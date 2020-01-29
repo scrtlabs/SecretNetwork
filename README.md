@@ -1,11 +1,15 @@
 # Enigmachain
 
+## Install
+
 ```bash
 git clone https://github.com/enigmampc/Enigmachain
 cd Enigmachain
 go mod tidy
 make install # installs engd and engcli
 ```
+
+## Quick Start
 
 ```bash
 engd init assaf --chain-id enigma0 # assaf==moniker==user-agent?
