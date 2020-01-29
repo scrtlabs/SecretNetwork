@@ -23,7 +23,7 @@ engd add-genesis-account $(engcli keys show b -a) 2000eng,200000000stake
 engcli config chain-id enigma0 # now we won't need to type --chain-id enigma0 every time
 engcli config output json
 engcli config indent true
-engcli config trust-node true # Set to true if you trust the full-node you are connecting to, false otherwise
+engcli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
 
 engd gentx --name a # generate a genesis transaction
 
