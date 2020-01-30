@@ -12,7 +12,7 @@ make install # installs engd and engcli
 ## Quick Start
 
 ```bash
-engd init assaf --chain-id enigma0 # assaf==moniker==user-agent?
+engd init banana --chain-id enigma0 # banana==moniker==user-agent?
 
 echo 01234567 | engcli keys add a
 echo 12345678 | engcli keys add b
