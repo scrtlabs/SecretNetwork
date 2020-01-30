@@ -33,3 +33,9 @@ engd validate-genesis # make sure genesis file is correct
 
 engd start # hokos pokos
 ```
+
+## Join as a Validator
+
+``` bash
+
+```
