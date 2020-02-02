@@ -40,6 +40,29 @@ engd start # hokos pokos
 engcli tx staking delegate $(engcli keys show a --bech=val -a) 10ueng --from b
 ```
 
+## Run your local node (on a running chain)
+First, init your environment:
+```bash
+endg init [moniker] --chain-id enigma0
+```
+
+Now you need a valid running node to send you their `genesis.json` file (usually at `~/.engd/config/genesis.json`)
+Once you have the valid `genesis.json`, put it in `~/.engd/config/genesis.json` (overwrite the existing file if needed).
+Next, edit your `.engd/config/config.toml`, set the `persistent_peers`:
+```bash
+persistent_peers = "[id]@[peer_node_ip]:26656" # `id` can be aquired from your peer by running `engcli status`
+```
+
+That't it! Once you're done, just run:
+```bash
+engd start
+```
+You will see you local bloackchain replica starting to catch up with your peer's one.
+
+Congrats, you are now up and running!
+
+***Note**: If anything goes wrong, delete the `~/.engd` and `~/.engcli` dirs and start again.*
+
 ## Join as a Validator
 
 ``` bash
