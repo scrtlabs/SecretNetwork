@@ -40,7 +40,8 @@ engd start # hokos pokos
 engcli tx staking delegate $(engcli keys show a --bech=val -a) 10ueng --from b
 ```
 
-## Run your local node (on a running chain)
+## Run your private node (on a running chain)
+
 First, init your environment:
 ```bash
 endg init [moniker] --chain-id enigma0
@@ -65,5 +66,24 @@ Congrats, you are now up and running!
 
 ## Join as a Validator
 
+After you have a private up and running, run the following command:
+
 ``` bash
+engcli tx staking create-validator \
+  --amount=<num of coins> \ # This is the amount of coins you put at stake. i.e. 100000ueng
+  --pubkey=$(engd tendermint show-validator) \
+  --moniker="<name-of-your-moniker>" \
+  --chain-id=<chain-id> \
+  --commission-rate="0.10" \
+  --commission-max-rate="0.20" \
+  --commission-max-change-rate="0.01" \
+  --min-self-delegation="1" \
+  --gas="auto" \
+  --gas-prices="0.025ueng" \
+  --from=<name or address> # Name or address of your existing account
+```
+
+To check if you got added to the validator-set by running:
+```bash
+engcli q tendermint-validator-set
 ```
