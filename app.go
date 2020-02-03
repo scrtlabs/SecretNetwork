@@ -12,6 +12,7 @@ import (
 
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/simapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/version"
@@ -39,7 +40,9 @@ var (
 	// DefaultNodeHome sets the folder where the applcation data and configuration will be stored
 	DefaultNodeHome = os.ExpandEnv("$HOME/.engd")
 
-	// ModuleBasics is in charge of setting up basic module elemnets
+	// ModuleBasics The module BasicManager is in charge of setting up basic,
+	// non-dependant module elements, such as codec registration
+	// and genesis verification.
 	ModuleBasics = module.NewBasicManager(
 		genutil.AppModuleBasic{},
 		auth.AppModuleBasic{},
@@ -53,7 +56,8 @@ var (
 		supply.AppModuleBasic{},
 		upgrade.AppModuleBasic{},
 	)
-	// account permissions
+
+	// module account permissions
 	maccPerms = map[string][]string{
 		auth.FeeCollectorName:     nil,
 		distr.ModuleName:          nil,
@@ -64,16 +68,23 @@ var (
 	}
 )
 
-// MakeCodec generates the necessary codecs for Amino
+// MakeCodec creates the application codec. The codec is sealed before it is
+// returned.
 func MakeCodec() *codec.Codec {
 	var cdc = codec.New()
+
 	ModuleBasics.RegisterCodec(cdc)
 	sdk.RegisterCodec(cdc)
 	codec.RegisterCrypto(cdc)
-	return cdc
+
+	return cdc.Seal()
 }
 
-type enigmaChainApp struct {
+// Verify app interface at compile time
+var _ simapp.App = (*EnigmaChainApp)(nil)
+
+// EnigmaChainApp extended ABCI application
+type EnigmaChainApp struct {
 	*bam.BaseApp
 	cdc *codec.Codec
 
@@ -81,7 +92,6 @@ type enigmaChainApp struct {
 	keys  map[string]*sdk.KVStoreKey
 	tkeys map[string]*sdk.TransientStoreKey
 
-	// Keepers
 	// keepers
 	accountKeeper  auth.AccountKeeper
 	bankKeeper     bank.Keeper
@@ -96,6 +106,9 @@ type enigmaChainApp struct {
 
 	// the module manager
 	mm *module.Manager
+
+	// simulation manager
+	sm *module.SimulationManager
 }
 
 // NewEnigmaChainApp is a constructor function for enigmaChainApp
@@ -104,7 +117,7 @@ func NewEnigmaChainApp(
 	db dbm.DB,
 	skipUpgradeHeights map[int64]bool,
 	baseAppOptions ...func(*bam.BaseApp),
-) *enigmaChainApp {
+) *EnigmaChainApp {
 
 	// First define the top level codec that will be shared by the different modules
 	cdc := MakeCodec()
@@ -126,18 +139,18 @@ func NewEnigmaChainApp(
 		upgrade.StoreKey,
 	)
 
-	tkeys := sdk.NewTransientStoreKeys(staking.TStoreKey, params.TStoreKey)
+	tKeys := sdk.NewTransientStoreKeys(staking.TStoreKey, params.TStoreKey)
 
-	// Here you initialize your application with the store keys it requires
-	app := &enigmaChainApp{
+	// Initialize our application with the store keys it requires
+	app := &EnigmaChainApp{
 		BaseApp: bApp,
 		cdc:     cdc,
 		keys:    keys,
-		tkeys:   tkeys,
+		tkeys:   tKeys,
 	}
 
 	// The ParamsKeeper handles parameter storage for the application
-	app.paramsKeeper = params.NewKeeper(app.cdc, keys[params.StoreKey], tkeys[params.TStoreKey])
+	app.paramsKeeper = params.NewKeeper(app.cdc, keys[params.StoreKey], tKeys[params.TStoreKey])
 	authSubspace := app.paramsKeeper.Subspace(auth.DefaultParamspace)
 	bankSupspace := app.paramsKeeper.Subspace(bank.DefaultParamspace)
 	stakingSubspace := app.paramsKeeper.Subspace(staking.DefaultParamspace)
@@ -177,7 +190,6 @@ func NewEnigmaChainApp(
 		app.supplyKeeper,
 		stakingSubspace,
 	)
-
 	app.mintKeeper = mint.NewKeeper(
 		app.cdc,
 		keys[mint.StoreKey],
@@ -186,7 +198,6 @@ func NewEnigmaChainApp(
 		app.supplyKeeper,
 		auth.FeeCollectorName,
 	)
-
 	app.distrKeeper = distr.NewKeeper(
 		app.cdc,
 		keys[distr.StoreKey],
@@ -196,14 +207,12 @@ func NewEnigmaChainApp(
 		auth.FeeCollectorName,
 		app.ModuleAccountAddrs(),
 	)
-
 	app.slashingKeeper = slashing.NewKeeper(
 		app.cdc,
 		keys[slashing.StoreKey],
 		&stakingKeeper,
 		slashingSubspace,
 	)
-
 	app.upgradeKeeper = upgrade.NewKeeper(skipUpgradeHeights, keys[upgrade.StoreKey], app.cdc)
 
 	// register the proposal types
@@ -225,6 +234,8 @@ func NewEnigmaChainApp(
 			app.slashingKeeper.Hooks()),
 	)
 
+	// NOTE: Any module instantiated in the module manager that is later modified
+	// must be passed by reference here.
 	app.mm = module.NewManager(
 		genutil.NewAppModule(app.accountKeeper, app.stakingKeeper, app.BaseApp.DeliverTx),
 		auth.NewAppModule(app.accountKeeper),
@@ -237,13 +248,16 @@ func NewEnigmaChainApp(
 		staking.NewAppModule(app.stakingKeeper, app.accountKeeper, app.supplyKeeper),
 		upgrade.NewAppModule(app.upgradeKeeper),
 	)
+	// During begin block slashing happens after distr.BeginBlocker so that
+	// there is nothing left over in the validator fee pool, so as to keep the
+	// CanWithdrawInvariant invariant.
 
 	app.mm.SetOrderBeginBlockers(upgrade.ModuleName, mint.ModuleName, distr.ModuleName, slashing.ModuleName)
 	app.mm.SetOrderEndBlockers(gov.ModuleName, staking.ModuleName)
 
-	// Sets the order of Genesis - Order matters, genutil is to always come last
-	// NOTE: The genutils moodule must occur after staking so that pools are
+	// NOTE: The genutils module must occur after staking so that pools are
 	// properly initialized with tokens from genesis accounts.
+	// Sets the order of Genesis - Order matters, genutil is to always come last
 	app.mm.SetOrderInitGenesis(
 		distr.ModuleName,
 		staking.ModuleName,
@@ -259,23 +273,38 @@ func NewEnigmaChainApp(
 	// register all module routes and module queriers
 	app.mm.RegisterRoutes(app.Router(), app.QueryRouter())
 
+	// create the simulation manager and define the order of the modules for deterministic simulations
+	//
+	// NOTE: This is not required for apps that don't use the simulator for fuzz testing
+	// transactions.
+	app.sm = module.NewSimulationManager(
+		auth.NewAppModule(app.accountKeeper),
+		bank.NewAppModule(app.bankKeeper, app.accountKeeper),
+		supply.NewAppModule(app.supplyKeeper, app.accountKeeper),
+		gov.NewAppModule(app.govKeeper, app.accountKeeper, app.supplyKeeper),
+		mint.NewAppModule(app.mintKeeper),
+		distr.NewAppModule(app.distrKeeper, app.accountKeeper, app.supplyKeeper, app.stakingKeeper),
+		staking.NewAppModule(app.stakingKeeper, app.accountKeeper, app.supplyKeeper),
+		slashing.NewAppModule(app.slashingKeeper, app.accountKeeper, app.stakingKeeper),
+	)
+
+	app.sm.RegisterStoreDecoders()
+
+	// initialize stores
+	app.MountKVStores(keys)
+	app.MountTransientStores(tKeys)
+
 	// The initChainer handles translating the genesis.json file into initial state for the network
 	app.SetInitChainer(app.InitChainer)
 	app.SetBeginBlocker(app.BeginBlocker)
-	app.SetEndBlocker(app.EndBlocker)
-
-	// The AnteHandler handles signature verification and transaction pre-processing
-	app.SetAnteHandler(
+	app.SetAnteHandler( // The AnteHandler handles signature verification and transaction pre-processing
 		auth.NewAnteHandler(
 			app.accountKeeper,
 			app.supplyKeeper,
 			auth.DefaultSigVerificationGasConsumer,
 		),
 	)
-
-	// initialize stores
-	app.MountKVStores(keys)
-	app.MountTransientStores(tkeys)
+	app.SetEndBlocker(app.EndBlocker)
 
 	err := app.LoadLatestVersion(app.keys[bam.MainStoreKey])
 	if err != nil {
@@ -285,36 +314,36 @@ func NewEnigmaChainApp(
 	return app
 }
 
-// GenesisState represents chain state at the start of the chain. Any initial state (account balances) are stored here.
-type GenesisState map[string]json.RawMessage
+// BeginBlocker application updates every begin block
+func (app *EnigmaChainApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
+	return app.mm.BeginBlock(ctx, req)
+}
 
-func NewDefaultGenesisState() GenesisState {
+// EndBlocker application updates every end block
+func (app *EnigmaChainApp) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
+	return app.mm.EndBlock(ctx, req)
+}
+
+// NewDefaultGenesisState return a default genesis state
+func NewDefaultGenesisState() simapp.GenesisState {
 	return ModuleBasics.DefaultGenesis()
 }
 
-func (app *enigmaChainApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
-	var genesisState GenesisState
-
-	err := app.cdc.UnmarshalJSON(req.AppStateBytes, &genesisState)
-	if err != nil {
-		panic(err)
-	}
+// InitChainer application update at chain initialization
+func (app *EnigmaChainApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
+	var genesisState simapp.GenesisState
+	app.cdc.MustUnmarshalJSON(req.AppStateBytes, &genesisState)
 
 	return app.mm.InitGenesis(ctx, genesisState)
 }
 
-func (app *enigmaChainApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
-	return app.mm.BeginBlock(ctx, req)
-}
-func (app *enigmaChainApp) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
-	return app.mm.EndBlock(ctx, req)
-}
-func (app *enigmaChainApp) LoadHeight(height int64) error {
+// LoadHeight loads a particular height
+func (app *EnigmaChainApp) LoadHeight(height int64) error {
 	return app.LoadVersion(height, app.keys[bam.MainStoreKey])
 }
 
 // ModuleAccountAddrs returns all the app's module account addresses.
-func (app *enigmaChainApp) ModuleAccountAddrs() map[string]bool {
+func (app *EnigmaChainApp) ModuleAccountAddrs() map[string]bool {
 	modAccAddrs := make(map[string]bool)
 	for acc := range maccPerms {
 		modAccAddrs[supply.NewModuleAddress(acc).String()] = true
@@ -323,9 +352,26 @@ func (app *enigmaChainApp) ModuleAccountAddrs() map[string]bool {
 	return modAccAddrs
 }
 
-//_________________________________________________________
+// Codec returns the application's sealed codec.
+func (app *EnigmaChainApp) Codec() *codec.Codec {
+	return app.cdc
+}
 
-func (app *enigmaChainApp) ExportAppStateAndValidators(forZeroHeight bool, jailWhiteList []string,
+// SimulationManager implements the SimulationApp interface
+func (app *EnigmaChainApp) SimulationManager() *module.SimulationManager {
+	return app.sm
+}
+
+// GetMaccPerms returns a mapping of the application's module account permissions.
+func GetMaccPerms() map[string][]string {
+	modAccPerms := make(map[string][]string)
+	for k, v := range maccPerms {
+		modAccPerms[k] = v
+	}
+	return modAccPerms
+}
+
+func (app *EnigmaChainApp) ExportAppStateAndValidators(forZeroHeight bool, jailWhiteList []string,
 ) (appState json.RawMessage, validators []tmtypes.GenesisValidator, err error) {
 
 	// as if they could withdraw from the start of the next block
