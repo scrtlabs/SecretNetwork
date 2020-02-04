@@ -33,7 +33,7 @@ perl -i -pe 's/"stake"/"ueng"/g' ~/.engd/config/genesis.json # change the defaul
 
 engd validate-genesis # make sure genesis file is correct
 
-engd start # starts a node
+engd start --pruning nothing # starts a node
 ```
 
 # Delegation & rewards
@@ -101,14 +101,14 @@ persistent_peers = "[id]@[peer_node_ip]:26656" # `id` can be aquired from your f
 That't it! Once you're done, just run:
 
 ```bash
-engd start
+engd start --pruning nothing
 ```
 
 You will see you local bloackchain replica starting to catch up with your peer's one.
 
 Congrats, you are now up and running!
 
-**Note:** you can also run `engd start --p2p.persistent_peers [id]@[peer_node_ip]:26656` instead of editing the conf file.  
+**Note:** you can also run `engd start --pruning nothing --p2p.persistent_peers [id]@[peer_node_ip]:26656` instead of editing the conf file.  
 **Note**: If anything goes wrong, delete the `~/.engd` and `~/.engcli` dirs and start again.
 
 # Join as a new Validator
