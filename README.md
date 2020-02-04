@@ -1,6 +1,6 @@
 # Enigmachain
 
-## Install
+# Install
 
 ```bash
 git clone https://github.com/enigmampc/Enigmachain
@@ -9,7 +9,7 @@ go mod tidy
 make install # installs engd and engcli
 ```
 
-## Quick Start
+# Quick Start
 
 ```bash
 engcli config chain-id enigma0 # now we won't need to type --chain-id enigma0 every time
@@ -36,13 +36,53 @@ engd validate-genesis # make sure genesis file is correct
 engd start # starts a node
 ```
 
+# Delegation & rewards
+
+## `b` is a delegator of `a`
+
+Now `a` is a validator with 1 ENG (1000000ueng) staked.  
+This is how `b` can delegate 0.00001 ENG to `a`:
+
 ```bash
-# Now a is a validator with 1 ENG (1000000ueng) staked.
-# This is how b can delegate 0.00001 ENG to a
 engcli tx staking delegate $(engcli keys show a --bech=val -a) 10ueng --from b
 ```
 
-## Run your private node (on a running chain)
+This is how to see `b`'s rewards from delegating to `a`:
+
+```bash
+engcli q distribution rewards $(engcli keys show -a b)
+```
+
+This is how `b` can withdraw its rewards:
+
+```bash
+engcli tx distribution withdraw-rewards $(engcli keys show --bech=val -a a) --from b
+```
+
+## `a` is a validator and has `b` as a delegator
+
+`a` was set up as a validator from genesis.  
+This is how to see `a`'s rewards from being a validator:
+
+```bash
+engcli q distribution rewards $(engcli keys show -a a)
+```
+
+This is how to see `a`'s commissions from being a validator:
+
+```bash
+engcli q distribution commission $(engcli keys show -a --bech=val a)
+```
+
+This is how `a` can withdraw its rewards + its commissions from being a validator:
+
+```bash
+engcli tx distribution withdraw-rewards $(engcli keys show --bech=val -a a) --from a --commission
+```
+
+(To withdraw only rewards omit the `--commission`)
+
+# Run your private node (on a running chain)
 
 First, init your environment:
 
@@ -71,7 +111,7 @@ Congrats, you are now up and running!
 **Note:** you can also run `engd start --p2p.persistent_peers [id]@[peer_node_ip]:26656` instead of editing the conf file.  
 **Note**: If anything goes wrong, delete the `~/.engd` and `~/.engcli` dirs and start again.
 
-## Join as a Validator
+# Join as a new Validator
 
 After you have a private node up and running, run the following command:
 
