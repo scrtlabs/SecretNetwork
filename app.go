@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -17,8 +18,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	authvesting "github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/x/crisis"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
+	"github.com/cosmos/cosmos-sdk/x/evidence"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/mint"
@@ -52,9 +56,11 @@ var (
 		distr.AppModuleBasic{},
 		gov.NewAppModuleBasic(paramsclient.ProposalHandler, distr.ProposalHandler, upgradeclient.ProposalHandler),
 		params.AppModuleBasic{},
+		crisis.AppModuleBasic{},
 		slashing.AppModuleBasic{},
 		supply.AppModuleBasic{},
 		upgrade.AppModuleBasic{},
+		evidence.AppModuleBasic{},
 	)
 
 	// module account permissions
@@ -76,6 +82,8 @@ func MakeCodec() *codec.Codec {
 	ModuleBasics.RegisterCodec(cdc)
 	sdk.RegisterCodec(cdc)
 	codec.RegisterCrypto(cdc)
+	codec.RegisterEvidences(cdc)
+	authvesting.RegisterCodec(cdc)
 
 	return cdc.Seal()
 }
@@ -88,9 +96,11 @@ type EnigmaChainApp struct {
 	*bam.BaseApp
 	cdc *codec.Codec
 
+	invCheckPeriod uint
+
 	// keys to access the substores
 	keys  map[string]*sdk.KVStoreKey
-	tkeys map[string]*sdk.TransientStoreKey
+	tKeys map[string]*sdk.TransientStoreKey
 
 	// keepers
 	accountKeeper  auth.AccountKeeper
@@ -101,8 +111,10 @@ type EnigmaChainApp struct {
 	mintKeeper     mint.Keeper
 	distrKeeper    distr.Keeper
 	govKeeper      gov.Keeper
+	crisisKeeper   crisis.Keeper
 	paramsKeeper   params.Keeper
 	upgradeKeeper  upgrade.Keeper
+	evidenceKeeper evidence.Keeper
 
 	// the module manager
 	mm *module.Manager
@@ -115,6 +127,9 @@ type EnigmaChainApp struct {
 func NewEnigmaChainApp(
 	logger log.Logger,
 	db dbm.DB,
+	traceStore io.Writer,
+	loadLatest bool,
+	invCheckPeriod uint,
 	skipUpgradeHeights map[int64]bool,
 	baseAppOptions ...func(*bam.BaseApp),
 ) *EnigmaChainApp {
@@ -124,7 +139,7 @@ func NewEnigmaChainApp(
 
 	// BaseApp handles interactions with Tendermint through the ABCI protocol
 	bApp := bam.NewBaseApp(appName, logger, db, auth.DefaultTxDecoder(cdc), baseAppOptions...)
-
+	bApp.SetCommitMultiStoreTracer(traceStore)
 	bApp.SetAppVersion(version.Version)
 	keys := sdk.NewKVStoreKeys(
 		bam.MainStoreKey,
@@ -143,10 +158,11 @@ func NewEnigmaChainApp(
 
 	// Initialize our application with the store keys it requires
 	app := &EnigmaChainApp{
-		BaseApp: bApp,
-		cdc:     cdc,
-		keys:    keys,
-		tkeys:   tKeys,
+		BaseApp:        bApp,
+		cdc:            cdc,
+		invCheckPeriod: invCheckPeriod,
+		keys:           keys,
+		tKeys:          tKeys,
 	}
 
 	// The ParamsKeeper handles parameter storage for the application
@@ -158,6 +174,8 @@ func NewEnigmaChainApp(
 	distrSubspace := app.paramsKeeper.Subspace(distr.DefaultParamspace)
 	slashingSubspace := app.paramsKeeper.Subspace(slashing.DefaultParamspace)
 	govSubspace := app.paramsKeeper.Subspace(gov.DefaultParamspace).WithKeyTable(gov.ParamKeyTable())
+	crisisSubspace := app.paramsKeeper.Subspace(crisis.DefaultParamspace)
+	evidenceSubspace := app.paramsKeeper.Subspace(evidence.DefaultParamspace)
 
 	// The AccountKeeper handles address -> account lookups
 	app.accountKeeper = auth.NewAccountKeeper(
@@ -166,7 +184,6 @@ func NewEnigmaChainApp(
 		authSubspace,
 		auth.ProtoBaseAccount,
 	)
-
 	// The BankKeeper allows you perform sdk.Coins interactions
 	app.bankKeeper = bank.NewBaseKeeper(
 		app.accountKeeper,
@@ -213,7 +230,21 @@ func NewEnigmaChainApp(
 		&stakingKeeper,
 		slashingSubspace,
 	)
+	app.crisisKeeper = crisis.NewKeeper(
+		crisisSubspace, invCheckPeriod, app.supplyKeeper, auth.FeeCollectorName,
+	)
 	app.upgradeKeeper = upgrade.NewKeeper(skipUpgradeHeights, keys[upgrade.StoreKey], app.cdc)
+
+	// create evidence keeper with evidence router
+	evidenceKeeper := evidence.NewKeeper(
+		app.cdc, keys[evidence.StoreKey], evidenceSubspace, &stakingKeeper, app.slashingKeeper,
+	)
+	evidenceRouter := evidence.NewRouter()
+
+	// TODO: register evidence routes
+	evidenceKeeper.SetRouter(evidenceRouter)
+
+	app.evidenceKeeper = *evidenceKeeper
 
 	// register the proposal types
 	govRouter := gov.NewRouter()
@@ -240,6 +271,7 @@ func NewEnigmaChainApp(
 		genutil.NewAppModule(app.accountKeeper, app.stakingKeeper, app.BaseApp.DeliverTx),
 		auth.NewAppModule(app.accountKeeper),
 		bank.NewAppModule(app.bankKeeper, app.accountKeeper),
+		crisis.NewAppModule(&app.crisisKeeper),
 		supply.NewAppModule(app.supplyKeeper, app.accountKeeper),
 		gov.NewAppModule(app.govKeeper, app.accountKeeper, app.supplyKeeper),
 		mint.NewAppModule(app.mintKeeper),
@@ -247,13 +279,14 @@ func NewEnigmaChainApp(
 		distr.NewAppModule(app.distrKeeper, app.accountKeeper, app.supplyKeeper, app.stakingKeeper),
 		staking.NewAppModule(app.stakingKeeper, app.accountKeeper, app.supplyKeeper),
 		upgrade.NewAppModule(app.upgradeKeeper),
+		evidence.NewAppModule(app.evidenceKeeper),
 	)
 	// During begin block slashing happens after distr.BeginBlocker so that
 	// there is nothing left over in the validator fee pool, so as to keep the
 	// CanWithdrawInvariant invariant.
 
 	app.mm.SetOrderBeginBlockers(upgrade.ModuleName, mint.ModuleName, distr.ModuleName, slashing.ModuleName)
-	app.mm.SetOrderEndBlockers(gov.ModuleName, staking.ModuleName)
+	app.mm.SetOrderEndBlockers(crisis.ModuleName, gov.ModuleName, staking.ModuleName)
 
 	// NOTE: The genutils module must occur after staking so that pools are
 	// properly initialized with tokens from genesis accounts.
@@ -267,10 +300,13 @@ func NewEnigmaChainApp(
 		gov.ModuleName,
 		mint.ModuleName,
 		supply.ModuleName,
+		crisis.ModuleName,
 		genutil.ModuleName,
+		evidence.ModuleName,
 	)
 
 	// register all module routes and module queriers
+	app.mm.RegisterInvariants(&app.crisisKeeper)
 	app.mm.RegisterRoutes(app.Router(), app.QueryRouter())
 
 	// create the simulation manager and define the order of the modules for deterministic simulations
@@ -306,13 +342,18 @@ func NewEnigmaChainApp(
 	)
 	app.SetEndBlocker(app.EndBlocker)
 
-	err := app.LoadLatestVersion(app.keys[bam.MainStoreKey])
-	if err != nil {
-		tmos.Exit(err.Error())
+	if loadLatest {
+		err := app.LoadLatestVersion(app.keys[bam.MainStoreKey])
+		if err != nil {
+			tmos.Exit(err.Error())
+		}
 	}
 
 	return app
 }
+
+// Name returns the name of the App
+func (app *EnigmaChainApp) Name() string { return app.BaseApp.Name() }
 
 // BeginBlocker application updates every begin block
 func (app *EnigmaChainApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {

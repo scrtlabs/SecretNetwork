@@ -26,6 +26,10 @@ import (
 	dbm "github.com/tendermint/tm-db"
 )
 
+const flagInvCheckPeriod = "inv-check-period"
+
+var invCheckPeriod uint
+
 func main() {
 	cdc := app.MakeCodec()
 
@@ -60,6 +64,8 @@ func main() {
 
 	// prepare and add flags
 	executor := cli.PrepareBaseCmd(rootCmd, "EN", app.DefaultNodeHome)
+	rootCmd.PersistentFlags().UintVar(&invCheckPeriod, flagInvCheckPeriod,
+		0, "Assert registered invariants every N blocks")
 	err := executor.Execute()
 	if err != nil {
 		panic(err)
@@ -79,7 +85,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer) abci.Application
 	}
 
 	return app.NewEnigmaChainApp(
-		logger, db, skipUpgradeHeights,
+		logger, db, traceStore, true, invCheckPeriod, skipUpgradeHeights,
 		baseapp.SetPruning(store.NewPruningOptionsFromString(viper.GetString("pruning"))),
 		baseapp.SetMinGasPrices(viper.GetString(server.FlagMinGasPrices)),
 		baseapp.SetHaltHeight(viper.GetUint64(server.FlagHaltHeight)),
@@ -93,7 +99,7 @@ func exportAppStateAndTMValidators(
 ) (json.RawMessage, []tmtypes.GenesisValidator, error) {
 
 	if height != -1 {
-		engApp := app.NewEnigmaChainApp(logger, db, map[int64]bool{})
+		engApp := app.NewEnigmaChainApp(logger, db, traceStore, false, uint(1), map[int64]bool{})
 		err := engApp.LoadHeight(height)
 		if err != nil {
 			return nil, nil, err
@@ -101,6 +107,6 @@ func exportAppStateAndTMValidators(
 		return engApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 	}
 
-	engApp := app.NewEnigmaChainApp(logger, db, map[int64]bool{})
+	engApp := app.NewEnigmaChainApp(logger, db, traceStore, true, uint(1), map[int64]bool{})
 	return engApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 }
