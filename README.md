@@ -82,7 +82,7 @@ engcli tx distribution withdraw-rewards $(engcli keys show --bech=val -a a) --fr
 
 (To withdraw only rewards omit the `--commission`)
 
-# Run your private node (on a running chain)
+# Run your own node (after genesis)
 
 First, init your environment:
 
