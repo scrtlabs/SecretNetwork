@@ -19,15 +19,17 @@ engcli config trust-node true # true if you trust the full-node you are connecti
 
 engd init banana --chain-id enigma0 # banana==moniker==user-agent of this node
 
-echo 12345678 | engcli keys add a
-echo 12345678 | engcli keys add b
+engcli keys add a
+engcli keys add b
 
 engd add-genesis-account $(engcli keys show -a a) 1000000000000ueng # 1 ENG == 10^6 uENG
 engd add-genesis-account $(engcli keys show -a b) 2000000000000ueng # 1 ENG == 10^6 uENG
 
-echo 12345678 | engd gentx --name a --amount 1000000ueng # generate a genesis transaction - this makes a a validator on genesis which stakes 1000000ueng (1 ENG)
+engd gentx --name a --amount 1000000ueng # generate a genesis transaction - this makes a a validator on genesis which stakes 1000000ueng (1 ENG)
 
 engd collect-gentxs # input the genTx into the genesis file, so that the chain is aware of the validators
+
+perl -i -pe 's/"stake"/"ueng"/g' ~/.engd/config/genesis.json # change the default staking denom from stake to ueng
 
 engd validate-genesis # make sure genesis file is correct
 
