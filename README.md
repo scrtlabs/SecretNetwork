@@ -22,14 +22,14 @@ engd init banana --chain-id enigma0 # banana==moniker==user-agent of this node
 engcli keys add a
 engcli keys add b
 
-engd add-genesis-account $(engcli keys show -a a) 1000000000000ueng # 1 ENG == 10^6 uENG
-engd add-genesis-account $(engcli keys show -a b) 2000000000000ueng # 1 ENG == 10^6 uENG
+engd add-genesis-account $(engcli keys show -a a) 1000000000000uscrt # 1 SCRT == 10^6 uSCRT
+engd add-genesis-account $(engcli keys show -a b) 2000000000000uscrt # 1 SCRT == 10^6 uSCRT
 
-engd gentx --name a --amount 1000000ueng # generate a genesis transaction - this makes a a validator on genesis which stakes 1000000ueng (1 ENG)
+engd gentx --name a --amount 1000000uscrt # generate a genesis transaction - this makes a a validator on genesis which stakes 1000000uscrt (1 SCRT)
 
 engd collect-gentxs # input the genTx into the genesis file, so that the chain is aware of the validators
 
-perl -i -pe 's/"stake"/"ueng"/g' ~/.engd/config/genesis.json # change the default staking denom from stake to ueng
+perl -i -pe 's/"stake"/"uscrt"/g' ~/.engd/config/genesis.json # change the default staking denom from stake to uscrt
 
 engd validate-genesis # make sure genesis file is correct
 
@@ -40,11 +40,11 @@ engd start --pruning nothing # starts a node
 
 ## `b` is a delegator of `a`
 
-Now `a` is a validator with 1 ENG (1000000ueng) staked.  
-This is how `b` can delegate 0.00001 ENG to `a`:
+Now `a` is a validator with 1 SCRT (1000000uscrt) staked.  
+This is how `b` can delegate 0.00001 SCRT to `a`:
 
 ```bash
-engcli tx staking delegate $(engcli keys show a --bech=val -a) 10ueng --from b
+engcli tx staking delegate $(engcli keys show a --bech=val -a) 10uscrt --from b
 ```
 
 This is how to see `b`'s rewards from delegating to `a`:
@@ -117,7 +117,7 @@ After you have a private node up and running, run the following command:
 
 ```bash
 engcli tx staking create-validator \
-  --amount=<num of coins> \ # This is the amount of coins you put at stake. i.e. 100000ueng
+  --amount=<num of coins> \ # This is the amount of coins you put at stake. i.e. 100000uscrt
   --pubkey=$(engd tendermint show-validator) \
   --moniker="<name-of-your-moniker>" \
   --chain-id=<chain-id> \
@@ -126,7 +126,7 @@ engcli tx staking create-validator \
   --commission-max-change-rate="0.01" \
   --min-self-delegation="1" \
   --gas="auto" \
-  --gas-prices="0.025ueng" \
+  --gas-prices="0.025uscrt" \
   --from=<name or address> # Name or address of your existing account
 ```
 
