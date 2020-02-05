@@ -3,8 +3,8 @@ package tokenswap
 import (
 	"encoding/json"
 
-	"github.com/enigmampc/Enigmachain/x/swap/client"
-	"github.com/enigmampc/Enigmachain/x/swap/types"
+	"github.com/enigmampc/Enigmachain/x/tokenswap/client"
+	"github.com/enigmampc/Enigmachain/x/tokenswap/types"
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 

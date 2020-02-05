@@ -10,7 +10,7 @@ import (
 
 const (
 	// ModuleName is the name of the module
-	ModuleName = "swap"
+	ModuleName = "tokenswap"
 
 	// StoreKey is used to register the module's store
 	StoreKey = ModuleName
