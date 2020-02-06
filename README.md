@@ -12,12 +12,13 @@ make install # installs engd and engcli
 # Quick Start
 
 ```bash
-engcli config chain-id enigma0 # now we won't need to type --chain-id enigma0 every time
+engcli config chain-id enigma-testnet-0 # now we won't need to type --chain-id enigma-testnet-0 every time
 engcli config output json
 engcli config indent true
 engcli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
 
-engd init banana --chain-id enigma0 # banana==moniker==user-agent of this node
+engd init banana --chain-id enigma-testnet-0 # banana==moniker==user-agent of this node
+perl -i -pe 's/"stake"/"uscrt"/g' ~/.engd/config/genesis.json # change the default staking denom from stake to uscrt
 
 engcli keys add a
 engcli keys add b
@@ -25,13 +26,17 @@ engcli keys add b
 engd add-genesis-account $(engcli keys show -a a) 1000000000000uscrt # 1 SCRT == 10^6 uSCRT
 engd add-genesis-account $(engcli keys show -a b) 2000000000000uscrt # 1 SCRT == 10^6 uSCRT
 
+engd validate-genesis # make sure genesis file is correct
+
+# `engd export` to send genesis.json to validators
+
 engd gentx --name a --amount 1000000uscrt # generate a genesis transaction - this makes a a validator on genesis which stakes 1000000uscrt (1 SCRT)
 
 engd collect-gentxs # input the genTx into the genesis file, so that the chain is aware of the validators
 
-perl -i -pe 's/"stake"/"uscrt"/g' ~/.engd/config/genesis.json # change the default staking denom from stake to uscrt
-
 engd validate-genesis # make sure genesis file is correct
+
+# `engd export` to send genesis.json to validators
 
 engd start --pruning nothing # starts a node
 ```
@@ -87,7 +92,7 @@ engcli tx distribution withdraw-rewards $(engcli keys show --bech=val -a a) --fr
 First, init your environment:
 
 ```bash
-endg init [moniker] --chain-id enigma0
+endg init [moniker] --chain-id enigma-testnet-0
 ```
 
 Now you need a valid running node to send you their `genesis.json` file (usually at `~/.engd/config/genesis.json`).  
