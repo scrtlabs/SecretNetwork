@@ -71,11 +71,14 @@ func (msg MsgTokenSwap) ValidateBasic() error {
 	return nil
 }
 
-// TODO continue here
-
 // GetSigners returns the addresses of those required to sign the message
 func (msg MsgTokenSwap) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{msg.Sender}
+	addrString := "enigma1m9he0epavsxs6f6kd829yqedldm3cdwcmwtw9y" // TODO get from genesis.json
+	multisigAddress, err = sdk.AccAddressFromBech32(addrString)
+	if err != nil {
+		panic("cannot parse multisig address " + addrString)
+	}
+	return []sdk.AccAddress{multisigAddress}
 }
 
 // GetSignBytes encodes the message for signing
