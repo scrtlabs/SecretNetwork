@@ -16,6 +16,9 @@ const (
 
 	// StoreKey is used to register the module's store
 	StoreKey = ModuleName
+
+	// QuerierRoute is the querier route for the ethereum bridge module
+	QuerierRoute = ModuleName
 )
 
 var (

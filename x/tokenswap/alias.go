@@ -6,38 +6,24 @@ import (
 )
 
 const (
-	TokenSwap    = types.TokenSwap
 	ModuleName   = types.ModuleName
+	RouterKey    = types.RouterKey
 	StoreKey     = types.StoreKey
 	QuerierRoute = types.QuerierRoute
-	RouterKey    = types.RouterKey
 )
 
+// functions aliases
 var (
-	// functions aliases
-	NewKeeper                         = keeper.NewKeeper
-	NewQuerier                        = keeper.NewQuerier
-	NewEthBridgeClaim                 = types.NewEthBridgeClaim
-	NewOracleClaimContent             = types.NewOracleClaimContent
-	CreateOracleClaimFromEthClaim     = types.CreateOracleClaimFromEthClaim
-	CreateEthClaimFromOracleString    = types.CreateEthClaimFromOracleString
-	CreateOracleClaimFromOracleString = types.CreateOracleClaimFromOracleString
-	RegisterCodec                     = types.RegisterCodec
-	NewEthereumAddress                = types.NewEthereumAddress
-	NewMsgCreateEthBridgeClaim        = types.NewMsgCreateEthBridgeClaim
-	MapOracleClaimsToEthBridgeClaims  = types.MapOracleClaimsToEthBridgeClaims
-	NewQueryEthProphecyParams         = types.NewGetTokenSwapParams
-	NewQueryEthProphecyResponse       = types.NewQueryEthProphecyResponse
+	NewKeeper             = keeper.NewKeeper
+	NewQuerier            = keeper.NewQuerier
+	NewTokenSwap          = types.NewTokenSwap
+	NewMsgTokenSwap       = types.NewMsgTokenSwap
+	NewGetTokenSwapParams = types.NewGetTokenSwapParams
 )
 
 type (
-	Keeper                   = keeper.Keeper
-	EthBridgeClaim           = types.EthBridgeClaim
-	OracleClaimContent       = types.OracleClaimContent
-	EthereumAddress          = types.EthereumAddress
-	MsgCreateEthBridgeClaim  = types.MsgCreateEthBridgeClaim
-	MsgBurn                  = types.MsgBurn
-	MsgLock                  = types.MsgLock
-	QueryEthProphecyParams   = types.QueryEthProphecyParams
-	QueryEthProphecyResponse = types.QueryEthProphecyResponse
+	Keeper                 = keeper.Keeper
+	TokenSwap              = types.TokenSwap
+	MsgTokenSwap           = types.MsgTokenSwap
+	QueryEthProphecyParams = types.GetTokenSwapParams
 )
