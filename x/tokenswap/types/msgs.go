@@ -19,6 +19,9 @@ type MsgTokenSwap struct {
 	AmountENG      float64
 }
 
+// Check in compile time that MsgTokenSwap is a sdk.Msg
+var _ sdk.Msg = MsgTokenSwap{}
+
 // NewMsgTokenSwap Returns a new MsgTokenSwap
 func NewMsgTokenSwap(ethereumTxHash string, ethereumSender string, receiver sdk.AccAddress, amountENG float64) MsgTokenSwap {
 	return MsgTokenSwap{
