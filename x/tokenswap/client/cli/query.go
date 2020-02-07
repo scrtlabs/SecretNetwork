@@ -36,7 +36,7 @@ func GetCmdGetEthBridgeProphecy(queryRoute string, cdc *codec.Codec) *cobra.Comm
 			tokenContract := types.NewEthereumAddress(args[4])
 			ethereumSender := types.NewEthereumAddress(args[5])
 
-			bz, err := cdc.MarshalJSON(types.NewQueryEthProphecyParams(ethereumChainID, bridgeContract, nonce, symbol, tokenContract, ethereumSender))
+			bz, err := cdc.MarshalJSON(types.NewGetTokenSwapParams(ethereumChainID, bridgeContract, nonce, symbol, tokenContract, ethereumSender))
 			if err != nil {
 				return err
 			}

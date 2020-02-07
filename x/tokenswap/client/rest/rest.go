@@ -143,7 +143,7 @@ func getProphecyHandler(cliCtx context.CLIContext, storeName string) http.Handle
 
 		ethereumSender := types.NewEthereumAddress(vars[restEthereumSender])
 
-		bz, err := cliCtx.Codec.MarshalJSON(types.NewQueryEthProphecyParams(ethereumChainIDString, bridgeContract, nonceString, symbol, tokenContract, ethereumSender))
+		bz, err := cliCtx.Codec.MarshalJSON(types.NewGetTokenSwapParams(ethereumChainIDString, bridgeContract, nonceString, symbol, tokenContract, ethereumSender))
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusNotFound, err.Error())
 			return
