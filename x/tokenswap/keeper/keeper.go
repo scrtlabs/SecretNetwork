@@ -36,6 +36,35 @@ func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
 }
 
+// SetOnlyAllowedSigner sets the only allowed signer of txs in this module
+func (k Keeper) SetOnlyAllowedSigner(ctx sdk.Context, onlyAllowedSigner string) error {
+	addr, err := sdk.AccAddressFromBech32(onlyAllowedSigner)
+	if err != nil {
+		return err
+	}
+
+	store := ctx.KVStore(k.storeKey)
+	store.Set([]byte("only_allowed_signer"), addr)
+	return nil
+}
+
+// GetOnlyAllowedSigner returns the only allowed signer of txs in this module
+func (k Keeper) GetOnlyAllowedSigner(ctx sdk.Context) (sdk.AccAddress, error) {
+	store := ctx.KVStore(k.storeKey)
+
+	if !store.Has([]byte("only_allowed_signer")) {
+		return sdk.AccAddress{}, sdkerrors.Wrap(
+			sdkerrors.ErrUnknownRequest,
+			"only_allowed_signer wasn't set on genesis",
+		)
+	}
+
+	var addr sdk.AccAddress
+	addr = store.Get([]byte("only_allowed_signer"))
+
+	return addr, nil
+}
+
 // ProcessTokenSwapRequest processes a claim that has just completed successfully with consensus
 func (k Keeper) ProcessTokenSwapRequest(ctx sdk.Context, ethereumTxHash string, ethereumSender string, receiver sdk.AccAddress, amountENG float64) error {
 	// Convert ENG to uSCRT
@@ -47,17 +76,24 @@ func (k Keeper) ProcessTokenSwapRequest(ctx sdk.Context, ethereumTxHash string, 
 	tokenSwap := types.NewTokenSwap(ethereumTxHashLowercase, ethereumSender, receiver, amountUscrtCoins)
 
 	// Mint new uSCRTs
-	err := k.supplyKeeper.MintCoins(ctx, types.ModuleName, tokenSwap.AmountUSCRT)
+	err := k.supplyKeeper.MintCoins(
+		ctx,
+		types.ModuleName,
+		tokenSwap.AmountUSCRT,
+	)
 	if err != nil {
 		return err
 	}
 
 	// Transfer new funds to receiver
 	err = k.supplyKeeper.SendCoinsFromModuleToAccount(
-		ctx, types.ModuleName, tokenSwap.Receiver, tokenSwap.AmountUSCRT,
+		ctx,
+		types.ModuleName,
+		tokenSwap.Receiver,
+		tokenSwap.AmountUSCRT,
 	)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	// Store the token swap request in our state
