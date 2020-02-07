@@ -56,7 +56,7 @@ func (msg MsgTokenSwap) ValidateBasic() error {
 			fmt.Sprintf(
 				`Invalid EthereumSender %s accoding to regex '%s'`,
 				msg.EthereumSender,
-				ethereumAddressRegex.String()
+				ethereumAddressRegex.String(),
 			),
 		)
 	}
@@ -65,8 +65,8 @@ func (msg MsgTokenSwap) ValidateBasic() error {
 		return sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "Receiver cannot be empty")
 	}
 
-	if !msg.AmountENG.IsPositive() {
-		return sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, fmt.Sprintf("Amont %s must be positive",msg.AmountENG.String()))
+	if msg.AmountENG <= 0 {
+		return sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, fmt.Sprintf("Amont %f must be positive", msg.AmountENG))
 	}
 	return nil
 }
@@ -74,7 +74,7 @@ func (msg MsgTokenSwap) ValidateBasic() error {
 // GetSigners returns the addresses of those required to sign the message
 func (msg MsgTokenSwap) GetSigners() []sdk.AccAddress {
 	addrString := "enigma1m9he0epavsxs6f6kd829yqedldm3cdwcmwtw9y" // TODO get from genesis.json
-	multisigAddress, err = sdk.AccAddressFromBech32(addrString)
+	multisigAddress, err := sdk.AccAddressFromBech32(addrString)
 	if err != nil {
 		panic("cannot parse multisig address " + addrString)
 	}
