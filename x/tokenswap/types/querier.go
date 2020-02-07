@@ -2,7 +2,7 @@ package types
 
 // query endpoints supported by the oracle Querier
 const (
-	GetTokenSwap = "get"
+	GetTokenSwapRoute = "get"
 )
 
 // GetTokenSwapParams defines the params for the following queries:

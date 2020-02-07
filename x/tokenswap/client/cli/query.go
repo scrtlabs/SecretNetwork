@@ -26,7 +26,7 @@ func GetQueryCmd(queryRoute string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			route := fmt.Sprintf("custom/%s/%s", queryRoute, types.GetTokenSwap)
+			route := fmt.Sprintf("custom/%s/%s", queryRoute, types.GetTokenSwapRoute)
 			res, _, err := cliCtx.QueryWithData(route, bz)
 			if err != nil {
 				return err

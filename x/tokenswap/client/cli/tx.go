@@ -30,7 +30,7 @@ func GetTxCmd(cdc *codec.Codec) *cobra.Command {
 			ethereumTxHash := args[0]
 			ethereumSender := args[1]
 
-			engFloat, err := strconv.ParseFloat(args[2], 64)
+			amountENG, err := strconv.ParseFloat(args[2], 64)
 			if err != nil {
 				return sdkerrors.Wrapf(err, "Error parsing ENG amount %v", args[2])
 			}
@@ -44,7 +44,7 @@ func GetTxCmd(cdc *codec.Codec) *cobra.Command {
 				ethereumTxHash,
 				ethereumSender,
 				receiver,
-				engFloat,
+				amountENG,
 			)
 			if err := msg.ValidateBasic(); err != nil {
 				return err

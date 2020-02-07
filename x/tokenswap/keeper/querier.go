@@ -21,7 +21,7 @@ const (
 func NewQuerier(keeper Keeper, cdc *codec.Codec) sdk.Querier {
 	return func(ctx sdk.Context, path []string, req abci.RequestQuery) ([]byte, error) {
 		switch path[0] {
-		case types.GetTokenSwap:
+		case types.GetTokenSwapRoute:
 			return getTokenSwapRequest(ctx, cdc, req, keeper)
 		default:
 			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "unknown tokenswap query endpoint "+path[0])

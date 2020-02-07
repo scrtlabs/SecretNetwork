@@ -4,152 +4,64 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 
 	"github.com/gorilla/mux"
 
 	"github.com/enigmampc/Enigmachain/x/tokenswap/types"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 const (
-	restEthereumChainID = "ethereumChainID"
-	restBridgeContract  = "bridgeContract"
-	restNonce           = "nonce"
-	restSymbol          = "symbol"
-	restTokenContract   = "tokenContract"
-	restEthereumSender  = "ethereumSender"
+	restEthereumTxHash = "ethereumTxHash"
 )
 
-type createEthClaimReq struct {
-	BaseReq               rest.BaseReq `json:"base_req"`
-	EthereumChainID       int          `json:"ethereum_chain_id"`
-	BridgeContractAddress string       `json:"bridge_contract_address"`
-	Nonce                 int          `json:"nonce"`
-	Symbol                string       `json:"symbol"`
-	TokenContractAddress  string       `json:"token_contract_address"`
-	EthereumSender        string       `json:"ethereum_sender"`
-	CosmosReceiver        string       `json:"cosmos_receiver"`
-	Validator             string       `json:"validator"`
-	Amount                string       `json:"amount"`
-	ClaimType             string       `json:"claim_type"`
+type getTokenSwapReq struct {
+	BaseReq        rest.BaseReq `json:"base_req"`
+	EthereumTxHash string       `json:"ethereum_tx_hash"`
 }
 
-type burnOrLockEthReq struct {
-	BaseReq          rest.BaseReq `json:"base_req"`
-	EthereumChainID  string       `json:"ethereum_chain_id"`
-	TokenContract    string       `json:"token_contract_address"`
-	CosmosSender     string       `json:"cosmos_sender"`
-	EthereumReceiver string       `json:"ethereum_receiver"`
-	Amount           string       `json:"amount"`
+type createTokenSwapReq struct {
+	BaseReq        rest.BaseReq `json:"base_req"`
+	EthereumTxHash string       `json:"ethereum_tx_hash"`
+	EthereumSender string       `json:"ethereum_sender"`
+	Receiver       string       `json:"amount_uscrt"`
+	AmountENG      string       `json:"receiver"`
 }
 
 // RegisterRESTRoutes - Central function to define routes that get registered by the main application
 func RegisterRESTRoutes(cliCtx context.CLIContext, r *mux.Router, storeName string) {
-	r.HandleFunc(fmt.Sprintf("/%s/prophecies", storeName), createClaimHandler(cliCtx)).Methods("POST")
-	r.HandleFunc(fmt.Sprintf("/%s/prophecies/{%s}/{%s}/{%s}/{%s}/{%s}/{%s}", storeName, restEthereumChainID, restBridgeContract, restNonce, restSymbol, restTokenContract, restEthereumSender), getProphecyHandler(cliCtx, storeName)).Methods("GET")
-	r.HandleFunc(fmt.Sprintf("/%s/burn", storeName), burnOrLockHandler(cliCtx, "burn")).Methods("POST")
-	r.HandleFunc(fmt.Sprintf("/%s/lock", storeName), burnOrLockHandler(cliCtx, "lock")).Methods("POST")
+	r.HandleFunc(
+		fmt.Sprintf(
+			"/%s/get/{%s}",
+			storeName,
+			restEthereumTxHash,
+		),
+		getTokenSwapHandler(cliCtx, storeName),
+	).Methods("GET")
+	r.HandleFunc(
+		fmt.Sprintf("/%s/create", storeName),
+		createTokenSwapHandler(cliCtx),
+	).Methods("POST")
 }
 
-func createClaimHandler(cliCtx context.CLIContext) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var req createEthClaimReq
-
-		if !rest.ReadRESTReq(w, r, cliCtx.Codec, &req) {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, "failed to parse request")
-			return
-		}
-
-		baseReq := req.BaseReq.Sanitize()
-		if !baseReq.ValidateBasic(w) {
-			return
-		}
-
-		bridgeContractAddress := types.NewEthereumAddress(req.BridgeContractAddress)
-
-		tokenContractAddress := types.NewEthereumAddress(req.TokenContractAddress)
-
-		ethereumSender := types.NewEthereumAddress(req.EthereumSender)
-
-		cosmosReceiver, err := sdk.AccAddressFromBech32(req.CosmosReceiver)
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-			return
-		}
-		validator, err := sdk.ValAddressFromBech32(req.Validator)
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-			return
-		}
-
-		amount, err := sdk.ParseCoins(req.Amount)
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-			return
-		}
-
-		claimType, err := types.StringToClaimType(req.ClaimType)
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, types.ErrInvalidClaimType.Error())
-			return
-		}
-
-		// create the message
-		ethBridgeClaim := types.NewEthBridgeClaim(req.EthereumChainID, bridgeContractAddress, req.Nonce, req.Symbol, tokenContractAddress, ethereumSender, cosmosReceiver, validator, amount, claimType)
-		msg := types.NewMsgCreateEthBridgeClaim(ethBridgeClaim)
-		err = msg.ValidateBasic()
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-			return
-		}
-
-		utils.WriteGenerateStdTxResponse(w, cliCtx, baseReq, []sdk.Msg{msg})
-	}
-}
-
-func getProphecyHandler(cliCtx context.CLIContext, storeName string) http.HandlerFunc {
+func getTokenSwapHandler(cliCtx context.CLIContext, storeName string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 
-		ethereumChainID := vars[restEthereumChainID]
-		ethereumChainIDString, err := strconv.Atoi(ethereumChainID)
+		ethereumTxHash := vars[restEthereumTxHash]
+
+		bz, err := cliCtx.Codec.MarshalJSON(types.NewGetTokenSwapParams(ethereumTxHash))
 		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
-		bridgeContract := types.NewEthereumAddress(vars[restBridgeContract])
-
-		nonce := vars[restNonce]
-		nonceString, err := strconv.Atoi(nonce)
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		tokenContract := types.NewEthereumAddress(vars[restTokenContract])
-
-		symbol := vars[restSymbol]
-		if strings.TrimSpace(symbol) == "" {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		ethereumSender := types.NewEthereumAddress(vars[restEthereumSender])
-
-		bz, err := cliCtx.Codec.MarshalJSON(types.NewGetTokenSwapParams(ethereumChainIDString, bridgeContract, nonceString, symbol, tokenContract, ethereumSender))
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusNotFound, err.Error())
-			return
-		}
-
-		route := fmt.Sprintf("custom/%s/%s", storeName, types.QueryEthProphecy)
+		route := fmt.Sprintf("custom/%s/%s", storeName, types.GetTokenSwapRoute)
 		res, _, err := cliCtx.QueryWithData(route, bz)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusNotFound, err.Error())
@@ -160,9 +72,9 @@ func getProphecyHandler(cliCtx context.CLIContext, storeName string) http.Handle
 	}
 }
 
-func burnOrLockHandler(cliCtx context.CLIContext, lockOrBurn string) http.HandlerFunc {
+func createTokenSwapHandler(cliCtx context.CLIContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req burnOrLockEthReq
+		var req createTokenSwapReq
 
 		if !rest.ReadRESTReq(w, r, cliCtx.Codec, &req) {
 			rest.WriteErrorResponse(w, http.StatusBadRequest, "failed to parse request")
@@ -174,38 +86,31 @@ func burnOrLockHandler(cliCtx context.CLIContext, lockOrBurn string) http.Handle
 			return
 		}
 
-		ethereumChainID, err := strconv.Atoi(req.EthereumChainID)
+		ethereumTxHash := req.EthereumTxHash
+		ethereumSender := req.EthereumSender
+
+		amountENG, err := strconv.ParseFloat(req.AmountENG, 64)
 		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
+			rest.WriteErrorResponse(
+				w,
+				http.StatusBadRequest,
+				sdkerrors.Wrapf(err, "Error parsing ENG amount %v", req.AmountENG).Error(),
+			)
 		}
 
-		tokenContract := types.NewEthereumAddress(req.TokenContract)
-
-		cosmosSender, err := sdk.AccAddressFromBech32(req.CosmosSender)
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-			return
-		}
-
-		ethereumReceiver := types.NewEthereumAddress(req.EthereumReceiver)
-
-		amount, err := sdk.ParseCoins(req.Amount)
+		receiver, err := sdk.AccAddressFromBech32(req.Receiver)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
-		// create the message
-		var msg sdk.Msg
-		switch lockOrBurn {
-		case "lock":
-			msg = types.NewMsgLock(ethereumChainID, tokenContract, cosmosSender, ethereumReceiver, amount)
-		case "burn":
-			msg = types.NewMsgBurn(ethereumChainID, tokenContract, cosmosSender, ethereumReceiver, amount)
-		}
-		err = msg.ValidateBasic()
-		if err != nil {
+		msg := types.NewMsgTokenSwap(
+			ethereumTxHash,
+			ethereumSender,
+			receiver,
+			amountENG,
+		)
+		if err := msg.ValidateBasic(); err != nil {
 			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
