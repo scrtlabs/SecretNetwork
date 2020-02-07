@@ -14,32 +14,30 @@ import (
 // GetQueryCmd returns the cli query commands for this module
 func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 	// Group ethbridge queries under a subcommand
-	ethBridgeQueryCmd := &cobra.Command{
-		Use:   "ethbridge",
-		Short: "Querying commands for the ethbridge module",
+	tokenSwapQueryCmd := &cobra.Command{
+		Use:   "tokenswap",
+		Short: "Querying commands for the tokenswap module",
 	}
 
-	ethBridgeQueryCmd.AddCommand(flags.GetCommands(
-		cli.GetCmdGetEthBridgeProphecy(storeKey, cdc),
+	tokenSwapQueryCmd.AddCommand(flags.GetCommands(
+		cli.GetQueryCmd(storeKey, cdc),
 	)...)
 
-	return ethBridgeQueryCmd
+	return tokenSwapQueryCmd
 }
 
 // GetTxCmd returns the transaction commands for this module
 func GetTxCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
-	ethBridgeTxCmd := &cobra.Command{
-		Use:   "ethbridge",
-		Short: "EthBridge transactions subcommands",
+	tokenSwapTxCmd := &cobra.Command{
+		Use:   "tokenswap",
+		Short: "tokenswap transactions subcommands",
 	}
 
-	ethBridgeTxCmd.AddCommand(flags.PostCommands(
-		cli.GetCmdCreateEthBridgeClaim(cdc),
-		cli.GetCmdBurn(cdc),
-		cli.GetCmdLock(cdc),
+	tokenSwapTxCmd.AddCommand(flags.PostCommands(
+		cli.GetTxCmd(cdc),
 	)...)
 
-	return ethBridgeTxCmd
+	return tokenSwapTxCmd
 }
 
 // RegisterRESTRoutes - Central function to define routes that get registered by the main application
