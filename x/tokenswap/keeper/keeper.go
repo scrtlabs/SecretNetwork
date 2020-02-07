@@ -124,3 +124,9 @@ func (k Keeper) GetPastTokenSwapRequest(ctx sdk.Context, ethereumTxHash string) 
 
 	return tokenSwap, nil
 }
+
+// GetTokenSwapRecordsIterator get an iterator over tokenswap records
+func (k Keeper) GetTokenSwapRecordsIterator(ctx sdk.Context) sdk.Iterator {
+	store := ctx.KVStore(k.storeKey)
+	return sdk.KVStorePrefixIterator(store, nil)
+}
