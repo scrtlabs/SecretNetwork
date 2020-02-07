@@ -16,11 +16,11 @@ type MsgTokenSwap struct {
 	EthereumTxHash string
 	EthereumSender string
 	Receiver       sdk.AccAddress
-	AmountENG      sdk.Coin
+	AmountENG      float64
 }
 
 // NewMsgTokenSwap Returns a new MsgTokenSwap
-func NewMsgTokenSwap(ethereumTxHash string, ethereumSender string, receiver sdk.AccAddress, amountENG sdk.Coin) MsgTokenSwap {
+func NewMsgTokenSwap(ethereumTxHash string, ethereumSender string, receiver sdk.AccAddress, amountENG float64) MsgTokenSwap {
 	return MsgTokenSwap{
 		EthereumTxHash: ethereumTxHash,
 		EthereumSender: ethereumSender,
@@ -46,7 +46,7 @@ func (msg MsgTokenSwap) ValidateBasic() error {
 			fmt.Sprintf(
 				`Invalid EthereumTxHash %s accoding to regex '%s'`,
 				msg.EthereumTxHash,
-				ethereumTxHashRegex.String()
+				ethereumTxHashRegex.String(),
 			),
 		)
 	}
