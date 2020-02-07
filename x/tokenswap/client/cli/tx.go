@@ -2,7 +2,6 @@ package cli
 
 import (
 	"bufio"
-	"strconv"
 
 	"github.com/enigmampc/Enigmachain/x/tokenswap/types"
 	"github.com/spf13/cobra"
@@ -13,7 +12,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
 // GetTxCmd is the CLI command for creating a token swap request
@@ -29,11 +27,7 @@ func GetTxCmd(cdc *codec.Codec) *cobra.Command {
 
 			ethereumTxHash := args[0]
 			ethereumSender := args[1]
-
-			amountENG, err := strconv.ParseFloat(args[2], 64)
-			if err != nil {
-				return sdkerrors.Wrapf(err, "Error parsing ENG amount %v", args[2])
-			}
+			amountENG := args[2]
 
 			receiver, err := sdk.AccAddressFromBech32(args[3])
 			if err != nil {

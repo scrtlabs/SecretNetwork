@@ -3,6 +3,7 @@ package keeper
 import (
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 
 	"github.com/tendermint/tendermint/libs/log"
@@ -66,9 +67,14 @@ func (k Keeper) GetOnlyAllowedSigner(ctx sdk.Context) (sdk.AccAddress, error) {
 }
 
 // ProcessTokenSwapRequest processes a claim that has just completed successfully with consensus
-func (k Keeper) ProcessTokenSwapRequest(ctx sdk.Context, ethereumTxHash string, ethereumSender string, receiver sdk.AccAddress, amountENG float64) error {
+func (k Keeper) ProcessTokenSwapRequest(ctx sdk.Context, ethereumTxHash string, ethereumSender string, receiver sdk.AccAddress, amountENG string) error {
 	// Convert ENG to uSCRT
-	amountUscrt := int64(math.Ceil(amountENG * 1e6))
+	engFloat, err := strconv.ParseFloat(amountENG, 64)
+	if err != nil {
+		return err
+	}
+
+	amountUscrt := int64(math.Ceil(engFloat * 1e6))
 	amountUscrtCoins := sdk.NewCoins(sdk.NewCoin("uscrt", sdk.NewInt(amountUscrt)))
 
 	// Lowercase ethereumTxHash as this is our indexed field
@@ -76,7 +82,7 @@ func (k Keeper) ProcessTokenSwapRequest(ctx sdk.Context, ethereumTxHash string, 
 	tokenSwap := types.NewTokenSwap(ethereumTxHashLowercase, ethereumSender, receiver, amountUscrtCoins)
 
 	// Mint new uSCRTs
-	err := k.supplyKeeper.MintCoins(
+	err = k.supplyKeeper.MintCoins(
 		ctx,
 		types.ModuleName,
 		tokenSwap.AmountUSCRT,

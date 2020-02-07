@@ -3,11 +3,9 @@ package rest
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 
@@ -88,15 +86,7 @@ func createTokenSwapHandler(cliCtx context.CLIContext) http.HandlerFunc {
 
 		ethereumTxHash := req.EthereumTxHash
 		ethereumSender := req.EthereumSender
-
-		amountENG, err := strconv.ParseFloat(req.AmountENG, 64)
-		if err != nil {
-			rest.WriteErrorResponse(
-				w,
-				http.StatusBadRequest,
-				sdkerrors.Wrapf(err, "Error parsing ENG amount %v", req.AmountENG).Error(),
-			)
-		}
+		amountENG := req.AmountENG
 
 		receiver, err := sdk.AccAddressFromBech32(req.Receiver)
 		if err != nil {

@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -16,14 +17,14 @@ type MsgTokenSwap struct {
 	EthereumTxHash string
 	EthereumSender string
 	Receiver       sdk.AccAddress
-	AmountENG      float64
+	AmountENG      string
 }
 
 // Check in compile time that MsgTokenSwap is a sdk.Msg
 var _ sdk.Msg = MsgTokenSwap{}
 
 // NewMsgTokenSwap Returns a new MsgTokenSwap
-func NewMsgTokenSwap(ethereumTxHash string, ethereumSender string, receiver sdk.AccAddress, amountENG float64) MsgTokenSwap {
+func NewMsgTokenSwap(ethereumTxHash string, ethereumSender string, receiver sdk.AccAddress, amountENG string) MsgTokenSwap {
 	return MsgTokenSwap{
 		EthereumTxHash: ethereumTxHash,
 		EthereumSender: ethereumSender,
@@ -68,8 +69,12 @@ func (msg MsgTokenSwap) ValidateBasic() error {
 		return sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "Receiver cannot be empty")
 	}
 
-	if msg.AmountENG <= 0 {
-		return sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, fmt.Sprintf("Amont %f must be positive", msg.AmountENG))
+	engFloat, err := strconv.ParseFloat(msg.AmountENG, 64)
+	if err != nil {
+		return err
+	}
+	if engFloat <= 0 {
+		return sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, fmt.Sprintf("Amount %f must be positive", engFloat))
 	}
 	return nil
 }
