@@ -34,7 +34,7 @@ func (AppModuleBasic) Name() string {
 
 // RegisterCodec registers the tokenswap module's types for the given codec.
 func (AppModuleBasic) RegisterCodec(cdc *codec.Codec) {
-	cdc.RegisterConcrete(types.MsgTokenSwap{}, "tokenswap/request", nil)
+	cdc.RegisterConcrete(types.MsgTokenSwap{}, "tokenswap/TokenSwap", nil)
 }
 
 // DefaultGenesis returns default genesis state as raw bytes for the tokenswap
