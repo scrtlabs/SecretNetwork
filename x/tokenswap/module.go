@@ -34,7 +34,7 @@ func (AppModuleBasic) Name() string {
 
 // RegisterCodec registers the tokenswap module's types for the given codec.
 func (AppModuleBasic) RegisterCodec(cdc *codec.Codec) {
-	types.RegisterCodec(cdc)
+	cdc.RegisterConcrete(types.MsgTokenSwap{}, "tokenswap/request", nil)
 }
 
 // DefaultGenesis returns default genesis state as raw bytes for the tokenswap
@@ -113,7 +113,7 @@ func (AppModule) Route() string {
 
 // NewHandler returns an sdk.Handler for the tokenswap module.
 func (am AppModule) NewHandler() sdk.Handler {
-	return NewHandler(am.AccountKeeper, am.TokenSwapKeeper, am.Codec)
+	return NewHandler(am.TokenSwapKeeper)
 }
 
 // QuerierRoute returns the tokenswap module's querier route name.
