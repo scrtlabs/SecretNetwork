@@ -19,3 +19,4 @@ WantedBy=multi-user.target
 EOF
 
 echo "Before you launce your node make sure to edit the User=XXXXX in /etc/systemd/system/enigma-node.service"
+echo 'E.g. sudo perl -i -pe "s/XXXXX/$USER/" /etc/systemd/system/enigma-node.service'
