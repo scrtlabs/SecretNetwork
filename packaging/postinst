@@ -1,0 +1,27 @@
+#!/bin/bash
+# This `DEBIAN/postinst` script is run post-installation
+
+
+ENGD_USER=$(find /home -maxdepth 2 -type d -name .engd | head -1 | awk -F / '{print $3}')
+
+if [ -z "$var" ]
+then
+    echo "ERROR: Cannot find '.engd' directory under '/home/*/.engd'"
+    exit 1
+fi
+
+cat <<EOF > /etc/systemd/system/enigma-node.service
+[Unit]
+Description=Enigma node service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/engd start --pruning nothing
+User=$ENGD_USER
+Restart=always
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target
+EOF

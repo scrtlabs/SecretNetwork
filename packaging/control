@@ -1,0 +1,6 @@
+Package: enigmachain
+Priority: optional
+Architecture: amd64
+Homepage: https://github.com/enigmampc/Enigmachain
+Maintainer: https://github.com/enigmampc
+Description: The Enigma blockchain

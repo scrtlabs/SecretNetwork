@@ -30,13 +30,11 @@ deb: install
 		mkdir -p /tmp/enigmachain/deb/bin
 		cp "$(GOPATH)/bin/engcli" /tmp/enigmachain/deb/bin
 		cp "$(GOPATH)/bin/engd" /tmp/enigmachain/deb/bin
+		chmod +x /tmp/enigmachain/deb/bin/engd /tmp/enigmachain/deb/bin/engcli
 		mkdir -p /tmp/enigmachain/deb/DEBIAN
-		echo "Package: enigmachain" > /tmp/enigmachain/deb/DEBIAN/control
+		cp ./packaging/control /tmp/enigmachain/deb/DEBIAN/control
 		echo "Version: 0.0.1" >> /tmp/enigmachain/deb/DEBIAN/control
-		echo "Priority: optional" >> /tmp/enigmachain/deb/DEBIAN/control
-		echo "Architecture: amd64" >> /tmp/enigmachain/deb/DEBIAN/control
-		echo "Homepage: https://github.com/enigmampc/Enigmachain" >> /tmp/enigmachain/deb/DEBIAN/control
-		echo "Maintainer: https://github.com/enigmampc" >> /tmp/enigmachain/deb/DEBIAN/control
-		echo "Installed-Size: $(ls -l --block-size=KB /tmp/enigmachain/deb/bin/eng* | tr -d 'kB' | awk '{sum+=$5} END{print sum}')" >> /tmp/enigmachain/deb/DEBIAN/control
-		echo "Description: The Enigma blockchain" >> /tmp/enigmachain/deb/DEBIAN/control
+		echo "" >> /tmp/enigmachain/deb/DEBIAN/control
+		cp ./packaging/postinst /tmp/enigmachain/deb/DEBIAN/postinst
+		chmod 755 /tmp/enigmachain/deb/DEBIAN/postinst
 		dpkg-deb --build /tmp/enigmachain/deb/ .
