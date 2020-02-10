@@ -24,3 +24,19 @@ go.sum: go.mod
 
 test:
 	@go test -mod=readonly $(PACKAGES)
+
+deb: install
+		rm -rf /tmp/enigmachain
+		mkdir -p /tmp/enigmachain/deb/bin
+		cp "$(GOPATH)/bin/engcli" /tmp/enigmachain/deb/bin
+		cp "$(GOPATH)/bin/engd" /tmp/enigmachain/deb/bin
+		mkdir -p /tmp/enigmachain/deb/DEBIAN
+		echo "Package: enigmachain" > /tmp/enigmachain/deb/DEBIAN/control
+		echo "Version: 0.0.1" >> /tmp/enigmachain/deb/DEBIAN/control
+		echo "Priority: optional" >> /tmp/enigmachain/deb/DEBIAN/control
+		echo "Architecture: amd64" >> /tmp/enigmachain/deb/DEBIAN/control
+		echo "Homepage: https://github.com/enigmampc/Enigmachain" >> /tmp/enigmachain/deb/DEBIAN/control
+		echo "Maintainer: https://github.com/enigmampc" >> /tmp/enigmachain/deb/DEBIAN/control
+		echo "Installed-Size: $(ls -l --block-size=KB /tmp/enigmachain/deb/bin/eng* | tr -d 'kB' | awk '{sum+=$5} END{print sum}')" >> /tmp/enigmachain/deb/DEBIAN/control
+		echo "Description: The Enigma blockchain" >> /tmp/enigmachain/deb/DEBIAN/control
+		dpkg-deb --build /tmp/enigmachain/deb/ .

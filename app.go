@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/enigmampc/Enigmachain/x/tokenswap"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
 	tmos "github.com/tendermint/tendermint/libs/os"
@@ -61,6 +62,7 @@ var (
 		supply.AppModuleBasic{},
 		upgrade.AppModuleBasic{},
 		evidence.AppModuleBasic{},
+		tokenswap.AppModuleBasic{},
 	)
 
 	// module account permissions
@@ -71,6 +73,7 @@ var (
 		staking.BondedPoolName:    {supply.Burner, supply.Staking},
 		staking.NotBondedPoolName: {supply.Burner, supply.Staking},
 		gov.ModuleName:            {supply.Burner},
+		tokenswap.ModuleName:      {supply.Minter},
 	}
 )
 
@@ -103,18 +106,19 @@ type EnigmaChainApp struct {
 	tKeys map[string]*sdk.TransientStoreKey
 
 	// keepers
-	accountKeeper  auth.AccountKeeper
-	bankKeeper     bank.Keeper
-	supplyKeeper   supply.Keeper
-	stakingKeeper  staking.Keeper
-	slashingKeeper slashing.Keeper
-	mintKeeper     mint.Keeper
-	distrKeeper    distr.Keeper
-	govKeeper      gov.Keeper
-	crisisKeeper   crisis.Keeper
-	paramsKeeper   params.Keeper
-	upgradeKeeper  upgrade.Keeper
-	evidenceKeeper evidence.Keeper
+	accountKeeper   auth.AccountKeeper
+	bankKeeper      bank.Keeper
+	supplyKeeper    supply.Keeper
+	stakingKeeper   staking.Keeper
+	slashingKeeper  slashing.Keeper
+	mintKeeper      mint.Keeper
+	distrKeeper     distr.Keeper
+	govKeeper       gov.Keeper
+	crisisKeeper    crisis.Keeper
+	paramsKeeper    params.Keeper
+	upgradeKeeper   upgrade.Keeper
+	evidenceKeeper  evidence.Keeper
+	tokenSwapKeeper tokenswap.Keeper
 
 	// the module manager
 	mm *module.Manager
@@ -152,6 +156,8 @@ func NewEnigmaChainApp(
 		gov.StoreKey,
 		params.StoreKey,
 		upgrade.StoreKey,
+		evidence.StoreKey,
+		tokenswap.StoreKey,
 	)
 
 	tKeys := sdk.NewTransientStoreKeys(staking.TStoreKey, params.TStoreKey)
@@ -235,6 +241,8 @@ func NewEnigmaChainApp(
 	)
 	app.upgradeKeeper = upgrade.NewKeeper(skipUpgradeHeights, keys[upgrade.StoreKey], app.cdc)
 
+	app.tokenSwapKeeper = tokenswap.NewKeeper(app.cdc, keys[tokenswap.StoreKey], app.supplyKeeper)
+
 	// create evidence keeper with evidence router
 	evidenceKeeper := evidence.NewKeeper(
 		app.cdc, keys[evidence.StoreKey], evidenceSubspace, &stakingKeeper, app.slashingKeeper,
@@ -280,6 +288,7 @@ func NewEnigmaChainApp(
 		staking.NewAppModule(app.stakingKeeper, app.accountKeeper, app.supplyKeeper),
 		upgrade.NewAppModule(app.upgradeKeeper),
 		evidence.NewAppModule(app.evidenceKeeper),
+		tokenswap.NewAppModule(app.supplyKeeper, app.accountKeeper, app.tokenSwapKeeper, app.cdc),
 	)
 	// During begin block slashing happens after distr.BeginBlocker so that
 	// there is nothing left over in the validator fee pool, so as to keep the
@@ -303,6 +312,7 @@ func NewEnigmaChainApp(
 		crisis.ModuleName,
 		genutil.ModuleName,
 		evidence.ModuleName,
+		tokenswap.ModuleName,
 	)
 
 	// register all module routes and module queriers
