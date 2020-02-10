@@ -1,6 +1,7 @@
 #!/bin/bash
 # This `DEBIAN/postinst` script is run post-installation
 
+set -e
 
 cat <<EOF > /etc/systemd/system/enigma-node.service
 [Unit]

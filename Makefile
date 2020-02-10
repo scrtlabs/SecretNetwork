@@ -37,5 +37,7 @@ deb: install
 		echo "" >> /tmp/enigmachain/deb/DEBIAN/control
 		cp ./packaging/postinst /tmp/enigmachain/deb/DEBIAN/postinst
 		chmod 755 /tmp/enigmachain/deb/DEBIAN/postinst
+		cp ./packaging/postrm /tmp/enigmachain/deb/DEBIAN/postrm
+		chmod 755 /tmp/enigmachain/deb/DEBIAN/postrm
 		dpkg-deb --build /tmp/enigmachain/deb/ .
 		rm -rf /tmp/enigmachain
