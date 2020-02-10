@@ -42,13 +42,13 @@ func handleMsgTokenSwap(
 		)
 	}
 
-	keeper.ProcessTokenSwapRequest(
+	err = keeper.ProcessTokenSwapRequest(
 		ctx,
 		msg.EthereumTxHash,
 		msg.EthereumSender,
 		msg.Receiver,
 		msg.AmountENG,
 	)
-	return &sdk.Result{}, nil
+	return &sdk.Result{}, err
 
 }
