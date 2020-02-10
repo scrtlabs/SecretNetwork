@@ -9,7 +9,7 @@ go mod tidy
 make install # installs engd and engcli
 ```
 
-# Quick Start
+# Developers Quick Start
 
 ```bash
 engcli config chain-id enigma-testnet-0 # now we won't need to type --chain-id enigma-testnet-0 every time
@@ -41,7 +41,7 @@ engd validate-genesis # make sure genesis file is correct
 engd start --pruning nothing # starts a node
 ```
 
-# Delegation & rewards
+# Delegation & Rewards
 
 ## `b` is a delegator of `a`
 
