@@ -96,7 +96,7 @@ engcli tx distribution withdraw-rewards $(engcli keys show --bech=val -a a) --fr
 First, init your environment:
 
 ```bash
-endg init [moniker] --chain-id enigma-testnet-0
+engd init [moniker] --chain-id enigma-testnet-0
 ```
 
 Now you need a valid running node to send you their `genesis.json` file (usually at `~/.engd/config/genesis.json`).  
