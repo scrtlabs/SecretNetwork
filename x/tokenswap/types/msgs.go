@@ -81,7 +81,9 @@ func (msg MsgTokenSwap) ValidateBasic() error {
 
 // GetSigners returns the addresses of those required to sign the message
 func (msg MsgTokenSwap) GetSigners() []sdk.AccAddress {
-	addrString := "enigma1m9he0epavsxs6f6kd829yqedldm3cdwcmwtw9y" // TODO get from genesis.json
+	// TODO This is a stub
+	// TODO get from genesis.json
+	addrString := "enigma1m9he0epavsxs6f6kd829yqedldm3cdwcmwtw9y"
 	multisigAddress, err := sdk.AccAddressFromBech32(addrString)
 	if err != nil {
 		panic("cannot parse multisig address " + addrString)
