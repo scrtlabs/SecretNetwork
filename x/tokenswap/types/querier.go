@@ -1,6 +1,6 @@
 package types
 
-// query endpoints supported by the oracle Querier
+// query endpoints supported by the Querier
 const (
 	GetTokenSwapRoute = "get"
 )

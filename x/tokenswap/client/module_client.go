@@ -13,7 +13,7 @@ import (
 
 // GetQueryCmd returns the cli query commands for this module
 func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
-	// Group ethbridge queries under a subcommand
+	// Group tokenswap queries under a subcommand
 	tokenSwapQueryCmd := &cobra.Command{
 		Use:   "tokenswap",
 		Short: "Querying commands for the tokenswap module",
