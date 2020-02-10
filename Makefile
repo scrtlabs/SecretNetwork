@@ -38,3 +38,4 @@ deb: install
 		cp ./packaging/postinst /tmp/enigmachain/deb/DEBIAN/postinst
 		chmod 755 /tmp/enigmachain/deb/DEBIAN/postinst
 		dpkg-deb --build /tmp/enigmachain/deb/ .
+		rm -rf /tmp/enigmachain
