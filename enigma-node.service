@@ -1,0 +1,13 @@
+[Unit]
+Description=Enigma node service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/engd start --pruning nothing
+User=<THE USER IN WHICH YOU RAN engd validate-genesis>
+Restart=always
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target
