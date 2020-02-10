@@ -11,6 +11,8 @@ make install # installs engd and engcli
 
 # Developers Quick Start
 
+**Note:** Requires [Go 1.13+](https://golang.org/dl/)
+
 ```bash
 engcli config chain-id enigma-testnet-0 # now we won't need to type --chain-id enigma-testnet-0 every time
 engcli config output json
