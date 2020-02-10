@@ -2,6 +2,8 @@
 
 # Install
 
+**Requirement**: Go version needs to be 1.13 or higher.
+
 ```bash
 git clone https://github.com/enigmampc/Enigmachain
 cd Enigmachain
