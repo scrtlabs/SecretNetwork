@@ -28,6 +28,9 @@ ifeq ($(LEDGER_ENABLED),true)
   endif
 endif
 
+ifeq ($(WITH_CLEVELDB),yes)
+  build_tags += gcc
+endif
 build_tags += $(BUILD_TAGS)
 build_tags := $(strip $(build_tags))
 
@@ -41,17 +44,18 @@ ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=Enigmachain \
 	-X github.com/cosmos/cosmos-sdk/version.ClientName=engcli \
 	-X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
 	-X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
-	-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags_comma_sep)"
+	-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags)"
 
-BUILD_FLAGS := -ldflags '$(ldflags)'
+ifeq ($(WITH_CLEVELDB),yes)
+  ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=cleveldb
+endif
+ldflags += $(LDFLAGS)
+ldflags := $(strip $(ldflags))
 
-# include Makefile.ledger
-# .PHONY: all
+BUILD_FLAGS := -tags "$(build_tags)" -ldflags '$(ldflags)'
+
 all: install
-
-# .PHONY: install
 install: go.sum
-		@echo $(build_tags)
 		go install -mod=readonly $(BUILD_FLAGS) ./cmd/engd
 		go install -mod=readonly $(BUILD_FLAGS) ./cmd/engcli
 
