@@ -16,12 +16,12 @@ make install # installs engd and engcli
 **Note:** Requires [Go 1.13+](https://golang.org/dl/)
 
 ```bash
-engcli config chain-id enigma-testnet-0 # now we won't need to type --chain-id enigma-testnet-0 every time
+engcli config chain-id enigma-testnet # now we won't need to type --chain-id enigma-testnet every time
 engcli config output json
 engcli config indent true
 engcli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
 
-engd init banana --chain-id enigma-testnet-0 # banana==moniker==user-agent of this node
+engd init banana --chain-id enigma-testnet # banana==moniker==user-agent of this node
 perl -i -pe 's/"stake"/"uscrt"/g' ~/.engd/config/genesis.json # change the default staking denom from stake to uscrt
 
 engcli keys add a
@@ -96,7 +96,7 @@ engcli tx distribution withdraw-rewards $(engcli keys show --bech=val -a a) --fr
 First, init your environment:
 
 ```bash
-engd init [moniker] --chain-id enigma-testnet-0
+engd init [moniker] --chain-id enigma-testnet
 ```
 
 Now you need a valid running node to send you their `genesis.json` file (usually at `~/.engd/config/genesis.json`).  
