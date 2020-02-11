@@ -2,18 +2,16 @@
 
 # Install
 
-**Requirement**: Go version needs to be 1.13 or higher.
+**Requirement**: Go version needs to be [1.13 or higher](https://golang.org/dl/).
 
 ```bash
-git clone https://github.com/enigmampc/Enigmachain
-cd Enigmachain
+git clone https://github.com/enigmampc/enigmachain
+cd enigmachain
 go mod tidy
 make install # installs engd and engcli
 ```
 
 # Developers Quick Start
-
-**Note:** Requires [Go 1.13+](https://golang.org/dl/)
 
 ```bash
 engcli config chain-id enigma-testnet # now we won't need to type --chain-id enigma-testnet every time
