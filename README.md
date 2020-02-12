@@ -1,4 +1,4 @@
-# Enigmachain
+# Enigma Chain
 
 # Install
 
