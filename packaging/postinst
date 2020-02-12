@@ -19,8 +19,8 @@ StartLimitInterval=0
 WantedBy=multi-user.target
 EOF
 
-sudo perl -i -pe 's/#SystemMaxUse=.*/SystemMaxUse=50M/' /etc/systemd/journald.conf || true
-sudo systemctl reload systemd-journald || true
+sudo perl -i -pe 's/#SystemMaxUse=.*/SystemMaxUse=50M/' /etc/systemd/journald.conf
+sudo systemctl restart systemd-journald
 
 echo "Before you launce your node make sure to edit the User=XXXXX in /etc/systemd/system/enigma-node.service"
 echo 'E.g. sudo perl -i -pe "s/XXXXX/$USER/" /etc/systemd/system/enigma-node.service'
