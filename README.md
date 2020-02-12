@@ -142,3 +142,6 @@ To check if you got added to the validator-set by running:
 ```bash
 enigmacli q tendermint-validator-set
 ```
+# Ledger support
+
+For instructions on using Ledger Nano S, [see here](https://github.com/enigmampc/enigmachain/blob/master/Ledger.md).
