@@ -69,8 +69,8 @@ test:
 deb: install
 		rm -rf /tmp/enigmachain
 		mkdir -p /tmp/enigmachain/deb/bin
-		cp "$(GOPATH)/bin/engcli" /tmp/enigmachain/deb/bin
-		cp "$(GOPATH)/bin/engd" /tmp/enigmachain/deb/bin
+		mv "$(GOPATH)/bin/engcli" /tmp/enigmachain/deb/bin
+		mv "$(GOPATH)/bin/engd" /tmp/enigmachain/deb/bin
 		chmod +x /tmp/enigmachain/deb/bin/engd /tmp/enigmachain/deb/bin/engcli
 		mkdir -p /tmp/enigmachain/deb/DEBIAN
 		cp ./packaging/control /tmp/enigmachain/deb/DEBIAN/control
