@@ -8,39 +8,39 @@
 git clone https://github.com/enigmampc/enigmachain
 cd enigmachain
 go mod tidy
-make install # installs engd and engcli
+make install # installs enigmad and enigmacli
 ```
 
 # Developers Quick Start
 
 ```bash
-engcli config chain-id enigma-testnet # now we won't need to type --chain-id enigma-testnet every time
-engcli config output json
-engcli config indent true
-engcli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
+enigmacli config chain-id enigma-testnet # now we won't need to type --chain-id enigma-testnet every time
+enigmacli config output json
+enigmacli config indent true
+enigmacli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
 
-engd init banana --chain-id enigma-testnet # banana==moniker==user-agent of this node
-perl -i -pe 's/"stake"/"uscrt"/g' ~/.engd/config/genesis.json # change the default staking denom from stake to uscrt
+enigmad init banana --chain-id enigma-testnet # banana==moniker==user-agent of this node
+perl -i -pe 's/"stake"/"uscrt"/g' ~/.enigmad/config/genesis.json # change the default staking denom from stake to uscrt
 
-engcli keys add a
-engcli keys add b
+enigmacli keys add a
+enigmacli keys add b
 
-engd add-genesis-account $(engcli keys show -a a) 1000000000000uscrt # 1 SCRT == 10^6 uSCRT
-engd add-genesis-account $(engcli keys show -a b) 2000000000000uscrt # 1 SCRT == 10^6 uSCRT
+enigmad add-genesis-account $(enigmacli keys show -a a) 1000000000000uscrt # 1 SCRT == 10^6 uSCRT
+enigmad add-genesis-account $(enigmacli keys show -a b) 2000000000000uscrt # 1 SCRT == 10^6 uSCRT
 
-engd validate-genesis # make sure genesis file is correct
+enigmad validate-genesis # make sure genesis file is correct
 
-# `engd export` to send genesis.json to validators
+# `enigmad export` to send genesis.json to validators
 
-engd gentx --name a --amount 1000000uscrt # generate a genesis transaction - this makes a a validator on genesis which stakes 1000000uscrt (1 SCRT)
+enigmad gentx --name a --amount 1000000uscrt # generate a genesis transaction - this makes a a validator on genesis which stakes 1000000uscrt (1 SCRT)
 
-engd collect-gentxs # input the genTx into the genesis file, so that the chain is aware of the validators
+enigmad collect-gentxs # input the genTx into the genesis file, so that the chain is aware of the validators
 
-engd validate-genesis # make sure genesis file is correct
+enigmad validate-genesis # make sure genesis file is correct
 
-# `engd export` to send genesis.json to validators
+# `enigmad export` to send genesis.json to validators
 
-engd start --pruning nothing # starts a node
+enigmad start --pruning nothing # starts a node
 ```
 
 # Delegation & Rewards
@@ -51,19 +51,19 @@ Now `a` is a validator with 1 SCRT (1000000uscrt) staked.
 This is how `b` can delegate 0.00001 SCRT to `a`:
 
 ```bash
-engcli tx staking delegate $(engcli keys show a --bech=val -a) 10uscrt --from b
+enigmacli tx staking delegate $(enigmacli keys show a --bech=val -a) 10uscrt --from b
 ```
 
 This is how to see `b`'s rewards from delegating to `a`:
 
 ```bash
-engcli q distribution rewards $(engcli keys show -a b)
+enigmacli q distribution rewards $(enigmacli keys show -a b)
 ```
 
 This is how `b` can withdraw its rewards:
 
 ```bash
-engcli tx distribution withdraw-rewards $(engcli keys show --bech=val -a a) --from b
+enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a a) --from b
 ```
 
 ## `a` is a validator and has `b` as a delegator
@@ -72,19 +72,19 @@ engcli tx distribution withdraw-rewards $(engcli keys show --bech=val -a a) --fr
 This is how to see `a`'s rewards from being a validator:
 
 ```bash
-engcli q distribution rewards $(engcli keys show -a a)
+enigmacli q distribution rewards $(enigmacli keys show -a a)
 ```
 
 This is how to see `a`'s commissions from being a validator:
 
 ```bash
-engcli q distribution commission $(engcli keys show -a --bech=val a)
+enigmacli q distribution commission $(enigmacli keys show -a --bech=val a)
 ```
 
 This is how `a` can withdraw its rewards + its commissions from being a validator:
 
 ```bash
-engcli tx distribution withdraw-rewards $(engcli keys show --bech=val -a a) --from a --commission
+enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a a) --from a --commission
 ```
 
 (To withdraw only rewards omit the `--commission`)
@@ -94,38 +94,38 @@ engcli tx distribution withdraw-rewards $(engcli keys show --bech=val -a a) --fr
 First, init your environment:
 
 ```bash
-engd init [moniker] --chain-id enigma-testnet
+enigmad init [moniker] --chain-id enigma-testnet
 ```
 
-Now you need a valid running node to send you their `genesis.json` file (usually at `~/.engd/config/genesis.json`).  
-Once you have the valid `genesis.json`, put it in `~/.engd/config/genesis.json` (overwrite the existing file if needed).  
-Next, edit your `~/.engd/config/config.toml`, set the `persistent_peers`:
+Now you need a valid running node to send you their `genesis.json` file (usually at `~/.enigmad/config/genesis.json`).  
+Once you have the valid `genesis.json`, put it in `~/.enigmad/config/genesis.json` (overwrite the existing file if needed).  
+Next, edit your `~/.enigmad/config/config.toml`, set the `persistent_peers`:
 
 ```bash
-persistent_peers = "[id]@[peer_node_ip]:26656" # `id` can be aquired from your first peer by running `engcli status`
+persistent_peers = "[id]@[peer_node_ip]:26656" # `id` can be aquired from your first peer by running `enigmacli status`
 ```
 
 That't it! Once you're done, just run:
 
 ```bash
-engd start --pruning nothing
+enigmad start --pruning nothing
 ```
 
 You will see you local bloackchain replica starting to catch up with your peer's one.
 
 Congrats, you are now up and running!
 
-**Note:** you can also run `engd start --pruning nothing --p2p.persistent_peers [id]@[peer_node_ip]:26656` instead of editing the conf file.  
-**Note**: If anything goes wrong, delete the `~/.engd` and `~/.engcli` dirs and start again.
+**Note:** you can also run `enigmad start --pruning nothing --p2p.persistent_peers [id]@[peer_node_ip]:26656` instead of editing the conf file.  
+**Note**: If anything goes wrong, delete the `~/.enigmad` and `~/.enigmacli` dirs and start again.
 
 # Join as a new Validator
 
 After you have a private node up and running, run the following command:
 
 ```bash
-engcli tx staking create-validator \
+enigmacli tx staking create-validator \
   --amount=<num of coins> \ # This is the amount of coins you put at stake. i.e. 100000uscrt
-  --pubkey=$(engd tendermint show-validator) \
+  --pubkey=$(enigmad tendermint show-validator) \
   --moniker="<name-of-your-moniker>" \
   --chain-id=<chain-id> \
   --commission-rate="0.10" \
@@ -140,5 +140,5 @@ engcli tx staking create-validator \
 To check if you got added to the validator-set by running:
 
 ```bash
-engcli q tendermint-validator-set
+enigmacli q tendermint-validator-set
 ```

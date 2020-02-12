@@ -40,7 +40,7 @@ func main() {
 	config.Seal()
 
 	rootCmd := &cobra.Command{
-		Use:   "engcli",
+		Use:   "enigmacli",
 		Short: "Enigmachain Client",
 	}
 

@@ -4,8 +4,8 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/engd start --pruning nothing
-User=<THE USER IN WHICH YOU RAN engd validate-genesis>
+ExecStart=/usr/bin/enigmad start --pruning nothing
+User=<THE USER IN WHICH YOU RAN enigmad validate-genesis>
 Restart=always
 StartLimitInterval=0
 

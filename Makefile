@@ -40,8 +40,8 @@ comma := ,
 build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 
 ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=Enigmachain \
-	-X github.com/cosmos/cosmos-sdk/version.ServerName=engd \
-	-X github.com/cosmos/cosmos-sdk/version.ClientName=engcli \
+	-X github.com/cosmos/cosmos-sdk/version.ServerName=enigmad \
+	-X github.com/cosmos/cosmos-sdk/version.ClientName=enigmacli \
 	-X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
 	-X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
 	-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags)"
@@ -56,8 +56,8 @@ BUILD_FLAGS := -tags "$(build_tags)" -ldflags '$(ldflags)'
 
 all: install
 install: go.sum
-		go install -mod=readonly $(BUILD_FLAGS) ./cmd/engd
-		go install -mod=readonly $(BUILD_FLAGS) ./cmd/engcli
+		go install -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
+		go install -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
 
 go.sum: go.mod
 		@echo "--> Ensure dependencies have not been modified"
@@ -69,9 +69,9 @@ test:
 deb: install
 		rm -rf /tmp/enigmachain
 		mkdir -p /tmp/enigmachain/deb/bin
-		mv "$(GOPATH)/bin/engcli" /tmp/enigmachain/deb/bin
-		mv "$(GOPATH)/bin/engd" /tmp/enigmachain/deb/bin
-		chmod +x /tmp/enigmachain/deb/bin/engd /tmp/enigmachain/deb/bin/engcli
+		mv "$(GOPATH)/bin/enigmacli" /tmp/enigmachain/deb/bin
+		mv "$(GOPATH)/bin/enigmad" /tmp/enigmachain/deb/bin
+		chmod +x /tmp/enigmachain/deb/bin/enigmad /tmp/enigmachain/deb/bin/enigmacli
 		mkdir -p /tmp/enigmachain/deb/DEBIAN
 		cp ./packaging/control /tmp/enigmachain/deb/DEBIAN/control
 		echo "Version: 0.0.1" >> /tmp/enigmachain/deb/DEBIAN/control
