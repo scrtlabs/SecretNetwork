@@ -197,6 +197,8 @@ If the above is too verbose, just run: `enigmacli q staking validators | grep mo
 
 ## Staking more tokens
 
+(remember 1 SCRT = 1,000,000 uSCRT)
+
 In order to stake more tokens beyond those in the initial transaction, run:
 
 ```bash

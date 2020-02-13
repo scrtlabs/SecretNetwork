@@ -172,6 +172,8 @@ If the above is too verbose, just run: `engcli q staking validators | grep monik
 
 ## Staking more tokens
 
+(remember 1 SCRT = 1,000,000 uSCRT)
+
 In order to stake more tokens beyond those in the initial transaction, run:
 
 ```
