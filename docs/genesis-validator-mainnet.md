@@ -39,7 +39,9 @@ sudo rm -rf "$(which engd)"
 sudo dpkg -i enigmachain_0.0.1_amd64.deb
 ```
 
-### 3. Update the configuration file that sets up the system service with your current user as the user this service will run as. _Note: Even if we are running this command and the previous one with sudo, this package does not need to be run as root_.
+### 3. Update the configuration file that sets up the system service with your current user as the user this service will run as.
+
+_Note: Even if we are running this command and the previous one with sudo, this package does not need to be run as root_.
 
 ```bash
 sudo perl -i -pe "s/XXXXX/$USER/" /etc/systemd/system/enigma-node.service

@@ -10,7 +10,7 @@ This document details how to join the EnigmaChain `testnet`
 
 ## Installation
 
-### 1. Download the [EnigmaChain package installer](https://enigmaco-website.s3.amazonaws.com/enigmachain_0.0.1_amd64.deb) (Debian/Ubuntu). This installer is generated from a private repo that will be made public later this week:
+### 1. Download the [EnigmaChain package installer](https://enigmaco-website.s3.amazonaws.com/enigmachain_0.0.1_amd64.deb) (Debian/Ubuntu)
 
 ```
 wget -O enigmachain_0.0.1_amd64.deb https://enigmaco-website.s3.amazonaws.com/enigmachain_0.0.1_amd64.deb
@@ -36,7 +36,9 @@ sudo rm -rf "$(which engd)"
 sudo dpkg -i enigmachain_0.0.1_amd64.deb
 ```
 
-### 4. Update the configuration file that sets up the system service with your current user as the user this service will run as. _Note: Even if we are running this command and the previous one with sudo, this package does not need to be run as root_.
+### 4. Update the configuration file that sets up the system service with your current user as the user this service will run as.
+
+_Note: Even if we are running this command and the previous one with sudo, this package does not need to be run as root_.
 
 ```
 sudo perl -i -pe "s/XXXXX/$USER/" /etc/systemd/system/enigma-node.service
@@ -66,7 +68,9 @@ echo "6724d80b5eaa6b2d8b181ed8021d5c68e5fea96139ce51d3a073e7ef0f13e37f $HOME/.en
 engd validate-genesis
 ```
 
-### 9. Add `bootstrap.enigmachain.enigma.co` as a persistent peer in your configuration file. If you are curious, you can query the RPC endpoint on that node http://bootstrap.enigmachain.enigma.co:26657/ (please note that the RPC port `26657` is different from the P2P port `26656` below)
+### 9. Add `bootstrap.enigmachain.enigma.co` as a persistent peer in your configuration file.
+
+If you are curious, you can query the RPC endpoint on that node http://bootstrap.enigmachain.enigma.co:26657/ (please note that the RPC port `26657` is different from the P2P port `26656` below)
 
 ```
 perl -i -pe 's/persistent_peers = ""/persistent_peers = "6795f5e88edab2e225389eb9b6d6a2f715ddbcd2\@bootstrap.enigmachain.enigma.co:26656"/' ~/.engd/config/config.toml
@@ -139,7 +143,9 @@ If you get the following message, it means that you have not tokens yet:
 ERROR: unknown address: account enigmaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx does not exist
 ```
 
-### 18. Join the network as a new validator: replace `<MONIKER>` with your own from step 4 above, and adjust the amount you want to stake (remember 1 SCRT = 1,000,000 uSCRT, and so the command below stakes 100k SCRT).
+### 18. Join the network as a new validator: replace `<MONIKER>` with your own from step 4 above, and adjust the amount you want to stake
+
+(remember 1 SCRT = 1,000,000 uSCRT, and so the command below stakes 100k SCRT).
 
 ```
 engcli tx staking create-validator \

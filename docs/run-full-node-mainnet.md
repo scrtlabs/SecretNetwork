@@ -23,7 +23,9 @@ echo "13b06329543dcbe6ca896406887afb79f7f8b975e5d5585db1943e4520b77521 enigmacha
 sudo dpkg -i enigmachain_0.0.1_amd64.deb
 ```
 
-### 3. Update the configuration file that sets up the system service with your current user as the user this service will run as. _Note: Even if we are running this command and the previous one with sudo, this package does not need to be run as root_.
+### 3. Update the configuration file that sets up the system service with your current user as the user this service will run as.
+
+_Note: Even if we are running this command and the previous one with sudo, this package does not need to be run as root_.
 
 ```bash
 sudo perl -i -pe "s/XXXXX/$USER/" /etc/systemd/system/enigma-node.service
@@ -53,7 +55,9 @@ echo "86cd9864f5b8e7f540c5edd3954372df94bd23de62e06d5c33a84bd5f3d29114 $HOME/.en
 enigmad validate-genesis
 ```
 
-### 8. Add `bootstrap.enigmachain.enigma.co` as a persistent peer in your configuration file. If you are curious, you can query the RPC endpoint on that node http://bootstrap.mainnet.enigma.co:26657/ (please note that the RPC port `26657` is different from the P2P port `26656` below)
+### 8. Add `bootstrap.enigmachain.enigma.co` as a persistent peer in your configuration file.
+
+If you are curious, you can query the RPC endpoint on that node http://bootstrap.mainnet.enigma.co:26657/ (please note that the RPC port `26657` is different from the P2P port `26656` below)
 
 ```
 perl -i -pe 's/persistent_peers = ""/persistent_peers = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.enigmad/config/config.toml
