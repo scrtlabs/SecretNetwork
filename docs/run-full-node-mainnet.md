@@ -67,19 +67,19 @@ perl -i -pe 's/persistent_peers = ""/persistent_peers = "201cff36d13c6352acfc4a3
 
 In `~/.enigmad/config/config.toml` set `laddr = "tcp://<your-PUBLIC-ip>:26657"`.
 
-### 9. Enable `enigma-node` as a system service:
+### 10. Enable `enigma-node` as a system service:
 
 ```
 sudo systemctl enable enigma-node
 ```
 
-### 10. Start `enigma-node` as a system service:
+### 11. Start `enigma-node` as a system service:
 
 ```
 sudo systemctl start enigma-node
 ```
 
-### 11. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
+### 12. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
 
 ```
 journalctl -f -u enigma-node
@@ -101,7 +101,7 @@ Feb 10 21:18:59 ip-172-31-41-58 enigmad[8814]: I[2020-02-10|21:18:59.695] Commit
 
 You are now a full node. :tada:
 
-### 12. Add the following configuration settings (some of these avoid having to type some flags all the time):
+### 13. Add the following configuration settings (some of these avoid having to type some flags all the time):
 
 ```
 enigmacli config chain-id enigma-1
@@ -110,7 +110,7 @@ enigmacli config indent true
 enigmacli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
 ```
 
-### 13. Get you node ID with:
+### 14. Get you node ID with:
 
 ```bash
 enigmacli status | awk -F \" '/"id"/{print $4}'
