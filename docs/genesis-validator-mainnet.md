@@ -10,7 +10,7 @@ This document details how to join the EnigmaChain `mainnet` as a genesis validat
 
 ## Installation
 
-0. Download the [EnigmaChain package installer](https://github.com/enigmampc/enigmachain/releases/download/v0.0.1/enigmachain_0.0.1_amd64.deb) (Debian/Ubuntu). This installer is generated from a private repo that will be made public later this week:
+0. Download the [EnigmaChain package installer](https://github.com/enigmampc/enigmachain/releases/download/v0.0.1/enigmachain_0.0.1_amd64.deb) (Debian/Ubuntu):
 
 **Note**: The new binaries are now called `enigmacli` & `enigmad`.
 
