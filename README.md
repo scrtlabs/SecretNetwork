@@ -1,8 +1,8 @@
 # Enigma Chain
 
-* [How to join EnigmaChain as a mainnet genesis validator](docs/validator-mainnet.md)
-* [How to join EnigmaChain as a testnet validator](docs/validator-testnet.md)
-* [Ledger support in EnigmaChain](docs/Ledger.md)
+- [How to join EnigmaChain as a mainnet genesis validator](docs/genesis-validator-mainnet.md)
+- [How to join EnigmaChain as a testnet validator](docs/validator-testnet.md)
+- [Ledger support in EnigmaChain](docs/Ledger.md)
 
 # Install
 
