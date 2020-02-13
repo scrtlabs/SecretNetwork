@@ -153,7 +153,7 @@ sudo systemctl start enigma-node
 
 ```
 journalctl -f -u enigma-node
-<TODO>
+Feb 13 13:31:15 ip-172-31-44-28 enigmad[18653]: I[2020-02-13|13:31:15.208] starting ABCI with Tendermint
 ^C
 ```
 
