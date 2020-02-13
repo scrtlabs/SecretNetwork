@@ -102,7 +102,7 @@ perl -i -pe 's/moniker = ".*?"/moniker = "<MONIKER>"/' ~/.enigmad/config/config.
 13. Create a genesis validator transaction file:
 
 ```bash
-enigmad gentx --name <key-alias> --amount <amount-to-stake>uscrt --ip <your-public-ip>
+enigmad gentx --name <key-alias> --amount <amount-to-stake>uscrt --ip <your-PUBLIC-ip-or-dns>
 ```
 
 **Note**: You should stake at least 100000000 uscrt (100 SCRT). After the mainnet launch you can [transfer the rest of your funds to a ledger](https://github.com/enigmampc/enigmachain/blob/master/Ledger.md) and [delegate more funds](https://gist.github.com/assafmo/0d3c789aa51de9217b3937b3e5671686#staking-more-tokens) to your validator from there.
