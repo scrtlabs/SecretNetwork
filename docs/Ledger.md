@@ -3,7 +3,7 @@
 ## Prerequisites
 * This guide assumes you have a verified, genuine Ledger Nano S device.
 * If you don't, or you using your Ledger device for the first time, you should check Ledger's [Getting Started](https://support.ledger.com/hc/en-us/sections/360001415213-Getting-started) guide.
-* We also advise you to check your Ledger's genuineness and upgrade your firmware to the newest one available.
+* We also advise you to check your Ledger's genuineness and upgrade your firmware to the newest one available (`v1.6.0+`).
 * Have a machine with [Ledger Live](https://www.ledger.com/ledger-live) installed.
 * Have the latest version of our latest binaries installed. You can get it [here](https://github.com/enigmampc/enigmachain/releases).
 
@@ -18,6 +18,8 @@
 * Now go to Manager and search "Cosmos":
 ![](https://raw.githubusercontent.com/cosmos/ledger-cosmos/master/docs/img/cosmos_app3.png)
 
+* Our binaries require Cosmos App Version `1.5.1` (if you only see a lower version available, like `1.0.0`, then you need to upgrade your Ledger firmware).
+
 * Hit "Install" and wait for process to complete.
 
 *Ref: https://github.com/cosmos/ledger-cosmos*
@@ -30,10 +32,24 @@ These are some basic examples for commands you can use with your Ledger. You may
 ![](https://miro.medium.com/max/1536/1*Xfi5_ScAiFn6rr9YBjgFFw.jpeg)
 *Ref: https://medium.com/cryptium-cosmos/how-to-store-your-cosmos-atoms-on-your-ledger-and-delegate-with-the-command-line-929eb29705f*
 
+### Prepare your linux host to work with ledger
+Some users may not have their ledger recognized by their linux host. To fix this issue impliment the fix for connection issues on linux from the [ledger support page](https://support.ledger.com/hc/en-us/articles/115005165269-Connection-issues-with-Windows-or-Linux)
+
+```bash
+wget -q -O - https://raw.githubusercontent.com/LedgerHQ/udev-rules/master/add_udev_rules.sh | sudo bash
+```
 ### Create an account
+
+>Note : You can use any number you'd like for your account number. Be sure to remember the number you used, so you can recover if needed.
 
 ```bash
 enigmacli keys add <account name> --ledger --account <account number on your Ledger>
+```
+
+### Display your account address
+
+```bash
+enigmacli keys show -a <account name>
 ```
 
 ### Add an account to `engcli` that already exists on your Ledger
@@ -43,7 +59,12 @@ enigmacli keys add <account name> --ledger --account <account number on your Led
 enigmacli keys add <account name> --ledger --account <account number on your Ledger> --recover
 ```
 
-**Note! If you run the above command without the `--ledger` flag, the CLI will prompt you to enter your BIP39 mnemonic, which is your Ledger recovery phrase. YOU DO NOT WANT TO DO THIS. This will essentialy save your private key locally.**
+**Note! If you run the above command without the `--ledger` flag, the CLI will prompt you to enter your BIP39 mnemonic, which is your Ledger recovery phrase. YOU DO NOT WANT TO DO THIS. This will essentially save your private key locally.**
+
+*Note: the commands below assume that you run them on the same machine where you have an enigmachain node running. However, if you need to connect to a remote enigmachain node (on the cloud) while you interact with your Ledger wallet locally, you will need to append the following to each command below:* 
+```bash
+--node http://node.domain:26657
+```
 
 ### Send tokens
 
