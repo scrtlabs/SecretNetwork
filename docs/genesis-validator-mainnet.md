@@ -10,7 +10,7 @@ This document details how to join the EnigmaChain `mainnet` as a genesis validat
 
 ## Installation
 
-0. Download the [EnigmaChain package installer](https://github.com/enigmampc/enigmachain/releases/download/v0.0.1/enigmachain_0.0.1_amd64.deb) (Debian/Ubuntu):
+### 0. Download the [EnigmaChain package installer](https://github.com/enigmampc/enigmachain/releases/download/v0.0.1/enigmachain_0.0.1_amd64.deb) (Debian/Ubuntu):
 
 **Note**: The new binaries are now called `enigmacli` & `enigmad`.
 
@@ -19,7 +19,7 @@ wget -O enigmachain_0.0.1_amd64.deb https://github.com/enigmampc/enigmachain/rel
 echo "13b06329543dcbe6ca896406887afb79f7f8b975e5d5585db1943e4520b77521 enigmachain_0.0.1_amd64.deb" | sha256sum --check
 ```
 
-1. Make sure you don't have a previous installation (from testnet):
+### 1. Make sure you don't have a previous installation (from testnet):
 
 **Note:** If you will be using the same key from testnet you can export if with `enigmacli keys export <key-alias> > my.key` and later import it with `enigmacli keys import <key-alias> my.key`.
 
@@ -33,19 +33,19 @@ sudo rm -rf "$(which engcli)"
 sudo rm -rf "$(which engd)"
 ```
 
-2. Install the enigmachain package:
+### 2. Install the enigmachain package:
 
 ```bash
 sudo dpkg -i enigmachain_0.0.1_amd64.deb
 ```
 
-3. Update the configuration file that sets up the system service with your current user as the user this service will run as. _Note: Even if we are running this command and the previous one with sudo, this package does not need to be run as root_.
+### 3. Update the configuration file that sets up the system service with your current user as the user this service will run as. _Note: Even if we are running this command and the previous one with sudo, this package does not need to be run as root_.
 
 ```bash
 sudo perl -i -pe "s/XXXXX/$USER/" /etc/systemd/system/enigma-node.service
 ```
 
-4. Add the following configuration settings (some of these avoid having to type some flags all the time):
+### 4. Add the following configuration settings (some of these avoid having to type some flags all the time):
 
 ```bash
 enigmacli config chain-id "enigma-1"
@@ -54,7 +54,7 @@ enigmacli config indent true
 enigmacli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
 ```
 
-5. Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):
+### 5. Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):
 
 **Note:** If you will be using the same key you exported in step 1, you can import it with `enigmacli keys import <key-alias> my.key`.
 
@@ -62,44 +62,44 @@ enigmacli config trust-node true # true if you trust the full-node you are conne
 enigmacli keys add <key-alias>
 ```
 
-6. Output your key address:
+### 6. Output your key address:
 
 ```bash
 enigmacli keys show <key-alias> -a
 ```
 
-7. Request tokens be allocated in genesis to the address displayed above.
+### 7. Request tokens be allocated in genesis to the address displayed above.
 
 **:warning:Note:warning:: You must finish this step before Thursday 2020-02-13 15:00:00 UTC**
 
-8. Download a copy of the Genesis Block file: `genesis.json`
+### 8. Download a copy of the Genesis Block file: `genesis.json`
 
 ```bash
 mkdir -p ~/.enigmad/config/
 wget -O ~/.enigmad/config/genesis.json https://gist.githubusercontent.com/assafmo/be72c7275bfeaeeb53f6bb8eb995207b/raw/0035d6ef7b8212c77439c71bee777c934758373d/genesis.json
 ```
 
-9. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
+### 9. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
 
 ```bash
 echo "7ae57ee77b5ad4369790b357a26afc54d709234953ea6c5422e26f8dbf2dbd00 $HOME/.enigmad/config/genesis.json" | sha256sum --check
 ```
 
-10. Validate that the `genesis.json` is a valid genesis file:
+### 10. Validate that the `genesis.json` is a valid genesis file:
 
 ```bash
 enigmad validate-genesis
 ```
 
-11. Set your moniker, which is your public validator name. Replace `<MONIKER>` with your own:
+### 11. Set your moniker, which is your public validator name. Replace `<MONIKER>` with your own:
 
 ```bash
 perl -i -pe 's/moniker = ".*?"/moniker = "<MONIKER>"/' ~/.enigmad/config/config.toml
 ```
 
-12. Inspect `~/.enigmad/config/genesis.json` to make sure you agree with the parameters and the amount of `uSCRT` allocated to your account. Remember that 1`SCRT` equals to 1,000,000`uSCRT`.
+### 12. Inspect `~/.enigmad/config/genesis.json` to make sure you agree with the parameters and the amount of `uSCRT` allocated to your account. Remember that 1`SCRT` equals to 1,000,000`uSCRT`.
 
-13. Create a genesis validator transaction file:
+### 13. Create a genesis validator transaction file:
 
 ```bash
 enigmad gentx --name <key-alias> --amount <amount-to-stake>uscrt --ip <your-PUBLIC-ip-or-dns>
@@ -107,7 +107,7 @@ enigmad gentx --name <key-alias> --amount <amount-to-stake>uscrt --ip <your-PUBL
 
 **Note**: You should stake at least 100000000 uscrt (100 SCRT). After the mainnet launch you can [transfer the rest of your funds to a ledger](https://github.com/enigmampc/enigmachain/blob/master/Ledger.md) and [delegate more funds](https://gist.github.com/assafmo/0d3c789aa51de9217b3937b3e5671686#staking-more-tokens) to your validator from there.
 
-14. Now upload the genesis validator transaction file you created in step 13 and send us the pastebin link:
+### 14. Now upload the genesis validator transaction file you created in step 13 and send us the pastebin link:
 
 ```bash
 sudo apt install -y pastebinit
@@ -117,7 +117,7 @@ sudo apt install -y pastebinit
 pastebinit -b pastebin.com ~/.enigmad/config/gentx/*.json
 ```
 
-15. Download a copy of the new Genesis Block file `genesis.json`
+### 15. Download a copy of the new Genesis Block file `genesis.json`
 
 This genesis.json includes all the genesis stake transactions from all the validators.
 
@@ -125,31 +125,31 @@ This genesis.json includes all the genesis stake transactions from all the valid
 wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/enigmachain/master/enigma-1-genesis.json"
 ```
 
-16. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
+### 16. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
 
 ```bash
 echo "86cd9864f5b8e7f540c5edd3954372df94bd23de62e06d5c33a84bd5f3d29114 $HOME/.enigmad/config/genesis.json" | sha256sum --check
 ```
 
-17. Validate that the `genesis.json` is a valid genesis file:
+### 17. Validate that the `genesis.json` is a valid genesis file:
 
 ```bash
 enigmad validate-genesis
 ```
 
-18. Enable `enigma-node` as a system service:
+### 18. Enable `enigma-node` as a system service:
 
 ```bash
 sudo systemctl enable enigma-node
 ```
 
-19. Start `enigma-node` as a system service:
+### 19. Start `enigma-node` as a system service:
 
 ```bash
 sudo systemctl start enigma-node
 ```
 
-20. If everything above worked correctly, the following command will show your node **waiting** for at least 67% of the voting power to come online. This can take a while so be patient.
+### 20. If everything above worked correctly, the following command will show your node **waiting** for at least 67% of the voting power to come online. This can take a while so be patient.
 
 ```
 journalctl -f -u enigma-node
@@ -159,7 +159,7 @@ Feb 13 13:31:15 ip-172-31-44-28 enigmad[18653]: I[2020-02-13|13:31:15.208] start
 
 (this is for debugging purposes only, kill this command anytime with Ctrl-C)
 
-21. At some point (could take hours) the network will come alive. The following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
+### 21. At some point (could take hours) the network will come alive. The following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
 
 ```
 journalctl -f -u enigma-node
@@ -179,13 +179,13 @@ Feb 10 21:18:59 ip-172-31-41-58 enigmad[8814]: I[2020-02-10|21:18:59.695] Commit
 ^C
 ```
 
-22. Check that you have your tokens minus your stake:
+### 22. Check that you have your tokens minus your stake:
 
 ```bash
 enigmacli q account $(enigmacli keys show -a <key_alias>)
 ```
 
-23. Check that you have been added as a validator:
+### 23. Check that you have been added as a validator:
 
 ```bash
 enigmacli q staking validators

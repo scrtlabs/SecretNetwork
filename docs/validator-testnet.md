@@ -4,87 +4,88 @@ This document details how to join the EnigmaChain `testnet`
 
 ## Requirements
 
-* Ubuntu/Debian host
-* A public IP address
-* Open ports `TCP 26655 - 26660`
+- Ubuntu/Debian host
+- A public IP address
+- Open ports `TCP 26655 - 26660`
 
 ## Installation
 
-1. Download the [EnigmaChain package installer](https://enigmaco-website.s3.amazonaws.com/enigmachain_0.0.1_amd64.deb) (Debian/Ubuntu). This installer is generated from a private repo that will be made public later this week:
+### 1. Download the [EnigmaChain package installer](https://enigmaco-website.s3.amazonaws.com/enigmachain_0.0.1_amd64.deb) (Debian/Ubuntu). This installer is generated from a private repo that will be made public later this week:
 
 ```
 wget -O enigmachain_0.0.1_amd64.deb https://enigmaco-website.s3.amazonaws.com/enigmachain_0.0.1_amd64.deb
 ```
 
-2. Make sure you don't have a previous installation (from testnet):
+### 2. Make sure you don't have a previous installation (from testnet):
 
 **Note:** If you will be using the same key from testnet you can export it with `enigmacli keys export <key-alias> > my.key` and later import it with `enigmacli keys import <key-alias> my.key`.
 
 ```bash
 sudo dpkg -r enigmachain
 sudo rm -rf ~/.enigmad ~/.enigmacli
-sudo rm -rf ~/.engd ~/.engcli 
+sudo rm -rf ~/.engd ~/.engcli
 sudo rm -rf "$(which enigmad)"
 sudo rm -rf "$(which enigmacli)"
 sudo rm -rf "$(which engcli)"
 sudo rm -rf "$(which engd)"
 ```
 
-3. Install the above package:
+### 3. Install the above package:
 
 ```
 sudo dpkg -i enigmachain_0.0.1_amd64.deb
 ```
 
-4. Update the configuration file that sets up the system service with your current user as the user this service will run as. *Note: Even if we are running this command and the previous one with sudo, this package does not need to be run as root*.
+### 4. Update the configuration file that sets up the system service with your current user as the user this service will run as. _Note: Even if we are running this command and the previous one with sudo, this package does not need to be run as root_.
 
 ```
 sudo perl -i -pe "s/XXXXX/$USER/" /etc/systemd/system/enigma-node.service
 ```
 
-5. Initialize your installation of the enigmachain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
+### 5. Initialize your installation of the enigmachain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
 
 ```
 engd init <MONIKER> --chain-id enigma-testnet
 ```
 
-6. Download a copy of the Genesis Block file: `genesis.json`
+### 6. Download a copy of the Genesis Block file: `genesis.json`
 
 ```
 wget -O ~/.engd/config/genesis.json https://gist.githubusercontent.com/lacabra/29ea80e279a70a8b3315baa0157cfe97/raw/faa8356fc2e4b08e29abb9eeb26237cd7eb9984f/genesis.json
 ```
 
-7. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
+### 7. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
 
 ```
 echo "6724d80b5eaa6b2d8b181ed8021d5c68e5fea96139ce51d3a073e7ef0f13e37f $HOME/.engd/config/genesis.json" | sha256sum --check
 ```
 
-8. Validate that the `genesis.json` is a valid genesis file:
+### 8. Validate that the `genesis.json` is a valid genesis file:
 
 ```
 engd validate-genesis
 ```
 
-9. Add `bootstrap.enigmachain.enigma.co` as a persistent peer in your configuration file. If you are curious, you can query the RPC endpoint on that node http://bootstrap.enigmachain.enigma.co:26657/ (please note that the RPC port `26657` is different from the P2P port `26656` below)
+### 9. Add `bootstrap.enigmachain.enigma.co` as a persistent peer in your configuration file. If you are curious, you can query the RPC endpoint on that node http://bootstrap.enigmachain.enigma.co:26657/ (please note that the RPC port `26657` is different from the P2P port `26656` below)
 
 ```
 perl -i -pe 's/persistent_peers = ""/persistent_peers = "6795f5e88edab2e225389eb9b6d6a2f715ddbcd2\@bootstrap.enigmachain.enigma.co:26656"/' ~/.engd/config/config.toml
 ```
 
-10. Enable `enigma-node` as a system service:
+### 10. Enable `enigma-node` as a system service:
 
 ```
 sudo systemctl enable enigma-node
 ```
 
-11. Start `enigma-node` as a system service:
+### 11. Start `enigma-node` as a system service:
 
 ```
 sudo systemctl start enigma-node
 ```
 
-12. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
+### 12. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
+
 ```
 journalctl -f -u enigma-node
 -- Logs begin at Mon 2020-02-10 16:41:59 UTC. --
@@ -103,7 +104,7 @@ Feb 10 21:18:59 ip-172-31-41-58 engd[8814]: I[2020-02-10|21:18:59.695] Committed
 ^C
 ```
 
-13. Add the following configuration settings (some of these avoid having to type some flags all the time):
+### 13. Add the following configuration settings (some of these avoid having to type some flags all the time):
 
 ```
 engcli config chain-id enigma-testnet
@@ -112,21 +113,21 @@ engcli config indent true
 engcli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
 ```
 
-14. Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):
+### 14. Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):
 
 ```
 engcli keys add <key-alias>
-``` 
+```
 
-15. Output your node address:
+### 15. Output your node address:
 
 ```
 engcli keys show <key-alias> -a
 ```
 
-16. Request tokens be sent to the address displayed above.
+### 16. Request tokens be sent to the address displayed above.
 
-17. Check that you have the requested tokens:
+### 17. Check that you have the requested tokens:
 
 ```
 engcli q account $(engcli keys show -a <key_alias>)
@@ -138,7 +139,8 @@ If you get the following message, it means that you have not tokens yet:
 ERROR: unknown address: account enigmaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx does not exist
 ```
 
-18. Join the network as a new validator: replace `<MONIKER>` with your own from step 4 above, and adjust the amount you want to stake (remember 1 SCRT = 1,000,000 uSCRT, and so the command below stakes 100k SCRT).
+### 18. Join the network as a new validator: replace `<MONIKER>` with your own from step 4 above, and adjust the amount you want to stake (remember 1 SCRT = 1,000,000 uSCRT, and so the command below stakes 100k SCRT).
+
 ```
 engcli tx staking create-validator \
   --amount=100000000000uscrt \
@@ -154,8 +156,8 @@ engcli tx staking create-validator \
   --from=<key-alias>
 ```
 
-19. Check that you have been added as a validator:
- 
+### 19. Check that you have been added as a validator:
+
 ```bash
 engcli q staking validators
 ```
@@ -171,21 +173,25 @@ engcli tx staking delegate $(engcli keys show <key-alias> --bech=val -a) 1uscrt 
 ```
 
 ## Seeing your rewards from being a validator
+
 ```bash
 engcli q distribution rewards $(engcli keys show -a <key-alias>)
 ```
 
 ## Seeing your commissions from your delegators
+
 ```bash
 engcli q distribution commission $(engcli keys show -a <key-alias> --bech=val)
 ```
 
 ## Withdrawing rewards
+
 ```bash
 engcli tx distribution withdraw-rewards $(engcli keys show --bech=val -a <key-alias>) --from <key-alias>
 ```
 
 ## Withdrawing rewards+commissions
+
 ```bash
 engcli tx distribution withdraw-rewards $(engcli keys show --bech=val -a <key-alias>) --from <key-alias> --commission
 ```
