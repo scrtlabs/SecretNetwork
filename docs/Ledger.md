@@ -72,7 +72,7 @@ enigmacli keys add <account name> --ledger --account <account number on your Led
 enigmacli tx send <account name or address> <to_address> <amount> --ledger
 ```
 
-### Bond SCRT to a validator
+### Delegate SCRT to a validator
 
 ```bash
 enigmacli tx staking delegate <validator address> <amount to bond> --from <account key> --gas auto --gas-prices <gasPrice> --ledger
