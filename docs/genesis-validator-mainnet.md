@@ -76,7 +76,7 @@ enigmacli keys show <key-alias> -a
 
 ```bash
 mkdir -p ~/.enigmad/config/
-wget -O ~/.enigmad/config/genesis.json
+wget -O ~/.enigmad/config/genesis.json https://gist.githubusercontent.com/assafmo/be72c7275bfeaeeb53f6bb8eb995207b/raw/0035d6ef7b8212c77439c71bee777c934758373d/genesis.json
 ```
 
 9. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
