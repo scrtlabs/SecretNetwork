@@ -106,6 +106,8 @@ enigmacli config trust-node true # true if you trust the full-node you are conne
 enigmacli keys add <key-alias>
 ```
 
+**Note**: If you already have a key you can import it with the bip39 mnemonic with `enigmacli keys add <key-alias> --recover` or with `enigmacli keys export` & `enigmacli keys import`.
+
 14. Output your node address:
 
 ```
