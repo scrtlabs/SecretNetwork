@@ -1,4 +1,4 @@
-# How to join EnigmaChain as a mainnet validator
+# How to deploy a full node on EnigmaChain
 
 This document details how to join the EnigmaChain `mainnet` as a validator.
 
