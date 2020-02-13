@@ -76,13 +76,13 @@ enigmacli keys show <key-alias> -a
 
 ```bash
 mkdir -p ~/.enigmad/config/
-wget -O ~/.enigmad/config/genesis.json "<LINK WILL BE HERE AFTER EVERYONE FINISHES STEP 7>"
+wget -O ~/.enigmad/config/genesis.json
 ```
 
 9. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
 
 ```bash
-echo "<HASH WILL BE HERE AFTER EVERYONE FINISHES STEP 7> $HOME/.enigmad/config/genesis.json" | sha256sum --check
+echo "7ae57ee77b5ad4369790b357a26afc54d709234953ea6c5422e26f8dbf2dbd00 $HOME/.enigmad/config/genesis.json" | sha256sum --check
 ```
 
 10. Validate that the `genesis.json` is a valid genesis file:
