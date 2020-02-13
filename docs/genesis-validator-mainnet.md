@@ -10,13 +10,13 @@ This document details how to join the EnigmaChain `mainnet` as a genesis validat
 
 ## Installation
 
-0. Download the [EnigmaChain package installer](https://github.com/enigmampc/enigmachain/releases/download/v0.0.1/enigmachain_0.0.1_amd64.deb) (Debian/Ubuntu). 
+0. Download the [EnigmaChain package installer](https://github.com/enigmampc/enigmachain/releases/download/v0.0.1/enigmachain_0.0.1_amd64.deb) (Debian/Ubuntu). This installer is generated from a private repo that will be made public later this week:
 
 **Note**: The new binaries are now called `enigmacli` & `enigmad`.
 
 ```bash
 wget -O enigmachain_0.0.1_amd64.deb https://github.com/enigmampc/enigmachain/releases/download/v0.0.1/enigmachain_0.0.1_amd64.deb
-echo "54b9c8748d47db909676ca934c1eb08c00707c73c92b903a8959152af5a0fa51 enigmachain_0.0.1_amd64.deb" | sha256sum --check
+echo "13b06329543dcbe6ca896406887afb79f7f8b975e5d5585db1943e4520b77521 enigmachain_0.0.1_amd64.deb" | sha256sum --check
 ```
 
 1. Make sure you don't have a previous installation (from testnet):
@@ -26,7 +26,7 @@ echo "54b9c8748d47db909676ca934c1eb08c00707c73c92b903a8959152af5a0fa51 enigmacha
 ```bash
 sudo dpkg -r enigmachain
 sudo rm -rf ~/.enigmad ~/.enigmacli
-sudo rm -rf ~/.engd ~/.engcli 
+sudo rm -rf ~/.engd ~/.engcli
 sudo rm -rf "$(which enigmad)"
 sudo rm -rf "$(which enigmacli)"
 sudo rm -rf "$(which engcli)"
