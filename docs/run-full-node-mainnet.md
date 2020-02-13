@@ -126,5 +126,5 @@ enigmacli config chain-id enigma-1
 enigmacli config output json
 enigmacli config indent true
 enigmacli config trust-node false
-enigmacli config node <your-node-id>@<your-public-ip>:26656
+enigmacli config node tcp://<your-public-ip>:26657
 ```
