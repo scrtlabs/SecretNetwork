@@ -122,13 +122,13 @@ pastebinit -b pastebin.com ~/.enigmad/config/gentx/*.json
 This genesis.json includes all the genesis stake transactions from all the validators.
 
 ```bash
-wget -O ~/.enigmad/config/genesis.json "<LINK WILL BE HERE AFTER EVERYONE FINISH STEP 14>"
+wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/enigmachain/master/enigma-1-genesis.json"
 ```
 
 16. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
 
 ```bash
-echo "<HASH WILL BE HERE AFTER EVERYONE FINISH STEP 14> $HOME/.enigmad/config/genesis.json" | sha256sum --check
+echo "86cd9864f5b8e7f540c5edd3954372df94bd23de62e06d5c33a84bd5f3d29114 $HOME/.enigmad/config/genesis.json" | sha256sum --check
 ```
 
 17. Validate that the `genesis.json` is a valid genesis file:
