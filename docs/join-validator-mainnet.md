@@ -140,7 +140,6 @@ ERROR: unknown address: account enigmaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx do
 enigmacli tx staking create-validator \
   --amount=100000000000uscrt \
   --pubkey=$(enigmad tendermint show-validator) \
-  --chain-id=enigma-testnet \
   --commission-rate="0.10" \
   --commission-max-rate="0.20" \
   --commission-max-change-rate="0.01" \
