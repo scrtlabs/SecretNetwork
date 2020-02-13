@@ -1,5 +1,9 @@
 # Enigma Chain
 
+* [How to join EnigmaChain as a mainnet genesis validator](docs/validator-mainnet.md)
+* [How to join EnigmaChain as a testnet validator](docs/validator-testnet.md)
+* [Ledger support in EnigmaChain](docs/Ledger.md)
+
 # Install
 
 **Requirement**: Go version needs to be [1.13 or higher](https://golang.org/dl/).
@@ -142,6 +146,3 @@ To check if you got added to the validator-set by running:
 ```bash
 enigmacli q tendermint-validator-set
 ```
-# Ledger support
-
-For instructions on using Ledger Nano S, [see here](https://github.com/enigmampc/enigmachain/blob/master/Ledger.md).
