@@ -6,7 +6,7 @@ This document details how to join the EnigmaChain `mainnet` as a validator.
 
 - Ubuntu/Debian host (with ZFS or LVM to be able to add more storage easily)
 - A public IP address
-- Open ports `TCP 26656 - 26660`
+- Open ports `TCP 26656 - 26660` Note : If you're behind a router or firewall then you'll need to port forward on the network device.
 
 ## Installation
 
@@ -83,8 +83,11 @@ sudo systemctl start enigma-node
 
 ### 12. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
 
-```
+```bash
 journalctl -f -u enigma-node
+```
+
+```
 -- Logs begin at Mon 2020-02-10 16:41:59 UTC. --
 Feb 10 21:18:34 ip-172-31-41-58 enigmad[8814]: I[2020-02-10|21:18:34.307] Executed block                               module=state height=2629 validTxs=0 invalidTxs=0
 Feb 10 21:18:34 ip-172-31-41-58 enigmad[8814]: I[2020-02-10|21:18:34.317] Committed state                              module=state height=2629 txs=0 appHash=34BC6CF2A11504A43607D8EBB2785ED5B20EAB4221B256CA1D32837EBC4B53C5
@@ -105,10 +108,19 @@ You are now a full node. :tada:
 
 ### 13. Add the following configuration settings (some of these avoid having to type some flags all the time):
 
-```
+```bash
 enigmacli config chain-id enigma-1
+```
+
+```bash
 enigmacli config output json
+```
+
+```bash
 enigmacli config indent true
+```
+
+```bash
 enigmacli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
 ```
 
@@ -129,8 +141,20 @@ And if someone wants to use you from their `enigmacli` then have them run:
 
 ```bash
 enigmacli config chain-id enigma-1
+```
+
+```bash
 enigmacli config output json
+```
+
+```bash
 enigmacli config indent true
+```
+
+```bash
 enigmacli config trust-node false
+```
+
+```bash
 enigmacli config node tcp://<your-public-ip>:26657
 ```
