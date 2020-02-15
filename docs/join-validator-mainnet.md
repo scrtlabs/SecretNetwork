@@ -6,14 +6,18 @@ This document details how to join the EnigmaChain `mainnet` as a validator.
 
 - Ubuntu/Debian host (with ZFS or LVM to be able to add more storage easily)
 - A public IP address
-- Open ports `TCP 26656 - 26660`
+- Open ports `TCP 26656 - 26660` Note : If you're behind a router or firewall then you'll need to port forward on the network device.
 
 ## Installation
 
 ### 1. Download the [EnigmaChain package installer](https://github.com/enigmampc/enigmachain/releases/download/v0.0.1/enigmachain_0.0.1_amd64.deb) (Debian/Ubuntu):
 
 ```bash
-wget -O enigmachain_0.0.1_amd64.deb https://github.com/enigmampc/enigmachain/releases/download/v0.0.1/enigmachain_0.0.1_amd64.deb
+wget -O enigmachain_0.0.1_amd64.deb 
+```
+
+```bash
+https://github.com/enigmampc/enigmachain/releases/download/v0.0.1/enigmachain_0.0.1_amd64.deb
 echo "13b06329543dcbe6ca896406887afb79f7f8b975e5d5585db1943e4520b77521 enigmachain_0.0.1_amd64.deb" | sha256sum --check
 ```
 
@@ -77,8 +81,11 @@ sudo systemctl start enigma-node
 
 ### 11. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
 
-```
+```bash
 journalctl -f -u enigma-node
+```
+
+```
 -- Logs begin at Mon 2020-02-10 16:41:59 UTC. --
 Feb 10 21:18:34 ip-172-31-41-58 enigmad[8814]: I[2020-02-10|21:18:34.307] Executed block                               module=state height=2629 validTxs=0 invalidTxs=0
 Feb 10 21:18:34 ip-172-31-41-58 enigmad[8814]: I[2020-02-10|21:18:34.317] Committed state                              module=state height=2629 txs=0 appHash=34BC6CF2A11504A43607D8EBB2785ED5B20EAB4221B256CA1D32837EBC4B53C5
@@ -97,16 +104,25 @@ Feb 10 21:18:59 ip-172-31-41-58 enigmad[8814]: I[2020-02-10|21:18:59.695] Commit
 
 ### 12. Add the following configuration settings (some of these avoid having to type some flags all the time):
 
-```
+```bash
 enigmacli config chain-id enigma-1
+```
+
+```bash
 enigmacli config output json
+```
+
+```bash
 enigmacli config indent true
+```
+
+```bash
 enigmacli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
 ```
 
 ### 13. Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):
 
-```
+```bash
 enigmacli keys add <key-alias>
 ```
 
@@ -114,7 +130,7 @@ enigmacli keys add <key-alias>
 
 ### 14. Output your node address:
 
-```
+```bash
 enigmacli keys show <key-alias> -a
 ```
 
@@ -122,13 +138,13 @@ enigmacli keys show <key-alias> -a
 
 ### 16. Check that you have the requested tokens:
 
-```
+```bash
 enigmacli q account $(enigmacli keys show -a <key_alias>)
 ```
 
 If you get the following message, it means that you have no tokens yet:
 
-```
+```bash
 ERROR: unknown address: account enigmaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx does not exist
 ```
 
@@ -136,7 +152,7 @@ ERROR: unknown address: account enigmaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx do
 
 (remember 1 SCRT = 1,000,000 uSCRT, and so the command below stakes 100k SCRT).
 
-```
+```bash
 enigmacli tx staking create-validator \
   --amount=100000000000uscrt \
   --pubkey=$(enigmad tendermint show-validator) \
