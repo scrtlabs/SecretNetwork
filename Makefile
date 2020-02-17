@@ -60,8 +60,19 @@ install: go.sum
 		go install -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
 
 build: go.sum
-		go build -o ./enigmad -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
-		go build -o ./enigmacli -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+		go build -o ./enigmad-$(OS_NAME)64 -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
+		go build -o ./enigmacli-$(OS_NAME)64 -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+
+build_linux:
+		GOOS=linux $(MAKE) build OS_NAME=linux
+
+build_windows:
+		GOOS=windows $(MAKE) build OS_NAME=win
+
+build_macos:
+		GOOS=darwin $(MAKE) build OS_NAME=macos
+
+build_all: build_linux build_windows build_macos
 
 go.sum: go.mod
 		@echo "--> Ensure dependencies have not been modified"
@@ -70,11 +81,11 @@ go.sum: go.mod
 test:
 	@go test -mod=readonly $(PACKAGES)
 
-deb: build
+deb: build_linux
 		rm -rf /tmp/enigmachain
 		mkdir -p /tmp/enigmachain/deb/bin
-		mv ./enigmacli /tmp/enigmachain/deb/bin
-		mv ./enigmad /tmp/enigmachain/deb/bin
+		mv -f ./enigmacli-linux64 /tmp/enigmachain/deb/bin/enigmacli
+		mv -f ./enigmad-linux64 /tmp/enigmachain/deb/bin/enigmad
 		chmod +x /tmp/enigmachain/deb/bin/enigmad /tmp/enigmachain/deb/bin/enigmacli
 		mkdir -p /tmp/enigmachain/deb/DEBIAN
 		cp ./packaging/control /tmp/enigmachain/deb/DEBIAN/control
@@ -86,3 +97,8 @@ deb: build
 		chmod 755 /tmp/enigmachain/deb/DEBIAN/postrm
 		dpkg-deb --build /tmp/enigmachain/deb/ .
 		rm -rf /tmp/enigmachain
+
+clean:
+	rm -rf /tmp/enigmachain
+	rm -f ./enigmad-linux64 ./enigmad-macos64 ./enigmad-win64
+	rm -f ./enigmacli-linux64 ./enigmacli-macos64 ./enigmacli-win64
