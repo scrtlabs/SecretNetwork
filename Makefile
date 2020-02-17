@@ -100,5 +100,6 @@ deb: build_linux
 
 clean:
 	rm -rf /tmp/enigmachain
+	rm -f enigmachain_*_amd64.deb
 	rm -f ./enigmad-linux64 ./enigmad-macos64 ./enigmad-win64
 	rm -f ./enigmacli-linux64 ./enigmacli-macos64 ./enigmacli-win64
