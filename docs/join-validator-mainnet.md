@@ -13,7 +13,7 @@ This document details how to join the EnigmaChain `mainnet` as a validator.
 ### 1. Download the [EnigmaChain package installer](https://github.com/enigmampc/enigmachain/releases/download/v0.0.1/enigmachain_0.0.1_amd64.deb) (Debian/Ubuntu):
 
 ```bash
-wget -O enigmachain_0.0.1_amd64.deb 
+wget -O enigmachain_0.0.1_amd64.deb
 ```
 
 ```bash
@@ -59,7 +59,7 @@ echo "86cd9864f5b8e7f540c5edd3954372df94bd23de62e06d5c33a84bd5f3d29114 $HOME/.en
 enigmad validate-genesis
 ```
 
-### 8. Add `bootstrap.enigmachain.enigma.co` as a persistent peer in your configuration file.
+### 8. Add `bootstrap.mainnet.enigma.co` as a persistent peer in your configuration file.
 
 If you are curious, you can query the RPC endpoint on that node http://bootstrap.mainnet.enigma.co:26657/ (please note that the RPC port `26657` is different from the P2P port `26656` below)
 
