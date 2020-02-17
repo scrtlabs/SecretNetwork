@@ -1,1 +1,3 @@
 *.deb
+/enigmacli
+/enigmad

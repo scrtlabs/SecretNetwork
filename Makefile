@@ -59,6 +59,10 @@ install: go.sum
 		go install -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
 		go install -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
 
+build: go.sum
+		go build -o ./enigmad -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
+		go build -o ./enigmacli -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+
 go.sum: go.mod
 		@echo "--> Ensure dependencies have not been modified"
 		GO111MODULE=on go mod verify
@@ -66,11 +70,11 @@ go.sum: go.mod
 test:
 	@go test -mod=readonly $(PACKAGES)
 
-deb: install
+deb: build
 		rm -rf /tmp/enigmachain
 		mkdir -p /tmp/enigmachain/deb/bin
-		mv "$(GOPATH)/bin/enigmacli" /tmp/enigmachain/deb/bin
-		mv "$(GOPATH)/bin/enigmad" /tmp/enigmachain/deb/bin
+		mv ./enigmacli /tmp/enigmachain/deb/bin
+		mv ./enigmad /tmp/enigmachain/deb/bin
 		chmod +x /tmp/enigmachain/deb/bin/enigmad /tmp/enigmachain/deb/bin/enigmacli
 		mkdir -p /tmp/enigmachain/deb/DEBIAN
 		cp ./packaging/control /tmp/enigmachain/deb/DEBIAN/control
