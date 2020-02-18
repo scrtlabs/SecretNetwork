@@ -54,56 +54,51 @@ ldflags := $(strip $(ldflags))
 
 BUILD_FLAGS := -tags "$(build_tags)" -ldflags '$(ldflags)'
 
-all: install
-install: go.sum
-		go install -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
-		go install -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+all: build_all
+
+go.sum: go.mod
+	@echo "--> Ensure dependencies have not been modified"
+	GO111MODULE=on go mod verify
 
 build: go.sum
-		go build -o ./enigmad-$(OS_NAME)64-v$(VERSION)$(EXT) -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
-		go build -o ./enigmacli-$(OS_NAME)64-v$(VERSION)$(EXT) -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/enigmachain/cmd/enigmacli
+	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/enigmachain/cmd/enigmad
+
+build_local: go.sum
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
 
 build_linux:
-		GOOS=linux $(MAKE) build OS_NAME=linux
+	$(MAKE) build XGO_TARGET=linux/amd64
 
 build_windows:
-		GOOS=windows $(MAKE) build OS_NAME=win EXT=".exe"
+	$(MAKE) build XGO_TARGET=windows/amd64
 
 build_macos:
-		GOOS=darwin $(MAKE) build OS_NAME=macos
+	$(MAKE) build XGO_TARGET=darwin/amd64
 
 build_all: build_linux build_windows build_macos
 
-go.sum: go.mod
-		@echo "--> Ensure dependencies have not been modified"
-		GO111MODULE=on go mod verify
-
-test:
-	@go test -mod=readonly $(PACKAGES)
-
-deb: build_linux
-		rm -rf /tmp/enigmachain
-		mkdir -p /tmp/enigmachain/deb/bin
-		mv -f ./enigmacli-linux64-v* /tmp/enigmachain/deb/bin/enigmacli
-		mv -f ./enigmad-linux64-v* /tmp/enigmachain/deb/bin/enigmad
-		chmod +x /tmp/enigmachain/deb/bin/enigmad /tmp/enigmachain/deb/bin/enigmacli
-		mkdir -p /tmp/enigmachain/deb/DEBIAN
-		cp ./packaging/control /tmp/enigmachain/deb/DEBIAN/control
-		echo "Version: 0.0.1" >> /tmp/enigmachain/deb/DEBIAN/control
-		echo "" >> /tmp/enigmachain/deb/DEBIAN/control
-		cp ./packaging/postinst /tmp/enigmachain/deb/DEBIAN/postinst
-		chmod 755 /tmp/enigmachain/deb/DEBIAN/postinst
-		cp ./packaging/postrm /tmp/enigmachain/deb/DEBIAN/postrm
-		chmod 755 /tmp/enigmachain/deb/DEBIAN/postrm
-		dpkg-deb --build /tmp/enigmachain/deb/ .
-		rm -rf /tmp/enigmachain
+deb: build_local
+    ifneq ($(UNAME_S),Linux)
+		exit 1
+    endif
+	rm -rf /tmp/enigmachain
+	mkdir -p /tmp/enigmachain/deb/bin
+	mv -f ./enigmacli /tmp/enigmachain/deb/bin/enigmacli
+	mv -f ./enigmad /tmp/enigmachain/deb/bin/enigmad
+	chmod +x /tmp/enigmachain/deb/bin/enigmad /tmp/enigmachain/deb/bin/enigmacli
+	mkdir -p /tmp/enigmachain/deb/DEBIAN
+	cp ./packaging/control /tmp/enigmachain/deb/DEBIAN/control
+	echo "Version: 0.0.1" >> /tmp/enigmachain/deb/DEBIAN/control
+	echo "" >> /tmp/enigmachain/deb/DEBIAN/control
+	cp ./packaging/postinst /tmp/enigmachain/deb/DEBIAN/postinst
+	chmod 755 /tmp/enigmachain/deb/DEBIAN/postinst
+	cp ./packaging/postrm /tmp/enigmachain/deb/DEBIAN/postrm
+	chmod 755 /tmp/enigmachain/deb/DEBIAN/postrm
+	dpkg-deb --build /tmp/enigmachain/deb/ .
+	rm -rf /tmp/enigmachain
 
 clean:
 	rm -rf /tmp/enigmachain
-	rm -f ./enigmachain_*_amd64.deb
-	rm -f ./enigmad-linux64*
-	rm -f ./enigmacli-linux64*
-	rm -f ./enigmad-macos64*
-	rm -f ./enigmacli-macos64*
-	rm -f ./enigmad-win64*
-	rm -f ./enigmacli-win64*
+	rm -rf ./build/
