@@ -60,14 +60,14 @@ install: go.sum
 		go install -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
 
 build: go.sum
-		go build -o ./enigmad-$(OS_NAME)64-v$(VERSION) -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
-		go build -o ./enigmacli-$(OS_NAME)64-v$(VERSION) -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+		go build -o ./enigmad-$(OS_NAME)64-v$(VERSION)$(EXT) -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
+		go build -o ./enigmacli-$(OS_NAME)64-v$(VERSION)$(EXT) -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
 
 build_linux:
 		GOOS=linux $(MAKE) build OS_NAME=linux
 
 build_windows:
-		GOOS=windows $(MAKE) build OS_NAME=win
+		GOOS=windows $(MAKE) build OS_NAME=win EXT=".exe"
 
 build_macos:
 		GOOS=darwin $(MAKE) build OS_NAME=macos
