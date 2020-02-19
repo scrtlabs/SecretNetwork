@@ -55,7 +55,7 @@ enigmacli keys add <account name> --ledger --account <account number on your Led
 enigmacli keys show -a <account name>
 ```
 
-### Add an account to `engcli` that already exists on your Ledger
+### Add an account to `enigmacli` that already exists on your Ledger
 
 _You'll use this when you, say, using a different machine._
 
