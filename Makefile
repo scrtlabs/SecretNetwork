@@ -123,5 +123,5 @@ clean:
 	-rm -rf /tmp/enigmachain
 	-rm -f ./enigmacli-*
 	-rm -f ./enigmad-*
-	-rm -f ./enigmachain-*.deb
+	-rm -f ./enigmachain*.deb
 	-rm -f ./SHA256SUMS*
