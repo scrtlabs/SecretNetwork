@@ -1,9 +1,8 @@
-<div align="center">
-<img src="https://github.com/enigmampc/enigmachain/blob/master/logo.png" type="image/png">
+![Enigma](/logo.png)
 
+<p align="center">
 Enigma secures the decentralized web
-
-</div>
+</p>
 
 # What is Enigma?
 
