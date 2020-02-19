@@ -89,15 +89,15 @@ deb: build_local
 	mv -f ./enigmad /tmp/enigmachain/deb/bin/enigmad
 	chmod +x /tmp/enigmachain/deb/bin/enigmad /tmp/enigmachain/deb/bin/enigmacli
 	mkdir -p /tmp/enigmachain/deb/DEBIAN
-	cp ./packaging/control /tmp/enigmachain/deb/DEBIAN/control
+	cp ./packaging_ubuntu/control /tmp/enigmachain/deb/DEBIAN/control
 	echo "Version: 0.0.1" >> /tmp/enigmachain/deb/DEBIAN/control
 	echo "" >> /tmp/enigmachain/deb/DEBIAN/control
-	cp ./packaging/postinst /tmp/enigmachain/deb/DEBIAN/postinst
+	cp ./packaging_ubuntu/postinst /tmp/enigmachain/deb/DEBIAN/postinst
 	chmod 755 /tmp/enigmachain/deb/DEBIAN/postinst
-	cp ./packaging/postrm /tmp/enigmachain/deb/DEBIAN/postrm
+	cp ./packaging_ubuntu/postrm /tmp/enigmachain/deb/DEBIAN/postrm
 	chmod 755 /tmp/enigmachain/deb/DEBIAN/postrm
 	dpkg-deb --build /tmp/enigmachain/deb/ .
-	rm -rf /tmp/enigmachain
+	-rm -rf /tmp/enigmachain
 
 clean:
 	rm -rf /tmp/enigmachain
