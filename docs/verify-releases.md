@@ -31,4 +31,4 @@ Then to eliminate future warnings run:
 gpg2 --lsign 91831DE812C6415123AFAA7B420BF1CB005FBCE6
 ```
 
-(You have to `gpg2 --gen-key` before, if you don't already have a personal private key)
+(If you don't already have a personal private key, generate one with `gpg2 --gen-key` or `gpg2 --expert --full-gen-key`)
