@@ -2,14 +2,14 @@
 
 1. Get the lastest release of `enigmacli` for your OS: https://github.com/enigmampc/enigmachain/releases/latest.
 
-   ([How to verify releases](https://github.com/enigmampc/enigmachain/blob/592ba7e05b8c8e300ed24e240c34ff15cbde1cec/docs/verify-releases.md))
+   ([How to verify releases](/docs/verify-releases.md))
 
-2. Install:
+2) Install:
 
    - Mac/Windows: Rename it from `enigmacli-${VERSION}-${OS}` to `enigmacli` and put it in your path.
    - Ubuntu/Debian: `sudo dpkg -i enigmachain*.deb`
 
-3. Configure:
+3) Configure:
 
    ```bash
    # Set the mainnet chain-id
@@ -34,7 +34,7 @@
    enigmacli config trust-node false
    ```
 
-4. Check the installation:
+4) Check the installation:
 
    ```bash
    enigmacli status

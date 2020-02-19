@@ -4,7 +4,7 @@ To get the lastest release: https://github.com/enigmampc/enigmachain/releases/la
 
 ## Docs
 
-- [How to verify releases](https://github.com/enigmampc/enigmachain/blob/606a9d679480763818a1d453d22f7c9a4ad41a00/docs/verify-releases.md)
+- [How to verify releases](/docs/verify-releases.md)
 - [Using `enigmacli` as an EnigmaChain light client](/docs/ligth-client-mainnet.md)
 - [Ledger Nano S support](/docs/ledger-nano-s.md)
 - [How to run a full node in mainnet](/docs/run-full-node-mainnet.md)
