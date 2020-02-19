@@ -121,7 +121,7 @@ release: sign_for_release
 
 clean:
 	-rm -rf /tmp/enigmachain
-	-rm -rf enigmacli-*
-	-rm -rf enigmad-*
-	-rm -rf enigmachain-*.deb
+	-rm -f ./enigmacli-*
+	-rm -f ./enigmad-*
+	-rm -f ./enigmachain-*.deb
 	-rm -f ./SHA256SUMS*
