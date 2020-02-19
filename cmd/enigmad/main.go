@@ -19,8 +19,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
-	app "github.com/enigmampc/Enigmachain"
-	eng "github.com/enigmampc/Enigmachain/types"
+	app "github.com/enigmampc/enigmachain"
+	eng "github.com/enigmampc/enigmachain/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
@@ -43,7 +43,7 @@ func main() {
 	cobra.EnableCommandSorting = false
 	rootCmd := &cobra.Command{
 		Use:               "enigmad",
-		Short:             "Enigmachain App Daemon (server)",
+		Short:             "EnigmaChain App Daemon (server)",
 		PersistentPreRunE: server.PersistentPreRunEFn(ctx),
 	}
 	// CLI commands to initialize the chain

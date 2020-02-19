@@ -39,7 +39,7 @@ whitespace += $(whitespace)
 comma := ,
 build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 
-ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=Enigmachain \
+ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=enigmachain \
 	-X github.com/cosmos/cosmos-sdk/version.ServerName=enigmad \
 	-X github.com/cosmos/cosmos-sdk/version.ClientName=enigmacli \
 	-X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
