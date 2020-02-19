@@ -16,8 +16,9 @@ This document details how to join the EnigmaChain `mainnet` as a genesis validat
 
 ```bash
 wget -O enigmachain_0.0.1_amd64.deb https://github.com/enigmampc/enigmachain/releases/download/v0.0.1/enigmachain_0.0.1_amd64.deb
-echo "13b06329543dcbe6ca896406887afb79f7f8b975e5d5585db1943e4520b77521 enigmachain_0.0.1_amd64.deb" | sha256sum --check
 ```
+
+([How to verify releases](https://github.com/enigmampc/enigmachain/blob/592ba7e05b8c8e300ed24e240c34ff15cbde1cec/docs/verify-releases.md))
 
 ### 1. Make sure you don't have a previous installation (from testnet):
 
