@@ -60,22 +60,25 @@ go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"
 	GO111MODULE=on go mod verify
 
-build: go.sum
-	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/enigmachain/cmd/enigmacli
+xgo_build_enigmad: go.sum
 	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/enigmachain/cmd/enigmad
 
-build_local: go.sum
+xgo_build_enigmacli: go.sum
+	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/enigmachain/cmd/enigmacli
+
+build_local:
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
 
-build_linux:
-	$(MAKE) build XGO_TARGET=linux/amd64
+build_linux: build_local
 
 build_windows:
-	$(MAKE) build XGO_TARGET=windows/amd64
+	$(MAKE) xgo_build_enigmad XGO_TARGET=windows/amd64
+	$(MAKE) xgo_build_enigmacli XGO_TARGET=windows/amd64
 
 build_macos:
-	$(MAKE) build XGO_TARGET=darwin/amd64
+	$(MAKE) xgo_build_enigmad XGO_TARGET=darwin/amd64
+	$(MAKE) xgo_build_enigmacli XGO_TARGET=darwin/amd64
 
 build_all: build_linux build_windows build_macos
 
@@ -99,6 +102,26 @@ deb: build_local
 	dpkg-deb --build /tmp/enigmachain/deb/ .
 	-rm -rf /tmp/enigmachain
 
+rename_for_release:
+	-rename "s/windows-4.0-amd64/v${VERSION}-win64/" *.exe
+	-rename "s/darwin-10.6-amd64/v${VERSION}-osx64/" *darwin*
+
+sign_for_release: rename_for_release
+	sha256sum enigmachain*.deb enigmad-* enigmacli-* > SHA256SUMS
+	gpg2 -u 91831DE812C6415123AFAA7B420BF1CB005FBCE6 --digest-algo sha256 --clearsign --yes SHA256SUMS
+	rm -f SHA256SUMS
+	
+release: sign_for_release
+	rm -rf ./release/
+	mkdir -p ./release/
+	cp enigmachain_*.deb ./release/ 
+	cp enigmacli-* ./release/ 
+	cp enigmad-* ./release/
+	cp SHA256SUMS.asc ./release/
+
 clean:
-	rm -rf /tmp/enigmachain
-	rm -rf ./build/
+	-rm -rf /tmp/enigmachain
+	-rm -rf enigmacli-*
+	-rm -rf enigmad-*
+	-rm -rf enigmachain-*.deb
+	-rm -f ./SHA256SUMS*
