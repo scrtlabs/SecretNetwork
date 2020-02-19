@@ -1,5 +1,5 @@
 <div align="center">
-<img width="400px" src="https://github.com/enigmampc/enigmachain/blob/cfb8a48be908e387c35860739f5d9aee93b9d7e5/docs/logo.svg" type="image/svg+xml">
+<img width="380px" src="https://raw.githubusercontent.com/enigmampc/enigmachain/cfb8a48be908e387c35860739f5d9aee93b9d7e5/docs/logo.svg" type="image/svg+xml">
 
 Enigma secures the decentralized web
 
