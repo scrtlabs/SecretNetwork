@@ -6,7 +6,7 @@ This document details how to join the EnigmaChain `mainnet` as a validator.
 
 - Ubuntu/Debian host (with ZFS or LVM to be able to add more storage easily)
 - A public IP address
-- Open ports `TCP 26656 - 26660` Note : If you're behind a router or firewall then you'll need to port forward on the network device.
+- Open ports `TCP 26656 - 26660` _Note: If you're behind a router or firewall then you'll need to port forward on the network device._
 
 ## Installation
 
@@ -135,7 +135,7 @@ And publish yourself as a node with this ID:
 <your-node-id>@<your-public-ip>:26656
 ```
 
-So if someone wants to add you ass a peer have the add the above address to teir `persistent_peers` in their `~/.enigmad/config/config.toml`.  
+So if someone wants to add you ass a peer have the add the above address to their `persistent_peers` in their `~/.enigmad/config/config.toml`.  
 And if someone wants to use you from their `enigmacli` then have them run:
 
 ```bash

@@ -71,7 +71,7 @@ enigmacli keys add <key-alias>
 enigmacli keys show <key-alias> -a
 ```
 
-### 7. Request tokens be allocated in genesis to the address displayed above.
+### 7. Request tokens to be allocated in genesis to the address displayed above.
 
 **:warning:Note:warning:: You must finish this step before Thursday 2020-02-13 15:00:00 UTC**
 
@@ -110,7 +110,7 @@ enigmad gentx --name <key-alias> --amount <amount-to-stake>uscrt --ip <your-PUBL
 
 **Note**: You should stake at least 100000000 uscrt (100 SCRT). After the mainnet launch you can [transfer the rest of your funds to a ledger](https://github.com/enigmampc/enigmachain/blob/master/Ledger.md) and [delegate more funds](https://gist.github.com/assafmo/0d3c789aa51de9217b3937b3e5671686#staking-more-tokens) to your validator from there.
 
-### 14. Now upload the genesis validator transaction file you created in step 13 and send us the pastebin link:
+### 14. Now upload the genesis validator transaction file you created in step 13 and send us the Pastebin link:
 
 ```bash
 sudo apt install -y pastebinit

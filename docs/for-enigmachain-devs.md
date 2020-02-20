@@ -87,7 +87,7 @@ enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a a
 
 (To withdraw only rewards omit the `--commission`)
 
-# Run your own node (after genesis)
+# Run a node (after genesis)
 
 First, init your environment:
 
@@ -103,13 +103,13 @@ Next, edit your `~/.enigmad/config/config.toml`, set the `persistent_peers`:
 persistent_peers = "[id]@[peer_node_ip]:26656" # `id` can be aquired from your first peer by running `enigmacli status`
 ```
 
-That't it! Once you're done, just run:
+That's it! Once you're done, just run:
 
 ```bash
 enigmad start --pruning nothing
 ```
 
-You will see you local bloackchain replica starting to catch up with your peer's one.
+You will see your local blockchain replica starting to catch up with your peer's one.
 
 Congrats, you are now up and running!
 

@@ -21,21 +21,21 @@
 
 - Our binaries require Cosmos App Version `1.5.1` (if you only see a lower version available, like `1.0.0`, then you need to upgrade your Ledger firmware).
 
-- Hit "Install" and wait for process to complete.
+- Hit "Install" and wait for the process to complete.
 
 _Ref: https://github.com/cosmos/ledger-cosmos_
 
 ## Common commands
 
-These are some basic examples for commands you can use with your Ledger. You may notice that most commands stay the same, you just need to add the `--ledger` flag.
+These are some basic examples of commands you can use with your Ledger. You may notice that most commands stay the same, you just need to add the `--ledger` flag.
 
 **Note: To run these commands below, or any command that requires signing with your Ledger device, you need your Ledger to be opened on the Cosmos App:**  
 ![](https://miro.medium.com/max/1536/1*Xfi5_ScAiFn6rr9YBjgFFw.jpeg)
 _Ref: https://medium.com/cryptium-cosmos/how-to-store-your-cosmos-atoms-on-your-ledger-and-delegate-with-the-command-line-929eb29705f_
 
-### Prepare your linux host to work with ledger
+### Prepare your Linux host to work with ledger
 
-Some users may not have their ledger recognized by their linux host. To fix this issue impliment the fix for connection issues on linux from the [ledger support page](https://support.ledger.com/hc/en-us/articles/115005165269-Connection-issues-with-Windows-or-Linux)
+Some users may not have their ledger recognized by their Linux host. To fix this issue implement the fix for connection issues on Linux from the [ledger support page](https://support.ledger.com/hc/en-us/articles/115005165269-Connection-issues-with-Windows-or-Linux)
 
 ```bash
 wget -q -O - https://raw.githubusercontent.com/LedgerHQ/udev-rules/master/add_udev_rules.sh | sudo bash
@@ -43,7 +43,7 @@ wget -q -O - https://raw.githubusercontent.com/LedgerHQ/udev-rules/master/add_ud
 
 ### Create an account
 
-> Note : You can use any number you'd like for your account number. Be sure to remember the number you used, so you can recover if needed.
+> Note: You can use any number you'd like for your account number. Be sure to remember the number you used, so you can recover if needed.
 
 ```bash
 enigmacli keys add <account name> --ledger --account <account number on your Ledger>

@@ -23,7 +23,7 @@ gpg: WARNING: This key is not certified with a trusted signature!
 gpg:          There is no indication that the signature belongs to the owner.
 ```
 
-You may contact us in a channel you deem secure and we'll verify the fingerprint for you.
+You may contact us on a channel you deem secure and we'll verify the fingerprint for you.
 
 Then to eliminate future warnings run:
 

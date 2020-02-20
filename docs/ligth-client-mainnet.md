@@ -1,6 +1,6 @@
 # How to use `enigmacli` as an EnigmaChain light client
 
-1. Get the lastest release of `enigmacli` for your OS: https://github.com/enigmampc/enigmachain/releases/latest.
+1. Get the latest release of `enigmacli` for your OS: https://github.com/enigmampc/enigmachain/releases/latest.
 
    ([How to verify releases](/docs/verify-releases.md))
 
