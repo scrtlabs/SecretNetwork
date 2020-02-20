@@ -23,4 +23,4 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/enigmacha
 
 # Archive
 
-- [How to join EnigmaChain as a mainnet genesis validator](/docs/genesis-validator-mainnet.md)
+- [How to join Enigmachain as a mainnet genesis validator](/docs/genesis-validator-mainnet.md)
