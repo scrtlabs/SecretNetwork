@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/enigmampc/Enigmachain/types/util"
+	"github.com/enigmampc/enigmachain/types/util"
 )
 
 // Aliases for internal types

@@ -23,8 +23,8 @@ import (
 	"github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/libs/cli"
 
-	app "github.com/enigmampc/Enigmachain"
-	eng "github.com/enigmampc/Enigmachain/types"
+	app "github.com/enigmampc/enigmachain"
+	eng "github.com/enigmampc/enigmachain/types"
 )
 
 func main() {
@@ -41,7 +41,7 @@ func main() {
 
 	rootCmd := &cobra.Command{
 		Use:   "enigmacli",
-		Short: "Enigmachain Client",
+		Short: "EnigmaChain Client",
 	}
 
 	// Add --chain-id to persistent flags and mark it required
