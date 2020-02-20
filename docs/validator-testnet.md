@@ -129,7 +129,7 @@ engcli keys add <key-alias>
 engcli keys show <key-alias> -a
 ```
 
-### 16. Request tokens be sent to the address displayed above.
+### 16. Request tokens to be sent to the address displayed above.
 
 ### 17. Check that you have the requested tokens:
 
