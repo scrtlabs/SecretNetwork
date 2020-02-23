@@ -65,6 +65,8 @@ enigmacli config trust-node true # true if you trust the full-node you are conne
 enigmacli keys add <key-alias>
 ```
 
+**:warning:Note:warning:: Please backup the mnemonics!**
+
 ### 6. Output your key address:
 
 ```bash

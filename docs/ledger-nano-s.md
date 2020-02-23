@@ -49,6 +49,8 @@ wget -q -O - https://raw.githubusercontent.com/LedgerHQ/udev-rules/master/add_ud
 enigmacli keys add <account name> --ledger --account <account number on your Ledger>
 ```
 
+**:warning:Note:warning:: Please backup the mnemonics!**
+
 ### Display your account address
 
 ```bash

@@ -123,6 +123,8 @@ engcli config trust-node true # true if you trust the full-node you are connecti
 engcli keys add <key-alias>
 ```
 
+**:warning:Note:warning:: Please backup the mnemonics!**
+
 ### 15. Output your node address:
 
 ```
