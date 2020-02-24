@@ -1,5 +1,5 @@
 *.deb
-/enigmacli-*
-/enigmad-*
+/enigmacli*
+/enigmad*
 SHA256SUMS*
 /release
