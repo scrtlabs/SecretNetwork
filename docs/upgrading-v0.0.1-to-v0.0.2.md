@@ -75,7 +75,7 @@ If all went well you should see your node continueing to sync blocks:
 journalctl -f -u enigma-node
 ```
 
-And to check if your validator node is jailed:
+To check if your validator node is jailed:
 
 ```bash
 enigmacli q staking validators | grep -B 10 "<YOUR_MONIKER>"
