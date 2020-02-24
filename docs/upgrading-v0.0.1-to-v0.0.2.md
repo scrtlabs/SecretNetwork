@@ -5,7 +5,7 @@ This upgrade is optional and should only save disk space for full nodes.
 
 1. The `~/.enigmad/config` directory
 2. The self delegator key: `enigmacli keys export mykey`
-3. After step 2: The `~/.enigmad/data/priv_validator_state.json` file
+3. After step #2: The `~/.enigmad/data/priv_validator_state.json` file
 
 Note: because of current aggressive slashing parameters you need to finish this entire upgrade process in under 50 blocks (Around 4 minutes), otherwise you will be jailed for 10 minutes and slashed a bit.
 
