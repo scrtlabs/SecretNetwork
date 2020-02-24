@@ -1,7 +1,7 @@
 # Upgrading a full node from v0.0.1 to v0.0.2
 
 This upgrade is optional and should only save disk space for full nodes.  
-If you are upgrading a validator node :warning:please make sure to backup:warning::
+:warning:If you are upgrading a validator node please make sure to backup:warning::
 
 1. The `~/.enigmad/config` directory
 2. The self delegator key: `enigmacli keys export mykey`
