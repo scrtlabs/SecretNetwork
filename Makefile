@@ -93,7 +93,8 @@ deb: build_local
 	chmod +x /tmp/enigmachain/deb/bin/enigmad /tmp/enigmachain/deb/bin/enigmacli
 	mkdir -p /tmp/enigmachain/deb/DEBIAN
 	cp ./packaging_ubuntu/control /tmp/enigmachain/deb/DEBIAN/control
-	echo "Version: 0.0.1" >> /tmp/enigmachain/deb/DEBIAN/control
+	printf "Version: " >> /tmp/enigmachain/deb/DEBIAN/control
+	git tag | tail -1 | tr -d v >> /tmp/enigmachain/deb/DEBIAN/control
 	echo "" >> /tmp/enigmachain/deb/DEBIAN/control
 	cp ./packaging_ubuntu/postinst /tmp/enigmachain/deb/DEBIAN/postinst
 	chmod 755 /tmp/enigmachain/deb/DEBIAN/postinst
