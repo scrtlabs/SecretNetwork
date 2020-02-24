@@ -10,7 +10,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=$(which enigmad) start --pruning nothing
+ExecStart=$(which enigmad) start
 User=XXXXX
 Restart=always
 StartLimitInterval=0
