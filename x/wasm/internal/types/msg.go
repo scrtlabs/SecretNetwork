@@ -70,6 +70,9 @@ func (msg MsgStoreCode) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Sender}
 }
 
+// Assaf:
+// Need to add a flag if encryted or not
+// InitMsg - should be encryptd
 type MsgInstantiateContract struct {
 	Sender    sdk.AccAddress  `json:"sender" yaml:"sender"`
 	Code      uint64          `json:"code_id" yaml:"code_id"`
@@ -100,6 +103,9 @@ func (msg MsgInstantiateContract) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Sender}
 }
 
+// Assaf:
+// Need to add a flag if encryted or not
+// Msg - should be encryptd
 type MsgExecuteContract struct {
 	Sender    sdk.AccAddress  `json:"sender" yaml:"sender"`
 	Contract  sdk.AccAddress  `json:"contract" yaml:"contract"`
