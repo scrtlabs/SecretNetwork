@@ -9,13 +9,15 @@ This upgrade is optional and should only save disk space for full nodes.
 
 Note: because of current aggressive slashing parameters you need to finish this entire upgrade process in under 50 blocks (Around 4 minutes), otherwise you will be jailed for 10 minutes and slashed a bit.
 
-# Recovery
+# Note on recovery
 
 Prior to upgrading to v0.0.2, validators are encouraged to take a full data snapshot before proceeding. Snapshotting depends heavily on infrastructure, but generally this can be done by backing up the `.enigmacli` and `.enigmad` directories.
 
 It is critically important to back-up the `.enigmad/data/priv_validator_state.json` file after stopping your `enigmad` process (or the `enigma-node` systemd service). This file is updated every block as your validator participates in a consensus rounds. It is a critical file needed to prevent double-signing, in case the upgrade fails and the previous state needs to be restarted.
 
 In the event that the upgrade does not succeed, validators and operators must downgrade back to v0.0.1 restore to their latest snapshot before restarting their nodes.
+
+# Upgrade process
 
 ## 1. Get v0.0.2
 
