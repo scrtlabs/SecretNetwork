@@ -17,10 +17,10 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/enigmacha
 - [How to verify releases](/docs/verify-releases.md)
 - [Using `enigmacli` as an Enigma light client](/docs/ligth-client-mainnet.md)
 - [Ledger Nano S support](/docs/ledger-nano-s.md)
-- [How to run a full node in mainnet](/docs/run-full-node-mainnet.md)
-- [How to join as a mainnet validator](/docs/validator-testnet.md)
-- [For Enigma developers](/docs/for-enigmachain-devs.md)
+- [How to run a full node in mainnet](/docs/validators_and_full_nodes/run-full-node-mainnet.md)
+- [How to join as a mainnet validator](/docs/validators_and_full_nodes/join-validator-mainnet.md)
+- [For Enigma developers](/docs/archive/for-enigmachain-devs.md)
 
 # Archive
 
-- [How to join Enigma as a mainnet genesis validator](/docs/genesis-validator-mainnet.md)
+- [How to join Enigma as a mainnet genesis validator](/docs/genesis/genesis-validator-mainnet.md)
