@@ -11,7 +11,7 @@ Note: because of current aggressive slashing parameters you need to finish this 
 
 # Note on recovery
 
-Prior to upgrading to v0.0.2, validators are encouraged to take a full data snapshot before proceeding. Snapshotting depends heavily on infrastructure, but generally this can be done by backing up the `.enigmacli` and `.enigmad` directories.
+Prior to upgrading to v0.0.2, validators are encouraged to take a full data snapshot. Snapshotting depends heavily on infrastructure, but generally this can be done by backing up the `.enigmacli` and `.enigmad` directories.
 
 It is critically important to back-up the `.enigmad/data/priv_validator_state.json` file after stopping your `enigmad` process (or the `enigma-node` systemd service). This file is updated every block as your validator participates in a consensus rounds. It is a critical file needed to prevent double-signing, in case the upgrade fails and the previous state needs to be restarted.
 
