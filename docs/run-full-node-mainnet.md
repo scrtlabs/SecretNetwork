@@ -7,6 +7,7 @@ This document details how to join the EnigmaChain `mainnet` as a validator.
 - Ubuntu/Debian host (with ZFS or LVM to be able to add more storage easily)
 - A public IP address
 - Open ports `TCP 26656 - 26660` _Note: If you're behind a router or firewall then you'll need to port forward on the network device._
+- Reading https://docs.tendermint.com/master/tendermint-core/running-in-production.html
 
 ## Installation
 

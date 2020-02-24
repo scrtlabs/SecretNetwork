@@ -7,6 +7,7 @@ This document details how to join the EnigmaChain `mainnet` as a genesis validat
 - Ubuntu/Debian host (with ZFS or LVM to be able to add more storage easily)
 - A public IP address
 - Open ports `TCP 26656 - 26660`
+- Reading https://docs.tendermint.com/master/tendermint-core/running-in-production.html
 
 ## Installation
 
