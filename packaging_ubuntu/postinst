@@ -20,7 +20,6 @@ LimitNOFILE=65535
 [Install]
 WantedBy=multi-user.target
 EOF
-sudo perl -i -pe "s/XXXXX/$USER/" /etc/systemd/system/enigma-node.service
 sudo systemctl daemon-reload
 
 sudo perl -i -pe 's/#SystemMaxUse=.*/SystemMaxUse=50M/' /etc/systemd/journald.conf
