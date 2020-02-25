@@ -1,7 +1,7 @@
 # Upgrading a validator or a full node from v0.0.1 to v0.0.2
 
 This upgrade is optional and should only save disk space for full nodes.  
-:warning:If you are upgrading a validator node please [make sure to back it up before you make any changes.](/docs/validators_and_full_nodes/backup-a-validator.md):warning:
+:warning:If you are upgrading a validator node please [make sure to back it up before you make any changes.](/docs/validators-and-full-nodes/migrate-a-vlidator.md):warning:
 
 Because of current aggressive slashing parameters, validators need to make sure their node is down for less than 50 blocks (Around 4 minutes), otherwise you will be jailed for 10 minutes and slashed a bit.
 
