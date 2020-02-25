@@ -37,6 +37,11 @@ sudo mount /dev/chainstate/data .enigmad/data
 sudo echo "/dev/chainstate/data	/home/ubuntu ext4 defaults		0 0" >> /etc/fstab
 ```
 
+### Install the `.deb` file
+```bash
+sudo dpkg -i enigmachain_0.0.1_amd64.deb
+```
+
 ### Config local node
 
 ```bash
