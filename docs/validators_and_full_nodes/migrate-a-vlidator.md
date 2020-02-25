@@ -1,5 +1,7 @@
 # How to migrate a validator
 
+:warning: This is not yet tested by the Enigma team :warning:
+
 Please make sure you [backup your validator](/docs/validators_and_full_nodes/backup-a-validator.md) before you migrate it.
 
 ### 1. [Run a new full node](/docs/validators_and_full_nodes/run-full-node-mainnet.md) on a new server.

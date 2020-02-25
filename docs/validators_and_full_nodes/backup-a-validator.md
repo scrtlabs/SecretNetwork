@@ -16,6 +16,8 @@ To see the associated bech32 address:
 enigmad tendermint show-address
 ```
 
-If you are using the software sign (which is the default signing method of tendermint), your Tendermint Key is located in `~/.enigmad/config/priv_validator_key.json`. The easiest way is to backup the whole config folder.
+If you are using the software sign (which is the default signing method of tendermint), your Tendermint Key is located in `~/.enigmad/config/priv_validator_key.json`.
+
+The easiest way is to backup the whole config folder.
 
 Or you can use hardware to manage your Tendermint Key much more safely, such as [YubiHSM2](https://developers.yubico.com/YubiHSM2/).
