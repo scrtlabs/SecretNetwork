@@ -41,7 +41,7 @@ sudo dpkg -i enigmachain_0.0.1_amd64.deb
 _Note: Even if we are running this command and the previous one with sudo, this package does not need to be run as root_.
 
 ```
-sudo perl -i -pe "s/XXXXX/$USER/" /etc/systemd/system/enigma-node.service
+sudo perl -i -pe "s/XXXXX/$(logname)/" /etc/systemd/system/enigma-node.service
 ```
 
 ### 5. Initialize your installation of the enigmachain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
