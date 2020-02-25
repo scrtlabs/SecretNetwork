@@ -1,4 +1,4 @@
-# How to migrate a validator
+# How to migrate a validator to a new server
 
 Please make sure you [backup your validator](/docs/validators_and_full_nodes/backup-a-validator.md) before you migrate it.
 
