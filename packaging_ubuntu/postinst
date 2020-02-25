@@ -11,7 +11,7 @@ After=network.target
 [Service]
 Type=simple
 ExecStart=$(which enigmad) start
-User=XXXXX
+User=$(logname)
 Restart=always
 StartLimitInterval=0
 RestartSec=3
