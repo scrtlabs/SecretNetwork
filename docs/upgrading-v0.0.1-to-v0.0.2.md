@@ -9,13 +9,13 @@ Also, Because this upgrade is related to blockchain storage, to prevent data cor
 
 # Validators
 
-Follow the [How to migrate a validator to a new machine](/docs/validators_and_full_nodes/migrate-a-vlidator.md) guide while installing v0.0.2 on the new machine.
+Follow the [How to migrate a validator to a new machine](/docs/validators-and-full-nodes/migrate-a-vlidator.md) guide while installing v0.0.2 on the new machine.
 
 # Full nodes that are not validators
 
 - If you do care about downtime:
 
-  Follow the [How to deploy a full node](/docs/validators_and_full_nodes/run-full-node-mainnet.md) guide while installing v0.0.2 on the new machine.
+  Follow the [How to deploy a full node](/docs/validators-and-full-nodes/run-full-node-mainnet.md) guide while installing v0.0.2 on the new machine.
 
   To check if the new full node finished catching-up:
 
