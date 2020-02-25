@@ -35,6 +35,9 @@ sudo mount /dev/chainstate/data .enigmad/data
 
 # Make mount persistant
 sudo echo "/dev/chainstate/data	/home/ubuntu ext4 defaults		0 0" >> /etc/fstab
+
+# Make the default user able to r/w
+sudo chown -R ubuntu .enigmad/
 ```
 
 ### Install the `.deb` file
