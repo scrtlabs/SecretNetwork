@@ -25,43 +25,31 @@ wget -O enigmachain_0.0.2_amd64.deb https://github.com/enigmampc/enigmachain/rel
 sudo dpkg -i enigmachain_0.0.2_amd64.deb
 ```
 
-### 3. Update the configuration file that sets up the system service with your current user as the user this service will run as.
-
-_Note: Even if we are running this command and the previous one with sudo, this package does not need to be run as root_.
-
-```bash
-sudo perl -i -pe "s/XXXXX/$(logname)/" /etc/systemd/system/enigma-node.service
-```
-
-```bash
-sudo systemctl daemon-reload
-```
-
-### 4. Initialize your installation of the enigmachain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
+### 3. Initialize your installation of the enigmachain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
 
 ```bash
 enigmad init <MONIKER> --chain-id enigma-1
 ```
 
-### 5. Download a copy of the Genesis Block file: `genesis.json`
+### 4. Download a copy of the Genesis Block file: `genesis.json`
 
 ```bash
 wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/enigmachain/master/enigma-1-genesis.json"
 ```
 
-### 6. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
+### 5. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
 
 ```
 echo "86cd9864f5b8e7f540c5edd3954372df94bd23de62e06d5c33a84bd5f3d29114 $HOME/.enigmad/config/genesis.json" | sha256sum --check
 ```
 
-### 7. Validate that the `genesis.json` is a valid genesis file:
+### 6. Validate that the `genesis.json` is a valid genesis file:
 
 ```
 enigmad validate-genesis
 ```
 
-### 8. Add `bootstrap.mainnet.enigma.co` as a persistent peer in your configuration file.
+### 7. Add `bootstrap.mainnet.enigma.co` as a persistent peer in your configuration file.
 
 If you are curious, you can query the RPC endpoint on that node http://bootstrap.mainnet.enigma.co:26657/ (please note that the RPC port `26657` is different from the P2P port `26656` below)
 
@@ -69,25 +57,25 @@ If you are curious, you can query the RPC endpoint on that node http://bootstrap
 perl -i -pe 's/persistent_peers = ""/persistent_peers = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.enigmad/config/config.toml
 ```
 
-### 9. Listen for incoming RPC requests so that light nodes could connect to you:
+### 8. Listen for incoming RPC requests so that light nodes could connect to you:
 
 ```bash
 perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.enigmad/config/config.toml
 ```
 
-### 10. Enable `enigma-node` as a system service:
+### 9. Enable `enigma-node` as a system service:
 
 ```
 sudo systemctl enable enigma-node
 ```
 
-### 11. Start `enigma-node` as a system service:
+### 10. Start `enigma-node` as a system service:
 
 ```
 sudo systemctl start enigma-node
 ```
 
-### 12. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
+### 11. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
 
 ```bash
 journalctl -f -u enigma-node
@@ -112,7 +100,7 @@ Feb 10 21:18:59 ip-172-31-41-58 enigmad[8814]: I[2020-02-10|21:18:59.695] Commit
 
 You are now a full node. :tada:
 
-### 13. Add the following configuration settings (some of these avoid having to type some flags all the time):
+### 12. Add the following configuration settings (some of these avoid having to type some flags all the time):
 
 ```bash
 enigmacli config chain-id enigma-1
@@ -130,7 +118,7 @@ enigmacli config indent true
 enigmacli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
 ```
 
-### 14. Get you node ID with:
+### 13. Get you node ID with:
 
 ```bash
 enigmacli status | awk -F \" '/"id"/{print $4}'
