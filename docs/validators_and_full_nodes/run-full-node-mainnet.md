@@ -65,13 +65,11 @@ If you are curious, you can query the RPC endpoint on that node http://bootstrap
 perl -i -pe 's/persistent_peers = ""/persistent_peers = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.enigmad/config/config.toml
 ```
 
-### 9. Add your public IP to your config file so that light nodes could connect to you:
+### 9. Listen for incoming RPC requests so that light nodes could connect to you:
 
-In `~/.enigmad/config/config.toml` set `laddr = "tcp://<your-machines-ip>:26657"`.
-
-`<your-machines-ip>` is the IP address your machine binds to. If you ony have on interface you can get it with `hotsname -I`.
-
-If `<your-machines-ip>` isn't a public IP then you should make sure it's reacable to the internet via port forwarding.
+```bash
+perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.enigmad/config/config.toml
+```
 
 ### 10. Enable `enigma-node` as a system service:
 
