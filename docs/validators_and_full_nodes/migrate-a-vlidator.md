@@ -1,7 +1,5 @@
 # How to migrate a validator
 
-:warning: This is not yet tested by the Enigma team :warning:
-
 Please make sure you [backup your validator](/docs/validators_and_full_nodes/backup-a-validator.md) before you migrate it.
 
 ### 1. [Run a new full node](/docs/validators_and_full_nodes/run-full-node-mainnet.md) on a new server.
@@ -39,6 +37,8 @@ To check on the new full node if it finished catching-up:
 # On the full node on the new machine:
 enigmacli status | jq .sync_info
 ```
+
+(`catching_up` should equal `false`)
 
 ### 5. After the new node have caught-up, stop the validator node and then stop the new full node.
 
