@@ -51,13 +51,13 @@ wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigma
 
 ### 6. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
 
-```
+```bash
 echo "86cd9864f5b8e7f540c5edd3954372df94bd23de62e06d5c33a84bd5f3d29114 $HOME/.enigmad/config/genesis.json" | sha256sum --check
 ```
 
 ### 7. Validate that the `genesis.json` is a valid genesis file:
 
-```
+```bash
 enigmad validate-genesis
 ```
 
@@ -65,19 +65,19 @@ enigmad validate-genesis
 
 If you are curious, you can query the RPC endpoint on that node http://bootstrap.mainnet.enigma.co:26657/ (please note that the RPC port `26657` is different from the P2P port `26656` below)
 
-```
+```bash
 perl -i -pe 's/persistent_peers = ""/persistent_peers = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.enigmad/config/config.toml
 ```
 
 ### 9. Enable `enigma-node` as a system service:
 
-```
+```bash
 sudo systemctl enable enigma-node
 ```
 
 ### 10. Start `enigma-node` as a system service:
 
-```
+```bash
 sudo systemctl start enigma-node
 ```
 
