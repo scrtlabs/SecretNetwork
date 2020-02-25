@@ -21,8 +21,8 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/enigmacha
 - [How to join as a mainnet validator](/docs/validators-and-full-nodes/join-validator-mainnet.md)
 - [How to backup a validator](/docs/validators-and-full-nodes/backup-a-validator.md)
 - [How to migrate a validator to a new machine](/docs/validators-and-full-nodes/migrate-a-vlidator.md)
-- [For Enigma developers](/docs/archive/for-enigmachain-devs.md)
 
 # Archive
 
+- [For Enigma developers](/docs/dev/for-enigmachain-devs.md)
 - [How to join Enigma as a mainnet genesis validator](/docs/genesis/genesis-validator-mainnet.md)
