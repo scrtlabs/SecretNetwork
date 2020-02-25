@@ -8,8 +8,8 @@ Please make sure you [backup your validator](/docs/validators-and-full-nodes/bac
 
 You can also back it up with:
 
+On the validator node on the old machine:
 ```bash
-# On the validator node on the old machine:
 enigmacli keys export mykey > mykey.backup
 ```
 
@@ -17,15 +17,15 @@ enigmacli keys export mykey > mykey.backup
 
 This can be done with the mnemonics:
 
+On the full node on the new machine:
 ```bash
-# On the full node on the new machine:
 enigmacli keys add mykey --recover
 ```
 
 Or with the backup file `mykey.backup` from the previous step:
 
+On the full node on the new machine:
 ```bash
-# On the full node on the new machine:
 enigmacli keys import mykey mykey.backup
 ```
 
@@ -33,8 +33,8 @@ enigmacli keys import mykey mykey.backup
 
 To check on the new full node if it finished catching-up:
 
+On the full node on the new machine:
 ```bash
-# On the full node on the new machine:
 enigmacli status | jq .sync_info
 ```
 
@@ -44,13 +44,13 @@ enigmacli status | jq .sync_info
 
 To prevert double signing, you should stop the validator node and only then stop the new full node.
 
+On the validator node on the old machine:
 ```bash
-# On the validator node on the old machine:
 sudo systemctl stop enigma-node
 ```
 
+On the full node on the new machine:
 ```bash
-# On the full node on the new machine:
 sudo systemctl stop enigma-node
 ```
 
@@ -60,14 +60,14 @@ On the old machine the file is `~/.enigmad/config/priv_validator_key.json`.
 
 You can copy it manually or for example you can copy the file to the new machine using ssh:
 
+On the validator node on the old machine:
 ```bash
-# On the validator node on the old machine:
 scp ~/.enigmad/config/priv_validator_key.json ubuntu@new_machine_ip:~/.enigmad/config/priv_validator_key.json
 ```
 
 ### 7. On the new server start the new full node which is now your validator node.
 
+On the new machine:
 ```bash
-# On the new machine:
 sudo systemctl start enigma-node
 ```
