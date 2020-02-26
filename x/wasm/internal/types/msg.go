@@ -89,6 +89,8 @@ func (msg MsgStoreCode) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Sender}
 }
 
+// TODO encrypt:
+// InitMsg
 type MsgInstantiateContract struct {
 	Sender    sdk.AccAddress  `json:"sender" yaml:"sender"`
 	Code      uint64          `json:"code_id" yaml:"code_id"`
@@ -134,6 +136,8 @@ func (msg MsgInstantiateContract) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Sender}
 }
 
+// TODO encrypt:
+// Msg
 type MsgExecuteContract struct {
 	Sender    sdk.AccAddress  `json:"sender" yaml:"sender"`
 	Contract  sdk.AccAddress  `json:"contract" yaml:"contract"`
