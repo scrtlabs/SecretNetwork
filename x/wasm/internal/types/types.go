@@ -40,6 +40,7 @@ func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, source string, builder
 }
 
 // ContractInfo stores a WASM contract instance
+// TODO encrypt: InitMsg
 type ContractInfo struct {
 	CodeID  uint64          `json:"code_id"`
 	Creator sdk.AccAddress  `json:"creator"`
