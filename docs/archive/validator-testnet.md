@@ -13,7 +13,7 @@ This document details how to join the EnigmaChain `testnet`
 ### 1. Download the [EnigmaChain package installer](https://enigmaco-website.s3.amazonaws.com/enigmachain_0.0.1_amd64.deb) (Debian/Ubuntu)
 
 ```
-wget -O enigmachain_0.0.1_amd64.deb https://enigmaco-website.s3.amazonaws.com/enigmachain_0.0.1_amd64.deb
+wget https://enigmaco-website.s3.amazonaws.com/enigmachain_0.0.1_amd64.deb
 ```
 
 ### 2. Make sure you don't have a previous installation (from testnet):
