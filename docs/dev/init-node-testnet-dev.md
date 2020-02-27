@@ -1,7 +1,7 @@
 ### Download Release 0.0.1
 
 ```bash
-wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.1/enigmachain_0.0.1_amd64.deb
+wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb
 ```
 
 ### Remove old installations
@@ -44,13 +44,12 @@ sudo chown -R ubuntu .enigmad/
 ### Install the `.deb` file
 
 ```bash
-sudo dpkg -i enigmachain_0.0.1_amd64.deb
+sudo dpkg -i enigmachain_0.0.2_amd64.deb
 ```
 
 ### Config local node
 
 ```bash
-sudo perl -i -pe "s/XXXXX/$USER/" /etc/systemd/system/enigma-node.service
 enigmacli config chain-id "enigma-testnet"
 enigmacli config output json
 enigmacli config indent true
