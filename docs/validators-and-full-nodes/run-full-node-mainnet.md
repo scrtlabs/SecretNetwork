@@ -1,4 +1,4 @@
-# How to deploy a full node
+# How to join the Enigma Blockhain as a full node on mainnet
 
 This document details how to join the EnigmaChain `mainnet` as a validator.
 
