@@ -22,7 +22,7 @@ For more information about the governance process and how it works, please check
 
 ## Create a Governance Proposal
 
-In order to create a governance proposal, you must submit an initial deposit along with a title and description. Currently, in order to enter the voting period, a proposal must accumulate within a week deposits of at least [1000 SCRT](https://github.com/enigmampc/EnigmaBlockchain/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1851-L1856).
+In order to create a governance proposal, you must submit an initial deposit along with a title and description. Currently, in order to enter the voting period, a proposal must accumulate within a week deposits of at least [1000 `SCRT`](https://github.com/enigmampc/EnigmaBlockchain/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1851-L1856).
 
 Various modules outside of governance may implement their own proposal types and handlers (eg. parameter changes), where the governance module itself supports `Text` proposals. Any module outside of governance has it's command mounted on top of `submit-proposal`.
 
@@ -134,7 +134,7 @@ The only ways deposits won't be returned to their owners is:
 1. If in the voting period the proposal gets 1/3 `NoWithVeto` out of all votes, excluding Abstain votes (So `NoWithVeto` needs to be 1/3 out of all `Yes`, `No` & `NoWithVeto` ).
 2. If in the voting period less than 1/3 of voting power votes (== The proposal won't reach a quorum).
 
-Anyone can deposit for a proposal, even if you have 0 `uSCRT` tokens staked/delegated/bonded.
+Anyone can deposit for a proposal, even if you have 0 `SCRT` tokens staked/delegated/bonded.
 
 ## Query Deposits
 
