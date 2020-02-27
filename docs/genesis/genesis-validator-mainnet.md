@@ -118,7 +118,7 @@ enigmacli keys add <key-alias>
 
 **:warning:Note:warning:: Please backup the mnemonics!**
 
-**Note**: If you already have a key you can import it with the bip39 mnemonic with `enigmacli keys add <key-alias> --recover` or with `enigmacli keys export` & `enigmacli keys import`.
+**Note**: If you already have a key you can import it with the bip39 mnemonic with `enigmacli keys add <key-alias> --recover` or with `enigmacli keys export` (exports to `stderr`!!) & `enigmacli keys import`.
 
 ### 13. Output your node address:
 

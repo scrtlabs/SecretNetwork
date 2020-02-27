@@ -18,7 +18,7 @@ wget https://enigmaco-website.s3.amazonaws.com/enigmachain_0.0.1_amd64.deb
 
 ### 2. Make sure you don't have a previous installation (from testnet):
 
-**Note:** If you will be using the same key from testnet you can export it with `enigmacli keys export <key-alias> > my.key` and later import it with `enigmacli keys import <key-alias> my.key`.
+**Note:** If you will be using the same key from testnet you can export it to `stderr` with `enigmacli keys export <key-alias>` and paste it into `my.key` and later import it with `enigmacli keys import <key-alias> my.key`.
 
 ```bash
 sudo dpkg -r enigmachain
