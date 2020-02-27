@@ -1,2 +1,2 @@
 /target/
-libgo_cosmwasm*
+*.so
