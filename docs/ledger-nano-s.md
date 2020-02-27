@@ -6,7 +6,7 @@
 - If you don't, or you using your Ledger device for the first time, you should check Ledger's [Getting Started](https://support.ledger.com/hc/en-us/sections/360001415213-Getting-started) guide.
 - We also advise you to check your Ledger's genuineness and upgrade your firmware to the newest one available (`v1.6.0+`).
 - Have a machine with [Ledger Live](https://www.ledger.com/ledger-live) installed.
-- Have the latest version of our latest binaries installed. You can get it [here](https://github.com/enigmampc/enigmachain/releases).
+- Have the latest version of our latest binaries installed. You can get it [here](https://github.com/enigmampc/EnigmaBlockchain/releases/latest).
 
 ## Install Cosmos Ledger App
 

@@ -1,4 +1,4 @@
-module github.com/enigmampc/enigmachain
+module github.com/enigmampc/EnigmaBlockchain
 
 go 1.13
 

@@ -3,8 +3,8 @@
 **Requirement**: Go version needs to be [1.13 or higher](https://golang.org/dl/).
 
 ```bash
-git clone https://github.com/enigmampc/enigmachain
-cd enigmachain
+git clone https://github.com/enigmampc/EnigmaBlockchain
+cd EnigmaBlockchain
 go mod tidy
 make install # installs enigmad and enigmacli
 ```

@@ -11,21 +11,21 @@ This document details how to join the EnigmaChain `mainnet` as a validator.
 
 ## Installation
 
-### 1. Download the [EnigmaChain package installer](https://github.com/enigmampc/enigmachain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb) (Debian/Ubuntu):
+### 1. Download the [EnigmaChain package installer](https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb) (Debian/Ubuntu):
 
 ```bash
-wget -O enigmachain_0.0.2_amd64.deb https://github.com/enigmampc/enigmachain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb
+wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb
 ```
 
 ([How to verify releases](/docs/verify-releases.md))
 
-### 2. Install the enigmachain package:
+### 2. Install the package:
 
 ```bash
 sudo dpkg -i enigmachain_0.0.2_amd64.deb
 ```
 
-### 3. Initialize your installation of the enigmachain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
+### 3. Initialize your installation of the Enigma Blockchain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
 
 ```bash
 enigmad init <MONIKER> --chain-id enigma-1
