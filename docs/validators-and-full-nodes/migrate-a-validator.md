@@ -1,6 +1,6 @@
 # How to migrate a validator to a new machine
 
-Please make sure you [backup your validator](/docs/validators-and-full-nodes/backup-a-validator.md) before you migrate it.
+:warning: Please make sure you [backup your validator](/docs/validators-and-full-nodes/backup-a-validator.md) before you migrate it.
 
 ### 1. [Run a new full node](/docs/validators-and-full-nodes/run-full-node-mainnet.md) on a new machine.
 
