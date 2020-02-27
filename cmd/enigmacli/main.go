@@ -23,8 +23,8 @@ import (
 	"github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/libs/cli"
 
-	app "github.com/enigmampc/enigmachain"
-	eng "github.com/enigmampc/enigmachain/types"
+	app "github.com/enigmampc/EnigmaBlockchain"
+	eng "github.com/enigmampc/EnigmaBlockchain/types"
 )
 
 func main() {

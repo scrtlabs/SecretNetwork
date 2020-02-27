@@ -19,8 +19,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
-	app "github.com/enigmampc/enigmachain"
-	eng "github.com/enigmampc/enigmachain/types"
+	app "github.com/enigmampc/EnigmaBlockchain"
+	eng "github.com/enigmampc/EnigmaBlockchain/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"

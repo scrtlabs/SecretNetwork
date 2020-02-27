@@ -1,7 +1,7 @@
 ### Download Release 0.0.1
 
 ```bash
-wget -O enigmachain_0.0.1_amd64.deb https://github.com/enigmampc/enigmachain/releases/download/v0.0.1/enigmachain_0.0.1_amd64.deb
+wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.1/enigmachain_0.0.1_amd64.deb
 ```
 
 ### Remove old installations
@@ -20,6 +20,7 @@ sudo rm -rf "$(which engd)"
 
 - Attach storage to instance
 - Run the following
+
 ```bash
 # Create volumes and groups
 sudo pvcreate /dev/xvdf
@@ -41,6 +42,7 @@ sudo chown -R ubuntu .enigmad/
 ```
 
 ### Install the `.deb` file
+
 ```bash
 sudo dpkg -i enigmachain_0.0.1_amd64.deb
 ```

@@ -13,12 +13,12 @@ This document details how to join the EnigmaChain `testnet`
 ### 1. Download the [EnigmaChain package installer](https://enigmaco-website.s3.amazonaws.com/enigmachain_0.0.1_amd64.deb) (Debian/Ubuntu)
 
 ```
-wget -O enigmachain_0.0.1_amd64.deb https://enigmaco-website.s3.amazonaws.com/enigmachain_0.0.1_amd64.deb
+wget https://enigmaco-website.s3.amazonaws.com/enigmachain_0.0.1_amd64.deb
 ```
 
 ### 2. Make sure you don't have a previous installation (from testnet):
 
-**Note:** If you will be using the same key from testnet you can export it with `enigmacli keys export <key-alias> > my.key` and later import it with `enigmacli keys import <key-alias> my.key`.
+**Note:** If you will be using the same key from testnet you can export it to `stderr` with `enigmacli keys export <key-alias>` and paste it into `my.key` and later import it with `enigmacli keys import <key-alias> my.key`.
 
 ```bash
 sudo dpkg -r enigmachain
@@ -44,7 +44,7 @@ _Note: Even if we are running this command and the previous one with sudo, this 
 sudo perl -i -pe "s/XXXXX/$(logname)/" /etc/systemd/system/enigma-node.service
 ```
 
-### 5. Initialize your installation of the enigmachain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
+### 5. Initialize your installation. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
 
 ```
 engd init <MONIKER> --chain-id enigma-testnet

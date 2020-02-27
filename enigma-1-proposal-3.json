@@ -1,0 +1,17 @@
+{
+  "title": "Param Change slashing.signed_blocks_window: from 100 to 5000",
+  "description": "We propose increasing `slashing.signed_blocks_window` from 100 to 5000.\n\nCurrently `slashing.signed_blocks_window` is 100 and `slashing.min_signed_per_window` is 50%.\nTherefore validators must sign at least 50 blocks out of the last 100 blocks to prevent being slashed because of downtime.\nWith the current block time of 5.76 seconds, validators cannot be offline for more than 4m48s.\n\nIf this proposal will pass:\nValidators will be able to sign at least 2500 blocks out of the last 5000 blocks to prevent being slashed because of downtime.\nValidators will be able to be offline for 4 hours at a time without being slashed, which will give more time for maintenance and chain updates.",
+  "changes": [
+    {
+      "subspace": "slashing",
+      "key": "SignedBlocksWindow",
+      "value": "5000"
+    }
+  ],
+  "deposit": [
+    {
+      "denom": "uscrt",
+      "amount": "20000000"
+    }
+  ]
+}

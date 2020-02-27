@@ -11,25 +11,21 @@ This document details how to join the EnigmaChain `mainnet` as a validator.
 
 ## Installation
 
-### 1. Download the [EnigmaChain package installer](https://github.com/enigmampc/enigmachain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb) (Debian/Ubuntu):
+### 1. Download the [Enigma Blockchain package installer](https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb) (Debian/Ubuntu):
 
 ```bash
-wget -O enigmachain_0.0.2_amd64.deb
-```
-
-```bash
-https://github.com/enigmampc/enigmachain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb
+wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb
 ```
 
 ([How to verify releases](/docs/verify-releases.md))
 
-### 2. Install the enigmachain package:
+### 2. Install the package:
 
 ```bash
 sudo dpkg -i enigmachain_0.0.2_amd64.deb
 ```
 
-### 3. Initialize your installation of the enigmachain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
+### 3. Initialize your installation of Enigma Blockchain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
 
 ```bash
 enigmad init <MONIKER> --chain-id enigma-1
@@ -38,7 +34,7 @@ enigmad init <MONIKER> --chain-id enigma-1
 ### 4. Download a copy of the Genesis Block file: `genesis.json`
 
 ```bash
-wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/enigmachain/master/enigma-1-genesis.json"
+wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/EnigmaBlockchain/master/enigma-1-genesis.json"
 ```
 
 ### 5. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
@@ -122,7 +118,7 @@ enigmacli keys add <key-alias>
 
 **:warning:Note:warning:: Please backup the mnemonics!**
 
-**Note**: If you already have a key you can import it with the bip39 mnemonic with `enigmacli keys add <key-alias> --recover` or with `enigmacli keys export` & `enigmacli keys import`.
+**Note**: If you already have a key you can import it with the bip39 mnemonic with `enigmacli keys add <key-alias> --recover` or with `enigmacli keys export` (exports to `stderr`!!) & `enigmacli keys import`.
 
 ### 13. Output your node address:
 

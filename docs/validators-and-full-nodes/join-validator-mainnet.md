@@ -11,57 +11,45 @@ This document details how to join the EnigmaChain `mainnet` as a validator.
 
 ## Installation
 
-### 1. Download the [EnigmaChain package installer](https://github.com/enigmampc/enigmachain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb) (Debian/Ubuntu):
+### 1. Download the [Enigma Blockchain package installer](https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb) (Debian/Ubuntu):
 
 ```bash
-wget -O enigmachain_0.0.2_amd64.deb
-```
-
-```bash
-https://github.com/enigmampc/enigmachain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb
+wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb
 ```
 
 ([How to verify releases](/docs/verify-releases.md))
 
-### 2. Install the enigmachain package:
+### 2. Install the package:
 
 ```bash
 sudo dpkg -i enigmachain_0.0.2_amd64.deb
 ```
 
-### 3. Update the configuration file that sets up the system service with your current user as the user this service will run as.
-
-_Note: Even if we are running this command and the previous one with sudo, this package does not need to be run as root_.
-
-```bash
-sudo perl -i -pe "s/XXXXX/$USER/" /etc/systemd/system/enigma-node.service
-```
-
-### 4. Initialize your installation of the enigmachain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
+### 3. Initialize your installation. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
 
 ```bash
 enigmad init <MONIKER> --chain-id enigma-1
 ```
 
-### 5. Download a copy of the Genesis Block file: `genesis.json`
+### 4. Download a copy of the Genesis Block file: `genesis.json`
 
 ```bash
-wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/enigmachain/master/enigma-1-genesis.json"
+wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/EnigmaBlockchain/master/enigma-1-genesis.json"
 ```
 
-### 6. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
+### 5. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
 
 ```bash
 echo "86cd9864f5b8e7f540c5edd3954372df94bd23de62e06d5c33a84bd5f3d29114 $HOME/.enigmad/config/genesis.json" | sha256sum --check
 ```
 
-### 7. Validate that the `genesis.json` is a valid genesis file:
+### 6. Validate that the `genesis.json` is a valid genesis file:
 
 ```bash
 enigmad validate-genesis
 ```
 
-### 8. Add `bootstrap.mainnet.enigma.co` as a persistent peer in your configuration file.
+### 7. Add `bootstrap.mainnet.enigma.co` as a persistent peer in your configuration file.
 
 If you are curious, you can query the RPC endpoint on that node http://bootstrap.mainnet.enigma.co:26657/ (please note that the RPC port `26657` is different from the P2P port `26656` below)
 
@@ -69,19 +57,19 @@ If you are curious, you can query the RPC endpoint on that node http://bootstrap
 perl -i -pe 's/persistent_peers = ""/persistent_peers = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.enigmad/config/config.toml
 ```
 
-### 9. Enable `enigma-node` as a system service:
+### 8. Enable `enigma-node` as a system service:
 
 ```bash
 sudo systemctl enable enigma-node
 ```
 
-### 10. Start `enigma-node` as a system service:
+### 9. Start `enigma-node` as a system service:
 
 ```bash
 sudo systemctl start enigma-node
 ```
 
-### 11. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
+### 10. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
 
 ```bash
 journalctl -f -u enigma-node
@@ -104,7 +92,7 @@ Feb 10 21:18:59 ip-172-31-41-58 enigmad[8814]: I[2020-02-10|21:18:59.695] Commit
 ^C
 ```
 
-### 12. Add the following configuration settings (some of these avoid having to type some flags all the time):
+### 11. Add the following configuration settings (some of these avoid having to type some flags all the time):
 
 ```bash
 enigmacli config chain-id enigma-1
@@ -122,7 +110,7 @@ enigmacli config indent true
 enigmacli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
 ```
 
-### 13. Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):
+### 12. Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):
 
 ```bash
 enigmacli keys add <key-alias>
@@ -130,17 +118,17 @@ enigmacli keys add <key-alias>
 
 **:warning:Note:warning:: Please backup the mnemonics!**
 
-**Note**: If you already have a key you can import it with the bip39 mnemonic with `enigmacli keys add <key-alias> --recover` or with `enigmacli keys export` & `enigmacli keys import`.
+**Note**: If you already have a key you can import it with the bip39 mnemonic with `enigmacli keys add <key-alias> --recover` or with `enigmacli keys export` (exports to `stderr`!!) & `enigmacli keys import`.
 
-### 14. Output your node address:
+### 13. Output your node address:
 
 ```bash
 enigmacli keys show <key-alias> -a
 ```
 
-### 15. Transfer tokens to the address displayed above.
+### 14. Transfer tokens to the address displayed above.
 
-### 16. Check that you have the requested tokens:
+### 15. Check that you have the requested tokens:
 
 ```bash
 enigmacli q account $(enigmacli keys show -a <key_alias>)
@@ -152,7 +140,7 @@ If you get the following message, it means that you have no tokens yet:
 ERROR: unknown address: account enigmaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx does not exist
 ```
 
-### 17. Join the network as a new validator: replace `<MONIKER>` with your own from step 3 above, and adjust the amount you want to stake
+### 16. Join the network as a new validator: replace `<MONIKER>` with your own from step 3 above, and adjust the amount you want to stake
 
 (remember 1 SCRT = 1,000,000 uSCRT, and so the command below stakes 100k SCRT).
 
@@ -170,7 +158,7 @@ enigmacli tx staking create-validator \
   --from=<key-alias>
 ```
 
-### 18. Check that you have been added as a validator:
+### 17. Check that you have been added as a validator:
 
 ```bash
 enigmacli q staking validators

@@ -6,7 +6,7 @@
 - If you don't, or you using your Ledger device for the first time, you should check Ledger's [Getting Started](https://support.ledger.com/hc/en-us/sections/360001415213-Getting-started) guide.
 - We also advise you to check your Ledger's genuineness and upgrade your firmware to the newest one available (`v1.6.0+`).
 - Have a machine with [Ledger Live](https://www.ledger.com/ledger-live) installed.
-- Have the latest version of our latest binaries installed. You can get it [here](https://github.com/enigmampc/enigmachain/releases).
+- Have the latest version of our latest binaries installed. You can get it [here](https://github.com/enigmampc/EnigmaBlockchain/releases/latest).
 
 ## Install Cosmos Ledger App
 
@@ -67,7 +67,7 @@ enigmacli keys add <account name> --ledger --account <account number on your Led
 
 **Note! If you run the above command without the `--ledger` flag, the CLI will prompt you to enter your BIP39 mnemonic, which is your Ledger recovery phrase. YOU DO NOT WANT TO DO THIS. This will essentially save your private key locally.**
 
-_Note: the commands below assume that you run them on the same machine where you have an enigmachain node running. However, if you need to connect to a remote enigmachain node (on the cloud) while you interact with your Ledger wallet locally, you will need to append the following to each command below:_
+_Note: the commands below assume that you run them on the same machine where you have an Enigma Blockchain node running. However, if you need to connect to a remote Enigma Blockchain node (on the cloud) while you interact with your Ledger wallet locally, you will need to append the following to each command below:_
 
 ```bash
 --node http://node.domain:26657
