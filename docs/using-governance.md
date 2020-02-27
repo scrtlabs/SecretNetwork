@@ -1,4 +1,4 @@
-# How to participate in the on-chain governance
+# How to participate in on-chain governance
 
 Governance is the process from which users in the Enigma Blockchain can come to consensus
 on software upgrades, parameters of the mainnet or signaling mechanisms through
