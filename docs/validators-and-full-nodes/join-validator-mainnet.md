@@ -25,7 +25,7 @@ wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enig
 sudo dpkg -i enigmachain_0.0.2_amd64.deb
 ```
 
-### 3. Initialize your installation of the enigmachain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
+### 3. Initialize your installation. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
 
 ```bash
 enigmad init <MONIKER> --chain-id enigma-1
@@ -34,7 +34,7 @@ enigmad init <MONIKER> --chain-id enigma-1
 ### 4. Download a copy of the Genesis Block file: `genesis.json`
 
 ```bash
-wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/enigmachain/master/enigma-1-genesis.json"
+wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/EnigmaBlockchain/master/enigma-1-genesis.json"
 ```
 
 ### 5. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:

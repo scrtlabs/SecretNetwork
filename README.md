@@ -38,5 +38,5 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/EnigmaBlo
 
 # Archive
 
-- [For Enigma developers](/docs/dev/for-enigmachain-devs.md)
+- [For Enigma developers](/docs/dev/for-enigma-blockchain-devs.md)
 - [How to join Enigma as a mainnet genesis validator](/docs/genesis/genesis-validator-mainnet.md)

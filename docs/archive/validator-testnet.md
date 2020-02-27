@@ -44,7 +44,7 @@ _Note: Even if we are running this command and the previous one with sudo, this 
 sudo perl -i -pe "s/XXXXX/$(logname)/" /etc/systemd/system/enigma-node.service
 ```
 
-### 5. Initialize your installation of the enigmachain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
+### 5. Initialize your installation. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
 
 ```
 engd init <MONIKER> --chain-id enigma-testnet
