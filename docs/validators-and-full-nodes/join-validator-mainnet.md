@@ -9,6 +9,19 @@ This document details how to join the Enigma Blockchain `mainnet` as a validator
 - Open ports `TCP 26656 & 26657` _Note: If you're behind a router or firewall then you'll need to port forward on the network device._
 - Reading https://docs.tendermint.com/master/tendermint-core/running-in-production.html
 
+### While actual specs vary depending on the load and validators count, minimal requirements are:
+
+1GB RAM
+25GB of disk space
+1.4 GHz CPU
+SSD disks are preferable for applications with high transaction throughput.
+
+### Recommended:
+
+2GB RAM
+100GB SSD
+x64 2.0 GHz 2v CPU
+
 ## Installation
 
 ### 1. Download the [Enigma Blockchain package installer](https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb) (Debian/Ubuntu):
