@@ -18,7 +18,7 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/EnigmaBlo
 - Forum: https://forum.enigma.co
 - Discord: https://www.enigma.co/discord
 - Blog: https://blog.enigma.co
-- Twitter: https://twitter.com/enigmampc
+- Twitter: https://twitter.com/EnigmaMPC
 - Unofficial Telegram Chat: https://t.me/EnigmaCommunity
 
 # Block Explorers
