@@ -1,9 +1,6 @@
 # How to participate in on-chain governance
 
-Governance is the process from which users in the Enigma Blockchain can come to consensus
-on software upgrades, parameters of the mainnet or signaling mechanisms through
-text proposals. This is done through voting on proposals, which will be submitted
-by `SCRT` holders on the mainnet.
+Governance is the process from which users in the Enigma Blockchain can come to consensus on software upgrades, parameters of the mainnet or signaling mechanisms through text proposals. This is done through voting on proposals, which will be submitted by `SCRT` holders on the mainnet.
 
 Some considerations about the voting process:
 
@@ -16,8 +13,12 @@ Some considerations about the voting process:
   - `(NoWithVetoVotes / (YesVotes+NoVotes+NoWithVetoVotes)) < 1/3` ([veto](https://github.com/enigmampc/EnigmaBlockchain/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1865))
   - `((YesVotes+NoVotes+NoWithVetoVotes) / totalBondedStake) >= 1/3` ([quorum](https://github.com/enigmampc/EnigmaBlockchain/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1863))
 
-For more information about the governance process and how it works, please check
-out the Governance module [specification](https://github.com/cosmos/cosmos-sdk/tree/master/x/gov/spec).
+For more information about the governance process and how it works, please check out the Governance module [specification](https://github.com/cosmos/cosmos-sdk/tree/master/x/gov/spec).
+
+## Setup
+
+- [How to use a light client (Windows, Mac & Linux)](/docs/ligth-client-mainnet.md)
+- [Ledger Nano S support](/docs/ledger-nano-s.md)
 
 ## Create a Governance Proposal
 
@@ -60,8 +61,7 @@ Where `proposal.json` is:
 }
 ```
 
-To submit a parameter change proposal, you must provide a proposal file as its
-contents are less friendly to CLI input:
+To submit a parameter change proposal, you must provide a proposal file as its contents are less friendly to CLI input:
 
 ```bash
 enigmacli tx gov submit-proposal param-change <path/to/proposal.json> --from <key_alias>
@@ -91,16 +91,11 @@ Where `proposal.json` is:
 
 You can see another `param-change` example here: [enigma-1-proposal-3.json](/enigma-1-proposal-3.json)
 
-:warning: Currently parameter changes are _evaluated_ but not _validated_, so it is very important
-that any `value` change is valid (ie. correct type and within bounds) for its
-respective parameter, eg. `MaxValidators` should be an integer and not a decimal.
+:warning: Currently parameter changes are _evaluated_ but not _validated_, so it is very important that any `value` change is valid (ie. correct type and within bounds) for its respective parameter, eg. `MaxValidators` should be an integer and not a decimal.
 
-Proper vetting of a parameter change proposal should prevent this from happening
-(no deposits should occur during the governance process), but it should be noted
-regardless.
+Proper vetting of a parameter change proposal should prevent this from happening (no deposits should occur during the governance process), but it should be noted regardless.
 
-The `SoftwareUpgrade` is currently not supported as it's not implemented and
-currently does not differ from the semantics of a `Text` proposal.
+The `SoftwareUpgrade` is currently not supported as it's not implemented and currently does not differ from the semantics of a `Text` proposal.
 
 ## Query Proposals
 
