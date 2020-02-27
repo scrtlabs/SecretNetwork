@@ -1,0 +1,44 @@
+[package]
+name = "go-cosmwasm"
+version = "0.6.3"
+authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
+edition = "2018"
+description = "Go bindings for cosmwasm contracts"
+repository = "https://github.com/enigmampc/enigmachain/go-cosmwasm"
+license = "Apache-2.0"
+readme = "README.md"
+exclude = [".circleci/*", ".gitignore"]
+
+[lib]
+crate-type = ["cdylib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[badges]
+circle-ci = { repository = "confio/go-cosmwasm", branch = "master" }
+maintenance = { status = "actively-developed" }
+
+[features]
+default = ["singlepass", "backtraces"]
+backtraces = ["snafu/backtraces"]
+singlepass = ["cosmwasm-vm/default-singlepass"]
+cranelift = ["cosmwasm-vm/default-cranelift"]
+
+[dependencies]
+cosmwasm = "0.6.4"
+cosmwasm-vm = "0.6.4"
+errno = "0.2"
+snafu = { version = "0.5.0", default-features = false, features = ["rust_1_30"] }
+
+[build-dependencies]
+cbindgen = { version = "0.9.1" }
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = true
+lto = false
+debug-assertions = false
+codegen-units = 16
+panic = 'unwind'
+incremental = true
+overflow-checks = true
