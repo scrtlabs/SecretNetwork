@@ -1,4 +1,4 @@
-# Use your Ledger with Enigma chain!
+# Use your Ledger with the Enigma Blockchain!
 
 ## Prerequisites
 
