@@ -10,7 +10,21 @@ Want to build a better internet? Solve for privacy.
 
 Enigma is a decentralized, open-source protocol that lets anyone perform computations on encrypted data, bringing privacy to smart contracts and public blockchains. Our mission: improve the adoption and usability of decentralized technologies, for the benefit of all.
 
-Mainnet is out! Get the latest release at https://github.com/enigmampc/enigmachain/releases/latest.
+Mainnet is out! Get the latest release at https://github.com/enigmampc/EnigmaBlockchain/releases/latest.
+
+# Community
+
+- Homepage: https://www.enigma.co
+- Forum: https://forum.enigma.co
+- Discord: https://www.enigma.co/discord
+- Blog: https://blog.enigma.co
+- Twitter: https://twitter.com/enigmampc
+- Unofficial Telegram Chat: https://t.me/EnigmaCommunity
+
+# Block Explorers
+
+- https://explorer.mainnet.enigma.co/
+- https://explorer.scrt.cashmaney.com/
 
 # Docs
 
