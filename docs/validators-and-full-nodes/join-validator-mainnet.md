@@ -1,6 +1,6 @@
-# How to join EnigmaChain as a mainnet validator
+# How to join the Enigma Blockhain as a mainnet validator
 
-This document details how to join the EnigmaChain `mainnet` as a validator.
+This document details how to join the Enigma Blockchain `mainnet` as a validator.
 
 ## Requirements
 
