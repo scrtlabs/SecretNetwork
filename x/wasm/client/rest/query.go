@@ -10,8 +10,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/rest"
-	"github.com/enigmampc/enigmachain/x/wasm/internal/keeper"
-	"github.com/enigmampc/enigmachain/x/wasm/internal/types"
+	"github.com/enigmampc/EnigmaBlockchain/x/wasm/internal/keeper"
+	"github.com/enigmampc/EnigmaBlockchain/x/wasm/internal/types"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/gorilla/mux"

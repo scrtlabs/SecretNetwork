@@ -10,8 +10,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 	"github.com/gorilla/mux"
 
-	wasmUtils "github.com/enigmampc/enigmachain/x/wasm/client/utils"
-	"github.com/enigmampc/enigmachain/x/wasm/internal/types"
+	wasmUtils "github.com/enigmampc/EnigmaBlockchain/x/wasm/client/utils"
+	"github.com/enigmampc/EnigmaBlockchain/x/wasm/internal/types"
 )
 
 func registerTxRoutes(cliCtx context.CLIContext, r *mux.Router) {

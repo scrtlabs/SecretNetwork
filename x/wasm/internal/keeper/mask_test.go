@@ -12,7 +12,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-	wasmTypes "github.com/enigmampc/enigmachain/go-cosmwasm/types"
+	wasmTypes "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
 )
 
 // MaskInitMsg is {}

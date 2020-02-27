@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/enigmampc/enigmachain/go-cosmwasm/types"
+	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
 )
 
 func TestInitAndReleaseCache(t *testing.T) {

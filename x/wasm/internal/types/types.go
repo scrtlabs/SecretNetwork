@@ -7,7 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	auth "github.com/cosmos/cosmos-sdk/x/auth/exported"
-	wasmTypes "github.com/enigmampc/enigmachain/go-cosmwasm/types"
+	wasmTypes "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
 )
 
 const defaultLRUCacheSize = uint64(0)

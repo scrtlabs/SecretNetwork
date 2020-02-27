@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	wasm "github.com/enigmampc/enigmachain/go-cosmwasm"
-	wasmTypes "github.com/enigmampc/enigmachain/go-cosmwasm/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -14,9 +12,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/exported"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	wasm "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm"
+	wasmTypes "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
 	"github.com/tendermint/tendermint/crypto"
 
-	"github.com/enigmampc/enigmachain/x/wasm/internal/types"
+	"github.com/enigmampc/EnigmaBlockchain/x/wasm/internal/types"
 )
 
 // GasMultiplier is how many cosmwasm gas points = 1 sdk gas point
@@ -69,7 +69,7 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	}
 	var codeHash []byte
 	if isSimulationMode(ctx) {
-		// https://github.com/enigmampc/enigmachain/issues/42
+		// https://github.com/enigmampc/EnigmaBlockchain/issues/42
 		// any sha256 hash is good enough
 		codeHash = make([]byte, 32)
 	} else {

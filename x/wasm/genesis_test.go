@@ -70,7 +70,7 @@ func TestInitGenesis(t *testing.T) {
 	msg = MsgStoreCode{
 		Sender:       creator,
 		WASMByteCode: testContract,
-		Source:       "https://github.com/enigmampc/enigmachain/blob/master/x/wasm/testdata/escrow.wasm",
+		Source:       "https://github.com/enigmampc/EnigmaBlockchain/blob/master/x/wasm/testdata/escrow.wasm",
 		Builder:      "cosmwasm-opt:0.5.2",
 	}
 	err = msg.ValidateBasic()

@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/enigmampc/enigmachain/x/wasm"
+	"github.com/enigmampc/EnigmaBlockchain/x/wasm"
 	"github.com/spf13/viper"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/cli"
