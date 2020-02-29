@@ -143,7 +143,7 @@ And publish yourself as a node with this ID:
 <your-node-id>@<your-public-ip>:26656
 ```
 
-So if someone wants to add you as a peer have them add the above address to their `persistent_peers` in their `~/.enigmad/config/config.toml`.  
+So if someone wants to add you as a peer, have them add the above address to their `persistent_peers` in their `~/.enigmad/config/config.toml`.  
 And if someone wants to use you from their `enigmacli` then have them run:
 
 ```bash
