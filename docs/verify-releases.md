@@ -10,7 +10,7 @@ gpg2 --recv-keys 91831DE812C6415123AFAA7B420BF1CB005FBCE6
 sha256sum --check SHA256SUMS.asc
 ```
 
-## 3. Verify the hashes are singed by Enigma:
+## 3. Verify the hashes are signed by Enigma:
 
 ```bash
 gpg2 --verify SHA256SUMS.asc
