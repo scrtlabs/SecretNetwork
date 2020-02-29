@@ -115,7 +115,6 @@ type EnigmaChainApp struct {
 	paramsKeeper   params.Keeper
 	upgradeKeeper  upgrade.Keeper
 	evidenceKeeper evidence.Keeper
-	// tokenSwapKeeper tokenswap.Keeper
 
 	// the module manager
 	mm *module.Manager
@@ -282,7 +281,6 @@ func NewEnigmaChainApp(
 		staking.NewAppModule(app.stakingKeeper, app.accountKeeper, app.supplyKeeper),
 		upgrade.NewAppModule(app.upgradeKeeper),
 		evidence.NewAppModule(app.evidenceKeeper),
-		// tokenswap.NewAppModule(app.supplyKeeper, app.accountKeeper, app.tokenSwapKeeper, app.cdc),
 	)
 	// During begin block slashing happens after distr.BeginBlocker so that
 	// there is nothing left over in the validator fee pool, so as to keep the
