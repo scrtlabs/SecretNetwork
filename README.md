@@ -29,7 +29,7 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/EnigmaBlo
 # Docs
 
 - [How to verify software releases](/docs/verify-releases.md)
-- [How to use a light client (Windows, Mac & Linux)](/docs/ligth-client-mainnet.md)
+- [How to use a light client (Windows, Mac & Linux)](/docs/light-client-mainnet.md)
 - [How to participate in on-chain governance](docs/using-governance.md)
 - [Ledger Nano S support](/docs/ledger-nano-s.md)
 - [How to run a full node in mainnet](/docs/validators-and-full-nodes/run-full-node-mainnet.md)
