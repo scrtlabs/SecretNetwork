@@ -1,0 +1,250 @@
+version: 2
+workflows:
+  version: 2
+  test:
+    jobs:
+      - base
+      - singlepass_vm
+      - cranelift_vm
+      - hackatom
+      - hackatom_in_singlepass_vm
+      - fmt
+      - clippy
+
+jobs:
+  base:
+    docker:
+      - image: rust:1.40.0
+    steps:
+      - checkout
+      - run:
+          name: Install CMAKE
+          command: 'apt-get update && apt-get install -y cmake'
+      - run:
+          name: Version information
+          command: rustc --version; cargo --version; rustup --version; rustup target list --installed
+      - restore_cache:
+          keys:
+            - cargocache-base-rust:1.40.0-{{ checksum "Cargo.lock" }}
+      - run:
+          name: Build all targets (including workspaces)
+          command: cargo build --locked
+      - run:
+          name: Run all tests (including workspaces)
+          command: cargo test --locked
+      - save_cache:
+          paths:
+            - /usr/local/cargo/registry
+            - target/debug/.fingerprint
+            - target/debug/build
+            - target/debug/deps
+          key: cargocache-base-rust:1.40.0-{{ checksum "Cargo.lock" }}
+
+  singlepass_vm:
+    docker:
+      - image: rustlang/rust:nightly
+    steps:
+      - checkout
+      - run:
+          name: Install CMAKE
+          command: 'apt-get update && apt-get install -y cmake'
+      - run:
+          name: Version information
+          command: rustc --version; cargo --version; rustup --version; rustup target list --installed
+      - restore_cache:
+          keys:
+            - cargocache-singlepass-rust:nightly-{{ checksum "Cargo.lock" }}
+      - run:
+          name: Build all targets (including workspaces)
+          working_directory: ~/project/lib/vm
+          command: cargo build --locked
+      - run:
+          name: Run all tests (including workspaces)
+          working_directory: ~/project/lib/vm
+          command: cargo test --locked
+      - save_cache:
+          paths:
+            - /usr/local/cargo/registry
+            - target/debug/.fingerprint
+            - target/debug/build
+            - target/debug/deps
+          key: cargocache-singlepass-rust:nightly-{{ checksum "Cargo.lock" }}
+
+  cranelift_vm:
+    docker:
+      - image: rust:1.40.0
+    steps:
+      - checkout
+      - run:
+          name: Install CMAKE
+          command: 'apt-get update && apt-get install -y cmake'
+      - run:
+          name: Version information
+          command: rustc --version; cargo --version; rustup --version; rustup target list --installed
+      - restore_cache:
+          keys:
+            - cargocache-cranelift-rust:1.40.0-{{ checksum "Cargo.lock" }}
+      - run:
+          name: Build all targets (including workspaces)
+          working_directory: ~/project/lib/vm
+          command: cargo build --locked --no-default-features --features default-cranelift
+      - run:
+          name: Run all tests (including workspaces)
+          working_directory: ~/project/lib/vm
+          command: cargo test --locked --no-default-features --features default-cranelift
+      - save_cache:
+          paths:
+            - /usr/local/cargo/registry
+            - target/debug/.fingerprint
+            - target/debug/build
+            - target/debug/deps
+          key: cargocache-cranelift-rust:1.40.0-{{ checksum "Cargo.lock" }}
+
+  hackatom:
+    docker:
+      - image: rust:1.40.0
+    working_directory: ~/cosmwasm/contracts/hackatom
+    steps:
+      - checkout:
+          path: ~/cosmwasm
+      - run:
+          name: Version information
+          command: rustc --version; cargo --version; rustup --version
+      - restore_cache:
+          keys:
+            - cargocache-hackatom-rust:1.40.0-{{ checksum "Cargo.lock" }}
+      - run:
+          name: Add wasm32 target
+          command: rustup target add wasm32-unknown-unknown
+      - run:
+          name: Show targets
+          command: rustup target list --installed
+      - run:
+          name: Build wasm binary
+          command: cargo wasm --locked
+      - run:
+          name: Unit tests
+          env: RUST_BACKTRACE=1
+          command: cargo unit-test --locked
+      - run:
+          name: Integration tests
+          command: cargo integration-test --locked
+      - save_cache:
+          paths:
+            - /usr/local/cargo/registry
+            - target/debug/.fingerprint
+            - target/debug/build
+            - target/debug/deps
+            - target/wasm32-unknown-unknown/release/.fingerprint
+            - target/wasm32-unknown-unknown/release/build
+            - target/wasm32-unknown-unknown/release/deps
+          key: cargocache-hackatom-rust:1.40.0-{{ checksum "Cargo.lock" }}
+
+  # In this job we use singlepass as the VM to execute integration tests. This requires Rust nightly.
+  hackatom_in_singlepass_vm:
+    docker:
+      - image: rustlang/rust:nightly
+    working_directory: ~/cosmwasm/contracts/hackatom
+    steps:
+      - checkout:
+          path: ~/cosmwasm
+      - run:
+          name: Version information
+          command: rustc --version; cargo --version; rustup --version
+      - restore_cache:
+          keys:
+            - cargocache-hackatom_in_singlepass_vm-rust:nightly-{{ checksum "Cargo.lock" }}
+      - run:
+          name: Add wasm32 target
+          command: rustup target add wasm32-unknown-unknown
+      - run:
+          name: Show targets
+          command: rustup target list --installed
+      - run:
+          name: Build wasm binary
+          command: cargo wasm --locked
+      - run:
+          name: Unit tests
+          env: RUST_BACKTRACE=1
+          command: cargo unit-test --locked
+      - run:
+          name: Integration tests
+          command: cargo integration-test --no-default-features --features singlepass --locked
+      - save_cache:
+          paths:
+            - /usr/local/cargo/registry
+            - target/debug/.fingerprint
+            - target/debug/build
+            - target/debug/deps
+            - target/wasm32-unknown-unknown/release/.fingerprint
+            - target/wasm32-unknown-unknown/release/build
+            - target/wasm32-unknown-unknown/release/deps
+          key: cargocache-hackatom_in_singlepass_vm-rust:nightly-{{ checksum "Cargo.lock" }}
+
+  fmt:
+    docker:
+      - image: rust:1.40.0
+    steps:
+      - checkout
+      - run:
+          name: Version information
+          command: rustc --version; cargo --version; rustup --version; rustup target list --installed
+      - restore_cache:
+          keys:
+            - cargocache-fmt-rust:1.40.0-{{ checksum "Cargo.lock" }}
+      - run:
+          name: Add rustfmt component
+          command: rustup component add rustfmt
+      - run:
+          name: Cargo format
+          command: cargo fmt
+      - run:
+          name: Cargo format hackatom
+          command: cd contracts/hackatom && cargo fmt
+      - run:
+          name: Ensure checked-in source code is properly formatted
+          command: |
+            CHANGES_IN_REPO=$(git status --porcelain)
+            if [[ -n "$CHANGES_IN_REPO" ]]; then
+              echo "Repository is dirty. Showing 'git status' for debugging now:"
+              git status
+              exit 1
+            fi
+      - save_cache:
+          paths:
+            - /usr/local/cargo/registry
+            - target/debug/.fingerprint
+            - target/debug/build
+            - target/debug/deps
+          key: cargocache-fmt-rust:1.40.0-{{ checksum "Cargo.lock" }}
+
+  clippy:
+    docker:
+      - image: rust:1.40.0
+    steps:
+      - checkout
+      - run:
+          name: Version information
+          command: rustc --version; cargo --version; rustup --version; rustup target list --installed
+      - restore_cache:
+          keys:
+            - cargocache-clippy-rust:1.40.0-{{ checksum "Cargo.lock" }}
+      - run:
+          name: Add clippy component
+          command: rustup component add clippy
+      - run:
+          name: Clippy linting
+          command: cargo clippy -- -D warnings
+      - run:
+          name: Clippy linting on lib/vm (use flags for stable support)
+          command: cd lib/vm && cargo clippy --no-default-features --features default-cranelift
+      - run:
+          name: Clippy linting on hackatom
+          command: cd contracts/hackatom && cargo clippy -- -D warnings
+      - save_cache:
+          paths:
+            - /usr/local/cargo/registry
+            - target/debug/.fingerprint
+            - target/debug/build
+            - target/debug/deps
+          key: cargocache-clippy-rust:1.40.0-{{ checksum "Cargo.lock" }}

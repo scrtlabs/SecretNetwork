@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# Text file backups
+**/*.rs.bk
+
+# Build results
+target/
+contracts/**/contract.wasm
+contracts/**/hash.txt
+
+# IDEs
+.vscode/
+.idea/
+*.iml
