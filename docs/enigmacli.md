@@ -396,13 +396,18 @@ enigmacli q distribution commission $(enigmacli keys show -a <key-alias> --bech=
 ##### Withdrawing rewards
 
 ```bash
-enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a <key-alias>) --from <key-alias>
+enigmacli tx distribution withdraw-rewards \
+	$(enigmacli keys show --bech=val -a <key-alias>) \
+	--from <key-alias>
 ```
 
 ##### Withdrawing rewards+commissions
 
 ```bash
-enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a <key-alias>) --from <key-alias> --commission
+enigmacli tx distribution withdraw-rewards \
+	$(enigmacli keys show --bech=val -a <key-alias>) \
+	--from <key-alias> \
+	--commission
 ```
 
 #### Delegate to a Validator
