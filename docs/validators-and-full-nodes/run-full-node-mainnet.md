@@ -1,4 +1,4 @@
-# How to deploy a full node
+# How to join the Enigma Blockhain as a full node on mainnet
 
 This document details how to join the EnigmaChain `mainnet` as a validator.
 
@@ -9,9 +9,22 @@ This document details how to join the EnigmaChain `mainnet` as a validator.
 - Open ports `TCP 26656 & 26657` _Note: If you're behind a router or firewall then you'll need to port forward on the network device._
 - Reading https://docs.tendermint.com/master/tendermint-core/running-in-production.html
 
+### While actual specs vary depending on the load and validators count, minimal requirements are:
+
+1GB RAM
+25GB of disk space
+1.4 GHz CPU
+SSD disks are preferable for applications with high transaction throughput.
+
+### Recommended:
+
+2GB RAM
+100GB SSD
+x64 2.0 GHz 2v CPU
+
 ## Installation
 
-### 1. Download the [EnigmaChain package installer](https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb) (Debian/Ubuntu):
+### 1. Download the [Enigma Blockchain package installer](https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb) (Debian/Ubuntu):
 
 ```bash
 wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb
@@ -57,7 +70,7 @@ If you are curious, you can query the RPC endpoint on that node http://bootstrap
 perl -i -pe 's/persistent_peers = ""/persistent_peers = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.enigmad/config/config.toml
 ```
 
-### 8. Listen for incoming RPC requests so that light nodes could connect to you:
+### 8. Listen for incoming RPC requests so that light nodes can connect to you:
 
 ```bash
 perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.enigmad/config/config.toml
@@ -118,7 +131,7 @@ enigmacli config indent true
 enigmacli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
 ```
 
-### 13. Get you node ID with:
+### 13. Get your node ID with:
 
 ```bash
 enigmacli status | awk -F \" '/"id"/{print $4}'
@@ -130,7 +143,7 @@ And publish yourself as a node with this ID:
 <your-node-id>@<your-public-ip>:26656
 ```
 
-So if someone wants to add you ass a peer have the add the above address to their `persistent_peers` in their `~/.enigmad/config/config.toml`.  
+So if someone wants to add you as a peer, have them add the above address to their `persistent_peers` in their `~/.enigmad/config/config.toml`.  
 And if someone wants to use you from their `enigmacli` then have them run:
 
 ```bash
