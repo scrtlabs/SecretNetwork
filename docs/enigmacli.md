@@ -372,6 +372,41 @@ enigmacli q mint annual-provisions
 
 Please refer to [How to join mainnet as a validator](/docs/validators-and-full-nodes/join-validator-mainnet.md) for a complete guide on how to set up a validator-candidate.
 
+Use the following command to:
+- rename your validator (moniker)
+- see your rewards and commissions from delegators
+- withdraw rewards and/or commissions
+
+##### Renaming your moniker
+
+```bash
+enigmacli tx staking edit-validator --moniker <new-moniker> --from <key-alias>
+```
+
+##### Seeing your rewards from being a validator
+
+```bash
+enigmacli q distribution rewards $(enigmacli keys show -a <key-alias>)
+```
+
+##### Seeing your commissions from your delegators
+
+```bash
+enigmacli q distribution commission $(enigmacli keys show -a <key-alias> --bech=val)
+```
+
+##### Withdrawing rewards
+
+```bash
+enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a <key-alias>) --from <key-alias>
+```
+
+##### Withdrawing rewards+commissions
+
+```bash
+enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a <key-alias>) --from <key-alias> --commission
+```
+
 #### Delegate to a Validator
 
 On mainnet, you can delegate `uscrt` to a validator. These delegators can receive part of the validator's fee revenue. Read more about the [Cosmos Token Model](https://github.com/cosmos/cosmos/raw/master/Cosmos_Token_Model.pdf).
@@ -417,6 +452,14 @@ enigmacli keys show <key-alias> --bech val
 where `<key-alias>` is the name of the key you specified when you initialized `enigmad`.
 
 While tokens are bonded, they are pooled with all the other bonded tokens in the network. Validators and delegators obtain a percentage of shares that equal their stake in this pool.
+
+#### Withdraw Rewards
+
+To withdraw the delegator rewards:
+
+```bash
+enigmacli tx distribution withdraw-rewards <validator-operator-address> --from <key-alias>
+```
 
 ##### Query Delegations
 
