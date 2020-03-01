@@ -1,4 +1,4 @@
-# How to use `enigmacli` as an Enigma Blockchain light client
+# Install the `enigmacli` Enigma Blockchain light client
 
 1. Get the latest release of `enigmacli` for your OS: https://github.com/enigmampc/EnigmaBlockchain/releases/latest.
 
