@@ -192,8 +192,6 @@ enigmacli q account $(enigmacli keys show -a <key-alias>)
 ::: warning Note
 When you query an account balance with zero tokens, you will get this error: `No account with address <enigma-address> was found in the state.` This can also happen if you fund the account before your node has fully synced with the chain. These are both normal.
 
-:::
-
 ### Send Tokens
 
 The following command could be used to send coins from one account to another:
