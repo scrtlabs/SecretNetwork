@@ -372,7 +372,7 @@ enigmacli q mint annual-provisions
 
 Please refer to [How to join mainnet as a validator](/docs/validators-and-full-nodes/join-validator-mainnet.md) for a complete guide on how to set up a validator-candidate.
 
-Use the following command to:
+Use the following commands to:
 - rename your validator (moniker)
 - see your rewards and commissions from delegators
 - withdraw rewards and/or commissions
@@ -425,7 +425,7 @@ If you want to get the information of a single validator you can check it with:
 enigmacli q staking validator <validator-address>
 ```
 
-#### Bond Tokens
+##### Bond Tokens
 
 On the EnigmaChain mainnet, we delegate `uscrt`, where `1scrt = 1000000uscrt`. Here's how you can bond tokens to a validator (_i.e._ delegate):
 
@@ -453,7 +453,7 @@ where `<key-alias>` is the name of the key you specified when you initialized `e
 
 While tokens are bonded, they are pooled with all the other bonded tokens in the network. Validators and delegators obtain a percentage of shares that equal their stake in this pool.
 
-#### Withdraw Rewards
+##### Withdraw Rewards
 
 To withdraw the delegator rewards:
 
@@ -481,7 +481,7 @@ Or if you want to check all your current delegations with distinct validators:
 enigmacli q staking delegations <delegator-address>
 ```
 
-#### Unbond Tokens
+##### Unbond Tokens
 
 If for any reason the validator misbehaves, or you just want to unbond a certain
 amount of tokens, use this following command.
@@ -516,7 +516,7 @@ Additionally, you can get all the unbonding-delegations from a particular valida
 enigmacli q staking unbonding-delegations-from <validator-operator-address>
 ```
 
-#### Redelegate Tokens
+##### Redelegate Tokens
 
 A redelegation is a type delegation that allows you to bond illiquid tokens from one validator to another:
 
@@ -553,7 +553,7 @@ Additionally, you can get all the outgoing redelegations from a particular valid
   enigmacli q staking redelegations-from <validator-operator-address>
 ```
 
-#### Query Parameters
+##### Query Parameters
 
 Parameters define high level settings for staking. You can get the current values by using:
 
@@ -588,7 +588,7 @@ $ enigmacli q staking params
 
 All these values will be subject to updates though a `governance` process by `ParameterChange` proposals.
 
-#### Query Pool
+##### Query Pool
 
 A staking `Pool` defines the dynamic parameters of the current state. You can query them with the following command:
 
