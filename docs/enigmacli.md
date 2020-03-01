@@ -200,8 +200,8 @@ The following command could be used to send coins from one account to another:
 
 ```bash
 enigmacli tx send <sender-key-alias-or-address> <recipient-address> 10scrt \
-	--memo <tx_memo> \
-	--chain-id=<chain_id>
+	--memo <tx-memo> \
+	--chain-id=<chain-id>
 ```
 
 ::: warning Note
@@ -234,7 +234,7 @@ You can simulate a transaction without actually broadcasting it by appending the
 
 ```bash
 enigmacli tx send <sender-key-alias-or-address> <recipient-address> 10uscrt \
-  --chain-id=<chain_id> \
+  --chain-id=<chain-id> \
   --dry-run
 ```
 
@@ -392,7 +392,7 @@ enigmacli q staking validator <validator-address>
 
 #### Bond Tokens
 
-On the EnigmaChain mainnet, we delegate `uscrt`, where `1uscrt = 1000000uscrt`. Here's how you can bond tokens to a validator (_i.e._ delegate):
+On the EnigmaChain mainnet, we delegate `uscrt`, where `1scrt = 1000000uscrt`. Here's how you can bond tokens to a validator (_i.e._ delegate):
 
 ```bash
 enigmacli tx staking delegate \
