@@ -23,8 +23,16 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/EnigmaBlo
 
 # Block Explorers
 
-- https://explorer.mainnet.enigma.co/
-- https://explorer.scrt.cashmaney.com/
+- https://explorer.mainnet.enigma.co
+- https://explorer.scrt.cashmaney.com
+
+# Implementation Discussions
+
+- [Secret Contracts on Enigma Blockchain](https://forum.enigma.co/t/secret-contracts-on-enigma-blockchain/1284)
+- [Input/Output/State Encryption/Decryption protocol](https://forum.enigma.co/t/input-output-state-encryption-decryption-protocol/1325)
+- [Network key management/agreement](https://forum.enigma.co/t/network-key-management-agreement/1324)
+- [Why the Cosmos move doesn’t mean we’re leaving Ethereum](https://forum.enigma.co/t/why-the-cosmos-move-doesnt-mean-were-leaving-ethereum/1301)
+- [(Dev discussion/Issue) WASM implementation](https://forum.enigma.co/t/dev-discussion-issue-wasm-implementation/1303)
 
 # Blockchain REST Providers
 
@@ -36,10 +44,10 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/EnigmaBlo
 - [How to use the `enigmacli` light client](/docs/enigmacli.md)
 - [How to participate in on-chain governance](docs/using-governance.md)
 - [How to run a full node on mainnet](/docs/validators-and-full-nodes/run-full-node-mainnet.md)
+- [Ledger Nano S (and X) support](/docs/ledger-nano-s.md)
 - [How to join as a mainnet validator](/docs/validators-and-full-nodes/join-validator-mainnet.md)
 - [How to backup a validator](/docs/validators-and-full-nodes/backup-a-validator.md)
 - [How to migrate a validator to a new machine](/docs/validators-and-full-nodes/migrate-a-validator.md)
-- [Ledger Nano S support](/docs/ledger-nano-s.md)
 - [How to verify software releases](/docs/verify-releases.md)
 
 # Archive

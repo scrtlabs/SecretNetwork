@@ -1,5 +1,7 @@
 # Use your Ledger with the Enigma Blockchain!
 
+Note: This guide is for Ledger Nano S but according to community members it also works for Ledger Nano X.
+
 ## Prerequisites
 
 - This guide assumes you have a verified, genuine Ledger Nano S device.
