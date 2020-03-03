@@ -26,6 +26,8 @@ In order to create a governance proposal, you must submit an initial deposit alo
 
 Various modules outside of governance may implement their own proposal types and handlers (eg. parameter changes), where the governance module itself supports `Text` proposals. Any module outside of governance has it's command mounted on top of `submit-proposal`.
 
+### Text
+
 To submit a `Text` proposal:
 
 ```bash
@@ -61,6 +63,8 @@ Where `proposal.json` is:
 }
 ```
 
+### Param Change
+
 To submit a parameter change proposal, you must provide a proposal file as its contents are less friendly to CLI input:
 
 ```bash
@@ -72,7 +76,7 @@ Where `proposal.json` is:
 ```json
 {
   "title": "Param Change",
-  "description": "Update max validators",
+  "description": "Update max validators with line breaks \n and `code formatting`",
   "changes": [
     {
       "subspace": "staking",
@@ -94,6 +98,38 @@ You can see another `param-change` example here: [enigma-1-proposal-3.json](/eni
 :warning: Currently parameter changes are _evaluated_ but not _validated_, so it is very important that any `value` change is valid (ie. correct type and within bounds) for its respective parameter, eg. `MaxValidators` should be an integer and not a decimal.
 
 Proper vetting of a parameter change proposal should prevent this from happening (no deposits should occur during the governance process), but it should be noted regardless.
+
+### Community Pool Spend
+
+To submit a community pool spend proposal, you also must provide a proposal file as its contents are less friendly to CLI input:
+
+```bash
+enigmacli tx gov submit-proposal community-pool-spend <path/to/proposal.json> --from <key_alias>
+```
+
+Where `proposal.json` is:
+
+```json
+{
+  "title": "Community Pool Spend",
+  "description": "Spend 10 SCRT with line breaks \n and `code formatting`",
+  "recipient": "enigma1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "amount": [
+    {
+      "denom": "uscrt",
+      "amount": "10000000"
+    }
+  ],
+  "deposit": [
+    {
+      "denom": "uscrt",
+      "amount": "10000000"
+    }
+  ]
+}
+```
+
+### Software Upgrade
 
 The `SoftwareUpgrade` is currently not supported as it's not implemented and currently does not differ from the semantics of a `Text` proposal.
 
