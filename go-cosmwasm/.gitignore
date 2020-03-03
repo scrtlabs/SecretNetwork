@@ -1,2 +1,5 @@
-/target/
-*.so
+/target
+**/*.rs.bk
+*.iml
+.idea
+libgo_cosmwasm*

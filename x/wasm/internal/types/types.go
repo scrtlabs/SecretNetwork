@@ -40,17 +40,63 @@ func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, source string, builder
 }
 
 // ContractInfo stores a WASM contract instance
-// TODO encrypt: InitMsg
 type ContractInfo struct {
 	CodeID  uint64          `json:"code_id"`
 	Creator sdk.AccAddress  `json:"creator"`
 	Label   string          `json:"label"`
-	InitMsg json.RawMessage `json:"init_msg"`
+	InitMsg json.RawMessage `json:"init_msg,omitempty"`
+	// never show this in query results, just use for sorting
+	// (Note: when using json tag "-" amino refused to serialize it...)
+	Created *CreatedAt `json:"created,omitempty"`
+}
+
+// CreatedAt can be used to sort contracts
+type CreatedAt struct {
+	// BlockHeight is the block the contract was created at
+	BlockHeight int64
+	// TxIndex is a monotonic counter within the block (actual transaction index, or gas consumed)
+	TxIndex uint64
+}
+
+// LessThan can be used to sort
+func (a *CreatedAt) LessThan(b *CreatedAt) bool {
+	if a == nil {
+		return true
+	}
+	if b == nil {
+		return false
+	}
+	return a.BlockHeight < b.BlockHeight || (a.BlockHeight == b.BlockHeight && a.TxIndex < b.TxIndex)
+}
+
+// NewCreatedAt gets a timestamp from the context
+func NewCreatedAt(ctx sdk.Context) *CreatedAt {
+	// we must safely handle nil gas meters
+	var index uint64
+	meter := ctx.BlockGasMeter()
+	if meter != nil {
+		index = meter.GasConsumed()
+	}
+	return &CreatedAt{
+		BlockHeight: ctx.BlockHeight(),
+		TxIndex:     index,
+	}
+}
+
+// NewContractInfo creates a new instance of a given WASM contract info
+func NewContractInfo(codeID uint64, creator sdk.AccAddress, initMsg []byte, label string, createdAt *CreatedAt) ContractInfo {
+	return ContractInfo{
+		CodeID:  codeID,
+		Creator: creator,
+		InitMsg: initMsg,
+		Label:   label,
+		Created: createdAt,
+	}
 }
 
 // NewParams initializes params for a contract instance
-func NewParams(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contractAcct auth.Account) wasmTypes.Params {
-	return wasmTypes.Params{
+func NewParams(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contractAcct auth.Account) wasmTypes.Env {
+	return wasmTypes.Env{
 		Block: wasmTypes.BlockInfo{
 			Height:  ctx.BlockHeight(),
 			Time:    ctx.BlockTime().Unix(),
@@ -79,21 +125,27 @@ func NewWasmCoins(cosmosCoins sdk.Coins) (wasmCoins []wasmTypes.Coin) {
 	return wasmCoins
 }
 
-// NewContractInfo creates a new instance of a given WASM contract info
-func NewContractInfo(codeID uint64, creator sdk.AccAddress, initMsg []byte, label string) ContractInfo {
-	return ContractInfo{
-		CodeID:  codeID,
-		Creator: creator,
-		InitMsg: initMsg,
-		Label:   label,
-	}
-}
+const CustomEventType = "wasm"
+const AttributeKeyContractAddr = "contract_address"
 
 // CosmosResult converts from a Wasm Result type
-func CosmosResult(wasmResult wasmTypes.Result) sdk.Result {
+func CosmosResult(wasmResult wasmTypes.Result, contractAddr sdk.AccAddress) sdk.Result {
+	var events []sdk.Event
+	if len(wasmResult.Log) > 0 {
+		// we always tag with the contract address issuing this event
+		attrs := []sdk.Attribute{sdk.NewAttribute(AttributeKeyContractAddr, contractAddr.String())}
+		for _, l := range wasmResult.Log {
+			// and reserve the contract_address key for our use (not contract)
+			if l.Key != AttributeKeyContractAddr {
+				attr := sdk.NewAttribute(l.Key, l.Value)
+				attrs = append(attrs, attr)
+			}
+		}
+		events = []sdk.Event{sdk.NewEvent(CustomEventType, attrs...)}
+	}
 	return sdk.Result{
-		Data: []byte(wasmResult.Data),
-		Log:  wasmResult.Log,
+		Data:   []byte(wasmResult.Data),
+		Events: events,
 	}
 }
 

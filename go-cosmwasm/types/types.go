@@ -1,17 +1,13 @@
 package types
 
-import (
-	"encoding/json"
-)
+//---------- Env ---------
 
-//---------- Params ---------
-
-// Params defines the state of the blockchain environment this contract is
+// Env defines the state of the blockchain environment this contract is
 // running in. This must contain only trusted data - nothing from the Tx itself
 // that has not been verfied (like Signer).
 //
-// Params are json encoded to a byte slice before passing to the wasm contract.
-type Params struct {
+// Env are json encoded to a byte slice before passing to the wasm contract.
+type Env struct {
 	Block    BlockInfo    `json:"block"`
 	Message  MessageInfo  `json:"message"`
 	Contract ContractInfo `json:"contract"`
@@ -45,31 +41,8 @@ type Coin struct {
 	Amount string `json:"amount"` // string encoing of decimal value, eg. "12.3456"
 }
 
-// we use a type here to force compatible encoding
-// TODO: remove this when cosmwasm updated
-type CanonicalAddress []byte
-
-func (c CanonicalAddress) MarshalJSON() ([]byte, error) {
-	ints := make([]int, len(c))
-	for i, v := range c {
-		ints[i] = int(v)
-	}
-	return json.Marshal(ints)
-}
-
-func (c *CanonicalAddress) UnmarshalJSON(bz []byte) error {
-	var ints []int
-	err := json.Unmarshal(bz, &ints)
-	if err != nil {
-		return err
-	}
-	res := make([]byte, len(ints))
-	for i, v := range ints {
-		res[i] = byte(v)
-	}
-	*c = res
-	return nil
-}
+// CanoncialAddress uses standard base64 encoding, just use it as a label for developers
+type CanonicalAddress = []byte
 
 //------- Results / Msgs -------------
 
@@ -89,7 +62,13 @@ type Result struct {
 	// base64-encoded bytes to return as ABCI.Data field
 	Data string `json:"data"`
 	// log message to return over abci interface
-	Log string `json:"log"`
+	Log []LogAttribute `json:"log"`
+}
+
+// LogAttribute
+type LogAttribute struct {
+    Key string `json:"key"`
+    Value string `json:"value"`
 }
 
 // CosmosMsg is an rust enum and only (exactly) one of the fields should be set
@@ -121,7 +100,7 @@ type ContractMsg struct {
 	ContractAddr string `json:"contract_addr"`
 	// Msg is assumed to be a json-encoded message, which will be passed directly
 	// as `userMsg` when calling `Handle` on the above-defined contract
-	Msg string `json:"msg"`
+	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
 	Send []Coin `json:"send"`
 }
@@ -140,7 +119,7 @@ type OpaqueMsg struct {
 	// Generally the base64-encoded of go-amino binary encoding of an sdk.Msg implementation.
 	// This should never be created by the contract, but allows for blindly passing through
 	// temporary data.
-	Data string `json:"data"`
+	Data []byte `json:"data"`
 }
 
 //-------- Queries --------

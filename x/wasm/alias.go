@@ -19,11 +19,11 @@ const (
 	MaxWasmSize                   = types.MaxWasmSize
 	GasMultiplier                 = keeper.GasMultiplier
 	MaxGas                        = keeper.MaxGas
-	QueryListContracts            = keeper.QueryListContracts
 	QueryGetContract              = keeper.QueryGetContract
 	QueryGetContractState         = keeper.QueryGetContractState
 	QueryGetCode                  = keeper.QueryGetCode
 	QueryListCode                 = keeper.QueryListCode
+	QueryListContractByCode       = keeper.QueryListContractByCode
 	QueryMethodContractStateSmart = keeper.QueryMethodContractStateSmart
 	QueryMethodContractStateAll   = keeper.QueryMethodContractStateAll
 	QueryMethodContractStateRaw   = keeper.QueryMethodContractStateRaw
@@ -68,17 +68,18 @@ var (
 )
 
 type (
-	GenesisState           = types.GenesisState
-	Code                   = types.Code
-	Contract               = types.Contract
-	MsgStoreCode           = types.MsgStoreCode
-	MsgInstantiateContract = types.MsgInstantiateContract
-	MsgExecuteContract     = types.MsgExecuteContract
-	Model                  = types.Model
-	CodeInfo               = types.CodeInfo
-	ContractInfo           = types.ContractInfo
-	WasmConfig             = types.WasmConfig
-	Keeper                 = keeper.Keeper
-	GetCodeResponse        = keeper.GetCodeResponse
-	ListCodeResponse       = keeper.ListCodeResponse
+	GenesisState            = types.GenesisState
+	Code                    = types.Code
+	Contract                = types.Contract
+	MsgStoreCode            = types.MsgStoreCode
+	MsgInstantiateContract  = types.MsgInstantiateContract
+	MsgExecuteContract      = types.MsgExecuteContract
+	Model                   = types.Model
+	CodeInfo                = types.CodeInfo
+	ContractInfo            = types.ContractInfo
+	WasmConfig              = types.WasmConfig
+	Keeper                  = keeper.Keeper
+	ContractInfoWithAddress = keeper.ContractInfoWithAddress
+	GetCodeResponse         = keeper.GetCodeResponse
+	ListCodeResponse        = keeper.ListCodeResponse
 )

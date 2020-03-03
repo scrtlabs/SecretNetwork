@@ -49,7 +49,7 @@ build-go:
 	go build ./...
 
 test:
-	RUST_BACKTRACE=1 go test -v ./api ./types
+	RUST_BACKTRACE=1 go test -v ./api .
 
 docker-image-centos7:
 	docker build . -t go-cosmwasm:$(DOCKER_TAG)-centos7 -f ./Dockerfile.centos7

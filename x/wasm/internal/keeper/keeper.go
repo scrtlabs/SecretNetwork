@@ -69,7 +69,7 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	}
 	var codeHash []byte
 	if isSimulationMode(ctx) {
-		// https://github.com/enigmampc/EnigmaBlockchain/issues/42
+		// https://github.com/cosmwasm/wasmd/issues/42
 		// any sha256 hash is good enough
 		codeHash = make([]byte, 32)
 	} else {
@@ -81,9 +81,9 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	}
 	store := ctx.KVStore(k.storeKey)
 	codeID = k.autoIncrementID(ctx, types.KeyLastCodeID)
-	contractInfo := types.NewCodeInfo(codeHash, creator, source, builder)
+	codeInfo := types.NewCodeInfo(codeHash, creator, source, builder)
 	// 0x01 | codeID (uint64) -> ContractInfo
-	store.Set(types.GetCodeKey(codeID), k.cdc.MustMarshalBinaryBare(contractInfo))
+	store.Set(types.GetCodeKey(codeID), k.cdc.MustMarshalBinaryBare(codeInfo))
 
 	return codeID, nil
 }
@@ -141,14 +141,18 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	}
 	consumeGas(ctx, res.GasUsed)
 
+	// emit all events from this contract itself
+	value := types.CosmosResult(*res, contractAddress)
+	ctx.EventManager().EmitEvents(value.Events)
+
 	err = k.dispatchMessages(ctx, contractAccount, res.Messages)
 	if err != nil {
 		return nil, err
 	}
 
 	// persist instance
-	instance := types.NewContractInfo(codeID, creator, initMsg, label)
-	// 0x02 | contractAddress (sdk.AccAddress) -> Instance
+	createdAt := types.NewCreatedAt(ctx)
+	instance := types.NewContractInfo(codeID, creator, initMsg, label, createdAt)
 	store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshalBinaryBare(instance))
 
 	return contractAddress, nil
@@ -180,12 +184,18 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 	consumeGas(ctx, res.GasUsed)
 
+	// emit all events from this contract itself
+	value := types.CosmosResult(*res, contractAddress)
+	ctx.EventManager().EmitEvents(value.Events)
+	value.Events = nil
+
+	// TODO: capture events here as well
 	err = k.dispatchMessages(ctx, contractAccount, res.Messages)
 	if err != nil {
 		return sdk.Result{}, err
 	}
 
-	return types.CosmosResult(*res), nil
+	return value, nil
 }
 
 // QuerySmart queries the smart contract itself.
@@ -331,8 +341,7 @@ func (k Keeper) dispatchMessage(ctx sdk.Context, contract exported.Account, msg 
 		if err != nil {
 			return err
 		}
-		payload, err := DecodeCosmosMsgContract(msg.Contract.Msg)
-		_, err = k.Execute(ctx, targetAddr, contractAddr, payload, sentFunds)
+		_, err = k.Execute(ctx, targetAddr, contractAddr, msg.Contract.Msg, sentFunds)
 		return err // may be nil
 	} else if msg.Opaque != nil {
 		msg, err := ParseOpaqueMsg(k.cdc, msg.Opaque)
@@ -407,11 +416,13 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 	if h == nil {
 		return sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, msg.Route())
 	}
-	// TODO: use this return value somehow (log/data)
-	_, err := h(ctx, msg)
+	res, err := h(ctx, msg)
 	if err != nil {
 		return err
 	}
+	// redispatch all events, (type sdk.EventTypeMessage will be filtered out in the handler)
+	ctx.EventManager().EmitEvents(res.Events)
+
 	return nil
 }
 

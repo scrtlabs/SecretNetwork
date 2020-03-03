@@ -34,7 +34,6 @@ func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 	queryCmd.AddCommand(flags.GetCommands(
 		GetCmdListCode(cdc),
 		GetCmdQueryCode(cdc),
-		GetCmdListContracts(cdc),
 		GetCmdGetContractInfo(cdc),
 		GetCmdGetContractState(cdc),
 	)...)
@@ -82,7 +81,6 @@ func GetCmdQueryCode(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			if len(res) == 0 {
 				return fmt.Errorf("contract not found")
 			}
@@ -92,33 +90,12 @@ func GetCmdQueryCode(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			if len(code.Code) == 0 {
+			if len(code.Data) == 0 {
 				return fmt.Errorf("contract not found")
 			}
 
 			fmt.Printf("Downloading wasm code to %s\n", args[1])
-			return ioutil.WriteFile(args[1], code.Code, 0644)
-		},
-	}
-}
-
-// GetCmdListContracts lists all instantiated contracts
-func GetCmdListContracts(cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
-		Use:   "list-contracts",
-		Short: "List addresses of all instantiated contracts on the chain",
-		Long:  "List addresses of all instantiated contracts on the chain",
-		Args:  cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
-
-			route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, keeper.QueryListContracts)
-			res, _, err := cliCtx.Query(route)
-			if err != nil {
-				return err
-			}
-			fmt.Println(string(res))
-			return nil
+			return ioutil.WriteFile(args[1], code.Data, 0644)
 		},
 	}
 }

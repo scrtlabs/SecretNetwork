@@ -26,6 +26,7 @@ const (
 	flagAmount  = "amount"
 	flagSource  = "source"
 	flagBuilder = "builder"
+	flagLabel   = "label"
 )
 
 // GetTxCmd returns the transaction commands for this module
@@ -123,12 +124,18 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
+			label := viper.GetString(flagLabel)
+			if label == "" {
+				return fmt.Errorf("Label is required on all contracts")
+			}
+
 			initMsg := args[1]
 
 			// build and sign the transaction, then broadcast to Tendermint
 			msg := types.MsgInstantiateContract{
 				Sender:    cliCtx.GetFromAddress(),
 				Code:      codeID,
+				Label:     label,
 				InitFunds: amount,
 				InitMsg:   []byte(initMsg),
 			}
@@ -137,6 +144,7 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 	}
 
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract during instantiation")
+	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
 	return cmd
 }
 

@@ -4,11 +4,11 @@ package api
 #include "bindings.h"
 
 // typedefs for _cgo functions (db)
-typedef int64_t (*get_fn)(db_t *ptr, Buffer key, Buffer val);
-typedef void (*set_fn)(db_t *ptr, Buffer key, Buffer val);
+typedef int64_t (*read_db_fn)(db_t *ptr, Buffer key, Buffer val);
+typedef void (*write_db_fn)(db_t *ptr, Buffer key, Buffer val);
 // and api
-typedef int32_t (*human_address_fn)(api_t*, Buffer, Buffer);
-typedef int32_t (*canonical_address_fn)(api_t*, Buffer, Buffer);
+typedef int32_t (*humanize_address_fn)(api_t*, Buffer, Buffer);
+typedef int32_t (*canonicalize_address_fn)(api_t*, Buffer, Buffer);
 
 // forward declarations (db)
 int64_t cGet_cgo(db_t *ptr, Buffer key, Buffer val);
@@ -32,8 +32,8 @@ type KVStore interface {
 }
 
 var db_vtable = C.DB_vtable{
-	c_get: (C.get_fn)(C.cGet_cgo),
-	c_set: (C.set_fn)(C.cSet_cgo),
+	read_db: (C.read_db_fn)(C.cGet_cgo),
+	write_db: (C.write_db_fn)(C.cSet_cgo),
 }
 
 // contract: original pointer/struct referenced must live longer than C.DB struct
@@ -75,8 +75,8 @@ type GoAPI struct {
 }
 
 var api_vtable = C.GoApi_vtable{
-	c_human_address:     (C.human_address_fn)(C.cHumanAddress_cgo),
-	c_canonical_address: (C.canonical_address_fn)(C.cCanonicalAddress_cgo),
+	humanize_address:     (C.humanize_address_fn)(C.cHumanAddress_cgo),
+	canonicalize_address: (C.canonicalize_address_fn)(C.cCanonicalAddress_cgo),
 }
 
 // contract: original pointer/struct referenced must live longer than C.GoApi struct

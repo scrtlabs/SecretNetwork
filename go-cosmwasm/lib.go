@@ -81,8 +81,8 @@ func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 //
 // TODO: clarify which errors are returned? vm failure. out of gas. code unauthorized.
 // TODO: add callback for querying into other modules
-func (w *Wasmer) Instantiate(code CodeID, params types.Params, initMsg []byte, store KVStore, goapi GoAPI, gasLimit uint64) (*types.Result, error) {
-	paramBin, err := json.Marshal(params)
+func (w *Wasmer) Instantiate(code CodeID, env types.Env, initMsg []byte, store KVStore, goapi GoAPI, gasLimit uint64) (*types.Result, error) {
+	paramBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, err
 	}
@@ -108,11 +108,11 @@ func (w *Wasmer) Instantiate(code CodeID, params types.Params, initMsg []byte, s
 // (That is a detail for the external, sdk-facing, side).
 //
 // The caller is responsible for passing the correct `store` (which must have been initialized exactly once),
-// and setting the params with relevent info on this instance (address, balance, etc)
+// and setting the env with relevent info on this instance (address, balance, etc)
 //
 // TODO: add callback for querying into other modules
-func (w *Wasmer) Execute(code CodeID, params types.Params, executeMsg []byte, store KVStore, goapi GoAPI, gasLimit uint64) (*types.Result, error) {
-	paramBin, err := json.Marshal(params)
+func (w *Wasmer) Execute(code CodeID, env types.Env, executeMsg []byte, store KVStore, goapi GoAPI, gasLimit uint64) (*types.Result, error) {
+	paramBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, err
 	}

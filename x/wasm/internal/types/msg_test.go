@@ -1,8 +1,6 @@
 package types
 
 import (
-	"fmt"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -12,22 +10,27 @@ import (
 )
 
 func TestBuilderRegexp(t *testing.T) {
-	cases := []struct {
+	cases := map[string]struct {
 		example string
 		valid   bool
 	}{
-		{"fedora/httpd:version1.0", true},
-		{"cosmwasm-opt:0.6.3", true},
-		{"cosmwasm-opt-:0.6.3", false},
-		{"confio/js-builder-1:test", true},
-		{"confio/.builder-1:manual", false},
+		"normal":                {"fedora/httpd:version1.0", true},
+		"another valid org":     {"confio/js-builder-1:test", true},
+		"no org name":           {"cosmwasm-opt:0.6.3", false},
+		"invalid trailing char": {"someone/cosmwasm-opt-:0.6.3", false},
+		"invalid leading char":  {"confio/.builder-1:manual", false},
+		"multiple orgs":         {"confio/assembly-script/optimizer:v0.9.1", true},
+		"too long":              {"over-128-character-limit/some-long-sub-path/and-yet-another-long-name/testtesttesttesttesttesttest/foobarfoobar/foobarfoobar:randomstringrandomstringrandomstringrandomstring", false},
 	}
 
-	for i, tc := range cases {
-		t.Run(fmt.Sprintf("case %d", i), func(t *testing.T) {
-			ok, err := regexp.MatchString(BuildTagRegexp, tc.example)
-			assert.NoError(t, err)
-			assert.Equal(t, tc.valid, ok)
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			err := validateBuilder(tc.example)
+			if tc.valid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
 		})
 
 	}

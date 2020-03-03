@@ -24,8 +24,8 @@ typedef struct db_t {
 } db_t;
 
 typedef struct DB_vtable {
-  int64_t (*c_get)(db_t*, Buffer, Buffer);
-  void (*c_set)(db_t*, Buffer, Buffer);
+  int64_t (*read_db)(db_t*, Buffer, Buffer);
+  void (*write_db)(db_t*, Buffer, Buffer);
 } DB_vtable;
 
 typedef struct DB {
@@ -38,12 +38,12 @@ typedef struct api_t {
 } api_t;
 
 typedef struct GoApi_vtable {
-  int32_t (*c_human_address)(api_t*, Buffer, Buffer);
-  int32_t (*c_canonical_address)(api_t*, Buffer, Buffer);
+  int32_t (*humanize_address)(const api_t*, Buffer, Buffer);
+  int32_t (*canonicalize_address)(const api_t*, Buffer, Buffer);
 } GoApi_vtable;
 
 typedef struct GoApi {
-  api_t *state;
+  const api_t *state;
   GoApi_vtable vtable;
 } GoApi;
 

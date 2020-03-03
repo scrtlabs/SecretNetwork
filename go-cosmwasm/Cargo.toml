@@ -1,10 +1,10 @@
 [package]
 name = "go-cosmwasm"
-version = "0.6.3"
+version = "0.7.0"
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2018"
 description = "Go bindings for cosmwasm contracts"
-repository = "https://github.com/enigmampc/EnigmaBlockchain/go-cosmwasm"
+repository = "https://github.com/confio/go-cosmwasm"
 license = "Apache-2.0"
 readme = "README.md"
 exclude = [".circleci/*", ".gitignore"]
@@ -24,8 +24,8 @@ singlepass = ["cosmwasm-vm/default-singlepass"]
 cranelift = ["cosmwasm-vm/default-cranelift"]
 
 [dependencies]
-cosmwasm = "0.6.4"
-cosmwasm-vm = "0.6.4"
+cosmwasm = "0.7.0"
+cosmwasm-vm = "0.7.0"
 errno = "0.2"
 snafu = { version = "0.5.0", default-features = false, features = ["rust_1_30"] }
 

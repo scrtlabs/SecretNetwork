@@ -39,7 +39,7 @@ func TestCreate(t *testing.T) {
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
-	contractID, err := keeper.Create(ctx, creator, wasmCode, "https://github.com/enigmampc/EnigmaBlockchain/blob/master/x/wasm/testdata/escrow.wasm", "cosmwasm-opt:0.5.2")
+	contractID, err := keeper.Create(ctx, creator, wasmCode, "https://github.com/enigmampc/EnigmaBlockchain/blob/cosmwasm/x/wasm/testdata/escrow.wasm", "cosmwasm-opt:0.5.2")
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), contractID)
 	// and verify content
@@ -62,7 +62,7 @@ func TestCreateWithSimulation(t *testing.T) {
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
-	contractID, err := keeper.Create(ctx, creator, wasmCode, "https://github.com/enigmampc/EnigmaBlockchain/blob/master/x/wasm/testdata/escrow.wasm", "cosmwasm-opt:0.5.2")
+	contractID, err := keeper.Create(ctx, creator, wasmCode, "https://github.com/cosmwasm/wasmd/blob/master/x/wasm/testdata/escrow.wasm", "cosmwasm-opt:0.5.2")
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), contractID)
 	// and verify content
@@ -107,7 +107,7 @@ func TestCreateWithGzippedPayload(t *testing.T) {
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm.gzip")
 	require.NoError(t, err)
 
-	contractID, err := keeper.Create(ctx, creator, wasmCode, "https://github.com/enigmampc/EnigmaBlockchain/blob/master/x/wasm/testdata/escrow.wasm", "")
+	contractID, err := keeper.Create(ctx, creator, wasmCode, "https://github.com/cosmwasm/wasmd/blob/master/x/wasm/testdata/escrow.wasm", "")
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), contractID)
 	// and verify content
@@ -130,7 +130,7 @@ func TestInstantiate(t *testing.T) {
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
-	contractID, err := keeper.Create(ctx, creator, wasmCode, "https://github.com/enigmampc/EnigmaBlockchain/blob/master/x/wasm/testdata/escrow.wasm", "")
+	contractID, err := keeper.Create(ctx, creator, wasmCode, "https://github.com/cosmwasm/wasmd/blob/master/x/wasm/testdata/escrow.wasm", "")
 	require.NoError(t, err)
 
 	_, _, bob := keyPubAddr()
@@ -151,7 +151,7 @@ func TestInstantiate(t *testing.T) {
 	require.Equal(t, "cosmos18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5", addr.String())
 
 	gasAfter := ctx.GasMeter().GasConsumed()
-	require.Equal(t, uint64(28936), gasAfter-gasBefore)
+	require.Equal(t, uint64(24823), gasAfter-gasBefore)
 
 	// ensure it is stored properly
 	info := keeper.GetContractInfo(ctx, addr)
@@ -244,7 +244,7 @@ func TestExecute(t *testing.T) {
 
 	// make sure gas is properly deducted from ctx
 	gasAfter := ctx.GasMeter().GasConsumed()
-	require.Equal(t, uint64(31805), gasAfter-gasBefore)
+	require.Equal(t, uint64(31162), gasAfter-gasBefore)
 
 	// ensure bob now exists and got both payments released
 	bobAcct = accKeeper.GetAccount(ctx, bob)

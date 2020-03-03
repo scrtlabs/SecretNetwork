@@ -103,13 +103,11 @@ func TestMaskReflectOpaque(t *testing.T) {
 		ToAddress:   fred,
 		Amount:      sdk.NewCoins(sdk.NewInt64Coin("denom", 23000)),
 	}
-	opaque, err := ToOpaqueMsg(keeper.cdc, sdkSendMsg)
+	opaque, err := ToCosmosMsg(keeper.cdc, sdkSendMsg)
 	require.NoError(t, err)
 	reflectOpaque := MaskHandleMsg{
 		Reflect: &reflectPayload{
-			Msg: wasmTypes.CosmosMsg{
-				Opaque: opaque,
-			},
+			Msg: opaque,
 		},
 	}
 	reflectOpaqueBz, err := json.Marshal(reflectOpaque)
@@ -177,7 +175,7 @@ func TestMaskReflectContractSend(t *testing.T) {
 	// we also send an additional 14k tokens there.
 	// this should reduce the mask balance by 14k (to 26k)
 	// this 14k is added to the escrow, then the entire balance is sent to bob (total: 39k)
-	approveMsg := EncodeCosmosMsgContract(`{"release":{}}`)
+	approveMsg := []byte(`{"release":{}}`)
 	msg := wasmTypes.CosmosMsg{
 		Contract: &wasmTypes.ContractMsg{
 			ContractAddr: escrowAddr.String(),

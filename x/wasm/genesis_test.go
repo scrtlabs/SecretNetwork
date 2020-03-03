@@ -70,8 +70,8 @@ func TestInitGenesis(t *testing.T) {
 	msg = MsgStoreCode{
 		Sender:       creator,
 		WASMByteCode: testContract,
-		Source:       "https://github.com/enigmampc/EnigmaBlockchain/blob/master/x/wasm/testdata/escrow.wasm",
-		Builder:      "cosmwasm-opt:0.5.2",
+		Source:       "https://github.com/enigmampc/EnigmaBlockchain/blob/cosnwasm/x/wasm/testdata/escrow.wasm",
+		Builder:      "confio/cosmwasm-opt:0.7.0",
 	}
 	err = msg.ValidateBasic()
 	require.NoError(t, err)
@@ -111,7 +111,7 @@ func TestInitGenesis(t *testing.T) {
 	assertCodeList(t, q, data.ctx, 1)
 	assertCodeBytes(t, q, data.ctx, 1, testContract)
 
-	assertContractList(t, q, data.ctx, []string{contractAddr.String()})
+	assertContractList(t, q, data.ctx, 1, []string{contractAddr.String()})
 	assertContractInfo(t, q, data.ctx, contractAddr, 1, creator)
 	assertContractState(t, q, data.ctx, contractAddr, state{
 		Verifier:    []byte(fred),
@@ -134,7 +134,7 @@ func TestInitGenesis(t *testing.T) {
 	assertCodeList(t, q2, newData.ctx, 1)
 	assertCodeBytes(t, q2, newData.ctx, 1, testContract)
 
-	assertContractList(t, q2, newData.ctx, []string{contractAddr.String()})
+	assertContractList(t, q2, newData.ctx, 1, []string{contractAddr.String()})
 	assertContractInfo(t, q2, newData.ctx, contractAddr, 1, creator)
 	assertContractState(t, q2, newData.ctx, contractAddr, state{
 		Verifier:    []byte(fred),

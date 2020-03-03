@@ -41,6 +41,19 @@ func NewHandler(k Keeper) sdk.Handler {
 	}
 }
 
+// filterMessageEvents returns the same events with all of type == EventTypeMessage removed.
+// this is so only our top-level message event comes through
+func filterMessageEvents(manager *sdk.EventManager) sdk.Events {
+	events := manager.Events()
+	res := make([]sdk.Event, 0, len(events)+1)
+	for _, e := range events {
+		if e.Type != sdk.EventTypeMessage {
+			res = append(res, e)
+		}
+	}
+	return res
+}
+
 func handleStoreCode(ctx sdk.Context, k Keeper, msg *MsgStoreCode) (*sdk.Result, error) {
 	err := msg.ValidateBasic()
 	if err != nil {
@@ -52,20 +65,17 @@ func handleStoreCode(ctx sdk.Context, k Keeper, msg *MsgStoreCode) (*sdk.Result,
 		return nil, err
 	}
 
-	// de-duplicate events sent in other parts of the sdk
-	// https://github.com/confio/cosm-js/pull/40#discussion_r374811810
-	ctx.EventManager().EmitEvent(
-		sdk.NewEvent(
-			sdk.EventTypeMessage,
-			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-			sdk.NewAttribute(AttributeSigner, msg.Sender.String()),
-			sdk.NewAttribute(AttributeKeyCodeID, fmt.Sprintf("%d", codeID)),
-		),
+	events := filterMessageEvents(ctx.EventManager())
+	ourEvent := sdk.NewEvent(
+		sdk.EventTypeMessage,
+		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
+		sdk.NewAttribute(AttributeSigner, msg.Sender.String()),
+		sdk.NewAttribute(AttributeKeyCodeID, fmt.Sprintf("%d", codeID)),
 	)
 
 	return &sdk.Result{
 		Data:   []byte(fmt.Sprintf("%d", codeID)),
-		Events: ctx.EventManager().Events(),
+		Events: append(events, ourEvent),
 	}, nil
 }
 
@@ -75,19 +85,18 @@ func handleInstantiate(ctx sdk.Context, k Keeper, msg *MsgInstantiateContract) (
 		return nil, err
 	}
 
-	ctx.EventManager().EmitEvent(
-		sdk.NewEvent(
-			sdk.EventTypeMessage,
-			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-			sdk.NewAttribute(AttributeSigner, msg.Sender.String()),
-			sdk.NewAttribute(AttributeKeyCodeID, fmt.Sprintf("%d", msg.Code)),
-			sdk.NewAttribute(AttributeKeyContract, contractAddr.String()),
-		),
+	events := filterMessageEvents(ctx.EventManager())
+	ourEvent := sdk.NewEvent(
+		sdk.EventTypeMessage,
+		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
+		sdk.NewAttribute(AttributeSigner, msg.Sender.String()),
+		sdk.NewAttribute(AttributeKeyCodeID, fmt.Sprintf("%d", msg.Code)),
+		sdk.NewAttribute(AttributeKeyContract, contractAddr.String()),
 	)
 
 	return &sdk.Result{
 		Data:   contractAddr,
-		Events: ctx.EventManager().Events(),
+		Events: append(events, ourEvent),
 	}, nil
 }
 
@@ -97,15 +106,14 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *MsgExecuteContract) (*sdk.Res
 		return nil, err
 	}
 
-	ctx.EventManager().EmitEvent(
-		sdk.NewEvent(
-			sdk.EventTypeMessage,
-			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-			sdk.NewAttribute(AttributeSigner, msg.Sender.String()),
-			sdk.NewAttribute(AttributeKeyContract, msg.Contract.String()),
-		),
+	events := filterMessageEvents(ctx.EventManager())
+	ourEvent := sdk.NewEvent(
+		sdk.EventTypeMessage,
+		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
+		sdk.NewAttribute(AttributeSigner, msg.Sender.String()),
+		sdk.NewAttribute(AttributeKeyContract, msg.Contract.String()),
 	)
 
-	res.Events = append(res.Events, ctx.EventManager().Events()...)
+	res.Events = append(events, ourEvent)
 	return &res, nil
 }

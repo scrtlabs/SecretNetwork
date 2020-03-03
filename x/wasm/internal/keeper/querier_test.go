@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -139,5 +140,73 @@ func TestQueryContractState(t *testing.T) {
 				assert.Contains(t, r, v)
 			}
 		})
+	}
+}
+
+func TestListContractByCodeOrdering(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+
+	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 1000000))
+	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 500))
+	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
+	anyAddr := createFakeFundedAccount(ctx, accKeeper, topUp)
+
+	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
+	require.NoError(t, err)
+
+	codeID, err := keeper.Create(ctx, creator, wasmCode, "", "")
+	require.NoError(t, err)
+
+	_, _, bob := keyPubAddr()
+	initMsg := InitMsg{
+		Verifier:    anyAddr,
+		Beneficiary: bob,
+	}
+	initMsgBz, err := json.Marshal(initMsg)
+	require.NoError(t, err)
+
+	// manage some realistic block settings
+	var h int64 = 10
+	setBlock := func(ctx sdk.Context, height int64) sdk.Context {
+		ctx = ctx.WithBlockHeight(height)
+		meter := sdk.NewGasMeter(1000000)
+		ctx = ctx.WithGasMeter(meter)
+		ctx = ctx.WithBlockGasMeter(meter)
+		return ctx
+	}
+
+	// create 10 contracts with real block/gas setup
+	for i := range [10]int{} {
+		// 3 tx per block, so we ensure both comparisons work
+		if i%3 == 0 {
+			ctx = setBlock(ctx, h)
+			h++
+		}
+		_, err = keeper.Instantiate(ctx, codeID, creator, initMsgBz, fmt.Sprintf("contract %d", i), topUp)
+		require.NoError(t, err)
+	}
+
+	// query and check the results are properly sorted
+	q := NewQuerier(keeper)
+	query := []string{QueryListContractByCode, fmt.Sprintf("%d", codeID)}
+	data := abci.RequestQuery{}
+	res, err := q(ctx, query, data)
+	require.NoError(t, err)
+
+	var contracts []ContractInfoWithAddress
+	err = json.Unmarshal(res, &contracts)
+	require.NoError(t, err)
+
+	require.Equal(t, 10, len(contracts))
+
+	for i, contract := range contracts {
+		assert.Equal(t, fmt.Sprintf("contract %d", i), contract.Label)
+		assert.NotEmpty(t, contract.Address)
+		// ensure these are not shown
+		assert.Nil(t, contract.InitMsg)
+		assert.Nil(t, contract.Created)
 	}
 }
