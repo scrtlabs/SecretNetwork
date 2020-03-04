@@ -11,7 +11,7 @@ ENV PACKAGES curl make git libc-dev bash gcc linux-headers eudev-dev python
 RUN apk add $PACKAGES
 
 # Set working directory for the build
-WORKDIR /go/src/github.com/enigmampc/enigmachain
+WORKDIR /go/src/github.com/enigmampc/enigmablockchain
 
 # Add source files
 COPY . .
@@ -29,8 +29,8 @@ WORKDIR /root
 # CMD ["/bin/bash"]
 
 # Copy over binaries from the build-env
-COPY --from=build-env /go/src/github.com/enigmampc/enigmachain/enigmad /usr/bin/enigmad
-COPY --from=build-env  /go/src/github.com/enigmampc/enigmachain/enigmacli /usr/bin/enigmacli
+COPY --from=build-env /go/src/github.com/enigmampc/enigmablockchain/enigmad /usr/bin/enigmad
+COPY --from=build-env  /go/src/github.com/enigmampc/enigmablockchain/enigmacli /usr/bin/enigmacli
 
 COPY ./packaging_docker/docker_start.sh .
 
