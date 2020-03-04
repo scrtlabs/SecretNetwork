@@ -12,8 +12,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/enigmampc/EnigmaBlockchain/x/wasm/client/cli"
-	"github.com/enigmampc/EnigmaBlockchain/x/wasm/client/rest"
+	"github.com/enigmampc/EnigmaBlockchain/x/secret-contract/client/cli"
+	"github.com/enigmampc/EnigmaBlockchain/x/secret-contract/client/rest"
 )
 
 var (

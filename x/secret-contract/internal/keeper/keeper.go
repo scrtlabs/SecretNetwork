@@ -16,7 +16,7 @@ import (
 	wasmTypes "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
 	"github.com/tendermint/tendermint/crypto"
 
-	"github.com/enigmampc/EnigmaBlockchain/x/wasm/internal/types"
+	"github.com/enigmampc/EnigmaBlockchain/x/secret-contract/internal/types"
 )
 
 // GasMultiplier is how many cosmwasm gas points = 1 sdk gas point
