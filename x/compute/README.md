@@ -8,7 +8,7 @@ You can add the following section to `config/app.toml`. Below is shown with defa
 
 ```toml
 [wasm]
-# This is the maximum sdk gas (wasm and storage) that we allow for any x/secret-contract "smart" queries
+# This is the maximum sdk gas (wasm and storage) that we allow for any x/compute "smart" queries
 query_gas_limit = 300000
 # This is the number of wasm vm instances we keep cached in memory for speed-up
 # Warning: this is currently unstable and may lead to crashes, best to keep for 0 unless testing locally
@@ -115,7 +115,7 @@ and the contract releases the entire funds (`105000denom`) to the beneficiary.
 We will see all the following events, where you should be able to reconstruct the actions
 (remember there are two events for each transfer). We see (1) the initial transfer of funds
 to the contract, (2) the contract custom event that it released funds (3) the transfer of funds
-from the contract to the beneficiary and (4) the generic x/secret-contract event stating that the contract
+from the contract to the beneficiary and (4) the generic x/compute event stating that the contract
 was executed (which always appears, while 2 is optional and has information as reliable as the contract):
 
 ```json

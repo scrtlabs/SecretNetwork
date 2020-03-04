@@ -17,8 +17,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 
-	wasmUtils "github.com/enigmampc/EnigmaBlockchain/x/secret-contract/client/utils"
-	"github.com/enigmampc/EnigmaBlockchain/x/secret-contract/internal/types"
+	wasmUtils "github.com/enigmampc/EnigmaBlockchain/x/compute/client/utils"
+	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
 )
 
 const (

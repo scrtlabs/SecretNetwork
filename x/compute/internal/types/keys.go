@@ -6,7 +6,7 @@ import (
 
 const (
 	// ModuleName is the name of the contract module
-	ModuleName = "scrt-contract"
+	ModuleName = "compute"
 
 	// StoreKey is the string store representation
 	StoreKey = ModuleName

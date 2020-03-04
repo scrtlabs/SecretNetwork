@@ -1,4 +1,4 @@
-package wasm
+package compute
 
 import (
 	"fmt"

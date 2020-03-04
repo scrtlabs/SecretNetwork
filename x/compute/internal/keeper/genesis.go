@@ -4,9 +4,9 @@ import (
 	"bytes"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/enigmampc/EnigmaBlockchain/x/secret-contract/internal/types"
+	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
 	// authexported "github.com/cosmos/cosmos-sdk/x/auth/exported"
-	// "github.com/enigmampc/EnigmaBlockchain/x/secret-contract/internal/types"
+	// "github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
 )
 
 // InitGenesis sets supply information for genesis.

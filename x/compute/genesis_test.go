@@ -1,4 +1,4 @@
-package wasm
+package compute
 
 import (
 	"encoding/json"
@@ -70,7 +70,7 @@ func TestInitGenesis(t *testing.T) {
 	msg = MsgStoreCode{
 		Sender:       creator,
 		WASMByteCode: testContract,
-		Source:       "https://github.com/enigmampc/EnigmaBlockchain/blob/cosnwasm/x/secret-contract/testdata/escrow.wasm",
+		Source:       "https://github.com/enigmampc/EnigmaBlockchain/blob/cosnwasm/x/compute/testdata/escrow.wasm",
 		Builder:      "confio/cosmwasm-opt:0.7.0",
 	}
 	err = msg.ValidateBasic()
