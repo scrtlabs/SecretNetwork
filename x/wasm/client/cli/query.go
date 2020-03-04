@@ -33,6 +33,7 @@ func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 	}
 	queryCmd.AddCommand(flags.GetCommands(
 		GetCmdListCode(cdc),
+		GetCmdListContractByCode(cdc),
 		GetCmdQueryCode(cdc),
 		GetCmdGetContractInfo(cdc),
 		GetCmdGetContractState(cdc),
@@ -51,6 +52,32 @@ func GetCmdListCode(cdc *codec.Codec) *cobra.Command {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
 			route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, keeper.QueryListCode)
+			res, _, err := cliCtx.Query(route)
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(res))
+			return nil
+		},
+	}
+}
+
+// GetCmdListContractByCode lists all wasm code uploaded for given code id
+func GetCmdListContractByCode(cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "list-contract-by-code [code_id]",
+		Short: "List wasm all bytecode on the chain for given code id",
+		Long:  "List wasm all bytecode on the chain for given code id",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			codeID, err := strconv.ParseUint(args[0], 10, 64)
+			if err != nil {
+				return err
+			}
+
+			route := fmt.Sprintf("custom/%s/%s/%d", types.QuerierRoute, keeper.QueryListContractByCode, codeID)
 			res, _, err := cliCtx.Query(route)
 			if err != nil {
 				return err
