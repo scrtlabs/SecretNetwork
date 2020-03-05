@@ -14,7 +14,7 @@ On the validator node on the old machine:
 enigmacli keys export mykey
 ```
 
-This prints the private key to `stderr`, you can them paste in into the file `mykey.backup`.
+This prints the private key to `stderr`, you can then paste in into the file `mykey.backup`.
 
 ### 3. Recover the active key of the old machine on the new machine
 
