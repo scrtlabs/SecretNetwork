@@ -1,4 +1,4 @@
-Package: enigmachain
+Package: enigma-blockchain
 Priority: optional
 Architecture: amd64
 Homepage: https://github.com/enigmampc/EnigmaBlockchain
