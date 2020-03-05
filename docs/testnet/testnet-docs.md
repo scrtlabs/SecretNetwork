@@ -1,5 +1,5 @@
-***NOTE:*** You DO NOT want to use the v0.1.0 on an existing mainnet validator node. It will not work.
-***NOTE 2:*** We recommend you to first remove older `enigmachain` installations to prevent collisions.
+***NOTE:*** You DO NOT want to use the v0.1.0 on an existing mainnet validator node. It will not work. <br>
+***NOTE 2:*** We recommend you to first remove older `enigmachain` installations to prevent collisions. <br>
 ***NOTE 3:*** Before removing, changing or doing anything with the old `enigmad`,`enigmacli` installations - make sure to back up your keys and recovery seeds!
 
 ## Set up a light client
