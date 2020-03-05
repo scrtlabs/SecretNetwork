@@ -7,7 +7,7 @@ For smart contract testing and development, most of you would choose this option
 You would do this if you have no interest at all at running a full-node or a validator node on testnet.
 
 1. Get the v0.1.0 pre-release from our repo: https://github.com/enigmampc/EnigmaBlockchain/releases/tag/v0.1.0
-(Currently support is only for Debian. Other OS distributions coming soon)
+(Currently support is only for Debian/Ubuntu. Other OS distributions coming soon)
 2. Uninstall previous releases:
 ```bash
 sudo dpkg -r enigmachain
