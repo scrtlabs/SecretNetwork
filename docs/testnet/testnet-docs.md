@@ -53,7 +53,7 @@ enigmad init <MONIKER> --chain-id enigma-testnet
 ```
 3. Download a copy of the genesis file:
 ```bahs
-wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/EnigmaBlockchain/master/genesis-enigma-testnet-1.json"
+wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/EnigmaBlockchain/master/enigma-testnet-genesis.json"
 ```
 
 4. Validate the checksum of the file:
