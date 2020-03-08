@@ -20,6 +20,8 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/EnigmaBlo
 - Blog: https://blog.enigma.co
 - Twitter: https://twitter.com/EnigmaMPC
 - Telegram Channel: https://t.me/EnigmaProject
+- Community Secret Nodes Telegram : https://t.me/secretnodes
+- Community Enigma Governance Telegram : https://t.me/secretdao
 
 # Block Explorers
 
