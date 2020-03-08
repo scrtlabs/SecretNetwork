@@ -18,13 +18,13 @@ import (
 )
 
 func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
-	r.HandleFunc("/compute/code", listCodesHandlerFn(cliCtx)).Methods("GET")
-	r.HandleFunc("/compute/code/{codeID}", queryCodeHandlerFn(cliCtx)).Methods("GET")
-	r.HandleFunc("/compute/code/{codeID}/contracts", listContractsByCodeHandlerFn(cliCtx)).Methods("GET")
-	r.HandleFunc("/compute/contract/{contractAddr}", queryContractHandlerFn(cliCtx)).Methods("GET")
-	r.HandleFunc("/compute/contract/{contractAddr}/state", queryContractStateAllHandlerFn(cliCtx)).Methods("GET")
-	r.HandleFunc("/compute/contract/{contractAddr}/smart/{query}", queryContractStateSmartHandlerFn(cliCtx)).Queries("encoding", "{encoding}").Methods("GET")
-	r.HandleFunc("/compute/contract/{contractAddr}/raw/{key}", queryContractStateRawHandlerFn(cliCtx)).Queries("encoding", "{encoding}").Methods("GET")
+	r.HandleFunc("/wasm/code", listCodesHandlerFn(cliCtx)).Methods("GET")
+	r.HandleFunc("/wasm/code/{codeID}", queryCodeHandlerFn(cliCtx)).Methods("GET")
+	r.HandleFunc("/wasm/code/{codeID}/contracts", listContractsByCodeHandlerFn(cliCtx)).Methods("GET")
+	r.HandleFunc("/wasm/contract/{contractAddr}", queryContractHandlerFn(cliCtx)).Methods("GET")
+	r.HandleFunc("/wasm/contract/{contractAddr}/state", queryContractStateAllHandlerFn(cliCtx)).Methods("GET")
+	r.HandleFunc("/wasm/contract/{contractAddr}/smart/{query}", queryContractStateSmartHandlerFn(cliCtx)).Queries("encoding", "{encoding}").Methods("GET")
+	r.HandleFunc("/wasm/contract/{contractAddr}/raw/{key}", queryContractStateRawHandlerFn(cliCtx)).Queries("encoding", "{encoding}").Methods("GET")
 }
 
 func listCodesHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
