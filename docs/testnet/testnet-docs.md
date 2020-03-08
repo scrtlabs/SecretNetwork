@@ -71,18 +71,13 @@ enigmad validate-genesis
 perl -i -pe 's/persistent_peers = ""/persistent_peers = "16e95298703bfbf6565a1cbb6691cf30129f52ca\@bootstrap.testnet.enigma.co:26656"/' ~/.enigmad/config/config.toml
 ```
 
-7. Set the chain-id flag:
-```bash
-enigmacli config chain-id enigma-testnet
-```
-
-8. Run your node:
+7. Run your node:
 ```bash
 sudo systemctl enable enigma-node
 sudo systemctl start enigma-node
 ```
 
-9. Verify success:
+8. Verify success:
 ```bash
 journalctl -f -u enigma-node
 ```
