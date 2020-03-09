@@ -98,3 +98,7 @@ enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a <
 ```bash
 enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a <key-alias>) --from <key-alias> --commission
 ```
+
+## Removing your validator
+
+Currently deleting a validator is not possible. If you redelegate or unbond your self-delegations then your validator will become offline and all your delegators will start to unbond.
