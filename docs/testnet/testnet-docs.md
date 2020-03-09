@@ -34,6 +34,8 @@ run `enigmacli tx compute --help` for more info.
 Smart Contracts docs will be posted soon, in the meantime you should check out [CosmWasm's docs](https://github.com/confio/cosmwasm) for info about writing and deploying smart contracts.
 
 ## Get some Testnet-SCRT
+Please don't abuse this service—the number of available tokens is limited.
+
 1. Head to https://faucet.testnet.enigma.co .
 2. Generate a key-pair:
 ```bash
