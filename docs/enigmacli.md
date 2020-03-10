@@ -197,7 +197,7 @@ When you query an account balance with zero tokens, you will get this error: `No
 The following command could be used to send coins from one account to another:
 
 ```bash
-enigmacli tx send <sender-key-alias-or-address> <recipient-address> 10scrt \
+enigmacli tx send <sender-key-alias-or-address> <recipient-address> 10uscrt \
 	--memo <tx-memo> \
 	--chain-id=<chain-id>
 ```
