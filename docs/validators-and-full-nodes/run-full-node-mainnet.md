@@ -62,13 +62,18 @@ echo "86cd9864f5b8e7f540c5edd3954372df94bd23de62e06d5c33a84bd5f3d29114 $HOME/.en
 enigmad validate-genesis
 ```
 
-### 7. Add `bootstrap.mainnet.enigma.co` as a persistent peer in your configuration file.
+### 7. Add persistent peers to your configuration file.
 
-If you are curious, you can query the RPC endpoint on that node http://bootstrap.mainnet.enigma.co:26657/ (please note that the RPC port `26657` is different from the P2P port `26656` below)
+For an updated (partial) list of full nodes: http://bootstrap.mainnet.enigma.co/peers.txt
+(Generated every minute with [this script](https://gist.github.com/assafmo/a39fdb535f74ce2d6493a1a3f695e4ca))
+
+You can also use Enigma's node:
 
 ```
 perl -i -pe 's/persistent_peers = ""/persistent_peers = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.enigmad/config/config.toml
 ```
+
+This configuration updates automatically by your node when it learns of new nodes in the network.
 
 ### 8. Listen for incoming RPC requests so that light nodes can connect to you:
 
