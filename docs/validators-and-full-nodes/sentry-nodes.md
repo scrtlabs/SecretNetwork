@@ -30,9 +30,9 @@ Sentry Nodes should edit their config.toml:
 ```bash
 # Comma separated list of peer IDs to keep private (will not be gossiped to other peers)
 # Example ID: 3e16af0cead27979e1fc3dac57d03df3c7a77acc@3.87.179.235:26656
-```
-
+# Comma separated list of peer IDs to keep private (will not be gossiped to other peers)
 private_peer_ids = "node_ids_of_private_peers"
+```
 
 Sources:
 
