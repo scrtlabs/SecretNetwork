@@ -59,6 +59,10 @@ enigmacli q staking validators | jq '.[] | select(.description.moniker == "<MONI
 
 Or run: `enigmacli q staking validators | grep moniker`. You should see your moniker listed.
 
+## Protecting your validator agains DDoS attacks
+
+See [Sentry Nodes](/docs/validators-and-full-nodes/sentry-nodes.md).
+
 ## Staking more tokens
 
 (remember 1 SCRT = 1,000,000 uSCRT)
