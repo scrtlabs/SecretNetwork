@@ -54,10 +54,10 @@ enigmacli tx staking create-validator \
 ### 7. Check that you have been added as a validator:
 
 ```bash
-enigmacli q staking validators
+enigmacli q staking validators | jq '.[] | select(.description.moniker == "<MONIKER>")'
 ```
 
-If the above is too verbose, just run: `enigmacli q staking validators | grep moniker`. You should see your moniker listed.
+Or run: `enigmacli q staking validators | grep moniker`. You should see your moniker listed.
 
 ## Staking more tokens
 
