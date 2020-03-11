@@ -4,7 +4,7 @@ The Sentry Node Architecture is an infrastructure example for DDoS mitigation on
 
 [Sentry Node Architecture Overview.](https://forum.cosmos.network/t/sentry-node-architecture-overview/454)
 
-Validators are responsible for ensuring that the network can sustain denial of service attacks.
+Secret Nodes (Validators) are responsible for ensuring that the network can sustain denial of service attacks.
 
 One recommended way to mitigate these risks is for validators to carefully structure their network topology in a so-called sentry node architecture.
 
@@ -14,7 +14,13 @@ Sentry nodes can be quickly spun up or change their IP addresses. Because the li
 
 To setup your sentry node architecture you can follow the instructions below:
 
-Validators nodes should edit their config.toml:
+Validators nodes should edit their .enigmad/config/config.toml:
+
+```bash
+nano /.enigmad/config/config.toml
+```
+
+Proceed to make the following changes.
 
 ```bash
 # Comma separated list of nodes to keep persistent connections to
@@ -30,7 +36,6 @@ Sentry Nodes should edit their config.toml:
 ```bash
 # Comma separated list of peer IDs to keep private (will not be gossiped to other peers)
 # Example ID: 3e16af0cead27979e1fc3dac57d03df3c7a77acc@3.87.179.235:26656
-# Comma separated list of peer IDs to keep private (will not be gossiped to other peers)
 private_peer_ids = "node_ids_of_private_peers"
 ```
 
