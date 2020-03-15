@@ -14,7 +14,7 @@ circle-ci = { repository = "confio/cosmwasm", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [workspace]
-members = [ "lib/vm" ]
+members = [ "lib/vm", "lib/sgx-vm" ]
 exclude = [ "contracts" ]
 
 [dependencies]
