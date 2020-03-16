@@ -79,7 +79,7 @@ Where `proposal.json` is:
   "description": "Update max validators with line breaks \n and `code formatting`",
   "changes": [
     {
-      "subspace": "staking",
+      "subspace": "Staking",
       "key": "MaxValidators",
       "value": 105
     }
@@ -95,9 +95,13 @@ Where `proposal.json` is:
 
 You can see another `param-change` example here: [enigma-1-proposal-3.json](/enigma-1-proposal-3.json)
 
+To see possible values for `subspace`, `key` and `value` go to https://github.com/gavinly/CosmosParametersWiki.
+
+:warning: Note that `subspace` and `key` are case sensitive and `value` must be of the correct type and within the allowed bounds. Proposals with errors on these inputs should not enter voting period (should not get deposits) or be voted on with `NoWithVeto`.
+
 :warning: Currently parameter changes are _evaluated_ but not _validated_, so it is very important that any `value` change is valid (ie. correct type and within bounds) for its respective parameter, eg. `MaxValidators` should be an integer and not a decimal.
 
-Proper vetting of a parameter change proposal should prevent this from happening (no deposits should occur during the governance process), but it should be noted regardless.
+:warning: Proper vetting of a parameter change proposal should prevent this from happening (no deposits should occur during the governance process), but it should be noted regardless.
 
 ### Community Pool Spend
 
