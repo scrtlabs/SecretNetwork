@@ -59,10 +59,10 @@
 * https://github.com/enigmampc/EnigmaBlockchain/issues/97
 * https://github.com/enigmampc/EnigmaBlockchain/issues/104
 
-## Recovery
+## Recovery Process
 
-1. Log in to the testnet bootstrap machine.
-2. Export state from the last "rounded" block height:
+1. Logged in to the testnet bootstrap machine.
+2. Exported state from the last "rounded" block height:
     ```
     enigmad export --for-zero-height --height=170000 > state_export.json
     ```
@@ -87,7 +87,7 @@
         ...
     }
     ```
-5. Erase the `coins` in possesion of the `gov` ModuleAccount:
+5. Erased the `coins` in possesion of the `gov` ModuleAccount:
     ```
     "auth":{
         "accounts":[
@@ -107,7 +107,24 @@
             }, ...
     }, ...
     ```
-6. "Refund" coins to the account that deposited to these proposals on the first place i.e.
+6. "Refund" coins to the account that deposited to these proposals on the first place i.e. added to account's balance in:
+    ```
+    "app_state":{
+      "auth":{
+         "accounts":[
+            {
+               "value":{
+                  "coins":[
+                     {
+                        "amount":"<added to this amount>"
+                     }
+                  ]
+               }
+            }
+         ]
+      }
+    }
+    ```
 7. A problem occured with staking, described at: https://github.com/cosmos/cosmos-sdk/issues/5818
     Changed the following:
     ```
