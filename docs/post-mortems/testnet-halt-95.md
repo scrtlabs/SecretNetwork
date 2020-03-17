@@ -95,7 +95,9 @@
             {
                 "type":"cosmos-sdk/ModuleAccount",
                     "value":{
-                      "coins":<subtracted amount here>,
+                      "coins": [ 
+                        <subtracted amount here>
+                      ]
                       "name":"gov"
                     }
             }, ...
