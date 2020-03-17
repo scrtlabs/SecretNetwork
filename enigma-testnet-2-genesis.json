@@ -272,7 +272,7 @@
                   "address":"enigma1tlarjg03ey86gq92wsagg0yf0zlehg9jcuf22q",
                   "coins":[
                      {
-                        "amount":"74442136",
+                        "amount":"94442136",
                         "denom":"uscrt"
                      }
                   ],
@@ -330,12 +330,7 @@
                "value":{
                   "account_number":8,
                   "address":"enigma10d07y265gmmuvt4z0w9aw880jnsr700jt22en3",
-                  "coins":[
-                     {
-                        "amount":"20000000",
-                        "denom":"uscrt"
-                     }
-                  ],
+                  "coins":[],
                   "name":"gov",
                   "permissions":[
                      "burner"
@@ -959,7 +954,7 @@
                "starting_info":{
                   "creation_height":"49674",
                   "previous_period":"1",
-                  "stake":"999990000.000000000000000000"
+                  "stake":"990000000.000000000000000000"
                },
                "validator_address":"enigmavaloper16xq4q5kw4xjz2rjpf3g7h2vd0ejld5c7ujyvnx"
             },
