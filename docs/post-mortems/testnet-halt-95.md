@@ -75,7 +75,6 @@
         ...
     }
     ```
-
 4. Made sure the `distribution` parameters are still make sense:
     ```
     "distribution":{
@@ -88,3 +87,66 @@
         ...
     }
     ```
+5. Erase the `coins` in possesion of the `gov` ModuleAccount:
+    ```
+    "auth":{
+        "accounts":[
+            {
+                "type":"cosmos-sdk/ModuleAccount",
+                    "value":{
+                      "account_number":8,
+                      "address":"enigma10d07y265gmmuvt4z0w9aw880jnsr700jt22en3",
+                      "coins":[],
+                      "name":"gov",
+                      "permissions":[
+                          "burner"
+                      ],
+                      "public_key":"",
+                      "sequence":0
+                    }
+            }, ...
+    }, ...
+    ```
+6. "Refund" coins to the account that deposited to these proposals on the first place i.e.
+7. A problem occured with staking, described at: https://github.com/cosmos/cosmos-sdk/issues/5818
+    Changed the following:
+    ```
+    "distribution":{
+      "delegator_starting_infos":[
+        {
+          ...,
+          "starting_info":{
+            "...,
+            "stake":"999990000.000000000000000000"
+          },
+          ...
+        },
+        ...
+      ],
+      ...
+    }
+    ```
+
+    To this:
+    ```
+    "distribution":{
+      "delegator_starting_infos":[
+        {
+          ...,
+          "starting_info":{
+            "...,
+            "stake":"990000000.000000000000000000"
+          },
+          ...
+        },
+        ...
+      ],
+      ...
+    }
+    ```
+8. Then a problem occured with the `compute` module:
+    ```
+    panic: create wasm contract failed: Wasm Error: Filesystem error: File exists (os error 17)
+    ```
+    This one got fixed when deleted the `.enigmad/data/.compute` directory.
+9. Restarted the node.
