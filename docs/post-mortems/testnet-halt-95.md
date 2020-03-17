@@ -1,7 +1,8 @@
 ## Post Mortem
 
-**Chain id:** `enigma-testnet`
-**Date:** 16/03/2020 3am UTC
+* **Chain id:** `enigma-testnet`
+* **Date:** 16/03/2020 3am UTC
+* **Related issues:** https://github.com/enigmampc/EnigmaBlockchain/issues/95
 ### Description
 * On the 15 Mar 2020, around 9pm UTC the following param-change proposal was submitted:
     ```
