@@ -167,4 +167,8 @@
     panic: create wasm contract failed: Wasm Error: Filesystem error: File exists (os error 17)
     ```
     This one got fixed when deleted the `.enigmad/data/.compute` directory.
-9. Restarted the node.
+9. Reset state:
+    ```
+    enigmad --unsafe-reset-all
+    ```
+10. Restarted the node.
