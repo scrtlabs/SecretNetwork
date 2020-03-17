@@ -95,15 +95,8 @@
             {
                 "type":"cosmos-sdk/ModuleAccount",
                     "value":{
-                      "account_number":8,
-                      "address":"enigma10d07y265gmmuvt4z0w9aw880jnsr700jt22en3",
-                      "coins":[],
-                      "name":"gov",
-                      "permissions":[
-                          "burner"
-                      ],
-                      "public_key":"",
-                      "sequence":0
+                      "coins":<subtracted amount here>,
+                      "name":"gov"
                     }
             }, ...
     }, ...
