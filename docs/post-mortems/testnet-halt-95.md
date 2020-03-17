@@ -66,4 +66,17 @@
     ```
     enigmad export --for-zero-height --height=170000 > state_export.json
     ```
-3. Removed all references to proposal ids `4` and `5`:
+3. Removed all references to proposal ids `4` and `5` in:
+    1. Deposits
+    2. Proposals
+    3. Votes
+
+4. Made sure the `distribution` parameters are still make sense:
+    ```
+    "params":{
+            "base_proposer_reward":"0.010000000000000000",
+            "bonus_proposer_reward":"0.040000000000000000",
+            "community_tax":"0.020000000000000000",
+            "withdraw_addr_enabled":true
+         }
+    ```
