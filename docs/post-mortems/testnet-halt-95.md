@@ -42,6 +42,18 @@ withdraw_addr_enabled: true
 * The problem occurred because the sum of `baseproposerreward` and `bonusproposerreward` can't be grater than 1 i.e. `0.999 + 0.04 > 1`. This results in miscalculations of the rewards and fees.
 * The cause is a bug in Cosmos SDK in the parameter value validation, causing the proposal to pass despite being invalid. More on that here: https://github.com/cosmos/cosmos-sdk/issues/5808
 
+### Additional Notes
+* Another invalid proposal was on voting period, and by itself would have caused the network to halt as well:
+```
+"changes": [
+  {
+    "subspace": "distribution",
+    "key": "bonusproposerreward",
+    "value": "\"0.999000000000000000\""
+  }
+]
+```
+
 ### Action Items:
 * https://github.com/enigmampc/EnigmaBlockchain/issues/95
 * https://github.com/enigmampc/EnigmaBlockchain/issues/97
