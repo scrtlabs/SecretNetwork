@@ -79,7 +79,7 @@ Where `proposal.json` is:
   "description": "Update max validators with line breaks \n and `code formatting`",
   "changes": [
     {
-      "subspace": "staking",
+      "subspace": "Staking",
       "key": "MaxValidators",
       "value": 105
     }
@@ -95,9 +95,52 @@ Where `proposal.json` is:
 
 You can see another `param-change` example here: [enigma-1-proposal-3.json](/enigma-1-proposal-3.json)
 
-:warning: Currently parameter changes are _evaluated_ but not _validated_, so it is very important that any `value` change is valid (ie. correct type and within bounds) for its respective parameter, eg. `MaxValidators` should be an integer and not a decimal.
+#### Subspaces, Keys and Values
 
-Proper vetting of a parameter change proposal should prevent this from happening (no deposits should occur during the governance process), but it should be noted regardless.
+| Subspace       | Key                       | Type             | Example                                                                                                   |
+| -------------- | ------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------- |
+| `auth`         | `MaxMemoCharacters`       | string (uint64)  | `"256"`                                                                                                   |
+| `auth`         | `TxSigLimit`              | string (uint64)  | `"7"`                                                                                                     |
+| `auth`         | `TxSizeCostPerByte`       | string (uint64)  | `"10"`                                                                                                    |
+| `auth`         | `SigVerifyCostED25519`    | string (uint64)  | `"590"`                                                                                                   |
+| `auth`         | `SigVerifyCostSecp256k1`  | string (uint64)  | `"1000"`                                                                                                  |
+| `bank`         | `sendenabled`             | bool             | `true`                                                                                                    |
+| `crisis`       | `ConstantFee`             | object (coin)    | `{"denom": "uscrt", "amount": "1000"}`                                                                    |
+| `distribution` | `communitytax`            | string (dec)     | `"0.020000000000000000"`                                                                                  |
+| `distribution` | `baseproposerreward`      | string (dec)     | `"0.010000000000000000"`                                                                                  |
+| `distribution` | `bonusproposerreward`     | string (dec)     | `"0.040000000000000000"`                                                                                  |
+| `distribution` | `withdrawaddrenabled`     | bool             | `true`                                                                                                    |
+| `evidence`     | `MaxEvidenceAge`          | string (time ns) | `"120000000000"`                                                                                          |
+| `gov`          | `depositparams`           | object           | `{"min_deposit": [{"denom": "uscrt", "amount": "10000000"}], "max_deposit_period": "172800000000000"}`    |
+| `gov`          | `votingparams`            | object           | `{"voting_period": "172800000000000"}`                                                                    |
+| `gov`          | `tallyparams`             | object           | `{"quorum": "0.334000000000000000", "threshold": "0.500000000000000000", "veto": "0.334000000000000000"}` |
+| `mint`         | `MintDenom`               | string           | `"uscrt"`                                                                                                 |
+| `mint`         | `InflationRateChange`     | string (dec)     | `"0.130000000000000000"`                                                                                  |
+| `mint`         | `InflationMax`            | string (dec)     | `"0.200000000000000000"`                                                                                  |
+| `mint`         | `InflationMin`            | string (dec)     | `"0.070000000000000000"`                                                                                  |
+| `mint`         | `GoalBonded`              | string (dec)     | `"0.670000000000000000"`                                                                                  |
+| `mint`         | `BlocksPerYear`           | string (uint64)  | `"6311520"`                                                                                               |
+| `slashing`     | `SignedBlocksWindow`      | string (int64)   | `"100"`                                                                                                   |
+| `slashing`     | `MinSignedPerWindow`      | string (dec)     | `"0.500000000000000000"`                                                                                  |
+| `slashing`     | `DowntimeJailDuration`    | string (time ns) | `"600000000000"`                                                                                          |
+| `slashing`     | `SlashFractionDoubleSign` | string (dec)     | `"0.050000000000000000"`                                                                                  |
+| `slashing`     | `SlashFractionDowntime`   | string (dec)     | `"0.010000000000000000"`                                                                                  |
+| `staking`      | `UnbondingTime`           | string (time ns) | `"259200000000000"`                                                                                       |
+| `staking`      | `MaxValidators`           | uint16           | `100`                                                                                                     |
+| `staking`      | `KeyMaxEntries`           | uint16           | `7`                                                                                                       |
+| `staking`      | `HistoricalEntries`       | uint16           | `3`                                                                                                       |
+| `staking`      | `BondDenom`               | string           | `"uscrt"`                                                                                                 |
+
+Notes:
+
+- The `subspace` is always the `ModuleName`: E.g. https://github.com/cosmos/cosmos-sdk/blob/v0.38.1/x/distribution/types/keys.go#L11
+- The `key` is usually defined in `x/$MODULE_NAME/types/params.go`: E.g. https://github.com/cosmos/cosmos-sdk/blob/v0.38.1/x/distribution/types/params.go#L19-L22
+- The `value`'s type is usually near the `key` definition: E.g. https://github.com/cosmos/cosmos-sdk/blob/v0.38.1/x/distribution/types/params.go#L26-L31
+- :warning: `subspace` and `key` are case sensitive and `value` must be of the correct type and within the allowed bounds. Proposals with errors on these inputs should not enter voting period (should not get deposits) or be voted on with `NoWithVeto`.
+- :warning: Currently parameter changes are _evaluated_ but not _validated_, so it is very important that any `value` change is valid (i.e. correct type and within bounds) for its respective parameter, eg. `MaxValidators` should be an integer and not a decimal.
+- :warning: Proper vetting of a parameter change proposal should prevent this from happening (no deposits should occur during the governance process), but it should be noted regardless.
+
+To read more go to https://github.com/gavinly/CosmosParametersWiki.
 
 ### Community Pool Spend
 
