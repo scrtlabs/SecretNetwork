@@ -2,7 +2,7 @@
 
 **Chain id:** `enigma-testnet`
 **Date:** 16/03/2020 3am UTC
-#### Description
+### Description
 * On the 15 Mar 2020, around 9pm UTC the following param-change proposal was submitted:
 ```
 {
@@ -42,7 +42,15 @@ withdraw_addr_enabled: true
 * The problem occurred because the sum of `baseproposerreward` and `bonusproposerreward` can't be grater than 1 i.e. `0.999 + 0.04 > 1`. This results in miscalculations of the rewards and fees.
 * The cause is a bug in Cosmos SDK in the parameter value validation, causing the proposal to pass despite being invalid. More on that here: https://github.com/cosmos/cosmos-sdk/issues/5808
 
-#### Action Items:
+### Action Items:
 * https://github.com/enigmampc/EnigmaBlockchain/issues/95
 * https://github.com/enigmampc/EnigmaBlockchain/issues/97
 * https://github.com/enigmampc/EnigmaBlockchain/issues/104
+
+## Recovery
+
+1. Log in to the testnet bootstrap machine.
+2. Export state from the last "rounded" block height:
+```
+enigmad export --for-zero-height --height=170000 > state_export.json
+```
