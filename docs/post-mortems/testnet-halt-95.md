@@ -169,6 +169,6 @@
     This one got fixed when deleted the `.enigmad/data/.compute` directory.
 9. Reset state:
     ```
-    enigmad --unsafe-reset-all
+    enigmad unsafe-reset-all
     ```
 10. Restarted the node.
