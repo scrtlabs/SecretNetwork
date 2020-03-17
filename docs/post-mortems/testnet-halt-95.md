@@ -76,7 +76,7 @@
         ...
     }
     ```
-4. Made sure the `distribution` parameters are still make sense:
+4. Made sure the `distribution` parameters still make sense:
     ```
     "distribution":{
         "params":{
