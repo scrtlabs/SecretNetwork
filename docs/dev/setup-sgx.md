@@ -6,7 +6,8 @@
 
 # Software
 
-First, make sure you have Rust installed: https://www.rust-lang.org/tools/install
+Note: These commands can replace steps 1-7:  
+(Tested with version 2.9 and Ubuntu 18.04)
 
 - Once Rust is installed, install the `nightly` toolchain:
 
