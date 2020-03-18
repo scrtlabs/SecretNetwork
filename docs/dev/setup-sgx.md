@@ -22,7 +22,7 @@ lynx -dump -listonly -nonumbers https://download.01.org/intel-sgx/sgx-linux/ |
 
 chmod +x *.bin
 sudo ./sgx_linux_x64_driver_*.bin
-(echo no && sleep 0.5 && echo "$HOME/.sgxsdk") | ./sgx_linux_x64_sdk_*.bin
+(echo no && sleep 0.1 && echo "$HOME/.sgxsdk") | ./sgx_linux_x64_sdk_*.bin
 ```
 
 1. Go to https://download.01.org/intel-sgx/sgx-linux
