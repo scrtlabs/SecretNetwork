@@ -6,51 +6,59 @@
 
 # Software
 
-Note: These commands can replace steps 1-7:  
-(Tested with version 2.9 and Ubuntu 18.04)
-
-- Once Rust is installed, install the `nightly` toolchain:
-
-chmod +x *.bin
-
-sudo ./sgx_linux_x64_driver_*.bin
-ls /dev/isgx &>/dev/null && echo "SGX Driver installed" || echo "SGX Driver NOT installed"
-
-(echo no && sleep 0.5 && echo "$HOME/.sgxsdk") | ./sgx_linux_x64_sdk_*.bin
-```
-
-Note that sometimes after a system reboot you'll need to reinstall the driver (usually after a kernel upgrade):
+This script was tested on Ubuntu 20.04 with SGX driver/sdk version 2.9 intended for Ubuntu 18.04:
 
 ```bash
-sudo $HOME/.sgxsdk/sgx_linux_x64_driver_*.bin
+# Create a working directory to download and install the SDK inside
+mkdir -p "$HOME/.sgxsdk"
+
+(
+   # In a new sub-shell cd into our working directory so to no pollute the original shell's working directory
+   cd "$HOME/.sgxsdk"
+
+   # 1. Go to https://download.01.org/intel-sgx/sgx-linux
+   # 2. Step into the latest version
+   # 3. Step into `distro/$LATEST_UBUNTU_YOU_SEE_THERE`
+   # 4. Download `sgx_linux_x64_driver_*.bin` and `sgx_linux_x64_sdk_*.bin`
+   lynx -dump -listonly -nonumbers https://download.01.org/intel-sgx/sgx-linux/ |
+      grep -P 'sgx-linux/(\d\.?)+/' |
+      sort |
+      tail -1 |
+      parallel --bar --verbose lynx -dump -listonly -nonumbers "{}/distro" |
+      grep -P 'ubuntu\d\d' |
+      sort |
+      tail -1 |
+      parallel --bar --verbose lynx -dump -listonly -nonumbers |
+      grep -P '\.bin$' |
+      parallel --bar --verbose curl -OSs
+
+   # Make the driver and SDK installers executable
+   chmod +x ./sgx_linux_*.bin
+
+   # Install the driver
+   sudo ./sgx_linux_x64_driver_*.bin
+
+   # Verify SGX driver installation
+   ls /dev/isgx &>/dev/null && echo "SGX Driver installed" || echo "SGX Driver NOT installed"
+
+   # Install the SDK inside ./sgxsdk which is inside $HOME/.sgxsdk
+   echo yes | ./sgx_linux_x64_sdk_*.bin
+
+   # Setup the environment variables for every new shell
+   echo "source '$HOME/.sgxsdk/sgxsdk/environment'" | tee -a "$HOME/.bashrc" "$HOME/.zshrc" > /dev/null
+)
+
+# Add
+echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main' |
+   sudo tee /etc/apt/sources.list.d/intel-sgx.list
+wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key |
+   sudo apt-key add -
+
+# Install all the additional necessary dependencies (besides the driver and the SDK) for building a rust enclave
+sudo apt install -y libsgx-enclave-common libsgx-enclave-common-dev autoconf
 ```
 
-# Testing your SGX setup
-
-1. For node runners, by using `sgx-detect`:
-
-5. `chmod +x sgx_linux_*.bin`
-
-   sgx-detect
-   ```
-
-   Verify that the driver is installed correctly:
-
-   ```bash
-   ls /dev/isgx &>/dev/null && echo "SGX Driver installed" || echo "SGX Driver NOT installed"
-   ```
-
-7. `./sgx_linux_x64_sdk_*.bin`
-
-   ```
-   ✔  Able to launch enclaves
-      ✔  Debug mode
-      ✔  Production mode (Intel whitelisted)
-
-   You're all set to start running SGX programs!
-   ```
-
-2. For enclave developers, by compiling a `hello-rust` project:
+TODO: Add steps on how the test the setup (E.g. compiling & running a helloworld program)
 
    ```bash
    git clone --depth 1 -b v1.1.1-testing git@github.com:apache/incubator-teaclave-sgx-sdk.git
