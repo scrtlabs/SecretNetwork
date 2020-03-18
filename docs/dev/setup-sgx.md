@@ -11,7 +11,8 @@ This script was tested on Ubuntu 20.04 with SGX driver/sdk version 2.9 intended 
 mkdir -p "$HOME/.sgxsdk"
 
 (
-   # In a new sub-shell cd into our working directory so to no pollute the original shell's working directory
+   # In a new sub-shell cd into our working directory so to no pollute the
+   # original shell's working directory
    cd "$HOME/.sgxsdk"
 
    # 1. Go to https://download.01.org/intel-sgx/sgx-linux
@@ -43,16 +44,18 @@ mkdir -p "$HOME/.sgxsdk"
    echo yes | ./sgx_linux_x64_sdk_*.bin
 
    # Setup the environment variables for every new shell
-   echo "source '$HOME/.sgxsdk/sgxsdk/environment'" | tee -a "$HOME/.bashrc" "$HOME/.zshrc" > /dev/null
+   echo "source '$HOME/.sgxsdk/sgxsdk/environment'" |
+      tee -a "$HOME/.bashrc" "$HOME/.zshrc" > /dev/null
 )
 
-# Add
+# Add Intels's SGX PPA
 echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main' |
    sudo tee /etc/apt/sources.list.d/intel-sgx.list
 wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key |
    sudo apt-key add -
 
-# Install all the additional necessary dependencies (besides the driver and the SDK) for building a rust enclave
+# Install all the additional necessary dependencies (besides the driver and the SDK)
+# for building a rust enclave
 sudo apt install -y libsgx-enclave-common libsgx-enclave-common-dev autoconf
 ```
 
