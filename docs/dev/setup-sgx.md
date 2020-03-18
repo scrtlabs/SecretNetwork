@@ -4,6 +4,7 @@ TODO
 
 # Software
 
+<<<<<<< HEAD
 This script was tested on Ubuntu 20.04 with SGX driver/sdk version 2.9 intended for Ubuntu 18.04:
 
 ```bash
@@ -54,6 +55,27 @@ wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key |
 
 # Install all the additional necessary dependencies (besides the driver and the SDK) for building a rust enclave
 sudo apt install -y libsgx-enclave-common libsgx-enclave-common-dev autoconf
+=======
+Note: These commands can replace steps 1-7:  
+(Tested with version 2.9 and Ubuntu 18.04)
+
+```bash
+lynx -dump -listonly -nonumbers https://download.01.org/intel-sgx/sgx-linux/ |
+    grep -P 'sgx-linux/(\d\.?)+/' |
+    sort |
+    tail -1 |
+    parallel --bar --verbose lynx -dump -listonly -nonumbers "{}/distro" |
+    grep -P 'ubuntu\d\d' |
+    sort |
+    tail -1 |
+    parallel --bar --verbose lynx -dump -listonly -nonumbers |
+    grep -P '\.bin$' |
+    parallel --bar --verbose curl -OSs
+
+chmod +x *.bin
+sudo ./sgx_linux_x64_driver_*.bin
+(echo no && sleep 0.1 && echo "$HOME/.sgxsdk") | ./sgx_linux_x64_sdk_*.bin
+>>>>>>> 4c5a84aa5ed38e4c46ced79cbca3635271e6629b
 ```
 
 TODO: Add steps on how the test the setup (E.g. compiling & running a helloworld program)
