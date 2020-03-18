@@ -58,10 +58,22 @@ wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key |
 
 # Install all the additional necessary dependencies (besides the driver and the SDK)
 # for building a rust enclave
-sudo apt install -y libsgx-enclave-common libsgx-enclave-common-dev autoconf libtool
+sudo apt install -y libsgx-enclave-common libsgx-enclave-common-dev libsgx-urts autoconf libtool
 ```
 
-TODO: Add steps on how the test the setup (E.g. compiling & running a helloworld program)
+### Test that it works
+
+```bash
+cargo install fortanix-sgx-tools sgxs-tools
+sgx-detect
+```
+
+```bash
+git clone --depth 1 -b v1.1.0 git@github.com:apache/incubator-teaclave-sgx-sdk.git
+
+cd incubator-teaclave-sgx-sdk/
+
+```
 
    ```bash
    git clone --depth 1 -b v1.1.1-testing git@github.com:apache/incubator-teaclave-sgx-sdk.git
