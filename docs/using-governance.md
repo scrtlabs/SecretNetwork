@@ -131,7 +131,7 @@ You can see another `param-change` example here: [enigma-1-proposal-3.json](/eni
 | `staking`      | `HistoricalEntries`       | uint16           | `3`                                                                                                       |
 | `staking`      | `BondDenom`               | string           | `"uscrt"`                                                                                                 |
 
-Please notes:
+Please note:
 
 - The `subspace` is always the `ModuleName`: E.g. https://github.com/cosmos/cosmos-sdk/blob/v0.38.1/x/distribution/types/keys.go#L11
 - The `key` is usually defined in `x/$MODULE_NAME/types/params.go`: E.g. https://github.com/cosmos/cosmos-sdk/blob/v0.38.1/x/distribution/types/params.go#L19-L22
