@@ -10,7 +10,21 @@ Note: These commands can replace steps 1-7:
 (Tested with version 2.9 and Ubuntu 18.04)
 
 ```bash
-sudo $HOME/.sgxsdk/sgx_linux_x64_driver_*.bin
+lynx -dump -listonly -nonumbers https://download.01.org/intel-sgx/sgx-linux/ |
+    grep -P 'sgx-linux/(\d\.?)+/' |
+    sort |
+    tail -1 |
+    parallel --bar --verbose lynx -dump -listonly -nonumbers "{}/distro" |
+    grep -P 'ubuntu\d\d' |
+    sort |
+    tail -1 |
+    parallel --bar --verbose lynx -dump -listonly -nonumbers |
+    grep -P '\.bin$' |
+    parallel --bar --verbose curl -OSs
+
+chmod +x *.bin
+sudo ./sgx_linux_x64_driver_*.bin
+(echo no && sleep 0.1 && echo "$HOME/.sgxsdk") | ./sgx_linux_x64_sdk_*.bin
 ```
 
 # Testing your SGX setup
