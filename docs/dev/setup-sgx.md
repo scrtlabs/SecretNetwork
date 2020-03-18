@@ -56,7 +56,7 @@ wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key |
 
 # Install all the additional necessary dependencies (besides the driver and the SDK)
 # for building a rust enclave
-sudo apt install -y libsgx-enclave-common libsgx-enclave-common-dev autoconf
+sudo apt install -y libsgx-enclave-common libsgx-enclave-common-dev autoconf libtool
 ```
 
 TODO: Add steps on how the test the setup (E.g. compiling & running a helloworld program)
