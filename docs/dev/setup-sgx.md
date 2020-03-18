@@ -4,7 +4,7 @@ TODO
 
 # Software
 
-Notes: These commands can replace steps 1-7:  
+Note: These commands can replace steps 1-7:  
 (Tested with version 2.9 and Ubuntu 18.04)
 
 ```bash
