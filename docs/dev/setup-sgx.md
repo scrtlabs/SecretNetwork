@@ -21,7 +21,10 @@ lynx -dump -listonly -nonumbers https://download.01.org/intel-sgx/sgx-linux/ |
     parallel --bar --verbose curl -OSs
 
 chmod +x *.bin
+
 sudo ./sgx_linux_x64_driver_*.bin
+ls /dev/isgx &>/dev/null && echo "SGX Driver installed" || echo "SGX Driver NOT installed"
+
 (echo no && sleep 0.5 && echo "$HOME/.sgxsdk") | ./sgx_linux_x64_sdk_*.bin
 ```
 
@@ -33,9 +36,15 @@ sudo ./sgx_linux_x64_driver_*.bin
 
 4. Download `sgx_linux_x64_driver_*.bin` and `sgx_linux_x64_sdk_*.bin`
 
-5. `chmod +x *.bin`
+5. `chmod +x sgx_linux_*.bin`
 
 6. `sudo ./sgx_linux_x64_driver_*.bin`
+
+   Verify that the driver is installed correctly:
+
+   ```bash
+   ls /dev/isgx &>/dev/null && echo "SGX Driver installed" || echo "SGX Driver NOT installed"
+   ```
 
 7. `./sgx_linux_x64_sdk_*.bin`
 
