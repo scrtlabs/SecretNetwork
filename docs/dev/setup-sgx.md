@@ -23,8 +23,11 @@ lynx -dump -listonly -nonumbers https://download.01.org/intel-sgx/sgx-linux/ |
     parallel --bar --verbose curl -OSs
 
 chmod +x *.bin
+
 sudo ./sgx_linux_x64_driver_*.bin
-(echo no && sleep 0.1 && echo "$HOME/.sgxsdk") | ./sgx_linux_x64_sdk_*.bin
+ls /dev/isgx &>/dev/null && echo "SGX Driver installed" || echo "SGX Driver NOT installed"
+
+(echo no && sleep 0.5 && echo "$HOME/.sgxsdk") | ./sgx_linux_x64_sdk_*.bin
 ```
 
 # Testing your SGX setup
@@ -48,17 +51,18 @@ sudo ./sgx_linux_x64_driver_*.bin
    You're all set to start running SGX programs!
    ```
 
-2. For enclave developers, by compiling a `hello-rust` project:
+5. `chmod +x sgx_linux_*.bin`
 
    ```bash
    git clone --depth 1 -b v1.1.1-testing git@github.com:apache/incubator-teaclave-sgx-sdk.git
 
-   cd incubator-teaclave-sgx-sdk/samplecode/hello-rust
-   perl -i -pe 's/SGX_SDK \?=.+/SGX_SDK ?= \$(HOME)\/.sgxsdk\/sgxsdk/' Makefile
-   make
-   cd bin
-   ./app
+   Verify that the driver is installed correctly:
+
+   ```bash
+   ls /dev/isgx &>/dev/null && echo "SGX Driver installed" || echo "SGX Driver NOT installed"
    ```
+
+7. `./sgx_linux_x64_sdk_*.bin`
 
    Should print somting similar to this:
 
