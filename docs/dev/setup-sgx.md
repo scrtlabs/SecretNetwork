@@ -62,6 +62,7 @@ sudo apt install -y libsgx-enclave-common libsgx-enclave-common-dev libsgx-urts 
 ### Test that it works
 
 ```bash
+sudo apt install -y libssl-dev
 cargo install fortanix-sgx-tools sgxs-tools
 sgx-detect
 ```
