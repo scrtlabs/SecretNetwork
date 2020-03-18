@@ -12,8 +12,11 @@ Note: These commands can replace steps 1-7:
 - Once Rust is installed, install the `nightly` toolchain:
 
 chmod +x *.bin
+
 sudo ./sgx_linux_x64_driver_*.bin
-(echo no && sleep 0.1 && echo "$HOME/.sgxsdk") | ./sgx_linux_x64_sdk_*.bin
+ls /dev/isgx &>/dev/null && echo "SGX Driver installed" || echo "SGX Driver NOT installed"
+
+(echo no && sleep 0.5 && echo "$HOME/.sgxsdk") | ./sgx_linux_x64_sdk_*.bin
 ```
 
 Note that sometimes after a system reboot you'll need to reinstall the driver (usually after a kernel upgrade):
@@ -26,14 +29,18 @@ sudo $HOME/.sgxsdk/sgx_linux_x64_driver_*.bin
 
 1. For node runners, by using `sgx-detect`:
 
-   ```bash
-   sudo apt install -y libssl-dev protobuf-compiler
-   cargo +nightly install fortanix-sgx-tools sgxs-tools
+5. `chmod +x sgx_linux_*.bin`
 
    sgx-detect
    ```
 
-   Should print at the end:
+   Verify that the driver is installed correctly:
+
+   ```bash
+   ls /dev/isgx &>/dev/null && echo "SGX Driver installed" || echo "SGX Driver NOT installed"
+   ```
+
+7. `./sgx_linux_x64_sdk_*.bin`
 
    ```
    ✔  Able to launch enclaves
