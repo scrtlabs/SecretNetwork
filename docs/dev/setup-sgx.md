@@ -56,7 +56,10 @@ wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key |
 
 # Install all the additional necessary dependencies (besides the driver and the SDK)
 # for building a rust enclave
-sudo apt install -y libsgx-enclave-common libsgx-enclave-common-dev libsgx-urts autoconf libtool
+wget -O /tmp/libprotobuf10_3.0.0-9_amd64.deb http://ftp.br.debian.org/debian/pool/main/p/protobuf/libprotobuf10_3.0.0-9_amd64.deb
+(sleep 3 ; echo y) | sudo gdebi /tmp/libprotobuf10_3.0.0-9_amd64.deb
+
+sudo apt install -y libsgx-enclave-common libsgx-enclave-common-dev libsgx-urts sgx-aesm-service libsgx-uae-service libsgx-launch autoconf libtool
 ```
 
 ### Test that it works
