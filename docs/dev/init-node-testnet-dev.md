@@ -7,7 +7,7 @@ wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.3/enig
 ### Remove old installations
 
 ```bash
-sudo dpkg -P enigmachain
+sudo dpkg -r enigmachain
 sudo rm -rf ~/.enigmad ~/.enigmacli
 sudo rm -rf ~/.engd ~/.engcli
 sudo rm -rf "$(which enigmad)"
@@ -21,7 +21,7 @@ sudo rm -rf "$(which engd)"
 - Attach storage to instance
 - Run the following
 
-```shell
+```bash
 # Create volumes and groups
 sudo pvcreate /dev/xvdf
 sudo vgcreate chainstate /dev/xvdf
@@ -43,7 +43,6 @@ sudo chown -R ubuntu .enigmad/
 
 ### Install the `.deb` file
 
-<<<<<<< HEAD
 sudo dpkg -i enigma-blockchain_0.0.3_amd64.deb
 ```
 

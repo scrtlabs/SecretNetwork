@@ -11,7 +11,7 @@
 
 3) Configure:
 
-   ```shell
+   ```bash
    # Set the mainnet chain-id
    enigmacli config chain-id enigma-1
    ```
@@ -24,12 +24,12 @@
    enigmacli config indent true
    ```
 
-   ```shell
+   ```bash
    # Set the full node address
    enigmacli config node tcp://bootstrap.mainnet.enigma.co:26657
    ```
 
-   ```shell
+   ```bash
    # Verify everything you receive from the full node
    enigmacli config trust-node false
    ```

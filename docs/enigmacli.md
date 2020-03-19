@@ -328,7 +328,7 @@ enigmacli q tx [hash]
 To unjail your jailed validator
 
 ```bash
-enigmacli tx slashing unjail --from=<key-alias>
+enigmacli tx slashing unjail --from <key-alias>
 ```
 
 #### Signing Info
