@@ -39,7 +39,6 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 - [Math Wallet](https://mathwallet.org/web/enigma)
 
 # Implementation Discussions
-=======
 
 - [An Update on the Encryption Protocol](https://forum.enigma.co/t/an-update-on-the-encryption-protocol/1641)
 - [Hard Forks and Network Upgrades](https://forum.enigma.co/t/hard-forks-and-network-upgrades/1670)
