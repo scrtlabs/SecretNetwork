@@ -1,18 +1,18 @@
 ## 1. Import the Enigma public GPG key:
 
-```shell
+```bash
 gpg2 --recv-keys 91831DE812C6415123AFAA7B420BF1CB005FBCE6
 ```
 
 ## 2. Check release hashes:
 
-```shell
+```bash
 sha256sum --check SHA256SUMS.asc
 ```
 
 ## 3. Verify the hashes are signed by Enigma:
 
-```shell
+```bash
 gpg2 --verify SHA256SUMS.asc
 ```
 
@@ -27,7 +27,7 @@ You may contact us on a channel you deem secure and we'll verify the fingerprint
 
 Then to eliminate future warnings run:
 
-```shell
+```bash
 gpg2 --lsign 91831DE812C6415123AFAA7B420BF1CB005FBCE6
 ```
 

@@ -11,31 +11,31 @@
 
 3) Configure:
 
-   ```shell
+   ```bash
    # Set the mainnet chain-id
    enigmacli config chain-id enigma-1
    ```
 
-   ```shell
+   ```bash
    enigmacli config output json
    ```
 
-   ```shell
+   ```bash
    enigmacli config indent true
    ```
 
-   ```shell
+   ```bash
    # Set the full node address
    enigmacli config node tcp://bootstrap.mainnet.enigma.co:26657
    ```
 
-   ```shell
+   ```bash
    # Verify everything you receive from the full node
    enigmacli config trust-node false
    ```
 
 4) Check the installation:
 
-   ```shell
+   ```bash
    enigmacli status
    ```
