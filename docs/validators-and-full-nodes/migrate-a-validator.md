@@ -54,13 +54,13 @@ Please read about [the dangers in running a validator](/docs/validators-and-full
 
 On the validator node on the old machine:
 
-```bash
+```shell
 sudo systemctl stop enigma-node
 ```
 
 On the full node on the new machine:
 
-```bash
+```shell
 sudo systemctl stop enigma-node
 ```
 
@@ -80,6 +80,6 @@ scp ~/.secretd/config/priv_validator_key.json ubuntu@new_machine_ip:~/.secretd/c
 
 On the new machine:
 
-```bash
+```shell
 sudo systemctl start enigma-node
 ```

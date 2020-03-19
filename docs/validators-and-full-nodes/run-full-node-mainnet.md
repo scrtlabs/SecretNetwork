@@ -95,7 +95,7 @@ sudo systemctl start enigma-node
 
 ### 11. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
 
-```bash
+```shell
 journalctl -f -u enigma-node
 ```
 

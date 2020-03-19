@@ -28,16 +28,7 @@ You would do this if you have no interest at all at running a full-node or a val
    enigmacli config node tcp://bootstrap.testnet.enigma.co:26657
    ```
 
-   ```bash
-   enigmacli config chain-id enigma-testnet
-   enigmacli config node tcp://bootstrap.testnet.enigma.co:26657
-   ```
-
 5. Check installation:
-
-   ```bash
-   enigmacli status
-   ```
 
    ```bash
    enigmacli status
@@ -80,15 +71,7 @@ Please don't abuse this service—the number of available tokens is limited.
    wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/EnigmaBlockchain/master/enigma-testnet-genesis.json"
    ```
 
-   ```bash
-   wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/EnigmaBlockchain/master/enigma-testnet-genesis.json"
-   ```
-
 4. Validate the checksum of the file:
-
-   ```bash
-   echo "cc7ab684b955dcc78baffd508530f0a119723836d24153b41d8669f0e4ec3caa $HOME/.enigmad/config/genesis.json" | sha256sum --check
-   ```
 
    ```bash
    echo "cc7ab684b955dcc78baffd508530f0a119723836d24153b41d8669f0e4ec3caa $HOME/.enigmad/config/genesis.json" | sha256sum --check
@@ -100,15 +83,7 @@ Please don't abuse this service—the number of available tokens is limited.
    enigmad validate-genesis
    ```
 
-   ```bash
-   enigmad validate-genesis
-   ```
-
 6. Add the bootstrap node as a persistent peer:
-
-   ```bash
-   perl -i -pe 's/persistent_peers = ""/persistent_peers = "16e95298703bfbf6565a1cbb6691cf30129f52ca\@bootstrap.testnet.enigma.co:26656"/' ~/.enigmad/config/config.toml
-   ```
 
    ```bash
    perl -i -pe 's/persistent_peers = ""/persistent_peers = "16e95298703bfbf6565a1cbb6691cf30129f52ca\@bootstrap.testnet.enigma.co:26656"/' ~/.enigmad/config/config.toml
@@ -121,16 +96,7 @@ Please don't abuse this service—the number of available tokens is limited.
    sudo systemctl start enigma-node
    ```
 
-   ```bash
-   sudo systemctl enable enigma-node
-   sudo systemctl start enigma-node
-   ```
-
 8. Verify success:
-
-   ```bash
-   journalctl -f -u enigma-node
-   ```
 
    ```bash
    journalctl -f -u enigma-node

@@ -21,7 +21,7 @@ sudo rm -rf "$(which engd)"
 - Attach storage to instance
 - Run the following
 
-```bash
+```shell
 # Create volumes and groups
 sudo pvcreate /dev/xvdf
 sudo vgcreate chainstate /dev/xvdf
@@ -49,7 +49,7 @@ sudo dpkg -i enigma-blockchain_0.0.3_amd64.deb
 
 ### Config local node
 
-```bash
+```shell
 enigmacli config chain-id "enigma-testnet"
 enigmacli config output json
 enigmacli config indent true

@@ -19,7 +19,7 @@ Follow the [How to migrate a validator to a new machine](/docs/validators-and-fu
 
   To check if the new full node finished catching-up:
 
-  ```bash
+  ```shell
   # On the full node on the new machine:
   enigmacli status | jq .sync_info
   ```
@@ -30,7 +30,7 @@ Follow the [How to migrate a validator to a new machine](/docs/validators-and-fu
 
 - If you don't care about downtime:
 
-  ```bash
+  ```shell
   # Stop the node
   sudo systemctl stop enigma-node
 
