@@ -1,6 +1,6 @@
-# How to join the Secret Blockhain as a full node on mainnet
+# How to join the Secret Network as a full node on mainnet
 
-This document details how to join the EnigmaChain `mainnet` as a validator.
+This document details how to join the Secret Network `mainnet` as a validator.
 
 ## Requirements
 
@@ -24,10 +24,10 @@ x64 2.0 GHz 2v CPU
 
 ## Installation
 
-### 1. Download the Secret Blockchain package installer for Debian/Ubuntu:
+### 1. Download the Secret Network package installer for Debian/Ubuntu:
 
 ```bash
-wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.3/enigma-blockchain_0.0.3_amd64.deb
+wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.1.0/secretnetwork_0.1.0_amd64.deb
 ```
 
 ([How to verify releases](/docs/verify-releases.md))
@@ -35,19 +35,19 @@ wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.3/enig
 ### 2. Install the package:
 
 ```bash
-sudo dpkg -i enigma-blockchain_0.0.3_amd64.deb
+sudo dpkg -i secretnetwork_0.1.0_amd64.deb
 ```
 
-### 3. Initialize your installation of the Secret Blockchain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
+### 3. Initialize your installation of the Secret Network. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
 
 ```bash
-secretd init <MONIKER> --chain-id enigma-1
+secretd init <MONIKER> --chain-id secret-1
 ```
 
 ### 4. Download a copy of the Genesis Block file: `genesis.json`
 
 ```bash
-wget -O ~/.secretd/config/genesis.json "https://raw.githubusercontent.com/enigmampc/EnigmaBlockchain/master/enigma-1-genesis.json"
+wget -O ~/.secretd/config/genesis.json "https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/secret-1-genesis.json"
 ```
 
 ### 5. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
@@ -81,22 +81,22 @@ This configuration updates automatically by your node when it learns of new node
 perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.secretd/config/config.toml
 ```
 
-### 9. Enable `enigma-node` as a system service:
+### 9. Enable `secret-node` as a system service:
 
 ```
-sudo systemctl enable enigma-node
+sudo systemctl enable secret-node
 ```
 
-### 10. Start `enigma-node` as a system service:
+### 10. Start `secret-node` as a system service:
 
 ```
-sudo systemctl start enigma-node
+sudo systemctl start secret-node
 ```
 
 ### 11. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
 
-```shell
-journalctl -f -u enigma-node
+```bash
+journalctl -f -u secret-node
 ```
 
 ```
@@ -121,7 +121,7 @@ You are now a full node. :tada:
 ### 12. Add the following configuration settings (some of these avoid having to type some flags all the time):
 
 ```bash
-secretcli config chain-id enigma-1
+secretcli config chain-id secret-1
 ```
 
 ```bash
@@ -152,7 +152,7 @@ So if someone wants to add you as a peer, have them add the above address to the
 And if someone wants to use you from their `secretcli` then have them run:
 
 ```bash
-secretcli config chain-id enigma-1
+secretcli config chain-id secret-1
 ```
 
 ```bash

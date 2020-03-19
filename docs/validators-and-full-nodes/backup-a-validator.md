@@ -12,13 +12,8 @@ secretd tendermint show-validator
 
 To see the associated bech32 address:
 
-<<<<<<< HEAD
 ```bash
 secretd tendermint show-address
-=======
-```shell
-enigmad tendermint show-address
->>>>>>> markdown replace ```bash with ```shell
 ```
 
 If you are using the software sign (which is the default signing method of tendermint), your Tendermint Key is located in `~/.secretd/config/priv_validator_key.json`.

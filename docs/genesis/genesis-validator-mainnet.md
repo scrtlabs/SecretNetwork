@@ -27,25 +27,25 @@ sudo dpkg -i enigma-blockchain_0.0.3_amd64.deb
 
 ### 3. Initialize your installation of Enigma Blockchain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
 
-```shell
+```bash
 enigmad init <MONIKER> --chain-id enigma-1
 ```
 
 ### 4. Download a copy of the Genesis Block file: `genesis.json`
 
-```shell
+```bash
 wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/EnigmaBlockchain/master/enigma-1-genesis.json"
 ```
 
 ### 5. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
 
-```shell
+```bash
 echo "86cd9864f5b8e7f540c5edd3954372df94bd23de62e06d5c33a84bd5f3d29114 $HOME/.enigmad/config/genesis.json" | sha256sum --check
 ```
 
 ### 6. Validate that the `genesis.json` is a valid genesis file:
 
-```shell
+```bash
 enigmad validate-genesis
 ```
 
@@ -53,25 +53,25 @@ enigmad validate-genesis
 
 If you are curious, you can query the RPC endpoint on that node http://bootstrap.mainnet.enigma.co:26657/ (please note that the RPC port `26657` is different from the P2P port `26656` below)
 
-```shell
+```bash
 perl -i -pe 's/persistent_peers = ""/persistent_peers = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.enigmad/config/config.toml
 ```
 
 ### 8. Enable `enigma-node` as a system service:
 
-```shell
+```bash
 sudo systemctl enable enigma-node
 ```
 
 ### 9. Start `enigma-node` as a system service:
 
-```shell
+```bash
 sudo systemctl start enigma-node
 ```
 
 ### 10. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
 
-```shell
+```bash
 journalctl -f -u enigma-node
 ```
 
@@ -94,25 +94,25 @@ Feb 10 21:18:59 ip-172-31-41-58 enigmad[8814]: I[2020-02-10|21:18:59.695] Commit
 
 ### 11. Add the following configuration settings (some of these avoid having to type some flags all the time):
 
-```shell
+```bash
 enigmacli config chain-id enigma-1
 ```
 
-```shell
+```bash
 enigmacli config output json
 ```
 
-```shell
+```bash
 enigmacli config indent true
 ```
 
-```shell
+```bash
 enigmacli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
 ```
 
 ### 12. Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):
 
-```shell
+```bash
 enigmacli keys add <key-alias>
 ```
 
@@ -122,7 +122,7 @@ enigmacli keys add <key-alias>
 
 ### 13. Output your node address:
 
-```shell
+```bash
 enigmacli keys show <key-alias> -a
 ```
 
@@ -130,13 +130,13 @@ enigmacli keys show <key-alias> -a
 
 ### 15. Check that you have the requested tokens:
 
-```shell
+```bash
 enigmacli q account $(enigmacli keys show -a <key_alias>)
 ```
 
 If you get the following message, it means that you have no tokens yet:
 
-```shell
+```bash
 ERROR: unknown address: account enigmaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx does not exist
 ```
 
@@ -144,7 +144,7 @@ ERROR: unknown address: account enigmaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx do
 
 (remember 1 SCRT = 1,000,000 uSCRT, and so the command below stakes 100k SCRT).
 
-```shell
+```bash
 enigmacli tx staking create-validator \
   --amount=100000000000uscrt \
   --pubkey=$(enigmad tendermint show-validator) \
@@ -160,7 +160,7 @@ enigmacli tx staking create-validator \
 
 ### 17. Check that you have been added as a validator:
 
-```shell
+```bash
 enigmacli q staking validators
 ```
 
@@ -172,36 +172,36 @@ If the above is too verbose, just run: `enigmacli q staking validators | grep mo
 
 In order to stake more tokens beyond those in the initial transaction, run:
 
-```shell
+```bash
 enigmacli tx staking delegate $(enigmacli keys show <key-alias> --bech=val -a) <amount>uscrt --from <key-alias>
 ```
 
 ## Renaming your moniker
 
-```shell
+```bash
 enigmacli tx staking edit-validator --moniker <new-moniker> --from <key-alias>
 ```
 
 ## Seeing your rewards from being a validator
 
-```shell
+```bash
 enigmacli q distribution rewards $(enigmacli keys show -a <key-alias>)
 ```
 
 ## Seeing your commissions from your delegators
 
-```shell
+```bash
 enigmacli q distribution commission $(enigmacli keys show -a <key-alias> --bech=val)
 ```
 
 ## Withdrawing rewards
 
-```shell
+```bash
 enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a <key-alias>) --from <key-alias>
 ```
 
 ## Withdrawing rewards+commissions
 
-```shell
+```bash
 enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a <key-alias>) --from <key-alias> --commission
 ```

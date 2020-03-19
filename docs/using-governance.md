@@ -1,6 +1,6 @@
 # How to participate in on-chain governance
 
-Governance is the process from which users in the Secret Blockchain can come to consensus on software upgrades, parameters of the mainnet or signaling mechanisms through text proposals. This is done through voting on proposals, which will be submitted by `SCRT` holders on the mainnet.
+Governance is the process from which users in the Secret Network can come to consensus on software upgrades, parameters of the mainnet or signaling mechanisms through text proposals. This is done through voting on proposals, which will be submitted by `SCRT` holders on the mainnet.
 
 Some considerations about the voting process:
 
@@ -9,11 +9,11 @@ Some considerations about the voting process:
 - Votes are tallied at the end of the voting period (1 week on mainnet) where each address can vote multiple times to update its `Option` value (paying the transaction fee each time), only the most recently cast vote will count as valid.
 - Voters can choose between options `Yes`, `No`, `NoWithVeto` and `Abstain`.
 - At the end of the voting period, a proposal is accepted IFF:
-  - `(YesVotes / (YesVotes+NoVotes+NoWithVetoVotes)) > 1/2` ([threshold](https://github.com/enigmampc/EnigmaBlockchain/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1864))
-  - `(NoWithVetoVotes / (YesVotes+NoVotes+NoWithVetoVotes)) < 1/3` ([veto](https://github.com/enigmampc/EnigmaBlockchain/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1865))
-  - `((YesVotes+NoVotes+NoWithVetoVotes) / totalBondedStake) >= 1/3` ([quorum](https://github.com/enigmampc/EnigmaBlockchain/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1863))
+  - `(YesVotes / (YesVotes+NoVotes+NoWithVetoVotes)) > 1/2` ([threshold](https://github.com/enigmampc/SecretNetwork/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1864))
+  - `(NoWithVetoVotes / (YesVotes+NoVotes+NoWithVetoVotes)) < 1/3` ([veto](https://github.com/enigmampc/SecretNetwork/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1865))
+  - `((YesVotes+NoVotes+NoWithVetoVotes) / totalBondedStake) >= 1/3` ([quorum](https://github.com/enigmampc/SecretNetwork/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1863))
 
-For more information about the governance process and how it works, please check out the Governance module [specification](https://github.com/cosmos/cosmos-sdk/tree/master/x/gov/spec).
+For more information about the governance process and how it works, please check out the Governance module [specification](https://github.com/Cashmaney/cosmos-sdk/tree/master/x/gov/spec).
 
 ## Setup
 
@@ -22,7 +22,7 @@ For more information about the governance process and how it works, please check
 
 ## Create a Governance Proposal
 
-In order to create a governance proposal, you must submit an initial deposit along with a title and description. Currently, in order to enter the voting period, a proposal must accumulate within a week deposits of at least [1000 `SCRT`](https://github.com/enigmampc/EnigmaBlockchain/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1851-L1856).
+In order to create a governance proposal, you must submit an initial deposit along with a title and description. Currently, in order to enter the voting period, a proposal must accumulate within a week deposits of at least [1000 `SCRT`](https://github.com/enigmampc/SecretNetwork/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1851-L1856).
 
 Various modules outside of governance may implement their own proposal types and handlers (eg. parameter changes), where the governance module itself supports `Text` proposals. Any module outside of governance has it's command mounted on top of `submit-proposal`.
 
@@ -133,16 +133,16 @@ You can see another `param-change` example here: [enigma-1-proposal-3.json](/eni
 
 Please note:
 
-- The `subspace` is always the `ModuleName`: E.g. https://github.com/cosmos/cosmos-sdk/blob/v0.38.1/x/distribution/types/keys.go#L11
-- The `key` is usually defined in `x/$MODULE_NAME/types/params.go`: E.g. https://github.com/cosmos/cosmos-sdk/blob/v0.38.1/x/distribution/types/params.go#L19-L22
-- The `value`'s type is usually near the `key` definition: E.g. https://github.com/cosmos/cosmos-sdk/blob/v0.38.1/x/distribution/types/params.go#L26-L31
+- The `subspace` is always the `ModuleName`: E.g. https://github.com/Cashmaney/cosmos-sdk/blob/v0.38.1/x/distribution/types/keys.go#L11
+- The `key` is usually defined in `x/$MODULE_NAME/types/params.go`: E.g. https://github.com/Cashmaney/cosmos-sdk/blob/v0.38.1/x/distribution/types/params.go#L19-L22
+- The `value`'s type is usually near the `key` definition: E.g. https://github.com/Cashmaney/cosmos-sdk/blob/v0.38.1/x/distribution/types/params.go#L26-L31
 - :warning: `subspace` and `key` are case sensitive and `value` must be of the correct type and within the allowed bounds. Proposals with errors on these inputs should not enter voting period (should not get deposits) or be voted on with `NoWithVeto`.
 - :warning: Currently parameter changes are _evaluated_ but not _validated_, so it is very important that any `value` change is valid (i.e. correct type and within bounds) for its respective parameter, eg. `MaxValidators` should be an integer and not a decimal.
 - :warning: Proper vetting of a parameter change proposal should prevent this from happening (no deposits should occur during the governance process), but it should be noted regardless.
 
 ##### Known Constraints
 
-- `distribution.baseproposerreward + distribution.bonusproposerreward < 1`. See [this](https://github.com/enigmampc/EnigmaBlockchain/issues/95) and [this](https://github.com/cosmos/cosmos-sdk/issues/5808) for more info.
+- `distribution.baseproposerreward + distribution.bonusproposerreward < 1`. See [this](https://github.com/enigmampc/SecretNetwork/issues/95) and [this](https://github.com/cosmos/cosmos-sdk/issues/5808) for more info.
 
 To read more go to https://github.com/gavinly/CosmosParametersWiki.
 
@@ -160,7 +160,7 @@ Where `proposal.json` is:
 {
   "title": "Community Pool Spend",
   "description": "Spend 10 SCRT with line breaks \n and `code formatting`",
-  "recipient": "enigma1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "recipient": "secret1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
   "amount": [
     {
       "denom": "uscrt",

@@ -39,7 +39,7 @@ _Ref: https://medium.com/cryptium-cosmos/how-to-store-your-cosmos-atoms-on-your-
 
 Some users may not have their ledger recognized by their Linux host. To fix this issue implement the fix for connection issues on Linux from the [ledger support page](https://support.ledger.com/hc/en-us/articles/115005165269-Connection-issues-with-Windows-or-Linux)
 
-```shell
+```bash
 wget -q -O - https://raw.githubusercontent.com/LedgerHQ/udev-rules/master/add_udev_rules.sh | sudo bash
 ```
 
@@ -71,7 +71,7 @@ secretcli keys add <account name> --ledger --account <account number on your Led
 
 _Note: the commands below assume that you run them on the same machine where you have an Secret Network node running. However, if you need to connect to a remote Secret Network node (on the cloud) while you interact with your Ledger wallet locally, you will need to append the following to each command below:_
 
-```shell
+```bash
 --node http://node.domain:26657
 ```
 
