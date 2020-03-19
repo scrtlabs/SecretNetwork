@@ -20,7 +20,7 @@ wget https://enigmaco-website.s3.amazonaws.com/enigmachain_0.0.1_amd64.deb
 
 **Note:** If you will be using the same key from testnet you can export it to `stderr` with `enigmacli keys export <key-alias>` and paste it into `my.key` and later import it with `enigmacli keys import <key-alias> my.key`.
 
-```shell
+```bash
 sudo dpkg -r enigmachain
 sudo rm -rf ~/.enigmad ~/.enigmacli
 sudo rm -rf ~/.engd ~/.engcli
@@ -166,7 +166,7 @@ engcli tx staking create-validator \
 
 ### 19. Check that you have been added as a validator:
 
-```shell
+```bash
 engcli q staking validators
 ```
 
@@ -184,24 +184,24 @@ engcli tx staking delegate $(engcli keys show <key-alias> --bech=val -a) 1uscrt 
 
 ## Seeing your rewards from being a validator
 
-```shell
+```bash
 engcli q distribution rewards $(engcli keys show -a <key-alias>)
 ```
 
 ## Seeing your commissions from your delegators
 
-```shell
+```bash
 engcli q distribution commission $(engcli keys show -a <key-alias> --bech=val)
 ```
 
 ## Withdrawing rewards
 
-```shell
+```bash
 engcli tx distribution withdraw-rewards $(engcli keys show --bech=val -a <key-alias>) --from <key-alias>
 ```
 
 ## Withdrawing rewards+commissions
 
-```shell
+```bash
 engcli tx distribution withdraw-rewards $(engcli keys show --bech=val -a <key-alias>) --from <key-alias> --commission
 ```
