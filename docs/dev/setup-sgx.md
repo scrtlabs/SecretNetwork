@@ -10,13 +10,13 @@ First, make sure you have Rust installed: https://www.rust-lang.org/tools/instal
 
 - Once Rust is installed, install the `nightly` toolchain:
 
-  ```shell
+  ```bash
   rustup toolchain install nightly
   ```
 
 Then you can use this script (or run the commands one-by-one), which was tested on Ubuntu 20.04 with SGX driver/sdk version 2.9 intended for Ubuntu 18.04:
 
-```shell
+```bash
 echo "\n\n#######################################"
 echo "##### Installing missing packages #####"
 echo "#######################################\n\n"
@@ -95,7 +95,7 @@ sudo apt install -y libsgx-enclave-common libsgx-enclave-common-dev libsgx-urts 
 
 Note that sometimes after a system reboot you'll need to reinstall the driver (usually after a kernel upgrade):
 
-```shell
+```bash
 sudo $HOME/.sgxsdk/sgx_linux_x64_driver_*.bin
 sudo mount -o remount,exec /dev
 ```
@@ -104,7 +104,7 @@ sudo mount -o remount,exec /dev
 
 1. Using `sgx-detect`:
 
-   ```shell
+   ```bash
    sudo apt install -y libssl-dev protobuf-compiler
    cargo +nightly install fortanix-sgx-tools sgxs-tools
 
@@ -123,7 +123,7 @@ sudo mount -o remount,exec /dev
 
 2. Compiling a `hello-rust` project:
 
-   ```shell
+   ```bash
    git clone --depth 1 -b v1.1.1-testing git@github.com:apache/incubator-teaclave-sgx-sdk.git
 
    cd incubator-teaclave-sgx-sdk/samplecode/hello-rust
@@ -150,26 +150,26 @@ sudo mount -o remount,exec /dev
 
 To uninstall the Intel(R) SGX Driver, run:
 
-```shell
+```bash
 sudo /opt/intel/sgxdriver/uninstall.sh
 ```
 
 The above command produces no output when it succeeds. If you want to verify that the driver has been uninstalled, you can run the following, which should print `SGX Driver NOT installed`:
 
-```shell
+```bash
 ls /dev/isgx &>/dev/null && echo "SGX Driver installed" || echo "SGX Driver NOT installed"
 ```
 
 To uninstall the SGX SDK, run:
 
-```shell
+```bash
 sudo "$HOME"/.sgxsdk/sgxsdk/uninstall.sh
 rm -rf "$HOME/.sgxsdk"
 ```
 
 To uninstall the rest of the dependencies, run:
 
-```shell
+```bash
 sudo apt purge -y libsgx-enclave-common libsgx-enclave-common-dev libsgx-urts sgx-aesm-service libsgx-uae-service libsgx-launch libsgx-aesm-launch-plugin libsgx-ae-le
 ```
 

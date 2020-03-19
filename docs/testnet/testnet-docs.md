@@ -11,22 +11,22 @@ You would do this if you have no interest at all at running a full-node or a val
    (Currently support is only for Debian/Ubuntu. Other OS distributions coming soon)
 2. Uninstall previous releases:
 
-    ```shell
-    sudo dpkg -r enigmachain
-    ```
+   ```bash
+   sudo dpkg -r enigmachain
+   ```
 
 3. Install:
 
-    ```shell
-    sudo dpkg -i enigma-blockchain_0.1.0_amd64.deb
-    ```
+   ```bash
+   sudo dpkg -i enigma-blockchain_0.1.0_amd64.deb
+   ```
 
 4. Configure the client to point to the testnet nodes:
 
-    ```shell
-    enigmacli config chain-id enigma-testnet
-    enigmacli config node tcp://bootstrap.testnet.enigma.co:26657
-    ```
+   ```bash
+   enigmacli config chain-id enigma-testnet
+   enigmacli config node tcp://bootstrap.testnet.enigma.co:26657
+   ```
 
    ```bash
    enigmacli config chain-id enigma-testnet
@@ -35,9 +35,9 @@ You would do this if you have no interest at all at running a full-node or a val
 
 5. Check installation:
 
-    ```shell
-    enigmacli status
-    ```
+   ```bash
+   enigmacli status
+   ```
 
    ```bash
    enigmacli status
@@ -57,9 +57,9 @@ Please don't abuse this service—the number of available tokens is limited.
 1. Head to https://faucet.testnet.enigma.co .
 2. Generate a key-pair:
 
-    ```shell
-    enigmacli keys add [your-key-name]
-    ```
+   ```bash
+   enigmacli keys add [your-key-name]
+   ```
 
 3. Fill in your address and press `Send me tokens`.
 
@@ -70,24 +70,25 @@ Please don't abuse this service—the number of available tokens is limited.
 1. Run steps 1-3 of the previous section (light client guide) on your server.
 2. Initialize your installation of the Enigma Blockchain. Choose a  **moniker**  for yourself that will be public, and replace  `<MONIKER>`  with your moniker below
 
-    ```shell
-    enigmad init <MONIKER> --chain-id enigma-testnet
-    ```
+   ```bash
+   enigmad init <MONIKER> --chain-id enigma-testnet
+   ```
 
 3. Download a copy of the genesis file:
 
-    ```shell
-    wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/EnigmaBlockchain/master/enigma-testnet-genesis.json"
-    ```
+   ```bash
+   wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/EnigmaBlockchain/master/enigma-testnet-genesis.json"
+   ```
 
    ```bash
    wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/EnigmaBlockchain/master/enigma-testnet-genesis.json"
    ```
 
 4. Validate the checksum of the file:
-    ```shell
-    echo "cc7ab684b955dcc78baffd508530f0a119723836d24153b41d8669f0e4ec3caa $HOME/.enigmad/config/genesis.json" | sha256sum --check
-    ```
+
+   ```bash
+   echo "cc7ab684b955dcc78baffd508530f0a119723836d24153b41d8669f0e4ec3caa $HOME/.enigmad/config/genesis.json" | sha256sum --check
+   ```
 
    ```bash
    echo "cc7ab684b955dcc78baffd508530f0a119723836d24153b41d8669f0e4ec3caa $HOME/.enigmad/config/genesis.json" | sha256sum --check
@@ -95,9 +96,9 @@ Please don't abuse this service—the number of available tokens is limited.
 
 5. Validate genesis:
 
-    ```shell
-    enigmad validate-genesis
-    ```
+   ```bash
+   enigmad validate-genesis
+   ```
 
    ```bash
    enigmad validate-genesis
@@ -105,9 +106,9 @@ Please don't abuse this service—the number of available tokens is limited.
 
 6. Add the bootstrap node as a persistent peer:
 
-    ```shell
-    perl -i -pe 's/persistent_peers = ""/persistent_peers = "16e95298703bfbf6565a1cbb6691cf30129f52ca\@bootstrap.testnet.enigma.co:26656"/' ~/.enigmad/config/config.toml
-    ```
+   ```bash
+   perl -i -pe 's/persistent_peers = ""/persistent_peers = "16e95298703bfbf6565a1cbb6691cf30129f52ca\@bootstrap.testnet.enigma.co:26656"/' ~/.enigmad/config/config.toml
+   ```
 
    ```bash
    perl -i -pe 's/persistent_peers = ""/persistent_peers = "16e95298703bfbf6565a1cbb6691cf30129f52ca\@bootstrap.testnet.enigma.co:26656"/' ~/.enigmad/config/config.toml
@@ -115,10 +116,10 @@ Please don't abuse this service—the number of available tokens is limited.
 
 7. Run your node:
 
-    ```shell
-    sudo systemctl enable enigma-node
-    sudo systemctl start enigma-node
-    ```
+   ```bash
+   sudo systemctl enable enigma-node
+   sudo systemctl start enigma-node
+   ```
 
    ```bash
    sudo systemctl enable enigma-node
@@ -127,9 +128,9 @@ Please don't abuse this service—the number of available tokens is limited.
 
 8. Verify success:
 
-    ```shell
-    journalctl -f -u enigma-node
-    ```
+   ```bash
+   journalctl -f -u enigma-node
+   ```
 
    ```bash
    journalctl -f -u enigma-node
@@ -137,7 +138,7 @@ Please don't abuse this service—the number of available tokens is limited.
 
 Logs should look similar to this:
 
-```shell
+```bash
 Mar 05 19:13:08 ip-172-31-44-28 enigmad[3083]: I[2020-03-05|19:13:08.623] Executed block                               module=state height=1920 validTxs=0 invalidTxs=0
 Mar 05 19:13:08 ip-172-31-44-28 enigmad[3083]: I[2020-03-05|19:13:08.633] Committed state                              module=state height=1920 txs=0 appHash=079C94F8198AC7F25BF5CF453F12B56A73816A4D07BA01630D3138A66136B340
 Mar 05 19:13:13 ip-172-31-44-28 enigmad[3083]: I[2020-03-05|19:13:13.698] Executed block                               module=state height=1921 validTxs=0 invalidTxs=0

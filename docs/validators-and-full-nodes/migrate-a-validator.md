@@ -10,7 +10,7 @@ You can also back it up with:
 
 On the validator node on the old machine:
 
-```shell
+```bash
 enigmacli keys export mykey
 ```
 
@@ -22,7 +22,7 @@ This can be done with the mnemonics:
 
 On the full node on the new machine:
 
-```shell
+```bash
 enigmacli keys add mykey --recover
 ```
 
@@ -30,7 +30,7 @@ Or with the backup file `mykey.backup` from the previous step:
 
 On the full node on the new machine:
 
-```shell
+```bash
 enigmacli keys import mykey mykey.backup
 ```
 
@@ -40,7 +40,7 @@ To check on the new full node if it finished catching-up:
 
 On the full node on the new machine:
 
-```shell
+```bash
 enigmacli status | jq .sync_info
 ```
 
@@ -54,13 +54,13 @@ Please read about [the dangers in running a validator](/docs/validators-and-full
 
 On the validator node on the old machine:
 
-```shell
+```bash
 sudo systemctl stop enigma-node
 ```
 
 On the full node on the new machine:
 
-```shell
+```bash
 sudo systemctl stop enigma-node
 ```
 
@@ -72,7 +72,7 @@ You can copy it manually or for example you can copy the file to the new machine
 
 On the validator node on the old machine:
 
-```shell
+```bash
 scp ~/.enigmad/config/priv_validator_key.json ubuntu@new_machine_ip:~/.enigmad/config/priv_validator_key.json
 ```
 
@@ -80,6 +80,6 @@ scp ~/.enigmad/config/priv_validator_key.json ubuntu@new_machine_ip:~/.enigmad/c
 
 On the new machine:
 
-```shell
+```bash
 sudo systemctl start enigma-node
 ```

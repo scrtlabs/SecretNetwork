@@ -6,13 +6,13 @@ The validator private key is a Tendermint Key - a unique key used to sign consen
 
 To see the associated public key:
 
-```shell
+```bash
 enigmad tendermint show-validator
 ```
 
 To see the associated bech32 address:
 
-```shell
+```bash
 enigmad tendermint show-address
 ```
 

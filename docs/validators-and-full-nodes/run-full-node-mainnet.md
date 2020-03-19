@@ -26,7 +26,7 @@ x64 2.0 GHz 2v CPU
 
 ### 1. Download the Secret Blockchain package installer for Debian/Ubuntu:
 
-```shell
+```bash
 wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb
 ```
 
@@ -34,19 +34,19 @@ wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enig
 
 ### 2. Install the package:
 
-```shell
+```bash
 sudo dpkg -i enigmachain_0.0.2_amd64.deb
 ```
 
 ### 3. Initialize your installation of the Secret Blockchain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
 
-```shell
+```bash
 enigmad init <MONIKER> --chain-id enigma-1
 ```
 
 ### 4. Download a copy of the Genesis Block file: `genesis.json`
 
-```shell
+```bash
 wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/EnigmaBlockchain/master/enigma-1-genesis.json"
 ```
 
@@ -77,7 +77,7 @@ This configuration updates automatically by your node when it learns of new node
 
 ### 8. Listen for incoming RPC requests so that light nodes can connect to you:
 
-```shell
+```bash
 perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.enigmad/config/config.toml
 ```
 
@@ -95,7 +95,7 @@ sudo systemctl start enigma-node
 
 ### 11. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
 
-```shell
+```bash
 journalctl -f -u enigma-node
 ```
 
@@ -120,25 +120,25 @@ You are now a full node. :tada:
 
 ### 12. Add the following configuration settings (some of these avoid having to type some flags all the time):
 
-```shell
+```bash
 enigmacli config chain-id enigma-1
 ```
 
-```shell
+```bash
 enigmacli config output json
 ```
 
-```shell
+```bash
 enigmacli config indent true
 ```
 
-```shell
+```bash
 enigmacli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
 ```
 
 ### 13. Get your node ID with:
 
-```shell
+```bash
 enigmacli status | awk -F \" '/"id"/{print $4}'
 ```
 
@@ -151,22 +151,22 @@ And publish yourself as a node with this ID:
 So if someone wants to add you as a peer, have them add the above address to their `persistent_peers` in their `~/.secretd/config/config.toml`.  
 And if someone wants to use you from their `secretcli` then have them run:
 
-```shell
+```bash
 enigmacli config chain-id enigma-1
 ```
 
-```shell
+```bash
 enigmacli config output json
 ```
 
-```shell
+```bash
 enigmacli config indent true
 ```
 
-```shell
+```bash
 enigmacli config trust-node false
 ```
 
-```shell
+```bash
 enigmacli config node tcp://<your-public-ip>:26657
 ```
