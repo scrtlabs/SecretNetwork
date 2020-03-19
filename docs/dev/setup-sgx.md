@@ -160,6 +160,12 @@ The above command produces no output when it succeeds. If you want to verify tha
 ls /dev/isgx &>/dev/null && echo "SGX Driver installed" || echo "SGX Driver NOT installed"
 ```
 
+To uninstall the SGX SDK, run:
+
+```shell
+sudo /home/eng-user/.sgxsdk/sgxsdk/uninstall.sh
+```
+
 # Refs
 
 1. https://github.com/apache/incubator-teaclave-sgx-sdk/wiki/Environment-Setup
