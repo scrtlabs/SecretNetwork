@@ -146,6 +146,20 @@ sudo mount -o remount,exec /dev
    [+] say_something success...
    ```
 
+# Uninstall
+
+To uninstall the Intel(R) SGX Driver, run:
+
+```shell
+sudo /opt/intel/sgxdriver/uninstall.sh 
+```
+
+The above command produces no output when it succeeds. If you want to verify that the driver has been uninstalled, you can run the following, which should print `SGX Driver NOT installed`:
+
+```shell
+ls /dev/isgx &>/dev/null && echo "SGX Driver installed" || echo "SGX Driver NOT installed"
+```
+
 # Refs
 
 1. https://github.com/apache/incubator-teaclave-sgx-sdk/wiki/Environment-Setup
