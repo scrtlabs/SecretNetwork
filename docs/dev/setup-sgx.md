@@ -1,6 +1,6 @@
 # Hardware
 
-1. Go to your BIOS menu.
+1. Go to your BIOS menu
 2. Enable SGX (Software controlled is not enough)
 3. Disable Secure Boot
 
