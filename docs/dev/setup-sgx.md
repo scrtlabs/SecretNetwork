@@ -103,7 +103,7 @@ sgx-detect
 git clone --depth 1 -b v1.1.1-testing git@github.com:apache/incubator-teaclave-sgx-sdk.git
 
 cd incubator-teaclave-sgx-sdk/samplecode/hello-rust
-perl -i -pe 's/SGX_SDK \?=.+/SGX_SDK ?= \$(HOME)\/sgxsdk\/.sgxsdk/' Makefile
+perl -i -pe 's/SGX_SDK \?=.+/SGX_SDK ?= \$(HOME)\/.sgxsdk\/sgxsdk/' Makefile
 make
 cd bin
 ./app
