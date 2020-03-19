@@ -113,7 +113,7 @@ sudo mount -o remount,exec /dev
 
 # Testing your SGX setup
 
-1. Using `sgx-detect`:
+1. For node runners, by using `sgx-detect`:
 
    ```bash
    sudo apt install -y libssl-dev protobuf-compiler
@@ -132,7 +132,7 @@ sudo mount -o remount,exec /dev
    You're all set to start running SGX programs!
    ```
 
-2. Compiling a `hello-rust` project:
+2. For enclave developers, by compiling a `hello-rust` project:
 
    ```bash
    git clone --depth 1 -b v1.1.1-testing git@github.com:apache/incubator-teaclave-sgx-sdk.git
