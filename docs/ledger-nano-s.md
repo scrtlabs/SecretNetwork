@@ -39,7 +39,7 @@ _Ref: https://medium.com/cryptium-cosmos/how-to-store-your-cosmos-atoms-on-your-
 
 Some users may not have their ledger recognized by their Linux host. To fix this issue implement the fix for connection issues on Linux from the [ledger support page](https://support.ledger.com/hc/en-us/articles/115005165269-Connection-issues-with-Windows-or-Linux)
 
-```bash
+```shell
 wget -q -O - https://raw.githubusercontent.com/LedgerHQ/udev-rules/master/add_udev_rules.sh | sudo bash
 ```
 
@@ -47,54 +47,54 @@ wget -q -O - https://raw.githubusercontent.com/LedgerHQ/udev-rules/master/add_ud
 
 > Note: You can use any number you'd like for your account number. Be sure to remember the number you used, so you can recover if needed.
 
-```bash
-secretcli keys add <account name> --ledger --account <account number on your Ledger>
+```shell
+enigmacli keys add <account name> --ledger --account <account number on your Ledger>
 ```
 
 **:warning:Note:warning:: Please backup the mnemonics!**
 
 ### Display your account address
 
-```bash
-secretcli keys show -a <account name>
+```shell
+enigmacli keys show -a <account name>
 ```
 
 ### Add an account to `secretcli` that already exists on your Ledger
 
 _You'll use this when you, say, using a different machine._
 
-```bash
-secretcli keys add <account name> --ledger --account <account number on your Ledger> --recover
+```shell
+enigmacli keys add <account name> --ledger --account <account number on your Ledger> --recover
 ```
 
 **Note! If you run the above command without the `--ledger` flag, the CLI will prompt you to enter your BIP39 mnemonic, which is your Ledger recovery phrase. YOU DO NOT WANT TO DO THIS. This will essentially save your private key locally.**
 
 _Note: the commands below assume that you run them on the same machine where you have an Secret Network node running. However, if you need to connect to a remote Secret Network node (on the cloud) while you interact with your Ledger wallet locally, you will need to append the following to each command below:_
 
-```bash
+```shell
 --node http://node.domain:26657
 ```
 
 ### Send tokens
 
-```bash
-secretcli tx send <account name or address> <to_address> <amount> --ledger
+```shell
+enigmacli tx send <account name or address> <to_address> <amount> --ledger
 ```
 
 ### Delegate SCRT to a validator
 
-```bash
-secretcli tx staking delegate <validator address> <amount to bond> --from <account key> --gas auto --gas-prices <gasPrice> --ledger
+```shell
+enigmacli tx staking delegate <validator address> <amount to bond> --from <account key> --gas auto --gas-prices <gasPrice> --ledger
 ```
 
 ### Collect rewards and commission
 
-```bash
-secretcli tx distribution withdraw-all-rewards --from <account name> --gas auto --commission --ledger
+```shell
+enigmacli tx distribution withdraw-all-rewards --from <account name> --gas auto --commission --ledger
 ```
 
 ### Vote on proposals
 
-```bash
-secretcli tx gov vote <proposal-id> <vote> --from <account name> --ledger
+```shell
+enigmacli tx gov vote <proposal-id> <vote> --from <account name> --ledger
 ```

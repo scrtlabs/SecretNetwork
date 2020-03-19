@@ -1,13 +1,13 @@
 ### Download Release
 
-```bash
-wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.3/enigma-blockchain_0.0.3_amd64.deb
+```shell
+wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb
 ```
 
 ### Remove old installations
 
-```bash
-sudo dpkg -P enigmachain
+```shell
+sudo dpkg -r enigmachain
 sudo rm -rf ~/.enigmad ~/.enigmacli
 sudo rm -rf ~/.engd ~/.engcli
 sudo rm -rf "$(which enigmad)"
@@ -21,7 +21,7 @@ sudo rm -rf "$(which engd)"
 - Attach storage to instance
 - Run the following
 
-```bash
+```shell
 # Create volumes and groups
 sudo pvcreate /dev/xvdf
 sudo vgcreate chainstate /dev/xvdf
@@ -43,13 +43,13 @@ sudo chown -R ubuntu .enigmad/
 
 ### Install the `.deb` file
 
-```bash
-sudo dpkg -i enigma-blockchain_0.0.3_amd64.deb
+```shell
+sudo dpkg -i enigmachain_0.0.2_amd64.deb
 ```
 
 ### Config local node
 
-```bash
+```shell
 enigmacli config chain-id "enigma-testnet"
 enigmacli config output json
 enigmacli config indent true

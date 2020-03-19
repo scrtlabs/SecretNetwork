@@ -6,14 +6,14 @@ The validator private key is a Tendermint Key - a unique key used to sign consen
 
 To see the associated public key:
 
-```bash
-secretd tendermint show-validator
+```shell
+enigmad tendermint show-validator
 ```
 
 To see the associated bech32 address:
 
-```bash
-secretd tendermint show-address
+```shell
+enigmad tendermint show-address
 ```
 
 If you are using the software sign (which is the default signing method of tendermint), your Tendermint Key is located in `~/.secretd/config/priv_validator_key.json`.

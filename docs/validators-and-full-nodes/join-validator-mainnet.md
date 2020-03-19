@@ -4,8 +4,8 @@
 
 ### 2. Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):
 
-```bash
-secretcli keys add <key-alias>
+```shell
+enigmacli keys add <key-alias>
 ```
 
 **:warning:Note:warning:: Backup the mnemonics!**
@@ -15,21 +15,21 @@ secretcli keys add <key-alias>
 
 ### 3. Output your node address:
 
-```bash
-secretcli keys show <key-alias> -a
+```shell
+enigmacli keys show <key-alias> -a
 ```
 
 ### 4. Transfer tokens to the address displayed above.
 
 ### 5. Check that you have the requested tokens:
 
-```bash
-secretcli q account $(secretcli keys show -a <key_alias>)
+```shell
+enigmacli q account $(enigmacli keys show -a <key_alias>)
 ```
 
 If you get the following message, it means that you have no tokens yet:
 
-```bash
+```shell
 ERROR: unknown address: account enigmaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx does not exist
 ```
 
@@ -37,8 +37,8 @@ ERROR: unknown address: account enigmaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx do
 
 (remember 1 SCRT = 1,000,000 uSCRT, and so the command below stakes 100k SCRT).
 
-```bash
-secretcli tx staking create-validator \
+```shell
+enigmacli tx staking create-validator \
   --amount=100000000000uscrt \
   --pubkey=$(secretd tendermint show-validator) \
   --commission-rate="0.10" \
@@ -53,8 +53,8 @@ secretcli tx staking create-validator \
 
 ### 7. Check that you have been added as a validator:
 
-```bash
-secretcli q staking validators | jq '.[] | select(.description.moniker == "<MONIKER>")'
+```shell
+enigmacli q staking validators | jq '.[] | select(.description.moniker == "<MONIKER>")'
 ```
 
 Or run: `secretcli q staking validators | grep moniker`. You should see your moniker listed.
@@ -97,38 +97,38 @@ See [Sentry Nodes](/docs/validators-and-full-nodes/sentry-nodes.md).
 
 In order to stake more tokens beyond those in the initial transaction, run:
 
-```bash
-secretcli tx staking delegate $(secretcli keys show <key-alias> --bech=val -a) <amount>uscrt --from <key-alias>
+```shell
+enigmacli tx staking delegate $(enigmacli keys show <key-alias> --bech=val -a) <amount>uscrt --from <key-alias>
 ```
 
 ## Renaming your moniker
 
-```bash
-secretcli tx staking edit-validator --moniker <new-moniker> --from <key-alias>
+```shell
+enigmacli tx staking edit-validator --moniker <new-moniker> --from <key-alias>
 ```
 
 ## Seeing your rewards from being a validator
 
-```bash
-secretcli q distribution rewards $(secretcli keys show -a <key-alias>)
+```shell
+enigmacli q distribution rewards $(enigmacli keys show -a <key-alias>)
 ```
 
 ## Seeing your commissions from your delegators
 
-```bash
-secretcli q distribution commission $(secretcli keys show -a <key-alias> --bech=val)
+```shell
+enigmacli q distribution commission $(enigmacli keys show -a <key-alias> --bech=val)
 ```
 
 ## Withdrawing rewards
 
-```bash
-secretcli tx distribution withdraw-rewards $(secretcli keys show --bech=val -a <key-alias>) --from <key-alias>
+```shell
+enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a <key-alias>) --from <key-alias>
 ```
 
 ## Withdrawing rewards+commissions
 
-```bash
-secretcli tx distribution withdraw-rewards $(secretcli keys show --bech=val -a <key-alias>) --from <key-alias> --commission
+```shell
+enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a <key-alias>) --from <key-alias> --commission
 ```
 
 ## Removing your validator

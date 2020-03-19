@@ -39,58 +39,58 @@ You'll need an account private and public key pair \(a.k.a. `sk, pk` respectivel
 
 To generate a new _secp256k1_ key:
 
-```bash
-secretcli keys add <key-alias>
+```shell
+enigmacli keys add <key-alias>
 ```
 
 The output of the above command will contain a _seed phrase_. It is recommended to save the _seed phrase_ in a safe place so that in case you forget the password of the operating system's credentials store, you could eventually regenerate the key from the seed phrase with the following command:
 
-```bash
-secretcli keys add --recover
+```shell
+enigmacli keys add --recover
 ```
 
 You can also backup your key using `export`, which outputs to _stderr_:
 
 _(copy and paste to a `<key-export-file>`)_
 
-```bash
-secretcli keys export <key-alias>
+```shell
+enigmacli keys export <key-alias>
 ```
 
 and import it with:
 
-```bash
-secretcli keys import <key-alias> <key-export-file>
+```shell
+enigmacli keys import <key-alias> <key-export-file>
 ```
 
 If you check your private keys, you'll now see `<key-alias>`:
 
-```bash
-secretcli keys show <key-alias>
+```shell
+enigmacli keys show <key-alias>
 ```
 
 If you want to just see your enigma address:
 
-```bash
-secretcli keys show <key-alias> -a
+```shell
+enigmacli keys show <key-alias> -a
 ```
 
 View the validator operator's address via:
 
-```bash
-secretcli keys show <key-alias> --bech=val
+```shell
+enigmacli keys show <key-alias> --bech=val
 ```
 
 You can see all your available keys by typing:
 
-```bash
-secretcli keys list
+```shell
+enigmacli keys list
 ```
 
 View the validator pubkey for your node by typing:
 
-```bash
-secretd tendermint show-validator
+```shell
+enigmad tendermint show-validator
 ```
 
 Note that this is the Tendermint signing key, _not_ the operator key you will use in delegation transactions.
@@ -103,8 +103,8 @@ We strongly recommend _NOT_ using the same passphrase for multiple keys. The Ten
 
 You can generate and print a multisig public key by typing:
 
-```bash
-secretcli keys add --multisig=name1,name2,name3[...] --multisig-threshold=K <new-key-alias>
+```shell
+enigmacli keys add --multisig=name1,name2,name3[...] --multisig-threshold=K <new-key-alias>
 ```
 
 `K` is the minimum number of private keys that must have signed the
@@ -116,15 +116,15 @@ All names supplied through `--multisig` must already exist in the local database
 the flag `--nosort` is set, the order in which the keys are supplied on the command line
 does not matter, i.e. the following commands generate two identical keys:
 
-```bash
-secretcli keys add --multisig=foo,bar,baz --multisig-threshold=2 <multisig-address>
-secretcli keys add --multisig=baz,foo,bar --multisig-threshold=2 <multisig-address>
+```shell
+enigmacli keys add --multisig=foo,bar,baz --multisig-threshold=2 <multisig-address>
+enigmacli keys add --multisig=baz,foo,bar --multisig-threshold=2 <multisig-address>
 ```
 
 Multisig addresses can also be generated on-the-fly and printed through the which command:
 
-```bash
-secretcli keys show --multisig-threshold K name1 name2 name3 [...]
+```shell
+enigmacli keys show --multisig-threshold K name1 name2 name3 [...]
 ```
 
 For more information regarding how to generate, sign and broadcast transactions with a multi-signature account see [Multisig Transactions](#multisig-transactions).
@@ -154,14 +154,14 @@ txs by `gasPrice` in the mempool, so providing higher fees or gas prices may yie
 
 e.g.
 
-```bash
-secretcli tx send ... --fees=50000uscrt
+```shell
+enigmacli tx send ... --fees=50000uscrt
 ```
 
 or
 
-```bash
-secretcli tx send ... --gas-prices=0.025uscrt
+```shell
+enigmacli tx send ... --gas-prices=0.025uscrt
 ```
 
 ### Account
@@ -174,22 +174,22 @@ On a testnet, getting tokens is usually done via a faucet.
 
 After receiving tokens to your address, you can view your account's balance by typing:
 
-```bash
-secretcli q account <enigma-address>
+```shell
+enigmacli q account <enigma-address>
 ```
 
 Get your `<enigma-address>` using:
 
-```bash
-secretcli keys show -a <key-alias>
+```shell
+enigmacli keys show -a <key-alias>
 ```
 
 (the _-a_ flag is used to display the address only)
 
 Optionally, you can supply your address within the command as:
 
-```bash
-secretcli q account $(secretcli keys show -a <key-alias>)
+```shell
+enigmacli q account $(enigmacli keys show -a <key-alias>)
 ```
 
 ::: warning Note
@@ -199,8 +199,8 @@ When you query an account balance with zero tokens, you will get this error: `No
 
 The following command could be used to send coins from one account to another:
 
-```bash
-secretcli tx send <sender-key-alias-or-address> <recipient-address> 10uscrt \
+```shell
+enigmacli tx send <sender-key-alias-or-address> <recipient-address> 10uscrt \
 	--memo <tx-memo> \
 	--chain-id=<chain-id>
 ```
@@ -219,22 +219,22 @@ Gas estimate might be inaccurate as state changes could occur in between the end
 
 Now, view the updated balances of the origin and destination accounts:
 
-```bash
-secretcli q account <enigma-address>
-secretcli q account <recipient-address>
+```shell
+enigmacli q account <enigma-address>
+enigmacli q account <recipient-address>
 ```
 
 You can also check your balance at a given block by using the `--block` flag:
 
-```bash
-secretcli q account <enigma-address> --block=<block_height>
+```shell
+enigmacli q account <enigma-address> --block=<block_height>
 ```
 
 You can simulate a transaction without actually broadcasting it by appending the
 `--dry-run` flag to the command line:
 
-```bash
-secretcli tx send <sender-key-alias-or-address> <recipient-address> 10uscrt \
+```shell
+enigmacli tx send <sender-key-alias-or-address> <recipient-address> 10uscrt \
   --chain-id=<chain-id> \
   --dry-run
 ```
@@ -242,14 +242,14 @@ secretcli tx send <sender-key-alias-or-address> <recipient-address> 10uscrt \
 Furthermore, you can build a transaction and print its JSON format to STDOUT by
 appending `--generate-only` to the list of the command line arguments:
 
-```bash
-secretcli tx send <sender-key-alias-or-address> <recipient-address> 10uscrt \
+```shell
+enigmacli tx send <sender-key-alias-or-address> <recipient-address> 10uscrt \
   --chain-id=<chain-id> \
   --generate-only > unsignedSendTx.json
 ```
 
-```bash
-secretcli tx sign \
+```shell
+enigmacli tx sign \
   --chain-id=<chain-id> \
   --from=<key-alias> \
   unsignedSendTx.json > signedSendTx.json
@@ -262,14 +262,14 @@ Thus when such flag is supplied `<sender-key-alias-or-address>` must be an addre
 
 You can validate the transaction's signatures by typing the following:
 
-```bash
-secretcli tx sign --validate-signatures signedSendTx.json
+```shell
+enigmacli tx sign --validate-signatures signedSendTx.json
 ```
 
 You can broadcast the signed transaction to a node by providing the JSON file to the following command:
 
-```bash
-secretcli tx broadcast --node=<node> signedSendTx.json
+```shell
+enigmacli tx broadcast --node=<node> signedSendTx.json
 ```
 
 ### Query Transactions
@@ -284,20 +284,20 @@ Events can also be combined to query for a more specific result using the `&` sy
 
 You can query transactions by `events` as follows:
 
-```bash
-secretcli q txs --events='message.sender=enigma1...'
+```shell
+enigmacli q txs --events='message.sender=enigma1...'
 ```
 
 And for using multiple `events`:
 
-```bash
-secretcli q txs --events='message.sender=enigma1...&message.action=withdraw_delegator_reward'
+```shell
+enigmacli q txs --events='message.sender=enigma1...&message.action=withdraw_delegator_reward'
 ```
 
 The pagination is supported as well via `page` and `limit`:
 
-```bash
-secretcli q txs --events='message.sender=enigma1...' --page=1 --limit=20
+```shell
+enigmacli q txs --events='message.sender=enigma1...' --page=1 --limit=20
 ```
 
 ::: tip Note
@@ -317,8 +317,8 @@ You can find a list of available `events` on each of the SDK modules:
 
 You can also query a single transaction by its hash using the following command:
 
-```bash
-secretcli q tx [hash]
+```shell
+enigmacli q tx [hash]
 ```
 
 ### Slashing
@@ -327,44 +327,44 @@ secretcli q tx [hash]
 
 To unjail your jailed validator
 
-```bash
-secretcli tx slashing unjail --from <key-alias>
+```shell
+enigmacli tx slashing unjail --from <key-alias>
 ```
 
 #### Signing Info
 
 To retrieve a validator's signing info:
 
-```bash
-secretcli q slashing signing-info <validator-conspub-key>
+```shell
+enigmacli q slashing signing-info <validator-conspub-key>
 ```
 
 #### Query Parameters
 
 You can get the current slashing parameters via:
 
-```bash
-secretcli q slashing params
+```shell
+enigmacli q slashing params
 ```
 
 ### Minting
 
 You can query for the minting/inflation parameters via:
 
-```bash
-secretcli q mint params
+```shell
+enigmacli q mint params
 ```
 
 To query for the current inflation value:
 
-```bash
-secretcli q mint inflation
+```shell
+enigmacli q mint inflation
 ```
 
 To query for the current annual provisions value:
 
-```bash
-secretcli q mint annual-provisions
+```shell
+enigmacli q mint annual-provisions
 ```
 
 ### Staking
@@ -381,8 +381,8 @@ Use the following commands to:
 
 ##### Renaming your moniker
 
-```bash
-secretcli tx staking edit-validator --moniker <new-moniker> --from <key-alias>
+```shell
+enigmacli tx staking edit-validator --moniker <new-moniker> --from <key-alias>
 ```
 
 ##### Changing your commission rate
@@ -395,29 +395,29 @@ secretcli tx staking edit-validator --commission-rate 0.075 --from <key-alias>
 
 ##### Seeing your rewards from being a validator
 
-```bash
-secretcli q distribution rewards $(secretcli keys show -a <key-alias>)
+```shell
+enigmacli q distribution rewards $(enigmacli keys show -a <key-alias>)
 ```
 
 ##### Seeing your commissions from your delegators
 
-```bash
-secretcli q distribution commission $(secretcli keys show -a <key-alias> --bech=val)
+```shell
+enigmacli q distribution commission $(enigmacli keys show -a <key-alias> --bech=val)
 ```
 
 ##### Withdrawing rewards
 
-```bash
-secretcli tx distribution withdraw-rewards \
-	$(secretcli keys show --bech=val -a <key-alias>) \
+```shell
+enigmacli tx distribution withdraw-rewards \
+	$(enigmacli keys show --bech=val -a <key-alias>) \
 	--from <key-alias>
 ```
 
 ##### Withdrawing rewards+commissions
 
-```bash
-secretcli tx distribution withdraw-rewards \
-	$(secretcli keys show --bech=val -a <key-alias>) \
+```shell
+enigmacli tx distribution withdraw-rewards \
+	$(enigmacli keys show --bech=val -a <key-alias>) \
 	--from <key-alias> \
 	--commission
 ```
@@ -430,22 +430,22 @@ On mainnet, you can delegate `uscrt` to a validator. These delegators can receiv
 
 You can query the list of all validators of a specific chain:
 
-```bash
-secretcli q staking validators
+```shell
+enigmacli q staking validators
 ```
 
 If you want to get the information of a single validator you can check it with:
 
-```bash
-secretcli q staking validator <validator-address>
+```shell
+enigmacli q staking validator <validator-address>
 ```
 
 ##### Bond Tokens
 
 On the EnigmaChain mainnet, we delegate `uscrt`, where `1scrt = 1000000uscrt`. Here's how you can bond tokens to a validator (_i.e._ delegate):
 
-```bash
-secretcli tx staking delegate \
+```shell
+enigmacli tx staking delegate \
 	<validator-operator-address>
 	<amount> \
 	--from=<key-alias>
@@ -462,8 +462,8 @@ secretcli tx staking delegate \
 
 `<validator-operator-address>` is the operator address of the validator to which you intend to delegate. If you are running a full node, you can find this with:
 
-```bash
-secretcli keys show <key-alias> --bech val
+```shell
+enigmacli keys show <key-alias> --bech val
 ```
 
 where `<key-alias>` is the name of the key you specified when you initialized `secretd`.
@@ -474,30 +474,30 @@ While tokens are bonded, they are pooled with all the other bonded tokens in the
 
 To withdraw the delegator rewards:
 
-```bash
-secretcli tx distribution withdraw-rewards <validator-operator-address> --from <key-alias>
+```shell
+enigmacli tx distribution withdraw-rewards <validator-operator-address> --from <key-alias>
 ```
 
 ##### Query Delegations
 
 Once you've submitted a delegation to a validator, you can see it's information by using the following command:
 
-```bash
-secretcli q staking delegation <delegator-address> <validator-operator-address>
+```shell
+enigmacli q staking delegation <delegator-address> <validator-operator-address>
 ```
 
 Example:
 
-```bash
-secretcli q staking delegation \
+```shell
+enigmacli q staking delegation \
 	enigma1gghjut3ccd8ay0zduzj64hwre2fxs9ld75ru9p \
 	enigmavaloper1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj
 ```
 
 Or if you want to check all your current delegations with distinct validators:
 
-```bash
-secretcli q staking delegations <delegator-address>
+```shell
+enigmacli q staking delegations <delegator-address>
 ```
 
 ##### Unbond Tokens
@@ -505,8 +505,8 @@ secretcli q staking delegations <delegator-address>
 If for any reason the validator misbehaves, or you just want to unbond a certain
 amount of tokens, use this following command.
 
-```bash
-secretcli tx staking unbond \
+```shell
+enigmacli tx staking unbond \
   <validator-address> \
   10uscrt \
   --from=<key-alias> \
@@ -519,28 +519,28 @@ The unbonding will be automatically completed when the unbonding period has pass
 
 Once you begin an unbonding-delegation, you can see it's information by using the following command:
 
-```bash
-secretcli q staking unbonding-delegation <delegator-address> <validator-operator-address>
+```shell
+enigmacli q staking unbonding-delegation <delegator-address> <validator-operator-address>
 ```
 
 Or if you want to check all your current unbonding-delegations with distinct validators:
 
-```bash
-secretcli q staking unbonding-delegations <delegator-address>
+```shell
+enigmacli q staking unbonding-delegations <delegator-address>
 ```
 
 Additionally, you can get all the unbonding-delegations from a particular validator:
 
-```bash
-secretcli q staking unbonding-delegations-from <validator-operator-address>
+```shell
+enigmacli q staking unbonding-delegations-from <validator-operator-address>
 ```
 
 ##### Redelegate Tokens
 
 A redelegation is a type delegation that allows you to bond illiquid tokens from one validator to another:
 
-```bash
-secretcli tx staking redelegate \
+```shell
+enigmacli tx staking redelegate \
   <src-validator-operator-address> \
   <dst-validator-operator-address> \
   10uscrt \
@@ -556,28 +556,28 @@ The redelegation will be automatically completed when the unbonding period has p
 
 Once you begin an redelegation, you can see it's information by using the following command:
 
-```bash
-secretcli q staking redelegation <delegator-address> <src-valoper-address> <dst-valoper-address>
+```shell
+enigmacli q staking redelegation <delegator-address> <src-valoper-address> <dst-valoper-address>
 ```
 
 Or if you want to check all your current unbonding-delegations with distinct validators:
 
-```bash
-secretcli q staking redelegations <delegator-address>
+```shell
+enigmacli q staking redelegations <delegator-address>
 ```
 
 Additionally, you can get all the outgoing redelegations from a particular validator:
 
-```bash
-  secretcli q staking redelegations-from <validator-operator-address>
+```shell
+  enigmacli q staking redelegations-from <validator-operator-address>
 ```
 
 ##### Query Parameters
 
 Parameters define high level settings for staking. You can get the current values by using:
 
-```bash
-secretcli q staking params
+```shell
+enigmacli q staking params
 ```
 
 With the above command you will get the values for:
@@ -588,8 +588,8 @@ With the above command you will get the values for:
 
 Example:
 
-```bash
-$ secretcli q staking params
+```shell
+$ enigmacli q staking params
 
 {
 
@@ -612,8 +612,8 @@ All these values will be subject to updates though a `governance` process by `Pa
 
 A staking `Pool` defines the dynamic parameters of the current state. You can query them with the following command:
 
-```bash
-secretcli q staking pool
+```shell
+enigmacli q staking pool
 ```
 
 With the `pool` command you will get the values for:
@@ -627,14 +627,14 @@ With the `pool` command you will get the values for:
 
 You can also query all of the delegations to a particular validator:
 
-```bash
-  secretcli q staking delegations-to <validator-operator-address>
+```shell
+  enigmacli q staking delegations-to <validator-operator-address>
 ```
 
 Example:
 
-```bash
-$ secretcli q staking delegations-to enigmavaloper1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj
+```shell
+$ enigmacli q staking delegations-to enigmavaloper1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj
 
 ```
 
@@ -642,8 +642,8 @@ $ secretcli q staking delegations-to enigmavaloper1gghjut3ccd8ay0zduzj64hwre2fxs
 
 If you are running a full node or a validator node, view the status by typing:
 
-```bash
-secretcli status
+```shell
+enigmacli status
 ```
 
 [How to run a full node on mainnet](/docs/validators-and-full-nodes/run-full-node-mainnet.md).
@@ -663,56 +663,56 @@ by `SCRT` holders on the mainnet.
 
 To check the current distribution parameters, run:
 
-```bash
-secretcli q distribution params
+```shell
+enigmacli q distribution params
 ```
 
 #### Query distribution Community Pool
 
 To query all coins in the community pool which is under Governance control:
 
-```bash
-secretcli q distribution community-pool
+```shell
+enigmacli q distribution community-pool
 ```
 
 #### Query Outstanding Validator rewards
 
 To check the current outstanding (un-withdrawn) rewards, run:
 
-```bash
-secretcli q distribution validator-outstanding-rewards <validator-address>
+```shell
+enigmacli q distribution validator-outstanding-rewards <validator-address>
 ```
 
 #### Query Validator Commission
 
 To check the current outstanding commission for a validator, run:
 
-```bash
-secretcli q distribution commission <validator-operator-address>
+```shell
+enigmacli q distribution commission <validator-operator-address>
 ```
 
 #### Query Validator Slashes
 
 To check historical slashes for a validator, run:
 
-```bash
-secretcli q distribution slashes <validator-operator-address> <start-height> <end-height>
+```shell
+enigmacli q distribution slashes <validator-operator-address> <start-height> <end-height>
 ```
 
 #### Query Delegator Rewards
 
 To check current rewards for a delegation (were they to be withdrawn), run:
 
-```bash
-secretcli q distribution rewards <delegator-address> <validator-address>
+```shell
+enigmacli q distribution rewards <delegator-address> <validator-address>
 ```
 
 #### Query All Delegator Rewards
 
 To check all current rewards for a delegation (were they to be withdrawn), run:
 
-```bash
-secretcli q distribution rewards <delegator-address>
+```shell
+enigmacli q distribution rewards <delegator-address>
 ```
 
 ### Multisig Transactions
@@ -721,8 +721,8 @@ Multisig transactions require signatures of multiple private keys. Thus, generat
 
 For example, given a multisig key comprising the keys `p1`, `p2`, and `p3`, each of which is held by a distinct party, the user holding `p1` would require to import both `p2` and `p3` in order to generate the multisig account public key:
 
-```bash
-secretcli keys add \
+```shell
+enigmacli keys add \
   p2 \
   --pubkey=enigmapub1addwnpepqtd28uwa0yxtwal5223qqr5aqf5y57tc7kk7z8qd4zplrdlk5ez5kdnlrj4
 
@@ -739,15 +739,15 @@ secretcli keys add \
 A new multisig public key `p1p2p3` has been stored, and its address will be
 used as signer of multisig transactions:
 
-```bash
-secretcli keys show p1p2p3 -a
+```shell
+enigmacli keys show p1p2p3 -a
 ```
 
 You may also view multisig threshold, pubkey constituents and respective weights
 by viewing the JSON output of the key or passing the `--show-multisig` flag:
 
-```bash
-secretcli keys show p1p2p3 -o json
+```shell
+enigmacli keys show p1p2p3 -o json
 
 secretcli keys show p1p2p3 --show-multisig
 ```
@@ -755,8 +755,8 @@ secretcli keys show p1p2p3 --show-multisig
 The first step to create a multisig transaction is to initiate it on behalf
 of the multisig address created above:
 
-```bash
-secretcli tx send enigma1570v2fq3twt0f0x02vhxpuzc9jc4yl30q2qned 1000000uscrt \
+```shell
+enigmacli tx send enigma1570v2fq3twt0f0x02vhxpuzc9jc4yl30q2qned 1000000uscrt \
   --from=<multisig-address> \
   --generate-only > unsignedTx.json
 ```
@@ -764,8 +764,8 @@ secretcli tx send enigma1570v2fq3twt0f0x02vhxpuzc9jc4yl30q2qned 1000000uscrt \
 The file `unsignedTx.json` contains the unsigned transaction encoded in JSON.
 `p1` can now sign the transaction with its own private key:
 
-```bash
-secretcli tx sign \
+```shell
+enigmacli tx sign \
   unsignedTx.json \
   --multisig=<multisig-address> \
   --from=p1 \
@@ -776,8 +776,8 @@ Once the signature is generated, `p1` transmits both `unsignedTx.json` and
 `p1signature.json` to `p2` or `p3`, which in turn will generate their
 respective signature:
 
-```bash
-secretcli tx sign \
+```shell
+enigmacli tx sign \
   unsignedTx.json \
   --multisig=<multisig-address> \
   --from=p2 \
@@ -788,8 +788,8 @@ secretcli tx sign \
 is sufficient. Any the key holders can now generate the multisig
 transaction by combining the required signature files:
 
-```bash
-secretcli tx multisign \
+```shell
+enigmacli tx multisign \
   unsignedTx.json \
   p1p2p3 \
   p1signature.json p2signature.json > signedTx.json
@@ -797,8 +797,8 @@ secretcli tx multisign \
 
 The transaction can now be sent to the node:
 
-```bash
-secretcli tx broadcast signedTx.json
+```shell
+enigmacli tx broadcast signedTx.json
 ```
 
 ## Shells Completion Scripts
@@ -809,25 +809,25 @@ can be generated through the `completion` command, which is available for both
 
 If you want to generate `Bash` completion scripts run the following command:
 
-```bash
-secretd completion > secretd_completion
-secretcli completion > secretcli_completion
+```shell
+enigmad completion > enigmad_completion
+enigmacli completion > enigmacli_completion
 ```
 
 If you want to generate `Zsh` completion scripts run the following command:
 
-```bash
-secretd completion --zsh > secretd_completion
-secretcli completion --zsh > secretcli_completion
+```shell
+enigmad completion --zsh > enigmad_completion
+enigmacli completion --zsh > enigmacli_completion
 ```
 
 ::: tip Note
 On most UNIX systems, such scripts may be loaded in `.bashrc` or
 `.bash_profile` to enable Bash autocompletion:
 
-```bash
-echo '. secretd_completion' >> ~/.bashrc
-echo '. secretcli_completion' >> ~/.bashrc
+```shell
+echo '. enigmad_completion' >> ~/.bashrc
+echo '. enigmacli_completion' >> ~/.bashrc
 ```
 
 Refer to the user's manual of your interpreter provided by your
