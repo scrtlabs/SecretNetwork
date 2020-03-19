@@ -51,6 +51,7 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/EnigmaBlo
 - [How to backup a validator](/docs/validators-and-full-nodes/backup-a-validator.md)
 - [How to migrate a validator to a new machine](/docs/validators-and-full-nodes/migrate-a-validator.md)
 - [How to verify software releases](/docs/verify-releases.md)
+- [How to setup SGX on your machine](/docs/dev/setup-sgx.md)
 
 # Archive
 
