@@ -16,7 +16,18 @@ First, make sure you have Rust installed: https://www.rust-lang.org/tools/instal
 
 Then you can use this script (or run the commands one-by-one), which was tested on Ubuntu 20.04 with SGX driver/sdk version 2.9 intended for Ubuntu 18.04:
 
-```bash
+```shell
+UBUNTUVERSION=$(lsb_release -r -s | cut -d '.' -f 1)
+
+if (($UBUNTUVERSION < 16)); then 
+	echo "Your version of Ubuntu is not supporting. Aborting installation script..."
+	exit 1
+elif (($UBUNTUVERSION < 18)); then
+	DISTRO='xenial'
+else
+	DISTRO='bionic'
+fi
+
 echo "\n\n#######################################"
 echo "##### Installing missing packages #####"
 echo "#######################################\n\n"
@@ -79,7 +90,7 @@ echo "##### Installing additional dependencies #####"
 echo "##############################################\n\n"
 
 # Add Intels's SGX PPA
-echo "deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu $(lsb_release -c -s) main" |
+echo "deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu $DISTRO main" |
    sudo tee /etc/apt/sources.list.d/intel-sgx.list
 wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key |
    sudo apt-key add -
