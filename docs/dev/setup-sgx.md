@@ -8,11 +8,11 @@
 
 First, make sure you have Rust installed: https://www.rust-lang.org/tools/install
 
-* Once Rust is installed, install the `nightly` toolchain:
+- Once Rust is installed, install the `nightly` toolchain:
 
-    ```shell
-    rustup toolchain install nightly
-    ```
+  ```shell
+  rustup toolchain install nightly
+  ```
 
 Then you can use this script (or run the commands one-by-one), which was tested on Ubuntu 20.04 with SGX driver/sdk version 2.9 intended for Ubuntu 18.04:
 
@@ -151,7 +151,11 @@ sudo mount -o remount,exec /dev
 To uninstall the Intel(R) SGX Driver, run:
 
 ```shell
-sudo /opt/intel/sgxdriver/uninstall.sh 
+sudo /opt/intel/sgxdriver/uninstall.sh
+rm -rf "$HOME/.sgxsdk"
+
+sudo apt purge -y libsgx-enclave-common libsgx-enclave-common-dev libsgx-urts sgx-aesm-service libsgx-uae-service libsgx-launch libsgx-aesm-launch-plugin libsgx-ae-le
+sudo dpkg -r libprotobuf10
 ```
 
 The above command produces no output when it succeeds. If you want to verify that the driver has been uninstalled, you can run the following, which should print `SGX Driver NOT installed`:
