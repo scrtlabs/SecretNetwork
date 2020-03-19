@@ -29,7 +29,7 @@ enigmacli q account $(enigmacli keys show -a <key_alias>)
 
 If you get the following message, it means that you have no tokens yet:
 
-```bash
+```shell
 ERROR: unknown address: account enigmaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx does not exist
 ```
 

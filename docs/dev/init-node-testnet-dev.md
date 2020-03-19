@@ -21,7 +21,7 @@ sudo rm -rf "$(which engd)"
 - Attach storage to instance
 - Run the following
 
-```bash
+```shell
 # Create volumes and groups
 sudo pvcreate /dev/xvdf
 sudo vgcreate chainstate /dev/xvdf
@@ -43,7 +43,7 @@ sudo chown -R ubuntu .enigmad/
 
 ### Install the `.deb` file
 
-```bash
+<<<<<<< HEAD
 sudo dpkg -i enigma-blockchain_0.0.3_amd64.deb
 ```
 
