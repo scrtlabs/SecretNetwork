@@ -7,6 +7,10 @@ TODO
 This script was tested on Ubuntu 20.04 with SGX driver/sdk version 2.9 intended for Ubuntu 18.04:
 
 ```bash
+echo "\n\n#######################################"
+echo "##### Installing missing packages #####"
+echo "#######################################\n\n"
+
 # Install needed packages for script
 sudo apt install -y lynx parallel gdebi
 
@@ -17,6 +21,10 @@ mkdir -p "$HOME/.sgxsdk"
    # In a new sub-shell cd into our working directory so to no pollute the
    # original shell's working directory
    cd "$HOME/.sgxsdk"
+
+   echo "\n\n################################################"
+   echo "##### Downloading Intel SGX driver and SDK #####"
+   echo "################################################\n\n"
 
    # 1. Go to https://download.01.org/intel-sgx/sgx-linux
    # 2. Step into the latest version
@@ -37,6 +45,10 @@ mkdir -p "$HOME/.sgxsdk"
    # Make the driver and SDK installers executable
    chmod +x ./sgx_linux_*.bin
 
+   echo "\n\n###############################################"
+   echo "##### Installing Intel SGX driver and SDK #####"
+   echo "###############################################\n\n"
+
    # Install the driver
    sudo ./sgx_linux_x64_driver_*.bin
 
@@ -50,6 +62,10 @@ mkdir -p "$HOME/.sgxsdk"
    echo "source '$HOME/.sgxsdk/sgxsdk/environment'" |
       tee -a "$HOME/.bashrc" "$HOME/.zshrc" > /dev/null
 )
+
+echo "\n\n##############################################"
+echo "##### Installing additional dependencies #####"
+echo "##############################################\n\n"
 
 # Add Intels's SGX PPA
 echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main' |
