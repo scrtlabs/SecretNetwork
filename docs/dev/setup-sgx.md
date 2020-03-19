@@ -10,7 +10,7 @@ First, make sure you have rust installed: https://www.rust-lang.org/tools/instal
 
 Then you can use this script (or run the commands one-by-one), which was tested on Ubuntu 20.04 with SGX driver/sdk version 2.9 intended for Ubuntu 18.04:
 
-```bash
+```shell
 echo "\n\n#######################################"
 echo "##### Installing missing packages #####"
 echo "#######################################\n\n"
@@ -89,7 +89,7 @@ sudo apt install -y libsgx-enclave-common libsgx-enclave-common-dev libsgx-urts 
 
 Note that sometimes after a system reboot you'll need to reinstall the driver (usually after a kernel upgrade):
 
-```bash
+```shell
 sudo $HOME/.sgxsdk/sgx_linux_x64_driver_*.bin
 sudo mount -o remount,exec /dev
 ```
@@ -98,7 +98,7 @@ sudo mount -o remount,exec /dev
 
 1. Using `sgx-detect`:
 
-   ```bash
+   ```shell
    sudo apt install -y libssl-dev protobuf-compiler
    cargo +nightly install fortanix-sgx-tools sgxs-tools
 
@@ -117,7 +117,7 @@ sudo mount -o remount,exec /dev
 
 2. Compiling a `hello-rust` project:
 
-   ```bash
+   ```shell
    git clone --depth 1 -b v1.1.1-testing git@github.com:apache/incubator-teaclave-sgx-sdk.git
 
    cd incubator-teaclave-sgx-sdk/samplecode/hello-rust

@@ -4,7 +4,7 @@
 
 ### 2. Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):
 
-```bash
+```shell
 enigmacli keys add <key-alias>
 ```
 
@@ -15,7 +15,7 @@ enigmacli keys add <key-alias>
 
 ### 3. Output your node address:
 
-```bash
+```shell
 enigmacli keys show <key-alias> -a
 ```
 
@@ -23,13 +23,13 @@ enigmacli keys show <key-alias> -a
 
 ### 5. Check that you have the requested tokens:
 
-```bash
+```shell
 enigmacli q account $(enigmacli keys show -a <key_alias>)
 ```
 
 If you get the following message, it means that you have no tokens yet:
 
-```bash
+```shell
 ERROR: unknown address: account enigmaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx does not exist
 ```
 
@@ -37,7 +37,7 @@ ERROR: unknown address: account enigmaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx do
 
 (remember 1 SCRT = 1,000,000 uSCRT, and so the command below stakes 100k SCRT).
 
-```bash
+```shell
 enigmacli tx staking create-validator \
   --amount=100000000000uscrt \
   --pubkey=$(enigmad tendermint show-validator) \
@@ -53,7 +53,7 @@ enigmacli tx staking create-validator \
 
 ### 7. Check that you have been added as a validator:
 
-```bash
+```shell
 enigmacli q staking validators | jq '.[] | select(.description.moniker == "<MONIKER>")'
 ```
 
@@ -69,37 +69,37 @@ See [Sentry Nodes](/docs/validators-and-full-nodes/sentry-nodes.md).
 
 In order to stake more tokens beyond those in the initial transaction, run:
 
-```bash
+```shell
 enigmacli tx staking delegate $(enigmacli keys show <key-alias> --bech=val -a) <amount>uscrt --from <key-alias>
 ```
 
 ## Renaming your moniker
 
-```bash
+```shell
 enigmacli tx staking edit-validator --moniker <new-moniker> --from <key-alias>
 ```
 
 ## Seeing your rewards from being a validator
 
-```bash
+```shell
 enigmacli q distribution rewards $(enigmacli keys show -a <key-alias>)
 ```
 
 ## Seeing your commissions from your delegators
 
-```bash
+```shell
 enigmacli q distribution commission $(enigmacli keys show -a <key-alias> --bech=val)
 ```
 
 ## Withdrawing rewards
 
-```bash
+```shell
 enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a <key-alias>) --from <key-alias>
 ```
 
 ## Withdrawing rewards+commissions
 
-```bash
+```shell
 enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a <key-alias>) --from <key-alias> --commission
 ```
 
