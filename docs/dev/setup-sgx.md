@@ -146,54 +146,18 @@ sudo mount -o remount,exec /dev
    [+] say_something success...
    ```
 
-   ```bash
-   git clone --depth 1 -b v1.1.1-testing git@github.com:apache/incubator-teaclave-sgx-sdk.git
-
-   cd incubator-teaclave-sgx-sdk/samplecode/hello-rust
-   perl -i -pe 's/SGX_SDK \?=.+/SGX_SDK ?= \$(HOME)\/.sgxsdk\/sgxsdk/' Makefile
-   make
-   cd bin
-   ./app
-   ```
-
-   Should print somting similar to this:
-
-   ```
-   [+] Init Enclave Successful 2!
-   This is a normal world string passed into Enclave!
-   This is a in-Enclave Rust string!
-   gd: 1 0 0 1
-   static: 1 eremove: 0 dyn: 0
-   EDMM: 0, feature: 9007268790009855
-   supported sgx
-   [+] say_something success...
-   ```
-
 # Uninstall
 
 To uninstall the Intel(R) SGX Driver, run:
 
-```bash
-sudo /opt/intel/sgxdriver/uninstall.sh
+```shell
+sudo /opt/intel/sgxdriver/uninstall.sh 
 ```
 
 The above command produces no output when it succeeds. If you want to verify that the driver has been uninstalled, you can run the following, which should print `SGX Driver NOT installed`:
 
-```bash
+```shell
 ls /dev/isgx &>/dev/null && echo "SGX Driver installed" || echo "SGX Driver NOT installed"
-```
-
-To uninstall the SGX SDK, run:
-
-```bash
-sudo "$HOME"/.sgxsdk/sgxsdk/uninstall.sh
-rm -rf "$HOME/.sgxsdk"
-```
-
-To uninstall the rest of the dependencies, run:
-
-```bash
-sudo apt purge -y libsgx-enclave-common libsgx-enclave-common-dev libsgx-urts sgx-aesm-service libsgx-uae-service libsgx-launch libsgx-aesm-launch-plugin libsgx-ae-le
 ```
 
 # Refs
