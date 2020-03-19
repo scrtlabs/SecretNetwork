@@ -55,6 +55,7 @@ echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic 
    sudo tee /etc/apt/sources.list.d/intel-sgx.list
 wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key |
    sudo apt-key add -
+sudo apt update
 
 # Install all the additional necessary dependencies (besides the driver and the SDK)
 # for building a rust enclave
@@ -68,14 +69,15 @@ sudo apt install -y libsgx-enclave-common libsgx-enclave-common-dev libsgx-urts 
 
 ```bash
 sudo apt install -y libssl-dev protobuf-compiler
-cargo install fortanix-sgx-tools sgxs-tools
+cargo +nightly install fortanix-sgx-tools sgxs-tools
+
 sgx-detect
 ```
 
 ```bash
-git clone --depth 1 -b v1.1.0 git@github.com:apache/incubator-teaclave-sgx-sdk.git
+git clone --depth 1 -b v1.1.1-testing git@github.com:apache/incubator-teaclave-sgx-sdk.git
 
-cd incubator-teaclave-sgx-sdk/
+cd incubator-teaclave-sgx-sdk/samplecode/hello-rust
 
 ```
 
