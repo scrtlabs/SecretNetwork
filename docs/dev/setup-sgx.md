@@ -53,6 +53,7 @@ mkdir -p "$HOME/.sgxsdk"
 
    # Install the driver
    sudo ./sgx_linux_x64_driver_*.bin
+   sudo mount -o remount,exec /dev
 
    # Verify SGX driver installation
    ls /dev/isgx &>/dev/null && echo "SGX Driver installed" || echo "SGX Driver NOT installed"
@@ -82,6 +83,13 @@ wget -O /tmp/libprotobuf10_3.0.0-9_amd64.deb http://ftp.br.debian.org/debian/poo
 (sleep 3 ; echo y) | sudo gdebi /tmp/libprotobuf10_3.0.0-9_amd64.deb
 
 sudo apt install -y libsgx-enclave-common libsgx-enclave-common-dev libsgx-urts sgx-aesm-service libsgx-uae-service libsgx-launch libsgx-aesm-launch-plugin libsgx-ae-le autoconf libtool
+```
+
+Note that sometimes after a system reboot you'll need to reinstall the driver (usually after a kernel upgrade):
+
+```bash
+sudo $HOME/.sgxsdk/sgx_linux_x64_driver_*.bin
+sudo mount -o remount,exec /dev
 ```
 
 ### Test that it works
