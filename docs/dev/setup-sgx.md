@@ -6,7 +6,9 @@
 
 # Software
 
-This script was tested on Ubuntu 20.04 with SGX driver/sdk version 2.9 intended for Ubuntu 18.04:
+First, make sure you have rust installed: https://www.rust-lang.org/tools/install
+
+Then you can use this script (or run the commands one-by-one), which was tested on Ubuntu 20.04 with SGX driver/sdk version 2.9 intended for Ubuntu 18.04:
 
 ```bash
 echo "\n\n#######################################"
