@@ -152,10 +152,6 @@ To uninstall the Intel(R) SGX Driver, run:
 
 ```shell
 sudo /opt/intel/sgxdriver/uninstall.sh
-rm -rf "$HOME/.sgxsdk"
-
-sudo apt purge -y libsgx-enclave-common libsgx-enclave-common-dev libsgx-urts sgx-aesm-service libsgx-uae-service libsgx-launch libsgx-aesm-launch-plugin libsgx-ae-le
-sudo dpkg -r libprotobuf10
 ```
 
 The above command produces no output when it succeeds. If you want to verify that the driver has been uninstalled, you can run the following, which should print `SGX Driver NOT installed`:
@@ -167,7 +163,14 @@ ls /dev/isgx &>/dev/null && echo "SGX Driver installed" || echo "SGX Driver NOT 
 To uninstall the SGX SDK, run:
 
 ```shell
-sudo /home/eng-user/.sgxsdk/sgxsdk/uninstall.sh
+sudo "$HOME"/.sgxsdk/sgxsdk/uninstall.sh
+rm -rf "$HOME/.sgxsdk"
+```
+
+To uninstall the rest of the dependencies, run:
+
+```shell
+sudo apt purge -y libsgx-enclave-common libsgx-enclave-common-dev libsgx-urts sgx-aesm-service libsgx-uae-service libsgx-launch libsgx-aesm-launch-plugin libsgx-ae-le
 ```
 
 # Refs
