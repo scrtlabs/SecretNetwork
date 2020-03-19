@@ -85,9 +85,8 @@ wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigma
    ```
 
 4. Validate the checksum of the file:
-
-```shell
-echo "2e73c0277f515636c727af3b25c43d58d6031eb8c995b3c2578a872d6095349f $HOME/.enigmad/config/genesis.json" | sha256sum --check
+```bash
+echo "cc7ab684b955dcc78baffd508530f0a119723836d24153b41d8669f0e4ec3caa $HOME/.enigmad/config/genesis.json" | sha256sum --check
 ```
 
    ```bash
