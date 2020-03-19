@@ -94,24 +94,51 @@ sudo $HOME/.sgxsdk/sgx_linux_x64_driver_*.bin
 sudo mount -o remount,exec /dev
 ```
 
-### Test that it works
+# Testing your SGX setup
 
-```bash
-sudo apt install -y libssl-dev protobuf-compiler
-cargo +nightly install fortanix-sgx-tools sgxs-tools
+1. Using `sgx-detect`:
 
-sgx-detect
-```
+   ```bash
+   sudo apt install -y libssl-dev protobuf-compiler
+   cargo +nightly install fortanix-sgx-tools sgxs-tools
 
-```bash
-git clone --depth 1 -b v1.1.1-testing git@github.com:apache/incubator-teaclave-sgx-sdk.git
+   sgx-detect
+   ```
 
-cd incubator-teaclave-sgx-sdk/samplecode/hello-rust
-perl -i -pe 's/SGX_SDK \?=.+/SGX_SDK ?= \$(HOME)\/.sgxsdk\/sgxsdk/' Makefile
-make
-cd bin
-./app
-```
+   Should print at the end:
+
+   ```
+   ✔  Able to launch enclaves
+      ✔  Debug mode
+      ✔  Production mode (Intel whitelisted)
+
+   You're all set to start running SGX programs!
+   ```
+
+2. Compiling a `hello-rust` project:
+
+   ```bash
+   git clone --depth 1 -b v1.1.1-testing git@github.com:apache/incubator-teaclave-sgx-sdk.git
+
+   cd incubator-teaclave-sgx-sdk/samplecode/hello-rust
+   perl -i -pe 's/SGX_SDK \?=.+/SGX_SDK ?= \$(HOME)\/.sgxsdk\/sgxsdk/' Makefile
+   make
+   cd bin
+   ./app
+   ```
+
+   Should print somting similar to this:
+
+   ```
+   [+] Init Enclave Successful 2!
+   This is a normal world string passed into Enclave!
+   This is a in-Enclave Rust string!
+   gd: 1 0 0 1
+   static: 1 eremove: 0 dyn: 0
+   EDMM: 0, feature: 9007268790009855
+   supported sgx
+   [+] say_something success...
+   ```
 
    ```bash
    git clone --depth 1 -b v1.1.1-testing git@github.com:apache/incubator-teaclave-sgx-sdk.git
