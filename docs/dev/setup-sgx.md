@@ -19,8 +19,8 @@ Then you can use this script (or run the commands one-by-one), which was tested 
 ```shell
 UBUNTUVERSION=$(lsb_release -r -s | cut -d '.' -f 1)
 
-if (($UBUNTUVERSION < 16)); then 
-	echo "Your version of Ubuntu is not supported. Aborting installation script..."
+if (($UBUNTUVERSION < 16)); then
+	echo "Your version of Ubuntu is not supported. Must have Ubuntu 16.04 and up. Aborting installation script..."
 	exit 1
 elif (($UBUNTUVERSION < 18)); then
 	DISTRO='xenial'
