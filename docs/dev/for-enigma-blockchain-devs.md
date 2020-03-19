@@ -2,7 +2,7 @@
 
 **Requirement**: Go version needs to be [1.13 or higher](https://golang.org/dl/).
 
-```bash
+```shell
 git clone https://github.com/enigmampc/EnigmaBlockchain
 cd EnigmaBlockchain
 go mod tidy
@@ -11,7 +11,7 @@ make install # installs enigmad and enigmacli
 
 # Developers Quick Start
 
-```bash
+```shell
 enigmacli config chain-id enigma-testnet # now we won't need to type --chain-id enigma-testnet every time
 enigmacli config output json
 enigmacli config indent true
@@ -48,19 +48,19 @@ enigmad start --pruning nothing # starts a node
 Now `a` is a validator with 1 SCRT (1000000uscrt) staked.  
 This is how `b` can delegate 0.00001 SCRT to `a`:
 
-```bash
+```shell
 enigmacli tx staking delegate $(enigmacli keys show a --bech=val -a) 10uscrt --from b
 ```
 
 This is how to see `b`'s rewards from delegating to `a`:
 
-```bash
+```shell
 enigmacli q distribution rewards $(enigmacli keys show -a b)
 ```
 
 This is how `b` can withdraw its rewards:
 
-```bash
+```shell
 enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a a) --from b
 ```
 
@@ -69,19 +69,19 @@ enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a a
 `a` was set up as a validator from genesis.  
 This is how to see `a`'s rewards from being a validator:
 
-```bash
+```shell
 enigmacli q distribution rewards $(enigmacli keys show -a a)
 ```
 
 This is how to see `a`'s commissions from being a validator:
 
-```bash
+```shell
 enigmacli q distribution commission $(enigmacli keys show -a --bech=val a)
 ```
 
 This is how `a` can withdraw its rewards + its commissions from being a validator:
 
-```bash
+```shell
 enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a a) --from a --commission
 ```
 
@@ -91,7 +91,7 @@ enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a a
 
 First, init your environment:
 
-```bash
+```shell
 enigmad init [moniker] --chain-id enigma-testnet
 ```
 
@@ -99,13 +99,13 @@ Now you need a valid running node to send you their `genesis.json` file (usually
 Once you have the valid `genesis.json`, put it in `~/.enigmad/config/genesis.json` (overwrite the existing file if needed).  
 Next, edit your `~/.enigmad/config/config.toml`, set the `persistent_peers`:
 
-```bash
+```shell
 persistent_peers = "[id]@[peer_node_ip]:26656" # `id` can be aquired from your first peer by running `enigmacli status`
 ```
 
 That's it! Once you're done, just run:
 
-```bash
+```shell
 enigmad start --pruning nothing
 ```
 
@@ -120,7 +120,7 @@ Congrats, you are now up and running!
 
 After you have a private node up and running, run the following command:
 
-```bash
+```shell
 enigmacli tx staking create-validator \
   --amount=<num of coins> \ # This is the amount of coins you put at stake. i.e. 100000uscrt
   --pubkey=$(enigmad tendermint show-validator) \
@@ -137,6 +137,6 @@ enigmacli tx staking create-validator \
 
 To check if you got added to the validator-set by running:
 
-```bash
+```shell
 enigmacli q tendermint-validator-set
 ```
