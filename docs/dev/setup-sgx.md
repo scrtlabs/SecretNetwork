@@ -7,6 +7,9 @@ TODO
 This script was tested on Ubuntu 20.04 with SGX driver/sdk version 2.9 intended for Ubuntu 18.04:
 
 ```bash
+# Install needed packages for script
+sudo apt install -y lynx parallel gdebi
+
 # Create a working directory to download and install the SDK inside
 mkdir -p "$HOME/.sgxsdk"
 
