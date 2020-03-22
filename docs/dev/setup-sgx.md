@@ -108,7 +108,13 @@ Note that sometimes after a system reboot you'll need to reinstall the driver (u
 
 ```bash
 sudo $HOME/.sgxsdk/sgx_linux_x64_driver_*.bin
+```
+
+And if the AESM service is down to following commands should help:
+
+```bash
 sudo mount -o remount,exec /dev
+sudo systemctl restart aesmd
 ```
 
 # Testing your SGX setup
