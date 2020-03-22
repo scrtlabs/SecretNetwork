@@ -141,17 +141,15 @@ sudo systemctl restart aesmd
    sgx-detect
    ```
 
-````
+   Should print at the end:
 
-Should print at the end:
+   ```
+   ✔  Able to launch enclaves
+      ✔  Debug mode
+      ✔  Production mode (Intel whitelisted)
 
-```
-✔  Able to launch enclaves
-   ✔  Debug mode
-   ✔  Production mode (Intel whitelisted)
-
-You're all set to start running SGX programs!
-```
+   You're all set to start running SGX programs!
+   ```
 
 2. For enclave developers, by compiling a `hello-rust` project:
 
@@ -211,4 +209,3 @@ sudo apt purge -y libsgx-enclave-common libsgx-enclave-common-dev libsgx-urts sg
 2. https://github.com/openenclave/openenclave/blob/master/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md
 3. https://github.com/apache/incubator-teaclave-sgx-sdk/blob/783f04c002e243d1022c5af8a982f9c2a7138f32/dockerfile/Dockerfile.1804.nightly
 4. https://edp.fortanix.com/docs/installation/guide/
-````
