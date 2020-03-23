@@ -73,7 +73,7 @@ Conditions for downtime:
 
 Penalties for downtime:
 
-- Slashing of 1% of your and your validators' staking amount.
+- Slashing of 1% of your and your delegators' staking amount.
 - Jailing for 10 minutes of your validator node. You don't earn block rewards for this period and at the end must manually unjail your node with `enigmacli tx slashing unjail --from <key-alias>`.
 
 ### Slashing for double-signing
@@ -84,7 +84,7 @@ Conditions for double-signing:
 
 Penalties for double-signing:
 
-- Slashing of 5% of your and your validators' staking amount.
+- Slashing of 5% of your and your delegators' staking amount.
 - Jailing forever (tombstoned) of your validator node. You cannot earn block rewards anymore with this validator and you and your delegators must redelegate your stake to a different validator.
 
 ## Protecting your validator agains DDoS attacks
