@@ -72,12 +72,24 @@ mkdir -p "$HOME/.sgxsdk"
 
    # Install the driver
    sudo ./sgx_linux_x64_driver_*.bin
-   sudo mount -o remount,exec /dev
 
-   # Verify SGX driver installation
-   ls /dev/isgx &>/dev/null && echo "SGX Driver installed" || echo "SGX Driver NOT installed"
+   # Remount /dev as exec, also at system startup
+   sudo tee remount-dev-exec.service >/dev/null <<EOF
+[Unit]
+Description=Remount /dev as exec to allow AESM service to boot and load enclaves into SGX
 
-   # Install the SDK inside ./sgxsdk which is inside $HOME/.sgxsdk
+[Service]
+Type=oneshot
+ExecStart=/bin/mount -o remount,exec /dev
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+   sudo systemctl enable remount-dev-exec
+   sudo systemctl start remount-dev-exec
+
+   # Install the SDK inside ./sgxsdk/ which is inside $HOME/.sgxsdk
    echo yes | ./sgx_linux_x64_sdk_*.bin
 
    # Setup the environment variables for every new shell
@@ -108,26 +120,6 @@ Note that sometimes after a system reboot you'll need to reinstall the driver (u
 
 ```bash
 sudo $HOME/.sgxsdk/sgx_linux_x64_driver_*.bin
-```
-
-If the AESM service is down the following commands should help:
-
-```bash
-sudo mount -o remount,exec /dev
-sudo systemctl restart aesmd
-```
-
-Another solution is to go to `/lib/systemd/system/aesmd.service` and add the following line under the `[Service]` section:
-
-```
-ExecStartPre=/bin/mount -o remount,exec /dev
-```
-
-And then execute:
-
-```
-sudo systemctl daemon-reload
-sudo systemctl restart aesmd
 ```
 
 # Testing your SGX setup
