@@ -59,6 +59,34 @@ enigmacli q staking validators | jq '.[] | select(.description.moniker == "<MONI
 
 Or run: `enigmacli q staking validators | grep moniker`. You should see your moniker listed.
 
+## Dangers in running a validator
+
+There are a couple of scenarios that can lead to losing a precentage of your and your delegators' stake. These are called slashing events.
+
+The following is updated as of March 23, 2020.
+
+### Slashing for downtime
+
+Conditions for downtime:
+
+- Signing less than 2500 blocks out of every 5000-block window. For a block time of 5.8 seconds, this roughly translates to being up for 4 hours out of every 8-hour window.
+
+Penalties for downtime:
+
+- Slashing of 1% of your and your validators' staking amount.
+- Jailing for 10 minutes of your validator node. You don't earn block rewards for this period and at the end must manually unjail your node with `enigmacli tx slashing unjail --from <key-alias>`.
+
+### Slashing for double-signing
+
+Conditions for double-signing:
+
+- Your validator signs the same block height twice.
+
+Penalties for double-signing:
+
+- Slashing of 5% of your and your validators' staking amount.
+- Jailing forever (tombstoned) of your validator node. You cannot earn block rewards anymore with this validator and you and your delegators must redelegate your stake to a different validator.
+
 ## Protecting your validator agains DDoS attacks
 
 See [Sentry Nodes](/docs/validators-and-full-nodes/sentry-nodes.md).
