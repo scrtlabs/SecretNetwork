@@ -74,7 +74,7 @@ mkdir -p "$HOME/.sgxsdk"
    sudo ./sgx_linux_x64_driver_*.bin
 
    # Remount /dev as exec, also at system startup
-   sudo tee remount-dev-exec.service >/dev/null <<EOF
+   sudo tee /etc/systemd/system/remount-dev-exec.service >/dev/null <<EOF
 [Unit]
 Description=Remount /dev as exec to allow AESM service to boot and load enclaves into SGX
 
