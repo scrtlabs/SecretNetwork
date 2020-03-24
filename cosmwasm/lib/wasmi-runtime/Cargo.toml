@@ -1,0 +1,11 @@
+[package]
+name = "wasmi-runtime"
+version = "0.1.0"
+authors = ["Reuven Podmazo <reuven@enigma.co>"]
+edition = "2018"
+description = "An enclave running wasmi, to be used by cosmwasm-sgx-vm"
+
+[dependencies]
+enclave-ffi-types = { path = "../enclave-ffi-types" }
+
+[build-dependencies]
