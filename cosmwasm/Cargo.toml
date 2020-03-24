@@ -15,7 +15,7 @@ maintenance = { status = "actively-developed" }
 
 [workspace]
 members = [ "lib/vm", "lib/sgx-vm" ]
-exclude = [ "contracts" ]
+exclude = [ "contracts", "lib/wasmi-runtime", "lib/enclave-ffi-types"]
 
 [dependencies]
 base64 = "0.11.0"
