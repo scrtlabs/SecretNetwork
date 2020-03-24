@@ -35,9 +35,15 @@ style = "both"
 # "feature = serde" = "DEFINE_SERDE"
 
 [export]
-include = []
+include = [
+    "UserSpaceBuffer",
+    "EnclaveBuffer",
+    "InitResult",
+    "HandleResult",
+    "QueryResult",
+]
 exclude = []
-prefix = "EFFI_"
+prefix = ""
 item_types = []
 renaming_overrides_prefixing = false
 

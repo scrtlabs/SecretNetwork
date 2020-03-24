@@ -10,10 +10,8 @@ enum Error {
         #[from]
         source: cbindgen::Error,
     },
-    #[error("")]
-    BadOutDir {
-        path: PathBuf,
-    },
+    #[error("{path}")]
+    BadOutDir { path: PathBuf },
 }
 
 fn main() -> Result<(), Error> {
@@ -25,7 +23,9 @@ fn main() -> Result<(), Error> {
         let mut path = out_dir.clone();
         while path.file_name() != Some(&std::ffi::OsString::from("target")) {
             // If for some reason we scanned the entire path and failed to find the `target` directory, return an error
-            if !path.pop() { return Err(Error::BadOutDir { path: out_dir }) }
+            if !path.pop() {
+                return Err(Error::BadOutDir { path: out_dir });
+            }
         }
         path.push("headers");
         path.push("enclave-ffi-types.h"); // This should always equal the crate name
