@@ -56,22 +56,22 @@ endif
 
 CUSTOM_LIBRARY_PATH := ./lib
 CUSTOM_BIN_PATH := ./bin
-CUSTOM_EDL_PATH := ../../edl
-CUSTOM_COMMON_PATH := ../../common
+CUSTOM_EDL_PATH := ./incubator-teaclave-sgx-sdk/edl
+CUSTOM_COMMON_PATH := ./incubator-teaclave-sgx-sdk/common
 
 ######## EDL Settings ########
 
-Enclave_EDL_Files := enclave/Enclave_t.c enclave/Enclave_t.h app/Enclave_u.c app/Enclave_u.h
+Enclave_EDL_Files := ./wasmi-runtime/Enclave_t.c ./wasmi-runtime/Enclave_t.h ./sgx-vm/Enclave_u.c ./sgx-vm/Enclave_u.h
 
 ######## APP Settings ########
 
 App_Rust_Flags := --release
-App_SRC_Files := $(shell find app/ -type f -name '*.rs') $(shell find app/ -type f -name 'Cargo.toml')
-App_Include_Paths := -I ./app -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
+App_SRC_Files := $(shell find sgx-vm/ -type f -name '*.rs') $(shell find sgx-vm/ -type f -name 'Cargo.toml')
+App_Include_Paths := -I ./sgx-vm -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
-App_Rust_Path := ./app/target/release
-App_Enclave_u_Object :=app/libEnclave_u.a
+App_Rust_Path := ./sgx-vm/target/release
+App_Enclave_u_Object :=sgx-vm/libEnclave_u.a
 App_Name := bin/app
 
 ######## Enclave Settings ########
@@ -87,9 +87,9 @@ Crypto_Library_Name := sgx_tcrypto
 KeyExchange_Library_Name := sgx_tkey_exchange
 ProtectedFs_Library_Name := sgx_tprotected_fs
 
-RustEnclave_C_Files := $(wildcard ./enclave/*.c)
+RustEnclave_C_Files := $(wildcard ./wasmi-runtime/*.c)
 RustEnclave_C_Objects := $(RustEnclave_C_Files:.c=.o)
-RustEnclave_Include_Paths := -I$(CUSTOM_COMMON_PATH)/inc -I$(CUSTOM_EDL_PATH) -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -I$(SGX_SDK)/include/epid -I ./enclave -I./include
+RustEnclave_Include_Paths := -I$(CUSTOM_COMMON_PATH)/inc -I$(CUSTOM_EDL_PATH) -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -I$(SGX_SDK)/include/epid -I ./wasmi-runtime -I./include
 
 RustEnclave_Link_Libs := -L$(CUSTOM_LIBRARY_PATH) -lcompiler-rt-patch -lenclave
 RustEnclave_Compile_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(RustEnclave_Include_Paths)
@@ -100,9 +100,9 @@ RustEnclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nod
 	-Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \
 	-Wl,--defsym,__ImageBase=0 \
 	-Wl,--gc-sections \
-	-Wl,--version-script=enclave/Enclave.lds
+	-Wl,--version-script=wasmi-runtime/Enclave.lds
 
-RustEnclave_Name := enclave/enclave.so
+RustEnclave_Name := wasmi-runtime/enclave.so
 Signed_RustEnclave_Name := bin/enclave.signed.so
 
 .PHONY: all
@@ -110,54 +110,54 @@ all: $(App_Name) $(Signed_RustEnclave_Name)
 
 ######## EDL Objects ########
 
-$(Enclave_EDL_Files): $(SGX_EDGER8R) enclave/Enclave.edl
-	$(SGX_EDGER8R) --trusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --search-path ../../edl --trusted-dir enclave
-	$(SGX_EDGER8R) --untrusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --search-path ../../edl --untrusted-dir app
+$(Enclave_EDL_Files): $(SGX_EDGER8R) wasmi-runtime/Enclave.edl
+	$(SGX_EDGER8R) --trusted wasmi-runtime/Enclave.edl --search-path $(SGX_SDK)/include --search-path incubator-teaclave-sgx-sdk/edl --trusted-dir wasmi-runtime
+	$(SGX_EDGER8R) --untrusted wasmi-runtime/Enclave.edl --search-path $(SGX_SDK)/include --search-path incubator-teaclave-sgx-sdk/edl --untrusted-dir sgx-vm
 	@echo "GEN  =>  $(Enclave_EDL_Files)"
 
 ######## App Objects ########
 
-app/Enclave_u.o: $(Enclave_EDL_Files)
-	@$(CC) $(App_C_Flags) -c app/Enclave_u.c -o $@
+sgx-vm/Enclave_u.o: $(Enclave_EDL_Files)
+	@$(CC) $(App_C_Flags) -c sgx-vm/Enclave_u.c -o $@
 	@echo "CC   <=  $<"
 
-$(App_Enclave_u_Object): app/Enclave_u.o
+$(App_Enclave_u_Object): sgx-vm/Enclave_u.o
 	$(AR) rcsD $@ $^
 	cp $(App_Enclave_u_Object) ./lib
 
 $(App_Name): $(App_Enclave_u_Object) $(App_SRC_Files)
-	@cd app && SGX_SDK=$(SGX_SDK) cargo build $(App_Rust_Flags)
+	@cd sgx-vm && SGX_SDK=$(SGX_SDK) cargo build $(App_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	mkdir -p bin
-	cp $(App_Rust_Path)/app ./bin
+	cp $(App_Rust_Path)/sgx-vm ./bin
 
 ######## Enclave Objects ########
 
-enclave/Enclave_t.o: $(Enclave_EDL_Files)
-	@$(CC) $(RustEnclave_Compile_Flags) -c enclave/Enclave_t.c -o $@
+wasmi-runtime/Enclave_t.o: $(Enclave_EDL_Files)
+	@$(CC) $(RustEnclave_Compile_Flags) -c wasmi-runtime/Enclave_t.c -o $@
 	@echo "CC   <=  $<"
 
-$(RustEnclave_Name): enclave compiler-rt enclave/Enclave_t.o
-	cp ../../compiler-rt/libcompiler-rt-patch.a ./lib
-	@$(CXX) enclave/Enclave_t.o -o $@ $(RustEnclave_Link_Flags)
+$(RustEnclave_Name): enclave compiler-rt wasmi-runtime/Enclave_t.o
+	cp incubator-teaclave-sgx-sdk/compiler-rt/libcompiler-rt-patch.a ./lib
+	@$(CXX) wasmi-runtime/Enclave_t.o -o $@ $(RustEnclave_Link_Flags)
 	@echo "LINK =>  $@"
 
 $(Signed_RustEnclave_Name): $(RustEnclave_Name)
 	mkdir -p bin
-	@$(SGX_ENCLAVE_SIGNER) sign -key enclave/Enclave_private.pem -enclave $(RustEnclave_Name) -out $@ -config enclave/Enclave.config.xml
+	@$(SGX_ENCLAVE_SIGNER) sign -key wasmi-runtime/Enclave_private.pem -enclave $(RustEnclave_Name) -out $@ -config wasmi-runtime/Enclave.config.xml
 	@echo "SIGN =>  $@"
 
 .PHONY: enclave
 enclave:
-	$(MAKE) -C ./enclave/
+	$(MAKE) -C ./wasmi-runtime/
 
 .PHONY: compiler-rt
 compiler-rt:
-	$(MAKE) -C ../../compiler-rt/ 2> /dev/null
+	$(MAKE) -C incubator-teaclave-sgx-sdk/compiler-rt/ 2> /dev/null
 
 .PHONY: clean
 clean:
-	@rm -f $(App_Name) $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* app/*_u.* lib/*.a
-	@cd enclave && cargo clean && rm -f Cargo.lock
-	@cd app && cargo clean && rm -f Cargo.lock
+	@rm -f $(App_Name) $(RustEnclave_Name) $(Signed_RustEnclave_Name) wasmi-runtime/*_t.* sgx-vm/*_u.* lib/*.a
+	@cd wasmi-runtime && cargo clean && rm -f Cargo.lock
+	@cd sgx-vm && cargo clean && rm -f Cargo.lock
 
