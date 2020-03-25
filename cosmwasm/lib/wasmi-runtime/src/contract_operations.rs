@@ -1,3 +1,6 @@
+use enclave_ffi_types::UserSpaceBuffer;
+
+use super::imports;
 use super::results::{HandleResult, InitResult, QueryResult};
 
 /// This is a safe wrapper for allocating buffers outside the enclave.
