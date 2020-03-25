@@ -2,90 +2,90 @@
 alloc = {}
 
 [dependencies.sgx_types]
-path = "../../../sgx_types"
+path = "../incubator-teaclave-sgx-sdk/sgx_types"
 stage = 1
 
 [dependencies.sgx_alloc]
-path = "../../../sgx_alloc"
+path = "../incubator-teaclave-sgx-sdk/sgx_alloc"
 stage = 1
 
 [dependencies.sgx_unwind]
-path = "../../../sgx_unwind"
+path = "../incubator-teaclave-sgx-sdk/sgx_unwind"
 stage = 1
 
 [dependencies.sgx_demangle]
-path = "../../../sgx_demangle"
+path = "../incubator-teaclave-sgx-sdk/sgx_demangle"
 stage = 1
 
 [dependencies.panic_abort]
-path = "../../../sgx_panic_abort"
+path = "../incubator-teaclave-sgx-sdk/sgx_panic_abort"
 stage = 1
 
 [dependencies.sgx_libc]
-path = "../../../sgx_libc"
+path = "../incubator-teaclave-sgx-sdk/sgx_libc"
 stage = 2
 
 [dependencies.sgx_tkey_exchange]
-path = "../../../sgx_tkey_exchange"
+path = "../incubator-teaclave-sgx-sdk/sgx_tkey_exchange"
 stage = 2
 
 [dependencies.sgx_tse]
-path = "../../../sgx_tse"
+path = "../incubator-teaclave-sgx-sdk/sgx_tse"
 stage = 2
 
 [dependencies.sgx_tcrypto]
-path = "../../../sgx_tcrypto"
+path = "../incubator-teaclave-sgx-sdk/sgx_tcrypto"
 stage = 2
 
 [dependencies.sgx_trts]
-path = "../../../sgx_trts"
+path = "../incubator-teaclave-sgx-sdk/sgx_trts"
 stage = 3
 
 [dependencies.sgx_backtrace_sys]
-path = "../../../sgx_backtrace_sys"
+path = "../incubator-teaclave-sgx-sdk/sgx_backtrace_sys"
 stage = 3
 
 [dependencies.panic_unwind]
-path = "../../../sgx_panic_unwind"
+path = "../incubator-teaclave-sgx-sdk/sgx_panic_unwind"
 stage = 3
 
 [dependencies.sgx_tdh]
-path = "../../../sgx_tdh"
+path = "../incubator-teaclave-sgx-sdk/sgx_tdh"
 stage = 4
 
 [dependencies.sgx_tseal]
-path = "../../../sgx_tseal"
+path = "../incubator-teaclave-sgx-sdk/sgx_tseal"
 stage = 4
 
 [dependencies.sgx_tprotected_fs]
-path = "../../../sgx_tprotected_fs"
+path = "../incubator-teaclave-sgx-sdk/sgx_tprotected_fs"
 stage = 4
 
 [dependencies.std]
-path = "../../../xargo/sgx_tstd"
+path = "../incubator-teaclave-sgx-sdk/xargo/sgx_tstd"
 stage = 5
 features = ["backtrace"]
 
 [dependencies.sgx_no_tstd]
-path = "../../../sgx_no_tstd"
+path = "../incubator-teaclave-sgx-sdk/sgx_no_tstd"
 stage = 5
 
 [dependencies.sgx_rand]
-path = "../../../sgx_rand"
+path = "../incubator-teaclave-sgx-sdk/sgx_rand"
 stage = 6
 
 [dependencies.sgx_serialize]
-path = "../../../sgx_serialize"
+path = "../incubator-teaclave-sgx-sdk/sgx_serialize"
 stage = 6
 
 [dependencies.sgx_tunittest]
-path = "../../../sgx_tunittest"
+path = "../incubator-teaclave-sgx-sdk/sgx_tunittest"
 stage = 6
 
 [dependencies.sgx_backtrace]
-path = "../../../sgx_backtrace"
+path = "../incubator-teaclave-sgx-sdk/sgx_backtrace"
 stage = 7
 
 [dependencies.sgx_cov]
-path = "../../../sgx_cov"
+path = "../incubator-teaclave-sgx-sdk/sgx_cov"
 stage = 7
