@@ -6,7 +6,7 @@ enclave {
     trusted {
         EnclaveBuffer ecall_allocate([in, count=length] const uint8_t* buffer, const uintptr_t length);
 
-        InitResult ecall_init(
+        public InitResult ecall_init(
             [in, count=contract_len] const uint8_t* contract,
             const uintptr_t contract_len,
             [in, count=env_len] const uint8_t* env,
@@ -15,7 +15,7 @@ enclave {
             const uintptr_t msg_len,
         );
 
-        HandleResult ecall_handle(
+        public HandleResult ecall_handle(
             [in, count=contract_len] const uint8_t* contract,
             const uintptr_t contract_len,
             [in, count=env_len] const uint8_t* env,
@@ -24,7 +24,7 @@ enclave {
             const uintptr_t msg_len,
         );
 
-        QueryResult ecall_query(
+        public QueryResult ecall_query(
             [in, count=contract_len] const uint8_t* contract,
             const uintptr_t contract_len,
             [in, count=msg_len] const uint8_t* msg,
@@ -35,13 +35,13 @@ enclave {
     untrusted {
         UserSpaceBuffer ocall_allocate([in, count=length] const uint8_t* buffer, const uintptr_t length);
 
-        EnclaveBuffer ocall_read_db(
+        public EnclaveBuffer ocall_read_db(
             const uint64_t instance_id,
             [in, count=key_len] const uint8_t* key,
             const uintptr_t key_len,
         );
 
-        void ocall_write_db(
+        public void ocall_write_db(
             const uint64_t instance_id,
             [in, count=key_len] const uint8_t* key,
             const uintptr_t key_len,
