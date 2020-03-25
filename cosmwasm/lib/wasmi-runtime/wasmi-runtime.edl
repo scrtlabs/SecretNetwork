@@ -4,49 +4,49 @@ enclave {
     include "target/headers/enclave-ffi-types.h"
 
     trusted {
-        EnclaveBuffer ecall_allocate([in, count=length] const uint8_t* buffer, const size_t length);
+        EnclaveBuffer ecall_allocate([in, count=length] const uint8_t* buffer, const uintptr_t length);
 
         InitResult ecall_init(
             [in, count=contract_len] const uint8_t* contract,
-            const size_t contract_len,
+            const uintptr_t contract_len,
             [in, count=env_len] const uint8_t* env,
-            const size_t env_len,
+            const uintptr_t env_len,
             [in, count=msg_len] const uint8_t* msg,
-            const size_t msg_len,
+            const uintptr_t msg_len,
         );
 
         HandleResult ecall_handle(
             [in, count=contract_len] const uint8_t* contract,
-            const size_t contract_len,
+            const uintptr_t contract_len,
             [in, count=env_len] const uint8_t* env,
-            const size_t env_len,
+            const uintptr_t env_len,
             [in, count=msg_len] const uint8_t* msg,
-            const size_t msg_len,
+            const uintptr_t msg_len,
         );
 
         QueryResult ecall_query(
             [in, count=contract_len] const uint8_t* contract,
-            const size_t contract_len,
+            const uintptr_t contract_len,
             [in, count=msg_len] const uint8_t* msg,
-            const size_t msg_len,
+            const uintptr_t msg_len,
         );
     }
 
     untrusted {
-        UserSpaceBuffer ocall_allocate([in, count=length] const uint8_t* buffer, const size_t length);
+        UserSpaceBuffer ocall_allocate([in, count=length] const uint8_t* buffer, const uintptr_t length);
 
         EnclaveBuffer ocall_read_db(
             const uint64_t instance_id,
             [in, count=key_len] const uint8_t* key,
-            const size_t key_len,
+            const uintptr_t key_len,
         );
 
         void ocall_write_db(
             const uint64_t instance_id,
             [in, count=key_len] const uint8_t* key,
-            const size_t key_len,
+            const uintptr_t key_len,
             [in, count=value_len] const uint8_t* value,
-            const size_t value_len,
+            const uintptr_t value_len,
         );
     }
 }
