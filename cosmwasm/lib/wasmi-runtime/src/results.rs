@@ -1,9 +1,9 @@
-use enclave_ffi_types::{EnclaveBuffer, UserSpaceBuffer};
+use enclave_ffi_types::{EnclaveError, HandleResult, InitResult, QueryResult};
 
 use super::imports;
 
 /// This struct is returned from module initialization.
-pub struct InitResult {
+pub struct InitSuccess {
     /// The output of the calculation
     pub output: Vec<u8>,
     /// The gas used by the execution.
@@ -12,23 +12,23 @@ pub struct InitResult {
     pub signature: [u8; 65],
 }
 
-impl std::convert::From<InitResult> for enclave_ffi_types::InitResult {
-    fn from(other: InitResult) -> Self {
-        let InitResult {
+pub fn result_init_success_to_initresult(result: Result<InitSuccess, EnclaveError>) -> InitResult {
+    match result {
+        Ok(InitSuccess {
             output,
             used_gas,
             signature,
-        } = other;
-        Self {
+        }) => InitResult::Success {
             output: unsafe { imports::ocall_allocate(output.as_ptr(), output.len()) },
             used_gas,
             signature,
-        }
+        },
+        Err(err) => InitResult::Failure { err },
     }
 }
 
 /// This struct is returned from a handle method.
-pub struct HandleResult {
+pub struct HandleSuccess {
     /// The output of the calculation
     pub output: Vec<u8>,
     /// The gas used by the execution.
@@ -37,23 +37,25 @@ pub struct HandleResult {
     pub signature: [u8; 65],
 }
 
-impl std::convert::From<HandleResult> for enclave_ffi_types::HandleResult {
-    fn from(other: HandleResult) -> Self {
-        let HandleResult {
+pub fn result_handle_success_to_handleresult(
+    result: Result<HandleSuccess, EnclaveError>,
+) -> HandleResult {
+    match result {
+        Ok(HandleSuccess {
             output,
             used_gas,
             signature,
-        } = other;
-        Self {
+        }) => HandleResult::Success {
             output: unsafe { imports::ocall_allocate(output.as_ptr(), output.len()) },
             used_gas,
             signature,
-        }
+        },
+        Err(err) => HandleResult::Failure { err },
     }
 }
 
 /// This struct is returned from a query method.
-pub struct QueryResult {
+pub struct QuerySuccess {
     /// The output of the calculation
     pub output: Vec<u8>,
     /// The gas used by the execution.
@@ -62,17 +64,19 @@ pub struct QueryResult {
     pub signature: [u8; 65],
 }
 
-impl std::convert::From<QueryResult> for enclave_ffi_types::QueryResult {
-    fn from(other: QueryResult) -> Self {
-        let QueryResult {
+pub fn result_query_success_to_queryresult(
+    result: Result<QuerySuccess, EnclaveError>,
+) -> QueryResult {
+    match result {
+        Ok(QuerySuccess {
             output,
             used_gas,
             signature,
-        } = other;
-        Self {
+        }) => QueryResult::Success {
             output: unsafe { imports::ocall_allocate(output.as_ptr(), output.len()) },
             used_gas,
             signature,
-        }
+        },
+        Err(err) => QueryResult::Failure { err },
     }
 }

@@ -1,3 +1,5 @@
 mod types;
 
-pub use types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult, UserSpaceBuffer};
+pub use types::{
+    Ctx, EnclaveBuffer, EnclaveError, HandleResult, InitResult, QueryResult, UserSpaceBuffer,
+};

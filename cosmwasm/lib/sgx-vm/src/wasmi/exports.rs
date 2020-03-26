@@ -1,6 +1,8 @@
 use std::ffi::c_void;
 
-use enclave_ffi_types::{Ctx, UserSpaceBuffer, EnclaveBuffer, HandleResult, InitResult, QueryResult};
+use enclave_ffi_types::{
+    Ctx, EnclaveBuffer, UserSpaceBuffer,
+};
 
 /// Copy a buffer from the enclave memory space, and return an opaque pointer to it.
 #[no_mangle]
@@ -9,23 +11,24 @@ pub extern "C" fn ocall_allocate(buffer: *const u8, length: usize) -> UserSpaceB
     let vector_copy = slice.to_vec();
     let boxed_vector = Box::new(vector_copy);
     let heap_pointer = Box::into_raw(boxed_vector);
-    UserSpaceBuffer { ptr: heap_pointer as *mut c_void }
+    UserSpaceBuffer {
+        ptr: heap_pointer as *mut c_void,
+    }
 }
 
 /// Take a pointer as returned by `ocall_allocate` and recover the Vec<u8> inside of it.
-pub unsafe fn recover_buffer(ptr: UserSpaceBuffer) -> Vec<u8> {
+pub unsafe fn recover_buffer(ptr: EnclaveBuffer) -> Option<Vec<u8>> {
+    if ptr.ptr.is_null() {
+        return None;
+    }
     let boxed_vector = Box::from_raw(ptr.ptr as *mut Vec<u8>);
-    *boxed_vector
+    Some(*boxed_vector)
 }
 
 /// Read a key from the contracts key-value store.
 /// instance_id should be the sha256 of the wasm blob.
 #[no_mangle]
-pub extern "C" fn ocall_read_db(
-    context: Ctx,
-    key: *const u8,
-    key_len: usize,
-) -> EnclaveBuffer {
+pub extern "C" fn ocall_read_db(context: Ctx, key: *const u8, key_len: usize) -> EnclaveBuffer {
     let _key = unsafe { std::slice::from_raw_parts(key, key_len) };
     // also add panic handlers here
     // how do we signal errors into the enclave? should we?
