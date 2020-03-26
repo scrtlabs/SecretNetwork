@@ -1,7 +1,5 @@
-#![cfg_attr(sgx, no_std)]
-
-// #[cfg(sgx)]
-// use sgx_tstd as std;
+#![no_std]
+use sgx_tstd as std;
 
 mod contract_operations;
 pub mod exports;

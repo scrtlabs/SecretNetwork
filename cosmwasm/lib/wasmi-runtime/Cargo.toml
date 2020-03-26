@@ -9,15 +9,11 @@ description = "An enclave running wasmi, to be used by cosmwasm-sgx-vm"
 name = "wasmi_runtime_enclave"
 crate-type = ["staticlib"]
 
-[features]
-sgx = []
-default = ["sgx"]
-
 [dependencies]
 enclave-ffi-types = { path = "../enclave-ffi-types" }
 
 wasmi = { git = "https://github.com/paritytech/wasmi", branch = "master", default-features = false, features = ["core"] }
 
 sgx_types = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk.git", rev = "v1.1.1-testing" }
-sgx_tstd = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk.git", rev = "v1.1.1-testing" }
+std = { package = "sgx_tstd", git = "https://github.com/apache/incubator-teaclave-sgx-sdk.git", rev = "v1.1.1-testing" }
 sgx_trts = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk.git", rev = "v1.1.1-testing" }
