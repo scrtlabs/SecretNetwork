@@ -11,5 +11,9 @@ crate-type = ["staticlib"]
 
 [dependencies]
 enclave-ffi-types = { path = "../enclave-ffi-types" }
+
 wasmi = { git = "https://github.com/paritytech/wasmi", branch = "master", default-features = false, features = ["core"] }
-sgx_tstd = { path = "../incubator-teaclave-sgx-sdk/sgx_tstd" }
+
+sgx_types = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk.git", rev = "v1.1.1-testing" }
+sgx_tstd = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk.git", rev = "v1.1.1-testing" }
+sgx_trts = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk.git", rev = "v1.1.1-testing" }
