@@ -49,4 +49,4 @@ enclave {
             uintptr_t value_len
         );
     };
-}
+};
