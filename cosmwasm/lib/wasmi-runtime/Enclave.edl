@@ -30,23 +30,23 @@ enclave {
             [in, count=msg_len] const uint8_t* msg,
             uintptr_t msg_len
         );
-    }
+    };
 
     untrusted {
-        UserSpaceBuffer ocall_allocate([in, count=length] const uint8_t* buffer, const uintptr_t length);
+        UserSpaceBuffer ocall_allocate([in, count=length] const uint8_t* buffer, uintptr_t length);
 
-        public EnclaveBuffer ocall_read_db(
-            const uint64_t instance_id,
+        EnclaveBuffer ocall_read_db(
+            uint64_t instance_id,
             [in, count=key_len] const uint8_t* key,
             uintptr_t key_len
         );
 
-        public void ocall_write_db(
-            const uint64_t instance_id,
+        void ocall_write_db(
+            uint64_t instance_id,
             [in, count=key_len] const uint8_t* key,
             uintptr_t key_len,
             [in, count=value_len] const uint8_t* value,
             uintptr_t value_len
         );
-    }
+    };
 }
