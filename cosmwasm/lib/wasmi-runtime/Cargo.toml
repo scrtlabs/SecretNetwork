@@ -9,6 +9,10 @@ description = "An enclave running wasmi, to be used by cosmwasm-sgx-vm"
 name = "wasmi_runtime_enclave"
 crate-type = ["staticlib"]
 
+[features]
+sgx = []
+default = ["sgx"]
+
 [dependencies]
 enclave-ffi-types = { path = "../enclave-ffi-types" }
 
