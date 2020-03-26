@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 
-use enclave_ffi_types::{UserSpaceBuffer, EnclaveBuffer, HandleResult, InitResult, QueryResult};
+use enclave_ffi_types::{Ctx, UserSpaceBuffer, EnclaveBuffer, HandleResult, InitResult, QueryResult};
 
 /// Copy a buffer from the enclave memory space, and return an opaque pointer to it.
 #[no_mangle]
@@ -22,7 +22,7 @@ pub unsafe fn recover_buffer(ptr: UserSpaceBuffer) -> Vec<u8> {
 /// instance_id should be the sha256 of the wasm blob.
 #[no_mangle]
 pub extern "C" fn ocall_read_db(
-    _instance_id: u64,
+    context: Ctx,
     key: *const u8,
     key_len: usize,
 ) -> EnclaveBuffer {
@@ -37,7 +37,7 @@ pub extern "C" fn ocall_read_db(
 /// instance_id should be the sha256 of the wasm blob.
 #[no_mangle]
 pub extern "C" fn ocall_write_db(
-    _instance_id: u64,
+    context: Ctx,
     key: *const u8,
     key_len: usize,
     value: *const u8,

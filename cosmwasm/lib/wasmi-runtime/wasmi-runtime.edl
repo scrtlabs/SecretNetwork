@@ -1,52 +1,58 @@
 enclave {
 
+    from "sgx_tstd.edl" import *;
+    from "sgx_stdio.edl" import *;
+    from "sgx_backtrace.edl" import *;
+    from "sgx_tstdc.edl" import *;
+    from "sgx_fs.edl" import *;
+
     // This header is generated during the build of the enclave-ffi-types dependency
     include "target/headers/enclave-ffi-types.h"
 
     trusted {
-        EnclaveBuffer ecall_allocate([in, count=length] const uint8_t* buffer, const uintptr_t length);
+        EnclaveBuffer ecall_allocate([in, count=length] const uint8_t* buffer, uintptr_t length);
 
         public InitResult ecall_init(
             [in, count=contract_len] const uint8_t* contract,
-            const uintptr_t contract_len,
+            uintptr_t contract_len,
             [in, count=env_len] const uint8_t* env,
-            const uintptr_t env_len,
+            uintptr_t env_len,
             [in, count=msg_len] const uint8_t* msg,
-            const uintptr_t msg_len,
+            uintptr_t msg_len
         );
 
         public HandleResult ecall_handle(
             [in, count=contract_len] const uint8_t* contract,
-            const uintptr_t contract_len,
+            uintptr_t contract_len,
             [in, count=env_len] const uint8_t* env,
-            const uintptr_t env_len,
+            uintptr_t env_len,
             [in, count=msg_len] const uint8_t* msg,
-            const uintptr_t msg_len,
+            uintptr_t msg_len
         );
 
         public QueryResult ecall_query(
             [in, count=contract_len] const uint8_t* contract,
-            const uintptr_t contract_len,
+            uintptr_t contract_len,
             [in, count=msg_len] const uint8_t* msg,
-            const uintptr_t msg_len,
+            uintptr_t msg_len
         );
-    }
+    };
 
     untrusted {
-        UserSpaceBuffer ocall_allocate([in, count=length] const uint8_t* buffer, const uintptr_t length);
+        UserSpaceBuffer ocall_allocate([in, count=length] const uint8_t* buffer, uintptr_t length);
 
-        public EnclaveBuffer ocall_read_db(
+        EnclaveBuffer ocall_read_db(
             const uint64_t instance_id,
             [in, count=key_len] const uint8_t* key,
-            const uintptr_t key_len,
+            uintptr_t key_len
         );
 
-        public void ocall_write_db(
+        void ocall_write_db(
             const uint64_t instance_id,
             [in, count=key_len] const uint8_t* key,
-            const uintptr_t key_len,
+            uintptr_t key_len,
             [in, count=value_len] const uint8_t* value,
-            const uintptr_t value_len,
+            uintptr_t value_len
         );
-    }
-}
+    };
+};
