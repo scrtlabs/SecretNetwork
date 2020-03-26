@@ -1,3 +1,5 @@
+use std::prelude::v1::*;
+
 use enclave_ffi_types::UserSpaceBuffer;
 
 use super::imports;
@@ -9,7 +11,6 @@ pub(super) fn allocate_user_space_buffer(buffer: &[u8]) -> UserSpaceBuffer {
     let len = buffer.len();
     unsafe { imports::ocall_allocate(ptr, len) }
 }
-
 
 pub fn init(_contract: &[u8], _env: &[u8], _msg: &[u8]) -> InitResult {
     todo!()

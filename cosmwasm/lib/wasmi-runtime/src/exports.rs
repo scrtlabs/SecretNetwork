@@ -1,3 +1,5 @@
+use std::prelude::v1::*;
+
 use std::ffi::c_void;
 
 use enclave_ffi_types::{EnclaveBuffer, HandleResult, InitResult, QueryResult, UserSpaceBuffer};
