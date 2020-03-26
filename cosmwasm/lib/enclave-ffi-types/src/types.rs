@@ -12,6 +12,13 @@ pub struct EnclaveBuffer {
     pub ptr: *mut c_void,
 }
 
+/// This struct holds a pointer to memory in userspace, that contains the storage
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Ctx {
+    data: *mut c_void,
+}
+
 /// This struct is returned from ecall_init.
 #[repr(C)]
 pub struct InitResult {

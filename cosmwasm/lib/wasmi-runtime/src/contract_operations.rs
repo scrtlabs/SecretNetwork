@@ -1,6 +1,6 @@
 use std::prelude::v1::*;
 
-use enclave_ffi_types::UserSpaceBuffer;
+use enclave_ffi_types::{Ctx, UserSpaceBuffer};
 
 use super::imports;
 use super::results::{HandleResult, InitResult, QueryResult};
@@ -12,14 +12,14 @@ pub(super) fn allocate_user_space_buffer(buffer: &[u8]) -> UserSpaceBuffer {
     unsafe { imports::ocall_allocate(ptr, len) }
 }
 
-pub fn init(_contract: &[u8], _env: &[u8], _msg: &[u8]) -> InitResult {
+pub fn init(context: Ctx, contract: &[u8], env: &[u8], msg: &[u8]) -> InitResult {
     todo!()
 }
 
-pub fn handle(_contract: &[u8], _env: &[u8], _msg: &[u8]) -> HandleResult {
+pub fn handle(context: Ctx, contract: &[u8], env: &[u8], msg: &[u8]) -> HandleResult {
     todo!()
 }
 
-pub fn query(_contract: &[u8], _msg: &[u8]) -> QueryResult {
+pub fn query(context: Ctx, contract: &[u8], msg: &[u8]) -> QueryResult {
     todo!()
 }

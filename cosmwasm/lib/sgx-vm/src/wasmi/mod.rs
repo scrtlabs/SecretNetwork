@@ -1,6 +1,6 @@
-mod ffi;
 mod imports;
 mod exports;
+mod results;
 mod wasm_hash;
 mod wrapper;
 
