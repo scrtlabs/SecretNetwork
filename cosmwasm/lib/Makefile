@@ -106,7 +106,11 @@ RustEnclave_Name := wasmi-runtime/enclave.so
 Signed_RustEnclave_Name := bin/enclave.signed.so
 
 .PHONY: all
-all: $(App_Name) $(Signed_RustEnclave_Name)
+all: enclave-ffi-types $(App_Name) $(Signed_RustEnclave_Name)
+
+enclave-ffi-types:
+	cd enclave-ffi-types
+	cargo build
 
 ######## EDL Objects ########
 
@@ -160,4 +164,5 @@ clean:
 	@rm -f $(App_Name) $(RustEnclave_Name) $(Signed_RustEnclave_Name) wasmi-runtime/*_t.* sgx-vm/*_u.* lib/*.a
 	@cd wasmi-runtime && cargo clean && rm -f Cargo.lock
 	@cd sgx-vm && cargo clean && rm -f Cargo.lock
+	@cd enclave-ffi-types && cargo clean && rm -f Cargo.lock
 
