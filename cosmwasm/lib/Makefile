@@ -108,9 +108,9 @@ Signed_RustEnclave_Name := bin/enclave.signed.so
 .PHONY: all
 all: enclave-ffi-types $(App_Name) $(Signed_RustEnclave_Name)
 
+.PHONY: enclave-ffi-types
 enclave-ffi-types:
-	cd enclave-ffi-types
-	cargo build
+	@cd enclave-ffi-types && cargo build
 
 ######## EDL Objects ########
 
@@ -129,7 +129,7 @@ $(App_Enclave_u_Object): sgx-vm/Enclave_u.o
 	$(AR) rcsD $@ $^
 	cp $(App_Enclave_u_Object) ./lib
 
-$(App_Name): $(App_Enclave_u_Object) $(App_SRC_Files)
+$(App_Name): enclave-ffi-types $(App_Enclave_u_Object) $(App_SRC_Files)
 	@cd sgx-vm && SGX_SDK=$(SGX_SDK) cargo build $(App_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	mkdir -p bin
@@ -146,7 +146,7 @@ $(RustEnclave_Name): enclave compiler-rt wasmi-runtime/Enclave_t.o
 	@$(CXX) wasmi-runtime/Enclave_t.o -o $@ $(RustEnclave_Link_Flags)
 	@echo "LINK =>  $@"
 
-$(Signed_RustEnclave_Name): $(RustEnclave_Name)
+$(Signed_RustEnclave_Name): enclave-ffi-types $(RustEnclave_Name)
 	mkdir -p bin
 	@$(SGX_ENCLAVE_SIGNER) sign -key wasmi-runtime/Enclave_private.pem -enclave $(RustEnclave_Name) -out $@ -config wasmi-runtime/Enclave.config.xml
 	@echo "SIGN =>  $@"
