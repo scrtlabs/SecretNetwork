@@ -38,6 +38,7 @@ style = "both"
 include = [
     "UserSpaceBuffer",
     "EnclaveBuffer",
+    "Ctx",
     "InitResult",
     "HandleResult",
     "QueryResult",

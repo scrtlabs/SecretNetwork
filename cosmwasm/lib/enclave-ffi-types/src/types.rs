@@ -16,7 +16,7 @@ pub struct EnclaveBuffer {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct Ctx {
-    data: *mut c_void,
+    pub data: *mut c_void,
 }
 
 /// This struct is returned from ecall_init.
