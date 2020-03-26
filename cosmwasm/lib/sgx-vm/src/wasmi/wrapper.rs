@@ -27,7 +27,7 @@ pub struct Module {
 impl Module {
     pub fn new(bytecode: Vec<u8>, storage: *mut c_void, gas_limit: u64) -> Self {
         // TODO add validation of this bytecode?
-        let context = Ctx { data: storage }
+        let context = Ctx { data: storage };
         Self { bytecode, context, gas_limit }
     }
 
