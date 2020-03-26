@@ -108,14 +108,6 @@ Signed_RustEnclave_Name := bin/enclave.signed.so
 .PHONY: all
 all: $(App_Name) $(Signed_RustEnclave_Name)
 
-# .PHONY: enclave-ffi-types
-# enclave-ffi-types:
-# 	cd enclave-ffi-types && cargo build
-# 	mkdir -p ./sgx-vm/target/headers
-# 	mkdir -p ./wasmi-runtime/target/headers
-# 	cp -f ./enclave-ffi-types/target/headers/enclave-ffi-types.h ./wasmi-runtime/target/headers
-# 	cp -f ./enclave-ffi-types/target/headers/enclave-ffi-types.h ./sgx-vm/target/headers
-
 ######## EDL Objects ########
 
 $(Enclave_EDL_Files): $(SGX_EDGER8R) wasmi-runtime/Enclave.edl
@@ -133,9 +125,11 @@ $(App_Enclave_u_Object): sgx-vm/Enclave_u.o
 	$(AR) rcsD $@ $^
 	cp $(App_Enclave_u_Object) ./lib
 
-$(App_Name): enclave-ffi-types $(App_Enclave_u_Object) $(App_SRC_Files)
+foo:
 	@cd sgx-vm && SGX_SDK=$(SGX_SDK) cargo build $(App_Rust_Flags)
 	@echo "Cargo  =>  $@"
+
+$(App_Name): foo $(App_Enclave_u_Object) $(App_SRC_Files)
 	mkdir -p bin
 	cp $(App_Rust_Path)/sgx-vm ./bin
 
