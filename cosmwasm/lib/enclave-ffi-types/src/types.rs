@@ -1,4 +1,4 @@
-use std::ffi::c_void;
+use core::ffi::c_void;
 
 /// This type represents an opaque pointer to a memory address in normal user space.
 #[repr(C)]
