@@ -490,9 +490,7 @@ name = "wasmi-runtime"
 version = "0.1.0"
 dependencies = [
  "enclave-ffi-types",
- "sgx_trts",
  "sgx_tstd",
- "sgx_types",
  "wasmi",
 ]
 
