@@ -1,7 +1,8 @@
 use super::exports;
+use enclave_ffi_types::{EnclaveError, InitResult, HandleResult, QueryResult};
 
 /// This struct is returned from module initialization.
-pub struct InitResult {
+pub struct InitSuccess {
     /// A pointer to the output of the execution using `ocall_save_to_memory`
     output: Vec<u8>,
     /// The gas used by the execution.
@@ -10,7 +11,7 @@ pub struct InitResult {
     signature: [u8; 65],
 }
 
-impl InitResult {
+impl InitSuccess {
     pub fn output(&self) -> &[u8] {
         &self.output
     }
@@ -24,23 +25,25 @@ impl InitResult {
     }
 }
 
-impl std::convert::From<enclave_ffi_types::InitResult> for InitResult {
-    fn from(other: enclave_ffi_types::InitResult) -> Self {
-        let enclave_ffi_types::InitResult {
-            output,
-            used_gas,
-            signature,
-        } = other;
-        Self {
-            output: unsafe { exports::recover_buffer(output) },
-            used_gas,
-            signature,
+impl std::convert::From<InitResult> for Result<InitSuccess, EnclaveError> {
+    fn from(other: InitResult) -> Self {
+        match other {
+            InitResult::Success {
+                output,
+                used_gas,
+                signature,
+            } => Ok(InitSuccess {
+                output: unsafe { exports::recover_buffer(output) },
+                used_gas,
+                signature,
+            }),
+            InitResult::Failure { err } => Err(err),
         }
     }
 }
 
 /// This struct is returned from a handle method.
-pub struct HandleResult {
+pub struct HandleSuccess {
     /// A pointer to the output of the execution using `ocall_save_to_memory`
     output: Vec<u8>,
     /// The gas used by the execution.
@@ -49,7 +52,7 @@ pub struct HandleResult {
     signature: [u8; 65],
 }
 
-impl HandleResult {
+impl HandleSuccess {
     pub fn output(&self) -> &[u8] {
         &self.output
     }
@@ -63,23 +66,25 @@ impl HandleResult {
     }
 }
 
-impl std::convert::From<enclave_ffi_types::HandleResult> for HandleResult {
-    fn from(other: enclave_ffi_types::HandleResult) -> Self {
-        let enclave_ffi_types::HandleResult {
-            output,
-            used_gas,
-            signature,
-        } = other;
-        Self {
-            output: unsafe { exports::recover_buffer(output) },
-            used_gas,
-            signature,
+impl std::convert::From<HandleResult> for Result<HandleSuccess, EnclaveError> {
+    fn from(other: HandleResult) -> Self {
+        match other {
+            HandleResult::Success {
+                output,
+                used_gas,
+                signature,
+            } => Ok(HandleSuccess {
+                output: unsafe { exports::recover_buffer(output) },
+                used_gas,
+                signature,
+            }),
+            HandleResult::Failure { err } => Err(err),
         }
     }
 }
 
 /// This struct is returned from a query method.
-pub struct QueryResult {
+pub struct QuerySuccess {
     /// A pointer to the output of the execution using `ocall_save_to_memory`
     output: Vec<u8>,
     /// The gas used by the execution.
@@ -88,7 +93,7 @@ pub struct QueryResult {
     signature: [u8; 65],
 }
 
-impl QueryResult {
+impl QuerySuccess {
     pub fn output(&self) -> &[u8] {
         &self.output
     }
@@ -102,17 +107,19 @@ impl QueryResult {
     }
 }
 
-impl std::convert::From<enclave_ffi_types::QueryResult> for QueryResult {
-    fn from(other: enclave_ffi_types::QueryResult) -> Self {
-        let enclave_ffi_types::QueryResult {
-            output,
-            used_gas,
-            signature,
-        } = other;
-        Self {
-            output: unsafe { exports::recover_buffer(output) },
-            used_gas,
-            signature,
+impl std::convert::From<QueryResult> for Result<QuerySuccess, EnclaveError> {
+    fn from(other: QueryResult) -> Self {
+        match other {
+            QueryResult::Success {
+                output,
+                used_gas,
+                signature,
+            } => Ok(QuerySuccess {
+                output: unsafe { exports::recover_buffer(output) },
+                used_gas,
+                signature,
+            }),
+            QueryResult::Failure { err } => Err(err),
         }
     }
 }

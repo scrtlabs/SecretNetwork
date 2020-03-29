@@ -16,38 +16,65 @@ pub struct EnclaveBuffer {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct Ctx {
-    data: *mut c_void,
+    pub data: *mut c_void,
+}
+
+/// This type represents the possible error conditions that can be encountered in the enclave
+/// cbindgen:prefix-with-name
+#[repr(C)]
+pub enum EnclaveError {
+    InvalidWasm,
+    WasmModuleWithStart,
+    WasmModuleWithFP,
 }
 
 /// This struct is returned from ecall_init.
+/// cbindgen:prefix-with-name
 #[repr(C)]
-pub struct InitResult {
-    /// A pointer to the output of the calculation
-    pub output: UserSpaceBuffer,
-    /// The gas used by the execution.
-    pub used_gas: u64,
-    /// A signature by the enclave on all of the results.
-    pub signature: [u8; 65],
+pub enum InitResult {
+    Success {
+        /// A pointer to the output of the calculation
+        output: UserSpaceBuffer,
+        /// The gas used by the execution.
+        used_gas: u64,
+        /// A signature by the enclave on all of the results.
+        signature: [u8; 65],
+    },
+    Failure {
+        err: EnclaveError,
+    },
 }
 
 /// This struct is returned from ecall_handle.
+/// cbindgen:prefix-with-name
 #[repr(C)]
-pub struct HandleResult {
-    /// A pointer to the output of the calculation
-    pub output: UserSpaceBuffer,
-    /// The gas used by the execution.
-    pub used_gas: u64,
-    /// A signature by the enclave on all of the results.
-    pub signature: [u8; 65],
+pub enum HandleResult {
+    Success {
+        /// A pointer to the output of the calculation
+        output: UserSpaceBuffer,
+        /// The gas used by the execution.
+        used_gas: u64,
+        /// A signature by the enclave on all of the results.
+        signature: [u8; 65],
+    },
+    Failure {
+        err: EnclaveError,
+    },
 }
 
 /// This struct is returned from ecall_query.
+/// cbindgen:prefix-with-name
 #[repr(C)]
-pub struct QueryResult {
-    /// A pointer to the output of the calculation
-    pub output: UserSpaceBuffer,
-    /// The gas used by the execution.
-    pub used_gas: u64,
-    /// A signature by the enclave on all of the results.
-    pub signature: [u8; 65],
+pub enum QueryResult {
+    Success {
+        /// A pointer to the output of the calculation
+        output: UserSpaceBuffer,
+        /// The gas used by the execution.
+        used_gas: u64,
+        /// A signature by the enclave on all of the results.
+        signature: [u8; 65],
+    },
+    Failure {
+        err: EnclaveError,
+    },
 }

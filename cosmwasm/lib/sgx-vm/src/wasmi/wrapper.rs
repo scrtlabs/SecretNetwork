@@ -2,14 +2,12 @@
 
 use std::ffi::c_void;
 
-use enclave_ffi_types::{ EnclaveBuffer, Ctx};
+use enclave_ffi_types::{Ctx, EnclaveBuffer, EnclaveError};
 
 use crate::errors::Result;
 
 use super::imports;
-use super::exports;
-use super::results::{InitResult, HandleResult, QueryResult};
-
+use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
 
 /// This is a safe wrapper for allocating buffers inside the enclave.
 pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> EnclaveBuffer {
@@ -21,17 +19,23 @@ pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> EnclaveBuffer {
 pub struct Module {
     bytecode: Vec<u8>,
     context: Ctx,
+    context_drop: fn(*mut c_void),
     gas_limit: u64,
 }
 
 impl Module {
-    pub fn new(bytecode: Vec<u8>, storage: *mut c_void, gas_limit: u64) -> Self {
+    pub fn new(bytecode: Vec<u8>, storage: (*mut c_void, fn(*mut c_void)), gas_limit: u64) -> Self {
         // TODO add validation of this bytecode?
-        let context = Ctx { data: storage }
-        Self { bytecode, context, gas_limit }
+        let context = Ctx { data: storage.0 };
+        Self {
+            bytecode,
+            context,
+            context_drop: storage.1,
+            gas_limit,
+        }
     }
 
-    pub fn init(&self, env: &[u8], msg: &[u8]) -> InitResult {
+    pub fn init(&self, env: &[u8], msg: &[u8]) -> Result<InitSuccess, EnclaveError> {
         let init_result = unsafe {
             imports::ecall_init(
                 self.context,
@@ -46,7 +50,7 @@ impl Module {
         init_result.into()
     }
 
-    pub fn handle(&self, env: &[u8], msg: &[u8]) -> HandleResult {
+    pub fn handle(&self, env: &[u8], msg: &[u8]) -> Result<HandleSuccess, EnclaveError> {
         let handle_result = unsafe {
             imports::ecall_handle(
                 self.context,
@@ -61,7 +65,7 @@ impl Module {
         handle_result.into()
     }
 
-    pub fn query(&self, msg: &[u8]) -> QueryResult {
+    pub fn query(&self, msg: &[u8]) -> Result<QuerySuccess, EnclaveError> {
         let query_result = unsafe {
             imports::ecall_query(
                 self.context,
@@ -72,5 +76,11 @@ impl Module {
             )
         };
         query_result.into()
+    }
+}
+
+impl std::ops::Drop for Module {
+    fn drop(&mut self) {
+        self.context_drop(self.context.data);
     }
 }
