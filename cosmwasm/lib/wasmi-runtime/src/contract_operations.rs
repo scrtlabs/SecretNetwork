@@ -51,11 +51,6 @@ pub fn init(
     let imports = ImportsBuilder::new().with_resolver("env", &ResolveAll);
 
     // Instantiate a module with our imports and assert that there is no `start` function.
-    /*
-    if self.loaded_module.module().start_section().is_some() {
-           panic!("assert_no_start called on module with `start` function");
-    }
-    */
     let not_started_instance =
         ModuleInstance::new(&module, &imports).map_err(|_err| EnclaveError::InvalidWasm)?;
     if not_started_instance.has_start() {
