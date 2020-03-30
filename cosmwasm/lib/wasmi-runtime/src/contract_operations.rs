@@ -125,9 +125,11 @@ pub fn query(context: Ctx, contract: &[u8], msg: &[u8]) -> Result<QuerySuccess, 
 // When invoking a function inside the module we can give it different runtimes (which we probably won't do)
 struct ResolveAll;
 
-// These functions
+// These functions should be available to invoke from wasm code
+// These should pass the request up to go-cosmwasm: 
 // fn read_db(key: *const c_void, value: *mut c_void) -> i32;
 // fn write_db(key: *const c_void, value: *mut c_void);
+// These should be implemented here: + TODO: Check Cosmwasm implementation for these:
 // fn canonicalize_address(human: *const c_void, canonical: *mut c_void) -> i32;
 // fn humanize_address(canonical: *const c_void, human: *mut c_void) -> i32;
 impl ModuleImportResolver for ResolveAll {
