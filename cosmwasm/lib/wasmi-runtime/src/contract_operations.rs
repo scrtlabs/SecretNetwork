@@ -11,6 +11,7 @@ use std::io::{self, Write};
 use std::slice;
 use std::string::String;
 use std::vec::Vec;
+use std::ptr;
 
 extern crate wasmi;
 use wasmi::{
@@ -61,23 +62,40 @@ pub fn init(
     let mut runtime = Runtime {};
 
     //.invoke_export("allocate" env size
-    let env_in_contract = instance.invoke_export("allocate",
-                                                 &[RuntimeValue::I32(env.len() as i32)],
-                                                 &mut runtime);
+    let env_in_contract = match instance.invoke_export(
+        "allocate",
+        &[RuntimeValue::I32(env.len() as i32)],
+        &mut runtime
+    ).map_err(|_err| EnclaveError::FailedFunctionCall)?{
+        Some(ptr) => ptr,
+        None => panic!("TEST") // TODO: return error here
+    };
     
+    // TODO: copy env to that pointer (figure out what wasmi returns and translate that pointer to my memory space)
+    // unsafe {
+    //     ptr::copy_nonoverlapping(env, &env_in_contract as *mut u8, env.len());
+    // }
 
-    // copy env to that pointer (figure out what wasmi returns and translate that pointer to my memory space)
     //.invoke_export("allocate" msg size
-    let msg_in_contract = instance.invoke_export("allocate",
-                                                 &[RuntimeValue::I32(msg.len() as i32)],
-                                                 &mut runtime);
-    // copy msg to that pointer  (figure out what wasmi returns and translate that pointer to my memory space)
+    let msg_in_contract = match instance.invoke_export(
+        "allocate",
+        &[RuntimeValue::I32(msg.len() as i32)],
+        &mut runtime
+    ).map_err(|_err| EnclaveError::FailedFunctionCall)?{
+        Some(ptr) => ptr,
+        None => panic!("TEST") // TODO: return error here
+    };
+    // TODO: copy msg to that pointer  (figure out what wasmi returns and translate that pointer to my memory space)
 
     //.invoke_export("init" with both pointers that we got from allocate
-
     let x = instance
-        .invoke_export("init", &[], &mut runtime)
+        .invoke_export(
+            "init",
+            &[],
+            &mut runtime
+        )
         .map_err(|_err| EnclaveError::FailedFunctionCall)?; // TODO return _err to user
+
     todo!()
 }
 
