@@ -59,9 +59,17 @@ pub fn init(
     let instance = not_started_instance.not_started_instance();
 
     let mut runtime = Runtime {};
+
     //.invoke_export("allocate" env size
+    let env_in_contract = instance.invoke_export("allocate",
+                                                 &[RuntimeValue::I32(env.len())],
+                                                 &mut runtime))
+
     // copy env to that pointer (figure out what wasmi returns and translate that pointer to my memory space)
     //.invoke_export("allocate" msg size
+    let msg_in_contract = instance.invoke_export("allocate",
+                                                 &[RuntimeValue::I32(msg.len())],
+                                                 &mut runtime))
     // copy msg to that pointer  (figure out what wasmi returns and translate that pointer to my memory space)
 
     //.invoke_export("init" with both pointers that we got from allocate
