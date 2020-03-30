@@ -112,8 +112,8 @@ pub fn init(
         .invoke_export(
             "init",
             &[
-                RuntimeValue::I32(env_in_contract),
-                RuntimeValue::I32(msg_in_contract),
+                env_in_contract,
+                msg_in_contract,
             ],
             &mut runtime,
         )
