@@ -91,7 +91,7 @@ pub fn init(
     let x = instance
         .invoke_export(
             "init",
-            &[],
+            &[RuntimeValue::I32(env_in_contract), RuntimeValue::I32(msg_in_contract)],
             &mut runtime
         )
         .map_err(|_err| EnclaveError::FailedFunctionCall)?; // TODO return _err to user
