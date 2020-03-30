@@ -76,7 +76,7 @@ pub fn init(
 
     let mut runtime = Runtime {};
 
-    //.invoke_export("allocate" env size
+    // Allocate memory inside WASM VM to house the `env` buffer
     let env_in_contract = match instance
         .invoke_export(
             "allocate",
@@ -93,7 +93,7 @@ pub fn init(
     //     ptr::copy_nonoverlapping(env, &env_in_contract as *mut u8, env.len());
     // }
 
-    //.invoke_export("allocate" msg size
+    // Allocate memory inside WASM VM to house the `msg` buffer
     let msg_in_contract = match instance
         .invoke_export(
             "allocate",
@@ -109,14 +109,7 @@ pub fn init(
 
     //.invoke_export("init" with both pointers that we got from allocate
     let x = instance
-        .invoke_export(
-            "init",
-            &[
-                env_in_contract,
-                msg_in_contract,
-            ],
-            &mut runtime,
-        )
+        .invoke_export("init", &[env_in_contract, msg_in_contract], &mut runtime)
         .map_err(|_err| EnclaveError::FailedFunctionCall)?; // TODO return _err to user
 
     todo!()
