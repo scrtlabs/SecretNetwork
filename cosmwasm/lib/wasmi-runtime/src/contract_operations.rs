@@ -8,10 +8,10 @@ use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::exports;
 
 use std::io::{self, Write};
+use std::ptr;
 use std::slice;
 use std::string::String;
 use std::vec::Vec;
-use std::ptr;
 
 extern crate wasmi;
 use wasmi::{
@@ -38,6 +38,21 @@ fn write_db(context: Ctx, key: &[u8], value: &[u8]) {
     }
 }
 
+/*
+Each contract is compiled with these functions already implemented in wasm:
+fn cosmwasm_api_0_6() -> i32;  // Seems unused, but we should support it anyways
+fn allocate(size: usize) -> *mut c_void;
+fn deallocate(pointer: *mut c_void);
+fn init(env_ptr: *mut c_void, msg_ptr: *mut c_void) -> *mut c_void
+fn handle(env_ptr: *mut c_void, msg_ptr: *mut c_void) -> *mut c_void
+fn query(msg_ptr: *mut c_void) -> *mut c_void
+
+Re `init`, `handle` and `query`: We need to pass `env` & `msg`
+down to the wasm implementations, but because they are buffers
+we need to allocate memory regions inside the VM's instance and copy
+`env` & `msg` into those memory regions inside the VM's instance.
+*/
+
 pub fn init(
     context: Ctx,    // need to pass this to read_db & write_db
     contract: &[u8], // contract wasm bytes
@@ -62,28 +77,33 @@ pub fn init(
     let mut runtime = Runtime {};
 
     //.invoke_export("allocate" env size
-    let env_in_contract = match instance.invoke_export(
-        "allocate",
-        &[RuntimeValue::I32(env.len() as i32)],
-        &mut runtime
-    ).map_err(|_err| EnclaveError::FailedFunctionCall)?{
+    let env_in_contract = match instance
+        .invoke_export(
+            "allocate",
+            &[RuntimeValue::I32(env.len() as i32)],
+            &mut runtime,
+        )
+        .map_err(|_err| EnclaveError::FailedFunctionCall)?
+    {
         Some(ptr) => ptr,
-        None => panic!("TEST") // TODO: return error here
+        None => panic!("TEST"), // TODO: return error here
     };
-    
     // TODO: copy env to that pointer (figure out what wasmi returns and translate that pointer to my memory space)
     // unsafe {
     //     ptr::copy_nonoverlapping(env, &env_in_contract as *mut u8, env.len());
     // }
 
     //.invoke_export("allocate" msg size
-    let msg_in_contract = match instance.invoke_export(
-        "allocate",
-        &[RuntimeValue::I32(msg.len() as i32)],
-        &mut runtime
-    ).map_err(|_err| EnclaveError::FailedFunctionCall)?{
+    let msg_in_contract = match instance
+        .invoke_export(
+            "allocate",
+            &[RuntimeValue::I32(msg.len() as i32)],
+            &mut runtime,
+        )
+        .map_err(|_err| EnclaveError::FailedFunctionCall)?
+    {
         Some(ptr) => ptr,
-        None => panic!("TEST") // TODO: return error here
+        None => panic!("TEST"), // TODO: return error here
     };
     // TODO: copy msg to that pointer  (figure out what wasmi returns and translate that pointer to my memory space)
 
@@ -91,8 +111,11 @@ pub fn init(
     let x = instance
         .invoke_export(
             "init",
-            &[RuntimeValue::I32(env_in_contract), RuntimeValue::I32(msg_in_contract)],
-            &mut runtime
+            &[
+                RuntimeValue::I32(env_in_contract),
+                RuntimeValue::I32(msg_in_contract),
+            ],
+            &mut runtime,
         )
         .map_err(|_err| EnclaveError::FailedFunctionCall)?; // TODO return _err to user
 
@@ -118,7 +141,7 @@ pub fn query(context: Ctx, contract: &[u8], msg: &[u8]) -> Result<QuerySuccess, 
 // --------------------------------
 // Functions to expose to WASM code
 // --------------------------------
-// TODO find better names for "Runtime" and "ResolveAll"
+// TODO find better names for `Runtime` and `ResolveAll`
 
 // ResolveAll maps function name to its function signature and also to function index in Runtime
 // When instansiating a module we give it this resolver
@@ -126,7 +149,7 @@ pub fn query(context: Ctx, contract: &[u8], msg: &[u8]) -> Result<QuerySuccess, 
 struct ResolveAll;
 
 // These functions should be available to invoke from wasm code
-// These should pass the request up to go-cosmwasm: 
+// These should pass the request up to go-cosmwasm:
 // fn read_db(key: *const c_void, value: *mut c_void) -> i32;
 // fn write_db(key: *const c_void, value: *mut c_void);
 // These should be implemented here: + TODO: Check Cosmwasm implementation for these:
