@@ -64,7 +64,7 @@ pub fn init(
 
     // Create new imports resolver.
     // These are the signatures of rust functions available to invoke from wasm code.
-    let imports = ImportsBuilder::new().with_resolver("env", &ResolveAll);
+    let imports = ImportsBuilder::new().with_resolver("env", &EnigmaImportResolver);
 
     // Instantiate a module with our imports and assert that there is no `start` function.
     let not_started_instance =
@@ -141,12 +141,12 @@ pub fn query(context: Ctx, contract: &[u8], msg: &[u8]) -> Result<QuerySuccess, 
 // --------------------------------
 // Functions to expose to WASM code
 // --------------------------------
-// TODO find better names for `Runtime` and `ResolveAll`
+// TODO find better name for `Runtime`
 
-// ResolveAll maps function name to its function signature and also to function index in Runtime
+// EnigmaImportResolver maps function name to its function signature and also to function index in Runtime
 // When instansiating a module we give it this resolver
 // When invoking a function inside the module we can give it different runtimes (which we probably won't do)
-struct ResolveAll;
+struct EnigmaImportResolver;
 
 // These functions should be available to invoke from wasm code
 // These should pass the request up to go-cosmwasm:
@@ -155,7 +155,7 @@ struct ResolveAll;
 // These should be implemented here: + TODO: Check Cosmwasm implementation for these:
 // fn canonicalize_address(human: *const c_void, canonical: *mut c_void) -> i32;
 // fn humanize_address(canonical: *const c_void, human: *mut c_void) -> i32;
-impl ModuleImportResolver for ResolveAll {
+impl ModuleImportResolver for EnigmaImportResolver {
     fn resolve_func(
         &self,
         func_name: &str,
@@ -187,7 +187,7 @@ impl ModuleImportResolver for ResolveAll {
 }
 
 // Runtime maps function index to implementation
-// When instansiating a module we give it the ResolveAll resolver
+// When instansiating a module we give it the EnigmaImportResolver resolver
 // When invoking a function inside the module we give it this runtime which is the acctual functions implementation ()
 struct Runtime;
 
