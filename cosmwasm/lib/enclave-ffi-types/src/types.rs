@@ -26,6 +26,7 @@ pub enum EnclaveError {
     InvalidWasm,
     WasmModuleWithStart,
     WasmModuleWithFP,
+    FailedFunctionCall,
 }
 
 /// This struct is returned from ecall_init.
