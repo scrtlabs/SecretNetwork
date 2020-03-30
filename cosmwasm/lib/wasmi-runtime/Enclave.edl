@@ -5,11 +5,14 @@ enclave {
     from "sgx_tstdc.edl" import *;
     from "sgx_fs.edl" import *;
     
-    // This header is generated during the build of the enclave-ffi-types dependency
+    // This header is generated during the build of enclave-ffi-types
     include "target/headers/enclave-ffi-types.h"
 
     trusted {
-        EnclaveBuffer ecall_allocate([in, count=length] const uint8_t* buffer, uintptr_t length);
+        EnclaveBuffer ecall_allocate(
+            [in, count=length] const uint8_t* buffer,
+            uintptr_t length
+        );
 
         public InitResult ecall_init(
             [in, count=contract_len] const uint8_t* contract,
@@ -38,7 +41,10 @@ enclave {
     };
 
     untrusted {
-        UserSpaceBuffer ocall_allocate([in, count=length] const uint8_t* buffer, uintptr_t length);
+        UserSpaceBuffer ocall_allocate(
+            [in, count=length] const uint8_t* buffer,
+            uintptr_t length
+        );
 
         EnclaveBuffer ocall_read_db(
             uint64_t instance_id,
