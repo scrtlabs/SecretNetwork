@@ -14,8 +14,9 @@ circle-ci = { repository = "confio/cosmwasm", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [workspace]
-members = [ "lib/vm", "lib/sgx-vm" ]
-exclude = [ "contracts", "lib/wasmi-runtime", "lib/enclave-ffi-types"]
+members = [ "lib/sgx-vm" ]
+# lib/vm is kept as legacy for now, as reference to the original implementation.
+exclude = [ "contracts", "lib/vm", "lib/wasmi-runtime", "lib/enclave-ffi-types"]
 
 [dependencies]
 base64 = "0.11.0"
