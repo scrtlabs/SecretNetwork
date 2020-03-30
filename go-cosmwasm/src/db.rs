@@ -1,4 +1,4 @@
-use cosmwasm::traits::{ReadonlyStorage, Storage};
+use cosmwasm_sgx_vm::{ReadonlyStorage, Storage};
 
 use crate::memory::Buffer;
 

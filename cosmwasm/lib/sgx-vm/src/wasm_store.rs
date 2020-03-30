@@ -1,3 +1,6 @@
+//! This module exposes two simple methods, save and load, which just store binary blobs in a requested directory,
+//! with the filename of the blob equaling `hex(sha256(blob))`
+
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::PathBuf;
