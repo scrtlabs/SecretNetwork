@@ -1,17 +1,21 @@
 //! Copied and modified from the `wasmer-runtime-core` crate.
 
 use serde::{Deserialize, Serialize};
-use snafu::Snafu;
 
-#[derive(Debug, Snafu)]
-struct DeserializeError {
-    #[snafu(display("Deserialization error: {}", msg))]
-    pub msg: String,
-}
+#[derive(Debug)]
+pub struct DeserializeError(String);
 
 impl DeserializeError {
     fn new(msg: String) -> Self {
-        Self { msg }
+        Self(msg)
+    }
+}
+
+impl std::error::Error for DeserializeError {}
+
+impl std::fmt::Display for DeserializeError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(formatter, "Deserialization error: {:?}", self.0)
     }
 }
 
@@ -39,11 +43,13 @@ impl WasmHash {
 
     /// Create the hexadecimal representation of the
     /// stored hash.
+    #[allow(dead_code)]
     pub fn encode(self) -> String {
         hex::encode(&self.into_array() as &[u8])
     }
 
     /// Create hash from hexadecimal representation
+    #[allow(dead_code)]
     pub fn decode(hex_str: &str) -> Result<Self> {
         let bytes = hex::decode(hex_str).map_err(|e| {
             DeserializeError::new(format!(

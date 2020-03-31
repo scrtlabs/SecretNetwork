@@ -1,13 +1,16 @@
 //! This module provides safe wrappers for the calls into the enclave running WASMI.
 
-use std::ffi::c_void;
-
+use crate::context::context_from_dyn_storage;
+use crate::Storage;
 use enclave_ffi_types::{Ctx, EnclaveBuffer, EnclaveError};
 
 use crate::errors::Result;
 
 use super::imports;
-use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
+use super::results::{
+    handle_result_to_result_handlesuccess, init_result_to_result_initsuccess,
+    query_result_to_result_querysuccess, HandleSuccess, InitSuccess, QuerySuccess,
+};
 
 /// This is a safe wrapper for allocating buffers inside the enclave.
 pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> EnclaveBuffer {
@@ -18,27 +21,54 @@ pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> EnclaveBuffer {
 
 pub struct Module {
     bytecode: Vec<u8>,
-    context: Ctx,
-    context_drop: fn(*mut c_void),
+    storage: Option<Box<Box<dyn Storage>>>,
     gas_limit: u64,
 }
 
 impl Module {
-    pub fn new(bytecode: Vec<u8>, storage: (*mut c_void, fn(*mut c_void)), gas_limit: u64) -> Self {
+    pub fn new(bytecode: Vec<u8>, gas_limit: u64) -> Self {
         // TODO add validation of this bytecode?
-        let context = Ctx { data: storage.0 };
         Self {
             bytecode,
-            context,
-            context_drop: storage.1,
+            storage: None,
             gas_limit,
         }
     }
 
-    pub fn init(&self, env: &[u8], msg: &[u8]) -> Result<InitSuccess, EnclaveError> {
+    pub fn storage_mut(&mut self) -> &mut dyn Storage {
+        self.storage
+            .as_mut()
+            .expect("This method should only be called when we have a configured storage")
+            .as_mut()
+            .as_mut()
+    }
+
+    pub fn set_storage(&mut self, storage: Box<dyn Storage>) {
+        self.storage.replace(Box::new(storage));
+    }
+
+    pub fn take_storage(&mut self) -> Option<Box<dyn Storage>> {
+        // unbox one layer to return the storage trait-item inside
+        self.storage.take().map(|boxed| *boxed)
+    }
+
+    fn context(&mut self) -> Ctx {
+        context_from_dyn_storage(
+            &mut self
+                .storage
+                .as_mut()
+                .expect("This method should only be called when we have a configured storage"),
+        )
+    }
+
+    pub fn gas_limit(&self) -> u64 {
+        self.gas_limit
+    }
+
+    pub fn init(&mut self, env: &[u8], msg: &[u8]) -> Result<InitSuccess, EnclaveError> {
         let init_result = unsafe {
             imports::ecall_init(
-                self.context,
+                self.context(),
                 self.bytecode.as_ptr(),
                 self.bytecode.len(),
                 env.as_ptr(),
@@ -47,13 +77,16 @@ impl Module {
                 msg.len(),
             )
         };
-        init_result.into()
+        init_result_to_result_initsuccess(init_result).map(|success| {
+            self.gas_limit -= success.used_gas();
+            success
+        })
     }
 
-    pub fn handle(&self, env: &[u8], msg: &[u8]) -> Result<HandleSuccess, EnclaveError> {
+    pub fn handle(&mut self, env: &[u8], msg: &[u8]) -> Result<HandleSuccess, EnclaveError> {
         let handle_result = unsafe {
             imports::ecall_handle(
-                self.context,
+                self.context(),
                 self.bytecode.as_ptr(),
                 self.bytecode.len(),
                 env.as_ptr(),
@@ -62,25 +95,25 @@ impl Module {
                 msg.len(),
             )
         };
-        handle_result.into()
+        handle_result_to_result_handlesuccess(handle_result).map(|success| {
+            self.gas_limit -= success.used_gas();
+            success
+        })
     }
 
-    pub fn query(&self, msg: &[u8]) -> Result<QuerySuccess, EnclaveError> {
+    pub fn query(&mut self, msg: &[u8]) -> Result<QuerySuccess, EnclaveError> {
         let query_result = unsafe {
             imports::ecall_query(
-                self.context,
+                self.context(),
                 self.bytecode.as_ptr(),
                 self.bytecode.len(),
                 msg.as_ptr(),
                 msg.len(),
             )
         };
-        query_result.into()
-    }
-}
-
-impl std::ops::Drop for Module {
-    fn drop(&mut self) {
-        self.context_drop(self.context.data);
+        query_result_to_result_querysuccess(query_result).map(|success| {
+            self.gas_limit -= success.used_gas();
+            success
+        })
     }
 }

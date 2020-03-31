@@ -14,7 +14,6 @@ pub struct EnclaveBuffer {
 
 /// This struct holds a pointer to memory in userspace, that contains the storage
 #[repr(C)]
-#[derive(Clone, Copy)]
 pub struct Ctx {
     pub data: *mut c_void,
 }
@@ -22,11 +21,18 @@ pub struct Ctx {
 /// This type represents the possible error conditions that can be encountered in the enclave
 /// cbindgen:prefix-with-name
 #[repr(C)]
+#[derive(Debug)]
 pub enum EnclaveError {
     InvalidWasm,
     WasmModuleWithStart,
     WasmModuleWithFP,
     FailedFunctionCall,
+}
+
+impl core::fmt::Display for EnclaveError {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(formatter, "{:?}", self)
+    }
 }
 
 /// This struct is returned from ecall_init.

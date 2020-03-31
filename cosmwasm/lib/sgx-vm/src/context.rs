@@ -1,24 +1,29 @@
 /**
 Internal details to be used by instance.rs only
 **/
-use std::convert::TryInto;
+// use std::convert::TryInto;
 use std::ffi::c_void;
-use std::mem;
+// use std::mem;
 
-use wasmer_runtime_core::vm::Ctx;
+// use wasmer_runtime_core::vm::Ctx;
 
-use cosmwasm::traits::{Api, Storage};
+// use cosmwasm::traits::{Api, Storage};
 
-use crate::errors::Error;
-use crate::memory::{read_region, write_region};
-use cosmwasm::encoding::Binary;
-use cosmwasm::types::{CanonicalAddr, HumanAddr};
+use crate::Storage;
+// use crate::errors::Error;
+// use crate::memory::{read_region, write_region};
+// use cosmwasm::encoding::Binary;
+// use cosmwasm::types::{CanonicalAddr, HumanAddr};
+use enclave_ffi_types::Ctx;
 
+/*
 /// An unknown error occurred when writing to region
 static ERROR_WRITE_TO_REGION_UNKNONW: i32 = -1000001;
 /// Could not write to region because it is too small
 static ERROR_WRITE_TO_REGION_TOO_SMALL: i32 = -1000002;
+*/
 
+/*
 pub fn do_read<T: Storage>(ctx: &Ctx, key_ptr: u32, value_ptr: u32) -> i32 {
     let key = read_region(ctx, key_ptr);
     let mut value: Option<Vec<u8>> = None;
@@ -123,4 +128,26 @@ pub fn leave_storage<S: Storage>(ctx: &Ctx, storage: Option<S>) {
     let _ = b.data.take();
     b.data = storage;
     mem::forget(b); // we do this to avoid cleanup
+}
+*/
+
+/// This function takes a `Box<Box<dyn Storage>>` because `Box<dyn Storage>` is a trait item. This means it
+/// holds the pointer to the real value and a vtable pointer, both inline.
+/// Instead, we ask that users move the trait item to the Heap (the second `Box`), and we then return a pointer
+/// to that heap location inside of the `Ctx` instance.
+pub fn context_from_dyn_storage(storage: &mut Box<Box<dyn Storage>>) -> Ctx {
+    let storage: &mut Box<dyn Storage> = &mut *storage;
+    Ctx {
+        data: storage as *mut Box<dyn Storage> as *mut c_void,
+    }
+}
+
+/// Using the context, dereference it all the way to the underlying storage, and call the function with a
+/// reference to it. This function panics if the type of expected storage differs from the type of storage
+/// behind the trait item.
+pub fn with_storage_from_context<F: FnMut(&mut dyn Storage)>(ctx: &mut Ctx, mut func: F) {
+    // First convert the pointer to the type we saved it as in the `context_from_dyn_storage` function.
+    let storage: &mut Box<dyn Storage> = unsafe { &mut *(ctx.data as *mut Box<dyn Storage>) };
+
+    func(&mut **storage);
 }

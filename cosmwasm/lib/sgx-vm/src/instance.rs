@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
-use snafu::ResultExt;
+// use snafu::ResultExt;
+/*
 pub use wasmer_runtime_core::typed_func::Func;
 use wasmer_runtime_core::{
     imports,
@@ -8,19 +9,24 @@ use wasmer_runtime_core::{
     typed_func::{Wasm, WasmTypeList},
     vm::Ctx,
 };
+*/
 
-use cosmwasm::traits::{Api, Extern, Storage};
+use cosmwasm::traits::Api;
 
-use crate::backends::{compile, get_gas, set_gas};
-use crate::context::{
-    do_canonical_address, do_human_address, do_read, do_write, leave_storage, setup_context,
-    take_storage, with_storage_from_context,
-};
-use crate::errors::{ResolveErr, Result, RuntimeErr, WasmerErr};
-use crate::memory::{read_region, write_region};
+use crate::{Extern, Storage};
+// use crate::backends::{compile, get_gas, set_gas};
+// use crate::context::{
+//     do_canonical_address, do_human_address, do_read, do_write, leave_storage, setup_context,
+//     take_storage, with_storage_from_context,
+// };
+use crate::errors::{Error, Result};
+// use crate::memory::{read_region, write_region};
 
+use crate::wasmi::Module;
+
+/// An instance is a combination of wasm code, storage, and gas limit.
 pub struct Instance<S: Storage + 'static, A: Api + 'static> {
-    wasmer_instance: wasmer_runtime_core::instance::Instance,
+    enclave_instance: Module,
     pub api: A,
     // This does not store data but only fixes type information
     type_storage: PhantomData<S>,
@@ -32,10 +38,11 @@ where
     A: Api + 'static,
 {
     pub fn from_code(code: &[u8], deps: Extern<S, A>, gas_limit: u64) -> Result<Self> {
-        let module = compile(code)?;
-        Instance::from_module(&module, deps, gas_limit)
+        let module = Module::new(code.to_vec(), gas_limit);
+        Ok(Instance::from_wasmer(module, deps, gas_limit))
     }
 
+    /*
     pub fn from_module(module: &Module, deps: Extern<S, A>, gas_limit: u64) -> Result<Self> {
         // copy this so it can be moved into the closures, without pulling in deps
         let api = deps.api;
@@ -74,16 +81,16 @@ where
         let wasmer_instance = module.instantiate(&import_obj).context(WasmerErr {})?;
         Ok(Instance::from_wasmer(wasmer_instance, deps, gas_limit))
     }
+    */
 
     pub fn from_wasmer(
-        mut wasmer_instance: wasmer_runtime_core::Instance,
+        mut module: Module,
         deps: Extern<S, A>,
-        gas_limit: u64,
+        _gas_limit: u64, // gas_limit parameter left here for code compatibility with original library.
     ) -> Self {
-        set_gas(&mut wasmer_instance, gas_limit);
-        leave_storage(wasmer_instance.context(), Some(deps.storage));
+        module.set_storage(Box::new(deps.storage) as Box<dyn Storage>);
         Instance {
-            wasmer_instance: wasmer_instance,
+            enclave_instance: module,
             api: deps.api,
             type_storage: PhantomData::<S> {},
         }
@@ -91,26 +98,63 @@ where
 
     /// Takes ownership of instance and decomposes it into its components.
     /// The components we want to preserve are returned, the rest is dropped.
-    pub fn recycle(instance: Self) -> (wasmer_runtime_core::Instance, Option<Extern<S, A>>) {
-        let ext = if let Some(storage) = take_storage(instance.wasmer_instance.context()) {
+    pub fn recycle(mut instance: Self) -> (Module, Option<Extern<S, A>>) {
+        let ext = if let Some(storage) = instance.enclave_instance.take_storage() {
+            let storage = *storage
+                .downcast::<S>()
+                .ok()
+                .expect("We only ever provide storage of type S");
             Some(Extern {
-                storage: storage,
+                storage,
                 api: instance.api,
             })
         } else {
             None
         };
-        (instance.wasmer_instance, ext)
+        (instance.enclave_instance, ext)
     }
 
     pub fn get_gas(&self) -> u64 {
-        get_gas(&self.wasmer_instance)
+        self.enclave_instance.gas_limit()
     }
 
-    pub fn with_storage<F: FnMut(&mut S)>(&self, func: F) {
-        with_storage_from_context(self.wasmer_instance.context(), func)
+    pub fn with_storage<F: FnMut(&mut S)>(&mut self, mut func: F) {
+        func(
+            self.enclave_instance
+                .storage_mut()
+                .downcast_mut::<S>()
+                .expect("We only ever provide storage of type S"),
+        );
     }
 
+    pub fn call_init(&mut self, env: &[u8], msg: &[u8]) -> Result<Vec<u8>, Error> {
+        let init_result = self
+            .enclave_instance
+            .init(env, msg)
+            .map_err(|err| Error::EnclaveErr { inner: err })?;
+        // TODO verify signature
+        Ok(init_result.into_output())
+    }
+
+    pub fn call_handle(&mut self, env: &[u8], msg: &[u8]) -> Result<Vec<u8>, Error> {
+        let init_result = self
+            .enclave_instance
+            .handle(env, msg)
+            .map_err(|err| Error::EnclaveErr { inner: err })?;
+        // TODO verify signature
+        Ok(init_result.into_output())
+    }
+
+    pub fn call_query(&mut self, msg: &[u8]) -> Result<Vec<u8>, Error> {
+        let init_result = self
+            .enclave_instance
+            .query(msg)
+            .map_err(|err| Error::EnclaveErr { inner: err })?;
+        // TODO verify signature
+        Ok(init_result.into_output())
+    }
+
+    /*
     pub fn memory(&self, ptr: u32) -> Vec<u8> {
         read_region(self.wasmer_instance.context(), ptr)
     }
@@ -140,6 +184,7 @@ where
     {
         self.wasmer_instance.func(name).context(ResolveErr {})
     }
+    */
 }
 
 #[cfg(test)]

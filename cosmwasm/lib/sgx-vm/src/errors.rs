@@ -2,8 +2,8 @@ use std::fmt::Debug;
 use std::io;
 
 use snafu::Snafu;
-use wasmer_runtime_core::cache::Error as CacheError;
-use wasmer_runtime_core::error as core_error;
+// use wasmer_runtime_core::cache::Error as CacheError;
+// use wasmer_runtime_core::error as core_error;
 
 #[derive(Debug, Snafu)]
 #[snafu(visibility = "pub")]
@@ -14,12 +14,14 @@ pub enum Error {
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
+    /*
     #[snafu(display("Compiling wasm: {}", source))]
     CompileErr {
         source: core_error::CompileError,
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
+    */
     #[snafu(display("Filesystem error: {}", source))]
     IoErr {
         source: io::Error,
@@ -43,6 +45,7 @@ pub enum Error {
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
+    /*
     #[snafu(display("Resolving wasm function: {}", source))]
     ResolveErr {
         source: core_error::ResolveError,
@@ -55,6 +58,7 @@ pub enum Error {
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
+    */
     #[snafu(display("Region too small. Got {}, required {}", size, required))]
     RegionTooSmallErr {
         size: usize,
@@ -68,16 +72,23 @@ pub enum Error {
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
+    /*
     #[snafu(display("Wasmer error: {}", source))]
     WasmerErr {
         source: core_error::Error,
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
+    */
+    #[snafu(display("Enclave error: {}", inner))]
+    EnclaveErr {
+        inner: enclave_ffi_types::EnclaveError,
+    },
 }
 
 pub type Result<T, E = Error> = core::result::Result<T, E>;
 
+/*
 pub trait CacheExt<T: Debug> {
     fn convert_cache(self) -> Result<T>;
 }
@@ -92,3 +103,4 @@ impl<T: Debug> CacheExt<T> for Result<T, CacheError> {
         })
     }
 }
+*/
