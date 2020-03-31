@@ -13,3 +13,4 @@ crate-type = ["staticlib"]
 enclave-ffi-types = { path = "../enclave-ffi-types" }
 wasmi = { git = "https://github.com/reuvenpo/wasmi", branch = "make-libc-optional", default-features = false, features = ["core"] }
 sp-wasm-interface = { version = "2.0.0-alpha.5", default-features = false }
+sc-executor-wasmi = "0.8.0-alpha.5"
