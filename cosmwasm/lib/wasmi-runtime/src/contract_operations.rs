@@ -1,4 +1,3 @@
-
 use enclave_ffi_types::{Ctx, EnclaveError, UserSpaceBuffer};
 
 use super::imports;
@@ -126,8 +125,7 @@ pub fn handle(
 
 pub fn query(context: Ctx, contract: &[u8], msg: &[u8]) -> Result<QuerySuccess, EnclaveError> {
     todo!()
-    // init wasmi
-    // no access to write_db
+    // init wasmi - maybe the same as init for now except env?
 }
 
 // --------------------------------
