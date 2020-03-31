@@ -15,7 +15,6 @@ use wasmi::{
     ValueType,
 };
 
-extern crate sp_wasm_interface;
 use sp_wasm_interface::Pointer;
 
 /// Safe wrapper around reads from the contract storage
