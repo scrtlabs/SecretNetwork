@@ -1,4 +1,3 @@
-use std::prelude::v1::*;
 
 use enclave_ffi_types::{EnclaveError, HandleResult, InitResult, QueryResult};
 
