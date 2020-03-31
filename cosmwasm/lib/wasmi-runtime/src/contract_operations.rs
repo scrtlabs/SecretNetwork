@@ -1,5 +1,3 @@
-use std::format;
-use std::prelude::v1::*;
 
 use enclave_ffi_types::{Ctx, EnclaveError, UserSpaceBuffer};
 
@@ -10,8 +8,6 @@ use crate::exports;
 use std::io::{self, Write};
 use std::ptr;
 use std::slice;
-use std::string::String;
-use std::vec::Vec;
 
 extern crate wasmi;
 use wasmi::{
@@ -19,6 +15,9 @@ use wasmi::{
     ModuleImportResolver, ModuleInstance, ModuleRef, RuntimeArgs, RuntimeValue, Signature, Trap,
     ValueType,
 };
+
+extern crate sp_wasm_interface;
+use sp_wasm_interface::Pointer;
 
 /// Safe wrapper around reads from the contract storage
 fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
