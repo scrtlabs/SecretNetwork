@@ -26,3 +26,6 @@ $(Rust_Enclave_Name): $(Rust_Enclave_Files)
 	RUST_TARGET_PATH=$(Rust_Target_Path) xargo build --target x86_64-unknown-linux-sgx --release
 	mkdir -p ../lib
 	cp ./target/x86_64-unknown-linux-sgx/release/libwasmi_runtime_enclave.a ../lib/libenclave.a
+
+clean:
+	xargo clean

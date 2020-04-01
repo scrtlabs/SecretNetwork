@@ -4,7 +4,6 @@ use super::imports;
 use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::exports;
 
-use std::io::{self, Write};
 use std::ptr;
 use std::slice;
 
@@ -19,6 +18,8 @@ use sp_wasm_interface::Pointer;
 
 /// Safe wrapper around reads from the contract storage
 fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
+    let _ = std::slice::from_raw_parts::<u8>;
+
     unsafe { exports::recover_buffer(imports::ocall_read_db(context, key.as_ptr(), key.len())) }
 }
 
