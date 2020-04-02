@@ -4,12 +4,9 @@ use super::imports;
 use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::exports;
 
+use wasmi::{ImportsBuilder, ModuleInstance};
 
-use wasmi::{
-    ImportsBuilder, ModuleInstance
-};
-
-use crate::runtime::{EnigmaImportResolver, Runtime, Engine};
+use crate::runtime::{Engine, EnigmaImportResolver, Runtime};
 
 /// Safe wrapper around reads from the contract storage
 fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
@@ -52,17 +49,26 @@ pub fn init(
 ) -> Result<InitSuccess, EnclaveError> {
     let mut engine = start_engine(contract)?;
 
-    let env_ptr = engine.write_to_memory(env).map_err(|_err| EnclaveError::FailedFunctionCall)?;
-    let msg_ptr = engine.write_to_memory(msg).map_err(|_err| EnclaveError::FailedFunctionCall)?;
+    let env_ptr = engine
+        .write_to_memory(env)
+        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
 
-    //.invoke_export("init" with both pointers that we got from allocate
-    let vec_ptr = engine.init(env_ptr, msg_ptr).map_err(|_err| EnclaveError::FailedFunctionCall)?;
+    let msg_ptr = engine
+        .write_to_memory(msg)
+        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
 
-    let output = engine.extract_vector(vec_ptr).map_err(|_err| EnclaveError::FailedFunctionCall)?;
-    Ok(InitSuccess{
+    let vec_ptr = engine
+        .init(env_ptr, msg_ptr)
+        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+
+    let output = engine
+        .extract_vector(vec_ptr)
+        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+
+    Ok(InitSuccess {
         output,
-        used_gas: 0,
-        signature: [0; 65],
+        used_gas: 0,        // TODO gas
+        signature: [0; 65], // TODO enclave sign
     })
 }
 
@@ -72,13 +78,51 @@ pub fn handle(
     env: &[u8],
     msg: &[u8],
 ) -> Result<HandleSuccess, EnclaveError> {
-    todo!()
-    // init wasmi - maybe the same as init for now?
+    let mut engine = start_engine(contract)?;
+
+    let env_ptr = engine
+        .write_to_memory(env)
+        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+
+    let msg_ptr = engine
+        .write_to_memory(msg)
+        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+
+    let vec_ptr = engine
+        .handle(env_ptr, msg_ptr)
+        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+
+    let output = engine
+        .extract_vector(vec_ptr)
+        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+
+    Ok(HandleSuccess {
+        output,
+        used_gas: 0,        // TODO gas
+        signature: [0; 65], // enclave sign
+    })
 }
 
 pub fn query(context: Ctx, contract: &[u8], msg: &[u8]) -> Result<QuerySuccess, EnclaveError> {
-    todo!()
-    // init wasmi - maybe the same as init for now except env?
+    let mut engine = start_engine(contract)?;
+
+    let msg_ptr = engine
+        .write_to_memory(msg)
+        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+
+    let vec_ptr = engine
+        .query(msg_ptr)
+        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+
+    let output = engine
+        .extract_vector(vec_ptr)
+        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+
+    Ok(QuerySuccess {
+        output,
+        used_gas: 0,        // TODO gas
+        signature: [0; 65], // enclave sign
+    })
 }
 
 fn start_engine(contract: &[u8]) -> Result<Engine, EnclaveError> {
@@ -87,14 +131,16 @@ fn start_engine(contract: &[u8]) -> Result<Engine, EnclaveError> {
 
     // Create new imports resolver.
     // These are the signatures of rust functions available to invoke from wasm code.
-    let imports = EnigmaImportResolver::with_limit(4 * 1024 * 1024 * 1024); // 4GiB
+    // We want to limit to 4GiB of memory. `with_limit` accepts number of memory pages.
+    // 1 memory page is 64KiB, therefore 4GiB/64KiB == num of pages == 64*1024
+    let imports = EnigmaImportResolver::with_limit(64 * 1024);
     let module_imports = ImportsBuilder::new().with_resolver("env", &imports);
 
     // Instantiate a module with our imports and assert that there is no `start` function.
     let instance =
         ModuleInstance::new(&module, &module_imports).map_err(|_err| EnclaveError::InvalidWasm)?;
     if instance.has_start() {
-        return Err(EnclaveError::WasmModuleWithStart)
+        return Err(EnclaveError::WasmModuleWithStart);
     }
     let instance = instance.not_started_instance().clone();
     let runtime = Runtime;
