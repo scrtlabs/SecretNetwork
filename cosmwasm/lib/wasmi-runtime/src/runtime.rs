@@ -200,7 +200,38 @@ impl Engine {
         )? {
             Some(RuntimeValue::I32(offset)) => Ok(offset as u32),
             other => Err(InterpreterError::Value(format!(
-                "allocate method returned value which wasn't u32: {:?}",
+                "init method returned value which wasn't u32: {:?}",
+                other
+            ))),
+        }
+    }
+
+    pub fn handle(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, InterpreterError> {
+        match self.instance.invoke_export(
+            "handle",
+            &[
+                RuntimeValue::I32(env_ptr as i32),
+                RuntimeValue::I32(msg_ptr as i32),
+            ],
+            &mut self.runtime,
+        )? {
+            Some(RuntimeValue::I32(offset)) => Ok(offset as u32),
+            other => Err(InterpreterError::Value(format!(
+                "handle method returned value which wasn't u32: {:?}",
+                other
+            ))),
+        }
+    }
+
+    pub fn query(&mut self, msg_ptr: u32) -> Result<u32, InterpreterError> {
+        match self.instance.invoke_export(
+            "query",
+            &[RuntimeValue::I32(msg_ptr as i32)],
+            &mut self.runtime,
+        )? {
+            Some(RuntimeValue::I32(offset)) => Ok(offset as u32),
+            other => Err(InterpreterError::Value(format!(
+                "query method returned value which wasn't u32: {:?}",
                 other
             ))),
         }
