@@ -10,6 +10,7 @@ name = "wasmi_runtime_enclave"
 crate-type = ["staticlib"]
 
 [dependencies]
+cosmwasm = { path = "../.."}
 enclave-ffi-types = { path = "../enclave-ffi-types" }
 wasmi = { git = "https://github.com/paritytech/wasmi", rev = "39a18a433a765a36383d34d4edd536ba1e0664d2", default-features = false, features = ["core"] }
 # sp-wasm-interface = { version = "2.0.0-alpha.5", default-features = false }
