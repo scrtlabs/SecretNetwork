@@ -235,6 +235,8 @@ dependencies = [
  "schemars",
  "serde",
  "serde-json-wasm",
+ "sgx_types",
+ "sgx_urts",
  "sha2",
  "snafu",
  "tempfile",
@@ -582,6 +584,20 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "sgx_types"
+version = "1.1.0"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
+
+[[package]]
+name = "sgx_urts"
+version = "1.1.0"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
+dependencies = [
+ "libc",
+ "sgx_types",
 ]
 
 [[package]]

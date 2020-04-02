@@ -3,8 +3,9 @@
 use crate::context::context_from_dyn_storage;
 use crate::Storage;
 use enclave_ffi_types::{Ctx, EnclaveBuffer, EnclaveError};
+use sgx_urts::SgxEnclave;
 
-use crate::errors::Result;
+use crate::errors::{Error, Result};
 
 use super::imports;
 use super::results::{
@@ -26,7 +27,7 @@ pub struct Module {
 }
 
 impl Module {
-    pub fn new(bytecode: Vec<u8>, gas_limit: u64) -> Self {
+    pub fn new(bytecode: Vec<u8>, gas_limit: u64, enclave: SgxEnclave) -> Self {
         // TODO add validation of this bytecode?
         Self {
             bytecode,
@@ -65,7 +66,7 @@ impl Module {
         self.gas_limit
     }
 
-    pub fn init(&mut self, env: &[u8], msg: &[u8]) -> Result<InitSuccess, EnclaveError> {
+    pub fn init(&mut self, env: &[u8], msg: &[u8]) -> Result<InitSuccess> {
         let init_result = unsafe {
             imports::ecall_init(
                 self.context(),
@@ -77,13 +78,15 @@ impl Module {
                 msg.len(),
             )
         };
-        init_result_to_result_initsuccess(init_result).map(|success| {
-            self.gas_limit -= success.used_gas();
-            success
-        })
+        init_result_to_result_initsuccess(init_result)
+            .map(|success| {
+                self.gas_limit -= success.used_gas();
+                success
+            })
+            .map_err(|err| Error::EnclaveErr { inner: err })
     }
 
-    pub fn handle(&mut self, env: &[u8], msg: &[u8]) -> Result<HandleSuccess, EnclaveError> {
+    pub fn handle(&mut self, env: &[u8], msg: &[u8]) -> Result<HandleSuccess> {
         let handle_result = unsafe {
             imports::ecall_handle(
                 self.context(),
@@ -95,13 +98,15 @@ impl Module {
                 msg.len(),
             )
         };
-        handle_result_to_result_handlesuccess(handle_result).map(|success| {
-            self.gas_limit -= success.used_gas();
-            success
-        })
+        handle_result_to_result_handlesuccess(handle_result)
+            .map(|success| {
+                self.gas_limit -= success.used_gas();
+                success
+            })
+            .map_err(|err| Error::EnclaveErr { inner: err })
     }
 
-    pub fn query(&mut self, msg: &[u8]) -> Result<QuerySuccess, EnclaveError> {
+    pub fn query(&mut self, msg: &[u8]) -> Result<QuerySuccess> {
         let query_result = unsafe {
             imports::ecall_query(
                 self.context(),
@@ -111,9 +116,11 @@ impl Module {
                 msg.len(),
             )
         };
-        query_result_to_result_querysuccess(query_result).map(|success| {
-            self.gas_limit -= success.used_gas();
-            success
-        })
+        query_result_to_result_querysuccess(query_result)
+            .map(|success| {
+                self.gas_limit -= success.used_gas();
+                success
+            })
+            .map_err(|err| Error::EnclaveErr { inner: err })
     }
 }

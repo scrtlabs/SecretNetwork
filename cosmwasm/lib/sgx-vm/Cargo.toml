@@ -26,6 +26,8 @@ parity-wasm = "0.41"
 blake3 = "0.1.0"
 downcast-rs = "1"
 enclave-ffi-types = { path = "../enclave-ffi-types" }
+sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.0" }
+sgx_urts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.0" }
 
 [dev-dependencies]
 tempfile = "3.1.0"

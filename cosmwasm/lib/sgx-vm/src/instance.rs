@@ -24,6 +24,9 @@ use crate::errors::{Error, Result};
 
 use crate::wasmi::Module;
 
+use sgx_types::{sgx_launch_token_t, sgx_misc_attribute_t};
+use sgx_urts::SgxEnclave;
+
 /// An instance is a combination of wasm code, storage, and gas limit.
 pub struct Instance<S: Storage + 'static, A: Api + 'static> {
     enclave_instance: Module,
@@ -32,13 +35,35 @@ pub struct Instance<S: Storage + 'static, A: Api + 'static> {
     type_storage: PhantomData<S>,
 }
 
+fn init_enclave() -> SgxResult<SgxEnclave> {
+    let mut launch_token: sgx_launch_token_t = [0; 1024];
+    let mut launch_token_updated: i32 = 0;
+    // call sgx_create_enclave to initialize an enclave instance
+    // Debug Support: set 2nd parameter to 1
+    let debug = 1;
+    let mut misc_attr = sgx_misc_attribute_t {
+        secs_attr: sgx_attributes_t { flags: 0, xfrm: 0 },
+        misc_select: 0,
+    };
+    SgxEnclave::create(
+        ENCLAVE_FILE,
+        debug,
+        &mut launch_token,
+        &mut launch_token_updated,
+        &mut misc_attr,
+    )
+}
+
 impl<S, A> Instance<S, A>
 where
     S: Storage + 'static,
     A: Api + 'static,
 {
     pub fn from_code(code: &[u8], deps: Extern<S, A>, gas_limit: u64) -> Result<Self> {
-        let module = Module::new(code.to_vec(), gas_limit);
+        let enclave = init_enclave().map_err(|err| Error::SdkErr { inner: err })?;
+
+        let module = Module::new(code.to_vec(), gas_limit, enclave);
+
         Ok(Instance::from_wasmer(module, deps, gas_limit))
     }
 
@@ -128,28 +153,19 @@ where
     }
 
     pub fn call_init(&mut self, env: &[u8], msg: &[u8]) -> Result<Vec<u8>, Error> {
-        let init_result = self
-            .enclave_instance
-            .init(env, msg)
-            .map_err(|err| Error::EnclaveErr { inner: err })?;
+        let init_result = self.enclave_instance.init(env, msg)?;
         // TODO verify signature
         Ok(init_result.into_output())
     }
 
     pub fn call_handle(&mut self, env: &[u8], msg: &[u8]) -> Result<Vec<u8>, Error> {
-        let init_result = self
-            .enclave_instance
-            .handle(env, msg)
-            .map_err(|err| Error::EnclaveErr { inner: err })?;
+        let init_result = self.enclave_instance.handle(env, msg)?;
         // TODO verify signature
         Ok(init_result.into_output())
     }
 
     pub fn call_query(&mut self, msg: &[u8]) -> Result<Vec<u8>, Error> {
-        let init_result = self
-            .enclave_instance
-            .query(msg)
-            .map_err(|err| Error::EnclaveErr { inner: err })?;
+        let init_result = self.enclave_instance.query(msg)?;
         // TODO verify signature
         Ok(init_result.into_output())
     }

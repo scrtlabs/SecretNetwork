@@ -1,6 +1,8 @@
 use std::fmt::Debug;
 use std::io;
 
+use sgx_types::sgx_status_t;
+
 use snafu::Snafu;
 // use wasmer_runtime_core::cache::Error as CacheError;
 // use wasmer_runtime_core::error as core_error;
@@ -84,6 +86,8 @@ pub enum Error {
     EnclaveErr {
         inner: enclave_ffi_types::EnclaveError,
     },
+    #[snafu(display("SDK error: {}", inner))]
+    SdkErr { inner: sgx_status_t },
 }
 
 pub type Result<T, E = Error> = core::result::Result<T, E>;
