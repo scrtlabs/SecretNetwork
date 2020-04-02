@@ -76,7 +76,7 @@ pub fn init(
     let mut runtime = Runtime {};
 
     // Allocate memory inside WASM VM to house the `env` buffer
-    let env_in_contract = match instance
+    let env_offset_in_instance_memory = match instance
         .invoke_export(
             "allocate",
             &[RuntimeValue::I32(env.len() as i32)],
@@ -84,16 +84,17 @@ pub fn init(
         )
         .map_err(|_err| EnclaveError::FailedFunctionCall)?
     {
-        Some(ptr) => ptr,
-        None => panic!("TEST"), // TODO: return error here
+        Some(RuntimeValue::I32(env_offset_in_instance_memory)) => env_offset_in_instance_memory,
+        _ => panic!("TEST"), // TODO: return error here
     };
-    // TODO: copy env to that pointer (figure out what wasmi returns and translate that pointer to my memory space)
-    // unsafe {
-    //     ptr::copy_nonoverlapping(env, &env_in_contract as *mut u8, env.len());
-    // }
+
+    let instance_memory_ref = enigma_import_resolver.memory_ref();
+    instance_memory_ref
+        .set(env_offset_in_instance_memory as u32, env)
+        .expect("Error copying `env` into the memory region allocated for it by the WASM VM");
 
     // Allocate memory inside WASM VM to house the `msg` buffer
-    let msg_in_contract = match instance
+    let msg_offset_in_instance_memory = match instance
         .invoke_export(
             "allocate",
             &[RuntimeValue::I32(msg.len() as i32)],
@@ -101,14 +102,24 @@ pub fn init(
         )
         .map_err(|_err| EnclaveError::FailedFunctionCall)?
     {
-        Some(ptr) => ptr,
-        None => panic!("TEST"), // TODO: return error here
+        Some(RuntimeValue::I32(msg_offset_in_instance_memory)) => msg_offset_in_instance_memory,
+        _ => panic!("TEST"), // TODO: return error here
     };
-    // TODO: copy msg to that pointer  (figure out what wasmi returns and translate that pointer to my memory space)
+
+    instance_memory_ref
+        .set(msg_offset_in_instance_memory as u32, msg)
+        .expect("Error copying `msg` into the memory region allocated for it by the WASM VM");
 
     //.invoke_export("init" with both pointers that we got from allocate
     let x = instance
-        .invoke_export("init", &[env_in_contract, msg_in_contract], &mut runtime)
+        .invoke_export(
+            "init",
+            &[
+                RuntimeValue::I32(env_offset_in_instance_memory),
+                RuntimeValue::I32(msg_offset_in_instance_memory),
+            ],
+            &mut runtime,
+        )
         .map_err(|_err| EnclaveError::FailedFunctionCall)?; // TODO return _err to user
 
     todo!()
