@@ -2,9 +2,9 @@ use std::borrow::ToOwned;
 use std::cell::RefCell;
 
 use wasmi::{
-    memory_units, Error as InterpreterError, Externals, FuncInstance, FuncRef,
-    MemoryDescriptor, MemoryInstance, MemoryRef, ModuleImportResolver, RuntimeArgs,
-    RuntimeValue, Signature, Trap, ValueType, ModuleRef,
+    memory_units, Error as InterpreterError, Externals, FuncInstance, FuncRef, MemoryDescriptor,
+    MemoryInstance, MemoryRef, ModuleImportResolver, ModuleRef, RuntimeArgs, RuntimeValue,
+    Signature, Trap, ValueType,
 };
 
 // --------------------------------
@@ -31,7 +31,7 @@ impl EnigmaImportResolver {
                     memory_units::Pages(0),
                     Some(memory_units::Pages(max_memory as usize)),
                 )
-                    .expect("Reuven to fix this"),
+                .expect("Reuven to fix this"),
             ),
         }
     }
@@ -150,19 +150,24 @@ pub struct Engine {
 
 impl Engine {
     pub fn new(runtime: Runtime, instance: ModuleRef, imports: EnigmaImportResolver) -> Self {
-        Self { runtime, instance, imports }
+        Self {
+            runtime,
+            instance,
+            imports,
+        }
     }
 
     pub fn allocate(&mut self, len: u32) -> Result<u32, InterpreterError> {
-        match self.instance
-            .invoke_export(
-                "allocate",
-                &[RuntimeValue::I32(len as i32)],
-                &mut self.runtime,
-            )?
-        {
+        match self.instance.invoke_export(
+            "allocate",
+            &[RuntimeValue::I32(len as i32)],
+            &mut self.runtime,
+        )? {
             Some(RuntimeValue::I32(offset)) => Ok(offset as u32),
-            other => Err(InterpreterError::Value(format!("allocate method returned value which wasn't u32: {:?}", other))),
+            other => Err(InterpreterError::Value(format!(
+                "allocate method returned value which wasn't u32: {:?}",
+                other
+            ))),
         }
     }
 
@@ -179,25 +184,25 @@ impl Engine {
     pub fn extract_vector(&self, vec_ptr: u32) -> Result<Vec<u8>, InterpreterError> {
         let memory = self.memory();
         let ptr: u32 = memory.get_value(vec_ptr)?;
-        let len: u32 = memory.get_value(vec_ptr + 32/8)?;
+        let len: u32 = memory.get_value(vec_ptr + 32 / 8)?;
 
         memory.get(ptr, len as usize)
     }
 
     pub fn init(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, InterpreterError> {
-        match self.instance
-            .invoke_export(
-                "init",
-                &[
-                    RuntimeValue::I32(env_ptr as i32),
-                    RuntimeValue::I32(msg_ptr as i32),
-                ],
-                &mut self.runtime,
-            )?
-        {
+        match self.instance.invoke_export(
+            "init",
+            &[
+                RuntimeValue::I32(env_ptr as i32),
+                RuntimeValue::I32(msg_ptr as i32),
+            ],
+            &mut self.runtime,
+        )? {
             Some(RuntimeValue::I32(offset)) => Ok(offset as u32),
-            other => Err(InterpreterError::Value(format!("allocate method returned value which wasn't u32: {:?}", other))),
+            other => Err(InterpreterError::Value(format!(
+                "allocate method returned value which wasn't u32: {:?}",
+                other
+            ))),
         }
     }
 }
-
