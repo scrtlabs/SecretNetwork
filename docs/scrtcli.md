@@ -395,9 +395,9 @@ secretcli tx staking edit-validator --commission-rate 0.075 --from <key-alias>
 
 ##### Changing your commission rate
 
-Example 0.75 = 7.5%
+Example 0.075 = 7.5%
 ```bash
-enigmacli tx staking edit-validator --commission-rate 0.75 --from <key-alias>
+enigmacli tx staking edit-validator --commission-rate 0.075 --from <key-alias>
 ```
 
 ##### Seeing your rewards from being a validator
