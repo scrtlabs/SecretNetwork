@@ -1,9 +1,12 @@
 //! This module provides safe wrappers for the calls into the enclave running WASMI.
 
+use std::mem::MaybeUninit;
+
 use crate::context::context_from_dyn_storage;
 use crate::Storage;
 use enclave_ffi_types::{Ctx, EnclaveBuffer, EnclaveError, HandleResult, InitResult, QueryResult};
 
+use sgx_types::sgx_status_t;
 use sgx_urts::SgxEnclave;
 
 use crate::errors::{Error, Result};
@@ -70,24 +73,25 @@ impl Module {
     }
 
     pub fn init(&mut self, env: &[u8], msg: &[u8]) -> Result<InitSuccess> {
-        // TODO use https://doc.rust-lang.org/std/mem/union.MaybeUninit.html
-        // to allocate `retval` but let the ecall set the content
-        let mut init_result: InitResult;
+        let mut init_result = MaybeUninit::<InitResult>::uninit();
 
-        unsafe {
-            // TODO get status
-            imports::ecall_init(
-                self.enclave.geteid(),
-                &mut init_result,
-                self.context(),
-                self.bytecode.as_ptr(),
-                self.bytecode.len(),
-                env.as_ptr(),
-                env.len(),
-                msg.as_ptr(),
-                msg.len(),
-            )
-        };
+        match unsafe { imports::ecall_init(
+            self.enclave.geteid(),
+            init_result.as_mut_ptr(),
+            self.context(),
+            self.bytecode.as_ptr(),
+            self.bytecode.len(),
+            env.as_ptr(),
+            env.len(),
+            msg.as_ptr(),
+            msg.len(),
+        ) } {
+            sgx_status_t::SGX_SUCCESS => {/* continue */},
+            failure_status => return Err(Error::SdkErr { inner: failure_status }),
+        }
+        // At this point we know that the ecall was successful and init_result was initialized.
+        let init_result = unsafe { init_result.assume_init() };
+
         init_result_to_result_initsuccess(init_result)
             .map(|success| {
                 self.gas_limit -= success.used_gas();
@@ -97,24 +101,25 @@ impl Module {
     }
 
     pub fn handle(&mut self, env: &[u8], msg: &[u8]) -> Result<HandleSuccess> {
-        // TODO use https://doc.rust-lang.org/std/mem/union.MaybeUninit.html
-        // to allocate `retval` but let the ecall set the content
-        let mut handle_result: HandleResult;
+        let mut handle_result = MaybeUninit::<HandleResult>::uninit();
 
-        unsafe {
-            // TODO get status
-            imports::ecall_handle(
-                self.enclave.geteid(),
-                &mut handle_result,
-                self.context(),
-                self.bytecode.as_ptr(),
-                self.bytecode.len(),
-                env.as_ptr(),
-                env.len(),
-                msg.as_ptr(),
-                msg.len(),
-            )
-        };
+        match unsafe { imports::ecall_handle(
+            self.enclave.geteid(),
+            handle_result.as_mut_ptr(),
+            self.context(),
+            self.bytecode.as_ptr(),
+            self.bytecode.len(),
+            env.as_ptr(),
+            env.len(),
+            msg.as_ptr(),
+            msg.len(),
+        ) } {
+            sgx_status_t::SGX_SUCCESS => {/* continue */},
+            failure_status => return Err(Error::SdkErr { inner: failure_status }),
+        }
+        // At this point we know that the ecall was successful and handle_result was initialized.
+        let handle_result = unsafe { handle_result.assume_init() };
+
         handle_result_to_result_handlesuccess(handle_result)
             .map(|success| {
                 self.gas_limit -= success.used_gas();
@@ -124,22 +129,23 @@ impl Module {
     }
 
     pub fn query(&mut self, msg: &[u8]) -> Result<QuerySuccess> {
-        // TODO use https://doc.rust-lang.org/std/mem/union.MaybeUninit.html
-        // to allocate `retval` but let the ecall set the content
-        let mut query_result: QueryResult;
+        let mut query_result = MaybeUninit::<QueryResult>::uninit();
 
-        unsafe {
-            // TODO get status
-            imports::ecall_query(
-                self.enclave.geteid(),
-                &mut query_result,
-                self.context(),
-                self.bytecode.as_ptr(),
-                self.bytecode.len(),
-                msg.as_ptr(),
-                msg.len(),
-            )
-        };
+        match unsafe { imports::ecall_query(
+            self.enclave.geteid(),
+            query_result.as_mut_ptr(),
+            self.context(),
+            self.bytecode.as_ptr(),
+            self.bytecode.len(),
+            msg.as_ptr(),
+            msg.len(),
+        ) } {
+            sgx_status_t::SGX_SUCCESS => {/* continue */},
+            failure_status => return Err(Error::SdkErr { inner: failure_status }),
+        }
+        // At this point we know that the ecall was successful and query_result was initialized.
+        let query_result = unsafe { query_result.assume_init() };
+
         query_result_to_result_querysuccess(query_result)
             .map(|success| {
                 self.gas_limit -= success.used_gas();

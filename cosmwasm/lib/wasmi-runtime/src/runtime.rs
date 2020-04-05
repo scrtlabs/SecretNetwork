@@ -1,13 +1,14 @@
 use std::borrow::ToOwned;
 use std::cell::RefCell;
-
-use enclave_ffi_types::Ctx;
+use sgx_types::{sgx_status_t, SgxResult, SgxError};
 
 use wasmi::{
     memory_units, Error as InterpreterError, Externals, FuncInstance, FuncRef, MemoryDescriptor,
     MemoryInstance, MemoryRef, ModuleImportResolver, ModuleRef, RuntimeArgs, RuntimeValue,
     Signature, Trap, TrapKind, ValueType,
 };
+
+use enclave_ffi_types::{Ctx, EnclaveBuffer};
 
 // --------------------------------
 // Functions to expose to WASM code
@@ -128,20 +129,30 @@ use super::exports;
 use super::imports;
 
 /// Safe wrapper around reads from the contract storage
-fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
-    unsafe { exports::recover_buffer(imports::ocall_read_db(context, key.as_ptr(), key.len())) }
+fn read_db(context: Ctx, key: &[u8]) -> SgxResult<Option<Vec<u8>>> {
+    let mut enclave_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
+    unsafe {
+        match imports::ocall_read_db(enclave_buffer.as_mut_ptr(), context, key.as_ptr(), key.len()) {
+            sgx_status_t::SGX_SUCCESS => {/* continue */},
+            error_status => return Err(error_status),
+        }
+        let enclave_buffer = enclave_buffer.assume_init();
+        // TODO add validation of this pointer before returning its contents.
+        Ok(exports::recover_buffer(enclave_buffer))
+    }
 }
 
 /// Safe wrapper around writes to the contract storage
-fn write_db(context: Ctx, key: &[u8], value: &[u8]) {
-    unsafe {
-        imports::ocall_write_db(
-            context,
-            key.as_ptr(),
-            key.len(),
-            value.as_ptr(),
-            value.len(),
-        )
+fn write_db(context: Ctx, key: &[u8], value: &[u8]) -> SgxError {
+    match unsafe { imports::ocall_write_db(
+        context,
+        key.as_ptr(),
+        key.len(),
+        value.as_ptr(),
+        value.len(),
+    ) } {
+        sgx_status_t::SGX_SUCCESS => Ok(()),
+        err => Err(err),
     }
 }
 
@@ -187,7 +198,9 @@ impl Externals for Runtime {
                 // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
                 // Thie return the value from Tendermint
                 // fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
-                let value = match read_db(unsafe { self.context.clone() }, &key) {
+                let value = match read_db(unsafe { self.context.clone() }, &key)
+                    .map_err(|_| Trap::new(TrapKind::Unreachable))?
+                {
                     None => return Ok(Some(RuntimeValue::I32(0))),
                     Some(value) => value,
                 };

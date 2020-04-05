@@ -29,9 +29,17 @@ impl Ctx {
 #[repr(C)]
 #[derive(Debug)]
 pub enum EnclaveError {
+    /// This indicated failed ocalls, but ocalls during callbacks from wasm code will not currently
+    /// be represented this way. This is doable by returning a `TrapKind::Host` from these callbacks,
+    /// but that's a TODO at the moment.
+    FailedOcall,
+    /// The WASM code was invalid and could not be loaded.
     InvalidWasm,
+    /// The WASM module contained a start section, which is not allowed.
     WasmModuleWithStart,
+    /// The WASM module contained floating point operations, which is not allowed.
     WasmModuleWithFP,
+    /// Calling a function in the contract failed.
     FailedFunctionCall,
 }
 
