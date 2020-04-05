@@ -80,7 +80,7 @@ pub fn handle(
     Ok(HandleSuccess {
         output,
         used_gas: 0,        // TODO gas
-        signature: [0; 65], // enclave sign
+        signature: [0; 65], // TODO enclave sign
     })
 }
 
@@ -102,7 +102,7 @@ pub fn query(context: Ctx, contract: &[u8], msg: &[u8]) -> Result<QuerySuccess, 
     Ok(QuerySuccess {
         output,
         used_gas: 0,        // TODO gas
-        signature: [0; 65], // enclave sign
+        signature: [0; 65], // TODO enclave sign
     })
 }
 
