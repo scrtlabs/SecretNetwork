@@ -2,7 +2,8 @@
 
 use crate::context::context_from_dyn_storage;
 use crate::Storage;
-use enclave_ffi_types::{Ctx, EnclaveBuffer, EnclaveError};
+use enclave_ffi_types::{Ctx, EnclaveBuffer, EnclaveError, HandleResult, InitResult, QueryResult};
+
 use sgx_urts::SgxEnclave;
 
 use crate::errors::{Error, Result};
@@ -69,8 +70,14 @@ impl Module {
     }
 
     pub fn init(&mut self, env: &[u8], msg: &[u8]) -> Result<InitSuccess> {
-        let init_result = unsafe {
+        // TODO use https://doc.rust-lang.org/std/mem/union.MaybeUninit.html
+        // to allocate `retval` but let the ecall set the content
+        let mut init_result: InitResult;
+
+        unsafe {
             imports::ecall_init(
+                self.enclave.geteid(),
+                &mut init_result,
                 self.context(),
                 self.bytecode.as_ptr(),
                 self.bytecode.len(),
