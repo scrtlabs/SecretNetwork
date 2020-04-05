@@ -1,30 +1,11 @@
 use enclave_ffi_types::{Ctx, EnclaveError};
 
-use super::imports;
 use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::exports;
 
 use wasmi::{ImportsBuilder, ModuleInstance};
 
 use crate::runtime::{Engine, EnigmaImportResolver, Runtime};
-
-/// Safe wrapper around reads from the contract storage
-fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
-    unsafe { exports::recover_buffer(imports::ocall_read_db(context, key.as_ptr(), key.len())) }
-}
-
-/// Safe wrapper around writes to the contract storage
-fn write_db(context: Ctx, key: &[u8], value: &[u8]) {
-    unsafe {
-        imports::ocall_write_db(
-            context,
-            key.as_ptr(),
-            key.len(),
-            value.as_ptr(),
-            value.len(),
-        )
-    }
-}
 
 /*
 Each contract is compiled with these functions already implemented in wasm:
@@ -47,7 +28,7 @@ pub fn init(
     env: &[u8],      // blockchain state
     msg: &[u8],      // probably function call and args
 ) -> Result<InitSuccess, EnclaveError> {
-    let mut engine = start_engine(contract)?;
+    let mut engine = start_engine(context, contract)?;
 
     let env_ptr = engine
         .write_to_memory(env)
@@ -78,7 +59,7 @@ pub fn handle(
     env: &[u8],
     msg: &[u8],
 ) -> Result<HandleSuccess, EnclaveError> {
-    let mut engine = start_engine(contract)?;
+    let mut engine = start_engine(context, contract)?;
 
     let env_ptr = engine
         .write_to_memory(env)
@@ -104,7 +85,7 @@ pub fn handle(
 }
 
 pub fn query(context: Ctx, contract: &[u8], msg: &[u8]) -> Result<QuerySuccess, EnclaveError> {
-    let mut engine = start_engine(contract)?;
+    let mut engine = start_engine(context, contract)?;
 
     let msg_ptr = engine
         .write_to_memory(msg)
@@ -125,7 +106,7 @@ pub fn query(context: Ctx, contract: &[u8], msg: &[u8]) -> Result<QuerySuccess, 
     })
 }
 
-fn start_engine(contract: &[u8]) -> Result<Engine, EnclaveError> {
+fn start_engine(context: Ctx, contract: &[u8]) -> Result<Engine, EnclaveError> {
     // Load wasm binary and prepare it for instantiation.
     let module = wasmi::Module::from_buffer(contract).map_err(|_err| EnclaveError::InvalidWasm)?;
 
@@ -133,7 +114,7 @@ fn start_engine(contract: &[u8]) -> Result<Engine, EnclaveError> {
     // These are the signatures of rust functions available to invoke from wasm code.
     // We want to limit to 4GiB of memory. `with_limit` accepts number of memory pages.
     // 1 memory page is 64KiB, therefore 4GiB/64KiB == num of pages == 64*1024
-    let imports = EnigmaImportResolver::with_limit(64 * 1024);
+    let imports = EnigmaImportResolver::with_limit(context, 64 * 1024);
     let module_imports = ImportsBuilder::new().with_resolver("env", &imports);
 
     // Instantiate a module with our imports and assert that there is no `start` function.

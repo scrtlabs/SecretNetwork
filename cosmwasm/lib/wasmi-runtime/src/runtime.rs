@@ -1,6 +1,8 @@
 use std::borrow::ToOwned;
 use std::cell::RefCell;
 
+use enclave_ffi_types::Ctx;
+
 use wasmi::{
     memory_units, Error as InterpreterError, Externals, FuncInstance, FuncRef, MemoryDescriptor,
     MemoryInstance, MemoryRef, ModuleImportResolver, ModuleRef, RuntimeArgs, RuntimeValue,
@@ -19,11 +21,12 @@ use wasmi::{
 pub struct EnigmaImportResolver {
     max_memory: u32,
     memory: RefCell<MemoryRef>,
+    context: Ctx,
 }
 
 impl EnigmaImportResolver {
     /// New import resolver with specifed maximum amount of inital memory (in wasm pages = 64kb)
-    pub fn with_limit(max_memory: u32) -> EnigmaImportResolver {
+    pub fn with_limit(context: Ctx, max_memory: u32) -> EnigmaImportResolver {
         EnigmaImportResolver {
             max_memory,
             memory: RefCell::new(
@@ -33,6 +36,7 @@ impl EnigmaImportResolver {
                 )
                 .expect("Reuven to fix this"),
             ),
+            context,
         }
     }
 
@@ -93,16 +97,19 @@ impl ModuleImportResolver for EnigmaImportResolver {
     ) -> Result<FuncRef, InterpreterError> {
         let func_ref = match func_name {
             "read_db" => FuncInstance::alloc_host(
-                Signature::new(&[][..], Some(ValueType::I32)),
+                Signature::new(&[/* TODO fix */][..], Some(ValueType::I32)),
                 READ_DB_INDEX,
             ),
-            "write_db" => FuncInstance::alloc_host(Signature::new(&[][..], None), WRITE_DB_INDEX),
+            "write_db" => FuncInstance::alloc_host(
+                Signature::new(&[/* TODO fix */][..], None),
+                WRITE_DB_INDEX,
+            ),
             "canonicalize_address" => FuncInstance::alloc_host(
-                Signature::new(&[][..], Some(ValueType::I32)),
+                Signature::new(&[/* TODO fix */][..], Some(ValueType::I32)),
                 CANONICALIZE_ADDRESS_INDEX,
             ),
             "humanize_address" => FuncInstance::alloc_host(
-                Signature::new(&[][..], Some(ValueType::I32)),
+                Signature::new(&[/* TODO fix */][..], Some(ValueType::I32)),
                 HUMANIZE_ADDRESS_INDEX,
             ),
             _ => {
@@ -119,6 +126,26 @@ impl ModuleImportResolver for EnigmaImportResolver {
 // Runtime maps function index to implementation
 // When instansiating a module we give it the EnigmaImportResolver resolver
 // When invoking a function inside the module we give it this runtime which is the acctual functions implementation ()
+use super::imports;
+
+/// Safe wrapper around reads from the contract storage
+fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
+    unsafe { exports::recover_buffer(imports::ocall_read_db(context, key.as_ptr(), key.len())) }
+}
+
+/// Safe wrapper around writes to the contract storage
+fn write_db(context: Ctx, key: &[u8], value: &[u8]) {
+    unsafe {
+        imports::ocall_write_db(
+            context,
+            key.as_ptr(),
+            key.len(),
+            value.as_ptr(),
+            value.len(),
+        )
+    }
+}
+
 pub struct Runtime;
 
 const READ_DB_INDEX: usize = 0;
@@ -135,8 +162,8 @@ impl Externals for Runtime {
         match index {
             READ_DB_INDEX => Ok(Some(RuntimeValue::I32(2))), // TODO implement
             WRITE_DB_INDEX => Ok(Some(RuntimeValue::I32(2))), // TODO implement
-            CANONICALIZE_ADDRESS_INDEX => Ok(Some(RuntimeValue::I32(2))), // TODO implement
-            HUMANIZE_ADDRESS_INDEX => Ok(Some(RuntimeValue::I32(2))), // TODO implement
+            CANONICALIZE_ADDRESS_INDEX => Ok(Some(RuntimeValue::I32(2))), // TODO implement here - port from Go
+            HUMANIZE_ADDRESS_INDEX => Ok(Some(RuntimeValue::I32(2))), // TODO implement here - port from Go
             _ => panic!("unknown function index"),
         }
     }
