@@ -93,7 +93,7 @@ impl ModuleImportResolver for EnigmaImportResolver {
     fn resolve_func(
         &self,
         func_name: &str,
-        signature: &Signature,
+        signature: &Signature, // TODO add args?
     ) -> Result<FuncRef, InterpreterError> {
         let func_ref = match func_name {
             "read_db" => FuncInstance::alloc_host(
