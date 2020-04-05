@@ -18,6 +18,12 @@ pub struct Ctx {
     pub data: *mut c_void,
 }
 
+impl Ctx {
+    pub unsafe fn clone(&self) -> Ctx {
+        Ctx { data: self.data }
+    }
+}
+
 /// This type represents the possible error conditions that can be encountered in the enclave
 /// cbindgen:prefix-with-name
 #[repr(C)]

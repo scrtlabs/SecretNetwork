@@ -146,8 +146,8 @@ fn write_db(context: Ctx, key: &[u8], value: &[u8]) {
 }
 
 pub struct Runtime {
-    context: Ctx,
-    memory: MemoryRef,
+    pub context: Ctx,
+    pub memory: MemoryRef,
 }
 
 const READ_DB_INDEX: usize = 0;
@@ -166,7 +166,7 @@ impl Externals for Runtime {
         index: usize,
         args: RuntimeArgs,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        let ptr = match index {
+        match index {
             READ_DB_INDEX => {
                 // This function is imported to WASM code
 
@@ -179,13 +179,16 @@ impl Externals for Runtime {
                 // Get pointer to the region of the key name
                 // extract_vector extract key into a buffer
                 let key_ptr_ptr_in_wasm: i32 = args.nth_checked(0)?;
-                let key = extract_vector(self.memory, key_ptr_ptr_in_wasm)?;
+                let key = match extract_vector(&self.memory, key_ptr_ptr_in_wasm as u32) {
+                    Err(_) => return Ok(Some(RuntimeValue::I32(0))),
+                    Ok(value) => value,
+                };
 
                 // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
                 // Thie return the value from Tendermint
                 // fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
-                let value = match read_db(self.context, &key) {
-                    None => return Ok(RuntimeValue::I32(0)),
+                let value = match read_db(unsafe { self.context.clone() }, &key) {
+                    None => return Ok(Some(RuntimeValue::I32(0))),
                     Some(value) => value,
                 };
 
@@ -193,18 +196,24 @@ impl Externals for Runtime {
                 let value_ptr_ptr_in_wasm: i32 = args.nth_checked(1)?;
 
                 // Get pointer to the buffer (this was allocated in WASM)
-                let value_ptr_in_wasm: u32 = match memory.get_value(value_ptr_ptr_in_wasm) {
-                    Ok(x) => x as u32,
+                let value_ptr_in_wasm: u32 = match self
+                    .memory
+                    .get_value::<u32>(value_ptr_ptr_in_wasm as u32)
+                {
+                    Ok(x) => x,
                     Err(_) => return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW))),
                 };
                 // Get length of the buffer (this was allocated in WASM)
-                let value_len_in_wasm: u32 = match memory.get_value(value_ptr_ptr_in_wasm + 4) {
-                    Ok(x) => x as u32,
+                let value_len_in_wasm: u32 = match self
+                    .memory
+                    .get_value::<u32>((value_ptr_ptr_in_wasm + 4) as u32)
+                {
+                    Ok(x) => x,
                     Err(_) => return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW))),
                 };
 
                 // Check that value is not too big to write into the allocated buffer
-                if value_len_in_wasm < value.len() {
+                if value_len_in_wasm < value.len() as u32 {
                     return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_TOO_SMALL)));
                 }
 
@@ -220,7 +229,7 @@ impl Externals for Runtime {
             CANONICALIZE_ADDRESS_INDEX => Ok(Some(RuntimeValue::I32(2))), // TODO implement here - port from Go
             HUMANIZE_ADDRESS_INDEX => Ok(Some(RuntimeValue::I32(2))), // TODO implement here - port from Go
             _ => panic!("unknown function index"),
-        };
+        }
     }
 }
 
@@ -264,7 +273,7 @@ impl Engine {
     }
 
     pub fn extract_vector(&self, vec_ptr_ptr: u32) -> Result<Vec<u8>, InterpreterError> {
-        extract_vector(self.memory(), vec_ptr_ptr)
+        extract_vector(&self.memory(), vec_ptr_ptr)
     }
 
     pub fn init(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, InterpreterError> {
