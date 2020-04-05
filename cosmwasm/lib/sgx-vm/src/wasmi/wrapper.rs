@@ -24,6 +24,7 @@ pub struct Module {
     bytecode: Vec<u8>,
     storage: Option<Box<Box<dyn Storage>>>,
     gas_limit: u64,
+    enclave: SgxEnclave,
 }
 
 impl Module {
@@ -33,6 +34,7 @@ impl Module {
             bytecode,
             storage: None,
             gas_limit,
+            enclave,
         }
     }
 

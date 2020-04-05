@@ -24,7 +24,7 @@ use crate::errors::{Error, Result};
 
 use crate::wasmi::Module;
 
-use sgx_types::{sgx_launch_token_t, sgx_misc_attribute_t};
+use sgx_types::{sgx_attributes_t, sgx_launch_token_t, sgx_misc_attribute_t, SgxResult};
 use sgx_urts::SgxEnclave;
 
 /// An instance is a combination of wasm code, storage, and gas limit.
@@ -34,6 +34,8 @@ pub struct Instance<S: Storage + 'static, A: Api + 'static> {
     // This does not store data but only fixes type information
     type_storage: PhantomData<S>,
 }
+
+static ENCLAVE_FILE: &'static str = "enclave.signed.so";
 
 fn init_enclave() -> SgxResult<SgxEnclave> {
     let mut launch_token: sgx_launch_token_t = [0; 1024];
