@@ -6,7 +6,7 @@ use enclave_ffi_types::Ctx;
 use wasmi::{
     memory_units, Error as InterpreterError, Externals, FuncInstance, FuncRef, MemoryDescriptor,
     MemoryInstance, MemoryRef, ModuleImportResolver, ModuleRef, RuntimeArgs, RuntimeValue,
-    Signature, Trap, ValueType,
+    Signature, Trap, TrapKind, ValueType,
 };
 
 // --------------------------------
@@ -21,12 +21,11 @@ use wasmi::{
 pub struct EnigmaImportResolver {
     max_memory: u32,
     memory: RefCell<MemoryRef>,
-    context: Ctx,
 }
 
 impl EnigmaImportResolver {
     /// New import resolver with specifed maximum amount of inital memory (in wasm pages = 64kb)
-    pub fn with_limit(context: Ctx, max_memory: u32) -> EnigmaImportResolver {
+    pub fn with_limit(max_memory: u32) -> EnigmaImportResolver {
         EnigmaImportResolver {
             max_memory,
             memory: RefCell::new(
@@ -36,7 +35,6 @@ impl EnigmaImportResolver {
                 )
                 .expect("Reuven to fix this"),
             ),
-            context,
         }
     }
 
@@ -126,6 +124,7 @@ impl ModuleImportResolver for EnigmaImportResolver {
 // Runtime maps function index to implementation
 // When instansiating a module we give it the EnigmaImportResolver resolver
 // When invoking a function inside the module we give it this runtime which is the acctual functions implementation ()
+use super::exports;
 use super::imports;
 
 /// Safe wrapper around reads from the contract storage
@@ -146,12 +145,20 @@ fn write_db(context: Ctx, key: &[u8], value: &[u8]) {
     }
 }
 
-pub struct Runtime;
+pub struct Runtime {
+    context: Ctx,
+    memory: MemoryRef,
+}
 
 const READ_DB_INDEX: usize = 0;
 const WRITE_DB_INDEX: usize = 1;
 const CANONICALIZE_ADDRESS_INDEX: usize = 2;
 const HUMANIZE_ADDRESS_INDEX: usize = 3;
+
+/// An unknown error occurred when writing to region
+const ERROR_WRITE_TO_REGION_UNKNONW: i32 = -1000001;
+/// Could not write to region because it is too small
+const ERROR_WRITE_TO_REGION_TOO_SMALL: i32 = -1000002;
 
 impl Externals for Runtime {
     fn invoke_index(
@@ -159,13 +166,43 @@ impl Externals for Runtime {
         index: usize,
         args: RuntimeArgs,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        match index {
-            READ_DB_INDEX => Ok(Some(RuntimeValue::I32(2))), // TODO implement
+        let ptr = match index {
+            READ_DB_INDEX => {
+                // get pointer in wasm memory of the key
+                let key_ptr: i32 = args.nth_checked(0)?;
+                let key = extract_vector(self.memory, key_ptr)?;
+
+                // fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
+                let value = match read_db(self.context, &key) {
+                    None => return Ok(RuntimeValue::I32(0)),
+                    Some(value) => value,
+                };
+                let value_region_in_wasm: i32 = args.nth_checked(1)?;
+
+                let value_ptr_in_wasm: u32 = match memory.get_value(value_region_in_wasm) {
+                    Ok(x) => x as u32,
+                    Err(_) => return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW))),
+                };
+                let value_len_in_wasm: u32 = match memory.get_value(value_region_in_wasm + 4) {
+                    Ok(x) => x as u32,
+                    Err(_) => return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW))),
+                };
+
+                if value_len_in_wasm < value.len() {
+                    return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_TOO_SMALL)));
+                }
+
+                if let Err(_) = self.memory.set(value_ptr_in_wasm, &value) {
+                    return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
+                }
+
+                Ok(Some(RuntimeValue::I32(value.len() as i32)))
+            }
             WRITE_DB_INDEX => Ok(Some(RuntimeValue::I32(2))), // TODO implement
             CANONICALIZE_ADDRESS_INDEX => Ok(Some(RuntimeValue::I32(2))), // TODO implement here - port from Go
             HUMANIZE_ADDRESS_INDEX => Ok(Some(RuntimeValue::I32(2))), // TODO implement here - port from Go
             _ => panic!("unknown function index"),
-        }
+        };
     }
 }
 
@@ -209,11 +246,7 @@ impl Engine {
     }
 
     pub fn extract_vector(&self, vec_ptr: u32) -> Result<Vec<u8>, InterpreterError> {
-        let memory = self.memory();
-        let ptr: u32 = memory.get_value(vec_ptr)?;
-        let len: u32 = memory.get_value(vec_ptr + 32 / 8)?;
-
-        memory.get(ptr, len as usize)
+        extract_vector(self.memory(), vec_ptr)
     }
 
     pub fn init(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, InterpreterError> {
@@ -263,4 +296,11 @@ impl Engine {
             ))),
         }
     }
+}
+
+fn extract_vector(memory: &MemoryRef, vec_ptr: u32) -> Result<Vec<u8>, InterpreterError> {
+    let ptr: u32 = memory.get_value(vec_ptr)?;
+    let len: u32 = memory.get_value(vec_ptr + 4)?;
+
+    memory.get(ptr, len as usize)
 }
