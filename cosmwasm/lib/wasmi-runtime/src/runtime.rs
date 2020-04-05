@@ -168,34 +168,52 @@ impl Externals for Runtime {
     ) -> Result<Option<RuntimeValue>, Trap> {
         let ptr = match index {
             READ_DB_INDEX => {
-                // get pointer in wasm memory of the key
-                let key_ptr: i32 = args.nth_checked(0)?;
-                let key = extract_vector(self.memory, key_ptr)?;
+                // This function is imported to WASM code
 
+                // We get 2 args:
+                // 1. "key" to read from Tendermint (buffer of bytes)
+                // 2. "value" - a buffer that was allocated in WASM code - we need to write the read_db result to this buffer
+                // Both of them are pointers to a region "struct" of "pointer" and "length"
+                // Lets say Region looks like { ptr: u32, len: u32 }
+
+                // Get pointer to the region of the key name
+                // extract_vector extract key into a buffer
+                let key_ptr_ptr_in_wasm: i32 = args.nth_checked(0)?;
+                let key = extract_vector(self.memory, key_ptr_ptr_in_wasm)?;
+
+                // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
+                // Thie return the value from Tendermint
                 // fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
                 let value = match read_db(self.context, &key) {
                     None => return Ok(RuntimeValue::I32(0)),
                     Some(value) => value,
                 };
-                let value_region_in_wasm: i32 = args.nth_checked(1)?;
 
-                let value_ptr_in_wasm: u32 = match memory.get_value(value_region_in_wasm) {
+                // Get pointer to the region of the value buffer
+                let value_ptr_ptr_in_wasm: i32 = args.nth_checked(1)?;
+
+                // Get pointer to the buffer (this was allocated in WASM)
+                let value_ptr_in_wasm: u32 = match memory.get_value(value_ptr_ptr_in_wasm) {
                     Ok(x) => x as u32,
                     Err(_) => return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW))),
                 };
-                let value_len_in_wasm: u32 = match memory.get_value(value_region_in_wasm + 4) {
+                // Get length of the buffer (this was allocated in WASM)
+                let value_len_in_wasm: u32 = match memory.get_value(value_ptr_ptr_in_wasm + 4) {
                     Ok(x) => x as u32,
                     Err(_) => return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW))),
                 };
 
+                // Check that value is not too big to write into the allocated buffer
                 if value_len_in_wasm < value.len() {
                     return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_TOO_SMALL)));
                 }
 
+                // Write value returned from read_db to WASM memory
                 if let Err(_) = self.memory.set(value_ptr_in_wasm, &value) {
                     return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
                 }
 
+                // Return how many bytes were written to the buffer
                 Ok(Some(RuntimeValue::I32(value.len() as i32)))
             }
             WRITE_DB_INDEX => Ok(Some(RuntimeValue::I32(2))), // TODO implement
@@ -245,8 +263,8 @@ impl Engine {
         Ok(pointer)
     }
 
-    pub fn extract_vector(&self, vec_ptr: u32) -> Result<Vec<u8>, InterpreterError> {
-        extract_vector(self.memory(), vec_ptr)
+    pub fn extract_vector(&self, vec_ptr_ptr: u32) -> Result<Vec<u8>, InterpreterError> {
+        extract_vector(self.memory(), vec_ptr_ptr)
     }
 
     pub fn init(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, InterpreterError> {
@@ -298,9 +316,9 @@ impl Engine {
     }
 }
 
-fn extract_vector(memory: &MemoryRef, vec_ptr: u32) -> Result<Vec<u8>, InterpreterError> {
-    let ptr: u32 = memory.get_value(vec_ptr)?;
-    let len: u32 = memory.get_value(vec_ptr + 4)?;
+fn extract_vector(memory: &MemoryRef, vec_ptr_ptr: u32) -> Result<Vec<u8>, InterpreterError> {
+    let ptr: u32 = memory.get_value(vec_ptr_ptr)?;
+    let len: u32 = memory.get_value(vec_ptr_ptr + 4)?;
 
     memory.get(ptr, len as usize)
 }
