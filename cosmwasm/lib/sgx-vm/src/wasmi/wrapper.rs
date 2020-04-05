@@ -75,6 +75,7 @@ impl Module {
         let mut init_result: InitResult;
 
         unsafe {
+            // TODO get status
             imports::ecall_init(
                 self.enclave.geteid(),
                 &mut init_result,
@@ -96,8 +97,15 @@ impl Module {
     }
 
     pub fn handle(&mut self, env: &[u8], msg: &[u8]) -> Result<HandleSuccess> {
-        let handle_result = unsafe {
+        // TODO use https://doc.rust-lang.org/std/mem/union.MaybeUninit.html
+        // to allocate `retval` but let the ecall set the content
+        let mut handle_result: HandleResult;
+
+        unsafe {
+            // TODO get status
             imports::ecall_handle(
+                self.enclave.geteid(),
+                &mut handle_result,
                 self.context(),
                 self.bytecode.as_ptr(),
                 self.bytecode.len(),
@@ -116,8 +124,15 @@ impl Module {
     }
 
     pub fn query(&mut self, msg: &[u8]) -> Result<QuerySuccess> {
-        let query_result = unsafe {
+        // TODO use https://doc.rust-lang.org/std/mem/union.MaybeUninit.html
+        // to allocate `retval` but let the ecall set the content
+        let mut query_result: QueryResult;
+
+        unsafe {
+            // TODO get status
             imports::ecall_query(
+                self.enclave.geteid(),
+                &mut query_result,
                 self.context(),
                 self.bytecode.as_ptr(),
                 self.bytecode.len(),
