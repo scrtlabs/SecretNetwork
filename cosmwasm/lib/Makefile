@@ -70,7 +70,7 @@ App_SRC_Files := $(shell find sgx-vm/ -type f -name '*.rs') $(shell find sgx-vm/
 App_Include_Paths := -I ./sgx-vm -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
-App_Rust_Path := ./sgx-vm/target/release
+App_Rust_Path := ../target/release
 App_Enclave_u_Object := sgx-vm/libEnclave_u.a
 App_Name := bin/app
 
