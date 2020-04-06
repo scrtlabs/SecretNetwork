@@ -1,5 +1,5 @@
-use derive_more::Display;
 use core::ffi::c_void;
+use derive_more::Display;
 
 /// This type represents an opaque pointer to a memory address in normal user space.
 #[repr(C)]
