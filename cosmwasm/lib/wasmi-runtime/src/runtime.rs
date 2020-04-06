@@ -429,7 +429,7 @@ impl Externals for Runtime {
                     Err(_) => return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW))),
                 };
 
-                // Check that human_bytes is not too big to write into the allocated buffer (human should always be 20 bytes)
+                // Check that human_bytes is not too big to write into the allocated buffer (human_bytes should always be 45 bytes)
                 if human_len_in_wasm < human_bytes.len() as u32 {
                     return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_TOO_SMALL)));
                 }
