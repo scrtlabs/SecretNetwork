@@ -95,11 +95,11 @@ impl ModuleImportResolver for EnigmaImportResolver {
     ) -> Result<FuncRef, InterpreterError> {
         let func_ref = match func_name {
             "read_db" => FuncInstance::alloc_host(
-                Signature::new(&[/* TODO fix */][..], Some(ValueType::I32)),
+                Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
                 READ_DB_INDEX,
             ),
             "write_db" => FuncInstance::alloc_host(
-                Signature::new(&[/* TODO fix */][..], None),
+                Signature::new(&[ValueType::I32, ValueType::I32][..], None),
                 WRITE_DB_INDEX,
             ),
             "canonicalize_address" => FuncInstance::alloc_host(
