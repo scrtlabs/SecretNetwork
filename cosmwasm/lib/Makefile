@@ -160,7 +160,7 @@ compiler-rt:
 .PHONY: clean
 clean:
 	@rm -f $(App_Name) $(RustEnclave_Name) $(Signed_RustEnclave_Name) wasmi-runtime/*_t.* sgx-vm/*_u.* lib/*.a
-	@cd wasmi-runtime && cargo clean && rm -f Cargo.lock
-	@cd sgx-vm && cargo clean && rm -f Cargo.lock
-	@cd enclave-ffi-types && cargo clean && rm -f Cargo.lock
+	@cd wasmi-runtime && cargo clean
+	@cd sgx-vm && cargo clean
+	@cd enclave-ffi-types && cargo clean
 
