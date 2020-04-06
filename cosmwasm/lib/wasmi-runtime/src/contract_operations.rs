@@ -4,6 +4,7 @@ use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
 
 use wasmi::{ImportsBuilder, ModuleInstance};
 
+use crate::errors::wasmi_error_to_enclave_error;
 use crate::runtime::{Engine, EnigmaImportResolver, Runtime};
 
 /*
@@ -31,19 +32,19 @@ pub fn init(
 
     let env_ptr = engine
         .write_to_memory(env)
-        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+        .map_err(wasmi_error_to_enclave_error)?;
 
     let msg_ptr = engine
         .write_to_memory(msg)
-        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+        .map_err(wasmi_error_to_enclave_error)?;
 
     let vec_ptr = engine
         .init(env_ptr, msg_ptr)
-        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+        .map_err(wasmi_error_to_enclave_error)?;
 
     let output = engine
         .extract_vector(vec_ptr)
-        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+        .map_err(wasmi_error_to_enclave_error)?;
 
     Ok(InitSuccess {
         output,
@@ -62,19 +63,19 @@ pub fn handle(
 
     let env_ptr = engine
         .write_to_memory(env)
-        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+        .map_err(wasmi_error_to_enclave_error)?;
 
     let msg_ptr = engine
         .write_to_memory(msg)
-        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+        .map_err(wasmi_error_to_enclave_error)?;
 
     let vec_ptr = engine
         .handle(env_ptr, msg_ptr)
-        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+        .map_err(wasmi_error_to_enclave_error)?;
 
     let output = engine
         .extract_vector(vec_ptr)
-        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+        .map_err(wasmi_error_to_enclave_error)?;
 
     Ok(HandleSuccess {
         output,
@@ -88,15 +89,15 @@ pub fn query(context: Ctx, contract: &[u8], msg: &[u8]) -> Result<QuerySuccess, 
 
     let msg_ptr = engine
         .write_to_memory(msg)
-        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+        .map_err(wasmi_error_to_enclave_error)?;
 
     let vec_ptr = engine
         .query(msg_ptr)
-        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+        .map_err(wasmi_error_to_enclave_error)?;
 
     let output = engine
         .extract_vector(vec_ptr)
-        .map_err(|_err| EnclaveError::FailedFunctionCall)?;
+        .map_err(wasmi_error_to_enclave_error)?;
 
     Ok(QuerySuccess {
         output,

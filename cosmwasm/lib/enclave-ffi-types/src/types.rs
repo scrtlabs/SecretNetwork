@@ -1,3 +1,4 @@
+use derive_more::Display;
 use core::ffi::c_void;
 
 /// This type represents an opaque pointer to a memory address in normal user space.
@@ -27,7 +28,7 @@ impl Ctx {
 /// This type represents the possible error conditions that can be encountered in the enclave
 /// cbindgen:prefix-with-name
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Display)]
 pub enum EnclaveError {
     /// This indicated failed ocalls, but ocalls during callbacks from wasm code will not currently
     /// be represented this way. This is doable by returning a `TrapKind::Host` from these callbacks,
@@ -41,12 +42,8 @@ pub enum EnclaveError {
     WasmModuleWithFP,
     /// Calling a function in the contract failed.
     FailedFunctionCall,
-}
-
-impl core::fmt::Display for EnclaveError {
-    fn fmt(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(formatter, "{:?}", self)
-    }
+    /// Unexpected Error happened, no more details available
+    Unknown,
 }
 
 /// This struct is returned from ecall_init.

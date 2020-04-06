@@ -4,7 +4,7 @@ use std::mem::MaybeUninit;
 
 use crate::context::context_from_dyn_storage;
 use crate::Storage;
-use enclave_ffi_types::{Ctx, EnclaveBuffer, EnclaveError, HandleResult, InitResult, QueryResult};
+use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
 
 use sgx_types::sgx_status_t;
 use sgx_urts::SgxEnclave;
@@ -75,19 +75,25 @@ impl Module {
     pub fn init(&mut self, env: &[u8], msg: &[u8]) -> Result<InitSuccess> {
         let mut init_result = MaybeUninit::<InitResult>::uninit();
 
-        match unsafe { imports::ecall_init(
-            self.enclave.geteid(),
-            init_result.as_mut_ptr(),
-            self.context(),
-            self.bytecode.as_ptr(),
-            self.bytecode.len(),
-            env.as_ptr(),
-            env.len(),
-            msg.as_ptr(),
-            msg.len(),
-        ) } {
-            sgx_status_t::SGX_SUCCESS => {/* continue */},
-            failure_status => return Err(Error::SdkErr { inner: failure_status }),
+        match unsafe {
+            imports::ecall_init(
+                self.enclave.geteid(),
+                init_result.as_mut_ptr(),
+                self.context(),
+                self.bytecode.as_ptr(),
+                self.bytecode.len(),
+                env.as_ptr(),
+                env.len(),
+                msg.as_ptr(),
+                msg.len(),
+            )
+        } {
+            sgx_status_t::SGX_SUCCESS => { /* continue */ }
+            failure_status => {
+                return Err(Error::SdkErr {
+                    inner: failure_status,
+                })
+            }
         }
         // At this point we know that the ecall was successful and init_result was initialized.
         let init_result = unsafe { init_result.assume_init() };
@@ -103,19 +109,25 @@ impl Module {
     pub fn handle(&mut self, env: &[u8], msg: &[u8]) -> Result<HandleSuccess> {
         let mut handle_result = MaybeUninit::<HandleResult>::uninit();
 
-        match unsafe { imports::ecall_handle(
-            self.enclave.geteid(),
-            handle_result.as_mut_ptr(),
-            self.context(),
-            self.bytecode.as_ptr(),
-            self.bytecode.len(),
-            env.as_ptr(),
-            env.len(),
-            msg.as_ptr(),
-            msg.len(),
-        ) } {
-            sgx_status_t::SGX_SUCCESS => {/* continue */},
-            failure_status => return Err(Error::SdkErr { inner: failure_status }),
+        match unsafe {
+            imports::ecall_handle(
+                self.enclave.geteid(),
+                handle_result.as_mut_ptr(),
+                self.context(),
+                self.bytecode.as_ptr(),
+                self.bytecode.len(),
+                env.as_ptr(),
+                env.len(),
+                msg.as_ptr(),
+                msg.len(),
+            )
+        } {
+            sgx_status_t::SGX_SUCCESS => { /* continue */ }
+            failure_status => {
+                return Err(Error::SdkErr {
+                    inner: failure_status,
+                })
+            }
         }
         // At this point we know that the ecall was successful and handle_result was initialized.
         let handle_result = unsafe { handle_result.assume_init() };
@@ -131,17 +143,23 @@ impl Module {
     pub fn query(&mut self, msg: &[u8]) -> Result<QuerySuccess> {
         let mut query_result = MaybeUninit::<QueryResult>::uninit();
 
-        match unsafe { imports::ecall_query(
-            self.enclave.geteid(),
-            query_result.as_mut_ptr(),
-            self.context(),
-            self.bytecode.as_ptr(),
-            self.bytecode.len(),
-            msg.as_ptr(),
-            msg.len(),
-        ) } {
-            sgx_status_t::SGX_SUCCESS => {/* continue */},
-            failure_status => return Err(Error::SdkErr { inner: failure_status }),
+        match unsafe {
+            imports::ecall_query(
+                self.enclave.geteid(),
+                query_result.as_mut_ptr(),
+                self.context(),
+                self.bytecode.as_ptr(),
+                self.bytecode.len(),
+                msg.as_ptr(),
+                msg.len(),
+            )
+        } {
+            sgx_status_t::SGX_SUCCESS => { /* continue */ }
+            failure_status => {
+                return Err(Error::SdkErr {
+                    inner: failure_status,
+                })
+            }
         }
         // At this point we know that the ecall was successful and query_result was initialized.
         let query_result = unsafe { query_result.assume_init() };

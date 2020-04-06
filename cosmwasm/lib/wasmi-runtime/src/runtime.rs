@@ -13,6 +13,8 @@ use wasmi::{
 
 use enclave_ffi_types::{Ctx, EnclaveBuffer};
 
+use super::errors::WasmEngineError;
+
 // --------------------------------
 // Functions to expose to WASM code
 // --------------------------------
@@ -213,7 +215,7 @@ impl Externals for Runtime {
                 // This returns the value from Tendermint
                 // fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
                 let value = match read_db(unsafe { self.context.clone() }, &key)
-                    .map_err(|_| Trap::new(TrapKind::Unreachable))?
+                    .map_err(|_| WasmEngineError::FailedOcall)?
                 {
                     None => return Ok(Some(RuntimeValue::I32(0))),
                     Some(value) => value,
@@ -280,7 +282,7 @@ impl Externals for Runtime {
                 // Call write_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
                 // fn write_db(context: Ctx, key: &[u8], value: &[u8]) {
                 write_db(unsafe { self.context.clone() }, &key, &value)
-                    .map_err(|_| Trap::new(TrapKind::Unreachable))?;
+                    .map_err(|_| WasmEngineError::FailedOcall)?;
 
                 // Return nothing because this is the api ¯\_(ツ)_/¯
                 Ok(None)
