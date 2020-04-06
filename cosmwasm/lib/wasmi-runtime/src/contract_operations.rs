@@ -1,7 +1,6 @@
 use enclave_ffi_types::{Ctx, EnclaveError};
 
 use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
-use crate::exports;
 
 use wasmi::{ImportsBuilder, ModuleInstance};
 

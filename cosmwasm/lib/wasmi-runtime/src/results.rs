@@ -1,7 +1,7 @@
+use sgx_types::sgx_status_t;
+use enclave_ffi_types::{EnclaveError, HandleResult, InitResult, QueryResult, UserSpaceBuffer};
 
-use enclave_ffi_types::{EnclaveError, HandleResult, InitResult, QueryResult};
-
-use super::imports;
+use crate::imports::ocall_allocate;
 
 /// This struct is returned from module initialization.
 pub struct InitSuccess {
@@ -19,10 +19,20 @@ pub fn result_init_success_to_initresult(result: Result<InitSuccess, EnclaveErro
             output,
             used_gas,
             signature,
-        }) => InitResult::Success {
-            output: unsafe { imports::ocall_allocate(output.as_ptr(), output.len()) },
-            used_gas,
-            signature,
+        }) => {
+            let user_buffer = unsafe {
+                let mut user_buffer = std::mem::MaybeUninit::<UserSpaceBuffer>::uninit();
+                match ocall_allocate(user_buffer.as_mut_ptr(), output.as_ptr(), output.len()) {
+                    sgx_status_t::SGX_SUCCESS => {/* continue */},
+                    _ => return InitResult::Failure { err: EnclaveError::FailedOcall },
+                }
+                user_buffer.assume_init()
+            };
+            InitResult::Success {
+                output: user_buffer,
+                used_gas,
+                signature,
+            }
         },
         Err(err) => InitResult::Failure { err },
     }
@@ -46,10 +56,20 @@ pub fn result_handle_success_to_handleresult(
             output,
             used_gas,
             signature,
-        }) => HandleResult::Success {
-            output: unsafe { imports::ocall_allocate(output.as_ptr(), output.len()) },
-            used_gas,
-            signature,
+        }) => {
+            let user_buffer = unsafe {
+                let mut user_buffer = std::mem::MaybeUninit::<UserSpaceBuffer>::uninit();
+                match ocall_allocate(user_buffer.as_mut_ptr(), output.as_ptr(), output.len()) {
+                    sgx_status_t::SGX_SUCCESS => {/* continue */},
+                    _ => return HandleResult::Failure { err: EnclaveError::FailedOcall },
+                }
+                user_buffer.assume_init()
+            };
+            HandleResult::Success {
+                output: user_buffer,
+                used_gas,
+                signature,
+            }
         },
         Err(err) => HandleResult::Failure { err },
     }
@@ -73,10 +93,20 @@ pub fn result_query_success_to_queryresult(
             output,
             used_gas,
             signature,
-        }) => QueryResult::Success {
-            output: unsafe { imports::ocall_allocate(output.as_ptr(), output.len()) },
-            used_gas,
-            signature,
+        }) => {
+            let user_buffer = unsafe {
+                let mut user_buffer = std::mem::MaybeUninit::<UserSpaceBuffer>::uninit();
+                match ocall_allocate(user_buffer.as_mut_ptr(), output.as_ptr(), output.len()) {
+                    sgx_status_t::SGX_SUCCESS => {/* continue */},
+                    _ => return QueryResult::Failure { err: EnclaveError::FailedOcall },
+                }
+                user_buffer.assume_init()
+            };
+            QueryResult::Success {
+                output: user_buffer,
+                used_gas,
+                signature,
+            }
         },
         Err(err) => QueryResult::Failure { err },
     }
