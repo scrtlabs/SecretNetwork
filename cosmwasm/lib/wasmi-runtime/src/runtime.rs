@@ -263,7 +263,7 @@ impl Externals for Runtime {
                 };
 
                 // Get pointer to the region of the value
-                let value_ptr_ptr_in_wasm: i32 = args.nth_checked(0)?;
+                let value_ptr_ptr_in_wasm: i32 = args.nth_checked(1)?;
                 // extract_vector extracts value into a buffer
                 let value = match extract_vector(&self.memory, value_ptr_ptr_in_wasm as u32) {
                     Err(_) => return Ok(Some(RuntimeValue::I32(0))),
