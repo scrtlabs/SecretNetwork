@@ -447,11 +447,6 @@ impl Externals for Runtime {
 }
 
 const BECH32_PREFIX_ACC_ADDR: &'static str = "enigma";
-// const Bech32PrefixAccPub = "enigmapub";
-// const Bech32PrefixValAddr = "enigmavaloper";
-// const Bech32PrefixValPub = "enigmavaloperpub";
-// const Bech32PrefixConsAddr = "enigmavalcons";
-// const Bech32PrefixConsPub = "enigmavalconspub";
 
 pub struct Engine {
     runtime: Runtime,
