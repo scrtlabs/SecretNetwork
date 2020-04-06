@@ -177,7 +177,7 @@ impl Externals for Runtime {
                 // Lets say Region looks like { ptr: u32, len: u32 }
 
                 // Get pointer to the region of the key name
-                // extract_vector extract key into a buffer
+                // extract_vectors extract key into a buffer
                 let key_ptr_ptr_in_wasm: i32 = args.nth_checked(0)?;
                 let key = match extract_vector(&self.memory, key_ptr_ptr_in_wasm as u32) {
                     Err(_) => return Ok(Some(RuntimeValue::I32(0))),
@@ -185,7 +185,7 @@ impl Externals for Runtime {
                 };
 
                 // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
-                // Thie return the value from Tendermint
+                // This returns the value from Tendermint
                 // fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
                 let value = match read_db(unsafe { self.context.clone() }, &key) {
                     None => return Ok(Some(RuntimeValue::I32(0))),
@@ -225,7 +225,38 @@ impl Externals for Runtime {
                 // Return how many bytes were written to the buffer
                 Ok(Some(RuntimeValue::I32(value.len() as i32)))
             }
-            WRITE_DB_INDEX => Ok(Some(RuntimeValue::I32(2))), // TODO implement
+            WRITE_DB_INDEX => {
+                // This function is imported to WASM code
+
+                // We get 2 args:
+                // 1. "key" to write to Tendermint (buffer of bytes)
+                // 2. "value" to write to Tendermint (buffer of bytes)
+                // Both of them are pointers to a region "struct" of "pointer" and "length"
+                // Lets say Region looks like { ptr: u32, len: u32 }
+
+                // Get pointer to the region of the key name
+                let key_ptr_ptr_in_wasm: i32 = args.nth_checked(0)?;
+                // extract_vector extracts key into a buffer
+                let key = match extract_vector(&self.memory, key_ptr_ptr_in_wasm as u32) {
+                    Err(_) => return Ok(Some(RuntimeValue::I32(0))),
+                    Ok(value) => value,
+                };
+
+                // Get pointer to the region of the value
+                let value_ptr_ptr_in_wasm: i32 = args.nth_checked(0)?;
+                // extract_vector extracts value into a buffer
+                let value = match extract_vector(&self.memory, value_ptr_ptr_in_wasm as u32) {
+                    Err(_) => return Ok(Some(RuntimeValue::I32(0))),
+                    Ok(value) => value,
+                };
+
+                // Call write_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
+                // fn write_db(context: Ctx, key: &[u8], value: &[u8]) {
+                write_db(unsafe { self.context.clone() }, &key, &value);
+
+                // Return nothing because this is the api ¯\_(ツ)_/¯
+                Ok(None)
+            }
             CANONICALIZE_ADDRESS_INDEX => Ok(Some(RuntimeValue::I32(2))), // TODO implement here - port from Go
             HUMANIZE_ADDRESS_INDEX => Ok(Some(RuntimeValue::I32(2))), // TODO implement here - port from Go
             _ => panic!("unknown function index"),
