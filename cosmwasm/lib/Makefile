@@ -71,7 +71,7 @@ App_Include_Paths := -I ./sgx-vm -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
 App_Rust_Path := ./sgx-vm/target/release
-App_Enclave_u_Object :=sgx-vm/libEnclave_u.a
+App_Enclave_u_Object := sgx-vm/libEnclave_u.a
 App_Name := bin/app
 
 ######## Enclave Settings ########
