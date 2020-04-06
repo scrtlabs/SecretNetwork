@@ -1,6 +1,6 @@
+use sgx_types::{sgx_status_t, SgxError, SgxResult};
 use std::borrow::ToOwned;
 use std::cell::RefCell;
-use sgx_types::{sgx_status_t, SgxResult, SgxError};
 
 use wasmi::{
     memory_units, Error as InterpreterError, Externals, FuncInstance, FuncRef, MemoryDescriptor,
@@ -132,8 +132,13 @@ use super::imports;
 fn read_db(context: Ctx, key: &[u8]) -> SgxResult<Option<Vec<u8>>> {
     let mut enclave_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
     unsafe {
-        match imports::ocall_read_db(enclave_buffer.as_mut_ptr(), context, key.as_ptr(), key.len()) {
-            sgx_status_t::SGX_SUCCESS => {/* continue */},
+        match imports::ocall_read_db(
+            enclave_buffer.as_mut_ptr(),
+            context,
+            key.as_ptr(),
+            key.len(),
+        ) {
+            sgx_status_t::SGX_SUCCESS => { /* continue */ }
             error_status => return Err(error_status),
         }
         let enclave_buffer = enclave_buffer.assume_init();
@@ -144,13 +149,15 @@ fn read_db(context: Ctx, key: &[u8]) -> SgxResult<Option<Vec<u8>>> {
 
 /// Safe wrapper around writes to the contract storage
 fn write_db(context: Ctx, key: &[u8], value: &[u8]) -> SgxError {
-    match unsafe { imports::ocall_write_db(
-        context,
-        key.as_ptr(),
-        key.len(),
-        value.as_ptr(),
-        value.len(),
-    ) } {
+    match unsafe {
+        imports::ocall_write_db(
+            context,
+            key.as_ptr(),
+            key.len(),
+            value.as_ptr(),
+            value.len(),
+        )
+    } {
         sgx_status_t::SGX_SUCCESS => Ok(()),
         err => Err(err),
     }
@@ -265,7 +272,8 @@ impl Externals for Runtime {
 
                 // Call write_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
                 // fn write_db(context: Ctx, key: &[u8], value: &[u8]) {
-                write_db(unsafe { self.context.clone() }, &key, &value);
+                write_db(unsafe { self.context.clone() }, &key, &value)
+                    .map_err(|_| Trap::new(TrapKind::Unreachable))?;
 
                 // Return nothing because this is the api ¯\_(ツ)_/¯
                 Ok(None)
