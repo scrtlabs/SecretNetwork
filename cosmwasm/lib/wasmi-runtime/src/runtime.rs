@@ -1,3 +1,5 @@
+use bech32;
+use bech32::FromBase32;
 use sgx_types::{sgx_status_t, SgxError, SgxResult};
 use std::borrow::ToOwned;
 use std::cell::RefCell;
@@ -289,19 +291,20 @@ impl Externals for Runtime {
 
                 // extract_vector extracts human addr into a buffer
                 let human = match extract_vector(&self.memory, human_ptr_ptr_in_wasm as u32) {
-                    Err(_) => return Ok(Some(RuntimeValue::I32(0))),
+                    Err(_) => return Ok(Some(RuntimeValue::I32(-1))),
                     Ok(value) => value,
                 };
 
                 // Turn Vec<u8> to str
-                let mut human_addr_str = str::from_utf8(&human).unwrap(); // TODO handle error
+                let mut human_addr_str = match str::from_utf8(&human) {
+                    Err(_) => return Ok(Some(RuntimeValue::I32(-2))),
+                    Ok(x) => x,
+                };
 
                 // if len(strings.TrimSpace(address)) == 0 {
                 //     return AccAddress{}, nil
                 // }
                 human_addr_str = human_addr_str.trim();
-
-                // If the address is empty
                 if human_addr_str.len() == 0 {
                     return Ok(Some(RuntimeValue::I32(0)));
                 }
@@ -309,42 +312,67 @@ impl Externals for Runtime {
                 // if err != nil {
                 //     return nil, err
                 // }
+                let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
+                    Err(_) => return Ok(Some(RuntimeValue::I32(-3))),
+                    Ok(x) => x,
+                };
+                if decoded_prefix != BECH32_PREFIX_ACC_ADDR {
+                    return Ok(Some(RuntimeValue::I32(-4)));
+                }
+
                 // err = VerifyAddressFormat(bz)
+                // func VerifyAddressFormat(bz []byte) error {
+                // 	verifier := GetConfig().GetAddressVerifier()
+                // 	if verifier != nil { // this is always null
+                // 		return verifier(bz)
+                // 	}
+                // 	if len(bz) != AddrLen { // this is 20
+                // 		return errors.New("incorrect address length")
+                // 	}
+                // 	return nil
+                // }
                 // if err != nil {
                 //     return nil, err
                 // }
+                let canonical = match Vec::<u8>::from_base32(&data) {
+                    Err(_) => return Ok(Some(RuntimeValue::I32(-5))),
+                    Ok(x) => x,
+                };
+                if canonical.len() != 20 {
+                    return Ok(Some(RuntimeValue::I32(-6)));
+                }
 
-                // Get pointer to the region of the value buffer
-                let value_ptr_ptr_in_wasm: i32 = args.nth_checked(1)?;
+                // Get pointer to the region of the canonical buffer
+                let canonical_ptr_ptr_in_wasm: i32 = args.nth_checked(1)?;
 
                 // Get pointer to the buffer (this was allocated in WASM)
-                let value_ptr_in_wasm: u32 = match self
+                let canonical_ptr_in_wasm: u32 = match self
                     .memory
-                    .get_value::<u32>(value_ptr_ptr_in_wasm as u32)
+                    .get_value::<u32>(canonical_ptr_ptr_in_wasm as u32)
                 {
                     Ok(x) => x,
                     Err(_) => return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW))),
                 };
                 // Get length of the buffer (this was allocated in WASM)
-                let value_len_in_wasm: u32 = match self
+                let canonical_len_in_wasm: u32 = match self
                     .memory
-                    .get_value::<u32>((value_ptr_ptr_in_wasm + 4) as u32)
+                    .get_value::<u32>((canonical_ptr_ptr_in_wasm + 4) as u32)
                 {
                     Ok(x) => x,
                     Err(_) => return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW))),
                 };
 
-                // Check that value is not too big to write into the allocated buffer
-                if value_len_in_wasm < value.len() as u32 {
+                // Check that canonical is not too big to write into the allocated buffer (canonical should always be 20 bytes)
+                if canonical_len_in_wasm < canonical.len() as u32 {
                     return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_TOO_SMALL)));
                 }
 
-                // Write value returned from read_db to WASM memory
-                if let Err(_) = self.memory.set(value_ptr_in_wasm, &value) {
+                // Write the canonical address to WASM memory
+                if let Err(_) = self.memory.set(canonical_ptr_in_wasm, &canonical) {
                     return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
                 }
                 // return AccAddress(bz), nil
-                Ok(None)
+                Ok(Some(RuntimeValue::I32(canonical.len() as i32)))
             } // TODO implement here - port from Go
             HUMANIZE_ADDRESS_INDEX => Ok(Some(RuntimeValue::I32(2))), // TODO implement here - port from Go
             _ => panic!("unknown function index"),
@@ -352,7 +380,7 @@ impl Externals for Runtime {
     }
 }
 
-const bech32_prefix_acc_addr: &'static str = "enigma";
+const BECH32_PREFIX_ACC_ADDR: &'static str = "enigma";
 // const Bech32PrefixAccPub = "enigmapub";
 // const Bech32PrefixValAddr = "enigmavaloper";
 // const Bech32PrefixValPub = "enigmavaloperpub";
