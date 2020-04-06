@@ -296,8 +296,6 @@ impl Externals for Runtime {
                 // Turn Vec<u8> to str
                 let mut human_addr_str = str::from_utf8(&human).unwrap(); // TODO handle error
 
-                
-
                 // if len(strings.TrimSpace(address)) == 0 {
                 //     return AccAddress{}, nil
                 // }
@@ -305,14 +303,12 @@ impl Externals for Runtime {
 
                 // If the address is empty
                 if human_addr_str.len() == 0 {
-                    return Ok(Some(RuntimeValue::I32(0)));              
+                    return Ok(Some(RuntimeValue::I32(0)));
                 }
-                          
                 // bz, err := GetFromBech32(address, bech32PrefixAccAddr)
                 // if err != nil {
                 //     return nil, err
                 // }
-            
                 // err = VerifyAddressFormat(bz)
                 // if err != nil {
                 //     return nil, err
@@ -347,18 +343,16 @@ impl Externals for Runtime {
                 if let Err(_) = self.memory.set(value_ptr_in_wasm, &value) {
                     return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
                 }
-            
                 // return AccAddress(bz), nil
                 Ok(None)
-            }, // TODO implement here - port from Go
+            } // TODO implement here - port from Go
             HUMANIZE_ADDRESS_INDEX => Ok(Some(RuntimeValue::I32(2))), // TODO implement here - port from Go
             _ => panic!("unknown function index"),
         }
     }
 }
 
-
-const bech32_prefix_acc_addr:  &'static str = "enigma";
+const bech32_prefix_acc_addr: &'static str = "enigma";
 // const Bech32PrefixAccPub = "enigmapub";
 // const Bech32PrefixValAddr = "enigmavaloper";
 // const Bech32PrefixValPub = "enigmavaloperpub";
