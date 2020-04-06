@@ -1,5 +1,5 @@
 use bech32;
-use bech32::FromBase32;
+use bech32::{FromBase32, ToBase32};
 use sgx_types::{sgx_status_t, SgxError, SgxResult};
 use std::borrow::ToOwned;
 use std::cell::RefCell;
@@ -339,6 +339,8 @@ impl Externals for Runtime {
                     Ok(x) => x,
                 };
                 if canonical.len() != 20 {
+                    // cosmos address length is 20
+                    // https://github.com/cosmos/cosmos-sdk/blob/v0.38.1/types/address.go#L32
                     return Ok(Some(RuntimeValue::I32(-6)));
                 }
 
@@ -373,8 +375,70 @@ impl Externals for Runtime {
                 }
                 // return AccAddress(bz), nil
                 Ok(Some(RuntimeValue::I32(canonical.len() as i32)))
-            } // TODO implement here - port from Go
-            HUMANIZE_ADDRESS_INDEX => Ok(Some(RuntimeValue::I32(2))), // TODO implement here - port from Go
+            }
+            // fn humanize_address(canonical: *const c_void, human: *mut c_void) -> i32;
+            HUMANIZE_ADDRESS_INDEX => {
+                // func humanAddress(canon []byte) (string, error) {
+                //     if len(canon) != sdk.AddrLen {
+                //         return "", fmt.Errorf("Expected %d byte address", sdk.AddrLen)
+                //     }
+                //     return sdk.AccAddress(canon).String(), nil
+                // }
+                let canonical_ptr_ptr_in_wasm: i32 = args.nth_checked(0)?;
+
+                // extract_vector extracts canonical address into a buffer
+                let canonical = match extract_vector(&self.memory, canonical_ptr_ptr_in_wasm as u32)
+                {
+                    Err(_) => return Ok(Some(RuntimeValue::I32(-1))),
+                    Ok(value) => value,
+                };
+
+                if canonical.len() != 20 {
+                    // cosmos address length is 20
+                    // https://github.com/cosmos/cosmos-sdk/blob/v0.38.1/types/address.go#L32
+                    return Ok(Some(RuntimeValue::I32(-2)));
+                }
+
+                let human_addr_str =
+                    match bech32::encode(BECH32_PREFIX_ACC_ADDR, canonical.to_base32()) {
+                        Err(_) => return Ok(Some(RuntimeValue::I32(-3))),
+                        Ok(value) => value,
+                    };
+
+                let human_bytes = human_addr_str.into_bytes();
+
+                // Get pointer to the region of the human buffer
+                let human_ptr_ptr_in_wasm: i32 = args.nth_checked(1)?;
+
+                // Get pointer to the buffer (this was allocated in WASM)
+                let human_ptr_in_wasm: u32 = match self
+                    .memory
+                    .get_value::<u32>(human_ptr_ptr_in_wasm as u32)
+                {
+                    Ok(x) => x,
+                    Err(_) => return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW))),
+                };
+                // Get length of the buffer (this was allocated in WASM)
+                let human_len_in_wasm: u32 = match self
+                    .memory
+                    .get_value::<u32>((human_ptr_ptr_in_wasm + 4) as u32)
+                {
+                    Ok(x) => x,
+                    Err(_) => return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW))),
+                };
+
+                // Check that human_bytes is not too big to write into the allocated buffer (human should always be 20 bytes)
+                if human_len_in_wasm < human_bytes.len() as u32 {
+                    return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_TOO_SMALL)));
+                }
+
+                // Write the canonical address to WASM memory
+                if let Err(_) = self.memory.set(human_ptr_in_wasm, &human_bytes) {
+                    return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
+                }
+
+                Ok(Some(RuntimeValue::I32(human_bytes.len() as i32)))
+            }
             _ => panic!("unknown function index"),
         }
     }
