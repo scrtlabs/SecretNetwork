@@ -95,20 +95,24 @@ impl ModuleImportResolver for EnigmaImportResolver {
         signature: &Signature,
     ) -> Result<FuncRef, InterpreterError> {
         let func_ref = match func_name {
+            // fn read_db(key: *const c_void, value: *mut c_void) -> i32;
             "read_db" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
                 READ_DB_INDEX,
             ),
+            // fn write_db(key: *const c_void, value: *mut c_void);
             "write_db" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32, ValueType::I32][..], None),
                 WRITE_DB_INDEX,
             ),
+            // fn canonicalize_address(human: *const c_void, canonical: *mut c_void) -> i32;
             "canonicalize_address" => FuncInstance::alloc_host(
-                Signature::new(&[/* TODO fix */][..], Some(ValueType::I32)),
+                Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
                 CANONICALIZE_ADDRESS_INDEX,
             ),
+            // fn humanize_address(canonical: *const c_void, human: *mut c_void) -> i32;
             "humanize_address" => FuncInstance::alloc_host(
-                Signature::new(&[/* TODO fix */][..], Some(ValueType::I32)),
+                Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
                 HUMANIZE_ADDRESS_INDEX,
             ),
             _ => {
