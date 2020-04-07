@@ -130,7 +130,7 @@ fn start_engine(context: Ctx, contract: &[u8]) -> Result<Engine, EnclaveError> {
             .expect("Module expected to have 'memory' export")
             .as_memory()
             .cloned()
-            .expect("'memory' export should be a memory"),
+            .expect("'memory' export should be of memory type"),
     };
 
     Ok(Engine::new(runtime, instance))
