@@ -14,6 +14,4 @@ derive_more = "0.99"
 sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.0" }
 enclave-ffi-types = { path = "../enclave-ffi-types" }
 wasmi = { git = "https://github.com/paritytech/wasmi", rev = "39a18a433a765a36383d34d4edd536ba1e0664d2", default-features = false, features = ["core"] }
-bech32 = "0.7.2"
-# sp-wasm-interface = { version = "2.0.0-alpha.5", default-features = false }
-# sc-executor-wasmi = { git = "https://github.com/assafmo/substrate", rev = "db2c1883e440bd4edf7a5058675c77fe97bed074", default-features = false }
+bech32 = { git = "https://github.com/reuvenpo/rust-bech32", branch = "support-no_std", default-features = false }
