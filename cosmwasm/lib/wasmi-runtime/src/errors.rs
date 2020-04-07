@@ -18,7 +18,7 @@ pub fn wasmi_error_to_enclave_error(wasmi_error: InterpreterError) -> EnclaveErr
         // An ocall failed during contract execution.
         Some(Some(WasmEngineError::FailedOcall)) => EnclaveError::FailedOcall,
         // Unexpected WasmEngineError variant or unexpected HostError.
-        Some(Some(_)) | Some(None) => EnclaveError::Unknown,
+        Some(None) => EnclaveError::Unknown,
         // The error is not a HostError. In the future we might want to return more specific errors.
         None => EnclaveError::FailedFunctionCall,
     }

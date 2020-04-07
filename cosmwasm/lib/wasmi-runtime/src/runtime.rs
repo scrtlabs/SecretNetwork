@@ -1,14 +1,11 @@
 use bech32;
 use bech32::{FromBase32, ToBase32};
 use sgx_types::{sgx_status_t, SgxError, SgxResult};
-use std::borrow::ToOwned;
-use std::cell::RefCell;
 use std::str;
 
 use wasmi::{
-    memory_units, Error as InterpreterError, Externals, FuncInstance, FuncRef, MemoryDescriptor,
-    MemoryInstance, MemoryRef, ModuleImportResolver, ModuleRef, RuntimeArgs, RuntimeValue,
-    Signature, Trap, TrapKind, ValueType,
+    Error as InterpreterError, Externals, FuncInstance, FuncRef, MemoryRef, ModuleImportResolver,
+    ModuleRef, RuntimeArgs, RuntimeValue, Signature, Trap, ValueType,
 };
 
 use enclave_ffi_types::{Ctx, EnclaveBuffer};
@@ -24,39 +21,7 @@ use super::errors::WasmEngineError;
 // When instansiating a module we give it this resolver
 // When invoking a function inside the module we can give it different runtimes (which we probably won't do)
 #[derive(Debug, Clone)]
-pub struct EnigmaImportResolver {
-    max_memory: u32,
-    memory: RefCell<MemoryRef>,
-}
-
-impl EnigmaImportResolver {
-    /// New import resolver with specifed maximum amount of inital memory (in wasm pages = 64kb)
-    pub fn with_limit(max_memory: u32) -> EnigmaImportResolver {
-        EnigmaImportResolver {
-            max_memory,
-            memory: RefCell::new(
-                MemoryInstance::alloc(
-                    memory_units::Pages(0),
-                    Some(memory_units::Pages(max_memory as usize)),
-                )
-                .expect("Reuven to fix this"),
-            ),
-        }
-    }
-
-    /// Returns memory that was instantiated during the contract module
-    /// start. If contract does not use memory at all, the dummy memory of length (0, 0)
-    /// will be created instead. So this method always returns memory instance
-    /// unless errored.
-    pub fn memory_ref(&self) -> MemoryRef {
-        self.memory.borrow().clone()
-    }
-
-    /// Returns current memory that is in use
-    pub fn memory_size(&self) -> Result<u32, InterpreterError> {
-        Ok(self.memory_ref().current_size().0 as u32)
-    }
-}
+pub struct EnigmaImportResolver {}
 
 // These functions should be available to invoke from wasm code
 // These should pass the request up to go-cosmwasm:
@@ -66,38 +31,10 @@ impl EnigmaImportResolver {
 // fn canonicalize_address(human: *const c_void, canonical: *mut c_void) -> i32;
 // fn humanize_address(canonical: *const c_void, human: *mut c_void) -> i32;
 impl ModuleImportResolver for EnigmaImportResolver {
-    fn resolve_memory(
-        &self,
-        field_name: &str,
-        descriptor: &MemoryDescriptor,
-    ) -> Result<MemoryRef, InterpreterError> {
-        if field_name == "memory" {
-            let effective_max = descriptor.maximum().unwrap_or(self.max_memory + 1);
-            if descriptor.initial() > self.max_memory || effective_max > self.max_memory {
-                Err(InterpreterError::Instantiation(
-                    "Module requested too much memory".to_owned(),
-                ))
-            } else {
-                let mem = MemoryInstance::alloc(
-                    memory_units::Pages(descriptor.initial() as usize),
-                    descriptor
-                        .maximum()
-                        .map(|x| memory_units::Pages(x as usize)),
-                )?;
-                *self.memory.borrow_mut() = mem.clone();
-                Ok(mem)
-            }
-        } else {
-            Err(InterpreterError::Instantiation(
-                "Memory imported under unknown name".to_owned(),
-            ))
-        }
-    }
-
     fn resolve_func(
         &self,
         func_name: &str,
-        signature: &Signature,
+        _signature: &Signature,
     ) -> Result<FuncRef, InterpreterError> {
         let func_ref = match func_name {
             // fn read_db(key: *const c_void, value: *mut c_void) -> i32;
@@ -451,16 +388,11 @@ const BECH32_PREFIX_ACC_ADDR: &'static str = "enigma";
 pub struct Engine {
     runtime: Runtime,
     instance: ModuleRef,
-    imports: EnigmaImportResolver,
 }
 
 impl Engine {
-    pub fn new(runtime: Runtime, instance: ModuleRef, imports: EnigmaImportResolver) -> Self {
-        Self {
-            runtime,
-            instance,
-            imports,
-        }
+    pub fn new(runtime: Runtime, instance: ModuleRef) -> Self {
+        Self { runtime, instance }
     }
 
     pub fn allocate(&mut self, len: u32) -> Result<u32, InterpreterError> {
@@ -478,7 +410,12 @@ impl Engine {
     }
 
     pub fn memory(&self) -> MemoryRef {
-        self.imports.memory_ref()
+        self.instance
+            .export_by_name("memory")
+            .expect("Module expected to have 'memory' export")
+            .as_memory()
+            .cloned()
+            .expect("'memory' export should be a memory")
     }
 
     pub fn write_to_memory(&mut self, buffer: &[u8]) -> Result<u32, InterpreterError> {

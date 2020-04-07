@@ -112,9 +112,7 @@ fn start_engine(context: Ctx, contract: &[u8]) -> Result<Engine, EnclaveError> {
 
     // Create new imports resolver.
     // These are the signatures of rust functions available to invoke from wasm code.
-    // We want to limit to 4GiB of memory. `with_limit` accepts number of memory pages.
-    // 1 memory page is 64KiB, therefore 4GiB/64KiB == num of pages == 64*1024
-    let imports = EnigmaImportResolver::with_limit(64 * 1024);
+    let imports = EnigmaImportResolver {};
     let module_imports = ImportsBuilder::new().with_resolver("env", &imports);
 
     // Instantiate a module with our imports and assert that there is no `start` function.
@@ -124,10 +122,16 @@ fn start_engine(context: Ctx, contract: &[u8]) -> Result<Engine, EnclaveError> {
         return Err(EnclaveError::WasmModuleWithStart);
     }
     let instance = instance.not_started_instance().clone();
+
     let runtime = Runtime {
         context,
-        memory: imports.memory_ref(),
+        memory: instance
+            .export_by_name("memory")
+            .expect("Module expected to have 'memory' export")
+            .as_memory()
+            .cloned()
+            .expect("'memory' export should be a memory"),
     };
 
-    Ok(Engine::new(runtime, instance, imports))
+    Ok(Engine::new(runtime, instance))
 }
