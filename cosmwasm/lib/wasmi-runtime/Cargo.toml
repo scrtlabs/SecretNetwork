@@ -5,7 +5,13 @@ authors = ["Reuven Podmazo <reuven@enigma.co>"]
 edition = "2018"
 description = "An enclave running wasmi, to be used by cosmwasm-sgx-vm"
 
-[dependencies]
-enclave-ffi-types = { path = "../enclave-ffi-types" }
+[lib]
+name = "wasmi_runtime_enclave"
+crate-type = ["staticlib"]
 
-[build-dependencies]
+[dependencies]
+derive_more = "0.99"
+sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.0" }
+enclave-ffi-types = { path = "../enclave-ffi-types" }
+wasmi = { git = "https://github.com/paritytech/wasmi", rev = "39a18a433a765a36383d34d4edd536ba1e0664d2", default-features = false, features = ["core"] }
+bech32 = { git = "https://github.com/reuvenpo/rust-bech32", branch = "support-no_std", default-features = false }

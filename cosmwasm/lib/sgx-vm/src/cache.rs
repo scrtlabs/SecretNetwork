@@ -1,3 +1,8 @@
+//! This module defines the `CosmCache` type which wraps the concept of a directory holding a cache of wasm contracts.
+//! The contracts are validated before storing them (they are checked to be valid WASM bytecode, with the correct
+//! imports and exports.) but not when fetching them. This is why the constructor of the type is unsafe. Perhaps we
+//! should add this full validation on startup to make it safe? (correct hashes, valid bytecode, correct im/exports)
+
 use std::fs::create_dir_all;
 use std::marker::PhantomData;
 use std::path::PathBuf;
@@ -5,17 +10,20 @@ use std::path::PathBuf;
 use lru::LruCache;
 use snafu::ResultExt;
 
-use cosmwasm::traits::{Api, Extern, Storage};
+use crate::{Extern, Storage};
+use cosmwasm::traits::Api;
 
-use crate::backends::{backend, compile};
+// use crate::backends::{backend, compile};
 use crate::compatability::check_api_compatibility;
 use crate::errors::{Error, IntegrityErr, IoErr};
 use crate::instance::Instance;
-use crate::modules::{FileSystemCache, WasmHash};
+// use crate::modules::{FileSystemCache, WasmHash};
 use crate::wasm_store::{load, save, wasm_hash};
 
+use crate::wasmi::{Module, WasmHash};
+
 static WASM_DIR: &str = "wasm";
-static MODULES_DIR: &str = "modules";
+// static MODULES_DIR: &str = "modules";
 
 #[derive(Debug, Default, Clone)]
 struct Stats {
@@ -26,8 +34,9 @@ struct Stats {
 
 pub struct CosmCache<S: Storage + 'static, A: Api + 'static> {
     wasm_path: PathBuf,
-    modules: FileSystemCache,
-    instances: Option<LruCache<WasmHash, wasmer_runtime_core::Instance>>,
+    // modules: FileSystemCache,
+    /// In sgx-vm this field is just a cache of wasm blobs.
+    instances: Option<LruCache<WasmHash, Module>>,
     stats: Stats,
     // Those two don't store data but only fix type information
     type_storage: PhantomData<S>,
@@ -50,14 +59,14 @@ where
         let base = base_dir.into();
         let wasm_path = base.join(WASM_DIR);
         create_dir_all(&wasm_path).context(IoErr {})?;
-        let modules = FileSystemCache::new(base.join(MODULES_DIR)).context(IoErr {})?;
+        // let modules = FileSystemCache::new(base.join(MODULES_DIR)).context(IoErr {})?;
         let instances = if cache_size > 0 {
             Some(LruCache::new(cache_size))
         } else {
             None
         };
         Ok(CosmCache {
-            modules,
+            // modules,
             wasm_path,
             instances,
             stats: Stats::default(),
@@ -68,12 +77,7 @@ where
 
     pub fn save_wasm(&mut self, wasm: &[u8]) -> Result<Vec<u8>, Error> {
         check_api_compatibility(wasm)?;
-        let id = save(&self.wasm_path, wasm)?;
-        let module = compile(wasm)?;
-        let hash = WasmHash::generate(&id);
-        // singlepass cannot store a module, just make best effort
-        let _ = self.modules.store(hash, module);
-        Ok(id)
+        save(&self.wasm_path, wasm)
     }
 
     pub fn load_wasm(&self, id: &[u8]) -> Result<Vec<u8>, Error> {
@@ -104,12 +108,14 @@ where
             }
         }
 
+        /*
         // try from the module cache
         let res = self.modules.load_with_backend(hash, backend());
         if let Ok(module) = res {
             self.stats.hits_module += 1;
             return Instance::from_module(&module, deps, gas_limit);
         }
+        */
 
         // fall back to wasm cache (and re-compiling) - this is for backends that don't support serialization
         let wasm = self.load_wasm(id)?;
