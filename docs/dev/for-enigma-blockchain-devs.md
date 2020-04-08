@@ -54,6 +54,17 @@ docker run -d -p 26657:26657 -p 26656:26656 -p 1317:1317 \
  --name secretdev secretdev
 ```
 
+## Docker installation
+
+```bash
+git clone https://github.com/enigmampc/EnigmaBlockchain
+cd EnigmaBlockchain
+docker build -t enigmadev -f Dockerfile_devnet .
+
+docker run -d -p 26657:26657 -p 26656:26656 -p 1317:1317 \
+ --name enigmadev enigmadev
+```
+
 # Delegation & Rewards
 
 ## `b` is a delegator of `a`
