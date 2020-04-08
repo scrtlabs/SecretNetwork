@@ -1,10 +1,13 @@
 use enclave_ffi_types::{Ctx, EnclaveError};
 
+use parity_wasm::elements;
+
 use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
 
 use wasmi::{ImportsBuilder, ModuleInstance};
 
 use crate::errors::wasmi_error_to_enclave_error;
+use crate::gas::{gas_rules, WasmCosts};
 use crate::runtime::{Engine, EnigmaImportResolver, Runtime};
 
 /*
@@ -107,8 +110,20 @@ pub fn query(context: Ctx, contract: &[u8], msg: &[u8]) -> Result<QuerySuccess, 
 }
 
 fn start_engine(context: Ctx, contract: &[u8]) -> Result<Engine, EnclaveError> {
-    // Load wasm binary and prepare it for instantiation.
-    let module = wasmi::Module::from_buffer(contract).map_err(|_err| EnclaveError::InvalidWasm)?;
+    // Create a parity-wasm module first, so we can inject gas metering to it
+    // (you need a parity-wasm module to use the pwasm-utils create)
+    let p_modlue = elements::deserialize_buffer(contract).map_err(|_| EnclaveError::InvalidWasm)?;
+
+    // Set the gas costs for wasm op-codes (there is an inline stack_height limit in WasmCosts)
+    let wasm_costs = WasmCosts::default();
+
+    // Inject gas metering to pwasm module
+    let contract_module = pwasm_utils::inject_gas_counter(p_modlue, &gas_rules(&wasm_costs))
+        .map_err(|_| EnclaveError::FailedGasMeteringInjection)?;
+
+    // Create a wasmi module from the parity module
+    let module = wasmi::Module::from_parity_wasm_module(contract_module)
+        .map_err(|_err| EnclaveError::InvalidWasm)?;
 
     // Create new imports resolver.
     // These are the signatures of rust functions available to invoke from wasm code.

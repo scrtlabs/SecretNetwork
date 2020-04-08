@@ -42,6 +42,8 @@ pub enum EnclaveError {
     WasmModuleWithFP,
     /// Calling a function in the contract failed.
     FailedFunctionCall,
+    /// Fail to inject gas metering
+    FailedGasMeteringInjection,
     /// Unexpected Error happened, no more details available
     Unknown,
 }
