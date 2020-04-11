@@ -111,17 +111,17 @@ deb: build_local
 	# mv -f ./go-cosmwasm/api/libgo_cosmwasm.so /tmp/EnigmaBlockchain/deb/usr/lib/libgo_cosmwasm.so
 	# chmod +x /tmp/EnigmaBlockchain/deb/usr/lib/libgo_cosmwasm.so
 
-	mkdir -p /tmp/SecretNetwork/deb/DEBIAN
-	cp ./packaging_ubuntu/control /tmp/SecretNetwork/deb/DEBIAN/control
-	printf "Version: " >> /tmp/SecretNetwork/deb/DEBIAN/control
-	git tag | grep -P '^v' | tail -1 | tr -d v >> /tmp/SecretNetwork/deb/DEBIAN/control
-	echo "" >> /tmp/SecretNetwork/deb/DEBIAN/control
-	cp ./packaging_ubuntu/postinst /tmp/SecretNetwork/deb/DEBIAN/postinst
-	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/postinst
-	cp ./packaging_ubuntu/postrm /tmp/SecretNetwork/deb/DEBIAN/postrm
-	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/postrm
-	dpkg-deb --build /tmp/SecretNetwork/deb/ .
-	-rm -rf /tmp/SecretNetwork
+	mkdir -p /tmp/EnigmaBlockchain/deb/DEBIAN
+	cp ./packaging_ubuntu/control /tmp/EnigmaBlockchain/deb/DEBIAN/control
+	printf "Version: " >> /tmp/EnigmaBlockchain/deb/DEBIAN/control
+	git describe --tags | tr -d v >> /tmp/EnigmaBlockchain/deb/DEBIAN/control
+	echo "" >> /tmp/EnigmaBlockchain/deb/DEBIAN/control
+	cp ./packaging_ubuntu/postinst /tmp/EnigmaBlockchain/deb/DEBIAN/postinst
+	chmod 755 /tmp/EnigmaBlockchain/deb/DEBIAN/postinst
+	cp ./packaging_ubuntu/postrm /tmp/EnigmaBlockchain/deb/DEBIAN/postrm
+	chmod 755 /tmp/EnigmaBlockchain/deb/DEBIAN/postrm
+	dpkg-deb --build /tmp/EnigmaBlockchain/deb/ .
+	-rm -rf /tmp/EnigmaBlockchain
 
 rename_for_release:
 	-rename "s/windows-4.0-amd64/v${VERSION}-win64/" *.exe
