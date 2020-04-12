@@ -25,7 +25,6 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/EnigmaBlo
 
 # Block Explorers
 
-- https://explorer.mainnet.enigma.co
 - https://explorer.scrt.cashmaney.com
 
 # Implementation Discussions
