@@ -28,11 +28,11 @@ pub struct Module {
     bytecode: Vec<u8>,
     storage: Option<Box<Box<dyn Storage>>>,
     gas_limit: u64,
-    enclave: SgxEnclave,
+    enclave: &'static SgxEnclave,
 }
 
 impl Module {
-    pub fn new(bytecode: Vec<u8>, gas_limit: u64, enclave: SgxEnclave) -> Self {
+    pub fn new(bytecode: Vec<u8>, gas_limit: u64, enclave: &'static SgxEnclave) -> Self {
         // TODO add validation of this bytecode?
         Self {
             bytecode,

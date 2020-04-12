@@ -11,6 +11,8 @@ use wasmer_runtime_core::{
 };
 */
 
+use lazy_static::lazy_static;
+
 use cosmwasm::traits::Api;
 
 use crate::{Extern, Storage};
@@ -56,13 +58,17 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
     )
 }
 
+lazy_static! {
+    static ref SGX_ENCLAVE: SgxResult<SgxEnclave> = init_enclave();
+}
+
 impl<S, A> Instance<S, A>
 where
     S: Storage + 'static,
     A: Api + 'static,
 {
     pub fn from_code(code: &[u8], deps: Extern<S, A>, gas_limit: u64) -> Result<Self> {
-        let enclave = init_enclave().map_err(|err| Error::SdkErr { inner: err })?;
+        let enclave = SGX_ENCLAVE.as_ref().map_err(|err| Error::SdkErr { inner: *err })?;
 
         let module = Module::new(code.to_vec(), gas_limit, enclave);
 
