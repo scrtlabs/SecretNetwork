@@ -24,10 +24,10 @@ x64 2.0 GHz 2v CPU
 
 ## Installation
 
-### 1. Download the Secret Blockchain package installer for Debian/Ubuntu:
+### 1. Download the Enigma Blockchain package installer for Debian/Ubuntu:
 
 ```bash
-wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb
+wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.3/enigma-blockchain_0.0.3_amd64.deb
 ```
 
 ([How to verify releases](/docs/verify-releases.md))
@@ -35,7 +35,7 @@ wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enig
 ### 2. Install the package:
 
 ```bash
-sudo dpkg -i enigmachain_0.0.2_amd64.deb
+sudo dpkg -i enigma-blockchain_0.0.3_amd64.deb
 ```
 
 ### 3. Initialize your installation of the Secret Blockchain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
