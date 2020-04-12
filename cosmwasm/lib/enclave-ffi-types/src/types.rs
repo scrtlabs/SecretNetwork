@@ -44,6 +44,8 @@ pub enum EnclaveError {
     FailedFunctionCall,
     /// Fail to inject gas metering
     FailedGasMeteringInjection,
+    /// Ran out of gas
+    OutOfGas,
     /// Unexpected Error happened, no more details available
     Unknown,
 }
