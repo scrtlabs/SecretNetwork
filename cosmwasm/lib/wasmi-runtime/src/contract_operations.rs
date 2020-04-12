@@ -52,7 +52,7 @@ pub fn init(
 
     Ok(InitSuccess {
         output,
-        used_gas: 0,        // TODO gas
+        used_gas: engine.gas_used(),
         signature: [0; 65], // TODO enclave sign
     })
 }
@@ -84,7 +84,7 @@ pub fn handle(
 
     Ok(HandleSuccess {
         output,
-        used_gas: 0,        // TODO gas
+        used_gas: engine.gas_used(),
         signature: [0; 65], // TODO enclave sign
     })
 }
@@ -111,7 +111,7 @@ pub fn query(
 
     Ok(QuerySuccess {
         output,
-        used_gas: 0,        // TODO gas
+        used_gas: engine.gas_used(),
         signature: [0; 65], // TODO enclave sign
     })
 }

@@ -428,6 +428,10 @@ impl Engine {
         Self { runtime, instance }
     }
 
+    pub fn gas_used(&self) -> u64 {
+        self.runtime.gas_used
+    }
+
     pub fn allocate(&mut self, len: u32) -> Result<u32, InterpreterError> {
         match self.instance.invoke_export(
             "allocate",
