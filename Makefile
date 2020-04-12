@@ -97,8 +97,8 @@ deb: build_local
 	chmod +x /tmp/EnigmaBlockchain/deb/bin/enigmad /tmp/EnigmaBlockchain/deb/bin/enigmacli
 
 	mkdir -p /tmp/EnigmaBlockchain/deb/usr/lib
-	mv -f ./go-cosmwasm/api/libgo_cosmwasm.so /tmp/EnigmaBlockchain/deb/usr/lib/libgo_cosmwasm.so
-	chmod +x /tmp/EnigmaBlockchain/deb/usr/lib/libgo_cosmwasm.so
+	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/EnigmaBlockchain/deb/usr/lib/
+	chmod +x /tmp/EnigmaBlockchain/deb/usr/lib/lib*.so
 
 	mkdir -p /tmp/EnigmaBlockchain/deb/DEBIAN
 	cp ./packaging_ubuntu/control /tmp/EnigmaBlockchain/deb/DEBIAN/control

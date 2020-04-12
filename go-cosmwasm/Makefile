@@ -52,18 +52,18 @@ build: build-rust build-go
 build-rust: build-rust-release
 
 # use debug build for quick testing
-build-rust-debug: enclave.signed.so lib/libEnclave_u.a
+build-rust-debug: librust_cosmwasm_enclave.signed.so lib/libEnclave_u.a
 	cargo build --features backtraces
 	cp target/debug/libgo_cosmwasm.$(DLL_EXT) api
 
 # use release build to actually ship - smaller and much faster
-build-rust-release: enclave.signed.so lib/libEnclave_u.a
+build-rust-release: librust_cosmwasm_enclave.signed.so lib/libEnclave_u.a
 	cargo build --release --features backtraces
 	cp target/release/libgo_cosmwasm.$(DLL_EXT) api
 	@ #this pulls out ELF symbols, 80% size reduction!
 
-enclave.signed.so: build-enclave
-	cp ../cosmwasm/lib/wasmi-runtime/enclave.signed.so enclave.signed.so
+librust_cosmwasm_enclave.signed.so: build-enclave
+	cp ../cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./
 
 # This file will be picked up by the crates build script and linked into the library.
 # We make sure that the enclave is built before we compile the edl,
