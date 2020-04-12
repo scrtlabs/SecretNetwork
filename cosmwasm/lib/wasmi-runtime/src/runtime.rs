@@ -116,6 +116,8 @@ fn write_db(context: Ctx, key: &[u8], value: &[u8]) -> SgxError {
 pub struct Runtime {
     pub context: Ctx,
     pub memory: MemoryRef,
+    pub gas_limit: i32,
+    pub gas_used: i32,
 }
 
 const READ_DB_INDEX: usize = 0;
@@ -382,6 +384,21 @@ impl Externals for Runtime {
                 }
 
                 Ok(Some(RuntimeValue::I32(human_bytes.len() as i32)))
+            }
+            GAS_INDEX => {
+                // Get the gas_amount argument
+                let gas_amount: i32 = args.nth_checked(0)?;
+
+                // Add amount to a static counter
+                self.gas_used += gas_amount;
+
+                // Check if new amount is bigger than gas limit
+                // If is above the limit, halt execution
+                if (self.gas_used > self.gas_limit) {
+                    return Err(WasmEngineError::OutOfGas);
+                }
+
+                Ok(None)
             }
             _ => panic!("unknown function index"),
         }
