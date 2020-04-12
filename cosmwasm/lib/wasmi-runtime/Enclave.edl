@@ -4,9 +4,9 @@ enclave {
     from "sgx_backtrace.edl" import *;
     from "sgx_tstdc.edl" import *;
     from "sgx_fs.edl" import *;
-    
+
     // This header is generated during the build of enclave-ffi-types
-    include "../../target/headers/enclave-ffi-types.h"
+    include "target/headers/enclave-ffi-types.h"
 
     trusted {
         EnclaveBuffer ecall_allocate(
