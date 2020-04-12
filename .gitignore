@@ -9,3 +9,4 @@ cosmwasm/lib/sgx-vm/Enclave_u.c
 cosmwasm/lib/sgx-vm/Enclave_u.h
 cosmwasm/lib/sgx-vm/Enclave_u.o
 cosmwasm/lib/sgx-vm/libEnclave_u.a
+librust_cosmwasm_enclave.signed.so
