@@ -7,7 +7,7 @@ wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.3/enig
 ### Remove old installations
 
 ```bash
-sudo dpkg -r enigmachain
+sudo dpkg -P enigmachain
 sudo rm -rf ~/.enigmad ~/.enigmacli
 sudo rm -rf ~/.engd ~/.engcli
 sudo rm -rf "$(which enigmad)"
@@ -43,6 +43,7 @@ sudo chown -R ubuntu .enigmad/
 
 ### Install the `.deb` file
 
+```bash
 sudo dpkg -i enigma-blockchain_0.0.3_amd64.deb
 ```
 
