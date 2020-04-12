@@ -57,6 +57,10 @@ impl ModuleImportResolver for EnigmaImportResolver {
                 Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
                 HUMANIZE_ADDRESS_INDEX,
             ),
+            // fn gas(amount: i32);
+            "gas" => {
+                FuncInstance::alloc_host(Signature::new(&[ValueType::I32][..], None), GAS_INDEX)
+            }
             _ => {
                 return Err(InterpreterError::Function(format!(
                     "host module doesn't export function with name {}",
@@ -118,6 +122,7 @@ const READ_DB_INDEX: usize = 0;
 const WRITE_DB_INDEX: usize = 1;
 const CANONICALIZE_ADDRESS_INDEX: usize = 2;
 const HUMANIZE_ADDRESS_INDEX: usize = 3;
+const GAS_INDEX: usize = 4;
 
 /// An unknown error occurred when writing to region
 const ERROR_WRITE_TO_REGION_UNKNONW: i32 = -1000001;
