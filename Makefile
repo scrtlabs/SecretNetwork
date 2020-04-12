@@ -66,26 +66,24 @@ xgo_build_enigmad: go.sum
 xgo_build_enigmacli: go.sum
 	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/EnigmaBlockchain/cmd/enigmacli
 
-build_local:
+build_linux:
 	$(MAKE) -C go-cosmwasm build-rust
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
 #   this pulls out ELF symbols, 80% size reduction!
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
 
-build_linux: build_local
-
 build_windows:
-	$(MAKE) xgo_build_enigmad XGO_TARGET=windows/amd64
+	# CLI only 
 	$(MAKE) xgo_build_enigmacli XGO_TARGET=windows/amd64
 
 build_macos:
-	$(MAKE) xgo_build_enigmad XGO_TARGET=darwin/amd64
+	# CLI only 
 	$(MAKE) xgo_build_enigmacli XGO_TARGET=darwin/amd64
 
 build_all: build_linux build_windows build_macos
 
-deb: build_local
+deb: build_linux
     ifneq ($(UNAME_S),Linux)
 		exit 1
     endif
