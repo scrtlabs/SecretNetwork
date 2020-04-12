@@ -67,7 +67,7 @@ xgo_build_enigmacli: go.sum
 	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/EnigmaBlockchain/cmd/enigmacli
 
 build_local:
-	cd go-cosmwasm && cargo build --release --features backtraces
+	$(MAKE) -C go-cosmwasm build-rust
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
 	#this pulls out ELF symbols, 80% size reduction!
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
@@ -136,3 +136,4 @@ clean:
 	-rm -f ./enigmad-*
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*
+	$(MAKE) -C go-cosmwasm clean-all
