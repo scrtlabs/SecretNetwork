@@ -111,7 +111,7 @@ pub fn query(context: Ctx, contract: &[u8], msg: &[u8]) -> Result<QuerySuccess, 
 
 fn start_engine(context: Ctx, contract: &[u8]) -> Result<Engine, EnclaveError> {
     // Create a parity-wasm module first, so we can inject gas metering to it
-    // (you need a parity-wasm module to use the pwasm-utils create)
+    // (you need a parity-wasm module to use the pwasm-utils crate)
     let p_modlue = elements::deserialize_buffer(contract).map_err(|_| EnclaveError::InvalidWasm)?;
 
     // Set the gas costs for wasm op-codes (there is an inline stack_height limit in WasmCosts)
