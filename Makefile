@@ -69,7 +69,7 @@ xgo_build_enigmacli: go.sum
 build_local:
 	$(MAKE) -C go-cosmwasm build-rust
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
-	#this pulls out ELF symbols, 80% size reduction!
+#   this pulls out ELF symbols, 80% size reduction!
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
 
