@@ -77,12 +77,12 @@ Rust_Target_Path := $(CURDIR)/../incubator-teaclave-sgx-sdk/xargo
 all: enclave
 
 .PHONY: enclave
-enclave: enclave.signed.so
+enclave: librust_cosmwasm_enclave.signed.so
 
-enclave.signed.so: enclave.so
+librust_cosmwasm_enclave.signed.so: librust_cosmwasm_enclave.so
 	sgx_sign sign -key Enclave_private.pem -enclave $^ -out $@ -config Enclave.config.xml
 
-enclave.so: $(CUSTOM_LIBRARY_PATH)/libenclave.a Enclave_t.o compiler-rt
+librust_cosmwasm_enclave.so: $(CUSTOM_LIBRARY_PATH)/libenclave.a Enclave_t.o compiler-rt
 	$(CXX) Enclave_t.o -o $@ $(RustEnclave_Link_Flags)
 
 .PHONY: compiler-rt

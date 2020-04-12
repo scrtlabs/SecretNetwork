@@ -35,7 +35,7 @@ pub struct Instance<S: Storage + 'static, A: Api + 'static> {
     type_storage: PhantomData<S>,
 }
 
-static ENCLAVE_FILE: &'static str = "enclave.signed.so";
+static ENCLAVE_FILE: &'static str = "librust_cosmwasm_enclave.signed.so";
 
 fn init_enclave() -> SgxResult<SgxEnclave> {
     let mut launch_token: sgx_launch_token_t = [0; 1024];
