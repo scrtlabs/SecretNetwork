@@ -26,12 +26,13 @@ we need to allocate memory regions inside the VM's instance and copy
 */
 
 pub fn init(
-    context: Ctx,    // need to pass this to read_db & write_db
+    context: Ctx, // need to pass this to read_db & write_db
+    gas_limit: u64,
     contract: &[u8], // contract wasm bytes
     env: &[u8],      // blockchain state
     msg: &[u8],      // probably function call and args
 ) -> Result<InitSuccess, EnclaveError> {
-    let mut engine = start_engine(context, contract)?;
+    let mut engine = start_engine(context, gas_limit, contract)?;
 
     let env_ptr = engine
         .write_to_memory(env)
@@ -58,11 +59,12 @@ pub fn init(
 
 pub fn handle(
     context: Ctx,
+    gas_limit: u64,
     contract: &[u8],
     env: &[u8],
     msg: &[u8],
 ) -> Result<HandleSuccess, EnclaveError> {
-    let mut engine = start_engine(context, contract)?;
+    let mut engine = start_engine(context, gas_limit, contract)?;
 
     let env_ptr = engine
         .write_to_memory(env)
@@ -87,8 +89,13 @@ pub fn handle(
     })
 }
 
-pub fn query(context: Ctx, contract: &[u8], msg: &[u8]) -> Result<QuerySuccess, EnclaveError> {
-    let mut engine = start_engine(context, contract)?;
+pub fn query(
+    context: Ctx,
+    gas_limit: u64,
+    contract: &[u8],
+    msg: &[u8],
+) -> Result<QuerySuccess, EnclaveError> {
+    let mut engine = start_engine(context, gas_limit, contract)?;
 
     let msg_ptr = engine
         .write_to_memory(msg)
@@ -109,7 +116,7 @@ pub fn query(context: Ctx, contract: &[u8], msg: &[u8]) -> Result<QuerySuccess, 
     })
 }
 
-fn start_engine(context: Ctx, contract: &[u8]) -> Result<Engine, EnclaveError> {
+fn start_engine(context: Ctx, gas_limit: u64, contract: &[u8]) -> Result<Engine, EnclaveError> {
     // Create a parity-wasm module first, so we can inject gas metering to it
     // (you need a parity-wasm module to use the pwasm-utils crate)
     let p_modlue = elements::deserialize_buffer(contract).map_err(|_| EnclaveError::InvalidWasm)?;
@@ -138,15 +145,16 @@ fn start_engine(context: Ctx, contract: &[u8]) -> Result<Engine, EnclaveError> {
     }
     let instance = instance.not_started_instance().clone();
 
-    let runtime = Runtime {
+    let runtime = Runtime::new(
         context,
-        memory: instance
+        instance
             .export_by_name("memory")
             .expect("Module expected to have 'memory' export")
             .as_memory()
             .cloned()
             .expect("'memory' export should be of memory type"),
-    };
+        gas_limit,
+    );
 
     Ok(Engine::new(runtime, instance))
 }

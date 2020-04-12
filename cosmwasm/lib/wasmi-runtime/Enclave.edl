@@ -15,6 +15,8 @@ enclave {
         );
 
         public InitResult ecall_init(
+            Ctx context,
+            uint64_t gas_limit,
             [in, count=contract_len] const uint8_t* contract,
             uintptr_t contract_len,
             [in, count=env_len] const uint8_t* env,
@@ -24,6 +26,8 @@ enclave {
         );
 
         public HandleResult ecall_handle(
+            Ctx context,
+            uint64_t gas_limit,
             [in, count=contract_len] const uint8_t* contract,
             uintptr_t contract_len,
             [in, count=env_len] const uint8_t* env,
@@ -33,6 +37,8 @@ enclave {
         );
 
         public QueryResult ecall_query(
+            Ctx context,
+            uint64_t gas_limit,
             [in, count=contract_len] const uint8_t* contract,
             uintptr_t contract_len,
             [in, count=msg_len] const uint8_t* msg,
@@ -47,13 +53,13 @@ enclave {
         );
 
         EnclaveBuffer ocall_read_db(
-            uint64_t instance_id,
+            Ctx context,
             [in, count=key_len] const uint8_t* key,
             uintptr_t key_len
         );
 
         void ocall_write_db(
-            uint64_t instance_id,
+            Ctx context,
             [in, count=key_len] const uint8_t* key,
             uintptr_t key_len,
             [in, count=value_len] const uint8_t* value,

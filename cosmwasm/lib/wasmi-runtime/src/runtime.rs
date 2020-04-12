@@ -116,8 +116,19 @@ fn write_db(context: Ctx, key: &[u8], value: &[u8]) -> SgxError {
 pub struct Runtime {
     pub context: Ctx,
     pub memory: MemoryRef,
-    pub gas_limit: i32,
-    pub gas_used: i32,
+    pub gas_limit: u64,
+    pub gas_used: u64,
+}
+
+impl Runtime {
+    pub fn new(context: Ctx, memory: MemoryRef, gas_limit: u64) -> Self {
+        Self {
+            context,
+            memory,
+            gas_limit,
+            gas_used: 0,
+        }
+    }
 }
 
 const READ_DB_INDEX: usize = 0;
@@ -390,12 +401,12 @@ impl Externals for Runtime {
                 let gas_amount: i32 = args.nth_checked(0)?;
 
                 // Add amount to a static counter
-                self.gas_used += gas_amount;
+                self.gas_used += gas_amount as u64;
 
                 // Check if new amount is bigger than gas limit
                 // If is above the limit, halt execution
-                if (self.gas_used > self.gas_limit) {
-                    return Err(WasmEngineError::OutOfGas);
+                if self.gas_used > self.gas_limit {
+                    Err(WasmEngineError::OutOfGas)?;
                 }
 
                 Ok(None)
