@@ -30,7 +30,9 @@ pub unsafe fn recover_buffer(ptr: UserSpaceBuffer) -> Option<Vec<u8>> {
 #[no_mangle]
 pub extern "C" fn ocall_read_db(mut context: Ctx, key: *const u8, key_len: usize) -> EnclaveBuffer {
     let key = unsafe { std::slice::from_raw_parts(key, key_len) };
-    let null_buffer = EnclaveBuffer { ptr: std::ptr::null_mut() };
+    let null_buffer = EnclaveBuffer {
+        ptr: std::ptr::null_mut(),
+    };
 
     // Returning `EnclaveBuffer { ptr: std::ptr::null_mut() }` is basically returning a null pointer,
     // which in the enclave is interpreted as signaling that the key does not exist.
@@ -44,7 +46,9 @@ pub extern "C" fn ocall_read_db(mut context: Ctx, key: *const u8, key_len: usize
     })
     .map(|value| {
         value
-            .map(|vec| super::allocate_enclave_buffer(&vec).unwrap_or(unsafe { null_buffer.clone() }))
+            .map(|vec| {
+                super::allocate_enclave_buffer(&vec).unwrap_or(unsafe { null_buffer.clone() })
+            })
             .unwrap_or(unsafe { null_buffer.clone() })
     })
     // TODO add logging if we fail to write
