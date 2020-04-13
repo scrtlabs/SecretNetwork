@@ -59,7 +59,7 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
 }
 
 lazy_static! {
-    static ref SGX_ENCLAVE: SgxResult<SgxEnclave> = init_enclave();
+    pub static ref SGX_ENCLAVE: SgxResult<SgxEnclave> = init_enclave();
 }
 
 impl<S, A> Instance<S, A>

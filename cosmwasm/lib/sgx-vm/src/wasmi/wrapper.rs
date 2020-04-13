@@ -18,10 +18,22 @@ use super::results::{
 };
 
 /// This is a safe wrapper for allocating buffers inside the enclave.
-pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> EnclaveBuffer {
+pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> Result<EnclaveBuffer, sgx_status_t> {
     let ptr = buffer.as_ptr();
     let len = buffer.len();
-    unsafe { imports::ecall_allocate(ptr, len) }
+    let mut  enclave_buffer = MaybeUninit::<EnclaveBuffer>::uninit();
+
+    let enclave_id = super::super::instance::SGX_ENCLAVE
+        .as_ref()
+        .expect("If we got here, surely the enclave has been loaded")
+        .geteid();
+
+    match unsafe { imports::ecall_allocate(
+        enclave_id, enclave_buffer.as_mut_ptr(), ptr, len
+    )} {
+        sgx_status_t::SGX_SUCCESS => { Ok(unsafe { enclave_buffer.assume_init() }) }
+        failure_status => Err(failure_status)
+    }
 }
 
 pub struct Module {

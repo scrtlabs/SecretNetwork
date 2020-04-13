@@ -5,7 +5,12 @@ use sgx_types::{sgx_enclave_id_t, sgx_status_t};
 
 extern "C" {
     /// Copy a buffer into the enclave memory space, and receive an opaque pointer to it.
-    pub fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer;
+    pub fn ecall_allocate(
+        eid: sgx_enclave_id_t,
+        retval: *mut EnclaveBuffer,
+        buffer: *const u8,
+        length: usize
+    ) -> sgx_status_t;
 
     /// Trigger the init method in a wasm contract
     pub fn ecall_init(

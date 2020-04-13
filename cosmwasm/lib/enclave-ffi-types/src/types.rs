@@ -13,6 +13,12 @@ pub struct EnclaveBuffer {
     pub ptr: *mut c_void,
 }
 
+impl EnclaveBuffer {
+    pub unsafe fn clone(&self) -> EnclaveBuffer {
+        EnclaveBuffer { ptr: self.ptr }
+    }
+}
+
 /// This struct holds a pointer to memory in userspace, that contains the storage
 #[repr(C)]
 pub struct Ctx {
