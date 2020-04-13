@@ -79,12 +79,12 @@ use super::exports;
 use super::imports;
 
 /// Safe wrapper around reads from the contract storage
-fn read_db(context: Ctx, key: &[u8]) -> SgxResult<Option<Vec<u8>>> {
+fn read_db(context: &Ctx, key: &[u8]) -> SgxResult<Option<Vec<u8>>> {
     let mut enclave_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
     unsafe {
         match imports::ocall_read_db(
             enclave_buffer.as_mut_ptr(),
-            context,
+            context.clone(),
             key.as_ptr(),
             key.len(),
         ) {
