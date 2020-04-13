@@ -26,8 +26,8 @@ we need to allocate memory regions inside the VM's instance and copy
 */
 
 pub fn init(
-    context: Ctx, // need to pass this to read_db & write_db
-    gas_limit: u64,
+    context: Ctx,    // need to pass this to read_db & write_db
+    gas_limit: u64,  // gas limit for this execution
     contract: &[u8], // contract wasm bytes
     env: &[u8],      // blockchain state
     msg: &[u8],      // probably function call and args
