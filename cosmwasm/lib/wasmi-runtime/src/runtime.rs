@@ -169,7 +169,7 @@ impl Externals for Runtime {
                 // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
                 // This returns the value from Tendermint
                 // fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
-                let value = match read_db(unsafe { self.context.clone() }, &key)
+                let value = match read_db(unsafe { &self.context.clone() }, &key)
                     .map_err(|_| WasmEngineError::FailedOcall)?
                 {
                     None => return Ok(Some(RuntimeValue::I32(0))),
