@@ -469,7 +469,7 @@ impl Engine {
         let buffer_len_in_wasm: u32 = self
             .memory()
             .get_value::<u32>(ptr_to_region_in_wasm_vm + 4)?;
-        if buffer_len_in_wasm != buffer.len() {
+        if buffer_len_in_wasm != buffer.len() as u32 {
             // TODO return an Error? Or maybe this is already covered by allocate?
         }
 
