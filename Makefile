@@ -101,7 +101,7 @@ deb: build_linux
 	mkdir -p /tmp/EnigmaBlockchain/deb/DEBIAN
 	cp ./packaging_ubuntu/control /tmp/EnigmaBlockchain/deb/DEBIAN/control
 	printf "Version: " >> /tmp/EnigmaBlockchain/deb/DEBIAN/control
-	git tag | grep -P '^v' | tail -1 | tr -d v >> /tmp/EnigmaBlockchain/deb/DEBIAN/control
+	git describe --tags | tr -d v >> /tmp/EnigmaBlockchain/deb/DEBIAN/control
 	echo "" >> /tmp/EnigmaBlockchain/deb/DEBIAN/control
 	cp ./packaging_ubuntu/postinst /tmp/EnigmaBlockchain/deb/DEBIAN/postinst
 	chmod 755 /tmp/EnigmaBlockchain/deb/DEBIAN/postinst
