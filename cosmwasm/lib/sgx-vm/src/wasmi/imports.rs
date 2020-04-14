@@ -9,7 +9,7 @@ extern "C" {
         eid: sgx_enclave_id_t,
         retval: *mut EnclaveBuffer,
         buffer: *const u8,
-        length: usize
+        length: usize,
     ) -> sgx_status_t;
 
     /// Trigger the init method in a wasm contract

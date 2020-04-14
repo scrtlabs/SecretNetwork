@@ -68,7 +68,9 @@ where
     A: Api + 'static,
 {
     pub fn from_code(code: &[u8], deps: Extern<S, A>, gas_limit: u64) -> Result<Self> {
-        let enclave = SGX_ENCLAVE.as_ref().map_err(|err| Error::SdkErr { inner: *err })?;
+        let enclave = SGX_ENCLAVE
+            .as_ref()
+            .map_err(|err| Error::SdkErr { inner: *err })?;
 
         let module = Module::new(code.to_vec(), gas_limit, enclave);
 
