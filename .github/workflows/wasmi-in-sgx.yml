@@ -1,0 +1,32 @@
+name: Sanity test for wasmi in SGX
+
+on: [push, pull_request]
+
+jobs:
+  Test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Intel's SGX SDK
+        run: |
+          mkdir -p "$HOME/.sgxsdk"
+          cd "$HOME/.sgxsdk"
+          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
+
+          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
+
+          chmod +x "$SDK_BIN"
+          echo yes | ./"$SDK_BIN"
+      - run: git submodule update --init --recursive
+      - run: rustup component add rust-src
+      - run: cargo +stable install xargo
+      - name: Build
+        run: |
+          source "$HOME/.sgxsdk/sgxsdk/environment"
+          SGX_MODE=SW make build_linux
+          cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+      - name: Test
+        run: |
+          source "$HOME/.sgxsdk/sgxsdk/environment"
+          ./cosmwasm/lib/wasmi-sgx-test.sh
