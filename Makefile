@@ -49,6 +49,7 @@ ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=EnigmaBlockchain \
 ifeq ($(WITH_CLEVELDB),yes)
   ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=cleveldb
 endif
+ldflags += -s -w
 ldflags += $(LDFLAGS)
 ldflags := $(strip $(ldflags))
 
