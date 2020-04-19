@@ -82,7 +82,11 @@ build_macos:
 	# CLI only 
 	$(MAKE) xgo_build_enigmacli XGO_TARGET=darwin/amd64
 
-build_all: build_linux build_windows build_macos
+build_arm_linux:
+	# CLI only 
+	$(MAKE) xgo_build_enigmacli XGO_TARGET=linux/arm64
+
+build_all: build_linux build_windows build_macos build_arm_linux
 
 deb: build_linux
     ifneq ($(UNAME_S),Linux)
