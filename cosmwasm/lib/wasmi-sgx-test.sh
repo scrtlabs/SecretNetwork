@@ -10,8 +10,6 @@ function wait_for_tx () {
     done
 }
 
-# TODO check if already installed and install intel sgx sdk
-
 # init the node
 rm -rf ~/.enigma*
 ./enigmacli config chain-id enigma-testnet 
@@ -43,7 +41,7 @@ do
     sleep 1
 done
 
-# store wasm
+# store wasm code on-chain so we could later instansiate it
 wget -nc -O /tmp/contract.wasm https://raw.githubusercontent.com/CosmWasm/cosmwasm-examples/f5ea00a85247abae8f8cbcba301f94ef21c66087/erc20/contract.wasm
 STORE_TX_HASH=$(
     yes |
