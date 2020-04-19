@@ -7,8 +7,9 @@ mod instance;
 // mod memory;
 // mod middleware;
 // mod modules;
-// pub mod testing;
-mod traits;
+mod mock;
+pub mod testing;
+pub mod traits;
 mod wasm_store;
 mod wasmi;
 

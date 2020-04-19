@@ -2,10 +2,10 @@ use std::str::from_utf8;
 
 use cosmwasm::mock::mock_env;
 use cosmwasm::serde::from_slice;
-use cosmwasm::traits::{Api, ReadonlyStorage};
 use cosmwasm::types::{coin, log, CosmosMsg, HumanAddr, QueryResult};
+use cosmwasm_sgx_vm::traits::{Api, ReadonlyStorage};
 
-use cosmwasm_vm::testing::{handle, init, mock_instance, query, test_io};
+use cosmwasm_sgx_vm::testing::{handle, init, mock_instance, query};
 
 use hackatom::contract::{HandleMsg, InitMsg, QueryMsg, State, CONFIG_KEY};
 
@@ -187,19 +187,21 @@ fn failed_handle() {
     });
 }
 
+/*
 #[test]
 fn passes_io_tests() {
     let mut deps = mock_instance(WASM);
     test_io(&mut deps);
 }
+*/
 
 #[cfg(feature = "singlepass")]
 mod singlepass_tests {
     use super::*;
 
     use cosmwasm::serde::to_vec;
-    use cosmwasm_vm::call_handle;
-    use cosmwasm_vm::testing::mock_instance_with_gas_limit;
+    use cosmwasm_sgx_vm::call_handle;
+    use cosmwasm_sgx_vm::testing::mock_instance_with_gas_limit;
 
     #[test]
     fn handle_panic_and_loops() {

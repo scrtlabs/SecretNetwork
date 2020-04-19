@@ -5,14 +5,15 @@ use serde::Serialize;
 // JsonSchema is a flag for types meant to be publically exposed
 use schemars::JsonSchema;
 
-use cosmwasm::mock::{dependencies, MockApi, MockStorage};
+use crate::mock::{dependencies, MockApi, MockStorage};
 use cosmwasm::serde::to_vec;
-use cosmwasm::traits::{Api, Storage};
+use cosmwasm::traits::Api;
 use cosmwasm::types::{ContractResult, Env, QueryResult};
 
 use crate::calls::{call_handle, call_init, call_query};
 use crate::compatability::check_api_compatibility;
 use crate::instance::Instance;
+use crate::traits::Storage;
 
 /// Gas limit for testing
 static DEFAULT_GAS_LIMIT: u64 = 500_000;
@@ -68,6 +69,7 @@ pub fn query<S: Storage + 'static, A: Api + 'static, T: Serialize + JsonSchema>(
     }
 }
 
+/*
 /// Runs a series of IO tests, hammering especially on allocate and deallocate.
 /// This could be especially useful when run with some kind of leak detector.
 pub fn test_io<S: Storage + 'static, A: Api + 'static>(instance: &mut Instance<S, A>) {
@@ -92,3 +94,4 @@ pub fn test_io<S: Storage + 'static, A: Api + 'static>(instance: &mut Instance<S
         }
     }
 }
+*/

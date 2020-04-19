@@ -2,7 +2,7 @@
 //! in order to allow downcasting trait objects of this trait. Since the implementations of this trait outside and
 //! inside the wasm runtime are completely separate, we can replace the original trait for this one in the code of
 //! cosmwasm-sgx-vm.
-use cosmwasm::traits::Api;
+pub use cosmwasm::traits::Api;
 use downcast_rs::{impl_downcast, Downcast};
 
 // Extern holds all external dependencies of the contract,
@@ -24,3 +24,21 @@ pub trait Storage: ReadonlyStorage {
     fn set(&mut self, key: &[u8], value: &[u8]);
 }
 impl_downcast!(Storage);
+
+impl<T> ReadonlyStorage for T
+where
+    T: cosmwasm::traits::ReadonlyStorage + 'static,
+{
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+        <T as cosmwasm::traits::ReadonlyStorage>::get(self, key)
+    }
+}
+
+impl<T> Storage for T
+where
+    T: cosmwasm::traits::Storage + 'static,
+{
+    fn set(&mut self, key: &[u8], value: &[u8]) {
+        <T as cosmwasm::traits::Storage>::set(self, key, value);
+    }
+}
