@@ -53,13 +53,14 @@ STORE_TX_HASH=$(
 
 wait_for_tx "$STORE_TX_HASH" "Waiting for store to finish on-chain..."
 
+# test storing of wasm code (this doesn't touch sgx yet)
 ./enigmacli q tx "$STORE_TX_HASH" |
     jq -e '.logs[].events[].attributes[] | select(.key == "code_id" and .value == "1")'
 
 # init the contract (ocall_init + write_db + canonicalize_address)
 # a is a tendermint address (will be used in transfer: https://github.com/CosmWasm/cosmwasm-examples/blob/f2f0568ebc90d812bcfaa0ef5eb1da149a951552/erc20/src/contract.rs#L110)
 # enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4 is just a random address
-# balances are 108 & 53 at init
+# balances are set to 108 & 53 at init
 INIT_TX_HASH=$(
     yes |
         ./enigmacli tx compute instantiate 1 "{\"decimals\":10,\"initial_balances\":[{\"address\":\"$(./enigmacli keys show a -a)\",\"amount\":\"108\"},{\"address\":\"enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4\",\"amount\":\"53\"}],\"name\":\"ReuvenPersonalRustCoin\",\"symbol\":\"RVN\"}" --label RVNCoin --from a 2> /dev/null |
