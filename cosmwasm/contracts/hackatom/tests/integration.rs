@@ -173,17 +173,15 @@ fn failed_handle() {
     assert!(handle_res.is_err());
 
     // state should not change
+    let expected_state = State {
+        verifier: deps.api.canonical_address(&verifier).unwrap(),
+        beneficiary: deps.api.canonical_address(&beneficiary).unwrap(),
+        funder: deps.api.canonical_address(&creator).unwrap(),
+    };
     deps.with_storage(|store| {
         let data = store.get(CONFIG_KEY).expect("no data stored");
         let state: State = from_slice(&data).unwrap();
-        assert_eq!(
-            state,
-            State {
-                verifier: deps.api.canonical_address(&verifier).unwrap(),
-                beneficiary: deps.api.canonical_address(&beneficiary).unwrap(),
-                funder: deps.api.canonical_address(&creator).unwrap(),
-            }
-        );
+        assert_eq!(state, expected_state);
     });
 }
 
