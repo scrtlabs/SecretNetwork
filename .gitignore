@@ -3,10 +3,9 @@
 /enigmad*
 SHA256SUMS*
 /release
-cosmwasm/lib/lib/libEnclave_u.a
-cosmwasm/lib/lib/libenclave.a
-cosmwasm/lib/sgx-vm/Enclave_u.c
-cosmwasm/lib/sgx-vm/Enclave_u.h
-cosmwasm/lib/sgx-vm/Enclave_u.o
-cosmwasm/lib/sgx-vm/libEnclave_u.a
+libEnclave_u.a
+libenclave.a
+Enclave_u.c
+Enclave_u.h
+Enclave_u.o
 librust_cosmwasm_enclave.signed.so
