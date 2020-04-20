@@ -1,10 +1,9 @@
 use enclave_ffi_types::{Ctx, EnclaveError};
-
+use log::{error, info};
 use parity_wasm::elements;
+use wasmi::{ImportsBuilder, ModuleInstance};
 
 use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
-
-use wasmi::{ImportsBuilder, ModuleInstance};
 
 use crate::errors::wasmi_error_to_enclave_error;
 use crate::gas::{gas_rules, WasmCosts};

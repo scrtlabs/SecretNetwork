@@ -17,3 +17,5 @@ wasmi = { git = "https://github.com/paritytech/wasmi", rev = "39a18a433a765a3638
 bech32 = { git = "https://github.com/reuvenpo/rust-bech32", branch = "support-no_std", default-features = false }
 pwasm-utils = { version = "0.12.0", default-features = false }
 parity-wasm = { version = "0.41.0", default-features = false }
+log = "0.4.8"
+ctor = "0.1.13"
