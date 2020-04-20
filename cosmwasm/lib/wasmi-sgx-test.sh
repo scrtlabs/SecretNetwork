@@ -81,7 +81,7 @@ CONTRACT_ADDRESS=$(
 # transfer 10 balance (ocall_handle + read_db + write_db + humanize_address + canonicalize_address)
 TRANSFER_TX_HASH=$(
     yes |
-        ./enigmacli tx compute execute --from a "$CONTRACT_ADDRESS" '{"transfer":{"amount":"10","recipient":"enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4"}}' |
+        ./enigmacli tx compute execute --from a "$CONTRACT_ADDRESS" '{"transfer":{"amount":"10","recipient":"enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4"}}' 2> /dev/null |
         jq -r .txhash
 )
 
