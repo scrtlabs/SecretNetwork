@@ -31,13 +31,16 @@ jobs:
           key: ${{ runner.os }}-sccache
       - run: rustup component add rust-src
       - run: |
-          cargo +stable install xargo sccache
+          cargo +stable install xargo
           xargo --version
-          sccache --version
+      - run: |
+          wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
+          tar xf ./sccache-*.tar.gz
+          mv ./sccache*/sccache /bin/sccache
       - name: Build
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          SGX_MODE=SW RUSTC_WRAPPER="$(which sccache)" make build_linux
+          SGX_MODE=SW RUSTC_WRAPPER=/bin/sccache make build_linux
           cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
       - name: Test
         run: |
