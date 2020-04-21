@@ -30,10 +30,12 @@ jobs:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
       - run: rustup component add rust-src
-      - run: |
+      - name: Install xargo
+        run: |
           cargo +stable install xargo
           xargo --version
-      - run: |
+      - name: Download sccache
+        run: |
           wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
           tar xf ./sccache-*.tar.gz
           mv ./sccache*/sccache /bin/sccache
