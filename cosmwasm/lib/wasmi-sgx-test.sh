@@ -20,7 +20,7 @@ rm -rf ~/.enigma*
 
 ./enigmad init banana --chain-id enigma-testnet
 perl -i -pe 's/"stake"/"uscrt"/g' ~/.enigmad/config/genesis.json
-yes | ./enigmacli keys add a
+./enigmacli keys add a
 ./enigmad add-genesis-account $(./enigmacli keys show -a a) 1000000000000uscrt
 ./enigmad gentx --name a --keyring-backend test --amount 1000000uscrt
 ./enigmad collect-gentxs
