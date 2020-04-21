@@ -25,7 +25,9 @@ jobs:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
       - run: rustup component add rust-src
-      - run: cargo +stable install xargo
+      - run: |
+          cargo +stable install xargo
+          xargo --version
       - name: Build
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
