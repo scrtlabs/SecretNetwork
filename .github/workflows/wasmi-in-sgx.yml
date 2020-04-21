@@ -24,14 +24,20 @@ jobs:
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache build artifacts
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/sccache
+          key: ${{ runner.os }}-sccache
       - run: rustup component add rust-src
       - run: |
-          cargo +stable install xargo
+          cargo +stable install xargo sccache
           xargo --version
+          sccache --version
       - name: Build
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          SGX_MODE=SW make build_linux
+          SGX_MODE=SW RUSTC_WRAPPER="$(which sccache)" make build_linux
           cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
       - name: Test
         run: |
