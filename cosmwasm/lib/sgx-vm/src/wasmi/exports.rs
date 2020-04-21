@@ -82,7 +82,7 @@ pub extern "C" fn ocall_write_db(
 
     info!(
         target: module_path!(),
-        "ocall_write_db() called with key_len: {:?} key: {:?} val_len: {:?} val: {:?}...",
+        "ocall_write_db() called with key_len: {:?} key: {:?} val_len: {:?} val: {:?}... (first 20 bytes)",
         key_len,
         String::from_utf8_lossy(key),
         value_len,

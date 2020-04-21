@@ -9,6 +9,8 @@ use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResul
 use sgx_types::sgx_status_t;
 use sgx_urts::SgxEnclave;
 
+use log::info;
+
 use crate::errors::{Error, Result};
 
 use super::imports;
@@ -27,6 +29,11 @@ pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> Result<EnclaveBuffer, sg
         .as_ref()
         .expect("If we got here, surely the enclave has been loaded")
         .geteid();
+
+    info!(
+        target: module_path!(),
+        "allocate_enclave_buffer() called with len: {:?} enclave_id: {:?}", len, enclave_id
+    );
 
     match unsafe { imports::ecall_allocate(enclave_id, enclave_buffer.as_mut_ptr(), ptr, len) } {
         sgx_status_t::SGX_SUCCESS => Ok(unsafe { enclave_buffer.assume_init() }),
@@ -83,6 +90,14 @@ impl Module {
     }
 
     pub fn init(&mut self, env: &[u8], msg: &[u8]) -> Result<InitSuccess> {
+        info!(
+            target: module_path!(),
+            "init() called with env: {:?} msg: {:?} enclave_id: {:?}",
+            String::from_utf8_lossy(env),
+            String::from_utf8_lossy(msg),
+            self.enclave.geteid()
+        );
+
         let mut init_result = MaybeUninit::<InitResult>::uninit();
 
         match unsafe {
@@ -118,6 +133,14 @@ impl Module {
     }
 
     pub fn handle(&mut self, env: &[u8], msg: &[u8]) -> Result<HandleSuccess> {
+        info!(
+            target: module_path!(),
+            "handle() called with env: {:?} msg: {:?} enclave_id: {:?}",
+            String::from_utf8_lossy(env),
+            String::from_utf8_lossy(msg),
+            self.enclave.geteid()
+        );
+
         let mut handle_result = MaybeUninit::<HandleResult>::uninit();
 
         match unsafe {
@@ -153,6 +176,13 @@ impl Module {
     }
 
     pub fn query(&mut self, msg: &[u8]) -> Result<QuerySuccess> {
+        info!(
+            target: module_path!(),
+            "query() called with msg: {:?} enclave_id: {:?}",
+            String::from_utf8_lossy(msg),
+            self.enclave.geteid()
+        );
+
         let mut query_result = MaybeUninit::<QueryResult>::uninit();
 
         match unsafe {
