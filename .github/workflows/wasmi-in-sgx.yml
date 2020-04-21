@@ -19,6 +19,11 @@ jobs:
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - run: git submodule update --init --recursive
+      - name: Cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
       - run: rustup component add rust-src
       - run: cargo +stable install xargo
       - name: Build
