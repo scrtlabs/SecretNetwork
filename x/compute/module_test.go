@@ -169,7 +169,7 @@ func TestHandleInstantiate(t *testing.T) {
 	res, err = h(data.ctx, initCmd)
 	require.NoError(t, err)
 	contractAddr := sdk.AccAddress(res.Data)
-	require.Equal(t, "cosmos18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5", contractAddr.String())
+	require.Equal(t, "enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5", contractAddr.String())
 	// this should be standard x/compute init event, nothing from contract
 	require.Equal(t, 1, len(res.Events), prettyEvents(res.Events))
 	assert.Equal(t, "message", res.Events[0].Type)
@@ -224,7 +224,7 @@ func TestHandleExecute(t *testing.T) {
 	res, err = h(data.ctx, initCmd)
 	require.NoError(t, err)
 	contractAddr := sdk.AccAddress(res.Data)
-	require.Equal(t, "cosmos18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5", contractAddr.String())
+	require.Equal(t, "enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5", contractAddr.String())
 	// this should be standard x/compute init event, plus a bank send event (2), with no custom contract events
 	require.Equal(t, 2, len(res.Events), prettyEvents(res.Events))
 	assert.Equal(t, "transfer", res.Events[0].Type)
@@ -335,7 +335,7 @@ func TestHandleExecuteEscrow(t *testing.T) {
 	res, err = h(data.ctx, initCmd)
 	require.NoError(t, err)
 	contractAddr := sdk.AccAddress(res.Data)
-	require.Equal(t, "cosmos18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5", contractAddr.String())
+	require.Equal(t, "enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5", contractAddr.String())
 
 	handleMsg := map[string]interface{}{
 		"approve": map[string]interface{}{},
