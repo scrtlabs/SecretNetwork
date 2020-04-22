@@ -166,6 +166,12 @@ impl Externals for Runtime {
                     Ok(value) => value,
                 };
 
+                println!(
+                    "INFO  [{}] read_db() was called from WASM code with key: {:?}",
+                    module_path!(),
+                    String::from_utf8_lossy(&key)
+                );
+
                 // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
                 // This returns the value from Tendermint
                 // fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
@@ -234,6 +240,13 @@ impl Externals for Runtime {
                     Ok(value) => value,
                 };
 
+                println!(
+                    "INFO  [{}] write_db() was called from WASM code with key: {:?} value: {:?}",
+                    module_path!(),
+                    String::from_utf8_lossy(&key),
+                    String::from_utf8_lossy(value.get(0..std::cmp::min(20, value.len())).unwrap())
+                );
+
                 // Call write_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
                 // fn write_db(context: Ctx, key: &[u8], value: &[u8]) {
                 write_db(unsafe { self.context.clone() }, &key, &value)
@@ -251,6 +264,12 @@ impl Externals for Runtime {
                     Err(_) => return Ok(Some(RuntimeValue::I32(-1))),
                     Ok(value) => value,
                 };
+
+                println!(
+                    "INFO  [{}] canonicalize_address() was called from WASM code with {:?}",
+                    module_path!(),
+                    String::from_utf8_lossy(&human)
+                );
 
                 // Turn Vec<u8> to str
                 let mut human_addr_str = match str::from_utf8(&human) {
@@ -349,6 +368,12 @@ impl Externals for Runtime {
                     Err(_) => return Ok(Some(RuntimeValue::I32(-1))),
                     Ok(value) => value,
                 };
+
+                println!(
+                    "INFO  [{}] humanize_address() was called from WASM code with {:?}",
+                    module_path!(),
+                    canonical
+                );
 
                 if canonical.len() != 20 {
                     // cosmos address length is 20
