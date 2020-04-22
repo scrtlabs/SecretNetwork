@@ -11,6 +11,7 @@ import (
 	stypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	eng "github.com/enigmampc/EnigmaBlockchain/types"
 	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,6 +19,14 @@ import (
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 )
+
+func init() {
+	config := sdk.GetConfig()
+	config.SetBech32PrefixForAccount(eng.Bech32PrefixAccAddr, eng.Bech32PrefixAccPub)
+	config.SetBech32PrefixForValidator(eng.Bech32PrefixValAddr, eng.Bech32PrefixValPub)
+	config.SetBech32PrefixForConsensusNode(eng.Bech32PrefixConsAddr, eng.Bech32PrefixConsPub)
+	config.Seal()
+}
 
 func TestNewKeeper(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
