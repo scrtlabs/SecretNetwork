@@ -379,7 +379,7 @@ impl Externals for Runtime {
                     Err(err) => {
                         log_error(format!(
                             "canonicalize_address() error while trying to decode bytes from base32 {:?}: {:?}",
-                    String::from_utf8_lossy(&data),
+                            data,
                             err
                         ));
                         return Ok(Some(RuntimeValue::I32(-5)));
