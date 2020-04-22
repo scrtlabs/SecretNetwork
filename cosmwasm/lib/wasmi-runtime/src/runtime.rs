@@ -162,7 +162,7 @@ impl Externals for Runtime {
                 // extract_vectors extract key into a buffer
                 let key_ptr_ptr_in_wasm: i32 = args.nth_checked(0)?;
                 let key = match extract_vector(&self.memory, key_ptr_ptr_in_wasm as u32) {
-                    Err(_) => return Ok(Some(RuntimeValue::I32(0))),
+                    Err(_) => return Ok(Some(RuntimeValue::I32(-1))),
                     Ok(value) => value,
                 };
 
