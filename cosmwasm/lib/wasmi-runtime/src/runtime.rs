@@ -162,7 +162,13 @@ impl Externals for Runtime {
                 // extract_vectors extract key into a buffer
                 let key_ptr_ptr_in_wasm: i32 = args.nth_checked(0)?;
                 let key = match extract_vector(&self.memory, key_ptr_ptr_in_wasm as u32) {
-                    Err(_) => return Ok(Some(RuntimeValue::I32(-1))),
+                    Err(err) => {
+                        log_error(format!(
+                            "read_db() error while trying to read key from wasm memory: {:?}",
+                            err
+                        ));
+                        return Ok(Some(RuntimeValue::I32(-1)));
+                    }
                     Ok(value) => value,
                 };
 
@@ -190,7 +196,10 @@ impl Externals for Runtime {
                     .get_value::<u32>(value_ptr_ptr_in_wasm as u32)
                 {
                     Ok(x) => x,
-                    Err(_) => return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW))),
+                    Err(err) => {
+                        log_error(format!("read_db() error while trying to get pointer for the result buffer: {:?}", err));
+                        return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
+                    }
                 };
                 // Get length of the buffer (this was allocated in WASM)
                 let value_len_in_wasm: u32 = match self
@@ -198,16 +207,27 @@ impl Externals for Runtime {
                     .get_value::<u32>((value_ptr_ptr_in_wasm + 4) as u32)
                 {
                     Ok(x) => x,
-                    Err(_) => return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW))),
+                    Err(err) => {
+                        log_error(format!(
+                            "read_db() error while trying to get length of result buffer: {:?}",
+                            err
+                        ));
+                        return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
+                    }
                 };
 
                 // Check that value is not too big to write into the allocated buffer
                 if value_len_in_wasm < value.len() as u32 {
+                    log_error(format!("read_db() error read result to big to write to allocated wasm buffer: {:?}"));
                     return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_TOO_SMALL)));
                 }
 
                 // Write value returned from read_db to WASM memory
-                if let Err(_) = self.memory.set(value_ptr_in_wasm, &value) {
+                if let Err(err) = self.memory.set(value_ptr_in_wasm, &value) {
+                    log_error(format!(
+                        "read_db() error while trying to write to result buffer: {:?}",
+                        err
+                    ));
                     return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
                 }
 
