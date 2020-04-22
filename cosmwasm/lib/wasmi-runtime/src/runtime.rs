@@ -180,12 +180,17 @@ impl Externals for Runtime {
                 // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
                 // This returns the value from Tendermint
                 // fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
-                let value = match read_db(unsafe { &self.context.clone() }, &key)
-                    .map_err(|_| WasmEngineError::FailedOcall)?
-                {
-                    None => return Ok(Some(RuntimeValue::I32(0))),
-                    Some(value) => value,
-                };
+                let value =
+                    match read_db(unsafe { &self.context.clone() }, &key).map_err(|err| {
+                        log_error(format!(
+                            "read_db() go an error from ocall_read_db, stopping wasm: {:?}",
+                            err
+                        ));
+                        WasmEngineError::FailedOcall
+                    })? {
+                        None => return Ok(Some(RuntimeValue::I32(0))),
+                        Some(value) => value,
+                    };
 
                 // Get pointer to the region of the value buffer
                 let value_ptr_ptr_in_wasm: i32 = args.nth_checked(1)?;
@@ -247,7 +252,13 @@ impl Externals for Runtime {
                 let key_ptr_ptr_in_wasm: i32 = args.nth_checked(0)?;
                 // extract_vector extracts key into a buffer
                 let key = match extract_vector(&self.memory, key_ptr_ptr_in_wasm as u32) {
-                    Err(_) => return Ok(Some(RuntimeValue::I32(-1))),
+                    Err(err) => {
+                        log_error(format!(
+                            "write_db() error while trying to read key from wasm memory: {:?}",
+                            err
+                        ));
+                        return Ok(Some(RuntimeValue::I32(-1)));
+                    }
                     Ok(value) => value,
                 };
 
@@ -255,7 +266,13 @@ impl Externals for Runtime {
                 let value_ptr_ptr_in_wasm: i32 = args.nth_checked(1)?;
                 // extract_vector extracts value into a buffer
                 let value = match extract_vector(&self.memory, value_ptr_ptr_in_wasm as u32) {
-                    Err(_) => return Ok(Some(RuntimeValue::I32(-2))),
+                    Err(err) => {
+                        log_error(format!(
+                            "write_db() error while trying to read value from wasm memory: {:?}",
+                            err
+                        ));
+                        return Ok(Some(RuntimeValue::I32(-2)));
+                    }
                     Ok(value) => value,
                 };
 
@@ -267,8 +284,13 @@ impl Externals for Runtime {
 
                 // Call write_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
                 // fn write_db(context: Ctx, key: &[u8], value: &[u8]) {
-                write_db(unsafe { self.context.clone() }, &key, &value)
-                    .map_err(|_| WasmEngineError::FailedOcall)?;
+                write_db(unsafe { self.context.clone() }, &key, &value).map_err(|err| {
+                    log_error(format!(
+                        "write_db() go an error from ocall_write_db, stopping wasm: {:?}",
+                        err
+                    ));
+                    WasmEngineError::FailedOcall
+                })?;
 
                 // Return nothing because this is the api ¯\_(ツ)_/¯
                 Ok(None)
