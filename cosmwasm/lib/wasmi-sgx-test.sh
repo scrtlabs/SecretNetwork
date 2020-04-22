@@ -61,7 +61,7 @@ wait_for_tx "$STORE_TX_HASH" "Waiting for store to finish on-chain..."
 # balances are set to 108 & 53 at init
 INIT_TX_HASH=$(
     yes |
-        ./enigmacli tx compute instantiate 1 "{\"decimals\":10,\"initial_balances\":[{\"address\":\"$(./enigmacli keys show a -a)\",\"amount\":\"108\"},{\"address\":\"enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4\",\"amount\":\"53\"}],\"name\":\"ReuvenPersonalRustCoin\",\"symbol\":\"RVN\"}" --label RVNCoin --from a 2> /dev/null |
+        ./enigmacli tx compute instantiate 1 "{\"decimals\":10,\"initial_balances\":[{\"address\":\"$(./enigmacli keys show a -a)\",\"amount\":\"108\"},{\"address\":\"enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4\",\"amount\":\"53\"}],\"name\":\"ReuvenPersonalRustCoin\",\"symbol\":\"RPRC\"}" --label RPRCCoin --from a 2> /dev/null |
         jq -r .txhash
 )
 
