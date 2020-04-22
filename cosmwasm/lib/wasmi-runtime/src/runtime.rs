@@ -228,7 +228,7 @@ impl Externals for Runtime {
                 let key_ptr_ptr_in_wasm: i32 = args.nth_checked(0)?;
                 // extract_vector extracts key into a buffer
                 let key = match extract_vector(&self.memory, key_ptr_ptr_in_wasm as u32) {
-                    Err(_) => return Ok(Some(RuntimeValue::I32(0))),
+                    Err(_) => return Ok(Some(RuntimeValue::I32(-1))),
                     Ok(value) => value,
                 };
 
@@ -236,7 +236,7 @@ impl Externals for Runtime {
                 let value_ptr_ptr_in_wasm: i32 = args.nth_checked(1)?;
                 // extract_vector extracts value into a buffer
                 let value = match extract_vector(&self.memory, value_ptr_ptr_in_wasm as u32) {
-                    Err(_) => return Ok(Some(RuntimeValue::I32(0))),
+                    Err(_) => return Ok(Some(RuntimeValue::I32(-2))),
                     Ok(value) => value,
                 };
 
