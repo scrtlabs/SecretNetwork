@@ -354,7 +354,7 @@ impl Externals for Runtime {
                 if decoded_prefix != BECH32_PREFIX_ACC_ADDR {
                     log_error(format!(
                         "canonicalize_address() wrong prefix {:?} (expected {:?}) while decoding human address {:?} as bech32",
-                       decoded_prefix, 
+                       decoded_prefix,
                        BECH32_PREFIX_ACC_ADDR,
                        human_addr_str
                     ));
@@ -389,7 +389,10 @@ impl Externals for Runtime {
                 if canonical.len() != 20 {
                     // cosmos address length is 20
                     // https://github.com/cosmos/cosmos-sdk/blob/v0.38.1/types/address.go#L32
-                    log_error(format!("canonicalize_address() decoded canonical address is not 20 bytes: {:?}",canonical));
+                    log_error(format!(
+                        "canonicalize_address() decoded canonical address is not 20 bytes: {:?}",
+                        canonical
+                    ));
                     return Ok(Some(RuntimeValue::I32(-6)));
                 }
 
@@ -469,18 +472,23 @@ impl Externals for Runtime {
                 if canonical.len() != 20 {
                     // cosmos address length is 20
                     // https://github.com/cosmos/cosmos-sdk/blob/v0.38.1/types/address.go#L32
-                    log_error(format!("humanize_address() input canonical address must be 20 bytes: {:?}",canonical));
+                    log_error(format!(
+                        "humanize_address() input canonical address must be 20 bytes: {:?}",
+                        canonical
+                    ));
                     return Ok(Some(RuntimeValue::I32(-2)));
                 }
 
-                let human_addr_str =
-                    match bech32::encode(BECH32_PREFIX_ACC_ADDR, canonical.to_base32()) {
-                        Err(err) => {
-                            log_error(format!("humanize_address() error while trying to encode canonical address {:?} to human: {:?}",canonical, err));
-                            return Ok(Some(RuntimeValue::I32(-3)));
-                        }
-                        Ok(value) => value,
-                    };
+                let human_addr_str = match bech32::encode(
+                    BECH32_PREFIX_ACC_ADDR,
+                    canonical.to_base32(),
+                ) {
+                    Err(err) => {
+                        log_error(format!("humanize_address() error while trying to encode canonical address {:?} to human: {:?}",canonical, err));
+                        return Ok(Some(RuntimeValue::I32(-3)));
+                    }
+                    Ok(value) => value,
+                };
 
                 let human_bytes = human_addr_str.into_bytes();
 
@@ -488,14 +496,16 @@ impl Externals for Runtime {
                 let human_ptr_ptr_in_wasm: i32 = args.nth_checked(1)?;
 
                 // Get pointer to the buffer (this was allocated in WASM)
-                let human_ptr_in_wasm: u32 =
-                    match self.memory.get_value::<u32>(human_ptr_ptr_in_wasm as u32) {
-                        Ok(x) => x,
-                        Err(err) => {
-                            log_error(format!("humanize_address() error while trying to get pointer for the result buffer: {:?}", err));
-                            return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
-                        }
-                    };
+                let human_ptr_in_wasm: u32 = match self
+                    .memory
+                    .get_value::<u32>(human_ptr_ptr_in_wasm as u32)
+                {
+                    Ok(x) => x,
+                    Err(err) => {
+                        log_error(format!("humanize_address() error while trying to get pointer for the result buffer: {:?}", err));
+                        return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
+                    }
+                };
                 // Get length of the buffer (this was allocated in WASM)
                 let human_len_in_wasm: u32 = match self
                     .memory
@@ -516,7 +526,10 @@ impl Externals for Runtime {
 
                 // Write the canonical address to WASM memory
                 if let Err(err) = self.memory.set(human_ptr_in_wasm, &human_bytes) {
-                    log_error(format!("humanize_address() error while trying to write to result buffer: {:?}", err));
+                    log_error(format!(
+                        "humanize_address() error while trying to write to result buffer: {:?}",
+                        err
+                    ));
                     return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
                 }
 
