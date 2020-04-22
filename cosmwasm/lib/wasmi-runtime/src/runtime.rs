@@ -166,11 +166,10 @@ impl Externals for Runtime {
                     Ok(value) => value,
                 };
 
-                println!(
-                    "INFO  [{}] read_db() was called from WASM code with key: {:?}",
-                    module_path!(),
+                log_info(format!(
+                    "read_db() was called from WASM code with key: {:?}",
                     String::from_utf8_lossy(&key)
-                );
+                ));
 
                 // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
                 // This returns the value from Tendermint
@@ -240,12 +239,11 @@ impl Externals for Runtime {
                     Ok(value) => value,
                 };
 
-                println!(
-                    "INFO  [{}] write_db() was called from WASM code with key: {:?} value: {:?}",
-                    module_path!(),
+                log_info(format!(
+                    "write_db() was called from WASM code with key: {:?} value: {:?}",
                     String::from_utf8_lossy(&key),
                     String::from_utf8_lossy(value.get(0..std::cmp::min(20, value.len())).unwrap())
-                );
+                ));
 
                 // Call write_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
                 // fn write_db(context: Ctx, key: &[u8], value: &[u8]) {
@@ -265,11 +263,10 @@ impl Externals for Runtime {
                     Ok(value) => value,
                 };
 
-                println!(
-                    "INFO  [{}] canonicalize_address() was called from WASM code with {:?}",
-                    module_path!(),
+                log_info(format!(
+                    "canonicalize_address() was called from WASM code with {:?}",
                     String::from_utf8_lossy(&human)
-                );
+                ));
 
                 // Turn Vec<u8> to str
                 let mut human_addr_str = match str::from_utf8(&human) {
@@ -369,11 +366,10 @@ impl Externals for Runtime {
                     Ok(value) => value,
                 };
 
-                println!(
-                    "INFO  [{}] humanize_address() was called from WASM code with {:?}",
-                    module_path!(),
+                log_info(format!(
+                    "humanize_address() was called from WASM code with {:?}",
                     canonical
-                );
+                ));
 
                 if canonical.len() != 20 {
                     // cosmos address length is 20
@@ -562,4 +558,11 @@ fn extract_vector(memory: &MemoryRef, vec_ptr_ptr: u32) -> Result<Vec<u8>, Inter
     let len: u32 = memory.get_value(vec_ptr_ptr + 4)?;
 
     memory.get(ptr, len as usize)
+}
+
+fn log_info(text: &str) {
+    println!("INFO  [{}] {}", module_path!(), text);
+}
+fn log_error(text: &str) {
+    println!("ERROR  [{}] {}", module_path!(), text);
 }
