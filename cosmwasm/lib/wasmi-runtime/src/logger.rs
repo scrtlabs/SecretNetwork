@@ -4,18 +4,17 @@ pub struct SimpleLogger;
 
 impl log::Log for SimpleLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= Level::Info
+        // Not really needed since we set logging level at lib.rs in the init function
+        true
     }
 
     fn log(&self, record: &Record) {
-        if self.enabled(record.metadata()) {
-            println!(
-                "[{}] - Module: {} - {}",
-                record.level(),
-                record.target(),
-                record.args()
-            );
-        }
+        println!(
+            "{}  [{}] {}",
+            record.level(),
+            record.target(),
+            record.args()
+        );
     }
 
     fn flush(&self) {}
