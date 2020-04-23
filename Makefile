@@ -135,8 +135,10 @@ release: sign_for_release
 
 clean:
 	-rm -rf /tmp/EnigmaBlockchain
-	-rm -f ./enigmacli-*
-	-rm -f ./enigmad-*
+	-rm -f ./enigmacli*
+	-rm -f ./enigmad*
+	-rm -f ./librust_cosmwasm_enclave.signed.so
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*
 	$(MAKE) -C go-cosmwasm clean-all
+	$(MAKE) -C cosmwasm/lib/wasmi-runtime clean
