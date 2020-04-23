@@ -419,7 +419,7 @@ impl Externals for Runtime {
                     Ok(x) => x,
                     Err(err) => {
                         warn!(
-                            "canonicalize_address() error while trying to get length of result buffer: {:?}",                            err
+                            "canonicalize_address() error while trying to get length of result buffer: {:?}", err
                         );
                         return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
                     }
