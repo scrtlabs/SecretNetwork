@@ -43,11 +43,11 @@ jobs:
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           SGX_MODE=SW RUSTC_WRAPPER="$HOME/sccache" make build_linux
-      - name: SGX Sanity Test
+      - name: Test SGX Sanity
         run: |
           cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
           ./cosmwasm/lib/wasmi-sgx-test.sh
-      - name: Compute Module Tests
+      - name: Test Compute Module
         run: |
           cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
           go test ./x/compute/internal/...
