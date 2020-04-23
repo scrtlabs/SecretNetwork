@@ -1,9 +1,9 @@
-name: Sanity test for wasmi in SGX
+name: Tests
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
-  Test:
+  SGX Sanity:
     runs-on: ubuntu-latest
 
     steps:
