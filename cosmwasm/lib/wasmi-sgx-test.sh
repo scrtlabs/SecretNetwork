@@ -35,7 +35,7 @@ function cleanup()
 }
 trap cleanup EXIT ERR
 
-until (./enigmacli status 2>&1 | jq -e '(.sync_info.latest_block_height | tonumber) > 0')
+until (./enigmacli status 2>&1 | jq -e '(.sync_info.latest_block_height | tonumber) > 0' &> /dev/null)
 do
     echo "Waiting for chain to start..."
     sleep 1
