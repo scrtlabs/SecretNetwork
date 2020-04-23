@@ -9,7 +9,7 @@ use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResul
 use sgx_types::sgx_status_t;
 use sgx_urts::SgxEnclave;
 
-use log::info;
+use log::trace;
 
 use crate::errors::{Error, Result};
 
@@ -30,9 +30,11 @@ pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> Result<EnclaveBuffer, sg
         .expect("If we got here, surely the enclave has been loaded")
         .geteid();
 
-    info!(
+    trace!(
         target: module_path!(),
-        "allocate_enclave_buffer() called with len: {:?} enclave_id: {:?}", len, enclave_id
+        "allocate_enclave_buffer() called with len: {:?} enclave_id: {:?}",
+        len,
+        enclave_id
     );
 
     match unsafe { imports::ecall_allocate(enclave_id, enclave_buffer.as_mut_ptr(), ptr, len) } {
@@ -90,12 +92,13 @@ impl Module {
     }
 
     pub fn init(&mut self, env: &[u8], msg: &[u8]) -> Result<InitSuccess> {
-        info!(
+        trace!(
             target: module_path!(),
-            "init() called with env: {:?} msg: {:?} enclave_id: {:?}",
+            "init() called with env: {:?} msg: {:?} enclave_id: {:?} gas_limit: {}",
             String::from_utf8_lossy(env),
             String::from_utf8_lossy(msg),
-            self.enclave.geteid()
+            self.enclave.geteid(),
+            self.gas_limit
         );
 
         let mut init_result = MaybeUninit::<InitResult>::uninit();
@@ -126,6 +129,12 @@ impl Module {
 
         init_result_to_result_initsuccess(init_result)
             .map(|success| {
+                trace!(
+                    target: module_path!(),
+                    "init() returned with gas_used: {} (gas_limit: {})",
+                    success.used_gas(),
+                    self.gas_limit
+                );
                 self.gas_limit -= success.used_gas();
                 success
             })
@@ -133,12 +142,13 @@ impl Module {
     }
 
     pub fn handle(&mut self, env: &[u8], msg: &[u8]) -> Result<HandleSuccess> {
-        info!(
+        trace!(
             target: module_path!(),
-            "handle() called with env: {:?} msg: {:?} enclave_id: {:?}",
+            "handle() called with env: {:?} msg: {:?} enclave_id: {:?} gas_limit: {}",
             String::from_utf8_lossy(env),
             String::from_utf8_lossy(msg),
-            self.enclave.geteid()
+            self.enclave.geteid(),
+            self.gas_limit
         );
 
         let mut handle_result = MaybeUninit::<HandleResult>::uninit();
@@ -169,6 +179,12 @@ impl Module {
 
         handle_result_to_result_handlesuccess(handle_result)
             .map(|success| {
+                trace!(
+                    target: module_path!(),
+                    "handle() returned with gas_used: {} (gas_limit: {})",
+                    success.used_gas(),
+                    self.gas_limit
+                );
                 self.gas_limit -= success.used_gas();
                 success
             })
@@ -176,7 +192,7 @@ impl Module {
     }
 
     pub fn query(&mut self, msg: &[u8]) -> Result<QuerySuccess> {
-        info!(
+        trace!(
             target: module_path!(),
             "query() called with msg: {:?} enclave_id: {:?}",
             String::from_utf8_lossy(msg),
