@@ -3,7 +3,7 @@ name: Tests
 on: [push]
 
 jobs:
-  "SGX Sanity":
+  sgx-sanity:
     runs-on: ubuntu-latest
 
     steps:
