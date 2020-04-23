@@ -160,7 +160,7 @@ func TestInstantiate(t *testing.T) {
 	require.Equal(t, "enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89d2p9uk", addr.String())
 
 	gasAfter := ctx.GasMeter().GasConsumed()
-	require.Equal(t, uint64(24823), gasAfter-gasBefore)
+	require.Equal(t, uint64(24959), gasAfter-gasBefore)
 
 	// ensure it is stored properly
 	info := keeper.GetContractInfo(ctx, addr)
