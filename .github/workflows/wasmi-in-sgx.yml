@@ -3,7 +3,7 @@ name: Tests
 on: [push]
 
 jobs:
-  sgx-sanity:
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -43,8 +43,11 @@ jobs:
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           SGX_MODE=SW RUSTC_WRAPPER="$HOME/sccache" make build_linux
-          cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
-      - name: Test
+      - name: SGX Sanity Test
         run: |
-          source "$HOME/.sgxsdk/sgxsdk/environment"
+          cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
           ./cosmwasm/lib/wasmi-sgx-test.sh
+      - name: Compute Module Tests
+        run: |
+          cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+          go test ./x/compute/internal/...
