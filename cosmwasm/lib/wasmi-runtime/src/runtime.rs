@@ -1,8 +1,8 @@
 use bech32;
 use bech32::{FromBase32, ToBase32};
+use log::{debug, error, info, trace};
 use sgx_types::{sgx_status_t, SgxError, SgxResult};
 use std::str;
-
 use wasmi::{
     Error as InterpreterError, Externals, FuncInstance, FuncRef, MemoryRef, ModuleImportResolver,
     ModuleRef, RuntimeArgs, RuntimeValue, Signature, Trap, ValueType,
@@ -163,29 +163,29 @@ impl Externals for Runtime {
                 let key_ptr_ptr_in_wasm: i32 = args.nth_checked(0)?;
                 let key = match extract_vector(&self.memory, key_ptr_ptr_in_wasm as u32) {
                     Err(err) => {
-                        log_error(format!(
+                        error!(
                             "read_db() error while trying to read key from wasm memory: {:?}",
                             err
-                        ));
+                        );
                         return Ok(Some(RuntimeValue::I32(-1)));
                     }
                     Ok(value) => value,
                 };
 
-                log_info(format!(
+                trace!(
                     "read_db() was called from WASM code with key: {:?}",
                     String::from_utf8_lossy(&key)
-                ));
+                );
 
                 // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
                 // This returns the value from Tendermint
                 // fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
                 let value =
                     match read_db(unsafe { &self.context.clone() }, &key).map_err(|err| {
-                        log_error(format!(
+                        error!(
                             "read_db() go an error from ocall_read_db, stopping wasm: {:?}",
                             err
-                        ));
+                        );
                         WasmEngineError::FailedOcall
                     })? {
                         None => return Ok(Some(RuntimeValue::I32(0))),
@@ -202,7 +202,7 @@ impl Externals for Runtime {
                 {
                     Ok(x) => x,
                     Err(err) => {
-                        log_error(format!("read_db() error while trying to get pointer for the result buffer: {:?}", err));
+                        error!("read_db() error while trying to get pointer for the result buffer: {:?}", err);
                         return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
                     }
                 };
@@ -213,28 +213,28 @@ impl Externals for Runtime {
                 {
                     Ok(x) => x,
                     Err(err) => {
-                        log_error(format!(
+                        error!(
                             "read_db() error while trying to get length of result buffer: {:?}",
                             err
-                        ));
+                        );
                         return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
                     }
                 };
 
                 // Check that value is not too big to write into the allocated buffer
                 if value_len_in_wasm < value.len() as u32 {
-                    log_error(format!(
+                    error!(
                         "read_db() result to big ({} bytes) to write to allocated wasm buffer ({} bytes)" ,value.len(),value_len_in_wasm
-                    ));
+                    );
                     return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_TOO_SMALL)));
                 }
 
                 // Write value returned from read_db to WASM memory
                 if let Err(err) = self.memory.set(value_ptr_in_wasm, &value) {
-                    log_error(format!(
+                    error!(
                         "read_db() error while trying to write to result buffer: {:?}",
                         err
-                    ));
+                    );
                     return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
                 }
 
@@ -255,10 +255,10 @@ impl Externals for Runtime {
                 // extract_vector extracts key into a buffer
                 let key = match extract_vector(&self.memory, key_ptr_ptr_in_wasm as u32) {
                     Err(err) => {
-                        log_error(format!(
+                        error!(
                             "write_db() error while trying to read key from wasm memory: {:?}",
                             err
-                        ));
+                        );
                         return Ok(Some(RuntimeValue::I32(-1)));
                     }
                     Ok(value) => value,
@@ -269,28 +269,28 @@ impl Externals for Runtime {
                 // extract_vector extracts value into a buffer
                 let value = match extract_vector(&self.memory, value_ptr_ptr_in_wasm as u32) {
                     Err(err) => {
-                        log_error(format!(
+                        error!(
                             "write_db() error while trying to read value from wasm memory: {:?}",
                             err
-                        ));
+                        );
                         return Ok(Some(RuntimeValue::I32(-2)));
                     }
                     Ok(value) => value,
                 };
 
-                log_info(format!(
+                trace!(
                     "write_db() was called from WASM code with key: {:?} value: {:?}... (first 20 bytes)",
                     String::from_utf8_lossy(&key),
                     String::from_utf8_lossy(value.get(0..std::cmp::min(20, value.len())).unwrap())
-                ));
+                );
 
                 // Call write_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
                 // fn write_db(context: Ctx, key: &[u8], value: &[u8]) {
                 write_db(unsafe { self.context.clone() }, &key, &value).map_err(|err| {
-                    log_error(format!(
+                    error!(
                         "write_db() go an error from ocall_write_db, stopping wasm: {:?}",
                         err
-                    ));
+                    );
                     WasmEngineError::FailedOcall
                 })?;
 
@@ -304,27 +304,27 @@ impl Externals for Runtime {
                 // extract_vector extracts human addr into a buffer
                 let human = match extract_vector(&self.memory, human_ptr_ptr_in_wasm as u32) {
                     Err(err) => {
-                        log_error(format!(
+                        error!(
                             "canonicalize_address() error while trying to read human address from wasm memory: {:?}",
                             err
-                        ));
+                        );
                         return Ok(Some(RuntimeValue::I32(-1)));
                     }
                     Ok(value) => value,
                 };
 
-                log_info(format!(
+                trace!(
                     "canonicalize_address() was called from WASM code with {:?}",
                     String::from_utf8_lossy(&human)
-                ));
+                );
 
                 // Turn Vec<u8> to str
                 let mut human_addr_str = match str::from_utf8(&human) {
                     Err(err) => {
-                        log_error(format!(
+                        error!(
                             "canonicalize_address() error while trying to parse human address from bytes to string: {:?}",
                             err
-                        ));
+                        );
                         return Ok(Some(RuntimeValue::I32(-2)));
                     }
                     Ok(x) => x,
@@ -343,21 +343,21 @@ impl Externals for Runtime {
                 // }
                 let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
                     Err(err) => {
-                        log_error(format!(
+                        error!(
                             "canonicalize_address() error while trying to decode human address {:?} as bech32: {:?}",
                            human_addr_str, err
-                        ));
+                        );
                         return Ok(Some(RuntimeValue::I32(-3)));
                     }
                     Ok(x) => x,
                 };
                 if decoded_prefix != BECH32_PREFIX_ACC_ADDR {
-                    log_error(format!(
+                    error!(
                         "canonicalize_address() wrong prefix {:?} (expected {:?}) while decoding human address {:?} as bech32",
                        decoded_prefix,
                        BECH32_PREFIX_ACC_ADDR,
                        human_addr_str
-                    ));
+                    );
                     return Ok(Some(RuntimeValue::I32(-4)));
                 }
 
@@ -377,11 +377,11 @@ impl Externals for Runtime {
                 // }
                 let canonical = match Vec::<u8>::from_base32(&data) {
                     Err(err) => {
-                        log_error(format!(
+                        error!(
                             "canonicalize_address() error while trying to decode bytes from base32 {:?}: {:?}",
                             data,
                             err
-                        ));
+                        );
                         return Ok(Some(RuntimeValue::I32(-5)));
                     }
                     Ok(x) => x,
@@ -389,10 +389,10 @@ impl Externals for Runtime {
                 if canonical.len() != 20 {
                     // cosmos address length is 20
                     // https://github.com/cosmos/cosmos-sdk/blob/v0.38.1/types/address.go#L32
-                    log_error(format!(
+                    error!(
                         "canonicalize_address() decoded canonical address is not 20 bytes: {:?}",
                         canonical
-                    ));
+                    );
                     return Ok(Some(RuntimeValue::I32(-6)));
                 }
 
@@ -406,9 +406,9 @@ impl Externals for Runtime {
                 {
                     Ok(x) => x,
                     Err(err) => {
-                        log_error(format!(
+                        error!(
                             "canonicalize_address() error while trying to get pointer for the result buffer: {:?}", err
-                        ));
+                        );
                         return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
                     }
                 };
@@ -419,25 +419,25 @@ impl Externals for Runtime {
                 {
                     Ok(x) => x,
                     Err(err) => {
-                        log_error(format!(
+                        error!(
                             "canonicalize_address() error while trying to get length of result buffer: {:?}",                            err
-                        ));
+                        );
                         return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
                     }
                 };
 
                 // Check that canonical is not too big to write into the allocated buffer (canonical should always be 20 bytes)
                 if canonical_len_in_wasm < canonical.len() as u32 {
-                    log_error(format!("canonicalize_address() result to big ({} bytes) to write to allocated wasm buffer ({} bytes)" ,canonical.len(),canonical_len_in_wasm));
+                    error!("canonicalize_address() result to big ({} bytes) to write to allocated wasm buffer ({} bytes)" ,canonical.len(),canonical_len_in_wasm);
                     return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_TOO_SMALL)));
                 }
 
                 // Write the canonical address to WASM memory
                 if let Err(err) = self.memory.set(canonical_ptr_in_wasm, &canonical) {
-                    log_error(format!(
+                    error!(
                         "canonicalize_address() error while trying to write to result buffer: {:?}",
                         err
-                    ));
+                    );
                     return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
                 }
                 // return AccAddress(bz), nil
@@ -457,25 +457,25 @@ impl Externals for Runtime {
                 let canonical = match extract_vector(&self.memory, canonical_ptr_ptr_in_wasm as u32)
                 {
                     Err(err) => {
-                        log_error(format!("humanize_address() error while trying to read human address from wasm memory: {:?}",
-                            err));
+                        error!("humanize_address() error while trying to read human address from wasm memory: {:?}",
+                            err);
                         return Ok(Some(RuntimeValue::I32(-1)));
                     }
                     Ok(value) => value,
                 };
 
-                log_info(format!(
+                trace!(
                     "humanize_address() was called from WASM code with {:?}",
                     canonical
-                ));
+                );
 
                 if canonical.len() != 20 {
                     // cosmos address length is 20
                     // https://github.com/cosmos/cosmos-sdk/blob/v0.38.1/types/address.go#L32
-                    log_error(format!(
+                    error!(
                         "humanize_address() input canonical address must be 20 bytes: {:?}",
                         canonical
-                    ));
+                    );
                     return Ok(Some(RuntimeValue::I32(-2)));
                 }
 
@@ -484,7 +484,7 @@ impl Externals for Runtime {
                     canonical.to_base32(),
                 ) {
                     Err(err) => {
-                        log_error(format!("humanize_address() error while trying to encode canonical address {:?} to human: {:?}",canonical, err));
+                        error!("humanize_address() error while trying to encode canonical address {:?} to human: {:?}",canonical, err);
                         return Ok(Some(RuntimeValue::I32(-3)));
                     }
                     Ok(value) => value,
@@ -502,7 +502,7 @@ impl Externals for Runtime {
                 {
                     Ok(x) => x,
                     Err(err) => {
-                        log_error(format!("humanize_address() error while trying to get pointer for the result buffer: {:?}", err));
+                        error!("humanize_address() error while trying to get pointer for the result buffer: {:?}", err);
                         return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
                     }
                 };
@@ -513,23 +513,23 @@ impl Externals for Runtime {
                 {
                     Ok(x) => x,
                     Err(err) => {
-                        log_error(format!("humanize_address() error while trying to get length of result buffer: {:?}", err));
+                        error!("humanize_address() error while trying to get length of result buffer: {:?}", err);
                         return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
                     }
                 };
 
                 // Check that human_bytes is not too big to write into the allocated buffer (human_bytes should always be 45 bytes)
                 if human_len_in_wasm < human_bytes.len() as u32 {
-                    log_error(format!("humanize_address() result to big ({} bytes) to write to allocated wasm buffer ({} bytes)" ,human_bytes.len(),human_len_in_wasm));
+                    error!("humanize_address() result to big ({} bytes) to write to allocated wasm buffer ({} bytes)" ,human_bytes.len(),human_len_in_wasm);
                     return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_TOO_SMALL)));
                 }
 
                 // Write the canonical address to WASM memory
                 if let Err(err) = self.memory.set(human_ptr_in_wasm, &human_bytes) {
-                    log_error(format!(
+                    error!(
                         "humanize_address() error while trying to write to result buffer: {:?}",
                         err
-                    ));
+                    );
                     return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
                 }
 
@@ -676,11 +676,4 @@ fn extract_vector(memory: &MemoryRef, vec_ptr_ptr: u32) -> Result<Vec<u8>, Inter
     let len: u32 = memory.get_value(vec_ptr_ptr + 4)?;
 
     memory.get(ptr, len as usize)
-}
-
-fn log_info(text: String) {
-    println!("INFO  [{}] {}", module_path!(), text);
-}
-fn log_error(text: String) {
-    println!("ERROR  [{}] {}", module_path!(), text);
 }
