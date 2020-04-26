@@ -137,7 +137,8 @@ clean:
 	-rm -rf /tmp/EnigmaBlockchain
 	-rm -f ./enigmacli*
 	-rm -f ./enigmad*
-	-rm -f {./,./x/compute/internal/keeper}librust_cosmwasm_enclave.signed.so 
+	-rm -f ./librust_cosmwasm_enclave.signed.so 
+	-rm -f ./x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so 
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*
 	$(MAKE) -C go-cosmwasm clean-all
