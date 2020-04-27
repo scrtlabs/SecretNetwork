@@ -5,7 +5,7 @@ use crate::results::{
     result_query_success_to_queryresult,
 };
 use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, KeyGenResult, QueryResult};
-// use enigma_crypto::KeyPair;
+use secp256k1::*;
 
 #[no_mangle]
 pub extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
@@ -81,10 +81,18 @@ pub extern "C" fn ecall_query(
     result_query_success_to_queryresult(result)
 }
 
+use sgx_trts::trts::rsgx_read_rand;
+
 #[no_mangle]
 pub extern "C" fn ecall_key_gen() -> KeyGenResult {
     // TODO
     println!("here");
+
+    let secp = Secp256k1::new();
+
+    let mut secret_key = [0_u8; 32];
+    rsgx_read_rand(&mut secret_key);
+
     todo!()
     // KeyGenResult {}
 }

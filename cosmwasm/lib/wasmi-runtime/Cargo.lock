@@ -61,6 +61,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "cc"
+version = "1.0.41"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8dae9c4b8fedcae85592ba623c4fd08cfdab3e3b72d6df780c6ead964a69bfff"
+
+[[package]]
 name = "cfg-if"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -298,6 +304,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "535622e6be132bccd223f4bb2b8ac8d53cda3c7a6394944d3b2b33fb974f9d76"
 
 [[package]]
+name = "secp256k1"
+version = "0.17.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2932dc07acd2066ff2e3921a4419606b220ba6cd03a9935123856cc534877056"
+dependencies = [
+ "secp256k1-sys",
+]
+
+[[package]]
+name = "secp256k1-sys"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ab2c26f0d3552a0f12e639ae8a64afc2e3db9c52fe32f5fc6c289d38519f220"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "serde"
 version = "1.0.106"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -329,9 +353,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "sgx_libc"
+version = "1.1.1"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.1#66aaa2888992c63137e87adc688ddedab1181056"
+dependencies = [
+ "sgx_types",
+]
+
+[[package]]
+name = "sgx_trts"
+version = "1.1.1"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.1#66aaa2888992c63137e87adc688ddedab1181056"
+dependencies = [
+ "sgx_libc",
+ "sgx_types",
+]
+
+[[package]]
 name = "sgx_types"
-version = "1.1.0"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.0#71a88b647bb76a16cbc5c3e29403e2afb67f82fd"
+version = "1.1.1"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.1#66aaa2888992c63137e87adc688ddedab1181056"
 
 [[package]]
 name = "strsim"
@@ -450,6 +491,8 @@ dependencies = [
  "log",
  "parity-wasm",
  "pwasm-utils",
+ "secp256k1",
+ "sgx_trts",
  "sgx_types",
  "wasmi",
 ]
