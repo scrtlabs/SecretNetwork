@@ -8,8 +8,6 @@ package api
 void cSet(db_t *ptr, Buffer key, Buffer val);
 int64_t cGet(db_t *ptr, Buffer key, Buffer val);
 // imports (api)
-int32_t cHumanAddress(api_t *ptr, Buffer canon, Buffer human);
-int32_t cCanonicalAddress(api_t *ptr, Buffer human, Buffer canon);
 
 // Gateway functions (db)
 int64_t cGet_cgo(db_t *ptr, Buffer key, Buffer val) {
@@ -17,14 +15,6 @@ int64_t cGet_cgo(db_t *ptr, Buffer key, Buffer val) {
 }
 void cSet_cgo(db_t *ptr, Buffer key, Buffer val) {
 	cSet(ptr, key, val);
-}
-
-// Gateway functions (api)
-int32_t cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer canon) {
-    return cCanonicalAddress(ptr, human, canon);
-}
-int32_t cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer human) {
-    return cHumanAddress(ptr, canon, human);
 }
 */
 import "C"

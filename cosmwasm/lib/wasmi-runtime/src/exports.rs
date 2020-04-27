@@ -83,5 +83,7 @@ pub extern "C" fn ecall_query(
 #[no_mangle]
 pub extern "C" fn ecall_key_gen() -> KeyGenResult {
     // TODO
-    KeyGenResult {}
+    println!("here");
+    todo!()
+    // KeyGenResult {}
 }

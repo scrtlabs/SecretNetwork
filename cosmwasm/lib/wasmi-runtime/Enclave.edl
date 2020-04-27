@@ -45,8 +45,7 @@ enclave {
             uintptr_t msg_len
         );
 
-        public KeyGenResult ecall_key_gen(
-        );
+        public KeyGenResult ecall_key_gen();
     };
 
     untrusted {

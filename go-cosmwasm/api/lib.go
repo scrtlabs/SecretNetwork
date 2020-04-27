@@ -99,6 +99,20 @@ func Query(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, g
 	return receiveSlice(res), uint64(gasUsed), nil
 }
 
+func KeyGen(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
+	id := sendSlice(code_id)
+	m := sendSlice(msg)
+	db := buildDB(store)
+	a := buildAPI(api)
+	var gasUsed u64
+	errmsg := C.Buffer{}
+	res, err := C.key_gen(cache.ptr, id, m, db, a, u64(gasLimit), &gasUsed, &errmsg)
+	if err != nil {
+		return nil, 0, errorWithMessage(err, errmsg)
+	}
+	return receiveSlice(res), uint64(gasUsed), nil
+}
+
 /**** To error module ***/
 
 func errorWithMessage(err error, b C.Buffer) error {

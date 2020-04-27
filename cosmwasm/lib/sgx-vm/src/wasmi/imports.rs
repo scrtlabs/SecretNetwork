@@ -53,5 +53,5 @@ extern "C" {
     ) -> sgx_status_t;
 
     /// Trigger a key generation method in a wasm contract
-    pub fn ecall_query(eid: sgx_enclave_id_t, retval: *mut QueryResult) -> sgx_status_t;
+    pub fn ecall_key_gen(eid: sgx_enclave_id_t, retval: *mut QueryResult) -> sgx_status_t;
 }

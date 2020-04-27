@@ -107,7 +107,7 @@ pub enum QueryResult {
     },
 }
 
-/// This struct is returned from ecall_query.
+/// This struct is returned from ecall_key_gen.
 /// cbindgen:prefix-with-name
 #[repr(C)]
 pub enum KeyGenResult {
