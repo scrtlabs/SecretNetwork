@@ -5,12 +5,4 @@
 /enigmad*
 SHA256SUMS*
 /release
-Enclave_u.c
-Enclave_u.h
-.vscode/
-.idea/
-Enclave_t.c
-Enclave_t.h
-*.a
-*.o
-*.so
+.vscode/launch.json
