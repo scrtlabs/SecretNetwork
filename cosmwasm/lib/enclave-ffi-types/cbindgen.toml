@@ -42,6 +42,7 @@ include = [
     "InitResult",
     "HandleResult",
     "QueryResult",
+    "KeyGenResult",
 ]
 exclude = []
 prefix = ""

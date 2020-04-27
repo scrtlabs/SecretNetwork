@@ -5,6 +5,7 @@ use crate::results::{
     result_query_success_to_queryresult,
 };
 use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, KeyGenResult, QueryResult};
+// use enigma_crypto::KeyPair;
 
 #[no_mangle]
 pub extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
