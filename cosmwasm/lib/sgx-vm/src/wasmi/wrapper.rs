@@ -230,4 +230,8 @@ impl Module {
             })
             .map_err(|err| Error::EnclaveErr { inner: err })
     }
+
+    pub fn key_gen(&mut self) -> Result<QuerySuccess> {
+        // TODO
+    }
 }

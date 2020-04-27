@@ -4,7 +4,7 @@ use crate::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
     result_query_success_to_queryresult,
 };
-use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
+use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, KeyGenResult, QueryResult};
 
 #[no_mangle]
 pub extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
@@ -78,4 +78,10 @@ pub extern "C" fn ecall_query(
 
     let result = super::contract_operations::query(context, gas_limit, contract, msg);
     result_query_success_to_queryresult(result)
+}
+
+#[no_mangle]
+pub extern "C" fn ecall_key_gen() -> KeyGenResult {
+    // TODO
+    KeyGenResult {}
 }

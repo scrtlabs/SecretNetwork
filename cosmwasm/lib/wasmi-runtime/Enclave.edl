@@ -44,6 +44,9 @@ enclave {
             [in, count=msg_len] const uint8_t* msg,
             uintptr_t msg_len
         );
+
+        public KeyGenResult ecall_key_gen(
+        );
     };
 
     untrusted {
