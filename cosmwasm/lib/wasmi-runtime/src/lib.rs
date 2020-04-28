@@ -6,6 +6,7 @@ pub mod exports;
 mod gas;
 pub mod imports;
 pub mod logger;
+mod node_reg;
 mod results;
 mod runtime;
 

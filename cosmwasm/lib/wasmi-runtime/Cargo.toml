@@ -11,7 +11,6 @@ crate-type = ["staticlib"]
 
 [dependencies]
 derive_more = "0.99"
-secp256k1 = { version = "0.17.2", default-features = false }
 sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.1" }
 sgx_trts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.1" }
 enclave-ffi-types = { path = "../enclave-ffi-types" }
