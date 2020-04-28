@@ -25,14 +25,14 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/EnigmaBlo
 
 # Block Explorers
 
-- https://explorer.mainnet.enigma.co
 - https://explorer.scrt.cashmaney.com
+- https://secretscan.io
 
 # Implementation Discussions
 
 - [Secret Contracts on Enigma Blockchain](https://forum.enigma.co/t/secret-contracts-on-enigma-blockchain/1284)
-- [Input/Output/State Encryption/Decryption protocol](https://forum.enigma.co/t/input-output-state-encryption-decryption-protocol/1325)
 - [Network key management/agreement](https://forum.enigma.co/t/network-key-management-agreement/1324)
+- [Input/Output/State Encryption/Decryption protocol](https://forum.enigma.co/t/input-output-state-encryption-decryption-protocol/1325)
 - [Why the Cosmos move doesn’t mean we’re leaving Ethereum](https://forum.enigma.co/t/why-the-cosmos-move-doesnt-mean-were-leaving-ethereum/1301)
 - [(Dev discussion/Issue) WASM implementation](https://forum.enigma.co/t/dev-discussion-issue-wasm-implementation/1303)
 

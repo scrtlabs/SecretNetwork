@@ -7,7 +7,7 @@
 2) Install:
 
    - Mac/Windows: Rename it from `enigmacli-${VERSION}-${OS}` to `enigmacli` or `enigmacli.exe` and put it in your path.
-   - Ubuntu/Debian: `sudo dpkg -i enigmachain*.deb`
+   - Ubuntu/Debian: `sudo dpkg -i enigma*.deb`
 
 3) Configure:
 

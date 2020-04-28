@@ -24,10 +24,10 @@ x64 2.0 GHz 2v CPU
 
 ## Installation
 
-### 1. Download the [Enigma Blockchain package installer](https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb) (Debian/Ubuntu):
+### 1. Download the Enigma Blockchain package installer for Debian/Ubuntu:
 
 ```bash
-wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb
+wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.3/enigma-blockchain_0.0.3_amd64.deb
 ```
 
 ([How to verify releases](/docs/verify-releases.md))
@@ -35,7 +35,7 @@ wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enig
 ### 2. Install the package:
 
 ```bash
-sudo dpkg -i enigmachain_0.0.2_amd64.deb
+sudo dpkg -i enigma-blockchain_0.0.3_amd64.deb
 ```
 
 ### 3. Initialize your installation of the Enigma Blockchain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
@@ -139,7 +139,7 @@ enigmacli config trust-node true # true if you trust the full-node you are conne
 ### 13. Get your node ID with:
 
 ```bash
-enigmacli status | awk -F \" '/"id"/{print $4}'
+enigmad tendermint show-node-id
 ```
 
 And publish yourself as a node with this ID:

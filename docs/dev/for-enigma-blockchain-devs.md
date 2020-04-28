@@ -2,14 +2,16 @@
 
 **Requirement**: Go version needs to be [1.13 or higher](https://golang.org/dl/).
 
+# Developers Quick Start
+
+## Local installation
+
 ```bash
 git clone https://github.com/enigmampc/EnigmaBlockchain
 cd EnigmaBlockchain
 go mod tidy
 make install # installs enigmad and enigmacli
 ```
-
-# Developers Quick Start
 
 ```bash
 enigmacli config chain-id enigma-testnet # now we won't need to type --chain-id enigma-testnet every time
@@ -39,6 +41,17 @@ enigmad validate-genesis # make sure genesis file is correct
 # `enigmad export` to send genesis.json to validators
 
 enigmad start --pruning nothing # starts a node
+```
+
+## Docker installation
+
+```bash
+git clone https://github.com/enigmampc/EnigmaBlockchain
+cd EnigmaBlockchain
+docker build -t enigmadev -f Dockerfile_devnet .
+
+docker run -d -p 26657:26657 -p 26656:26656 -p 1317:1317 \
+ --name enigmadev enigmadev
 ```
 
 # Delegation & Rewards

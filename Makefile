@@ -66,9 +66,14 @@ xgo_build_enigmad: go.sum
 xgo_build_enigmacli: go.sum
 	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/EnigmaBlockchain/cmd/enigmacli
 
+build_local_no_rust:
+	@ #this pulls out ELF symbols, 80% size reduction!
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+
 build_local:
-	cd go-cosmwasm && rustup run nightly cargo build --release --features backtraces
-	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
+	# cd go-cosmwasm && rustup run nightly cargo build --release --features backtraces
+	# cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
 	@ #this pulls out ELF symbols, 80% size reduction!
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
@@ -96,14 +101,14 @@ deb: build_local
 	mv -f ./enigmad /tmp/EnigmaBlockchain/deb/bin/enigmad
 	chmod +x /tmp/EnigmaBlockchain/deb/bin/enigmad /tmp/EnigmaBlockchain/deb/bin/enigmacli
 	
-	mkdir -p /tmp/EnigmaBlockchain/deb/usr/lib
-	mv -f ./go-cosmwasm/api/libgo_cosmwasm.so /tmp/EnigmaBlockchain/deb/usr/lib/libgo_cosmwasm.so
-	chmod +x /tmp/EnigmaBlockchain/deb/usr/lib/libgo_cosmwasm.so
+	# mkdir -p /tmp/EnigmaBlockchain/deb/usr/lib
+	# mv -f ./go-cosmwasm/api/libgo_cosmwasm.so /tmp/EnigmaBlockchain/deb/usr/lib/libgo_cosmwasm.so
+	# chmod +x /tmp/EnigmaBlockchain/deb/usr/lib/libgo_cosmwasm.so
 
 	mkdir -p /tmp/EnigmaBlockchain/deb/DEBIAN
 	cp ./packaging_ubuntu/control /tmp/EnigmaBlockchain/deb/DEBIAN/control
 	printf "Version: " >> /tmp/EnigmaBlockchain/deb/DEBIAN/control
-	git tag | grep -P '^v' | tail -1 | tr -d v >> /tmp/EnigmaBlockchain/deb/DEBIAN/control
+	git describe --tags | tr -d v >> /tmp/EnigmaBlockchain/deb/DEBIAN/control
 	echo "" >> /tmp/EnigmaBlockchain/deb/DEBIAN/control
 	cp ./packaging_ubuntu/postinst /tmp/EnigmaBlockchain/deb/DEBIAN/postinst
 	chmod 755 /tmp/EnigmaBlockchain/deb/DEBIAN/postinst

@@ -385,6 +385,13 @@ Use the following commands to:
 enigmacli tx staking edit-validator --moniker <new-moniker> --from <key-alias>
 ```
 
+##### Changing your commission rate
+
+Example 0.075 = 7.5%
+```bash
+enigmacli tx staking edit-validator --commission-rate 0.075 --from <key-alias>
+```
+
 ##### Seeing your rewards from being a validator
 
 ```bash
