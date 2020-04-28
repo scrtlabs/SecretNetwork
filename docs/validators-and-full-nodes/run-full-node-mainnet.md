@@ -139,7 +139,7 @@ enigmacli config trust-node true # true if you trust the full-node you are conne
 ### 13. Get your node ID with:
 
 ```bash
-enigmacli status | awk -F \" '/"id"/{print $4}'
+enigmad tendermint show-node-id
 ```
 
 And publish yourself as a node with this ID:
