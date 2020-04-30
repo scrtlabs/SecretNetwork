@@ -7,11 +7,14 @@ package api
 typedef int64_t (*read_db_fn)(db_t *ptr, Buffer key, Buffer val);
 typedef void (*write_db_fn)(db_t *ptr, Buffer key, Buffer val);
 // and api
-
+typedef int32_t (*humanize_address_fn)(api_t*, Buffer, Buffer);
+typedef int32_t (*canonicalize_address_fn)(api_t*, Buffer, Buffer);
 // forward declarations (db)
 int64_t cGet_cgo(db_t *ptr, Buffer key, Buffer val);
 void cSet_cgo(db_t *ptr, Buffer key, Buffer val);
 // and api
+int32_t cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer human);
+int32_t cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer canon);
 */
 import "C"
 
@@ -58,4 +61,56 @@ func cSet(ptr *C.db_t, key C.Buffer, val C.Buffer) {
 	k := receiveSlice(key)
 	v := receiveSlice(val)
 	kv.Set(k, v)
+}
+
+/***** GoAPI *******/
+
+type HumanAddress func([]byte) (string, error)
+type CanonicalAddress func(string) ([]byte, error)
+
+type GoAPI struct {
+	HumanAddress     HumanAddress
+	CanonicalAddress CanonicalAddress
+}
+
+var api_vtable = C.GoApi_vtable{
+	humanize_address:     (C.humanize_address_fn)(C.cHumanAddress_cgo),
+	canonicalize_address: (C.canonicalize_address_fn)(C.cCanonicalAddress_cgo),
+}
+
+// contract: original pointer/struct referenced must live longer than C.GoApi struct
+// since this is only used internally, we can verify the code that this is the case
+func buildAPI(api *GoAPI) C.GoApi {
+	return C.GoApi{
+		state:  (*C.api_t)(unsafe.Pointer(api)),
+		vtable: api_vtable,
+	}
+}
+
+//export cHumanAddress
+func cHumanAddress(ptr *C.api_t, canon C.Buffer, human C.Buffer) i32 {
+	api := (*GoAPI)(unsafe.Pointer(ptr))
+	c := receiveSlice(canon)
+	h, err := api.HumanAddress(c)
+	if err != nil {
+		return -1
+	}
+	if len(h) == 0 {
+		return 0
+	}
+	return i32(writeToBuffer(human, []byte(h)))
+}
+
+//export cCanonicalAddress
+func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon C.Buffer) i32 {
+	api := (*GoAPI)(unsafe.Pointer(ptr))
+	h := string(receiveSlice(human))
+	c, err := api.CanonicalAddress(h)
+	if err != nil {
+		return -1
+	}
+	if len(c) == 0 {
+		return 0
+	}
+	return i32(writeToBuffer(canon, c))
 }
