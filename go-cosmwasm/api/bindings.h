@@ -75,6 +75,8 @@ Buffer instantiate(cache_t *cache,
                    uint64_t *gas_used,
                    Buffer *err);
 
+Buffer key_gen(Buffer *err);
+
 Buffer query(cache_t *cache,
              Buffer code_id,
              Buffer msg,
