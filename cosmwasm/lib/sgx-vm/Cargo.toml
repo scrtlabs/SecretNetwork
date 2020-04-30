@@ -1,7 +1,10 @@
 [package]
 name = "cosmwasm-sgx-vm"
 version = "0.7.0"
-authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>", "Enigma Team <dev@enigma.co>"]
+authors = [
+    "Ethan Frey <ethanfrey@users.noreply.github.com>",
+    "Enigma Team <info@enigma.co>"
+]
 edition = "2018"
 description = "VM bindings to run cosmwams contracts inside an SGX enclave"
 repository = "https://github.com/enigmampc/EnigmaBlockchain/tree/master/cosmwasm/lib/sgx-vm"
@@ -16,8 +19,13 @@ backtraces = ["snafu/backtraces"]
 cosmwasm = { path = "../..", version = "0.7.0" }
 serde-json-wasm = "0.1.0"
 schemars = "0.5"
-serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
-snafu = { version = "0.5.0", default-features = false, features = ["rust_1_30"] }
+serde = { version = "1.0.103", default-features = false, features = [
+    "derive",
+    "alloc"
+] }
+snafu = { version = "0.5.0", default-features = false, features = [
+    "rust_1_30"
+] }
 sha2 = "0.8.0"
 hex = "0.3.1"
 memmap = "0.7"
