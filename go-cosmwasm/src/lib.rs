@@ -265,13 +265,14 @@ fn do_query(
 
 #[no_mangle]
 pub extern "C" fn key_gen(err: Option<&mut Buffer>) -> Buffer {
-    let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_query(c, code_id, msg, db, api, gas_limit, gas_used)
-        }))
-        .unwrap_or_else(|_| Panic {}.fail()),
-        None => EmptyArg { name: CACHE_ARG }.fail(),
-    };
-    let v = handle_c_error(r, err);
-    Buffer::from_vec(v)
+    // let r = match to_cache(cache) {
+    //     Some(c) => catch_unwind(AssertUnwindSafe(move || {
+    //         do_query(c, code_id, msg, db, api, gas_limit, gas_used)
+    //     }))
+    //     .unwrap_or_else(|_| Panic {}.fail()),
+    //     None => EmptyArg { name: CACHE_ARG }.fail(),
+    // };
+    // let v = handle_c_error(r, err);
+    // Buffer::from_vec(v)
+    todo!()
 }

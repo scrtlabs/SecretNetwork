@@ -99,18 +99,14 @@ func Query(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, g
 	return receiveSlice(res), uint64(gasUsed), nil
 }
 
-func KeyGen(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
-	m := sendSlice(msg)
-	db := buildDB(store)
-	a := buildAPI(api)
-	var gasUsed u64
+// KeyGen Seng KeyGen request to enclave
+func KeyGen() ([]byte, error) {
 	errmsg := C.Buffer{}
-	res, err := C.key_gen(cache.ptr, id, m, db, a, u64(gasLimit), &gasUsed, &errmsg)
+	res, err := C.key_gen(&errmsg)
 	if err != nil {
-		return nil, 0, errorWithMessage(err, errmsg)
+		return nil, errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(res), uint64(gasUsed), nil
+	return receiveSlice(res), nil
 }
 
 /**** To error module ***/
