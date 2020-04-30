@@ -25,7 +25,7 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/EnigmaBlo
 
 # Block Explorers
 
-- https://explorer.scrt.cashmaney.com
+- https://explorer.cashmaney.com
 - https://secretscan.io
 
 # Implementation Discussions
