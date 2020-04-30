@@ -91,7 +91,7 @@ compiler-rt: $(CUSTOM_LIBRARY_PATH)
 	cp ../incubator-teaclave-sgx-sdk/compiler-rt/libcompiler-rt-patch.a $(CUSTOM_LIBRARY_PATH)/libcompiler-rt-patch.a
 
 $(CUSTOM_LIBRARY_PATH)/libenclave.a: $(CUSTOM_LIBRARY_PATH) $(Rust_Crate_Source)
-	RUST_TARGET_PATH=$(Rust_Target_Path) xargo build --target x86_64-unknown-linux-sgx --release
+	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS="-Z force-unstable-if-unmarked" xargo build --target x86_64-unknown-linux-sgx --release
 	cp target/x86_64-unknown-linux-sgx/release/libwasmi_runtime_enclave.a $(CUSTOM_LIBRARY_PATH)/libenclave.a
 
 $(CUSTOM_LIBRARY_PATH):

@@ -16,7 +16,6 @@ use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
 use cosmwasm_sgx_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache, Extern};
 
 use ctor::ctor;
-use log;
 
 #[ctor]
 fn init_logger() {
