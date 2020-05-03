@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 use std::env;
-use std::path::{PathBuf, Path};
+use std::path::{Path};
 // use snafu::ResultExt;
 /*
 pub use wasmer_runtime_core::typed_func::Func;
