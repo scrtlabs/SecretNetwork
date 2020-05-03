@@ -3,6 +3,6 @@
 mod types;
 
 pub use types::{
-    Ctx, EnclaveBuffer, EnclaveError, HandleResult, InitResult, KeyGenResult, QueryResult,
-    UserSpaceBuffer,
+    CryptoError, Ctx, EnclaveBuffer, EnclaveError, HandleResult, InitResult, KeyGenResult,
+    QueryResult, UserSpaceBuffer,
 };
