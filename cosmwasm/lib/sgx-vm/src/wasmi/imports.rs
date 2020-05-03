@@ -13,6 +13,7 @@ extern "C" {
     ) -> sgx_status_t;
 
     pub fn ecall_init_seed(
+        eid: sgx_enclave_id_t,
         pk: &[u8; 64],
         encrypted_key: &[u8; 32],
     ) -> sgx_status_t;

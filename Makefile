@@ -74,6 +74,11 @@ build_linux:
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
 
+build_local_no_rust:
+#   this pulls out ELF symbols, 80% size reduction!
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+
 build_windows:
 	# CLI only 
 	$(MAKE) xgo_build_enigmacli XGO_TARGET=windows/amd64

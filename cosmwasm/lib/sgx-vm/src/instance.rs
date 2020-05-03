@@ -25,7 +25,7 @@ use crate::errors::{Error, Result};
 // use crate::memory::{read_region, write_region};
 
 use crate::wasmi::Module;
-
+use crate::wasmi::init_seed;
 use sgx_types::{sgx_attributes_t, sgx_launch_token_t, sgx_misc_attribute_t, SgxResult};
 use sgx_urts::SgxEnclave;
 
@@ -61,6 +61,21 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
 lazy_static! {
     pub static ref SGX_ENCLAVE: SgxResult<SgxEnclave> = init_enclave();
 }
+
+pub fn call_init_seed(pk: &[u8; 64], encrypted_key: &[u8; 32]) -> Result<bool, Error> {
+    let enclave: SgxEnclave = SGX_ENCLAVE
+        .map_err(|err| Error::SdkErr { inner: *err })?;
+
+
+    return match init_seed(enclave.geteid(), pk, encrypted_key) {
+        Ok(_) => Ok(true),
+        Err(e) => Err(e)
+    };
+    // TODO verify signature
+    // Ok(init_result)
+}
+
+
 
 impl<S, A> Instance<S, A>
 where
@@ -164,12 +179,6 @@ where
 
     pub fn call_init(&mut self, env: &[u8], msg: &[u8]) -> Result<Vec<u8>, Error> {
         let init_result = self.enclave_instance.init(env, msg)?;
-        // TODO verify signature
-        Ok(init_result.into_output())
-    }
-
-    pub fn call_init_seed(&mut self, pk: &[u8], encrypted_key: &[u8]) -> Result<Vec<u8>, Error> {
-        let init_result = self.enclave_instance.init_seed(pk, encrypted_key)?;
         // TODO verify signature
         Ok(init_result.into_output())
     }

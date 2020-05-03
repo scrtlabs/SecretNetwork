@@ -2,18 +2,22 @@
 # > docker build -t enigma .
 # > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.enigmad:/root/.enigmad -v ~/.enigmacli:/root/.enigmacli enigma enigmad init
 # > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.enigmad:/root/.enigmad -v ~/.enigmacli:/root/.enigmacli enigma enigmad start
-FROM rust:1.42-stretch AS build-env-rust
+FROM sgx_base AS build-env-rust
+
+ENV PATH="/root/.cargo/bin:$PATH"
+
+ARG SGX_MODE=SW
+ENV SGX_MODE=${SGX_MODE}
 
 # Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/enigmablockchain
 
-RUN rustup default nightly
-
 # Add source files
 COPY go-cosmwasm/ go-cosmwasm/
+COPY cosmwasm/ cosmwasm/
 
 WORKDIR /go/src/github.com/enigmampc/enigmablockchain/go-cosmwasm
-RUN cargo build --release --features backtraces
+RUN . /opt/sgxsdk/environment && env && make all
 
 FROM golang:1.14-stretch AS build-env
 
@@ -28,29 +32,41 @@ RUN apt-get update && \
 WORKDIR /go/src/github.com/enigmampc/enigmablockchain
 
 # Add source files
-COPY . .
+COPY go-cosmwasm go-cosmwasm
+COPY x .
+COPY types .
+COPY app.go .
+COPY go.mod .
+COPY go.sum .
+COPY cmd .
+
 
 COPY --from=build-env-rust /go/src/github.com/enigmampc/enigmablockchain/go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
 
 RUN go mod tidy
 
-RUN make build_local_no_rust
+RUN . /opt/sgxsdk/environment && env && make build_local_no_rust
 
 # Final image
-FROM ubuntu:18.04
+FROM cashmaney/enigma-sgx-base
+
+ENV SCRT_ENCLAVE_DIR=/usr/lib/
 
 # Install ca-certificates
 WORKDIR /root
 
 # Copy over binaries from the build-env
 COPY --from=build-env-rust /go/src/github.com/enigmampc/enigmablockchain/go-cosmwasm/target/release/libgo_cosmwasm.so /usr/lib/
+COPY --from=build-env-rust /go/src/github.com/enigmampc/enigmablockchain/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/
 COPY --from=build-env /go/src/github.com/enigmampc/enigmablockchain/enigmad /usr/bin/enigmad
 COPY --from=build-env  /go/src/github.com/enigmampc/enigmablockchain/enigmacli /usr/bin/enigmacli
 
-COPY ./packaging_docker/devnet_init.sh .
+# COPY ./packaging_docker/devnet_init.sh .
+COPY ./cosmwasm/lib/wasmi-sgx-test.sh .
 
 RUN chmod +x /usr/bin/enigmad
 RUN chmod +x /usr/bin/enigmacli
+RUN chmod +x wasmi-sgx-test.sh
 
 # Run enigmad by default, omit entrypoint to ease using container with enigmacli
-ENTRYPOINT ["/bin/bash", "devnet_init.sh"]
+ENTRYPOINT ["/bin/bash", "wasmi-sgx-test.sh"]

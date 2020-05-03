@@ -20,6 +20,25 @@ use super::results::{
     InitSuccess, KeyGenSuccess, QuerySuccess,
 };
 
+use sgx_types::{sgx_enclave_id_t};
+
+pub fn init_seed(eid: sgx_enclave_id_t, pk: &[u8; 64], encrypted_key: &[u8; 32]) -> Result<sgx_status_t, Error> {
+    return match unsafe {
+        imports::ecall_init_seed(
+            eid,
+            pk,
+            encrypted_key
+        )
+    } {
+        sgx_status_t::SGX_SUCCESS => { Ok(sgx_status_t::SGX_SUCCESS) }
+        failure_status => {
+            return Err(Error::SdkErr {
+                inner: failure_status,
+            })
+        }
+    }
+}
+
 /// This is a safe wrapper for allocating buffers inside the enclave.
 pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> Result<EnclaveBuffer, sgx_status_t> {
     let ptr = buffer.as_ptr();
@@ -90,22 +109,6 @@ impl Module {
 
     pub fn gas_limit(&self) -> u64 {
         self.gas_limit
-    }
-
-    pub fn init_seed(&mut self, pk: &[u8; 64], encrypted_key: &[u8; 32]) -> Result<sgx_status_t> {
-        return match unsafe {
-            imports::ecall_init_seed(
-                pk,
-                encrypted_key
-            )
-        } {
-            sgx_status_t::SGX_SUCCESS => { Ok(sgx_status_t::SGX_SUCCESS) }
-            failure_status => {
-                return Err(Error::SdkErr {
-                    inner: failure_status,
-                })
-            }
-        }
     }
 
     pub fn init(&mut self, env: &[u8], msg: &[u8]) -> Result<InitSuccess> {

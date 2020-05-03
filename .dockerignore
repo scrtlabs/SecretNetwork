@@ -1,5 +1,13 @@
 Dockerfile
 docs
+*.md
+
+**/target
 
 README.md
 .gitignore
+
+.vscode
+.github
+.git
+.idea

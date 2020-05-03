@@ -13,8 +13,7 @@ use std::str::from_utf8;
 
 use crate::error::{clear_error, handle_c_error, set_error};
 use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
-use cosmwasm_sgx_vm::{call_handle_raw, call_init_raw, call_query_raw, call_init_seed_raw, CosmCache, Extern};
-
+use cosmwasm_sgx_vm::{call_handle_raw, call_init_raw, call_query_raw, call_init_seed_wrap, CosmCache, Extern};
 use ctor::ctor;
 use log;
 
@@ -99,11 +98,17 @@ fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<D
     Ok(Box::into_raw(out))
 }
 
-fn do_init_seed(public_key: Buffer, seed: Buffer) -> Result<Vec<u8>, Error> {
+fn do_init_seed(public_key: Buffer, seed: Buffer) -> Result<bool, Error> {
     let pk = public_key.read().ok_or_else(|| empty_err(PUBLIC_KEY_ARG))?;
     let seed = seed.read().ok_or_else(|| empty_err(SEED_ARG))?;
 
-    let res = call_init_seed_raw(&mut instance, params, msg);
+    let mut pk_sized = [0u8; 64];
+    pk_sized[0..64].copy_from_slice(&pk);
+
+    let mut enc_key_sized = [0u8; 32];
+    enc_key_sized[0..64].copy_from_slice(&pk);
+
+    let res = call_init_seed_wrap(&pk_sized, &enc_key_sized);
     res
 }
 
