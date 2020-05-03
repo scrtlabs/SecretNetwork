@@ -1,6 +1,6 @@
-use std::marker::PhantomData;
 use std::env;
-use std::path::{Path};
+use std::marker::PhantomData;
+use std::path::Path;
 // use snafu::ResultExt;
 /*
 pub use wasmer_runtime_core::typed_func::Func;
@@ -30,7 +30,6 @@ use crate::wasmi::Module;
 use sgx_types::{sgx_attributes_t, sgx_launch_token_t, sgx_misc_attribute_t, SgxResult};
 use sgx_urts::SgxEnclave;
 
-
 /// An instance is a combination of wasm code, storage, and gas limit.
 pub struct Instance<S: Storage + 'static, A: Api + 'static> {
     enclave_instance: Module,
@@ -40,7 +39,6 @@ pub struct Instance<S: Storage + 'static, A: Api + 'static> {
 }
 
 static ENCLAVE_FILE: &'static str = "librust_cosmwasm_enclave.signed.so";
-
 
 fn init_enclave() -> SgxResult<SgxEnclave> {
     let mut launch_token: sgx_launch_token_t = [0; 1024];
@@ -55,8 +53,7 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
 
     // Step : try to create a .enigma folder for storing all the files
     // Create a directory, returns `io::Result<()>`
-    //let storage_path = home_dir.join(ENCLAVE_DIR);
-    let enclave_directory = env::var("ENCLAVE_DIR").unwrap_or('.'.to_string());
+    let enclave_directory = env::var("SCRT_ENCLAVE_DIR").unwrap_or('.'.to_string());
 
     let path = Path::new(&enclave_directory);
 
