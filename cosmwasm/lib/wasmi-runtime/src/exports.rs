@@ -1,10 +1,11 @@
 use std::ffi::c_void;
-
+use sgx_types::{sgx_status_t, SgxError};
 use crate::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
     result_query_success_to_queryresult,
 };
 use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, KeyGenResult, QueryResult};
+use crate::node_reg::{init_seed};
 
 #[no_mangle]
 pub extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
@@ -94,4 +95,12 @@ pub extern "C" fn ecall_key_gen() -> KeyGenResult {
 
     todo!()
     // KeyGenResult {}
+}
+
+#[no_mangle]
+pub extern "C" fn ecall_init_seed(
+    pk: &[u8; 64],  // public key
+    encrypted_key: &[u8; 32], // encrypted key
+) -> Result<sgx_status_t, SgxError> {
+    init_seed(pk, encrypted_key)
 }

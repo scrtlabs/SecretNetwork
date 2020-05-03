@@ -12,6 +12,11 @@ extern "C" {
         length: usize,
     ) -> sgx_status_t;
 
+    pub fn ecall_init_seed(
+        pk: &[u8; 64],
+        encrypted_key: &[u8; 32],
+    ) -> sgx_status_t;
+
     /// Trigger the init method in a wasm contract
     pub fn ecall_init(
         eid: sgx_enclave_id_t,

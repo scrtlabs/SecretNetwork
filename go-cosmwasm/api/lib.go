@@ -20,6 +20,18 @@ type Cache struct {
 	ptr *C.cache_t
 }
 
+func InitSeed(publicKey []byte, seed []byte) ([]byte, error) {
+	pkSlice := sendSlice(publicKey)
+	seedSlice := sendSlice(seed)
+	errmsg := C.Buffer{}
+
+	res, err := C.init_cache(pkSlice, seedSlice, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return receiveSlice(res), nil
+}
+
 func InitCache(dataDir string, cacheSize uint64) (Cache, error) {
 	dir := sendSlice([]byte(dataDir))
 	errmsg := C.Buffer{}

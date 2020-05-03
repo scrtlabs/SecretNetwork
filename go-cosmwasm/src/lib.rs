@@ -13,7 +13,7 @@ use std::str::from_utf8;
 
 use crate::error::{clear_error, handle_c_error, set_error};
 use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
-use cosmwasm_sgx_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache, Extern};
+use cosmwasm_sgx_vm::{call_handle_raw, call_init_raw, call_query_raw, call_init_seed_raw, CosmCache, Extern};
 
 use ctor::ctor;
 use log;
@@ -37,6 +37,26 @@ fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache<DB, GoApi>> {
 
 fn to_extern(storage: DB, api: GoApi) -> Extern<DB, GoApi> {
     Extern { storage, api }
+}
+
+#[no_mangle]
+pub extern "C" fn init_seed(
+    pk: Buffer,
+    encrypted_key: Buffer,
+    err: Option<&mut Buffer>,
+) -> bool {
+    let r =
+        catch_unwind(|| do_init_seed(pk, encrypted_key)).unwrap_or_else(|_| Panic {}.fail());
+    match r {
+        Ok(t) => {
+            clear_error();
+            true
+        }
+        Err(e) => {
+            set_error(e.to_string(), err);
+            false
+        }
+    }
 }
 
 #[no_mangle]
@@ -67,6 +87,9 @@ static CODE_ID_ARG: &str = "code_id";
 static MSG_ARG: &str = "msg";
 static PARAMS_ARG: &str = "params";
 static GAS_USED_ARG: &str = "gas_used";
+static SEED_ARG: &str = "";
+static PUBLIC_KEY_ARG: &str = "";
+
 
 fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<DB, GoApi>, Error> {
     let dir = data_dir.read().ok_or_else(|| empty_err(DATA_DIR_ARG))?;
@@ -74,6 +97,14 @@ fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<D
     let cache = unsafe { CosmCache::new(dir_str, cache_size).context(WasmErr {})? };
     let out = Box::new(cache);
     Ok(Box::into_raw(out))
+}
+
+fn do_init_seed(public_key: Buffer, seed: Buffer) -> Result<Vec<u8>, Error> {
+    let pk = public_key.read().ok_or_else(|| empty_err(PUBLIC_KEY_ARG))?;
+    let seed = seed.read().ok_or_else(|| empty_err(SEED_ARG))?;
+
+    let res = call_init_seed_raw(&mut instance, params, msg);
+    res
 }
 
 /// frees a cache reference

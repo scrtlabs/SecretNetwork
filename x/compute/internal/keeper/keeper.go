@@ -44,10 +44,21 @@ type Keeper struct {
 
 // NewKeeper creates a new contract Keeper instance
 func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.AccountKeeper, bankKeeper bank.Keeper,
-	router sdk.Router, homeDir string, wasmConfig types.WasmConfig) Keeper {
+	router sdk.Router, homeDir string, wasmConfig types.WasmConfig, bootstrap bool) Keeper {
 	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), wasmConfig.CacheSize)
 	if err != nil {
 		panic(err)
+	}
+
+	if !bootstrap {
+		// get PK from CLI
+		// get encrypted master key
+		var pk = "0xaaaaaa"
+		var key = "yoyoyoyo"
+		_, err := wasmer.InitSeed([]byte(pk), []byte(key))
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	return Keeper{
@@ -79,6 +90,7 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 			return 0, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
 		}
 	}
+
 	store := ctx.KVStore(k.storeKey)
 	codeID = k.autoIncrementID(ctx, types.KeyLastCodeID)
 	codeInfo := types.NewCodeInfo(codeHash, creator, source, builder)

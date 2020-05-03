@@ -168,6 +168,12 @@ where
         Ok(init_result.into_output())
     }
 
+    pub fn call_init_seed(&mut self, pk: &[u8], encrypted_key: &[u8]) -> Result<Vec<u8>, Error> {
+        let init_result = self.enclave_instance.init_seed(pk, encrypted_key)?;
+        // TODO verify signature
+        Ok(init_result.into_output())
+    }
+
     pub fn call_handle(&mut self, env: &[u8], msg: &[u8]) -> Result<Vec<u8>, Error> {
         let init_result = self.enclave_instance.handle(env, msg)?;
         // TODO verify signature

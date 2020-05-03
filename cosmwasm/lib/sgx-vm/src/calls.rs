@@ -54,6 +54,15 @@ pub fn call_init_raw<S: Storage + 'static, A: Api + 'static>(
     instance.call_init(env, msg).into()
 }
 
+pub fn call_init_seed_raw<S: Storage + 'static, A: Api + 'static>(
+    instance: &mut Instance<S, A>,
+    pk: &[u8],
+    encrypted_key: &[u8],
+) -> Result<Vec<u8>, Error> {
+    instance.call_init_seed(pk, encrypted_key).into()
+}
+
+
 pub fn call_handle_raw<S: Storage + 'static, A: Api + 'static>(
     instance: &mut Instance<S, A>,
     env: &[u8],
