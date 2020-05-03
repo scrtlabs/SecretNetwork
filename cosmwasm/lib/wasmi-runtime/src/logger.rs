@@ -1,9 +1,9 @@
-use log::{Level, Metadata, Record};
+use log::{Metadata, Record};
 
 pub struct SimpleLogger;
 
 impl log::Log for SimpleLogger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
+    fn enabled(&self, _metadata: &Metadata) -> bool {
         // Not really needed since we set logging level at lib.rs in the init function
         true
     }

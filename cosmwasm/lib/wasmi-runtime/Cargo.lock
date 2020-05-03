@@ -35,7 +35,8 @@ checksum = "f8aac770f1885fd7e387acedd76065302551364496e46b3dd00860b2f8359b9d"
 [[package]]
 name = "bech32"
 version = "0.7.2"
-source = "git+https://github.com/reuvenpo/rust-bech32?branch=support-no_std#b3a601250535173444ea1e3e7867c35965e9a649"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cdcf67bb7ba7797a081cd19009948ab533af7c355d5caf1d08c777582d351e9c"
 
 [[package]]
 name = "bitflags"
@@ -455,11 +456,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "sgx_tcrypto"
+version = "1.1.1"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.1#66aaa2888992c63137e87adc688ddedab1181056"
+dependencies = [
+ "sgx_types",
+]
+
+[[package]]
 name = "sgx_trts"
 version = "1.1.1"
 source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.1#66aaa2888992c63137e87adc688ddedab1181056"
 dependencies = [
  "sgx_libc",
+ "sgx_types",
+]
+
+[[package]]
+name = "sgx_tse"
+version = "1.1.1"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.1#66aaa2888992c63137e87adc688ddedab1181056"
+dependencies = [
+ "sgx_types",
+]
+
+[[package]]
+name = "sgx_tseal"
+version = "1.1.1"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.1#66aaa2888992c63137e87adc688ddedab1181056"
+dependencies = [
+ "sgx_tcrypto",
+ "sgx_trts",
+ "sgx_tse",
  "sgx_types",
 ]
 
@@ -618,6 +646,7 @@ dependencies = [
  "pwasm-utils",
  "rand",
  "sgx_trts",
+ "sgx_tseal",
  "sgx_types",
  "sha2",
  "wasmi",

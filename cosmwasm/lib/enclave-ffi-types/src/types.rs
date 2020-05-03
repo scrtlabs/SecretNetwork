@@ -189,6 +189,6 @@ pub enum KeyGenResult {
         signature: [u8; 65],
     },
     Failure {
-        err: EnclaveError,
+        err: CryptoError,
     },
 }

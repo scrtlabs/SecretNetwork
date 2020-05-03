@@ -1,5 +1,6 @@
 use std::ffi::c_void;
 
+use crate::node_reg::KeyPair;
 use crate::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
     result_query_success_to_queryresult,
@@ -80,18 +81,13 @@ pub extern "C" fn ecall_query(
     result_query_success_to_queryresult(result)
 }
 
-use sgx_trts::trts::rsgx_read_rand;
-
 #[no_mangle]
 pub extern "C" fn ecall_key_gen() -> KeyGenResult {
-    // TODO
-    println!("here");
+    // Generate node-specific key-pair
+    let key_pair = match KeyPair::new() {
+        Ok(kp) => kp,
+        Err(err) => return KeyGenResult::Failure { err },
+    };
 
-    // let secp = Secp256k1::new();
-
-    let mut secret_key = [0_u8; 32];
-    rsgx_read_rand(&mut secret_key);
-
-    todo!()
-    // KeyGenResult {}
+    todo!("Seal and backup");
 }

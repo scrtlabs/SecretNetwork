@@ -1,5 +1,4 @@
 use enclave_ffi_types::{Ctx, EnclaveError};
-use log::{error, info};
 use parity_wasm::elements;
 use wasmi::{ImportsBuilder, ModuleInstance};
 
