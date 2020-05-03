@@ -24,3 +24,4 @@ log = "0.4.8"
 ctor = "0.1.13"
 libsecp256k1 = "0.3.5"
 rand = { version = "0.7.3" }
+sha2 = "0.8.1"

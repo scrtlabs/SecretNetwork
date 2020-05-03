@@ -1,8 +1,7 @@
-/// Functions re:node registration will be implemented here
-// extern crate rand;
 use enclave_ffi_types::CryptoError;
 use rand::{thread_rng, CryptoRng, Rng};
 use secp256k1::{PublicKey, SecretKey, SharedSecret};
+use sha2::Sha256;
 
 // pub use crate::hash::Hash256;
 /// The size of the symmetric 256 bit key we use for encryption (in bytes).
@@ -55,27 +54,27 @@ impl KeyPair {
 
     /// This function does an ECDH(point multiplication) between one's private key and the other one's public key.
     ///
-    // pub fn derive_key(&self, _pubarr: &PubKey) -> Result<DhKey, CryptoError> {
-    //     let mut pubarr: [u8; 65] = [0; 65];
-    //     pubarr[0] = 4;
-    //     pubarr[1..].copy_from_slice(&_pubarr[..]);
+    pub fn derive_key(&self, _pubarr: &PubKey) -> Result<DhKey, CryptoError> {
+        let mut pubarr: [u8; 65] = [0; 65];
+        pubarr[0] = 4;
+        pubarr[1..].copy_from_slice(&_pubarr[..]);
 
-    //     let pubkey = PublicKey::parse(&pubarr).map_err(|e| CryptoError::KeyError {
-    //         key_type: "Private Key",
-    //         err: Some(e),
-    //     })?;
+        let pubkey = PublicKey::parse(&pubarr).map_err(|e| CryptoError::KeyError {
+            key_type: "Private Key",
+            err: Some(e),
+        })?;
 
-    //     let shared = SharedSecret::new(&pubkey, &self.privkey).map_err(|_| {
-    //         CryptoError::DerivingKeyError {
-    //             self_key: self.get_pubkey(),
-    //             other_key: *_pubarr,
-    //         }
-    //     })?;
+        let shared = SharedSecret::<Sha256>::new(&pubkey, &self.privkey).map_err(|_| {
+            CryptoError::DerivingKeyError {
+                self_key: self.get_pubkey(),
+                other_key: *_pubarr,
+            }
+        })?;
 
-    //     let mut result = [0u8; 32];
-    //     result.copy_from_slice(shared.as_ref());
-    //     Ok(result)
-    // }
+        let mut result = [0u8; 32];
+        result.copy_from_slice(shared.as_ref());
+        Ok(result)
+    }
 
     /// This will return the raw 32 bytes private key. use carefully.
     pub fn get_privkey(&self) -> [u8; 32] {
@@ -92,8 +91,14 @@ impl KeyPair {
     ///     `https://tools.ietf.org/html/rfc5480#section-2.2`
     ///     `https://docs.rs/libsecp256k1/0.1.13/src/secp256k1/lib.rs.html#146`
     pub fn get_pubkey(&self) -> PubKey {
-        todo!();
-        // KeyPair::pubkey_object_to_pubkey(&self.pubkey)
+        // todo!();
+        KeyPair::pubkey_object_to_pubkey(&self.pubkey)
+    }
+
+    fn pubkey_object_to_pubkey(key: &PublicKey) -> PubKey {
+        let mut sliced_pubkey: [u8; 64] = [0; 64];
+        sliced_pubkey.clone_from_slice(&key.serialize()[1..65]);
+        sliced_pubkey
     }
 }
 

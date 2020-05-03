@@ -619,6 +619,7 @@ dependencies = [
  "rand",
  "sgx_trts",
  "sgx_types",
+ "sha2",
  "wasmi",
 ]
 
