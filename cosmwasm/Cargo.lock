@@ -300,6 +300,7 @@ dependencies = [
  "cbindgen",
  "derive_more",
  "libsecp256k1",
+ "rand",
  "thiserror",
 ]
 

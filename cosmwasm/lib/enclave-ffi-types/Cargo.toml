@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 derive_more = "0.99"
 libsecp256k1 = "0.3.5"
+rand = { version = "0.7.3" }
 
 [build-dependencies]
 cbindgen = "0.13"
