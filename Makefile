@@ -144,3 +144,11 @@ clean:
 	-rm -f ./SHA256SUMS*
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/lib/wasmi-runtime clean
+
+# while developing:
+build-enclave:
+	$(MAKE) -C cosmwasm/lib/wasmi-runtime 
+
+# while developing:
+clean-enclave:
+	$(MAKE) -C cosmwasm/lib/wasmi-runtime clean 
