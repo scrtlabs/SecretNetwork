@@ -2,6 +2,8 @@ package keeper
 
 import (
 	"encoding/binary"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 
@@ -28,6 +30,26 @@ const GasMultiplier = 100
 // MaxGas for a contract is 900 million (enforced in rust)
 const MaxGas = 900_000_000
 
+// User struct which contains a name
+// a type and a list of social links
+type SeedConfig struct {
+	PublicKey    string `json:"pk"`
+	EncryptedKey string `json:"encKey"`
+}
+
+func (c SeedConfig) decode() ([]byte, []byte, error) {
+	enc, err := hex.DecodeString(c.EncryptedKey)
+	if err != nil {
+		return nil, nil, err
+	}
+	pk, err := hex.DecodeString(c.PublicKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return pk, enc, nil
+}
+
 // Keeper will have a reference to Wasmer with it's own data directory.
 type Keeper struct {
 	storeKey      sdk.StoreKey
@@ -51,13 +73,37 @@ func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.Accou
 	}
 
 	if !bootstrap {
+
+		seedPath := filepath.Join(homeDir, "seed.json")
+
+		if !fileExists(seedPath) {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, "Seed configuration not found. Did you initialize the node?"))
+		}
+
 		// get PK from CLI
 		// get encrypted master key
-		var pk = "0xaaaaaa"
-		var key = "yoyoyoyo"
-		_, err := wasmer.InitSeed([]byte(pk), []byte(key))
+		byteValue, err := getFile(seedPath)
+
+		var seedCfg SeedConfig
+
+		err = json.Unmarshal(byteValue, &seedCfg)
 		if err != nil {
-			panic(err)
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		}
+
+		err = validateSeedParams(seedCfg)
+		if err != nil {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		}
+
+		pk, enc, err := seedCfg.decode()
+		if err != nil {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		}
+
+		_, err = wasmer.InitSeed(pk, enc)
+		if err != nil {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 		}
 	}
 
@@ -488,4 +534,19 @@ func addrFromUint64(id uint64) sdk.AccAddress {
 	addr[0] = 'C'
 	binary.PutUvarint(addr[1:], id)
 	return sdk.AccAddress(crypto.AddressHash(addr))
+}
+
+func validateSeedParams(config SeedConfig) error {
+	if len(config.PublicKey) != types.PublicKeyLength || !isHexString(config.PublicKey) {
+		return sdkerrors.Wrap(types.ErrInstantiateFailed, "Invalid parameter `public key` in seed parameters. Did you initialize the node?")
+	}
+	if len(config.EncryptedKey) != types.EncryptedKeyLength || !isHexString(config.EncryptedKey) {
+		return sdkerrors.Wrap(types.ErrInstantiateFailed, "Invalid parameter: `seed` in seed parameters. Did you initialize the node?")
+	}
+	return nil
+}
+
+func isHexString(s string) bool {
+	_, err := hex.DecodeString(s)
+	return err == nil
 }

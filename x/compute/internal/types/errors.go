@@ -31,4 +31,7 @@ var (
 
 	// ErrQueryFailed error for rust smart query contract failure
 	ErrQueryFailed = sdkErrors.Register(DefaultCodespace, 8, "query wasm contract failed")
+
+	// ErrSeedInitFailed error when the seed initialization fails
+	ErrSeedInitFailed = sdkErrors.Register(DefaultCodespace, 9, "Initialize node seed failed")
 )

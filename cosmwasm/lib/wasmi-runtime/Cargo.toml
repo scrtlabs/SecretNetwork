@@ -22,3 +22,6 @@ pwasm-utils = { version = "0.12.0", default-features = false }
 parity-wasm = { version = "0.41.0", default-features = false }
 log = "0.4.8"
 ctor = "0.1.13"
+#serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx.git", rev= "v1.1.1-backup" }
+#serde = { git = "https://github.com/mesalock-linux/serde-sgx", rev="v1.1.1-backup" }
+hex = { version = "0.4.2", default-features = false }

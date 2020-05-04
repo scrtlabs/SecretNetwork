@@ -1,4 +1,9 @@
 #![feature(rustc_private)]
+//
+// #[macro_use]
+// extern crate serde_json;
+
+extern crate hex;
 
 mod contract_operations;
 mod errors;
@@ -9,7 +14,7 @@ pub mod logger;
 mod node_reg;
 mod results;
 mod runtime;
-
+mod document_storage_t;
 use ctor::*;
 use log::{LevelFilter, SetLoggerError};
 

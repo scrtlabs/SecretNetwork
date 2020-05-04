@@ -111,6 +111,8 @@ fn do_init_seed(public_key: Buffer, encrypted_key: Buffer) -> Result<bool, Error
         *p = x;
     }
 
+    println!("yo yo: {:?}", enc_key_sized);
+
     return match call_init_seed_wrap(&pk_sized, &enc_key_sized) {
         Ok(res) => Ok(res),
         Err(E) => EmptyArg { name: CACHE_ARG }.fail(),

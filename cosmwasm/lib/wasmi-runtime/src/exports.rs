@@ -4,7 +4,7 @@ use crate::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
     result_query_success_to_queryresult,
 };
-use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, KeyGenResult, QueryResult};
+use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, KeyGenResult, QueryResult, EnclaveReturn};
 use crate::node_reg::{init_seed};
 
 #[no_mangle]
@@ -98,9 +98,11 @@ pub extern "C" fn ecall_key_gen() -> KeyGenResult {
 }
 
 #[no_mangle]
-pub extern "C" fn ecall_init_seed(
-    pk: &[u8; 64],  // public key
-    encrypted_key: &[u8; 32], // encrypted key
-) -> Result<sgx_status_t, SgxError> {
-    init_seed(pk, encrypted_key)
+pub unsafe extern "C" fn ecall_init_seed (
+    pk: &[u8; 64usize],  // public key
+    encrypted_key: &[u8; 32usize], // encrypted key
+) -> EnclaveReturn {
+    println!("{:?}", &encrypted_key);
+    init_seed(pk, encrypted_key);
+    EnclaveReturn::Success
 }

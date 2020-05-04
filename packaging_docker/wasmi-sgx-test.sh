@@ -11,7 +11,7 @@ function wait_for_tx () {
 }
 
 # init the node
-rm -rf ~/.enigma*
+# rm -rf ~/.enigma*
 enigmacli config chain-id enigma-testnet
 enigmacli config output json
 enigmacli config indent true
@@ -28,12 +28,12 @@ enigmad validate-genesis
 
 RUST_BACKTRACE=1 enigmad start &
 
-ENIGMAD_PID=$(echo $!)
-function cleanup()
-{
-    kill -KILL "$ENIGMAD_PID"
-}
-trap cleanup EXIT ERR
+# ENIGMAD_PID=$(echo $!)
+#function cleanup()
+#{
+#    kill -KILL "$ENIGMAD_PID"
+#}
+#trap cleanup EXIT ERR
 
 until (enigmacli status 2>&1 | jq -e '(.sync_info.latest_block_height | tonumber) > 0' &> /dev/null)
 do

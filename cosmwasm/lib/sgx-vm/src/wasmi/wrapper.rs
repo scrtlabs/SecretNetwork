@@ -4,7 +4,7 @@ use std::mem::MaybeUninit;
 
 use crate::context::context_from_dyn_storage;
 use crate::Storage;
-use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, KeyGenResult, QueryResult};
+use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, KeyGenResult, QueryResult, EnclaveReturn};
 
 use sgx_types::sgx_status_t;
 use sgx_urts::SgxEnclave;
@@ -24,9 +24,12 @@ use sgx_types::{sgx_enclave_id_t};
 
 pub fn init_seed(eid: sgx_enclave_id_t, pk: &[u8; 64], encrypted_key: &[u8; 32]) -> Result<sgx_status_t, Error> {
     println!("Hello from just before the enclave!");
+    let mut ret = EnclaveReturn::default();
+
     return match unsafe {
         imports::ecall_init_seed(
             eid,
+            &mut ret,
             pk,
             encrypted_key
         )
