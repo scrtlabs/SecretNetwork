@@ -273,7 +273,7 @@ func NewEnigmaChainApp(
 	}
 	wasmConfig := wasmWrap.Wasm
 
-	app.computeKeeper = compute.NewKeeper(app.cdc, keys[compute.StoreKey], app.accountKeeper, app.bankKeeper, computeRouter, computeDir, wasmConfig)
+	app.computeKeeper = compute.NewKeeper(app.cdc, keys[compute.StoreKey], app.accountKeeper, app.bankKeeper, computeRouter, computeDir, wasmConfig, false)
 
 	// register the proposal types
 	govRouter := gov.NewRouter()

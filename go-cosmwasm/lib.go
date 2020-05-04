@@ -41,10 +41,10 @@ func NewWasmer(dataDir string, cacheSize uint64) (*Wasmer, error) {
 }
 
 // Cleanup should be called when no longer using this to free resources on the rust-side
-func (w *Wasmer) InitSeed(publicKey []byte, encryptedKey []byte) ([]byte, error) {
+func (w *Wasmer) InitSeed(publicKey []byte, encryptedKey []byte) (bool, error) {
 	res, err := api.InitSeed(publicKey, encryptedKey)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 	return res, nil
 }

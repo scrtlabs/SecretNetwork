@@ -23,6 +23,7 @@ use super::results::{
 use sgx_types::{sgx_enclave_id_t};
 
 pub fn init_seed(eid: sgx_enclave_id_t, pk: &[u8; 64], encrypted_key: &[u8; 32]) -> Result<sgx_status_t, Error> {
+    println!("Hello from just before the enclave!");
     return match unsafe {
         imports::ecall_init_seed(
             eid,
@@ -32,6 +33,7 @@ pub fn init_seed(eid: sgx_enclave_id_t, pk: &[u8; 64], encrypted_key: &[u8; 32])
     } {
         sgx_status_t::SGX_SUCCESS => { Ok(sgx_status_t::SGX_SUCCESS) }
         failure_status => {
+            println!("Failed2");
             return Err(Error::SdkErr {
                 inner: failure_status,
             })

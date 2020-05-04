@@ -3,6 +3,10 @@ docs
 *.md
 
 **/target
+**/*.a
+**/*.so
+
+cosmwasm/lib/incubator-teaclave-sgx-sdk
 
 README.md
 .gitignore
@@ -11,3 +15,4 @@ README.md
 .github
 .git
 .idea
+**/.idea

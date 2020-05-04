@@ -98,18 +98,25 @@ fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<D
     Ok(Box::into_raw(out))
 }
 
-fn do_init_seed(public_key: Buffer, seed: Buffer) -> Result<bool, Error> {
+fn do_init_seed(public_key: Buffer, encrypted_key: Buffer) -> Result<bool, Error> {
     let pk = public_key.read().ok_or_else(|| empty_err(PUBLIC_KEY_ARG))?;
-    let seed = seed.read().ok_or_else(|| empty_err(SEED_ARG))?;
+    let enc_key = encrypted_key.read().ok_or_else(|| empty_err(SEED_ARG))?;
 
     let mut pk_sized = [0u8; 64];
-    pk_sized[0..64].copy_from_slice(&pk);
-
     let mut enc_key_sized = [0u8; 32];
-    enc_key_sized[0..64].copy_from_slice(&pk);
 
-    let res = call_init_seed_wrap(&pk_sized, &enc_key_sized);
-    res
+    for (&x, p) in pk.iter().zip(pk_sized.iter_mut()) {
+        *p = x;
+    }
+    for (&x, p) in enc_key.iter().zip(enc_key_sized.iter_mut()) {
+        *p = x;
+    }
+
+    return match call_init_seed_wrap(&pk_sized, &enc_key_sized) {
+        Ok(res) => Ok(res),
+        Err(E) => EmptyArg { name: CACHE_ARG }.fail(),
+    }
+
 }
 
 /// frees a cache reference

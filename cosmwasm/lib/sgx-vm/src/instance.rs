@@ -63,10 +63,9 @@ lazy_static! {
 }
 
 pub fn call_init_seed(pk: &[u8; 64], encrypted_key: &[u8; 32]) -> Result<bool, Error> {
-    let enclave: SgxEnclave = SGX_ENCLAVE
-        .map_err(|err| Error::SdkErr { inner: *err })?;
-
-
+    println!("Hello from just before initializing");
+    let enclave = init_enclave().unwrap();
+    println!("Hello from just after initializing");
     return match init_seed(enclave.geteid(), pk, encrypted_key) {
         Ok(_) => Ok(true),
         Err(e) => Err(e)
