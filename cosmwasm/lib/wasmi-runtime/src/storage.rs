@@ -28,7 +28,7 @@ impl SecretKeyStorage {
             xfrm: 0,
         };
         // todo: change the key policy to MRENCLAVE and create an upgrade mechanism for updating the enclave
-        let sealed_data = SgxSealedData::<SecretKeyStorage>::seal_data_ex(
+        let sealed_data = SgxSealedData::<Self>::seal_data_ex(
             sgx_types::SGX_KEYPOLICY_MRSIGNER, //key policy
             attribute_mask,
             0, //misc mask
