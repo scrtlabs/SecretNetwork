@@ -9,7 +9,7 @@ pub mod logger;
 mod node_reg;
 mod results;
 mod runtime;
-mod storage;
+// mod storage;
 
 use ctor::*;
 use log::LevelFilter;

@@ -1,7 +1,6 @@
 use enclave_ffi_types::CryptoError;
-use rand::{thread_rng, CryptoRng, Rng};
 use secp256k1::{PublicKey, SecretKey, SharedSecret};
-use sha2::Sha256;
+use sgx_trts::trts::rsgx_read_rand;
 
 // pub use crate::hash::Hash256;
 /// The size of the symmetric 256 bit key we use for encryption (in bytes).
@@ -43,10 +42,7 @@ impl KeyPair {
     /// Because `KeyPair::new()` will make sure it uses a good random source and will loop private keys until it's a good key.
     /// (and it's best to isolate the generation of keys to one place)
     pub fn from_slice(privkey: &[u8; 32]) -> Result<KeyPair, CryptoError> {
-        let privkey = SecretKey::parse(&privkey).map_err(|e| CryptoError::KeyError {
-            key_type: "Private Key",
-            err: Some(e),
-        })?;
+        let privkey = SecretKey::parse(&privkey).map_err(|e| CryptoError::KeyError {})?;
         let pubkey = PublicKey::from_secret_key(&privkey);
 
         Ok(KeyPair { privkey, pubkey })
@@ -59,17 +55,10 @@ impl KeyPair {
         pubarr[0] = 4;
         pubarr[1..].copy_from_slice(&_pubarr[..]);
 
-        let pubkey = PublicKey::parse(&pubarr).map_err(|e| CryptoError::KeyError {
-            key_type: "Private Key",
-            err: Some(e),
-        })?;
+        let pubkey = PublicKey::parse(&pubarr).map_err(|e| CryptoError::KeyError {})?;
 
-        let shared = SharedSecret::<Sha256>::new(&pubkey, &self.privkey).map_err(|_| {
-            CryptoError::DerivingKeyError {
-                self_key: self.get_pubkey(),
-                other_key: *_pubarr,
-            }
-        })?;
+        let shared = SharedSecret::new(&pubkey, &self.privkey)
+            .map_err(|_| CryptoError::DerivingKeyError {})?;
 
         let mut result = [0u8; 32];
         result.copy_from_slice(shared.as_ref());
@@ -103,7 +92,8 @@ impl KeyPair {
 }
 
 fn rand_slice(rand: &mut [u8]) -> Result<(), CryptoError> {
-    let mut rng = thread_rng();
-    rng.try_fill(rand)
-        .map_err(|e| CryptoError::RandomError { err: e })
+    // let mut rng = thread_rng();
+    // rng.try_fill(rand)
+    //     .map_err(|e| CryptoError::RandomError { err: e })
+    rsgx_read_rand(rand).map_err(|e| CryptoError::RandomError {})
 }

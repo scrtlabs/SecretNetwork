@@ -10,12 +10,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "arrayref"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4c527152e37cf757a3f78aae5a06fbeefdb07ccc535c980a3208ee3060dd544"
-
-[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -95,6 +89,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "cc"
+version = "1.0.41"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8dae9c4b8fedcae85592ba623c4fd08cfdab3e3b72d6df780c6ead964a69bfff"
+
+[[package]]
 name = "cfg-if"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -113,22 +113,6 @@ dependencies = [
  "textwrap",
  "unicode-width",
  "vec_map",
-]
-
-[[package]]
-name = "crunchy"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
-
-[[package]]
-name = "crypto-mac"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4434400df11d95d556bac068ddfedd482915eb18fe8bea89bc80b6e4b1c179e5"
-dependencies = [
- "generic-array",
- "subtle 1.0.0",
 ]
 
 [[package]]
@@ -167,8 +151,7 @@ version = "0.1.0"
 dependencies = [
  "cbindgen",
  "derive_more",
- "libsecp256k1",
- "rand",
+ "secp256k1",
  "thiserror",
 ]
 
@@ -208,27 +191,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hmac"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5dcb5e64cda4c23119ab41ba960d1e170a774c8e4b9d9e6a9bc18aabf5e59695"
-dependencies = [
- "crypto-mac",
- "digest",
-]
-
-[[package]]
-name = "hmac-drbg"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6e570451493f10f6581b48cdd530413b63ea9e780f544bfd3bdcaa0d89d1a7b"
-dependencies = [
- "digest",
- "generic-array",
- "hmac",
-]
-
-[[package]]
 name = "itoa"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -245,22 +207,6 @@ name = "libm"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fc7aa29613bd6a620df431842069224d8bc9011086b1db4c0e0cd47fa03ec9a"
-
-[[package]]
-name = "libsecp256k1"
-version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fc1e2c808481a63dc6da2074752fdd4336a3c8fcc68b83db6f1fd5224ae7962"
-dependencies = [
- "arrayref",
- "crunchy",
- "digest",
- "hmac-drbg",
- "rand",
- "sha2",
- "subtle 2.2.2",
- "typenum",
-]
 
 [[package]]
 name = "log"
@@ -417,6 +363,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "535622e6be132bccd223f4bb2b8ac8d53cda3c7a6394944d3b2b33fb974f9d76"
 
 [[package]]
+name = "secp256k1"
+version = "0.17.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2932dc07acd2066ff2e3921a4419606b220ba6cd03a9935123856cc534877056"
+dependencies = [
+ "secp256k1-sys",
+]
+
+[[package]]
+name = "secp256k1-sys"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ab2c26f0d3552a0f12e639ae8a64afc2e3db9c52fe32f5fc6c289d38519f220"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "serde"
 version = "1.0.106"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -513,18 +477,6 @@ name = "strsim"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ea5119cdb4c55b55d432abb513a0429384878c15dde60cc77b1c99de1a95a6a"
-
-[[package]]
-name = "subtle"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d67a5a62ba6e01cb2192ff309324cb4875d0c451d55fe2319433abe7a05a8ee"
-
-[[package]]
-name = "subtle"
-version = "2.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c65d530b10ccaeac294f349038a597e435b18fb456aadd0840a623f83b9e941"
 
 [[package]]
 name = "syn"
@@ -640,11 +592,10 @@ dependencies = [
  "ctor",
  "derive_more",
  "enclave-ffi-types",
- "libsecp256k1",
  "log",
  "parity-wasm",
  "pwasm-utils",
- "rand",
+ "secp256k1",
  "sgx_trts",
  "sgx_tseal",
  "sgx_types",

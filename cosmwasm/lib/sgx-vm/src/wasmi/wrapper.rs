@@ -250,6 +250,6 @@ impl Module {
         let key_gen_result = unsafe { key_gen_result.assume_init() };
 
         key_gen_result_to_result_key_gensuccess(key_gen_result)
-            .map_err(|err| Error::EnclaveErr { inner: err })
+            .map_err(|err| Error::CryptoErr { inner: err })
     }
 }

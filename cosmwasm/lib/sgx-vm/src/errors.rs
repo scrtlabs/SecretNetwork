@@ -86,6 +86,9 @@ pub enum Error {
     EnclaveErr {
         inner: enclave_ffi_types::EnclaveError,
     },
+    CryptoErr {
+        inner: enclave_ffi_types::CryptoError,
+    },
     #[snafu(display("SDK error: {}", inner))]
     SdkErr { inner: sgx_status_t },
 }

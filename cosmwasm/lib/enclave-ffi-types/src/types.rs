@@ -1,7 +1,5 @@
 use core::ffi::c_void;
 use derive_more::Display;
-use rand;
-use secp256k1;
 
 /// This type represents an opaque pointer to a memory address in normal user space.
 #[repr(C)]
@@ -58,20 +56,24 @@ pub enum EnclaveError {
     Unknown,
 }
 
+#[repr(C)]
+#[derive(Debug, Display)]
 pub enum CryptoError {
     /// The `DerivingKeyError` error.
     ///
     /// This error means that the ECDH process failed.
-    DerivingKeyError {
-        self_key: [u8; 64],
-        other_key: [u8; 64],
-    },
+    DerivingKeyError,
+    // {
+    //     self_key: [u8; 64],
+    //     other_key: [u8; 64],
+    // },
     /// The `MissingKeyError` error.
     ///
     /// This error means that a key was missing.
-    MissingKeyError {
-        key_type: &'static str,
-    },
+    MissingKeyError,
+    //  {
+    //     key_type: &'static str,
+    // },
     /// The `DecryptionError` error.
     ///
     /// This error means that the symmetric decryption has failed for some reason.
@@ -88,43 +90,47 @@ pub enum CryptoError {
     /// The `SigningError` error.
     ///
     /// This error means that the signing process has failed for some reason.
-    SigningError {
-        hashed_msg: [u8; 32],
-    },
+    SigningError,
+    // {
+    //     hashed_msg: [u8; 32],
+    // },
     /// The `ParsingError` error.
     ///
     /// This error means that the signature couldn't be parsed correctly.
-    ParsingError {
-        sig: [u8; 65],
-    },
+    ParsingError,
+    //  {
+    //     sig: [u8; 65],
+    // },
     /// The `RecoveryError` error.
     ///
     /// This error means that the public key can't be recovered from that message & signature.
-    RecoveryError {
-        sig: [u8; 65],
-    },
+    RecoveryError,
+    //  {
+    //     sig: [u8; 65],
+    // },
     /// The `KeyError` error.
     ///
     /// This error means that a key wasn't vaild.
     /// e.g. PrivateKey, PubliKey, SharedSecret.
     // #[cfg(feature = "asymmetric")]
-    KeyError {
-        key_type: &'static str,
-        err: Option<secp256k1::Error>,
-    },
+    KeyError,
+    //  {
+    //     key_type: &'static str,
+    //     err: Option<secp256k1::Error>,
+    // },
     // #[cfg(not(feature = "asymmetric"))]
     // KeyError { key_type: &'static str, err: Option<()> },
     // /// The `RandomError` error.
     // ///
     // /// This error means that the random function had failed generating randomness.
     // #[cfg(feature = "std")]
-    RandomError {
-        err: rand::Error,
-    },
-    // #[cfg(feature = "sgx")]
     // RandomError {
-    //     err: sgx_types::sgx_status_t,
+    //     err: rand::Error,
     // },
+    // #[cfg(feature = "sgx")]
+    RandomError, // {
+                 //     err: sgx_types::sgx_status_t,
+                 // }
 }
 
 /// This struct is returned from ecall_init.
