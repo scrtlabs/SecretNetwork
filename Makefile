@@ -152,3 +152,9 @@ build-enclave:
 # while developing:
 clean-enclave:
 	$(MAKE) -C cosmwasm/lib/wasmi-runtime clean 
+
+sanity-test:
+	SGX_MODE=SW $(MAKE) build_linux
+	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+	./cosmwasm/lib/wasmi-sgx-test.sh
+	
