@@ -90,10 +90,10 @@ pub extern "C" fn ecall_key_gen() -> KeyGenResult {
         Err(err) => return KeyGenResult::Failure { err },
     };
 
-    todo!();
+    let pk = key_pair.privkey;
+    seal(pk[..], "/tmp/pk.sealed");
 
-    // let pk = key_pair.privkey;
-    // seal(pk.serialize(), "dsacdsa");
+    // read with SecretKey::from_slice()
 
-    // seal(key_pair)
+    KeyGenResult::Success {}
 }
