@@ -52,6 +52,8 @@ pub enum EnclaveError {
     FailedGasMeteringInjection,
     /// Ran out of gas
     OutOfGas,
+    /// Failed to seal data
+    FailedSeal,
     /// Unexpected Error happened, no more details available
     Unknown,
 }

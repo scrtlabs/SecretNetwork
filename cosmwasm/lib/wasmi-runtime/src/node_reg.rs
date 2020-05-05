@@ -21,7 +21,7 @@ pub type PubKey = [u8; 64];
 pub struct KeyPair {
     context: Secp256k1<All>,
     pubkey: PublicKey,
-    privkey: SecretKey,
+    pub privkey: SecretKey,
 }
 
 impl KeyPair {

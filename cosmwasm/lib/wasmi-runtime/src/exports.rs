@@ -1,3 +1,4 @@
+use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, KeyGenResult, QueryResult};
 use std::ffi::c_void;
 
 use crate::node_reg::KeyPair;
@@ -5,7 +6,7 @@ use crate::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
     result_query_success_to_queryresult,
 };
-use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, KeyGenResult, QueryResult};
+use crate::storage::seal;
 
 #[no_mangle]
 pub extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
@@ -89,5 +90,10 @@ pub extern "C" fn ecall_key_gen() -> KeyGenResult {
         Err(err) => return KeyGenResult::Failure { err },
     };
 
-    todo!("Seal and backup");
+    todo!();
+
+    // let pk = key_pair.privkey;
+    // seal(pk.serialize(), "dsacdsa");
+
+    // seal(key_pair)
 }
