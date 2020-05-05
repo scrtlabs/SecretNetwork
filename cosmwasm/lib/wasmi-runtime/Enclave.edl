@@ -15,8 +15,10 @@ enclave {
         );
 
         public sgx_status_t ecall_init_seed(
-            [in] uint8_t pk[64],
-            [in] uint8_t encrypted_key[32]
+            [in, count=public_key_len] const uint8_t* public_key,
+            uintptr_t public_key_len,
+            [in, count=encrypted_seed_len] const uint8_t* encrypted_seed,
+            uintptr_t encrypted_seed_len
         );
 
         public InitResult ecall_init(

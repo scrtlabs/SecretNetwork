@@ -3,10 +3,9 @@
 // #[macro_use]
 // extern crate serde_json;
 
-extern crate hex;
-
 mod contract_operations;
 mod errors;
+mod consts;
 pub mod exports;
 mod gas;
 pub mod imports;

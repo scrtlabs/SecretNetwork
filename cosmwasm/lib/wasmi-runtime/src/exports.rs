@@ -1,10 +1,11 @@
 use std::ffi::c_void;
+use std::slice;
 use sgx_types::{sgx_status_t, SgxError};
 use crate::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
     result_query_success_to_queryresult,
 };
-use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, KeyGenResult, QueryResult, EnclaveReturn};
+use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, KeyGenResult, QueryResult};
 use crate::node_reg::{init_seed};
 
 #[no_mangle]
@@ -99,10 +100,13 @@ pub extern "C" fn ecall_key_gen() -> KeyGenResult {
 
 #[no_mangle]
 pub unsafe extern "C" fn ecall_init_seed (
-    pk: &[u8; 64usize],  // public key
-    encrypted_key: &[u8; 32usize], // encrypted key
-) -> EnclaveReturn {
-    println!("{:?}", &encrypted_key);
-    init_seed(pk, encrypted_key);
-    EnclaveReturn::Success
+    public_key: *const u8,
+    public_key_len: u32,
+    encrypted_seed: *const u8,
+    encrypted_seed_len: u32
+) -> sgx_status_t {
+    // println!("{:?}", &encrypted_seed);
+    let public_key_slice = slice::from_raw_parts(public_key, public_key_len as usize);
+    let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
+    init_seed(public_key_slice, encrypted_seed_slice)
 }

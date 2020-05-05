@@ -39,12 +39,17 @@ fn to_extern(storage: DB, api: GoApi) -> Extern<DB, GoApi> {
 
 #[no_mangle]
 pub extern "C" fn init_seed(
-    pk: Buffer,
-    encrypted_key: Buffer,
+    public_key: Buffer,
+    public_key_len: u32,
+    encrypted_seed: Buffer,
+    encrypted_seed_len: u32,
     err: Option<&mut Buffer>,
 ) -> bool {
     let r =
-        catch_unwind(|| do_init_seed(pk, encrypted_key)).unwrap_or_else(|_| Panic {}.fail());
+        catch_unwind(|| do_init_seed(public_key,
+                                     public_key_len,
+                                     encrypted_seed,
+                                     encrypted_seed_len)).unwrap_or_else(|_| Panic {}.fail());
     match r {
         Ok(t) => {
             clear_error();
@@ -97,25 +102,16 @@ fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<D
     Ok(Box::into_raw(out))
 }
 
-fn do_init_seed(public_key: Buffer, encrypted_key: Buffer) -> Result<bool, Error> {
+fn do_init_seed(public_key: Buffer, public_key_len: u32, encrypted_seed: Buffer, encrypted_seed_len: u32) -> Result<bool, Error> {
     let pk = public_key.read().ok_or_else(|| empty_err(PUBLIC_KEY_ARG))?;
-    let enc_key = encrypted_key.read().ok_or_else(|| empty_err(SEED_ARG))?;
+    let enc_key = encrypted_seed.read().ok_or_else(|| empty_err(SEED_ARG))?;
 
-    let mut pk_sized = [0u8; 64];
-    let mut enc_key_sized = [0u8; 32];
-
-    for (&x, p) in pk.iter().zip(pk_sized.iter_mut()) {
-        *p = x;
-    }
-    for (&x, p) in enc_key.iter().zip(enc_key_sized.iter_mut()) {
-        *p = x;
-    }
-
-    println!("yo yo: {:?}", enc_key_sized);
-
-    return match call_init_seed_wrap(&pk_sized, &enc_key_sized) {
+    return match call_init_seed_wrap(pk.as_ptr(),
+                                     public_key_len,
+                                     enc_key.as_ptr(),
+                                     encrypted_seed_len) {
         Ok(res) => Ok(res),
-        Err(E) => EmptyArg { name: CACHE_ARG }.fail(),
+        Err(E) => Panic {}.fail(),
     }
 
 }

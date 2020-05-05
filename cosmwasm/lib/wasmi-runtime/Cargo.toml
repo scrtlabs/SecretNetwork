@@ -13,15 +13,20 @@ crate-type = ["staticlib"]
 derive_more = "0.99"
 sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.1" }
 sgx_trts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.1" }
+sgx_tstd  = { rev = "v1.1.1", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["untrusted_fs","backtrace"] }
+sgx_tseal = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.1" }
 enclave-ffi-types = { path = "../enclave-ffi-types" }
 wasmi = { git = "https://github.com/paritytech/wasmi", rev = "39a18a433a765a36383d34d4edd536ba1e0664d2", default-features = false, features = [
     "core"
 ] }
+
 bech32 = { git = "https://github.com/reuvenpo/rust-bech32", branch = "support-no_std", default-features = false }
 pwasm-utils = { version = "0.12.0", default-features = false }
 parity-wasm = { version = "0.41.0", default-features = false }
-log = "0.4.8"
+log = { rev = "sgx_1.1.1", git = "https://github.com/mesalock-linux/log-sgx" }
+
+#sgx_crypto_helper = { rev = "v1.1.1", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+#sgx_tcrypto   = { rev = "v1.1.1", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 ctor = "0.1.13"
-#serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx.git", rev= "v1.1.1-backup" }
-#serde = { git = "https://github.com/mesalock-linux/serde-sgx", rev="v1.1.1-backup" }
-hex = { version = "0.4.2", default-features = false }
+#serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx.git", rev= "sgx_v1.1.1" }
+#serde = { git = "https://github.com/mesalock-linux/serde-sgx", rev="sgx_v1.1.1" }

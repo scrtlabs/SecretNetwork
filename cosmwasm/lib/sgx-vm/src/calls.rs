@@ -63,8 +63,14 @@ pub fn call_handle_raw<S: Storage + 'static, A: Api + 'static>(
     instance.call_handle(env, msg).into()
 }
 
-pub fn call_init_seed_wrap(pk: &[u8; 64], encrypted_key: &[u8; 32]) -> Result<bool, Error> {
-    call_init_seed(pk, encrypted_key)
+pub fn call_init_seed_wrap(public_key: *const u8,
+                           public_key_len: u32,
+                           encrypted_seed: *const u8,
+                           encrypted_seed_len: u32) -> Result<bool, Error> {
+    call_init_seed(public_key,
+                   public_key_len,
+                   encrypted_seed,
+                   encrypted_seed_len)
 }
 
 /*

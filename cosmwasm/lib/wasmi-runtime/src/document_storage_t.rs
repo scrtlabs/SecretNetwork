@@ -1,26 +1,27 @@
 // use sgx_tseal::SgxSealedData;
-// use sgx_types::{sgx_attributes_t, sgx_sealed_data_t, sgx_status_t};
+// use sgx_types::*;
+// // use sgx_types::{sgx_attributes_t, sgx_sealed_data_t, sgx_status_t};
 // use sgx_types::marker::ContiguousMemory;
 // use std::io::{Read, Write};
 // use std::path::PathBuf;
 // use std::string::*;
 // use std::untrusted::fs;
 // use std::untrusted::fs::{File, remove_file};
-//
-// use common::errors_t::{EnclaveError, EnclaveError::*, EnclaveSystemError::*};
+// use core::marker::PhantomData;
+// use enclave_ffi_types::{EnclaveError, EnclaveError::*};
 //
 // pub const SEAL_LOG_SIZE: usize = 2048;
 //
 // #[derive(Copy, Clone, Default, Debug)]
-// pub struct SealedDocumentStorage<T: ?Sized> {
-//     pub version: u32,
-//     pub data: T,
+// pub struct SealedDocumentStorage {
+//     pub data: [u8; 32],
 // }
 //
-// unsafe impl<T> ContiguousMemory for SealedDocumentStorage<T> {}
 //
-// impl<T> SealedDocumentStorage<T> where
-//     T: Copy {
+//
+//
+// impl SealedDocumentStorage {
+//
 //     /// Safe seal
 //     /// param: the_data : clear text to be sealed
 //     /// param: sealed_log_out : the output of the sealed data
@@ -29,20 +30,20 @@
 //     /// additional is a part of AES-GCM that you can authenticate data with the MAC without encrypting it.
 //     pub fn seal(&self, sealed_log_out: &mut [u8; SEAL_LOG_SIZE]) -> Result<(), EnclaveError> {
 //         let additional: [u8; 0] = [0_u8; 0];
-//         let attribute_mask = sgx_attributes_t { flags: 0xffff_ffff_ffff_fff3, xfrm: 0 };
-//         let sealed_data = SgxSealedData::<Self>::seal_data_ex(
+//         let attribute_mask = sgx_attributes_t{flags: TSEAL_DEFAULT_FLAGSMASK, xfrm: 0};
+//         let sealed_data = SgxSealedData::<[u8; 32]>::seal_data_ex(
 //             sgx_types::SGX_KEYPOLICY_MRSIGNER, //key policy
 //             attribute_mask,
 //             0, //misc mask
 //             &additional,
-//             &self,
-//         )?;
+//             &self.data,
+//         ).unwrap();
 //         let sealed_log = sealed_log_out.as_mut_ptr();
 //         let sealed_log_size: usize = SEAL_LOG_SIZE;
 //         to_sealed_log(&sealed_data, sealed_log, sealed_log_size as u32);
 //         Ok(())
 //     }
-//
+//     //
 //     /// Unseal sealed log
 //     /// param: sealed_log_in : the encrypted blob
 //     pub fn unseal(sealed_log_in: &mut [u8]) -> Result<Option<Self>, EnclaveError> {
@@ -51,7 +52,8 @@
 //         let sealed_data = match from_sealed_log::<Self>(sealed_log, sealed_log_size as u32) {
 //             Some(data) => data,
 //             None => {
-//                 return Err(SystemError(OcallError { command: "unseal".to_string(), err: "No data in sealed log".to_string() }));
+//                 //return Err(SystemError(OcallError { command: "unseal".to_string(), err: "No data in sealed log".to_string() }));
+//                 return Err(EnclaveError::FailedFunctionCall)
 //             }
 //         };
 //         let unsealed_result = sealed_data.unseal_data();
@@ -63,13 +65,16 @@
 //             Err(err) => {
 //                 // TODO: Handle this. It can causes panic in Simulation Mode until deleting the file.
 //                 if err != sgx_status_t::SGX_ERROR_MAC_MISMATCH {
-//                     return Err(SystemError(OcallError { command: "unseal".to_string(), err: format!("{:?}", err) }));
+//                     // return Err(SystemError(OcallError { command: "unseal".to_string(), err: format!("{:?}", err) }));
+//                     return Err(EnclaveError::FailedFunctionCall)
 //                 }
 //                 Ok(None)
 //             }
 //         }
 //     }
 // }
+//
+// unsafe impl ContiguousMemory for SealedDocumentStorage  {}
 //
 // /// This casts sealed_log from *u8 to *sgx_sealed_data_t which aren't aligned the same way.
 // fn to_sealed_log<T: Copy + ContiguousMemory>(sealed_data: &SgxSealedData<T>, sealed_log: *mut u8,
@@ -88,13 +93,15 @@
 //     let mut file = match File::create(path) {
 //         Ok(opt) => opt,
 //         Err(err) => {
-//             return Err(SystemError(OcallError { command: "save_sealed_document".to_string(), err: format!("{:?}", err) }));
+//             //return Err(SystemError(OcallError { command: "save_sealed_document".to_string(), err: format!("{:?}", err) }));
+//             return Err(EnclaveError::FailedFunctionCall)
 //         }
 //     };
 //     match file.write_all(&sealed_document) {
 //         Ok(_) => println!("Sealed document: {:?} written successfully.", path),
 //         Err(err) => {
-//             return Err(SystemError(OcallError { command: "sealed_document".to_string(), err: format!("{:?}", err) }));
+//             // return Err(SystemError(OcallError { command: "sealed_document".to_string(), err: format!("{:?}", err) }));
+//             return Err(EnclaveError::FailedFunctionCall)
 //         }
 //     }
 //     Ok(())
@@ -113,46 +120,48 @@
 //     let mut file = match File::open(path) {
 //         Ok(opt) => opt,
 //         Err(err) => {
-//             return Err(SystemError(OcallError { command: "load_sealed_document".to_string(), err: format!("{:?}", err) }));
+//             //return Err(SystemError(OcallError { command: "load_sealed_document".to_string(), err: format!("{:?}", err) }));
+//             return Err(EnclaveError::FailedFunctionCall)
 //         }
 //     };
 //     match file.read(sealed_document) {
 //         Ok(_) => println!("Sealed document: {:?} loaded successfully.", path),
 //         Err(err) => {
-//             return Err(SystemError(OcallError { command: "load_sealed_document".to_string(), err: format!("{:?}", err) }));
+//             //return Err(SystemError(OcallError { command: "load_sealed_document".to_string(), err: format!("{:?}", err) }));
+//             return Err(EnclaveError::FailedFunctionCall)
 //         }
 //     };
 //     Ok(())
 // }
 //
-// //#[cfg(debug_assertions)]
-// pub mod tests {
-//     use super::*;
-//
-// //use std::untrusted::fs::*;
-//
-//     /* Test functions */
-//     pub fn test_document_sealing_storage() {
-//         // generate mock data
-//         let doc: SealedDocumentStorage<[u8; 32]> = SealedDocumentStorage {
-//             version: 0x1234,
-//             data: [b'i'; 32],
-//         };
-//         // seal data
-//         let mut sealed_log_in: [u8; SEAL_LOG_SIZE] = [0; SEAL_LOG_SIZE];
-//         doc.seal(&mut sealed_log_in).expect("Unable to seal document");
-//         // save sealed_log to file
-//         let p = PathBuf::from("seal_test.sealed");
-//         save_sealed_document(&p, &sealed_log_in).expect("Unable to save sealed document");
-//         // load sealed_log from file
-//         let mut sealed_log_out: [u8; SEAL_LOG_SIZE] = [0; SEAL_LOG_SIZE];
-//         load_sealed_document(&p, &mut sealed_log_out).expect("Unable to load sealed document");
-//         // unseal data
-//         let unsealed_doc = SealedDocumentStorage::<[u8; 32]>::unseal(&mut sealed_log_out).expect("Unable to unseal document").unwrap();
-//         // compare data
-//         assert_eq!(doc.data, unsealed_doc.data);
-//         // delete the file
-//         let f = remove_file(&p);
-//         assert!(f.is_ok());
-//     }
-// }
+// // //#[cfg(debug_assertions)]
+// // pub mod tests {
+// //     use super::*;
+// //
+// // //use std::untrusted::fs::*;
+// //
+// //     /* Test functions */
+// //     pub fn test_document_sealing_storage() {
+// //         // generate mock data
+// //         let doc: SealedDocumentStorage<[u8; 32]> = SealedDocumentStorage {
+// //             version: 0x1234,
+// //             data: [b'i'; 32],
+// //         };
+// //         // seal data
+// //         let mut sealed_log_in: [u8; SEAL_LOG_SIZE] = [0; SEAL_LOG_SIZE];
+// //         doc.seal(&mut sealed_log_in).expect("Unable to seal document");
+// //         // save sealed_log to file
+// //         let p = PathBuf::from("seal_test.sealed");
+// //         save_sealed_document(&p, &sealed_log_in).expect("Unable to save sealed document");
+// //         // load sealed_log from file
+// //         let mut sealed_log_out: [u8; SEAL_LOG_SIZE] = [0; SEAL_LOG_SIZE];
+// //         load_sealed_document(&p, &mut sealed_log_out).expect("Unable to load sealed document");
+// //         // unseal data
+// //         let unsealed_doc = SealedDocumentStorage::<[u8; 32]>::unseal(&mut sealed_log_out).expect("Unable to unseal document").unwrap();
+// //         // compare data
+// //         assert_eq!(doc.data, unsealed_doc.data);
+// //         // delete the file
+// //         let f = remove_file(&p);
+// //         assert!(f.is_ok());
+// //     }
+// // }
