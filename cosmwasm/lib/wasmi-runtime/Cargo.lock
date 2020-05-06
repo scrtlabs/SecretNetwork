@@ -413,24 +413,24 @@ dependencies = [
 
 [[package]]
 name = "sgx_libc"
-version = "1.1.1"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.1#66aaa2888992c63137e87adc688ddedab1181056"
+version = "1.1.2"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
 dependencies = [
  "sgx_types",
 ]
 
 [[package]]
 name = "sgx_tcrypto"
-version = "1.1.1"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.1#66aaa2888992c63137e87adc688ddedab1181056"
+version = "1.1.2"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
 dependencies = [
  "sgx_types",
 ]
 
 [[package]]
 name = "sgx_trts"
-version = "1.1.1"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.1#66aaa2888992c63137e87adc688ddedab1181056"
+version = "1.1.2"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
 dependencies = [
  "sgx_libc",
  "sgx_types",
@@ -438,16 +438,16 @@ dependencies = [
 
 [[package]]
 name = "sgx_tse"
-version = "1.1.1"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.1#66aaa2888992c63137e87adc688ddedab1181056"
+version = "1.1.2"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
 dependencies = [
  "sgx_types",
 ]
 
 [[package]]
 name = "sgx_tseal"
-version = "1.1.1"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.1#66aaa2888992c63137e87adc688ddedab1181056"
+version = "1.1.2"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
 dependencies = [
  "sgx_tcrypto",
  "sgx_trts",
@@ -457,8 +457,8 @@ dependencies = [
 
 [[package]]
 name = "sgx_types"
-version = "1.1.1"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.1#66aaa2888992c63137e87adc688ddedab1181056"
+version = "1.1.2"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
 
 [[package]]
 name = "sha2"

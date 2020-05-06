@@ -1,7 +1,5 @@
 use super::exports;
-use enclave_ffi_types::{
-    CryptoError, EnclaveError, HandleResult, InitResult, KeyGenResult, QueryResult,
-};
+use enclave_ffi_types::{CryptoError, EnclaveError, HandleResult, InitResult, QueryResult};
 
 /// This struct is returned from module initialization.
 pub struct InitSuccess {
@@ -155,18 +153,5 @@ impl KeyGenSuccess {
 
     pub fn signature(&self) -> &[u8; 65] {
         &self.signature
-    }
-}
-
-// TODO not sure if we need key_gen_result_to_result_key_gensuccess
-pub fn key_gen_result_to_result_key_gensuccess(
-    other: KeyGenResult,
-) -> Result<KeyGenSuccess, CryptoError> {
-    match other {
-        KeyGenResult::Success { output, signature } => Ok(KeyGenSuccess {
-            output: unsafe { exports::recover_buffer(output) }.unwrap_or_else(|| Vec::new()),
-            signature,
-        }),
-        KeyGenResult::Failure { err } => Err(err),
     }
 }

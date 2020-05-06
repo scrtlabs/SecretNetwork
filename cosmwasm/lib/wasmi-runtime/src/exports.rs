@@ -1,5 +1,7 @@
-use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, KeyGenResult, QueryResult};
+use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
+use sgx_types::sgx_status_t;
 use std::ffi::c_void;
+use std::slice;
 
 use crate::node_reg::KeyPair;
 use crate::results::{
@@ -82,18 +84,29 @@ pub extern "C" fn ecall_query(
     result_query_success_to_queryresult(result)
 }
 
+// gen (sk_node,pk_node) keypair for new node registration
 #[no_mangle]
-pub extern "C" fn ecall_key_gen() -> KeyGenResult {
+pub unsafe extern "C" fn ecall_key_gen(
+    pk_node: *mut u8,
+    pk_node_size: u32,
+) -> sgx_types::sgx_status_t {
     // Generate node-specific key-pair
     let key_pair = match KeyPair::new() {
         Ok(kp) => kp,
-        Err(err) => return KeyGenResult::Failure { err },
+        Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
     };
 
-    let pk = key_pair.privkey;
-    seal(pk[..], "/tmp/pk.sealed");
+    let privkey = key_pair.get_privkey();
+    seal(&privkey, "/tmp/sk_node.sealed"); // can read with SecretKey::from_slice()
 
-    // read with SecretKey::from_slice()
+    let pk_node_output_slice = slice::from_raw_parts_mut(pk_node, pk_node_size as usize);
+    let pubkey = key_pair.get_pubkey();
 
-    KeyGenResult::Success {}
+    if pubkey.len() != pk_node_output_slice.len() {
+        return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+    }
+
+    pk_node_output_slice.clone_from_slice(&pubkey);
+
+    sgx_status_t::SGX_SUCCESS
 }

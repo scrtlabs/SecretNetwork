@@ -4,7 +4,7 @@ use std::mem::MaybeUninit;
 
 use crate::context::context_from_dyn_storage;
 use crate::Storage;
-use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, KeyGenResult, QueryResult};
+use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
 
 use sgx_types::sgx_status_t;
 use sgx_urts::SgxEnclave;
@@ -233,23 +233,28 @@ impl Module {
     }
 
     pub fn key_gen(&mut self) -> Result<KeyGenSuccess> {
-        let mut key_gen_result = MaybeUninit::<KeyGenResult>::uninit();
+        let pk_node_size = 65;
+        let mut pk_node = vec![0u8; pk_node_size as usize];
 
-        match unsafe { imports::ecall_key_gen(self.enclave.geteid(), key_gen_result.as_mut_ptr()) }
-        {
-            sgx_status_t::SGX_SUCCESS => { /* continue */ }
-            failure_status => {
-                return Err(Error::SdkErr {
-                    inner: failure_status,
-                })
-            }
+        let mut status = sgx_status_t::SGX_SUCCESS;
+        let result = unsafe {
+            imports::ecall_key_gen(
+                self.enclave.geteid(),
+                &mut status,
+                pk_node.as_mut_ptr(),
+                pk_node_size,
+            )
+        };
+
+        if status != sgx_status_t::SGX_SUCCESS {
+            return Err(status);
         }
-        // At this point we know that the ecall was successful and key_gen_result was initialized.
+        if result != sgx_status_t::SGX_SUCCESS {
+            return Err(result);
+        }
 
-        // TODO not sure we need `key_gen_result_to_result_key_gensuccess` here
-        let key_gen_result = unsafe { key_gen_result.assume_init() };
+        // pk_node is now populated
 
-        key_gen_result_to_result_key_gensuccess(key_gen_result)
-            .map_err(|err| Error::CryptoErr { inner: err })
+        todo!()
     }
 }

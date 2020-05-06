@@ -185,18 +185,3 @@ pub enum QueryResult {
         err: EnclaveError,
     },
 }
-
-/// This struct is returned from ecall_key_gen.
-/// cbindgen:prefix-with-name
-#[repr(C)]
-pub enum KeyGenResult {
-    Success {
-        /// A pointer to the output of the calculation
-        output: UserSpaceBuffer,
-        /// A signature by the enclave on all of the results.
-        signature: [u8; 65],
-    },
-    Failure {
-        err: CryptoError,
-    },
-}

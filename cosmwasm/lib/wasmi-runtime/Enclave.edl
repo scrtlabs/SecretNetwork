@@ -45,7 +45,7 @@ enclave {
             uintptr_t msg_len
         );
 
-        public KeyGenResult ecall_key_gen();
+        public sgx_status_t ecall_key_gen([out] uint8_t pk_node[64]);
     };
 
     untrusted {

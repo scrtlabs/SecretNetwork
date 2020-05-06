@@ -21,7 +21,7 @@ pub type PubKey = [u8; 64];
 pub struct KeyPair {
     context: Secp256k1<All>,
     pubkey: PublicKey,
-    pub privkey: SecretKey,
+    privkey: SecretKey,
 }
 
 impl KeyPair {
@@ -72,22 +72,14 @@ impl KeyPair {
         Ok(result)
     }
 
-    // /// This will return the raw 32 bytes private key. use carefully.
-    // pub fn get_privkey(&self) -> [u8; 32] {
-    //     self.privkey.serialize()
-    // }
+    /// This will return the raw 32 bytes private key. use carefully.
+    pub fn get_privkey(&self) -> &[u8] {
+        &self.privkey[..]
+    }
 
-    /// Get the Public Key and slice the first byte
-    /// The first byte represents if the key is compressed or not.
-    /// Because we use uncompressed Keys That start with `0x04` we can slice it out.
-    ///
-    /// We should move to compressed keys in the future, this will save 31 bytes on each pubkey.
-    ///
-    /// See More:
-    ///     `https://tools.ietf.org/html/rfc5480#section-2.2`
-    ///     `https://docs.rs/libsecp256k1/0.1.13/src/secp256k1/lib.rs.html#146`
-    pub fn get_pubkey(&self) -> PubKey {
-        KeyPair::pubkey_object_to_pubkey(&self.pubkey)
+    // This will return the raw 64 bytes public key.
+    pub fn get_pubkey(&self) -> [u8; 65] {
+        self.pubkey.serialize_uncompressed()
     }
 
     fn pubkey_object_to_pubkey(key: &PublicKey) -> PubKey {
