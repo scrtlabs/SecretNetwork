@@ -11,9 +11,9 @@ crate-type = ["staticlib"]
 
 [dependencies]
 derive_more = "0.99"
-sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.1" }
-sgx_trts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.1" }
-sgx_tseal = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.1" }
+sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.2" }
+sgx_trts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.2" }
+sgx_tseal = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.2" }
 enclave-ffi-types = { path = "../enclave-ffi-types" }
 wasmi = { git = "https://github.com/paritytech/wasmi", rev = "39a18a433a765a36383d34d4edd536ba1e0664d2", default-features = false, features = [
     "core"

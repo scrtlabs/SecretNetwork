@@ -1,4 +1,4 @@
 [submodule "cosmwasm/lib/incubator-teaclave-sgx-sdk"]
 	path = cosmwasm/lib/incubator-teaclave-sgx-sdk
 	url = https://github.com/apache/incubator-teaclave-sgx-sdk.git
-	branch = v1.1.1
+	branch = v1.1.2
