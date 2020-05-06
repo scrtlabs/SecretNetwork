@@ -59,7 +59,7 @@ RustEnclave_C_Files := $(wildcard ./*.c)
 RustEnclave_C_Objects := $(RustEnclave_C_Files:.c=.o)
 RustEnclave_Include_Paths := -I$(CUSTOM_COMMON_PATH)/inc -I$(CUSTOM_EDL_PATH) -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -I$(SGX_SDK)/include/epid -I./ -I./include
 
-RustEnclave_Link_Libs := -L$(CUSTOM_LIBRARY_PATH) -lcompiler-rt-patch -lenclave
+RustEnclave_Link_Libs := -L$(CUSTOM_LIBRARY_PATH) -lenclave
 RustEnclave_Compile_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(RustEnclave_Include_Paths)
 RustEnclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
 	-Wl,--whole-archive -l$(Trts_Library_Name) -Wl,--no-whole-archive \
@@ -82,13 +82,8 @@ enclave: librust_cosmwasm_enclave.signed.so
 librust_cosmwasm_enclave.signed.so: librust_cosmwasm_enclave.so
 	sgx_sign sign -key Enclave_private.pem -enclave $^ -out $@ -config Enclave.config.xml
 
-librust_cosmwasm_enclave.so: $(CUSTOM_LIBRARY_PATH)/libenclave.a Enclave_t.o compiler-rt
+librust_cosmwasm_enclave.so: $(CUSTOM_LIBRARY_PATH)/libenclave.a Enclave_t.o
 	$(CXX) Enclave_t.o -o $@ $(RustEnclave_Link_Flags)
-
-.PHONY: compiler-rt
-compiler-rt: $(CUSTOM_LIBRARY_PATH)
-	$(MAKE) -C ../incubator-teaclave-sgx-sdk/compiler-rt/ 2> /dev/null
-	cp ../incubator-teaclave-sgx-sdk/compiler-rt/libcompiler-rt-patch.a $(CUSTOM_LIBRARY_PATH)/libcompiler-rt-patch.a
 
 $(CUSTOM_LIBRARY_PATH)/libenclave.a: $(CUSTOM_LIBRARY_PATH) $(Rust_Crate_Source)
 	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS="-Z force-unstable-if-unmarked" xargo build --target x86_64-unknown-linux-sgx --release
