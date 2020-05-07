@@ -34,8 +34,8 @@ parity-wasm = "0.41"
 lazy_static = "1.4"
 downcast-rs = "1"
 enclave-ffi-types = { path = "../enclave-ffi-types" }
-sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.1" }
-sgx_urts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.1" }
+sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "v1.1.1" }
+sgx_urts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "v1.1.1" }
 log = "0.4.8"
 
 [dev-dependencies]

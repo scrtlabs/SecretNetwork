@@ -11,6 +11,7 @@ import "fmt"
 type i32 = C.int32_t
 type i64 = C.int64_t
 type u64 = C.uint64_t
+type u32 = C.uint32_t
 type u8 = C.uint8_t
 type u8_ptr = *C.uint8_t
 type usize = C.uintptr_t

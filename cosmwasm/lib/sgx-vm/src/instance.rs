@@ -1,5 +1,6 @@
+use std::env;
 use std::marker::PhantomData;
-
+use std::path::Path;
 // use snafu::ResultExt;
 /*
 pub use wasmer_runtime_core::typed_func::Func;
@@ -25,7 +26,6 @@ use crate::errors::{Error, Result};
 // use crate::memory::{read_region, write_region};
 
 use crate::wasmi::Module;
-
 use sgx_types::{sgx_attributes_t, sgx_launch_token_t, sgx_misc_attribute_t, SgxResult};
 use sgx_urts::SgxEnclave;
 
@@ -49,8 +49,17 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
         secs_attr: sgx_attributes_t { flags: 0, xfrm: 0 },
         misc_select: 0,
     };
+
+    // Step : try to create a .enigma folder for storing all the files
+    // Create a directory, returns `io::Result<()>`
+    let enclave_directory = env::var("SCRT_ENCLAVE_DIR").unwrap_or('.'.to_string());
+
+    let path = Path::new(&enclave_directory);
+
+    let enclave_file_path: std::path::PathBuf = path.join(ENCLAVE_FILE);
+
     SgxEnclave::create(
-        ENCLAVE_FILE,
+        enclave_file_path,
         debug,
         &mut launch_token,
         &mut launch_token_updated,
@@ -242,7 +251,7 @@ mod test {
     #[should_panic]
     fn with_context_safe_for_panic() {
         // this should fail with the assertion, but not cause a double-free crash (issue #59)
-        let instance = mock_instance(&CONTRACT_0_7);
+        let mut instance = mock_instance(&CONTRACT_0_7);
         instance.with_storage(|_store| assert_eq!(1, 2));
     }
 

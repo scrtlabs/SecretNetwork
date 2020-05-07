@@ -57,6 +57,9 @@ BUILD_FLAGS := -tags "$(build_tags)" -ldflags '$(ldflags)'
 
 all: build_all
 
+vendor:
+	cargo vendor third_party/vendor --manifest-path cosmwasm/lib/wasmi-runtime/Cargo.toml
+
 go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"
 	GO111MODULE=on go mod verify
@@ -70,6 +73,11 @@ xgo_build_enigmacli: go.sum
 build_linux:
 	$(MAKE) -C go-cosmwasm build-rust
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
+#   this pulls out ELF symbols, 80% size reduction!
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+
+build_local_no_rust:
 #   this pulls out ELF symbols, 80% size reduction!
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli

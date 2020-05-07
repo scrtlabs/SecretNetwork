@@ -6,7 +6,7 @@ use crate::context::context_from_dyn_storage;
 use crate::Storage;
 use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
 
-use sgx_types::sgx_status_t;
+use sgx_types::{sgx_enclave_id_t, sgx_status_t};
 use sgx_urts::SgxEnclave;
 
 use log::trace;

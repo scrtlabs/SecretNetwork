@@ -1,5 +1,9 @@
 #![feature(rustc_private)]
+//
+// #[macro_use]
+// extern crate serde_json;
 
+mod consts;
 mod contract_operations;
 mod errors;
 pub mod exports;

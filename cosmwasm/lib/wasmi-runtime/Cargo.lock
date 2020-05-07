@@ -117,9 +117,9 @@ dependencies = [
 
 [[package]]
 name = "ctor"
-version = "0.1.13"
+version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47c5e5ac752e18207b12e16b10631ae5f7f68f8805f335f9b817ead83d9ffce1"
+checksum = "cf6b25ee9ac1995c54d7adb2eff8cfffb7260bc774fb63c601ec65467f43cd9d"
 dependencies = [
  "quote",
  "syn",
@@ -191,9 +191,9 @@ dependencies = [
 
 [[package]]
 name = "hermit-abi"
-version = "0.1.10"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "725cf19794cf90aa94e65050cb4191ff5d8fa87a498383774c47b332e3af952e"
+checksum = "61565ff7aaace3525556587bd2dc31d4a07071957be715e63ce7b1eccf51a8f4"
 dependencies = [
  "libc",
 ]
@@ -206,9 +206,9 @@ checksum = "b8b7a7c0c47db5545ed3fef7468ee7bb5b74691498139e4b3f6a20685dc6dd8e"
 
 [[package]]
 name = "libc"
-version = "0.2.68"
+version = "0.2.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dea0c0405123bba743ee3f91f49b1c7cfb684eef0da0a50110f758ccf24cdff0"
+checksum = "99e85c08494b21a9054e7fe1374a732aeadaff3980b6990b94bfd3a70f690005"
 
 [[package]]
 name = "libm"
@@ -281,9 +281,9 @@ checksum = "74490b50b9fbe561ac330df47c08f3f33073d2d00c150f719147d7c54522fa1b"
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.10"
+version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df246d292ff63439fea9bc8c0a270bed0e390d5ebd4db4ba15aba81111b5abe3"
+checksum = "8872cf6f48eee44265156c111456a700ab3483686b3f96df4cf5481c89157319"
 dependencies = [
  "unicode-xid",
 ]
@@ -301,9 +301,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.3"
+version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bdc6c187c65bca4260c9011c9e3132efe4909da44726bad24cf7572ae338d7f"
+checksum = "4c1f4b0efa5fc5e8ceb705136bfee52cfdb6a4e3509f770b478cd6ed434232a7"
 dependencies = [
  "proc-macro2",
 ]
@@ -367,7 +367,7 @@ dependencies = [
 [[package]]
 name = "ring"
 version = "0.16.11"
-source = "git+https://github.com/mesalock-linux/ring-sgx?tag=v0.16.5#5311ddb2d335ddabf7a00f94efd8e7a5f7a9f728"
+source = "git+https://github.com/mesalock-linux/ring-sgx?rev=v0.16.5#5311ddb2d335ddabf7a00f94efd8e7a5f7a9f728"
 dependencies = [
  "cc",
  "sgx_tstd",
@@ -377,9 +377,9 @@ dependencies = [
 
 [[package]]
 name = "ryu"
-version = "1.0.3"
+version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "535622e6be132bccd223f4bb2b8ac8d53cda3c7a6394944d3b2b33fb974f9d76"
+checksum = "ed3d612bc64430efeb3f7ee6ef26d590dce0c43249217bddc62112540c7941e1"
 
 [[package]]
 name = "secp256k1"
@@ -421,9 +421,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.51"
+version = "1.0.52"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da07b57ee2623368351e9a0488bb0b261322a15a6e0ae53e243cbdc0f4208da9"
+checksum = "a7894c8ed05b7a3a279aeb79025fdec1d3158080b75b98a08faf2806bb799edd"
 dependencies = [
  "itoa",
  "ryu",
@@ -442,7 +442,7 @@ source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2#df76765f
 dependencies = [
  "cc",
  "sgx_build_helper",
- "sgx_libc 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
+ "sgx_libc",
 ]
 
 [[package]]
@@ -456,27 +456,24 @@ version = "1.1.2"
 source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
 
 [[package]]
-name = "sgx_libc"
+name = "sgx_edl"
 version = "1.1.2"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
-dependencies = [
- "sgx_types 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2)",
-]
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
 
 [[package]]
 name = "sgx_libc"
 version = "1.1.2"
 source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
 dependencies = [
- "sgx_types 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
+ "sgx_types",
 ]
 
 [[package]]
 name = "sgx_tcrypto"
 version = "1.1.2"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
 dependencies = [
- "sgx_types 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2)",
+ "sgx_types",
 ]
 
 [[package]]
@@ -484,17 +481,8 @@ name = "sgx_tprotected_fs"
 version = "1.1.2"
 source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
 dependencies = [
- "sgx_trts 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
- "sgx_types 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
-]
-
-[[package]]
-name = "sgx_trts"
-version = "1.1.2"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
-dependencies = [
- "sgx_libc 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2)",
- "sgx_types 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2)",
+ "sgx_trts",
+ "sgx_types",
 ]
 
 [[package]]
@@ -502,27 +490,27 @@ name = "sgx_trts"
 version = "1.1.2"
 source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
 dependencies = [
- "sgx_libc 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
- "sgx_types 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
+ "sgx_libc",
+ "sgx_types",
 ]
 
 [[package]]
 name = "sgx_tse"
 version = "1.1.2"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
 dependencies = [
- "sgx_types 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2)",
+ "sgx_types",
 ]
 
 [[package]]
 name = "sgx_tseal"
 version = "1.1.2"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
 dependencies = [
  "sgx_tcrypto",
- "sgx_trts 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2)",
+ "sgx_trts",
  "sgx_tse",
- "sgx_types 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2)",
+ "sgx_types",
 ]
 
 [[package]]
@@ -534,17 +522,12 @@ dependencies = [
  "sgx_alloc",
  "sgx_backtrace_sys",
  "sgx_demangle",
- "sgx_libc 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
+ "sgx_libc",
  "sgx_tprotected_fs",
- "sgx_trts 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
- "sgx_types 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
+ "sgx_trts",
+ "sgx_types",
  "sgx_unwind",
 ]
-
-[[package]]
-name = "sgx_types"
-version = "1.1.2"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
 
 [[package]]
 name = "sgx_types"
@@ -585,9 +568,9 @@ checksum = "8ea5119cdb4c55b55d432abb513a0429384878c15dde60cc77b1c99de1a95a6a"
 
 [[package]]
 name = "syn"
-version = "1.0.17"
+version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0df0eb663f387145cab623dea85b09c2c5b4b0aef44e945d928e682fce71bb03"
+checksum = "e8e5aa70697bb26ee62214ae3288465ecec0000f05182f039b477001f08f5ae7"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -619,18 +602,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.14"
+version = "1.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0570dc61221295909abdb95c739f2e74325e14293b2026b0a7e195091ec54ae"
+checksum = "d12a1dae4add0f0d568eebc7bf142f145ba1aa2544cafb195c76f0f409091b60"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.14"
+version = "1.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "227362df41d566be41a28f64401e07a043157c21c14b9785a0d8e256f940a8fd"
+checksum = "3f34e0c1caaa462fd840ec6b768946ea1e7842620d94fe29d5b847138f521269"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -672,9 +655,9 @@ checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
 
 [[package]]
 name = "vec_map"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05c78687fb1a80548ae3250346c3db86a80a7cdd77bda190189f2d0a0987c81a"
+checksum = "f1bddf1187be692e79c5ffeab891132dfb0f236ed36a43c7ed39f1165ee20191"
 
 [[package]]
 name = "wasi"
@@ -708,9 +691,10 @@ dependencies = [
  "pwasm-utils",
  "ring",
  "secp256k1",
- "sgx_trts 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2)",
+ "sgx_edl",
+ "sgx_trts",
  "sgx_tseal",
- "sgx_types 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2)",
+ "sgx_types",
  "sha2",
  "wasmi",
 ]

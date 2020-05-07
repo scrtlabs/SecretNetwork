@@ -1,5 +1,18 @@
 Dockerfile
 docs
+*.md
+
+**/target
+**/*.a
+**/*.so
+
+cosmwasm/lib/incubator-teaclave-sgx-sdk
 
 README.md
 .gitignore
+
+.vscode
+.github
+.git
+.idea
+**/.idea

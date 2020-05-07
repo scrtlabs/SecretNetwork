@@ -10,3 +10,4 @@ Enclave_u.h
 Enclave_u.o
 librust_cosmwasm_enclave.signed.so
 .vscode/
+/third_party/vendor

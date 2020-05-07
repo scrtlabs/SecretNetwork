@@ -14,9 +14,7 @@ use std::str::from_utf8;
 use crate::error::{clear_error, handle_c_error, set_error};
 use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
 use cosmwasm_sgx_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache, Extern};
-
 use ctor::ctor;
-use log;
 
 #[ctor]
 fn init_logger() {
@@ -67,6 +65,8 @@ static CODE_ID_ARG: &str = "code_id";
 static MSG_ARG: &str = "msg";
 static PARAMS_ARG: &str = "params";
 static GAS_USED_ARG: &str = "gas_used";
+static SEED_ARG: &str = "";
+static PUBLIC_KEY_ARG: &str = "";
 
 fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<DB, GoApi>, Error> {
     let dir = data_dir.read().ok_or_else(|| empty_err(DATA_DIR_ARG))?;

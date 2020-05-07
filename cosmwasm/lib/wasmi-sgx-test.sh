@@ -12,7 +12,7 @@ function wait_for_tx () {
 
 # init the node
 rm -rf ~/.enigma*
-./enigmacli config chain-id enigma-testnet 
+./enigmacli config chain-id enigma-testnet
 ./enigmacli config output json
 ./enigmacli config indent true
 ./enigmacli config trust-node true
