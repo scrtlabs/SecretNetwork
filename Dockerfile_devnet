@@ -2,7 +2,7 @@
 # > docker build -t enigma .
 # > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.enigmad:/root/.enigmad -v ~/.enigmacli:/root/.enigmacli enigma enigmad init
 # > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.enigmad:/root/.enigmad -v ~/.enigmacli:/root/.enigmacli enigma enigmad start
-FROM baiduxlab/sgx-rust:1804-1.1.1 AS build-env-rust-go
+FROM baiduxlab/sgx-rust:1804-1.1.2 AS build-env-rust-go
 
 ENV PATH="/root/.cargo/bin:$PATH"
 ENV GOROOT=/usr/local/go
@@ -18,7 +18,7 @@ RUN tar -C /usr/local -xzf go1.14.2.linux-amd64.tar.gz
 # Set working directory for the build
 
 WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/cosmwasm/lib/
-RUN git clone -b v1.1.1 https://github.com/apache/incubator-teaclave-sgx-sdk.git
+RUN git clone -b v1.1.2 https://github.com/apache/incubator-teaclave-sgx-sdk.git
 
 WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/
 # Add source files

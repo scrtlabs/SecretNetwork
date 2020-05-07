@@ -1,5 +1,8 @@
 .PHONY: all build build-rust build-go test docker-image docker-build docker-image-centos7
 
+TOP_DIR := ../third_party/build
+include $(TOP_DIR)/buildenv.mk
+
 DOCKER_TAG := 0.6.3
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
@@ -49,7 +52,7 @@ build: build-rust build-go
 
 # don't strip for now, for better error reporting
 # build-rust: build-rust-release strip
-build-rust: cargo-vendor build-rust-release
+build-rust: build-rust-release
 
 # use debug build for quick testing
 build-rust-debug: librust_cosmwasm_enclave.signed.so lib/libEnclave_u.a
