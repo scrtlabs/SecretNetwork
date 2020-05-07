@@ -17,22 +17,22 @@ RUN curl -O https://dl.google.com/go/go1.14.2.linux-amd64.tar.gz
 RUN tar -C /usr/local -xzf go1.14.2.linux-amd64.tar.gz
 # Set working directory for the build
 
-WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/cosmwasm/lib/
-RUN git clone -b v1.1.2 https://github.com/apache/incubator-teaclave-sgx-sdk.git
-
 WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/
+
+COPY third_party/build third_party/build
+
 # Add source files
 COPY go-cosmwasm/ go-cosmwasm/
 COPY cosmwasm/ cosmwasm/
 
-WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/cosmwasm/lib/wasmi-runtime
+WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/
+
+COPY Makefile Makefile
+RUN make vendor
 
 RUN make clean
 
 WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/go-cosmwasm
-
-RUN make clean
-
 RUN . /opt/sgxsdk/environment && env && make build-rust
 
 # Set working directory for the build
