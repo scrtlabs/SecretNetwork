@@ -42,6 +42,7 @@ jobs:
       - name: Build
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
+          make vendor
           SGX_MODE=SW RUSTC_WRAPPER="$HOME/sccache" make build_linux
       - name: Test SGX Sanity
         run: |
