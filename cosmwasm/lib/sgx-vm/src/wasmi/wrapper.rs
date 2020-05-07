@@ -6,9 +6,8 @@ use crate::context::context_from_dyn_storage;
 use crate::Storage;
 use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, KeyGenResult, QueryResult};
 
-use sgx_types::sgx_status_t;
 use sgx_urts::SgxEnclave;
-
+use sgx_types::sgx_status_t;
 use log::trace;
 
 use crate::errors::{Error, Result};
@@ -43,6 +42,8 @@ pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> Result<EnclaveBuffer, sg
         failure_status => Err(failure_status),
     }
 }
+
+
 
 pub struct Module {
     bytecode: Vec<u8>,
@@ -253,3 +254,5 @@ impl Module {
             .map_err(|err| Error::CryptoErr { inner: err })
     }
 }
+
+

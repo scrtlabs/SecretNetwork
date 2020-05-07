@@ -2,55 +2,80 @@
 # > docker build -t enigma .
 # > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.enigmad:/root/.enigmad -v ~/.enigmacli:/root/.enigmacli enigma enigmad init
 # > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.enigmad:/root/.enigmad -v ~/.enigmacli:/root/.enigmacli enigma enigmad start
-FROM rust:1.42-stretch AS build-env-rust
+FROM baiduxlab/sgx-rust:1804-1.1.2 AS build-env-rust-go
 
+ENV PATH="/root/.cargo/bin:$PATH"
+ENV GOROOT=/usr/local/go
+ENV GOPATH=/go/
+ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
+
+ARG SGX_MODE=SW
+ENV SGX_MODE=${SGX_MODE}
+
+
+RUN curl -O https://dl.google.com/go/go1.14.2.linux-amd64.tar.gz
+RUN tar -C /usr/local -xzf go1.14.2.linux-amd64.tar.gz
 # Set working directory for the build
-WORKDIR /go/src/github.com/enigmampc/enigmablockchain
 
-RUN rustup default nightly
+WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/cosmwasm/lib/
+RUN git clone -b v1.1.2 https://github.com/apache/incubator-teaclave-sgx-sdk.git
 
+WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/
 # Add source files
 COPY go-cosmwasm/ go-cosmwasm/
+COPY cosmwasm/ cosmwasm/
 
-WORKDIR /go/src/github.com/enigmampc/enigmablockchain/go-cosmwasm
-RUN cargo build --release --features backtraces
+WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/cosmwasm/lib/wasmi-runtime
 
-FROM golang:1.14-stretch AS build-env
+RUN make clean
 
-# Set up dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    make \
-    git && \
-    rm -rf /var/lib/apt/lists/*
+WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/go-cosmwasm
+
+RUN make clean
+
+RUN . /opt/sgxsdk/environment && env && make build-rust
 
 # Set working directory for the build
-WORKDIR /go/src/github.com/enigmampc/enigmablockchain
+WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain
 
 # Add source files
-COPY . .
+COPY go-cosmwasm go-cosmwasm
+COPY x x
+COPY types types
+COPY app.go .
+COPY go.mod .
+COPY go.sum .
+COPY cmd cmd
+COPY Makefile .
 
-COPY --from=build-env-rust /go/src/github.com/enigmampc/enigmablockchain/go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
+# COPY /go/src/github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/libgo_cosmwasm.so go-cosmwasm/api
 
-RUN go mod tidy
-
-RUN make build_local_no_rust
+RUN . /opt/sgxsdk/environment && env && make build_local_no_rust
 
 # Final image
-FROM ubuntu:18.04
+FROM cashmaney/enigma-sgx-base
+
+ENV LD_LIBRARY_PATH=/opt/sgxsdk/sdk_libs
+ENV SCRT_ENCLAVE_DIR=/usr/lib/
 
 # Install ca-certificates
 WORKDIR /root
 
 # Copy over binaries from the build-env
-COPY --from=build-env-rust /go/src/github.com/enigmampc/enigmablockchain/go-cosmwasm/target/release/libgo_cosmwasm.so /usr/lib/
-COPY --from=build-env /go/src/github.com/enigmampc/enigmablockchain/enigmad /usr/bin/enigmad
-COPY --from=build-env  /go/src/github.com/enigmampc/enigmablockchain/enigmacli /usr/bin/enigmacli
+COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/target/release/libgo_cosmwasm.so /usr/lib/
+COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/
+COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/enigmad /usr/bin/enigmad
+COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/enigmacli /usr/bin/enigmacli
 
-COPY ./packaging_docker/devnet_init.sh .
+# COPY ./packaging_docker/devnet_init.sh .
+COPY ./packaging_docker/wasmi-sgx-test.sh .
 
 RUN chmod +x /usr/bin/enigmad
 RUN chmod +x /usr/bin/enigmacli
+RUN chmod +x wasmi-sgx-test.sh
+
+RUN mkdir -p /root/.enigmad/.compute/
+# COPY ./packaging_docker/seed.json /root/.enigmad/.compute/seed.json
 
 # Run enigmad by default, omit entrypoint to ease using container with enigmacli
-ENTRYPOINT ["/bin/bash", "devnet_init.sh"]
+ENTRYPOINT ["/bin/bash", "wasmi-sgx-test.sh"]

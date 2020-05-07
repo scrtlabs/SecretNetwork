@@ -22,3 +22,4 @@ sgx_serialize = { path = "../incubator-teaclave-sgx-sdk/sgx_serialize", stage = 
 sgx_tunittest = { path = "../incubator-teaclave-sgx-sdk/sgx_tunittest", stage = 6 }
 sgx_backtrace = { path = "../incubator-teaclave-sgx-sdk/sgx_backtrace", stage = 7 }
 sgx_cov = { path = "../incubator-teaclave-sgx-sdk/sgx_cov", stage = 7 }
+sgx_signal = { path = "../incubator-teaclave-sgx-sdk/sgx_signal", stage = 7 }

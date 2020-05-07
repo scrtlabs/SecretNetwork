@@ -2,7 +2,10 @@ package keeper
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
+	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
+	"os"
 	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -42,6 +45,15 @@ type Keeper struct {
 	queryGasLimit uint64
 }
 
+func SgxMode() string {
+	sgx := os.Getenv("SGX_MODE")
+	if sgx == "" {
+		sgx = "HW"
+	}
+
+	return sgx
+}
+
 // NewKeeper creates a new contract Keeper instance
 func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.AccountKeeper, bankKeeper bank.Keeper,
 	router sdk.Router, homeDir string, wasmConfig types.WasmConfig) Keeper {
@@ -49,6 +61,15 @@ func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.Accou
 	if err != nil {
 		panic(err)
 	}
+
+	spid, err := hex.DecodeString("b0335fd3Bc1cca8f804eb98a6420592d")
+	quote, err := api.GetQuote(spid)
+
+
+	if SgxMode() == "HW" {
+		// do attestation here?
+	}
+	fmt.Println("Got quote", hex.EncodeToString(quote))
 
 	return Keeper{
 		storeKey:      storeKey,

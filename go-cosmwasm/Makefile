@@ -31,6 +31,8 @@ else
 	SGX_COMMON_CFLAGS += -O2
 endif
 
+SGX_COMMON_CFLAGS += -fstack-protector
+
 CUSTOM_EDL_PATH := ../cosmwasm/lib/incubator-teaclave-sgx-sdk/edl
 App_Rust_Flags := --release
 App_SRC_Files := $(shell find ../cosmwasm/lib/sgx-vm/ -type f -name '*.rs') \

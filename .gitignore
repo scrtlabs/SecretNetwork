@@ -8,5 +8,6 @@ libenclave.a
 Enclave_u.c
 Enclave_u.h
 Enclave_u.o
+incubator-teaclave-sgx-sdk
 librust_cosmwasm_enclave.signed.so
 .vscode/

@@ -34,10 +34,15 @@ parity-wasm = "0.41"
 lazy_static = "1.4"
 downcast-rs = "1"
 enclave-ffi-types = { path = "../enclave-ffi-types" }
-sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.1" }
-sgx_urts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.1" }
+sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.2" }
+sgx_urts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.2" }
 log = "0.4.8"
+base64 = "0.12.0"
 
 [dev-dependencies]
 tempfile = "3.1.0"
 wabt = "0.9.1"
+
+[patch.'https://github.com/apache/teaclave-sgx-sdk.git']
+sgx_types = { path = "../incubator-teaclave-sgx-sdk/sgx_types" }
+sgx_urts = { path = "../incubator-teaclave-sgx-sdk/sgx_urts" }

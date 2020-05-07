@@ -64,6 +64,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b41b7ea54a0c9d92199de89e20e58d49f02f8e699814ef3fdf266f6f748d15c7"
 
 [[package]]
+name = "base64"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d5ca2cd0adc3f48f9e9ea5a6bbdf9ccc0bfade884847e484d452414c7ccffb3"
+
+[[package]]
 name = "bitflags"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -179,7 +185,7 @@ dependencies = [
 name = "cosmwasm"
 version = "0.7.0"
 dependencies = [
- "base64",
+ "base64 0.11.0",
  "schemars",
  "serde",
  "serde-json-wasm",
@@ -191,6 +197,7 @@ dependencies = [
 name = "cosmwasm-sgx-vm"
 version = "0.7.0"
 dependencies = [
+ "base64 0.12.0",
  "cosmwasm",
  "downcast-rs",
  "enclave-ffi-types",
@@ -583,13 +590,13 @@ dependencies = [
 
 [[package]]
 name = "sgx_types"
-version = "1.1.1"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.1#779acddb67863d33bf3cf2e73efa5c80a3d8da2c"
+version = "1.1.2"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
 
 [[package]]
 name = "sgx_urts"
-version = "1.1.1"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.1#779acddb67863d33bf3cf2e73efa5c80a3d8da2c"
+version = "1.1.2"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
 dependencies = [
  "libc",
  "sgx_types",

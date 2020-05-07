@@ -109,6 +109,18 @@ func KeyGen() ([]byte, error) {
 	return receiveSlice(res), nil
 }
 
+// KeyGen Seng KeyGen request to enclave
+func GetQuote(spid []byte) ([]byte, error) {
+	errmsg := C.Buffer{}
+    spidSlice := sendSlice(spid)
+	res, err := C.produce_quote(spidSlice, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return receiveSlice(res), nil
+}
+
+
 /**** To error module ***/
 
 func errorWithMessage(err error, b C.Buffer) error {

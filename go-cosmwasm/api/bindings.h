@@ -77,6 +77,8 @@ Buffer instantiate(cache_t *cache,
 
 Buffer key_gen(Buffer *err);
 
+Buffer produce_quote(Buffer spid, Buffer *err);
+
 Buffer query(cache_t *cache,
              Buffer code_id,
              Buffer msg,

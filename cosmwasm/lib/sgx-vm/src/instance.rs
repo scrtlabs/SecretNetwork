@@ -1,4 +1,6 @@
+use std::env;
 use std::marker::PhantomData;
+use std::path::Path;
 
 // use snafu::ResultExt;
 /*
@@ -10,7 +12,7 @@ use wasmer_runtime_core::{
     vm::Ctx,
 };
 */
-
+use log::*;
 use lazy_static::lazy_static;
 
 use cosmwasm::traits::Api;
@@ -23,10 +25,11 @@ use crate::{Extern, Storage};
 // };
 use crate::errors::{Error, Result};
 // use crate::memory::{read_region, write_region};
-
+use std::str;
 use crate::wasmi::Module;
+use crate::quote_untrusted::{produce_report, produce_quote};
 
-use sgx_types::{sgx_attributes_t, sgx_launch_token_t, sgx_misc_attribute_t, SgxResult};
+use sgx_types::{sgx_attributes_t, sgx_launch_token_t, sgx_misc_attribute_t, SgxResult, sgx_status_t};
 use sgx_urts::SgxEnclave;
 
 /// An instance is a combination of wasm code, storage, and gas limit.
@@ -39,7 +42,29 @@ pub struct Instance<S: Storage + 'static, A: Api + 'static> {
 
 static ENCLAVE_FILE: &'static str = "librust_cosmwasm_enclave.signed.so";
 
-fn init_enclave() -> SgxResult<SgxEnclave> {
+// this is here basically to be able to call the enclave initialization -- we can move this somewhere else and simplify
+pub fn call_produce_quote(spid: &[u8]) -> Result<String, Error> {
+    info!("Hello from just before initializing");
+    let enclave = init_enclave().unwrap();
+    info!("Hello from just after initializing");
+
+    let spid_str = hex::encode(spid);
+
+    let result = produce_quote(enclave.geteid(), &spid_str);
+
+    result
+}
+
+pub fn call_produce_report() {
+
+    info!("Hello from just before initializing - produce_report");
+    let enclave = init_enclave().unwrap();
+    info!("Hello from just after initializing - produce_report");
+
+    produce_report(enclave.geteid());
+}
+
+pub fn init_enclave() -> SgxResult<SgxEnclave> {
     let mut launch_token: sgx_launch_token_t = [0; 1024];
     let mut launch_token_updated: i32 = 0;
     // call sgx_create_enclave to initialize an enclave instance
@@ -49,8 +74,17 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
         secs_attr: sgx_attributes_t { flags: 0, xfrm: 0 },
         misc_select: 0,
     };
+
+    // Step : try to create a .enigma folder for storing all the files
+    // Create a directory, returns `io::Result<()>`
+    let enclave_directory = env::var("SCRT_ENCLAVE_DIR").unwrap_or('.'.to_string());
+
+    let path = Path::new(&enclave_directory);
+
+    let enclave_file_path: std::path::PathBuf = path.join(ENCLAVE_FILE);
+
     SgxEnclave::create(
-        ENCLAVE_FILE,
+        enclave_file_path,
         debug,
         &mut launch_token,
         &mut launch_token_updated,

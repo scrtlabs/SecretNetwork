@@ -1,12 +1,16 @@
 use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, KeyGenResult, QueryResult};
 use std::ffi::c_void;
-
-use crate::node_reg::KeyPair;
+use sgx_types::{sgx_report_t, sgx_target_info_t, sgx_status_t, sgx_quote_sign_type_t};
+//use crate::quote::{create_attestation_report, create_report_with_data};
+// use crate::node_reg::KeyPair;
 use crate::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
     result_query_success_to_queryresult,
 };
-use crate::storage::seal;
+// use crate::storage::seal;
+use std::ptr::null;
+
+// use log::*;
 
 #[no_mangle]
 pub extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
@@ -85,10 +89,10 @@ pub extern "C" fn ecall_query(
 #[no_mangle]
 pub extern "C" fn ecall_key_gen() -> KeyGenResult {
     // Generate node-specific key-pair
-    let key_pair = match KeyPair::new() {
-        Ok(kp) => kp,
-        Err(err) => return KeyGenResult::Failure { err },
-    };
+    // let key_pair = match KeyPair::new() {
+    //     Ok(kp) => kp,
+    //     Err(err) => return KeyGenResult::Failure { err },
+    // };
 
     todo!();
 
@@ -96,4 +100,30 @@ pub extern "C" fn ecall_key_gen() -> KeyGenResult {
     // seal(pk.serialize(), "dsacdsa");
 
     // seal(key_pair)
+}
+
+#[no_mangle]
+pub extern "C" fn ecall_get_registration_quote(target_info: &sgx_target_info_t, generated_report: &mut sgx_report_t) -> sgx_status_t {
+    todo!();
+    //&SIGNING_KEY.get_pubkey().address()
+    // todo: get some key from key manager
+    //create_report_with_data(target_info, generated_report, &[0u8])
+}
+
+
+#[no_mangle]
+pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
+    todo!();
+    // let (attn_report, sig, cert) = match create_attestation_report(sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE) {
+    //     Err(e) => {
+    //         println!("Error in create_attestation_report: {:?}", e);
+    //         return e;
+    //     }
+    //     Ok(res) => {
+    //         res
+    //     }
+    // };
+    // let payload = attn_report + "|" + &sig + "|" + &cert;
+    // info!("{:?}", payload);
+    // sgx_status_t::SGX_SUCCESS
 }

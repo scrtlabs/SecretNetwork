@@ -4,6 +4,9 @@ SGX_SDK ?= $(HOME)/.sgxsdk/sgxsdk
 SGX_MODE ?= HW
 SGX_ARCH ?= x64
 
+#include the build settings from rust-sgx-sdk
+include ../incubator-teaclave-sgx-sdk/buildenv.mk
+
 ifeq ($(shell getconf LONG_BIT), 32)
 	SGX_ARCH := x86
 else ifeq ($(findstring -m32, $(CXXFLAGS)), -m32)
@@ -29,6 +32,14 @@ ifeq ($(SGX_DEBUG), 1)
 	SGX_COMMON_CFLAGS += -O0 -g
 else
 	SGX_COMMON_CFLAGS += -O2
+endif
+
+SGX_COMMON_CFLAGS += -fstack-protector
+
+ifeq ($(MITIGATION-CVE-2020-0551), LOAD)
+export MITIGATION_CVE_2020_0551=LOAD
+else ifeq ($(MITIGATION-CVE-2020-0551), CF)
+export MITIGATION_CVE_2020_0551=CF
 endif
 
 ######## CUSTOM Settings ########
@@ -59,16 +70,14 @@ RustEnclave_C_Files := $(wildcard ./*.c)
 RustEnclave_C_Objects := $(RustEnclave_C_Files:.c=.o)
 RustEnclave_Include_Paths := -I$(CUSTOM_COMMON_PATH)/inc -I$(CUSTOM_EDL_PATH) -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -I$(SGX_SDK)/include/epid -I./ -I./include
 
-RustEnclave_Link_Libs := -L$(CUSTOM_LIBRARY_PATH) -lcompiler-rt-patch -lenclave
+RustEnclave_Link_Libs := -L$(CUSTOM_LIBRARY_PATH) -lenclave
 RustEnclave_Compile_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(RustEnclave_Include_Paths)
-RustEnclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
+RustEnclave_Link_Flags := -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
 	-Wl,--whole-archive -l$(Trts_Library_Name) -Wl,--no-whole-archive \
-	-Wl,--start-group -lsgx_tstdc -l$(Service_Library_Name) -l$(Crypto_Library_Name) $(RustEnclave_Link_Libs) -Wl,--end-group \
-	-Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
-	-Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \
-	-Wl,--defsym,__ImageBase=0 \
-	-Wl,--gc-sections \
-	-Wl,--version-script=Enclave.lds
+	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -l$(Crypto_Library_Name) -l$(Service_Library_Name) -l$(ProtectedFs_Library_Name) $(RustEnclave_Link_Libs) -Wl,--end-group \
+	-Wl,--version-script=Enclave.lds \
+	$(ENCLAVE_LDFLAGS)
+
 
 Rust_Crate_Source := $(wildcard src/*.rs)
 Rust_Target_Path := $(CURDIR)/../incubator-teaclave-sgx-sdk/xargo
@@ -82,13 +91,8 @@ enclave: librust_cosmwasm_enclave.signed.so
 librust_cosmwasm_enclave.signed.so: librust_cosmwasm_enclave.so
 	sgx_sign sign -key Enclave_private.pem -enclave $^ -out $@ -config Enclave.config.xml
 
-librust_cosmwasm_enclave.so: $(CUSTOM_LIBRARY_PATH)/libenclave.a Enclave_t.o compiler-rt
+librust_cosmwasm_enclave.so: $(CUSTOM_LIBRARY_PATH)/libenclave.a Enclave_t.o
 	$(CXX) Enclave_t.o -o $@ $(RustEnclave_Link_Flags)
-
-.PHONY: compiler-rt
-compiler-rt: $(CUSTOM_LIBRARY_PATH)
-	$(MAKE) -C ../incubator-teaclave-sgx-sdk/compiler-rt/ 2> /dev/null
-	cp ../incubator-teaclave-sgx-sdk/compiler-rt/libcompiler-rt-patch.a $(CUSTOM_LIBRARY_PATH)/libcompiler-rt-patch.a
 
 $(CUSTOM_LIBRARY_PATH)/libenclave.a: $(CUSTOM_LIBRARY_PATH) $(Rust_Crate_Source)
 	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS="-Z force-unstable-if-unmarked" xargo build --target x86_64-unknown-linux-sgx --release

@@ -21,7 +21,7 @@
 // pub struct KeyPair {
 //     context: Secp256k1<All>,
 //     pubkey: PublicKey,
-//     pub privkey: SecretKey,
+//     privkey: SecretKey,
 // }
 //
 // impl KeyPair {

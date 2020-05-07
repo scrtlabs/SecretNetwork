@@ -3,12 +3,14 @@ mod calls;
 mod compatability;
 mod context;
 pub mod errors;
-mod instance;
+pub mod instance;
 mod mock;
 pub mod testing;
 pub mod traits;
 mod wasm_store;
 mod wasmi;
+
+mod quote_untrusted;
 
 pub use crate::cache::CosmCache;
 pub use crate::calls::{
@@ -16,3 +18,5 @@ pub use crate::calls::{
 };
 pub use crate::instance::Instance;
 pub use crate::traits::{Extern, ReadonlyStorage, Storage};
+
+pub use crate::instance::{call_produce_quote, call_produce_report};
