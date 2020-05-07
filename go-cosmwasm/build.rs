@@ -14,6 +14,9 @@ fn main() {
     println!("cargo:rustc-link-search=native={}/lib64", sdk_dir);
 
     let is_sim = env::var("SGX_MODE").unwrap_or_else(|_| "HW".to_string());
+
+    println!("cargo:rustc-link-lib=dylib=sgx_uprotected_fs");
+    
     match is_sim.as_ref() {
         "SW" => println!("cargo:rustc-link-lib=dylib=sgx_urts_sim"),
         "HW" => println!("cargo:rustc-link-lib=dylib=sgx_urts"),
