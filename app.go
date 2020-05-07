@@ -141,6 +141,7 @@ func NewEnigmaChainApp(
 	db dbm.DB,
 	traceStore io.Writer,
 	loadLatest bool,
+	bootstrap bool,
 	invCheckPeriod uint,
 	skipUpgradeHeights map[int64]bool,
 	baseAppOptions ...func(*bam.BaseApp),
@@ -273,7 +274,8 @@ func NewEnigmaChainApp(
 	}
 	wasmConfig := wasmWrap.Wasm
 
-	app.computeKeeper = compute.NewKeeper(app.cdc, keys[compute.StoreKey], app.accountKeeper, app.bankKeeper, computeRouter, computeDir, wasmConfig)
+	// replace with bootstrap flag when we figure out how to test properly and everything works
+	app.computeKeeper = compute.NewKeeper(app.cdc, keys[compute.StoreKey], app.accountKeeper, app.bankKeeper, computeRouter, computeDir, wasmConfig, true)
 
 	// register the proposal types
 	govRouter := gov.NewRouter()

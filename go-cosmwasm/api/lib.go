@@ -11,6 +11,7 @@ import "fmt"
 type i32 = C.int32_t
 type i64 = C.int64_t
 type u64 = C.uint64_t
+type u32 = C.uint32_t
 type u8 = C.uint8_t
 type u8_ptr = *C.uint8_t
 type usize = C.uintptr_t
@@ -18,6 +19,18 @@ type cint = C.int
 
 type Cache struct {
 	ptr *C.cache_t
+}
+
+func InitSeed(publicKey []byte, seed []byte) (bool, error) {
+	pkSlice := sendSlice(publicKey)
+	seedSlice := sendSlice(seed)
+	errmsg := C.Buffer{}
+
+	_, err := C.init_seed(pkSlice, u32(len(publicKey)), seedSlice, u32(len(seed)), &errmsg)
+	if err != nil {
+		return false, errorWithMessage(err, errmsg)
+	}
+	return true, nil
 }
 
 func InitCache(dataDir string, cacheSize uint64) (Cache, error) {

@@ -4,8 +4,8 @@ SGX_SDK ?= $(HOME)/.sgxsdk/sgxsdk
 SGX_MODE ?= HW
 SGX_ARCH ?= x64
 
-#include the build settings from rust-sgx-sdk
-include ../incubator-teaclave-sgx-sdk/buildenv.mk
+TOP_DIR := ../../../third_party/build
+include $(TOP_DIR)/buildenv.mk
 
 ifeq ($(shell getconf LONG_BIT), 32)
 	SGX_ARCH := x86
@@ -45,8 +45,8 @@ endif
 ######## CUSTOM Settings ########
 
 CUSTOM_LIBRARY_PATH := ./lib
-CUSTOM_EDL_PATH := ../incubator-teaclave-sgx-sdk/edl
-CUSTOM_COMMON_PATH := ../incubator-teaclave-sgx-sdk/common
+CUSTOM_EDL_PATH := ../../../third_party/vendor/sgx_edl/edl
+CUSTOM_COMMON_PATH := ../../../third_party/vendor/sgx_edl/common
 
 ######## EDL Settings ########
 
@@ -72,7 +72,7 @@ RustEnclave_Include_Paths := -I$(CUSTOM_COMMON_PATH)/inc -I$(CUSTOM_EDL_PATH) -I
 
 RustEnclave_Link_Libs := -L$(CUSTOM_LIBRARY_PATH) -lenclave
 RustEnclave_Compile_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(RustEnclave_Include_Paths)
-RustEnclave_Link_Flags := -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
+RustEnclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
 	-Wl,--whole-archive -l$(Trts_Library_Name) -Wl,--no-whole-archive \
 	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -l$(Crypto_Library_Name) -l$(Service_Library_Name) -l$(ProtectedFs_Library_Name) $(RustEnclave_Link_Libs) -Wl,--end-group \
 	-Wl,--version-script=Enclave.lds \
@@ -80,7 +80,7 @@ RustEnclave_Link_Flags := -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfi
 
 
 Rust_Crate_Source := $(wildcard src/*.rs)
-Rust_Target_Path := $(CURDIR)/../incubator-teaclave-sgx-sdk/xargo
+Rust_Target_Path := $(CURDIR)/xargo
 
 .PHONY: all
 all: enclave

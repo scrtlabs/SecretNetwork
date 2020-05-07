@@ -6,8 +6,9 @@ use crate::context::context_from_dyn_storage;
 use crate::Storage;
 use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, KeyGenResult, QueryResult};
 
+use sgx_types::{sgx_enclave_id_t, sgx_status_t};
 use sgx_urts::SgxEnclave;
-use sgx_types::sgx_status_t;
+
 use log::trace;
 
 use crate::errors::{Error, Result};
@@ -18,6 +19,36 @@ use super::results::{
     key_gen_result_to_result_key_gensuccess, query_result_to_result_querysuccess, HandleSuccess,
     InitSuccess, KeyGenSuccess, QuerySuccess,
 };
+
+
+
+pub fn init_seed(eid: sgx_enclave_id_t,
+                 public_key: *const u8,
+                 public_key_len: u32,
+                 encrypted_seed: *const u8,
+                 encrypted_seed_len: u32) -> Result<sgx_status_t, Error> {
+    println!("Hello from just before the enclave!");
+    let mut ret = sgx_status_t::SGX_SUCCESS;
+
+    return match unsafe {
+        imports::ecall_init_seed(
+            eid,
+            &mut ret,
+            public_key,
+            public_key_len,
+            encrypted_seed,
+            encrypted_seed_len
+        )
+    } {
+        sgx_status_t::SGX_SUCCESS => { Ok(ret) }
+        failure_status => {
+            println!("Failed2");
+            return Err(Error::SdkErr {
+                inner: failure_status,
+            })
+        }
+    }
+}
 
 /// This is a safe wrapper for allocating buffers inside the enclave.
 pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> Result<EnclaveBuffer, sgx_status_t> {

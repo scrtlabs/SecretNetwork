@@ -41,6 +41,15 @@ func NewWasmer(dataDir string, cacheSize uint64) (*Wasmer, error) {
 }
 
 // Cleanup should be called when no longer using this to free resources on the rust-side
+func (w *Wasmer) InitSeed(publicKey []byte, encryptedKey []byte) (bool, error) {
+	res, err := api.InitSeed(publicKey, encryptedKey)
+	if err != nil {
+		return false, err
+	}
+	return res, nil
+}
+
+// Cleanup should be called when no longer using this to free resources on the rust-side
 func (w *Wasmer) Cleanup() {
 	api.ReleaseCache(w.cache)
 }
@@ -69,6 +78,7 @@ func (w *Wasmer) Create(code WasmCode) (CodeID, error) {
 func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 	return api.GetCode(w.cache, code)
 }
+
 
 // Instantiate will create a new contract based on the given codeID.
 // We can set the initMsg (contract "genesis") here, and it then receives

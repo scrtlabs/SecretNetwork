@@ -79,13 +79,15 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer) abci.Application
 		cache = store.NewCommitKVStoreCacheManager()
 	}
 
+	bootstrap := viper.GetBool("bootstrap")
+
 	skipUpgradeHeights := make(map[int64]bool)
 	for _, h := range viper.GetIntSlice(server.FlagUnsafeSkipUpgrades) {
 		skipUpgradeHeights[int64(h)] = true
 	}
 
 	return app.NewEnigmaChainApp(
-		logger, db, traceStore, true, invCheckPeriod, skipUpgradeHeights,
+		logger, db, traceStore, true, bootstrap, invCheckPeriod, skipUpgradeHeights,
 		baseapp.SetPruning(store.NewPruningOptionsFromString(viper.GetString("pruning"))),
 		baseapp.SetMinGasPrices(viper.GetString(server.FlagMinGasPrices)),
 		baseapp.SetHaltHeight(viper.GetUint64(server.FlagHaltHeight)),
@@ -98,8 +100,10 @@ func exportAppStateAndTMValidators(
 	logger log.Logger, db dbm.DB, traceStore io.Writer, height int64, forZeroHeight bool, jailWhiteList []string,
 ) (json.RawMessage, []tmtypes.GenesisValidator, error) {
 
+	bootstrap := viper.GetBool("bootstrap")
+
 	if height != -1 {
-		engApp := app.NewEnigmaChainApp(logger, db, traceStore, false, uint(1), map[int64]bool{})
+		engApp := app.NewEnigmaChainApp(logger, db, traceStore, false, bootstrap, uint(1), map[int64]bool{})
 		err := engApp.LoadHeight(height)
 		if err != nil {
 			return nil, nil, err
@@ -107,6 +111,6 @@ func exportAppStateAndTMValidators(
 		return engApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 	}
 
-	engApp := app.NewEnigmaChainApp(logger, db, traceStore, true, uint(1), map[int64]bool{})
+	engApp := app.NewEnigmaChainApp(logger, db, traceStore, true, bootstrap, uint(1), map[int64]bool{})
 	return engApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 }
