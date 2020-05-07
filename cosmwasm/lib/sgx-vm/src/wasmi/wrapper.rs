@@ -16,8 +16,7 @@ use crate::errors::{Error, Result};
 use super::imports;
 use super::results::{
     handle_result_to_result_handlesuccess, init_result_to_result_initsuccess,
-    key_gen_result_to_result_key_gensuccess, query_result_to_result_querysuccess, HandleSuccess,
-    InitSuccess, KeyGenSuccess, QuerySuccess,
+    query_result_to_result_querysuccess, HandleSuccess, InitSuccess, KeyGenSuccess, QuerySuccess,
 };
 
 /// This is a safe wrapper for allocating buffers inside the enclave.
@@ -233,17 +232,11 @@ impl Module {
     }
 
     pub fn key_gen(&mut self) -> Result<KeyGenSuccess> {
-        let pk_node_size = 65;
-        let mut pk_node = vec![0u8; pk_node_size as usize];
+        let mut pk_node = [0u8; 65];
 
         let mut status = sgx_status_t::SGX_SUCCESS;
         let result = unsafe {
-            imports::ecall_key_gen(
-                self.enclave.geteid(),
-                &mut status,
-                pk_node.as_mut_ptr(),
-                pk_node_size,
-            )
+            imports::ecall_key_gen(self.enclave.geteid(), &mut status, pk_node.as_mut_ptr())
         };
 
         if status != sgx_status_t::SGX_SUCCESS {

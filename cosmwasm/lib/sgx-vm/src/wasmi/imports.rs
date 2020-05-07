@@ -52,11 +52,10 @@ extern "C" {
         msg_len: usize,
     ) -> sgx_status_t;
 
-    /// Trigger a key generation method in a wasm contract
+    /// Generate (pk_node,sk_node), seal sk_node to disk and return pk_node
     pub fn ecall_key_gen(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
-        pk_node: *mut u8,
-        pk_node_size: u32,
+        pk_node: *mut [u8; 65],
     ) -> sgx_status_t;
 }

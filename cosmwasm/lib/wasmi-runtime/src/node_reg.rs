@@ -1,4 +1,5 @@
 use enclave_ffi_types::CryptoError;
+use secp256k1::constants::UNCOMPRESSED_PUBLIC_KEY_SIZE;
 use secp256k1::ecdh::SharedSecret;
 use secp256k1::key::{PublicKey, SecretKey};
 use secp256k1::{All, Secp256k1};
@@ -16,7 +17,7 @@ pub type DhKey = SymmetricKey;
 /// ContractAddress is the address of contracts in the Enigma Network.
 // pub type ContractAddress = Hash256;
 /// PubKey is a public key that is used for ECDSA signing.
-pub type PubKey = [u8; 64];
+pub type PubKey = [u8; UNCOMPRESSED_PUBLIC_KEY_SIZE];
 
 pub struct KeyPair {
     context: Secp256k1<All>,
@@ -78,14 +79,8 @@ impl KeyPair {
     }
 
     // This will return the raw 64 bytes public key.
-    pub fn get_pubkey(&self) -> [u8; 65] {
+    pub fn get_pubkey(&self) -> PubKey {
         self.pubkey.serialize_uncompressed()
-    }
-
-    fn pubkey_object_to_pubkey(key: &PublicKey) -> PubKey {
-        let mut sliced_pubkey: [u8; 64] = [0; 64];
-        sliced_pubkey.clone_from_slice(&key.serialize()[1..65]);
-        sliced_pubkey
     }
 }
 

@@ -3,7 +3,7 @@ enclave {
     from "sgx_stdio.edl" import *;
     from "sgx_backtrace.edl" import *;
     from "sgx_tstdc.edl" import *;
-    from "sgx_fs.edl" import *;
+    from "sgx_tprotected_fs.edl" import *;
 
     // This header is generated during the build of enclave-ffi-types
     include "target/headers/enclave-ffi-types.h"
@@ -45,7 +45,7 @@ enclave {
             uintptr_t msg_len
         );
 
-        public sgx_status_t ecall_key_gen([out] uint8_t pk_node[64]);
+        public sgx_status_t ecall_key_gen([out] uint8_t pk_node[65]);
     };
 
     untrusted {
