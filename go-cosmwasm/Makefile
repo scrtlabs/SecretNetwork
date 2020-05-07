@@ -49,7 +49,7 @@ build: build-rust build-go
 
 # don't strip for now, for better error reporting
 # build-rust: build-rust-release strip
-build-rust: build-rust-release
+build-rust: cargo-vendor build-rust-release
 
 # use debug build for quick testing
 build-rust-debug: librust_cosmwasm_enclave.signed.so lib/libEnclave_u.a
@@ -95,6 +95,9 @@ else
 # TODO: add for windows and osx
 strip:
 endif
+
+cargo-vendor:
+	cargo vendor ../third_party/vendor --manifest-path ../cosmwasm/lib/wasmi-runtime/Cargo.toml
 
 build-go:
 	go build ./...
