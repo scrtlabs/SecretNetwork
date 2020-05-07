@@ -99,9 +99,6 @@ else
 strip:
 endif
 
-cargo-vendor:
-	cargo vendor ../third_party/vendor --manifest-path ../cosmwasm/lib/wasmi-runtime/Cargo.toml
-
 build-go:
 	go build ./...
 

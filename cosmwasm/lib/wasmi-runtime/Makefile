@@ -37,8 +37,8 @@ endif
 ######## CUSTOM Settings ########
 
 CUSTOM_LIBRARY_PATH := ./lib
-CUSTOM_EDL_PATH := ../../../third_party/vendor/sgk_edl/edl
-CUSTOM_COMMON_PATH := ../../../third_party/vendor/sgk_edl/common
+CUSTOM_EDL_PATH := ../../../third_party/vendor/sgx_edl/edl
+CUSTOM_COMMON_PATH := ../../../third_party/vendor/sgx_edl/common
 
 ######## EDL Settings ########
 

@@ -57,6 +57,9 @@ BUILD_FLAGS := -tags "$(build_tags)" -ldflags '$(ldflags)'
 
 all: build_all
 
+vendor:
+	cargo vendor third_party/vendor --manifest-path cosmwasm/lib/wasmi-runtime/Cargo.toml
+
 go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"
 	GO111MODULE=on go mod verify
