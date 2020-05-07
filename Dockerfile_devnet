@@ -2,7 +2,7 @@
 # > docker build -t enigma .
 # > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.enigmad:/root/.enigmad -v ~/.enigmacli:/root/.enigmacli enigma enigmad init
 # > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.enigmad:/root/.enigmad -v ~/.enigmacli:/root/.enigmacli enigma enigmad start
-FROM sgx_base AS build-env-rust-go
+FROM baiduxlab/sgx-rust:1804-1.1.1 AS build-env-rust-go
 
 ENV PATH="/root/.cargo/bin:$PATH"
 ENV GOROOT=/usr/local/go
