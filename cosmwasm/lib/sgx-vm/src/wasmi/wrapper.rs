@@ -231,13 +231,12 @@ impl Module {
             .map_err(|err| Error::EnclaveErr { inner: err })
     }
 
-    pub fn key_gen(&mut self) -> Result<KeyGenSuccess> {
+    pub fn key_gen(&mut self) -> Result<KeyGenSuccess, sgx_status_t> {
         let mut pk_node = [0u8; 65];
 
         let mut status = sgx_status_t::SGX_SUCCESS;
-        let result = unsafe {
-            imports::ecall_key_gen(self.enclave.geteid(), &mut status, pk_node.as_mut_ptr())
-        };
+        let result =
+            unsafe { imports::ecall_key_gen(self.enclave.geteid(), &mut status, &mut pk_node) };
 
         if status != sgx_status_t::SGX_SUCCESS {
             return Err(status);
