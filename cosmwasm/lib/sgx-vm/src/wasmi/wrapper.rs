@@ -20,36 +20,6 @@ use super::results::{
     InitSuccess, KeyGenSuccess, QuerySuccess,
 };
 
-
-
-pub fn init_seed(eid: sgx_enclave_id_t,
-                 public_key: *const u8,
-                 public_key_len: u32,
-                 encrypted_seed: *const u8,
-                 encrypted_seed_len: u32) -> Result<sgx_status_t, Error> {
-    println!("Hello from just before the enclave!");
-    let mut ret = sgx_status_t::SGX_SUCCESS;
-
-    return match unsafe {
-        imports::ecall_init_seed(
-            eid,
-            &mut ret,
-            public_key,
-            public_key_len,
-            encrypted_seed,
-            encrypted_seed_len
-        )
-    } {
-        sgx_status_t::SGX_SUCCESS => { Ok(ret) }
-        failure_status => {
-            println!("Failed2");
-            return Err(Error::SdkErr {
-                inner: failure_status,
-            })
-        }
-    }
-}
-
 /// This is a safe wrapper for allocating buffers inside the enclave.
 pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> Result<EnclaveBuffer, sgx_status_t> {
     let ptr = buffer.as_ptr();

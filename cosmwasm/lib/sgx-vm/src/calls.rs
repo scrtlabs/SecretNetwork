@@ -6,7 +6,6 @@ use cosmwasm::types::{ContractResult, Env, QueryResult};
 
 use crate::errors::{Error, ParseErr, /*RuntimeErr,*/ SerializeErr};
 use crate::instance::Instance;
-use crate::instance::call_init_seed;
 use crate::Storage;
 
 pub fn call_init<S: Storage + 'static, A: Api + 'static>(
@@ -63,15 +62,6 @@ pub fn call_handle_raw<S: Storage + 'static, A: Api + 'static>(
     instance.call_handle(env, msg).into()
 }
 
-pub fn call_init_seed_wrap(public_key: *const u8,
-                           public_key_len: u32,
-                           encrypted_seed: *const u8,
-                           encrypted_seed_len: u32) -> Result<bool, Error> {
-    call_init_seed(public_key,
-                   public_key_len,
-                   encrypted_seed,
-                   encrypted_seed_len)
-}
 
 /*
 fn call_raw<S: Storage + 'static, A: Api + 'static>(

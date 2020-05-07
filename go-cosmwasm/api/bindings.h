@@ -65,12 +65,6 @@ Buffer handle(cache_t *cache,
 
 cache_t *init_cache(Buffer data_dir, uintptr_t cache_size, Buffer *err);
 
-bool init_seed(Buffer public_key,
-               uint32_t public_key_len,
-               Buffer encrypted_seed,
-               uint32_t encrypted_seed_len,
-               Buffer *err);
-
 Buffer instantiate(cache_t *cache,
                    Buffer contract_id,
                    Buffer params,
