@@ -9,6 +9,13 @@ description = "An enclave running wasmi, to be used by cosmwasm-sgx-vm"
 name = "wasmi_runtime_enclave"
 crate-type = ["staticlib"]
 
+[features]
+default = ["SGX_MODE_SW"]
+SGX_MODE_SW = []
+SGX_MODE_HW = []
+production = []
+test = []
+
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_tse       = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tstd      = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["net", "untrusted_fs","backtrace"] }

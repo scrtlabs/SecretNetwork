@@ -16,38 +16,137 @@ use std::string::String;
 use std::sync::Arc;
 use std::untrusted::fs;
 use std::vec::Vec;
-
+use crate::consts::{API_KEY_FILE, SPID_FILE};
 use crate::hex;
 use crate::imports::*;
 
+use log::*;
 
 pub const DEV_HOSTNAME:&'static str = "api.trustedservices.intel.com";
-pub const SIGRL_SUFFIX:&'static str = "/sgx/dev/attestation/v3/sigrl/";
-pub const REPORT_SUFFIX:&'static str = "/sgx/dev/attestation/v3/report";
+
+#[cfg(feature = "production")]
+pub const SIGRL_SUFFIX: &str = "/sgx/attestation/v4/sigrl/";
+#[cfg(feature = "production")]
+pub const REPORT_SUFFIX: &str = "/sgx/attestation/v4/report";
+
+#[cfg(not(feature = "production"))]
+pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v4/sigrl/";
+#[cfg(not(feature = "production"))]
+pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
+
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
 // extra_data size (limit to 64)
 static REPORT_DATA_SIZE: usize = 64;
 
+#[cfg(not(feature = "SGX_MODE_HW"))]
+pub fn software_mode_quote() -> sgx_status_t {
+
+    // info!("produce_quote entered");
+    // let spid = hex::decode(spid).unwrap();
+    // let mut id = [0; 16];
+    // id.copy_from_slice(&spid);
+    // let spid: sgx_spid_t = sgx_spid_t { id };
+    // info!("before check_busy");
+    // // create quote
+    // let (status, (target_info, _gid)) = check_busy(|| {
+    //     let mut target_info = sgx_target_info_t::default();
+    //     let mut gid = sgx_epid_group_id_t::default();
+    //     info!("before sgx_init_quote");
+    //     let status = unsafe { sgx_init_quote(&mut target_info, &mut gid) };
+    //     (status, (target_info, gid))
+    // });
+    // if status != sgx_status_t::SGX_SUCCESS {
+    //     return Err(Error::SdkErr { inner: status }.into());
+    // }
+    //
+    // // create report
+    // let (status, (report, retval)) = check_busy(move || {
+    //     let mut report = sgx_report_t::default();
+    //     let mut retval = sgx_status_t::SGX_SUCCESS;
+    //     info!("before ecall_get_registration_quote");
+    //     let status = unsafe { ecall_get_registration_quote(eid, &mut retval, &target_info, &mut report) };
+    //     (status, (report, retval))
+    // });
+    //
+    // if status != sgx_status_t::SGX_SUCCESS || retval != sgx_status_t::SGX_SUCCESS {
+    //     return Err(Error::SdkErr { inner: status }.into());
+    // }
+    //
+    //
+    // // calc quote size
+    // let (status, quote_size) = check_busy(|| {
+    //     let mut quote_size: u32 = 0;
+    //     info!("before sgx_calc_quote_size");
+    //     let status = unsafe { sgx_calc_quote_size(std::ptr::null(), 0, &mut quote_size) };
+    //     (status, quote_size)
+    // });
+    // if status != sgx_status_t::SGX_SUCCESS || quote_size == 0 {
+    //     return Err(Error::SdkErr { inner: status }.into());
+    // }
+    //
+    // // get the actual quote
+    // let (status, the_quote) = check_busy(|| {
+    //     let mut the_quote = vec![0u8; quote_size as usize].into_boxed_slice();
+    //     // all of this is according to this: https://software.intel.com/en-us/sgx-sdk-dev-reference-sgx-get-quote
+    //     // the `p_qe_report` is null together with the nonce because we don't have an ISV enclave that needs to verify this
+    //     // and we don't care about replay attacks because the signing key will stay the same and that's what's important.
+    //     let status = unsafe {
+    //         info!("before sgx_get_quote");
+    //         sgx_get_quote(&report,
+    //                       sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+    //                       &spid,
+    //                       std::ptr::null(),
+    //                       std::ptr::null(),
+    //                       0,
+    //                       std::ptr::null_mut(),
+    //                       the_quote.as_mut_ptr() as *mut sgx_quote_t,
+    //                       quote_size,
+    //         )
+    //     };
+    //     (status, the_quote)
+    // });
+    // if status != sgx_status_t::SGX_SUCCESS {
+    //     return Err(Error::SdkErr { inner: status }.into());
+    // }
+    //
+    // let encoded_quote = base64::encode(&the_quote);
+    // info!("encoded_quote: {:?}", encoded_quote);
+    // Ok(encoded_quote)
+
+
+    let (status, rt, (target_info, _gid)) = {
+        let mut target_info = sgx_target_info_t::default();
+        let mut epid = sgx_epid_group_id_t::default();
+        // let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
+        let mut rt : sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+        info!("before sgx_init_quote");
+        let status = unsafe {
+            ocall_sgx_init_quote(&mut rt as *mut sgx_status_t,
+                                 &mut target_info as *mut sgx_target_info_t,
+                                 &mut epid as *mut sgx_epid_group_id_t)
+        };
+        (status, rt, (target_info, epid))
+    };
+    if status != sgx_status_t::SGX_SUCCESS {
+        return status;
+    }
+    if rt != sgx_status_t::SGX_SUCCESS {
+        return rt;
+    }
+
+    let mut report = sgx_report_t::default();
+
+    create_report_with_data(&target_info, & mut report, &[0u8])
+}
+
+#[cfg(not(feature = "SGX_MODE_HW"))]
 pub fn create_report_with_data(target_info: &sgx_target_info_t, out_report: &mut sgx_report_t, extra_data: &[u8]) -> sgx_status_t {
     let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
     // secret data to be attached with the report.
     // if extra_data.len() > REPORT_DATA_SIZE {
     //     return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
     // }
-
-    // // todo: figure out why this code gives me duplicate structure errors?!
-    // match rsgx_create_report(target_info, &report_data) {
-    //     Ok(r) => {
-    //                 *out_report = r;
-    //                 sgx_status_t::SGX_SUCCESS
-    //             }
-    //             Err(err) => {
-    //                 // println!("[-] Enclave: error creating report");
-    //                 sgx_status_t::from(err)
-    //             }
-    // }
-
     // report_data.d[..extra_data.len()].copy_from_slice(extra_data);
     let mut report = sgx_report_t::default();
     let ret = unsafe {
@@ -74,6 +173,7 @@ pub fn create_report_with_data(target_info: &sgx_target_info_t, out_report: &mut
 }
 
 //input: pub_k: &sgx_ec256_public_t, todo: make this the pubkey of the node
+#[cfg(feature = "SGX_MODE_HW")]
 #[allow(const_err)]
 pub fn create_attestation_report(sign_type: sgx_quote_sign_type_t) -> Result<(String, String, String), sgx_status_t> {
     // Workflow:
@@ -177,7 +277,7 @@ pub fn create_attestation_report(sign_type: sgx_quote_sign_type_t) -> Result<(St
     let p_report = (&rep.unwrap()) as * const sgx_report_t;
     let quote_type = sign_type;
 
-    let spid : sgx_spid_t = load_spid("spid.txt");
+    let spid : sgx_spid_t = load_spid(SPID_FILE);
 
     let p_spid = &spid as *const sgx_spid_t;
     let p_nonce = &quote_nonce as * const sgx_quote_nonce_t;
@@ -275,6 +375,7 @@ pub fn create_attestation_report(sign_type: sgx_quote_sign_type_t) -> Result<(St
     Ok((attn_report, sig, cert))
 }
 
+#[cfg(feature = "SGX_MODE_HW")]
 fn parse_response_attn_report(resp : &[u8]) -> (String, String, String){
     println!("parse_response_attn_report");
     let mut headers = [httparse::EMPTY_HEADER; 16];
@@ -336,7 +437,7 @@ fn parse_response_attn_report(resp : &[u8]) -> (String, String, String){
     (attn_report, sig, sig_cert)
 }
 
-
+#[cfg(feature = "SGX_MODE_HW")]
 fn parse_response_sigrl(resp : &[u8]) -> Vec<u8> {
     println!("parse_response_sigrl");
     let mut headers = [httparse::EMPTY_HEADER; 16];
@@ -383,6 +484,7 @@ fn parse_response_sigrl(resp : &[u8]) -> Vec<u8> {
     Vec::new()
 }
 
+#[cfg(feature = "SGX_MODE_HW")]
 pub fn make_ias_client_config() -> rustls::ClientConfig {
     let mut config = rustls::ClientConfig::new();
 
@@ -391,9 +493,9 @@ pub fn make_ias_client_config() -> rustls::ClientConfig {
     config
 }
 
-
+#[cfg(feature = "SGX_MODE_HW")]
 pub fn get_sigrl_from_intel(fd : c_int, gid : u32) -> Vec<u8> {
-    println!("get_sigrl_from_intel fd = {:?}", fd);
+    info!("get_sigrl_from_intel fd = {:?}", fd);
     let config = make_ias_client_config();
     let ias_key = get_ias_api_key();
 
@@ -403,7 +505,7 @@ pub fn get_sigrl_from_intel(fd : c_int, gid : u32) -> Vec<u8> {
                       DEV_HOSTNAME,
                       ias_key);
 
-    println!("{}", req);
+    info!("get_sigrl_from_intel: {}", req);
 
     let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME).unwrap();
     let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
@@ -413,19 +515,19 @@ pub fn get_sigrl_from_intel(fd : c_int, gid : u32) -> Vec<u8> {
     let _result = tls.write(req.as_bytes());
     let mut plaintext = Vec::new();
 
-    println!("write complete");
+    info!("write complete");
 
     match tls.read_to_end(&mut plaintext) {
         Ok(_) => (),
         Err(e) => {
-            println!("get_sigrl_from_intel tls.read_to_end: {:?}", e);
+            info!("get_sigrl_from_intel tls.read_to_end: {:?}", e);
             panic!("haha");
         }
     }
-    println!("read_to_end complete");
+    info!("read_to_end complete");
     let resp_string = String::from_utf8(plaintext.clone()).unwrap();
 
-    println!("{}", resp_string);
+    debug!("{}", resp_string);
 
     // resp_string
 
@@ -433,8 +535,9 @@ pub fn get_sigrl_from_intel(fd : c_int, gid : u32) -> Vec<u8> {
 }
 
 // TODO: support pse
+#[cfg(feature = "SGX_MODE_HW")]
 pub fn get_report_from_intel(fd : c_int, quote : Vec<u8>) -> (String, String, String) {
-    println!("get_report_from_intel fd = {:?}", fd);
+    info!("get_report_from_intel fd = {:?}", fd);
     let config = make_ias_client_config();
     let encoded_quote = base64::encode(&quote[..]);
     let encoded_json = format!("{{\"isvEnclaveQuote\":\"{}\"}}\r\n", encoded_quote);
@@ -447,7 +550,7 @@ pub fn get_report_from_intel(fd : c_int, quote : Vec<u8>) -> (String, String, St
                       encoded_json.len(),
                       encoded_json);
 
-    println!("{}", req);
+    info!("{}", req);
     let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME).unwrap();
     let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
     let mut sock = TcpStream::new(fd).unwrap();
@@ -456,19 +559,20 @@ pub fn get_report_from_intel(fd : c_int, quote : Vec<u8>) -> (String, String, St
     let _result = tls.write(req.as_bytes());
     let mut plaintext = Vec::new();
 
-    println!("write complete");
+    info!("write complete");
 
     tls.read_to_end(&mut plaintext).unwrap();
-    println!("read_to_end complete");
+    info!("read_to_end complete");
     let resp_string = String::from_utf8(plaintext.clone()).unwrap();
 
-    println!("resp_string = {}", resp_string);
+    info!("resp_string = {}", resp_string);
 
     let (attn_report, sig, cert) = parse_response_attn_report(&plaintext);
 
     (attn_report, sig, cert)
 }
 
+#[cfg(feature = "SGX_MODE_HW")]
 fn as_u32_le(array: &[u8; 4]) -> u32 {
     ((array[0] as u32) <<  0) +
         ((array[1] as u32) <<  8) +
@@ -485,8 +589,9 @@ fn load_spid(filename: &str) -> sgx_spid_t {
     hex::decode_spid(&contents)
 }
 
+#[cfg(feature = "SGX_MODE_HW")]
 fn get_ias_api_key() -> String {
-    let mut keyfile = fs::File::open("key.txt").expect("cannot open ias key file");
+    let mut keyfile = fs::File::open(API_KEY_FILE).expect("cannot open ias key file");
     let mut key = String::new();
     keyfile.read_to_string(&mut key).expect("cannot read the ias key file");
     key.trim_end().to_owned()

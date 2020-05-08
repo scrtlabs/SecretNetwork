@@ -24,17 +24,17 @@ extern crate sgx_tcrypto;
 extern crate sgx_tse;
 
 mod hex;
-mod quote;
+mod attestation;
 mod contract_operations;
 mod errors;
 pub mod exports;
 mod gas;
 pub mod imports;
 pub mod logger;
-// mod node_reg;
 mod results;
 mod runtime;
-// mod storage;
+mod consts;
+
 
 use ctor::*;
 use log::LevelFilter;

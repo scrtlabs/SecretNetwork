@@ -11,7 +11,7 @@ function wait_for_tx () {
 }
 
 # init the node
-# rm -rf ~/.enigma*
+rm -rf ~/.enigma*
 enigmacli config chain-id enigma-testnet
 enigmacli config output json
 enigmacli config indent true
@@ -95,3 +95,4 @@ enigmacli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"ad
 
 
 echo "All is done. Yay!"
+

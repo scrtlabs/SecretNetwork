@@ -10,7 +10,10 @@ pub mod traits;
 mod wasm_store;
 mod wasmi;
 
-mod quote_untrusted;
+mod attestation;
+
+// extern crate sgx_signal;
+// use sgx_signal;
 
 pub use crate::cache::CosmCache;
 pub use crate::calls::{
@@ -18,4 +21,4 @@ pub use crate::calls::{
 pub use crate::instance::Instance;
 pub use crate::traits::{Extern, ReadonlyStorage, Storage};
 
-pub use crate::instance::{call_produce_quote, call_produce_report};
+pub use crate::instance::{untrusted_create_attestation_report};

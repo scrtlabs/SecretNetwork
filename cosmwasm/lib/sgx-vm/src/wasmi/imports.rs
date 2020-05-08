@@ -58,7 +58,7 @@ extern "C" {
     pub fn ecall_get_registration_quote(eid: sgx_enclave_id_t, retval: *mut sgx_status_t,
                                         target_info: *const sgx_target_info_t, report: *mut sgx_report_t) -> sgx_status_t;
 
-    pub fn ecall_get_attestation_report(eid: sgx_enclave_id_t, retval: *mut sgx_status_t);
+    pub fn ecall_get_attestation_report(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
 
     // pub fn ocall_sgx_init_quote ( ret_val : *mut sgx_status_t,
     //                               ret_ti  : *mut sgx_target_info_t,

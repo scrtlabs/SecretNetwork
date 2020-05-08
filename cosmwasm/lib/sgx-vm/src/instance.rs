@@ -27,7 +27,7 @@ use crate::errors::{Error, Result};
 // use crate::memory::{read_region, write_region};
 use std::str;
 use crate::wasmi::Module;
-use crate::quote_untrusted::{produce_report, produce_quote};
+use crate::attestation::{inner_create_report, produce_quote};
 
 use sgx_types::{sgx_attributes_t, sgx_launch_token_t, sgx_misc_attribute_t, SgxResult, sgx_status_t};
 use sgx_urts::SgxEnclave;
@@ -43,25 +43,14 @@ pub struct Instance<S: Storage + 'static, A: Api + 'static> {
 static ENCLAVE_FILE: &'static str = "librust_cosmwasm_enclave.signed.so";
 
 // this is here basically to be able to call the enclave initialization -- we can move this somewhere else and simplify
-pub fn call_produce_quote(spid: &[u8]) -> Result<String, Error> {
-    info!("Hello from just before initializing");
-    let enclave = init_enclave().unwrap();
-    info!("Hello from just after initializing");
 
-    let spid_str = hex::encode(spid);
-
-    let result = produce_quote(enclave.geteid(), &spid_str);
-
-    result
-}
-
-pub fn call_produce_report() {
+pub fn untrusted_create_attestation_report() -> SgxResult<sgx_status_t> {
 
     info!("Hello from just before initializing - produce_report");
     let enclave = init_enclave().unwrap();
     info!("Hello from just after initializing - produce_report");
 
-    produce_report(enclave.geteid());
+    inner_create_report(enclave.geteid())
 }
 
 pub fn init_enclave() -> SgxResult<SgxEnclave> {

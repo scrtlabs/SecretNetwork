@@ -13,7 +13,7 @@ use std::str::from_utf8;
 
 use crate::error::{clear_error, handle_c_error, set_error};
 use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
-use cosmwasm_sgx_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache, Extern, call_produce_quote, call_produce_report};
+use cosmwasm_sgx_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache, Extern, untrusted_create_attestation_report};
 
 use ctor::ctor;
 use log;
@@ -36,40 +36,25 @@ fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache<DB, GoApi>> {
 }
 
 #[no_mangle]
-pub extern "C" fn produce_quote(
-    spid: Buffer,
+pub extern "C" fn create_attestation_report(
     err: Option<&mut Buffer>,
-) -> Buffer {
-
-    call_produce_report();
+) -> bool {
 
     let r =
-        catch_unwind(|| do_produce_quote(spid)).unwrap_or_else(|_| Panic {}.fail());
+        catch_unwind(|| untrusted_create_attestation_report()).unwrap_or_else(|_| Panic {}.fail());
 
     let result = match r {
         Ok(t) => {
             clear_error();
-            t
+            true
         }
         Err(e) => {
             set_error(e.to_string(), err);
-            Buffer::default()
+            false
         }
     };
 
     result
-}
-
-pub fn do_produce_quote(spid: Buffer) -> Result<Buffer, Error> {
-
-    let spid = spid.read().ok_or_else(|| empty_err(DATA_DIR_ARG))?;
-
-    let result = call_produce_quote(spid)
-        // todo: figure out some error handling
-        .map(|res|
-        Buffer::from_vec(res.into_bytes()));
-
-    result.map_err(|_| error::empty_err("Yo yo yo"))
 }
 
 fn to_extern(storage: DB, api: GoApi) -> Extern<DB, GoApi> {

@@ -8,6 +8,7 @@ docs
 **/Enclave_t.*
 **/Enclave_u.*
 **/*.lock
+third_party/vendor
 
 cosmwasm/lib/incubator-teaclave-sgx-sdk
 

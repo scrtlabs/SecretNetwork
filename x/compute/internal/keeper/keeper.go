@@ -62,13 +62,16 @@ func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.Accou
 		panic(err)
 	}
 
-	spid, err := hex.DecodeString("b0335fd3Bc1cca8f804eb98a6420592d")
-	quote, err := api.GetQuote(spid)
-
+	_, err = api.CreateAttestationReport()
+	if err != nil {
+		panic(err)
+	}
 
 	if SgxMode() == "HW" {
-		// do attestation here?
+		// validate attestation
+
 	}
+
 	fmt.Println("Got quote", hex.EncodeToString(quote))
 
 	return Keeper{

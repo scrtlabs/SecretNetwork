@@ -27,6 +27,13 @@ $(error Cannot set SGX_DEBUG and SGX_PRERELEASE at the same time!!)
 endif
 endif
 
+######## CVE 2020-0551 (INTEL-SA-00334) mitigation flags ########
+
+ifeq ($(MITIGATION-CVE-2020-0551), LOAD)
+export MITIGATION_CVE_2020_0551=LOAD
+else ifeq ($(MITIGATION-CVE-2020-0551), CF)
+export MITIGATION_CVE_2020_0551=CF
+endif
 
 ifeq ($(SGX_DEBUG), 1)
 	SGX_COMMON_CFLAGS += -O0 -g
@@ -35,12 +42,6 @@ else
 endif
 
 SGX_COMMON_CFLAGS += -fstack-protector
-
-ifeq ($(MITIGATION-CVE-2020-0551), LOAD)
-export MITIGATION_CVE_2020_0551=LOAD
-else ifeq ($(MITIGATION-CVE-2020-0551), CF)
-export MITIGATION_CVE_2020_0551=CF
-endif
 
 ######## CUSTOM Settings ########
 
@@ -95,7 +96,7 @@ librust_cosmwasm_enclave.so: $(CUSTOM_LIBRARY_PATH)/libenclave.a Enclave_t.o
 	$(CXX) Enclave_t.o -o $@ $(RustEnclave_Link_Flags)
 
 $(CUSTOM_LIBRARY_PATH)/libenclave.a: $(CUSTOM_LIBRARY_PATH) $(Rust_Crate_Source)
-	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS="-Z force-unstable-if-unmarked" xargo build --target x86_64-unknown-linux-sgx --release
+	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS="-Z force-unstable-if-unmarked" xargo build --features "SGX_MODE_$(SGX_MODE)" --target x86_64-unknown-linux-sgx --release
 	cp target/x86_64-unknown-linux-sgx/release/libwasmi_runtime_enclave.a $(CUSTOM_LIBRARY_PATH)/libenclave.a
 
 $(CUSTOM_LIBRARY_PATH):
