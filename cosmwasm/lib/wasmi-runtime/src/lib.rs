@@ -11,6 +11,7 @@ extern crate sgx_types;
 extern crate sgx_rand;
 extern crate sgx_tcrypto;
 extern crate sgx_tse;
+extern crate sgx_trts;
 
 mod cert;
 mod hex;

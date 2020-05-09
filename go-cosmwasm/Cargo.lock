@@ -71,9 +71,9 @@ checksum = "b41b7ea54a0c9d92199de89e20e58d49f02f8e699814ef3fdf266f6f748d15c7"
 
 [[package]]
 name = "base64"
-version = "0.12.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d5ca2cd0adc3f48f9e9ea5a6bbdf9ccc0bfade884847e484d452414c7ccffb3"
+checksum = "53d1ccbaf7d9ec9537465a97bf19edc1a4e158ecb49fc16178202238c569cc42"
 
 [[package]]
 name = "bitflags"
@@ -126,7 +126,7 @@ dependencies = [
  "quote 1.0.4",
  "serde",
  "serde_json",
- "syn 1.0.18",
+ "syn 1.0.19",
  "tempfile",
  "toml",
 ]
@@ -143,7 +143,7 @@ dependencies = [
  "quote 1.0.4",
  "serde",
  "serde_json",
- "syn 1.0.18",
+ "syn 1.0.19",
  "tempfile",
  "toml",
 ]
@@ -232,7 +232,7 @@ dependencies = [
 name = "cosmwasm-sgx-vm"
 version = "0.7.0"
 dependencies = [
- "base64 0.12.0",
+ "base64 0.12.1",
  "cosmwasm",
  "downcast-rs",
  "enclave-ffi-types",
@@ -258,7 +258,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf6b25ee9ac1995c54d7adb2eff8cfffb7260bc774fb63c601ec65467f43cd9d"
 dependencies = [
  "quote 1.0.4",
- "syn 1.0.18",
+ "syn 1.0.19",
 ]
 
 [[package]]
@@ -269,7 +269,7 @@ checksum = "e2323f3f47db9a0e77ce7a300605d8d2098597fc451ed1a97bb1f6411bb550a7"
 dependencies = [
  "proc-macro2 1.0.12",
  "quote 1.0.4",
- "syn 1.0.18",
+ "syn 1.0.19",
 ]
 
 [[package]]
@@ -609,7 +609,7 @@ dependencies = [
  "proc-macro2 1.0.12",
  "quote 1.0.4",
  "serde_derive_internals",
- "syn 1.0.18",
+ "syn 1.0.19",
 ]
 
 [[package]]
@@ -632,9 +632,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.106"
+version = "1.0.107"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36df6ac6412072f67cf767ebbde4133a5b2e88e76dc6187fa7104cd16f783399"
+checksum = "eba7550f2cdf88ffc23ab0f1607133486c390a8c0f89b57e589b9654ee15e04d"
 dependencies = [
  "serde_derive",
 ]
@@ -650,13 +650,13 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.106"
+version = "1.0.107"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e549e3abf4fb8621bd1609f11dfc9f5e50320802273b12f3811a67e6716ea6c"
+checksum = "10be45e22e5597d4b88afcc71f9d7bfadcd604bf0c78a3ab4582b8d2b37f39f3"
 dependencies = [
  "proc-macro2 1.0.12",
  "quote 1.0.4",
- "syn 1.0.18",
+ "syn 1.0.19",
 ]
 
 [[package]]
@@ -667,7 +667,7 @@ checksum = "1dbab34ca63057a1f15280bdf3c39f2b1eb1b54c17e98360e511637aef7418c6"
 dependencies = [
  "proc-macro2 1.0.12",
  "quote 1.0.4",
- "syn 1.0.18",
+ "syn 1.0.19",
 ]
 
 [[package]]
@@ -684,17 +684,17 @@ dependencies = [
 [[package]]
 name = "sgx_edl"
 version = "1.1.2"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#253b3ac982b2d09d32f5fa5a2011e3c36bcbed1e"
 
 [[package]]
 name = "sgx_types"
 version = "1.1.2"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#253b3ac982b2d09d32f5fa5a2011e3c36bcbed1e"
 
 [[package]]
 name = "sgx_urts"
 version = "1.1.2"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#df76765f586cf103189a5e62355672c96f4920ce"
+source = "git+https://github.com/apache/teaclave-sgx-sdk.git?tag=v1.1.2#253b3ac982b2d09d32f5fa5a2011e3c36bcbed1e"
 dependencies = [
  "libc",
  "sgx_types",
@@ -766,9 +766,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.18"
+version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "410a7488c0a728c7ceb4ad59b9567eb4053d02e8cc7f5c0e0eeeb39518369213"
+checksum = "e8e5aa70697bb26ee62214ae3288465ecec0000f05182f039b477001f08f5ae7"
 dependencies = [
  "proc-macro2 1.0.12",
  "quote 1.0.4",
@@ -815,7 +815,7 @@ checksum = "3f34e0c1caaa462fd840ec6b768946ea1e7842620d94fe29d5b847138f521269"
 dependencies = [
  "proc-macro2 1.0.12",
  "quote 1.0.4",
- "syn 1.0.18",
+ "syn 1.0.19",
 ]
 
 [[package]]
@@ -863,9 +863,9 @@ checksum = "826e7639553986605ec5979c7dd957c7895e93eabed50ab2ffa7f6128a75097c"
 
 [[package]]
 name = "vec_map"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05c78687fb1a80548ae3250346c3db86a80a7cdd77bda190189f2d0a0987c81a"
+checksum = "f1bddf1187be692e79c5ffeab891132dfb0f236ed36a43c7ed39f1165ee20191"
 
 [[package]]
 name = "wasi"

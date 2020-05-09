@@ -7,7 +7,7 @@ use sgx_types::*;
 use std::io::{BufReader, Read, Write};
 use std::net::TcpStream;
 use std::prelude::v1::*;
-//use sgx_trts::trts::{rsgx_raw_is_outside_enclave, rsgx_lfence};
+
 use std::ptr;
 use std::str;
 use std::string::String;
