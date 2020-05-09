@@ -25,7 +25,7 @@ fn main() {
         // Treat undefined as HW
         _ => {
             println!("******** here! ********");
-            println!("cargo:rustc-link-lib=dylib=sgx_quote_ex");
+            // println!("cargo:rustc-link-lib=dylib=sgx_quote_ex");
             println!("cargo:rustc-link-lib=static=sgx_ukey_exchange");
             //println!("cargo:rustc-link-lib=dylib=sgx_epid.so");
             println!("cargo:rustc-link-lib=dylib=sgx_urts");

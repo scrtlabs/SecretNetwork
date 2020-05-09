@@ -40,21 +40,12 @@ pub extern "C" fn create_attestation_report(
     err: Option<&mut Buffer>,
 ) -> bool {
 
-    let r =
-        catch_unwind(|| untrusted_create_attestation_report()).unwrap_or_else(|_| Panic {}.fail());
-
-    let result = match r {
-        Ok(t) => {
-            clear_error();
-            true
-        }
-        Err(e) => {
-            set_error(e.to_string(), err);
-            false
-        }
-    };
-
-    result
+    if let Err(status) =  untrusted_create_attestation_report() {
+        set_error(status.to_string(), err);
+        return false;
+    }
+    clear_error();
+    true
 }
 
 fn to_extern(storage: DB, api: GoApi) -> Extern<DB, GoApi> {

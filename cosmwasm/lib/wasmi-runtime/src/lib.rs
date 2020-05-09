@@ -7,22 +7,12 @@
 #[macro_use]
 extern crate sgx_tstd as std;
 
-// extern crate base64;
-// extern crate bit_vec;
-// extern crate chrono;
-// extern crate httparse;
-// extern crate itertools;
-// extern crate num_bigint;
-// extern crate rustls;
-// extern crate webpki;
-// extern crate webpki_roots;
-// extern crate yasna;
-
 extern crate sgx_types;
 extern crate sgx_rand;
 extern crate sgx_tcrypto;
 extern crate sgx_tse;
 
+mod cert;
 mod hex;
 mod attestation;
 mod contract_operations;
@@ -34,7 +24,8 @@ pub mod logger;
 mod results;
 mod runtime;
 mod consts;
-
+mod storage;
+mod utils;
 
 use ctor::*;
 use log::LevelFilter;

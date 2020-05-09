@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
 	"os"
@@ -72,7 +71,7 @@ func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.Accou
 
 	}
 
-	fmt.Println("Got quote", hex.EncodeToString(quote))
+	// fmt.Println("Got quote", hex.EncodeToString(quote))
 
 	return Keeper{
 		storeKey:      storeKey,

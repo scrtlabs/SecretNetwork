@@ -12,6 +12,7 @@ type QuoteReport struct {
 	IsvEnclaveQuoteStatus string `json:"isvEnclaveQuoteStatus"`
 	PlatformInfoBlob      string `json:"platformInfoBlob"`
 	IsvEnclaveQuoteBody   string `json:"isvEnclaveQuoteBody"`
+	AdvisoryIDs			  string `json:"advisoryIDs"`
 }
 
 //TODO: add more origin field if needed

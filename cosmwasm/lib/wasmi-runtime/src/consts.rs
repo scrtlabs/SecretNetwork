@@ -15,3 +15,5 @@ pub static SPID_FILE: &str = "spid.txt";
 pub static API_KEY_FILE: &str = "api_key.txt";
 
 pub static RA_CERT: &str = "cert.pem";
+
+pub const CERTEXPIRYDAYS: i64 = 90i64;

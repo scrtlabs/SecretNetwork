@@ -19,11 +19,6 @@ enclave {
             uintptr_t length
         );
 
-        public sgx_status_t ecall_get_registration_quote(
-            [in] const sgx_target_info_t * target_info ,
-            [out]  sgx_report_t * report
-        );
-
         public sgx_status_t ecall_get_attestation_report();
 
         public InitResult ecall_init(

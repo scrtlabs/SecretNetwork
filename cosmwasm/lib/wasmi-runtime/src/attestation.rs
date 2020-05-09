@@ -1,13 +1,11 @@
-
-
 use itertools::Itertools;
+use log::*;
 use sgx_rand::*;
 use sgx_tcrypto::*;
 use sgx_tse::*;
 use sgx_types::*;
 use std::io::{BufReader, Read, Write};
 use std::net::TcpStream;
-use std::prelude::v1::*;
 use std::prelude::v1::*;
 //use sgx_trts::trts::{rsgx_raw_is_outside_enclave, rsgx_lfence};
 use std::ptr;
@@ -16,11 +14,10 @@ use std::string::String;
 use std::sync::Arc;
 use std::untrusted::fs;
 use std::vec::Vec;
+
 use crate::consts::{API_KEY_FILE, SPID_FILE};
 use crate::hex;
 use crate::imports::*;
-
-use log::*;
 
 pub const DEV_HOSTNAME:&'static str = "api.trustedservices.intel.com";
 
@@ -140,6 +137,7 @@ pub fn software_mode_quote() -> sgx_status_t {
     create_report_with_data(&target_info, & mut report, &[0u8])
 }
 
+
 #[cfg(not(feature = "SGX_MODE_HW"))]
 pub fn create_report_with_data(target_info: &sgx_target_info_t, out_report: &mut sgx_report_t, extra_data: &[u8]) -> sgx_status_t {
     let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
@@ -172,10 +170,39 @@ pub fn create_report_with_data(target_info: &sgx_target_info_t, out_report: &mut
     }
 }
 
+
+// todo: add public/private key handling pub_k: &sgx_ec256_public_t,
+#[cfg(feature = "SGX_MODE_HW")]
+pub fn create_attestation_certificate(sign_type: sgx_quote_sign_type_t) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+    let ecc_handle = SgxEccHandle::new();
+    let _result = ecc_handle.open();
+    let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
+
+    let (attn_report, sig, cert) = match create_attestation_report(&pub_k, sign_type) {
+        Ok(r) => r,
+        Err(e) => {
+            error!("Error in create_attestation_report: {:?}", e);
+            return Err(e);
+        }
+    };
+
+    let payload = attn_report + "|" + &sig + "|" + &cert;
+    let (key_der, cert_der) = match crate::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle) {
+        Ok(r) => r,
+        Err(e) => {
+            error!("Error in gen_ecc_cert: {:?}", e);
+            return Err(e);
+        }
+    };
+    let _result = ecc_handle.close();
+
+    Ok((key_der, cert_der))
+}
+
 //input: pub_k: &sgx_ec256_public_t, todo: make this the pubkey of the node
 #[cfg(feature = "SGX_MODE_HW")]
 #[allow(const_err)]
-pub fn create_attestation_report(sign_type: sgx_quote_sign_type_t) -> Result<(String, String, String), sgx_status_t> {
+pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quote_sign_type_t) -> Result<(String, String, String), sgx_status_t> {
     // Workflow:
     // (1) ocall to get the target_info structure (ti) and epid group id (eg)
     // (1.5) get sigrl
@@ -193,7 +220,7 @@ pub fn create_attestation_report(sign_type: sgx_quote_sign_type_t) -> Result<(St
                              &mut eg as *mut sgx_epid_group_id_t)
     };
 
-    println!("eg = {:?}", eg);
+    debug!("EPID group = {:?}", eg);
 
     if res != sgx_status_t::SGX_SUCCESS {
         return Err(res);
@@ -221,7 +248,7 @@ pub fn create_attestation_report(sign_type: sgx_quote_sign_type_t) -> Result<(St
         return Err(rt);
     }
 
-    println!("Got ias_sock = {}", ias_sock);
+    debug!("Got ias_sock successfully = {}", ias_sock);
 
     // Now sigrl_vec is the revocation list, a vec<u8>
     let sigrl_vec : Vec<u8> = get_sigrl_from_intel(ias_sock, eg_num);
@@ -230,20 +257,20 @@ pub fn create_attestation_report(sign_type: sgx_quote_sign_type_t) -> Result<(St
     // Fill ecc256 public key into report_data
     let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
 
-    // let mut pub_k_gx = pub_k.gx.clone();
-    // pub_k_gx.reverse();
-    // let mut pub_k_gy = pub_k.gy.clone();
-    // pub_k_gy.reverse();
-    // report_data.d[..32].clone_from_slice(&pub_k_gx);
-    // report_data.d[32..].clone_from_slice(&pub_k_gy);
+    let mut pub_k_gx = pub_k.gx.clone();
+    pub_k_gx.reverse();
+    let mut pub_k_gy = pub_k.gy.clone();
+    pub_k_gy.reverse();
+    report_data.d[..32].clone_from_slice(&pub_k_gx);
+    report_data.d[32..].clone_from_slice(&pub_k_gy);
 
     let rep = match rsgx_create_report(&ti, &report_data) {
         Ok(r) =>{
-            println!("Report creation => success {:?}", r.body.mr_signer.m);
+            info!("Report creation => success {:?}", r.body.mr_signer.m);
             Some(r)
         },
         Err(e) =>{
-            println!("Report creation => failed {:?}", e);
+            info!("Report creation => failed {:?}", e);
             None
         },
     };
@@ -251,7 +278,7 @@ pub fn create_attestation_report(sign_type: sgx_quote_sign_type_t) -> Result<(St
     let mut quote_nonce = sgx_quote_nonce_t { rand : [0;16] };
     let mut os_rng = os::SgxRng::new().unwrap();
     os_rng.fill_bytes(&mut quote_nonce.rand);
-    println!("rand finished");
+    debug!("Nonce generated successfully");
     let mut qe_report = sgx_report_t::default();
     const RET_QUOTE_BUF_LEN : u32 = 2048;
     let mut return_quote_buf : [u8; RET_QUOTE_BUF_LEN as usize] = [0;RET_QUOTE_BUF_LEN as usize];
@@ -301,11 +328,12 @@ pub fn create_attestation_report(sign_type: sgx_quote_sign_type_t) -> Result<(St
     };
 
     if result != sgx_status_t::SGX_SUCCESS {
+        error!("ocall_get_quote returned {}", result);
         return Err(result);
     }
 
     if rt != sgx_status_t::SGX_SUCCESS {
-        println!("ocall_get_quote returned {}", rt);
+        error!("ocall_get_quote returned {}", rt);
         return Err(rt);
     }
 
@@ -314,7 +342,7 @@ pub fn create_attestation_report(sign_type: sgx_quote_sign_type_t) -> Result<(St
     match rsgx_verify_report(&qe_report) {
         Ok(()) => println!("rsgx_verify_report passed!"),
         Err(x) => {
-            println!("rsgx_verify_report failed with {:?}", x);
+            error!("rsgx_verify_report failed with {:?}", x);
             return Err(x);
         },
     }
@@ -323,11 +351,11 @@ pub fn create_attestation_report(sign_type: sgx_quote_sign_type_t) -> Result<(St
     if ti.mr_enclave.m != qe_report.body.mr_enclave.m ||
         ti.attributes.flags != qe_report.body.attributes.flags ||
         ti.attributes.xfrm  != qe_report.body.attributes.xfrm {
-        println!("qe_report does not match current target_info!");
+        error!("qe_report does not match current target_info!");
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
-    println!("qe_report check passed");
+    info!("QE report check passed");
 
     // Debug
     // for i in 0..quote_len {
@@ -349,11 +377,11 @@ pub fn create_attestation_report(sign_type: sgx_quote_sign_type_t) -> Result<(St
     let rhs_hash = rsgx_sha256_slice(&rhs_vec[..]).unwrap();
     let lhs_hash = &qe_report.body.report_data.d[..32];
 
-    println!("rhs hash = {:02X}", rhs_hash.iter().format(""));
-    println!("report hs= {:02X}", lhs_hash.iter().format(""));
+    debug!("Report rhs hash = {:02X}", rhs_hash.iter().format(""));
+    debug!("Report lhs hash = {:02X}", lhs_hash.iter().format(""));
 
     if rhs_hash != lhs_hash {
-        println!("Quote is tampered!");
+        error!("Quote is tampered!");
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
@@ -377,11 +405,11 @@ pub fn create_attestation_report(sign_type: sgx_quote_sign_type_t) -> Result<(St
 
 #[cfg(feature = "SGX_MODE_HW")]
 fn parse_response_attn_report(resp : &[u8]) -> (String, String, String){
-    println!("parse_response_attn_report");
+    debug!("parse_response_attn_report");
     let mut headers = [httparse::EMPTY_HEADER; 16];
     let mut respp   = httparse::Response::new(&mut headers);
     let result = respp.parse(resp);
-    println!("parse result {:?}", result);
+    debug!("parse result {:?}", result);
 
     let msg : &'static str;
 
@@ -394,10 +422,10 @@ fn parse_response_attn_report(resp : &[u8]) -> (String, String, String){
             a temporary overloading or maintenance). This is a
             temporary state – the same request can be repeated after
             some time. ",
-        _ => {println!("DBG:{}", respp.code.unwrap()); msg = "Unknown error occured"},
+        _ => {error!("DBG:{}", respp.code.unwrap()); msg = "Unknown error occured"},
     }
 
-    println!("{}", msg);
+    debug!("{}", msg);
     let mut len_num : u32 = 0;
 
     let mut sig = String::new();
@@ -411,7 +439,7 @@ fn parse_response_attn_report(resp : &[u8]) -> (String, String, String){
             "Content-Length" => {
                 let len_str = String::from_utf8(h.value.to_vec()).unwrap();
                 len_num = len_str.parse::<u32>().unwrap();
-                println!("content length = {}", len_num);
+                debug!("content length = {}", len_num);
             }
             "X-IASReport-Signature" => sig = str::from_utf8(h.value).unwrap().to_string(),
             "X-IASReport-Signing-Certificate" => cert = str::from_utf8(h.value).unwrap().to_string(),
@@ -430,7 +458,7 @@ fn parse_response_attn_report(resp : &[u8]) -> (String, String, String){
         let header_len = result.unwrap().unwrap();
         let resp_body = &resp[header_len..];
         attn_report = str::from_utf8(resp_body).unwrap().to_string();
-        println!("Attestation report: {}", attn_report);
+        info!("Attestation report: {}", attn_report);
     }
 
     // len_num == 0

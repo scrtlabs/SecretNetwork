@@ -49,6 +49,8 @@ typedef struct GoApi {
 
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
+bool create_attestation_report(Buffer *err);
+
 void free_rust(Buffer buf);
 
 Buffer get_code(cache_t *cache, Buffer id, Buffer *err);
@@ -76,8 +78,6 @@ Buffer instantiate(cache_t *cache,
                    Buffer *err);
 
 Buffer key_gen(Buffer *err);
-
-Buffer produce_quote(Buffer spid, Buffer *err);
 
 Buffer query(cache_t *cache,
              Buffer code_id,

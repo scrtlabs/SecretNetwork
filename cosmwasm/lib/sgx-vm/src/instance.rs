@@ -1,36 +1,19 @@
 use std::env;
 use std::marker::PhantomData;
 use std::path::Path;
+use std::str;
 
-// use snafu::ResultExt;
-/*
-pub use wasmer_runtime_core::typed_func::Func;
-use wasmer_runtime_core::{
-    imports,
-    module::Module,
-    typed_func::{Wasm, WasmTypeList},
-    vm::Ctx,
-};
-*/
 use log::*;
-use lazy_static::lazy_static;
+use sgx_types::{sgx_attributes_t, sgx_launch_token_t, sgx_misc_attribute_t, sgx_status_t, SgxResult};
+use sgx_urts::SgxEnclave;
 
 use cosmwasm::traits::Api;
+use lazy_static::lazy_static;
 
 use crate::{Extern, Storage};
-// use crate::backends::{compile, get_gas, set_gas};
-// use crate::context::{
-//     do_canonical_address, do_human_address, do_read, do_write, leave_storage, setup_context,
-//     take_storage, with_storage_from_context,
-// };
+use crate::attestation::{inner_create_report};
 use crate::errors::{Error, Result};
-// use crate::memory::{read_region, write_region};
-use std::str;
 use crate::wasmi::Module;
-use crate::attestation::{inner_create_report, produce_quote};
-
-use sgx_types::{sgx_attributes_t, sgx_launch_token_t, sgx_misc_attribute_t, SgxResult, sgx_status_t};
-use sgx_urts::SgxEnclave;
 
 /// An instance is a combination of wasm code, storage, and gas limit.
 pub struct Instance<S: Storage + 'static, A: Api + 'static> {
@@ -238,10 +221,11 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::calls::{call_handle, call_init, call_query};
-    use crate::testing::{mock_instance, mock_instance_with_gas_limit};
     use cosmwasm::mock::mock_env;
     use cosmwasm::types::coin;
+
+    use crate::calls::{call_handle, call_init, call_query};
+    use crate::testing::{mock_instance, mock_instance_with_gas_limit};
 
     static CONTRACT_0_7: &[u8] = include_bytes!("../testdata/contract_0.7.wasm");
 

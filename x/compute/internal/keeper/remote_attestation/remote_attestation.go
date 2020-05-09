@@ -12,21 +12,30 @@ import (
 	"time"
 )
 
-func verify_mra_cert(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
-	printCert(rawCerts[0])
+/*
+ Verifies the remote attestation certificate, which is comprised of a the attestation report, intel signature, and enclave signature
+
+ We verify that:
+	- the report is valid, that no outstanding issues exist (todo: match enclave hash or something?)
+	- Intel's certificate signed the report
+	- The public key of the enclave/node exists, so we can use that to encrypt the seed
+
+ */
+func verifyRaCert(rawCert []byte, verifiedChains []*x509.Certificate) error {
+	printCert(rawCert)
 
 	// get the pubkey and payload from raw data
-	pub_k, payload := unmarshalCert(rawCerts[0])
+	pubK, payload := unmarshalCert(rawCert)
 
 	// Load Intel CA, Verify Cert and Signature
-	attn_report_raw, err := verifyCert(payload)
+	attnReportRaw, err := verifyCert(payload)
 	if err != nil {
 		log.Fatalln(err)
 		return err
 	}
 
 	// Verify attestation report
-	err = verifyAttReport(attn_report_raw, pub_k)
+	err = verifyAttReport(attnReportRaw, pubK)
 	if err != nil {
 		log.Fatalln(err)
 		return err
@@ -37,8 +46,8 @@ func verify_mra_cert(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) er
 
 func unmarshalCert(rawbyte []byte) ([]byte, []byte) {
 	// Search for Public Key prime256v1 OID
-	prime256v1_oid := []byte{0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07}
-	offset := uint(bytes.Index(rawbyte, prime256v1_oid))
+	prime256v1Oid := []byte{0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07}
+	offset := uint(bytes.Index(rawbyte, prime256v1Oid))
 	offset += 11 // 10 + TAG (0x03)
 
 	// Obtain Public Key length
@@ -50,11 +59,11 @@ func unmarshalCert(rawbyte []byte) ([]byte, []byte) {
 
 	// Obtain Public Key
 	offset += 1
-	pub_k := rawbyte[offset+2 : offset+length] // skip "00 04"
+	pubK := rawbyte[offset+2 : offset+length] // skip "00 04"
 
 	// Search for Netscape Comment OID
-	ns_cmt_oid := []byte{0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x42, 0x01, 0x0D}
-	offset = uint(bytes.Index(rawbyte, ns_cmt_oid))
+	nsCmtOid := []byte{0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x42, 0x01, 0x0D}
+	offset = uint(bytes.Index(rawbyte, nsCmtOid))
 	offset += 12 // 11 + TAG (0x04)
 
 	// Obtain Netscape Comment length
@@ -67,30 +76,30 @@ func unmarshalCert(rawbyte []byte) ([]byte, []byte) {
 	// Obtain Netscape Comment
 	offset += 1
 	payload := rawbyte[offset : offset+length]
-	return pub_k, payload
+	return pubK, payload
 }
 
 func verifyCert(payload []byte) ([]byte, error) {
 	// Extract each field
-	pl_split := bytes.Split(payload, []byte{0x7C})
-	attn_report_raw := pl_split[0]
-	sig_raw := pl_split[1]
+	plSplit := bytes.Split(payload, []byte{0x7C}) // '|'
+	attnReportRaw := plSplit[0]
+	sigRaw := plSplit[1]
 
-	var sig, sig_cert_dec []byte
-	sig, err := base64.StdEncoding.DecodeString(string(sig_raw))
+	var sig, sigCertDec []byte
+	sig, err := base64.StdEncoding.DecodeString(string(sigRaw))
 	if err != nil {
 		log.Fatalln(err)
 		return nil, err
 	}
 
-	sig_cert_raw := pl_split[2]
-	sig_cert_dec, err = base64.StdEncoding.DecodeString(string(sig_cert_raw))
+	sigCertRaw := plSplit[2]
+	sigCertDec, err = base64.StdEncoding.DecodeString(string(sigCertRaw))
 	if err != nil {
 		log.Fatalln(err)
 		return nil, err
 	}
 
-	certServer, err := x509.ParseCertificate(sig_cert_dec)
+	certServer, err := x509.ParseCertificate(sigCertDec)
 	if err != nil {
 		log.Fatalln(err)
 		return nil, err
@@ -119,19 +128,19 @@ func verifyCert(payload []byte) ([]byte, error) {
 	}
 
 	// Verify the signature against the signing cert
-	err = certServer.CheckSignature(certServer.SignatureAlgorithm, attn_report_raw, sig)
+	err = certServer.CheckSignature(certServer.SignatureAlgorithm, attnReportRaw, sig)
 	if err != nil {
 		log.Fatalln(err)
 		return nil, err
 	} else {
 		fmt.Println("Signature good")
 	}
-	return attn_report_raw, nil
+	return attnReportRaw, nil
 }
 
-func verifyAttReport(attn_report_raw []byte, pub_k []byte) error {
+func verifyAttReport(attnReportRaw []byte, pubK []byte) error {
 	var qr QuoteReport
-	err := json.Unmarshal(attn_report_raw, &qr)
+	err := json.Unmarshal(attnReportRaw, &qr)
 	if err != nil {
 		return err
 	}
@@ -153,7 +162,7 @@ func verifyAttReport(attn_report_raw []byte, pub_k []byte) error {
 		switch qr.IsvEnclaveQuoteStatus {
 		case "OK":
 			break
-		case "GROUP_OUT_OF_DATE", "GROUP_REVOKED", "CONFIGURATION_NEEDED":
+		case "GROUP_OUT_OF_DATE", "GROUP_REVOKED", "CONFIGURATION_NEEDED", "CONFIGURATION_AND_SW_HARDENING_NEEDED":
 			// Verify platformInfoBlob for further info if status not OK
 			if qr.PlatformInfoBlob != "" {
 				platInfo, err := hex.DecodeString(qr.PlatformInfoBlob)
@@ -171,6 +180,26 @@ func verifyAttReport(attn_report_raw []byte, pub_k []byte) error {
 			} else {
 				return errors.New("Failed to fetch platformInfoBlob from attestation report")
 			}
+			if qr.AdvisoryIDs != "" {
+				cves, err := json.Marshal(qr.AdvisoryIDs)
+				if err != nil {
+					return err
+				}
+				fmt.Println("Advisory IDs: " + string(cves))
+			}
+			//return errors.New("Quote status invalid")
+		case "SW_HARDENING_NEEDED":
+			if qr.AdvisoryIDs != "" {
+				cves, err := json.Marshal(qr.AdvisoryIDs)
+				if err != nil {
+					return err
+				}
+				fmt.Println("Advisory IDs: " + string(cves))
+				//return errors.New("Platform is vulnerable, and requires updates before authorization")
+			} else {
+				return errors.New("Failed to fetch advisory IDs even though platform is vulnerable")
+			}
+
 		default:
 			return errors.New("SGX_ERROR_UNEXPECTED")
 		}
@@ -179,7 +208,7 @@ func verifyAttReport(attn_report_raw []byte, pub_k []byte) error {
 		return err
 	}
 
-	// 3. Verify quote body
+	// 3. Verify quote body (mandatory field)
 	if qr.IsvEnclaveQuoteBody != "" {
 		qb, err := base64.StdEncoding.DecodeString(qr.IsvEnclaveQuoteBody)
 		if err != nil {
@@ -192,7 +221,7 @@ func verifyAttReport(attn_report_raw []byte, pub_k []byte) error {
 			quoteHex += fmt.Sprintf("%02x", int(b))
 		}
 
-		for _, b := range pub_k {
+		for _, b := range pubK {
 			pubHex += fmt.Sprintf("%02x", int(b))
 		}
 

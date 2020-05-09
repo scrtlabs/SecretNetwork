@@ -10,7 +10,7 @@ pub mod traits;
 mod wasm_store;
 mod wasmi;
 
-mod attestation;
+pub mod attestation;
 
 // extern crate sgx_signal;
 // use sgx_signal;

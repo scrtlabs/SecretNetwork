@@ -15,9 +15,9 @@ use crate::attestation::{create_attestation_report};
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
 use crate::attestation::{create_report_with_data, software_mode_quote};
+use crate::attestation::create_attestation_certificate;
 
-
-
+use crate::storage::write_to_untrusted;
 
 #[no_mangle]
 pub extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
@@ -112,17 +112,21 @@ pub extern "C" fn ecall_key_gen() -> KeyGenResult {
 #[cfg(feature = "SGX_MODE_HW")]
 #[no_mangle]
 pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
-    let (attn_report, sig, cert) = match create_attestation_report(sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE) {
+    let (private_key_der, cert) = match create_attestation_certificate(sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE) {
         Err(e) => {
-            println!("Error in create_attestation_report: {:?}", e);
+            error!("Error in create_attestation_certificate: {:?}", e);
             return e;
         }
         Ok(res) => {
             res
         }
     };
-    let payload = attn_report + "|" + &sig + "|" + &cert;
-    info!("{:?}", payload);
+    info!("private key {:?}, cert: {:?}", private_key_der, cert);
+
+    if let Err(status) = write_to_untrusted(cert.as_slice(), "attestation_cert.der") {
+        return status;
+    }
+    //seal(private_key_der, "ecc_cert_private.der")
     sgx_status_t::SGX_SUCCESS
 }
 
