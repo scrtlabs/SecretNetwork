@@ -26,6 +26,8 @@ enigmad gentx --name a --keyring-backend test --amount 1000000uscrt
 enigmad collect-gentxs
 enigmad validate-genesis
 
+enigmad init-enclave
+
 RUST_BACKTRACE=1 enigmad start &
 
 # ENIGMAD_PID=$(echo $!)

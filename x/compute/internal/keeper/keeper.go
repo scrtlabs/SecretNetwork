@@ -3,7 +3,6 @@ package keeper
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
 	"os"
 	"path/filepath"
 
@@ -61,17 +60,10 @@ func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.Accou
 		panic(err)
 	}
 
-	_, err = api.CreateAttestationReport()
-	if err != nil {
-		panic(err)
-	}
-
 	if SgxMode() == "HW" {
 		// validate attestation
 
 	}
-
-	// fmt.Println("Got quote", hex.EncodeToString(quote))
 
 	return Keeper{
 		storeKey:      storeKey,
