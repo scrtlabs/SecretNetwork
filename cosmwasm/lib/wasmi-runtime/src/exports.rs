@@ -1,14 +1,13 @@
 use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
 use sgx_types::sgx_status_t;
 use std::ffi::c_void;
-use std::slice;
 
-use crate::node_reg::{KeyPair, PubKey};
+use crate::keys::{KeyPair, PubKey};
 use crate::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
     result_query_success_to_queryresult,
 };
-use crate::storage::seal;
+use crate::storage::{seal, NODE_SK_SEALING_PATH};
 
 #[no_mangle]
 pub extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
@@ -94,7 +93,7 @@ pub unsafe extern "C" fn ecall_key_gen(pk_node: *mut PubKey) -> sgx_types::sgx_s
     };
 
     let privkey = key_pair.get_privkey();
-    match seal(&privkey, "/tmp/sk_node.sealed") {
+    match seal(&privkey, NODE_SK_SEALING_PATH) {
         Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
         Ok(_) => { /* continue */ }
     }; // can read with SecretKey::from_slice()

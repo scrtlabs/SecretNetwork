@@ -50,12 +50,18 @@ impl KeyPair {
     /// Please don't use it to generate a new key, if you want a new key use `KeyPair::new()`
     /// Because `KeyPair::new()` will make sure it uses a good random source and will loop private keys until it's a good key.
     /// (and it's best to isolate the generation of keys to one place)
-    // pub fn from_slice(privkey: &[u8; 32]) -> Result<KeyPair, CryptoError> {
-    //     let privkey = SecretKey::parse(&privkey).map_err(|e| CryptoError::KeyError {})?;
-    //     let pubkey = PublicKey::from_secret_key(&privkey);
+    pub fn new_from_slice(privkey: &[u8; 32]) -> Result<KeyPair, CryptoError> {
+        let context = Secp256k1::new();
 
-    //     Ok(KeyPair { privkey, pubkey })
-    // }
+        let privkey = SecretKey::from_slice(privkey).map_err(|e| CryptoError::KeyError {})?;
+        let pubkey = PublicKey::from_secret_key(&context, &privkey);
+
+        Ok(KeyPair {
+            context,
+            privkey,
+            pubkey,
+        })
+    }
 
     /// This function does an ECDH(point multiplication) between one's private key and the other one's public key.
     ///
