@@ -20,8 +20,18 @@ import (
 	- Intel's certificate signed the report
 	- The public key of the enclave/node exists, so we can use that to encrypt the seed
 
- */
-func verifyRaCert(rawCert []byte, verifiedChains []*x509.Certificate) error {
+*/
+
+/*
+ Verifies the remote attestation certificate, which is comprised of a the attestation report, intel signature, and enclave signature
+
+ We verify that:
+	- the report is valid, that no outstanding issues exist (todo: match enclave hash or something?)
+	- Intel's certificate signed the report
+	- The public key of the enclave/node exists, so we can use that to encrypt the seed
+
+*/
+func VerifyRaCert(rawCert []byte) ([]byte, error) {
 	printCert(rawCert)
 
 	// get the pubkey and payload from raw data
@@ -31,17 +41,17 @@ func verifyRaCert(rawCert []byte, verifiedChains []*x509.Certificate) error {
 	attnReportRaw, err := verifyCert(payload)
 	if err != nil {
 		log.Fatalln(err)
-		return err
+		return nil, err
 	}
 
 	// Verify attestation report
 	err = verifyAttReport(attnReportRaw, pubK)
 	if err != nil {
 		log.Fatalln(err)
-		return err
+		return nil, err
 	}
 
-	return nil
+	return pubK, nil
 }
 
 func unmarshalCert(rawbyte []byte) ([]byte, []byte) {
@@ -106,7 +116,7 @@ func verifyCert(payload []byte) ([]byte, error) {
 	}
 
 	roots := x509.NewCertPool()
-	cacert, err := readFile("./../../cert/AttestationReportSigningCACert.pem")
+	cacert, err := readFile("./remote_attestation/Intel_SGX_Attestation_RootCA.pem")
 	if err != nil {
 		log.Fatalln(err)
 		return nil, err
@@ -180,7 +190,7 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) error {
 			} else {
 				return errors.New("Failed to fetch platformInfoBlob from attestation report")
 			}
-			if qr.AdvisoryIDs != "" {
+			if len(qr.AdvisoryIDs) != 0 {
 				cves, err := json.Marshal(qr.AdvisoryIDs)
 				if err != nil {
 					return err
@@ -189,13 +199,13 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) error {
 			}
 			//return errors.New("Quote status invalid")
 		case "SW_HARDENING_NEEDED":
-			if qr.AdvisoryIDs != "" {
+			if len(qr.AdvisoryIDs) != 0 {
 				cves, err := json.Marshal(qr.AdvisoryIDs)
 				if err != nil {
 					return err
 				}
 				fmt.Println("Advisory IDs: " + string(cves))
-				//return errors.New("Platform is vulnerable, and requires updates before authorization")
+				// return errors.New("Platform is vulnerable, and requires updates before authorization: " + string(cves))
 			} else {
 				return errors.New("Failed to fetch advisory IDs even though platform is vulnerable")
 			}
@@ -227,6 +237,7 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) error {
 
 		qrData := parseReport(qb, quoteHex)
 
+		// todo: possibly verify mr signer/enclave?
 		fmt.Println("Quote = [" + quoteBytes[:len(quoteBytes)-2] + "]")
 		fmt.Println("sgx quote version = ", qrData.version)
 		fmt.Println("sgx quote signature type = ", qrData.signType)

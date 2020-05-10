@@ -6,13 +6,13 @@ import (
 )
 
 type QuoteReport struct {
-	ID                    string `json:"id"`
-	Timestamp             string `json:"timestamp"`
-	Version               int    `json:"version"`
-	IsvEnclaveQuoteStatus string `json:"isvEnclaveQuoteStatus"`
-	PlatformInfoBlob      string `json:"platformInfoBlob"`
-	IsvEnclaveQuoteBody   string `json:"isvEnclaveQuoteBody"`
-	AdvisoryIDs			  string `json:"advisoryIDs"`
+	ID                    string   `json:"id"`
+	Timestamp             string   `json:"timestamp"`
+	Version               int      `json:"version"`
+	IsvEnclaveQuoteStatus string   `json:"isvEnclaveQuoteStatus"`
+	PlatformInfoBlob      string   `json:"platformInfoBlob"`
+	IsvEnclaveQuoteBody   string   `json:"isvEnclaveQuoteBody"`
+	AdvisoryIDs           []string `json:"advisoryIDs"`
 }
 
 //TODO: add more origin field if needed
@@ -30,15 +30,15 @@ type QuoteReportBody struct {
 }
 
 type PlatformInfoBlob struct {
-	Sgx_epid_group_flags       uint8             `json:"sgx_epid_group_flags"`
-	Sgx_tcb_evaluation_flags   uint32            `json:"sgx_tcb_evaluation_flags"`
-	Pse_evaluation_flags       uint32            `json:"pse_evaluation_flags"`
-	Latest_equivalent_tcb_psvn string            `json:"latest_equivalent_tcb_psvn"`
-	Latest_pse_isvsvn          string            `json:"latest_pse_isvsvn"`
-	Latest_psda_svn            string            `json:"latest_psda_svn"`
-	Xeid                       uint32            `json:"xeid"`
-	Gid                        uint32            `json:"gid"`
-	Sgx_ec256_signature_t      SGXEC256Signature `json:"sgx_ec256_signature_t"`
+	SgxEpidGroupFlags       uint8             `json:"sgx_epid_group_flags"`
+	SgxTcbEvaluationFlags   uint32            `json:"sgx_tcb_evaluation_flags"`
+	PseEvaluationFlags      uint32            `json:"pse_evaluation_flags"`
+	LatestEquivalentTcbPsvn string            `json:"latest_equivalent_tcb_psvn"`
+	LatestPseIsvsvn         string            `json:"latest_pse_isvsvn"`
+	LatestPsdaSvn           string            `json:"latest_psda_svn"`
+	Xeid                    uint32            `json:"xeid"`
+	Gid                     uint32            `json:"gid"`
+	SgxEc256SignatureT      SGXEC256Signature `json:"sgx_ec256_signature_t"`
 }
 
 type SGXEC256Signature struct {
@@ -59,17 +59,17 @@ func parseReport(quoteBytes []byte, quoteHex string) *QuoteReportData {
 
 // directly read from []byte
 func parsePlatform(piBlobByte []byte) *PlatformInfoBlob {
-	piBlob := &PlatformInfoBlob{Sgx_ec256_signature_t: SGXEC256Signature{}}
-	piBlob.Sgx_epid_group_flags = uint8(piBlobByte[0])
-	piBlob.Sgx_tcb_evaluation_flags = computeDec(piBlobByte[1:3])
-	piBlob.Pse_evaluation_flags = computeDec(piBlobByte[3:5])
-	piBlob.Latest_equivalent_tcb_psvn = bytesToString(piBlobByte[5:23])
-	piBlob.Latest_pse_isvsvn = bytesToString(piBlobByte[23:25])
-	piBlob.Latest_psda_svn = bytesToString(piBlobByte[25:29])
+	piBlob := &PlatformInfoBlob{SgxEc256SignatureT: SGXEC256Signature{}}
+	piBlob.SgxEpidGroupFlags = uint8(piBlobByte[0])
+	piBlob.SgxTcbEvaluationFlags = computeDec(piBlobByte[1:3])
+	piBlob.PseEvaluationFlags = computeDec(piBlobByte[3:5])
+	piBlob.LatestEquivalentTcbPsvn = bytesToString(piBlobByte[5:23])
+	piBlob.LatestPseIsvsvn = bytesToString(piBlobByte[23:25])
+	piBlob.LatestPsdaSvn = bytesToString(piBlobByte[25:29])
 	piBlob.Xeid = computeDec(piBlobByte[29:33])
 	piBlob.Gid = computeDec(piBlobByte[33:37])
-	piBlob.Sgx_ec256_signature_t.Gx = bytesToString(piBlobByte[37:69])
-	piBlob.Sgx_ec256_signature_t.Gy = bytesToString(piBlobByte[69:])
+	piBlob.SgxEc256SignatureT.Gx = bytesToString(piBlobByte[37:69])
+	piBlob.SgxEc256SignatureT.Gy = bytesToString(piBlobByte[69:])
 
 	return piBlob
 }
