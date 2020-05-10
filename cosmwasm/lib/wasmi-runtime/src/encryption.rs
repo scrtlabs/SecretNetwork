@@ -14,22 +14,14 @@ type IV = [u8; IV_SIZE];
 /// This function does the same as [`self::encrypt`] but accepts an IV.
 /// it *shouldn't* be called directly. only from tests or [`crate::Encryption::encrypt_with_nonce`] implementations.
 fn encrypt(message: &[u8], key: &SymmetricKey) -> Result<Vec<u8>, CryptoError> {
-    let mut iv: IV;
-    rsgx_read_rand(&mut iv).map_err(|e| CryptoError::RandomError {})?;
-
     let aes_encrypt =
         aead::SealingKey::new(&AES_MODE, key).map_err(|_| CryptoError::KeyError {})?;
 
     let mut in_out = message.to_owned();
-    let tag_size = AES_MODE.tag_len();
+    let tag_size = AES_MODE.tag_len(); // padding?
     in_out.extend(vec![0u8; tag_size]);
-    let seal_size = {
-        let iv = Nonce::assume_unique_for_key(iv);
-        // aead::seal_in_place_append_tag(&aes_encrypt, iv, Aad::empty(), &mut in_out, tag_size)
-        //     .map_err(|_| CryptoError::EncryptionError)
-        aead::seal_in_place_append_tag(&aes_encrypt, Aad::empty(), &mut in_out)
-            .map_err(|_| CryptoError::EncryptionError)
-    }?;
+    let seal_size = aead::seal_in_place_append_tag(&aes_encrypt, Aad::empty(), &mut in_out)
+        .map_err(|_| CryptoError::EncryptionError)?;
 
     in_out.truncate(seal_size);
     in_out.extend_from_slice(&iv);
