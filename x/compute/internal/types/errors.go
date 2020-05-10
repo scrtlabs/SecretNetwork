@@ -34,4 +34,6 @@ var (
 
 	// ErrSeedInitFailed error when the seed initialization fails
 	ErrSeedInitFailed = sdkErrors.Register(DefaultCodespace, 9, "Initialize node seed failed")
+
+	ErrAuthenticateFailed = sdkErrors.Register(DefaultCodespace, 10, "Failed to authenticate node")
 )

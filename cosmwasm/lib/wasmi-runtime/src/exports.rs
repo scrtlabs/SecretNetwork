@@ -167,7 +167,11 @@ pub extern "C" fn ecall_get_encrypted_seed(cert: *const u8, cert_len: u32, seed:
         }
     };
 
-    seed.copy_from_slice(pk.as_slice());
+    let test_result = [41u8; 32];
+
+    info!("Hello from seed copying!");
+
+    seed.copy_from_slice(&test_result);
     // calc encrypted seed
 
     // return seed

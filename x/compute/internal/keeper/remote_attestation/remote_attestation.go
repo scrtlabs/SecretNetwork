@@ -116,12 +116,12 @@ func verifyCert(payload []byte) ([]byte, error) {
 	}
 
 	roots := x509.NewCertPool()
-	cacert, err := readFile("./remote_attestation/Intel_SGX_Attestation_RootCA.pem")
-	if err != nil {
-		log.Fatalln(err)
-		return nil, err
-	}
-	ok := roots.AppendCertsFromPEM([]byte(cacert))
+	//cacert, err := readFile("./remote_attestation/Intel_SGX_Attestation_RootCA.pem")
+	//if err != nil {
+	//	log.Fatalln(err)
+	//	return nil, err
+	//}
+	ok := roots.AppendCertsFromPEM([]byte(rootIntelPEM))
 	if !ok {
 		panic("failed to parse root certificate")
 	}

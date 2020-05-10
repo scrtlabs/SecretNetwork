@@ -68,6 +68,7 @@ var (
 )
 
 type (
+	MsgRaAuthenticate       = types.RaAuthenticate
 	GenesisState            = types.GenesisState
 	Code                    = types.Code
 	Contract                = types.Contract

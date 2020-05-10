@@ -18,7 +18,7 @@ use cosmwasm_sgx_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache,
 
 use ctor::ctor;
 use log;
-
+use log::*;
 use cosmwasm_sgx_vm::{untrusted_get_encrypted_seed, create_attestation_report_u, init_seed_u};
 
 #[ctor]
@@ -43,7 +43,7 @@ pub extern "C" fn get_encrypted_seed(
     cert: Buffer,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-
+    info!("Hello from get_encrypted_seed");
     let cert_slice = match cert.read() {
         None => {
             set_error("Attestation Certificate is empty".to_string(), err);
@@ -51,9 +51,10 @@ pub extern "C" fn get_encrypted_seed(
         },
         Some(r) => r
     };
-
+    info!("Hello from right before untrusted_get_encrypted_seed");
     let result = match untrusted_get_encrypted_seed(cert_slice) {
         Err(e) => {
+            error!("Error :(");
             set_error(e.to_string(), err);
             return Buffer::default();
         }

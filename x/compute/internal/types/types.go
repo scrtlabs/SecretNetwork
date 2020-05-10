@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	ra "github.com/enigmampc/EnigmaBlockchain/x/compute/internal/keeper/remote_attestation"
 
 	tmBytes "github.com/tendermint/tendermint/libs/bytes"
 
@@ -13,8 +14,15 @@ import (
 const defaultLRUCacheSize = uint64(0)
 const defaultQueryGasLimit = uint64(3000000)
 
-const PublicKeyLength = 128 // encoded length
+const PublicKeyLength = 128   // encoded length
 const EncryptedKeyLength = 64 // encoded length
+
+type NodeID []byte
+
+type RegistrationNodeInfo struct {
+	Certificate   ra.Certificate
+	EncryptedSeed []byte
+}
 
 // Model is a struct that holds a KV pair
 type Model struct {

@@ -10,6 +10,7 @@ func RegisterCodec(cdc *codec.Codec) {
 	cdc.RegisterConcrete(&MsgStoreCode{}, "wasm/store-code", nil)
 	cdc.RegisterConcrete(&MsgInstantiateContract{}, "wasm/instantiate", nil)
 	cdc.RegisterConcrete(&MsgExecuteContract{}, "wasm/execute", nil)
+	cdc.RegisterConcrete(&RaAuthenticate{}, "wasm/authenticate", nil)
 }
 
 // ModuleCdc generic sealed codec to be used throughout module

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
+	ra "github.com/enigmampc/EnigmaBlockchain/x/compute/internal/keeper/remote_attestation"
 	"os"
 	"path/filepath"
 
@@ -161,6 +162,42 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	return codeID, nil
 }
 
+// Create uploads and compiles a WASM contract, returning a short identifier for the contract
+func (k Keeper) AuthenticateNode(ctx sdk.Context, certificate ra.Certificate, nodeId types.NodeID) ([]byte, error) {
+	fmt.Println("AuthenticateNode")
+	var encSeed []byte
+
+	if isSimulationMode(ctx) {
+		// any sha256 hash is good enough
+		encSeed = make([]byte, 32)
+	} else {
+		isAuth, err := k.isNodeAuthenticated(ctx, nodeId)
+		if err != nil {
+			return nil, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
+		}
+		fmt.Println("After isNodeAuthenticated")
+		if isAuth {
+			return k.getRegistrationInfo(ctx, nodeId).EncryptedSeed, nil
+		}
+		fmt.Println("After getRegistrationInfo")
+		encSeed, err = api.GetEncryptedSeed(certificate)
+		fmt.Println("After GetEncryptedSeed")
+		if err != nil {
+			// return 0, sdkerrors.Wrap(err, "cosmwasm create")
+			return nil, sdkerrors.Wrap(types.ErrAuthenticateFailed, err.Error())
+		}
+		fmt.Println("Woohoo")
+	}
+
+	regInfo := types.RegistrationNodeInfo{
+		Certificate:   certificate,
+		EncryptedSeed: encSeed,
+	}
+	k.setRegistrationInfo(ctx, regInfo, nodeId)
+
+	return encSeed, nil
+}
+
 // returns true when simulation mode used by gas=auto queries
 func isSimulationMode(ctx sdk.Context) bool {
 	return ctx.GasMeter().Limit() == 0 && ctx.BlockHeight() != 0
@@ -210,7 +247,6 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	res, err := k.wasmer.Instantiate(codeInfo.CodeHash, params, initMsg, prefixStore, cosmwasmAPI, gas)
 	if err != nil {
 		return contractAddress, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
-		// return contractAddress, sdkerrors.Wrap(err, "cosmwasm instantiate")
 	}
 	consumeGas(ctx, res.GasUsed)
 

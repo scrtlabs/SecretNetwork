@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bufio"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"strconv"
@@ -42,8 +43,53 @@ func GetTxCmd(cdc *codec.Codec) *cobra.Command {
 		StoreCodeCmd(cdc),
 		InstantiateContractCmd(cdc),
 		ExecuteContractCmd(cdc),
+		AuthenticateNodeCmd(cdc),
 	)...)
 	return txCmd
+}
+
+// StoreCodeCmd will upload code to be reused.
+func AuthenticateNodeCmd(cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "auth [cert file] [node-id]",
+		Short: "Upload a certificate to authenticate the node",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			inBuf := bufio.NewReader(cmd.InOrStdin())
+			txBldr := auth.NewTxBuilderFromCLI(inBuf).WithTxEncoder(utils.GetTxEncoder(cdc))
+			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
+
+			// parse coins trying to be sent
+			cert, err := ioutil.ReadFile(args[0])
+			if err != nil {
+				return err
+			}
+
+			pubkey, err := hex.DecodeString(args[1])
+			if err != nil {
+				return err
+			}
+
+			// build and sign the transaction, then broadcast to Tendermint
+			msg := types.RaAuthenticate{
+				Sender:      cliCtx.GetFromAddress(),
+				Certificate: cert,
+				PubKey:      pubkey,
+			}
+			err = msg.ValidateBasic()
+
+			if err != nil {
+				return err
+			}
+
+			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
+		},
+	}
+
+	cmd.Flags().String(flagSource, "", "A valid URI reference to the contract's source code, optional")
+	cmd.Flags().String(flagBuilder, "", "A valid docker tag for the build system, optional")
+
+	return cmd
 }
 
 // StoreCodeCmd will upload code to be reused.
