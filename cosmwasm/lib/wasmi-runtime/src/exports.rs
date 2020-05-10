@@ -5,7 +5,7 @@ use crate::results::{
 };
 use std::ffi::c_void;
 use std::ptr::null;
-use sgx_trts::trts::{rsgx_raw_is_outside_enclave, rsgx_lfence};
+use sgx_trts::trts::{rsgx_raw_is_outside_enclave, rsgx_lfence, rsgx_sfence};
 use log::*;
 
 use sgx_types::{sgx_report_t, sgx_target_info_t, sgx_status_t, sgx_quote_sign_type_t};
@@ -138,11 +138,8 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
 
 #[cfg(feature = "SGX_MODE_HW")]
 #[no_mangle]
-pub extern "C" fn ecall_get_encrypted_seed(cert: *mut u8, cert_len: u32) -> sgx_status_t {
-    if rsgx_raw_is_outside_enclave(cert as * const u8, cert_len as usize) {
-        error!("ecall_get_encrypted_seed tried to access memory from outside the enclave");
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+pub extern "C" fn ecall_get_encrypted_seed(cert: *const u8, cert_len: u32) -> sgx_status_t {
+
     rsgx_lfence();
 
     let cert_slice = unsafe { std::slice::from_raw_parts(cert, cert_len as usize) };

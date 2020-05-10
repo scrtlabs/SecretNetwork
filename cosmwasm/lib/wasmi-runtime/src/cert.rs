@@ -355,6 +355,7 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
                 }
                 // return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
             }
+
             _ => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
         }
     } else {
