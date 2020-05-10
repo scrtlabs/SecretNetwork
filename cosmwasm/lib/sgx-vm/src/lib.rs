@@ -7,8 +7,10 @@ pub mod instance;
 mod mock;
 pub mod testing;
 pub mod traits;
+
 mod wasm_store;
 mod wasmi;
+mod seed;
 
 pub mod attestation;
 
@@ -21,4 +23,4 @@ pub use crate::calls::{
 pub use crate::instance::Instance;
 pub use crate::traits::{Extern, ReadonlyStorage, Storage};
 
-pub use crate::instance::{untrusted_create_attestation_report};
+pub use crate::instance::{create_attestation_report_u, init_seed_u, untrusted_get_encrypted_seed};

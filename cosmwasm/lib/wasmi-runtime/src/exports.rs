@@ -7,8 +7,10 @@ use std::ffi::c_void;
 use std::ptr::null;
 use sgx_trts::trts::{rsgx_raw_is_outside_enclave, rsgx_lfence, rsgx_sfence, rsgx_slice_is_outside_enclave};
 use log::*;
-
+use std::slice;
 use sgx_types::{sgx_report_t, sgx_target_info_t, sgx_status_t, sgx_quote_sign_type_t};
+
+use crate::node_reg::init_seed;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use crate::attestation::{create_attestation_report};
@@ -171,4 +173,29 @@ pub extern "C" fn ecall_get_encrypted_seed(cert: *const u8, cert_len: u32, seed:
     // return seed
 
     sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ecall_init_seed (
+    public_key: *const u8,
+    public_key_len: u32,
+    encrypted_seed: *const u8,
+    encrypted_seed_len: u32
+) -> sgx_status_t {
+
+    if public_key.is_null() || public_key_len == 0 {
+        error!("Tried to access an empty pointer - public_key.is_null()");
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+    rsgx_lfence();
+
+    if encrypted_seed.is_null() || encrypted_seed_len == 0 {
+        error!("Tried to access an empty pointer - encrypted_seed.is_null()");
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+    rsgx_lfence();
+
+    let public_key_slice = slice::from_raw_parts(public_key, public_key_len as usize);
+    let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
+    init_seed(public_key_slice, encrypted_seed_slice)
 }

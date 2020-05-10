@@ -18,6 +18,7 @@ pub static RA_CERT: &str = "cert.pem";
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
+#[derive(PartialEq, Eq)]
 pub enum SigningMethod {
     MRSIGNER,
     MRENCLAVE,

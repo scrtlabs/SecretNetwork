@@ -14,11 +14,12 @@ use std::str::from_utf8;
 
 use crate::error::{clear_error, handle_c_error, set_error};
 use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
-use cosmwasm_sgx_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache, Extern, untrusted_create_attestation_report};
+use cosmwasm_sgx_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache, Extern};
 
 use ctor::ctor;
 use log;
-use cosmwasm_sgx_vm::instance::untrusted_get_encrypted_seed;
+
+use cosmwasm_sgx_vm::{untrusted_get_encrypted_seed, create_attestation_report_u, init_seed_u};
 
 #[ctor]
 fn init_logger() {
@@ -65,11 +66,51 @@ pub extern "C" fn get_encrypted_seed(
 }
 
 #[no_mangle]
+pub extern "C" fn init_seed(
+    public_key: Buffer,
+    encrypted_seed: Buffer,
+    err: Option<&mut Buffer>,
+) -> bool {
+
+    let pk_slice = match public_key.read() {
+        None => {
+            set_error("Public key is empty".to_string(), err);
+            return false;
+        },
+        Some(r) => r
+    };
+    let encrypted_seed_slice = match encrypted_seed.read() {
+        None => {
+            set_error("Encrypted seed is empty".to_string(), err);
+            return false;
+        },
+        Some(r) => r
+    };
+
+    let result = match init_seed_u(pk_slice.as_ptr(),
+                                   pk_slice.len() as u32,
+     encrypted_seed_slice.as_ptr(),
+     encrypted_seed_slice.len() as u32) {
+        Ok(t) => {
+            clear_error();
+            true
+        }
+        Err(e) => {
+            set_error(e.to_string(), err);
+            false
+        }
+    };
+
+    result
+}
+
+
+#[no_mangle]
 pub extern "C" fn create_attestation_report(
     err: Option<&mut Buffer>,
 ) -> bool {
 
-    if let Err(status) =  untrusted_create_attestation_report() {
+    if let Err(status) =  create_attestation_report_u() {
         set_error(status.to_string(), err);
         return false;
     }
@@ -100,6 +141,7 @@ pub extern "C" fn init_cache(
         }
     }
 }
+
 
 // store some common string for argument names
 static DATA_DIR_ARG: &str = "data_dir";

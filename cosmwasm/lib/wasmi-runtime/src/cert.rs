@@ -375,7 +375,7 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
 
         // Borrow of packed field is unsafe in future Rust releases
         // todo: fix this up, validate more
-        unsafe{
+        unsafe {
             info!("sgx quote version = {}", sgx_quote.version);
             info!("sgx quote signature type = {}", sgx_quote.sign_type);
             info!("sgx quote report_data = {:02x}", sgx_quote.report_body.report_data.d.iter().format(""));
@@ -386,7 +386,7 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
         if SIGNING_METHOD == SigningMethod::MRENCLAVE {
             // todo: fill this in some time
             debug!("Validating using MRENCLAVE");
-            if sgx_quote.report_body.mr_enclave != ENCLAVE_SIGNATURE {
+            if sgx_quote.report_body.mr_enclave.m.to_vec().as_slice() != ENCLAVE_SIGNATURE {
                 info!("Sgx MRENCLAVE is different from expected!");
                 info!("sgx quote mr_enclave = {:02x}", sgx_quote.report_body.mr_enclave.m.iter().format(""));
                 // return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
@@ -396,7 +396,7 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
         if SIGNING_METHOD == SigningMethod::MRSIGNER {
             // todo: fill this in some time
             debug!("Validating using MRSIGNER");
-            if sgx_quote.report_body.mr_signer != ENCLAVE_SIGNATURE {
+            if sgx_quote.report_body.mr_signer.m.to_vec().as_slice() != ENCLAVE_SIGNATURE {
                 info!("Sgx MRSIGNER is different from expected!");
                 info!("sgx quote mr_signer = {:02x}", sgx_quote.report_body.mr_signer.m.iter().format(""));
                 // return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
@@ -414,3 +414,4 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
 
     Ok(pub_k)
 }
+

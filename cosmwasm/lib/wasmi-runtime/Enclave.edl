@@ -26,6 +26,13 @@ enclave {
             [in, count=32] uint8_t* seed
         );
 
+        public sgx_status_t ecall_init_seed(
+            [in, count=public_key_len] const uint8_t* public_key,
+            uintptr_t public_key_len,
+            [in, count=encrypted_seed_len] const uint8_t* encrypted_seed,
+            uintptr_t encrypted_seed_len
+        );
+
         public InitResult ecall_init(
             Ctx context,
             uint64_t gas_limit,

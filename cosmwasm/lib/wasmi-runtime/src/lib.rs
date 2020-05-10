@@ -13,6 +13,7 @@ extern crate sgx_tcrypto;
 extern crate sgx_tse;
 extern crate sgx_trts;
 
+mod node_reg;
 mod cert;
 mod hex;
 mod attestation;
