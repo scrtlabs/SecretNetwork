@@ -5,7 +5,7 @@ use crate::results::{
 };
 use std::ffi::c_void;
 use std::ptr::null;
-use sgx_trts::trts::{rsgx_raw_is_outside_enclave, rsgx_lfence, rsgx_sfence};
+use sgx_trts::trts::{rsgx_raw_is_outside_enclave, rsgx_lfence, rsgx_sfence, rsgx_slice_is_outside_enclave};
 use log::*;
 
 use sgx_types::{sgx_report_t, sgx_target_info_t, sgx_status_t, sgx_quote_sign_type_t};
@@ -138,8 +138,19 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
 
 #[cfg(feature = "SGX_MODE_HW")]
 #[no_mangle]
-pub extern "C" fn ecall_get_encrypted_seed(cert: *const u8, cert_len: u32) -> sgx_status_t {
+// todo: replace 32 with crypto consts once I have crypto library
+pub extern "C" fn ecall_get_encrypted_seed(cert: *const u8, cert_len: u32, seed: &mut [u8; 32]) -> sgx_status_t {
 
+    if rsgx_slice_is_outside_enclave(seed) {
+        error!("Tried to access memory outside enclave -- rsgx_slice_is_outside_enclave");
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+    rsgx_sfence();
+
+    if cert.is_null() || cert_len == 0 {
+        error!("Tried to access an empty pointer - cert.is_null()");
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
     rsgx_lfence();
 
     let cert_slice = unsafe { std::slice::from_raw_parts(cert, cert_len as usize) };
@@ -154,6 +165,7 @@ pub extern "C" fn ecall_get_encrypted_seed(cert: *const u8, cert_len: u32) -> sg
         }
     };
 
+    seed.copy_from_slice(pk.as_slice());
     // calc encrypted seed
 
     // return seed

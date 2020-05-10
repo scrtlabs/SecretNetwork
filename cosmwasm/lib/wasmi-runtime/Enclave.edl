@@ -8,7 +8,6 @@ enclave {
     from "sgx_backtrace.edl" import *;
     include "sgx_quote.h"
 
-
     // This header is generated during the build of enclave-ffi-types
     include "target/headers/enclave-ffi-types.h"
 
@@ -20,6 +19,12 @@ enclave {
         );
 
         public sgx_status_t ecall_get_attestation_report();
+
+        public sgx_status_t ecall_get_encrypted_seed(
+            [in, count=cert_len] const uint8_t* cert,
+            uintptr_t cert_len,
+            [in, count=32] uint8_t* seed
+        );
 
         public InitResult ecall_init(
             Ctx context,

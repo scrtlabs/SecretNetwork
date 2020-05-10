@@ -10,6 +10,7 @@ pub use memory::{free_rust, Buffer};
 use snafu::ResultExt;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
+// use std::Vec;
 
 use crate::error::{clear_error, handle_c_error, set_error};
 use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
@@ -17,6 +18,7 @@ use cosmwasm_sgx_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache,
 
 use ctor::ctor;
 use log;
+use cosmwasm_sgx_vm::instance::untrusted_get_encrypted_seed;
 
 #[ctor]
 fn init_logger() {
@@ -33,6 +35,33 @@ fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache<DB, GoApi>> {
         let c = unsafe { &mut *(ptr as *mut CosmCache<DB, GoApi>) };
         Some(c)
     }
+}
+
+#[no_mangle]
+pub extern "C" fn get_encrypted_seed(
+    cert: Buffer,
+    err: Option<&mut Buffer>,
+) -> Buffer {
+
+    let cert_slice = match cert.read() {
+        None => {
+            set_error("Attestation Certificate is empty".to_string(), err);
+            return Buffer::default();
+        },
+        Some(r) => r
+    };
+
+    let result = match untrusted_get_encrypted_seed(cert_slice) {
+        Err(e) => {
+            set_error(e.to_string(), err);
+            return Buffer::default();
+        }
+        Ok(r) => {
+            clear_error();
+            Buffer::from_vec(r.to_vec())
+        }
+    };
+    return result
 }
 
 #[no_mangle]

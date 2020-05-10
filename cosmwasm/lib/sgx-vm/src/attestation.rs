@@ -11,7 +11,13 @@ use sgx_types::{sgx_status_t, SgxResult};
 use crate::errors::Error;
 
 extern "C" {
-    pub fn ecall_get_attestation_report(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
+    pub fn ecall_get_attestation_report(eid: sgx_enclave_id_t,
+                                        retval: *mut sgx_status_t) -> sgx_status_t;
+    pub fn ecall_get_encrypted_seed(eid: sgx_enclave_id_t,
+                                    retval: *mut sgx_status_t,
+                                    cert: *const u8,
+                                    cert_len: u32,
+                                    seed: &mut [u8; 32]) -> sgx_status_t;
 }
 
 #[no_mangle]
@@ -127,6 +133,28 @@ pub fn inner_create_report(eid: sgx_enclave_id_t) -> SgxResult<sgx_status_t> {
     Ok(sgx_status_t::SGX_SUCCESS)
 }
 
+pub fn inner_get_encrypted_seed(eid: sgx_enclave_id_t, cert: *const u8, cert_len: u32) -> SgxResult<[u8; 32]> {
+
+    info!("Entered produce report");
+    let mut retval = sgx_status_t::SGX_SUCCESS;
+    let mut seed = [0u8; 32];
+    let status = unsafe { ecall_get_encrypted_seed(eid, &mut retval, cert, cert_len, & mut seed) };
+
+    if status != sgx_status_t::SGX_SUCCESS  {
+        return Err(status);
+    }
+
+    if retval != sgx_status_t::SGX_SUCCESS {
+        return Err(retval);
+    }
+
+    if seed.is_empty() {
+        error!("Got empty seed from encryption");
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+    }
+
+    Ok(seed)
+}
 
 #[cfg(test)]
 mod test {

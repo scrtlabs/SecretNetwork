@@ -120,6 +120,16 @@ func CreateAttestationReport() (bool, error) {
 	return true, nil
 }
 
+func GetEncryptedSeed(cert []byte) ([]byte, error) {
+	errmsg := C.Buffer{}
+	certSlice := sendSlice(cert)
+	res, err := C.get_encrypted_seed(certSlice, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return receiveSlice(res), nil
+}
+
 /**** To error module ***/
 
 func errorWithMessage(err error, b C.Buffer) error {

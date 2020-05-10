@@ -11,7 +11,7 @@ use cosmwasm::traits::Api;
 use lazy_static::lazy_static;
 
 use crate::{Extern, Storage};
-use crate::attestation::{inner_create_report};
+use crate::attestation::{inner_create_report, inner_get_encrypted_seed};
 use crate::errors::{Error, Result};
 use crate::wasmi::Module;
 
@@ -34,6 +34,15 @@ pub fn untrusted_create_attestation_report() -> SgxResult<sgx_status_t> {
     info!("Hello from just after initializing - produce_report");
 
     inner_create_report(enclave.geteid())
+}
+
+pub fn untrusted_get_encrypted_seed(cert: &[u8]) -> SgxResult<[u8; 32]> {
+
+    info!("Hello from just before initializing - produce_report");
+    let enclave = init_enclave().unwrap();
+    info!("Hello from just after initializing - produce_report");
+
+    inner_get_encrypted_seed(enclave.geteid(), cert.as_ptr(), cert.len() as u32)
 }
 
 pub fn init_enclave() -> SgxResult<SgxEnclave> {

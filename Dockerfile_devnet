@@ -18,6 +18,7 @@ WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/
 
 ARG SGX_MODE=HW
 ENV SGX_MODE=${SGX_MODE}
+ENV MITIGATION_CVE_2020_0551=LOAD
 
 COPY third_party/build third_party/build
 

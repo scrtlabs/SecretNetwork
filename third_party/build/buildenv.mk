@@ -59,8 +59,6 @@ CXXFLAGS += -std=c++0x
 % : s.%
 % : SCCS/s.%
 
-export MITIGATION_CVE_2020_0551=LOAD
-
 # If a rule fails, delete $@.
 .DELETE_ON_ERROR:
 
