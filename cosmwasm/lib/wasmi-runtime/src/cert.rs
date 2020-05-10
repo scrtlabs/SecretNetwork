@@ -21,7 +21,7 @@ use itertools::Itertools;
 use serde_json;
 use serde_json::Value;
 
-use super::consts::CERTEXPIRYDAYS;
+use super::consts::{SIGNING_METHOD, CERTEXPIRYDAYS, SigningMethod};
 
 
 extern "C" {
@@ -48,6 +48,9 @@ static SUPPORTED_SIG_ALGS: SignatureAlgorithms = &[
 ];
 
 pub const IAS_REPORT_CA:&[u8] = include_bytes!("../Intel_SGX_Attestation_RootCA.pem");
+
+// todo: replace this with MRSIGNER/MRENCLAVE
+pub const ENCLAVE_SIGNATURE:&[u8] = include_bytes!("../Intel_SGX_Attestation_RootCA.pem");
 
 const ISSUER : &str = "EnigmaTEE";
 const SUBJECT : &str = "EnigmaChain Node Certificate";
@@ -371,11 +374,7 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
         let sgx_quote: sgx_quote_t = unsafe{ptr::read(quote.as_ptr() as *const _)};
 
         // Borrow of packed field is unsafe in future Rust releases
-        // ATTENTION
-        // DO SECURITY CHECK ON DEMAND
-        // DO SECURITY CHECK ON DEMAND
-        // DO SECURITY CHECK ON DEMAND
-        // todo: check mr_signer or mr_enclave
+        // todo: fix this up, validate more
         unsafe{
             info!("sgx quote version = {}", sgx_quote.version);
             info!("sgx quote signature type = {}", sgx_quote.sign_type);
@@ -383,6 +382,27 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
             info!("sgx quote mr_enclave = {:02x}", sgx_quote.report_body.mr_enclave.m.iter().format(""));
             info!("sgx quote mr_signer = {:02x}", sgx_quote.report_body.mr_signer.m.iter().format(""));
         }
+
+        if SIGNING_METHOD == SigningMethod::MRENCLAVE {
+            // todo: fill this in some time
+            debug!("Validating using MRENCLAVE");
+            if sgx_quote.report_body.mr_enclave != ENCLAVE_SIGNATURE {
+                info!("Sgx MRENCLAVE is different from expected!");
+                info!("sgx quote mr_enclave = {:02x}", sgx_quote.report_body.mr_enclave.m.iter().format(""));
+                // return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            }
+        }
+
+        if SIGNING_METHOD == SigningMethod::MRSIGNER {
+            // todo: fill this in some time
+            debug!("Validating using MRSIGNER");
+            if sgx_quote.report_body.mr_signer != ENCLAVE_SIGNATURE {
+                info!("Sgx MRSIGNER is different from expected!");
+                info!("sgx quote mr_signer = {:02x}", sgx_quote.report_body.mr_signer.m.iter().format(""));
+                // return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            }
+        }
+
         info!("Anticipated public key = {:02x}", pub_k.iter().format(""));
         if sgx_quote.report_body.report_data.d.to_vec() == pub_k.to_vec() {
             info!("Mutual RA done!");

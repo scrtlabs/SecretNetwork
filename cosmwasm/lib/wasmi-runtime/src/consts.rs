@@ -17,3 +17,15 @@ pub static API_KEY_FILE: &str = "api_key.txt";
 pub static RA_CERT: &str = "cert.pem";
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
+
+pub enum SigningMethod {
+    MRSIGNER,
+    MRENCLAVE,
+    NONE
+}
+
+#[cfg(feature = "production")]
+pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
+
+#[cfg(not(feature = "production"))]
+pub const SIGNING_METHOD: SigningMethod = SigningMethod::NONE;
