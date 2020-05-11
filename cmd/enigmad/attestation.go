@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
+	reg "github.com/enigmampc/EnigmaBlockchain/x/registration"
 	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
 	"io/ioutil"
 
@@ -57,6 +59,51 @@ func ParseCert(_ *server.Context, _ *codec.Codec) *cobra.Command {
 			}
 
 			fmt.Println(fmt.Sprintf("0x%s", hex.EncodeToString(pubkey)))
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func ConfigureSecret(_ *server.Context, _ *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "configure [cert file] [seed]",
+		Short: "After registration is successful, configure the secret node with the credentials file",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			// parse coins trying to be sent
+			cert, err := ioutil.ReadFile(args[0])
+			if err != nil {
+				return err
+			}
+
+			pubkey, err := ra.VerifyRaCert(cert)
+			if err != nil {
+				return err
+			}
+
+			// parse coins trying to be sent
+			seed := args[1]
+
+			// fmt.Println(fmt.Sprintf("0x%s", hex.EncodeToString(pubkey)))
+
+			cfg := reg.SeedConfig{
+				EncryptedKey: seed,
+				PublicKey:    hex.EncodeToString(pubkey),
+			}
+
+			cfgBytes, err := json.Marshal(&cfg)
+			if err != nil {
+				return err
+			}
+
+			err = ioutil.WriteFile(reg.SecretNodeSeedConfig, cfgBytes, 0644)
+			if err != nil {
+				return err
+			}
+
 			return nil
 		},
 	}

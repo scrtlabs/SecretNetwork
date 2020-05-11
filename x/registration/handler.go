@@ -59,7 +59,7 @@ func handleRaAuthenticate(ctx sdk.Context, k Keeper, msg *types.RaAuthenticate) 
 	}
 
 	// fmt.Println("RaAuth", hex.EncodeToString(msg.PubKey))
-	encSeed, err := k.AuthenticateNode(ctx, msg.Certificate)
+	encSeed, err := k.RegisterNode(ctx, msg.Certificate)
 	if err != nil {
 		return nil, err
 	}

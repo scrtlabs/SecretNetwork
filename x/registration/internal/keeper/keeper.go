@@ -4,36 +4,15 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
-	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
-	"os"
-	"path/filepath"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
 	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
+	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
+	"os"
+	"path/filepath"
 )
-
-// User struct which contains a name
-// a type and a list of social links
-type SeedConfig struct {
-	PublicKey    string `json:"pk"`
-	EncryptedKey string `json:"encKey"`
-}
-
-func (c SeedConfig) decode() ([]byte, []byte, error) {
-	enc, err := hex.DecodeString(c.EncryptedKey)
-	if err != nil {
-		return nil, nil, err
-	}
-	pk, err := hex.DecodeString(c.PublicKey)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return pk, enc, nil
-}
 
 // Keeper will have a reference to Wasmer with it's own data directory.
 type Keeper struct {
@@ -55,44 +34,10 @@ func SgxMode() string {
 // NewKeeper creates a new contract Keeper instance
 func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, router sdk.Router, homeDir string, bootstrap bool) Keeper {
 
-	if SgxMode() == "HW" {
-		// validate attestation
-
-	}
-
-	if !bootstrap {
-
-		seedPath := filepath.Join(homeDir, "seed.json")
-
-		if !fileExists(seedPath) {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, "Seed configuration not found. Did you initialize the node?"))
-		}
-
-		// get PK from CLI
-		// get encrypted master key
-		byteValue, err := getFile(seedPath)
-
-		var seedCfg SeedConfig
-
-		err = json.Unmarshal(byteValue, &seedCfg)
-		if err != nil {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-		}
-
-		err = validateSeedParams(seedCfg)
-		if err != nil {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-		}
-
-		pk, enc, err := seedCfg.decode()
-		if err != nil {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-		}
-
-		_, err = api.InitSeed(pk, enc)
-		if err != nil {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-		}
+	if bootstrap {
+		InitializeBootstrap(homeDir)
+	} else {
+		InitializeNonBootstrap(homeDir)
 	}
 
 	return Keeper{
@@ -102,9 +47,63 @@ func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, router sdk.Router, homeD
 	}
 }
 
+func InitializeNonBootstrap(homeDir string) {
+
+	if SgxMode() != "HW" {
+		return
+	}
+
+	seedPath := filepath.Join(homeDir, "seed.json")
+
+	if !fileExists(seedPath) {
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, "Seed configuration not found. Did you initialize the node?"))
+	}
+
+	// get PK from CLI
+	// get encrypted master key
+	byteValue, err := getFile(seedPath)
+
+	var seedCfg types.SeedConfig
+
+	err = json.Unmarshal(byteValue, &seedCfg)
+	if err != nil {
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	}
+
+	err = validateSeedParams(seedCfg)
+	if err != nil {
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	}
+
+	pk, enc, err := seedCfg.Decode()
+	if err != nil {
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	}
+
+	_, err = api.InitSeed(pk, enc)
+	if err != nil {
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	}
+}
+
+func InitializeBootstrap(homeDir string) {
+
+	if SgxMode() != "HW" {
+		// validate attestation
+		return
+	}
+
+	return
+	//
+	//_, err = api.(pk, enc)
+	//if err != nil {
+	//	panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	//}
+}
+
 // Create uploads and compiles a WASM contract, returning a short identifier for the contract
-func (k Keeper) AuthenticateNode(ctx sdk.Context, certificate ra.Certificate) ([]byte, error) {
-	fmt.Println("AuthenticateNode")
+func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byte, error) {
+	fmt.Println("RegisterNode")
 	var encSeed []byte
 
 	if isSimulationMode(ctx) {
@@ -208,7 +207,7 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 	return nil
 }
 
-func validateSeedParams(config SeedConfig) error {
+func validateSeedParams(config types.SeedConfig) error {
 	if len(config.PublicKey) != types.PublicKeyLength || !isHexString(config.PublicKey) {
 		return sdkerrors.Wrap(types.ErrSeedValidationParams, "Invalid parameter `public key` in seed parameters. Did you initialize the node?")
 	}

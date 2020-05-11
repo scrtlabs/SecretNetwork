@@ -49,6 +49,7 @@ func main() {
 	// CLI commands to initialize the chain
 	rootCmd.AddCommand(InitAttestation(ctx, cdc))
 	rootCmd.AddCommand(ParseCert(ctx, cdc))
+	rootCmd.AddCommand(ConfigureSecret(ctx, cdc))
 	rootCmd.AddCommand(genutilcli.InitCmd(ctx, cdc, app.ModuleBasics, app.DefaultNodeHome))
 	rootCmd.AddCommand(genutilcli.CollectGenTxsCmd(ctx, cdc, auth.GenesisAccountIterator{}, app.DefaultNodeHome))
 	rootCmd.AddCommand(genutilcli.MigrateGenesisCmd(ctx, cdc))

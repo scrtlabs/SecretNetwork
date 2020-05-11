@@ -11,12 +11,13 @@ import (
 )
 
 const (
-	ModuleName         = types.ModuleName
-	StoreKey           = types.StoreKey
-	TStoreKey          = types.TStoreKey
-	QuerierRoute       = types.QuerierRoute
-	RouterKey          = types.RouterKey
-	QueryEncryptedSeed = keeper.QueryEncryptedSeed
+	ModuleName           = types.ModuleName
+	StoreKey             = types.StoreKey
+	TStoreKey            = types.TStoreKey
+	QuerierRoute         = types.QuerierRoute
+	RouterKey            = types.RouterKey
+	QueryEncryptedSeed   = keeper.QueryEncryptedSeed
+	SecretNodeSeedConfig = types.SecretNodeSeedConfig
 )
 
 var (
@@ -42,4 +43,5 @@ type (
 	MsgRaAuthenticate = types.RaAuthenticate
 	GenesisState      = types.GenesisState
 	Keeper            = keeper.Keeper
+	SeedConfig        = types.SeedConfig
 )
