@@ -20,7 +20,9 @@ impl EnclaveBuffer {
 }
 
 impl Default for EnclaveReturn {
-    fn default() -> EnclaveReturn { EnclaveReturn::Success }
+    fn default() -> EnclaveReturn {
+        EnclaveReturn::Success
+    }
 }
 
 /// This enum is used to return from an ecall/ocall to represent if the operation was a success and if not then what was the error.
@@ -51,9 +53,8 @@ pub enum EnclaveReturn {
     /// OcallDBError, an error from the Database in the untrusted part, couldn't get/save something.
     OcallDBError,
     /// Something went really wrong.
-    Other
+    Other,
 }
-
 
 /// This struct holds a pointer to memory in userspace, that contains the storage
 #[repr(C)]
@@ -219,20 +220,5 @@ pub enum QueryResult {
     },
     Failure {
         err: EnclaveError,
-    },
-}
-
-/// This struct is returned from ecall_key_gen.
-/// cbindgen:prefix-with-name
-#[repr(C)]
-pub enum KeyGenResult {
-    Success {
-        /// A pointer to the output of the calculation
-        output: UserSpaceBuffer,
-        /// A signature by the enclave on all of the results.
-        signature: [u8; 65],
-    },
-    Failure {
-        err: CryptoError,
     },
 }

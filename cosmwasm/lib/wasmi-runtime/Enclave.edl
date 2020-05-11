@@ -4,9 +4,10 @@ enclave {
     from "sgx_fs.edl" import *;
     from "sgx_net.edl" import *;
     from "sgx_time.edl" import *;
-    from "sgx_tstdc.edl" import *;
-    from "sgx_backtrace.edl" import *;
     include "sgx_quote.h"
+    from "sgx_backtrace.edl" import *;
+    from "sgx_tstdc.edl" import *;
+    from "sgx_tprotected_fs.edl" import *;
 
     // This header is generated during the build of enclave-ffi-types
     include "target/headers/enclave-ffi-types.h"
@@ -64,8 +65,7 @@ enclave {
             uintptr_t msg_len
         );
 
-        public KeyGenResult ecall_key_gen();
-
+        public sgx_status_t ecall_key_gen([out] uint8_t pk_node[65]);
     };
 
     untrusted {

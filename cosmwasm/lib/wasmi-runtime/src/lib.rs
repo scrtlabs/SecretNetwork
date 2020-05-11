@@ -1,5 +1,4 @@
 #![crate_type = "staticlib"]
-
 #![cfg_attr(not(target_env = "sgx"), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
@@ -7,25 +6,26 @@
 #[macro_use]
 extern crate sgx_tstd as std;
 
-extern crate sgx_types;
 extern crate sgx_rand;
 extern crate sgx_tcrypto;
-extern crate sgx_tse;
 extern crate sgx_trts;
+extern crate sgx_tse;
+extern crate sgx_types;
 
-mod node_reg;
-mod cert;
-mod hex;
 mod attestation;
+mod cert;
+mod consts;
 mod contract_operations;
+mod encryption;
 mod errors;
 pub mod exports;
 mod gas;
+mod hex;
 pub mod imports;
+mod keys;
 pub mod logger;
 mod results;
 mod runtime;
-mod consts;
 mod storage;
 mod utils;
 

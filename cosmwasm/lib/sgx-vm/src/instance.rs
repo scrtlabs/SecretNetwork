@@ -4,17 +4,19 @@ use std::path::Path;
 use std::str;
 
 use log::*;
-use sgx_types::{sgx_attributes_t, sgx_launch_token_t, sgx_misc_attribute_t, sgx_status_t, SgxResult};
+use sgx_types::{
+    sgx_attributes_t, sgx_launch_token_t, sgx_misc_attribute_t, sgx_status_t, SgxResult,
+};
 use sgx_urts::SgxEnclave;
 
 use cosmwasm::traits::Api;
 use lazy_static::lazy_static;
 
-use crate::{Extern, Storage};
 use crate::attestation::{inner_create_report, inner_get_encrypted_seed};
-use crate::seed::{inner_init_seed};
 use crate::errors::{Error, Result};
+use crate::seed::inner_init_seed;
 use crate::wasmi::Module;
+use crate::{Extern, Storage};
 
 /// An instance is a combination of wasm code, storage, and gas limit.
 pub struct Instance<S: Storage + 'static, A: Api + 'static> {
@@ -28,25 +30,26 @@ static ENCLAVE_FILE: &'static str = "librust_cosmwasm_enclave.signed.so";
 
 // this is here basically to be able to call the enclave initialization -- we can move this somewhere else and simplify
 
-pub fn init_seed_u(public_key: *const u8,
-                 public_key_len: u32,
-                 encrypted_seed: *const u8,
-                 encrypted_seed_len: u32) -> SgxResult<sgx_status_t> {
-
+pub fn init_seed_u(
+    public_key: *const u8,
+    public_key_len: u32,
+    encrypted_seed: *const u8,
+    encrypted_seed_len: u32,
+) -> SgxResult<sgx_status_t> {
     info!("Hello from just before initializing - produce_report");
     let enclave = init_enclave().unwrap();
     info!("Hello from just after initializing - produce_report");
 
-    inner_init_seed(enclave.geteid(),
-                    public_key,
-                    public_key_len,
-                    encrypted_seed,
-                    encrypted_seed_len)
+    inner_init_seed(
+        enclave.geteid(),
+        public_key,
+        public_key_len,
+        encrypted_seed,
+        encrypted_seed_len,
+    )
 }
 
-
 pub fn create_attestation_report_u() -> SgxResult<sgx_status_t> {
-
     info!("Hello from just before initializing - produce_report");
     let enclave = init_enclave().unwrap();
     info!("Hello from just after initializing - produce_report");
@@ -55,7 +58,6 @@ pub fn create_attestation_report_u() -> SgxResult<sgx_status_t> {
 }
 
 pub fn untrusted_get_encrypted_seed(cert: &[u8]) -> SgxResult<[u8; 32]> {
-
     info!("Hello from just before initializing - produce_report");
     let enclave = init_enclave().unwrap();
     info!("Hello from just after initializing - produce_report");

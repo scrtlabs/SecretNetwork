@@ -62,7 +62,6 @@ pub fn call_handle_raw<S: Storage + 'static, A: Api + 'static>(
     instance.call_handle(env, msg).into()
 }
 
-
 /*
 fn call_raw<S: Storage + 'static, A: Api + 'static>(
     instance: &mut Instance<S, A>,

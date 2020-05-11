@@ -70,7 +70,6 @@ func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 	return api.GetCode(w.cache, code)
 }
 
-
 // Instantiate will create a new contract based on the given codeID.
 // We can set the initMsg (contract "genesis") here, and it then receives
 // an account and address and can be invoked (Execute) many times.

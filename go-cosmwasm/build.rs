@@ -21,7 +21,7 @@ fn main() {
         "SW" => {
             println!("cargo:rustc-link-lib=dylib=sgx_urts_sim");
             println!("cargo:rustc-link-lib=dylib=sgx_uae_service_sim");
-        },
+        }
         // Treat undefined as HW
         _ => {
             println!("******** here! ********");

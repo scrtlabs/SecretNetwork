@@ -4,7 +4,7 @@ use std::mem::MaybeUninit;
 
 use crate::context::context_from_dyn_storage;
 use crate::Storage;
-use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, KeyGenResult, QueryResult};
+use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
 
 use sgx_types::{sgx_enclave_id_t, sgx_status_t};
 use sgx_urts::SgxEnclave;
@@ -16,8 +16,7 @@ use crate::errors::{Error, Result};
 use super::imports;
 use super::results::{
     handle_result_to_result_handlesuccess, init_result_to_result_initsuccess,
-    key_gen_result_to_result_key_gensuccess, query_result_to_result_querysuccess, HandleSuccess,
-    InitSuccess, KeyGenSuccess, QuerySuccess,
+    query_result_to_result_querysuccess, HandleSuccess, InitSuccess, KeyGenSuccess, QuerySuccess,
 };
 
 /// This is a safe wrapper for allocating buffers inside the enclave.
@@ -234,25 +233,23 @@ impl Module {
             .map_err(|err| Error::EnclaveErr { inner: err })
     }
 
-    pub fn key_gen(&mut self) -> Result<KeyGenSuccess> {
-        let mut key_gen_result = MaybeUninit::<KeyGenResult>::uninit();
+    pub fn key_gen(&mut self) -> Result<KeyGenSuccess, sgx_status_t> {
+        let mut pk_node = [0u8; 65];
 
-        match unsafe { imports::ecall_key_gen(self.enclave.geteid(), key_gen_result.as_mut_ptr()) }
-        {
-            sgx_status_t::SGX_SUCCESS => { /* continue */ }
-            failure_status => {
-                return Err(Error::SdkErr {
-                    inner: failure_status,
-                })
-            }
+        let mut status = sgx_status_t::SGX_SUCCESS;
+        let result =
+            unsafe { imports::ecall_key_gen(self.enclave.geteid(), &mut status, &mut pk_node) };
+
+        if status != sgx_status_t::SGX_SUCCESS {
+            return Err(status);
         }
-        // At this point we know that the ecall was successful and key_gen_result was initialized.
+        if result != sgx_status_t::SGX_SUCCESS {
+            return Err(result);
+        }
 
-        // TODO not sure we need `key_gen_result_to_result_key_gensuccess` here
-        let key_gen_result = unsafe { key_gen_result.assume_init() };
+        // pk_node is now populated
 
-        key_gen_result_to_result_key_gensuccess(key_gen_result)
-            .map_err(|err| Error::CryptoErr { inner: err })
+        todo!()
     }
 }
 

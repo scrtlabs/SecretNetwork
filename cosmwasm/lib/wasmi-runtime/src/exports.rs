@@ -1,25 +1,29 @@
-use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, KeyGenResult, QueryResult};
+use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
+use std::ffi::c_void;
+
+use crate::keys::{KeyPair, PubKey};
 use crate::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
     result_query_success_to_queryresult,
 };
-use std::ffi::c_void;
-use std::ptr::null;
-use sgx_trts::trts::{rsgx_raw_is_outside_enclave, rsgx_lfence, rsgx_sfence, rsgx_slice_is_outside_enclave};
 use log::*;
+use sgx_trts::trts::{
+    rsgx_lfence, rsgx_raw_is_outside_enclave, rsgx_sfence, rsgx_slice_is_outside_enclave,
+};
+use sgx_types::{sgx_quote_sign_type_t, sgx_report_t, sgx_status_t, sgx_target_info_t};
+use std::ptr::null;
 use std::slice;
-use sgx_types::{sgx_report_t, sgx_target_info_t, sgx_status_t, sgx_quote_sign_type_t};
 
-use crate::node_reg::init_seed;
+use crate::keys::init_seed;
 
 #[cfg(feature = "SGX_MODE_HW")]
-use crate::attestation::{create_attestation_report};
+use crate::attestation::create_attestation_report;
 
+use crate::attestation::create_attestation_certificate;
 #[cfg(not(feature = "SGX_MODE_HW"))]
 use crate::attestation::{create_report_with_data, software_mode_quote};
-use crate::attestation::create_attestation_certificate;
 use crate::cert::verify_mra_cert;
-use crate::storage::write_to_untrusted;
+use crate::storage::{seal, write_to_untrusted, NODE_SK_SEALING_PATH};
 
 #[no_mangle]
 pub extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
@@ -95,34 +99,38 @@ pub extern "C" fn ecall_query(
     result_query_success_to_queryresult(result)
 }
 
+// gen (sk_node,pk_node) keypair for new node registration
 #[no_mangle]
-pub extern "C" fn ecall_key_gen() -> KeyGenResult {
+pub unsafe extern "C" fn ecall_key_gen(pk_node: *mut PubKey) -> sgx_types::sgx_status_t {
     // Generate node-specific key-pair
-    // let key_pair = match KeyPair::new() {
-    //     Ok(kp) => kp,
-    //     Err(err) => return KeyGenResult::Failure { err },
-    // };
+    let key_pair = match KeyPair::new() {
+        Ok(kp) => kp,
+        Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
+    };
 
-    todo!();
+    let privkey = key_pair.get_privkey();
+    match seal(&privkey, NODE_SK_SEALING_PATH) {
+        Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
+        Ok(_) => { /* continue */ }
+    }; // can read with SecretKey::from_slice()
 
-    // let pk = key_pair.privkey;
-    // seal(pk.serialize(), "dsacdsa");
+    let pubkey = key_pair.get_pubkey();
 
-    // seal(key_pair)
+    (&mut *pk_node).clone_from_slice(&pubkey);
+    sgx_status_t::SGX_SUCCESS
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
 #[no_mangle]
 pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
-    let (private_key_der, cert) = match create_attestation_certificate(sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE) {
-        Err(e) => {
-            error!("Error in create_attestation_certificate: {:?}", e);
-            return e;
-        }
-        Ok(res) => {
-            res
-        }
-    };
+    let (private_key_der, cert) =
+        match create_attestation_certificate(sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE) {
+            Err(e) => {
+                error!("Error in create_attestation_certificate: {:?}", e);
+                return e;
+            }
+            Ok(res) => res,
+        };
     info!("private key {:?}, cert: {:?}", private_key_der, cert);
 
     if let Err(status) = write_to_untrusted(cert.as_slice(), "attestation_cert.der") {
@@ -141,8 +149,11 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
 #[cfg(feature = "SGX_MODE_HW")]
 #[no_mangle]
 // todo: replace 32 with crypto consts once I have crypto library
-pub extern "C" fn ecall_get_encrypted_seed(cert: *const u8, cert_len: u32, seed: &mut [u8; 32]) -> sgx_status_t {
-
+pub extern "C" fn ecall_get_encrypted_seed(
+    cert: *const u8,
+    cert_len: u32,
+    seed: &mut [u8; 32],
+) -> sgx_status_t {
     if rsgx_slice_is_outside_enclave(seed) {
         error!("Tried to access memory outside enclave -- rsgx_slice_is_outside_enclave");
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
@@ -162,9 +173,7 @@ pub extern "C" fn ecall_get_encrypted_seed(cert: *const u8, cert_len: u32, seed:
             error!("Error in validating certificate: {:?}", e);
             return e;
         }
-        Ok(res) => {
-            res
-        }
+        Ok(res) => res,
     };
 
     let test_result = [41u8; 32];
@@ -180,13 +189,12 @@ pub extern "C" fn ecall_get_encrypted_seed(cert: *const u8, cert_len: u32, seed:
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ecall_init_seed (
+pub unsafe extern "C" fn ecall_init_seed(
     public_key: *const u8,
     public_key_len: u32,
     encrypted_seed: *const u8,
-    encrypted_seed_len: u32
+    encrypted_seed_len: u32,
 ) -> sgx_status_t {
-
     if public_key.is_null() || public_key_len == 0 {
         error!("Tried to access an empty pointer - public_key.is_null()");
         return sgx_status_t::SGX_ERROR_UNEXPECTED;

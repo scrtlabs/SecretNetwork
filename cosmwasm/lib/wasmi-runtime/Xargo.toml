@@ -1,5 +1,5 @@
 [dependencies]
-alloc = {}
+alloc = {  }
 sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.2", stage = 1 }
 sgx_alloc = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.2", stage = 1 }
 sgx_unwind = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.2", stage = 1 }
@@ -15,7 +15,11 @@ panic_unwind = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "
 sgx_tdh = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.2", stage = 4 }
 sgx_tseal = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.2", stage = 4 }
 sgx_tprotected_fs = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.2", stage = 4 }
-std = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.2", stage = 5, features = ["net", "backtrace", "untrusted_fs"] }
+std = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.2", stage = 5, features = [
+    "net",
+    "backtrace",
+    "untrusted_fs"
+] }
 sgx_no_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.2", stage = 5 }
 sgx_rand = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.2", stage = 6 }
 sgx_serialize = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.2", stage = 6 }
@@ -23,4 +27,3 @@ sgx_tunittest = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = 
 sgx_backtrace = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.2", stage = 7 }
 sgx_cov = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.2", stage = 7 }
 sgx_signal = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.2", stage = 7 }
-

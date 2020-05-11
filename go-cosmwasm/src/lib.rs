@@ -15,11 +15,10 @@ use std::str::from_utf8;
 use crate::error::{clear_error, handle_c_error, set_error};
 use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
 use cosmwasm_sgx_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache, Extern};
-
+use cosmwasm_sgx_vm::{create_attestation_report_u, init_seed_u, untrusted_get_encrypted_seed};
 use ctor::ctor;
 use log;
 use log::*;
-use cosmwasm_sgx_vm::{untrusted_get_encrypted_seed, create_attestation_report_u, init_seed_u};
 
 #[ctor]
 fn init_logger() {
@@ -39,17 +38,14 @@ fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache<DB, GoApi>> {
 }
 
 #[no_mangle]
-pub extern "C" fn get_encrypted_seed(
-    cert: Buffer,
-    err: Option<&mut Buffer>,
-) -> Buffer {
+pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> Buffer {
     info!("Hello from get_encrypted_seed");
     let cert_slice = match cert.read() {
         None => {
             set_error("Attestation Certificate is empty".to_string(), err);
             return Buffer::default();
-        },
-        Some(r) => r
+        }
+        Some(r) => r,
     };
     info!("Hello from right before untrusted_get_encrypted_seed");
     let result = match untrusted_get_encrypted_seed(cert_slice) {
@@ -63,7 +59,7 @@ pub extern "C" fn get_encrypted_seed(
             Buffer::from_vec(r.to_vec())
         }
     };
-    return result
+    return result;
 }
 
 #[no_mangle]
@@ -72,26 +68,27 @@ pub extern "C" fn init_seed(
     encrypted_seed: Buffer,
     err: Option<&mut Buffer>,
 ) -> bool {
-
     let pk_slice = match public_key.read() {
         None => {
             set_error("Public key is empty".to_string(), err);
             return false;
-        },
-        Some(r) => r
+        }
+        Some(r) => r,
     };
     let encrypted_seed_slice = match encrypted_seed.read() {
         None => {
             set_error("Encrypted seed is empty".to_string(), err);
             return false;
-        },
-        Some(r) => r
+        }
+        Some(r) => r,
     };
 
-    let result = match init_seed_u(pk_slice.as_ptr(),
-                                   pk_slice.len() as u32,
-     encrypted_seed_slice.as_ptr(),
-     encrypted_seed_slice.len() as u32) {
+    let result = match init_seed_u(
+        pk_slice.as_ptr(),
+        pk_slice.len() as u32,
+        encrypted_seed_slice.as_ptr(),
+        encrypted_seed_slice.len() as u32,
+    ) {
         Ok(t) => {
             clear_error();
             true
@@ -105,13 +102,9 @@ pub extern "C" fn init_seed(
     result
 }
 
-
 #[no_mangle]
-pub extern "C" fn create_attestation_report(
-    err: Option<&mut Buffer>,
-) -> bool {
-
-    if let Err(status) =  create_attestation_report_u() {
+pub extern "C" fn create_attestation_report(err: Option<&mut Buffer>) -> bool {
+    if let Err(status) = create_attestation_report_u() {
         set_error(status.to_string(), err);
         return false;
     }
@@ -142,7 +135,6 @@ pub extern "C" fn init_cache(
         }
     }
 }
-
 
 // store some common string for argument names
 static DATA_DIR_ARG: &str = "data_dir";
