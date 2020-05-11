@@ -132,7 +132,7 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
             }
             Ok(res) => res,
         };
-    info!("private key {:?}, cert: {:?}", private_key_der, cert);
+    // info!("private key {:?}, cert: {:?}", private_key_der, cert);
 
     if let Err(status) = write_to_untrusted(cert.as_slice(), "attestation_cert.der") {
         return status;
