@@ -31,6 +31,7 @@ impl SealedKey for KeyPair {
             EnclaveError::FailedUnseal
         })?;
 
+        println!("AHAHAHAHAHAHAHAHA");
         file.write_all(&self.get_privkey()).map_err(|err| {
             error!(
                 "[Enclave] Dramatic error while trying to write to {}: {:?}",
