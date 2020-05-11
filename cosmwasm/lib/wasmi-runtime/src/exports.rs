@@ -166,12 +166,12 @@ pub extern "C" fn ecall_init_bootstrap() -> sgx_status_t {
         Ok(kp) => kp,
         Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
     };
-    //
+
     // let privkey = key_pair.get_privkey();
-    // match seal(&privkey, NODE_SK_SEALING_PATH) {
-    //     Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
-    //     Ok(_) => { /* continue */ }
-    // }; // can read with SecretKey::from_slice()
+    match key_pair.seal(NODE_SK_SEALING_PATH) {
+        Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
+        Ok(_) => { /* continue */ }
+    }; // can read with SecretKey::from_slice()
 
     sgx_status_t::SGX_SUCCESS
 }
