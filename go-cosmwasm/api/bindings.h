@@ -67,6 +67,8 @@ Buffer handle(cache_t *cache,
               uint64_t *gas_used,
               Buffer *err);
 
+bool init_bootstrap(Buffer *err);
+
 cache_t *init_cache(Buffer data_dir, uintptr_t cache_size, Buffer *err);
 
 bool init_seed(Buffer public_key, Buffer encrypted_seed, Buffer *err);

@@ -9,6 +9,9 @@ extern "C" {
         encrypted_seed: *const u8,
         encrypted_seed_len: u32
     ) -> sgx_status_t;
+
+    pub fn ecall_init_bootstrap(eid: sgx_enclave_id_t,
+                                retval: *mut sgx_status_t) -> sgx_status_t;
 }
 
 pub fn inner_init_seed(eid: sgx_enclave_id_t,
@@ -16,7 +19,7 @@ pub fn inner_init_seed(eid: sgx_enclave_id_t,
                  public_key_len: u32,
                  encrypted_seed: *const u8,
                  encrypted_seed_len: u32) -> SgxResult<sgx_status_t> {
-    println!("Hello from just before the enclave!");
+
     let mut ret = sgx_status_t::SGX_SUCCESS;
 
     let status = unsafe { ecall_init_seed(eid, &mut ret, public_key, public_key_len,
@@ -33,3 +36,19 @@ pub fn inner_init_seed(eid: sgx_enclave_id_t,
     Ok(sgx_status_t::SGX_SUCCESS)
 }
 
+
+pub fn inner_init_bootstrap(eid: sgx_enclave_id_t) -> SgxResult<sgx_status_t> {
+
+    let mut retval = sgx_status_t::SGX_SUCCESS;
+    let status = unsafe { ecall_init_bootstrap(eid, &mut retval) };
+
+    if status != sgx_status_t::SGX_SUCCESS  {
+        return Err(status);
+    }
+
+    if retval != sgx_status_t::SGX_SUCCESS {
+        return Err(retval);
+    }
+
+    Ok(sgx_status_t::SGX_SUCCESS)
+}

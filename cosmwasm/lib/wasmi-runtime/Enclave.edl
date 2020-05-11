@@ -19,6 +19,8 @@ enclave {
             uintptr_t length
         );
 
+        public sgx_status_t ecall_init_bootstrap();
+
         public sgx_status_t ecall_get_attestation_report();
 
         public sgx_status_t ecall_get_encrypted_seed(

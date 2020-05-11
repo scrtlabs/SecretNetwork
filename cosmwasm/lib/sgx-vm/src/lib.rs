@@ -24,4 +24,4 @@ pub use crate::calls::{
 pub use crate::instance::Instance;
 pub use crate::traits::{Extern, ReadonlyStorage, Storage};
 
-pub use crate::instance::{create_attestation_report_u, init_seed_u, untrusted_get_encrypted_seed};
+pub use crate::instance::{create_attestation_report_u, init_seed_u, untrusted_get_encrypted_seed, untrusted_init_bootstrap};

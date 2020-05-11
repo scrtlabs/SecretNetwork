@@ -27,7 +27,9 @@ import (
 )
 
 const flagInvCheckPeriod = "inv-check-period"
+const flagIsBootstrap = "bootstrap"
 
+var bootstrap bool
 var invCheckPeriod uint
 
 func main() {
@@ -69,6 +71,8 @@ func main() {
 	executor := cli.PrepareBaseCmd(rootCmd, "EN", app.DefaultNodeHome)
 	rootCmd.PersistentFlags().UintVar(&invCheckPeriod, flagInvCheckPeriod,
 		0, "Assert registered invariants every N blocks")
+	rootCmd.PersistentFlags().BoolVar(&bootstrap, flagIsBootstrap,
+		false, "Start the node as the bootstrap node for the network (only used when starting a new network)")
 	err := executor.Execute()
 	if err != nil {
 		panic(err)
