@@ -91,6 +91,7 @@ pub enum EnclaveError {
     OutOfGas,
     /// Failed to seal data
     FailedSeal,
+    FailedUnseal,
     /// Unexpected Error happened, no more details available
     Unknown,
 }

@@ -23,7 +23,7 @@ use crate::attestation::create_attestation_certificate;
 #[cfg(not(feature = "SGX_MODE_HW"))]
 use crate::attestation::{create_report_with_data, software_mode_quote};
 use crate::cert::verify_mra_cert;
-use crate::storage::{seal, write_to_untrusted, NODE_SK_SEALING_PATH};
+use crate::storage::{write_to_untrusted, SealedKey, NODE_SK_SEALING_PATH};
 
 #[no_mangle]
 pub extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
@@ -108,8 +108,8 @@ pub unsafe extern "C" fn ecall_key_gen(pk_node: *mut PubKey) -> sgx_types::sgx_s
         Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
     };
 
-    let privkey = key_pair.get_privkey();
-    match seal(&privkey, NODE_SK_SEALING_PATH) {
+    // let privkey = key_pair.get_privkey();
+    match key_pair.seal(NODE_SK_SEALING_PATH) {
         Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
         Ok(_) => { /* continue */ }
     }; // can read with SecretKey::from_slice()
