@@ -75,6 +75,8 @@ RUN chmod +x /usr/bin/enigmacli
 RUN chmod +x wasmi-sgx-test.sh
 
 RUN mkdir -p /root/.enigmad/.compute/
+RUN mkdir -p /root/.sgx_secrets/
+RUN mkdir -p /root/.enigmad/.node/
 # COPY ./packaging_docker/seed.json /root/.enigmad/.compute/seed.json
 
 COPY api_key.txt /root/

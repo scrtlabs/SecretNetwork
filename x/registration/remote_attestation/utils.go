@@ -8,7 +8,7 @@ import (
 )
 
 func printCert(rawByte []byte) {
-	// print("--received-server cert: [Certificate(b\"")
+	print("--received-server cert: [Certificate(b\"")
 	for _, b := range rawByte {
 		if b == '\n' {
 			print("\\n")

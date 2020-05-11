@@ -104,7 +104,7 @@ func ConfigureSecret(_ *server.Context, _ *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			err = ioutil.WriteFile(filepath.Join(app.DefaultCLIHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig),
+			err = ioutil.WriteFile(filepath.Join(app.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig),
 				cfgBytes, 0644)
 			if err != nil {
 				return err
