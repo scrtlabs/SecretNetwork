@@ -6,6 +6,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
+	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
 )
 
 func (k Keeper) getRegistrationInfo(ctx sdk.Context, publicKey types.NodeID) *types.RegistrationNodeInfo {
@@ -35,8 +36,14 @@ func (k Keeper) ListRegistrationInfo(ctx sdk.Context, cb func([]byte, types.Regi
 	}
 }
 
-func (k Keeper) setRegistrationInfo(ctx sdk.Context, certificate types.RegistrationNodeInfo, publicKey types.NodeID) {
+func (k Keeper) setRegistrationInfo(ctx sdk.Context, certificate types.RegistrationNodeInfo) {
 	store := ctx.KVStore(k.storeKey)
+
+	publicKey, err := ra.VerifyRaCert(certificate.Certificate)
+	if err != nil {
+		return
+	}
+
 	fmt.Println("pubkey", hex.EncodeToString(publicKey))
 	fmt.Println("EncryptedSeed", hex.EncodeToString(certificate.EncryptedSeed))
 	store.Set(types.GetRegistrationKey(publicKey), k.cdc.MustMarshalBinaryBare(certificate))

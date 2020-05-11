@@ -12,13 +12,7 @@ import (
 // CONTRACT: all types of accounts must have been already initialized/created
 func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 	for _, storedRegInfo := range data.Registration {
-
-		regInfo := types.RegistrationNodeInfo{
-			Certificate:   storedRegInfo.Certificate,
-			EncryptedSeed: storedRegInfo.Seed,
-		}
-
-		keeper.setRegistrationInfo(ctx, regInfo, storedRegInfo.PublicKey)
+		keeper.setRegistrationInfo(ctx, storedRegInfo)
 	}
 }
 
@@ -27,13 +21,7 @@ func ExportGenesis(ctx sdk.Context, keeper Keeper) types.GenesisState {
 	var genState types.GenesisState
 
 	keeper.ListRegistrationInfo(ctx, func(pubkey []byte, regInfo types.RegistrationNodeInfo) bool {
-
-		genState.Registration = append(genState.Registration, types.RegInfo{
-			Certificate: regInfo.Certificate,
-			Seed:        regInfo.EncryptedSeed,
-			PublicKey:   pubkey,
-		})
-
+		genState.Registration = append(genState.Registration, regInfo)
 		return false
 	})
 

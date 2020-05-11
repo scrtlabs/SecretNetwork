@@ -1,7 +1,7 @@
 package types
 
 import (
-	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/internal/keeper/remote_attestation"
+	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
 )
 
 const PublicKeyLength = 128   // encoded length

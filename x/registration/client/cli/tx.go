@@ -2,7 +2,6 @@ package cli
 
 import (
 	"bufio"
-	"encoding/hex"
 	//"fmt"
 	"io/ioutil"
 	//"strconv"
@@ -39,7 +38,7 @@ func GetTxCmd(cdc *codec.Codec) *cobra.Command {
 // AuthenticateNodeCmd will upload code to be reused.
 func AuthenticateNodeCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "auth [cert file] [node-id]",
+		Use:   "auth [cert file]",
 		Short: "Upload a certificate to authenticate the node",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -53,16 +52,10 @@ func AuthenticateNodeCmd(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			pubkey, err := hex.DecodeString(args[1])
-			if err != nil {
-				return err
-			}
-
 			// build and sign the transaction, then broadcast to Tendermint
 			msg := types.RaAuthenticate{
 				Sender:      cliCtx.GetFromAddress(),
 				Certificate: cert,
-				PubKey:      pubkey,
 			}
 			err = msg.ValidateBasic()
 

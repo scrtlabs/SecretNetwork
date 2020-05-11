@@ -3,7 +3,7 @@ package types
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/internal/keeper/remote_attestation"
+	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
 )
 
 const (
@@ -15,7 +15,7 @@ type RaAuthenticate struct {
 	// Certificate can be raw or gzip compressed
 	Certificate ra.Certificate `json:"ra_cert" yaml:"ra_cert"`
 	// Node ID is the identifier of the node we're going to fun
-	PubKey NodeID `json:"node_id" yaml:"node_id"`
+	// PubKey NodeID `json:"node_id" yaml:"node_id"`
 }
 
 func (msg RaAuthenticate) Route() string {
@@ -39,9 +39,9 @@ func (msg RaAuthenticate) ValidateBasic() error {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "certificate length too large")
 	}
 
-	if msg.PubKey == nil {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "Node ID cannot be empty")
-	}
+	//if msg.PubKey == nil {
+	//	return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "Node ID cannot be empty")
+	//}
 
 	return validateCertificate(msg.Certificate)
 }

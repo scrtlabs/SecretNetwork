@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
-	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/internal/keeper/remote_attestation"
+	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
 	"os"
 	"path/filepath"
 
@@ -103,7 +103,7 @@ func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, router sdk.Router, homeD
 }
 
 // Create uploads and compiles a WASM contract, returning a short identifier for the contract
-func (k Keeper) AuthenticateNode(ctx sdk.Context, certificate ra.Certificate, nodeId types.NodeID) ([]byte, error) {
+func (k Keeper) AuthenticateNode(ctx sdk.Context, certificate ra.Certificate) ([]byte, error) {
 	fmt.Println("AuthenticateNode")
 	var encSeed []byte
 
@@ -111,13 +111,19 @@ func (k Keeper) AuthenticateNode(ctx sdk.Context, certificate ra.Certificate, no
 		// any sha256 hash is good enough
 		encSeed = make([]byte, 32)
 	} else {
-		isAuth, err := k.isNodeAuthenticated(ctx, nodeId)
+
+		publicKey, err := ra.VerifyRaCert(certificate)
+		if err != nil {
+			return nil, sdkerrors.Wrap(types.ErrAuthenticateFailed, err.Error())
+		}
+
+		isAuth, err := k.isNodeAuthenticated(ctx, publicKey)
 		if err != nil {
 			return nil, sdkerrors.Wrap(types.ErrAuthenticateFailed, err.Error())
 		}
 		fmt.Println("After isNodeAuthenticated")
 		if isAuth {
-			return k.getRegistrationInfo(ctx, nodeId).EncryptedSeed, nil
+			return k.getRegistrationInfo(ctx, publicKey).EncryptedSeed, nil
 		}
 		fmt.Println("After getRegistrationInfo")
 		encSeed, err = api.GetEncryptedSeed(certificate)
@@ -133,7 +139,7 @@ func (k Keeper) AuthenticateNode(ctx sdk.Context, certificate ra.Certificate, no
 		Certificate:   certificate,
 		EncryptedSeed: encSeed,
 	}
-	k.setRegistrationInfo(ctx, regInfo, nodeId)
+	k.setRegistrationInfo(ctx, regInfo)
 
 	return encSeed, nil
 }

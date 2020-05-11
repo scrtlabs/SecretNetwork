@@ -3,10 +3,10 @@ package registration
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
+	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
 )
 
 const (
@@ -52,8 +52,14 @@ func handleRaAuthenticate(ctx sdk.Context, k Keeper, msg *types.RaAuthenticate) 
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("RaAuth", hex.EncodeToString(msg.PubKey))
-	encSeed, err := k.AuthenticateNode(ctx, msg.Certificate, msg.PubKey)
+
+	pubkey, err := ra.VerifyRaCert(msg.Certificate)
+	if err != nil {
+		return nil, err
+	}
+
+	// fmt.Println("RaAuth", hex.EncodeToString(msg.PubKey))
+	encSeed, err := k.AuthenticateNode(ctx, msg.Certificate)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +70,7 @@ func handleRaAuthenticate(ctx sdk.Context, k Keeper, msg *types.RaAuthenticate) 
 		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
 		sdk.NewAttribute(AttributeSigner, msg.Sender.String()),
 		sdk.NewAttribute(AttributeEncryptedSeed, fmt.Sprintf("%02x", encSeed)),
-		sdk.NewAttribute(AttributeNodeID, fmt.Sprintf("%02x", msg.PubKey)),
+		sdk.NewAttribute(AttributeNodeID, fmt.Sprintf("%02x", hex.EncodeToString(pubkey))),
 	)
 
 	return &sdk.Result{
