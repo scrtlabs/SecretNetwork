@@ -208,16 +208,16 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 }
 
 func validateSeedParams(config types.SeedConfig) error {
-	if len(config.PublicKey) != types.PublicKeyLength || !isHexString(config.PublicKey) {
+	if len(config.PublicKey) != types.PublicKeyLength || !IsHexString(config.PublicKey) {
 		return sdkerrors.Wrap(types.ErrSeedValidationParams, "Invalid parameter `public key` in seed parameters. Did you initialize the node?")
 	}
-	if len(config.EncryptedKey) != types.EncryptedKeyLength || !isHexString(config.EncryptedKey) {
+	if len(config.EncryptedKey) != types.EncryptedKeyLength || !IsHexString(config.EncryptedKey) {
 		return sdkerrors.Wrap(types.ErrSeedValidationParams, "Invalid parameter: `seed` in seed parameters. Did you initialize the node?")
 	}
 	return nil
 }
 
-func isHexString(s string) bool {
+func IsHexString(s string) bool {
 	_, err := hex.DecodeString(s)
 	return err == nil
 }

@@ -1,4 +1,6 @@
+#[cfg(feature = "SGX_MODE_HW")]
 use itertools::Itertools;
+
 use log::*;
 use sgx_rand::*;
 use sgx_tcrypto::*;
