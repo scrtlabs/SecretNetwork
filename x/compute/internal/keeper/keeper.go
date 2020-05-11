@@ -2,12 +2,7 @@ package keeper
 
 import (
 	"encoding/binary"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
-	ra "github.com/enigmampc/EnigmaBlockchain/x/compute/internal/keeper/remote_attestation"
-	"os"
 	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -33,26 +28,6 @@ const GasMultiplier = 100
 // MaxGas for a contract is 900 million (enforced in rust)
 const MaxGas = 900_000_000
 
-// User struct which contains a name
-// a type and a list of social links
-type SeedConfig struct {
-	PublicKey    string `json:"pk"`
-	EncryptedKey string `json:"encKey"`
-}
-
-func (c SeedConfig) decode() ([]byte, []byte, error) {
-	enc, err := hex.DecodeString(c.EncryptedKey)
-	if err != nil {
-		return nil, nil, err
-	}
-	pk, err := hex.DecodeString(c.PublicKey)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return pk, enc, nil
-}
-
 // Keeper will have a reference to Wasmer with it's own data directory.
 type Keeper struct {
 	storeKey      sdk.StoreKey
@@ -67,61 +42,12 @@ type Keeper struct {
 	queryGasLimit uint64
 }
 
-func SgxMode() string {
-	sgx := os.Getenv("SGX_MODE")
-	if sgx == "" {
-		sgx = "HW"
-	}
-
-	return sgx
-}
-
 // NewKeeper creates a new contract Keeper instance
 func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.AccountKeeper, bankKeeper bank.Keeper,
-	router sdk.Router, homeDir string, wasmConfig types.WasmConfig, bootstrap bool) Keeper {
+	router sdk.Router, homeDir string, wasmConfig types.WasmConfig) Keeper {
 	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), wasmConfig.CacheSize)
 	if err != nil {
 		panic(err)
-	}
-
-	if SgxMode() == "HW" {
-		// validate attestation
-
-	}
-
-	if !bootstrap {
-
-		seedPath := filepath.Join(homeDir, "seed.json")
-
-		if !fileExists(seedPath) {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, "Seed configuration not found. Did you initialize the node?"))
-		}
-
-		// get PK from CLI
-		// get encrypted master key
-		byteValue, err := getFile(seedPath)
-
-		var seedCfg SeedConfig
-
-		err = json.Unmarshal(byteValue, &seedCfg)
-		if err != nil {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-		}
-
-		err = validateSeedParams(seedCfg)
-		if err != nil {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-		}
-
-		pk, enc, err := seedCfg.decode()
-		if err != nil {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-		}
-
-		_, err = api.InitSeed(pk, enc)
-		if err != nil {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-		}
 	}
 
 	return Keeper{
@@ -160,42 +86,6 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	store.Set(types.GetCodeKey(codeID), k.cdc.MustMarshalBinaryBare(codeInfo))
 
 	return codeID, nil
-}
-
-// Create uploads and compiles a WASM contract, returning a short identifier for the contract
-func (k Keeper) AuthenticateNode(ctx sdk.Context, certificate ra.Certificate, nodeId types.NodeID) ([]byte, error) {
-	fmt.Println("AuthenticateNode")
-	var encSeed []byte
-
-	if isSimulationMode(ctx) {
-		// any sha256 hash is good enough
-		encSeed = make([]byte, 32)
-	} else {
-		isAuth, err := k.isNodeAuthenticated(ctx, nodeId)
-		if err != nil {
-			return nil, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
-		}
-		fmt.Println("After isNodeAuthenticated")
-		if isAuth {
-			return k.getRegistrationInfo(ctx, nodeId).EncryptedSeed, nil
-		}
-		fmt.Println("After getRegistrationInfo")
-		encSeed, err = api.GetEncryptedSeed(certificate)
-		fmt.Println("After GetEncryptedSeed")
-		if err != nil {
-			// return 0, sdkerrors.Wrap(err, "cosmwasm create")
-			return nil, sdkerrors.Wrap(types.ErrAuthenticateFailed, err.Error())
-		}
-		fmt.Println("Woohoo")
-	}
-
-	regInfo := types.RegistrationNodeInfo{
-		Certificate:   certificate,
-		EncryptedSeed: encSeed,
-	}
-	k.setRegistrationInfo(ctx, regInfo, nodeId)
-
-	return encSeed, nil
 }
 
 // returns true when simulation mode used by gas=auto queries
@@ -585,19 +475,4 @@ func addrFromUint64(id uint64) sdk.AccAddress {
 	addr[0] = 'C'
 	binary.PutUvarint(addr[1:], id)
 	return sdk.AccAddress(crypto.AddressHash(addr))
-}
-
-func validateSeedParams(config SeedConfig) error {
-	if len(config.PublicKey) != types.PublicKeyLength || !isHexString(config.PublicKey) {
-		return sdkerrors.Wrap(types.ErrInstantiateFailed, "Invalid parameter `public key` in seed parameters. Did you initialize the node?")
-	}
-	if len(config.EncryptedKey) != types.EncryptedKeyLength || !isHexString(config.EncryptedKey) {
-		return sdkerrors.Wrap(types.ErrInstantiateFailed, "Invalid parameter: `seed` in seed parameters. Did you initialize the node?")
-	}
-	return nil
-}
-
-func isHexString(s string) bool {
-	_, err := hex.DecodeString(s)
-	return err == nil
 }

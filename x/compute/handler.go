@@ -1,20 +1,15 @@
 package compute
 
 import (
-	"encoding/hex"
 	"fmt"
-	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
 const (
-	AttributeKeyContract   = "contract_address"
-	AttributeKeyCodeID     = "code_id"
-	AttributeSigner        = "signer"
-	AttributeEncryptedSeed = "encrypted_seed"
-	AttributeNodeID        = "node_id"
+	AttributeKeyContract = "contract_address"
+	AttributeKeyCodeID   = "code_id"
+	AttributeSigner      = "signer"
 )
 
 // NewHandler returns a handler for "bank" type messages.
@@ -23,11 +18,6 @@ func NewHandler(k Keeper) sdk.Handler {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
 
 		switch msg := msg.(type) {
-
-		case MsgRaAuthenticate:
-			return handleRaAuthenticate(ctx, k, &msg)
-		case *MsgRaAuthenticate:
-			return handleRaAuthenticate(ctx, k, msg)
 
 		case MsgStoreCode:
 			return handleStoreCode(ctx, k, &msg)
@@ -62,32 +52,6 @@ func filterMessageEvents(manager *sdk.EventManager) sdk.Events {
 		}
 	}
 	return res
-}
-
-func handleRaAuthenticate(ctx sdk.Context, k Keeper, msg *types.RaAuthenticate) (*sdk.Result, error) {
-	err := msg.ValidateBasic()
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("RaAuth", hex.EncodeToString(msg.PubKey))
-	encSeed, err := k.AuthenticateNode(ctx, msg.Certificate, msg.PubKey)
-	if err != nil {
-		return nil, err
-	}
-
-	events := filterMessageEvents(ctx.EventManager())
-	ourEvent := sdk.NewEvent(
-		sdk.EventTypeMessage,
-		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-		sdk.NewAttribute(AttributeSigner, msg.Sender.String()),
-		sdk.NewAttribute(AttributeEncryptedSeed, fmt.Sprintf("%02x", encSeed)),
-		sdk.NewAttribute(AttributeNodeID, fmt.Sprintf("%02x", msg.PubKey)),
-	)
-
-	return &sdk.Result{
-		Data:   []byte(fmt.Sprintf("%02x", encSeed)),
-		Events: append(events, ourEvent),
-	}, nil
 }
 
 func handleStoreCode(ctx sdk.Context, k Keeper, msg *MsgStoreCode) (*sdk.Result, error) {

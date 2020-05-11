@@ -37,7 +37,6 @@ func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 		GetCmdQueryCode(cdc),
 		GetCmdGetContractInfo(cdc),
 		GetCmdGetContractState(cdc),
-		GetCmdEncryptedSeed(cdc),
 	)...)
 	return queryCmd
 }
@@ -58,32 +57,6 @@ func GetCmdListCode(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 			fmt.Println(string(res))
-			return nil
-		},
-	}
-}
-
-// GetCmdListCode lists all wasm code uploaded
-func GetCmdEncryptedSeed(cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
-		Use:   "seed [node-id]",
-		Short: "Get encrypted seed for a node",
-		Long:  "Get encrypted seed for a node",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
-
-			nodeId := args[0]
-			if len(nodeId) != 128 {
-				return fmt.Errorf("invalid Node ID format (req: hex string of length 64)")
-			}
-
-			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryEncryptedSeed, nodeId)
-			res, _, err := cliCtx.Query(route)
-			if err != nil {
-				return err
-			}
-			fmt.Println(hex.EncodeToString(res))
 			return nil
 		},
 	}
