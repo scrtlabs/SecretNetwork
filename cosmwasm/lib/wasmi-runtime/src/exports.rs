@@ -162,10 +162,10 @@ pub extern "C" fn ecall_get_encrypted_seed(
 #[no_mangle]
 pub extern "C" fn ecall_init_bootstrap() -> sgx_status_t {
     // Generate node-specific key-pair
-    // let key_pair = match KeyPair::new() {
-    //     Ok(kp) => kp,
-    //     Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
-    // };
+    let key_pair = match KeyPair::new() {
+        Ok(kp) => kp,
+        Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
+    };
     //
     // let privkey = key_pair.get_privkey();
     // match seal(&privkey, NODE_SK_SEALING_PATH) {
