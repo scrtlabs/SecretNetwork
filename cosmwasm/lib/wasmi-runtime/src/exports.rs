@@ -18,8 +18,9 @@ use crate::keys::init_seed;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use crate::attestation::create_attestation_report;
-
+#[cfg(feature = "SGX_MODE_HW")]
 use crate::attestation::create_attestation_certificate;
+
 #[cfg(not(feature = "SGX_MODE_HW"))]
 use crate::attestation::{create_report_with_data, software_mode_quote};
 use crate::cert::verify_mra_cert;
@@ -144,6 +145,17 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
 #[no_mangle]
 pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
     software_mode_quote()
+}
+
+#[cfg(not(feature = "SGX_MODE_HW"))]
+#[no_mangle]
+// todo: replace 32 with crypto consts once I have crypto library
+pub extern "C" fn ecall_get_encrypted_seed(
+    cert: *const u8,
+    cert_len: u32,
+    seed: &mut [u8; 32],
+) -> sgx_status_t {
+    sgx_status_t::SGX_SUCCESS
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
