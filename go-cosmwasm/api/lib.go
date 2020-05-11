@@ -24,11 +24,11 @@ type Cache struct {
 func InitBootstrap() (bool, error) {
 	errmsg := C.Buffer{}
 
-	res, err := C.init_bootstrap(&errmsg)
+	_, err := C.init_bootstrap(&errmsg)
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
 	}
-	return res, nil
+	return true, nil
 }
 
 func InitSeed(publicKey []byte, seed []byte) (bool, error) {

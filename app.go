@@ -150,7 +150,6 @@ func NewEnigmaChainApp(
 
 	// First define the top level codec that will be shared by the different modules
 	cdc := MakeCodec()
-
 	// BaseApp handles interactions with Tendermint through the ABCI protocol
 	bApp := bam.NewBaseApp(appName, logger, db, auth.DefaultTxDecoder(cdc), baseAppOptions...)
 	bApp.SetCommitMultiStoreTracer(traceStore)
@@ -280,7 +279,7 @@ func NewEnigmaChainApp(
 
 	// replace with bootstrap flag when we figure out how to test properly and everything works
 	app.computeKeeper = compute.NewKeeper(app.cdc, keys[compute.StoreKey], app.accountKeeper, app.bankKeeper, computeRouter, computeDir, wasmConfig)
-	app.regKeeper = reg.NewKeeper(app.cdc, keys[reg.StoreKey], regRouter, homeDir, true)
+	app.regKeeper = reg.NewKeeper(app.cdc, keys[reg.StoreKey], regRouter, homeDir, bootstrap)
 	// register the proposal types
 	govRouter := gov.NewRouter()
 	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler).

@@ -57,7 +57,7 @@ pub fn create_attestation_report_u() -> SgxResult<sgx_status_t> {
     inner_create_report(enclave.geteid())
 }
 
-pub fn untrusted_init_bootstrap() -> SgxResult<[u8; 32]> {
+pub fn untrusted_init_bootstrap() -> SgxResult<sgx_status_t> {
     info!("Hello from just before initializing - produce_report");
     let enclave = init_enclave().unwrap();
     info!("Hello from just after initializing - produce_report");

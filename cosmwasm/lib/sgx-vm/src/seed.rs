@@ -19,7 +19,7 @@ pub fn inner_init_seed(eid: sgx_enclave_id_t,
                  public_key_len: u32,
                  encrypted_seed: *const u8,
                  encrypted_seed_len: u32) -> SgxResult<sgx_status_t> {
-    println!("Hello from just before the enclave!");
+
     let mut ret = sgx_status_t::SGX_SUCCESS;
 
     let status = unsafe { ecall_init_seed(eid, &mut ret, public_key, public_key_len,
@@ -38,7 +38,7 @@ pub fn inner_init_seed(eid: sgx_enclave_id_t,
 
 
 pub fn inner_init_bootstrap(eid: sgx_enclave_id_t) -> SgxResult<sgx_status_t> {
-    info!("Entered produce report");
+
     let mut retval = sgx_status_t::SGX_SUCCESS;
     let status = unsafe { ecall_init_bootstrap(eid, &mut retval) };
 

@@ -159,6 +159,7 @@ pub extern "C" fn ecall_get_encrypted_seed(
     sgx_status_t::SGX_SUCCESS
 }
 
+#[no_mangle]
 pub extern "C" fn ecall_init_bootstrap() -> sgx_status_t {
     // Generate node-specific key-pair
     let key_pair = match KeyPair::new() {
