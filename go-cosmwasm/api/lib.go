@@ -21,6 +21,16 @@ type Cache struct {
 	ptr *C.cache_t
 }
 
+func InitBootstrap() (bool, error) {
+	errmsg := C.Buffer{}
+
+	res, err := C.init_bootstrap(&errmsg)
+	if err != nil {
+		return false, errorWithMessage(err, errmsg)
+	}
+	return res, nil
+}
+
 func InitSeed(publicKey []byte, seed []byte) (bool, error) {
 	pkSlice := sendSlice(publicKey)
 	seedSlice := sendSlice(seed)

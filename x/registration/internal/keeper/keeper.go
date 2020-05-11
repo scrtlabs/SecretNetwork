@@ -86,11 +86,20 @@ func InitializeNonBootstrap(homeDir string) {
 	}
 }
 
-func InitializeBootstrap(homeDir string) {
+func InitializeBootstrap() {
 
 	if SgxMode() != "HW" {
 		// validate attestation
 		return
+	}
+
+	res, err := api.InitBootstrap()
+	if err != nil {
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	}
+
+	if !res {
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, "Bootstrap init failed :("))
 	}
 
 	return

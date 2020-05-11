@@ -19,6 +19,7 @@ use cosmwasm_sgx_vm::{create_attestation_report_u, init_seed_u, untrusted_get_en
 use ctor::ctor;
 use log;
 use log::*;
+use cosmwasm_sgx_vm::instance::untrusted_init_bootstrap;
 
 #[ctor]
 fn init_logger() {
@@ -60,6 +61,25 @@ pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> 
         }
     };
     return result;
+}
+
+#[no_mangle]
+pub extern "C" fn init_bootstrap(
+    err: Option<&mut Buffer>,
+) -> bool {
+    info!("Hello from right before untrusted_get_encrypted_seed");
+    let result = match untrusted_init_bootstrap() {
+        Err(e) => {
+            error!("Error :(");
+            set_error(e.to_string(), err);
+            return false
+        }
+        Ok(r) => {
+            clear_error();
+            true
+        }
+    };
+    return true;
 }
 
 #[no_mangle]

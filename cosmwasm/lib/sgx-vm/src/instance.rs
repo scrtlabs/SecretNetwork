@@ -14,7 +14,7 @@ use lazy_static::lazy_static;
 
 use crate::attestation::{inner_create_report, inner_get_encrypted_seed};
 use crate::errors::{Error, Result};
-use crate::seed::inner_init_seed;
+use crate::seed::{inner_init_bootstrap, inner_init_seed};
 use crate::wasmi::Module;
 use crate::{Extern, Storage};
 
@@ -55,6 +55,14 @@ pub fn create_attestation_report_u() -> SgxResult<sgx_status_t> {
     info!("Hello from just after initializing - produce_report");
 
     inner_create_report(enclave.geteid())
+}
+
+pub fn untrusted_init_bootstrap() -> SgxResult<[u8; 32]> {
+    info!("Hello from just before initializing - produce_report");
+    let enclave = init_enclave().unwrap();
+    info!("Hello from just after initializing - produce_report");
+
+    inner_init_bootstrap(enclave.geteid())
 }
 
 pub fn untrusted_get_encrypted_seed(cert: &[u8]) -> SgxResult<[u8; 32]> {

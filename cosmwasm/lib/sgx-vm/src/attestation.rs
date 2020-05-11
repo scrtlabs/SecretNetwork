@@ -115,7 +115,6 @@ fn ocall_get_update_info (platform_blob: * const sgx_platform_info_t,
     }
 }
 
-
 pub fn inner_create_report(eid: sgx_enclave_id_t) -> SgxResult<sgx_status_t> {
 
     info!("Entered produce report");

@@ -69,6 +69,8 @@ Buffer handle(cache_t *cache,
 
 cache_t *init_cache(Buffer data_dir, uintptr_t cache_size, Buffer *err);
 
+Buffer init_bootstrap(Buffer *err);
+
 bool init_seed(Buffer public_key, Buffer encrypted_seed, Buffer *err);
 
 Buffer instantiate(cache_t *cache,
