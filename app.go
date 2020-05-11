@@ -270,7 +270,6 @@ func NewEnigmaChainApp(
 	// better way to get this dir???
 	homeDir := viper.GetString(cli.HomeFlag)
 	computeDir := filepath.Join(homeDir, ".compute")
-	regDir := filepath.Join(homeDir, ".node")
 
 	wasmWrap := WasmWrapper{Wasm: compute.DefaultWasmConfig()}
 	err := viper.Unmarshal(&wasmWrap)
@@ -281,7 +280,7 @@ func NewEnigmaChainApp(
 
 	// replace with bootstrap flag when we figure out how to test properly and everything works
 	app.computeKeeper = compute.NewKeeper(app.cdc, keys[compute.StoreKey], app.accountKeeper, app.bankKeeper, computeRouter, computeDir, wasmConfig)
-	app.regKeeper = reg.NewKeeper(app.cdc, keys[reg.StoreKey], regRouter, regDir, true)
+	app.regKeeper = reg.NewKeeper(app.cdc, keys[reg.StoreKey], regRouter, homeDir, true)
 	// register the proposal types
 	govRouter := gov.NewRouter()
 	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler).

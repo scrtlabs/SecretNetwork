@@ -4,10 +4,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	app "github.com/enigmampc/EnigmaBlockchain"
 	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
 	reg "github.com/enigmampc/EnigmaBlockchain/x/registration"
 	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
 	"io/ioutil"
+	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -68,9 +70,10 @@ func ParseCert(_ *server.Context, _ *codec.Codec) *cobra.Command {
 
 func ConfigureSecret(_ *server.Context, _ *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "configure [cert file] [seed]",
-		Short: "After registration is successful, configure the secret node with the credentials file",
-		Args:  cobra.ExactArgs(2),
+		Use: "configure-secret [cert file] [seed]",
+		Short: "After registration is successful, configure the secret node with the credentials file and the encrypted" +
+			"seed that was written on-chain",
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			// parse coins trying to be sent
@@ -86,7 +89,9 @@ func ConfigureSecret(_ *server.Context, _ *codec.Codec) *cobra.Command {
 
 			// parse coins trying to be sent
 			seed := args[1]
-
+			if len(seed) != 64 || !reg.IsHexString(seed) {
+				return fmt.Errorf("invalid encrypted seed format (req: hex string of length 64)")
+			}
 			// fmt.Println(fmt.Sprintf("0x%s", hex.EncodeToString(pubkey)))
 
 			cfg := reg.SeedConfig{
@@ -99,7 +104,8 @@ func ConfigureSecret(_ *server.Context, _ *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			err = ioutil.WriteFile(reg.SecretNodeSeedConfig, cfgBytes, 0644)
+			err = ioutil.WriteFile(filepath.Join(app.DefaultCLIHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig),
+				cfgBytes, 0644)
 			if err != nil {
 				return err
 			}

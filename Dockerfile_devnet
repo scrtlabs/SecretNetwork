@@ -29,9 +29,9 @@ COPY cosmwasm/ cosmwasm/
 WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/
 
 COPY Makefile Makefile
-RUN make vendor
 
 RUN make clean
+RUN make vendor
 
 WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/go-cosmwasm
 RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD SGX_MODE=${SGX_MODE} make build-rust

@@ -18,8 +18,9 @@ use crate::keys::init_seed;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use crate::attestation::create_attestation_report;
-
+#[cfg(feature = "SGX_MODE_HW")]
 use crate::attestation::create_attestation_certificate;
+
 #[cfg(not(feature = "SGX_MODE_HW"))]
 use crate::attestation::{create_report_with_data, software_mode_quote};
 use crate::cert::verify_mra_cert;

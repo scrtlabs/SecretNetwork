@@ -9,6 +9,7 @@ const PublicKeyLength = 128   // encoded length
 const EncryptedKeyLength = 64 // encoded length
 
 const SecretNodeSeedConfig = "seed.json"
+const SecretNodeCfgFolder = ".node"
 
 type NodeID []byte
 

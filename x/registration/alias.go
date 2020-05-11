@@ -18,6 +18,7 @@ const (
 	RouterKey            = types.RouterKey
 	QueryEncryptedSeed   = keeper.QueryEncryptedSeed
 	SecretNodeSeedConfig = types.SecretNodeSeedConfig
+	SecretNodeCfgFolder  = types.SecretNodeCfgFolder
 )
 
 var (
@@ -28,6 +29,8 @@ var (
 	ExportGenesis   = keeper.ExportGenesis
 	NewKeeper       = keeper.NewKeeper
 	NewQuerier      = keeper.NewQuerier
+
+	IsHexString = keeper.IsHexString
 	//MakeTestCodec             = keeper.MakeTestCodec
 	//CreateTestInput           = keeper.CreateTestInput
 
