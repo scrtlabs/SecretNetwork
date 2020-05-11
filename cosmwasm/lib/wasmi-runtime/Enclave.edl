@@ -1,0 +1,69 @@
+enclave {
+    from "sgx_tstd.edl" import *;
+    from "sgx_stdio.edl" import *;
+    from "sgx_backtrace.edl" import *;
+    from "sgx_tstdc.edl" import *;
+    from "sgx_fs.edl" import *;
+
+    // This header is generated during the build of enclave-ffi-types
+    include "target/headers/enclave-ffi-types.h"
+
+    trusted {
+        EnclaveBuffer ecall_allocate(
+            [in, count=length] const uint8_t* buffer,
+            uintptr_t length
+        );
+
+        public InitResult ecall_init(
+            Ctx context,
+            uint64_t gas_limit,
+            [in, count=contract_len] const uint8_t* contract,
+            uintptr_t contract_len,
+            [in, count=env_len] const uint8_t* env,
+            uintptr_t env_len,
+            [in, count=msg_len] const uint8_t* msg,
+            uintptr_t msg_len
+        );
+
+        public HandleResult ecall_handle(
+            Ctx context,
+            uint64_t gas_limit,
+            [in, count=contract_len] const uint8_t* contract,
+            uintptr_t contract_len,
+            [in, count=env_len] const uint8_t* env,
+            uintptr_t env_len,
+            [in, count=msg_len] const uint8_t* msg,
+            uintptr_t msg_len
+        );
+
+        public QueryResult ecall_query(
+            Ctx context,
+            uint64_t gas_limit,
+            [in, count=contract_len] const uint8_t* contract,
+            uintptr_t contract_len,
+            [in, count=msg_len] const uint8_t* msg,
+            uintptr_t msg_len
+        );
+    };
+
+    untrusted {
+        UserSpaceBuffer ocall_allocate(
+            [in, count=length] const uint8_t* buffer,
+            uintptr_t length
+        );
+
+        EnclaveBuffer ocall_read_db(
+            Ctx context,
+            [in, count=key_len] const uint8_t* key,
+            uintptr_t key_len
+        ) allow (ecall_allocate);
+
+        void ocall_write_db(
+            Ctx context,
+            [in, count=key_len] const uint8_t* key,
+            uintptr_t key_len,
+            [in, count=value_len] const uint8_t* value,
+            uintptr_t value_len
+        );
+    };
+};

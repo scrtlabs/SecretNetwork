@@ -13,8 +13,14 @@ use std::str::from_utf8;
 
 use crate::error::{clear_error, handle_c_error, set_error};
 use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
-use cosmwasm::traits::Extern;
-use cosmwasm_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache};
+use cosmwasm_sgx_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache, Extern};
+
+use ctor::ctor;
+
+#[ctor]
+fn init_logger() {
+    simple_logger::init().unwrap();
+}
 
 #[repr(C)]
 pub struct cache_t {}
@@ -154,7 +160,9 @@ fn do_init(
     let msg = msg.read().ok_or_else(|| empty_err(MSG_ARG))?;
 
     let deps = to_extern(db, api);
-    let mut instance = cache.get_instance(code_id, deps, gas_limit).context(WasmErr {})?;
+    let mut instance = cache
+        .get_instance(code_id, deps, gas_limit)
+        .context(WasmErr {})?;
     let res = call_init_raw(&mut instance, params, msg).context(WasmErr {})?;
     *gas_used = gas_limit - instance.get_gas();
     cache.store_instance(code_id, instance);
@@ -200,7 +208,9 @@ fn do_handle(
     let msg = msg.read().ok_or_else(|| empty_err(MSG_ARG))?;
 
     let deps = to_extern(db, api);
-    let mut instance = cache.get_instance(code_id, deps, gas_limit).context(WasmErr {})?;
+    let mut instance = cache
+        .get_instance(code_id, deps, gas_limit)
+        .context(WasmErr {})?;
     let res = call_handle_raw(&mut instance, params, msg).context(WasmErr {})?;
     *gas_used = gas_limit - instance.get_gas();
     cache.store_instance(code_id, instance);
@@ -243,7 +253,9 @@ fn do_query(
     let msg = msg.read().ok_or_else(|| empty_err(MSG_ARG))?;
 
     let deps = to_extern(db, api);
-    let mut instance = cache.get_instance(code_id, deps, gas_limit).context(WasmErr {})?;
+    let mut instance = cache
+        .get_instance(code_id, deps, gas_limit)
+        .context(WasmErr {})?;
     let res = call_query_raw(&mut instance, msg).context(WasmErr {})?;
     *gas_used = gas_limit - instance.get_gas();
     cache.store_instance(code_id, instance);

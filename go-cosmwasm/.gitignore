@@ -3,3 +3,9 @@
 *.iml
 .idea
 libgo_cosmwasm*
+
+*.so
+*.o
+*.h
+*.c
+lib/

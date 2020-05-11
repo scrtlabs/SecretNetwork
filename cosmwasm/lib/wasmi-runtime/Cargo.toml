@@ -1,0 +1,23 @@
+[package]
+name = "wasmi-runtime"
+version = "0.1.0"
+authors = ["Reuven Podmazo <reuven@enigma.co>"]
+edition = "2018"
+description = "An enclave running wasmi, to be used by cosmwasm-sgx-vm"
+
+[lib]
+name = "wasmi_runtime_enclave"
+crate-type = ["staticlib"]
+
+[dependencies]
+derive_more = "0.99"
+sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.0" }
+enclave-ffi-types = { path = "../enclave-ffi-types" }
+wasmi = { git = "https://github.com/paritytech/wasmi", rev = "39a18a433a765a36383d34d4edd536ba1e0664d2", default-features = false, features = [
+    "core"
+] }
+bech32 = "0.7"
+pwasm-utils = { version = "0.12.0", default-features = false }
+parity-wasm = { version = "0.41.0", default-features = false }
+log = "0.4.8"
+ctor = "0.1.13"

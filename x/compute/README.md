@@ -39,7 +39,7 @@ was sent:
     },
     {
       "key": "signer",
-      "value": "cosmos1vx8knpllrj7n963p9ttd80w47kpacrhuts497x"
+      "value": "enigma1vx8knpllrj7n963p9ttd80w47kpacrhuts497x"
     },
     {
       "key": "code_id",
@@ -47,7 +47,7 @@ was sent:
     },
     {
       "key": "contract_address",
-      "value": "cosmos18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5"
+      "value": "enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5"
     }
   ]
 }
@@ -64,11 +64,11 @@ provide a initial balance in the same `MsgInstantiateContract`. We see the follo
     "Attr": [
       {
         "key": "recipient",
-        "value": "cosmos18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5"
+        "value": "enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5"
       },
       {
         "key": "sender",
-        "value": "cosmos1ffnqn02ft2psvyv4dyr56nnv6plllf9pm2kpmv"
+        "value": "enigma1ffnqn02ft2psvyv4dyr56nnv6plllf9pm2kpmv"
       },
       {
         "key": "amount",
@@ -91,7 +91,7 @@ Here is an example from the escrow contract successfully releasing funds to the 
   "Attr": [
     {
       "key": "contract_address",
-      "value": "cosmos18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5"
+      "value": "enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5"
     },
     {
       "key": "action",
@@ -99,7 +99,7 @@ Here is an example from the escrow contract successfully releasing funds to the 
     },
     {
       "key": "destination",
-      "value": "cosmos14k7v7ms4jxkk2etmg9gljxjm4ru3qjdugfsflq"
+      "value": "enigma14k7v7ms4jxkk2etmg9gljxjm4ru3qjdugfsflq"
     }
   ]
 }
@@ -125,11 +125,11 @@ was executed (which always appears, while 2 is optional and has information as r
     "Attr": [
       {
         "key": "recipient",
-        "value": "cosmos18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5"
+        "value": "enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5"
       },
       {
         "key": "sender",
-        "value": "cosmos1zm074khx32hqy20hlshlsd423n07pwlu9cpt37"
+        "value": "enigma1zm074khx32hqy20hlshlsd423n07pwlu9cpt37"
       },
       {
         "key": "amount",
@@ -142,7 +142,7 @@ was executed (which always appears, while 2 is optional and has information as r
     "Attr": [
       {
         "key": "contract_address",
-        "value": "cosmos18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5"
+        "value": "enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5"
       },
       {
         "key": "action",
@@ -150,7 +150,7 @@ was executed (which always appears, while 2 is optional and has information as r
       },
       {
         "key": "destination",
-        "value": "cosmos14k7v7ms4jxkk2etmg9gljxjm4ru3qjdugfsflq"
+        "value": "enigma14k7v7ms4jxkk2etmg9gljxjm4ru3qjdugfsflq"
       }
     ]
   },
@@ -159,11 +159,11 @@ was executed (which always appears, while 2 is optional and has information as r
     "Attr": [
       {
         "key": "recipient",
-        "value": "cosmos14k7v7ms4jxkk2etmg9gljxjm4ru3qjdugfsflq"
+        "value": "enigma14k7v7ms4jxkk2etmg9gljxjm4ru3qjdugfsflq"
       },
       {
         "key": "sender",
-        "value": "cosmos18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5"
+        "value": "enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5"
       },
       {
         "key": "amount",
@@ -184,11 +184,11 @@ was executed (which always appears, while 2 is optional and has information as r
       },
       {
         "key": "signer",
-        "value": "cosmos1zm074khx32hqy20hlshlsd423n07pwlu9cpt37"
+        "value": "enigma1zm074khx32hqy20hlshlsd423n07pwlu9cpt37"
       },
       {
         "key": "contract_address",
-        "value": "cosmos18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5"
+        "value": "enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5"
       }
     ]
   }
