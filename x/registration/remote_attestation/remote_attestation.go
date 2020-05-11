@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"log"
-	"time"
 )
 
 /*
@@ -134,7 +133,7 @@ func verifyCert(payload []byte) ([]byte, error) {
 		log.Fatalln(err)
 		return nil, err
 	} else {
-		fmt.Println("Cert is good")
+		//fmt.Println("Cert is good")
 	}
 
 	// Verify the signature against the signing cert
@@ -143,7 +142,7 @@ func verifyCert(payload []byte) ([]byte, error) {
 		log.Fatalln(err)
 		return nil, err
 	} else {
-		fmt.Println("Signature good")
+		//fmt.Println("Signature good")
 	}
 	return attnReportRaw, nil
 }
@@ -158,17 +157,17 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) error {
 	// 1. Check timestamp is within 24H
 	if qr.Timestamp != "" {
 		//timeFixed := qr.Timestamp + "+0000"
-		timeFixed := qr.Timestamp + "Z"
-		ts, _ := time.Parse(time.RFC3339, timeFixed)
-		now := time.Now().Unix()
-		fmt.Println("Time diff = ", now-ts.Unix())
+		//timeFixed := qr.Timestamp + "Z"
+		//ts, _ := time.Parse(time.RFC3339, timeFixed)
+		//now := time.Now().Unix()
+		//fmt.Println("Time diff = ", now-ts.Unix())
 	} else {
 		return errors.New("Failed to fetch timestamp from attestation report")
 	}
 
 	// 2. Verify quote status (mandatory field)
 	if qr.IsvEnclaveQuoteStatus != "" {
-		fmt.Println("isvEnclaveQuoteStatus = ", qr.IsvEnclaveQuoteStatus)
+		//fmt.Println("isvEnclaveQuoteStatus = ", qr.IsvEnclaveQuoteStatus)
 		switch qr.IsvEnclaveQuoteStatus {
 		case "OK":
 			break
@@ -238,16 +237,17 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) error {
 		qrData := parseReport(qb, quoteHex)
 
 		// todo: possibly verify mr signer/enclave?
-		fmt.Println("Quote = [" + quoteBytes[:len(quoteBytes)-2] + "]")
-		fmt.Println("sgx quote version = ", qrData.version)
-		fmt.Println("sgx quote signature type = ", qrData.signType)
-		fmt.Println("sgx quote report_data = ", qrData.reportBody.reportData)
-		fmt.Println("sgx quote mr_enclave = ", qrData.reportBody.mrEnclave)
-		fmt.Println("sgx quote mr_signer = ", qrData.reportBody.mrSigner)
-		fmt.Println("Anticipated public key = ", pubHex)
+		//fmt.Println("Quote = [" + quoteBytes[:len(quoteBytes)-2] + "]")
+		//fmt.Println("sgx quote version = ", qrData.version)
+		//fmt.Println("sgx quote signature type = ", qrData.signType)
+		//fmt.Println("sgx quote report_data = ", qrData.reportBody.reportData)
+		//fmt.Println("sgx quote mr_enclave = ", qrData.reportBody.mrEnclave)
+		//fmt.Println("sgx quote mr_signer = ", qrData.reportBody.mrSigner)
+		//fmt.Println("Anticipated public key = ", pubHex)
 
-		if qrData.reportBody.reportData == pubHex {
-			fmt.Println("ue RA done!")
+		if qrData.reportBody.reportData != pubHex {
+			err := errors.New("Failed to authenticate certificate public key")
+			return err
 		}
 	} else {
 		err := errors.New("Failed to fetch isvEnclaveQuoteBody from attestation report")

@@ -69,8 +69,8 @@ func handleRaAuthenticate(ctx sdk.Context, k Keeper, msg *types.RaAuthenticate) 
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
 		sdk.NewAttribute(AttributeSigner, msg.Sender.String()),
-		sdk.NewAttribute(AttributeEncryptedSeed, fmt.Sprintf("%02x", encSeed)),
-		sdk.NewAttribute(AttributeNodeID, fmt.Sprintf("%02x", hex.EncodeToString(pubkey))),
+		sdk.NewAttribute(AttributeEncryptedSeed, fmt.Sprintf("0x%02x", encSeed)),
+		sdk.NewAttribute(AttributeNodeID, fmt.Sprintf("0x%s", hex.EncodeToString(pubkey))),
 	)
 
 	return &sdk.Result{
