@@ -31,7 +31,7 @@ import (
 
 */
 func VerifyRaCert(rawCert []byte) ([]byte, error) {
-	printCert(rawCert)
+	// printCert(rawCert)
 
 	// get the pubkey and payload from raw data
 	pubK, payload := unmarshalCert(rawCert)
@@ -194,7 +194,7 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) error {
 				if err != nil {
 					return err
 				}
-				fmt.Println("Advisory IDs: " + string(cves))
+				fmt.Println("Warning - Advisory IDs: " + string(cves))
 			}
 			//return errors.New("Quote status invalid")
 		case "SW_HARDENING_NEEDED":
