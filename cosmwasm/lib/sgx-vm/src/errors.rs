@@ -10,6 +10,11 @@ use snafu::Snafu;
 #[derive(Debug, Snafu)]
 #[snafu(visibility = "pub")]
 pub enum Error {
+
+    GenericErr {
+        msg: String
+    },
+
     #[snafu(display("Cache error: {}", msg))]
     CacheErr {
         msg: String,
@@ -68,7 +73,7 @@ pub enum Error {
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
-    #[snafu(display("Validating Wasm: {}", msg))]
+    #[snafu(display("Validating: {}", msg))]
     ValidationErr {
         msg: String,
         #[cfg(feature = "backtraces")]
@@ -86,8 +91,12 @@ pub enum Error {
     EnclaveErr {
         inner: enclave_ffi_types::EnclaveError,
     },
+    CryptoErr {
+        inner: enclave_ffi_types::CryptoError,
+    },
     #[snafu(display("SDK error: {}", inner))]
     SdkErr { inner: sgx_status_t },
+
 }
 
 pub type Result<T, E = Error> = core::result::Result<T, E>;

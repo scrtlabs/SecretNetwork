@@ -57,6 +57,9 @@ BUILD_FLAGS := -tags "$(build_tags)" -ldflags '$(ldflags)'
 
 all: build_all
 
+vendor:
+	cargo vendor third_party/vendor --manifest-path third_party/build/Cargo.toml
+
 go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"
 	GO111MODULE=on go mod verify
@@ -67,12 +70,23 @@ xgo_build_enigmad: go.sum
 xgo_build_enigmacli: go.sum
 	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/EnigmaBlockchain/cmd/enigmacli
 
+build_local_no_rust:
+	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
+#   this pulls out ELF symbols, 80% size reduction!
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+
 build_linux:
 	$(MAKE) -C go-cosmwasm build-rust
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
 #   this pulls out ELF symbols, 80% size reduction!
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+
+#build_local_no_rust:
+#   this pulls out ELF symbols, 80% size reduction!
+#	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
+#	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
 
 build_windows:
 	# CLI only 
@@ -139,7 +153,27 @@ clean:
 	-rm -f ./enigmad*
 	-rm -f ./librust_cosmwasm_enclave.signed.so 
 	-rm -f ./x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so 
+	-rm -f ./go-cosmwasm/api/libgo_cosmwasm.so
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*
+	-rm -rf ./third_party/vendor/
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/lib/wasmi-runtime clean
+
+# while developing:
+build-enclave:
+	$(MAKE) -C cosmwasm/lib/wasmi-runtime 
+
+# while developing:
+clean-enclave:
+	$(MAKE) -C cosmwasm/lib/wasmi-runtime clean 
+
+sanity-test:
+	SGX_MODE=SW $(MAKE) build_linux
+	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+	./cosmwasm/lib/wasmi-sgx-test.sh
+	
+sanity-test-hw:
+	$(MAKE) build_linux
+	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+	./cosmwasm/lib/wasmi-sgx-test.sh

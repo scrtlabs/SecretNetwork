@@ -19,6 +19,43 @@ impl EnclaveBuffer {
     }
 }
 
+impl Default for EnclaveReturn {
+    fn default() -> EnclaveReturn {
+        EnclaveReturn::Success
+    }
+}
+
+/// This enum is used to return from an ecall/ocall to represent if the operation was a success and if not then what was the error.
+/// The goal is to not reveal anything sensitive
+/// `#[repr(C)]` is a Rust feature which makes the struct be aligned just like C structs.
+/// See [`Repr(C)`][https://doc.rust-lang.org/nomicon/other-reprs.html]
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum EnclaveReturn {
+    /// Success, the function returned without any failure.
+    Success,
+    /// KeysError, There's a key missing or failed to derive a key.
+    KeysError,
+    /// Failure in Encryption, couldn't decrypt the variable / failed to encrypt the results.
+    EncryptionError,
+    /// SigningError, for some reason it failed on signing the results.
+    SigningError,
+    /// RecoveringError, Something failed in recovering the public key.
+    RecoveringError,
+    ///PermissionError, Received a permission error from an ocall, (i.e. opening the signing keys file or something like that)
+    PermissionError,
+    /// SgxError, Error that came from the SGX specific stuff (i.e DRAND, Sealing etc.)
+    SgxError,
+    /// StateError, an Error in the State. (i.e. failed applying delta, failed deserializing it etc.)
+    StateError,
+    /// OcallError, an error from an ocall.
+    OcallError,
+    /// OcallDBError, an error from the Database in the untrusted part, couldn't get/save something.
+    OcallDBError,
+    /// Something went really wrong.
+    Other,
+}
+
 /// This struct holds a pointer to memory in userspace, that contains the storage
 #[repr(C)]
 pub struct Ctx {
@@ -52,8 +89,87 @@ pub enum EnclaveError {
     FailedGasMeteringInjection,
     /// Ran out of gas
     OutOfGas,
+    /// Failed to seal data
+    FailedSeal,
     /// Unexpected Error happened, no more details available
     Unknown,
+}
+
+#[repr(C)]
+#[derive(Debug, Display)]
+pub enum CryptoError {
+    /// The `DerivingKeyError` error.
+    ///
+    /// This error means that the ECDH process failed.
+    DerivingKeyError,
+    // {
+    //     self_key: [u8; 64],
+    //     other_key: [u8; 64],
+    // },
+    /// The `MissingKeyError` error.
+    ///
+    /// This error means that a key was missing.
+    MissingKeyError,
+    //  {
+    //     key_type: &'static str,
+    // },
+    /// The `DecryptionError` error.
+    ///
+    /// This error means that the symmetric decryption has failed for some reason.
+    DecryptionError,
+    /// The `ImproperEncryption` error.
+    ///
+    /// This error means that the ciphertext provided was imporper.
+    /// e.g. MAC wasn't valid, missing IV etc.
+    ImproperEncryption,
+    /// The `EncryptionError` error.
+    ///
+    /// This error means that the symmetric encryption has failed for some reason.
+    EncryptionError,
+    /// The `SigningError` error.
+    ///
+    /// This error means that the signing process has failed for some reason.
+    SigningError,
+    // {
+    //     hashed_msg: [u8; 32],
+    // },
+    /// The `ParsingError` error.
+    ///
+    /// This error means that the signature couldn't be parsed correctly.
+    ParsingError,
+    //  {
+    //     sig: [u8; 65],
+    // },
+    /// The `RecoveryError` error.
+    ///
+    /// This error means that the public key can't be recovered from that message & signature.
+    RecoveryError,
+    //  {
+    //     sig: [u8; 65],
+    // },
+    /// The `KeyError` error.
+    ///
+    /// This error means that a key wasn't vaild.
+    /// e.g. PrivateKey, PubliKey, SharedSecret.
+    // #[cfg(feature = "asymmetric")]
+    KeyError,
+    //  {
+    //     key_type: &'static str,
+    //     err: Option<secp256k1::Error>,
+    // },
+    // #[cfg(not(feature = "asymmetric"))]
+    // KeyError { key_type: &'static str, err: Option<()> },
+    // /// The `RandomError` error.
+    // ///
+    // /// This error means that the random function had failed generating randomness.
+    // #[cfg(feature = "std")]
+    // RandomError {
+    //     err: rand::Error,
+    // },
+    // #[cfg(feature = "sgx")]
+    RandomError, // {
+                 //     err: sgx_types::sgx_status_t,
+                 // }
 }
 
 /// This struct is returned from ecall_init.

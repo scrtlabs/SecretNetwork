@@ -1,34 +1,22 @@
 use std::env;
 use std::marker::PhantomData;
 use std::path::Path;
-// use snafu::ResultExt;
-/*
-pub use wasmer_runtime_core::typed_func::Func;
-use wasmer_runtime_core::{
-    imports,
-    module::Module,
-    typed_func::{Wasm, WasmTypeList},
-    vm::Ctx,
-};
-*/
+use std::str;
 
-use lazy_static::lazy_static;
+use log::*;
+use sgx_types::{
+    sgx_attributes_t, sgx_launch_token_t, sgx_misc_attribute_t, sgx_status_t, SgxResult,
+};
+use sgx_urts::SgxEnclave;
 
 use cosmwasm::traits::Api;
+use lazy_static::lazy_static;
 
-use crate::{Extern, Storage};
-// use crate::backends::{compile, get_gas, set_gas};
-// use crate::context::{
-//     do_canonical_address, do_human_address, do_read, do_write, leave_storage, setup_context,
-//     take_storage, with_storage_from_context,
-// };
+use crate::attestation::{inner_create_report, inner_get_encrypted_seed};
 use crate::errors::{Error, Result};
-// use crate::memory::{read_region, write_region};
-
+use crate::seed::inner_init_seed;
 use crate::wasmi::Module;
-
-use sgx_types::{sgx_attributes_t, sgx_launch_token_t, sgx_misc_attribute_t, SgxResult};
-use sgx_urts::SgxEnclave;
+use crate::{Extern, Storage};
 
 /// An instance is a combination of wasm code, storage, and gas limit.
 pub struct Instance<S: Storage + 'static, A: Api + 'static> {
@@ -40,7 +28,44 @@ pub struct Instance<S: Storage + 'static, A: Api + 'static> {
 
 static ENCLAVE_FILE: &'static str = "librust_cosmwasm_enclave.signed.so";
 
-fn init_enclave() -> SgxResult<SgxEnclave> {
+// this is here basically to be able to call the enclave initialization -- we can move this somewhere else and simplify
+
+pub fn init_seed_u(
+    public_key: *const u8,
+    public_key_len: u32,
+    encrypted_seed: *const u8,
+    encrypted_seed_len: u32,
+) -> SgxResult<sgx_status_t> {
+    info!("Hello from just before initializing - produce_report");
+    let enclave = init_enclave().unwrap();
+    info!("Hello from just after initializing - produce_report");
+
+    inner_init_seed(
+        enclave.geteid(),
+        public_key,
+        public_key_len,
+        encrypted_seed,
+        encrypted_seed_len,
+    )
+}
+
+pub fn create_attestation_report_u() -> SgxResult<sgx_status_t> {
+    info!("Hello from just before initializing - produce_report");
+    let enclave = init_enclave().unwrap();
+    info!("Hello from just after initializing - produce_report");
+
+    inner_create_report(enclave.geteid())
+}
+
+pub fn untrusted_get_encrypted_seed(cert: &[u8]) -> SgxResult<[u8; 32]> {
+    info!("Hello from just before initializing - produce_report");
+    let enclave = init_enclave().unwrap();
+    info!("Hello from just after initializing - produce_report");
+
+    inner_get_encrypted_seed(enclave.geteid(), cert.as_ptr(), cert.len() as u32)
+}
+
+pub fn init_enclave() -> SgxResult<SgxEnclave> {
     let mut launch_token: sgx_launch_token_t = [0; 1024];
     let mut launch_token_updated: i32 = 0;
     // call sgx_create_enclave to initialize an enclave instance
@@ -225,10 +250,11 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::calls::{call_handle, call_init, call_query};
-    use crate::testing::{mock_instance, mock_instance_with_gas_limit};
     use cosmwasm::mock::mock_env;
     use cosmwasm::types::coin;
+
+    use crate::calls::{call_handle, call_init, call_query};
+    use crate::testing::{mock_instance, mock_instance_with_gas_limit};
 
     static CONTRACT_0_7: &[u8] = include_bytes!("../testdata/contract_0.7.wasm");
 
@@ -252,7 +278,7 @@ mod test {
     #[should_panic]
     fn with_context_safe_for_panic() {
         // this should fail with the assertion, but not cause a double-free crash (issue #59)
-        let mut instance = mock_instance(&CONTRACT_0_7);
+        let instance = mock_instance(&CONTRACT_0_7);
         instance.with_storage(|_store| assert_eq!(1, 2));
     }
 

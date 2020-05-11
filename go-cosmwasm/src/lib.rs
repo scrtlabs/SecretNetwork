@@ -10,12 +10,15 @@ pub use memory::{free_rust, Buffer};
 use snafu::ResultExt;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
+// use std::Vec;
 
 use crate::error::{clear_error, handle_c_error, set_error};
 use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
 use cosmwasm_sgx_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache, Extern};
-
+use cosmwasm_sgx_vm::{create_attestation_report_u, init_seed_u, untrusted_get_encrypted_seed};
 use ctor::ctor;
+use log;
+use log::*;
 
 #[ctor]
 fn init_logger() {
@@ -32,6 +35,81 @@ fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache<DB, GoApi>> {
         let c = unsafe { &mut *(ptr as *mut CosmCache<DB, GoApi>) };
         Some(c)
     }
+}
+
+#[no_mangle]
+pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> Buffer {
+    info!("Hello from get_encrypted_seed");
+    let cert_slice = match cert.read() {
+        None => {
+            set_error("Attestation Certificate is empty".to_string(), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+    info!("Hello from right before untrusted_get_encrypted_seed");
+    let result = match untrusted_get_encrypted_seed(cert_slice) {
+        Err(e) => {
+            error!("Error :(");
+            set_error(e.to_string(), err);
+            return Buffer::default();
+        }
+        Ok(r) => {
+            clear_error();
+            Buffer::from_vec(r.to_vec())
+        }
+    };
+    return result;
+}
+
+#[no_mangle]
+pub extern "C" fn init_seed(
+    public_key: Buffer,
+    encrypted_seed: Buffer,
+    err: Option<&mut Buffer>,
+) -> bool {
+    let pk_slice = match public_key.read() {
+        None => {
+            set_error("Public key is empty".to_string(), err);
+            return false;
+        }
+        Some(r) => r,
+    };
+    let encrypted_seed_slice = match encrypted_seed.read() {
+        None => {
+            set_error("Encrypted seed is empty".to_string(), err);
+            return false;
+        }
+        Some(r) => r,
+    };
+
+    let result = match init_seed_u(
+        pk_slice.as_ptr(),
+        pk_slice.len() as u32,
+        encrypted_seed_slice.as_ptr(),
+        encrypted_seed_slice.len() as u32,
+    ) {
+        Ok(t) => {
+            clear_error();
+            true
+        }
+        Err(e) => {
+            set_error(e.to_string(), err);
+            false
+        }
+    };
+
+    result
+}
+
+#[no_mangle]
+pub extern "C" fn create_attestation_report(err: Option<&mut Buffer>) -> bool {
+    if let Err(status) = create_attestation_report_u() {
+        set_error(status.to_string(), err);
+        return false;
+    }
+    clear_error();
+    true
 }
 
 fn to_extern(storage: DB, api: GoApi) -> Extern<DB, GoApi> {
@@ -260,4 +338,18 @@ fn do_query(
     *gas_used = gas_limit - instance.get_gas();
     cache.store_instance(code_id, instance);
     Ok(res)
+}
+
+#[no_mangle]
+pub extern "C" fn key_gen(err: Option<&mut Buffer>) -> Buffer {
+    // let r = match to_cache(cache) {
+    //     Some(c) => catch_unwind(AssertUnwindSafe(move || {
+    //         do_query(c, code_id, msg, db, api, gas_limit, gas_used)
+    //     }))
+    //     .unwrap_or_else(|_| Panic {}.fail()),
+    //     None => EmptyArg { name: CACHE_ARG }.fail(),
+    // };
+    // let v = handle_c_error(r, err);
+    // Buffer::from_vec(v)
+    todo!()
 }

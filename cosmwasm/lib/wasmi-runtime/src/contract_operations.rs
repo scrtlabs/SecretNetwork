@@ -1,5 +1,4 @@
 use enclave_ffi_types::{Ctx, EnclaveError};
-use log::{error, info};
 use parity_wasm::elements;
 use wasmi::{ImportsBuilder, ModuleInstance};
 
@@ -130,6 +129,10 @@ fn start_engine(context: Ctx, gas_limit: u64, contract: &[u8]) -> Result<Engine,
     // Create a wasmi module from the parity module
     let module = wasmi::Module::from_parity_wasm_module(contract_module)
         .map_err(|_err| EnclaveError::InvalidWasm)?;
+
+    module
+        .deny_floating_point()
+        .map_err(|_err| EnclaveError::WasmModuleWithFP)?;
 
     // Create new imports resolver.
     // These are the signatures of rust functions available to invoke from wasm code.

@@ -29,6 +29,7 @@ type Result<T> = core::result::Result<T, DeserializeError>;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 // WasmHash is made up of a 32 byte array
 pub struct WasmHash([u8; 32]);
+use sha2::{Digest, Sha256};
 
 impl WasmHash {
     /// Hash a wasm module.
@@ -37,7 +38,7 @@ impl WasmHash {
     /// This does no verification that the supplied data
     /// is, in fact, a wasm module.
     pub fn generate(wasm: &[u8]) -> Self {
-        let hash = blake3::hash(wasm);
+        let hash = Sha256::digest(wasm);
         WasmHash(hash.into())
     }
 

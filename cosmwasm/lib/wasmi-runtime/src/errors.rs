@@ -9,6 +9,7 @@ pub enum WasmEngineError {
     OutOfGas,
 }
 
+
 impl HostError for WasmEngineError {}
 
 pub fn wasmi_error_to_enclave_error(wasmi_error: InterpreterError) -> EnclaveError {

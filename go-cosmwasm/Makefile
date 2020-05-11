@@ -1,5 +1,8 @@
 .PHONY: all build build-rust build-go test docker-image docker-build docker-image-centos7
 
+TOP_DIR := ../third_party/build
+include $(TOP_DIR)/buildenv.mk
+
 DOCKER_TAG := 0.6.3
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
@@ -31,7 +34,9 @@ else
 	SGX_COMMON_CFLAGS += -O2
 endif
 
-CUSTOM_EDL_PATH := ../cosmwasm/lib/incubator-teaclave-sgx-sdk/edl
+SGX_COMMON_CFLAGS += -fstack-protector
+
+CUSTOM_EDL_PATH := ../third_party/vendor/sgx_edl/edl
 App_Rust_Flags := --release
 App_SRC_Files := $(shell find ../cosmwasm/lib/sgx-vm/ -type f -name '*.rs') \
     $(shell find ../cosmwasm/lib/sgx-vm/ -type f -name 'Cargo.toml') \

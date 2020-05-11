@@ -4,9 +4,7 @@
 # See https://github.com/eqrion/cbindgen/blob/master/docs.md#cbindgentoml
 # for detailed documentation of every option here.
 language = "C"
-
 ############## Options for Wrapping the Contents of the Header #################
-
 # header = "/* Text to put at the beginning of the generated file. Probably a license. */"
 # trailer = "/* Text to put at the end of the generated file */"
 include_guard = "enclave_ffi_types_h"
@@ -18,22 +16,18 @@ using_namespaces = []
 sys_includes = []
 includes = []
 no_includes = false
-
 ############################ Code Style Options ################################
-
 braces = "SameLine"
 line_length = 100
 tab_width = 4
 documentation_style = "auto"
-
 ############################# Codegen Options ##################################
-
 style = "both"
 
 [defines]
+
 # "target_os = freebsd" = "DEFINE_FREEBSD"
 # "feature = serde" = "DEFINE_SERDE"
-
 [export]
 include = [
     "UserSpaceBuffer",
@@ -93,7 +87,6 @@ allow_constexpr = false
 bitflags = false
 
 ############## Options for How Your Rust library Should Be Parsed ##############
-
 [parse]
 parse_deps = false
 # include = []

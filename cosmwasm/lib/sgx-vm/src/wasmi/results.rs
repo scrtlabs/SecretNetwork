@@ -1,5 +1,5 @@
 use super::exports;
-use enclave_ffi_types::{EnclaveError, HandleResult, InitResult, QueryResult};
+use enclave_ffi_types::{CryptoError, EnclaveError, HandleResult, InitResult, QueryResult};
 
 /// This struct is returned from module initialization.
 pub struct InitSuccess {
@@ -131,5 +131,27 @@ pub fn query_result_to_result_querysuccess(
             signature,
         }),
         QueryResult::Failure { err } => Err(err),
+    }
+}
+
+/// This struct is returned from key-pair generation.
+pub struct KeyGenSuccess {
+    /// A pointer to the output of the execution
+    output: Vec<u8>,
+    /// A signature by the enclave on all of the results.
+    signature: [u8; 65],
+}
+
+impl KeyGenSuccess {
+    pub fn output(&self) -> &[u8] {
+        &self.output
+    }
+
+    pub fn into_output(self) -> Vec<u8> {
+        self.output
+    }
+
+    pub fn signature(&self) -> &[u8; 65] {
+        &self.signature
     }
 }

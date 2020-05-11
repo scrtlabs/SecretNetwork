@@ -7,6 +7,7 @@ Enclave_u.h
 Enclave_u.o
 /enigmacli*
 /enigmad*
+incubator-teaclave-sgx-sdk
 libenclave.a
 libEnclave_u.a
 librust_cosmwasm_enclave.signed.so
@@ -14,4 +15,5 @@ librust_cosmwasm_enclave.signed.so
 /release
 SHA256SUMS*
 *.so
+/third_party/vendor
 .vscode/
