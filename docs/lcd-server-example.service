@@ -1,0 +1,22 @@
+# 1. Put this file in /etc/systemd/system/enigma-lcd.service
+# 2. Make sure "/bin/enigmacli" is the right path for enigmacli
+# 3. Make sure port 1337 is open 
+# 4. Make sure "enigma-1" is the right chain ID 
+# 5. Enable on startup: sudo systemctl enable enigma-lcd
+# 6. Start now:         sudo systemctl start enigma-lcd
+
+[Unit]
+Description=Enigma LCD server
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/bin/enigmacli rest-server --chain-id enigma-1 --laddr tcp://0.0.0.0:1337
+User=ubuntu
+Restart=always
+StartLimitInterval=0
+RestartSec=3
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
