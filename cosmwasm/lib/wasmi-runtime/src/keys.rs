@@ -4,6 +4,7 @@ use secp256k1::ecdh::SharedSecret;
 use secp256k1::key::{PublicKey, SecretKey};
 use secp256k1::{All, Secp256k1};
 use sgx_trts::trts::rsgx_read_rand;
+use sgx_types::sgx_status_t;
 
 // pub use crate::hash::Hash256;
 /// The size of the symmetric 256 bit key we use for encryption (in bytes).
@@ -95,4 +96,11 @@ fn rand_slice(rand: &mut [u8]) -> Result<(), CryptoError> {
     // rng.try_fill(rand)
     //     .map_err(|e| CryptoError::RandomError { err: e })
     rsgx_read_rand(rand).map_err(|e| CryptoError::RandomError {})
+}
+
+pub fn init_seed(public_key: &[u8], encrypted_seed: &[u8]) -> sgx_status_t {
+    println!("yo yo yo");
+    println!("key: 0x{:?}", encrypted_seed);
+
+    return sgx_status_t::SGX_SUCCESS;
 }

@@ -29,26 +29,6 @@ const GasMultiplier = 100
 // MaxGas for a contract is 900 million (enforced in rust)
 const MaxGas = 900_000_000
 
-// User struct which contains a name
-// a type and a list of social links
-type SeedConfig struct {
-	PublicKey    string `json:"pk"`
-	EncryptedKey string `json:"encKey"`
-}
-
-func (c SeedConfig) decode() ([]byte, []byte, error) {
-	enc, err := hex.DecodeString(c.EncryptedKey)
-	if err != nil {
-		return nil, nil, err
-	}
-	pk, err := hex.DecodeString(c.PublicKey)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return pk, enc, nil
-}
-
 // Keeper will have a reference to Wasmer with it's own data directory.
 type Keeper struct {
 	storeKey      sdk.StoreKey
@@ -65,7 +45,7 @@ type Keeper struct {
 
 // NewKeeper creates a new contract Keeper instance
 func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.AccountKeeper, bankKeeper bank.Keeper,
-	router sdk.Router, homeDir string, wasmConfig types.WasmConfig, bootstrap bool) Keeper {
+	router sdk.Router, homeDir string, wasmConfig types.WasmConfig) Keeper {
 	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), wasmConfig.CacheSize)
 	if err != nil {
 		panic(err)
@@ -100,7 +80,6 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 			return 0, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
 		}
 	}
-
 	store := ctx.KVStore(k.storeKey)
 	codeID = k.autoIncrementID(ctx, types.KeyLastCodeID)
 	codeInfo := types.NewCodeInfo(codeHash, creator, source, builder)
@@ -159,7 +138,6 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	res, err := k.wasmer.Instantiate(codeInfo.CodeHash, params, initMsg, prefixStore, cosmwasmAPI, gas)
 	if err != nil {
 		return contractAddress, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
-		// return contractAddress, sdkerrors.Wrap(err, "cosmwasm instantiate")
 	}
 	consumeGas(ctx, res.GasUsed)
 

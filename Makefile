@@ -58,7 +58,7 @@ BUILD_FLAGS := -tags "$(build_tags)" -ldflags '$(ldflags)'
 all: build_all
 
 vendor:
-	cargo vendor third_party/vendor --manifest-path cosmwasm/lib/wasmi-runtime/Cargo.toml
+	cargo vendor third_party/vendor --manifest-path third_party/build/Cargo.toml
 
 go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"
@@ -70,6 +70,12 @@ xgo_build_enigmad: go.sum
 xgo_build_enigmacli: go.sum
 	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/EnigmaBlockchain/cmd/enigmacli
 
+build_local_no_rust:
+	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
+#   this pulls out ELF symbols, 80% size reduction!
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+
 build_linux:
 	$(MAKE) -C go-cosmwasm build-rust
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
@@ -77,10 +83,10 @@ build_linux:
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
 
-build_local_no_rust:
+#build_local_no_rust:
 #   this pulls out ELF symbols, 80% size reduction!
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+#	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
+#	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
 
 build_windows:
 	# CLI only 

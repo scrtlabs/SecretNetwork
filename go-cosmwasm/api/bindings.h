@@ -49,9 +49,13 @@ typedef struct GoApi {
 
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
+bool create_attestation_report(Buffer *err);
+
 void free_rust(Buffer buf);
 
 Buffer get_code(cache_t *cache, Buffer id, Buffer *err);
+
+Buffer get_encrypted_seed(Buffer cert, Buffer *err);
 
 Buffer handle(cache_t *cache,
               Buffer code_id,
@@ -64,6 +68,8 @@ Buffer handle(cache_t *cache,
               Buffer *err);
 
 cache_t *init_cache(Buffer data_dir, uintptr_t cache_size, Buffer *err);
+
+bool init_seed(Buffer public_key, Buffer encrypted_seed, Buffer *err);
 
 Buffer instantiate(cache_t *cache,
                    Buffer contract_id,

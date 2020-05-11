@@ -9,23 +9,103 @@ description = "An enclave running wasmi, to be used by cosmwasm-sgx-vm"
 name = "wasmi_runtime_enclave"
 crate-type = ["staticlib"]
 
+[features]
+default = ["SGX_MODE_SW"]
+SGX_MODE_SW = []
+SGX_MODE_HW = []
+production = []
+test = []
+
+[target.'cfg(not(target_env = "sgx"))'.dependencies]
+sgx_tse = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
+    "net",
+    "untrusted_fs",
+    "backtrace"
+] }
+sgx_rand = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_trts = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tseal = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tcrypto = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+
 [dependencies]
-derive_more = "0.99"
-sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "v1.1.2" }
-sgx_trts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "v1.1.2" }
-sgx_tseal = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "v1.1.2" }
 enclave-ffi-types = { path = "../enclave-ffi-types" }
+pwasm-utils = { version = "0.12.0", default-features = false }
+parity-wasm = { version = "0.41.0", default-features = false }
 wasmi = { git = "https://github.com/paritytech/wasmi", rev = "39a18a433a765a36383d34d4edd536ba1e0664d2", default-features = false, features = [
     "core"
 ] }
-bech32 = "0.7"
-pwasm-utils = { version = "0.12.0", default-features = false }
-parity-wasm = { version = "0.41.0", default-features = false }
-log = "0.4.8"
+serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
+log = { version = "0.4.8" }
 ctor = "0.1.13"
+bech32 = "0.7"
+derive_more = "0.99"
 secp256k1 = "0.17.2"
 sha2 = "0.8.1"
-ring = { git = "https://github.com/mesalock-linux/ring-sgx", rev = "v0.16.5" }
+ring = { git = "https://github.com/mesalock-linux/ring-sgx", tag = "v0.16.5" }
+# for attestation
+chrono = { version = "0.4.7", git = "https://github.com/mesalock-linux/chrono-sgx" }
+base64 = { version = "0.10", git = "https://github.com/mesalock-linux/rust-base64-sgx" }
+num-bigint = { version = "0.2", git = "https://github.com/mesalock-linux/num-bigint-sgx" }
+# serde_derive    = { version = "1.0", git = "https://github.com/mesalock-linux/serde-sgx" }
+httparse = { version = "1.3", default-features = false }
+itertools = { version = "0.8", default-features = false, features = [] }
+bit-vec = { version = "0.6", default-features = false }
+base58 = { rev = "sgx_1.1.2", package = "rust-base58", git = "https://github.com/mesalock-linux/rust-base58-sgx", default-features = false, features = [
+    "mesalock_sgx"
+] }
+
+[dependencies.webpki]
+git = "https://github.com/mesalock-linux/webpki"
+branch = "mesalock_sgx"
+version = "0.21.0"
+
+[dependencies.webpki-roots]
+git = "https://github.com/mesalock-linux/webpki-roots"
+branch = "mesalock_sgx"
+version = "0.19.0"
+
+[dependencies.yasna]
+git = "https://github.com/mesalock-linux/yasna.rs-sgx"
+rev = "sgx_1.1.2"
+default-features = false
+features = ["bit-vec", "num-bigint", "chrono", "mesalock_sgx"]
+
+[dependencies.rustls]
+git = "https://github.com/mesalock-linux/rustls"
+rev = "sgx_1.1.2"
+default-features = false
+features = ["dangerous_configuration", "mesalock_sgx"]
 
 [dev-dependencies]
-sgx_edl = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "v1.1.2" }
+sgx_edl = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+# Comment out these following lines to use rust-sgx-sdk from git
+# [patch.'https://github.com/apache/teaclave-sgx-sdk.git']
+# sgx_alloc = { path = "../incubator-teaclave-sgx-sdk/sgx_alloc" }
+# sgx_backtrace = { path = "../incubator-teaclave-sgx-sdk/sgx_backtrace" }
+# sgx_backtrace_sys = { path = "../incubator-teaclave-sgx-sdk/sgx_backtrace_sys" }
+# sgx_build_helper = { path = "../incubator-teaclave-sgx-sdk/sgx_build_helper" }
+# sgx_cov = { path = "../incubator-teaclave-sgx-sdk/sgx_cov" }
+# sgx_crypto_helper = { path = "../incubator-teaclave-sgx-sdk/sgx_crypto_helper" }
+# sgx_demangle = { path = "../incubator-teaclave-sgx-sdk/sgx_demangle" }
+# sgx_libc = { path = "../incubator-teaclave-sgx-sdk/sgx_libc" }
+# sgx_rand = { path = "../incubator-teaclave-sgx-sdk/sgx_rand" }
+# sgx_rand_derive = { path = "../incubator-teaclave-sgx-sdk/sgx_rand_derive" }
+# sgx_serialize = { path = "../incubator-teaclave-sgx-sdk/sgx_serialize" }
+# sgx_serialize_derive = { path = "../incubator-teaclave-sgx-sdk/sgx_serialize_derive" }
+# sgx_serialize_derive_internals = { path = "../incubator-teaclave-sgx-sdk/sgx_serialize_derive_internals" }
+# sgx_tcrypto = { path = "../incubator-teaclave-sgx-sdk/sgx_tcrypto" }
+# sgx_tcrypto_helper = { path = "../incubator-teaclave-sgx-sdk/sgx_tcrypto_helper" }
+# sgx_tdh = { path = "../incubator-teaclave-sgx-sdk/sgx_tdh" }
+# sgx_tkey_exchange = { path = "../incubator-teaclave-sgx-sdk/sgx_tkey_exchange" }
+# sgx_tprotected_fs = { path = "../incubator-teaclave-sgx-sdk/sgx_tprotected_fs" }
+# sgx_trts = { path = "../incubator-teaclave-sgx-sdk/sgx_trts" }
+# sgx_tse = { path = "../incubator-teaclave-sgx-sdk/sgx_tse" }
+# sgx_tseal = { path = "../incubator-teaclave-sgx-sdk/sgx_tseal" }
+# sgx_tstd = { path = "../incubator-teaclave-sgx-sdk/sgx_tstd" }
+# sgx_tunittest = { path = "../incubator-teaclave-sgx-sdk/sgx_tunittest" }
+# sgx_types = { path = "../incubator-teaclave-sgx-sdk/sgx_types" }
+# sgx_ucrypto = { path = "../incubator-teaclave-sgx-sdk/sgx_ucrypto" }
+# sgx_unwind = { path = "../incubator-teaclave-sgx-sdk/sgx_unwind" }
+# sgx_urts = { path = "../incubator-teaclave-sgx-sdk/sgx_urts" }

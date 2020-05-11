@@ -43,6 +43,8 @@ pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> Result<EnclaveBuffer, sg
     }
 }
 
+
+
 pub struct Module {
     bytecode: Vec<u8>,
     storage: Option<Box<Box<dyn Storage>>>,
@@ -250,3 +252,5 @@ impl Module {
         todo!()
     }
 }
+
+

@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"io"
 	"io/ioutil"
-	"os"
 )
 
 // magic bytes to identify gzip.
@@ -31,24 +30,4 @@ func uncompress(src []byte) ([]byte, error) {
 	zr.Multistream(false)
 
 	return ioutil.ReadAll(io.LimitReader(zr, maxSize))
-}
-
-func getFile(src string) ([]byte, error) {
-	file, err := os.Open(src)
-	if err != nil {
-		// log.Fatal(err)
-		return nil, err
-	}
-	defer file.Close()
-
-	b, err := ioutil.ReadAll(file)
-	return b, err
-}
-
-func fileExists(src string) bool {
-	if _, err := os.Stat(src); err == nil {
-		return true
-	} else {
-		return false
-	}
 }

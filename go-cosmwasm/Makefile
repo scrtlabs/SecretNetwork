@@ -34,6 +34,8 @@ else
 	SGX_COMMON_CFLAGS += -O2
 endif
 
+SGX_COMMON_CFLAGS += -fstack-protector
+
 CUSTOM_EDL_PATH := ../third_party/vendor/sgx_edl/edl
 App_Rust_Flags := --release
 App_SRC_Files := $(shell find ../cosmwasm/lib/sgx-vm/ -type f -name '*.rs') \

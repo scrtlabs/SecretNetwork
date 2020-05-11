@@ -27,12 +27,21 @@ $(error Cannot set SGX_DEBUG and SGX_PRERELEASE at the same time!!)
 endif
 endif
 
+######## CVE 2020-0551 (INTEL-SA-00334) mitigation flags ########
+
+ifeq ($(MITIGATION-CVE-2020-0551), LOAD)
+export MITIGATION_CVE_2020_0551=LOAD
+else ifeq ($(MITIGATION-CVE-2020-0551), CF)
+export MITIGATION_CVE_2020_0551=CF
+endif
 
 ifeq ($(SGX_DEBUG), 1)
 	SGX_COMMON_CFLAGS += -O0 -g
 else
 	SGX_COMMON_CFLAGS += -O2
 endif
+
+SGX_COMMON_CFLAGS += -fstack-protector
 
 ######## CUSTOM Settings ########
 
@@ -66,9 +75,10 @@ RustEnclave_Link_Libs := -L$(CUSTOM_LIBRARY_PATH) -lenclave
 RustEnclave_Compile_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(RustEnclave_Include_Paths)
 RustEnclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
 	-Wl,--whole-archive -l$(Trts_Library_Name) -Wl,--no-whole-archive \
-	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -l$(Service_Library_Name) -l$(ProtectedFs_Library_Name) -l$(Crypto_Library_Name) $(RustEnclave_Link_Libs) -Wl,--end-group \
+	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -l$(Crypto_Library_Name) -l$(Service_Library_Name) -l$(ProtectedFs_Library_Name) $(RustEnclave_Link_Libs) -Wl,--end-group \
 	-Wl,--version-script=Enclave.lds \
 	$(ENCLAVE_LDFLAGS)
+
 
 Rust_Crate_Source := $(wildcard src/*.rs)
 Rust_Target_Path := $(CURDIR)/xargo
@@ -86,7 +96,7 @@ librust_cosmwasm_enclave.so: $(CUSTOM_LIBRARY_PATH)/libenclave.a Enclave_t.o
 	$(CXX) Enclave_t.o -o $@ $(RustEnclave_Link_Flags)
 
 $(CUSTOM_LIBRARY_PATH)/libenclave.a: $(CUSTOM_LIBRARY_PATH) $(Rust_Crate_Source)
-	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS="-Z force-unstable-if-unmarked" xargo build --target x86_64-unknown-linux-sgx --release
+	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS="-Z force-unstable-if-unmarked" xargo build --features "SGX_MODE_$(SGX_MODE)" --target x86_64-unknown-linux-sgx --release
 	cp target/x86_64-unknown-linux-sgx/release/libwasmi_runtime_enclave.a $(CUSTOM_LIBRARY_PATH)/libenclave.a
 
 $(CUSTOM_LIBRARY_PATH):

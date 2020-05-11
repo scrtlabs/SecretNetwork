@@ -21,6 +21,18 @@ type Cache struct {
 	ptr *C.cache_t
 }
 
+func InitSeed(publicKey []byte, seed []byte) (bool, error) {
+	pkSlice := sendSlice(publicKey)
+	seedSlice := sendSlice(seed)
+	errmsg := C.Buffer{}
+
+	_, err := C.init_seed(pkSlice, seedSlice, &errmsg)
+	if err != nil {
+		return false, errorWithMessage(err, errmsg)
+	}
+	return true, nil
+}
+
 func InitCache(dataDir string, cacheSize uint64) (Cache, error) {
 	dir := sendSlice([]byte(dataDir))
 	errmsg := C.Buffer{}
@@ -104,6 +116,26 @@ func Query(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, g
 func KeyGen() ([]byte, error) {
 	errmsg := C.Buffer{}
 	res, err := C.key_gen(&errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return receiveSlice(res), nil
+}
+
+// KeyGen Seng KeyGen request to enclave
+func CreateAttestationReport() (bool, error) {
+	errmsg := C.Buffer{}
+	_, err := C.create_attestation_report(&errmsg)
+	if err != nil {
+		return false, errorWithMessage(err, errmsg)
+	}
+	return true, nil
+}
+
+func GetEncryptedSeed(cert []byte) ([]byte, error) {
+	errmsg := C.Buffer{}
+	certSlice := sendSlice(cert)
+	res, err := C.get_encrypted_seed(certSlice, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}

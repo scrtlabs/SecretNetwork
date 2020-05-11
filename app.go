@@ -2,18 +2,6 @@ package app
 
 import (
 	"encoding/json"
-	"io"
-	"os"
-	"path/filepath"
-
-	"github.com/enigmampc/EnigmaBlockchain/x/compute"
-	"github.com/spf13/viper"
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/cli"
-	"github.com/tendermint/tendermint/libs/log"
-	tmos "github.com/tendermint/tendermint/libs/os"
-	tmtypes "github.com/tendermint/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
 
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -37,6 +25,18 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/supply"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
+	"github.com/enigmampc/EnigmaBlockchain/x/compute"
+	reg "github.com/enigmampc/EnigmaBlockchain/x/registration"
+	"github.com/spf13/viper"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/cli"
+	"github.com/tendermint/tendermint/libs/log"
+	tmos "github.com/tendermint/tendermint/libs/os"
+	tmtypes "github.com/tendermint/tendermint/types"
+	dbm "github.com/tendermint/tm-db"
+	"io"
+	"os"
+	"path/filepath"
 )
 
 const appName = "enigma"
@@ -61,6 +61,7 @@ var (
 		gov.NewAppModuleBasic(paramsclient.ProposalHandler, distr.ProposalHandler, upgradeclient.ProposalHandler),
 		params.AppModuleBasic{},
 		compute.AppModuleBasic{},
+		reg.AppModuleBasic{},
 		crisis.AppModuleBasic{},
 		slashing.AppModuleBasic{},
 		supply.AppModuleBasic{},
@@ -121,7 +122,7 @@ type EnigmaChainApp struct {
 	upgradeKeeper  upgrade.Keeper
 	evidenceKeeper evidence.Keeper
 	computeKeeper  compute.Keeper
-
+	regKeeper      reg.Keeper
 	// the module manager
 	mm *module.Manager
 
@@ -167,6 +168,7 @@ func NewEnigmaChainApp(
 		upgrade.StoreKey,
 		evidence.StoreKey,
 		compute.StoreKey,
+		reg.StoreKey,
 	)
 
 	tKeys := sdk.NewTransientStoreKeys(staking.TStoreKey, params.TStoreKey)
@@ -263,9 +265,12 @@ func NewEnigmaChainApp(
 
 	// just re-use the full router - do we want to limit this more?
 	var computeRouter = bApp.Router()
+	regRouter := bApp.Router()
+
 	// better way to get this dir???
 	homeDir := viper.GetString(cli.HomeFlag)
 	computeDir := filepath.Join(homeDir, ".compute")
+	regDir := filepath.Join(homeDir, ".node")
 
 	wasmWrap := WasmWrapper{Wasm: compute.DefaultWasmConfig()}
 	err := viper.Unmarshal(&wasmWrap)
@@ -275,8 +280,8 @@ func NewEnigmaChainApp(
 	wasmConfig := wasmWrap.Wasm
 
 	// replace with bootstrap flag when we figure out how to test properly and everything works
-	app.computeKeeper = compute.NewKeeper(app.cdc, keys[compute.StoreKey], app.accountKeeper, app.bankKeeper, computeRouter, computeDir, wasmConfig, true)
-
+	app.computeKeeper = compute.NewKeeper(app.cdc, keys[compute.StoreKey], app.accountKeeper, app.bankKeeper, computeRouter, computeDir, wasmConfig)
+	app.regKeeper = reg.NewKeeper(app.cdc, keys[reg.StoreKey], regRouter, regDir, true)
 	// register the proposal types
 	govRouter := gov.NewRouter()
 	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler).
@@ -312,6 +317,7 @@ func NewEnigmaChainApp(
 		upgrade.NewAppModule(app.upgradeKeeper),
 		evidence.NewAppModule(app.evidenceKeeper),
 		compute.NewAppModule(app.computeKeeper),
+		reg.NewAppModule(app.regKeeper),
 	)
 	// During begin block slashing happens after distr.BeginBlocker so that
 	// there is nothing left over in the validator fee pool, so as to keep the
@@ -333,9 +339,10 @@ func NewEnigmaChainApp(
 		mint.ModuleName,
 		supply.ModuleName,
 		crisis.ModuleName,
-		genutil.ModuleName,
 		evidence.ModuleName,
 		compute.ModuleName,
+		reg.ModuleName,
+		genutil.ModuleName,
 	)
 
 	// register all module routes and module queriers

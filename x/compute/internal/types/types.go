@@ -13,9 +13,6 @@ import (
 const defaultLRUCacheSize = uint64(0)
 const defaultQueryGasLimit = uint64(3000000)
 
-const PublicKeyLength = 128 // encoded length
-const EncryptedKeyLength = 64 // encoded length
-
 // Model is a struct that holds a KV pair
 type Model struct {
 	// hex-encode key to read it better (this is often ascii)

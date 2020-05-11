@@ -11,7 +11,7 @@ function wait_for_tx () {
 }
 
 # init the node
-# rm -rf ~/.enigma*
+rm -rf ~/.enigma*
 enigmacli config chain-id enigma-testnet
 enigmacli config output json
 enigmacli config indent true
@@ -25,6 +25,8 @@ enigmad add-genesis-account $(enigmacli keys show -a a) 1000000000000uscrt
 enigmad gentx --name a --keyring-backend test --amount 1000000uscrt
 enigmad collect-gentxs
 enigmad validate-genesis
+
+enigmad init-enclave
 
 RUST_BACKTRACE=1 enigmad start &
 
@@ -95,3 +97,4 @@ enigmacli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"ad
 
 
 echo "All is done. Yay!"
+
