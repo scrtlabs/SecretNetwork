@@ -25,7 +25,7 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/EnigmaBlo
 
 # Block Explorers
 
-- https://explorer.scrt.cashmaney.com
+- https://explorer.cashmaney.com
 - https://secretscan.io
 
 # Implementation Discussions
@@ -46,6 +46,7 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/EnigmaBlo
 - [How to use the `enigmacli` light client](/docs/enigmacli.md)
 - [How to participate in on-chain governance](docs/using-governance.md)
 - [How to run a full node on mainnet](/docs/validators-and-full-nodes/run-full-node-mainnet.md)
+- [How to run an LCD server](/docs/lcd-server-example.service)
 - [Ledger Nano S (and X) support](/docs/ledger-nano-s.md)
 - [How to join as a mainnet validator](/docs/validators-and-full-nodes/join-validator-mainnet.md)
 - [How to backup a validator](/docs/validators-and-full-nodes/backup-a-validator.md)
