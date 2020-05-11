@@ -147,6 +147,17 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
     software_mode_quote()
 }
 
+#[cfg(not(feature = "SGX_MODE_HW"))]
+#[no_mangle]
+// todo: replace 32 with crypto consts once I have crypto library
+pub extern "C" fn ecall_get_encrypted_seed(
+    cert: *const u8,
+    cert_len: u32,
+    seed: &mut [u8; 32],
+) -> sgx_status_t {
+    sgx_status_t::SGX_SUCCESS
+}
+
 #[cfg(feature = "SGX_MODE_HW")]
 #[no_mangle]
 // todo: replace 32 with crypto consts once I have crypto library
