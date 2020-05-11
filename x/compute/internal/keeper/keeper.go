@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"path/filepath"
 
@@ -476,19 +475,4 @@ func addrFromUint64(id uint64) sdk.AccAddress {
 	addr[0] = 'C'
 	binary.PutUvarint(addr[1:], id)
 	return sdk.AccAddress(crypto.AddressHash(addr))
-}
-
-func validateSeedParams(config SeedConfig) error {
-	if len(config.PublicKey) != types.PublicKeyLength || !isHexString(config.PublicKey) {
-		return sdkerrors.Wrap(types.ErrInstantiateFailed, "Invalid parameter `public key` in seed parameters. Did you initialize the node?")
-	}
-	if len(config.EncryptedKey) != types.EncryptedKeyLength || !isHexString(config.EncryptedKey) {
-		return sdkerrors.Wrap(types.ErrInstantiateFailed, "Invalid parameter: `seed` in seed parameters. Did you initialize the node?")
-	}
-	return nil
-}
-
-func isHexString(s string) bool {
-	_, err := hex.DecodeString(s)
-	return err == nil
 }
