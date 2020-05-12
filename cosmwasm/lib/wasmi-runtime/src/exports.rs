@@ -2,34 +2,28 @@ use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResul
 use std::ffi::c_void;
 
 use crate::crypto;
-use crate::crypto::{PubKey};
+use crate::crypto::PubKey;
 use crate::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
     result_query_success_to_queryresult,
 };
 use log::*;
-use sgx_trts::trts::{
-    rsgx_lfence, rsgx_raw_is_outside_enclave, rsgx_sfence, rsgx_slice_is_outside_enclave,
-};
-use sgx_types::{sgx_quote_sign_type_t, sgx_report_t, sgx_status_t, sgx_target_info_t};
-use std::ptr::null;
+use sgx_trts::trts::{rsgx_lfence, rsgx_sfence, rsgx_slice_is_outside_enclave};
+use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 use std::slice;
 
-
-use crate::consts::{NODE_SK_SEALING_PATH, SEED_SEALING_PATH};
-pub use crate::crypto::traits::{SealedKey, Encryptable, Kdf};
+use crate::consts::NODE_SK_SEALING_PATH;
+pub use crate::crypto::traits::{Encryptable, Kdf, SealedKey};
 // use crate::crypto::keys::init_seed;
 
 #[cfg(feature = "SGX_MODE_HW")]
-use crate::attestation::create_attestation_report;
-#[cfg(feature = "SGX_MODE_HW")]
 use crate::attestation::create_attestation_certificate;
-
+#[cfg(feature = "SGX_MODE_HW")]
 #[cfg(not(feature = "SGX_MODE_HW"))]
 use crate::attestation::{create_report_with_data, software_mode_quote};
 use crate::cert::verify_mra_cert;
 
-use crate::storage::{write_to_untrusted};
+use crate::storage::write_to_untrusted;
 
 #[no_mangle]
 pub extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
@@ -246,5 +240,4 @@ pub unsafe extern "C" fn ecall_init_seed(
     let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
 
     sgx_status_t::SGX_SUCCESS
-
 }

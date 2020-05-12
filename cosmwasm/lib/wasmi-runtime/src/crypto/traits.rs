@@ -1,3 +1,4 @@
+use crate::crypto::keys::SECRET_KEY_SIZE;
 use enclave_ffi_types::{CryptoError, EnclaveError};
 
 pub trait Encryptable {
@@ -6,8 +7,8 @@ pub trait Encryptable {
 }
 
 pub trait SealedKey
-    where
-        Self: std::marker::Sized,
+where
+    Self: std::marker::Sized,
 {
     fn seal(&self, filepath: &str) -> Result<(), EnclaveError>;
     fn unseal(filepath: &str) -> Result<Self, EnclaveError>;
@@ -18,5 +19,5 @@ pub trait Rng {
 }
 
 pub trait Kdf {
-    fn derive_key_from_this(&self) -> Self;
+    fn derive_key_from_this(&self, counter: u32) -> [u8; SECRET_KEY_SIZE];
 }

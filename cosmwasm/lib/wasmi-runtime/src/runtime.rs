@@ -1,3 +1,5 @@
+use crate::crypto::key_manager;
+use crate::crypto::*;
 use bech32;
 use bech32::{FromBase32, ToBase32};
 use log::{error, trace, warn};
@@ -182,6 +184,12 @@ impl Externals for Runtime {
                     "read_db() was called from WASM code with key: {:?}",
                     String::from_utf8_lossy(&key)
                 );
+
+                let mut master_state_key = key_manager::KEY_MANAGER
+                    .as_ref()
+                    .expect("TODO fix this")
+                    .get_master_state_key();
+                let master_state_key = AESKey::new_from_slice(master_state_key.get());
 
                 // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
                 // This returns the value from Tendermint

@@ -55,6 +55,7 @@ bit-vec = { version = "0.6", default-features = false }
 base58 = { rev = "sgx_1.1.2", package = "rust-base58", git = "https://github.com/mesalock-linux/rust-base58-sgx", default-features = false, features = [
     "mesalock_sgx"
 ] }
+lazy_static = "1.4"
 
 [dependencies.webpki]
 git = "https://github.com/mesalock-linux/webpki"

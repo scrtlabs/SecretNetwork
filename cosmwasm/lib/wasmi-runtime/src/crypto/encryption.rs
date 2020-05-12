@@ -1,15 +1,14 @@
-use crate::crypto::keys::{SymmetricKey, AESKey};
+use crate::crypto::keys::{AESKey, SymmetricKey};
+use crate::crypto::traits::Encryptable;
 use enclave_ffi_types::CryptoError;
 use ring::aead::{self, Aad, LessSafeKey, Nonce, UnboundKey};
-use sgx_trts::trts::rsgx_read_rand;
-use crate::crypto::traits::Encryptable;
+
 static AES_MODE: &aead::Algorithm = &aead::AES_256_GCM;
 
 /// The IV key byte size
 const IV_SIZE: usize = 96 / 8;
 /// Type alias for the IV byte array
 type IV = [u8; IV_SIZE];
-
 
 impl Encryptable for AESKey {
     fn encrypt(&self, plaintext: &[u8]) -> Result<Vec<u8>, CryptoError> {
@@ -20,7 +19,6 @@ impl Encryptable for AESKey {
         decrypt(ciphertext, self.get())
     }
 }
-
 
 /// This function will encrypt a plaintext message and append the tag
 /// The cyphertext can be decrypted with the `decrypt` function below.
