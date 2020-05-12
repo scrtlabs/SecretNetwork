@@ -1,7 +1,8 @@
 use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
 use std::ffi::c_void;
 
-use crate::keys::{KeyPair, PubKey};
+use crate::crypto;
+use crate::crypto::{PubKey};
 use crate::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
     result_query_success_to_queryresult,
@@ -14,7 +15,10 @@ use sgx_types::{sgx_quote_sign_type_t, sgx_report_t, sgx_status_t, sgx_target_in
 use std::ptr::null;
 use std::slice;
 
-use crate::keys::init_seed;
+
+use crate::consts::{NODE_SK_SEALING_PATH, SEED_SEALING_PATH};
+pub use crate::crypto::traits::{SealedKey, Encryptable, Kdf};
+// use crate::crypto::keys::init_seed;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use crate::attestation::create_attestation_report;
@@ -24,7 +28,8 @@ use crate::attestation::create_attestation_certificate;
 #[cfg(not(feature = "SGX_MODE_HW"))]
 use crate::attestation::{create_report_with_data, software_mode_quote};
 use crate::cert::verify_mra_cert;
-use crate::storage::{write_to_untrusted, SealedKey, NODE_SK_SEALING_PATH};
+
+use crate::storage::{write_to_untrusted};
 
 #[no_mangle]
 pub extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
@@ -104,7 +109,7 @@ pub extern "C" fn ecall_query(
 #[no_mangle]
 pub unsafe extern "C" fn ecall_key_gen(pk_node: *mut PubKey) -> sgx_types::sgx_status_t {
     // Generate node-specific key-pair
-    let key_pair = match KeyPair::new() {
+    let key_pair = match crypto::KeyPair::new() {
         Ok(kp) => kp,
         Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
     };
@@ -162,7 +167,7 @@ pub extern "C" fn ecall_get_encrypted_seed(
 #[no_mangle]
 pub extern "C" fn ecall_init_bootstrap() -> sgx_status_t {
     // Generate node-specific key-pair
-    let key_pair = match KeyPair::new() {
+    let key_pair = match crypto::KeyPair::new() {
         Ok(kp) => kp,
         Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
     };
@@ -239,5 +244,7 @@ pub unsafe extern "C" fn ecall_init_seed(
 
     let public_key_slice = slice::from_raw_parts(public_key, public_key_len as usize);
     let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
-    init_seed(public_key_slice, encrypted_seed_slice)
+
+    sgx_status_t::SGX_SUCCESS
+
 }

@@ -1,4 +1,4 @@
-use crate::keys::*;
+use crate::crypto::keys::*;
 struct Keychain {
     seed: [u8; SEED_SIZE],
     master_state_key: StateKey,
