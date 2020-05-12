@@ -9,10 +9,9 @@ use crate::results::{
 };
 use log::*;
 use sgx_trts::trts::{
-    rsgx_lfence, rsgx_raw_is_outside_enclave, rsgx_sfence, rsgx_slice_is_outside_enclave,
+    rsgx_lfence, rsgx_raw_is_outside_enclave, rsgx_sfence, rsgx_slice_is_outside_enclave
 };
-use sgx_types::{sgx_quote_sign_type_t, sgx_report_t, sgx_status_t, sgx_target_info_t};
-use std::ptr::null;
+use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 use std::slice;
 
 
@@ -21,15 +20,13 @@ pub use crate::crypto::traits::{SealedKey, Encryptable, Kdf};
 
 
 #[cfg(feature = "SGX_MODE_HW")]
-use crate::attestation::create_attestation_report;
-#[cfg(feature = "SGX_MODE_HW")]
 use crate::attestation::create_attestation_certificate;
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
 use crate::attestation::{create_report_with_data, software_mode_quote};
 use crate::cert::verify_mra_cert;
 
-use crate::storage::{write_to_untrusted};
+use crate::storage::write_to_untrusted;
 
 #[no_mangle]
 pub extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
@@ -416,5 +413,4 @@ pub unsafe extern "C" fn ecall_init_seed(
     sk_io.seal(NODE_SK_SEALING_PATH);
 
     sgx_status_t::SGX_SUCCESS
-
 }

@@ -1,8 +1,8 @@
+use crate::crypto::keys::{Seed, SECRET_KEY_SIZE};
 use crate::crypto::traits::Kdf;
-use crate::crypto::keys::AESKey;
 
-impl Kdf for AESKey {
-    fn derive_key_from_this(&self) -> Self {
-        return AESKey::new_from_slice(self.get())
+impl Kdf for Seed {
+    fn derive_key_from_this(&self, counter: u32) -> [u8; SECRET_KEY_SIZE] {
+        self.get().clone()
     }
 }

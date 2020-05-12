@@ -1,9 +1,8 @@
 use crate::utils::UnwrapOrSgxErrorUnexpected;
 
 use sgx_types::*;
-use std::fmt;
 use std::fs::File;
-use std::io::{Write};
+use std::io::Write;
 
 pub fn write_to_untrusted(bytes: &[u8], filepath: &str) -> SgxResult<sgx_status_t> {
     File::create(filepath)

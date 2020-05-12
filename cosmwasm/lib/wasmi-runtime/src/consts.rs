@@ -22,7 +22,7 @@ pub const CERTEXPIRYDAYS: i64 = 90i64;
 pub enum SigningMethod {
     MRSIGNER,
     MRENCLAVE,
-    NONE
+    NONE,
 }
 
 #[cfg(feature = "production")]
@@ -33,3 +33,6 @@ pub const SIGNING_METHOD: SigningMethod = SigningMethod::NONE;
 
 pub const SEED_SEALING_PATH: &str = "./.sgx_secrets/seed.sealed";
 pub const NODE_SK_SEALING_PATH: &str = "./.sgx_secrets/node_sk_key.sealed";
+
+pub const IO_KEY_DERIVE_ORDER: u32 = 1;
+pub const STATE_MASTER_KEY_DERIVE_ORDER: u32 = 2;

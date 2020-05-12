@@ -6,7 +6,7 @@ use sgx_rand::*;
 use sgx_tcrypto::*;
 use sgx_tse::*;
 use sgx_types::*;
-use std::io::{BufReader, Read, Write};
+use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::prelude::v1::*;
 
@@ -21,7 +21,7 @@ use crate::consts::{API_KEY_FILE, SPID_FILE};
 use crate::hex;
 use crate::imports::*;
 
-pub const DEV_HOSTNAME:&'static str = "api.trustedservices.intel.com";
+pub const DEV_HOSTNAME: &'static str = "api.trustedservices.intel.com";
 
 #[cfg(feature = "production")]
 pub const SIGRL_SUFFIX: &str = "/sgx/attestation/v4/sigrl/";
@@ -40,7 +40,6 @@ static REPORT_DATA_SIZE: usize = 64;
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
 pub fn software_mode_quote() -> sgx_status_t {
-
     // info!("produce_quote entered");
     // let spid = hex::decode(spid).unwrap();
     // let mut id = [0; 16];
@@ -113,17 +112,18 @@ pub fn software_mode_quote() -> sgx_status_t {
     // info!("encoded_quote: {:?}", encoded_quote);
     // Ok(encoded_quote)
 
-
     let (status, rt, (target_info, _gid)) = {
         let mut target_info = sgx_target_info_t::default();
         let mut epid = sgx_epid_group_id_t::default();
         // let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
-        let mut rt : sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+        let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
         info!("before sgx_init_quote");
         let status = unsafe {
-            ocall_sgx_init_quote(&mut rt as *mut sgx_status_t,
-                                 &mut target_info as *mut sgx_target_info_t,
-                                 &mut epid as *mut sgx_epid_group_id_t)
+            ocall_sgx_init_quote(
+                &mut rt as *mut sgx_status_t,
+                &mut target_info as *mut sgx_target_info_t,
+                &mut epid as *mut sgx_epid_group_id_t,
+            )
         };
         (status, rt, (target_info, epid))
     };
@@ -136,12 +136,15 @@ pub fn software_mode_quote() -> sgx_status_t {
 
     let mut report = sgx_report_t::default();
 
-    create_report_with_data(&target_info, & mut report, &[0u8])
+    create_report_with_data(&target_info, &mut report, &[0u8])
 }
 
-
 #[cfg(not(feature = "SGX_MODE_HW"))]
-pub fn create_report_with_data(target_info: &sgx_target_info_t, out_report: &mut sgx_report_t, extra_data: &[u8]) -> sgx_status_t {
+pub fn create_report_with_data(
+    target_info: &sgx_target_info_t,
+    out_report: &mut sgx_report_t,
+    extra_data: &[u8],
+) -> sgx_status_t {
     let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
     // secret data to be attached with the report.
     // if extra_data.len() > REPORT_DATA_SIZE {
@@ -172,10 +175,11 @@ pub fn create_report_with_data(target_info: &sgx_target_info_t, out_report: &mut
     }
 }
 
-
 // todo: add public/private key handling pub_k: &sgx_ec256_public_t,
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn create_attestation_certificate(sign_type: sgx_quote_sign_type_t) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+pub fn create_attestation_certificate(
+    sign_type: sgx_quote_sign_type_t,
+) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     let ecc_handle = SgxEccHandle::new();
     let _result = ecc_handle.open();
     let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
@@ -189,7 +193,8 @@ pub fn create_attestation_certificate(sign_type: sgx_quote_sign_type_t) -> Resul
     };
 
     let payload = attn_report + "|" + &sig + "|" + &cert;
-    let (key_der, cert_der) = match crate::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle) {
+    let (key_der, cert_der) = match crate::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)
+    {
         Ok(r) => r,
         Err(e) => {
             error!("Error in gen_ecc_cert: {:?}", e);
@@ -204,7 +209,10 @@ pub fn create_attestation_certificate(sign_type: sgx_quote_sign_type_t) -> Resul
 //input: pub_k: &sgx_ec256_public_t, todo: make this the pubkey of the node
 #[cfg(feature = "SGX_MODE_HW")]
 #[allow(const_err)]
-pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quote_sign_type_t) -> Result<(String, String, String), sgx_status_t> {
+pub fn create_attestation_report(
+    pub_k: &sgx_ec256_public_t,
+    sign_type: sgx_quote_sign_type_t,
+) -> Result<(String, String, String), sgx_status_t> {
     // Workflow:
     // (1) ocall to get the target_info structure (ti) and epid group id (eg)
     // (1.5) get sigrl
@@ -212,14 +220,16 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
     // (3) ocall to sgx_get_quote to generate (*mut sgx-quote_t, uint32_t)
 
     // (1) get ti + eg
-    let mut ti : sgx_target_info_t = sgx_target_info_t::default();
-    let mut eg : sgx_epid_group_id_t = sgx_epid_group_id_t::default();
-    let mut rt : sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+    let mut ti: sgx_target_info_t = sgx_target_info_t::default();
+    let mut eg: sgx_epid_group_id_t = sgx_epid_group_id_t::default();
+    let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 
     let res = unsafe {
-        ocall_sgx_init_quote(&mut rt as *mut sgx_status_t,
-                             &mut ti as *mut sgx_target_info_t,
-                             &mut eg as *mut sgx_epid_group_id_t)
+        ocall_sgx_init_quote(
+            &mut rt as *mut sgx_status_t,
+            &mut ti as *mut sgx_target_info_t,
+            &mut eg as *mut sgx_epid_group_id_t,
+        )
     };
 
     debug!("EPID group = {:?}", eg);
@@ -235,12 +245,10 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
     let eg_num = as_u32_le(&eg);
 
     // (1.5) get sigrl
-    let mut ias_sock : i32 = 0;
+    let mut ias_sock: i32 = 0;
 
-    let res = unsafe {
-        ocall_get_ias_socket(&mut rt as *mut sgx_status_t,
-                             &mut ias_sock as *mut i32)
-    };
+    let res =
+        unsafe { ocall_get_ias_socket(&mut rt as *mut sgx_status_t, &mut ias_sock as *mut i32) };
 
     if res != sgx_status_t::SGX_SUCCESS {
         return Err(res);
@@ -253,7 +261,7 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
     debug!("Got ias_sock successfully = {}", ias_sock);
 
     // Now sigrl_vec is the revocation list, a vec<u8>
-    let sigrl_vec : Vec<u8> = get_sigrl_from_intel(ias_sock, eg_num);
+    let sigrl_vec: Vec<u8> = get_sigrl_from_intel(ias_sock, eg_num);
 
     // (2) Generate the report
     // Fill ecc256 public key into report_data
@@ -267,24 +275,24 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
     report_data.d[32..].clone_from_slice(&pub_k_gy);
 
     let rep = match rsgx_create_report(&ti, &report_data) {
-        Ok(r) =>{
+        Ok(r) => {
             info!("Report creation => success {:?}", r.body.mr_signer.m);
             Some(r)
-        },
-        Err(e) =>{
+        }
+        Err(e) => {
             info!("Report creation => failed {:?}", e);
             None
-        },
+        }
     };
 
-    let mut quote_nonce = sgx_quote_nonce_t { rand : [0;16] };
+    let mut quote_nonce = sgx_quote_nonce_t { rand: [0; 16] };
     let mut os_rng = os::SgxRng::new().unwrap();
     os_rng.fill_bytes(&mut quote_nonce.rand);
     debug!("Nonce generated successfully");
     let mut qe_report = sgx_report_t::default();
-    const RET_QUOTE_BUF_LEN : u32 = 2048;
-    let mut return_quote_buf : [u8; RET_QUOTE_BUF_LEN as usize] = [0;RET_QUOTE_BUF_LEN as usize];
-    let mut quote_len : u32 = 0;
+    const RET_QUOTE_BUF_LEN: u32 = 2048;
+    let mut return_quote_buf: [u8; RET_QUOTE_BUF_LEN as usize] = [0; RET_QUOTE_BUF_LEN as usize];
+    let mut quote_len: u32 = 0;
 
     // (3) Generate the quote
     // Args:
@@ -297,36 +305,37 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
     //       7. [out]p_qe_report need further check
     //       8. [out]p_quote
     //       9. quote_size
-    let (p_sigrl, sigrl_len) =
-        if sigrl_vec.len() == 0 {
-            (ptr::null(), 0)
-        } else {
-            (sigrl_vec.as_ptr(), sigrl_vec.len() as u32)
-        };
-    let p_report = (&rep.unwrap()) as * const sgx_report_t;
+    let (p_sigrl, sigrl_len) = if sigrl_vec.len() == 0 {
+        (ptr::null(), 0)
+    } else {
+        (sigrl_vec.as_ptr(), sigrl_vec.len() as u32)
+    };
+    let p_report = (&rep.unwrap()) as *const sgx_report_t;
     let quote_type = sign_type;
 
-    let spid : sgx_spid_t = load_spid(SPID_FILE);
+    let spid: sgx_spid_t = load_spid(SPID_FILE);
 
     let p_spid = &spid as *const sgx_spid_t;
-    let p_nonce = &quote_nonce as * const sgx_quote_nonce_t;
+    let p_nonce = &quote_nonce as *const sgx_quote_nonce_t;
     let p_qe_report = &mut qe_report as *mut sgx_report_t;
     let p_quote = return_quote_buf.as_mut_ptr();
     let maxlen = RET_QUOTE_BUF_LEN;
     let p_quote_len = &mut quote_len as *mut u32;
 
     let result = unsafe {
-        ocall_get_quote(&mut rt as *mut sgx_status_t,
-                        p_sigrl,
-                        sigrl_len,
-                        p_report,
-                        quote_type,
-                        p_spid,
-                        p_nonce,
-                        p_qe_report,
-                        p_quote,
-                        maxlen,
-                        p_quote_len)
+        ocall_get_quote(
+            &mut rt as *mut sgx_status_t,
+            p_sigrl,
+            sigrl_len,
+            p_report,
+            quote_type,
+            p_spid,
+            p_nonce,
+            p_qe_report,
+            p_quote,
+            maxlen,
+            p_quote_len,
+        )
     };
 
     if result != sgx_status_t::SGX_SUCCESS {
@@ -346,13 +355,14 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
         Err(x) => {
             error!("rsgx_verify_report failed with {:?}", x);
             return Err(x);
-        },
+        }
     }
 
     // Check if the qe_report is produced on the same platform
-    if ti.mr_enclave.m != qe_report.body.mr_enclave.m ||
-        ti.attributes.flags != qe_report.body.attributes.flags ||
-        ti.attributes.xfrm  != qe_report.body.attributes.xfrm {
+    if ti.mr_enclave.m != qe_report.body.mr_enclave.m
+        || ti.attributes.flags != qe_report.body.attributes.flags
+        || ti.attributes.xfrm != qe_report.body.attributes.xfrm
+    {
         error!("qe_report does not match current target_info!");
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
@@ -374,7 +384,7 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
     // p_qe_report and report.data to confirm the QUOTE has not be modified and
     // is not a replay. It is optional.
 
-    let mut rhs_vec : Vec<u8> = quote_nonce.rand.to_vec();
+    let mut rhs_vec: Vec<u8> = quote_nonce.rand.to_vec();
     rhs_vec.extend(&return_quote_buf[..quote_len as usize]);
     let rhs_hash = rsgx_sha256_slice(&rhs_vec[..]).unwrap();
     let lhs_hash = &qe_report.body.report_data.d[..32];
@@ -387,11 +397,9 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
-    let quote_vec : Vec<u8> = return_quote_buf[..quote_len as usize].to_vec();
-    let res = unsafe {
-        ocall_get_ias_socket(&mut rt as *mut sgx_status_t,
-                             &mut ias_sock as *mut i32)
-    };
+    let quote_vec: Vec<u8> = return_quote_buf[..quote_len as usize].to_vec();
+    let res =
+        unsafe { ocall_get_ias_socket(&mut rt as *mut sgx_status_t, &mut ias_sock as *mut i32) };
 
     if res != sgx_status_t::SGX_SUCCESS {
         return Err(res);
@@ -406,29 +414,34 @@ pub fn create_attestation_report(pub_k: &sgx_ec256_public_t, sign_type: sgx_quot
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-fn parse_response_attn_report(resp : &[u8]) -> (String, String, String){
+fn parse_response_attn_report(resp: &[u8]) -> (String, String, String) {
     debug!("parse_response_attn_report");
     let mut headers = [httparse::EMPTY_HEADER; 16];
-    let mut respp   = httparse::Response::new(&mut headers);
+    let mut respp = httparse::Response::new(&mut headers);
     let result = respp.parse(resp);
     debug!("parse result {:?}", result);
 
-    let msg : &'static str;
+    let msg: &'static str;
 
     match respp.code {
         Some(200) => msg = "OK Operation Successful",
         Some(401) => msg = "Unauthorized Failed to authenticate or authorize request.",
         Some(404) => msg = "Not Found GID does not refer to a valid EPID group ID.",
         Some(500) => msg = "Internal error occurred",
-        Some(503) => msg = "Service is currently not able to process the request (due to
+        Some(503) => {
+            msg = "Service is currently not able to process the request (due to
             a temporary overloading or maintenance). This is a
             temporary state – the same request can be repeated after
-            some time. ",
-        _ => {error!("DBG:{}", respp.code.unwrap()); msg = "Unknown error occured"},
+            some time. "
+        }
+        _ => {
+            error!("DBG:{}", respp.code.unwrap());
+            msg = "Unknown error occured"
+        }
     }
 
     debug!("{}", msg);
-    let mut len_num : u32 = 0;
+    let mut len_num: u32 = 0;
 
     let mut sig = String::new();
     let mut cert = String::new();
@@ -437,14 +450,16 @@ fn parse_response_attn_report(resp : &[u8]) -> (String, String, String){
     for i in 0..respp.headers.len() {
         let h = respp.headers[i];
         //println!("{} : {}", h.name, str::from_utf8(h.value).unwrap());
-        match h.name{
+        match h.name {
             "Content-Length" => {
                 let len_str = String::from_utf8(h.value.to_vec()).unwrap();
                 len_num = len_str.parse::<u32>().unwrap();
                 debug!("content length = {}", len_num);
             }
             "X-IASReport-Signature" => sig = str::from_utf8(h.value).unwrap().to_string(),
-            "X-IASReport-Signing-Certificate" => cert = str::from_utf8(h.value).unwrap().to_string(),
+            "X-IASReport-Signing-Certificate" => {
+                cert = str::from_utf8(h.value).unwrap().to_string()
+            }
             _ => (),
         }
     }
@@ -468,30 +483,32 @@ fn parse_response_attn_report(resp : &[u8]) -> (String, String, String){
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-fn parse_response_sigrl(resp : &[u8]) -> Vec<u8> {
+fn parse_response_sigrl(resp: &[u8]) -> Vec<u8> {
     println!("parse_response_sigrl");
     let mut headers = [httparse::EMPTY_HEADER; 16];
-    let mut respp   = httparse::Response::new(&mut headers);
+    let mut respp = httparse::Response::new(&mut headers);
     let result = respp.parse(resp);
     println!("parse result {:?}", result);
     println!("parse response{:?}", respp);
 
-    let msg : &'static str;
+    let msg: &'static str;
 
     match respp.code {
         Some(200) => msg = "OK Operation Successful",
         Some(401) => msg = "Unauthorized Failed to authenticate or authorize request.",
         Some(404) => msg = "Not Found GID does not refer to a valid EPID group ID.",
         Some(500) => msg = "Internal error occurred",
-        Some(503) => msg = "Service is currently not able to process the request (due to
+        Some(503) => {
+            msg = "Service is currently not able to process the request (due to
             a temporary overloading or maintenance). This is a
             temporary state – the same request can be repeated after
-            some time. ",
+            some time. "
+        }
         _ => msg = "Unknown error occured",
     }
 
     println!("{}", msg);
-    let mut len_num : u32 = 0;
+    let mut len_num: u32 = 0;
 
     for i in 0..respp.headers.len() {
         let h = respp.headers[i];
@@ -518,13 +535,15 @@ fn parse_response_sigrl(resp : &[u8]) -> Vec<u8> {
 pub fn make_ias_client_config() -> rustls::ClientConfig {
     let mut config = rustls::ClientConfig::new();
 
-    config.root_store.add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
+    config
+        .root_store
+        .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
 
     config
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn get_sigrl_from_intel(fd : c_int, gid : u32) -> Vec<u8> {
+pub fn get_sigrl_from_intel(fd: c_int, gid: u32) -> Vec<u8> {
     info!("get_sigrl_from_intel fd = {:?}", fd);
     let config = make_ias_client_config();
     let ias_key = get_ias_api_key();
@@ -566,7 +585,7 @@ pub fn get_sigrl_from_intel(fd : c_int, gid : u32) -> Vec<u8> {
 
 // TODO: support pse
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn get_report_from_intel(fd : c_int, quote : Vec<u8>) -> (String, String, String) {
+pub fn get_report_from_intel(fd: c_int, quote: Vec<u8>) -> (String, String, String) {
     info!("get_report_from_intel fd = {:?}", fd);
     let config = make_ias_client_config();
     let encoded_quote = base64::encode(&quote[..]);
@@ -604,17 +623,18 @@ pub fn get_report_from_intel(fd : c_int, quote : Vec<u8>) -> (String, String, St
 
 #[cfg(feature = "SGX_MODE_HW")]
 fn as_u32_le(array: &[u8; 4]) -> u32 {
-    ((array[0] as u32) <<  0) +
-        ((array[1] as u32) <<  8) +
-        ((array[2] as u32) << 16) +
-        ((array[3] as u32) << 24)
+    ((array[0] as u32) << 0)
+        + ((array[1] as u32) << 8)
+        + ((array[2] as u32) << 16)
+        + ((array[3] as u32) << 24)
 }
-
 
 fn load_spid(filename: &str) -> sgx_spid_t {
     let mut spidfile = fs::File::open(filename).expect("cannot open spid file");
     let mut contents = String::new();
-    spidfile.read_to_string(&mut contents).expect("cannot read the spid file");
+    spidfile
+        .read_to_string(&mut contents)
+        .expect("cannot read the spid file");
 
     hex::decode_spid(&contents)
 }
@@ -623,6 +643,8 @@ fn load_spid(filename: &str) -> sgx_spid_t {
 fn get_ias_api_key() -> String {
     let mut keyfile = fs::File::open(API_KEY_FILE).expect("cannot open ias key file");
     let mut key = String::new();
-    keyfile.read_to_string(&mut key).expect("cannot read the ias key file");
+    keyfile
+        .read_to_string(&mut key)
+        .expect("cannot read the ias key file");
     key.trim_end().to_owned()
 }

@@ -7,8 +7,9 @@ use wasmi::{Error as InterpreterError, HostError};
 pub enum WasmEngineError {
     FailedOcall,
     OutOfGas,
+    EncryptionError,
+    DecryptionError,
 }
-
 
 impl HostError for WasmEngineError {}
 
@@ -21,6 +22,8 @@ pub fn wasmi_error_to_enclave_error(wasmi_error: InterpreterError) -> EnclaveErr
         Some(Some(WasmEngineError::FailedOcall)) => EnclaveError::FailedOcall,
         // Ran out of gas
         Some(Some(WasmEngineError::OutOfGas)) => EnclaveError::OutOfGas,
+        Some(Some(WasmEngineError::EncryptionError)) => EnclaveError::FailedSeal,
+        Some(Some(WasmEngineError::DecryptionError)) => EnclaveError::FailedUnseal,
         // Unexpected WasmEngineError variant or unexpected HostError.
         Some(None) => EnclaveError::Unknown,
         // The error is not a HostError. In the future we might want to return more specific errors.

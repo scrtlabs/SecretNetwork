@@ -1,17 +1,24 @@
-use crate::crypto::keys::{AESKey, KeyPair};
-use crate::crypto::keys::{SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE};
+use crate::crypto::keys::SECRET_KEY_SIZE;
+use crate::crypto::keys::{AESKey, KeyPair, Seed};
 use crate::crypto::traits::SealedKey;
 
 use enclave_ffi_types::EnclaveError;
 use log::*;
-use sgx_types::*;
-use std::fmt;
-use std::fs::File;
-use std::io::{Error, Read, Write};
+use std::io::{Read, Write};
 use std::sgxfs::SgxFile;
 
-
 impl SealedKey for AESKey {
+    fn seal(&self, filepath: &str) -> Result<(), EnclaveError> {
+        seal(self.get(), filepath)
+    }
+
+    fn unseal(filepath: &str) -> Result<Self, EnclaveError> {
+        let mut buf = open(filepath)?;
+        Ok(Self::new_from_slice(&buf))
+    }
+}
+
+impl SealedKey for Seed {
     fn seal(&self, filepath: &str) -> Result<(), EnclaveError> {
         seal(self.get(), filepath)
     }
@@ -37,11 +44,8 @@ impl SealedKey for KeyPair {
 
         KeyPair::new_from_slice(&buf).map_err(|err| {
             error!(
-                "{}",
-                format!(
-                    "[Enclave] Dramatic error while trying to init secret key from bytes: {:?}",
-                    err
-                )
+                "[Enclave] Dramatic error while trying to init secret key from bytes: {:?}",
+                err
             );
             EnclaveError::FailedUnseal
         })

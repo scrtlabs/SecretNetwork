@@ -3,7 +3,6 @@ use secp256k1::ecdh::SharedSecret;
 use secp256k1::key::{PublicKey, SecretKey};
 use secp256k1::{All, Secp256k1};
 use sgx_trts::trts::rsgx_read_rand;
-use sgx_types::sgx_status_t;
 
 pub const SEED_KEY_SIZE: usize = 32;
 
@@ -29,21 +28,32 @@ pub type PubKey = [u8; UNCOMPRESSED_PUBLIC_KEY_SIZE];
 pub struct AESKey(SymmetricKey);
 
 impl AESKey {
-    pub fn get(&self) -> &[u8; SECRET_KEY_SIZE] {
-        return &self.0
+    pub fn get(&self) -> &[u8; SYMMETRIC_KEY_SIZE] {
+        return &self.0;
     }
 
-    pub fn new_from_slice(privkey: &[u8; SECRET_KEY_SIZE]) -> Self {
-        Self{0: privkey.clone()}
+    pub fn new_from_slice(privkey: &[u8; SYMMETRIC_KEY_SIZE]) -> Self {
+        Self { 0: privkey.clone() }
+    }
+}
+
+pub struct Seed([u8; SEED_SIZE]);
+
+impl Seed {
+    pub fn get(&self) -> &[u8; SEED_SIZE] {
+        return &self.0;
+    }
+
+    pub fn new_from_slice(s: &[u8; SEED_SIZE]) -> Self {
+        Self { 0: s.clone() }
     }
 
     pub fn new() -> Result<Self, CryptoError> {
-        let mut sk_slice = [0; SECRET_KEY_SIZE];
+        let mut sk_slice = [0; SEED_SIZE];
         rand_slice(&mut sk_slice)?;
         Ok(Self::new_from_slice(&sk_slice))
     }
 }
-
 pub struct KeyPair {
     context: Secp256k1<All>,
     pubkey: PublicKey,
@@ -88,8 +98,7 @@ impl KeyPair {
         })
     }
 
-    /// This function does an ECDH(point multiplication) between one's private key and the other one's public key.
-    ///
+    /// This function does an ECDH(point multiplication) between one's private key and the other one's public key
     pub fn derive_key(&self, _pubarr: &PubKey) -> Result<DhKey, CryptoError> {
         let mut pubarr = [0; UNCOMPRESSED_PUBLIC_KEY_SIZE];
         pubarr[0] = 4;
@@ -116,8 +125,5 @@ impl KeyPair {
 }
 
 fn rand_slice(rand: &mut [u8]) -> Result<(), CryptoError> {
-    // let mut rng = thread_rng();
-    // rng.try_fill(rand)
-    //     .map_err(|e| CryptoError::RandomError { err: e })
     rsgx_read_rand(rand).map_err(|e| CryptoError::RandomError {})
 }

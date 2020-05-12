@@ -1,35 +1,42 @@
-use crate::crypto::keys::*;
-struct Keychain {
-    seed: [u8; SEED_SIZE],
-    master_state_key: StateKey,
+use crate::consts;
+use crate::crypto::keys::{KeyPair, Seed};
+use crate::crypto::traits::*;
+use enclave_ffi_types::CryptoError;
+use lazy_static::lazy_static;
+use log::*;
+
+pub struct Keychain {
+    seed: Seed,
+    master_state_key: Seed,
     io_key: KeyPair,
 }
 
-static key_manager: Option(Keychain) = None;
+lazy_static! {
+    pub static ref KEY_MANAGER :Result<Keychain, CryptoError> = {
+        let seed = Seed::unseal(consts::SEED_SEALING_PATH).map_err(|err| {
+            error!("[Enclave] Error unsealing the seed: {:?}", err);
+            CryptoError::ParsingError /* change error type? */
+        })?;
+
+        let io_key_bytes = seed.derive_key_from_this(consts::IO_KEY_DERIVE_ORDER);
+        let io_key = KeyPair::new_from_slice(&io_key_bytes).map_err(|err| {
+            error!("[Enclave] Error creating io_key: {:?}", err);
+            CryptoError::ParsingError /* change error type? */
+        })?;
+
+        let master_state_key_bytes = seed.derive_key_from_this(consts::STATE_MASTER_KEY_DERIVE_ORDER);
+        let master_state_key = Seed::new_from_slice(&io_key_bytes);
+
+        Ok(Keychain {
+            seed,
+            master_state_key,
+            io_key,
+        })
+    };
+}
 
 impl Keychain {
-    pub fn get() -> Result<Keychain, CryptoError> {
-        match key_manager {
-            Some(x) => x,
-            None => {
-                /**
-                 * TODO:
-                 * 1. unseal `seed`
-                 * 2. CSPRNG.init(seed)
-                 * 3. CSPRNG.next(256 bits) => master_state_key
-                 * 4. CSPRNG.next(256 bits) => sk_io
-                 **/
-                let seed = [1_u8; SEED_SIZE];
-                let master_state_key = [2_u8; SYMMETRIC_KEY_SIZE];
-                let io_key = [3_u8; SECRET_KEY_SIZE];
-
-                key_manager = Some(Keychain {
-                    seed: seed,
-                    master_state_key: master_state_key,
-                    io_key: KeyPair::new_from_slice(&io_key)?, // TODO handle the error in here in order to not need to handle it outside
-                });
-                key_manager
-            }
-        }
+    pub fn get_master_state_key(&self) -> &Seed {
+        &self.master_state_key
     }
 }
