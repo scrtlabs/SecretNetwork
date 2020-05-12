@@ -22,6 +22,24 @@ pub type DhKey = SymmetricKey;
 /// PubKey is a public key that is used for ECDSA signing.
 pub type PubKey = [u8; UNCOMPRESSED_PUBLIC_KEY_SIZE];
 
+pub struct AESKey(SymmetricKey);
+
+impl AESKey {
+    pub fn get(&self) -> &[u8; SECRET_KEY_SIZE] {
+        return &self.0
+    }
+
+    pub fn new_from_slice(privkey: &[u8; SECRET_KEY_SIZE]) -> Self {
+        Self{0: privkey.clone()}
+    }
+
+    pub fn new() -> Result<Self, CryptoError> {
+        let mut sk_slice = [0; SECRET_KEY_SIZE];
+        rand_slice(&mut sk_slice)?;
+        Ok(Self::new_from_slice(&sk_slice))
+    }
+}
+
 pub struct KeyPair {
     context: Secp256k1<All>,
     pubkey: PublicKey,
@@ -98,11 +116,4 @@ fn rand_slice(rand: &mut [u8]) -> Result<(), CryptoError> {
     // rng.try_fill(rand)
     //     .map_err(|e| CryptoError::RandomError { err: e })
     rsgx_read_rand(rand).map_err(|e| CryptoError::RandomError {})
-}
-
-pub fn init_seed(public_key: &[u8], encrypted_seed: &[u8]) -> sgx_status_t {
-    println!("yo yo yo");
-    println!("key: 0x{:?}", encrypted_seed);
-
-    return sgx_status_t::SGX_SUCCESS;
 }

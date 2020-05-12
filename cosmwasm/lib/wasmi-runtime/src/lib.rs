@@ -12,17 +12,16 @@ extern crate sgx_trts;
 extern crate sgx_tse;
 extern crate sgx_types;
 
+mod crypto;
 mod attestation;
 mod cert;
 mod consts;
 mod contract_operations;
-mod encryption;
 mod errors;
 pub mod exports;
 mod gas;
 mod hex;
 pub mod imports;
-mod keys;
 pub mod logger;
 mod results;
 mod runtime;
