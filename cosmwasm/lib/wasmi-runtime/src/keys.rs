@@ -66,8 +66,7 @@ impl KeyPair {
         })
     }
 
-    /// This function does an ECDH(point multiplication) between one's private key and the other one's public key.
-    ///
+    /// This function does an ECDH(point multiplication) between one's private key and the other one's public key
     pub fn derive_key(&self, _pubarr: &PubKey) -> Result<DhKey, CryptoError> {
         let mut pubarr = [0; UNCOMPRESSED_PUBLIC_KEY_SIZE];
         pubarr[0] = 4;
@@ -94,9 +93,6 @@ impl KeyPair {
 }
 
 fn rand_slice(rand: &mut [u8]) -> Result<(), CryptoError> {
-    // let mut rng = thread_rng();
-    // rng.try_fill(rand)
-    //     .map_err(|e| CryptoError::RandomError { err: e })
     rsgx_read_rand(rand).map_err(|e| CryptoError::RandomError {})
 }
 
