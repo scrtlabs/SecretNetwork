@@ -30,3 +30,6 @@ pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
 
 #[cfg(not(feature = "production"))]
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::NONE;
+
+pub const SEED_SEALING_PATH: &str = "./.sgx_secrets/seed.sealed";
+pub const NODE_SK_SEALING_PATH: &str = "./.sgx_secrets/node_sk_key.sealed";
