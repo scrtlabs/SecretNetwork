@@ -197,6 +197,17 @@ pub extern "C" fn ecall_init_bootstrap(
     sgx_status_t::SGX_SUCCESS
 }
 
+/**
+  *  `ecall_get_encrypted_seed`
+  *
+  *  This call is used to help new nodes register in the network. The function will authenticate the
+  *  new node, based on a received certificate. If the node is authenticated successfully, the seed
+  *  will be encrypted and shared with the registering node.
+  *
+  *  The seed is encrypted with a key derived from the secret master key of the chain, and the public
+  *  key of the requesting chain
+  *
+  */
 #[cfg(feature = "SGX_MODE_HW")]
 #[no_mangle]
 // todo: replace 32 with crypto consts once I have crypto library
@@ -275,6 +286,17 @@ pub extern "C" fn ecall_get_encrypted_seed(
     sgx_status_t::SGX_SUCCESS
 }
 
+/**
+  *  `ecall_init_seed`
+  *
+  *  This function is called during initialization of __non__ bootstrap nodes.
+  *
+  *  It receives the master public key (pk_io) and uses it, and its node key (generated in [ecall_key_gen])
+  *  to decrypt the seed.
+  *
+  *  The seed was encrypted using Diffie-Hellman in the function [ecall_get_encrypted_seed]
+  *
+  */
 #[no_mangle]
 pub unsafe extern "C" fn ecall_init_seed(
     public_key: *const u8,

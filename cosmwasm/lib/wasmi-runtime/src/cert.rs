@@ -10,7 +10,6 @@ use sgx_types::*;
 use log::*;
 use std::{ptr, str};
 use std::io::BufReader;
-use base64;
 
 use std::prelude::v1::*;
 use std::time::*;
@@ -18,7 +17,11 @@ use std::untrusted::time::SystemTimeEx;
 use yasna::models::ObjectIdentifier;
 use itertools::Itertools;
 
+#[cfg(feature = "SGX_MODE_HW")]
+use base64;
+#[cfg(feature = "SGX_MODE_HW")]
 use serde_json;
+#[cfg(feature = "SGX_MODE_HW")]
 use serde_json::Value;
 
 use super::consts::{SIGNING_METHOD, CERTEXPIRYDAYS, SigningMethod};

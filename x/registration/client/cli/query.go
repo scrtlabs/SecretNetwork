@@ -64,7 +64,7 @@ func GetCmdMasterPublicKey(cdc *codec.Codec) *cobra.Command {
 		Use:   "master-key",
 		Short: "Get master key for the chain",
 		Long:  "Get master key for the chain",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
