@@ -106,6 +106,8 @@ func (k Keeper) InitBootstrap(ctx sdk.Context) {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, "Bootstrap init failed :("))
 	}
 
+	fmt.Printf("got public key: %s\n", hex.EncodeToString(res))
+
 	k.setMasterPublicKey(ctx, res)
 }
 

@@ -68,7 +68,7 @@ func GetCmdMasterPublicKey(cdc *codec.Codec) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
-			route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, keeper.QueryEncryptedSeed)
+			route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, keeper.QueryMasterKey)
 			res, _, err := cliCtx.Query(route)
 			if err != nil {
 				return err

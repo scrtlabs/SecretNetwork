@@ -67,7 +67,7 @@ pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> 
 pub extern "C" fn init_bootstrap(
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    info!("Hello from right before untrusted_get_encrypted_seed");
+    info!("Hello from right before init_bootstrap");
     match untrusted_init_bootstrap() {
         Err(e) => {
             error!("Error :(");

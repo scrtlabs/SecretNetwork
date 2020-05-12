@@ -17,11 +17,8 @@ use std::untrusted::time::SystemTimeEx;
 use yasna::models::ObjectIdentifier;
 use itertools::Itertools;
 
-#[cfg(feature = "SGX_MODE_HW")]
 use base64;
-#[cfg(feature = "SGX_MODE_HW")]
 use serde_json;
-#[cfg(feature = "SGX_MODE_HW")]
 use serde_json::Value;
 
 use super::consts::{SIGNING_METHOD, CERTEXPIRYDAYS, SigningMethod};

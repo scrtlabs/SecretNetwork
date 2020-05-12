@@ -11,21 +11,22 @@ import (
 
 func (k Keeper) GetMasterPublicKey(ctx sdk.Context) *types.PublicKey {
 	store := ctx.KVStore(k.storeKey)
-
+	fmt.Println("hey bro2")
 	var pkIO types.PublicKey
-	certBz := store.Get([]byte(types.MasterPublicKeyId))
+	certBz := store.Get(types.GetMasterPublicKey(types.MasterPublicKeyId))
+	fmt.Println("hey bro3")
 	if certBz == nil {
 		return nil
 	}
 	k.cdc.MustUnmarshalBinaryBare(certBz, &pkIO)
-
+	fmt.Println("hey bro4")
 	return &pkIO
 }
 
 func (k Keeper) setMasterPublicKey(ctx sdk.Context, publicKey types.PublicKey) {
 	store := ctx.KVStore(k.storeKey)
 
-	store.Set(types.GetMasterPublicKey([]byte(types.MasterPublicKeyId)), k.cdc.MustMarshalBinaryBare(publicKey))
+	store.Set(types.GetMasterPublicKey(types.MasterPublicKeyId), k.cdc.MustMarshalBinaryBare(publicKey))
 }
 
 func (k Keeper) isMasterKeyDefined(ctx sdk.Context) bool {

@@ -27,6 +27,6 @@ func GetRegistrationKey(key []byte) []byte {
 	return append(RegistrationStorePrefix, key...)
 }
 
-func GetMasterPublicKey(key []byte) []byte {
-	return append(MasterKeyPrefix, key...)
+func GetMasterPublicKey(key string) []byte {
+	return append(MasterKeyPrefix, []byte(key)...)
 }

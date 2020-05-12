@@ -128,6 +128,18 @@ pub unsafe extern "C" fn ecall_key_gen(pk_node: *mut PubKey) -> sgx_types::sgx_s
 
 #[cfg(feature = "SGX_MODE_HW")]
 #[no_mangle]
+/**
+ * `ecall_get_attestation_report` (HW mode)
+ *
+ * Creates the attestation report to be used to authenticate with the blockchain. The output of this
+ * function is an X.509 certificate signed by the enclave, which contains the report signed by Intel.
+ *
+ * Verifying functions will verify the public key bytes sent in the extra data of the __report__ (which
+ * may or may not match the public key of the __certificate__ -- depending on implementation choices)
+ *
+ * This x509 certificate can be used in the future for mutual-RA cross-enclave TLS channels, or for
+ * other creative usages.
+ */
 pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
     let (private_key_der, cert) =
         match create_attestation_certificate(sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE) {
@@ -148,12 +160,30 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
 #[no_mangle]
+/**
+ * `ecall_get_attestation_report` (SW mode)
+ *
+ * Creates the attestation report to be used to authenticate with the blockchain. In software mode
+ * I'm not yet sure what this function is actually going to do (empty, just quote, or what?)
+ *
+ */
 pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
     software_mode_quote()
 }
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
 #[no_mangle]
+/**
+  *  `ecall_get_encrypted_seed` (SW Mode)
+  *
+  *  This call is used to help new nodes register in the network. The function will authenticate the
+  *  new node, based on a received certificate. If the node is authenticated successfully, the seed
+  *  will be encrypted and shared with the registering node.
+  *
+  *  The seed is encrypted with a key derived from the secret master key of the chain, and the public
+  *  key of the requesting chain
+  *
+  */
 // todo: replace 32 with crypto consts once I have crypto library
 pub extern "C" fn ecall_get_encrypted_seed(
     cert: *const u8,
@@ -164,6 +194,14 @@ pub extern "C" fn ecall_get_encrypted_seed(
     sgx_status_t::SGX_SUCCESS
 }
 
+/**
+ * `ecall_init_bootstrap`
+ *
+ *  Function to handle the initialization of the bootstrap node. Generates the master private/public
+ *  key (seed + pk_io/sk_io). This happens once at the initialization of a chain. Returns the master
+ *  public key (pk_io), which is saved on-chain, and used to propagate the seed to registering nodes
+ *
+ */
 #[no_mangle]
 pub extern "C" fn ecall_init_bootstrap(
     public_key: &mut [u8; PUBLIC_KEY_SIZE]) -> sgx_status_t {
@@ -189,6 +227,16 @@ pub extern "C" fn ecall_init_bootstrap(
         Ok(_) => { /* continue */ }
     };
 
+    let mut temp_key: [u8; 32] = [0u8; 32];
+    temp_key.copy_from_slice(seed.get_privkey());
+
+    let sk_io = match KeyPair::new_from_slice(&temp_key){
+        Ok(sk) => sk,
+        Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
+    };
+
+    sk_io.seal(NODE_SK_SEALING_PATH);
+
     // don't want to copy the first byte (no need to pass the 0x4 uncompressed byte)
     public_key.copy_from_slice(&seed.get_pubkey()[1..UNCOMPRESSED_PUBLIC_KEY_SIZE]);
 
@@ -198,7 +246,7 @@ pub extern "C" fn ecall_init_bootstrap(
 }
 
 /**
-  *  `ecall_get_encrypted_seed`
+  *  `ecall_get_encrypted_seed` (HW mode)
   *
   *  This call is used to help new nodes register in the network. The function will authenticate the
   *  new node, based on a received certificate. If the node is authenticated successfully, the seed
@@ -359,6 +407,13 @@ pub unsafe extern "C" fn ecall_init_seed(
     info!("Decrypted seed: {:?}", seed_buf);
 
     AESKey::new_from_slice(&seed_buf).seal(SEED_SEALING_PATH);
+
+    let sk_io = match KeyPair::new_from_slice(&seed_buf){
+        Ok(sk) => sk,
+        Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
+    };
+
+    sk_io.seal(NODE_SK_SEALING_PATH);
 
     sgx_status_t::SGX_SUCCESS
 
