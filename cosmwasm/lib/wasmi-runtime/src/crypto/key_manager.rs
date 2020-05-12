@@ -12,7 +12,7 @@ pub struct Keychain {
 }
 
 lazy_static! {
-    pub static ref KEY_MANAGER :Result<Keychain, CryptoError> = {
+    pub static ref KEY_MANAGER: Result<Keychain, CryptoError> = {
         let seed = Seed::unseal(consts::SEED_SEALING_PATH).map_err(|err| {
             error!("[Enclave] Error unsealing the seed: {:?}", err);
             CryptoError::ParsingError /* change error type? */

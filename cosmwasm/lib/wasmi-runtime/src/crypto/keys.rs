@@ -99,12 +99,15 @@ impl KeyPair {
     }
 
     /// This function does an ECDH(point multiplication) between one's private key and the other one's public key
-    pub fn derive_key(&self, _pubarr: &PubKey) -> Result<DhKey, CryptoError> {
-        let mut pubarr = [0; UNCOMPRESSED_PUBLIC_KEY_SIZE];
-        pubarr[0] = 4;
-        pubarr[1..].copy_from_slice(&_pubarr[..]);
+    pub fn derive_key(&self, pubarr: &PubKey) -> Result<DhKey, CryptoError> {
 
-        let pubkey = PublicKey::from_slice(&pubarr).map_err(|e| CryptoError::KeyError {})?;
+        // Pubkey is already 65 bytes, not sure what this is for?
+
+        // let mut pubarr = [0; UNCOMPRESSED_PUBLIC_KEY_SIZE];
+        // pubarr[0] = 4;
+        // pubarr[1..].copy_from_slice(&_pubarr[..]);
+
+        let pubkey = PublicKey::from_slice(pubarr).map_err(|e| CryptoError::KeyError {})?;
 
         let shared = SharedSecret::new(&pubkey, &self.privkey);
 

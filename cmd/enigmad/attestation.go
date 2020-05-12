@@ -28,8 +28,12 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert.der
 `,
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			_, err := api.KeyGen()
+			if err != nil {
+				return fmt.Errorf("failed to initialize enclave: %w", err)
+			}
 
-			_, err := api.CreateAttestationReport()
+			_, err = api.CreateAttestationReport()
 			if err != nil {
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}

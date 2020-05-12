@@ -17,6 +17,7 @@ use std::sync::Arc;
 use std::untrusted::fs;
 use std::vec::Vec;
 
+use crate::crypto::KeyPair;
 use crate::consts::{API_KEY_FILE, SPID_FILE};
 use crate::hex;
 use crate::imports::*;
@@ -178,11 +179,28 @@ pub fn create_report_with_data(
 // todo: add public/private key handling pub_k: &sgx_ec256_public_t,
 #[cfg(feature = "SGX_MODE_HW")]
 pub fn create_attestation_certificate(
+    kp: &KeyPair,
     sign_type: sgx_quote_sign_type_t,
 ) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+
+    let mut priv_key_buf: [u8; 32] = [0u8; 32];
+
+    priv_key_buf.copy_from_slice(kp.get_privkey());
+
+
+
+
+
     let ecc_handle = SgxEccHandle::new();
     let _result = ecc_handle.open();
-    let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
+
+    let prv_k = sgx_ec256_private_t {
+        r: priv_key_buf.clone()
+    };
+    let pub_k = rsgx_ecc256_pub_from_priv(&prv_k).unwrap();
+
+    // if we want to use ephemeral certificates, we can do this
+    // let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
 
     let (attn_report, sig, cert) = match create_attestation_report(&pub_k, sign_type) {
         Ok(r) => r,

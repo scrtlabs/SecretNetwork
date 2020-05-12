@@ -15,7 +15,7 @@ use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 use std::slice;
 
 
-use crate::consts::{NODE_SK_SEALING_PATH, SEED_SEALING_PATH};
+use crate::consts::{NODE_SK_SEALING_PATH, SEED_SEALING_PATH, IO_KEY_SEALING_KEY_PATH};
 pub use crate::crypto::traits::{SealedKey, Encryptable, Kdf};
 
 
@@ -138,8 +138,14 @@ pub unsafe extern "C" fn ecall_key_gen(pk_node: *mut PubKey) -> sgx_types::sgx_s
  * other creative usages.
  */
 pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
+
+    let kp = match KeyPair::unseal(NODE_SK_SEALING_PATH) {
+        Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
+        Ok(res) => { res }
+    }; // can read with SecretKey::from_slice()
+
     let (private_key_der, cert) =
-        match create_attestation_certificate(sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE) {
+        match create_attestation_certificate(&kp, sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE) {
             Err(e) => {
                 error!("Error in create_attestation_certificate: {:?}", e);
                 return e;
@@ -224,15 +230,16 @@ pub extern "C" fn ecall_init_bootstrap(
         Ok(_) => { /* continue */ }
     };
 
+    // todo: replace this, just wanted to placeholder generate skio
     let mut temp_key: [u8; 32] = [0u8; 32];
     temp_key.copy_from_slice(seed.get_privkey());
 
-    let sk_io = match KeyPair::new_from_slice(&temp_key){
+    let io_key = match KeyPair::new_from_slice(&temp_key){
         Ok(sk) => sk,
         Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
     };
 
-    sk_io.seal(NODE_SK_SEALING_PATH);
+    io_key.seal(IO_KEY_SEALING_KEY_PATH);
 
     // don't want to copy the first byte (no need to pass the 0x4 uncompressed byte)
     public_key.copy_from_slice(&seed.get_pubkey()[1..UNCOMPRESSED_PUBLIC_KEY_SIZE]);
@@ -275,6 +282,7 @@ pub extern "C" fn ecall_get_encrypted_seed(
 
     let cert_slice = unsafe { std::slice::from_raw_parts(cert, cert_len as usize) };
 
+    // verify certificate, and return the public key in the extra data of the report
     let pk = match verify_mra_cert(cert_slice) {
         Err(e) => {
             error!("Error in validating certificate: {:?}", e);
@@ -283,6 +291,7 @@ pub extern "C" fn ecall_get_encrypted_seed(
         Ok(res) => res,
     };
 
+    // just make sure the length isn't wrong for some reason (certificate may be malformed)
     if pk.len() != crypto::PUBLIC_KEY_SIZE {
         error!("Got public key from certificate with the wrong size: {:?}", pk.len());
         return sgx_status_t::SGX_ERROR_UNEXPECTED
@@ -290,7 +299,8 @@ pub extern "C" fn ecall_get_encrypted_seed(
 
     let mut target_public_key: [u8; 65] = [4u8; 65];
 
-    let node_secret = match crypto::KeyPair::unseal(NODE_SK_SEALING_PATH) {
+    // encrypt using sk_io and pk_node
+    let io_key = match crypto::KeyPair::unseal(IO_KEY_SEALING_KEY_PATH) {
         Ok(r) => r,
         Err(e) => {
             return sgx_status_t::SGX_ERROR_UNEXPECTED
@@ -304,15 +314,16 @@ pub extern "C" fn ecall_get_encrypted_seed(
         }
     };
 
-    target_public_key.copy_from_slice(&pk);
+    target_public_key[1..].copy_from_slice(&pk);
 
-    let shared_enc_key = match node_secret.derive_key(&target_public_key) {
+    let shared_enc_key = match io_key.derive_key(&target_public_key) {
         Ok(r) => r,
         Err(e) => {
             return sgx_status_t::SGX_ERROR_UNEXPECTED
         }
     };
 
+    // encrypt the seed using the symmetric key derived in the previous stage
     let res = match AESKey::new_from_slice(&shared_enc_key).encrypt(&node_seed.get().to_vec()) {
         Ok(r) => {
             if r.len() != SEED_KEY_SIZE {
@@ -369,7 +380,7 @@ pub unsafe extern "C" fn ecall_init_seed(
         error!("Got public key of a weird size");
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
-    target_public_key.copy_from_slice(&public_key_slice);
+    target_public_key[1..].copy_from_slice(&public_key_slice);
 
     let node_secret = match crypto::KeyPair::unseal(NODE_SK_SEALING_PATH) {
         Ok(r) => r,
@@ -410,7 +421,7 @@ pub unsafe extern "C" fn ecall_init_seed(
         Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
     };
 
-    sk_io.seal(NODE_SK_SEALING_PATH);
+    sk_io.seal(IO_KEY_SEALING_KEY_PATH);
 
     sgx_status_t::SGX_SUCCESS
 }
