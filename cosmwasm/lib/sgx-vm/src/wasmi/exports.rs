@@ -2,8 +2,6 @@ use enclave_ffi_types::{Ctx, EnclaveBuffer, UserSpaceBuffer};
 use log::info;
 use std::ffi::c_void;
 
-use sgx_types::*;
-
 use crate::context::with_storage_from_context;
 
 /// Copy a buffer from the enclave memory space, and return an opaque pointer to it.

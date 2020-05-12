@@ -50,25 +50,25 @@ pub fn init_seed_u(
 }
 
 pub fn create_attestation_report_u() -> SgxResult<sgx_status_t> {
-    info!("Hello from just before initializing - produce_report");
+    info!("Hello from just before initializing - create_attestation_report_u");
     let enclave = init_enclave().unwrap();
-    info!("Hello from just after initializing - produce_report");
+    info!("Hello from just after initializing - create_attestation_report_u");
 
     inner_create_report(enclave.geteid())
 }
 
-pub fn untrusted_init_bootstrap() -> SgxResult<sgx_status_t> {
-    info!("Hello from just before initializing - produce_report");
+pub fn untrusted_init_bootstrap() -> SgxResult<[u8; 64]> {
+    info!("Hello from just before initializing - untrusted_init_bootstrap");
     let enclave = init_enclave().unwrap();
-    info!("Hello from just after initializing - produce_report");
+    info!("Hello from just after initializing - untrusted_init_bootstrap");
 
     inner_init_bootstrap(enclave.geteid())
 }
 
 pub fn untrusted_get_encrypted_seed(cert: &[u8]) -> SgxResult<[u8; 32]> {
-    info!("Hello from just before initializing - produce_report");
+    info!("Hello from just before initializing - untrusted_get_encrypted_seed");
     let enclave = init_enclave().unwrap();
-    info!("Hello from just after initializing - produce_report");
+    info!("Hello from just after initializing - untrusted_get_encrypted_seed");
 
     inner_get_encrypted_seed(enclave.geteid(), cert.as_ptr(), cert.len() as u32)
 }

@@ -103,7 +103,7 @@ type EnigmaChainApp struct {
 	cdc *codec.Codec
 
 	invCheckPeriod uint
-
+	bootstrap      bool
 	// keys to access the substores
 	keys  map[string]*sdk.KVStoreKey
 	tKeys map[string]*sdk.TransientStoreKey
@@ -177,6 +177,7 @@ func NewEnigmaChainApp(
 		BaseApp:        bApp,
 		cdc:            cdc,
 		invCheckPeriod: invCheckPeriod,
+		bootstrap:      bootstrap,
 		keys:           keys,
 		tKeys:          tKeys,
 	}
@@ -279,7 +280,7 @@ func NewEnigmaChainApp(
 
 	// replace with bootstrap flag when we figure out how to test properly and everything works
 	app.computeKeeper = compute.NewKeeper(app.cdc, keys[compute.StoreKey], app.accountKeeper, app.bankKeeper, computeRouter, computeDir, wasmConfig)
-	app.regKeeper = reg.NewKeeper(app.cdc, keys[reg.StoreKey], regRouter, homeDir, bootstrap)
+	app.regKeeper = reg.NewKeeper(app.cdc, keys[reg.StoreKey], regRouter, homeDir, app.bootstrap)
 	// register the proposal types
 	govRouter := gov.NewRouter()
 	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler).
@@ -413,7 +414,12 @@ func (app *EnigmaChainApp) InitChainer(ctx sdk.Context, req abci.RequestInitChai
 	var genesisState simapp.GenesisState
 	app.cdc.MustUnmarshalJSON(req.AppStateBytes, &genesisState)
 
-	return app.mm.InitGenesis(ctx, genesisState)
+	res := app.mm.InitGenesis(ctx, genesisState)
+
+	if app.bootstrap {
+		app.regKeeper.InitBootstrap(ctx)
+	}
+	return res
 }
 
 // LoadHeight loads a particular height

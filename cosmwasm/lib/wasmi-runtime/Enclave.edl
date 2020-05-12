@@ -19,7 +19,9 @@ enclave {
             uintptr_t length
         );
 
-        public sgx_status_t ecall_init_bootstrap();
+        public sgx_status_t ecall_init_bootstrap(
+            [out, count=64] uint8_t* seed
+        );
 
         public sgx_status_t ecall_get_attestation_report();
 

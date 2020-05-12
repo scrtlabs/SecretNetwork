@@ -21,17 +21,17 @@ type Cache struct {
 	ptr *C.cache_t
 }
 
-func InitBootstrap() (bool, error) {
+func InitBootstrap() ([]byte, error) {
 	errmsg := C.Buffer{}
 
-	_, err := C.init_bootstrap(&errmsg)
+	res, err := C.init_bootstrap(&errmsg)
 	if err != nil {
-		return false, errorWithMessage(err, errmsg)
+		return nil, errorWithMessage(err, errmsg)
 	}
-	return true, nil
+	return receiveSlice(res), nil
 }
 
-func InitSeed(publicKey []byte, seed []byte) (bool, error) {
+func LoadSeedToEnclave(publicKey []byte, seed []byte) (bool, error) {
 	pkSlice := sendSlice(publicKey)
 	seedSlice := sendSlice(seed)
 	errmsg := C.Buffer{}

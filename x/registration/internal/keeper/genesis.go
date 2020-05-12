@@ -11,14 +11,21 @@ import (
 //
 // CONTRACT: all types of accounts must have been already initialized/created
 func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
-	for _, storedRegInfo := range data.Registration {
-		keeper.setRegistrationInfo(ctx, storedRegInfo)
+
+	if data.MasterPublic != nil {
+		keeper.setMasterPublicKey(ctx, data.MasterPublic)
+
+		for _, storedRegInfo := range data.Registration {
+			keeper.setRegistrationInfo(ctx, storedRegInfo)
+		}
 	}
 }
 
 // ExportGenesis returns a GenesisState for a given context and keeper.
 func ExportGenesis(ctx sdk.Context, keeper Keeper) types.GenesisState {
 	var genState types.GenesisState
+
+	genState.MasterPublic = *keeper.GetMasterPublicKey(ctx)
 
 	keeper.ListRegistrationInfo(ctx, func(pubkey []byte, regInfo types.RegistrationNodeInfo) bool {
 		genState.Registration = append(genState.Registration, regInfo)

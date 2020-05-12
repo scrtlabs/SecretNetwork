@@ -67,7 +67,7 @@ Buffer handle(cache_t *cache,
               uint64_t *gas_used,
               Buffer *err);
 
-bool init_bootstrap(Buffer *err);
+Buffer init_bootstrap(Buffer *err);
 
 cache_t *init_cache(Buffer data_dir, uintptr_t cache_size, Buffer *err);
 

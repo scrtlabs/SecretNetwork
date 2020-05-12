@@ -28,8 +28,12 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert.der
 `,
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			_, err := api.KeyGen()
+			if err != nil {
+				return fmt.Errorf("failed to initialize enclave: %w", err)
+			}
 
-			_, err := api.CreateAttestationReport()
+			_, err = api.CreateAttestationReport()
 			if err != nil {
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}
@@ -70,33 +74,26 @@ func ParseCert(_ *server.Context, _ *codec.Codec) *cobra.Command {
 
 func ConfigureSecret(_ *server.Context, _ *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "configure-secret [cert file] [seed]",
+		Use: "configure-secret [master-key] [seed]",
 		Short: "After registration is successful, configure the secret node with the credentials file and the encrypted" +
 			"seed that was written on-chain",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			// parse coins trying to be sent
-			cert, err := ioutil.ReadFile(args[0])
-			if err != nil {
-				return err
-			}
-
-			pubkey, err := ra.VerifyRaCert(cert)
-			if err != nil {
-				return err
+			pubkey := args[0]
+			if len(pubkey) != 128 || !reg.IsHexString(pubkey) {
+				return fmt.Errorf("invalid master public key format (requires hex string of length 128 without 0x prefix)")
 			}
 
 			// parse coins trying to be sent
 			seed := args[1]
 			if len(seed) != 64 || !reg.IsHexString(seed) {
-				return fmt.Errorf("invalid encrypted seed format (req: hex string of length 64)")
+				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 64 without 0x prefix)")
 			}
-			// fmt.Println(fmt.Sprintf("0x%s", hex.EncodeToString(pubkey)))
 
 			cfg := reg.SeedConfig{
 				EncryptedKey: seed,
-				PublicKey:    hex.EncodeToString(pubkey),
+				PublicKey:    pubkey,
 			}
 
 			cfgBytes, err := json.Marshal(&cfg)

@@ -15,4 +15,7 @@ var (
 
 	// ErrSeedInitFailed error when the seed initialization fails
 	ErrSeedValidationParams = sdkErrors.Register(DefaultCodespace, 3, "Failed to validate seed parameters")
+
+	// ErrSeedInitFailed error when the seed initialization fails
+	BootstrapInitFailed = sdkErrors.Register(DefaultCodespace, 4, "Failed to initialize bootstrap")
 )

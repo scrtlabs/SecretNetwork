@@ -34,9 +34,7 @@ func SgxMode() string {
 // NewKeeper creates a new contract Keeper instance
 func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, router sdk.Router, homeDir string, bootstrap bool) Keeper {
 
-	if bootstrap {
-		InitializeBootstrap()
-	} else {
+	if !bootstrap {
 		InitializeNonBootstrap(homeDir)
 	}
 
@@ -80,13 +78,19 @@ func InitializeNonBootstrap(homeDir string) {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
-	_, err = api.InitSeed(pk, enc)
+	_, err = api.LoadSeedToEnclave(pk, enc)
 	if err != nil {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
+
+	return
 }
 
-func InitializeBootstrap() {
+func (k Keeper) InitBootstrap(ctx sdk.Context) {
+
+	if k.isMasterKeyDefined(ctx) {
+		panic(sdkerrors.Wrap(types.BootstrapInitFailed, "Bootstrap is already defined in this network"))
+	}
 
 	if SgxMode() != "HW" {
 		// validate attestation
@@ -98,16 +102,13 @@ func InitializeBootstrap() {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
-	if !res {
+	if len(res) != 64 {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, "Bootstrap init failed :("))
 	}
 
-	return
-	//
-	//_, err = api.(pk, enc)
-	//if err != nil {
-	//	panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-	//}
+	fmt.Printf("got public key: %s\n", hex.EncodeToString(res))
+
+	k.setMasterPublicKey(ctx, res)
 }
 
 // Create uploads and compiles a WASM contract, returning a short identifier for the contract

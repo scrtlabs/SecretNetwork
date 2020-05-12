@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"encoding/hex"
-	"fmt"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
@@ -11,6 +10,7 @@ import (
 
 const (
 	QueryEncryptedSeed = "seed"
+	QueryMasterKey     = "master-key"
 )
 
 // controls error output on querier - set true when testing/debugging
@@ -22,15 +22,24 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 		switch path[0] {
 		case QueryEncryptedSeed:
 			return queryEncryptedSeed(ctx, path[1], req, keeper)
+		case QueryMasterKey:
+			return queryMasterKey(ctx, req, keeper)
 		default:
 			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "unknown data query endpoint")
 		}
 	}
 }
 
-func queryEncryptedSeed(ctx sdk.Context, pubkey string, req abci.RequestQuery, keeper Keeper) ([]byte, error) {
-	fmt.Println("queryEncryptedSeed")
+func queryMasterKey(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, error) {
+	seed := keeper.GetMasterPublicKey(ctx)
+	if seed == nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownAddress, "Chain has not been initialized yet")
+	}
 
+	return *seed, nil
+}
+
+func queryEncryptedSeed(ctx sdk.Context, pubkey string, req abci.RequestQuery, keeper Keeper) ([]byte, error) {
 	pubkeyBytes, err := hex.DecodeString(pubkey)
 	if err != nil {
 		return nil, err

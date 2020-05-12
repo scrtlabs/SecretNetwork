@@ -8,7 +8,7 @@ use log::*;
 use sgx_types::*;
 use sgx_types::{sgx_status_t, SgxResult};
 
-use crate::errors::Error;
+// use crate::errors::Error;
 
 extern "C" {
     pub fn ecall_get_attestation_report(eid: sgx_enclave_id_t,

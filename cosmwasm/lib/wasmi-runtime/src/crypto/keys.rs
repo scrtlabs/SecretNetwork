@@ -4,6 +4,9 @@ use secp256k1::key::{PublicKey, SecretKey};
 use secp256k1::{All, Secp256k1};
 use sgx_trts::trts::rsgx_read_rand;
 
+pub const SEED_KEY_SIZE: usize = 32;
+
+pub const PUBLIC_KEY_SIZE: usize = 64;
 /// The size of the symmetric 256 bit key we use for encryption (in bytes).
 pub const SYMMETRIC_KEY_SIZE: usize = 256 / 8;
 /// The size of the master seed
@@ -21,6 +24,7 @@ pub type DhKey = SymmetricKey;
 /// PubKey is a public key that is used for ECDSA signing.
 pub type PubKey = [u8; UNCOMPRESSED_PUBLIC_KEY_SIZE];
 
+#[derive(Debug)]
 pub struct AESKey(SymmetricKey);
 
 impl AESKey {
@@ -95,12 +99,15 @@ impl KeyPair {
     }
 
     /// This function does an ECDH(point multiplication) between one's private key and the other one's public key
-    pub fn derive_key(&self, _pubarr: &PubKey) -> Result<DhKey, CryptoError> {
-        let mut pubarr = [0; UNCOMPRESSED_PUBLIC_KEY_SIZE];
-        pubarr[0] = 4;
-        pubarr[1..].copy_from_slice(&_pubarr[..]);
+    pub fn derive_key(&self, pubarr: &PubKey) -> Result<DhKey, CryptoError> {
 
-        let pubkey = PublicKey::from_slice(&pubarr).map_err(|e| CryptoError::KeyError {})?;
+        // Pubkey is already 65 bytes, not sure what this is for?
+
+        // let mut pubarr = [0; UNCOMPRESSED_PUBLIC_KEY_SIZE];
+        // pubarr[0] = 4;
+        // pubarr[1..].copy_from_slice(&_pubarr[..]);
+
+        let pubkey = PublicKey::from_slice(pubarr).map_err(|e| CryptoError::KeyError {})?;
 
         let shared = SharedSecret::new(&pubkey, &self.privkey);
 
