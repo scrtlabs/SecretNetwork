@@ -5,6 +5,9 @@ use secp256k1::{All, Secp256k1};
 use sgx_trts::trts::rsgx_read_rand;
 use sgx_types::sgx_status_t;
 
+pub const SEED_KEY_SIZE: usize = 32;
+
+pub const PUBLIC_KEY_SIZE: usize = 64;
 /// The size of the symmetric 256 bit key we use for encryption (in bytes).
 pub const SYMMETRIC_KEY_SIZE: usize = 256 / 8;
 /// The size of the master seed
@@ -22,6 +25,7 @@ pub type DhKey = SymmetricKey;
 /// PubKey is a public key that is used for ECDSA signing.
 pub type PubKey = [u8; UNCOMPRESSED_PUBLIC_KEY_SIZE];
 
+#[derive(Debug)]
 pub struct AESKey(SymmetricKey);
 
 impl AESKey {

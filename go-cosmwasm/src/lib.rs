@@ -66,20 +66,19 @@ pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> 
 #[no_mangle]
 pub extern "C" fn init_bootstrap(
     err: Option<&mut Buffer>,
-) -> bool {
+) -> Buffer {
     info!("Hello from right before untrusted_get_encrypted_seed");
-    let result = match untrusted_init_bootstrap() {
+    match untrusted_init_bootstrap() {
         Err(e) => {
             error!("Error :(");
             set_error(e.to_string(), err);
-            return false
+            Buffer::default()
         }
         Ok(r) => {
             clear_error();
-            true
+            Buffer::from_vec(r.to_vec())
         }
-    };
-    return true;
+    }
 }
 
 #[no_mangle]
@@ -109,7 +108,7 @@ pub extern "C" fn init_seed(
         encrypted_seed_slice.as_ptr(),
         encrypted_seed_slice.len() as u32,
     ) {
-        Ok(t) => {
+        Ok(_) => {
             clear_error();
             true
         }

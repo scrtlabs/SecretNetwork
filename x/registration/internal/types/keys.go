@@ -20,8 +20,13 @@ const (
 // nolint
 var (
 	RegistrationStorePrefix = []byte{0x01}
+	MasterKeyPrefix         = []byte{0x02}
 )
 
 func GetRegistrationKey(key []byte) []byte {
 	return append(RegistrationStorePrefix, key...)
+}
+
+func GetMasterPublicKey(key []byte) []byte {
+	return append(MasterKeyPrefix, key...)
 }

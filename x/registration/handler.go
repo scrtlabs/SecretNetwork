@@ -73,8 +73,10 @@ func handleRaAuthenticate(ctx sdk.Context, k Keeper, msg *types.RaAuthenticate) 
 		sdk.NewAttribute(AttributeNodeID, fmt.Sprintf("0x%s", hex.EncodeToString(pubkey))),
 	)
 
+	pkIO := k.GetMasterPublicKey(ctx)
+
 	return &sdk.Result{
-		Data:   []byte(fmt.Sprintf("%02x", encSeed)),
+		Data:   []byte(fmt.Sprintf("S: %02x | PK: %s", encSeed, hex.EncodeToString(*pkIO))),
 		Events: append(events, ourEvent),
 	}, nil
 }

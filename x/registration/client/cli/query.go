@@ -27,6 +27,7 @@ func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 	}
 	queryCmd.AddCommand(flags.GetCommands(
 		GetCmdEncryptedSeed(cdc),
+		GetCmdMasterPublicKey(cdc),
 	)...)
 	return queryCmd
 }
@@ -47,6 +48,27 @@ func GetCmdEncryptedSeed(cdc *codec.Codec) *cobra.Command {
 			}
 
 			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryEncryptedSeed, nodeId)
+			res, _, err := cliCtx.Query(route)
+			if err != nil {
+				return err
+			}
+			fmt.Println(fmt.Sprintf("0x%s", hex.EncodeToString(res)))
+			return nil
+		},
+	}
+}
+
+// GetCmdListCode lists all wasm code uploaded
+func GetCmdMasterPublicKey(cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "master-key",
+		Short: "Get master key for the chain",
+		Long:  "Get master key for the chain",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, keeper.QueryEncryptedSeed)
 			res, _, err := cliCtx.Query(route)
 			if err != nil {
 				return err
