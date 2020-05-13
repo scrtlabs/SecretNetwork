@@ -32,7 +32,7 @@ impl Keychain {
             Err(e) => None
         };
 
-        let master_state_key = match Seed::unseal(MASTER_STATE_KEY_SEALED_KEY_FILE) {
+        let master_state_key = match Seed::unseal(MASTER_STATE_KEY_PATH) {
             Ok(k) => Some(k),
             Err(e) => None
         };
