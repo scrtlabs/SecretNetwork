@@ -13,6 +13,10 @@ extern "C" {
     pub fn ecall_init_bootstrap(eid: sgx_enclave_id_t,
                                 retval: *mut sgx_status_t,
                                 public_key: &mut [u8; 64]) -> sgx_status_t;
+
+    pub fn ecall_key_gen       (eid: sgx_enclave_id_t,
+                                retval: *mut sgx_status_t,
+                                public_key: &mut [u8; 64]) -> sgx_status_t;
 }
 
 pub fn inner_init_seed(eid: sgx_enclave_id_t,
@@ -36,6 +40,24 @@ pub fn inner_init_seed(eid: sgx_enclave_id_t,
 
     Ok(sgx_status_t::SGX_SUCCESS)
 }
+
+pub fn inner_key_gen(eid: sgx_enclave_id_t) -> SgxResult<[u8; 64]> {
+    let mut retval = sgx_status_t::SGX_SUCCESS;
+    let mut public_key = [0u8; 64];
+    // let status = unsafe { ecall_get_encrypted_seed(eid, &mut retval, cert, cert_len, & mut seed) };
+    let status = unsafe { ecall_key_gen(eid, &mut retval, &mut public_key) };
+
+    if status != sgx_status_t::SGX_SUCCESS  {
+        return Err(status);
+    }
+
+    if retval != sgx_status_t::SGX_SUCCESS {
+        return Err(retval);
+    }
+
+    Ok(public_key)
+}
+
 
 
 pub fn inner_init_bootstrap(eid: sgx_enclave_id_t) -> SgxResult<[u8; 64]> {

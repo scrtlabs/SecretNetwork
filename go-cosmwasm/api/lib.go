@@ -122,7 +122,7 @@ func Query(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, g
 	return receiveSlice(res), uint64(gasUsed), nil
 }
 
-// KeyGen Seng KeyGen request to enclave
+// KeyGen Send KeyGen request to enclave
 func KeyGen() ([]byte, error) {
 	errmsg := C.Buffer{}
 	res, err := C.key_gen(&errmsg)

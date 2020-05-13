@@ -23,6 +23,10 @@ enclave {
             [out, count=64] uint8_t* seed
         );
 
+        public sgx_status_t ecall_key_gen(
+            [out, count=64] uint8_t* public_key
+        );
+
         public sgx_status_t ecall_get_attestation_report();
 
         public sgx_status_t ecall_get_encrypted_seed(
@@ -69,7 +73,6 @@ enclave {
             uintptr_t msg_len
         );
 
-        public sgx_status_t ecall_key_gen([out] uint8_t pk_node[65]);
     };
 
     untrusted {
