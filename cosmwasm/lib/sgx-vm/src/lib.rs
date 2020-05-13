@@ -29,3 +29,5 @@ pub use crate::instance::{create_attestation_report_u,
                           untrusted_get_encrypted_seed,
                           untrusted_init_bootstrap,
                           untrusted_key_gen};
+
+use enclave_ffi_types::ENCRYPTED_SEED_SIZE;

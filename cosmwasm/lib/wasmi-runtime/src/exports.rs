@@ -15,7 +15,7 @@ use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 use std::slice;
 
 
-use crate::consts::{NODE_SK_SEALING_PATH, SEED_SEALING_PATH, IO_KEY_SEALING_KEY_PATH};
+use crate::consts::{NODE_SK_SEALING_PATH, SEED_SEALING_PATH, IO_KEY_SEALING_KEY_PATH, ENCRYPTED_SEED_SIZE};
 pub use crate::crypto::traits::{SealedKey, Encryptable, Kdf};
 
 
@@ -125,7 +125,7 @@ pub unsafe extern "C" fn ecall_key_gen(public_key: &mut [u8; PUBLIC_KEY_SIZE]) -
     }; // can read with SecretKey::from_slice()
 
     let pubkey = key_pair.get_pubkey();
-
+    info!("ecall_key_gen key pk: {:?}", public_key.to_vec());
     public_key.clone_from_slice(&pubkey[1..UNCOMPRESSED_PUBLIC_KEY_SIZE]);
     sgx_status_t::SGX_SUCCESS
 }
@@ -150,7 +150,7 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
         Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
         Ok(res) => { res }
     }; // can read with SecretKey::from_slice()
-
+    info!("ecall_get_attestation_report key pk: {:?}", &kp.get_pubkey().to_vec());
     let (private_key_der, cert) =
         match create_attestation_certificate(&kp, sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE) {
             Err(e) => {
@@ -198,7 +198,7 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
 pub extern "C" fn ecall_get_encrypted_seed(
     cert: *const u8,
     cert_len: u32,
-    seed: &mut [u8; 32],
+    seed: &mut [u8; ENCRYPTED_SEED_SIZE],
 ) -> sgx_status_t {
     // just return the seed
     sgx_status_t::SGX_SUCCESS
@@ -246,11 +246,17 @@ pub extern "C" fn ecall_init_bootstrap(
         Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
     };
 
-    io_key.seal(IO_KEY_SEALING_KEY_PATH);
+    match io_key.seal(IO_KEY_SEALING_KEY_PATH) {
+        Ok(sk) => {},
+        Err(err) => {
+            error!("Failed to seal IO key");
+            return sgx_status_t::SGX_ERROR_UNEXPECTED
+        },
+    };
 
     // don't want to copy the first byte (no need to pass the 0x4 uncompressed byte)
-    public_key.copy_from_slice(&seed.get_pubkey()[1..UNCOMPRESSED_PUBLIC_KEY_SIZE]);
-
+    public_key.copy_from_slice(&io_key.get_pubkey()[1..UNCOMPRESSED_PUBLIC_KEY_SIZE]);
+    info!("ecall_init_bootstrap key pk: {:?}", &public_key.to_vec());
     // info!("DEBUG: public key: {:?}", seed);
 
     sgx_status_t::SGX_SUCCESS
@@ -273,7 +279,7 @@ pub extern "C" fn ecall_init_bootstrap(
 pub extern "C" fn ecall_get_encrypted_seed(
     cert: *const u8,
     cert_len: u32,
-    seed: &mut [u8; 32]
+    seed: &mut [u8; ENCRYPTED_SEED_SIZE]
 ) -> sgx_status_t {
     if rsgx_slice_is_outside_enclave(seed) {
         error!("Tried to access memory outside enclave -- rsgx_slice_is_outside_enclave");
@@ -310,6 +316,7 @@ pub extern "C" fn ecall_get_encrypted_seed(
     let io_key = match crypto::KeyPair::unseal(IO_KEY_SEALING_KEY_PATH) {
         Ok(r) => r,
         Err(e) => {
+            error!("Failed to unseal IO key");
             return sgx_status_t::SGX_ERROR_UNEXPECTED
         }
     };
@@ -317,15 +324,17 @@ pub extern "C" fn ecall_get_encrypted_seed(
     let node_seed = match crypto::AESKey::unseal(SEED_SEALING_PATH) {
         Ok(r) => r,
         Err(e) => {
+            error!("Failed to unseal seed");
             return sgx_status_t::SGX_ERROR_UNEXPECTED
         }
     };
 
     target_public_key[1..].copy_from_slice(&pk);
-
+    info!("ecall_get_encrypted_seed target_public_key key pk: {:?}", &target_public_key.to_vec());
     let shared_enc_key = match io_key.derive_key(&target_public_key) {
         Ok(r) => r,
         Err(e) => {
+            error!("Failed to derive key from IO key and node public");
             return sgx_status_t::SGX_ERROR_UNEXPECTED
         }
     };
@@ -333,8 +342,8 @@ pub extern "C" fn ecall_get_encrypted_seed(
     // encrypt the seed using the symmetric key derived in the previous stage
     let res = match AESKey::new_from_slice(&shared_enc_key).encrypt(&node_seed.get().to_vec()) {
         Ok(r) => {
-            if r.len() != SEED_KEY_SIZE {
-                error!("wtf?");
+            if r.len() != ENCRYPTED_SEED_SIZE {
+                error!("wtf? {:?}", r.len());
                 return sgx_status_t::SGX_ERROR_UNEXPECTED
             }
             r
@@ -383,7 +392,7 @@ pub unsafe extern "C" fn ecall_init_seed(
     let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
 
     let mut target_public_key: [u8; UNCOMPRESSED_PUBLIC_KEY_SIZE] = [4u8; UNCOMPRESSED_PUBLIC_KEY_SIZE];
-    if public_key_slice.len() != UNCOMPRESSED_PUBLIC_KEY_SIZE {
+    if public_key_slice.len() != PUBLIC_KEY_SIZE {
         error!("Got public key of a weird size");
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
@@ -406,7 +415,7 @@ pub unsafe extern "C" fn ecall_init_seed(
     let res = match AESKey::new_from_slice(&shared_enc_key).decrypt(&encrypted_seed_slice) {
         Ok(r) => {
             if r.len() != SEED_KEY_SIZE {
-                error!("wtf2?");
+                error!("wtf2? {:?}", r.len());
                 return sgx_status_t::SGX_ERROR_UNEXPECTED
             }
             r

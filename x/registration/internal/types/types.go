@@ -6,7 +6,7 @@ import (
 )
 
 const PublicKeyLength = 128   // encoded length
-const EncryptedKeyLength = 64 // encoded length
+const EncryptedKeyLength = 96 // encoded length
 const MasterPublicKeyId = "MasterKey"
 const SecretNodeSeedConfig = "seed.json"
 const SecretNodeCfgFolder = ".node"

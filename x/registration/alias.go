@@ -19,6 +19,8 @@ const (
 	QueryEncryptedSeed   = keeper.QueryEncryptedSeed
 	SecretNodeSeedConfig = types.SecretNodeSeedConfig
 	SecretNodeCfgFolder  = types.SecretNodeCfgFolder
+	EncryptedKeyLength   = types.EncryptedKeyLength
+	PublicKeyLength      = types.PublicKeyLength
 )
 
 var (

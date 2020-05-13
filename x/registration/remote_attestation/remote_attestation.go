@@ -44,7 +44,7 @@ func VerifyRaCert(rawCert []byte) ([]byte, error) {
 	}
 
 	// Verify attestation report
-	err = verifyAttReport(attnReportRaw, pubK)
+	pubK, err = verifyAttReport(attnReportRaw, pubK)
 	if err != nil {
 		log.Fatalln(err)
 		return nil, err
@@ -147,11 +147,11 @@ func verifyCert(payload []byte) ([]byte, error) {
 	return attnReportRaw, nil
 }
 
-func verifyAttReport(attnReportRaw []byte, pubK []byte) error {
+func verifyAttReport(attnReportRaw []byte, pubK []byte) ([]byte, error) {
 	var qr QuoteReport
 	err := json.Unmarshal(attnReportRaw, &qr)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// 1. Check timestamp is within 24H
@@ -162,7 +162,7 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) error {
 		//now := time.Now().Unix()
 		//fmt.Println("Time diff = ", now-ts.Unix())
 	} else {
-		return errors.New("Failed to fetch timestamp from attestation report")
+		return nil, errors.New("Failed to fetch timestamp from attestation report")
 	}
 
 	// 2. Verify quote status (mandatory field)
@@ -176,52 +176,52 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) error {
 			if qr.PlatformInfoBlob != "" {
 				platInfo, err := hex.DecodeString(qr.PlatformInfoBlob)
 				if err != nil && len(platInfo) != 105 {
-					return errors.New("illegal PlatformInfoBlob")
+					return nil, errors.New("illegal PlatformInfoBlob")
 				}
 				platInfo = platInfo[4:]
 
-				piBlob := parsePlatform(platInfo)
-				piBlobJson, err := json.Marshal(piBlob)
-				if err != nil {
-					return err
-				}
-				fmt.Println("Platform info is: " + string(piBlobJson))
+				//piBlob := parsePlatform(platInfo)
+				//piBlobJson, err := json.Marshal(piBlob)
+				//if err != nil {
+				//	return nil, err
+				//}
+				//fmt.Println("Platform info is: " + string(piBlobJson))
 			} else {
-				return errors.New("Failed to fetch platformInfoBlob from attestation report")
+				return nil, errors.New("Failed to fetch platformInfoBlob from attestation report")
 			}
 			if len(qr.AdvisoryIDs) != 0 {
-				cves, err := json.Marshal(qr.AdvisoryIDs)
+				_, err := json.Marshal(qr.AdvisoryIDs)
 				if err != nil {
-					return err
+					return nil, err
 				}
-				fmt.Println("Warning - Advisory IDs: " + string(cves))
+				//fmt.Println("Warning - Advisory IDs: " + string(cves))
 			}
-			//return errors.New("Quote status invalid")
+			//return nil, errors.New("Quote status invalid")
 		case "SW_HARDENING_NEEDED":
 			if len(qr.AdvisoryIDs) != 0 {
-				cves, err := json.Marshal(qr.AdvisoryIDs)
+				_, err := json.Marshal(qr.AdvisoryIDs)
 				if err != nil {
-					return err
+					return nil, err
 				}
-				fmt.Println("Advisory IDs: " + string(cves))
-				// return errors.New("Platform is vulnerable, and requires updates before authorization: " + string(cves))
+				// fmt.Println("Advisory IDs: " + string(cves))
+				// return nil, errors.New("Platform is vulnerable, and requires updates before authorization: " + string(cves))
 			} else {
-				return errors.New("Failed to fetch advisory IDs even though platform is vulnerable")
+				return nil, errors.New("Failed to fetch advisory IDs even though platform is vulnerable")
 			}
 
 		default:
-			return errors.New("SGX_ERROR_UNEXPECTED")
+			return nil, errors.New("SGX_ERROR_UNEXPECTED")
 		}
 	} else {
 		err := errors.New("Failed to fetch isvEnclaveQuoteStatus from attestation report")
-		return err
+		return nil, err
 	}
 
 	// 3. Verify quote body (mandatory field)
 	if qr.IsvEnclaveQuoteBody != "" {
 		qb, err := base64.StdEncoding.DecodeString(qr.IsvEnclaveQuoteBody)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		var quoteBytes, quoteHex, pubHex string
@@ -246,12 +246,16 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) error {
 		//fmt.Println("Anticipated public key = ", pubHex)
 
 		if qrData.reportBody.reportData != pubHex {
-			err := errors.New("Failed to authenticate certificate public key")
-			return err
+			// err := errors.New("Failed to authenticate certificate public key")
+			reportPubKey, err := hex.DecodeString(qrData.reportBody.reportData)
+			if err != nil {
+				return nil, err
+			}
+			return reportPubKey, nil
 		}
 	} else {
 		err := errors.New("Failed to fetch isvEnclaveQuoteBody from attestation report")
-		return err
+		return nil, err
 	}
-	return nil
+	return pubK, nil
 }

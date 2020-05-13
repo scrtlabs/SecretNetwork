@@ -186,9 +186,7 @@ impl Externals for Runtime {
                 );
 
                 let mut master_state_key = key_manager::KEY_MANAGER
-                    .as_ref()
-                    .expect("TODO fix this")
-                    .get_master_state_key();
+                    .get_master_state_key().unwrap();
                 let master_state_key = AESKey::new_from_slice(master_state_key.get());
 
                 // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)

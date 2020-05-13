@@ -9,6 +9,7 @@ import (
 	reg "github.com/enigmampc/EnigmaBlockchain/x/registration"
 	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -81,14 +82,14 @@ func ConfigureSecret(_ *server.Context, _ *codec.Codec) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			pubkey := args[0]
-			if len(pubkey) != 128 || !reg.IsHexString(pubkey) {
+			if len(pubkey) != reg.PublicKeyLength || !reg.IsHexString(pubkey) {
 				return fmt.Errorf("invalid master public key format (requires hex string of length 128 without 0x prefix)")
 			}
 
-			// parse coins trying to be sent
+			// We expect seed to be 48 bytes of encrypted data (aka 96 hex chars) [32 bytes + 12 IV]
 			seed := args[1]
-			if len(seed) != 64 || !reg.IsHexString(seed) {
-				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 64 without 0x prefix)")
+			if len(seed) != reg.EncryptedKeyLength || !reg.IsHexString(seed) {
+				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 96 without 0x prefix)")
 			}
 
 			cfg := reg.SeedConfig{
@@ -101,8 +102,17 @@ func ConfigureSecret(_ *server.Context, _ *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			err = ioutil.WriteFile(filepath.Join(app.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig),
-				cfgBytes, 0644)
+			path := filepath.Join(app.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
+			// fmt.Println("File Created Successfully", path)
+			if os.IsNotExist(err) {
+				var file, err = os.Create(path)
+				if err != nil {
+					return fmt.Errorf("failed to open config file: %s", path)
+				}
+				_ = file.Close()
+			}
+
+			err = ioutil.WriteFile(path, cfgBytes, 0644)
 			if err != nil {
 				return err
 			}

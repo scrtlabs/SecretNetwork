@@ -419,6 +419,7 @@ func (app *EnigmaChainApp) InitChainer(ctx sdk.Context, req abci.RequestInitChai
 	if app.bootstrap {
 		app.regKeeper.InitBootstrap(ctx)
 	}
+
 	return res
 }
 
