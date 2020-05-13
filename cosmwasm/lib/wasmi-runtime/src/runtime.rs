@@ -1,4 +1,5 @@
 use crate::crypto::key_manager;
+use crate::crypto::traits::Encryptable;
 use crate::crypto::*;
 use bech32;
 use bech32::{FromBase32, ToBase32};
@@ -169,10 +170,11 @@ impl Externals for Runtime {
                     );
                     err
                 })?;
-                let key = match extract_vector(&self.memory, key_ptr_ptr_in_wasm as u32) {
+                let state_key_name = match extract_vector(&self.memory, key_ptr_ptr_in_wasm as u32)
+                {
                     Err(err) => {
                         warn!(
-                            "read_db() error while trying to read key from wasm memory: {:?}",
+                            "read_db() error while trying to read state_key_name from wasm memory: {:?}",
                             err
                         );
                         return Ok(Some(RuntimeValue::I32(-1)));
@@ -181,30 +183,49 @@ impl Externals for Runtime {
                 };
 
                 trace!(
-                    "read_db() was called from WASM code with key: {:?}",
-                    String::from_utf8_lossy(&key)
+                    "read_db() was called from WASM code with state_key_name: {:?}",
+                    String::from_utf8_lossy(&state_key_name)
                 );
 
                 let mut master_state_key = key_manager::KEY_MANAGER
                     .as_ref()
-                    .expect("TODO fix this")
+                    .unwrap() // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
                     .get_master_state_key();
+                // TODO derive encryption key for these key-value on this contract
                 let master_state_key = AESKey::new_from_slice(master_state_key.get());
+                let encrypted_state_key_name = master_state_key.encrypt(&state_key_name).map_err(|err| {
+                    error!(
+                        "read_db() got an error while trying to encrypt the state_key_name {:?}, stopping wasm: {:?}",
+                        String::from_utf8_lossy(&state_key_name),
+                        err
+                    );
+                        WasmEngineError::EncryptionError
+                })?;
 
                 // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
                 // This returns the value from Tendermint
                 // fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
                 let value =
-                    match read_db(unsafe { &self.context.clone() }, &key).map_err(|err| {
-                        error!(
-                            "read_db() got an error from ocall_read_db, stopping wasm: {:?}",
-                            err
-                        );
-                        WasmEngineError::FailedOcall
-                    })? {
+                    match read_db(unsafe { &self.context.clone() }, &encrypted_state_key_name)
+                        .map_err(|err| {
+                            error!(
+                                "read_db() got an error from ocall_read_db, stopping wasm: {:?}",
+                                err
+                            );
+                            WasmEngineError::FailedOcall
+                        })? {
                         None => return Ok(Some(RuntimeValue::I32(0))),
                         Some(value) => value,
                     };
+
+                let decrypted_value = master_state_key.encrypt(&value).map_err(|err| {
+                    error!(
+                        "read_db() got an error while trying to decrypt the value for key {:?}, stopping wasm: {:?}",
+                        String::from_utf8_lossy(&state_key_name),
+                        err
+                    );
+                        WasmEngineError::DecryptionError
+                })?;
 
                 // Get pointer to the region of the value buffer
                 let value_ptr_ptr_in_wasm: i32 = args.nth_checked(1)?;
@@ -236,15 +257,15 @@ impl Externals for Runtime {
                 };
 
                 // Check that value is not too big to write into the allocated buffer
-                if value_len_in_wasm < value.len() as u32 {
+                if value_len_in_wasm < decrypted_value.len() as u32 {
                     warn!(
-                        "read_db() result to big ({} bytes) to write to allocated wasm buffer ({} bytes)" ,value.len(),value_len_in_wasm
+                        "read_db() result to big ({} bytes) to write to allocated wasm buffer ({} bytes)" ,decrypted_value.len(),value_len_in_wasm
                     );
                     return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_TOO_SMALL)));
                 }
 
                 // Write value returned from read_db to WASM memory
-                if let Err(err) = self.memory.set(value_ptr_in_wasm, &value) {
+                if let Err(err) = self.memory.set(value_ptr_in_wasm, &decrypted_value) {
                     warn!(
                         "read_db() error while trying to write to result buffer: {:?}",
                         err
