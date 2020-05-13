@@ -1,4 +1,4 @@
-use crate::consts::{NODE_SK_SEALING_PATH, MASTER_STATE_KEY_SEALED_KEY_FILE,
+use crate::consts::{NODE_SK_SEALING_PATH, MASTER_STATE_KEY_PATH,
                     IO_KEY_SEALING_KEY_PATH, SEED_SEALING_PATH, IO_KEY_DERIVE_ORDER, STATE_MASTER_KEY_DERIVE_ORDER};
 use crate::crypto::keys::{KeyPair, Seed};
 use crate::crypto::traits::*;
@@ -144,7 +144,7 @@ impl Keychain {
     }
 
     pub fn set_master_state_key(&mut self, seed: Seed) -> Result<(), EnclaveError> {
-        if let Err(e) = seed.seal(MASTER_STATE_KEY_SEALED_KEY_FILE) {
+        if let Err(e) = seed.seal(MASTER_STATE_KEY_PATH) {
             error!("Error setting master state key");
             return Err(e);
         }
