@@ -199,7 +199,7 @@ impl Externals for Runtime {
                         String::from_utf8_lossy(&state_key_name),
                         err
                     );
-                        WasmEngineError::EncryptionError
+                    WasmEngineError::EncryptionError
                 })?;
 
                 // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
@@ -224,7 +224,7 @@ impl Externals for Runtime {
                         String::from_utf8_lossy(&state_key_name),
                         err
                     );
-                        WasmEngineError::DecryptionError
+                    WasmEngineError::DecryptionError
                 })?;
 
                 // Get pointer to the region of the value buffer
