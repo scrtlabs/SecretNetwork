@@ -321,8 +321,8 @@ impl Externals for Runtime {
                 };
 
                 trace!(
-                    "write_db() was called from WASM code with key: {:?} value: {:?}... (first 20 bytes)",
-                    String::from_utf8_lossy(&key),
+                    "write_db() was called from WASM code with state_key_name: {:?} value: {:?}... (first 20 bytes)",
+                    String::from_utf8_lossy(&state_key_name),
                     String::from_utf8_lossy(value.get(0..std::cmp::min(20, value.len())).unwrap())
                 );
 
