@@ -17,4 +17,4 @@ SHA256SUMS*
 *.so
 /third_party/vendor
 .vscode
-.sgx-secrets
+/.sgx-secrets
