@@ -47,11 +47,12 @@ jobs:
       - name: Test SGX Sanity
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          mkdir -p "./.sgx_secrets"
+          mkdir -p ./.sgx_secrets
           cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
           ./cosmwasm/lib/wasmi-sgx-test.sh
       - name: Test Compute Module
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+          cp -r ./.sgx_secrets ./x/compute/internal/keeper
           go test -v ./x/compute/internal/...

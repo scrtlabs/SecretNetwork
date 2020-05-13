@@ -17,6 +17,4 @@ SHA256SUMS*
 *.so
 /third_party/vendor
 .vscode
-.sgx-secrets
-.sgx_secrets/io_sk_key.sealed
-.sgx_secrets/seed.sealed
+*.sealed
