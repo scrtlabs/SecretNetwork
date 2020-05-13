@@ -26,6 +26,9 @@ perl -i -pe 's/"stake"/"uscrt"/g' ~/.enigmad/config/genesis.json
 ./enigmad collect-gentxs
 ./enigmad validate-genesis
 
+./enigmad init-bootstrap
+./enigmad validate-genesis
+
 RUST_BACKTRACE=1 ./enigmad start --bootstrap &
 
 ENIGMAD_PID=$(echo $!)
