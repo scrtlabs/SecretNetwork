@@ -12,6 +12,7 @@ use sgx_urts::SgxEnclave;
 use cosmwasm::traits::Api;
 use lazy_static::lazy_static;
 
+use crate::ENCRYPTED_SEED_SIZE;
 use crate::attestation::{inner_create_report, inner_get_encrypted_seed};
 use crate::errors::{Error, Result};
 use crate::seed::{inner_init_bootstrap, inner_init_seed, inner_key_gen};
@@ -73,7 +74,7 @@ pub fn untrusted_init_bootstrap() -> SgxResult<[u8; 64]> {
     inner_init_bootstrap(enclave.geteid())
 }
 
-pub fn untrusted_get_encrypted_seed(cert: &[u8]) -> SgxResult<[u8; 32]> {
+pub fn untrusted_get_encrypted_seed(cert: &[u8]) -> SgxResult<[u8; ENCRYPTED_SEED_SIZE]> {
     info!("Hello from just before initializing - untrusted_get_encrypted_seed");
     let enclave = init_enclave().unwrap();
     info!("Hello from just after initializing - untrusted_get_encrypted_seed");

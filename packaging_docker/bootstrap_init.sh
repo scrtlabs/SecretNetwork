@@ -20,6 +20,9 @@ enigmad gentx --name a --keyring-backend test --amount 1000000uscrt
 enigmad collect-gentxs
 enigmad validate-genesis
 
+enigmad init-bootstrap
+enigmad validate-genesis
+
 sed -i 's/persistent_peers = ""/persistent_peers = "'$PERSISTENT_PEERS'"/g' ~/.enigmad/config/config.toml
 
 RUST_BACKTRACE=1 enigmad start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap

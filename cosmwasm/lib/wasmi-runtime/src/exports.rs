@@ -2,12 +2,21 @@ use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResul
 use std::ffi::c_void;
 
 use crate::crypto;
-use crate::crypto::{PubKey, AESKey, SEED_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE, KeyPair, PUBLIC_KEY_SIZE};
+use crate::crypto::{Keychain,
+                    PubKey,
+                    AESKey,
+                    KeyPair,
+                    Seed,
+                    SEED_KEY_SIZE,
+                    UNCOMPRESSED_PUBLIC_KEY_SIZE,
+                    PUBLIC_KEY_SIZE,
+                    };
 use crate::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
     result_query_success_to_queryresult,
 };
 use log::*;
+use sgx_types::*;
 use sgx_trts::trts::{
     rsgx_lfence, rsgx_raw_is_outside_enclave, rsgx_sfence, rsgx_slice_is_outside_enclave
 };
@@ -15,7 +24,7 @@ use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 use std::slice;
 
 
-use crate::consts::{NODE_SK_SEALING_PATH, SEED_SEALING_PATH, IO_KEY_SEALING_KEY_PATH};
+use crate::consts::{NODE_SK_SEALING_PATH, SEED_SEALING_PATH, IO_KEY_SEALING_KEY_PATH, ENCRYPTED_SEED_SIZE};
 pub use crate::crypto::traits::{SealedKey, Encryptable, Kdf};
 
 
@@ -112,20 +121,12 @@ pub unsafe extern "C" fn ecall_key_gen(public_key: &mut [u8; PUBLIC_KEY_SIZE]) -
     }
     rsgx_sfence();
 
-    // Generate node-specific key-pair
-    let key_pair = match crypto::KeyPair::new() {
-        Ok(kp) => kp,
-        Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
-    };
+    let mut key_manager = Keychain::new();
 
-    // let privkey = key_pair.get_privkey();
-    match key_pair.seal(NODE_SK_SEALING_PATH) {
-        Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
-        Ok(_) => { /* continue */ }
-    }; // can read with SecretKey::from_slice()
+    key_manager.create_node_key();
 
-    let pubkey = key_pair.get_pubkey();
-
+    let pubkey = key_manager.get_node_key().unwrap().get_pubkey();
+    info!("ecall_key_gen key pk: {:?}", public_key.to_vec());
     public_key.clone_from_slice(&pubkey[1..UNCOMPRESSED_PUBLIC_KEY_SIZE]);
     sgx_status_t::SGX_SUCCESS
 }
@@ -145,12 +146,9 @@ pub unsafe extern "C" fn ecall_key_gen(public_key: &mut [u8; PUBLIC_KEY_SIZE]) -
  * other creative usages.
  */
 pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
-
-    let kp = match KeyPair::unseal(NODE_SK_SEALING_PATH) {
-        Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
-        Ok(res) => { res }
-    }; // can read with SecretKey::from_slice()
-
+    let mut key_manager = Keychain::new();
+    let kp = key_manager.get_node_key().unwrap();
+    info!("ecall_get_attestation_report key pk: {:?}", &kp.get_pubkey().to_vec());
     let (private_key_der, cert) =
         match create_attestation_certificate(&kp, sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE) {
             Err(e) => {
@@ -198,7 +196,7 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
 pub extern "C" fn ecall_get_encrypted_seed(
     cert: *const u8,
     cert_len: u32,
-    seed: &mut [u8; 32],
+    seed: &mut [u8; ENCRYPTED_SEED_SIZE],
 ) -> sgx_status_t {
     // just return the seed
     sgx_status_t::SGX_SUCCESS
@@ -215,43 +213,25 @@ pub extern "C" fn ecall_get_encrypted_seed(
 #[no_mangle]
 pub extern "C" fn ecall_init_bootstrap(
     public_key: &mut [u8; PUBLIC_KEY_SIZE]) -> sgx_status_t {
-
     if rsgx_slice_is_outside_enclave(public_key) {
         error!("Tried to access memory outside enclave -- rsgx_slice_is_outside_enclave");
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
     rsgx_sfence();
 
+    let mut key_manager = Keychain::new();
 
-    // Generate node-specific key-pair
-    let seed = match crypto::KeyPair::new() {
-        Ok(seed) => seed,
-        Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
-    };
+    if let Err(e) = key_manager.create_seed() {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
 
-    info!("DEBUG: key: {:?}", seed.get_privkey());
-
-    // let seed = key_pair.get_privkey();
-    match seed.seal(SEED_SEALING_PATH) {
-        Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
-        Ok(_) => { /* continue */ }
-    };
-
-    // todo: replace this, just wanted to placeholder generate skio
-    let mut temp_key: [u8; 32] = [0u8; 32];
-    temp_key.copy_from_slice(seed.get_privkey());
-
-    let io_key = match KeyPair::new_from_slice(&temp_key){
-        Ok(sk) => sk,
-        Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
-    };
-
-    io_key.seal(IO_KEY_SEALING_KEY_PATH);
+    if let Err(e) = key_manager.generate_master_keys() {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
 
     // don't want to copy the first byte (no need to pass the 0x4 uncompressed byte)
-    public_key.copy_from_slice(&seed.get_pubkey()[1..UNCOMPRESSED_PUBLIC_KEY_SIZE]);
-
-    // info!("DEBUG: public key: {:?}", seed);
+    public_key.copy_from_slice(&key_manager.get_io_key().unwrap().get_pubkey()[1..UNCOMPRESSED_PUBLIC_KEY_SIZE]);
+    debug!("ecall_init_bootstrap key pk: {:?}", &public_key.to_vec());
 
     sgx_status_t::SGX_SUCCESS
 }
@@ -273,7 +253,7 @@ pub extern "C" fn ecall_init_bootstrap(
 pub extern "C" fn ecall_get_encrypted_seed(
     cert: *const u8,
     cert_len: u32,
-    seed: &mut [u8; 32]
+    seed: &mut [u8; ENCRYPTED_SEED_SIZE]
 ) -> sgx_status_t {
     if rsgx_slice_is_outside_enclave(seed) {
         error!("Tried to access memory outside enclave -- rsgx_slice_is_outside_enclave");
@@ -288,6 +268,7 @@ pub extern "C" fn ecall_get_encrypted_seed(
     rsgx_lfence();
 
     let cert_slice = unsafe { std::slice::from_raw_parts(cert, cert_len as usize) };
+    let key_manager = Keychain::new();
 
     // verify certificate, and return the public key in the extra data of the report
     let pk = match verify_mra_cert(cert_slice) {
@@ -306,24 +287,10 @@ pub extern "C" fn ecall_get_encrypted_seed(
 
     let mut target_public_key: [u8; 65] = [4u8; 65];
 
-    // encrypt using sk_io and pk_node
-    let io_key = match crypto::KeyPair::unseal(IO_KEY_SEALING_KEY_PATH) {
-        Ok(r) => r,
-        Err(e) => {
-            return sgx_status_t::SGX_ERROR_UNEXPECTED
-        }
-    };
-
-    let node_seed = match crypto::AESKey::unseal(SEED_SEALING_PATH) {
-        Ok(r) => r,
-        Err(e) => {
-            return sgx_status_t::SGX_ERROR_UNEXPECTED
-        }
-    };
-
     target_public_key[1..].copy_from_slice(&pk);
+    debug!("ecall_get_encrypted_seed target_public_key key pk: {:?}", &target_public_key.to_vec());
 
-    let shared_enc_key = match io_key.derive_key(&target_public_key) {
+    let shared_enc_key = match key_manager.get_io_key().unwrap().derive_key(&target_public_key) {
         Ok(r) => r,
         Err(e) => {
             return sgx_status_t::SGX_ERROR_UNEXPECTED
@@ -331,10 +298,11 @@ pub extern "C" fn ecall_get_encrypted_seed(
     };
 
     // encrypt the seed using the symmetric key derived in the previous stage
-    let res = match AESKey::new_from_slice(&shared_enc_key).encrypt(&node_seed.get().to_vec()) {
+    let res = match AESKey::new_from_slice(&shared_enc_key).encrypt(
+        &key_manager.get_seed().unwrap().get().to_vec()) {
         Ok(r) => {
-            if r.len() != SEED_KEY_SIZE {
-                error!("wtf?");
+            if r.len() != ENCRYPTED_SEED_SIZE {
+                error!("wtf? {:?}", r.len());
                 return sgx_status_t::SGX_ERROR_UNEXPECTED
             }
             r
@@ -379,24 +347,19 @@ pub unsafe extern "C" fn ecall_init_seed(
     }
     rsgx_lfence();
 
+    let mut key_manager = Keychain::new();
+
     let public_key_slice = slice::from_raw_parts(public_key, public_key_len as usize);
     let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
 
     let mut target_public_key: [u8; UNCOMPRESSED_PUBLIC_KEY_SIZE] = [4u8; UNCOMPRESSED_PUBLIC_KEY_SIZE];
-    if public_key_slice.len() != UNCOMPRESSED_PUBLIC_KEY_SIZE {
+    if public_key_slice.len() != PUBLIC_KEY_SIZE {
         error!("Got public key of a weird size");
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
     target_public_key[1..].copy_from_slice(&public_key_slice);
 
-    let node_secret = match crypto::KeyPair::unseal(NODE_SK_SEALING_PATH) {
-        Ok(r) => r,
-        Err(e) => {
-            return sgx_status_t::SGX_ERROR_UNEXPECTED
-        }
-    };
-
-    let shared_enc_key = match node_secret.derive_key(&target_public_key) {
+    let shared_enc_key = match key_manager.get_node_key().unwrap().derive_key(&target_public_key) {
         Ok(r) => r,
         Err(e) => {
             return sgx_status_t::SGX_ERROR_UNEXPECTED
@@ -406,7 +369,7 @@ pub unsafe extern "C" fn ecall_init_seed(
     let res = match AESKey::new_from_slice(&shared_enc_key).decrypt(&encrypted_seed_slice) {
         Ok(r) => {
             if r.len() != SEED_KEY_SIZE {
-                error!("wtf2?");
+                error!("wtf2? {:?}", r.len());
                 return sgx_status_t::SGX_ERROR_UNEXPECTED
             }
             r
@@ -421,14 +384,15 @@ pub unsafe extern "C" fn ecall_init_seed(
 
     info!("Decrypted seed: {:?}", seed_buf);
 
-    AESKey::new_from_slice(&seed_buf).seal(SEED_SEALING_PATH);
+    let seed = Seed::new_from_slice(&seed_buf);
 
-    let sk_io = match KeyPair::new_from_slice(&seed_buf){
-        Ok(sk) => sk,
-        Err(err) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
-    };
+    if let Err(e) = key_manager.set_seed(seed) {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
 
-    sk_io.seal(IO_KEY_SEALING_KEY_PATH);
+    if let Err(e) = key_manager.generate_master_keys() {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
 
     sgx_status_t::SGX_SUCCESS
 }

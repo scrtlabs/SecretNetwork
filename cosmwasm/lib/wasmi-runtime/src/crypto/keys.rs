@@ -4,6 +4,8 @@ use secp256k1::key::{PublicKey, SecretKey};
 use secp256k1::{All, Secp256k1};
 use sgx_trts::trts::rsgx_read_rand;
 
+use log::*;
+
 pub const SEED_KEY_SIZE: usize = 32;
 
 pub const PUBLIC_KEY_SIZE: usize = 64;
@@ -24,7 +26,7 @@ pub type DhKey = SymmetricKey;
 /// PubKey is a public key that is used for ECDSA signing.
 pub type PubKey = [u8; UNCOMPRESSED_PUBLIC_KEY_SIZE];
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct AESKey(SymmetricKey);
 
 impl AESKey {
@@ -33,10 +35,13 @@ impl AESKey {
     }
 
     pub fn new_from_slice(privkey: &[u8; SYMMETRIC_KEY_SIZE]) -> Self {
-        Self { 0: privkey.clone() }
+        let mut key = [0u8; 32];
+        key.clone_from_slice(privkey);
+        Self { 0: key }
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct Seed([u8; SEED_SIZE]);
 
 impl Seed {
@@ -54,6 +59,8 @@ impl Seed {
         Ok(Self::new_from_slice(&sk_slice))
     }
 }
+
+#[derive(Debug, Clone)]
 pub struct KeyPair {
     context: Secp256k1<All>,
     pubkey: PublicKey,
@@ -102,14 +109,32 @@ impl KeyPair {
     pub fn derive_key(&self, pubarr: &PubKey) -> Result<DhKey, CryptoError> {
 
         // Pubkey is already 65 bytes, not sure what this is for?
+        // let mut pub_k = [4u8; UNCOMPRESSED_PUBLIC_KEY_SIZE];
+        // let mut pub_k_gx: [u8; 32] = [0u8; 32];
+        // pub_k_gx.clone_from_slice(&pubarr[1..33]);
+        // pub_k_gx.reverse();
+        //
+        // let mut pub_k_gy: [u8; 32] = [0u8; 32];
+        // pub_k_gx.clone_from_slice(&pubarr[33..65]);
+        // pub_k_gy.reverse();
+        //
+        //
+        // pub_k[1..33].clone_from_slice(&pub_k_gx);
+        // pub_k[33..].clone_from_slice(&pub_k_gy);
 
-        // let mut pubarr = [0; UNCOMPRESSED_PUBLIC_KEY_SIZE];
-        // pubarr[0] = 4;
-        // pubarr[1..].copy_from_slice(&_pubarr[..]);
+        info!("Derive key pk: {:?}", &pubarr.to_vec());
 
-        let pubkey = PublicKey::from_slice(pubarr).map_err(|e| CryptoError::KeyError {})?;
+
+        let pubkey = PublicKey::from_slice(pubarr).map_err(|e| {
+            error!("Error creating public key {:?}", e);
+            CryptoError::KeyError {}})?;
 
         let shared = SharedSecret::new(&pubkey, &self.privkey);
+
+        if shared.len() != SYMMETRIC_KEY_SIZE {
+            error!("Error creating shared secret. Size mismatch {:?}", shared.len());
+            return Err(CryptoError::KeyError {})
+        }
 
         let mut result = [0u8; SYMMETRIC_KEY_SIZE];
         result.copy_from_slice(shared.as_ref());

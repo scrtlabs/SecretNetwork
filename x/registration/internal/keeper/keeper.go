@@ -51,7 +51,7 @@ func InitializeNonBootstrap(homeDir string) {
 		return
 	}
 
-	seedPath := filepath.Join(homeDir, "seed.json")
+	seedPath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
 
 	if !fileExists(seedPath) {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, "Seed configuration not found. Did you initialize the node?"))

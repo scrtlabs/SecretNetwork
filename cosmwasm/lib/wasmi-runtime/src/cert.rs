@@ -406,6 +406,8 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
         info!("Anticipated public key = {:02x}", pub_k.iter().format(""));
         if sgx_quote.report_body.report_data.d.to_vec() == pub_k.to_vec() {
             info!("Mutual RA done!");
+        } else {
+            return Ok(sgx_quote.report_body.report_data.d.to_vec());
         }
     } else {
         info!("Failed to fetch isvEnclaveQuoteBody from attestation report");

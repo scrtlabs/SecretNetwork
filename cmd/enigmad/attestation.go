@@ -4,11 +4,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/types/module"
+	"github.com/cosmos/cosmos-sdk/x/genutil"
 	app "github.com/enigmampc/EnigmaBlockchain"
 	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
 	reg "github.com/enigmampc/EnigmaBlockchain/x/registration"
 	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -38,6 +41,58 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert.der
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}
 			return nil
+		},
+	}
+
+	return cmd
+}
+
+func InitBootstrapCmd(
+	ctx *server.Context, cdc *codec.Codec, mbm module.BasicManager) *cobra.Command {
+
+	cmd := &cobra.Command{
+		Use:   "init-bootstrap [output-file]",
+		Short: "Perform remote attestation of the enclave",
+		Long: `Create attestation report, signed by Intel which is used in the registation process of
+the node to the chain. This process, if successful, will output a certificate which is used to authenticate with the 
+blockchain. Writes the certificate in DER format to ~/attestation_cert.der
+`,
+		Args: cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			config := ctx.Config
+
+			genFile := config.GenesisFile()
+			appState, genDoc, err := genutil.GenesisStateFromGenFile(cdc, genFile)
+			if err != nil {
+				return fmt.Errorf("failed to unmarshal genesis state: %w", err)
+			}
+
+			regGenState := reg.GetGenesisStateFromAppState(cdc, appState)
+			if regGenState.MasterPublic != nil {
+				return fmt.Errorf("master key already set for this genesis file")
+			}
+
+			masterKey, err := api.InitBootstrap()
+			if err != nil {
+				return fmt.Errorf("failed to initialize enclave: %w", err)
+			}
+
+			regGenState.MasterPublic = masterKey
+
+			regGenStateBz, err := cdc.MarshalJSON(regGenState)
+			if err != nil {
+				return fmt.Errorf("failed to marshal auth genesis state: %w", err)
+			}
+
+			appState[reg.ModuleName] = regGenStateBz
+
+			appStateJSON, err := cdc.MarshalJSON(appState)
+			if err != nil {
+				return fmt.Errorf("failed to marshal application genesis state: %w", err)
+			}
+
+			genDoc.AppState = appStateJSON
+			return genutil.ExportGenesisFile(genDoc, genFile)
 		},
 	}
 
@@ -81,14 +136,14 @@ func ConfigureSecret(_ *server.Context, _ *codec.Codec) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			pubkey := args[0]
-			if len(pubkey) != 128 || !reg.IsHexString(pubkey) {
+			if len(pubkey) != reg.PublicKeyLength || !reg.IsHexString(pubkey) {
 				return fmt.Errorf("invalid master public key format (requires hex string of length 128 without 0x prefix)")
 			}
 
-			// parse coins trying to be sent
+			// We expect seed to be 48 bytes of encrypted data (aka 96 hex chars) [32 bytes + 12 IV]
 			seed := args[1]
-			if len(seed) != 64 || !reg.IsHexString(seed) {
-				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 64 without 0x prefix)")
+			if len(seed) != reg.EncryptedKeyLength || !reg.IsHexString(seed) {
+				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 96 without 0x prefix)")
 			}
 
 			cfg := reg.SeedConfig{
@@ -101,8 +156,17 @@ func ConfigureSecret(_ *server.Context, _ *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			err = ioutil.WriteFile(filepath.Join(app.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig),
-				cfgBytes, 0644)
+			path := filepath.Join(app.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
+			// fmt.Println("File Created Successfully", path)
+			if os.IsNotExist(err) {
+				var file, err = os.Create(path)
+				if err != nil {
+					return fmt.Errorf("failed to open config file: %s", path)
+				}
+				_ = file.Close()
+			}
+
+			err = ioutil.WriteFile(path, cfgBytes, 0644)
 			if err != nil {
 				return err
 			}

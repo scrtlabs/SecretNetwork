@@ -187,11 +187,9 @@ impl Externals for Runtime {
                     String::from_utf8_lossy(&state_key_name)
                 );
 
-                let mut master_state_key = key_manager::KEY_MANAGER
-                    .as_ref()
-                    .unwrap() // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
-                    .get_master_state_key();
+                // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
                 // TODO derive encryption key for these key-value on this contract
+                let mut master_state_key = key_manager::KEY_MANAGER.get_master_state_key().unwrap();
                 let master_state_key = AESKey::new_from_slice(master_state_key.get());
                 let encrypted_state_key_name = master_state_key.encrypt(&state_key_name).map_err(|err| {
                     error!(
@@ -326,11 +324,9 @@ impl Externals for Runtime {
                     String::from_utf8_lossy(value.get(0..std::cmp::min(20, value.len())).unwrap())
                 );
 
-                let mut master_state_key = key_manager::KEY_MANAGER
-                    .as_ref()
-                    .unwrap() // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
-                    .get_master_state_key();
+                // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
                 // TODO derive encryption key for these key-value on this contract
+                let mut master_state_key = key_manager::KEY_MANAGER.get_master_state_key().unwrap();
                 let master_state_key = AESKey::new_from_slice(master_state_key.get());
                 let encrypted_state_key_name = master_state_key.encrypt(&state_key_name).map_err(|err| {
                     error!(

@@ -8,6 +8,7 @@ use log::*;
 use sgx_types::*;
 use sgx_types::{sgx_status_t, SgxResult};
 
+use crate::ENCRYPTED_SEED_SIZE;
 // use crate::errors::Error;
 
 extern "C" {
@@ -17,7 +18,7 @@ extern "C" {
                                     retval: *mut sgx_status_t,
                                     cert: *const u8,
                                     cert_len: u32,
-                                    seed: &mut [u8; 32]) -> sgx_status_t;
+                                    seed: &mut [u8; ENCRYPTED_SEED_SIZE]) -> sgx_status_t;
 }
 
 #[no_mangle]
@@ -132,11 +133,11 @@ pub fn inner_create_report(eid: sgx_enclave_id_t) -> SgxResult<sgx_status_t> {
     Ok(sgx_status_t::SGX_SUCCESS)
 }
 
-pub fn inner_get_encrypted_seed(eid: sgx_enclave_id_t, cert: *const u8, cert_len: u32) -> SgxResult<[u8; 32]> {
+pub fn inner_get_encrypted_seed(eid: sgx_enclave_id_t, cert: *const u8, cert_len: u32) -> SgxResult<[u8; ENCRYPTED_SEED_SIZE]> {
 
     info!("Entered produce report");
     let mut retval = sgx_status_t::SGX_SUCCESS;
-    let mut seed = [0u8; 32];
+    let mut seed = [0u8; ENCRYPTED_SEED_SIZE];
     let status = unsafe { ecall_get_encrypted_seed(eid, &mut retval, cert, cert_len, & mut seed) };
 
     if status != sgx_status_t::SGX_SUCCESS  {

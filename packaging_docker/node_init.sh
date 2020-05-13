@@ -10,6 +10,9 @@ set -euv
 #enigmacli config trust-node true
 #enigmacli config keyring-backend test
 rm -rf ~/.enigmad
+
+mkdir -p /root/.enigmad/.node
+
 enigmad init $(hostname) --chain-id enigma-testnet || true
 
 PERSISTENT_PEERS=115aa0a629f5d70dd1d464bc7e42799e00f4edae@bootstrap:26656
@@ -20,13 +23,13 @@ echo "Set persistent_peers: $PERSISTENT_PEERS"
 echo "Waiting for bootstrap to start..."
 sleep 10
 
-MASTER_KEY=$(enigmacli q register master-key 2> /dev/null | cut -c 3- )
+MASTER_KEY="$(enigmacli q register master-key --node http://bootstrap:26657 2> /dev/null | cut -c 3- )"
 
 echo "Master key: $MASTER_KEY"
 
 enigmad init-enclave
 
-PUBLIC_KEY=$(enigmad parse attestation_cert.der 2> /dev/null | cut -c 3- )
+PUBLIC_KEY="$(enigmad parse attestation_cert.der 2> /dev/null | cut -c 3- )"
 
 echo "Public key: $PUBLIC_KEY"
 
@@ -34,8 +37,13 @@ enigmacli tx register auth attestation_cert.der --node http://bootstrap:26657 -y
 
 sleep 5
 
-SEED=$(enigmacli q register seed 2> /dev/null | cut -c 3-)
+SEED=$(enigmacli q register seed $PUBLIC_KEY --node http://bootstrap:26657 2> /dev/null | cut -c 3-)
+echo "SEED: $SEED"
 
-enigmad configure-secret $(MASTER_KEY) $(SEED)
+$(enigmad configure-secret $MASTER_KEY $SEED)
+
+cp /tmp/.enigmad/config/genesis.json /root/.enigmad/config/genesis.json
+
+enigmad validate-genesis
 
 RUST_BACKTRACE=1 enigmad start
