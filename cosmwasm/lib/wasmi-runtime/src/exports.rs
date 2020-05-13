@@ -104,7 +104,14 @@ pub extern "C" fn ecall_query(
 
 // gen (sk_node,pk_node) keypair for new node registration
 #[no_mangle]
-pub unsafe extern "C" fn ecall_key_gen(pk_node: *mut PubKey) -> sgx_types::sgx_status_t {
+pub unsafe extern "C" fn ecall_key_gen(public_key: &mut [u8; PUBLIC_KEY_SIZE]) -> sgx_types::sgx_status_t {
+
+    if rsgx_slice_is_outside_enclave(public_key) {
+        error!("Tried to access memory outside enclave -- rsgx_slice_is_outside_enclave");
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+    rsgx_sfence();
+
     // Generate node-specific key-pair
     let key_pair = match crypto::KeyPair::new() {
         Ok(kp) => kp,
@@ -119,7 +126,7 @@ pub unsafe extern "C" fn ecall_key_gen(pk_node: *mut PubKey) -> sgx_types::sgx_s
 
     let pubkey = key_pair.get_pubkey();
 
-    (&mut *pk_node).clone_from_slice(&pubkey);
+    public_key.clone_from_slice(&pubkey[1..UNCOMPRESSED_PUBLIC_KEY_SIZE]);
     sgx_status_t::SGX_SUCCESS
 }
 

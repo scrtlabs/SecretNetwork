@@ -15,7 +15,7 @@ use std::str::from_utf8;
 use crate::error::{clear_error, handle_c_error, set_error};
 use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
 use cosmwasm_sgx_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache, Extern};
-use cosmwasm_sgx_vm::{create_attestation_report_u, init_seed_u, untrusted_get_encrypted_seed};
+use cosmwasm_sgx_vm::{create_attestation_report_u, init_seed_u, untrusted_get_encrypted_seed, untrusted_key_gen};
 use ctor::ctor;
 use log;
 use log::*;
@@ -361,14 +361,16 @@ fn do_query(
 
 #[no_mangle]
 pub extern "C" fn key_gen(err: Option<&mut Buffer>) -> Buffer {
-    // let r = match to_cache(cache) {
-    //     Some(c) => catch_unwind(AssertUnwindSafe(move || {
-    //         do_query(c, code_id, msg, db, api, gas_limit, gas_used)
-    //     }))
-    //     .unwrap_or_else(|_| Panic {}.fail()),
-    //     None => EmptyArg { name: CACHE_ARG }.fail(),
-    // };
-    // let v = handle_c_error(r, err);
-    // Buffer::from_vec(v)
-    todo!()
+    info!("Hello from right before key_gen");
+    match untrusted_key_gen() {
+        Err(e) => {
+            error!("Error :(");
+            set_error(e.to_string(), err);
+            Buffer::default()
+        }
+        Ok(r) => {
+            clear_error();
+            Buffer::from_vec(r.to_vec())
+        }
+    }
 }
