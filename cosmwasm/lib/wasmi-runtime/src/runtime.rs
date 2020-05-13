@@ -294,7 +294,8 @@ impl Externals for Runtime {
                     err
                 })?;
                 // extract_vector extracts key into a buffer
-                let key = match extract_vector(&self.memory, key_ptr_ptr_in_wasm as u32) {
+                let state_key_name = match extract_vector(&self.memory, key_ptr_ptr_in_wasm as u32)
+                {
                     Err(err) => {
                         warn!(
                             "write_db() error while trying to read key from wasm memory: {:?}",
@@ -325,9 +326,37 @@ impl Externals for Runtime {
                     String::from_utf8_lossy(value.get(0..std::cmp::min(20, value.len())).unwrap())
                 );
 
+                let mut master_state_key = key_manager::KEY_MANAGER
+                    .as_ref()
+                    .unwrap() // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
+                    .get_master_state_key();
+                // TODO derive encryption key for these key-value on this contract
+                let master_state_key = AESKey::new_from_slice(master_state_key.get());
+                let encrypted_state_key_name = master_state_key.encrypt(&state_key_name).map_err(|err| {
+                    error!(
+                        "write_db() got an error while trying to encrypt the state_key_name {:?}, stopping wasm: {:?}",
+                        String::from_utf8_lossy(&state_key_name),
+                        err
+                    );
+                    WasmEngineError::EncryptionError
+                })?;
+                let encrypted_value = master_state_key.encrypt(&value).map_err(|err| {
+                    error!(
+                        "write_db() got an error while trying to encrypt the value {:?}, stopping wasm: {:?}",
+                        String::from_utf8_lossy(&value),
+                        err
+                    );
+                    WasmEngineError::EncryptionError
+                })?;
+
                 // Call write_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
                 // fn write_db(context: Ctx, key: &[u8], value: &[u8]) {
-                write_db(unsafe { self.context.clone() }, &key, &value).map_err(|err| {
+                write_db(
+                    unsafe { self.context.clone() },
+                    &encrypted_state_key_name,
+                    &encrypted_value,
+                )
+                .map_err(|err| {
                     error!(
                         "write_db() go an error from ocall_write_db, stopping wasm: {:?}",
                         err
