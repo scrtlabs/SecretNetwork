@@ -11,15 +11,12 @@ import (
 
 func (k Keeper) GetMasterPublicKey(ctx sdk.Context) *types.PublicKey {
 	store := ctx.KVStore(k.storeKey)
-	fmt.Println("hey bro2")
 	var pkIO types.PublicKey
 	certBz := store.Get(types.GetMasterPublicKey(types.MasterPublicKeyId))
-	fmt.Println("hey bro3")
 	if certBz == nil {
 		return nil
 	}
 	k.cdc.MustUnmarshalBinaryBare(certBz, &pkIO)
-	fmt.Println("hey bro4")
 	return &pkIO
 }
 

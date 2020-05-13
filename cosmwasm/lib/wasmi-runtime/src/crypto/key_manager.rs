@@ -5,6 +5,7 @@ use crate::crypto::traits::*;
 use enclave_ffi_types::{EnclaveError, CryptoError};
 use lazy_static::lazy_static;
 use log::*;
+use ring::hmac::Key;
 
 pub struct Keychain {
     seed: Option<Seed>,
@@ -15,6 +16,12 @@ pub struct Keychain {
 
 lazy_static! {
     pub static ref KEY_MANAGER: Keychain = {
+        Keychain::new()
+    };
+}
+
+impl Keychain {
+    pub fn new() -> Self {
         let seed = match Seed::unseal(SEED_SEALING_PATH) {
             Ok(k) => Some(k),
             Err(e) => None
@@ -41,10 +48,30 @@ lazy_static! {
             io_key,
             node_key
         }
-    };
-}
+    }
+    pub fn create_seed(&mut self) -> Result<(), CryptoError> {
+        match Seed::new() {
+            Ok(seed) => {
+                if let Err(e) = self.set_seed(seed) {
+                    return Err(CryptoError::KeyError);
+                }
+            },
+            Err(err) => return Err(err),
+        };
+        Ok(())
+    }
 
-impl Keychain {
+    pub fn create_node_key(&mut self) -> Result<(), CryptoError> {
+        match KeyPair::new() {
+            Ok(key) => {
+                if let Err(e) = self.set_node_key(key) {
+                    return Err(CryptoError::KeyError);
+                }
+            },
+            Err(err) => return Err(err),
+        };
+        Ok(())
+    }
 
     pub fn is_node_key_set(&self) -> bool {
         return self.node_key.is_some()
@@ -132,7 +159,7 @@ impl Keychain {
         Ok(self.seed = Some(seed.clone()))
     }
 
-    pub fn derive_keys(&mut self) -> Result<(), EnclaveError>{
+    pub fn generate_master_keys(&mut self) -> Result<(), EnclaveError>{
 
         if !self.is_seed_set() {
             error!("Seed not initialized! Cannot derive enclave keys");
