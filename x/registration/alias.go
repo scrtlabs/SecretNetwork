@@ -25,14 +25,14 @@ const (
 
 var (
 	// functions aliases
-	RegisterCodec   = types.RegisterCodec
-	ValidateGenesis = types.ValidateGenesis
-	InitGenesis     = keeper.InitGenesis
-	ExportGenesis   = keeper.ExportGenesis
-	NewKeeper       = keeper.NewKeeper
-	NewQuerier      = keeper.NewQuerier
-
-	IsHexString = keeper.IsHexString
+	RegisterCodec               = types.RegisterCodec
+	ValidateGenesis             = types.ValidateGenesis
+	InitGenesis                 = keeper.InitGenesis
+	ExportGenesis               = keeper.ExportGenesis
+	NewKeeper                   = keeper.NewKeeper
+	NewQuerier                  = keeper.NewQuerier
+	GetGenesisStateFromAppState = keeper.GetGenesisStateFromAppState
+	IsHexString                 = keeper.IsHexString
 	//MakeTestCodec             = keeper.MakeTestCodec
 	//CreateTestInput           = keeper.CreateTestInput
 

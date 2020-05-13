@@ -1,6 +1,8 @@
 package keeper
 
 import (
+	"encoding/json"
+	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
 	// authexported "github.com/cosmos/cosmos-sdk/x/auth/exported"
@@ -33,4 +35,13 @@ func ExportGenesis(ctx sdk.Context, keeper Keeper) types.GenesisState {
 	})
 
 	return genState
+}
+
+func GetGenesisStateFromAppState(cdc *codec.Codec, appState map[string]json.RawMessage) types.GenesisState {
+	var genesisState types.GenesisState
+	if appState[types.ModuleName] != nil {
+		cdc.MustUnmarshalJSON(appState[types.ModuleName], &genesisState)
+	}
+
+	return genesisState
 }

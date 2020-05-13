@@ -42,4 +42,8 @@ echo "SEED: $SEED"
 
 $(enigmad configure-secret $MASTER_KEY $SEED)
 
+cp /tmp/.enigmad/config/genesis.json /root/.enigmad/config/genesis.json
+
+enigmad validate-genesis
+
 RUST_BACKTRACE=1 enigmad start

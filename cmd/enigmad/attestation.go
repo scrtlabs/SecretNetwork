@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/types/module"
+	"github.com/cosmos/cosmos-sdk/x/genutil"
 	app "github.com/enigmampc/EnigmaBlockchain"
 	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
 	reg "github.com/enigmampc/EnigmaBlockchain/x/registration"
@@ -39,6 +41,58 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert.der
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}
 			return nil
+		},
+	}
+
+	return cmd
+}
+
+func InitBootstrapCmd(
+	ctx *server.Context, cdc *codec.Codec, mbm module.BasicManager) *cobra.Command {
+
+	cmd := &cobra.Command{
+		Use:   "init-bootstrap [output-file]",
+		Short: "Perform remote attestation of the enclave",
+		Long: `Create attestation report, signed by Intel which is used in the registation process of
+the node to the chain. This process, if successful, will output a certificate which is used to authenticate with the 
+blockchain. Writes the certificate in DER format to ~/attestation_cert.der
+`,
+		Args: cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			config := ctx.Config
+
+			genFile := config.GenesisFile()
+			appState, genDoc, err := genutil.GenesisStateFromGenFile(cdc, genFile)
+			if err != nil {
+				return fmt.Errorf("failed to unmarshal genesis state: %w", err)
+			}
+
+			regGenState := reg.GetGenesisStateFromAppState(cdc, appState)
+			if regGenState.MasterPublic != nil {
+				return fmt.Errorf("master key already set for this genesis file")
+			}
+
+			masterKey, err := api.InitBootstrap()
+			if err != nil {
+				return fmt.Errorf("failed to initialize enclave: %w", err)
+			}
+
+			regGenState.MasterPublic = masterKey
+
+			regGenStateBz, err := cdc.MarshalJSON(regGenState)
+			if err != nil {
+				return fmt.Errorf("failed to marshal auth genesis state: %w", err)
+			}
+
+			appState[reg.ModuleName] = regGenStateBz
+
+			appStateJSON, err := cdc.MarshalJSON(appState)
+			if err != nil {
+				return fmt.Errorf("failed to marshal application genesis state: %w", err)
+			}
+
+			genDoc.AppState = appStateJSON
+			return genutil.ExportGenesisFile(genDoc, genFile)
 		},
 	}
 
