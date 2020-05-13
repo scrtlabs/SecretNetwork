@@ -69,12 +69,12 @@ COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/enig
 
 # COPY ./packaging_docker/devnet_init.sh .
 COPY ./packaging_docker/wasmi-sgx-test.sh .
-COPY ./packaging_docker/node_init.sh .
+COPY ./packaging_docker/bootstrap_init.sh .
 
 RUN chmod +x /usr/bin/enigmad
 RUN chmod +x /usr/bin/enigmacli
 RUN chmod +x wasmi-sgx-test.sh
-RUN chmod +x node_init.sh
+RUN chmod +x bootstrap_init.sh
 
 RUN mkdir -p /root/.enigmad/.compute/
 RUN mkdir -p /root/.sgx_secrets/
@@ -87,4 +87,4 @@ COPY spid.txt /root/
 
 
 # Run enigmad by default, omit entrypoint to ease using container with enigmacli
-ENTRYPOINT ["/bin/bash", "node_init.sh"]
+ENTRYPOINT ["/bin/bash", "bootstrap_init.sh"]

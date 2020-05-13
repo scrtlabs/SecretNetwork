@@ -1,9 +1,3 @@
-pub const MASTER_STATE_KEY_SEALED_KEY_FILE: &str = "master_state_key_sealed.bin";
-pub const MASTER_IO_SEALED_KEY_FILE: &str = "master_io_sealed.bin";
-pub const MASTER_RAND_SEED_KEY_FILE: &str = "master_rand_seed_sealed.bin";
-pub const SECRET_KEY_SEALED_KEY_FILE: &str = "private_key_sealed.bin";
-pub const PUBLIC_KEY_SEALED_KEY_FILE: &str = "public_key_sealed.bin";
-
 pub use enclave_ffi_types::ENCRYPTED_SEED_SIZE;
 
 #[cfg(feature = "production")]
@@ -36,6 +30,7 @@ pub const SIGNING_METHOD: SigningMethod = SigningMethod::NONE;
 pub const SEED_SEALING_PATH: &str = "./.sgx_secrets/seed.sealed";
 pub const NODE_SK_SEALING_PATH: &str = "./.sgx_secrets/node_sk_key.sealed";
 pub const IO_KEY_SEALING_KEY_PATH: &str = "./.sgx_secrets/io_sk_key.sealed";
+pub const MASTER_STATE_KEY_PATH: &str = "./.sgx_secrets/master_state_key_sealed.sealed";
 
 pub const IO_KEY_DERIVE_ORDER: u32 = 1;
 pub const STATE_MASTER_KEY_DERIVE_ORDER: u32 = 2;

@@ -43,10 +43,6 @@ impl SealedKey for KeyPair {
         let mut buf = open(filepath)?;
 
         KeyPair::new_from_slice(&buf).map_err(|err| {
-            error!(
-                "[Enclave] Dramatic error while trying to init secret key from bytes: {:?}",
-                err
-            );
             EnclaveError::FailedUnseal
         })
     }
