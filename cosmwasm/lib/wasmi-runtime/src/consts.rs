@@ -27,10 +27,17 @@ pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
 #[cfg(not(feature = "production"))]
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::NONE;
 
-pub const SEED_SEALING_PATH: &str = "./.sgx_secrets/seed.sealed";
-pub const NODE_SK_SEALING_PATH: &str = "./.sgx_secrets/node_sk_key.sealed";
-pub const IO_KEY_SEALING_KEY_PATH: &str = "./.sgx_secrets/io_sk_key.sealed";
-pub const MASTER_STATE_KEY_PATH: &str = "./.sgx_secrets/master_state_key_sealed.sealed";
+pub const CONSENSUS_SEED_SEALING_PATH: &str = "./.sgx_secrets/consensus_seed.sealed";
+pub const CONSENSUS_BASE_STATE_KEY_SEALING_PATH: &str =
+    "./.sgx_secrets/consensus_base_state_key.sealed";
+pub const CONSENSUS_SEED_EXCHANGE_KEYPAIR_SEALING_PATH: &str =
+    "./.sgx_secrets/consensus_seed_exchange_keypair.sealed";
+pub const CONSENSUS_IO_EXCHANGE_KEYPAIR_SEALING_PATH: &str =
+    "./.sgx_secrets/consensus_io_exchange_keypair.sealed";
 
-pub const IO_KEY_DERIVE_ORDER: u32 = 1;
-pub const STATE_MASTER_KEY_DERIVE_ORDER: u32 = 2;
+pub const NEW_NODE_SEED_EXCHANGE_KEYPAIR_SEALING_PATH: &str =
+    "./.sgx_secrets/new_node_seed_exchange_keypair.sealed";
+
+pub const CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 1;
+pub const CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 2;
+pub const CONSENSUS_BASE_STATE_KEY_DERIVE_ORDER: u32 = 3;
