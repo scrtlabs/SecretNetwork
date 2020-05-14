@@ -229,6 +229,23 @@ pub extern "C" fn ecall_init_bootstrap(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
+    let mut key_manager = Keychain::new();
+    let kp = key_manager.get_io_key().unwrap();
+    info!("ecall_get_attestation_report key pk: {:?}", &kp.get_pubkey().to_vec());
+    let (_, cert) =
+        match create_attestation_certificate(&kp, sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE) {
+            Err(e) => {
+                error!("Error in create_attestation_certificate: {:?}", e);
+                return e;
+            }
+            Ok(res) => res,
+        };
+    // info!("private key {:?}, cert: {:?}", private_key_der, cert);
+
+    if let Err(status) = write_to_untrusted(cert.as_slice(), "attestation_cert.der") {
+        return status;
+    }
+
     // don't want to copy the first byte (no need to pass the 0x4 uncompressed byte)
     public_key.copy_from_slice(&key_manager.get_io_key().unwrap().get_pubkey()[1..UNCOMPRESSED_PUBLIC_KEY_SIZE]);
     debug!("ecall_init_bootstrap key pk: {:?}", &public_key.to_vec());
@@ -330,12 +347,12 @@ pub extern "C" fn ecall_get_encrypted_seed(
   */
 #[no_mangle]
 pub unsafe extern "C" fn ecall_init_seed(
-    public_key: *const u8,
-    public_key_len: u32,
+    master_cert: *const u8,
+    master_cert_len: u32,
     encrypted_seed: *const u8,
     encrypted_seed_len: u32,
 ) -> sgx_status_t {
-    if public_key.is_null() || public_key_len == 0 {
+    if master_cert.is_null() || master_cert_len == 0 {
         error!("Tried to access an empty pointer - public_key.is_null()");
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
@@ -349,15 +366,23 @@ pub unsafe extern "C" fn ecall_init_seed(
 
     let mut key_manager = Keychain::new();
 
-    let public_key_slice = slice::from_raw_parts(public_key, public_key_len as usize);
+    let cert_slice = slice::from_raw_parts(master_cert, master_cert_len as usize);
     let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
-
     let mut target_public_key: [u8; UNCOMPRESSED_PUBLIC_KEY_SIZE] = [4u8; UNCOMPRESSED_PUBLIC_KEY_SIZE];
-    if public_key_slice.len() != PUBLIC_KEY_SIZE {
-        error!("Got public key of a weird size");
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+
+    let pk = match verify_mra_cert(cert_slice) {
+        Err(e) => {
+            error!("Error in validating certificate: {:?}", e);
+            return e;
+        }
+        Ok(res) => res,
+    };
+    // just make sure the length isn't wrong for some reason (certificate may be malformed)
+    if pk.len() != crypto::PUBLIC_KEY_SIZE {
+        error!("Got public key from certificate with the wrong size: {:?}", pk.len());
+        return sgx_status_t::SGX_ERROR_UNEXPECTED
     }
-    target_public_key[1..].copy_from_slice(&public_key_slice);
+    target_public_key[1..].copy_from_slice(&pk);
 
     let shared_enc_key = match key_manager.get_node_key().unwrap().derive_key(&target_public_key) {
         Ok(r) => r,

@@ -23,9 +23,9 @@ echo "Set persistent_peers: $PERSISTENT_PEERS"
 echo "Waiting for bootstrap to start..."
 sleep 10
 
-MASTER_KEY="$(enigmacli q register master-key --node http://bootstrap:26657 2> /dev/null | cut -c 3- )"
+MASTER_KEY="$(enigmacli q register secret-network-params --node http://bootstrap:26657 2> /dev/null | cut -c 3- )"
 
-echo "Master key: $MASTER_KEY"
+#echo "Master key: $MASTER_KEY"
 
 enigmad init-enclave
 
@@ -40,7 +40,7 @@ sleep 5
 SEED=$(enigmacli q register seed $PUBLIC_KEY --node http://bootstrap:26657 2> /dev/null | cut -c 3-)
 echo "SEED: $SEED"
 
-$(enigmad configure-secret $MASTER_KEY $SEED)
+$(enigmad configure-secret master-cert.der $SEED)
 
 cp /tmp/.enigmad/config/genesis.json /root/.enigmad/config/genesis.json
 

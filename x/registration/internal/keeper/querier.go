@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	QueryEncryptedSeed = "seed"
-	QueryMasterKey     = "master-key"
+	QueryEncryptedSeed     = "seed"
+	QueryMasterCertificate = "master-cert"
 )
 
 // controls error output on querier - set true when testing/debugging
@@ -22,7 +22,7 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 		switch path[0] {
 		case QueryEncryptedSeed:
 			return queryEncryptedSeed(ctx, path[1], req, keeper)
-		case QueryMasterKey:
+		case QueryMasterCertificate:
 			return queryMasterKey(ctx, req, keeper)
 		default:
 			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "unknown data query endpoint")
@@ -31,7 +31,7 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 }
 
 func queryMasterKey(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, error) {
-	seed := keeper.GetMasterPublicKey(ctx)
+	seed := keeper.GetMasterCertificate(ctx)
 	if seed == nil {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownAddress, "Chain has not been initialized yet")
 	}

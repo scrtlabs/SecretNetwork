@@ -32,8 +32,8 @@ static ENCLAVE_FILE: &'static str = "librust_cosmwasm_enclave.signed.so";
 // this is here basically to be able to call the enclave initialization -- we can move this somewhere else and simplify
 
 pub fn init_seed_u(
-    public_key: *const u8,
-    public_key_len: u32,
+    master_cert: *const u8,
+    master_cert_len: u32,
     encrypted_seed: *const u8,
     encrypted_seed_len: u32,
 ) -> SgxResult<sgx_status_t> {
@@ -43,8 +43,8 @@ pub fn init_seed_u(
 
     inner_init_seed(
         enclave.geteid(),
-        public_key,
-        public_key_len,
+        master_cert,
+        master_cert_len,
         encrypted_seed,
         encrypted_seed_len,
     )

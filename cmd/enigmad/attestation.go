@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -52,7 +53,7 @@ func InitBootstrapCmd(
 
 	cmd := &cobra.Command{
 		Use:   "init-bootstrap [output-file]",
-		Short: "Perform remote attestation of the enclave",
+		Short: "Perform bootstrap initialization",
 		Long: `Create attestation report, signed by Intel which is used in the registation process of
 the node to the chain. This process, if successful, will output a certificate which is used to authenticate with the 
 blockchain. Writes the certificate in DER format to ~/attestation_cert.der
@@ -68,16 +69,30 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert.der
 			}
 
 			regGenState := reg.GetGenesisStateFromAppState(cdc, appState)
-			if regGenState.MasterPublic != nil {
-				return fmt.Errorf("master key already set for this genesis file")
-			}
 
 			masterKey, err := api.InitBootstrap()
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
 
-			regGenState.MasterPublic = masterKey
+			userHome, _ := os.UserHomeDir()
+
+			// parse coins trying to be sent
+			cert, err := ioutil.ReadFile(filepath.Join(userHome, reg.AttestationCertPath))
+			if err != nil {
+				return err
+			}
+
+			pubkey, err := ra.VerifyRaCert(cert)
+			if err != nil {
+				return err
+			}
+
+			if hex.EncodeToString(pubkey) != hex.EncodeToString(masterKey) {
+				return fmt.Errorf("invalid certificate for master public key")
+			}
+
+			regGenState.MasterCertificate = cert
 
 			regGenStateBz, err := cdc.MarshalJSON(regGenState)
 			if err != nil {
@@ -129,15 +144,16 @@ func ParseCert(_ *server.Context, _ *codec.Codec) *cobra.Command {
 
 func ConfigureSecret(_ *server.Context, _ *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "configure-secret [master-key] [seed]",
+		Use: "configure-secret [master-cert] [seed]",
 		Short: "After registration is successful, configure the secret node with the credentials file and the encrypted" +
 			"seed that was written on-chain",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			pubkey := args[0]
-			if len(pubkey) != reg.PublicKeyLength || !reg.IsHexString(pubkey) {
-				return fmt.Errorf("invalid master public key format (requires hex string of length 128 without 0x prefix)")
+			// parse coins trying to be sent
+			cert, err := ioutil.ReadFile(args[0])
+			if err != nil {
+				return err
 			}
 
 			// We expect seed to be 48 bytes of encrypted data (aka 96 hex chars) [32 bytes + 12 IV]
@@ -148,7 +164,7 @@ func ConfigureSecret(_ *server.Context, _ *codec.Codec) *cobra.Command {
 
 			cfg := reg.SeedConfig{
 				EncryptedKey: seed,
-				PublicKey:    pubkey,
+				MasterCert:   base64.StdEncoding.EncodeToString(cert),
 			}
 
 			cfgBytes, err := json.Marshal(&cfg)
