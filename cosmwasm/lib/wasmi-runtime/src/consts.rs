@@ -30,7 +30,7 @@ pub const SIGNING_METHOD: SigningMethod = SigningMethod::NONE;
 pub const SEED_SEALING_PATH: &str = "./.sgx_secrets/seed.sealed";
 pub const NODE_SK_SEALING_PATH: &str = "./.sgx_secrets/node_sk_key.sealed";
 pub const IO_KEY_SEALING_KEY_PATH: &str = "./.sgx_secrets/io_sk_key.sealed";
-pub const MASTER_STATE_KEY_PATH: &str = "./.sgx_secrets/master_state_key_sealed.sealed";
+pub const base_state_key_PATH: &str = "./.sgx_secrets/base_state_key_sealed.sealed";
 
 pub const IO_KEY_DERIVE_ORDER: u32 = 1;
 pub const STATE_MASTER_KEY_DERIVE_ORDER: u32 = 2;

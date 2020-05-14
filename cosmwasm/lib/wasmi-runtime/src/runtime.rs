@@ -189,9 +189,9 @@ impl Externals for Runtime {
 
                 // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
                 // TODO derive encryption key for these key-value on this contract
-                let mut master_state_key = key_manager::KEY_MANAGER.get_master_state_key().unwrap();
-                let master_state_key = AESKey::new_from_slice(master_state_key.get());
-                let encrypted_state_key_name = master_state_key.encrypt(&state_key_name).map_err(|err| {
+                let mut base_state_key = key_manager::KEY_MANAGER.get_base_state_key().unwrap();
+                let base_state_key = AESKey::new_from_slice(base_state_key.get());
+                let encrypted_state_key_name = base_state_key.encrypt(&state_key_name).map_err(|err| {
                     error!(
                         "read_db() got an error while trying to encrypt the state_key_name {:?}, stopping wasm: {:?}",
                         String::from_utf8_lossy(&state_key_name),
@@ -216,7 +216,7 @@ impl Externals for Runtime {
                         Some(value) => value,
                     };
 
-                let decrypted_value = master_state_key.encrypt(&value).map_err(|err| {
+                let decrypted_value = base_state_key.encrypt(&value).map_err(|err| {
                     error!(
                         "read_db() got an error while trying to decrypt the value for key {:?}, stopping wasm: {:?}",
                         String::from_utf8_lossy(&state_key_name),
@@ -326,9 +326,9 @@ impl Externals for Runtime {
 
                 // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
                 // TODO derive encryption key for these key-value on this contract
-                let mut master_state_key = key_manager::KEY_MANAGER.get_master_state_key().unwrap();
-                let master_state_key = AESKey::new_from_slice(master_state_key.get());
-                let encrypted_state_key_name = master_state_key.encrypt(&state_key_name).map_err(|err| {
+                let mut base_state_key = key_manager::KEY_MANAGER.get_base_state_key().unwrap();
+                let base_state_key = AESKey::new_from_slice(base_state_key.get());
+                let encrypted_state_key_name = base_state_key.encrypt(&state_key_name).map_err(|err| {
                     error!(
                         "write_db() got an error while trying to encrypt the state_key_name {:?}, stopping wasm: {:?}",
                         String::from_utf8_lossy(&state_key_name),
@@ -336,7 +336,7 @@ impl Externals for Runtime {
                     );
                     WasmEngineError::EncryptionError
                 })?;
-                let encrypted_value = master_state_key.encrypt(&value).map_err(|err| {
+                let encrypted_value = base_state_key.encrypt(&value).map_err(|err| {
                     error!(
                         "write_db() got an error while trying to encrypt the value {:?}, stopping wasm: {:?}",
                         String::from_utf8_lossy(&value),
