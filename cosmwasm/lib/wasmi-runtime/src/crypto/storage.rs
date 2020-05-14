@@ -13,7 +13,7 @@ impl SealedKey for AESKey {
     }
 
     fn unseal(filepath: &str) -> Result<Self, EnclaveError> {
-        let mut buf = open(filepath)?;
+        let buf = open(filepath)?;
         Ok(Self::new_from_slice(&buf))
     }
 }
@@ -24,7 +24,7 @@ impl SealedKey for Seed {
     }
 
     fn unseal(filepath: &str) -> Result<Self, EnclaveError> {
-        let mut buf = open(filepath)?;
+        let buf = open(filepath)?;
         Ok(Self::new_from_slice(&buf))
     }
 }
@@ -40,11 +40,9 @@ impl SealedKey for KeyPair {
     }
 
     fn unseal(filepath: &str) -> Result<Self, EnclaveError> {
-        let mut buf = open(filepath)?;
+        let buf = open(filepath)?;
 
-        KeyPair::new_from_slice(&buf).map_err(|err| {
-            EnclaveError::FailedUnseal
-        })
+        KeyPair::new_from_slice(&buf).map_err(|err| EnclaveError::FailedUnseal)
     }
 }
 
