@@ -189,7 +189,9 @@ impl Externals for Runtime {
 
                 // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
                 // TODO derive encryption key for these key-value on this contract
-                let mut base_state_key = key_manager::KEY_MANAGER.get_base_state_key().unwrap();
+                let mut base_state_key = key_manager::KEY_MANAGER
+                    .get_consensus_base_state_key()
+                    .unwrap();
                 let base_state_key = AESKey::new_from_slice(base_state_key.get());
                 let encrypted_state_key_name = base_state_key.encrypt(&state_key_name).map_err(|err| {
                     error!(
@@ -326,7 +328,9 @@ impl Externals for Runtime {
 
                 // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
                 // TODO derive encryption key for these key-value on this contract
-                let mut base_state_key = key_manager::KEY_MANAGER.get_base_state_key().unwrap();
+                let mut base_state_key = key_manager::KEY_MANAGER
+                    .get_consensus_base_state_key()
+                    .unwrap();
                 let base_state_key = AESKey::new_from_slice(base_state_key.get());
                 let encrypted_state_key_name = base_state_key.encrypt(&state_key_name).map_err(|err| {
                     error!(

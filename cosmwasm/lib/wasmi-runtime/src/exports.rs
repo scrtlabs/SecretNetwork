@@ -3,8 +3,7 @@ use std::ffi::c_void;
 
 use crate::crypto;
 use crate::crypto::{
-    AESKey, KeyPair, Keychain, PubKey, Seed, PUBLIC_KEY_SIZE, SEED_KEY_SIZE,
-    UNCOMPRESSED_PUBLIC_KEY_SIZE,
+    AESKey, Keychain, Seed, PUBLIC_KEY_SIZE, SEED_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
 };
 use crate::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
@@ -14,13 +13,10 @@ use log::*;
 use sgx_trts::trts::{
     rsgx_lfence, rsgx_raw_is_outside_enclave, rsgx_sfence, rsgx_slice_is_outside_enclave,
 };
-use sgx_types::*;
 use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 use std::slice;
 
-use crate::consts::{
-    ENCRYPTED_SEED_SIZE, IO_KEY_SEALING_KEY_PATH, NODE_SK_SEALING_PATH, SEED_SEALING_PATH,
-};
+use crate::consts::*;
 pub use crate::crypto::traits::{Encryptable, Kdf, SealedKey};
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -119,9 +115,12 @@ pub unsafe extern "C" fn ecall_key_gen(
 
     let mut key_manager = Keychain::new();
 
-    key_manager.create_node_key();
+    key_manager.create_new_node_seed_exchange_keypair();
 
-    let pubkey = key_manager.get_node_key().unwrap().get_pubkey();
+    let pubkey = key_manager
+        .get_new_node_seed_exchange_keypair()
+        .unwrap()
+        .get_pubkey();
     info!("ecall_key_gen key pk: {:?}", public_key.to_vec());
     public_key.clone_from_slice(&pubkey[1..UNCOMPRESSED_PUBLIC_KEY_SIZE]);
     sgx_status_t::SGX_SUCCESS
@@ -143,7 +142,7 @@ pub unsafe extern "C" fn ecall_key_gen(
  */
 pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
     let mut key_manager = Keychain::new();
-    let kp = key_manager.get_node_key().unwrap();
+    let kp = key_manager.get_new_node_seed_exchange_keypair().unwrap();
     info!(
         "ecall_get_attestation_report key pk: {:?}",
         &kp.get_pubkey().to_vec()
@@ -221,19 +220,25 @@ pub extern "C" fn ecall_init_bootstrap(public_key: &mut [u8; PUBLIC_KEY_SIZE]) -
 
     let mut key_manager = Keychain::new();
 
-    if let Err(e) = key_manager.create_master_seed() {
+    if let Err(e) = key_manager.create_consensus_master_seed() {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
-    if let Err(e) = key_manager.generate_master_keys() {
+    if let Err(e) = key_manager.generate_consensus_master_keys() {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
     // don't want to copy the first byte (no need to pass the 0x4 uncompressed byte)
     public_key.copy_from_slice(
-        &key_manager.get_io_key().unwrap().get_pubkey()[1..UNCOMPRESSED_PUBLIC_KEY_SIZE],
+        &key_manager
+            .get_consensus_seed_exchange_keypair()
+            .unwrap()
+            .get_pubkey()[1..UNCOMPRESSED_PUBLIC_KEY_SIZE],
     );
-    debug!("ecall_init_bootstrap key pk: {:?}", &public_key.to_vec());
+    debug!(
+        "ecall_init_bootstrap consensus_seed_exchange_keypair public key: {:?}",
+        &public_key.to_vec()
+    );
 
     sgx_status_t::SGX_SUCCESS
 }
@@ -299,7 +304,7 @@ pub extern "C" fn ecall_get_encrypted_seed(
     );
 
     let shared_enc_key = match key_manager
-        .get_io_key()
+        .get_consensus_seed_exchange_keypair()
         .unwrap()
         .derive_key(&target_public_key)
     {
@@ -308,9 +313,13 @@ pub extern "C" fn ecall_get_encrypted_seed(
     };
 
     // encrypt the seed using the symmetric key derived in the previous stage
-    let res = match AESKey::new_from_slice(&shared_enc_key)
-        .encrypt(&key_manager.get_master_seed().unwrap().get().to_vec())
-    {
+    let res = match AESKey::new_from_slice(&shared_enc_key).encrypt(
+        &key_manager
+            .get_consensus_master_seed()
+            .unwrap()
+            .get()
+            .to_vec(),
+    ) {
         Ok(r) => {
             if r.len() != ENCRYPTED_SEED_SIZE {
                 error!("wtf? {:?}", r.len());
@@ -370,7 +379,7 @@ pub unsafe extern "C" fn ecall_init_seed(
     target_public_key[1..].copy_from_slice(&public_key_slice);
 
     let shared_enc_key = match key_manager
-        .get_node_key()
+        .get_new_node_seed_exchange_keypair()
         .unwrap()
         .derive_key(&target_public_key)
     {
@@ -396,11 +405,11 @@ pub unsafe extern "C" fn ecall_init_seed(
 
     let seed = Seed::new_from_slice(&seed_buf);
 
-    if let Err(e) = key_manager.set_master_seed(seed) {
+    if let Err(e) = key_manager.set_consensus_master_seed(seed) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
-    if let Err(e) = key_manager.generate_master_keys() {
+    if let Err(e) = key_manager.generate_consensus_master_keys() {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
