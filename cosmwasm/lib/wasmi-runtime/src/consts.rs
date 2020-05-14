@@ -28,13 +28,6 @@ pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::NONE;
 
 pub const CONSENSUS_SEED_SEALING_PATH: &str = "./.sgx_secrets/consensus_seed.sealed";
-pub const CONSENSUS_BASE_STATE_KEY_SEALING_PATH: &str =
-    "./.sgx_secrets/consensus_base_state_key.sealed";
-pub const CONSENSUS_SEED_EXCHANGE_KEYPAIR_SEALING_PATH: &str =
-    "./.sgx_secrets/consensus_seed_exchange_keypair.sealed";
-pub const CONSENSUS_IO_EXCHANGE_KEYPAIR_SEALING_PATH: &str =
-    "./.sgx_secrets/consensus_io_exchange_keypair.sealed";
-
 pub const NEW_NODE_SEED_EXCHANGE_KEYPAIR_SEALING_PATH: &str =
     "./.sgx_secrets/new_node_seed_exchange_keypair.sealed";
 

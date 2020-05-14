@@ -29,7 +29,6 @@ sgx_types = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.
 sgx_tseal = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tcrypto = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
-
 [dependencies]
 enclave-ffi-types = { path = "../enclave-ffi-types" }
 pwasm-utils = { version = "0.12.0", default-features = false }
@@ -48,7 +47,6 @@ sha2 = "0.8.1"
 ring = { git = "https://github.com/mesalock-linux/ring-sgx", tag = "v0.16.5" }
 # for attestation
 chrono = { version = "0.4.7", git = "https://github.com/mesalock-linux/chrono-sgx" }
-
 num-bigint = { version = "0.2", git = "https://github.com/mesalock-linux/num-bigint-sgx" }
 # serde_derive    = { version = "1.0", git = "https://github.com/mesalock-linux/serde-sgx" }
 httparse = { version = "1.3", default-features = false }
