@@ -12,11 +12,11 @@ use sgx_urts::SgxEnclave;
 use cosmwasm::traits::Api;
 use lazy_static::lazy_static;
 
-use crate::ENCRYPTED_SEED_SIZE;
 use crate::attestation::{inner_create_report, inner_get_encrypted_seed};
 use crate::errors::{Error, Result};
 use crate::seed::{inner_init_bootstrap, inner_init_seed, inner_key_gen};
 use crate::wasmi::Module;
+use crate::ENCRYPTED_SEED_SIZE;
 use crate::{Extern, Storage};
 
 /// An instance is a combination of wasm code, storage, and gas limit.
