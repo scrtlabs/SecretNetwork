@@ -6,7 +6,7 @@ Secret Network secures the decentralized web
 
 # What is Secret Network?
 
-For better background, before reading this guide you might want to check out Cosmos' guide upgrading from `cosmoshub-2` to `cosmoshub-3`.
+Want to build a better internet? Solve for privacy.
 
 Secret Network is a blockchain-based, open-source protocol that lets anyone perform computations on encrypted data, bringing privacy to smart contracts and public blockchains. Our mission: improve the adoption and usability of decentralized technologies, for the benefit of all.
 
@@ -14,7 +14,7 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/SecretNet
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
 
-2. Inside `new_genesis.json` Rename `chain_id` from `enigma-1` to the new agreed upon Chain ID.
+# Community
 
 - Homepage: https://scrt.network
 - Forum: https://forum.scrt.network
@@ -25,7 +25,7 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/SecretNet
 - Telegram Channel: https://t.me/SCRTnetwork
 - Community Secret Nodes Telegram: https://t.me/secretnodes
 
-4. Compile the new `scrt` binaries with `make deb` (or distribute them precompiled).
+# Block Explorers
 
 Secret Network is secured by the SCRT coin (Secret), which is used for fees, staking, and governance. Transactions, validators, governance proposals, and more can be viewed using the following Secret Network block explorers:
 
@@ -38,8 +38,7 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 - [Ledger Nano S and Ledger Nano X](/docs/ledger-nano-s.md)
 - [Math Wallet](https://mathwallet.org/web/enigma)
 
-   ```bash
-   sudo dpkg -i precompiled_scrt_package.deb # install scrtd & scrtcli and setup scrt-node.service
+# Implementation Discussions
 
 - [An Update on the Encryption Protocol](https://forum.enigma.co/t/an-update-on-the-encryption-protocol/1641)
 - [Hard Forks and Network Upgrades](https://forum.enigma.co/t/hard-forks-and-network-upgrades/1670)
@@ -49,21 +48,31 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 - [Input/Output/State Encryption/Decryption protocol](https://forum.enigma.co/t/input-output-state-encryption-decryption-protocol/1325)
 - [Why the Cosmos move doesn’t mean we’re leaving Ethereum](https://forum.enigma.co/t/why-the-cosmos-move-doesnt-mean-were-leaving-ethereum/1301)
 - [(Dev discussion/Issue) WASM implementation](https://forum.enigma.co/t/dev-discussion-issue-wasm-implementation/1303)
+```
 
-6. Setup the new node/validaor:
+# Blockchain REST Providers
 
 - https://api.chainofsecrets.org
 
-   # import old config files to the new node
-   cp ~/.enigmad/config/{app.toml,config.toml,addrbook.json} ~/.scrtd/config
+# Docs
 
-   # import node's & validator's private keys to the new node
-   cp ~/.enigmad/config/{priv_validator_key.json,node_key.json} ~/.scrtd/config
+- [Install the `secretcli` light client (Windows, Mac & Linux)](/docs/light-client-mainnet.md)
+- [How to use the `secretcli` light client](/docs/secretcli.md)
+- [How to participate in on-chain governance](docs/using-governance.md)
+- [How to run a full node on mainnet](/docs/validators-and-full-nodes/run-full-node-mainnet.md)
+- [How to run an LCD server](/docs/lcd-server-example.service)
+- [Ledger Nano S (and X) support](/docs/ledger-nano-s.md)
+- [How to join as a mainnet validator](/docs/validators-and-full-nodes/join-validator-mainnet.md)
+- [How to backup a validator](/docs/validators-and-full-nodes/backup-a-validator.md)
+- [How to migrate a validator to a new machine](/docs/validators-and-full-nodes/migrate-a-validator.md)
+- [How to verify software releases](/docs/verify-releases.md)
+- [How to setup SGX on your machine](/docs/dev/setup-sgx.md)
 
-   # set new_genesis.json from step 3 as the genesis.json of the new chain
-   cp new_genesis.json ~/.scrtd/config/genesis.json
+# Upgrades
+- [How to upgrade to the Secret Network (rebranding)](/docs/upgrades/howto-secretnetwork-rebranding.md)
 
-- [For Blockchain developers](/docs/dev/for-enigma-blockchain-devs.md)
+# Archive
+- [For Blockchain developers](/docs/dev/for-secret-networks-devs.md)
 - [How to be a mainnet genesis validator](/docs/genesis/genesis-validator-mainnet.md)
 
 # License
