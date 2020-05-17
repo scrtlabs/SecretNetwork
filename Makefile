@@ -50,8 +50,8 @@ ifeq ($(WITH_CLEVELDB),yes)
   ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=cleveldb
 endif
 ldflags += $(LDFLAGS)
-ldflags := $(strip $(ldflags))
 ldflags += -w -s
+ldflags := $(strip $(ldflags))
 
 BUILD_FLAGS := -tags "$(build_tags)" -ldflags '$(ldflags)'
 
