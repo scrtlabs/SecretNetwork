@@ -39,9 +39,9 @@ whitespace += $(whitespace)
 comma := ,
 build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 
-ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=EnigmaBlockchain \
-	-X github.com/cosmos/cosmos-sdk/version.ServerName=enigmad \
-	-X github.com/cosmos/cosmos-sdk/version.ClientName=enigmacli \
+ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=SecretBlockchain \
+	-X github.com/cosmos/cosmos-sdk/version.ServerName=scrtd \
+	-X github.com/cosmos/cosmos-sdk/version.ClientName=scrtcli \
 	-X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
 	-X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
 	-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags)"
@@ -61,38 +61,33 @@ go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"
 	GO111MODULE=on go mod verify
 
-xgo_build_enigmad: go.sum
-	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/EnigmaBlockchain/cmd/enigmad
+xgo_build_scrtd: go.sum
+	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/EnigmaBlockchain/cmd/scrtd
 
-xgo_build_enigmacli: go.sum
-	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/EnigmaBlockchain/cmd/enigmacli
-
-build_local_no_rust:
-	@ #this pulls out ELF symbols, 80% size reduction!
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+xgo_build_scrtcli: go.sum
+	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/EnigmaBlockchain/cmd/scrtcli
 
 build_local_no_rust:
 	@ #this pulls out ELF symbols, 80% size reduction!
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/scrtd
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/scrtcli
 
 build_local:
 	# cd go-cosmwasm && rustup run nightly cargo build --release --features backtraces
 	# cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
 	@ #this pulls out ELF symbols, 80% size reduction!
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/scrtd
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/scrtcli
 
 build_linux: build_local
 
 build_windows:
-	$(MAKE) xgo_build_enigmad XGO_TARGET=windows/amd64
-	$(MAKE) xgo_build_enigmacli XGO_TARGET=windows/amd64
+	$(MAKE) xgo_build_scrtd XGO_TARGET=windows/amd64
+	$(MAKE) xgo_build_scrtcli XGO_TARGET=windows/amd64
 
 build_macos:
-	$(MAKE) xgo_build_enigmad XGO_TARGET=darwin/amd64
-	$(MAKE) xgo_build_enigmacli XGO_TARGET=darwin/amd64
+	$(MAKE) xgo_build_scrtd XGO_TARGET=darwin/amd64
+	$(MAKE) xgo_build_scrtcli XGO_TARGET=darwin/amd64
 
 build_all: build_linux build_windows build_macos
 
@@ -103,9 +98,9 @@ deb: build_local
 	rm -rf /tmp/EnigmaBlockchain
 	
 	mkdir -p /tmp/EnigmaBlockchain/deb/bin
-	mv -f ./enigmacli /tmp/EnigmaBlockchain/deb/bin/enigmacli
-	mv -f ./enigmad /tmp/EnigmaBlockchain/deb/bin/enigmad
-	chmod +x /tmp/EnigmaBlockchain/deb/bin/enigmad /tmp/EnigmaBlockchain/deb/bin/enigmacli
+	mv -f ./scrtcli /tmp/EnigmaBlockchain/deb/bin/scrtcli
+	mv -f ./scrtd /tmp/EnigmaBlockchain/deb/bin/scrtd
+	chmod +x /tmp/EnigmaBlockchain/deb/bin/scrtd /tmp/EnigmaBlockchain/deb/bin/scrtcli
 	
 	# mkdir -p /tmp/EnigmaBlockchain/deb/usr/lib
 	# mv -f ./go-cosmwasm/api/libgo_cosmwasm.so /tmp/EnigmaBlockchain/deb/usr/lib/libgo_cosmwasm.so
@@ -129,7 +124,7 @@ rename_for_release:
 
 sign_for_release: rename_for_release
 	sha256sum enigma-blockchain*.deb > SHA256SUMS
-	-sha256sum enigmad-* enigmacli-* >> SHA256SUMS
+	-sha256sum scrtd-* scrtcli-* >> SHA256SUMS
 	gpg -u 91831DE812C6415123AFAA7B420BF1CB005FBCE6 --digest-algo sha256 --clearsign --yes SHA256SUMS
 	rm -f SHA256SUMS
 	
@@ -137,13 +132,13 @@ release: sign_for_release
 	rm -rf ./release/
 	mkdir -p ./release/
 	cp enigma-blockchain_*.deb ./release/ 
-	cp enigmacli-* ./release/ 
-	cp enigmad-* ./release/
+	cp scrtcli-* ./release/ 
+	cp scrtd-* ./release/
 	cp SHA256SUMS.asc ./release/
 
 clean:
 	-rm -rf /tmp/EnigmaBlockchain
-	-rm -f ./enigmacli-*
-	-rm -f ./enigmad-*
+	-rm -f ./scrtcli-*
+	-rm -f ./scrtd-*
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*

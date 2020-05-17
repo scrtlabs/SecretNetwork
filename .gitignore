@@ -1,6 +1,6 @@
 *.deb
-/enigmacli*
-/enigmad*
+/scrtcli*
+/scrtd*
 SHA256SUMS*
 /release
 Enclave_u.c
