@@ -34,24 +34,20 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 - [Puzzle](https://puzzle-staging.secretnodes.org/enigma/chains/enigma-1)
 
 # Wallets
-=======
 
 - [Ledger Nano S and Ledger Nano X](/docs/ledger-nano-s.md)
 - [Math Wallet](https://mathwallet.org/web/enigma)
 
 # Implementation Discussions
 
-- [An Update on the Encryption Protocol](https://forum.enigma.co/t/an-update-on-the-encryption-protocol/1641)
-- [Hard Forks and Network Upgrades](https://forum.enigma.co/t/hard-forks-and-network-upgrades/1670)
-- [Don’t trust, verify (an untrusted host)](https://forum.scrt.network/t/dont-trust-verify-an-untrusted-host/1669)
-- [Secret Contracts on Secret Network](https://forum.enigma.co/t/secret-contracts-on-enigma-blockchain/1284)
-- [Network key management/agreement](https://forum.enigma.co/t/network-key-management-agreement/1324)
-- [Input/Output/State Encryption/Decryption protocol](https://forum.enigma.co/t/input-output-state-encryption-decryption-protocol/1325)
-- [Why the Cosmos move doesn’t mean we’re leaving Ethereum](https://forum.enigma.co/t/why-the-cosmos-move-doesnt-mean-were-leaving-ethereum/1301)
-- [(Dev discussion/Issue) WASM implementation](https://forum.enigma.co/t/dev-discussion-issue-wasm-implementation/1303)
-```
+- [An Update on the Encryption Protocol](https://forum.scrt.network/t/an-update-on-the-encryption-protocol/1641)
+- [Secret Contracts on Secret Network](https://forum.scrt.network/t/secret-contracts-on-enigma-blockchain/1284)
+- [Network key management/agreement](https://forum.scrt.network/t/network-key-management-agreement/1324)
+- [Input/Output/State Encryption/Decryption protocol](https://forum.scrt.network/t/input-output-state-encryption-decryption-protocol/1325)
+- [Why the Cosmos move doesn’t mean we’re leaving Ethereum](https://forum.scrt.network/t/why-the-cosmos-move-doesnt-mean-were-leaving-ethereum/1301)
+- [(Dev discussion/Issue) WASM implementation](https://forum.scrt.network/t/dev-discussion-issue-wasm-implementation/1303)
 
-# Blockchain REST Providers
+# Secret Network REST Providers
 
 - https://api.chainofsecrets.org
 
@@ -73,7 +69,8 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 - [How to upgrade to the Secret Network (rebranding)](/docs/upgrades/howto-secretnetwork-rebranding.md)
 
 # Archive
-- [For Blockchain developers](/docs/dev/for-secret-networks-devs.md)
+
+- [For Secret Network developers](/docs/dev/for-secret-network-devs.md)
 - [How to be a mainnet genesis validator](/docs/genesis/genesis-validator-mainnet.md)
 
 # License
