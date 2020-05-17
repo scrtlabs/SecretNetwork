@@ -6,7 +6,7 @@
 # 6. Start now:         sudo systemctl start secret-lcd
 
 [Unit]
-Description=Enigma LCD server
+Description=Secret LCD server
 After=network.target
 
 [Service]

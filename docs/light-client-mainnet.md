@@ -1,4 +1,4 @@
-# Install the `secretcli` Secret Blockchain light client
+# Install the `secretcli` Secret Network light client
 
 1. Get the latest release of `secretcli` for your OS: https://github.com/enigmampc/EnigmaBlockchain/releases/latest.
 
