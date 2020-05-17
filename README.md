@@ -7,77 +7,79 @@ Since most nodes use `--pruning syncable` configuration, the node prunes most of
 
 For better background, before reading this guide you might want to check out Cosmos' guide upgrading from `cosmoshub-2` to `cosmoshub-3`.
 
-1. Export `genesis.json` for the new fork:
+### 1. Export `genesis.json` for the new fork:
 
-   ```bash
-   sudo systemctl stop enigma-node
-   enigmad export --for-zero-height --height <agreed_upon_block_height> > new_genesis.json
-   ```
+```bash
+sudo systemctl stop enigma-node
+enigmad export --for-zero-height --height <agreed_upon_block_height> > new_genesis.json
+```
 
-2. Inside `new_genesis.json` Rename `chain_id` from `enigma-1` to the new agreed upon Chain ID.
+### 2. Inside `new_genesis.json` Rename `chain_id` from `enigma-1` to the new agreed upon Chain ID.
 
-3. Convert all enigma addresses to secret adresses.  
-   You can just paste `new_genesis.json` into https://bech32.enigma.co and paste the result back into `new_genesis.json`.
+### 3. Convert all enigma addresses to secret adresses.
 
-4. Compile the new `scrt` binaries with `make deb` (or distribute them precompiled).
+You can just paste `new_genesis.json` into https://bech32.enigma.co and paste the result back into `new_genesis.json`.
 
-5. Setup new binaries:
+### 4. Compile the new `scrt` binaries with `make deb` (or distribute them precompiled).
 
-   ```bash
-   sudo dpkg -i precompiled_scrt_package.deb # install scrtd & scrtcli and setup scrt-node.service
+### 5. Setup new binaries:
 
-   scrtcli config chain-id <new_chain_id>
-   scrtcli config output json
-   scrtcli config indent true
-   scrtcli config trust-node true
-   ```
+```bash
+sudo dpkg -i precompiled_scrt_package.deb # install scrtd & scrtcli and setup scrt-node.service
 
-6. Setup the new node/validaor:
+scrtcli config chain-id <new_chain_id>
+scrtcli config output json
+scrtcli config indent true
+scrtcli config trust-node true
+```
 
-   ```bash
-   # args for scrtd init doesn't matter because we're going to import the old config files
-   scrtd init <moniker> --chain-id <new_chain_id>
+### 6. Setup the new node/validaor:
 
-   # import old config files to the new node
-   cp ~/.enigmad/config/{app.toml,config.toml,addrbook.json} ~/.scrtd/config
+```bash
+# args for scrtd init doesn't matter because we're going to import the old config files
+scrtd init <moniker> --chain-id <new_chain_id>
 
-   # import node's & validator's private keys to the new node
-   cp ~/.enigmad/config/{priv_validator_key.json,node_key.json} ~/.scrtd/config
+# import old config files to the new node
+cp ~/.enigmad/config/{app.toml,config.toml,addrbook.json} ~/.scrtd/config
 
-   # set new_genesis.json from step 3 as the genesis.json of the new chain
-   cp new_genesis.json ~/.scrtd/config/genesis.json
+# import node's & validator's private keys to the new node
+cp ~/.enigmad/config/{priv_validator_key.json,node_key.json} ~/.scrtd/config
 
-   # at this point you should also validate sha256 checksums of ~/.scrtd/config/* against ~/.enigmad/config/*
-   ```
+# set new_genesis.json from step 3 as the genesis.json of the new chain
+cp new_genesis.json ~/.scrtd/config/genesis.json
 
-7. Start the new Blockchain! :tada:
+# at this point you should also validate sha256 checksums of ~/.scrtd/config/* against ~/.enigmad/config/*
+```
 
-   ```bash
-   sudo systemctl enable secret-node # enable on startup
-   sudo systemctl start secret-node
-   ```
+### 7. Start the new Blockchain! :tada:
 
-   When more than 2/3 of voting power gets online you'll start to see blocks streaming on:
+```bash
+sudo systemctl enable secret-node # enable on startup
+sudo systemctl start secret-node
+```
 
-   ```bash
-   journalctl -u secret-node -f
-   ```
+When more than 2/3 of voting power gets online you'll start to see blocks streaming on:
 
-   If something goes wrong the network can relaunch the `enigma-node`, therefore it's not advisable to delete `~/.enigmad`, `~/.enigmacli` until the new chain is live and stable.
+```bash
+journalctl -u secret-node -f
+```
 
-8. Import wallet keys from the old chain to the new chain:
+If something goes wrong the network can relaunch the `enigma-node`, therefore it's not advisable to delete `~/.enigmad`, `~/.enigmacli` until the new chain is live and stable.
 
-   (Ledger Nano S/X users should do anything, just use the new CLI with `--ledger --account <number>`)
+### 8. Import wallet keys from the old chain to the new chain:
 
-   ```bash
-   enigmacli keys export <key_name>
-   # this^ outputs stuff the stderr and also exports the key to stderr,
-   # so copy only the private key output to file `key.export`
+(Ledger Nano S/X users should do anything, just use the new CLI with `--ledger --account <number>`)
 
-   scrtcli import <key_name> key.export
-   ```
+```bash
+enigmacli keys export <key_name>
+# this^ outputs stuff the stderr and also exports the key to stderr,
+# so copy only the private key output to file `key.export`
 
-9. When the new chain is live and everything works well, you can delete the files of the old chain:
-   - `rm -rf ~/.enigmad`
-   - `rm -rf ~/.enigmacli`
-   - `sudo dpkg -r enigma-blockchain`
+scrtcli import <key_name> key.export
+```
+
+### 9. When the new chain is live and everything works well, you can delete the files of the old chain:
+
+- `rm -rf ~/.enigmad`
+- `rm -rf ~/.enigmacli`
+- `sudo dpkg -r enigma-blockchain`
