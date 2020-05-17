@@ -40,7 +40,7 @@ func main() {
 	config.Seal()
 
 	rootCmd := &cobra.Command{
-		Use:   "scrtcli",
+		Use:   "secretcli",
 		Short: "The Secret Blockchain Client",
 	}
 

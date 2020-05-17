@@ -1,6 +1,6 @@
 *.deb
-/scrtcli*
-/scrtd*
+/secretcli*
+/secretd*
 /enigmacli*
 /enigmad*
 SHA256SUMS*

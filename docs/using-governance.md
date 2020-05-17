@@ -31,7 +31,7 @@ Various modules outside of governance may implement their own proposal types and
 To submit a `Text` proposal:
 
 ```bash
-scrtcli tx gov submit-proposal \
+secretcli tx gov submit-proposal \
   --title <title> \
   --description <description> \
   --type Text \
@@ -42,7 +42,7 @@ scrtcli tx gov submit-proposal \
 You may also provide the proposal directly through the `--proposal` flag which points to a JSON file containing the proposal:
 
 ```bash
-scrtcli tx gov submit-proposal \
+secretcli tx gov submit-proposal \
   --type Text \
   --proposal <path/to/proposal.json> \
   --from <key_alias>
@@ -68,7 +68,7 @@ Where `proposal.json` is:
 To submit a parameter change proposal, you must provide a proposal file as its contents are less friendly to CLI input:
 
 ```bash
-scrtcli tx gov submit-proposal param-change <path/to/proposal.json> --from <key_alias>
+secretcli tx gov submit-proposal param-change <path/to/proposal.json> --from <key_alias>
 ```
 
 Where `proposal.json` is:
@@ -151,7 +151,7 @@ To read more go to https://github.com/gavinly/CosmosParametersWiki.
 To submit a community pool spend proposal, you also must provide a proposal file as its contents are less friendly to CLI input:
 
 ```bash
-scrtcli tx gov submit-proposal community-pool-spend <path/to/proposal.json> --from <key_alias>
+secretcli tx gov submit-proposal community-pool-spend <path/to/proposal.json> --from <key_alias>
 ```
 
 Where `proposal.json` is:
@@ -185,13 +185,13 @@ The `SoftwareUpgrade` is currently not supported as it's not implemented and cur
 Once created, you can now query information of the proposal:
 
 ```bash
-scrtcli query gov proposal <proposal_id>
+secretcli query gov proposal <proposal_id>
 ```
 
 Or query all available proposals:
 
 ```bash
-scrtcli query gov proposals
+secretcli query gov proposals
 ```
 
 You can also query proposals filtered by `voter` or `depositor` by using the corresponding flags.
@@ -199,7 +199,7 @@ You can also query proposals filtered by `voter` or `depositor` by using the cor
 To query for the proposer of a given governance proposal:
 
 ```bash
-scrtcli query gov proposer <proposal_id>
+secretcli query gov proposer <proposal_id>
 ```
 
 ## Increase Deposit
@@ -207,7 +207,7 @@ scrtcli query gov proposer <proposal_id>
 If the proposal you previously created didn't meet the `MinDeposit` requirement, you can still increase the total amount deposited to activate it. Once the minimum deposit is reached, the proposal enters voting period:
 
 ```bash
-scrtcli tx gov deposit <proposal_id> "10000000uscrt" --from <key_alias>
+secretcli tx gov deposit <proposal_id> "10000000uscrt" --from <key_alias>
 ```
 
 _NOTE_: Proposals that don't meet this requirement will be deleted after `MaxDepositPeriod` is reached.
@@ -224,13 +224,13 @@ Anyone can deposit for a proposal, even if you have 0 `SCRT` tokens staked/deleg
 Once a new proposal is created, you can query all the deposits submitted to it:
 
 ```bash
-scrtcli query gov deposits <proposal_id>
+secretcli query gov deposits <proposal_id>
 ```
 
 You can also query a deposit submitted by a specific address:
 
 ```bash
-scrtcli query gov deposit <proposal_id> <depositor_address>
+secretcli query gov deposit <proposal_id> <depositor_address>
 ```
 
 ## Vote on a Proposal
@@ -238,7 +238,7 @@ scrtcli query gov deposit <proposal_id> <depositor_address>
 After a proposal's deposit reaches the `MinDeposit` value, the voting period opens. Bonded `SCRT` holders can then cast vote on it:
 
 ```bash
-scrtcli tx gov vote <proposal_id> <Yes/No/NoWithVeto/Abstain> --from <key_alias>
+secretcli tx gov vote <proposal_id> <Yes/No/NoWithVeto/Abstain> --from <key_alias>
 ```
 
 ## Query Votes
@@ -246,13 +246,13 @@ scrtcli tx gov vote <proposal_id> <Yes/No/NoWithVeto/Abstain> --from <key_alias>
 Check the vote with the option you just submitted:
 
 ```bash
-scrtcli query gov vote <proposal_id> <voter_address>
+secretcli query gov vote <proposal_id> <voter_address>
 ```
 
 You can also get all the previous votes submitted to the proposal with:
 
 ```bash
-scrtcli query gov votes <proposal_id>
+secretcli query gov votes <proposal_id>
 ```
 
 ## Query proposal tally results
@@ -260,7 +260,7 @@ scrtcli query gov votes <proposal_id>
 To check the current tally of a given proposal you can use the `tally` command:
 
 ```bash
-scrtcli query gov tally <proposal_id>
+secretcli query gov tally <proposal_id>
 ```
 
 ## Query Governance Parameters
@@ -268,13 +268,13 @@ scrtcli query gov tally <proposal_id>
 To check the current governance parameters run:
 
 ```bash
-scrtcli query gov params
+secretcli query gov params
 ```
 
 To query subsets of the governance parameters run:
 
 ```bash
-scrtcli query gov param voting
-scrtcli query gov param tallying
-scrtcli query gov param deposit
+secretcli query gov param voting
+secretcli query gov param tallying
+secretcli query gov param deposit
 ```

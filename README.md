@@ -34,30 +34,30 @@ Or you can just paste `exported_state.json` into https://bech32.enigma.co and pa
 ### 5. Setup new binaries:
 
 ```bash
-sudo dpkg -i precompiled_scrt_package.deb # install scrtd & scrtcli and setup scrt-node.service
+sudo dpkg -i precompiled_scrt_package.deb # install secretd & secretcli and setup scrt-node.service
 
-scrtcli config chain-id <new_chain_id>
-scrtcli config output json
-scrtcli config indent true
-scrtcli config trust-node true
+secretcli config chain-id <new_chain_id>
+secretcli config output json
+secretcli config indent true
+secretcli config trust-node true
 ```
 
 ### 6. Setup the new node/validaor:
 
 ```bash
-# args for scrtd init doesn't matter because we're going to import the old config files
-scrtd init <moniker> --chain-id <new_chain_id>
+# args for secretd init doesn't matter because we're going to import the old config files
+secretd init <moniker> --chain-id <new_chain_id>
 
 # import old config files to the new node
-cp ~/.enigmad/config/{app.toml,config.toml,addrbook.json} ~/.scrtd/config
+cp ~/.enigmad/config/{app.toml,config.toml,addrbook.json} ~/.secretd/config
 
 # import node's & validator's private keys to the new node
-cp ~/.enigmad/config/{priv_validator_key.json,node_key.json} ~/.scrtd/config
+cp ~/.enigmad/config/{priv_validator_key.json,node_key.json} ~/.secretd/config
 
 # set new_genesis.json from step 3 as the genesis.json of the new chain
-cp new_genesis.json ~/.scrtd/config/genesis.json
+cp new_genesis.json ~/.secretd/config/genesis.json
 
-# at this point you should also validate sha256 checksums of ~/.scrtd/config/* against ~/.enigmad/config/*
+# at this point you should also validate sha256 checksums of ~/.secretd/config/* against ~/.enigmad/config/*
 ```
 
 ### 7. Start the new Blockchain! :tada:
@@ -84,7 +84,7 @@ enigmacli keys export <key_name>
 # this^ outputs stuff the stderr and also exports the key to stderr,
 # so copy only the private key output to file `key.export`
 
-scrtcli import <key_name> key.export
+secretcli import <key_name> key.export
 ```
 
 ### 9. When the new chain is live and everything works well, you can delete the files of the old chain:
