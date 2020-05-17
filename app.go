@@ -39,10 +39,10 @@ const appName = "enigma"
 
 var (
 	// DefaultCLIHome default home directories for the application CLI
-	DefaultCLIHome = os.ExpandEnv("$HOME/.scrtcli")
+	DefaultCLIHome = os.ExpandEnv("$HOME/.secretcli")
 
 	// DefaultNodeHome sets the folder where the applcation data and configuration will be stored
-	DefaultNodeHome = os.ExpandEnv("$HOME/.scrtd")
+	DefaultNodeHome = os.ExpandEnv("$HOME/.secretd")
 
 	// ModuleBasics The module BasicManager is in charge of setting up basic,
 	// non-dependant module elements, such as codec registration

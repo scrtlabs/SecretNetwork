@@ -1,5 +1,5 @@
 # 1. Put this file in /etc/systemd/system/enigma-lcd.service
-# 2. Make sure "/bin/scrtcli" is the right path for scrtcli
+# 2. Make sure "/bin/secretcli" is the right path for secretcli
 # 3. Make sure port 1337 is open 
 # 4. Make sure "enigma-1" is the right chain ID 
 # 5. Enable on startup: sudo systemctl enable enigma-lcd
@@ -11,7 +11,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/bin/scrtcli rest-server --chain-id enigma-1 --laddr tcp://0.0.0.0:1337
+ExecStart=/bin/secretcli rest-server --chain-id enigma-1 --laddr tcp://0.0.0.0:1337
 User=ubuntu
 Restart=always
 StartLimitInterval=0
