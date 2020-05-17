@@ -14,9 +14,15 @@ sudo systemctl stop enigma-node
 enigmad export --for-zero-height --height <agreed_upon_block_height> > exported_state.json
 ```
 
-### 2. Inside `exported_state.json` Rename `chain_id` from `enigma-1` to the new agreed upon Chain ID.
+### 2. Inside `exported_state.json` Rename `chain_id` from `enigma-1` to the new agreed upon Chain ID
 
-### 3. Convert all enigma addresses to secret adresses.
+For example:
+
+```bash
+perl -i -pe 's/"enigma-1"/"bla-bla"/' exported_state.json
+```
+
+### 3. Convert all `enigma` addresses to `secret` adresses
 
 Using the CLI:
 
