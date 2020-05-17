@@ -7,19 +7,19 @@
 ## Local installation
 
 ```bash
-git clone https://github.com/enigmampc/EnigmaBlockchain
-cd EnigmaBlockchain
+git clone https://github.com/enigmampc/SecretNetwork
+cd SecretNetwork
 go mod tidy
 make install # installs secretd and secretcli
 ```
 
 ```bash
-secretcli config chain-id enigma-testnet # now we won't need to type --chain-id enigma-testnet every time
+secretcli config chain-id secret-testnet # now we won't need to type --chain-id secret-testnet every time
 secretcli config output json
 secretcli config indent true
 secretcli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
 
-secretd init banana --chain-id enigma-testnet # banana==moniker==user-agent of this node
+secretd init banana --chain-id secret-testnet # banana==moniker==user-agent of this node
 perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json # change the default staking denom from stake to uscrt
 
 secretcli keys add a
@@ -46,8 +46,8 @@ secretd start --pruning nothing # starts a node
 ## Docker installation
 
 ```bash
-git clone https://github.com/enigmampc/EnigmaBlockchain
-cd EnigmaBlockchain
+git clone https://github.com/enigmampc/SecretNetwork
+cd SecretNetwork
 docker build -t secretdev -f Dockerfile_devnet .
 
 docker run -d -p 26657:26657 -p 26656:26656 -p 1317:1317 \

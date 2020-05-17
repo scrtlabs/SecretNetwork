@@ -3,7 +3,7 @@
 
 set -e
 
-cat <<EOF > /etc/systemd/system/enigma-node.service
+cat <<EOF > /etc/systemd/system/secret-node.service
 [Unit]
 Description=Secret Node Service
 After=network.target

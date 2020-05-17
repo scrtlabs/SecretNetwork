@@ -3,6 +3,6 @@
 
 set -e
 
-systemctl stop enigma-node    || true
-systemctl disable enigma-node || true
-rm -f /etc/systemd/system/enigma-node.service
+systemctl stop secret-node    || true
+systemctl disable secret-node || true
+rm -f /etc/systemd/system/secret-node.service

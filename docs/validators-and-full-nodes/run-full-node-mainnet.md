@@ -53,6 +53,7 @@ wget -O ~/.secretd/config/genesis.json "https://raw.githubusercontent.com/enigma
 ### 5. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
 
 ```
+<<<<<<< HEAD
 echo "86cd9864f5b8e7f540c5edd3954372df94bd23de62e06d5c33a84bd5f3d29114 $HOME/.secretd/config/genesis.json" | sha256sum --check
 ```
 

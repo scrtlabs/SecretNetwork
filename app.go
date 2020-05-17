@@ -35,7 +35,7 @@ import (
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 )
 
-const appName = "enigma"
+const appName = "secret"
 
 var (
 	// DefaultCLIHome default home directories for the application CLI
