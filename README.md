@@ -19,6 +19,7 @@ enigmad export --for-zero-height --height <agreed_upon_block_height> > new_genes
 ### 3. Convert all enigma addresses to secret adresses.
 
 You can just paste `new_genesis.json` into https://bech32.enigma.co and paste the result back into `new_genesis.json`.
+(TODO maybe use [this](https://github.com/enigmampc/bech32.enigma.co/blob/8c7cec466923295fcf2d10cacfc2dafd3932e255/src/App.js#L82-L116) to make a CLI)
 
 ### 4. Compile the new `scrt` binaries with `make deb` (or distribute them precompiled).
 
