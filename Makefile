@@ -4,7 +4,7 @@ COMMIT := $(shell git log -1 --format='%H')
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
 
-build_tags = 
+build_tags = netgo
 ifeq ($(LEDGER_ENABLED),true)
   ifeq ($(OS),Windows_NT)
     GCCEXE = $(shell where gcc.exe 2> NUL)
@@ -51,6 +51,7 @@ ifeq ($(WITH_CLEVELDB),yes)
 endif
 ldflags += $(LDFLAGS)
 ldflags := $(strip $(ldflags))
+ldflags += -w -s
 
 BUILD_FLAGS := -tags "$(build_tags)" -ldflags '$(ldflags)'
 
