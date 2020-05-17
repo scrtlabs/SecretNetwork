@@ -73,7 +73,7 @@ sudo systemctl enable secret-node # enable on startup
 sudo systemctl start secret-node
 ```
 
-When more than 2/3 of voting power gets online you'll start to see blocks streaming on:
+Once more than 2/3 of voting power comes online you'll start seeing blocks streaming on:
 
 ```bash
 journalctl -u secret-node -f
