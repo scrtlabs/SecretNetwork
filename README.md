@@ -1,60 +1,83 @@
-![Enigma](/logo.png)
+# HOWTO Rebranding
 
-<p align="center">
-Enigma secures the decentralized web
-</p>
+The [rebranding proposal](https://explorer.cashmaney.com/proposals/7) passed on-chain, and this mandates a hard fork.
 
-# What is Enigma?
+The network needs to decide on a block number to fork from.
+Since most nodes use `--pruning syncable` configuration, the node prunes most of the blocks, so state should be exported from a height that is a multiple of 100 (e.g. 100, 500, 131400, ...).
 
-Want to build a better internet? Solve for privacy.
+For better background, before reading this guide you might want to check out Cosmos' guide upgrading from `cosmoshub-2` to `cosmoshub-3`.
 
-Enigma is a decentralized, open-source protocol that lets anyone perform computations on encrypted data, bringing privacy to smart contracts and public blockchains. Our mission: improve the adoption and usability of decentralized technologies, for the benefit of all.
+1. Export `genesis.json` for the new fork:
 
-Mainnet is out! Get the latest release at https://github.com/enigmampc/EnigmaBlockchain/releases/latest.
+   ```bash
+   sudo systemctl stop enigma-node
+   enigmad export --for-zero-height --height <agreed_upon_block_height> > new_genesis.json
+   ```
 
-# Community
+2. Inside `new_genesis.json` Rename `chain_id` from `enigma-1` to the new agreed upon Chain ID.
 
-- Homepage: https://www.enigma.co
-- Forum: https://forum.enigma.co
-- Discord: https://www.enigma.co/discord
-- Blog: https://blog.enigma.co
-- Twitter: https://twitter.com/EnigmaMPC
-- Telegram Channel: https://t.me/EnigmaProject
-- Community Secret Nodes Telegram : https://t.me/secretnodes
-- Community Enigma Governance Telegram : https://t.me/secretdao
+3. Convert all enigma addresses to secret adresses.  
+   You can just paste `new_genesis.json` into https://bech32.enigma.co and paste the result back into `new_genesis.json`.
 
-# Block Explorers
+4. Compile the new `scrt` binaries with `make deb` (or distribute them precompiled).
 
-- https://explorer.cashmaney.com
-- https://secretscan.io
+5. Setup new binaries:
 
-# Implementation Discussions
+   ```bash
+   sudo dpkg -i precompiled_scrt_package.deb # install scrtd & scrtcli and setup scrt-node.service
 
-- [Secret Contracts on The Secret Blockchain](https://forum.enigma.co/t/secret-contracts-on-enigma-blockchain/1284)
-- [Network key management/agreement](https://forum.enigma.co/t/network-key-management-agreement/1324)
-- [Input/Output/State Encryption/Decryption protocol](https://forum.enigma.co/t/input-output-state-encryption-decryption-protocol/1325)
-- [Why the Cosmos move doesn’t mean we’re leaving Ethereum](https://forum.enigma.co/t/why-the-cosmos-move-doesnt-mean-were-leaving-ethereum/1301)
-- [(Dev discussion/Issue) WASM implementation](https://forum.enigma.co/t/dev-discussion-issue-wasm-implementation/1303)
+   scrtcli config chain-id <new_chain_id>
+   scrtcli config output json
+   scrtcli config indent true
+   scrtcli config trust-node true
+   ```
 
-# Blockchain REST Providers
+6. Setup the new node/validaor:
 
-- https://api.chainofsecrets.org/
+   ```bash
+   # args for scrtd init doesn't matter because we're going to import the old config files
+   scrtd init <moniker> --chain-id <new_chain_id>
 
-# Docs
+   # import old config files to the new node
+   cp ~/.enigmad/config/{app.toml,config.toml,addrbook.json} ~/.scrtd/config
 
-- [Install the `scrtcli` light client (Windows, Mac & Linux)](/docs/light-client-mainnet.md)
-- [How to use the `scrtcli` light client](/docs/scrtcli.md)
-- [How to participate in on-chain governance](docs/using-governance.md)
-- [How to run a full node on mainnet](/docs/validators-and-full-nodes/run-full-node-mainnet.md)
-- [How to run an LCD server](/docs/lcd-server-example.service)
-- [Ledger Nano S (and X) support](/docs/ledger-nano-s.md)
-- [How to join as a mainnet validator](/docs/validators-and-full-nodes/join-validator-mainnet.md)
-- [How to backup a validator](/docs/validators-and-full-nodes/backup-a-validator.md)
-- [How to migrate a validator to a new machine](/docs/validators-and-full-nodes/migrate-a-validator.md)
-- [How to verify software releases](/docs/verify-releases.md)
-- [How to setup SGX on your machine](/docs/dev/setup-sgx.md)
+   # import node's & validator's private keys to the new node
+   cp ~/.enigmad/config/{priv_validator_key.json,node_key.json} ~/.scrtd/config
 
-# Archive
+   # set new_genesis.json from step 3 as the genesis.json of the new chain
+   cp new_genesis.json ~/.scrtd/config/genesis.json
 
-- [For Enigma developers](/docs/dev/for-enigma-blockchain-devs.md)
-- [How to join Enigma as a mainnet genesis validator](/docs/genesis/genesis-validator-mainnet.md)
+   # at this point you should also validate sha256 checksums of ~/.scrtd/config/* against ~/.enigmad/config/*
+   ```
+
+7. Start the new Blockchain! :tada:
+
+   ```bash
+   sudo systemctl enable secret-node # enable on startup
+   sudo systemctl start secret-node
+   ```
+
+   When more than 2/3 of voting power gets online you'll start to see blocks streaming on:
+
+   ```bash
+   journalctl -u secret-node -f
+   ```
+
+   If something goes wrong the network can relaunch the `enigma-node`, therefore it's not advisable to delete `~/.enigmad`, `~/.enigmacli` until the new chain is live and stable.
+
+8. Import wallet keys from the old chain to the new chain:
+
+   (Ledger Nano S/X users should do anything, just use the new CLI with `--ledger --account <number>`)
+
+   ```bash
+   enigmacli keys export <key_name>
+   # this^ outputs stuff the stderr and also exports the key to stderr,
+   # so copy only the private key output to file `key.export`
+
+   scrtcli import <key_name> key.export
+   ```
+
+9. When the new chain is live and everything works well, you can delete the files of the old chain:
+   - `rm -rf ~/.enigmad`
+   - `rm -rf ~/.enigmacli`
+   - `sudo dpkg -r enigma-blockchain`
