@@ -30,7 +30,7 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/EnigmaBlo
 
 # Implementation Discussions
 
-- [Secret Contracts on Enigma Blockchain](https://forum.enigma.co/t/secret-contracts-on-enigma-blockchain/1284)
+- [Secret Contracts on The Secret Blockchain](https://forum.enigma.co/t/secret-contracts-on-enigma-blockchain/1284)
 - [Network key management/agreement](https://forum.enigma.co/t/network-key-management-agreement/1324)
 - [Input/Output/State Encryption/Decryption protocol](https://forum.enigma.co/t/input-output-state-encryption-decryption-protocol/1325)
 - [Why the Cosmos move doesn’t mean we’re leaving Ethereum](https://forum.enigma.co/t/why-the-cosmos-move-doesnt-mean-were-leaving-ethereum/1301)
@@ -42,8 +42,8 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/EnigmaBlo
 
 # Docs
 
-- [Install the `enigmacli` light client (Windows, Mac & Linux)](/docs/light-client-mainnet.md)
-- [How to use the `enigmacli` light client](/docs/enigmacli.md)
+- [Install the `scrtcli` light client (Windows, Mac & Linux)](/docs/light-client-mainnet.md)
+- [How to use the `scrtcli` light client](/docs/scrtcli.md)
 - [How to participate in on-chain governance](docs/using-governance.md)
 - [How to run a full node on mainnet](/docs/validators-and-full-nodes/run-full-node-mainnet.md)
 - [How to run an LCD server](/docs/lcd-server-example.service)

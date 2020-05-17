@@ -11,7 +11,7 @@ You can also back it up with:
 On the validator node on the old machine:
 
 ```bash
-enigmacli keys export mykey
+scrtcli keys export mykey
 ```
 
 This prints the private key to `stderr`, you can then paste in into the file `mykey.backup`.
@@ -23,7 +23,7 @@ This can be done with the mnemonics:
 On the full node on the new machine:
 
 ```bash
-enigmacli keys add mykey --recover
+scrtcli keys add mykey --recover
 ```
 
 Or with the backup file `mykey.backup` from the previous step:
@@ -31,7 +31,7 @@ Or with the backup file `mykey.backup` from the previous step:
 On the full node on the new machine:
 
 ```bash
-enigmacli keys import mykey mykey.backup
+scrtcli keys import mykey mykey.backup
 ```
 
 ### 4. Wait for the new full node on the new machine to finish catching-up.
@@ -41,7 +41,7 @@ To check on the new full node if it finished catching-up:
 On the full node on the new machine:
 
 ```bash
-enigmacli status | jq .sync_info
+scrtcli status | jq .sync_info
 ```
 
 (`catching_up` should equal `false`)
@@ -66,14 +66,14 @@ sudo systemctl stop enigma-node
 
 ### 6. Move the validator's private key from the old machine to the new machine.
 
-On the old machine the file is `~/.enigmad/config/priv_validator_key.json`.
+On the old machine the file is `~/.scrtd/config/priv_validator_key.json`.
 
 You can copy it manually or for example you can copy the file to the new machine using ssh:
 
 On the validator node on the old machine:
 
 ```bash
-scp ~/.enigmad/config/priv_validator_key.json ubuntu@new_machine_ip:~/.enigmad/config/priv_validator_key.json
+scp ~/.scrtd/config/priv_validator_key.json ubuntu@new_machine_ip:~/.scrtd/config/priv_validator_key.json
 ```
 
 ### 7. On the new server start the new full node which is now your validator node.

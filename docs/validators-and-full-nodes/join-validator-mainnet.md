@@ -1,22 +1,22 @@
-# How to join the Enigma Blockhain as a mainnet validator
+# How to join the Secret Blockhain as a mainnet validator
 
 ### 1. [Run a new full node](/docs/validators-and-full-nodes/run-full-node-mainnet.md) on a new machine.
 
 ### 2. Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):
 
 ```bash
-enigmacli keys add <key-alias>
+scrtcli keys add <key-alias>
 ```
 
 **:warning:Note:warning:: Backup the mnemonics!**
 **:warning:Note:warning:: Please make sure you also [backup your validator](/docs/validators-and-full-nodes/backup-a-validator.md)**
 
-**Note**: If you already have a key you can import it with the bip39 mnemonic with `enigmacli keys add <key-alias> --recover` or with `enigmacli keys export` (exports to `stderr`!!) & `enigmacli keys import`.
+**Note**: If you already have a key you can import it with the bip39 mnemonic with `scrtcli keys add <key-alias> --recover` or with `scrtcli keys export` (exports to `stderr`!!) & `scrtcli keys import`.
 
 ### 3. Output your node address:
 
 ```bash
-enigmacli keys show <key-alias> -a
+scrtcli keys show <key-alias> -a
 ```
 
 ### 4. Transfer tokens to the address displayed above.
@@ -24,7 +24,7 @@ enigmacli keys show <key-alias> -a
 ### 5. Check that you have the requested tokens:
 
 ```bash
-enigmacli q account $(enigmacli keys show -a <key_alias>)
+scrtcli q account $(scrtcli keys show -a <key_alias>)
 ```
 
 If you get the following message, it means that you have no tokens yet:
@@ -38,9 +38,9 @@ ERROR: unknown address: account enigmaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx do
 (remember 1 SCRT = 1,000,000 uSCRT, and so the command below stakes 100k SCRT).
 
 ```bash
-enigmacli tx staking create-validator \
+scrtcli tx staking create-validator \
   --amount=100000000000uscrt \
-  --pubkey=$(enigmad tendermint show-validator) \
+  --pubkey=$(scrtd tendermint show-validator) \
   --commission-rate="0.10" \
   --commission-max-rate="0.20" \
   --commission-max-change-rate="0.01" \
@@ -54,10 +54,10 @@ enigmacli tx staking create-validator \
 ### 7. Check that you have been added as a validator:
 
 ```bash
-enigmacli q staking validators | jq '.[] | select(.description.moniker == "<MONIKER>")'
+scrtcli q staking validators | jq '.[] | select(.description.moniker == "<MONIKER>")'
 ```
 
-Or run: `enigmacli q staking validators | grep moniker`. You should see your moniker listed.
+Or run: `scrtcli q staking validators | grep moniker`. You should see your moniker listed.
 
 ## Dangers in running a validator
 
@@ -74,7 +74,7 @@ Conditions for downtime:
 Penalties for downtime:
 
 - Slashing of 1% of your and your delegators' staking amount.
-- Jailing for 10 minutes of your validator node. You don't earn block rewards for this period and at the end must manually unjail your node with `enigmacli tx slashing unjail --from <key-alias>`.
+- Jailing for 10 minutes of your validator node. You don't earn block rewards for this period and at the end must manually unjail your node with `scrtcli tx slashing unjail --from <key-alias>`.
 
 ### Slashing for double-signing
 
@@ -98,37 +98,37 @@ See [Sentry Nodes](/docs/validators-and-full-nodes/sentry-nodes.md).
 In order to stake more tokens beyond those in the initial transaction, run:
 
 ```bash
-enigmacli tx staking delegate $(enigmacli keys show <key-alias> --bech=val -a) <amount>uscrt --from <key-alias>
+scrtcli tx staking delegate $(scrtcli keys show <key-alias> --bech=val -a) <amount>uscrt --from <key-alias>
 ```
 
 ## Renaming your moniker
 
 ```bash
-enigmacli tx staking edit-validator --moniker <new-moniker> --from <key-alias>
+scrtcli tx staking edit-validator --moniker <new-moniker> --from <key-alias>
 ```
 
 ## Seeing your rewards from being a validator
 
 ```bash
-enigmacli q distribution rewards $(enigmacli keys show -a <key-alias>)
+scrtcli q distribution rewards $(scrtcli keys show -a <key-alias>)
 ```
 
 ## Seeing your commissions from your delegators
 
 ```bash
-enigmacli q distribution commission $(enigmacli keys show -a <key-alias> --bech=val)
+scrtcli q distribution commission $(scrtcli keys show -a <key-alias> --bech=val)
 ```
 
 ## Withdrawing rewards
 
 ```bash
-enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a <key-alias>) --from <key-alias>
+scrtcli tx distribution withdraw-rewards $(scrtcli keys show --bech=val -a <key-alias>) --from <key-alias>
 ```
 
 ## Withdrawing rewards+commissions
 
 ```bash
-enigmacli tx distribution withdraw-rewards $(enigmacli keys show --bech=val -a <key-alias>) --from <key-alias> --commission
+scrtcli tx distribution withdraw-rewards $(scrtcli keys show --bech=val -a <key-alias>) --from <key-alias> --commission
 ```
 
 ## Removing your validator

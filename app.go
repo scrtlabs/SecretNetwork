@@ -35,14 +35,14 @@ import (
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 )
 
-const appName = "enigma"
+const appName = "secret"
 
 var (
 	// DefaultCLIHome default home directories for the application CLI
-	DefaultCLIHome = os.ExpandEnv("$HOME/.enigmacli")
+	DefaultCLIHome = os.ExpandEnv("$HOME/.scrtcli")
 
 	// DefaultNodeHome sets the folder where the applcation data and configuration will be stored
-	DefaultNodeHome = os.ExpandEnv("$HOME/.enigmad")
+	DefaultNodeHome = os.ExpandEnv("$HOME/.scrtd")
 
 	// ModuleBasics The module BasicManager is in charge of setting up basic,
 	// non-dependant module elements, such as codec registration
@@ -90,10 +90,10 @@ func MakeCodec() *codec.Codec {
 }
 
 // Verify app interface at compile time
-var _ simapp.App = (*EnigmaChainApp)(nil)
+var _ simapp.App = (*SecretChainApp)(nil)
 
-// EnigmaChainApp extended ABCI application
-type EnigmaChainApp struct {
+// SecretChainApp extended ABCI application
+type SecretChainApp struct {
 	*bam.BaseApp
 	cdc *codec.Codec
 
@@ -131,8 +131,8 @@ type EnigmaChainApp struct {
 // 	Wasm compute.WasmConfig `mapstructure:"wasm"`
 // }
 
-// NewEnigmaChainApp is a constructor function for enigmaChainApp
-func NewEnigmaChainApp(
+// NewSecretChainApp is a constructor function for SecretChainApp
+func NewSecretChainApp(
 	logger log.Logger,
 	db dbm.DB,
 	traceStore io.Writer,
@@ -140,7 +140,7 @@ func NewEnigmaChainApp(
 	invCheckPeriod uint,
 	skipUpgradeHeights map[int64]bool,
 	baseAppOptions ...func(*bam.BaseApp),
-) *EnigmaChainApp {
+) *SecretChainApp {
 
 	// First define the top level codec that will be shared by the different modules
 	cdc := MakeCodec()
@@ -167,7 +167,7 @@ func NewEnigmaChainApp(
 	tKeys := sdk.NewTransientStoreKeys(staking.TStoreKey, params.TStoreKey)
 
 	// Initialize our application with the store keys it requires
-	app := &EnigmaChainApp{
+	app := &SecretChainApp{
 		BaseApp:        bApp,
 		cdc:            cdc,
 		invCheckPeriod: invCheckPeriod,
@@ -380,15 +380,15 @@ func NewEnigmaChainApp(
 }
 
 // Name returns the name of the App
-func (app *EnigmaChainApp) Name() string { return app.BaseApp.Name() }
+func (app *SecretChainApp) Name() string { return app.BaseApp.Name() }
 
 // BeginBlocker application updates every begin block
-func (app *EnigmaChainApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
+func (app *SecretChainApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
 	return app.mm.BeginBlock(ctx, req)
 }
 
 // EndBlocker application updates every end block
-func (app *EnigmaChainApp) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
+func (app *SecretChainApp) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
 	return app.mm.EndBlock(ctx, req)
 }
 
@@ -398,7 +398,7 @@ func NewDefaultGenesisState() simapp.GenesisState {
 }
 
 // InitChainer application update at chain initialization
-func (app *EnigmaChainApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
+func (app *SecretChainApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
 	var genesisState simapp.GenesisState
 	app.cdc.MustUnmarshalJSON(req.AppStateBytes, &genesisState)
 
@@ -406,12 +406,12 @@ func (app *EnigmaChainApp) InitChainer(ctx sdk.Context, req abci.RequestInitChai
 }
 
 // LoadHeight loads a particular height
-func (app *EnigmaChainApp) LoadHeight(height int64) error {
+func (app *SecretChainApp) LoadHeight(height int64) error {
 	return app.LoadVersion(height, app.keys[bam.MainStoreKey])
 }
 
 // ModuleAccountAddrs returns all the app's module account addresses.
-func (app *EnigmaChainApp) ModuleAccountAddrs() map[string]bool {
+func (app *SecretChainApp) ModuleAccountAddrs() map[string]bool {
 	modAccAddrs := make(map[string]bool)
 	for acc := range maccPerms {
 		modAccAddrs[supply.NewModuleAddress(acc).String()] = true
@@ -421,12 +421,12 @@ func (app *EnigmaChainApp) ModuleAccountAddrs() map[string]bool {
 }
 
 // Codec returns the application's sealed codec.
-func (app *EnigmaChainApp) Codec() *codec.Codec {
+func (app *SecretChainApp) Codec() *codec.Codec {
 	return app.cdc
 }
 
 // SimulationManager implements the SimulationApp interface
-func (app *EnigmaChainApp) SimulationManager() *module.SimulationManager {
+func (app *SecretChainApp) SimulationManager() *module.SimulationManager {
 	return app.sm
 }
 
@@ -439,7 +439,7 @@ func GetMaccPerms() map[string][]string {
 	return modAccPerms
 }
 
-func (app *EnigmaChainApp) ExportAppStateAndValidators(forZeroHeight bool, jailWhiteList []string,
+func (app *SecretChainApp) ExportAppStateAndValidators(forZeroHeight bool, jailWhiteList []string,
 ) (appState json.RawMessage, validators []tmtypes.GenesisValidator, err error) {
 	// as if they could withdraw from the start of the next block
 	ctx := app.NewContext(true, abci.Header{Height: app.LastBlockHeight()})
