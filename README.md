@@ -68,12 +68,8 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 - [How to verify software releases](/docs/verify-releases.md)
 - [How to setup SGX on your machine](/docs/dev/setup-sgx.md)
 
-<<<<<<< HEAD
 # Upgrades
 - [How to upgrade to the Secret Network (rebranding)](/docs/upgrades/howto-secretnetwork-rebranding.md)
-=======
-(Ledger Nano S/X users shouldn't do anything, just use the new CLI with `--ledger --account <number>` as usual)
->>>>>>> readme add cli option for converting bech32 prefix
 
 # Archive
 - [For Blockchain developers](/docs/dev/for-secret-networks-devs.md)
