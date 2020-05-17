@@ -34,6 +34,7 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 - [Puzzle](https://puzzle-staging.secretnodes.org/enigma/chains/enigma-1)
 
 # Wallets
+=======
 
 - [Ledger Nano S and Ledger Nano X](/docs/ledger-nano-s.md)
 - [Math Wallet](https://mathwallet.org/web/enigma)
