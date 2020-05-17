@@ -105,7 +105,7 @@ secretcli tx distribution withdraw-rewards $(secretcli keys show --bech=val -a a
 First, init your environment:
 
 ```bash
-secretd init [moniker] --chain-id enigma-testnet
+secretd init [moniker] --chain-id secret-testnet
 ```
 
 Now you need a valid running node to send you their `genesis.json` file (usually at `~/.secretd/config/genesis.json`).  
