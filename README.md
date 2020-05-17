@@ -29,12 +29,12 @@ cat exported_state.json | ./bech32-convert > new_genesis.json
 
 Or you can just paste `exported_state.json` into https://bech32.enigma.co and paste the result back into `new_genesis.json`.
 
-### 4. Compile the new `scrt` binaries with `make deb` (or distribute them precompiled).
+### 4. Compile the new `secret` binaries with `make deb` (or distribute them precompiled).
 
 ### 5. Setup new binaries:
 
 ```bash
-sudo dpkg -i precompiled_scrt_package.deb # install secretd & secretcli and setup scrt-node.service
+sudo dpkg -i precompiled_secret_package.deb # install secretd & secretcli and setup secret-node.service
 
 secretcli config chain-id <new_chain_id>
 secretcli config output json
