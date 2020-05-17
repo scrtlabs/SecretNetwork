@@ -10,7 +10,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=$(which secretd) start
+ExecStart=$(which scrtd) start
 User=$(logname)
 Restart=always
 StartLimitInterval=0
