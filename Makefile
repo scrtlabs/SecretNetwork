@@ -52,6 +52,7 @@ endif
 ldflags += $(LDFLAGS)
 ldflags += -w -s
 ldflags := $(strip $(ldflags))
+ldflags += -w -s
 
 BUILD_FLAGS := -tags "$(build_tags)" -ldflags '$(ldflags)'
 
