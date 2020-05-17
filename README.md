@@ -5,7 +5,7 @@ The [rebranding proposal](https://explorer.cashmaney.com/proposals/7) passed on-
 The network needs to decide on a block number to fork from.
 Since most nodes use `--pruning syncable` configuration, the node prunes most of the blocks, so state should be exported from a height that is a multiple of 100 (e.g. 100, 500, 131400, ...).
 
-For better background, before reading this guide you might want to check out Cosmos' guide upgrading from `cosmoshub-2` to `cosmoshub-3`.
+For better background, before reading this guide you might want to check out Cosmos' guide upgrading from `cosmoshub-2` to `cosmoshub-3`: https://github.com/cosmos/gaia/blob/master/docs/migration/cosmoshub-2.md
 
 ### 1. Export `genesis.json` for the new fork:
 
