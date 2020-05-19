@@ -53,11 +53,10 @@ hkfd_salt = uint256(
 - From `consensus_seed_exchange_privkey` calculate `consensus_seed_exchange_pubkey`.
 
 ```js
-// 256 bits
 consensus_seed_exchange_privkey = hkdf({
   salt: hkfd_salt,
   data: uint256(consensus_seed) + uint256(1),
-});
+}); // 256 bits
 consensus_seed_exchange_pubkey = calculate_secp256k1_pubkey(
   consensus_seed_exchange_privkey
 );
@@ -69,11 +68,10 @@ consensus_seed_exchange_pubkey = calculate_secp256k1_pubkey(
 - From `consensus_io_exchange_privkey` calculate `consensus_io_exchange_pubkey`.
 
 ```js
-// 256 bits
 consensus_io_exchange_privkey = hkdf({
   salt: hkfd_salt,
   data: uint256(consensus_seed) + uint256(2),
-});
+}); // 256 bits
 consensus_io_exchange_pubkey = calculate_secp256k1_pubkey(
   consensus_io_exchange_privkey
 );
@@ -84,17 +82,15 @@ consensus_io_exchange_pubkey = calculate_secp256k1_pubkey(
 - `consensus_base_state_ikm`: An input keying material (IKM) for HKDF to derive encryption keys for contracts' state.
 
 ```js
-// 256 bits
 consensus_base_state_ikm = hkdf({
   salt: hkfd_salt,
   data: uint256(consensus_seed) + uint256(3),
-});
+}); // 256 bits
 ```
 
 ### Bootstrap process epilogue
 
-- Seal to disk (`"$HOME/.enigmad/sgx-secrets/consensus_seed.sealed"`):
-  - `consensus_seed`
+- Seal `consensus_seed` to disk at `"$HOME/.enigmad/sgx-secrets/consensus_seed.sealed"`.
 - Publish to `genesis.json`:
   - `consensus_seed_exchange_pubkey`
   - `consensus_io_exchange_pubkey`
