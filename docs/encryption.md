@@ -17,6 +17,7 @@
 ### consensus_seed
 
 ```js
+// 256 bits
 consensus_seed = true_random({ bytes: 32 });
 seal({
   key: "MRENCLAVE",
@@ -28,6 +29,7 @@ seal({
 ### consensus_seed_exchange_privkey
 
 ```js
+// 256 bits
 consensus_seed_exchange_privkey = hkdf({
   salt: "0x000000000000000000024bead8df69990852c202db0e0097c1a12ea637d7e96d",
   data: consensus_seed.append(1),
@@ -40,6 +42,7 @@ consensus_seed_exchange_pubkey = calculate_secp256k1_pubkey(
 ### consensus_io_exchange_privkey
 
 ```js
+// 256 bits
 consensus_io_exchange_privkey = hkdf({
   salt: "0x000000000000000000024bead8df69990852c202db0e0097c1a12ea637d7e96d",
   data: consensus_seed.append(2),
@@ -52,6 +55,7 @@ consensus_io_exchange_pubkey = calculate_secp256k1_pubkey(
 ### consensus_base_state_ikm
 
 ```js
+// 256 bits
 consensus_base_state_ikm = hkdf({
   salt: "0x000000000000000000024bead8df69990852c202db0e0097c1a12ea637d7e96d",
   data: consensus_seed.append(3),
