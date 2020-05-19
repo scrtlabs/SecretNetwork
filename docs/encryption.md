@@ -14,6 +14,7 @@
   - [New Node Registration](#new-node-registration)
   - [Contracts State Encryption](#contracts-state-encryption)
   - [Transaction Encryption](#transaction-encryption)
+  - [Theoretical Attacks](#theoretical-attacks)
 
 ## Bootstrap Process
 
@@ -111,3 +112,5 @@ A new node wants to join the network as a full node.
 ## Contracts State Encryption
 
 ## Transaction Encryption
+
+## Theoretical Attacks
