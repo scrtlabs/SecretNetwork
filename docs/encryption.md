@@ -3,32 +3,32 @@
 :warning: This is a very advanced WIP.
 
 - [Implementing the Secret in Contracts](#implementing-the-secret-in-contracts)
-  - [Bootstrap Process](#bootstrap-process)
-    - [`consensus_seed`](#consensusseed)
-    - [Key Derivation](#key-derivation)
-      - [`consensus_seed_exchange_privkey`](#consensusseedexchangeprivkey)
-      - [`consensus_io_exchange_privkey`](#consensusioexchangeprivkey)
-      - [`consensus_base_state_ikm`](#consensusbasestateikm)
-    - [Bootstrap Process Epilogue](#bootstrap-process-epilogue)
-  - [Node Startup](#node-startup)
-  - [New Node Registration](#new-node-registration)
-    - [On the new node](#on-the-new-node)
-    - [On the consensus layer, inside the Enclave of every full node](#on-the-consensus-layer-inside-the-enclave-of-every-full-node)
-      - [`seed_exchange_key`](#seedexchangekey)
-      - [Sharing `consensus_seed` with the new node](#sharing-consensusseed-with-the-new-node)
-    - [Back on the new node, inside its Enclave](#back-on-the-new-node-inside-its-enclave)
-      - [`seed_exchange_key`](#seedexchangekey-1)
-      - [Decrypting `encrypted_consensus_seed`](#decrypting-encryptedconsensusseed)
-    - [New Node Registration Epilogue](#new-node-registration-epilogue)
-  - [Contracts State Encryption](#contracts-state-encryption)
-  - [Transaction Encryption](#transaction-encryption)
-  - [Theoretical Attacks](#theoretical-attacks)
+- [Bootstrap Process](#bootstrap-process)
+  - [`consensus_seed`](#consensusseed)
+  - [Key Derivation](#key-derivation)
+    - [`consensus_seed_exchange_privkey`](#consensusseedexchangeprivkey)
+    - [`consensus_io_exchange_privkey`](#consensusioexchangeprivkey)
+    - [`consensus_base_state_ikm`](#consensusbasestateikm)
+  - [Bootstrap Process Epilogue](#bootstrap-process-epilogue)
+- [Node Startup](#node-startup)
+- [New Node Registration](#new-node-registration)
+  - [On the new node](#on-the-new-node)
+  - [On the consensus layer, inside the Enclave of every full node](#on-the-consensus-layer-inside-the-enclave-of-every-full-node)
+    - [`seed_exchange_key`](#seedexchangekey)
+    - [Sharing `consensus_seed` with the new node](#sharing-consensusseed-with-the-new-node)
+  - [Back on the new node, inside its Enclave](#back-on-the-new-node-inside-its-enclave)
+    - [`seed_exchange_key`](#seedexchangekey-1)
+    - [Decrypting `encrypted_consensus_seed`](#decrypting-encryptedconsensusseed)
+  - [New Node Registration Epilogue](#new-node-registration-epilogue)
+- [Contracts State Encryption](#contracts-state-encryption)
+- [Transaction Encryption](#transaction-encryption)
+- [Theoretical Attacks](#theoretical-attacks)
 
-## Bootstrap Process
+# Bootstrap Process
 
 Before the genesis of a new chain, there most be a bootstrap node to generate network-wide secrets to fuel all the privacy features of the chain.
 
-### `consensus_seed`
+## `consensus_seed`
 
 - Create a remote attestation proof that the nodw's Enclave is genuine.
 - Generate inside the Enclave a true random 256 bits seed: `consensus_seed`.
@@ -45,7 +45,7 @@ seal({
 });
 ```
 
-### Key Derivation
+## Key Derivation
 
 TODO reasoning
 
@@ -60,7 +60,7 @@ hkfd_salt = uint256(
 
 - Using HKDF, `hkfd_salt` and `consensus_seed`, derive the following keys:
 
-#### `consensus_seed_exchange_privkey`
+### `consensus_seed_exchange_privkey`
 
 - `consensus_seed_exchange_privkey`: A secp256k1 curve private key. Will be used to derive encryption keys in order to securely share `consensus_seed` with new nodes in the network.
 - From `consensus_seed_exchange_privkey` calculate `consensus_seed_exchange_pubkey`.
@@ -76,7 +76,7 @@ consensus_seed_exchange_pubkey = calculate_secp256k1_pubkey(
 );
 ```
 
-#### `consensus_io_exchange_privkey`
+### `consensus_io_exchange_privkey`
 
 - `consensus_io_exchange_privkey`: A secp256k1 curve private key. Will be used to derive encryption keys in order to decrypt transaction inputs and encrypt transaction outputs.
 - From `consensus_io_exchange_privkey` calculate `consensus_io_exchange_pubkey`.
@@ -92,7 +92,7 @@ consensus_io_exchange_pubkey = calculate_secp256k1_pubkey(
 );
 ```
 
-#### `consensus_base_state_ikm`
+### `consensus_base_state_ikm`
 
 - `consensus_base_state_ikm`: An input keying material (IKM) for HKDF to derive encryption keys for contracts' state.
 
@@ -103,7 +103,7 @@ consensus_base_state_ikm = hkdf({
 }); // 256 bits
 ```
 
-### Bootstrap Process Epilogue
+## Bootstrap Process Epilogue
 
 TODO reasoning
 
@@ -113,15 +113,15 @@ TODO reasoning
   - `consensus_seed_exchange_pubkey`
   - `consensus_io_exchange_pubkey`
 
-## Node Startup
+# Node Startup
 
 When a full node resumes its participation in the network, it reads `consensus_seed` from `"$HOME/.enigmad/sgx-secrets/consensus_seed.sealed"` and again does [key derivation](#Key-Derivation) as outlined above.
 
-## New Node Registration
+# New Node Registration
 
 A new node wants to join the network as a full node.
 
-### On the new node
+## On the new node
 
 TODO reasoning
 
@@ -135,14 +135,14 @@ TODO reasoning
   - 256 bits true random `challenge`
   - 256 bits true random `nonce`
 
-### On the consensus layer, inside the Enclave of every full node
+## On the consensus layer, inside the Enclave of every full node
 
 TODO reasoning
 
 - Receive the `enigmacli tx register auth` transaction.
 - Verify the remote attestation proof that the new node's Enclave is genuine.
 
-#### `seed_exchange_key`
+### `seed_exchange_key`
 
 TODO reasoning
 
@@ -163,7 +163,7 @@ seed_exchange_key = hkdf({
 }); // 256 bits
 ```
 
-#### Sharing `consensus_seed` with the new node
+### Sharing `consensus_seed` with the new node
 
 TODO reasoning
 
@@ -179,11 +179,11 @@ encrypted_consensus_seed = aes_256_gcm_encrypt({
 return encrypted_consensus_seed;
 ```
 
-### Back on the new node, inside its Enclave
+## Back on the new node, inside its Enclave
 
 - Receive the `enigmacli tx register auth` transaction output (`encrypted_consensus_seed`).
 
-#### `seed_exchange_key`
+### `seed_exchange_key`
 
 TODO reasoning
 
@@ -204,7 +204,7 @@ seed_exchange_key = hkdf({
 }); // 256 bits
 ```
 
-#### Decrypting `encrypted_consensus_seed`
+### Decrypting `encrypted_consensus_seed`
 
 TODO reasoning
 
@@ -226,19 +226,19 @@ seal({
 });
 ```
 
-### New Node Registration Epilogue
+## New Node Registration Epilogue
 
 TODO reasoning
 
 - The new node can now do [key derivation](#key-derivation) to get all the required network-wide secrets in order participate in blocks execution and validation.
 - After a machine/process reboot, the node can go through the [node startup process](#node-startup) again.
 
-## Contracts State Encryption
+# Contracts State Encryption
 
 TODO reasoning
 
-## Transaction Encryption
+# Transaction Encryption
 
 TODO reasoning
 
-## Theoretical Attacks
+# Theoretical Attacks
