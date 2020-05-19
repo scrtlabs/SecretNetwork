@@ -8,7 +8,7 @@
   - [Key Derivation](#key-derivation)
     - [`consensus_seed_exchange_privkey`](#consensusseedexchangeprivkey)
     - [`consensus_io_exchange_privkey`](#consensusioexchangeprivkey)
-    - [`consensus_base_state_ikm`](#consensusbasestateikm)
+    - [`consensus_state_ikm`](#consensusstateikm)
   - [Bootstrap Process Epilogue](#bootstrap-process-epilogue)
 - [Node Startup](#node-startup)
 - [New Node Registration](#new-node-registration)
@@ -95,12 +95,12 @@ consensus_io_exchange_pubkey = calculate_secp256k1_pubkey(
 );
 ```
 
-### `consensus_base_state_ikm`
+### `consensus_state_ikm`
 
-- `consensus_base_state_ikm`: An input keying material (IKM) for HKDF to derive encryption keys for contracts' state.
+- `consensus_state_ikm`: An input keying material (IKM) for HKDF to derive encryption keys for contracts' state.
 
 ```js
-consensus_base_state_ikm = hkdf({
+consensus_state_ikm = hkdf({
   salt: hkfd_salt,
   data: uint256(consensus_seed) + uint256(3),
 }); // 256 bits
