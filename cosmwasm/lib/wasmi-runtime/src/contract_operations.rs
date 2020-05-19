@@ -12,7 +12,7 @@ use crate::gas::{gas_rules, WasmCosts};
 use crate::runtime::{Engine, EnigmaImportResolver, Runtime};
 
 /*
-Each contract is compiled with these functions already implemented in wasm:
+Each contract is compiled with these functions alreadyy implemented in wasm:
 fn cosmwasm_api_0_6() -> i32;  // Seems unused, but we should support it anyways
 fn allocate(size: usize) -> *mut c_void;
 fn deallocate(pointer: *mut c_void);
@@ -53,12 +53,18 @@ pub fn init(
         .extract_vector(vec_ptr)
         .map_err(wasmi_error_to_enclave_error)?;
 
+    // output on init is only the contract id, which cannot be private
     // let output = encrypt_output(&output)?;
+
+    debug!(
+        "YYYYYYYYYYYYYYYYYYYYYYY {:?}",
+        String::from_utf8_lossy(&output)
+    );
 
     Ok(InitSuccess {
         output,
         used_gas: engine.gas_used(),
-        signature: [0; 65], // TODO this is needed anymore as output is alread authenticated
+        signature: [0; 65], // TODO this is needed anymore as output is already authenticated
     })
 }
 
@@ -89,12 +95,17 @@ pub fn handle(
         .extract_vector(vec_ptr)
         .map_err(wasmi_error_to_enclave_error)?;
 
-    // let output = encrypt_output(&output)?;
+    debug!(
+        "XXXXXXXXXXXXXXXXXXXXXXXXX {:?}",
+        String::from_utf8_lossy(&output)
+    );
+
+    let output = encrypt_output(&output)?;
 
     Ok(HandleSuccess {
         output,
         used_gas: engine.gas_used(),
-        signature: [0; 65], // TODO this is needed anymore as output is alread authenticated
+        signature: [0; 65], // TODO this is needed anymore as output is already authenticated
     })
 }
 
@@ -125,7 +136,7 @@ pub fn query(
     Ok(QuerySuccess {
         output,
         used_gas: engine.gas_used(),
-        signature: [0; 65], // TODO this is needed anymore as output is alread authenticated
+        signature: [0; 65], // TODO this is needed anymore as output is already authenticated
     })
 }
 
@@ -166,6 +177,8 @@ fn decrypt_msg(msg: &[u8]) -> Result<Vec<u8>, EnclaveError> {
     Ok(msg)
 }
 
+use serde_json::{Result, Value};
+
 fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
     // TODO:
     // extract "challenge" & "wallet_pubkey" from AAD
@@ -185,6 +198,8 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
     // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
 
     let key = AESKey::new_from_slice(&[7_u8; 32]);
+
+    let v: Value = serde_json::from_slice(output)?;
 
     let output = key.encrypt(output).map_err(|err| {
         error!("got an error while trying to encrypt the output: {}", err);
