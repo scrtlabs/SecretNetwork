@@ -32,7 +32,7 @@ consensus_seed_exchange_privkey = hkdf({
   salt: "0x000000000000000000024bead8df69990852c202db0e0097c1a12ea637d7e96d",
   data: consensus_seed.append(1),
 });
-consensus_seed_exchange_pubkey = secp256k1.calculate_pubkey(
+consensus_seed_exchange_pubkey = calculate_secp256k1_pubkey(
   consensus_seed_exchange_privkey
 );
 ```
@@ -44,7 +44,7 @@ consensus_io_exchange_privkey = hkdf({
   salt: "0x000000000000000000024bead8df69990852c202db0e0097c1a12ea637d7e96d",
   data: consensus_seed.append(2),
 });
-consensus_io_exchange_pubkey = secp256k1.calculate_pubkey(
+consensus_io_exchange_pubkey = calculate_secp256k1_pubkey(
   consensus_io_exchange_privkey
 );
 ```
@@ -58,10 +58,8 @@ consensus_base_state_ikm = hkdf({
 });
 ```
 
+## New Node Registration
+
 ## Contracts State Encryption
 
 ## Transaction Encryption
-
-```
-
-```
