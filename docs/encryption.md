@@ -22,8 +22,9 @@
   - [New Node Registration Epilogue](#new-node-registration-epilogue)
 - [Contracts State Encryption](#contracts-state-encryption)
 - [Transaction Encryption](#transaction-encryption)
-- [Input](#input)
-- [Output](#output)
+  - [Input](#input)
+  - [Output](#output)
+- [Chain Upgrades](#chain-upgrades)
 - [Theoretical Attacks](#theoretical-attacks)
 
 # Bootstrap Process
@@ -241,11 +242,15 @@ TODO reasoning
 
 # Transaction Encryption
 
-# Input
+## Input
 
 TODO reasoning
 
-# Output
+## Output
+
+TODO reasoning
+
+# Chain Upgrades
 
 TODO reasoning
 
