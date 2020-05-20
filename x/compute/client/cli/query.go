@@ -19,6 +19,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	wasmUtils "github.com/enigmampc/EnigmaBlockchain/x/compute/client/utils"
 	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/keeper"
 	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
 )
@@ -252,6 +253,12 @@ func GetCmdGetContractStateSmart(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("decode query: %s", err)
 			}
+
+			queryData, err = wasmUtils.Encrypt(queryData)
+			if err != nil {
+				return err
+			}
+
 			res, _, err := cliCtx.QueryWithData(route, queryData)
 			if err != nil {
 				return err

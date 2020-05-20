@@ -1,15 +1,20 @@
+use crate::crypto::*;
+use base64;
 use enclave_ffi_types::{Ctx, EnclaveError};
+use log::*;
 use parity_wasm::elements;
+use serde_json::Value;
 use wasmi::{ImportsBuilder, ModuleInstance};
 
 use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
 
+use crate::crypto::key_manager::KEY_MANAGER;
 use crate::errors::wasmi_error_to_enclave_error;
 use crate::gas::{gas_rules, WasmCosts};
 use crate::runtime::{Engine, EnigmaImportResolver, Runtime};
 
 /*
-Each contract is compiled with these functions already implemented in wasm:
+Each contract is compiled with these functions alreadyy implemented in wasm:
 fn cosmwasm_api_0_6() -> i32;  // Seems unused, but we should support it anyways
 fn allocate(size: usize) -> *mut c_void;
 fn deallocate(pointer: *mut c_void);
@@ -36,8 +41,10 @@ pub fn init(
         .write_to_memory(env)
         .map_err(wasmi_error_to_enclave_error)?;
 
+    let msg = decrypt_msg(msg)?;
+
     let msg_ptr = engine
-        .write_to_memory(msg)
+        .write_to_memory(&msg)
         .map_err(wasmi_error_to_enclave_error)?;
 
     let vec_ptr = engine
@@ -48,10 +55,12 @@ pub fn init(
         .extract_vector(vec_ptr)
         .map_err(wasmi_error_to_enclave_error)?;
 
+    let output = encrypt_output(&output)?;
+
     Ok(InitSuccess {
         output,
         used_gas: engine.gas_used(),
-        signature: [0; 65], // TODO enclave sign
+        signature: [0; 65], // TODO this is needed anymore as output is already authenticated
     })
 }
 
@@ -68,8 +77,10 @@ pub fn handle(
         .write_to_memory(env)
         .map_err(wasmi_error_to_enclave_error)?;
 
+    let msg = decrypt_msg(msg)?;
+
     let msg_ptr = engine
-        .write_to_memory(msg)
+        .write_to_memory(&msg)
         .map_err(wasmi_error_to_enclave_error)?;
 
     let vec_ptr = engine
@@ -80,10 +91,12 @@ pub fn handle(
         .extract_vector(vec_ptr)
         .map_err(wasmi_error_to_enclave_error)?;
 
+    let output = encrypt_output(&output)?;
+
     Ok(HandleSuccess {
         output,
         used_gas: engine.gas_used(),
-        signature: [0; 65], // TODO enclave sign
+        signature: [0; 65], // TODO this is needed anymore as output is already authenticated
     })
 }
 
@@ -95,8 +108,10 @@ pub fn query(
 ) -> Result<QuerySuccess, EnclaveError> {
     let mut engine = start_engine(context, gas_limit, contract)?;
 
+    let msg = decrypt_msg(msg)?;
+
     let msg_ptr = engine
-        .write_to_memory(msg)
+        .write_to_memory(&msg)
         .map_err(wasmi_error_to_enclave_error)?;
 
     let vec_ptr = engine
@@ -107,11 +122,177 @@ pub fn query(
         .extract_vector(vec_ptr)
         .map_err(wasmi_error_to_enclave_error)?;
 
+    let output = encrypt_output(&output)?;
+
     Ok(QuerySuccess {
         output,
         used_gas: engine.gas_used(),
-        signature: [0; 65], // TODO enclave sign
+        signature: [0; 65], // TODO this is needed anymore as output is already authenticated
     })
+}
+
+fn decrypt_msg(msg: &[u8]) -> Result<Vec<u8>, EnclaveError> {
+    // TODO:
+    // extract "challenge" & "wallet_pubkey" from AAD
+    // validate that "env.message.signer" is derived from "wallet_pubkey"
+    // calculate "shared_key_base" from "ECDH(wallet_pubkey, sk_consensus_io_exchange_keypair)"
+    // calculate "shared_key" from "HKDF(shared_key_base + challenge)"
+    // decrypt(shared_key, msg)
+    // ?? need to authenticate ADD or doest it happen inside decrypt ??
+
+    // pseudo code:
+    // [challenge, pk_wallet] = get_AAD(encrypted_input)
+    // base_key = ECDH(sk_io, pk_wallet)
+    // encryption_key = HKDF(base_key + challenge)
+    // decrypted_input = decrypt(key=encryption_key, data=encrypted_input)
+    // ?? need to authenticate ADD or doest it happen inside decrypt ??
+
+    // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
+    let key = AESKey::new_from_slice(&[7_u8; 32]);
+
+    // let (msg, aad) = msg.split_at(msg.len() - 89);
+
+    // aad = last 89 bytes of msg
+    // let aad = msg[(msg.len() - 89)..];
+    // let msg = mag[0..(msg.len() - 89)];
+
+    // pass
+    let msg = key.decrypt(msg).map_err(|err| {
+        error!(
+            "handle() got an error while trying to decrypt the msg: {}",
+            err
+        );
+        EnclaveError::FailedUnseal
+    })?;
+
+    Ok(msg)
+}
+
+fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
+    // TODO:
+    // extract "challenge" & "wallet_pubkey" from AAD
+    // validate that "env.message.signer" is derived from "wallet_pubkey"
+    // calculate "shared_key_base" from "ECDH(wallet_pubkey, sk_consensus_io_exchange_keypair)"
+    // calculate "shared_key" from "HKDF(shared_key_base + challenge)"
+    // decrypt(shared_key, msg)
+    // ?? need to authenticate ADD or doest it happen inside decrypt ??
+
+    // pseudo code:
+    // [challenge, pk_wallet] = get_AAD(encrypted_input)
+    // base_key = ECDH(sk_io, pk_wallet)
+    // encryption_key = HKDF(base_key + challenge)
+    // decrypted_input = decrypt(key=encryption_key, data=encrypted_input)
+    // ?? need to authenticate ADD or doest it happen inside decrypt ??
+
+    // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
+
+    let key = AESKey::new_from_slice(&[7_u8; 32]);
+
+    debug!("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+    debug!("before: {:?}", String::from_utf8_lossy(&output));
+    debug!("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+
+    let mut v: Value = serde_json::from_slice(output).map_err(|err| {
+        error!(
+            "got an error while trying to deserialize output bytes into json {:?}: {}",
+            output, err
+        );
+        EnclaveError::FailedSeal
+    })?;
+
+    if let Value::String(err) = &v["err"] {
+        v["err"] = Value::String(base64::encode(
+            &key.encrypt(&err.to_owned().into_bytes()).map_err(|err| {
+                error!(
+                    "got an error while trying to encrypt output error {:?}: {}",
+                    err, err
+                );
+                EnclaveError::FailedSeal
+            })?,
+        ));
+    } else if let Value::String(ok) = &v["ok"] {
+        // query
+        v["ok"] = Value::String(base64::encode(
+            &key.encrypt(&ok.to_owned().into_bytes()).map_err(|err| {
+                error!(
+                    "got an error while trying to encrypt query output {:?}: {}",
+                    ok, err
+                );
+                EnclaveError::FailedSeal
+            })?,
+        ));
+    } else if let Value::Object(ok) = &mut v["ok"] {
+        // init of handle
+        if let Value::Array(msgs) = &mut ok["messages"] {
+            for msg in msgs {
+                if let Value::String(msg_to_next_call) = &mut msg["contract"]["msg"] {
+                    msg["contract"]["msg"] = Value::String(base64::encode(
+                        &key.encrypt(&msg_to_next_call.to_owned().into_bytes())
+                            .map_err(|err| {
+                                error!(
+                            "got an error while trying to encrypt the msg to next call {:?}: {}",
+                            msg["contract"], err
+                        );
+                                EnclaveError::FailedSeal
+                            })?,
+                    ));
+                }
+            }
+        }
+
+        if let Value::Array(events) = &mut v["ok"]["log"] {
+            for e in events {
+                if let Value::String(k) = &mut e["key"] {
+                    e["key"] = Value::String(base64::encode(
+                        &key.encrypt(&k.to_owned().into_bytes()).map_err(|err| {
+                            error!(
+                                "got an error while trying to encrypt the event key {}: {}",
+                                k, err
+                            );
+                            EnclaveError::FailedSeal
+                        })?,
+                    ));
+                }
+                if let Value::String(v) = &mut e["value"] {
+                    e["value"] = Value::String(base64::encode(
+                        &key.encrypt(&v.to_owned().into_bytes()).map_err(|err| {
+                            error!(
+                                "got an error while trying to encrypt the event value {}: {}",
+                                v, err
+                            );
+                            EnclaveError::FailedSeal
+                        })?,
+                    ));
+                }
+            }
+        }
+
+        if let Value::String(data) = &mut v["ok"]["data"] {
+            v["ok"]["data"] = Value::String(base64::encode(
+                &key.encrypt(&data.to_owned().into_bytes()).map_err(|err| {
+                    error!(
+                        "got an error while trying to encrypt the data section {}: {}",
+                        data, err
+                    );
+                    EnclaveError::FailedSeal
+                })?,
+            ));
+        }
+    }
+
+    let output = serde_json::ser::to_vec(&v).map_err(|err| {
+        error!(
+            "got an error while trying to serialize output json into bytes {:?}: {}",
+            v, err
+        );
+        EnclaveError::FailedSeal
+    })?;
+
+    debug!("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+    debug!("after: {:?}", String::from_utf8_lossy(&output));
+    debug!("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+
+    Ok(output)
 }
 
 fn start_engine(context: Ctx, gas_limit: u64, contract: &[u8]) -> Result<Engine, EnclaveError> {
