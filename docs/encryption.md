@@ -38,7 +38,7 @@ Before the genesis of a new chain, there most be a bootstrap node to generate ne
 - Seal `consensus_seed` with MRENCLAVE to a local file: `$HOME/.enigmad/sgx-secrets/consensus_seed.sealed`.
 
 ```js
-// 256 bits
+// array of 32 bytes
 consensus_seed = true_random({ bytes: 32 });
 
 seal({
@@ -57,7 +57,7 @@ TODO reasoning
 
 ```js
 hkfd_salt = sha256(
-  uint256(0x000000000000000000024bead8df69990852c202db0e0097c1a12ea637d7e96d)
+  0x000000000000000000024bead8df69990852c202db0e0097c1a12ea637d7e96d
 );
 ```
 
@@ -71,8 +71,8 @@ hkfd_salt = sha256(
 ```js
 consensus_seed_exchange_privkey = hkdf({
   salt: hkfd_salt,
-  data: uint256(consensus_seed) + uint256(1),
-}); // 256 bits
+  ikm: consensus_seed.append(uint8(1)),
+}); // array of 32 bytes
 
 consensus_seed_exchange_pubkey = calculate_secp256k1_pubkey(
   consensus_seed_exchange_privkey
@@ -87,8 +87,8 @@ consensus_seed_exchange_pubkey = calculate_secp256k1_pubkey(
 ```js
 consensus_io_exchange_privkey = hkdf({
   salt: hkfd_salt,
-  data: uint256(consensus_seed) + uint256(2),
-}); // 256 bits
+  ikm: consensus_seed.append(uint8(2)),
+}); // array of 32 bytes
 
 consensus_io_exchange_pubkey = calculate_secp256k1_pubkey(
   consensus_io_exchange_privkey
@@ -102,8 +102,8 @@ consensus_io_exchange_pubkey = calculate_secp256k1_pubkey(
 ```js
 consensus_state_ikm = hkdf({
   salt: hkfd_salt,
-  data: uint256(consensus_seed) + uint256(3),
-}); // 256 bits
+  ikm: consensus_seed.append(uint8(3)),
+}); // array of 32 bytes
 ```
 
 ## Bootstrap Process Epilogue
@@ -158,12 +158,12 @@ TODO reasoning
 seed_exchange_ikm = ecdh({
   privkey: consensus_seed_exchange_privkey,
   pubkey: new_node_seed_exchange_pubkey,
-}); // 256 bits
+}); // array of 32 bytes
 
 seed_exchange_key = hkdf({
   salt: hkfd_salt,
-  data: uint256(seed_exchange_ikm) + uint256(challenge),
-}); // 256 bits
+  ikm: seed_exchange_ikm.append(uint8(challenge)),
+}); // array of 32 bytes
 ```
 
 ### Sharing `consensus_seed` with the new node
@@ -199,12 +199,12 @@ TODO reasoning
 seed_exchange_ikm = ecdh({
   privkey: new_node_seed_exchange_privkey,
   pubkey: consensus_seed_exchange_pubkey,
-}); // 256 bits
+}); // array of 32 bytes
 
 seed_exchange_key = hkdf({
   salt: hkfd_salt,
-  data: uint256(seed_exchange_ikm) + uint256(challenge),
-}); // 256 bits
+  ikm: seed_exchange_ikm.append(uint8(challenge)),
+}); // array of 32 bytes
 ```
 
 ### Decrypting `encrypted_consensus_seed`
