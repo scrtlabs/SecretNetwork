@@ -200,7 +200,17 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
         EnclaveError::FailedSeal
     })?;
 
-    if let Value::String(ok) = &mut v["ok"] {
+    if let Value::String(err) = &mut v["err"] {
+        v["err"] = Value::String(base64::encode(
+            &key.encrypt(&err.to_owned().into_bytes()).map_err(|err| {
+                error!(
+                    "got an error while trying to encrypt output error {:?}: {}",
+                    err, err
+                );
+                EnclaveError::FailedSeal
+            })?,
+        ));
+    } else if let Value::String(ok) = &mut v["ok"] {
         // query
         v["ok"] = Value::String(base64::encode(
             &key.encrypt(&ok.to_owned().into_bytes()).map_err(|err| {
