@@ -56,8 +56,8 @@ TODO reasoning
 - The HKDF [salt](https://tools.ietf.org/html/rfc5869#section-3.1) is chosen to be Bitcoin's halving block hash.
 
 ```js
-hkfd_salt = uint256(
-  0x000000000000000000024bead8df69990852c202db0e0097c1a12ea637d7e96d
+hkfd_salt = sha256(
+  uint256(0x000000000000000000024bead8df69990852c202db0e0097c1a12ea637d7e96d)
 );
 ```
 
