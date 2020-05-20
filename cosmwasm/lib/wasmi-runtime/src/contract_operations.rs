@@ -1,7 +1,9 @@
 use crate::crypto::*;
+use base64;
 use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
 use parity_wasm::elements;
+use serde_json::Value;
 use wasmi::{ImportsBuilder, ModuleInstance};
 
 use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
@@ -53,13 +55,7 @@ pub fn init(
         .extract_vector(vec_ptr)
         .map_err(wasmi_error_to_enclave_error)?;
 
-    // output on init is only the contract id, which cannot be private
-    // let output = encrypt_output(&output)?;
-
-    debug!(
-        "YYYYYYYYYYYYYYYYYYYYYYY {:?}",
-        String::from_utf8_lossy(&output)
-    );
+    let output = encrypt_output(&output)?;
 
     Ok(InitSuccess {
         output,
@@ -95,11 +91,6 @@ pub fn handle(
         .extract_vector(vec_ptr)
         .map_err(wasmi_error_to_enclave_error)?;
 
-    debug!(
-        "XXXXXXXXXXXXXXXXXXXXXXXXX {:?}",
-        String::from_utf8_lossy(&output)
-    );
-
     let output = encrypt_output(&output)?;
 
     Ok(HandleSuccess {
@@ -131,7 +122,7 @@ pub fn query(
         .extract_vector(vec_ptr)
         .map_err(wasmi_error_to_enclave_error)?;
 
-    // let output = encrypt_output(&output)?;
+    let output = encrypt_output(&output)?;
 
     Ok(QuerySuccess {
         output,
@@ -177,8 +168,6 @@ fn decrypt_msg(msg: &[u8]) -> Result<Vec<u8>, EnclaveError> {
     Ok(msg)
 }
 
-use serde_json::{Result, Value};
-
 fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
     // TODO:
     // extract "challenge" & "wallet_pubkey" from AAD
@@ -199,12 +188,99 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
 
     let key = AESKey::new_from_slice(&[7_u8; 32]);
 
-    let v: Value = serde_json::from_slice(output)?;
+    debug!("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+    debug!("before: {:?}", String::from_utf8_lossy(&output));
+    debug!("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
 
-    let output = key.encrypt(output).map_err(|err| {
-        error!("got an error while trying to encrypt the output: {}", err);
+    let mut v: Value = serde_json::from_slice(output).map_err(|err| {
+        error!(
+            "got an error while trying to deserialize output bytes into json {:?}: {}",
+            output, err
+        );
         EnclaveError::FailedSeal
     })?;
+
+    if let Value::String(ok) = &mut v["ok"] {
+        // query
+        v["ok"] = Value::String(base64::encode(
+            &key.encrypt(&ok.to_owned().into_bytes()).map_err(|err| {
+                error!(
+                    "got an error while trying to encrypt query output {:?}: {}",
+                    ok, err
+                );
+                EnclaveError::FailedSeal
+            })?,
+        ));
+    } else if let Value::Object(ok) = &mut v["ok"] {
+        // init of handle
+        if let Value::Array(msgs) = &mut ok["messages"] {
+            for msg in msgs {
+                if let Value::String(msg_to_next_call) = &mut msg["contract"]["msg"] {
+                    msg["contract"]["msg"] = Value::String(base64::encode(
+                        &key.encrypt(&msg_to_next_call.to_owned().into_bytes())
+                            .map_err(|err| {
+                                error!(
+                            "got an error while trying to encrypt the msg to next call {:?}: {}",
+                            msg["contract"], err
+                        );
+                                EnclaveError::FailedSeal
+                            })?,
+                    ));
+                }
+            }
+        }
+
+        if let Value::Array(events) = &mut v["ok"]["log"] {
+            for e in events {
+                if let Value::String(k) = &mut e["key"] {
+                    e["key"] = Value::String(base64::encode(
+                        &key.encrypt(&k.to_owned().into_bytes()).map_err(|err| {
+                            error!(
+                                "got an error while trying to encrypt the event key {}: {}",
+                                k, err
+                            );
+                            EnclaveError::FailedSeal
+                        })?,
+                    ));
+                }
+                if let Value::String(v) = &mut e["value"] {
+                    e["value"] = Value::String(base64::encode(
+                        &key.encrypt(&v.to_owned().into_bytes()).map_err(|err| {
+                            error!(
+                                "got an error while trying to encrypt the event value {}: {}",
+                                v, err
+                            );
+                            EnclaveError::FailedSeal
+                        })?,
+                    ));
+                }
+            }
+        }
+
+        if let Value::String(data) = &mut v["ok"]["data"] {
+            v["ok"]["data"] = Value::String(base64::encode(
+                &key.encrypt(&data.to_owned().into_bytes()).map_err(|err| {
+                    error!(
+                        "got an error while trying to encrypt the data section {}: {}",
+                        data, err
+                    );
+                    EnclaveError::FailedSeal
+                })?,
+            ));
+        }
+    }
+
+    let output = serde_json::ser::to_vec(&v).map_err(|err| {
+        error!(
+            "got an error while trying to serialize output json into bytes {:?}: {}",
+            v, err
+        );
+        EnclaveError::FailedSeal
+    })?;
+
+    debug!("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+    debug!("after: {:?}", String::from_utf8_lossy(&output));
+    debug!("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
 
     Ok(output)
 }
