@@ -243,16 +243,16 @@ TODO reasoning
 
 TODO reasoning
 
-- While executing a function call inside a transaction, the contract code can call `write_db(field_name, value)` or `read_db(field_name)`.
-- Contracts state is store on-chain inside a key-value store, thus the state `field_name` must remain constant between calls.
-- Good encryption doesn't use the same encryption key and IV together more than once. This means that encrypting the same input twice yields different outputs, and therefore we cannot encrypt the state `field_name` because the next time we want to query it we won't know where to look for.
-- Encryption keys are derived using HKDF-SHA256 from:
+- While executing a function call inside a transaction, the contract code can call `write_db(field_name, value)` and `read_db(field_name)`.
+- Contracts' state is store on-chain inside a key-value store, thus the `field_name` must remain constant between calls.
+- Good encryption doesn't use the same `encryption_key` and `iv` together more than once. This means that encrypting the same input twice yields different outputs, and therefore we cannot encrypt the `field_name` because the next time we want to query it we won't know where to look for it.
+- `encryption_key` is derived using HKDF-SHA256 from:
   - `consensus_state_ikm`
   - `field_name`
   - `sha256(contract_wasm_binary)`
   - The contract's wallet address (TODO how to authenticate this??)
-- Ciphertext is prepended with the `iv` so that the next read will be able to derive the encryption key that was used for encryption. `iv` is also authenticated via AES-256-GCM AAD.
-- `iv` is derive from `sha256(value + previous_iv)` in order to prevent tx rollback attack that can force `iv` reuse. This also prevents using the same `iv` in different instances of the same contract.
+- Ciphertext is prepended with the `iv` so that the next read will be able to decrypt it. `iv` is also authenticated with the AES-256-GCM AAD.
+- `iv` is derive from `sha256(value + previous_iv)` in order to prevent tx rollback attacks that can force `iv` and `encryption_key` reuse. This also prevents using the same `iv` in different instances of the same contract.
 
 ## write_db(field_name, value)
 
