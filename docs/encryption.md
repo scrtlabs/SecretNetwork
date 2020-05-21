@@ -21,6 +21,8 @@
     - [Decrypting `encrypted_consensus_seed`](#decrypting-encryptedconsensusseed)
   - [New Node Registration Epilogue](#new-node-registration-epilogue)
 - [Contracts State Encryption](#contracts-state-encryption)
+  - [write_db(field_name, value)](#writedbfieldname-value)
+  - [read_db(field_name)](#readdbfieldname)
 - [Transaction Encryption](#transaction-encryption)
   - [Input](#input)
   - [Output](#output)
@@ -38,7 +40,7 @@ Before the genesis of a new chain, there most be a bootstrap node to generate ne
 - Seal `consensus_seed` with MRENCLAVE to a local file: `$HOME/.enigmad/sgx-secrets/consensus_seed.sealed`.
 
 ```js
-// array of 32 bytes
+// 256 bits
 consensus_seed = true_random({ bytes: 32 });
 
 seal({
@@ -72,7 +74,7 @@ hkfd_salt = sha256(
 consensus_seed_exchange_privkey = hkdf({
   salt: hkfd_salt,
   ikm: consensus_seed.append(uint8(1)),
-}); // array of 32 bytes
+}); // 256 bits
 
 consensus_seed_exchange_pubkey = calculate_secp256k1_pubkey(
   consensus_seed_exchange_privkey
@@ -88,7 +90,7 @@ consensus_seed_exchange_pubkey = calculate_secp256k1_pubkey(
 consensus_io_exchange_privkey = hkdf({
   salt: hkfd_salt,
   ikm: consensus_seed.append(uint8(2)),
-}); // array of 32 bytes
+}); // 256 bits
 
 consensus_io_exchange_pubkey = calculate_secp256k1_pubkey(
   consensus_io_exchange_privkey
@@ -103,7 +105,7 @@ consensus_io_exchange_pubkey = calculate_secp256k1_pubkey(
 consensus_state_ikm = hkdf({
   salt: hkfd_salt,
   ikm: consensus_seed.append(uint8(3)),
-}); // array of 32 bytes
+}); // 256 bits
 ```
 
 ## Bootstrap Process Epilogue
@@ -158,12 +160,12 @@ TODO reasoning
 seed_exchange_ikm = ecdh({
   privkey: consensus_seed_exchange_privkey,
   pubkey: new_node_seed_exchange_pubkey,
-}); // array of 32 bytes
+}); // 256 bits
 
 seed_exchange_key = hkdf({
   salt: hkfd_salt,
   ikm: seed_exchange_ikm.append(uint8(challenge)),
-}); // array of 32 bytes
+}); // 256 bits
 ```
 
 ### Sharing `consensus_seed` with the new node
@@ -177,6 +179,7 @@ encrypted_consensus_seed = aes_256_gcm_encrypt({
   iv: nonce,
   key: seed_exchange_key,
   data: consensus_seed,
+  // TODO need AAD here?
 });
 
 return encrypted_consensus_seed;
@@ -199,12 +202,12 @@ TODO reasoning
 seed_exchange_ikm = ecdh({
   privkey: new_node_seed_exchange_privkey,
   pubkey: consensus_seed_exchange_pubkey,
-}); // array of 32 bytes
+}); // 256 bits
 
 seed_exchange_key = hkdf({
   salt: hkfd_salt,
   ikm: seed_exchange_ikm.append(uint8(challenge)),
-}); // array of 32 bytes
+}); // 256 bits
 ```
 
 ### Decrypting `encrypted_consensus_seed`
@@ -239,6 +242,84 @@ TODO reasoning
 # Contracts State Encryption
 
 TODO reasoning
+
+- While executing a function call inside a transaction, the contract code can call `write_db(field_name, value)` or `read_db(field_name)`.
+- Contracts state is store on-chain inside a key-value store, thus the state `field_name` must remain constant between calls.
+- Good encryption doesn't use the same encryption key and IV together more than once. This means that encrypting the same input twice yields different outputs, and therefore we cannot encrypt the state `field_name` because the next time we want to query it we won't know where to look for.
+- Encryption keys are derived using HKDF-SHA256 from:
+  - `consensus_state_ikm`
+  - `field_name`
+  - `sha256(contract_wasm_binary)`
+  - The contract's wallet address (TODO how to authenticate this??)
+- Ciphertext is prepended with the `iv` so that the next read will be able to derive the encryption key that was used for encryption. `iv` is also authenticated via AES-256-GCM AAD.
+- `iv` is derive from `sha256(value + previous_iv)` in order to prevent tx rollback attack that can force `iv` reuse. This also prevents using the same `iv` in different instances of the same contract.
+
+## write_db(field_name, value)
+
+```js
+current_state_ciphertext = internal_read_db(field_name);
+
+encryption_key = hkdf({
+  salt: hkfd_salt,
+  ikm: consensus_state_ikm.concat(field_name).concat(sha256(contract_wasm_binary)), // TODO diffrentiate between same binaries for different contracts
+});
+
+if (current_state_ciphertext == null) {
+  // field_name doesn't yet initialized in state
+  iv = uint96(sha256(value));
+} else {
+  // read previous_iv, verify it, calculate new iv
+  previous_iv = uint96(current_state_ciphertext[0:12]); // first 12 bytes
+  current_state_ciphertext = current_state_ciphertext[12:]; // skip first 12 bytes
+
+  aes_256_gcm_decrypt({
+    iv: previous_iv,
+    key: encryption_key,
+    data: current_state_ciphertext,
+    aad: previous_iv
+  });
+  iv = uint96(sha256(previous_iv.concat(value)));
+}
+
+new_state_ciphertext = aes_256_gcm_encrypt({
+  iv: iv,
+  key: encryption_key,
+  data: value,
+  aad: iv
+});
+
+new_state = iv.concat(new_state_ciphertext);
+
+internal_write_db(field_name, new_state);
+```
+
+## read_db(field_name)
+
+```js
+current_state_ciphertext = internal_read_db(field_name);
+
+encryption_key = hkdf({
+  salt: hkfd_salt,
+  ikm: consensus_state_ikm.concat(field_name).concat(sha256(contract_wasm_binary)), // TODO diffrentiate between same binaries for different contracts
+});
+
+if (current_state_ciphertext == null) {
+  // field_name doesn't yet initialized in state
+  return null;
+}
+
+// read iv, verify it, calculate new iv
+iv = uint96(current_state_ciphertext[0:12]); // first 12 bytes
+current_state_ciphertext = current_state_ciphertext[12:]; // skip first 12 bytes
+current_state_plaintext = aes_256_gcm_decrypt({
+  iv: iv,
+  key: encryption_key,
+  data: current_state_ciphertext,
+  aad: iv
+});
+
+return current_state_plaintext;
+```
 
 # Transaction Encryption
 
