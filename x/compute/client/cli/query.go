@@ -232,7 +232,7 @@ func GetCmdGetContractStateSmart(cdc *codec.Codec) *cobra.Command {
 	decoder := newArgDecoder(asciiDecodeString)
 
 	cmd := &cobra.Command{
-		Use:   "smart [bech32_address] [query]",
+		Use:   "smart [bech32_address] [query]", // TODO add --from wallet
 		Short: "Calls contract with given address  with query data and prints the returned result",
 		Long:  "Calls contract with given address  with query data and prints the returned result",
 		Args:  cobra.ExactArgs(2),
@@ -259,10 +259,20 @@ func GetCmdGetContractStateSmart(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			res, _, err := cliCtx.QueryWithData(route, queryData)
+			resEncrypted, _, err := cliCtx.QueryWithData(route, queryData)
 			if err != nil {
 				return err
 			}
+
+			resAsBase64, err := wasmUtils.Decrypt(resEncrypted)
+			if err != nil {
+				return err
+			}
+			res, err := base64.StdEncoding.DecodeString(string(resAsBase64))
+			if err != nil {
+				return err
+			}
+
 			fmt.Println(string(res))
 			return nil
 		},
