@@ -26,7 +26,7 @@
 - [Transaction Encryption](#transaction-encryption)
   - [Input](#input)
   - [Output](#output)
-- [Chain Upgrades](#chain-upgrades)
+- [Blockchain Upgrades](#blockchain-upgrades)
 - [Theoretical Attacks](#theoretical-attacks)
 
 # Bootstrap Process
@@ -243,7 +243,7 @@ TODO reasoning
 
 TODO reasoning
 
-- While executing a function call inside a transaction, the contract code can call `write_db(field_name, value)` and `read_db(field_name)`.
+- While executing a function call inside the Enclave as part of a transaction, the contract code can call `write_db(field_name, value)` and `read_db(field_name)`.
 - Contracts' state is store on-chain inside a key-value store, thus the `field_name` must remain constant between calls.
 - Good encryption doesn't use the same `encryption_key` and `iv` together more than once. This means that encrypting the same input twice yields different outputs, and therefore we cannot encrypt the `field_name` because the next time we want to query it we won't know where to look for it.
 - `encryption_key` is derived using HKDF-SHA256 from:
@@ -331,7 +331,7 @@ TODO reasoning
 
 TODO reasoning
 
-# Chain Upgrades
+# Blockchain Upgrades
 
 TODO reasoning
 
