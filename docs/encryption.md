@@ -266,10 +266,10 @@ encryption_key = hkdf({
 
 if (current_state_ciphertext == null) {
   // field_name doesn't yet initialized in state
-  iv = uint96(sha256(value));
+  iv = sha256(value)[0:12]; // truncate because iv is only 96 bits
 } else {
   // read previous_iv, verify it, calculate new iv
-  previous_iv = uint96(current_state_ciphertext[0:12]); // first 12 bytes
+  previous_iv = current_state_ciphertext[0:12]; // first 12 bytes
   current_state_ciphertext = current_state_ciphertext[12:]; // skip first 12 bytes
 
   aes_256_gcm_decrypt({
@@ -278,7 +278,7 @@ if (current_state_ciphertext == null) {
     data: current_state_ciphertext,
     aad: previous_iv
   });
-  iv = uint96(sha256(previous_iv.concat(value)));
+  iv = sha256(previous_iv.concat(value))[0:12]; // truncate because iv is only 96 bits
 }
 
 new_state_ciphertext = aes_256_gcm_encrypt({
@@ -309,7 +309,7 @@ if (current_state_ciphertext == null) {
 }
 
 // read iv, verify it, calculate new iv
-iv = uint96(current_state_ciphertext[0:12]); // first 12 bytes
+iv = current_state_ciphertext[0:12]; // first 12 bytes
 current_state_ciphertext = current_state_ciphertext[12:]; // skip first 12 bytes
 current_state_plaintext = aes_256_gcm_decrypt({
   iv: iv,
