@@ -281,7 +281,7 @@ encryption_key = hkdf({
   ikm: concat(consensus_state_ikm, contract_id_payload),
 });
 
-iv = sha256(concat(consensus_state_iv, contract_id_payload)).slice(0, 12);
+iv = sha256(concat(consensus_state_iv, contract_id_payload)).slice(0, 12); // truncate because iv is only 96 bits
 
 encrypted_contract_id_payload = aes_256_gcm_encrypt({
   iv: iv,
