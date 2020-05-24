@@ -111,26 +111,12 @@ func (w *Wasmer) Instantiate(code CodeID, env types.Env, initMsg []byte, store K
 // and setting the env with relevent info on this instance (address, balance, etc)
 //
 // TODO: add callback for querying into other modules
-func (w *Wasmer) Execute(code CodeID, env types.Env, executeMsg []byte, store KVStore, goapi GoAPI, gasLimit uint64) (*types.Result, error) {
+func (w *Wasmer) Execute(code CodeID, env types.Env, executeMsg []byte, store KVStore, goapi GoAPI, gasLimit uint64) ([]byte, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, store, &goapi, gasLimit)
-	if err != nil {
-		return nil, err
-	}
-
-	var resp types.CosmosResponse
-	err = json.Unmarshal(data, &resp)
-	if err != nil {
-		return nil, err
-	}
-	if resp.Err != "" {
-		return nil, fmt.Errorf(resp.Err)
-	}
-	resp.Ok.GasUsed = gasUsed
-	return &resp.Ok, nil
+	return api.Handle(w.cache, code, paramBin, executeMsg, store, &goapi, gasLimit)
 }
 
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be

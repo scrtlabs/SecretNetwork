@@ -67,8 +67,8 @@ type Result struct {
 
 // LogAttribute
 type LogAttribute struct {
-    Key string `json:"key"`
-    Value string `json:"value"`
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
 // CosmosMsg is an rust enum and only (exactly) one of the fields should be set

@@ -176,25 +176,28 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	params := types.NewParams(ctx, caller, coins, contractAccount)
 
 	gas := gasForContract(ctx)
-	res, execErr := k.wasmer.Execute(codeInfo.CodeHash, params, msg, prefixStore, cosmwasmAPI, gas)
+	encryptedOutput, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, params, msg, prefixStore, cosmwasmAPI, gas)
 	if execErr != nil {
 		// TODO: wasmer doesn't return gas used on error. we should consume it (for error on metering failure)
 		return sdk.Result{}, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
-	consumeGas(ctx, res.GasUsed)
+	consumeGas(ctx, gasUsed)
 
-	// emit all events from this contract itself
-	value := types.CosmosResult(*res, contractAddress)
-	ctx.EventManager().EmitEvents(value.Events)
-	value.Events = nil
+	// // emit all events from this contract itself
+	// value := types.CosmosResult(*encryptedOutput, contractAddress)
+	// return
+	// ctx.EventManager().EmitEvents(value.Events)
+	// value.Events = nil
 
-	// TODO: capture events here as well
-	err = k.dispatchMessages(ctx, contractAccount, res.Messages)
-	if err != nil {
-		return sdk.Result{}, err
-	}
+	// // TODO: capture events here as well
+	// err = k.dispatchMessages(ctx, contractAccount, encryptedOutput.Messages)
+	// if err != nil {
+	// 	return sdk.Result{}, err
+	// }
 
-	return value, nil
+	return sdk.Result{
+		Data: encryptedOutput,
+	}, nil
 }
 
 // QuerySmart queries the smart contract itself.

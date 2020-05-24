@@ -180,7 +180,7 @@ pub extern "C" fn ecall_init_bootstrap(public_key: &mut [u8; PUBLIC_KEY_SIZE]) -
 
     let mut key_manager = Keychain::new();
 
-    if let Err(e) = key_manager.create_consensus_master_seed() {
+    if let Err(e) = key_manager.create_consensus_seed() {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
@@ -288,13 +288,9 @@ pub extern "C" fn ecall_get_encrypted_seed(
     };
 
     // encrypt the seed using the symmetric key derived in the previous stage
-    let res = match AESKey::new_from_slice(&shared_enc_key).encrypt(
-        &key_manager
-            .get_consensus_master_seed()
-            .unwrap()
-            .get()
-            .to_vec(),
-    ) {
+    let res = match AESKey::new_from_slice(&shared_enc_key)
+        .encrypt(&key_manager.get_consensus_seed().unwrap().get().to_vec())
+    {
         Ok(r) => {
             if r.len() != ENCRYPTED_SEED_SIZE {
                 error!("wtf? {:?}", r.len());
@@ -384,7 +380,7 @@ pub unsafe extern "C" fn ecall_init_seed(
 
     let seed = Seed::new_from_slice(&seed_buf);
 
-    if let Err(e) = key_manager.set_consensus_master_seed(seed) {
+    if let Err(e) = key_manager.set_consensus_seed(seed) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 

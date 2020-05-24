@@ -19,6 +19,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	wasmUtils "github.com/enigmampc/EnigmaBlockchain/x/compute/client/utils"
 	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/keeper"
 	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
 )
@@ -231,7 +232,7 @@ func GetCmdGetContractStateSmart(cdc *codec.Codec) *cobra.Command {
 	decoder := newArgDecoder(asciiDecodeString)
 
 	cmd := &cobra.Command{
-		Use:   "smart [bech32_address] [query]",
+		Use:   "smart [bech32_address] [query]", // TODO add --from wallet
 		Short: "Calls contract with given address  with query data and prints the returned result",
 		Long:  "Calls contract with given address  with query data and prints the returned result",
 		Args:  cobra.ExactArgs(2),
@@ -252,10 +253,26 @@ func GetCmdGetContractStateSmart(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("decode query: %s", err)
 			}
-			res, _, err := cliCtx.QueryWithData(route, queryData)
+
+			queryData, err = wasmUtils.Encrypt(queryData)
 			if err != nil {
 				return err
 			}
+
+			resEncrypted, _, err := cliCtx.QueryWithData(route, queryData)
+			if err != nil {
+				return err
+			}
+
+			resAsBase64, err := wasmUtils.Decrypt(resEncrypted)
+			if err != nil {
+				return err
+			}
+			res, err := base64.StdEncoding.DecodeString(string(resAsBase64))
+			if err != nil {
+				return err
+			}
+
 			fmt.Println(string(res))
 			return nil
 		},

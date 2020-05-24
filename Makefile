@@ -76,7 +76,7 @@ build_local_no_rust:
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
 
-build_linux:
+build_linux: vendor
 	$(MAKE) -C go-cosmwasm build-rust
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
 #   this pulls out ELF symbols, 80% size reduction!

@@ -88,7 +88,7 @@ func queryCmd(cdc *amino.Codec) *cobra.Command {
 		rpc.ValidatorCommand(cdc),
 		rpc.BlockCommand(),
 		authcmd.QueryTxsByEventsCmd(cdc),
-		authcmd.QueryTxCmd(cdc),
+		authcmd.QueryTxCmd(cdc), // TODO add another one like this that decrypts the output if it's from the wallet that sent the tx
 		flags.LineBreak,
 	)
 
