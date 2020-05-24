@@ -16,6 +16,8 @@ use sgx_trts::trts::{
 use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 use std::slice;
 
+use crate::utils::{validate_mut_ptr, validate_const_ptr};
+
 use crate::consts::*;
 pub use crate::crypto::traits::{Encryptable, Kdf, SealedKey};
 
@@ -111,10 +113,10 @@ pub unsafe extern "C" fn ecall_key_gen(
 
     let mut key_manager = Keychain::new();
 
-    key_manager.create_new_node_seed_exchange_keypair();
+    key_manager.create_registration_key();
 
     let pubkey = key_manager
-        .get_new_node_seed_exchange_keypair()
+        .get_registration_key()
         .unwrap()
         .get_pubkey();
     info!("ecall_key_gen key pk: {:?}", public_key.to_vec());
@@ -137,7 +139,7 @@ pub unsafe extern "C" fn ecall_key_gen(
  */
 pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
     let mut key_manager = Keychain::new();
-    let kp = key_manager.get_new_node_seed_exchange_keypair().unwrap();
+    let kp = key_manager.get_registration_key().unwrap();
     info!(
         "ecall_get_attestation_report key pk: {:?}",
         &kp.get_pubkey().to_vec()
@@ -186,8 +188,11 @@ pub extern "C" fn ecall_init_bootstrap(public_key: &mut [u8; PUBLIC_KEY_SIZE]) -
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
-    let mut key_manager = Keychain::new();
-    let kp = key_manager.get_io_key().unwrap();
+    if let Err(e) = key_manager.create_registration_key() {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    let kp = key_manager.seed_exchange_key().unwrap();
     let (_, cert) =
         match create_attestation_certificate(&kp, sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE) {
             Err(e) => {
@@ -205,7 +210,7 @@ pub extern "C" fn ecall_init_bootstrap(public_key: &mut [u8; PUBLIC_KEY_SIZE]) -
     // don't want to copy the first byte (no need to pass the 0x4 uncompressed byte)
     public_key.copy_from_slice(
         &key_manager
-            .get_consensus_seed_exchange_keypair()
+            .seed_exchange_key()
             .unwrap()
             .get_pubkey()[1..UNCOMPRESSED_PUBLIC_KEY_SIZE],
     );
@@ -274,7 +279,7 @@ pub extern "C" fn ecall_get_encrypted_seed(
     );
 
     let shared_enc_key = match key_manager
-        .get_consensus_seed_exchange_keypair()
+        .seed_exchange_key()
         .unwrap()
         .derive_key(&target_public_key)
     {
@@ -353,7 +358,7 @@ pub unsafe extern "C" fn ecall_init_seed(
     target_public_key[1..].copy_from_slice(&pk);
 
     let shared_enc_key = match key_manager
-        .get_new_node_seed_exchange_keypair()
+        .get_registration_key()
         .unwrap()
         .derive_key(&target_public_key)
     {

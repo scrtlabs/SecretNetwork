@@ -35,7 +35,7 @@ pub const CONSENSUS_SEED_EXCHANGE_KEYPAIR_SEALING_PATH: &str =
 pub const CONSENSUS_IO_EXCHANGE_KEYPAIR_SEALING_PATH: &str =
     "./.sgx_secrets/consensus_io_exchange_keypair.sealed";
 
-pub const NEW_NODE_SEED_EXCHANGE_KEYPAIR_SEALING_PATH: &str =
+pub const REGISTRATION_KEY_SEALING_PATH: &str =
     "./.sgx_secrets/new_node_seed_exchange_keypair.sealed";
 
 pub const CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 1;
