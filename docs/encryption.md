@@ -270,7 +270,7 @@ TODO reasoning
 
 ## `contract_id`
 
-- `contract_id` is a concatenation of three values: `contract_id_payload || encrypted_contract_id_payload || iv`.
+- `contract_id` is a concatenation of two values: `contract_id_payload || encrypted_contract_id_payload`.
 - When a contract is deployed (i.e., on contract init), `contract_id` is generated inside of the enclave as follows:
 
 ```js
@@ -289,7 +289,7 @@ encrypted_contract_id_payload = aes_256_gcm_encrypt({
   iv: iv,
   key: encryption_key,
   data: contract_id_payload,
-  aad: iv,
+  aad: contract_id_payload.concat(code_hash),
 });
 
 contract_id = contract_id_payload
@@ -310,14 +310,13 @@ encryption_key = hkdf({
   ikm: consensus_state_ikm.concat(contract_id_payload),
 });
 
-interpreted_payload = aes_256_gcm_decrypt({
+(interpreted_payload, interpreted_code_hash)  = aes_256_gcm_decrypt({
   iv: iv,
-  key: encryption_key,
-  data: encrypted_contract_id_payload,
-  aad: iv,
+  key: encryption_key
 });
 
 assert(interpreted_payload == contract_id_payload);
+assert(interpreted_code_hash == sha256(contract_code);
 ```
 
 ## write_db(field_name, value)
