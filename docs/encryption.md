@@ -22,6 +22,7 @@
     - [Decrypting `encrypted_consensus_seed`](#decrypting-encrypted_consensus_seed)
   - [New Node Registration Epilogue](#new-node-registration-epilogue)
 - [Contracts State Encryption](#contracts-state-encryption)
+  - [`contact_id`](#contact_id)
   - [write_db(field_name, value)](#write_dbfield_name-value)
   - [read_db(field_name)](#read_dbfield_name)
 - [Transaction Encryption](#transaction-encryption)
@@ -263,10 +264,13 @@ TODO reasoning
 - `encryption_key` is derived using HKDF-SHA256 from:
   - `consensus_state_ikm`
   - `field_name`
-  - `sha256(contract_wasm_binary)`
-  - The contract's wallet address (TODO how to authenticate this??)
+  - `contact_id`
 - Ciphertext is prepended with the `iv` so that the next read will be able to decrypt it. `iv` is also authenticated with the AES-256-GCM AAD.
 - `iv` is derive from `sha256(consensus_state_iv + value + previous_iv)` in order to prevent tx rollback attacks that can force `iv` and `encryption_key` reuse. This also prevents using the same `iv` in different instances of the same contract. `consensus_state_iv` prevents exposing `value` by comparing `iv` to `previos_iv`.
+
+## `contact_id`
+
+- TODO how to generate and use the `contract_id` in a trusted way
 
 ## write_db(field_name, value)
 
@@ -275,7 +279,7 @@ current_state_ciphertext = internal_read_db(field_name);
 
 encryption_key = hkdf({
   salt: hkfd_salt,
-  ikm: consensus_state_ikm.concat(field_name).concat(sha256(contract_wasm_binary)), // TODO diffrentiate between same binaries for different contracts
+  ikm: consensus_state_ikm.concat(field_name).concat(contact_id),
 });
 
 if (current_state_ciphertext == null) {
