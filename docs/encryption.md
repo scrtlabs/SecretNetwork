@@ -270,46 +270,51 @@ TODO reasoning
 
 ## `contract_id`
 
-- `contract_id` is a 608-bit value which is a concatenation of three values: `contract_id_payload || encrypted_contract_id_payload || iv`. Details on its creation and verification below.
-- Generating `contract_id`: When a contract is deployed (i.e., on contract init), `contract_id` is generated inside of the enclave as follows:
+- `contract_id` is a concatenation of three values: `contract_id_payload || encrypted_contract_id_payload || iv`.
+- When a contract is deployed (i.e., on contract init), `contract_id` is generated inside of the enclave as follows:
 
 ```js
-contract_id_payload = sha256(msg_sender.concat(block_height).concat(sha256(contract_code));
+contract_id_payload = sha256(
+  msg_sender.concat(block_height).concat(sha256(contract_code))
+);
 
 encryption_key = hkdf({
   salt: hkfd_salt,
   ikm: consensus_state_ikm.concat(contract_id_payload),
 });
 
-iv = sha256(consensus_state_iv.concat(contract_id_payload))[0:12];
+iv = sha256(consensus_state_iv.concat(contract_id_payload)).slice(0, 12);
 
-encrypted_contract_id_payload =
-    aes_256_gcm_encrypt({
-      iv: iv,
-      key: encryption_key,
-      data: contract_id_payload
-    });
+encrypted_contract_id_payload = aes_256_gcm_encrypt({
+  iv: iv,
+  key: encryption_key,
+  data: contract_id_payload,
+  aad: iv,
+});
 
-contract_id = contract_id_payload.concat(encrypted_contract_id_payload).concat(iv);
+contract_id = contract_id_payload
+  .concat(encrypted_contract_id_payload)
+  .concat(iv);
 ```
 
 - Every time a contract execution is called, the contract id should be sent to the enclave.
 - In the enclave, the following verification needs to happen:
 
 ```js
-contract_id_payload = contract_id[0:32];
-encrypted_contract_id_payload = contract_id[32:64];
-iv = contract_id[64:];
+contract_id_payload = contract_id.slice(0, 32);
+encrypted_contract_id_payload = contract_id.slice(32, 64);
+iv = contract_id.slice(64);
 
 encryption_key = hkdf({
- salt: hkfd_salt,
- ikm: consensus_state_ikm.concat(contract_id_payload),
+  salt: hkfd_salt,
+  ikm: consensus_state_ikm.concat(contract_id_payload),
 });
 
 interpreted_payload = aes_256_gcm_decrypt({
- iv: iv,
- key: encryption_key,
- data: encrypted_contract_id_payload,
+  iv: iv,
+  key: encryption_key,
+  data: encrypted_contract_id_payload,
+  aad: iv,
 });
 
 assert(interpreted_payload == contract_id_payload);
@@ -327,26 +332,29 @@ encryption_key = hkdf({
 
 if (current_state_ciphertext == null) {
   // field_name doesn't yet initialized in state
-  iv = sha256(consensus_state_iv.concat(value))[0:12]; // truncate because iv is only 96 bits
+  iv = sha256(consensus_state_iv.concat(value)).slice(0, 12); // truncate because iv is only 96 bits
 } else {
   // read previous_iv, verify it, calculate new iv
-  previous_iv = current_state_ciphertext[0:12]; // first 12 bytes
-  current_state_ciphertext = current_state_ciphertext[12:]; // skip first 12 bytes
+  previous_iv = current_state_ciphertext.slice(0, 12); // first 12 bytes
+  current_state_ciphertext = current_state_ciphertext.slice(12); // skip first 12 bytes
 
   aes_256_gcm_decrypt({
     iv: previous_iv,
     key: encryption_key,
     data: current_state_ciphertext,
-    aad: previous_iv
+    aad: previous_iv,
   });
-  iv = sha256(consensus_state_iv.concat(value).concat(previous_iv))[0:12]; // truncate because iv is only 96 bits
+  iv = sha256(consensus_state_iv.concat(value).concat(previous_iv)).slice(
+    0,
+    12
+  ); // truncate because iv is only 96 bits
 }
 
 new_state_ciphertext = aes_256_gcm_encrypt({
   iv: iv,
   key: encryption_key,
   data: value,
-  aad: iv
+  aad: iv,
 });
 
 new_state = iv.concat(new_state_ciphertext);
@@ -361,7 +369,9 @@ current_state_ciphertext = internal_read_db(field_name);
 
 encryption_key = hkdf({
   salt: hkfd_salt,
-  ikm: consensus_state_ikm.concat(field_name).concat(sha256(contract_wasm_binary)), // TODO diffrentiate between same binaries for different contracts
+  ikm: consensus_state_ikm
+    .concat(field_name)
+    .concat(sha256(contract_wasm_binary)), // TODO diffrentiate between same binaries for different contracts
 });
 
 if (current_state_ciphertext == null) {
@@ -370,13 +380,13 @@ if (current_state_ciphertext == null) {
 }
 
 // read iv, verify it, calculate new iv
-iv = current_state_ciphertext[0:12]; // first 12 bytes
-current_state_ciphertext = current_state_ciphertext[12:]; // skip first 12 bytes
+iv = current_state_ciphertext.slice(0, 12); // first 12 bytes
+current_state_ciphertext = current_state_ciphertext.slice(12); // skip first 12 bytes
 current_state_plaintext = aes_256_gcm_decrypt({
   iv: iv,
   key: encryption_key,
   data: current_state_ciphertext,
-  aad: iv
+  aad: iv,
 });
 
 return current_state_plaintext;
