@@ -312,7 +312,8 @@ encryption_key = hkdf({
 
 (interpreted_payload, interpreted_code_hash)  = aes_256_gcm_decrypt({
   iv: iv,
-  key: encryption_key
+  key: encryption_key,
+  data: encrypted_contract_id_payload
 });
 
 assert(interpreted_payload == contract_id_payload);
