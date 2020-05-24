@@ -274,9 +274,7 @@ TODO reasoning
 - When a contract is deployed (i.e., on contract init), `contract_id` is generated inside of the enclave as follows:
 
 ```js
-contract_id_payload = sha256(
-  msg_sender.concat(block_height).concat(sha256(contract_code))
-);
+contract_id_payload = sha256(msg_sender.concat(block_height, contract_code));
 
 encryption_key = hkdf({
   salt: hkfd_salt,
@@ -288,13 +286,11 @@ iv = sha256(consensus_state_iv.concat(contract_id_payload)).slice(0, 12);
 encrypted_contract_id_payload = aes_256_gcm_encrypt({
   iv: iv,
   key: encryption_key,
-  data: contract_id_payload,
-  aad: contract_id_payload.concat(code_hash),
+  data: null,
+  aad: contract_id_payload.concat(code_hash, iv),
 });
 
-contract_id = contract_id_payload
-  .concat(encrypted_contract_id_payload)
-  .concat(iv);
+contract_id = contract_id_payload.concat(encrypted_contract_id_payload, iv);
 ```
 
 - Every time a contract execution is called, the contract id should be sent to the enclave.
@@ -327,7 +323,7 @@ current_state_ciphertext = internal_read_db(field_name);
 
 encryption_key = hkdf({
   salt: hkfd_salt,
-  ikm: consensus_state_ikm.concat(field_name).concat(contact_id),
+  ikm: consensus_state_ikm.concat(field_name, contact_id),
 });
 
 if (current_state_ciphertext == null) {
@@ -344,10 +340,7 @@ if (current_state_ciphertext == null) {
     data: current_state_ciphertext,
     aad: previous_iv,
   });
-  iv = sha256(consensus_state_iv.concat(value).concat(previous_iv)).slice(
-    0,
-    12
-  ); // truncate because iv is only 96 bits
+  iv = sha256(consensus_state_iv.concat(value, previous_iv)).slice(0, 12); // truncate because iv is only 96 bits
 }
 
 new_state_ciphertext = aes_256_gcm_encrypt({
