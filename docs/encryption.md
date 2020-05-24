@@ -268,9 +268,52 @@ TODO reasoning
 - Ciphertext is prepended with the `iv` so that the next read will be able to decrypt it. `iv` is also authenticated with the AES-256-GCM AAD.
 - `iv` is derive from `sha256(consensus_state_iv + value + previous_iv)` in order to prevent tx rollback attacks that can force `iv` and `encryption_key` reuse. This also prevents using the same `iv` in different instances of the same contract. `consensus_state_iv` prevents exposing `value` by comparing `iv` to `previos_iv`.
 
-## `contact_id`
+## `contract_id`
 
-- TODO how to generate and use the `contract_id` in a trusted way
+- `contract_id` is a 608-bit value which is a concatenation of three values: `contract_id_payload || encrypted_contract_id_payload || iv`. Details on its creation and verification below.
+
+- Generating `contract_id`: When a contract is deployed (i.e., on contract init), we should generate the `contract_id` *inside of the enclave* as follows:
+```
+contract_id_payload = sha256(msg_sender.concat(block_height).concat(sha256(contract_code));
+
+encryption_key = hkdf({
+  salt: hkfd_salt,
+  ikm: consensus_state_ikm.concat(contract_id_payload),
+});
+
+iv = sha256(consensus_state_iv.concat(contract_id_payload))[0:12];
+
+encrypted_contract_id_payload = 
+    aes_256_gcm_encrypt({
+      iv: iv,
+      key: encryption_key,
+      data: contract_id_payload
+    });
+
+contract_id = contract_id_payload.concat(encrypted_contract_id_payload).concat(iv);
+  ```
+
+- Every time a contract execution is called, the contract id should be sent to the enclave. In the enclave, the following verification needs to happen:
+
+ ```
+contract_id_payload = contract_id[:32]
+encrypted_contract_id_payload = contract_id[32:64]
+iv = contract_id[64:]
+
+encryption_key = hkdf({
+  salt: hkfd_salt,
+  ikm: consensus_state_ikm.concat(contract_id_payload),
+});
+
+interpreted_payload = aes_256_gcm_decrypt({
+  iv: iv,
+  key: encryption_key,
+  data: current_state_ciphertext,
+  aad: previous_iv
+ });
+ 
+ assert(interpreted_payload == contract_id_payload) 
+ ```
 
 ## write_db(field_name, value)
 
