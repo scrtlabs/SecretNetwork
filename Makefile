@@ -157,6 +157,8 @@ clean:
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*
 	-rm -rf ./third_party/vendor/
+	-rm -rf ./.sgx_secrets/*
+	-rm -rf ./x/compute/internal/keeper/.sgx_secrets/*
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/lib/wasmi-runtime clean
 
