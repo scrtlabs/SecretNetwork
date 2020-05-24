@@ -16,6 +16,7 @@ import {
   StdFee,
   StdSignature,
 } from "./types";
+import crypto from "crypto-browserify";
 
 export interface SigningCallback {
   (signBytes: Uint8Array): Promise<StdSignature>;
@@ -177,6 +178,15 @@ export class SigningCosmWasmClient extends CosmWasmClient {
       logs: result.logs,
       transactionHash: result.transactionHash,
     };
+  }
+
+  encrypt(plaintext: object) {
+    // https://gist.github.com/vlucas/2bd40f62d20c1d49237a109d491974eb
+    const plaintextStr = JSON.stringify(plaintext);
+  }
+
+  decrypt(ciphertext: object) {
+    // https://gist.github.com/vlucas/2bd40f62d20c1d49237a109d491974eb
   }
 
   public async instantiate(
