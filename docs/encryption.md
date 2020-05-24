@@ -4,25 +4,26 @@
 
 - [Implementing the Secret in Contracts](#implementing-the-secret-in-contracts)
 - [Bootstrap Process](#bootstrap-process)
-  - [`consensus_seed`](#consensusseed)
+  - [`consensus_seed`](#consensus_seed)
   - [Key Derivation](#key-derivation)
-    - [`consensus_seed_exchange_privkey`](#consensusseedexchangeprivkey)
-    - [`consensus_io_exchange_privkey`](#consensusioexchangeprivkey)
-    - [`consensus_state_ikm`](#consensusstateikm)
+    - [`consensus_seed_exchange_privkey`](#consensus_seed_exchange_privkey)
+    - [`consensus_io_exchange_privkey`](#consensus_io_exchange_privkey)
+    - [`consensus_state_ikm`](#consensus_state_ikm)
+    - [`consensus_state_iv`](#consensus_state_iv)
   - [Bootstrap Process Epilogue](#bootstrap-process-epilogue)
 - [Node Startup](#node-startup)
 - [New Node Registration](#new-node-registration)
   - [On the new node](#on-the-new-node)
   - [On the consensus layer, inside the Enclave of every full node](#on-the-consensus-layer-inside-the-enclave-of-every-full-node)
-    - [`seed_exchange_key`](#seedexchangekey)
-    - [Sharing `consensus_seed` with the new node](#sharing-consensusseed-with-the-new-node)
+    - [`seed_exchange_key`](#seed_exchange_key)
+    - [Sharing `consensus_seed` with the new node](#sharing-consensus_seed-with-the-new-node)
   - [Back on the new node, inside its Enclave](#back-on-the-new-node-inside-its-enclave)
-    - [`seed_exchange_key`](#seedexchangekey-1)
-    - [Decrypting `encrypted_consensus_seed`](#decrypting-encryptedconsensusseed)
+    - [`seed_exchange_key`](#seed_exchange_key-1)
+    - [Decrypting `encrypted_consensus_seed`](#decrypting-encrypted_consensus_seed)
   - [New Node Registration Epilogue](#new-node-registration-epilogue)
 - [Contracts State Encryption](#contracts-state-encryption)
-  - [write_db(field_name, value)](#writedbfieldname-value)
-  - [read_db(field_name)](#readdbfieldname)
+  - [write_db(field_name, value)](#write_dbfield_name-value)
+  - [read_db(field_name)](#read_dbfield_name)
 - [Transaction Encryption](#transaction-encryption)
   - [Input](#input)
   - [Output](#output)
@@ -105,6 +106,19 @@ consensus_io_exchange_pubkey = calculate_secp256k1_pubkey(
 consensus_state_ikm = hkdf({
   salt: hkfd_salt,
   ikm: consensus_seed.append(uint8(3)),
+}); // 256 bits
+```
+
+### `consensus_state_iv`
+
+TODO reasoning
+
+- `consensus_state_iv`: An input secret IV to prevent IV manipulation while encrypting contracts' state.
+
+```js
+consensus_state_iv = hkdf({
+  salt: hkfd_salt,
+  ikm: consensus_seed.append(uint8(4)),
 }); // 256 bits
 ```
 
@@ -252,7 +266,7 @@ TODO reasoning
   - `sha256(contract_wasm_binary)`
   - The contract's wallet address (TODO how to authenticate this??)
 - Ciphertext is prepended with the `iv` so that the next read will be able to decrypt it. `iv` is also authenticated with the AES-256-GCM AAD.
-- `iv` is derive from `sha256(value + previous_iv)` in order to prevent tx rollback attacks that can force `iv` and `encryption_key` reuse. This also prevents using the same `iv` in different instances of the same contract.
+- `iv` is derive from `sha256(consensus_state_iv + value + previous_iv)` in order to prevent tx rollback attacks that can force `iv` and `encryption_key` reuse. This also prevents using the same `iv` in different instances of the same contract. `consensus_state_iv` prevents exposing `value` by comparing `iv` to `previos_iv`.
 
 ## write_db(field_name, value)
 
@@ -266,7 +280,7 @@ encryption_key = hkdf({
 
 if (current_state_ciphertext == null) {
   // field_name doesn't yet initialized in state
-  iv = sha256(value)[0:12]; // truncate because iv is only 96 bits
+  iv = sha256(consensus_state_iv.concat(value))[0:12]; // truncate because iv is only 96 bits
 } else {
   // read previous_iv, verify it, calculate new iv
   previous_iv = current_state_ciphertext[0:12]; // first 12 bytes
@@ -278,7 +292,7 @@ if (current_state_ciphertext == null) {
     data: current_state_ciphertext,
     aad: previous_iv
   });
-  iv = sha256(previous_iv.concat(value))[0:12]; // truncate because iv is only 96 bits
+  iv = sha256(consensus_state_iv.concat(value).concat(previous_iv))[0:12]; // truncate because iv is only 96 bits
 }
 
 new_state_ciphertext = aes_256_gcm_encrypt({
