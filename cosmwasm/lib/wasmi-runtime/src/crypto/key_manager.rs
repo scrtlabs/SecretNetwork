@@ -25,10 +25,11 @@ impl Keychain {
         };
 
         let mut x = Keychain {
+            consensus_seed,
             consensus_base_state_key: None,
             consensus_seed_exchange_keypair: None,
             consensus_io_exchange_keypair: None,
-        registration_key: None,
+            registration_key: None,
         };
 
         x.generate_consensus_master_keys();
@@ -66,7 +67,7 @@ impl Keychain {
         Ok(())
     }
 
-    pub fn is_new_node_seed_exchange_keypair_set(&self) -> bool {
+    pub fn is_registration_key_set(&self) -> bool {
         return self.registration_key.is_some();
     }
 
