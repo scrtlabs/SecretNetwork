@@ -54,7 +54,7 @@ func InitBootstrapCmd(
 	cmd := &cobra.Command{
 		Use:   "init-bootstrap [output-file]",
 		Short: "Perform bootstrap initialization",
-		Long: `Create attestation report, signed by Intel which is used in the registation process of
+		Long: `Create attestation report, signed by Intel which is used in the registration process of
 the node to the chain. This process, if successful, will output a certificate which is used to authenticate with the 
 blockchain. Writes the certificate in DER format to ~/attestation_cert.der
 `,
@@ -70,6 +70,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert.der
 
 			regGenState := reg.GetGenesisStateFromAppState(cdc, appState)
 
+			// the master key of the generated certificate is returned here
 			masterKey, err := api.InitBootstrap()
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
@@ -88,6 +89,10 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert.der
 				return err
 			}
 
+			fmt.Println(fmt.Sprintf("%s", hex.EncodeToString(pubkey)))
+			fmt.Println(fmt.Sprintf("%s", hex.EncodeToString(masterKey)))
+
+			// sanity check - make sure the certificate we're using matches the generated key
 			if hex.EncodeToString(pubkey) != hex.EncodeToString(masterKey) {
 				return fmt.Errorf("invalid certificate for master public key")
 			}

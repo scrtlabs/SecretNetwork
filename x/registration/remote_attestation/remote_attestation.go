@@ -32,10 +32,18 @@ import (
 */
 func VerifyRaCert(rawCert []byte) ([]byte, error) {
 	// printCert(rawCert)
-
 	// get the pubkey and payload from raw data
-	pubK, payload := unmarshalCert(rawCert)
 
+	pubK, payload := unmarshalCert(rawCert)
+	if !isSgxHardwareMode() {
+		pk, err := base64.StdEncoding.DecodeString(string(payload))
+		if err != nil {
+			log.Fatalln(err)
+			return nil, err
+		}
+
+		return pk, nil
+	}
 	// Load Intel CA, Verify Cert and Signature
 	attnReportRaw, err := verifyCert(payload)
 	if err != nil {
@@ -51,6 +59,25 @@ func VerifyRaCert(rawCert []byte) ([]byte, error) {
 	}
 
 	return pubK, nil
+}
+
+func extractPublicFromCert(cert []byte) []byte {
+	prime256v1Oid := []byte{0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07}
+	offset := uint(bytes.Index(cert, prime256v1Oid))
+	offset += 11 // 10 + TAG (0x03)
+
+	// Obtain Public Key length
+	length := uint(cert[offset])
+	if length > 0x80 {
+		length = uint(cert[offset+1])*uint(0x100) + uint(cert[offset+2])
+		offset += 2
+	}
+
+	// Obtain Public Key
+	offset += 1
+	pubK := cert[offset+2 : offset+length] // skip "00 04"
+
+	return pubK
 }
 
 func unmarshalCert(rawbyte []byte) ([]byte, []byte) {

@@ -160,6 +160,11 @@ clean:
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/lib/wasmi-runtime clean
 
+docker_bootstrap:
+	docker build --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t cashmaney/secret_bootstrap .
+
+docker_node:
+	docker build --build-arg SECRET_NODE_TYPE=NODE -t cashmaney/secret_node .
 # while developing:
 build-enclave:
 	$(MAKE) -C cosmwasm/lib/wasmi-runtime 

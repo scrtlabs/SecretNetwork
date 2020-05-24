@@ -11,7 +11,6 @@ import (
 	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
 	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
 	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
-	"os"
 	"path/filepath"
 )
 
@@ -23,14 +22,14 @@ type Keeper struct {
 	router sdk.Router
 }
 
-func SgxMode() string {
-	sgx := os.Getenv("SGX_MODE")
-	if sgx == "" {
-		sgx = "HW"
-	}
-
-	return sgx
-}
+//func SgxMode() string {
+//	sgx := os.Getenv("SGX_MODE")
+//	if sgx == "" {
+//		sgx = "HW"
+//	}
+//
+//	return sgx
+//}
 
 // NewKeeper creates a new contract Keeper instance
 func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, router sdk.Router, homeDir string, bootstrap bool) Keeper {
@@ -47,10 +46,6 @@ func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, router sdk.Router, homeD
 }
 
 func InitializeNode(homeDir string) {
-
-	if SgxMode() != "HW" {
-		return
-	}
 
 	seedPath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
 
@@ -87,7 +82,6 @@ func InitializeNode(homeDir string) {
 	return
 }
 
-// Create uploads and compiles a WASM contract, returning a short identifier for the contract
 func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byte, error) {
 	fmt.Println("RegisterNode")
 	var encSeed []byte

@@ -13,7 +13,7 @@ rm -rf ~/.enigmad
 
 mkdir -p /root/.enigmad/.node
 
-enigmad init $(hostname) --chain-id enigma-testnet || true
+enigmad init "$(hostname)" --chain-id enigma-testnet || true
 
 PERSISTENT_PEERS=115aa0a629f5d70dd1d464bc7e42799e00f4edae@bootstrap:26656
 
@@ -23,24 +23,26 @@ echo "Set persistent_peers: $PERSISTENT_PEERS"
 echo "Waiting for bootstrap to start..."
 sleep 10
 
-MASTER_KEY="$(enigmacli q register secret-network-params --node http://bootstrap:26657 2> /dev/null | cut -c 3- )"
+# MASTER_KEY="$(enigmacli q register secret-network-params --node http://bootstrap:26657 2> /dev/null | cut -c 3- )"
 
 #echo "Master key: $MASTER_KEY"
 
 enigmad init-enclave
 
-PUBLIC_KEY="$(enigmad parse attestation_cert.der 2> /dev/null | cut -c 3- )"
+PUBLIC_KEY=$(enigmad parse attestation_cert.der 2> /dev/null | cut -c 3- )
 
-echo "Public key: $PUBLIC_KEY"
+echo "Public key: $(enigmad parse attestation_cert.der 2> /dev/null | cut -c 3- )"
 
 enigmacli tx register auth attestation_cert.der --node http://bootstrap:26657 -y --from a
 
 sleep 5
 
-SEED=$(enigmacli q register seed $PUBLIC_KEY --node http://bootstrap:26657 2> /dev/null | cut -c 3-)
+SEED=$(enigmacli q register seed "$PUBLIC_KEY" --node http://bootstrap:26657 2> /dev/null | cut -c 3-)
 echo "SEED: $SEED"
 
-$(enigmad configure-secret master-cert.der $SEED)
+enigmacli q register secret-network-params --node http://bootstrap:26657 2> /dev/null
+
+enigmad configure-secret master-cert.der "$SEED"
 
 cp /tmp/.enigmad/config/genesis.json /root/.enigmad/config/genesis.json
 
