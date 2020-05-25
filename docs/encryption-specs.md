@@ -31,7 +31,7 @@
     - [On the consensus layer, inside the Enclave of every full node](#on-the-consensus-layer-inside-the-enclave-of-every-full-node-1)
   - [Output](#output)
     - [On the consensus layer, inside the Enclave of every full node](#on-the-consensus-layer-inside-the-enclave-of-every-full-node-2)
-    - [On the transaction sender](#on-the-transaction-sender-1)
+    - [Back on the transaction sender](#back-on-the-transaction-sender)
 - [Blockchain Upgrades](#blockchain-upgrades)
 - [Theoretical Attacks](#theoretical-attacks)
 
@@ -586,9 +586,32 @@ if (typeof output["err"] == "string") {
 return output;
 ```
 
-### On the transaction sender
+### Back on the transaction sender
 
-TODO ??
+- The transaction output is written to the chain
+- Only the wallet with the right `tx_sender_wallet_privkey` can derive `tx_encryption_key`, so for everyone else it'll just be encrypted.
+- Every encrypted value can be decrypted the following way:
+
+```js
+// output["err"]
+// output["ok"]["data"]
+// output["ok"]["log"][i]["key"]
+// output["ok"]["log"][i]["value"]
+// output["ok"] if input is a query
+
+bytes = base64_encode(encrypted_output);
+iv = bytes.slice(0, 12);
+encrypted_bytes = bytes.slice(12);
+
+aes_256_gcm_decrypt({
+  iv: iv,
+  key: tx_encryption_key,
+  data: encrypted_bytes,
+  aad: iv,
+});
+```
+
+- For `output["ok"]["messages"][i]["type"] == "Contract"`, `output["ok"]["messages"][i]["msg"]` will be decrypted in [this](#on-the-consensus-layer-inside-the-enclave-of-every-full-node-1) manner by the consensus layer when it handles the contract callback.
 
 # Blockchain Upgrades
 
