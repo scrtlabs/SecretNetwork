@@ -58,7 +58,7 @@ func InitBootstrapCmd(
 the node to the chain. This process, if successful, will output a certificate which is used to authenticate with the 
 blockchain. Writes the certificate in DER format to ~/attestation_cert.der
 `,
-		Args: cobra.ExactArgs(0),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			config := ctx.Config
 
