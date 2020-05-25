@@ -26,8 +26,7 @@ perl -i -pe 's/"stake"/"uscrt"/g' ~/.enigmad/config/genesis.json
 ./enigmad collect-gentxs
 ./enigmad validate-genesis
 
-
-./enigmad init-bootstrap "$(find /home/runner/ -name "*.der")"
+./enigmad init-bootstrap /home/runner/work/EnigmaBlockchain/EnigmaBlockchain/attestation_cert.der
 
 ./enigmad validate-genesis
 
