@@ -460,7 +460,7 @@ msg = aes_256_gcm_decrypt({
 
 - The output must be a valid JSON object, as it is passed to multiple mechanisms for final processing:
   - Logs are treated as Tendermint events
-  - Messages can be callbacks to another contract call or to
+  - Messages can be callbacks to another contract call
   - Messages can also instruct to send funds from the contract's wallet
   - There's a data section which is free form bytes to be inerperted by the client (or dApp)
   - And there's also an error section
