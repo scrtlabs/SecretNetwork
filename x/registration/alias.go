@@ -49,4 +49,5 @@ type (
 	GenesisState      = types.GenesisState
 	Keeper            = keeper.Keeper
 	SeedConfig        = types.SeedConfig
+	EnclaveApi        = keeper.EnclaveApi
 )
