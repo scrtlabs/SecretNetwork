@@ -41,6 +41,7 @@ var (
 	ErrAuthenticateFailed   = types.ErrAuthenticateFailed
 	ErrSeedInitFailed       = types.ErrSeedInitFailed
 	RegistrationStorePrefix = types.RegistrationStorePrefix
+	ErrInvalidType          = types.ErrInvalidType
 )
 
 type (

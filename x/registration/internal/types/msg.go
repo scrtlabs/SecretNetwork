@@ -57,7 +57,7 @@ func validateCertificate(cert ra.Certificate) error {
 	// todo: add public key verification
 	_, err := ra.VerifyRaCert(cert)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	return nil

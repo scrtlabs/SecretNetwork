@@ -26,7 +26,11 @@ func VerifyRaCert(rawCert []byte) ([]byte, error) {
 	// printCert(rawCert)
 	// get the pubkey and payload from raw data
 
-	pubK, payload := unmarshalCert(rawCert)
+	pubK, payload, err := unmarshalCert(rawCert)
+	if err != nil {
+		return nil, err
+	}
+
 	if !isSgxHardwareMode() {
 		pk, err := base64.StdEncoding.DecodeString(string(payload))
 		if err != nil {
@@ -53,9 +57,16 @@ func VerifyRaCert(rawCert []byte) ([]byte, error) {
 	return pubK, nil
 }
 
-func extractPublicFromCert(cert []byte) []byte {
+func extractPublicFromCert(cert []byte) ([]byte, error) {
 	prime256v1Oid := []byte{0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07}
-	offset := uint(bytes.Index(cert, prime256v1Oid))
+	idx := bytes.Index(cert, prime256v1Oid)
+
+	if idx == -1 {
+		err := errors.New("Error parsing certificate - public key not found")
+		return nil, err
+	}
+
+	offset := uint(idx)
 	offset += 11 // 10 + TAG (0x03)
 
 	// Obtain Public Key length
@@ -69,15 +80,17 @@ func extractPublicFromCert(cert []byte) []byte {
 	offset += 1
 	pubK := cert[offset+2 : offset+length] // skip "00 04"
 
-	return pubK
+	return pubK, nil
 }
 
-func unmarshalCert(rawbyte []byte) ([]byte, []byte) {
+func unmarshalCert(rawbyte []byte) ([]byte, []byte, error) {
 	// Search for Public Key prime256v1 OID
 	// Obtain Public Key
 
-	pubK := extractPublicFromCert(rawbyte)
-
+	pubK, err := extractPublicFromCert(rawbyte)
+	if err != nil {
+		return nil, nil, err
+	}
 	// Search for Netscape Comment OID
 	nsCmtOid := []byte{0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x42, 0x01, 0x0D}
 	offset := uint(bytes.Index(rawbyte, nsCmtOid))
@@ -93,32 +106,35 @@ func unmarshalCert(rawbyte []byte) ([]byte, []byte) {
 	// Obtain Netscape Comment
 	offset += 1
 	payload := rawbyte[offset : offset+length]
-	return pubK, payload
+	return pubK, payload, err
 }
 
 func verifyCert(payload []byte) ([]byte, error) {
 	// Extract each field
 	plSplit := bytes.Split(payload, []byte{0x7C}) // '|'
+
+	if len(plSplit) < 2 {
+		err := errors.New("failed to parse certificate - malformed")
+		return nil, err
+	}
+
 	attnReportRaw := plSplit[0]
 	sigRaw := plSplit[1]
 
 	var sig, sigCertDec []byte
 	sig, err := base64.StdEncoding.DecodeString(string(sigRaw))
 	if err != nil {
-		log.Fatalln(err)
 		return nil, err
 	}
 
 	sigCertRaw := plSplit[2]
 	sigCertDec, err = base64.StdEncoding.DecodeString(string(sigCertRaw))
 	if err != nil {
-		log.Fatalln(err)
 		return nil, err
 	}
 
 	certServer, err := x509.ParseCertificate(sigCertDec)
 	if err != nil {
-		log.Fatalln(err)
 		return nil, err
 	}
 
@@ -138,7 +154,6 @@ func verifyCert(payload []byte) ([]byte, error) {
 	}
 
 	if _, err := certServer.Verify(opts); err != nil {
-		log.Fatalln(err)
 		return nil, err
 	} else {
 		//fmt.Println("Cert is good")
@@ -147,7 +162,6 @@ func verifyCert(payload []byte) ([]byte, error) {
 	// Verify the signature against the signing cert
 	err = certServer.CheckSignature(certServer.SignatureAlgorithm, attnReportRaw, sig)
 	if err != nil {
-		log.Fatalln(err)
 		return nil, err
 	} else {
 		//fmt.Println("Signature good")

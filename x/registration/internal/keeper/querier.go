@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-
+	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
@@ -42,13 +42,13 @@ func queryMasterKey(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]by
 func queryEncryptedSeed(ctx sdk.Context, pubkey string, req abci.RequestQuery, keeper Keeper) ([]byte, error) {
 	pubkeyBytes, err := hex.DecodeString(pubkey)
 	if err != nil {
-		return nil, err
+		return nil, sdkerrors.Wrap(types.ErrInvalidType, err.Error())
 	}
 
-	seed := keeper.getRegistrationInfo(ctx, pubkeyBytes).EncryptedSeed
+	seed := keeper.getRegistrationInfo(ctx, pubkeyBytes)
 	if seed == nil {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownAddress, "Node has not been authenticated yet")
 	}
 
-	return seed, nil
+	return seed.EncryptedSeed, nil
 }

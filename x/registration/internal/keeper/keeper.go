@@ -8,9 +8,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
 	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
 	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
+	"github.com/prometheus/common/log"
 	"path/filepath"
 )
 
@@ -18,8 +18,8 @@ import (
 type Keeper struct {
 	storeKey sdk.StoreKey
 	cdc      *codec.Codec
-
-	router sdk.Router
+	enclave  EnclaveInterface
+	router   sdk.Router
 }
 
 //func SgxMode() string {
@@ -32,20 +32,21 @@ type Keeper struct {
 //}
 
 // NewKeeper creates a new contract Keeper instance
-func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, router sdk.Router, homeDir string, bootstrap bool) Keeper {
+func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, router sdk.Router, enclave EnclaveInterface, homeDir string, bootstrap bool) Keeper {
 
 	if !bootstrap {
-		InitializeNode(homeDir)
+		InitializeNode(homeDir, enclave)
 	}
 
 	return Keeper{
 		storeKey: storeKey,
 		cdc:      cdc,
 		router:   router,
+		enclave:  enclave,
 	}
 }
 
-func InitializeNode(homeDir string) {
+func InitializeNode(homeDir string, enclave EnclaveInterface) {
 
 	seedPath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
 
@@ -74,7 +75,7 @@ func InitializeNode(homeDir string) {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
-	_, err = api.LoadSeedToEnclave(cert, enc)
+	_, err = enclave.LoadSeed(cert, enc)
 	if err != nil {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
@@ -100,25 +101,25 @@ func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byt
 		if err != nil {
 			return nil, sdkerrors.Wrap(types.ErrAuthenticateFailed, err.Error())
 		}
-		fmt.Println("After isNodeAuthenticated")
+		log.Debug("After isNodeAuthenticated")
 		if isAuth {
 			return k.getRegistrationInfo(ctx, publicKey).EncryptedSeed, nil
 		}
-		fmt.Println("After getRegistrationInfo")
-		encSeed, err = api.GetEncryptedSeed(certificate)
-		fmt.Println("After GetEncryptedSeed")
+		log.Debug("After getRegistrationInfo")
+		encSeed, err = k.enclave.GetEncryptedSeed(certificate)
+		log.Debug("After GetEncryptedSeed")
 		if err != nil {
 			// return 0, sdkerrors.Wrap(err, "cosmwasm create")
 			return nil, sdkerrors.Wrap(types.ErrAuthenticateFailed, err.Error())
 		}
-		fmt.Println("Woohoo")
+		log.Debug("Registration done")
 	}
 
 	regInfo := types.RegistrationNodeInfo{
 		Certificate:   certificate,
 		EncryptedSeed: encSeed,
 	}
-	k.setRegistrationInfo(ctx, regInfo)
+	k.SetRegistrationInfo(ctx, regInfo)
 
 	return encSeed, nil
 }

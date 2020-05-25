@@ -50,6 +50,9 @@ jobs:
           mkdir -p ./.sgx_secrets
           cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
           ./cosmwasm/lib/wasmi-sgx-test.sh
+      - name: Test Registration Module
+        run: |
+          go test -v ./x/registration/internal/...
       - name: Test Compute Module
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"

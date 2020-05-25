@@ -78,7 +78,7 @@ func (k Keeper) ListRegistrationInfo(ctx sdk.Context, cb func([]byte, types.Regi
 	}
 }
 
-func (k Keeper) setRegistrationInfo(ctx sdk.Context, certificate types.RegistrationNodeInfo) {
+func (k Keeper) SetRegistrationInfo(ctx sdk.Context, certificate types.RegistrationNodeInfo) {
 	store := ctx.KVStore(k.storeKey)
 
 	publicKey, err := ra.VerifyRaCert(certificate.Certificate)

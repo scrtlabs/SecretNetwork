@@ -18,4 +18,6 @@ var (
 
 	// ErrSeedInitFailed error when the seed initialization fails
 	BootstrapInitFailed = sdkErrors.Register(DefaultCodespace, 4, "Failed to initialize bootstrap")
+
+	ErrInvalidType = sdkErrors.Register(DefaultCodespace, 5, "Type error")
 )
