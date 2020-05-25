@@ -467,7 +467,7 @@ msg = aes_256_gcm_decrypt({
 - Therefore the output must be part-encrypted, so we need to use a new `iv` for each part.
 - We'll use HKDF-SHA256 in combination with the `input_iv` and an `iv_counter` to derive a new `iv` for each part.
 - An example output for an execution:
-  ```json
+  ```js
   {
     "ok": {
       "messages": [
@@ -510,13 +510,13 @@ msg = aes_256_gcm_decrypt({
 - Notice on a `Contract` message, the `msg` value is the same as our `tx_input`, so we need to prepend the new `iv_input`, the `nonce` and `tx_sender_wallet_pubkey` just like we did on the tx sender.
 - For the rest of the encrypted outputs we ony need to prepend the new `iv` for each encrypted value, as the tx sender can get `consensus_io_exchange_prubkey` from `genesis.json` and nonce from the `tx_input` the is attached to the `tx_output`.
 - An example output with an error:
-  ```json
+  ```js
   {
     "err": "{\"watermelon\":6,\"coffee\":5}" // need to encrypt this value
   }
   ```
 - An example output for a query:
-  ```json
+  ```js
   {
     "ok": "{\"answer\":42}" // need to encrypt this value
   }
