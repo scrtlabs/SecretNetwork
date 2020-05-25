@@ -7,7 +7,7 @@ use log::*;
 
 pub struct Keychain {
     consensus_seed: Option<Seed>,
-    consensus_base_state_key: Option<Seed>,
+    consensus_state_ikm: Option<Seed>,
     consensus_seed_exchange_keypair: Option<KeyPair>,
     consensus_io_exchange_keypair: Option<KeyPair>,
     new_node_seed_exchange_keypair: Option<KeyPair>,
@@ -26,7 +26,7 @@ impl Keychain {
 
         let mut x = Keychain {
             consensus_seed,
-            consensus_base_state_key: None,
+            consensus_state_ikm: None,
             consensus_seed_exchange_keypair: None,
             consensus_io_exchange_keypair: None,
             new_node_seed_exchange_keypair: None,
@@ -71,8 +71,8 @@ impl Keychain {
         return self.new_node_seed_exchange_keypair.is_some();
     }
 
-    pub fn is_consensus_base_state_key_set(&self) -> bool {
-        return self.consensus_base_state_key.is_some();
+    pub fn is_consensus_state_ikm_set(&self) -> bool {
+        return self.consensus_state_ikm.is_some();
     }
 
     pub fn is_consensus_seed_exchange_keypair_set(&self) -> bool {
@@ -87,9 +87,9 @@ impl Keychain {
         return self.consensus_seed.is_some();
     }
 
-    pub fn get_consensus_base_state_key(&self) -> Result<Seed, CryptoError> {
-        if self.consensus_base_state_key.is_some() {
-            Ok(self.consensus_base_state_key.unwrap())
+    pub fn get_consensus_state_ikm(&self) -> Result<Seed, CryptoError> {
+        if self.consensus_state_ikm.is_some() {
+            Ok(self.consensus_state_ikm.unwrap())
         } else {
             error!("Error accessing base_state_key (does not exist, or was not initialized)");
             Err(CryptoError::ParsingError)
@@ -151,8 +151,8 @@ impl Keychain {
         self.consensus_io_exchange_keypair = Some(kp.clone())
     }
 
-    pub fn set_consensus_base_state_key(&mut self, consensus_base_state_key: Seed) {
-        self.consensus_base_state_key = Some(consensus_base_state_key.clone());
+    pub fn set_consensus_state_ikm(&mut self, consensus_state_ikm: Seed) {
+        self.consensus_state_ikm = Some(consensus_state_ikm.clone());
     }
 
     pub fn set_consensus_seed(&mut self, consensus_seed: Seed) -> Result<(), EnclaveError> {
@@ -207,15 +207,15 @@ impl Keychain {
 
         self.set_consensus_io_exchange_keypair(consensus_io_exchange_keypair);
 
-        // consensus_base_state_key
+        // consensus_state_ikm
 
-        let consensus_base_state_key_bytes = self
+        let consensus_state_ikm_bytes = self
             .consensus_seed
             .unwrap()
-            .derive_key_from_this(CONSENSUS_BASE_STATE_KEY_DERIVE_ORDER);
-        let consensus_base_state_key = Seed::new_from_slice(&consensus_base_state_key_bytes);
+            .derive_key_from_this(CONSENSUS_STATE_ikm_DERIVE_ORDER);
+        let consensus_state_ikm = Seed::new_from_slice(&consensus_state_ikm_bytes);
 
-        self.set_consensus_base_state_key(consensus_base_state_key);
+        self.set_consensus_state_ikm(consensus_state_ikm);
 
         Ok(())
     }
