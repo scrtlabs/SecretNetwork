@@ -507,7 +507,7 @@ msg = aes_256_gcm_decrypt({
     }
   }
   ```
-- Notice on a `Contract` message, the `msg` value is the same as our `tx_input`, so we need to prepend the new `iv_input`, the `nonce` and `tx_sender_wallet_pubkey` just like we did on the tx sender.
+- Notice on a `Contract` message, the `msg` value should be the same `msg` as in our `tx_input`, so we need to prepend the new `iv_input`, the `nonce` and `tx_sender_wallet_pubkey` just like we did on the tx sender.
 - For the rest of the encrypted outputs we ony need to prepend the new `iv` for each encrypted value, as the tx sender can get `consensus_io_exchange_prubkey` from `genesis.json` and nonce from the `tx_input` the is attached to the `tx_output`.
 - An example output with an error:
   ```js
