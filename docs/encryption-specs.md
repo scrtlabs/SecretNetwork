@@ -151,11 +151,11 @@ TODO reasoning
 
 - Verify the remote attestation proof of the bootstrap node from `genesis.json`.
 - Create a remote attestation proof that the node's Enclave is genuine.
-- Generate inside the node's Enclave a true random secp256k1 curve private key: `new_node_seed_exchange_privkey`.
-- From `new_node_seed_exchange_privkey` calculate `new_node_seed_exchange_pubkey`.
+- Generate inside the node's Enclave a true random secp256k1 curve private key: `registration_privkey`.
+- From `registration_privkey` calculate `registration_pubkey`.
 - Send an `enigmacli tx register auth` transaction with the following inputs:
   - The remote attestation proof that the node's Enclave is genuine.
-  - `new_node_seed_exchange_pubkey`
+  - `registration_pubkey`
   - 256 bits true random `nonce`
   - 256 bits true random `iv`
 
@@ -172,13 +172,13 @@ TODO reasoning
 
 - `seed_exchange_key`: An AES-256-GCM encryption key. Will be used to send `consensus_seed` to the new node.
 - `seed_exchange_key` is derived the following way:
-  - `seed_exchange_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_seed_exchange_privkey` and `new_node_seed_exchange_pubkey`.
+  - `seed_exchange_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_seed_exchange_privkey` and `registration_pubkey`.
   - `seed_exchange_key` is derived using HKDF-SHA256 from `seed_exchange_ikm` and `nonce`.
 
 ```js
 seed_exchange_ikm = ecdh({
   privkey: consensus_seed_exchange_privkey,
-  pubkey: new_node_seed_exchange_pubkey,
+  pubkey: registration_pubkey,
 }); // 256 bits
 
 seed_exchange_key = hkdf({
@@ -214,12 +214,12 @@ TODO reasoning
 
 - `seed_exchange_key`: An AES-256-GCM encryption key. Will be used to receive `consensus_seed` from the network.
 - `seed_exchange_key` is derived the following way:
-  - `seed_exchange_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_seed_exchange_pubkey` (public in `genesis.json`) and `new_node_seed_exchange_privkey` (available only inside the new node's Enclave).
+  - `seed_exchange_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_seed_exchange_pubkey` (public in `genesis.json`) and `registration_privkey` (available only inside the new node's Enclave).
   - `seed_exchange_key` is derived using HKDF-SHA256 with `seed_exchange_ikm` and `nonce`.
 
 ```js
 seed_exchange_ikm = ecdh({
-  privkey: new_node_seed_exchange_privkey,
+  privkey: registration_privkey,
   pubkey: consensus_seed_exchange_pubkey, // from genesis.json
 }); // 256 bits
 
