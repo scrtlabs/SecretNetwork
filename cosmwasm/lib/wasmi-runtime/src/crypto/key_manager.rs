@@ -165,8 +165,8 @@ impl Keychain {
 
     pub fn generate_consensus_master_keys(&mut self) -> Result<(), EnclaveError> {
         if !self.is_consensus_seed_set() {
-            error!("Seed not initialized! Cannot derive enclave keys");
-            return Err(EnclaveError::FailedUnseal);
+            debug!("Seed not initialized! Cannot derive enclave keys");
+            return Ok(());
         }
 
         // consensus_seed_exchange_keypair
@@ -176,15 +176,13 @@ impl Keychain {
             .unwrap()
             .derive_key_from_this(CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER);
         let consensus_seed_exchange_keypair =
-            KeyPair::new_from_slice(&consensus_seed_exchange_keypair_bytes)
-                .map_err(|err| {
-                    error!(
-                        "[Enclave] Error creating consensus_seed_exchange_keypair: {:?}",
-                        err
-                    );
-                    EnclaveError::FailedUnseal /* change error type? */
-                })
-                .unwrap();
+            KeyPair::new_from_slice(&consensus_seed_exchange_keypair_bytes).map_err(|err| {
+                error!(
+                    "[Enclave] Error creating consensus_seed_exchange_keypair: {:?}",
+                    err
+                );
+                EnclaveError::FailedUnseal /* change error type? */
+            })?;
 
         self.set_consensus_seed_exchange_keypair(consensus_seed_exchange_keypair);
 
@@ -195,15 +193,13 @@ impl Keychain {
             .unwrap()
             .derive_key_from_this(CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER);
         let consensus_io_exchange_keypair =
-            KeyPair::new_from_slice(&consensus_io_exchange_keypair_bytes)
-                .map_err(|err| {
-                    error!(
-                        "[Enclave] Error creating consensus_io_exchange_keypair: {:?}",
-                        err
-                    );
-                    EnclaveError::FailedUnseal /* change error type? */
-                })
-                .unwrap();
+            KeyPair::new_from_slice(&consensus_io_exchange_keypair_bytes).map_err(|err| {
+                error!(
+                    "[Enclave] Error creating consensus_io_exchange_keypair: {:?}",
+                    err
+                );
+                EnclaveError::FailedUnseal /* change error type? */
+            })?;
 
         self.set_consensus_io_exchange_keypair(consensus_io_exchange_keypair);
 
