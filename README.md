@@ -24,14 +24,17 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/EnigmaBlo
 - Telegram Channel: https://t.me/EnigmaProject
 - Community Secret Nodes Telegram : https://t.me/secretnodes
 - Community Enigma Governance Telegram : https://t.me/secretdao
+- The New Chat: https://chat.scrt.network/channel/general
 
 # Block Explorers
 
 - https://explorer.cashmaney.com
 - https://secretscan.io
+- https://puzzle-staging.secretnodes.org/enigma/chains/enigma-1
 
 # Implementation Discussions
 
+- [An Update on the Encryption Protocol](https://forum.enigma.co/t/an-update-on-the-encryption-protocol/1641)
 - [Secret Contracts on Enigma Blockchain](https://forum.enigma.co/t/secret-contracts-on-enigma-blockchain/1284)
 - [Network key management/agreement](https://forum.enigma.co/t/network-key-management-agreement/1324)
 - [Input/Output/State Encryption/Decryption protocol](https://forum.enigma.co/t/input-output-state-encryption-decryption-protocol/1325)
@@ -58,8 +61,8 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/EnigmaBlo
 
 # Archive
 
-- [For Enigma developers](/docs/dev/for-enigma-blockchain-devs.md)
-- [How to join Enigma as a mainnet genesis validator](/docs/genesis/genesis-validator-mainnet.md)
+- [For Blockchain developers](/docs/dev/for-enigma-blockchain-devs.md)
+- [How to be a mainnet genesis validator](/docs/genesis/genesis-validator-mainnet.md)
 
 # License
 
