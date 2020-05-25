@@ -59,9 +59,9 @@ pub fn create_attestation_report_u() -> SgxResult<sgx_status_t> {
 }
 
 pub fn untrusted_key_gen() -> SgxResult<[u8; 64]> {
-    info!("Hello from just before initializing - untrusted_init_bootstrap");
+    info!("Hello from just before initializing - untrusted_key_gen");
     let enclave = init_enclave().unwrap();
-    info!("Hello from just after initializing - untrusted_init_bootstrap");
+    info!("Hello from just after initializing - untrusted_key_gen");
 
     inner_key_gen(enclave.geteid())
 }
@@ -291,6 +291,7 @@ mod test {
         assert_eq!(orig_gas, 123321);
     }
 
+    //noinspection ALL
     #[test]
     #[should_panic]
     fn with_context_safe_for_panic() {

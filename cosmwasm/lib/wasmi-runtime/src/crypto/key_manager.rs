@@ -130,7 +130,7 @@ impl Keychain {
             // KeyPair does not implement copy (due to internal type not implementing it
             Ok(self.registration_key.clone().unwrap())
         } else {
-            error!("Error accessing new_node_seed_exchange_keypair (does not exist, or was not initialized)");
+            error!("Error accessing registration_key (does not exist, or was not initialized)");
             Err(CryptoError::ParsingError)
         }
     }

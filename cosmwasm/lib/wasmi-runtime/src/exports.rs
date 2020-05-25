@@ -119,8 +119,9 @@ pub unsafe extern "C" fn ecall_key_gen(
         .get_registration_key()
         .unwrap()
         .get_pubkey();
-    info!("ecall_key_gen key pk: {:?}", public_key.to_vec());
+
     public_key.clone_from_slice(&pubkey[1..UNCOMPRESSED_PUBLIC_KEY_SIZE]);
+    info!("ecall_key_gen key pk: {:?}", public_key.to_vec());
     sgx_status_t::SGX_SUCCESS
 }
 
