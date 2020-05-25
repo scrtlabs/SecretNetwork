@@ -41,7 +41,7 @@ Before the genesis of a new chain, there most be a bootstrap node to generate ne
 
 ## `consensus_seed`
 
-- Create a remote attestation proof that the nodw's Enclave is genuine.
+- Create a remote attestation proof that the node's Enclave is genuine.
 - Generate inside the Enclave a true random 256 bits seed: `consensus_seed`.
 - Seal `consensus_seed` with MRENCLAVE to a local file: `$HOME/.enigmad/sgx-secrets/consensus_seed.sealed`.
 
