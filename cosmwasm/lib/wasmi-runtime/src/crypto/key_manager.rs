@@ -208,7 +208,7 @@ impl Keychain {
         let consensus_state_ikm_bytes = self
             .consensus_seed
             .unwrap()
-            .derive_key_from_this(CONSENSUS_STATE_ikm_DERIVE_ORDER);
+            .derive_key_from_this(CONSENSUS_STATE_IKM_DERIVE_ORDER);
         let consensus_state_ikm = Seed::new_from_slice(&consensus_state_ikm_bytes);
 
         self.set_consensus_state_ikm(consensus_state_ikm);
