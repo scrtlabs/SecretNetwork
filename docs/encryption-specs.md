@@ -393,10 +393,11 @@ return current_state_plaintext;
 TODO reasoning
 
 - `tx_encryption_key`: An AES-256-GCM encryption key. Will be used to encrypt tx inputs and decrypt tx outpus.
-  - `tx_encryption_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_io_exchange_pubkey` and `tx_sender_wallet_privkey`.
-  - `tx_encryption_key` is derived using HKDF-SHA256 with `tx_encryption_ikm` and a random number `nonce`. This is to prevent using the same key for the same tx sender multiple times.
+  - `tx_encryption_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_io_exchange_pubkey` and `tx_sender_wallet_privkey` (client side).
+- `tx_encryption_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_io_exchange_privkey` and `tx_sender_wallet_pubkey` (inside the enclave of every full node).
+- `tx_encryption_key` is derived using HKDF-SHA256 with `tx_encryption_ikm` and a random number `nonce`. This is to prevent using the same key for the same tx sender multiple times.
 - `iv_input` for the input is randomly generated on the client side by the transation sender.
-- `iv`s for the output is derived from `iv_input` using HKDF-SHA256.
+- `iv`s for the output are derived from `iv_input` using HKDF-SHA256.
 
 ## Input
 
