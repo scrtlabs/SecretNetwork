@@ -183,7 +183,7 @@ seed_exchange_ikm = ecdh({
 
 seed_exchange_key = hkdf({
   salt: hkfd_salt,
-  ikm: seed_exchange_ikm.concat(nonce),
+  ikm: concat(seed_exchange_ikm, nonce),
 }); // 256 bits
 ```
 
@@ -225,7 +225,7 @@ seed_exchange_ikm = ecdh({
 
 seed_exchange_key = hkdf({
   salt: hkfd_salt,
-  ikm: seed_exchange_ikm.concat(nonce),
+  ikm: concat(seed_exchange_ikm, nonce),
 }); // 256 bits
 ```
 
@@ -344,7 +344,7 @@ if (current_state_ciphertext == null) {
     key: encryption_key,
     data: current_state_ciphertext,
     aad: previous_iv,
-  });
+  }); // just to authenticate previous_iv
   iv = sha256(concat(consensus_state_iv, value, previous_iv)).slice(0, 12); // truncate because iv is only 96 bits
 }
 
@@ -413,19 +413,21 @@ nonce = true_random({ bytes: 32 });
 
 tx_encryption_key = hkdf({
   salt: hkfd_salt,
-  ikm: tx_encryption_ikm.concat(nonce),
+  ikm: concat(tx_encryption_ikm, nonce),
 }); // 256 bits
 
 iv_input = true_random({ bytes: 12 });
+
+aad = concat(iv_input, nonce, tx_sender_wallet_pubkey);
 
 encrypted_msg = aes_256_gcm_encrypt({
   iv: iv_input,
   key: tx_encryption_key,
   data: msg,
-  aad: iv_input.concat(nonce, tx_sender_wallet_pubkey),
+  aad: aad,
 });
 
-tx_input = iv_input.concat(nonce, tx_sender_wallet_pubkey, encrypted_msg);
+tx_input = concat(aad, encrypted_msg);
 ```
 
 ### On the consensus layer, inside the Enclave of every full node
@@ -443,14 +445,14 @@ tx_encryption_ikm = ecdh({
 
 tx_encryption_key = hkdf({
   salt: hkfd_salt,
-  ikm: tx_encryption_ikm.concat(nonce),
+  ikm: concat(tx_encryption_ikm, nonce),
 }); // 256 bits
 
 msg = aes_256_gcm_decrypt({
   iv: iv_input,
   key: tx_encryption_key,
   data: encrypted_msg,
-  aad: iv_input.concat(nonce, tx_sender_wallet_pubkey),
+  aad: concat(iv_input, nonce, tx_sender_wallet_pubkey), // or: tx_input.slice(0, 77)
 });
 ```
 
@@ -533,7 +535,7 @@ iv_counter = 1;
 if (typeof output["err"] == "string") {
   iv = hkdf({
     salt: hkfd_salt,
-    ikm: input_iv.concat([iv_counter]),
+    ikm: concat(input_iv, [iv_counter]),
   }).slice(0, 12); // 96 bits
   iv_counter += 1;
 
@@ -544,7 +546,7 @@ if (typeof output["err"] == "string") {
     aad: iv,
   });
 
-  output["err"] = base64_encode(iv.concat(encrypted_err)); // needs to be a string
+  output["err"] = base64_encode(concat(iv, encrypted_err)); // needs to be a string
 } else if (typeof output["ok"] == "string") {
   // query
   // same as output["err"]...
@@ -554,7 +556,7 @@ if (typeof output["err"] == "string") {
     if (m["type"] == "Contract") {
       iv_input = hkdf({
         salt: hkfd_salt,
-        ikm: input_iv.concat([iv_counter]),
+        ikm: concat(input_iv, [iv_counter]),
       }).slice(0, 12); // 96 bits
       iv_counter += 1;
 
@@ -562,13 +564,13 @@ if (typeof output["err"] == "string") {
         iv: iv,
         key: tx_encryption_key,
         data: m["msg"],
-        aad: iv_input.concat(nonce, tx_sender_wallet_pubkey),
+        aad: concat(iv_input, nonce, tx_sender_wallet_pubkey),
       });
 
       // base64_encode because needs to be a string
       // also turns into a tx_input so we also need to prepend iv_input, nonce and tx_sender_wallet_pubkey
       m["msg"] = base64_encode(
-        iv_input.concat(nonce, tx_sender_wallet_pubkey, encrypted_msg)
+        concat(iv_input, nonce, tx_sender_wallet_pubkey, encrypted_msg)
       );
     }
   }
