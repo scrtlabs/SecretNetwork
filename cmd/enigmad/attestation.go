@@ -78,10 +78,17 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert.der
 
 			userHome, _ := os.UserHomeDir()
 
-			// parse coins trying to be sent
-			cert, err := ioutil.ReadFile(filepath.Join(userHome, reg.AttestationCertPath))
-			if err != nil {
-				return err
+			cert := []byte(nil)
+			if args[0] != "" {
+				cert, err = ioutil.ReadFile(args[0])
+				if err != nil {
+					return err
+				}
+			} else {
+				cert, err = ioutil.ReadFile(filepath.Join(userHome, reg.AttestationCertPath))
+				if err != nil {
+					return err
+				}
 			}
 
 			pubkey, err := ra.VerifyRaCert(cert)
