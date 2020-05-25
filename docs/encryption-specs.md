@@ -61,7 +61,7 @@ seal({
 TODO reasoning
 
 - Key Derivation inside the Enclave is done deterministically using HKDF-SHA256 [[1]](https://tools.ietf.org/html/rfc5869#section-2)[[2]](https://en.wikipedia.org/wiki/HKDF).
-- The HKDF [salt](https://tools.ietf.org/html/rfc5869#section-3.1) is chosen to be Bitcoin's halving block hash.
+- The HKDF-SHA256 [salt](https://tools.ietf.org/html/rfc5869#section-3.1) is chosen to be Bitcoin's halving block hash.
 
 ```js
 hkfd_salt = sha256(
@@ -69,7 +69,7 @@ hkfd_salt = sha256(
 );
 ```
 
-- Using HKDF, `hkfd_salt` and `consensus_seed`, derive the following keys:
+- Using HKDF-SHA256, `hkfd_salt` and `consensus_seed`, derive the following keys:
 
 ### `consensus_seed_exchange_privkey`
 
@@ -105,7 +105,7 @@ consensus_io_exchange_pubkey = calculate_secp256k1_pubkey(
 
 ### `consensus_state_ikm`
 
-- `consensus_state_ikm`: An input keying material (IKM) for HKDF to derive encryption keys for contracts' state.
+- `consensus_state_ikm`: An input keying material (IKM) for HKDF-SHA256 to derive encryption keys for contracts' state.
 
 ```js
 consensus_state_ikm = hkdf({
@@ -173,7 +173,7 @@ TODO reasoning
 - `seed_exchange_key`: An AES-256-GCM encryption key. Will be used to send `consensus_seed` to the new node.
 - `seed_exchange_key` is derived the following way:
   - `seed_exchange_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_seed_exchange_privkey` and `new_node_seed_exchange_pubkey`.
-  - `seed_exchange_key` is derived using HKDF from `seed_exchange_ikm` and `nonce`.
+  - `seed_exchange_key` is derived using HKDF-SHA256 from `seed_exchange_ikm` and `nonce`.
 
 ```js
 seed_exchange_ikm = ecdh({
@@ -215,7 +215,7 @@ TODO reasoning
 - `seed_exchange_key`: An AES-256-GCM encryption key. Will be used to receive `consensus_seed` from the network.
 - `seed_exchange_key` is derived the following way:
   - `seed_exchange_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_seed_exchange_pubkey` (public in `genesis.json`) and `new_node_seed_exchange_privkey` (available only inside the new node's Enclave).
-  - `seed_exchange_key` is derived using HKDF with `seed_exchange_ikm` and `nonce`.
+  - `seed_exchange_key` is derived using HKDF-SHA256 with `seed_exchange_ikm` and `nonce`.
 
 ```js
 seed_exchange_ikm = ecdh({
