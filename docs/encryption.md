@@ -27,7 +27,11 @@
   - [read_db(field_name)](#read_dbfield_name)
 - [Transaction Encryption](#transaction-encryption)
   - [Input](#input)
+    - [On the transaction sender](#on-the-transaction-sender)
+    - [On the consensus layer, inside the Enclave of every full node](#on-the-consensus-layer-inside-the-enclave-of-every-full-node-1)
   - [Output](#output)
+    - [On the consensus layer, inside the Enclave of every full node](#on-the-consensus-layer-inside-the-enclave-of-every-full-node-2)
+    - [On the transaction sender](#on-the-transaction-sender-1)
 - [Blockchain Upgrades](#blockchain-upgrades)
 - [Theoretical Attacks](#theoretical-attacks)
 
@@ -152,8 +156,8 @@ TODO reasoning
 - Send an `enigmacli tx register auth` transaction with the following inputs:
   - The remote attestation proof that the node's Enclave is genuine.
   - `new_node_seed_exchange_pubkey`
-  - 256 bits true random `challenge`
   - 256 bits true random `nonce`
+  - 256 bits true random `iv`
 
 ## On the consensus layer, inside the Enclave of every full node
 
@@ -169,7 +173,7 @@ TODO reasoning
 - `seed_exchange_key`: An AES-256-GCM encryption key. Will be used to send `consensus_seed` to the new node.
 - `seed_exchange_key` is derived the following way:
   - `seed_exchange_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_seed_exchange_privkey` and `new_node_seed_exchange_pubkey`.
-  - `seed_exchange_key` is derived using HKDF from `seed_exchange_ikm` and `challenge`.
+  - `seed_exchange_key` is derived using HKDF from `seed_exchange_ikm` and `nonce`.
 
 ```js
 seed_exchange_ikm = ecdh({
@@ -179,7 +183,7 @@ seed_exchange_ikm = ecdh({
 
 seed_exchange_key = hkdf({
   salt: hkfd_salt,
-  ikm: seed_exchange_ikm.append(uint8(challenge)),
+  ikm: seed_exchange_ikm.concat(nonce),
 }); // 256 bits
 ```
 
@@ -187,14 +191,14 @@ seed_exchange_key = hkdf({
 
 TODO reasoning
 
-- The output of the `enigmacli tx register auth` transaction is `consensus_seed` encrypted with AES-256-GCM, `seed_exchange_key` as the encryption key and `nonce` as the encryption IV.
+- The output of the `enigmacli tx register auth` transaction is `consensus_seed` encrypted with AES-256-GCM, `seed_exchange_key` as the encryption key and `iv` as the encryption IV.
 
 ```js
 encrypted_consensus_seed = aes_256_gcm_encrypt({
-  iv: nonce,
+  iv: iv,
   key: seed_exchange_key,
   data: consensus_seed,
-  // TODO need AAD here?
+  aad: iv,
 });
 
 return encrypted_consensus_seed;
@@ -211,17 +215,17 @@ TODO reasoning
 - `seed_exchange_key`: An AES-256-GCM encryption key. Will be used to receive `consensus_seed` from the network.
 - `seed_exchange_key` is derived the following way:
   - `seed_exchange_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_seed_exchange_pubkey` (public in `genesis.json`) and `new_node_seed_exchange_privkey` (available only inside the new node's Enclave).
-  - `seed_exchange_key` is derived using HKDF with `seed_exchange_ikm` and `challenge`.
+  - `seed_exchange_key` is derived using HKDF with `seed_exchange_ikm` and `nonce`.
 
 ```js
 seed_exchange_ikm = ecdh({
   privkey: new_node_seed_exchange_privkey,
-  pubkey: consensus_seed_exchange_pubkey,
+  pubkey: consensus_seed_exchange_pubkey, // from genesis.json
 }); // 256 bits
 
 seed_exchange_key = hkdf({
   salt: hkfd_salt,
-  ikm: seed_exchange_ikm.append(uint8(challenge)),
+  ikm: seed_exchange_ikm.concat(nonce),
 }); // 256 bits
 ```
 
@@ -229,15 +233,16 @@ seed_exchange_key = hkdf({
 
 TODO reasoning
 
-- `encrypted_consensus_seed` is encrypted with AES-256-GCM, `seed_exchange_key` as the encryption key and `nonce` as the encryption IV.
+- `encrypted_consensus_seed` is encrypted with AES-256-GCM, `seed_exchange_key` as the encryption key and `iv` as the encryption IV.
 - The new node now has all of these^ parameters inside its Enclave, so it's able to decrypt `consensus_seed` from `encrypted_consensus_seed`.
 - Seal `consensus_seed` to disk at `"$HOME/.enigmad/sgx-secrets/consensus_seed.sealed"`.
 
 ```js
 consensus_seed = aes_256_gcm_decrypt({
-  iv: nonce,
+  iv: iv,
   key: seed_exchange_key,
   data: encrypted_consensus_seed,
+  aad: iv,
 });
 
 seal({
@@ -385,13 +390,202 @@ return current_state_plaintext;
 
 # Transaction Encryption
 
+TODO reasoning
+
+- `tx_encryption_key`: An AES-256-GCM encryption key. Will be used to encrypt tx inputs and decrypt tx outpus.
+  - `tx_encryption_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_io_exchange_pubkey` and `tx_sender_wallet_privkey`.
+  - `tx_encryption_key` is derived using HKDF-SHA256 with `tx_encryption_ikm` and a random number `nonce`. This is to prevent using the same key for the same tx sender multiple times.
+- `iv_input` for the input is randomly generated on the client side by the transation sender.
+- `iv`s for the output is derived from `iv_input` using HKDF-SHA256.
+
 ## Input
 
-TODO reasoning
+### On the transaction sender
+
+```js
+tx_encryption_ikm = ecdh({
+  privkey: tx_sender_wallet_privkey,
+  pubkey: consensus_io_exchange_pubkey, // from genesis.json
+}); // 256 bits
+
+nonce = true_random({ bytes: 32 });
+
+tx_encryption_key = hkdf({
+  salt: hkfd_salt,
+  ikm: tx_encryption_ikm.concat(nonce),
+}); // 256 bits
+
+iv_input = true_random({ bytes: 12 });
+
+encrypted_msg = aes_256_gcm_encrypt({
+  iv: iv_input,
+  key: tx_encryption_key,
+  data: msg,
+  aad: iv_input.concat(nonce, tx_sender_wallet_pubkey),
+});
+
+tx_input = iv_input.concat(nonce, tx_sender_wallet_pubkey, encrypted_msg);
+```
+
+### On the consensus layer, inside the Enclave of every full node
+
+```js
+iv_input = tx_input.slice(0, 12); // 12 bytes
+nonce = tx_input.slice(12, 44); // 32 bytes
+tx_sender_wallet_pubkey = tx_input.slice(44, 77); // 33 bytes, compressed secp256k1 public key
+encrypted_msg = tx_input.slice(77);
+
+tx_encryption_ikm = ecdh({
+  privkey: consensus_io_exchange_privkey,
+  pubkey: tx_sender_wallet_pubkey,
+}); // 256 bits
+
+tx_encryption_key = hkdf({
+  salt: hkfd_salt,
+  ikm: tx_encryption_ikm.concat(nonce),
+}); // 256 bits
+
+msg = aes_256_gcm_decrypt({
+  iv: iv_input,
+  key: tx_encryption_key,
+  data: encrypted_msg,
+  aad: iv_input.concat(nonce, tx_sender_wallet_pubkey),
+});
+```
 
 ## Output
 
-TODO reasoning
+- The output must be a valid JSON object, as it is passed to multiple mechanisms for final processing:
+  - Logs are treated as Tendermint events
+  - Messages can be callbacks to another contract call or to
+  - Messages can also instruct to send funds from the contract's wallet
+  - There's a data section which is free form bytes to be inerperted by the client (or dApp)
+  - And there's also an error section
+- Therefore the output must be part-encrypted, so we need to use a new `iv` for each part.
+- We'll use HKDF-SHA256 in combination with the `input_iv` and a counter to derive a new `iv` for each part.
+- An example output for an execution:
+  ```json
+  {
+    "ok": {
+      "messages": [
+        {
+          "type": "Send",
+          "to": "...",
+          "amount": "..."
+        },
+        {
+          "type": "Contract",
+          "msg": "{\"banana\":1,\"papaya\":2}", // need to encrypt this value
+          "contract_addr": "aaa",
+          "send": { "amount": 100, "denom": "uscrt" }
+        },
+        {
+          "type": "Contract",
+          "msg": "{\"water\":1,\"fire\":2}", // need to encrypt this value
+          "contract_addr": "bbb",
+          "send": { "amount": 0, "denom": "uscrt" }
+        }
+      ],
+      "log": [
+        {
+          "key": "action", // need to encrypt this value
+          "value": "transfer" // need to encrypt this value
+        },
+        {
+          "key": "sender", // need to encrypt this value
+          "value": "enigma1v9tna8rkemndl7cd4ahru9t7ewa7kdq8d4zlr5" // need to encrypt this value
+        },
+        {
+          "key": "recipient", // need to encrypt this value
+          "value": "enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4" // need to encrypt this value
+        }
+      ],
+      "data": "bla bla" // need to encrypt this value
+    }
+  }
+  ```
+- Notice on a `Contract` message, the `msg` value is the same as our `tx_input`, so we need to prepend the new `iv_input`, the `nonce` and `tx_sender_wallet_pubkey` just like we did on the tx sender.
+- For the rest of the encrypted outputs we ony need to prepend the new `iv` for each encrypted value, as the tx sender can get `consensus_io_exchange_prubkey` from `genesis.json` and nonce from the `tx_input` the is attached to the `tx_output`.
+- An example output with an error:
+  ```json
+  {
+    "err": "{\"watermelon\":6,\"coffee\":5}" // need to encrypt this value
+  }
+  ```
+- An example output for a query:
+  ```json
+  {
+    "ok": "{\"answer\":42}" // need to encrypt this value
+  }
+  ```
+
+### On the consensus layer, inside the Enclave of every full node
+
+```js
+// already have from tx_input:
+// - tx_encryption_key
+// - iv_input
+// - nonce
+
+iv_counter = 1;
+
+if (typeof output["err"] == "string") {
+  iv = hkdf({
+    salt: hkfd_salt,
+    ikm: input_iv.concat([iv_counter]),
+  }).slice(0, 12); // 96 bits
+  iv_counter += 1;
+
+  encrypted_err = aes_256_gcm_encrypt({
+    iv: iv,
+    key: tx_encryption_key,
+    data: output["err"],
+    aad: iv,
+  });
+
+  output["err"] = base64_encode(iv.concat(encrypted_err)); // needs to be a string
+} else if (typeof output["ok"] == "string") {
+  // query
+  // same as output["err"]...
+} else if (typeof output["ok"] == "object") {
+  // execute
+  for (m in output["ok"]["messages"]) {
+    if (m["type"] == "Contract") {
+      iv_input = hkdf({
+        salt: hkfd_salt,
+        ikm: input_iv.concat([iv_counter]),
+      }).slice(0, 12); // 96 bits
+      iv_counter += 1;
+
+      encrypted_msg = aes_256_gcm_encrypt({
+        iv: iv,
+        key: tx_encryption_key,
+        data: m["msg"],
+        aad: iv_input.concat(nonce, tx_sender_wallet_pubkey),
+      });
+
+      // base64_encode because needs to be a string
+      // also turns into a tx_input so we also need to prepend iv_input, nonce and tx_sender_wallet_pubkey
+      m["msg"] = base64_encode(
+        iv_input.concat(nonce, tx_sender_wallet_pubkey, encrypted_msg)
+      );
+    }
+  }
+
+  for (l in output["ok"]["log"]) {
+    // l["key"] is the same as output["err"]...
+    // l["value"] is the same as output["err"]...
+  }
+
+  // output["ok"]["data"] is the same as output["err"]...
+}
+
+return output;
+```
+
+### On the transaction sender
+
+TODO ??
 
 # Blockchain Upgrades
 
