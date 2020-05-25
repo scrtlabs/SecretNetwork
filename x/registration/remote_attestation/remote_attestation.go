@@ -19,15 +19,7 @@ import (
 	- Intel's certificate signed the report
 	- The public key of the enclave/node exists, so we can use that to encrypt the seed
 
-*/
-
-/*
- Verifies the remote attestation certificate, which is comprised of a the attestation report, intel signature, and enclave signature
-
- We verify that:
-	- the report is valid, that no outstanding issues exist (todo: match enclave hash or something?)
-	- Intel's certificate signed the report
-	- The public key of the enclave/node exists, so we can use that to encrypt the seed
+ In software mode this will just return the raw netscape comment, as it is the public key of the signer
 
 */
 func VerifyRaCert(rawCert []byte) ([]byte, error) {
@@ -82,28 +74,17 @@ func extractPublicFromCert(cert []byte) []byte {
 
 func unmarshalCert(rawbyte []byte) ([]byte, []byte) {
 	// Search for Public Key prime256v1 OID
-	prime256v1Oid := []byte{0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07}
-	offset := uint(bytes.Index(rawbyte, prime256v1Oid))
-	offset += 11 // 10 + TAG (0x03)
-
-	// Obtain Public Key length
-	length := uint(rawbyte[offset])
-	if length > 0x80 {
-		length = uint(rawbyte[offset+1])*uint(0x100) + uint(rawbyte[offset+2])
-		offset += 2
-	}
-
 	// Obtain Public Key
-	offset += 1
-	pubK := rawbyte[offset+2 : offset+length] // skip "00 04"
+
+	pubK := extractPublicFromCert(rawbyte)
 
 	// Search for Netscape Comment OID
 	nsCmtOid := []byte{0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x42, 0x01, 0x0D}
-	offset = uint(bytes.Index(rawbyte, nsCmtOid))
+	offset := uint(bytes.Index(rawbyte, nsCmtOid))
 	offset += 12 // 11 + TAG (0x04)
 
 	// Obtain Netscape Comment length
-	length = uint(rawbyte[offset])
+	length := uint(rawbyte[offset])
 	if length > 0x80 {
 		length = uint(rawbyte[offset+1])*uint(0x100) + uint(rawbyte[offset+2])
 		offset += 2

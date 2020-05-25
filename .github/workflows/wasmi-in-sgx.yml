@@ -49,7 +49,8 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           mkdir -p ./.sgx_secrets
           cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
-          ./cosmwasm/lib/wasmi-sgx-test.sh
+          cd ./cosmwasm/lib/wasmi-runtime/
+          ./../wasmi-sgx-test.sh
       - name: Test Compute Module
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
