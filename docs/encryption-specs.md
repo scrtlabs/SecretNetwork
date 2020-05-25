@@ -465,7 +465,7 @@ msg = aes_256_gcm_decrypt({
   - There's a data section which is free form bytes to be inerperted by the client (or dApp)
   - And there's also an error section
 - Therefore the output must be part-encrypted, so we need to use a new `iv` for each part.
-- We'll use HKDF-SHA256 in combination with the `input_iv` and a counter to derive a new `iv` for each part.
+- We'll use HKDF-SHA256 in combination with the `input_iv` and an `iv_counter` to derive a new `iv` for each part.
 - An example output for an execution:
   ```json
   {
