@@ -53,6 +53,7 @@ jobs:
           ./cosmwasm/lib/wasmi-sgx-test.sh
       - name: Test Registration Module
         run: |
+          source "$HOME/.sgxsdk/sgxsdk/environment"
           go test -v ./x/registration/internal/...
       - name: Test Compute Module
         run: |
