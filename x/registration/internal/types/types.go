@@ -12,7 +12,7 @@ const MasterPublicKeyId = "MasterKey"
 const SecretNodeSeedConfig = "seed.json"
 const SecretNodeCfgFolder = ".node"
 
-const AttestationCertPath = "attestation_cert.der"
+const AttestationCertPath = "attestation_cert"
 
 type NodeID []byte
 

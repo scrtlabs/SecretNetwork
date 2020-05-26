@@ -22,7 +22,7 @@ import (
 func CreateTestSeedConfig(t *testing.T) []byte {
 
 	seed := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert.der")
+	cert, err := ioutil.ReadFile("../../testdata/attestation_cert")
 	require.NoError(t, err)
 
 	cfg := types.SeedConfig{

@@ -157,7 +157,7 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
     };
     // info!("private key {:?}, cert: {:?}", private_key_der, cert);
 
-    if let Err(status) = write_to_untrusted(cert.as_slice(), "attestation_cert.der") {
+    if let Err(status) = write_to_untrusted(cert.as_slice(), CERTIFICATE_SAVE_PATH) {
         return status;
     }
     //seal(private_key_der, "ecc_cert_private.der")
@@ -204,7 +204,7 @@ pub extern "C" fn ecall_init_bootstrap(public_key: &mut [u8; PUBLIC_KEY_SIZE]) -
         };
     // info!("private key {:?}, cert: {:?}", private_key_der, cert);
 
-    if let Err(status) = write_to_untrusted(cert.as_slice(), "attestation_cert.der") {
+    if let Err(status) = write_to_untrusted(cert.as_slice(), "attestation_cert") {
         return status;
     }
 

@@ -28,7 +28,7 @@ func InitAttestation(
 		Short: "Perform remote attestation of the enclave",
 		Long: `Create attestation report, signed by Intel which is used in the registation process of
 the node to the chain. This process, if successful, will output a certificate which is used to authenticate with the 
-blockchain. Writes the certificate in DER format to ~/attestation_cert.der
+blockchain. Writes the certificate in DER format to ~/attestation_cert
 `,
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -56,7 +56,7 @@ func InitBootstrapCmd(
 		Short: "Perform bootstrap initialization",
 		Long: `Create attestation report, signed by Intel which is used in the registration process of
 the node to the chain. This process, if successful, will output a certificate which is used to authenticate with the 
-blockchain. Writes the certificate in DER format to ~/attestation_cert.der
+blockchain. Writes the certificate in DER format to ~/attestation_cert
 `,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
