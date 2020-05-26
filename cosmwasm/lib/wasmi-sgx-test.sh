@@ -26,9 +26,7 @@ perl -i -pe 's/"stake"/"uscrt"/g' ~/.enigmad/config/genesis.json
 ./enigmad collect-gentxs
 ./enigmad validate-genesis
 
-ATT_CERT=$(find /home/runner/ -name "*.der")
-
-./enigmad init-bootstrap "$ATT_CERT"
+./enigmad init-bootstrap /home/runner/work/SecretNetwork/SecretNetwork/attestation_cert.der
 
 ./enigmad validate-genesis
 
