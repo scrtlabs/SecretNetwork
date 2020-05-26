@@ -3,7 +3,6 @@ use sgx_types::sgx_status_t;
 
 use crate::imports::ocall_allocate;
 
-
 /// This struct is returned from module initialization.
 pub struct InitSuccess {
     /// The output of the calculation
