@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/keeper"
@@ -75,7 +76,19 @@ func GetCmdMasterParams(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			err = ioutil.WriteFile("master-cert.der", res, 0644)
+			var certs types.GenesisState
+
+			err = json.Unmarshal(res, &certs)
+			if err != nil {
+				return err
+			}
+
+			err = ioutil.WriteFile(types.IoExchMasterCertPath, certs.IoMasterCertificate, 0644)
+			if err != nil {
+				return err
+			}
+
+			err = ioutil.WriteFile(types.NodeExchMasterCertPath, certs.NodeExchMasterCertificate, 0644)
 			if err != nil {
 				return err
 			}

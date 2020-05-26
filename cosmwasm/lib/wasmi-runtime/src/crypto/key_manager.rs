@@ -24,12 +24,17 @@ impl Keychain {
             Err(e) => None,
         };
 
+        let registration_key = match KeyPair::unseal(REGISTRATION_KEY_SEALING_PATH) {
+            Ok(k) => Some(k),
+            Err(e) => None,
+        };
+
         let mut x = Keychain {
             consensus_seed,
+            registration_key,
             consensus_state_ikm: None,
             consensus_seed_exchange_keypair: None,
             consensus_io_exchange_keypair: None,
-            registration_key: None,
         };
 
         x.generate_consensus_master_keys();

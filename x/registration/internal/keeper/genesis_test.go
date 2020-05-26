@@ -19,8 +19,9 @@ func TestInitGenesisNoMaster(t *testing.T) {
 	//require.NoError(t, err)
 
 	data := types.GenesisState{
-		Registration:      nil,
-		MasterCertificate: nil,
+		Registration:              nil,
+		IoMasterCertificate:       nil,
+		NodeExchMasterCertificate: nil,
 	}
 
 	assert.Panics(t, func() { InitGenesis(ctx, keeper, data) }, "Init genesis didn't panic without master certificate")
@@ -36,8 +37,9 @@ func TestInitGenesis(t *testing.T) {
 	require.NoError(t, err)
 
 	data := types.GenesisState{
-		Registration:      nil,
-		MasterCertificate: cert,
+		Registration:              nil,
+		IoMasterCertificate:       cert,
+		NodeExchMasterCertificate: cert,
 	}
 
 	InitGenesis(ctx, keeper, data)
@@ -53,14 +55,16 @@ func TestExportGenesis(t *testing.T) {
 	require.NoError(t, err)
 
 	data := types.GenesisState{
-		Registration:      nil,
-		MasterCertificate: cert,
+		Registration:              nil,
+		IoMasterCertificate:       cert,
+		NodeExchMasterCertificate: cert,
 	}
 
 	InitGenesis(ctx, keeper, data)
 
 	data2 := ExportGenesis(ctx, keeper)
 
-	require.Equal(t, string(data.MasterCertificate), string(data2.MasterCertificate))
+	require.Equal(t, string(data.IoMasterCertificate), string(data2.IoMasterCertificate))
+	require.Equal(t, string(data.NodeExchMasterCertificate), string(data2.NodeExchMasterCertificate))
 	require.Equal(t, data2.Registration, data2.Registration)
 }

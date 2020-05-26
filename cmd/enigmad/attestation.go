@@ -52,13 +52,13 @@ func InitBootstrapCmd(
 	ctx *server.Context, cdc *codec.Codec, mbm module.BasicManager) *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "init-bootstrap [output-file]",
+		Use:   "init-bootstrap [node-exchange-file] [io-exchange-file]",
 		Short: "Perform bootstrap initialization",
 		Long: `Create attestation report, signed by Intel which is used in the registration process of
 the node to the chain. This process, if successful, will output a certificate which is used to authenticate with the 
 blockchain. Writes the certificate in DER format to ~/attestation_cert
 `,
-		Args: cobra.MaximumNArgs(1),
+		Args: cobra.MaximumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			config := ctx.Config
 
@@ -78,6 +78,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 
 			userHome, _ := os.UserHomeDir()
 
+			// Load consensus_seed_exchange_pubkey
 			cert := []byte(nil)
 			if len(args) == 1 {
 				cert, err = ioutil.ReadFile(args[0])
@@ -85,7 +86,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 					return err
 				}
 			} else {
-				cert, err = ioutil.ReadFile(filepath.Join(userHome, reg.AttestationCertPath))
+				cert, err = ioutil.ReadFile(filepath.Join(userHome, reg.NodeExchMasterCertPath))
 				if err != nil {
 					return err
 				}
@@ -104,8 +105,23 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 				return fmt.Errorf("invalid certificate for master public key")
 			}
 
-			regGenState.MasterCertificate = cert
+			regGenState.NodeExchMasterCertificate = cert
 
+			// Load consensus_io_exchange_pubkey
+			if len(args) == 2 {
+				cert, err = ioutil.ReadFile(args[1])
+				if err != nil {
+					return err
+				}
+			} else {
+				cert, err = ioutil.ReadFile(filepath.Join(userHome, reg.IoExchMasterCertPath))
+				if err != nil {
+					return err
+				}
+			}
+			regGenState.IoMasterCertificate = cert
+
+			// Create genesis state from certificates
 			regGenStateBz, err := cdc.MarshalJSON(regGenState)
 			if err != nil {
 				return fmt.Errorf("failed to marshal auth genesis state: %w", err)

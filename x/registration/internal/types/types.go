@@ -8,11 +8,15 @@ import (
 
 const PublicKeyLength = 128   // encoded length
 const EncryptedKeyLength = 96 // encoded length
-const MasterPublicKeyId = "MasterKey"
+const MasterNodeKeyId = "NodeExchMasterKey"
+const MasterIoKeyId = "IoExchMasterKey"
 const SecretNodeSeedConfig = "seed.json"
 const SecretNodeCfgFolder = ".node"
 
-const AttestationCertPath = "attestation_cert"
+const NodeExchMasterCertPath = "node-master-cert.der"
+const IoExchMasterCertPath = "io-master-cert.der"
+
+const AttestationCertPath = "attstation_cert.der"
 
 type NodeID []byte
 
