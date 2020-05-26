@@ -40,7 +40,7 @@ fn aes_siv_encrypt(
     let ciphertext = match cipher.encrypt(iv, plaintext) {
         Ok(res) => res,
         Err(e) => {
-            return Err(CryptoError("Failed to encrypt data"));
+            return Err(CryptoError::EncryptionError);
         }
     };
     Ok(ciphertext)
@@ -52,10 +52,10 @@ fn aes_siv_decrypt(
     key: &SymmetricKey,
 ) -> Result<Vec<u8>, CryptoError> {
     let mut cipher = Aes128Siv::new(GenericArray::clone_from_slice(key));
-    plaintext = match cipher.decrypt(iv, ciphertext) {
+    let plaintext = match cipher.decrypt(iv, ciphertext) {
         Ok(res) => res,
         Err(e) => {
-            return Err(CryptoError("Failed to decrypt data (wrong AD used?)"));
+            return Err(CryptoError::DecryptionError);
         }
     };
     Ok(plaintext)

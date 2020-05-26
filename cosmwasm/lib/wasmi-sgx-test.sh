@@ -26,6 +26,9 @@ perl -i -pe 's/"stake"/"uscrt"/g' ~/.enigmad/config/genesis.json
 ./enigmad collect-gentxs
 ./enigmad validate-genesis
 
+RESULT=$(find /home/runner -name "*.der")
+echo "$RESULT"
+
 ./enigmad init-bootstrap /home/runner/work/SecretNetwork/SecretNetwork/node-master-cert.der /home/runner/work/SecretNetwork/SecretNetwork/io-master-cert.der
 
 ./enigmad validate-genesis
