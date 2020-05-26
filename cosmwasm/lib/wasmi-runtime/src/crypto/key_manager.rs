@@ -10,7 +10,7 @@ pub struct Keychain {
     consensus_state_ikm: Option<Seed>,
     consensus_seed_exchange_keypair: Option<KeyPair>,
     consensus_io_exchange_keypair: Option<KeyPair>,
-    new_node_seed_exchange_keypair: Option<KeyPair>,
+    registration_key: Option<KeyPair>,
 }
 
 lazy_static! {
@@ -29,7 +29,7 @@ impl Keychain {
             consensus_state_ikm: None,
             consensus_seed_exchange_keypair: None,
             consensus_io_exchange_keypair: None,
-            new_node_seed_exchange_keypair: None,
+            registration_key: None,
         };
 
         x.generate_consensus_master_keys();
@@ -55,10 +55,10 @@ impl Keychain {
         Ok(())
     }
 
-    pub fn create_new_node_seed_exchange_keypair(&mut self) -> Result<(), CryptoError> {
+    pub fn create_registration_key(&mut self) -> Result<(), CryptoError> {
         match KeyPair::new() {
             Ok(key) => {
-                if let Err(e) = self.set_new_node_seed_exchange_keypair(key) {
+                if let Err(e) = self.set_registration_key(key) {
                     return Err(CryptoError::KeyError);
                 }
             }
@@ -67,8 +67,8 @@ impl Keychain {
         Ok(())
     }
 
-    pub fn is_new_node_seed_exchange_keypair_set(&self) -> bool {
-        return self.new_node_seed_exchange_keypair.is_some();
+    pub fn is_registration_key_set(&self) -> bool {
+        return self.registration_key.is_some();
     }
 
     pub fn is_consensus_state_ikm_set(&self) -> bool {
@@ -105,7 +105,7 @@ impl Keychain {
         }
     }
 
-    pub fn get_consensus_seed_exchange_keypair(&self) -> Result<KeyPair, CryptoError> {
+    pub fn seed_exchange_key(&self) -> Result<KeyPair, CryptoError> {
         if self.consensus_seed_exchange_keypair.is_some() {
             // KeyPair does not implement copy (due to internal type not implementing it
             Ok(self.consensus_seed_exchange_keypair.clone().unwrap())
@@ -125,22 +125,22 @@ impl Keychain {
         }
     }
 
-    pub fn get_new_node_seed_exchange_keypair(&self) -> Result<KeyPair, CryptoError> {
-        if self.new_node_seed_exchange_keypair.is_some() {
+    pub fn get_registration_key(&self) -> Result<KeyPair, CryptoError> {
+        if self.registration_key.is_some() {
             // KeyPair does not implement copy (due to internal type not implementing it
-            Ok(self.new_node_seed_exchange_keypair.clone().unwrap())
+            Ok(self.registration_key.clone().unwrap())
         } else {
-            error!("Error accessing new_node_seed_exchange_keypair (does not exist, or was not initialized)");
+            error!("Error accessing registration_key (does not exist, or was not initialized)");
             Err(CryptoError::ParsingError)
         }
     }
 
-    pub fn set_new_node_seed_exchange_keypair(&mut self, kp: KeyPair) -> Result<(), EnclaveError> {
-        if let Err(e) = kp.seal(NEW_NODE_SEED_EXCHANGE_KEYPAIR_SEALING_PATH) {
-            error!("Error sealing new_node_seed_exchange_keypair");
+    pub fn set_registration_key(&mut self, kp: KeyPair) -> Result<(), EnclaveError> {
+        if let Err(e) = kp.seal(REGISTRATION_KEY_SEALING_PATH) {
+            error!("Error sealing registration key");
             return Err(e);
         }
-        Ok(self.new_node_seed_exchange_keypair = Some(kp.clone()))
+        Ok(self.registration_key = Some(kp.clone()))
     }
 
     pub fn set_consensus_seed_exchange_keypair(&mut self, kp: KeyPair) {

@@ -11,16 +11,17 @@ import (
 )
 
 const (
-	ModuleName           = types.ModuleName
-	StoreKey             = types.StoreKey
-	TStoreKey            = types.TStoreKey
-	QuerierRoute         = types.QuerierRoute
-	RouterKey            = types.RouterKey
-	QueryEncryptedSeed   = keeper.QueryEncryptedSeed
-	SecretNodeSeedConfig = types.SecretNodeSeedConfig
-	SecretNodeCfgFolder  = types.SecretNodeCfgFolder
-	EncryptedKeyLength   = types.EncryptedKeyLength
-	PublicKeyLength      = types.PublicKeyLength
+	ModuleName             = types.ModuleName
+	StoreKey               = types.StoreKey
+	TStoreKey              = types.TStoreKey
+	QuerierRoute           = types.QuerierRoute
+	RouterKey              = types.RouterKey
+	QueryEncryptedSeed     = keeper.QueryEncryptedSeed
+	QueryMasterCertificate = keeper.QueryMasterCertificate
+	SecretNodeSeedConfig   = types.SecretNodeSeedConfig
+	SecretNodeCfgFolder    = types.SecretNodeCfgFolder
+	EncryptedKeyLength     = types.EncryptedKeyLength
+	AttestationCertPath    = types.AttestationCertPath
 )
 
 var (
@@ -33,8 +34,6 @@ var (
 	NewQuerier                  = keeper.NewQuerier
 	GetGenesisStateFromAppState = keeper.GetGenesisStateFromAppState
 	IsHexString                 = keeper.IsHexString
-	//MakeTestCodec             = keeper.MakeTestCodec
-	//CreateTestInput           = keeper.CreateTestInput
 
 	// variable aliases
 	ModuleCdc               = types.ModuleCdc
@@ -42,6 +41,7 @@ var (
 	ErrAuthenticateFailed   = types.ErrAuthenticateFailed
 	ErrSeedInitFailed       = types.ErrSeedInitFailed
 	RegistrationStorePrefix = types.RegistrationStorePrefix
+	ErrInvalidType          = types.ErrInvalidType
 )
 
 type (
@@ -49,4 +49,5 @@ type (
 	GenesisState      = types.GenesisState
 	Keeper            = keeper.Keeper
 	SeedConfig        = types.SeedConfig
+	EnclaveApi        = keeper.EnclaveApi
 )

@@ -83,11 +83,11 @@ pub extern "C" fn init_bootstrap(
 
 #[no_mangle]
 pub extern "C" fn init_seed(
-    public_key: Buffer,
+    master_cert: Buffer,
     encrypted_seed: Buffer,
     err: Option<&mut Buffer>,
 ) -> bool {
-    let pk_slice = match public_key.read() {
+    let pk_slice = match master_cert.read() {
         None => {
             set_error("Public key is empty".to_string(), err);
             return false;

@@ -68,7 +68,6 @@ pub fn gen_ecc_cert(payload: String,
     pub_key_bytes.extend_from_slice(&pk_gx);
     pub_key_bytes.extend_from_slice(&pk_gy);
 
-
     // Generate Certificate DER
     let cert_der = yasna::construct_der(|writer| {
         writer.write_sequence(|writer| {
@@ -195,9 +194,7 @@ pub fn percent_decode(orig: String) -> String {
     ret
 }
 
-pub fn verify_mra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
-    // Before we reach here, Webpki already verifed the cert is properly signed
-
+pub fn get_cert_pubkey(cert_der: &[u8]) -> Vec<u8> {
     // Search for Public Key prime256v1 OID
     let prime256v1_oid = &[0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07];
     let mut offset = cert_der.windows(prime256v1_oid.len()).position(|window| window == prime256v1_oid).unwrap();
@@ -212,9 +209,12 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
 
     // Obtain Public Key
     offset += 1;
-    let pub_k = cert_der[offset+2..offset+len].to_vec(); // skip "00 04"
+    let pub_k = cert_der[offset+2..offset+len].to_vec();
 
+    return pub_k
+}
 
+pub fn get_netscape_comment(cert_der: &[u8]) -> Vec<u8> {
     // Search for Netscape Comment OID
     let ns_cmt_oid = &[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x42, 0x01, 0x0D];
     let mut offset = cert_der.windows(ns_cmt_oid.len()).position(|window| window == ns_cmt_oid).unwrap();
@@ -231,17 +231,10 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
     offset += 1;
     let payload = cert_der[offset..offset+len].to_vec();
 
-    // Extract each field
-    let mut iter = payload.split(|x| *x == 0x7C);
-    let attn_report_raw = iter.next().unwrap();
-    let sig_raw = iter.next().unwrap();
-    let sig = base64::decode(&sig_raw).unwrap();
+    payload
+}
 
-    let sig_cert_raw = iter.next().unwrap();
-    let sig_cert_dec = base64::decode_config(&sig_cert_raw, base64::STANDARD).unwrap();
-    //let sig_cert_input = untrusted::Input::from(&sig_cert_dec);
-    let sig_cert = webpki::EndEntityCert::from(&sig_cert_dec).expect("Bad DER");
-
+pub fn get_ias_auth_config() -> (Vec<u8>, rustls::RootCertStore){
     // Verify if the signing cert is issued by Intel CA
     let mut ias_ca_stripped = IAS_REPORT_CA.to_vec();
     ias_ca_stripped.retain(|&x| x != 0x0d && x != 0x0a);
@@ -256,6 +249,51 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
     let mut root_store = rustls::RootCertStore::empty();
     root_store.add_pem_file(&mut ca_reader).expect("Failed to add CA");
 
+    (ias_cert_dec, root_store)
+}
+
+pub fn parse_signed_payload(report_payload: &[u8]) -> (&[u8], Vec<u8>, Vec<u8>) {
+    let mut iter = report_payload.split(|x| *x == 0x7C);
+    let attn_report_raw = iter.next().unwrap();
+    let sig_raw = iter.next().unwrap();
+    let sig = base64::decode(&sig_raw).unwrap();
+
+    let sig_cert_raw = iter.next().unwrap();
+    let sig_cert_dec = base64::decode_config(&sig_cert_raw, base64::STANDARD).unwrap();
+
+    return (attn_report_raw, sig, sig_cert_dec)
+}
+
+#[cfg(not(feature = "SGX_MODE_HW"))]
+pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
+    let payload = get_netscape_comment(cert_der);
+
+    let pk = base64::decode(&payload).unwrap();
+
+    Ok(pk)
+}
+
+/// # Verifies remote attestation cert
+///
+/// Logic:
+/// 1. Extract public key
+/// 2. Extract netscape comment == attestation report
+/// 3.
+///
+#[cfg(feature = "SGX_MODE_HW")]
+pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
+    // Before we reach here, Webpki already verifed the cert is properly signed
+
+    let pub_k = get_cert_pubkey(cert_der);
+
+    let payload = get_netscape_comment(cert_der);
+
+    let (attn_report_raw, sig, sig_cert_dec) = parse_signed_payload(&payload);
+
+    let sig_cert = webpki::EndEntityCert::from(&sig_cert_dec).expect("Bad DER");
+
+    let (cert, root_store) = get_ias_auth_config();
+
     let trust_anchors: Vec<webpki::TrustAnchor> = root_store
         .roots
         .iter()
@@ -263,7 +301,7 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
         .collect();
 
     let mut chain:Vec<&[u8]> = Vec::new();
-    chain.push(&ias_cert_dec);
+    chain.push(&cert);
 
     let now_func = webpki::Time::try_from(SystemTime::now());
 
@@ -294,15 +332,15 @@ pub fn verify_mra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
     // Verify attestation report
     // 1. Check timestamp is within 24H (90day is recommended by Intel)
     let attn_report: Value = serde_json::from_slice(attn_report_raw).unwrap();
-    if let Value::String(time) = &attn_report["timestamp"] {
-        let time_fixed = time.clone() + "+0000";
-        let ts = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z").unwrap().timestamp();
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
-        info!("Time diff = {}", now - ts);
-    } else {
-        info!("Failed to fetch timestamp from attestation report");
-        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-    }
+    // if let Value::String(time) = &attn_report["timestamp"] {
+    //     let time_fixed = time.clone() + "+0000";
+    //     let ts = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z").unwrap().timestamp();
+    //     let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
+    //     info!("Time diff = {}", now - ts);
+    // } else {
+    //     info!("Failed to fetch timestamp from attestation report");
+    //     return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+    // }
 
     // 2. Verify quote status (mandatory field)
     if let Value::String(quote_status) = &attn_report["isvEnclaveQuoteStatus"] {

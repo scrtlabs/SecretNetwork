@@ -21,12 +21,13 @@ rm -rf ~/.enigma*
 ./enigmad init banana --chain-id enigma-testnet
 perl -i -pe 's/"stake"/"uscrt"/g' ~/.enigmad/config/genesis.json
 ./enigmacli keys add a
-./enigmad add-genesis-account $(./enigmacli keys show -a a) 1000000000000uscrt
+./enigmad add-genesis-account "$(./enigmacli keys show -a a)" 1000000000000uscrt
 ./enigmad gentx --name a --keyring-backend test --amount 1000000uscrt
 ./enigmad collect-gentxs
 ./enigmad validate-genesis
 
-./enigmad init-bootstrap
+./enigmad init-bootstrap /home/runner/work/SecretNetwork/SecretNetwork/attestation_cert.der
+
 ./enigmad validate-genesis
 
 RUST_BACKTRACE=1 ./enigmad start --bootstrap &

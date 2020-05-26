@@ -21,6 +21,8 @@ pub enum SigningMethod {
     NONE,
 }
 
+pub const CERTIFICATE_SAVE_PATH: &str = "attestation_cert.der";
+
 #[cfg(feature = "production")]
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
 
@@ -28,7 +30,7 @@ pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::NONE;
 
 pub const CONSENSUS_SEED_SEALING_PATH: &str = "./.sgx_secrets/consensus_seed.sealed";
-pub const NEW_NODE_SEED_EXCHANGE_KEYPAIR_SEALING_PATH: &str =
+pub const REGISTRATION_KEY_SEALING_PATH: &str =
     "./.sgx_secrets/new_node_seed_exchange_keypair.sealed";
 
 pub const CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 1;

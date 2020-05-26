@@ -9,25 +9,42 @@ import (
 	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
 )
 
-func (k Keeper) GetMasterPublicKey(ctx sdk.Context) *types.PublicKey {
+//func (k Keeper) GetMasterPublicKey(ctx sdk.Context) *types.PublicKey {
+//	store := ctx.KVStore(k.storeKey)
+//	var pkIO types.PublicKey
+//	certBz := store.Get(types.GetMasterPublicKey(types.MasterPublicKeyId))
+//	if certBz == nil {
+//		return nil
+//	}
+//	k.cdc.MustUnmarshalBinaryBare(certBz, &pkIO)
+//	return &pkIO
+//}
+//
+//func (k Keeper) setMasterPublicKey(ctx sdk.Context, publicKey types.PublicKey) {
+//	store := ctx.KVStore(k.storeKey)
+//
+//	store.Set(types.GetMasterPublicKey(types.MasterPublicKeyId), k.cdc.MustMarshalBinaryBare(publicKey))
+//}
+
+func (k Keeper) GetMasterCertificate(ctx sdk.Context) *types.MasterCertificate {
 	store := ctx.KVStore(k.storeKey)
-	var pkIO types.PublicKey
+	var cert types.MasterCertificate
 	certBz := store.Get(types.GetMasterPublicKey(types.MasterPublicKeyId))
 	if certBz == nil {
 		return nil
 	}
-	k.cdc.MustUnmarshalBinaryBare(certBz, &pkIO)
-	return &pkIO
+	k.cdc.MustUnmarshalBinaryBare(certBz, &cert)
+	return &cert
 }
 
-func (k Keeper) setMasterPublicKey(ctx sdk.Context, publicKey types.PublicKey) {
+func (k Keeper) setMasterCertificate(ctx sdk.Context, cert types.MasterCertificate) {
 	store := ctx.KVStore(k.storeKey)
 
-	store.Set(types.GetMasterPublicKey(types.MasterPublicKeyId), k.cdc.MustMarshalBinaryBare(publicKey))
+	store.Set(types.GetMasterPublicKey(types.MasterPublicKeyId), k.cdc.MustMarshalBinaryBare(cert))
 }
 
-func (k Keeper) isMasterKeyDefined(ctx sdk.Context) bool {
-	regInfo := k.GetMasterPublicKey(ctx)
+func (k Keeper) isMasterCertificateDefined(ctx sdk.Context) bool {
+	regInfo := k.GetMasterCertificate(ctx)
 	if regInfo == nil {
 		return false
 	}
@@ -61,7 +78,7 @@ func (k Keeper) ListRegistrationInfo(ctx sdk.Context, cb func([]byte, types.Regi
 	}
 }
 
-func (k Keeper) setRegistrationInfo(ctx sdk.Context, certificate types.RegistrationNodeInfo) {
+func (k Keeper) SetRegistrationInfo(ctx sdk.Context, certificate types.RegistrationNodeInfo) {
 	store := ctx.KVStore(k.storeKey)
 
 	publicKey, err := ra.VerifyRaCert(certificate.Certificate)
