@@ -13,7 +13,7 @@ use crate::attestation::create_attestation_certificate;
 use crate::cert::verify_ra_cert;
 use crate::consts::*;
 use crate::crypto;
-pub use crate::crypto::traits::{Encryptable, Kdf, SealedKey};
+pub use crate::crypto::traits::{Kdf, SIVEncryptable, SealedKey};
 use crate::crypto::{
     AESKey, Keychain, Seed, PUBLIC_KEY_SIZE, SEED_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
 };
@@ -210,7 +210,7 @@ pub extern "C" fn ecall_init_bootstrap(public_key: &mut [u8; PUBLIC_KEY_SIZE]) -
 }
 
 /**
- *  `ecall_get_encrypted_seed`
+ *  `ecall_authenticate_new_node`
  *
  *  This call is used to help new nodes register in the network. The function will authenticate the
  *  new node, based on a received certificate. If the node is authenticated successfully, the seed
@@ -222,7 +222,7 @@ pub extern "C" fn ecall_init_bootstrap(public_key: &mut [u8; PUBLIC_KEY_SIZE]) -
  */
 #[no_mangle]
 // todo: replace 32 with crypto consts once I have crypto library
-pub extern "C" fn ecall_get_encrypted_seed(
+pub extern "C" fn ecall_authenticate_new_node(
     cert: *const u8,
     cert_len: u32,
     seed: &mut [u8; ENCRYPTED_SEED_SIZE],
@@ -273,10 +273,13 @@ pub extern "C" fn ecall_get_encrypted_seed(
         Err(e) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
     };
 
+    let mut authenticated_data: Vec<&[u8]> = Vec::default();
+    authenticated_data.push(&target_public_key);
     // encrypt the seed using the symmetric key derived in the previous stage
-    let res = match AESKey::new_from_slice(&shared_enc_key)
-        .encrypt(&key_manager.get_consensus_seed().unwrap().get().to_vec())
-    {
+    let res = match AESKey::new_from_slice(&shared_enc_key).encrypt_siv(
+        &key_manager.get_consensus_seed().unwrap().get().to_vec(),
+        &authenticated_data,
+    ) {
         Ok(r) => {
             if r.len() != ENCRYPTED_SEED_SIZE {
                 error!("wtf? {:?}", r.len());
@@ -352,7 +355,13 @@ pub unsafe extern "C" fn ecall_init_seed(
         Err(e) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
     };
 
-    let res = match AESKey::new_from_slice(&shared_enc_key).decrypt(&encrypted_seed_slice) {
+    let my_public_key = key_manager.get_registration_key().unwrap().get_pubkey();
+
+    let mut authenticated_data: Vec<&[u8]> = Vec::default();
+    authenticated_data.push(&my_public_key);
+    let res = match AESKey::new_from_slice(&shared_enc_key)
+        .decrypt_siv(&encrypted_seed_slice, &authenticated_data)
+    {
         Ok(r) => {
             if r.len() != SEED_KEY_SIZE {
                 error!("wtf2? {:?}", r.len());
