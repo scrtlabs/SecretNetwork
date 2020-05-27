@@ -82,20 +82,10 @@ func TestNewQuerier(t *testing.T) {
 			sdkErrors.ErrUnknownAddress,
 			"",
 		},
-		"query master cert": {
-			[]string{QueryMasterCertificate},
-			abci.RequestQuery{Data: []byte("")},
-			nil,
-			string(expectedSecretParams),
-		},
 	}
 
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
-			if msg == "query master cert" {
-				keeper.setMasterCertificate(ctx, types.MasterCertificate(regInfo.Certificate), types.MasterNodeKeyId)
-				keeper.setMasterCertificate(ctx, types.MasterCertificate(regInfo.Certificate), types.MasterIoKeyId)
-			}
 			binResult, err := querier(ctx, spec.srcPath, spec.srcReq)
 			require.True(t, spec.expErr.Is(err), err)
 
@@ -104,4 +94,10 @@ func TestNewQuerier(t *testing.T) {
 			}
 		})
 	}
+
+	keeper.setMasterCertificate(ctx, types.MasterCertificate(regInfo.Certificate), types.MasterNodeKeyId)
+	keeper.setMasterCertificate(ctx, types.MasterCertificate(regInfo.Certificate), types.MasterIoKeyId)
+
+	binResult, err := querier(ctx, []string{QueryMasterCertificate}, abci.RequestQuery{Data: []byte("")})
+	require.Equal(t, string(binResult), string(expectedSecretParams))
 }
