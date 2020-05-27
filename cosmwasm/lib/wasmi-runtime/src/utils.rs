@@ -47,6 +47,7 @@ impl<T, S> UnwrapOrSgxErrorUnexpected for Result<T, S> {
         }
     }
 }
+
 pub fn validate_mut_ptr(ptr: *mut u8, ptr_len: usize) -> SgxResult<()> {
     if rsgx_raw_is_outside_enclave(ptr, ptr_len) {
         error!("Tried to access memory outside enclave -- rsgx_slice_is_outside_enclave");

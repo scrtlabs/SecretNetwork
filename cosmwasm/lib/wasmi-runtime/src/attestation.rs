@@ -8,7 +8,6 @@ use sgx_tse::*;
 use sgx_types::*;
 use std::io::{Read, Write};
 use std::net::TcpStream;
-use std::prelude::v1::*;
 
 use std::ptr;
 use std::str;
@@ -17,8 +16,8 @@ use std::sync::Arc;
 use std::untrusted::fs;
 use std::vec::Vec;
 
-use crate::crypto::KeyPair;
 use crate::consts::{API_KEY_FILE, SPID_FILE};
+use crate::crypto::KeyPair;
 use crate::hex;
 use crate::imports::*;
 
@@ -117,7 +116,6 @@ pub fn create_attestation_certificate(
     kp: &KeyPair,
     sign_type: sgx_quote_sign_type_t,
 ) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
-
     // extract private key from KeyPair
     let mut priv_key_buf: [u8; 32] = [0u8; 32];
     priv_key_buf.copy_from_slice(kp.get_privkey());
@@ -132,7 +130,7 @@ pub fn create_attestation_certificate(
 
     // convert keypair private to sgx ecc private
     let prv_k = sgx_ec256_private_t {
-        r: priv_key_buf.clone()
+        r: priv_key_buf.clone(),
     };
     // generate the P256 public (will be different from KeyPair's public key)
     let pub_k = rsgx_ecc256_pub_from_priv(&prv_k).unwrap();
@@ -227,8 +225,8 @@ pub fn create_attestation_report(
     report_data.d[..64].copy_from_slice(pub_k);
 
     /* This is used to match the encoding of the public key here with the ecc key, but honestly
-      the certificate uses curve P256, so that will cause issues anyway -- I'm leaving the code here
-      as a reference in case we want to take another look at this at some point */
+    the certificate uses curve P256, so that will cause issues anyway -- I'm leaving the code here
+    as a reference in case we want to take another look at this at some point */
 
     // let mut pub_k_gx = pub_k.gx.clone();
     // pub_k_gx.reverse();
