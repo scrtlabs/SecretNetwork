@@ -1,3 +1,6 @@
+// similar trick to get the IDE to use sgx_tstd even when it doesn't know we're targetting SGX
+#[cfg(not(target_env = "sgx"))]
+extern crate sgx_tstd as std;
 // This annotation is here to trick the IDE into ignoring the extern crate, and instead pull in sgx_types from our
 // Cargo.toml. By importing sgx_types using `extern crate` but without letting it resolve in Cargo.toml when compiling
 // to SGX, we make the compiler pull it in from the target root, which contains the sgx_types listed in Xargo.toml.
@@ -6,30 +9,25 @@
 #[cfg(target_env = "sgx")]
 extern crate sgx_types;
 
-// similar trick to get the IDE to use sgx_tstd even when it doesn't know we're targetting SGX
-#[cfg(not(target_env = "sgx"))]
-extern crate sgx_tstd as std;
-
-mod attestation;
-mod cert;
-mod consts;
-mod contract_operations;
-mod crypto;
-mod errors;
-pub mod exports;
-mod gas;
-mod hex;
-pub mod imports;
-pub mod logger;
-mod results;
-mod runtime;
-mod storage;
-mod utils;
-
 use ctor::*;
 use log::LevelFilter;
 
 use crate::logger::*;
+
+pub mod exports;
+pub mod imports;
+pub mod logger;
+pub mod registration;
+
+mod consts;
+mod contract_operations;
+mod crypto;
+mod errors;
+mod gas;
+mod results;
+mod runtime;
+mod storage;
+mod utils;
 
 static LOGGER: SimpleLogger = SimpleLogger;
 

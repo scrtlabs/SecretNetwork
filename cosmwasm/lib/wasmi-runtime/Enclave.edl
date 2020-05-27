@@ -35,7 +35,7 @@ enclave {
             [out, count=48] uint8_t* seed
         );
 
-        public sgx_status_t ecall_init_seed(
+        public sgx_status_t ecall_init_node(
             [in, count=master_cert_len] const uint8_t* master_cert,
             uintptr_t master_cert_len,
             [in, count=encrypted_seed_len] const uint8_t* encrypted_seed,

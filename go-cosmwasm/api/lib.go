@@ -36,7 +36,7 @@ func LoadSeedToEnclave(masterCert []byte, seed []byte) (bool, error) {
 	seedSlice := sendSlice(seed)
 	errmsg := C.Buffer{}
 
-	_, err := C.init_seed(pkSlice, seedSlice, &errmsg)
+	_, err := C.init_node(pkSlice, seedSlice, &errmsg)
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
 	}

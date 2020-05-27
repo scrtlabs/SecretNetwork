@@ -1,25 +1,31 @@
+use super::hex;
+#[cfg(feature = "SGX_MODE_HW")]
+use crate::consts::{API_KEY_FILE, SPID_FILE};
+use crate::crypto::KeyPair;
+#[cfg(feature = "SGX_MODE_HW")]
+use crate::imports::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote};
 #[cfg(feature = "SGX_MODE_HW")]
 use itertools::Itertools;
-
 use log::*;
+#[cfg(feature = "SGX_MODE_HW")]
 use sgx_rand::*;
 use sgx_tcrypto::*;
+#[cfg(feature = "SGX_MODE_HW")]
 use sgx_tse::*;
 use sgx_types::*;
-use std::io::{Read, Write};
+use std::io::Read;
+#[cfg(feature = "SGX_MODE_HW")]
+use std::io::Write;
+#[cfg(feature = "SGX_MODE_HW")]
 use std::net::TcpStream;
-
+#[cfg(feature = "SGX_MODE_HW")]
 use std::ptr;
 use std::str;
 use std::string::String;
+#[cfg(feature = "SGX_MODE_HW")]
 use std::sync::Arc;
 use std::untrusted::fs;
 use std::vec::Vec;
-
-use crate::consts::{API_KEY_FILE, SPID_FILE};
-use crate::crypto::KeyPair;
-use crate::hex;
-use crate::imports::*;
 
 pub const DEV_HOSTNAME: &'static str = "api.trustedservices.intel.com";
 
@@ -39,8 +45,10 @@ pub const CERTEXPIRYDAYS: i64 = 90i64;
 static REPORT_DATA_SIZE: usize = 64;
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
-pub fn create_attestation_certificate(kp: &KeyPair, sign_type: sgx_quote_sign_type_t) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
-
+pub fn create_attestation_certificate(
+    kp: &KeyPair,
+    sign_type: sgx_quote_sign_type_t,
+) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     // extract private key from KeyPair
     let mut priv_key_buf: [u8; 32] = [0u8; 32];
     priv_key_buf.copy_from_slice(kp.get_privkey());
@@ -55,20 +63,20 @@ pub fn create_attestation_certificate(kp: &KeyPair, sign_type: sgx_quote_sign_ty
 
     // convert keypair private to sgx ecc private
     let prv_k = sgx_ec256_private_t {
-        r: priv_key_buf.clone()
+        r: priv_key_buf.clone(),
     };
     // generate the P256 public (will be different from KeyPair's public key)
     let pub_k = rsgx_ecc256_pub_from_priv(&prv_k).unwrap();
 
     let encoded_pubkey = base64::encode(&pub_key_secp256k1[..]);
-    let (key_der, cert_der) = match crate::cert::gen_ecc_cert(encoded_pubkey, &prv_k, &pub_k, &ecc_handle)
-    {
-        Ok(r) => r,
-        Err(e) => {
-            error!("Error in gen_ecc_cert: {:?}", e);
-            return Err(e);
-        }
-    };
+    let (key_der, cert_der) =
+        match super::cert::gen_ecc_cert(encoded_pubkey, &prv_k, &pub_k, &ecc_handle) {
+            Ok(r) => r,
+            Err(e) => {
+                error!("Error in gen_ecc_cert: {:?}", e);
+                return Err(e);
+            }
+        };
     let _result = ecc_handle.close();
 
     Ok((key_der, cert_der))
@@ -148,7 +156,7 @@ pub fn create_attestation_certificate(
     };
 
     let payload = attn_report + "|" + &sig + "|" + &cert;
-    let (key_der, cert_der) = match crate::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)
+    let (key_der, cert_der) = match super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)
     {
         Ok(r) => r,
         Err(e) => {
