@@ -18,8 +18,8 @@ use sgx_trts::trts::{
 };
 use sgx_types::*;
 
-use crate::attestation::create_attestation_certificate;
 use crate::crypto::KeyPair;
+use crate::registration::create_attestation_certificate;
 use crate::storage::write_to_untrusted;
 
 pub trait UnwrapOrSgxErrorUnexpected {
@@ -63,6 +63,15 @@ pub fn validate_const_ptr(ptr: *const u8, ptr_len: usize) -> SgxResult<()> {
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
     rsgx_lfence();
+    Ok(())
+}
+
+pub fn validate_mut_slice(mut_slice: &mut [u8]) -> SgxResult<()> {
+    if rsgx_slice_is_outside_enclave(mut_slice) {
+        error!("Tried to access memory outside enclave -- rsgx_slice_is_outside_enclave");
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+    }
+    rsgx_sfence();
     Ok(())
 }
 

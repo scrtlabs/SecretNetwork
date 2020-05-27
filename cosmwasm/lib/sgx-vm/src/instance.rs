@@ -14,7 +14,7 @@ use lazy_static::lazy_static;
 
 use crate::attestation::{inner_create_report, inner_get_encrypted_seed};
 use crate::errors::{Error, Result};
-use crate::seed::{inner_init_bootstrap, inner_init_seed, inner_key_gen};
+use crate::seed::{inner_init_bootstrap, inner_init_node, inner_key_gen};
 use crate::wasmi::Module;
 use crate::ENCRYPTED_SEED_SIZE;
 use crate::{Extern, Storage};
@@ -31,7 +31,7 @@ static ENCLAVE_FILE: &'static str = "librust_cosmwasm_enclave.signed.so";
 
 // this is here basically to be able to call the enclave initialization -- we can move this somewhere else and simplify
 
-pub fn init_seed_u(
+pub fn untrusted_init_node(
     master_cert: *const u8,
     master_cert_len: u32,
     encrypted_seed: *const u8,
@@ -41,7 +41,7 @@ pub fn init_seed_u(
     let enclave = init_enclave().unwrap();
     info!("Hello from just after initializing - produce_report");
 
-    inner_init_seed(
+    inner_init_node(
         enclave.geteid(),
         master_cert,
         master_cert_len,

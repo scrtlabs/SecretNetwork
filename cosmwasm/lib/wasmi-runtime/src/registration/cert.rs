@@ -1,26 +1,36 @@
+use base64;
 use bit_vec::BitVec;
+#[cfg(feature = "SGX_MODE_HW")]
 use chrono::prelude::*;
 use chrono::Duration;
 use chrono::TimeZone;
 use chrono::Utc as TzUtc;
+#[cfg(feature = "SGX_MODE_HW")]
+use itertools::Itertools;
+#[cfg(feature = "SGX_MODE_HW")]
 use log::*;
 use num_bigint::BigUint;
 use rustls;
+#[cfg(feature = "SGX_MODE_HW")]
+use serde_json;
+#[cfg(feature = "SGX_MODE_HW")]
+use serde_json::Value;
 use sgx_tcrypto::*;
 use sgx_types::*;
 use std::io::BufReader;
-use std::{ptr, str};
-
-use itertools::Itertools;
+use std::str;
 use std::time::*;
 use std::untrusted::time::SystemTimeEx;
+
+#[cfg(feature = "SGX_MODE_HW")]
+use std::ptr;
+
 use yasna::models::ObjectIdentifier;
 
-use base64;
-use serde_json;
-use serde_json::Value;
+use crate::consts::CERTEXPIRYDAYS;
 
-use super::consts::{SigningMethod, CERTEXPIRYDAYS, SIGNING_METHOD};
+#[cfg(feature = "SGX_MODE_HW")]
+use crate::consts::{SigningMethod, SIGNING_METHOD};
 
 extern "C" {
     pub fn ocall_get_update_info(
@@ -46,10 +56,10 @@ static SUPPORTED_SIG_ALGS: SignatureAlgorithms = &[
     &webpki::RSA_PKCS1_3072_8192_SHA384,
 ];
 
-pub const IAS_REPORT_CA: &[u8] = include_bytes!("../Intel_SGX_Attestation_RootCA.pem");
+pub const IAS_REPORT_CA: &[u8] = include_bytes!("../../Intel_SGX_Attestation_RootCA.pem");
 
 // todo: replace this with MRSIGNER/MRENCLAVE
-pub const ENCLAVE_SIGNATURE: &[u8] = include_bytes!("../Intel_SGX_Attestation_RootCA.pem");
+pub const ENCLAVE_SIGNATURE: &[u8] = include_bytes!("../../Intel_SGX_Attestation_RootCA.pem");
 
 const ISSUER: &str = "EnigmaTEE";
 const SUBJECT: &str = "EnigmaChain Node Certificate";
@@ -208,19 +218,6 @@ pub fn gen_ecc_cert(
     });
 
     Ok((key_der, cert_der))
-}
-
-pub fn percent_decode(orig: String) -> String {
-    let v: Vec<&str> = orig.split("%").collect();
-    let mut ret = String::new();
-    ret.push_str(v[0]);
-    if v.len() > 1 {
-        for s in v[1..].iter() {
-            ret.push(u8::from_str_radix(&s[0..2], 16).unwrap() as char);
-            ret.push_str(&s[2..]);
-        }
-    }
-    ret
 }
 
 pub fn get_cert_pubkey(cert_der: &[u8]) -> Vec<u8> {
