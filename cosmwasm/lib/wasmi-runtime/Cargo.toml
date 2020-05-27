@@ -21,6 +21,7 @@ test = []
 # when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_types = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 [dependencies]
 sgx_tse = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }

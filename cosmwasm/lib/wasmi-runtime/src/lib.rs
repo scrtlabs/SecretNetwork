@@ -6,6 +6,10 @@
 #[cfg(target_env = "sgx")]
 extern crate sgx_types;
 
+// similar trick to get the IDE to use sgx_tstd even when it doesn't know we're targetting SGX
+#[cfg(not(target_env = "sgx"))]
+extern crate sgx_tstd as std;
+
 mod attestation;
 mod cert;
 mod consts;

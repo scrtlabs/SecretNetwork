@@ -840,6 +840,7 @@ dependencies = [
  "sgx_trts 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
  "sgx_tse 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
  "sgx_tseal 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
+ "sgx_tstd 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
  "sgx_types 1.1.2 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2)",
  "sha2 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasmi 0.6.2 (git+https://github.com/paritytech/wasmi?rev=39a18a433a765a36383d34d4edd536ba1e0664d2)",
