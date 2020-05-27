@@ -156,7 +156,7 @@ pub fn create_attestation_certificate(
     };
 
     let payload = attn_report + "|" + &sig + "|" + &cert;
-    let (key_der, cert_der) = match crate::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)
+    let (key_der, cert_der) = match super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)
     {
         Ok(r) => r,
         Err(e) => {
