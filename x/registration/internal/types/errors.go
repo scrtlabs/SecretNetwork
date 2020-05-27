@@ -20,4 +20,6 @@ var (
 	BootstrapInitFailed = sdkErrors.Register(DefaultCodespace, 4, "Failed to initialize bootstrap")
 
 	ErrInvalidType = sdkErrors.Register(DefaultCodespace, 5, "Type error")
+
+	ErrCertificateInvalid = sdkErrors.Register(DefaultCodespace, 6, "Certificate invalid or does not exist")
 )

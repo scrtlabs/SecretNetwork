@@ -1,7 +1,19 @@
-use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
 use std::ffi::c_void;
+use std::slice;
 
+use log::*;
+
+use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
+use sgx_trts::trts::{
+    rsgx_lfence, rsgx_raw_is_outside_enclave, rsgx_sfence, rsgx_slice_is_outside_enclave,
+};
+use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
+
+use crate::attestation::create_attestation_certificate;
+use crate::cert::verify_ra_cert;
+use crate::consts::*;
 use crate::crypto;
+pub use crate::crypto::traits::{Kdf, SIVEncryptable, SealedKey};
 use crate::crypto::{
     AESKey, Keychain, Seed, PUBLIC_KEY_SIZE, SEED_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
 };
@@ -9,22 +21,8 @@ use crate::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
     result_query_success_to_queryresult,
 };
-use log::*;
-use sgx_trts::trts::{
-    rsgx_lfence, rsgx_raw_is_outside_enclave, rsgx_sfence, rsgx_slice_is_outside_enclave,
-};
-use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
-use std::slice;
-
-use crate::utils::{validate_mut_ptr, validate_const_ptr};
-
-use crate::consts::*;
-pub use crate::crypto::traits::{Encryptable, Kdf, SealedKey};
-
-use crate::cert::verify_ra_cert;
-use crate::attestation::create_attestation_certificate;
-
 use crate::storage::write_to_untrusted;
+use crate::utils::{attest_from_key, validate_const_ptr, validate_mut_ptr};
 
 #[no_mangle]
 pub extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
@@ -115,10 +113,7 @@ pub unsafe extern "C" fn ecall_key_gen(
 
     key_manager.create_registration_key();
 
-    let pubkey = key_manager
-        .get_registration_key()
-        .unwrap()
-        .get_pubkey();
+    let pubkey = key_manager.get_registration_key().unwrap().get_pubkey();
 
     public_key.clone_from_slice(&pubkey[1..UNCOMPRESSED_PUBLIC_KEY_SIZE]);
     info!("ecall_key_gen key pk: {:?}", public_key.to_vec());
@@ -157,7 +152,7 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
     };
     // info!("private key {:?}, cert: {:?}", private_key_der, cert);
 
-    if let Err(status) = write_to_untrusted(cert.as_slice(), CERTIFICATE_SAVE_PATH) {
+    if let Err(status) = write_to_untrusted(cert.as_slice(), ATTESTATION_CERTIFICATE_SAVE_PATH) {
         return status;
     }
     //seal(private_key_der, "ecc_cert_private.der")
@@ -174,7 +169,6 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
  */
 #[no_mangle]
 pub extern "C" fn ecall_init_bootstrap(public_key: &mut [u8; PUBLIC_KEY_SIZE]) -> sgx_status_t {
-
     if let Err(e) = validate_mut_ptr(public_key.as_mut_ptr(), public_key.len()) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
@@ -194,26 +188,18 @@ pub extern "C" fn ecall_init_bootstrap(public_key: &mut [u8; PUBLIC_KEY_SIZE]) -
     }
 
     let kp = key_manager.seed_exchange_key().unwrap();
-    let (_, cert) =
-        match create_attestation_certificate(&kp, sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE) {
-            Err(e) => {
-                error!("Error in create_attestation_certificate: {:?}", e);
-                return e;
-            }
-            Ok(res) => res,
-        };
-    // info!("private key {:?}, cert: {:?}", private_key_der, cert);
+    if let Err(status) = attest_from_key(&kp, SEED_EXCH_CERTIFICATE_SAVE_PATH) {
+        return status;
+    }
 
-    if let Err(status) = write_to_untrusted(cert.as_slice(), CERTIFICATE_SAVE_PATH) {
+    let kp = key_manager.get_consensus_io_exchange_keypair().unwrap();
+    if let Err(status) = attest_from_key(&kp, IO_CERTIFICATE_SAVE_PATH) {
         return status;
     }
 
     // don't want to copy the first byte (no need to pass the 0x4 uncompressed byte)
     public_key.copy_from_slice(
-        &key_manager
-            .seed_exchange_key()
-            .unwrap()
-            .get_pubkey()[1..UNCOMPRESSED_PUBLIC_KEY_SIZE],
+        &key_manager.seed_exchange_key().unwrap().get_pubkey()[1..UNCOMPRESSED_PUBLIC_KEY_SIZE],
     );
     debug!(
         "ecall_init_bootstrap consensus_seed_exchange_keypair public key: {:?}",
@@ -224,24 +210,23 @@ pub extern "C" fn ecall_init_bootstrap(public_key: &mut [u8; PUBLIC_KEY_SIZE]) -
 }
 
 /**
-  *  `ecall_get_encrypted_seed`
-  *
-  *  This call is used to help new nodes register in the network. The function will authenticate the
-  *  new node, based on a received certificate. If the node is authenticated successfully, the seed
-  *  will be encrypted and shared with the registering node.
-  *
-  *  The seed is encrypted with a key derived from the secret master key of the chain, and the public
-  *  key of the requesting chain
-  *
-  */
+ *  `ecall_authenticate_new_node`
+ *
+ *  This call is used to help new nodes register in the network. The function will authenticate the
+ *  new node, based on a received certificate. If the node is authenticated successfully, the seed
+ *  will be encrypted and shared with the registering node.
+ *
+ *  The seed is encrypted with a key derived from the secret master key of the chain, and the public
+ *  key of the requesting chain
+ *
+ */
 #[no_mangle]
 // todo: replace 32 with crypto consts once I have crypto library
-pub extern "C" fn ecall_get_encrypted_seed(
+pub extern "C" fn ecall_authenticate_new_node(
     cert: *const u8,
     cert_len: u32,
     seed: &mut [u8; ENCRYPTED_SEED_SIZE],
 ) -> sgx_status_t {
-
     if let Err(e) = validate_mut_ptr(seed.as_mut_ptr(), seed.len()) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
@@ -288,10 +273,13 @@ pub extern "C" fn ecall_get_encrypted_seed(
         Err(e) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
     };
 
+    let mut authenticated_data: Vec<&[u8]> = Vec::default();
+    authenticated_data.push(&target_public_key);
     // encrypt the seed using the symmetric key derived in the previous stage
-    let res = match AESKey::new_from_slice(&shared_enc_key)
-        .encrypt(&key_manager.get_consensus_seed().unwrap().get().to_vec())
-    {
+    let res = match AESKey::new_from_slice(&shared_enc_key).encrypt_siv(
+        &key_manager.get_consensus_seed().unwrap().get().to_vec(),
+        &authenticated_data,
+    ) {
         Ok(r) => {
             if r.len() != ENCRYPTED_SEED_SIZE {
                 error!("wtf? {:?}", r.len());
@@ -338,7 +326,8 @@ pub unsafe extern "C" fn ecall_init_seed(
     let cert_slice = slice::from_raw_parts(master_cert, master_cert_len as usize);
     let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
 
-    let mut target_public_key: [u8; UNCOMPRESSED_PUBLIC_KEY_SIZE] = [4u8; UNCOMPRESSED_PUBLIC_KEY_SIZE];
+    let mut target_public_key: [u8; UNCOMPRESSED_PUBLIC_KEY_SIZE] =
+        [4u8; UNCOMPRESSED_PUBLIC_KEY_SIZE];
 
     let pk = match verify_ra_cert(cert_slice) {
         Err(e) => {
@@ -349,8 +338,11 @@ pub unsafe extern "C" fn ecall_init_seed(
     };
     // just make sure the length isn't wrong for some reason (certificate may be malformed)
     if pk.len() != crypto::PUBLIC_KEY_SIZE {
-        error!("Got public key from certificate with the wrong size: {:?}", pk.len());
-        return sgx_status_t::SGX_ERROR_UNEXPECTED
+        error!(
+            "Got public key from certificate with the wrong size: {:?}",
+            pk.len()
+        );
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
     target_public_key[1..].copy_from_slice(&pk);
 
@@ -363,7 +355,13 @@ pub unsafe extern "C" fn ecall_init_seed(
         Err(e) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
     };
 
-    let res = match AESKey::new_from_slice(&shared_enc_key).decrypt(&encrypted_seed_slice) {
+    let my_public_key = key_manager.get_registration_key().unwrap().get_pubkey();
+
+    let mut authenticated_data: Vec<&[u8]> = Vec::default();
+    authenticated_data.push(&my_public_key);
+    let res = match AESKey::new_from_slice(&shared_enc_key)
+        .decrypt_siv(&encrypted_seed_slice, &authenticated_data)
+    {
         Ok(r) => {
             if r.len() != SEED_KEY_SIZE {
                 error!("wtf2? {:?}", r.len());

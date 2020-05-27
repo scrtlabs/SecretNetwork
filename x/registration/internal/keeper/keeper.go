@@ -22,15 +22,6 @@ type Keeper struct {
 	router   sdk.Router
 }
 
-//func SgxMode() string {
-//	sgx := os.Getenv("SGX_MODE")
-//	if sgx == "" {
-//		sgx = "HW"
-//	}
-//
-//	return sgx
-//}
-
 // NewKeeper creates a new contract Keeper instance
 func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, router sdk.Router, enclave EnclaveInterface, homeDir string, bootstrap bool) Keeper {
 

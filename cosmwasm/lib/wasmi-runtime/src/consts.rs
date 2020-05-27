@@ -21,7 +21,10 @@ pub enum SigningMethod {
     NONE,
 }
 
-pub const CERTIFICATE_SAVE_PATH: &str = "attestation_cert.der";
+pub const ATTESTATION_CERTIFICATE_SAVE_PATH: &str = "attestation_cert.der";
+
+pub const SEED_EXCH_CERTIFICATE_SAVE_PATH: &str = "node-master-cert.der";
+pub const IO_CERTIFICATE_SAVE_PATH: &str = "io-master-cert.der";
 
 #[cfg(feature = "production")]
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;

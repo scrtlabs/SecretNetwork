@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
@@ -31,12 +32,24 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 }
 
 func queryMasterKey(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, error) {
-	seed := keeper.GetMasterCertificate(ctx)
-	if seed == nil {
+	ioKey := keeper.GetMasterCertificate(ctx, types.MasterIoKeyId)
+	nodeKey := keeper.GetMasterCertificate(ctx, types.MasterNodeKeyId)
+	if ioKey == nil || nodeKey == nil {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownAddress, "Chain has not been initialized yet")
 	}
 
-	return *seed, nil
+	resp := types.GenesisState{
+		Registration:              nil,
+		NodeExchMasterCertificate: *nodeKey,
+		IoMasterCertificate:       *ioKey,
+	}
+
+	asBytes, err := json.Marshal(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	return asBytes, nil
 }
 
 func queryEncryptedSeed(ctx sdk.Context, pubkey string, req abci.RequestQuery, keeper Keeper) ([]byte, error) {

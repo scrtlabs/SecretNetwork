@@ -12,10 +12,15 @@
 */
 
 use log::*;
+
 use sgx_trts::trts::{
     rsgx_lfence, rsgx_raw_is_outside_enclave, rsgx_sfence, rsgx_slice_is_outside_enclave,
 };
 use sgx_types::*;
+
+use crate::attestation::create_attestation_certificate;
+use crate::crypto::KeyPair;
+use crate::storage::write_to_untrusted;
 
 pub trait UnwrapOrSgxErrorUnexpected {
     type ReturnType;
@@ -58,5 +63,25 @@ pub fn validate_const_ptr(ptr: *const u8, ptr_len: usize) -> SgxResult<()> {
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
     rsgx_lfence();
+    Ok(())
+}
+
+pub fn attest_from_key(kp: &KeyPair, save_path: &str) -> SgxResult<()> {
+    let (_, cert) = match create_attestation_certificate(
+        &kp,
+        sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+    ) {
+        Err(e) => {
+            error!("Error in create_attestation_certificate: {:?}", e);
+            return Err(e);
+        }
+        Ok(res) => res,
+    };
+    // info!("private key {:?}, cert: {:?}", private_key_der, cert);
+
+    if let Err(status) = write_to_untrusted(cert.as_slice(), save_path) {
+        return Err(status);
+    }
+
     Ok(())
 }

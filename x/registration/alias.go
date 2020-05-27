@@ -22,6 +22,8 @@ const (
 	SecretNodeCfgFolder    = types.SecretNodeCfgFolder
 	EncryptedKeyLength     = types.EncryptedKeyLength
 	AttestationCertPath    = types.AttestationCertPath
+	IoExchMasterCertPath   = types.IoExchMasterCertPath
+	NodeExchMasterCertPath = types.NodeExchMasterCertPath
 )
 
 var (

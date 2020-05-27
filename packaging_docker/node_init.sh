@@ -42,7 +42,7 @@ echo "SEED: $SEED"
 
 enigmacli q register secret-network-params --node http://bootstrap:26657 2> /dev/null
 
-enigmad configure-secret master-cert.der "$SEED"
+enigmad configure-secret node-master-cert.der "$SEED"
 
 cp /tmp/.enigmad/config/genesis.json /root/.enigmad/config/genesis.json
 
