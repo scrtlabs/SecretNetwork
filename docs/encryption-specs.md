@@ -170,7 +170,7 @@ TODO reasoning
 
 TODO reasoning
 
-- `seed_exchange_key`: An AES-256-GCM encryption key. Will be used to send `consensus_seed` to the new node.
+- `seed_exchange_key`: An AES-SIV-128 encryption key. Will be used to send `consensus_seed` to the new node.
 - `seed_exchange_key` is derived the following way:
   - `seed_exchange_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_seed_exchange_privkey` and `registration_pubkey`.
   - `seed_exchange_key` is derived using HKDF-SHA256 from `seed_exchange_ikm` and `nonce`.
@@ -191,14 +191,13 @@ seed_exchange_key = hkdf({
 
 TODO reasoning
 
-- The output of the `enigmacli tx register auth` transaction is `consensus_seed` encrypted with AES-256-GCM, `seed_exchange_key` as the encryption key and `iv` as the encryption IV.
+- The output of the `enigmacli tx register auth` transaction is `consensus_seed` encrypted with AES-SIV-128, `seed_exchange_key` as the encryption key, using the public key of the registering node for the AD.
 
 ```js
-encrypted_consensus_seed = aes_256_gcm_encrypt({
-  iv: iv,
+encrypted_consensus_seed = aes_siv_128_encrypt({
   key: seed_exchange_key,
   data: consensus_seed,
-  aad: iv,
+  ad: new_node_public_key,
 });
 
 return encrypted_consensus_seed;
@@ -212,9 +211,10 @@ return encrypted_consensus_seed;
 
 TODO reasoning
 
-- `seed_exchange_key`: An AES-256-GCM encryption key. Will be used to receive `consensus_seed` from the network.
+- `seed_exchange_key`: An AES-SIV-128 encryption key. Will be used to decrypt `consensus_seed`.
 - `seed_exchange_key` is derived the following way:
   - `seed_exchange_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_seed_exchange_pubkey` (public in `genesis.json`) and `registration_privkey` (available only inside the new node's Enclave).
+ 
   - `seed_exchange_key` is derived using HKDF-SHA256 with `seed_exchange_ikm` and `nonce`.
 
 ```js
@@ -233,16 +233,15 @@ seed_exchange_key = hkdf({
 
 TODO reasoning
 
-- `encrypted_consensus_seed` is encrypted with AES-256-GCM, `seed_exchange_key` as the encryption key and `iv` as the encryption IV.
+- `encrypted_consensus_seed` is encrypted with AES-SIV-128, `seed_exchange_key` as the encryption key and the public key of the registering node as the `ad` as the decryption additional data.
 - The new node now has all of these^ parameters inside its Enclave, so it's able to decrypt `consensus_seed` from `encrypted_consensus_seed`.
 - Seal `consensus_seed` to disk at `"$HOME/.enigmad/sgx-secrets/consensus_seed.sealed"`.
 
 ```js
 consensus_seed = aes_256_gcm_decrypt({
-  iv: iv,
   key: seed_exchange_key,
   data: encrypted_consensus_seed,
-  aad: iv,
+  ad: new_node_public_key,
 });
 
 seal({
