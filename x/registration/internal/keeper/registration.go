@@ -9,10 +9,10 @@ import (
 	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
 )
 
-//func (k Keeper) GetMasterPublicKey(ctx sdk.Context) *types.PublicKey {
+//func (k Keeper) MasterCertPrefix(ctx sdk.Context) *types.PublicKey {
 //	store := ctx.KVStore(k.storeKey)
 //	var pkIO types.PublicKey
-//	certBz := store.Get(types.GetMasterPublicKey(types.MasterPublicKeyId))
+//	certBz := store.Get(types.MasterCertPrefix(types.MasterPublicKeyId))
 //	if certBz == nil {
 //		return nil
 //	}
@@ -23,13 +23,13 @@ import (
 //func (k Keeper) setMasterPublicKey(ctx sdk.Context, publicKey types.PublicKey) {
 //	store := ctx.KVStore(k.storeKey)
 //
-//	store.Set(types.GetMasterPublicKey(types.MasterPublicKeyId), k.cdc.MustMarshalBinaryBare(publicKey))
+//	store.Set(types.MasterCertPrefix(types.MasterPublicKeyId), k.cdc.MustMarshalBinaryBare(publicKey))
 //}
 
-func (k Keeper) GetMasterCertificate(ctx sdk.Context) *types.MasterCertificate {
+func (k Keeper) GetMasterCertificate(ctx sdk.Context, certType string) *types.MasterCertificate {
 	store := ctx.KVStore(k.storeKey)
 	var cert types.MasterCertificate
-	certBz := store.Get(types.GetMasterPublicKey(types.MasterPublicKeyId))
+	certBz := store.Get(types.MasterCertPrefix(certType))
 	if certBz == nil {
 		return nil
 	}
@@ -37,14 +37,14 @@ func (k Keeper) GetMasterCertificate(ctx sdk.Context) *types.MasterCertificate {
 	return &cert
 }
 
-func (k Keeper) setMasterCertificate(ctx sdk.Context, cert types.MasterCertificate) {
+func (k Keeper) setMasterCertificate(ctx sdk.Context, cert types.MasterCertificate, certType string) {
 	store := ctx.KVStore(k.storeKey)
 
-	store.Set(types.GetMasterPublicKey(types.MasterPublicKeyId), k.cdc.MustMarshalBinaryBare(cert))
+	store.Set(types.MasterCertPrefix(certType), k.cdc.MustMarshalBinaryBare(cert))
 }
 
-func (k Keeper) isMasterCertificateDefined(ctx sdk.Context) bool {
-	regInfo := k.GetMasterCertificate(ctx)
+func (k Keeper) isMasterCertificateDefined(ctx sdk.Context, certType string) bool {
+	regInfo := k.GetMasterCertificate(ctx, certType)
 	if regInfo == nil {
 		return false
 	}
@@ -55,7 +55,7 @@ func (k Keeper) getRegistrationInfo(ctx sdk.Context, publicKey types.NodeID) *ty
 	store := ctx.KVStore(k.storeKey)
 	var nodeInfo types.RegistrationNodeInfo
 	fmt.Println("pubkey", hex.EncodeToString(publicKey))
-	certBz := store.Get(types.GetRegistrationKey(publicKey))
+	certBz := store.Get(types.RegistrationKeyPrefix(publicKey))
 
 	if certBz == nil {
 		return nil
@@ -88,7 +88,7 @@ func (k Keeper) SetRegistrationInfo(ctx sdk.Context, certificate types.Registrat
 
 	fmt.Println("pubkey", hex.EncodeToString(publicKey))
 	fmt.Println("EncryptedSeed", hex.EncodeToString(certificate.EncryptedSeed))
-	store.Set(types.GetRegistrationKey(publicKey), k.cdc.MustMarshalBinaryBare(certificate))
+	store.Set(types.RegistrationKeyPrefix(publicKey), k.cdc.MustMarshalBinaryBare(certificate))
 }
 
 func (k Keeper) isNodeAuthenticated(ctx sdk.Context, publicKey types.NodeID) (bool, error) {

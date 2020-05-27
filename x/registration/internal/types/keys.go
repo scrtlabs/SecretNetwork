@@ -23,10 +23,10 @@ var (
 	MasterKeyPrefix         = []byte{0x02}
 )
 
-func GetRegistrationKey(key []byte) []byte {
+func RegistrationKeyPrefix(key []byte) []byte {
 	return append(RegistrationStorePrefix, key...)
 }
 
-func GetMasterPublicKey(key string) []byte {
+func MasterCertPrefix(key string) []byte {
 	return append(MasterKeyPrefix, []byte(key)...)
 }

@@ -4,6 +4,7 @@ package keeper
 ////
 import (
 	"encoding/hex"
+	"encoding/json"
 	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
 	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
@@ -42,6 +43,12 @@ func TestNewQuerier(t *testing.T) {
 		return
 	}
 
+	expectedSecretParams, _ := json.Marshal(types.GenesisState{
+		Registration:              nil,
+		NodeExchMasterCertificate: regInfo.Certificate,
+		IoMasterCertificate:       regInfo.Certificate,
+	})
+
 	specs := map[string]struct {
 		srcPath []string
 		srcReq  abci.RequestQuery
@@ -75,19 +82,10 @@ func TestNewQuerier(t *testing.T) {
 			sdkErrors.ErrUnknownAddress,
 			"",
 		},
-		"query master cert": {
-			[]string{QueryMasterCertificate},
-			abci.RequestQuery{Data: []byte("")},
-			nil,
-			string(regInfo.Certificate),
-		},
 	}
 
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
-			if msg == "query master cert" {
-				keeper.setMasterCertificate(ctx, types.MasterCertificate(regInfo.Certificate))
-			}
 			binResult, err := querier(ctx, spec.srcPath, spec.srcReq)
 			require.True(t, spec.expErr.Is(err), err)
 
@@ -96,4 +94,10 @@ func TestNewQuerier(t *testing.T) {
 			}
 		})
 	}
+
+	keeper.setMasterCertificate(ctx, types.MasterCertificate(regInfo.Certificate), types.MasterNodeKeyId)
+	keeper.setMasterCertificate(ctx, types.MasterCertificate(regInfo.Certificate), types.MasterIoKeyId)
+
+	binResult, err := querier(ctx, []string{QueryMasterCertificate}, abci.RequestQuery{Data: []byte("")})
+	require.Equal(t, string(binResult), string(expectedSecretParams))
 }
