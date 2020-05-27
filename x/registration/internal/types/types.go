@@ -16,7 +16,7 @@ const SecretNodeCfgFolder = ".node"
 const NodeExchMasterCertPath = "node-master-cert.der"
 const IoExchMasterCertPath = "io-master-cert.der"
 
-const AttestationCertPath = "attstation_cert.der"
+const AttestationCertPath = "attestation_cert.der"
 
 type NodeID []byte
 

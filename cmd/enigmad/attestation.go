@@ -80,7 +80,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 
 			// Load consensus_seed_exchange_pubkey
 			cert := []byte(nil)
-			if len(args) == 1 {
+			if len(args) >= 1 {
 				cert, err = ioutil.ReadFile(args[0])
 				if err != nil {
 					return err
