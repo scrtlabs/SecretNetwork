@@ -1,12 +1,16 @@
 ### Download Release
 
 ```bash
-wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.3/enigma-blockchain_0.0.3_amd64.deb
+wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.0.1/secret-blockchain_0.0.1_amd64.deb
 ```
 
 ### Remove old installations
 
 ```bash
+sudo dpkg -P secret-blockchain
+sudo rm -rf ~/.secretd ~/.secretcli
+sudo rm -rf "$(which secretd)"
+sudo rm -rf "$(which secretcli)"
 sudo dpkg -P enigmachain
 sudo rm -rf ~/.enigmad ~/.enigmacli
 sudo rm -rf ~/.engd ~/.engcli
@@ -44,14 +48,14 @@ sudo chown -R ubuntu .enigmad/
 ### Install the `.deb` file
 
 ```bash
-sudo dpkg -i enigma-blockchain_0.0.3_amd64.deb
+sudo dpkg -i secret-blockchain_0.0.1_amd64.deb
 ```
 
 ### Config local node
 
 ```bash
-enigmacli config chain-id "enigma-testnet"
-enigmacli config output json
-enigmacli config indent true
-enigmacli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
+secretcli config chain-id "secret-testnet"
+secretcli config output json
+secretcli config indent true
+secretcli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
 ```

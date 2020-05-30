@@ -45,4 +45,4 @@ private_peer_ids = "node_ids_of_private_peers"
 
 Sources:
 
-1. https://github.com/Cashmaney/gaia/blob/master/docs/validators/security.md
+1. https://github.com/cosmos/gaia/blob/master/docs/validators/security.md

@@ -1,19 +1,19 @@
 # Install the `secretcli` Secret Network light client
 
-1. Get the latest release of `secretcli` for your OS: https://github.com/enigmampc/EnigmaBlockchain/releases/latest.
+1. Get the latest release of `secretcli` for your OS: https://github.com/enigmampc/SecretNetwork/releases/latest.
 
    ([How to verify releases](/docs/verify-releases.md))
 
 2) Install:
 
    - Mac/Windows: Rename it from `secretcli-${VERSION}-${OS}` to `secretcli` or `secretcli.exe` and put it in your path.
-   - Ubuntu/Debian: `sudo dpkg -i enigma*.deb`
+   - Ubuntu/Debian: `sudo dpkg -i secret*.deb`
 
 3) Configure:
 
    ```bash
    # Set the mainnet chain-id
-   secretcli config chain-id enigma-1
+   secretcli config chain-id secret-1
    ```
 
    ```bash

@@ -1,7 +1,7 @@
 # Simple usage with a mounted data directory:
-# > docker build -t enigma .
-# > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.enigmad:/root/.enigmad -v ~/.enigmacli:/root/.enigmacli enigma enigmad init
-# > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.enigmad:/root/.enigmad -v ~/.enigmacli:/root/.enigmacli enigma enigmad start
+# > docker build -t secret .
+# > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli secret secretd init
+# > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli secret secretd start
 FROM golang:alpine AS build-env
 
 # Set up dependencies
@@ -11,7 +11,7 @@ ENV PACKAGES curl make git libc-dev bash gcc linux-headers eudev-dev python
 RUN apk add $PACKAGES
 
 # Set working directory for the build
-WORKDIR /go/src/github.com/enigmampc/enigmablockchain
+WORKDIR /go/src/github.com/enigmampc/secretnetwork
 
 # Add source files
 COPY . .
@@ -29,8 +29,8 @@ WORKDIR /root
 # CMD ["/bin/bash"]
 
 # Copy over binaries from the build-env
-COPY --from=build-env /go/src/github.com/enigmampc/enigmablockchain/enigmad /usr/bin/enigmad
-COPY --from=build-env  /go/src/github.com/enigmampc/enigmablockchain/enigmacli /usr/bin/enigmacli
+COPY --from=build-env /go/src/github.com/enigmampc/secretnetwork/secretd /usr/bin/secretd
+COPY --from=build-env  /go/src/github.com/enigmampc/secretnetwork/secretcli /usr/bin/secretcli
 
 COPY ./packaging_docker/docker_start.sh .
 
@@ -42,8 +42,8 @@ RUN chmod +x docker_start.sh .
 
 ####### STAGE 1 -- build core
 ARG moniker=default
-ARG chainid=enigma-1
-ARG genesis_path=https://raw.githubusercontent.com/enigmampc/EnigmaBlockchain/master/enigma-1-genesis.json
+ARG chainid=secret-1
+ARG genesis_path=https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/secret-1-genesis.json
 ARG persistent_peers=201cff36d13c6352acfc4a373b60e83211cd3102@bootstrap.mainnet.enigma.co:26656
 
 ENV GENESISPATH=$genesis_path
@@ -51,4 +51,4 @@ ENV CHAINID=$chainid
 ENV MONIKER=$moniker
 ENV PERSISTENT_PEERS=$persistent_peers
 
-ENTRYPOINT ["/bin/ash", "docker_start.sh"]
+ENTRYPOINT ["/bin/bash", "docker_start.sh"]
