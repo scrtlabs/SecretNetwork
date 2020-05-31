@@ -48,4 +48,6 @@ cp /tmp/.enigmad/config/genesis.json /root/.enigmad/config/genesis.json
 
 enigmad validate-genesis
 
-RUST_BACKTRACE=1 enigmad start
+RUST_BACKTRACE=1 enigmad start &
+
+./wasmi-sgx-test.sh
