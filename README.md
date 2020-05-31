@@ -23,7 +23,7 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/SecretNet
 - Twitter: https://twitter.com/SecretNetwork
 - Main Chat: https://chat.scrt.network/channel/general
 - Telegram Channel: https://t.me/SCRTnetwork
-- Community Secret Nodes Telegram : https://t.me/secretnodes
+- Community Secret Nodes Telegram: https://t.me/secretnodes
 
 # Block Explorers
 
