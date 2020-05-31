@@ -35,3 +35,9 @@ static LOGGER: SimpleLogger = SimpleLogger;
 fn init_logger() {
     log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Trace));
 }
+
+// todo: figure out how we want to turn this on
+#[cfg(feature = "test")]
+fn run_test() {
+    println!("placeholder")
+}
