@@ -40,12 +40,6 @@ impl Keychain {
         x.generate_consensus_master_keys();
 
         return x;
-
-        // let kdf_salt: Vec<u8> = vec![
-        //     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x4b, 0xea, 0xd8, 0xdf,
-        //     0x69, 0x99, 0x08, 0x52, 0xc2, 0x02, 0xdb, 0x0e, 0x00, 0x97, 0xc1, 0xa1, 0x2e, 0xa6,
-        //     0x37, 0xd7, 0xe9, 0x6d,
-        // ]; // Bitcoin halving block hash https://www.blockchain.com/btc/block/000000000000000000024bead8df69990852c202db0e0097c1a12ea637d7e96d
     }
 
     pub fn create_consensus_seed(&mut self) -> Result<(), CryptoError> {
@@ -188,7 +182,10 @@ impl Keychain {
                 );
                 EnclaveError::FailedUnseal /* change error type? */
             })?;
-
+        info!(
+            "consensus_seed_exchange_keypair: {:?}",
+            consensus_seed_exchange_keypair
+        );
         self.set_consensus_seed_exchange_keypair(consensus_seed_exchange_keypair);
 
         // consensus_io_exchange_keypair
@@ -205,7 +202,10 @@ impl Keychain {
                 );
                 EnclaveError::FailedUnseal /* change error type? */
             })?;
-
+        info!(
+            "consensus_io_exchange_keypair: {:?}",
+            consensus_io_exchange_keypair
+        );
         self.set_consensus_io_exchange_keypair(consensus_io_exchange_keypair);
 
         // consensus_state_ikm
@@ -215,7 +215,7 @@ impl Keychain {
             .unwrap()
             .derive_key_from_this(CONSENSUS_STATE_IKM_DERIVE_ORDER);
         let consensus_state_ikm = Seed::new_from_slice(&consensus_state_ikm_bytes);
-
+        info!("consensus_state_ikm: {:?}", consensus_state_ikm);
         self.set_consensus_state_ikm(consensus_state_ikm);
 
         Ok(())

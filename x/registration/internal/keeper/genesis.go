@@ -14,7 +14,7 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 	if data.IoMasterCertificate != nil && data.NodeExchMasterCertificate != nil {
 		// keeper.setMasterPublicKey(ctx, data.MasterPublic)
 		keeper.setMasterCertificate(ctx, data.IoMasterCertificate, types.MasterIoKeyId)
-		keeper.setMasterCertificate(ctx, data.IoMasterCertificate, types.MasterNodeKeyId)
+		keeper.setMasterCertificate(ctx, data.NodeExchMasterCertificate, types.MasterNodeKeyId)
 		for _, storedRegInfo := range data.Registration {
 			keeper.SetRegistrationInfo(ctx, storedRegInfo)
 		}

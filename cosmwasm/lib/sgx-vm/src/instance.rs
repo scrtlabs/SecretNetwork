@@ -37,9 +37,9 @@ pub fn untrusted_init_node(
     encrypted_seed: *const u8,
     encrypted_seed_len: u32,
 ) -> SgxResult<sgx_status_t> {
-    info!("Hello from just before initializing - produce_report");
+    info!("Hello from just before initializing - init_node");
     let enclave = init_enclave().unwrap();
-    info!("Hello from just after initializing - produce_report");
+    info!("Hello from just after initializing - init_node");
 
     inner_init_node(
         enclave.geteid(),
