@@ -17,6 +17,7 @@ import {
   StdSignature,
 } from "./types";
 import crypto from "crypto-browserify";
+import forge from "node-forge";
 
 export interface SigningCallback {
   (signBytes: Uint8Array): Promise<StdSignature>;
@@ -180,14 +181,27 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     };
   }
 
-  encrypt(plaintext: object) {
-    // https://gist.github.com/vlucas/2bd40f62d20c1d49237a109d491974eb
-    const plaintextStr = JSON.stringify(plaintext);
+  encrypt(msg: object) {
+    const msgAsStr = JSON.stringify(msg);
+
+    const key = forge.util.createBuffer(new Uint8Array(new Array(32).fill(0x7)).buffer);
+    const iv = forge.util.createBuffer(new Uint8Array(new Array(12).fill(0x0)).buffer);
+    const dummyAad = forge.util.createBuffer(new Uint8Array(new Array(89).fill(0x0)).buffer);
+
+    const input = forge.util.createBuffer();
+    input.putString(msgAsStr);
+
+    const cipher = forge.cipher.createCipher("AES-GCM", key);
+    cipher.start({ iv: iv, aad: dummyAad });
+    cipher.update(input);
+    cipher.finish();
+    const encrypted = cipher.output;
+    const tag = cipher.mode.tag;
+
+    return cipher.output.putBuffer(cipher.mode.tag);
   }
 
-  decrypt(ciphertext: object) {
-    // https://gist.github.com/vlucas/2bd40f62d20c1d49237a109d491974eb
-  }
+  decrypt(ciphertext: object) {}
 
   public async instantiate(
     codeId: number,

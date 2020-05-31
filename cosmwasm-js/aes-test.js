@@ -12,7 +12,7 @@ cipher.update(input);
 cipher.finish();
 var encrypted = cipher.output;
 // outputs encrypted hex
-console.log(encrypted.toHex());
+console.log(encrypted.putBuffer(cipher.mode.tag));
 
 key = forge.util.createBuffer(new Uint8Array(new Array(32).fill(0x7)).buffer);
 iv = forge.util.createBuffer(new Uint8Array(new Array(12).fill(0x0)).buffer);
