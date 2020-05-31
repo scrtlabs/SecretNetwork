@@ -1,4 +1,3 @@
-use crate::crypto::*;
 use base64;
 use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
@@ -8,7 +7,7 @@ use wasmi::{ImportsBuilder, ModuleInstance};
 
 use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
 
-use crate::crypto::key_manager::KEY_MANAGER;
+use crate::crypto::{key_manager::KEY_MANAGER, AESKey, Encryptable, SIVEncryptable};
 use crate::errors::wasmi_error_to_enclave_error;
 use crate::gas::{gas_rules, WasmCosts};
 use crate::runtime::{Engine, EnigmaImportResolver, Runtime};
@@ -132,9 +131,10 @@ pub fn query(
 }
 
 fn decrypt_msg(msg: &[u8]) -> Result<Vec<u8>, EnclaveError> {
-    let nonce = msg[0..32];
-    let tx_sender_wallet_pubkey = msg[32..65];
-    let encrypted_msg = msg[65..];
+    // TODO check msg.len > 33
+
+    let tx_sender_wallet_pubkey = &msg[0..33];
+    let encrypted_msg = &msg[33..];
 
     /////////////////////////////////// ASSAF TAKE IT FROM HERE
     // derive decryption key
@@ -144,12 +144,12 @@ fn decrypt_msg(msg: &[u8]) -> Result<Vec<u8>, EnclaveError> {
 
     // let (msg, aad) = msg.split_at(msg.len() - 89);
 
-    // aad = last 89 bytes of msg
-    // let aad = msg[(msg.len() - 89)..];
+    // ad = first 33 bytes of msg
+    // let ad = msg[(msg.len() - 89)..];
     // let msg = mag[0..(msg.len() - 89)];
 
     // pass
-    let msg = key.decrypt(msg).map_err(|err| {
+    let msg = key.decrypt_siv(msg, &vec![]).map_err(|err| {
         error!(
             "handle() got an error while trying to decrypt the msg: {}",
             err
