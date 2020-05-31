@@ -7,7 +7,7 @@ use wasmi::{ImportsBuilder, ModuleInstance};
 
 use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
 
-use crate::crypto::{key_manager::KEY_MANAGER, AESKey, Encryptable, SIVEncryptable};
+use crate::crypto::{key_manager::KEY_MANAGER, AESKey, SIVEncryptable};
 use crate::errors::wasmi_error_to_enclave_error;
 use crate::gas::{gas_rules, WasmCosts};
 use crate::runtime::{Engine, EnigmaImportResolver, Runtime};
@@ -131,10 +131,11 @@ pub fn query(
 }
 
 fn decrypt_msg(msg: &[u8]) -> Result<Vec<u8>, EnclaveError> {
-    // TODO check msg.len > 33
+    // TODO check msg.len > 65
 
-    let tx_sender_wallet_pubkey = &msg[0..33];
-    let encrypted_msg = &msg[33..];
+    let nonce = &msg[0..32]; // to then kdf with aes key
+    let tx_sender_wallet_pubkey = &msg[32..65]; // 33 bytes compressed secp256k1 pubkey
+    let encrypted_msg = &msg[65..];
 
     /////////////////////////////////// ASSAF TAKE IT FROM HERE
     // derive decryption key
@@ -194,24 +195,26 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
 
     if let Value::String(err) = &v["err"] {
         v["err"] = Value::String(base64::encode(
-            &key.encrypt(&err.to_owned().into_bytes()).map_err(|err| {
-                error!(
-                    "got an error while trying to encrypt output error {:?}: {}",
-                    err, err
-                );
-                EnclaveError::FailedSeal
-            })?,
+            &key.encrypt_siv(&err.to_owned().into_bytes(), &vec![])
+                .map_err(|err| {
+                    error!(
+                        "got an error while trying to encrypt output error {:?}: {}",
+                        err, err
+                    );
+                    EnclaveError::FailedSeal
+                })?,
         ));
     } else if let Value::String(ok) = &v["ok"] {
         // query
         v["ok"] = Value::String(base64::encode(
-            &key.encrypt(&ok.to_owned().into_bytes()).map_err(|err| {
-                error!(
-                    "got an error while trying to encrypt query output {:?}: {}",
-                    ok, err
-                );
-                EnclaveError::FailedSeal
-            })?,
+            &key.encrypt_siv(&ok.to_owned().into_bytes(), &vec![])
+                .map_err(|err| {
+                    error!(
+                        "got an error while trying to encrypt query output {:?}: {}",
+                        ok, err
+                    );
+                    EnclaveError::FailedSeal
+                })?,
         ));
     } else if let Value::Object(ok) = &mut v["ok"] {
         // init of handle
@@ -219,7 +222,7 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
             for msg in msgs {
                 if let Value::String(msg_to_next_call) = &mut msg["contract"]["msg"] {
                     msg["contract"]["msg"] = Value::String(base64::encode(
-                        &key.encrypt(&msg_to_next_call.to_owned().into_bytes())
+                        &key.encrypt_siv(&msg_to_next_call.to_owned().into_bytes(), &vec![])
                             .map_err(|err| {
                                 error!(
                             "got an error while trying to encrypt the msg to next call {:?}: {}",
@@ -236,24 +239,26 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
             for e in events {
                 if let Value::String(k) = &mut e["key"] {
                     e["key"] = Value::String(base64::encode(
-                        &key.encrypt(&k.to_owned().into_bytes()).map_err(|err| {
-                            error!(
-                                "got an error while trying to encrypt the event key {}: {}",
-                                k, err
-                            );
-                            EnclaveError::FailedSeal
-                        })?,
+                        &key.encrypt_siv(&k.to_owned().into_bytes(), &vec![])
+                            .map_err(|err| {
+                                error!(
+                                    "got an error while trying to encrypt the event key {}: {}",
+                                    k, err
+                                );
+                                EnclaveError::FailedSeal
+                            })?,
                     ));
                 }
                 if let Value::String(v) = &mut e["value"] {
                     e["value"] = Value::String(base64::encode(
-                        &key.encrypt(&v.to_owned().into_bytes()).map_err(|err| {
-                            error!(
-                                "got an error while trying to encrypt the event value {}: {}",
-                                v, err
-                            );
-                            EnclaveError::FailedSeal
-                        })?,
+                        &key.encrypt_siv(&v.to_owned().into_bytes(), &vec![])
+                            .map_err(|err| {
+                                error!(
+                                    "got an error while trying to encrypt the event value {}: {}",
+                                    v, err
+                                );
+                                EnclaveError::FailedSeal
+                            })?,
                     ));
                 }
             }
@@ -261,13 +266,14 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
 
         if let Value::String(data) = &mut v["ok"]["data"] {
             v["ok"]["data"] = Value::String(base64::encode(
-                &key.encrypt(&data.to_owned().into_bytes()).map_err(|err| {
-                    error!(
-                        "got an error while trying to encrypt the data section {}: {}",
-                        data, err
-                    );
-                    EnclaveError::FailedSeal
-                })?,
+                &key.encrypt_siv(&data.to_owned().into_bytes(), &vec![])
+                    .map_err(|err| {
+                        error!(
+                            "got an error while trying to encrypt the data section {}: {}",
+                            data, err
+                        );
+                        EnclaveError::FailedSeal
+                    })?,
             ));
         }
     }

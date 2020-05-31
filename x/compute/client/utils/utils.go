@@ -3,10 +3,10 @@ package utils
 import (
 	"bytes"
 	"compress/gzip"
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/rand"
 	"io"
+
+	"github.com/miscreant/miscreant.go"
 )
 
 var (
@@ -53,38 +53,30 @@ func Encrypt(plaintext []byte) ([]byte, error) {
 		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
 	}
 
-	block, err := aes.NewCipher(key)
+	cipher, err := miscreant.NewAESCMACSIV(key)
 	if err != nil {
 		return nil, err
 	}
 
-	inputNonce := make([]byte, 12) // 96 bit nonce
-	if _, err := io.ReadFull(rand.Reader, inputNonce); err != nil {
+	nonce := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 		return nil, err
 	}
 
-	outputNonce := make([]byte, 12) // 96 bit nonce
-	if _, err := io.ReadFull(rand.Reader, outputNonce); err != nil {
-		return nil, err
-	}
-
-	aesgcm, err := cipher.NewGCM(block)
+	ciphertext, err := cipher.Seal(nil, plaintext)
 	if err != nil {
 		return nil, err
 	}
 
-	inputNonce = make([]byte, 12)  // TODO fix
-	outputNonce = make([]byte, 12) // TODO fix
+	nonce = make([]byte, 32)         // TODO fix
+	walletPubKey := make([]byte, 33) // TODO fix
 
 	// aad = inputNonce(12)|wallet_pubkey(65)|outputNonce(12) = 89 bytes
-	aad := []byte{}
-	aad = append(aad, inputNonce...)       // TODO fix real inputNonce
-	aad = append(aad, make([]byte, 65)...) // TODO fix real wallet_pubkey
-	aad = append(aad, outputNonce...)      // TODO fix real outputNonce
-	aad = []byte{}
+	ad := []byte{}
+	ad = append(ad, nonce...)        // TODO fix real inputNonce
+	ad = append(ad, walletPubKey...) // TODO fix real outputNonce
 
-	ciphertext := aesgcm.Seal(nil, inputNonce, plaintext, aad)
-	ciphertext = append(ciphertext, aad...)
+	ciphertext = append(ad, ciphertext...)
 
 	return ciphertext, nil
 }
@@ -101,7 +93,7 @@ func Decrypt(ciphertext []byte) ([]byte, error) {
 		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
 	}
 
-	block, err := aes.NewCipher(key)
+	cipher, err := miscreant.NewAESCMACSIV(key)
 	if err != nil {
 		return nil, err
 	}
@@ -113,13 +105,8 @@ func Decrypt(ciphertext []byte) ([]byte, error) {
 	// ciphertext = ciphertext[0 : len(ciphertext)-12]
 	// aad := outputNonce
 
-	outputNonce := make([]byte, 12) // TODO fix
-	aad := []byte{}                 // TODO fix
+	// outputNonce := make([]byte, 32) // TODO fix
+	// ad := []byte{} // TODO fix
 
-	aesgcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, err
-	}
-
-	return aesgcm.Open(nil, outputNonce, ciphertext, aad)
+	return cipher.Open(nil, ciphertext)
 }
