@@ -132,20 +132,12 @@ pub fn query(
 }
 
 fn decrypt_msg(msg: &[u8]) -> Result<Vec<u8>, EnclaveError> {
-    // TODO:
-    // extract "challenge" & "wallet_pubkey" from AAD
-    // validate that "env.message.signer" is derived from "wallet_pubkey"
-    // calculate "shared_key_base" from "ECDH(wallet_pubkey, sk_consensus_io_exchange_keypair)"
-    // calculate "shared_key" from "HKDF(shared_key_base + challenge)"
-    // decrypt(shared_key, msg)
-    // ?? need to authenticate ADD or doest it happen inside decrypt ??
+    let nonce = msg[0..32];
+    let tx_sender_wallet_pubkey = msg[32..65];
+    let encrypted_msg = msg[65..];
 
-    // pseudo code:
-    // [challenge, pk_wallet] = get_AAD(encrypted_input)
-    // base_key = ECDH(sk_io, pk_wallet)
-    // encryption_key = HKDF(base_key + challenge)
-    // decrypted_input = decrypt(key=encryption_key, data=encrypted_input)
-    // ?? need to authenticate ADD or doest it happen inside decrypt ??
+    /////////////////////////////////// ASSAF TAKE IT FROM HERE
+    // derive decryption key
 
     // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
     let key = AESKey::new_from_slice(&[7_u8; 32]);
