@@ -107,7 +107,6 @@ impl KeyPair {
 
     /// This function does an ECDH(point multiplication) between one's private key and the other one's public key
     pub fn derive_key(&self, pubarr: &PubKey) -> Result<DhKey, CryptoError> {
-
         // Pubkey is already 65 bytes, not sure what this is for?
         // let mut pub_k = [4u8; UNCOMPRESSED_PUBLIC_KEY_SIZE];
         // let mut pub_k_gx: [u8; 32] = [0u8; 32];
@@ -124,16 +123,19 @@ impl KeyPair {
 
         info!("Derive key pk: {:?}", &pubarr.to_vec());
 
-
         let pubkey = PublicKey::from_slice(pubarr).map_err(|e| {
             error!("Error creating public key {:?}", e);
-            CryptoError::KeyError {}})?;
+            CryptoError::KeyError {}
+        })?;
 
         let shared = SharedSecret::new(&pubkey, &self.privkey);
 
         if shared.len() != SYMMETRIC_KEY_SIZE {
-            error!("Error creating shared secret. Size mismatch {:?}", shared.len());
-            return Err(CryptoError::KeyError {})
+            error!(
+                "Error creating shared secret. Size mismatch {:?}",
+                shared.len()
+            );
+            return Err(CryptoError::KeyError {});
         }
 
         let mut result = [0u8; SYMMETRIC_KEY_SIZE];
@@ -154,4 +156,54 @@ impl KeyPair {
 
 fn rand_slice(rand: &mut [u8]) -> Result<(), CryptoError> {
     rsgx_read_rand(rand).map_err(|e| CryptoError::RandomError {})
+}
+
+#[cfg(feature = "test")]
+pub mod tests {
+
+    use super::{KeyPair, Seed, SymmetricKey, SEED_SIZE};
+    use crate::crypto::{PUBLIC_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE};
+    use enclave_ffi_types::CryptoError;
+
+    fn test_seed_from_slice() {
+        let seed = Seed::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+
+        assert_eq!(seed.0, b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+        assert_eq!(seed.get(), b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+    }
+
+    fn test_seed_new() {
+        let seed = Seed::new();
+        let zero_slice = [0u8; SEED_SIZE];
+        assert_ne!(seed.0, zero_slice)
+    }
+
+    // todo: replace public key with real value
+    fn test_keypair_from_slice() {
+        let kp = KeyPair::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").unwrap();
+
+        assert_eq!(kp.get_privkey(), b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+        assert_eq!(
+            kp.get_pubkey(),
+            b"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+        );
+    }
+
+    // this obviously isn't a cryptanalysis, but hey, at least make sure the random doesn't generate all zeros
+    fn test_keypair_new() {
+        let kp = KeyPair::new().unwrap();
+        let zero_slice = [0u8; SEED_SIZE];
+        assert_ne!(kp.get_privkey(), zero_slice);
+    }
+
+    // this obviously isn't a cryptanalysis, but hey, at least make sure the random doesn't generate all zeros
+    fn test_ecdh() {
+        let kp = KeyPair::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").unwrap();
+
+        let zero_slice = [10u8; UNCOMPRESSED_PUBLIC_KEY_SIZE];
+
+        let dhkey = kp.derive_key(&zero_slice).unwrap();
+
+        assert_eq!(dhkey, b"SOME EXPECTED KEY");
+    }
 }

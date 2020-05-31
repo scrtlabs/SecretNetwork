@@ -221,3 +221,96 @@ impl Keychain {
         Ok(())
     }
 }
+
+#[cfg(feature = "test")]
+pub mod tests {
+
+    use super::{
+        Keychain, CONSENSUS_SEED_SEALING_PATH, KEY_MANAGER, REGISTRATION_KEY_SEALING_PATH,
+    };
+    use crate::crypto::{KeyPair, Seed};
+    use enclave_ffi_types::CryptoError;
+
+    // todo: fix test vectors to actually work
+    fn test_initial_keychain_state() {
+        // clear previous data (if any)
+        std::sgxfs::remove(CONSENSUS_SEED_SEALING_PATH);
+        std::sgxfs::remove(REGISTRATION_KEY_SEALING_PATH);
+
+        let keys = Keychain::new();
+
+        // todo: replace with actual checks
+        assert_eq!(keys.get_registration_key(), Err(CryptoError));
+        assert_eq!(keys.get_consensus_seed(), Err(CryptoError));
+        assert_eq!(keys.get_consensus_io_exchange_keypair(), Err(CryptoError));
+        assert_eq!(keys.get_consensus_state_ikm(), Err(CryptoError));
+    }
+
+    // todo: fix test vectors to actually work
+    fn test_initialize_keychain_seed() {
+        // clear previous data (if any)
+        std::sgxfs::remove(CONSENSUS_SEED_SEALING_PATH);
+        std::sgxfs::remove(REGISTRATION_KEY_SEALING_PATH);
+
+        let mut keys = Keychain::new();
+
+        let seed = Seed::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+
+        keys.set_consensus_seed(seed);
+        keys.generate_consensus_master_keys();
+        // todo: replace with actual checks
+        assert_eq!(keys.get_registration_key(), Err(CryptoError));
+        assert_eq!(keys.get_consensus_seed().unwrap(), seed);
+    }
+
+    // todo: fix test vectors to actually work
+    fn test_initialize_keychain_registration() {
+        // clear previous data (if any)
+        std::sgxfs::remove(CONSENSUS_SEED_SEALING_PATH);
+        std::sgxfs::remove(REGISTRATION_KEY_SEALING_PATH);
+
+        let mut keys = Keychain::new();
+
+        let kp = KeyPair::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").unwrap();
+
+        keys.set_registration_key(kp);
+        // todo: replace with actual checks
+        assert_eq!(keys.get_registration_key().unwrap(), kp);
+    }
+
+    // todo: fix test vectors to actually work
+    fn test_initialize_keys() {
+        // clear previous data (if any)
+        std::sgxfs::remove(CONSENSUS_SEED_SEALING_PATH);
+        std::sgxfs::remove(REGISTRATION_KEY_SEALING_PATH);
+
+        let mut keys = Keychain::new();
+
+        let seed = Seed::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+
+        keys.set_consensus_seed(seed);
+        keys.generate_consensus_master_keys();
+        // todo: replace with actual checks
+        assert_eq!(keys.get_consensus_io_exchange_keypair().unwrap(), seed);
+        assert_eq!(keys.get_consensus_state_ikm().unwrap(), seed);
+    }
+
+    // todo: fix test vectors to actually work
+    fn test_key_manager() {
+        // clear previous data (if any)
+        std::sgxfs::remove(CONSENSUS_SEED_SEALING_PATH);
+        std::sgxfs::remove(REGISTRATION_KEY_SEALING_PATH);
+
+        let seed = Seed::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+        let mut keys = Keychain::new();
+        keys.set_consensus_seed(seed);
+        keys.generate_consensus_master_keys();
+
+        // todo: replace with actual checks
+        assert_eq!(
+            KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap(),
+            seed
+        );
+        assert_eq!(KEY_MANAGER.get_consensus_state_ikm().unwrap(), seed);
+    }
+}
