@@ -56,6 +56,15 @@ RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD SGX_MODE=$
 # Final image
 FROM cashmaney/enigma-sgx-base
 
+# wasmi-sgx-test script requirements
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    #### Base utilities ####
+    jq \
+    wget && \
+    rm -rf /var/lib/apt/lists/*
+
+
 ARG SGX_MODE=SW
 ENV SGX_MODE=${SGX_MODE}
 
