@@ -18,3 +18,5 @@ SHA256SUMS*
 /third_party/vendor
 .vscode
 *.sealed
+*.der
+/*.txt
