@@ -313,7 +313,7 @@ calculated_contract_id_payload = HMAC_SHA256({
 });
 
 assert(code_hash == sha256(contract_code)); // doesn't this step happen already?
-assert(authentication_key == calculated_contract_id_payload);
+assert(calculated_contract_id_payload == expected_contract_id_payload);
 ```
 
 ## write_db(field_name, value)
