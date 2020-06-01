@@ -274,7 +274,7 @@ TODO reasoning
 
 ## `contract_id`
 
-- `contract_id` is a concatenation of two values: `contract_id_payload || encrypted_contract_id_payload`.
+- `contract_id` is a concatenation of two values: `contract_id_payload || authenticated_contract_id_payload`.
 - When a contract is deployed (i.e., on contract init), `contract_id` is generated inside of the enclave as follows:
 
 ```js
@@ -312,7 +312,6 @@ calculated_contract_id_payload = HMAC_SHA256({
   data: concat(contract_id_payload, code_hash),
 });
 
-assert(code_hash == sha256(contract_code)); // doesn't this step happen already?
 assert(calculated_contract_id_payload == expected_contract_id_payload);
 ```
 
