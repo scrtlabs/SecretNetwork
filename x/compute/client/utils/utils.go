@@ -63,7 +63,7 @@ func Encrypt(plaintext []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	ciphertext, err := cipher.Seal(nil, plaintext)
+	ciphertext, err := cipher.Seal(nil, plaintext, []byte{})
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func Encrypt(plaintext []byte) ([]byte, error) {
 	nonce = make([]byte, 32)         // TODO fix
 	walletPubKey := make([]byte, 33) // TODO fix
 
-	// aad = inputNonce(12)|wallet_pubkey(65)|outputNonce(12) = 89 bytes
+	// aad = nonce(32)|wallet_pubkey(33) = 65 bytes
 	ad := []byte{}
 	ad = append(ad, nonce...)        // TODO fix real inputNonce
 	ad = append(ad, walletPubKey...) // TODO fix real outputNonce
@@ -108,5 +108,5 @@ func Decrypt(ciphertext []byte) ([]byte, error) {
 	// outputNonce := make([]byte, 32) // TODO fix
 	// ad := []byte{} // TODO fix
 
-	return cipher.Open(nil, ciphertext)
+	return cipher.Open(nil, ciphertext, []byte{})
 }
