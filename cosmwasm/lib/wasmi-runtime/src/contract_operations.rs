@@ -3,15 +3,43 @@ use base64;
 use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
 use parity_wasm::elements;
-use serde_json::Value;
+
+use serde::Deserialize;
+
+use serde_json::{from_slice, to_vec, Value};
 use wasmi::{ImportsBuilder, ModuleInstance};
 
 use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
 
-use crate::crypto::key_manager::KEY_MANAGER;
+use super::cosmwasm;
+
+use crate::crypto::{Hmac, Kdf, KEY_MANAGER};
 use crate::errors::wasmi_error_to_enclave_error;
 use crate::gas::{gas_rules, WasmCosts};
 use crate::runtime::{Engine, EnigmaImportResolver, Runtime};
+
+fn generate_sender_id(msg_sender: &[u8], block_height: u64) -> [u8; HASH_SIZE] {
+    let mut input_data = msg_sender.to_vec();
+    input_data.extend_from_slice(&block_height.to_be_bytes());
+    sha_256(&input_data)
+}
+
+fn generate_contract_id(
+    consensus_state_ikm: &AESKey,
+    sender_id: &[u8; HASH_SIZE],
+    code_hash: &[u8; HASH_SIZE],
+) -> [u8; HASH_SIZE] {
+    let authentication_key = consensus_state_ikm.derive_key_from_this(sender_id.as_ref());
+
+    let mut input_data = sender_id.to_vec();
+    input_data.extend_from_slice(code_hash);
+
+    authentication_key.sign_sha_256(&input_data)
+}
+
+fn calc_contract_hash(contract_bytes: &[u8]) -> [u8; HASH_SIZE] {
+    sha_256(&contract_bytes)
+}
 
 /*
 Each contract is compiled with these functions alreadyy implemented in wasm:
@@ -35,6 +63,28 @@ pub fn init(
     env: &[u8],      // blockchain state
     msg: &[u8],      // probably function call and args
 ) -> Result<InitSuccess, EnclaveError> {
+    let consensus_state_ikm = KEY_MANAGER.get_consensus_state_ikm().unwrap();
+    let parsed_env: cosmwasm::types::Env = serde_json::from_slice(env).map_err(|err| {
+        error!(
+            "got an error while trying to deserialize output bytes into json {:?}: {}",
+            env, err
+        );
+        EnclaveError::FailedUnseal
+    })?;
+
+    let contract_hash = calc_contract_hash(contract);
+
+    let sender_id = generate_sender_id(
+        parsed_env.message.signer.as_slice(),
+        parsed_env.block.height as u64,
+    );
+
+    let authenticated_contract_id =
+        generate_contract_id(&consensus_state_ikm, &sender_id, &contract_hash);
+
+    let mut tm_contract_id = sender_id.to_vec();
+    tm_contract_id.extend_from_slice(&authenticated_contract_id);
+
     let mut engine = start_engine(context, gas_limit, contract)?;
 
     let env_ptr = engine

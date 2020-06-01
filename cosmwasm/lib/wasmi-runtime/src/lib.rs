@@ -21,6 +21,7 @@ pub mod registration;
 
 mod consts;
 mod contract_operations;
+mod cosmwasm;
 mod crypto;
 mod errors;
 mod gas;
