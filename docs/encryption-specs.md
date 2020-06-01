@@ -278,23 +278,19 @@ TODO reasoning
 - When a contract is deployed (i.e., on contract init), `contract_id` is generated inside of the enclave as follows:
 
 ```js
-contract_id_payload = sha256(concat(msg_sender, block_height, contract_code));
+contract_id_payload = sha256(concat(msg_sender, block_height));
 
 encryption_key = hkdf({
   salt: hkfd_salt,
   ikm: concat(consensus_state_ikm, contract_id_payload),
 });
 
-iv = sha256(concat(consensus_state_iv, contract_id_payload)).slice(0, 12); // truncate because iv is only 96 bits
-
-encrypted_contract_id_payload = aes_256_gcm_encrypt({
-  iv: iv,
+authenticated_contract_id_payload = HMAC_SHA256({
   key: encryption_key,
-  data: null,
-  aad: concat(contract_id_payload, code_hash, iv),
+  data: concat(contract_id_payload, code_hash),
 });
 
-contract_id = concat(contract_id_payload, encrypted_contract_id_payload, iv);
+contract_id = concat(contract_id_payload, authenticated_contract_id_payload);
 ```
 
 - Every time a contract execution is called, `contract_id` should be sent to the enclave.
