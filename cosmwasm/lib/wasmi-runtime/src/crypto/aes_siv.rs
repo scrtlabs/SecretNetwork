@@ -20,6 +20,7 @@ use crate::crypto::traits::SIVEncryptable;
 use aes_siv::aead::generic_array::GenericArray;
 use aes_siv::siv::Aes128Siv;
 use enclave_ffi_types::CryptoError;
+use log::*;
 
 impl SIVEncryptable for AESKey {
     fn encrypt_siv(&self, plaintext: &[u8], ad: &Vec<&[u8]>) -> Result<Vec<u8>, CryptoError> {
@@ -40,6 +41,7 @@ fn aes_siv_encrypt(
     let ciphertext = match cipher.encrypt(ad, plaintext) {
         Ok(res) => res,
         Err(e) => {
+            error!("aes_siv_encrypt error: {:?}", e);
             return Err(CryptoError::EncryptionError);
         }
     };
@@ -55,6 +57,7 @@ fn aes_siv_decrypt(
     let plaintext = match cipher.decrypt(ad, ciphertext) {
         Ok(res) => res,
         Err(e) => {
+            error!("aes_siv_decrypt error: {:?}", e);
             return Err(CryptoError::DecryptionError);
         }
     };

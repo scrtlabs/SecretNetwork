@@ -18,6 +18,6 @@ SHA256SUMS*
 /third_party/vendor
 .vscode
 *.sealed
-/*api_key.txt
-/*spid.txt
 *.der
+spid.txt
+api_key.txt

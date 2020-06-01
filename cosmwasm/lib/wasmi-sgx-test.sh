@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euv
+set -euvx
 
 function wait_for_tx () {
     until (./enigmacli q tx "$1")
