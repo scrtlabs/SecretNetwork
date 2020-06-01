@@ -280,40 +280,40 @@ TODO reasoning
 ```js
 contract_id_payload = sha256(concat(msg_sender, block_height));
 
-encryption_key = hkdf({
+authentication_key = hkdf({
   salt: hkfd_salt,
+  info: b"contract_id",
   ikm: concat(consensus_state_ikm, contract_id_payload),
 });
 
 authenticated_contract_id_payload = HMAC_SHA256({
-  key: encryption_key,
+  key: authentication_key,
   data: concat(contract_id_payload, code_hash),
 });
 
-contract_id = concat(contract_id_payload, authenticated_contract_id_payload);
+tm_contract_id = concat(contract_id_payload, authenticated_contract_id_payload);
 ```
 
 - Every time a contract execution is called, `contract_id` should be sent to the enclave.
 - In the enclave, the following verification needs to happen:
 
 ```js
-contract_id_payload = contract_id.slice(0, 32);
-encrypted_contract_id_payload = contract_id.slice(32, 64);
-iv = contract_id.slice(64);
+contract_id_payload = tm_contract_id.slice(0, 32);
+expected_contract_id_payload = tm_contract_id.slice(32, 64);
 
-encryption_key = hkdf({
+authentication_key = hkdf({
   salt: hkfd_salt,
-  ikm: concat(consensus_state_ikm,contract_id_payload),
+  info: b"contract_id",
+  ikm: concat(consensus_state_ikm, contract_id_payload),
 });
 
-(interpreted_payload, interpreted_code_hash)  = aes_256_gcm_decrypt({
-  iv: iv,
-  key: encryption_key,
-  data: encrypted_contract_id_payload
+calculated_contract_id_payload = HMAC_SHA256({
+  key: authentication_key,
+  data: concat(contract_id_payload, code_hash),
 });
 
-assert(interpreted_payload == contract_id_payload);
-assert(interpreted_code_hash == sha256(contract_code);
+assert(code_hash == sha256(contract_code)); // doesn't this step happen already?
+assert(authentication_key == calculated_contract_id_payload);
 ```
 
 ## write_db(field_name, value)
