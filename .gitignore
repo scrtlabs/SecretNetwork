@@ -19,4 +19,5 @@ SHA256SUMS*
 .vscode
 *.sealed
 *.der
-/*.txt
+spid.txt
+api_key.txt
