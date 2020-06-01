@@ -598,6 +598,7 @@ fn as_u32_le(array: &[u8; 4]) -> u32 {
         + ((array[3] as u32) << 24)
 }
 
+// todo: replace this with compile-time ID
 fn load_spid(filename: &str) -> sgx_spid_t {
     let mut spidfile = fs::File::open(filename).expect("cannot open spid file");
     let mut contents = String::new();
@@ -608,6 +609,7 @@ fn load_spid(filename: &str) -> sgx_spid_t {
     hex::decode_spid(&contents)
 }
 
+// todo: replace this with compile-time API Key
 #[cfg(feature = "SGX_MODE_HW")]
 fn get_ias_api_key() -> String {
     let mut keyfile = fs::File::open(API_KEY_FILE).expect("cannot open ias key file");
@@ -616,4 +618,27 @@ fn get_ias_api_key() -> String {
         .read_to_string(&mut key)
         .expect("cannot read the ias key file");
     key.trim_end().to_owned()
+}
+
+#[cfg(feature = "test")]
+pub mod tests {
+
+    use super::{create_attestation_certificate, get_ias_api_key, load_spid};
+    use crate::crypto::KeyPair;
+    use crate::registration::cert::verify_ra_cert;
+
+    use super::sgx_quote_sign_type_t;
+
+    // todo: replace public key with real value
+    fn test_create_attestation_certificate() {
+        let kp = KeyPair::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").unwrap();
+
+        let cert =
+            create_attestation_certificate(&kp, sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE)
+                .unwrap();
+
+        let result = verify_ra_cert(cert[1]).unwrap();
+
+        assert_eq!(result, kp.get_pubkey())
+    }
 }
