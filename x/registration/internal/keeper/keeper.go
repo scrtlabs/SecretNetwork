@@ -1,16 +1,16 @@
 package keeper
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
 	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
 	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
-	"os"
+	"github.com/prometheus/common/log"
 	"path/filepath"
 )
 
@@ -18,38 +18,26 @@ import (
 type Keeper struct {
 	storeKey sdk.StoreKey
 	cdc      *codec.Codec
-
-	router sdk.Router
-}
-
-func SgxMode() string {
-	sgx := os.Getenv("SGX_MODE")
-	if sgx == "" {
-		sgx = "HW"
-	}
-
-	return sgx
+	enclave  EnclaveInterface
+	router   sdk.Router
 }
 
 // NewKeeper creates a new contract Keeper instance
-func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, router sdk.Router, homeDir string, bootstrap bool) Keeper {
+func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, router sdk.Router, enclave EnclaveInterface, homeDir string, bootstrap bool) Keeper {
 
 	if !bootstrap {
-		InitializeNonBootstrap(homeDir)
+		InitializeNode(homeDir, enclave)
 	}
 
 	return Keeper{
 		storeKey: storeKey,
 		cdc:      cdc,
 		router:   router,
+		enclave:  enclave,
 	}
 }
 
-func InitializeNonBootstrap(homeDir string) {
-
-	if SgxMode() != "HW" {
-		return
-	}
+func InitializeNode(homeDir string, enclave EnclaveInterface) {
 
 	seedPath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
 
@@ -73,12 +61,12 @@ func InitializeNonBootstrap(homeDir string) {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
-	pk, enc, err := seedCfg.Decode()
+	cert, enc, err := seedCfg.Decode()
 	if err != nil {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
-	_, err = api.LoadSeedToEnclave(pk, enc)
+	_, err = enclave.LoadSeed(cert, enc)
 	if err != nil {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
@@ -86,32 +74,6 @@ func InitializeNonBootstrap(homeDir string) {
 	return
 }
 
-func (k Keeper) InitBootstrap(ctx sdk.Context) {
-
-	if k.isMasterKeyDefined(ctx) {
-		panic(sdkerrors.Wrap(types.BootstrapInitFailed, "Bootstrap is already defined in this network"))
-	}
-
-	if SgxMode() != "HW" {
-		// validate attestation
-		return
-	}
-
-	res, err := api.InitBootstrap()
-	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-	}
-
-	if len(res) != 64 {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, "Bootstrap init failed :("))
-	}
-
-	fmt.Printf("got public key: %s\n", hex.EncodeToString(res))
-
-	k.setMasterPublicKey(ctx, res)
-}
-
-// Create uploads and compiles a WASM contract, returning a short identifier for the contract
 func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byte, error) {
 	fmt.Println("RegisterNode")
 	var encSeed []byte
@@ -130,25 +92,25 @@ func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byt
 		if err != nil {
 			return nil, sdkerrors.Wrap(types.ErrAuthenticateFailed, err.Error())
 		}
-		fmt.Println("After isNodeAuthenticated")
+		log.Debug("After isNodeAuthenticated")
 		if isAuth {
 			return k.getRegistrationInfo(ctx, publicKey).EncryptedSeed, nil
 		}
-		fmt.Println("After getRegistrationInfo")
-		encSeed, err = api.GetEncryptedSeed(certificate)
-		fmt.Println("After GetEncryptedSeed")
+		log.Debug("After getRegistrationInfo")
+		encSeed, err = k.enclave.GetEncryptedSeed(certificate)
+		log.Debug("After GetEncryptedSeed")
 		if err != nil {
 			// return 0, sdkerrors.Wrap(err, "cosmwasm create")
 			return nil, sdkerrors.Wrap(types.ErrAuthenticateFailed, err.Error())
 		}
-		fmt.Println("Woohoo")
+		log.Debug("Registration done")
 	}
 
 	regInfo := types.RegistrationNodeInfo{
 		Certificate:   certificate,
 		EncryptedSeed: encSeed,
 	}
-	k.setRegistrationInfo(ctx, regInfo)
+	k.SetRegistrationInfo(ctx, regInfo)
 
 	return encSeed, nil
 }
@@ -157,42 +119,6 @@ func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byt
 func isSimulationMode(ctx sdk.Context) bool {
 	return ctx.GasMeter().Limit() == 0 && ctx.BlockHeight() != 0
 }
-
-//func (k Keeper) dispatchMessages(ctx sdk.Context, contract exported.Account, msgs []wasmTypes.CosmosMsg) error {
-//	for _, msg := range msgs {
-//		if err := k.dispatchMessage(ctx, contract, msg); err != nil {
-//			return err
-//		}
-//	}
-//	return nil
-//}
-//
-//func (k Keeper) dispatchMessage(ctx sdk.Context, contract exported.Account, msg wasmTypes.CosmosMsg) error {
-//	// maybe use this instead for the arg?
-//	contractAddr := contract.GetAddress()
-//	if msg.Send != nil {
-//		return k.sendTokens(ctx, contractAddr, msg.Send.FromAddress, msg.Send.ToAddress, msg.Send.Amount)
-//	} else if msg.Contract != nil {
-//		targetAddr, stderr := sdk.AccAddressFromBech32(msg.Contract.ContractAddr)
-//		if stderr != nil {
-//			return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Contract.ContractAddr)
-//		}
-//		sentFunds, err := convertWasmCoinToSdkCoin(msg.Contract.Send)
-//		if err != nil {
-//			return err
-//		}
-//		_, err = k.Execute(ctx, targetAddr, contractAddr, msg.Contract.Msg, sentFunds)
-//		return err // may be nil
-//	} else if msg.Opaque != nil {
-//		msg, err := ParseOpaqueMsg(k.cdc, msg.Opaque)
-//		if err != nil {
-//			return err
-//		}
-//		return k.handleSdkMessage(ctx, contractAddr, msg)
-//	}
-//	// what is it?
-//	panic(fmt.Sprintf("Unknown CosmosMsg: %#v", msg))
-//}
 
 func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg sdk.Msg) error {
 	// make sure this account can send it
@@ -218,9 +144,16 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 }
 
 func validateSeedParams(config types.SeedConfig) error {
-	if len(config.PublicKey) != types.PublicKeyLength || !IsHexString(config.PublicKey) {
-		return sdkerrors.Wrap(types.ErrSeedValidationParams, "Invalid parameter `public key` in seed parameters. Did you initialize the node?")
+	res, err := base64.StdEncoding.DecodeString(config.MasterCert)
+	if err != nil {
+		return err
 	}
+
+	res, err = ra.VerifyRaCert(res)
+	if err != nil {
+		return err
+	}
+
 	if len(config.EncryptedKey) != types.EncryptedKeyLength || !IsHexString(config.EncryptedKey) {
 		return sdkerrors.Wrap(types.ErrSeedValidationParams, "Invalid parameter: `seed` in seed parameters. Did you initialize the node?")
 	}

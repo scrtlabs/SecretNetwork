@@ -1,4 +1,3 @@
-use crate::crypto::*;
 use base64;
 use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
@@ -8,7 +7,7 @@ use wasmi::{ImportsBuilder, ModuleInstance};
 
 use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
 
-use crate::crypto::key_manager::KEY_MANAGER;
+use crate::crypto::{key_manager::KEY_MANAGER, AESKey, SIVEncryptable};
 use crate::errors::wasmi_error_to_enclave_error;
 use crate::gas::{gas_rules, WasmCosts};
 use crate::runtime::{Engine, EnigmaImportResolver, Runtime};
@@ -132,32 +131,26 @@ pub fn query(
 }
 
 fn decrypt_msg(msg: &[u8]) -> Result<Vec<u8>, EnclaveError> {
-    // TODO:
-    // extract "challenge" & "wallet_pubkey" from AAD
-    // validate that "env.message.signer" is derived from "wallet_pubkey"
-    // calculate "shared_key_base" from "ECDH(wallet_pubkey, sk_consensus_io_exchange_keypair)"
-    // calculate "shared_key" from "HKDF(shared_key_base + challenge)"
-    // decrypt(shared_key, msg)
-    // ?? need to authenticate ADD or doest it happen inside decrypt ??
+    // TODO check msg.len > 65
 
-    // pseudo code:
-    // [challenge, pk_wallet] = get_AAD(encrypted_input)
-    // base_key = ECDH(sk_io, pk_wallet)
-    // encryption_key = HKDF(base_key + challenge)
-    // decrypted_input = decrypt(key=encryption_key, data=encrypted_input)
-    // ?? need to authenticate ADD or doest it happen inside decrypt ??
+    let nonce = &msg[0..32]; // to then kdf with aes key
+    let tx_sender_wallet_pubkey = &msg[32..65]; // 33 bytes compressed secp256k1 pubkey
+    let encrypted_msg = &msg[65..];
+
+    /////////////////////////////////// ASSAF TAKE IT FROM HERE
+    // derive decryption key
 
     // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
     let key = AESKey::new_from_slice(&[7_u8; 32]);
 
     // let (msg, aad) = msg.split_at(msg.len() - 89);
 
-    // aad = last 89 bytes of msg
-    // let aad = msg[(msg.len() - 89)..];
+    // ad = first 33 bytes of msg
+    // let ad = msg[(msg.len() - 89)..];
     // let msg = mag[0..(msg.len() - 89)];
 
     // pass
-    let msg = key.decrypt(msg).map_err(|err| {
+    let msg = key.decrypt_siv(encrypted_msg, &vec![&[]]).map_err(|err| {
         error!(
             "handle() got an error while trying to decrypt the msg: {}",
             err
@@ -202,24 +195,26 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
 
     if let Value::String(err) = &v["err"] {
         v["err"] = Value::String(base64::encode(
-            &key.encrypt(&err.to_owned().into_bytes()).map_err(|err| {
-                error!(
-                    "got an error while trying to encrypt output error {:?}: {}",
-                    err, err
-                );
-                EnclaveError::FailedSeal
-            })?,
+            &key.encrypt_siv(&err.to_owned().into_bytes(), &vec![&[]])
+                .map_err(|err| {
+                    error!(
+                        "got an error while trying to encrypt output error {:?}: {}",
+                        err, err
+                    );
+                    EnclaveError::FailedSeal
+                })?,
         ));
     } else if let Value::String(ok) = &v["ok"] {
         // query
         v["ok"] = Value::String(base64::encode(
-            &key.encrypt(&ok.to_owned().into_bytes()).map_err(|err| {
-                error!(
-                    "got an error while trying to encrypt query output {:?}: {}",
-                    ok, err
-                );
-                EnclaveError::FailedSeal
-            })?,
+            &key.encrypt_siv(&ok.to_owned().into_bytes(), &vec![&[]])
+                .map_err(|err| {
+                    error!(
+                        "got an error while trying to encrypt query output {:?}: {}",
+                        ok, err
+                    );
+                    EnclaveError::FailedSeal
+                })?,
         ));
     } else if let Value::Object(ok) = &mut v["ok"] {
         // init of handle
@@ -227,7 +222,7 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
             for msg in msgs {
                 if let Value::String(msg_to_next_call) = &mut msg["contract"]["msg"] {
                     msg["contract"]["msg"] = Value::String(base64::encode(
-                        &key.encrypt(&msg_to_next_call.to_owned().into_bytes())
+                        &key.encrypt_siv(&msg_to_next_call.to_owned().into_bytes(), &vec![&[]])
                             .map_err(|err| {
                                 error!(
                             "got an error while trying to encrypt the msg to next call {:?}: {}",
@@ -244,24 +239,26 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
             for e in events {
                 if let Value::String(k) = &mut e["key"] {
                     e["key"] = Value::String(base64::encode(
-                        &key.encrypt(&k.to_owned().into_bytes()).map_err(|err| {
-                            error!(
-                                "got an error while trying to encrypt the event key {}: {}",
-                                k, err
-                            );
-                            EnclaveError::FailedSeal
-                        })?,
+                        &key.encrypt_siv(&k.to_owned().into_bytes(), &vec![&[]])
+                            .map_err(|err| {
+                                error!(
+                                    "got an error while trying to encrypt the event key {}: {}",
+                                    k, err
+                                );
+                                EnclaveError::FailedSeal
+                            })?,
                     ));
                 }
                 if let Value::String(v) = &mut e["value"] {
                     e["value"] = Value::String(base64::encode(
-                        &key.encrypt(&v.to_owned().into_bytes()).map_err(|err| {
-                            error!(
-                                "got an error while trying to encrypt the event value {}: {}",
-                                v, err
-                            );
-                            EnclaveError::FailedSeal
-                        })?,
+                        &key.encrypt_siv(&v.to_owned().into_bytes(), &vec![&[]])
+                            .map_err(|err| {
+                                error!(
+                                    "got an error while trying to encrypt the event value {}: {}",
+                                    v, err
+                                );
+                                EnclaveError::FailedSeal
+                            })?,
                     ));
                 }
             }
@@ -269,13 +266,14 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
 
         if let Value::String(data) = &mut v["ok"]["data"] {
             v["ok"]["data"] = Value::String(base64::encode(
-                &key.encrypt(&data.to_owned().into_bytes()).map_err(|err| {
-                    error!(
-                        "got an error while trying to encrypt the data section {}: {}",
-                        data, err
-                    );
-                    EnclaveError::FailedSeal
-                })?,
+                &key.encrypt_siv(&data.to_owned().into_bytes(), &vec![&[]])
+                    .map_err(|err| {
+                        error!(
+                            "got an error while trying to encrypt the data section {}: {}",
+                            data, err
+                        );
+                        EnclaveError::FailedSeal
+                    })?,
             ));
         }
     }

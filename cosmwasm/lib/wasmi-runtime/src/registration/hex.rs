@@ -1,9 +1,7 @@
-
 // hex encoder and decoder used by rust-protobuf unittests
 
-use std::prelude::v1::*;
-use std::char;
 use sgx_types::*;
+use std::char;
 
 fn decode_hex_digit(digit: char) -> u8 {
     match digit {
@@ -75,7 +73,7 @@ pub fn encode_hex(bytes: &[u8]) -> String {
 // taken from https://github.com/apache/incubator-teaclave-sgx-sdk/blob/master/samplecode/mutual-ra/enclave/src/cert.rs
 // isn't actually hex, but I'm sticking it here anyway
 pub fn percent_decode(orig: String) -> String {
-    let v:Vec<&str> = orig.split("%").collect();
+    let v: Vec<&str> = orig.split("%").collect();
     let mut ret = String::new();
     ret.push_str(v[0]);
     if v.len() > 1 {

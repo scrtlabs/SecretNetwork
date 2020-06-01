@@ -162,6 +162,11 @@ clean:
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/lib/wasmi-runtime clean
 
+docker_bootstrap:
+	docker build --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t enigmampc/secret_bootstrap .
+
+docker_node:
+	docker build --build-arg SECRET_NODE_TYPE=NODE -t enigmampc/secret_node .
 # while developing:
 build-enclave:
 	$(MAKE) -C cosmwasm/lib/wasmi-runtime 
@@ -173,7 +178,7 @@ clean-enclave:
 sanity-test:
 	SGX_MODE=SW $(MAKE) build_linux
 	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
-	./cosmwasm/lib/wasmi-sgx-test.sh
+	SGX_MODE=SW ./cosmwasm/lib/wasmi-sgx-test.sh
 	
 sanity-test-hw:
 	$(MAKE) build_linux

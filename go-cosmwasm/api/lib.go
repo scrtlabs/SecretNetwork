@@ -31,12 +31,12 @@ func InitBootstrap() ([]byte, error) {
 	return receiveSlice(res), nil
 }
 
-func LoadSeedToEnclave(publicKey []byte, seed []byte) (bool, error) {
-	pkSlice := sendSlice(publicKey)
+func LoadSeedToEnclave(masterCert []byte, seed []byte) (bool, error) {
+	pkSlice := sendSlice(masterCert)
 	seedSlice := sendSlice(seed)
 	errmsg := C.Buffer{}
 
-	_, err := C.init_seed(pkSlice, seedSlice, &errmsg)
+	_, err := C.init_node(pkSlice, seedSlice, &errmsg)
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
 	}

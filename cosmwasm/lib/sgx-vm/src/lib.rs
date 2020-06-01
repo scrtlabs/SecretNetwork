@@ -24,10 +24,9 @@ pub use crate::calls::{
 pub use crate::instance::Instance;
 pub use crate::traits::{Extern, ReadonlyStorage, Storage};
 
-pub use crate::instance::{create_attestation_report_u,
-                          init_seed_u,
-                          untrusted_get_encrypted_seed,
-                          untrusted_init_bootstrap,
-                          untrusted_key_gen};
+pub use crate::instance::{
+    create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_init_bootstrap,
+    untrusted_init_node, untrusted_key_gen,
+};
 
 use enclave_ffi_types::ENCRYPTED_SEED_SIZE;

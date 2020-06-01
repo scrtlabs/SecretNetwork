@@ -14,7 +14,7 @@ use lazy_static::lazy_static;
 
 use crate::attestation::{inner_create_report, inner_get_encrypted_seed};
 use crate::errors::{Error, Result};
-use crate::seed::{inner_init_bootstrap, inner_init_seed, inner_key_gen};
+use crate::seed::{inner_init_bootstrap, inner_init_node, inner_key_gen};
 use crate::wasmi::Module;
 use crate::ENCRYPTED_SEED_SIZE;
 use crate::{Extern, Storage};
@@ -31,20 +31,20 @@ static ENCLAVE_FILE: &'static str = "librust_cosmwasm_enclave.signed.so";
 
 // this is here basically to be able to call the enclave initialization -- we can move this somewhere else and simplify
 
-pub fn init_seed_u(
-    public_key: *const u8,
-    public_key_len: u32,
+pub fn untrusted_init_node(
+    master_cert: *const u8,
+    master_cert_len: u32,
     encrypted_seed: *const u8,
     encrypted_seed_len: u32,
 ) -> SgxResult<sgx_status_t> {
-    info!("Hello from just before initializing - produce_report");
+    info!("Hello from just before initializing - init_node");
     let enclave = init_enclave().unwrap();
-    info!("Hello from just after initializing - produce_report");
+    info!("Hello from just after initializing - init_node");
 
-    inner_init_seed(
+    inner_init_node(
         enclave.geteid(),
-        public_key,
-        public_key_len,
+        master_cert,
+        master_cert_len,
         encrypted_seed,
         encrypted_seed_len,
     )
@@ -59,9 +59,9 @@ pub fn create_attestation_report_u() -> SgxResult<sgx_status_t> {
 }
 
 pub fn untrusted_key_gen() -> SgxResult<[u8; 64]> {
-    info!("Hello from just before initializing - untrusted_init_bootstrap");
+    info!("Hello from just before initializing - untrusted_key_gen");
     let enclave = init_enclave().unwrap();
-    info!("Hello from just after initializing - untrusted_init_bootstrap");
+    info!("Hello from just after initializing - untrusted_key_gen");
 
     inner_key_gen(enclave.geteid())
 }
@@ -291,6 +291,7 @@ mod test {
         assert_eq!(orig_gas, 123321);
     }
 
+    //noinspection ALL
     #[test]
     #[should_panic]
     fn with_context_safe_for_panic() {

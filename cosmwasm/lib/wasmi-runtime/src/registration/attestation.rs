@@ -1,26 +1,31 @@
+use super::hex;
+#[cfg(feature = "SGX_MODE_HW")]
+use crate::consts::{API_KEY_FILE, SPID_FILE};
+use crate::crypto::KeyPair;
+#[cfg(feature = "SGX_MODE_HW")]
+use crate::imports::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote};
 #[cfg(feature = "SGX_MODE_HW")]
 use itertools::Itertools;
-
 use log::*;
+#[cfg(feature = "SGX_MODE_HW")]
 use sgx_rand::*;
 use sgx_tcrypto::*;
+#[cfg(feature = "SGX_MODE_HW")]
 use sgx_tse::*;
 use sgx_types::*;
-use std::io::{Read, Write};
+use std::io::Read;
+#[cfg(feature = "SGX_MODE_HW")]
+use std::io::Write;
+#[cfg(feature = "SGX_MODE_HW")]
 use std::net::TcpStream;
-use std::prelude::v1::*;
-
+#[cfg(feature = "SGX_MODE_HW")]
 use std::ptr;
 use std::str;
 use std::string::String;
+#[cfg(feature = "SGX_MODE_HW")]
 use std::sync::Arc;
 use std::untrusted::fs;
 use std::vec::Vec;
-
-use crate::crypto::KeyPair;
-use crate::consts::{API_KEY_FILE, SPID_FILE};
-use crate::hex;
-use crate::imports::*;
 
 pub const DEV_HOSTNAME: &'static str = "api.trustedservices.intel.com";
 
@@ -40,104 +45,41 @@ pub const CERTEXPIRYDAYS: i64 = 90i64;
 static REPORT_DATA_SIZE: usize = 64;
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
-pub fn software_mode_quote() -> sgx_status_t {
-    // info!("produce_quote entered");
-    // let spid = hex::decode(spid).unwrap();
-    // let mut id = [0; 16];
-    // id.copy_from_slice(&spid);
-    // let spid: sgx_spid_t = sgx_spid_t { id };
-    // info!("before check_busy");
-    // // create quote
-    // let (status, (target_info, _gid)) = check_busy(|| {
-    //     let mut target_info = sgx_target_info_t::default();
-    //     let mut gid = sgx_epid_group_id_t::default();
-    //     info!("before sgx_init_quote");
-    //     let status = unsafe { sgx_init_quote(&mut target_info, &mut gid) };
-    //     (status, (target_info, gid))
-    // });
-    // if status != sgx_status_t::SGX_SUCCESS {
-    //     return Err(Error::SdkErr { inner: status }.into());
-    // }
-    //
-    // // create report
-    // let (status, (report, retval)) = check_busy(move || {
-    //     let mut report = sgx_report_t::default();
-    //     let mut retval = sgx_status_t::SGX_SUCCESS;
-    //     info!("before ecall_get_registration_quote");
-    //     let status = unsafe { ecall_get_registration_quote(eid, &mut retval, &target_info, &mut report) };
-    //     (status, (report, retval))
-    // });
-    //
-    // if status != sgx_status_t::SGX_SUCCESS || retval != sgx_status_t::SGX_SUCCESS {
-    //     return Err(Error::SdkErr { inner: status }.into());
-    // }
-    //
-    //
-    // // calc quote size
-    // let (status, quote_size) = check_busy(|| {
-    //     let mut quote_size: u32 = 0;
-    //     info!("before sgx_calc_quote_size");
-    //     let status = unsafe { sgx_calc_quote_size(std::ptr::null(), 0, &mut quote_size) };
-    //     (status, quote_size)
-    // });
-    // if status != sgx_status_t::SGX_SUCCESS || quote_size == 0 {
-    //     return Err(Error::SdkErr { inner: status }.into());
-    // }
-    //
-    // // get the actual quote
-    // let (status, the_quote) = check_busy(|| {
-    //     let mut the_quote = vec![0u8; quote_size as usize].into_boxed_slice();
-    //     // all of this is according to this: https://software.intel.com/en-us/sgx-sdk-dev-reference-sgx-get-quote
-    //     // the `p_qe_report` is null together with the nonce because we don't have an ISV enclave that needs to verify this
-    //     // and we don't care about replay attacks because the signing key will stay the same and that's what's important.
-    //     let status = unsafe {
-    //         info!("before sgx_get_quote");
-    //         sgx_get_quote(&report,
-    //                       sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-    //                       &spid,
-    //                       std::ptr::null(),
-    //                       std::ptr::null(),
-    //                       0,
-    //                       std::ptr::null_mut(),
-    //                       the_quote.as_mut_ptr() as *mut sgx_quote_t,
-    //                       quote_size,
-    //         )
-    //     };
-    //     (status, the_quote)
-    // });
-    // if status != sgx_status_t::SGX_SUCCESS {
-    //     return Err(Error::SdkErr { inner: status }.into());
-    // }
-    //
-    // let encoded_quote = base64::encode(&the_quote);
-    // info!("encoded_quote: {:?}", encoded_quote);
-    // Ok(encoded_quote)
+pub fn create_attestation_certificate(
+    kp: &KeyPair,
+    sign_type: sgx_quote_sign_type_t,
+) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+    // extract private key from KeyPair
+    let mut priv_key_buf: [u8; 32] = [0u8; 32];
+    priv_key_buf.copy_from_slice(kp.get_privkey());
 
-    let (status, rt, (target_info, _gid)) = {
-        let mut target_info = sgx_target_info_t::default();
-        let mut epid = sgx_epid_group_id_t::default();
-        // let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
-        let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-        info!("before sgx_init_quote");
-        let status = unsafe {
-            ocall_sgx_init_quote(
-                &mut rt as *mut sgx_status_t,
-                &mut target_info as *mut sgx_target_info_t,
-                &mut epid as *mut sgx_epid_group_id_t,
-            )
-        };
-        (status, rt, (target_info, epid))
+    // extra public key from KeyPair
+    let mut pub_key_secp256k1: [u8; 64] = [0u8; 64];
+    pub_key_secp256k1.copy_from_slice(&kp.get_pubkey()[1..65]);
+
+    // init sgx ecc
+    let ecc_handle = SgxEccHandle::new();
+    let _result = ecc_handle.open();
+
+    // convert keypair private to sgx ecc private
+    let prv_k = sgx_ec256_private_t {
+        r: priv_key_buf.clone(),
     };
-    if status != sgx_status_t::SGX_SUCCESS {
-        return status;
-    }
-    if rt != sgx_status_t::SGX_SUCCESS {
-        return rt;
-    }
+    // generate the P256 public (will be different from KeyPair's public key)
+    let pub_k = rsgx_ecc256_pub_from_priv(&prv_k).unwrap();
 
-    let mut report = sgx_report_t::default();
+    let encoded_pubkey = base64::encode(&pub_key_secp256k1[..]);
+    let (key_der, cert_der) =
+        match super::cert::gen_ecc_cert(encoded_pubkey, &prv_k, &pub_k, &ecc_handle) {
+            Ok(r) => r,
+            Err(e) => {
+                error!("Error in gen_ecc_cert: {:?}", e);
+                return Err(e);
+            }
+        };
+    let _result = ecc_handle.close();
 
-    create_report_with_data(&target_info, &mut report, &[0u8])
+    Ok((key_der, cert_der))
 }
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
@@ -182,7 +124,6 @@ pub fn create_attestation_certificate(
     kp: &KeyPair,
     sign_type: sgx_quote_sign_type_t,
 ) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
-
     // extract private key from KeyPair
     let mut priv_key_buf: [u8; 32] = [0u8; 32];
     priv_key_buf.copy_from_slice(kp.get_privkey());
@@ -197,7 +138,7 @@ pub fn create_attestation_certificate(
 
     // convert keypair private to sgx ecc private
     let prv_k = sgx_ec256_private_t {
-        r: priv_key_buf.clone()
+        r: priv_key_buf.clone(),
     };
     // generate the P256 public (will be different from KeyPair's public key)
     let pub_k = rsgx_ecc256_pub_from_priv(&prv_k).unwrap();
@@ -215,7 +156,7 @@ pub fn create_attestation_certificate(
     };
 
     let payload = attn_report + "|" + &sig + "|" + &cert;
-    let (key_der, cert_der) = match crate::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)
+    let (key_der, cert_der) = match super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)
     {
         Ok(r) => r,
         Err(e) => {
@@ -292,8 +233,8 @@ pub fn create_attestation_report(
     report_data.d[..64].copy_from_slice(pub_k);
 
     /* This is used to match the encoding of the public key here with the ecc key, but honestly
-      the certificate uses curve P256, so that will cause issues anyway -- I'm leaving the code here
-      as a reference in case we want to take another look at this at some point */
+    the certificate uses curve P256, so that will cause issues anyway -- I'm leaving the code here
+    as a reference in case we want to take another look at this at some point */
 
     // let mut pub_k_gx = pub_k.gx.clone();
     // pub_k_gx.reverse();
@@ -657,6 +598,7 @@ fn as_u32_le(array: &[u8; 4]) -> u32 {
         + ((array[3] as u32) << 24)
 }
 
+// todo: replace this with compile-time ID
 fn load_spid(filename: &str) -> sgx_spid_t {
     let mut spidfile = fs::File::open(filename).expect("cannot open spid file");
     let mut contents = String::new();
@@ -667,6 +609,7 @@ fn load_spid(filename: &str) -> sgx_spid_t {
     hex::decode_spid(&contents)
 }
 
+// todo: replace this with compile-time API Key
 #[cfg(feature = "SGX_MODE_HW")]
 fn get_ias_api_key() -> String {
     let mut keyfile = fs::File::open(API_KEY_FILE).expect("cannot open ias key file");
@@ -675,4 +618,27 @@ fn get_ias_api_key() -> String {
         .read_to_string(&mut key)
         .expect("cannot read the ias key file");
     key.trim_end().to_owned()
+}
+
+#[cfg(feature = "test")]
+pub mod tests {
+
+    use super::{create_attestation_certificate, get_ias_api_key, load_spid};
+    use crate::crypto::KeyPair;
+    use crate::registration::cert::verify_ra_cert;
+
+    use super::sgx_quote_sign_type_t;
+
+    // todo: replace public key with real value
+    fn test_create_attestation_certificate() {
+        let kp = KeyPair::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").unwrap();
+
+        let cert =
+            create_attestation_certificate(&kp, sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE)
+                .unwrap();
+
+        let result = verify_ra_cert(cert[1]).unwrap();
+
+        assert_eq!(result, kp.get_pubkey())
+    }
 }

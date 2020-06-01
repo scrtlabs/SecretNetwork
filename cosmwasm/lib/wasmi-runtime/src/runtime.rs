@@ -187,38 +187,27 @@ impl Externals for Runtime {
                     String::from_utf8_lossy(&state_key_name)
                 );
 
-                // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
-                // TODO derive encryption key for these key-value on this contract
-                let base_state_key = key_manager::KEY_MANAGER
-                    .get_consensus_base_state_key()
-                    .unwrap();
-                let base_state_key = AESKey::new_from_slice(base_state_key.get());
-                let encrypted_state_key_name = base_state_key.encrypt(&state_key_name).map_err(|err| {
-                    error!(
-                        "read_db() got an error while trying to encrypt the state_key_name {:?}, stopping wasm: {:?}",
-                        String::from_utf8_lossy(&state_key_name),
-                        err
-                    );
-                    WasmEngineError::EncryptionError
-                })?;
-
                 // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
                 // This returns the value from Tendermint
                 // fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
-                let value =
-                    match read_db(unsafe { &self.context.clone() }, &encrypted_state_key_name)
-                        .map_err(|err| {
-                            error!(
-                                "read_db() got an error from ocall_read_db, stopping wasm: {:?}",
-                                err
-                            );
-                            WasmEngineError::FailedOcall
-                        })? {
-                        None => return Ok(Some(RuntimeValue::I32(0))),
-                        Some(value) => value,
-                    };
+                let value = match read_db(unsafe { &self.context.clone() }, &state_key_name)
+                    .map_err(|err| {
+                        error!(
+                            "read_db() got an error from ocall_read_db, stopping wasm: {:?}",
+                            err
+                        );
+                        WasmEngineError::FailedOcall
+                    })? {
+                    None => return Ok(Some(RuntimeValue::I32(0))),
+                    Some(value) => value,
+                };
 
-                let decrypted_value = base_state_key.encrypt(&value).map_err(|err| {
+                // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
+                // TODO derive encryption key for these key-value on this contract
+                let base_state_key = key_manager::KEY_MANAGER.get_consensus_state_ikm().unwrap();
+                let base_state_key = AESKey::new_from_slice(base_state_key.get());
+
+                let decrypted_value = base_state_key.decrypt_siv(&value, &vec![]).map_err(|err| {
                     error!(
                         "read_db() got an error while trying to decrypt the value for key {:?}, stopping wasm: {:?}",
                         String::from_utf8_lossy(&state_key_name),
@@ -328,19 +317,10 @@ impl Externals for Runtime {
 
                 // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
                 // TODO derive encryption key for these key-value on this contract
-                let base_state_key = key_manager::KEY_MANAGER
-                    .get_consensus_base_state_key()
-                    .unwrap();
+                let base_state_key = key_manager::KEY_MANAGER.get_consensus_state_ikm().unwrap();
                 let base_state_key = AESKey::new_from_slice(base_state_key.get());
-                let encrypted_state_key_name = base_state_key.encrypt(&state_key_name).map_err(|err| {
-                    error!(
-                        "write_db() got an error while trying to encrypt the state_key_name {:?}, stopping wasm: {:?}",
-                        String::from_utf8_lossy(&state_key_name),
-                        err
-                    );
-                    WasmEngineError::EncryptionError
-                })?;
-                let encrypted_value = base_state_key.encrypt(&value).map_err(|err| {
+
+                let encrypted_value = base_state_key.encrypt_siv(&value,&vec![]).map_err(|err| {
                     error!(
                         "write_db() got an error while trying to encrypt the value {:?}, stopping wasm: {:?}",
                         String::from_utf8_lossy(&value),
@@ -353,7 +333,7 @@ impl Externals for Runtime {
                 // fn write_db(context: Ctx, key: &[u8], value: &[u8]) {
                 write_db(
                     unsafe { self.context.clone() },
-                    &encrypted_state_key_name,
+                    &state_key_name,
                     &encrypted_value,
                 )
                 .map_err(|err| {

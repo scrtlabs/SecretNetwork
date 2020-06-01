@@ -6,6 +6,11 @@ pub trait Encryptable {
     fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>, CryptoError>;
 }
 
+pub trait SIVEncryptable {
+    fn encrypt_siv(&self, plaintext: &[u8], ad: &Vec<&[u8]>) -> Result<Vec<u8>, CryptoError>;
+    fn decrypt_siv(&self, plaintext: &[u8], ad: &Vec<&[u8]>) -> Result<Vec<u8>, CryptoError>;
+}
+
 pub trait SealedKey
 where
     Self: std::marker::Sized,

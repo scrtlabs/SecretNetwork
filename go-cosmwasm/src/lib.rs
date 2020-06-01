@@ -14,12 +14,15 @@ use std::str::from_utf8;
 
 use crate::error::{clear_error, handle_c_error, set_error};
 use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
+use cosmwasm_sgx_vm::instance::untrusted_init_bootstrap;
 use cosmwasm_sgx_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache, Extern};
-use cosmwasm_sgx_vm::{create_attestation_report_u, init_seed_u, untrusted_get_encrypted_seed, untrusted_key_gen};
+use cosmwasm_sgx_vm::{
+    create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_init_node,
+    untrusted_key_gen,
+};
 use ctor::ctor;
 use log;
 use log::*;
-use cosmwasm_sgx_vm::instance::untrusted_init_bootstrap;
 
 #[ctor]
 fn init_logger() {
@@ -64,9 +67,7 @@ pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> 
 }
 
 #[no_mangle]
-pub extern "C" fn init_bootstrap(
-    err: Option<&mut Buffer>,
-) -> Buffer {
+pub extern "C" fn init_bootstrap(err: Option<&mut Buffer>) -> Buffer {
     info!("Hello from right before init_bootstrap");
     match untrusted_init_bootstrap() {
         Err(e) => {
@@ -82,12 +83,12 @@ pub extern "C" fn init_bootstrap(
 }
 
 #[no_mangle]
-pub extern "C" fn init_seed(
-    public_key: Buffer,
+pub extern "C" fn init_node(
+    master_cert: Buffer,
     encrypted_seed: Buffer,
     err: Option<&mut Buffer>,
 ) -> bool {
-    let pk_slice = match public_key.read() {
+    let pk_slice = match master_cert.read() {
         None => {
             set_error("Public key is empty".to_string(), err);
             return false;
@@ -102,7 +103,7 @@ pub extern "C" fn init_seed(
         Some(r) => r,
     };
 
-    let result = match init_seed_u(
+    let result = match untrusted_init_node(
         pk_slice.as_ptr(),
         pk_slice.len() as u32,
         encrypted_seed_slice.as_ptr(),

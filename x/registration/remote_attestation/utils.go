@@ -7,6 +7,14 @@ import (
 	"os"
 )
 
+func isSgxHardwareMode() bool {
+	if os.Getenv("SGX_MODE") == "SW" {
+		return false
+	} else {
+		return true
+	}
+}
+
 func printCert(rawByte []byte) {
 	print("--received-server cert: [Certificate(b\"")
 	for _, b := range rawByte {

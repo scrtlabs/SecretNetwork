@@ -1,0 +1,30 @@
+version: '3'
+
+services:
+  bootstrap:
+    image: enigmampc/secret_bootstrap
+    container_name: bootstrap
+    volumes:
+      - /tmp/enigmad:/root/.enigmad
+      - /tmp/enigmacli:/root/.enigmacli
+    stdin_open: true
+    tty: true
+    environment:
+      - http_proxy
+      - https_proxy
+    expose:
+      - 26656
+      - 26657
+
+  node:
+    image: enigmampc/secret_node
+    depends_on:
+      - bootstrap
+    volumes:
+      - /tmp/enigmad:/tmp/.enigmad
+      - /tmp/enigmacli:/root/.enigmacli
+    stdin_open: true
+    tty: true
+    environment:
+      - http_proxy
+      - https_proxy

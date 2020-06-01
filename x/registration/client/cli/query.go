@@ -3,9 +3,12 @@ package cli
 import (
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/keeper"
 	flag "github.com/spf13/pflag"
+	"io/ioutil"
 
 	"github.com/spf13/cobra"
 
@@ -13,7 +16,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/keeper"
 	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
 )
 
@@ -27,7 +29,7 @@ func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 	}
 	queryCmd.AddCommand(flags.GetCommands(
 		GetCmdEncryptedSeed(cdc),
-		GetCmdMasterPublicKey(cdc),
+		GetCmdMasterParams(cdc),
 	)...)
 	return queryCmd
 }
@@ -59,21 +61,38 @@ func GetCmdEncryptedSeed(cdc *codec.Codec) *cobra.Command {
 }
 
 // GetCmdListCode lists all wasm code uploaded
-func GetCmdMasterPublicKey(cdc *codec.Codec) *cobra.Command {
+func GetCmdMasterParams(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:   "master-key",
-		Short: "Get master key for the chain",
-		Long:  "Get master key for the chain",
+		Use:   "secret-network-params",
+		Short: "Get parameters for the secret network",
+		Long:  "Get parameters for the secret network - writes the parameters to [master-cert.der] by default",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
-			route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, keeper.QueryMasterKey)
+			route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, keeper.QueryMasterCertificate)
 			res, _, err := cliCtx.Query(route)
 			if err != nil {
 				return err
 			}
-			fmt.Println(fmt.Sprintf("0x%s", hex.EncodeToString(res)))
+
+			var certs types.GenesisState
+
+			err = json.Unmarshal(res, &certs)
+			if err != nil {
+				return err
+			}
+
+			err = ioutil.WriteFile(types.IoExchMasterCertPath, certs.IoMasterCertificate, 0644)
+			if err != nil {
+				return err
+			}
+
+			err = ioutil.WriteFile(types.NodeExchMasterCertPath, certs.NodeExchMasterCertificate, 0644)
+			if err != nil {
+				return err
+			}
+
 			return nil
 		},
 	}

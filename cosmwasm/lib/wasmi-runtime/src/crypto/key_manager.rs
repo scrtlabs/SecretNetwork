@@ -7,10 +7,10 @@ use log::*;
 
 pub struct Keychain {
     consensus_seed: Option<Seed>,
-    consensus_base_state_key: Option<Seed>,
+    consensus_state_ikm: Option<Seed>,
     consensus_seed_exchange_keypair: Option<KeyPair>,
     consensus_io_exchange_keypair: Option<KeyPair>,
-    new_node_seed_exchange_keypair: Option<KeyPair>,
+    registration_key: Option<KeyPair>,
 }
 
 lazy_static! {
@@ -24,23 +24,22 @@ impl Keychain {
             Err(e) => None,
         };
 
+        let registration_key = match KeyPair::unseal(REGISTRATION_KEY_SEALING_PATH) {
+            Ok(k) => Some(k),
+            Err(e) => None,
+        };
+
         let mut x = Keychain {
             consensus_seed,
-            consensus_base_state_key: None,
+            registration_key,
+            consensus_state_ikm: None,
             consensus_seed_exchange_keypair: None,
             consensus_io_exchange_keypair: None,
-            new_node_seed_exchange_keypair: None,
         };
 
         x.generate_consensus_master_keys();
 
         return x;
-
-        // let kdf_salt: Vec<u8> = vec![
-        //     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x4b, 0xea, 0xd8, 0xdf,
-        //     0x69, 0x99, 0x08, 0x52, 0xc2, 0x02, 0xdb, 0x0e, 0x00, 0x97, 0xc1, 0xa1, 0x2e, 0xa6,
-        //     0x37, 0xd7, 0xe9, 0x6d,
-        // ]; // Bitcoin halving block hash https://www.blockchain.com/btc/block/000000000000000000024bead8df69990852c202db0e0097c1a12ea637d7e96d
     }
 
     pub fn create_consensus_seed(&mut self) -> Result<(), CryptoError> {
@@ -55,10 +54,10 @@ impl Keychain {
         Ok(())
     }
 
-    pub fn create_new_node_seed_exchange_keypair(&mut self) -> Result<(), CryptoError> {
+    pub fn create_registration_key(&mut self) -> Result<(), CryptoError> {
         match KeyPair::new() {
             Ok(key) => {
-                if let Err(e) = self.set_new_node_seed_exchange_keypair(key) {
+                if let Err(e) = self.set_registration_key(key) {
                     return Err(CryptoError::KeyError);
                 }
             }
@@ -67,12 +66,12 @@ impl Keychain {
         Ok(())
     }
 
-    pub fn is_new_node_seed_exchange_keypair_set(&self) -> bool {
-        return self.new_node_seed_exchange_keypair.is_some();
+    pub fn is_registration_key_set(&self) -> bool {
+        return self.registration_key.is_some();
     }
 
-    pub fn is_consensus_base_state_key_set(&self) -> bool {
-        return self.consensus_base_state_key.is_some();
+    pub fn is_consensus_state_ikm_set(&self) -> bool {
+        return self.consensus_state_ikm.is_some();
     }
 
     pub fn is_consensus_seed_exchange_keypair_set(&self) -> bool {
@@ -87,9 +86,9 @@ impl Keychain {
         return self.consensus_seed.is_some();
     }
 
-    pub fn get_consensus_base_state_key(&self) -> Result<Seed, CryptoError> {
-        if self.consensus_base_state_key.is_some() {
-            Ok(self.consensus_base_state_key.unwrap())
+    pub fn get_consensus_state_ikm(&self) -> Result<Seed, CryptoError> {
+        if self.consensus_state_ikm.is_some() {
+            Ok(self.consensus_state_ikm.unwrap())
         } else {
             error!("Error accessing base_state_key (does not exist, or was not initialized)");
             Err(CryptoError::ParsingError)
@@ -105,7 +104,7 @@ impl Keychain {
         }
     }
 
-    pub fn get_consensus_seed_exchange_keypair(&self) -> Result<KeyPair, CryptoError> {
+    pub fn seed_exchange_key(&self) -> Result<KeyPair, CryptoError> {
         if self.consensus_seed_exchange_keypair.is_some() {
             // KeyPair does not implement copy (due to internal type not implementing it
             Ok(self.consensus_seed_exchange_keypair.clone().unwrap())
@@ -125,22 +124,22 @@ impl Keychain {
         }
     }
 
-    pub fn get_new_node_seed_exchange_keypair(&self) -> Result<KeyPair, CryptoError> {
-        if self.new_node_seed_exchange_keypair.is_some() {
+    pub fn get_registration_key(&self) -> Result<KeyPair, CryptoError> {
+        if self.registration_key.is_some() {
             // KeyPair does not implement copy (due to internal type not implementing it
-            Ok(self.new_node_seed_exchange_keypair.clone().unwrap())
+            Ok(self.registration_key.clone().unwrap())
         } else {
-            error!("Error accessing new_node_seed_exchange_keypair (does not exist, or was not initialized)");
+            error!("Error accessing registration_key (does not exist, or was not initialized)");
             Err(CryptoError::ParsingError)
         }
     }
 
-    pub fn set_new_node_seed_exchange_keypair(&mut self, kp: KeyPair) -> Result<(), EnclaveError> {
-        if let Err(e) = kp.seal(NEW_NODE_SEED_EXCHANGE_KEYPAIR_SEALING_PATH) {
-            error!("Error sealing new_node_seed_exchange_keypair");
+    pub fn set_registration_key(&mut self, kp: KeyPair) -> Result<(), EnclaveError> {
+        if let Err(e) = kp.seal(REGISTRATION_KEY_SEALING_PATH) {
+            error!("Error sealing registration key");
             return Err(e);
         }
-        Ok(self.new_node_seed_exchange_keypair = Some(kp.clone()))
+        Ok(self.registration_key = Some(kp.clone()))
     }
 
     pub fn set_consensus_seed_exchange_keypair(&mut self, kp: KeyPair) {
@@ -151,8 +150,8 @@ impl Keychain {
         self.consensus_io_exchange_keypair = Some(kp.clone())
     }
 
-    pub fn set_consensus_base_state_key(&mut self, consensus_base_state_key: Seed) {
-        self.consensus_base_state_key = Some(consensus_base_state_key.clone());
+    pub fn set_consensus_state_ikm(&mut self, consensus_state_ikm: Seed) {
+        self.consensus_state_ikm = Some(consensus_state_ikm.clone());
     }
 
     pub fn set_consensus_seed(&mut self, consensus_seed: Seed) -> Result<(), EnclaveError> {
@@ -165,8 +164,8 @@ impl Keychain {
 
     pub fn generate_consensus_master_keys(&mut self) -> Result<(), EnclaveError> {
         if !self.is_consensus_seed_set() {
-            error!("Seed not initialized! Cannot derive enclave keys");
-            return Err(EnclaveError::FailedUnseal);
+            debug!("Seed not initialized! Cannot derive enclave keys");
+            return Ok(());
         }
 
         // consensus_seed_exchange_keypair
@@ -176,16 +175,17 @@ impl Keychain {
             .unwrap()
             .derive_key_from_this(CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER);
         let consensus_seed_exchange_keypair =
-            KeyPair::new_from_slice(&consensus_seed_exchange_keypair_bytes)
-                .map_err(|err| {
-                    error!(
-                        "[Enclave] Error creating consensus_seed_exchange_keypair: {:?}",
-                        err
-                    );
-                    EnclaveError::FailedUnseal /* change error type? */
-                })
-                .unwrap();
-
+            KeyPair::new_from_slice(&consensus_seed_exchange_keypair_bytes).map_err(|err| {
+                error!(
+                    "[Enclave] Error creating consensus_seed_exchange_keypair: {:?}",
+                    err
+                );
+                EnclaveError::FailedUnseal /* change error type? */
+            })?;
+        info!(
+            "consensus_seed_exchange_keypair: {:?}",
+            consensus_seed_exchange_keypair
+        );
         self.set_consensus_seed_exchange_keypair(consensus_seed_exchange_keypair);
 
         // consensus_io_exchange_keypair
@@ -195,28 +195,122 @@ impl Keychain {
             .unwrap()
             .derive_key_from_this(CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER);
         let consensus_io_exchange_keypair =
-            KeyPair::new_from_slice(&consensus_io_exchange_keypair_bytes)
-                .map_err(|err| {
-                    error!(
-                        "[Enclave] Error creating consensus_io_exchange_keypair: {:?}",
-                        err
-                    );
-                    EnclaveError::FailedUnseal /* change error type? */
-                })
-                .unwrap();
-
+            KeyPair::new_from_slice(&consensus_io_exchange_keypair_bytes).map_err(|err| {
+                error!(
+                    "[Enclave] Error creating consensus_io_exchange_keypair: {:?}",
+                    err
+                );
+                EnclaveError::FailedUnseal /* change error type? */
+            })?;
+        info!(
+            "consensus_io_exchange_keypair: {:?}",
+            consensus_io_exchange_keypair
+        );
         self.set_consensus_io_exchange_keypair(consensus_io_exchange_keypair);
 
-        // consensus_base_state_key
+        // consensus_state_ikm
 
-        let consensus_base_state_key_bytes = self
+        let consensus_state_ikm_bytes = self
             .consensus_seed
             .unwrap()
-            .derive_key_from_this(CONSENSUS_BASE_STATE_KEY_DERIVE_ORDER);
-        let consensus_base_state_key = Seed::new_from_slice(&consensus_base_state_key_bytes);
-
-        self.set_consensus_base_state_key(consensus_base_state_key);
+            .derive_key_from_this(CONSENSUS_STATE_IKM_DERIVE_ORDER);
+        let consensus_state_ikm = Seed::new_from_slice(&consensus_state_ikm_bytes);
+        info!("consensus_state_ikm: {:?}", consensus_state_ikm);
+        self.set_consensus_state_ikm(consensus_state_ikm);
 
         Ok(())
+    }
+}
+
+#[cfg(feature = "test")]
+pub mod tests {
+
+    use super::{
+        Keychain, CONSENSUS_SEED_SEALING_PATH, KEY_MANAGER, REGISTRATION_KEY_SEALING_PATH,
+    };
+    use crate::crypto::{KeyPair, Seed};
+    use enclave_ffi_types::CryptoError;
+
+    // todo: fix test vectors to actually work
+    fn test_initial_keychain_state() {
+        // clear previous data (if any)
+        std::sgxfs::remove(CONSENSUS_SEED_SEALING_PATH);
+        std::sgxfs::remove(REGISTRATION_KEY_SEALING_PATH);
+
+        let keys = Keychain::new();
+
+        // todo: replace with actual checks
+        assert_eq!(keys.get_registration_key(), Err(CryptoError));
+        assert_eq!(keys.get_consensus_seed(), Err(CryptoError));
+        assert_eq!(keys.get_consensus_io_exchange_keypair(), Err(CryptoError));
+        assert_eq!(keys.get_consensus_state_ikm(), Err(CryptoError));
+    }
+
+    // todo: fix test vectors to actually work
+    fn test_initialize_keychain_seed() {
+        // clear previous data (if any)
+        std::sgxfs::remove(CONSENSUS_SEED_SEALING_PATH);
+        std::sgxfs::remove(REGISTRATION_KEY_SEALING_PATH);
+
+        let mut keys = Keychain::new();
+
+        let seed = Seed::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+
+        keys.set_consensus_seed(seed);
+        keys.generate_consensus_master_keys();
+        // todo: replace with actual checks
+        assert_eq!(keys.get_registration_key(), Err(CryptoError));
+        assert_eq!(keys.get_consensus_seed().unwrap(), seed);
+    }
+
+    // todo: fix test vectors to actually work
+    fn test_initialize_keychain_registration() {
+        // clear previous data (if any)
+        std::sgxfs::remove(CONSENSUS_SEED_SEALING_PATH);
+        std::sgxfs::remove(REGISTRATION_KEY_SEALING_PATH);
+
+        let mut keys = Keychain::new();
+
+        let kp = KeyPair::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").unwrap();
+
+        keys.set_registration_key(kp);
+        // todo: replace with actual checks
+        assert_eq!(keys.get_registration_key().unwrap(), kp);
+    }
+
+    // todo: fix test vectors to actually work
+    fn test_initialize_keys() {
+        // clear previous data (if any)
+        std::sgxfs::remove(CONSENSUS_SEED_SEALING_PATH);
+        std::sgxfs::remove(REGISTRATION_KEY_SEALING_PATH);
+
+        let mut keys = Keychain::new();
+
+        let seed = Seed::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+
+        keys.set_consensus_seed(seed);
+        keys.generate_consensus_master_keys();
+        // todo: replace with actual checks
+        assert_eq!(keys.get_consensus_io_exchange_keypair().unwrap(), seed);
+        assert_eq!(keys.get_consensus_state_ikm().unwrap(), seed);
+    }
+
+    // todo: fix test vectors to actually work
+    fn test_key_manager() {
+        // clear previous data (if any)
+        std::sgxfs::remove(CONSENSUS_SEED_SEALING_PATH);
+        std::sgxfs::remove(REGISTRATION_KEY_SEALING_PATH);
+
+        let seed = Seed::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+        let mut keys = Keychain::new();
+        keys.set_consensus_seed(seed);
+        keys.generate_consensus_master_keys();
+
+        // todo: replace with actual checks
+        assert_eq!(
+            KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap(),
+            seed
+        );
+        assert_eq!(KEY_MANAGER.get_consensus_state_ikm().unwrap(), seed);
     }
 }

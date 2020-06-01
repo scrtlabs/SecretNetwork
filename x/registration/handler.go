@@ -58,7 +58,6 @@ func handleRaAuthenticate(ctx sdk.Context, k Keeper, msg *types.RaAuthenticate) 
 		return nil, err
 	}
 
-	// fmt.Println("RaAuth", hex.EncodeToString(msg.PubKey))
 	encSeed, err := k.RegisterNode(ctx, msg.Certificate)
 	if err != nil {
 		return nil, err
@@ -73,10 +72,8 @@ func handleRaAuthenticate(ctx sdk.Context, k Keeper, msg *types.RaAuthenticate) 
 		sdk.NewAttribute(AttributeNodeID, fmt.Sprintf("0x%s", hex.EncodeToString(pubkey))),
 	)
 
-	pkIO := k.GetMasterPublicKey(ctx)
-
 	return &sdk.Result{
-		Data:   []byte(fmt.Sprintf("S: %02x | PK: %s", encSeed, hex.EncodeToString(*pkIO))),
+		Data:   []byte(fmt.Sprintf("S: %02x", encSeed)),
 		Events: append(events, ourEvent),
 	}, nil
 }
