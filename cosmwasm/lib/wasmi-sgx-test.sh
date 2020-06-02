@@ -20,7 +20,8 @@ rm -rf ~/.enigma*
 
 ./enigmad init banana --chain-id enigma-testnet
 perl -i -pe 's/"stake"/"uscrt"/g' ~/.enigmad/config/genesis.json
-./enigmacli keys add a
+echo "cost member exercise evoke isolate gift cattle move bundle assume spell face balance lesson resemble orange bench surge now unhappy potato dress number acid" |
+    ./enigmacli keys add a --recover
 ./enigmad add-genesis-account "$(./enigmacli keys show -a a)" 1000000000000uscrt
 ./enigmad gentx --name a --keyring-backend test --amount 1000000uscrt
 ./enigmad collect-gentxs
@@ -100,7 +101,11 @@ wait_for_tx "$TRANSFER_TX_HASH" "Waiting for transfer to finish on-chain..."
 ./enigmacli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4\"}}" |
     jq -e '.balance == "63"' > /dev/null
 
+(   cd ./cosmwasm-js/packages/sdk
+    yarn build
+
+)
+
+node ./cosmwasm/lib/cosmwasm-js-test.js
 
 echo "All is done. Yay!"
-
-sleep infinity

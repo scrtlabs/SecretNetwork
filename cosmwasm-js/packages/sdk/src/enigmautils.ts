@@ -38,7 +38,6 @@ export async function decrypt(ciphertext: Uint8Array): Promise<Uint8Array> {
   const siv = await miscreant.SIV.importKey(key, "AES-SIV", cryptoProvider);
 
   const plaintext = await siv.open(ciphertext, [new Uint8Array()]);
-
   return plaintext;
 }
 
