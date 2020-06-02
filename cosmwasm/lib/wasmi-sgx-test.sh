@@ -33,17 +33,20 @@ perl -i -pe 's/"stake"/"uscrt"/g' ~/.enigmad/config/genesis.json
 RUST_BACKTRACE=1 ./enigmad start --bootstrap &
 
 ENIGMAD_PID=$(echo $!)
-function cleanup()
-{
-    kill -KILL "$ENIGMAD_PID"
-}
-trap cleanup EXIT ERR
 
 until (./enigmacli status 2>&1 | jq -e '(.sync_info.latest_block_height | tonumber) > 0' &> /dev/null)
 do
     echo "Waiting for chain to start..."
     sleep 1
 done
+
+./enigmacli rest-server --chain-id enigma-testnet --laddr tcp://0.0.0.0:1337 &
+LCD_PID=$(echo $!)
+function cleanup()
+{
+    kill -KILL "$ENIGMAD_PID" "$LCD_PID"
+}
+trap cleanup EXIT ERR
 
 # store wasm code on-chain so we could later instansiate it
 wget -O /tmp/contract.wasm https://raw.githubusercontent.com/CosmWasm/cosmwasm-examples/f5ea00a85247abae8f8cbcba301f94ef21c66087/erc20/contract.wasm
@@ -99,3 +102,5 @@ wait_for_tx "$TRANSFER_TX_HASH" "Waiting for transfer to finish on-chain..."
 
 
 echo "All is done. Yay!"
+
+sleep infinity
