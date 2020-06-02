@@ -4,14 +4,12 @@ use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
 use parity_wasm::elements;
 
-use serde::Deserialize;
-
-use serde_json::{from_slice, to_vec, Value};
+use serde_json::Value;
 use wasmi::{ImportsBuilder, ModuleInstance};
 
 use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
 
-use super::cosmwasm;
+use crate::cosmwasm::types::Env;
 
 use crate::crypto::{Hmac, Kdf, KEY_MANAGER};
 use crate::errors::wasmi_error_to_enclave_error;
@@ -64,7 +62,7 @@ pub fn init(
     msg: &[u8],      // probably function call and args
 ) -> Result<InitSuccess, EnclaveError> {
     let consensus_state_ikm = KEY_MANAGER.get_consensus_state_ikm().unwrap();
-    let parsed_env: cosmwasm::types::Env = serde_json::from_slice(env).map_err(|err| {
+    let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
         error!(
             "got an error while trying to deserialize output bytes into json {:?}: {}",
             env, err
