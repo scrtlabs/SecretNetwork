@@ -195,7 +195,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
         code_id: codeId.toString(),
         label: label,
         // eslint-disable-next-line @typescript-eslint/camelcase
-        init_msg: encrypt(initMsg),
+        init_msg: await encrypt(initMsg),
         // eslint-disable-next-line @typescript-eslint/camelcase
         init_funds: transferAmount || [],
       },
@@ -233,7 +233,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
       value: {
         sender: this.senderAddress,
         contract: contractAddress,
-        msg: encrypt(handleMsg),
+        msg: await encrypt(handleMsg),
         // eslint-disable-next-line @typescript-eslint/camelcase
         sent_funds: transferAmount || [],
       },

@@ -5,7 +5,6 @@ import { Log, parseLogs } from "./logs";
 import { decodeBech32Pubkey } from "./pubkey";
 import { BroadcastMode, RestClient } from "./restclient";
 import { Coin, CosmosSdkTx, JsonObject, PubKey, StdTx } from "./types";
-import { encrypt, decrypt } from "./enigmautils";
 
 export interface GetNonceResult {
   readonly accountNumber: number;
@@ -400,7 +399,7 @@ export class CosmWasmClient {
    */
   public async queryContractSmart(address: string, queryMsg: object): Promise<JsonObject> {
     try {
-      return await this.restClient.queryContractSmart(address, encrypt(queryMsg));
+      return await this.restClient.queryContractSmart(address, queryMsg);
     } catch (error) {
       if (error instanceof Error) {
         if (error.message.startsWith("not found: contract")) {

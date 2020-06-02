@@ -4,6 +4,7 @@ import axios, { AxiosError, AxiosInstance } from "axios";
 import { Coin, CosmosSdkTx, JsonObject, Model, parseWasmData, StdTx, WasmData } from "./types";
 
 const { fromBase64, fromUtf8, toHex, toUtf8 } = Encoding;
+import { encrypt, decrypt } from "./enigmautils";
 
 export interface CosmosSdkAccount {
   /** Bech32 account address */
@@ -234,10 +235,11 @@ function isWasmError<T>(resp: WasmResponse<T>): resp is WasmError {
   return (resp as WasmError).error !== undefined;
 }
 
-function unwrapWasmResponse<T>(response: WasmResponse<T>): T {
+async function unwrapWasmResponse<T>(response: WasmResponse<T>): Promise<T> {
   if (isWasmError(response)) {
-    throw new Error(response.error);
+    throw new Error(JSON.stringify(await decrypt(response.error)));
   }
+
   return response.result;
 }
 
@@ -397,7 +399,7 @@ export class RestClient {
   public async listCodeInfo(): Promise<readonly CodeInfo[]> {
     const path = `/wasm/code`;
     const responseData = (await this.get(path)) as WasmResponse<CosmosSdkArray<CodeInfo>>;
-    return normalizeArray(unwrapWasmResponse(responseData));
+    return normalizeArray(await unwrapWasmResponse(responseData));
   }
 
   // this will download the original wasm bytecode by code id
@@ -405,13 +407,13 @@ export class RestClient {
   public async getCode(id: number): Promise<CodeDetails> {
     const path = `/wasm/code/${id}`;
     const responseData = (await this.get(path)) as WasmResponse<CodeDetails>;
-    return unwrapWasmResponse(responseData);
+    return await unwrapWasmResponse(responseData);
   }
 
   public async listContractsByCodeId(id: number): Promise<readonly ContractInfo[]> {
     const path = `/wasm/code/${id}/contracts`;
     const responseData = (await this.get(path)) as WasmResponse<CosmosSdkArray<ContractInfo>>;
-    return normalizeArray(unwrapWasmResponse(responseData));
+    return normalizeArray(await unwrapWasmResponse(responseData));
   }
 
   /**
@@ -420,7 +422,7 @@ export class RestClient {
   public async getContractInfo(address: string): Promise<ContractDetails | null> {
     const path = `/wasm/contract/${address}`;
     const response = (await this.get(path)) as WasmResponse<ContractDetails | null>;
-    return unwrapWasmResponse(response);
+    return await unwrapWasmResponse(response);
   }
 
   // Returns all contract state.
@@ -428,7 +430,7 @@ export class RestClient {
   public async getAllContractState(address: string): Promise<readonly Model[]> {
     const path = `/wasm/contract/${address}/state`;
     const responseData = (await this.get(path)) as WasmResponse<CosmosSdkArray<WasmData>>;
-    return normalizeArray(unwrapWasmResponse(responseData)).map(parseWasmData);
+    return normalizeArray(await unwrapWasmResponse(responseData)).map(parseWasmData);
   }
 
   // Returns the data at the key if present (unknown decoded json),
@@ -437,7 +439,7 @@ export class RestClient {
     const hexKey = toHex(key);
     const path = `/wasm/contract/${address}/raw/${hexKey}?encoding=hex`;
     const responseData = (await this.get(path)) as WasmResponse<WasmData[]>;
-    const data = unwrapWasmResponse(responseData);
+    const data = await unwrapWasmResponse(responseData);
     return data.length === 0 ? null : fromBase64(data[0].val);
   }
 
@@ -446,11 +448,13 @@ export class RestClient {
    * Throws error if no such contract exists, the query format is invalid or the response is invalid.
    */
   public async queryContractSmart(address: string, query: object): Promise<JsonObject> {
-    const encoded = toHex(toUtf8(JSON.stringify(query)));
+    const encrypted = await encrypt(query);
+    const encoded = toHex(toUtf8(encrypted));
     const path = `/wasm/contract/${address}/smart/${encoded}?encoding=hex`;
     const responseData = (await this.get(path)) as WasmResponse<SmartQueryResponse>;
-    const result = unwrapWasmResponse(responseData);
+
+    const result = await unwrapWasmResponse(responseData);
     // By convention, smart queries must return a valid JSON document (see https://github.com/CosmWasm/cosmwasm/issues/144)
-    return JSON.parse(fromUtf8(fromBase64(result.smart)));
+    return JSON.parse(fromUtf8(await decrypt(fromBase64(result.smart)));
   }
 }
