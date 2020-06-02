@@ -322,34 +322,32 @@ current_state_ciphertext = internal_read_db(field_name);
 
 encryption_key = hkdf({
   salt: hkfd_salt,
-  ikm: concat(consensus_state_ikm, field_name, contact_id),
+  ikm: concat(consensus_state_ikm, field_name, contract_id),
 });
 
 if (current_state_ciphertext == null) {
   // field_name doesn't yet initialized in state
-  iv = sha256(concat(consensus_state_iv, value)).slice(0, 12); // truncate because iv is only 96 bits
+  ad = sha256(concat(consensus_state_ikm, value)).slice(0, 12); // truncate because iv is only 96 bits
 } else {
-  // read previous_iv, verify it, calculate new iv
-  previous_iv = current_state_ciphertext.slice(0, 12); // first 12 bytes
+  // read previous_ad, verify it, calculate new iv
+  previous_ad = current_state_ciphertext.slice(0, 12); // first 12 bytes
   current_state_ciphertext = current_state_ciphertext.slice(12); // skip first 12 bytes
 
   aes_256_gcm_decrypt({
-    iv: previous_iv,
     key: encryption_key,
     data: current_state_ciphertext,
-    aad: previous_iv,
+    ad: previous_ad,
   }); // just to authenticate previous_iv
-  iv = sha256(concat(consensus_state_iv, value, previous_iv)).slice(0, 12); // truncate because iv is only 96 bits
+  ad = sha256(concat(consensus_state_ikm, value, previous_ad)).slice(0, 12); // truncate because iv is only 96 bits
 }
 
-new_state_ciphertext = aes_256_gcm_encrypt({
-  iv: iv,
+new_state_ciphertext = aes_128_siv_encrypt({
   key: encryption_key,
   data: value,
-  aad: iv,
+  ad: ad,
 });
 
-new_state = concat(iv, new_state_ciphertext);
+new_state = concat(ad, new_state_ciphertext);
 
 internal_write_db(field_name, new_state);
 ```
@@ -361,7 +359,7 @@ current_state_ciphertext = internal_read_db(field_name);
 
 encryption_key = hkdf({
   salt: hkfd_salt,
-  ikm: concat(consensus_state_ikm, field_name, sha256(contract_wasm_binary)), // TODO diffrentiate between same binaries for different contracts
+  ikm: concat(consensus_state_ikm, field_name, contract_id),
 });
 
 if (current_state_ciphertext == null) {
@@ -369,14 +367,13 @@ if (current_state_ciphertext == null) {
   return null;
 }
 
-// read iv, verify it, calculate new iv
-iv = current_state_ciphertext.slice(0, 12); // first 12 bytes
+// read ad, verify it
+ad = current_state_ciphertext.slice(0, 12); // first 12 bytes
 current_state_ciphertext = current_state_ciphertext.slice(12); // skip first 12 bytes
-current_state_plaintext = aes_256_gcm_decrypt({
-  iv: iv,
+current_state_plaintext = aes_128_siv_decrypt({
   key: encryption_key,
   data: current_state_ciphertext,
-  aad: iv,
+  ad: ad,
 });
 
 return current_state_plaintext;
