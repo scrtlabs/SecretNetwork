@@ -36,9 +36,7 @@ parity-wasm = { version = "0.41.0", default-features = false }
 wasmi = { git = "https://github.com/paritytech/wasmi", rev = "39a18a433a765a36383d34d4edd536ba1e0664d2", default-features = false, features = [
     "core"
 ] }
-# serde        	  = { rev = "sgx_1.1.2", git = "https://github.com/mesalock-linux/serde-sgx" }
-serde_derive    = { rev = "sgx_1.1.2", git = "https://github.com/mesalock-linux/serde-sgx" }
-serde            = { rev = "sgx_1.1.2", git = "https://github.com/mesalock-linux/serde-sgx", features = ["derive"] }
+serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = ["derive"] }
 serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
 base64 = { version = "0.10", git = "https://github.com/mesalock-linux/rust-base64-sgx" }
 log = { version = "0.4.8" }
@@ -59,7 +57,6 @@ base58 = { rev = "sgx_1.1.2", package = "rust-base58", git = "https://github.com
     "mesalock_sgx"
 ] }
 lazy_static = "1.4"
-# schemars = "0.5"
 
 [dependencies.webpki]
 git = "https://github.com/mesalock-linux/webpki"

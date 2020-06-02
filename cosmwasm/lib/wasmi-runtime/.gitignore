@@ -3,3 +3,5 @@
 *.h
 *.c
 lib/
+
+!Cargo.lock
