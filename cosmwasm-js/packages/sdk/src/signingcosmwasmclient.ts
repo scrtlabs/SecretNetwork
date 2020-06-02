@@ -188,7 +188,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     };
   }
 
-  async encrypt(msg: object) {
+  async encrypt(msg: object): Promise<Uint8Array> {
     const key = Uint8Array.from(new Array(32).fill(0x7));
     const siv = await miscreant.SIV.importKey(key, "AES-SIV", cryptoProvider);
 
@@ -203,13 +203,13 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     return Uint8Array.from([...ad, ...ciphertext]);
   }
 
-  async decrypt(ciphertext: Uint8Array) {
+  async decrypt(ciphertext: Uint8Array): Promise<object> {
     const key = Uint8Array.from(new Array(32).fill(0x7));
     const siv = await miscreant.SIV.importKey(key, "AES-SIV", cryptoProvider);
 
     const plaintext = await siv.open(ciphertext, []);
 
-    const msg = new TextDecoder("utf-8").decode(plaintext);
+    const msg = JSON.parse(new TextDecoder("utf-8").decode(plaintext));
 
     return msg;
   }
