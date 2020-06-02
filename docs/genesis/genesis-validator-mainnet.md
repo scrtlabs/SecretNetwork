@@ -1,6 +1,6 @@
 # How to join as a mainnet validator
 
-This document details how to join the SecretBlockchain `mainnet` as a validator.
+This document details how to join the SecretNetwork `mainnet` as a validator.
 
 ## Requirements
 
@@ -11,10 +11,10 @@ This document details how to join the SecretBlockchain `mainnet` as a validator.
 
 ## Installation
 
-### 1. Download the Secret Blockchain package installer for Debian/Ubuntu:
+### 1. Download the Secret Network package installer for Debian/Ubuntu:
 
 ```bash
-wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.0.1/secret-blockchain_0.0.1_amd64.deb
+wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.1.0/secretnetwork_0.1.0_amd64.deb
 ```
 
 ([How to verify releases](/docs/verify-releases.md))
@@ -22,10 +22,10 @@ wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.0.1/secret-
 ### 2. Install the package:
 
 ```bash
-sudo dpkg -i secret-blockchain_0.0.1_amd64.deb
+sudo dpkg -i secretnetwork_0.1.0_amd64.deb
 ```
 
-### 3. Initialize your installation of Enigma Blockchain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
+### 3. Initialize your installation of Secret Network. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
 
 ```bash
 secretd init <MONIKER> --chain-id secret-1

@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/store/prefix"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/auth/exported"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-	wasm "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm"
-	wasmTypes "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
+	"github.com/Cashmaney/cosmos-sdk/codec"
+	"github.com/Cashmaney/cosmos-sdk/store/prefix"
+	sdk "github.com/Cashmaney/cosmos-sdk/types"
+	sdkerrors "github.com/Cashmaney/cosmos-sdk/types/errors"
+	"github.com/Cashmaney/cosmos-sdk/x/auth"
+	"github.com/Cashmaney/cosmos-sdk/x/auth/exported"
+	"github.com/Cashmaney/cosmos-sdk/x/bank"
+	wasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
+	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	"github.com/tendermint/tendermint/crypto"
 
-	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 // GasMultiplier is how many cosmwasm gas points = 1 sdk gas point

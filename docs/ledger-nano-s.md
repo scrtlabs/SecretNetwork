@@ -25,7 +25,7 @@ Note: This guide is for Ledger Nano S but according to community members it also
 
 - Hit "Install" and wait for the process to complete.
 
-_Ref: https://github.com/cosmos/ledger-cosmos_
+_Ref: https://github.com/Cashmaney/ledger-cosmos_
 
 ## Common commands
 

@@ -66,7 +66,7 @@ cp new_genesis.json ~/.secretd/config/genesis.json
 # at this point you should also validate sha256 checksums of ~/.secretd/config/* against ~/.enigmad/config/*
 ```
 
-### 7. Start the new Blockchain! :tada:
+### 7. Start the new Secret Node! :tada:
 
 ```bash
 sudo systemctl enable secret-node # enable on startup

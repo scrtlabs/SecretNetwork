@@ -5,9 +5,9 @@ import (
 
 	tmBytes "github.com/tendermint/tendermint/libs/bytes"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	auth "github.com/cosmos/cosmos-sdk/x/auth/exported"
-	wasmTypes "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
+	sdk "github.com/Cashmaney/cosmos-sdk/types"
+	auth "github.com/Cashmaney/cosmos-sdk/x/auth/exported"
+	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 )
 
 const defaultLRUCacheSize = uint64(0)

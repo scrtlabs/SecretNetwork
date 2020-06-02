@@ -1,13 +1,13 @@
 ### Download Release
 
 ```bash
-wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.0.1/secret-blockchain_0.0.1_amd64.deb
+wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.1.0/secretnetwork_0.1.0_amd64.deb
 ```
 
 ### Remove old installations
 
 ```bash
-sudo dpkg -P secret-blockchain
+sudo dpkg -P secretnetwork
 sudo rm -rf ~/.secretd ~/.secretcli
 sudo rm -rf "$(which secretd)"
 sudo rm -rf "$(which secretcli)"
@@ -48,7 +48,7 @@ sudo chown -R ubuntu .enigmad/
 ### Install the `.deb` file
 
 ```bash
-sudo dpkg -i secret-blockchain_0.0.1_amd64.deb
+sudo dpkg -i secretnetwork_0.1.0_amd64.deb
 ```
 
 ### Config local node
