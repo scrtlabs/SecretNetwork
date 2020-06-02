@@ -71,7 +71,7 @@ func Encrypt(plaintext []byte) ([]byte, error) {
 	nonce = make([]byte, 32)         // TODO fix
 	walletPubKey := make([]byte, 33) // TODO fix
 
-	// aad = nonce(32)|wallet_pubkey(33) = 65 bytes
+	// ad = nonce(32)|wallet_pubkey(33) = 65 bytes
 	ad := []byte{}
 	ad = append(ad, nonce...)        // TODO fix real inputNonce
 	ad = append(ad, walletPubKey...) // TODO fix real outputNonce

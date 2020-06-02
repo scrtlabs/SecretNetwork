@@ -217,6 +217,12 @@ func queryContractStateSmartHandlerFn(cliCtx context.CLIContext) http.HandlerFun
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		queryData, err = base64.StdEncoding.DecodeString(string(queryData))
+		if err != nil {
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
 		res, height, err := cliCtx.QueryWithData(route, queryData)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
