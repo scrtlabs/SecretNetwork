@@ -101,9 +101,11 @@ wait_for_tx "$TRANSFER_TX_HASH" "Waiting for transfer to finish on-chain..."
 ./enigmacli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4\"}}" |
     jq -e '.balance == "63"' > /dev/null
 
-(   cd ./cosmwasm-js/packages/sdk
+(   
+    cd ./cosmwasm-js
+    yarn
+    cd ./packages/sdk
     yarn build
-
 )
 
 node ./cosmwasm/lib/cosmwasm-js-test.js
