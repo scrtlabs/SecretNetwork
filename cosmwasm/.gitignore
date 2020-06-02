@@ -13,3 +13,5 @@ contracts/**/hash.txt
 .vscode/
 .idea/
 *.iml
+
+Cargo.lock

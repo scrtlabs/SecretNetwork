@@ -1,14 +1,23 @@
+/// These types are are copied over from the cosmwasm_std package, and must be kept in sync with it.
+///
+/// We copy these types instead of directly depending on them, because we require special versions of serde
+/// inside the enclave, which are different from the versions that cosmwasm_std uses.
+/// For some reason patching the dependencies didn't work, so we are forced to maintain this copy, for now :(
 use std::fmt;
 
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::encoding::Binary;
+use super::encoding::Binary;
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize)]
+pub struct Test {
+    t: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct HumanAddr(pub String);
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct CanonicalAddr(pub Binary);
 
 impl HumanAddr {
@@ -59,7 +68,7 @@ impl fmt::Display for CanonicalAddr {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct Env {
     pub block: BlockInfo,
     pub message: MessageInfo,
@@ -67,7 +76,7 @@ pub struct Env {
     pub contract_key: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct BlockInfo {
     pub height: i64,
     // time is seconds since epoch begin (Jan. 1, 1970)
@@ -75,27 +84,27 @@ pub struct BlockInfo {
     pub chain_id: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct MessageInfo {
     pub signer: CanonicalAddr,
     // go likes to return null for empty array, make sure we can parse it (use option)
     pub sent_funds: Option<Vec<Coin>>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct ContractInfo {
     pub address: CanonicalAddr,
     // go likes to return null for empty array, make sure we can parse it (use option)
     pub balance: Option<Vec<Coin>>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct Coin {
     pub denom: String,
     pub amount: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum CosmosMsg {
     // this moves tokens in the underlying sdk
@@ -117,7 +126,7 @@ pub enum CosmosMsg {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum ContractResult {
     Ok(Response),
@@ -141,21 +150,22 @@ impl ContractResult {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct LogAttribute {
     pub key: String,
     pub value: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct Response {
     // let's make the positive case a struct, it contrains Msg: {...}, but also Data, Log, maybe later Events, etc.
     pub messages: Vec<CosmosMsg>,
     pub log: Vec<LogAttribute>, // abci defines this as string
     pub data: Option<Binary>,   // abci defines this as bytes
+    pub contract_key: Option<Binary>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum QueryResult {
     Ok(Binary),

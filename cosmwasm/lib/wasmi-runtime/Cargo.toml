@@ -37,6 +37,7 @@ parity-wasm = { version = "0.41.0", default-features = false }
 wasmi = { git = "https://github.com/paritytech/wasmi", rev = "39a18a433a765a36383d34d4edd536ba1e0664d2", default-features = false, features = [
     "core"
 ] }
+serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = ["derive"] }
 serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
 base64 = { version = "0.10", git = "https://github.com/mesalock-linux/rust-base64-sgx" }
 log = { version = "0.4.8" }

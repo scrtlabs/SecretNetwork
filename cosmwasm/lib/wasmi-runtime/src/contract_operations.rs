@@ -2,15 +2,24 @@ use base64;
 use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
 use parity_wasm::elements;
+
 use serde_json::Value;
 use wasmi::{ImportsBuilder, ModuleInstance};
 
 use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
 
-use crate::crypto::{key_manager::KEY_MANAGER, AESKey, SIVEncryptable};
+use crate::cosmwasm::encoding::Binary;
+use crate::cosmwasm::types::{ContractResult, Env, Response};
+
+use crate::crypto::{AESKey, Hmac, Kdf, SIVEncryptable, HASH_SIZE, KEY_MANAGER};
 use crate::errors::wasmi_error_to_enclave_error;
 use crate::gas::{gas_rules, WasmCosts};
 use crate::runtime::{Engine, EnigmaImportResolver, Runtime};
+
+use crate::contract_validation::{
+    calc_contract_hash, extract_contract_key, generate_contract_id, generate_sender_id,
+    validate_contract_key, CONTRACT_KEY_LENGTH,
+};
 
 /*
 Each contract is compiled with these functions alreadyy implemented in wasm:
@@ -34,6 +43,30 @@ pub fn init(
     env: &[u8],      // blockchain state
     msg: &[u8],      // probably function call and args
 ) -> Result<InitSuccess, EnclaveError> {
+    let consensus_state_ikm = KEY_MANAGER.get_consensus_state_ikm().unwrap();
+    let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
+        error!(
+            "got an error while trying to deserialize output bytes into json {:?}: {}",
+            env, err
+        );
+        EnclaveError::InvalidWasm
+    })?;
+
+    let contract_hash = calc_contract_hash(contract);
+
+    let sender_id = generate_sender_id(
+        parsed_env.message.signer.as_slice(),
+        parsed_env.block.height as u64,
+    );
+
+    let mut encryption_key = [0u8; 64];
+
+    let authenticated_contract_id =
+        generate_contract_id(&consensus_state_ikm, &sender_id, &contract_hash);
+
+    encryption_key[0..32].copy_from_slice(&sender_id);
+    encryption_key[32..].copy_from_slice(&authenticated_contract_id);
+
     let mut engine = start_engine(context, gas_limit, contract)?;
 
     let env_ptr = engine
@@ -56,10 +89,13 @@ pub fn init(
 
     let output = encrypt_output(&output)?;
 
+    // third time's the charm
+    // let output = append_contract_key(&output, encryption_key)?;
+
     Ok(InitSuccess {
         output,
         used_gas: engine.gas_used(),
-        signature: [0; 65], // TODO this is needed anymore as output is already authenticated
+        signature: encryption_key, // TODO this is needed anymore as output is already authenticated
     })
 }
 
@@ -71,6 +107,25 @@ pub fn handle(
     msg: &[u8],
 ) -> Result<HandleSuccess, EnclaveError> {
     let mut engine = start_engine(context, gas_limit, contract)?;
+
+    let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
+        error!(
+            "got an error while trying to deserialize output bytes into json {:?}: {}",
+            env, err
+        );
+        EnclaveError::InvalidWasm
+    })?;
+
+    debug!("handle parsed_envs: {:?}", parsed_env);
+
+    let key = extract_contract_key(&parsed_env)?;
+
+    if !validate_contract_key(&key, contract) {
+        error!("got an error while trying to deserialize output bytes");
+        return Err(EnclaveError::FailedContractAuthentication);
+    }
+
+    debug!("Successfully authenticated the contract!");
 
     let env_ptr = engine
         .write_to_memory(env)
@@ -95,7 +150,7 @@ pub fn handle(
     Ok(HandleSuccess {
         output,
         used_gas: engine.gas_used(),
-        signature: [0; 65], // TODO this is needed anymore as output is already authenticated
+        signature: [0u8; 64], // TODO this is needed anymore as output is already authenticated
     })
 }
 
@@ -126,7 +181,7 @@ pub fn query(
     Ok(QuerySuccess {
         output,
         used_gas: engine.gas_used(),
-        signature: [0; 65], // TODO this is needed anymore as output is already authenticated
+        signature: [0; 64], // TODO this is needed anymore as output is already authenticated
     })
 }
 

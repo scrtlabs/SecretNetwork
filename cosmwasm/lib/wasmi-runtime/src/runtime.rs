@@ -205,7 +205,6 @@ impl Externals for Runtime {
                 // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
                 // TODO derive encryption key for these key-value on this contract
                 let base_state_key = key_manager::KEY_MANAGER.get_consensus_state_ikm().unwrap();
-                let base_state_key = AESKey::new_from_slice(base_state_key.get());
 
                 let decrypted_value = base_state_key.decrypt_siv(&value, &vec![]).map_err(|err| {
                     error!(
@@ -318,8 +317,6 @@ impl Externals for Runtime {
                 // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
                 // TODO derive encryption key for these key-value on this contract
                 let base_state_key = key_manager::KEY_MANAGER.get_consensus_state_ikm().unwrap();
-                let base_state_key = AESKey::new_from_slice(base_state_key.get());
-
                 let encrypted_value = base_state_key.encrypt_siv(&value,&vec![]).map_err(|err| {
                     error!(
                         "write_db() got an error while trying to encrypt the value {:?}, stopping wasm: {:?}",

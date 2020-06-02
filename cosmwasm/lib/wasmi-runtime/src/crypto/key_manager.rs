@@ -1,5 +1,5 @@
 use crate::consts::*;
-use crate::crypto::keys::{KeyPair, Seed};
+use crate::crypto::keys::{AESKey, KeyPair, Seed};
 use crate::crypto::traits::*;
 use enclave_ffi_types::{CryptoError, EnclaveError};
 use lazy_static::lazy_static;
@@ -7,7 +7,7 @@ use log::*;
 
 pub struct Keychain {
     consensus_seed: Option<Seed>,
-    consensus_state_ikm: Option<Seed>,
+    consensus_state_ikm: Option<AESKey>,
     consensus_seed_exchange_keypair: Option<KeyPair>,
     consensus_io_exchange_keypair: Option<KeyPair>,
     registration_key: Option<KeyPair>,
@@ -86,7 +86,7 @@ impl Keychain {
         return self.consensus_seed.is_some();
     }
 
-    pub fn get_consensus_state_ikm(&self) -> Result<Seed, CryptoError> {
+    pub fn get_consensus_state_ikm(&self) -> Result<AESKey, CryptoError> {
         if self.consensus_state_ikm.is_some() {
             Ok(self.consensus_state_ikm.unwrap())
         } else {
@@ -150,7 +150,7 @@ impl Keychain {
         self.consensus_io_exchange_keypair = Some(kp.clone())
     }
 
-    pub fn set_consensus_state_ikm(&mut self, consensus_state_ikm: Seed) {
+    pub fn set_consensus_state_ikm(&mut self, consensus_state_ikm: AESKey) {
         self.consensus_state_ikm = Some(consensus_state_ikm.clone());
     }
 
@@ -173,15 +173,17 @@ impl Keychain {
         let consensus_seed_exchange_keypair_bytes = self
             .consensus_seed
             .unwrap()
-            .derive_key_from_this(CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER);
-        let consensus_seed_exchange_keypair =
-            KeyPair::new_from_slice(&consensus_seed_exchange_keypair_bytes).map_err(|err| {
-                error!(
-                    "[Enclave] Error creating consensus_seed_exchange_keypair: {:?}",
-                    err
-                );
-                EnclaveError::FailedUnseal /* change error type? */
-            })?;
+            .derive_key_from_this(&CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes());
+        let consensus_seed_exchange_keypair = KeyPair::new_from_slice(
+            &consensus_seed_exchange_keypair_bytes.get(),
+        )
+        .map_err(|err| {
+            error!(
+                "[Enclave] Error creating consensus_seed_exchange_keypair: {:?}",
+                err
+            );
+            EnclaveError::FailedUnseal /* change error type? */
+        })?;
         info!(
             "consensus_seed_exchange_keypair: {:?}",
             consensus_seed_exchange_keypair
@@ -193,9 +195,9 @@ impl Keychain {
         let consensus_io_exchange_keypair_bytes = self
             .consensus_seed
             .unwrap()
-            .derive_key_from_this(CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER);
+            .derive_key_from_this(&CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes());
         let consensus_io_exchange_keypair =
-            KeyPair::new_from_slice(&consensus_io_exchange_keypair_bytes).map_err(|err| {
+            KeyPair::new_from_slice(&consensus_io_exchange_keypair_bytes.get()).map_err(|err| {
                 error!(
                     "[Enclave] Error creating consensus_io_exchange_keypair: {:?}",
                     err
@@ -213,8 +215,8 @@ impl Keychain {
         let consensus_state_ikm_bytes = self
             .consensus_seed
             .unwrap()
-            .derive_key_from_this(CONSENSUS_STATE_IKM_DERIVE_ORDER);
-        let consensus_state_ikm = Seed::new_from_slice(&consensus_state_ikm_bytes);
+            .derive_key_from_this(&CONSENSUS_STATE_IKM_DERIVE_ORDER.to_be_bytes());
+        let consensus_state_ikm = AESKey::new_from_slice(consensus_state_ikm_bytes.get());
         info!("consensus_state_ikm: {:?}", consensus_state_ikm);
         self.set_consensus_state_ikm(consensus_state_ikm);
 

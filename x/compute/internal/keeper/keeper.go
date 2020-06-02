@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	"path/filepath"
@@ -125,7 +126,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	k.cdc.MustUnmarshalBinaryBare(bz, &codeInfo)
 
 	// prepare params for contract instantiate call
-	params := types.NewParams(ctx, creator, deposit, contractAccount)
+	params := types.NewParams(ctx, creator, deposit, contractAccount, nil)
 
 	// create prefixed data store
 	// 0x03 | contractAddress (sdk.AccAddress)
@@ -134,7 +135,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
-	res, err := k.wasmer.Instantiate(codeInfo.CodeHash, params, initMsg, prefixStore, cosmwasmAPI, gas)
+	res, key, err := k.wasmer.Instantiate(codeInfo.CodeHash, params, initMsg, prefixStore, cosmwasmAPI, gas)
 	if err != nil {
 		return contractAddress, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
 	}
@@ -154,6 +155,10 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	instance := types.NewContractInfo(codeID, creator, initMsg, label, createdAt)
 	store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshalBinaryBare(instance))
 
+	fmt.Printf("Storing key: %s for account %s", key, contractAddress)
+
+	store.Set(types.GetContractEnclaveKey(contractAddress), key)
+
 	return contractAddress, nil
 }
 
@@ -172,9 +177,11 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		}
 	}
 	contractAccount := k.accountKeeper.GetAccount(ctx, contractAddress)
-
-	params := types.NewParams(ctx, caller, coins, contractAccount)
-
+	store := ctx.KVStore(k.storeKey)
+	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
+	fmt.Printf("Contract Execute: Got contract Key for contract %s: %s\n", contractAddress, base64.StdEncoding.EncodeToString(contractKey))
+	params := types.NewParams(ctx, caller, coins, contractAccount, contractKey)
+	fmt.Printf("Contract Execute: key from params %s \n", params.Key)
 	gas := gasForContract(ctx)
 	encryptedOutput, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, params, msg, prefixStore, cosmwasmAPI, gas)
 	if execErr != nil {
