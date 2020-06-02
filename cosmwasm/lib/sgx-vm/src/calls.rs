@@ -15,7 +15,6 @@ pub fn call_init<S: Storage + 'static, A: Api + 'static>(
 ) -> Result<ContractResult, Error> {
     let env = to_vec(env).context(SerializeErr {})?;
     let data = call_init_raw(instance, &env, msg)?;
-    println!("data: {:?}", data);
     let res: ContractResult = from_slice(&data).context(ParseErr {})?;
     Ok(res)
 }

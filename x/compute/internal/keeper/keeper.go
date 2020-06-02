@@ -141,8 +141,6 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	}
 	consumeGas(ctx, res.GasUsed)
 
-	fmt.Printf("instantiate result: %s\n", res)
-
 	// emit all events from this contract itself
 	value := types.CosmosResult(*res, contractAddress)
 	ctx.EventManager().EmitEvents(value.Events)

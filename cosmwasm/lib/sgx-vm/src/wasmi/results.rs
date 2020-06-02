@@ -19,7 +19,6 @@ impl InitSuccess {
     pub fn into_output(self) -> Vec<u8> {
         let mut out_vec = self.signature.to_vec();
         out_vec.extend_from_slice(&self.output);
-        println!("Into output signature");
         out_vec
     }
 

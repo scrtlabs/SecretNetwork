@@ -90,10 +90,6 @@ func (w *Wasmer) Instantiate(code CodeID, env types.Env, initMsg []byte, store K
 	if err != nil {
 		return nil, nil, err
 	}
-	fmt.Printf("Returned from Instantiate: %s", data)
-
-	fmt.Printf("Key from Instantiate: %s", data[0:64])
-	fmt.Printf("Response from Instantiate: %s", data[64:])
 
 	key := data[0:64]
 	var resp types.CosmosResponse
