@@ -24,5 +24,5 @@ pub trait Rng {
 }
 
 pub trait Kdf {
-    fn derive_key_from_this(&self, counter: u32) -> [u8; SECRET_KEY_SIZE];
+    fn derive_key_from_this(&self, data: &[u8]) -> Self;
 }
