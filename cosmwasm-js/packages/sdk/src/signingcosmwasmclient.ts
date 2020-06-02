@@ -16,8 +16,15 @@ import {
   StdFee,
   StdSignature,
 } from "./types";
-import crypto from "crypto-browserify";
-import forge from "node-forge";
+const miscreant = require("miscreant");
+const cryptoProvider = new miscreant.PolyfillCryptoProvider();
+
+if (!TextEncoder || !TextDecoder) {
+  // we're probably in nodejs
+  const util = require("util");
+  var TextEncoder = util.TextEncoder;
+  var TextDecoder = util.TextDecoder;
+}
 
 export interface SigningCallback {
   (signBytes: Uint8Array): Promise<StdSignature>;
@@ -181,27 +188,31 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     };
   }
 
-  encrypt(msg: object) {
+  async encrypt(msg: object) {
+    const key = Uint8Array.from(new Array(32).fill(0x7));
+    const siv = await miscreant.SIV.importKey(key, "AES-SIV", cryptoProvider);
+
     const msgAsStr = JSON.stringify(msg);
+    const plaintext = new TextEncoder("utf-8").encode(msgAsStr);
 
-    const key = forge.util.createBuffer(new Uint8Array(new Array(32).fill(0x7)).buffer);
-    const iv = forge.util.createBuffer(new Uint8Array(new Array(12).fill(0x0)).buffer);
-    const dummyAad = forge.util.createBuffer(new Uint8Array(new Array(89).fill(0x0)).buffer);
+    const ciphertext = await siv.seal(plaintext, []);
 
-    const input = forge.util.createBuffer();
-    input.putString(msgAsStr);
+    // ad = nonce(32)|wallet_pubkey(33) = 65 bytes
+    const ad = Uint8Array.from(new Array(65).fill(0x0));
 
-    const cipher = forge.cipher.createCipher("AES-GCM", key);
-    cipher.start({ iv: iv, aad: dummyAad });
-    cipher.update(input);
-    cipher.finish();
-    const encrypted = cipher.output;
-    const tag = cipher.mode.tag;
-
-    return cipher.output.putBuffer(cipher.mode.tag);
+    return Uint8Array.from([...ad, ...ciphertext]);
   }
 
-  decrypt(ciphertext: object) {}
+  async decrypt(ciphertext: Uint8Array) {
+    const key = Uint8Array.from(new Array(32).fill(0x7));
+    const siv = await miscreant.SIV.importKey(key, "AES-SIV", cryptoProvider);
+
+    const plaintext = await siv.open(ciphertext, []);
+
+    const msg = new TextDecoder("utf-8").decode(plaintext);
+
+    return msg;
+  }
 
   public async instantiate(
     codeId: number,
