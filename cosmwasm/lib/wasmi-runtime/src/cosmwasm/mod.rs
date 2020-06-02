@@ -1,2 +1,2 @@
-mod encoding;
+pub mod encoding;
 pub mod types;

@@ -157,6 +157,7 @@ pub struct Response {
     pub messages: Vec<CosmosMsg>,
     pub log: Vec<LogAttribute>, // abci defines this as string
     pub data: Option<Binary>,   // abci defines this as bytes
+    pub contract_key: Option<Binary>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

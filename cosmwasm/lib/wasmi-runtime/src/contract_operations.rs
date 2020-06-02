@@ -13,6 +13,7 @@ use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
 
 use super::cosmwasm;
 
+use crate::cosmwasm::types::ContractResult;
 use crate::crypto::{Hmac, Kdf, KEY_MANAGER};
 use crate::errors::wasmi_error_to_enclave_error;
 use crate::gas::{gas_rules, WasmCosts};
@@ -39,6 +40,47 @@ fn generate_contract_id(
 
 fn calc_contract_hash(contract_bytes: &[u8]) -> [u8; HASH_SIZE] {
     sha_256(&contract_bytes)
+}
+
+pub fn create() {}
+
+pub fn append_contract_key(
+    response: &[u8],
+    contract_key: [u8; 64],
+) -> Result<Vec<u8>, EnclaveError> {
+    debug!(
+        "Append contract key -before: {:?}",
+        String::from_utf8_lossy(&response)
+    );
+
+    let mut v: ContractResult = serde_json::from_slice(response).map_err(|err| {
+        error!(
+            "got an error while trying to deserialize response bytes into json {:?}: {}",
+            output, err
+        );
+        EnclaveError::InvalidWasm
+    })?;
+
+    if v.is_err() {
+        Err(EnclaveError::Unknown)
+    }
+
+    v.unwrap().contract_key = Some(cosmwasm::encoding::Binary::from(&contract_key));
+
+    let output = serde_json::ser::to_vec(&v).map_err(|err| {
+        error!(
+            "got an error while trying to serialize response json into bytes {:?}: {}",
+            v, err
+        );
+        EnclaveError::InvalidWasm
+    })?;
+
+    debug!(
+        "Append contract key - after: {:?}",
+        String::from_utf8_lossy(&output)
+    );
+
+    Ok(output)
 }
 
 /*
@@ -69,7 +111,7 @@ pub fn init(
             "got an error while trying to deserialize output bytes into json {:?}: {}",
             env, err
         );
-        EnclaveError::FailedUnseal
+        EnclaveError::InvalidWasm
     })?;
 
     let contract_hash = calc_contract_hash(contract);
@@ -78,12 +120,20 @@ pub fn init(
         parsed_env.message.signer.as_slice(),
         parsed_env.block.height as u64,
     );
+    //let sender_id = [7u8; 32];
+
+    let mut encryption_key = [0u8; 64];
 
     let authenticated_contract_id =
         generate_contract_id(&consensus_state_ikm, &sender_id, &contract_hash);
 
-    let mut tm_contract_id = sender_id.to_vec();
-    tm_contract_id.extend_from_slice(&authenticated_contract_id);
+    encryption_key[0..32].copy_from_slice(&sender_id);
+    encryption_key[32..].copy_from_slice(&authenticated_contract_id);
+
+    // let mut tm_contract_id = sender_id.to_vec();
+    // tm_contract_id.extend_from_slice(&authenticated_contract_id);
+    //
+    // encryption_key.copy_from_slice(&tm_contract_id);
 
     let mut engine = start_engine(context, gas_limit, contract)?;
 
@@ -107,10 +157,13 @@ pub fn init(
 
     let output = encrypt_output(&output)?;
 
+    // third time's the charm
+    let output = append_contract_key(&output, encryption_key)?;
+
     Ok(InitSuccess {
         output,
         used_gas: engine.gas_used(),
-        signature: [0; 65], // TODO this is needed anymore as output is already authenticated
+        signature: encryption_key, // TODO this is needed anymore as output is already authenticated
     })
 }
 
@@ -146,7 +199,7 @@ pub fn handle(
     Ok(HandleSuccess {
         output,
         used_gas: engine.gas_used(),
-        signature: [0; 65], // TODO this is needed anymore as output is already authenticated
+        signature: [0u8; 64], // TODO this is needed anymore as output is already authenticated
     })
 }
 
@@ -177,7 +230,7 @@ pub fn query(
     Ok(QuerySuccess {
         output,
         used_gas: engine.gas_used(),
-        signature: [0; 65], // TODO this is needed anymore as output is already authenticated
+        signature: [0; 64], // TODO this is needed anymore as output is already authenticated
     })
 }
 

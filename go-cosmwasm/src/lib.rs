@@ -239,6 +239,7 @@ pub extern "C" fn instantiate(
         None => EmptyArg { name: CACHE_ARG }.fail(),
     };
     let v = handle_c_error(r, err);
+    println!("Instantiate: Got here and stuff");
     Buffer::from_vec(v)
 }
 
