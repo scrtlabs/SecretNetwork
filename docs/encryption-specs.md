@@ -272,47 +272,47 @@ TODO reasoning
 - Ciphertext is prepended with the `iv` so that the next read will be able to decrypt it. `iv` is also authenticated with the AES-256-GCM AAD.
 - `iv` is derive from `sha256(consensus_state_iv || value || previous_iv)` in order to prevent tx rollback attacks that can force `iv` and `encryption_key` reuse. This also prevents using the same `iv` in different instances of the same contract. `consensus_state_iv` prevents exposing `value` by comparing `iv` to `previos_iv`.
 
-## `contract_id`
+## `contract_key`
 
-- `contract_id` is a concatenation of two values: `contract_id_payload || authenticated_contract_id_payload`.
-- When a contract is deployed (i.e., on contract init), `contract_id` is generated inside of the enclave as follows:
+- `contract_key` is a concatenation of two values: `signer_id || authenticated_contract_id`.
+- When a contract is deployed (i.e., on contract init), `contract_key` is generated inside of the enclave as follows:
 
 ```js
-contract_id_payload = sha256(concat(msg_sender, block_height));
+signer_id = sha256(concat(msg_sender, block_height));
 
 authentication_key = hkdf({
   salt: hkfd_salt,
   info: b"contract_id",
-  ikm: concat(consensus_state_ikm, contract_id_payload),
+  ikm: concat(consensus_state_ikm, signer_id),
 });
 
-authenticated_contract_id_payload = HMAC_SHA256({
+authenticated_contract_id = HMAC_SHA256({
   key: authentication_key,
-  data: concat(contract_id_payload, code_hash),
+  data: code_hash,
 });
 
-tm_contract_id = concat(contract_id_payload, authenticated_contract_id_payload);
+contract_key = concat(signer_id, authenticated_contract_id);
 ```
 
-- Every time a contract execution is called, `contract_id` should be sent to the enclave.
+- Every time a contract execution is called, `contract_key` should be sent to the enclave.
 - In the enclave, the following verification needs to happen:
 
 ```js
-contract_id_payload = tm_contract_id.slice(0, 32);
-expected_contract_id_payload = tm_contract_id.slice(32, 64);
+signer_id = contract_key.slice(0, 32);
+expected_contract_id = contract_key.slice(32, 64);
 
 authentication_key = hkdf({
   salt: hkfd_salt,
   info: b"contract_id",
-  ikm: concat(consensus_state_ikm, contract_id_payload),
+  ikm: concat(consensus_state_ikm, signer_id),
 });
 
-calculated_contract_id_payload = HMAC_SHA256({
+calculated_contract_id = HMAC_SHA256({
   key: authentication_key,
-  data: concat(contract_id_payload, code_hash),
+  data: code_hash,
 });
 
-assert(calculated_contract_id_payload == expected_contract_id_payload);
+assert(calculated_contract_id == expected_contract_id);
 ```
 
 ## write_db(field_name, value)
