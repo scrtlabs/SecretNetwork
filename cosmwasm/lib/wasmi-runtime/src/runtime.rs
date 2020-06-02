@@ -1,9 +1,10 @@
 use crate::crypto::key_manager;
-use crate::crypto::traits::Encryptable;
+use crate::crypto::traits::{Encryptable, Kdf};
 use crate::crypto::*;
 use bech32;
 use bech32::{FromBase32, ToBase32};
 use log::{error, trace, warn};
+use sgx_tcrypto::*;
 use sgx_types::{sgx_status_t, SgxError, SgxResult};
 use std::str;
 use wasmi::{
@@ -14,6 +15,20 @@ use wasmi::{
 use enclave_ffi_types::{Ctx, EnclaveBuffer};
 
 use super::errors::WasmEngineError;
+
+// TEMP UNTIL MERGE WITH ANOTHER BRANCH WHERE THIS IS IMPLEMENTED IN ANOTHER CRATE
+use ring::digest;
+
+pub const HASH_SIZE: usize = 32;
+
+pub fn sha_256(data: &[u8]) -> [u8; HASH_SIZE] {
+    let hash = digest::digest(&digest::SHA256, data);
+
+    let mut result = [0u8; HASH_SIZE];
+    result.copy_from_slice(hash.as_ref());
+
+    result
+}
 
 // --------------------------------
 // Functions to expose to WASM code
@@ -202,12 +217,20 @@ impl Externals for Runtime {
                     Some(value) => value,
                 };
 
-                // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
-                // TODO derive encryption key for these key-value on this contract
-                let base_state_key = key_manager::KEY_MANAGER.get_consensus_state_ikm().unwrap();
-                let base_state_key = AESKey::new_from_slice(base_state_key.get());
+                // Get the state key from the key manager
+                let consensus_state_ikm =
+                    key_manager::KEY_MANAGER.get_consensus_state_ikm().unwrap();
+                let consensus_state_ikm = AESKey::new_from_slice(consensus_state_ikm.get());
 
-                let decrypted_value = base_state_key.decrypt_siv(&value, &vec![]).map_err(|err| {
+                // Derive the key to the specific field name
+                let mut derivation_data = state_key_name.to_vec();
+                derivation_data.extend_from_slice(&[] /* TODO set to contract_id */);
+                let decryption_key = consensus_state_ikm.derive_key_from_this(&derivation_data);
+
+                // Slice ad from `value`
+                let (ad, encrypted_value) = value.split_at(32);
+
+                let decrypted_value = decryption_key.decrypt_siv(&encrypted_value, &vec![ad]).map_err(|err| {
                     error!(
                         "read_db() got an error while trying to decrypt the value for key {:?}, stopping wasm: {:?}",
                         String::from_utf8_lossy(&state_key_name),
@@ -315,12 +338,57 @@ impl Externals for Runtime {
                     String::from_utf8_lossy(value.get(0..std::cmp::min(20, value.len())).unwrap())
                 );
 
-                // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
-                // TODO derive encryption key for these key-value on this contract
-                let base_state_key = key_manager::KEY_MANAGER.get_consensus_state_ikm().unwrap();
-                let base_state_key = AESKey::new_from_slice(base_state_key.get());
+                // Get the state key from the key manager
+                let consensus_state_ikm =
+                    key_manager::KEY_MANAGER.get_consensus_state_ikm().unwrap();
+                let consensus_state_ikm = AESKey::new_from_slice(consensus_state_ikm.get());
 
-                let encrypted_value = base_state_key.encrypt_siv(&value,&vec![]).map_err(|err| {
+                // Derive the key to the specific field name
+                let mut derivation_data = state_key_name.to_vec();
+                derivation_data.extend_from_slice(&[] /* TODO set to contract_id */);
+                let encryption_key = consensus_state_ikm.derive_key_from_this(&derivation_data);
+
+                // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
+                // This returns the value from Tendermint
+                // fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
+                let ad: [u8; 32] = match read_db(unsafe { &self.context.clone() }, &state_key_name)
+                    .map_err(|err| {
+                        error!(
+                            "read_db() got an error from ocall_read_db, stopping wasm: {:?}",
+                            err
+                        );
+                        WasmEngineError::FailedOcall
+                    })? {
+                    None => {
+                        // No data exist yet for this state_key_name, so creating a new `ad`
+                        let mut ad_data = consensus_state_ikm.get().to_vec();
+                        ad_data.extend_from_slice(&value);
+
+                        sha_256(&ad_data) // TODO Do we really need sha256 here?
+                    }
+                    Some(old_value) => {
+                        // Extract previous_ad to calculate the new ad (first 32 bytes)
+                        let (previous_ad, old_value_encrypted) = old_value.split_at(32);
+
+                        // Verify `previous_ad` (decryption won't work if ad is different, don't actually need the decrypted data)
+                        encryption_key.decrypt_siv(&old_value_encrypted, &vec![&previous_ad]).map_err(|err| {
+                            error!(
+                                "read_db() got an error while trying to decrypt the value for key {:?}, stopping wasm: {:?}",
+                                String::from_utf8_lossy(&state_key_name),
+                                err
+                            );
+                            WasmEngineError::DecryptionError
+                        })?;
+
+                        let mut ad_data = &mut consensus_state_ikm.get().to_vec();
+                        ad_data.extend_from_slice(&value);
+                        ad_data.extend_from_slice(&previous_ad);
+
+                        sha_256(ad_data) // TODO Do we really need sha256 here?
+                    }
+                };
+
+                let mut encrypted_value = encryption_key.encrypt_siv(&value, &vec![&ad]).map_err(|err| {
                     error!(
                         "write_db() got an error while trying to encrypt the value {:?}, stopping wasm: {:?}",
                         String::from_utf8_lossy(&value),
@@ -329,12 +397,16 @@ impl Externals for Runtime {
                     WasmEngineError::EncryptionError
                 })?;
 
+                // Write the new data as concat(ad, encrypted_val)
+                let mut encrypted_value_ad = ad.to_vec();
+                encrypted_value_ad.append(&mut encrypted_value);
+
                 // Call write_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
                 // fn write_db(context: Ctx, key: &[u8], value: &[u8]) {
                 write_db(
                     unsafe { self.context.clone() },
                     &state_key_name,
-                    &encrypted_value,
+                    &encrypted_value_ad,
                 )
                 .map_err(|err| {
                     error!(
