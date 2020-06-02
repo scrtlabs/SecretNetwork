@@ -33,15 +33,13 @@ export async function encrypt(msg: object): Promise<string> {
   return btoa(Uint8Array.from([...ad, ...ciphertext]));
 }
 
-export async function decrypt(ciphertext: Uint8Array): Promise<object> {
+export async function decrypt(ciphertext: Uint8Array): Promise<Uint8Array> {
   const key = Uint8Array.from(new Array(32).fill(0x7));
   const siv = await miscreant.SIV.importKey(key, "AES-SIV", cryptoProvider);
 
   const plaintext = await siv.open(ciphertext, [new Uint8Array()]);
 
-  const msg = JSON.parse(new TextDecoder("utf-8").decode(plaintext));
-
-  return msg;
+  return plaintext;
 }
 
 module.exports = {

@@ -237,7 +237,7 @@ function isWasmError<T>(resp: WasmResponse<T>): resp is WasmError {
 
 async function unwrapWasmResponse<T>(response: WasmResponse<T>): Promise<T> {
   if (isWasmError(response)) {
-    throw new Error(JSON.stringify(await decrypt(response.error)));
+    throw new Error(JSON.stringify(await decrypt(fromBase64(response.error))));
   }
 
   return response.result;
@@ -455,6 +455,6 @@ export class RestClient {
 
     const result = await unwrapWasmResponse(responseData);
     // By convention, smart queries must return a valid JSON document (see https://github.com/CosmWasm/cosmwasm/issues/144)
-    return JSON.parse(fromUtf8(await decrypt(fromBase64(result.smart)));
+    return JSON.parse(fromUtf8(fromBase64(fromUtf8(await decrypt(fromBase64(result.smart))))));
   }
 }

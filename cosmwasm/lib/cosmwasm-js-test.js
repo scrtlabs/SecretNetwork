@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 const path = require("path");
 const cosmwasmjs = require(path.resolve(
   __dirname,
