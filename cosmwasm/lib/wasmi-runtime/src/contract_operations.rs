@@ -9,13 +9,15 @@ use wasmi::{ImportsBuilder, ModuleInstance};
 
 use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
 
-use crate::cosmwasm::types::Env;
+use crate::cosmwasm::encoding::Binary;
+use crate::cosmwasm::types::{ContractResult, Env, Response};
 
-use crate::cosmwasm::types::ContractResult;
 use crate::crypto::{Hmac, Kdf, KEY_MANAGER};
 use crate::errors::wasmi_error_to_enclave_error;
 use crate::gas::{gas_rules, WasmCosts};
 use crate::runtime::{Engine, EnigmaImportResolver, Runtime};
+
+pub const CONTRACT_KEY_LENGTH: usize = HASH_SIZE + HASH_SIZE;
 
 fn generate_sender_id(msg_sender: &[u8], block_height: u64) -> [u8; HASH_SIZE] {
     let mut input_data = msg_sender.to_vec();
@@ -51,26 +53,24 @@ pub fn append_contract_key(
         String::from_utf8_lossy(&response)
     );
 
-    let mut v: ContractResult = serde_json::from_slice(response).map_err(|err| {
+    let mut v: Value = serde_json::from_slice(response).map_err(|err| {
         error!(
             "got an error while trying to deserialize response bytes into json {:?}: {}",
-            output, err
+            response, err
         );
-        EnclaveError::InvalidWasm
+        EnclaveError::FailedSeal
     })?;
 
-    if v.is_err() {
-        Err(EnclaveError::Unknown)
+    if let Value::Object(_) = &mut v["ok"] {
+        v["ok"]["contract_key"] = Value::String(base64::encode(contract_key.to_vec().as_slice()));
     }
-
-    v.unwrap().contract_key = Some(cosmwasm::encoding::Binary::from(&contract_key));
 
     let output = serde_json::ser::to_vec(&v).map_err(|err| {
         error!(
-            "got an error while trying to serialize response json into bytes {:?}: {}",
+            "got an error while trying to serialize output json into bytes {:?}: {}",
             v, err
         );
-        EnclaveError::InvalidWasm
+        EnclaveError::FailedSeal
     })?;
 
     debug!(
@@ -156,13 +156,67 @@ pub fn init(
     let output = encrypt_output(&output)?;
 
     // third time's the charm
-    let output = append_contract_key(&output, encryption_key)?;
+    // let output = append_contract_key(&output, encryption_key)?;
 
     Ok(InitSuccess {
         output,
         used_gas: engine.gas_used(),
         signature: encryption_key, // TODO this is needed anymore as output is already authenticated
     })
+}
+
+fn extract_contract_key(env: &Env) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
+    if env.contract_key.is_none() {
+        error!("Contract execute with empty contract key");
+        return Err(EnclaveError::FailedContractAuthentication);
+    }
+
+    let contract_key =
+        base64::decode(env.contract_key.as_ref().unwrap().as_bytes()).map_err(|err| {
+            error!(
+                "got an error while trying to deserialize output bytes into json {:?}: {}",
+                env, err
+            );
+            EnclaveError::FailedContractAuthentication
+        })?;
+
+    if contract_key.len() != CONTRACT_KEY_LENGTH {
+        error!("Contract execute with empty contract key");
+        return Err(EnclaveError::FailedContractAuthentication);
+    }
+
+    let mut key_as_bytes = [0u8; CONTRACT_KEY_LENGTH];
+
+    key_as_bytes.copy_from_slice(&contract_key);
+
+    Ok(key_as_bytes)
+}
+
+fn validate_contract_key(contract_key: &[u8; CONTRACT_KEY_LENGTH], contract_code: &[u8]) -> bool {
+    // parse contract key -> < signer_id || authentication_code >
+    let mut signer_id: [u8; HASH_SIZE] = [0u8; HASH_SIZE];
+    signer_id.copy_from_slice(&contract_key[0..HASH_SIZE]);
+
+    let mut expected_authentication_id: [u8; HASH_SIZE] = [0u8; HASH_SIZE];
+    expected_authentication_id.copy_from_slice(&contract_key[HASH_SIZE..]);
+
+    // calculate contract hash
+    let contract_hash = calc_contract_hash(contract_code);
+
+    // get the enclave key
+    let enclave_key = KEY_MANAGER
+        .get_consensus_state_ikm()
+        .map_err(|err| {
+            error!("Error extractling consensus_state_key");
+            return false;
+        })
+        .unwrap();
+
+    // calculate the authentication_id
+    let calculated_authentication_id =
+        generate_contract_id(&enclave_key, &signer_id, &contract_hash);
+
+    return calculated_authentication_id == expected_authentication_id;
 }
 
 pub fn handle(
@@ -173,6 +227,25 @@ pub fn handle(
     msg: &[u8],
 ) -> Result<HandleSuccess, EnclaveError> {
     let mut engine = start_engine(context, gas_limit, contract)?;
+
+    let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
+        error!(
+            "got an error while trying to deserialize output bytes into json {:?}: {}",
+            env, err
+        );
+        EnclaveError::InvalidWasm
+    })?;
+
+    debug!("handle parsed_envs: {:?}", parsed_env);
+
+    let key = extract_contract_key(&parsed_env)?;
+
+    if !validate_contract_key(&key, contract) {
+        error!("got an error while trying to deserialize output bytes");
+        return Err(EnclaveError::FailedContractAuthentication);
+    }
+
+    debug!("Successfully authenticated the contract!");
 
     let env_ptr = engine
         .write_to_memory(env)

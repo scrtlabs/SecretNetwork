@@ -64,6 +64,7 @@ pub struct Env {
     pub block: BlockInfo,
     pub message: MessageInfo,
     pub contract: ContractInfo,
+    pub contract_key: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, JsonSchema)]
@@ -152,7 +153,6 @@ pub struct Response {
     pub messages: Vec<CosmosMsg>,
     pub log: Vec<LogAttribute>, // abci defines this as string
     pub data: Option<Binary>,   // abci defines this as bytes
-    pub contract_key: Option<Binary>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
