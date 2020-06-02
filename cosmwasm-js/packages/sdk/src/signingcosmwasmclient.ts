@@ -16,15 +16,7 @@ import {
   StdFee,
   StdSignature,
 } from "./types";
-const miscreant = require("miscreant");
-const cryptoProvider = new miscreant.PolyfillCryptoProvider();
-
-if (!TextEncoder || !TextDecoder) {
-  // we're probably in nodejs
-  const util = require("util");
-  var TextEncoder = util.TextEncoder;
-  var TextDecoder = util.TextDecoder;
-}
+import { encrypt, decrypt } from "./enigmautils";
 
 export interface SigningCallback {
   (signBytes: Uint8Array): Promise<StdSignature>;
@@ -188,32 +180,6 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     };
   }
 
-  async encrypt(msg: object): Promise<Uint8Array> {
-    const key = Uint8Array.from(new Array(32).fill(0x7));
-    const siv = await miscreant.SIV.importKey(key, "AES-SIV", cryptoProvider);
-
-    const msgAsStr = JSON.stringify(msg);
-    const plaintext = new TextEncoder("utf-8").encode(msgAsStr);
-
-    const ciphertext = await siv.seal(plaintext, []);
-
-    // ad = nonce(32)|wallet_pubkey(33) = 65 bytes
-    const ad = Uint8Array.from(new Array(65).fill(0x0));
-
-    return Uint8Array.from([...ad, ...ciphertext]);
-  }
-
-  async decrypt(ciphertext: Uint8Array): Promise<object> {
-    const key = Uint8Array.from(new Array(32).fill(0x7));
-    const siv = await miscreant.SIV.importKey(key, "AES-SIV", cryptoProvider);
-
-    const plaintext = await siv.open(ciphertext, []);
-
-    const msg = JSON.parse(new TextDecoder("utf-8").decode(plaintext));
-
-    return msg;
-  }
-
   public async instantiate(
     codeId: number,
     initMsg: object,
@@ -229,7 +195,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
         code_id: codeId.toString(),
         label: label,
         // eslint-disable-next-line @typescript-eslint/camelcase
-        init_msg: initMsg,
+        init_msg: encrypt(initMsg),
         // eslint-disable-next-line @typescript-eslint/camelcase
         init_funds: transferAmount || [],
       },
@@ -267,7 +233,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
       value: {
         sender: this.senderAddress,
         contract: contractAddress,
-        msg: handleMsg,
+        msg: encrypt(handleMsg),
         // eslint-disable-next-line @typescript-eslint/camelcase
         sent_funds: transferAmount || [],
       },
