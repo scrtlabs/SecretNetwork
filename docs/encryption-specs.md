@@ -277,7 +277,7 @@ TODO reasoning
 ## `contract_key`
 
 - `contract_key` is a concatenation of two values: `signer_id || authenticated_contract_key`.
-- When a contract is deployed (i.e., on contract init), `contract_key` is generated inside of the enclave as follows:
+- When a contract is deployed (i.e., on contract init), `contract_key` is generated inside of the Enclave as follows:
 
 ```js
 signer_id = sha256(concat(msg_sender, block_height));
@@ -296,8 +296,8 @@ authenticated_contract_key = hmac_sha256({
 contract_key = concat(signer_id, authenticated_contract_key);
 ```
 
-- Every time a contract execution is called, `contract_key` should be sent to the enclave.
-- In the enclave, the following verification needs to happen:
+- Every time a contract execution is called, `contract_key` should be sent to the Enclave.
+- In the Enclave, the following verification needs to happen:
 
 ```js
 signer_id = contract_key.slice(0, 32);
@@ -397,7 +397,7 @@ TODO reasoning
 
 - `tx_encryption_key`: An AES-128-SIV encryption key. Will be used to encrypt tx inputs and decrypt tx outpus.
   - `tx_encryption_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_io_exchange_pubkey` and `tx_sender_wallet_privkey` (on the sender's side).
-  - `tx_encryption_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_io_exchange_privkey` and `tx_sender_wallet_pubkey` (inside the enclave of every full node).
+  - `tx_encryption_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_io_exchange_privkey` and `tx_sender_wallet_pubkey` (inside the Enclave of every full node).
 - `tx_encryption_key` is derived using HKDF-SHA256 with `tx_encryption_ikm` and a random number `nonce`. This is to prevent using the same key for the same tx sender multiple times.
 
 ## Input
@@ -586,7 +586,7 @@ return output;
 ### Back on the transaction sender
 
 - The transaction output is written to the chain
-- Only the wallet with the right `tx_sender_wallet_privkey` can derive `tx_encryption_key`, so for everyone else it'll just be encrypted.
+- Only the wallet with the right `tx_sender_wallet_privkey` can derive `tx_encryption_key`, so for everyone else it will just be encrypted.
 - Every encrypted value can be decrypted the following way:
 
 ```js
@@ -596,15 +596,11 @@ return output;
 // output["ok"]["log"][i]["value"]
 // output["ok"] if input is a query
 
-bytes = base64_encode(encrypted_output);
-iv = bytes.slice(0, 12);
-encrypted_bytes = bytes.slice(12);
+encrypted_bytes = base64_encode(encrypted_output);
 
-aes_256_gcm_decrypt({
-  iv: iv,
+aes_128_siv_decrypt({
   key: tx_encryption_key,
   data: encrypted_bytes,
-  aad: iv,
 });
 ```
 
@@ -612,6 +608,8 @@ aes_256_gcm_decrypt({
 
 # Blockchain Upgrades
 
-TODO reasoning
+TODO
 
 # Theoretical Attacks
+
+TODO
