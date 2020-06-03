@@ -16,20 +16,6 @@ use enclave_ffi_types::{Ctx, EnclaveBuffer};
 
 use super::errors::WasmEngineError;
 
-// TEMP UNTIL MERGE WITH ANOTHER BRANCH WHERE THIS IS IMPLEMENTED IN ANOTHER CRATE
-use ring::digest;
-
-pub const HASH_SIZE: usize = 32;
-
-pub fn sha_256(data: &[u8]) -> [u8; HASH_SIZE] {
-    let hash = digest::digest(&digest::SHA256, data);
-
-    let mut result = [0u8; HASH_SIZE];
-    result.copy_from_slice(hash.as_ref());
-
-    result
-}
-
 // --------------------------------
 // Functions to expose to WASM code
 // --------------------------------
@@ -220,7 +206,6 @@ impl Externals for Runtime {
                 // Get the state key from the key manager
                 let consensus_state_ikm =
                     key_manager::KEY_MANAGER.get_consensus_state_ikm().unwrap();
-                let consensus_state_ikm = AESKey::new_from_slice(consensus_state_ikm.get());
 
                 // Derive the key to the specific field name
                 let mut derivation_data = state_key_name.to_vec();
@@ -341,7 +326,6 @@ impl Externals for Runtime {
                 // Get the state key from the key manager
                 let consensus_state_ikm =
                     key_manager::KEY_MANAGER.get_consensus_state_ikm().unwrap();
-                let consensus_state_ikm = AESKey::new_from_slice(consensus_state_ikm.get());
 
                 // Derive the key to the specific field name
                 let mut derivation_data = state_key_name.to_vec();

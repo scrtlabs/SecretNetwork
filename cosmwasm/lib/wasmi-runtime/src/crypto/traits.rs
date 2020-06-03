@@ -1,6 +1,8 @@
 use crate::crypto::keys::SECRET_KEY_SIZE;
 use enclave_ffi_types::{CryptoError, EnclaveError};
 
+pub const HMAC_SIGNATURE_SIZE: usize = 32;
+
 pub trait Encryptable {
     fn encrypt(&self, plaintext: &[u8]) -> Result<Vec<u8>, CryptoError>;
     fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>, CryptoError>;
@@ -25,4 +27,8 @@ pub trait Rng {
 
 pub trait Kdf {
     fn derive_key_from_this(&self, data: &[u8]) -> Self;
+}
+
+pub trait Hmac {
+    fn sign_sha_256(&self, to_sign: &[u8]) -> [u8; HMAC_SIGNATURE_SIZE];
 }

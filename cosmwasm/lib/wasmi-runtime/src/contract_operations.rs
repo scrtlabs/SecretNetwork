@@ -2,15 +2,24 @@ use base64;
 use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
 use parity_wasm::elements;
+
 use serde_json::Value;
 use wasmi::{ImportsBuilder, ModuleInstance};
 
 use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
 
-use crate::crypto::{key_manager::KEY_MANAGER, AESKey, SIVEncryptable};
+use crate::cosmwasm::encoding::Binary;
+use crate::cosmwasm::types::{ContractResult, Env, Response};
+
+use crate::crypto::{AESKey, Hmac, Kdf, SIVEncryptable, HASH_SIZE, KEY_MANAGER};
 use crate::errors::wasmi_error_to_enclave_error;
 use crate::gas::{gas_rules, WasmCosts};
 use crate::runtime::{Engine, EnigmaImportResolver, Runtime};
+
+use crate::contract_validation::{
+    calc_contract_hash, extract_contract_key, generate_contract_id, generate_encryption_key,
+    generate_sender_id, validate_contract_key, CONTRACT_KEY_LENGTH,
+};
 
 /*
 Each contract is compiled with these functions alreadyy implemented in wasm:
@@ -34,6 +43,16 @@ pub fn init(
     env: &[u8],      // blockchain state
     msg: &[u8],      // probably function call and args
 ) -> Result<InitSuccess, EnclaveError> {
+    let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
+        error!(
+            "got an error while trying to deserialize output bytes into json {:?}: {}",
+            env, err
+        );
+        EnclaveError::FailedToDeserialize
+    })?;
+
+    let contract_key = generate_encryption_key(&parsed_env, contract)?;
+
     let mut engine = start_engine(context, gas_limit, contract)?;
 
     let env_ptr = engine
@@ -56,10 +75,13 @@ pub fn init(
 
     let output = encrypt_output(&output)?;
 
+    // third time's the charm
+    // let output = append_contract_key(&output, encryption_key)?;
+
     Ok(InitSuccess {
         output,
         used_gas: engine.gas_used(),
-        signature: [0; 65], // TODO this is needed anymore as output is already authenticated
+        signature: contract_key, // TODO this is needed anymore as output is already authenticated
     })
 }
 
@@ -71,6 +93,25 @@ pub fn handle(
     msg: &[u8],
 ) -> Result<HandleSuccess, EnclaveError> {
     let mut engine = start_engine(context, gas_limit, contract)?;
+
+    let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
+        error!(
+            "got an error while trying to deserialize output bytes into json {:?}: {}",
+            env, err
+        );
+        EnclaveError::FailedToDeserialize
+    })?;
+
+    debug!("handle parsed_envs: {:?}", parsed_env);
+
+    let key = extract_contract_key(&parsed_env)?;
+
+    if !validate_contract_key(&key, contract) {
+        error!("got an error while trying to deserialize output bytes");
+        return Err(EnclaveError::FailedContractAuthentication);
+    }
+
+    debug!("Successfully authenticated the contract!");
 
     let env_ptr = engine
         .write_to_memory(env)
@@ -95,7 +136,7 @@ pub fn handle(
     Ok(HandleSuccess {
         output,
         used_gas: engine.gas_used(),
-        signature: [0; 65], // TODO this is needed anymore as output is already authenticated
+        signature: [0u8; 64], // TODO this is needed anymore as output is already authenticated
     })
 }
 
@@ -126,7 +167,7 @@ pub fn query(
     Ok(QuerySuccess {
         output,
         used_gas: engine.gas_used(),
-        signature: [0; 65], // TODO this is needed anymore as output is already authenticated
+        signature: [0; 64], // TODO this is needed anymore as output is already authenticated
     })
 }
 
@@ -155,7 +196,7 @@ fn decrypt_msg(msg: &[u8]) -> Result<Vec<u8>, EnclaveError> {
             "handle() got an error while trying to decrypt the msg: {}",
             err
         );
-        EnclaveError::FailedUnseal
+        EnclaveError::DecryptionError
     })?;
 
     Ok(msg)
@@ -190,7 +231,7 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
             "got an error while trying to deserialize output bytes into json {:?}: {}",
             output, err
         );
-        EnclaveError::FailedSeal
+        EnclaveError::FailedToDeserialize
     })?;
 
     if let Value::String(err) = &v["err"] {
@@ -201,7 +242,7 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
                         "got an error while trying to encrypt output error {:?}: {}",
                         err, err
                     );
-                    EnclaveError::FailedSeal
+                    EnclaveError::EncryptionError
                 })?,
         ));
     } else if let Value::String(ok) = &v["ok"] {
@@ -213,7 +254,7 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
                         "got an error while trying to encrypt query output {:?}: {}",
                         ok, err
                     );
-                    EnclaveError::FailedSeal
+                    EnclaveError::EncryptionError
                 })?,
         ));
     } else if let Value::Object(ok) = &mut v["ok"] {
@@ -228,7 +269,7 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
                             "got an error while trying to encrypt the msg to next call {:?}: {}",
                             msg["contract"], err
                         );
-                                EnclaveError::FailedSeal
+                                EnclaveError::EncryptionError
                             })?,
                     ));
                 }
@@ -245,7 +286,7 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
                                     "got an error while trying to encrypt the event key {}: {}",
                                     k, err
                                 );
-                                EnclaveError::FailedSeal
+                                EnclaveError::EncryptionError
                             })?,
                     ));
                 }
@@ -257,7 +298,7 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
                                     "got an error while trying to encrypt the event value {}: {}",
                                     v, err
                                 );
-                                EnclaveError::FailedSeal
+                                EnclaveError::EncryptionError
                             })?,
                     ));
                 }
@@ -272,7 +313,7 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
                             "got an error while trying to encrypt the data section {}: {}",
                             data, err
                         );
-                        EnclaveError::FailedSeal
+                        EnclaveError::EncryptionError
                     })?,
             ));
         }
@@ -283,7 +324,7 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
             "got an error while trying to serialize output json into bytes {:?}: {}",
             v, err
         );
-        EnclaveError::FailedSeal
+        EnclaveError::FailedToSerialize
     })?;
 
     debug!("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");

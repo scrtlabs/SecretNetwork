@@ -92,6 +92,12 @@ pub enum EnclaveError {
     /// Failed to seal data
     FailedSeal,
     FailedUnseal,
+    /// contract key was invalid
+    FailedContractAuthentication,
+    FailedToDeserialize,
+    FailedToSerialize,
+    EncryptionError,
+    DecryptionError,
     /// Unexpected Error happened, no more details available
     Unknown,
 }
@@ -183,7 +189,7 @@ pub enum InitResult {
         /// The gas used by the execution.
         used_gas: u64,
         /// A signature by the enclave on all of the results.
-        signature: [u8; 65],
+        signature: [u8; 64],
     },
     Failure {
         err: EnclaveError,
@@ -200,7 +206,7 @@ pub enum HandleResult {
         /// The gas used by the execution.
         used_gas: u64,
         /// A signature by the enclave on all of the results.
-        signature: [u8; 65],
+        signature: [u8; 64],
     },
     Failure {
         err: EnclaveError,
@@ -217,7 +223,7 @@ pub enum QueryResult {
         /// The gas used by the execution.
         used_gas: u64,
         /// A signature by the enclave on all of the results.
-        signature: [u8; 65],
+        signature: [u8; 64],
     },
     Failure {
         err: EnclaveError,

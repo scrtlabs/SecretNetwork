@@ -8,7 +8,7 @@ pub struct InitSuccess {
     /// The gas used by the execution.
     used_gas: u64,
     /// A signature by the enclave on all of the results.
-    signature: [u8; 65],
+    signature: [u8; 64],
 }
 
 impl InitSuccess {
@@ -17,14 +17,16 @@ impl InitSuccess {
     }
 
     pub fn into_output(self) -> Vec<u8> {
-        self.output
+        let mut out_vec = self.signature.to_vec();
+        out_vec.extend_from_slice(&self.output);
+        out_vec
     }
 
     pub fn used_gas(&self) -> u64 {
         self.used_gas
     }
 
-    pub fn signature(&self) -> &[u8; 65] {
+    pub fn signature(&self) -> &[u8; 64] {
         &self.signature
     }
 }
@@ -51,7 +53,7 @@ pub struct HandleSuccess {
     /// The gas used by the execution.
     used_gas: u64,
     /// A signature by the enclave on all of the results.
-    signature: [u8; 65],
+    signature: [u8; 64],
 }
 
 impl HandleSuccess {
@@ -67,7 +69,7 @@ impl HandleSuccess {
         self.used_gas
     }
 
-    pub fn signature(&self) -> &[u8; 65] {
+    pub fn signature(&self) -> &[u8; 64] {
         &self.signature
     }
 }
@@ -96,7 +98,7 @@ pub struct QuerySuccess {
     /// The gas used by the execution.
     used_gas: u64,
     /// A signature by the enclave on all of the results.
-    signature: [u8; 65],
+    signature: [u8; 64],
 }
 
 impl QuerySuccess {
@@ -112,7 +114,7 @@ impl QuerySuccess {
         self.used_gas
     }
 
-    pub fn signature(&self) -> &[u8; 65] {
+    pub fn signature(&self) -> &[u8; 64] {
         &self.signature
     }
 }
@@ -139,7 +141,7 @@ pub struct KeyGenSuccess {
     /// A pointer to the output of the execution
     output: Vec<u8>,
     /// A signature by the enclave on all of the results.
-    signature: [u8; 65],
+    signature: [u8; 64],
 }
 
 impl KeyGenSuccess {
@@ -151,7 +153,7 @@ impl KeyGenSuccess {
         self.output
     }
 
-    pub fn signature(&self) -> &[u8; 65] {
+    pub fn signature(&self) -> &[u8; 64] {
         &self.signature
     }
 }

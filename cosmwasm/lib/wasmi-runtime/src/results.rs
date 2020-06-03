@@ -10,7 +10,7 @@ pub struct InitSuccess {
     /// The gas used by the execution.
     pub used_gas: u64,
     /// A signature by the enclave on all of the results.
-    pub signature: [u8; 65],
+    pub signature: [u8; 64],
 }
 
 pub fn result_init_success_to_initresult(result: Result<InitSuccess, EnclaveError>) -> InitResult {
@@ -49,7 +49,7 @@ pub struct HandleSuccess {
     /// The gas used by the execution.
     pub used_gas: u64,
     /// A signature by the enclave on all of the results.
-    pub signature: [u8; 65],
+    pub signature: [u8; 64],
 }
 
 pub fn result_handle_success_to_handleresult(
@@ -90,7 +90,7 @@ pub struct QuerySuccess {
     /// The gas used by the execution.
     pub used_gas: u64,
     /// A signature by the enclave on all of the results.
-    pub signature: [u8; 65],
+    pub signature: [u8; 64],
 }
 
 pub fn result_query_success_to_queryresult(

@@ -81,26 +81,27 @@ func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 //
 // TODO: clarify which errors are returned? vm failure. out of gas. code unauthorized.
 // TODO: add callback for querying into other modules
-func (w *Wasmer) Instantiate(code CodeID, env types.Env, initMsg []byte, store KVStore, goapi GoAPI, gasLimit uint64) (*types.Result, error) {
+func (w *Wasmer) Instantiate(code CodeID, env types.Env, initMsg []byte, store KVStore, goapi GoAPI, gasLimit uint64) (*types.Result, []byte, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	data, gasUsed, err := api.Instantiate(w.cache, code, paramBin, initMsg, store, &goapi, gasLimit)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
+	key := data[0:64]
 	var resp types.CosmosResponse
-	err = json.Unmarshal(data, &resp)
+	err = json.Unmarshal(data[64:], &resp)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if resp.Err != "" {
-		return nil, fmt.Errorf(resp.Err)
+		return nil, nil, fmt.Errorf(resp.Err)
 	}
 	resp.Ok.GasUsed = gasUsed
-	return &resp.Ok, nil
+	return &resp.Ok, key, nil
 }
 
 // Execute calls a given contract. Since the only difference between contracts with the same CodeID is the
