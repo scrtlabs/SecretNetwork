@@ -7,8 +7,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 
@@ -128,12 +130,14 @@ func (ctx WASMCLIContext) getTxEncryptionKey(txSenderPrivKey *secp256k1.PrivateK
 	if err != nil {
 		return nil, err
 	}
-	ioPubKey, err := secp256k1.ParsePubKey(ioPubKeyBytes)
+	ioPubKey, err := secp256k1.ParsePubKey(append([]byte{0x4}, ioPubKeyBytes...))
 	if err != nil {
 		return nil, err
 	}
 
 	txEncryptionIkm := secp256k1.GenerateSharedSecret(txSenderPrivKey, ioPubKey)
+
+	fmt.Fprintf(os.Stderr, "CLI txEncryptionIkm = %v", txEncryptionIkm)
 
 	hkdf := hkdf.New(sha256.New, append(txEncryptionIkm, nonce...), hkdfSalt, []byte{})
 
@@ -142,11 +146,15 @@ func (ctx WASMCLIContext) getTxEncryptionKey(txSenderPrivKey *secp256k1.PrivateK
 		return nil, err
 	}
 
+	fmt.Fprintf(os.Stderr, "CLI txEncryptionKey = %v", txEncryptionKey)
+
 	return txEncryptionKey, nil
 }
 
 // Encrypt encrypts
 func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
+	log.Println("שלום אני פה")
+
 	txSenderPrivKey, txSenderPubKey, err := ctx.getTxSenderKeyPair()
 
 	nonce := make([]byte, 32)
@@ -154,16 +162,19 @@ func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
 
 	txEncryptionKey, err := ctx.getTxEncryptionKey(txSenderPrivKey, nonce)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
 	cipher, err := miscreant.NewAESCMACSIV(txEncryptionKey)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
 	ciphertext, err := cipher.Seal(nil, plaintext, []byte{})
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 

@@ -9,12 +9,18 @@ use serde_json::Value;
 fn derive_dh_io_key(user_pubkey: &[u8], nonce: &[u8; 32]) -> Result<AESKey, EnclaveError> {
     let enclave_io_key = KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap();
 
-    let derived_key = match enclave_io_key.derive_key(user_pubkey) {
+    let tx_encryption_ikm = match enclave_io_key.derive_key(user_pubkey) {
         Err(e) => return Err(EnclaveError::FailedFunctionCall),
         Ok(t) => t,
     };
 
-    Ok(AESKey::new_from_slice(&derived_key).derive_key_from_this(nonce))
+    info!("rust tx_encryption_ikm {:?}", tx_encryption_ikm);
+
+    let tx_encryption_key = AESKey::new_from_slice(&tx_encryption_ikm).derive_key_from_this(nonce);
+
+    info!("rust tx_encryption_key {:?}", tx_encryption_key);
+
+    Ok(tx_encryption_key)
 }
 
 pub fn decrypt_msg(msg: &[u8]) -> Result<(Vec<u8>, [u8; 33], [u8; 32]), EnclaveError> {

@@ -17,7 +17,7 @@ pub const SEED_SIZE: usize = 32;
 pub const SECRET_KEY_SIZE: usize = secp256k1::constants::SECRET_KEY_SIZE;
 /// The size of uncomressed public keys
 pub const UNCOMPRESSED_PUBLIC_KEY_SIZE: usize = secp256k1::constants::UNCOMPRESSED_PUBLIC_KEY_SIZE;
-pub const COMPRESSED_PUBLIC_KEY_SIZE: usize = secp256k1::constants::COMPACT_SIGNATURE_SIZE;
+pub const COMPRESSED_PUBLIC_KEY_SIZE: usize = 33;
 /// symmetric key we use for encryption.
 pub type SymmetricKey = [u8; SYMMETRIC_KEY_SIZE];
 /// StateKey is the key used for state encryption.
@@ -110,22 +110,10 @@ impl KeyPair {
 
     /// This function does an ECDH(point multiplication) between one's private key and the other one's public key
     pub fn derive_key(&self, pubarr: &[u8]) -> Result<DhKey, CryptoError> {
-        // Pubkey is already 65 bytes, not sure what this is for?
-        // let mut pub_k = [4u8; UNCOMPRESSED_PUBLIC_KEY_SIZE];
-        // let mut pub_k_gx: [u8; 32] = [0u8; 32];
-        // pub_k_gx.clone_from_slice(&pubarr[1..33]);
-        // pub_k_gx.reverse();
-        //
-        // let mut pub_k_gy: [u8; 32] = [0u8; 32];
-        // pub_k_gx.clone_from_slice(&pubarr[33..65]);
-        // pub_k_gy.reverse();
-        //
-        //
-        // pub_k[1..33].clone_from_slice(&pub_k_gx);
-        // pub_k[33..].clone_from_slice(&pub_k_gy);
+        info!("rust got pubkey {:?}", pubarr);
 
         if pubarr.len() != UNCOMPRESSED_PUBLIC_KEY_SIZE
-            || pubarr.len() != UNCOMPRESSED_PUBLIC_KEY_SIZE
+            && pubarr.len() != COMPRESSED_PUBLIC_KEY_SIZE
         {
             error!("Public key invalid length - must be 65 or 33 bytes");
             return Err(CryptoError::KeyError {});
