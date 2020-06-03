@@ -42,13 +42,14 @@ func GzipIt(input []byte) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-type CLIContext struct {
+// WASMCLIContext wraps github.com/cosmos/cosmos-sdk/client/context.CLIContext
+type WASMCLIContext struct {
 	CLIContext context.CLIContext
 }
 
 // Encrypt encrypts the input ([]byte)
 // https://gist.github.com/kkirsche/e28da6754c39d5e7ea10
-func (ctx CLIContext) Encrypt(plaintext []byte) ([]byte, error) {
+func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
 	key := []byte{
 		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
 		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
@@ -86,7 +87,7 @@ func (ctx CLIContext) Encrypt(plaintext []byte) ([]byte, error) {
 
 // Decrypt decrypts the input ([]byte)
 // https://gist.github.com/kkirsche/e28da6754c39d5e7ea10
-func (ctx CLIContext) Decrypt(ciphertext []byte) ([]byte, error) {
+func (ctx WASMCLIContext) Decrypt(ciphertext []byte) ([]byte, error) {
 	key := []byte{
 		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
 		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,

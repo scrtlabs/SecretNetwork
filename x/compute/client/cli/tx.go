@@ -129,7 +129,7 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 				return fmt.Errorf("Label is required on all contracts")
 			}
 
-			wasmCliCtx := wasmUtils.CLIContext{CLIContext: cliCtx}
+			wasmCliCtx := wasmUtils.WASMCLIContext{CLIContext: cliCtx}
 
 			initMsg := []byte(args[1])
 			initMsg, err = wasmCliCtx.Encrypt(initMsg)
@@ -177,7 +177,7 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			wasmCliCtx := wasmUtils.CLIContext{CLIContext: cliCtx}
+			wasmCliCtx := wasmUtils.WASMCLIContext{CLIContext: cliCtx}
 
 			execMsg := []byte(args[1])
 			execMsg, err = wasmCliCtx.Encrypt(execMsg)
