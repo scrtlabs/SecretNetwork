@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"io"
@@ -14,7 +15,10 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/decred/dcrd/dcrec/secp256k1"
+	regtypes "github.com/enigmampc/EnigmaBlockchain/x/registration"
+	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
 	"github.com/miscreant/miscreant.go"
+	"golang.org/x/crypto/hkdf"
 )
 
 var (
@@ -72,7 +76,7 @@ func (ctx WASMCLIContext) getKeyPair() (*secp256k1.PrivateKey, *secp256k1.Public
 
 		keyPair := keyPair{
 			Private: hex.EncodeToString(privkey.Serialize()),
-			Public:  hex.EncodeToString(pubkey.Serialize()),
+			Public:  hex.EncodeToString(pubkey.SerializeCompressed()),
 		}
 
 		keyPairJSONBytes, err := json.MarshalIndent(keyPair, "", "    ")
@@ -106,26 +110,50 @@ func (ctx WASMCLIContext) getKeyPair() (*secp256k1.PrivateKey, *secp256k1.Public
 	return privkey, pubkey, nil
 }
 
-// Encrypt encrypts the input ([]byte)
-// https://gist.github.com/kkirsche/e28da6754c39d5e7ea10
+var hkdfSalt = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x4b, 0xea, 0xd8, 0xdf, 0x69, 0x99,
+	0x08, 0x52, 0xc2, 0x02, 0xdb, 0x0e, 0x00, 0x97, 0xc1, 0xa1, 0x2e, 0xa6, 0x37, 0xd7, 0xe9, 0x6d}
+
+// Encrypt encrypts
 func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
-	priv, pub, err := ctx.getKeyPair()
-	log.Printf("priv: %v, pub %v, err %v", priv, pub, err)
+	txSenderPrivKey, txSenderPubKey, err := ctx.getKeyPair()
+	log.Printf("priv: %v, pub %v, err %v", txSenderPrivKey, txSenderPubKey, err)
 
-	key := []byte{
-		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
-		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
-		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
-		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
+	res, _, err := ctx.CLIContext.Query("custom/register/master-cert")
+	if err != nil {
+		return nil, err
 	}
+	var certs regtypes.GenesisState
 
-	cipher, err := miscreant.NewAESCMACSIV(key)
+	err = json.Unmarshal(res, &certs)
 	if err != nil {
 		return nil, err
 	}
 
+	ioPubKeyBytes, err := ra.VerifyRaCert(certs.IoMasterCertificate)
+	if err != nil {
+		return nil, err
+	}
+	ioPubKey, err := secp256k1.ParsePubKey(ioPubKeyBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	txEncryptionIkm := secp256k1.GenerateSharedSecret(txSenderPrivKey, ioPubKey)
+
+	hkdfHash := sha256.New
+
 	nonce := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+	rand.Read(nonce)
+
+	hkdf := hkdf.New(hkdfHash, append(txEncryptionIkm, nonce...), hkdfSalt, []byte{})
+
+	txEncryptionKey := make([]byte, 32)
+	if _, err := io.ReadFull(hkdf, txEncryptionKey); err != nil {
+		return nil, err
+	}
+
+	cipher, err := miscreant.NewAESCMACSIV(txEncryptionKey)
+	if err != nil {
 		return nil, err
 	}
 
@@ -134,23 +162,14 @@ func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	nonce = make([]byte, 32)         // TODO fix
-	walletPubKey := make([]byte, 33) // TODO fix
-
-	// ad = nonce(32)|wallet_pubkey(33) = 65 bytes
-	ad := []byte{}
-	ad = append(ad, nonce...)        // TODO fix real inputNonce
-	ad = append(ad, walletPubKey...) // TODO fix real outputNonce
-
-	ciphertext = append(ad, ciphertext...)
+	// ciphertext = nonce(32) || wallet_pubkey(33) || ciphertext
+	ciphertext = append(nonce, append(txSenderPubKey.SerializeCompressed(), ciphertext...)...)
 
 	return ciphertext, nil
 }
 
-// Decrypt decrypts the input ([]byte)
-// https://gist.github.com/kkirsche/e28da6754c39d5e7ea10
+// Decrypt decrypts
 func (ctx WASMCLIContext) Decrypt(ciphertext []byte) ([]byte, error) {
-
 	key := []byte{
 		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
 		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,

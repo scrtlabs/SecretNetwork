@@ -3,6 +3,7 @@ package keeper
 import (
 	"encoding/hex"
 	"encoding/json"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"

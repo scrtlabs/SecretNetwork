@@ -15,7 +15,7 @@ impl Kdf for AESKey {
         let mut input_bytes: Vec<u8> = self.get().to_vec();
         input_bytes.extend_from_slice(data);
 
-        AESKey::new_from_slice(&derive_key(&input_bytes, &[b"aeskey"]))
+        AESKey::new_from_slice(&derive_key(&input_bytes, &[]))
     }
 }
 

@@ -6,9 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+
 	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/keeper"
 	flag "github.com/spf13/pflag"
-	"io/ioutil"
 
 	"github.com/spf13/cobra"
 
