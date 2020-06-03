@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"io"
 
+	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/miscreant/miscreant.go"
 )
 
@@ -41,11 +42,14 @@ func GzipIt(input []byte) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
+// WASMCLIContext wraps github.com/cosmos/cosmos-sdk/client/context.CLIContext
+type WASMCLIContext struct {
+	CLIContext context.CLIContext
+}
+
 // Encrypt encrypts the input ([]byte)
 // https://gist.github.com/kkirsche/e28da6754c39d5e7ea10
-func Encrypt(plaintext []byte) ([]byte, error) {
-	// The key argument should be the AES key, either 16 or 32 bytes
-	// to select AES-128 or AES-256.
+func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
 	key := []byte{
 		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
 		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
@@ -83,9 +87,7 @@ func Encrypt(plaintext []byte) ([]byte, error) {
 
 // Decrypt decrypts the input ([]byte)
 // https://gist.github.com/kkirsche/e28da6754c39d5e7ea10
-func Decrypt(ciphertext []byte) ([]byte, error) {
-	// The key argument should be the AES key, either 16 or 32 bytes
-	// to select AES-128 or AES-256.
+func (ctx WASMCLIContext) Decrypt(ciphertext []byte) ([]byte, error) {
 	key := []byte{
 		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
 		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
