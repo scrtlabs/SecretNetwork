@@ -20,6 +20,7 @@ use super::contract_validation::{
     calc_contract_hash, extract_contract_key, generate_contract_id, generate_encryption_key,
     generate_sender_id, validate_contract_key, CONTRACT_KEY_LENGTH,
 };
+use crate::wasm::contract_validation::ContractKey;
 
 /*
 Each contract is compiled with these functions alreadyy implemented in wasm:
@@ -53,7 +54,9 @@ pub fn init(
 
     let contract_key = generate_encryption_key(&parsed_env, contract)?;
 
-    let mut engine = start_engine(context, gas_limit, contract)?;
+    info!("Init: Contract Key: {:?}", contract_key.to_vec().as_slice());
+
+    let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
 
     let env_ptr = engine
         .write_to_memory(env)
@@ -92,8 +95,6 @@ pub fn handle(
     env: &[u8],
     msg: &[u8],
 ) -> Result<HandleSuccess, EnclaveError> {
-    let mut engine = start_engine(context, gas_limit, contract)?;
-
     let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
         error!(
             "got an error while trying to deserialize output bytes into json {:?}: {}",
@@ -104,14 +105,21 @@ pub fn handle(
 
     debug!("handle parsed_envs: {:?}", parsed_env);
 
-    let key = extract_contract_key(&parsed_env)?;
+    let contract_key = extract_contract_key(&parsed_env)?;
 
-    if !validate_contract_key(&key, contract) {
+    if !validate_contract_key(&contract_key, contract) {
         error!("got an error while trying to deserialize output bytes");
         return Err(EnclaveError::FailedContractAuthentication);
     }
 
     debug!("Successfully authenticated the contract!");
+
+    info!(
+        "Handle: Contract Key: {:?}",
+        contract_key.to_vec().as_slice()
+    );
+
+    let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
 
     let env_ptr = engine
         .write_to_memory(env)
@@ -146,7 +154,22 @@ pub fn query(
     contract: &[u8],
     msg: &[u8],
 ) -> Result<QuerySuccess, EnclaveError> {
-    let mut engine = start_engine(context, gas_limit, contract)?;
+    if msg.len() < CONTRACT_KEY_LENGTH {
+        error!("Input query is shorter than the minimum expected. Msg is malformed");
+        return Err(EnclaveError::FailedFunctionCall);
+    }
+
+    let (key, msg) = msg.split_at(CONTRACT_KEY_LENGTH);
+
+    let mut contract_key = [0; CONTRACT_KEY_LENGTH];
+    contract_key.copy_from_slice(key);
+
+    info!(
+        "Query: Contract Key: {:?}",
+        contract_key.to_vec().as_slice()
+    );
+
+    let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
 
     let msg = decrypt_msg(msg)?;
 
@@ -334,7 +357,12 @@ fn encrypt_output(output: &Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
     Ok(output)
 }
 
-fn start_engine(context: Ctx, gas_limit: u64, contract: &[u8]) -> Result<Engine, EnclaveError> {
+fn start_engine(
+    context: Ctx,
+    gas_limit: u64,
+    contract: &[u8],
+    contract_key: &ContractKey,
+) -> Result<Engine, EnclaveError> {
     // Create a parity-wasm module first, so we can inject gas metering to it
     // (you need a parity-wasm module to use the pwasm-utils crate)
     let p_modlue = elements::deserialize_buffer(contract).map_err(|_| EnclaveError::InvalidWasm)?;
@@ -376,6 +404,7 @@ fn start_engine(context: Ctx, gas_limit: u64, contract: &[u8]) -> Result<Engine,
             .cloned()
             .expect("'memory' export should be of memory type"),
         gas_limit,
+        contract_key.clone(),
     );
 
     Ok(Engine::new(runtime, instance))
