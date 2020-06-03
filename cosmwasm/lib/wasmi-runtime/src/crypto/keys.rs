@@ -126,6 +126,8 @@ impl KeyPair {
             CryptoError::KeyError {}
         })?;
 
+        info!("rust consensus_io_pubkey: {:?}", self.pubkey);
+
         let shared = SharedSecret::new(&pubkey, &self.privkey);
 
         if shared.len() != SYMMETRIC_KEY_SIZE {

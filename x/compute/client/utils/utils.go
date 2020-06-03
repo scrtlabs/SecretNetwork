@@ -126,18 +126,21 @@ func (ctx WASMCLIContext) getTxEncryptionKey(txSenderPrivKey *secp256k1.PrivateK
 		return nil, err
 	}
 
-	ioPubKeyBytes, err := ra.VerifyRaCert(certs.IoMasterCertificate)
-	if err != nil {
-		return nil, err
-	}
-	ioPubKey, err := secp256k1.ParsePubKey(append([]byte{0x4}, ioPubKeyBytes...))
+	consensusIoPubKeyBytes, err := ra.VerifyRaCert(certs.IoMasterCertificate)
 	if err != nil {
 		return nil, err
 	}
 
-	txEncryptionIkm := secp256k1.GenerateSharedSecret(txSenderPrivKey, ioPubKey)
+	consensusIoPubKey, err := secp256k1.ParsePubKey(append([]byte{0x4}, consensusIoPubKeyBytes...))
+	if err != nil {
+		return nil, err
+	}
 
-	fmt.Fprintf(os.Stderr, "CLI txEncryptionIkm = %v", txEncryptionIkm)
+	fmt.Fprintf(os.Stderr, "CLI consensusIoPubKey = %v\n", consensusIoPubKey.SerializeCompressed())
+
+	txEncryptionIkm := secp256k1.GenerateSharedSecret(txSenderPrivKey, consensusIoPubKey)
+
+	fmt.Fprintf(os.Stderr, "CLI txEncryptionIkm = %v\n", txEncryptionIkm)
 
 	hkdf := hkdf.New(sha256.New, append(txEncryptionIkm, nonce...), hkdfSalt, []byte{})
 
@@ -146,15 +149,13 @@ func (ctx WASMCLIContext) getTxEncryptionKey(txSenderPrivKey *secp256k1.PrivateK
 		return nil, err
 	}
 
-	fmt.Fprintf(os.Stderr, "CLI txEncryptionKey = %v", txEncryptionKey)
+	fmt.Fprintf(os.Stderr, "CLI txEncryptionKey = %v\n", txEncryptionKey)
 
 	return txEncryptionKey, nil
 }
 
 // Encrypt encrypts
 func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
-	log.Println("שלום אני פה")
-
 	txSenderPrivKey, txSenderPubKey, err := ctx.getTxSenderKeyPair()
 
 	nonce := make([]byte, 32)
@@ -177,6 +178,8 @@ func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
 		log.Println(err)
 		return nil, err
 	}
+
+	fmt.Fprintf(os.Stderr, "CLI txSenderPubKey = %v\n", txSenderPubKey.SerializeCompressed())
 
 	// ciphertext = nonce(32) || wallet_pubkey(33) || ciphertext
 	ciphertext = append(nonce, append(txSenderPubKey.SerializeCompressed(), ciphertext...)...)
