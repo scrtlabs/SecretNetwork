@@ -3,9 +3,12 @@ use log::*;
 use sgx_types::{sgx_status_t, SgxResult};
 
 use crate::consts::ENCRYPTED_SEED_SIZE;
-use crate::crypto::{AESKey, Keychain, SIVEncryptable, SEED_KEY_SIZE};
+use crate::crypto::{AESKey, Keychain, SIVEncryptable, PUBLIC_KEY_SIZE, SEED_KEY_SIZE};
 
-pub fn encrypt_seed(key_manager: &Keychain, new_node_pk: [u8; 65]) -> SgxResult<Vec<u8>> {
+pub fn encrypt_seed(
+    key_manager: &Keychain,
+    new_node_pk: [u8; PUBLIC_KEY_SIZE],
+) -> SgxResult<Vec<u8>> {
     let shared_enc_key = match key_manager
         .seed_exchange_key()
         .unwrap()
@@ -43,7 +46,7 @@ pub fn encrypt_seed(key_manager: &Keychain, new_node_pk: [u8; 65]) -> SgxResult<
 ///
 pub fn decrypt_seed(
     key_manager: &Keychain,
-    master_pk: [u8; 65],
+    master_pk: [u8; PUBLIC_KEY_SIZE],
     encrypted_seed: [u8; ENCRYPTED_SEED_SIZE],
 ) -> SgxResult<Vec<u8>> {
     // create shared encryption key using ECDH

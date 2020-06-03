@@ -53,10 +53,6 @@ pub fn create_attestation_certificate(
     let mut priv_key_buf: [u8; 32] = [0u8; 32];
     priv_key_buf.copy_from_slice(kp.get_privkey());
 
-    // extra public key from KeyPair
-    let mut pub_key_secp256k1: [u8; 64] = [0u8; 64];
-    pub_key_secp256k1.copy_from_slice(&kp.get_pubkey()[1..65]);
-
     // init sgx ecc
     let ecc_handle = SgxEccHandle::new();
     let _result = ecc_handle.open();
@@ -68,7 +64,9 @@ pub fn create_attestation_certificate(
     // generate the P256 public (will be different from KeyPair's public key)
     let pub_k = rsgx_ecc256_pub_from_priv(&prv_k).unwrap();
 
-    let encoded_pubkey = base64::encode(&pub_key_secp256k1[..]);
+    // this is the ed25519 public key we want to encode
+    let encoded_pubkey = base64::encode(&kp.get_pubkey());
+
     let (key_der, cert_der) =
         match super::cert::gen_ecc_cert(encoded_pubkey, &prv_k, &pub_k, &ecc_handle) {
             Ok(r) => r,

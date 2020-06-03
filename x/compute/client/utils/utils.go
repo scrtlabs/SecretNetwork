@@ -130,10 +130,25 @@ func (ctx WASMCLIContext) getTxEncryptionKey(txSenderPrivKey *secp256k1.PrivateK
 	if err != nil {
 		return nil, err
 	}
+
+	for i, j := 0, len(ioPubKeyBytes)/2-1; i < j; i, j = i+1, j-1 {
+		ioPubKeyBytes[i], ioPubKeyBytes[j] = ioPubKeyBytes[j], ioPubKeyBytes[i]
+	}
+
+	for i, j := len(ioPubKeyBytes)/2-1, len(ioPubKeyBytes)-1; i < j; i, j = i+1, j-1 {
+		ioPubKeyBytes[i], ioPubKeyBytes[j] = ioPubKeyBytes[j], ioPubKeyBytes[i]
+	}
+
+	fmt.Fprintf(os.Stderr, "CLI: ioPubKeyBytes: %v", ioPubKeyBytes)
+	fmt.Fprintf(os.Stderr, "CLI: txSenderPubKey: %v", txSenderPrivKey.PubKey().SerializeUncompressed())
+
 	ioPubKey, err := secp256k1.ParsePubKey(append([]byte{0x4}, ioPubKeyBytes...))
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Fprintf(os.Stderr, "CLI: ioPubKey: %v", ioPubKey.SerializeUncompressed())
+	fmt.Fprintf(os.Stderr, "CLI: derive private: %v", txSenderPrivKey.Serialize())
 
 	txEncryptionIkm := secp256k1.GenerateSharedSecret(txSenderPrivKey, ioPubKey)
 

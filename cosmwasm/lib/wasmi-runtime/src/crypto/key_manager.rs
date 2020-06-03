@@ -1,6 +1,6 @@
 use crate::consts::*;
-use crate::crypto::keys::{AESKey, KeyPair, Seed};
 use crate::crypto::traits::*;
+use crate::crypto::{AESKey, KeyPair, Seed};
 use enclave_ffi_types::{CryptoError, EnclaveError};
 use lazy_static::lazy_static;
 use log::*;

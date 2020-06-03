@@ -56,10 +56,7 @@ pub extern "C" fn ecall_init_bootstrap(public_key: &mut [u8; PUBLIC_KEY_SIZE]) -
         return status;
     }
 
-    // don't want to copy the first byte (no need to pass the 0x4 uncompressed byte)
-    public_key.copy_from_slice(
-        &key_manager.seed_exchange_key().unwrap().get_pubkey()[1..UNCOMPRESSED_PUBLIC_KEY_SIZE],
-    );
+    public_key.copy_from_slice(&key_manager.seed_exchange_key().unwrap().get_pubkey());
     debug!(
         "ecall_init_bootstrap consensus_seed_exchange_keypair public key: {:?}",
         &public_key.to_vec()
@@ -113,8 +110,7 @@ pub unsafe extern "C" fn ecall_init_node(
     encrypted_seed.copy_from_slice(&encrypted_seed_slice);
 
     // public keys in certificates don't have 0x04, so we'll copy it here
-    let mut target_public_key: [u8; UNCOMPRESSED_PUBLIC_KEY_SIZE] =
-        [4u8; UNCOMPRESSED_PUBLIC_KEY_SIZE];
+    let mut target_public_key: [u8; PUBLIC_KEY_SIZE] = [0u8; PUBLIC_KEY_SIZE];
 
     // validate certificate w/ attestation report
     let pk = match verify_ra_cert(cert_slice) {
@@ -133,7 +129,7 @@ pub unsafe extern "C" fn ecall_init_node(
         );
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
-    target_public_key[1..].copy_from_slice(&pk);
+    target_public_key.copy_from_slice(&pk);
 
     let mut key_manager = Keychain::new();
     let res = match decrypt_seed(&key_manager, target_public_key, encrypted_seed) {

@@ -20,11 +20,11 @@ enclave {
         );
 
         public sgx_status_t ecall_init_bootstrap(
-            [out, count=64] uint8_t* seed
+            [out, count=32] uint8_t* seed
         );
 
         public sgx_status_t ecall_key_gen(
-            [out, count=64] uint8_t* public_key
+            [out, count=32] uint8_t* public_key
         );
 
         public sgx_status_t ecall_get_attestation_report();

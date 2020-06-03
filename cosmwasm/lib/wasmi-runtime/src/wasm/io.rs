@@ -9,6 +9,12 @@ use serde_json::Value;
 fn derive_dh_io_key(user_pubkey: &[u8], nonce: &[u8; 32]) -> Result<AESKey, EnclaveError> {
     let enclave_io_key = KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap();
 
+    info!("rust user_pubkey {:?}", user_pubkey);
+    info!(
+        "rust enclave_io_key {:?}",
+        enclave_io_key.get_pubkey().to_vec().as_slice()
+    );
+
     let tx_encryption_ikm = match enclave_io_key.derive_key(user_pubkey) {
         Err(e) => return Err(EnclaveError::FailedFunctionCall),
         Ok(t) => t,

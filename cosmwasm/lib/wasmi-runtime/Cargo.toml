@@ -59,6 +59,10 @@ base58 = { rev = "sgx_1.1.2", package = "rust-base58", git = "https://github.com
 ] }
 lazy_static = "1.4"
 
+# ed25519-dalek = { version = "1.0.0-pre.3", default-features = false, features = ["u64_backend", "alloc"], optional = true }
+x25519-dalek = { version = "0.6", default-features = false, features = ["u64_backend"]}
+# blake2-rfc = { version = "0.2.18", default-features = false, optional = true }
+
 [dependencies.webpki]
 git = "https://github.com/mesalock-linux/webpki"
 branch = "mesalock_sgx"

@@ -8,3 +8,4 @@ pub use types::{
 };
 
 pub const ENCRYPTED_SEED_SIZE: usize = 48;
+pub const PUBLIC_KEY_SIZE: usize = 32;
