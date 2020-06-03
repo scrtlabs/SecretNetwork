@@ -269,17 +269,14 @@ TODO reasoning
 
 - While executing a function call inside the Enclave as part of a transaction, the contract code can call `write_db(field_name, value)` and `read_db(field_name)`.
 - Contracts' state is stored on-chain inside a key-value store, thus the `field_name` must remain constant between calls.
-- Good encryption doesn't use the same `encryption_key` and `iv` together more than once. This means that encrypting the same input twice yields different outputs, and therefore we cannot encrypt the `field_name` because the next time we want to query it we won't know where to look for it.
 - `encryption_key` is derived using HKDF-SHA256 from:
   - `consensus_state_ikm`
   - `field_name`
-  - `contact_id`
-- Ciphertext is prepended with the `iv` so that the next read will be able to decrypt it. `iv` is also authenticated with the AES-256-GCM AAD.
-- `iv` is derive from `sha256(consensus_state_iv || value || previous_iv)` in order to prevent tx rollback attacks that can force `iv` and `encryption_key` reuse. This also prevents using the same `iv` in different instances of the same contract. `consensus_state_iv` prevents exposing `value` by comparing `iv` to `previos_iv`.
+  - `contact_key`
 
 ## `contract_key`
 
-- `contract_key` is a concatenation of two values: `signer_id || authenticated_contract_id`.
+- `contract_key` is a concatenation of two values: `signer_id || authenticated_contract_key`.
 - When a contract is deployed (i.e., on contract init), `contract_key` is generated inside of the enclave as follows:
 
 ```js
@@ -287,16 +284,16 @@ signer_id = sha256(concat(msg_sender, block_height));
 
 authentication_key = hkdf({
   salt: hkfd_salt,
-  info: contract_id,
+  info: "contract_key",
   ikm: concat(consensus_state_ikm, signer_id),
 });
 
-authenticated_contract_id = hmac_sha256({
+authenticated_contract_key = hmac_sha256({
   key: authentication_key,
   data: code_hash,
 });
 
-contract_key = concat(signer_id, authenticated_contract_id);
+contract_key = concat(signer_id, authenticated_contract_key);
 ```
 
 - Every time a contract execution is called, `contract_key` should be sent to the enclave.
@@ -304,46 +301,51 @@ contract_key = concat(signer_id, authenticated_contract_id);
 
 ```js
 signer_id = contract_key.slice(0, 32);
-expected_contract_id = contract_key.slice(32, 64);
+expected_contract_key = contract_key.slice(32, 64);
 
 authentication_key = hkdf({
   salt: hkfd_salt,
-  info: b"contract_id",
+  info: "contract_key",
   ikm: concat(consensus_state_ikm, signer_id),
 });
 
-calculated_contract_id = hmac_sha256({
+calculated_contract_key = hmac_sha256({
   key: authentication_key,
   data: code_hash,
 });
 
-assert(calculated_contract_id == expected_contract_id);
+assert(calculated_contract_key == expected_contract_key);
 ```
 
 ## write_db(field_name, value)
 
 ```js
-current_state_ciphertext = internal_read_db(field_name);
-
 encryption_key = hkdf({
   salt: hkfd_salt,
-  ikm: concat(consensus_state_ikm, field_name, contract_id),
+  ikm: concat(consensus_state_ikm, field_name, contract_key),
 });
+
+encrypted_field_name = aes_128_siv_encrypt({
+  key: encryption_key,
+  data: field_name,
+});
+
+current_state_ciphertext = internal_read_db(encrypted_field_name);
 
 if (current_state_ciphertext == null) {
   // field_name doesn't yet initialized in state
-  ad = sha256(concat(consensus_state_ikm, value)).slice(0, 12); // truncate because iv is only 96 bits
+  ad = sha256(concat(encryption_key, value));
 } else {
   // read previous_ad, verify it, calculate new iv
-  previous_ad = current_state_ciphertext.slice(0, 12); // first 12 bytes
-  current_state_ciphertext = current_state_ciphertext.slice(12); // skip first 12 bytes
+  previous_ad = current_state_ciphertext.slice(0, 32); // first 32 bytes/256 bits
+  current_state_ciphertext = current_state_ciphertext.slice(32); // skip first 32 bytes
 
   aes_128_siv_decrypt({
     key: encryption_key,
     data: current_state_ciphertext,
     ad: previous_ad,
   }); // just to authenticate previous_iv
-  ad = sha256(concat(consensus_state_ikm, value, previous_ad)).slice(0, 12); // truncate because iv is only 96 bits
+  ad = sha256(concat(encryption_key, value, previous_ad));
 }
 
 new_state_ciphertext = aes_128_siv_encrypt({
@@ -354,18 +356,23 @@ new_state_ciphertext = aes_128_siv_encrypt({
 
 new_state = concat(ad, new_state_ciphertext);
 
-internal_write_db(field_name, new_state);
+internal_write_db(encrypted_field_name, new_state);
 ```
 
 ## read_db(field_name)
 
 ```js
-current_state_ciphertext = internal_read_db(field_name);
-
 encryption_key = hkdf({
   salt: hkfd_salt,
-  ikm: concat(consensus_state_ikm, field_name, contract_id),
+  ikm: concat(consensus_state_ikm, field_name, contract_key),
 });
+
+encrypted_field_name = aes_128_siv_encrypt({
+  key: encryption_key,
+  data: field_name,
+});
+
+current_state_ciphertext = internal_read_db(encrypted_field_name);
 
 if (current_state_ciphertext == null) {
   // field_name doesn't yet initialized in state
@@ -373,8 +380,8 @@ if (current_state_ciphertext == null) {
 }
 
 // read ad, verify it
-ad = current_state_ciphertext.slice(0, 12); // first 12 bytes
-current_state_ciphertext = current_state_ciphertext.slice(12); // skip first 12 bytes
+ad = current_state_ciphertext.slice(0, 32); // first 32 bytes/256 bits
+current_state_ciphertext = current_state_ciphertext.slice(32); // skip first 32 bytes
 current_state_plaintext = aes_128_siv_decrypt({
   key: encryption_key,
   data: current_state_ciphertext,
