@@ -22,7 +22,7 @@
     - [Decrypting `encrypted_consensus_seed`](#decrypting-encrypted_consensus_seed)
   - [New Node Registration Epilogue](#new-node-registration-epilogue)
 - [Contracts State Encryption](#contracts-state-encryption)
-  - [`contract_id`](#contract_id)
+  - [`contract_key`](#contract_key)
   - [write_db(field_name, value)](#write_dbfield_name-value)
   - [read_db(field_name)](#read_dbfield_name)
 - [Transaction Encryption](#transaction-encryption)
@@ -194,7 +194,7 @@ TODO reasoning
 - The output of the `enigmacli tx register auth` transaction is `consensus_seed` encrypted with AES-SIV-128, `seed_exchange_key` as the encryption key, using the public key of the registering node for the AD.
 
 ```js
-encrypted_consensus_seed = aes_siv_128_encrypt({
+encrypted_consensus_seed = aes_128_siv_encrypt({
   key: seed_exchange_key,
   data: consensus_seed,
   ad: new_node_public_key,
@@ -213,8 +213,9 @@ TODO reasoning
 
 - `seed_exchange_key`: An AES-SIV-128 encryption key. Will be used to decrypt `consensus_seed`.
 - `seed_exchange_key` is derived the following way:
+
   - `seed_exchange_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_seed_exchange_pubkey` (public in `genesis.json`) and `registration_privkey` (available only inside the new node's Enclave).
- 
+
   - `seed_exchange_key` is derived using HKDF-SHA256 with `seed_exchange_ikm` and `nonce`.
 
 ```js
@@ -238,7 +239,7 @@ TODO reasoning
 - Seal `consensus_seed` to disk at `"$HOME/.enigmad/sgx-secrets/consensus_seed.sealed"`.
 
 ```js
-consensus_seed = aes_256_gcm_decrypt({
+consensus_seed = aes_128_siv_decrypt({
   key: seed_exchange_key,
   data: encrypted_consensus_seed,
   ad: new_node_public_key,
@@ -282,11 +283,11 @@ signer_id = sha256(concat(msg_sender, block_height));
 
 authentication_key = hkdf({
   salt: hkfd_salt,
-  info: b"contract_id",
+  info: contract_id,
   ikm: concat(consensus_state_ikm, signer_id),
 });
 
-authenticated_contract_id = HMAC_SHA256({
+authenticated_contract_id = hmac_sha256({
   key: authentication_key,
   data: code_hash,
 });
@@ -307,7 +308,7 @@ authentication_key = hkdf({
   ikm: concat(consensus_state_ikm, signer_id),
 });
 
-calculated_contract_id = HMAC_SHA256({
+calculated_contract_id = hmac_sha256({
   key: authentication_key,
   data: code_hash,
 });
@@ -333,7 +334,7 @@ if (current_state_ciphertext == null) {
   previous_ad = current_state_ciphertext.slice(0, 12); // first 12 bytes
   current_state_ciphertext = current_state_ciphertext.slice(12); // skip first 12 bytes
 
-  aes_256_gcm_decrypt({
+  aes_128_siv_decrypt({
     key: encryption_key,
     data: current_state_ciphertext,
     ad: previous_ad,
@@ -383,12 +384,10 @@ return current_state_plaintext;
 
 TODO reasoning
 
-- `tx_encryption_key`: An AES-256-GCM encryption key. Will be used to encrypt tx inputs and decrypt tx outpus.
+- `tx_encryption_key`: An AES-128-SIV encryption key. Will be used to encrypt tx inputs and decrypt tx outpus.
   - `tx_encryption_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_io_exchange_pubkey` and `tx_sender_wallet_privkey` (on the sender's side).
   - `tx_encryption_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_io_exchange_privkey` and `tx_sender_wallet_pubkey` (inside the enclave of every full node).
 - `tx_encryption_key` is derived using HKDF-SHA256 with `tx_encryption_ikm` and a random number `nonce`. This is to prevent using the same key for the same tx sender multiple times.
-- `iv_input` for the input is randomly generated on the client side by the transation sender.
-- `iv`s for the output are derived from `iv_input` using HKDF-SHA256.
 
 ## Input
 
@@ -409,16 +408,15 @@ tx_encryption_key = hkdf({
 
 iv_input = true_random({ bytes: 12 });
 
-aad = concat(iv_input, nonce, tx_sender_wallet_pubkey);
+ad = concat(nonce, tx_sender_wallet_pubkey);
 
-encrypted_msg = aes_256_gcm_encrypt({
-  iv: iv_input,
+encrypted_msg = aes_128_siv_encrypt({
   key: tx_encryption_key,
   data: msg,
-  aad: aad,
+  ad: ad,
 });
 
-tx_input = concat(aad, encrypted_msg);
+tx_input = concat(ad, encrypted_msg);
 ```
 
 ### On the consensus layer, inside the Enclave of every full node
