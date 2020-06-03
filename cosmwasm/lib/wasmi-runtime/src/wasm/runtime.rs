@@ -1,6 +1,3 @@
-use crate::crypto::key_manager;
-use crate::crypto::traits::{Encryptable, Kdf};
-use crate::crypto::*;
 use bech32;
 use bech32::{FromBase32, ToBase32};
 use log::{error, trace, warn};
@@ -14,7 +11,16 @@ use wasmi::{
 
 use enclave_ffi_types::{Ctx, EnclaveBuffer};
 
+use crate::crypto::key_manager;
+use crate::crypto::traits::{Encryptable, Kdf};
+use crate::crypto::*;
+
 use super::errors::WasmEngineError;
+// Runtime maps function index to implementation
+// When instansiating a module we give it the EnigmaImportResolver resolver
+// When invoking a function inside the module we give it this runtime which is the acctual functions implementation ()
+use crate::exports;
+use crate::imports;
 
 // --------------------------------
 // Functions to expose to WASM code
@@ -75,12 +81,6 @@ impl ModuleImportResolver for EnigmaImportResolver {
         Ok(func_ref)
     }
 }
-
-// Runtime maps function index to implementation
-// When instansiating a module we give it the EnigmaImportResolver resolver
-// When invoking a function inside the module we give it this runtime which is the acctual functions implementation ()
-use super::exports;
-use super::imports;
 
 /// Safe wrapper around reads from the contract storage
 fn read_db(context: &Ctx, key: &[u8]) -> SgxResult<Option<Vec<u8>>> {

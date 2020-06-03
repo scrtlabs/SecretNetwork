@@ -20,14 +20,15 @@ pub mod logger;
 pub mod registration;
 
 mod consts;
-mod contract_operations;
-mod contract_validation;
+mod wasm;
+//mod contract_operations;
+//mod contract_validation;
 mod cosmwasm;
 mod crypto;
-mod errors;
-mod gas;
+// mod errors;
+// mod gas;
 mod results;
-mod runtime;
+//mod runtime;
 mod storage;
 mod utils;
 

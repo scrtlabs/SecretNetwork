@@ -6,17 +6,17 @@ use parity_wasm::elements;
 use serde_json::Value;
 use wasmi::{ImportsBuilder, ModuleInstance};
 
-use super::results::{HandleSuccess, InitSuccess, QuerySuccess};
+use crate::results::{HandleSuccess, InitSuccess, QuerySuccess};
 
 use crate::cosmwasm::encoding::Binary;
 use crate::cosmwasm::types::{ContractResult, Env, Response};
 
+use super::errors::wasmi_error_to_enclave_error;
+use super::gas::{gas_rules, WasmCosts};
+use super::runtime::{Engine, EnigmaImportResolver, Runtime};
 use crate::crypto::{AESKey, Hmac, Kdf, SIVEncryptable, HASH_SIZE, KEY_MANAGER};
-use crate::errors::wasmi_error_to_enclave_error;
-use crate::gas::{gas_rules, WasmCosts};
-use crate::runtime::{Engine, EnigmaImportResolver, Runtime};
 
-use crate::contract_validation::{
+use super::contract_validation::{
     calc_contract_hash, extract_contract_key, generate_contract_id, generate_encryption_key,
     generate_sender_id, validate_contract_key, CONTRACT_KEY_LENGTH,
 };
