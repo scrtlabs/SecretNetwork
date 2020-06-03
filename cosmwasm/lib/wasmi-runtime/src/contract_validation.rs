@@ -18,6 +18,27 @@ use crate::runtime::{Engine, EnigmaImportResolver, Runtime};
 
 pub const CONTRACT_KEY_LENGTH: usize = HASH_SIZE + HASH_SIZE;
 
+pub fn generate_encryption_key(
+    env: &Env,
+    contract: &[u8],
+) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
+    let consensus_state_ikm = KEY_MANAGER.get_consensus_state_ikm().unwrap();
+
+    let contract_hash = calc_contract_hash(contract);
+
+    let sender_id = generate_sender_id(env.message.signer.as_slice(), env.block.height as u64);
+
+    let mut encryption_key = [0u8; 64];
+
+    let authenticated_contract_id =
+        generate_contract_id(&consensus_state_ikm, &sender_id, &contract_hash);
+
+    encryption_key[0..32].copy_from_slice(&sender_id);
+    encryption_key[32..].copy_from_slice(&authenticated_contract_id);
+
+    Ok(encryption_key)
+}
+
 pub fn extract_contract_key(env: &Env) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
     if env.contract_key.is_none() {
         error!("Contract execute with empty contract key");
