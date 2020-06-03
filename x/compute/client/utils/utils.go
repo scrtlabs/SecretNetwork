@@ -19,6 +19,7 @@ import (
 	regtypes "github.com/enigmampc/EnigmaBlockchain/x/registration"
 	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
 	"github.com/miscreant/miscreant.go"
+	"golang.org/x/crypto/curve25519"
 	"golang.org/x/crypto/hkdf"
 )
 
@@ -64,20 +65,19 @@ type keyPair struct {
 	Public  string `json:"public"`
 }
 
-func (ctx WASMCLIContext) getTxSenderKeyPair() (*secp256k1.PrivateKey, *secp256k1.PublicKey, error) {
+func (ctx WASMCLIContext) getTxSenderKeyPair() ([]byte, []byte, error) {
 	keyPairFilePath := path.Join(ctx.CLIContext.HomeDir, "id_tx_io.json")
 
 	if _, err := os.Stat(keyPairFilePath); os.IsNotExist(err) {
-		privkey, err := secp256k1.GeneratePrivateKey()
-		if err != nil {
-			return nil, nil, err
-		}
+		var privkey [32]byte
+		rand.Read(privkey[:])
 
-		pubkey := privkey.PubKey()
+		var pubkey [32]byte
+		curve25519.ScalarBaseMult(&pubkey, &privkey)
 
 		keyPair := keyPair{
-			Private: hex.EncodeToString(privkey.Serialize()),
-			Public:  hex.EncodeToString(pubkey.SerializeCompressed()),
+			Private: hex.EncodeToString(privkey[:]),
+			Public:  hex.EncodeToString(pubkey[:]),
 		}
 
 		keyPairJSONBytes, err := json.MarshalIndent(keyPair, "", "    ")
@@ -90,7 +90,7 @@ func (ctx WASMCLIContext) getTxSenderKeyPair() (*secp256k1.PrivateKey, *secp256k
 			return nil, nil, err
 		}
 
-		return privkey, pubkey, nil
+		return privkey[:], pubkey[:], nil
 	}
 
 	keyPairJSONBytes, err := ioutil.ReadFile(keyPairFilePath)
@@ -105,16 +105,25 @@ func (ctx WASMCLIContext) getTxSenderKeyPair() (*secp256k1.PrivateKey, *secp256k
 		return nil, nil, err
 	}
 
-	privKeyBytes, err := hex.DecodeString(keyPair.Private)
+	privkey, err := hex.DecodeString(keyPair.Private)
+	pubkey, err := hex.DecodeString(keyPair.Public)
 
-	privkey, pubkey := secp256k1.PrivKeyFromBytes(privKeyBytes)
+	// TODO verify pubkey
+
 	return privkey, pubkey, nil
 }
 
-var hkdfSalt = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x4b, 0xea, 0xd8, 0xdf, 0x69, 0x99,
-	0x08, 0x52, 0xc2, 0x02, 0xdb, 0x0e, 0x00, 0x97, 0xc1, 0xa1, 0x2e, 0xa6, 0x37, 0xd7, 0xe9, 0x6d}
+var hkdfSalt = []byte{
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x02, 0x4b, 0xea, 0xd8, 0xdf, 0x69, 0x99,
+	0x08, 0x52, 0xc2, 0x02, 0xdb, 0x0e, 0x00, 0x97,
+	0xc1, 0xa1, 0x2e, 0xa6, 0x37, 0xd7, 0xe9, 0x6d,
+}
 
 func (ctx WASMCLIContext) getTxEncryptionKey(txSenderPrivKey *secp256k1.PrivateKey, nonce []byte) ([]byte, error) {
+	// TODO replace all the scep256k1 stuff with x25519
+	// https://godoc.org/golang.org/x/crypto/curve25519
+
 	res, _, err := ctx.CLIContext.Query("custom/register/master-cert")
 	if err != nil {
 		return nil, err
@@ -126,50 +135,37 @@ func (ctx WASMCLIContext) getTxEncryptionKey(txSenderPrivKey *secp256k1.PrivateK
 		return nil, err
 	}
 
-	ioPubKeyBytes, err := ra.VerifyRaCert(certs.IoMasterCertificate)
+	consensusIoPubKeyBytes, err := ra.VerifyRaCert(certs.IoMasterCertificate)
 	if err != nil {
 		return nil, err
 	}
 
-	for i, j := 0, len(ioPubKeyBytes)/2-1; i < j; i, j = i+1, j-1 {
-		ioPubKeyBytes[i], ioPubKeyBytes[j] = ioPubKeyBytes[j], ioPubKeyBytes[i]
-	}
-
-	for i, j := len(ioPubKeyBytes)/2-1, len(ioPubKeyBytes)-1; i < j; i, j = i+1, j-1 {
-		ioPubKeyBytes[i], ioPubKeyBytes[j] = ioPubKeyBytes[j], ioPubKeyBytes[i]
-	}
-
-	fmt.Fprintf(os.Stderr, "CLI: ioPubKeyBytes: %v", ioPubKeyBytes)
-	fmt.Fprintf(os.Stderr, "CLI: txSenderPubKey: %v", txSenderPrivKey.PubKey().SerializeUncompressed())
-
-	ioPubKey, err := secp256k1.ParsePubKey(append([]byte{0x4}, ioPubKeyBytes...))
+	consensusIoPubKey, err := secp256k1.ParsePubKey(append([]byte{0x4}, consensusIoPubKeyBytes...))
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Fprintf(os.Stderr, "CLI: ioPubKey: %v", ioPubKey.SerializeUncompressed())
-	fmt.Fprintf(os.Stderr, "CLI: derive private: %v", txSenderPrivKey.Serialize())
+	fmt.Fprintf(os.Stderr, "CLI consensusIoPubKey = %v\n", consensusIoPubKey.SerializeCompressed())
 
-	txEncryptionIkm := secp256k1.GenerateSharedSecret(txSenderPrivKey, ioPubKey)
+	txEncryptionIkmx := secp256k1.GenerateSharedSecret(txSenderPrivKey, consensusIoPubKey)
+	txEncryptionIkm := sha256.Sum256(txEncryptionIkmx)
 
-	fmt.Fprintf(os.Stderr, "CLI txEncryptionIkm = %v", txEncryptionIkm)
+	fmt.Fprintf(os.Stderr, "CLI txEncryptionIkm = %v\n", txEncryptionIkm)
 
-	hkdf := hkdf.New(sha256.New, append(txEncryptionIkm, nonce...), hkdfSalt, []byte{})
+	hkdf := hkdf.New(sha256.New, append(txEncryptionIkm[:], nonce...), hkdfSalt, []byte{})
 
 	txEncryptionKey := make([]byte, 32)
 	if _, err := io.ReadFull(hkdf, txEncryptionKey); err != nil {
 		return nil, err
 	}
 
-	fmt.Fprintf(os.Stderr, "CLI txEncryptionKey = %v", txEncryptionKey)
+	fmt.Fprintf(os.Stderr, "CLI txEncryptionKey = %v\n", txEncryptionKey)
 
 	return txEncryptionKey, nil
 }
 
 // Encrypt encrypts
 func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
-	log.Println("שלום אני פה")
-
 	txSenderPrivKey, txSenderPubKey, err := ctx.getTxSenderKeyPair()
 
 	nonce := make([]byte, 32)
@@ -192,6 +188,8 @@ func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
 		log.Println(err)
 		return nil, err
 	}
+
+	fmt.Fprintf(os.Stderr, "CLI txSenderPubKey = %v\n", txSenderPubKey.SerializeCompressed())
 
 	// ciphertext = nonce(32) || wallet_pubkey(33) || ciphertext
 	ciphertext = append(nonce, append(txSenderPubKey.SerializeCompressed(), ciphertext...)...)
