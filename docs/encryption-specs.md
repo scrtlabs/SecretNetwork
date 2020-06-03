@@ -334,7 +334,7 @@ current_state_ciphertext = internal_read_db(encrypted_field_name);
 
 if (current_state_ciphertext == null) {
   // field_name doesn't yet initialized in state
-  ad = sha256(concat(encryption_key, value));
+  ad = sha256(encrypted_field_name);
 } else {
   // read previous_ad, verify it, calculate new iv
   previous_ad = current_state_ciphertext.slice(0, 32); // first 32 bytes/256 bits
@@ -345,7 +345,7 @@ if (current_state_ciphertext == null) {
     data: current_state_ciphertext,
     ad: previous_ad,
   }); // just to authenticate previous_iv
-  ad = sha256(concat(encryption_key, value, previous_ad));
+  ad = sha256(previous_ad);
 }
 
 new_state_ciphertext = aes_128_siv_encrypt({
