@@ -406,8 +406,6 @@ tx_encryption_key = hkdf({
   ikm: concat(tx_encryption_ikm, nonce),
 }); // 256 bits
 
-iv_input = true_random({ bytes: 12 });
-
 ad = concat(nonce, tx_sender_wallet_pubkey);
 
 encrypted_msg = aes_128_siv_encrypt({
