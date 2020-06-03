@@ -7,6 +7,8 @@ use enclave_ffi_types::EnclaveError;
 use crate::cosmwasm::types::Env;
 use crate::crypto::{sha_256, AESKey, Hmac, Kdf, SIVEncryptable, HASH_SIZE, KEY_MANAGER};
 
+pub type ContractKey = [u8; CONTRACT_KEY_LENGTH];
+
 pub const CONTRACT_KEY_LENGTH: usize = HASH_SIZE + HASH_SIZE;
 
 pub fn generate_encryption_key(
