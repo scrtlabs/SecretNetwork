@@ -460,8 +460,7 @@ msg = aes_128_siv_decrypt({
   - Messages can also instruct to send funds from the contract's wallet
   - There's a data section which is free form bytes to be inerperted by the client (or dApp)
   - And there's also an error section
-- Therefore the output must be part-encrypted, so we need to use a new `iv` for each part.
-- We'll use HKDF-SHA256 in combination with the `input_iv` and an `iv_counter` to derive a new `iv` for each part.
+- Therefore the output must be partialy-encrypted.
 - An example output for an execution:
   ```js
   {
@@ -503,8 +502,8 @@ msg = aes_128_siv_decrypt({
     }
   }
   ```
-- Notice on a `Contract` message, the `msg` value should be the same `msg` as in our `tx_input`, so we need to prepend the new `iv_input`, the `nonce` and `tx_sender_wallet_pubkey` just like we did on the tx sender.
-- For the rest of the encrypted outputs we only need to prepend the new `iv` for each encrypted value, as the tx sender can get `consensus_io_exchange_prubkey` from `genesis.json` and `nonce` from the `tx_input` that is attached to the `tx_output`.
+- Notice on a `Contract` message, the `msg` value should be the same `msg` as in our `tx_input`, so we need to prepend the `nonce` and `tx_sender_wallet_pubkey` just like we did on the tx sender above.
+- For the rest of the encrypted outputs we only need to send the ciphertext, as the tx sender can get `consensus_io_exchange_prubkey` from `genesis.json` and `nonce` from the `tx_input` that is attached to the `tx_output`.
 - An example output with an error:
   ```js
   {
@@ -523,60 +522,62 @@ msg = aes_128_siv_decrypt({
 ```js
 // already have from tx_input:
 // - tx_encryption_key
-// - iv_input
 // - nonce
 
-iv_counter = 1;
-
 if (typeof output["err"] == "string") {
-  iv = hkdf({
-    salt: hkfd_salt,
-    ikm: concat(input_iv, [iv_counter]),
-  }).slice(0, 12); // 96 bits
-  iv_counter += 1;
-
-  encrypted_err = aes_256_gcm_encrypt({
-    iv: iv,
+  encrypted_err = aes_128_siv_encrypt({
     key: tx_encryption_key,
     data: output["err"],
-    aad: iv,
   });
-
-  output["err"] = base64_encode(concat(iv, encrypted_err)); // needs to be a string
+  output["err"] = base64_encode(encrypted_err); // needs to be a JSON string
 } else if (typeof output["ok"] == "string") {
   // query
-  // same as output["err"]...
+  // output["ok"] is handled the same way as output["err"]...
+  encrypted_query_result = aes_128_siv_encrypt({
+    key: tx_encryption_key,
+    data: output["ok"],
+  });
+  output["ok"] = base64_encode(encrypted_query_result); // needs to be a JSON string
 } else if (typeof output["ok"] == "object") {
   // execute
   for (m in output["ok"]["messages"]) {
     if (m["type"] == "Contract") {
-      iv_input = hkdf({
-        salt: hkfd_salt,
-        ikm: concat(input_iv, [iv_counter]),
-      }).slice(0, 12); // 96 bits
-      iv_counter += 1;
-
-      encrypted_msg = aes_256_gcm_encrypt({
-        iv: iv,
+      encrypted_msg = aes_128_siv_encrypt({
         key: tx_encryption_key,
         data: m["msg"],
-        aad: concat(iv_input, nonce, tx_sender_wallet_pubkey),
+        ad: concat(nonce, tx_sender_wallet_pubkey),
       });
 
       // base64_encode because needs to be a string
-      // also turns into a tx_input so we also need to prepend iv_input, nonce and tx_sender_wallet_pubkey
+      // also turns into a tx_input so we also need to prepend nonce and tx_sender_wallet_pubkey
       m["msg"] = base64_encode(
-        concat(iv_input, nonce, tx_sender_wallet_pubkey, encrypted_msg)
+        concat(nonce, tx_sender_wallet_pubkey, encrypted_msg)
       );
     }
   }
 
   for (l in output["ok"]["log"]) {
-    // l["key"] is the same as output["err"]...
-    // l["value"] is the same as output["err"]...
+    // l["key"] is handled the same way as output["err"]...
+    encrypted_log_key_name = aes_128_siv_encrypt({
+      key: tx_encryption_key,
+      data: l["key"],
+    });
+    l["key"] = base64_encode(encrypted_log_key_name); // needs to be a JSON string
+
+    // l["value"] is handled the same way as output["err"]...
+    encrypted_log_value = aes_128_siv_encrypt({
+      key: tx_encryption_key,
+      data: l["value"],
+    });
+    l["value"] = base64_encode(encrypted_log_value); // needs to be a JSON string
   }
 
-  // output["ok"]["data"] is the same as output["err"]...
+  // output["ok"]["data"] is handled the same way as output["err"]...
+  encrypted_output_data = aes_128_siv_encrypt({
+    key: tx_encryption_key,
+    data: output["ok"]["data"],
+  });
+  output["ok"]["data"] = base64_encode(encrypted_output_data); // needs to be a JSON string
 }
 
 return output;
