@@ -613,3 +613,6 @@ TODO
 # Theoretical Attacks
 
 TODO
+
+- No encryption padding, so a value of e.g. "yes" or "no" can be deanonymized by its byte count.
+- If an attacker can create a contract with the same `contract_key` as another contract, they can potentially deanonymize the state of the second contract. E.g. if there's a permissioned getter in the original contract, in the new contract the attacker can set themselves as the owner in the new contract and ask the new contract to decrypt the state of the original contract via that permissioned getter.
