@@ -265,8 +265,8 @@ func GetCmdGetContractStateSmart(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			resAsBase64, err := wasmCliCtx.Decrypt(resEncrypted)
+			nonce := queryData[:32]
+			resAsBase64, err := wasmCliCtx.Decrypt(resEncrypted, nonce)
 			if err != nil {
 				return err
 			}

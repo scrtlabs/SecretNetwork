@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 
@@ -63,7 +62,7 @@ type keyPair struct {
 	Public  string `json:"public"`
 }
 
-func (ctx WASMCLIContext) getKeyPair() (*secp256k1.PrivateKey, *secp256k1.PublicKey, error) {
+func (ctx WASMCLIContext) getTxSenderKeyPair() (*secp256k1.PrivateKey, *secp256k1.PublicKey, error) {
 	keyPairFilePath := path.Join(ctx.CLIContext.HomeDir, "id_tx_io.json")
 
 	if _, err := os.Stat(keyPairFilePath); os.IsNotExist(err) {
@@ -113,11 +112,7 @@ func (ctx WASMCLIContext) getKeyPair() (*secp256k1.PrivateKey, *secp256k1.Public
 var hkdfSalt = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x4b, 0xea, 0xd8, 0xdf, 0x69, 0x99,
 	0x08, 0x52, 0xc2, 0x02, 0xdb, 0x0e, 0x00, 0x97, 0xc1, 0xa1, 0x2e, 0xa6, 0x37, 0xd7, 0xe9, 0x6d}
 
-// Encrypt encrypts
-func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
-	txSenderPrivKey, txSenderPubKey, err := ctx.getKeyPair()
-	log.Printf("priv: %v, pub %v, err %v", txSenderPrivKey, txSenderPubKey, err)
-
+func (ctx WASMCLIContext) getTxEncryptionKey(txSenderPrivKey *secp256k1.PrivateKey, nonce []byte) ([]byte, error) {
 	res, _, err := ctx.CLIContext.Query("custom/register/master-cert")
 	if err != nil {
 		return nil, err
@@ -140,15 +135,25 @@ func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
 
 	txEncryptionIkm := secp256k1.GenerateSharedSecret(txSenderPrivKey, ioPubKey)
 
-	hkdfHash := sha256.New
+	hkdf := hkdf.New(sha256.New, append(txEncryptionIkm, nonce...), hkdfSalt, []byte{})
+
+	txEncryptionKey := make([]byte, 32)
+	if _, err := io.ReadFull(hkdf, txEncryptionKey); err != nil {
+		return nil, err
+	}
+
+	return txEncryptionKey, nil
+}
+
+// Encrypt encrypts
+func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
+	txSenderPrivKey, txSenderPubKey, err := ctx.getTxSenderKeyPair()
 
 	nonce := make([]byte, 32)
 	rand.Read(nonce)
 
-	hkdf := hkdf.New(hkdfHash, append(txEncryptionIkm, nonce...), hkdfSalt, []byte{})
-
-	txEncryptionKey := make([]byte, 32)
-	if _, err := io.ReadFull(hkdf, txEncryptionKey); err != nil {
+	txEncryptionKey, err := ctx.getTxEncryptionKey(txSenderPrivKey, nonce)
+	if err != nil {
 		return nil, err
 	}
 
@@ -169,28 +174,18 @@ func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
 }
 
 // Decrypt decrypts
-func (ctx WASMCLIContext) Decrypt(ciphertext []byte) ([]byte, error) {
-	key := []byte{
-		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
-		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
-		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
-		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
-	}
+func (ctx WASMCLIContext) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) {
+	txSenderPrivKey, _, err := ctx.getTxSenderKeyPair()
 
-	cipher, err := miscreant.NewAESCMACSIV(key)
+	txEncryptionKey, err := ctx.getTxEncryptionKey(txSenderPrivKey, nonce)
 	if err != nil {
 		return nil, err
 	}
 
-	// extract nonce
-	// nonce is appended at the end
-	// nonce is 96 bits / 12 bytes
-	// outputNonce := ciphertext[len(ciphertext)-12:]
-	// ciphertext = ciphertext[0 : len(ciphertext)-12]
-	// aad := outputNonce
-
-	// outputNonce := make([]byte, 32) // TODO fix
-	// ad := []byte{} // TODO fix
+	cipher, err := miscreant.NewAESCMACSIV(txEncryptionKey)
+	if err != nil {
+		return nil, err
+	}
 
 	return cipher.Open(nil, ciphertext, []byte{})
 }
