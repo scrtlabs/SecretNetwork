@@ -121,6 +121,9 @@ var hkdfSalt = []byte{
 }
 
 func (ctx WASMCLIContext) getTxEncryptionKey(txSenderPrivKey *secp256k1.PrivateKey, nonce []byte) ([]byte, error) {
+	// TODO replace all the scep256k1 stuff with x25519
+	// https://godoc.org/golang.org/x/crypto/curve25519
+
 	res, _, err := ctx.CLIContext.Query("custom/register/master-cert")
 	if err != nil {
 		return nil, err
