@@ -451,7 +451,6 @@ tx_encryption_key = hkdf({
 msg = aes_128_siv_decrypt({
   key: tx_encryption_key,
   data: encrypted_msg,
-  ad: concat(nonce, tx_sender_wallet_pubkey), // or: tx_input.slice(0, 65)
 });
 ```
 
@@ -548,7 +547,6 @@ if (typeof output["err"] == "string") {
       encrypted_msg = aes_128_siv_encrypt({
         key: tx_encryption_key,
         data: m["msg"],
-        ad: concat(nonce, tx_sender_wallet_pubkey),
       });
 
       // base64_encode because needs to be a string
