@@ -422,10 +422,9 @@ tx_input = concat(ad, encrypted_msg);
 ### On the consensus layer, inside the Enclave of every full node
 
 ```js
-iv_input = tx_input.slice(0, 12); // 12 bytes
-nonce = tx_input.slice(12, 44); // 32 bytes
-tx_sender_wallet_pubkey = tx_input.slice(44, 77); // 33 bytes, compressed secp256k1 public key
-encrypted_msg = tx_input.slice(77);
+nonce = tx_input.slice(0, 32); // 32 bytes
+tx_sender_wallet_pubkey = tx_input.slice(32, 65); // 33 bytes, compressed secp256k1 public key
+encrypted_msg = tx_input.slice(65);
 
 tx_encryption_ikm = ecdh({
   privkey: consensus_io_exchange_privkey,
@@ -437,11 +436,10 @@ tx_encryption_key = hkdf({
   ikm: concat(tx_encryption_ikm, nonce),
 }); // 256 bits
 
-msg = aes_256_gcm_decrypt({
-  iv: iv_input,
+msg = aes_128_siv_decrypt({
   key: tx_encryption_key,
   data: encrypted_msg,
-  aad: concat(iv_input, nonce, tx_sender_wallet_pubkey), // or: tx_input.slice(0, 77)
+  ad: concat(nonce, tx_sender_wallet_pubkey), // or: tx_input.slice(0, 65)
 });
 ```
 
