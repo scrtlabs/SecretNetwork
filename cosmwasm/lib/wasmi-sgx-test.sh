@@ -11,6 +11,9 @@ function wait_for_tx () {
 }
 
 # init the node
+rm -rf ./.sgx_secrets
+mkdir -p ./.sgx_secrets
+
 rm -rf ~/.enigma*
 ./enigmacli config chain-id enigma-testnet
 ./enigmacli config output json

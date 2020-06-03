@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/cosmos/cosmos-sdk v0.38.4
+	github.com/decred/dcrd/dcrec/secp256k1 v1.0.3
 	github.com/gorilla/mux v1.7.4
 	github.com/miscreant/miscreant.go v0.0.0-20200214223636-26d376326b75
 	github.com/pkg/errors v0.9.1

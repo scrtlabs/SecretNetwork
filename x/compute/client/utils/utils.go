@@ -4,9 +4,16 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
 	"io"
+	"io/ioutil"
+	"log"
+	"os"
+	"path"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/decred/dcrd/dcrec/secp256k1"
 	"github.com/miscreant/miscreant.go"
 )
 
@@ -47,9 +54,64 @@ type WASMCLIContext struct {
 	CLIContext context.CLIContext
 }
 
+type keyPair struct {
+	Private string `json:"private"`
+	Public  string `json:"public"`
+}
+
+func (ctx WASMCLIContext) getKeyPair() (*secp256k1.PrivateKey, *secp256k1.PublicKey, error) {
+	keyPairFilePath := path.Join(ctx.CLIContext.HomeDir, "id_tx_io.json")
+
+	if _, err := os.Stat(keyPairFilePath); os.IsNotExist(err) {
+		privkey, err := secp256k1.GeneratePrivateKey()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		pubkey := privkey.PubKey()
+
+		keyPair := keyPair{
+			Private: hex.EncodeToString(privkey.Serialize()),
+			Public:  hex.EncodeToString(pubkey.Serialize()),
+		}
+
+		keyPairJSONBytes, err := json.MarshalIndent(keyPair, "", "    ")
+		if err != nil {
+			return nil, nil, err
+		}
+
+		err = ioutil.WriteFile(keyPairFilePath, keyPairJSONBytes, 0644)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return privkey, pubkey, nil
+	}
+
+	keyPairJSONBytes, err := ioutil.ReadFile(keyPairFilePath)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var keyPair keyPair
+
+	err = json.Unmarshal(keyPairJSONBytes, &keyPair)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	privKeyBytes, err := hex.DecodeString(keyPair.Private)
+
+	privkey, pubkey := secp256k1.PrivKeyFromBytes(privKeyBytes)
+	return privkey, pubkey, nil
+}
+
 // Encrypt encrypts the input ([]byte)
 // https://gist.github.com/kkirsche/e28da6754c39d5e7ea10
 func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
+	priv, pub, err := ctx.getKeyPair()
+	log.Printf("priv: %v, pub %v, err %v", priv, pub, err)
+
 	key := []byte{
 		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
 		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
@@ -88,6 +150,7 @@ func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
 // Decrypt decrypts the input ([]byte)
 // https://gist.github.com/kkirsche/e28da6754c39d5e7ea10
 func (ctx WASMCLIContext) Decrypt(ciphertext []byte) ([]byte, error) {
+
 	key := []byte{
 		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
 		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
