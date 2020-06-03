@@ -34,6 +34,9 @@
     - [Back on the transaction sender](#back-on-the-transaction-sender)
 - [Blockchain Upgrades](#blockchain-upgrades)
 - [Theoretical Attacks](#theoretical-attacks)
+  - [Deanonymizing with ciphertext byte count](#deanonymizing-with-ciphertext-byte-count)
+  - [Two contracts with the same `contract_key` could deanonymize each other's states](#two-contracts-with-the-same-contract_key-could-deanonymize-each-others-states)
+  - [Tx Replay attacks?](#tx-replay-attacks)
 
 # Bootstrap Process
 
@@ -612,7 +615,16 @@ TODO
 
 # Theoretical Attacks
 
-TODO
+TODO add more
 
-- No encryption padding, so a value of e.g. "yes" or "no" can be deanonymized by its byte count.
-- If an attacker can create a contract with the same `contract_key` as another contract, they can potentially deanonymize the state of the second contract. E.g. if there's a permissioned getter in the original contract, in the new contract the attacker can set themselves as the owner in the new contract and ask the new contract to decrypt the state of the original contract via that permissioned getter.
+## Deanonymizing with ciphertext byte count
+
+No encryption padding, so a value of e.g. "yes" or "no" can be deanonymized by its byte count.
+
+## Two contracts with the same `contract_key` could deanonymize each other's states
+
+If an attacker can create a contract with the same `contract_key` as another contract, the state of the original contract can potentially be deanonymized.
+
+For example, An original contract with a permissioned getter, such that only whitelisted addresses can query the getter. In the malicious contract the attacker can set themselves as the owner and ask the malicious contract to decrypt the state of the original contract via that permissioned getter.
+
+## Tx Replay attacks?
