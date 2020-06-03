@@ -94,6 +94,10 @@ pub enum EnclaveError {
     FailedUnseal,
     /// contract key was invalid
     FailedContractAuthentication,
+    FailedToDeserialize,
+    FailedToSerialize,
+    EncryptionError,
+    DecryptionError,
     /// Unexpected Error happened, no more details available
     Unknown,
 }
