@@ -46,8 +46,8 @@ func GetCmdEncryptedSeed(cdc *codec.Codec) *cobra.Command {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
 			nodeId := args[0]
-			if len(nodeId) != 128 {
-				return fmt.Errorf("invalid Node ID format (req: hex string of length 64)")
+			if len(nodeId) != types.PublicKeyLength {
+				return fmt.Errorf("invalid Node ID format (req: hex string of length %d)", types.PublicKeyLength)
 			}
 
 			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryEncryptedSeed, nodeId)

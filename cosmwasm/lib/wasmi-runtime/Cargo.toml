@@ -64,7 +64,7 @@ x25519-dalek = { version = "0.6", default-features = false, features = ["u64_bac
 
 [patch.crates-io]
 rand_core = { git = "https://github.com/enigmampc/rand-sgx", default-features = false, features = ["mesalock_sgx"] }
-rand = { git = "https://github.com/enigmampc/rand-sgx", default-features = false, features = ["mesalock_sgx"] }
+# rand = { git = "https://github.com/enigmampc/rand-sgx", default-features = false, features = ["mesalock_sgx"] }
 
 [dependencies.webpki]
 git = "https://github.com/mesalock-linux/webpki"

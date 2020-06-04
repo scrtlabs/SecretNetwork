@@ -6,7 +6,7 @@ import (
 	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
 )
 
-const PublicKeyLength = 128   // encoded length
+const PublicKeyLength = 64    // encoded length
 const EncryptedKeyLength = 96 // encoded length
 const MasterNodeKeyId = "NodeExchMasterKey"
 const MasterIoKeyId = "IoExchMasterKey"

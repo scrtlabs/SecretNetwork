@@ -903,8 +903,3 @@ dependencies = [
  "syn",
  "synstructure",
 ]
-
-[[patch.unused]]
-name = "rand"
-version = "0.7.3"
-source = "git+https://github.com/enigmampc/rand-sgx#d099b5f31e78c4df99270be726c89b0d1d5e08a9"

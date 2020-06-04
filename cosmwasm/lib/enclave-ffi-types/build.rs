@@ -1,6 +1,9 @@
+#![cfg_attr(not(feature = "build_headers"), allow(unused))]
+
 use std::env;
 use std::path::PathBuf;
 
+#[cfg(feature = "build_headers")]
 use thiserror::Error;
 
 #[cfg(feature = "build_headers")]
@@ -32,8 +35,7 @@ fn main() -> Result<(), Error> {
         path.push("enclave-ffi-types.h"); // This should always equal the crate name
         path
     };
-    println!("HELLO");
-    println!("{:?} {:?}", &crate_dir, &header_path);
+
     cbindgen::generate(crate_dir)?.write_to_file(header_path);
 
     Ok(())
