@@ -498,7 +498,7 @@ dependencies = [
 [[package]]
 name = "rand_core"
 version = "0.5.1"
-source = "git+https://github.com/enigmampc/rand-sgx#d099b5f31e78c4df99270be726c89b0d1d5e08a9"
+source = "git+https://github.com/mesalock-linux/rand-sgx#a6a7eccfd4f574b9dc87fec88ca779a12cae1ab0"
 
 [[package]]
 name = "ring"

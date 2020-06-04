@@ -9,19 +9,11 @@ use serde_json::Value;
 fn derive_dh_io_key(user_pubkey: &[u8; 32], nonce: &[u8; 32]) -> Result<AESKey, EnclaveError> {
     let enclave_io_key = KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap();
 
-    info!("rust user_pubkey {:?}", user_pubkey);
-    info!(
-        "rust enclave_io_key {:?}",
-        enclave_io_key.get_pubkey().to_vec().as_slice()
-    );
-
     let tx_encryption_ikm = enclave_io_key.diffie_hellman(user_pubkey);
-
-    info!("rust tx_encryption_ikm {:?}", tx_encryption_ikm);
 
     let tx_encryption_key = AESKey::new_from_slice(&tx_encryption_ikm).derive_key_from_this(nonce);
 
-    info!("rust tx_encryption_key {:?}", tx_encryption_key);
+    debug!("rust tx_encryption_key {:?}", tx_encryption_key);
 
     Ok(tx_encryption_key)
 }
@@ -67,9 +59,10 @@ pub fn encrypt_output(
 ) -> Result<Vec<u8>, EnclaveError> {
     let key = derive_dh_io_key(user_pubkey, nonce)?;
 
-    debug!("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-    debug!("before: {:?}", String::from_utf8_lossy(&plaintext));
-    debug!("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+    debug!(
+        "Before encryption: {:?}",
+        String::from_utf8_lossy(&plaintext)
+    );
 
     let mut v: Value = serde_json::from_slice(plaintext).map_err(|err| {
         error!(
@@ -172,9 +165,7 @@ pub fn encrypt_output(
         EnclaveError::FailedToSerialize
     })?;
 
-    debug!("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
-    debug!("after: {:?}", String::from_utf8_lossy(&output));
-    debug!("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+    debug!("after encryption: {:?}", String::from_utf8_lossy(&output));
 
     Ok(output)
 }

@@ -11,7 +11,6 @@ build_headers = ["cbindgen", "thiserror"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 derive_more = "0.99"
-# secp256k1 = { version = "0.17.2", default-features = false }
 
 [build-dependencies]
 cbindgen = { version = "0.13", optional = true}
