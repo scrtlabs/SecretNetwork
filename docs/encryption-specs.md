@@ -74,7 +74,7 @@ hkfd_salt = 0x000000000000000000024bead8df69990852c202db0e0097c1a12ea637d7e96d;
 
 ### `consensus_seed_exchange_privkey`
 
-- `consensus_seed_exchange_privkey`: A secp256k1 curve private key. Will be used to derive encryption keys in order to securely share `consensus_seed` with new nodes in the network.
+- `consensus_seed_exchange_privkey`: A curve25519 private key. Will be used to derive encryption keys in order to securely share `consensus_seed` with new nodes in the network.
 - From `consensus_seed_exchange_privkey` calculate `consensus_seed_exchange_pubkey`.
 
 ```js
@@ -83,14 +83,14 @@ consensus_seed_exchange_privkey = hkdf({
   ikm: consensus_seed.append(uint8(1)),
 }); // 256 bits
 
-consensus_seed_exchange_pubkey = calculate_secp256k1_pubkey(
+consensus_seed_exchange_pubkey = calculate_curve25519_pubkey(
   consensus_seed_exchange_privkey
 );
 ```
 
 ### `consensus_io_exchange_privkey`
 
-- `consensus_io_exchange_privkey`: A secp256k1 curve private key. Will be used to derive encryption keys in order to decrypt transaction inputs and encrypt transaction outputs.
+- `consensus_io_exchange_privkey`: A curve25519 curve private key. Will be used to derive encryption keys in order to decrypt transaction inputs and encrypt transaction outputs.
 - From `consensus_io_exchange_privkey` calculate `consensus_io_exchange_pubkey`.
 
 ```js
@@ -99,7 +99,7 @@ consensus_io_exchange_privkey = hkdf({
   ikm: consensus_seed.append(uint8(2)),
 }); // 256 bits
 
-consensus_io_exchange_pubkey = calculate_secp256k1_pubkey(
+consensus_io_exchange_pubkey = calculate_curve25519_pubkey(
   consensus_io_exchange_privkey
 );
 ```
@@ -152,7 +152,7 @@ TODO reasoning
 
 - Verify the remote attestation proof of the bootstrap node from `genesis.json`.
 - Create a remote attestation proof that the node's Enclave is genuine.
-- Generate inside the node's Enclave a true random secp256k1 curve private key: `registration_privkey`.
+- Generate inside the node's Enclave a true random curve25519 curve private key: `registration_privkey`.
 - From `registration_privkey` calculate `registration_pubkey`.
 - Send an `enigmacli tx register auth` transaction with the following inputs:
   - The remote attestation proof that the node's Enclave is genuine.
@@ -433,8 +433,8 @@ tx_input = concat(ad, encrypted_msg);
 
 ```js
 nonce = tx_input.slice(0, 32); // 32 bytes
-tx_sender_wallet_pubkey = tx_input.slice(32, 65); // 33 bytes, compressed secp256k1 public key
-encrypted_msg = tx_input.slice(65);
+tx_sender_wallet_pubkey = tx_input.slice(32, 32); // 32 bytes, compressed curve25519 public key
+encrypted_msg = tx_input.slice(64);
 
 tx_encryption_ikm = ecdh({
   privkey: consensus_io_exchange_privkey,
