@@ -5,7 +5,7 @@ use snafu::ResultExt;
 use crate::traits::{Api, Extern, ReadonlyStorage, Storage};
 use cosmwasm::encoding::Binary;
 use cosmwasm::errors::{ContractErr, Result, Utf8StringErr}; //, Utf8StringErtest_ior};
-use cosmwasm::types::{BlockInfo, CanonicalAddr, Coin, ContractInfo, Env, HumanAddr, MessageInfo};
+use cosmwasm::types::{CanonicalAddr, HumanAddr};
 
 // dependencies are all external requirements that can be injected for unit tests
 pub fn dependencies(canonical_length: usize) -> Extern<MockStorage, MockApi> {
@@ -96,48 +96,48 @@ impl Api for MockApi {
     }
 }
 
-// just set signer, sent funds, and balance - rest given defaults
-// this is intended for use in testcode only
-pub fn mock_env<T: Api, U: Into<HumanAddr>>(
-    api: &T,
-    signer: U,
-    sent: &[Coin],
-    balance: &[Coin],
-) -> Env {
-    let signer = signer.into();
-    Env {
-        block: BlockInfo {
-            height: 12_345,
-            time: 1_571_797_419,
-            chain_id: "cosmos-testnet-14002".to_string(),
-        },
-        message: MessageInfo {
-            signer: api.canonical_address(&signer).unwrap(),
-            sent_funds: if sent.is_empty() {
-                None
-            } else {
-                Some(sent.to_vec())
-            },
-        },
-        contract: ContractInfo {
-            address: api
-                .canonical_address(&HumanAddr("cosmos2contract".to_string()))
-                .unwrap(),
-            balance: if balance.is_empty() {
-                None
-            } else {
-                Some(balance.to_vec())
-            },
-        },
-        contract_key: Some("".to_string()),
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
 
     use crate::types::coin;
+    use cosmwasm::types::{BlockInfo, Coin, ContractInfo, Env, MessageInfo};
+    // just set signer, sent funds, and balance - rest given defaults
+    // this is intended for use in testcode only
+    pub fn mock_env<T: Api, U: Into<HumanAddr>>(
+        api: &T,
+        signer: U,
+        sent: &[Coin],
+        balance: &[Coin],
+    ) -> Env {
+        let signer = signer.into();
+        Env {
+            block: BlockInfo {
+                height: 12_345,
+                time: 1_571_797_419,
+                chain_id: "cosmos-testnet-14002".to_string(),
+            },
+            message: MessageInfo {
+                signer: api.canonical_address(&signer).unwrap(),
+                sent_funds: if sent.is_empty() {
+                    None
+                } else {
+                    Some(sent.to_vec())
+                },
+            },
+            contract: ContractInfo {
+                address: api
+                    .canonical_address(&HumanAddr("cosmos2contract".to_string()))
+                    .unwrap(),
+                balance: if balance.is_empty() {
+                    None
+                } else {
+                    Some(balance.to_vec())
+                },
+            },
+            contract_key: Some("".to_string()),
+        }
+    }
 
     #[test]
     fn mock_env_arguments() {

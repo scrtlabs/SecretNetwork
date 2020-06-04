@@ -1,9 +1,8 @@
-use std::net::{SocketAddr, TcpListener, TcpStream};
-use std::os::unix::io::{AsRawFd, IntoRawFd};
-use std::thread::sleep;
-use std::{self, time};
+use std::net::{SocketAddr, TcpStream};
+use std::os::unix::io::IntoRawFd;
 
-use base64;
+use std::{self};
+
 use log::*;
 use sgx_types::*;
 use sgx_types::{sgx_status_t, SgxResult};

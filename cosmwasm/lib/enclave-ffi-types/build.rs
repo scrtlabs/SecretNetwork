@@ -1,5 +1,3 @@
-#![cfg_attr(not(feature = "build_headers"), allow(unused))]
-
 use std::env;
 use std::path::PathBuf;
 
