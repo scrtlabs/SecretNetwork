@@ -9,14 +9,10 @@ pub fn encrypt_seed(
     key_manager: &Keychain,
     new_node_pk: [u8; PUBLIC_KEY_SIZE],
 ) -> SgxResult<Vec<u8>> {
-    let shared_enc_key = match key_manager
+    let shared_enc_key = key_manager
         .seed_exchange_key()
         .unwrap()
-        .derive_key(&new_node_pk)
-    {
-        Ok(r) => r,
-        Err(e) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
-    };
+        .diffie_hellman(&new_node_pk);
 
     let mut authenticated_data: Vec<&[u8]> = Vec::default();
     authenticated_data.push(&new_node_pk);
@@ -50,14 +46,10 @@ pub fn decrypt_seed(
     encrypted_seed: [u8; ENCRYPTED_SEED_SIZE],
 ) -> SgxResult<Vec<u8>> {
     // create shared encryption key using ECDH
-    let shared_enc_key = match key_manager
+    let shared_enc_key = key_manager
         .get_registration_key()
         .unwrap()
-        .derive_key(&master_pk)
-    {
-        Ok(r) => r,
-        Err(e) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
-    };
+        .diffie_hellman(&master_pk);
 
     // Create AD of encryption
     let my_public_key = key_manager.get_registration_key().unwrap().get_pubkey();

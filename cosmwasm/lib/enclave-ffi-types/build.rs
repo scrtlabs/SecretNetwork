@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use thiserror::Error;
 
+#[cfg(feature = "build_headers")]
 #[derive(Debug, Error)]
 enum Error {
     #[error(transparent)]
@@ -13,7 +14,7 @@ enum Error {
     #[error("{path}")]
     BadOutDir { path: PathBuf },
 }
-
+#[cfg(feature = "build_headers")]
 fn main() -> Result<(), Error> {
     let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     // This is a directory under the `target` directory of the crate building us.
@@ -31,8 +32,12 @@ fn main() -> Result<(), Error> {
         path.push("enclave-ffi-types.h"); // This should always equal the crate name
         path
     };
-
+    println!("HELLO");
+    println!("{:?} {:?}", &crate_dir, &header_path);
     cbindgen::generate(crate_dir)?.write_to_file(header_path);
 
     Ok(())
 }
+
+#[cfg(not(feature = "build_headers"))]
+fn main() {}

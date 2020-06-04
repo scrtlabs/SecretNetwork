@@ -175,7 +175,7 @@ impl Keychain {
             .unwrap()
             .derive_key_from_this(&CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes());
         let consensus_seed_exchange_keypair = KeyPair::new_from_slice(
-            &consensus_seed_exchange_keypair_bytes.get(),
+            consensus_seed_exchange_keypair_bytes.get().clone(),
         )
         .map_err(|err| {
             error!(
@@ -196,14 +196,16 @@ impl Keychain {
             .consensus_seed
             .unwrap()
             .derive_key_from_this(&CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes());
-        let consensus_io_exchange_keypair =
-            KeyPair::new_from_slice(&consensus_io_exchange_keypair_bytes.get()).map_err(|err| {
-                error!(
-                    "[Enclave] Error creating consensus_io_exchange_keypair: {:?}",
-                    err
-                );
-                EnclaveError::FailedUnseal /* change error type? */
-            })?;
+        let consensus_io_exchange_keypair = KeyPair::new_from_slice(
+            consensus_io_exchange_keypair_bytes.get().clone(),
+        )
+        .map_err(|err| {
+            error!(
+                "[Enclave] Error creating consensus_io_exchange_keypair: {:?}",
+                err
+            );
+            EnclaveError::FailedUnseal /* change error type? */
+        })?;
         info!(
             "consensus_io_exchange_keypair: {:?}",
             consensus_io_exchange_keypair

@@ -15,7 +15,6 @@ import (
 	"path"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/decred/dcrd/dcrec/secp256k1"
 	regtypes "github.com/enigmampc/EnigmaBlockchain/x/registration"
 	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
 	"github.com/miscreant/miscreant.go"
@@ -120,7 +119,7 @@ var hkdfSalt = []byte{
 	0xc1, 0xa1, 0x2e, 0xa6, 0x37, 0xd7, 0xe9, 0x6d,
 }
 
-func (ctx WASMCLIContext) getTxEncryptionKey(txSenderPrivKey *secp256k1.PrivateKey, nonce []byte) ([]byte, error) {
+func (ctx WASMCLIContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) ([]byte, error) {
 	// TODO replace all the scep256k1 stuff with x25519
 	// https://godoc.org/golang.org/x/crypto/curve25519
 
@@ -140,15 +139,15 @@ func (ctx WASMCLIContext) getTxEncryptionKey(txSenderPrivKey *secp256k1.PrivateK
 		return nil, err
 	}
 
-	consensusIoPubKey, err := secp256k1.ParsePubKey(append([]byte{0x4}, consensusIoPubKeyBytes...))
-	if err != nil {
-		return nil, err
-	}
+	////consensusIoPubKey, err := secp256k1.ParsePubKey(append([]byte{0x4}, consensusIoPubKeyBytes...))
+	//
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	fmt.Fprintf(os.Stderr, "CLI consensusIoPubKey = %v\n", consensusIoPubKeyBytes)
 
-	fmt.Fprintf(os.Stderr, "CLI consensusIoPubKey = %v\n", consensusIoPubKey.SerializeCompressed())
-
-	txEncryptionIkmx := secp256k1.GenerateSharedSecret(txSenderPrivKey, consensusIoPubKey)
-	txEncryptionIkm := sha256.Sum256(txEncryptionIkmx)
+	txEncryptionIkm, err := curve25519.X25519(txSenderPrivKey, consensusIoPubKeyBytes)
 
 	fmt.Fprintf(os.Stderr, "CLI txEncryptionIkm = %v\n", txEncryptionIkm)
 
@@ -189,10 +188,10 @@ func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	fmt.Fprintf(os.Stderr, "CLI txSenderPubKey = %v\n", txSenderPubKey.SerializeCompressed())
+	fmt.Fprintf(os.Stderr, "CLI txSenderPubKey = %v\n", txSenderPubKey)
 
 	// ciphertext = nonce(32) || wallet_pubkey(33) || ciphertext
-	ciphertext = append(nonce, append(txSenderPubKey.SerializeCompressed(), ciphertext...)...)
+	ciphertext = append(nonce, append(txSenderPubKey, ciphertext...)...)
 
 	return ciphertext, nil
 }

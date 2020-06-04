@@ -42,24 +42,20 @@ pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
 // extra_data size (limit to 64)
-static REPORT_DATA_SIZE: usize = 64;
+static REPORT_DATA_SIZE: usize = 32;
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
 pub fn create_attestation_certificate(
     kp: &KeyPair,
     sign_type: sgx_quote_sign_type_t,
 ) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
-    // extract private key from KeyPair
-    let mut priv_key_buf: [u8; 32] = [0u8; 32];
-    priv_key_buf.copy_from_slice(kp.get_privkey());
-
     // init sgx ecc
     let ecc_handle = SgxEccHandle::new();
     let _result = ecc_handle.open();
 
     // convert keypair private to sgx ecc private
     let prv_k = sgx_ec256_private_t {
-        r: priv_key_buf.clone(),
+        r: kp.get_privkey(),
     };
     // generate the P256 public (will be different from KeyPair's public key)
     let pub_k = rsgx_ecc256_pub_from_priv(&prv_k).unwrap();
@@ -124,7 +120,7 @@ pub fn create_attestation_certificate(
 ) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     // extract private key from KeyPair
     let mut priv_key_buf: [u8; 32] = [0u8; 32];
-    priv_key_buf.copy_from_slice(kp.get_privkey());
+    priv_key_buf.copy_from_slice(&kp.get_privkey());
 
     // extra public key from KeyPair
     let mut pub_key_secp256k1: [u8; 64] = [0u8; 64];

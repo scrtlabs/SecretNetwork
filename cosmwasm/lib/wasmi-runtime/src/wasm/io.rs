@@ -6,7 +6,7 @@ use enclave_ffi_types::EnclaveError;
 use log::*;
 use serde_json::Value;
 
-fn derive_dh_io_key(user_pubkey: &[u8], nonce: &[u8; 32]) -> Result<AESKey, EnclaveError> {
+fn derive_dh_io_key(user_pubkey: &[u8; 32], nonce: &[u8; 32]) -> Result<AESKey, EnclaveError> {
     let enclave_io_key = KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap();
 
     info!("rust user_pubkey {:?}", user_pubkey);
@@ -15,10 +15,7 @@ fn derive_dh_io_key(user_pubkey: &[u8], nonce: &[u8; 32]) -> Result<AESKey, Encl
         enclave_io_key.get_pubkey().to_vec().as_slice()
     );
 
-    let tx_encryption_ikm = match enclave_io_key.derive_key(user_pubkey) {
-        Err(e) => return Err(EnclaveError::FailedFunctionCall),
-        Ok(t) => t,
-    };
+    let tx_encryption_ikm = enclave_io_key.diffie_hellman(user_pubkey);
 
     info!("rust tx_encryption_ikm {:?}", tx_encryption_ikm);
 
@@ -29,7 +26,7 @@ fn derive_dh_io_key(user_pubkey: &[u8], nonce: &[u8; 32]) -> Result<AESKey, Encl
     Ok(tx_encryption_key)
 }
 
-pub fn decrypt_msg(msg: &[u8]) -> Result<(Vec<u8>, [u8; 33], [u8; 32]), EnclaveError> {
+pub fn decrypt_msg(msg: &[u8]) -> Result<(Vec<u8>, [u8; 32], [u8; 32]), EnclaveError> {
     // 32 bytes of AD
     // 33 bytes of secp256k1 compressed public key
     // 16+ bytes of encrypted data
@@ -44,10 +41,10 @@ pub fn decrypt_msg(msg: &[u8]) -> Result<(Vec<u8>, [u8; 33], [u8; 32]), EnclaveE
     let mut nonce = [0u8; 32];
     nonce.copy_from_slice(&msg[0..32]);
 
-    let mut user_pubkey = [0u8; 33];
-    user_pubkey.copy_from_slice(&msg[32..65]);
+    let mut user_pubkey = [0u8; 32];
+    user_pubkey.copy_from_slice(&msg[32..64]);
 
-    let encrypted_msg = &msg[65..];
+    let encrypted_msg = &msg[64..];
 
     let key = derive_dh_io_key(&user_pubkey, &nonce)?;
 
@@ -65,7 +62,7 @@ pub fn decrypt_msg(msg: &[u8]) -> Result<(Vec<u8>, [u8; 33], [u8; 32]), EnclaveE
 
 pub fn encrypt_output(
     plaintext: &Vec<u8>,
-    user_pubkey: &[u8; 33],
+    user_pubkey: &[u8; 32],
     nonce: &[u8; 32],
 ) -> Result<Vec<u8>, EnclaveError> {
     let key = derive_dh_io_key(user_pubkey, nonce)?;

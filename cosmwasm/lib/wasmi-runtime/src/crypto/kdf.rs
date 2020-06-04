@@ -1,5 +1,5 @@
-use crate::crypto::keys::{AESKey, Seed, SECRET_KEY_SIZE};
 use crate::crypto::traits::Kdf;
+use crate::crypto::{AESKey, Seed, SECRET_KEY_SIZE};
 
 use chrono::format::Numeric::Second;
 use ring::{hkdf, hmac};

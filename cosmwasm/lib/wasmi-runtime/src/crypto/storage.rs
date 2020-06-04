@@ -1,6 +1,5 @@
-use crate::crypto::keys::SECRET_KEY_SIZE;
-use crate::crypto::keys::{AESKey, KeyPair, Seed};
 use crate::crypto::traits::SealedKey;
+use crate::crypto::{AESKey, KeyPair, Seed, SECRET_KEY_SIZE};
 
 use enclave_ffi_types::EnclaveError;
 use log::*;
@@ -32,17 +31,17 @@ impl SealedKey for Seed {
 impl SealedKey for KeyPair {
     fn seal(&self, filepath: &str) -> Result<(), EnclaveError> {
         // Files are automatically closed when they go out of scope.
-        let mut buf = [0u8; 32];
+        //let mut buf = [0u8; 32];
 
-        buf.copy_from_slice(self.get_privkey());
+        //buf.copy_from_slice();
 
-        seal(&buf, filepath)
+        seal(&self.get_privkey(), filepath)
     }
 
     fn unseal(filepath: &str) -> Result<Self, EnclaveError> {
         let buf = open(filepath)?;
 
-        KeyPair::new_from_slice(&buf).map_err(|err| EnclaveError::FailedUnseal)
+        KeyPair::new_from_slice(buf).map_err(|err| EnclaveError::FailedUnseal)
     }
 }
 

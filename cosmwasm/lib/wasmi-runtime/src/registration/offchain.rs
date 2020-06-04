@@ -10,7 +10,7 @@ use crate::consts::{
     ATTESTATION_CERTIFICATE_SAVE_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH,
     SEED_EXCH_CERTIFICATE_SAVE_PATH,
 };
-use crate::crypto::{Keychain, Seed, PUBLIC_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE};
+use crate::crypto::{Keychain, Seed, PUBLIC_KEY_SIZE};
 use crate::storage::write_to_untrusted;
 use crate::utils::{attest_from_key, validate_const_ptr, validate_mut_ptr, validate_mut_slice};
 
@@ -210,7 +210,7 @@ pub unsafe extern "C" fn ecall_key_gen(
     key_manager.create_registration_key();
 
     let pubkey = key_manager.get_registration_key().unwrap().get_pubkey();
-    public_key.clone_from_slice(&pubkey[1..UNCOMPRESSED_PUBLIC_KEY_SIZE]);
+    public_key.clone_from_slice(&pubkey);
     // todo: remove this before production O.o
     info!("ecall_key_gen key pk: {:?}", public_key.to_vec());
     sgx_status_t::SGX_SUCCESS

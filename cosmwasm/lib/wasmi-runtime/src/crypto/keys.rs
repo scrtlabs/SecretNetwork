@@ -1,3 +1,5 @@
+use super::rng::rand_slice;
+use enclave_ffi_types::CryptoError;
 use log::*;
 
 pub const SEED_KEY_SIZE: usize = 32;

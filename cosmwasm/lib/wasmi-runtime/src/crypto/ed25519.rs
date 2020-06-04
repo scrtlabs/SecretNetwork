@@ -1,6 +1,6 @@
 use super::keys::DhKey;
 
-use super::traits::Ecdh;
+// super::traits::Ecdh;
 
 use x25519_dalek;
 
@@ -23,29 +23,30 @@ impl KeyPair {
         rand_slice(&mut sk_slice)?;
 
         let sk = x25519_dalek::StaticSecret::from(sk_slice);
-        let pk = x25519_dalek::PublicKey::from(sk);
+        let pk = x25519_dalek::PublicKey::from(&sk);
 
         return Ok(Self {
             secret_key: sk.to_bytes(),
             public_key: pk.as_bytes().clone(),
         });
     }
-    pub fn new_from_slice(privkey: &[u8; SECRET_KEY_SIZE]) -> Result<Self, CryptoError> {
-        let pk = x25519_dalek::PublicKey::from(privkey);
+    pub fn new_from_slice(privkey: [u8; SECRET_KEY_SIZE]) -> Result<Self, CryptoError> {
+        let my_secret = x25519_dalek::StaticSecret::from(privkey);
+        let pk = x25519_dalek::PublicKey::from(&my_secret);
         return Ok(Self {
             secret_key: privkey.clone(),
             public_key: pk.as_bytes().clone(),
         });
     }
-    pub fn derive_key(&self, your_public: &[u8]) -> DhKey {
+    pub fn diffie_hellman(&self, your_public: &[u8; SECRET_KEY_SIZE]) -> DhKey {
         let my_secret = x25519_dalek::StaticSecret::from(self.secret_key);
-        let pk = x25519_dalek::PublicKey::from(your_public);
+        let pk = x25519_dalek::PublicKey::from(your_public.clone());
         let ss = my_secret.diffie_hellman(&pk);
 
         ss.as_bytes().clone()
     }
-    pub fn get_privkey(&self) -> &[u8] {
-        &self.secret_key[..]
+    pub fn get_privkey(&self) -> [u8; SECRET_KEY_SIZE] {
+        self.secret_key.clone()
     }
 
     // This will return the raw 64 bytes public key.
