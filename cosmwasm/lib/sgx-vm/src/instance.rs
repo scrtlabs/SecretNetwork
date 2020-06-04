@@ -58,7 +58,7 @@ pub fn create_attestation_report_u() -> SgxResult<sgx_status_t> {
     inner_create_report(enclave.geteid())
 }
 
-pub fn untrusted_key_gen() -> SgxResult<[u8; 64]> {
+pub fn untrusted_key_gen() -> SgxResult<[u8; 32]> {
     info!("Hello from just before initializing - untrusted_key_gen");
     let enclave = init_enclave().unwrap();
     info!("Hello from just after initializing - untrusted_key_gen");
@@ -66,7 +66,7 @@ pub fn untrusted_key_gen() -> SgxResult<[u8; 64]> {
     inner_key_gen(enclave.geteid())
 }
 
-pub fn untrusted_init_bootstrap() -> SgxResult<[u8; 64]> {
+pub fn untrusted_init_bootstrap() -> SgxResult<[u8; 32]> {
     info!("Hello from just before initializing - untrusted_init_bootstrap");
     let enclave = init_enclave().unwrap();
     info!("Hello from just after initializing - untrusted_init_bootstrap");

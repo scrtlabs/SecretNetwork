@@ -1,5 +1,5 @@
-use crate::crypto::keys::{AESKey, Seed, SECRET_KEY_SIZE};
 use crate::crypto::traits::Kdf;
+use crate::crypto::{AESKey, Seed, SECRET_KEY_SIZE};
 
 use chrono::format::Numeric::Second;
 use ring::{hkdf, hmac};
@@ -15,7 +15,7 @@ impl Kdf for AESKey {
         let mut input_bytes: Vec<u8> = self.get().to_vec();
         input_bytes.extend_from_slice(data);
 
-        AESKey::new_from_slice(&derive_key(&input_bytes, &[b"aeskey"]))
+        AESKey::new_from_slice(&derive_key(&input_bytes, &[]))
     }
 }
 

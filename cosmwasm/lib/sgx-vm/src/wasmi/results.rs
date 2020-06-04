@@ -1,5 +1,5 @@
 use super::exports;
-use enclave_ffi_types::{CryptoError, EnclaveError, HandleResult, InitResult, QueryResult};
+use enclave_ffi_types::{EnclaveError, HandleResult, InitResult, QueryResult};
 
 /// This struct is returned from module initialization.
 pub struct InitSuccess {

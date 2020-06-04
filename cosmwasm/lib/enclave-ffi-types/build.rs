@@ -1,8 +1,10 @@
 use std::env;
 use std::path::PathBuf;
 
+#[cfg(feature = "build_headers")]
 use thiserror::Error;
 
+#[cfg(feature = "build_headers")]
 #[derive(Debug, Error)]
 enum Error {
     #[error(transparent)]
@@ -13,7 +15,7 @@ enum Error {
     #[error("{path}")]
     BadOutDir { path: PathBuf },
 }
-
+#[cfg(feature = "build_headers")]
 fn main() -> Result<(), Error> {
     let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     // This is a directory under the `target` directory of the crate building us.
@@ -36,3 +38,6 @@ fn main() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[cfg(not(feature = "build_headers"))]
+fn main() {}

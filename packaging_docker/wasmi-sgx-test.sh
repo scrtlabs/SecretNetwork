@@ -21,7 +21,7 @@ done
 wget -O /tmp/contract.wasm https://raw.githubusercontent.com/CosmWasm/cosmwasm-examples/f5ea00a85247abae8f8cbcba301f94ef21c66087/erc20/contract.wasm --no-check-certificate
 STORE_TX_HASH=$(
     yes |
-    enigmacli tx compute store /tmp/contract.wasm --from a --gas 10000000 2> /dev/null |
+    enigmacli tx compute store /tmp/contract.wasm --from a --gas 10000000 |
     jq -r .txhash
 )
 
@@ -37,7 +37,7 @@ enigmacli q tx "$STORE_TX_HASH" |
 # balances are set to 108 & 53 at init
 INIT_TX_HASH=$(
     yes |
-        enigmacli tx compute instantiate 1 "{\"decimals\":10,\"initial_balances\":[{\"address\":\"$(enigmacli keys show a -a)\",\"amount\":\"108\"},{\"address\":\"enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4\",\"amount\":\"53\"}],\"name\":\"ReuvenPersonalRustCoin\",\"symbol\":\"RPRC\"}" --label RPRCCoin --from a 2> /dev/null |
+        enigmacli tx compute instantiate 1 "{\"decimals\":10,\"initial_balances\":[{\"address\":\"$(enigmacli keys show a -a)\",\"amount\":\"108\"},{\"address\":\"enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4\",\"amount\":\"53\"}],\"name\":\"ReuvenPersonalRustCoin\",\"symbol\":\"RPRC\"}" --label RPRCCoin --from a |
         jq -r .txhash
 )
 

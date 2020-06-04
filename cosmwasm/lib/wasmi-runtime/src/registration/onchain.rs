@@ -58,9 +58,8 @@ pub extern "C" fn ecall_authenticate_new_node(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
-    let mut target_public_key: [u8; 65] = [4u8; 65];
-
-    target_public_key[1..].copy_from_slice(&pk);
+    let mut target_public_key: [u8; 32] = [0u8; 32];
+    target_public_key.copy_from_slice(&pk);
     debug!(
         "ecall_get_encrypted_seed target_public_key key pk: {:?}",
         &target_public_key.to_vec()

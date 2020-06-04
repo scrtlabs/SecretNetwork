@@ -1,9 +1,7 @@
-use crate::crypto::key_manager;
-use crate::crypto::traits::Encryptable;
-use crate::crypto::*;
 use bech32;
 use bech32::{FromBase32, ToBase32};
 use log::{error, trace, warn};
+use sgx_tcrypto::*;
 use sgx_types::{sgx_status_t, SgxError, SgxResult};
 use std::str;
 use wasmi::{
@@ -13,7 +11,18 @@ use wasmi::{
 
 use enclave_ffi_types::{Ctx, EnclaveBuffer};
 
-use super::errors::WasmEngineError;
+use super::contract_validation::ContractKey;
+use crate::crypto::key_manager;
+use crate::crypto::traits::{Encryptable, Kdf};
+use crate::crypto::*;
+
+use super::errors::{DbError, WasmEngineError};
+// Runtime maps function index to implementation
+// When instansiating a module we give it the EnigmaImportResolver resolver
+// When invoking a function inside the module we give it this runtime which is the acctual functions implementation ()
+use crate::exports;
+use crate::imports;
+use crate::wasm::db::{read_encrypted_key, write_encrypted_key};
 
 // --------------------------------
 // Functions to expose to WASM code
@@ -75,61 +84,22 @@ impl ModuleImportResolver for EnigmaImportResolver {
     }
 }
 
-// Runtime maps function index to implementation
-// When instansiating a module we give it the EnigmaImportResolver resolver
-// When invoking a function inside the module we give it this runtime which is the acctual functions implementation ()
-use super::exports;
-use super::imports;
-
-/// Safe wrapper around reads from the contract storage
-fn read_db(context: &Ctx, key: &[u8]) -> SgxResult<Option<Vec<u8>>> {
-    let mut enclave_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
-    unsafe {
-        match imports::ocall_read_db(
-            enclave_buffer.as_mut_ptr(),
-            context.clone(),
-            key.as_ptr(),
-            key.len(),
-        ) {
-            sgx_status_t::SGX_SUCCESS => { /* continue */ }
-            error_status => return Err(error_status),
-        }
-        let enclave_buffer = enclave_buffer.assume_init();
-        // TODO add validation of this pointer before returning its contents.
-        Ok(exports::recover_buffer(enclave_buffer))
-    }
-}
-
-/// Safe wrapper around writes to the contract storage
-fn write_db(context: Ctx, key: &[u8], value: &[u8]) -> SgxError {
-    match unsafe {
-        imports::ocall_write_db(
-            context,
-            key.as_ptr(),
-            key.len(),
-            value.as_ptr(),
-            value.len(),
-        )
-    } {
-        sgx_status_t::SGX_SUCCESS => Ok(()),
-        err => Err(err),
-    }
-}
-
 pub struct Runtime {
     pub context: Ctx,
     pub memory: MemoryRef,
     pub gas_limit: u64,
     pub gas_used: u64,
+    pub contract_key: ContractKey,
 }
 
 impl Runtime {
-    pub fn new(context: Ctx, memory: MemoryRef, gas_limit: u64) -> Self {
+    pub fn new(context: Ctx, memory: MemoryRef, gas_limit: u64, contract_key: ContractKey) -> Self {
         Self {
             context,
             memory,
             gas_limit,
             gas_used: 0,
+            contract_key,
         }
     }
 }
@@ -139,6 +109,11 @@ const WRITE_DB_INDEX: usize = 1;
 const CANONICALIZE_ADDRESS_INDEX: usize = 2;
 const HUMANIZE_ADDRESS_INDEX: usize = 3;
 const GAS_INDEX: usize = 4;
+
+/// An unknown error occurred when writing to region
+const ERROR_READING_DB: i32 = -5;
+/// An unknown error occurred when writing to region
+const ERROR_WRITING_DB: i32 = -6;
 
 /// An unknown error occurred when writing to region
 const ERROR_WRITE_TO_REGION_UNKNONW: i32 = -1000001;
@@ -189,31 +164,16 @@ impl Externals for Runtime {
 
                 // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
                 // This returns the value from Tendermint
-                // fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
-                let value = match read_db(unsafe { &self.context.clone() }, &state_key_name)
-                    .map_err(|err| {
-                        error!(
-                            "read_db() got an error from ocall_read_db, stopping wasm: {:?}",
-                            err
-                        );
-                        WasmEngineError::FailedOcall
-                    })? {
-                    None => return Ok(Some(RuntimeValue::I32(0))),
-                    Some(value) => value,
-                };
-
-                // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
-                // TODO derive encryption key for these key-value on this contract
-                let base_state_key = key_manager::KEY_MANAGER.get_consensus_state_ikm().unwrap();
-
-                let decrypted_value = base_state_key.decrypt_siv(&value, &vec![]).map_err(|err| {
-                    error!(
-                        "read_db() got an error while trying to decrypt the value for key {:?}, stopping wasm: {:?}",
-                        String::from_utf8_lossy(&state_key_name),
-                        err
-                    );
-                    WasmEngineError::DecryptionError
-                })?;
+                let value: Vec<u8> =
+                    match read_encrypted_key(&state_key_name, &self.context, &self.contract_key) {
+                        Err(e) => {
+                            return match e {
+                                DbError::EmptyValue => Ok(Some(RuntimeValue::I32(0))),
+                                _ => Ok(Some(RuntimeValue::I32(ERROR_READING_DB))),
+                            }
+                        }
+                        Ok(T) => T,
+                    };
 
                 // Get pointer to the region of the value buffer
                 let value_ptr_ptr_in_wasm: i32 = args.nth_checked(1)?;
@@ -245,15 +205,15 @@ impl Externals for Runtime {
                 };
 
                 // Check that value is not too big to write into the allocated buffer
-                if value_len_in_wasm < decrypted_value.len() as u32 {
+                if value_len_in_wasm < value.len() as u32 {
                     warn!(
-                        "read_db() result to big ({} bytes) to write to allocated wasm buffer ({} bytes)" ,decrypted_value.len(),value_len_in_wasm
+                        "read_db() result to big ({} bytes) to write to allocated wasm buffer ({} bytes)" ,value.len(),value_len_in_wasm
                     );
                     return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_TOO_SMALL)));
                 }
 
                 // Write value returned from read_db to WASM memory
-                if let Err(err) = self.memory.set(value_ptr_in_wasm, &decrypted_value) {
+                if let Err(err) = self.memory.set(value_ptr_in_wasm, &value) {
                     warn!(
                         "read_db() error while trying to write to result buffer: {:?}",
                         err
@@ -314,34 +274,11 @@ impl Externals for Runtime {
                     String::from_utf8_lossy(value.get(0..std::cmp::min(20, value.len())).unwrap())
                 );
 
-                // TODO KEY_MANAGER should be initialized in the boot process and after that it'll never panic, if it panics on boot than the node is in a broken state and should panic
-                // TODO derive encryption key for these key-value on this contract
-                let base_state_key = key_manager::KEY_MANAGER.get_consensus_state_ikm().unwrap();
-                let encrypted_value = base_state_key.encrypt_siv(&value,&vec![]).map_err(|err| {
-                    error!(
-                        "write_db() got an error while trying to encrypt the value {:?}, stopping wasm: {:?}",
-                        String::from_utf8_lossy(&value),
-                        err
-                    );
-                    WasmEngineError::EncryptionError
-                })?;
-
-                // Call write_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
-                // fn write_db(context: Ctx, key: &[u8], value: &[u8]) {
-                write_db(
-                    unsafe { self.context.clone() },
-                    &state_key_name,
-                    &encrypted_value,
-                )
-                .map_err(|err| {
-                    error!(
-                        "write_db() go an error from ocall_write_db, stopping wasm: {:?}",
-                        err
-                    );
-                    WasmEngineError::FailedOcall
-                })?;
-
-                // Return nothing because this is the api ¯\_(ツ)_/¯
+                if let Err(e) =
+                    write_encrypted_key(&state_key_name, &value, &self.context, &self.contract_key)
+                {
+                    return Ok(Some(RuntimeValue::I32(ERROR_WRITING_DB)));
+                }
                 Ok(None)
             }
             // fn canonicalize_address(human: *const c_void, canonical: *mut c_void) -> i32;

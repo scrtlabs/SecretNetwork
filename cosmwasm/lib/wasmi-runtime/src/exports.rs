@@ -42,7 +42,7 @@ pub extern "C" fn ecall_init(
     let env = unsafe { std::slice::from_raw_parts(env, env_len) };
     let msg = unsafe { std::slice::from_raw_parts(msg, msg_len) };
 
-    let result = super::contract_operations::init(context, gas_limit, contract, env, msg);
+    let result = crate::wasm::init(context, gas_limit, contract, env, msg);
     result_init_success_to_initresult(result)
 }
 
@@ -61,7 +61,7 @@ pub extern "C" fn ecall_handle(
     let env = unsafe { std::slice::from_raw_parts(env, env_len) };
     let msg = unsafe { std::slice::from_raw_parts(msg, msg_len) };
 
-    let result = super::contract_operations::handle(context, gas_limit, contract, env, msg);
+    let result = crate::wasm::handle(context, gas_limit, contract, env, msg);
     result_handle_success_to_handleresult(result)
 }
 
@@ -77,6 +77,6 @@ pub extern "C" fn ecall_query(
     let contract = unsafe { std::slice::from_raw_parts(contract, contract_len) };
     let msg = unsafe { std::slice::from_raw_parts(msg, msg_len) };
 
-    let result = super::contract_operations::query(context, gas_limit, contract, msg);
+    let result = crate::wasm::query(context, gas_limit, contract, msg);
     result_query_success_to_queryresult(result)
 }

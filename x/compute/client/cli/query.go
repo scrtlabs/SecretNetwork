@@ -254,7 +254,9 @@ func GetCmdGetContractStateSmart(cdc *codec.Codec) *cobra.Command {
 				return fmt.Errorf("decode query: %s", err)
 			}
 
-			queryData, err = wasmUtils.Encrypt(queryData)
+			wasmCliCtx := wasmUtils.WASMCLIContext{CLIContext: cliCtx}
+
+			queryData, err = wasmCliCtx.Encrypt(queryData)
 			if err != nil {
 				return err
 			}
@@ -263,8 +265,8 @@ func GetCmdGetContractStateSmart(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			resAsBase64, err := wasmUtils.Decrypt(resEncrypted)
+			nonce := queryData[:32]
+			resAsBase64, err := wasmCliCtx.Decrypt(resEncrypted, nonce)
 			if err != nil {
 				return err
 			}

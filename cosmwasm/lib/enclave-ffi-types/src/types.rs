@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use core::ffi::c_void;
 use derive_more::Display;
 
