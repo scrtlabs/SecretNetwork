@@ -119,10 +119,7 @@ var hkdfSalt = []byte{
 	0xc1, 0xa1, 0x2e, 0xa6, 0x37, 0xd7, 0xe9, 0x6d,
 }
 
-func (ctx WASMCLIContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) ([]byte, error) {
-	// TODO replace all the scep256k1 stuff with x25519
-	// https://godoc.org/golang.org/x/crypto/curve25519
-
+func (ctx WASMCLIContext) getMasterIoKey() ([]byte, error) {
 	res, _, err := ctx.CLIContext.Query("custom/register/master-cert")
 	if err != nil {
 		return nil, err
@@ -134,31 +131,31 @@ func (ctx WASMCLIContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byt
 		return nil, err
 	}
 
-	consensusIoPubKeyBytes, err := ra.VerifyRaCert(certs.IoMasterCertificate)
+	ioPubkey, err := ra.VerifyRaCert(certs.IoMasterCertificate)
 	if err != nil {
 		return nil, err
 	}
 
-	////consensusIoPubKey, err := secp256k1.ParsePubKey(append([]byte{0x4}, consensusIoPubKeyBytes...))
-	//
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	fmt.Fprintf(os.Stderr, "CLI consensusIoPubKey = %v\n", consensusIoPubKeyBytes)
+	return ioPubkey, nil
+}
 
-	txEncryptionIkm, err := curve25519.X25519(txSenderPrivKey, consensusIoPubKeyBytes)
+func (ctx WASMCLIContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) ([]byte, error) {
 
-	fmt.Fprintf(os.Stderr, "CLI txEncryptionIkm = %v\n", txEncryptionIkm)
-
-	hkdf := hkdf.New(sha256.New, append(txEncryptionIkm[:], nonce...), hkdfSalt, []byte{})
-
-	txEncryptionKey := make([]byte, 32)
-	if _, err := io.ReadFull(hkdf, txEncryptionKey); err != nil {
+	consensusIoPubKeyBytes, err := ctx.getMasterIoKey()
+	if err != nil {
 		return nil, err
 	}
 
-	fmt.Fprintf(os.Stderr, "CLI txEncryptionKey = %v\n", txEncryptionKey)
+	txEncryptionIkm, err := curve25519.X25519(txSenderPrivKey, consensusIoPubKeyBytes)
+
+	kdfFunc := hkdf.New(sha256.New, append(txEncryptionIkm[:], nonce...), hkdfSalt, []byte{})
+
+	txEncryptionKey := make([]byte, 32)
+	if _, err := io.ReadFull(kdfFunc, txEncryptionKey); err != nil {
+		return nil, err
+	}
+
+	_, _ = fmt.Fprintf(os.Stderr, "CLI txEncryptionKey = %v\n", txEncryptionKey)
 
 	return txEncryptionKey, nil
 }
@@ -168,7 +165,7 @@ func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
 	txSenderPrivKey, txSenderPubKey, err := ctx.getTxSenderKeyPair()
 
 	nonce := make([]byte, 32)
-	rand.Read(nonce)
+	_, _ = rand.Read(nonce)
 
 	txEncryptionKey, err := ctx.getTxEncryptionKey(txSenderPrivKey, nonce)
 	if err != nil {
@@ -187,8 +184,6 @@ func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
 		log.Println(err)
 		return nil, err
 	}
-
-	fmt.Fprintf(os.Stderr, "CLI txSenderPubKey = %v\n", txSenderPubKey)
 
 	// ciphertext = nonce(32) || wallet_pubkey(33) || ciphertext
 	ciphertext = append(nonce, append(txSenderPubKey, ciphertext...)...)
