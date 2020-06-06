@@ -108,7 +108,8 @@ deb: build_local
 	mkdir -p /tmp/SecretNetwork/deb/DEBIAN
 	cp ./packaging_ubuntu/control /tmp/SecretNetwork/deb/DEBIAN/control
 	printf "Version: " >> /tmp/SecretNetwork/deb/DEBIAN/control
-	git describe --tags | tr -d v >> /tmp/SecretNetwork/deb/DEBIAN/control
+	# git tag | grep -P '^v' | tail -1 | tr -d v >> /tmp/SecretNetwork/deb/DEBIAN/control
+	git tag | grep -P '^v$(VERSION)' | tr -d v >> /tmp/SecretNetwork/deb/DEBIAN/control
 	echo "" >> /tmp/SecretNetwork/deb/DEBIAN/control
 	cp ./packaging_ubuntu/postinst /tmp/SecretNetwork/deb/DEBIAN/postinst
 	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/postinst
@@ -122,7 +123,7 @@ rename_for_release:
 	-rename "s/darwin-10.6-amd64/v${VERSION}-osx64/" *darwin*
 
 sign_for_release: rename_for_release
-	sha256sum secretnetwork*.deb > SHA256SUMS
+	sha256sum secret-network*.deb > SHA256SUMS
 	-sha256sum secretd-* secretcli-* >> SHA256SUMS
 	gpg -u 91831DE812C6415123AFAA7B420BF1CB005FBCE6 --digest-algo sha256 --clearsign --yes SHA256SUMS
 	rm -f SHA256SUMS
