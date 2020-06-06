@@ -22,7 +22,7 @@
     - [Decrypting `encrypted_consensus_seed`](#decrypting-encrypted_consensus_seed)
   - [New Node Registration Epilogue](#new-node-registration-epilogue)
 - [Contracts State Encryption](#contracts-state-encryption)
-  - [`contract_id`](#contract_id)
+  - [`contract_key`](#contract_key)
   - [write_db(field_name, value)](#write_dbfield_name-value)
   - [read_db(field_name)](#read_dbfield_name)
 - [Transaction Encryption](#transaction-encryption)
@@ -34,6 +34,9 @@
     - [Back on the transaction sender](#back-on-the-transaction-sender)
 - [Blockchain Upgrades](#blockchain-upgrades)
 - [Theoretical Attacks](#theoretical-attacks)
+  - [Deanonymizing with ciphertext byte count](#deanonymizing-with-ciphertext-byte-count)
+  - [Two contracts with the same `contract_key` could deanonymize each other's states](#two-contracts-with-the-same-contract_key-could-deanonymize-each-others-states)
+  - [Tx Replay attacks?](#tx-replay-attacks)
 
 # Bootstrap Process
 
@@ -64,16 +67,14 @@ TODO reasoning
 - The HKDF-SHA256 [salt](https://tools.ietf.org/html/rfc5869#section-3.1) is chosen to be Bitcoin's halving block hash.
 
 ```js
-hkfd_salt = sha256(
-  0x000000000000000000024bead8df69990852c202db0e0097c1a12ea637d7e96d
-);
+hkfd_salt = 0x000000000000000000024bead8df69990852c202db0e0097c1a12ea637d7e96d;
 ```
 
 - Using HKDF-SHA256, `hkfd_salt` and `consensus_seed`, derive the following keys:
 
 ### `consensus_seed_exchange_privkey`
 
-- `consensus_seed_exchange_privkey`: A secp256k1 curve private key. Will be used to derive encryption keys in order to securely share `consensus_seed` with new nodes in the network.
+- `consensus_seed_exchange_privkey`: A curve25519 private key. Will be used to derive encryption keys in order to securely share `consensus_seed` with new nodes in the network.
 - From `consensus_seed_exchange_privkey` calculate `consensus_seed_exchange_pubkey`.
 
 ```js
@@ -82,14 +83,14 @@ consensus_seed_exchange_privkey = hkdf({
   ikm: consensus_seed.append(uint8(1)),
 }); // 256 bits
 
-consensus_seed_exchange_pubkey = calculate_secp256k1_pubkey(
+consensus_seed_exchange_pubkey = calculate_curve25519_pubkey(
   consensus_seed_exchange_privkey
 );
 ```
 
 ### `consensus_io_exchange_privkey`
 
-- `consensus_io_exchange_privkey`: A secp256k1 curve private key. Will be used to derive encryption keys in order to decrypt transaction inputs and encrypt transaction outputs.
+- `consensus_io_exchange_privkey`: A curve25519 curve private key. Will be used to derive encryption keys in order to decrypt transaction inputs and encrypt transaction outputs.
 - From `consensus_io_exchange_privkey` calculate `consensus_io_exchange_pubkey`.
 
 ```js
@@ -98,7 +99,7 @@ consensus_io_exchange_privkey = hkdf({
   ikm: consensus_seed.append(uint8(2)),
 }); // 256 bits
 
-consensus_io_exchange_pubkey = calculate_secp256k1_pubkey(
+consensus_io_exchange_pubkey = calculate_curve25519_pubkey(
   consensus_io_exchange_privkey
 );
 ```
@@ -151,7 +152,7 @@ TODO reasoning
 
 - Verify the remote attestation proof of the bootstrap node from `genesis.json`.
 - Create a remote attestation proof that the node's Enclave is genuine.
-- Generate inside the node's Enclave a true random secp256k1 curve private key: `registration_privkey`.
+- Generate inside the node's Enclave a true random curve25519 curve private key: `registration_privkey`.
 - From `registration_privkey` calculate `registration_pubkey`.
 - Send an `enigmacli tx register auth` transaction with the following inputs:
   - The remote attestation proof that the node's Enclave is genuine.
@@ -170,7 +171,11 @@ TODO reasoning
 
 TODO reasoning
 
-- `seed_exchange_key`: An AES-SIV-128 encryption key. Will be used to send `consensus_seed` to the new node.
+- `seed_exchange_key`: An [AES-128-SIV](https://tools.ietf.org/html/rfc5297) encryption key. Will be used to send `consensus_seed` to the new node.
+- AES-128-SIV was chosen to prevent IV misuse by client libraries.
+  - https://tools.ietf.org/html/rfc5297
+  - https://github.com/miscreant/meta
+  - The input key is 256 bits, but half of it is used to derive the internal IV.
 - `seed_exchange_key` is derived the following way:
   - `seed_exchange_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_seed_exchange_privkey` and `registration_pubkey`.
   - `seed_exchange_key` is derived using HKDF-SHA256 from `seed_exchange_ikm` and `nonce`.
@@ -191,10 +196,10 @@ seed_exchange_key = hkdf({
 
 TODO reasoning
 
-- The output of the `enigmacli tx register auth` transaction is `consensus_seed` encrypted with AES-SIV-128, `seed_exchange_key` as the encryption key, using the public key of the registering node for the AD.
+- The output of the `enigmacli tx register auth` transaction is `consensus_seed` encrypted with AES-128-SIV, `seed_exchange_key` as the encryption key, using the public key of the registering node for the AD.
 
 ```js
-encrypted_consensus_seed = aes_siv_128_encrypt({
+encrypted_consensus_seed = aes_128_siv_encrypt({
   key: seed_exchange_key,
   data: consensus_seed,
   ad: new_node_public_key,
@@ -211,10 +216,11 @@ return encrypted_consensus_seed;
 
 TODO reasoning
 
-- `seed_exchange_key`: An AES-SIV-128 encryption key. Will be used to decrypt `consensus_seed`.
+- `seed_exchange_key`: An AES-128-SIV encryption key. Will be used to decrypt `consensus_seed`.
 - `seed_exchange_key` is derived the following way:
+
   - `seed_exchange_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_seed_exchange_pubkey` (public in `genesis.json`) and `registration_privkey` (available only inside the new node's Enclave).
- 
+
   - `seed_exchange_key` is derived using HKDF-SHA256 with `seed_exchange_ikm` and `nonce`.
 
 ```js
@@ -233,12 +239,12 @@ seed_exchange_key = hkdf({
 
 TODO reasoning
 
-- `encrypted_consensus_seed` is encrypted with AES-SIV-128, `seed_exchange_key` as the encryption key and the public key of the registering node as the `ad` as the decryption additional data.
+- `encrypted_consensus_seed` is encrypted with AES-128-SIV, `seed_exchange_key` as the encryption key and the public key of the registering node as the `ad` as the decryption additional data.
 - The new node now has all of these^ parameters inside its Enclave, so it's able to decrypt `consensus_seed` from `encrypted_consensus_seed`.
 - Seal `consensus_seed` to disk at `"$HOME/.enigmad/sgx-secrets/consensus_seed.sealed"`.
 
 ```js
-consensus_seed = aes_256_gcm_decrypt({
+consensus_seed = aes_128_siv_decrypt({
   key: seed_exchange_key,
   data: encrypted_consensus_seed,
   ad: new_node_public_key,
@@ -264,124 +270,123 @@ TODO reasoning
 
 - While executing a function call inside the Enclave as part of a transaction, the contract code can call `write_db(field_name, value)` and `read_db(field_name)`.
 - Contracts' state is stored on-chain inside a key-value store, thus the `field_name` must remain constant between calls.
-- Good encryption doesn't use the same `encryption_key` and `iv` together more than once. This means that encrypting the same input twice yields different outputs, and therefore we cannot encrypt the `field_name` because the next time we want to query it we won't know where to look for it.
 - `encryption_key` is derived using HKDF-SHA256 from:
   - `consensus_state_ikm`
   - `field_name`
-  - `contact_id`
-- Ciphertext is prepended with the `iv` so that the next read will be able to decrypt it. `iv` is also authenticated with the AES-256-GCM AAD.
-- `iv` is derive from `sha256(consensus_state_iv || value || previous_iv)` in order to prevent tx rollback attacks that can force `iv` and `encryption_key` reuse. This also prevents using the same `iv` in different instances of the same contract. `consensus_state_iv` prevents exposing `value` by comparing `iv` to `previos_iv`.
+  - `contact_key`
 
-## `contract_id`
+## `contract_key`
 
-- `contract_id` is a concatenation of two values: `contract_id_payload || encrypted_contract_id_payload`.
-- When a contract is deployed (i.e., on contract init), `contract_id` is generated inside of the enclave as follows:
+- `contract_key` is a concatenation of two values: `signer_id || authenticated_contract_key`.
+- When a contract is deployed (i.e., on contract init), `contract_key` is generated inside of the Enclave as follows:
 
 ```js
-contract_id_payload = sha256(concat(msg_sender, block_height, contract_code));
+signer_id = sha256(concat(msg_sender, block_height));
 
-encryption_key = hkdf({
+authentication_key = hkdf({
   salt: hkfd_salt,
-  ikm: concat(consensus_state_ikm, contract_id_payload),
+  info: "contract_key",
+  ikm: concat(consensus_state_ikm, signer_id),
 });
 
-iv = sha256(concat(consensus_state_iv, contract_id_payload)).slice(0, 12); // truncate because iv is only 96 bits
-
-encrypted_contract_id_payload = aes_256_gcm_encrypt({
-  iv: iv,
-  key: encryption_key,
-  data: null,
-  aad: concat(contract_id_payload, code_hash, iv),
+authenticated_contract_key = hmac_sha256({
+  key: authentication_key,
+  data: code_hash,
 });
 
-contract_id = concat(contract_id_payload, encrypted_contract_id_payload, iv);
+contract_key = concat(signer_id, authenticated_contract_key);
 ```
 
-- Every time a contract execution is called, `contract_id` should be sent to the enclave.
-- In the enclave, the following verification needs to happen:
+- Every time a contract execution is called, `contract_key` should be sent to the Enclave.
+- In the Enclave, the following verification needs to happen:
 
 ```js
-contract_id_payload = contract_id.slice(0, 32);
-encrypted_contract_id_payload = contract_id.slice(32, 64);
-iv = contract_id.slice(64);
+signer_id = contract_key.slice(0, 32);
+expected_contract_key = contract_key.slice(32, 64);
 
-encryption_key = hkdf({
+authentication_key = hkdf({
   salt: hkfd_salt,
-  ikm: concat(consensus_state_ikm,contract_id_payload),
+  info: "contract_key",
+  ikm: concat(consensus_state_ikm, signer_id),
 });
 
-(interpreted_payload, interpreted_code_hash)  = aes_256_gcm_decrypt({
-  iv: iv,
-  key: encryption_key,
-  data: encrypted_contract_id_payload
+calculated_contract_key = hmac_sha256({
+  key: authentication_key,
+  data: code_hash,
 });
 
-assert(interpreted_payload == contract_id_payload);
-assert(interpreted_code_hash == sha256(contract_code);
+assert(calculated_contract_key == expected_contract_key);
 ```
 
 ## write_db(field_name, value)
 
 ```js
-current_state_ciphertext = internal_read_db(field_name);
-
 encryption_key = hkdf({
   salt: hkfd_salt,
-  ikm: concat(consensus_state_ikm, field_name, contact_id),
+  ikm: concat(consensus_state_ikm, field_name, contract_key),
 });
+
+encrypted_field_name = aes_128_siv_encrypt({
+  key: encryption_key,
+  data: field_name,
+});
+
+current_state_ciphertext = internal_read_db(encrypted_field_name);
 
 if (current_state_ciphertext == null) {
   // field_name doesn't yet initialized in state
-  iv = sha256(concat(consensus_state_iv, value)).slice(0, 12); // truncate because iv is only 96 bits
+  ad = sha256(encrypted_field_name);
 } else {
-  // read previous_iv, verify it, calculate new iv
-  previous_iv = current_state_ciphertext.slice(0, 12); // first 12 bytes
-  current_state_ciphertext = current_state_ciphertext.slice(12); // skip first 12 bytes
+  // read previous_ad, verify it, calculate new iv
+  previous_ad = current_state_ciphertext.slice(0, 32); // first 32 bytes/256 bits
+  current_state_ciphertext = current_state_ciphertext.slice(32); // skip first 32 bytes
 
-  aes_256_gcm_decrypt({
-    iv: previous_iv,
+  aes_128_siv_decrypt({
     key: encryption_key,
     data: current_state_ciphertext,
-    aad: previous_iv,
+    ad: previous_ad,
   }); // just to authenticate previous_iv
-  iv = sha256(concat(consensus_state_iv, value, previous_iv)).slice(0, 12); // truncate because iv is only 96 bits
+  ad = sha256(previous_ad);
 }
 
-new_state_ciphertext = aes_256_gcm_encrypt({
-  iv: iv,
+new_state_ciphertext = aes_128_siv_encrypt({
   key: encryption_key,
   data: value,
-  aad: iv,
+  ad: ad,
 });
 
-new_state = concat(iv, new_state_ciphertext);
+new_state = concat(ad, new_state_ciphertext);
 
-internal_write_db(field_name, new_state);
+internal_write_db(encrypted_field_name, new_state);
 ```
 
 ## read_db(field_name)
 
 ```js
-current_state_ciphertext = internal_read_db(field_name);
-
 encryption_key = hkdf({
   salt: hkfd_salt,
-  ikm: concat(consensus_state_ikm, field_name, sha256(contract_wasm_binary)), // TODO diffrentiate between same binaries for different contracts
+  ikm: concat(consensus_state_ikm, field_name, contract_key),
 });
+
+encrypted_field_name = aes_128_siv_encrypt({
+  key: encryption_key,
+  data: field_name,
+});
+
+current_state_ciphertext = internal_read_db(encrypted_field_name);
 
 if (current_state_ciphertext == null) {
   // field_name doesn't yet initialized in state
   return null;
 }
 
-// read iv, verify it, calculate new iv
-iv = current_state_ciphertext.slice(0, 12); // first 12 bytes
-current_state_ciphertext = current_state_ciphertext.slice(12); // skip first 12 bytes
-current_state_plaintext = aes_256_gcm_decrypt({
-  iv: iv,
+// read ad, verify it
+ad = current_state_ciphertext.slice(0, 32); // first 32 bytes/256 bits
+current_state_ciphertext = current_state_ciphertext.slice(32); // skip first 32 bytes
+current_state_plaintext = aes_128_siv_decrypt({
   key: encryption_key,
   data: current_state_ciphertext,
-  aad: iv,
+  ad: ad,
 });
 
 return current_state_plaintext;
@@ -391,12 +396,10 @@ return current_state_plaintext;
 
 TODO reasoning
 
-- `tx_encryption_key`: An AES-256-GCM encryption key. Will be used to encrypt tx inputs and decrypt tx outpus.
+- `tx_encryption_key`: An AES-128-SIV encryption key. Will be used to encrypt tx inputs and decrypt tx outpus.
   - `tx_encryption_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_io_exchange_pubkey` and `tx_sender_wallet_privkey` (on the sender's side).
-  - `tx_encryption_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_io_exchange_privkey` and `tx_sender_wallet_pubkey` (inside the enclave of every full node).
+  - `tx_encryption_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_io_exchange_privkey` and `tx_sender_wallet_pubkey` (inside the Enclave of every full node).
 - `tx_encryption_key` is derived using HKDF-SHA256 with `tx_encryption_ikm` and a random number `nonce`. This is to prevent using the same key for the same tx sender multiple times.
-- `iv_input` for the input is randomly generated on the client side by the transation sender.
-- `iv`s for the output are derived from `iv_input` using HKDF-SHA256.
 
 ## Input
 
@@ -415,27 +418,23 @@ tx_encryption_key = hkdf({
   ikm: concat(tx_encryption_ikm, nonce),
 }); // 256 bits
 
-iv_input = true_random({ bytes: 12 });
+ad = concat(nonce, tx_sender_wallet_pubkey);
 
-aad = concat(iv_input, nonce, tx_sender_wallet_pubkey);
-
-encrypted_msg = aes_256_gcm_encrypt({
-  iv: iv_input,
+encrypted_msg = aes_128_siv_encrypt({
   key: tx_encryption_key,
   data: msg,
-  aad: aad,
+  ad: ad,
 });
 
-tx_input = concat(aad, encrypted_msg);
+tx_input = concat(ad, encrypted_msg);
 ```
 
 ### On the consensus layer, inside the Enclave of every full node
 
 ```js
-iv_input = tx_input.slice(0, 12); // 12 bytes
-nonce = tx_input.slice(12, 44); // 32 bytes
-tx_sender_wallet_pubkey = tx_input.slice(44, 77); // 33 bytes, compressed secp256k1 public key
-encrypted_msg = tx_input.slice(77);
+nonce = tx_input.slice(0, 32); // 32 bytes
+tx_sender_wallet_pubkey = tx_input.slice(32, 32); // 32 bytes, compressed curve25519 public key
+encrypted_msg = tx_input.slice(64);
 
 tx_encryption_ikm = ecdh({
   privkey: consensus_io_exchange_privkey,
@@ -447,11 +446,9 @@ tx_encryption_key = hkdf({
   ikm: concat(tx_encryption_ikm, nonce),
 }); // 256 bits
 
-msg = aes_256_gcm_decrypt({
-  iv: iv_input,
+msg = aes_128_siv_decrypt({
   key: tx_encryption_key,
   data: encrypted_msg,
-  aad: concat(iv_input, nonce, tx_sender_wallet_pubkey), // or: tx_input.slice(0, 77)
 });
 ```
 
@@ -463,8 +460,7 @@ msg = aes_256_gcm_decrypt({
   - Messages can also instruct to send funds from the contract's wallet
   - There's a data section which is free form bytes to be inerperted by the client (or dApp)
   - And there's also an error section
-- Therefore the output must be part-encrypted, so we need to use a new `iv` for each part.
-- We'll use HKDF-SHA256 in combination with the `input_iv` and an `iv_counter` to derive a new `iv` for each part.
+- Therefore the output must be partialy-encrypted.
 - An example output for an execution:
   ```js
   {
@@ -506,8 +502,8 @@ msg = aes_256_gcm_decrypt({
     }
   }
   ```
-- Notice on a `Contract` message, the `msg` value should be the same `msg` as in our `tx_input`, so we need to prepend the new `iv_input`, the `nonce` and `tx_sender_wallet_pubkey` just like we did on the tx sender.
-- For the rest of the encrypted outputs we only need to prepend the new `iv` for each encrypted value, as the tx sender can get `consensus_io_exchange_prubkey` from `genesis.json` and `nonce` from the `tx_input` that is attached to the `tx_output`.
+- Notice on a `Contract` message, the `msg` value should be the same `msg` as in our `tx_input`, so we need to prepend the `nonce` and `tx_sender_wallet_pubkey` just like we did on the tx sender above.
+- For the rest of the encrypted outputs we only need to send the ciphertext, as the tx sender can get `consensus_io_exchange_prubkey` from `genesis.json` and `nonce` from the `tx_input` that is attached to the `tx_output`.
 - An example output with an error:
   ```js
   {
@@ -526,60 +522,61 @@ msg = aes_256_gcm_decrypt({
 ```js
 // already have from tx_input:
 // - tx_encryption_key
-// - iv_input
 // - nonce
 
-iv_counter = 1;
-
 if (typeof output["err"] == "string") {
-  iv = hkdf({
-    salt: hkfd_salt,
-    ikm: concat(input_iv, [iv_counter]),
-  }).slice(0, 12); // 96 bits
-  iv_counter += 1;
-
-  encrypted_err = aes_256_gcm_encrypt({
-    iv: iv,
+  encrypted_err = aes_128_siv_encrypt({
     key: tx_encryption_key,
     data: output["err"],
-    aad: iv,
   });
-
-  output["err"] = base64_encode(concat(iv, encrypted_err)); // needs to be a string
+  output["err"] = base64_encode(encrypted_err); // needs to be a JSON string
 } else if (typeof output["ok"] == "string") {
   // query
-  // same as output["err"]...
+  // output["ok"] is handled the same way as output["err"]...
+  encrypted_query_result = aes_128_siv_encrypt({
+    key: tx_encryption_key,
+    data: output["ok"],
+  });
+  output["ok"] = base64_encode(encrypted_query_result); // needs to be a JSON string
 } else if (typeof output["ok"] == "object") {
   // execute
   for (m in output["ok"]["messages"]) {
     if (m["type"] == "Contract") {
-      iv_input = hkdf({
-        salt: hkfd_salt,
-        ikm: concat(input_iv, [iv_counter]),
-      }).slice(0, 12); // 96 bits
-      iv_counter += 1;
-
-      encrypted_msg = aes_256_gcm_encrypt({
-        iv: iv,
+      encrypted_msg = aes_128_siv_encrypt({
         key: tx_encryption_key,
         data: m["msg"],
-        aad: concat(iv_input, nonce, tx_sender_wallet_pubkey),
       });
 
       // base64_encode because needs to be a string
-      // also turns into a tx_input so we also need to prepend iv_input, nonce and tx_sender_wallet_pubkey
+      // also turns into a tx_input so we also need to prepend nonce and tx_sender_wallet_pubkey
       m["msg"] = base64_encode(
-        concat(iv_input, nonce, tx_sender_wallet_pubkey, encrypted_msg)
+        concat(nonce, tx_sender_wallet_pubkey, encrypted_msg)
       );
     }
   }
 
   for (l in output["ok"]["log"]) {
-    // l["key"] is the same as output["err"]...
-    // l["value"] is the same as output["err"]...
+    // l["key"] is handled the same way as output["err"]...
+    encrypted_log_key_name = aes_128_siv_encrypt({
+      key: tx_encryption_key,
+      data: l["key"],
+    });
+    l["key"] = base64_encode(encrypted_log_key_name); // needs to be a JSON string
+
+    // l["value"] is handled the same way as output["err"]...
+    encrypted_log_value = aes_128_siv_encrypt({
+      key: tx_encryption_key,
+      data: l["value"],
+    });
+    l["value"] = base64_encode(encrypted_log_value); // needs to be a JSON string
   }
 
-  // output["ok"]["data"] is the same as output["err"]...
+  // output["ok"]["data"] is handled the same way as output["err"]...
+  encrypted_output_data = aes_128_siv_encrypt({
+    key: tx_encryption_key,
+    data: output["ok"]["data"],
+  });
+  output["ok"]["data"] = base64_encode(encrypted_output_data); // needs to be a JSON string
 }
 
 return output;
@@ -588,7 +585,7 @@ return output;
 ### Back on the transaction sender
 
 - The transaction output is written to the chain
-- Only the wallet with the right `tx_sender_wallet_privkey` can derive `tx_encryption_key`, so for everyone else it'll just be encrypted.
+- Only the wallet with the right `tx_sender_wallet_privkey` can derive `tx_encryption_key`, so for everyone else it will just be encrypted.
 - Every encrypted value can be decrypted the following way:
 
 ```js
@@ -598,15 +595,11 @@ return output;
 // output["ok"]["log"][i]["value"]
 // output["ok"] if input is a query
 
-bytes = base64_encode(encrypted_output);
-iv = bytes.slice(0, 12);
-encrypted_bytes = bytes.slice(12);
+encrypted_bytes = base64_encode(encrypted_output);
 
-aes_256_gcm_decrypt({
-  iv: iv,
+aes_128_siv_decrypt({
   key: tx_encryption_key,
   data: encrypted_bytes,
-  aad: iv,
 });
 ```
 
@@ -614,6 +607,20 @@ aes_256_gcm_decrypt({
 
 # Blockchain Upgrades
 
-TODO reasoning
+TODO
 
 # Theoretical Attacks
+
+TODO add more
+
+## Deanonymizing with ciphertext byte count
+
+No encryption padding, so a value of e.g. "yes" or "no" can be deanonymized by its byte count.
+
+## Two contracts with the same `contract_key` could deanonymize each other's states
+
+If an attacker can create a contract with the same `contract_key` as another contract, the state of the original contract can potentially be deanonymized.
+
+For example, An original contract with a permissioned getter, such that only whitelisted addresses can query the getter. In the malicious contract the attacker can set themselves as the owner and ask the malicious contract to decrypt the state of the original contract via that permissioned getter.
+
+## Tx Replay attacks?
