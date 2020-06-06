@@ -1,5 +1,6 @@
-**_NOTE 1:_** We recommend you to first remove older `secretnetwork` installations to prevent collisions. <br>
-**_NOTE 2:_** Before removing, changing or doing anything with the old `secretd`,`secretcli` installations - make sure to back up your keys and recovery seeds!
+**_NOTE:_** You DO NOT want to use the v0.1.0 on an existing mainnet validator node. It will not work. <br>
+**_NOTE 2:_** We recommend you to first remove older `secretnetwork` installations to prevent collisions. <br>
+**_NOTE 3:_** Before removing, changing or doing anything with the old `secretd`,`secretcli` installations - make sure to back up your keys and recovery seeds!
 
 ## Set up a light client
 
@@ -33,23 +34,18 @@ You would do this if you have no interest at all at running a full-node or a val
    secretcli status
    ```
 
-## Use smart contracts (TBD)
+## Use smart contracts
 
 The smart contracts module we embedded into secretnetwork is called `compute`.
 run `secretcli tx compute --help` for more info.
 
 Smart Contracts docs will be posted soon, in the meantime you should check out [CosmWasm's docs](https://github.com/confio/cosmwasm) for info about writing and deploying smart contracts.
 
-## Get some Testnet SCRT (TSCRT)
+## Get some Testnet-TSCRT
 
 Please don't abuse this service—the number of available tokens is limited.
 
-1a. Go to the [#secret-testnet](https://chat.scrt.network/channel/secret-testnet) channel and ask for TSCRT
-
-OR
-
-1b. Or head to https://secretfaucet.io (Coming Soon)
-
+1. Head to https://secretfaucet.io .
 2. Generate a key-pair:
 
    ```bash
@@ -72,7 +68,7 @@ OR
 3. Download a copy of the genesis file:
 
    ```bash
-   wget -O ~/.secretd/config/genesis.json "https://raw.githubusercontent.com/ChainofSecrets/secrettestnet.io/master/secret-testnet-1-genesis.json"
+   wget -O ~/.secretd/config/genesis.json "https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/secret-testnet-1-genesis.json"
    ```
 
 4. Validate the checksum of the file:
