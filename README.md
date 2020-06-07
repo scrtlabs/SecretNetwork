@@ -1,5 +1,9 @@
 ![Secret Network](/logo.png)
 
+<p align="center">
+Secret Network secures the decentralized web
+</p>
+
 # The Romulus Upgrade
 
 This is the Romulus Upgrade for the Secret Network as specified in the mainnet _Romulus Upgrade Signal_ proposal:
@@ -19,9 +23,6 @@ In the meantime if you'd like to get a peak at the steps we'll be running throug
   [How to upgrade to the Secret Network (rebranding)](/docs/upgrades/howto-secretnetwork-rebranding.md)
 
 
-<p align="center">
-Secret Network secures the decentralized web
-</p>
 
 # What is Secret Network?
 
