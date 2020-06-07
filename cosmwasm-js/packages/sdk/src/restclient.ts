@@ -3,7 +3,6 @@ import axios, { AxiosError, AxiosInstance } from "axios";
 
 import { Coin, CosmosSdkTx, JsonObject, Model, parseWasmData, StdTx, WasmData } from "./types";
 
-const { fromBase64, fromUtf8, toHex, toUtf8, toBase64 } = Encoding;
 import EnigmaUtils from "./enigmautils";
 
 export interface CosmosSdkAccount {
@@ -437,11 +436,11 @@ export class RestClient {
   // Returns the data at the key if present (unknown decoded json),
   // or null if no data at this (contract address, key) pair
   public async queryContractRaw(address: string, key: Uint8Array): Promise<Uint8Array | null> {
-    const hexKey = toHex(key);
+    const hexKey = Encoding.toHex(key);
     const path = `/wasm/contract/${address}/raw/${hexKey}?encoding=hex`;
     const responseData = (await this.get(path)) as WasmResponse<WasmData[]>;
     const data = await unwrapWasmResponse(responseData);
-    return data.length === 0 ? null : fromBase64(data[0].val);
+    return data.length === 0 ? null : Encoding.fromBase64(data[0].val);
   }
 
   /**
@@ -452,18 +451,24 @@ export class RestClient {
     const encrypted = await this.enigmautils.encrypt(query);
     const nonce = encrypted.slice(0, 32);
 
-    const encoded = toHex(toUtf8(toBase64(encrypted)));
+    const encoded = Encoding.toHex(Encoding.toUtf8(Encoding.toBase64(encrypted)));
     const path = `/wasm/contract/${address}/smart/${encoded}?encoding=hex`;
     const responseData = (await this.get(path)) as WasmResponse<SmartQueryResponse>;
 
     if (isWasmError(responseData)) {
-      throw new Error(JSON.stringify(await this.enigmautils.decrypt(fromBase64(responseData.error), nonce)));
+      throw new Error(
+        JSON.stringify(await this.enigmautils.decrypt(Encoding.fromBase64(responseData.error), nonce)),
+      );
     }
 
     // By convention, smart queries must return a valid JSON document (see https://github.com/CosmWasm/cosmwasm/issues/144)
     return JSON.parse(
-      fromUtf8(
-        fromBase64(fromUtf8(await this.enigmautils.decrypt(fromBase64(responseData.result.smart), nonce))),
+      Encoding.fromUtf8(
+        Encoding.fromBase64(
+          Encoding.fromUtf8(
+            await this.enigmautils.decrypt(Encoding.fromBase64(responseData.result.smart), nonce),
+          ),
+        ),
       ),
     );
   }

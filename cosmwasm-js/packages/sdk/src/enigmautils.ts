@@ -6,7 +6,6 @@ import axios from "axios";
 const hkdf = require("js-crypto-hkdf");
 
 const cryptoProvider = new miscreant.PolyfillCryptoProvider();
-const { fromBase64, fromUtf8, toBase64, toUtf8, toHex, fromHex } = Encoding;
 
 if (typeof process === "object") {
   // nodejs
@@ -72,12 +71,12 @@ export default class EnigmaUtils {
       const seedFor25519 = secureRandom(32, { type: "Uint8Array" });
       const { private: privkey, public: pubkey } = generateKeyPair(seedFor25519);
 
-      localStorage.setItem("tx_sender_privkey", toHex(privkey));
-      localStorage.setItem("tx_sender_pubkey", toHex(pubkey));
+      localStorage.setItem("tx_sender_privkey", Encoding.toHex(privkey));
+      localStorage.setItem("tx_sender_pubkey", Encoding.toHex(pubkey));
     }
 
-    const privkey = fromHex(localStorage.getItem("tx_sender_privkey"));
-    const pubkey = fromHex(localStorage.getItem("tx_sender_pubkey"));
+    const privkey = Encoding.fromHex(localStorage.getItem("tx_sender_privkey"));
+    const pubkey = Encoding.fromHex(localStorage.getItem("tx_sender_pubkey"));
 
     // TODO verify pubkey
 
@@ -97,7 +96,7 @@ export default class EnigmaUtils {
       headers: { "Content-Type": "application/json" },
     });
 
-    this.consensusIoPubKey = fromBase64(ioExchPubkey);
+    this.consensusIoPubKey = Encoding.fromBase64(ioExchPubkey);
     return this.consensusIoPubKey;
   }
 
@@ -126,7 +125,7 @@ export default class EnigmaUtils {
 
     const siv = await miscreant.SIV.importKey(txEncryptionKey, "AES-SIV", cryptoProvider);
 
-    const plaintext = toUtf8(JSON.stringify(msg));
+    const plaintext = Encoding.toUtf8(JSON.stringify(msg));
 
     const ciphertext = await siv.seal(plaintext, [new Uint8Array()]);
 
