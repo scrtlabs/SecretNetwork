@@ -57,13 +57,13 @@ If you are curious, you can query the RPC endpoint on that node http://bootstrap
 perl -i -pe 's/persistent_peers = ""/persistent_peers = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.secretd/config/config.toml
 ```
 
-### 8. Enable `enigma-node` as a system service:
+### 8. Enable `secret-node` as a system service:
 
 ```bash
 sudo systemctl enable secret-node
 ```
 
-### 9. Start `enigma-node` as a system service:
+### 9. Start `secret-node` as a system service:
 
 ```bash
 sudo systemctl start secret-node
@@ -118,7 +118,7 @@ secretcli keys add <key-alias>
 
 **:warning:Note:warning:: Please backup the mnemonics!**
 
-**Note**: If you already have a key you can import it with the bip39 mnemonic with `enigmacli keys add <key-alias> --recover` or with `enigmacli keys export` (exports to `stderr`!!) & `enigmacli keys import`.
+**Note**: If you already have a key you can import it with the bip39 mnemonic with `secretcli keys add <key-alias> --recover` or with `secretcli keys export` (exports to `stderr`!!) & `secretcli keys import`.
 
 ### 13. Output your node address:
 
@@ -164,7 +164,7 @@ secretcli tx staking create-validator \
 secretcli q staking validators
 ```
 
-If the above is too verbose, just run: `enigmacli q staking validators | grep moniker`. You should see your moniker listed.
+If the above is too verbose, just run: `secretcli q staking validators | grep moniker`. You should see your moniker listed.
 
 ## Staking more tokens
 

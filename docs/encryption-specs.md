@@ -126,7 +126,7 @@ TODO reasoning
 
 # Node Startup
 
-When a full node resumes its participation in the network, it reads `consensus_seed` from `"$HOME/.enigmad/sgx-secrets/consensus_seed.sealed"` and again does [key derivation](#Key-Derivation) as outlined above.
+When a full node resumes its participation in the network, it reads `consensus_seed` from `"$HOME/.secretd/sgx-secrets/consensus_seed.sealed"` and again does [key derivation](#Key-Derivation) as outlined above.
 
 # New Node Registration
 
@@ -140,7 +140,7 @@ TODO reasoning
 - Create a remote attestation proof that the node's Enclave is genuine.
 - Generate inside the node's Enclave a true random curve25519 curve private key: `registration_privkey`.
 - From `registration_privkey` calculate `registration_pubkey`.
-- Send an `enigmacli tx register auth` transaction with the following inputs:
+- Send an `secretcli tx register auth` transaction with the following inputs:
   - The remote attestation proof that the node's Enclave is genuine.
   - `registration_pubkey`
   - 256 bits true random `nonce`
@@ -149,7 +149,7 @@ TODO reasoning
 
 TODO reasoning
 
-- Receive the `enigmacli tx register auth` transaction.
+- Receive the `secretcli tx register auth` transaction.
 - Verify the remote attestation proof that the new node's Enclave is genuine.
 
 ### `seed_exchange_key`
@@ -181,7 +181,7 @@ seed_exchange_key = hkdf({
 
 TODO reasoning
 
-- The output of the `enigmacli tx register auth` transaction is `consensus_seed` encrypted with AES-128-SIV, `seed_exchange_key` as the encryption key, using the public key of the registering node for the AD.
+- The output of the `secretcli tx register auth` transaction is `consensus_seed` encrypted with AES-128-SIV, `seed_exchange_key` as the encryption key, using the public key of the registering node for the AD.
 
 ```js
 encrypted_consensus_seed = aes_128_siv_encrypt({
@@ -195,7 +195,7 @@ return encrypted_consensus_seed;
 
 ## Back on the new node, inside its Enclave
 
-- Receive the `enigmacli tx register auth` transaction output (`encrypted_consensus_seed`).
+- Receive the `secretcli tx register auth` transaction output (`encrypted_consensus_seed`).
 
 ### `seed_exchange_key`
 
@@ -226,7 +226,7 @@ TODO reasoning
 
 - `encrypted_consensus_seed` is encrypted with AES-128-SIV, `seed_exchange_key` as the encryption key and the public key of the registering node as the `ad` as the decryption additional data.
 - The new node now has all of these^ parameters inside its Enclave, so it's able to decrypt `consensus_seed` from `encrypted_consensus_seed`.
-- Seal `consensus_seed` to disk at `"$HOME/.enigmad/sgx-secrets/consensus_seed.sealed"`.
+- Seal `consensus_seed` to disk at `"$HOME/.secretd/sgx-secrets/consensus_seed.sealed"`.
 
 ```js
 consensus_seed = aes_128_siv_decrypt({
@@ -238,7 +238,7 @@ consensus_seed = aes_128_siv_decrypt({
 seal({
   key: "MRENCLAVE",
   data: consensus_seed,
-  to_file: "$HOME/.enigmad/sgx-secrets/consensus_seed.sealed",
+  to_file: "$HOME/.secretd/sgx-secrets/consensus_seed.sealed",
 });
 ```
 
@@ -476,11 +476,11 @@ msg = aes_128_siv_decrypt({
         },
         {
           "key": "sender", // need to encrypt this value
-          "value": "enigma1v9tna8rkemndl7cd4ahru9t7ewa7kdq8d4zlr5" // need to encrypt this value
+          "value": "secret1v9tna8rkemndl7cd4ahru9t7ewa7kdq8d4zlr5" // need to encrypt this value
         },
         {
           "key": "recipient", // need to encrypt this value
-          "value": "enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4" // need to encrypt this value
+          "value": "secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4" // need to encrypt this value
         }
       ],
       "data": "bla bla" // need to encrypt this value

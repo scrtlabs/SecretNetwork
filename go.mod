@@ -1,4 +1,4 @@
-module github.com/enigmampc/EnigmaBlockchain
+module github.com/enigmampc/SecretNetwork
 
 go 1.14
 

@@ -41,7 +41,7 @@ FROM alpine:edge
 RUN apk add --update ca-certificates
 WORKDIR /root
 
-# Run enigmad by default, omit entrypoint to ease using container with enigmacli
+# Run secretd by default, omit entrypoint to ease using container with secretcli
 # CMD ["/bin/bash"]
 
 # Copy over binaries from the build-env
@@ -50,11 +50,11 @@ COPY --from=build-env  /go/src/github.com/enigmampc/secretnetwork/secretcli /usr
 
 COPY ./packaging_docker/docker_start.sh .
 
-RUN chmod +x /usr/bin/enigmad
-RUN chmod +x /usr/bin/enigmacli
+RUN chmod +x /usr/bin/secretd
+RUN chmod +x /usr/bin/secretcli
 RUN chmod +x docker_start.sh .
-# Run enigmad by default, omit entrypoint to ease using container with enigmacli
-#CMD ["/root/enigmad"]
+# Run secretd by default, omit entrypoint to ease using container with secretcli
+#CMD ["/root/secretd"]
 
 ####### STAGE 1 -- build core
 ARG MONIKER=default

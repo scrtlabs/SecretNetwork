@@ -442,7 +442,7 @@ secretcli q staking validator <validator-address>
 
 ##### Bond Tokens
 
-On the EnigmaChain mainnet, we delegate `uscrt`, where `1scrt = 1000000uscrt`. Here's how you can bond tokens to a validator (_i.e._ delegate):
+On the Secret Network mainnet, we delegate `uscrt`, where `1scrt = 1000000uscrt`. Here's how you can bond tokens to a validator (_i.e._ delegate):
 
 ```bash
 secretcli tx staking delegate \

@@ -35,14 +35,14 @@ sudo lvcreate --name data --size 19GB chainstate
 sudo mkfs.ext4 /dev/chainstate/data
 
 # Create the `data` path and mount
-sudo mkdir -p .enigmad/data
-sudo mount /dev/chainstate/data .enigmad/data
+sudo mkdir -p .secretd/data
+sudo mount /dev/chainstate/data .secretd/data
 
 # Make mount persistant
 sudo echo "/dev/chainstate/data	/home/ubuntu ext4 defaults		0 0" >> /etc/fstab
 
 # Make the default user able to r/w
-sudo chown -R ubuntu .enigmad/
+sudo chown -R ubuntu .secretd/
 ```
 
 ### Install the `.deb` file

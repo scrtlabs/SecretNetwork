@@ -40,7 +40,7 @@ Or you can just paste `exported_state.json` into https://bech32.enigma.co and pa
 ### 5. Setup new binaries:
 
 ```bash
-sudo dpkg -i precompiled_secret_package.deb # install secretd & secretcli and setup secret-node.service
+sudo dpkg -i secretnetwork_0.1.0_amd64.deb # install secretd & secretcli and setup secret-node.service
 
 secretcli config chain-id <new_chain_id>
 secretcli config output json
