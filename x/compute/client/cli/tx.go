@@ -129,7 +129,13 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 				return fmt.Errorf("Label is required on all contracts")
 			}
 
-			initMsg := args[1]
+			wasmCliCtx := wasmUtils.WASMCLIContext{CLIContext: cliCtx}
+
+			initMsg := []byte(args[1])
+			initMsg, err = wasmCliCtx.Encrypt(initMsg)
+			if err != nil {
+				return err
+			}
 
 			// build and sign the transaction, then broadcast to Tendermint
 			msg := types.MsgInstantiateContract{
@@ -137,7 +143,7 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 				Code:      codeID,
 				Label:     label,
 				InitFunds: amount,
-				InitMsg:   []byte(initMsg),
+				InitMsg:   initMsg,
 			}
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
 		},
@@ -171,14 +177,20 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			execMsg := args[1]
+			wasmCliCtx := wasmUtils.WASMCLIContext{CLIContext: cliCtx}
+
+			execMsg := []byte(args[1])
+			execMsg, err = wasmCliCtx.Encrypt(execMsg)
+			if err != nil {
+				return err
+			}
 
 			// build and sign the transaction, then broadcast to Tendermint
 			msg := types.MsgExecuteContract{
 				Sender:    cliCtx.GetFromAddress(),
 				Contract:  contractAddr,
 				SentFunds: amount,
-				Msg:       []byte(execMsg),
+				Msg:       execMsg,
 			}
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
 		},

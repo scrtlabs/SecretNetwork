@@ -11,6 +11,7 @@ import "fmt"
 type i32 = C.int32_t
 type i64 = C.int64_t
 type u64 = C.uint64_t
+type u32 = C.uint32_t
 type u8 = C.uint8_t
 type u8_ptr = *C.uint8_t
 type usize = C.uintptr_t
@@ -18,6 +19,28 @@ type cint = C.int
 
 type Cache struct {
 	ptr *C.cache_t
+}
+
+func InitBootstrap() ([]byte, error) {
+	errmsg := C.Buffer{}
+
+	res, err := C.init_bootstrap(&errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return receiveSlice(res), nil
+}
+
+func LoadSeedToEnclave(masterCert []byte, seed []byte) (bool, error) {
+	pkSlice := sendSlice(masterCert)
+	seedSlice := sendSlice(seed)
+	errmsg := C.Buffer{}
+
+	_, err := C.init_node(pkSlice, seedSlice, &errmsg)
+	if err != nil {
+		return false, errorWithMessage(err, errmsg)
+	}
+	return true, nil
 }
 
 func InitCache(dataDir string, cacheSize uint64) (Cache, error) {
@@ -97,6 +120,36 @@ func Query(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, g
 		return nil, 0, errorWithMessage(err, errmsg)
 	}
 	return receiveSlice(res), uint64(gasUsed), nil
+}
+
+// KeyGen Send KeyGen request to enclave
+func KeyGen() ([]byte, error) {
+	errmsg := C.Buffer{}
+	res, err := C.key_gen(&errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return receiveSlice(res), nil
+}
+
+// KeyGen Seng KeyGen request to enclave
+func CreateAttestationReport() (bool, error) {
+	errmsg := C.Buffer{}
+	_, err := C.create_attestation_report(&errmsg)
+	if err != nil {
+		return false, errorWithMessage(err, errmsg)
+	}
+	return true, nil
+}
+
+func GetEncryptedSeed(cert []byte) ([]byte, error) {
+	errmsg := C.Buffer{}
+	certSlice := sendSlice(cert)
+	res, err := C.get_encrypted_seed(certSlice, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return receiveSlice(res), nil
 }
 
 /**** To error module ***/

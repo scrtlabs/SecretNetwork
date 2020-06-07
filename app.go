@@ -2,14 +2,6 @@ package app
 
 import (
 	"encoding/json"
-	"io"
-	"os"
-
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/log"
-	tmos "github.com/tendermint/tendermint/libs/os"
-	tmtypes "github.com/tendermint/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
 
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -33,6 +25,18 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/supply"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
+	"github.com/enigmampc/EnigmaBlockchain/x/compute"
+	reg "github.com/enigmampc/EnigmaBlockchain/x/registration"
+	"github.com/spf13/viper"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/cli"
+	"github.com/tendermint/tendermint/libs/log"
+	tmos "github.com/tendermint/tendermint/libs/os"
+	tmtypes "github.com/tendermint/tendermint/types"
+	dbm "github.com/tendermint/tm-db"
+	"io"
+	"os"
+	"path/filepath"
 )
 
 const appName = "enigma"
@@ -56,7 +60,8 @@ var (
 		distr.AppModuleBasic{},
 		gov.NewAppModuleBasic(paramsclient.ProposalHandler, distr.ProposalHandler, upgradeclient.ProposalHandler),
 		params.AppModuleBasic{},
-		// compute.AppModuleBasic{},
+		compute.AppModuleBasic{},
+		reg.AppModuleBasic{},
 		crisis.AppModuleBasic{},
 		slashing.AppModuleBasic{},
 		supply.AppModuleBasic{},
@@ -98,7 +103,7 @@ type EnigmaChainApp struct {
 	cdc *codec.Codec
 
 	invCheckPeriod uint
-
+	bootstrap      bool
 	// keys to access the substores
 	keys  map[string]*sdk.KVStoreKey
 	tKeys map[string]*sdk.TransientStoreKey
@@ -116,8 +121,8 @@ type EnigmaChainApp struct {
 	paramsKeeper   params.Keeper
 	upgradeKeeper  upgrade.Keeper
 	evidenceKeeper evidence.Keeper
-	// computeKeeper  compute.Keeper
-
+	computeKeeper  compute.Keeper
+	regKeeper      reg.Keeper
 	// the module manager
 	mm *module.Manager
 
@@ -127,9 +132,9 @@ type EnigmaChainApp struct {
 
 // WasmWrapper allows us to use namespacing in the config file
 // This is only used for parsing in the app, x/compute expects WasmConfig
-// type WasmWrapper struct {
-// 	Wasm compute.WasmConfig `mapstructure:"wasm"`
-// }
+type WasmWrapper struct {
+	Wasm compute.WasmConfig `mapstructure:"wasm"`
+}
 
 // NewEnigmaChainApp is a constructor function for enigmaChainApp
 func NewEnigmaChainApp(
@@ -137,6 +142,7 @@ func NewEnigmaChainApp(
 	db dbm.DB,
 	traceStore io.Writer,
 	loadLatest bool,
+	bootstrap bool,
 	invCheckPeriod uint,
 	skipUpgradeHeights map[int64]bool,
 	baseAppOptions ...func(*bam.BaseApp),
@@ -144,7 +150,6 @@ func NewEnigmaChainApp(
 
 	// First define the top level codec that will be shared by the different modules
 	cdc := MakeCodec()
-
 	// BaseApp handles interactions with Tendermint through the ABCI protocol
 	bApp := bam.NewBaseApp(appName, logger, db, auth.DefaultTxDecoder(cdc), baseAppOptions...)
 	bApp.SetCommitMultiStoreTracer(traceStore)
@@ -161,7 +166,8 @@ func NewEnigmaChainApp(
 		params.StoreKey,
 		upgrade.StoreKey,
 		evidence.StoreKey,
-		// compute.StoreKey,
+		compute.StoreKey,
+		reg.StoreKey,
 	)
 
 	tKeys := sdk.NewTransientStoreKeys(staking.TStoreKey, params.TStoreKey)
@@ -171,6 +177,7 @@ func NewEnigmaChainApp(
 		BaseApp:        bApp,
 		cdc:            cdc,
 		invCheckPeriod: invCheckPeriod,
+		bootstrap:      bootstrap,
 		keys:           keys,
 		tKeys:          tKeys,
 	}
@@ -256,21 +263,24 @@ func NewEnigmaChainApp(
 
 	app.evidenceKeeper = *evidenceKeeper
 
-	// // just re-use the full router - do we want to limit this more?
-	// var computeRouter = bApp.Router()
-	// // better way to get this dir???
-	// homeDir := viper.GetString(cli.HomeFlag)
-	// computeDir := filepath.Join(homeDir, ".compute")
+	// just re-use the full router - do we want to limit this more?
+	var computeRouter = bApp.Router()
+	regRouter := bApp.Router()
 
-	// wasmWrap := WasmWrapper{Wasm: compute.DefaultWasmConfig()}
-	// err := viper.Unmarshal(&wasmWrap)
-	// if err != nil {
-	// 	panic("error while reading wasm config: " + err.Error())
-	// }
-	// wasmConfig := wasmWrap.Wasm
+	// better way to get this dir???
+	homeDir := viper.GetString(cli.HomeFlag)
+	computeDir := filepath.Join(homeDir, ".compute")
 
-	// app.computeKeeper = compute.NewKeeper(app.cdc, keys[compute.StoreKey], app.accountKeeper, app.bankKeeper, computeRouter, computeDir, wasmConfig)
+	wasmWrap := WasmWrapper{Wasm: compute.DefaultWasmConfig()}
+	err := viper.Unmarshal(&wasmWrap)
+	if err != nil {
+		panic("error while reading wasm config: " + err.Error())
+	}
+	wasmConfig := wasmWrap.Wasm
 
+	// replace with bootstrap flag when we figure out how to test properly and everything works
+	app.computeKeeper = compute.NewKeeper(app.cdc, keys[compute.StoreKey], app.accountKeeper, app.bankKeeper, computeRouter, computeDir, wasmConfig)
+	app.regKeeper = reg.NewKeeper(app.cdc, keys[reg.StoreKey], regRouter, reg.EnclaveApi{}, homeDir, app.bootstrap)
 	// register the proposal types
 	govRouter := gov.NewRouter()
 	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler).
@@ -305,7 +315,8 @@ func NewEnigmaChainApp(
 		staking.NewAppModule(app.stakingKeeper, app.accountKeeper, app.supplyKeeper),
 		upgrade.NewAppModule(app.upgradeKeeper),
 		evidence.NewAppModule(app.evidenceKeeper),
-		// compute.NewAppModule(app.computeKeeper),
+		compute.NewAppModule(app.computeKeeper),
+		reg.NewAppModule(app.regKeeper),
 	)
 	// During begin block slashing happens after distr.BeginBlocker so that
 	// there is nothing left over in the validator fee pool, so as to keep the
@@ -327,9 +338,10 @@ func NewEnigmaChainApp(
 		mint.ModuleName,
 		supply.ModuleName,
 		crisis.ModuleName,
-		genutil.ModuleName,
 		evidence.ModuleName,
-		// compute.ModuleName,
+		compute.ModuleName,
+		reg.ModuleName,
+		genutil.ModuleName,
 	)
 
 	// register all module routes and module queriers
@@ -402,7 +414,9 @@ func (app *EnigmaChainApp) InitChainer(ctx sdk.Context, req abci.RequestInitChai
 	var genesisState simapp.GenesisState
 	app.cdc.MustUnmarshalJSON(req.AppStateBytes, &genesisState)
 
-	return app.mm.InitGenesis(ctx, genesisState)
+	res := app.mm.InitGenesis(ctx, genesisState)
+
+	return res
 }
 
 // LoadHeight loads a particular height

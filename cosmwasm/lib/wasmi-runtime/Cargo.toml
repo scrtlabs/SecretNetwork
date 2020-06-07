@@ -1,0 +1,89 @@
+[package]
+name = "wasmi-runtime"
+version = "0.1.0"
+authors = ["Reuven Podmazo <reuven@enigma.co>"]
+edition = "2018"
+description = "An enclave running wasmi, to be used by cosmwasm-sgx-vm"
+
+[lib]
+name = "wasmi_runtime_enclave"
+crate-type = ["staticlib"]
+
+[features]
+default = ["SGX_MODE_SW"]
+SGX_MODE_SW = []
+SGX_MODE_HW = []
+production = []
+test = []
+
+# This annotation is here to trick the IDE into showing us type information about this crate.
+# we alwats compile to the "sgx" target, so this will always be false.
+# when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
+[target.'cfg(not(target_env = "sgx"))'.dependencies]
+sgx_types = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+
+[dependencies]
+sgx_tse = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_rand = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_trts = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tseal = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tcrypto = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+aes-siv = { version = "0.2.0" }
+miscreant = "0.5.2"
+enclave-ffi-types = { path = "../enclave-ffi-types" }
+pwasm-utils = { version = "0.12.0", default-features = false }
+parity-wasm = { version = "0.41.0", default-features = false }
+wasmi = { git = "https://github.com/paritytech/wasmi", rev = "39a18a433a765a36383d34d4edd536ba1e0664d2", default-features = false, features = [
+    "core"
+] }
+serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = ["derive"] }
+serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
+base64 = { version = "0.10", git = "https://github.com/mesalock-linux/rust-base64-sgx" }
+log = { version = "0.4.8" }
+ctor = "0.1.13"
+bech32 = "0.7"
+derive_more = "0.99"
+sha2 = "0.8.1"
+ring = { git = "https://github.com/mesalock-linux/ring-sgx", tag = "v0.16.5" }
+# for attestation
+chrono = { version = "0.4.7", git = "https://github.com/mesalock-linux/chrono-sgx" }
+num-bigint = { version = "0.2", git = "https://github.com/mesalock-linux/num-bigint-sgx" }
+
+httparse = { version = "1.3", default-features = false }
+itertools = { version = "0.8", default-features = false, features = [] }
+bit-vec = { version = "0.6", default-features = false }
+base58 = { rev = "sgx_1.1.2", package = "rust-base58", git = "https://github.com/mesalock-linux/rust-base58-sgx", default-features = false, features = [
+    "mesalock_sgx"
+] }
+lazy_static = "1.4"
+
+x25519-dalek = { version = "0.6", default-features = false, features = ["u64_backend"]}
+
+[patch.crates-io]
+rand_core = { git = "https://github.com/mesalock-linux/rand-sgx", default-features = false, features = ["mesalock_sgx"] }
+
+[dependencies.webpki]
+git = "https://github.com/mesalock-linux/webpki"
+branch = "mesalock_sgx"
+version = "0.21.0"
+
+[dependencies.webpki-roots]
+git = "https://github.com/mesalock-linux/webpki-roots"
+branch = "mesalock_sgx"
+version = "0.19.0"
+
+[dependencies.yasna]
+git = "https://github.com/mesalock-linux/yasna.rs-sgx"
+rev = "sgx_1.1.2"
+default-features = false
+features = ["bit-vec", "num-bigint", "chrono", "mesalock_sgx"]
+
+[dependencies.rustls]
+git = "https://github.com/mesalock-linux/rustls"
+rev = "sgx_1.1.2"
+default-features = false
+features = ["dangerous_configuration", "mesalock_sgx"]
+
+[dev-dependencies]
+sgx_edl = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }

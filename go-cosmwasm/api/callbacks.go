@@ -9,7 +9,6 @@ typedef void (*write_db_fn)(db_t *ptr, Buffer key, Buffer val);
 // and api
 typedef int32_t (*humanize_address_fn)(api_t*, Buffer, Buffer);
 typedef int32_t (*canonicalize_address_fn)(api_t*, Buffer, Buffer);
-
 // forward declarations (db)
 int64_t cGet_cgo(db_t *ptr, Buffer key, Buffer val);
 void cSet_cgo(db_t *ptr, Buffer key, Buffer val);
@@ -32,7 +31,7 @@ type KVStore interface {
 }
 
 var db_vtable = C.DB_vtable{
-	read_db: (C.read_db_fn)(C.cGet_cgo),
+	read_db:  (C.read_db_fn)(C.cGet_cgo),
 	write_db: (C.write_db_fn)(C.cSet_cgo),
 }
 

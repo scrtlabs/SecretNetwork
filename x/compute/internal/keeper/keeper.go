@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	"path/filepath"
@@ -125,7 +126,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	k.cdc.MustUnmarshalBinaryBare(bz, &codeInfo)
 
 	// prepare params for contract instantiate call
-	params := types.NewParams(ctx, creator, deposit, contractAccount)
+	params := types.NewParams(ctx, creator, deposit, contractAccount, nil)
 
 	// create prefixed data store
 	// 0x03 | contractAddress (sdk.AccAddress)
@@ -134,10 +135,9 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
-	res, err := k.wasmer.Instantiate(codeInfo.CodeHash, params, initMsg, prefixStore, cosmwasmAPI, gas)
+	res, key, err := k.wasmer.Instantiate(codeInfo.CodeHash, params, initMsg, prefixStore, cosmwasmAPI, gas)
 	if err != nil {
 		return contractAddress, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
-		// return contractAddress, sdkerrors.Wrap(err, "cosmwasm instantiate")
 	}
 	consumeGas(ctx, res.GasUsed)
 
@@ -154,6 +154,10 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	createdAt := types.NewCreatedAt(ctx)
 	instance := types.NewContractInfo(codeID, creator, initMsg, label, createdAt)
 	store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshalBinaryBare(instance))
+
+	fmt.Printf("Storing key: %s for account %s", key, contractAddress)
+
+	store.Set(types.GetContractEnclaveKey(contractAddress), key)
 
 	return contractAddress, nil
 }
@@ -173,29 +177,34 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		}
 	}
 	contractAccount := k.accountKeeper.GetAccount(ctx, contractAddress)
-
-	params := types.NewParams(ctx, caller, coins, contractAccount)
-
+	store := ctx.KVStore(k.storeKey)
+	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
+	fmt.Printf("Contract Execute: Got contract Key for contract %s: %s\n", contractAddress, base64.StdEncoding.EncodeToString(contractKey))
+	params := types.NewParams(ctx, caller, coins, contractAccount, contractKey)
+	fmt.Printf("Contract Execute: key from params %s \n", params.Key)
 	gas := gasForContract(ctx)
-	res, execErr := k.wasmer.Execute(codeInfo.CodeHash, params, msg, prefixStore, cosmwasmAPI, gas)
+	encryptedOutput, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, params, msg, prefixStore, cosmwasmAPI, gas)
 	if execErr != nil {
 		// TODO: wasmer doesn't return gas used on error. we should consume it (for error on metering failure)
 		return sdk.Result{}, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
-	consumeGas(ctx, res.GasUsed)
+	consumeGas(ctx, gasUsed)
 
-	// emit all events from this contract itself
-	value := types.CosmosResult(*res, contractAddress)
-	ctx.EventManager().EmitEvents(value.Events)
-	value.Events = nil
+	// // emit all events from this contract itself
+	// value := types.CosmosResult(*encryptedOutput, contractAddress)
+	// return
+	// ctx.EventManager().EmitEvents(value.Events)
+	// value.Events = nil
 
-	// TODO: capture events here as well
-	err = k.dispatchMessages(ctx, contractAccount, res.Messages)
-	if err != nil {
-		return sdk.Result{}, err
-	}
+	// // TODO: capture events here as well
+	// err = k.dispatchMessages(ctx, contractAccount, encryptedOutput.Messages)
+	// if err != nil {
+	// 	return sdk.Result{}, err
+	// }
 
-	return value, nil
+	return sdk.Result{
+		Data: encryptedOutput,
+	}, nil
 }
 
 // QuerySmart queries the smart contract itself.
@@ -206,7 +215,12 @@ func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []b
 	if err != nil {
 		return nil, err
 	}
-	queryResult, gasUsed, qErr := k.wasmer.Query(codeInfo.CodeHash, req, prefixStore, cosmwasmAPI, gasForContract(ctx))
+
+	store := ctx.KVStore(k.storeKey)
+	// 0x01 | codeID (uint64) -> ContractInfo
+	contractKey := store.Get(types.GetContractEnclaveKey(contractAddr))
+
+	queryResult, gasUsed, qErr := k.wasmer.Query(codeInfo.CodeHash, append(contractKey[:], req[:]...), prefixStore, cosmwasmAPI, gasForContract(ctx))
 	if qErr != nil {
 		return nil, sdkerrors.Wrap(types.ErrQueryFailed, qErr.Error())
 	}

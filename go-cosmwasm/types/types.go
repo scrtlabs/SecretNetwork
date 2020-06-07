@@ -11,7 +11,10 @@ type Env struct {
 	Block    BlockInfo    `json:"block"`
 	Message  MessageInfo  `json:"message"`
 	Contract ContractInfo `json:"contract"`
+	Key      ContractKey  `json:"contract_key"`
 }
+
+type ContractKey string
 
 type BlockInfo struct {
 	// block height this transaction is executed
@@ -67,8 +70,8 @@ type Result struct {
 
 // LogAttribute
 type LogAttribute struct {
-    Key string `json:"key"`
-    Value string `json:"value"`
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
 // CosmosMsg is an rust enum and only (exactly) one of the fields should be set

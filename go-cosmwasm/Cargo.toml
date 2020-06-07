@@ -18,19 +18,23 @@ circle-ci = { repository = "confio/go-cosmwasm", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [features]
-default = ["singlepass", "backtraces"]
+default = ["backtraces"]
 backtraces = ["snafu/backtraces"]
-singlepass = ["cosmwasm-vm/default-singlepass"]
-cranelift = ["cosmwasm-vm/default-cranelift"]
 
 [dependencies]
-cosmwasm = "0.7.0"
-cosmwasm-vm = "0.7.0"
+cosmwasm = { path = "../cosmwasm" }
+cosmwasm-sgx-vm = { path = "../cosmwasm/lib/sgx-vm" }
 errno = "0.2"
-snafu = { version = "0.5.0", default-features = false, features = ["rust_1_30"] }
+snafu = { version = "0.5.0", default-features = false, features = [
+    "rust_1_30"
+] }
+ctor = "0.1.13"
+simple_logger = "1.6.0"
+log = "0.4.8"
 
 [build-dependencies]
 cbindgen = { version = "0.9.1" }
+sgx_edl = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "v1.1.2" }
 
 [profile.release]
 opt-level = 3

@@ -1,0 +1,44 @@
+[package]
+name = "cosmwasm-sgx-vm"
+version = "0.7.0"
+authors = [
+    "Ethan Frey <ethanfrey@users.noreply.github.com>",
+    "Enigma Team <info@enigma.co>"
+]
+edition = "2018"
+description = "VM bindings to run cosmwams contracts inside an SGX enclave"
+repository = "https://github.com/enigmampc/EnigmaBlockchain/tree/master/cosmwasm/lib/sgx-vm"
+license = "Apache-2.0"
+
+[features]
+# enable this for better error reporting
+default = ["backtraces"]
+backtraces = ["snafu/backtraces"]
+
+[dependencies]
+cosmwasm = { path = "../..", version = "0.7.0" }
+serde-json-wasm = "0.1.0"
+schemars = "0.5"
+serde = { version = "1.0.103", default-features = false, features = [
+    "derive",
+    "alloc"
+] }
+snafu = { version = "0.5.0", default-features = false, features = [
+    "rust_1_30"
+] }
+sha2 = "0.8.0"
+hex = "0.3.1"
+memmap = "0.7"
+lru = "0.3.1"
+parity-wasm = "0.41"
+lazy_static = "1.4"
+downcast-rs = "1"
+enclave-ffi-types = { path = "../enclave-ffi-types", features=["build_headers"] }
+sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "v1.1.2" }
+sgx_urts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "v1.1.2" }
+log = "0.4.8"
+base64 = "0.12.0"
+
+[dev-dependencies]
+tempfile = "3.1.0"
+wabt = "0.9.1"

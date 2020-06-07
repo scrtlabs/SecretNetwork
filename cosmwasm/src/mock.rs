@@ -129,6 +129,7 @@ pub fn mock_env<T: Api, U: Into<HumanAddr>>(
                 Some(balance.to_vec())
             },
         },
+        contract_key: Some("".to_string()),
     }
 }
 

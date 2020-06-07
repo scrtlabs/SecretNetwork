@@ -1,0 +1,118 @@
+enclave {
+    from "sgx_tstd.edl" import *;
+    from "sgx_stdio.edl" import *;
+    from "sgx_fs.edl" import *;
+    from "sgx_net.edl" import *;
+    from "sgx_time.edl" import *;
+    include "sgx_quote.h"
+    from "sgx_backtrace.edl" import *;
+    from "sgx_tstdc.edl" import *;
+    from "sgx_tprotected_fs.edl" import *;
+
+    // This header is generated during the build of enclave-ffi-types
+    include "target/headers/enclave-ffi-types.h"
+
+    trusted {
+
+        EnclaveBuffer ecall_allocate(
+            [in, count=length] const uint8_t* buffer,
+            uintptr_t length
+        );
+
+        public sgx_status_t ecall_init_bootstrap(
+            [out, count=32] uint8_t* seed
+        );
+
+        public sgx_status_t ecall_key_gen(
+            [out, count=32] uint8_t* public_key
+        );
+
+        public sgx_status_t ecall_get_attestation_report();
+
+        public sgx_status_t ecall_authenticate_new_node(
+            [in, count=cert_len] const uint8_t* cert,
+            uintptr_t cert_len,
+            [out, count=48] uint8_t* seed
+        );
+
+        public sgx_status_t ecall_init_node(
+            [in, count=master_cert_len] const uint8_t* master_cert,
+            uintptr_t master_cert_len,
+            [in, count=encrypted_seed_len] const uint8_t* encrypted_seed,
+            uintptr_t encrypted_seed_len
+        );
+
+        public InitResult ecall_init(
+            Ctx context,
+            uint64_t gas_limit,
+            [in, count=contract_len] const uint8_t* contract,
+            uintptr_t contract_len,
+            [in, count=env_len] const uint8_t* env,
+            uintptr_t env_len,
+            [in, count=msg_len] const uint8_t* msg,
+            uintptr_t msg_len
+        );
+
+        public HandleResult ecall_handle(
+            Ctx context,
+            uint64_t gas_limit,
+            [in, count=contract_len] const uint8_t* contract,
+            uintptr_t contract_len,
+            [in, count=env_len] const uint8_t* env,
+            uintptr_t env_len,
+            [in, count=msg_len] const uint8_t* msg,
+            uintptr_t msg_len
+        );
+
+        public QueryResult ecall_query(
+            Ctx context,
+            uint64_t gas_limit,
+            [in, count=contract_len] const uint8_t* contract,
+            uintptr_t contract_len,
+            [in, count=msg_len] const uint8_t* msg,
+            uintptr_t msg_len
+        );
+
+    };
+
+    untrusted {
+        UserSpaceBuffer ocall_allocate(
+            [in, count=length] const uint8_t* buffer,
+            uintptr_t length
+        );
+
+        EnclaveBuffer ocall_read_db(
+            Ctx context,
+            [in, count=key_len] const uint8_t* key,
+            uintptr_t key_len
+        ) allow (ecall_allocate);
+
+        void ocall_write_db(
+            Ctx context,
+            [in, count=key_len] const uint8_t* key,
+            uintptr_t key_len,
+            [in, count=value_len] const uint8_t* value,
+            uintptr_t value_len
+        );
+
+        sgx_status_t ocall_sgx_init_quote([out] sgx_target_info_t *ret_ti,
+                      [out] sgx_epid_group_id_t *ret_gid);
+
+        sgx_status_t ocall_get_ias_socket([out] int *ret_fd);
+
+        sgx_status_t ocall_get_quote(  [in, size = sigrl_len] uint8_t * p_sigrl,
+                                       uint32_t sigrl_len,
+                                       [in] sgx_report_t *report,
+                                       sgx_quote_sign_type_t quote_type,
+                                       [in] sgx_spid_t *p_spid,
+                                       [in] sgx_quote_nonce_t *p_nonce,
+                                       [out] sgx_report_t *p_qe_report,
+                                       [out, size = maxlen] sgx_quote_t *p_quote,
+                                       uint32_t maxlen,
+                                       [out] uint32_t* p_quote_len);
+
+        sgx_status_t ocall_get_update_info([in] sgx_platform_info_t * platformBlob,
+                           int32_t enclaveTrusted,
+                           [out] sgx_update_info_bit_t * update_info);
+    };
+};

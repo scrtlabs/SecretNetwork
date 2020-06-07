@@ -1,7 +1,6 @@
 package types
 
 import (
-	"encoding/json"
 	"net/url"
 	"regexp"
 
@@ -12,6 +11,7 @@ import (
 const (
 	MaxWasmSize = 500 * 1024
 
+	MaxCertificateSize = 20 * 1024
 	// MaxLabelSize is the longest label that can be used when Instantiating a contract
 	MaxLabelSize = 128
 
@@ -102,11 +102,11 @@ func validateBuilder(buildTag string) error {
 }
 
 type MsgInstantiateContract struct {
-	Sender    sdk.AccAddress  `json:"sender" yaml:"sender"`
-	Code      uint64          `json:"code_id" yaml:"code_id"`
-	Label     string          `json:"label" yaml:"label"`
-	InitMsg   json.RawMessage `json:"init_msg" yaml:"init_msg"`
-	InitFunds sdk.Coins       `json:"init_funds" yaml:"init_funds"`
+	Sender    sdk.AccAddress `json:"sender" yaml:"sender"`
+	Code      uint64         `json:"code_id" yaml:"code_id"`
+	Label     string         `json:"label" yaml:"label"`
+	InitMsg   []byte         `json:"init_msg" yaml:"init_msg"`
+	InitFunds sdk.Coins      `json:"init_funds" yaml:"init_funds"`
 }
 
 func (msg MsgInstantiateContract) Route() string {
@@ -147,10 +147,10 @@ func (msg MsgInstantiateContract) GetSigners() []sdk.AccAddress {
 }
 
 type MsgExecuteContract struct {
-	Sender    sdk.AccAddress  `json:"sender" yaml:"sender"`
-	Contract  sdk.AccAddress  `json:"contract" yaml:"contract"`
-	Msg       json.RawMessage `json:"msg" yaml:"msg"`
-	SentFunds sdk.Coins       `json:"sent_funds" yaml:"sent_funds"`
+	Sender    sdk.AccAddress `json:"sender" yaml:"sender"`
+	Contract  sdk.AccAddress `json:"contract" yaml:"contract"`
+	Msg       []byte         `json:"msg" yaml:"msg"`
+	SentFunds sdk.Coins      `json:"sent_funds" yaml:"sent_funds"`
 }
 
 func (msg MsgExecuteContract) Route() string {
