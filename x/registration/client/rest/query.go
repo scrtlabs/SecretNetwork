@@ -6,8 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
 	// sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/rest"
+	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
+
 	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/keeper"
 	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
 
@@ -17,6 +20,8 @@ import (
 
 func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
 	r.HandleFunc("/reg/code", listCodesHandlerFn(cliCtx)).Methods("GET")
+	r.HandleFunc("/reg/consensus-io-exch-pubkey", ioPubkeyHandlerFn(cliCtx)).Methods("GET")
+	r.HandleFunc("/reg/consensus-seed-exch-pubkey", seedPubkeyHandlerFn(cliCtx)).Methods("GET")
 }
 
 func listCodesHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
@@ -34,6 +39,76 @@ func listCodesHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 		}
 		cliCtx = cliCtx.WithHeight(height)
 		rest.PostProcessResponse(w, cliCtx, json.RawMessage(res))
+	}
+}
+
+func ioPubkeyHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
+		if !ok {
+			return
+		}
+
+		route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, keeper.QueryMasterCertificate)
+		res, height, err := cliCtx.Query(route)
+		if err != nil {
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		cliCtx = cliCtx.WithHeight(height)
+
+		var certs types.GenesisState
+
+		err = json.Unmarshal(res, &certs)
+		if err != nil {
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		ioExchPubkey, err := ra.VerifyRaCert(certs.IoMasterCertificate)
+		if err != nil {
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		res = []byte(fmt.Sprintf(`{"ioExchPubkey":"%s"}`, base64.StdEncoding.EncodeToString(ioExchPubkey)))
+
+		rest.PostProcessResponse(w, cliCtx, json.RawMessage(res))
+	}
+}
+
+func seedPubkeyHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
+		if !ok {
+			return
+		}
+
+		route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, keeper.QueryMasterCertificate)
+		res, height, err := cliCtx.Query(route)
+		if err != nil {
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		cliCtx = cliCtx.WithHeight(height)
+
+		var certs types.GenesisState
+
+		err = json.Unmarshal(res, &certs)
+		if err != nil {
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		nodeExchPubkey, err := ra.VerifyRaCert(certs.NodeExchMasterCertificate)
+		if err != nil {
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		res = []byte(fmt.Sprintf(`{"nodeExchPubkey":"%s"}`, base64.StdEncoding.EncodeToString(nodeExchPubkey)))
+
+		rest.PostProcessResponse(w, cliCtx, nodeExchPubkey)
 	}
 }
 
