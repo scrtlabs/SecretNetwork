@@ -1,5 +1,24 @@
 ![Secret Network](/logo.png)
 
+# The Romulus Upgrade
+
+This is the Romulus Upgrade for the Secret Network as specified in the mainnet _Romulus Upgrade Signal_ proposal:
+
+https://explorer.cashmaney.com/proposals/11
+
+The Romulus Upgrade Signal is to suggest a time to upgrade the Secret Network. This upgrade will rename the current enigma prefix to secret in order to rebrand the address format, additionally it will bring other improvements such as the addition of a new module. The proposed time for this upgrade is approximately 5am PT Wednesday June 10th 2020. The proposed time approximately corresponds to block 1,697,639 All additions can be reviewed in the following GitHub repo : https://github.com/secretnodes/secretnetwork. Any suggested or required changes to the repo must be made before June 7th. All official discussions around the Romulus Upgrade will be coordinated in the #the-romulus-upgrade room on https://chat.scrt.network.
+
+_Stay Tuned_
+
+Instructions for the upgrade will be posted here soon by Chain of Secrets.
+
+We are currently testing the upgrade on our *secrettestnet* and will develop a guide outlining the process.
+
+In the meantime if you'd like to get a peak at the steps we'll be running through on our testnet, you can review the notes here:
+
+  [How to upgrade to the Secret Network (rebranding)](/docs/upgrades/howto-secretnetwork-rebranding.md)
+
+
 <p align="center">
 Secret Network secures the decentralized web
 </p>
