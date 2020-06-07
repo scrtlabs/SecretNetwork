@@ -457,4 +457,11 @@ export class RestClient {
     // By convention, smart queries must return a valid JSON document (see https://github.com/CosmWasm/cosmwasm/issues/144)
     return JSON.parse(fromUtf8(fromBase64(fromUtf8(await decrypt(fromBase64(result.smart))))));
   }
+
+  /**
+   * Get the consensus keypair for IO encryption
+   */
+  public async getMasterCerts(address: string, query: object): Promise<any> {
+    return this.get("/register/master-cert");
+  }
 }
