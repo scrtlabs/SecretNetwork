@@ -9,7 +9,6 @@
     - [`consensus_seed_exchange_privkey`](#consensus_seed_exchange_privkey)
     - [`consensus_io_exchange_privkey`](#consensus_io_exchange_privkey)
     - [`consensus_state_ikm`](#consensus_state_ikm)
-    - [`consensus_state_iv`](#consensus_state_iv)
   - [Bootstrap Process Epilogue](#bootstrap-process-epilogue)
 - [Node Startup](#node-startup)
 - [New Node Registration](#new-node-registration)
@@ -115,19 +114,6 @@ consensus_state_ikm = hkdf({
 }); // 256 bits
 ```
 
-### `consensus_state_iv`
-
-TODO reasoning
-
-- `consensus_state_iv`: An input secret IV to prevent IV manipulation while encrypting contracts' state.
-
-```js
-consensus_state_iv = hkdf({
-  salt: hkfd_salt,
-  ikm: consensus_seed.append(uint8(4)),
-}); // 256 bits
-```
-
 ## Bootstrap Process Epilogue
 
 TODO reasoning
@@ -158,7 +144,6 @@ TODO reasoning
   - The remote attestation proof that the node's Enclave is genuine.
   - `registration_pubkey`
   - 256 bits true random `nonce`
-  - 256 bits true random `iv`
 
 ## On the consensus layer, inside the Enclave of every full node
 
@@ -177,7 +162,7 @@ TODO reasoning
   - https://github.com/miscreant/meta
   - The input key is 256 bits, but half of it is used to derive the internal IV.
 - `seed_exchange_key` is derived the following way:
-  - `seed_exchange_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_seed_exchange_privkey` and `registration_pubkey`.
+  - `seed_exchange_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) ([x25519](https://tools.ietf.org/html/rfc7748#section-6)) with `consensus_seed_exchange_privkey` and `registration_pubkey`.
   - `seed_exchange_key` is derived using HKDF-SHA256 from `seed_exchange_ikm` and `nonce`.
 
 ```js
@@ -219,7 +204,7 @@ TODO reasoning
 - `seed_exchange_key`: An AES-128-SIV encryption key. Will be used to decrypt `consensus_seed`.
 - `seed_exchange_key` is derived the following way:
 
-  - `seed_exchange_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_seed_exchange_pubkey` (public in `genesis.json`) and `registration_privkey` (available only inside the new node's Enclave).
+  - `seed_exchange_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) ([x25519](https://tools.ietf.org/html/rfc7748#section-6)) with `consensus_seed_exchange_pubkey` (public in `genesis.json`) and `registration_privkey` (available only inside the new node's Enclave).
 
   - `seed_exchange_key` is derived using HKDF-SHA256 with `seed_exchange_ikm` and `nonce`.
 
@@ -337,7 +322,7 @@ if (current_state_ciphertext == null) {
   // field_name doesn't yet initialized in state
   ad = sha256(encrypted_field_name);
 } else {
-  // read previous_ad, verify it, calculate new iv
+  // read previous_ad, verify it, calculate new ad
   previous_ad = current_state_ciphertext.slice(0, 32); // first 32 bytes/256 bits
   current_state_ciphertext = current_state_ciphertext.slice(32); // skip first 32 bytes
 
@@ -345,7 +330,7 @@ if (current_state_ciphertext == null) {
     key: encryption_key,
     data: current_state_ciphertext,
     ad: previous_ad,
-  }); // just to authenticate previous_iv
+  }); // just to authenticate previous_ad
   ad = sha256(previous_ad);
 }
 
@@ -397,8 +382,8 @@ return current_state_plaintext;
 TODO reasoning
 
 - `tx_encryption_key`: An AES-128-SIV encryption key. Will be used to encrypt tx inputs and decrypt tx outpus.
-  - `tx_encryption_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_io_exchange_pubkey` and `tx_sender_wallet_privkey` (on the sender's side).
-  - `tx_encryption_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) with `consensus_io_exchange_privkey` and `tx_sender_wallet_pubkey` (inside the Enclave of every full node).
+  - `tx_encryption_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) ([x25519](https://tools.ietf.org/html/rfc7748#section-6)) with `consensus_io_exchange_pubkey` and `tx_sender_wallet_privkey` (on the sender's side).
+  - `tx_encryption_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) ([x25519](https://tools.ietf.org/html/rfc7748#section-6)) with `consensus_io_exchange_privkey` and `tx_sender_wallet_pubkey` (inside the Enclave of every full node).
 - `tx_encryption_key` is derived using HKDF-SHA256 with `tx_encryption_ikm` and a random number `nonce`. This is to prevent using the same key for the same tx sender multiple times.
 
 ## Input
