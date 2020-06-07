@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
+
 use super::hex;
 #[cfg(feature = "SGX_MODE_HW")]
 use crate::consts::{API_KEY_FILE, SPID_FILE};

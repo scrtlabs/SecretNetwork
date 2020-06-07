@@ -14,7 +14,7 @@ pub const SEED_SIZE: usize = 32;
 /// symmetric key we use for encryption.
 pub type SymmetricKey = [u8; SYMMETRIC_KEY_SIZE];
 /// StateKey is the key used for state encryption.
-pub type StateKey = SymmetricKey;
+// pub type StateKey = SymmetricKey;
 /// DHKey is the key that results from the ECDH [`enigma_crypto::KeyPair::derive_key`](../replace_me)
 pub type DhKey = SymmetricKey;
 

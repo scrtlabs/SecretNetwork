@@ -9,13 +9,13 @@ use crate::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::wasm::contract_validation::ContractKey;
 
 use super::contract_validation::{
-    calc_contract_hash, extract_contract_key, generate_contract_id, generate_encryption_key,
-    generate_sender_id, validate_contract_key, CONTRACT_KEY_LENGTH,
+    extract_contract_key, generate_encryption_key, validate_contract_key, CONTRACT_KEY_LENGTH,
 };
 use super::errors::wasmi_error_to_enclave_error;
 use super::gas::{gas_rules, WasmCosts};
-use super::io::{decrypt_msg, encrypt_output};
+use super::io::encrypt_output;
 use super::runtime::{Engine, EnigmaImportResolver, Runtime};
+use crate::wasm::types::SecretMessage;
 
 /*
 Each contract is compiled with these functions alreadyy implemented in wasm:
@@ -57,10 +57,10 @@ pub fn init(
         .write_to_memory(env)
         .map_err(wasmi_error_to_enclave_error)?;
 
-    let (msg, user_pubkey, nonce) = decrypt_msg(msg)?;
+    let secret_msg = SecretMessage::from_slice(msg)?;
 
     let msg_ptr = engine
-        .write_to_memory(&msg)
+        .write_to_memory(&secret_msg.decrypt()?)
         .map_err(wasmi_error_to_enclave_error)?;
 
     let vec_ptr = engine
@@ -71,7 +71,7 @@ pub fn init(
         .extract_vector(vec_ptr)
         .map_err(wasmi_error_to_enclave_error)?;
 
-    let output = encrypt_output(&output, &user_pubkey, &nonce)?;
+    let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
 
     // third time's the charm
     // let output = append_contract_key(&output, encryption_key)?;
@@ -116,14 +116,14 @@ pub fn handle(
 
     let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
 
+    let secret_msg = SecretMessage::from_slice(msg)?;
+
     let env_ptr = engine
         .write_to_memory(env)
         .map_err(wasmi_error_to_enclave_error)?;
 
-    let (msg, user_pubkey, nonce) = decrypt_msg(msg)?;
-
     let msg_ptr = engine
-        .write_to_memory(&msg)
+        .write_to_memory(&secret_msg.decrypt()?)
         .map_err(wasmi_error_to_enclave_error)?;
 
     let vec_ptr = engine
@@ -134,7 +134,7 @@ pub fn handle(
         .extract_vector(vec_ptr)
         .map_err(wasmi_error_to_enclave_error)?;
 
-    let output = encrypt_output(&output, &user_pubkey, &nonce)?;
+    let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
 
     Ok(HandleSuccess {
         output,
@@ -166,10 +166,10 @@ pub fn query(
 
     let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
 
-    let (msg, user_pubkey, nonce) = decrypt_msg(msg)?;
+    let secret_msg = SecretMessage::from_slice(msg)?;
 
     let msg_ptr = engine
-        .write_to_memory(&msg)
+        .write_to_memory(&secret_msg.decrypt()?)
         .map_err(wasmi_error_to_enclave_error)?;
 
     let vec_ptr = engine
@@ -180,7 +180,7 @@ pub fn query(
         .extract_vector(vec_ptr)
         .map_err(wasmi_error_to_enclave_error)?;
 
-    let output = encrypt_output(&output, &user_pubkey, &nonce)?;
+    let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
 
     Ok(QuerySuccess {
         output,

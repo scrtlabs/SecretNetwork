@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
+
 use base64;
 use bit_vec::BitVec;
 #[cfg(feature = "SGX_MODE_HW")]

@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use std::fmt;
 
 use serde::{de, ser, Deserialize, Deserializer, Serialize};

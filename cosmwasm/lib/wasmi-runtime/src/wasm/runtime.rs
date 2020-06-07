@@ -1,27 +1,20 @@
 use bech32;
 use bech32::{FromBase32, ToBase32};
 use log::{error, trace, warn};
-use sgx_tcrypto::*;
-use sgx_types::{sgx_status_t, SgxError, SgxResult};
 use std::str;
 use wasmi::{
     Error as InterpreterError, Externals, FuncInstance, FuncRef, MemoryRef, ModuleImportResolver,
     ModuleRef, RuntimeArgs, RuntimeValue, Signature, Trap, ValueType,
 };
 
-use enclave_ffi_types::{Ctx, EnclaveBuffer};
+use enclave_ffi_types::Ctx;
 
 use super::contract_validation::ContractKey;
-use crate::crypto::key_manager;
-use crate::crypto::traits::{Encryptable, Kdf};
-use crate::crypto::*;
 
 use super::errors::{DbError, WasmEngineError};
 // Runtime maps function index to implementation
 // When instansiating a module we give it the EnigmaImportResolver resolver
 // When invoking a function inside the module we give it this runtime which is the acctual functions implementation ()
-use crate::exports;
-use crate::imports;
 use crate::wasm::db::{read_encrypted_key, write_encrypted_key};
 
 // --------------------------------
