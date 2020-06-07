@@ -16,7 +16,6 @@ import {
   StdFee,
   StdSignature,
 } from "./types";
-import { encrypt, decrypt } from "./enigmautils";
 
 export interface SigningCallback {
   (signBytes: Uint8Array): Promise<StdSignature>;
@@ -195,7 +194,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
         code_id: codeId.toString(),
         label: label,
         // eslint-disable-next-line @typescript-eslint/camelcase
-        init_msg: await encrypt(initMsg),
+        init_msg: Encoding.toBase64(await this.restClient.enigmautils.encrypt(initMsg)),
         // eslint-disable-next-line @typescript-eslint/camelcase
         init_funds: transferAmount || [],
       },
@@ -233,7 +232,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
       value: {
         sender: this.senderAddress,
         contract: contractAddress,
-        msg: await encrypt(handleMsg),
+        msg: Encoding.toBase64(await this.restClient.enigmautils.encrypt(handleMsg)),
         // eslint-disable-next-line @typescript-eslint/camelcase
         sent_funds: transferAmount || [],
       },
