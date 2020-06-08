@@ -41,7 +41,7 @@ impl SealedKey for KeyPair {
     fn unseal(filepath: &str) -> Result<Self, EnclaveError> {
         let buf = open(filepath)?;
 
-        KeyPair::new_from_slice(buf).map_err(|err| EnclaveError::FailedUnseal)
+        KeyPair::new_from_slice(buf).map_err(|_err| EnclaveError::FailedUnseal)
     }
 }
 

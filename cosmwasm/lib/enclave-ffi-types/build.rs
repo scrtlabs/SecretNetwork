@@ -1,4 +1,6 @@
+#[cfg(feature = "build_headers")]
 use std::env;
+#[cfg(feature = "build_headers")]
 use std::path::PathBuf;
 
 #[cfg(feature = "build_headers")]

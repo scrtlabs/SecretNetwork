@@ -1,5 +1,5 @@
 use super::{AESKey, Hmac, HMAC_SIGNATURE_SIZE};
-use ring::{hmac, rand};
+use ring::hmac;
 
 impl Hmac for AESKey {
     fn sign_sha_256(&self, to_sign: &[u8]) -> [u8; HMAC_SIGNATURE_SIZE] {

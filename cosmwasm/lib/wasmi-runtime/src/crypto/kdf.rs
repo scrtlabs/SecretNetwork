@@ -1,8 +1,7 @@
 use crate::crypto::traits::Kdf;
 use crate::crypto::{AESKey, Seed, SECRET_KEY_SIZE};
 
-use chrono::format::Numeric::Second;
-use ring::{hkdf, hmac};
+use ring::hkdf;
 
 // Bitcoin halving block hash https://www.blockchain.com/btc/block/000000000000000000024bead8df69990852c202db0e0097c1a12ea637d7e96d
 const KDF_SALT: [u8; 32] = [
@@ -37,7 +36,7 @@ fn derive_key(input_bytes: &[u8], info: &[&[u8]]) -> [u8; SECRET_KEY_SIZE] {
 
     let mut result: [u8; SECRET_KEY_SIZE] = [0u8; SECRET_KEY_SIZE];
 
-    okm.fill(&mut result);
+    let _ = okm.fill(&mut result);
 
     result
 }

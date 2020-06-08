@@ -31,7 +31,7 @@ pub fn encrypt_seed(
             }
             r
         }
-        Err(e) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
+        Err(_e) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
     };
 
     Ok(res)
@@ -70,7 +70,7 @@ pub fn decrypt_seed(
             }
             r
         }
-        Err(e) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
+        Err(_e) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
     };
 
     Ok(res)

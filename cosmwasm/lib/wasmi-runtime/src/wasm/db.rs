@@ -148,7 +148,7 @@ fn encrypt_key(
 ) -> Result<Vec<u8>, DbError> {
     let encryption_key = get_symmetrical_key(field_name, contract_key);
 
-    let mut encrypted_value = encryption_key
+    let encrypted_value = encryption_key
         .encrypt_siv(&value, &vec![ad])
         .map_err(|err| {
             error!(

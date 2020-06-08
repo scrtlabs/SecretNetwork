@@ -29,11 +29,11 @@ pub extern "C" fn ecall_authenticate_new_node(
     cert_len: u32,
     seed: &mut [u8; ENCRYPTED_SEED_SIZE],
 ) -> sgx_status_t {
-    if let Err(e) = validate_mut_ptr(seed.as_mut_ptr(), seed.len()) {
+    if let Err(_e) = validate_mut_ptr(seed.as_mut_ptr(), seed.len()) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
-    if let Err(e) = validate_const_ptr(cert, cert_len as usize) {
+    if let Err(_e) = validate_const_ptr(cert, cert_len as usize) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
