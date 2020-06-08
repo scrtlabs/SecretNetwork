@@ -16,7 +16,7 @@ export interface Account {
 export interface PostTxResult {
   readonly logs: readonly Log[];
   readonly rawLog: string;
-  readonly data?: string;
+  readonly data: any;
   /** Transaction hash (might be used as transaction ID). Guaranteed to be non-empty upper-case hex */
   readonly transactionHash: string;
 }

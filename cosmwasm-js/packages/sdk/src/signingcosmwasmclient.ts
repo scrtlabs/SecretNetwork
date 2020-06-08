@@ -5,7 +5,7 @@ import pako from "pako";
 import { isValidBuilder } from "./builder";
 import { Account, CosmWasmClient, GetNonceResult, PostTxResult } from "./cosmwasmclient";
 import { makeSignBytes } from "./encoding";
-import { findAttribute, Log } from "./logs";
+import { findAttribute, Log, Attribute } from "./logs";
 import { BroadcastMode } from "./restclient";
 import {
   Coin,
@@ -89,14 +89,14 @@ export interface InstantiateResult {
   readonly logs: readonly Log[];
   /** Transaction hash (might be used as transaction ID). Guaranteed to be non-empty upper-case hex */
   readonly transactionHash: string;
-  readonly data?: any;
+  readonly data: any;
 }
 
 export interface ExecuteResult {
   readonly logs: readonly Log[];
   /** Transaction hash (might be used as transaction ID). Guaranteed to be non-empty upper-case hex */
   readonly transactionHash: string;
-  readonly data?: any;
+  readonly data: any;
 }
 
 export class SigningCosmWasmClient extends CosmWasmClient {
@@ -217,18 +217,15 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     const result = await this.postTx(signedTx);
     const contractAddressAttr = findAttribute(result.logs, "message", "contract_address");
 
-    let data;
-    if (typeof result.data === "string") {
-      const { data: encryptedData } = JSON.parse(Encoding.fromUtf8(Encoding.fromHex(result.data)));
-      if (typeof encryptedData === "string") {
-        const nonce: Uint8Array = Encoding.fromBase64(instantiateMsg.value.init_msg).slice(0, 32);
-        data = await this.restClient.enigmautils.decrypt(Encoding.fromBase64(encryptedData), nonce);
-      }
-    }
+    const nonce = Encoding.fromBase64(instantiateMsg.value.init_msg).slice(0, 32);
+
+    const { data, log: wasmEvents } = await this.restClient.decryptDataField(result.data, nonce);
+
+    const wasmLog: Log = { msg_index: 1, log: "", events: [{ type: "message", attributes: wasmEvents }] };
 
     return {
       contractAddress: contractAddressAttr.value,
-      logs: result.logs,
+      logs: result.logs.concat(wasmLog),
       transactionHash: result.transactionHash,
       data: data,
     };
@@ -264,17 +261,14 @@ export class SigningCosmWasmClient extends CosmWasmClient {
 
     const result = await this.postTx(signedTx);
 
-    let data;
-    if (typeof result.data === "string") {
-      const { data: encryptedData } = JSON.parse(Encoding.fromUtf8(Encoding.fromHex(result.data)));
-      if (typeof encryptedData === "string") {
-        const nonce: Uint8Array = Encoding.fromBase64(executeMsg.value.msg).slice(0, 32);
-        data = await this.restClient.enigmautils.decrypt(Encoding.fromBase64(encryptedData), nonce);
-      }
-    }
+    const nonce = Encoding.fromBase64(executeMsg.value.msg).slice(0, 32);
+
+    const { data, log: wasmEvents } = await this.restClient.decryptDataField(result.data, nonce);
+
+    const wasmLog: Log = { msg_index: 1, log: "", events: [{ type: "message", attributes: wasmEvents }] };
 
     return {
-      logs: result.logs,
+      logs: result.logs.concat(wasmLog),
       transactionHash: result.transactionHash,
       data: data,
     };

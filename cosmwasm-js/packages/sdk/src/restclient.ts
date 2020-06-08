@@ -3,6 +3,8 @@ import axios, { AxiosError, AxiosInstance } from "axios";
 
 import { Coin, CosmosSdkTx, JsonObject, Model, parseWasmData, StdTx, WasmData } from "./types";
 
+import { Attribute } from "./logs";
+
 import EnigmaUtils from "./enigmautils";
 
 export interface CosmosSdkAccount {
@@ -124,7 +126,7 @@ export interface TxsResponse {
   /** Falsy when transaction execution succeeded. Contains error code on error. */
   readonly code?: number;
   readonly raw_log: string;
-  readonly data?: string;
+  readonly data: string;
   readonly logs?: object;
   readonly tx: CosmosSdkTx;
   /** The gas limit as set by the user */
@@ -148,7 +150,7 @@ export interface PostTxsResponse {
   readonly txhash: string;
   readonly code?: number;
   readonly raw_log?: string;
-  readonly data?: string;
+  readonly data: any;
   /** The same as `raw_log` but deserialized? */
   readonly logs?: object;
   /** The gas limit as set by the user */
@@ -175,7 +177,7 @@ export interface CodeInfo {
 
 export interface CodeDetails extends CodeInfo {
   /** Base64 encoded raw wasm data */
-  readonly data: string;
+  readonly data: any;
 }
 
 // This is list view, without contract info
@@ -480,5 +482,35 @@ export class RestClient {
    */
   public async getMasterCerts(address: string, query: object): Promise<any> {
     return this.get("/register/master-cert");
+  }
+
+  public async decryptDataField(
+    dataField: string,
+    nonce: Uint8Array,
+  ): Promise<{ log: { key: string; value: string }[]; data: any }> {
+    const wasmOutputs = JSON.parse(Encoding.fromUtf8(Encoding.fromHex(dataField)));
+
+    if (wasmOutputs.err) {
+      throw new Error(wasmOutputs.err);
+    }
+
+    // data
+    const data = wasmOutputs.ok.data
+      ? await this.enigmautils.decrypt(Encoding.fromBase64(wasmOutputs.ok.data), nonce)
+      : undefined;
+
+    // logs
+    const wasmEvents: Attribute[] = await Promise.all(
+      wasmOutputs.ok.log.map(
+        async (l: Attribute): Promise<Attribute> => ({
+          key: Encoding.fromUtf8(await this.enigmautils.decrypt(Encoding.fromBase64(l.key), nonce)),
+          value: Encoding.fromUtf8(await this.enigmautils.decrypt(Encoding.fromBase64(l.value), nonce)),
+        }),
+      ),
+    );
+
+    // todo messages
+
+    return { log: wasmEvents, data: data };
   }
 }

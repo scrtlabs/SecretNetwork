@@ -799,6 +799,7 @@ describe("RestClient", () => {
         height: jasmine.stringMatching(nonNegativeIntegerMatcher),
         txhash: jasmine.stringMatching(tendermintIdMatcher),
         // code is not set
+        data: null,
         raw_log: jasmine.stringMatching(/^\[.+\]$/i),
         logs: jasmine.any(Array),
         gas_wanted: jasmine.stringMatching(nonNegativeIntegerMatcher),

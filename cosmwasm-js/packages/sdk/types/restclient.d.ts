@@ -99,7 +99,7 @@ export interface TxsResponse {
   /** Falsy when transaction execution succeeded. Contains error code on error. */
   readonly code?: number;
   readonly raw_log: string;
-  readonly data?: string;
+  readonly data: string;
   readonly logs?: object;
   readonly tx: CosmosSdkTx;
   /** The gas limit as set by the user */
@@ -121,7 +121,7 @@ export interface PostTxsResponse {
   readonly txhash: string;
   readonly code?: number;
   readonly raw_log?: string;
-  readonly data?: string;
+  readonly data: any;
   /** The same as `raw_log` but deserialized? */
   readonly logs?: object;
   /** The gas limit as set by the user */
@@ -143,7 +143,7 @@ export interface CodeInfo {
 }
 export interface CodeDetails extends CodeInfo {
   /** Base64 encoded raw wasm data */
-  readonly data: string;
+  readonly data: any;
 }
 export interface ContractInfo {
   readonly address: string;
@@ -234,5 +234,15 @@ export declare class RestClient {
    * Get the consensus keypair for IO encryption
    */
   getMasterCerts(address: string, query: object): Promise<any>;
+  decryptDataField(
+    dataField: string,
+    nonce: Uint8Array,
+  ): Promise<{
+    log: {
+      key: string;
+      value: string;
+    }[];
+    data: any;
+  }>;
 }
 export {};
