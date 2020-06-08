@@ -2,9 +2,9 @@
 
 
 syntax = "proto3";
-package EnigmaBlockchain.x.tokenswap.v1;
+package SecretNetwork.x.tokenswap.v1;
 
-option go_package = "github.com/enigmampc/EnigmaBlockchain/x/tokenswap/types";
+option go_package = "github.com/enigmampc/SecretNetwork/x/tokenswap/types";
 option (gogoproto.equal_all) = true;
 
 import "third_party/proto/gogoproto/gogo.proto";
@@ -13,12 +13,12 @@ message MsgTokenSwap {
     option (gogoproto.equal) = true;
 
     bytes ethereum_tx_hash = 1 [
-                                (gogoproto.casttype) = "github.com/enigmampc/EnigmaBlockchain/x/tokenswap/types.EthereumTxHash",
+                                (gogoproto.casttype) = "github.com/enigmampc/SecretNetwork/x/tokenswap/types.EthereumTxHash",
                                 (gogoproto.nullable) = false,
                                 (gogoproto.moretags) = "yaml:\"ethereum_tx_hash\""
                                 ];
     bytes ethereum_sender_address = 2 [
-                               (gogoproto.casttype) = "github.com/enigmampc/EnigmaBlockchain/x/tokenswap/types.EthereumAddress",
+                               (gogoproto.casttype) = "github.com/enigmampc/SecretNetwork/x/tokenswap/types.EthereumAddress",
                                (gogoproto.nullable) = false,
                                (gogoproto.moretags) = "yaml:\"ethereum_sender_address\""
                                ];
@@ -27,10 +27,10 @@ message MsgTokenSwap {
                                (gogoproto.nullable)   = false,
                                (gogoproto.moretags) = "yaml:\"eng_burned_amount\""
                                ];
-    bytes enigmachain_receiver_address = 4 [
+    bytes secretnetwork_receiver_address = 4 [
                                (gogoproto.casttype) = "github.com/Cashmaney/cosmos-sdk/types.AccAddress",
                                (gogoproto.nullable)   = false,
-                               (gogoproto.moretags) = "yaml:\"enigmachain_receiver_address\""
+                               (gogoproto.moretags) = "yaml:\"secretnetwork_receiver_address\""
                                ];
     bytes signer_addr      = 5 [
                                (gogoproto.casttype) = "github.com/Cashmaney/cosmos-sdk/types.AccAddress",

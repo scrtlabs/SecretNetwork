@@ -3,8 +3,8 @@ package client
 import (
 	"github.com/Cashmaney/cosmos-sdk/client/context"
 	"github.com/Cashmaney/cosmos-sdk/codec"
-	"github.com/enigmampc/EnigmaBlockchain/x/tokenswap/client/cli"
-	"github.com/enigmampc/EnigmaBlockchain/x/tokenswap/client/rest"
+	"github.com/enigmampc/SecretNetwork/x/tokenswap/client/cli"
+	"github.com/enigmampc/SecretNetwork/x/tokenswap/client/rest"
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 

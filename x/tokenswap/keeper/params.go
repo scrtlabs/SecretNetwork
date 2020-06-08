@@ -2,7 +2,7 @@ package keeper
 
 import (
 	sdk "github.com/Cashmaney/cosmos-sdk/types"
-	"github.com/enigmampc/EnigmaBlockchain/x/tokenswap/types"
+	"github.com/enigmampc/SecretNetwork/x/tokenswap/types"
 )
 
 // GetParams returns the total set of distribution parameters.

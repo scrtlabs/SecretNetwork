@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/enigmampc/EnigmaBlockchain/x/tokenswap/types"
+	"github.com/enigmampc/SecretNetwork/x/tokenswap/types"
 	"github.com/spf13/cobra"
 
 	"github.com/Cashmaney/cosmos-sdk/client/context"

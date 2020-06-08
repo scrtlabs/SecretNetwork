@@ -2,8 +2,9 @@ package keeper
 
 import (
 	"fmt"
+
 	paramtypes "github.com/Cashmaney/cosmos-sdk/x/params/subspace"
-	"github.com/enigmampc/EnigmaBlockchain/x/tokenswap/types"
+	"github.com/enigmampc/SecretNetwork/x/tokenswap/types"
 
 	"github.com/Cashmaney/cosmos-sdk/codec"
 	"github.com/tendermint/tendermint/libs/log"
