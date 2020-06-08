@@ -35,9 +35,34 @@ cat exported_state.json | ./bech32-convert > secret-1-genesis.json
 
 Or you can just paste `exported_state.json` into https://bech32.enigma.co and paste the result back into `secret-1-genesis.json`.
 
-### 4. Compile the new `secret` binaries with `make deb` (or distribute them precompiled).
+### 4. Use `jq` to make the `secret-1-genesis.json` more readable
 
-### 5. Setup new binaries:
+```bash
+jq . secret-1-genesis.json > secret-1-genesis-jq.json
+mv secret-1-genesis-jq.json secret-1-genesis.json
+
+```
+
+NOTE: if you don't have `jq`, you can install it with `sudo apt-get install jq`
+
+### 5. Add Tokenswap parameters
+
+Modify the `secret-1-genesis.json` and add the following tokenswap parameters under `gov`:
+
+```bash
+	"tokenswap": {
+		"params": {
+			"minting_approver_address": "",
+			"minting_multiplier": "1.000000000000000000",
+			"minting_enabled": false
+		},
+		"swaps": null
+	},
+```
+
+### 6. Compile the new `secret` binaries with `make deb` (or distribute them precompiled).
+
+### 7. Setup new binaries:
 
 ```bash
 sudo dpkg -i secretnetwork_0.1.0_amd64.deb # install secretd & secretcli and setup secret-node.service
@@ -48,7 +73,7 @@ secretcli config indent true
 secretcli config trust-node true
 ```
 
-### 6. Setup the new node/validaor:
+### 8. Setup the new node/validaor:
 
 ```bash
 # args for secretd init doesn't matter because we're going to import the old config files
@@ -66,7 +91,7 @@ cp new_genesis.json ~/.secretd/config/genesis.json
 # at this point you should also validate sha256 checksums of ~/.secretd/config/* against ~/.enigmad/config/*
 ```
 
-### 7. Start the new Secret Node! :tada:
+### 9. Start the new Secret Node! :tada:
 
 ```bash
 sudo systemctl enable secret-node # enable on startup
@@ -81,7 +106,7 @@ journalctl -u secret-node -f
 
 If something goes wrong the network can relaunch the `enigma-node`, therefore it's not advisable to delete `~/.enigmad` & `~/.enigmacli` until the new chain is live and stable.
 
-### 8. Import wallet keys from the old chain to the new chain:
+### 10. Import wallet keys from the old chain to the new chain:
 
 (Ledger Nano S/X users shouldn't do anything, just use the new CLI with `--ledger --account <number>` as usual)
 
@@ -93,7 +118,7 @@ enigmacli keys export <key_name>
 secretcli import <key_name> key.export
 ```
 
-### 9. When the new chain is live and everything works well, you can delete the files of the old chain:
+### 11. When the new chain is live and everything works well, you can delete the files of the old chain:
 
 - `rm -rf ~/.enigmad`
 - `rm -rf ~/.enigmacli`
