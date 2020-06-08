@@ -12,6 +12,29 @@ https://explorer.cashmaney.com/proposals/11
 
 The Romulus Upgrade Signal is to suggest a time to upgrade the Secret Network. This upgrade will rename the current enigma prefix to secret in order to rebrand the address format, additionally it will bring other improvements such as the addition of a new module. The proposed time for this upgrade is approximately 5am PT Wednesday June 10th 2020. The proposed time approximately corresponds to block 1,697,639 All additions can be reviewed in the following GitHub repo : https://github.com/secretnodes/secretnetwork. Any suggested or required changes to the repo must be made before June 7th. All official discussions around the Romulus Upgrade will be coordinated in the #the-romulus-upgrade room on https://chat.scrt.network.
 
+
+## Secret Network Version
+
+Below is the version information for the Secret Network.
+
+```bash
+{
+  "name": "SecretNetwork",
+  "server_name": "secretd",
+  "client_name": "secretcli",
+  "version": "0.2.0-193-gbd9a551",
+  "commit": "bd9a551bbbf72b2160144046d9f03ee503740ab2",
+  "build_tags": "ledger",
+  "go": "go version go1.14.4 linux/amd64"
+}
+```
+
+You can check that you hae the right release by doing:
+
+```bash
+secretcli version --long | jq .
+```
+
 _Stay Tuned_
 
 Instructions for the upgrade will be posted here soon by Chain of Secrets.

@@ -62,12 +62,16 @@ Modify the `secret-1-genesis.json` and add the following tokenswap parameters un
 
 ### 6. Compile the new `secret` binaries with `make deb` (or distribute them precompiled).
 
+```bash
+secretnetwork_0.2.0_amd64.deb
+```
+
 ### 7. Setup new binaries:
 
 ```bash
-sudo dpkg -i secretnetwork_0.1.0_amd64.deb # install secretd & secretcli and setup secret-node.service
+sudo dpkg -i secretnetwork_0.2.0_amd64.deb # install secretd & secretcli and setup secret-node.service
 
-secretcli config chain-id <new_chain_id>
+secretcli config chain-id secret-1
 secretcli config output json
 secretcli config indent true
 secretcli config trust-node true
@@ -77,7 +81,7 @@ secretcli config trust-node true
 
 ```bash
 # args for secretd init doesn't matter because we're going to import the old config files
-secretd init <moniker> --chain-id <new_chain_id>
+secretd init <moniker> --chain-id secret-1
 
 # import old config files to the new node
 cp ~/.enigmad/config/{app.toml,config.toml,addrbook.json} ~/.secretd/config
