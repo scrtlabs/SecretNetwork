@@ -13,7 +13,8 @@ const assert = require("assert").strict;
   const resQuery = await client.queryContractSmart(contract, {
     balance: { address: "enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4" },
   });
-  assert.equal(resQuery.balance, "63");
+  const initBalance = +resQuery.balance;
+  console.log(`js: initBalance is ${initBalance}`);
 
   const pen = await cosmwasmjs.Secp256k1Pen.fromMnemonic(
     "cost member exercise evoke isolate gift cattle move bundle assume spell face balance lesson resemble orange bench surge now unhappy potato dress number acid"
@@ -56,5 +57,9 @@ const assert = require("assert").strict;
   const res2Query = await client.queryContractSmart(contract, {
     balance: { address: "enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4" },
   });
-  assert.equal(res2Query.balance, "73");
+
+  console.log(
+    `js: finalBalance is ${res2Query.balance} (should be ${initBalance + 10})`
+  );
+  assert.equal(+res2Query.balance, initBalance + 10);
 })();

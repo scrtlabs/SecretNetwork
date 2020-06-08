@@ -3,8 +3,7 @@ import axios, { AxiosError, AxiosInstance } from "axios";
 
 import { Coin, CosmosSdkTx, JsonObject, Model, parseWasmData, StdTx, WasmData } from "./types";
 
-const { fromBase64, fromUtf8, toHex, toUtf8 } = Encoding;
-import { encrypt, decrypt } from "./enigmautils";
+import EnigmaUtils from "./enigmautils";
 
 export interface CosmosSdkAccount {
   /** Bech32 account address */
@@ -125,6 +124,7 @@ export interface TxsResponse {
   /** Falsy when transaction execution succeeded. Contains error code on error. */
   readonly code?: number;
   readonly raw_log: string;
+  readonly data?: string;
   readonly logs?: object;
   readonly tx: CosmosSdkTx;
   /** The gas limit as set by the user */
@@ -148,6 +148,7 @@ export interface PostTxsResponse {
   readonly txhash: string;
   readonly code?: number;
   readonly raw_log?: string;
+  readonly data?: string;
   /** The same as `raw_log` but deserialized? */
   readonly logs?: object;
   /** The gas limit as set by the user */
@@ -235,11 +236,10 @@ function isWasmError<T>(resp: WasmResponse<T>): resp is WasmError {
   return (resp as WasmError).error !== undefined;
 }
 
-async function unwrapWasmResponse<T>(response: WasmResponse<T>): Promise<T> {
+function unwrapWasmResponse<T>(response: WasmResponse<T>): T {
   if (isWasmError(response)) {
-    throw new Error(JSON.stringify(await decrypt(fromBase64(response.error))));
+    throw new Error(response.error);
   }
-
   return response.result;
 }
 
@@ -268,6 +268,7 @@ function parseAxiosError(err: AxiosError): never {
 export class RestClient {
   private readonly client: AxiosInstance;
   private readonly broadcastMode: BroadcastMode;
+  public readonly enigmautils: EnigmaUtils;
 
   /**
    * Creates a new client to interact with a Cosmos SDK light client daemon.
@@ -289,6 +290,7 @@ export class RestClient {
       headers: headers,
     });
     this.broadcastMode = broadcastMode;
+    this.enigmautils = new EnigmaUtils(apiUrl);
   }
 
   public async get(path: string): Promise<RestClientResponse> {
@@ -436,11 +438,11 @@ export class RestClient {
   // Returns the data at the key if present (unknown decoded json),
   // or null if no data at this (contract address, key) pair
   public async queryContractRaw(address: string, key: Uint8Array): Promise<Uint8Array | null> {
-    const hexKey = toHex(key);
+    const hexKey = Encoding.toHex(key);
     const path = `/wasm/contract/${address}/raw/${hexKey}?encoding=hex`;
     const responseData = (await this.get(path)) as WasmResponse<WasmData[]>;
     const data = await unwrapWasmResponse(responseData);
-    return data.length === 0 ? null : fromBase64(data[0].val);
+    return data.length === 0 ? null : Encoding.fromBase64(data[0].val);
   }
 
   /**
@@ -448,13 +450,35 @@ export class RestClient {
    * Throws error if no such contract exists, the query format is invalid or the response is invalid.
    */
   public async queryContractSmart(address: string, query: object): Promise<JsonObject> {
-    const encrypted = await encrypt(query);
-    const encoded = toHex(toUtf8(encrypted));
+    const encrypted = await this.enigmautils.encrypt(query);
+    const nonce = encrypted.slice(0, 32);
+
+    const encoded = Encoding.toHex(Encoding.toUtf8(Encoding.toBase64(encrypted)));
     const path = `/wasm/contract/${address}/smart/${encoded}?encoding=hex`;
     const responseData = (await this.get(path)) as WasmResponse<SmartQueryResponse>;
 
-    const result = await unwrapWasmResponse(responseData);
+    if (isWasmError(responseData)) {
+      throw new Error(
+        JSON.stringify(await this.enigmautils.decrypt(Encoding.fromBase64(responseData.error), nonce)),
+      );
+    }
+
     // By convention, smart queries must return a valid JSON document (see https://github.com/CosmWasm/cosmwasm/issues/144)
-    return JSON.parse(fromUtf8(fromBase64(fromUtf8(await decrypt(fromBase64(result.smart))))));
+    return JSON.parse(
+      Encoding.fromUtf8(
+        Encoding.fromBase64(
+          Encoding.fromUtf8(
+            await this.enigmautils.decrypt(Encoding.fromBase64(responseData.result.smart), nonce),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /**
+   * Get the consensus keypair for IO encryption
+   */
+  public async getMasterCerts(address: string, query: object): Promise<any> {
+    return this.get("/register/master-cert");
   }
 }

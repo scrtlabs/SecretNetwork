@@ -1,4 +1,5 @@
 import { Coin, CosmosSdkTx, JsonObject, Model, StdTx } from "./types";
+import EnigmaUtils from "./enigmautils";
 export interface CosmosSdkAccount {
   /** Bech32 account address */
   readonly address: string;
@@ -98,6 +99,7 @@ export interface TxsResponse {
   /** Falsy when transaction execution succeeded. Contains error code on error. */
   readonly code?: number;
   readonly raw_log: string;
+  readonly data?: string;
   readonly logs?: object;
   readonly tx: CosmosSdkTx;
   /** The gas limit as set by the user */
@@ -119,6 +121,7 @@ export interface PostTxsResponse {
   readonly txhash: string;
   readonly code?: number;
   readonly raw_log?: string;
+  readonly data?: string;
   /** The same as `raw_log` but deserialized? */
   readonly logs?: object;
   /** The gas limit as set by the user */
@@ -182,6 +185,7 @@ export declare enum BroadcastMode {
 export declare class RestClient {
   private readonly client;
   private readonly broadcastMode;
+  readonly enigmautils: EnigmaUtils;
   /**
    * Creates a new client to interact with a Cosmos SDK light client daemon.
    * This class tries to be a direct mapping onto the API. Some basic decoding and normalizatin is done
@@ -226,5 +230,9 @@ export declare class RestClient {
    * Throws error if no such contract exists, the query format is invalid or the response is invalid.
    */
   queryContractSmart(address: string, query: object): Promise<JsonObject>;
+  /**
+   * Get the consensus keypair for IO encryption
+   */
+  getMasterCerts(address: string, query: object): Promise<any>;
 }
 export {};

@@ -56,7 +56,7 @@ trap cleanup EXIT ERR
 wget -O /tmp/contract.wasm https://raw.githubusercontent.com/CosmWasm/cosmwasm-examples/f5ea00a85247abae8f8cbcba301f94ef21c66087/erc20/contract.wasm
 STORE_TX_HASH=$(
     yes |
-    ./enigmacli tx compute store /tmp/contract.wasm --from a --gas 10000000 2> /dev/null |
+    ./enigmacli tx compute store /tmp/contract.wasm --from a --gas 10000000 |
     jq -r .txhash
 )
 
@@ -85,9 +85,9 @@ CONTRACT_ADDRESS=$(
 
 # test balances after init (ocall_query + read_db + canonicalize_address)
 ./enigmacli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"$(./enigmacli keys show a -a)\"}}" |
-    jq -e '.balance == "108"' > /dev/null
+    jq -e '.balance == "108"'
 ./enigmacli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4\"}}" |
-    jq -e '.balance == "53"' > /dev/null
+    jq -e '.balance == "53"'
 
 # transfer 10 balance (ocall_handle + read_db + write_db + humanize_address + canonicalize_address)
 TRANSFER_TX_HASH=$(
@@ -100,9 +100,9 @@ wait_for_tx "$TRANSFER_TX_HASH" "Waiting for transfer to finish on-chain..."
 
 # test balances after transfer (ocall_query + read_db)
 ./enigmacli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"$(./enigmacli keys show a -a)\"}}" |
-    jq -e '.balance == "98"' > /dev/null
+    jq -e '.balance == "98"'
 ./enigmacli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4\"}}" |
-    jq -e '.balance == "63"' > /dev/null
+    jq -e '.balance == "63"'
 
 (   
     cd ./cosmwasm-js

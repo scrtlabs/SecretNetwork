@@ -23,6 +23,7 @@ export interface Account {
 export interface PostTxResult {
   readonly logs: readonly Log[];
   readonly rawLog: string;
+  readonly data?: string;
   /** Transaction hash (might be used as transaction ID). Guaranteed to be non-empty upper-case hex */
   readonly transactionHash: string;
 }
@@ -314,6 +315,7 @@ export class CosmWasmClient {
       logs: result.logs ? parseLogs(result.logs) : [],
       rawLog: result.raw_log || "",
       transactionHash: result.txhash,
+      data: result.data,
     };
   }
 

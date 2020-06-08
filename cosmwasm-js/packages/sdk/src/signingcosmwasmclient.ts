@@ -16,7 +16,6 @@ import {
   StdFee,
   StdSignature,
 } from "./types";
-import { encrypt, decrypt } from "./enigmautils";
 
 export interface SigningCallback {
   (signBytes: Uint8Array): Promise<StdSignature>;
@@ -90,12 +89,14 @@ export interface InstantiateResult {
   readonly logs: readonly Log[];
   /** Transaction hash (might be used as transaction ID). Guaranteed to be non-empty upper-case hex */
   readonly transactionHash: string;
+  readonly data?: any;
 }
 
 export interface ExecuteResult {
   readonly logs: readonly Log[];
   /** Transaction hash (might be used as transaction ID). Guaranteed to be non-empty upper-case hex */
   readonly transactionHash: string;
+  readonly data?: any;
 }
 
 export class SigningCosmWasmClient extends CosmWasmClient {
@@ -195,7 +196,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
         code_id: codeId.toString(),
         label: label,
         // eslint-disable-next-line @typescript-eslint/camelcase
-        init_msg: await encrypt(initMsg),
+        init_msg: Encoding.toBase64(await this.restClient.enigmautils.encrypt(initMsg)),
         // eslint-disable-next-line @typescript-eslint/camelcase
         init_funds: transferAmount || [],
       },
@@ -215,10 +216,21 @@ export class SigningCosmWasmClient extends CosmWasmClient {
 
     const result = await this.postTx(signedTx);
     const contractAddressAttr = findAttribute(result.logs, "message", "contract_address");
+
+    let data;
+    if (typeof result.data === "string") {
+      const { data: encryptedData } = JSON.parse(Encoding.fromUtf8(Encoding.fromHex(result.data)));
+      if (typeof encryptedData === "string") {
+        const nonce: Uint8Array = Encoding.fromBase64(instantiateMsg.value.init_msg).slice(0, 32);
+        data = await this.restClient.enigmautils.decrypt(Encoding.fromBase64(encryptedData), nonce);
+      }
+    }
+
     return {
       contractAddress: contractAddressAttr.value,
       logs: result.logs,
       transactionHash: result.transactionHash,
+      data: data,
     };
   }
 
@@ -233,7 +245,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
       value: {
         sender: this.senderAddress,
         contract: contractAddress,
-        msg: await encrypt(handleMsg),
+        msg: Encoding.toBase64(await this.restClient.enigmautils.encrypt(handleMsg)),
         // eslint-disable-next-line @typescript-eslint/camelcase
         sent_funds: transferAmount || [],
       },
@@ -251,9 +263,20 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     };
 
     const result = await this.postTx(signedTx);
+
+    let data;
+    if (typeof result.data === "string") {
+      const { data: encryptedData } = JSON.parse(Encoding.fromUtf8(Encoding.fromHex(result.data)));
+      if (typeof encryptedData === "string") {
+        const nonce: Uint8Array = Encoding.fromBase64(executeMsg.value.msg).slice(0, 32);
+        data = await this.restClient.enigmautils.decrypt(Encoding.fromBase64(encryptedData), nonce);
+      }
+    }
+
     return {
       logs: result.logs,
       transactionHash: result.transactionHash,
+      data: data,
     };
   }
 

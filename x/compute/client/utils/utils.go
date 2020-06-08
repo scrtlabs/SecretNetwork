@@ -119,7 +119,7 @@ var hkdfSalt = []byte{
 	0xc1, 0xa1, 0x2e, 0xa6, 0x37, 0xd7, 0xe9, 0x6d,
 }
 
-func (ctx WASMCLIContext) getMasterIoKey() ([]byte, error) {
+func (ctx WASMCLIContext) getConsensusIoPubKey() ([]byte, error) {
 	res, _, err := ctx.CLIContext.Query("custom/register/master-cert")
 	if err != nil {
 		return nil, err
@@ -140,8 +140,7 @@ func (ctx WASMCLIContext) getMasterIoKey() ([]byte, error) {
 }
 
 func (ctx WASMCLIContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) ([]byte, error) {
-
-	consensusIoPubKeyBytes, err := ctx.getMasterIoKey()
+	consensusIoPubKeyBytes, err := ctx.getConsensusIoPubKey()
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +184,7 @@ func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// ciphertext = nonce(32) || wallet_pubkey(33) || ciphertext
+	// ciphertext = nonce(32) || wallet_pubkey(32) || ciphertext
 	ciphertext = append(nonce, append(txSenderPubKey, ciphertext...)...)
 
 	return ciphertext, nil
