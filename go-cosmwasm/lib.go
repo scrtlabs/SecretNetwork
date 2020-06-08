@@ -137,5 +137,6 @@ func (w *Wasmer) Query(code CodeID, queryMsg []byte, store KVStore, goapi GoAPI,
 	if resp.Err != "" {
 		return nil, gasUsed, fmt.Errorf(resp.Err)
 	}
+
 	return resp.Ok, gasUsed, nil
 }

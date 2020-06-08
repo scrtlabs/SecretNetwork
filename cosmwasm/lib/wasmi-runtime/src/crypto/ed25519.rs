@@ -11,10 +11,13 @@ use super::rng::rand_slice;
 pub const SECRET_KEY_SIZE: usize = 32;
 pub const PUBLIC_KEY_SIZE: usize = 32;
 
+pub type PublicKey = [u8; 32];
+pub type PrivateKey = [u8; 32];
+
 #[derive(Debug, Clone)]
 pub struct KeyPair {
-    secret_key: [u8; 32],
-    public_key: [u8; 32],
+    secret_key: PrivateKey,
+    public_key: PublicKey,
 }
 
 impl KeyPair {

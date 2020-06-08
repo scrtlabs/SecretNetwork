@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use derive_more::Display;
 use enclave_ffi_types::EnclaveError;
 use wasmi::{Error as InterpreterError, HostError};

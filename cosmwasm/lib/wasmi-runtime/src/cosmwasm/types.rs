@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 /// These types are are copied over from the cosmwasm_std package, and must be kept in sync with it.
 ///
 /// We copy these types instead of directly depending on them, because we require special versions of serde
@@ -8,11 +10,6 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use super::encoding::Binary;
-
-#[derive(Serialize, Deserialize)]
-pub struct Test {
-    t: String,
-}
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct HumanAddr(pub String);

@@ -261,21 +261,25 @@ func GetCmdGetContractStateSmart(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			resEncrypted, _, err := cliCtx.QueryWithData(route, queryData)
-			if err != nil {
-				return err
-			}
-			nonce := queryData[:32]
-			resAsBase64, err := wasmCliCtx.Decrypt(resEncrypted, nonce)
-			if err != nil {
-				return err
-			}
-			res, err := base64.StdEncoding.DecodeString(string(resAsBase64))
+			res, _, err := cliCtx.QueryWithData(route, queryData)
 			if err != nil {
 				return err
 			}
 
-			fmt.Println(string(res))
+			// fmt.Printf("Look at all my encrypted data! %v\n", resEncrypted)
+
+			nonce := queryData[:32]
+			resDecrypted, err := wasmCliCtx.Decrypt(res, nonce)
+			if err != nil {
+				return err
+			}
+
+			decodedResp, err := base64.StdEncoding.DecodeString(string(resDecrypted))
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(string(decodedResp))
 			return nil
 		},
 	}

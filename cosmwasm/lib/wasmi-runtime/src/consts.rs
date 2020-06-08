@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
+
 pub use enclave_ffi_types::ENCRYPTED_SEED_SIZE;
 
 #[cfg(feature = "production")]

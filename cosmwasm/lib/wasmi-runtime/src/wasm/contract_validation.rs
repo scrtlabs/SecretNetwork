@@ -5,7 +5,7 @@ use serde_json::Value;
 use enclave_ffi_types::EnclaveError;
 
 use crate::cosmwasm::types::Env;
-use crate::crypto::{sha_256, AESKey, Hmac, Kdf, SIVEncryptable, HASH_SIZE, KEY_MANAGER};
+use crate::crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
 
 pub type ContractKey = [u8; CONTRACT_KEY_LENGTH];
 

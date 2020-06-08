@@ -1,4 +1,4 @@
-// hex encoder and decoder used by rust-protobuf unittests
+#![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
 
 use sgx_types::*;
 use std::char;
