@@ -1,6 +1,5 @@
 use base64;
 use log::*;
-use serde_json::Value;
 
 use enclave_ffi_types::EnclaveError;
 
@@ -82,43 +81,6 @@ pub fn calc_contract_hash(contract_bytes: &[u8]) -> [u8; HASH_SIZE] {
     sha_256(&contract_bytes)
 }
 
-pub fn append_contract_key(
-    response: &[u8],
-    contract_key: [u8; 64],
-) -> Result<Vec<u8>, EnclaveError> {
-    debug!(
-        "Append contract key -before: {:?}",
-        String::from_utf8_lossy(&response)
-    );
-
-    let mut v: Value = serde_json::from_slice(response).map_err(|err| {
-        error!(
-            "got an error while trying to deserialize response bytes into json {:?}: {}",
-            response, err
-        );
-        EnclaveError::FailedSeal
-    })?;
-
-    if let Value::Object(_) = &mut v["ok"] {
-        v["ok"]["contract_key"] = Value::String(base64::encode(contract_key.to_vec().as_slice()));
-    }
-
-    let output = serde_json::ser::to_vec(&v).map_err(|err| {
-        error!(
-            "got an error while trying to serialize output json into bytes {:?}: {}",
-            v, err
-        );
-        EnclaveError::FailedSeal
-    })?;
-
-    debug!(
-        "Append contract key - after: {:?}",
-        String::from_utf8_lossy(&output)
-    );
-
-    Ok(output)
-}
-
 pub fn validate_contract_key(
     contract_key: &[u8; CONTRACT_KEY_LENGTH],
     contract_code: &[u8],
@@ -136,7 +98,7 @@ pub fn validate_contract_key(
     // get the enclave key
     let enclave_key = KEY_MANAGER
         .get_consensus_state_ikm()
-        .map_err(|err| {
+        .map_err(|_err| {
             error!("Error extractling consensus_state_key");
             return false;
         })

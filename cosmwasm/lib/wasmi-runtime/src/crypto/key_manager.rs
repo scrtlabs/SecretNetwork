@@ -21,12 +21,12 @@ impl Keychain {
     pub fn new() -> Self {
         let consensus_seed = match Seed::unseal(CONSENSUS_SEED_SEALING_PATH) {
             Ok(k) => Some(k),
-            Err(e) => None,
+            Err(_e) => None,
         };
 
         let registration_key = match KeyPair::unseal(REGISTRATION_KEY_SEALING_PATH) {
             Ok(k) => Some(k),
-            Err(e) => None,
+            Err(_e) => None,
         };
 
         let mut x = Keychain {
@@ -37,7 +37,7 @@ impl Keychain {
             consensus_io_exchange_keypair: None,
         };
 
-        x.generate_consensus_master_keys();
+        let _ = x.generate_consensus_master_keys();
 
         return x;
     }
@@ -45,7 +45,7 @@ impl Keychain {
     pub fn create_consensus_seed(&mut self) -> Result<(), CryptoError> {
         match Seed::new() {
             Ok(seed) => {
-                if let Err(e) = self.set_consensus_seed(seed) {
+                if let Err(_e) = self.set_consensus_seed(seed) {
                     return Err(CryptoError::KeyError);
                 }
             }
@@ -57,7 +57,7 @@ impl Keychain {
     pub fn create_registration_key(&mut self) -> Result<(), CryptoError> {
         match KeyPair::new() {
             Ok(key) => {
-                if let Err(e) = self.set_registration_key(key) {
+                if let Err(_e) = self.set_registration_key(key) {
                     return Err(CryptoError::KeyError);
                 }
             }
@@ -66,21 +66,21 @@ impl Keychain {
         Ok(())
     }
 
-    pub fn is_registration_key_set(&self) -> bool {
-        return self.registration_key.is_some();
-    }
+    // pub fn is_registration_key_set(&self) -> bool {
+    //     return self.registration_key.is_some();
+    // }
+    //
+    // pub fn is_consensus_state_ikm_set(&self) -> bool {
+    //     return self.consensus_state_ikm.is_some();
+    // }
 
-    pub fn is_consensus_state_ikm_set(&self) -> bool {
-        return self.consensus_state_ikm.is_some();
-    }
+    // pub fn is_consensus_seed_exchange_keypair_set(&self) -> bool {
+    //     return self.consensus_seed_exchange_keypair.is_some();
+    // }
 
-    pub fn is_consensus_seed_exchange_keypair_set(&self) -> bool {
-        return self.consensus_seed_exchange_keypair.is_some();
-    }
-
-    pub fn is_consensus_io_exchange_keypair_set(&self) -> bool {
-        return self.consensus_io_exchange_keypair.is_some();
-    }
+    // pub fn is_consensus_io_exchange_keypair_set(&self) -> bool {
+    //     return self.consensus_io_exchange_keypair.is_some();
+    // }
 
     pub fn is_consensus_seed_set(&self) -> bool {
         return self.consensus_seed.is_some();

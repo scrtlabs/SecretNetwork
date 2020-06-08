@@ -73,9 +73,7 @@ pub fn init(
 
     let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
 
-    // third time's the charm
-    // let output = append_contract_key(&output, encryption_key)?;
-
+    // todo: can move the key to somewhere in the output message if we want
     Ok(InitSuccess {
         output,
         used_gas: engine.gas_used(),

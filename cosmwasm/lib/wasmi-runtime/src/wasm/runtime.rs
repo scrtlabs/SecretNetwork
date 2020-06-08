@@ -165,7 +165,7 @@ impl Externals for Runtime {
                                 _ => Ok(Some(RuntimeValue::I32(ERROR_READING_DB))),
                             }
                         }
-                        Ok(T) => T,
+                        Ok(v) => v,
                     };
 
                 // Get pointer to the region of the value buffer
@@ -267,7 +267,7 @@ impl Externals for Runtime {
                     String::from_utf8_lossy(value.get(0..std::cmp::min(20, value.len())).unwrap())
                 );
 
-                if let Err(e) =
+                if let Err(_e) =
                     write_encrypted_key(&state_key_name, &value, &self.context, &self.contract_key)
                 {
                     return Ok(Some(RuntimeValue::I32(ERROR_WRITING_DB)));

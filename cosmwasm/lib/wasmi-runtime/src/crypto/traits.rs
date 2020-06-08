@@ -1,4 +1,3 @@
-use crate::crypto::keys::DhKey;
 use enclave_ffi_types::{CryptoError, EnclaveError};
 
 pub const HMAC_SIGNATURE_SIZE: usize = 32;
@@ -32,9 +31,3 @@ pub trait Kdf {
 pub trait Hmac {
     fn sign_sha_256(&self, to_sign: &[u8]) -> [u8; HMAC_SIGNATURE_SIZE];
 }
-
-// pub trait Ecdh {
-//     fn new() -> Result<Self, CryptoError> {}
-//     fn new_from_slice(privkey: &[u8]) -> Result<Self, CryptoError> {}
-//     fn derive_key(&self, your_public: &[u8]) -> DhKey {}
-// }

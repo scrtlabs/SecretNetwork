@@ -36,7 +36,9 @@ static LOGGER: SimpleLogger = SimpleLogger;
 
 #[ctor]
 fn init_logger() {
-    log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Trace));
+    log::set_logger(&LOGGER)
+        .map(|()| log::set_max_level(LevelFilter::Trace))
+        .unwrap();
 }
 
 // todo: figure out how we want to turn this on

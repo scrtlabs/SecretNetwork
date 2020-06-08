@@ -1,10 +1,8 @@
 use super::rng::rand_slice;
 use enclave_ffi_types::CryptoError;
-use log::*;
 
 pub const SEED_KEY_SIZE: usize = 32;
 
-pub const PUBLIC_KEY_SIZE: usize = 64;
 /// The size of the symmetric 256 bit key we use for encryption (in bytes).
 pub const SYMMETRIC_KEY_SIZE: usize = 256 / 8;
 /// The size of the master seed
