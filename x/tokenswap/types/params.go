@@ -28,7 +28,7 @@ func ParamKeyTable() paramtypes.KeyTable {
 
 // DefaultParams returns default distribution parameters
 func DefaultParams() Params {
-	addrString := "secret1n4pc2w3us9n4axa0ppadd3kv3c0sar8c4ju6k7"
+	addrString := "enigma1n4pc2w3us9n4axa0ppadd3kv3c0sar8c4ju6k7"
 	multisigAddress, _ := sdk.AccAddressFromBech32(addrString)
 	return Params{
 		MultisigApproveAddress: multisigAddress,

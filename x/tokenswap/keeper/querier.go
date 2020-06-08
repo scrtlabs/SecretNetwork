@@ -9,7 +9,7 @@ import (
 	sdk "github.com/Cashmaney/cosmos-sdk/types"
 	sdkerrors "github.com/Cashmaney/cosmos-sdk/types/errors"
 
-	"github.com/enigmampc/SecretNetwork/x/tokenswap/types"
+	"github.com/enigmampc/EnigmaBlockchain/x/tokenswap/types"
 )
 
 // query endpoints supported by the tokenswap Querier

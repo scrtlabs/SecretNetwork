@@ -12,7 +12,7 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/enigmampc/SecretNetwork/x/tokenswap/types"
+	"github.com/enigmampc/EnigmaBlockchain/x/tokenswap/types"
 )
 
 const (

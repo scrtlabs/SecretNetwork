@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/enigmampc/SecretNetwork/x/tokenswap/client"
-	"github.com/enigmampc/SecretNetwork/x/tokenswap/types"
+	"github.com/enigmampc/EnigmaBlockchain/x/tokenswap/client"
+	"github.com/enigmampc/EnigmaBlockchain/x/tokenswap/types"
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 

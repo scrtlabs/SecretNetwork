@@ -7,7 +7,7 @@ import (
 
 	"github.com/Cashmaney/cosmos-sdk/client/context"
 	"github.com/Cashmaney/cosmos-sdk/codec"
-	"github.com/enigmampc/SecretNetwork/x/tokenswap/types"
+	"github.com/enigmampc/EnigmaBlockchain/x/tokenswap/types"
 )
 
 // GetQueryCmd queries information about a Ethereum tx hash

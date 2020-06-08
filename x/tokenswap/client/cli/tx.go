@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/enigmampc/SecretNetwork/x/tokenswap/types"
+	"github.com/enigmampc/EnigmaBlockchain/x/tokenswap/types"
 	"github.com/spf13/cobra"
 
 	"github.com/Cashmaney/cosmos-sdk/client/context"
@@ -19,7 +19,7 @@ import (
 // GetTxCmd is the CLI command for creating a token swap request
 func GetTxCmd(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:   "create [ethereum-tx-hash] [sender-ethereum-address] [amount-eng] [receiver-secret-address] --from [multisig-address]",
+		Use:   "create [ethereum-tx-hash] [sender-ethereum-address] [amount-eng] [receiver-enigma-address] --from [multisig-address]",
 		Short: "Create a token swap request",
 		Args:  cobra.ExactArgs(4),
 		RunE: func(cmd *cobra.Command, args []string) error {

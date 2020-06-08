@@ -2,7 +2,7 @@
 
 ### What do?
 
-Module that performs the SecretNetwork side of the tokenswap. Essentially, this modules adds on-demand minting 
+Module that performs the EnigmaChain side of the tokenswap. Essentially, this modules adds on-demand minting 
 functionality for a configurable address. The goal is that this address should be a multisig address 
 approved by the community to authorize swaps, blah blah Ian if you want to add more stuff here submit a PR
 
@@ -32,15 +32,15 @@ I added a handy dockerfile that runs an independent chain for easy testing/playi
  
 * Compile the code, and run the chain in a container
 
-`docker build -f .\Dockerfile_build -t secretnetwork .`    
+`docker build -f .\Dockerfile_build -t enigmachain .`    
 
 * run the container
 
-`docker run secretnetwork --name secretnetwork`
+`docker run enigmachain --name enigmachain`
 
 * Open a shell
  
-`docker exec -it /bin/bash secretnetwork`
+`docker exec -it /bin/bash enigmachain`
 
 * Show the random seed accounts:
 
@@ -48,7 +48,7 @@ I added a handy dockerfile that runs an independent chain for easy testing/playi
 
 * Send the multisig address some coins:
 
-`secretcli tx send <one of the above addresses> secret1n4pc2w3us9n4axa0ppadd3kv3c0sar8c4ju6k7 10000000uscrt --keyring-backend test`
+`secretcli tx send <one of the above addresses> enigma1n4pc2w3us9n4axa0ppadd3kv3c0sar8c4ju6k7 10000000uscrt --keyring-backend test`
 
 * Broadcast the transaction:
 
@@ -56,7 +56,7 @@ I added a handy dockerfile that runs an independent chain for easy testing/playi
 
 * Should show 10 uscrt balance:
 
-`secretcli query account secret1yuth8vrhemuu5m0ps0lv75yjhc9t86tf9hf83z`
+`secretcli query account enigma1yuth8vrhemuu5m0ps0lv75yjhc9t86tf9hf83z`
 
 ##### CLI
 
@@ -67,7 +67,7 @@ That amount will be divided by 100 to convert to uSCRT
 
 Example to create 1 SCRT:
 
-`secretcli tx tokenswap create 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb 100000000 secret1yuth8vrhemuu5m0ps0lv75yjhc9t86tf9hf83z --from=secret1n4pc2w3us9n4axa0ppadd3kv3c0sar8c4ju6k7 --generate-only > unsigned.json
+`secretcli tx tokenswap create 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb 100000000 enigma1yuth8vrhemuu5m0ps0lv75yjhc9t86tf9hf83z --from=enigma1n4pc2w3us9n4axa0ppadd3kv3c0sar8c4ju6k7 --generate-only > unsigned.json
 `
 
 ### Multisig In cosmos
@@ -81,43 +81,43 @@ https://github.com/cosmos/gaia/blob/master/docs/resources/gaiacli.md
 {
   "name": "t1",
   "type": "local",
-  "address": "secret1daq9t2mp8vwtta2sd2demc6pyhf8zwstjhfrxw",
-  "pubkey": "secretpub1addwnpepqfwzdealtjqf462ehckyku0h34qqq5p7hghlsxwxq3738gfx5rujuy89zj6",
+  "address": "enigma1daq9t2mp8vwtta2sd2demc6pyhf8zwstjhfrxw",
+  "pubkey": "enigmapub1addwnpepqfwzdealtjqf462ehckyku0h34qqq5p7hghlsxwxq3738gfx5rujuy89zj6",
   "mnemonic": "zero sun wheel arm boss retire truth crack program fire hazard silver pattern crater example almost hub bounce brown act dumb auto arrow smart"
 }
 
 {
   "name": "t2",
   "type": "local",
-  "address": "secret1yuth8vrhemuu5m0ps0lv75yjhc9t86tf9hf83z",
-  "pubkey": "secretpub1addwnpepqwl0nwldws4yzk3j7m8xk9kn5xl9ca5r756njmvewe0q7ahypckevnp7ng0",
+  "address": "enigma1yuth8vrhemuu5m0ps0lv75yjhc9t86tf9hf83z",
+  "pubkey": "enigmapub1addwnpepqwl0nwldws4yzk3j7m8xk9kn5xl9ca5r756njmvewe0q7ahypckevnp7ng0",
   "mnemonic": "leisure possible ten thunder wild master hat rebuild denial unknown deny mutual gas upper measure aware book cancel spray ankle divorce side deposit stumble"
 }
 
 {
   "name": "t3",
   "type": "local",
-  "address": "secret1ee00mr20zqhmvv2pg7th2u4eg2pxpzn7tf0rz2",
-  "pubkey": "secretpub1addwnpepqgas7mdn265t36eq7jq3c6p2spp2jsu6a70jrgv6y3f6zylwelk37kqka5c",
+  "address": "enigma1ee00mr20zqhmvv2pg7th2u4eg2pxpzn7tf0rz2",
+  "pubkey": "enigmapub1addwnpepqgas7mdn265t36eq7jq3c6p2spp2jsu6a70jrgv6y3f6zylwelk37kqka5c",
   "mnemonic": "mother water cotton gun gun nation blast dilemma citizen swear lady magnet churn pattern lava fog original injury riot deputy panda hedgehog scissors seat"
 }
 
 {
 "name": "multitest1",
 "type": "multi",
-"address": "secret1n4pc2w3us9n4axa0ppadd3kv3c0sar8c4ju6k7",
-"pubkey": "secretpub1ytql0csgqgfzd666axrjzqa7lxa76ap2g9dr9akwdvtd8gd7t3mg8af489kejaj7pamwgr3djcfzd666axrjzqjuymnm7hyqnt54n03vfdcl0r2qqpgraw30lqvuvprazwsjdg8e9cfzd666axrjzq3mpakmx44ghr4jpaypr35z4qzz49pe4mulyxse5fzn5yf7anldrutcu62m"        
+"address": "enigma1n4pc2w3us9n4axa0ppadd3kv3c0sar8c4ju6k7",
+"pubkey": "enigmapub1ytql0csgqgfzd666axrjzqa7lxa76ap2g9dr9akwdvtd8gd7t3mg8af489kejaj7pamwgr3djcfzd666axrjzqjuymnm7hyqnt54n03vfdcl0r2qqpgraw30lqvuvprazwsjdg8e9cfzd666axrjzq3mpakmx44ghr4jpaypr35z4qzz49pe4mulyxse5fzn5yf7anldrutcu62m"        
 },
 	
 secretcli keys add t1 --recover <recover using the t1 mnemonic>
 secretcli keys add t2 --recover <recover using the t2 mnemonic>
-secretcli keys add rt3 --pubkey=secretpub1addwnpepqgas7mdn265t36eq7jq3c6p2spp2jsu6a70jrgv6y3f6zylwelk37kqka5c
+secretcli keys add rt3 --pubkey=enigmapub1addwnpepqgas7mdn265t36eq7jq3c6p2spp2jsu6a70jrgv6y3f6zylwelk37kqka5c
 secretcli keys add smt1 --multisig=t1,t2,rt3 --multisig-threshold 2
 
-secretcli tx tokenswap create 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb 10 secret1yuth8vrhemuu5m0ps0lv75yjhc9t86tf9hf83z --from=secret1n4pc2w3us9n4axa0ppadd3kv3c0sar8c4ju6k7 --generate-only > unsigned.json
+secretcli tx tokenswap create 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb 10 enigma1yuth8vrhemuu5m0ps0lv75yjhc9t86tf9hf83z --from=enigma1n4pc2w3us9n4axa0ppadd3kv3c0sar8c4ju6k7 --generate-only > unsigned.json
 
-secretcli tx sign unsigned.json --multisig secret1n4pc2w3us9n4axa0ppadd3kv3c0sar8c4ju6k7 --from=t1 --output-document p1.json
-secretcli tx sign unsigned.json --multisig secret1n4pc2w3us9n4axa0ppadd3kv3c0sar8c4ju6k7 --from=t2 --output-document p2.json
+secretcli tx sign unsigned.json --multisig enigma1n4pc2w3us9n4axa0ppadd3kv3c0sar8c4ju6k7 --from=t1 --output-document p1.json
+secretcli tx sign unsigned.json --multisig enigma1n4pc2w3us9n4axa0ppadd3kv3c0sar8c4ju6k7 --from=t2 --output-document p2.json
 
 secretcli tx multisign unsigned.json smt1 p1.json p2.json > signed.json
 

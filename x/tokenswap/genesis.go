@@ -3,7 +3,7 @@ package tokenswap
 import (
 	sdk "github.com/Cashmaney/cosmos-sdk/types"
 	"github.com/Cashmaney/cosmos-sdk/x/supply"
-	swtypes "github.com/enigmampc/SecretNetwork/x/tokenswap/types"
+	swtypes "github.com/enigmampc/EnigmaBlockchain/x/tokenswap/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 

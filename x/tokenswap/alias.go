@@ -1,8 +1,8 @@
 package tokenswap
 
 import (
-	"github.com/enigmampc/SecretNetwork/x/tokenswap/keeper"
-	"github.com/enigmampc/SecretNetwork/x/tokenswap/types"
+	"github.com/enigmampc/EnigmaBlockchain/x/tokenswap/keeper"
+	"github.com/enigmampc/EnigmaBlockchain/x/tokenswap/types"
 )
 
 const (
