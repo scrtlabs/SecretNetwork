@@ -124,6 +124,7 @@ export interface TxsResponse {
   /** Falsy when transaction execution succeeded. Contains error code on error. */
   readonly code?: number;
   readonly raw_log: string;
+  readonly data?: string;
   readonly logs?: object;
   readonly tx: CosmosSdkTx;
   /** The gas limit as set by the user */
@@ -147,6 +148,7 @@ export interface PostTxsResponse {
   readonly txhash: string;
   readonly code?: number;
   readonly raw_log?: string;
+  readonly data?: string;
   /** The same as `raw_log` but deserialized? */
   readonly logs?: object;
   /** The gas limit as set by the user */

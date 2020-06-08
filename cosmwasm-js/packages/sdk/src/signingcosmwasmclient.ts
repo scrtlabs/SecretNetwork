@@ -89,12 +89,14 @@ export interface InstantiateResult {
   readonly logs: readonly Log[];
   /** Transaction hash (might be used as transaction ID). Guaranteed to be non-empty upper-case hex */
   readonly transactionHash: string;
+  readonly data?: any;
 }
 
 export interface ExecuteResult {
   readonly logs: readonly Log[];
   /** Transaction hash (might be used as transaction ID). Guaranteed to be non-empty upper-case hex */
   readonly transactionHash: string;
+  readonly data?: any;
 }
 
 export class SigningCosmWasmClient extends CosmWasmClient {
@@ -214,10 +216,21 @@ export class SigningCosmWasmClient extends CosmWasmClient {
 
     const result = await this.postTx(signedTx);
     const contractAddressAttr = findAttribute(result.logs, "message", "contract_address");
+
+    let data;
+    if (typeof result.data === "string") {
+      const { data: encryptedData } = JSON.parse(Encoding.fromUtf8(Encoding.fromHex(result.data)));
+      if (typeof encryptedData === "string") {
+        const nonce: Uint8Array = Encoding.fromBase64(instantiateMsg.value.init_msg).slice(0, 32);
+        data = await this.restClient.enigmautils.decrypt(Encoding.fromBase64(encryptedData), nonce);
+      }
+    }
+
     return {
       contractAddress: contractAddressAttr.value,
       logs: result.logs,
       transactionHash: result.transactionHash,
+      data: data,
     };
   }
 
@@ -250,9 +263,20 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     };
 
     const result = await this.postTx(signedTx);
+
+    let data;
+    if (typeof result.data === "string") {
+      const { data: encryptedData } = JSON.parse(Encoding.fromUtf8(Encoding.fromHex(result.data)));
+      if (typeof encryptedData === "string") {
+        const nonce: Uint8Array = Encoding.fromBase64(executeMsg.value.msg).slice(0, 32);
+        data = await this.restClient.enigmautils.decrypt(Encoding.fromBase64(encryptedData), nonce);
+      }
+    }
+
     return {
       logs: result.logs,
       transactionHash: result.transactionHash,
+      data: data,
     };
   }
 
