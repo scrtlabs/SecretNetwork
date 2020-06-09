@@ -51,7 +51,6 @@ ifeq ($(WITH_CLEVELDB),yes)
 endif
 ldflags += -s -w
 ldflags += $(LDFLAGS)
-ldflags += -w -s
 ldflags := $(strip $(ldflags))
 
 BUILD_FLAGS := -tags "$(build_tags)" -ldflags '$(ldflags)'
