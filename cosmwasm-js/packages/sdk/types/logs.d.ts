@@ -1,6 +1,6 @@
 export interface Attribute {
-  readonly key: string;
-  readonly value: string;
+  key: string;
+  value: string;
 }
 export interface Event {
   readonly type: string;

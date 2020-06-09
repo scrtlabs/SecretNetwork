@@ -2,8 +2,8 @@
 import { isNonNullObject } from "@iov/encoding";
 
 export interface Attribute {
-  readonly key: string;
-  readonly value: string;
+  key: string;
+  value: string;
 }
 
 export interface Event {

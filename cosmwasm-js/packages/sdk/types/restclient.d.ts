@@ -1,3 +1,4 @@
+import { Log } from "./logs";
 import { Coin, CosmosSdkTx, JsonObject, Model, StdTx } from "./types";
 import EnigmaUtils from "./enigmautils";
 export interface CosmosSdkAccount {
@@ -235,6 +236,7 @@ export declare class RestClient {
    */
   getMasterCerts(address: string, query: object): Promise<any>;
   decryptDataField(dataField: any, nonce: Uint8Array): Promise<any>;
+  decryptLogs(logs: readonly Log[], nonce: Uint8Array): Promise<readonly Log[]>;
   decryptTxsResponse(txsResponse: TxsResponse): Promise<TxsResponse>;
 }
 export {};

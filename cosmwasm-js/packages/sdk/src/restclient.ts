@@ -1,6 +1,6 @@
 import { Encoding, isNonNullObject } from "@iov/encoding";
 import axios, { AxiosError, AxiosInstance } from "axios";
-
+import { Log, Attribute } from "./logs";
 import {
   Coin,
   Msg,
@@ -13,9 +13,6 @@ import {
   MsgInstantiateContract,
   MsgExecuteContract,
 } from "./types";
-
-import { Attribute } from "./logs";
-
 import EnigmaUtils from "./enigmautils";
 
 export interface CosmosSdkAccount {
@@ -529,6 +526,27 @@ export class RestClient {
     // todo messages
 
     return { log: wasmEvents, data: data };
+  }
+
+  public async decryptLogs(logs: readonly Log[], nonce: Uint8Array): Promise<readonly Log[]> {
+    for (const l of logs) {
+      for (const e of l.events) {
+        if (e.type === "wasm") {
+          for (const a of e.attributes) {
+            try {
+              a.key = Encoding.fromUtf8(await this.enigmautils.decrypt(Encoding.fromBase64(a.key), nonce));
+            } catch (e) {}
+            try {
+              a.value = Encoding.fromUtf8(
+                await this.enigmautils.decrypt(Encoding.fromBase64(a.value), nonce),
+              );
+            } catch (e) {}
+          }
+        }
+      }
+    }
+
+    return logs;
   }
 
   public async decryptTxsResponse(txsResponse: TxsResponse): Promise<TxsResponse> {
