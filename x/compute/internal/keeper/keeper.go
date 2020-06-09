@@ -190,18 +190,18 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		return sdk.Result{}, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
 	consumeGas(ctx, gasUsed)
-	var result wasmTypes.Result
+	var result wasmTypes.CosmosResponse
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return sdk.Result{}, err
 	}
 
 	// emit all events from this contract itself
-	value := types.CosmosResult(result, contractAddress)
+	value := types.CosmosResult(result.Ok, contractAddress)
 	ctx.EventManager().EmitEvents(value.Events)
 
 	// TODO: capture events here as well
-	err = k.dispatchMessages(ctx, contractAccount, result.Messages)
+	err = k.dispatchMessages(ctx, contractAccount, result.Ok.Messages)
 	if err != nil {
 		return sdk.Result{}, err
 	}

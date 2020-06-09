@@ -220,10 +220,11 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     const nonce = Encoding.fromBase64(instantiateMsg.value.init_msg).slice(0, 32);
 
     const data = await this.restClient.decryptDataField(result.data, nonce);
+    const logs = await this.restClient.decryptLogs(result.logs, nonce);
 
     return {
       contractAddress: contractAddressAttr.value,
-      logs: result.logs,
+      logs: logs,
       transactionHash: result.transactionHash,
       data: data,
     };
@@ -262,9 +263,10 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     const nonce = Encoding.fromBase64(executeMsg.value.msg).slice(0, 32);
 
     const data = await this.restClient.decryptDataField(result.data, nonce);
+    const logs = await this.restClient.decryptLogs(result.logs, nonce);
 
     return {
-      logs: result.logs,
+      logs: logs,
       transactionHash: result.transactionHash,
       data: data,
     };
