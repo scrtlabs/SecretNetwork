@@ -153,7 +153,7 @@ interface SearchTxsResponse {
   readonly page_number: string;
   readonly page_total: string;
   readonly limit: string;
-  readonly txs: readonly TxsResponse[];
+  readonly txs: TxsResponse[];
 }
 
 export interface PostTxsResponse {
@@ -161,7 +161,7 @@ export interface PostTxsResponse {
   readonly txhash: string;
   readonly code?: number;
   readonly raw_log?: string;
-  readonly data: any;
+  data: any;
   /** The same as `raw_log` but deserialized? */
   readonly logs?: object;
   /** The gas limit as set by the user */
@@ -366,40 +366,7 @@ export class RestClient {
       throw new Error("Unexpected response data format");
     }
 
-    const txsResponse = responseData as TxsResponse;
-    for (let i = 0; i < txsResponse.tx.value.msg.length; i++) {
-      const msg: Msg = txsResponse.tx.value.msg[0];
-
-      let inputMsgEncrypted: Uint8Array;
-      if (msg.type === "wasm/execute") {
-        inputMsgEncrypted = Encoding.fromBase64((msg as MsgExecuteContract).value.msg);
-      } else if (msg.type === "wasm/instantiate") {
-        inputMsgEncrypted = Encoding.fromBase64((msg as MsgInstantiateContract).value.init_msg);
-      } else {
-        continue;
-      }
-
-      const inputMsgPubkey = inputMsgEncrypted.slice(32, 64);
-      if (Encoding.toBase64(this.enigmautils.getMyPubkey()) === Encoding.toBase64(inputMsgPubkey)) {
-        // my pubkey, can decrypt
-        const nonce = inputMsgEncrypted.slice(0, 32);
-
-        // decrypt input
-        const inputMsg = Encoding.fromUtf8(
-          await this.enigmautils.decrypt(inputMsgEncrypted.slice(64), nonce),
-        );
-
-        if (msg.type === "wasm/execute") {
-          (txsResponse.tx.value.msg[i] as MsgExecuteContract).value.msg = inputMsg;
-        } else if (msg.type === "wasm/instantiate") {
-          (txsResponse.tx.value.msg[i] as MsgInstantiateContract).value.init_msg = inputMsg;
-        }
-
-        // decrypt output
-        txsResponse.data = await this.decryptDataField(txsResponse.data, nonce);
-      }
-    }
-    return txsResponse;
+    return this.decryptTxsResponse(responseData as TxsResponse);
   }
 
   public async txsQuery(query: string): Promise<SearchTxsResponse> {
@@ -407,7 +374,14 @@ export class RestClient {
     if (!(responseData as any).txs) {
       throw new Error("Unexpected response data format");
     }
-    return responseData as SearchTxsResponse;
+
+    const resp = responseData as SearchTxsResponse;
+
+    for (let i = 0; i < resp.txs.length; i++) {
+      resp.txs[i] = await this.decryptTxsResponse(resp.txs[i]);
+    }
+
+    return resp;
   }
 
   /** returns the amino-encoding of the transaction performed by the server */
@@ -553,5 +527,41 @@ export class RestClient {
     // todo messages
 
     return { log: wasmEvents, data: data };
+  }
+
+  public async decryptTxsResponse(txsResponse: TxsResponse): Promise<TxsResponse> {
+    if (txsResponse.tx.value.msg.length === 1) {
+      const msg: Msg = txsResponse.tx.value.msg[0];
+
+      let inputMsgEncrypted: Uint8Array;
+      if (msg.type === "wasm/execute") {
+        inputMsgEncrypted = Encoding.fromBase64((msg as MsgExecuteContract).value.msg);
+      } else if (msg.type === "wasm/instantiate") {
+        inputMsgEncrypted = Encoding.fromBase64((msg as MsgInstantiateContract).value.init_msg);
+      } else {
+        return txsResponse;
+      }
+
+      const inputMsgPubkey = inputMsgEncrypted.slice(32, 64);
+      if (Encoding.toBase64(this.enigmautils.getMyPubkey()) === Encoding.toBase64(inputMsgPubkey)) {
+        // my pubkey, can decrypt
+        const nonce = inputMsgEncrypted.slice(0, 32);
+
+        // decrypt input
+        const inputMsg = Encoding.fromUtf8(
+          await this.enigmautils.decrypt(inputMsgEncrypted.slice(64), nonce),
+        );
+
+        if (msg.type === "wasm/execute") {
+          (txsResponse.tx.value.msg[0] as MsgExecuteContract).value.msg = inputMsg;
+        } else if (msg.type === "wasm/instantiate") {
+          (txsResponse.tx.value.msg[0] as MsgInstantiateContract).value.init_msg = inputMsg;
+        }
+
+        // decrypt output
+        txsResponse.data = await this.decryptDataField(txsResponse.data, nonce);
+      }
+    }
+    return txsResponse;
   }
 }

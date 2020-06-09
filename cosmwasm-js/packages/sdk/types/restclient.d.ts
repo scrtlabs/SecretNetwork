@@ -114,14 +114,14 @@ interface SearchTxsResponse {
   readonly page_number: string;
   readonly page_total: string;
   readonly limit: string;
-  readonly txs: readonly TxsResponse[];
+  readonly txs: TxsResponse[];
 }
 export interface PostTxsResponse {
   readonly height: string;
   readonly txhash: string;
   readonly code?: number;
   readonly raw_log?: string;
-  readonly data: any;
+  data: any;
   /** The same as `raw_log` but deserialized? */
   readonly logs?: object;
   /** The gas limit as set by the user */
@@ -244,5 +244,6 @@ export declare class RestClient {
     }[];
     data: any;
   }>;
+  decryptTxsResponse(txsResponse: TxsResponse): Promise<TxsResponse>;
 }
 export {};
