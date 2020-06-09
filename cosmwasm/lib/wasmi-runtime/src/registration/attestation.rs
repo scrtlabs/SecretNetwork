@@ -121,29 +121,24 @@ pub fn create_attestation_certificate(
     sign_type: sgx_quote_sign_type_t,
 ) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     // extract private key from KeyPair
-    let mut priv_key_buf: [u8; 32] = [0u8; 32];
-    priv_key_buf.copy_from_slice(&kp.get_privkey());
-
-    // extra public key from KeyPair
-    let mut pub_key_secp256k1: [u8; 64] = [0u8; 64];
-    pub_key_secp256k1.copy_from_slice(&kp.get_pubkey()[1..65]);
-
-    // init sgx ecc
     let ecc_handle = SgxEccHandle::new();
     let _result = ecc_handle.open();
 
     // convert keypair private to sgx ecc private
     let prv_k = sgx_ec256_private_t {
-        r: priv_key_buf.clone(),
+        r: kp.get_privkey(),
     };
     // generate the P256 public (will be different from KeyPair's public key)
     let pub_k = rsgx_ecc256_pub_from_priv(&prv_k).unwrap();
+
+    // this is the ed25519 public key we want to encode
+    let encoded_pubkey = base64::encode(&kp.get_pubkey());
 
     // if we want to use ephemeral certificates, we can do this
     // let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
 
     // call create_report using the secp256k1 public key, and __not__ the P256 one
-    let (attn_report, sig, cert) = match create_attestation_report(&pub_key_secp256k1, sign_type) {
+    let (attn_report, sig, cert) = match create_attestation_report(&kp.get_pubkey(), sign_type) {
         Ok(r) => r,
         Err(e) => {
             error!("Error in create_attestation_report: {:?}", e);
@@ -169,7 +164,7 @@ pub fn create_attestation_certificate(
 #[cfg(feature = "SGX_MODE_HW")]
 #[allow(const_err)]
 pub fn create_attestation_report(
-    pub_k: &[u8; 64],
+    pub_k: &[u8; 32],
     sign_type: sgx_quote_sign_type_t,
 ) -> Result<(String, String, String), sgx_status_t> {
     // Workflow:
@@ -226,7 +221,7 @@ pub fn create_attestation_report(
     // Fill ecc256 public key into report_data
     let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
 
-    report_data.d[..64].copy_from_slice(pub_k);
+    report_data.d[..32].copy_from_slice(pub_k);
 
     /* This is used to match the encoding of the public key here with the ecc key, but honestly
     the certificate uses curve P256, so that will cause issues anyway -- I'm leaving the code here

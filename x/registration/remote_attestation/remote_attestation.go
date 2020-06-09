@@ -48,13 +48,14 @@ func VerifyRaCert(rawCert []byte) ([]byte, error) {
 	}
 
 	// Verify attestation report
+
 	pubK, err = verifyAttReport(attnReportRaw, pubK)
 	if err != nil {
 		log.Fatalln(err)
 		return nil, err
 	}
-
-	return pubK, nil
+	// verifyAttReport returns all the report_data field, which is 64 bytes - we just want the first 32 of them (rest are 0)
+	return pubK[0:32], nil
 }
 
 func extractPublicFromCert(cert []byte) ([]byte, error) {

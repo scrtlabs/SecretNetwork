@@ -1,4 +1,4 @@
-FROM ubuntu:bionic as runtime_base
+FROM ubuntu:focal as runtime_base
 
 LABEL maintainer=enigmampc
 
@@ -46,10 +46,5 @@ RUN echo -e 'no\n/opt' | ./sgx/sgx_linux_x64_sdk_${SGX_VERSION}.bin && \
     rm -rf ./sgx/*
 
 ENV LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/
-## CMD /bin/bash
-#RUN SGX_DEBUG=0 SGX_MODE=HW SGX_PRERELEASE=1 make
-#
-#RUN adduser -q --disabled-password --gecos "" --no-create-home sgxuser
-#USER sgxuser
 
-#CMD ./app
+#RUN SGX_DEBUG=0 SGX_MODE=HW SGX_PRERELEASE=1 make
