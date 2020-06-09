@@ -1,7 +1,18 @@
 import { Encoding, isNonNullObject } from "@iov/encoding";
 import axios, { AxiosError, AxiosInstance } from "axios";
 
-import { Coin, CosmosSdkTx, JsonObject, Model, parseWasmData, StdTx, WasmData } from "./types";
+import {
+  Coin,
+  Msg,
+  CosmosSdkTx,
+  JsonObject,
+  Model,
+  parseWasmData,
+  StdTx,
+  WasmData,
+  MsgInstantiateContract,
+  MsgExecuteContract,
+} from "./types";
 
 import { Attribute } from "./logs";
 
@@ -126,7 +137,7 @@ export interface TxsResponse {
   /** Falsy when transaction execution succeeded. Contains error code on error. */
   readonly code?: number;
   readonly raw_log: string;
-  readonly data: string;
+  data: any;
   readonly logs?: object;
   readonly tx: CosmosSdkTx;
   /** The gas limit as set by the user */
@@ -313,7 +324,6 @@ export class RestClient {
   }
 
   // The /auth endpoints
-
   public async authAccounts(address: string): Promise<AuthAccountsResponse> {
     const path = `/auth/accounts/${address}`;
     const responseData = await this.get(path);
@@ -324,7 +334,6 @@ export class RestClient {
   }
 
   // The /blocks endpoints
-
   public async blocksLatest(): Promise<BlockResponse> {
     const responseData = await this.get("/blocks/latest");
     if (!(responseData as any).block) {
@@ -342,7 +351,6 @@ export class RestClient {
   }
 
   // The /node_info endpoint
-
   public async nodeInfo(): Promise<NodeInfoResponse> {
     const responseData = await this.get("/node_info");
     if (!(responseData as any).node_info) {
@@ -352,13 +360,46 @@ export class RestClient {
   }
 
   // The /txs endpoints
-
   public async txById(id: string): Promise<TxsResponse> {
     const responseData = await this.get(`/txs/${id}`);
     if (!(responseData as any).tx) {
       throw new Error("Unexpected response data format");
     }
-    return responseData as TxsResponse;
+
+    const txsResponse = responseData as TxsResponse;
+    for (let i = 0; i < txsResponse.tx.value.msg.length; i++) {
+      const msg: Msg = txsResponse.tx.value.msg[0];
+
+      let inputMsgEncrypted: Uint8Array;
+      if (msg.type === "wasm/execute") {
+        inputMsgEncrypted = Encoding.fromBase64((msg as MsgExecuteContract).value.msg);
+      } else if (msg.type === "wasm/instantiate") {
+        inputMsgEncrypted = Encoding.fromBase64((msg as MsgInstantiateContract).value.init_msg);
+      } else {
+        continue;
+      }
+
+      const inputMsgPubkey = inputMsgEncrypted.slice(32, 64);
+      if (Encoding.toBase64(this.enigmautils.getMyPubkey()) === Encoding.toBase64(inputMsgPubkey)) {
+        // my pubkey, can decrypt
+        const nonce = inputMsgEncrypted.slice(0, 32);
+
+        // decrypt input
+        const inputMsg = Encoding.fromUtf8(
+          await this.enigmautils.decrypt(inputMsgEncrypted.slice(64), nonce),
+        );
+
+        if (msg.type === "wasm/execute") {
+          (txsResponse.tx.value.msg[i] as MsgExecuteContract).value.msg = inputMsg;
+        } else if (msg.type === "wasm/instantiate") {
+          (txsResponse.tx.value.msg[i] as MsgInstantiateContract).value.init_msg = inputMsg;
+        }
+
+        // decrypt output
+        txsResponse.data = await this.decryptDataField(txsResponse.data, nonce);
+      }
+    }
+    return txsResponse;
   }
 
   public async txsQuery(query: string): Promise<SearchTxsResponse> {

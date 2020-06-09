@@ -142,6 +142,11 @@ export default class EnigmaUtils {
     const plaintext = await siv.open(ciphertext, [new Uint8Array()]);
     return plaintext;
   }
+
+  public getMyPubkey(): Uint8Array {
+    const { pubkey } = this.getTxSenderKeyPair();
+    return pubkey;
+  }
 }
 
 module.exports = EnigmaUtils;

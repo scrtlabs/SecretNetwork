@@ -4,7 +4,7 @@ const { fromBase64, fromHex } = Encoding;
 
 /** An Amino/Cosmos SDK StdTx */
 export interface StdTx {
-  readonly msg: ReadonlyArray<Msg>;
+  msg: Msg[];
   readonly fee: StdFee;
   readonly signatures: ReadonlyArray<StdSignature>;
   readonly memo: string | undefined;
@@ -73,7 +73,7 @@ export interface MsgInstantiateContract extends MsgTemplate {
     /** Human-readable label for this contract */
     readonly label: string;
     /** Init message as JavaScript object */
-    readonly init_msg: any;
+    init_msg: any;
     readonly init_funds: ReadonlyArray<Coin>;
   };
 }
@@ -91,7 +91,7 @@ export interface MsgExecuteContract extends MsgTemplate {
     /** Bech32 account address */
     readonly contract: string;
     /** Handle message as JavaScript object */
-    readonly msg: any;
+    msg: any;
     readonly sent_funds: ReadonlyArray<Coin>;
   };
 }

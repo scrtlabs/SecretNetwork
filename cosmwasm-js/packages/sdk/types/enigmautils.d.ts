@@ -7,4 +7,5 @@ export default class EnigmaUtils {
   private getTxEncryptionKey;
   encrypt(msg: object): Promise<Uint8Array>;
   decrypt(ciphertext: Uint8Array, nonce: Uint8Array): Promise<Uint8Array>;
+  getMyPubkey(): Uint8Array;
 }

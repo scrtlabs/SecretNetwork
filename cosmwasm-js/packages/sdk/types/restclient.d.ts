@@ -99,7 +99,7 @@ export interface TxsResponse {
   /** Falsy when transaction execution succeeded. Contains error code on error. */
   readonly code?: number;
   readonly raw_log: string;
-  readonly data: string;
+  data: any;
   readonly logs?: object;
   readonly tx: CosmosSdkTx;
   /** The gas limit as set by the user */

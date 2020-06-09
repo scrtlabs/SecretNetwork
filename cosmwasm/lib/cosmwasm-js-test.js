@@ -47,7 +47,7 @@ const assert = require("assert").strict;
     }
   );
 
-  await signingClient.execute(contract, {
+  const execTx = await signingClient.execute(contract, {
     transfer: {
       amount: "10",
       recipient: "enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4",
@@ -57,6 +57,8 @@ const assert = require("assert").strict;
   const res2Query = await client.queryContractSmart(contract, {
     balance: { address: "enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4" },
   });
+
+  // const tx = await client.restClient.txById(execTx.transactionHash);
 
   console.log(
     `js: finalBalance is ${res2Query.balance} (should be ${initBalance + 10})`
