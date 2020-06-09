@@ -4,21 +4,21 @@
 ///
 use super::types::{IoNonce, SecretMessage};
 
-use crate::crypto::{AESKey, Kdf, PublicKey, SIVEncryptable, KEY_MANAGER};
+use crate::crypto::{AESKey, Ed25519PublicKey, Kdf, SIVEncryptable, KEY_MANAGER};
 use enclave_ffi_types::EnclaveError;
 use log::*;
 use serde::Serialize;
 use serde_json;
 use serde_json::Value;
 
-pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &PublicKey) -> AESKey {
+pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) -> AESKey {
     let enclave_io_key = KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap();
 
     let tx_encryption_ikm = enclave_io_key.diffie_hellman(user_public_key);
 
     let tx_encryption_key = AESKey::new_from_slice(&tx_encryption_ikm).derive_key_from_this(nonce);
 
-    debug!("rust tx_encryption_key {:?}", tx_encryption_key);
+    debug!("rust tx_encryption_key {:?}", tx_encryption_key.get());
 
     tx_encryption_key
 }
@@ -71,7 +71,7 @@ fn encode(data: &[u8]) -> Value {
 pub fn encrypt_output(
     output: Vec<u8>,
     nonce: IoNonce,
-    user_public_key: PublicKey,
+    user_public_key: Ed25519PublicKey,
 ) -> Result<Vec<u8>, EnclaveError> {
     let key = calc_encryption_key(&nonce, &user_public_key);
 

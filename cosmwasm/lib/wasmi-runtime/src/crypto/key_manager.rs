@@ -174,19 +174,10 @@ impl Keychain {
             .consensus_seed
             .unwrap()
             .derive_key_from_this(&CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes());
-        let consensus_seed_exchange_keypair = KeyPair::new_from_slice(
-            consensus_seed_exchange_keypair_bytes.get().clone(),
-        )
-        .map_err(|err| {
-            error!(
-                "[Enclave] Error creating consensus_seed_exchange_keypair: {:?}",
-                err
-            );
-            EnclaveError::FailedUnseal /* change error type? */
-        })?;
+        let consensus_seed_exchange_keypair = KeyPair::from(consensus_seed_exchange_keypair_bytes);
         info!(
             "consensus_seed_exchange_keypair: {:?}",
-            consensus_seed_exchange_keypair
+            consensus_seed_exchange_keypair.get_pubkey()
         );
         self.set_consensus_seed_exchange_keypair(consensus_seed_exchange_keypair);
 
@@ -196,30 +187,21 @@ impl Keychain {
             .consensus_seed
             .unwrap()
             .derive_key_from_this(&CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes());
-        let consensus_io_exchange_keypair = KeyPair::new_from_slice(
-            consensus_io_exchange_keypair_bytes.get().clone(),
-        )
-        .map_err(|err| {
-            error!(
-                "[Enclave] Error creating consensus_io_exchange_keypair: {:?}",
-                err
-            );
-            EnclaveError::FailedUnseal /* change error type? */
-        })?;
+        let consensus_io_exchange_keypair = KeyPair::from(consensus_io_exchange_keypair_bytes);
         info!(
             "consensus_io_exchange_keypair: {:?}",
-            consensus_io_exchange_keypair
+            consensus_io_exchange_keypair.get_pubkey()
         );
         self.set_consensus_io_exchange_keypair(consensus_io_exchange_keypair);
 
         // consensus_state_ikm
 
-        let consensus_state_ikm_bytes = self
+        let consensus_state_ikm = self
             .consensus_seed
             .unwrap()
             .derive_key_from_this(&CONSENSUS_STATE_IKM_DERIVE_ORDER.to_be_bytes());
-        let consensus_state_ikm = AESKey::new_from_slice(consensus_state_ikm_bytes.get());
-        info!("consensus_state_ikm: {:?}", consensus_state_ikm);
+
+        info!("consensus_state_ikm: {:?}", consensus_state_ikm.get());
         self.set_consensus_state_ikm(consensus_state_ikm);
 
         Ok(())

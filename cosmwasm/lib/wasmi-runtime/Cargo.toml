@@ -30,7 +30,7 @@ sgx_trts = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.g
 sgx_tseal = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tcrypto = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 aes-siv = { version = "0.2.0" }
-miscreant = "0.5.2"
+
 enclave-ffi-types = { path = "../enclave-ffi-types" }
 pwasm-utils = { version = "0.12.0", default-features = false }
 parity-wasm = { version = "0.41.0", default-features = false }

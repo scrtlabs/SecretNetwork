@@ -32,7 +32,6 @@ dependencies = [
  "crypto-mac",
  "ctr",
  "dbl",
- "pmac",
  "stream-cipher",
  "zeroize",
 ]
@@ -324,21 +323,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71d96e3f3c0b6325d8ccd83c33b28acb183edcb6c67938ba104ec546854b0882"
 
 [[package]]
-name = "miscreant"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c174360ad70a6f4c707dee38ac3c9b1bc74c1cd9bc9bc66bc20b8868f6d2672"
-dependencies = [
- "aes",
- "aes-siv",
- "cmac",
- "crypto-mac",
- "ctr",
- "pmac",
- "stream-cipher",
-]
-
-[[package]]
 name = "num"
 version = "0.2.0"
 source = "git+https://github.com/mesalock-linux/num-sgx#22645415542cc67551890dfdd34f4d5638b9ec78"
@@ -454,17 +438,6 @@ name = "parity-wasm"
 version = "0.41.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ddfc878dac00da22f8f61e7af3157988424567ab01d9920b962ef7dcbd7cd865"
-
-[[package]]
-name = "pmac"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd76d63e86aa67a4bd063079f0d93bb8730b036eea5697345f651e6874ea61e5"
-dependencies = [
- "block-cipher-trait",
- "crypto-mac",
- "dbl",
-]
 
 [[package]]
 name = "proc-macro2"
@@ -809,7 +782,6 @@ dependencies = [
  "itertools",
  "lazy_static",
  "log",
- "miscreant",
  "num-bigint",
  "parity-wasm",
  "pwasm-utils",

@@ -56,11 +56,7 @@ pub fn create_attestation_certificate(
     let _result = ecc_handle.open();
 
     // convert keypair private to sgx ecc private
-    let prv_k = sgx_ec256_private_t {
-        r: kp.get_privkey(),
-    };
-    // generate the P256 public (will be different from KeyPair's public key)
-    let pub_k = rsgx_ecc256_pub_from_priv(&prv_k).unwrap();
+    let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
 
     // this is the ed25519 public key we want to encode
     let encoded_pubkey = base64::encode(&kp.get_pubkey());
@@ -124,18 +120,8 @@ pub fn create_attestation_certificate(
     let ecc_handle = SgxEccHandle::new();
     let _result = ecc_handle.open();
 
-    // convert keypair private to sgx ecc private
-    let prv_k = sgx_ec256_private_t {
-        r: kp.get_privkey(),
-    };
-    // generate the P256 public (will be different from KeyPair's public key)
-    let pub_k = rsgx_ecc256_pub_from_priv(&prv_k).unwrap();
-
-    // this is the ed25519 public key we want to encode
-    let encoded_pubkey = base64::encode(&kp.get_pubkey());
-
-    // if we want to use ephemeral certificates, we can do this
-    // let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
+    // use ephemeral key
+    let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
 
     // call create_report using the secp256k1 public key, and __not__ the P256 one
     let (attn_report, sig, cert) = match create_attestation_report(&kp.get_pubkey(), sign_type) {

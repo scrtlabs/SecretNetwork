@@ -9,34 +9,35 @@ const KDF_SALT: [u8; 32] = [
     0x08, 0x52, 0xc2, 0x02, 0xdb, 0x0e, 0x00, 0x97, 0xc1, 0xa1, 0x2e, 0xa6, 0x37, 0xd7, 0xe9, 0x6d,
 ];
 
-impl Kdf for AESKey {
+impl Kdf<AESKey> for AESKey {
     fn derive_key_from_this(&self, data: &[u8]) -> Self {
         let mut input_bytes: Vec<u8> = self.get().to_vec();
         input_bytes.extend_from_slice(data);
 
-        AESKey::new_from_slice(&derive_key(&input_bytes, &[]))
+        derive_key(&input_bytes, &[])
     }
 }
 
-impl Kdf for Seed {
-    fn derive_key_from_this(&self, data: &[u8]) -> Self {
-        let mut input_bytes: Vec<u8> = self.get().to_vec();
+impl Kdf<AESKey> for Seed {
+    //
+    fn derive_key_from_this(&self, data: &[u8]) -> AESKey {
+        let mut input_bytes: Vec<u8> = self.as_slice().to_vec();
         input_bytes.extend_from_slice(data);
 
-        Self::new_from_slice(&derive_key(&input_bytes, &[b"seed"]))
+        derive_key(&input_bytes, &[b"seed"])
     }
 }
 
-fn derive_key(input_bytes: &[u8], info: &[&[u8]]) -> [u8; SECRET_KEY_SIZE] {
+fn derive_key(input_bytes: &[u8], info: &[&[u8]]) -> AESKey {
     let salt = hkdf::Salt::new(hkdf::HKDF_SHA256, &KDF_SALT);
 
     let prk = salt.extract(input_bytes);
 
     let okm = prk.expand(info, My(SECRET_KEY_SIZE)).unwrap();
 
-    let mut result: [u8; SECRET_KEY_SIZE] = [0u8; SECRET_KEY_SIZE];
+    let mut result: AESKey = AESKey::default();
 
-    let _ = okm.fill(&mut result);
+    let _ = okm.fill(result.as_mut());
 
     result
 }
