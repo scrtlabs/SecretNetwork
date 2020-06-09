@@ -1,6 +1,6 @@
 // use crate::cosmwasm::types::CosmosMsg;
 
-use crate::crypto::{AESKey, PublicKey, SIVEncryptable};
+use crate::crypto::{AESKey, Ed25519PublicKey, SIVEncryptable};
 use crate::wasm::io::calc_encryption_key;
 use enclave_ffi_types::EnclaveError;
 use log::*;
@@ -11,7 +11,7 @@ pub type IoNonce = [u8; 32];
 #[derive(Serialize, Deserialize)]
 pub struct SecretMessage {
     pub nonce: IoNonce,
-    pub user_public_key: PublicKey,
+    pub user_public_key: Ed25519PublicKey,
     pub msg: Vec<u8>,
 }
 

@@ -2,8 +2,8 @@
 
 use base64;
 use bit_vec::BitVec;
-#[cfg(feature = "SGX_MODE_HW")]
-use chrono::prelude::*;
+// #[cfg(feature = "SGX_MODE_HW")]
+// use chrono::prelude::*;
 use chrono::Duration;
 use chrono::TimeZone;
 use chrono::Utc as TzUtc;

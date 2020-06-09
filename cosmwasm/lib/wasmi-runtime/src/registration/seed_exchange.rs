@@ -3,13 +3,12 @@ use log::*;
 use sgx_types::{sgx_status_t, SgxResult};
 
 use crate::consts::ENCRYPTED_SEED_SIZE;
-use crate::crypto::{AESKey, Keychain, SIVEncryptable, PUBLIC_KEY_SIZE, SEED_KEY_SIZE};
+use crate::crypto::{
+    AESKey, Keychain, SIVEncryptable, Seed, KEY_MANAGER, PUBLIC_KEY_SIZE, SEED_KEY_SIZE,
+};
 
-pub fn encrypt_seed(
-    key_manager: &Keychain,
-    new_node_pk: [u8; PUBLIC_KEY_SIZE],
-) -> SgxResult<Vec<u8>> {
-    let shared_enc_key = key_manager
+pub fn encrypt_seed(new_node_pk: [u8; PUBLIC_KEY_SIZE]) -> SgxResult<Vec<u8>> {
+    let shared_enc_key = KEY_MANAGER
         .seed_exchange_key()
         .unwrap()
         .diffie_hellman(&new_node_pk);
@@ -18,7 +17,7 @@ pub fn encrypt_seed(
     authenticated_data.push(&new_node_pk);
     // encrypt the seed using the symmetric key derived in the previous stage
     let res = match AESKey::new_from_slice(&shared_enc_key).encrypt_siv(
-        &key_manager.get_consensus_seed().unwrap().get().to_vec(),
+        KEY_MANAGER.get_consensus_seed().unwrap().as_slice() as &[u8],
         &authenticated_data,
     ) {
         Ok(r) => {
@@ -44,12 +43,14 @@ pub fn decrypt_seed(
     key_manager: &Keychain,
     master_pk: [u8; PUBLIC_KEY_SIZE],
     encrypted_seed: [u8; ENCRYPTED_SEED_SIZE],
-) -> SgxResult<Vec<u8>> {
+) -> SgxResult<Seed> {
     // create shared encryption key using ECDH
     let shared_enc_key = key_manager
         .get_registration_key()
         .unwrap()
         .diffie_hellman(&master_pk);
+
+    let mut seed = Seed::default();
 
     // Create AD of encryption
     let my_public_key = key_manager.get_registration_key().unwrap().get_pubkey();
@@ -57,21 +58,21 @@ pub fn decrypt_seed(
     authenticated_data.push(&my_public_key);
 
     // decrypt
-    let res = match AESKey::new_from_slice(&shared_enc_key)
-        .decrypt_siv(&encrypted_seed, &authenticated_data)
-    {
-        Ok(r) => {
-            if r.len() != SEED_KEY_SIZE {
-                error!(
-                    "Init failed! Decrypted seed has invalid length - {:?}",
-                    r.len()
-                );
-                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+    seed.as_mut()
+        .copy_from_slice(&match AESKey::new_from_slice(&shared_enc_key)
+            .decrypt_siv(&encrypted_seed, &authenticated_data)
+        {
+            Ok(r) => {
+                if r.len() != SEED_KEY_SIZE {
+                    error!(
+                        "Init failed! Decrypted seed has invalid length - {:?}",
+                        r.len()
+                    );
+                    return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+                }
+                r
             }
-            r
-        }
-        Err(_e) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
-    };
-
-    Ok(res)
+            Err(_e) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
+        });
+    Ok(seed)
 }

@@ -5,7 +5,7 @@ use log::*;
 use sgx_types::sgx_status_t;
 
 use crate::consts::ENCRYPTED_SEED_SIZE;
-use crate::crypto::{Keychain, PUBLIC_KEY_SIZE};
+use crate::crypto::PUBLIC_KEY_SIZE;
 use crate::utils::{validate_const_ptr, validate_mut_ptr};
 
 use super::cert::verify_ra_cert;
@@ -38,7 +38,6 @@ pub extern "C" fn ecall_authenticate_new_node(
     }
 
     let cert_slice = unsafe { std::slice::from_raw_parts(cert, cert_len as usize) };
-    let key_manager = Keychain::new();
 
     // verify certificate, and return the public key in the extra data of the report
     let pk = match verify_ra_cert(cert_slice) {
@@ -65,7 +64,7 @@ pub extern "C" fn ecall_authenticate_new_node(
         &target_public_key.to_vec()
     );
 
-    let res: Vec<u8> = match encrypt_seed(&key_manager, target_public_key) {
+    let res: Vec<u8> = match encrypt_seed(target_public_key) {
         Ok(result) => result,
         Err(status) => return status,
     };

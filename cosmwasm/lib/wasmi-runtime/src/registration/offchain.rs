@@ -10,7 +10,7 @@ use crate::consts::{
     ATTESTATION_CERTIFICATE_SAVE_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH,
     SEED_EXCH_CERTIFICATE_SAVE_PATH,
 };
-use crate::crypto::{Keychain, Seed, KEY_MANAGER, PUBLIC_KEY_SIZE};
+use crate::crypto::{Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
 use crate::storage::write_to_untrusted;
 use crate::utils::{attest_from_key, validate_const_ptr, validate_mut_ptr, validate_mut_slice};
 
@@ -132,18 +132,10 @@ pub unsafe extern "C" fn ecall_init_node(
     target_public_key.copy_from_slice(&pk);
 
     let mut key_manager = Keychain::new();
-    let res = match decrypt_seed(&key_manager, target_public_key, encrypted_seed) {
+    let seed = match decrypt_seed(&key_manager, target_public_key, encrypted_seed) {
         Ok(result) => result,
         Err(status) => return status,
     };
-
-    let mut seed_buf: [u8; 32] = [0u8; 32];
-    seed_buf.copy_from_slice(&res);
-
-    // todo: remove this before production O.o
-    info!("Decrypted seed: {:?}", seed_buf);
-
-    let seed = Seed::new_from_slice(&seed_buf);
 
     if let Err(_e) = key_manager.set_consensus_seed(seed) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
