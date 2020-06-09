@@ -34,7 +34,7 @@ RUN make clean
 RUN make vendor
 
 WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/go-cosmwasm
-RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD SGX_MODE=${SGX_MODE} make build-rust
+RUN . /opt/sgxsdk/environment && env && SGX_MODE=${SGX_MODE} make build-rust
 
 # Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain
@@ -65,7 +65,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 
-ARG SGX_MODE=SW
+# ARG SGX_MODE=HW
 ENV SGX_MODE=${SGX_MODE}
 
 ARG SECRET_NODE_TYPE=BOOTSTRAP
@@ -74,7 +74,7 @@ ENV SECRET_NODE_TYPE=${SECRET_NODE_TYPE}
 ENV SCRT_ENCLAVE_DIR=/usr/lib/
 
 # workaround because paths seem kind of messed up
-RUN cp /opt/sgxsdk/lib64/* /usr/lib/ -r
+# RUN cp /opt/sgxsdk/lib64/* /usr/lib/ -r
 
 # Install ca-certificates
 WORKDIR /root

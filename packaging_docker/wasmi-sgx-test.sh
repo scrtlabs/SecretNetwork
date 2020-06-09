@@ -71,3 +71,4 @@ enigmacli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"ad
 
 
 echo "All is done. Yay!"
+

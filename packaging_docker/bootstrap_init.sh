@@ -25,4 +25,4 @@ enigmad validate-genesis
 
 sed -i 's/persistent_peers = ""/persistent_peers = "'"$PERSISTENT_PEERS"'"/g' ~/.enigmad/config/config.toml
 
-RUST_BACKTRACE=1 enigmad start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap
+source /opt/sgxsdk/environment && RUST_BACKTRACE=1 enigmad start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap

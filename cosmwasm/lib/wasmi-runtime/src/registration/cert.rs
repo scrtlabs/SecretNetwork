@@ -33,6 +33,7 @@ use crate::consts::CERTEXPIRYDAYS;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use crate::consts::{SigningMethod, SIGNING_METHOD};
+use crate::crypto::PUBLIC_KEY_SIZE;
 
 extern "C" {
     pub fn ocall_get_update_info(
@@ -496,7 +497,14 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
         if sgx_quote.report_body.report_data.d.to_vec() == pub_k.to_vec() {
             info!("Mutual RA done!");
         } else {
-            return Ok(sgx_quote.report_body.report_data.d.to_vec());
+            let report_public_key = sgx_quote.report_body.report_data.d.to_vec();
+
+            if report_public_key.len() < PUBLIC_KEY_SIZE {
+                error!("Reported public key is too short - requires a minimum of 32 bytes but got {:?}", report_public_key.len());
+                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            }
+            // standard report data will be 64 bytes, so we just return the first 32 of those
+            return Ok(report_public_key[0..32].to_vec());
         }
     } else {
         info!("Failed to fetch isvEnclaveQuoteBody from attestation report");
