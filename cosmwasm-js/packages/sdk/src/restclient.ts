@@ -499,11 +499,13 @@ export class RestClient {
     return this.get("/register/master-cert");
   }
 
-  public async decryptDataField(
-    dataField: string,
-    nonce: Uint8Array,
-  ): Promise<{ log: { key: string; value: string }[]; data: any }> {
-    const wasmOutputs = JSON.parse(Encoding.fromUtf8(Encoding.fromHex(dataField)));
+  public async decryptDataField(dataField: any, nonce: Uint8Array): Promise<any> {
+    let wasmOutputs;
+    try {
+      wasmOutputs = JSON.parse(Encoding.fromUtf8(Encoding.fromHex(dataField)));
+    } catch (e) {
+      return dataField;
+    }
 
     if (wasmOutputs.err) {
       throw new Error(wasmOutputs.err);
