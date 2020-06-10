@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
-	"log"
 )
 
 /*
@@ -34,7 +33,6 @@ func VerifyRaCert(rawCert []byte) ([]byte, error) {
 	if !isSgxHardwareMode() {
 		pk, err := base64.StdEncoding.DecodeString(string(payload))
 		if err != nil {
-			log.Fatalln(err)
 			return nil, err
 		}
 
@@ -43,7 +41,6 @@ func VerifyRaCert(rawCert []byte) ([]byte, error) {
 	// Load Intel CA, Verify Cert and Signature
 	attnReportRaw, err := verifyCert(payload)
 	if err != nil {
-		log.Fatalln(err)
 		return nil, err
 	}
 
@@ -51,37 +48,44 @@ func VerifyRaCert(rawCert []byte) ([]byte, error) {
 
 	pubK, err = verifyAttReport(attnReportRaw, pubK)
 	if err != nil {
-		log.Fatalln(err)
 		return nil, err
 	}
 	// verifyAttReport returns all the report_data field, which is 64 bytes - we just want the first 32 of them (rest are 0)
 	return pubK[0:32], nil
 }
 
-func extractPublicFromCert(cert []byte) ([]byte, error) {
-	prime256v1Oid := []byte{0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07}
-	idx := bytes.Index(cert, prime256v1Oid)
+func extractAsn1Value(cert []byte, oid []byte) ([]byte, error) {
+	offset := uint(bytes.Index(cert, oid))
+	offset += 12 // 11 + TAG (0x04)
 
-	if idx == -1 {
-		err := errors.New("Error parsing certificate - public key not found")
+	// we will be accessing offset + 2, so make sure it's not out-of-bounds
+	if offset+2 >= uint(len(cert)) {
+		err := errors.New("Error parsing certificate - malformed certificate")
 		return nil, err
 	}
 
-	offset := uint(idx)
-	offset += 11 // 10 + TAG (0x03)
-
-	// Obtain Public Key length
+	// Obtain Netscape Comment length
 	length := uint(cert[offset])
 	if length > 0x80 {
 		length = uint(cert[offset+1])*uint(0x100) + uint(cert[offset+2])
 		offset += 2
 	}
 
-	// Obtain Public Key
-	offset += 1
-	pubK := cert[offset+2 : offset+length] // skip "00 04"
+	if offset+length+1 >= uint(len(cert)) {
+		err := errors.New("Error parsing certificate - malformed certificate")
+		return nil, err
+	}
 
-	return pubK, nil
+	// Obtain Netscape Comment
+	offset += 1
+	payload := cert[offset : offset+length]
+
+	return payload, nil
+}
+
+func extractPublicFromCert(cert []byte) ([]byte, error) {
+	prime256v1Oid := []byte{0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07}
+	return extractAsn1Value(cert, prime256v1Oid)
 }
 
 func unmarshalCert(rawbyte []byte) ([]byte, []byte, error) {
@@ -94,19 +98,11 @@ func unmarshalCert(rawbyte []byte) ([]byte, []byte, error) {
 	}
 	// Search for Netscape Comment OID
 	nsCmtOid := []byte{0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x42, 0x01, 0x0D}
-	offset := uint(bytes.Index(rawbyte, nsCmtOid))
-	offset += 12 // 11 + TAG (0x04)
-
-	// Obtain Netscape Comment length
-	length := uint(rawbyte[offset])
-	if length > 0x80 {
-		length = uint(rawbyte[offset+1])*uint(0x100) + uint(rawbyte[offset+2])
-		offset += 2
+	payload, err := extractAsn1Value(rawbyte, nsCmtOid)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	// Obtain Netscape Comment
-	offset += 1
-	payload := rawbyte[offset : offset+length]
 	return pubK, payload, err
 }
 
@@ -114,7 +110,7 @@ func verifyCert(payload []byte) ([]byte, error) {
 	// Extract each field
 	plSplit := bytes.Split(payload, []byte{0x7C}) // '|'
 
-	if len(plSplit) < 2 {
+	if len(plSplit) < 3 {
 		err := errors.New("failed to parse certificate - malformed")
 		return nil, err
 	}
