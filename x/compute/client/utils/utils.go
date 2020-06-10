@@ -64,7 +64,8 @@ type keyPair struct {
 	Public  string `json:"public"`
 }
 
-func (ctx WASMCLIContext) getTxSenderKeyPair() ([]byte, []byte, error) {
+// GetTxSenderKeyPair get the local tx encryption id
+func (ctx WASMCLIContext) GetTxSenderKeyPair() (privkey []byte, pubkey []byte, er error) {
 	keyPairFilePath := path.Join(ctx.CLIContext.HomeDir, "id_tx_io.json")
 
 	if _, err := os.Stat(keyPairFilePath); os.IsNotExist(err) {
@@ -104,8 +105,8 @@ func (ctx WASMCLIContext) getTxSenderKeyPair() ([]byte, []byte, error) {
 		return nil, nil, err
 	}
 
-	privkey, err := hex.DecodeString(keyPair.Private)
-	pubkey, err := hex.DecodeString(keyPair.Public)
+	privkey, err = hex.DecodeString(keyPair.Private)
+	pubkey, err = hex.DecodeString(keyPair.Public)
 
 	// TODO verify pubkey
 
@@ -161,7 +162,7 @@ func (ctx WASMCLIContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byt
 
 // Encrypt encrypts
 func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
-	txSenderPrivKey, txSenderPubKey, err := ctx.getTxSenderKeyPair()
+	txSenderPrivKey, txSenderPubKey, err := ctx.GetTxSenderKeyPair()
 
 	nonce := make([]byte, 32)
 	_, _ = rand.Read(nonce)
@@ -192,7 +193,7 @@ func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
 
 // Decrypt decrypts
 func (ctx WASMCLIContext) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) {
-	txSenderPrivKey, _, err := ctx.getTxSenderKeyPair()
+	txSenderPrivKey, _, err := ctx.GetTxSenderKeyPair()
 
 	txEncryptionKey, err := ctx.getTxEncryptionKey(txSenderPrivKey, nonce)
 	if err != nil {

@@ -83,6 +83,8 @@ CONTRACT_ADDRESS=$(
         jq -er '.logs[].events[].attributes[] | select(.key == "contract_address") | .value'
 )
 
+./enigmacli q compute tx "$INIT_TX_HASH"
+
 # test balances after init (ocall_query + read_db + canonicalize_address)
 ./enigmacli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"$(./enigmacli keys show a -a)\"}}" |
     jq -e '.balance == "108"'
@@ -98,12 +100,16 @@ TRANSFER_TX_HASH=$(
 
 wait_for_tx "$TRANSFER_TX_HASH" "Waiting for transfer to finish on-chain..."
 
+./enigmacli q compute tx "$TRANSFER_TX_HASH"
+
 # test balances after transfer (ocall_query + read_db)
 ./enigmacli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"$(./enigmacli keys show a -a)\"}}" |
     jq -e '.balance == "98"'
 ./enigmacli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4\"}}" |
     jq -e '.balance == "63"'
+
 # sleep infinity
+
 (   
     cd ./cosmwasm-js
     yarn

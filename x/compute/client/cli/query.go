@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -10,6 +11,7 @@ import (
 	"strconv"
 
 	flag "github.com/spf13/pflag"
+	"github.com/tendermint/go-amino"
 
 	"github.com/spf13/cobra"
 
@@ -18,8 +20,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 
+	wasmTypes "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
 	wasmUtils "github.com/enigmampc/EnigmaBlockchain/x/compute/client/utils"
+
 	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/keeper"
 	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
 )
@@ -38,6 +43,7 @@ func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 		GetCmdQueryCode(cdc),
 		GetCmdGetContractInfo(cdc),
 		GetCmdGetContractState(cdc),
+		GetQueryDecryptTxCmd(cdc),
 	)...)
 	return queryCmd
 }
@@ -225,6 +231,177 @@ func GetCmdGetContractStateRaw(cdc *codec.Codec) *cobra.Command {
 		},
 	}
 	decoder.RegisterFlags(cmd.PersistentFlags(), "key argument")
+	return cmd
+}
+
+// QueryDecryptTxCmd the default command for a tx query + IO decryption if I'm the tx sender.
+// Coppied from https://github.com/cosmos/cosmos-sdk/blob/v0.38.4/x/auth/client/cli/query.go#L157-L184 and added IO decryption (Could not wrap it because it prints directly to stdout)
+func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "tx [hash]",
+		Short: "Query for a transaction by hash in a committed block, decrypt input and outputs if I'm the tx sender",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			result, err := utils.QueryTx(cliCtx, args[0])
+			if err != nil {
+				return err
+			}
+
+			if result.Empty() {
+				return fmt.Errorf("no transaction found with hash %s", args[0])
+			}
+
+			var answer struct {
+				Type           string `json:"type"`
+				Input          string `json:"input"`
+				OutputData     string `json:"output_data"`
+				OutputLogs     string `json:"output_log"`
+				OutputMessages string `json:"output_messages"`
+				OutputError    string `json:"output_error"`
+			}
+			var encryptedInput []byte
+			var cosmwasmJSONOutputHex string
+
+			txInputs := result.Tx.GetMsgs()
+			if len(txInputs) != 1 {
+				return fmt.Errorf("Can only decrypt txs with 1 input. Got %d", len(txInputs))
+			}
+			txInput := txInputs[0]
+
+			if txInput.Type() == "execute" {
+				execTx, ok := txInput.(*types.MsgExecuteContract)
+				if !ok {
+					return fmt.Errorf("Error parsing tx as type 'execute': %v", txInput)
+				}
+
+				encryptedInput = execTx.Msg
+				cosmwasmJSONOutputHex = result.Data
+			} else if txInput.Type() == "instantiate" {
+				initTx, ok := txInput.(*types.MsgInstantiateContract)
+				if !ok {
+					return fmt.Errorf("Error parsing tx as type 'instantiate': %v", txInput)
+				}
+
+				encryptedInput = initTx.InitMsg
+			} else {
+				return fmt.Errorf("Tx %s is not of type 'execute' or 'instantiate'. Got type '%s'", args[0], txInput.Type())
+			}
+			answer.Type = txInput.Type()
+
+			// decrypt input
+			if len(encryptedInput) < 64 {
+				return fmt.Errorf("Input must be > 64 bytes. Got %d", len(encryptedInput))
+			}
+
+			nonce := encryptedInput[0:32]
+			originalTxSenderPubkey := encryptedInput[32:64]
+
+			wasmCliCtx := wasmUtils.WASMCLIContext{CLIContext: cliCtx}
+			_, myPubkey, err := wasmCliCtx.GetTxSenderKeyPair()
+			if err != nil {
+				return err
+			}
+
+			if !bytes.Equal(originalTxSenderPubkey, myPubkey) {
+				return fmt.Errorf("Cannot decrypt, not original tx sender")
+			}
+
+			ciphertextInput := encryptedInput[64:]
+
+			plaintextInput, err := wasmCliCtx.Decrypt(ciphertextInput, nonce)
+			if err != nil {
+				return err
+			}
+
+			answer.Input = string(plaintextInput)
+
+			// decrypt data
+			if answer.Type == "execute" {
+				cosmwasmJSONOutput, err := hex.DecodeString(cosmwasmJSONOutputHex)
+				if err != nil {
+					return err
+				}
+
+				var cosmwasmOutput wasmTypes.CosmosResponse
+				err = json.Unmarshal(cosmwasmJSONOutput, &cosmwasmOutput)
+				if err != nil {
+					return err
+				}
+
+				if cosmwasmOutput.Ok.Data != "" {
+					dataCiphertext, err := base64.StdEncoding.DecodeString(cosmwasmOutput.Ok.Data)
+					if err != nil {
+						return err
+					}
+					dataPlaintext, err := wasmCliCtx.Decrypt(dataCiphertext, nonce)
+					if err != nil {
+						return err
+					}
+					answer.OutputData = string(dataPlaintext)
+				}
+
+				if cosmwasmOutput.Err != "" {
+					errorCiphertext, err := base64.StdEncoding.DecodeString(cosmwasmOutput.Err)
+					if err != nil {
+						return err
+					}
+					errorPlaintext, err := wasmCliCtx.Decrypt(errorCiphertext, nonce)
+					if err != nil {
+						return err
+					}
+					answer.OutputError = string(errorPlaintext)
+				}
+			}
+
+			// decrypt logs
+			for _, l := range result.Logs {
+				for _, e := range l.Events {
+					if e.Type == "wasm" {
+						for i, a := range e.Attributes {
+							if a.Key != "contract_address" {
+								// key
+								keyCiphertext, err := base64.StdEncoding.DecodeString(a.Key)
+								if err != nil {
+									return err
+								}
+								keyPalaintext, err := wasmCliCtx.Decrypt(keyCiphertext, nonce)
+								if err != nil {
+									return err
+								}
+								a.Key = string(keyPalaintext)
+
+								// value
+								valueCiphertext, err := base64.StdEncoding.DecodeString(a.Value)
+								if err != nil {
+									return err
+								}
+								valuePalaintext, err := wasmCliCtx.Decrypt(valueCiphertext, nonce)
+								if err != nil {
+									return err
+								}
+								a.Value = string(valuePalaintext)
+
+								e.Attributes[i] = a
+							}
+						}
+					}
+				}
+			}
+			logs, err := json.Marshal(result.Logs)
+			if err != nil {
+				return err
+			}
+			answer.OutputLogs = string(logs)
+
+			// decrypt messages
+			// TODO
+
+			return cliCtx.PrintOutput(answer)
+		},
+	}
+
 	return cmd
 }
 
