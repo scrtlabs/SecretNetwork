@@ -609,3 +609,7 @@ If an attacker can create a contract with the same `contract_key` as another con
 For example, An original contract with a permissioned getter, such that only whitelisted addresses can query the getter. In the malicious contract the attacker can set themselves as the owner and ask the malicious contract to decrypt the state of the original contract via that permissioned getter.
 
 ## Tx Replay attacks?
+
+## Tx outputs can leak data
+
+E.g. a dev writes a contract with 2 funtions, the first one always outputs 3 events and the second one always outputs 4 events. By counting the number of output events an attacker can know which funcation was invoked. 
