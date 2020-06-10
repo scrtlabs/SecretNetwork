@@ -21,4 +21,4 @@ SHA256SUMS*
 *.der
 spid.txt
 api_key.txt
-cmd/enigmad/__debug_bin
+__debug_bin
