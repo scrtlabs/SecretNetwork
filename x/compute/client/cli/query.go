@@ -22,7 +22,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 
+	wasmTypes "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
 	wasmUtils "github.com/enigmampc/EnigmaBlockchain/x/compute/client/utils"
+
 	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/keeper"
 	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
 )
@@ -252,12 +254,15 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			}
 
 			var answer struct {
-				Type   string `json:"type"`
-				Input  string `json:"input"`
-				Output string `json:"output"`
+				Type           string `json:"type"`
+				Input          string `json:"input"`
+				OutputData     string `json:"output_data"`
+				OutputLogs     string `json:"output_log"`
+				OutputMessages string `json:"output_messages"`
+				OutputError    string `json:"output_error"`
 			}
 			var encryptedInput []byte
-			var encryptedOutputHex string
+			var cosmwasmJSONOutputHex string
 
 			txInputs := result.Tx.GetMsgs()
 			if len(txInputs) != 1 {
@@ -272,7 +277,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 				}
 
 				encryptedInput = execTx.Msg
-				encryptedOutputHex = result.Data
+				cosmwasmJSONOutputHex = result.Data
 			} else if txInput.Type() == "instantiate" {
 				initTx, ok := txInput.(*types.MsgInstantiateContract)
 				if !ok {
@@ -280,7 +285,6 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 				}
 
 				encryptedInput = initTx.InitMsg
-				encryptedOutputHex = result.Data
 			} else {
 				return fmt.Errorf("Tx %s is not of type 'execute' or 'instantiate'. Got type '%s'", args[0], txInput.Type())
 			}
@@ -313,21 +317,49 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 
 			answer.Input = string(plaintextInput)
 
-			// decrypt output
+			// decrypt data
 			if answer.Type == "execute" {
-				encryptedOutput, err := hex.DecodeString(encryptedOutputHex)
+				cosmwasmJSONOutput, err := hex.DecodeString(cosmwasmJSONOutputHex)
 				if err != nil {
 					return err
 				}
-				plaintextOutput, err := wasmCliCtx.Decrypt(encryptedOutput, nonce)
-				answer.Output = string(plaintextOutput)
+
+				var cosmwasmOutput wasmTypes.CosmosResponse
+				err = json.Unmarshal(cosmwasmJSONOutput, &cosmwasmOutput)
 				if err != nil {
 					return err
 				}
-			} else {
-				// output of 'instantiate' is the contract's address
-				answer.Output = ""
+
+				if cosmwasmOutput.Ok.Data != "" {
+					dataCiphertext, err := base64.StdEncoding.DecodeString(cosmwasmOutput.Ok.Data)
+					if err != nil {
+						return err
+					}
+					dataPlaintext, err := wasmCliCtx.Decrypt(dataCiphertext, nonce)
+					if err != nil {
+						return err
+					}
+					answer.OutputData = string(dataPlaintext)
+				}
+
+				if cosmwasmOutput.Err != "" {
+					errorCiphertext, err := base64.StdEncoding.DecodeString(cosmwasmOutput.Err)
+					if err != nil {
+						return err
+					}
+					errorPlaintext, err := wasmCliCtx.Decrypt(errorCiphertext, nonce)
+					if err != nil {
+						return err
+					}
+					answer.OutputError = string(errorPlaintext)
+				}
 			}
+
+			// decrypt logs
+			// TODO
+
+			// decrypt messages
+			// TODO
 
 			return cliCtx.PrintOutput(answer)
 		},
