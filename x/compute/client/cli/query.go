@@ -356,7 +356,44 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			}
 
 			// decrypt logs
-			// TODO
+			for _, l := range result.Logs {
+				for _, e := range l.Events {
+					if e.Type == "wasm" {
+						for i, a := range e.Attributes {
+							if a.Key != "contract_address" {
+								// key
+								keyCiphertext, err := base64.StdEncoding.DecodeString(a.Key)
+								if err != nil {
+									return err
+								}
+								keyPalaintext, err := wasmCliCtx.Decrypt(keyCiphertext, nonce)
+								if err != nil {
+									return err
+								}
+								a.Key = string(keyPalaintext)
+
+								// value
+								valueCiphertext, err := base64.StdEncoding.DecodeString(a.Value)
+								if err != nil {
+									return err
+								}
+								valuePalaintext, err := wasmCliCtx.Decrypt(valueCiphertext, nonce)
+								if err != nil {
+									return err
+								}
+								a.Value = string(valuePalaintext)
+
+								e.Attributes[i] = a
+							}
+						}
+					}
+				}
+			}
+			logs, err := json.Marshal(result.Logs)
+			if err != nil {
+				return err
+			}
+			answer.OutputLogs = string(logs)
 
 			// decrypt messages
 			// TODO
