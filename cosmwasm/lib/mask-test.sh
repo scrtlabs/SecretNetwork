@@ -84,10 +84,12 @@ export CONTRACT_ADDRESS=$(
 
 ./enigmacli q compute tx "$INIT_TX_HASH"
 
+export INNER_MSG=$(base64 <<< "{\"reflectmsg\":{\"msgs\":[]}}")
+
 # reflect (generate callbacks)
 REFLECT_TX_HASH=$(
     yes |
-        ./enigmacli tx compute execute --from a $CONTRACT_ADDRESS '{"reflectmsg":{"msgs":[{"contract":{"contract_addr":"'$CONTRACT_ADDRESS'","msg":"eyJjb250cmFjdCI6e319Cg=="}}]}}' |
+        ./enigmacli tx compute execute --from a $CONTRACT_ADDRESS "{\"reflectmsg\":{\"msgs\":[{\"contract\":{\"contract_addr\":\"$CONTRACT_ADDRESS\",\"msg\":\"$INNER_MSG\"}}]}}" |
         jq -r .txhash
 )
 
