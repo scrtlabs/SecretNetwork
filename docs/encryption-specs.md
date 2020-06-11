@@ -613,4 +613,4 @@ For example, An original contract with a permissioned getter, such that only whi
 
 ## Tx outputs can leak data
 
-E.g. a dev writes a contract with 2 funtions, the first one always outputs 3 events and the second one always outputs 4 events. By counting the number of output events an attacker can know which funcation was invoked.
+E.g. a dev writes a contract with 2 funtions, the first one always outputs 3 events and the second one always outputs 4 events. By counting the number of output events an attacker can know which funcation was invoked. Also applies with deposits, callbacks and transfers.
