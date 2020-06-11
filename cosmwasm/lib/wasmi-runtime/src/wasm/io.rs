@@ -103,7 +103,13 @@ pub fn encrypt_output(
                         user_public_key,
                     }
                     .to_slice();
-                    msg["contract"]["msg"] = encode(encrypt(&key, &packed_msg)?.as_slice());
+
+                    debug!("XXXXXXXXXXXXXXXXXXXXXXXXX encoding callback to base64");
+
+                    let packed_msg_bas64_str = base64::encode(&packed_msg);
+
+                    msg["contract"]["msg"] =
+                        encode(encrypt(&key, &packed_msg_bas64_str.into_bytes())?.as_slice());
                 }
             }
         }
