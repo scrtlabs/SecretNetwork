@@ -609,8 +609,14 @@ If an attacker can create a contract with the same `contract_key` as another con
 
 For example, An original contract with a permissioned getter, such that only whitelisted addresses can query the getter. In the malicious contract the attacker can set themselves as the owner and ask the malicious contract to decrypt the state of the original contract via that permissioned getter.
 
-## Tx Replay attacks?
+## Tx Replay attacks
+
+After a contract runs on the chain, an attaker can sync up a node up to a specific block in the chain, and then call into the enclave with the same authenticated user inputs that were given to the enclave on-chain, but out-of-order, or omit selected messages. A contract that does not anticipate or protect against this might end up deanonimizing the information provided by users. for example, in a naive voting contract (or other personal data collection algorithm), we can deanonimize a voter by re-running the vote without the target's request, and analyze thedifference in final results.
+
+## Partial storage rollback during contract runtime
+
+Our current schema can verify that when reading from a field in storage, the value received from the host has been written by the same contract instance to the same field in storage. BUT we can not (yet) verify that the value is the most __recent__ value that wsa stored there. This means that a malicious host can (offline) run a transaction, and then selectively provide outdated values for some fields of the storage. In the worst case, this can cause a contract to expose old secrets with new permissions, or new secrets with old permissions. The contract can protect against this by either (e.g.) making sure that pieces of information that have to be synced with each other are saved under the same field (so they are never observed as desynchronised) or (e.g.) somehow verify their validity when reading them from two separate fields of storage.
 
 ## Tx outputs can leak data
 
-E.g. a dev writes a contract with 2 funtions, the first one always outputs 3 events and the second one always outputs 4 events. By counting the number of output events an attacker can know which funcation was invoked. Also applies with deposits, callbacks and transfers.
+E.g. a dev writes a contract with 2 functions, the first one always outputs 3 events and the second one always outputs 4 events. By counting the number of output events an attacker can know which funcation was invoked. Also applies with deposits, callbacks and transfers.
