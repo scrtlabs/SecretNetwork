@@ -104,12 +104,11 @@ pub fn encrypt_output(
                     }
                     .to_slice();
 
-                    debug!("XXXXXXXXXXXXXXXXXXXXXXXXX encoding callback to base64");
+                    // debug!("XXXXXXXXXXXXXXXXXXXXXXXXX encoding callback to base64");
 
-                    let packed_msg_bas64_str = base64::encode(&packed_msg);
+                    // let packed_msg_bas64_str = base64::encode(&packed_msg);
 
-                    msg["contract"]["msg"] =
-                        encode(encrypt(&key, &packed_msg_bas64_str.into_bytes())?.as_slice());
+                    msg["contract"]["msg"] = encode(encrypt(&key, &packed_msg)?.as_slice());
                 }
             }
         }

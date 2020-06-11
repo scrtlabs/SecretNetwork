@@ -87,12 +87,10 @@ export CONTRACT_ADDRESS=$(
 # reflect (generate callbacks)
 REFLECT_TX_HASH=$(
     yes |
-        ./enigmacli tx compute execute --from a $CONTRACT_ADDRESS '{"reflectmsg":{"msgs":[{"contract":{"contract_addr":"'$CONTRACT_ADDRESS'","msg":"{\\"reflectmsg\\":{\\"msgs\\":[]}}"}}]}}' |
+        ./enigmacli tx compute execute --from a $CONTRACT_ADDRESS '{"reflectmsg":{"msgs":[{"contract":{"contract_addr":"'$CONTRACT_ADDRESS'","msg":"eyJjb250cmFjdCI6e319Cg=="}}]}}' |
         jq -r .txhash
 )
 
 wait_for_tx "$REFLECT_TX_HASH" "Waiting for reflect to finish on-chain..."
 
-# ./enigmacli q compute tx "$REFLECT_TX_HASH"
-
-echo "All is done. Yay!"
+./enigmacli q compute tx "$REFLECT_TX_HASH"
