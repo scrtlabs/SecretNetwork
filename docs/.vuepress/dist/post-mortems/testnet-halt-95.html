@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Post Mortem</title>
+    <meta name="generator" content="VuePress 1.5.1">
+    <link rel="icon" href="/SecretNetwork/logo.png">
+    <meta name="description" content="Privacy is a Public Good">
+    <link rel="preload" href="/SecretNetwork/assets/css/0.styles.8490c900.css" as="style"><link rel="preload" href="/SecretNetwork/assets/js/app.894b1e11.js" as="script"><link rel="preload" href="/SecretNetwork/assets/js/2.69f57745.js" as="script"><link rel="preload" href="/SecretNetwork/assets/js/19.b1ec0ee3.js" as="script"><link rel="prefetch" href="/SecretNetwork/assets/js/10.cbf19240.js"><link rel="prefetch" href="/SecretNetwork/assets/js/11.197e2724.js"><link rel="prefetch" href="/SecretNetwork/assets/js/12.ee939ee3.js"><link rel="prefetch" href="/SecretNetwork/assets/js/13.113fd8b6.js"><link rel="prefetch" href="/SecretNetwork/assets/js/14.cd70f648.js"><link rel="prefetch" href="/SecretNetwork/assets/js/15.6f4b72df.js"><link rel="prefetch" href="/SecretNetwork/assets/js/16.ab92cba8.js"><link rel="prefetch" href="/SecretNetwork/assets/js/17.30d5b672.js"><link rel="prefetch" href="/SecretNetwork/assets/js/18.e937f275.js"><link rel="prefetch" href="/SecretNetwork/assets/js/20.6b960096.js"><link rel="prefetch" href="/SecretNetwork/assets/js/21.74cf392c.js"><link rel="prefetch" href="/SecretNetwork/assets/js/22.a0c82374.js"><link rel="prefetch" href="/SecretNetwork/assets/js/23.4f2d721a.js"><link rel="prefetch" href="/SecretNetwork/assets/js/24.af409d27.js"><link rel="prefetch" href="/SecretNetwork/assets/js/25.73448b29.js"><link rel="prefetch" href="/SecretNetwork/assets/js/26.46c5e29e.js"><link rel="prefetch" href="/SecretNetwork/assets/js/27.0ed4b88b.js"><link rel="prefetch" href="/SecretNetwork/assets/js/28.b922de61.js"><link rel="prefetch" href="/SecretNetwork/assets/js/29.cfe1aa09.js"><link rel="prefetch" href="/SecretNetwork/assets/js/3.a037e568.js"><link rel="prefetch" href="/SecretNetwork/assets/js/30.19d88cef.js"><link rel="prefetch" href="/SecretNetwork/assets/js/31.4a138282.js"><link rel="prefetch" href="/SecretNetwork/assets/js/32.55e23500.js"><link rel="prefetch" href="/SecretNetwork/assets/js/33.cade4a85.js"><link rel="prefetch" href="/SecretNetwork/assets/js/34.ed72494f.js"><link rel="prefetch" href="/SecretNetwork/assets/js/35.e2024768.js"><link rel="prefetch" href="/SecretNetwork/assets/js/36.a0274794.js"><link rel="prefetch" href="/SecretNetwork/assets/js/37.2480ad67.js"><link rel="prefetch" href="/SecretNetwork/assets/js/4.1a9da7e5.js"><link rel="prefetch" href="/SecretNetwork/assets/js/5.fe41f59c.js"><link rel="prefetch" href="/SecretNetwork/assets/js/6.f88614c4.js"><link rel="prefetch" href="/SecretNetwork/assets/js/7.f658464d.js"><link rel="prefetch" href="/SecretNetwork/assets/js/8.0dab5731.js"><link rel="prefetch" href="/SecretNetwork/assets/js/9.43505a6a.js">
+    <link rel="stylesheet" href="/SecretNetwork/assets/css/0.styles.8490c900.css">
+  </head>
+  <body>
+    <div id="app" data-server-rendered="true"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/SecretNetwork/" class="home-link router-link-active"><img src="/SecretNetwork/logo.png" alt="" class="logo"> <!----></a> <div class="links"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <nav class="nav-links can-hide"><div class="nav-item"><a href="/SecretNetwork/overview.html" class="nav-link">
+  Docs
+</a></div><div class="nav-item"><a href="https://scrt.network" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Website
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://blog.scrt.network" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Blog
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://chat.scrt.network" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Chat
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://forum.scrt.network" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Forum
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://twitter.com/SecretNetwork" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Twitter
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div> <!----></nav></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><nav class="nav-links"><div class="nav-item"><a href="/SecretNetwork/overview.html" class="nav-link">
+  Docs
+</a></div><div class="nav-item"><a href="https://scrt.network" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Website
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://blog.scrt.network" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Blog
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://chat.scrt.network" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Chat
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://forum.scrt.network" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Forum
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://twitter.com/SecretNetwork" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Twitter
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div> <!----></nav>  <ul class="sidebar-links"><li><section class="sidebar-group collapsable depth-0"><a href="/SecretNetwork/overview" class="sidebar-heading clickable open"><span>Overview</span> <span class="arrow down"></span></a> <ul class="sidebar-links sidebar-group-items"><li><a href="/SecretNetwork/protocol/architecture.html" class="sidebar-link">Network Architecture</a></li><li><a href="/SecretNetwork/protocol/roadmap.html" class="sidebar-link">Development Roadmap</a></li><li><a href="/SecretNetwork/ledger-nano-s.html" class="sidebar-link">Using SCRT with Ledger</a></li></ul></section></li><li><section class="sidebar-group collapsable depth-0"><a href="/SecretNetwork/dev/developers" class="sidebar-heading clickable"><span>App Developers</span> <span class="arrow right"></span></a> <!----></section></li><li><section class="sidebar-group collapsable depth-0"><a href="/SecretNetwork/validators-and-full-nodes/secret-nodes" class="sidebar-heading clickable"><span>Node Operators</span> <span class="arrow right"></span></a> <!----></section></li><li><section class="sidebar-group collapsable depth-0"><a href="/SecretNetwork/protocol/intro" class="sidebar-heading clickable"><span>Protocol</span> <span class="arrow right"></span></a> <!----></section></li></ul> </aside> <main class="page"> <div class="theme-default-content content__default"><h2 id="post-mortem"><a href="#post-mortem" class="header-anchor">#</a> Post Mortem</h2> <ul><li><strong>Chain id:</strong> <code>enigma-testnet</code></li> <li><strong>Date:</strong> 16/03/2020 3am UTC</li> <li><strong>Related issues:</strong> https://github.com/enigmampc/EnigmaBlockchain/issues/95</li></ul> <h3 id="description"><a href="#description" class="header-anchor">#</a> Description</h3> <ul><li><p>On the 15 Mar 2020, around 9pm UTC the following param-change proposal was submitted:</p> <div class="language- extra-class"><pre class="language-text"><code>{
+  &quot;title&quot;: &quot;Rwd Change&quot;,
+  &quot;description&quot;: &quot;This is tansaction to test a parameter-change for rewards.&quot;,
+  &quot;changes&quot;: [
+    {
+      &quot;subspace&quot;: &quot;distribution&quot;,
+      &quot;key&quot;: &quot;baseproposerreward&quot;,
+      &quot;value&quot;: &quot;0.999000000000000000&quot;
+    }
+  ],
+  &quot;deposit&quot;: [
+    {
+      &quot;denom&quot;: &quot;uscrt&quot;,
+      &quot;amount&quot;: &quot;10000000&quot;
+    }
+  ]
+}
+</code></pre></div></li> <li><p>At around 3am UTC of the following night the proposal got accepted, and as a result the network halted, with following error:</p> <div class="language- extra-class"><pre class="language-text"><code>Mar 16 05:02:52 ip-172-31-44-28 enigmad[20612]: I[2020-03-16|05:02:52.767] Executed block                               module=state height=171146 validTxs=0 invalidTxs=0
+Mar 16 05:02:52 ip-172-31-44-28 enigmad[20612]: I[2020-03-16|05:02:52.780] Committed state                              module=state height=171146 txs=0 appHash=FB4739B6F0D4FED77D431922E340B95B8144BF37483D3C1225431311A5BB229D
+Mar 16 05:02:58 ip-172-31-44-28 enigmad[20612]: E[2020-03-16|05:02:58.075] CONSENSUS FAILURE!!!                         module=consensus err=&quot;negative coin amount&quot; stack=&quot;goroutine 1419 [running]:\nruntime/debug.Stack(0xc0012c2ce0, 0x1115f40, 0x16671b0)\n\t/usr/lib/go-1.13/src/runtime/debug/stack.go:24 +0x9d\ngithub.com/tendermint/tendermint/consensus.(*State).receiveRoutine.func2(0xc002741c00, 0x149b478)\n\t/home/assafmo/workspace/go/pkg/mod/github.com/tendermint/tendermint@v0.33.0/consensus/state.go:613 +0x57\npanic(0x1115f40, 0x16671b0)\n\t/usr/lib/go-1.13/src/runtime/panic.go:679 +0x1b2\ngithub.com/cosmos/cosmos-sdk/types.DecCoins.Sub(...)\n\t/home/assafmo/workspace/go/pkg/mod/github.com/cosmos/cosmos-sdk@v0.38.1/types/dec_coin.go:307\ngithub.com/cosmos/cosmos-sdk/x/distribution/keeper.Keeper.AllocateTokens(0x169cf60, 0xc000eab5b0, 0xc000ab8460, 0xc000ab8460, 0x169cf60, 0xc000eab5e0, 0x169cfa0, 0xc000eab630, 0xc000e9fbe0, 0xc, ...)\n\t/home/assafmo/workspace/go/pkg/mod/github.com/cosmos/cosmos-sdk@v0.38.1/x/distribution/keeper/allocation.go:66 +0x1589\ngithub.com/cosmos/cosmos-sdk/x/distribution.BeginBlocker(0x16ad9a0, 0xc000034048, 0x16c2100, 0xc005382800, 0xa, 0x0, 0x0, 0x0, 0x0, 0x0, ...)\n\t/home/assafmo/workspace/go/pkg/mod/github.com/cosmos/cosmos-sdk@v0.38.1/x/distribution/abci.go:26 +0x2e6\ngithub.com/cosmos/cosmos-sdk/x/distribution.AppModule.BeginBlock(...)\n\t/home/assafmo/workspace/go/pkg/mod/github.com/cosmos/cosmos-sdk@v0.38.1/x/distribution/module.go:147\ngithub.com/cosmos/cosmos-sdk/types/module.(*Manager).BeginBlock(0xc000ab9030, 0x16ad9a0, 0xc000034048, 0x16c2100, 0xc005382800, 0xa, 0x0, 0x0, 0x0, 0x0, ...)\n\t/home/assafmo/workspace/go/pkg/mod/github.com/cosmos/cosmos-sdk@v0.38.1/types/module/module.go:297 +0x1ca\ngithub.com/enigmampc/EnigmaBlockchain.(*EnigmaChainApp).BeginBlocker(...)\n\t/home/assafmo/workspace/enigmachain/app.go:391\ngithub.com/cosmos/cosmos-sdk/baseapp.(*BaseApp).BeginBlock(0xc000d197c0, 0xc004071c00, 0x20, 0x20, 0xa, 0x0, 0x0, 0x0, 0x0, 0x0, ...)\n\t/home/assafmo/workspace/go/pkg/mod/github.com/cosmos/cosmos-sdk@v0.38.1/baseapp/abci.go:136 +0x469\ngithub.com/tendermint/tendermint/abci/client.(*localClient).BeginBlockSync(0xc000e7cd20, 0xc004071c00, 0x20, 0x20, 0xa, 0x0, 0x0, 0x0, 0x0, 0x0, ...)\n\t/home/assafmo/workspace/go/pkg/mod/github.com/tendermint/tendermint@v0.33.0/abci/client/local_client.go:231 +0x101\ngithub.com/tendermint/tendermint/proxy.(*appConnConsensus).BeginBlockSync(0xc000eab1b0, 0xc004071c00, 0x20, 0x20, 0xa, 0x0, 0x0, 0x0, 0x0, 0x0, ...)\n\t/home/assafmo/workspace/go/pkg/mod/github.com/tendermint/tendermint@v0.33.0/proxy/app_conn.go:69 +0x6b\ngithub.com/tendermint/tendermint/state.execBlockOnProxyApp(0x16ae3a0, 0xc0027fa9a0, 0x16bb520, 0xc000eab1b0, 0xc003dc3a40, 0x16c4080, 0xc000011138, 0x6, 0xc00272a9a0, 0xe)\n\t/home/assafmo/workspace/go/pkg/mod/github.com/tendermint/tendermint@v0.33.0/state/execution.go:280 +0x3e1\ngithub.com/tendermint/tendermint/state.(*BlockExecutor).ApplyBlock(0xc0000fce00, 0xa, 0x0, 0xc00272a980, 0x6, 0xc00272a9a0, 0xe, 0x29c8a, 0xc0038a1660, 0x20, ...)\n\t/home/assafmo/workspace/go/pkg/mod/github.com/tendermint/tendermint@v0.33.0/state/execution.go:131 +0x17a\ngithub.com/tendermint/tendermint/consensus.(*State).finalizeCommit(0xc002741c00, 0x29c8b)\n\t/home/assafmo/workspace/go/pkg/mod/github.com/tendermint/tendermint@v0.33.0/consensus/state.go:1431 +0x8f5\ngithub.com/tendermint/tendermint/consensus.(*State).tryFinalizeCommit(0xc002741c00, 0x29c8b)\n\t/home/assafmo/workspace/go/pkg/mod/github.com/tendermint/tendermint@v0.33.0/consensus/state.go:1350 +0x383\ngithub.com/tendermint/tendermint/consensus.(*State).enterCommit.func1(0xc002741c00, 0x0, 0x29c8b)\n\t/home/assafmo/workspace/go/pkg/mod/github.com/tendermint/tendermint@v0.33.0/consensus/state.go:1285 +0x90\ngithub.com/tendermint/tendermint/consensus.(*State).enterCommit(0xc002741c00, 0x29c8b, 0x0)\n\t/home/assafmo/workspace/go/pkg/mod/github.com/tendermint/tendermint@v0.33.0/consensus/state.go:1322 +0x61a\ngithub.com/tendermint/tendermint/consensus.(*State).addVote(0xc002741c00, 0xc005087c20, 0xc003fd0b70, 0x28, 0xc0012c9a38, 0xd31f92, 0x0)\n\t/home/assafmo/workspace/go/pkg/mod/github.com/tendermint/tendermint@v0.33.0/consensus/state.go:1819 +0xa39\ngithub.com/tendermint/tendermint/consensus.(*State).tryAddVote(0xc002741c00, 0xc005087c20, 0xc003fd0b70, 0x28, 0xf136b9f2d600ff82, 0x108, 0x100)\n\t/home/assafmo/workspace/go/pkg/mod/github.com/tendermint/tendermint@v0.33.0/consensus/state.go:1642 +0x59\ngithub.com/tendermint/tendermint/consensus.(*State).handleMsg(0xc002741c00, 0x168b640, 0xc0028f4538, 0xc003fd0b70, 0x28)\n\t/home/assafmo/workspace/go/pkg/mod/github.com/tendermint/tendermint@v0.33.0/consensus/state.go:709 +0x252\ngithub.com/tendermint/tendermint/consensus.(*State).receiveRoutine(0xc002741c00, 0x0)\n\t/home/assafmo/workspace/go/pkg/mod/github.com/tendermint/tendermint@v0.33.0/consensus/state.go:644 +0x6eb\ncreated by github.com/tendermint/tendermint/consensus.(*State).OnStart\n\t/home/assafmo/workspace/go/pkg/mod/github.com/tendermint/tendermint@v0.33.0/consensus/state.go:335 +0x13a\n&quot;
+Mar 16 05:36:48 ip-172-31-44-28 enigmad[20612]: E[2020-03-16|05:36:48.395] Connection failed @ sendRoutine              module=p2p peer=842822b88cb5762ba99cee50a37156c6d0a6c452@149.248.55.89:60440 conn=MConn{149.248.55.89:60440} err=&quot;pong timeout&quot;
+Mar 16 05:36:48 ip-172-31-44-28 enigmad[20612]: E[2020-03-16|05:36:48.402] Stopping peer for error                      module=p2p peer=&quot;Peer{MConn{149.248.55.89:60440} 842822b88cb5762ba99cee50a37156c6d0a6c452 in}&quot; err=&quot;pong timeout&quot;
+</code></pre></div></li> <li><p>When the vote passed, the <code>distribution</code> module parameters changed to:</p> <div class="language- extra-class"><pre class="language-text"><code>community_tax: &quot;0.020000000000000000&quot;
+base_proposer_reward: &quot;0.999000000000000000&quot;
+bonus_proposer_reward: &quot;0.040000000000000000&quot;
+withdraw_addr_enabled: true
+</code></pre></div></li> <li><p>The problem occurred because the sum of <code>baseproposerreward</code> and <code>bonusproposerreward</code> can't be grater than 1 i.e. <code>0.999 + 0.04 &gt; 1</code>. This results in miscalculations of the rewards and fees.</p></li> <li><p>The cause is a bug in Cosmos SDK in the parameter value validation, causing the proposal to pass despite being invalid. More on that here: https://github.com/cosmos/cosmos-sdk/issues/5808</p></li></ul> <h3 id="additional-notes"><a href="#additional-notes" class="header-anchor">#</a> Additional Notes</h3> <ul><li>Another invalid proposal was on voting period, and by itself would have caused the network to halt as well:<div class="language- extra-class"><pre class="language-text"><code>&quot;changes&quot;: [
+  {
+    &quot;subspace&quot;: &quot;distribution&quot;,
+    &quot;key&quot;: &quot;bonusproposerreward&quot;,
+    &quot;value&quot;: &quot;\&quot;0.999000000000000000\&quot;&quot;
+  }
+]
+</code></pre></div></li></ul> <h3 id="action-items"><a href="#action-items" class="header-anchor">#</a> Action Items:</h3> <ul><li>https://github.com/enigmampc/EnigmaBlockchain/issues/95</li> <li>https://github.com/enigmampc/EnigmaBlockchain/issues/97</li> <li>https://github.com/enigmampc/EnigmaBlockchain/issues/104</li></ul> <h2 id="recovery-process"><a href="#recovery-process" class="header-anchor">#</a> Recovery Process</h2> <ol><li><p>Logged in to the testnet bootstrap machine.</p></li> <li><p>Exported state from the last &quot;rounded&quot; block height:</p> <div class="language- extra-class"><pre class="language-text"><code>enigmad export --for-zero-height --height=170000 &gt; state_export.json
+</code></pre></div></li> <li><p>Removed all references to proposal ids <code>4</code> and <code>5</code> in:</p> <div class="language- extra-class"><pre class="language-text"><code>&quot;gov&quot;:{
+    &quot;deposits&quot;:[...],
+    &quot;proposals&quot;:[...],
+    &quot;votes&quot;:[...],
+    ...
+}
+</code></pre></div></li> <li><p>Made sure the <code>distribution</code> parameters still make sense:</p> <div class="language- extra-class"><pre class="language-text"><code>&quot;distribution&quot;:{
+    &quot;params&quot;:{
+            &quot;base_proposer_reward&quot;:&quot;0.010000000000000000&quot;,
+            &quot;bonus_proposer_reward&quot;:&quot;0.040000000000000000&quot;,
+            &quot;community_tax&quot;:&quot;0.020000000000000000&quot;,
+            &quot;withdraw_addr_enabled&quot;:true
+    },
+    ...
+}
+</code></pre></div></li> <li><p>Erased the <code>coins</code> in possesion of the <code>gov</code> ModuleAccount:</p> <div class="language- extra-class"><pre class="language-text"><code>&quot;auth&quot;:{
+    &quot;accounts&quot;:[
+        {
+            &quot;type&quot;:&quot;cosmos-sdk/ModuleAccount&quot;,
+                &quot;value&quot;:{
+                  &quot;coins&quot;: [ 
+                    &lt;subtracted amount here&gt;
+                  ]
+                  &quot;name&quot;:&quot;gov&quot;
+                }
+        }, ...
+}, ...
+</code></pre></div></li> <li><p>&quot;Refund&quot; coins to the account that deposited to these proposals on the first place i.e. added to account's balance in:</p> <div class="language- extra-class"><pre class="language-text"><code>&quot;app_state&quot;:{
+  &quot;auth&quot;:{
+     &quot;accounts&quot;:[
+        {
+           &quot;value&quot;:{
+              &quot;coins&quot;:[
+                 {
+                    &quot;amount&quot;:&quot;&lt;added to this amount&gt;&quot;
+                 }
+              ]
+           }
+        }
+     ]
+  }
+}
+</code></pre></div></li> <li><p>A problem occured with staking, described at: https://github.com/cosmos/cosmos-sdk/issues/5818
+Changed the following:</p> <div class="language- extra-class"><pre class="language-text"><code>&quot;distribution&quot;:{
+  &quot;delegator_starting_infos&quot;:[
+    {
+      ...,
+      &quot;starting_info&quot;:{
+        &quot;...,
+        &quot;stake&quot;:&quot;999990000.000000000000000000&quot;
+      },
+      ...
+    },
+    ...
+  ],
+  ...
+}
+</code></pre></div><p>To this:</p> <div class="language- extra-class"><pre class="language-text"><code>&quot;distribution&quot;:{
+  &quot;delegator_starting_infos&quot;:[
+    {
+      ...,
+      &quot;starting_info&quot;:{
+        &quot;...,
+        &quot;stake&quot;:&quot;990000000.000000000000000000&quot;
+      },
+      ...
+    },
+    ...
+  ],
+  ...
+}
+</code></pre></div></li> <li><p>Then a problem occured with the <code>compute</code> module:</p> <div class="language- extra-class"><pre class="language-text"><code>panic: create wasm contract failed: Wasm Error: Filesystem error: File exists (os error 17)
+</code></pre></div><p>This one got fixed when deleted the <code>.enigmad/.compute</code> directory.</p></li> <li><p>Reset state:</p> <div class="language- extra-class"><pre class="language-text"><code>enigmad unsafe-reset-all
+</code></pre></div></li> <li><p>Restarted the node.</p></li></ol></div> <footer class="page-edit"><!----> <!----></footer> <!----> </main></div><div class="global-ui"></div></div>
+    <script src="/SecretNetwork/assets/js/app.894b1e11.js" defer></script><script src="/SecretNetwork/assets/js/2.69f57745.js" defer></script><script src="/SecretNetwork/assets/js/19.b1ec0ee3.js" defer></script>
+  </body>
+</html>
