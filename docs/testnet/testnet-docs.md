@@ -59,7 +59,7 @@ Please don't abuse this service—the number of available tokens is limited.
 ## Run a full node
 
 1. Run steps 1-3 of the previous section (light client guide) on your server.
-2. Initialize your installation of the Enigma Blockchain. Choose a  **moniker**  for yourself that will be public, and replace  `<MONIKER>`  with your moniker below
+2. Initialize your installation of the Secret Network. Choose a  **moniker**  for yourself that will be public, and replace  `<MONIKER>`  with your moniker below
 
    ```bash
    enigmad init <MONIKER> --chain-id enigma-testnet

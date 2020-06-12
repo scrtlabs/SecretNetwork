@@ -1,6 +1,6 @@
-# How to join the Enigma Blockhain as a full node on mainnet
+# Run a Full Node
 
-This document details how to join the EnigmaChain `mainnet` as a validator.
+This document details how to join the Secret Network as a full node.
 
 ## Requirements
 
@@ -24,13 +24,13 @@ x64 2.0 GHz 2v CPU
 
 ## Installation
 
-### 1. Download the Enigma Blockchain package installer for Debian/Ubuntu:
+### 1. Download the Secret Network package installer for Debian/Ubuntu:
 
 ```bash
-wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.3/enigma-blockchain_0.0.3_amd64.deb
+wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.0.3/enigma-blockchain_0.0.3_amd64.deb
 ```
 
-([How to verify releases](/docs/verify-releases.md))
+([How to verify releases](/verify-releases.md))
 
 ### 2. Install the package:
 
@@ -38,7 +38,7 @@ wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.3/enig
 sudo dpkg -i enigma-blockchain_0.0.3_amd64.deb
 ```
 
-### 3. Initialize your installation of the Enigma Blockchain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
+### 3. Initialize your installation of the Secret Network. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
 
 ```bash
 enigmad init <MONIKER> --chain-id enigma-1

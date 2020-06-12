@@ -1,0 +1,15 @@
+# Overview
+
+Enigma is a company that builds privacy-preserving computation technologies and solutions. As part of this work, Enigma is a core contributor to the Secret Network. The Secret Network is a blockchain protocol that enables decentralized applications to use private or sensitive data. On the Secret Network, the code that enables applications to use this private data is referred to as a “secret contract”. Secret contracts are similar to smart contracts, such as those used with Ethereum. The key difference is that secret contracts can take encrypted inputs and produce encrypted outputs, without exposing any data while it is in-use. In addition, a contract state (its internal, persisted database), remains encrypted throughout executions.
+
+Data on blockchains is public by default. This is a problem for applications which make use of sensitive information, such as user data, personally identifiable information (PII), votes, or moves in a game like rock-paper-scissors or poker. The Secret Network aims to solve this problem by enabling data-in-use privacy through private computation for decentralized applications.
+
+For example, a developer could create a voting application where individual votes are never revealed, but the overall tally is provably correct. Alternatively, a credit scoring application could produce a score based on verified data submitted by users, without ever seeing that data in plaintext (or storing plaintext data on-chain). Many applications require data privacy, which is especially difficult to achieve in blockchain-based applications.
+
+The Secret Network is completely decentralized, with governance decisions made by community vote. The network is run by Validators, who propose blocks according to a delegated proof-of-stake model. Validators are rewarded for proposing new blocks in SCRT. Users pay SCRT to the network as fees in order to have their transactions included.
+
+The Secret Network was built on top of the Cosmos SDK and uses Tendermint Consensus. 
+
+To achieve data privacy, the Secret Network relies on a combination of key management and encryption protocols, and Trusted Execution Environment (TEE) technology. 
+
+![contracts](/diagrams/contracts.png)

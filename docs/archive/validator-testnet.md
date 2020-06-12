@@ -1,4 +1,4 @@
-# How to join the Enigma Blockchain as a testnet validator
+# How to join the Secret Network as a testnet validator
 
 This document details how to join the EnigmaChain `testnet`
 

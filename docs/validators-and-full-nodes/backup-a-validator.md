@@ -1,4 +1,4 @@
-# How to backup a validator
+# Backup a Validator
 
 It is **CRUCIAL** to backup your validator's private key. It's the only way to restore your validator in an event of a disaster.
 

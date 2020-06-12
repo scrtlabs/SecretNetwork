@@ -1,4 +1,4 @@
-# Use your Ledger with the Secret Network!
+# Using SCRT with Ledger
 
 Note: This guide is for Ledger Nano S but according to community members it also works for Ledger Nano X.
 
@@ -51,7 +51,9 @@ wget -q -O - https://raw.githubusercontent.com/LedgerHQ/udev-rules/master/add_ud
 enigmacli keys add <account name> --ledger --account <account number on your Ledger>
 ```
 
-**:warning:Note:warning:: Please backup the mnemonics!**
+:warning::warning::warning:
+
+**Please backup the mnemonics!**
 
 ### Display your account address
 

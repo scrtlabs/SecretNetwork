@@ -1,10 +1,10 @@
-﻿# Enigma Blockchain Light Client
+﻿# Secret Network Light Client
 
 ## Enigma CLI
 
-`enigmacli` is the command-line tool that enables you to interact with a node that runs on the Enigma Blockchain.
+`enigmacli` is the command-line interface tool that enables you to interact with a node that runs on the Secret Network.
 
-[How to install and use `enigmacli`](/docs/light-client-mainnet.md).
+[How to install and use `enigmacli`](/light-client-mainnet.md).
 
 ## `enigmacli` Guide
 
@@ -442,7 +442,7 @@ enigmacli q staking validator <validator-address>
 
 ##### Bond Tokens
 
-On the EnigmaChain mainnet, we delegate `uscrt`, where `1scrt = 1000000uscrt`. Here's how you can bond tokens to a validator (_i.e._ delegate):
+On the Secret Network, we delegate `uscrt`, where `1scrt = 1000000uscrt`. Here's how you can bond tokens to a validator (_i.e._ delegate):
 
 ```bash
 enigmacli tx staking delegate \
@@ -650,7 +650,7 @@ enigmacli status
 
 ### Governance
 
-Governance is the process from which users in the Enigma Blockchain can come to consensus
+Governance is the process from which users in the Secret Network can come to consensus
 on software upgrades, parameters of the mainnet or signaling mechanisms through
 text proposals. This is done through voting on proposals, which will be submitted
 by `SCRT` holders on the mainnet.
