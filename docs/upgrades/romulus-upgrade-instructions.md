@@ -67,15 +67,7 @@ sudo systemctl enable enigma-node
 sudo systemctl start enigma-node
 ```
 
-3. Remove `secretnetwork` package and directories:
-
-```bash
-rm -rf ~/.secretd
-rm -rf ~/.secretcli
-sudo dpkg -r secretnetwork
-```
-
-4. Monitor the enigma-node (once 2/3 of voting power is online, you'll see blocks streaming):
+3. Monitor the enigma-node (once 2/3 of voting power is online, you'll see blocks streaming):
 
 ```bash
 journalctl -u enigma-node -f
