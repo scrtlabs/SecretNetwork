@@ -1,6 +1,6 @@
 # Romulus Upgrade Instructions
 
-The [Romulus Upgrade Signal](https://explorer.cashmaney.com/proposals/13) passed on-chain, and this mandates a hard fork.
+The [Romulus Upgrade Signal](https://puzzle.report/enigma/chains/enigma-1/governance/proposals/13) passed on-chain, and this mandates a hard fork.
 
 This document describes the steps required to perform the Romulus Upgrade to go from the `enigma-1` to `secret-1` chain. The upgrade is 
 required for all full-node operators (both validators and non-validators).
@@ -33,7 +33,7 @@ change the addresses. You'll see not only the address prefix change, but also th
 
 - Addition of a tokenswap module.
 
-This module has been added to allow the chain implementation of the _Burn ENG for SCRT!_ proposal: https://puzzle-staging.secretnodes.org/enigma/chains/enigma-1/governance/proposals/4
+This module has been added to allow the chain implementation of the _Burn ENG for SCRT!_ proposal: https://puzzle.report/enigma/chains/enigma-1/governance/proposals/4
 
 ## Risks
 

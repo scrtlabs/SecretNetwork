@@ -1,5 +1,9 @@
 # HOWTO Romulus Upgrade
 
+** These are notes provided by SecretNodes.org and other contributors that we used to test and develop the final upgrade instructions **
+
+* DO NOT use these instructions for the actual Romulus Upgrade procedure *
+
 The [rebranding proposal](https://explorer.cashmaney.com/proposals/13) passed on-chain, and this mandates a hard fork.
 
 The network needs to decide on a block number to fork from.

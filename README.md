@@ -6,9 +6,9 @@ Secret Network secures the decentralized web
 
 # The Romulus Upgrade
 
-This is the Romulus Upgrade for the Secret Network as specified in the mainnet _Romulus Upgrade Signal_ proposal:
+This is the Romulus Upgrade for the Secret Network as specified in the mainnet _Romulus Upgrade Signal_ proposal.
 
-[Proposal 13](https://secretscan.io/governance/proposal/13)
+[Proposal 13](https://puzzle.report/enigma/chains/enigma-1/proposals/13)
 
 
 ```bash
@@ -77,6 +77,13 @@ Wishing everyone much success on the day of the upgrade!!
 
 :tada: :tada: :tada:
 
+## Acknowledgements
+
+Special thanks to Ian and Jacob from SecretNodes.org for all of the work they did on the upgrade proposal, coding and 
+instructions! Chain of Secrets was able to pick-up the torch, complete the work and perform testing thanks to their efforts.
+
+We also had valuable contributors who aided us along the way and we're very grateful for their help as well!
+
 
 # What is Secret Network?
 
@@ -103,7 +110,7 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 
 - [Cashmaney](https://explorer.cashmaney.com)
 - [SecretScan](https://secretscan.io)
-- [Puzzle](https://puzzle-staging.secretnodes.org/enigma/chains/enigma-1)
+- [Puzzle](https://puzzle.report/enigma/chains/enigma-1)
 
 # Wallets
 
@@ -138,7 +145,7 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 - [How to setup SGX on your machine](/docs/dev/setup-sgx.md)
 
 # Upgrades
-- [How to upgrade to the Secret Network (rebranding)](/docs/upgrades/howto-secretnetwork-rebranding.md)
+- [How to upgrade to the Secret Network (rebranding)](/docs/upgrades/romulus-upgrade-instructions.md)
 
 # Archive
 
