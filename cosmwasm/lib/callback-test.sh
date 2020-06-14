@@ -52,12 +52,9 @@ function cleanup()
 }
 trap cleanup EXIT ERR
 
-# store wasm code on-chain so we could later instansiate it
-wget -O /tmp/contract.wasm https://raw.githubusercontent.com/CosmWasm/cosmwasm-examples/f5ea00a85247abae8f8cbcba301f94ef21c66087/mask/contract.wasm
-
 STORE_TX_HASH=$(
     yes |
-    ./enigmacli tx compute store /tmp/contract.wasm --from a --gas 10000000 |
+    ./enigmacli tx compute store ./cosmwasm/lib/mask-test-contract/contract.wasm --from a --gas 10000000 |
     jq -r .txhash
 )
 
@@ -69,7 +66,7 @@ wait_for_tx "$STORE_TX_HASH" "Waiting for store to finish on-chain..."
 
 
 # init the contract (ocall_init + write_db + canonicalize_address)
-INIT_TX_HASH=$(
+export INIT_TX_HASH=$(
     yes |
         ./enigmacli tx compute instantiate 1 "{}" --label baaaaaaa --from a |
         jq -r .txhash
@@ -84,12 +81,10 @@ export CONTRACT_ADDRESS=$(
 
 ./enigmacli q compute tx "$INIT_TX_HASH"
 
-export INNER_MSG=$(base64 <<< "{\"reflectmsg\":{\"msgs\":[]}}")
-
 # reflect (generate callbacks)
 REFLECT_TX_HASH=$(
     yes |
-        ./enigmacli tx compute execute --from a $CONTRACT_ADDRESS "{\"reflectmsg\":{\"msgs\":[{\"contract\":{\"contract_addr\":\"$CONTRACT_ADDRESS\",\"msg\":\"$INNER_MSG\"}}]}}" |
+        ./enigmacli tx compute execute --from a $CONTRACT_ADDRESS "{\"a\":{\"contract_addr\":\"$CONTRACT_ADDRESS\",\"x\":2,\"y\":3}}" |
         jq -r .txhash
 )
 

@@ -342,6 +342,22 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 					answer.OutputData = string(dataPlaintext)
 				}
 
+				for i, msg := range cosmwasmOutput.Ok.Messages {
+					if len(msg.Contract.Msg) > 0 {
+						msgPlaintext, err := wasmCliCtx.Decrypt(msg.Contract.Msg[64:], nonce)
+						if err != nil {
+							return err
+						}
+						cosmwasmOutput.Ok.Messages[i].Contract.Msg = msgPlaintext
+					}
+				}
+
+				msgs, err := json.Marshal(cosmwasmOutput.Ok.Messages)
+				if err != nil {
+					return err
+				}
+				answer.OutputMessages = string(msgs)
+
 				if cosmwasmOutput.Err != "" {
 					errorCiphertext, err := base64.StdEncoding.DecodeString(cosmwasmOutput.Err)
 					if err != nil {

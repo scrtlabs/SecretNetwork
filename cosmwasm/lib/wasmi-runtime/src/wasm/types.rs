@@ -16,6 +16,18 @@ pub struct SecretMessage {
 }
 
 impl SecretMessage {
+    pub fn encrypt_in_place(&mut self) -> Result<(), EnclaveError> {
+        self.msg = self
+            .encryption_key()
+            .encrypt_siv(self.msg.as_slice(), &vec![&[]])
+            .map_err(|err| {
+                error!("got an error while trying to encrypt the msg: {}", err);
+                EnclaveError::EncryptionError
+            })?;
+
+        Ok(())
+    }
+
     pub fn decrypt(&self) -> Result<Vec<u8>, EnclaveError> {
         let key = self.encryption_key();
 
@@ -23,10 +35,7 @@ impl SecretMessage {
         let msg = key
             .decrypt_siv(self.msg.as_slice(), &vec![&[]])
             .map_err(|err| {
-                error!(
-                    "handle() got an error while trying to decrypt the msg: {}",
-                    err
-                );
+                error!("got an error while trying to decrypt the msg: {}", err);
                 EnclaveError::DecryptionError
             })?;
 
@@ -37,9 +46,29 @@ impl SecretMessage {
         calc_encryption_key(&self.nonce, &self.user_public_key)
     }
 
+    pub fn from_base64(
+        msg_b64: String,
+        nonce: IoNonce,
+        user_public_key: Ed25519PublicKey,
+    ) -> Result<Self, EnclaveError> {
+        let msg = base64::decode(&msg_b64.to_owned().into_bytes()).map_err(|err| {
+            error!(
+                "got an error while trying to decode msg to next contract as base64 {:?}: {:?}",
+                msg_b64, err
+            );
+            EnclaveError::FailedToDeserialize
+        })?;
+
+        Ok(SecretMessage {
+            msg: msg,
+            nonce,
+            user_public_key,
+        })
+    }
+
     pub fn from_slice(msg: &[u8]) -> Result<Self, EnclaveError> {
-        // 32 bytes of AD
-        // 33 bytes of secp256k1 compressed public key
+        // 32 bytes of nonce
+        // 32 bytes of 25519 compressed public key
         // 16+ bytes of encrypted data
 
         if msg.len() < 82 {
@@ -55,6 +84,11 @@ impl SecretMessage {
 
         let mut user_pubkey = [0u8; 32];
         user_pubkey.copy_from_slice(&msg[32..64]);
+
+        info!(
+            "SecretMessage::from_slice nonce = {:?} pubkey = {:?}",
+            nonce, user_pubkey
+        );
 
         Ok(SecretMessage {
             nonce,

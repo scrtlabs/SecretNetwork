@@ -185,7 +185,7 @@ sanity-test-hw:
 	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
 	./cosmwasm/lib/wasmi-sgx-test.sh
 
-mask-sanity-test:
+callback-sanity-test:
 	SGX_MODE=SW $(MAKE) build_linux
 	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
-	SGX_MODE=SW ./cosmwasm/lib/mask-test.sh
+	SGX_MODE=SW ./cosmwasm/lib/callback-test.sh
