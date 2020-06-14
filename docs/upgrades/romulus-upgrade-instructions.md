@@ -1,11 +1,6 @@
-# HOWTO Rebranding
+# Romulus Upgrade Instructions
 
-The [rebranding proposal](https://explorer.cashmaney.com/proposals/7) passed on-chain, and this mandates a hard fork.
-
-The network needs to decide on a block number to fork from.
-Since most nodes use `--pruning syncable` configuration, the node prunes most of the blocks, so state should be exported from a height that is a multiple of 100 (e.g. 100, 500, 131400, ...).
-
-For better background, before reading this guide you might want to check out Cosmos' guide upgrading from `cosmoshub-2` to `cosmoshub-3`: https://github.com/cosmos/gaia/blob/master/docs/migration/cosmoshub-2.md
+The [Romulus Upgrade Signal](https://explorer.cashmaney.com/proposals/13) passed on-chain, and this mandates a hard fork.
 
 ### 1. Export `genesis.json` for the new fork:
 
@@ -77,7 +72,7 @@ secretcli config indent true
 secretcli config trust-node true
 ```
 
-### 8. Setup the new node/validaor:
+### 8. Setup the new node/validator:
 
 ```bash
 # args for secretd init doesn't matter because we're going to import the old config files
@@ -93,6 +88,8 @@ cp ~/.enigmad/config/{priv_validator_key.json,node_key.json} ~/.secretd/config
 cp new_genesis.json ~/.secretd/config/genesis.json
 
 # at this point you should also validate sha256 checksums of ~/.secretd/config/* against ~/.enigmad/config/*
+
+echo "9167cc828f5060507af42f553ee6c2f0270a4118c6bf1a0912171f4a14961143 $HOME/.secretd/config/genesis.json" | sha256sum --check
 ```
 
 ### 9. Start the new Secret Node! :tada:

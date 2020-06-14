@@ -8,10 +8,22 @@ Secret Network secures the decentralized web
 
 This is the Romulus Upgrade for the Secret Network as specified in the mainnet _Romulus Upgrade Signal_ proposal:
 
-https://explorer.cashmaney.com/proposals/11
+[Proposal 13](https://secretscan.io/governance/proposal/13)
 
-The Romulus Upgrade Signal is to suggest a time to upgrade the Secret Network. This upgrade will rename the current enigma prefix to secret in order to rebrand the address format, additionally it will bring other improvements such as the addition of a new module. The proposed time for this upgrade is approximately 5am PT Wednesday June 10th 2020. The proposed time approximately corresponds to block 1,697,639 All additions can be reviewed in the following GitHub repo : https://github.com/secretnodes/secretnetwork. Any suggested or required changes to the repo must be made before June 7th. All official discussions around the Romulus Upgrade will be coordinated in the #the-romulus-upgrade room on https://chat.scrt.network.
 
+```bash
+This proposal is intended to set a time to upgrade the Secret Network. This upgrade will rename the current enigma 
+prefix to secret in order to rebrand the address format, additionally it will bring other improvements such as the 
+addition of a new module.
+
+The proposed time for this upgrade is approximately 5am PT Wednesday June 17th 2020.
+
+The proposed time approximately corresponds to block 1,794,500
+
+All additions can be transparently reviewed in the following GitHub repo : https://github.com/chainofsecrets/TheRomulusUpgrade
+
+Note: The original date was moved from the 10th to the 17th to allow an additional week for testing.
+```
 
 ## Secret Network Version
 
@@ -22,8 +34,8 @@ Below is the version information for the Secret Network.
   "name": "SecretNetwork",
   "server_name": "secretd",
   "client_name": "secretcli",
-  "version": "0.2.0-193-gbd9a551",
-  "commit": "bd9a551bbbf72b2160144046d9f03ee503740ab2",
+  "version": "0.2.0-199-gcb314b9",
+  "commit": "cb314b96aeff45b572e2aaaeca86ceb9aa16dac9",
   "build_tags": "ledger",
   "go": "go version go1.14.4 linux/amd64"
 }
@@ -35,15 +47,9 @@ You can check that you hae the right release by doing:
 secretcli version --long | jq .
 ```
 
-_Stay Tuned_
+# Upgrade Instructions
 
-Instructions for the upgrade will be posted here soon by Chain of Secrets.
-
-We are currently testing the upgrade on our *secrettestnet* and will develop a guide outlining the process.
-
-In the meantime if you'd like to get a peak at the steps we'll be running through on our testnet, you can review the notes here:
-
-  [How to upgrade to the Secret Network (rebranding)](/docs/upgrades/howto-secretnetwork-rebranding.md)
+  [Romulus Upgrade instructions)](/docs/upgrades/romulus-upgrade-instructions.md)
 
 
 
