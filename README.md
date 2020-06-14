@@ -25,28 +25,6 @@ All additions can be transparently reviewed in the following GitHub repo : https
 Note: The original date was moved from the 10th to the 17th to allow an additional week for testing.
 ```
 
-## Secret Network Version
-
-Below is the version information for the Secret Network.
-
-```bash
-{
-  "name": "SecretNetwork",
-  "server_name": "secretd",
-  "client_name": "secretcli",
-  "version": "0.2.0-199-gcb314b9",
-  "commit": "cb314b96aeff45b572e2aaaeca86ceb9aa16dac9",
-  "build_tags": "ledger",
-  "go": "go version go1.14.4 linux/amd64"
-}
-```
-
-You can check that you have the right release by doing:
-
-```bash
-secretcli version --long | jq .
-```
-
 # Upgrade Instructions
 
 ### The Romulus Upgrade is scheduled for June 17th, 2020, Wednesday at 5:00am PST, 8:00am EST, 12:00pm UTC
@@ -70,15 +48,15 @@ CoS will export the genesis state and modify the chain id from `enigma-1` to `se
 
 The tokenswap parameters will be added to the exported genesis file.
 
-### Step 3 - Setup Secret Network Binaries
+### Step 3 - Setup Secret Network
 
-All validators and those running full nodes will then install the `secretnetwork` release and perform configuration steps.
+All validators and those running full nodes will then install the `secretnetwork` release and perform configuration steps
 
 ### Step 4 - Setup the Node/Validator
 
 Initialize the node and import config files. Set the new genesis file and validate the checksum.
 
-### Step 5 - Start the new Secret Node! :tada:
+### Step 5 - Start the new Secret Node
 
 This is where the `secret-node` is enabled and started. Once 2/3 of online voting power comes online we'll be seeing blocks streaming.
 
@@ -86,12 +64,18 @@ This is where the `secret-node` is enabled and started. Once 2/3 of online votin
 
 In this step the `enigmacli` keys are imported into `secretcli`.
 
+### Step 7 - Remove Old Chain
+
+If all went well and the Secret Network is live and stable, the old `enigma-1` node can be removed.
+
 
 ## Romulus Upgrade Instructions
 
 For detailed steps follow the [Romulus Upgrade instructions)](/docs/upgrades/romulus-upgrade-instructions.md).
 
-Wishing much success on the day of the upgrade!!
+Wishing everyone much success on the day of the upgrade!!
+
+:tada: :tada: :tada:
 
 
 # What is Secret Network?
@@ -99,8 +83,6 @@ Wishing much success on the day of the upgrade!!
 Want to build a better internet? Solve for privacy.
 
 Secret Network is a blockchain-based, open-source protocol that lets anyone perform computations on encrypted data, bringing privacy to smart contracts and public blockchains. Our mission: improve the adoption and usability of decentralized technologies, for the benefit of all.
-
-Mainnet is out! Get the latest release at https://github.com/enigmampc/SecretNetwork/releases/latest.
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
 

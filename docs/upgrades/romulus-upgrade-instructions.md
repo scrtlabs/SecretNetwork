@@ -9,12 +9,15 @@ The CoS team will post the official modified genesis file, but you'll be able to
 
 The agreed upon block height for the Romulus Upgrade is *1,794,500*.
 
-NOTE: Full-nodes includes any Sentry nodes that are part of a validator's network architecture.
+_NOTE: Full-nodes includes any Sentry nodes that are part of a validator's network architecture._
+
+This document describes the upgrade in the following sections:
 
 - Preliminary
 - Risks
 - Recovery
 - Upgrade Procedure
+
 
 ## Preliminary
 
@@ -24,7 +27,7 @@ The significant changes in this upgrade are the following:
 
 The `enigmacli/enigmad` commands change to `secretcli/secretd`.
 
-The `enigma1...` addresses change to `secret1...`. The addresses will go through a bech32 coverter supplied by the Enigma team to properly 
+The `enigma1...` addresses change to `secret1...`. The addresses will go through a bech32 address converter supplied by the Enigma team to properly 
 change the addresses. You'll see not only the address prefix change, but also the entire address. Wallet keys will then be exported using the 
 `enigmacli` command and imported using `secretcli`. There may seem to be a bit of magic there, but it's been tested and works great!
 
@@ -40,7 +43,7 @@ genesis file to ensure the correct staked amounts. This script is being provided
 There is no risk of 'double-signing' unless you have two nodes running the same keys in parallel. Please ensure that is not the case for your nodes.
 
 We are using a modified fork of the cosmos-sdk to address issues with using a genesis file created via an `export`. There is a risk that an export 
-of the current chain state may reveal a new issue, not foreseen.
+of the current chain state may reveal a new issue.
 
 If necessary, the network can be relaunched with the old chain `enigma-1`. For this reason do not delete the existing `.enigmad` and `.enigmcli` 
 directories. See the *Recovery* section below. 
@@ -54,28 +57,28 @@ operators and validators.
 
 ```bash
 # may fail, but that's okay
-$ sudo systemctl stop secret-node
+sudo systemctl stop secret-node
 ```
 
 2. Re-start the `enigma-1` chain:
 
 ```bash
-$ sudo systemctl enable enigma-node
-$ sudo systemctl start enigma-node
+sudo systemctl enable enigma-node
+sudo systemctl start enigma-node
 ```
 
 3. Remove `secretnetwork` package and directories:
 
 ```bash
-$ rm -rf ~/.secretd
-$ rm -rf ~/.secretcli
-$ sudo dpkg -r secretnetwork
+rm -rf ~/.secretd
+rm -rf ~/.secretcli
+sudo dpkg -r secretnetwork
 ```
 
 4. Monitor the enigma-node (once 2/3 of voting power is online, you'll see blocks streaming):
 
 ```bash
-$ journalctl -u enigma-node -f
+journalctl -u enigma-node -f
 ```
 
 NOTE: you may have to put `sudo` in front of the `journalctl` command if you don't have permission to run it.
@@ -83,35 +86,52 @@ NOTE: you may have to put `sudo` in front of the `journalctl` command if you don
 
 ## Upgrade Procedure
 
-### 1. Export `genesis.json` for the new fork:
+### 1. Gracefully Halt the `enigma-1` Chain
 
 ```bash
 sudo systemctl stop enigma-node
-enigmad export --for-zero-height --height <agreed_upon_block_height> > exported_state.json
+enigmad start --halt-height 1794500 > enigmad.log &
+tail -f enigmad.log
 ```
 
-### 2. Inside `exported_state.json` Rename `chain_id` from `enigma-1` to the new agreed upon Chain ID (`secret-1`)
+The chain will halt at block height _1794500_ at approximately 7:30am PST, 10:30am EDT and 2:30pm UTC. 
 
-For example:
+You may see dialing and connection errors as nodes are halted, which is expected. When the node is finally stopped, you'll see these messages:
 
 ```bash
-perl -i -pe 's/"enigma-1"/"secret-1"/' exported_state.json
+halting node per configuration
+
+
+exiting... 
 ```
 
-### 3. Convert all `enigma` addresses to `secret` adresses
+### 2. Upgrade Genesis
 
-Using the CLI:
+*NOTE: CoS performs these steps!*
+
+Export the chain state:
+
+```bash
+enigmad export --for-zero-height --height 1794500 > exported-enigma-state.json
+```
+
+Inside `exported-enigma-state.json` Rename `chain_id` from `enigma-1` to `secret-1`:
+
+```bash
+perl -i -pe 's/"enigma-1"/"secret-1"/' exported-enigma-state.json
+```
+
+Get bech32 converter and change all `enigma` addresses to `secret` adresses:
 
 ```bash
 wget https://github.com/enigmampc/bech32.enigma.co/releases/download/cli/bech32-convert
 chmod +x bech32-convert
 
-cat exported_state.json | ./bech32-convert > secret-1-genesis.json
+cat | ./bech32-convert > secret-1-genesis.json
 ```
 
-Or you can just paste `exported_state.json` into https://bech32.enigma.co and paste the result back into `secret-1-genesis.json`.
+Use `jq` to make the `secret-1-genesis.json` more readable:
 
-### 4. Use `jq` to make the `secret-1-genesis.json` more readable
 
 ```bash
 jq . secret-1-genesis.json > secret-1-genesis-jq.json
@@ -120,8 +140,6 @@ mv secret-1-genesis-jq.json secret-1-genesis.json
 ```
 
 NOTE: if you don't have `jq`, you can install it with `sudo apt-get install jq`
-
-### 5. Add Tokenswap parameters
 
 Modify the `secret-1-genesis.json` and add the following tokenswap parameters under `gov`:
 
@@ -136,47 +154,99 @@ Modify the `secret-1-genesis.json` and add the following tokenswap parameters un
 	},
 ```
 
-### 6. Compile the new `secret` binaries with `make deb` (or distribute them precompiled).
+Create the sha256 checksum for the new genesis file:
 
 ```bash
-secretnetwork_0.2.0_amd64.deb
+sha256sum secret-1-genesis-json > secret-genesis-sha256sum
 ```
 
-### 7. Setup new binaries:
+Update the Romulus Upgrade repo with the `secret-1-genesis.json` file:
+
+```bash
+git add secret-1-genesis.json
+git commit -m "romulus upgrade genesis file"
+git push
+```
+
+## All Full-Node Operators and Validators
+
+### 3. Setup Secret Network 
+
+Get the `secretnetwork` release:
+
+```bash
+wget -O secretnetwork_0.2.0_amd64.deb https://github.com/chainofsecrets/TheRomulusUpgrade/releases/download/v0.2.0/secretnetwork_0.2.0_amd64.deb
+```
+
+Install the release and configure:
 
 ```bash
 sudo dpkg -i secretnetwork_0.2.0_amd64.deb # install secretd & secretcli and setup secret-node.service
 
+```
+
+Verify the package version for the Secret Network:
+
+```bash
+secretcli version --long | jq .
+```
+
+Below is the version information for the Secret Network.
+
+```bash
+{
+  "name": "SecretNetwork",
+  "server_name": "secretd",
+  "client_name": "secretcli",
+  "version": "0.2.0-199-gcb314b9",
+  "commit": "cb314b96aeff45b572e2aaaeca86ceb9aa16dac9",
+  "build_tags": "ledger",
+  "go": "go version go1.14.4 linux/amd64"
+}
+```
+
+Configure the node:
+
+```bash
 secretcli config chain-id secret-1
 secretcli config output json
 secretcli config indent true
 secretcli config trust-node true
 ```
 
-### 8. Setup the new node/validator:
+
+### 4. Setup the new Node/Validator:
+
+Get the new `secret-1` genesis file (this will be provided by CoS after Step #2 is completed):
 
 ```bash
-# args for secretd init doesn't matter because we're going to import the old config files
+wget -O https://github.com/chainofsecrets/TheRomulusUpgrade/blob/romulus-upgrade/secret-1-genesis.json
+```
+
+Validate the genesis file (replace <sha256sum> with the checksum provided by CoS after Step #2 is completed):
+
+
+```bash
+echo "<sha256sum> secret-1-genesis.json" | sha256sum --check
+```
+
+Initialize and configure `secretd`:
+
+```bash
 secretd init <moniker> --chain-id secret-1
-
-# import old config files to the new node
 cp ~/.enigmad/config/{app.toml,config.toml,addrbook.json} ~/.secretd/config
-
-# import node's & validator's private keys to the new node
 cp ~/.enigmad/config/{priv_validator_key.json,node_key.json} ~/.secretd/config
 
 # set new_genesis.json from step 3 as the genesis.json of the new chain
-cp new_genesis.json ~/.secretd/config/genesis.json
+cp secret-1-genesis.json ~/.secretd/config/genesis.json
 
-# at this point you should also validate sha256 checksums of ~/.secretd/config/* against ~/.enigmad/config/*
 
-echo "9167cc828f5060507af42f553ee6c2f0270a4118c6bf1a0912171f4a14961143 $HOME/.secretd/config/genesis.json" | sha256sum --check
-```
+### 5. Start the new Secret Node! :tada:
 
-### 9. Start the new Secret Node! :tada:
+Enable the new node and start:
 
 ```bash
-sudo systemctl enable secret-node # enable on startup
+sudo systemctl enable secret-node
 sudo systemctl start secret-node
 ```
 
@@ -186,9 +256,10 @@ Once more than 2/3 of voting power comes online you'll start seeing blocks strea
 journalctl -u secret-node -f
 ```
 
-If something goes wrong the network can relaunch the `enigma-node`, therefore it's not advisable to delete `~/.enigmad` & `~/.enigmacli` until the new chain is live and stable.
+If something goes wrong the network can relaunch the `enigma-node`, therefore it's not advisable to delete `~/.enigmad` & `~/.enigmacli` until 
+the new chain is live and stable.
 
-### 10. Import wallet keys from the old chain to the new chain:
+### 6. Import Wallet Keys
 
 (Ledger Nano S/X users shouldn't do anything, just use the new CLI with `--ledger --account <number>` as usual)
 
@@ -197,11 +268,14 @@ enigmacli keys export <key_name>
 # this^ outputs stuff to stderr and also exports the key to stderr,
 # so copy only the private key output to a file named `key.export`
 
-secretcli import <key_name> key.export
+secretcli keys import <key_name> key.export
 ```
 
-### 11. When the new chain is live and everything works well, you can delete the files of the old chain:
+### 7. Remove Old Chain
+
+When the `secret-1` chain is live and stable, you can delete the files of the old `enigma-1` chain:
 
 - `rm -rf ~/.enigmad`
 - `rm -rf ~/.enigmacli`
 - `sudo dpkg -r enigma-blockchain`
+
