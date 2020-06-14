@@ -2,6 +2,87 @@
 
 The [Romulus Upgrade Signal](https://explorer.cashmaney.com/proposals/13) passed on-chain, and this mandates a hard fork.
 
+This document describes the steps required to perform the Romulus Upgrade to go from the `enigma-1` to `secret-1` chain. The upgrade is 
+required for all full-node operators (both validators and non-validators).
+
+The CoS team will post the official modified genesis file, but you'll be able to validate it with a step below.
+
+The agreed upon block height for the Romulus Upgrade is *1,794,500*.
+
+NOTE: Full-nodes includes any Sentry nodes that are part of a validator's network architecture.
+
+- Preliminary
+- Risks
+- Recovery
+- Upgrade Procedure
+
+## Preliminary
+
+The significant changes in this upgrade are the following:
+
+- The _Secret Network_ re-branding.
+
+The `enigmacli/enigmad` commands change to `secretcli/secretd`.
+
+The `enigma1...` addresses change to `secret1...`. The addresses will go through a bech32 coverter supplied by the Enigma team to properly 
+change the addresses. You'll see not only the address prefix change, but also the entire address. Wallet keys will then be exported using the 
+`enigmacli` command and imported using `secretcli`. There may seem to be a bit of magic there, but it's been tested and works great!
+
+- Addition of a tokenswap module.
+
+This module has been added to allow the chain implementation of the _Burn ENG for SCRT!_ proposal: https://puzzle-staging.secretnodes.org/enigma/chains/enigma-1/governance/proposals/4
+
+## Risks
+
+To mitigate the risk of jailed/slashed validator addresses causing an issue when starting the new chain, CoS will run a script to modify the 
+genesis file to ensure the correct staked amounts. This script is being provided by a key contributor to the Secret Network.
+
+There is no risk of 'double-signing' unless you have two nodes running the same keys in parallel. Please ensure that is not the case for your nodes.
+
+We are using a modified fork of the cosmos-sdk to address issues with using a genesis file created via an `export`. There is a risk that an export 
+of the current chain state may reveal a new issue, not foreseen.
+
+If necessary, the network can be relaunched with the old chain `enigma-1`. For this reason do not delete the existing `.enigmad` and `.enigmcli` 
+directories. See the *Recovery* section below. 
+
+## Recovery
+
+In the event that something goes wrong and we need to revert back to the old chain, the following steps should be performed by all full-node 
+operators and validators.
+
+1. Stop the `secret-1` chain if running:
+
+```bash
+# may fail, but that's okay
+$ sudo systemctl stop secret-node
+```
+
+2. Re-start the `enigma-1` chain:
+
+```bash
+$ sudo systemctl enable enigma-node
+$ sudo systemctl start enigma-node
+```
+
+3. Remove `secretnetwork` package and directories:
+
+```bash
+$ rm -rf ~/.secretd
+$ rm -rf ~/.secretcli
+$ sudo dpkg -r secretnetwork
+```
+
+4. Monitor the enigma-node (once 2/3 of voting power is online, you'll see blocks streaming):
+
+```bash
+$ journalctl -u enigma-node -f
+```
+
+NOTE: you may have to put `sudo` in front of the `journalctl` command if you don't have permission to run it.
+
+
+## Upgrade Procedure
+
 ### 1. Export `genesis.json` for the new fork:
 
 ```bash
