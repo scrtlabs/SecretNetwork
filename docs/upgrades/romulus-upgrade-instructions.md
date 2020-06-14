@@ -107,7 +107,7 @@ Export the chain state:
 enigmad export --for-zero-height --height 1794500 > exported-enigma-state.json
 ```
 
-Inside `exported-enigma-state.json` Rename `chain_id` from `enigma-1` to `secret-1`:
+Inside `exported-enigma-state.json` rename _chain_id_ from `enigma-1` to `secret-1`:
 
 ```bash
 perl -i -pe 's/"enigma-1"/"secret-1"/' exported-enigma-state.json
@@ -215,17 +215,18 @@ Get the new `secret-1` genesis file (this will be provided by CoS after Step #2 
 wget -O https://github.com/chainofsecrets/TheRomulusUpgrade/blob/romulus-upgrade/secret-1-genesis.json
 ```
 
-Validate the genesis file (replace <sha256sum> with the checksum provided by CoS after Step #2 is completed):
+Validate the genesis file (replace "<sha256sum>" with the checksum provided by CoS after Step #2 is completed):
 
 
 ```bash
 echo "<sha256sum> secret-1-genesis.json" | sha256sum --check
 ```
 
-Initialize and configure `secretd`:
+Initialize and configure `secretd` (substitute "<moniker>" with the _moniker_ of your node on the old chain):
 
 ```bash
 secretd init <moniker> --chain-id secret-1
+
 cp ~/.enigmad/config/{app.toml,config.toml,addrbook.json} ~/.secretd/config
 cp ~/.enigmad/config/{priv_validator_key.json,node_key.json} ~/.secretd/config
 
