@@ -8,7 +8,7 @@ Secret Network secures the decentralized web
 
 This is the Romulus Upgrade for the Secret Network as specified in the mainnet _Romulus Upgrade Signal_ proposal.
 
-[Proposal 13](https://puzzle.report/enigma/chains/enigma-1/proposals/13)
+[Proposal 13](https://puzzle.report/enigma/chains/enigma-1/governance/proposals/13)
 
 
 ```bash
