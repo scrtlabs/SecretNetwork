@@ -41,7 +41,7 @@ Below is the version information for the Secret Network.
 }
 ```
 
-You can check that you hae the right release by doing:
+You can check that you have the right release by doing:
 
 ```bash
 secretcli version --long | jq .
@@ -49,8 +49,49 @@ secretcli version --long | jq .
 
 # Upgrade Instructions
 
-  [Romulus Upgrade instructions)](/docs/upgrades/romulus-upgrade-instructions.md)
+### The Romulus Upgrade is scheduled for June 17th, 2020, Wednesday at 5:00am PST, 8:00am EST, 12:00pm UTC
 
+## Summary
+
+Chain of Secrets (CoS) will lead the Romulus Upgrade and you can follow along in these Rocket Chat channels:
+
+	https://chat.scrt.network/channel/mainnet-validators
+	https://chat.scrt.network/channel/romulus-upgrade
+
+### Step 1 - Gracefully Halt the `enigma-1` Chain
+
+All validators will full nodes will be restarted with a flag to stop the chain at the block height of *1,794,500*. The agreed upon
+block height should be reached at approximately 7:30am PST, 10:30am EST, 2:30pm UTC. This step ensures that all nodes are stopped gracefully
+at the same block height.
+
+### Step 2 - Upgrade Genesis
+
+CoS will export the genesis state and modify the chain id from `enigma-1` to `secret-1`, and converting all addresses to the new `secret` format.
+
+The tokenswap parameters will be added to the exported genesis file.
+
+### Step 3 - Setup Secret Network Binaries
+
+All validators and those running full nodes will then install the `secretnetwork` release and perform configuration steps.
+
+### Step 4 - Setup the Node/Validator
+
+Initialize the node and import config files. Set the new genesis file and validate the checksum.
+
+### Step 5 - Start the new Secret Node! :tada:
+
+This is where the `secret-node` is enabled and started. Once 2/3 of online voting power comes online we'll be seeing blocks streaming.
+
+### Step 6 - Import Wallet Keys
+
+In this step the `enigmacli` keys are imported into `secretcli`.
+
+
+## Romulus Upgrade Instructions
+
+For detailed steps follow the [Romulus Upgrade instructions)](/docs/upgrades/romulus-upgrade-instructions.md).
+
+Wishing much success on the day of the upgrade!!
 
 
 # What is Secret Network?
