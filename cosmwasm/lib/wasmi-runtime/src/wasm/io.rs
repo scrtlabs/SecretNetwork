@@ -96,14 +96,16 @@ pub fn encrypt_output(
         // init of handle
         if let Value::Array(msgs) = &mut ok["messages"] {
             for msg in msgs {
-                if let Value::String(msg_to_next_call) = &mut msg["contract"]["msg"] {
-                    let packed_msg = SecretMessage {
-                        msg: msg_to_next_call.to_owned().into_bytes(),
+                if let Value::String(msg_to_next_call_base64) = &mut msg["contract"]["msg"] {
+                    let mut msg_to_pass = SecretMessage::from_base64(
+                        msg_to_next_call_base64.to_string(),
                         nonce,
                         user_public_key,
-                    }
-                    .to_slice();
-                    msg["contract"]["msg"] = encode(encrypt(&key, &packed_msg)?.as_slice());
+                    )?;
+
+                    msg_to_pass.encrypt_in_place()?;
+
+                    msg["contract"]["msg"] = encode(&msg_to_pass.to_slice());
                 }
             }
         }

@@ -114,7 +114,13 @@ pub fn handle(
 
     let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
 
+    info!("AAAAAAAAAA msg = {:?}", msg);
     let secret_msg = SecretMessage::from_slice(msg)?;
+
+    info!(
+        "(1) nonce after parse: nonce = {:?} pubkey = {:?}",
+        secret_msg.nonce, secret_msg.user_public_key
+    );
 
     let env_ptr = engine
         .write_to_memory(env)
@@ -132,6 +138,10 @@ pub fn handle(
         .extract_vector(vec_ptr)
         .map_err(wasmi_error_to_enclave_error)?;
 
+    info!(
+        "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",
+        secret_msg.nonce, secret_msg.user_public_key
+    );
     let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
 
     Ok(HandleSuccess {
