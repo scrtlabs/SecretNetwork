@@ -71,7 +71,7 @@ If all went well and the Secret Network is live and stable, the old `enigma-1` n
 
 ## Romulus Upgrade Instructions
 
-For detailed steps follow the [Romulus Upgrade instructions)](/docs/upgrades/romulus-upgrade-instructions.md).
+For detailed steps follow the [Romulus Upgrade instructions](/docs/upgrades/romulus-upgrade-instructions.md).
 
 Wishing everyone much success on the day of the upgrade!!
 
