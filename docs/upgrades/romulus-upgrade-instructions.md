@@ -119,7 +119,7 @@ Get bech32 converter and change all `enigma` addresses to `secret` adresses:
 wget https://github.com/enigmampc/bech32.enigma.co/releases/download/cli/bech32-convert
 chmod +x bech32-convert
 
-cat | ./bech32-convert > secret-1-genesis.json
+cat exported-enigma-state.json | ./bech32-convert > secret-1-genesis.json
 ```
 
 Use `jq` to make the `secret-1-genesis.json` more readable:
