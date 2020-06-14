@@ -15,6 +15,11 @@ pub enum HandleMsg {
         y: u8,
     },
     B {
+        contract_addr: HumanAddr,
+        x: u8,
+        y: u8,
+    },
+    C {
         x: u8,
         y: u8,
     },

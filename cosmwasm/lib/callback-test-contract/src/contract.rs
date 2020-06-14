@@ -28,7 +28,12 @@ pub fn handle<S: Storage, A: Api>(
             x,
             y,
         } => try_a(deps, env, contract_addr, x, y),
-        HandleMsg::B { x, y } => try_b(deps, env, x, y),
+        HandleMsg::B {
+            contract_addr,
+            x,
+            y,
+        } => try_b(deps, env, contract_addr, x, y),
+        HandleMsg::C { x, y } => try_c(deps, env, x, y),
     }
 }
 
@@ -41,11 +46,16 @@ pub fn try_a<S: Storage, A: Api>(
 ) -> Result<Response> {
     let res = Response {
         messages: vec![CosmosMsg::Contract {
-            contract_addr,
+            contract_addr: contract_addr.clone(),
             msg: Binary(
-                format!("{{\"b\":{{\"x\":{} ,\"y\": {} }}}}", x, y)
-                    .as_bytes()
-                    .to_vec(),
+                format!(
+                    "{{\"b\":{{\"x\":{} ,\"y\": {},\"contract_addr\": \"{}\" }}}}",
+                    x,
+                    y,
+                    contract_addr.as_str()
+                )
+                .as_bytes()
+                .to_vec(),
             ),
             send: None,
         }],
@@ -58,12 +68,35 @@ pub fn try_a<S: Storage, A: Api>(
 pub fn try_b<S: Storage, A: Api>(
     deps: &mut Extern<S, A>,
     env: Env,
+    contract_addr: HumanAddr,
+    x: u8,
+    y: u8,
+) -> Result<Response> {
+    let res = Response {
+        messages: vec![CosmosMsg::Contract {
+            contract_addr: contract_addr.clone(),
+            msg: Binary(
+                format!("{{\"c\":{{\"x\":{} ,\"y\": {} }}}}", x + 1, y + 1)
+                    .as_bytes()
+                    .to_vec(),
+            ),
+            send: None,
+        }],
+        log: vec![log("action", "papaya")],
+        data: Some(Binary(vec![x + y])),
+    };
+    Ok(res)
+}
+
+pub fn try_c<S: Storage, A: Api>(
+    deps: &mut Extern<S, A>,
+    env: Env,
     x: u8,
     y: u8,
 ) -> Result<Response> {
     let res = Response {
         messages: vec![],
-        log: vec![log("action", "papaya")],
+        log: vec![log("action", "watermelon")],
         data: Some(Binary(vec![x + y])),
     };
     Ok(res)
