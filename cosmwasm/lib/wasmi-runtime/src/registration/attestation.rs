@@ -60,7 +60,8 @@ pub fn create_attestation_certificate(
     // this is the ed25519 public key we want to encode
     let encoded_pubkey = base64::encode(&kp.get_pubkey());
 
-    let (key_der, cert_der) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)?;
+    let (key_der, cert_der) =
+        super::cert::gen_ecc_cert(encoded_pubkey, &prv_k, &pub_k, &ecc_handle)?;
     let _result = ecc_handle.close();
 
     Ok((key_der, cert_der))
