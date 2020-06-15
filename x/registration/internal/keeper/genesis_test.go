@@ -33,7 +33,7 @@ func TestInitGenesis(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert")
+	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
 	data := types.GenesisState{
@@ -51,7 +51,7 @@ func TestExportGenesis(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert")
+	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
 	data := types.GenesisState{

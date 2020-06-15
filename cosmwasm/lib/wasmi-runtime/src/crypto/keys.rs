@@ -36,6 +36,7 @@ pub struct AESKey {
 }
 
 impl AESKey {
+    #[allow(dead_code)]
     fn key_len() -> usize {
         return SYMMETRIC_KEY_SIZE;
     }
@@ -80,6 +81,7 @@ pub struct Seed {
 }
 
 impl Seed {
+    #[allow(dead_code)]
     fn key_len() -> usize {
         return SEED_KEY_SIZE;
     }

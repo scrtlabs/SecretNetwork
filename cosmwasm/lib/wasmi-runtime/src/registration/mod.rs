@@ -7,5 +7,6 @@ mod cert;
 mod hex;
 mod offchain;
 mod onchain;
+mod report;
 
 mod seed_exchange;

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # init the node
-rm -rf ~/.enigma*
+rm -rf ~/.enigma* || true
 enigmacli config chain-id enigma-testnet
 enigmacli config output json
 enigmacli config indent true

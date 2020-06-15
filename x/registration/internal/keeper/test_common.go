@@ -11,18 +11,18 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/keeper/mock"
+	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
-
-	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
 )
 
 func CreateTestSeedConfig(t *testing.T) []byte {
 
 	seed := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert")
+	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
 	cfg := types.SeedConfig{
@@ -65,7 +65,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, bootstrap boo
 	router := baseapp.NewRouter()
 
 	// Load default wasm config
-	keeper := NewKeeper(cdc, keyContract, router, MockEnclaveApi{}, tempDir, bootstrap)
+	keeper := NewKeeper(cdc, keyContract, router, mock.MockEnclaveApi{}, tempDir, bootstrap)
 
 	return ctx, keeper
 }

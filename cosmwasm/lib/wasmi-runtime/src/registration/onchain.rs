@@ -4,12 +4,12 @@
 use log::*;
 use sgx_types::sgx_status_t;
 
-use crate::consts::ENCRYPTED_SEED_SIZE;
-use crate::crypto::PUBLIC_KEY_SIZE;
-use crate::utils::{validate_const_ptr, validate_mut_ptr};
-
 use super::cert::verify_ra_cert;
 use super::seed_exchange::encrypt_seed;
+use crate::consts::ENCRYPTED_SEED_SIZE;
+use crate::crypto::PUBLIC_KEY_SIZE;
+use crate::storage::write_to_untrusted;
+use crate::utils::{validate_const_ptr, validate_mut_ptr};
 
 ///
 /// `ecall_authenticate_new_node`
@@ -43,6 +43,9 @@ pub extern "C" fn ecall_authenticate_new_node(
     let pk = match verify_ra_cert(cert_slice) {
         Err(e) => {
             error!("Error in validating certificate: {:?}", e);
+            if let Err(status) = write_to_untrusted(cert_slice, "failed_cert.der") {
+                return status;
+            }
             return e;
         }
         Ok(res) => res,
