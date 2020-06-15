@@ -135,7 +135,7 @@ export interface TxsResponse {
   readonly code?: number;
   readonly raw_log: string;
   data: any;
-  readonly logs?: object;
+  readonly logs?: Log[];
   readonly tx: CosmosSdkTx;
   /** The gas limit as set by the user */
   readonly gas_wanted?: string;
@@ -496,13 +496,11 @@ export class RestClient {
     return this.get("/register/master-cert");
   }
 
-  public async decryptDataField(dataField: any, nonce: Uint8Array): Promise<any> {
-    let wasmOutputs;
-    try {
-      wasmOutputs = JSON.parse(Encoding.fromUtf8(Encoding.fromHex(dataField)));
-    } catch (e) {
-      return dataField;
-    }
+  public async decryptDataField(
+    dataField: string,
+    nonce: Uint8Array,
+  ): Promise<{ log: Attribute[]; data: Uint8Array; messages: any[] }> {
+    const wasmOutputs = JSON.parse(Encoding.fromUtf8(Encoding.fromHex(dataField)));
 
     if (wasmOutputs.err) {
       throw new Error(wasmOutputs.err);
@@ -511,7 +509,21 @@ export class RestClient {
     // data
     const data = wasmOutputs.ok.data
       ? await this.enigmautils.decrypt(Encoding.fromBase64(wasmOutputs.ok.data), nonce)
-      : undefined;
+      : new Uint8Array();
+
+    for (let i = 0; i < wasmOutputs.ok.messages.length; i++) {
+      const m = wasmOutputs.ok.messages[i];
+      if (!m.contract) {
+        continue;
+      }
+
+      m.contract.msg = Encoding.fromUtf8(
+        await this.enigmautils.decrypt(Encoding.fromBase64(m.contract.msg).slice(64), nonce),
+      );
+      wasmOutputs.ok.messages[i] = m;
+    }
+
+    const messages = wasmOutputs.ok.messages;
 
     // logs
     const wasmEvents: Attribute[] = await Promise.all(
@@ -525,7 +537,7 @@ export class RestClient {
 
     // todo messages
 
-    return { log: wasmEvents, data: data };
+    return { log: wasmEvents, data: data, messages: messages };
   }
 
   public async decryptLogs(logs: readonly Log[], nonce: Uint8Array): Promise<readonly Log[]> {
@@ -580,6 +592,11 @@ export class RestClient {
 
         // decrypt output
         txsResponse.data = await this.decryptDataField(txsResponse.data, nonce);
+        let logs;
+        if (txsResponse.logs) {
+          logs = await this.decryptLogs(txsResponse.logs, nonce);
+          txsResponse = Object.assign({}, txsResponse, { logs: logs });
+        }
       }
     }
     return txsResponse;

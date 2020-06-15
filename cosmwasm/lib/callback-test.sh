@@ -91,3 +91,14 @@ REFLECT_TX_HASH=$(
 wait_for_tx "$REFLECT_TX_HASH" "Waiting for reflect to finish on-chain..."
 
 ./enigmacli q compute tx "$REFLECT_TX_HASH"
+
+# sleep infinity
+
+(   
+    cd ./cosmwasm-js
+    yarn
+    cd ./packages/sdk
+    yarn build
+)
+
+node ./cosmwasm/lib/callback-test.js
