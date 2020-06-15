@@ -21,7 +21,7 @@ func init() {
 }
 
 func TestNewKeeper(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
+	tempDir, err := ioutil.TempDir("", "reg")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 	_, regKeeper := CreateTestInput(t, false, tempDir, true)
@@ -29,7 +29,7 @@ func TestNewKeeper(t *testing.T) {
 }
 
 func TestNewKeeper_Node(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
+	tempDir, err := ioutil.TempDir("", "reg")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
@@ -51,7 +51,7 @@ func TestKeeper_RegisterationStore(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 	ctx, regKeeper := CreateTestInput(t, false, tempDir, true)
 
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert")
+	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
 	regInfo := types.RegistrationNodeInfo{
@@ -77,7 +77,7 @@ func TestKeeper_RegisterNode(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 	ctx, regKeeper := CreateTestInput(t, false, tempDir, true)
 
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert")
+	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
 	regInfo := types.RegistrationNodeInfo{

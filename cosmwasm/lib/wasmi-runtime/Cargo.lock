@@ -754,6 +754,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
 
 [[package]]
+name = "uuid"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fde2f6a4bea1d6e007c4ad38c6839fa71cbb63b6dbf5b595aa38dc9b1093c11"
+
+[[package]]
 name = "wasmi"
 version = "0.6.2"
 source = "git+https://github.com/paritytech/wasmi?rev=39a18a433a765a36383d34d4edd536ba1e0664d2#39a18a433a765a36383d34d4edd536ba1e0664d2"
@@ -799,6 +805,7 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "sha2",
+ "uuid",
  "wasmi",
  "webpki",
  "webpki-roots",

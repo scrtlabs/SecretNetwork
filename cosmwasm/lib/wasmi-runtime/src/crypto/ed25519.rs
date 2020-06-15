@@ -31,12 +31,12 @@ impl Ed25519PrivateKey {
         return &mut self.key.key.r as &mut [u8; SECRET_KEY_SIZE];
     }
 
-    pub fn new() -> Result<Self, CryptoError> {
-        let mut seed = Self::default();
-
-        rand_slice(seed.as_mut())?;
-        Ok(seed)
-    }
+    // pub fn new() -> Result<Self, CryptoError> {
+    //     let mut seed = Self::default();
+    //
+    //     rand_slice(seed.as_mut())?;
+    //     Ok(seed)
+    // }
 }
 
 impl ExportECKey for Ed25519PrivateKey {

@@ -13,7 +13,7 @@ import (
 
 func TestMsgRaAuthenticateRoute(t *testing.T) {
 	addr1 := sdk.AccAddress([]byte("from"))
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert")
+	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 	// coins := sdk.NewCoins(sdk.NewInt64Coin("atom", 10))
 	var msg = RaAuthenticate{
@@ -32,7 +32,7 @@ func TestMsgSendValidation(t *testing.T) {
 	addressTooShort := sdk.AccAddress([]byte("from"))
 	addr0 := sdk.AccAddress([]byte("qwlnmxj7prpx8rysxm2u"))
 
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert")
+	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
 	certBadSig, err := ioutil.ReadFile("../../testdata/attestation_cert_invalid")
@@ -76,7 +76,7 @@ func TestMsgSendValidation(t *testing.T) {
 func TestMsgSendGetSignBytes(t *testing.T) {
 	addr0 := sdk.AccAddress([]byte("qwlnmxj7prpx8rysxm2u"))
 
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert")
+	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
 	var msg = RaAuthenticate{
@@ -91,7 +91,7 @@ func TestMsgSendGetSignBytes(t *testing.T) {
 func TestMsgSendGetSigners(t *testing.T) {
 	addr0 := sdk.AccAddress([]byte("qwlnmxj7prpx8rysxm2u"))
 
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert")
+	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
 	var msg = RaAuthenticate{

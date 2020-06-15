@@ -38,6 +38,7 @@ func VerifyRaCert(rawCert []byte) ([]byte, error) {
 
 		return pk, nil
 	}
+
 	// Load Intel CA, Verify Cert and Signature
 	attnReportRaw, err := verifyCert(payload)
 	if err != nil {
@@ -45,7 +46,6 @@ func VerifyRaCert(rawCert []byte) ([]byte, error) {
 	}
 
 	// Verify attestation report
-
 	pubK, err = verifyAttReport(attnReportRaw, pubK)
 	if err != nil {
 		return nil, err
@@ -108,39 +108,26 @@ func unmarshalCert(rawbyte []byte) ([]byte, []byte, error) {
 
 func verifyCert(payload []byte) ([]byte, error) {
 	// Extract each field
-	plSplit := bytes.Split(payload, []byte{0x7C}) // '|'
 
-	if len(plSplit) < 3 {
-		err := errors.New("failed to parse certificate - malformed")
-		return nil, err
-	}
+	var signedReport EndorsedAttestationReport
 
-	attnReportRaw := plSplit[0]
-	sigRaw := plSplit[1]
-
-	var sig, sigCertDec []byte
-	sig, err := base64.StdEncoding.DecodeString(string(sigRaw))
+	err := json.Unmarshal(payload, &signedReport)
 	if err != nil {
 		return nil, err
 	}
 
-	sigCertRaw := plSplit[2]
-	sigCertDec, err = base64.StdEncoding.DecodeString(string(sigCertRaw))
-	if err != nil {
-		return nil, err
-	}
+	//cert, err := base64.StdEncoding.DecodeString(string(signedReport.SigningCert))
+	//if err != nil {
+	//	return nil, err
+	//}
 
-	certServer, err := x509.ParseCertificate(sigCertDec)
+	certServer, err := x509.ParseCertificate(signedReport.SigningCert)
 	if err != nil {
 		return nil, err
 	}
 
 	roots := x509.NewCertPool()
-	//cacert, err := readFile("./remote_attestation/Intel_SGX_Attestation_RootCA.pem")
-	//if err != nil {
-	//	log.Fatalln(err)
-	//	return nil, err
-	//}
+
 	ok := roots.AppendCertsFromPEM([]byte(rootIntelPEM))
 	if !ok {
 		panic("failed to parse root certificate")
@@ -152,18 +139,15 @@ func verifyCert(payload []byte) ([]byte, error) {
 
 	if _, err := certServer.Verify(opts); err != nil {
 		return nil, err
-	} else {
-		//fmt.Println("Cert is good")
 	}
 
 	// Verify the signature against the signing cert
-	err = certServer.CheckSignature(certServer.SignatureAlgorithm, attnReportRaw, sig)
+	err = certServer.CheckSignature(certServer.SignatureAlgorithm, signedReport.Report, signedReport.Signature)
 	if err != nil {
 		return nil, err
-	} else {
-		//fmt.Println("Signature good")
 	}
-	return attnReportRaw, nil
+
+	return signedReport.Report, nil
 }
 
 func verifyAttReport(attnReportRaw []byte, pubK []byte) ([]byte, error) {
