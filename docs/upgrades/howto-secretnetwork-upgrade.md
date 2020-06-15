@@ -1,6 +1,10 @@
-# HOWTO Rebranding
+# HOWTO Romulus Upgrade
 
-The [rebranding proposal](https://explorer.cashmaney.com/proposals/7) passed on-chain, and this mandates a hard fork.
+** These are notes provided by SecretNodes.org and other contributors that we used to test and develop the final upgrade instructions **
+
+* DO NOT use these instructions for the actual Romulus Upgrade procedure *
+
+The [rebranding proposal](https://explorer.cashmaney.com/proposals/13) passed on-chain, and this mandates a hard fork.
 
 The network needs to decide on a block number to fork from.
 Since most nodes use `--pruning syncable` configuration, the node prunes most of the blocks, so state should be exported from a height that is a multiple of 100 (e.g. 100, 500, 131400, ...).
