@@ -11,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
 	reg "github.com/enigmampc/EnigmaBlockchain/x/registration"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -82,7 +83,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string) (sdk.Context,
 	wasmConfig := wasmTypes.DefaultWasmConfig()
 
 	regKeeper := reg.NewKeeper(cdc, regParams, baseapp.NewRouter(), reg.EnclaveApi{}, tempDir, true)
-	reg.Keeper.
+	masterKey, err := api.InitBootstrap()
 
 	keeper := NewKeeper(cdc, keyContract, accountKeeper, bk, regKeeper, router, tempDir, wasmConfig)
 
