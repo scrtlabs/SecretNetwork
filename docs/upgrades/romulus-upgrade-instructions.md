@@ -80,13 +80,64 @@ NOTE: you may have to put `sudo` in front of the `journalctl` command if you don
 
 ### 1. Gracefully Halt the `enigma-1` Chain
 
+Stop the enigma-node service:
+
 ```bash
 sudo systemctl stop enigma-node
-enigmad start --halt-height 1794500 > enigmad.log &
-tail -f enigmad.log
 ```
 
-The chain will halt at block height _1794500_ at approximately 7:30am PST, 10:30am EDT and 2:30pm UTC. 
+Edit the service file (/etc/systemd/system/enigma-node.service) and add the `--halt-height` argument to stop the node at the specified block
+height:
+
+```bash
+sudo nano /etc/systemd/system/enigma-node.service
+```
+
+Change the `ExecStart` setting to:
+
+```bash
+ExecStart=/bin/enigmad start --halt-height 1794500
+```
+
+Change the `Restart` setting to:
+
+```bash
+Restart=no
+```
+
+Verify it looks the same as below and if so, save the changes to the service file:
+
+```bash
+[Unit]
+Description=Enigma node service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/bin/enigmad start --halt-height 1794500
+User=ubuntu
+Restart=no
+StartLimitInterval=0
+RestartSec=3
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Reload the service configuration:
+
+```bash
+sudo systemctl daemon-reload
+```
+
+Now start the `enigma-node` service and monitor:
+
+```bash
+sudo systemctl stat enigma-node
+```
+
+*The chain will halt at block height _1794500_ at approximately 7:30am PST, 10:30am EDT and 2:30pm UTC.*
 
 You may see dialing and connection errors as nodes are halted, which is expected. When the node is finally stopped, you'll see these messages:
 
@@ -269,6 +320,7 @@ secretcli keys import <key_name> key.export
 
 When the `secret-1` chain is live and stable, you can delete the files of the old `enigma-1` chain:
 
+- `sudo systemctl disable enigma-node`
 - `rm -rf ~/.enigmad`
 - `rm -rf ~/.enigmacli`
 - `sudo dpkg -r enigma-blockchain`
