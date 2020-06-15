@@ -7,6 +7,7 @@ package registration
 
 import (
 	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/keeper"
+	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/keeper/enclave"
 	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
 )
 
@@ -51,5 +52,5 @@ type (
 	GenesisState      = types.GenesisState
 	Keeper            = keeper.Keeper
 	SeedConfig        = types.SeedConfig
-	EnclaveApi        = keeper.EnclaveApi
+	EnclaveApi        = enclave.Api
 )
