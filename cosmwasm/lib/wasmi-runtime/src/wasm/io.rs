@@ -52,18 +52,6 @@ where
     Ok(encode(encrypted_data.as_slice()))
 }
 
-fn encrypt(key: &AESKey, val: &[u8]) -> Result<Vec<u8>, EnclaveError> {
-    let encrypted_data = key.encrypt_siv(val, &vec![&[]]).map_err(|err| {
-        error!(
-            "got an error while trying to encrypt output error {:?}: {}",
-            err, err
-        );
-        EnclaveError::EncryptionError
-    })?;
-
-    Ok(encrypted_data)
-}
-
 fn encode(data: &[u8]) -> Value {
     Value::String(base64::encode(data))
 }

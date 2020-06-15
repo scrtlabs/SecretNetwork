@@ -16,7 +16,7 @@ RUN tar -C /usr/local -xzf go1.14.2.linux-amd64.tar.gz
 
 WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/
 
-ARG SGX_MODE=SW
+ARG SGX_MODE=HW
 ENV SGX_MODE=${SGX_MODE}
 ENV MITIGATION_CVE_2020_0551=LOAD
 
@@ -65,7 +65,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 
-ARG SGX_MODE=SW
+ARG SGX_MODE=HW
 ENV SGX_MODE=${SGX_MODE}
 
 ARG SECRET_NODE_TYPE=BOOTSTRAP

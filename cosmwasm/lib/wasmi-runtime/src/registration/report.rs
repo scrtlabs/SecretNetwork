@@ -85,7 +85,10 @@ where
     deserializer.deserialize_str(Base64Visitor)
 }
 
+#[cfg(feature = "SGX_MODE_HW")]
 type SignatureAlgorithms = &'static [&'static webpki::SignatureAlgorithm];
+
+#[cfg(feature = "SGX_MODE_HW")]
 static SUPPORTED_SIG_ALGS: SignatureAlgorithms = &[
     &webpki::ECDSA_P256_SHA256,
     &webpki::ECDSA_P256_SHA384,
@@ -225,6 +228,7 @@ impl SgxEnclaveReport {
 
 /// SGX Quote structure version
 #[derive(Debug, PartialEq)]
+#[allow(dead_code)]
 pub enum SgxQuoteVersion {
     /// EPID quote version
     V1(SgxEpidQuoteSigType),
@@ -236,6 +240,7 @@ pub enum SgxQuoteVersion {
 
 /// Intel EPID attestation signature type
 #[derive(Debug, PartialEq)]
+#[allow(dead_code)]
 pub enum SgxEpidQuoteSigType {
     Unlinkable,
     Linkable,
@@ -393,6 +398,8 @@ impl std::fmt::Debug for SgxQuote {
 
 impl SgxQuote {
     /// Parse from bytes to `SgxQuote`.
+    // just unused in SW mode
+    #[allow(dead_code)]
     fn parse_from<'a>(bytes: &'a [u8]) -> Result<Self, Error> {
         let mut pos: usize = 0;
         let mut take = |n: usize| -> Result<&'a [u8], Error> {
@@ -527,6 +534,8 @@ impl AttestationReport {
     /// Construct a AttestationReport from a X509 certificate and verify
     /// attestation report with the report_ca_cert which is from the attestation
     /// service provider.
+    // just unused in SW mode
+    #[allow(dead_code)]
     pub fn from_cert(cert: &[u8]) -> Result<Self, Error> {
         // Before we reach here, Webpki already verifed the cert is properly signed.
 
