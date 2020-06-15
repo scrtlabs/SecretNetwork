@@ -58,7 +58,7 @@ func GzipIt(input []byte) ([]byte, error) {
 type WASMContext struct {
 	CLIContext       context.CLIContext
 	TestKeyPairPath  string
-	TestMasterIOCert *regtypes.MasterCertificate
+	TestMasterIOCert regtypes.MasterCertificate
 }
 
 type keyPair struct {
@@ -130,7 +130,7 @@ var hkdfSalt = []byte{
 func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
 	var certs regtypes.GenesisState
 	if ctx.TestMasterIOCert != nil { // TODO check length?
-		certs.IoMasterCertificate = *ctx.TestMasterIOCert
+		certs.IoMasterCertificate = ctx.TestMasterIOCert
 	} else {
 		res, _, err := ctx.CLIContext.Query("custom/register/master-cert")
 		if err != nil {

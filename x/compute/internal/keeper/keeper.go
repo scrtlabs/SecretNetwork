@@ -16,7 +16,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	wasm "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm"
 	wasmTypes "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
-	reg "github.com/enigmampc/EnigmaBlockchain/x/registration"
 	"github.com/tendermint/tendermint/crypto"
 
 	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
@@ -37,7 +36,6 @@ type Keeper struct {
 	cdc           *codec.Codec
 	accountKeeper auth.AccountKeeper
 	bankKeeper    bank.Keeper
-	regKeeper     reg.Keeper
 
 	router sdk.Router
 
@@ -47,7 +45,7 @@ type Keeper struct {
 }
 
 // NewKeeper creates a new contract Keeper instance
-func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.AccountKeeper, bankKeeper bank.Keeper, regKeeper reg.Keeper,
+func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.AccountKeeper, bankKeeper bank.Keeper,
 	router sdk.Router, homeDir string, wasmConfig types.WasmConfig) Keeper {
 	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), wasmConfig.CacheSize)
 	if err != nil {
@@ -60,7 +58,6 @@ func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.Accou
 		wasmer:        *wasmer,
 		accountKeeper: accountKeeper,
 		bankKeeper:    bankKeeper,
-		regKeeper:     regKeeper,
 		router:        router,
 		queryGasLimit: wasmConfig.SmartQueryGasLimit,
 	}

@@ -19,7 +19,6 @@ import (
 	"github.com/tendermint/tendermint/crypto/ed25519"
 
 	wasmUtils "github.com/enigmampc/EnigmaBlockchain/x/compute/client/utils"
-	regtypes "github.com/enigmampc/EnigmaBlockchain/x/registration"
 )
 
 func init() {
@@ -34,7 +33,7 @@ func TestNewKeeper(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	_, _, keeper := CreateTestInput(t, false, tempDir)
+	_, _, keeper, _ := CreateTestInput(t, false, tempDir)
 	require.NotNil(t, keeper)
 }
 
@@ -42,7 +41,7 @@ func TestCreate(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	ctx, accKeeper, keeper, _ := CreateTestInput(t, false, tempDir)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
@@ -63,7 +62,7 @@ func TestCreateWithSimulation(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	ctx, accKeeper, keeper, _ := CreateTestInput(t, false, tempDir)
 	ctx = ctx.WithBlockHeader(abci.Header{Height: 1}).
 		WithGasMeter(stypes.NewInfiniteGasMeter())
 
@@ -110,7 +109,7 @@ func TestCreateWithGzippedPayload(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	ctx, accKeeper, keeper, _ := CreateTestInput(t, false, tempDir)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
@@ -133,7 +132,7 @@ func TestInstantiate(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	ctx, accKeeper, keeper, ioCert := CreateTestInput(t, false, tempDir)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
@@ -156,7 +155,7 @@ func TestInstantiate(t *testing.T) {
 
 	wasmCtx := wasmUtils.WASMContext{
 		TestKeyPairPath:  "/tmp",
-		TestMasterIOCert: keeper.regKeeper.GetMasterCertificate(ctx, regtypes.QueryMasterCertificate),
+		TestMasterIOCert: ioCert,
 	}
 	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
 	require.NoError(t, err)
@@ -184,7 +183,7 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	ctx, accKeeper, keeper, _ := CreateTestInput(t, false, tempDir)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
@@ -205,7 +204,7 @@ func TestExecuteWithNonExistingAddress(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	ctx, accKeeper, keeper, _ := CreateTestInput(t, false, tempDir)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	creator := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
@@ -220,7 +219,7 @@ func TestExecuteWithPanic(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	ctx, accKeeper, keeper, _ := CreateTestInput(t, false, tempDir)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
@@ -253,7 +252,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	ctx, accKeeper, keeper, _ := CreateTestInput(t, false, tempDir)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
@@ -297,7 +296,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	ctx, accKeeper, keeper, _ := CreateTestInput(t, false, tempDir)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
