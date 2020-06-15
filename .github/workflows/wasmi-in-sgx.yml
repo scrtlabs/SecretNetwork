@@ -3,6 +3,13 @@ name: Tests
 on: [push]
 
 jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/audit-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
   test:
     runs-on: ubuntu-latest
 
@@ -42,7 +49,7 @@ jobs:
       - name: Clippy
         run: |
           cd cosmwasm/lib/wasmi-runtime/
-          SGX_MODE=HW make clippy
+          SGX_MODE=SW make clippy
       - name: Build
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
