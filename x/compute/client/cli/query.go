@@ -298,7 +298,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			nonce := encryptedInput[0:32]
 			originalTxSenderPubkey := encryptedInput[32:64]
 
-			wasmCliCtx := wasmUtils.WASMCLIContext{CLIContext: cliCtx}
+			wasmCliCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
 			_, myPubkey, err := wasmCliCtx.GetTxSenderKeyPair()
 			if err != nil {
 				return err
@@ -447,7 +447,7 @@ func GetCmdGetContractStateSmart(cdc *codec.Codec) *cobra.Command {
 				return fmt.Errorf("decode query: %s", err)
 			}
 
-			wasmCliCtx := wasmUtils.WASMCLIContext{CLIContext: cliCtx}
+			wasmCliCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
 
 			queryData, err = wasmCliCtx.Encrypt(queryData)
 			if err != nil {

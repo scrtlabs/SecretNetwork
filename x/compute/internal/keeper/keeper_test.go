@@ -17,6 +17,9 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
+
+	wasmUtils "github.com/enigmampc/EnigmaBlockchain/x/compute/client/utils"
+	regtypes "github.com/enigmampc/EnigmaBlockchain/x/registration"
 )
 
 func init() {
@@ -149,6 +152,13 @@ func TestInstantiate(t *testing.T) {
 		Beneficiary: bob,
 	}
 	initMsgBz, err := json.Marshal(initMsg)
+	require.NoError(t, err)
+
+	wasmCtx := wasmUtils.WASMContext{
+		TestKeyPairPath:  "/tmp",
+		TestMasterIOCert: keeper.regKeeper.GetMasterCertificate(ctx, regtypes.QueryMasterCertificate),
+	}
+	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
 	require.NoError(t, err)
 
 	gasBefore := ctx.GasMeter().GasConsumed()
