@@ -3,7 +3,7 @@ use super::keys::DhKey;
 use super::traits::{AlignedMemory, ExportECKey, EC_256_PRIVATE_KEY_SIZE};
 use sgx_types::sgx_align_ec256_private_t;
 
-use x25519_dalek;
+// use x25519_dalek;
 
 use enclave_ffi_types::CryptoError;
 
@@ -24,11 +24,11 @@ pub struct Ed25519PrivateKey {
 
 impl Ed25519PrivateKey {
     pub fn to_owned(&self) -> AlignedEc256PrivateKey {
-        return self.key.clone();
+        self.key
     }
 
     pub fn as_mut(&mut self) -> &mut [u8; SECRET_KEY_SIZE] {
-        return &mut self.key.key.r as &mut [u8; SECRET_KEY_SIZE];
+        &mut self.key.key.r as &mut [u8; SECRET_KEY_SIZE]
     }
 
     // pub fn new() -> Result<Self, CryptoError> {
@@ -41,7 +41,7 @@ impl Ed25519PrivateKey {
 
 impl ExportECKey for Ed25519PrivateKey {
     fn key_ref(&self) -> &[u8; EC_256_PRIVATE_KEY_SIZE] {
-        return &self.key.key.r as &[u8; EC_256_PRIVATE_KEY_SIZE];
+        &self.key.key.r as &[u8; EC_256_PRIVATE_KEY_SIZE]
     }
 }
 
@@ -59,19 +59,19 @@ impl KeyPair {
         let sk = x25519_dalek::StaticSecret::from(secret_key.to_owned().key.r as [u8; 32]);
         let pk = x25519_dalek::PublicKey::from(&sk);
 
-        return Ok(Self {
+        Ok(Self {
             secret_key,
-            public_key: pk.as_bytes().clone(),
-        });
+            public_key: *pk.as_bytes(),
+        })
     }
 
     pub fn diffie_hellman(&self, your_public: &[u8; SECRET_KEY_SIZE]) -> DhKey {
         let my_secret =
             x25519_dalek::StaticSecret::from(self.secret_key.to_owned().key.r as [u8; 32]);
-        let pk = x25519_dalek::PublicKey::from(your_public.clone());
+        let pk = x25519_dalek::PublicKey::from(*your_public);
         let ss = my_secret.diffie_hellman(&pk);
 
-        ss.as_bytes().clone()
+        *ss.as_bytes()
     }
     pub fn get_privkey(&self) -> &[u8; SECRET_KEY_SIZE] {
         self.secret_key.key_ref()
@@ -79,7 +79,7 @@ impl KeyPair {
 
     // This will return the raw 64 bytes public key.
     pub fn get_pubkey(&self) -> [u8; PUBLIC_KEY_SIZE] {
-        self.public_key.clone()
+        self.public_key
     }
 }
 
@@ -96,7 +96,7 @@ impl<T: AlignedMemory + ExportECKey> From<T> for KeyPair {
         let pk = x25519_dalek::PublicKey::from(&my_secret);
         Self {
             secret_key,
-            public_key: pk.as_bytes().clone(),
+            public_key: *pk.as_bytes(),
         }
     }
 }

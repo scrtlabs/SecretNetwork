@@ -39,6 +39,10 @@ jobs:
           wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
           tar xf ./sccache-*.tar.gz
           mv ./sccache*/sccache "$HOME/sccache"
+      - name: Clippy
+        run: |
+          cd cosmwasm/lib/wasmi-runtime/
+          SGX_MODE=HW make clippy
       - name: Build
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"

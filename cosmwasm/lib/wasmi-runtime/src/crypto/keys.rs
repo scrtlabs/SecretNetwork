@@ -38,15 +38,15 @@ pub struct AESKey {
 impl AESKey {
     #[allow(dead_code)]
     fn key_len() -> usize {
-        return SYMMETRIC_KEY_SIZE;
+        SYMMETRIC_KEY_SIZE
     }
 
     pub fn get(&self) -> &[u8; SYMMETRIC_KEY_SIZE] {
-        return &self.key.key.r as &[u8; 32];
+        &self.key.key.r as &[u8; 32]
     }
 
     pub fn as_mut(&mut self) -> &mut [u8; 32] {
-        return &mut self.key.key.r as &mut [u8; 32];
+        &mut self.key.key.r as &mut [u8; 32]
     }
 
     pub fn new_from_slice(privkey: &[u8; SYMMETRIC_KEY_SIZE]) -> Self {
@@ -61,7 +61,7 @@ impl AESKey {
 impl AlignedMemory for AESKey {}
 impl ExportECKey for AESKey {
     fn key_ref(&self) -> &[u8; EC_256_PRIVATE_KEY_SIZE] {
-        return self.get();
+        self.get()
     }
 }
 
@@ -83,15 +83,15 @@ pub struct Seed {
 impl Seed {
     #[allow(dead_code)]
     fn key_len() -> usize {
-        return SEED_KEY_SIZE;
+        SEED_KEY_SIZE
     }
 
     pub fn as_slice(&self) -> &[u8; SEED_KEY_SIZE] {
-        return &self.key.key.r as &[u8; SEED_KEY_SIZE];
+        &self.key.key.r as &[u8; SEED_KEY_SIZE]
     }
 
     pub fn as_mut(&mut self) -> &mut [u8; SEED_KEY_SIZE] {
-        return &mut self.key.key.r as &mut [u8; SEED_KEY_SIZE];
+        &mut self.key.key.r as &mut [u8; SEED_KEY_SIZE]
     }
 
     pub fn new() -> Result<Self, CryptoError> {

@@ -8,7 +8,7 @@ use crate::crypto::{AESKey, Ed25519PublicKey, Kdf, SIVEncryptable, KEY_MANAGER};
 use enclave_ffi_types::EnclaveError;
 use log::*;
 use serde::Serialize;
-use serde_json;
+// use serde_json;
 use serde_json::Value;
 
 pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) -> AESKey {
@@ -39,15 +39,13 @@ where
     // instead of removing the extra quotes like this
     let trimmed = serialized.trim_start_matches('"').trim_end_matches('"');
 
-    let encrypted_data = key
-        .encrypt_siv(trimmed.as_bytes(), &vec![&[]])
-        .map_err(|err| {
-            error!(
-                "got an error while trying to encrypt output error {:?}: {}",
-                err, err
-            );
-            EnclaveError::EncryptionError
-        })?;
+    let encrypted_data = key.encrypt_siv(trimmed.as_bytes(), None).map_err(|err| {
+        error!(
+            "got an error while trying to encrypt output error {:?}: {}",
+            err, err
+        );
+        EnclaveError::EncryptionError
+    })?;
 
     Ok(encode(encrypted_data.as_slice()))
 }
@@ -84,12 +82,9 @@ pub fn encrypt_output(
         // init of handle
         if let Value::Array(msgs) = &mut ok["messages"] {
             for msg in msgs {
-                if let Value::String(msg_to_next_call_base64) = &mut msg["contract"]["msg"] {
-                    let mut msg_to_pass = SecretMessage::from_base64(
-                        msg_to_next_call_base64.to_string(),
-                        nonce,
-                        user_public_key,
-                    )?;
+                if let Value::String(msg_b64) = &mut msg["contract"]["msg"] {
+                    let mut msg_to_pass =
+                        SecretMessage::from_base64((*msg_b64).to_string(), nonce, user_public_key)?;
 
                     msg_to_pass.encrypt_in_place()?;
 

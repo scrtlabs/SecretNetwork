@@ -16,7 +16,9 @@ pub struct EnclaveBuffer {
 }
 
 impl EnclaveBuffer {
-    pub unsafe fn clone(&self) -> EnclaveBuffer {
+    /// # Safety
+    /// Very unsafe. Much careful
+    pub unsafe fn unsafe_clone(&self) -> EnclaveBuffer {
         EnclaveBuffer { ptr: self.ptr }
     }
 }
@@ -65,7 +67,9 @@ pub struct Ctx {
 }
 
 impl Ctx {
-    pub unsafe fn clone(&self) -> Ctx {
+    /// # Safety
+    /// Very unsafe. Much careful
+    pub unsafe fn unsafe_clone(&self) -> Ctx {
         Ctx { data: self.data }
     }
 }
@@ -102,6 +106,7 @@ pub enum EnclaveError {
     DecryptionError,
     /// Unexpected Error happened, no more details available
     Unknown,
+    Panic,
 }
 
 #[repr(C)]

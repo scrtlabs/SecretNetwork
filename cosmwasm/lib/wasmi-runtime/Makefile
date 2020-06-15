@@ -117,6 +117,9 @@ $(Enclave_EDL_Products): Enclave.edl
 check:
 	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS="-Z force-unstable-if-unmarked" xargo check --features "SGX_MODE_$(SGX_MODE)" --target x86_64-unknown-linux-sgx
 
+clippy:
+	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS="-Z force-unstable-if-unmarked -D warnings" xargo clippy --features "SGX_MODE_$(SGX_MODE)" --target x86_64-unknown-linux-sgx
+
 clean:
 	rm -rf $(CUSTOM_LIBRARY_PATH) $(Enclave_EDL_Products) *.o *.so
 	xargo clean

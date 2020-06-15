@@ -1,21 +1,25 @@
 #![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
 
-use super::hex;
-#[cfg(feature = "SGX_MODE_HW")]
-use crate::consts::{API_KEY_FILE, SPID_FILE};
-use crate::crypto::KeyPair;
-#[cfg(feature = "SGX_MODE_HW")]
-use crate::imports::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote};
-use crate::registration::report::EndorsedAttestationReport;
 #[cfg(feature = "SGX_MODE_HW")]
 use itertools::Itertools;
 use log::*;
 #[cfg(feature = "SGX_MODE_HW")]
-use sgx_rand::*;
-use sgx_tcrypto::*;
+use sgx_rand::{os, Rng};
+use sgx_tcrypto::{rsgx_sha256_slice, SgxEccHandle};
 #[cfg(feature = "SGX_MODE_HW")]
-use sgx_tse::*;
-use sgx_types::*;
+use sgx_tse::{rsgx_create_report, rsgx_verify_report};
+
+#[cfg(not(feature = "SGX_MODE_HW"))]
+use sgx_types::{sgx_create_report, SgxResult};
+
+use sgx_types::{
+    c_int, sgx_quote_sign_type_t, sgx_report_data_t, sgx_report_t, sgx_spid_t, sgx_status_t,
+    sgx_target_info_t,
+};
+
+#[cfg(feature = "SGX_MODE_HW")]
+use sgx_types::{sgx_epid_group_id_t, sgx_quote_nonce_t};
+
 use std::io::Read;
 #[cfg(feature = "SGX_MODE_HW")]
 use std::io::Write;
@@ -30,7 +34,16 @@ use std::sync::Arc;
 use std::untrusted::fs;
 use std::vec::Vec;
 
-pub const DEV_HOSTNAME: &'static str = "api.trustedservices.intel.com";
+#[cfg(feature = "SGX_MODE_HW")]
+use crate::consts::{API_KEY_FILE, SPID_FILE};
+use crate::crypto::KeyPair;
+#[cfg(feature = "SGX_MODE_HW")]
+use crate::imports::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote};
+use crate::registration::report::EndorsedAttestationReport;
+
+use super::hex;
+
+pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
 
 #[cfg(feature = "production")]
 pub const SIGRL_SUFFIX: &str = "/sgx/attestation/v4/sigrl/";
@@ -171,7 +184,7 @@ pub fn create_attestation_report(
         return Err(rt);
     }
 
-    let eg_num = as_u32_le(&eg);
+    let eg_num = as_u32_le(eg);
 
     // (1.5) get sigrl
     let mut ias_sock: i32 = 0;
@@ -240,7 +253,7 @@ pub fn create_attestation_report(
     //       7. [out]p_qe_report need further check
     //       8. [out]p_quote
     //       9. quote_size
-    let (p_sigrl, sigrl_len) = if sigrl_vec.len() == 0 {
+    let (p_sigrl, sigrl_len) = if sigrl_vec.is_empty() {
         (ptr::null(), 0)
     } else {
         (sigrl_vec.as_ptr(), sigrl_vec.len() as u32)
@@ -563,8 +576,8 @@ pub fn get_report_from_intel(fd: c_int, quote: Vec<u8>) -> (String, Vec<u8>, Vec
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-fn as_u32_le(array: &[u8; 4]) -> u32 {
-    ((array[0] as u32) << 0)
+fn as_u32_le(array: [u8; 4]) -> u32 {
+    (array[0] as u32)
         + ((array[1] as u32) << 8)
         + ((array[2] as u32) << 16)
         + ((array[3] as u32) << 24)
@@ -594,12 +607,11 @@ fn get_ias_api_key() -> String {
 
 #[cfg(feature = "test")]
 pub mod tests {
-
-    use super::{create_attestation_certificate, get_ias_api_key, load_spid};
     use crate::crypto::KeyPair;
     use crate::registration::cert::verify_ra_cert;
 
     use super::sgx_quote_sign_type_t;
+    use super::{create_attestation_certificate, get_ias_api_key, load_spid};
 
     // todo: replace public key with real value
     fn test_create_attestation_certificate() {

@@ -15,9 +15,9 @@ use cosmwasm::encoding::Binary;
 use cosmwasm::types::{CanonicalAddr, HumanAddr};
 
 /// An unknown error occurred when writing to region
-static ERROR_WRITE_TO_REGION_UNKNONW: i32 = -1000001;
+static ERROR_WRITE_TO_REGION_UNKNONW: i32 = -1_000_001;
 /// Could not write to region because it is too small
-static ERROR_WRITE_TO_REGION_TOO_SMALL: i32 = -1000002;
+static ERROR_WRITE_TO_REGION_TOO_SMALL: i32 = -1_000_002;
 
 pub fn do_read<T: Storage>(ctx: &Ctx, key_ptr: u32, value_ptr: u32) -> i32 {
     let key = read_region(ctx, key_ptr);

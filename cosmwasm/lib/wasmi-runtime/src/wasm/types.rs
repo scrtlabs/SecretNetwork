@@ -19,7 +19,7 @@ impl SecretMessage {
     pub fn encrypt_in_place(&mut self) -> Result<(), EnclaveError> {
         self.msg = self
             .encryption_key()
-            .encrypt_siv(self.msg.as_slice(), &vec![&[]])
+            .encrypt_siv(self.msg.as_slice(), None)
             .map_err(|err| {
                 error!("got an error while trying to encrypt the msg: {}", err);
                 EnclaveError::EncryptionError
@@ -32,12 +32,10 @@ impl SecretMessage {
         let key = self.encryption_key();
 
         // pass
-        let msg = key
-            .decrypt_siv(self.msg.as_slice(), &vec![&[]])
-            .map_err(|err| {
-                error!("got an error while trying to decrypt the msg: {}", err);
-                EnclaveError::DecryptionError
-            })?;
+        let msg = key.decrypt_siv(self.msg.as_slice(), None).map_err(|err| {
+            error!("got an error while trying to decrypt the msg: {}", err);
+            EnclaveError::DecryptionError
+        })?;
 
         Ok(msg)
     }
@@ -60,7 +58,7 @@ impl SecretMessage {
         })?;
 
         Ok(SecretMessage {
-            msg: msg,
+            msg,
             nonce,
             user_public_key,
         })

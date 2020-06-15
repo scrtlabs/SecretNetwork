@@ -3,25 +3,21 @@
 //
 // This product includes software developed at
 // The Apache Software Foundation (http://www.apache.org/).
-
 //! Types that contain information about attestation report.
 //! The implementation is based on Attestation Service API version 4.
 //! https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf
 
-use super::cert::{get_ias_auth_config, get_netscape_comment};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
-use std::prelude::v1::*;
-
 use log::*;
-use std::convert::TryFrom;
-use std::time::*;
-
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
-
 use std::array::TryFromSliceError;
+use std::convert::TryFrom;
+// use std::prelude::v1::*;
+use std::time::SystemTime;
 use std::untrusted::time::SystemTimeEx;
 use uuid::Uuid;
+
+use super::cert::{get_ias_auth_config, get_netscape_comment};
 
 pub enum Error {
     ReportParseError,
@@ -55,7 +51,7 @@ pub struct EndorsedAttestationReport {
     pub signing_cert: Vec<u8>,
 }
 
-fn as_base64<S>(key: &Vec<u8>, serializer: S) -> Result<S::Ok, S::Error>
+fn as_base64<S>(key: &[u8], serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
@@ -85,10 +81,7 @@ where
     deserializer.deserialize_str(Base64Visitor)
 }
 
-#[cfg(feature = "SGX_MODE_HW")]
 type SignatureAlgorithms = &'static [&'static webpki::SignatureAlgorithm];
-
-#[cfg(feature = "SGX_MODE_HW")]
 static SUPPORTED_SIG_ALGS: SignatureAlgorithms = &[
     &webpki::ECDSA_P256_SHA256,
     &webpki::ECDSA_P256_SHA384,
@@ -161,7 +154,7 @@ impl SgxEnclaveReport {
                 Ok(ret)
             } else {
                 error!("Enclave report parsing error - bad report size");
-                return Err(Error::ReportParseError);
+                Err(Error::ReportParseError)
             }
         };
 
@@ -409,7 +402,7 @@ impl SgxQuote {
                 Ok(ret)
             } else {
                 error!("Quote parsing error.");
-                return Err(Error::ReportParseError);
+                Err(Error::ReportParseError)
             }
         };
 
@@ -659,10 +652,11 @@ impl AttestationReport {
 
 #[cfg(feature = "test")]
 pub mod tests {
-    use super::*;
     use serde_json::json;
     use std::io::Read;
     use std::untrusted::fs::File;
+
+    use super::*;
 
     fn tls_ra_cert_der_v3() -> Vec<u8> {
         let mut cert = vec![];

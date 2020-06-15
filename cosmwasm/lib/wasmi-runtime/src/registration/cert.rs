@@ -1,33 +1,37 @@
 #![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
 
+#[cfg(not(feature = "SGX_MODE_HW"))]
 use base64;
+
 use bit_vec::BitVec;
-// #[cfg(feature = "SGX_MODE_HW")]
-// use chrono::prelude::*;
-use chrono::Duration;
-use chrono::TimeZone;
 use chrono::Utc as TzUtc;
+use chrono::{Duration, TimeZone};
 #[cfg(feature = "SGX_MODE_HW")]
 use itertools::Itertools;
 #[cfg(feature = "SGX_MODE_HW")]
 use log::*;
 use num_bigint::BigUint;
+
+#[cfg(not(feature = "SGX_MODE_HW"))]
 use rustls;
-use sgx_tcrypto::*;
-use sgx_types::*;
+
+use sgx_tcrypto::SgxEccHandle;
+use sgx_types::{
+    sgx_ec256_private_t, sgx_ec256_public_t, sgx_platform_info_t, sgx_status_t,
+    sgx_update_info_bit_t, SgxResult,
+};
 use std::io::BufReader;
 use std::str;
-use std::time::*;
+use std::time::{SystemTime, UNIX_EPOCH};
 use std::untrusted::time::SystemTimeEx;
-
-use super::report::{AttestationReport, SgxQuoteStatus};
-
 use yasna::models::ObjectIdentifier;
 
 use crate::consts::CERTEXPIRYDAYS;
-
 #[cfg(feature = "SGX_MODE_HW")]
 use crate::consts::{SigningMethod, SIGNING_METHOD};
+
+#[cfg(feature = "SGX_MODE_HW")]
+use super::report::{AttestationReport, SgxQuoteStatus};
 
 extern "C" {
     #[allow(dead_code)]
@@ -44,8 +48,8 @@ pub const IAS_REPORT_CA: &[u8] = include_bytes!("../../Intel_SGX_Attestation_Roo
 // todo: replace this with MRSIGNER/MRENCLAVE
 pub const ENCLAVE_SIGNATURE: &[u8] = include_bytes!("../../Intel_SGX_Attestation_RootCA.pem");
 
-const ISSUER: &str = "EnigmaTEE";
-const SUBJECT: &str = "EnigmaChain Node Certificate";
+const ISSUER: &str = "SecretTEE";
+const SUBJECT: &str = "Secret Network Node Certificate";
 
 pub enum Error {
     GenericError,
@@ -56,12 +60,12 @@ pub fn gen_ecc_cert(
     prv_k: &sgx_ec256_private_t,
     pub_k: &sgx_ec256_public_t,
     ecc_handle: &SgxEccHandle,
-) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+) -> SgxResult<(Vec<u8>, Vec<u8>)> {
     // Generate public key bytes since both DER will use it
     let mut pub_key_bytes: Vec<u8> = vec![4];
-    let mut pk_gx = pub_k.gx.clone();
+    let mut pk_gx = pub_k.gx;
     pk_gx.reverse();
-    let mut pk_gy = pub_k.gy.clone();
+    let mut pk_gy = pub_k.gy;
     pk_gy.reverse();
     pub_key_bytes.extend_from_slice(&pk_gx);
     pub_key_bytes.extend_from_slice(&pk_gy);
@@ -143,7 +147,7 @@ pub fn gen_ecc_cert(
                         writer.write_sequence(|writer| {
                             writer.next().write_sequence(|writer| {
                                 writer.next().write_oid(&ObjectIdentifier::from_slice(&[
-                                    2, 16, 840, 1, 113730, 1, 13,
+                                    2, 16, 840, 1, 113_730, 1, 13,
                                 ]));
                                 writer.next().write_bytes(&payload.into_bytes());
                             });
@@ -163,9 +167,9 @@ pub fn gen_ecc_cert(
             };
             let sig_der = yasna::construct_der(|writer| {
                 writer.write_sequence(|writer| {
-                    let mut sig_x = sig.x.clone();
+                    let mut sig_x = sig.x;
                     sig_x.reverse();
-                    let mut sig_y = sig.y.clone();
+                    let mut sig_y = sig.y;
                     sig_y.reverse();
                     writer.next().write_biguint(&BigUint::from_slice(&sig_x));
                     writer.next().write_biguint(&BigUint::from_slice(&sig_y));
@@ -190,7 +194,7 @@ pub fn gen_ecc_cert(
             let inner_key_der = yasna::construct_der(|writer| {
                 writer.write_sequence(|writer| {
                     writer.next().write_u8(1);
-                    let mut prv_k_r = prv_k.r.clone();
+                    let mut prv_k_r = prv_k.r;
                     prv_k_r.reverse();
                     writer.next().write_bytes(&prv_k_r);
                     writer
@@ -316,7 +320,7 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
         SigningMethod::MRENCLAVE => {
             // todo: fill this in some time
             debug!("Validating using MRENCLAVE");
-            if &report.sgx_quote_body.isv_enclave_report.mr_enclave != ENCLAVE_SIGNATURE {
+            if report.sgx_quote_body.isv_enclave_report.mr_enclave != ENCLAVE_SIGNATURE {
                 error!("Remote node signature MRENCLAVE is different from expected");
                 debug!(
                     "sgx quote mr_enclave = {:02x}",
@@ -333,7 +337,7 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
         SigningMethod::MRSIGNER => {
             // todo: fill this in some time
             debug!("Validating using MRSIGNER");
-            if &report.sgx_quote_body.isv_enclave_report.mr_signer != ENCLAVE_SIGNATURE {
+            if report.sgx_quote_body.isv_enclave_report.mr_signer != ENCLAVE_SIGNATURE {
                 error!("Remote node signature MRSIGNER is different from expected");
                 debug!(
                     "sgx quote mr_signer = {:02x}",
@@ -352,161 +356,14 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
 
     let report_public_key = report.sgx_quote_body.isv_enclave_report.report_data[0..32].to_vec();
     Ok(report_public_key)
-
-    // if let Value::String(quote_status) = &attn_report["isvEnclaveQuoteStatus"] {
-    //     info!("isvEnclaveQuoteStatus = {}", quote_status);
-    //     match quote_status.as_ref() {
-    //         "OK" => (),
-    //         "GROUP_OUT_OF_DATE" | "GROUP_REVOKED" | "CONFIGURATION_NEEDED" => {
-    //             // Verify platformInfoBlob for further info if status not OK
-    //             if let Value::String(pib) = &attn_report["platformInfoBlob"] {
-    //                 let mut buf = Vec::new();
-    //
-    //                 // the TLV Header (4 bytes/8 hexes) should be skipped
-    //                 let n = (pib.len() - 8) / 2;
-    //
-    //                 for i in 0..n {
-    //                     buf.push(
-    //                         match u8::from_str_radix(&pib[(i * 2 + 8)..(i * 2 + 10)], 16) {
-    //                             Ok(val) => val,
-    //                             Err(_e) => {
-    //                                 error!("Failed to parse pib as hex");
-    //                                 return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-    //                             }
-    //                         },
-    //                     );
-    //                 }
-    //
-    //                 let mut update_info = sgx_update_info_bit_t::default();
-    //                 let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-    //                 let res = unsafe {
-    //                     ocall_get_update_info(
-    //                         &mut rt as *mut sgx_status_t,
-    //                         buf.as_slice().as_ptr() as *const sgx_platform_info_t,
-    //                         1,
-    //                         &mut update_info as *mut sgx_update_info_bit_t,
-    //                     )
-    //                 };
-    //                 if res != sgx_status_t::SGX_SUCCESS {
-    //                     debug!("ocall_get_update_info res={:?}", res);
-    //                     return Err(res);
-    //                 }
-    //
-    //                 if rt != sgx_status_t::SGX_SUCCESS {
-    //                     debug!("ocall_get_update_info rt={:?}", rt);
-    //                     // Borrow of packed field is unsafe in future Rust releases
-    //                     unsafe {
-    //                         debug!("update_info.pswUpdate: {}", update_info.pswUpdate);
-    //                         debug!("update_info.csmeFwUpdate: {}", update_info.csmeFwUpdate);
-    //                         debug!("update_info.ucodeUpdate: {}", update_info.ucodeUpdate);
-    //                     }
-    //                     return Err(rt);
-    //                 }
-    //             } else {
-    //                 error!("Failed to fetch platformInfoBlob from attestation report");
-    //                 return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-    //             }
-    //         }
-    //         "SW_HARDENING_NEEDED" | "CONFIGURATION_AND_SW_HARDENING_NEEDED" => {
-    //             if let Value::String(advisory_ids) = &attn_report["AdvisoryIDs"] {
-    //                 debug!("Signing enclave is vulnerable, and must be patched before it can be trusted: {:}", advisory_ids.to_string())
-    //             } else {
-    //                 error!("Failed to parse advisory IDs, but platform was marked as vulnerable");
-    //             }
-    //             // return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-    //         }
-    //
-    //         _ => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
-    //     }
-    // } else {
-    //     info!("Failed to fetch isvEnclaveQuoteStatus from attestation report");
-    //     return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-    // }
-    //
-    // // 3. Verify quote body
-    // return if let Value::String(quote_raw) = &attn_report["isvEnclaveQuoteBody"] {
-    //     let quote = match base64::decode(&quote_raw) {
-    //         Ok(val) => val,
-    //         Err(e) => {
-    //             error!("Invalid quote is not base64");
-    //             return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-    //         }
-    //     };
-    //     debug!("Quote = {:?}", quote);
-    //     // TODO: lack security check here
-    //     let sgx_quote: sgx_quote_t = unsafe { ptr::read(quote.as_ptr() as *const _) };
-    //
-    //     unsafe {
-    //         debug!("sgx quote version = {}", sgx_quote.version);
-    //         debug!("sgx quote signature type = {}", sgx_quote.sign_type);
-    //         debug!(
-    //             "sgx quote report_data = {:02x}",
-    //             sgx_quote.report_body.report_data.d.iter().format("")
-    //         );
-    //         debug!(
-    //             "sgx quote mr_enclave = {:02x}",
-    //             sgx_quote.report_body.mr_enclave.m.iter().format("")
-    //         );
-    //         debug!(
-    //             "sgx quote mr_signer = {:02x}",
-    //             sgx_quote.report_body.mr_signer.m.iter().format("")
-    //         );
-    //     }
-    //
-    //     if SIGNING_METHOD == SigningMethod::MRENCLAVE {
-    //         // todo: fill this in some time
-    //         debug!("Validating using MRENCLAVE");
-    //         if sgx_quote.report_body.mr_enclave.m.to_vec().as_slice() != ENCLAVE_SIGNATURE {
-    //             info!("Sgx MRENCLAVE is different from expected!");
-    //             info!(
-    //                 "sgx quote mr_enclave = {:02x}",
-    //                 sgx_quote.report_body.mr_enclave.m.iter().format("")
-    //             );
-    //             // return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-    //         }
-    //     }
-    //
-    //     if SIGNING_METHOD == SigningMethod::MRSIGNER {
-    //         // todo: fill this in some time
-    //         debug!("Validating using MRSIGNER");
-    //         if sgx_quote.report_body.mr_signer.m.to_vec().as_slice() != ENCLAVE_SIGNATURE {
-    //             error!("Sgx MRSIGNER is different from expected!");
-    //             error!(
-    //                 "sgx quote mr_signer = {:02x}",
-    //                 sgx_quote.report_body.mr_signer.m.iter().format("")
-    //             );
-    //             // return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-    //         }
-    //     }
-    //
-    //     // debug!("Anticipated public key = {:02x}", pub_k.iter().format(""));
-    //     // if sgx_quote.report_body.report_data.d.to_vec() == pub_k.to_vec() {
-    //     //     info!("Validated peer certificate successfully!");
-    //     // } else {
-    //     let report_public_key = sgx_quote.report_body.report_data.d[0..32].to_vec();
-    //
-    //     // if report_public_key.len() < PUBLIC_KEY_SIZE {
-    //     //     error!(
-    //     //         "Reported public key is too short - requires a minimum of 32 bytes but got {:?}",
-    //     //         report_public_key.len()
-    //     //     );
-    //     //     return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-    //     // }
-    //     // standard report data will be 64 bytes, so we just return the first 32 of those
-    //     Ok(report_public_key.to_vec())
-    // } else {
-    //     error!("Failed to fetch isvEnclaveQuoteBody from attestation report");
-    //     Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-    // };
 }
 
 #[cfg(feature = "test")]
 pub mod tests {
-
-    use super::verify_ra_cert;
     use crate::crypto::KeyPair;
 
     use super::sgx_quote_sign_type_t;
+    use super::verify_ra_cert;
 
     fn test_validate_certificate_valid_sw_mode() {
         pub const cert: &[u8] = include_bytes!("../testdata/attestation_cert");

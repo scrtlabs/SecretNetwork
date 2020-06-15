@@ -1,9 +1,10 @@
-use log::*;
-use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 ///
 /// These functions run off chain, and so are not limited by deterministic limitations. Feel free
 /// to go crazy with random generation entropy, time requirements, or whatever else
 ///
+use log::*;
+use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
+
 use std::slice;
 
 use crate::consts::{
@@ -78,6 +79,8 @@ pub extern "C" fn ecall_init_bootstrap(public_key: &mut [u8; PUBLIC_KEY_SIZE]) -
 /// This function happens off-chain, so if we panic for some reason it _can_ be acceptable,
 ///  though probably not recommended
 ///
+/// # Safety
+///  Something should go here
 ///
 #[no_mangle]
 pub unsafe extern "C" fn ecall_init_node(
@@ -198,12 +201,9 @@ pub unsafe extern "C" fn ecall_key_gen(
     }
 
     let mut key_manager = Keychain::new();
-    match key_manager.create_registration_key() {
-        Err(_e) => {
-            error!("Failed to create registration key");
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
-        _ => {}
+    if let Err(_e) = key_manager.create_registration_key() {
+        error!("Failed to create registration key");
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
     };
 
     let pubkey = key_manager.get_registration_key().unwrap().get_pubkey();
