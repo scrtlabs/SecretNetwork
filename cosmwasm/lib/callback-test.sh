@@ -36,7 +36,7 @@ echo "cost member exercise evoke isolate gift cattle move bundle assume spell fa
 
 RUST_BACKTRACE=1 ./enigmad start --bootstrap &
 
-ENIGMAD_PID=$(echo $!)
+export ENIGMAD_PID=$(echo $!)
 
 until (./enigmacli status 2>&1 | jq -e '(.sync_info.latest_block_height | tonumber) > 0' &> /dev/null)
 do
@@ -45,14 +45,14 @@ do
 done
 
 ./enigmacli rest-server --chain-id enigma-testnet --laddr tcp://0.0.0.0:1337 &
-LCD_PID=$(echo $!)
+export LCD_PID=$(echo $!)
 function cleanup()
 {
     kill -KILL "$ENIGMAD_PID" "$LCD_PID"
 }
 trap cleanup EXIT ERR
 
-STORE_TX_HASH=$(
+export STORE_TX_HASH=$(
     yes |
     ./enigmacli tx compute store ./cosmwasm/lib/callback-test-contract/contract.wasm --from a --gas 10000000 |
     jq -r .txhash
@@ -81,16 +81,16 @@ export CONTRACT_ADDRESS=$(
 
 ./enigmacli q compute tx "$INIT_TX_HASH"
 
-# reflect (generate callbacks)
-REFLECT_TX_HASH=$(
+# exec (generate callbacks)
+export EXEC_TX_HASH=$(
     yes |
         ./enigmacli tx compute execute --from a $CONTRACT_ADDRESS "{\"a\":{\"contract_addr\":\"$CONTRACT_ADDRESS\",\"x\":2,\"y\":3}}" |
         jq -r .txhash
 )
 
-wait_for_tx "$REFLECT_TX_HASH" "Waiting for reflect to finish on-chain..."
+wait_for_tx "$EXEC_TX_HASH" "Waiting for reflect to finish on-chain..."
 
-./enigmacli q compute tx "$REFLECT_TX_HASH"
+./enigmacli q compute tx "$EXEC_TX_HASH"
 
 # sleep infinity
 
