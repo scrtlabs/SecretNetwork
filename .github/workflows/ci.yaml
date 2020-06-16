@@ -56,7 +56,7 @@ jobs:
           export SGX_MODE=SW
           mkdir -p ./.sgx_secrets
           cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
-          ./cosmwasm/lib/wasmi-sgx-test.sh
+          ./cosmwasm/lib/sanity-test.sh
       - name: Test SGX Sanity (Callbacks)
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"

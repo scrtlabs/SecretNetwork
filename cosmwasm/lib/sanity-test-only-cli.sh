@@ -20,9 +20,9 @@
 # }
 # And then:
 # 1. Build enigmacli and enigmad `SGX_MODE=SW make build_linux`
-# 2. Init the node: `SGX_MODE=SW cosmwasm/lib/wasmi-sgx-test-d-setup.sh `
+# 2. Init the node: `SGX_MODE=SW cosmwasm/lib/sanity-test-d-setup.sh `
 # 3. Launch vscode in debug mode (you can set breakpoints in enigmad go code)
-# 4. Run the tests with enigmacli: `SGX_MODE=SW cosmwasm/lib/wasmi-sgx-test-only-cli.sh`
+# 4. Run the tests with enigmacli: `SGX_MODE=SW cosmwasm/lib/sanity-test-only-cli.sh`
 
 
 set -euvx
