@@ -87,9 +87,6 @@ func decryptDataJSON(t *testing.T, resp *types.CosmosResponse, nonce []byte) {
 
 	// messages
 	for i, m := range resp.Ok.Messages {
-		// msgCiphertext, err := base64.StdEncoding.DecodeString(string(m.Contract.Msg))
-		// require.NoError(t, err)
-
 		msgPlaintext, err := wasmCtx.Decrypt(m.Contract.Msg[64:], nonce)
 		require.NoError(t, err)
 
