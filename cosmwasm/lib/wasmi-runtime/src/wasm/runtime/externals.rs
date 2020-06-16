@@ -85,7 +85,7 @@ impl Externals for ContractInstance {
 
                 let canonical: i32 = args.nth_checked(1)?;
 
-                self.canonicalize_address_index(human, canonical)
+                self.canonicalize_address_index(canonical, human)
             }
             // fn humanize_address(canonical: *const c_void, human: *mut c_void) -> i32;
             HostFunctions::HumanizeAddressIndex => {
