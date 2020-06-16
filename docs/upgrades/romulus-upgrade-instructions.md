@@ -5,7 +5,7 @@ The [Romulus Upgrade Signal](https://puzzle.report/enigma/chains/enigma-1/govern
 This document describes the steps required to perform the Romulus Upgrade to go from the `enigma-1` to `secret-1` chain. The upgrade is 
 required for all full-node operators (both validators and non-validators).
 
-The CoS team will post the official modified genesis file, but you'll be able to validate it with a step below.
+The Chain of Secrets (CoS) team will post the official modified genesis file, but you'll be able to validate it with a step below.
 
 The agreed upon block height for the Romulus Upgrade is *1,794,500*.
 
@@ -134,7 +134,7 @@ sudo systemctl daemon-reload
 Now start the `enigma-node` service and monitor:
 
 ```bash
-sudo systemctl stat enigma-node
+sudo systemctl start enigma-node
 ```
 
 *The chain will halt at block height _1794500_ at approximately 7:30am PST, 10:30am EDT and 2:30pm UTC.*
@@ -148,68 +148,16 @@ halting node per configuration
 exiting... 
 ```
 
-### 2. Upgrade Genesis
+### 2. Migrate Genesis
 
-*NOTE: CoS performs these steps!*
+*** NOTE: *Chain of Secrets* performs these steps! ***
 
-Export the chain state:
+CoS will notify mainnet validators and full-node operators when this step is complete.
 
-```bash
-enigmad export --for-zero-height --height 1794500 > exported-enigma-state.json
-```
+It is recommended that participants go through the steps to independently verify the migrated genesis file.
 
-Inside `exported-enigma-state.json` rename _chain_id_ from `enigma-1` to `secret-1`:
+See the [Addendum](#addendum) for detailed instructions.
 
-```bash
-perl -i -pe 's/"enigma-1"/"secret-1"/' exported-enigma-state.json
-```
-
-Get bech32 converter and change all `enigma` addresses to `secret` adresses:
-
-```bash
-wget https://github.com/enigmampc/bech32.enigma.co/releases/download/cli/bech32-convert
-chmod +x bech32-convert
-
-cat exported-enigma-state.json | ./bech32-convert > secret-1-genesis.json
-```
-
-Use `jq` to make the `secret-1-genesis.json` more readable:
-
-
-```bash
-jq . secret-1-genesis.json > secret-1-genesis-jq.json
-mv secret-1-genesis-jq.json secret-1-genesis.json
-
-```
-
-NOTE: if you don't have `jq`, you can install it with `sudo apt-get install jq`
-
-Modify the `secret-1-genesis.json` and add the following tokenswap parameters under `gov`:
-
-```bash
-	"tokenswap": {
-		"params": {
-			"minting_approver_address": "",
-			"minting_multiplier": "1.000000000000000000",
-			"minting_enabled": false
-		},
-		"swaps": null
-	},
-```
-
-Create the sha256 checksum for the new genesis file:
-
-```bash
-sha256sum secret-1-genesis-json > secret-genesis-sha256sum
-```
-
-Update the Romulus Upgrade repo with the `secret-1-genesis.json` file:
-
-```bash
-git add secret-1-genesis.json
-git commit -m "romulus upgrade genesis file"
-git push
-```
 
 ## All Full-Node Operators and Validators
 
@@ -324,4 +272,10 @@ When the `secret-1` chain is live and stable, you can delete the files of the ol
 - `rm -rf ~/.enigmad`
 - `rm -rf ~/.enigmacli`
 - `sudo dpkg -r enigma-blockchain`
+
+
+## <a name="#addendum"></a>Addendum
+
+See the [Migrate Genesis instructions](docs/upgrades/romulus-migrate-genesis.md).
+
 
