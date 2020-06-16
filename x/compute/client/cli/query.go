@@ -298,8 +298,8 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			nonce := encryptedInput[0:32]
 			originalTxSenderPubkey := encryptedInput[32:64]
 
-			wasmCliCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
-			_, myPubkey, err := wasmCliCtx.GetTxSenderKeyPair()
+			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
+			_, myPubkey, err := wasmCtx.GetTxSenderKeyPair()
 			if err != nil {
 				return err
 			}
@@ -310,7 +310,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 
 			ciphertextInput := encryptedInput[64:]
 
-			plaintextInput, err := wasmCliCtx.Decrypt(ciphertextInput, nonce)
+			plaintextInput, err := wasmCtx.Decrypt(ciphertextInput, nonce)
 			if err != nil {
 				return err
 			}
@@ -335,7 +335,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 					if err != nil {
 						return err
 					}
-					dataPlaintext, err := wasmCliCtx.Decrypt(dataCiphertext, nonce)
+					dataPlaintext, err := wasmCtx.Decrypt(dataCiphertext, nonce)
 					if err != nil {
 						return err
 					}
@@ -344,7 +344,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 
 				for i, msg := range cosmwasmOutput.Ok.Messages {
 					if len(msg.Contract.Msg) > 0 {
-						msgPlaintext, err := wasmCliCtx.Decrypt(msg.Contract.Msg[64:], nonce)
+						msgPlaintext, err := wasmCtx.Decrypt(msg.Contract.Msg[64:], nonce)
 						if err != nil {
 							return err
 						}
@@ -363,7 +363,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 					if err != nil {
 						return err
 					}
-					errorPlaintext, err := wasmCliCtx.Decrypt(errorCiphertext, nonce)
+					errorPlaintext, err := wasmCtx.Decrypt(errorCiphertext, nonce)
 					if err != nil {
 						return err
 					}
@@ -382,7 +382,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 								if err != nil {
 									return err
 								}
-								keyPalaintext, err := wasmCliCtx.Decrypt(keyCiphertext, nonce)
+								keyPalaintext, err := wasmCtx.Decrypt(keyCiphertext, nonce)
 								if err != nil {
 									return err
 								}
@@ -393,7 +393,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 								if err != nil {
 									return err
 								}
-								valuePalaintext, err := wasmCliCtx.Decrypt(valueCiphertext, nonce)
+								valuePalaintext, err := wasmCtx.Decrypt(valueCiphertext, nonce)
 								if err != nil {
 									return err
 								}
@@ -447,9 +447,9 @@ func GetCmdGetContractStateSmart(cdc *codec.Codec) *cobra.Command {
 				return fmt.Errorf("decode query: %s", err)
 			}
 
-			wasmCliCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
+			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
 
-			queryData, err = wasmCliCtx.Encrypt(queryData)
+			queryData, err = wasmCtx.Encrypt(queryData)
 			if err != nil {
 				return err
 			}
@@ -462,7 +462,7 @@ func GetCmdGetContractStateSmart(cdc *codec.Codec) *cobra.Command {
 			// fmt.Printf("Look at all my encrypted data! %v\n", resEncrypted)
 
 			nonce := queryData[:32]
-			resDecrypted, err := wasmCliCtx.Decrypt(res, nonce)
+			resDecrypted, err := wasmCtx.Decrypt(res, nonce)
 			if err != nil {
 				return err
 			}

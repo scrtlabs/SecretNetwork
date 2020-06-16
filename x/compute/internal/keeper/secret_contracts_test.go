@@ -46,6 +46,10 @@ func TestCallbackSanity(t *testing.T) {
 	resDecrypted, err := wasmCtx.Decrypt(res, nonce)
 	require.NoError(t, err)
 
+	// TODO iterate over res.Events and decrypt with nonce to verify banana, papaya, watermelon
+	// TODO hex.DecodeString(res.Data) -> json.Marshal -> {data: ... , messages: ..., log: [{key:, value:},{key:,value:}]}
+	// output decryption example: https://github.com/enigmampc/SecretNetwork/blob/bedbe10e2e08bedc800f3ff6dac019824da18bd7/x/compute/client/cli/query.go#L327
+
 	fmt.Println(resDecrypted)
 
 	require.NoError(t, err)
