@@ -1,6 +1,6 @@
 use log::*;
 use parity_wasm::elements;
-use wasmi::{ImportsBuilder, ModuleInstance};
+use wasmi::ModuleInstance;
 
 use enclave_ffi_types::{Ctx, EnclaveError};
 
@@ -14,7 +14,7 @@ use super::contract_validation::{
 use super::errors::wasmi_error_to_enclave_error;
 use super::gas::{gas_rules, WasmCosts};
 use super::io::encrypt_output;
-use super::runtime::{Engine, EnigmaImportResolver, Runtime};
+use super::runtime::{create_builder, ContractInstance, Engine, WasmiImportResolver};
 use crate::wasm::types::SecretMessage;
 
 /*
@@ -224,28 +224,28 @@ fn start_engine(
 
     // Create new imports resolver.
     // These are the signatures of rust functions available to invoke from wasm code.
-    let imports = EnigmaImportResolver {};
-    let module_imports = ImportsBuilder::new().with_resolver("env", &imports);
+    let resolver = WasmiImportResolver {};
+    let imports_builder = create_builder(&resolver);
 
     // Instantiate a module with our imports and assert that there is no `start` function.
-    let instance =
-        ModuleInstance::new(&module, &module_imports).map_err(|_err| EnclaveError::InvalidWasm)?;
-    if instance.has_start() {
+    let module_instance =
+        ModuleInstance::new(&module, &imports_builder).map_err(|_err| EnclaveError::InvalidWasm)?;
+    if module_instance.has_start() {
         return Err(EnclaveError::WasmModuleWithStart);
     }
-    let instance = instance.not_started_instance().clone();
+    let module = module_instance.not_started_instance().clone();
 
-    let runtime = Runtime::new(
-        context,
-        instance
-            .export_by_name("memory")
-            .expect("Module expected to have 'memory' export")
-            .as_memory()
-            .cloned()
-            .expect("'memory' export should be of memory type"),
-        gas_limit,
-        contract_key.clone(),
-    );
+    // helping the IDE
+    let deref_module: &ModuleInstance = &*module;
 
-    Ok(Engine::new(runtime, instance))
+    let memory_ref = deref_module
+        .export_by_name("memory")
+        .expect("Module expected to have 'memory' export")
+        .as_memory()
+        .cloned()
+        .expect("'memory' export should be of memory type");
+
+    let contract_instance = ContractInstance::new(context, memory_ref, gas_limit, *contract_key);
+
+    Ok(Engine::new(contract_instance, module))
 }

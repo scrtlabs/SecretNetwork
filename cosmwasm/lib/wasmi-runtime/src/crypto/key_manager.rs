@@ -39,7 +39,7 @@ impl Keychain {
 
         let _ = x.generate_consensus_master_keys();
 
-        return x;
+        x
     }
 
     pub fn create_consensus_seed(&mut self) -> Result<(), CryptoError> {
@@ -83,7 +83,7 @@ impl Keychain {
     // }
 
     pub fn is_consensus_seed_set(&self) -> bool {
-        return self.consensus_seed.is_some();
+        self.consensus_seed.is_some()
     }
 
     pub fn get_consensus_state_ikm(&self) -> Result<AESKey, CryptoError> {
@@ -139,19 +139,20 @@ impl Keychain {
             error!("Error sealing registration key");
             return Err(e);
         }
-        Ok(self.registration_key = Some(kp.clone()))
+        self.registration_key = Some(kp);
+        Ok(())
     }
 
     pub fn set_consensus_seed_exchange_keypair(&mut self, kp: KeyPair) {
-        self.consensus_seed_exchange_keypair = Some(kp.clone())
+        self.consensus_seed_exchange_keypair = Some(kp)
     }
 
     pub fn set_consensus_io_exchange_keypair(&mut self, kp: KeyPair) {
-        self.consensus_io_exchange_keypair = Some(kp.clone())
+        self.consensus_io_exchange_keypair = Some(kp)
     }
 
     pub fn set_consensus_state_ikm(&mut self, consensus_state_ikm: AESKey) {
-        self.consensus_state_ikm = Some(consensus_state_ikm.clone());
+        self.consensus_state_ikm = Some(consensus_state_ikm);
     }
 
     pub fn set_consensus_seed(&mut self, consensus_seed: Seed) -> Result<(), EnclaveError> {
@@ -159,7 +160,8 @@ impl Keychain {
             error!("Error sealing consensus_seed");
             return Err(e);
         }
-        Ok(self.consensus_seed = Some(consensus_seed.clone()))
+        self.consensus_seed = Some(consensus_seed);
+        Ok(())
     }
 
     pub fn generate_consensus_master_keys(&mut self) -> Result<(), EnclaveError> {

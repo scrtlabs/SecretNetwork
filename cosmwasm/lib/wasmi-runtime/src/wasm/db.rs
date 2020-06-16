@@ -57,7 +57,7 @@ pub fn read_encrypted_key(
     // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
     // This returns the value from Tendermint
     // fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
-    let value = read_db(context, &scrambled_field_name)
+    read_db(context, &scrambled_field_name)
         .map_err(|err| {
             error!(
                 "read_db() got an error from ocall_read_db, stopping wasm: {:?}",
@@ -66,14 +66,12 @@ pub fn read_encrypted_key(
             DbError::FailedRead
         })
         .map(|val| {
-            if val.is_some() {
-                decrypt_key(&scrambled_field_name, val.unwrap().as_slice(), contract_key)
+            if let Some(as_slice) = val {
+                decrypt_key(&scrambled_field_name, &as_slice, contract_key)
             } else {
-                return Err(DbError::EmptyValue);
+                Err(DbError::EmptyValue)
             }
-        })?;
-
-    value
+        })?
 }
 
 pub fn field_name_digest(field_name: &[u8], contract_key: &ContractKey) -> [u8; 32] {
@@ -89,7 +87,7 @@ fn read_db(context: &Ctx, key: &[u8]) -> SgxResult<Option<Vec<u8>>> {
     unsafe {
         match imports::ocall_read_db(
             enclave_buffer.as_mut_ptr(),
-            context.clone(),
+            context.unsafe_clone(),
             key.as_ptr(),
             key.len(),
         ) {
@@ -106,7 +104,7 @@ fn read_db(context: &Ctx, key: &[u8]) -> SgxResult<Option<Vec<u8>>> {
 fn write_db(context: &Ctx, key: &[u8], value: &[u8]) -> SgxError {
     match unsafe {
         imports::ocall_write_db(
-            context.clone(),
+            context.unsafe_clone(),
             key.as_ptr(),
             key.len(),
             value.as_ptr(),
@@ -148,8 +146,8 @@ fn encrypt_key(
 ) -> Result<Vec<u8>, DbError> {
     let encryption_key = get_symmetrical_key(field_name, contract_key);
 
-    let encrypted_value = encryption_key
-        .encrypt_siv(&value, &vec![ad])
+    encryption_key
+        .encrypt_siv(&value, Some(&[ad]))
         .map_err(|err| {
             error!(
                 "write_db() got an error while trying to encrypt the value {:?}, stopping wasm: {:?}",
@@ -157,9 +155,7 @@ fn encrypt_key(
                 err
             );
             DbError::FailedEncryption
-        });
-
-    encrypted_value
+    })
 }
 
 fn decrypt_key(
@@ -172,16 +168,14 @@ fn decrypt_key(
     // Slice ad from `value`
     let (ad, encrypted_value) = value.split_at(32);
 
-    let decrypted_value = decryption_key.decrypt_siv(&encrypted_value, &vec![ad]).map_err(|err| {
+    decryption_key.decrypt_siv(&encrypted_value, Some(&[ad])).map_err(|err| {
         error!(
             "read_db() got an error while trying to decrypt the value for key {:?}, stopping wasm: {:?}",
             String::from_utf8_lossy(&field_name),
             err
         );
         DbError::FailedDecryption
-    });
-
-    decrypted_value
+    })
 }
 
 fn get_symmetrical_key(field_name: &[u8], contract_key: &ContractKey) -> AESKey {
@@ -190,7 +184,5 @@ fn get_symmetrical_key(field_name: &[u8], contract_key: &ContractKey) -> AESKey 
     // Derive the key to the specific field name
     let mut derivation_data = field_name.to_vec();
     derivation_data.extend_from_slice(contract_key.to_vec().as_slice());
-    let encryption_key = consensus_state_ikm.derive_key_from_this(&derivation_data);
-
-    encryption_key
+    consensus_state_ikm.derive_key_from_this(&derivation_data)
 }

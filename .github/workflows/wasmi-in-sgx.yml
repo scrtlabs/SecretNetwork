@@ -18,7 +18,6 @@ jobs:
 
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
-      - run: git submodule update --init --recursive
       - name: Cache cargo registry
         uses: actions/cache@v1
         with:
@@ -29,7 +28,7 @@ jobs:
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
-      - run: rustup component add rust-src
+      - run: rustup component add rust-src clippy
       - name: Install xargo
         run: |
           cargo +stable install xargo
@@ -39,6 +38,13 @@ jobs:
           wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
           tar xf ./sccache-*.tar.gz
           mv ./sccache*/sccache "$HOME/sccache"
+      - name: Clippy
+        run: |
+          source "$HOME/.sgxsdk/sgxsdk/environment"
+          make vendor
+          cd cosmwasm/lib/wasmi-runtime/
+          SGX_MODE=SW make clippy
+          SGX_MODE=HW make clippy
       - name: Build
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"

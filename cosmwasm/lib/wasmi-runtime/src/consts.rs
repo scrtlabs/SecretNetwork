@@ -14,6 +14,8 @@ pub static API_KEY_FILE: &str = "api_key.txt";
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
+pub const BECH32_PREFIX_ACC_ADDR: &str = "enigma";
+
 #[allow(dead_code)]
 #[derive(PartialEq, Eq)]
 pub enum SigningMethod {
