@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBanana(t *testing.T) {
+func TestSanity(t *testing.T) {
 	// Assaf: maybe port the bash sanity test and the callback test into here?
 
 	tempDir, err := ioutil.TempDir("", "wasm")
