@@ -276,6 +276,6 @@ When the `secret-1` chain is live and stable, you can delete the files of the ol
 
 ## <a name="#addendum"></a>Addendum
 
-See the [Migrate Genesis instructions](docs/upgrades/romulus-migrate-genesis.md).
+See the [Migrate Genesis instructions](romulus-migrate-genesis.md).
 
 
