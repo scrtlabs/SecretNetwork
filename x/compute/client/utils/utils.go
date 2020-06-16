@@ -157,6 +157,8 @@ func (ctx WASMContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) 
 		return nil, err
 	}
 
+	fmt.Printf("@@@@@@@@ Go consensusIoPubKey = %v\n", consensusIoPubKeyBytes)
+
 	txEncryptionIkm, err := curve25519.X25519(txSenderPrivKey, consensusIoPubKeyBytes)
 
 	kdfFunc := hkdf.New(sha256.New, append(txEncryptionIkm[:], nonce...), hkdfSalt, []byte{})
@@ -165,8 +167,6 @@ func (ctx WASMContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) 
 	if _, err := io.ReadFull(kdfFunc, txEncryptionKey); err != nil {
 		return nil, err
 	}
-
-	fmt.Fprintf(os.Stderr, "Go txEncryptionKey = %v\n", txEncryptionKey)
 
 	return txEncryptionKey, nil
 }
@@ -195,6 +195,10 @@ func (ctx WASMContext) Encrypt(plaintext []byte) ([]byte, error) {
 		log.Println(err)
 		return nil, err
 	}
+
+	fmt.Printf("\n@@@@@@@@ Go txEncryptionKey = %v\n", txEncryptionKey)
+	fmt.Printf("@@@@@@@@ Go nonce = %v\n", nonce)
+	fmt.Printf("@@@@@@@@ Go txSenderPubKey = %v\n", txSenderPubKey)
 
 	// ciphertext = nonce(32) || wallet_pubkey(32) || ciphertext
 	ciphertext = append(nonce, append(txSenderPubKey, ciphertext...)...)

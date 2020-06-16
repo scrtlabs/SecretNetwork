@@ -3,23 +3,31 @@ package keeper
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	stypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
 	eng "github.com/enigmampc/EnigmaBlockchain/types"
 	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 
 	wasmUtils "github.com/enigmampc/EnigmaBlockchain/x/compute/client/utils"
+	reg "github.com/enigmampc/EnigmaBlockchain/x/registration"
 )
+
+var wasmCtx = wasmUtils.WASMContext{
+	TestKeyPairPath:  "/tmp/id_tx_io.json",
+	TestMasterIOCert: nil,
+}
 
 func init() {
 	config := sdk.GetConfig()
@@ -27,13 +35,24 @@ func init() {
 	config.SetBech32PrefixForValidator(eng.Bech32PrefixValAddr, eng.Bech32PrefixValPub)
 	config.SetBech32PrefixForConsensusNode(eng.Bech32PrefixConsAddr, eng.Bech32PrefixConsPub)
 	config.Seal()
+
+	_, err := api.InitBootstrap()
+	if err != nil {
+		panic(fmt.Sprintf("Error initializing the enclave: %v", err))
+	}
+
+	ioCert, err := ioutil.ReadFile(filepath.Join(".", reg.IoExchMasterCertPath))
+	if err != nil {
+		panic(fmt.Sprintf("Error reading 'io-master-cert.der': %v", err))
+	}
+	wasmCtx.TestMasterIOCert = ioCert
 }
 
 func TestNewKeeper(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	_, _, keeper, _ := CreateTestInput(t, false, tempDir)
+	_, _, keeper := CreateTestInput(t, false, tempDir)
 	require.NotNil(t, keeper)
 }
 
@@ -41,7 +60,7 @@ func TestCreate(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	ctx, accKeeper, keeper, _ := CreateTestInput(t, false, tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
@@ -62,7 +81,7 @@ func TestCreateWithSimulation(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	ctx, accKeeper, keeper, _ := CreateTestInput(t, false, tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
 	ctx = ctx.WithBlockHeader(abci.Header{Height: 1}).
 		WithGasMeter(stypes.NewInfiniteGasMeter())
 
@@ -100,7 +119,7 @@ func TestIsSimulationMode(t *testing.T) {
 	}
 	for msg, _ := range specs {
 		t.Run(msg, func(t *testing.T) {
-			//assert.Equal(t, spec.exp, isSimulationMode(spec.ctx))
+			//require.Equal(t, spec.exp, isSimulationMode(spec.ctx))
 		})
 	}
 }
@@ -109,7 +128,7 @@ func TestCreateWithGzippedPayload(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	ctx, accKeeper, keeper, _ := CreateTestInput(t, false, tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
@@ -132,7 +151,7 @@ func TestInstantiate(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	ctx, accKeeper, keeper, ioCert := CreateTestInput(t, false, tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
@@ -153,10 +172,6 @@ func TestInstantiate(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	wasmCtx := wasmUtils.WASMContext{
-		TestKeyPairPath:  "/tmp/id_tx_io.json",
-		TestMasterIOCert: ioCert,
-	}
 	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
 	require.NoError(t, err)
 
@@ -173,17 +188,17 @@ func TestInstantiate(t *testing.T) {
 	// ensure it is stored properly
 	info := keeper.GetContractInfo(ctx, addr)
 	require.NotNil(t, info)
-	assert.Equal(t, info.Creator, creator)
-	assert.Equal(t, info.CodeID, contractID)
-	assert.Equal(t, info.InitMsg, json.RawMessage(initMsgBz))
-	assert.Equal(t, info.Label, "demo contract 1")
+	require.Equal(t, info.Creator, creator)
+	require.Equal(t, info.CodeID, contractID)
+	require.Equal(t, info.InitMsg, json.RawMessage(initMsgBz))
+	require.Equal(t, info.Label, "demo contract 1")
 }
 
 func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	ctx, accKeeper, keeper, _ := CreateTestInput(t, false, tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
@@ -204,7 +219,7 @@ func TestExecuteWithNonExistingAddress(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	ctx, accKeeper, keeper, _ := CreateTestInput(t, false, tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	creator := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
@@ -219,7 +234,7 @@ func TestExecuteWithPanic(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	ctx, accKeeper, keeper, _ := CreateTestInput(t, false, tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
@@ -240,11 +255,17 @@ func TestExecuteWithPanic(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
+	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+	require.NoError(t, err)
+
 	addr, err := keeper.Instantiate(ctx, contractID, creator, initMsgBz, "demo contract 4", deposit)
 	require.NoError(t, err)
 
+	execMsgBz, err := wasmCtx.Encrypt([]byte(`{"panic":{}}`))
+	require.NoError(t, err)
+
 	// let's make sure we get a reasonable error, no panic/crash
-	_, err = keeper.Execute(ctx, addr, fred, []byte(`{"panic":{}}`), topUp)
+	_, err = keeper.Execute(ctx, addr, fred, execMsgBz, topUp)
 	require.Error(t, err)
 }
 
@@ -252,7 +273,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	ctx, accKeeper, keeper, _ := CreateTestInput(t, false, tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
@@ -283,7 +304,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 
 	// this must fail
 	_, err = keeper.Execute(ctx, addr, fred, []byte(`{"cpuloop":{}}`), nil)
-	assert.Error(t, err)
+	require.Error(t, err)
 	// make sure gas ran out
 	// TODO: wasmer doesn't return gas used on error. we should consume it (for error on metering failure)
 	// require.Equal(t, gasLimit, ctx.GasMeter().GasConsumed())
@@ -296,7 +317,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
-	ctx, accKeeper, keeper, _ := CreateTestInput(t, false, tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))

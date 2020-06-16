@@ -1,9 +1,6 @@
 package keeper
 
 import (
-	"fmt"
-	"io/ioutil"
-	"path/filepath"
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -14,9 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
 	wasmTypes "github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
-	reg "github.com/enigmampc/EnigmaBlockchain/x/registration"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
@@ -40,7 +35,7 @@ func MakeTestCodec() *codec.Codec {
 	return cdc
 }
 
-func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string) (sdk.Context, auth.AccountKeeper, Keeper, []byte) {
+func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string) (sdk.Context, auth.AccountKeeper, Keeper) {
 	keyContract := sdk.NewKVStoreKey(types.StoreKey)
 	keyAcc := sdk.NewKVStoreKey(auth.StoreKey)
 	keyParams := sdk.NewKVStoreKey(params.StoreKey)
@@ -82,17 +77,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string) (sdk.Context,
 	// Load default wasm config
 	wasmConfig := wasmTypes.DefaultWasmConfig()
 
-	_, err = api.InitBootstrap()
-	if err != nil {
-		panic(fmt.Sprintf("Error initializing the enclave: %v", err))
-	}
-
-	ioCert, err := ioutil.ReadFile(filepath.Join(".", reg.IoExchMasterCertPath))
-	if err != nil {
-		panic(fmt.Sprintf("Error reading 'io-master-cert.der': %v", err))
-	}
-
 	keeper := NewKeeper(cdc, keyContract, accountKeeper, bk, router, tempDir, wasmConfig)
 
-	return ctx, accountKeeper, keeper, ioCert
+	return ctx, accountKeeper, keeper
 }

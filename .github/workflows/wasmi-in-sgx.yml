@@ -66,7 +66,7 @@ jobs:
 #      - name: Test Compute Module
 #        run: |
 #          source "$HOME/.sgxsdk/sgxsdk/environment"
+#          export SGX_MODE=SW
 #          cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
-#          cp -r ./.sgx_secrets ./x/compute/internal/keeper
-#          find ./x/compute/internal/keeper
-#          go test -v ./x/compute/internal/...
+#          mkdir -p ./x/compute/internal/keeper/.sgx_secrets
+#          go test -p 1 -v ./x/compute/internal/...
