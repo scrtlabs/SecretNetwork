@@ -241,8 +241,8 @@ Below is the version information for the Secret Network.
   "name": "SecretNetwork",
   "server_name": "secretd",
   "client_name": "secretcli",
-  "version": "0.2.0-199-gcb314b9",
-  "commit": "cb314b96aeff45b572e2aaaeca86ceb9aa16dac9",
+  "version": "0.2.0-220-g3d4eb01",
+  "commit": "3d4eb015191ff8d7c5754f4588e0aabff20a1ab5",
   "build_tags": "ledger",
   "go": "go version go1.14.4 linux/amd64"
 }
