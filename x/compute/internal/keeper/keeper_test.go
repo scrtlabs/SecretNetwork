@@ -41,11 +41,10 @@ func init() {
 		panic(fmt.Sprintf("Error initializing the enclave: %v", err))
 	}
 
-	ioCert, err := ioutil.ReadFile(filepath.Join(".", reg.IoExchMasterCertPath))
+	wasmCtx.TestMasterIOCert, err = ioutil.ReadFile(filepath.Join(".", reg.IoExchMasterCertPath))
 	if err != nil {
 		panic(fmt.Sprintf("Error reading 'io-master-cert.der': %v", err))
 	}
-	wasmCtx.TestMasterIOCert = ioCert
 }
 
 func TestNewKeeper(t *testing.T) {
