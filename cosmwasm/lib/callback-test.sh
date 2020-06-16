@@ -54,7 +54,7 @@ trap cleanup EXIT ERR
 
 export STORE_TX_HASH=$(
     yes |
-    ./enigmacli tx compute store ./cosmwasm/lib/callback-test-contract/contract.wasm --from a --gas 10000000 |
+    ./enigmacli tx compute store ./test-contract/contract.wasm --from a --gas 10000000 |
     jq -r .txhash
 )
 

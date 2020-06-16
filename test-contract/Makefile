@@ -1,0 +1,2 @@
+all:
+	docker run --rm -v $(shell pwd):/code --mount type=volume,source=$(shell basename $(shell pwd))_cache,target=/code/target --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry confio/cosmwasm-opt:0.7.2
