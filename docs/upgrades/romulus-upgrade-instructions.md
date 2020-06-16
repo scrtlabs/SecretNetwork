@@ -137,7 +137,7 @@ Now start the `enigma-node` service and monitor:
 sudo systemctl start enigma-node
 ```
 
-*The chain will halt at block height _1794500_ at approximately 7:30am PST, 10:30am EDT and 2:30pm UTC.*
+*The chain will halt at block height _1794500_ at approximately 9am PDT, 12pm EDT and 4pm UTC.*
 
 You may see dialing and connection errors as nodes are halted, which is expected. When the node is finally stopped, you'll see these messages:
 

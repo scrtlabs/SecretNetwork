@@ -39,7 +39,7 @@ Chain of Secrets (CoS) will lead the Romulus Upgrade and you can follow along in
 ### Step 1 - Gracefully Halt the `enigma-1` Chain
 
 All validators will full nodes will be restarted with a flag to stop the chain at the block height of *1,794,500*. The agreed upon
-block height should be reached at approximately 7:30am PST, 10:30am EST, 2:30pm UTC. This step ensures that all nodes are stopped gracefully
+block height should be reached at approximately 9am PDT, 12pm EDT, 4pm UTC. This step ensures that all nodes are stopped gracefully
 at the same block height.
 
 ### Step 2 - Upgrade Genesis
