@@ -294,6 +294,9 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
+	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+	require.NoError(t, err)
+
 	addr, err := keeper.Instantiate(ctx, contractID, creator, initMsgBz, "demo contract 5", deposit)
 	require.NoError(t, err)
 
@@ -302,8 +305,11 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	ctx = ctx.WithGasMeter(sdk.NewGasMeter(gasLimit))
 	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
+	execMsgBz, err := wasmCtx.Encrypt([]byte(`{"cpuloop":{}}`))
+	require.NoError(t, err)
+
 	// this must fail
-	_, err = keeper.Execute(ctx, addr, fred, []byte(`{"cpuloop":{}}`), nil)
+	_, err = keeper.Execute(ctx, addr, fred, execMsgBz, nil)
 	require.Error(t, err)
 	// make sure gas ran out
 	// TODO: wasmer doesn't return gas used on error. we should consume it (for error on metering failure)
