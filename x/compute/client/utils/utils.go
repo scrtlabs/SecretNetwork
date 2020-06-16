@@ -166,7 +166,7 @@ func (ctx WASMContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) 
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(os.Stderr, "CLI txEncryptionKey = %v\n", txEncryptionKey)
+	fmt.Fprintf(os.Stderr, "Go txEncryptionKey = %v\n", txEncryptionKey)
 
 	return txEncryptionKey, nil
 }

@@ -154,7 +154,7 @@ func TestInstantiate(t *testing.T) {
 	require.NoError(t, err)
 
 	wasmCtx := wasmUtils.WASMContext{
-		TestKeyPairPath:  "/tmp",
+		TestKeyPairPath:  "/tmp/id_tx_io.json",
 		TestMasterIOCert: ioCert,
 	}
 	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
@@ -168,7 +168,7 @@ func TestInstantiate(t *testing.T) {
 	require.Equal(t, "enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89d2p9uk", addr.String())
 
 	gasAfter := ctx.GasMeter().GasConsumed()
-	require.Equal(t, uint64(25439), gasAfter-gasBefore)
+	require.Equal(t, uint64(33765), gasAfter-gasBefore)
 
 	// ensure it is stored properly
 	info := keeper.GetContractInfo(ctx, addr)
