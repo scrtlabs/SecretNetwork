@@ -28,7 +28,7 @@ jobs:
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
-      - run: rustup component add rust-src
+      - run: rustup component add rust-src clippy
       - name: Install xargo
         run: |
           cargo +stable install xargo
