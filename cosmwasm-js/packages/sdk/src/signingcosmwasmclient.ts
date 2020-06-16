@@ -220,7 +220,6 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     const nonce = Encoding.fromBase64(instantiateMsg.value.init_msg).slice(0, 32);
 
     const logs = await this.restClient.decryptLogs(result.logs, nonce);
-    // todo decrypt messages
 
     return {
       contractAddress: contractAddressAttr.value,
@@ -264,7 +263,6 @@ export class SigningCosmWasmClient extends CosmWasmClient {
 
     const data = await this.restClient.decryptDataField(result.data, nonce);
     const logs = await this.restClient.decryptLogs(result.logs, nonce);
-    // todo decrypt messages
 
     return {
       logs: logs,
