@@ -159,6 +159,8 @@ clean:
 	-rm -rf ./third_party/vendor/
 	-rm -rf ./.sgx_secrets/*
 	-rm -rf ./x/compute/internal/keeper/.sgx_secrets/*
+	-rm -rf ./x/compute/internal/keeper/*.der
+	-rm -rf ./x/compute/internal/keeper/*.so
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/lib/wasmi-runtime clean
 
@@ -189,3 +191,8 @@ callback-sanity-test:
 	SGX_MODE=SW $(MAKE) build_linux
 	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
 	SGX_MODE=SW ./cosmwasm/lib/callback-test.sh
+
+go-tests:
+	SGX_MODE=SW $(MAKE) build_linux
+	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	SGX_MODE=SW go test -p 1 -v ./x/compute/internal/...
