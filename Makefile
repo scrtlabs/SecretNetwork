@@ -108,14 +108,14 @@ deb: build_linux
     endif
 	rm -rf /tmp/EnigmaBlockchain
 
-	mkdir -p /tmp/EnigmaBlockchain/deb/bin
-	mv -f ./enigmacli /tmp/EnigmaBlockchain/deb/bin/enigmacli
-	mv -f ./enigmad /tmp/EnigmaBlockchain/deb/bin/enigmad
-	chmod +x /tmp/EnigmaBlockchain/deb/bin/enigmad /tmp/EnigmaBlockchain/deb/bin/enigmacli
+	mkdir -p /tmp/EnigmaBlockchain/deb/usr/local/bin
+	mv -f ./enigmacli /tmp/EnigmaBlockchain/deb/usr/local/bin/enigmacli
+	mv -f ./enigmad /tmp/EnigmaBlockchain/deb/usr/local/bin/enigmad
+	chmod +x /tmp/EnigmaBlockchain/deb/usr/local/bin/enigmad /tmp/EnigmaBlockchain/deb/usr/local/bin/enigmacli
 
-	mkdir -p /tmp/EnigmaBlockchain/deb/usr/lib
-	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/EnigmaBlockchain/deb/usr/lib/
-	chmod +x /tmp/EnigmaBlockchain/deb/usr/lib/lib*.so
+	mkdir -p /tmp/EnigmaBlockchain/deb/usr/local/lib
+	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/EnigmaBlockchain/deb/usr/local/lib/
+	chmod +x /tmp/EnigmaBlockchain/deb/usr/local/lib/lib*.so
 
 	mkdir -p /tmp/EnigmaBlockchain/deb/DEBIAN
 	cp ./packaging_ubuntu/control /tmp/EnigmaBlockchain/deb/DEBIAN/control
