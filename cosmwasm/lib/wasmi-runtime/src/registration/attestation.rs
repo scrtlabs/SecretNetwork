@@ -111,7 +111,7 @@ pub fn create_report_with_data(
         }
         Err(err) => {
             // println!("[-] Enclave: error creating report");
-            sgx_status_t::from(err)
+            err
         }
     }
 }

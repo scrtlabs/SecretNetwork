@@ -1,8 +1,5 @@
 #![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
 
-#[cfg(not(feature = "SGX_MODE_HW"))]
-use base64;
-
 use bit_vec::BitVec;
 use chrono::Utc as TzUtc;
 use chrono::{Duration, TimeZone};
@@ -11,9 +8,6 @@ use itertools::Itertools;
 #[cfg(feature = "SGX_MODE_HW")]
 use log::*;
 use num_bigint::BigUint;
-
-#[cfg(not(feature = "SGX_MODE_HW"))]
-use rustls;
 
 use sgx_tcrypto::SgxEccHandle;
 use sgx_types::{
