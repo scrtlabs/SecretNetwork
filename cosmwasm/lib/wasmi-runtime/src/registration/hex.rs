@@ -1,13 +1,13 @@
 #![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
 
-use sgx_types::*;
+use sgx_types::sgx_spid_t;
 use std::char;
 
 fn decode_hex_digit(digit: char) -> u8 {
     match digit {
-        '0'..='9' => digit as u8 - '0' as u8,
-        'a'..='f' => digit as u8 - 'a' as u8 + 10,
-        'A'..='F' => digit as u8 - 'A' as u8 + 10,
+        '0'..='9' => digit as u8 - b'0',
+        'a'..='f' => digit as u8 - b'a' + 10,
+        'A'..='F' => digit as u8 - b'A' + 10,
         _ => panic!(),
     }
 }
@@ -65,7 +65,7 @@ fn encode_hex_byte(byte: u8) -> [char; 2] {
 pub fn encode_hex(bytes: &[u8]) -> String {
     let strs: Vec<String> = bytes
         .iter()
-        .map(|byte| encode_hex_byte(*byte).iter().map(|c| *c).collect())
+        .map(|byte| encode_hex_byte(*byte).iter().copied().collect())
         .collect();
     strs.join(" ")
 }
@@ -73,7 +73,7 @@ pub fn encode_hex(bytes: &[u8]) -> String {
 // taken from https://github.com/apache/incubator-teaclave-sgx-sdk/blob/master/samplecode/mutual-ra/enclave/src/cert.rs
 // isn't actually hex, but I'm sticking it here anyway
 pub fn percent_decode(orig: String) -> String {
-    let v: Vec<&str> = orig.split("%").collect();
+    let v: Vec<&str> = orig.split('%').collect();
     let mut ret = String::new();
     ret.push_str(v[0]);
     if v.len() > 1 {

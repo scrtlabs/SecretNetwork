@@ -1,4 +1,4 @@
-use base64;
+// use base64;
 use log::*;
 
 use enclave_ffi_types::EnclaveError;
@@ -100,7 +100,7 @@ pub fn validate_contract_key(
         .get_consensus_state_ikm()
         .map_err(|_err| {
             error!("Error extractling consensus_state_key");
-            return false;
+            false
         })
         .unwrap();
 
@@ -108,5 +108,5 @@ pub fn validate_contract_key(
     let calculated_authentication_id =
         generate_contract_id(&enclave_key, &signer_id, &contract_hash);
 
-    return calculated_authentication_id == expected_authentication_id;
+    calculated_authentication_id == expected_authentication_id
 }

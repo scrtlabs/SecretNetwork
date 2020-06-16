@@ -8,7 +8,7 @@ import (
 )
 
 func Test_ValidateCertificateHwMode(t *testing.T) {
-	cert, err := ioutil.ReadFile("../testdata/attestation_cert_hw")
+	cert, err := ioutil.ReadFile("../testdata/attestation_cert_hw_v2")
 	require.NoError(t, err)
 	_ = os.Setenv("SGX_MODE", "HW")
 	_, err = VerifyRaCert(cert)
@@ -16,7 +16,7 @@ func Test_ValidateCertificateHwMode(t *testing.T) {
 }
 
 func Test_ValidateCertificateSwMode(t *testing.T) {
-	cert, err := ioutil.ReadFile("../testdata/attestation_cert")
+	cert, err := ioutil.ReadFile("../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 	_ = os.Setenv("SGX_MODE", "SW")
 	_, err = VerifyRaCert(cert)

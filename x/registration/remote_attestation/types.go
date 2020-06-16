@@ -63,6 +63,12 @@ type QuoteReportBody struct {
 	reportData string
 }
 
+type EndorsedAttestationReport struct {
+	Report      []byte `json:"report"`
+	Signature   []byte `json:"signature"`
+	SigningCert []byte `json:"signing_cert"`
+}
+
 type PlatformInfoBlob struct {
 	SgxEpidGroupFlags       uint8             `json:"sgx_epid_group_flags"`
 	SgxTcbEvaluationFlags   uint32            `json:"sgx_tcb_evaluation_flags"`

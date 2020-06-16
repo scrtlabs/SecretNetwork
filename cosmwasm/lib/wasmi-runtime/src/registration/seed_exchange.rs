@@ -1,5 +1,4 @@
 use log::*;
-
 use sgx_types::{sgx_status_t, SgxResult};
 
 use crate::consts::ENCRYPTED_SEED_SIZE;
@@ -18,7 +17,7 @@ pub fn encrypt_seed(new_node_pk: [u8; PUBLIC_KEY_SIZE]) -> SgxResult<Vec<u8>> {
     // encrypt the seed using the symmetric key derived in the previous stage
     let res = match AESKey::new_from_slice(&shared_enc_key).encrypt_siv(
         KEY_MANAGER.get_consensus_seed().unwrap().as_slice() as &[u8],
-        &authenticated_data,
+        Some(&authenticated_data),
     ) {
         Ok(r) => {
             if r.len() != ENCRYPTED_SEED_SIZE {
@@ -60,7 +59,7 @@ pub fn decrypt_seed(
     // decrypt
     seed.as_mut()
         .copy_from_slice(&match AESKey::new_from_slice(&shared_enc_key)
-            .decrypt_siv(&encrypted_seed, &authenticated_data)
+            .decrypt_siv(&encrypted_seed, Some(&authenticated_data))
         {
             Ok(r) => {
                 if r.len() != SEED_KEY_SIZE {

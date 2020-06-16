@@ -13,7 +13,7 @@ impl Hmac for AESKey {
 
         result.copy_from_slice(tag.as_ref());
 
-        return result;
+        result
     }
 }
 

@@ -23,46 +23,60 @@ use enclave_ffi_types::CryptoError;
 use log::*;
 
 impl SIVEncryptable for AESKey {
-    fn encrypt_siv(&self, plaintext: &[u8], ad: &Vec<&[u8]>) -> Result<Vec<u8>, CryptoError> {
+    fn encrypt_siv(&self, plaintext: &[u8], ad: Option<&[&[u8]]>) -> Result<Vec<u8>, CryptoError> {
         aes_siv_encrypt(plaintext, ad, self.get())
     }
 
-    fn decrypt_siv(&self, plaintext: &[u8], ad: &Vec<&[u8]>) -> Result<Vec<u8>, CryptoError> {
+    fn decrypt_siv(&self, plaintext: &[u8], ad: Option<&[&[u8]]>) -> Result<Vec<u8>, CryptoError> {
         aes_siv_decrypt(plaintext, ad, self.get())
     }
 }
 
 fn aes_siv_encrypt(
     plaintext: &[u8],
-    ad: &Vec<&[u8]>,
+    ad: Option<&[&[u8]]>,
     key: &SymmetricKey,
 ) -> Result<Vec<u8>, CryptoError> {
     let mut cipher = Aes128Siv::new(GenericArray::clone_from_slice(key));
-    let ciphertext = match cipher.encrypt(ad, plaintext) {
-        Ok(res) => res,
-        Err(e) => {
+
+    match ad {
+        Some(r) => cipher.encrypt(r, plaintext).map_err(|e| {
             error!("aes_siv_encrypt error: {:?}", e);
-            return Err(CryptoError::EncryptionError);
-        }
-    };
-    Ok(ciphertext)
+            CryptoError::EncryptionError
+        }),
+        None => cipher.encrypt(&vec![[]], plaintext).map_err(|e| {
+            error!("aes_siv_encrypt error: {:?}", e);
+            CryptoError::EncryptionError
+        }),
+    }
 }
 
 fn aes_siv_decrypt(
     ciphertext: &[u8],
-    ad: &Vec<&[u8]>,
+    ad: Option<&[&[u8]]>,
     key: &SymmetricKey,
 ) -> Result<Vec<u8>, CryptoError> {
     let mut cipher = Aes128Siv::new(GenericArray::clone_from_slice(key));
-    let plaintext = match cipher.decrypt(ad, ciphertext) {
-        Ok(res) => res,
-        Err(e) => {
+
+    match ad {
+        Some(r) => cipher.decrypt(r, ciphertext).map_err(|e| {
             error!("aes_siv_decrypt error: {:?}", e);
-            return Err(CryptoError::DecryptionError);
-        }
-    };
-    Ok(plaintext)
+            CryptoError::DecryptionError
+        }),
+        None => cipher.decrypt(&vec![[]], ciphertext).map_err(|e| {
+            error!("aes_siv_decrypt error: {:?}", e);
+            CryptoError::DecryptionError
+        }),
+    }
 }
+// }
+// let plaintext = match  {
+//     Ok(res) => res,
+//     Err(e) => {
+//
+//     }
+// };
+// Ok(plaintext)
 
 #[cfg(feature = "test")]
 pub mod tests {

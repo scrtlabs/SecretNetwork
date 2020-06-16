@@ -59,12 +59,13 @@ pub extern "C" fn ocall_read_db(mut context: Ctx, key: *const u8, key_len: usize
     .map(|value| {
         value
             .map(|vec| {
-                super::allocate_enclave_buffer(&vec).unwrap_or(unsafe { null_buffer.clone() })
+                super::allocate_enclave_buffer(&vec)
+                    .unwrap_or(unsafe { null_buffer.unsafe_clone() })
             })
-            .unwrap_or(unsafe { null_buffer.clone() })
+            .unwrap_or(unsafe { null_buffer.unsafe_clone() })
     })
     // TODO add logging if we fail to write
-    .unwrap_or(unsafe { null_buffer.clone() })
+    .unwrap_or(unsafe { null_buffer.unsafe_clone() })
 }
 
 /// Write a value to the contracts key-value store.
