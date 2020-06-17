@@ -19,7 +19,7 @@ sudo apt install jq
 
 ```bash
 cd ~
-git clone https://Cashmaney/migrate_genesis.git
+git clone https://github.com/Cashmaney/migrate_genesis.git
 ```
 
 ### Install requirements
