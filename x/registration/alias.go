@@ -53,4 +53,5 @@ type (
 	Keeper            = keeper.Keeper
 	SeedConfig        = types.SeedConfig
 	EnclaveApi        = enclave.Api
+	MasterCertificate = types.MasterCertificate
 )

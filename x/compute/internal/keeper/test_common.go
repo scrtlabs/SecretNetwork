@@ -11,12 +11,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
+	wasmTypes "github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
-
-	wasmTypes "github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
 )
 
 const flagLRUCacheSize = "lru_size"

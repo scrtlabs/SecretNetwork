@@ -7,7 +7,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -54,9 +53,11 @@ func GzipIt(input []byte) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// WASMCLIContext wraps github.com/cosmos/cosmos-sdk/client/context.CLIContext
-type WASMCLIContext struct {
-	CLIContext context.CLIContext
+// WASMContext wraps github.com/cosmos/cosmos-sdk/client/context.CLIContext
+type WASMContext struct {
+	CLIContext       context.CLIContext
+	TestKeyPairPath  string
+	TestMasterIOCert regtypes.MasterCertificate
 }
 
 type keyPair struct {
@@ -65,8 +66,13 @@ type keyPair struct {
 }
 
 // GetTxSenderKeyPair get the local tx encryption id
-func (ctx WASMCLIContext) GetTxSenderKeyPair() (privkey []byte, pubkey []byte, er error) {
-	keyPairFilePath := path.Join(ctx.CLIContext.HomeDir, "id_tx_io.json")
+func (ctx WASMContext) GetTxSenderKeyPair() (privkey []byte, pubkey []byte, er error) {
+	var keyPairFilePath string
+	if len(ctx.TestKeyPairPath) > 0 {
+		keyPairFilePath = ctx.TestKeyPairPath
+	} else {
+		keyPairFilePath = path.Join(ctx.CLIContext.HomeDir, "id_tx_io.json")
+	}
 
 	if _, err := os.Stat(keyPairFilePath); os.IsNotExist(err) {
 		var privkey [32]byte
@@ -120,16 +126,20 @@ var hkdfSalt = []byte{
 	0xc1, 0xa1, 0x2e, 0xa6, 0x37, 0xd7, 0xe9, 0x6d,
 }
 
-func (ctx WASMCLIContext) getConsensusIoPubKey() ([]byte, error) {
-	res, _, err := ctx.CLIContext.Query("custom/register/master-cert")
-	if err != nil {
-		return nil, err
-	}
+func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
 	var certs regtypes.GenesisState
+	if ctx.TestMasterIOCert != nil { // TODO check length?
+		certs.IoMasterCertificate = ctx.TestMasterIOCert
+	} else {
+		res, _, err := ctx.CLIContext.Query("custom/register/master-cert")
+		if err != nil {
+			return nil, err
+		}
 
-	err = json.Unmarshal(res, &certs)
-	if err != nil {
-		return nil, err
+		err = json.Unmarshal(res, &certs)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	ioPubkey, err := ra.VerifyRaCert(certs.IoMasterCertificate)
@@ -140,7 +150,7 @@ func (ctx WASMCLIContext) getConsensusIoPubKey() ([]byte, error) {
 	return ioPubkey, nil
 }
 
-func (ctx WASMCLIContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) ([]byte, error) {
+func (ctx WASMContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) ([]byte, error) {
 	consensusIoPubKeyBytes, err := ctx.getConsensusIoPubKey()
 	if err != nil {
 		return nil, err
@@ -155,13 +165,11 @@ func (ctx WASMCLIContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byt
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(os.Stderr, "CLI txEncryptionKey = %v\n", txEncryptionKey)
-
 	return txEncryptionKey, nil
 }
 
 // Encrypt encrypts
-func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
+func (ctx WASMContext) Encrypt(plaintext []byte) ([]byte, error) {
 	txSenderPrivKey, txSenderPubKey, err := ctx.GetTxSenderKeyPair()
 
 	nonce := make([]byte, 32)
@@ -192,7 +200,7 @@ func (ctx WASMCLIContext) Encrypt(plaintext []byte) ([]byte, error) {
 }
 
 // Decrypt decrypts
-func (ctx WASMCLIContext) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) {
+func (ctx WASMContext) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) {
 	txSenderPrivKey, _, err := ctx.GetTxSenderKeyPair()
 
 	txEncryptionKey, err := ctx.getTxEncryptionKey(txSenderPrivKey, nonce)

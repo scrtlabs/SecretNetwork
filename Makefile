@@ -108,14 +108,14 @@ deb: build_linux
     endif
 	rm -rf /tmp/EnigmaBlockchain
 
-	mkdir -p /tmp/EnigmaBlockchain/deb/bin
-	mv -f ./enigmacli /tmp/EnigmaBlockchain/deb/bin/enigmacli
-	mv -f ./enigmad /tmp/EnigmaBlockchain/deb/bin/enigmad
-	chmod +x /tmp/EnigmaBlockchain/deb/bin/enigmad /tmp/EnigmaBlockchain/deb/bin/enigmacli
+	mkdir -p /tmp/EnigmaBlockchain/deb/usr/local/bin
+	mv -f ./enigmacli /tmp/EnigmaBlockchain/deb/usr/local/bin/enigmacli
+	mv -f ./enigmad /tmp/EnigmaBlockchain/deb/usr/local/bin/enigmad
+	chmod +x /tmp/EnigmaBlockchain/deb/usr/local/bin/enigmad /tmp/EnigmaBlockchain/deb/usr/local/bin/enigmacli
 
-	mkdir -p /tmp/EnigmaBlockchain/deb/usr/lib
-	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/EnigmaBlockchain/deb/usr/lib/
-	chmod +x /tmp/EnigmaBlockchain/deb/usr/lib/lib*.so
+	mkdir -p /tmp/EnigmaBlockchain/deb/usr/local/lib
+	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/EnigmaBlockchain/deb/usr/local/lib/
+	chmod +x /tmp/EnigmaBlockchain/deb/usr/local/lib/lib*.so
 
 	mkdir -p /tmp/EnigmaBlockchain/deb/DEBIAN
 	cp ./packaging_ubuntu/control /tmp/EnigmaBlockchain/deb/DEBIAN/control
@@ -159,6 +159,8 @@ clean:
 	-rm -rf ./third_party/vendor/
 	-rm -rf ./.sgx_secrets/*
 	-rm -rf ./x/compute/internal/keeper/.sgx_secrets/*
+	-rm -rf ./x/compute/internal/keeper/*.der
+	-rm -rf ./x/compute/internal/keeper/*.so
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/lib/wasmi-runtime clean
 
@@ -178,14 +180,19 @@ clean-enclave:
 sanity-test:
 	SGX_MODE=SW $(MAKE) build_linux
 	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
-	SGX_MODE=SW ./cosmwasm/lib/wasmi-sgx-test.sh
+	SGX_MODE=SW ./cosmwasm/lib/sanity-test.sh
 	
 sanity-test-hw:
 	$(MAKE) build_linux
 	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
-	./cosmwasm/lib/wasmi-sgx-test.sh
+	./cosmwasm/lib/sanity-test.sh
 
 callback-sanity-test:
 	SGX_MODE=SW $(MAKE) build_linux
 	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
 	SGX_MODE=SW ./cosmwasm/lib/callback-test.sh
+
+go-tests:
+	SGX_MODE=SW $(MAKE) build_linux
+	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	SGX_MODE=SW go test -p 1 -v ./x/compute/internal/...

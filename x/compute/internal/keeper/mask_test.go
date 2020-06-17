@@ -3,11 +3,10 @@ package keeper
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	wasmTypes "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
+	"github.com/stretchr/testify/require"
 )
 
 // MaskInitMsg is {}
@@ -28,14 +27,14 @@ type reflectPayload struct {
 func checkAccount(t *testing.T, ctx sdk.Context, accKeeper auth.AccountKeeper, addr sdk.AccAddress, expected sdk.Coins) {
 	acct := accKeeper.GetAccount(ctx, addr)
 	if expected == nil {
-		assert.Nil(t, acct)
+		require.Nil(t, acct)
 	} else {
-		assert.NotNil(t, acct)
+		require.NotNil(t, acct)
 		if expected.Empty() {
 			// there is confusion between nil and empty slice... let's just treat them the same
-			assert.True(t, acct.GetCoins().Empty())
+			require.True(t, acct.GetCoins().Empty())
 		} else {
-			assert.Equal(t, acct.GetCoins(), expected)
+			require.Equal(t, acct.GetCoins(), expected)
 		}
 	}
 }
