@@ -40,6 +40,7 @@ pub fn handle<S: Storage, A: Api>(
         HandleMsg::C { x, y } => try_c(deps, env, x, y),
         HandleMsg::EmptyLogKeyValue {} => empty_log_key_value(deps,env),
         HandleMsg::EmptyData {} => empty_data(deps,env),
+        HandleMsg::NoData {} => no_data(deps,env),
     }
 }
 
@@ -130,6 +131,17 @@ pub fn empty_data<S: Storage, A: Api>(
         messages: vec![],
         log: vec![],
         data: Some(Binary(vec![])),
+    })
+}
+
+pub fn no_data<S: Storage, A: Api>(
+    deps: &mut Extern<S, A>,
+    env: Env,
+) -> Result<Response> {
+    Ok(Response {
+        messages: vec![],
+        log: vec![],
+        data: None,
     })
 }
 

@@ -389,3 +389,92 @@ func TestEmptyLogKeyValue(t *testing.T) {
 		data.Ok.Log,
 	)
 }
+
+func TestEmptyData(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	initMsg := InitMsg{}
+	initMsgBz, err := json.Marshal(initMsg)
+	require.NoError(t, err)
+
+	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+	require.NoError(t, err)
+
+	// init
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "demo contract 5", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.NoError(t, err)
+
+	data, _ := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"emptydata":{}}`, 1)
+
+	require.Empty(t, data.Err)
+	require.Equal(t, "", data.Ok.Data)
+}
+
+func TestNoData(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	initMsg := InitMsg{}
+	initMsgBz, err := json.Marshal(initMsg)
+	require.NoError(t, err)
+
+	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+	require.NoError(t, err)
+
+	// init
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "demo contract 5", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.NoError(t, err)
+
+	data, _ := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"nodata":{}}`, 1)
+
+	require.Empty(t, data.Err)
+	require.Equal(t, "nil", data.Ok.Data)
+}
+
+func TestExecuteError(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	initMsg := InitMsg{}
+	initMsgBz, err := json.Marshal(initMsg)
+	require.NoError(t, err)
+
+	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+	require.NoError(t, err)
+
+	// init
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "demo contract 5", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.NoError(t, err)
+
+	data, _ := executeHelper(t, keeper, ctx, contractAddress, walletA, `bad input`, 1)
+
+	require.Contains(t, data.Err, "Error parsing HandleMsg")
+}

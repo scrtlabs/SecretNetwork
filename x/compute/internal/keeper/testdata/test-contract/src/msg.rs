@@ -25,6 +25,7 @@ pub enum HandleMsg {
     },
     EmptyLogKeyValue { },
     EmptyData { },
+    NoData { },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
