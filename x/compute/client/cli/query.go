@@ -382,22 +382,22 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 								if err != nil {
 									return err
 								}
-								keyPalaintext, err := wasmCtx.Decrypt(keyCiphertext, nonce)
+								keyPlaintext, err := wasmCtx.Decrypt(keyCiphertext, nonce)
 								if err != nil {
 									return err
 								}
-								a.Key = string(keyPalaintext)
+								a.Key = string(keyPlaintext)
 
 								// value
 								valueCiphertext, err := base64.StdEncoding.DecodeString(a.Value)
 								if err != nil {
 									return err
 								}
-								valuePalaintext, err := wasmCtx.Decrypt(valueCiphertext, nonce)
+								valuePlaintext, err := wasmCtx.Decrypt(valueCiphertext, nonce)
 								if err != nil {
 									return err
 								}
-								a.Value = string(valuePalaintext)
+								a.Value = string(valuePlaintext)
 
 								e.Attributes[i] = a
 							}

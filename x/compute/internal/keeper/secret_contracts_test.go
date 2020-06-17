@@ -28,20 +28,21 @@ func getDecryptedWasmEvents(t *testing.T, ctx *sdk.Context, nonce []byte) sdk.Ev
 					keyCiphertext, err := base64.StdEncoding.DecodeString(key)
 					require.NoError(t, err)
 
-					keyPalaintext, err := wasmCtx.Decrypt(keyCiphertext, nonce)
+					keyPlaintext, err := wasmCtx.Decrypt(keyCiphertext, nonce)
 					require.NoError(t, err)
 
-					a.Key = keyPalaintext
+					a.Key = keyPlaintext
 
 					// value
 					valueCiphertext, err := base64.StdEncoding.DecodeString(value)
 					require.NoError(t, err)
 
-					valuePalaintext, err := wasmCtx.Decrypt(valueCiphertext, nonce)
+					valuePlaintext, err := wasmCtx.Decrypt(valueCiphertext, nonce)
 					require.NoError(t, err)
 
-					a.Value = valuePalaintext
+					a.Value = valuePlaintext
 
+					// override in parent
 					e.Attributes[i] = a
 				}
 			}
