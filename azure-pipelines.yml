@@ -30,3 +30,10 @@ steps:
     repository: enigmampc
     tags: enigma-sgx-node
     arguments: --build-arg SECRET_NODE_TYPE=BOOTSTRAP
+
+- script: docker-compose up aesm bootstrap -d
+
+- script: docker-compose up node
+
+- script: docker-compose down
+  condition: always()
