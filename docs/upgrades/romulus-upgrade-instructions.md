@@ -211,7 +211,7 @@ secretcli config trust-node true
 Get the new `secret-1` genesis file (this will be provided by CoS after Step #2 is completed):
 
 ```bash
-wget https://github.com/chainofsecrets/TheRomulusUpgrade/blob/romulus-upgrade/secret-1-genesis.json
+wget https://raw.githubusercontent.com/chainofsecrets/TheRomulusUpgrade/romulus-upgrade/secret-1-genesis.json
 ```
 
 Validate the genesis file (replace \<sha256sum> with the checksum provided by CoS after Step #2 is completed):
