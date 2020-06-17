@@ -205,7 +205,6 @@ secretcli config indent true
 secretcli config trust-node true
 ```
 
-
 ### 4. Setup the new Node/Validator:
 
 Get the new `secret-1` genesis file (this will be provided by CoS after Step #2 is completed):
