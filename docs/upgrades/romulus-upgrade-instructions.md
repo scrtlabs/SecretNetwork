@@ -95,7 +95,7 @@ sudo perl -i -pe 's/^Restart=.*/Restart=on-failure/' /etc/systemd/system/enigma-
 Display the `enigma-node` service file:
 
 ```bash
-cat /etc/systemd/system/enigma-node
+cat /etc/systemd/system/enigma-node.service
 ```
 
 It should look similar to below:
