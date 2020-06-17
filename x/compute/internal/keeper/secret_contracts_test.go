@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -32,8 +33,6 @@ func getDecryptedWasmEvents(t *testing.T, ctx sdk.Context, nonce []byte, skip ui
 					// key
 					keyCipherBz, err := base64.StdEncoding.DecodeString(newLog.Key)
 					require.NoError(t, err)
-					x := string(keyCipherBz)
-					_ = x
 					keyPlainBz, err := wasmCtx.Decrypt(keyCipherBz, nonce)
 					require.NoError(t, err)
 					newLog.Key = string(keyPlainBz)
@@ -168,7 +167,7 @@ func TestCallbackSanity(t *testing.T) {
 	require.NoError(t, err)
 
 	// init
-	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "demo contract 5", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
 	// check init events (no data in init)
@@ -242,7 +241,7 @@ func TestSanity(t *testing.T) {
 	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
 	require.NoError(t, err)
 
-	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "demo contract", deposit)
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "some label", deposit)
 	require.NoError(t, err)
 
 	// check init events (no data in init)
@@ -317,7 +316,7 @@ func TestInitLogs(t *testing.T) {
 	require.NoError(t, err)
 
 	// init
-	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "demo contract 5", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
 	// check init events (no data in init)
@@ -352,7 +351,7 @@ func TestEmptyLogKeyValue(t *testing.T) {
 	require.NoError(t, err)
 
 	// init
-	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "demo contract 5", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
 	data, execEvents := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"emptylogkeyvalue":{}}`, 1)
@@ -395,7 +394,7 @@ func TestEmptyData(t *testing.T) {
 	require.NoError(t, err)
 
 	// init
-	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "demo contract 5", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
 	data, _ := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"emptydata":{}}`, 1)
@@ -421,7 +420,7 @@ func TestNoData(t *testing.T) {
 	require.NoError(t, err)
 
 	// init
-	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "demo contract 5", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
 	data, _ := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"nodata":{}}`, 1)
@@ -447,10 +446,41 @@ func TestExecuteError(t *testing.T) {
 	require.NoError(t, err)
 
 	// init
-	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "demo contract 5", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
 	data, _ := executeHelper(t, keeper, ctx, contractAddress, walletA, `bad input`, 1)
 
 	require.Contains(t, data.Err, "Error parsing HandleMsg")
+}
+
+func TestInitError(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`bad input`))
+	require.NoError(t, err)
+
+	// init
+	_, err = keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	require.Contains(t, err.Error(), "instantiate wasm contract failed")
+
+	errorCipherB64 := strings.ReplaceAll(err.Error(), "instantiate wasm contract failed: ", "")
+	errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
+	require.NoError(t, err)
+	errorPlainBz, err := wasmCtx.Decrypt(errorCipherBz, initMsgBz[0:32])
+	require.NoError(t, err)
+	initErrorPlain := string(errorPlainBz)
+
+	require.Contains(t, initErrorPlain, "Error parsing InitMsg: Invalid type")
 }
