@@ -96,6 +96,23 @@ func getDecryptedData(t *testing.T, data []byte, nonce []byte) cosmwasm.CosmosRe
 	return res
 }
 
+func requireQueryResult(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.AccAddress, input string, expectedOutput string) {
+	queryBz, err := wasmCtx.Encrypt([]byte(input))
+	require.NoError(t, err)
+
+	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz)
+	require.NoError(t, err)
+
+	nonce := queryBz[0:32]
+	resultPlainBz, err := wasmCtx.Decrypt(resultCipherBz, nonce)
+	require.NoError(t, err)
+
+	resultBz, err := base64.StdEncoding.DecodeString(string(resultPlainBz))
+	require.NoError(t, err)
+
+	require.JSONEq(t, expectedOutput, string(resultBz))
+}
+
 func TestCallbackSanity(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
@@ -128,7 +145,7 @@ func TestCallbackSanity(t *testing.T) {
 	execResult, err := keeper.Execute(ctx, contractAddress, fred, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
-	nonce := execMsgBz[:32]
+	nonce := execMsgBz[0:32]
 
 	// Events is from all callbacks
 	wasmEvents := getDecryptedWasmEvents(t, &ctx, nonce)
@@ -171,6 +188,7 @@ func TestSanity(t *testing.T) {
 	creator := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
 	fred := createFakeFundedAccount(ctx, accKeeper, topUp)
 
+	// https://github.com/CosmWasm/cosmwasm-examples/blob/f5ea00a85247abae8f8cbcba301f94ef21c66087/erc20/src/contract.rs
 	wasmCode, err := ioutil.ReadFile("./testdata/erc20-f5ea00a85247abae8f8cbcba301f94ef21c66087.wasm")
 	require.NoError(t, err)
 
@@ -187,19 +205,14 @@ func TestSanity(t *testing.T) {
 	require.NoError(t, err)
 
 	// check state after init
-	query := fmt.Sprintf(`{"balance":{"address":"%s"}}`, creator.String())
-	queryBz, err := wasmCtx.Encrypt([]byte(query))
-	require.NoError(t, err)
-
-	queryRes, err := keeper.QuerySmart(ctx, contractAddr, queryBz)
-	require.NoError(t, err)
-
-	nonce := queryBz[:32]
-	resDecrypted, err := wasmCtx.Decrypt(queryRes, nonce)
-	require.NoError(t, err)
-
-	decodedResp, err := base64.StdEncoding.DecodeString(string(resDecrypted))
-	require.NoError(t, err)
-	x := string(decodedResp)
-	fmt.Println(x)
+	requireQueryResult(t,
+		keeper, ctx, contractAddr,
+		fmt.Sprintf(`{"balance":{"address":"%s"}}`, creator.String()),
+		`{"balance":"108"}`,
+	)
+	requireQueryResult(t,
+		keeper, ctx, contractAddr,
+		fmt.Sprintf(`{"balance":{"address":"%s"}}`, fred.String()),
+		`{"balance":"53"}`,
+	)
 }

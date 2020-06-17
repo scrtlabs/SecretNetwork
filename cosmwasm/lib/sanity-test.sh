@@ -67,7 +67,7 @@ wait_for_tx "$STORE_TX_HASH" "Waiting for store to finish on-chain..."
     jq -e '.logs[].events[].attributes[] | select(.key == "code_id" and .value == "1")'
 
 # init the contract (ocall_init + write_db + canonicalize_address)
-# a is a tendermint address (will be used in transfer: https://github.com/CosmWasm/cosmwasm-examples/blob/f2f0568ebc90d812bcfaa0ef5eb1da149a951552/erc20/src/contract.rs#L110)
+# a is a tendermint address (will be used in transfer: https://github.com/CosmWasm/cosmwasm-examples/blob/f5ea00a85247abae8f8cbcba301f94ef21c66087/erc20/src/contract.rs#L110)
 # enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4 is just a random address
 # balances are set to 108 & 53 at init
 export INIT_TX_HASH=$(
