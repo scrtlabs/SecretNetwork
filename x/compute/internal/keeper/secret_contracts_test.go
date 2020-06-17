@@ -164,11 +164,7 @@ func TestCallbackSanity(t *testing.T) {
 	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	initMsg := InitMsg{}
-	initMsgBz, err := json.Marshal(initMsg)
-	require.NoError(t, err)
-
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{}`))
 	require.NoError(t, err)
 
 	// init
@@ -317,11 +313,7 @@ func TestInitLogs(t *testing.T) {
 	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	initMsg := InitMsg{}
-	initMsgBz, err := json.Marshal(initMsg)
-	require.NoError(t, err)
-
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{}`))
 	require.NoError(t, err)
 
 	// init
@@ -356,11 +348,7 @@ func TestEmptyLogKeyValue(t *testing.T) {
 	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	initMsg := InitMsg{}
-	initMsgBz, err := json.Marshal(initMsg)
-	require.NoError(t, err)
-
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{}`))
 	require.NoError(t, err)
 
 	// init
@@ -403,11 +391,7 @@ func TestEmptyData(t *testing.T) {
 	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	initMsg := InitMsg{}
-	initMsgBz, err := json.Marshal(initMsg)
-	require.NoError(t, err)
-
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{}`))
 	require.NoError(t, err)
 
 	// init
@@ -433,11 +417,7 @@ func TestNoData(t *testing.T) {
 	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	initMsg := InitMsg{}
-	initMsgBz, err := json.Marshal(initMsg)
-	require.NoError(t, err)
-
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{}`))
 	require.NoError(t, err)
 
 	// init
@@ -463,11 +443,7 @@ func TestExecuteError(t *testing.T) {
 	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	initMsg := InitMsg{}
-	initMsgBz, err := json.Marshal(initMsg)
-	require.NoError(t, err)
-
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{}`))
 	require.NoError(t, err)
 
 	// init
