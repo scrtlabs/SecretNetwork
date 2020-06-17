@@ -80,32 +80,25 @@ NOTE: you may have to put `sudo` in front of the `journalctl` command if you don
 
 ### 1. Gracefully Halt the `enigma-1` Chain
 
-Stop the enigma-node service:
+Change the configured halt height in `app.toml`:
 
 ```bash
-sudo systemctl stop enigma-node
+perl -i -pe 's/^halt-height =.*/halt-height = 1794500/' ~/.enigmad/config/app.toml
 ```
 
-Edit the service file (/etc/systemd/system/enigma-node.service) and add the `--halt-height` argument to stop the node at the specified block
-height:
+Change the `enigma-node` service configuration to restart only on failure (so it doesn't keep trying to restart after the chain halt):
 
 ```bash
-sudo nano /etc/systemd/system/enigma-node.service
+sudo perl -i -pe 's/^Restart=*/Restart=on-failure' /etc/systemd/system/enigma-node.service
 ```
 
-Change the `ExecStart` setting to:
+Display the `enigma-node` service file:
 
 ```bash
-ExecStart=/bin/enigmad start --halt-height 1794500
+cat /etc/systemd/system/enigma-node
 ```
 
-Change the `Restart` setting to:
-
-```bash
-Restart=no
-```
-
-Verify it looks the same as below and if so, save the changes to the service file:
+It should look similar to below:
 
 ```bash
 [Unit]
@@ -114,9 +107,9 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/bin/enigmad start --halt-height 1794500
+ExecStart=/bin/enigmad start
 User=ubuntu
-Restart=no
+Restart=on-failure
 StartLimitInterval=0
 RestartSec=3
 LimitNOFILE=65535
@@ -125,17 +118,18 @@ LimitNOFILE=65535
 WantedBy=multi-user.target
 ```
 
-Reload the service configuration:
+Reload the `enigma-node` service configuration:
 
 ```bash
 sudo systemctl daemon-reload
 ```
 
-Now start the `enigma-node` service and monitor:
+Restart the `enigma-node` service and monitor:
 
 ```bash
-sudo systemctl start enigma-node
+sudo systemctl restart enigma-node
 ```
+
 
 *The chain will halt at block height _1794500_ at approximately 9am PDT, 12pm EDT and 4pm UTC.*
 
