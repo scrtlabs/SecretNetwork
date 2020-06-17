@@ -50,14 +50,14 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           make vendor
           SGX_MODE=SW RUSTC_WRAPPER="$HOME/sccache" make build_linux
-      - name: Test SGX Sanity
+      - name: Old bash+js sanity tests
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
           mkdir -p ./.sgx_secrets
           cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
           ./cosmwasm/lib/sanity-test.sh
-      - name: Test SGX Sanity (Callbacks)
+      - name: Old bash+js sanity callbacks tests
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
@@ -68,7 +68,7 @@ jobs:
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           go test -v ./x/registration/internal/...
-      - name: Test Compute Module
+      - name: System Tests
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
