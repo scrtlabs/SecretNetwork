@@ -39,7 +39,7 @@ fn try_init_with_callback<S: Storage, A: Api>(
             msg: Binary("{{\"c\":{{\"x\":0,\"y\":13}}}}".as_bytes().to_vec()),
             send: None,
         }],
-        log: vec![log("init with callback", "🦄")],
+        log: vec![log("init with a callback", "🦄")],
         data: None,
     })
 }

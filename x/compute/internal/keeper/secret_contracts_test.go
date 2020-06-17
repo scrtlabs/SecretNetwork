@@ -484,3 +484,64 @@ func TestInitError(t *testing.T) {
 
 	require.Contains(t, initErrorPlain, "Error parsing InitMsg")
 }
+
+func TestInitCallback(t *testing.T) {
+	t.SkipNow() // still not implemented in CosmWasm 0.9
+
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	// init first contract so we'd have someone to callback
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
+	require.NoError(t, err)
+	firstContractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.NoError(t, err)
+
+	// check init events (no data in init)
+	initEvents := getDecryptedWasmEvents(t, ctx, initMsgBz[0:32], 0)
+
+	require.Equal(t, 1, len(initEvents))
+	require.Equal(t,
+		[][]cosmwasm.LogAttribute{
+			{
+				{Key: "contract_address", Value: firstContractAddress.String()},
+				{Key: "init", Value: "🌈"},
+			},
+		},
+		initEvents,
+	)
+
+	// init second contract and callback to the first contract
+	initMsgBz, err = wasmCtx.Encrypt([]byte(fmt.Sprintf(`{"callback":{"contract_addr":"%s"}}`, firstContractAddress.String())))
+	require.NoError(t, err)
+
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.NoError(t, err)
+
+	// check init events (no data in init)
+	initEvents = getDecryptedWasmEvents(t, ctx, initMsgBz[0:32], 1)
+
+	require.Equal(t, 2, len(initEvents))
+	require.Equal(t,
+		[][]cosmwasm.LogAttribute{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "init with a callback", Value: "🦄"},
+			},
+			{
+				{Key: "contract_address", Value: firstContractAddress.String()},
+				{Key: "watermelon", Value: "🍉"},
+			},
+		},
+		initEvents,
+	)
+}
