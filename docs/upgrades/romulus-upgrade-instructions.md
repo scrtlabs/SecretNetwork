@@ -276,7 +276,7 @@ When the `secret-1` chain is live and stable, you can delete the files of the ol
 Change the configured halt height in `app.toml` and restart the node:
 
 ```bash
-perl -i -pe 's/^halt-height =.*/halt-height = 0/' ~/.enigmad/config/app.toml
+perl -i -pe 's/^halt-height =.*/halt-height = 0/' ~/.secretd/config/app.toml
 sudo systemctl restart secret-node
 ```
 
