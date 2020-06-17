@@ -163,7 +163,7 @@ func TestCallbackSanity(t *testing.T) {
 	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{}`))
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
 	require.NoError(t, err)
 
 	// init
@@ -312,7 +312,7 @@ func TestInitLogs(t *testing.T) {
 	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{}`))
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
 	require.NoError(t, err)
 
 	// init
@@ -347,7 +347,7 @@ func TestEmptyLogKeyValue(t *testing.T) {
 	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{}`))
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
 	require.NoError(t, err)
 
 	// init
@@ -390,7 +390,7 @@ func TestEmptyData(t *testing.T) {
 	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{}`))
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
 	require.NoError(t, err)
 
 	// init
@@ -416,7 +416,7 @@ func TestNoData(t *testing.T) {
 	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{}`))
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
 	require.NoError(t, err)
 
 	// init
@@ -426,7 +426,7 @@ func TestNoData(t *testing.T) {
 	data, _ := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"nodata":{}}`, 1)
 
 	require.Empty(t, data.Err)
-	require.Equal(t, "nil", data.Ok.Data)
+	require.Equal(t, "", data.Ok.Data)
 }
 
 func TestExecuteError(t *testing.T) {
@@ -442,7 +442,7 @@ func TestExecuteError(t *testing.T) {
 	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{}`))
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
 	require.NoError(t, err)
 
 	// init
@@ -482,5 +482,5 @@ func TestInitError(t *testing.T) {
 	require.NoError(t, err)
 	initErrorPlain := string(errorPlainBz)
 
-	require.Contains(t, initErrorPlain, "Error parsing InitMsg: Invalid type")
+	require.Contains(t, initErrorPlain, "Error parsing InitMsg")
 }

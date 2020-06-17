@@ -12,11 +12,34 @@ use crate::state::{config, config_read, State};
 pub fn init<S: Storage, A: Api>(
     deps: &mut Extern<S, A>,
     env: Env,
-    _msg: InitMsg,
+    msg: InitMsg,
 ) -> Result<Response> {
+    match msg {
+        InitMsg::Nop {} => try_init_nop(deps, env),
+        InitMsg::Callback { contract_addr } => try_init_with_callback(deps, env, contract_addr),
+    }
+}
+
+fn try_init_nop<S: Storage, A: Api>(deps: &mut Extern<S, A>, env: Env) -> Result<Response> {
     Ok(Response {
         messages: vec![],
         log: vec![log("init", "🌈")],
+        data: None,
+    })
+}
+
+fn try_init_with_callback<S: Storage, A: Api>(
+    deps: &mut Extern<S, A>,
+    env: Env,
+    contract_addr: HumanAddr,
+) -> Result<Response> {
+    Ok(Response {
+        messages: vec![CosmosMsg::Contract {
+            contract_addr: contract_addr.clone(),
+            msg: Binary("{{\"c\":{{\"x\":0,\"y\":13}}}}".as_bytes().to_vec()),
+            send: None,
+        }],
+        log: vec![log("init with callback", "🦄")],
         data: None,
     })
 }
@@ -38,9 +61,9 @@ pub fn handle<S: Storage, A: Api>(
             y,
         } => try_b(deps, env, contract_addr, x, y),
         HandleMsg::C { x, y } => try_c(deps, env, x, y),
-        HandleMsg::EmptyLogKeyValue {} => empty_log_key_value(deps,env),
-        HandleMsg::EmptyData {} => empty_data(deps,env),
-        HandleMsg::NoData {} => no_data(deps,env),
+        HandleMsg::EmptyLogKeyValue {} => try_empty_log_key_value(deps, env),
+        HandleMsg::EmptyData {} => try_empty_data(deps, env),
+        HandleMsg::NoData {} => try_no_data(deps, env),
     }
 }
 
@@ -109,24 +132,18 @@ pub fn try_c<S: Storage, A: Api>(
     Ok(res)
 }
 
-pub fn empty_log_key_value<S: Storage, A: Api>(
+pub fn try_empty_log_key_value<S: Storage, A: Api>(
     deps: &mut Extern<S, A>,
     env: Env,
 ) -> Result<Response> {
     Ok(Response {
         messages: vec![],
-        log: vec![
-            log("my value is empty", ""),  
-            log("", "my key is empty"),
-        ],
+        log: vec![log("my value is empty", ""), log("", "my key is empty")],
         data: None,
     })
 }
 
-pub fn empty_data<S: Storage, A: Api>(
-    deps: &mut Extern<S, A>,
-    env: Env,
-) -> Result<Response> {
+pub fn try_empty_data<S: Storage, A: Api>(deps: &mut Extern<S, A>, env: Env) -> Result<Response> {
     Ok(Response {
         messages: vec![],
         log: vec![],
@@ -134,10 +151,7 @@ pub fn empty_data<S: Storage, A: Api>(
     })
 }
 
-pub fn no_data<S: Storage, A: Api>(
-    deps: &mut Extern<S, A>,
-    env: Env,
-) -> Result<Response> {
+pub fn try_no_data<S: Storage, A: Api>(deps: &mut Extern<S, A>, env: Env) -> Result<Response> {
     Ok(Response {
         messages: vec![],
         log: vec![],

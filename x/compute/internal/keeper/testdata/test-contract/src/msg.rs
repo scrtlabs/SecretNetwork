@@ -4,7 +4,13 @@ use serde::{Deserialize, Serialize};
 use cosmwasm::types::{CosmosMsg, HumanAddr};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct InitMsg {}
+#[serde(rename_all = "lowercase")]
+pub enum InitMsg {
+       Nop { },
+       Callback {
+        contract_addr: HumanAddr,
+       },
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "lowercase")]
