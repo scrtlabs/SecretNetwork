@@ -9,92 +9,91 @@ import (
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
+	cosmwasm "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
+
 	"github.com/stretchr/testify/require"
 )
 
-// filterMessageEvents returns the same events with all of type == EventTypeMessage removed.
-// this is so only our top-level message event comes through
-func getDecryptedWasmEvents(t *testing.T, ctx *sdk.Context, nonce []byte) sdk.Events {
+// getDecryptedWasmEvents gets all "wasm" events and decrypt what's necessary
+// Returns all "wasm" events, including from contract callbacks
+func getDecryptedWasmEvents(t *testing.T, ctx *sdk.Context, nonce []byte) []cosmwasm.LogAttribute {
 	events := ctx.EventManager().Events()
-	var res []sdk.Event
+	var res []cosmwasm.LogAttribute
 	for _, e := range events {
 		if e.Type == "wasm" {
-			for i, a := range e.Attributes {
-				key := string(a.Key)
-				value := string(a.Value)
-				if key != "contract_address" {
+			for _, oldLog := range e.Attributes {
+				newLog := cosmwasm.LogAttribute{
+					Key:   string(oldLog.Key),
+					Value: string(oldLog.Value),
+				}
+
+				if newLog.Key != "contract_address" {
 					// key
-					keyCiphertext, err := base64.StdEncoding.DecodeString(key)
+					keyCipherBz, err := base64.StdEncoding.DecodeString(newLog.Key)
 					require.NoError(t, err)
-
-					keyPlaintext, err := wasmCtx.Decrypt(keyCiphertext, nonce)
+					keyPlainBz, err := wasmCtx.Decrypt(keyCipherBz, nonce)
 					require.NoError(t, err)
-
-					a.Key = keyPlaintext
+					newLog.Key = string(keyPlainBz)
 
 					// value
-					valueCiphertext, err := base64.StdEncoding.DecodeString(value)
+					valueCipherBz, err := base64.StdEncoding.DecodeString(newLog.Value)
 					require.NoError(t, err)
-
-					valuePlaintext, err := wasmCtx.Decrypt(valueCiphertext, nonce)
+					valuePlainBz, err := wasmCtx.Decrypt(valueCipherBz, nonce)
 					require.NoError(t, err)
-
-					a.Value = valuePlaintext
-
-					// override in parent
-					e.Attributes[i] = a
+					newLog.Value = string(valuePlainBz)
 				}
-			}
 
-			res = append(res, e)
+				res = append(res, newLog)
+			}
 		}
 	}
 	return res
 }
 
-func decryptDataJSON(t *testing.T, resp *types.CosmosResponse, nonce []byte) {
+// getDecryptedData decrytes the output of the first function to be called
+// Only returns the data, logs and messages from the first function call
+func getDecryptedData(t *testing.T, data []byte, nonce []byte) cosmwasm.CosmosResponse {
+	var res cosmwasm.CosmosResponse
+	err := json.Unmarshal(data, &res)
+	require.NoError(t, err)
+
 	// data
-	dataCiphertext, err := base64.StdEncoding.DecodeString(resp.Ok.Data)
+	dataCiphertextBz, err := base64.StdEncoding.DecodeString(res.Ok.Data)
+	require.NoError(t, err)
+	dataPlaintext, err := wasmCtx.Decrypt(dataCiphertextBz, nonce)
 	require.NoError(t, err)
 
-	dataPlaintext, err := wasmCtx.Decrypt(dataCiphertext, nonce)
-	require.NoError(t, err)
-
-	resp.Ok.Data = string(dataPlaintext)
+	res.Ok.Data = string(dataPlaintext)
 
 	// logs
-	for i, l := range resp.Ok.Log {
+	for i, log := range res.Ok.Log {
 		// key
-		keyCiphertext, err := base64.StdEncoding.DecodeString(l.Key)
+		keyCipherBz, err := base64.StdEncoding.DecodeString(log.Key)
 		require.NoError(t, err)
-
-		keyPlaintext, err := wasmCtx.Decrypt(keyCiphertext, nonce)
+		keyPlainBz, err := wasmCtx.Decrypt(keyCipherBz, nonce)
 		require.NoError(t, err)
-
-		l.Key = string(keyPlaintext)
+		log.Key = string(keyPlainBz)
 
 		// value
-		valueCiphertext, err := base64.StdEncoding.DecodeString(l.Value)
+		valueCipherBz, err := base64.StdEncoding.DecodeString(log.Value)
 		require.NoError(t, err)
-
-		valuePlaintext, err := wasmCtx.Decrypt(valueCiphertext, nonce)
+		valuePlainBz, err := wasmCtx.Decrypt(valueCipherBz, nonce)
 		require.NoError(t, err)
+		log.Value = string(valuePlainBz)
 
-		l.Value = string(valuePlaintext)
-
-		resp.Ok.Log[i] = l
+		res.Ok.Log[i] = log
 	}
 
 	// messages
-	for i, m := range resp.Ok.Messages {
-		msgPlaintext, err := wasmCtx.Decrypt(m.Contract.Msg[64:], nonce)
+	for i, msg := range res.Ok.Messages {
+		msgPlaintext, err := wasmCtx.Decrypt(msg.Contract.Msg[64:], nonce)
 		require.NoError(t, err)
+		msg.Contract.Msg = msgPlaintext
 
-		m.Contract.Msg = msgPlaintext
-
-		resp.Ok.Messages[i] = m
+		res.Ok.Messages[i] = msg
 	}
+
+	return res
 }
 
 func TestCallbackSanity(t *testing.T) {
@@ -118,34 +117,47 @@ func TestCallbackSanity(t *testing.T) {
 	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
 	require.NoError(t, err)
 
-	addr, err := keeper.Instantiate(ctx, contractID, creator, initMsgBz, "demo contract 5", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	contractAddress, err := keeper.Instantiate(ctx, contractID, creator, initMsgBz, "demo contract 5", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
-	execMsg := fmt.Sprintf(`{"a":{"contract_addr":"%s","x":2,"y":3}}`, addr.String())
+	execMsg := fmt.Sprintf(`{"a":{"contract_addr":"%s","x":2,"y":3}}`, contractAddress.String())
 	execMsgBz, err := wasmCtx.Encrypt([]byte(execMsg))
 	require.NoError(t, err)
 
 	// let's make sure we get a reasonable error, no panic/crash
-	execResult, err := keeper.Execute(ctx, addr, fred, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	execResult, err := keeper.Execute(ctx, contractAddress, fred, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
 	nonce := execMsgBz[:32]
 
-	// Getting wasm Events + get Data json
-	resEvents := getDecryptedWasmEvents(t, &ctx, nonce)
-	var resDataJSON types.CosmosResponse
-	err = json.Unmarshal(execResult.Data, &resDataJSON)
-	require.NoError(t, err)
+	// Events is from all callbacks
+	wasmEvents := getDecryptedWasmEvents(t, &ctx, nonce)
+	require.Equal(t, 6, len(wasmEvents))
+	require.Equal(t,
+		[]cosmwasm.LogAttribute{
+			{Key: "contract_address", Value: contractAddress.String()},
+			{Key: "action", Value: "banana"},
+			{Key: "contract_address", Value: contractAddress.String()},
+			{Key: "action", Value: "papaya"},
+			{Key: "contract_address", Value: contractAddress.String()},
+			{Key: "action", Value: "watermelon"},
+		},
+		wasmEvents,
+	)
 
-	// Decrypt Datat json
-	decryptDataJSON(t, &resDataJSON, nonce)
-	fmt.Println(resEvents)
+	// Data is the output of only the first call
+	data := getDecryptedData(t, execResult.Data, nonce)
 
-	// TODO iterate over res.Events and decrypt with nonce to verify banana, papaya, watermelon
-	// TODO hex.DecodeString(res.Data) -> json.Marshal -> {data: ... , messages: ..., log: [{key:, value:},{key:,value:}]}
-	// output decryption example: https://github.com/enigmampc/SecretNetwork/blob/bedbe10e2e08bedc800f3ff6dac019824da18bd7/x/compute/client/cli/query.go#L327
-
-	require.NoError(t, err)
+	require.Empty(t, data.Err)
+	require.Equal(t, base64.StdEncoding.EncodeToString([]byte{2, 3}), data.Ok.Data)
+	require.Equal(t, []cosmwasm.LogAttribute{{Key: "action", Value: "banana"}}, data.Ok.Log)
+	require.Equal(t, 1, len(data.Ok.Messages))
+	require.NotNil(t, data.Ok.Messages[0].Contract)
+	require.Equal(t, data.Ok.Messages[0].Contract.ContractAddr, contractAddress.String())
+	require.JSONEq(t,
+		string(data.Ok.Messages[0].Contract.Msg),
+		fmt.Sprintf(`{"b":{"x":2,"y":3,"contract_addr":"%s"}}`, contractAddress.String()),
+	)
 }
 
 func TestSanity(t *testing.T) {
