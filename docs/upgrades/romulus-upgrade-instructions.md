@@ -166,7 +166,7 @@ See the [Addendum](#addendum) for detailed instructions.
 Get the `secretnetwork` release:
 
 ```bash
-wget -O secretnetwork_0.2.0_amd64.deb https://github.com/chainofsecrets/TheRomulusUpgrade/releases/download/v0.2.0/secretnetwork_0.2.0_amd64.deb
+wget https://github.com/chainofsecrets/TheRomulusUpgrade/releases/download/v0.2.0/secretnetwork_0.2.0_amd64.deb
 ```
 
 Install the release and configure:
@@ -211,14 +211,14 @@ secretcli config trust-node true
 Get the new `secret-1` genesis file (this will be provided by CoS after Step #2 is completed):
 
 ```bash
-wget -O https://github.com/chainofsecrets/TheRomulusUpgrade/blob/romulus-upgrade/secret-1-genesis.json
+wget https://github.com/chainofsecrets/TheRomulusUpgrade/blob/romulus-upgrade/secret-1-genesis.json
 ```
 
 Validate the genesis file (replace \<sha256sum> with the checksum provided by CoS after Step #2 is completed):
 
 
 ```bash
-echo "<sha256sum> secret-1-genesis.json" | sha256sum --check
+echo "6291811bafcbebb44d93b34422cec683a04f7b168ccbe8965392ff73bfc46c39 secret-1-genesis.json" | sha256sum --check
 ```
 
 Initialize and configure `secretd` with a placeholder moniker "blabla" because it will be overwritten with the correct `app.toml` file:
