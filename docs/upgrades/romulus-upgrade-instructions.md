@@ -273,7 +273,7 @@ When the `secret-1` chain is live and stable, you can delete the files of the ol
 - `rm -rf ~/.enigmacli`
 - `sudo dpkg -r enigma-blockchain`
 
-Change the configured halt height in `app.toml` and restart the node:
+Reset the configured halt height to 0 in `app.toml` and restart the node:
 
 ```bash
 perl -i -pe 's/^halt-height =.*/halt-height = 0/' ~/.secretd/config/app.toml
