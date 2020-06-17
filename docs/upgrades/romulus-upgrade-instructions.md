@@ -86,6 +86,12 @@ Change the configured halt height in `app.toml`:
 perl -i -pe 's/^halt-height =.*/halt-height = 1794500/' ~/.enigmad/config/app.toml
 ```
 
+Change the pruning to "nothing" instead of "syncable":
+
+```bash
+perl -i -pe 's/^pruning =.*/pruning = "nothing"/' ~/.enigmad/config/app.toml
+```
+
 Change the `enigma-node` service configuration to restart only on failure (so it doesn't keep trying to restart after the chain halt):
 
 ```bash
