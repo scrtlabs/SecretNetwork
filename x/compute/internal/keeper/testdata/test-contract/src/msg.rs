@@ -23,6 +23,8 @@ pub enum HandleMsg {
         x: u8,
         y: u8,
     },
+    EmptyLogKeyValue { },
+    EmptyData { },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

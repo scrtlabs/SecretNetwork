@@ -38,6 +38,8 @@ pub fn handle<S: Storage, A: Api>(
             y,
         } => try_b(deps, env, contract_addr, x, y),
         HandleMsg::C { x, y } => try_c(deps, env, x, y),
+        HandleMsg::EmptyLogKeyValue {} => empty_log_key_value(deps,env),
+        HandleMsg::EmptyData {} => empty_data(deps,env),
     }
 }
 
@@ -104,6 +106,31 @@ pub fn try_c<S: Storage, A: Api>(
         data: Some(Binary(vec![x + y])),
     };
     Ok(res)
+}
+
+pub fn empty_log_key_value<S: Storage, A: Api>(
+    deps: &mut Extern<S, A>,
+    env: Env,
+) -> Result<Response> {
+    Ok(Response {
+        messages: vec![],
+        log: vec![
+            log("my value is empty", ""),  
+            log("", "my key is empty"),
+        ],
+        data: None,
+    })
+}
+
+pub fn empty_data<S: Storage, A: Api>(
+    deps: &mut Extern<S, A>,
+    env: Env,
+) -> Result<Response> {
+    Ok(Response {
+        messages: vec![],
+        log: vec![],
+        data: Some(Binary(vec![])),
+    })
 }
 
 pub fn query<S: Storage, A: Api>(deps: &Extern<S, A>, msg: QueryMsg) -> Result<Vec<u8>> {

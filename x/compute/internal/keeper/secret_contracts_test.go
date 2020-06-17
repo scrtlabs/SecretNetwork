@@ -303,3 +303,89 @@ func TestSanity(t *testing.T) {
 		`{"balance":"63"}`,
 	)
 }
+
+func TestInitLogs(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	initMsg := InitMsg{}
+	initMsgBz, err := json.Marshal(initMsg)
+	require.NoError(t, err)
+
+	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+	require.NoError(t, err)
+
+	// init
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "demo contract 5", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.NoError(t, err)
+
+	// check init events (no data in init)
+	initEvents := getDecryptedWasmEvents(t, ctx, initMsgBz[0:32], 0)
+
+	require.Equal(t, 1, len(initEvents))
+	require.Equal(t,
+		[][]cosmwasm.LogAttribute{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "init", Value: "🌈"},
+			},
+		},
+		initEvents,
+	)
+}
+
+func TestEmptyLogKeyValue(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	initMsg := InitMsg{}
+	initMsgBz, err := json.Marshal(initMsg)
+	require.NoError(t, err)
+
+	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+	require.NoError(t, err)
+
+	// init
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "demo contract 5", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.NoError(t, err)
+
+	data, execEvents := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"emptylogkeyvalue":{}}`, 1)
+
+	require.Empty(t, data.Err)
+	require.Equal(t, 1, len(execEvents))
+	require.Equal(t,
+		[][]cosmwasm.LogAttribute{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "my value is empty", Value: ""},
+				{Key: "", Value: "my key is empty"},
+			},
+		},
+		execEvents,
+	)
+	require.Equal(t,
+		[]cosmwasm.LogAttribute{
+			{Key: "my value is empty", Value: ""},
+			{Key: "", Value: "my key is empty"},
+		},
+		data.Ok.Log,
+	)
+}
