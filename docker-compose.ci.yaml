@@ -14,7 +14,7 @@ services:
 #      - https_proxy
 
   bootstrap:
-    image: enigmampc-ci/enigma-sgx-bootstrap
+    image: ci-enigma-sgx-bootstrap
     container_name: bootstrap
 #    depends_on:
 #      - aesm
@@ -34,7 +34,7 @@ services:
       - 26657
 
   node:
-    image: enigmampc-ci/enigma-sgx-node
+    image: ci-enigma-sgx-node
     depends_on:
       - bootstrap
     devices:
