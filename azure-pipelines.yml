@@ -27,7 +27,7 @@ steps:
     command: build
     repository: ci-enigma-sgx-bootstrap
     tags: latest
-    arguments: --build-arg SECRET_NODE_TYPE=BOOTSTRAP
+    arguments: --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg SGX_MODE=HW
 
 - script: docker-compose -f docker-compose.ci.yaml up --exit-code-from node
   displayName: 'Run integration tests'

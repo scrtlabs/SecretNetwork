@@ -109,5 +109,7 @@ COPY ./packaging_docker/node_key.json .
 COPY api_key.txt /root/
 COPY spid.txt /root/
 
+ENV LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/:/opt/sgxsdk/lib64/
+
 # Run enigmad by default, omit entrypoint to ease using container with enigmacli
 ENTRYPOINT ["/bin/bash", "startup.sh"]
