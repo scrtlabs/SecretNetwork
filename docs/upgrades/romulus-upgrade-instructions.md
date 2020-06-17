@@ -89,7 +89,7 @@ perl -i -pe 's/^halt-height =.*/halt-height = 1794500/' ~/.enigmad/config/app.to
 Change the `enigma-node` service configuration to restart only on failure (so it doesn't keep trying to restart after the chain halt):
 
 ```bash
-sudo perl -i -pe 's/^Restart=*/Restart=on-failure' /etc/systemd/system/enigma-node.service
+sudo perl -i -pe 's/^Restart=.*/Restart=on-failure/' /etc/systemd/system/enigma-node.service
 ```
 
 Display the `enigma-node` service file:
@@ -215,10 +215,10 @@ Validate the genesis file (replace \<sha256sum> with the checksum provided by Co
 echo "<sha256sum> secret-1-genesis.json" | sha256sum --check
 ```
 
-Initialize and configure `secretd` (substitute \<moniker> with the _moniker_ of your node on the old chain):
+Initialize and configure `secretd` with a placeholder moniker "blabla" because it will be overwritten with the correct `app.toml` file:
 
 ```bash
-secretd init <moniker> --chain-id secret-1
+secretd init blabla --chain-id secret-1
 
 cp ~/.enigmad/config/{app.toml,config.toml,addrbook.json} ~/.secretd/config
 cp ~/.enigmad/config/{priv_validator_key.json,node_key.json} ~/.secretd/config
