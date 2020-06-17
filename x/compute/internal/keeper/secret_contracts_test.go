@@ -249,6 +249,10 @@ func TestSanity(t *testing.T) {
 	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "demo contract", deposit)
 	require.NoError(t, err)
 
+	// check init events (no data in init)
+	initEvents := getDecryptedWasmEvents(t, ctx, initMsgBz[0:32], 0)
+	require.Empty(t, initEvents)
+
 	// check state after init
 	requireQueryResult(t,
 		keeper, ctx, contractAddress,
@@ -276,7 +280,7 @@ func TestSanity(t *testing.T) {
 		data.Ok.Log,
 	)
 
-	require.Equal(t, 4, len(wasmEvents))
+	require.Equal(t, 1, len(wasmEvents))
 	require.Equal(t,
 		[][]cosmwasm.LogAttribute{{
 			{Key: "contract_address", Value: contractAddress.String()},
