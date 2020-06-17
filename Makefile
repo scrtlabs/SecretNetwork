@@ -192,7 +192,10 @@ callback-sanity-test:
 	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
 	SGX_MODE=SW ./cosmwasm/lib/callback-test.sh
 
-go-tests:
+build-test-contract:
+	$(MAKE) -C ./x/compute/internal/keeper/testdata/test-contract
+
+go-tests: build-test-contract
 	SGX_MODE=SW $(MAKE) build_linux
 	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	SGX_MODE=SW go test -p 1 -v ./x/compute/internal/...

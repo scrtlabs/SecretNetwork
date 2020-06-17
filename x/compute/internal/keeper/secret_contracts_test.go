@@ -16,11 +16,12 @@ import (
 
 // getDecryptedWasmEvents gets all "wasm" events and decrypt what's necessary
 // Returns all "wasm" events, including from contract callbacks
-func getDecryptedWasmEvents(t *testing.T, ctx *sdk.Context, nonce []byte) []cosmwasm.LogAttribute {
+func getDecryptedWasmEvents(t *testing.T, ctx sdk.Context, nonce []byte, skip uint) [][]cosmwasm.LogAttribute {
 	events := ctx.EventManager().Events()
-	var res []cosmwasm.LogAttribute
-	for _, e := range events {
+	var res [][]cosmwasm.LogAttribute
+	for _, e := range events[skip:] {
 		if e.Type == "wasm" {
+			newEvent := []cosmwasm.LogAttribute{}
 			for _, oldLog := range e.Attributes {
 				newLog := cosmwasm.LogAttribute{
 					Key:   string(oldLog.Key),
@@ -31,6 +32,8 @@ func getDecryptedWasmEvents(t *testing.T, ctx *sdk.Context, nonce []byte) []cosm
 					// key
 					keyCipherBz, err := base64.StdEncoding.DecodeString(newLog.Key)
 					require.NoError(t, err)
+					x := string(keyCipherBz)
+					_ = x
 					keyPlainBz, err := wasmCtx.Decrypt(keyCipherBz, nonce)
 					require.NoError(t, err)
 					newLog.Key = string(keyPlainBz)
@@ -43,8 +46,9 @@ func getDecryptedWasmEvents(t *testing.T, ctx *sdk.Context, nonce []byte) []cosm
 					newLog.Value = string(valuePlainBz)
 				}
 
-				res = append(res, newLog)
+				newEvent = append(newEvent, newLog)
 			}
+			res = append(res, newEvent)
 		}
 	}
 	return res
@@ -129,7 +133,7 @@ func requireQueryResult(t *testing.T, keeper Keeper, ctx sdk.Context, contractAd
 	require.JSONEq(t, expectedOutput, string(resultBz))
 }
 
-func executeHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string) (cosmwasm.CosmosResponse, []cosmwasm.LogAttribute) {
+func executeHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string, skipEvents uint) (cosmwasm.CosmosResponse, [][]cosmwasm.LogAttribute) {
 	execMsgBz, err := wasmCtx.Encrypt([]byte(execMsg))
 	require.NoError(t, err)
 
@@ -139,7 +143,7 @@ func executeHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress
 	nonce := execMsgBz[0:32]
 
 	// Events is from all callbacks
-	wasmEvents := getDecryptedWasmEvents(t, &ctx, nonce)
+	wasmEvents := getDecryptedWasmEvents(t, ctx, nonce, skipEvents)
 
 	// Data is the output of only the first call
 	data := getDecryptedData(t, execResult.Data, nonce)
@@ -167,28 +171,48 @@ func TestCallbackSanity(t *testing.T) {
 	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
 	require.NoError(t, err)
 
+	// init
 	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "demo contract 5", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
-	data, wasmEvents := executeHelper(t, keeper, ctx, contractAddress, walletA,
-		fmt.Sprintf(`{"a":{"contract_addr":"%s","x":2,"y":3}}`, contractAddress.String()))
+	// check init events (no data in init)
+	initEvents := getDecryptedWasmEvents(t, ctx, initMsgBz[0:32], 0)
 
-	require.Equal(t, 6, len(wasmEvents))
+	require.Equal(t, 1, len(initEvents))
 	require.Equal(t,
-		[]cosmwasm.LogAttribute{
-			{Key: "contract_address", Value: contractAddress.String()},
-			{Key: "action", Value: "banana"},
-			{Key: "contract_address", Value: contractAddress.String()},
-			{Key: "action", Value: "papaya"},
-			{Key: "contract_address", Value: contractAddress.String()},
-			{Key: "action", Value: "watermelon"},
+		[][]cosmwasm.LogAttribute{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "init", Value: "🌈"},
+			},
 		},
-		wasmEvents,
+		initEvents,
+	)
+
+	data, execEvents := executeHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"a":{"contract_addr":"%s","x":2,"y":3}}`, contractAddress.String()), 1)
+
+	require.Equal(t, 3, len(execEvents))
+	require.Equal(t,
+		[][]cosmwasm.LogAttribute{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "banana", Value: "🍌"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "kiwi", Value: "🥝"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "watermelon", Value: "🍉"},
+			},
+		},
+		execEvents,
 	)
 
 	require.Empty(t, data.Err)
 	require.Equal(t, base64.StdEncoding.EncodeToString([]byte{2, 3}), data.Ok.Data)
-	require.Equal(t, []cosmwasm.LogAttribute{{Key: "action", Value: "banana"}}, data.Ok.Log)
+	require.Equal(t, []cosmwasm.LogAttribute{{Key: "banana", Value: "🍌"}}, data.Ok.Log)
 	require.Equal(t, 1, len(data.Ok.Messages))
 	require.NotNil(t, data.Ok.Messages[0].Contract)
 	require.Equal(t, data.Ok.Messages[0].Contract.ContractAddr, contractAddress.String())
@@ -239,7 +263,7 @@ func TestSanity(t *testing.T) {
 
 	// transfer 10 from A to B
 	data, wasmEvents := executeHelper(t, keeper, ctx, contractAddress, walletA,
-		fmt.Sprintf(`{"transfer":{"amount":"10","recipient":"%s"}}`, walletB.String()))
+		fmt.Sprintf(`{"transfer":{"amount":"10","recipient":"%s"}}`, walletB.String()), 0)
 
 	require.Empty(t, data.Err)
 	require.Empty(t, data.Ok.Data)
@@ -254,11 +278,12 @@ func TestSanity(t *testing.T) {
 
 	require.Equal(t, 4, len(wasmEvents))
 	require.Equal(t,
-		[]cosmwasm.LogAttribute{
+		[][]cosmwasm.LogAttribute{{
 			{Key: "contract_address", Value: contractAddress.String()},
 			{Key: "action", Value: "transfer"},
 			{Key: "sender", Value: walletA.String()},
-			{Key: "recipient", Value: walletB.String()}},
+			{Key: "recipient", Value: walletB.String()},
+		}},
 		wasmEvents,
 	)
 

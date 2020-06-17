@@ -14,7 +14,11 @@ pub fn init<S: Storage, A: Api>(
     env: Env,
     _msg: InitMsg,
 ) -> Result<Response> {
-    Ok(Response::default())
+    Ok(Response {
+        messages: vec![],
+        log: vec![log("init", "🌈")],
+        data: None,
+    })
 }
 
 pub fn handle<S: Storage, A: Api>(
@@ -59,7 +63,7 @@ pub fn try_a<S: Storage, A: Api>(
             ),
             send: None,
         }],
-        log: vec![log("action", "banana")],
+        log: vec![log("banana", "🍌")],
         data: Some(Binary(vec![x, y])),
     };
     Ok(res)
@@ -82,7 +86,7 @@ pub fn try_b<S: Storage, A: Api>(
             ),
             send: None,
         }],
-        log: vec![log("action", "papaya")],
+        log: vec![log("kiwi", "🥝")],
         data: Some(Binary(vec![x + y])),
     };
     Ok(res)
@@ -96,7 +100,7 @@ pub fn try_c<S: Storage, A: Api>(
 ) -> Result<Response> {
     let res = Response {
         messages: vec![],
-        log: vec![log("action", "watermelon")],
+        log: vec![log("watermelon", "🍉")],
         data: Some(Binary(vec![x + y])),
     };
     Ok(res)
