@@ -179,7 +179,7 @@ sudo dpkg -i secretnetwork_0.2.0_amd64.deb # install secretd & secretcli and set
 Verify the package version for the Secret Network:
 
 ```bash
-secretcli version --long | jq .
+secretcli version --long
 ```
 
 Below is the version information for the Secret Network.
