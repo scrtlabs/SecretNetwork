@@ -11,8 +11,6 @@ pool:
   name: 'default'
 
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
 
 - script: echo $(spid) > spid.txt; echo $(api-key-dev) > api_key.txt
   displayName: 'Save api keys'
@@ -31,9 +29,12 @@ steps:
     tags: enigma-sgx-node
     arguments: --build-arg SECRET_NODE_TYPE=BOOTSTRAP
 
-- script: docker-compose up -d aesm bootstrap
+- script: docker-compose -f docker-compose.ci.yaml up -d aesm bootstrap
+  displayName: 'Start bootstrap and Aesm'
 
-- script: docker-compose up node
+- script: docker-compose -f docker-compose.ci.yaml up node
+  displayName: 'Run integration tests'
 
 - script: docker-compose down
   condition: always()
+  displayName: 'Shutdown'
