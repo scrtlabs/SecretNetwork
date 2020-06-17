@@ -13,12 +13,8 @@ pool:
 steps:
 - script: echo Hello, world!
   displayName: 'Run a one-line script'
-- task: AzureKeyVault@1
-  inputs:
-    azureSubscription: 'Enigma Subscription(a8e64295-0d37-4afd-a370-f3b49a744f80)'
-    KeyVaultName: 'pipeline-keyvault'
-    secretsFilter: '*'
-- script: echo $(intel-sgx-spid) > spid.txt; echo $(intel-sgx-api-key-dev) > api_key.txt
+
+- script: echo $(spid) > spid.txt; echo $(api-key-dev) > api_key.txt
   displayName: 'Save api keys'
 - task: Docker@2
   displayName: Build
