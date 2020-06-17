@@ -57,29 +57,45 @@ func getDecryptedData(t *testing.T, data []byte, nonce []byte) cosmwasm.CosmosRe
 	err := json.Unmarshal(data, &res)
 	require.NoError(t, err)
 
-	// data
-	dataCiphertextBz, err := base64.StdEncoding.DecodeString(res.Ok.Data)
-	require.NoError(t, err)
-	dataPlaintext, err := wasmCtx.Decrypt(dataCiphertextBz, nonce)
-	require.NoError(t, err)
+	// err
+	if res.Err != "" {
+		errCipherBz, err := base64.StdEncoding.DecodeString(res.Err)
+		require.NoError(t, err)
+		errPlainBz, err := wasmCtx.Decrypt(errCipherBz, nonce)
+		require.NoError(t, err)
 
-	res.Ok.Data = string(dataPlaintext)
+		res.Err = string(errPlainBz)
+	}
+
+	// data
+	if res.Ok.Data != "" {
+		dataCiphertextBz, err := base64.StdEncoding.DecodeString(res.Ok.Data)
+		require.NoError(t, err)
+		dataPlaintext, err := wasmCtx.Decrypt(dataCiphertextBz, nonce)
+		require.NoError(t, err)
+
+		res.Ok.Data = string(dataPlaintext)
+	}
 
 	// logs
 	for i, log := range res.Ok.Log {
 		// key
-		keyCipherBz, err := base64.StdEncoding.DecodeString(log.Key)
-		require.NoError(t, err)
-		keyPlainBz, err := wasmCtx.Decrypt(keyCipherBz, nonce)
-		require.NoError(t, err)
-		log.Key = string(keyPlainBz)
+		if log.Key != "" {
+			keyCipherBz, err := base64.StdEncoding.DecodeString(log.Key)
+			require.NoError(t, err)
+			keyPlainBz, err := wasmCtx.Decrypt(keyCipherBz, nonce)
+			require.NoError(t, err)
+			log.Key = string(keyPlainBz)
+		}
 
 		// value
-		valueCipherBz, err := base64.StdEncoding.DecodeString(log.Value)
-		require.NoError(t, err)
-		valuePlainBz, err := wasmCtx.Decrypt(valueCipherBz, nonce)
-		require.NoError(t, err)
-		log.Value = string(valuePlainBz)
+		if log.Value != "" {
+			valueCipherBz, err := base64.StdEncoding.DecodeString(log.Value)
+			require.NoError(t, err)
+			valuePlainBz, err := wasmCtx.Decrypt(valueCipherBz, nonce)
+			require.NoError(t, err)
+			log.Value = string(valuePlainBz)
+		}
 
 		res.Ok.Log[i] = log
 	}
@@ -113,18 +129,35 @@ func requireQueryResult(t *testing.T, keeper Keeper, ctx sdk.Context, contractAd
 	require.JSONEq(t, expectedOutput, string(resultBz))
 }
 
+func executeHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string) (cosmwasm.CosmosResponse, []cosmwasm.LogAttribute) {
+	execMsgBz, err := wasmCtx.Encrypt([]byte(execMsg))
+	require.NoError(t, err)
+
+	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.NoError(t, err)
+
+	nonce := execMsgBz[0:32]
+
+	// Events is from all callbacks
+	wasmEvents := getDecryptedWasmEvents(t, &ctx, nonce)
+
+	// Data is the output of only the first call
+	data := getDecryptedData(t, execResult.Data, nonce)
+
+	return data, wasmEvents
+}
+
 func TestCallbackSanity(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
-	creator := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	fred := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 
 	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
-	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
+	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
 	initMsg := InitMsg{}
@@ -134,21 +167,12 @@ func TestCallbackSanity(t *testing.T) {
 	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
 	require.NoError(t, err)
 
-	contractAddress, err := keeper.Instantiate(ctx, contractID, creator, initMsgBz, "demo contract 5", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "demo contract 5", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
-	execMsg := fmt.Sprintf(`{"a":{"contract_addr":"%s","x":2,"y":3}}`, contractAddress.String())
-	execMsgBz, err := wasmCtx.Encrypt([]byte(execMsg))
-	require.NoError(t, err)
+	data, wasmEvents := executeHelper(t, keeper, ctx, contractAddress, walletA,
+		fmt.Sprintf(`{"a":{"contract_addr":"%s","x":2,"y":3}}`, contractAddress.String()))
 
-	// let's make sure we get a reasonable error, no panic/crash
-	execResult, err := keeper.Execute(ctx, contractAddress, fred, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.NoError(t, err)
-
-	nonce := execMsgBz[0:32]
-
-	// Events is from all callbacks
-	wasmEvents := getDecryptedWasmEvents(t, &ctx, nonce)
 	require.Equal(t, 6, len(wasmEvents))
 	require.Equal(t,
 		[]cosmwasm.LogAttribute{
@@ -161,9 +185,6 @@ func TestCallbackSanity(t *testing.T) {
 		},
 		wasmEvents,
 	)
-
-	// Data is the output of only the first call
-	data := getDecryptedData(t, execResult.Data, nonce)
 
 	require.Empty(t, data.Err)
 	require.Equal(t, base64.StdEncoding.EncodeToString([]byte{2, 3}), data.Ok.Data)
@@ -185,34 +206,71 @@ func TestSanity(t *testing.T) {
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
-	fred := createFakeFundedAccount(ctx, accKeeper, topUp)
+	walletA := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
+	walletB := createFakeFundedAccount(ctx, accKeeper, topUp)
 
 	// https://github.com/CosmWasm/cosmwasm-examples/blob/f5ea00a85247abae8f8cbcba301f94ef21c66087/erc20/src/contract.rs
 	wasmCode, err := ioutil.ReadFile("./testdata/erc20-f5ea00a85247abae8f8cbcba301f94ef21c66087.wasm")
 	require.NoError(t, err)
 
-	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
+	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
 	// init
-	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, creator.String(), fred.String())
+	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, walletA.String(), walletB.String())
 
 	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
 	require.NoError(t, err)
 
-	contractAddr, err := keeper.Instantiate(ctx, contractID, creator, initMsgBz, "demo contract", deposit)
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "demo contract", deposit)
 	require.NoError(t, err)
 
 	// check state after init
 	requireQueryResult(t,
-		keeper, ctx, contractAddr,
-		fmt.Sprintf(`{"balance":{"address":"%s"}}`, creator.String()),
+		keeper, ctx, contractAddress,
+		fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletA.String()),
 		`{"balance":"108"}`,
 	)
 	requireQueryResult(t,
-		keeper, ctx, contractAddr,
-		fmt.Sprintf(`{"balance":{"address":"%s"}}`, fred.String()),
+		keeper, ctx, contractAddress,
+		fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletB.String()),
 		`{"balance":"53"}`,
+	)
+
+	// transfer 10 from A to B
+	data, wasmEvents := executeHelper(t, keeper, ctx, contractAddress, walletA,
+		fmt.Sprintf(`{"transfer":{"amount":"10","recipient":"%s"}}`, walletB.String()))
+
+	require.Empty(t, data.Err)
+	require.Empty(t, data.Ok.Data)
+	require.Empty(t, data.Ok.Messages)
+	require.Equal(t,
+		[]cosmwasm.LogAttribute{
+			{Key: "action", Value: "transfer"},
+			{Key: "sender", Value: walletA.String()},
+			{Key: "recipient", Value: walletB.String()}},
+		data.Ok.Log,
+	)
+
+	require.Equal(t, 4, len(wasmEvents))
+	require.Equal(t,
+		[]cosmwasm.LogAttribute{
+			{Key: "contract_address", Value: contractAddress.String()},
+			{Key: "action", Value: "transfer"},
+			{Key: "sender", Value: walletA.String()},
+			{Key: "recipient", Value: walletB.String()}},
+		wasmEvents,
+	)
+
+	// check state after transfer
+	requireQueryResult(t,
+		keeper, ctx, contractAddress,
+		fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletA.String()),
+		`{"balance":"98"}`,
+	)
+	requireQueryResult(t,
+		keeper, ctx, contractAddress,
+		fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletB.String()),
+		`{"balance":"63"}`,
 	)
 }
