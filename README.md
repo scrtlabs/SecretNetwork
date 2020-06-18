@@ -31,7 +31,7 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 
 - [Cashmaney](https://explorer.cashmaney.com)
 - [SecretScan](https://secretscan.io)
-- [Puzzle](https://puzzle-staging.secretnodes.org/enigma/chains/enigma-1)
+- [Puzzle](https://puzzle.report/secret/chains/secret-1)
 
 # Wallets
 
