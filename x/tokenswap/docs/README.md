@@ -1,14 +1,14 @@
-# Tokenswap module, yo
+# Tokenswap module
 
-### What do?
+### What does it do?
 
 Module that performs the Secret Network side of the tokenswap. Essentially, this modules adds on-demand minting 
 functionality for a configurable address. The goal is that this address should be a multisig address 
-approved by the community to authorize swaps, blah blah Ian if you want to add more stuff here submit a PR
+approved by the community to authorize swaps.
 
 ### Parameters
 
-These are parameters that can be changed by community governance proposals:
+These parameters will be changed by a community governance proposal. The default settings are shown below:
 
 - MultisigApproveAddress - The multisig address that's allowed to approve swap requests
 
@@ -22,13 +22,12 @@ These are parameters that can be changed by community governance proposals:
     
     Default value: false
 
-Obviously currently the defaults are set for testing purposes and will be changed before deployment:)
 
 ### Usage
 
 ##### Module
 
-I added a handy dockerfile that runs an independent chain for easy testing/playing around.
+The `Dockerfile_build` is a dockerfile that runs an independent chain for easy testing/playing around. To use it follow the steps below.
  
 * Compile the code, and run the chain in a container
 
