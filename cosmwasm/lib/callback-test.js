@@ -57,24 +57,24 @@ const assert = require("assert").strict;
       value: contract,
     },
     {
-      key: "action",
-      value: "banana",
+      key: "banana",
+      value: "🍌",
     },
     {
       key: "contract_address",
       value: contract,
     },
     {
-      key: "action",
-      value: "papaya",
+      key: "kiwi",
+      value: "🥝",
     },
     {
       key: "contract_address",
       value: contract,
     },
     {
-      key: "action",
-      value: "watermelon",
+      key: "watermelon",
+      value: "🍉",
     },
   ]);
   console.log("ok");

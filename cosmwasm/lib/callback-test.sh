@@ -67,15 +67,17 @@ wait_for_tx "$STORE_TX_HASH" "Waiting for store to finish on-chain..."
 # init the contract (ocall_init + write_db + canonicalize_address)
 export INIT_TX_HASH=$(
     yes |
-        ./enigmacli tx compute instantiate 1 "{}" --label baaaaaaa --from a |
+        ./enigmacli tx compute instantiate 1 '{"nop":{}}' --label baaaaaaa --from a |
         jq -r .txhash
 )
 
 wait_for_tx "$INIT_TX_HASH" "Waiting for instantiate to finish on-chain..."
 
+sleep infinity
+
 export CONTRACT_ADDRESS=$(
     ./enigmacli q tx "$INIT_TX_HASH" |
-        jq -er '.logs[].events[].attributes[] | select(.key == "contract_address") | .value'
+        jq -er '.logs[].events[].attributes[] | select(.key == "contract_address") | .value' | head -1
 )
 
 ./enigmacli q compute tx "$INIT_TX_HASH"
