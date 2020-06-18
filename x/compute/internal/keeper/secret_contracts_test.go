@@ -447,7 +447,7 @@ func TestNoData(t *testing.T) {
 	require.Equal(t, "", data.Ok.Data)
 }
 
-func TestExecuteError(t *testing.T) {
+func TestExecuteIllegalInputError(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -472,7 +472,7 @@ func TestExecuteError(t *testing.T) {
 	require.Contains(t, data.Err, "Error parsing HandleMsg")
 }
 
-func TestInitError(t *testing.T) {
+func TestInitIllegalInputError(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
