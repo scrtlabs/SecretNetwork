@@ -41,8 +41,12 @@ WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain
 
 # Add source files
 COPY go-cosmwasm go-cosmwasm
+# This is due to some esoteric docker bug with the underlying filesystem, so until I figure out a better way, this should be a workaround
+RUN true
 COPY x x
+RUN true
 COPY types types
+RUN true
 COPY app.go .
 COPY go.mod .
 COPY go.sum .
