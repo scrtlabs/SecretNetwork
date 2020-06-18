@@ -13,13 +13,13 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	wasmTypes "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
+	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/libs/kv"
 
-	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/keeper"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
 )
 
 type testData struct {

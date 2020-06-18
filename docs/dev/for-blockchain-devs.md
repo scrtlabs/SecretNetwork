@@ -7,8 +7,8 @@
 ## Local installation
 
 ```bash
-git clone https://github.com/enigmampc/EnigmaBlockchain
-cd EnigmaBlockchain
+git clone https://github.com/enigmampc/SecretNetwork
+cd SecretNetwork
 go mod tidy
 make install # installs secretd and secretcli
 ```
@@ -46,8 +46,8 @@ secretd start --pruning nothing # starts a node
 ## Docker installation
 
 ```bash
-git clone https://github.com/enigmampc/EnigmaBlockchain
-cd EnigmaBlockchain
+git clone https://github.com/enigmampc/SecretNetwork
+cd SecretNetwork
 docker build -t secretdev -f Dockerfile_devnet .
 
 docker run -d -p 26657:26657 -p 26656:26656 -p 1317:1317 \

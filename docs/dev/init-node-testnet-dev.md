@@ -1,7 +1,7 @@
 ### Download Release
 
 ```bash
-wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.3/enigma-blockchain_0.0.3_amd64.deb
+wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.0.3/enigma-blockchain_0.0.3_amd64.deb
 ```
 
 ### Remove old installations

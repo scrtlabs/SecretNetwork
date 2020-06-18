@@ -62,10 +62,10 @@ go.sum: go.mod
 	GO111MODULE=on go mod verify
 
 xgo_build_secretd: go.sum
-	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/EnigmaBlockchain/cmd/secretd
+	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/SecretNetwork/cmd/secretd
 
 xgo_build_secretcli: go.sum
-	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/EnigmaBlockchain/cmd/secretcli
+	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/SecretNetwork/cmd/secretcli
 
 build_local_no_rust:
 	@ #this pulls out ELF symbols, 80% size reduction!
@@ -95,28 +95,28 @@ deb: build_local
     ifneq ($(UNAME_S),Linux)
 		exit 1
     endif
-	rm -rf /tmp/EnigmaBlockchain
+	rm -rf /tmp/SecretNetwork
 	
-	mkdir -p /tmp/EnigmaBlockchain/deb/bin
-	mv -f ./secretcli /tmp/EnigmaBlockchain/deb/bin/secretcli
-	mv -f ./secretd /tmp/EnigmaBlockchain/deb/bin/secretd
-	chmod +x /tmp/EnigmaBlockchain/deb/bin/secretd /tmp/EnigmaBlockchain/deb/bin/secretcli
+	mkdir -p /tmp/SecretNetwork/deb/bin
+	mv -f ./secretcli /tmp/SecretNetwork/deb/bin/secretcli
+	mv -f ./secretd /tmp/SecretNetwork/deb/bin/secretd
+	chmod +x /tmp/SecretNetwork/deb/bin/secretd /tmp/SecretNetwork/deb/bin/secretcli
 	
-	# mkdir -p /tmp/EnigmaBlockchain/deb/usr/lib
-	# mv -f ./go-cosmwasm/api/libgo_cosmwasm.so /tmp/EnigmaBlockchain/deb/usr/lib/libgo_cosmwasm.so
-	# chmod +x /tmp/EnigmaBlockchain/deb/usr/lib/libgo_cosmwasm.so
+	# mkdir -p /tmp/SecretNetwork/deb/usr/lib
+	# mv -f ./go-cosmwasm/api/libgo_cosmwasm.so /tmp/SecretNetwork/deb/usr/lib/libgo_cosmwasm.so
+	# chmod +x /tmp/SecretNetwork/deb/usr/lib/libgo_cosmwasm.so
 
-	mkdir -p /tmp/EnigmaBlockchain/deb/DEBIAN
-	cp ./packaging_ubuntu/control /tmp/EnigmaBlockchain/deb/DEBIAN/control
-	printf "Version: " >> /tmp/EnigmaBlockchain/deb/DEBIAN/control
-	git describe --tags | tr -d v >> /tmp/EnigmaBlockchain/deb/DEBIAN/control
-	echo "" >> /tmp/EnigmaBlockchain/deb/DEBIAN/control
-	cp ./packaging_ubuntu/postinst /tmp/EnigmaBlockchain/deb/DEBIAN/postinst
-	chmod 755 /tmp/EnigmaBlockchain/deb/DEBIAN/postinst
-	cp ./packaging_ubuntu/postrm /tmp/EnigmaBlockchain/deb/DEBIAN/postrm
-	chmod 755 /tmp/EnigmaBlockchain/deb/DEBIAN/postrm
-	dpkg-deb --build /tmp/EnigmaBlockchain/deb/ .
-	-rm -rf /tmp/EnigmaBlockchain
+	mkdir -p /tmp/SecretNetwork/deb/DEBIAN
+	cp ./packaging_ubuntu/control /tmp/SecretNetwork/deb/DEBIAN/control
+	printf "Version: " >> /tmp/SecretNetwork/deb/DEBIAN/control
+	git describe --tags | tr -d v >> /tmp/SecretNetwork/deb/DEBIAN/control
+	echo "" >> /tmp/SecretNetwork/deb/DEBIAN/control
+	cp ./packaging_ubuntu/postinst /tmp/SecretNetwork/deb/DEBIAN/postinst
+	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/postinst
+	cp ./packaging_ubuntu/postrm /tmp/SecretNetwork/deb/DEBIAN/postrm
+	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/postrm
+	dpkg-deb --build /tmp/SecretNetwork/deb/ .
+	-rm -rf /tmp/SecretNetwork
 
 rename_for_release:
 	-rename "s/windows-4.0-amd64/v${VERSION}-win64/" *.exe
@@ -137,7 +137,7 @@ release: sign_for_release
 	cp SHA256SUMS.asc ./release/
 
 clean:
-	-rm -rf /tmp/EnigmaBlockchain
+	-rm -rf /tmp/SecretNetwork
 	-rm -f ./secretcli-*
 	-rm -f ./secretd-*
 	-rm -f ./enigma-blockchain*.deb

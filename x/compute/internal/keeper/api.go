@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	cosmwasm "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm"
+	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
 )
 
 func humanAddress(canon []byte) (string, error) {

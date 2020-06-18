@@ -11,7 +11,7 @@ ENV PACKAGES curl make git libc-dev bash gcc linux-headers eudev-dev python
 RUN apk add $PACKAGES
 
 # Set working directory for the build
-WORKDIR /go/src/github.com/enigmampc/enigmablockchain
+WORKDIR /go/src/github.com/enigmampc/SecretNetwork
 
 # Add source files
 COPY . .
@@ -29,8 +29,8 @@ WORKDIR /root
 # CMD ["/bin/bash"]
 
 # Copy over binaries from the build-env
-COPY --from=build-env /go/src/github.com/enigmampc/enigmablockchain/enigmad /usr/bin/enigmad
-COPY --from=build-env  /go/src/github.com/enigmampc/enigmablockchain/enigmacli /usr/bin/enigmacli
+COPY --from=build-env /go/src/github.com/enigmampc/SecretNetwork/enigmad /usr/bin/enigmad
+COPY --from=build-env  /go/src/github.com/enigmampc/SecretNetwork/enigmacli /usr/bin/enigmacli
 
 COPY ./packaging_docker/docker_start.sh .
 
@@ -43,7 +43,7 @@ RUN chmod +x docker_start.sh .
 ####### STAGE 1 -- build core
 ARG moniker=default
 ARG chainid=enigma-1
-ARG genesis_path=https://raw.githubusercontent.com/enigmampc/EnigmaBlockchain/master/enigma-1-genesis.json
+ARG genesis_path=https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/enigma-1-genesis.json
 ARG persistent_peers=201cff36d13c6352acfc4a373b60e83211cd3102@bootstrap.mainnet.enigma.co:26656
 
 ENV GENESISPATH=$genesis_path

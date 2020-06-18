@@ -9,9 +9,9 @@ Some considerations about the voting process:
 - Votes are tallied at the end of the voting period (1 week on mainnet) where each address can vote multiple times to update its `Option` value (paying the transaction fee each time), only the most recently cast vote will count as valid.
 - Voters can choose between options `Yes`, `No`, `NoWithVeto` and `Abstain`.
 - At the end of the voting period, a proposal is accepted IFF:
-  - `(YesVotes / (YesVotes+NoVotes+NoWithVetoVotes)) > 1/2` ([threshold](https://github.com/enigmampc/EnigmaBlockchain/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1864))
-  - `(NoWithVetoVotes / (YesVotes+NoVotes+NoWithVetoVotes)) < 1/3` ([veto](https://github.com/enigmampc/EnigmaBlockchain/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1865))
-  - `((YesVotes+NoVotes+NoWithVetoVotes) / totalBondedStake) >= 1/3` ([quorum](https://github.com/enigmampc/EnigmaBlockchain/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1863))
+  - `(YesVotes / (YesVotes+NoVotes+NoWithVetoVotes)) > 1/2` ([threshold](https://github.com/enigmampc/SecretNetwork/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1864))
+  - `(NoWithVetoVotes / (YesVotes+NoVotes+NoWithVetoVotes)) < 1/3` ([veto](https://github.com/enigmampc/SecretNetwork/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1865))
+  - `((YesVotes+NoVotes+NoWithVetoVotes) / totalBondedStake) >= 1/3` ([quorum](https://github.com/enigmampc/SecretNetwork/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1863))
 
 For more information about the governance process and how it works, please check out the Governance module [specification](https://github.com/cosmos/cosmos-sdk/tree/master/x/gov/spec).
 
@@ -22,7 +22,7 @@ For more information about the governance process and how it works, please check
 
 ## Create a Governance Proposal
 
-In order to create a governance proposal, you must submit an initial deposit along with a title and description. Currently, in order to enter the voting period, a proposal must accumulate within a week deposits of at least [1000 `SCRT`](https://github.com/enigmampc/EnigmaBlockchain/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1851-L1856).
+In order to create a governance proposal, you must submit an initial deposit along with a title and description. Currently, in order to enter the voting period, a proposal must accumulate within a week deposits of at least [1000 `SCRT`](https://github.com/enigmampc/SecretNetwork/blob/b0792cc7f63a9264afe5de252a5821788c21834d/enigma-1-genesis.json#L1851-L1856).
 
 Various modules outside of governance may implement their own proposal types and handlers (eg. parameter changes), where the governance module itself supports `Text` proposals. Any module outside of governance has it's command mounted on top of `submit-proposal`.
 
@@ -142,7 +142,7 @@ Please note:
 
 ##### Known Constraints
 
-- `distribution.baseproposerreward + distribution.bonusproposerreward < 1`. See [this](https://github.com/enigmampc/EnigmaBlockchain/issues/95) and [this](https://github.com/cosmos/cosmos-sdk/issues/5808) for more info.
+- `distribution.baseproposerreward + distribution.bonusproposerreward < 1`. See [this](https://github.com/enigmampc/SecretNetwork/issues/95) and [this](https://github.com/cosmos/cosmos-sdk/issues/5808) for more info.
 
 To read more go to https://github.com/gavinly/CosmosParametersWiki.
 
