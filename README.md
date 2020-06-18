@@ -1,39 +1,61 @@
-# HOWTO Rebranding
+![Secret Network](/logo.png)
 
-The [rebranding proposal](https://explorer.cashmaney.com/proposals/7) passed on-chain, and this mandates a hard fork.
+<p align="center">
+Secret Network secures the decentralized web
+</p>
 
-The network needs to decide on a block number to fork from.
-Since most nodes use `--pruning syncable` configuration, the node prunes most of the blocks, so state should be exported from a height that is a multiple of 100 (e.g. 100, 500, 131400, ...).
+# What is Secret Network?
 
 For better background, before reading this guide you might want to check out Cosmos' guide upgrading from `cosmoshub-2` to `cosmoshub-3`: https://github.com/cosmos/gaia/blob/master/docs/migration/cosmoshub-2.md
 
-### 1. Export `genesis.json` for the new fork:
+Secret Network is a blockchain-based, open-source protocol that lets anyone perform computations on encrypted data, bringing privacy to smart contracts and public blockchains. Our mission: improve the adoption and usability of decentralized technologies, for the benefit of all.
 
-```bash
-sudo systemctl stop enigma-node
-enigmad export --for-zero-height --height <agreed_upon_block_height> > exported_state.json
-```
+Mainnet is out! Get the latest release at https://github.com/enigmampc/SecretNetwork/releases/latest.
+
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md) [![Contributor Covenant](https://chat.scrt.network/api/v1/shield.svg)](https://chat.scrt.network/home)
 
 ### 2. Inside `exported_state.json` Rename `chain_id` from `enigma-1` to the new agreed upon Chain ID
 
-For example:
+- Homepage: https://scrt.network
+- Forum: https://forum.scrt.network
+- Discord: https://discord.com/invite/SJK32GY
+- Blog: https://blog.scrt.network
+- Twitter: https://twitter.com/SecretNetwork
+- Main Chat: https://chat.scrt.network/channel/general
+- Telegram Channel: https://t.me/SCRTnetwork
+- Community Secret Nodes Telegram: https://t.me/secretnodes
 
 ```bash
 perl -i -pe 's/"enigma-1"/"bla-bla"/' exported_state.json
 ```
 
-### 3. Convert all `enigma` addresses to `secret` adresses
+Secret Network is secured by the SCRT coin (Secret), which is used for fees, staking, and governance. Transactions, validators, governance proposals, and more can be viewed using the following Secret Network block explorers:
+
+- [Cashmaney](https://explorer.cashmaney.com)
+- [SecretScan](https://secretscan.io)
+- [Puzzle](https://puzzle-staging.secretnodes.org/enigma/chains/enigma-1)
+
+# Wallets
+
+- [Ledger Nano S and Ledger Nano X](/docs/ledger-nano-s.md)
+- [Math Wallet](https://mathwallet.org/web/enigma)
 
 Using the CLI:
 
-```bash
-wget https://github.com/enigmampc/bech32.enigma.co/releases/download/cli/bech32-convert
-chmod +x bech32-convert
+- [An Update on the Encryption Protocol](https://forum.enigma.co/t/an-update-on-the-encryption-protocol/1641)
+- [Hard Forks and Network Upgrades](https://forum.enigma.co/t/hard-forks-and-network-upgrades/1670)
+- [Don’t trust, verify (an untrusted host)](https://forum.scrt.network/t/dont-trust-verify-an-untrusted-host/1669)
+- [Secret Contracts on Secret Network](https://forum.enigma.co/t/secret-contracts-on-enigma-blockchain/1284)
+- [Network key management/agreement](https://forum.enigma.co/t/network-key-management-agreement/1324)
+- [Input/Output/State Encryption/Decryption protocol](https://forum.enigma.co/t/input-output-state-encryption-decryption-protocol/1325)
+- [Why the Cosmos move doesn’t mean we’re leaving Ethereum](https://forum.enigma.co/t/why-the-cosmos-move-doesnt-mean-were-leaving-ethereum/1301)
+- [(Dev discussion/Issue) WASM implementation](https://forum.enigma.co/t/dev-discussion-issue-wasm-implementation/1303)
 
 cat exported_state.json | ./bech32-convert > new_genesis.json
-```
 
-Or you can just paste `exported_state.json` into https://bech32.enigma.co and paste the result back into `new_genesis.json`.
+````
+
+- https://api.chainofsecrets.org
 
 ### 4. Compile the new `secret` binaries with `make deb` (or distribute them precompiled).
 
@@ -42,59 +64,10 @@ Or you can just paste `exported_state.json` into https://bech32.enigma.co and pa
 ```bash
 sudo dpkg -i precompiled_secret_package.deb # install secretd & secretcli and setup secret-node.service
 
-secretcli config chain-id <new_chain_id>
-secretcli config output json
-secretcli config indent true
-secretcli config trust-node true
-```
+- [For Blockchain developers](/docs/dev/for-enigma-blockchain-devs.md)
+- [How to be a mainnet genesis validator](/docs/genesis/genesis-validator-mainnet.md)
 
-### 6. Setup the new node/validaor:
+# License
 
-```bash
-# args for secretd init doesn't matter because we're going to import the old config files
-secretd init <moniker> --chain-id <new_chain_id>
-
-# import old config files to the new node
-cp ~/.enigmad/config/{app.toml,config.toml,addrbook.json} ~/.secretd/config
-
-# import node's & validator's private keys to the new node
-cp ~/.enigmad/config/{priv_validator_key.json,node_key.json} ~/.secretd/config
-
-# set new_genesis.json from step 3 as the genesis.json of the new chain
-cp new_genesis.json ~/.secretd/config/genesis.json
-
-# at this point you should also validate sha256 checksums of ~/.secretd/config/* against ~/.enigmad/config/*
-```
-
-### 7. Start the new Blockchain! :tada:
-
-```bash
-sudo systemctl enable secret-node # enable on startup
-sudo systemctl start secret-node
-```
-
-Once more than 2/3 of voting power comes online you'll start seeing blocks streaming on:
-
-```bash
-journalctl -u secret-node -f
-```
-
-If something goes wrong the network can relaunch the `enigma-node`, therefore it's not advisable to delete `~/.enigmad` & `~/.enigmacli` until the new chain is live and stable.
-
-### 8. Import wallet keys from the old chain to the new chain:
-
-(Ledger Nano S/X users shouldn't do anything, just use the new CLI with `--ledger --account <number>` as usual)
-
-```bash
-enigmacli keys export <key_name>
-# this^ outputs stuff to stderr and also exports the key to stderr,
-# so copy only the private key output to a file named `key.export`
-
-secretcli import <key_name> key.export
-```
-
-### 9. When the new chain is live and everything works well, you can delete the files of the old chain:
-
-- `rm -rf ~/.enigmad`
-- `rm -rf ~/.enigmacli`
-- `sudo dpkg -r enigma-blockchain`
+SecretNetwork is free software: you can redistribute it and/or modify it under the terms of the [GNU Affero General Public License](LICENSE) as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. The GNU Affero General Public License is based on the GNU GPL, but has an additional term to allow users who interact with the licensed software over a network to receive the source for that program.
+````
