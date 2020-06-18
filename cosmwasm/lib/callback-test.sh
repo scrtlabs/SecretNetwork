@@ -73,8 +73,6 @@ export INIT_TX_HASH=$(
 
 wait_for_tx "$INIT_TX_HASH" "Waiting for instantiate to finish on-chain..."
 
-sleep infinity
-
 export CONTRACT_ADDRESS=$(
     ./enigmacli q tx "$INIT_TX_HASH" |
         jq -er '.logs[].events[].attributes[] | select(.key == "contract_address") | .value' | head -1
