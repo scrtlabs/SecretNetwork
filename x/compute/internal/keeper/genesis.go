@@ -25,7 +25,7 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 	}
 
 	for _, contract := range data.Contracts {
-		keeper.setContractInfo(ctx, contract.ContractAddress, contract.ContractInfo)
+		keeper.setContractInfo(ctx, contract.ContractAddress, &contract.ContractInfo)
 		keeper.setContractState(ctx, contract.ContractAddress, contract.ContractState)
 	}
 
