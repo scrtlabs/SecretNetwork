@@ -78,6 +78,21 @@ NOTE: you may have to put `sudo` in front of the `journalctl` command if you don
 
 ## Upgrade Procedure
 
+## NOTE: if you are performing the upgrade after the official date of the Romulus Upgrade (6/17/2020):
+
+### Stop your Enigma node
+
+```bash
+sudo systemctl stop enigma-node
+```
+
+### Go to Step #3
+
+You can skip Step #1 because it was for coordinating a graceful halt of the network on the day of the upgrade.
+
+You can skip Step #2 because that's where we migrated the genesis file from the `enigma-1` chain to the `secret-1` hard fork.
+
+
 ### 1. Gracefully Halt the `enigma-1` Chain
 
 Change the configured halt height in `app.toml`:
@@ -150,7 +165,7 @@ exiting...
 
 ### 2. Migrate Genesis
 
-*** NOTE: *Chain of Secrets* performs these steps! ***
+*** NOTE: *Chain of Secrets* has already performed these steps! You can go to Step #3 to proceed. ***
 
 CoS will notify mainnet validators and full-node operators when this step is complete.
 
@@ -205,16 +220,25 @@ secretcli config indent true
 secretcli config trust-node true
 ```
 
+## NOTE: if you are performing the upgrade, basically installing the Secret Network release from scratch, on a new node:
+
+
+Change the pruning to "nothing" instead of "syncable":
+
+```bash
+perl -i -pe 's/^pruning =.*/pruning = "nothing"/' ~/.secretd/config/app.toml
+```
+
+
 ### 4. Setup the new Node/Validator:
 
-Get the new `secret-1` genesis file (this will be provided by CoS after Step #2 is completed):
+Get the new `secret-1` genesis file:
 
 ```bash
 wget https://raw.githubusercontent.com/chainofsecrets/TheRomulusUpgrade/romulus-upgrade/secret-1-genesis.json
 ```
 
-Validate the genesis file (replace \<sha256sum> with the checksum provided by CoS after Step #2 is completed):
-
+Validate the genesis file:
 
 ```bash
 echo "6291811bafcbebb44d93b34422cec683a04f7b168ccbe8965392ff73bfc46c39 secret-1-genesis.json" | sha256sum --check
@@ -255,12 +279,14 @@ the new chain is live and stable.
 
 (Ledger Nano S/X users shouldn't do anything, just use the new CLI with `--ledger --account <number>` as usual)
 
-```bash
-enigmacli keys export <key_name>
-# this^ outputs stuff to stderr and also exports the key to stderr,
-# so copy only the private key output to a file named `key.export`
+_Substitute your key's name for `<key alias>` below_
 
-secretcli keys import <key_name> key.export
+```bash
+enigmacli keys export <key alias>
+# this^ outputs stuff to stderr and also exports the key to stderr,
+# so copy only the private key output to a file named `<key alias>.export`
+
+secretcli keys import <key alias> <key alias>.export
 ```
 
 ### 7. Remove Old Chain
