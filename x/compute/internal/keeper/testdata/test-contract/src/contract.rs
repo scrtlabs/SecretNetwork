@@ -17,6 +17,7 @@ pub fn init<S: Storage, A: Api>(
     match msg {
         InitMsg::Nop {} => try_init_nop(deps, env),
         InitMsg::Callback { contract_addr } => try_init_with_callback(deps, env, contract_addr),
+        InitMsg::Error {} => try_init_error(deps, env),
     }
 }
 
@@ -26,6 +27,9 @@ fn try_init_nop<S: Storage, A: Api>(deps: &mut Extern<S, A>, env: Env) -> Result
         log: vec![log("init", "🌈")],
         data: None,
     })
+}
+fn try_init_error<S: Storage, A: Api>(deps: &mut Extern<S, A>, env: Env) -> Result<Response> {
+    contract_err("Test error! 🌈")
 }
 
 fn try_init_with_callback<S: Storage, A: Api>(
@@ -61,6 +65,7 @@ pub fn handle<S: Storage, A: Api>(
             y,
         } => try_b(deps, env, contract_addr, x, y),
         HandleMsg::C { x, y } => try_c(deps, env, x, y),
+        HandleMsg::UnicodeData {} => try_unicode_data(deps, env),
         HandleMsg::EmptyLogKeyValue {} => try_empty_log_key_value(deps, env),
         HandleMsg::EmptyData {} => try_empty_data(deps, env),
         HandleMsg::NoData {} => try_no_data(deps, env),
@@ -148,6 +153,14 @@ pub fn try_empty_data<S: Storage, A: Api>(deps: &mut Extern<S, A>, env: Env) -> 
         messages: vec![],
         log: vec![],
         data: Some(Binary(vec![])),
+    })
+}
+
+pub fn try_unicode_data<S: Storage, A: Api>(deps: &mut Extern<S, A>, env: Env) -> Result<Response> {
+    Ok(Response {
+        messages: vec![],
+        log: vec![],
+        data: Some(Binary("🍆🥑🍄".as_bytes().to_vec())),
     })
 }
 
