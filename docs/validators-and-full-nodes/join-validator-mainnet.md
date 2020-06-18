@@ -1,4 +1,4 @@
-# How to join the Secret Blockhain as a mainnet validator
+# How to join the Secret Network as a mainnet validator
 
 ### 1. [Run a new full node](/docs/validators-and-full-nodes/run-full-node-mainnet.md) on a new machine.
 
@@ -30,7 +30,7 @@ secretcli q account $(secretcli keys show -a <key_alias>)
 If you get the following message, it means that you have no tokens yet:
 
 ```bash
-ERROR: unknown address: account enigmaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx does not exist
+ERROR: unknown address: account secret1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx does not exist
 ```
 
 ### 6. Join the network as a new validator: replace `<MONIKER>` with your own from step 3 above, and adjust the amount you want to stake

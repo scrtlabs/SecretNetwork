@@ -35,7 +35,8 @@
 - [Theoretical Attacks](#theoretical-attacks)
   - [Deanonymizing with ciphertext byte count](#deanonymizing-with-ciphertext-byte-count)
   - [Two contracts with the same `contract_key` could deanonymize each other's states](#two-contracts-with-the-same-contract_key-could-deanonymize-each-others-states)
-  - [Tx Replay attacks?](#tx-replay-attacks)
+  - [Tx Replay attacks](#tx-replay-attacks)
+  - [Partial storage rollback during contract runtime](#partial-storage-rollback-during-contract-runtime)
   - [Tx outputs can leak data](#tx-outputs-can-leak-data)
 
 # Bootstrap Process
@@ -477,11 +478,11 @@ msg = aes_128_siv_decrypt({
         },
         {
           "key": "sender", // need to encrypt this value
-          "value": "enigma1v9tna8rkemndl7cd4ahru9t7ewa7kdq8d4zlr5" // need to encrypt this value
+          "value": "secret1v9tna8rkemndl7cd4ahru9t7ewa7kdq87c02m2" // need to encrypt this value
         },
         {
           "key": "recipient", // need to encrypt this value
-          "value": "enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4" // need to encrypt this value
+          "value": "secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t" // need to encrypt this value
         }
       ],
       "data": "bla bla" // need to encrypt this value
@@ -615,7 +616,7 @@ After a contract runs on the chain, an attaker can sync up a node up to a specif
 
 ## Partial storage rollback during contract runtime
 
-Our current schema can verify that when reading from a field in storage, the value received from the host has been written by the same contract instance to the same field in storage. BUT we can not (yet) verify that the value is the most __recent__ value that wsa stored there. This means that a malicious host can (offline) run a transaction, and then selectively provide outdated values for some fields of the storage. In the worst case, this can cause a contract to expose old secrets with new permissions, or new secrets with old permissions. The contract can protect against this by either (e.g.) making sure that pieces of information that have to be synced with each other are saved under the same field (so they are never observed as desynchronised) or (e.g.) somehow verify their validity when reading them from two separate fields of storage.
+Our current schema can verify that when reading from a field in storage, the value received from the host has been written by the same contract instance to the same field in storage. BUT we can not (yet) verify that the value is the most **recent** value that wsa stored there. This means that a malicious host can (offline) run a transaction, and then selectively provide outdated values for some fields of the storage. In the worst case, this can cause a contract to expose old secrets with new permissions, or new secrets with old permissions. The contract can protect against this by either (e.g.) making sure that pieces of information that have to be synced with each other are saved under the same field (so they are never observed as desynchronised) or (e.g.) somehow verify their validity when reading them from two separate fields of storage.
 
 ## Tx outputs can leak data
 

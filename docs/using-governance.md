@@ -160,7 +160,7 @@ Where `proposal.json` is:
 {
   "title": "Community Pool Spend",
   "description": "Spend 10 SCRT with line breaks \n and `code formatting`",
-  "recipient": "enigma1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "recipient": "secret1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
   "amount": [
     {
       "denom": "uscrt",

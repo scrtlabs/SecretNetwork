@@ -1,6 +1,6 @@
 # Install the `secretcli` Secret Blockchain light client
 
-1. Get the latest release of `secretcli` for your OS: https://github.com/enigmampc/SecretNetwork/releases/latest.
+1. Get the latest release of `secretcli` for your OS: https://github.com/chainofsecrets/TheRomulusUpgrade/releases/tag/v0.2.0.
 
    ([How to verify releases](/docs/verify-releases.md))
 
@@ -13,7 +13,7 @@
 
    ```bash
    # Set the mainnet chain-id
-   secretcli config chain-id enigma-1
+   secretcli config chain-id secret-1
    ```
 
    ```bash
