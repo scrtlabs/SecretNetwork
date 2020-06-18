@@ -1,11 +1,15 @@
 package api
 
-// #cgo LDFLAGS: -Wl,-rpath,${SRCDIR} -L${SRCDIR} -lgo_cosmwasm
 // #include <stdlib.h>
 // #include "bindings.h"
 import "C"
 
-import "fmt"
+import (
+	"fmt"
+	"syscall"
+
+	"github.com/CosmWasm/go-cosmwasm/types"
+)
 
 // nice aliases to the rust names
 type i32 = C.int32_t
@@ -28,12 +32,14 @@ func InitBootstrap() ([]byte, error) {
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(res), nil
+	return receiveVector(res), nil
 }
 
 func LoadSeedToEnclave(masterCert []byte, seed []byte) (bool, error) {
 	pkSlice := sendSlice(masterCert)
+	defer freeAfterSend(pkSlice)
 	seedSlice := sendSlice(seed)
+	defer freeAfterSend(seedSlice)
 	errmsg := C.Buffer{}
 
 	_, err := C.init_node(pkSlice, seedSlice, &errmsg)
@@ -43,11 +49,16 @@ func LoadSeedToEnclave(masterCert []byte, seed []byte) (bool, error) {
 	return true, nil
 }
 
-func InitCache(dataDir string, cacheSize uint64) (Cache, error) {
+type Querier = types.Querier
+
+func InitCache(dataDir string, supportedFeatures string, cacheSize uint64) (Cache, error) {
 	dir := sendSlice([]byte(dataDir))
+	defer freeAfterSend(dir)
+	features := sendSlice([]byte(supportedFeatures))
+	defer freeAfterSend(features)
 	errmsg := C.Buffer{}
 
-	ptr, err := C.init_cache(dir, usize(cacheSize), &errmsg)
+	ptr, err := C.init_cache(dir, features, usize(cacheSize), &errmsg)
 	if err != nil {
 		return Cache{}, errorWithMessage(err, errmsg)
 	}
@@ -60,66 +71,141 @@ func ReleaseCache(cache Cache) {
 
 func Create(cache Cache, wasm []byte) ([]byte, error) {
 	code := sendSlice(wasm)
+	defer freeAfterSend(code)
 	errmsg := C.Buffer{}
 	id, err := C.create(cache.ptr, code, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(id), nil
+	return receiveVector(id), nil
 }
 
 func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 	id := sendSlice(code_id)
+	defer freeAfterSend(id)
 	errmsg := C.Buffer{}
 	code, err := C.get_code(cache.ptr, id, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(code), nil
+	return receiveVector(code), nil
 }
 
-func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
+func Instantiate(
+	cache Cache,
+	code_id []byte,
+	params []byte,
+	msg []byte,
+	gasMeter *GasMeter,
+	store *KVStore,
+	api *GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
+	defer freeAfterSend(id)
 	p := sendSlice(params)
+	defer freeAfterSend(p)
 	m := sendSlice(msg)
-	db := buildDB(store)
+	defer freeAfterSend(m)
+	db := buildDB(store, gasMeter)
 	a := buildAPI(api)
+	q := buildQuerier(querier)
 	var gasUsed u64
 	errmsg := C.Buffer{}
-	res, err := C.instantiate(cache.ptr, id, p, m, db, a, u64(gasLimit), &gasUsed, &errmsg)
-	if err != nil {
-		return nil, 0, errorWithMessage(err, errmsg)
+	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(res), uint64(gasUsed), nil
+	return receiveVector(res), uint64(gasUsed), nil
 }
 
-func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
+func Handle(
+	cache Cache,
+	code_id []byte,
+	params []byte,
+	msg []byte,
+	gasMeter *GasMeter,
+	store *KVStore,
+	api *GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
+	defer freeAfterSend(id)
 	p := sendSlice(params)
+	defer freeAfterSend(p)
 	m := sendSlice(msg)
-	db := buildDB(store)
+	defer freeAfterSend(m)
+	db := buildDB(store, gasMeter)
 	a := buildAPI(api)
+	q := buildQuerier(querier)
 	var gasUsed u64
 	errmsg := C.Buffer{}
-	res, err := C.handle(cache.ptr, id, p, m, db, a, u64(gasLimit), &gasUsed, &errmsg)
-	if err != nil {
-		return nil, 0, errorWithMessage(err, errmsg)
+	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(res), uint64(gasUsed), nil
+	return receiveVector(res), uint64(gasUsed), nil
 }
 
-func Query(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
+func Migrate(
+	cache Cache,
+	code_id []byte,
+	params []byte,
+	msg []byte,
+	gasMeter *GasMeter,
+	store *KVStore,
+	api *GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
+	defer freeAfterSend(id)
+	p := sendSlice(params)
+	defer freeAfterSend(p)
 	m := sendSlice(msg)
-	db := buildDB(store)
+	defer freeAfterSend(m)
+	db := buildDB(store, gasMeter)
 	a := buildAPI(api)
+	q := buildQuerier(querier)
 	var gasUsed u64
 	errmsg := C.Buffer{}
-	res, err := C.query(cache.ptr, id, m, db, a, u64(gasLimit), &gasUsed, &errmsg)
-	if err != nil {
-		return nil, 0, errorWithMessage(err, errmsg)
+	res, err := C.migrate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(res), uint64(gasUsed), nil
+	return receiveVector(res), uint64(gasUsed), nil
+}
+
+func Query(
+	cache Cache,
+	code_id []byte,
+	msg []byte,
+	gasMeter *GasMeter,
+	store *KVStore,
+	api *GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+) ([]byte, uint64, error) {
+	id := sendSlice(code_id)
+	defer freeAfterSend(id)
+	m := sendSlice(msg)
+	defer freeAfterSend(m)
+	db := buildDB(store, gasMeter)
+	a := buildAPI(api)
+	q := buildQuerier(querier)
+	var gasUsed u64
+	errmsg := C.Buffer{}
+	res, err := C.query(cache.ptr, id, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+	}
+	return receiveVector(res), uint64(gasUsed), nil
 }
 
 // KeyGen Send KeyGen request to enclave
@@ -129,7 +215,7 @@ func KeyGen() ([]byte, error) {
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(res), nil
+	return receiveVector(res), nil
 }
 
 // KeyGen Seng KeyGen request to enclave
@@ -145,17 +231,18 @@ func CreateAttestationReport() (bool, error) {
 func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	errmsg := C.Buffer{}
 	certSlice := sendSlice(cert)
+	defer freeAfterSend(certSlice)
 	res, err := C.get_encrypted_seed(certSlice, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(res), nil
+	return receiveVector(res), nil
 }
 
 /**** To error module ***/
 
 func errorWithMessage(err error, b C.Buffer) error {
-	msg := receiveSlice(b)
+	msg := receiveVector(b)
 	if msg == nil {
 		return err
 	}
