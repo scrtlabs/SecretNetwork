@@ -3,7 +3,7 @@ package keeper
 import (
 	"encoding/json"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/enigmampc/EnigmaBlockchain/x/wasm/internal/types"
+	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
 	"io/ioutil"
 	"os"
 	"strings"

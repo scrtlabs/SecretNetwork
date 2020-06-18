@@ -10,7 +10,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/distribution"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	wasmTypes "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
-	"github.com/enigmampc/EnigmaBlockchain/x/wasm/internal/types"
+	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
 )
 
 type MessageHandler struct {

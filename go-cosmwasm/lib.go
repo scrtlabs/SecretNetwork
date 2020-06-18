@@ -132,7 +132,17 @@ func (w *Wasmer) Execute(
 	if err != nil {
 		return nil, 0, err
 	}
-	return api.Handle(w.cache, code, paramBin, executeMsg, &gasMeter, &store, &goapi, &querier, gasLimit)
+
+	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, &gasMeter, &store, &goapi, &querier, gasLimit)
+
+	var resp types.Result
+	err = json.Unmarshal(data, &resp)
+
+	if err != nil {
+		return nil, gasUsed, err
+	}
+
+	return &resp, gasUsed, nil
 }
 
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be

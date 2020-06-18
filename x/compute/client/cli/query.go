@@ -345,13 +345,35 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 				}
 
 				for i, msg := range cosmwasmOutput.Ok.Messages {
-					if len(msg.Contract.Msg) > 64 {
-						msgPlaintext, err := wasmCtx.Decrypt(msg.Contract.Msg[64:], nonce)
-						if err != nil {
-							return err
+					// todo: Is there a better way to do this? Probably..
+					// check if msg.Wasm is set
+					if msg.Wasm != nil {
+						// check that message is of type Execute
+						if msg.Wasm.Execute != nil {
+							// check that it's longer than our minimum length
+							// todo: set 64 as a constant
+							if len(msg.Wasm.Execute.Msg) > 64 {
+								msgPlaintext, err := wasmCtx.Decrypt(msg.Wasm.Execute.Msg[64:], nonce)
+								if err != nil {
+									return err
+								}
+								cosmwasmOutput.Ok.Messages[i].Wasm.Execute.Msg = msgPlaintext
+							}
+						} else
+						// check that message is of type Instantiate
+						if msg.Wasm.Instantiate != nil {
+							// check that it's longer than our minimum length
+							// todo: set 64 as a constant
+							if len(msg.Wasm.Instantiate.Msg) > 64 {
+								msgPlaintext, err := wasmCtx.Decrypt(msg.Wasm.Instantiate.Msg[64:], nonce)
+								if err != nil {
+									return err
+								}
+								cosmwasmOutput.Ok.Messages[i].Wasm.Instantiate.Msg = msgPlaintext
+							}
 						}
-						cosmwasmOutput.Ok.Messages[i].Contract.Msg = msgPlaintext
 					}
+
 				}
 
 				msgs, err := json.Marshal(cosmwasmOutput.Ok.Messages)
@@ -360,8 +382,8 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 				}
 				answer.OutputMessages = string(msgs)
 
-				if cosmwasmOutput.Err != "" {
-					errorCiphertext, err := base64.StdEncoding.DecodeString(cosmwasmOutput.Err)
+				if cosmwasmOutput.Err.Error() != "" {
+					errorCiphertext, err := base64.StdEncoding.DecodeString(cosmwasmOutput.Err.Error())
 					if err != nil {
 						return err
 					}

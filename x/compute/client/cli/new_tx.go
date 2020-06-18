@@ -5,13 +5,13 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/CosmWasm/wasmd/x/wasm/internal/types"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
+	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
