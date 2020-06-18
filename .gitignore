@@ -11,3 +11,5 @@ Enclave_t.h
 *.a
 *.o
 *.so
+io-master-cert.der
+node-master-cert.der
