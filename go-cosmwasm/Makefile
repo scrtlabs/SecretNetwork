@@ -38,14 +38,14 @@ SGX_COMMON_CFLAGS += -fstack-protector
 
 CUSTOM_EDL_PATH := ../third_party/vendor/sgx_edl/edl
 App_Rust_Flags := --release
-App_SRC_Files := $(shell find ../cosmwasm/lib/sgx-vm/ -type f -name '*.rs') \
-    $(shell find ../cosmwasm/lib/sgx-vm/ -type f -name 'Cargo.toml') \
+App_SRC_Files := $(shell find ../cosmwasm/packages/sgx-vm/ -type f -name '*.rs') \
+    $(shell find ../cosmwasm/packages/sgx-vm/ -type f -name 'Cargo.toml') \
     $(shell find ./ -type f -name '*.rs') \
     $(shell find ./ -type f -name 'Cargo.toml')
 App_Include_Paths := -I./ -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
-Enclave_Path := ../cosmwasm/lib/wasmi-runtime
+Enclave_Path := ../cosmwasm/packages/wasmi-runtime
 Enclave_EDL_Products := Enclave_u.c Enclave_u.h
 
 all: build test
@@ -68,7 +68,7 @@ build-rust-release: librust_cosmwasm_enclave.signed.so lib/libEnclave_u.a
 	@ #this pulls out ELF symbols, 80% size reduction!
 
 librust_cosmwasm_enclave.signed.so: build-enclave
-	cp ../cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./
+	cp ../cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./
 
 # This file will be picked up by the crates build script and linked into the library.
 # We make sure that the enclave is built before we compile the edl,
@@ -86,7 +86,7 @@ lib/libEnclave_u.a: $(Enclave_Path)/Enclave.edl target/headers/enclave-ffi-types
 # So here we do the minimum required work to generate this file correctly, and copy it to the right location
 target/headers/enclave-ffi-types.h: build-enclave
 	mkdir -p $(dir $@)
-	cp ../cosmwasm/lib/wasmi-runtime/$(@) $@
+	cp ../cosmwasm/packages/wasmi-runtime/$(@) $@
 
 .PHONY: build-enclave
 build-enclave:
@@ -150,4 +150,4 @@ clean:
 
 .PHONY: clean-all
 clean-all: clean
-	$(MAKE) -C ../cosmwasm/lib/wasmi-runtime clean
+	$(MAKE) -C ../cosmwasm/packages/wasmi-runtime clean

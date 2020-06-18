@@ -89,15 +89,15 @@ build_linux: vendor
 #	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
 
 build_windows:
-	# CLI only 
+	# CLI only
 	$(MAKE) xgo_build_enigmacli XGO_TARGET=windows/amd64
 
 build_macos:
-	# CLI only 
+	# CLI only
 	$(MAKE) xgo_build_enigmacli XGO_TARGET=darwin/amd64
 
 build_arm_linux:
-	# CLI only 
+	# CLI only
 	$(MAKE) xgo_build_enigmacli XGO_TARGET=linux/arm64
 
 build_all: build_linux build_windows build_macos build_arm_linux
@@ -151,8 +151,8 @@ clean:
 	-rm -rf /tmp/EnigmaBlockchain
 	-rm -f ./enigmacli*
 	-rm -f ./enigmad*
-	-rm -f ./librust_cosmwasm_enclave.signed.so 
-	-rm -f ./x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so 
+	-rm -f ./librust_cosmwasm_enclave.signed.so
+	-rm -f ./x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so
 	-rm -f ./go-cosmwasm/api/libgo_cosmwasm.so
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*
@@ -162,7 +162,7 @@ clean:
 	-rm -rf ./x/compute/internal/keeper/*.der
 	-rm -rf ./x/compute/internal/keeper/*.so
 	$(MAKE) -C go-cosmwasm clean-all
-	$(MAKE) -C cosmwasm/lib/wasmi-runtime clean
+	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
 
 docker_bootstrap:
 	docker build --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t enigmampc/secret_bootstrap .
@@ -171,31 +171,31 @@ docker_node:
 	docker build --build-arg SECRET_NODE_TYPE=NODE -t enigmampc/secret_node .
 # while developing:
 build-enclave:
-	$(MAKE) -C cosmwasm/lib/wasmi-runtime 
+	$(MAKE) -C cosmwasm/packages/wasmi-runtime
 
 # while developing:
 clean-enclave:
-	$(MAKE) -C cosmwasm/lib/wasmi-runtime clean 
+	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
 
 sanity-test:
 	SGX_MODE=SW $(MAKE) build_linux
-	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
-	SGX_MODE=SW ./cosmwasm/lib/sanity-test.sh
-	
+	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+	SGX_MODE=SW ./cosmwasm/testing/sanity-test.sh
+
 sanity-test-hw:
 	$(MAKE) build_linux
-	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
-	./cosmwasm/lib/sanity-test.sh
+	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+	./cosmwasm/testing/sanity-test.sh
 
 callback-sanity-test:
 	SGX_MODE=SW $(MAKE) build_linux
-	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
-	SGX_MODE=SW ./cosmwasm/lib/callback-test.sh
+	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+	SGX_MODE=SW ./cosmwasm/testing/callback-test.sh
 
 build-test-contract:
 	$(MAKE) -C ./x/compute/internal/keeper/testdata/test-contract
 
 go-tests: build-test-contract
 	SGX_MODE=SW $(MAKE) build_linux
-	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	SGX_MODE=SW go test -p 1 -v ./x/compute/internal/...
