@@ -5,6 +5,7 @@ use cosmwasm::errors::{contract_err, unauthorized, Result, SerializeErr};
 use cosmwasm::serde::to_vec;
 use cosmwasm::traits::{Api, Extern, Storage};
 use cosmwasm::types::{log, CosmosMsg, Env, HumanAddr, Response};
+use cw_storage::{serialize, PrefixedStorage, ReadonlyPrefixedStorage};
 
 use crate::msg::{HandleMsg, InitMsg, OwnerResponse, QueryMsg};
 use crate::state::{config, config_read, State};
@@ -17,8 +18,15 @@ pub fn init<S: Storage, A: Api>(
     match msg {
         InitMsg::Nop {} => try_init_nop(deps, env),
         InitMsg::Callback { contract_addr } => try_init_with_callback(deps, env, contract_addr),
-        InitMsg::Error {} => try_init_error(deps, env),
+        InitMsg::ContractError {} => try_contract_error(),
+        InitMsg::State {} => try_init_state(deps, env),
     }
+}
+
+fn try_init_state<S: Storage, A: Api>(deps: &mut Extern<S, A>, env: Env) -> Result<Response> {
+    let mut store = PrefixedStorage::new(b"prefix", &mut deps.storage);
+
+    Ok(Response::default())
 }
 
 fn try_init_nop<S: Storage, A: Api>(deps: &mut Extern<S, A>, env: Env) -> Result<Response> {
@@ -28,7 +36,7 @@ fn try_init_nop<S: Storage, A: Api>(deps: &mut Extern<S, A>, env: Env) -> Result
         data: None,
     })
 }
-fn try_init_error<S: Storage, A: Api>(deps: &mut Extern<S, A>, env: Env) -> Result<Response> {
+fn try_contract_error() -> Result<Response> {
     contract_err("Test error! 🌈")
 }
 
@@ -69,6 +77,7 @@ pub fn handle<S: Storage, A: Api>(
         HandleMsg::EmptyLogKeyValue {} => try_empty_log_key_value(deps, env),
         HandleMsg::EmptyData {} => try_empty_data(deps, env),
         HandleMsg::NoData {} => try_no_data(deps, env),
+        HandleMsg::ContractError {} => try_contract_error(),
     }
 }
 
@@ -175,6 +184,7 @@ pub fn try_no_data<S: Storage, A: Api>(deps: &mut Extern<S, A>, env: Env) -> Res
 pub fn query<S: Storage, A: Api>(deps: &Extern<S, A>, msg: QueryMsg) -> Result<Vec<u8>> {
     match msg {
         QueryMsg::Owner {} => query_owner(deps),
+        QueryMsg::ContractError {} => try_query_contract_error(),
     }
 }
 
@@ -187,4 +197,8 @@ fn query_owner<S: Storage, A: Api>(deps: &Extern<S, A>) -> Result<Vec<u8>> {
     to_vec(&resp).context(SerializeErr {
         kind: "OwnerResponse",
     })
+}
+
+fn try_query_contract_error() -> Result<Vec<u8>> {
+    contract_err("Test error! 🌈")
 }

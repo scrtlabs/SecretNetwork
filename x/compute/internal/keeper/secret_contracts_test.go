@@ -656,5 +656,234 @@ func TestInitContractErrorUnicode(t *testing.T) {
 	require.NoError(t, err)
 
 	// init
-	requireInitError(t, keeper, ctx, contractID, walletA, `{"error":{}}`, "Test error! 🌈")
+	requireInitError(t, keeper, ctx, contractID, walletA, `{"contracterror":{}}`, "Test error! 🌈")
+}
+
+func TestExecuteContractErrorUnicode(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
+	require.NoError(t, err)
+
+	// init
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.NoError(t, err)
+
+	data, _ := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"contracterror":{}}`, 1)
+
+	require.Contains(t, data.Err, "Test error! 🌈")
+}
+
+func TestInitParamError(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"callback":{"contract_addr":"notanaddress"}}`))
+	require.NoError(t, err)
+
+	// init
+	_, err = keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.Error(t, err)
+
+	errorMsg := err.Error()
+	require.Contains(t, errorMsg, "invalid address")
+}
+
+func TestCallbackExecuteParamError(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
+	require.NoError(t, err)
+
+	// init
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.NoError(t, err)
+
+	execMsgBz, err := wasmCtx.Encrypt([]byte(`{"a":{"contract_addr":"notanaddress","x":2,"y":3}}`))
+	require.NoError(t, err)
+
+	_, err = keeper.Execute(ctx, contractAddress, walletA, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.Error(t, err)
+
+	errorMsg := err.Error()
+	require.Contains(t, errorMsg, "invalid address")
+}
+
+func TestQueryInputStructureError(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+
+	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
+	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
+	walletA := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
+	walletB := createFakeFundedAccount(ctx, accKeeper, topUp)
+
+	// https://github.com/CosmWasm/cosmwasm-examples/blob/f5ea00a85247abae8f8cbcba301f94ef21c66087/erc20/src/contract.rs
+	wasmCode, err := ioutil.ReadFile("./testdata/erc20-f5ea00a85247abae8f8cbcba301f94ef21c66087.wasm")
+	require.NoError(t, err)
+
+	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	// init
+	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, walletA.String(), walletB.String())
+
+	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
+	require.NoError(t, err)
+
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "some label", deposit)
+	require.NoError(t, err)
+
+	requireQueryError(t, keeper, ctx, contractAddress, `{"balance":{"invalidkey":"invalidval"}}`, "Error parsing QueryMsg: missing field")
+}
+
+func TestQueryContractErrorUnicode(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"state":{}}`))
+	require.NoError(t, err)
+
+	// init
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.NoError(t, err)
+
+	queryBz, err := wasmCtx.Encrypt([]byte(`{"contracterror":{}}`))
+	require.NoError(t, err)
+
+	_, err = keeper.QuerySmart(ctx, contractAddress, queryBz)
+
+	errorCipherB64 := strings.ReplaceAll(err.Error(), "query wasm contract failed: ", "")
+	errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
+	require.NoError(t, err)
+
+	nonce := queryBz[0:32]
+	errorPlainBz, err := wasmCtx.Decrypt(errorCipherBz, nonce)
+	require.NoError(t, err)
+
+	errorPlaintext := string(errorPlainBz)
+	require.Contains(t, errorPlaintext, "Test error! 🌈")
+}
+
+func TestInitNotEncryptedInputError(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	initMsg := []byte(`{"nop":{}`)
+
+	// init
+	_, err = keeper.Instantiate(ctx, contractID, walletA, initMsg, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.Error(t, err)
+
+	errorMsg := err.Error()
+	require.Contains(t, errorMsg, "DecryptionError")
+}
+
+func TestExecuteNotEncryptedInputError(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
+	require.NoError(t, err)
+
+	// init
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.NoError(t, err)
+
+	execMsg := []byte(`{"emptylogkeyvalue":{}}`)
+	require.NoError(t, err)
+
+	_, err = keeper.Execute(ctx, contractAddress, walletA, execMsg, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.Error(t, err)
+
+	errorMsg := err.Error()
+	require.Contains(t, errorMsg, "DecryptionError")
+}
+
+func TestQueryNotEncryptedInputError(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"state":{}}`))
+	require.NoError(t, err)
+
+	// init
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.NoError(t, err)
+
+	query := []byte(`{"owner":{}}`)
+	require.NoError(t, err)
+
+	_, err = keeper.QuerySmart(ctx, contractAddress, query)
+	require.Error(t, err)
+
+	errorMsg := err.Error()
+	require.Contains(t, errorMsg, "DecryptionError")
 }
