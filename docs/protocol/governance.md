@@ -1,4 +1,4 @@
-# How to participate in on-chain governance
+# Governance
 
 Governance is the process from which users in the Secret Blockchain can come to consensus on software upgrades, parameters of the mainnet or signaling mechanisms through text proposals. This is done through voting on proposals, which will be submitted by `SCRT` holders on the mainnet.
 
@@ -17,8 +17,8 @@ For more information about the governance process and how it works, please check
 
 ## Setup
 
-- [How to use a light client (Windows, Mac & Linux)](/docs/ligth-client-mainnet.md)
-- [Ledger Nano S support](/docs/ledger-nano-s.md)
+- [How to use a light client (Windows, Mac & Linux)](/light-client-mainnet.md)
+- [Ledger Nano S support](/ledger-nano-s.md)
 
 ## Create a Governance Proposal
 

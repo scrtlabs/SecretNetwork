@@ -1,6 +1,8 @@
-# How to join the Secret Network as a mainnet validator
+# Join as a Validator
 
-### 1. [Run a new full node](/docs/validators-and-full-nodes/run-full-node-mainnet.md) on a new machine.
+## How to become a validator on Secret Network
+
+### 1. [Run a new full node](/validators-and-full-nodes/run-full-node-mainnet.md) on a new machine.
 
 ### 2. Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):
 
@@ -9,7 +11,7 @@ secretcli keys add <key-alias>
 ```
 
 **:warning:Note:warning:: Backup the mnemonics!**
-**:warning:Note:warning:: Please make sure you also [backup your validator](/docs/validators-and-full-nodes/backup-a-validator.md)**
+**:warning:Note:warning:: Please make sure you also [backup your validator](/validators-and-full-nodes/backup-a-validator.md)**
 
 **Note**: If you already have a key you can import it with the bip39 mnemonic with `secretcli keys add <key-alias> --recover` or with `secretcli keys export` (exports to `stderr`!!) & `secretcli keys import`.
 
@@ -89,7 +91,7 @@ Penalties for double-signing:
 
 ## Protecting your validator agains DDoS attacks
 
-See [Sentry Nodes](/docs/validators-and-full-nodes/sentry-nodes.md).
+See [Sentry Nodes](/validators-and-full-nodes/sentry-nodes.md).
 
 ## Staking more tokens
 

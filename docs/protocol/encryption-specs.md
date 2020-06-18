@@ -1,8 +1,9 @@
-# Implementing the Secret in Contracts
+# Encryption
 
-:warning: This is a very advanced WIP.
+:warning: :warning: :warning:
 
-- [Implementing the Secret in Contracts](#implementing-the-secret-in-contracts)
+This is a very advanced WIP.
+
 - [Bootstrap Process](#bootstrap-process)
   - [`consensus_seed`](#consensus_seed)
   - [Key Derivation](#key-derivation)

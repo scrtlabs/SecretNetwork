@@ -2,7 +2,7 @@
 
 1. Get the latest release of `secretcli` for your OS: https://github.com/chainofsecrets/TheRomulusUpgrade/releases/tag/v0.2.0.
 
-   ([How to verify releases](/docs/verify-releases.md))
+   ([How to verify releases](/verify-releases.md))
 
 2) Install:
 

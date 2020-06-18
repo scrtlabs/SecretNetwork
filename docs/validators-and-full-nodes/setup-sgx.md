@@ -1,10 +1,12 @@
-# Hardware
+# SGX Requirements
+
+## Hardware
 
 1. Go to your BIOS menu
 2. Enable SGX (Software controlled is not enough)
 3. Disable Secure Boot
 
-# Software
+## Software
 
 First, make sure you have Rust installed: https://www.rust-lang.org/tools/install
 
@@ -197,7 +199,7 @@ sudo apt purge -y libsgx-enclave-common libsgx-enclave-common-dev libsgx-urts sg
 
 # Refs
 
-1. https://github.com/apache/incubator-teaclave-sgx-sdk/wiki/Environment-Setup
-2. https://github.com/openenclave/openenclave/blob/master/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md
-3. https://github.com/apache/incubator-teaclave-sgx-sdk/blob/783f04c002e243d1022c5af8a982f9c2a7138f32/dockerfile/Dockerfile.1804.nightly
-4. https://edp.fortanix.com/docs/installation/guide/
+1. [https://github.com/apache/incubator-teaclave-sgx-sdk/wiki/Environment-Setup](https://github.com/apache/incubator-teaclave-sgx-sdk/wiki/Environment-Setup)
+2. [https://github.com/openenclave/openenclave/blob/master/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md](https://github.com/openenclave/openenclave/blob/master/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md)
+3. [https://github.com/apache/incubator-teaclave-sgx-sdk/blob/783f04c002e243d1022c5af8a982f9c2a7138f32/dockerfile/Dockerfile.1804.nightly](https://github.com/apache/incubator-teaclave-sgx-sdk/blob/783f04c002e243d1022c5af8a982f9c2a7138f32/dockerfile/Dockerfile.1804.nightly)
+4. [https://edp.fortanix.com/docs/installation/guide](https://edp.fortanix.com/docs/installation/guide)

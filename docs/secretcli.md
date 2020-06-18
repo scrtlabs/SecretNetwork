@@ -442,7 +442,7 @@ secretcli q staking validator <validator-address>
 
 ##### Bond Tokens
 
-On the EnigmaChain mainnet, we delegate `uscrt`, where `1scrt = 1000000uscrt`. Here's how you can bond tokens to a validator (_i.e._ delegate):
+On the Secret Network, we delegate `uscrt`, where `1scrt = 1000000uscrt`. Here's how you can bond tokens to a validator (_i.e._ delegate):
 
 ```bash
 secretcli tx staking delegate \
@@ -650,10 +650,7 @@ secretcli status
 
 ### Governance
 
-Governance is the process from which users in the Secret Blockchain can come to consensus
-on software upgrades, parameters of the mainnet or signaling mechanisms through
-text proposals. This is done through voting on proposals, which will be submitted
-by `SCRT` holders on the mainnet.
+Governance is the process by which users in the Secret Blockchain can come to consensus on software upgrades, parameters of the mainnet or signals through text proposals. This is done through voting on proposals, which will be submitted by `SCRT` holders on the mainnet.
 
 [How to participate in on-chain governance](/docs/using-governance.md).
 
