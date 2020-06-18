@@ -150,6 +150,24 @@ func requireQueryError(t *testing.T, keeper Keeper, ctx sdk.Context, contractAdd
 	require.Contains(t, errorPlaintext, expectedContainedInOutput)
 }
 
+func requireInitError(t *testing.T, keeper Keeper, ctx sdk.Context, contractID uint64, creator sdk.AccAddress, initMsg string, expectedContainedInOutput string) {
+	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
+	require.NoError(t, err)
+
+	_, err = keeper.Instantiate(ctx, contractID, creator, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	errorCipherB64 := strings.ReplaceAll(err.Error(), "instantiate wasm contract failed: ", "")
+	errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
+	require.NoError(t, err)
+
+	nonce := initMsgBz[0:32]
+	errorPlainBz, err := wasmCtx.Decrypt(errorCipherBz, nonce)
+	require.NoError(t, err)
+
+	errorPlaintext := string(errorPlainBz)
+	require.Contains(t, errorPlaintext, expectedContainedInOutput)
+}
+
 func executeHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string, skipEvents uint) (cosmwasm.CosmosResponse, [][]cosmwasm.LogAttribute) {
 	execMsgBz, err := wasmCtx.Encrypt([]byte(execMsg))
 	require.NoError(t, err)
@@ -447,7 +465,7 @@ func TestNoData(t *testing.T) {
 	require.Equal(t, "", data.Ok.Data)
 }
 
-func TestExecuteError(t *testing.T) {
+func TestExecuteIllegalInputError(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -472,7 +490,7 @@ func TestExecuteError(t *testing.T) {
 	require.Contains(t, data.Err, "Error parsing HandleMsg")
 }
 
-func TestInitError(t *testing.T) {
+func TestInitIllegalInputError(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -564,7 +582,7 @@ func TestInitCallback(t *testing.T) {
 	)
 }
 
-func TestQueryError(t *testing.T) {
+func TestQueryInputParamError(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -596,4 +614,47 @@ func TestQueryError(t *testing.T) {
 		`{"balance":{"address":"blabla"}}`,
 		`Contract error: canonicalize_address returned error`,
 	)
+}
+
+func TestUnicodeData(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
+	require.NoError(t, err)
+
+	// init
+	contractAddress, err := keeper.Instantiate(ctx, contractID, walletA, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.NoError(t, err)
+
+	data, _ := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"unicodedata":{}}`, 1)
+
+	require.Empty(t, data.Err)
+	require.Equal(t, base64.StdEncoding.EncodeToString([]byte("🍆🥑🍄")), data.Ok.Data)
+}
+
+func TestInitContractErrorUnicode(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, accKeeper, keeper := CreateTestInput(t, false, tempDir)
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	contractID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	// init
+	requireInitError(t, keeper, ctx, contractID, walletA, `{"error":{}}`, "Test error! 🌈")
 }

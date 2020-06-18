@@ -10,6 +10,7 @@ pub enum InitMsg {
        Callback {
         contract_addr: HumanAddr,
        },
+       Error{ },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -29,6 +30,7 @@ pub enum HandleMsg {
         x: u8,
         y: u8,
     },
+    UnicodeData{ },
     EmptyLogKeyValue { },
     EmptyData { },
     NoData { },
