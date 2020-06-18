@@ -14,7 +14,7 @@ This document details how to join the EnigmaChain `mainnet` as a validator.
 ### 1. Download the Enigma Blockchain package installer for Debian/Ubuntu:
 
 ```bash
-wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.3/enigma-blockchain_0.0.3_amd64.deb
+wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.0.3/enigma-blockchain_0.0.3_amd64.deb
 ```
 
 ([How to verify releases](/docs/verify-releases.md))
@@ -34,7 +34,7 @@ enigmad init <MONIKER> --chain-id enigma-1
 ### 4. Download a copy of the Genesis Block file: `genesis.json`
 
 ```bash
-wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/EnigmaBlockchain/master/enigma-1-genesis.json"
+wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/enigma-1-genesis.json"
 ```
 
 ### 5. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:

@@ -48,7 +48,7 @@ wget -q -O - https://raw.githubusercontent.com/LedgerHQ/udev-rules/master/add_ud
 > Note: You can use any number you'd like for your account number. Be sure to remember the number you used, so you can recover if needed.
 
 ```bash
-enigmacli keys add <account name> --ledger --account <account number on your Ledger>
+secretcli keys add <account name> --ledger --account <account number on your Ledger>
 ```
 
 :warning::warning::warning:
@@ -58,15 +58,15 @@ enigmacli keys add <account name> --ledger --account <account number on your Led
 ### Display your account address
 
 ```bash
-enigmacli keys show -a <account name>
+secretcli keys show -a <account name>
 ```
 
-### Add an account to `enigmacli` that already exists on your Ledger
+### Add an account to `secretcli` that already exists on your Ledger
 
 _You'll use this when you, say, using a different machine._
 
 ```bash
-enigmacli keys add <account name> --ledger --account <account number on your Ledger> --recover
+secretcli keys add <account name> --ledger --account <account number on your Ledger> --recover
 ```
 
 **Note! If you run the above command without the `--ledger` flag, the CLI will prompt you to enter your BIP39 mnemonic, which is your Ledger recovery phrase. YOU DO NOT WANT TO DO THIS. This will essentially save your private key locally.**
@@ -80,23 +80,23 @@ _Note: the commands below assume that you run them on the same machine where you
 ### Send tokens
 
 ```bash
-enigmacli tx send <account name or address> <to_address> <amount> --ledger
+secretcli tx send <account name or address> <to_address> <amount> --ledger
 ```
 
 ### Delegate SCRT to a validator
 
 ```bash
-enigmacli tx staking delegate <validator address> <amount to bond> --from <account key> --gas auto --gas-prices <gasPrice> --ledger
+secretcli tx staking delegate <validator address> <amount to bond> --from <account key> --gas auto --gas-prices <gasPrice> --ledger
 ```
 
 ### Collect rewards and commission
 
 ```bash
-enigmacli tx distribution withdraw-all-rewards --from <account name> --gas auto --commission --ledger
+secretcli tx distribution withdraw-all-rewards --from <account name> --gas auto --commission --ledger
 ```
 
 ### Vote on proposals
 
 ```bash
-enigmacli tx gov vote <proposal-id> <vote> --from <account name> --ledger
+secretcli tx gov vote <proposal-id> <vote> --from <account name> --ledger
 ```

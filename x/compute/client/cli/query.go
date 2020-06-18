@@ -19,8 +19,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/keeper"
-	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 func GetQueryCmd(cdc *codec.Codec) *cobra.Command {

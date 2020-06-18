@@ -16,7 +16,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
 
-	wasmTypes "github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
+	wasmTypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 const flagLRUCacheSize = "lru_size"

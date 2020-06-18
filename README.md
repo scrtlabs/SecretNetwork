@@ -12,7 +12,7 @@ Secret Network is a blockchain-based, open-source protocol that lets anyone perf
 
 Mainnet is out! Get the latest release at https://github.com/enigmampc/SecretNetwork/releases/latest.
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md) [![Contributor Covenant](https://chat.scrt.network/api/v1/shield.svg)](https://chat.scrt.network/home)
 
 # Community
 
@@ -55,10 +55,11 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 
 # Docs
 
-- [Install the `enigmacli` light client (Windows, Mac & Linux)](/docs/light-client-mainnet.md)
-- [How to use the `enigmacli` light client](/docs/enigmacli.md)
+- [Install the `secretcli` light client (Windows, Mac & Linux)](/docs/light-client-mainnet.md)
+- [How to use the `secretcli` light client](/docs/secretcli.md)
 - [How to participate in on-chain governance](docs/using-governance.md)
 - [How to run a full node on mainnet](/docs/validators-and-full-nodes/run-full-node-mainnet.md)
+- [How to upgrade your full node from `enigma-1` v0.0.3 to `secret-1` v0.2.0](https://github.com/chainofsecrets/TheRomulusUpgrade/blob/romulus-upgrade/docs/upgrades/romulus-upgrade-instructions.md#upgrade-procedure)
 - [How to run an LCD server](/docs/lcd-server-example.service)
 - [Ledger Nano S (and X) support](/docs/ledger-nano-s.md)
 - [How to join as a mainnet validator](/docs/validators-and-full-nodes/join-validator-mainnet.md)

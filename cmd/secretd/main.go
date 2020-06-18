@@ -19,8 +19,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
-	app "github.com/enigmampc/EnigmaBlockchain"
-	eng "github.com/enigmampc/EnigmaBlockchain/types"
+	app "github.com/enigmampc/SecretNetwork"
+	eng "github.com/enigmampc/SecretNetwork/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
@@ -42,8 +42,8 @@ func main() {
 	ctx := server.NewDefaultContext()
 	cobra.EnableCommandSorting = false
 	rootCmd := &cobra.Command{
-		Use:               "enigmad",
-		Short:             "EnigmaChain App Daemon (server)",
+		Use:               "secretd",
+		Short:             "The Secret Blockchain App Daemon (server)",
 		PersistentPreRunE: server.PersistentPreRunEFn(ctx),
 	}
 	// CLI commands to initialize the chain
@@ -84,7 +84,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer) abci.Application
 		skipUpgradeHeights[int64(h)] = true
 	}
 
-	return app.NewEnigmaChainApp(
+	return app.NewSecretChainApp(
 		logger, db, traceStore, true, invCheckPeriod, skipUpgradeHeights,
 		baseapp.SetPruning(store.NewPruningOptionsFromString(viper.GetString("pruning"))),
 		baseapp.SetMinGasPrices(viper.GetString(server.FlagMinGasPrices)),
@@ -99,7 +99,7 @@ func exportAppStateAndTMValidators(
 ) (json.RawMessage, []tmtypes.GenesisValidator, error) {
 
 	if height != -1 {
-		engApp := app.NewEnigmaChainApp(logger, db, traceStore, false, uint(1), map[int64]bool{})
+		engApp := app.NewSecretChainApp(logger, db, traceStore, false, uint(1), map[int64]bool{})
 		err := engApp.LoadHeight(height)
 		if err != nil {
 			return nil, nil, err
@@ -107,6 +107,6 @@ func exportAppStateAndTMValidators(
 		return engApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 	}
 
-	engApp := app.NewEnigmaChainApp(logger, db, traceStore, true, uint(1), map[int64]bool{})
+	engApp := app.NewSecretChainApp(logger, db, traceStore, true, uint(1), map[int64]bool{})
 	return engApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 }

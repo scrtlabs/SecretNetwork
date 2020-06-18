@@ -1,4 +1,6 @@
 *.deb
+/secretcli*
+/secretd*
 /enigmacli*
 /enigmad*
 SHA256SUMS*
@@ -6,8 +8,11 @@ SHA256SUMS*
 Enclave_u.c
 Enclave_u.h
 .vscode/
+.idea/
 Enclave_t.c
 Enclave_t.h
 *.a
 *.o
 *.so
+io-master-cert.der
+node-master-cert.der

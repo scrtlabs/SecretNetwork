@@ -1,6 +1,6 @@
-module github.com/enigmampc/EnigmaBlockchain
+module github.com/enigmampc/SecretNetwork
 
-go 1.13
+go 1.14
 
 require (
 	github.com/cosmos/cosmos-sdk v0.38.3

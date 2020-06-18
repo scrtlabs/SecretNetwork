@@ -23,8 +23,8 @@ import (
 	"github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/libs/cli"
 
-	app "github.com/enigmampc/EnigmaBlockchain"
-	eng "github.com/enigmampc/EnigmaBlockchain/types"
+	app "github.com/enigmampc/SecretNetwork"
+	eng "github.com/enigmampc/SecretNetwork/types"
 )
 
 func main() {
@@ -40,8 +40,8 @@ func main() {
 	config.Seal()
 
 	rootCmd := &cobra.Command{
-		Use:   "enigmacli",
-		Short: "EnigmaChain Client",
+		Use:   "secretcli",
+		Short: "The Secret Blockchain Client",
 	}
 
 	// Add --chain-id to persistent flags and mark it required

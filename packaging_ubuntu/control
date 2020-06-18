@@ -1,6 +1,6 @@
-Package: enigma-blockchain
+Package: secret-blockchain
 Priority: optional
 Architecture: amd64
-Homepage: https://github.com/enigmampc/EnigmaBlockchain
+Homepage: https://github.com/enigmampc/SecretNetwork
 Maintainer: https://github.com/enigmampc
-Description: The Enigma Blockchain
+Description: The Secret Blockchain

@@ -5,14 +5,14 @@
 FROM rust:1.42-stretch AS build-env-rust
 
 # Set working directory for the build
-WORKDIR /go/src/github.com/enigmampc/enigmablockchain
+WORKDIR /go/src/github.com/enigmampc/SecretNetwork
 
 RUN rustup default nightly
 
 # Add source files
 COPY go-cosmwasm/ go-cosmwasm/
 
-WORKDIR /go/src/github.com/enigmampc/enigmablockchain/go-cosmwasm
+WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
 RUN cargo build --release --features backtraces
 
 FROM golang:1.14-stretch AS build-env
@@ -25,12 +25,12 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Set working directory for the build
-WORKDIR /go/src/github.com/enigmampc/enigmablockchain
+WORKDIR /go/src/github.com/enigmampc/SecretNetwork
 
 # Add source files
 COPY . .
 
-COPY --from=build-env-rust /go/src/github.com/enigmampc/enigmablockchain/go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
+COPY --from=build-env-rust /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
 
 RUN go mod tidy
 
@@ -43,9 +43,9 @@ FROM ubuntu:18.04
 WORKDIR /root
 
 # Copy over binaries from the build-env
-COPY --from=build-env-rust /go/src/github.com/enigmampc/enigmablockchain/go-cosmwasm/target/release/libgo_cosmwasm.so /usr/lib/
-COPY --from=build-env /go/src/github.com/enigmampc/enigmablockchain/enigmad /usr/bin/enigmad
-COPY --from=build-env  /go/src/github.com/enigmampc/enigmablockchain/enigmacli /usr/bin/enigmacli
+COPY --from=build-env-rust /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /usr/lib/
+COPY --from=build-env /go/src/github.com/enigmampc/SecretNetwork/enigmad /usr/bin/enigmad
+COPY --from=build-env  /go/src/github.com/enigmampc/SecretNetwork/enigmacli /usr/bin/enigmacli
 
 COPY ./packaging_docker/devnet_init.sh .
 

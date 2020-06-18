@@ -32,6 +32,7 @@ module.exports = {
                 collapsable: true, // optional, defaults to true
                 sidebarDepth: 0,    // optional, defaults to 1
                 children: [
+                  '/dev/for-blockchain-devs',
                   '/dev/contract-dev-guide',
                   '/enigmacli'
                 ]

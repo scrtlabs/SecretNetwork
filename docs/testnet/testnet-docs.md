@@ -7,7 +7,7 @@
 For smart contract testing and development, most of you would choose this option.
 You would do this if you have no interest at all at running a full-node or a validator node on testnet.
 
-1. Get the v0.1.0 pre-release from our repo: https://github.com/enigmampc/EnigmaBlockchain/releases/tag/v0.1.0
+1. Get the v0.1.0 pre-release from our repo: https://github.com/enigmampc/SecretNetwork/releases/tag/v0.1.0
    (Currently support is only for Debian/Ubuntu. Other OS distributions coming soon)
 2. Uninstall previous releases:
 
@@ -68,7 +68,7 @@ Please don't abuse this service—the number of available tokens is limited.
 3. Download a copy of the genesis file:
 
    ```bash
-   wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/EnigmaBlockchain/master/enigma-testnet-genesis.json"
+   wget -O ~/.enigmad/config/genesis.json "https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/enigma-testnet-genesis.json"
    ```
 
 4. Validate the checksum of the file:
