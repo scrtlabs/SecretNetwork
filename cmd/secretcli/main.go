@@ -40,8 +40,8 @@ func main() {
 	config.Seal()
 
 	rootCmd := &cobra.Command{
-		Use:   "enigmacli",
-		Short: "EnigmaChain Client",
+		Use:   "secretcli",
+		Short: "The Secret Blockchain Client",
 	}
 
 	// Add --chain-id to persistent flags and mark it required
