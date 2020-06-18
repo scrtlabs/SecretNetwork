@@ -1,12 +1,6 @@
-<<<<<<< HEAD
-# Install the `enigmacli` Secret Network light client
-
-1. Get the latest release of `enigmacli` for your OS: https://github.com/enigmampc/SecretNetwork/releases/latest.
-=======
 # Install the `secretcli` Secret Blockchain light client
 
 1. Get the latest release of `secretcli` for your OS: https://github.com/chainofsecrets/TheRomulusUpgrade/releases/tag/v0.2.0.
->>>>>>> upstream/master
 
    ([How to verify releases](/verify-releases.md))
 

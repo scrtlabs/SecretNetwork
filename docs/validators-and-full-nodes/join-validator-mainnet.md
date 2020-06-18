@@ -1,8 +1,6 @@
-<<<<<<< HEAD
 # Join as a Validator
-=======
-# How to join the Secret Network as a mainnet validator
->>>>>>> upstream/master
+
+## How to become a validator on Secret Network
 
 ### 1. [Run a new full node](/validators-and-full-nodes/run-full-node-mainnet.md) on a new machine.
 

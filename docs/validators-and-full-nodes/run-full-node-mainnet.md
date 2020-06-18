@@ -1,12 +1,6 @@
-<<<<<<< HEAD
 # Run a Full Node
 
-This document details how to join the Secret Network as a full node.
-=======
-# How to join the Secret Network as a full node on mainnet
-
 This document details how to join the Secret Network mainnet as a validator.
->>>>>>> upstream/master
 
 ## Requirements
 
@@ -30,17 +24,10 @@ x64 2.0 GHz 2v CPU
 
 ## Installation
 
-<<<<<<< HEAD
-### 1. Download the Secret Network package installer for Debian/Ubuntu:
-
-```bash
-wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.0.3/enigma-blockchain_0.0.3_amd64.deb
-=======
 ### 1. Download the Secret Blockchain package installer for Debian/Ubuntu:
 
 ```bash
 wget https://github.com/chainofsecrets/TheRomulusUpgrade/releases/download/v0.2.0/secretnetwork_0.2.0_amd64.deb
->>>>>>> upstream/master
 ```
 
 ([How to verify releases](/verify-releases.md))
@@ -51,11 +38,7 @@ wget https://github.com/chainofsecrets/TheRomulusUpgrade/releases/download/v0.2.
 sudo dpkg -i secretnetwork_0.2.0_amd64.deb
 ```
 
-<<<<<<< HEAD
-### 3. Initialize your installation of the Secret Network. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
-=======
 ### 3. Initialize your installation of the Secret Blockchain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
->>>>>>> upstream/master
 
 ```bash
 secretd init <MONIKER> --chain-id secret-1

@@ -1,10 +1,6 @@
 # Governance
 
-<<<<<<< HEAD:docs/protocol/governance.md
-On-chain governance is the process by which participants in the Secret Network can come to consensus on software upgrades, parameters of the mainnet or signaling mechanisms through text proposals. This is done through voting on proposals, which will be submitted by `SCRT` holders on the mainnet.
-=======
 Governance is the process from which users in the Secret Blockchain can come to consensus on software upgrades, parameters of the mainnet or signaling mechanisms through text proposals. This is done through voting on proposals, which will be submitted by `SCRT` holders on the mainnet.
->>>>>>> upstream/master:docs/using-governance.md
 
 Some considerations about the voting process:
 

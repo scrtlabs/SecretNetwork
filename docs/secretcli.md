@@ -1,20 +1,10 @@
-<<<<<<< HEAD:docs/enigmacli.md
-﻿# Secret Network Light Client
-=======
 ﻿# Secret Blockchain Light Client
->>>>>>> upstream/master:docs/secretcli.md
 
 ## Secret CLI
 
-<<<<<<< HEAD:docs/enigmacli.md
-`enigmacli` is the command-line interface tool that enables you to interact with a node that runs on the Secret Network.
-
-[How to install and use `enigmacli`](/light-client-mainnet.md).
-=======
 `secretcli` is the command-line tool that enables you to interact with a node that runs on the Secret Blockchain.
 
 [How to install and use `secretcli`](/docs/light-client-mainnet.md).
->>>>>>> upstream/master:docs/secretcli.md
 
 ## `secretcli` Guide
 
@@ -660,14 +650,7 @@ secretcli status
 
 ### Governance
 
-<<<<<<< HEAD:docs/enigmacli.md
-Governance is the process from which users in the Secret Network can come to consensus
-=======
-Governance is the process from which users in the Secret Blockchain can come to consensus
->>>>>>> upstream/master:docs/secretcli.md
-on software upgrades, parameters of the mainnet or signaling mechanisms through
-text proposals. This is done through voting on proposals, which will be submitted
-by `SCRT` holders on the mainnet.
+Governance is the process by which users in the Secret Blockchain can come to consensus on software upgrades, parameters of the mainnet or signals through text proposals. This is done through voting on proposals, which will be submitted by `SCRT` holders on the mainnet.
 
 [How to participate in on-chain governance](/docs/using-governance.md).
 
