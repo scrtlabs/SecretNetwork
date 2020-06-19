@@ -16,7 +16,7 @@ module.exports = {
         sidebar: [
             {
                 title: 'Overview',   // required
-                path: '/overview',      // optional, link of the title, which should be an absolute path and must exist
+                path: '/',      // optional, link of the title, which should be an absolute path and must exist
                 collapsable: true, // optional, defaults to true
                 sidebarDepth: 0,    // optional, defaults to 1
                 children: [
@@ -31,7 +31,6 @@ module.exports = {
                 collapsable: true, // optional, defaults to true
                 sidebarDepth: 0,    // optional, defaults to 1
                 children: [
-                  '/dev/for-blockchain-devs',
                   '/dev/contract-dev-guide',
                   '/secretcli'
                 ]
@@ -42,7 +41,7 @@ module.exports = {
                 collapsable: true, // optional, defaults to true
                 sidebarDepth: 0, // optional, defaults to 1
                 children: [
-                  '/validators-and-full-nodes/setup-sgx',
+                  '/validators-and-full-nodes/install-sgx',
                   '/validators-and-full-nodes/run-full-node-mainnet',
                   '/validators-and-full-nodes/join-validator-mainnet',
                   '/validators-and-full-nodes/backup-a-validator',
