@@ -14,3 +14,5 @@ features:
   details: We are thrilled to be part of the Cosmos ecosystem, which is focused on scalability, usability and interoperability. The inter-blockchain communication protocol is very interesting, and the plan is to develop a Secret Hub within our universal network of networks.
 footer: GNU AGPL v3 Licensed | Copyright © Secret Foundation
 ---
+
+# Secret Network
