@@ -41,7 +41,7 @@ module.exports = {
                 collapsable: true, // optional, defaults to true
                 sidebarDepth: 0, // optional, defaults to 1
                 children: [
-                  '/validators-and-full-nodes/install-sgx',
+                  '/validators-and-full-nodes/setup-sgx',
                   '/validators-and-full-nodes/run-full-node-mainnet',
                   '/validators-and-full-nodes/join-validator-mainnet',
                   '/validators-and-full-nodes/backup-a-validator',
