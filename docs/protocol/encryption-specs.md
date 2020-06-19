@@ -624,6 +624,8 @@ in log(n) tries (where n is the size of the interval) you'll have the exact valu
 
 The naive solution to this is requiring the node to successfully send out the answer to person 1 and broadcast the erasure of the data of person 1 and person 2 in the DHT before revealing an answer, but even that's imperfect since you can reload the contract and replay the network state up to that broadcast, then perform the attack with repeated rollbacks.
 
+Assaf: You could maybe implement the contract with the help of a 3rd party. I.e. the 2 players send their wealth amounts, and okay when the 3rd party sends an approval tx only the 2 players can query the result.   However, this is terrible UXwise.
+
 
 ## Partial storage rollback during contract runtime
 
