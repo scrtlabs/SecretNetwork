@@ -6,7 +6,7 @@ module.exports = {
     themeConfig: {
         logo: '/logo.png',
         nav: [
-            { text: 'Website', link: 'https://scrt.network' },
+            { text: 'Site', link: 'https://scrt.network' },
             { text: 'Blog', link: 'https://blog.scrt.network' },
             { text: 'Chat', link: 'https://chat.scrt.network' },
             { text: 'Wiki', link: 'https://learn.scrt.network' },

@@ -30,7 +30,7 @@ x64 2.0 GHz 2v CPU
 wget https://github.com/chainofsecrets/TheRomulusUpgrade/releases/download/v0.2.0/secretnetwork_0.2.0_amd64.deb
 ```
 
-([How to verify releases](/docs/verify-releases.md))
+([How to verify releases](/verify-releases.md))
 
 ### 2. Install the package:
 

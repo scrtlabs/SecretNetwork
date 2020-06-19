@@ -4,7 +4,7 @@
 
 `secretcli` is the command-line tool that enables you to interact with a node that runs on the Secret Blockchain.
 
-[How to install and use `secretcli`](/docs/light-client-mainnet.md).
+[How to install and use `secretcli`](/light-client-mainnet.md).
 
 ## `secretcli` Guide
 
@@ -371,7 +371,7 @@ secretcli q mint annual-provisions
 
 #### Set up a Validator
 
-Please refer to [How to join mainnet as a validator](/docs/validators-and-full-nodes/join-validator-mainnet.md) for a complete guide on how to set up a validator-candidate.
+Please refer to [How to join mainnet as a validator](/validators-and-full-nodes/join-validator-mainnet.md) for a complete guide on how to set up a validator-candidate.
 
 Use the following commands to:
 
@@ -646,13 +646,13 @@ If you are running a full node or a validator node, view the status by typing:
 secretcli status
 ```
 
-[How to run a full node on mainnet](/docs/validators-and-full-nodes/run-full-node-mainnet.md).
+[How to run a full node on mainnet](/validators-and-full-nodes/run-full-node-mainnet.md).
 
 ### Governance
 
 Governance is the process by which users in the Secret Blockchain can come to consensus on software upgrades, parameters of the mainnet or signals through text proposals. This is done through voting on proposals, which will be submitted by `SCRT` holders on the mainnet.
 
-[How to participate in on-chain governance](/docs/using-governance.md).
+[How to participate in on-chain governance](/protocol/governance.md).
 
 ### Fee Distribution
 
