@@ -34,7 +34,7 @@ module.exports = {
                 children: [
                   '/dev/for-blockchain-devs',
                   '/dev/contract-dev-guide',
-                  '/enigmacli'
+                  '/secretcli'
                 ]
             },
             {

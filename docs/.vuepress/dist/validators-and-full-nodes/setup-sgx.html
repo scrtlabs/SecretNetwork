@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>SGX Requirements</title>
+    <meta name="generator" content="VuePress 1.5.1">
+    <link rel="icon" href="/SecretNetwork/logo.png">
+    <meta name="description" content="Privacy is a Public Good">
+    <link rel="preload" href="/SecretNetwork/assets/css/0.styles.36df3cb2.css" as="style"><link rel="preload" href="/SecretNetwork/assets/js/app.ee2fc229.js" as="script"><link rel="preload" href="/SecretNetwork/assets/js/2.dd6b5ceb.js" as="script"><link rel="preload" href="/SecretNetwork/assets/js/36.676de77b.js" as="script"><link rel="prefetch" href="/SecretNetwork/assets/js/10.6c0cca71.js"><link rel="prefetch" href="/SecretNetwork/assets/js/11.f71abcdb.js"><link rel="prefetch" href="/SecretNetwork/assets/js/12.9f78aa7f.js"><link rel="prefetch" href="/SecretNetwork/assets/js/13.b98039f9.js"><link rel="prefetch" href="/SecretNetwork/assets/js/14.edcbed8e.js"><link rel="prefetch" href="/SecretNetwork/assets/js/15.88b99c80.js"><link rel="prefetch" href="/SecretNetwork/assets/js/16.4928a355.js"><link rel="prefetch" href="/SecretNetwork/assets/js/17.a14af1a6.js"><link rel="prefetch" href="/SecretNetwork/assets/js/18.3ddf7bbc.js"><link rel="prefetch" href="/SecretNetwork/assets/js/19.ea11da46.js"><link rel="prefetch" href="/SecretNetwork/assets/js/20.6a8710be.js"><link rel="prefetch" href="/SecretNetwork/assets/js/21.d33498ef.js"><link rel="prefetch" href="/SecretNetwork/assets/js/22.0fcbf90b.js"><link rel="prefetch" href="/SecretNetwork/assets/js/23.0209d3c3.js"><link rel="prefetch" href="/SecretNetwork/assets/js/24.673b8ab0.js"><link rel="prefetch" href="/SecretNetwork/assets/js/25.0cbe4856.js"><link rel="prefetch" href="/SecretNetwork/assets/js/26.f1555877.js"><link rel="prefetch" href="/SecretNetwork/assets/js/27.dabcb417.js"><link rel="prefetch" href="/SecretNetwork/assets/js/28.8bd7462c.js"><link rel="prefetch" href="/SecretNetwork/assets/js/29.aa13e94f.js"><link rel="prefetch" href="/SecretNetwork/assets/js/3.37a44a71.js"><link rel="prefetch" href="/SecretNetwork/assets/js/30.f6984ea0.js"><link rel="prefetch" href="/SecretNetwork/assets/js/31.c6442c2c.js"><link rel="prefetch" href="/SecretNetwork/assets/js/32.da4fcc65.js"><link rel="prefetch" href="/SecretNetwork/assets/js/33.1a1b0d8d.js"><link rel="prefetch" href="/SecretNetwork/assets/js/34.e95c7132.js"><link rel="prefetch" href="/SecretNetwork/assets/js/35.e5705099.js"><link rel="prefetch" href="/SecretNetwork/assets/js/37.bfdc623b.js"><link rel="prefetch" href="/SecretNetwork/assets/js/4.0010119a.js"><link rel="prefetch" href="/SecretNetwork/assets/js/5.0ad57697.js"><link rel="prefetch" href="/SecretNetwork/assets/js/6.5813cce5.js"><link rel="prefetch" href="/SecretNetwork/assets/js/7.b6ffdeab.js"><link rel="prefetch" href="/SecretNetwork/assets/js/8.2379eac7.js"><link rel="prefetch" href="/SecretNetwork/assets/js/9.5d928e97.js">
+    <link rel="stylesheet" href="/SecretNetwork/assets/css/0.styles.36df3cb2.css">
+  </head>
+  <body>
+    <div id="app" data-server-rendered="true"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/SecretNetwork/" class="home-link router-link-active"><img src="/SecretNetwork/logo.png" alt="" class="logo"> <!----></a> <div class="links"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <nav class="nav-links can-hide"><div class="nav-item"><a href="/SecretNetwork/overview.html" class="nav-link">
+  Docs
+</a></div><div class="nav-item"><a href="https://scrt.network" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Website
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://blog.scrt.network" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Blog
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://chat.scrt.network" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Chat
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://forum.scrt.network" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Forum
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://twitter.com/SecretNetwork" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Twitter
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div> <!----></nav></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><nav class="nav-links"><div class="nav-item"><a href="/SecretNetwork/overview.html" class="nav-link">
+  Docs
+</a></div><div class="nav-item"><a href="https://scrt.network" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Website
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://blog.scrt.network" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Blog
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://chat.scrt.network" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Chat
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://forum.scrt.network" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Forum
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://twitter.com/SecretNetwork" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  Twitter
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div> <!----></nav>  <ul class="sidebar-links"><li><section class="sidebar-group collapsable depth-0"><a href="/SecretNetwork/overview" class="sidebar-heading clickable"><span>Overview</span> <span class="arrow right"></span></a> <!----></section></li><li><section class="sidebar-group collapsable depth-0"><a href="/SecretNetwork/dev/developers" class="sidebar-heading clickable"><span>App Developers</span> <span class="arrow right"></span></a> <!----></section></li><li><section class="sidebar-group collapsable depth-0"><a href="/SecretNetwork/validators-and-full-nodes/secret-nodes" class="sidebar-heading clickable open"><span>Node Operators</span> <span class="arrow down"></span></a> <ul class="sidebar-links sidebar-group-items"><li><a href="/SecretNetwork/validators-and-full-nodes/setup-sgx.html" class="active sidebar-link">SGX Requirements</a></li><li><a href="/SecretNetwork/validators-and-full-nodes/run-full-node-mainnet.html" class="sidebar-link">Run a Full Node</a></li><li><a href="/SecretNetwork/validators-and-full-nodes/join-validator-mainnet.html" class="sidebar-link">Join as a Validator</a></li><li><a href="/SecretNetwork/validators-and-full-nodes/backup-a-validator.html" class="sidebar-link">Backup a Validator</a></li><li><a href="/SecretNetwork/validators-and-full-nodes/migrate-a-validator.html" class="sidebar-link">Migrate a Validator</a></li><li><a href="/SecretNetwork/validators-and-full-nodes/sentry-nodes.html" class="sidebar-link">Sentry Nodes</a></li></ul></section></li><li><section class="sidebar-group collapsable depth-0"><a href="/SecretNetwork/protocol/intro" class="sidebar-heading clickable"><span>Protocol</span> <span class="arrow right"></span></a> <!----></section></li></ul> </aside> <main class="page"> <div class="theme-default-content content__default"><h1 id="sgx-requirements"><a href="#sgx-requirements" class="header-anchor">#</a> SGX Requirements</h1> <h2 id="hardware"><a href="#hardware" class="header-anchor">#</a> Hardware</h2> <ol><li>Go to your BIOS menu</li> <li>Enable SGX (Software controlled is not enough)</li> <li>Disable Secure Boot</li></ol> <h2 id="software"><a href="#software" class="header-anchor">#</a> Software</h2> <p>First, make sure you have Rust installed: https://www.rust-lang.org/tools/install</p> <ul><li><p>Once Rust is installed, install the <code>nightly</code> toolchain:</p> <div class="language-bash extra-class"><pre class="language-bash"><code>rustup toolchain <span class="token function">install</span> nightly
+</code></pre></div></li></ul> <p>Then you can use this script (or run the commands one-by-one), which was tested on Ubuntu 20.04 with SGX driver/sdk version 2.9 intended for Ubuntu 18.04:</p> <div class="language-bash extra-class"><pre class="language-bash"><code><span class="token assign-left variable">UBUNTUVERSION</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span>lsb_release -r -s <span class="token operator">|</span> <span class="token function">cut</span> -d <span class="token string">'.'</span> -f <span class="token number">1</span><span class="token variable">)</span></span>
+
+<span class="token keyword">if</span> <span class="token variable"><span class="token punctuation">((</span>$UBUNTUVERSION <span class="token operator">&lt;</span> <span class="token number">16</span><span class="token punctuation">))</span></span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+	<span class="token builtin class-name">echo</span> <span class="token string">&quot;Your version of Ubuntu is not supported. Must have Ubuntu 16.04 and up. Aborting installation script...&quot;</span>
+	<span class="token builtin class-name">exit</span> <span class="token number">1</span>
+<span class="token keyword">elif</span> <span class="token variable"><span class="token punctuation">((</span>$UBUNTUVERSION <span class="token operator">&lt;</span> <span class="token number">18</span><span class="token punctuation">))</span></span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+	<span class="token assign-left variable">DISTRO</span><span class="token operator">=</span><span class="token string">'xenial'</span>
+<span class="token keyword">else</span>
+	<span class="token assign-left variable">DISTRO</span><span class="token operator">=</span><span class="token string">'bionic'</span>
+<span class="token keyword">fi</span>
+
+<span class="token builtin class-name">echo</span> <span class="token string">&quot;<span class="token entity" title="\n">\n</span><span class="token entity" title="\n">\n</span>#######################################&quot;</span>
+<span class="token builtin class-name">echo</span> <span class="token string">&quot;##### Installing missing packages #####&quot;</span>
+<span class="token builtin class-name">echo</span> <span class="token string">&quot;#######################################<span class="token entity" title="\n">\n</span><span class="token entity" title="\n">\n</span>&quot;</span>
+
+<span class="token comment"># Install needed packages for script</span>
+<span class="token function">sudo</span> <span class="token function">apt</span> <span class="token function">install</span> -y <span class="token function">lynx</span> parallel gdebi
+
+<span class="token comment"># Create a working directory to download and install the SDK inside</span>
+<span class="token function">mkdir</span> -p <span class="token string">&quot;<span class="token environment constant">$HOME</span>/.sgxsdk&quot;</span>
+
+<span class="token punctuation">(</span>
+   <span class="token comment"># In a new sub-shell cd into our working directory so to no pollute the</span>
+   <span class="token comment"># original shell's working directory</span>
+   <span class="token builtin class-name">cd</span> <span class="token string">&quot;<span class="token environment constant">$HOME</span>/.sgxsdk&quot;</span>
+
+   <span class="token builtin class-name">echo</span> <span class="token string">&quot;<span class="token entity" title="\n">\n</span><span class="token entity" title="\n">\n</span>################################################&quot;</span>
+   <span class="token builtin class-name">echo</span> <span class="token string">&quot;##### Downloading Intel SGX driver and SDK #####&quot;</span>
+   <span class="token builtin class-name">echo</span> <span class="token string">&quot;################################################<span class="token entity" title="\n">\n</span><span class="token entity" title="\n">\n</span>&quot;</span>
+
+   <span class="token comment"># 1. Go to https://download.01.org/intel-sgx/sgx-linux</span>
+   <span class="token comment"># 2. Step into the latest version</span>
+   <span class="token comment"># 3. Step into `distro/$LATEST_UBUNTU_YOU_SEE_THERE`</span>
+   <span class="token comment"># 4. Download `sgx_linux_x64_driver_*.bin` and `sgx_linux_x64_sdk_*.bin`</span>
+   <span class="token function">lynx</span> -dump -listonly -nonumbers https://download.01.org/intel-sgx/sgx-linux/ <span class="token operator">|</span>
+      <span class="token function">grep</span> -P <span class="token string">'sgx-linux/(\d\.?)+/'</span> <span class="token operator">|</span>
+      <span class="token function">sort</span> <span class="token operator">|</span>
+      <span class="token function">tail</span> -1 <span class="token operator">|</span>
+      parallel --bar --verbose <span class="token function">lynx</span> -dump -listonly -nonumbers <span class="token string">&quot;{}/distro&quot;</span> <span class="token operator">|</span>
+      <span class="token function">grep</span> -P <span class="token string">'ubuntu\d\d'</span> <span class="token operator">|</span>
+      <span class="token function">sort</span> <span class="token operator">|</span>
+      <span class="token function">tail</span> -1 <span class="token operator">|</span>
+      parallel --bar --verbose <span class="token function">lynx</span> -dump -listonly -nonumbers <span class="token operator">|</span>
+      <span class="token function">grep</span> -P <span class="token string">'\.bin$'</span> <span class="token operator">|</span>
+      parallel --bar --verbose <span class="token function">curl</span> -OSs
+
+   <span class="token comment"># Make the driver and SDK installers executable</span>
+   <span class="token function">chmod</span> +x ./sgx_linux_*.bin
+
+   <span class="token builtin class-name">echo</span> <span class="token string">&quot;<span class="token entity" title="\n">\n</span><span class="token entity" title="\n">\n</span>###############################################&quot;</span>
+   <span class="token builtin class-name">echo</span> <span class="token string">&quot;##### Installing Intel SGX driver and SDK #####&quot;</span>
+   <span class="token builtin class-name">echo</span> <span class="token string">&quot;###############################################<span class="token entity" title="\n">\n</span><span class="token entity" title="\n">\n</span>&quot;</span>
+
+   <span class="token comment"># Install the driver</span>
+   <span class="token function">sudo</span> ./sgx_linux_x64_driver_*.bin
+
+   <span class="token comment"># Remount /dev as exec, also at system startup</span>
+   <span class="token function">sudo</span> <span class="token function">tee</span> /etc/systemd/system/remount-dev-exec.service <span class="token operator">&gt;</span>/dev/null <span class="token operator">&lt;&lt;</span><span class="token string">EOF
+[Unit]
+Description=Remount /dev as exec to allow AESM service to boot and load enclaves into SGX
+
+[Service]
+Type=oneshot
+ExecStart=/bin/mount -o remount,exec /dev
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target
+EOF</span>
+   <span class="token function">sudo</span> systemctl <span class="token builtin class-name">enable</span> remount-dev-exec
+   <span class="token function">sudo</span> systemctl start remount-dev-exec
+
+   <span class="token comment"># Install the SDK inside ./sgxsdk/ which is inside $HOME/.sgxsdk</span>
+   <span class="token builtin class-name">echo</span> <span class="token function">yes</span> <span class="token operator">|</span> ./sgx_linux_x64_sdk_*.bin
+
+   <span class="token comment"># Setup the environment variables for every new shell</span>
+   <span class="token builtin class-name">echo</span> <span class="token string">&quot;source '<span class="token environment constant">$HOME</span>/.sgxsdk/sgxsdk/environment'&quot;</span> <span class="token operator">|</span>
+      <span class="token function">tee</span> -a <span class="token string">&quot;<span class="token environment constant">$HOME</span>/.bashrc&quot;</span> <span class="token string">&quot;<span class="token environment constant">$HOME</span>/.zshrc&quot;</span> <span class="token operator">&gt;</span> /dev/null
+<span class="token punctuation">)</span>
+
+<span class="token builtin class-name">echo</span> <span class="token string">&quot;<span class="token entity" title="\n">\n</span><span class="token entity" title="\n">\n</span>##############################################&quot;</span>
+<span class="token builtin class-name">echo</span> <span class="token string">&quot;##### Installing additional dependencies #####&quot;</span>
+<span class="token builtin class-name">echo</span> <span class="token string">&quot;##############################################<span class="token entity" title="\n">\n</span><span class="token entity" title="\n">\n</span>&quot;</span>
+
+<span class="token comment"># Add Intels's SGX PPA</span>
+<span class="token builtin class-name">echo</span> <span class="token string">&quot;deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu <span class="token variable">$DISTRO</span> main&quot;</span> <span class="token operator">|</span>
+   <span class="token function">sudo</span> <span class="token function">tee</span> /etc/apt/sources.list.d/intel-sgx.list
+<span class="token function">wget</span> -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key <span class="token operator">|</span>
+   <span class="token function">sudo</span> apt-key <span class="token function">add</span> -
+<span class="token function">sudo</span> <span class="token function">apt</span> update
+
+<span class="token comment"># Install all the additional necessary dependencies (besides the driver and the SDK)</span>
+<span class="token comment"># for building a rust enclave</span>
+<span class="token function">wget</span> -O /tmp/libprotobuf10_3.0.0-9_amd64.deb http://ftp.br.debian.org/debian/pool/main/p/protobuf/libprotobuf10_3.0.0-9_amd64.deb
+<span class="token punctuation">(</span>sleep <span class="token number">3</span> <span class="token punctuation">;</span> <span class="token builtin class-name">echo</span> y<span class="token punctuation">)</span> <span class="token operator">|</span> <span class="token function">sudo</span> gdebi /tmp/libprotobuf10_3.0.0-9_amd64.deb
+
+<span class="token function">sudo</span> <span class="token function">apt</span> <span class="token function">install</span> -y libsgx-enclave-common libsgx-enclave-common-dev libsgx-urts sgx-aesm-service libsgx-uae-service libsgx-launch libsgx-aesm-launch-plugin libsgx-ae-le autoconf libtool
+</code></pre></div><p>Note that sometimes after a system reboot you'll need to reinstall the driver (usually after a kernel upgrade):</p> <div class="language-bash extra-class"><pre class="language-bash"><code><span class="token function">sudo</span> <span class="token environment constant">$HOME</span>/.sgxsdk/sgx_linux_x64_driver_*.bin
+</code></pre></div><h1 id="testing-your-sgx-setup"><a href="#testing-your-sgx-setup" class="header-anchor">#</a> Testing your SGX setup</h1> <ol><li><p>For node runners, by using <code>sgx-detect</code>:</p> <div class="language-bash extra-class"><pre class="language-bash"><code><span class="token function">sudo</span> <span class="token function">apt</span> <span class="token function">install</span> -y libssl-dev protobuf-compiler
+cargo +nightly <span class="token function">install</span> fortanix-sgx-tools sgxs-tools
+
+sgx-detect
+</code></pre></div><p>Should print at the end:</p> <div class="language- extra-class"><pre class="language-text"><code>✔  Able to launch enclaves
+   ✔  Debug mode
+   ✔  Production mode (Intel whitelisted)
+
+You're all set to start running SGX programs!
+</code></pre></div></li> <li><p>For enclave developers, by compiling a <code>hello-rust</code> project:</p> <div class="language-bash extra-class"><pre class="language-bash"><code><span class="token function">git</span> clone --depth <span class="token number">1</span> -b v1.1.1-testing git@github.com:apache/incubator-teaclave-sgx-sdk.git
+
+<span class="token builtin class-name">cd</span> incubator-teaclave-sgx-sdk/samplecode/hello-rust
+perl -i -pe <span class="token string">'s/SGX_SDK \?=.+/SGX_SDK ?= \<span class="token variable"><span class="token variable">$(</span><span class="token environment constant">HOME</span><span class="token variable">)</span></span>\/.sgxsdk\/sgxsdk/'</span> Makefile
+<span class="token function">make</span>
+<span class="token builtin class-name">cd</span> bin
+./app
+</code></pre></div><p>Should print somting similar to this:</p> <div class="language- extra-class"><pre class="language-text"><code>[+] Init Enclave Successful 2!
+This is a normal world string passed into Enclave!
+This is a in-Enclave Rust string!
+gd: 1 0 0 1
+static: 1 eremove: 0 dyn: 0
+EDMM: 0, feature: 9007268790009855
+supported sgx
+[+] say_something success...
+</code></pre></div></li></ol> <h1 id="uninstall"><a href="#uninstall" class="header-anchor">#</a> Uninstall</h1> <p>To uninstall the Intel(R) SGX Driver, run:</p> <div class="language-bash extra-class"><pre class="language-bash"><code><span class="token function">sudo</span> /opt/intel/sgxdriver/uninstall.sh
+</code></pre></div><p>The above command produces no output when it succeeds. If you want to verify that the driver has been uninstalled, you can run the following, which should print <code>SGX Driver NOT installed</code>:</p> <div class="language-bash extra-class"><pre class="language-bash"><code><span class="token function">ls</span> /dev/isgx <span class="token operator">&amp;&gt;</span>/dev/null <span class="token operator">&amp;&amp;</span> <span class="token builtin class-name">echo</span> <span class="token string">&quot;SGX Driver installed&quot;</span> <span class="token operator">||</span> <span class="token builtin class-name">echo</span> <span class="token string">&quot;SGX Driver NOT installed&quot;</span>
+</code></pre></div><p>To uninstall the SGX SDK, run:</p> <div class="language-bash extra-class"><pre class="language-bash"><code><span class="token function">sudo</span> <span class="token string">&quot;<span class="token environment constant">$HOME</span>&quot;</span>/.sgxsdk/sgxsdk/uninstall.sh
+<span class="token function">rm</span> -rf <span class="token string">&quot;<span class="token environment constant">$HOME</span>/.sgxsdk&quot;</span>
+</code></pre></div><p>To uninstall the rest of the dependencies, run:</p> <div class="language-bash extra-class"><pre class="language-bash"><code><span class="token function">sudo</span> <span class="token function">apt</span> purge -y libsgx-enclave-common libsgx-enclave-common-dev libsgx-urts sgx-aesm-service libsgx-uae-service libsgx-launch libsgx-aesm-launch-plugin libsgx-ae-le
+</code></pre></div><h1 id="refs"><a href="#refs" class="header-anchor">#</a> Refs</h1> <ol><li><a href="https://github.com/apache/incubator-teaclave-sgx-sdk/wiki/Environment-Setup" target="_blank" rel="noopener noreferrer">https://github.com/apache/incubator-teaclave-sgx-sdk/wiki/Environment-Setup<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></li> <li><a href="https://github.com/openenclave/openenclave/blob/master/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md" target="_blank" rel="noopener noreferrer">https://github.com/openenclave/openenclave/blob/master/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></li> <li><a href="https://github.com/apache/incubator-teaclave-sgx-sdk/blob/783f04c002e243d1022c5af8a982f9c2a7138f32/dockerfile/Dockerfile.1804.nightly" target="_blank" rel="noopener noreferrer">https://github.com/apache/incubator-teaclave-sgx-sdk/blob/783f04c002e243d1022c5af8a982f9c2a7138f32/dockerfile/Dockerfile.1804.nightly<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></li> <li><a href="https://edp.fortanix.com/docs/installation/guide" target="_blank" rel="noopener noreferrer">https://edp.fortanix.com/docs/installation/guide<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></li></ol></div> <footer class="page-edit"><!----> <!----></footer> <div class="page-nav"><p class="inner"><span class="prev">
+      ←
+      <a href="/SecretNetwork/secretcli.html" class="prev">
+        Secret Blockchain Light Client
+      </a></span> <span class="next"><a href="/SecretNetwork/validators-and-full-nodes/run-full-node-mainnet.html">
+        Run a Full Node
+      </a>
+      →
+    </span></p></div> </main></div><div class="global-ui"></div></div>
+    <script src="/SecretNetwork/assets/js/app.ee2fc229.js" defer></script><script src="/SecretNetwork/assets/js/2.dd6b5ceb.js" defer></script><script src="/SecretNetwork/assets/js/36.676de77b.js" defer></script>
+  </body>
+</html>
