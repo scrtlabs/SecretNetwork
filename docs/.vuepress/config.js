@@ -1,6 +1,5 @@
 module.exports = {
     description: 'Privacy is a Public Good',
-    base: '/SecretNetwork/',
     head: [
         ['link', { rel: 'icon', href: '/logo.png' }]
       ],
