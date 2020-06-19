@@ -16,5 +16,5 @@ Enclave_t.h
 *.so
 io-master-cert.der
 node-master-cert.der
-/docs/.vuepress/dist*
-/node_modules*
+/docs/.vuepress/dist**
+/node_modules**
