@@ -7,10 +7,10 @@ module.exports = {
     themeConfig: {
         logo: '/logo.png',
         nav: [
-            { text: 'Docs', link: '/overview'},
             { text: 'Website', link: 'https://scrt.network' },
             { text: 'Blog', link: 'https://blog.scrt.network' },
             { text: 'Chat', link: 'https://chat.scrt.network' },
+            { text: 'Wiki', link: 'https://learn.scrt.network' },
             { text: 'Forum', link: 'https://forum.scrt.network' },
             { text: 'Twitter', link: 'https://twitter.com/SecretNetwork' }
           ],
