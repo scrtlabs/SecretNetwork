@@ -129,7 +129,7 @@ sudo $HOME/.sgxsdk/sgx_linux_x64_driver_*.bin
 1. For node runners, by using `sgx-detect`:
 
    ```bash
-   sudo apt install -y libssl-dev protobuf-compiler
+   sudo apt install -y libssl-dev protobuf-compiler pkg-config
    cargo +nightly install fortanix-sgx-tools sgxs-tools
 
    sgx-detect
