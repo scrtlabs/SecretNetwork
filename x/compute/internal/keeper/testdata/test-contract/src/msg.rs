@@ -1,16 +1,14 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm::types::{CosmosMsg, HumanAddr};
+use cosmwasm_std::HumanAddr;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum InitMsg {
-       Nop { },
-       Callback {
-        contract_addr: HumanAddr,
-       },
-       Error{ },
+    Nop {},
+    Callback { contract_addr: HumanAddr },
+    Error {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -30,10 +28,10 @@ pub enum HandleMsg {
         x: u8,
         y: u8,
     },
-    UnicodeData{ },
-    EmptyLogKeyValue { },
-    EmptyData { },
-    NoData { },
+    UnicodeData {},
+    EmptyLogKeyValue {},
+    EmptyData {},
+    NoData {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -47,3 +45,7 @@ pub enum QueryMsg {
 pub struct OwnerResponse {
     pub owner: HumanAddr,
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum MigrateMsg {}
