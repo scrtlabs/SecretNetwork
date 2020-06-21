@@ -4,7 +4,6 @@ use cosmwasm_std::{
 };
 
 use crate::msg::{HandleMsg, InitMsg, MigrateMsg, QueryMsg};
-// use crate::state::{config, config_read, State};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
