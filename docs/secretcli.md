@@ -455,7 +455,7 @@ Example:
 
 ```
 secretcli tx staking delegate \
-	enigmavaloper1l2rsakp388kuv9k8qzq6lrm9taddae7fpx59wm \
+	secretvaloper1l2rsakp388kuv9k8qzq6lrm9taddae7fpx59wm \
 	1000uscrt \
 	--from <key-alias>
 ```
@@ -634,7 +634,7 @@ You can also query all of the delegations to a particular validator:
 Example:
 
 ```bash
-$ secretcli q staking delegations-to enigmavaloper1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj
+$ secretcli q staking delegations-to secretvaloper1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj
 
 ```
 
