@@ -2,14 +2,15 @@ package keeper
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"os"
+	"testing"
+
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/distribution"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
-	"os"
-	"testing"
 
 	"github.com/stretchr/testify/require"
 
@@ -118,6 +119,8 @@ func TestInitializeStaking(t *testing.T) {
 	}
 	initBz, err := json.Marshal(&initMsg)
 	require.NoError(t, err)
+	initBz, err = wasmCtx.Encrypt(initBz)
+	require.NoError(t, err)
 
 	stakingAddr, err := keeper.Instantiate(ctx, stakingID, creator, nil, initBz, "staking derivates - DRV", nil)
 	require.NoError(t, err)
@@ -137,6 +140,8 @@ func TestInitializeStaking(t *testing.T) {
 		MinWithdrawl: "100",
 	}
 	badBz, err := json.Marshal(&badInitMsg)
+	require.NoError(t, err)
+	initBz, err = wasmCtx.Encrypt(initBz)
 	require.NoError(t, err)
 
 	_, err = keeper.Instantiate(ctx, stakingID, creator, nil, badBz, "missing validator", nil)
@@ -202,6 +207,8 @@ func initializeStaking(t *testing.T) initInfo {
 	}
 	initBz, err := json.Marshal(&initMsg)
 	require.NoError(t, err)
+	initBz, err = wasmCtx.Encrypt(initBz)
+	require.NoError(t, err)
 
 	stakingAddr, err := keeper.Instantiate(ctx, stakingID, creator, nil, initBz, "staking derivates - DRV", nil)
 	require.NoError(t, err)
@@ -245,6 +252,8 @@ func TestBonding(t *testing.T) {
 		Bond: &struct{}{},
 	}
 	bondBz, err := json.Marshal(bond)
+	require.NoError(t, err)
+	bondBz, err = wasmCtx.Encrypt(bondBz)
 	require.NoError(t, err)
 	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds)
 	require.NoError(t, err)
@@ -290,6 +299,8 @@ func TestUnbonding(t *testing.T) {
 	}
 	bondBz, err := json.Marshal(bond)
 	require.NoError(t, err)
+	bondBz, err = wasmCtx.Encrypt(bondBz)
+	require.NoError(t, err)
 	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds)
 	require.NoError(t, err)
 
@@ -303,6 +314,8 @@ func TestUnbonding(t *testing.T) {
 		},
 	}
 	unbondBz, err := json.Marshal(unbond)
+	require.NoError(t, err)
+	unbondBz, err = wasmCtx.Encrypt(unbondBz)
 	require.NoError(t, err)
 	_, err = keeper.Execute(ctx, contractAddr, bob, unbondBz, nil)
 	require.NoError(t, err)
@@ -360,6 +373,8 @@ func TestReinvest(t *testing.T) {
 	}
 	bondBz, err := json.Marshal(bond)
 	require.NoError(t, err)
+	bondBz, err = wasmCtx.Encrypt(bondBz)
+	require.NoError(t, err)
 	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds)
 	require.NoError(t, err)
 
@@ -373,6 +388,8 @@ func TestReinvest(t *testing.T) {
 		Reinvest: &struct{}{},
 	}
 	reinvestBz, err := json.Marshal(reinvest)
+	require.NoError(t, err)
+	reinvestBz, err = wasmCtx.Encrypt(reinvestBz)
 	require.NoError(t, err)
 	_, err = keeper.Execute(ctx, contractAddr, bob, reinvestBz, nil)
 	require.NoError(t, err)
@@ -464,6 +481,8 @@ func assertBalance(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Ac
 	}
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
+	queryBz, err = wasmCtx.Encrypt(queryBz)
+	require.NoError(t, err)
 	res, err := keeper.QuerySmart(ctx, contract, queryBz)
 	require.NoError(t, err)
 	var balance BalanceResponse
@@ -480,6 +499,8 @@ func assertClaims(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	}
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
+	queryBz, err = wasmCtx.Encrypt(queryBz)
+	require.NoError(t, err)
 	res, err := keeper.QuerySmart(ctx, contract, queryBz)
 	require.NoError(t, err)
 	var claims ClaimsResponse
@@ -491,6 +512,8 @@ func assertClaims(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 func assertSupply(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.AccAddress, expectedIssued string, expectedBonded sdk.Coin) {
 	query := StakingQueryMsg{Investment: &struct{}{}}
 	queryBz, err := json.Marshal(query)
+	require.NoError(t, err)
+	queryBz, err = wasmCtx.Encrypt(queryBz)
 	require.NoError(t, err)
 	res, err := keeper.QuerySmart(ctx, contract, queryBz)
 	require.NoError(t, err)
