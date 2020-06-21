@@ -42,7 +42,7 @@ jobs:
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           make vendor
-          cd cosmwasm/lib/wasmi-runtime/
+          cd cosmwasm/packages/wasmi-runtime/
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
       - name: Build
@@ -55,15 +55,15 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
           mkdir -p ./.sgx_secrets
-          cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
-          ./cosmwasm/lib/sanity-test.sh
+          cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+          ./cosmwasm/testing/sanity-test.sh
       - name: Old bash+js sanity callbacks tests
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
           mkdir -p ./.sgx_secrets
-          cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
-          ./cosmwasm/lib/callback-test.sh
+          cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+          ./cosmwasm/testing/callback-test.sh
       - name: Test Registration Module
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -72,6 +72,6 @@ jobs:
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
-          cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+          cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
           mkdir -p ./x/compute/internal/keeper/.sgx_secrets
           go test -p 1 -v ./x/compute/internal/...

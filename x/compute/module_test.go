@@ -34,7 +34,8 @@ func setupTest(t *testing.T) (testData, func()) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 
-	ctx, acctKeeper, keeper := CreateTestInput(t, false, tempDir)
+	ctx, keepers := CreateTestInput(t, false, tempDir, "staking", nil, nil)
+	acctKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 	data := testData{
 		module:     NewAppModule(keeper),
 		ctx:        ctx,
@@ -63,7 +64,8 @@ func mustLoad(path string) []byte {
 var (
 	key1, pub1, addr1 = keyPubAddr()
 	testContract      = mustLoad("./internal/keeper/testdata/contract.wasm")
-	escrowContract    = mustLoad("./testdata/escrow.wasm")
+	maskContract      = mustLoad("./internal/keeper/testdata/reflect.wasm")
+	oldContract       = mustLoad("./testdata/escrow_0.7.wasm")
 )
 
 func TestHandleCreate(t *testing.T) {
@@ -92,9 +94,16 @@ func TestHandleCreate(t *testing.T) {
 		"other valid wasm": {
 			msg: MsgStoreCode{
 				Sender:       addr1,
-				WASMByteCode: escrowContract,
+				WASMByteCode: maskContract,
 			},
 			isValid: true,
+		},
+		"old wasm (0.7)": {
+			msg: MsgStoreCode{
+				Sender:       addr1,
+				WASMByteCode: oldContract,
+			},
+			isValid: false,
 		},
 	}
 
@@ -310,7 +319,7 @@ func TestHandleExecuteEscrow(t *testing.T) {
 
 	msg := MsgStoreCode{
 		Sender:       creator,
-		WASMByteCode: escrowContract,
+		WASMByteCode: testContract,
 	}
 	res, err := h(data.ctx, &msg)
 	require.NoError(t, err)
@@ -318,10 +327,8 @@ func TestHandleExecuteEscrow(t *testing.T) {
 
 	_, _, bob := keyPubAddr()
 	initMsg := map[string]interface{}{
-		"arbiter":    fred.String(),
-		"recipient":  bob.String(),
-		"end_time":   0,
-		"end_height": 0,
+		"verifier":    fred.String(),
+		"beneficiary": bob.String(),
 	}
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
@@ -338,7 +345,7 @@ func TestHandleExecuteEscrow(t *testing.T) {
 	require.Equal(t, "enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5", contractAddr.String())
 
 	handleMsg := map[string]interface{}{
-		"approve": map[string]interface{}{},
+		"release": map[string]interface{}{},
 	}
 	handleMsgBz, err := json.Marshal(handleMsg)
 	require.NoError(t, err)
@@ -362,19 +369,6 @@ func TestHandleExecuteEscrow(t *testing.T) {
 	contractAcct := data.acctKeeper.GetAccount(data.ctx, contractAddr)
 	require.NotNil(t, contractAcct)
 	assert.Equal(t, sdk.Coins(nil), contractAcct.GetCoins())
-
-	// q := data.module.NewQuerierHandler()
-	// // ensure all contract state is as after init
-	// assertCodeList(t, q, data.ctx, 1)
-	// assertCodeBytes(t, q, data.ctx, 1, testContract)
-
-	// assertContractList(t, q, data.ctx, []string{contractAddr.String()})
-	// assertContractInfo(t, q, data.ctx, contractAddr, 1, creator)
-	// assertContractState(t, q, data.ctx, contractAddr, state{
-	// 	Verifier:    fred.String(),
-	// 	Beneficiary: bob.String(),
-	// 	Funder:      creator.String(),
-	// })
 }
 
 type prettyEvent struct {

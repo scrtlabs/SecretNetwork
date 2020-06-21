@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"fmt"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	cosmwasm "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm"
 )

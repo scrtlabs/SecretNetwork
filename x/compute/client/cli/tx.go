@@ -14,6 +14,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 
@@ -27,6 +28,8 @@ const (
 	flagSource  = "source"
 	flagBuilder = "builder"
 	flagLabel   = "label"
+	flagAdmin   = "admin"
+	flagNoAdmin = "no-admin"
 )
 
 // GetTxCmd returns the transaction commands for this module
@@ -42,6 +45,8 @@ func GetTxCmd(cdc *codec.Codec) *cobra.Command {
 		StoreCodeCmd(cdc),
 		InstantiateContractCmd(cdc),
 		ExecuteContractCmd(cdc),
+		MigrateContractCmd(cdc),
+		UpdateContractAdminCmd(cdc),
 	)...)
 	return txCmd
 }
@@ -106,7 +111,7 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "instantiate [code_id_int64] [json_encoded_init_args]",
 		Short: "Instantiate a wasm contract",
-		Args:  cobra.ExactArgs(2),
+		Args:  cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			inBuf := bufio.NewReader(cmd.InOrStdin())
 			txBldr := auth.NewTxBuilderFromCLI(inBuf).WithTxEncoder(utils.GetTxEncoder(cdc))
@@ -137,6 +142,15 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
+			adminStr := viper.GetString(flagAdmin)
+			var adminAddr sdk.AccAddress
+			if len(adminStr) != 0 {
+				adminAddr, err = sdk.AccAddressFromBech32(adminStr)
+				if err != nil {
+					return sdkerrors.Wrap(err, "admin")
+				}
+			}
+
 			// build and sign the transaction, then broadcast to Tendermint
 			msg := types.MsgInstantiateContract{
 				Sender:    cliCtx.GetFromAddress(),
@@ -144,6 +158,7 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 				Label:     label,
 				InitFunds: amount,
 				InitMsg:   initMsg,
+				Admin:     adminAddr,
 			}
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
 		},
@@ -151,6 +166,7 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract during instantiation")
 	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
+	cmd.Flags().String(flagAdmin, "", "Address of an admin")
 	return cmd
 }
 

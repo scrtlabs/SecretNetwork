@@ -10,7 +10,7 @@ docs
 **/*.lock
 third_party/vendor
 
-cosmwasm/lib/incubator-teaclave-sgx-sdk
+cosmwasm/packages/incubator-teaclave-sgx-sdk
 
 README.md
 .gitignore
