@@ -4,6 +4,7 @@
 
 This is a very advanced WIP.
 
+- [Encryption](#encryption)
 - [Bootstrap Process](#bootstrap-process)
   - [`consensus_seed`](#consensus_seed)
   - [Key Derivation](#key-derivation)
@@ -266,6 +267,9 @@ TODO reasoning
 ## `contract_key`
 
 - `contract_key` is a concatenation of two values: `signer_id || authenticated_contract_key`.
+- Its purpose is to make sure each contract have a unique unforgable encryption key.
+  - Unique: Make sure the state of two contracts with the same code is different.
+  - Unforgable: Make sure a malicious node runner won't try to locally encrypt transactions with it's own encryption key and then decrypt the resulting state with the fake key.
 - When a contract is deployed (i.e., on contract init), `contract_key` is generated inside of the Enclave as follows:
 
 ```js
