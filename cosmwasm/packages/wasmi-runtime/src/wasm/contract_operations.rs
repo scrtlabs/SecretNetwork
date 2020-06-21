@@ -71,6 +71,9 @@ pub fn init(
         .extract_vector(vec_ptr)
         .map_err(wasmi_error_to_enclave_error)?;
 
+    // TODO: copy cosmwasm's structures to enclave
+    // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
+    // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
     let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
 
     // todo: can move the key to somewhere in the output message if we want
