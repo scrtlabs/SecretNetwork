@@ -263,10 +263,11 @@ TODO reasoning
   - `consensus_state_ikm`
   - `field_name`
   - `contact_key`
+- `ad` (Additional Data) is used to prevent leaking information about the same value written to the same key at different times.
 
 ## `contract_key`
 
-- `contract_key` is a concatenation of two values: `signer_id || authenticated_contract_key`.
+- `contract_key` is a **concatenation** of two values: `signer_id || authenticated_contract_key`.
 - Its purpose is to make sure each contract have a unique unforgable encryption key.
   - Unique: Make sure the state of two contracts with the same code is different.
   - Unforgable: Make sure a malicious node runner won't try to locally encrypt transactions with it's own encryption key and then decrypt the resulting state with the fake key.
