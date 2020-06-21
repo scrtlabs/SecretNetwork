@@ -41,7 +41,7 @@ pub fn init(
 ) -> Result<InitSuccess, EnclaveError> {
     let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
         error!(
-            "got an error while trying to deserialize output bytes into json {:?}: {}",
+            "got an error while trying to deserialize env input bytes into json {:?}: {}",
             env, err
         );
         EnclaveError::FailedToDeserialize
@@ -93,7 +93,7 @@ pub fn handle(
 ) -> Result<HandleSuccess, EnclaveError> {
     let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
         error!(
-            "got an error while trying to deserialize output bytes into json {:?}: {}",
+            "got an error while trying to deserialize env input bytes into json {:?}: {}",
             env, err
         );
         EnclaveError::FailedToDeserialize
