@@ -56,10 +56,17 @@ impl Externals for ContractInstance {
                     );
                     err
                 })?;
-                // Get pointer to the region of the value buffer
-                let value: i32 = args.nth_checked(1)?;
-
                 self.read_db_index(key)
+            }
+            HostFunctions::RemoveDbIndex => {
+                let key: i32 = args.nth_checked(0).map_err(|err| {
+                    error!(
+                        "remove_db() error reading arguments, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+                self.remove_db_index(key)
             }
             HostFunctions::WriteDbIndex => {
                 let key: i32 = args.nth_checked(0).map_err(|err| {

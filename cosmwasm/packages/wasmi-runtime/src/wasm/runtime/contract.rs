@@ -80,9 +80,8 @@ impl ContractInstance {
 impl WasmiApi for ContractInstance {
     /// Args:
     /// 1. "key" to write to Tendermint (buffer of bytes)
-    /// 2. "value" to write to Tendermint (buffer of bytes)
-    /// Both of them are pointers to a region "struct" of "pointer" and "length"
-    /// Lets say Region looks like { ptr: u32, len: u32 }
+    /// key is a pointer to a region "struct" of "pointer" and "length"
+    /// A Region looks like { ptr: u32, len: u32 }
     fn read_db_index(&mut self, state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
         let state_key_name = self
             .extract_vector(state_key_ptr_ptr as u32)
@@ -159,6 +158,11 @@ impl WasmiApi for ContractInstance {
         // Return pointer to the allocated buffer with the value written to it
         Ok(Some(RuntimeValue::I32(value_ptr_ptr)))
     }
+
+    fn remove_db_index(&mut self, state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+        todo!()
+    }
+
     /// Args:
     /// 1. "key" to write to Tendermint (buffer of bytes)
     /// 2. "value" to write to Tendermint (buffer of bytes)
@@ -169,28 +173,22 @@ impl WasmiApi for ContractInstance {
         state_key_ptr_ptr: i32,
         value_ptr_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        let state_key_name = match self.extract_vector(state_key_ptr_ptr as u32) {
-            Err(err) => {
-                warn!(
-                    "write_db() error while trying to read key from wasm memory: {:?}",
+        let state_key_name = self
+            .extract_vector(state_key_ptr_ptr as u32)
+            .map_err(|err| {
+                error!(
+                    "write_db() error while trying to read state_key_name from wasm memory: {:?}",
                     err
                 );
-                return Ok(Some(RuntimeValue::I32(-1)));
-            }
-            Ok(value) => value,
-        };
-
-        // extract_vector extracts value into a buffer
-        let value = match self.extract_vector(value_ptr_ptr as u32) {
-            Err(err) => {
-                warn!(
-                    "write_db() error while trying to read value from wasm memory: {:?}",
-                    err
-                );
-                return Ok(Some(RuntimeValue::I32(-2)));
-            }
-            Ok(value) => value,
-        };
+                err
+            })?;
+        let value = self.extract_vector(value_ptr_ptr as u32).map_err(|err| {
+            error!(
+                "write_db() error while trying to read value from wasm memory: {:?}",
+                err
+            );
+            err
+        })?;
 
         trace!(
             "write_db() was called from WASM code with state_key_name: {:?} value: {:?}... (first 20 bytes)",
@@ -198,11 +196,16 @@ impl WasmiApi for ContractInstance {
             String::from_utf8_lossy(value.get(0..std::cmp::min(20, value.len())).unwrap())
         );
 
-        if let Err(_e) =
-            write_encrypted_key(&state_key_name, &value, &self.context, &self.contract_key)
-        {
-            return Ok(Some(RuntimeValue::I32(ERROR_WRITING_DB)));
-        }
+        write_encrypted_key(&state_key_name, &value, &self.context, &self.contract_key).map_err(
+            |err| {
+                error!(
+                    "write_db() error while trying to write the value to state: {:?}",
+                    err
+                );
+                err
+            },
+        )?;
+
         Ok(None)
     }
 
@@ -213,7 +216,7 @@ impl WasmiApi for ContractInstance {
     ) -> Result<Option<RuntimeValue>, Trap> {
         let human = match self.extract_vector(human_ptr_ptr as u32) {
             Err(err) => {
-                warn!(
+                error!(
                     "canonicalize_address() error while trying to read human address from wasm memory: {:?}",
                     err
                 );
