@@ -9,7 +9,7 @@ typedef GoResult (*write_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *use
 typedef GoResult (*remove_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key);
 typedef GoResult (*scan_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer start, Buffer end, int32_t order, GoIter *out);
 // iterator
-typedef GoResult (*next_db_fn)(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val);
+typedef GoResult (*next_db_fn)(iterator_t idx, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val);
 // and api
 typedef GoResult (*humanize_address_fn)(api_t*, Buffer, Buffer*);
 typedef GoResult (*canonicalize_address_fn)(api_t*, Buffer, Buffer*);
@@ -27,6 +27,8 @@ GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human);
 GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon);
 // and querier
 GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t *used_gas, Buffer request, Buffer *result);
+
+
 */
 import "C"
 
@@ -121,12 +123,29 @@ var db_vtable = C.DB_vtable{
 	scan_db:   (C.scan_db_fn)(C.cScan_cgo),
 }
 
+type DBState struct {
+	Store KVStore
+	// IteratorStackID is used to lookup the proper stack frame for iterators associated with this DB (iterator.go)
+	IteratorStackID uint64
+}
+
+// use this to create C.DB in two steps, so the pointer lives as long as the calling stack
+//   state := buildDBState(kv, counter)
+//   db := buildDB(&state, &gasMeter)
+//   // then pass db into some FFI function
+func buildDBState(kv KVStore, counter uint64) DBState {
+	return DBState{
+		Store:           kv,
+		IteratorStackID: counter,
+	}
+}
+
 // contract: original pointer/struct referenced must live longer than C.DB struct
 // since this is only used internally, we can verify the code that this is the case
-func buildDB(kv *KVStore, gm *GasMeter) C.DB {
+func buildDB(state *DBState, gm *GasMeter) C.DB {
 	return C.DB{
 		gas_meter: (*C.gas_meter_t)(unsafe.Pointer(gm)),
-		state:     (*C.db_t)(unsafe.Pointer(kv)),
+		state:     (*C.db_t)(unsafe.Pointer(state)),
 		vtable:    db_vtable,
 	}
 }
@@ -137,16 +156,16 @@ var iterator_vtable = C.Iterator_vtable{
 
 // contract: original pointer/struct referenced must live longer than C.DB struct
 // since this is only used internally, we can verify the code that this is the case
-func buildIterator(it dbm.Iterator, gasMeter *C.gas_meter_t) C.GoIter {
-	return C.GoIter{
-		gas_meter: gasMeter,
-		state:     (*C.iterator_t)(unsafe.Pointer(&it)),
-		vtable:    iterator_vtable,
+func buildIterator(dbCounter uint64, it dbm.Iterator) C.iterator_t {
+	idx := storeIterator(dbCounter, it)
+	return C.iterator_t{
+		db_counter:     u64(dbCounter),
+		iterator_index: u64(idx),
 	}
 }
 
 //export cGet
-func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffer, val *C.Buffer) (ret C.GoResult) {
+func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, key C.Buffer, val *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 	if ptr == nil || gasMeter == nil || usedGas == nil || val == nil {
 		// we received an invalid pointer
@@ -160,7 +179,7 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffe
 	gasBefore := gm.GasConsumed()
 	v := kv.Get(k)
 	gasAfter := gm.GasConsumed()
-	*usedGas = (C.uint64_t)((gasAfter - gasBefore) * GasMultiplier)
+	*usedGas = (u64)((gasAfter - gasBefore) * GasMultiplier)
 
 	// v will equal nil when the key is missing
 	// https://github.com/cosmos/cosmos-sdk/blob/1083fa948e347135861f88e07ec76b0314296832/store/types/store.go#L174
@@ -224,7 +243,8 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.Bu
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
-	kv := *(*KVStore)(unsafe.Pointer(ptr))
+	state := (*DBState)(unsafe.Pointer(ptr))
+	kv := state.Store
 	// handle null as well as data
 	var s, e []byte
 	if start.ptr != nil {
@@ -247,13 +267,13 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.Bu
 	gasAfter := gm.GasConsumed()
 	*usedGas = (C.uint64_t)((gasAfter - gasBefore) * GasMultiplier)
 
-	// Let's hope this works!
-	*out = buildIterator(iter, gasMeter)
+	out.state = buildIterator(state.IteratorStackID, iter)
+	out.vtable = iterator_vtable
 	return C.GoResult_Ok
 }
 
 //export cNext
-func cNext(ptr *C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *C.Buffer, val *C.Buffer) (ret C.GoResult) {
+func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *C.Buffer, val *C.Buffer) (ret C.GoResult) {
 	// typical usage of iterator
 	// 	for ; itr.Valid(); itr.Next() {
 	// 		k, v := itr.Key(); itr.Value()
@@ -261,13 +281,13 @@ func cNext(ptr *C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key 
 	// 	}
 
 	defer recoverPanic(&ret)
-	if ptr == nil || gasMeter == nil || usedGas == nil || key == nil || val == nil {
+	if ref.db_counter == 0 || gasMeter == nil || usedGas == nil || key == nil || val == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
-	iter := *(*dbm.Iterator)(unsafe.Pointer(ptr))
+	iter := retrieveIterator(uint64(ref.db_counter), uint64(ref.iterator_index))
 	if !iter.Valid() {
 		// end of iterator, return as no-op, nil key is considered end
 		return C.GoResult_Ok

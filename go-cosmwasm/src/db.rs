@@ -1,4 +1,4 @@
-use cosmwasm_sgx_vm::{FfiError, FfiResult, ReadonlyStorage, Storage, StorageIterator};
+use cosmwasm_sgx_vm::{FfiError, FfiResult, Storage, StorageIterator};
 use std::convert::TryInto;
 
 use crate::error::GoResult;
@@ -20,6 +20,8 @@ pub struct DB_vtable {
     pub write_db: extern "C" fn(*mut db_t, *mut gas_meter_t, *mut u64, Buffer, Buffer) -> i32,
     pub remove_db: extern "C" fn(*mut db_t, *mut gas_meter_t, *mut u64, Buffer) -> i32,
     // order -> Ascending = 1, Descending = 2
+    // Note: we cannot set gas_meter on the returned GoIter due to cgo memory safety.
+    // Since we have the pointer in rust already, we must set that manually
     pub scan_db: extern "C" fn(
         *mut db_t,
         *mut gas_meter_t,
@@ -38,7 +40,7 @@ pub struct DB {
     pub vtable: DB_vtable,
 }
 
-impl ReadonlyStorage for DB {
+impl Storage for DB {
     fn get(&self, key: &[u8]) -> FfiResult<(Option<Vec<u8>>, u64)> {
         let key_buf = Buffer::from_vec(key.to_vec());
         let mut result_buf = Buffer::default();
@@ -86,7 +88,7 @@ impl ReadonlyStorage for DB {
         let end_buf = end
             .map(|e| Buffer::from_vec(e.to_vec()))
             .unwrap_or_default();
-        let mut iter = GoIter::default();
+        let mut iter = GoIter::new(self.gas_meter);
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.scan_db)(
             self.state,
@@ -110,9 +112,7 @@ impl ReadonlyStorage for DB {
         go_result?;
         Ok((Box::new(iter), used_gas))
     }
-}
 
-impl Storage for DB {
     fn set(&mut self, key: &[u8], value: &[u8]) -> FfiResult<u64> {
         let key_buf = Buffer::from_vec(key.to_vec());
         let value_buf = Buffer::from_vec(value.to_vec());

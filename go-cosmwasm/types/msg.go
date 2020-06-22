@@ -6,14 +6,44 @@ import (
 
 //------- Results / Msgs -------------
 
-// CosmosResponse is the raw response from the init / handle calls
-type CosmosResponse struct {
-	Ok  *Result   `json:"Ok,omitempty"`
-	Err *StdError `json:"Err,omitempty"`
+// HandleResult is the raw response from the handle call
+type HandleResult struct {
+	Ok  *HandleResponse `json:"Ok,omitempty"`
+	Err *StdError       `json:"Err,omitempty"`
 }
 
-// Result defines the return value on a successful
-type Result struct {
+// HandleResponse defines the return value on a successful handle
+type HandleResponse struct {
+	// Messages comes directly from the contract and is it's request for action
+	Messages []CosmosMsg `json:"messages"`
+	// base64-encoded bytes to return as ABCI.Data field
+	Data string `json:"data"`
+	// log message to return over abci interface
+	Log []LogAttribute `json:"log"`
+}
+
+// InitResult is the raw response from the handle call
+type InitResult struct {
+	Ok  *InitResponse `json:"Ok,omitempty"`
+	Err *StdError     `json:"Err,omitempty"`
+}
+
+// InitResponse defines the return value on a successful handle
+type InitResponse struct {
+	// Messages comes directly from the contract and is it's request for action
+	Messages []CosmosMsg `json:"messages"`
+	// log message to return over abci interface
+	Log []LogAttribute `json:"log"`
+}
+
+// MigrateResult is the raw response from the handle call
+type MigrateResult struct {
+	Ok  *MigrateResponse `json:"Ok,omitempty"`
+	Err *StdError        `json:"Err,omitempty"`
+}
+
+// MigrateResponse defines the return value on a successful handle
+type MigrateResponse struct {
 	// Messages comes directly from the contract and is it's request for action
 	Messages []CosmosMsg `json:"messages"`
 	// base64-encoded bytes to return as ABCI.Data field

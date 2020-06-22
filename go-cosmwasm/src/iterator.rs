@@ -5,10 +5,12 @@ use crate::error::GoResult;
 use crate::gas_meter::gas_meter_t;
 use crate::memory::Buffer;
 
-// this represents something passed in from the caller side of FFI
+// Iterator maintains integer references to some tables on the Go side
 #[repr(C)]
+#[derive(Default, Copy, Clone)]
 pub struct iterator_t {
-    _private: [u8; 0],
+    pub db_counter: u64,
+    pub iterator_index: u64,
 }
 
 // These functions should return GoResult but because we don't trust them here, we treat the return value as i32
@@ -17,22 +19,22 @@ pub struct iterator_t {
 #[derive(Default)]
 pub struct Iterator_vtable {
     pub next_db: Option<
-        extern "C" fn(*mut iterator_t, *mut gas_meter_t, *mut u64, *mut Buffer, *mut Buffer) -> i32,
+        extern "C" fn(iterator_t, *mut gas_meter_t, *mut u64, *mut Buffer, *mut Buffer) -> i32,
     >,
 }
 
 #[repr(C)]
 pub struct GoIter {
     pub gas_meter: *mut gas_meter_t,
-    pub state: *mut iterator_t,
+    pub state: iterator_t,
     pub vtable: Iterator_vtable,
 }
 
-impl Default for GoIter {
-    fn default() -> Self {
+impl GoIter {
+    pub fn new(gas_meter: *mut gas_meter_t) -> Self {
         GoIter {
-            gas_meter: std::ptr::null_mut(),
-            state: std::ptr::null_mut(),
+            gas_meter,
+            state: iterator_t::default(),
             vtable: Iterator_vtable::default(),
         }
     }
