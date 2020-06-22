@@ -46,7 +46,7 @@ impl Engine {
 
         let buffer_len_in_wasm: u32 = self
             .memory()
-            .get_value::<u32>(ptr_to_region_in_wasm_vm + 4)?;
+            .get_value::<u32>(ptr_to_region_in_wasm_vm + 8)?;
         if buffer_len_in_wasm != buffer.len() as u32 {
             // TODO return an Error? Or maybe this is already covered by allocate?
         }
@@ -59,7 +59,7 @@ impl Engine {
 
     pub fn extract_vector(&self, vec_ptr_ptr: u32) -> Result<Vec<u8>, InterpreterError> {
         let ptr: u32 = self.memory().get_value(vec_ptr_ptr)?;
-        let len: u32 = self.memory().get_value(vec_ptr_ptr + 4)?;
+        let len: u32 = self.memory().get_value(vec_ptr_ptr + 8)?;
 
         self.memory().get(ptr, len as usize)
     }

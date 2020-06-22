@@ -1,6 +1,5 @@
 use bech32::{FromBase32, ToBase32};
 use log::*;
-use wasmi::ModuleInstance;
 use wasmi::{Error as InterpreterError, MemoryInstance, MemoryRef, ModuleRef, RuntimeValue, Trap};
 
 use enclave_ffi_types::Ctx;
@@ -8,7 +7,7 @@ use enclave_ffi_types::Ctx;
 use crate::consts::BECH32_PREFIX_ACC_ADDR;
 use crate::wasm::contract_validation::ContractKey;
 use crate::wasm::db::{read_encrypted_key, write_encrypted_key};
-use crate::wasm::errors::{DbError, WasmEngineError};
+use crate::wasm::errors::{WasmEngineError};
 use crate::wasm::runtime::traits::WasmiApi;
 
 /// An unknown error occurred when writing to region
@@ -58,17 +57,17 @@ impl ContractInstance {
     /// extract_vector extracts key into a buffer
     fn extract_vector(&self, vec_ptr_ptr: u32) -> Result<Vec<u8>, InterpreterError> {
         let ptr: u32 = self.get_memory().get_value(vec_ptr_ptr)?;
-        let len: u32 = self.get_memory().get_value(vec_ptr_ptr + 4)?;
+        let len: u32 = self.get_memory().get_value(vec_ptr_ptr + 8)?;
 
         self.get_memory().get(ptr, len as usize)
     }
 
-    pub fn allocate(&mut self, len: u32) -> Result<i32, InterpreterError> {
+    pub fn allocate(&mut self, len: u32) -> Result<u32, InterpreterError> {
         match self
             .module
-            .invoke_export("allocate", &[RuntimeValue::I32(len as i32)], &mut self)?
+            .invoke_export("allocate", &[RuntimeValue::I32(len as i32)], self)?
         {
-            Some(RuntimeValue::I32(offset)) => Ok(offset),
+            Some(RuntimeValue::I32(offset)) => Ok(offset as u32),
             other => Err(InterpreterError::Value(format!(
                 "allocate method returned value which wasn't u32: {:?}",
                 other
@@ -90,7 +89,7 @@ impl WasmiApi for ContractInstance {
                     "read_db() error while trying to read state_key_name from wasm memory: {:?}",
                     err
                 );
-                err
+                WasmEngineError::MemoryReadError.into()
             })?;
 
         trace!(
@@ -122,19 +121,19 @@ impl WasmiApi for ContractInstance {
                     "read_db() error while trying to get pointer for the result buffer: {:?}",
                     err,
                 );
-                err
+                WasmEngineError::MemoryReadError.into()
             })?;
 
         // Get length of the buffer (this was allocated in WASM)
         let value_len_in_wasm = self
             .get_memory()
-            .get_value::<u32>((value_ptr_ptr + 4) as u32)
+            .get_value::<u32>((value_ptr_ptr + 8) as u32)
             .map_err(|err| {
                 error!(
                     "read_db() error while trying to get length of result buffer: {:?}",
                     err
                 );
-                err
+                WasmEngineError::MemoryReadError.into()
             })?;
 
         // Check that value is not too big to write into the allocated buffer
@@ -155,7 +154,7 @@ impl WasmiApi for ContractInstance {
                     "read_db() error while trying to write to result buffer: {:?}",
                     err
                 );
-                err
+                WasmEngineError::MemoryWriteError.into()
             })?;
 
         // Return pointer to the allocated buffer with the value written to it
@@ -187,14 +186,14 @@ impl WasmiApi for ContractInstance {
                     "write_db() error while trying to read state_key_name from wasm memory: {:?}",
                     err
                 );
-                err
+                WasmEngineError::MemoryReadError.into()
             })?;
         let value = self.extract_vector(value_ptr_ptr as u32).map_err(|err| {
             error!(
                 "write_db() error while trying to read value from wasm memory: {:?}",
                 err
             );
-            err
+            WasmEngineError::MemoryReadError.into()
         })?;
 
         trace!(
@@ -231,7 +230,7 @@ impl WasmiApi for ContractInstance {
                 "canonicalize_address() error while trying to read human address from wasm memory: {:?}",
                 err
             );
-            err
+            WasmEngineError::MemoryReadError.into()
         })?;
 
         trace!(
@@ -245,7 +244,7 @@ impl WasmiApi for ContractInstance {
                 "canonicalize_address() error while trying to parse human address from bytes to string: {:?}",
                 err
             );
-            err
+            WasmEngineError::InputInvalid.into()
         })?;
 
         human_addr_str = human_addr_str.trim();
@@ -257,7 +256,7 @@ impl WasmiApi for ContractInstance {
                 "canonicalize_address() error while trying to decode human address {:?} as bech32: {:?}",
                 human_addr_str, err
             );
-            err
+            WasmEngineError::InputInvalid.into()
         })?;
 
         if decoded_prefix != BECH32_PREFIX_ACC_ADDR {
@@ -275,7 +274,7 @@ impl WasmiApi for ContractInstance {
                 "canonicalize_address() error while trying to decode bytes from base32 {:?}: {:?}",
                 data, err
             );
-            err
+            WasmEngineError::InputInvalid.into()
         })?;
 
         if canonical.len() != 20 {
@@ -303,13 +302,13 @@ impl WasmiApi for ContractInstance {
         // Get length of the buffer (this was allocated in WASM)
         let canonical_len_in_wasm = self
             .memory
-            .get_value::<u32>(canonical_ptr_ptr + 4)
+            .get_value::<u32>((canonical_ptr_ptr + 8) as u32)
             .map_err(|err| {
                 error!(
                     "read_db() error while trying to get pointer for the result buffer: {:?}",
                     err,
                 );
-                err
+                WasmEngineError::MemoryReadError.into()
             })?;
 
         // Check that canonical is not too big to write into the allocated buffer (canonical should always be 20 bytes)
@@ -330,7 +329,7 @@ impl WasmiApi for ContractInstance {
                     "canonicalize_address() error while trying to write to result buffer: {:?}",
                     err
                 );
-                err
+                WasmEngineError::MemoryWriteError.into()
             })?;
 
         // return 0 == ok
@@ -352,7 +351,7 @@ impl WasmiApi for ContractInstance {
                 "humanize_address() error while trying to read canonical address from wasm memory: {:?}",
                 err
             );
-            err
+            WasmEngineError::MemoryReadError.into()
         })?;
 
         trace!(
@@ -373,8 +372,8 @@ impl WasmiApi for ContractInstance {
         let human_addr_str= bech32::encode(BECH32_PREFIX_ACC_ADDR, canonical.to_base32())
             .map_err(|err| {
             error!("humanize_address() error while trying to encode canonical address {:?} to human: {:?}",  canonical, err);
-            err
-        })?;
+                WasmEngineError::InputInvalid.into()
+            })?;
 
         let human_bytes = human_addr_str.into_bytes();
 
@@ -387,19 +386,19 @@ impl WasmiApi for ContractInstance {
                     "humanize_address() error while trying to get pointer for the result buffer: {:?}",
                     err,
                 );
-                err
+                WasmEngineError::MemoryReadError.into()
             })?;
 
         // Get length of the buffer (this was allocated in WASM)
         let human_len_in_wasm: u32 = self
             .get_memory()
-            .get_value::<u32>((human_ptr_ptr + 4) as u32)
+            .get_value::<u32>((human_ptr_ptr + 8) as u32)
             .map_err(|err| {
                 error!(
                     "humanize_address() error while trying to get length of result buffer: {:?}",
                     err
                 );
-                err
+                WasmEngineError::MemoryReadError.into()
             })?;
 
         // Check that human_bytes is not too big to write into the allocated buffer (human_bytes should always be 45 bytes)
@@ -420,7 +419,7 @@ impl WasmiApi for ContractInstance {
                     "humanize_address() error while trying to write to result buffer: {:?}",
                     err
                 );
-                err
+                WasmEngineError::MemoryWriteError.into()
             })?;
 
         // return 0 == ok
