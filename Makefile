@@ -163,6 +163,7 @@ clean:
 	-rm -rf ./x/compute/internal/keeper/*.so
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
+	$(MAKE) -C ./x/compute/internal/keeper/testdata/test-contract clean
 
 docker_bootstrap:
 	docker build --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t enigmampc/secret_bootstrap .
