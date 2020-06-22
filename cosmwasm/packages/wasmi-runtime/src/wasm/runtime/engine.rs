@@ -21,17 +21,7 @@ impl Engine {
     }
 
     pub fn allocate(&mut self, len: u32) -> Result<u32, InterpreterError> {
-        match self.module.invoke_export(
-            "allocate",
-            &[RuntimeValue::I32(len as i32)],
-            &mut self.contract_instance,
-        )? {
-            Some(RuntimeValue::I32(offset)) => Ok(offset as u32),
-            other => Err(InterpreterError::Value(format!(
-                "allocate method returned value which wasn't u32: {:?}",
-                other
-            ))),
-        }
+        self.contract_instance.allocate(len)
     }
 
     pub fn memory(&self) -> MemoryRef {

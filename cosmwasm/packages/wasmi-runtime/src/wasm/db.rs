@@ -46,7 +46,7 @@ pub fn read_encrypted_key(
     key: &[u8],
     context: &Ctx,
     contract_key: &ContractKey,
-) -> Result<Vec<u8>, DbError> {
+) -> Result<Option<Vec<u8>>, DbError> {
     let scrambled_field_name = field_name_digest(key, contract_key);
 
     debug!(
@@ -65,13 +65,7 @@ pub fn read_encrypted_key(
             );
             DbError::FailedRead
         })
-        .map(|val| {
-            if let Some(as_slice) = val {
-                decrypt_key(&scrambled_field_name, &as_slice, contract_key)
-            } else {
-                Err(DbError::EmptyValue)
-            }
-        })?
+        .map(|val| val.map(|as_slice| decrypt_key(&scrambled_field_name, &as_slice, contract_key)?))
 }
 
 pub fn field_name_digest(field_name: &[u8], contract_key: &ContractKey) -> [u8; 32] {

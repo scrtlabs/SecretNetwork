@@ -1,6 +1,7 @@
 use bech32::{FromBase32, ToBase32};
 use log::*;
-use wasmi::{Error as InterpreterError, MemoryInstance, MemoryRef, RuntimeValue, Trap};
+use wasmi::ModuleInstance;
+use wasmi::{Error as InterpreterError, MemoryInstance, MemoryRef, ModuleRef, RuntimeValue, Trap};
 
 use enclave_ffi_types::Ctx;
 
@@ -29,6 +30,7 @@ pub struct ContractInstance {
     pub gas_limit: u64,
     pub gas_used: u64,
     pub contract_key: ContractKey,
+    pub module: ModuleRef,
 }
 
 impl ContractInstance {
@@ -36,13 +38,21 @@ impl ContractInstance {
         &*self.memory
     }
 
-    pub fn new(context: Ctx, memory: MemoryRef, gas_limit: u64, contract_key: ContractKey) -> Self {
+    pub fn new(context: Ctx, module: ModuleRef, gas_limit: u64, contract_key: ContractKey) -> Self {
+        let memory = (&*module)
+            .export_by_name("memory")
+            .expect("Module expected to have 'memory' export")
+            .as_memory()
+            .cloned()
+            .expect("'memory' export should be of memory type");
+
         Self {
             context,
             memory,
             gas_limit,
             gas_used: 0,
             contract_key,
+            module,
         }
     }
     /// extract_vector extracts key into a buffer
@@ -52,6 +62,19 @@ impl ContractInstance {
 
         self.get_memory().get(ptr, len as usize)
     }
+
+    pub fn allocate(&mut self, len: u32) -> Result<i32, InterpreterError> {
+        match self
+            .module
+            .invoke_export("allocate", &[RuntimeValue::I32(len as i32)], &mut self)?
+        {
+            Some(RuntimeValue::I32(offset)) => Ok(offset),
+            other => Err(InterpreterError::Value(format!(
+                "allocate method returned value which wasn't u32: {:?}",
+                other
+            ))),
+        }
+    }
 }
 
 impl WasmiApi for ContractInstance {
@@ -60,21 +83,16 @@ impl WasmiApi for ContractInstance {
     /// 2. "value" to write to Tendermint (buffer of bytes)
     /// Both of them are pointers to a region "struct" of "pointer" and "length"
     /// Lets say Region looks like { ptr: u32, len: u32 }
-    fn read_db_index(
-        &mut self,
-        state_key_ptr_ptr: i32,
-        value_ptr_ptr: i32,
-    ) -> Result<Option<RuntimeValue>, Trap> {
-        let state_key_name = match self.extract_vector(state_key_ptr_ptr as u32) {
-            Err(err) => {
-                warn!(
+    fn read_db_index(&mut self, state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+        let state_key_name = self
+            .extract_vector(state_key_ptr_ptr as u32)
+            .map_err(|err| {
+                error!(
                     "read_db() error while trying to read state_key_name from wasm memory: {:?}",
                     err
                 );
-                return Ok(Some(RuntimeValue::I32(-1)));
-            }
-            Ok(value) => value,
-        };
+                err
+            })?;
 
         trace!(
             "read_db() was called from WASM code with state_key_name: {:?}",
@@ -83,62 +101,63 @@ impl WasmiApi for ContractInstance {
 
         // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
         // This returns the value from Tendermint
-        let value: Vec<u8> =
-            match read_encrypted_key(&state_key_name, &self.context, &self.contract_key) {
-                Err(e) => {
-                    return match e {
-                        DbError::EmptyValue => Ok(Some(RuntimeValue::I32(0))),
-                        _ => Ok(Some(RuntimeValue::I32(ERROR_READING_DB))),
-                    }
-                }
-                Ok(v) => v,
-            };
+        let value = read_encrypted_key(&state_key_name, &self.context, &self.contract_key)
+            .map_err(WasmEngineError::from)?;
+
+        let value = match value {
+            None => return Ok(Some(RuntimeValue::I32(0))),
+            Some(value) => value,
+        };
+
+        let value_ptr_ptr = match self.allocate(value.len() as u32)? {
+            0 => return Err(WasmEngineError::MemoryAllocationError.into()),
+            value_ptr_ptr => value_ptr_ptr,
+        };
 
         // Get pointer to the buffer (this was allocated in WASM)
-        let value_ptr_in_wasm: u32 = match self.memory.get_value::<u32>(value_ptr_ptr as u32) {
-            Ok(x) => x,
-            Err(err) => {
-                warn!(
-                    "read_db() error while trying to get pointer for the result buffer: {:?}",
-                    err
-                );
-                return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
-            }
-        };
+        let value_ptr_in_wasm = self.memory.get_value::<u32>(value_ptr_ptr).map_err(|err| {
+            error!(
+                "read_db() error while trying to get pointer for the result buffer: {:?}",
+                err,
+            );
+            err
+        })?;
+
         // Get length of the buffer (this was allocated in WASM)
-        let value_len_in_wasm: u32 = match self.memory.get_value::<u32>((value_ptr_ptr + 4) as u32)
-        {
-            Ok(x) => x,
-            Err(err) => {
-                warn!(
+        let value_len_in_wasm = self
+            .memory
+            .get_value::<u32>(value_ptr_ptr + 4)
+            .map_err(|err| {
+                error!(
                     "read_db() error while trying to get length of result buffer: {:?}",
                     err
                 );
-                return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
-            }
-        };
+                err
+            })?;
 
         // Check that value is not too big to write into the allocated buffer
         if value_len_in_wasm < value.len() as u32 {
-            warn!(
+            error!(
                 "read_db() result to big ({} bytes) to write to allocated wasm buffer ({} bytes)",
                 value.len(),
                 value_len_in_wasm
             );
-            return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_TOO_SMALL)));
+            return Err(WasmEngineError::MemoryAllocationError.into());
         }
 
         // Write value returned from read_db to WASM memory
-        if let Err(err) = self.get_memory().set(value_ptr_in_wasm, &value) {
-            warn!(
-                "read_db() error while trying to write to result buffer: {:?}",
+        self.get_memory()
+            .set(value_ptr_in_wasm, &value)
+            .map_err(|err| {
+                error!(
+                    "read_db() error while trying to write to result buffer: {:?}",
+                    err
+                );
                 err
-            );
-            return Ok(Some(RuntimeValue::I32(ERROR_WRITE_TO_REGION_UNKNONW)));
-        }
+            })?;
 
-        // Return how many bytes were written to the buffer
-        Ok(Some(RuntimeValue::I32(value.len() as i32)))
+        // Return pointer to the allocated buffer with the value written to it
+        Ok(Some(RuntimeValue::I32(value_ptr_ptr)))
     }
     /// Args:
     /// 1. "key" to write to Tendermint (buffer of bytes)

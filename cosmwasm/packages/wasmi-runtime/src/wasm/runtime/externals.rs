@@ -10,9 +10,10 @@ use super::traits::WasmiApi;
 pub enum HostFunctions {
     ReadDbIndex = 0,
     WriteDbIndex = 1,
-    CanonicalizeAddressIndex = 2,
-    HumanizeAddressIndex = 3,
-    GasIndex = 4,
+    RemoveDbIndex = 2,
+    CanonicalizeAddressIndex = 3,
+    HumanizeAddressIndex = 4,
+    GasIndex = 5,
     Unknown,
 }
 
@@ -58,7 +59,7 @@ impl Externals for ContractInstance {
                 // Get pointer to the region of the value buffer
                 let value: i32 = args.nth_checked(1)?;
 
-                self.read_db_index(key, value)
+                self.read_db_index(key)
             }
             HostFunctions::WriteDbIndex => {
                 let key: i32 = args.nth_checked(0).map_err(|err| {

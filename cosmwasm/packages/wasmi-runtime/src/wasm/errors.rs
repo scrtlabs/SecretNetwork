@@ -11,17 +11,23 @@ pub enum WasmEngineError {
     OutOfGas,
     EncryptionError,
     DecryptionError,
-    DbError,
+    DbError(DbError),
+    MemoryAllocationError,
 }
 
 #[derive(Debug, Display)]
 #[non_exhaustive]
 pub enum DbError {
-    EmptyValue,
     FailedRead,
     FailedWrite,
     FailedEncryption,
     FailedDecryption,
+}
+
+impl From<DbError> for WasmEngineError {
+    fn from(err: DbError) -> Self {
+        WasmEngineError::DbError(err)
+    }
 }
 
 impl HostError for WasmEngineError {}
