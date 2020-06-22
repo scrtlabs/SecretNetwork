@@ -30,12 +30,12 @@ impl ModuleImportResolver for WasmiImportResolver {
     ) -> Result<FuncRef, InterpreterError> {
         let func_ref = match func_name {
             // fn read_db(key: *const c_void, value: *mut c_void) -> i32;
-            "read_db" => FuncInstance::alloc_host(
+            "db_read" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
                 HostFunctions::ReadDbIndex.into(),
             ),
             // fn write_db(key: *const c_void, value: *mut c_void);
-            "write_db" => FuncInstance::alloc_host(
+            "db_write" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32, ValueType::I32][..], None),
                 HostFunctions::WriteDbIndex.into(),
             ),

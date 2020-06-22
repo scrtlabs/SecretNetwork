@@ -71,10 +71,14 @@ pub fn init(
         .extract_vector(vec_ptr)
         .map_err(wasmi_error_to_enclave_error)?;
 
+    trace!("Init output before encryption: {:?}", output);
+
     // TODO: copy cosmwasm's structures to enclave
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
     let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
+
+    trace!("Init output after encryption: {:?}", output);
 
     // todo: can move the key to somewhere in the output message if we want
     Ok(InitSuccess {
@@ -206,9 +210,13 @@ fn start_engine(
     contract: &[u8],
     contract_key: &ContractKey,
 ) -> Result<Engine, EnclaveError> {
+    trace!("Deserializing Wasm contract");
+
     // Create a parity-wasm module first, so we can inject gas metering to it
     // (you need a parity-wasm module to use the pwasm-utils crate)
     let p_modlue = elements::deserialize_buffer(contract).map_err(|_| EnclaveError::InvalidWasm)?;
+
+    trace!("Deserialized Wasm contract");
 
     // Set the gas costs for wasm op-codes (there is an inline stack_height limit in WasmCosts)
     let wasm_costs = WasmCosts::default();
@@ -217,9 +225,13 @@ fn start_engine(
     let contract_module = pwasm_utils::inject_gas_counter(p_modlue, &gas_rules(&wasm_costs))
         .map_err(|_| EnclaveError::FailedGasMeteringInjection)?;
 
+    trace!("Trying to create Wasmi module from parity..");
+
     // Create a wasmi module from the parity module
     let module = wasmi::Module::from_parity_wasm_module(contract_module)
         .map_err(|_err| EnclaveError::InvalidWasm)?;
+
+    trace!("Created Wasmi module from parity. Now checking for floating points..");
 
     module
         .deny_floating_point()
@@ -231,8 +243,10 @@ fn start_engine(
     let imports_builder = create_builder(&resolver);
 
     // Instantiate a module with our imports and assert that there is no `start` function.
-    let module_instance =
-        ModuleInstance::new(&module, &imports_builder).map_err(|_err| EnclaveError::InvalidWasm)?;
+    let module_instance = ModuleInstance::new(&module, &imports_builder).map_err(|err| {
+        trace!("Error in instantiation: {:?}", err);
+        EnclaveError::InvalidWasm
+    })?;
     if module_instance.has_start() {
         return Err(EnclaveError::WasmModuleWithStart);
     }

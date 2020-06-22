@@ -79,7 +79,7 @@ pub fn encrypt_output(
         // query
         v["ok"] = encrypt_serializeable(&key, &ok)?;
     } else if let Value::Object(ok) = &mut v["ok"] {
-        // init of handle
+        // init or handle or migrate
         if let Value::Array(msgs) = &mut ok["messages"] {
             for msg in msgs {
                 if let Value::String(msg_b64) = &mut msg["contract"]["msg"] {
