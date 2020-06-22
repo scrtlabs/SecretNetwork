@@ -162,8 +162,6 @@ pub struct Response {
     pub contract_key: Option<Binary>,
 }
 
-
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum QueryResult {

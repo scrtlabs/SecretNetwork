@@ -244,7 +244,7 @@ fn start_engine(
 
     // Instantiate a module with our imports and assert that there is no `start` function.
     let module_instance = ModuleInstance::new(&module, &imports_builder).map_err(|err| {
-        trace!("Error in instantiation: {:?}", err);
+        error!("Error in instantiation: {:?}", err);
         EnclaveError::InvalidWasm
     })?;
     if module_instance.has_start() {

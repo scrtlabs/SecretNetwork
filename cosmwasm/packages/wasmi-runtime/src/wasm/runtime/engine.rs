@@ -46,7 +46,7 @@ impl Engine {
     pub fn write_to_memory(&mut self, buffer: &[u8]) -> Result<u32, InterpreterError> {
         // WASM pointers are pointers to "Region"
         // Region is a struct that looks like this:
-        // ptr_to_region -> | 4byte = buffer_addr | 4bytes = buffer_len |
+        // ptr_to_region -> | 4byte = buffer_addr | 4bytes = buffer_cap | 4bytes = buffer_len |
 
         // allocate return a poiter to a region
         let ptr_to_region_in_wasm_vm = self.allocate(buffer.len() as u32)?;
@@ -54,14 +54,18 @@ impl Engine {
         // extract the buffer pointer from the region
         let buffer_addr_in_wasm: u32 = self.memory().get_value::<u32>(ptr_to_region_in_wasm_vm)?;
 
-        let buffer_len_in_wasm: u32 = self
+        let buffer_cap_in_wasm: u32 = self
             .memory()
             .get_value::<u32>(ptr_to_region_in_wasm_vm + 4)?;
-        if buffer_len_in_wasm != buffer.len() as u32 {
+
+        if buffer_cap_in_wasm != buffer.len() as u32 {
             // TODO return an Error? Or maybe this is already covered by allocate?
         }
 
         self.memory().set(buffer_addr_in_wasm, buffer)?;
+
+        self.memory()
+            .set_value::<u32>(ptr_to_region_in_wasm_vm + 8, buffer.len() as u32)?;
 
         // return the WASM pointer
         Ok(ptr_to_region_in_wasm_vm)
@@ -69,7 +73,7 @@ impl Engine {
 
     pub fn extract_vector(&self, vec_ptr_ptr: u32) -> Result<Vec<u8>, InterpreterError> {
         let ptr: u32 = self.memory().get_value(vec_ptr_ptr)?;
-        let len: u32 = self.memory().get_value(vec_ptr_ptr + 4)?;
+        let len: u32 = self.memory().get_value(vec_ptr_ptr + 8)?;
 
         self.memory().get(ptr, len as usize)
     }
