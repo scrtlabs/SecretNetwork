@@ -28,14 +28,16 @@ pub use crate::calls::{
     call_query, call_query_raw,
 };
 pub use crate::checksum::Checksum;
-pub use crate::errors::{FfiError, FfiResult, VmError, VmResult};
+pub use crate::errors::{
+    CommunicationError, CommunicationResult, FfiError, FfiResult, VmError, VmResult,
+};
 pub use crate::features::features_from_csv;
 pub use crate::instance::Instance;
 /*
 pub use crate::modules::FileSystemCache;
 */
 pub use crate::serde::{from_slice, to_vec};
-pub use crate::traits::{Api, Extern, Querier, QuerierResult, ReadonlyStorage, Storage};
+pub use crate::traits::{Api, Extern, Querier, QuerierResult, Storage};
 
 #[cfg(feature = "iterator")]
 pub use crate::traits::{NextItem, StorageIterator};

@@ -24,6 +24,10 @@
   can still make use of the field.
 - Rename `MockQuerier::with_staking` to `MockQuerier::update_staking` to match
   `::update_balance`.
+- The obsolete `StdError::NullPointer` and `null_pointer` were removed.
+- Error creator functions are now in type itself, e.g.
+  `StdError::invalid_base64` instead of `invalid_base64`. The free functions are
+  deprecated and will be removed before 1.0.
 
 **cosmwasm-storage**
 
@@ -77,6 +81,7 @@
   in `CommunicationError::InvalidUtf8`, which is not reported back to the
   contract. A standard library should ensure this never happens by correctly
   encoding string input values.
+- Merge trait `ReadonlyStorage` into `Storage`.
 
 ## 0.8.1 (2020-06-08)
 

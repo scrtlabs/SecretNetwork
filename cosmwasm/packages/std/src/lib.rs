@@ -2,6 +2,7 @@
 
 mod coins;
 mod encoding;
+mod entry_points;
 mod errors;
 mod init_handle;
 #[cfg(feature = "iterator")]
@@ -15,9 +16,10 @@ mod types;
 
 pub use crate::coins::{coin, coins, has_coins, Coin};
 pub use crate::encoding::Binary;
+#[allow(deprecated)]
 pub use crate::errors::{
-    generic_err, invalid_base64, invalid_utf8, not_found, null_pointer, parse_err, serialize_err,
-    unauthorized, underflow, StdError, StdResult, SystemError, SystemResult,
+    generic_err, invalid_base64, invalid_utf8, not_found, parse_err, serialize_err, unauthorized,
+    underflow, StdError, StdResult, SystemError, SystemResult,
 };
 pub use crate::init_handle::{
     log, BankMsg, CosmosMsg, HandleResponse, HandleResult, InitResponse, InitResult, LogAttribute,

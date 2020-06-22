@@ -2,9 +2,9 @@
 # It is not intended for manual editing.
 [[package]]
 name = "addr2line"
-version = "0.12.1"
+version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a49806b9dadc843c61e7c97e72490ad7f7220ae249012fbda9ad0609457c0543"
+checksum = "602d785912f476e480434627e8732e6766b760c045bbf897d9dfaa9f4fbd399c"
 dependencies = [
  "gimli 0.21.0",
 ]
@@ -204,7 +204,7 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 
 [[package]]
 name = "cosmwasm-schema"
-version = "0.9.0-alpha1"
+version = "0.9.0-alpha2"
 dependencies = [
  "schemars",
  "serde_json",
@@ -212,7 +212,7 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-sgx-vm"
-version = "0.9.0-alpha1"
+version = "0.9.0-alpha2"
 dependencies = [
  "base64 0.12.2",
  "cosmwasm-std",
@@ -237,7 +237,7 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-std"
-version = "0.9.0-alpha1"
+version = "0.9.0-alpha2"
 dependencies = [
  "base64 0.11.0",
  "schemars",
@@ -248,7 +248,7 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-storage"
-version = "0.9.0-alpha1"
+version = "0.9.0-alpha2"
 dependencies = [
  "cosmwasm-std",
  "serde",
@@ -795,7 +795,7 @@ checksum = "2439c63f3f6139d1b57529d16bc3b8bb855230c8efcc5d3a896c8bea7c3b1e84"
 
 [[package]]
 name = "reflect"
-version = "0.9.0-alpha1"
+version = "0.9.0-alpha2"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-sgx-vm",
@@ -1023,9 +1023,9 @@ checksum = "2d67a5a62ba6e01cb2192ff309324cb4875d0c451d55fe2319433abe7a05a8ee"
 
 [[package]]
 name = "syn"
-version = "1.0.31"
+version = "1.0.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5304cfdf27365b7585c25d4af91b35016ed21ef88f17ced89c7093b43dba8b6"
+checksum = "e8d5d96e8cbb005d6959f119f773bfaebb5684296108fb32600c00cde305b2cd"
 dependencies = [
  "proc-macro2",
  "quote",
