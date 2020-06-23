@@ -71,6 +71,26 @@ pub fn read_encrypted_key(
         })?
 }
 
+pub fn remove_encrypted_key(
+    key: &[u8],
+    context: &Ctx,
+    contract_key: &ContractKey,
+) -> Result<(), DbError> {
+    let scrambled_field_name = field_name_digest(key, contract_key);
+
+    debug!("Removing scrambled field name: {:?}", scrambled_field_name);
+
+    // Call remove_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
+    // fn remove_db(context: Ctx, key: &[u8]) {
+    remove_db(context, &scrambled_field_name).map_err(|err| {
+        error!(
+            "remove_db() got an error from ocall_remove_db, stopping wasm: {:?}",
+            err
+        );
+        DbError::FailedRemove
+    })
+}
+
 pub fn field_name_digest(field_name: &[u8], contract_key: &ContractKey) -> [u8; 32] {
     let mut data: Vec<u8> = field_name.to_vec();
     data.extend_from_slice(contract_key);
@@ -94,6 +114,14 @@ fn read_db(context: &Ctx, key: &[u8]) -> SgxResult<Option<Vec<u8>>> {
         let enclave_buffer = enclave_buffer.assume_init();
         // TODO add validation of this pointer before returning its contents.
         Ok(exports::recover_buffer(enclave_buffer))
+    }
+}
+
+/// Safe wrapper around reads from the contract storage
+fn remove_db(context: &Ctx, key: &[u8]) -> SgxError {
+    match unsafe { imports::ocall_remove_db(context.unsafe_clone(), key.as_ptr(), key.len()) } {
+        sgx_status_t::SGX_SUCCESS => Ok(()),
+        error_status => Err(error_status),
     }
 }
 

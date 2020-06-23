@@ -32,7 +32,6 @@ pub unsafe fn recover_buffer(ptr: UserSpaceBuffer) -> Option<Vec<u8>> {
 }
 
 /// Read a key from the contracts key-value store.
-/// instance_id should be the sha256 of the wasm blob.
 #[no_mangle]
 pub extern "C" fn ocall_read_db(context: Ctx, key: *const u8, key_len: usize) -> EnclaveBuffer {
     let key = unsafe { std::slice::from_raw_parts(key, key_len) };
@@ -68,8 +67,31 @@ pub extern "C" fn ocall_read_db(context: Ctx, key: *const u8, key_len: usize) ->
         .unwrap_or(unsafe { null_buffer.unsafe_clone() })
 }
 
+/// Remove a key from the contracts key-value store.
+#[no_mangle]
+pub extern "C" fn ocall_remove_db(context: Ctx, key: *const u8, key_len: usize) {
+    let key = unsafe { std::slice::from_raw_parts(key, key_len) };
+
+    info!(
+        target: module_path!(),
+        "ocall_remove_db() called with len: {:?} key: {:?}",
+        key_len,
+        String::from_utf8_lossy(key)
+    );
+    let null_buffer = EnclaveBuffer {
+        ptr: std::ptr::null_mut(),
+    };
+
+    let implementation = unsafe { get_implementations_from_context(&context).remove_db };
+
+    // We explicitly ignore this potential panic here because we have no way of handling it at the moment.
+    // In the future, if we see that panics do occur here, we should add a way to report this to the enclave.
+    // TODO handle errors and return the gas cost
+    let _ = std::panic::catch_unwind(|| implementation(context, key, value).unwrap());
+    // TODO add logging if we fail to write
+}
+
 /// Write a value to the contracts key-value store.
-/// instance_id should be the sha256 of the wasm blob.
 #[no_mangle]
 pub extern "C" fn ocall_write_db(
     context: Ctx,
@@ -105,6 +127,7 @@ pub extern "C" fn ocall_write_db(
 /// appropriate for it.
 struct ExportImplementations {
     read_db: fn(context: Ctx, key: &[u8]) -> VmResult<(Option<Vec<u8>>, u64)>,
+    remove_db: fn(context: Ctx, key: &[u8]) -> VmResult<u64>,
     write_db: fn(context: Ctx, key: &[u8], value: &[u8]) -> VmResult<u64>,
 }
 
@@ -116,6 +139,7 @@ impl ExportImplementations {
     {
         Self {
             read_db: ocall_read_db_impl::<S, Q>,
+            remove_db: ocall_remove_db_impl::<S, Q>,
             write_db: ocall_write_db_impl::<S, Q>,
         }
     }
@@ -156,6 +180,16 @@ where
 {
     with_storage_from_context::<S, Q, _, _>(&mut context, |storage: &mut S| {
         storage.get(key).map_err(Into::into)
+    })
+}
+
+fn ocall_remove_db_impl<S, Q>(mut context: Ctx, key: &[u8]) -> VmResult<u64>
+where
+    S: Storage,
+    Q: Querier,
+{
+    with_storage_from_context::<S, Q, _, _>(&mut context, |storage: &mut S| {
+        storage.remove(key).map_err(Into::into)
     })
 }
 

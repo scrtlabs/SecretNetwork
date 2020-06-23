@@ -17,6 +17,8 @@ extern "C" {
         key_len: usize,
     ) -> sgx_status_t;
 
+    pub fn ocall_remove_db(context: Ctx, key: *const u8, key_len: usize) -> sgx_status_t;
+
     pub fn ocall_write_db(
         context: Ctx,
         key: *const u8,

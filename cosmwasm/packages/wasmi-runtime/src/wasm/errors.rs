@@ -27,6 +27,7 @@ pub enum WasmEngineError {
 #[non_exhaustive]
 pub enum DbError {
     FailedRead,
+    FailedRemove,
     FailedWrite,
     FailedEncryption,
     FailedDecryption,

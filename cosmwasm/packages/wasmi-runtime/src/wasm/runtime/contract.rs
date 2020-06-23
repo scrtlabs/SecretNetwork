@@ -6,7 +6,7 @@ use enclave_ffi_types::Ctx;
 
 use crate::consts::BECH32_PREFIX_ACC_ADDR;
 use crate::wasm::contract_validation::ContractKey;
-use crate::wasm::db::{read_encrypted_key, write_encrypted_key};
+use crate::wasm::db::{read_encrypted_key, remove_encrypted_key, write_encrypted_key};
 use crate::wasm::errors::WasmEngineError;
 use crate::wasm::runtime::traits::WasmiApi;
 
@@ -163,8 +163,27 @@ impl WasmiApi for ContractInstance {
     /// 1. "key" to delete from Tendermint (buffer of bytes)
     /// key is a pointer to a region "struct" of "pointer" and "length"
     /// A Region looks like { ptr: u32, len: u32 }
-    fn remove_db_index(&mut self, _state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
-        todo!()
+    fn remove_db_index(&mut self, state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+        let state_key_name = self
+            .extract_vector(state_key_ptr_ptr as u32)
+            .map_err(|err| {
+                error!(
+                    "remove_db() error while trying to read state_key_name from wasm memory: {:?}",
+                    err
+                );
+                WasmEngineError::MemoryReadError
+            })?;
+
+        trace!(
+            "read_db() was called from WASM code with state_key_name: {:?}",
+            String::from_utf8_lossy(&state_key_name)
+        );
+
+        // Call remove_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
+        remove_encrypted_key(&state_key_name, &self.context, &self.contract_key)
+            .map_err(WasmEngineError::from)?;
+
+        Ok(None)
     }
 
     /// Args:
