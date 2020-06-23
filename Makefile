@@ -169,9 +169,14 @@ docker_bootstrap:
 
 docker_node:
 	docker build --build-arg SECRET_NODE_TYPE=NODE -t enigmampc/secret_node .
+
 # while developing:
 build-enclave:
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime
+
+# while developing:
+check-enclave:
+	$(MAKE) -C cosmwasm/packages/wasmi-runtime check
 
 # while developing:
 clean-enclave:

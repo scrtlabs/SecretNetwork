@@ -21,17 +21,7 @@ impl Engine {
     }
 
     pub fn allocate(&mut self, len: u32) -> Result<u32, InterpreterError> {
-        match self.module.invoke_export(
-            "allocate",
-            &[RuntimeValue::I32(len as i32)],
-            &mut self.contract_instance,
-        )? {
-            Some(RuntimeValue::I32(offset)) => Ok(offset as u32),
-            other => Err(InterpreterError::Value(format!(
-                "allocate method returned value which wasn't u32: {:?}",
-                other
-            ))),
-        }
+        self.contract_instance.allocate(len)
     }
 
     pub fn memory(&self) -> MemoryRef {
@@ -56,7 +46,7 @@ impl Engine {
 
         let buffer_len_in_wasm: u32 = self
             .memory()
-            .get_value::<u32>(ptr_to_region_in_wasm_vm + 4)?;
+            .get_value::<u32>(ptr_to_region_in_wasm_vm + 8)?;
         if buffer_len_in_wasm != buffer.len() as u32 {
             // TODO return an Error? Or maybe this is already covered by allocate?
         }
@@ -69,7 +59,7 @@ impl Engine {
 
     pub fn extract_vector(&self, vec_ptr_ptr: u32) -> Result<Vec<u8>, InterpreterError> {
         let ptr: u32 = self.memory().get_value(vec_ptr_ptr)?;
-        let len: u32 = self.memory().get_value(vec_ptr_ptr + 4)?;
+        let len: u32 = self.memory().get_value(vec_ptr_ptr + 8)?;
 
         self.memory().get(ptr, len as usize)
     }

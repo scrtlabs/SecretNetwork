@@ -235,17 +235,8 @@ fn start_engine(
     }
     let module = module_instance.not_started_instance().clone();
 
-    // helping the IDE
-    let deref_module: &ModuleInstance = &*module;
-
-    let memory_ref = deref_module
-        .export_by_name("memory")
-        .expect("Module expected to have 'memory' export")
-        .as_memory()
-        .cloned()
-        .expect("'memory' export should be of memory type");
-
-    let contract_instance = ContractInstance::new(context, memory_ref, gas_limit, *contract_key);
+    let contract_instance =
+        ContractInstance::new(context, module.clone(), gas_limit, *contract_key);
 
     Ok(Engine::new(contract_instance, module))
 }
