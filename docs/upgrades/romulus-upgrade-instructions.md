@@ -167,12 +167,10 @@ exiting...
 
 *** NOTE: *Chain of Secrets* has already performed these steps! You can go to Step #3 to proceed. ***
 
-CoS will notify mainnet validators and full-node operators when this step is complete.
+Outlier Ventures' statement on running the successful Romulus upgrade on 6/17/2020, where they independently ran the genesis file migration and verified hashes 🎉
+https://ipfs.io/ipfs/QmPgHFFia64tEPQm91nV2S4bwW47d3hRMt4rmYyntTCDpA
 
-It is recommended that participants go through the steps to independently verify the migrated genesis file.
-
-See the [Addendum](#addendum) for detailed instructions.
-
+See the [Addendum](#addendum) to see the process used to migrate the genesis file.
 
 ## All Full-Node Operators and Validators
 
