@@ -215,8 +215,8 @@ func TestSanity(t *testing.T) {
 	walletA := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
 	walletB := createFakeFundedAccount(ctx, accKeeper, topUp)
 
-	// https://github.com/CosmWasm/cosmwasm-examples/blob/f5ea00a85247abae8f8cbcba301f94ef21c66087/erc20/src/contract.rs
-	wasmCode, err := ioutil.ReadFile("./testdata/erc20-f5ea00a85247abae8f8cbcba301f94ef21c66087.wasm")
+	// https://github.com/CosmWasm/cosmwasm-examples/blob/36e3b7b5cb6fce90d70ecbf5555e951ea22ad7d9/erc20/src/contract.rs
+	wasmCode, err := ioutil.ReadFile("./testdata/erc20-36e3b7b5cb6fce90d70ecbf5555e951ea22ad7d9.wasm")
 	require.NoError(t, err)
 
 	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -253,14 +253,15 @@ func TestSanity(t *testing.T) {
 
 	require.Empty(t, err)
 	require.Empty(t, data)
-	require.Equal(t, 1, len(wasmEvents))
 	require.Equal(t,
-		[][]cosmwasm.LogAttribute{{
-			{Key: "contract_address", Value: contractAddress.String()},
-			{Key: "action", Value: "transfer"},
-			{Key: "sender", Value: walletA.String()},
-			{Key: "recipient", Value: walletB.String()},
-		}},
+		[][]cosmwasm.LogAttribute{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "action", Value: "transfer"},
+				{Key: "sender", Value: walletA.String()},
+				{Key: "recipient", Value: walletB.String()},
+			},
+		},
 		wasmEvents,
 	)
 
