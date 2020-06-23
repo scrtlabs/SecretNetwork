@@ -13,7 +13,7 @@ set -euv
 #enigmacli config indent true
 #enigmacli config trust-node true
 #enigmacli config keyring-backend test
-rm -rf ~/.enigmad
+# rm -rf ~/.enigmad
 
 mkdir -p /root/.enigmad/.node
 
