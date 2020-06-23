@@ -46,7 +46,7 @@ enigmacli q register secret-network-params --node "$RPC_URL" 2> /dev/null
 
 enigmad configure-secret node-master-cert.der "$SEED"
 
-curl http://"$RPC_URL"/genesis | jq -r .result > /root/.enigmad/config/genesis.json
+curl http://"$RPC_URL"/genesis | jq -r .result.genesis > /root/.enigmad/config/genesis.json
 
 echo "Downloaded genesis file from: $GENESISPATH.."
 

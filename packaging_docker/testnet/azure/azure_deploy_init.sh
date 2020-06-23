@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 set -euv
 
 # REGISTRATION_SERVICE=
@@ -15,16 +14,17 @@ set -euv
 #enigmacli config trust-node true
 #enigmacli config keyring-backend test
 # rm -rf ~/.enigmad
-file=attestation_cert.der
+file=/root/.enigmad/config/attestation_cert.der
 if [ ! -e "$file" ]
 then
+  rm -rf ~/.enigmad/* || true
+
   mkdir -p /root/.enigmad/.node
 
   # enigmad init "$(hostname)" --chain-id enigma-testnet || true
 
   enigmad init "$MONIKER" --chain-id "$CHAINID"
   echo "Initializing chain: $CHAINID with node moniker: $(hostname)"
-
 
   sed -i 's/persistent_peers = ""/persistent_peers = "'"$PERSISTENT_PEERS"'"/g' ~/.enigmad/config/config.toml
   echo "Set persistent_peers: $PERSISTENT_PEERS"
@@ -40,23 +40,22 @@ then
 
   cp attestation_cert.der /root/.enigmad/config/
 
-  openssl base64 -in attestation_cert.der -out b64_cert
+  openssl base64 -A -in attestation_cert.der -out b64_cert
   # enigmacli tx register auth attestation_cert.der --node "$RPC_URL" -y --from a
-
-  curl http://$REGISTRATION_SERVICE/register?cert=$(cat b64_cert)
+  curl -G --data-urlencode "cert=$(cat b64_cert)" http://"$REGISTRATION_SERVICE"/register
 
   sleep 5
 
-  SEED=$(enigmacli q register seed "$PUBLIC_KEY" --node "$RPC_URL" 2> /dev/null | cut -c 3-)
+  SEED=$(enigmacli q register seed "$PUBLIC_KEY" --node tcp://"$RPC_URL" 2> /dev/null | cut -c 3-)
   echo "SEED: $SEED"
 
-  enigmacli q register secret-network-params --node "$RPC_URL" 2> /dev/null
+  enigmacli q register secret-network-params --node tcp://"$RPC_URL" 2> /dev/null
 
   enigmad configure-secret node-master-cert.der "$SEED"
 
-  curl http://"$RPC_URL"/genesis | jq -r .result > /root/.enigmad/config/genesis.json
+  curl http://"$RPC_URL"/genesis | jq -r .result.genesis > /root/.enigmad/config/genesis.json
 
-  echo "Downloaded genesis file from: $GENESISPATH.."
+  echo "Downloaded genesis file from $RPC_URL "
 
   enigmad validate-genesis
 fi
