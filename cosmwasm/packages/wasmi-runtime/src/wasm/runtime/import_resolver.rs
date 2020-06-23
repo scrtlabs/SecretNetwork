@@ -31,13 +31,18 @@ impl ModuleImportResolver for WasmiImportResolver {
         let func_ref = match func_name {
             // fn read_db(key: *const c_void, value: *mut c_void) -> i32;
             "db_read" => FuncInstance::alloc_host(
-                Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
+                Signature::new(&[ValueType::I32][..], Some(ValueType::I32)),
                 HostFunctions::ReadDbIndex.into(),
             ),
             // fn write_db(key: *const c_void, value: *mut c_void);
             "db_write" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32, ValueType::I32][..], None),
                 HostFunctions::WriteDbIndex.into(),
+            ),
+            // fn db_remove(key: *const c_void, value: *mut c_void) -> i32;
+            "db_remove" => FuncInstance::alloc_host(
+                Signature::new(&[ValueType::I32][..], None),
+                HostFunctions::RemoveDbIndex.into(),
             ),
             // fn canonicalize_address(human: *const c_void, canonical: *mut c_void) -> i32;
             "canonicalize_address" => FuncInstance::alloc_host(

@@ -10,9 +10,10 @@ use super::traits::WasmiApi;
 pub enum HostFunctions {
     ReadDbIndex = 0,
     WriteDbIndex = 1,
-    CanonicalizeAddressIndex = 2,
-    HumanizeAddressIndex = 3,
-    GasIndex = 4,
+    RemoveDbIndex = 2,
+    CanonicalizeAddressIndex = 3,
+    HumanizeAddressIndex = 4,
+    GasIndex = 5,
     Unknown,
 }
 
@@ -55,10 +56,17 @@ impl Externals for ContractInstance {
                     );
                     err
                 })?;
-                // Get pointer to the region of the value buffer
-                let value: i32 = args.nth_checked(1)?;
-
-                self.read_db_index(key, value)
+                self.read_db_index(key)
+            }
+            HostFunctions::RemoveDbIndex => {
+                let key: i32 = args.nth_checked(0).map_err(|err| {
+                    error!(
+                        "remove_db() error reading arguments, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+                self.remove_db_index(key)
             }
             HostFunctions::WriteDbIndex => {
                 let key: i32 = args.nth_checked(0).map_err(|err| {
@@ -85,7 +93,7 @@ impl Externals for ContractInstance {
 
                 let canonical: i32 = args.nth_checked(1)?;
 
-                self.canonicalize_address_index(canonical, human)
+                self.canonicalize_address_index(human, canonical)
             }
             // fn humanize_address(canonical: *const c_void, human: *mut c_void) -> i32;
             HostFunctions::HumanizeAddressIndex => {
@@ -103,7 +111,7 @@ impl Externals for ContractInstance {
                         err
                     );
                     err
-                })?;
+                })?; 
 
                 self.humanize_address_index(canonical, human)
             }
@@ -116,7 +124,7 @@ impl Externals for ContractInstance {
             }
             HostFunctions::Unknown => {
                 error!("unknown function index");
-                Err(WasmEngineError::DbError.into())
+                Err(WasmEngineError::NonExistentImportFunction.into())
             }
         }
     }

@@ -46,7 +46,7 @@ pub fn read_encrypted_key(
     key: &[u8],
     context: &Ctx,
     contract_key: &ContractKey,
-) -> Result<Vec<u8>, DbError> {
+) -> Result<Option<Vec<u8>>, DbError> {
     let scrambled_field_name = field_name_digest(key, contract_key);
 
     debug!(
@@ -58,20 +58,37 @@ pub fn read_encrypted_key(
     // This returns the value from Tendermint
     // fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
     read_db(context, &scrambled_field_name)
+        .map(|val| {
+            val.map(|as_slice| decrypt_key(&scrambled_field_name, &as_slice, contract_key))
+                .transpose()
+        })
         .map_err(|err| {
             error!(
                 "read_db() got an error from ocall_read_db, stopping wasm: {:?}",
                 err
             );
             DbError::FailedRead
-        })
-        .map(|val| {
-            if let Some(as_slice) = val {
-                decrypt_key(&scrambled_field_name, &as_slice, contract_key)
-            } else {
-                Err(DbError::EmptyValue)
-            }
         })?
+}
+
+pub fn remove_encrypted_key(
+    key: &[u8],
+    context: &Ctx,
+    contract_key: &ContractKey,
+) -> Result<(), DbError> {
+    let scrambled_field_name = field_name_digest(key, contract_key);
+
+    debug!("Removing scrambled field name: {:?}", scrambled_field_name);
+
+    // Call remove_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
+    // fn remove_db(context: Ctx, key: &[u8]) {
+    remove_db(context, &scrambled_field_name).map_err(|err| {
+        error!(
+            "remove_db() got an error from ocall_remove_db, stopping wasm: {:?}",
+            err
+        );
+        DbError::FailedRemove
+    })
 }
 
 pub fn field_name_digest(field_name: &[u8], contract_key: &ContractKey) -> [u8; 32] {
@@ -97,6 +114,14 @@ fn read_db(context: &Ctx, key: &[u8]) -> SgxResult<Option<Vec<u8>>> {
         let enclave_buffer = enclave_buffer.assume_init();
         // TODO add validation of this pointer before returning its contents.
         Ok(exports::recover_buffer(enclave_buffer))
+    }
+}
+
+/// Safe wrapper around reads from the contract storage
+fn remove_db(context: &Ctx, key: &[u8]) -> SgxError {
+    match unsafe { imports::ocall_remove_db(context.unsafe_clone(), key.as_ptr(), key.len()) } {
+        sgx_status_t::SGX_SUCCESS => Ok(()),
+        error_status => Err(error_status),
     }
 }
 

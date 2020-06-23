@@ -87,6 +87,12 @@ enclave {
             uintptr_t key_len
         ) allow (ecall_allocate);
 
+        void ocall_remove_db(
+            Ctx context,
+            [in, count=key_len] const uint8_t* key,
+            uintptr_t key_len
+        );
+
         void ocall_write_db(
             Ctx context,
             [in, count=key_len] const uint8_t* key,
