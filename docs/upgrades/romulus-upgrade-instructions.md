@@ -246,9 +246,16 @@ echo "6291811bafcbebb44d93b34422cec683a04f7b168ccbe8965392ff73bfc46c39 secret-1-
 
 Initialize and configure `secretd` with a placeholder moniker "blabla" because it will be overwritten with the correct `app.toml` file:
 
+*NOTE: if you are upgrading to this release from scratch or on a new node, change "blabla" to a moniker that you wish.
+
 ```bash
 secretd init blabla --chain-id secret-1
 
+```
+
+*NOTE: do these commands ONLY if you're upgrading an existing enigma-node. If you are trying to install the Romulus Upgrade from scratch, you can SKIP these steps.
+
+```bash
 cp ~/.enigmad/config/{app.toml,config.toml,addrbook.json} ~/.secretd/config
 cp ~/.enigmad/config/{priv_validator_key.json,node_key.json} ~/.secretd/config
 
