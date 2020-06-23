@@ -73,12 +73,12 @@ pub fn encrypt_output(
         EnclaveError::FailedToDeserialize
     })?;
 
-    if let Value::String(err) = &v["err"] {
-        v["err"] = encrypt_serializeable(&key, &err)?;
-    } else if let Value::String(ok) = &v["ok"] {
+    if let Value::String(err) = &v["Err"] {
+        v["Err"] = encrypt_serializeable(&key, &err)?;
+    } else if let Value::String(ok) = &v["Ok"] {
         // query
-        v["ok"] = encrypt_serializeable(&key, &ok)?;
-    } else if let Value::Object(ok) = &mut v["ok"] {
+        v["Ok"] = encrypt_serializeable(&key, &ok)?;
+    } else if let Value::Object(ok) = &mut v["Ok"] {
         // init or handle or migrate
         if let Value::Array(msgs) = &mut ok["messages"] {
             for msg in msgs {
@@ -93,7 +93,7 @@ pub fn encrypt_output(
             }
         }
 
-        if let Value::Array(events) = &mut v["ok"]["log"] {
+        if let Value::Array(events) = &mut ok["log"] {
             for e in events {
                 if let Value::String(k) = &mut e["key"] {
                     e["key"] = encrypt_serializeable(&key, k)?;
@@ -117,7 +117,7 @@ pub fn encrypt_output(
         EnclaveError::FailedToSerialize
     })?;
 
-    debug!("after encryption: {:?}", String::from_utf8_lossy(&output));
+    debug!("After encryption: {:?}", String::from_utf8_lossy(&output));
 
     Ok(output)
 }
