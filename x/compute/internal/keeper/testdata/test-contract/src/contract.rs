@@ -1,9 +1,20 @@
+// use snafu::ResultExt;
+
+// use cosmwasm::encoding::Binary;
+// use cosmwasm_std::to_vec;
+// use cosmwasm_std::{serialize_err, to_binary, to_vec, unauthorized};
+// use cosmwasm::traits::{Api, Extern, Storage};
+// use cosmwasm::types::{log, CosmosMsg, Env, HumanAddr, Response};
+use cosmwasm_storage::{PrefixedStorage, ReadonlyPrefixedStorage};
+
 use cosmwasm_std::{
-    generic_err, log, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HandleResult, HumanAddr,
-    InitResponse, InitResult, MigrateResponse, Querier, QueryResult, StdResult, Storage, WasmMsg,
+    generic_err, log, to_binary, to_vec, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
+    HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse, Querier, QueryResponse,
+    QueryResult, StdResult, Storage, WasmMsg,
 };
 
-use crate::msg::{HandleMsg, InitMsg, MigrateMsg, QueryMsg};
+use crate::msg::{HandleMsg, InitMsg, MigrateMsg, OwnerResponse, QueryMsg};
+use crate::state::{config, config_read, State};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -11,38 +22,42 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> InitResult {
     match msg {
-        InitMsg::Nop {} => init_nop(deps, env),
-        InitMsg::Callback { contract_addr } => init_with_callback(deps, env, contract_addr),
-        InitMsg::Error {} => init_error(deps, env),
+        InitMsg::Nop {} => Ok(init_nop(deps, env)),
+        InitMsg::Callback { contract_addr } => Ok(init_with_callback(deps, env, contract_addr)),
+        InitMsg::ContractError {} => Err(generic_err("Test error! 🌈")),
+        InitMsg::State {} => Ok(init_state(deps, env)),
     }
 }
 
-fn init_nop<S: Storage, A: Api, Q: Querier>(_deps: &mut Extern<S, A, Q>, _env: Env) -> InitResult {
-    Ok(InitResponse {
+fn init_state<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    _env: Env,
+) -> InitResponse {
+    let mut store = PrefixedStorage::new(b"prefix", &mut deps.storage);
+
+    InitResponse::default()
+}
+
+fn init_nop<S: Storage, A: Api, Q: Querier>(deps: &mut Extern<S, A, Q>, env: Env) -> InitResponse {
+    InitResponse {
         messages: vec![],
         log: vec![log("init", "🌈")],
-    })
-}
-fn init_error<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
-    _env: Env,
-) -> InitResult {
-    Err(generic_err("Test error! 🌈"))
+    }
 }
 
 fn init_with_callback<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
     contract_addr: HumanAddr,
-) -> InitResult {
-    Ok(InitResponse {
+) -> InitResponse {
+    InitResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
             msg: Binary("{{\"c\":{{\"x\":0,\"y\":13}}}}".as_bytes().to_vec()),
             send: vec![],
         })],
         log: vec![log("init with a callback", "🦄")],
-    })
+    }
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
@@ -50,23 +65,24 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: HandleMsg,
 ) -> HandleResult {
-    Ok(match msg {
+    match msg {
         HandleMsg::A {
             contract_addr,
             x,
             y,
-        } => a(deps, env, contract_addr, x, y),
+        } => Ok(a(deps, env, contract_addr, x, y)),
         HandleMsg::B {
             contract_addr,
             x,
             y,
-        } => b(deps, env, contract_addr, x, y),
-        HandleMsg::C { x, y } => c(deps, env, x, y),
-        HandleMsg::UnicodeData {} => unicode_data(deps, env),
-        HandleMsg::EmptyLogKeyValue {} => empty_log_key_value(deps, env),
-        HandleMsg::EmptyData {} => empty_data(deps, env),
-        HandleMsg::NoData {} => no_data(deps, env),
-    })
+        } => Ok(b(deps, env, contract_addr, x, y)),
+        HandleMsg::C { x, y } => Ok(c(deps, env, x, y)),
+        HandleMsg::UnicodeData {} => Ok(unicode_data(deps, env)),
+        HandleMsg::EmptyLogKeyValue {} => Ok(empty_log_key_value(deps, env)),
+        HandleMsg::EmptyData {} => Ok(empty_data(deps, env)),
+        HandleMsg::NoData {} => Ok(no_data(deps, env)),
+        HandleMsg::ContractError {} => Err(generic_err("Test error! 🌈")),
+    }
 }
 
 pub fn a<S: Storage, A: Api, Q: Querier>(
@@ -179,22 +195,24 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     _deps: &Extern<S, A, Q>,
     _msg: QueryMsg,
 ) -> QueryResult {
-    Ok(Binary(vec![]))
-    // match msg {
-    //     QueryMsg::Owner {} => query_owner(deps),
-    // }
+    match _msg {
+        QueryMsg::Owner {} => query_owner(_deps),
+        QueryMsg::ContractError {} => query_contract_error(),
+    }
 }
 
-// fn query_owner<S: Storage, A: Api,Q:Querier>(deps: &Extern<S, A,Q>) -> QueryResponse {
-//     let state = config_read(&deps.storage).load()?;
+fn query_owner<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Binary> {
+    let state = config_read(&deps.storage).load()?;
 
-//     let resp = OwnerResponse {
-//         owner: deps.api.human_address(&state.owner)?,
-//     };
-//     to_vec(&resp).context(SerializeErr {
-//         kind: "OwnerResponse",
-//     })
-// }
+    let resp = OwnerResponse {
+        owner: deps.api.human_address(&state.owner)?,
+    };
+    to_binary(&resp)
+}
+
+fn query_contract_error() -> QueryResult {
+    Err(generic_err("Test error! 🌈"))
+}
 
 pub fn migrate<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,

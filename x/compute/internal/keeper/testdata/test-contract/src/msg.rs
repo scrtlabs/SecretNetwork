@@ -1,14 +1,15 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::HumanAddr;
+use cosmwasm_std::{CosmosMsg, HumanAddr};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum InitMsg {
     Nop {},
     Callback { contract_addr: HumanAddr },
-    Error {},
+    ContractError {},
+    State {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -32,12 +33,14 @@ pub enum HandleMsg {
     EmptyLogKeyValue {},
     EmptyData {},
     NoData {},
+    ContractError {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum QueryMsg {
     Owner {},
+    ContractError {},
 }
 
 // We define a custom struct for each query response
