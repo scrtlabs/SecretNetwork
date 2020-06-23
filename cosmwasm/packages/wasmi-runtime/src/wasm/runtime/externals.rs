@@ -111,7 +111,7 @@ impl Externals for ContractInstance {
                         err
                     );
                     err
-                })?;
+                })?; 
 
                 self.humanize_address_index(canonical, human)
             }
@@ -124,7 +124,7 @@ impl Externals for ContractInstance {
             }
             HostFunctions::Unknown => {
                 error!("unknown function index");
-                Err(WasmEngineError::DbError.into())
+                Err(WasmEngineError::NonExistentImportFunction.into())
             }
         }
     }

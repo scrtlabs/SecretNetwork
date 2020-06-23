@@ -20,6 +20,7 @@ pub enum WasmEngineError {
     InputWrongPrefix,
     InputWrongLength,
     OutputWrongLength,
+    NonExistentImportFunction,
 }
 
 #[derive(Debug, Display)]

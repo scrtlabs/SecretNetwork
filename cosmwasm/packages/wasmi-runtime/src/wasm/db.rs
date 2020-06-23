@@ -58,14 +58,17 @@ pub fn read_encrypted_key(
     // This returns the value from Tendermint
     // fn read_db(context: Ctx, key: &[u8]) -> Option<Vec<u8>> {
     read_db(context, &scrambled_field_name)
+        .map(|val| {
+            val.map(|as_slice| decrypt_key(&scrambled_field_name, &as_slice, contract_key))
+                .transpose()
+        })
         .map_err(|err| {
             error!(
                 "read_db() got an error from ocall_read_db, stopping wasm: {:?}",
                 err
             );
             DbError::FailedRead
-        })
-        .map(|val| val.map(|as_slice| decrypt_key(&scrambled_field_name, &as_slice, contract_key)))?
+        })?
 }
 
 pub fn field_name_digest(field_name: &[u8], contract_key: &ContractKey) -> [u8; 32] {
