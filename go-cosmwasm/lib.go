@@ -106,6 +106,7 @@ func (w *Wasmer) Instantiate(
 	if err != nil {
 		return nil, nil, gasUsed, err
 	}
+
 	if resp.Err != nil {
 		return nil, nil, gasUsed, fmt.Errorf("%v", resp.Err)
 	}
@@ -135,14 +136,18 @@ func (w *Wasmer) Execute(
 
 	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, &gasMeter, &store, &goapi, &querier, gasLimit)
 
-	var resp types.Result
+	var resp types.CosmosResponse
 	err = json.Unmarshal(data, &resp)
 
 	if err != nil {
 		return nil, gasUsed, err
 	}
 
-	return &resp, gasUsed, nil
+	if resp.Err != nil {
+		return nil, gasUsed, fmt.Errorf("%v", resp.Err)
+	}
+
+	return resp.Ok, gasUsed, nil
 }
 
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be

@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -54,79 +53,21 @@ func getDecryptedWasmEvents(t *testing.T, ctx sdk.Context, nonce []byte, skip ui
 
 // getDecryptedData decrytes the output of the first function to be called
 // Only returns the data, logs and messages from the first function call
-func getDecryptedData(t *testing.T, data []byte, nonce []byte) cosmwasm.CosmosResponse {
-	var res cosmwasm.CosmosResponse
-	err := json.Unmarshal(data, &res)
+func getDecryptedData(t *testing.T, data []byte, nonce []byte) []byte {
+	// data
+	if len(data) == 0 {
+		return data
+	}
+
+	dataCiphertextBz, err := base64.StdEncoding.DecodeString(string(data))
+	require.NoError(t, err)
+	dataPlaintextBase64, err := wasmCtx.Decrypt(dataCiphertextBz, nonce)
 	require.NoError(t, err)
 
-	// err
-	if res.Err.Error() != "" {
-		errCipherBz, err := base64.StdEncoding.DecodeString(res.Err.Error())
-		require.NoError(t, err)
-		errPlainBz, err := wasmCtx.Decrypt(errCipherBz, nonce)
-		require.NoError(t, err)
+	dataPlaintext, err := base64.StdEncoding.DecodeString(string(dataPlaintextBase64))
+	require.NoError(t, err)
 
-		// wrap in generec for code simplicity
-		res.Err = &cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{string(errPlainBz)}}
-	}
-
-	// data
-	if res.Ok.Data != "" {
-		dataCiphertextBz, err := base64.StdEncoding.DecodeString(res.Ok.Data)
-		require.NoError(t, err)
-		dataPlaintext, err := wasmCtx.Decrypt(dataCiphertextBz, nonce)
-		require.NoError(t, err)
-
-		res.Ok.Data = string(dataPlaintext)
-	}
-
-	// logs
-	for i, log := range res.Ok.Log {
-		// key
-		if log.Key != "" {
-			keyCipherBz, err := base64.StdEncoding.DecodeString(log.Key)
-			require.NoError(t, err)
-			keyPlainBz, err := wasmCtx.Decrypt(keyCipherBz, nonce)
-			require.NoError(t, err)
-			log.Key = string(keyPlainBz)
-		}
-
-		// value
-		if log.Value != "" {
-			valueCipherBz, err := base64.StdEncoding.DecodeString(log.Value)
-			require.NoError(t, err)
-			valuePlainBz, err := wasmCtx.Decrypt(valueCipherBz, nonce)
-			require.NoError(t, err)
-			log.Value = string(valuePlainBz)
-		}
-
-		res.Ok.Log[i] = log
-	}
-
-	// messages
-	for i, msg := range res.Ok.Messages {
-		var msgBz []byte
-		if len(msg.Wasm.Execute.Msg) > 0 {
-			msgBz = msg.Wasm.Execute.Msg
-		} else if len(msg.Wasm.Instantiate.Msg) > 0 {
-			msgBz = msg.Wasm.Instantiate.Msg
-		} else {
-			continue
-		}
-
-		msgPlaintext, err := wasmCtx.Decrypt(msgBz[64:], nonce)
-		require.NoError(t, err)
-
-		if len(msg.Wasm.Execute.Msg) > 0 {
-			msg.Wasm.Execute.Msg = msgPlaintext
-		} else if len(msg.Wasm.Instantiate.Msg) > 0 {
-			msg.Wasm.Instantiate.Msg = msgPlaintext
-		}
-
-		res.Ok.Messages[i] = msg
-	}
-
-	return res
+	return dataPlaintext
 }
 
 func requireQueryResult(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.AccAddress, input string, expectedOutput string) {
@@ -182,22 +123,26 @@ func requireInitError(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint6
 	require.Contains(t, errorPlaintext, expectedContainedInOutput)
 }
 
-func executeHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string, skipEvents uint) (cosmwasm.CosmosResponse, [][]cosmwasm.LogAttribute) {
+func executeHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string, skipEvents uint) ([]byte, [][]cosmwasm.LogAttribute, error) {
 	execMsgBz, err := wasmCtx.Encrypt([]byte(execMsg))
 	require.NoError(t, err)
 
 	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.NoError(t, err)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	nonce := execMsgBz[0:32]
 
 	// Events is from all callbacks
 	wasmEvents := getDecryptedWasmEvents(t, ctx, nonce, skipEvents)
 
+	// TODO check if we can extract the messages from ctx
+
 	// Data is the output of only the first call
 	data := getDecryptedData(t, execResult.Data, nonce)
 
-	return data, wasmEvents
+	return data, wasmEvents, nil
 }
 
 func TestCallbackSanity(t *testing.T) {
@@ -236,7 +181,7 @@ func TestCallbackSanity(t *testing.T) {
 		initEvents,
 	)
 
-	data, execEvents := executeHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"a":{"contract_addr":"%s","x":2,"y":3}}`, contractAddress.String()), 1)
+	data, execEvents, err := executeHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"a":{"contract_addr":"%s","x":2,"y":3}}`, contractAddress.String()), 1)
 
 	require.Equal(t, 3, len(execEvents))
 	require.Equal(t,
@@ -257,16 +202,8 @@ func TestCallbackSanity(t *testing.T) {
 		execEvents,
 	)
 
-	require.Empty(t, data.Err)
-	require.Equal(t, base64.StdEncoding.EncodeToString([]byte{2, 3}), data.Ok.Data)
-	require.Equal(t, []cosmwasm.LogAttribute{{Key: "banana", Value: "🍌"}}, data.Ok.Log)
-	require.Equal(t, 1, len(data.Ok.Messages))
-	require.NotEmpty(t, data.Ok.Messages[0].Wasm.Execute.ContractAddr)
-	require.Equal(t, data.Ok.Messages[0].Wasm.Execute.ContractAddr, contractAddress.String())
-	require.JSONEq(t,
-		string(data.Ok.Messages[0].Wasm.Execute.Msg),
-		fmt.Sprintf(`{"b":{"x":2,"y":3,"contract_addr":"%s"}}`, contractAddress.String()),
-	)
+	require.Empty(t, err)
+	require.Equal(t, []byte{2, 3}, data)
 }
 
 func TestSanity(t *testing.T) {
@@ -313,20 +250,11 @@ func TestSanity(t *testing.T) {
 	)
 
 	// transfer 10 from A to B
-	data, wasmEvents := executeHelper(t, keeper, ctx, contractAddress, walletA,
+	data, wasmEvents, err := executeHelper(t, keeper, ctx, contractAddress, walletA,
 		fmt.Sprintf(`{"transfer":{"amount":"10","recipient":"%s"}}`, walletB.String()), 0)
 
-	require.Empty(t, data.Err)
-	require.Empty(t, data.Ok.Data)
-	require.Empty(t, data.Ok.Messages)
-	require.Equal(t,
-		[]cosmwasm.LogAttribute{
-			{Key: "action", Value: "transfer"},
-			{Key: "sender", Value: walletA.String()},
-			{Key: "recipient", Value: walletB.String()}},
-		data.Ok.Log,
-	)
-
+	require.Empty(t, err)
+	require.Empty(t, data)
 	require.Equal(t, 1, len(wasmEvents))
 	require.Equal(t,
 		[][]cosmwasm.LogAttribute{{
@@ -408,9 +336,9 @@ func TestEmptyLogKeyValue(t *testing.T) {
 	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
-	data, execEvents := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"emptylogkeyvalue":{}}`, 1)
+	_, execEvents, err := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"emptylogkeyvalue":{}}`, 1)
 
-	require.Empty(t, data.Err)
+	require.Empty(t, err)
 	require.Equal(t, 1, len(execEvents))
 	require.Equal(t,
 		[][]cosmwasm.LogAttribute{
@@ -421,13 +349,6 @@ func TestEmptyLogKeyValue(t *testing.T) {
 			},
 		},
 		execEvents,
-	)
-	require.Equal(t,
-		[]cosmwasm.LogAttribute{
-			{Key: "my value is empty", Value: ""},
-			{Key: "", Value: "my key is empty"},
-		},
-		data.Ok.Log,
 	)
 }
 
@@ -452,10 +373,10 @@ func TestEmptyData(t *testing.T) {
 	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
-	data, _ := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"emptydata":{}}`, 1)
+	data, _, err := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"emptydata":{}}`, 1)
 
-	require.Empty(t, data.Err)
-	require.Equal(t, "", data.Ok.Data)
+	require.Empty(t, err)
+	require.Empty(t, data)
 }
 
 func TestNoData(t *testing.T) {
@@ -479,10 +400,10 @@ func TestNoData(t *testing.T) {
 	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
-	data, _ := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"nodata":{}}`, 1)
+	data, _, err := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"nodata":{}}`, 1)
 
-	require.Empty(t, data.Err)
-	require.Equal(t, "", data.Ok.Data)
+	require.Empty(t, err)
+	require.Empty(t, data)
 }
 
 func TestExecuteIllegalInputError(t *testing.T) {
@@ -506,9 +427,9 @@ func TestExecuteIllegalInputError(t *testing.T) {
 	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
-	data, _ := executeHelper(t, keeper, ctx, contractAddress, walletA, `bad input`, 1)
+	_, _, err = executeHelper(t, keeper, ctx, contractAddress, walletA, `bad input`, 1)
 
-	require.Contains(t, data.Err, "Error parsing HandleMsg")
+	require.Contains(t, err.Error(), "Error parsing HandleMsg")
 }
 
 func TestInitIllegalInputError(t *testing.T) {
@@ -661,10 +582,10 @@ func TestUnicodeData(t *testing.T) {
 	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
-	data, _ := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"unicodedata":{}}`, 1)
+	data, _, err := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"unicodedata":{}}`, 1)
 
-	require.Empty(t, data.Err)
-	require.Equal(t, base64.StdEncoding.EncodeToString([]byte("🍆🥑🍄")), data.Ok.Data)
+	require.Empty(t, err)
+	require.Equal(t, "🍆🥑🍄", string(data))
 }
 
 func TestInitContractErrorUnicode(t *testing.T) {
@@ -706,9 +627,9 @@ func TestExecuteContractErrorUnicode(t *testing.T) {
 	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
-	data, _ := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"contracterror":{}}`, 1)
+	_, _, err = executeHelper(t, keeper, ctx, contractAddress, walletA, `{"contracterror":{}}`, 1)
 
-	require.Contains(t, data.Err, "Test error! 🌈")
+	require.Contains(t, err.Error(), "Test error! 🌈")
 }
 
 func TestInitParamError(t *testing.T) {

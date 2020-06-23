@@ -104,8 +104,8 @@ pub fn encrypt_output(
             }
         }
 
-        if let Value::String(data) = &mut v["ok"]["data"] {
-            v["ok"]["data"] = encrypt_serializeable(&key, data)?;
+        if let Value::String(data) = &mut v["Ok"]["data"] {
+            v["Ok"]["data"] = encrypt_serializeable(&key, data)?;
         }
     }
 
