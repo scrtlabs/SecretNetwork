@@ -39,9 +39,9 @@ impl ModuleImportResolver for WasmiImportResolver {
                 Signature::new(&[ValueType::I32, ValueType::I32][..], None),
                 HostFunctions::WriteDbIndex.into(),
             ),
-            // fn remove_db(key: *const c_void, value: *mut c_void) -> i32;
+            // fn db_remove(key: *const c_void, value: *mut c_void) -> i32;
             "db_remove" => FuncInstance::alloc_host(
-                Signature::new(&[ValueType::I32][..], Some(ValueType::I32)),
+                Signature::new(&[ValueType::I32][..], None),
                 HostFunctions::RemoveDbIndex.into(),
             ),
             // fn canonicalize_address(human: *const c_void, canonical: *mut c_void) -> i32;
