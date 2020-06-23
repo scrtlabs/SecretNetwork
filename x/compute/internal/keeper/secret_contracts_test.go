@@ -170,7 +170,6 @@ func TestCallbackSanity(t *testing.T) {
 	// check init events (no data in init)
 	initEvents := getDecryptedWasmEvents(t, ctx, initMsgBz[0:32], 0)
 
-	require.Equal(t, 1, len(initEvents))
 	require.Equal(t,
 		[][]cosmwasm.LogAttribute{
 			{
@@ -183,7 +182,6 @@ func TestCallbackSanity(t *testing.T) {
 
 	data, execEvents, err := executeHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"a":{"contract_addr":"%s","x":2,"y":3}}`, contractAddress.String()), 1)
 
-	require.Equal(t, 3, len(execEvents))
 	require.Equal(t,
 		[][]cosmwasm.LogAttribute{
 			{
