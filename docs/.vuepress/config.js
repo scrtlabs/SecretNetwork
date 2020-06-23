@@ -6,7 +6,7 @@ module.exports = {
     themeConfig: {
         logo: '/logo.png',
         nav: [
-            { text: 'Site', link: 'https://scrt.network' },
+            { text: 'Home', link: 'https://scrt.network' },
             { text: 'Blog', link: 'https://blog.scrt.network' },
             { text: 'Chat', link: 'https://chat.scrt.network' },
             { text: 'Wiki', link: 'https://learn.scrt.network' },
@@ -15,11 +15,12 @@ module.exports = {
           ],
         sidebar: [
             {
-                title: 'Overview',   // required
+                title: 'Secret Network',   // required
                 path: '/',      // optional, link of the title, which should be an absolute path and must exist
                 collapsable: true, // optional, defaults to true
                 sidebarDepth: 0,    // optional, defaults to 1
                 children: [
+                  '/overview',
                   '/protocol/architecture',
                   '/protocol/roadmap',
                   '/ledger-nano-s'
