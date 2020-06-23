@@ -87,7 +87,7 @@ pub extern "C" fn ocall_remove_db(context: Ctx, key: *const u8, key_len: usize) 
     // We explicitly ignore this potential panic here because we have no way of handling it at the moment.
     // In the future, if we see that panics do occur here, we should add a way to report this to the enclave.
     // TODO handle errors and return the gas cost
-    let _ = std::panic::catch_unwind(|| implementation(context, key, value).unwrap());
+    let _ = std::panic::catch_unwind(|| implementation(context, key).unwrap());
     // TODO add logging if we fail to write
 }
 
