@@ -3,6 +3,7 @@ VERSION := $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
+BUILD_PROFILE ?= release
 
 build_tags = netgo
 ifeq ($(LEDGER_ENABLED),true)
@@ -70,15 +71,9 @@ xgo_build_enigmad: go.sum
 xgo_build_enigmacli: go.sum
 	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/EnigmaBlockchain/cmd/enigmacli
 
-build_local_no_rust:
-	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
-#   this pulls out ELF symbols, 80% size reduction!
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
-
 build-linux: vendor
-	$(MAKE) -C go-cosmwasm build-rust
-	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
+	BUILD_PROFILE=$(BUILD_PROFILE) $(MAKE) -C go-cosmwasm build-rust
+	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
 
@@ -196,6 +191,6 @@ build-test-contract:
 	$(MAKE) -C ./x/compute/internal/keeper/testdata/test-contract
 
 go-tests: build-test-contract
-	SGX_MODE=SW BUILD_PROFILE=""  $(MAKE) build-linux # empty BUILD_PROFILE means debug mode which compiles faster
+	SGX_MODE=SW BUILD_PROFILE=debug $(MAKE) build-linux # empty BUILD_PROFILE means debug mode which compiles faster
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	SGX_MODE=SW go test -p 1 -v ./x/compute/internal/...

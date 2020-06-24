@@ -373,10 +373,9 @@ func TestEmptyLogKeyValue(t *testing.T) {
 	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
-	_, execEvents, err := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"emptylogkeyvalue":{}}`, 1)
+	_, execEvents, execErr := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"emptylogkeyvalue":{}}`, 1)
 
-	require.NoError(t, err)
-	require.Equal(t, 1, len(execEvents))
+	require.NoError(t, execErr)
 	require.Equal(t,
 		[][]cosmwasm.LogAttribute{
 			{

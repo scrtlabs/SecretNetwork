@@ -3,7 +3,7 @@
 SGX_SDK ?= $(HOME)/.sgxsdk/sgxsdk
 SGX_MODE ?= HW
 SGX_ARCH ?= x64
-BUILD_PROFILE ?= --release
+BUILD_PROFILE ?= release
 
 TOP_DIR := ../../../third_party/build
 include $(TOP_DIR)/buildenv.mk
@@ -93,7 +93,7 @@ enclave: ffi-types librust_cosmwasm_enclave.signed.so
 ffi-types:
 	mkdir -p target/headers/
 	cd ../enclave-ffi-types && \
-	RUST_TARGET_PATH=$(Rust_Target_Path) xargo build --features "build_headers" --target x86_64-unknown-linux-sgx $(BUILD_PROFILE) && \
+	RUST_TARGET_PATH=$(Rust_Target_Path) xargo build --features "build_headers" --target x86_64-unknown-linux-sgx -Z unstable-options --profile $(BUILD_PROFILE) && \
 	cp $(Rust_Target_Path)/../../../target/headers/enclave-ffi-types.h $(Rust_Target_Path)/../target/headers/
 
 librust_cosmwasm_enclave.signed.so: librust_cosmwasm_enclave.so
@@ -103,8 +103,8 @@ librust_cosmwasm_enclave.so: $(CUSTOM_LIBRARY_PATH)/libenclave.a Enclave_t.o
 	$(CXX) Enclave_t.o -o $@ $(RustEnclave_Link_Flags)
 
 $(CUSTOM_LIBRARY_PATH)/libenclave.a: $(CUSTOM_LIBRARY_PATH) $(Rust_Crate_Source)
-	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS="-Z force-unstable-if-unmarked -Ctarget-feature=+aes,+ssse3" xargo build --features "SGX_MODE_$(SGX_MODE)" --target x86_64-unknown-linux-sgx $(BUILD_PROFILE)
-	cp target/x86_64-unknown-linux-sgx/release/libwasmi_runtime_enclave.a $(CUSTOM_LIBRARY_PATH)/libenclave.a
+	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS="-Z force-unstable-if-unmarked -Ctarget-feature=+aes,+ssse3" xargo build --features "SGX_MODE_$(SGX_MODE)" --target x86_64-unknown-linux-sgx -Z unstable-options --profile $(BUILD_PROFILE)
+	cp target/x86_64-unknown-linux-sgx/$(BUILD_PROFILE)/libwasmi_runtime_enclave.a $(CUSTOM_LIBRARY_PATH)/libenclave.a
 
 $(CUSTOM_LIBRARY_PATH):
 	mkdir $(CUSTOM_LIBRARY_PATH)
