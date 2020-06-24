@@ -16,7 +16,7 @@ RUN tar -C /usr/local -xzf go1.14.2.linux-amd64.tar.gz
 
 WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/
 
-ARG SGX_MODE=SW
+ARG SGX_MODE=HW
 ENV SGX_MODE=${SGX_MODE}
 ENV MITIGATION_CVE_2020_0551=LOAD
 
@@ -41,12 +41,8 @@ WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain
 
 # Add source files
 COPY go-cosmwasm go-cosmwasm
-# This is due to some esoteric docker bug with the underlying filesystem, so until I figure out a better way, this should be a workaround
-RUN true
 COPY x x
-RUN true
 COPY types types
-RUN true
 COPY app.go .
 COPY go.mod .
 COPY go.sum .
@@ -65,12 +61,13 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     #### Base utilities ####
     jq \
-    wget \
-    curl && \
+    openssl \
+    curl \
+    wget && \
     rm -rf /var/lib/apt/lists/*
 
 
-ARG SGX_MODE=SW
+ARG SGX_MODE=HW
 ENV SGX_MODE=${SGX_MODE}
 
 ARG SECRET_NODE_TYPE=BOOTSTRAP
@@ -91,30 +88,19 @@ COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/go-c
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/enigmad /usr/bin/enigmad
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/enigmacli /usr/bin/enigmacli
 
-# COPY ./packaging_docker/devnet_init.sh .
-COPY packaging_docker/ci/wasmi-sgx-test.sh .
-COPY packaging_docker/ci/bootstrap_init.sh .
-COPY packaging_docker/ci/node_init.sh .
-COPY packaging_docker/ci/startup.sh .
-COPY packaging_docker/ci/node_key.json .
+COPY packaging_docker/testnet/azure/azure_deploy_init.sh .
 
 RUN chmod +x /usr/bin/enigmad
 RUN chmod +x /usr/bin/enigmacli
-RUN chmod +x wasmi-sgx-test.sh
-RUN chmod +x bootstrap_init.sh
-RUN chmod +x startup.sh
-RUN chmod +x node_init.sh
+RUN chmod +x azure_deploy_init.sh
 
 
 RUN mkdir -p /root/.enigmad/.compute/
 RUN mkdir -p /root/.sgx_secrets/
 RUN mkdir -p /root/.enigmad/.node/
-# COPY ./packaging_docker/seed.json /root/.enigmad/.compute/seed.json
 
 COPY api_key.txt /root/
 COPY spid.txt /root/
 
-#ENV LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/:/opt/sgxsdk/lib64/
-
 # Run enigmad by default, omit entrypoint to ease using container with enigmacli
-ENTRYPOINT ["/bin/bash", "startup.sh"]
+ENTRYPOINT ["/bin/bash", "azure_deploy_init.sh"]

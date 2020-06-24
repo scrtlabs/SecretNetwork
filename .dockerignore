@@ -1,7 +1,7 @@
 Dockerfile
+docker-compose*
 docs
 *.md
-
 **/target
 **/*.a
 **/*.so
@@ -9,6 +9,8 @@ docs
 **/Enclave_u.*
 **/*.lock
 third_party/vendor
+
+cosmwasm-js
 
 cosmwasm/lib/incubator-teaclave-sgx-sdk
 

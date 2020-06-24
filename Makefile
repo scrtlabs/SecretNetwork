@@ -4,6 +4,19 @@ COMMIT := $(shell git log -1 --format='%H')
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
 
+SGX_MODE ?= HW
+BRANCH ?= develop
+DEBUG ?= 0
+DOCKER_TAG ?= latest
+
+ifeq ($(SGX_MODE), HW)
+	ext := hw
+else ifeq ($(SGX_MODE), SW)
+	ext := sw
+else
+$(error SGX_MODE must be either HW or SW)
+endif
+
 build_tags = netgo
 ifeq ($(LEDGER_ENABLED),true)
   ifeq ($(OS),Windows_NT)
@@ -163,12 +176,19 @@ clean:
 	-rm -rf ./x/compute/internal/keeper/*.so
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/lib/wasmi-runtime clean
+# docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t cashmaney/secret-network-node:azuretestnet .
+build-azure:
+	docker build -f Dockerfile.azure -t cashmaney/secret-network-node:azuretestnet .
+
+build-testnet:
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f Dockerfile.testnet -t cashmaney/secret-network-bootstrap:testnet  .
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t cashmaney/secret-network-node:testnet .
 
 docker_bootstrap:
-	docker build --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t enigmampc/secret_bootstrap .
+	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t enigmampc/secret-network-bootstrap-${ext}:${DOCKER_TAG} .
 
 docker_node:
-	docker build --build-arg SECRET_NODE_TYPE=NODE -t enigmampc/secret_node .
+	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=NODE -t enigmampc/secret-network-node-${ext}:${DOCKER_TAG} .
 # while developing:
 build-enclave:
 	$(MAKE) -C cosmwasm/lib/wasmi-runtime 

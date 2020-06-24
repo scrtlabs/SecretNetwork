@@ -41,12 +41,8 @@ WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain
 
 # Add source files
 COPY go-cosmwasm go-cosmwasm
-# This is due to some esoteric docker bug with the underlying filesystem, so until I figure out a better way, this should be a workaround
-RUN true
 COPY x x
-RUN true
 COPY types types
-RUN true
 COPY app.go .
 COPY go.mod .
 COPY go.sum .
@@ -65,8 +61,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     #### Base utilities ####
     jq \
-    wget \
-    curl && \
+    wget && \
     rm -rf /var/lib/apt/lists/*
 
 
@@ -92,15 +87,13 @@ COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/enig
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/enigmacli /usr/bin/enigmacli
 
 # COPY ./packaging_docker/devnet_init.sh .
-COPY packaging_docker/ci/wasmi-sgx-test.sh .
-COPY packaging_docker/ci/bootstrap_init.sh .
-COPY packaging_docker/ci/node_init.sh .
-COPY packaging_docker/ci/startup.sh .
-COPY packaging_docker/ci/node_key.json .
+COPY packaging_docker/testnet/bootstrap_init.sh .
+COPY packaging_docker/testnet/node_init.sh .
+COPY packaging_docker/testnet/startup.sh .
+COPY packaging_docker/testnet/node_key.json .
 
 RUN chmod +x /usr/bin/enigmad
 RUN chmod +x /usr/bin/enigmacli
-RUN chmod +x wasmi-sgx-test.sh
 RUN chmod +x bootstrap_init.sh
 RUN chmod +x startup.sh
 RUN chmod +x node_init.sh
@@ -113,6 +106,17 @@ RUN mkdir -p /root/.enigmad/.node/
 
 COPY api_key.txt /root/
 COPY spid.txt /root/
+
+####### Node parameters
+ARG MONIKER=default
+ARG CHAINID=secret-testnet-1
+ARG GENESISPATH=https://raw.githubusercontent.com/enigmampc/EnigmaBlockchain/master/secret-testnet-genesis.json
+ARG PERSISTENT_PEERS=201cff36d13c6352acfc4a373b60e83211cd3102@bootstrap.southuk.azure.com:26656
+
+ENV GENESISPATH="${GENESISPATH}"
+ENV CHAINID="${CHAINID}"
+ENV MONIKER="${MONIKER}"
+ENV PERSISTENT_PEERS="${PERSISTENT_PEERS}"
 
 #ENV LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/:/opt/sgxsdk/lib64/
 
