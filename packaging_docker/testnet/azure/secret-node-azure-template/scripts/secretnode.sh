@@ -47,14 +47,15 @@ mkdir -p /usr/local/bin/secret-node
 sudo curl -L https://raw.githubusercontent.com/Cashmaney/secret-node-azure-template/master/scripts/docker-compose.yaml -o /usr/local/bin/secret-node/docker-compose.yaml
 
 sudo sed -i 's/\/tmp\/.enigmad:/\/home\/'$1'\/.enigmad:/g' /usr/local/bin/secret-node/docker-compose.yaml
+sudo sed -i 's/\/tmp\/.enigmacli:/\/home\/'$1'\/.enigmacli:/g' /usr/local/bin/secret-node/docker-compose.yaml
 
 echo "Setting Secret Node environment variables" >> /home/$1/install.progress.txt
 
-echo "export CHAINID=$2" >> /home/$1/.bashrc
-echo "export MONIKER=$3" >> /home/$1/.bashrc
-echo "export PERSISTENT_PEERS=$4" >> /home/$1/.bashrc
-echo "export RPC_URL=$5" >> /home/$1/.bashrc
-echo "export REGISTRATION_SERVICE=$6" >> /home/$1/.bashrc
+echo "export CHAINID=$2" >> /home/"$1"/.bashrc
+echo "export MONIKER=$3" >> /home/"$1"/.bashrc
+echo "export PERSISTENT_PEERS=$4" >> /home/"$1"/.bashrc
+echo "export RPC_URL=$5" >> /home/"$1"/.bashrc
+echo "export REGISTRATION_SERVICE=$6" >> /home/"$1"/.bashrc
 # echo "export GENESIS_PATH=$5" >> /home/$1/.bashrc
 
 export CHAINID=$2
@@ -63,9 +64,11 @@ export PERSISTENT_PEERS=$4
 export RPC_URL=$5
 export REGISTRATION_SERVICE=$6
 
-echo "CHAINID=$2" >> /home/$1/install.progress.txt
-echo "MONIKER=$3" >> /home/$1/install.progress.txt
-echo "PRSISTENT_PEERS=$4" >> /home/$1/install.progress.txt
+echo "CHAINID=$2" >> /home/"$1"/install.progress.txt
+echo "MONIKER=$3" >> /home/"$1"/install.progress.txt
+echo "PRSISTENT_PEERS=$4" >> /home/"$1"/install.progress.txt
+echo "export RPC_URL=$5" >> /home/"$1"/install.progress.txt
+echo "export REGISTRATION_SERVICE=$6" >> /home/"$1"/install.progress.txt
 
 ################################################################
 # Configure to auto start at boot					    #

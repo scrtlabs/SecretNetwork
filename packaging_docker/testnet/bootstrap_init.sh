@@ -2,7 +2,7 @@
 
 file=~/.enigmad/config/genesis.json
 if [ ! -e "$file" ]
-
+then
   # init the node
   # rm -rf ~/.enigma* || true
   enigmacli config chain-id enigma-testnet-1

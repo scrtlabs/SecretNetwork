@@ -17,6 +17,7 @@ services:
     volumes:
       - /tmp/aesmd:/var/run/aesmd
       - /tmp/.enigmad:/root/.enigmad
+      - /tmp/.enigmacli:/root/.enigmacli
     environment:
       - SGX_MODE=HW
       - MONIKER
