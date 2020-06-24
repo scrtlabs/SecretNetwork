@@ -55,7 +55,7 @@ fn encode(data: &[u8]) -> Value {
 }
 
 pub fn encrypt_output(
-    output: Vec<u8>,
+    output: &Vec<u8>,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
 ) -> Result<Vec<u8>, EnclaveError> {
@@ -92,14 +92,41 @@ pub fn encrypt_output(
     } else if let Value::Object(ok) = &mut v["Ok"] {
         // init or handle or migrate
         if let Value::Array(msgs) = &mut ok["messages"] {
+            /*
+            {
+              "Ok": {
+                "messages": [
+                  {
+                    "wasm": {
+                      "execute": {
+                        "contract_addr": "enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89d2p9uk",
+                        "msg": "eyJiIjp7IngiOjIgLCJ5IjogMywiY29udHJhY3RfYWRkciI6ICJlbmlnbWExOHZkOGZwd3h6Y2s5M3Fsd2doYWo2YXJoNHA3YzVuODlkMnA5dWsiIH19",
+                        "send": []
+                      }
+                    }
+                  }
+                ],
+                "log": [{ "key": "banana", "value": "🍌" }],
+                "data": "AgM="
+              }
+            }
+            */
+
             for msg in msgs {
-                if let Value::String(msg_b64) = &mut msg["contract"]["msg"] {
+                if let Value::String(msg_b64) = &mut msg["wasm"]["execute"]["msg"] {
                     let mut msg_to_pass =
                         SecretMessage::from_base64((*msg_b64).to_string(), nonce, user_public_key)?;
 
                     msg_to_pass.encrypt_in_place()?;
 
-                    msg["contract"]["msg"] = encode(&msg_to_pass.to_slice());
+                    msg["wasm"]["execute"]["msg"] = encode(&msg_to_pass.to_slice());
+                } else if let Value::String(msg_b64) = &mut msg["wasm"]["instantiate"]["msg"] {
+                    let mut msg_to_pass =
+                        SecretMessage::from_base64((*msg_b64).to_string(), nonce, user_public_key)?;
+
+                    msg_to_pass.encrypt_in_place()?;
+
+                    msg["wasm"]["instantiate"]["msg"] = encode(&msg_to_pass.to_slice());
                 }
             }
         }

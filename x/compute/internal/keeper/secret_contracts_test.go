@@ -176,15 +176,9 @@ func TestCallbackSanity(t *testing.T) {
 	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
-	require.NoError(t, err)
-
 	// init
-	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.NoError(t, err)
-
-	// check init events (no data in init)
-	initEvents := getDecryptedWasmEvents(t, ctx, initMsgBz[0:32], 0)
+	contractAddress, initEvents, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, err)
 
 	require.Equal(t,
 		[][]cosmwasm.LogAttribute{

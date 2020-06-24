@@ -59,7 +59,7 @@ pub fn init(
         Err(err) => {
             return Ok(InitSuccess {
                 output: encrypt_output(
-                    format!(
+                    &format!(
                         r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
                         err
                     )
@@ -78,7 +78,7 @@ pub fn init(
         Err(err) => {
             return Ok(InitSuccess {
                 output: encrypt_output(
-                    format!(
+                    &format!(
                         r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
                         err
                     )
@@ -97,7 +97,7 @@ pub fn init(
         Err(err) => {
             return Ok(InitSuccess {
                 output: encrypt_output(
-                    format!(
+                    &format!(
                         r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
                         err
                     )
@@ -116,7 +116,7 @@ pub fn init(
         Err(err) => {
             return Ok(InitSuccess {
                 output: encrypt_output(
-                    format!(
+                    &format!(
                         r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
                         err
                     )
@@ -135,7 +135,25 @@ pub fn init(
     // TODO: copy cosmwasm's structures to enclave
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
-    let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
+    let output = match encrypt_output(&output, secret_msg.nonce, secret_msg.user_public_key) {
+        Ok(x) => x,
+        Err(err) => {
+            return Ok(InitSuccess {
+                output: encrypt_output(
+                    &format!(
+                        r#"{{"Err":{{"generic_err":{{"msg":"Error received while trying to encrypt the output '{:?}' : {:?}"}}}}}}"#,
+                        String::from_utf8_lossy(&output),
+                        err
+                    )
+                        .into_bytes(),
+                    secret_msg.nonce,
+                    secret_msg.user_public_key,
+                )?,
+                used_gas: engine.gas_used(),
+                signature: contract_key, // TODO this is not needed anymore as output is already authenticated
+            });
+        }
+    };
 
     trace!("Init output after encryption: {:?}", output);
 
@@ -193,7 +211,7 @@ pub fn handle(
         Err(err) => {
             return Ok(HandleSuccess {
                 output: encrypt_output(
-                    format!(
+                    &format!(
                         r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
                         err
                     )
@@ -212,7 +230,7 @@ pub fn handle(
         Err(err) => {
             return Ok(HandleSuccess {
                 output: encrypt_output(
-                    format!(
+                    &format!(
                         r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
                         err
                     )
@@ -231,7 +249,7 @@ pub fn handle(
         Err(err) => {
             return Ok(HandleSuccess {
                 output: encrypt_output(
-                    format!(
+                    &format!(
                         r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
                         err
                     )
@@ -250,7 +268,7 @@ pub fn handle(
         Err(err) => {
             return Ok(HandleSuccess {
                 output: encrypt_output(
-                    format!(
+                    &format!(
                         r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
                         err
                     )
@@ -268,7 +286,25 @@ pub fn handle(
         "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",
         secret_msg.nonce, secret_msg.user_public_key
     );
-    let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
+    let output = match encrypt_output(&output, secret_msg.nonce, secret_msg.user_public_key) {
+        Ok(x) => x,
+        Err(err) => {
+            return Ok(HandleSuccess {
+                output: encrypt_output(
+                    &format!(
+                        r#"{{"Err":{{"generic_err":{{"msg":"Error received while trying to encrypt the output '{:?}' : {:?}"}}}}}}"#,
+                        String::from_utf8_lossy(&output),
+                        err
+                    )
+                        .into_bytes(),
+                    secret_msg.nonce,
+                    secret_msg.user_public_key,
+                )?,
+                used_gas: engine.gas_used(),
+                signature: contract_key, // TODO this is not needed anymore as output is already authenticated
+            });
+        }
+    };
 
     Ok(HandleSuccess {
         output,
@@ -307,7 +343,7 @@ pub fn query(
         Err(err) => {
             return Ok(QuerySuccess {
                 output: encrypt_output(
-                    format!(
+                    &format!(
                         r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
                         err
                     )
@@ -326,7 +362,7 @@ pub fn query(
         Err(err) => {
             return Ok(QuerySuccess {
                 output: encrypt_output(
-                    format!(
+                    &format!(
                         r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
                         err
                     )
@@ -345,7 +381,7 @@ pub fn query(
         Err(err) => {
             return Ok(QuerySuccess {
                 output: encrypt_output(
-                    format!(
+                    &format!(
                         r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
                         err
                     )
@@ -359,7 +395,25 @@ pub fn query(
         }
     };
 
-    let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
+    let output = match encrypt_output(&output, secret_msg.nonce, secret_msg.user_public_key) {
+        Ok(x) => x,
+        Err(err) => {
+            return Ok(QuerySuccess {
+                output: encrypt_output(
+                    &format!(
+                        r#"{{"Err":{{"generic_err":{{"msg":"Error received while trying to encrypt the output '{:?}' : {:?}"}}}}}}"#,
+                        String::from_utf8_lossy(&output),
+                        err
+                    )
+                        .into_bytes(),
+                    secret_msg.nonce,
+                    secret_msg.user_public_key,
+                )?,
+                used_gas: engine.gas_used(),
+                signature: contract_key, // TODO this is not needed anymore as output is already authenticated
+            });
+        }
+    };
 
     Ok(QuerySuccess {
         output,
