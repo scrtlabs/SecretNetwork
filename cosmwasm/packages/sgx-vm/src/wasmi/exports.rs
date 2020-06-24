@@ -78,9 +78,6 @@ pub extern "C" fn ocall_remove_db(context: Ctx, key: *const u8, key_len: usize) 
         key_len,
         String::from_utf8_lossy(key)
     );
-    let null_buffer = EnclaveBuffer {
-        ptr: std::ptr::null_mut(),
-    };
 
     let implementation = unsafe { get_implementations_from_context(&context).remove_db };
 
