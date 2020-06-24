@@ -136,6 +136,10 @@ func (w *Wasmer) Execute(
 
 	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, &gasMeter, &store, &goapi, &querier, gasLimit)
 
+	if err != nil {
+		return nil, gasUsed, err
+	}
+
 	var resp types.CosmosResponse
 	err = json.Unmarshal(data, &resp)
 

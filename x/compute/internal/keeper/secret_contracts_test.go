@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -123,18 +124,27 @@ func requireInitError(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint6
 	require.Contains(t, errorPlaintext, expectedContainedInOutput)
 }
 
-func executeHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string, skipEvents uint) ([]byte, [][]cosmwasm.LogAttribute, error) {
+func executeHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string, skipEvents uint) ([]byte, [][]cosmwasm.LogAttribute, cosmwasm.StdError) {
 	execMsgBz, err := wasmCtx.Encrypt([]byte(execMsg))
 	require.NoError(t, err)
+	nonce := execMsgBz[0:32]
 
 	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	if err != nil {
-		return nil, nil, err
+		errorCipherB64 := strings.ReplaceAll(err.Error(), "execute wasm contract failed: generic: ", "")
+		errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
+		require.NoError(t, err)
+		errorPlainBz, err := wasmCtx.Decrypt(errorCipherBz, nonce)
+		require.NoError(t, err)
+
+		var trueErr cosmwasm.StdError
+		err = json.Unmarshal(errorPlainBz, &trueErr)
+		require.NoError(t, err)
+
+		return nil, nil, trueErr
 	}
 
-	nonce := execMsgBz[0:32]
-
-	// Events is from all callbacks
+	// wasmEvents comes from all the callbacks as well
 	wasmEvents := getDecryptedWasmEvents(t, ctx, nonce, skipEvents)
 
 	// TODO check if we can extract the messages from ctx
@@ -142,7 +152,35 @@ func executeHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress
 	// Data is the output of only the first call
 	data := getDecryptedData(t, execResult.Data, nonce)
 
-	return data, wasmEvents, nil
+	return data, wasmEvents, cosmwasm.StdError{}
+}
+
+func initHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, creator sdk.AccAddress, initMsg string, skipEvents uint) (sdk.AccAddress, [][]cosmwasm.LogAttribute, cosmwasm.StdError) {
+	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
+	require.NoError(t, err)
+	nonce := initMsgBz[0:32]
+
+	contractAddress, err := keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	if err != nil {
+		errorCipherB64 := strings.ReplaceAll(err.Error(), "instantiate wasm contract failed: generic: ", "")
+		errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
+		require.NoError(t, err)
+		errorPlainBz, err := wasmCtx.Decrypt(errorCipherBz, nonce)
+		require.NoError(t, err)
+
+		var trueErr cosmwasm.StdError
+		err = json.Unmarshal(errorPlainBz, &trueErr)
+		require.NoError(t, err)
+
+		return nil, nil, trueErr
+	}
+
+	// wasmEvents comes from all the callbacks as well
+	wasmEvents := getDecryptedWasmEvents(t, ctx, nonce, skipEvents)
+
+	// TODO check if we can extract the messages from ctx
+
+	return contractAddress, wasmEvents, cosmwasm.StdError{}
 }
 
 func TestCallbackSanity(t *testing.T) {
@@ -200,7 +238,7 @@ func TestCallbackSanity(t *testing.T) {
 		execEvents,
 	)
 
-	require.Empty(t, err)
+	require.NoError(t, err)
 	require.Equal(t, []byte{2, 3}, data)
 }
 
@@ -251,7 +289,7 @@ func TestSanity(t *testing.T) {
 	data, wasmEvents, err := executeHelper(t, keeper, ctx, contractAddress, walletA,
 		fmt.Sprintf(`{"transfer":{"amount":"10","recipient":"%s"}}`, walletB.String()), 0)
 
-	require.Empty(t, err)
+	require.NoError(t, err)
 	require.Empty(t, data)
 	require.Equal(t,
 		[][]cosmwasm.LogAttribute{
@@ -337,7 +375,7 @@ func TestEmptyLogKeyValue(t *testing.T) {
 
 	_, execEvents, err := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"emptylogkeyvalue":{}}`, 1)
 
-	require.Empty(t, err)
+	require.NoError(t, err)
 	require.Equal(t, 1, len(execEvents))
 	require.Equal(t,
 		[][]cosmwasm.LogAttribute{
@@ -374,7 +412,7 @@ func TestEmptyData(t *testing.T) {
 
 	data, _, err := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"emptydata":{}}`, 1)
 
-	require.Empty(t, err)
+	require.NoError(t, err)
 	require.Empty(t, data)
 }
 
@@ -401,7 +439,7 @@ func TestNoData(t *testing.T) {
 
 	data, _, err := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"nodata":{}}`, 1)
 
-	require.Empty(t, err)
+	require.NoError(t, err)
 	require.Empty(t, data)
 }
 
@@ -426,9 +464,10 @@ func TestExecuteIllegalInputError(t *testing.T) {
 	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
-	_, _, err = executeHelper(t, keeper, ctx, contractAddress, walletA, `bad input`, 1)
+	_, _, execErr := executeHelper(t, keeper, ctx, contractAddress, walletA, `bad input`, 1)
 
-	require.Contains(t, err.Error(), "Error parsing HandleMsg")
+	require.Error(t, execErr)
+	require.Error(t, execErr.ParseErr)
 }
 
 func TestInitIllegalInputError(t *testing.T) {
@@ -445,22 +484,10 @@ func TestInitIllegalInputError(t *testing.T) {
 	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`bad input`))
-	require.NoError(t, err)
+	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `bad input`, 0)
 
-	// init
-	_, err = keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	require.Contains(t, err.Error(), "instantiate wasm contract failed")
-
-	errorCipherB64 := strings.ReplaceAll(err.Error(), "instantiate wasm contract failed: ", "")
-	errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
-	require.NoError(t, err)
-	errorPlainBz, err := wasmCtx.Decrypt(errorCipherBz, initMsgBz[0:32])
-	require.NoError(t, err)
-	initErrorPlain := string(errorPlainBz)
-
-	require.Contains(t, initErrorPlain, "Error parsing InitMsg")
+	require.Error(t, initErr)
+	require.Error(t, initErr.ParseErr)
 }
 
 func TestInitCallback(t *testing.T) {
@@ -602,7 +629,9 @@ func TestInitContractErrorUnicode(t *testing.T) {
 	require.NoError(t, err)
 
 	// init
-	requireInitError(t, keeper, ctx, codeID, walletA, `{"contracterror":{}}`, "Test error! 🌈")
+	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"contracterror":{}}`, 0)
+
+	require.Equal(t, initErr.GenericErr.Msg, "Test error! 🌈")
 }
 
 func TestExecuteContractErrorUnicode(t *testing.T) {
@@ -626,9 +655,9 @@ func TestExecuteContractErrorUnicode(t *testing.T) {
 	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
-	_, _, err = executeHelper(t, keeper, ctx, contractAddress, walletA, `{"contracterror":{}}`, 1)
+	_, _, execErr := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"contracterror":{}}`, 1)
 
-	require.Contains(t, err.Error(), "Test error! 🌈")
+	require.Equal(t, execErr.GenericErr.Msg, "Test error! 🌈")
 }
 
 func TestInitParamError(t *testing.T) {
