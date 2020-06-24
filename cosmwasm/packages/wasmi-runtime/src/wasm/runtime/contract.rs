@@ -65,6 +65,38 @@ impl ContractInstance {
             ))),
         }
     }
+
+    pub fn write_to_memory(&mut self, buffer: &[u8]) -> Result<u32, InterpreterError> {
+        // WASM pointers are pointers to "Region"
+        // Region is a struct that looks like this:
+        // ptr_to_region -> | 4byte = buffer_addr | 4bytes = buffer_cap | 4bytes = buffer_len |
+
+        // allocate return a pointer to a region
+        let ptr_to_region_in_wasm_vm = self.allocate(buffer.len() as u32)?;
+
+        // extract the buffer pointer from the region
+        let buffer_addr_in_wasm: u32 = self.get_memory().get_value::<u32>(ptr_to_region_in_wasm_vm)?;
+
+        let buffer_cap_in_wasm: u32 = self
+            .get_memory()
+            .get_value::<u32>(ptr_to_region_in_wasm_vm + 4)?;
+
+        if buffer_cap_in_wasm < buffer.len() as u32 {
+            return Err(InterpreterError::Memory(format!(
+                "Tried to allocate {} bytes but only got {} bytes",
+                buffer.len(),
+                buffer_cap_in_wasm
+            )));
+        }
+
+        self.get_memory().set(buffer_addr_in_wasm, buffer)?;
+
+        self.get_memory()
+            .set_value::<u32>(ptr_to_region_in_wasm_vm + 8, buffer.len() as u32)?;
+
+        // return the WASM pointer
+        Ok(ptr_to_region_in_wasm_vm)
+    }
 }
 
 impl WasmiApi for ContractInstance {
@@ -98,75 +130,17 @@ impl WasmiApi for ContractInstance {
             Some(value) => value,
         };
 
-        let value_ptr_ptr = match self.allocate(value.len() as u32).map_err(|err| {
+        let ptr_to_region_in_wasm_vm = self.write_to_memory(&value).map_err(|err| {
             error!(
                 "read_db() error while trying to allocate {} bytes for the value: {:?}",
                 value.len(),
                 err,
             );
             WasmEngineError::MemoryAllocationError
-        })? {
-            0 => return Err(WasmEngineError::MemoryAllocationError.into()),
-            value_ptr_ptr => value_ptr_ptr as i32,
-        };
-
-        // Get pointer to the buffer (this was allocated in WASM)
-        let value_ptr_in_wasm = self
-            .get_memory()
-            .get_value::<u32>(value_ptr_ptr as u32)
-            .map_err(|err| {
-                error!(
-                    "read_db() error while trying to get pointer for the result buffer: {:?}",
-                    err,
-                );
-                WasmEngineError::MemoryReadError
-            })?;
-
-        // Get capacity of the buffer (this was allocated in WASM)
-        let value_cap_in_wasm = self
-            .get_memory()
-            .get_value::<u32>((value_ptr_ptr + 4) as u32)
-            .map_err(|err| {
-                error!(
-                    "read_db() error while trying to get length of result buffer: {:?}",
-                    err
-                );
-                WasmEngineError::MemoryReadError
-            })?;
-
-        // Check that value is not too big to write into the allocated buffer
-        if value_cap_in_wasm < value.len() as u32 {
-            error!(
-                "read_db() result to big ({} bytes) to write to allocated wasm buffer ({} bytes)",
-                value.len(),
-                value_cap_in_wasm
-            );
-            return Err(WasmEngineError::MemoryAllocationError.into());
-        }
-
-        // Write value returned from read_db to WASM memory
-        self.get_memory()
-            .set(value_ptr_in_wasm, &value)
-            .map_err(|err| {
-                error!(
-                    "read_db() error while trying to write to result buffer: {:?}",
-                    err
-                );
-                WasmEngineError::MemoryWriteError
-            })?;
-        // Update the len
-        self.get_memory()
-            .set_value(value_ptr_in_wasm + 8, value.len() as u32)
-            .map_err(|err| {
-                error!(
-                    "read_db() error while trying to update written buffer length: {:?}",
-                    err
-                );
-                WasmEngineError::MemoryWriteError
-            })?;
+        })?;
 
         // Return pointer to the allocated buffer with the value written to it
-        Ok(Some(RuntimeValue::I32(value_ptr_ptr)))
+        Ok(Some(RuntimeValue::I32(ptr_to_region_in_wasm_vm as i32)))
     }
 
     /// Args:
