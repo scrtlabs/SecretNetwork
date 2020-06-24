@@ -172,6 +172,7 @@ impl VmError {
     }
 }
 
+/*
 impl From<wasmer_runtime_core::cache::Error> for VmError {
     fn from(original: wasmer_runtime_core::cache::Error) -> Self {
         VmError::cache_err(format!("Wasmer cache error: {:?}", original))
@@ -214,6 +215,7 @@ impl From<wasmer_runtime_core::error::RuntimeError> for VmError {
         }
     }
 }
+*/
 
 pub type VmResult<T> = core::result::Result<T, VmError>;
 
