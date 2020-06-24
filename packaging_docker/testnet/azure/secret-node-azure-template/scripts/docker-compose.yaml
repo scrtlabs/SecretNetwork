@@ -11,16 +11,19 @@ services:
     tty: true
 
   node:
-    image: cashmaney/secret-network-node:testnet
+    image: cashmaney/secret-network-node:azuretestnet
     devices:
       - /dev/sgx
     volumes:
       - /tmp/aesmd:/var/run/aesmd
       - /tmp/.enigmad:/root/.enigmad
-      - /tmp/.enigmacli:/root/.enigmacli
-      - /tmp/home:/root/
     environment:
       - SGX_MODE=HW
+      - MONIKER
+      - RPC_URL
+      - CHAINID
+      - PERSISTENT_PEERS
+      - REGISTRATION_SERVICE
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:26657"]
       interval: 1m30s
