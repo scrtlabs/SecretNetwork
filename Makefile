@@ -76,17 +76,11 @@ build_local_no_rust:
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
 
-build_linux: vendor
+build-linux: vendor
 	$(MAKE) -C go-cosmwasm build-rust
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
-#   this pulls out ELF symbols, 80% size reduction!
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
-
-#build_local_no_rust:
-#   this pulls out ELF symbols, 80% size reduction!
-#	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
-#	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
 
 build_windows:
 	# CLI only
@@ -100,9 +94,9 @@ build_arm_linux:
 	# CLI only
 	$(MAKE) xgo_build_enigmacli XGO_TARGET=linux/arm64
 
-build_all: build_linux build_windows build_macos build_arm_linux
+build_all: build-linux build_windows build_macos build_arm_linux
 
-deb: build_linux
+deb: build-linux
     ifneq ($(UNAME_S),Linux)
 		exit 1
     endif
@@ -184,17 +178,17 @@ clean-enclave:
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
 
 sanity-test:
-	SGX_MODE=SW $(MAKE) build_linux
+	SGX_MODE=SW $(MAKE) build-linux
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
 	SGX_MODE=SW ./cosmwasm/testing/sanity-test.sh
 
 sanity-test-hw:
-	$(MAKE) build_linux
+	$(MAKE) build-linux
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
 	./cosmwasm/testing/sanity-test.sh
 
 callback-sanity-test:
-	SGX_MODE=SW $(MAKE) build_linux
+	SGX_MODE=SW $(MAKE) build-linux
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
 	SGX_MODE=SW ./cosmwasm/testing/callback-test.sh
 
@@ -202,6 +196,6 @@ build-test-contract:
 	$(MAKE) -C ./x/compute/internal/keeper/testdata/test-contract
 
 go-tests: build-test-contract
-	SGX_MODE=SW $(MAKE) build_linux
+	SGX_MODE=SW BUILD_PROFILE=""  $(MAKE) build-linux # empty BUILD_PROFILE means debug mode which compiles faster
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	SGX_MODE=SW go test -p 1 -v ./x/compute/internal/...

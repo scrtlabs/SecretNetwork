@@ -178,7 +178,7 @@ impl Keychain {
             .derive_key_from_this(&CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes());
         let consensus_seed_exchange_keypair = KeyPair::from(consensus_seed_exchange_keypair_bytes);
         info!(
-            "consensus_seed_exchange_keypair: {:?}",
+            "YO consensus_seed_exchange_keypair: {:?}",
             consensus_seed_exchange_keypair.get_pubkey()
         );
         self.set_consensus_seed_exchange_keypair(consensus_seed_exchange_keypair);
