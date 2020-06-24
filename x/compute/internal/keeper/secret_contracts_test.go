@@ -830,10 +830,7 @@ func TestExecuteNotEncryptedInputError(t *testing.T) {
 	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
-	execMsg := []byte(`{"emptylogkeyvalue":{}}`)
-	require.NoError(t, err)
-
-	_, err = keeper.Execute(ctx, contractAddress, walletA, execMsg, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	_, err = keeper.Execute(ctx, contractAddress, walletA, []byte(`{"emptylogkeyvalue":{}}`), sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.Error(t, err)
 
 	errorMsg := err.Error()
