@@ -83,7 +83,7 @@ pub struct BlockInfo {
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct MessageInfo {
-    pub signer: CanonicalAddr,
+    pub sender: CanonicalAddr,
     // go likes to return null for empty array, make sure we can parse it (use option)
     pub sent_funds: Option<Vec<Coin>>,
 }

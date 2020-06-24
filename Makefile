@@ -3,6 +3,7 @@ VERSION := $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
+BUILD_PROFILE ?= release
 
 build_tags = netgo
 ifeq ($(LEDGER_ENABLED),true)
@@ -70,23 +71,11 @@ xgo_build_enigmad: go.sum
 xgo_build_enigmacli: go.sum
 	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/EnigmaBlockchain/cmd/enigmacli
 
-build_local_no_rust:
-	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
-#   this pulls out ELF symbols, 80% size reduction!
+build-linux: vendor
+	BUILD_PROFILE=$(BUILD_PROFILE) $(MAKE) -C go-cosmwasm build-rust
+	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
-
-build_linux: vendor
-	$(MAKE) -C go-cosmwasm build-rust
-	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
-#   this pulls out ELF symbols, 80% size reduction!
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
-
-#build_local_no_rust:
-#   this pulls out ELF symbols, 80% size reduction!
-#	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
-#	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
 
 build_windows:
 	# CLI only
@@ -100,9 +89,9 @@ build_arm_linux:
 	# CLI only
 	$(MAKE) xgo_build_enigmacli XGO_TARGET=linux/arm64
 
-build_all: build_linux build_windows build_macos build_arm_linux
+build_all: build-linux build_windows build_macos build_arm_linux
 
-deb: build_linux
+deb: build-linux
     ifneq ($(UNAME_S),Linux)
 		exit 1
     endif
@@ -163,6 +152,7 @@ clean:
 	-rm -rf ./x/compute/internal/keeper/*.so
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
+	$(MAKE) -C ./x/compute/internal/keeper/testdata/test-contract clean
 
 docker_bootstrap:
 	docker build --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t enigmampc/secret_bootstrap .
@@ -183,17 +173,17 @@ clean-enclave:
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
 
 sanity-test:
-	SGX_MODE=SW $(MAKE) build_linux
+	SGX_MODE=SW $(MAKE) build-linux
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
 	SGX_MODE=SW ./cosmwasm/testing/sanity-test.sh
 
 sanity-test-hw:
-	$(MAKE) build_linux
+	$(MAKE) build-linux
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
 	./cosmwasm/testing/sanity-test.sh
 
 callback-sanity-test:
-	SGX_MODE=SW $(MAKE) build_linux
+	SGX_MODE=SW $(MAKE) build-linux
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
 	SGX_MODE=SW ./cosmwasm/testing/callback-test.sh
 
@@ -201,6 +191,6 @@ build-test-contract:
 	$(MAKE) -C ./x/compute/internal/keeper/testdata/test-contract
 
 go-tests: build-test-contract
-	SGX_MODE=SW $(MAKE) build_linux
+	SGX_MODE=SW $(MAKE) build-linux # empty BUILD_PROFILE means debug mode which compiles faster
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	SGX_MODE=SW go test -p 1 -v ./x/compute/internal/...

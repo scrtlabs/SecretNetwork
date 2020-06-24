@@ -173,7 +173,11 @@ func (ctx WASMContext) Encrypt(plaintext []byte) ([]byte, error) {
 	txSenderPrivKey, txSenderPubKey, err := ctx.GetTxSenderKeyPair()
 
 	nonce := make([]byte, 32)
-	_, _ = rand.Read(nonce)
+	_, err = rand.Read(nonce)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
 
 	txEncryptionKey, err := ctx.getTxEncryptionKey(txSenderPrivKey, nonce)
 	if err != nil {

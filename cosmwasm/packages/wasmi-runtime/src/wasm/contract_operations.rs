@@ -11,7 +11,6 @@ use crate::wasm::contract_validation::ContractKey;
 use super::contract_validation::{
     extract_contract_key, generate_encryption_key, validate_contract_key, CONTRACT_KEY_LENGTH,
 };
-use super::errors::wasmi_error_to_enclave_error;
 use super::gas::{gas_rules, WasmCosts};
 use super::io::encrypt_output;
 use super::runtime::{create_builder, ContractInstance, Engine, WasmiImportResolver};
@@ -53,31 +52,116 @@ pub fn init(
 
     let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
 
-    let env_ptr = engine
-        .write_to_memory(env)
-        .map_err(wasmi_error_to_enclave_error)?;
-
     let secret_msg = SecretMessage::from_slice(msg)?;
 
-    let msg_ptr = engine
-        .write_to_memory(&secret_msg.decrypt()?)
-        .map_err(wasmi_error_to_enclave_error)?;
+    let env_ptr = match engine.write_to_memory(env) {
+        Ok(x) => x,
+        Err(err) => {
+            return Ok(InitSuccess {
+                output: encrypt_output(
+                    &format!(
+                        r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
+                        err
+                    )
+                    .into_bytes(),
+                    secret_msg.nonce,
+                    secret_msg.user_public_key,
+                )?,
+                used_gas: engine.gas_used(),
+                signature: contract_key, // TODO this is not needed anymore as output is already authenticated
+            });
+        }
+    };
 
-    let vec_ptr = engine
-        .init(env_ptr, msg_ptr)
-        .map_err(wasmi_error_to_enclave_error)?;
+    let msg_ptr = match engine.write_to_memory(&secret_msg.decrypt()?) {
+        Ok(x) => x,
+        Err(err) => {
+            return Ok(InitSuccess {
+                output: encrypt_output(
+                    &format!(
+                        r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
+                        err
+                    )
+                    .into_bytes(),
+                    secret_msg.nonce,
+                    secret_msg.user_public_key,
+                )?,
+                used_gas: engine.gas_used(),
+                signature: contract_key, // TODO this is not needed anymore as output is already authenticated
+            });
+        }
+    };
 
-    let output = engine
-        .extract_vector(vec_ptr)
-        .map_err(wasmi_error_to_enclave_error)?;
+    let vec_ptr = match engine.init(env_ptr, msg_ptr) {
+        Ok(x) => x,
+        Err(err) => {
+            return Ok(InitSuccess {
+                output: encrypt_output(
+                    &format!(
+                        r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
+                        err
+                    )
+                    .into_bytes(),
+                    secret_msg.nonce,
+                    secret_msg.user_public_key,
+                )?,
+                used_gas: engine.gas_used(),
+                signature: contract_key, // TODO this is not needed anymore as output is already authenticated
+            });
+        }
+    };
 
-    let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
+    let output = match engine.extract_vector(vec_ptr) {
+        Ok(x) => x,
+        Err(err) => {
+            return Ok(InitSuccess {
+                output: encrypt_output(
+                    &format!(
+                        r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
+                        err
+                    )
+                    .into_bytes(),
+                    secret_msg.nonce,
+                    secret_msg.user_public_key,
+                )?,
+                used_gas: engine.gas_used(),
+                signature: contract_key, // TODO this is not needed anymore as output is already authenticated
+            });
+        }
+    };
+
+    trace!("Init output before encryption: {:?}", output);
+
+    // TODO: copy cosmwasm's structures to enclave
+    // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
+    // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
+    let output = match encrypt_output(&output, secret_msg.nonce, secret_msg.user_public_key) {
+        Ok(x) => x,
+        Err(err) => {
+            return Ok(InitSuccess {
+                output: encrypt_output(
+                    &format!(
+                        r#"{{"Err":{{"generic_err":{{"msg":"Error received while trying to encrypt the output '{:?}' : {:?}"}}}}}}"#,
+                        String::from_utf8_lossy(&output),
+                        err
+                    )
+                        .into_bytes(),
+                    secret_msg.nonce,
+                    secret_msg.user_public_key,
+                )?,
+                used_gas: engine.gas_used(),
+                signature: contract_key, // TODO this is not needed anymore as output is already authenticated
+            });
+        }
+    };
+
+    trace!("Init output after encryption: {:?}", output);
 
     // todo: can move the key to somewhere in the output message if we want
     Ok(InitSuccess {
         output,
         used_gas: engine.gas_used(),
-        signature: contract_key, // TODO this is needed anymore as output is already authenticated
+        signature: contract_key, // TODO this is not needed anymore as output is already authenticated
     })
 }
 
@@ -122,32 +206,110 @@ pub fn handle(
         secret_msg.nonce, secret_msg.user_public_key
     );
 
-    let env_ptr = engine
-        .write_to_memory(env)
-        .map_err(wasmi_error_to_enclave_error)?;
+    let env_ptr = match engine.write_to_memory(env) {
+        Ok(x) => x,
+        Err(err) => {
+            return Ok(HandleSuccess {
+                output: encrypt_output(
+                    &format!(
+                        r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
+                        err
+                    )
+                    .into_bytes(),
+                    secret_msg.nonce,
+                    secret_msg.user_public_key,
+                )?,
+                used_gas: engine.gas_used(),
+                signature: contract_key, // TODO this is not needed anymore as output is already authenticated
+            });
+        }
+    };
 
-    let msg_ptr = engine
-        .write_to_memory(&secret_msg.decrypt()?)
-        .map_err(wasmi_error_to_enclave_error)?;
+    let msg_ptr = match engine.write_to_memory(&secret_msg.decrypt()?) {
+        Ok(x) => x,
+        Err(err) => {
+            return Ok(HandleSuccess {
+                output: encrypt_output(
+                    &format!(
+                        r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
+                        err
+                    )
+                    .into_bytes(),
+                    secret_msg.nonce,
+                    secret_msg.user_public_key,
+                )?,
+                used_gas: engine.gas_used(),
+                signature: contract_key, // TODO this is not needed anymore as output is already authenticated
+            });
+        }
+    };
 
-    let vec_ptr = engine
-        .handle(env_ptr, msg_ptr)
-        .map_err(wasmi_error_to_enclave_error)?;
+    let vec_ptr = match engine.handle(env_ptr, msg_ptr) {
+        Ok(x) => x,
+        Err(err) => {
+            return Ok(HandleSuccess {
+                output: encrypt_output(
+                    &format!(
+                        r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
+                        err
+                    )
+                    .into_bytes(),
+                    secret_msg.nonce,
+                    secret_msg.user_public_key,
+                )?,
+                used_gas: engine.gas_used(),
+                signature: contract_key, // TODO this is not needed anymore as output is already authenticated
+            });
+        }
+    };
 
-    let output = engine
-        .extract_vector(vec_ptr)
-        .map_err(wasmi_error_to_enclave_error)?;
+    let output = match engine.extract_vector(vec_ptr) {
+        Ok(x) => x,
+        Err(err) => {
+            return Ok(HandleSuccess {
+                output: encrypt_output(
+                    &format!(
+                        r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
+                        err
+                    )
+                    .into_bytes(),
+                    secret_msg.nonce,
+                    secret_msg.user_public_key,
+                )?,
+                used_gas: engine.gas_used(),
+                signature: contract_key, // TODO this is not needed anymore as output is already authenticated
+            });
+        }
+    };
 
     info!(
         "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",
         secret_msg.nonce, secret_msg.user_public_key
     );
-    let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
+    let output = match encrypt_output(&output, secret_msg.nonce, secret_msg.user_public_key) {
+        Ok(x) => x,
+        Err(err) => {
+            return Ok(HandleSuccess {
+                output: encrypt_output(
+                    &format!(
+                        r#"{{"Err":{{"generic_err":{{"msg":"Error received while trying to encrypt the output '{:?}' : {:?}"}}}}}}"#,
+                        String::from_utf8_lossy(&output),
+                        err
+                    )
+                        .into_bytes(),
+                    secret_msg.nonce,
+                    secret_msg.user_public_key,
+                )?,
+                used_gas: engine.gas_used(),
+                signature: contract_key, // TODO this is not needed anymore as output is already authenticated
+            });
+        }
+    };
 
     Ok(HandleSuccess {
         output,
         used_gas: engine.gas_used(),
-        signature: [0u8; 64], // TODO this is needed anymore as output is already authenticated
+        signature: [0u8; 64], // TODO this is not needed anymore as output is already authenticated
     })
 }
 
@@ -176,24 +338,87 @@ pub fn query(
 
     let secret_msg = SecretMessage::from_slice(msg)?;
 
-    let msg_ptr = engine
-        .write_to_memory(&secret_msg.decrypt()?)
-        .map_err(wasmi_error_to_enclave_error)?;
+    let msg_ptr = match engine.write_to_memory(&secret_msg.decrypt()?) {
+        Ok(x) => x,
+        Err(err) => {
+            return Ok(QuerySuccess {
+                output: encrypt_output(
+                    &format!(
+                        r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
+                        err
+                    )
+                    .into_bytes(),
+                    secret_msg.nonce,
+                    secret_msg.user_public_key,
+                )?,
+                used_gas: engine.gas_used(),
+                signature: contract_key, // TODO this is not needed anymore as output is already authenticated
+            });
+        }
+    };
 
-    let vec_ptr = engine
-        .query(msg_ptr)
-        .map_err(wasmi_error_to_enclave_error)?;
+    let vec_ptr = match engine.query(msg_ptr) {
+        Ok(x) => x,
+        Err(err) => {
+            return Ok(QuerySuccess {
+                output: encrypt_output(
+                    &format!(
+                        r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
+                        err
+                    )
+                    .into_bytes(),
+                    secret_msg.nonce,
+                    secret_msg.user_public_key,
+                )?,
+                used_gas: engine.gas_used(),
+                signature: contract_key, // TODO this is not needed anymore as output is already authenticated
+            });
+        }
+    };
 
-    let output = engine
-        .extract_vector(vec_ptr)
-        .map_err(wasmi_error_to_enclave_error)?;
+    let output = match engine.extract_vector(vec_ptr) {
+        Ok(x) => x,
+        Err(err) => {
+            return Ok(QuerySuccess {
+                output: encrypt_output(
+                    &format!(
+                        r#"{{"Err":{{"generic_err":{{"msg":"Error received from secret contract: {:?}"}}}}}}"#,
+                        err
+                    )
+                    .into_bytes(),
+                    secret_msg.nonce,
+                    secret_msg.user_public_key,
+                )?,
+                used_gas: engine.gas_used(),
+                signature: contract_key, // TODO this is not needed anymore as output is already authenticated
+            });
+        }
+    };
 
-    let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
+    let output = match encrypt_output(&output, secret_msg.nonce, secret_msg.user_public_key) {
+        Ok(x) => x,
+        Err(err) => {
+            return Ok(QuerySuccess {
+                output: encrypt_output(
+                    &format!(
+                        r#"{{"Err":{{"generic_err":{{"msg":"Error received while trying to encrypt the output '{:?}' : {:?}"}}}}}}"#,
+                        String::from_utf8_lossy(&output),
+                        err
+                    )
+                        .into_bytes(),
+                    secret_msg.nonce,
+                    secret_msg.user_public_key,
+                )?,
+                used_gas: engine.gas_used(),
+                signature: contract_key, // TODO this is not needed anymore as output is already authenticated
+            });
+        }
+    };
 
     Ok(QuerySuccess {
         output,
         used_gas: engine.gas_used(),
-        signature: [0; 64], // TODO this is needed anymore as output is already authenticated
+        signature: [0; 64], // TODO this is not needed anymore as output is already authenticated
     })
 }
 
@@ -203,9 +428,13 @@ fn start_engine(
     contract: &[u8],
     contract_key: &ContractKey,
 ) -> Result<Engine, EnclaveError> {
+    trace!("Deserializing Wasm contract");
+
     // Create a parity-wasm module first, so we can inject gas metering to it
     // (you need a parity-wasm module to use the pwasm-utils crate)
     let p_modlue = elements::deserialize_buffer(contract).map_err(|_| EnclaveError::InvalidWasm)?;
+
+    trace!("Deserialized Wasm contract");
 
     // Set the gas costs for wasm op-codes (there is an inline stack_height limit in WasmCosts)
     let wasm_costs = WasmCosts::default();
@@ -214,9 +443,13 @@ fn start_engine(
     let contract_module = pwasm_utils::inject_gas_counter(p_modlue, &gas_rules(&wasm_costs))
         .map_err(|_| EnclaveError::FailedGasMeteringInjection)?;
 
+    trace!("Trying to create Wasmi module from parity..");
+
     // Create a wasmi module from the parity module
     let module = wasmi::Module::from_parity_wasm_module(contract_module)
         .map_err(|_err| EnclaveError::InvalidWasm)?;
+
+    trace!("Created Wasmi module from parity. Now checking for floating points..");
 
     module
         .deny_floating_point()
@@ -228,8 +461,10 @@ fn start_engine(
     let imports_builder = create_builder(&resolver);
 
     // Instantiate a module with our imports and assert that there is no `start` function.
-    let module_instance =
-        ModuleInstance::new(&module, &imports_builder).map_err(|_err| EnclaveError::InvalidWasm)?;
+    let module_instance = ModuleInstance::new(&module, &imports_builder).map_err(|err| {
+        error!("Error in instantiation: {:?}", err);
+        EnclaveError::InvalidWasm
+    })?;
     if module_instance.has_start() {
         return Err(EnclaveError::WasmModuleWithStart);
     }

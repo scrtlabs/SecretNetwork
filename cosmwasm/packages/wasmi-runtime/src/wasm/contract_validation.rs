@@ -18,7 +18,7 @@ pub fn generate_encryption_key(
 
     let contract_hash = calc_contract_hash(contract);
 
-    let sender_id = generate_sender_id(env.message.signer.as_slice(), env.block.height as u64);
+    let sender_id = generate_sender_id(env.message.sender.as_slice(), env.block.height as u64);
 
     let mut encryption_key = [0u8; 64];
 
