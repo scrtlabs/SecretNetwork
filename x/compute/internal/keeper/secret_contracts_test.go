@@ -71,57 +71,35 @@ func getDecryptedData(t *testing.T, data []byte, nonce []byte) []byte {
 	return dataPlaintext
 }
 
-func requireQueryResult(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.AccAddress, input string, expectedOutput string) {
+func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.AccAddress, input string) (string, cosmwasm.StdError) {
 	queryBz, err := wasmCtx.Encrypt([]byte(input))
 	require.NoError(t, err)
+	nonce := queryBz[0:32]
 
 	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz)
-	require.NoError(t, err)
+	if err != nil {
+		x := err.Error()
+		fmt.Println(x)
+		errorCipherB64 := strings.ReplaceAll(x, "query wasm contract failed: generic: ", "")
+		errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
+		require.NoError(t, err)
+		errorPlainBz, err := wasmCtx.Decrypt(errorCipherBz, nonce)
+		require.NoError(t, err)
 
-	nonce := queryBz[0:32]
+		var trueErr cosmwasm.StdError
+		err = json.Unmarshal(errorPlainBz, &trueErr)
+		require.NoError(t, err)
+
+		return "", trueErr
+	}
+
 	resultPlainBz, err := wasmCtx.Decrypt(resultCipherBz, nonce)
 	require.NoError(t, err)
 
 	resultBz, err := base64.StdEncoding.DecodeString(string(resultPlainBz))
 	require.NoError(t, err)
 
-	require.JSONEq(t, expectedOutput, string(resultBz))
-}
-
-func requireQueryError(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.AccAddress, input string, expectedContainedInOutput string) {
-	queryBz, err := wasmCtx.Encrypt([]byte(input))
-	require.NoError(t, err)
-
-	_, err = keeper.QuerySmart(ctx, contractAddr, queryBz)
-
-	errorCipherB64 := strings.ReplaceAll(err.Error(), "query wasm contract failed: ", "")
-	errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
-	require.NoError(t, err)
-
-	nonce := queryBz[0:32]
-	errorPlainBz, err := wasmCtx.Decrypt(errorCipherBz, nonce)
-	require.NoError(t, err)
-
-	errorPlaintext := string(errorPlainBz)
-	require.Contains(t, errorPlaintext, expectedContainedInOutput)
-}
-
-func requireInitError(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, creator sdk.AccAddress, initMsg string, expectedContainedInOutput string) {
-	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
-	require.NoError(t, err)
-
-	_, err = keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	errorCipherB64 := strings.ReplaceAll(err.Error(), "instantiate wasm contract failed: ", "")
-	errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
-	require.NoError(t, err)
-
-	nonce := initMsgBz[0:32]
-	errorPlainBz, err := wasmCtx.Decrypt(errorCipherBz, nonce)
-	require.NoError(t, err)
-
-	errorPlaintext := string(errorPlainBz)
-	require.Contains(t, errorPlaintext, expectedContainedInOutput)
+	return string(resultBz), cosmwasm.StdError{}
 }
 
 func executeHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string, skipEvents uint) ([]byte, [][]cosmwasm.LogAttribute, cosmwasm.StdError) {
@@ -220,6 +198,7 @@ func TestCallbackSanity(t *testing.T) {
 
 	data, execEvents, err := executeHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"a":{"contract_addr":"%s","x":2,"y":3}}`, contractAddress.String()), 1)
 
+	require.Empty(t, err)
 	require.Equal(t,
 		[][]cosmwasm.LogAttribute{
 			{
@@ -237,8 +216,6 @@ func TestCallbackSanity(t *testing.T) {
 		},
 		execEvents,
 	)
-
-	require.NoError(t, err)
 	require.Equal(t, []byte{2, 3}, data)
 }
 
@@ -274,16 +251,13 @@ func TestSanity(t *testing.T) {
 	require.Empty(t, initEvents)
 
 	// check state after init
-	requireQueryResult(t,
-		keeper, ctx, contractAddress,
-		fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletA.String()),
-		`{"balance":"108"}`,
-	)
-	requireQueryResult(t,
-		keeper, ctx, contractAddress,
-		fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletB.String()),
-		`{"balance":"53"}`,
-	)
+	qRes, qErr := queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletA.String()))
+	require.Empty(t, qErr)
+	require.JSONEq(t, `{"balance":"108"}`, qRes)
+
+	qRes, qErr = queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletA.String()))
+	require.Empty(t, qErr)
+	require.JSONEq(t, `{"balance":"53"}`, qRes)
 
 	// transfer 10 from A to B
 	data, wasmEvents, err := executeHelper(t, keeper, ctx, contractAddress, walletA,
@@ -304,16 +278,13 @@ func TestSanity(t *testing.T) {
 	)
 
 	// check state after transfer
-	requireQueryResult(t,
-		keeper, ctx, contractAddress,
-		fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletA.String()),
-		`{"balance":"98"}`,
-	)
-	requireQueryResult(t,
-		keeper, ctx, contractAddress,
-		fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletB.String()),
-		`{"balance":"63"}`,
-	)
+	qRes, qErr = queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletA.String()))
+	require.Empty(t, qErr)
+	require.JSONEq(t, `{"balance":"98"}`, qRes)
+
+	qRes, qErr = queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletA.String()))
+	require.Empty(t, qErr)
+	require.JSONEq(t, `{"balance":"63"}`, qRes)
 }
 
 func TestInitLogs(t *testing.T) {
@@ -375,7 +346,7 @@ func TestEmptyLogKeyValue(t *testing.T) {
 
 	_, execEvents, execErr := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"emptylogkeyvalue":{}}`, 1)
 
-	require.NoError(t, execErr)
+	require.Empty(t, execErr)
 	require.Equal(t,
 		[][]cosmwasm.LogAttribute{
 			{
@@ -411,7 +382,7 @@ func TestEmptyData(t *testing.T) {
 
 	data, _, err := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"emptydata":{}}`, 1)
 
-	require.NoError(t, err)
+	require.Empty(t, err)
 	require.Empty(t, data)
 }
 
@@ -438,7 +409,7 @@ func TestNoData(t *testing.T) {
 
 	data, _, err := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"nodata":{}}`, 1)
 
-	require.NoError(t, err)
+	require.Empty(t, err)
 	require.Empty(t, data)
 }
 
@@ -563,8 +534,8 @@ func TestQueryInputParamError(t *testing.T) {
 	walletA := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
 	walletB := createFakeFundedAccount(ctx, accKeeper, topUp)
 
-	// https://github.com/CosmWasm/cosmwasm-examples/blob/f5ea00a85247abae8f8cbcba301f94ef21c66087/erc20/src/contract.rs
-	wasmCode, err := ioutil.ReadFile("./testdata/erc20-f5ea00a85247abae8f8cbcba301f94ef21c66087.wasm")
+	// https://github.com/CosmWasm/cosmwasm-examples/blob/36e3b7b5cb6fce90d70ecbf5555e951ea22ad7d9/erc20/src/contract.rs
+	wasmCode, err := ioutil.ReadFile("./testdata/erc20-36e3b7b5cb6fce90d70ecbf5555e951ea22ad7d9.wasm")
 	require.NoError(t, err)
 
 	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -579,11 +550,10 @@ func TestQueryInputParamError(t *testing.T) {
 	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", deposit)
 	require.NoError(t, err)
 
-	requireQueryError(t,
-		keeper, ctx, contractAddress,
-		`{"balance":{"address":"blabla"}}`,
-		`Contract error: canonicalize_address returned error`,
-	)
+	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"address":"blabla"}}`)
+	require.Error(t, qErr)
+	require.Error(t, qErr.GenericErr)
+	require.Contains(t, qErr.GenericErr.Msg, "InputInvalid")
 }
 
 func TestUnicodeData(t *testing.T) {
@@ -727,8 +697,8 @@ func TestQueryInputStructureError(t *testing.T) {
 	walletA := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
 	walletB := createFakeFundedAccount(ctx, accKeeper, topUp)
 
-	// https://github.com/CosmWasm/cosmwasm-examples/blob/f5ea00a85247abae8f8cbcba301f94ef21c66087/erc20/src/contract.rs
-	wasmCode, err := ioutil.ReadFile("./testdata/erc20-f5ea00a85247abae8f8cbcba301f94ef21c66087.wasm")
+	// https://github.com/CosmWasm/cosmwasm-examples/blob/36e3b7b5cb6fce90d70ecbf5555e951ea22ad7d9/erc20/src/contract.rs
+	wasmCode, err := ioutil.ReadFile("./testdata/erc20-36e3b7b5cb6fce90d70ecbf5555e951ea22ad7d9.wasm")
 	require.NoError(t, err)
 
 	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -743,7 +713,10 @@ func TestQueryInputStructureError(t *testing.T) {
 	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", deposit)
 	require.NoError(t, err)
 
-	requireQueryError(t, keeper, ctx, contractAddress, `{"balance":{"invalidkey":"invalidval"}}`, "Error parsing QueryMsg: missing field")
+	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"invalidkey":"invalidval"}}`)
+	require.Error(t, qErr)
+	require.Error(t, qErr.ParseErr)
+	require.Contains(t, qErr.ParseErr.Msg, "missing field `address`")
 }
 
 func TestQueryContractErrorUnicode(t *testing.T) {
@@ -772,7 +745,7 @@ func TestQueryContractErrorUnicode(t *testing.T) {
 
 	_, err = keeper.QuerySmart(ctx, contractAddress, queryBz)
 
-	errorCipherB64 := strings.ReplaceAll(err.Error(), "query wasm contract failed: ", "")
+	errorCipherB64 := strings.ReplaceAll(err.Error(), "query wasm contract failed: generic: ", "")
 	errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
 	require.NoError(t, err)
 

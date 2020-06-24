@@ -191,6 +191,6 @@ build-test-contract:
 	$(MAKE) -C ./x/compute/internal/keeper/testdata/test-contract
 
 go-tests: build-test-contract
-	SGX_MODE=SW BUILD_PROFILE=debug $(MAKE) build-linux # empty BUILD_PROFILE means debug mode which compiles faster
+	SGX_MODE=SW $(MAKE) build-linux # empty BUILD_PROFILE means debug mode which compiles faster
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	SGX_MODE=SW go test -p 1 -v ./x/compute/internal/...
