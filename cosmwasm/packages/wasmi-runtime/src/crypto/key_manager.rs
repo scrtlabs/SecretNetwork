@@ -1,7 +1,8 @@
 use crate::consts::*;
+use crate::crypto::errors::CryptoError;
 use crate::crypto::traits::*;
 use crate::crypto::{AESKey, KeyPair, Seed};
-use enclave_ffi_types::{CryptoError, EnclaveError};
+use enclave_ffi_types::EnclaveError;
 use lazy_static::lazy_static;
 use log::*;
 
@@ -216,8 +217,8 @@ pub mod tests {
     use super::{
         Keychain, CONSENSUS_SEED_SEALING_PATH, KEY_MANAGER, REGISTRATION_KEY_SEALING_PATH,
     };
+    use crate::crypto::errors::CryptoError;
     use crate::crypto::{KeyPair, Seed};
-    use enclave_ffi_types::CryptoError;
 
     // todo: fix test vectors to actually work
     fn test_initial_keychain_state() {

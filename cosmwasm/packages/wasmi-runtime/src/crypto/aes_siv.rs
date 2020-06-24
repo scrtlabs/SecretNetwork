@@ -1,3 +1,4 @@
+use crate::crypto::errors::CryptoError;
 /// AES-SIV encryption in rust - https://tools.ietf.org/html/rfc5297
 ///
 /// This is a unique AES mode for deterministic encryption, where it is difficult to generate random
@@ -19,7 +20,6 @@ use crate::crypto::keys::{AESKey, SymmetricKey};
 use crate::crypto::traits::SIVEncryptable;
 use aes_siv::aead::generic_array::GenericArray;
 use aes_siv::siv::Aes128Siv;
-use enclave_ffi_types::CryptoError;
 use log::*;
 
 impl SIVEncryptable for AESKey {

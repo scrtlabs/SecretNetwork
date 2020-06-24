@@ -1,3 +1,4 @@
+mod errors;
 mod kdf;
 pub mod key_manager;
 mod keys;
