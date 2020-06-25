@@ -185,10 +185,10 @@ build-testnet:
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t cashmaney/secret-network-node:testnet .
 
 docker_bootstrap:
-	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t enigmampc/secret-network-bootstrap-${ext}:${DOCKER_TAG} .
+	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t cashmaney/secret-network-bootstrap-${ext}:${DOCKER_TAG} .
 
 docker_node:
-	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=NODE -t enigmampc/secret-network-node-${ext}:${DOCKER_TAG} .
+	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=NODE -t cashmaney/secret-network-node-${ext}:${DOCKER_TAG} .
 # while developing:
 build-enclave:
 	$(MAKE) -C cosmwasm/lib/wasmi-runtime 
