@@ -66,16 +66,19 @@ impl ContractInstance {
         }
     }
 
-    pub fn write_to_memory(&mut self, buffer: &[u8]) -> Result<u32, InterpreterError> {
+    pub fn write_to_allocated_memory(
+        &mut self,
+        buffer: &[u8],
+        ptr_to_region_in_wasm_vm: u32,
+    ) -> Result<u32, InterpreterError> {
         // WASM pointers are pointers to "Region"
         // Region is a struct that looks like this:
         // ptr_to_region -> | 4byte = buffer_addr | 4bytes = buffer_cap | 4bytes = buffer_len |
 
-        // allocate return a pointer to a region
-        let ptr_to_region_in_wasm_vm = self.allocate(buffer.len() as u32)?;
-
         // extract the buffer pointer from the region
-        let buffer_addr_in_wasm: u32 = self.get_memory().get_value::<u32>(ptr_to_region_in_wasm_vm)?;
+        let buffer_addr_in_wasm: u32 = self
+            .get_memory()
+            .get_value::<u32>(ptr_to_region_in_wasm_vm)?;
 
         let buffer_cap_in_wasm: u32 = self
             .get_memory()
@@ -83,7 +86,7 @@ impl ContractInstance {
 
         if buffer_cap_in_wasm < buffer.len() as u32 {
             return Err(InterpreterError::Memory(format!(
-                "Tried to allocate {} bytes but only got {} bytes",
+                "Tried to write {} bytes but only got {} bytes in destination buffer",
                 buffer.len(),
                 buffer_cap_in_wasm
             )));
@@ -96,6 +99,16 @@ impl ContractInstance {
 
         // return the WASM pointer
         Ok(ptr_to_region_in_wasm_vm)
+    }
+
+    pub fn write_to_memory(&mut self, buffer: &[u8]) -> Result<u32, InterpreterError> {
+        // WASM pointers are pointers to "Region"
+        // Region is a struct that looks like this:
+        // ptr_to_region -> | 4byte = buffer_addr | 4bytes = buffer_cap | 4bytes = buffer_len |
+
+        // allocate return a pointer to a region
+        let ptr_to_region_in_wasm_vm = self.allocate(buffer.len() as u32)?;
+        self.write_to_allocated_memory(buffer, ptr_to_region_in_wasm_vm)
     }
 }
 
@@ -129,6 +142,12 @@ impl WasmiApi for ContractInstance {
             None => return Ok(Some(RuntimeValue::I32(0))),
             Some(value) => value,
         };
+
+        trace!(
+            "read_db() got value with len {}: '{:?}'",
+            value.len(),
+            value
+        );
 
         let ptr_to_region_in_wasm_vm = self.write_to_memory(&value).map_err(|err| {
             error!(
@@ -198,9 +217,9 @@ impl WasmiApi for ContractInstance {
         })?;
 
         trace!(
-            "write_db() was called from WASM code with state_key_name: {:?} value: {:?}... (first 20 bytes)",
+            "write_db() was called from WASM code with state_key_name: {:?} value: {:?}",
             String::from_utf8_lossy(&state_key_name),
-            String::from_utf8_lossy(value.get(0..std::cmp::min(20, value.len())).unwrap())
+            String::from_utf8_lossy(&value),
         );
 
         write_encrypted_key(&state_key_name, &value, &self.context, &self.contract_key).map_err(
@@ -240,25 +259,31 @@ impl WasmiApi for ContractInstance {
         );
 
         // Turn Vec<u8> to str
-        let mut human_addr_str = std::str::from_utf8(&human).map_err(|err|{
-            error!(
-                "canonicalize_address() error while trying to parse human address from bytes to string: {:?}",
-                err
-            );
-            WasmEngineError::InputInvalid
-        })?;
+        let mut human_addr_str = match std::str::from_utf8(&human) {
+            Err(err) => {
+                error!(
+                    "canonicalize_address() error while trying to parse human address from bytes to string: {:?}",
+                    err
+                );
+                return Ok(Some(RuntimeValue::I32(-1)));
+            }
+            Ok(x) => x,
+        };
 
         human_addr_str = human_addr_str.trim();
         if human_addr_str.is_empty() {
             return Err(WasmEngineError::InputEmpty.into());
         }
-        let (decoded_prefix, data) =   bech32::decode(&human_addr_str).map_err(|err|{
-            error!(
+        let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
+            Err(err) => {
+                error!(
                 "canonicalize_address() error while trying to decode human address {:?} as bech32: {:?}",
                 human_addr_str, err
             );
-            WasmEngineError::InputInvalid
-        })?;
+                return Ok(Some(RuntimeValue::I32(-2)));
+            }
+            Ok(x) => x,
+        };
 
         if decoded_prefix != BECH32_PREFIX_ACC_ADDR {
             warn!(
@@ -267,78 +292,26 @@ impl WasmiApi for ContractInstance {
                 BECH32_PREFIX_ACC_ADDR,
                 human_addr_str
             );
-            return Err(WasmEngineError::InputWrongPrefix.into());
+            return Ok(Some(RuntimeValue::I32(-3)));
         }
 
-        let canonical = Vec::<u8>::from_base32(&data).map_err(|err| {
-            warn!(
-                "canonicalize_address() error while trying to decode bytes from base32 {:?}: {:?}",
-                data, err
-            );
-            WasmEngineError::InputInvalid
-        })?;
+        let canonical = match Vec::<u8>::from_base32(&data) {
+            Err(err) => {
+                warn!(
+                    "canonicalize_address() error while trying to decode bytes from base32 {:?}: {:?}",
+                    data, err
+                );
+                return Ok(Some(RuntimeValue::I32(-4)));
+            }
+            Ok(x) => x,
+        };
 
-        if canonical.len() != 20 {
-            // cosmos address length is 20
-            // https://github.com/cosmos/cosmos-sdk/blob/v0.38.4/types/address.go#L32
-            warn!(
-                "canonicalize_address() decoded canonical address is not 20 bytes: {:?}",
-                canonical
-            );
-            return Err(WasmEngineError::InputWrongLength.into());
-        }
-
-        // Get pointer to the buffer (this was allocated in WASM)
-        let canonical_ptr_in_wasm = self
-            .get_memory()
-            .get_value::<u32>(canonical_ptr_ptr as u32)
+        self.write_to_allocated_memory(&canonical, canonical_ptr_ptr as u32)
             .map_err(|err| {
                 error!(
-                    "read_db() error while trying to get pointer for the result buffer: {:?}",
+                    "canonicalize_address() error while trying to write the answer {:?} to the destination buffer: {:?}",
+                    canonical,
                     err,
-                );
-                WasmEngineError::MemoryReadError
-            })?;
-
-        // Get capacity of the buffer (this was allocated in WASM)
-        let canonical_cap_in_wasm = self
-            .memory
-            .get_value::<u32>((canonical_ptr_ptr + 4) as u32)
-            .map_err(|err| {
-                error!(
-                    "read_db() error while trying to get pointer for the result buffer: {:?}",
-                    err,
-                );
-                WasmEngineError::MemoryReadError
-            })?;
-
-        // Check that canonical is not too big to write into the allocated buffer (canonical should always be 20 bytes)
-        if canonical_cap_in_wasm < canonical.len() as u32 {
-            error!(
-                "canonicalize_address() result to big ({} bytes) to write to allocated wasm buffer ({} bytes)",
-                canonical.len(),
-                canonical_cap_in_wasm
-            );
-            return Err(WasmEngineError::MemoryAllocationError.into());
-        }
-
-        // Write the canonical address to WASM memory
-        self.get_memory()
-            .set(canonical_ptr_in_wasm, &canonical)
-            .map_err(|err| {
-                error!(
-                    "canonicalize_address() error while trying to write to result buffer: {:?}",
-                    err
-                );
-                WasmEngineError::MemoryWriteError
-            })?;
-        // Update the len
-        self.get_memory()
-            .set_value(canonical_ptr_in_wasm + 8, canonical.len() as u32)
-            .map_err(|err| {
-                error!(
-                    "canonicalize_address() error while trying to update written buffer length: {:?}",
-                    err
                 );
                 WasmEngineError::MemoryWriteError
             })?;
@@ -370,75 +343,22 @@ impl WasmiApi for ContractInstance {
             canonical
         );
 
-        if canonical.len() != 20 {
-            // cosmos address length is 20
-            // https://github.com/cosmos/cosmos-sdk/blob/v0.38.4/types/address.go#L32
-            error!(
-                "humanize_address() input canonical address must be 20 bytes: {:?}",
-                canonical
-            );
-            return Err(WasmEngineError::InputWrongLength.into());
-        }
-
-        let human_addr_str= bech32::encode(BECH32_PREFIX_ACC_ADDR, canonical.to_base32())
-            .map_err(|err| {
-            error!("humanize_address() error while trying to encode canonical address {:?} to human: {:?}",  canonical, err);
-                WasmEngineError::InputInvalid
-            })?;
+        let human_addr_str = match bech32::encode(BECH32_PREFIX_ACC_ADDR, canonical.to_base32()) {
+            Err(err) => {
+                error!("humanize_address() error while trying to encode canonical address {:?} to human: {:?}",  canonical, err);
+                return Ok(Some(RuntimeValue::I32(-1)));
+            }
+            Ok(x) => x,
+        };
 
         let human_bytes = human_addr_str.into_bytes();
 
-        // Get pointer to the region of the human buffer
-        let human_ptr_in_wasm: u32 = self
-            .get_memory()
-            .get_value::<u32>(human_ptr_ptr as u32)
+        self.write_to_allocated_memory(&human_bytes, human_ptr_ptr as u32)
             .map_err(|err| {
                 error!(
-                    "humanize_address() error while trying to get pointer for the result buffer: {:?}",
+                    "humanize_address() error while trying to write the answer {:?} to the destination buffer: {:?}",
+                    human_bytes,
                     err,
-                );
-                WasmEngineError::MemoryReadError
-            })?;
-
-        // Get capacity of the buffer (this was allocated in WASM)
-        let human_cap_in_wasm: u32 = self
-            .get_memory()
-            .get_value::<u32>((human_ptr_ptr + 4) as u32)
-            .map_err(|err| {
-                error!(
-                    "humanize_address() error while trying to get length of result buffer: {:?}",
-                    err
-                );
-                WasmEngineError::MemoryReadError
-            })?;
-
-        // Check that human_bytes is not too big to write into the allocated buffer (human_bytes should always be 45 bytes)
-        if human_cap_in_wasm < human_bytes.len() as u32 {
-            error!(
-                "humanize_address() result to big ({} bytes) to write to allocated wasm buffer ({} bytes)",
-                human_bytes.len(),
-                human_cap_in_wasm
-            );
-            return Err(WasmEngineError::OutputWrongLength.into());
-        }
-
-        // Write the canonical address to WASM memory
-        self.get_memory()
-            .set(human_ptr_in_wasm, &human_bytes)
-            .map_err(|err| {
-                error!(
-                    "humanize_address() error while trying to write to result buffer: {:?}",
-                    err
-                );
-                WasmEngineError::MemoryWriteError
-            })?;
-        // Update the len
-        self.get_memory()
-            .set_value(human_ptr_in_wasm + 8, human_bytes.len() as u32)
-            .map_err(|err| {
-                error!(
-                    "humanize_address() error while trying to update written buffer length: {:?}",
-                    err
                 );
                 WasmEngineError::MemoryWriteError
             })?;

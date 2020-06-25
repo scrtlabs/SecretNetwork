@@ -8,11 +8,6 @@ use crate::{Querier, Storage, VmResult};
 /// Copy a buffer from the enclave memory space, and return an opaque pointer to it.
 #[no_mangle]
 pub extern "C" fn ocall_allocate(buffer: *const u8, length: usize) -> UserSpaceBuffer {
-    info!(
-        target: module_path!(),
-        "ocall_allocate() called with buffer length: {:?}", length
-    );
-
     let slice = unsafe { std::slice::from_raw_parts(buffer, length) };
     let vector_copy = slice.to_vec();
     let boxed_vector = Box::new(vector_copy);
@@ -36,12 +31,6 @@ pub unsafe fn recover_buffer(ptr: UserSpaceBuffer) -> Option<Vec<u8>> {
 pub extern "C" fn ocall_read_db(context: Ctx, key: *const u8, key_len: usize) -> EnclaveBuffer {
     let key = unsafe { std::slice::from_raw_parts(key, key_len) };
 
-    info!(
-        target: module_path!(),
-        "ocall_read_db() called with len: {:?} key: {:?}",
-        key_len,
-        String::from_utf8_lossy(key)
-    );
     let null_buffer = EnclaveBuffer {
         ptr: std::ptr::null_mut(),
     };
@@ -72,12 +61,6 @@ pub extern "C" fn ocall_read_db(context: Ctx, key: *const u8, key_len: usize) ->
 pub extern "C" fn ocall_remove_db(context: Ctx, key: *const u8, key_len: usize) {
     let key = unsafe { std::slice::from_raw_parts(key, key_len) };
 
-    info!(
-        target: module_path!(),
-        "ocall_remove_db() called with len: {:?} key: {:?}",
-        key_len,
-        String::from_utf8_lossy(key)
-    );
     let null_buffer = EnclaveBuffer {
         ptr: std::ptr::null_mut(),
     };
@@ -102,15 +85,6 @@ pub extern "C" fn ocall_write_db(
 ) {
     let key = unsafe { std::slice::from_raw_parts(key, key_len) };
     let value = unsafe { std::slice::from_raw_parts(value, value_len) };
-
-    info!(
-        target: module_path!(),
-        "ocall_write_db() called with key_len: {:?} key: {:?} val_len: {:?} val: {:?}... (first 20 bytes)",
-        key_len,
-        String::from_utf8_lossy(key),
-        value_len,
-        String::from_utf8_lossy(value.get(0..std::cmp::min(20, value_len)).unwrap())
-    );
 
     let implementation = unsafe { get_implementations_from_context(&context).write_db };
 
