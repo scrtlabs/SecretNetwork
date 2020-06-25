@@ -189,7 +189,7 @@ func TestInstantiate(t *testing.T) {
 	require.NotNil(t, info)
 	require.Equal(t, info.Creator, creator)
 	require.Equal(t, info.CodeID, contractID)
-	require.Equal(t, info.InitMsg, json.RawMessage(initMsgBz))
+	require.Equal(t, info.InitMsg, initMsgBz)
 	require.Equal(t, info.Label, "demo contract 1")
 }
 
