@@ -2,7 +2,7 @@ version: '3'
 
 services:
   bootstrap:
-    image: enigmampc/secret_bootstrap
+    image: cashmaney/secret-network-bootstrap-sw
     container_name: bootstrap
     volumes:
       - /tmp/enigmad:/root/.enigmad
@@ -17,7 +17,7 @@ services:
       - 26657
 
   node:
-    image: enigmampc/secret_node
+    image: cashmaney/secret-network-node-sw
     depends_on:
       - bootstrap
     volumes:
