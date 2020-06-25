@@ -269,7 +269,7 @@ func TestSanity(t *testing.T) {
 	data, wasmEvents, err := executeHelper(t, keeper, ctx, contractAddress, walletA,
 		fmt.Sprintf(`{"transfer":{"amount":"10","recipient":"%s"}}`, walletB.String()), 0)
 
-	require.NoError(t, err)
+	require.Empty(t, err)
 	require.Empty(t, data)
 	require.Equal(t,
 		[][]cosmwasm.LogAttribute{
