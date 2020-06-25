@@ -75,7 +75,9 @@ impl ContractInstance {
         let ptr_to_region_in_wasm_vm = self.allocate(buffer.len() as u32)?;
 
         // extract the buffer pointer from the region
-        let buffer_addr_in_wasm: u32 = self.get_memory().get_value::<u32>(ptr_to_region_in_wasm_vm)?;
+        let buffer_addr_in_wasm: u32 = self
+            .get_memory()
+            .get_value::<u32>(ptr_to_region_in_wasm_vm)?;
 
         let buffer_cap_in_wasm: u32 = self
             .get_memory()
@@ -129,6 +131,12 @@ impl WasmiApi for ContractInstance {
             None => return Ok(Some(RuntimeValue::I32(0))),
             Some(value) => value,
         };
+
+        trace!(
+            "read_db() got value with len {}: '{:?}'",
+            value.len(),
+            value
+        );
 
         let ptr_to_region_in_wasm_vm = self.write_to_memory(&value).map_err(|err| {
             error!(

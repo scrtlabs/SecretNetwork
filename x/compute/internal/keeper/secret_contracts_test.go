@@ -249,7 +249,7 @@ func TestSanity(t *testing.T) {
 	require.Empty(t, qErr)
 	require.JSONEq(t, `{"balance":"108"}`, qRes)
 
-	qRes, qErr = queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletA.String()))
+	qRes, qErr = queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletB.String()))
 	require.Empty(t, qErr)
 	require.JSONEq(t, `{"balance":"53"}`, qRes)
 
@@ -276,7 +276,7 @@ func TestSanity(t *testing.T) {
 	require.Empty(t, qErr)
 	require.JSONEq(t, `{"balance":"98"}`, qRes)
 
-	qRes, qErr = queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletA.String()))
+	qRes, qErr = queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletB.String()))
 	require.Empty(t, qErr)
 	require.JSONEq(t, `{"balance":"63"}`, qRes)
 }
