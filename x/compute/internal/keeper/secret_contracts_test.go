@@ -237,8 +237,7 @@ func TestSanity(t *testing.T) {
 	walletA := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
 	walletB := createFakeFundedAccount(ctx, accKeeper, topUp)
 
-	// https://github.com/CosmWasm/cosmwasm-examples/blob/36e3b7b5cb6fce90d70ecbf5555e951ea22ad7d9/erc20/src/contract.rs
-	wasmCode, err := ioutil.ReadFile("./testdata/erc20-36e3b7b5cb6fce90d70ecbf5555e951ea22ad7d9.wasm")
+	wasmCode, err := ioutil.ReadFile("./testdata/erc20.wasm")
 	require.NoError(t, err)
 
 	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -541,8 +540,7 @@ func TestQueryInputParamError(t *testing.T) {
 	walletA := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
 	walletB := createFakeFundedAccount(ctx, accKeeper, topUp)
 
-	// https://github.com/CosmWasm/cosmwasm-examples/blob/36e3b7b5cb6fce90d70ecbf5555e951ea22ad7d9/erc20/src/contract.rs
-	wasmCode, err := ioutil.ReadFile("./testdata/erc20-36e3b7b5cb6fce90d70ecbf5555e951ea22ad7d9.wasm")
+	wasmCode, err := ioutil.ReadFile("./testdata/erc20.wasm")
 	require.NoError(t, err)
 
 	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -704,8 +702,7 @@ func TestQueryInputStructureError(t *testing.T) {
 	walletA := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
 	walletB := createFakeFundedAccount(ctx, accKeeper, topUp)
 
-	// https://github.com/CosmWasm/cosmwasm-examples/blob/36e3b7b5cb6fce90d70ecbf5555e951ea22ad7d9/erc20/src/contract.rs
-	wasmCode, err := ioutil.ReadFile("./testdata/erc20-36e3b7b5cb6fce90d70ecbf5555e951ea22ad7d9.wasm")
+	wasmCode, err := ioutil.ReadFile("./testdata/erc20.wasm")
 	require.NoError(t, err)
 
 	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
