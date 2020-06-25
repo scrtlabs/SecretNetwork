@@ -560,7 +560,7 @@ func TestQueryInputParamError(t *testing.T) {
 	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"address":"blabla"}}`)
 	require.Error(t, qErr)
 	require.Error(t, qErr.GenericErr)
-	require.Contains(t, qErr.GenericErr.Msg, "EnclaveErr: Got an error from the enclave: Unknown") // TODO fix this
+	require.Contains(t, qErr.ParseErr.Msg, "Cannot convert human address 'blabla' to canonical address") // TODO fix this
 }
 
 func TestUnicodeData(t *testing.T) {
