@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -464,6 +465,7 @@ func (app *EnigmaChainApp) ExportAppStateAndValidators(forZeroHeight bool, jailW
 	}
 
 	genState := app.mm.ExportGenesis(ctx)
+	fmt.Println(string(genState["compute"]))
 	appState, err = codec.MarshalJSONIndent(app.cdc, genState)
 	if err != nil {
 		return nil, nil, err
