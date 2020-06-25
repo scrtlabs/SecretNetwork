@@ -127,7 +127,7 @@
       "type": "Microsoft.Network/networkSecurityGroups",
       "apiVersion": "2020-04-01",
       "name": "[variables('networkSecurityGroupName')]",
-      "location": "uksouth",
+      "location": "[parameters('location')]",
       "properties": {
         "securityRules": [
           {
@@ -141,11 +141,7 @@
               "destinationAddressPrefix": "*",
               "access": "Allow",
               "priority": 2000,
-              "direction": "Inbound",
-              "sourcePortRanges": [],
-              "destinationPortRanges": [],
-              "sourceAddressPrefixes": [],
-              "destinationAddressPrefixes": []
+              "direction": "Inbound"
             }
           },
           {
@@ -158,11 +154,7 @@
               "destinationAddressPrefix": "*",
               "access": "Allow",
               "priority": 2100,
-              "direction": "Inbound",
-              "sourcePortRanges": [],
-              "destinationPortRanges": [],
-              "sourceAddressPrefixes": [],
-              "destinationAddressPrefixes": []
+              "direction": "Inbound"
             }
           }
         ]
@@ -205,7 +197,6 @@
             }
           }
         ],
-        "virtualNetworkPeerings": [],
         "enableDdosProtection": false,
         "enableVmProtection": false
       }
@@ -322,7 +313,20 @@
           "commandToExecute": "[concat('sh secretnode.sh',' ',parameters('adminUsername'),' ',parameters('chainId'),' ',parameters('moniker'),' ',parameters('persistentPeers'),' ',parameters('rpcUrl'),' ',parameters('registrationService'))]"
         }
       }
-    }
+    },
+	{
+		"apiVersion": "2018-02-01",
+		"name": "pid-ae06c7bf-4801-5ab9-a1fa-bd3b9878ecb6",
+		"type": "Microsoft.Resources/deployments",
+		"properties": {
+			"mode": "Incremental",
+			"template": {
+				"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+				"contentVersion": "1.0.0.0",
+				"resources": []
+			}
+		}
+	}
   ],
   "outputs": {
     "adminUsername": {
