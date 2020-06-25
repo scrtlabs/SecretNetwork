@@ -74,16 +74,14 @@ pub fn encrypt_output(
     })?;
 
     if let Value::Object(err) = &mut v["Err"] {
-        let mut new_value: Value = serde_json::from_str(
-            format!(r#"{{"generic_err":{{"msg":""}}}}"#,).as_str(),
-        )
-        .map_err(|err| {
-            error!(
-                "got an error while trying to serialize error output bytes into json {:?}: {}",
-                output, err
-            );
-            EnclaveError::FailedToSerialize
-        })?;
+        let mut new_value: Value =
+            serde_json::from_str(r#"{"generic_err":{"msg":""}}"#).map_err(|err| {
+                error!(
+                    "got an error while trying to serialize error output bytes into json {:?}: {}",
+                    output, err
+                );
+                EnclaveError::FailedToSerialize
+            })?;
         new_value["generic_err"]["msg"] = encrypt_serializeable(&key, &err)?;
         v["Err"] = new_value;
     } else if let Value::String(ok) = &v["Ok"] {
