@@ -2,8 +2,6 @@ package types
 
 import (
 	"encoding/base64"
-	"encoding/json"
-
 	tmBytes "github.com/tendermint/tendermint/libs/bytes"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -44,11 +42,11 @@ func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, source string, builder
 
 // ContractInfo stores a WASM contract instance
 type ContractInfo struct {
-	CodeID  uint64          `json:"code_id"`
-	Creator sdk.AccAddress  `json:"creator"`
-	Admin   sdk.AccAddress  `json:"admin,omitempty"`
-	Label   string          `json:"label"`
-	InitMsg json.RawMessage `json:"init_msg,omitempty"`
+	CodeID  uint64         `json:"code_id"`
+	Creator sdk.AccAddress `json:"creator"`
+	Admin   sdk.AccAddress `json:"admin,omitempty"`
+	Label   string         `json:"label"`
+	InitMsg []byte         `json:"init_msg,omitempty"`
 	// never show this in query results, just use for sorting
 	// (Note: when using json tag "-" amino refused to serialize it...)
 	Created        *AbsoluteTxPosition `json:"created,omitempty"`
