@@ -1,10 +1,13 @@
 [package]
-name = "staking"
-version = "0.9.0-alpha1"
-authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
+name = "erc20"
+description = "An implementation of the ERC20 token interface"
+version = "0.4.0"
+authors = ["Simon Warta <webmaster128@users.noreply.github.com>"]
 edition = "2018"
+license = "Apache-2.0"
+repository = "https://github.com/CosmWasm/cosmwasm-examples"
 exclude = [
-  # Those files are cosmwasm-opt artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
   "contract.wasm",
   "hash.txt",
 ]
@@ -37,10 +40,8 @@ cosmwasm-std = { path = "../../packages/std", features = ["staking"] }
 cosmwasm-storage = { path = "../../packages/storage" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-snafu = { version = "0.6.3" }
+hex = "0.4"
 
 [dev-dependencies]
-cosmwasm-vm = { path = "../../packages/sgx-vm", package = "cosmwasm-sgx-vm", default-features = false, features = [
-  "staking"
-] }
+cosmwasm-vm = { path = "../../packages/sgx-vm", package = "cosmwasm-sgx-vm", default-features = false }
 cosmwasm-schema = { path = "../../packages/schema" }

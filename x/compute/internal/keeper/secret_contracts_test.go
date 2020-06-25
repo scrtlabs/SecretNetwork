@@ -237,8 +237,7 @@ func TestSanity(t *testing.T) {
 	walletA := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
 	walletB := createFakeFundedAccount(ctx, accKeeper, topUp)
 
-	// https://github.com/CosmWasm/cosmwasm-examples/blob/36e3b7b5cb6fce90d70ecbf5555e951ea22ad7d9/erc20/src/contract.rs
-	wasmCode, err := ioutil.ReadFile("./testdata/erc20-36e3b7b5cb6fce90d70ecbf5555e951ea22ad7d9.wasm")
+	wasmCode, err := ioutil.ReadFile("./testdata/erc20.wasm")
 	require.NoError(t, err)
 
 	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -262,7 +261,7 @@ func TestSanity(t *testing.T) {
 	require.Empty(t, qErr)
 	require.JSONEq(t, `{"balance":"108"}`, qRes)
 
-	qRes, qErr = queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletA.String()))
+	qRes, qErr = queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletB.String()))
 	require.Empty(t, qErr)
 	require.JSONEq(t, `{"balance":"53"}`, qRes)
 
@@ -270,7 +269,7 @@ func TestSanity(t *testing.T) {
 	data, wasmEvents, err := executeHelper(t, keeper, ctx, contractAddress, walletA,
 		fmt.Sprintf(`{"transfer":{"amount":"10","recipient":"%s"}}`, walletB.String()), 0)
 
-	require.NoError(t, err)
+	require.Empty(t, err)
 	require.Empty(t, data)
 	require.Equal(t,
 		[][]cosmwasm.LogAttribute{
@@ -289,7 +288,7 @@ func TestSanity(t *testing.T) {
 	require.Empty(t, qErr)
 	require.JSONEq(t, `{"balance":"98"}`, qRes)
 
-	qRes, qErr = queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletA.String()))
+	qRes, qErr = queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletB.String()))
 	require.Empty(t, qErr)
 	require.JSONEq(t, `{"balance":"63"}`, qRes)
 }
@@ -541,8 +540,7 @@ func TestQueryInputParamError(t *testing.T) {
 	walletA := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
 	walletB := createFakeFundedAccount(ctx, accKeeper, topUp)
 
-	// https://github.com/CosmWasm/cosmwasm-examples/blob/36e3b7b5cb6fce90d70ecbf5555e951ea22ad7d9/erc20/src/contract.rs
-	wasmCode, err := ioutil.ReadFile("./testdata/erc20-36e3b7b5cb6fce90d70ecbf5555e951ea22ad7d9.wasm")
+	wasmCode, err := ioutil.ReadFile("./testdata/erc20.wasm")
 	require.NoError(t, err)
 
 	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -560,7 +558,7 @@ func TestQueryInputParamError(t *testing.T) {
 	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"address":"blabla"}}`)
 	require.Error(t, qErr)
 	require.Error(t, qErr.GenericErr)
-	require.Contains(t, qErr.GenericErr.Msg, "EnclaveErr: Got an error from the enclave: Unknown") // TODO fix this
+	require.Contains(t, qErr.ParseErr.Msg, "Cannot convert human address 'blabla' to canonical address") // TODO fix this
 }
 
 func TestUnicodeData(t *testing.T) {
@@ -704,8 +702,7 @@ func TestQueryInputStructureError(t *testing.T) {
 	walletA := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
 	walletB := createFakeFundedAccount(ctx, accKeeper, topUp)
 
-	// https://github.com/CosmWasm/cosmwasm-examples/blob/36e3b7b5cb6fce90d70ecbf5555e951ea22ad7d9/erc20/src/contract.rs
-	wasmCode, err := ioutil.ReadFile("./testdata/erc20-36e3b7b5cb6fce90d70ecbf5555e951ea22ad7d9.wasm")
+	wasmCode, err := ioutil.ReadFile("./testdata/erc20.wasm")
 	require.NoError(t, err)
 
 	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
