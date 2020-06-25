@@ -259,25 +259,31 @@ impl WasmiApi for ContractInstance {
         );
 
         // Turn Vec<u8> to str
-        let mut human_addr_str = std::str::from_utf8(&human).map_err(|err|{
-            error!(
-                "canonicalize_address() error while trying to parse human address from bytes to string: {:?}",
-                err
-            );
-            WasmEngineError::InputInvalid
-        })?;
+        let mut human_addr_str = match std::str::from_utf8(&human) {
+            Err(err) => {
+                error!(
+                    "canonicalize_address() error while trying to parse human address from bytes to string: {:?}",
+                    err
+                );
+                return Ok(Some(RuntimeValue::I32(-1)));
+            }
+            Ok(x) => x,
+        };
 
         human_addr_str = human_addr_str.trim();
         if human_addr_str.is_empty() {
             return Err(WasmEngineError::InputEmpty.into());
         }
-        let (decoded_prefix, data) =   bech32::decode(&human_addr_str).map_err(|err|{
-            error!(
+        let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
+            Err(err) => {
+                error!(
                 "canonicalize_address() error while trying to decode human address {:?} as bech32: {:?}",
                 human_addr_str, err
             );
-            WasmEngineError::InputInvalid
-        })?;
+                return Ok(Some(RuntimeValue::I32(-2)));
+            }
+            Ok(x) => x,
+        };
 
         if decoded_prefix != BECH32_PREFIX_ACC_ADDR {
             warn!(
@@ -286,26 +292,19 @@ impl WasmiApi for ContractInstance {
                 BECH32_PREFIX_ACC_ADDR,
                 human_addr_str
             );
-            return Err(WasmEngineError::InputWrongPrefix.into());
+            return Ok(Some(RuntimeValue::I32(-3)));
         }
 
-        let canonical = Vec::<u8>::from_base32(&data).map_err(|err| {
-            warn!(
-                "canonicalize_address() error while trying to decode bytes from base32 {:?}: {:?}",
-                data, err
-            );
-            WasmEngineError::InputInvalid
-        })?;
-
-        if canonical.len() != 20 {
-            // cosmos address length is 20
-            // https://github.com/cosmos/cosmos-sdk/blob/v0.38.4/types/address.go#L32
-            warn!(
-                "canonicalize_address() decoded canonical address is not 20 bytes: {:?}",
-                canonical
-            );
-            return Err(WasmEngineError::InputWrongLength.into());
-        }
+        let canonical = match Vec::<u8>::from_base32(&data) {
+            Err(err) => {
+                warn!(
+                    "canonicalize_address() error while trying to decode bytes from base32 {:?}: {:?}",
+                    data, err
+                );
+                return Ok(Some(RuntimeValue::I32(-4)));
+            }
+            Ok(x) => x,
+        };
 
         self.write_to_allocated_memory(&canonical, canonical_ptr_ptr as u32)
             .map_err(|err| {
@@ -314,7 +313,7 @@ impl WasmiApi for ContractInstance {
                     canonical,
                     err,
                 );
-                WasmEngineError::MemoryAllocationError
+                WasmEngineError::MemoryWriteError
             })?;
 
         // return 0 == ok
@@ -344,21 +343,13 @@ impl WasmiApi for ContractInstance {
             canonical
         );
 
-        if canonical.len() != 20 {
-            // cosmos address length is 20
-            // https://github.com/cosmos/cosmos-sdk/blob/v0.38.4/types/address.go#L32
-            error!(
-                "humanize_address() input canonical address must be 20 bytes: {:?}",
-                canonical
-            );
-            return Err(WasmEngineError::InputWrongLength.into());
-        }
-
-        let human_addr_str= bech32::encode(BECH32_PREFIX_ACC_ADDR, canonical.to_base32())
-            .map_err(|err| {
-            error!("humanize_address() error while trying to encode canonical address {:?} to human: {:?}",  canonical, err);
-                WasmEngineError::InputInvalid
-            })?;
+        let human_addr_str = match bech32::encode(BECH32_PREFIX_ACC_ADDR, canonical.to_base32()) {
+            Err(err) => {
+                error!("humanize_address() error while trying to encode canonical address {:?} to human: {:?}",  canonical, err);
+                return Ok(Some(RuntimeValue::I32(-1)));
+            }
+            Ok(x) => x,
+        };
 
         let human_bytes = human_addr_str.into_bytes();
 
@@ -369,7 +360,7 @@ impl WasmiApi for ContractInstance {
                     human_bytes,
                     err,
                 );
-                WasmEngineError::MemoryAllocationError
+                WasmEngineError::MemoryWriteError
             })?;
 
         // return 0 == ok

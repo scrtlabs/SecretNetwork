@@ -558,7 +558,7 @@ func TestQueryInputParamError(t *testing.T) {
 	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"address":"blabla"}}`)
 	require.Error(t, qErr)
 	require.Error(t, qErr.GenericErr)
-	require.Contains(t, qErr.ParseErr.Msg, "Cannot convert human address 'blabla' to canonical address") // TODO fix this
+	require.Equal(t, qErr.GenericErr.Msg, "canonicalize_address returned error")
 }
 
 func TestUnicodeData(t *testing.T) {
