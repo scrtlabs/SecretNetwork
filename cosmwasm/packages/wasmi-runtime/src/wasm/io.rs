@@ -55,7 +55,7 @@ fn encode(data: &[u8]) -> Value {
 }
 
 pub fn encrypt_output(
-    output: &Vec<u8>,
+    output: Vec<u8>,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
 ) -> Result<Vec<u8>, EnclaveError> {

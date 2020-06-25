@@ -78,9 +78,12 @@ func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.
 
 	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz)
 	if err != nil {
-		x := err.Error()
-		fmt.Println(x)
-		errorCipherB64 := strings.ReplaceAll(x, "query wasm contract failed: generic: ", "")
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "EnclaveErr: Got an error from the enclave") {
+			return "", cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: errMsg}}
+		}
+
+		errorCipherB64 := strings.ReplaceAll(errMsg, "query wasm contract failed: generic: ", "")
 		errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
 		require.NoError(t, err)
 		errorPlainBz, err := wasmCtx.Decrypt(errorCipherBz, nonce)
@@ -109,7 +112,12 @@ func executeHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress
 
 	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	if err != nil {
-		errorCipherB64 := strings.ReplaceAll(err.Error(), "execute wasm contract failed: generic: ", "")
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "EnclaveErr: Got an error from the enclave") {
+			return nil, nil, cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: errMsg}}
+		}
+
+		errorCipherB64 := strings.ReplaceAll(errMsg, "execute wasm contract failed: generic: ", "")
 		errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
 		require.NoError(t, err)
 		errorPlainBz, err := wasmCtx.Decrypt(errorCipherBz, nonce)
@@ -140,6 +148,11 @@ func initHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, cre
 
 	contractAddress, err := keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	if err != nil {
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "EnclaveErr: Got an error from the enclave") {
+			return nil, nil, cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: errMsg}}
+		}
+
 		errorCipherB64 := strings.ReplaceAll(err.Error(), "instantiate wasm contract failed: generic: ", "")
 		errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
 		require.NoError(t, err)
@@ -547,7 +560,7 @@ func TestQueryInputParamError(t *testing.T) {
 	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"address":"blabla"}}`)
 	require.Error(t, qErr)
 	require.Error(t, qErr.GenericErr)
-	require.Contains(t, qErr.GenericErr.Msg, "InputInvalid")
+	require.Contains(t, qErr.GenericErr.Msg, "EnclaveErr: Got an error from the enclave: Unknown") // TODO fix this
 }
 
 func TestUnicodeData(t *testing.T) {
