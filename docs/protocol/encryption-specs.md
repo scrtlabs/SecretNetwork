@@ -38,6 +38,7 @@ This is a very advanced WIP.
   - [Deanonymizing with ciphertext byte count](#deanonymizing-with-ciphertext-byte-count)
   - [Two contracts with the same `contract_key` could deanonymize each other's states](#two-contracts-with-the-same-contract_key-could-deanonymize-each-others-states)
   - [Tx Replay attacks](#tx-replay-attacks)
+  - [More Advanced Tx Replay attacks -- search to decision for Millionaire's problem](#more-advanced-tx-replay-attacks----search-to-decision-for-millionaires-problem)
   - [Partial storage rollback during contract runtime](#partial-storage-rollback-during-contract-runtime)
   - [Tx outputs can leak data](#tx-outputs-can-leak-data)
 
@@ -624,13 +625,12 @@ After a contract runs on the chain, an attaker can sync up a node up to a specif
 
 This attack provides a specific example of a TX replay attack extracting the full information of a client based on replaying a TX.
 
-Specifically, assume for millionaire's that you have a contract where one person inputs their amount of money, then the other person does, then the contract sends them both a single bit saying who's is more -- this is the simplest implementation for Millionaire's problem solving, and it reveals the minimum amount of information (a single bit). As person 2, binary search the interval of possible money amounts person 1 could have -- say you know person 1 has less than N dollars. first, query with N/2 as your value with your node detached from the wider network, get the single bit out (whether the true value is higher or lower), then repeat by resyncing your node and calling in. 
+Specifically, assume for millionaire's that you have a contract where one person inputs their amount of money, then the other person does, then the contract sends them both a single bit saying who has more -- this is the simplest implementation for Millionaire's problem solving. As person 2, binary search the interval of possible money amounts person 1 could have -- say you know person 1 has less than N dollars. first, query with N/2 as your value with your node detached from the wider network, get the single bit out (whether the true value is higher or lower), then repeat by resyncing your node and calling in.
 By properties of binary search, in log(n) tries (where n is the size of the interval) you'll have the exact value of person 1's input.
 
-The naive solution to this is requiring the node to successfully broadcast the erasure of the data of person 1 and person 2 in the DHT before revealing an answer (which is an implicit heartbeat test, that also ensures the transaction isn't replayable), but even that's imperfect since you can reload the contract and replay the network state up to that broadcast, restoring the original state of the contract/DHT, then perform the attack with repeated rollbacks.
+The naive solution to this is requiring the node to successfully broadcast the data of person 1 and person 2 to the network before revealing an answer (which is an implicit heartbeat test, that also ensures the transaction isn't replayable), but even that's imperfect since you can reload the contract and replay the network state up to that broadcast, restoring the original state of the contract, then perform the attack with repeated rollbacks.
 
-Assaf: You could maybe implement the contract with the help of a 3rd party. I.e. the 2 players send their wealth amounts, and okay when the 3rd party sends an approval tx only the 2 players can query the result.   However, this is terrible UXwise.
-
+Assaf: You could maybe implement the contract with the help of a 3rd party. I.e. the 2 players send their amounts. When the 3rd party sends an approval tx only then the 2 players can query the result. However, this is not good UX.
 
 ## Partial storage rollback during contract runtime
 
