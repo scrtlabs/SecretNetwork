@@ -620,6 +620,18 @@ For example, An original contract with a permissioned getter, such that only whi
 
 After a contract runs on the chain, an attaker can sync up a node up to a specific block in the chain, and then call into the enclave with the same authenticated user inputs that were given to the enclave on-chain, but out-of-order, or omit selected messages. A contract that does not anticipate or protect against this might end up deanonimizing the information provided by users. for example, in a naive voting contract (or other personal data collection algorithm), we can deanonimize a voter by re-running the vote without the target's request, and analyze thedifference in final results.
 
+## More Advanced Tx Replay attacks -- search to decision for Millionaire's problem
+
+This attack provides a specific example of a TX replay attack extracting the full information of a client based on replaying a TX.
+
+Specifically, assume for millionaire's that you have a contract where one person inputs their amount of money, then the other person does, then the contract sends them both a single bit saying who's is more -- this is the simplest implementation for Millionaire's problem solving, and it reveals the minimum amount of information (a single bit). As person 2, binary search the interval of possible money amounts person 1 could have -- say you know person 1 has less than N dollars. first, query with N/2 as your value with your node detached from the wider network, get the single bit out (whether the true value is higher or lower), then repeat by resyncing your node and calling in. 
+By properties of binary search, in log(n) tries (where n is the size of the interval) you'll have the exact value of person 1's input.
+
+The naive solution to this is requiring the node to successfully broadcast the erasure of the data of person 1 and person 2 in the DHT before revealing an answer (which is an implicit heartbeat test, that also ensures the transaction isn't replayable), but even that's imperfect since you can reload the contract and replay the network state up to that broadcast, restoring the original state of the contract/DHT, then perform the attack with repeated rollbacks.
+
+Assaf: You could maybe implement the contract with the help of a 3rd party. I.e. the 2 players send their wealth amounts, and okay when the 3rd party sends an approval tx only the 2 players can query the result.   However, this is terrible UXwise.
+
+
 ## Partial storage rollback during contract runtime
 
 Our current schema can verify that when reading from a field in storage, the value received from the host has been written by the same contract instance to the same field in storage. BUT we can not (yet) verify that the value is the most **recent** value that wsa stored there. This means that a malicious host can (offline) run a transaction, and then selectively provide outdated values for some fields of the storage. In the worst case, this can cause a contract to expose old secrets with new permissions, or new secrets with old permissions. The contract can protect against this by either (e.g.) making sure that pieces of information that have to be synced with each other are saved under the same field (so they are never observed as desynchronised) or (e.g.) somehow verify their validity when reading them from two separate fields of storage.
