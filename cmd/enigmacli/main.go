@@ -34,6 +34,8 @@ func main() {
 
 	// Read in the configuration file for the sdk
 	config := sdk.GetConfig()
+	config.SetCoinType(529)
+	config.SetFullFundraiserPath("44'/529'/0'/0/0")
 	config.SetBech32PrefixForAccount(eng.Bech32PrefixAccAddr, eng.Bech32PrefixAccPub)
 	config.SetBech32PrefixForValidator(eng.Bech32PrefixValAddr, eng.Bech32PrefixValPub)
 	config.SetBech32PrefixForConsensusNode(eng.Bech32PrefixConsAddr, eng.Bech32PrefixConsPub)
