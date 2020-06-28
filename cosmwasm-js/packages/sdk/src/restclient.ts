@@ -469,7 +469,32 @@ export class RestClient {
 
     const encoded = Encoding.toHex(Encoding.toUtf8(Encoding.toBase64(encrypted)));
     const path = `/wasm/contract/${address}/smart/${encoded}?encoding=hex`;
-    const responseData = (await this.get(path)) as WasmResponse<SmartQueryResponse>;
+    let responseData;
+    try {
+      responseData = (await this.get(path)) as WasmResponse<SmartQueryResponse>;
+    } catch (err) {
+      try {
+        const errorMessageRgx = /wasm contract failed: generic: (.+?) \(HTTP 500\)/g;
+
+        const rgxMatches = errorMessageRgx.exec(err.message);
+        if (rgxMatches == null || rgxMatches.length != 2) {
+          throw err;
+        }
+
+        const errorCipherB64 = rgxMatches[1];
+        const errorCipherBz = Encoding.fromBase64(errorCipherB64);
+
+        const errorPlainBz = await this.enigmautils.decrypt(errorCipherBz, nonce);
+
+        err.message = err.message.replace(errorCipherB64, Encoding.fromUtf8(errorPlainBz));
+      } catch (decryptionError) {
+        throw new Error(
+          `Failed to decrypt the following error message: ${err.message}. Decryption error of the error message: ${decryptionError.message}`,
+        );
+      }
+
+      throw err;
+    }
 
     if (isWasmError(responseData)) {
       throw new Error(
@@ -496,7 +521,7 @@ export class RestClient {
     return this.get("/register/master-cert");
   }
 
-  public async decryptDataField(dataField: string, nonce: Uint8Array): Promise<Uint8Array> {
+  public async decryptDataField(dataField: string = "", nonce: Uint8Array): Promise<Uint8Array> {
     const wasmOutputDataCipherBz = Encoding.fromBase64(Encoding.fromUtf8(Encoding.fromHex(dataField)));
 
     // data

@@ -134,6 +134,10 @@ export default class EnigmaUtils {
   }
 
   public async decrypt(ciphertext: Uint8Array, nonce: Uint8Array): Promise<Uint8Array> {
+    if (ciphertext.length === 0) {
+      return new Uint8Array();
+    }
+
     const { privkey: txSenderPrivKey } = this.getTxSenderKeyPair();
     const txEncryptionKey = await this.getTxEncryptionKey(txSenderPrivKey, nonce);
 

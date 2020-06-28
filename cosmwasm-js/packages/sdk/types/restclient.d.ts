@@ -235,7 +235,7 @@ export declare class RestClient {
    * Get the consensus keypair for IO encryption
    */
   getMasterCerts(address: string, query: object): Promise<any>;
-  decryptDataField(dataField: string, nonce: Uint8Array): Promise<Uint8Array>;
+  decryptDataField(dataField: string | undefined, nonce: Uint8Array): Promise<Uint8Array>;
   decryptLogs(logs: readonly Log[], nonce: Uint8Array): Promise<readonly Log[]>;
   decryptTxsResponse(txsResponse: TxsResponse): Promise<TxsResponse>;
 }

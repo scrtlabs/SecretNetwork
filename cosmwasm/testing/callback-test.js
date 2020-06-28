@@ -76,5 +76,5 @@ const assert = require("assert").strict;
       value: "🍉",
     },
   ]);
-  console.log("ok");
+  console.log("ok 👌");
 })();
