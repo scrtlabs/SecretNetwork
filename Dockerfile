@@ -30,7 +30,7 @@ WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/
 
 COPY Makefile Makefile
 
-RUN make clean
+# RUN make clean
 RUN make vendor
 
 WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/go-cosmwasm
