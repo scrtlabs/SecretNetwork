@@ -16,6 +16,64 @@ use cosmwasm_std::{
 use crate::msg::{HandleMsg, InitMsg, MigrateMsg, OwnerResponse, QueryMsg};
 use crate::state::{config, config_read, State};
 
+/////////////////////////////// Messages ///////////////////////////////
+
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum InitMsg {
+    Nop {},
+    Callback { contract_addr: HumanAddr },
+    ContractError {},
+    State {},
+    NoLogs {},
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum HandleMsg {
+    A {
+        contract_addr: HumanAddr,
+        x: u8,
+        y: u8,
+    },
+    B {
+        contract_addr: HumanAddr,
+        x: u8,
+        y: u8,
+    },
+    C {
+        x: u8,
+        y: u8,
+    },
+    UnicodeData {},
+    EmptyLogKeyValue {},
+    EmptyData {},
+    NoData {},
+    ContractError {},
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum QueryMsg {
+    Owner {},
+    ContractError {},
+}
+
+// We define a custom struct for each query response
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct OwnerResponse {
+    pub owner: HumanAddr,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum MigrateMsg {}
+
+/////////////////////////////// Init ///////////////////////////////
+
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
@@ -26,6 +84,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         InitMsg::Callback { contract_addr } => Ok(init_with_callback(deps, env, contract_addr)),
         InitMsg::ContractError {} => Err(generic_err("Test error! 🌈")),
         InitMsg::State {} => Ok(init_state(deps, env)),
+        InitMsg::NoLogs {} => Ok(InitResponse::default()),
     }
 }
 
@@ -59,6 +118,8 @@ fn init_with_callback<S: Storage, A: Api, Q: Querier>(
         log: vec![log("init with a callback", "🦄")],
     }
 }
+
+/////////////////////////////// Handle ///////////////////////////////
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -191,6 +252,8 @@ pub fn no_data<S: Storage, A: Api, Q: Querier>(
     }
 }
 
+/////////////////////////////// Query ///////////////////////////////
+
 pub fn query<S: Storage, A: Api, Q: Querier>(
     _deps: &Extern<S, A, Q>,
     _msg: QueryMsg,
@@ -213,6 +276,8 @@ fn query_owner<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdRes
 fn query_contract_error() -> QueryResult {
     Err(generic_err("Test error! 🌈"))
 }
+
+/////////////////////////////// Migrate ///////////////////////////////
 
 pub fn migrate<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
