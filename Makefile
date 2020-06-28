@@ -71,6 +71,12 @@ xgo_build_enigmad: go.sum
 xgo_build_enigmacli: go.sum
 	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/EnigmaBlockchain/cmd/enigmacli
 
+build_local_no_rust:
+	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
+#   this pulls out ELF symbols, 80% size reduction!
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+
 build-linux: vendor
 	BUILD_PROFILE=$(BUILD_PROFILE) $(MAKE) -C go-cosmwasm build-rust
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
@@ -188,22 +194,25 @@ callback-sanity-test:
 	SGX_MODE=SW ./cosmwasm/testing/callback-test.sh
 
 build-test-contract:
+	# sudo apt install binaryen	
 	$(MAKE) -C ./x/compute/internal/keeper/testdata/test-contract
 
 go-tests: build-test-contract
-	SGX_MODE=SW $(MAKE) build-linux # empty BUILD_PROFILE means debug mode which compiles faster
+	# empty BUILD_PROFILE means debug mode which compiles faster
+	SGX_MODE=SW $(MAKE) build-linux
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	SGX_MODE=SW go test -p 1 -v ./x/compute/internal/...
 
 build-cosmwasm-test-contracts:
-	cd ./cosmwasm/contracts/staking && cargo wasm
-	cp ./cosmwasm/contracts/staking/target/wasm32-unknown-unknown/release/staking.wasm ./x/compute/internal/keeper/testdata
+	# sudo apt install binaryen
+	cd ./cosmwasm/contracts/staking && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+	wasm-opt -Os ./cosmwasm/contracts/staking/target/wasm32-unknown-unknown/release/staking.wasm -o ./x/compute/internal/keeper/testdata/staking.wasm
 
-	cd ./cosmwasm/contracts/reflect && cargo wasm
-	cp ./cosmwasm/contracts/reflect/target/wasm32-unknown-unknown/release/reflect.wasm ./x/compute/internal/keeper/testdata
+	cd ./cosmwasm/contracts/reflect && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+	wasm-opt -Os ./cosmwasm/contracts/reflect/target/wasm32-unknown-unknown/release/reflect.wasm -o ./x/compute/internal/keeper/testdata/reflect.wasm
 
-	cd ./cosmwasm/contracts/burner && cargo wasm
-	cp ./cosmwasm/contracts/burner/target/wasm32-unknown-unknown/release/burner.wasm ./x/compute/internal/keeper/testdata
+	cd ./cosmwasm/contracts/burner && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+	wasm-opt -Os ./cosmwasm/contracts/burner/target/wasm32-unknown-unknown/release/burner.wasm -o ./x/compute/internal/keeper/testdata/burner.wasm
 
-	cd ./cosmwasm/contracts/erc20 && cargo wasm
-	cp ./cosmwasm/contracts/erc20/target/wasm32-unknown-unknown/release/erc20.wasm ./x/compute/internal/keeper/testdata
+	cd ./cosmwasm/contracts/erc20 && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+	wasm-opt -Os ./cosmwasm/contracts/erc20/target/wasm32-unknown-unknown/release/erc20.wasm -o ./x/compute/internal/keeper/testdata/erc20.wasm

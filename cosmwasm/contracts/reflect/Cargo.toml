@@ -6,7 +6,6 @@ publish = false
 edition = "2018"
 description = "Reflect messages to use for test cases - based on cw-mask"
 license = "Apache-2.0"
-
 exclude = [
   # Those files are cosmwasm-opt artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
   "contract.wasm",
@@ -14,7 +13,6 @@ exclude = [
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -41,7 +39,9 @@ singlepass = ["cosmwasm-vm/default-singlepass"]
 cosmwasm-std = { path = "../../packages/std", features = ["staking"] }
 cosmwasm-storage = { path = "../../packages/storage" }
 schemars = "0.7"
-serde = { version = "=1.0.103", default-features = false, features = ["derive"] }
+serde = { version = "=1.0.103", default-features = false, features = [
+  "derive"
+] }
 
 [dev-dependencies]
 cosmwasm-vm = { path = "../../packages/sgx-vm", package = "cosmwasm-sgx-vm", default-features = false }
