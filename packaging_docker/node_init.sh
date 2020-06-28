@@ -50,6 +50,4 @@ enigmad validate-genesis
 
 RUST_BACKTRACE=1 enigmad start &
 
-sleep 10000
-
 ./wasmi-sgx-test.sh
