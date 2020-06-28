@@ -1,5 +1,7 @@
 .PHONY: all build build-rust build-go test docker-image docker-image-centos7 docker-image-cross
 
+BUILD_PROFILE ?= release
+
 TOP_DIR := ../third_party/build
 include $(TOP_DIR)/buildenv.mk
 
