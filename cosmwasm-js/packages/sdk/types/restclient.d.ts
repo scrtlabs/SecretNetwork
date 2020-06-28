@@ -99,7 +99,7 @@ export interface TxsResponse {
   readonly codespace?: string;
   /** Falsy when transaction execution succeeded. Contains error code on error. */
   readonly code?: number;
-  readonly raw_log: string;
+  raw_log: string;
   data: any;
   readonly logs?: Log[];
   readonly tx: CosmosSdkTx;

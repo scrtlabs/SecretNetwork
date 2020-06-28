@@ -99,6 +99,15 @@ const assert = require("assert").strict;
         `Insufficient funds: balance=${qRes2.balance}, required=1000"`
       )
     );
+
+    const txId = /Error when posting tx (.+?)\./.exec(err.message)[1];
+
+    const tx = await client.restClient.txById(txId);
+    assert(
+      tx.raw_log.includes(
+        `Insufficient funds: balance=${qRes2.balance}, required=1000"`
+      )
+    );
   }
 
   try {

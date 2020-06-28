@@ -133,7 +133,7 @@ export interface TxsResponse {
   readonly codespace?: string;
   /** Falsy when transaction execution succeeded. Contains error code on error. */
   readonly code?: number;
-  readonly raw_log: string;
+  raw_log: string;
   data: any;
   readonly logs?: Log[];
   readonly tx: CosmosSdkTx;
@@ -588,6 +588,19 @@ export class RestClient {
         if (txsResponse.logs) {
           logs = await this.decryptLogs(txsResponse.logs, nonce);
           txsResponse = Object.assign({}, txsResponse, { logs: logs });
+        }
+
+        // decrypt error
+        const errorMessageRgx = /wasm contract failed: generic: (.+?): failed to execute message; message index: 0/g;
+
+        const rgxMatches = errorMessageRgx.exec(txsResponse.raw_log);
+        if (Array.isArray(rgxMatches) && rgxMatches.length === 2) {
+          const errorCipherB64 = rgxMatches[1];
+          const errorCipherBz = Encoding.fromBase64(errorCipherB64);
+
+          const errorPlainBz = await this.enigmautils.decrypt(errorCipherBz, nonce);
+
+          txsResponse.raw_log = txsResponse.raw_log.replace(errorCipherB64, Encoding.fromUtf8(errorPlainBz));
         }
       }
     }
