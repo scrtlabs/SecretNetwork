@@ -1,20 +1,12 @@
-// use snafu::ResultExt;
-
-// use cosmwasm::encoding::Binary;
-// use cosmwasm_std::to_vec;
-// use cosmwasm_std::{serialize_err, to_binary, to_vec, unauthorized};
-// use cosmwasm::traits::{Api, Extern, Storage};
-// use cosmwasm::types::{log, CosmosMsg, Env, HumanAddr, Response};
-use cosmwasm_storage::{PrefixedStorage, ReadonlyPrefixedStorage};
+use cosmwasm_storage::PrefixedStorage;
 
 use cosmwasm_std::{
-    generic_err, log, to_binary, to_vec, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
-    HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse, Querier, QueryResponse,
-    QueryResult, StdResult, Storage, WasmMsg,
+    generic_err, log, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HandleResult,
+    HumanAddr, InitResponse, InitResult, MigrateResponse, Querier, QueryResult, StdResult, Storage,
+    WasmMsg,
 };
 
-use crate::msg::{HandleMsg, InitMsg, MigrateMsg, OwnerResponse, QueryMsg};
-use crate::state::{config, config_read, State};
+use crate::state::config_read;
 
 /////////////////////////////// Messages ///////////////////////////////
 
@@ -80,7 +72,10 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> InitResult {
     match msg {
-        InitMsg::Nop {} => Ok(init_nop(deps, env)),
+        InitMsg::Nop {} => Ok(InitResponse {
+            messages: vec![],
+            log: vec![log("init", "🌈")],
+        }),
         InitMsg::Callback { contract_addr } => Ok(init_with_callback(deps, env, contract_addr)),
         InitMsg::ContractError {} => Err(generic_err("Test error! 🌈")),
         InitMsg::State {} => Ok(init_state(deps, env)),
@@ -92,16 +87,9 @@ fn init_state<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     _env: Env,
 ) -> InitResponse {
-    let mut store = PrefixedStorage::new(b"prefix", &mut deps.storage);
+    let _store = PrefixedStorage::new(b"prefix", &mut deps.storage);
 
     InitResponse::default()
-}
-
-fn init_nop<S: Storage, A: Api, Q: Querier>(deps: &mut Extern<S, A, Q>, env: Env) -> InitResponse {
-    InitResponse {
-        messages: vec![],
-        log: vec![log("init", "🌈")],
-    }
 }
 
 fn init_with_callback<S: Storage, A: Api, Q: Querier>(
