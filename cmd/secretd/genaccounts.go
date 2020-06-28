@@ -10,15 +10,15 @@ import (
 
 	"github.com/tendermint/tendermint/libs/cli"
 
-	"github.com/Cashmaney/cosmos-sdk/client/flags"
-	"github.com/Cashmaney/cosmos-sdk/codec"
-	"github.com/Cashmaney/cosmos-sdk/crypto/keys"
-	"github.com/Cashmaney/cosmos-sdk/server"
-	sdk "github.com/Cashmaney/cosmos-sdk/types"
-	"github.com/Cashmaney/cosmos-sdk/x/auth"
-	authexported "github.com/Cashmaney/cosmos-sdk/x/auth/exported"
-	authvesting "github.com/Cashmaney/cosmos-sdk/x/auth/vesting"
-	"github.com/Cashmaney/cosmos-sdk/x/genutil"
+	"github.com/enigmampc/cosmos-sdk/client/flags"
+	"github.com/enigmampc/cosmos-sdk/codec"
+	"github.com/enigmampc/cosmos-sdk/crypto/keys"
+	"github.com/enigmampc/cosmos-sdk/server"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	"github.com/enigmampc/cosmos-sdk/x/auth"
+	authexported "github.com/enigmampc/cosmos-sdk/x/auth/exported"
+	authvesting "github.com/enigmampc/cosmos-sdk/x/auth/vesting"
+	"github.com/enigmampc/cosmos-sdk/x/genutil"
 )
 
 const (

@@ -11,7 +11,7 @@ const assert = require("assert").strict;
   const contract = (await client.getContracts(1))[0].address;
 
   const resQuery = await client.queryContractSmart(contract, {
-    balance: { address: "enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4" },
+    balance: { address: "secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t" },
   });
   const initBalance = +resQuery.balance;
   console.log(`js: initBalance is ${initBalance}`);
@@ -21,7 +21,7 @@ const assert = require("assert").strict;
   );
   const address = cosmwasmjs.pubkeyToAddress(
     cosmwasmjs.encodeSecp256k1Pubkey(pen.pubkey),
-    "enigma"
+    "secret"
   );
   const signingClient = new cosmwasmjs.SigningCosmWasmClient(
     "http://localhost:1337",
@@ -50,12 +50,12 @@ const assert = require("assert").strict;
   const execTx = await signingClient.execute(contract, {
     transfer: {
       amount: "10",
-      recipient: "enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4",
+      recipient: "secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t",
     },
   });
 
   const res2Query = await client.queryContractSmart(contract, {
-    balance: { address: "enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4" },
+    balance: { address: "secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t" },
   });
 
   // const tx = await client.restClient.txById(execTx.transactionHash);

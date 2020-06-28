@@ -32,7 +32,7 @@ chmod +x migrate.py
 ### Export the chain state:
 
 ```bash
-enigmad export --for-zero-height --height 1794500 > exported-enigma-state.json
+secretd export --for-zero-height --height 1794500 > exported-enigma-state.json
 ```
 
 ### Run the migration script

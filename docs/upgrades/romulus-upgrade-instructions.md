@@ -25,11 +25,11 @@ The significant changes in this upgrade are the following:
 
 - The _Secret Network_ re-branding.
 
-The `enigmacli/enigmad` commands change to `secretcli/secretd`.
+The `secretcli/secretd` commands change to `secretcli/secretd`.
 
 The `enigma1...` addresses change to `secret1...`. The addresses will go through a bech32 address converter supplied by the Enigma team to properly 
 change the addresses. You'll see not only the address prefix change, but also the entire address. Wallet keys will then be exported using the 
-`enigmacli` command and imported using `secretcli`. There may seem to be a bit of magic there, but it's been tested and works great!
+`secretcli` command and imported using `secretcli`. There may seem to be a bit of magic there, but it's been tested and works great!
 
 - Addition of a tokenswap module.
 
@@ -45,7 +45,7 @@ There is no risk of 'double-signing' unless you have two nodes running the same 
 We are using a modified fork of the cosmos-sdk to address issues with using a genesis file created via an `export`. There is a risk that an export 
 of the current chain state may reveal a new issue.
 
-If necessary, the network can be relaunched with the old chain `enigma-1`. For this reason do not delete the existing `.enigmad` and `.enigmcli` 
+If necessary, the network can be relaunched with the old chain `enigma-1`. For this reason do not delete the existing `.secretd` and `.enigmcli` 
 directories. See the *Recovery* section below. 
 
 ## Recovery
@@ -83,13 +83,13 @@ NOTE: you may have to put `sudo` in front of the `journalctl` command if you don
 Change the configured halt height in `app.toml`:
 
 ```bash
-perl -i -pe 's/^halt-height =.*/halt-height = 1794500/' ~/.enigmad/config/app.toml
+perl -i -pe 's/^halt-height =.*/halt-height = 1794500/' ~/.secretd/config/app.toml
 ```
 
 Change the pruning to "nothing" instead of "syncable":
 
 ```bash
-perl -i -pe 's/^pruning =.*/pruning = "nothing"/' ~/.enigmad/config/app.toml
+perl -i -pe 's/^pruning =.*/pruning = "nothing"/' ~/.secretd/config/app.toml
 ```
 
 Change the `enigma-node` service configuration to restart only on failure (so it doesn't keep trying to restart after the chain halt):
@@ -113,7 +113,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/bin/enigmad start
+ExecStart=/bin/secretd start
 User=ubuntu
 Restart=on-failure
 StartLimitInterval=0
@@ -225,8 +225,8 @@ Initialize and configure `secretd` with a placeholder moniker "blabla" because i
 ```bash
 secretd init blabla --chain-id secret-1
 
-cp ~/.enigmad/config/{app.toml,config.toml,addrbook.json} ~/.secretd/config
-cp ~/.enigmad/config/{priv_validator_key.json,node_key.json} ~/.secretd/config
+cp ~/.secretd/config/{app.toml,config.toml,addrbook.json} ~/.secretd/config
+cp ~/.secretd/config/{priv_validator_key.json,node_key.json} ~/.secretd/config
 
 # set new_genesis.json from step 3 as the genesis.json of the new chain
 cp secret-1-genesis.json ~/.secretd/config/genesis.json
@@ -248,7 +248,7 @@ Once more than 2/3 of voting power comes online you'll start seeing blocks strea
 journalctl -u secret-node -f
 ```
 
-If something goes wrong the network can relaunch the `enigma-node`, therefore it's not advisable to delete `~/.enigmad` & `~/.enigmacli` until 
+If something goes wrong the network can relaunch the `enigma-node`, therefore it's not advisable to delete `~/.secretd` & `~/.secretcli` until 
 the new chain is live and stable.
 
 ### 6. Import Wallet Keys
@@ -256,7 +256,7 @@ the new chain is live and stable.
 (Ledger Nano S/X users shouldn't do anything, just use the new CLI with `--ledger --account <number>` as usual)
 
 ```bash
-enigmacli keys export <key_name>
+secretcli keys export <key_name>
 # this^ outputs stuff to stderr and also exports the key to stderr,
 # so copy only the private key output to a file named `key.export`
 
@@ -268,8 +268,8 @@ secretcli keys import <key_name> key.export
 When the `secret-1` chain is live and stable, you can delete the files of the old `enigma-1` chain:
 
 - `sudo systemctl disable enigma-node`
-- `rm -rf ~/.enigmad`
-- `rm -rf ~/.enigmacli`
+- `rm -rf ~/.secretd`
+- `rm -rf ~/.secretcli`
 - `sudo dpkg -r enigma-blockchain`
 
 Reset the configured halt height to 0 in `app.toml` and restart the node:

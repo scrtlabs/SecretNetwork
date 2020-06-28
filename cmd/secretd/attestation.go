@@ -9,15 +9,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/cosmos/cosmos-sdk/x/genutil"
-	app "github.com/enigmampc/EnigmaBlockchain"
-	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
-	reg "github.com/enigmampc/EnigmaBlockchain/x/registration"
-	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
+	"github.com/enigmampc/cosmos-sdk/types/module"
+	"github.com/enigmampc/cosmos-sdk/x/genutil"
+	app "github.com/enigmampc/SecretNetwork"
+	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
+	reg "github.com/enigmampc/SecretNetwork/x/registration"
+	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/server"
+	"github.com/enigmampc/cosmos-sdk/codec"
+	"github.com/enigmampc/cosmos-sdk/server"
 	"github.com/spf13/cobra"
 )
 

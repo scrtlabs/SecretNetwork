@@ -259,7 +259,7 @@ impl WasmiApi for ContractInstance {
 
         if canonical.len() != 20 {
             // cosmos address length is 20
-            // https://github.com/cosmos/cosmos-sdk/blob/v0.38.1/types/address.go#L32
+            // https://github.com/enigmampc/cosmos-sdk/blob/v0.38.1/types/address.go#L32
             warn!(
                 "canonicalize_address() decoded canonical address is not 20 bytes: {:?}",
                 canonical
@@ -343,7 +343,7 @@ impl WasmiApi for ContractInstance {
 
         if canonical.len() != 20 {
             // cosmos address length is 20
-            // https://github.com/cosmos/cosmos-sdk/blob/v0.38.1/types/address.go#L32
+            // https://github.com/enigmampc/cosmos-sdk/blob/v0.38.1/types/address.go#L32
             warn!(
                 "humanize_address() input canonical address must be 20 bytes: {:?}",
                 canonical

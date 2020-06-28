@@ -12,10 +12,10 @@ sudo rm -rf ~/.secretd ~/.secretcli
 sudo rm -rf "$(which secretd)"
 sudo rm -rf "$(which secretcli)"
 sudo dpkg -P enigmachain
-sudo rm -rf ~/.enigmad ~/.enigmacli
+sudo rm -rf ~/.secretd ~/.secretcli
 sudo rm -rf ~/.engd ~/.engcli
-sudo rm -rf "$(which enigmad)"
-sudo rm -rf "$(which enigmacli)"
+sudo rm -rf "$(which secretd)"
+sudo rm -rf "$(which secretcli)"
 sudo rm -rf "$(which engcli)"
 sudo rm -rf "$(which engd)"
 ```

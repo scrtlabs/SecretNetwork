@@ -2,7 +2,7 @@
 
 #!/bin/bash
 
-# Use this script to run enigmad with debugger
+# Use this script to run secretd with debugger
 # Put this in .vscode/launch.json:
 # {
 #   "version": "0.2.0",
@@ -13,17 +13,17 @@
 #       "request": "launch",
 #       "mode": "auto",
 #       "cwd": "${workspaceFolder}",
-#       "program": "${workspaceFolder}/cmd/enigmad",
+#       "program": "${workspaceFolder}/cmd/secretd",
 #       "env": { "SGX_MODE": "SW" },
 #       "args": ["start", "--bootstrap"]
 #     }
 #   ]
 # }
 # And then:
-# 1. Build enigmacli and enigmad `SGX_MODE=SW make build_linux`
+# 1. Build secretcli and secretd `SGX_MODE=SW make build_linux`
 # 2. Init the node: `SGX_MODE=SW cosmwasm/lib/sanity-test-d-setup.sh `
-# 3. Launch vscode in debug mode (you can set breakpoints in enigmad go code)
-# 4. Run the tests with enigmacli: `SGX_MODE=SW cosmwasm/lib/sanity-test-only-cli.sh`
+# 3. Launch vscode in debug mode (you can set breakpoints in secretd go code)
+# 4. Run the tests with secretcli: `SGX_MODE=SW cosmwasm/lib/sanity-test-only-cli.sh`
 
 set -euvx
 
@@ -31,18 +31,18 @@ set -euvx
 rm -rf ./.sgx_secrets
 mkdir -p ./.sgx_secrets
 
-rm -rf ~/.enigma*
+rm -rf ~/.secret*
 
-./enigmad init banana --chain-id enigma-testnet
-perl -i -pe 's/"stake"/"uscrt"/g' ~/.enigmad/config/genesis.json
-./enigmacli config keyring-backend test
+./secretd init banana --chain-id enigma-testnet
+perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json
+./secretcli config keyring-backend test
 echo "cost member exercise evoke isolate gift cattle move bundle assume spell face balance lesson resemble orange bench surge now unhappy potato dress number acid" |
-    ./enigmacli keys add a --recover
-./enigmad add-genesis-account "$(./enigmacli keys show -a a)" 1000000000000uscrt
-./enigmad gentx --name a --keyring-backend test --amount 1000000uscrt
-./enigmad collect-gentxs
-./enigmad validate-genesis
+    ./secretcli keys add a --recover
+./secretd add-genesis-account "$(./secretcli keys show -a a)" 1000000000000uscrt
+./secretd gentx --name a --keyring-backend test --amount 1000000uscrt
+./secretd collect-gentxs
+./secretd validate-genesis
 
-./enigmad init-bootstrap ./node-master-cert.der ./io-master-cert.der
+./secretd init-bootstrap ./node-master-cert.der ./io-master-cert.der
 
-./enigmad validate-genesis
+./secretd validate-genesis

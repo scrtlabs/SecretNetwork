@@ -7,6 +7,13 @@ Because of current aggressive slashing parameters, validators need to make sure 
 
 Also, Because this upgrade is related to blockchain storage, to prevent data corruption and slashing, and after consulting with the cosmos-sdk team, we decided the safest way to do this upgrade is to spawn a new full node.
 
+## Preparation
+### Install jq
+
+```bash
+sudo apt install jq
+```
+
 # Validators
 
 Follow the [How to migrate a validator to a new machine](/docs/validators-and-full-nodes/migrate-a-validator.md) guide while installing v0.0.2 on the new machine.
@@ -38,7 +45,7 @@ Follow the [How to migrate a validator to a new machine](/docs/validators-and-fu
   secretd unsafe-reset-all
 
   # Download & install v0.0.2
-  wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb
+  wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb
   sudo dpkg -i enigmachain_0.0.2_amd64.deb
   sudo systemctl enable secret-node
 

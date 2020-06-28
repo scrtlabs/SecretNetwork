@@ -46,7 +46,7 @@ Before the genesis of a new chain, there must be a bootstrap node to generate ne
 
 - Create a remote attestation proof that the node's Enclave is genuine.
 - Generate inside the Enclave a true random 256 bits seed: `consensus_seed`.
-- Seal `consensus_seed` with MRENCLAVE to a local file: `$HOME/.enigmad/sgx-secrets/consensus_seed.sealed`.
+- Seal `consensus_seed` with MRENCLAVE to a local file: `$HOME/.secretd/sgx-secrets/consensus_seed.sealed`.
 
 ```js
 // 256 bits
@@ -55,7 +55,7 @@ consensus_seed = true_random({ bytes: 32 });
 seal({
   key: "MRENCLAVE",
   data: consensus_seed,
-  to_file: "$HOME/.enigmad/sgx-secrets/consensus_seed.sealed",
+  to_file: "$HOME/.secretd/sgx-secrets/consensus_seed.sealed",
 });
 ```
 
@@ -119,7 +119,7 @@ consensus_state_ikm = hkdf({
 
 TODO reasoning
 
-- Seal `consensus_seed` to disk at `"$HOME/.enigmad/sgx-secrets/consensus_seed.sealed"`.
+- Seal `consensus_seed` to disk at `"$HOME/.secretd/sgx-secrets/consensus_seed.sealed"`.
 - Publish to `genesis.json`:
   - The remote attestation proof that the Enclave is genuine.
   - `consensus_seed_exchange_pubkey`

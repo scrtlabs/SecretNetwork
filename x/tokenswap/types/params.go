@@ -5,8 +5,8 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	sdk "github.com/Cashmaney/cosmos-sdk/types"
-	paramtypes "github.com/Cashmaney/cosmos-sdk/x/params/subspace"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	paramtypes "github.com/enigmampc/cosmos-sdk/x/params/subspace"
 )
 
 const (
@@ -28,7 +28,7 @@ func ParamKeyTable() paramtypes.KeyTable {
 
 // DefaultParams returns default distribution parameters
 func DefaultParams() Params {
-	addrString := "enigma1n4pc2w3us9n4axa0ppadd3kv3c0sar8c4ju6k7"
+	addrString := "secret1n4pc2w3us9n4axa0ppadd3kv3c0sar8cxl30wq"
 	multisigAddress, _ := sdk.AccAddressFromBech32(addrString)
 	return Params{
 		MultisigApproveAddress: multisigAddress,

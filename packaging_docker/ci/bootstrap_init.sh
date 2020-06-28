@@ -1,28 +1,28 @@
 #!/bin/bash
 
 # init the node
-rm -rf ~/.enigma* || true
-enigmacli config chain-id enigma-testnet
-enigmacli config output json
-enigmacli config indent true
-enigmacli config trust-node true
-enigmacli config keyring-backend test
+rm -rf ~/.secret*
+secretcli config chain-id enigma-testnet
+secretcli config output json
+secretcli config indent true
+secretcli config trust-node true
+secretcli config keyring-backend test
 
-enigmad init banana --chain-id enigma-testnet
+secretd init banana --chain-id enigma-testnet
 
-cp ~/node_key.json ~/.enigmad/config/node_key.json
+cp ~/node_key.json ~/.secretd/config/node_key.json
 
-perl -i -pe 's/"stake"/"uscrt"/g' ~/.enigmad/config/genesis.json
-enigmacli keys add a
+perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json
+secretcli keys add a
 
-enigmad add-genesis-account "$(enigmacli keys show -a a)" 1000000000000uscrt
-enigmad gentx --name a --keyring-backend test --amount 1000000uscrt
-enigmad collect-gentxs
-enigmad validate-genesis
+secretd add-genesis-account "$(secretcli keys show -a a)" 1000000000000uscrt
+secretd gentx --name a --keyring-backend test --amount 1000000uscrt
+secretd collect-gentxs
+secretd validate-genesis
 
-enigmad init-bootstrap
-enigmad validate-genesis
+secretd init-bootstrap
+secretd validate-genesis
 
-sed -i 's/persistent_peers = ""/persistent_peers = "'"$PERSISTENT_PEERS"'"/g' ~/.enigmad/config/config.toml
+sed -i 's/persistent_peers = ""/persistent_peers = "'"$PERSISTENT_PEERS"'"/g' ~/.secretd/config/config.toml
 
-source /opt/sgxsdk/environment && RUST_BACKTRACE=1 enigmad start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap
+source /opt/sgxsdk/environment && RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap

@@ -2,35 +2,31 @@ package app
 
 import (
 	"encoding/json"
-	"io"
-	"log"
-	"os"
-	"path/filepath"
-
-	bam "github.com/Cashmaney/cosmos-sdk/baseapp"
-	"github.com/Cashmaney/cosmos-sdk/codec"
-	"github.com/Cashmaney/cosmos-sdk/simapp"
-	sdk "github.com/Cashmaney/cosmos-sdk/types"
-	"github.com/Cashmaney/cosmos-sdk/types/module"
-	"github.com/Cashmaney/cosmos-sdk/version"
-	"github.com/Cashmaney/cosmos-sdk/x/auth"
-	authvesting "github.com/Cashmaney/cosmos-sdk/x/auth/vesting"
-	"github.com/Cashmaney/cosmos-sdk/x/bank"
-	"github.com/Cashmaney/cosmos-sdk/x/crisis"
-	distr "github.com/Cashmaney/cosmos-sdk/x/distribution"
-	"github.com/Cashmaney/cosmos-sdk/x/evidence"
-	"github.com/Cashmaney/cosmos-sdk/x/genutil"
-	"github.com/Cashmaney/cosmos-sdk/x/gov"
-	"github.com/Cashmaney/cosmos-sdk/x/mint"
-	"github.com/Cashmaney/cosmos-sdk/x/params"
-	paramsclient "github.com/Cashmaney/cosmos-sdk/x/params/client"
-	"github.com/Cashmaney/cosmos-sdk/x/slashing"
-	"github.com/Cashmaney/cosmos-sdk/x/staking"
-	"github.com/Cashmaney/cosmos-sdk/x/supply"
-	"github.com/Cashmaney/cosmos-sdk/x/upgrade"
-	upgradeclient "github.com/Cashmaney/cosmos-sdk/x/upgrade/client"
-	"github.com/enigmampc/EnigmaBlockchain/x/compute"
-	reg "github.com/enigmampc/EnigmaBlockchain/x/registration"
+	"github.com/enigmampc/SecretNetwork/x/compute"
+	reg "github.com/enigmampc/SecretNetwork/x/registration"
+	"github.com/enigmampc/SecretNetwork/x/tokenswap"
+	bam "github.com/enigmampc/cosmos-sdk/baseapp"
+	"github.com/enigmampc/cosmos-sdk/codec"
+	"github.com/enigmampc/cosmos-sdk/simapp"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	"github.com/enigmampc/cosmos-sdk/types/module"
+	"github.com/enigmampc/cosmos-sdk/version"
+	"github.com/enigmampc/cosmos-sdk/x/auth"
+	authvesting "github.com/enigmampc/cosmos-sdk/x/auth/vesting"
+	"github.com/enigmampc/cosmos-sdk/x/bank"
+	"github.com/enigmampc/cosmos-sdk/x/crisis"
+	distr "github.com/enigmampc/cosmos-sdk/x/distribution"
+	"github.com/enigmampc/cosmos-sdk/x/evidence"
+	"github.com/enigmampc/cosmos-sdk/x/genutil"
+	"github.com/enigmampc/cosmos-sdk/x/gov"
+	"github.com/enigmampc/cosmos-sdk/x/mint"
+	"github.com/enigmampc/cosmos-sdk/x/params"
+	paramsclient "github.com/enigmampc/cosmos-sdk/x/params/client"
+	"github.com/enigmampc/cosmos-sdk/x/slashing"
+	"github.com/enigmampc/cosmos-sdk/x/staking"
+	"github.com/enigmampc/cosmos-sdk/x/supply"
+	"github.com/enigmampc/cosmos-sdk/x/upgrade"
+	upgradeclient "github.com/enigmampc/cosmos-sdk/x/upgrade/client"
 	"github.com/spf13/viper"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/cli"
@@ -38,6 +34,10 @@ import (
 	tmos "github.com/tendermint/tendermint/libs/os"
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
+	"io"
+	"log"
+	"os"
+	"path/filepath"
 )
 
 const appName = "secret"
@@ -485,7 +485,7 @@ func (app *SecretNetworkApp) ExportAppStateAndValidators(forZeroHeight bool, jai
 // prepare for fresh start at zero height
 // NOTE zero height genesis is a temporary feature which will be deprecated
 //      in favour of export at a block height
-func (app *EnigmaChainApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []string) {
+func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []string) {
 	applyWhiteList := false
 
 	//Check if there is a whitelist

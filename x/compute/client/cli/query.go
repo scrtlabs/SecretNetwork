@@ -15,18 +15,18 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
+	"github.com/enigmampc/cosmos-sdk/client"
+	"github.com/enigmampc/cosmos-sdk/client/context"
+	"github.com/enigmampc/cosmos-sdk/client/flags"
+	"github.com/enigmampc/cosmos-sdk/codec"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	"github.com/enigmampc/cosmos-sdk/x/auth/client/utils"
 
-	wasmTypes "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
-	wasmUtils "github.com/enigmampc/EnigmaBlockchain/x/compute/client/utils"
+	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
 
-	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/keeper"
-	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
@@ -235,7 +235,7 @@ func GetCmdGetContractStateRaw(cdc *codec.Codec) *cobra.Command {
 }
 
 // QueryDecryptTxCmd the default command for a tx query + IO decryption if I'm the tx sender.
-// Coppied from https://github.com/cosmos/cosmos-sdk/blob/v0.38.4/x/auth/client/cli/query.go#L157-L184 and added IO decryption (Could not wrap it because it prints directly to stdout)
+// Coppied from https://github.com/enigmampc/cosmos-sdk/blob/v0.38.4/x/auth/client/cli/query.go#L157-L184 and added IO decryption (Could not wrap it because it prints directly to stdout)
 func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tx [hash]",

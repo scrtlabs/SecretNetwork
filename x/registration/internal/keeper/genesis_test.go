@@ -1,7 +1,7 @@
 package keeper
 
 import (
-	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
+	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
