@@ -367,6 +367,11 @@ impl WasmiApi for ContractInstance {
         Ok(Some(RuntimeValue::I32(0)))
     }
 
+    // stub, for now
+    fn query_chain_index(&mut self, _query_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+        Err(WasmEngineError::NotImplemented.into())
+    }
+
     fn gas_index(&mut self, gas_amount: i32) -> Result<Option<RuntimeValue>, Trap> {
         self.gas_used += gas_amount as u64;
 
