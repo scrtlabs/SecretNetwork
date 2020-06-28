@@ -864,3 +864,28 @@ func TestInitNoLogs(t *testing.T) {
 	require.Empty(t, initErr)
 	require.Empty(t, initEvents)
 }
+
+func TestExecNoLogs(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
+	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	// init
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+
+	require.Empty(t, initErr)
+
+	_, execEvents, err := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"nologs":{}}`, 1)
+
+	require.Empty(t, err)
+	require.Empty(t, execEvents)
+}

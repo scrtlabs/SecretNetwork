@@ -45,6 +45,7 @@ pub enum HandleMsg {
     EmptyData {},
     NoData {},
     ContractError {},
+    NoLogs {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -131,6 +132,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::EmptyData {} => Ok(empty_data(deps, env)),
         HandleMsg::NoData {} => Ok(no_data(deps, env)),
         HandleMsg::ContractError {} => Err(generic_err("Test error! 🌈")),
+        HandleMsg::NoLogs {} => Ok(HandleResponse::default()),
     }
 }
 
