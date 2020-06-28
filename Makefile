@@ -216,3 +216,8 @@ build-cosmwasm-test-contracts:
 
 	cd ./cosmwasm/contracts/erc20 && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
 	wasm-opt -Os ./cosmwasm/contracts/erc20/target/wasm32-unknown-unknown/release/erc20.wasm -o ./x/compute/internal/keeper/testdata/erc20.wasm
+
+	cd ./cosmwasm/contracts/escrow && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+	wasm-opt -Os ./cosmwasm/contracts/escrow/target/wasm32-unknown-unknown/release/escrow.wasm -o ./x/compute/internal/keeper/testdata/contract.wasm
+	cat ./x/compute/internal/keeper/testdata/contract.wasm | gzip > ./x/compute/internal/keeper/testdata/contract.wasm.gzip
+	cp ./x/compute/internal/keeper/testdata/contract.wasm ./x/compute/testdata/escrow.wasm
