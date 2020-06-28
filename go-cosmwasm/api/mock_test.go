@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	// 	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
+	// 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 )
 
 /*** Mock KVStore ****/

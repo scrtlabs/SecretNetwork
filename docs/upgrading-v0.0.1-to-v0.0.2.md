@@ -21,7 +21,7 @@ Follow the [How to migrate a validator to a new machine](/docs/validators-and-fu
 
   ```bash
   # On the full node on the new machine:
-  enigmacli status | jq .sync_info
+  secretcli status | jq .sync_info
   ```
 
   (`catching_up` should equal `false`)
@@ -32,18 +32,18 @@ Follow the [How to migrate a validator to a new machine](/docs/validators-and-fu
 
   ```bash
   # Stop the node
-  sudo systemctl stop enigma-node
+  sudo systemctl stop secret-node
 
   # Clean the data folder
-  enigmad unsafe-reset-all
+  secretd unsafe-reset-all
 
   # Download & install v0.0.2
   wget https://github.com/enigmampc/EnigmaBlockchain/releases/download/v0.0.2/enigmachain_0.0.2_amd64.deb
   sudo dpkg -i enigmachain_0.0.2_amd64.deb
-  sudo systemctl enable enigma-node
+  sudo systemctl enable secret-node
 
   # Start the full node
-  sudo systemctl start enigma-node
+  sudo systemctl start secret-node
   ```
 
   Your new full node will now catch up.
