@@ -1,5 +1,5 @@
 {
-  "name": "@secret-network/sdk",
+  "name": "secretjs",
   "version": "0.9.0",
   "description": "CosmWasm SDK + Encryption for the Secret Network",
   "author": "Ethan Frey <ethanfrey@users.noreply.github.com>",
