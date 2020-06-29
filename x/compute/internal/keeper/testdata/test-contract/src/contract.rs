@@ -46,6 +46,9 @@ pub enum HandleMsg {
     NoData {},
     ContractError {},
     NoLogs {},
+    CallbackToInit {
+        code_id: u64,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -133,6 +136,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::NoData {} => Ok(no_data(deps, env)),
         HandleMsg::ContractError {} => Err(generic_err("Test error! 🌈")),
         HandleMsg::NoLogs {} => Ok(HandleResponse::default()),
+        HandleMsg::CallbackToInit { code_id } => Ok(callback_to_init(deps, env, code_id)),
     }
 }
 
@@ -238,6 +242,23 @@ pub fn no_data<S: Storage, A: Api, Q: Querier>(
     HandleResponse {
         messages: vec![],
         log: vec![],
+        data: None,
+    }
+}
+
+pub fn callback_to_init<S: Storage, A: Api, Q: Querier>(
+    _deps: &mut Extern<S, A, Q>,
+    _env: Env,
+    code_id: u64,
+) -> HandleResponse {
+    HandleResponse {
+        messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+            code_id: code_id,
+            msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
+            send: vec![],
+            label: None,
+        })],
+        log: vec![log("instantiating a new contract", "🪂")],
         data: None,
     }
 }
