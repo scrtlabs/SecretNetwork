@@ -7,9 +7,9 @@ import (
 	"os"
 	"testing"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	sdkErrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 )

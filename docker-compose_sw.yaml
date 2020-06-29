@@ -2,11 +2,11 @@ version: '3'
 
 services:
   bootstrap:
-    image: enigmampc/secret_bootstrap
+    image: cashmaney/secret-network-bootstrap-sw
     container_name: bootstrap
     volumes:
-      - /tmp/enigmad:/root/.enigmad
-      - /tmp/enigmacli:/root/.enigmacli
+      - /tmp/secretd:/root/.secretd
+      - /tmp/secretcli:/root/.secretcli
     stdin_open: true
     tty: true
     environment:
@@ -17,12 +17,12 @@ services:
       - 26657
 
   node:
-    image: enigmampc/secret_node
+    image: cashmaney/secret-network-node-sw
     depends_on:
       - bootstrap
     volumes:
-      - /tmp/enigmad:/tmp/.enigmad
-      - /tmp/enigmacli:/root/.enigmacli
+      - /tmp/secretd:/tmp/.secretd
+      - /tmp/secretcli:/root/.secretcli
     stdin_open: true
     tty: true
     environment:

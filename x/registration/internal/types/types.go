@@ -3,7 +3,7 @@ package types
 import (
 	"encoding/base64"
 	"encoding/hex"
-	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
+	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 )
 
 const PublicKeyLength = 64    // encoded length

@@ -21,6 +21,7 @@ use super::cert::{get_ias_auth_config, get_netscape_comment};
 
 pub enum Error {
     ReportParseError,
+    ReportValidationError,
 }
 
 impl From<std::array::TryFromSliceError> for Error {
@@ -570,7 +571,7 @@ impl AttestationReport {
             Ok(_) => debug!("Certificate verified successfully"),
             Err(e) => {
                 error!("Certificate verification error {:?}", e);
-                return Err(Error::ReportParseError);
+                return Err(Error::ReportValidationError);
             }
         }
 

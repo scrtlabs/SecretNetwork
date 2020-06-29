@@ -18,10 +18,10 @@ An unreachable validator node is not gossiped across the network i.e. all other 
 
 To setup your sentry node architecture you can follow the instructions below:
 
-Validators nodes should edit their .enigmad/config/config.toml:
+Validators nodes should edit their .secretd/config/config.toml:
 
 ```bash
-nano /.enigmad/config/config.toml
+nano /.secretd/config/config.toml
 ```
 
 Proceed to make the following changes.
@@ -45,4 +45,4 @@ private_peer_ids = "node_ids_of_private_peers"
 
 Sources:
 
-1. https://github.com/cosmos/gaia/blob/master/docs/validators/security.md
+1. https://github.com/Cashmaney/gaia/blob/master/docs/validators/security.md

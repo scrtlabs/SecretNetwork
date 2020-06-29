@@ -13,9 +13,9 @@ import (
 	"os"
 	"path"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
-	regtypes "github.com/enigmampc/EnigmaBlockchain/x/registration"
-	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
+	"github.com/enigmampc/cosmos-sdk/client/context"
+	regtypes "github.com/enigmampc/SecretNetwork/x/registration"
+	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 	"github.com/miscreant/miscreant.go"
 	"golang.org/x/crypto/curve25519"
 	"golang.org/x/crypto/hkdf"
@@ -53,7 +53,7 @@ func GzipIt(input []byte) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// WASMContext wraps github.com/cosmos/cosmos-sdk/client/context.CLIContext
+// WASMContext wraps github.com/enigmampc/cosmos-sdk/client/context.CLIContext
 type WASMContext struct {
 	CLIContext       context.CLIContext
 	TestKeyPairPath  string

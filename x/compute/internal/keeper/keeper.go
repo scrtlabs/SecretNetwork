@@ -6,23 +6,22 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/enigmampc/cosmos-sdk/codec"
+	"github.com/enigmampc/cosmos-sdk/store/prefix"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	"github.com/enigmampc/cosmos-sdk/x/auth"
+	"github.com/enigmampc/cosmos-sdk/x/auth/exported"
+	"github.com/enigmampc/cosmos-sdk/x/bank"
+	wasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
+	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/store/prefix"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-	wasm "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm"
-	wasmTypes "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
-	"github.com/tendermint/tendermint/crypto"
-
-	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 // GasMultiplier is how many cosmwasm gas points = 1 sdk gas point
-// SDK reference costs can be found here: https://github.com/cosmos/cosmos-sdk/blob/02c6c9fafd58da88550ab4d7d494724a477c8a68/store/types/gas.go#L153-L164
+// SDK reference costs can be found here: https://github.com/enigmampc/cosmos-sdk/blob/02c6c9fafd58da88550ab4d7d494724a477c8a68/store/types/gas.go#L153-L164
 // A write at ~3000 gas and ~200us = 10 gas per us (microsecond) cpu/io
 // Rough timing have 88k gas at 90us, which is equal to 1k sdk gas... (one read)
 const GasMultiplier = 100

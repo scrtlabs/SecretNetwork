@@ -8,16 +8,16 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/keeper"
+	"github.com/enigmampc/SecretNetwork/x/registration/internal/keeper"
 	flag "github.com/spf13/pflag"
 
 	"github.com/spf13/cobra"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
+	"github.com/enigmampc/cosmos-sdk/client"
+	"github.com/enigmampc/cosmos-sdk/client/context"
+	"github.com/enigmampc/cosmos-sdk/client/flags"
+	"github.com/enigmampc/cosmos-sdk/codec"
+	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 )
 
 func GetQueryCmd(cdc *codec.Codec) *cobra.Command {

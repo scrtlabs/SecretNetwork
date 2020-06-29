@@ -7,14 +7,14 @@ import (
 	"fmt"
 	"net/http"
 
-	// sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/rest"
-	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
+	// sdk "github.com/enigmampc/cosmos-sdk/types"
+	"github.com/enigmampc/cosmos-sdk/types/rest"
+	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 
-	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/keeper"
-	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
+	"github.com/enigmampc/SecretNetwork/x/registration/internal/keeper"
+	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/enigmampc/cosmos-sdk/client/context"
 	"github.com/gorilla/mux"
 )
 

@@ -5,6 +5,19 @@ LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
 BUILD_PROFILE ?= release
 
+SGX_MODE ?= HW
+BRANCH ?= develop
+DEBUG ?= 0
+DOCKER_TAG ?= latest
+
+ifeq ($(SGX_MODE), HW)
+	ext := hw
+else ifeq ($(SGX_MODE), SW)
+	ext := sw
+else
+$(error SGX_MODE must be either HW or SW)
+endif
+
 build_tags = netgo
 ifeq ($(LEDGER_ENABLED),true)
   ifeq ($(OS),Windows_NT)
@@ -40,15 +53,15 @@ whitespace += $(whitespace)
 comma := ,
 build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 
-ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=EnigmaBlockchain \
-	-X github.com/cosmos/cosmos-sdk/version.ServerName=enigmad \
-	-X github.com/cosmos/cosmos-sdk/version.ClientName=enigmacli \
-	-X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
-	-X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
-	-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags)"
+ldflags = -X github.com/enigmampc/cosmos-sdk/version.Name=EnigmaBlockchain \
+	-X github.com/enigmampc/cosmos-sdk/version.ServerName=secretd \
+	-X github.com/enigmampc/cosmos-sdk/version.ClientName=secretcli \
+	-X github.com/enigmampc/cosmos-sdk/version.Version=$(VERSION) \
+	-X github.com/enigmampc/cosmos-sdk/version.Commit=$(COMMIT) \
+	-X "github.com/enigmampc/cosmos-sdk/version.BuildTags=$(build_tags)"
 
 ifeq ($(WITH_CLEVELDB),yes)
-  ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=cleveldb
+  ldflags += -X github.com/enigmampc/cosmos-sdk/types.DBBackend=cleveldb
 endif
 ldflags += -s -w
 ldflags += $(LDFLAGS)
@@ -65,35 +78,36 @@ go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"
 	GO111MODULE=on go mod verify
 
-xgo_build_enigmad: go.sum
-	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/EnigmaBlockchain/cmd/enigmad
+xgo_build_secretd: go.sum
+	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/SecretNetwork/cmd/secretd
 
-xgo_build_enigmacli: go.sum
-	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/EnigmaBlockchain/cmd/enigmacli
+xgo_build_secretcli: go.sum
+	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/SecretNetwork/cmd/secretcli
 
 build_local_no_rust:
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
 #   this pulls out ELF symbols, 80% size reduction!
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretd
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretcli
 
-build-linux: vendor
+build_linux: vendor
 	BUILD_PROFILE=$(BUILD_PROFILE) $(MAKE) -C go-cosmwasm build-rust
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+#   this pulls out ELF symbols, 80% size reduction!
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretd
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretcli
 
 build_windows:
-	# CLI only
-	$(MAKE) xgo_build_enigmacli XGO_TARGET=windows/amd64
+	# CLI only 
+	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
 
 build_macos:
-	# CLI only
-	$(MAKE) xgo_build_enigmacli XGO_TARGET=darwin/amd64
+	# CLI only 
+	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/amd64
 
 build_arm_linux:
-	# CLI only
-	$(MAKE) xgo_build_enigmacli XGO_TARGET=linux/arm64
+	# CLI only 
+	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
 
 build_all: build-linux build_windows build_macos build_arm_linux
 
@@ -104,9 +118,9 @@ deb: build-linux
 	rm -rf /tmp/EnigmaBlockchain
 
 	mkdir -p /tmp/EnigmaBlockchain/deb/usr/local/bin
-	mv -f ./enigmacli /tmp/EnigmaBlockchain/deb/usr/local/bin/enigmacli
-	mv -f ./enigmad /tmp/EnigmaBlockchain/deb/usr/local/bin/enigmad
-	chmod +x /tmp/EnigmaBlockchain/deb/usr/local/bin/enigmad /tmp/EnigmaBlockchain/deb/usr/local/bin/enigmacli
+	mv -f ./secretcli /tmp/EnigmaBlockchain/deb/usr/local/bin/secretcli
+	mv -f ./secretd /tmp/EnigmaBlockchain/deb/usr/local/bin/secretd
+	chmod +x /tmp/EnigmaBlockchain/deb/usr/local/bin/secretd /tmp/EnigmaBlockchain/deb/usr/local/bin/secretcli
 
 	mkdir -p /tmp/EnigmaBlockchain/deb/usr/local/lib
 	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/EnigmaBlockchain/deb/usr/local/lib/
@@ -130,7 +144,7 @@ rename_for_release:
 
 sign_for_release: rename_for_release
 	sha256sum enigma-blockchain*.deb > SHA256SUMS
-	-sha256sum enigmad-* enigmacli-* >> SHA256SUMS
+	-sha256sum secretd-* secretcli-* >> SHA256SUMS
 	gpg -u 91831DE812C6415123AFAA7B420BF1CB005FBCE6 --digest-algo sha256 --clearsign --yes SHA256SUMS
 	rm -f SHA256SUMS
 
@@ -138,16 +152,16 @@ release: sign_for_release
 	rm -rf ./release/
 	mkdir -p ./release/
 	cp enigma-blockchain_*.deb ./release/
-	cp enigmacli-* ./release/
-	cp enigmad-* ./release/
+	cp secretcli-* ./release/
+	cp secretd-* ./release/
 	cp SHA256SUMS.asc ./release/
 
 clean:
 	-rm -rf /tmp/EnigmaBlockchain
-	-rm -f ./enigmacli*
-	-rm -f ./enigmad*
-	-rm -f ./librust_cosmwasm_enclave.signed.so
-	-rm -f ./x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so
+	-rm -f ./secretcli*
+	-rm -f ./secretd*
+	-rm -f ./librust_cosmwasm_enclave.signed.so 
+	-rm -f ./x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so 
 	-rm -f ./go-cosmwasm/api/libgo_cosmwasm.so
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*
@@ -159,13 +173,22 @@ clean:
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
 	$(MAKE) -C ./x/compute/internal/keeper/testdata/test-contract clean
+	$(MAKE) -C cosmwasm/lib/wasmi-runtime clean
+# docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t cashmaney/secret-network-node:azuretestnet .
+build-azure:
+	docker build -f Dockerfile.azure -t cashmaney/secret-network-node:azuretestnet .
+
+build-testnet:
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f Dockerfile.testnet -t cashmaney/secret-network-bootstrap:testnet  .
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t cashmaney/secret-network-node:testnet .
 
 docker_bootstrap:
-	docker build --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t enigmampc/secret_bootstrap .
+	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t cashmaney/secret-network-bootstrap-${ext}:${DOCKER_TAG} .
 
 docker_node:
 	docker build --build-arg SECRET_NODE_TYPE=NODE -t enigmampc/secret_node .
 
+	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=NODE -t cashmaney/secret-network-node-${ext}:${DOCKER_TAG} .
 # while developing:
 build-enclave:
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime
@@ -194,7 +217,7 @@ callback-sanity-test:
 	SGX_MODE=SW ./cosmwasm/testing/callback-test.sh
 
 build-test-contract:
-	# sudo apt install binaryen	
+	# sudo apt install binaryen
 	$(MAKE) -C ./x/compute/internal/keeper/testdata/test-contract
 
 go-tests: build-test-contract
