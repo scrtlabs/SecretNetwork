@@ -33,33 +33,48 @@ To register your node, you will need:
 * Account with at least 1 SCRT
 
 
-### Instructions
+### Registration Instructions
 
-* Initialize secret enclave. This will perform initialization, and remote attestation. Make sure SGX is enabled and running 
-or this step might fail. 
+#### 1. Initialize secret enclave
+This will perform initialization, and remote attestation. Make sure SGX is enabled and running or this step might fail. 
+```
+secretd init-enclave
+```
 
-`secretd init-enclave`
-
+#### 2. Verify initialization
 If `init-enclave` was succssful, you should see `attestation_cert.der` created. This is the _attestation certificate_ which we will 
 need for the next step 
 
-* Check your certificate is valid -
-`PUBLIC_KEY=$(secretd parse attestation_cert.der 2> /dev/null | cut -c 3- )`
-`echo $PUBLIC_KEY`
+#### 3. Check your certificate is valid
+```
+PUBLIC_KEY=$(secretd parse attestation_cert.der 2> /dev/null | cut -c 3- )
+echo $PUBLIC_KEY
+```
 Should return your 64 character registration key if it was successful.
 
-* Register your node on-chain
+#### 4. Register your node on-chain
+```
+secretcli tx register auth <path/to/attestation_cert.der> --node registration.enigma.co:26657 --from <your account>
+```
 
-`secretcli tx register auth <path/to/attestation_cert.der> --node registration.enigma.co:26657 --from <your account>`
+#### 5. Get your _encrypted seed_ from the network
+```
+secretcli q register seed "$PUBLIC_KEY" --node registration.enigma.co:26657
+```
 
-* Get your _encrypted seed_ from the network
-
-`secretcli q register seed "$PUBLIC_KEY" --node registration.enigma.co:26657`
-
-* Get additional network parameters
-
+#### 6. Get additional network parameters
 `secretcli q register secret-network-params --node registration.enigma.co:26657`
 
-* Configure your local node
+#### 7. Configure your local node
+```
+secretd configure-secret node-master-cert.der "$SEED"
+```
 
-`secretd configure-secret node-master-cert.der "$SEED"`
+Boom! All done!
+
+### Terms
+
+- attestation certificate
+- encrypted seed
+- remote attestation
+- Intel Attestation Service
