@@ -17,6 +17,26 @@ import (
 
 type ContractEvent []cosmwasm.LogAttribute
 
+func setupTest(t *testing.T, wasmPath string) (sdk.Context, Keeper, string, uint64, sdk.AccAddress, sdk.AccAddress) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
+	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
+
+	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
+	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
+	walletA := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
+	walletB := createFakeFundedAccount(ctx, accKeeper, topUp)
+
+	wasmCode, err := ioutil.ReadFile(wasmPath)
+	require.NoError(t, err)
+
+	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	return ctx, keeper, tempDir, codeID, walletA, walletB
+}
+
 // getDecryptedWasmEvents gets all "wasm" events and decrypt what's necessary
 // Returns all "wasm" events, including from contract callbacks
 func getDecryptedWasmEvents(t *testing.T, ctx sdk.Context, nonce []byte, skip uint) []ContractEvent {
@@ -159,19 +179,8 @@ func initHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, cre
 }
 
 func TestCallbackSanity(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	// init
 	contractAddress, initEvents, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
@@ -211,21 +220,8 @@ func TestCallbackSanity(t *testing.T) {
 }
 
 func TestSanity(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, walletB := setupTest(t, "./testdata/erc20.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	walletA := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
-	walletB := createFakeFundedAccount(ctx, accKeeper, topUp)
-
-	wasmCode, err := ioutil.ReadFile("./testdata/erc20.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	// init
 	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, walletA.String(), walletB.String())
@@ -233,7 +229,7 @@ func TestSanity(t *testing.T) {
 	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
 	require.NoError(t, err)
 
-	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", deposit)
+	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
 	// check init events (no data in init)
@@ -278,18 +274,8 @@ func TestSanity(t *testing.T) {
 }
 
 func TestInitLogs(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
 	require.NoError(t, err)
@@ -314,18 +300,8 @@ func TestInitLogs(t *testing.T) {
 }
 
 func TestEmptyLogKeyValue(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
 	require.NoError(t, err)
@@ -350,18 +326,8 @@ func TestEmptyLogKeyValue(t *testing.T) {
 }
 
 func TestEmptyData(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
 	require.NoError(t, err)
@@ -377,18 +343,8 @@ func TestEmptyData(t *testing.T) {
 }
 
 func TestNoData(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
 	require.NoError(t, err)
@@ -404,18 +360,8 @@ func TestNoData(t *testing.T) {
 }
 
 func TestExecuteIllegalInputError(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
 	require.NoError(t, err)
@@ -431,18 +377,8 @@ func TestExecuteIllegalInputError(t *testing.T) {
 }
 
 func TestInitIllegalInputError(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `bad input`, 0)
 
@@ -451,18 +387,8 @@ func TestInitIllegalInputError(t *testing.T) {
 }
 
 func TestCallbackFromInitAndCallbackEvents(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	// init first contract so we'd have someone to callback
 
@@ -499,22 +425,8 @@ func TestCallbackFromInitAndCallbackEvents(t *testing.T) {
 }
 
 func TestQueryInputParamError(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, walletB := setupTest(t, "./testdata/erc20.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-
-	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	walletA := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
-	walletB := createFakeFundedAccount(ctx, accKeeper, topUp)
-
-	wasmCode, err := ioutil.ReadFile("./testdata/erc20.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	// init
 	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, walletA.String(), walletB.String())
@@ -522,7 +434,7 @@ func TestQueryInputParamError(t *testing.T) {
 	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
 	require.NoError(t, err)
 
-	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", deposit)
+	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
 	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"address":"blabla"}}`)
@@ -532,18 +444,8 @@ func TestQueryInputParamError(t *testing.T) {
 }
 
 func TestUnicodeData(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
 	require.Empty(t, initErr)
@@ -555,18 +457,8 @@ func TestUnicodeData(t *testing.T) {
 }
 
 func TestInitContractError(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	t.Run("generic_err", func(t *testing.T) {
 		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"generic_err"}}`, 0)
@@ -626,18 +518,8 @@ func TestInitContractError(t *testing.T) {
 }
 
 func TestExecContractError(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
 	require.Empty(t, initErr)
@@ -700,18 +582,8 @@ func TestExecContractError(t *testing.T) {
 }
 
 func TestQueryContractError(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
 	require.Empty(t, initErr)
@@ -774,18 +646,8 @@ func TestQueryContractError(t *testing.T) {
 }
 
 func TestInitParamError(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"callback":{"contract_addr":"notanaddress"}}`))
 	require.NoError(t, err)
@@ -799,18 +661,8 @@ func TestInitParamError(t *testing.T) {
 }
 
 func TestCallbackExecuteParamError(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
 	require.NoError(t, err)
@@ -830,22 +682,8 @@ func TestCallbackExecuteParamError(t *testing.T) {
 }
 
 func TestQueryInputStructureError(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, walletB := setupTest(t, "./testdata/erc20.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-
-	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	walletA := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
-	walletB := createFakeFundedAccount(ctx, accKeeper, topUp)
-
-	wasmCode, err := ioutil.ReadFile("./testdata/erc20.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	// init
 	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, walletA.String(), walletB.String())
@@ -853,7 +691,7 @@ func TestQueryInputStructureError(t *testing.T) {
 	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
 	require.NoError(t, err)
 
-	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", deposit)
+	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
 	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"invalidkey":"invalidval"}}`)
@@ -863,23 +701,13 @@ func TestQueryInputStructureError(t *testing.T) {
 }
 
 func TestInitNotEncryptedInputError(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	initMsg := []byte(`{"nop":{}`)
 
 	// init
-	_, err = keeper.Instantiate(ctx, codeID, walletA, nil, initMsg, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsg, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.Error(t, err)
 
 	errorMsg := err.Error()
@@ -887,18 +715,8 @@ func TestInitNotEncryptedInputError(t *testing.T) {
 }
 
 func TestExecuteNotEncryptedInputError(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
 	require.NoError(t, err)
@@ -915,18 +733,8 @@ func TestExecuteNotEncryptedInputError(t *testing.T) {
 }
 
 func TestQueryNotEncryptedInputError(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"state":{}}`))
 	require.NoError(t, err)
@@ -946,18 +754,8 @@ func TestQueryNotEncryptedInputError(t *testing.T) {
 }
 
 func TestInitNoLogs(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	// init
 	_, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"no_logs":{}}`, 0)
@@ -967,18 +765,8 @@ func TestInitNoLogs(t *testing.T) {
 }
 
 func TestExecNoLogs(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	// init
 	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
@@ -991,18 +779,8 @@ func TestExecNoLogs(t *testing.T) {
 }
 
 func TestExecCallbackToInit(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	// init first contract
 	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
@@ -1039,18 +817,8 @@ func TestExecCallbackToInit(t *testing.T) {
 }
 
 func TestInitCallbackToInit(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	// init first contract
 	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d}}`, codeID), 0)
@@ -1082,18 +850,8 @@ func TestInitCallbackToInit(t *testing.T) {
 }
 
 func TestInitCallbackContratError(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	// init first contract
 	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
@@ -1109,18 +867,8 @@ func TestInitCallbackContratError(t *testing.T) {
 }
 
 func TestExecCallbackContratError(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
 
 	// init
 	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
