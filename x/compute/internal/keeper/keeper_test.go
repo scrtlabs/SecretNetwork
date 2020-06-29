@@ -29,7 +29,8 @@ import (
 	reg "github.com/enigmampc/EnigmaBlockchain/x/registration"
 )
 
-const SupportedFeatures = "" //"staking"
+// const SupportedFeatures = "staking"
+const SupportedFeatures = ""
 
 var wasmCtx = wasmUtils.WASMContext{
 	TestKeyPairPath:  "/tmp/id_tx_io.json",
