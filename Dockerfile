@@ -90,6 +90,8 @@ COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/go-c
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/enigmad /usr/bin/enigmad
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/enigmacli /usr/bin/enigmacli
 
+COPY ./x/compute/internal/keeper/testdata/erc20.wasm erc20.wasm
+
 # COPY ./packaging_docker/devnet_init.sh .
 COPY ./packaging_docker/wasmi-sgx-test.sh .
 COPY ./packaging_docker/bootstrap_init.sh .
