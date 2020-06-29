@@ -1,9 +1,9 @@
-// use parity_wasm::elements::{Internal, Module};
+use parity_wasm::elements::{Internal, Module};
 use std::collections::HashSet;
 use std::iter::FromIterator;
 // use wasmer_runtime_core::{export::Export, Instance as WasmerInstance};
 
-// static REQUIRES_PREFIX: &str = "requires_";
+static REQUIRES_PREFIX: &str = "requires_";
 
 /// Takes a comma-separated string, splits it by commas, removes empty elements and returns a set of features.
 /// This can be used e.g. to initialize the cache.
@@ -29,7 +29,6 @@ pub fn required_features_from_wasmer_instance(wasmer_instance: &WasmerInstance) 
 }
 */
 
-/*
 /// Implementation for check_wasm, based on static analysis of the bytecode.
 /// This is used for code upload, to perform check before compiling the Wasm.
 pub fn required_features_from_module(module: &Module) -> HashSet<String> {
@@ -49,7 +48,6 @@ pub fn required_features_from_module(module: &Module) -> HashSet<String> {
         }
     }
 }
-*/
 
 #[cfg(test)]
 mod test {

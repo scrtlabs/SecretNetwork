@@ -1,16 +1,10 @@
 use parity_wasm::elements::{deserialize_buffer, External, ImportEntry, Module};
-/*
 use std::collections::BTreeSet;
-*/
 use std::collections::HashSet;
-/*
 use std::iter::FromIterator;
-*/
 
 use crate::errors::{VmError, VmResult};
-/*
 use crate::features::required_features_from_module;
-*/
 
 /// Lists all imports we provide upon instantiating the instance in Instance::from_module()
 /// This should be updated when new imports are added
@@ -42,7 +36,7 @@ static REQUIRED_EXPORTS: &[&str] = &[
 static MEMORY_LIMIT: u32 = 512; // in pages
 
 /// Checks if the data is valid wasm and compatibility with the CosmWasm API (imports and exports)
-pub fn check_wasm(wasm_code: &[u8], _supported_features: &HashSet<String>) -> VmResult<()> {
+pub fn check_wasm(wasm_code: &[u8], supported_features: &HashSet<String>) -> VmResult<()> {
     let module = match deserialize_buffer(&wasm_code) {
         Ok(deserialized) => deserialized,
         Err(err) => {
@@ -55,7 +49,7 @@ pub fn check_wasm(wasm_code: &[u8], _supported_features: &HashSet<String>) -> Vm
     check_wasm_memories(&module)?;
     check_wasm_exports(&module)?;
     check_wasm_imports(&module)?;
-    // check_wasm_features(&module, supported_features)?;
+    check_wasm_features(&module, supported_features)?;
     Ok(())
 }
 
@@ -143,7 +137,6 @@ fn check_wasm_imports(module: &Module) -> VmResult<()> {
     Ok(())
 }
 
-/*
 fn check_wasm_features(module: &Module, supported_features: &HashSet<String>) -> VmResult<()> {
     let required_features = required_features_from_module(module);
     if !required_features.is_subset(supported_features) {
@@ -156,7 +149,6 @@ fn check_wasm_features(module: &Module, supported_features: &HashSet<String>) ->
     }
     Ok(())
 }
-*/
 
 #[cfg(test)]
 mod test {
