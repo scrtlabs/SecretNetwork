@@ -815,3 +815,39 @@ func TestExecCallbackContratError(t *testing.T) {
 	require.Empty(t, execEvents)
 	require.Empty(t, data)
 }
+
+func TestExecCallbackBadParam(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	// init
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
+	require.Equal(t, 1, len(initEvents))
+
+	data, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_contract_bad_param":{"contract_addr":"%s"}}`, contractAddress), 1)
+	require.Error(t, execErr)
+	require.Error(t, execErr.ParseErr)
+	require.Equal(t, execErr.ParseErr.Target, "test_contract::contract::HandleMsg")
+	require.Contains(t, execErr.ParseErr.Msg, "unknown variant `callback_contract_bad_param`")
+	require.Empty(t, execEvents)
+	require.Empty(t, data)
+}
+
+func TestInitCallbackBadParam(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	// init first
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
+	require.Equal(t, 1, len(initEvents))
+
+	secondContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback_contract_bad_param":{"contract_addr":"%s"}}`, contractAddress), 1)
+	require.Empty(t, secondContractAddress)
+	require.Empty(t, initEvents)
+	require.Error(t, initErr)
+	require.Error(t, initErr.ParseErr)
+	require.Equal(t, initErr.ParseErr.Target, "test_contract::contract::InitMsg")
+	require.Contains(t, initErr.ParseErr.Msg, "unknown variant `callback_contract_bad_param`")
+}
