@@ -1,6 +1,6 @@
 use enclave_ffi_types::EnclaveError;
 
-use crate::crypto::errors::CryptoError;
+use crate::crypto::CryptoError;
 
 pub const HMAC_SIGNATURE_SIZE: usize = 32;
 pub const EC_256_PRIVATE_KEY_SIZE: usize = 32;

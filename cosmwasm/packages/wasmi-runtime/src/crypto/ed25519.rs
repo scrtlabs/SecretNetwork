@@ -5,7 +5,7 @@ use sgx_types::sgx_align_ec256_private_t;
 
 // use x25519_dalek;
 
-use crate::crypto::errors::CryptoError;
+use crate::crypto::CryptoError;
 
 use super::rng::rand_slice;
 

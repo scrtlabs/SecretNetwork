@@ -67,7 +67,7 @@ pub mod tests {
     use super::{
         Keychain, CONSENSUS_SEED_SEALING_PATH, KEY_MANAGER, REGISTRATION_KEY_SEALING_PATH,
     };
-    use crate::crypto::errors::CryptoError;
+    use crate::crypto::CryptoError;
     use crate::crypto::{Kdf, KeyPair, Seed};
 
     // todo: fix test vectors to actually work
