@@ -76,7 +76,7 @@ func TestCreate(t *testing.T) {
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
-	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "cosmwasm-opt:0.5.2")
+	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), contractID)
 	// and verify content
@@ -134,14 +134,14 @@ func TestCreateWithSimulation(t *testing.T) {
 	require.NoError(t, err)
 
 	// create this once in simulation mode
-	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "confio/cosmwasm-opt:0.57.2")
+	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), contractID)
 
 	// then try to create it in non-simulation mode (should not fail)
 	ctx, keepers = CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
 	accKeeper, keeper = keepers.AccountKeeper, keepers.WasmKeeper
-	contractID, err = keeper.Create(ctx, creator, wasmCode, "", "confio/cosmwasm-opt:0.7.2")
+	contractID, err = keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), contractID)
 
