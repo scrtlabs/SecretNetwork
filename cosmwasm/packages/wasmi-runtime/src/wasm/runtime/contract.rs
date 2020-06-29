@@ -17,7 +17,10 @@ pub struct ContractInstance {
     pub context: Ctx,
     pub memory: MemoryRef,
     pub gas_limit: u64,
+    /// Gas used by wasmi
     pub gas_used: u64,
+    /// Gas used by external services. This is tracked separately so we don't double-charge for external services later.
+    pub gas_used_externally: u64,
     pub contract_key: ContractKey,
     pub module: ModuleRef,
 }
@@ -40,6 +43,7 @@ impl ContractInstance {
             memory,
             gas_limit,
             gas_used: 0,
+            gas_used_externally: 0,
             contract_key,
             module,
         }
@@ -64,6 +68,36 @@ impl ContractInstance {
                 other
             ))),
         }
+    }
+
+    /// Track gas used inside wasmi
+    fn use_gas(&mut self, gas_amount: u64) -> Result<(), WasmEngineError> {
+        self.gas_used = self.gas_used.saturating_add(gas_amount);
+        self.check_gas_usage()
+    }
+
+    /// Track gas used by external services (e.g. storage)
+    fn use_gas_externally(&mut self, gas_amount: u64) -> Result<(), WasmEngineError> {
+        self.gas_used_externally = self.gas_used_externally.saturating_add(gas_amount);
+        self.check_gas_usage()
+    }
+
+    fn check_gas_usage(&self) -> Result<(), WasmEngineError> {
+        // Check if new amount is bigger than gas limit
+        // If is above the limit, halt execution
+        if self.is_gas_depleted() {
+            warn!(
+                "Out of gas! Gas limit: {}, gas used: {}, gas used externally: {}",
+                self.gas_limit, self.gas_used, self.gas_used_externally
+            );
+            Err(WasmEngineError::OutOfGas)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn is_gas_depleted(&self) -> bool {
+        self.gas_limit <= self.gas_used.saturating_add(self.gas_used_externally)
     }
 }
 
@@ -90,8 +124,9 @@ impl WasmiApi for ContractInstance {
 
         // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
         // This returns the value from Tendermint
-        let value = read_encrypted_key(&state_key_name, &self.context, &self.contract_key)
-            .map_err(WasmEngineError::from)?;
+        let (value, gas_used) =
+            read_encrypted_key(&state_key_name, &self.context, &self.contract_key)?;
+        self.use_gas_externally(gas_used)?;
 
         let value = match value {
             None => return Ok(Some(RuntimeValue::I32(0))),
@@ -175,13 +210,13 @@ impl WasmiApi for ContractInstance {
             })?;
 
         trace!(
-            "read_db() was called from WASM code with state_key_name: {:?}",
+            "remove_db() was called from WASM code with state_key_name: {:?}",
             String::from_utf8_lossy(&state_key_name)
         );
 
         // Call remove_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
-        remove_encrypted_key(&state_key_name, &self.context, &self.contract_key)
-            .map_err(WasmEngineError::from)?;
+        let gas_used = remove_encrypted_key(&state_key_name, &self.context, &self.contract_key)?;
+        self.use_gas_externally(gas_used)?;
 
         Ok(None)
     }
@@ -219,15 +254,16 @@ impl WasmiApi for ContractInstance {
             String::from_utf8_lossy(value.get(0..std::cmp::min(20, value.len())).unwrap())
         );
 
-        write_encrypted_key(&state_key_name, &value, &self.context, &self.contract_key).map_err(
-            |err| {
-                error!(
-                    "write_db() error while trying to write the value to state: {:?}",
+        let used_gas =
+            write_encrypted_key(&state_key_name, &value, &self.context, &self.contract_key)
+                .map_err(|err| {
+                    error!(
+                        "write_db() error while trying to write the value to state: {:?}",
+                        err
+                    );
                     err
-                );
-                WasmEngineError::from(err)
-            },
-        )?;
+                })?;
+        self.use_gas_externally(used_gas)?;
 
         Ok(None)
     }
@@ -310,7 +346,7 @@ impl WasmiApi for ContractInstance {
             .get_value::<u32>(canonical_ptr_ptr as u32)
             .map_err(|err| {
                 error!(
-                    "read_db() error while trying to get pointer for the result buffer: {:?}",
+                    "canonicalize_address() error while trying to get pointer for the result buffer: {:?}",
                     err,
                 );
                 WasmEngineError::MemoryReadError
@@ -322,7 +358,7 @@ impl WasmiApi for ContractInstance {
             .get_value::<u32>((canonical_ptr_ptr + 8) as u32)
             .map_err(|err| {
                 error!(
-                    "read_db() error while trying to get pointer for the result buffer: {:?}",
+                    "canonicalize_address() error while trying to get pointer for the result buffer: {:?}",
                     err,
                 );
                 WasmEngineError::MemoryReadError
@@ -444,18 +480,7 @@ impl WasmiApi for ContractInstance {
     }
 
     fn gas_index(&mut self, gas_amount: i32) -> Result<Option<RuntimeValue>, Trap> {
-        self.gas_used += gas_amount as u64;
-
-        // Check if new amount is bigger than gas limit
-        // If is above the limit, halt execution
-        if self.gas_used > self.gas_limit {
-            warn!(
-                "Out of gas! Gas limit: {}, gas used: {}",
-                self.gas_limit, self.gas_used
-            );
-            return Err(WasmEngineError::OutOfGas.into());
-        }
-
+        self.use_gas(gas_amount as u64)?;
         Ok(None)
     }
 }

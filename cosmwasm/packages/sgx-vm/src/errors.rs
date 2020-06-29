@@ -341,6 +341,19 @@ mod enclave {
             VmError::EnclaveErr { source: error }
         }
     }
+
+    impl From<enclave_ffi_types::EnclaveError> for VmError {
+        fn from(error: enclave_ffi_types::EnclaveError) -> Self {
+            match error {
+                enclave_ffi_types::EnclaveError::OutOfGas => VmError::GasDepletion,
+                enclave_ffi_types::EnclaveError::FailedOcall { vm_error }
+                    if !vm_error.ptr.is_null() =>
+                // This error is boxed during ocalls.
+                unsafe { *Box::<VmError>::from_raw(vm_error.ptr as *mut _) }
+                other => EnclaveError::enclave_err(other).into(),
+            }
+        }
+    }
 }
 pub use enclave::EnclaveError;
 

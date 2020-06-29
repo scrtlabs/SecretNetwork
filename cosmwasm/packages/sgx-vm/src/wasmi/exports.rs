@@ -1,9 +1,9 @@
-use enclave_ffi_types::{Ctx, EnclaveBuffer, UserSpaceBuffer};
+use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError, UserSpaceBuffer};
 use log::info;
 use std::ffi::c_void;
 
 use crate::context::with_storage_from_context;
-use crate::{Querier, Storage, VmResult};
+use crate::{Querier, Storage, VmError, VmResult};
 
 /// Copy a buffer from the enclave memory space, and return an opaque pointer to it.
 #[no_mangle]
@@ -33,7 +33,14 @@ pub unsafe fn recover_buffer(ptr: UserSpaceBuffer) -> Option<Vec<u8>> {
 
 /// Read a key from the contracts key-value store.
 #[no_mangle]
-pub extern "C" fn ocall_read_db(context: Ctx, key: *const u8, key_len: usize) -> EnclaveBuffer {
+pub extern "C" fn ocall_read_db(
+    context: Ctx,
+    vm_error: *mut UntrustedVmError,
+    gas_used: *mut u64,
+    value: *mut EnclaveBuffer,
+    key: *const u8,
+    key_len: usize,
+) -> OcallReturn {
     let key = unsafe { std::slice::from_raw_parts(key, key_len) };
 
     info!(
@@ -42,9 +49,6 @@ pub extern "C" fn ocall_read_db(context: Ctx, key: *const u8, key_len: usize) ->
         key_len,
         String::from_utf8_lossy(key)
     );
-    let null_buffer = EnclaveBuffer {
-        ptr: std::ptr::null_mut(),
-    };
 
     let implementation = unsafe { get_implementations_from_context(&context).read_db };
 
@@ -53,23 +57,47 @@ pub extern "C" fn ocall_read_db(context: Ctx, key: *const u8, key_len: usize) ->
     // We also interpret this potential panic here as a missing key because we have no way of handling
     // it at the moment.
     // In the future, if we see that panics do occur here, we should add a way to report this to the enclave.
-    // TODO handle errors and return the gas cost
-    std::panic::catch_unwind(|| implementation(context, key).unwrap().0)
-        .map(|value| {
-            value
-                .map(|vec| {
-                    super::allocate_enclave_buffer(&vec)
-                        .unwrap_or(unsafe { null_buffer.unsafe_clone() })
-                })
-                .unwrap_or(unsafe { null_buffer.unsafe_clone() })
+    // TODO add logging if we fail to write
+    std::panic::catch_unwind(|| implementation(context, key))
+        // Get either an error(`OcallReturn`), or a response(`EnclaveBuffer`)
+        // which will be converted to a success status.
+        .map(|result| -> Result<EnclaveBuffer, OcallReturn> {
+            match result {
+                Ok((value, gas_cost)) => {
+                    unsafe { *gas_used = gas_cost };
+                    value
+                        .map(|val| {
+                            super::allocate_enclave_buffer(&val).map_err(|_| OcallReturn::Failure)
+                        })
+                        .unwrap_or(Ok(EnclaveBuffer::null()))
+                }
+                Err(err) => {
+                    unsafe { store_vm_error(err, vm_error) };
+                    Err(OcallReturn::Failure)
+                }
+            }
         })
-        // TODO add logging if we fail to write
-        .unwrap_or(unsafe { null_buffer.unsafe_clone() })
+        // Return the result or report the error
+        .map(|result| match result {
+            Ok(enclave_buffer) => {
+                unsafe { *value = enclave_buffer };
+                OcallReturn::Success
+            }
+            Err(err) => err,
+        })
+        // This will happen only when `catch_unwind` returns `Err`, which indicates a caught panic
+        .unwrap_or(OcallReturn::Panic)
 }
 
 /// Remove a key from the contracts key-value store.
 #[no_mangle]
-pub extern "C" fn ocall_remove_db(context: Ctx, key: *const u8, key_len: usize) {
+pub extern "C" fn ocall_remove_db(
+    context: Ctx,
+    vm_error: *mut UntrustedVmError,
+    gas_used: *mut u64,
+    key: *const u8,
+    key_len: usize,
+) -> OcallReturn {
     let key = unsafe { std::slice::from_raw_parts(key, key_len) };
 
     info!(
@@ -83,20 +111,32 @@ pub extern "C" fn ocall_remove_db(context: Ctx, key: *const u8, key_len: usize) 
 
     // We explicitly ignore this potential panic here because we have no way of handling it at the moment.
     // In the future, if we see that panics do occur here, we should add a way to report this to the enclave.
-    // TODO handle errors and return the gas cost
-    let _ = std::panic::catch_unwind(|| implementation(context, key).unwrap());
     // TODO add logging if we fail to write
+    std::panic::catch_unwind(|| match implementation(context, key) {
+        Ok(gas_cost) => {
+            unsafe { *gas_used = gas_cost };
+            OcallReturn::Success
+        }
+        Err(err) => {
+            unsafe { store_vm_error(err, vm_error) };
+            OcallReturn::Failure
+        }
+    })
+    // This will happen only when `catch_unwind` returns `Err`, which indicates a caught panic
+    .unwrap_or(OcallReturn::Panic)
 }
 
 /// Write a value to the contracts key-value store.
 #[no_mangle]
 pub extern "C" fn ocall_write_db(
     context: Ctx,
+    vm_error: *mut UntrustedVmError,
+    gas_used: *mut u64,
     key: *const u8,
     key_len: usize,
     value: *const u8,
     value_len: usize,
-) {
+) -> OcallReturn {
     let key = unsafe { std::slice::from_raw_parts(key, key_len) };
     let value = unsafe { std::slice::from_raw_parts(value, value_len) };
 
@@ -113,9 +153,30 @@ pub extern "C" fn ocall_write_db(
 
     // We explicitly ignore this potential panic here because we have no way of handling it at the moment.
     // In the future, if we see that panics do occur here, we should add a way to report this to the enclave.
-    // TODO handle errors and return the gas cost
-    let _ = std::panic::catch_unwind(|| implementation(context, key, value).unwrap());
     // TODO add logging if we fail to write
+    std::panic::catch_unwind(|| match implementation(context, key, value) {
+        Ok(gas_cost) => {
+            unsafe { *gas_used = gas_cost };
+            OcallReturn::Success
+        }
+        Err(err) => {
+            unsafe { store_vm_error(err, vm_error) };
+            OcallReturn::Failure
+        }
+    })
+    // This will happen only when `catch_unwind` returns `Err`, which indicates a caught panic
+    .unwrap_or(OcallReturn::Panic)
+}
+
+/// Box the error and return a pointer to it.
+/// This box will be recovered on the side that called the enclave.
+///
+/// # Safety
+/// Make sure that the pointer is valid
+unsafe fn store_vm_error(vm_err: VmError, location: *mut UntrustedVmError) {
+    let boxed_err = Box::new(vm_err);
+    let err_ptr = Box::leak(boxed_err) as *mut _ as *mut c_void;
+    *location = UntrustedVmError::new(err_ptr);
 }
 
 /// This type allows us to dynamically dispatch on the ocall side based on the generic implementation that the

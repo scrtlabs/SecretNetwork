@@ -16,48 +16,17 @@ pub struct EnclaveBuffer {
 }
 
 impl EnclaveBuffer {
+    pub fn null() -> Self {
+        Self {
+            ptr: core::ptr::null_mut(),
+        }
+    }
+
     /// # Safety
     /// Very unsafe. Much careful
-    pub unsafe fn unsafe_clone(&self) -> EnclaveBuffer {
+    pub unsafe fn unsafe_clone(&self) -> Self {
         EnclaveBuffer { ptr: self.ptr }
     }
-}
-
-impl Default for EnclaveReturn {
-    fn default() -> EnclaveReturn {
-        EnclaveReturn::Success
-    }
-}
-
-/// This enum is used to return from an ecall/ocall to represent if the operation was a success and if not then what was the error.
-/// The goal is to not reveal anything sensitive
-/// `#[repr(C)]` is a Rust feature which makes the struct be aligned just like C structs.
-/// See [`Repr(C)`][https://doc.rust-lang.org/nomicon/other-reprs.html]
-#[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum EnclaveReturn {
-    /// Success, the function returned without any failure.
-    Success,
-    /// KeysError, There's a key missing or failed to derive a key.
-    KeysError,
-    /// Failure in Encryption, couldn't decrypt the variable / failed to encrypt the results.
-    EncryptionError,
-    /// SigningError, for some reason it failed on signing the results.
-    SigningError,
-    /// RecoveringError, Something failed in recovering the public key.
-    RecoveringError,
-    ///PermissionError, Received a permission error from an ocall, (i.e. opening the signing keys file or something like that)
-    PermissionError,
-    /// SgxError, Error that came from the SGX specific stuff (i.e DRAND, Sealing etc.)
-    SgxError,
-    /// StateError, an Error in the State. (i.e. failed applying delta, failed deserializing it etc.)
-    StateError,
-    /// OcallError, an error from an ocall.
-    OcallError,
-    /// OcallDBError, an error from the Database in the untrusted part, couldn't get/save something.
-    OcallDBError,
-    /// Something went really wrong.
-    Other,
 }
 
 /// This struct holds a pointer to memory in userspace, that contains the storage
@@ -69,8 +38,8 @@ pub struct Ctx {
 impl Ctx {
     /// # Safety
     /// Very unsafe. Much careful
-    pub unsafe fn unsafe_clone(&self) -> Ctx {
-        Ctx { data: self.data }
+    pub unsafe fn unsafe_clone(&self) -> Self {
+        Self { data: self.data }
     }
 }
 
@@ -79,10 +48,16 @@ impl Ctx {
 #[repr(C)]
 #[derive(Debug, Display)]
 pub enum EnclaveError {
-    /// This indicated failed ocalls, but ocalls during callbacks from wasm code will not currently
-    /// be represented this way. This is doable by returning a `TrapKind::Host` from these callbacks,
-    /// but that's a TODO at the moment.
-    FailedOcall,
+    /// An ocall failed to execute. This can happen because of three scenarios:
+    /// 1. A VmError was thrown during the execution of the ocall. In this case, `vm_error` will be non-null.
+    /// 2. An error happened that prevented the ocall from running correctly. This can happen because of
+    ///    caught memory-handling issues, or a failed ecall during an ocall. `vm_error` will be null.
+    /// 3. We failed to call the ocall due to an SGX fault. `vm_error` will be null.
+    // TODO should we split these three cases for better diagnostics?
+    #[display(fmt = "FailedOcall")]
+    FailedOcall {
+        vm_error: UntrustedVmError,
+    },
     /// The WASM code was invalid and could not be loaded.
     InvalidWasm,
     /// The WASM module contained a start section, which is not allowed.
@@ -95,6 +70,7 @@ pub enum EnclaveError {
     FailedGasMeteringInjection,
     /// Ran out of gas
     OutOfGas,
+    // Errors in contract ABI:
     /// Failed to seal data
     FailedSeal,
     FailedUnseal,
@@ -104,8 +80,47 @@ pub enum EnclaveError {
     FailedToSerialize,
     EncryptionError,
     DecryptionError,
+    Panic,
     /// Unexpected Error happened, no more details available
     Unknown,
+}
+
+/// This type holds a pointer to a VmError that is boxed on the untrusted side
+#[repr(C)]
+#[derive(Debug, Display)]
+#[display(fmt = "VmError")]
+pub struct UntrustedVmError {
+    pub ptr: *mut c_void,
+}
+
+impl UntrustedVmError {
+    pub fn new(ptr: *mut c_void) -> Self {
+        Self { ptr }
+    }
+    pub fn null() -> Self {
+        Self {
+            ptr: core::ptr::null_mut(),
+        }
+    }
+}
+
+// These implementations are safe because we know that it will only ever be a Box<VmError>,
+// which also has these traits.
+unsafe impl Send for UntrustedVmError {}
+unsafe impl Sync for UntrustedVmError {}
+
+/// This type represent return statuses from ocalls.
+///
+/// cbindgen:prefix-with-name
+#[repr(C)]
+#[derive(Debug, Display)]
+pub enum OcallReturn {
+    /// Ocall returned successfully.
+    Success,
+    /// Ocall failed for some reason.
+    /// error parameters may be passed as out parameters.
+    Failure,
+    /// A panic happened during the ocall.
     Panic,
 }
 

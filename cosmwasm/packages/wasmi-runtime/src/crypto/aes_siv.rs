@@ -37,18 +37,13 @@ fn aes_siv_encrypt(
     ad: Option<&[&[u8]]>,
     key: &SymmetricKey,
 ) -> Result<Vec<u8>, CryptoError> {
-    let mut cipher = Aes128Siv::new(GenericArray::clone_from_slice(key));
+    let ad = ad.unwrap_or(&[&[]]);
 
-    match ad {
-        Some(r) => cipher.encrypt(r, plaintext).map_err(|e| {
-            error!("aes_siv_encrypt error: {:?}", e);
-            CryptoError::EncryptionError
-        }),
-        None => cipher.encrypt(&vec![[]], plaintext).map_err(|e| {
-            error!("aes_siv_encrypt error: {:?}", e);
-            CryptoError::EncryptionError
-        }),
-    }
+    let mut cipher = Aes128Siv::new(GenericArray::clone_from_slice(key));
+    cipher.encrypt(ad, plaintext).map_err(|e| {
+        error!("aes_siv_encrypt error: {:?}", e);
+        CryptoError::EncryptionError
+    })
 }
 
 fn aes_siv_decrypt(
@@ -56,27 +51,14 @@ fn aes_siv_decrypt(
     ad: Option<&[&[u8]]>,
     key: &SymmetricKey,
 ) -> Result<Vec<u8>, CryptoError> {
-    let mut cipher = Aes128Siv::new(GenericArray::clone_from_slice(key));
+    let ad = ad.unwrap_or(&[&[]]);
 
-    match ad {
-        Some(r) => cipher.decrypt(r, ciphertext).map_err(|e| {
-            error!("aes_siv_decrypt error: {:?}", e);
-            CryptoError::DecryptionError
-        }),
-        None => cipher.decrypt(&vec![[]], ciphertext).map_err(|e| {
-            error!("aes_siv_decrypt error: {:?}", e);
-            CryptoError::DecryptionError
-        }),
-    }
+    let mut cipher = Aes128Siv::new(GenericArray::clone_from_slice(key));
+    cipher.decrypt(ad, ciphertext).map_err(|e| {
+        error!("aes_siv_decrypt error: {:?}", e);
+        CryptoError::DecryptionError
+    })
 }
-// }
-// let plaintext = match  {
-//     Ok(res) => res,
-//     Err(e) => {
-//
-//     }
-// };
-// Ok(plaintext)
 
 #[cfg(feature = "test")]
 pub mod tests {
