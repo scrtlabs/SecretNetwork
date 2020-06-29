@@ -29,7 +29,7 @@ pub fn result_init_success_to_initresult(result: Result<InitSuccess, EnclaveErro
                     _ => {
                         return InitResult::Failure {
                             err: EnclaveError::FailedOcall {
-                                vm_error: UntrustedVmError::null(),
+                                vm_error: UntrustedVmError::default(),
                             },
                         }
                     }
@@ -72,7 +72,7 @@ pub fn result_handle_success_to_handleresult(
                     _ => {
                         return HandleResult::Failure {
                             err: EnclaveError::FailedOcall {
-                                vm_error: UntrustedVmError::null(),
+                                vm_error: UntrustedVmError::default(),
                             },
                         }
                     }
@@ -115,7 +115,7 @@ pub fn result_query_success_to_queryresult(
                     _ => {
                         return QueryResult::Failure {
                             err: EnclaveError::FailedOcall {
-                                vm_error: UntrustedVmError::null(),
+                                vm_error: UntrustedVmError::default(),
                             },
                         }
                     }

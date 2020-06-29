@@ -25,7 +25,7 @@ use super::results::{
 pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> SgxResult<EnclaveBuffer> {
     let ptr = buffer.as_ptr();
     let len = buffer.len();
-    let mut enclave_buffer = EnclaveBuffer::null();
+    let mut enclave_buffer = EnclaveBuffer::default();
 
     let enclave_id = crate::enclave::get_enclave()
         .expect("If we got here, surely the enclave has been loaded")

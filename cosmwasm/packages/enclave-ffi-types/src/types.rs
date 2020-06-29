@@ -16,16 +16,18 @@ pub struct EnclaveBuffer {
 }
 
 impl EnclaveBuffer {
-    pub fn null() -> Self {
-        Self {
-            ptr: core::ptr::null_mut(),
-        }
-    }
-
     /// # Safety
     /// Very unsafe. Much careful
     pub unsafe fn unsafe_clone(&self) -> Self {
         EnclaveBuffer { ptr: self.ptr }
+    }
+}
+
+impl Default for EnclaveBuffer {
+    fn default() -> Self {
+        Self {
+            ptr: core::ptr::null_mut(),
+        }
     }
 }
 
@@ -98,7 +100,10 @@ impl UntrustedVmError {
     pub fn new(ptr: *mut c_void) -> Self {
         Self { ptr }
     }
-    pub fn null() -> Self {
+}
+
+impl Default for UntrustedVmError {
+    fn default() -> Self {
         Self {
             ptr: core::ptr::null_mut(),
         }

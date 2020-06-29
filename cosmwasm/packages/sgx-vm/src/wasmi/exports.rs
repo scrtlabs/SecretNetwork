@@ -56,7 +56,7 @@ pub extern "C" fn ocall_read_db(
                         .map(|val| {
                             super::allocate_enclave_buffer(&val).map_err(|_| OcallReturn::Failure)
                         })
-                        .unwrap_or(Ok(EnclaveBuffer::null()))
+                        .unwrap_or(Ok(EnclaveBuffer::default()))
                 }
                 Err(err) => {
                     unsafe { store_vm_error(err, vm_error) };

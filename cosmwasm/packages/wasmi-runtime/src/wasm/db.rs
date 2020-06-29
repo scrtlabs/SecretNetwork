@@ -102,7 +102,7 @@ pub fn field_name_digest(field_name: &[u8], contract_key: &ContractKey) -> [u8; 
 fn read_db(context: &Ctx, key: &[u8]) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
     let mut ocall_return = OcallReturn::Success;
     let mut enclave_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
-    let mut vm_err = UntrustedVmError::null();
+    let mut vm_err = UntrustedVmError::default();
     let mut gas_used = 0_u64;
     let value = unsafe {
         let status = imports::ocall_read_db(
@@ -144,7 +144,7 @@ fn read_db(context: &Ctx, key: &[u8]) -> Result<(Option<Vec<u8>>, u64), WasmEngi
 /// Safe wrapper around reads from the contract storage
 fn remove_db(context: &Ctx, key: &[u8]) -> Result<u64, WasmEngineError> {
     let mut ocall_return = OcallReturn::Success;
-    let mut vm_err = UntrustedVmError::null();
+    let mut vm_err = UntrustedVmError::default();
     let mut gas_used = 0_u64;
     match unsafe {
         imports::ocall_remove_db(
@@ -170,7 +170,7 @@ fn remove_db(context: &Ctx, key: &[u8]) -> Result<u64, WasmEngineError> {
 /// Safe wrapper around writes to the contract storage
 fn write_db(context: &Ctx, key: &[u8], value: &[u8]) -> Result<u64, WasmEngineError> {
     let mut ocall_return = OcallReturn::Success;
-    let mut vm_err = UntrustedVmError::null();
+    let mut vm_err = UntrustedVmError::default();
     let mut gas_used = 0_u64;
     match unsafe {
         imports::ocall_write_db(
