@@ -5,26 +5,26 @@ import (
 	"os"
 	"path"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/client/keys"
-	"github.com/cosmos/cosmos-sdk/client/lcd"
-	"github.com/cosmos/cosmos-sdk/client/rpc"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/version"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
-	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
+	"github.com/enigmampc/cosmos-sdk/client"
+	"github.com/enigmampc/cosmos-sdk/client/flags"
+	"github.com/enigmampc/cosmos-sdk/client/keys"
+	"github.com/enigmampc/cosmos-sdk/client/lcd"
+	"github.com/enigmampc/cosmos-sdk/client/rpc"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	"github.com/enigmampc/cosmos-sdk/version"
+	"github.com/enigmampc/cosmos-sdk/x/auth"
+	authcmd "github.com/enigmampc/cosmos-sdk/x/auth/client/cli"
+	authrest "github.com/enigmampc/cosmos-sdk/x/auth/client/rest"
+	"github.com/enigmampc/cosmos-sdk/x/bank"
+	bankcmd "github.com/enigmampc/cosmos-sdk/x/bank/client/cli"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/libs/cli"
 
-	app "github.com/enigmampc/EnigmaBlockchain"
-	eng "github.com/enigmampc/EnigmaBlockchain/types"
+	app "github.com/enigmampc/SecretNetwork"
+	scrt "github.com/enigmampc/SecretNetwork/types"
 )
 
 func main() {
@@ -36,14 +36,14 @@ func main() {
 	config := sdk.GetConfig()
 	config.SetCoinType(529)
 	config.SetFullFundraiserPath("44'/529'/0'/0/0")
-	config.SetBech32PrefixForAccount(eng.Bech32PrefixAccAddr, eng.Bech32PrefixAccPub)
-	config.SetBech32PrefixForValidator(eng.Bech32PrefixValAddr, eng.Bech32PrefixValPub)
-	config.SetBech32PrefixForConsensusNode(eng.Bech32PrefixConsAddr, eng.Bech32PrefixConsPub)
+	config.SetBech32PrefixForAccount(scrt.Bech32PrefixAccAddr, scrt.Bech32PrefixAccPub)
+	config.SetBech32PrefixForValidator(scrt.Bech32PrefixValAddr, scrt.Bech32PrefixValPub)
+	config.SetBech32PrefixForConsensusNode(scrt.Bech32PrefixConsAddr, scrt.Bech32PrefixConsPub)
 	config.Seal()
 
 	rootCmd := &cobra.Command{
-		Use:   "enigmacli",
-		Short: "EnigmaChain Client",
+		Use:   "secretcli",
+		Short: "The Secret Network Client",
 	}
 
 	// Add --chain-id to persistent flags and mark it required

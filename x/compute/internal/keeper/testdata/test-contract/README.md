@@ -8,7 +8,7 @@ docker run --rm -v $(pwd):/code \
 # Cosmwasm Starter Pack
 
 This is a template to build smart contracts in Rust to run inside a
-[Cosmos SDK](https://github.com/cosmos/cosmos-sdk) module on all chains that enable it.
+[Cosmos SDK](https://github.com/enigmampc/cosmos-sdk) module on all chains that enable it.
 To understand the framework better, please read the overview in the
 [cosmwasm repo](https://github.com/confio/cosmwasm/blob/master/README.md),
 and dig into the [cosmwasm docs](https://www.cosmwasm.com).

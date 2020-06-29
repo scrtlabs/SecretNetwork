@@ -7,7 +7,7 @@ RUN apt-get update && \
     python3-pip && \
     rm -rf /var/lib/apt/lists/*
 
-COPY enigma_package/enigmacli /usr/bin/
+COPY enigma_package/secretcli /usr/bin/
 COPY enigma_package/libgo_cosmwasm.so /usr/lib/
 
 COPY requirements.txt .

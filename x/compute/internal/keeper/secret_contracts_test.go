@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	cosmwasm "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 
 	"github.com/stretchr/testify/require"
 )

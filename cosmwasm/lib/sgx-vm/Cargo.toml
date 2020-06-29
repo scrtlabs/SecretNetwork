@@ -7,7 +7,7 @@ authors = [
 ]
 edition = "2018"
 description = "VM bindings to run cosmwams contracts inside an SGX enclave"
-repository = "https://github.com/enigmampc/EnigmaBlockchain/tree/master/cosmwasm/lib/sgx-vm"
+repository = "https://github.com/enigmampc/SecretNetwork/tree/master/cosmwasm/lib/sgx-vm"
 license = "Apache-2.0"
 
 [features]

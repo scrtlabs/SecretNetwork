@@ -4,23 +4,23 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/cosmos/cosmos-sdk/server"
-	"github.com/cosmos/cosmos-sdk/store"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/staking"
+	"github.com/enigmampc/cosmos-sdk/server"
+	"github.com/enigmampc/cosmos-sdk/store"
+	"github.com/enigmampc/cosmos-sdk/x/auth"
+	"github.com/enigmampc/cosmos-sdk/x/staking"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/enigmampc/cosmos-sdk/baseapp"
+	"github.com/enigmampc/cosmos-sdk/client/flags"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
-	app "github.com/enigmampc/EnigmaBlockchain"
-	eng "github.com/enigmampc/EnigmaBlockchain/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	genutilcli "github.com/enigmampc/cosmos-sdk/x/genutil/client/cli"
+	app "github.com/enigmampc/SecretNetwork"
+	scrt "github.com/enigmampc/SecretNetwork/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
@@ -36,16 +36,16 @@ func main() {
 	cdc := app.MakeCodec()
 
 	config := sdk.GetConfig()
-	config.SetBech32PrefixForAccount(eng.Bech32PrefixAccAddr, eng.Bech32PrefixAccPub)
-	config.SetBech32PrefixForValidator(eng.Bech32PrefixValAddr, eng.Bech32PrefixValPub)
-	config.SetBech32PrefixForConsensusNode(eng.Bech32PrefixConsAddr, eng.Bech32PrefixConsPub)
+	config.SetBech32PrefixForAccount(scrt.Bech32PrefixAccAddr, scrt.Bech32PrefixAccPub)
+	config.SetBech32PrefixForValidator(scrt.Bech32PrefixValAddr, scrt.Bech32PrefixValPub)
+	config.SetBech32PrefixForConsensusNode(scrt.Bech32PrefixConsAddr, scrt.Bech32PrefixConsPub)
 	config.Seal()
 
 	ctx := server.NewDefaultContext()
 	cobra.EnableCommandSorting = false
 	rootCmd := &cobra.Command{
-		Use:               "enigmad",
-		Short:             "EnigmaChain App Daemon (server)",
+		Use:               "secretd",
+		Short:             "The Secret Network App Daemon (server)",
 		PersistentPreRunE: server.PersistentPreRunEFn(ctx),
 	}
 	// CLI commands to initialize the chain
@@ -94,7 +94,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer) abci.Application
 		skipUpgradeHeights[int64(h)] = true
 	}
 
-	return app.NewEnigmaChainApp(
+	return app.NewSecretNetworkApp(
 		logger, db, traceStore, true, bootstrap, invCheckPeriod, skipUpgradeHeights,
 		baseapp.SetPruning(store.NewPruningOptionsFromString(viper.GetString("pruning"))),
 		baseapp.SetMinGasPrices(viper.GetString(server.FlagMinGasPrices)),
@@ -111,14 +111,14 @@ func exportAppStateAndTMValidators(
 	bootstrap := viper.GetBool("bootstrap")
 
 	if height != -1 {
-		engApp := app.NewEnigmaChainApp(logger, db, traceStore, false, bootstrap, uint(1), map[int64]bool{})
-		err := engApp.LoadHeight(height)
+		secretApp := app.NewSecretNetworkApp(logger, db, traceStore, false, bootstrap, uint(1), map[int64]bool{})
+		err := secretApp.LoadHeight(height)
 		if err != nil {
 			return nil, nil, err
 		}
-		return engApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
+		return secretApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 	}
 
-	engApp := app.NewEnigmaChainApp(logger, db, traceStore, true, bootstrap, uint(1), map[int64]bool{})
-	return engApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
+	secretApp := app.NewSecretNetworkApp(logger, db, traceStore, true, bootstrap, uint(1), map[int64]bool{})
+	return secretApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 }

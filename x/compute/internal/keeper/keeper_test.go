@@ -9,19 +9,19 @@ import (
 	"path/filepath"
 	"testing"
 
-	stypes "github.com/cosmos/cosmos-sdk/store/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
-	eng "github.com/enigmampc/EnigmaBlockchain/types"
-	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
+	stypes "github.com/enigmampc/cosmos-sdk/store/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	"github.com/enigmampc/cosmos-sdk/x/auth"
+	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
+	eng "github.com/enigmampc/SecretNetwork/types"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 
-	wasmUtils "github.com/enigmampc/EnigmaBlockchain/x/compute/client/utils"
-	reg "github.com/enigmampc/EnigmaBlockchain/x/registration"
+	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
+	reg "github.com/enigmampc/SecretNetwork/x/registration"
 )
 
 var wasmCtx = wasmUtils.WASMContext{
@@ -67,7 +67,7 @@ func TestCreate(t *testing.T) {
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
-	contractID, err := keeper.Create(ctx, creator, wasmCode, "https://github.com/enigmampc/EnigmaBlockchain/blob/cosmwasm/x/compute/testdata/escrow.wasm", "cosmwasm-opt:0.5.2")
+	contractID, err := keeper.Create(ctx, creator, wasmCode, "https://github.com/enigmampc/SecretNetwork/blob/cosmwasm/x/compute/testdata/escrow.wasm", "cosmwasm-opt:0.5.2")
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), contractID)
 	// and verify content
@@ -179,7 +179,7 @@ func TestInstantiate(t *testing.T) {
 	// create with no balance is also legal
 	addr, err := keeper.Instantiate(ctx, contractID, creator, initMsgBz, "demo contract 1", nil)
 	require.NoError(t, err)
-	require.Equal(t, "enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89d2p9uk", addr.String())
+	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", addr.String())
 
 	gasAfter := ctx.GasMeter().GasConsumed()
 	require.Equal(t, uint64(33765), gasAfter-gasBefore)

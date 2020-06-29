@@ -52,15 +52,15 @@ whitespace += $(whitespace)
 comma := ,
 build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 
-ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=EnigmaBlockchain \
-	-X github.com/cosmos/cosmos-sdk/version.ServerName=enigmad \
-	-X github.com/cosmos/cosmos-sdk/version.ClientName=enigmacli \
-	-X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
-	-X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
-	-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags)"
+ldflags = -X github.com/enigmampc/cosmos-sdk/version.Name=EnigmaBlockchain \
+	-X github.com/enigmampc/cosmos-sdk/version.ServerName=secretd \
+	-X github.com/enigmampc/cosmos-sdk/version.ClientName=secretcli \
+	-X github.com/enigmampc/cosmos-sdk/version.Version=$(VERSION) \
+	-X github.com/enigmampc/cosmos-sdk/version.Commit=$(COMMIT) \
+	-X "github.com/enigmampc/cosmos-sdk/version.BuildTags=$(build_tags)"
 
 ifeq ($(WITH_CLEVELDB),yes)
-  ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=cleveldb
+  ldflags += -X github.com/enigmampc/cosmos-sdk/types.DBBackend=cleveldb
 endif
 ldflags += -s -w
 ldflags += $(LDFLAGS)
@@ -77,41 +77,41 @@ go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"
 	GO111MODULE=on go mod verify
 
-xgo_build_enigmad: go.sum
-	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/EnigmaBlockchain/cmd/enigmad
+xgo_build_secretd: go.sum
+	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/SecretNetwork/cmd/secretd
 
-xgo_build_enigmacli: go.sum
-	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/EnigmaBlockchain/cmd/enigmacli
+xgo_build_secretcli: go.sum
+	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/SecretNetwork/cmd/secretcli
 
 build_local_no_rust:
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
 #   this pulls out ELF symbols, 80% size reduction!
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretd
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretcli
 
 build_linux: vendor
 	$(MAKE) -C go-cosmwasm build-rust
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
 #   this pulls out ELF symbols, 80% size reduction!
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretd
+	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretcli
 
 #build_local_no_rust:
 #   this pulls out ELF symbols, 80% size reduction!
-#	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmad
-#	go build -mod=readonly $(BUILD_FLAGS) ./cmd/enigmacli
+#	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretd
+#	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretcli
 
 build_windows:
 	# CLI only 
-	$(MAKE) xgo_build_enigmacli XGO_TARGET=windows/amd64
+	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
 
 build_macos:
 	# CLI only 
-	$(MAKE) xgo_build_enigmacli XGO_TARGET=darwin/amd64
+	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/amd64
 
 build_arm_linux:
 	# CLI only 
-	$(MAKE) xgo_build_enigmacli XGO_TARGET=linux/arm64
+	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
 
 build_all: build_linux build_windows build_macos build_arm_linux
 
@@ -122,9 +122,9 @@ deb: build_linux
 	rm -rf /tmp/EnigmaBlockchain
 
 	mkdir -p /tmp/EnigmaBlockchain/deb/usr/local/bin
-	mv -f ./enigmacli /tmp/EnigmaBlockchain/deb/usr/local/bin/enigmacli
-	mv -f ./enigmad /tmp/EnigmaBlockchain/deb/usr/local/bin/enigmad
-	chmod +x /tmp/EnigmaBlockchain/deb/usr/local/bin/enigmad /tmp/EnigmaBlockchain/deb/usr/local/bin/enigmacli
+	mv -f ./secretcli /tmp/EnigmaBlockchain/deb/usr/local/bin/secretcli
+	mv -f ./secretd /tmp/EnigmaBlockchain/deb/usr/local/bin/secretd
+	chmod +x /tmp/EnigmaBlockchain/deb/usr/local/bin/secretd /tmp/EnigmaBlockchain/deb/usr/local/bin/secretcli
 
 	mkdir -p /tmp/EnigmaBlockchain/deb/usr/local/lib
 	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/EnigmaBlockchain/deb/usr/local/lib/
@@ -148,7 +148,7 @@ rename_for_release:
 
 sign_for_release: rename_for_release
 	sha256sum enigma-blockchain*.deb > SHA256SUMS
-	-sha256sum enigmad-* enigmacli-* >> SHA256SUMS
+	-sha256sum secretd-* secretcli-* >> SHA256SUMS
 	gpg -u 91831DE812C6415123AFAA7B420BF1CB005FBCE6 --digest-algo sha256 --clearsign --yes SHA256SUMS
 	rm -f SHA256SUMS
 
@@ -156,14 +156,14 @@ release: sign_for_release
 	rm -rf ./release/
 	mkdir -p ./release/
 	cp enigma-blockchain_*.deb ./release/
-	cp enigmacli-* ./release/
-	cp enigmad-* ./release/
+	cp secretcli-* ./release/
+	cp secretd-* ./release/
 	cp SHA256SUMS.asc ./release/
 
 clean:
 	-rm -rf /tmp/EnigmaBlockchain
-	-rm -f ./enigmacli*
-	-rm -f ./enigmad*
+	-rm -f ./secretcli*
+	-rm -f ./secretd*
 	-rm -f ./librust_cosmwasm_enclave.signed.so 
 	-rm -f ./x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so 
 	-rm -f ./go-cosmwasm/api/libgo_cosmwasm.so

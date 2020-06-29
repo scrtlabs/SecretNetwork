@@ -5,8 +5,8 @@ services:
     image: cashmaney/secret-network-bootstrap-sw
     container_name: bootstrap
     volumes:
-      - /tmp/enigmad:/root/.enigmad
-      - /tmp/enigmacli:/root/.enigmacli
+      - /tmp/secretd:/root/.secretd
+      - /tmp/secretcli:/root/.secretcli
     stdin_open: true
     tty: true
     environment:
@@ -21,8 +21,8 @@ services:
     depends_on:
       - bootstrap
     volumes:
-      - /tmp/enigmad:/tmp/.enigmad
-      - /tmp/enigmacli:/root/.enigmacli
+      - /tmp/secretd:/tmp/.secretd
+      - /tmp/secretcli:/root/.secretcli
     stdin_open: true
     tty: true
     environment:
