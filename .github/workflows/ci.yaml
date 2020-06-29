@@ -52,9 +52,9 @@ jobs:
           SGX_MODE=SW BUILD_PROFILE="minimal" RUSTC_WRAPPER="$HOME/sccache" make build-linux
       - name: Build Test Secret Contracts
         run: |
-          sudo add-apt-repository ppa:hnakamur/binaryen
+          echo "" | sudo add-apt-repository ppa:hnakamur/binaryen
           sudo apt update
-          sudo apt install binaryen 
+          sudo apt install -y binaryen 
           rustup target add wasm32-unknown-unknown
           make build-test-contract
           make build-cosmwasm-test-contracts
