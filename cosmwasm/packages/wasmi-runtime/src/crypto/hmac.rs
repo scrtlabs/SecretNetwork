@@ -23,7 +23,7 @@ impl Hmac for AESKey {
 //         Keychain, CONSENSUS_SEED_SEALING_PATH, KEY_MANAGER, REGISTRATION_KEY_SEALING_PATH,
 //     };
 //     use crate::crypto::{Kdf, KeyPair, Seed};
-//     use enclave_ffi_types::CryptoError;
+//     use crate::crypto::CryptoError;
 //
 //     // todo: fix test vectors to actually work
 //     fn test_derive_key() {

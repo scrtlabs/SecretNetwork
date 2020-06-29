@@ -4,9 +4,9 @@ pub mod singlepass;
 */
 pub mod enclave;
 
+/*
 pub use wasmer_runtime_core::backend::Compiler;
 
-/*
 pub fn compiler_for_backend(backend: &str) -> Option<Box<dyn Compiler>> {
     match backend {
         #[cfg(any(feature = "cranelift", feature = "default-cranelift"))]

@@ -1,3 +1,4 @@
+mod errors;
 mod kdf;
 pub mod key_manager;
 mod keys;
@@ -13,6 +14,7 @@ mod sha;
 mod ed25519;
 mod secp256k1;
 
+pub use errors::CryptoError;
 pub use key_manager::Keychain;
 pub use key_manager::KEY_MANAGER;
 pub use keys::{AESKey, Seed, SymmetricKey, SEED_KEY_SIZE};

@@ -1,5 +1,3 @@
-
-
 //
 // pub fn retry_quote(eid: sgx_enclave_id_t, spid: &str, times: usize) -> Result<String, Error> {
 //     let mut quote = String::new();

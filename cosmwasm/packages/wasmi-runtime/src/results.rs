@@ -1,4 +1,6 @@
-use enclave_ffi_types::{EnclaveError, HandleResult, InitResult, QueryResult, UserSpaceBuffer};
+use enclave_ffi_types::{
+    EnclaveError, HandleResult, InitResult, QueryResult, UntrustedVmError, UserSpaceBuffer,
+};
 use sgx_types::sgx_status_t;
 
 use crate::imports::ocall_allocate;
@@ -26,7 +28,9 @@ pub fn result_init_success_to_initresult(result: Result<InitSuccess, EnclaveErro
                     sgx_status_t::SGX_SUCCESS => { /* continue */ }
                     _ => {
                         return InitResult::Failure {
-                            err: EnclaveError::FailedOcall,
+                            err: EnclaveError::FailedOcall {
+                                vm_error: UntrustedVmError::default(),
+                            },
                         }
                     }
                 }
@@ -67,7 +71,9 @@ pub fn result_handle_success_to_handleresult(
                     sgx_status_t::SGX_SUCCESS => { /* continue */ }
                     _ => {
                         return HandleResult::Failure {
-                            err: EnclaveError::FailedOcall,
+                            err: EnclaveError::FailedOcall {
+                                vm_error: UntrustedVmError::default(),
+                            },
                         }
                     }
                 }
@@ -108,7 +114,9 @@ pub fn result_query_success_to_queryresult(
                     sgx_status_t::SGX_SUCCESS => { /* continue */ }
                     _ => {
                         return QueryResult::Failure {
-                            err: EnclaveError::FailedOcall,
+                            err: EnclaveError::FailedOcall {
+                                vm_error: UntrustedVmError::default(),
+                            },
                         }
                     }
                 }

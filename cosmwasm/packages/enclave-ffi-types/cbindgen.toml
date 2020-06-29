@@ -36,6 +36,7 @@ include = [
     "InitResult",
     "HandleResult",
     "QueryResult",
+    "OcallReturn",
 ]
 exclude = []
 prefix = ""

@@ -1,4 +1,4 @@
-// similar trick to get the IDE to use sgx_tstd even when it doesn't know we're targetting SGX
+// similar trick to get the IDE to use sgx_tstd even when it doesn't know we're targeting SGX
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
 // This annotation is here to trick the IDE into ignoring the extern crate, and instead pull in sgx_types from our

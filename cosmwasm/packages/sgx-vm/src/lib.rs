@@ -10,7 +10,7 @@ mod features;
 // mod imports;
 mod instance;
 // mod memory;
-mod middleware;
+// mod middleware;
 // mod modules;
 mod serde;
 pub mod testing;

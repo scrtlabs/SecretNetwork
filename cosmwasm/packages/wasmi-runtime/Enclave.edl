@@ -81,44 +81,57 @@ enclave {
             uintptr_t length
         );
 
-        EnclaveBuffer ocall_read_db(
+        OcallReturn ocall_read_db(
             Ctx context,
+            [out] UntrustedVmError* vm_error,
+            [out] uint64_t* gas_used,
+            [out] EnclaveBuffer* value,
             [in, count=key_len] const uint8_t* key,
             uintptr_t key_len
         ) allow (ecall_allocate);
 
-        void ocall_remove_db(
+        OcallReturn ocall_remove_db(
             Ctx context,
+            [out] UntrustedVmError* vm_error,
+            [out] uint64_t* gas_used,
             [in, count=key_len] const uint8_t* key,
             uintptr_t key_len
         );
 
-        void ocall_write_db(
+        OcallReturn ocall_write_db(
             Ctx context,
+            [out] UntrustedVmError* vm_error,
+            [out] uint64_t* gas_used,
             [in, count=key_len] const uint8_t* key,
             uintptr_t key_len,
             [in, count=value_len] const uint8_t* value,
             uintptr_t value_len
         );
 
-        sgx_status_t ocall_sgx_init_quote([out] sgx_target_info_t *ret_ti,
-                      [out] sgx_epid_group_id_t *ret_gid);
+        sgx_status_t ocall_sgx_init_quote(
+            [out] sgx_target_info_t *ret_ti,
+            [out] sgx_epid_group_id_t *ret_gid
+        );
 
         sgx_status_t ocall_get_ias_socket([out] int *ret_fd);
 
-        sgx_status_t ocall_get_quote(  [in, size = sigrl_len] uint8_t * p_sigrl,
-                                       uint32_t sigrl_len,
-                                       [in] sgx_report_t *report,
-                                       sgx_quote_sign_type_t quote_type,
-                                       [in] sgx_spid_t *p_spid,
-                                       [in] sgx_quote_nonce_t *p_nonce,
-                                       [out] sgx_report_t *p_qe_report,
-                                       [out, size = maxlen] sgx_quote_t *p_quote,
-                                       uint32_t maxlen,
-                                       [out] uint32_t* p_quote_len);
+        sgx_status_t ocall_get_quote(
+            [in, size=sigrl_len] uint8_t * p_sigrl,
+            uint32_t sigrl_len,
+            [in] sgx_report_t *report,
+            sgx_quote_sign_type_t quote_type,
+            [in] sgx_spid_t *p_spid,
+            [in] sgx_quote_nonce_t *p_nonce,
+            [out] sgx_report_t *p_qe_report,
+            [out, size=maxlen] sgx_quote_t *p_quote,
+            uint32_t maxlen,
+            [out] uint32_t* p_quote_len
+        );
 
-        sgx_status_t ocall_get_update_info([in] sgx_platform_info_t * platformBlob,
-                           int32_t enclaveTrusted,
-                           [out] sgx_update_info_bit_t * update_info);
+        sgx_status_t ocall_get_update_info(
+            [in] sgx_platform_info_t * platformBlob,
+            int32_t enclaveTrusted,
+            [out] sgx_update_info_bit_t * update_info
+        );
     };
 };

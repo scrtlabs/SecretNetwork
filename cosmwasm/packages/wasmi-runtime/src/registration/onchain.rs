@@ -44,16 +44,14 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
     let result = panic::catch_unwind(|| -> SgxResult<Vec<u8>> {
         // verify certificate, and return the public key in the extra data of the report
-        let pk = match verify_ra_cert(cert_slice) {
-            Err(e) => {
-                error!("Error in validating certificate: {:?}", e);
-                if let Err(status) = write_to_untrusted(cert_slice, "failed_cert.der") {
-                    return Err(status);
-                }
-                return Err(e);
+        let pk = verify_ra_cert(cert_slice).map_err(|verification_status| {
+            error!("Error in validating certificate: {:?}", verification_status);
+            if let Err(write_status) = write_to_untrusted(cert_slice, "failed_cert.der") {
+                write_status
+            } else {
+                verification_status
             }
-            Ok(res) => res,
-        };
+        })?;
 
         // just make sure the length isn't wrong for some reason (certificate may be malformed)
         if pk.len() != PUBLIC_KEY_SIZE {
@@ -71,13 +69,11 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
             &target_public_key.to_vec()
         );
 
-        let res: Vec<u8> = match encrypt_seed(target_public_key) {
-            Ok(result) => result,
-            Err(status) => return Err(status),
-        };
+        let res: Vec<u8> = encrypt_seed(target_public_key)?;
 
         Ok(res)
     });
+
     if let Ok(res) = result {
         match res {
             Ok(res) => {

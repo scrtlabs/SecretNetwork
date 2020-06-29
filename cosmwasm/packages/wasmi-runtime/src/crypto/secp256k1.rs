@@ -1,6 +1,6 @@
 // use super::keys::SECRET_KEY_SIZE;
 // use super::KeyPair;
-// use enclave_ffi_types::CryptoError;
+// use crate::crypto::CryptoError;
 //
 // use secp256k1::ecdh::SharedSecret;
 // use secp256k1::key::{PublicKey, SecretKey};
@@ -110,7 +110,7 @@
 //
 //     use super::{KeyPair, Seed, SymmetricKey, SEED_SIZE};
 //     use crate::crypto::{PUBLIC_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE};
-//     use enclave_ffi_types::CryptoError;
+//     use crate::crypto::CryptoError;
 //
 //     fn test_seed_from_slice() {
 //         let seed = Seed::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
