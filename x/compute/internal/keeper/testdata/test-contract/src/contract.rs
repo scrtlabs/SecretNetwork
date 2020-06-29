@@ -101,7 +101,7 @@ fn init_with_callback<S: Storage, A: Api, Q: Querier>(
     InitResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: Binary("{{\"c\":{{\"x\":0,\"y\":13}}}}".as_bytes().to_vec()),
+            msg: Binary("{\"c\":{\"x\":0,\"y\":13}}".as_bytes().to_vec()),
             send: vec![],
         })],
         log: vec![log("init with a callback", "🦄")],

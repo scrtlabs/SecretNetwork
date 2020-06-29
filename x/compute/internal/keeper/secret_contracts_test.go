@@ -466,9 +466,7 @@ func TestInitIllegalInputError(t *testing.T) {
 	require.Error(t, initErr.ParseErr)
 }
 
-func TestInitCallback(t *testing.T) {
-	t.SkipNow() // still not implemented in CosmWasm 0.9
-
+func TestInitCallbackAndCallbackEvents(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -483,15 +481,10 @@ func TestInitCallback(t *testing.T) {
 	require.NoError(t, err)
 
 	// init first contract so we'd have someone to callback
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
-	require.NoError(t, err)
-	firstContractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.NoError(t, err)
 
-	// check init events (no data in init)
-	initEvents := getDecryptedWasmEvents(t, ctx, initMsgBz[0:32], 0)
+	firstContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
 
-	require.Equal(t, 1, len(initEvents))
 	require.Equal(t,
 		[][]cosmwasm.LogAttribute{
 			{
@@ -503,16 +496,9 @@ func TestInitCallback(t *testing.T) {
 	)
 
 	// init second contract and callback to the first contract
-	initMsgBz, err = wasmCtx.Encrypt([]byte(fmt.Sprintf(`{"callback":{"contract_addr":"%s"}}`, firstContractAddress.String())))
-	require.NoError(t, err)
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback":{"contract_addr":"%s"}}`, firstContractAddress.String()), 1)
+	require.Empty(t, initErr)
 
-	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.NoError(t, err)
-
-	// check init events (no data in init)
-	initEvents = getDecryptedWasmEvents(t, ctx, initMsgBz[0:32], 1)
-
-	require.Equal(t, 2, len(initEvents))
 	require.Equal(t,
 		[][]cosmwasm.LogAttribute{
 			{
