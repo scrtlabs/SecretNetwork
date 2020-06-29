@@ -23,5 +23,8 @@ pub trait WasmiApi {
         canonical_ptr_ptr: i32,
         human_ptr_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap>;
+
+    fn query_chain_index(&mut self, query_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap>;
+
     fn gas_index(&mut self, gas_amount: i32) -> Result<Option<RuntimeValue>, Trap>;
 }

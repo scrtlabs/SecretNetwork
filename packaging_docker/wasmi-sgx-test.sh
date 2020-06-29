@@ -19,10 +19,9 @@ done
 sleep 5
 
 # store wasm code on-chain so we could later instansiate it
-wget -O /tmp/contract.wasm https://raw.githubusercontent.com/CosmWasm/cosmwasm-examples/f5ea00a85247abae8f8cbcba301f94ef21c66087/erc20/contract.wasm --no-check-certificate
 STORE_TX_HASH=$(
     yes |
-    enigmacli tx compute store /tmp/contract.wasm --from a --gas 10000000 |
+    enigmacli tx compute store erc20.wasm --from a --gas 10000000 |
     jq -r .txhash
 )
 
