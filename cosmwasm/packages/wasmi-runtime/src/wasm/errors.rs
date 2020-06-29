@@ -21,6 +21,7 @@ pub enum WasmEngineError {
     InputWrongLength,
     OutputWrongLength,
     NonExistentImportFunction,
+    NotImplemented,
 }
 
 #[derive(Debug, Display)]
@@ -53,6 +54,7 @@ pub fn wasmi_error_to_enclave_error(wasmi_error: InterpreterError) -> EnclaveErr
         Some(Some(WasmEngineError::EncryptionError)) => EnclaveError::FailedSeal,
         Some(Some(WasmEngineError::DecryptionError)) => EnclaveError::FailedUnseal,
         Some(Some(WasmEngineError::DbError(_))) => EnclaveError::FailedFunctionCall,
+        Some(Some(WasmEngineError::NotImplemented)) => EnclaveError::NotImplemented,
         // Unexpected WasmEngineError variant or unexpected HostError.
         Some(None) => EnclaveError::Unknown,
         // The error is not a HostError. In the future we might want to return more specific errors.

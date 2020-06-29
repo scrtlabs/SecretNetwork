@@ -200,8 +200,6 @@ func TestCreateWithGzippedPayload(t *testing.T) {
 }
 
 func TestInstantiate(t *testing.T) {
-	t.SkipNow() // escrow uses external query
-
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -238,14 +236,14 @@ func TestInstantiate(t *testing.T) {
 	require.Equal(t, "enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89d2p9uk", addr.String())
 
 	gasAfter := ctx.GasMeter().GasConsumed()
-	require.Equal(t, uint64(33765), gasAfter-gasBefore)
+	require.Equal(t, uint64(34930), gasAfter-gasBefore)
 
 	// ensure it is stored properly
 	info := keeper.GetContractInfo(ctx, addr)
 	require.NotNil(t, info)
 	require.Equal(t, info.Creator, creator)
 	require.Equal(t, info.CodeID, contractID)
-	require.Equal(t, info.InitMsg, json.RawMessage(initMsgBz))
+	require.Equal(t, info.InitMsg, initMsgBz)
 	require.Equal(t, info.Label, "demo contract 1")
 }
 
@@ -274,7 +272,7 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 }
 
 func TestExecute(t *testing.T) {
-	t.SkipNow() // escrow uses external query
+	t.SkipNow() // escrow requires external query which isn't yet implemented
 
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
@@ -305,7 +303,7 @@ func TestExecute(t *testing.T) {
 
 	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 3", deposit)
 	require.NoError(t, err)
-	require.Equal(t, "cosmos18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5", addr.String())
+	require.Equal(t, "enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89d2p9uk", addr.String())
 
 	// ensure bob doesn't exist
 	bobAcct := accKeeper.GetAccount(ctx, bob)
@@ -324,18 +322,20 @@ func TestExecute(t *testing.T) {
 
 	// unauthorized - trialCtx so we don't change state
 	trialCtx := ctx.WithMultiStore(ctx.MultiStore().CacheWrap().(sdk.MultiStore))
-	msgBz, err := wasmCtx.Encrypt([]byte(`{"release":{}}`))
-	require.NoError(t, err)
 
-	res, err := keeper.Execute(trialCtx, addr, creator, msgBz, nil)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "unauthorized")
+	_, _, trialExecErr := executeHelper(t, keeper, trialCtx, addr, creator, `{"approve":{}}`, 0)
+	require.Error(t, trialExecErr)
+	require.Error(t, trialExecErr.Unauthorized)
+	require.Contains(t, trialExecErr.Error(), "unauthorized")
 
 	// verifier can execute, and get proper gas amount
 	start := time.Now()
 	gasBefore := ctx.GasMeter().GasConsumed()
 
-	res, err = keeper.Execute(ctx, addr, fred, msgBz, topUp)
+	msgBz, err := wasmCtx.Encrypt([]byte(`{"approve":{}}`))
+	require.NoError(t, err)
+
+	res, err := keeper.Execute(ctx, addr, fred, msgBz, topUp)
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	require.NotNil(t, res)
@@ -854,8 +854,8 @@ func TestUpdateContractAdmin(t *testing.T) {
 }
 
 type InitMsg struct {
-	Verifier    sdk.AccAddress `json:"verifier"`
-	Beneficiary sdk.AccAddress `json:"beneficiary"`
+	Verifier    sdk.AccAddress `json:"arbiter"`
+	Beneficiary sdk.AccAddress `json:"recipient"`
 }
 
 func createFakeFundedAccount(ctx sdk.Context, am auth.AccountKeeper, coins sdk.Coins) sdk.AccAddress {
