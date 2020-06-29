@@ -1107,3 +1107,30 @@ func TestInitCallbackContratError(t *testing.T) {
 	require.Empty(t, secondContractAddress)
 	require.Empty(t, initEvents)
 }
+
+func TestExecCallbackContratError(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
+	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	// init
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
+	require.Equal(t, 1, len(initEvents))
+
+	data, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callbackcontracterror":{"contract_addr":"%s"}}`, contractAddress), 1)
+	require.Error(t, execErr)
+	require.Error(t, execErr.GenericErr)
+	require.Equal(t, execErr.GenericErr.Msg, "la la 🤯")
+	require.Empty(t, execEvents)
+	require.Empty(t, data)
+}
