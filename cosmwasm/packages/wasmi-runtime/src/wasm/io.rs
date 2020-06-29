@@ -8,8 +8,7 @@ use crate::crypto::{AESKey, Ed25519PublicKey, Kdf, SIVEncryptable, KEY_MANAGER};
 use enclave_ffi_types::EnclaveError;
 use log::*;
 use serde::Serialize;
-// use serde_json;
-use serde_json::Value;
+use serde_json::{json, Value};
 
 pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) -> AESKey {
     let enclave_io_key = KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap();
@@ -73,55 +72,74 @@ pub fn encrypt_output(
         EnclaveError::FailedToDeserialize
     })?;
 
-    if let Value::Object(err) = &mut v["Err"] {
-        let mut new_value: Value =
-            serde_json::from_str(r#"{"generic_err":{"msg":""}}"#).map_err(|err| {
-                error!(
-                    "got an error while trying to serialize error output bytes into json {:?}: {}",
-                    output, err
-                );
-                EnclaveError::FailedToSerialize
-            })?;
-        new_value["generic_err"]["msg"] = encrypt_serializeable(&key, &err)?;
-        v["Err"] = new_value;
-    } else if let Value::String(ok) = &v["Ok"] {
+    if v["Err"].is_object() {
+        if let Value::Object(err) = &mut v["Err"] {
+            let mut new_value: Value = json!({"generic_err":{"msg":""}});
+            new_value["generic_err"]["msg"] = encrypt_serializeable(&key, &err)?;
+            v["Err"] = new_value;
+        }
+    } else if v["Ok"].is_string() {
         // query
-        v["Ok"] = encrypt_serializeable(&key, &ok)?;
-    } else if let Value::Object(ok) = &mut v["Ok"] {
+        if let Value::String(ok) = &v["Ok"] {
+            v["Ok"] = encrypt_serializeable(&key, &ok)?;
+        }
+    } else if v["Ok"].is_object() {
         // init or handle or migrate
-        if let Value::Array(msgs) = &mut ok["messages"] {
-            for msg in msgs {
-                if let Value::String(msg_b64) = &mut msg["wasm"]["execute"]["msg"] {
-                    let mut msg_to_pass =
-                        SecretMessage::from_base64((*msg_b64).to_string(), nonce, user_public_key)?;
+        if let Value::Object(ok) = &mut v["Ok"] {
+            if ok["messages"].is_array() {
+                if let Value::Array(msgs) = &mut ok["messages"] {
+                    for msg in msgs {
+                        if msg["wasm"]["execute"]["msg"].is_string() {
+                            if let Value::String(msg_b64) = &mut msg["wasm"]["execute"]["msg"] {
+                                let mut msg_to_pass = SecretMessage::from_base64(
+                                    (*msg_b64).to_string(),
+                                    nonce,
+                                    user_public_key,
+                                )?;
 
-                    msg_to_pass.encrypt_in_place()?;
+                                msg_to_pass.encrypt_in_place()?;
 
-                    msg["wasm"]["execute"]["msg"] = encode(&msg_to_pass.to_slice());
-                } else if let Value::String(msg_b64) = &mut msg["wasm"]["instantiate"]["msg"] {
-                    let mut msg_to_pass =
-                        SecretMessage::from_base64((*msg_b64).to_string(), nonce, user_public_key)?;
+                                msg["wasm"]["execute"]["msg"] = encode(&msg_to_pass.to_slice());
+                            }
+                        } else if msg["wasm"]["instantiate"]["msg"].is_string() {
+                            if let Value::String(msg_b64) = &mut msg["wasm"]["instantiate"]["msg"] {
+                                let mut msg_to_pass = SecretMessage::from_base64(
+                                    (*msg_b64).to_string(),
+                                    nonce,
+                                    user_public_key,
+                                )?;
 
-                    msg_to_pass.encrypt_in_place()?;
+                                msg_to_pass.encrypt_in_place()?;
 
-                    msg["wasm"]["instantiate"]["msg"] = encode(&msg_to_pass.to_slice());
+                                msg["wasm"]["instantiate"]["msg"] = encode(&msg_to_pass.to_slice());
+                            }
+                        }
+                    }
                 }
             }
-        }
 
-        if let Value::Array(events) = &mut ok["log"] {
-            for e in events {
-                if let Value::String(k) = &mut e["key"] {
-                    e["key"] = encrypt_serializeable(&key, k)?;
-                }
-                if let Value::String(v) = &mut e["value"] {
-                    e["value"] = encrypt_serializeable(&key, v)?;
+            if ok["log"].is_array() {
+                if let Value::Array(events) = &mut ok["log"] {
+                    for e in events {
+                        if e["key"].is_string() {
+                            if let Value::String(k) = &mut e["key"] {
+                                e["key"] = encrypt_serializeable(&key, k)?;
+                            }
+                        }
+                        if e["value"].is_string() {
+                            if let Value::String(v) = &mut e["value"] {
+                                e["value"] = encrypt_serializeable(&key, v)?;
+                            }
+                        }
+                    }
                 }
             }
-        }
 
-        if let Value::String(data) = &mut v["Ok"]["data"] {
-            v["Ok"]["data"] = encrypt_serializeable(&key, data)?;
+            if v["Ok"]["data"].is_string() {
+                if let Value::String(data) = &mut v["Ok"]["data"] {
+                    v["Ok"]["data"] = encrypt_serializeable(&key, data)?;
+                }
+            }
         }
     }
 
