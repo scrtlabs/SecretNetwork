@@ -59,7 +59,7 @@ pub enum HandleMsg {
 #[serde(rename_all = "lowercase")]
 pub enum QueryMsg {
     Owner {},
-    ContractError {},
+    ContractError { error_type: String },
 }
 
 // We define a custom struct for each query response
@@ -303,12 +303,12 @@ pub fn exec_callback_to_init<S: Storage, A: Api, Q: Querier>(
 /////////////////////////////// Query ///////////////////////////////
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    _deps: &Extern<S, A, Q>,
+    deps: &Extern<S, A, Q>,
     _msg: QueryMsg,
 ) -> QueryResult {
     match _msg {
-        QueryMsg::Owner {} => query_owner(_deps),
-        QueryMsg::ContractError {} => query_contract_error(),
+        QueryMsg::Owner {} => query_owner(deps),
+        QueryMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
     }
 }
 
@@ -319,10 +319,6 @@ fn query_owner<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdRes
         owner: deps.api.human_address(&state.owner)?,
     };
     to_binary(&resp)
-}
-
-fn query_contract_error() -> QueryResult {
-    Err(generic_err("Test error! 🌈"))
 }
 
 /////////////////////////////// Migrate ///////////////////////////////
