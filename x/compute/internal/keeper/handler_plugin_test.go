@@ -3,16 +3,16 @@ package keeper
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/x/distribution"
-	"github.com/cosmos/cosmos-sdk/x/staking"
-	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/enigmampc/cosmos-sdk/x/distribution"
+	"github.com/enigmampc/cosmos-sdk/x/staking"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-	wasmTypes "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
+	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	"github.com/enigmampc/cosmos-sdk/x/bank"
 )
 
 func TestEncoding(t *testing.T) {

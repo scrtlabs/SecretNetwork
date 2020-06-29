@@ -11,7 +11,7 @@ const assert = require("assert").strict;
   const contract = (await client.getContracts(1))[0].address;
 
   const resQuery = await client.queryContractSmart(contract, {
-    balance: { address: "enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4" },
+    balance: { address: "secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t" },
   });
   const initBalance = +resQuery.balance;
 
@@ -20,7 +20,7 @@ const assert = require("assert").strict;
   );
   const address = cosmwasmjs.pubkeyToAddress(
     cosmwasmjs.encodeSecp256k1Pubkey(pen.pubkey),
-    "enigma"
+    "secret"
   );
   const signingClient = new cosmwasmjs.SigningCosmWasmClient(
     "http://localhost:1337",
@@ -49,7 +49,7 @@ const assert = require("assert").strict;
   const execTx = await signingClient.execute(contract, {
     transfer: {
       amount: "10",
-      recipient: "enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4",
+      recipient: "secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t",
     },
   });
 
@@ -68,29 +68,29 @@ const assert = require("assert").strict;
     },
     {
       key: "sender",
-      value: "enigma19hkhy46ute3g4xfr0vtcn9g6rp9824w2k3xpdg",
+      value: "secret19hkhy46ute3g4xfr0vtcn9g6rp9824w29ut54k",
     },
     {
       key: "recipient",
-      value: "enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4",
+      value: "secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t",
     },
   ]);
 
   const qRes = await client.queryContractSmart(contract, {
-    balance: { address: "enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4" },
+    balance: { address: "secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t" },
   });
 
   assert.equal(+qRes.balance, initBalance + 10);
 
   const qRes2 = await client.queryContractSmart(contract, {
-    balance: { address: "enigma19hkhy46ute3g4xfr0vtcn9g6rp9824w2k3xpdg" },
+    balance: { address: "secret19hkhy46ute3g4xfr0vtcn9g6rp9824w29ut54k" },
   });
 
   try {
     await signingClient.execute(contract, {
       transfer: {
         amount: "1000",
-        recipient: "enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4",
+        recipient: "secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t",
       },
     });
   } catch (err) {

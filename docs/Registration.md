@@ -62,4 +62,4 @@ Should return your 64 character registration key if it was successful.
 
 * Configure your local node
 
-`enigmad configure-secret node-master-cert.der "$SEED"`
+`secretd configure-secret node-master-cert.der "$SEED"`

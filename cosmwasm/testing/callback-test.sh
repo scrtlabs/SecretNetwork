@@ -94,13 +94,13 @@ wait_for_tx "$EXEC_TX_HASH" "Waiting for exec to finish on-chain..."
 # exec (generate error inside WASM)
 export EXEC_ERR_TX_HASH=$(
     yes |
-        ./enigmacli tx compute execute --from a $CONTRACT_ADDRESS "{\"contracterror\":{}}" |
+        ./secretcli tx compute execute --from a $CONTRACT_ADDRESS "{\"contracterror\":{}}" |
         jq -r .txhash
 )
 
 wait_for_tx "$EXEC_ERR_TX_HASH" "Waiting for exec to finish on-chain..."
 
-./enigmacli q compute tx "$EXEC_ERR_TX_HASH"
+./secretcli q compute tx "$EXEC_ERR_TX_HASH"
 
 (
     cd ./cosmwasm-js
