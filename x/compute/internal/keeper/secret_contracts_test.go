@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
-	"strings"
 	"testing"
 
 	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
@@ -97,12 +96,12 @@ func getDecryptedData(t *testing.T, data []byte, nonce []byte) []byte {
 var contractErrorRegex = regexp.MustCompile(`wasm contract failed: generic: (.+)`)
 
 func extractInnerError(t *testing.T, err error, nonce []byte) cosmwasm.StdError {
-	errMsg := err.Error()
-	if strings.Contains(errMsg, "EnclaveErr: Got an error from the enclave") {
-		return cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: errMsg}}
+	match := contractErrorRegex.FindAllStringSubmatch(err.Error(), -1)
+
+	if match == nil {
+		return cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: err.Error()}}
 	}
 
-	match := contractErrorRegex.FindAllStringSubmatch(err.Error(), -1)
 	require.NotEmpty(t, match)
 	require.Equal(t, len(match), 1)
 	require.Equal(t, len(match[0]), 2)
@@ -226,14 +225,8 @@ func TestSanity(t *testing.T) {
 	// init
 	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, walletA.String(), walletB.String())
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
-	require.NoError(t, err)
-
-	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.NoError(t, err)
-
-	// check init events (no data in init)
-	initEvents := getDecryptedWasmEvents(t, ctx, initMsgBz[0:32], 0)
+	contractAddress, initEvents, err := initHelper(t, keeper, ctx, codeID, walletA, initMsg, 0)
+	require.Empty(t, err)
 	require.Empty(t, initEvents)
 
 	// check state after init
@@ -277,16 +270,8 @@ func TestInitLogs(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
-	require.NoError(t, err)
-
-	// init
-	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.NoError(t, err)
-
-	// check init events (no data in init)
-	initEvents := getDecryptedWasmEvents(t, ctx, initMsgBz[0:32], 0)
-
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
 	require.Equal(t, 1, len(initEvents))
 	require.Equal(t,
 		[]ContractEvent{
@@ -303,12 +288,8 @@ func TestEmptyLogKeyValue(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
-	require.NoError(t, err)
-
-	// init
-	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.NoError(t, err)
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
 
 	_, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, `{"empty_log_key_value":{}}`, 1)
 
@@ -329,12 +310,8 @@ func TestEmptyData(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
-	require.NoError(t, err)
-
-	// init
-	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.NoError(t, err)
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
 
 	data, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, `{"empty_data":{}}`, 1)
 
@@ -346,12 +323,8 @@ func TestNoData(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
-	require.NoError(t, err)
-
-	// init
-	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.NoError(t, err)
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
 
 	data, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, `{"no_data":{}}`, 1)
 
@@ -363,12 +336,8 @@ func TestExecuteIllegalInputError(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
-	require.NoError(t, err)
-
-	// init
-	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.NoError(t, err)
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
 
 	_, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, `bad input`, 1)
 
@@ -391,7 +360,6 @@ func TestCallbackFromInitAndCallbackEvents(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// init first contract so we'd have someone to callback
-
 	firstContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
 	require.Empty(t, initErr)
 
@@ -431,11 +399,9 @@ func TestQueryInputParamError(t *testing.T) {
 	// init
 	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, walletA.String(), walletB.String())
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
-	require.NoError(t, err)
-
-	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.NoError(t, err)
+	contractAddress, initEvents, err := initHelper(t, keeper, ctx, codeID, walletA, initMsg, 0)
+	require.Empty(t, err)
+	require.Empty(t, initEvents)
 
 	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"address":"blabla"}}`)
 	require.Error(t, qErr)
@@ -649,36 +615,21 @@ func TestInitParamError(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"callback":{"contract_addr":"notanaddress"}}`))
-	require.NoError(t, err)
+	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"callback":{"contract_addr":"notanaddress"}}`, 0)
 
-	// init
-	_, err = keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.Error(t, err)
-
-	errorMsg := err.Error()
-	require.Contains(t, errorMsg, "invalid address")
+	require.Contains(t, initErr.Error(), "invalid address")
 }
 
 func TestCallbackExecuteParamError(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
-	require.NoError(t, err)
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
 
-	// init
-	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.NoError(t, err)
+	_, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, `{"a":{"contract_addr":"notanaddress","x":2,"y":3}}`, 1)
 
-	execMsgBz, err := wasmCtx.Encrypt([]byte(`{"a":{"contract_addr":"notanaddress","x":2,"y":3}}`))
-	require.NoError(t, err)
-
-	_, err = keeper.Execute(ctx, contractAddress, walletA, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.Error(t, err)
-
-	errorMsg := err.Error()
-	require.Contains(t, errorMsg, "invalid address")
+	require.Contains(t, err.Error(), "invalid address")
 }
 
 func TestQueryInputStructureError(t *testing.T) {
@@ -688,11 +639,9 @@ func TestQueryInputStructureError(t *testing.T) {
 	// init
 	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, walletA.String(), walletB.String())
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
-	require.NoError(t, err)
-
-	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.NoError(t, err)
+	contractAddress, initEvents, err := initHelper(t, keeper, ctx, codeID, walletA, initMsg, 0)
+	require.Empty(t, err)
+	require.Empty(t, initEvents)
 
 	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"invalidkey":"invalidval"}}`)
 	require.Error(t, qErr)
@@ -710,47 +659,33 @@ func TestInitNotEncryptedInputError(t *testing.T) {
 	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsg, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.Error(t, err)
 
-	errorMsg := err.Error()
-	require.Contains(t, errorMsg, "DecryptionError")
+	require.Contains(t, err.Error(), "DecryptionError")
 }
 
 func TestExecuteNotEncryptedInputError(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
-	require.NoError(t, err)
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
 
-	// init
-	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.NoError(t, err)
-
-	_, err = keeper.Execute(ctx, contractAddress, walletA, []byte(`{"empty_log_key_value":{}}`), sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	_, err := keeper.Execute(ctx, contractAddress, walletA, []byte(`{"empty_log_key_value":{}}`), sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.Error(t, err)
 
-	errorMsg := err.Error()
-	require.Contains(t, errorMsg, "DecryptionError")
+	require.Contains(t, err.Error(), "DecryptionError")
 }
 
 func TestQueryNotEncryptedInputError(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"state":{}}`))
-	require.NoError(t, err)
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"state":{}}`, 0)
+	require.Empty(t, initErr)
 
-	// init
-	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.NoError(t, err)
-
-	query := []byte(`{"owner":{}}`)
-	require.NoError(t, err)
-
-	_, err = keeper.QuerySmart(ctx, contractAddress, query)
+	_, err := keeper.QuerySmart(ctx, contractAddress, []byte(`{"owner":{}}`))
 	require.Error(t, err)
 
-	errorMsg := err.Error()
-	require.Contains(t, errorMsg, "DecryptionError")
+	require.Contains(t, err.Error(), "DecryptionError")
 }
 
 func TestInitNoLogs(t *testing.T) {
@@ -820,7 +755,6 @@ func TestInitCallbackToInit(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	// init first contract
 	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d}}`, codeID), 0)
 	require.Empty(t, initErr)
 
@@ -853,7 +787,6 @@ func TestInitCallbackContratError(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	// init first contract
 	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
 	require.Empty(t, initErr)
 	require.Equal(t, 1, len(initEvents))
@@ -881,4 +814,40 @@ func TestExecCallbackContratError(t *testing.T) {
 	require.Equal(t, execErr.GenericErr.Msg, "la la 🤯")
 	require.Empty(t, execEvents)
 	require.Empty(t, data)
+}
+
+func TestExecCallbackBadParam(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	// init
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
+	require.Equal(t, 1, len(initEvents))
+
+	data, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_contract_bad_param":{"contract_addr":"%s"}}`, contractAddress), 1)
+	require.Error(t, execErr)
+	require.Error(t, execErr.ParseErr)
+	require.Equal(t, execErr.ParseErr.Target, "test_contract::contract::HandleMsg")
+	require.Contains(t, execErr.ParseErr.Msg, "unknown variant `callback_contract_bad_param`")
+	require.Empty(t, execEvents)
+	require.Empty(t, data)
+}
+
+func TestInitCallbackBadParam(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	// init first
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
+	require.Equal(t, 1, len(initEvents))
+
+	secondContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback_contract_bad_param":{"contract_addr":"%s"}}`, contractAddress), 1)
+	require.Empty(t, secondContractAddress)
+	require.Empty(t, initEvents)
+	require.Error(t, initErr)
+	require.Error(t, initErr.ParseErr)
+	require.Equal(t, initErr.ParseErr.Target, "test_contract::contract::InitMsg")
+	require.Contains(t, initErr.ParseErr.Msg, "unknown variant `callback_contract_bad_param`")
 }

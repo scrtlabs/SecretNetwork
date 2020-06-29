@@ -24,6 +24,7 @@ pub enum InitMsg {
     State {},
     NoLogs {},
     CallbackToInit { code_id: u64 },
+    CallbackBadParams { contract_addr: HumanAddr },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -55,6 +56,9 @@ pub enum HandleMsg {
         code_id: u64,
     },
     CallbackContractError {
+        contract_addr: HumanAddr,
+    },
+    CallbackBadParams {
         contract_addr: HumanAddr,
     },
 }
@@ -96,6 +100,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         InitMsg::CallbackContractError { contract_addr } => {
             Ok(init_with_callback_contract_error(contract_addr))
         }
+        InitMsg::CallbackBadParams { contract_addr } => Ok(init_callback_bad_params(contract_addr)),
     }
 }
 
@@ -136,6 +141,17 @@ fn init_with_callback_contract_error(contract_addr: HumanAddr) -> InitResponse {
             send: vec![],
         })],
         log: vec![log("init with a callback with contract error", "🤷‍♀️")],
+    }
+}
+
+fn init_callback_bad_params(contract_addr: HumanAddr) -> InitResponse {
+    InitResponse {
+        messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: contract_addr.clone(),
+            msg: Binary(r#"{"c":{"x":"banana","y":3}}"#.as_bytes().to_vec()),
+            send: vec![],
+        })],
+        log: vec![],
     }
 }
 
@@ -196,9 +212,24 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
         HandleMsg::NoLogs {} => Ok(HandleResponse::default()),
         HandleMsg::CallbackToInit { code_id } => Ok(exec_callback_to_init(deps, env, code_id)),
+        HandleMsg::CallbackBadParams { contract_addr } => {
+            Ok(exec_callback_bad_params(contract_addr))
+        }
         HandleMsg::CallbackContractError { contract_addr } => {
             Ok(exec_with_callback_contract_error(contract_addr))
         }
+    }
+}
+
+fn exec_callback_bad_params(contract_addr: HumanAddr) -> HandleResponse {
+    HandleResponse {
+        messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: contract_addr.clone(),
+            msg: Binary(r#"{"c":{"x":"banana","y":3}}"#.as_bytes().to_vec()),
+            send: vec![],
+        })],
+        log: vec![],
+        data: None,
     }
 }
 
