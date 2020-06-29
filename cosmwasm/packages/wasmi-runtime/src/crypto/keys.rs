@@ -1,7 +1,7 @@
 use super::rng::rand_slice;
 use super::traits::{AlignedMemory, ExportECKey, EC_256_PRIVATE_KEY_SIZE};
 
-use enclave_ffi_types::CryptoError;
+use crate::crypto::CryptoError;
 
 use crate::crypto::ed25519::Ed25519PrivateKey;
 use sgx_types::sgx_align_ec256_private_t;

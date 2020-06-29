@@ -15,10 +15,11 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum InitMsg {
     Nop {},
     Callback { contract_addr: HumanAddr },
+    CallbackContractError { contract_addr: HumanAddr },
     ContractError { error_type: String },
     State {},
     NoLogs {},
@@ -26,7 +27,7 @@ pub enum InitMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     A {
         contract_addr: HumanAddr,
@@ -53,10 +54,13 @@ pub enum HandleMsg {
     CallbackToInit {
         code_id: u64,
     },
+    CallbackContractError {
+        contract_addr: HumanAddr,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Owner {},
     ContractError { error_type: String },
@@ -69,7 +73,7 @@ pub struct OwnerResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum MigrateMsg {}
 
 /////////////////////////////// Init ///////////////////////////////
@@ -89,6 +93,9 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         InitMsg::State {} => Ok(init_state(deps, env)),
         InitMsg::NoLogs {} => Ok(InitResponse::default()),
         InitMsg::CallbackToInit { code_id } => Ok(init_callback_to_init(deps, env, code_id)),
+        InitMsg::CallbackContractError { contract_addr } => {
+            Ok(init_with_callback_contract_error(contract_addr))
+        }
     }
 }
 
@@ -115,6 +122,21 @@ fn init_state<S: Storage, A: Api, Q: Querier>(
     let _store = PrefixedStorage::new(b"prefix", &mut deps.storage);
 
     InitResponse::default()
+}
+
+fn init_with_callback_contract_error(contract_addr: HumanAddr) -> InitResponse {
+    InitResponse {
+        messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: contract_addr.clone(),
+            msg: Binary(
+                r#"{"contract_error":{"error_type":"generic_err"}}"#
+                    .as_bytes()
+                    .to_vec(),
+            ),
+            send: vec![],
+        })],
+        log: vec![log("init with a callback with contract error", "🤷‍♀️")],
+    }
 }
 
 fn init_with_callback<S: Storage, A: Api, Q: Querier>(
@@ -174,6 +196,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
         HandleMsg::NoLogs {} => Ok(HandleResponse::default()),
         HandleMsg::CallbackToInit { code_id } => Ok(exec_callback_to_init(deps, env, code_id)),
+        HandleMsg::CallbackContractError { contract_addr } => {
+            Ok(exec_with_callback_contract_error(contract_addr))
+        }
     }
 }
 
@@ -296,6 +321,22 @@ pub fn exec_callback_to_init<S: Storage, A: Api, Q: Querier>(
             label: None,
         })],
         log: vec![log("instantiating a new contract", "🪂")],
+        data: None,
+    }
+}
+
+fn exec_with_callback_contract_error(contract_addr: HumanAddr) -> HandleResponse {
+    HandleResponse {
+        messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: contract_addr.clone(),
+            msg: Binary(
+                r#"{"contract_error":{"error_type":"generic_err"}}"#
+                    .as_bytes()
+                    .to_vec(),
+            ),
+            send: vec![],
+        })],
+        log: vec![log("exec with a callback with contract error", "🤷‍♂️")],
         data: None,
     }
 }

@@ -9,7 +9,7 @@ use crate::{Querier, Storage};
 
 use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
 
-use sgx_types::sgx_status_t;
+use sgx_types::{sgx_status_t, SgxResult};
 use sgx_urts::SgxEnclave;
 
 use log::trace;
@@ -22,10 +22,10 @@ use super::results::{
 };
 
 /// This is a safe wrapper for allocating buffers inside the enclave.
-pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> Result<EnclaveBuffer, sgx_status_t> {
+pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> SgxResult<EnclaveBuffer> {
     let ptr = buffer.as_ptr();
     let len = buffer.len();
-    let mut enclave_buffer = MaybeUninit::<EnclaveBuffer>::uninit();
+    let mut enclave_buffer = EnclaveBuffer::default();
 
     let enclave_id = crate::enclave::get_enclave()
         .expect("If we got here, surely the enclave has been loaded")
@@ -38,8 +38,9 @@ pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> Result<EnclaveBuffer, sg
         enclave_id
     );
 
-    match unsafe { imports::ecall_allocate(enclave_id, enclave_buffer.as_mut_ptr(), ptr, len) } {
-        sgx_status_t::SGX_SUCCESS => Ok(unsafe { enclave_buffer.assume_init() }),
+    match unsafe { imports::ecall_allocate(enclave_id, (&mut enclave_buffer) as *mut _, ptr, len) }
+    {
+        sgx_status_t::SGX_SUCCESS => Ok(enclave_buffer),
         failure_status => Err(failure_status),
     }
 }
@@ -143,7 +144,7 @@ where
                 self.gas_left -= success.used_gas();
                 success
             })
-            .map_err(|err| EnclaveError::enclave_err(err).into())
+            .map_err(Into::into)
     }
 
     pub fn handle(&mut self, env: &[u8], msg: &[u8]) -> VmResult<HandleSuccess> {
@@ -189,7 +190,7 @@ where
                 self.gas_left -= success.used_gas();
                 success
             })
-            .map_err(|err| EnclaveError::enclave_err(err).into())
+            .map_err(Into::into)
     }
 
     pub fn query(&mut self, msg: &[u8]) -> VmResult<QuerySuccess> {
@@ -225,7 +226,7 @@ where
                 self.gas_left -= success.used_gas();
                 success
             })
-            .map_err(|err| EnclaveError::enclave_err(err).into())
+            .map_err(Into::into)
     }
 }
 

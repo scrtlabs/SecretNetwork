@@ -67,8 +67,8 @@ pub mod tests {
     use super::{
         Keychain, CONSENSUS_SEED_SEALING_PATH, KEY_MANAGER, REGISTRATION_KEY_SEALING_PATH,
     };
+    use crate::crypto::CryptoError;
     use crate::crypto::{Kdf, KeyPair, Seed};
-    use enclave_ffi_types::CryptoError;
 
     // todo: fix test vectors to actually work
     fn test_derive_key() {
