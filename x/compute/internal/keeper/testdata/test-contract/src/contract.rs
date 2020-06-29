@@ -1,9 +1,10 @@
 use cosmwasm_storage::PrefixedStorage;
 
 use cosmwasm_std::{
-    generic_err, log, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HandleResult,
-    HumanAddr, InitResponse, InitResult, MigrateResponse, Querier, QueryResult, StdResult, Storage,
-    WasmMsg,
+    generic_err, invalid_base64, invalid_utf8, log, not_found, null_pointer, parse_err,
+    serialize_err, to_binary, unauthorized, underflow, Api, Binary, CosmosMsg, Env, Extern,
+    HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse, Querier,
+    QueryResult, StdError, StdResult, Storage, WasmMsg,
 };
 
 use crate::state::config_read;
@@ -18,7 +19,7 @@ use serde::{Deserialize, Serialize};
 pub enum InitMsg {
     Nop {},
     Callback { contract_addr: HumanAddr },
-    ContractError {},
+    ContractError { error_type: String },
     State {},
     NoLogs {},
     CallbackToInit { code_id: u64 },
@@ -82,10 +83,26 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             log: vec![log("init", "🌈")],
         }),
         InitMsg::Callback { contract_addr } => Ok(init_with_callback(deps, env, contract_addr)),
-        InitMsg::ContractError {} => Err(generic_err("Test error! 🌈")),
+        InitMsg::ContractError { error_type } => Err(init_with_error(error_type)),
         InitMsg::State {} => Ok(init_state(deps, env)),
         InitMsg::NoLogs {} => Ok(InitResponse::default()),
         InitMsg::CallbackToInit { code_id } => Ok(init_callback_to_init(deps, env, code_id)),
+    }
+}
+
+fn init_with_error(error_type: String) -> StdError {
+    let as_str: &str = &error_type[..];
+    match as_str {
+        "generic_err" => generic_err("la la 🤯"),
+        "invalid_base64" => invalid_base64("ra ra 🤯"),
+        "invalid_utf8" => invalid_utf8("ka ka 🤯"),
+        "not_found" => not_found("za za 🤯"),
+        "null_pointer" => null_pointer(),
+        "parse_err" => parse_err("na na 🤯", "pa pa 🤯"),
+        "serialize_err" => serialize_err("ba ba 🤯", "ga ga 🤯"),
+        "unauthorized" => unauthorized(),
+        "underflow" => underflow("minuend 🤯", "subtrahend 🤯"),
+        _ => generic_err("catch-all 🤯"),
     }
 }
 
