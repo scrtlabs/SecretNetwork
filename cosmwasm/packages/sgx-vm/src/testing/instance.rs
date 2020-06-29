@@ -5,9 +5,7 @@ use cosmwasm_std::{Coin, HumanAddr};
 use std::collections::HashSet;
 
 use crate::compatability::check_wasm;
-/*
 use crate::features::features_from_csv;
-*/
 use crate::instance::Instance;
 use crate::Extern;
 
@@ -93,10 +91,7 @@ impl Default for MockInstanceOptions<'_> {
             error_message: None,
 
             // instance
-            /*
             supported_features: features_from_csv("staking"),
-            */
-            supported_features: HashSet::new(),
             gas_limit: 500_000,
         }
     }
