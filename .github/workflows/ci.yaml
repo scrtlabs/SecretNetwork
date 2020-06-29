@@ -68,10 +68,11 @@ jobs:
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           go test -v ./x/registration/internal/...
-      - name: System Tests
+      - name: Test Compute Module
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
           cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
           mkdir -p ./x/compute/internal/keeper/.sgx_secrets
+          go test -v ./x/compute/client/...
           go test -p 1 -v ./x/compute/internal/...
