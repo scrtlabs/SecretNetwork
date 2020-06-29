@@ -14,6 +14,7 @@ pub enum HostFunctions {
     CanonicalizeAddressIndex = 3,
     HumanizeAddressIndex = 4,
     GasIndex = 5,
+    QueryChainIndex = 6,
     Unknown,
 }
 
@@ -81,7 +82,6 @@ impl Externals for ContractInstance {
 
                 self.write_db_index(key, value)
             }
-
             HostFunctions::CanonicalizeAddressIndex => {
                 let human: i32 = args.nth_checked(0).map_err(|err| {
                     error!(
@@ -111,9 +111,20 @@ impl Externals for ContractInstance {
                         err
                     );
                     err
-                })?; 
+                })?;
 
                 self.humanize_address_index(canonical, human)
+            }
+            HostFunctions::QueryChainIndex => {
+                let query: i32 = args.nth_checked(0).map_err(|err| {
+                    error!(
+                        "query_chain() error reading argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+
+                self.query_chain_index(query)
             }
             HostFunctions::GasIndex => {
                 let gas_amount: i32 = args.nth_checked(0).map_err(|err| {

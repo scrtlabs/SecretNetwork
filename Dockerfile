@@ -30,7 +30,7 @@ WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/
 
 COPY Makefile Makefile
 
-RUN make clean
+# RUN make clean
 RUN make vendor
 
 WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/go-cosmwasm
@@ -89,6 +89,8 @@ COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/go-c
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/enigmad /usr/bin/enigmad
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/enigmacli /usr/bin/enigmacli
+
+COPY ./x/compute/internal/keeper/testdata/erc20.wasm erc20.wasm
 
 # COPY ./packaging_docker/devnet_init.sh .
 COPY ./packaging_docker/wasmi-sgx-test.sh .

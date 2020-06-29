@@ -80,6 +80,7 @@ pub enum EnclaveError {
     FailedToSerialize,
     EncryptionError,
     DecryptionError,
+    NotImplemented,
     Panic,
     /// Unexpected Error happened, no more details available
     Unknown,

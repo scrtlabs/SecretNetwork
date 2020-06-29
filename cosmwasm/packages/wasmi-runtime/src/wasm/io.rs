@@ -73,27 +73,43 @@ pub fn encrypt_output(
         EnclaveError::FailedToDeserialize
     })?;
 
-    if let Value::String(err) = &v["err"] {
-        v["err"] = encrypt_serializeable(&key, &err)?;
-    } else if let Value::String(ok) = &v["ok"] {
+    if let Value::Object(err) = &mut v["Err"] {
+        let mut new_value: Value =
+            serde_json::from_str(r#"{"generic_err":{"msg":""}}"#).map_err(|err| {
+                error!(
+                    "got an error while trying to serialize error output bytes into json {:?}: {}",
+                    output, err
+                );
+                EnclaveError::FailedToSerialize
+            })?;
+        new_value["generic_err"]["msg"] = encrypt_serializeable(&key, &err)?;
+        v["Err"] = new_value;
+    } else if let Value::String(ok) = &v["Ok"] {
         // query
-        v["ok"] = encrypt_serializeable(&key, &ok)?;
-    } else if let Value::Object(ok) = &mut v["ok"] {
-        // init of handle
+        v["Ok"] = encrypt_serializeable(&key, &ok)?;
+    } else if let Value::Object(ok) = &mut v["Ok"] {
+        // init or handle or migrate
         if let Value::Array(msgs) = &mut ok["messages"] {
             for msg in msgs {
-                if let Value::String(msg_b64) = &mut msg["contract"]["msg"] {
+                if let Value::String(msg_b64) = &mut msg["wasm"]["execute"]["msg"] {
                     let mut msg_to_pass =
                         SecretMessage::from_base64((*msg_b64).to_string(), nonce, user_public_key)?;
 
                     msg_to_pass.encrypt_in_place()?;
 
-                    msg["contract"]["msg"] = encode(&msg_to_pass.to_slice());
+                    msg["wasm"]["execute"]["msg"] = encode(&msg_to_pass.to_slice());
+                } else if let Value::String(msg_b64) = &mut msg["wasm"]["instantiate"]["msg"] {
+                    let mut msg_to_pass =
+                        SecretMessage::from_base64((*msg_b64).to_string(), nonce, user_public_key)?;
+
+                    msg_to_pass.encrypt_in_place()?;
+
+                    msg["wasm"]["instantiate"]["msg"] = encode(&msg_to_pass.to_slice());
                 }
             }
         }
 
-        if let Value::Array(events) = &mut v["ok"]["log"] {
+        if let Value::Array(events) = &mut ok["log"] {
             for e in events {
                 if let Value::String(k) = &mut e["key"] {
                     e["key"] = encrypt_serializeable(&key, k)?;
@@ -104,8 +120,8 @@ pub fn encrypt_output(
             }
         }
 
-        if let Value::String(data) = &mut v["ok"]["data"] {
-            v["ok"]["data"] = encrypt_serializeable(&key, data)?;
+        if let Value::String(data) = &mut v["Ok"]["data"] {
+            v["Ok"]["data"] = encrypt_serializeable(&key, data)?;
         }
     }
 
@@ -117,7 +133,7 @@ pub fn encrypt_output(
         EnclaveError::FailedToSerialize
     })?;
 
-    debug!("after encryption: {:?}", String::from_utf8_lossy(&output));
+    debug!("After encryption: {:?}", String::from_utf8_lossy(&output));
 
     Ok(output)
 }

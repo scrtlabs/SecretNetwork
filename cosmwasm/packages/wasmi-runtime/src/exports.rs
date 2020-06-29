@@ -75,7 +75,7 @@ pub unsafe extern "C" fn ecall_init(
     if let Ok(res) = result {
         res
     } else {
-        error!("Call ecall_init panic'd unexpectedly!");
+        error!("Call ecall_init panicked unexpectedly!");
         InitResult::Failure {
             err: EnclaveError::Panic,
         }

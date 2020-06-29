@@ -24,3 +24,4 @@ api_key.txt
 __debug_bin
 id_tx_io.json
 .idea
+x/compute/internal/keeper/debug.test

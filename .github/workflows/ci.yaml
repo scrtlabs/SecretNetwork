@@ -49,7 +49,13 @@ jobs:
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           make vendor
-          SGX_MODE=SW RUSTC_WRAPPER="$HOME/sccache" make build_linux
+          SGX_MODE=SW BUILD_PROFILE="minimal" RUSTC_WRAPPER="$HOME/sccache" make build-linux
+      - name: Build Test Secret Contracts
+        run: |
+          rustup target add wasm32-unknown-unknown
+          sudo apt install binaryen 
+          make build-test-contract
+          make build-cosmwasm-test-contracts
       - name: Old bash+js sanity tests
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -64,14 +70,15 @@ jobs:
           mkdir -p ./.sgx_secrets
           cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
           ./cosmwasm/testing/callback-test.sh
-      - name: Test Registration Module
+      - name: Test x/registration
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           go test -v ./x/registration/internal/...
-      - name: System Tests
+      - name: Test x/compute
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
           cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
           mkdir -p ./x/compute/internal/keeper/.sgx_secrets
+          go test -v ./x/compute/client/...
           go test -p 1 -v ./x/compute/internal/...

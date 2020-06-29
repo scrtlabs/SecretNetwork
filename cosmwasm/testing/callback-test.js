@@ -49,8 +49,7 @@ const assert = require("assert").strict;
 
   assert.deepEqual(execTx.logs, tx.logs);
   assert.deepEqual(execTx.data, tx.data);
-  assert.deepEqual(tx.data.data, Uint8Array.from([65, 103, 77, 61]));
-
+  assert.deepEqual(tx.data, Uint8Array.from([2, 3]));
   assert.deepEqual(tx.logs[0].events[1].attributes, [
     {
       key: "contract_address",
@@ -77,5 +76,5 @@ const assert = require("assert").strict;
       value: "🍉",
     },
   ]);
-  console.log("ok");
+  console.log("ok 👌");
 })();

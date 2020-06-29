@@ -23,6 +23,7 @@ pub enum WasmEngineError {
     InputWrongLength,
     OutputWrongLength,
     NonExistentImportFunction,
+    NotImplemented,
 }
 
 impl HostError for WasmEngineError {}
@@ -40,6 +41,7 @@ pub fn wasmi_error_to_enclave_error(wasmi_error: InterpreterError) -> EnclaveErr
         Some(Some(WasmEngineError::OutOfGas)) => EnclaveError::OutOfGas,
         Some(Some(WasmEngineError::EncryptionError)) => EnclaveError::EncryptionError,
         Some(Some(WasmEngineError::DecryptionError)) => EnclaveError::DecryptionError,
+        Some(Some(WasmEngineError::NotImplemented)) => EnclaveError::NotImplemented,
         Some(Some(_other)) => EnclaveError::Unknown,
         // Unexpected WasmEngineError variant or unexpected HostError.
         Some(None) => EnclaveError::Unknown,
