@@ -89,6 +89,17 @@ pub enum EnclaveError {
 }
 
 /// This type holds a pointer to a VmError that is boxed on the untrusted side
+// `VmError` is the standard error type for the `cosmwasm-sgx-vm` layer.
+// During an ocall, we call into the original implementation of `db_read`, `db_write`, and `db_remove`.
+// These call out all the way to the Go side. They return `VmError` when something goes wrong in this process.
+// These errors need to be propagated back into and out of the enclave, and then bacl into the `cosmwasm-sgx-vm` layer.
+// There is never anything we can do with these errors inside the enclave, so instead of converting `VmError`
+// to a type that the enclave can understand, we just box it bedore returning from the enclave, store the heap pointer
+// in an instance of `UntrustedVmError`, propagate this error all the way back to the point that called
+// into the enclave, and then finally unwrap the `VmError`, which gets propagated up the normal stack.
+//
+// For a more detailed discussion, see:
+// https://github.com/enigmampc/SecretNetwork/pull/307#issuecomment-651157410
 #[repr(C)]
 #[derive(Debug, Display)]
 #[display(fmt = "VmError")]
