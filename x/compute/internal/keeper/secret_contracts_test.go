@@ -878,7 +878,7 @@ func TestExecNoLogs(t *testing.T) {
 	require.Empty(t, execEvents)
 }
 
-func TestCallbackToInit(t *testing.T) {
+func TestExecCallbackToInit(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -920,6 +920,49 @@ func TestCallbackToInit(t *testing.T) {
 	require.NoError(t, err)
 
 	data, execEvents, err := execHelper(t, keeper, ctx, secondContractAddress, walletA, `{"unicodedata":{}}`, 3)
+
+	require.Empty(t, err)
+	require.Empty(t, execEvents)
+	require.Equal(t, "🍆🥑🍄", string(data))
+}
+
+func TestInitCallbackToInit(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
+	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	// init first contract
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callbacktoinit":{"code_id":%d}}`, codeID), 0)
+	require.Empty(t, initErr)
+
+	require.Equal(t, 2, len(initEvents))
+	require.Equal(t,
+		ContractEvent{
+			{Key: "contract_address", Value: contractAddress.String()},
+			{Key: "instantiating a new contract from init!", Value: "🐙"},
+		},
+		initEvents[0],
+	)
+	require.Equal(t,
+		cosmwasm.LogAttribute{Key: "init", Value: "🌈"},
+		initEvents[1][1],
+	)
+	require.Equal(t, "contract_address", initEvents[1][0].Key)
+
+	secondContractAddressBech32 := initEvents[1][0].Value
+	secondContractAddress, err := sdk.AccAddressFromBech32(secondContractAddressBech32)
+	require.NoError(t, err)
+
+	data, execEvents, err := execHelper(t, keeper, ctx, secondContractAddress, walletA, `{"unicodedata":{}}`, 2)
 
 	require.Empty(t, err)
 	require.Empty(t, execEvents)
