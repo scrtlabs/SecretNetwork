@@ -3,7 +3,7 @@ name: Tests
 on: [push]
 
 jobs:
-  test:
+  Tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -45,14 +45,6 @@ jobs:
           cd cosmwasm/packages/wasmi-runtime/
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
-      - name: Build Test Secret Contracts
-        run: |
-          echo "" | sudo add-apt-repository ppa:hnakamur/binaryen
-          sudo apt update
-          sudo apt install -y binaryen 
-          rustup target add wasm32-unknown-unknown
-          make build-test-contract
-          make build-cosmwasm-test-contracts
       - name: Build
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -84,3 +76,14 @@ jobs:
           mkdir -p ./x/compute/internal/keeper/.sgx_secrets
           go test -v ./x/compute/client/...
           go test -p 1 -v ./x/compute/internal/...
+          
+  "Make sure test contrats compiles":
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+        echo "" | sudo add-apt-repository ppa:hnakamur/binaryen
+        sudo apt update
+        sudo apt install -y binaryen 
+        rustup target add wasm32-unknown-unknown
+        make build-test-contract
+        make build-cosmwasm-test-contracts
