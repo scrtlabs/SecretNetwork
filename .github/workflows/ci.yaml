@@ -76,14 +76,3 @@ jobs:
           mkdir -p ./x/compute/internal/keeper/.sgx_secrets
           go test -v ./x/compute/client/...
           go test -p 1 -v ./x/compute/internal/...
-
-  Make-sure-test-contrats-compile:
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo "" | sudo add-apt-repository ppa:hnakamur/binaryen
-          sudo apt update
-          sudo apt install -y binaryen 
-          rustup target add wasm32-unknown-unknown
-          make build-test-contract
-          make build-cosmwasm-test-contracts

@@ -46,7 +46,9 @@ pub enum HandleMsg {
     EmptyLogKeyValue {},
     EmptyData {},
     NoData {},
-    ContractError {},
+    ContractError {
+        error_type: String,
+    },
     NoLogs {},
     CallbackToInit {
         code_id: u64,
@@ -83,14 +85,14 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             log: vec![log("init", "🌈")],
         }),
         InitMsg::Callback { contract_addr } => Ok(init_with_callback(deps, env, contract_addr)),
-        InitMsg::ContractError { error_type } => Err(init_with_error(error_type)),
+        InitMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
         InitMsg::State {} => Ok(init_state(deps, env)),
         InitMsg::NoLogs {} => Ok(InitResponse::default()),
         InitMsg::CallbackToInit { code_id } => Ok(init_callback_to_init(deps, env, code_id)),
     }
 }
 
-fn init_with_error(error_type: String) -> StdError {
+fn map_string_to_error(error_type: String) -> StdError {
     let as_str: &str = &error_type[..];
     match as_str {
         "generic_err" => generic_err("la la 🤯"),
@@ -169,7 +171,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::EmptyLogKeyValue {} => Ok(empty_log_key_value(deps, env)),
         HandleMsg::EmptyData {} => Ok(empty_data(deps, env)),
         HandleMsg::NoData {} => Ok(no_data(deps, env)),
-        HandleMsg::ContractError {} => Err(generic_err("Test error! 🌈")),
+        HandleMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
         HandleMsg::NoLogs {} => Ok(HandleResponse::default()),
         HandleMsg::CallbackToInit { code_id } => Ok(exec_callback_to_init(deps, env, code_id)),
     }

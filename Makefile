@@ -194,13 +194,16 @@ callback-sanity-test:
 	SGX_MODE=SW ./cosmwasm/testing/callback-test.sh
 
 build-test-contract:
-	# sudo apt install binaryen	
+	# echo "" | sudo add-apt-repository ppa:hnakamur/binaryen
+	# sudo apt update
+	# sudo apt install -y binaryen
 	$(MAKE) -C ./x/compute/internal/keeper/testdata/test-contract
 
 go-tests: build-test-contract
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	SGX_MODE=SW $(MAKE) build-linux
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
 	SGX_MODE=SW go test -p 1 -v ./x/compute/internal/...
 
 build-cosmwasm-test-contracts:
