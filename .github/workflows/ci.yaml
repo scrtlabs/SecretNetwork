@@ -77,7 +77,7 @@ jobs:
           go test -v ./x/compute/client/...
           go test -p 1 -v ./x/compute/internal/...
 
-  "Make sure test contrats compiles":
+  Make-sure-test-contrats-compile:
     runs-on: ubuntu-latest
     steps:
       - run: |
