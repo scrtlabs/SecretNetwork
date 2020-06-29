@@ -17,7 +17,7 @@ pub fn sha_256(data: &[u8]) -> [u8; HASH_SIZE] {
 //         Keychain, CONSENSUS_SEED_SEALING_PATH, KEY_MANAGER, REGISTRATION_KEY_SEALING_PATH,
 //     };
 //     use crate::crypto::{Kdf, KeyPair, Seed};
-//     use crate::crypto::errors::CryptoError;
+//     use crate::crypto::CryptoError;
 //
 //     // todo: fix test vectors to actually work
 //     fn test_derive_key() {

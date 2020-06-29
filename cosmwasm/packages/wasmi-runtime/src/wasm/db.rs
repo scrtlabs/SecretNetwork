@@ -59,7 +59,7 @@ pub fn read_encrypted_key(
     match read_db(context, &scrambled_field_name) {
         Ok((value, gas_used)) => match value {
             Some(value) => match decrypt_key(&scrambled_field_name, &value, contract_key) {
-                Ok(encrypted) => Ok((Some(encrypted), gas_used)),
+                Ok(decrypted) => Ok((Some(decrypted), gas_used)),
                 // This error case is why we have all the matches here.
                 // If we successfully collected a value, but failed to decrypt it, then we propagate that error.
                 Err(err) => Err(err),

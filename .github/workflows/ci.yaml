@@ -3,7 +3,7 @@ name: Tests
 on: [push]
 
 jobs:
-  test:
+  Tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -50,12 +50,6 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           make vendor
           SGX_MODE=SW BUILD_PROFILE="minimal" RUSTC_WRAPPER="$HOME/sccache" make build-linux
-      - name: Build Test Secret Contracts
-        run: |
-          rustup target add wasm32-unknown-unknown
-          sudo apt install binaryen 
-          make build-test-contract
-          make build-cosmwasm-test-contracts
       - name: Old bash+js sanity tests
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"

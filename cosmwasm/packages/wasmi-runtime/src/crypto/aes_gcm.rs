@@ -1,6 +1,6 @@
 // use crate::crypto::keys::{AESKey, SymmetricKey};
 // use crate::crypto::traits::Encryptable;
-// use crate::crypto::errors::CryptoError;
+// use crate::crypto::CryptoError;
 // use ring::aead::{self, Aad, LessSafeKey, Nonce, UnboundKey};
 //
 // static AES_MODE: &aead::Algorithm = &aead::AES_256_GCM;

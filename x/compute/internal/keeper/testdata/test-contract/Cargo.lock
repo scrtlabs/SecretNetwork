@@ -81,9 +81,9 @@ checksum = "e223af0dc48c96d4f8342ec01a4974f139df863896b316681efd36742f22cc67"
 
 [[package]]
 name = "bincode"
-version = "1.2.1"
+version = "1.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5753e2a71534719bf3f4e57006c3a4f0d2c672a4b676eec84161f763eca87dbf"
+checksum = "f30d3a39baa26f9651f17b375061f3233dde33424a8b72b0dbe93a68a0bc896d"
 dependencies = [
  "byteorder",
  "serde",
@@ -162,9 +162,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.54"
+version = "1.0.56"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7bbb73db36c1246e9034e307d0fba23f9a2e251faa47ade70c1bd252220c8311"
+checksum = "77c1f1d60091c1b73e2b1f4560ab419204b178e625fa945ded7b660becd2bd46"
 
 [[package]]
 name = "cfg-if"
@@ -894,18 +894,18 @@ checksum = "cccddf32554fecc6acb585f82a32a72e28b48f8c4c1883ddfeeeaa96f7d8e519"
 
 [[package]]
 name = "wasmer-middleware-common"
-version = "0.17.0"
+version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd94068186b25fbe5213442648ffe0fa65ee77389bed020404486fd22056cc87"
+checksum = "56e70825a14d100994af1d9a347591c80dea1000f2b8e455a5712c2cc23ef08d"
 dependencies = [
  "wasmer-runtime-core",
 ]
 
 [[package]]
 name = "wasmer-runtime-core"
-version = "0.17.0"
+version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45d4253f097502423d8b19d54cb18745f61b984b9dbce32424cba7945cfef367"
+checksum = "740161245998752cf1a567e860fd6355df0336fedca6be1940ec7aaa59643220"
 dependencies = [
  "bincode",
  "blake3",

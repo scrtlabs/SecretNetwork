@@ -1,4 +1,3 @@
-use crate::crypto::errors::CryptoError;
 /// AES-SIV encryption in rust - https://tools.ietf.org/html/rfc5297
 ///
 /// This is a unique AES mode for deterministic encryption, where it is difficult to generate random
@@ -15,9 +14,9 @@ use crate::crypto::errors::CryptoError;
 /// would expect it to be. 256/512 bit for Aes128/256 respectively.
 ///
 /// The result of encrypted data will be the size of the data + 16 bytes, same as in GCM mode
-///
 use crate::crypto::keys::{AESKey, SymmetricKey};
 use crate::crypto::traits::SIVEncryptable;
+use crate::crypto::CryptoError;
 use aes_siv::aead::generic_array::GenericArray;
 use aes_siv::siv::Aes128Siv;
 use log::*;

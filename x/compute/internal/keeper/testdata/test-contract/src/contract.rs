@@ -1,9 +1,10 @@
 use cosmwasm_storage::PrefixedStorage;
 
 use cosmwasm_std::{
-    generic_err, log, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HandleResult,
-    HumanAddr, InitResponse, InitResult, MigrateResponse, Querier, QueryResult, StdResult, Storage,
-    WasmMsg,
+    generic_err, invalid_base64, invalid_utf8, log, not_found, null_pointer, parse_err,
+    serialize_err, to_binary, unauthorized, underflow, Api, Binary, CosmosMsg, Env, Extern,
+    HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse, Querier,
+    QueryResult, StdError, StdResult, Storage, WasmMsg,
 };
 
 use crate::state::config_read;
@@ -14,17 +15,19 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum InitMsg {
     Nop {},
     Callback { contract_addr: HumanAddr },
-    ContractError {},
+    CallbackContractError { contract_addr: HumanAddr },
+    ContractError { error_type: String },
     State {},
     NoLogs {},
+    CallbackToInit { code_id: u64 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     A {
         contract_addr: HumanAddr,
@@ -44,15 +47,23 @@ pub enum HandleMsg {
     EmptyLogKeyValue {},
     EmptyData {},
     NoData {},
-    ContractError {},
+    ContractError {
+        error_type: String,
+    },
     NoLogs {},
+    CallbackToInit {
+        code_id: u64,
+    },
+    CallbackContractError {
+        contract_addr: HumanAddr,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Owner {},
-    ContractError {},
+    ContractError { error_type: String },
 }
 
 // We define a custom struct for each query response
@@ -62,7 +73,7 @@ pub struct OwnerResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum MigrateMsg {}
 
 /////////////////////////////// Init ///////////////////////////////
@@ -78,9 +89,29 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             log: vec![log("init", "🌈")],
         }),
         InitMsg::Callback { contract_addr } => Ok(init_with_callback(deps, env, contract_addr)),
-        InitMsg::ContractError {} => Err(generic_err("Test error! 🌈")),
+        InitMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
         InitMsg::State {} => Ok(init_state(deps, env)),
         InitMsg::NoLogs {} => Ok(InitResponse::default()),
+        InitMsg::CallbackToInit { code_id } => Ok(init_callback_to_init(deps, env, code_id)),
+        InitMsg::CallbackContractError { contract_addr } => {
+            Ok(init_with_callback_contract_error(contract_addr))
+        }
+    }
+}
+
+fn map_string_to_error(error_type: String) -> StdError {
+    let as_str: &str = &error_type[..];
+    match as_str {
+        "generic_err" => generic_err("la la 🤯"),
+        "invalid_base64" => invalid_base64("ra ra 🤯"),
+        "invalid_utf8" => invalid_utf8("ka ka 🤯"),
+        "not_found" => not_found("za za 🤯"),
+        "null_pointer" => null_pointer(),
+        "parse_err" => parse_err("na na 🤯", "pa pa 🤯"),
+        "serialize_err" => serialize_err("ba ba 🤯", "ga ga 🤯"),
+        "unauthorized" => unauthorized(),
+        "underflow" => underflow("minuend 🤯", "subtrahend 🤯"),
+        _ => generic_err("catch-all 🤯"),
     }
 }
 
@@ -91,6 +122,21 @@ fn init_state<S: Storage, A: Api, Q: Querier>(
     let _store = PrefixedStorage::new(b"prefix", &mut deps.storage);
 
     InitResponse::default()
+}
+
+fn init_with_callback_contract_error(contract_addr: HumanAddr) -> InitResponse {
+    InitResponse {
+        messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: contract_addr.clone(),
+            msg: Binary(
+                r#"{"contract_error":{"error_type":"generic_err"}}"#
+                    .as_bytes()
+                    .to_vec(),
+            ),
+            send: vec![],
+        })],
+        log: vec![log("init with a callback with contract error", "🤷‍♀️")],
+    }
 }
 
 fn init_with_callback<S: Storage, A: Api, Q: Querier>(
@@ -105,6 +151,22 @@ fn init_with_callback<S: Storage, A: Api, Q: Querier>(
             send: vec![],
         })],
         log: vec![log("init with a callback", "🦄")],
+    }
+}
+
+pub fn init_callback_to_init<S: Storage, A: Api, Q: Querier>(
+    _deps: &mut Extern<S, A, Q>,
+    _env: Env,
+    code_id: u64,
+) -> InitResponse {
+    InitResponse {
+        messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+            code_id: code_id,
+            msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
+            send: vec![],
+            label: None,
+        })],
+        log: vec![log("instantiating a new contract from init!", "🐙")],
     }
 }
 
@@ -131,8 +193,12 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::EmptyLogKeyValue {} => Ok(empty_log_key_value(deps, env)),
         HandleMsg::EmptyData {} => Ok(empty_data(deps, env)),
         HandleMsg::NoData {} => Ok(no_data(deps, env)),
-        HandleMsg::ContractError {} => Err(generic_err("Test error! 🌈")),
+        HandleMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
         HandleMsg::NoLogs {} => Ok(HandleResponse::default()),
+        HandleMsg::CallbackToInit { code_id } => Ok(exec_callback_to_init(deps, env, code_id)),
+        HandleMsg::CallbackContractError { contract_addr } => {
+            Ok(exec_with_callback_contract_error(contract_addr))
+        }
     }
 }
 
@@ -242,15 +308,48 @@ pub fn no_data<S: Storage, A: Api, Q: Querier>(
     }
 }
 
+pub fn exec_callback_to_init<S: Storage, A: Api, Q: Querier>(
+    _deps: &mut Extern<S, A, Q>,
+    _env: Env,
+    code_id: u64,
+) -> HandleResponse {
+    HandleResponse {
+        messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+            code_id: code_id,
+            msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
+            send: vec![],
+            label: None,
+        })],
+        log: vec![log("instantiating a new contract", "🪂")],
+        data: None,
+    }
+}
+
+fn exec_with_callback_contract_error(contract_addr: HumanAddr) -> HandleResponse {
+    HandleResponse {
+        messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: contract_addr.clone(),
+            msg: Binary(
+                r#"{"contract_error":{"error_type":"generic_err"}}"#
+                    .as_bytes()
+                    .to_vec(),
+            ),
+            send: vec![],
+        })],
+        log: vec![log("exec with a callback with contract error", "🤷‍♂️")],
+        data: None,
+    }
+}
+
 /////////////////////////////// Query ///////////////////////////////
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    _deps: &Extern<S, A, Q>,
+    deps: &Extern<S, A, Q>,
     _msg: QueryMsg,
 ) -> QueryResult {
     match _msg {
-        QueryMsg::Owner {} => query_owner(_deps),
-        QueryMsg::ContractError {} => query_contract_error(),
+        QueryMsg::Owner {} => query_owner(deps),
+        QueryMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
     }
 }
 
@@ -261,10 +360,6 @@ fn query_owner<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdRes
         owner: deps.api.human_address(&state.owner)?,
     };
     to_binary(&resp)
-}
-
-fn query_contract_error() -> QueryResult {
-    Err(generic_err("Test error! 🌈"))
 }
 
 /////////////////////////////// Migrate ///////////////////////////////

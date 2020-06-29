@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -14,11 +15,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type ContractEvent []cosmwasm.LogAttribute
+
 // getDecryptedWasmEvents gets all "wasm" events and decrypt what's necessary
 // Returns all "wasm" events, including from contract callbacks
-func getDecryptedWasmEvents(t *testing.T, ctx sdk.Context, nonce []byte, skip uint) [][]cosmwasm.LogAttribute {
+func getDecryptedWasmEvents(t *testing.T, ctx sdk.Context, nonce []byte, skip uint) []ContractEvent {
 	events := ctx.EventManager().Events()
-	var res [][]cosmwasm.LogAttribute
+	var res []ContractEvent
 	for _, e := range events[skip:] {
 		if e.Type == "wasm" {
 			newEvent := []cosmwasm.LogAttribute{}
@@ -71,6 +74,32 @@ func getDecryptedData(t *testing.T, data []byte, nonce []byte) []byte {
 	return dataPlaintext
 }
 
+var contractErrorRegex = regexp.MustCompile(`wasm contract failed: generic: (.+)`)
+
+func extractInnerError(t *testing.T, err error, nonce []byte) cosmwasm.StdError {
+	errMsg := err.Error()
+	if strings.Contains(errMsg, "EnclaveErr: Got an error from the enclave") {
+		return cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: errMsg}}
+	}
+
+	match := contractErrorRegex.FindAllStringSubmatch(err.Error(), -1)
+	require.NotEmpty(t, match)
+	require.Equal(t, len(match), 1)
+	require.Equal(t, len(match[0]), 2)
+	errorCipherB64 := match[0][1]
+
+	errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
+	require.NoError(t, err)
+	errorPlainBz, err := wasmCtx.Decrypt(errorCipherBz, nonce)
+	require.NoError(t, err)
+
+	var innerErr cosmwasm.StdError
+	err = json.Unmarshal(errorPlainBz, &innerErr)
+	require.NoError(t, err)
+
+	return innerErr
+}
+
 func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.AccAddress, input string) (string, cosmwasm.StdError) {
 	queryBz, err := wasmCtx.Encrypt([]byte(input))
 	require.NoError(t, err)
@@ -78,22 +107,7 @@ func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.
 
 	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz)
 	if err != nil {
-		errMsg := err.Error()
-		if strings.Contains(errMsg, "EnclaveErr: Got an error from the enclave") {
-			return "", cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: errMsg}}
-		}
-
-		errorCipherB64 := strings.ReplaceAll(errMsg, "query wasm contract failed: generic: ", "")
-		errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
-		require.NoError(t, err)
-		errorPlainBz, err := wasmCtx.Decrypt(errorCipherBz, nonce)
-		require.NoError(t, err)
-
-		var trueErr cosmwasm.StdError
-		err = json.Unmarshal(errorPlainBz, &trueErr)
-		require.NoError(t, err)
-
-		return "", trueErr
+		return "", extractInnerError(t, err, nonce)
 	}
 
 	resultPlainBz, err := wasmCtx.Decrypt(resultCipherBz, nonce)
@@ -105,29 +119,14 @@ func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.
 	return string(resultBz), cosmwasm.StdError{}
 }
 
-func executeHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string, skipEvents uint) ([]byte, [][]cosmwasm.LogAttribute, cosmwasm.StdError) {
+func execHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string, skipEvents uint) ([]byte, []ContractEvent, cosmwasm.StdError) {
 	execMsgBz, err := wasmCtx.Encrypt([]byte(execMsg))
 	require.NoError(t, err)
 	nonce := execMsgBz[0:32]
 
 	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	if err != nil {
-		errMsg := err.Error()
-		if strings.Contains(errMsg, "EnclaveErr: Got an error from the enclave") {
-			return nil, nil, cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: errMsg}}
-		}
-
-		errorCipherB64 := strings.ReplaceAll(errMsg, "execute wasm contract failed: generic: ", "")
-		errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
-		require.NoError(t, err)
-		errorPlainBz, err := wasmCtx.Decrypt(errorCipherBz, nonce)
-		require.NoError(t, err)
-
-		var trueErr cosmwasm.StdError
-		err = json.Unmarshal(errorPlainBz, &trueErr)
-		require.NoError(t, err)
-
-		return nil, nil, trueErr
+		return nil, nil, extractInnerError(t, err, nonce)
 	}
 
 	// wasmEvents comes from all the callbacks as well
@@ -141,29 +140,14 @@ func executeHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress
 	return data, wasmEvents, cosmwasm.StdError{}
 }
 
-func initHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, creator sdk.AccAddress, initMsg string, skipEvents uint) (sdk.AccAddress, [][]cosmwasm.LogAttribute, cosmwasm.StdError) {
+func initHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, creator sdk.AccAddress, initMsg string, skipEvents uint) (sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
 	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
 	require.NoError(t, err)
 	nonce := initMsgBz[0:32]
 
 	contractAddress, err := keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	if err != nil {
-		errMsg := err.Error()
-		if strings.Contains(errMsg, "EnclaveErr: Got an error from the enclave") {
-			return nil, nil, cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: errMsg}}
-		}
-
-		errorCipherB64 := strings.ReplaceAll(err.Error(), "instantiate wasm contract failed: generic: ", "")
-		errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
-		require.NoError(t, err)
-		errorPlainBz, err := wasmCtx.Decrypt(errorCipherBz, nonce)
-		require.NoError(t, err)
-
-		var trueErr cosmwasm.StdError
-		err = json.Unmarshal(errorPlainBz, &trueErr)
-		require.NoError(t, err)
-
-		return nil, nil, trueErr
+		return nil, nil, extractInnerError(t, err, nonce)
 	}
 
 	// wasmEvents comes from all the callbacks as well
@@ -194,7 +178,7 @@ func TestCallbackSanity(t *testing.T) {
 	require.Empty(t, err)
 
 	require.Equal(t,
-		[][]cosmwasm.LogAttribute{
+		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
 				{Key: "init", Value: "🌈"},
@@ -203,11 +187,11 @@ func TestCallbackSanity(t *testing.T) {
 		initEvents,
 	)
 
-	data, execEvents, err := executeHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"a":{"contract_addr":"%s","x":2,"y":3}}`, contractAddress.String()), 1)
+	data, execEvents, err := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"a":{"contract_addr":"%s","x":2,"y":3}}`, contractAddress.String()), 1)
 
 	require.Empty(t, err)
 	require.Equal(t,
-		[][]cosmwasm.LogAttribute{
+		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
 				{Key: "banana", Value: "🍌"},
@@ -266,13 +250,13 @@ func TestSanity(t *testing.T) {
 	require.JSONEq(t, `{"balance":"53"}`, qRes)
 
 	// transfer 10 from A to B
-	data, wasmEvents, err := executeHelper(t, keeper, ctx, contractAddress, walletA,
+	data, wasmEvents, err := execHelper(t, keeper, ctx, contractAddress, walletA,
 		fmt.Sprintf(`{"transfer":{"amount":"10","recipient":"%s"}}`, walletB.String()), 0)
 
 	require.Empty(t, err)
 	require.Empty(t, data)
 	require.Equal(t,
-		[][]cosmwasm.LogAttribute{
+		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
 				{Key: "action", Value: "transfer"},
@@ -319,7 +303,7 @@ func TestInitLogs(t *testing.T) {
 
 	require.Equal(t, 1, len(initEvents))
 	require.Equal(t,
-		[][]cosmwasm.LogAttribute{
+		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
 				{Key: "init", Value: "🌈"},
@@ -350,11 +334,11 @@ func TestEmptyLogKeyValue(t *testing.T) {
 	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
-	_, execEvents, execErr := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"emptylogkeyvalue":{}}`, 1)
+	_, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, `{"empty_log_key_value":{}}`, 1)
 
 	require.Empty(t, execErr)
 	require.Equal(t,
-		[][]cosmwasm.LogAttribute{
+		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
 				{Key: "my value is empty", Value: ""},
@@ -386,7 +370,7 @@ func TestEmptyData(t *testing.T) {
 	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
-	data, _, err := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"emptydata":{}}`, 1)
+	data, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, `{"empty_data":{}}`, 1)
 
 	require.Empty(t, err)
 	require.Empty(t, data)
@@ -413,7 +397,7 @@ func TestNoData(t *testing.T) {
 	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
-	data, _, err := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"nodata":{}}`, 1)
+	data, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, `{"no_data":{}}`, 1)
 
 	require.Empty(t, err)
 	require.Empty(t, data)
@@ -440,7 +424,7 @@ func TestExecuteIllegalInputError(t *testing.T) {
 	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
-	_, _, execErr := executeHelper(t, keeper, ctx, contractAddress, walletA, `bad input`, 1)
+	_, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, `bad input`, 1)
 
 	require.Error(t, execErr)
 	require.Error(t, execErr.ParseErr)
@@ -466,7 +450,7 @@ func TestInitIllegalInputError(t *testing.T) {
 	require.Error(t, initErr.ParseErr)
 }
 
-func TestInitCallbackAndCallbackEvents(t *testing.T) {
+func TestCallbackFromInitAndCallbackEvents(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -486,7 +470,7 @@ func TestInitCallbackAndCallbackEvents(t *testing.T) {
 	require.Empty(t, initErr)
 
 	require.Equal(t,
-		[][]cosmwasm.LogAttribute{
+		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: firstContractAddress.String()},
 				{Key: "init", Value: "🌈"},
@@ -500,7 +484,7 @@ func TestInitCallbackAndCallbackEvents(t *testing.T) {
 	require.Empty(t, initErr)
 
 	require.Equal(t,
-		[][]cosmwasm.LogAttribute{
+		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
 				{Key: "init with a callback", Value: "🦄"},
@@ -561,20 +545,16 @@ func TestUnicodeData(t *testing.T) {
 	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
-	require.NoError(t, err)
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
 
-	// init
-	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.NoError(t, err)
-
-	data, _, err := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"unicodedata":{}}`, 1)
+	data, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, `{"unicode_data":{}}`, 1)
 
 	require.Empty(t, err)
 	require.Equal(t, "🍆🥑🍄", string(data))
 }
 
-func TestInitContractErrorUnicode(t *testing.T) {
+func TestInitContractError(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -588,13 +568,64 @@ func TestInitContractErrorUnicode(t *testing.T) {
 	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	// init
-	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"contracterror":{}}`, 0)
-
-	require.Equal(t, initErr.GenericErr.Msg, "Test error! 🌈")
+	t.Run("generic_err", func(t *testing.T) {
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"generic_err"}}`, 0)
+		require.Error(t, err)
+		require.Error(t, err.GenericErr)
+		require.Equal(t, err.GenericErr.Msg, "la la 🤯")
+	})
+	t.Run("invalid_base64", func(t *testing.T) {
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"invalid_base64"}}`, 0)
+		require.Error(t, err)
+		require.Error(t, err.InvalidBase64)
+		require.Equal(t, err.InvalidBase64.Msg, "ra ra 🤯")
+	})
+	t.Run("invalid_utf8", func(t *testing.T) {
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"invalid_utf8"}}`, 0)
+		require.Error(t, err)
+		require.Error(t, err.InvalidUtf8)
+		require.Equal(t, err.InvalidUtf8.Msg, "ka ka 🤯")
+	})
+	t.Run("not_found", func(t *testing.T) {
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"not_found"}}`, 0)
+		require.Error(t, err)
+		require.Error(t, err.NotFound)
+		require.Equal(t, err.NotFound.Kind, "za za 🤯")
+	})
+	t.Run("null_pointer", func(t *testing.T) {
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"null_pointer"}}`, 0)
+		require.Error(t, err)
+		require.Error(t, err.NullPointer)
+	})
+	t.Run("parse_err", func(t *testing.T) {
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"parse_err"}}`, 0)
+		require.Error(t, err)
+		require.Error(t, err.ParseErr)
+		require.Equal(t, err.ParseErr.Target, "na na 🤯")
+		require.Equal(t, err.ParseErr.Msg, "pa pa 🤯")
+	})
+	t.Run("serialize_err", func(t *testing.T) {
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"serialize_err"}}`, 0)
+		require.Error(t, err)
+		require.Error(t, err.SerializeErr)
+		require.Equal(t, err.SerializeErr.Source, "ba ba 🤯")
+		require.Equal(t, err.SerializeErr.Msg, "ga ga 🤯")
+	})
+	t.Run("unauthorized", func(t *testing.T) {
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"unauthorized"}}`, 0)
+		require.Error(t, err)
+		require.Error(t, err.Unauthorized)
+	})
+	t.Run("underflow", func(t *testing.T) {
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"underflow"}}`, 0)
+		require.Error(t, err)
+		require.Error(t, err.Underflow)
+		require.Equal(t, err.Underflow.Minuend, "minuend 🤯")
+		require.Equal(t, err.Underflow.Subtrahend, "subtrahend 🤯")
+	})
 }
 
-func TestExecuteContractErrorUnicode(t *testing.T) {
+func TestExecContractError(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -608,16 +639,138 @@ func TestExecuteContractErrorUnicode(t *testing.T) {
 	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"nop":{}}`))
+	contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
+
+	t.Run("generic_err", func(t *testing.T) {
+		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"generic_err"}}`, 1)
+		require.Error(t, err)
+		require.Error(t, err.GenericErr)
+		require.Equal(t, err.GenericErr.Msg, "la la 🤯")
+	})
+	t.Run("invalid_base64", func(t *testing.T) {
+		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"invalid_base64"}}`, 1)
+		require.Error(t, err)
+		require.Error(t, err.InvalidBase64)
+		require.Equal(t, err.InvalidBase64.Msg, "ra ra 🤯")
+	})
+	t.Run("invalid_utf8", func(t *testing.T) {
+		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"invalid_utf8"}}`, 1)
+		require.Error(t, err)
+		require.Error(t, err.InvalidUtf8)
+		require.Equal(t, err.InvalidUtf8.Msg, "ka ka 🤯")
+	})
+	t.Run("not_found", func(t *testing.T) {
+		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"not_found"}}`, 1)
+		require.Error(t, err)
+		require.Error(t, err.NotFound)
+		require.Equal(t, err.NotFound.Kind, "za za 🤯")
+	})
+	t.Run("null_pointer", func(t *testing.T) {
+		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"null_pointer"}}`, 1)
+		require.Error(t, err)
+		require.Error(t, err.NullPointer)
+	})
+	t.Run("parse_err", func(t *testing.T) {
+		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"parse_err"}}`, 1)
+		require.Error(t, err)
+		require.Error(t, err.ParseErr)
+		require.Equal(t, err.ParseErr.Target, "na na 🤯")
+		require.Equal(t, err.ParseErr.Msg, "pa pa 🤯")
+	})
+	t.Run("serialize_err", func(t *testing.T) {
+		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"serialize_err"}}`, 1)
+		require.Error(t, err)
+		require.Error(t, err.SerializeErr)
+		require.Equal(t, err.SerializeErr.Source, "ba ba 🤯")
+		require.Equal(t, err.SerializeErr.Msg, "ga ga 🤯")
+	})
+	t.Run("unauthorized", func(t *testing.T) {
+		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"unauthorized"}}`, 1)
+		require.Error(t, err)
+		require.Error(t, err.Unauthorized)
+	})
+	t.Run("underflow", func(t *testing.T) {
+		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"underflow"}}`, 1)
+		require.Error(t, err)
+		require.Error(t, err.Underflow)
+		require.Equal(t, err.Underflow.Minuend, "minuend 🤯")
+		require.Equal(t, err.Underflow.Subtrahend, "subtrahend 🤯")
+	})
+}
+
+func TestQueryContractError(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
+	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
-	// init
-	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	_, _, execErr := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"contracterror":{}}`, 1)
+	contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
 
-	require.Equal(t, execErr.GenericErr.Msg, "Test error! 🌈")
+	t.Run("generic_err", func(t *testing.T) {
+		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"generic_err"}}`)
+		require.Error(t, err)
+		require.Error(t, err.GenericErr)
+		require.Equal(t, err.GenericErr.Msg, "la la 🤯")
+	})
+	t.Run("invalid_base64", func(t *testing.T) {
+		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"invalid_base64"}}`)
+		require.Error(t, err)
+		require.Error(t, err.InvalidBase64)
+		require.Equal(t, err.InvalidBase64.Msg, "ra ra 🤯")
+	})
+	t.Run("invalid_utf8", func(t *testing.T) {
+		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"invalid_utf8"}}`)
+		require.Error(t, err)
+		require.Error(t, err.InvalidUtf8)
+		require.Equal(t, err.InvalidUtf8.Msg, "ka ka 🤯")
+	})
+	t.Run("not_found", func(t *testing.T) {
+		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"not_found"}}`)
+		require.Error(t, err)
+		require.Error(t, err.NotFound)
+		require.Equal(t, err.NotFound.Kind, "za za 🤯")
+	})
+	t.Run("null_pointer", func(t *testing.T) {
+		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"null_pointer"}}`)
+		require.Error(t, err)
+		require.Error(t, err.NullPointer)
+	})
+	t.Run("parse_err", func(t *testing.T) {
+		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"parse_err"}}`)
+		require.Error(t, err)
+		require.Error(t, err.ParseErr)
+		require.Equal(t, err.ParseErr.Target, "na na 🤯")
+		require.Equal(t, err.ParseErr.Msg, "pa pa 🤯")
+	})
+	t.Run("serialize_err", func(t *testing.T) {
+		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"serialize_err"}}`)
+		require.Error(t, err)
+		require.Error(t, err.SerializeErr)
+		require.Equal(t, err.SerializeErr.Source, "ba ba 🤯")
+		require.Equal(t, err.SerializeErr.Msg, "ga ga 🤯")
+	})
+	t.Run("unauthorized", func(t *testing.T) {
+		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"unauthorized"}}`)
+		require.Error(t, err)
+		require.Error(t, err.Unauthorized)
+	})
+	t.Run("underflow", func(t *testing.T) {
+		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"underflow"}}`)
+		require.Error(t, err)
+		require.Error(t, err.Underflow)
+		require.Equal(t, err.Underflow.Minuend, "minuend 🤯")
+		require.Equal(t, err.Underflow.Subtrahend, "subtrahend 🤯")
+	})
 }
 
 func TestInitParamError(t *testing.T) {
@@ -709,44 +862,6 @@ func TestQueryInputStructureError(t *testing.T) {
 	require.Contains(t, qErr.ParseErr.Msg, "missing field `address`")
 }
 
-func TestQueryContractErrorUnicode(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
-	require.NoError(t, err)
-
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
-
-	initMsgBz, err := wasmCtx.Encrypt([]byte(`{"state":{}}`))
-	require.NoError(t, err)
-
-	// init
-	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.NoError(t, err)
-
-	queryBz, err := wasmCtx.Encrypt([]byte(`{"contracterror":{}}`))
-	require.NoError(t, err)
-
-	_, err = keeper.QuerySmart(ctx, contractAddress, queryBz)
-
-	errorCipherB64 := strings.ReplaceAll(err.Error(), "query wasm contract failed: generic: ", "")
-	errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
-	require.NoError(t, err)
-
-	nonce := queryBz[0:32]
-	errorPlainBz, err := wasmCtx.Decrypt(errorCipherBz, nonce)
-	require.NoError(t, err)
-
-	errorPlaintext := string(errorPlainBz)
-	require.Contains(t, errorPlaintext, "Test error! 🌈")
-}
-
 func TestInitNotEncryptedInputError(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
@@ -792,7 +907,7 @@ func TestExecuteNotEncryptedInputError(t *testing.T) {
 	contractAddress, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.NoError(t, err)
 
-	_, err = keeper.Execute(ctx, contractAddress, walletA, []byte(`{"emptylogkeyvalue":{}}`), sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	_, err = keeper.Execute(ctx, contractAddress, walletA, []byte(`{"empty_log_key_value":{}}`), sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.Error(t, err)
 
 	errorMsg := err.Error()
@@ -845,7 +960,7 @@ func TestInitNoLogs(t *testing.T) {
 	require.NoError(t, err)
 
 	// init
-	_, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nologs":{}}`, 0)
+	_, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"no_logs":{}}`, 0)
 
 	require.Empty(t, initErr)
 	require.Empty(t, initEvents)
@@ -867,11 +982,155 @@ func TestExecNoLogs(t *testing.T) {
 
 	// init
 	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
-
 	require.Empty(t, initErr)
 
-	_, execEvents, err := executeHelper(t, keeper, ctx, contractAddress, walletA, `{"nologs":{}}`, 1)
+	_, execEvents, err := execHelper(t, keeper, ctx, contractAddress, walletA, `{"no_logs":{}}`, 1)
 
 	require.Empty(t, err)
 	require.Empty(t, execEvents)
+}
+
+func TestExecCallbackToInit(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
+	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	// init first contract
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
+
+	// init second contract and callback to the first contract
+	execData, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d}}`, codeID), 1)
+	require.Empty(t, execErr)
+	require.Empty(t, execData)
+
+	require.Equal(t, 2, len(execEvents))
+	require.Equal(t,
+		ContractEvent{
+			{Key: "contract_address", Value: contractAddress.String()},
+			{Key: "instantiating a new contract", Value: "🪂"},
+		},
+		execEvents[0],
+	)
+	require.Equal(t,
+		cosmwasm.LogAttribute{Key: "init", Value: "🌈"},
+		execEvents[1][1],
+	)
+	require.Equal(t, "contract_address", execEvents[1][0].Key)
+
+	secondContractAddressBech32 := execEvents[1][0].Value
+	secondContractAddress, err := sdk.AccAddressFromBech32(secondContractAddressBech32)
+	require.NoError(t, err)
+
+	data, execEvents, err := execHelper(t, keeper, ctx, secondContractAddress, walletA, `{"unicode_data":{}}`, 3)
+
+	require.Empty(t, err)
+	require.Empty(t, execEvents)
+	require.Equal(t, "🍆🥑🍄", string(data))
+}
+
+func TestInitCallbackToInit(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
+	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	// init first contract
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d}}`, codeID), 0)
+	require.Empty(t, initErr)
+
+	require.Equal(t, 2, len(initEvents))
+	require.Equal(t,
+		ContractEvent{
+			{Key: "contract_address", Value: contractAddress.String()},
+			{Key: "instantiating a new contract from init!", Value: "🐙"},
+		},
+		initEvents[0],
+	)
+	require.Equal(t,
+		cosmwasm.LogAttribute{Key: "init", Value: "🌈"},
+		initEvents[1][1],
+	)
+	require.Equal(t, "contract_address", initEvents[1][0].Key)
+
+	secondContractAddressBech32 := initEvents[1][0].Value
+	secondContractAddress, err := sdk.AccAddressFromBech32(secondContractAddressBech32)
+	require.NoError(t, err)
+
+	data, execEvents, err := execHelper(t, keeper, ctx, secondContractAddress, walletA, `{"unicode_data":{}}`, 2)
+
+	require.Empty(t, err)
+	require.Empty(t, execEvents)
+	require.Equal(t, "🍆🥑🍄", string(data))
+}
+
+func TestInitCallbackContratError(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
+	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	// init first contract
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
+	require.Equal(t, 1, len(initEvents))
+
+	secondContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s"}}`, contractAddress), 1)
+	require.Error(t, initErr)
+	require.Error(t, initErr.GenericErr)
+	require.Equal(t, initErr.GenericErr.Msg, "la la 🤯")
+	require.Empty(t, secondContractAddress)
+	require.Empty(t, initEvents)
+}
+
+func TestExecCallbackContratError(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
+	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	// init
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
+	require.Equal(t, 1, len(initEvents))
+
+	data, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s"}}`, contractAddress), 1)
+	require.Error(t, execErr)
+	require.Error(t, execErr.GenericErr)
+	require.Equal(t, execErr.GenericErr.Msg, "la la 🤯")
+	require.Empty(t, execEvents)
+	require.Empty(t, data)
 }

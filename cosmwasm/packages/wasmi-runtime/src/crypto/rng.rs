@@ -1,4 +1,4 @@
-use crate::crypto::errors::CryptoError;
+use crate::crypto::CryptoError;
 use sgx_trts::trts::rsgx_read_rand;
 
 pub fn rand_slice(rand: &mut [u8]) -> Result<(), CryptoError> {
