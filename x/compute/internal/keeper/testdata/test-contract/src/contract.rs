@@ -15,7 +15,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum InitMsg {
     Nop {},
     Callback { contract_addr: HumanAddr },
@@ -27,7 +27,7 @@ pub enum InitMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     A {
         contract_addr: HumanAddr,
@@ -60,7 +60,7 @@ pub enum HandleMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Owner {},
     ContractError { error_type: String },
@@ -73,7 +73,7 @@ pub struct OwnerResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum MigrateMsg {}
 
 /////////////////////////////// Init ///////////////////////////////
@@ -128,7 +128,11 @@ fn init_with_callback_contract_error(contract_addr: HumanAddr) -> InitResponse {
     InitResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: Binary(r#"{"contracterror":{"error_type":"generic_err"}}"#.as_bytes().to_vec()),
+            msg: Binary(
+                r#"{"contract_error":{"error_type":"generic_err"}}"#
+                    .as_bytes()
+                    .to_vec(),
+            ),
             send: vec![],
         })],
         log: vec![log("init with a callback with contract error", "🤷‍♀️")],
@@ -325,7 +329,11 @@ fn exec_with_callback_contract_error(contract_addr: HumanAddr) -> HandleResponse
     HandleResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: Binary(r#"{"contracterror":{"error_type":"generic_err"}}"#.as_bytes().to_vec()),
+            msg: Binary(
+                r#"{"contract_error":{"error_type":"generic_err"}}"#
+                    .as_bytes()
+                    .to_vec(),
+            ),
             send: vec![],
         })],
         log: vec![log("exec with a callback with contract error", "🤷‍♂️")],
