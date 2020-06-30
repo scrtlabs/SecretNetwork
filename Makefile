@@ -3,6 +3,20 @@ VERSION := $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
+BUILD_PROFILE ?= release
+
+SGX_MODE ?= HW
+BRANCH ?= develop
+DEBUG ?= 0
+DOCKER_TAG ?= latest
+
+ifeq ($(SGX_MODE), HW)
+	ext := hw
+else ifeq ($(SGX_MODE), SW)
+	ext := sw
+else
+$(error SGX_MODE must be either HW or SW)
+endif
 
 SGX_MODE ?= HW
 BRANCH ?= develop
@@ -89,17 +103,12 @@ build_local_no_rust:
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretd
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretcli
 
-build_linux: vendor
-	$(MAKE) -C go-cosmwasm build-rust
-	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
+build-linux: vendor
+	BUILD_PROFILE=$(BUILD_PROFILE) $(MAKE) -C go-cosmwasm build-rust
+	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
 #   this pulls out ELF symbols, 80% size reduction!
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretd
 	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretcli
-
-#build_local_no_rust:
-#   this pulls out ELF symbols, 80% size reduction!
-#	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretd
-#	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretcli
 
 build_windows:
 	# CLI only 
@@ -113,9 +122,9 @@ build_arm_linux:
 	# CLI only 
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
 
-build_all: build_linux build_windows build_macos build_arm_linux
+build_all: build-linux build_windows build_macos build_arm_linux
 
-deb: build_linux
+deb: build-linux
     ifneq ($(UNAME_S),Linux)
 		exit 1
     endif
@@ -175,7 +184,8 @@ clean:
 	-rm -rf ./x/compute/internal/keeper/*.der
 	-rm -rf ./x/compute/internal/keeper/*.so
 	$(MAKE) -C go-cosmwasm clean-all
-	$(MAKE) -C cosmwasm/lib/wasmi-runtime clean
+	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
+	$(MAKE) -C ./x/compute/internal/keeper/testdata/test-contract clean
 # docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t cashmaney/secret-network-node:azuretestnet .
 build-azure:
 	docker build -f Dockerfile.azure -t cashmaney/secret-network-node:azuretestnet .
@@ -188,34 +198,65 @@ docker_bootstrap:
 	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t cashmaney/secret-network-bootstrap-${ext}:${DOCKER_TAG} .
 
 docker_node:
+	docker build --build-arg SECRET_NODE_TYPE=NODE -t enigmampc/secret_node .
+
 	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=NODE -t cashmaney/secret-network-node-${ext}:${DOCKER_TAG} .
 # while developing:
 build-enclave:
-	$(MAKE) -C cosmwasm/lib/wasmi-runtime 
+	$(MAKE) -C cosmwasm/packages/wasmi-runtime
+
+# while developing:
+check-enclave:
+	$(MAKE) -C cosmwasm/packages/wasmi-runtime check
 
 # while developing:
 clean-enclave:
-	$(MAKE) -C cosmwasm/lib/wasmi-runtime clean 
+	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
 
 sanity-test:
-	SGX_MODE=SW $(MAKE) build_linux
-	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
-	SGX_MODE=SW ./cosmwasm/lib/sanity-test.sh
-	
+	SGX_MODE=SW $(MAKE) build-linux
+	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+	SGX_MODE=SW ./cosmwasm/testing/sanity-test.sh
+
 sanity-test-hw:
-	$(MAKE) build_linux
-	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
-	./cosmwasm/lib/sanity-test.sh
+	$(MAKE) build-linux
+	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+	./cosmwasm/testing/sanity-test.sh
 
 callback-sanity-test:
-	SGX_MODE=SW $(MAKE) build_linux
-	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
-	SGX_MODE=SW ./cosmwasm/lib/callback-test.sh
+	SGX_MODE=SW $(MAKE) build-linux
+	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+	SGX_MODE=SW ./cosmwasm/testing/callback-test.sh
 
 build-test-contract:
+	# echo "" | sudo add-apt-repository ppa:hnakamur/binaryen
+	# sudo apt update
+	# sudo apt install -y binaryen
 	$(MAKE) -C ./x/compute/internal/keeper/testdata/test-contract
 
 go-tests: build-test-contract
-	SGX_MODE=SW $(MAKE) build_linux
-	cp ./cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	# empty BUILD_PROFILE means debug mode which compiles faster
+	SGX_MODE=SW $(MAKE) build-linux
+	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
 	SGX_MODE=SW go test -p 1 -v ./x/compute/internal/...
+
+build-cosmwasm-test-contracts:
+	# echo "" | sudo add-apt-repository ppa:hnakamur/binaryen
+	# sudo apt update
+	# sudo apt install -y binaryen
+	cd ./cosmwasm/contracts/staking && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+	wasm-opt -Os ./cosmwasm/contracts/staking/target/wasm32-unknown-unknown/release/staking.wasm -o ./x/compute/internal/keeper/testdata/staking.wasm
+
+	cd ./cosmwasm/contracts/reflect && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+	wasm-opt -Os ./cosmwasm/contracts/reflect/target/wasm32-unknown-unknown/release/reflect.wasm -o ./x/compute/internal/keeper/testdata/reflect.wasm
+
+	cd ./cosmwasm/contracts/burner && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+	wasm-opt -Os ./cosmwasm/contracts/burner/target/wasm32-unknown-unknown/release/burner.wasm -o ./x/compute/internal/keeper/testdata/burner.wasm
+
+	cd ./cosmwasm/contracts/erc20 && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+	wasm-opt -Os ./cosmwasm/contracts/erc20/target/wasm32-unknown-unknown/release/erc20.wasm -o ./x/compute/internal/keeper/testdata/erc20.wasm
+
+	cd ./cosmwasm/contracts/hackatom && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+	wasm-opt -Os ./cosmwasm/contracts/hackatom/target/wasm32-unknown-unknown/release/hackatom.wasm -o ./x/compute/internal/keeper/testdata/contract.wasm
+	cat ./x/compute/internal/keeper/testdata/contract.wasm | gzip > ./x/compute/internal/keeper/testdata/contract.wasm.gzip

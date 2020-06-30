@@ -1,9 +1,11 @@
-.PHONY: all build build-rust build-go test docker-image docker-build docker-image-centos7
+.PHONY: all build build-rust build-go test docker-image docker-image-centos7 docker-image-cross
+
+BUILD_PROFILE ?= release
 
 TOP_DIR := ../third_party/build
 include $(TOP_DIR)/buildenv.mk
 
-DOCKER_TAG := 0.6.3
+DOCKER_TAG := 0.8.2
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
 
@@ -37,38 +39,27 @@ endif
 SGX_COMMON_CFLAGS += -fstack-protector
 
 CUSTOM_EDL_PATH := ../third_party/vendor/sgx_edl/edl
-App_Rust_Flags := --release
-App_SRC_Files := $(shell find ../cosmwasm/lib/sgx-vm/ -type f -name '*.rs') \
-    $(shell find ../cosmwasm/lib/sgx-vm/ -type f -name 'Cargo.toml') \
+App_SRC_Files := $(shell find ../cosmwasm/packages/sgx-vm/ -type f -name '*.rs') \
+    $(shell find ../cosmwasm/packages/sgx-vm/ -type f -name 'Cargo.toml') \
     $(shell find ./ -type f -name '*.rs') \
     $(shell find ./ -type f -name 'Cargo.toml')
 App_Include_Paths := -I./ -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
-Enclave_Path := ../cosmwasm/lib/wasmi-runtime
+Enclave_Path := ../cosmwasm/packages/wasmi-runtime
 Enclave_EDL_Products := Enclave_u.c Enclave_u.h
 
 all: build test
 
 build: build-rust build-go
 
-# don't strip for now, for better error reporting
-# build-rust: build-rust-release strip
-build-rust: build-rust-release
-
-# use debug build for quick testing
-build-rust-debug: librust_cosmwasm_enclave.signed.so lib/libEnclave_u.a
-	cargo build --features backtraces
-	cp target/debug/libgo_cosmwasm.$(DLL_EXT) api
-
-# use release build to actually ship - smaller and much faster
-build-rust-release: librust_cosmwasm_enclave.signed.so lib/libEnclave_u.a
-	cargo build --release --features backtraces
-	cp target/release/libgo_cosmwasm.$(DLL_EXT) api
+build-rust: librust_cosmwasm_enclave.signed.so lib/libEnclave_u.a
+	cargo build -Z unstable-options --profile $(BUILD_PROFILE) --features backtraces
+	cp target/$(BUILD_PROFILE)/libgo_cosmwasm.$(DLL_EXT) api
 	@ #this pulls out ELF symbols, 80% size reduction!
 
 librust_cosmwasm_enclave.signed.so: build-enclave
-	cp ../cosmwasm/lib/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./
+	cp ../cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./
 
 # This file will be picked up by the crates build script and linked into the library.
 # We make sure that the enclave is built before we compile the edl,
@@ -86,7 +77,7 @@ lib/libEnclave_u.a: $(Enclave_Path)/Enclave.edl target/headers/enclave-ffi-types
 # So here we do the minimum required work to generate this file correctly, and copy it to the right location
 target/headers/enclave-ffi-types.h: build-enclave
 	mkdir -p $(dir $@)
-	cp ../cosmwasm/lib/wasmi-runtime/$(@) $@
+	cp ../cosmwasm/packages/wasmi-runtime/$(@) $@
 
 .PHONY: build-enclave
 build-enclave:
@@ -105,17 +96,43 @@ build-go:
 	go build ./...
 
 test:
-	RUST_BACKTRACE=1 go test -v ./api .
+	RUST_BACKTRACE=1 go test -v ./api ./types .
 
+# we should build all the docker images locally ONCE and publish them
 docker-image-centos7:
-	docker build . -t go-cosmwasm:$(DOCKER_TAG)-centos7 -f ./Dockerfile.centos7
+	docker build . -t cosmwasm/go-ext-builder:$(DOCKER_TAG)-centos7 -f ./Dockerfile.centos7
 
 docker-image-cross:
-	docker build . -t go-cosmwasm:$(DOCKER_TAG)-cross -f ./Dockerfile.cross
+	docker build . -t cosmwasm/go-ext-builder:$(DOCKER_TAG)-cross -f ./Dockerfile.cross
 
-release: docker-image-cross docker-image-centos7
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code go-cosmwasm:$(DOCKER_TAG)-cross
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code go-cosmwasm:$(DOCKER_TAG)-centos7
+docker-image-alpine:
+	docker build . -t cosmwasm/go-ext-builder:$(DOCKER_TAG)-alpine -f ./Dockerfile.alpine
+
+docker-images: docker-image-centos7 docker-image-cross docker-image-alpine
+
+docker-publish: docker-images
+	docker push cosmwasm/go-ext-builder:$(DOCKER_TAG)-cross
+	docker push cosmwasm/go-ext-builder:$(DOCKER_TAG)-centos7
+	docker push cosmwasm/go-ext-builder:$(DOCKER_TAG)-alpine
+
+# and use them to compile release builds
+release:
+	rm -rf target/release
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(DOCKER_TAG)-cross
+	rm -rf target/release
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(DOCKER_TAG)-centos7
+
+test-alpine:
+	# build the muslc *.a file
+	rm -rf target/release/examples
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(DOCKER_TAG)-alpine
+	# try running go tests using this lib with muslc
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code cosmwasm/go-ext-builder:$(DOCKER_TAG)-alpine go build -tags muslc .
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code cosmwasm/go-ext-builder:$(DOCKER_TAG)-alpine go test -tags muslc ./api ./types
+	# build a go binary
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code cosmwasm/go-ext-builder:$(DOCKER_TAG)-alpine go build -tags muslc -o muslc.exe ./cmd
+	# run static binary locally (not dlls)
+	./muslc.exe ./api/testdata/hackatom.wasm
 
 .PHONY: clean
 clean:
@@ -124,4 +141,4 @@ clean:
 
 .PHONY: clean-all
 clean-all: clean
-	$(MAKE) -C ../cosmwasm/lib/wasmi-runtime clean
+	$(MAKE) -C ../cosmwasm/packages/wasmi-runtime clean

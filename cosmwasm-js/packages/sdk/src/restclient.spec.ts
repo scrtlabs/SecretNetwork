@@ -7,7 +7,7 @@ import { ReadonlyDate } from "readonly-date";
 import { rawSecp256k1PubkeyToAddress } from "./address";
 import { makeSignBytes } from "./encoding";
 import { findAttribute, parseLogs } from "./logs";
-import { makeCosmoshubPath, Pen, Secp256k1Pen } from "./pen";
+import { makeSecretNetworkPath, Pen, Secp256k1Pen } from "./pen";
 import { encodeBech32Pubkey } from "./pubkey";
 import { PostTxsResponse, RestClient, TxsResponse } from "./restclient";
 import { SigningCosmWasmClient } from "./signingcosmwasmclient";
@@ -809,9 +809,9 @@ describe("RestClient", () => {
 
     it("can't send transaction with additional signatures", async () => {
       pendingWithoutWasmd();
-      const account1 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeCosmoshubPath(0));
-      const account2 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeCosmoshubPath(1));
-      const account3 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeCosmoshubPath(2));
+      const account1 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeSecretNetworkPath(0));
+      const account2 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeSecretNetworkPath(1));
+      const account3 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeSecretNetworkPath(2));
       const address1 = rawSecp256k1PubkeyToAddress(account1.pubkey, "cosmos");
       const address2 = rawSecp256k1PubkeyToAddress(account2.pubkey, "cosmos");
       const address3 = rawSecp256k1PubkeyToAddress(account3.pubkey, "cosmos");
@@ -866,7 +866,7 @@ describe("RestClient", () => {
 
     it("can send multiple messages with one signature", async () => {
       pendingWithoutWasmd();
-      const account1 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeCosmoshubPath(0));
+      const account1 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeSecretNetworkPath(0));
       const address1 = rawSecp256k1PubkeyToAddress(account1.pubkey, "cosmos");
 
       const memo = "My first contract on chain";
@@ -925,8 +925,8 @@ describe("RestClient", () => {
 
     it("can send multiple messages with multiple signatures", async () => {
       pendingWithoutWasmd();
-      const account1 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeCosmoshubPath(0));
-      const account2 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeCosmoshubPath(1));
+      const account1 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeSecretNetworkPath(0));
+      const account2 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeSecretNetworkPath(1));
       const address1 = rawSecp256k1PubkeyToAddress(account1.pubkey, "cosmos");
       const address2 = rawSecp256k1PubkeyToAddress(account2.pubkey, "cosmos");
 
@@ -994,8 +994,8 @@ describe("RestClient", () => {
 
     it("can't send transaction with wrong signature order (1)", async () => {
       pendingWithoutWasmd();
-      const account1 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeCosmoshubPath(0));
-      const account2 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeCosmoshubPath(1));
+      const account1 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeSecretNetworkPath(0));
+      const account2 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeSecretNetworkPath(1));
       const address1 = rawSecp256k1PubkeyToAddress(account1.pubkey, "cosmos");
       const address2 = rawSecp256k1PubkeyToAddress(account2.pubkey, "cosmos");
 
@@ -1058,8 +1058,8 @@ describe("RestClient", () => {
 
     it("can't send transaction with wrong signature order (2)", async () => {
       pendingWithoutWasmd();
-      const account1 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeCosmoshubPath(0));
-      const account2 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeCosmoshubPath(1));
+      const account1 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeSecretNetworkPath(0));
+      const account2 = await Secp256k1Pen.fromMnemonic(faucet.mnemonic, makeSecretNetworkPath(1));
       const address1 = rawSecp256k1PubkeyToAddress(account1.pubkey, "cosmos");
       const address2 = rawSecp256k1PubkeyToAddress(account2.pubkey, "cosmos");
 

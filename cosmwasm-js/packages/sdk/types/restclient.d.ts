@@ -1,4 +1,4 @@
-import { Log, Attribute } from "./logs";
+import { Log } from "./logs";
 import { Coin, CosmosSdkTx, JsonObject, Model, StdTx } from "./types";
 import EnigmaUtils from "./enigmautils";
 export interface CosmosSdkAccount {
@@ -99,7 +99,7 @@ export interface TxsResponse {
   readonly codespace?: string;
   /** Falsy when transaction execution succeeded. Contains error code on error. */
   readonly code?: number;
-  readonly raw_log: string;
+  raw_log: string;
   data: any;
   readonly logs?: Log[];
   readonly tx: CosmosSdkTx;
@@ -235,14 +235,7 @@ export declare class RestClient {
    * Get the consensus keypair for IO encryption
    */
   getMasterCerts(address: string, query: object): Promise<any>;
-  decryptDataField(
-    dataField: string,
-    nonce: Uint8Array,
-  ): Promise<{
-    log: Attribute[];
-    data: Uint8Array;
-    messages: any[];
-  }>;
+  decryptDataField(dataField: string | undefined, nonce: Uint8Array): Promise<Uint8Array>;
   decryptLogs(logs: readonly Log[], nonce: Uint8Array): Promise<readonly Log[]>;
   decryptTxsResponse(txsResponse: TxsResponse): Promise<TxsResponse>;
 }

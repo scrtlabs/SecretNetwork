@@ -133,7 +133,7 @@ export interface TxsResponse {
   readonly codespace?: string;
   /** Falsy when transaction execution succeeded. Contains error code on error. */
   readonly code?: number;
-  readonly raw_log: string;
+  raw_log: string;
   data: any;
   readonly logs?: Log[];
   readonly tx: CosmosSdkTx;
@@ -469,7 +469,32 @@ export class RestClient {
 
     const encoded = Encoding.toHex(Encoding.toUtf8(Encoding.toBase64(encrypted)));
     const path = `/wasm/contract/${address}/smart/${encoded}?encoding=hex`;
-    const responseData = (await this.get(path)) as WasmResponse<SmartQueryResponse>;
+    let responseData;
+    try {
+      responseData = (await this.get(path)) as WasmResponse<SmartQueryResponse>;
+    } catch (err) {
+      try {
+        const errorMessageRgx = /wasm contract failed: generic: (.+?) \(HTTP 500\)/g;
+
+        const rgxMatches = errorMessageRgx.exec(err.message);
+        if (rgxMatches == null || rgxMatches.length != 2) {
+          throw err;
+        }
+
+        const errorCipherB64 = rgxMatches[1];
+        const errorCipherBz = Encoding.fromBase64(errorCipherB64);
+
+        const errorPlainBz = await this.enigmautils.decrypt(errorCipherBz, nonce);
+
+        err.message = err.message.replace(errorCipherB64, Encoding.fromUtf8(errorPlainBz));
+      } catch (decryptionError) {
+        throw new Error(
+          `Failed to decrypt the following error message: ${err.message}. Decryption error of the error message: ${decryptionError.message}`,
+        );
+      }
+
+      throw err;
+    }
 
     if (isWasmError(responseData)) {
       throw new Error(
@@ -496,48 +521,15 @@ export class RestClient {
     return this.get("/register/master-cert");
   }
 
-  public async decryptDataField(
-    dataField: string,
-    nonce: Uint8Array,
-  ): Promise<{ log: Attribute[]; data: Uint8Array; messages: any[] }> {
-    const wasmOutputs = JSON.parse(Encoding.fromUtf8(Encoding.fromHex(dataField)));
-
-    if (wasmOutputs.err) {
-      throw new Error(wasmOutputs.err);
-    }
+  public async decryptDataField(dataField: string = "", nonce: Uint8Array): Promise<Uint8Array> {
+    const wasmOutputDataCipherBz = Encoding.fromBase64(Encoding.fromUtf8(Encoding.fromHex(dataField)));
 
     // data
-    const data = wasmOutputs.ok.data
-      ? await this.enigmautils.decrypt(Encoding.fromBase64(wasmOutputs.ok.data), nonce)
-      : new Uint8Array();
-
-    for (let i = 0; i < wasmOutputs.ok.messages.length; i++) {
-      const m = wasmOutputs.ok.messages[i];
-      if (!m.contract) {
-        continue;
-      }
-
-      m.contract.msg = Encoding.fromUtf8(
-        await this.enigmautils.decrypt(Encoding.fromBase64(m.contract.msg).slice(64), nonce),
-      );
-      wasmOutputs.ok.messages[i] = m;
-    }
-
-    const messages = wasmOutputs.ok.messages;
-
-    // logs
-    const wasmEvents: Attribute[] = await Promise.all(
-      wasmOutputs.ok.log.map(
-        async (l: Attribute): Promise<Attribute> => ({
-          key: Encoding.fromUtf8(await this.enigmautils.decrypt(Encoding.fromBase64(l.key), nonce)),
-          value: Encoding.fromUtf8(await this.enigmautils.decrypt(Encoding.fromBase64(l.value), nonce)),
-        }),
-      ),
+    const data = Encoding.fromBase64(
+      Encoding.fromUtf8(await this.enigmautils.decrypt(wasmOutputDataCipherBz, nonce)),
     );
 
-    // todo messages
-
-    return { log: wasmEvents, data: data, messages: messages };
+    return data;
   }
 
   public async decryptLogs(logs: readonly Log[], nonce: Uint8Array): Promise<readonly Log[]> {
@@ -596,6 +588,19 @@ export class RestClient {
         if (txsResponse.logs) {
           logs = await this.decryptLogs(txsResponse.logs, nonce);
           txsResponse = Object.assign({}, txsResponse, { logs: logs });
+        }
+
+        // decrypt error
+        const errorMessageRgx = /wasm contract failed: generic: (.+?): failed to execute message; message index: 0/g;
+
+        const rgxMatches = errorMessageRgx.exec(txsResponse.raw_log);
+        if (Array.isArray(rgxMatches) && rgxMatches.length === 2) {
+          const errorCipherB64 = rgxMatches[1];
+          const errorCipherBz = Encoding.fromBase64(errorCipherB64);
+
+          const errorPlainBz = await this.enigmautils.decrypt(errorCipherBz, nonce);
+
+          txsResponse.raw_log = txsResponse.raw_log.replace(errorCipherB64, Encoding.fromUtf8(errorPlainBz));
         }
       }
     }

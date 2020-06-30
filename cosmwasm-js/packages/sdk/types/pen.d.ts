@@ -19,7 +19,7 @@ export interface Pen {
  * The Cosmoshub derivation path in the form `m/44'/118'/0'/0/a`
  * with 0-based account index `a`.
  */
-export declare function makeCosmoshubPath(a: number): readonly Slip10RawIndex[];
+export declare function makeSecretNetworkPath(a: number): readonly Slip10RawIndex[];
 export declare class Secp256k1Pen implements Pen {
   static fromMnemonic(mnemonic: string, hdPath?: readonly Slip10RawIndex[]): Promise<Secp256k1Pen>;
   readonly pubkey: Uint8Array;

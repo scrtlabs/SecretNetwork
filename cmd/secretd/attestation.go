@@ -206,7 +206,7 @@ func ConfigureSecret(_ *server.Context, _ *codec.Codec) *cobra.Command {
 			if os.IsNotExist(err) {
 				var file, err = os.Create(path)
 				if err != nil {
-					return fmt.Errorf("failed to open config file: %s", path)
+					return fmt.Errorf("failed to open config file '%s': %w", path, err)
 				}
 				_ = file.Close()
 			}

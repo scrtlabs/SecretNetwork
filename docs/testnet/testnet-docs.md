@@ -1,4 +1,4 @@
-**_NOTE:_** You DO NOT want to use the v0.1.0 on an existing mainnet validator node. It will not work. <br>
+**_NOTE:_** You DO NOT want to use the v0.5.0 on an existing mainnet validator node. It will not work. <br>
 **_NOTE 2:_** We recommend you to first remove older `secretnetwork` installations to prevent collisions. <br>
 **_NOTE 3:_** Before removing, changing or doing anything with the old `secretd`,`secretcli` installations - make sure to back up your keys and recovery seeds!
 

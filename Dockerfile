@@ -30,7 +30,7 @@ WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 
 COPY Makefile Makefile
 
-RUN make clean
+# RUN make clean
 RUN make vendor
 
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
@@ -90,6 +90,8 @@ COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosm
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretd /usr/bin/secretd
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretcli /usr/bin/secretcli
+
+COPY ./x/compute/internal/keeper/testdata/erc20.wasm erc20.wasm
 
 # COPY ./packaging_docker/devnet_init.sh .
 COPY packaging_docker/ci/wasmi-sgx-test.sh .
