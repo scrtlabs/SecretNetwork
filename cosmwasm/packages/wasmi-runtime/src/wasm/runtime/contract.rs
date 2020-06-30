@@ -301,6 +301,8 @@ impl WasmiApi for ContractInstance {
                     "canonicalize_address() error while trying to parse human address from bytes to string: {:?}",
                     err
                 );
+                // Assaf: Unless you override the CosmWasm implementation of deps.api.canonical_address
+                //        I don't think the input can be invalid utf8
                 return Ok(Some(RuntimeValue::I32(-1)));
             }
             Ok(x) => x,
@@ -310,6 +312,7 @@ impl WasmiApi for ContractInstance {
         if human_addr_str.is_empty() {
             return Ok(Some(RuntimeValue::I32(-2)));
         }
+
         let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
             Err(err) => {
                 error!(
@@ -337,6 +340,9 @@ impl WasmiApi for ContractInstance {
                     "canonicalize_address() error while trying to decode bytes from base32 {:?}: {:?}",
                     data, err
                 );
+                // Assaf: From reading https://docs.rs/bech32/0.7.1/src/bech32/lib.rs.html#607
+                //        and https://docs.rs/bech32/0.7.1/src/bech32/lib.rs.html#228
+                //        I don't think this can fail that way
                 return Ok(Some(RuntimeValue::I32(-5)));
             }
             Ok(x) => x,
@@ -381,6 +387,9 @@ impl WasmiApi for ContractInstance {
 
         let human_addr_str = match bech32::encode(BECH32_PREFIX_ACC_ADDR, canonical.to_base32()) {
             Err(err) => {
+                // Assaf: This can never fail IMO, because looking at bech32::encode it only
+                //        fails because use prefix issues, and for us it's always "secert"
+                //        which is valid.
                 error!("humanize_address() error while trying to encode canonical address {:?} to human: {:?}",  canonical, err);
                 return Ok(Some(RuntimeValue::I32(-1)));
             }

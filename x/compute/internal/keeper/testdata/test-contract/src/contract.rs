@@ -2,9 +2,9 @@ use cosmwasm_storage::PrefixedStorage;
 
 use cosmwasm_std::{
     generic_err, invalid_base64, invalid_utf8, log, not_found, null_pointer, parse_err,
-    serialize_err, to_binary, unauthorized, underflow, Api, Binary, CanonicalAddr, CosmosMsg, Env,
-    Extern, HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse,
-    Querier, QueryResult, ReadonlyStorage, StdError, StdResult, Storage, WasmMsg,
+    serialize_err, to_binary, unauthorized, underflow, Api, Binary, CosmosMsg, Env, Extern,
+    HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse, Querier,
+    QueryResult, ReadonlyStorage, StdError, StdResult, Storage, WasmMsg,
 };
 
 use crate::state::config_read;
@@ -24,6 +24,7 @@ pub enum InitMsg {
     NoLogs {},
     CallbackToInit { code_id: u64 },
     CallbackBadParams { contract_addr: HumanAddr },
+    Panic {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -70,7 +71,8 @@ pub enum HandleMsg {
     RemoveState {
         key: String,
     },
-    TestHumanizeAddressErrors {},
+    TestCanonicalizeAddressErrors {},
+    Panic {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -78,6 +80,7 @@ pub enum HandleMsg {
 pub enum QueryMsg {
     Owner {},
     ContractError { error_type: String },
+    Panic {},
 }
 
 // We define a custom struct for each query response
@@ -110,6 +113,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             Ok(init_with_callback_contract_error(contract_addr))
         }
         InitMsg::CallbackBadParams { contract_addr } => Ok(init_callback_bad_params(contract_addr)),
+        InitMsg::Panic {} => panic!("panic in init"),
     }
 }
 
@@ -221,7 +225,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::SetState { key, value } => Ok(set_state(deps, key, value)),
         HandleMsg::GetState { key } => Ok(get_state(deps, key)),
         HandleMsg::RemoveState { key } => Ok(remove_state(deps, key)),
-        HandleMsg::TestHumanizeAddressErrors {} => Ok(test_humanize_address_errors(deps)),
+        HandleMsg::TestCanonicalizeAddressErrors {} => test_canonicalize_address_errors(deps),
+        HandleMsg::Panic {} => panic!("panic in exec"),
     }
 }
 
@@ -411,14 +416,65 @@ fn remove_state<S: Storage, A: Api, Q: Querier>(
     HandleResponse::default()
 }
 
-fn test_humanize_address_errors<S: Storage, A: Api, Q: Querier>(
+fn test_canonicalize_address_errors<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-) -> HandleResponse {
-    deps.api
-        .human_address(&CanonicalAddr(Binary(vec![])))
-        .unwrap_err();
+) -> HandleResult {
+    match deps.api.canonical_address(&HumanAddr(String::from(""))) {
+        Err(StdError::GenericErr { msg, backtrace: _ }) => {
+            if msg != String::from("canonicalize_address returned error") {
+                return Err(generic_err("empty address should have failed with -2"));
+            }
+            // all is good, continue
+        }
+        _ => return Err(generic_err("empty address should have failed with -2")),
+    }
 
-    HandleResponse::default()
+    match deps.api.canonical_address(&HumanAddr(String::from("   "))) {
+        Err(StdError::GenericErr { msg, backtrace: _ }) => {
+            if msg != String::from("canonicalize_address returned error") {
+                return Err(generic_err(
+                    "empty trimmed address should have failed with -2",
+                ));
+            }
+            // all is good, continue
+        }
+        _ => {
+            return Err(generic_err(
+                "empty trimmed address should have failed with -2",
+            ))
+        }
+    }
+
+    match deps
+        .api
+        .canonical_address(&HumanAddr(String::from("cosmos1h99hrcc54ms9lxxxx")))
+    {
+        Err(StdError::GenericErr { msg, backtrace: _ }) => {
+            if msg != String::from("canonicalize_address returned error") {
+                return Err(generic_err("bad bech32 should have failed with -3"));
+            }
+            // all is good, continue
+        }
+        _ => return Err(generic_err("bad bech32 should have failed with -3")),
+    }
+
+    match deps.api.canonical_address(&HumanAddr(String::from(
+        "cosmos1h99hrcc54ms9luwpex9kw0rwdt7etvfdyxh6gu",
+    ))) {
+        Err(StdError::GenericErr { msg, backtrace: _ }) => {
+            if msg != String::from("canonicalize_address returned error") {
+                return Err(generic_err("bad prefix should have failed with -4"));
+            }
+            // all is good, continue
+        }
+        _ => return Err(generic_err("bad prefix should have failed with -4")),
+    }
+
+    Ok(HandleResponse {
+        data: Some(Binary("🤟".as_bytes().to_vec())),
+        log: vec![],
+        messages: vec![],
+    })
 }
 
 /////////////////////////////// Query ///////////////////////////////
@@ -430,6 +486,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match _msg {
         QueryMsg::Owner {} => query_owner(deps),
         QueryMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
+        QueryMsg::Panic {} => panic!("panic in query"),
     }
 }
 
