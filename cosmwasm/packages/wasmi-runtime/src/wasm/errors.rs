@@ -17,7 +17,6 @@ pub enum WasmEngineError {
     MemoryReadError,
     MemoryWriteError,
 
-    InputEmpty,
     NonExistentImportFunction,
     NotImplemented,
 }
