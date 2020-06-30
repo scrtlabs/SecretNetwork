@@ -186,7 +186,6 @@ clean:
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
 	$(MAKE) -C ./x/compute/internal/keeper/testdata/test-contract clean
-	$(MAKE) -C cosmwasm/lib/wasmi-runtime clean
 # docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t cashmaney/secret-network-node:azuretestnet .
 build-azure:
 	docker build -f Dockerfile.azure -t cashmaney/secret-network-node:azuretestnet .
