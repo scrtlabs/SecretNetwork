@@ -61,6 +61,8 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     #### Base utilities ####
     jq \
+    openssl \
+    curl \
     wget && \
     rm -rf /var/lib/apt/lists/*
 
