@@ -23,6 +23,7 @@ impl From<usize> for HostFunctions {
         match v {
             x if x == HostFunctions::ReadDbIndex as usize => HostFunctions::ReadDbIndex,
             x if x == HostFunctions::WriteDbIndex as usize => HostFunctions::WriteDbIndex,
+            x if x == HostFunctions::RemoveDbIndex as usize => HostFunctions::RemoveDbIndex,
             x if x == HostFunctions::CanonicalizeAddressIndex as usize => {
                 HostFunctions::CanonicalizeAddressIndex
             }
@@ -30,6 +31,7 @@ impl From<usize> for HostFunctions {
                 HostFunctions::HumanizeAddressIndex
             }
             x if x == HostFunctions::GasIndex as usize => HostFunctions::GasIndex,
+            x if x == HostFunctions::QueryChainIndex as usize => HostFunctions::QueryChainIndex,
             _ => HostFunctions::Unknown,
         }
     }
