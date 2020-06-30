@@ -182,10 +182,10 @@ clean:
 	-rm -rf ./.sgx_secrets/*
 	-rm -rf ./x/compute/internal/keeper/.sgx_secrets/*
 	-rm -rf ./x/compute/internal/keeper/*.der
+	-rm -rf ./*.der
 	-rm -rf ./x/compute/internal/keeper/*.so
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
-	$(MAKE) -C ./x/compute/internal/keeper/testdata/test-contract clean
 # docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t cashmaney/secret-network-node:azuretestnet .
 build-azure:
 	docker build -f Dockerfile.azure -t enigmampc/secret-network-node:azuretestnet .
