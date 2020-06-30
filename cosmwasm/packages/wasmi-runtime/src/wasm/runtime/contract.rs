@@ -308,7 +308,7 @@ impl WasmiApi for ContractInstance {
 
         human_addr_str = human_addr_str.trim();
         if human_addr_str.is_empty() {
-            return Err(WasmEngineError::InputEmpty.into());
+            return Ok(Some(RuntimeValue::I32(-2)));
         }
         let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
             Err(err) => {
@@ -316,7 +316,7 @@ impl WasmiApi for ContractInstance {
                 "canonicalize_address() error while trying to decode human address {:?} as bech32: {:?}",
                 human_addr_str, err
             );
-                return Ok(Some(RuntimeValue::I32(-2)));
+                return Ok(Some(RuntimeValue::I32(-3)));
             }
             Ok(x) => x,
         };
@@ -328,7 +328,7 @@ impl WasmiApi for ContractInstance {
                 BECH32_PREFIX_ACC_ADDR,
                 human_addr_str
             );
-            return Ok(Some(RuntimeValue::I32(-3)));
+            return Ok(Some(RuntimeValue::I32(-4)));
         }
 
         let canonical = match Vec::<u8>::from_base32(&data) {
@@ -337,7 +337,7 @@ impl WasmiApi for ContractInstance {
                     "canonicalize_address() error while trying to decode bytes from base32 {:?}: {:?}",
                     data, err
                 );
-                return Ok(Some(RuntimeValue::I32(-4)));
+                return Ok(Some(RuntimeValue::I32(-5)));
             }
             Ok(x) => x,
         };
