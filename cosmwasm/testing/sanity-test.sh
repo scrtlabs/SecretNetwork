@@ -14,14 +14,14 @@ function wait_for_tx () {
 rm -rf ./.sgx_secrets
 mkdir -p ./.sgx_secrets
 
-rm -rf ~/.enigma*
-./secretcli config chain-id enigma-testnet
+rm -rf ~/.secret*
+./secretcli config chain-id secret-sanity
 ./secretcli config output json
 ./secretcli config indent true
 ./secretcli config trust-node true
 ./secretcli config keyring-backend test
 
-./secretd init banana --chain-id enigma-testnet
+./secretd init banana --chain-id secret-sanity
 perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json
 echo "cost member exercise evoke isolate gift cattle move bundle assume spell face balance lesson resemble orange bench surge now unhappy potato dress number acid" |
     ./secretcli keys add a --recover
@@ -36,7 +36,7 @@ echo "cost member exercise evoke isolate gift cattle move bundle assume spell fa
 
 RUST_BACKTRACE=1 ./secretd start --bootstrap &
 
-export ENIGMAD_PID=$(echo $!)
+export SECRETD_PID=$(echo $!)
 
 until (./secretcli status 2>&1 | jq -e '(.sync_info.latest_block_height | tonumber) > 0' &> /dev/null)
 do
@@ -44,11 +44,11 @@ do
     sleep 1
 done
 
-./secretcli rest-server --chain-id enigma-testnet --laddr tcp://0.0.0.0:1337 &
+./secretcli rest-server --chain-id secret-sanity --laddr tcp://0.0.0.0:1337 &
 export LCD_PID=$(echo $!)
 function cleanup()
 {
-    kill -KILL "$ENIGMAD_PID" "$LCD_PID"
+    kill -KILL "$SECRETD_PID" "$LCD_PID"
 }
 trap cleanup EXIT ERR
 
@@ -107,7 +107,7 @@ wait_for_tx "$TRANSFER_TX_HASH" "Waiting for transfer to finish on-chain..."
 ./secretcli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\"}}" |
     jq -e '.balance == "63"'
 
-# sleep infinity
+sleep infinity
 
 (
     cd ./cosmwasm-js

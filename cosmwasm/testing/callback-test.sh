@@ -94,7 +94,7 @@ wait_for_tx "$EXEC_TX_HASH" "Waiting for exec to finish on-chain..."
 # exec (generate error inside WASM)
 export EXEC_ERR_TX_HASH=$(
     yes |
-        ./secretcli tx compute execute --from a $CONTRACT_ADDRESS "{\"contracterror\":{}}" |
+        ./secretcli tx compute execute --from a $CONTRACT_ADDRESS "{\"contract_error\":{\"error_type\":\"generic_err\"}}" |
         jq -r .txhash
 )
 

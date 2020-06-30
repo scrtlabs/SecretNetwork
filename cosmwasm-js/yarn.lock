@@ -18,6 +18,18 @@
     esutils "^2.0.2"
     js-tokens "^4.0.0"
 
+"@cosmwasm/sdk@^0.8.0-alpha.0":
+  version "0.8.1"
+  resolved "https://registry.yarnpkg.com/@cosmwasm/sdk/-/sdk-0.8.1.tgz#5bfcd729b24cfa8e9ccd84b965b51393b6352717"
+  integrity sha512-DT5cs05rY5aYrecAi0BCJWI0VLBOAV/PPfxknOYHiBZLI1zJCYjQLW6UXsba28WwHwMuCMXniS71dowJxywW6A==
+  dependencies:
+    "@iov/crypto" "^2.1.0"
+    "@iov/encoding" "^2.1.0"
+    "@iov/utils" "^2.0.2"
+    axios "^0.19.0"
+    fast-deep-equal "^3.1.1"
+    pako "^1.0.11"
+
 "@evocateur/libnpmaccess@^3.1.2":
   version "3.1.2"
   resolved "https://registry.yarnpkg.com/@evocateur/libnpmaccess/-/libnpmaccess-3.1.2.tgz#ecf7f6ce6b004e9f942b098d92200be4a4b1c845"
