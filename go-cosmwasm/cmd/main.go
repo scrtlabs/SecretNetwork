@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	wasm "github.com/CosmWasm/go-cosmwasm"
 	"io/ioutil"
 	"os"
+
+	wasm "github.com/CosmWasm/go-cosmwasm"
 )
 
 // This is just a demo to ensure we can compile a static go binary

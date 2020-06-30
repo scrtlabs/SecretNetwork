@@ -159,6 +159,9 @@ impl WasmiApi for ContractInstance {
                     "read_db() error while trying to read state_key_name from wasm memory: {:?}",
                     err
                 );
+                /*
+                    Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
+                */
                 WasmEngineError::MemoryReadError
             })?;
 
@@ -190,6 +193,9 @@ impl WasmiApi for ContractInstance {
                 value.len(),
                 err,
             );
+            /*
+                Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
+            */
             WasmEngineError::MemoryAllocationError
         })?;
 
@@ -209,6 +215,9 @@ impl WasmiApi for ContractInstance {
                     "remove_db() error while trying to read state_key_name from wasm memory: {:?}",
                     err
                 );
+                /*
+                    Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
+                */
                 WasmEngineError::MemoryReadError
             })?;
 
@@ -241,6 +250,9 @@ impl WasmiApi for ContractInstance {
                     "write_db() error while trying to read state_key_name from wasm memory: {:?}",
                     err
                 );
+                /*
+                    Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
+                */
                 WasmEngineError::MemoryReadError
             })?;
         let value = self.extract_vector(value_ptr_ptr as u32).map_err(|err| {
@@ -248,6 +260,9 @@ impl WasmiApi for ContractInstance {
                 "write_db() error while trying to read value from wasm memory: {:?}",
                 err
             );
+            /*
+                Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
+            */
             WasmEngineError::MemoryReadError
         })?;
 
@@ -285,7 +300,10 @@ impl WasmiApi for ContractInstance {
             error!(
                 "canonicalize_address() error while trying to read human address from wasm memory: {:?}",
                 err
-            );
+             );
+            /*
+                Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
+            */
             WasmEngineError::MemoryReadError
         })?;
 
@@ -301,6 +319,9 @@ impl WasmiApi for ContractInstance {
                     "canonicalize_address() error while trying to parse human address from bytes to string: {:?}",
                     err
                 );
+                /*
+                    Assaf: I don't think the input can be invalid utf8, unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
+                */
                 return Ok(Some(RuntimeValue::I32(-1)));
             }
             Ok(x) => x,
@@ -308,15 +329,16 @@ impl WasmiApi for ContractInstance {
 
         human_addr_str = human_addr_str.trim();
         if human_addr_str.is_empty() {
-            return Err(WasmEngineError::InputEmpty.into());
+            return Ok(Some(RuntimeValue::I32(-2)));
         }
+
         let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
             Err(err) => {
                 error!(
                 "canonicalize_address() error while trying to decode human address {:?} as bech32: {:?}",
                 human_addr_str, err
             );
-                return Ok(Some(RuntimeValue::I32(-2)));
+                return Ok(Some(RuntimeValue::I32(-3)));
             }
             Ok(x) => x,
         };
@@ -328,7 +350,7 @@ impl WasmiApi for ContractInstance {
                 BECH32_PREFIX_ACC_ADDR,
                 human_addr_str
             );
-            return Ok(Some(RuntimeValue::I32(-3)));
+            return Ok(Some(RuntimeValue::I32(-4)));
         }
 
         let canonical = match Vec::<u8>::from_base32(&data) {
@@ -337,7 +359,10 @@ impl WasmiApi for ContractInstance {
                     "canonicalize_address() error while trying to decode bytes from base32 {:?}: {:?}",
                     data, err
                 );
-                return Ok(Some(RuntimeValue::I32(-4)));
+                /*
+                    Assaf: From reading https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#607 and https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#228 I don't think this can fail that way
+                */
+                return Ok(Some(RuntimeValue::I32(-5)));
             }
             Ok(x) => x,
         };
@@ -349,6 +374,9 @@ impl WasmiApi for ContractInstance {
                     canonical,
                     err,
                 );
+                /*
+                    Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
+                */
                 WasmEngineError::MemoryWriteError
             })?;
 
@@ -371,6 +399,9 @@ impl WasmiApi for ContractInstance {
                 "humanize_address() error while trying to read canonical address from wasm memory: {:?}",
                 err
             );
+            /*
+                Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
+            */
             WasmEngineError::MemoryReadError
         })?;
 
@@ -381,6 +412,9 @@ impl WasmiApi for ContractInstance {
 
         let human_addr_str = match bech32::encode(BECH32_PREFIX_ACC_ADDR, canonical.to_base32()) {
             Err(err) => {
+                /*
+                    Assaf: IMO This can never fail. From looking at bech32::encode, it only fails because input prefix issues. For us the prefix is always "secert" which is valid.
+                */
                 error!("humanize_address() error while trying to encode canonical address {:?} to human: {:?}",  canonical, err);
                 return Ok(Some(RuntimeValue::I32(-1)));
             }
@@ -396,6 +430,9 @@ impl WasmiApi for ContractInstance {
                     human_bytes,
                     err,
                 );
+                /*
+                    Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
+                */
                 WasmEngineError::MemoryWriteError
             })?;
 
