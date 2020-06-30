@@ -3,8 +3,8 @@ use cosmwasm_storage::PrefixedStorage;
 use cosmwasm_std::{
     generic_err, invalid_base64, invalid_utf8, log, not_found, null_pointer, parse_err,
     serialize_err, to_binary, unauthorized, underflow, Api, Binary, CanonicalAddr, CosmosMsg, Env,
-    Extern, HandleResponse, HandleResult, HumanAddr, HumanAddr, InitResponse, InitResult,
-    MigrateResponse, Querier, QueryResult, ReadonlyStorage, StdError, StdResult, Storage, WasmMsg,
+    Extern, HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse,
+    Querier, QueryResult, ReadonlyStorage, StdError, StdResult, Storage, WasmMsg,
 };
 
 use crate::state::config_read;
@@ -21,7 +21,6 @@ pub enum InitMsg {
     Callback { contract_addr: HumanAddr },
     CallbackContractError { contract_addr: HumanAddr },
     ContractError { error_type: String },
-    State {},
     NoLogs {},
     CallbackToInit { code_id: u64 },
     CallbackBadParams { contract_addr: HumanAddr },
@@ -61,6 +60,17 @@ pub enum HandleMsg {
     CallbackBadParams {
         contract_addr: HumanAddr,
     },
+    SetState {
+        key: String,
+        value: String,
+    },
+    GetState {
+        key: String,
+    },
+    RemoveState {
+        key: String,
+    },
+    TestHumanizeAddressErrors {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -94,7 +104,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         }),
         InitMsg::Callback { contract_addr } => Ok(init_with_callback(deps, env, contract_addr)),
         InitMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
-        InitMsg::State {} => Ok(init_state(deps, env)),
         InitMsg::NoLogs {} => Ok(InitResponse::default()),
         InitMsg::CallbackToInit { code_id } => Ok(init_callback_to_init(deps, env, code_id)),
         InitMsg::CallbackContractError { contract_addr } => {
@@ -118,15 +127,6 @@ fn map_string_to_error(error_type: String) -> StdError {
         "underflow" => underflow("minuend 🤯", "subtrahend 🤯"),
         _ => generic_err("catch-all 🤯"),
     }
-}
-
-fn init_state<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    _env: Env,
-) -> InitResponse {
-    let _store = PrefixedStorage::new(b"prefix", &mut deps.storage);
-
-    InitResponse::default()
 }
 
 fn init_with_callback_contract_error(contract_addr: HumanAddr) -> InitResponse {
@@ -218,6 +218,10 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::CallbackContractError { contract_addr } => {
             Ok(exec_with_callback_contract_error(contract_addr))
         }
+        HandleMsg::SetState { key, value } => Ok(set_state(deps, key, value)),
+        HandleMsg::GetState { key } => Ok(get_state(deps, key)),
+        HandleMsg::RemoveState { key } => Ok(remove_state(deps, key)),
+        HandleMsg::TestHumanizeAddressErrors {} => Ok(test_humanize_address_errors(deps)),
     }
 }
 
@@ -407,10 +411,12 @@ fn remove_state<S: Storage, A: Api, Q: Querier>(
     HandleResponse::default()
 }
 
-fn test_humanize_address<S: Storage, A: Api, Q: Querier>(
+fn test_humanize_address_errors<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
 ) -> HandleResponse {
-    deps.api.human_address(CanonicalAddr::from(&[1, 2]));
+    deps.api
+        .human_address(&CanonicalAddr(Binary(vec![])))
+        .unwrap_err();
 
     HandleResponse::default()
 }
