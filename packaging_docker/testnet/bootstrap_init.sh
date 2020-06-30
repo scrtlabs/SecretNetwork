@@ -4,7 +4,9 @@ file=~/.secretd/config/genesis.json
 if [ ! -e "$file" ]
 then
   # init the node
-  # rm -rf ~/.secret* || true
+  rm -rf ~/.secretd/*
+  rm -rf ~/.secretcli/*
+  rm -rf ~/.sgx_secrets/*
   secretcli config chain-id enigma-testnet-1
   secretcli config output json
   secretcli config indent true

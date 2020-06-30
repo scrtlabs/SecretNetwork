@@ -8,7 +8,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 COPY enigma_package/secretcli /usr/bin/
-COPY enigma_package/libgo_cosmwasm.so /usr/lib/
+# COPY enigma_package/libgo_cosmwasm.so /usr/lib/
 
 COPY requirements.txt .
 
