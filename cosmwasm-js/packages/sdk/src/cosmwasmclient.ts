@@ -315,7 +315,7 @@ export class CosmWasmClient {
       logs: result.logs ? parseLogs(result.logs) : [],
       rawLog: result.raw_log || "",
       transactionHash: result.txhash,
-      data: result.data,
+      data: result.data || "",
     };
   }
 

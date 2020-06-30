@@ -4,14 +4,14 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/rest"
-	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
+	"github.com/enigmampc/cosmos-sdk/client/context"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	"github.com/enigmampc/cosmos-sdk/types/rest"
+	"github.com/enigmampc/cosmos-sdk/x/auth/client/utils"
 	"github.com/gorilla/mux"
 
-	wasmUtils "github.com/enigmampc/EnigmaBlockchain/x/compute/client/utils"
-	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
+	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 func registerTxRoutes(cliCtx context.CLIContext, r *mux.Router) {
@@ -29,9 +29,10 @@ type storeCodeReq struct {
 }
 
 type instantiateContractReq struct {
-	BaseReq rest.BaseReq `json:"base_req" yaml:"base_req"`
-	Deposit sdk.Coins    `json:"deposit" yaml:"deposit"`
-	InitMsg []byte       `json:"init_msg" yaml:"init_msg"`
+	BaseReq rest.BaseReq   `json:"base_req" yaml:"base_req"`
+	Deposit sdk.Coins      `json:"deposit" yaml:"deposit"`
+	Admin   sdk.AccAddress `json:"admin,omitempty" yaml:"admin"`
+	InitMsg []byte         `json:"init_msg" yaml:"init_msg"`
 }
 
 type executeContractReq struct {
@@ -117,6 +118,7 @@ func instantiateContractHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			Code:      codeID,
 			InitFunds: req.Deposit,
 			InitMsg:   req.InitMsg,
+			Admin:     req.Admin,
 		}
 
 		err = msg.ValidateBasic()

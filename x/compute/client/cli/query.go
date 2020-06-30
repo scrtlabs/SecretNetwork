@@ -9,24 +9,25 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strconv"
+	"strings"
 
+	cosmwasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	flag "github.com/spf13/pflag"
 	"github.com/tendermint/go-amino"
 
 	"github.com/spf13/cobra"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
+	"github.com/enigmampc/cosmos-sdk/client"
+	"github.com/enigmampc/cosmos-sdk/client/context"
+	"github.com/enigmampc/cosmos-sdk/client/flags"
+	"github.com/enigmampc/cosmos-sdk/codec"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	"github.com/enigmampc/cosmos-sdk/x/auth/client/utils"
 
-	wasmTypes "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
-	wasmUtils "github.com/enigmampc/EnigmaBlockchain/x/compute/client/utils"
+	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
 
-	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/keeper"
-	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
@@ -235,7 +236,7 @@ func GetCmdGetContractStateRaw(cdc *codec.Codec) *cobra.Command {
 }
 
 // QueryDecryptTxCmd the default command for a tx query + IO decryption if I'm the tx sender.
-// Coppied from https://github.com/cosmos/cosmos-sdk/blob/v0.38.4/x/auth/client/cli/query.go#L157-L184 and added IO decryption (Could not wrap it because it prints directly to stdout)
+// Coppied from https://github.com/enigmampc/cosmos-sdk/blob/v0.38.4/x/auth/client/cli/query.go#L157-L184 and added IO decryption (Could not wrap it because it prints directly to stdout)
 func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tx [hash]",
@@ -254,15 +255,14 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			}
 
 			var answer struct {
-				Type           string `json:"type"`
-				Input          string `json:"input"`
-				OutputData     string `json:"output_data"`
-				OutputLogs     string `json:"output_log"`
-				OutputMessages string `json:"output_messages"`
-				OutputError    string `json:"output_error"`
+				Type        string                 `json:"type"`
+				Input       json.RawMessage        `json:"input"`
+				OutputData  string                 `json:"output_data"`
+				OutputLogs  []sdk.StringEvent      `json:"output_log"`
+				OutputError cosmwasmTypes.StdError `json:"output_error"`
 			}
 			var encryptedInput []byte
-			var cosmwasmJSONOutputHex string
+			var dataOutputHexB64 string
 
 			txInputs := result.Tx.GetMsgs()
 			if len(txInputs) != 1 {
@@ -277,7 +277,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 				}
 
 				encryptedInput = execTx.Msg
-				cosmwasmJSONOutputHex = result.Data
+				dataOutputHexB64 = result.Data
 			} else if txInput.Type() == "instantiate" {
 				initTx, ok := txInput.(*types.MsgInstantiateContract)
 				if !ok {
@@ -317,63 +317,29 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 				}
 			}
 
-			answer.Input = string(plaintextInput)
+			answer.Input = plaintextInput
 
 			// decrypt data
 			if answer.Type == "execute" {
-				cosmwasmJSONOutput, err := hex.DecodeString(cosmwasmJSONOutputHex)
+				dataOutputB64, err := hex.DecodeString(dataOutputHexB64)
 				if err != nil {
 					return err
 				}
 
-				var cosmwasmOutput wasmTypes.CosmosResponse
-				err = json.Unmarshal(cosmwasmJSONOutput, &cosmwasmOutput)
+				dataOutputCipherBz, err := base64.StdEncoding.DecodeString(string(dataOutputB64))
 				if err != nil {
 					return err
 				}
 
-				if cosmwasmOutput.Ok.Data != "" {
-					dataCiphertext, err := base64.StdEncoding.DecodeString(cosmwasmOutput.Ok.Data)
-					if err != nil {
-						return err
-					}
-					dataPlaintext, err := wasmCtx.Decrypt(dataCiphertext, nonce)
-					if err != nil {
-						return err
-					}
-					answer.OutputData = string(dataPlaintext)
-				}
-
-				for i, msg := range cosmwasmOutput.Ok.Messages {
-					if len(msg.Contract.Msg) > 64 {
-						msgPlaintext, err := wasmCtx.Decrypt(msg.Contract.Msg[64:], nonce)
-						if err != nil {
-							return err
-						}
-						cosmwasmOutput.Ok.Messages[i].Contract.Msg = msgPlaintext
-					}
-				}
-
-				msgs, err := json.Marshal(cosmwasmOutput.Ok.Messages)
+				dataPlaintext, err := wasmCtx.Decrypt(dataOutputCipherBz, nonce)
 				if err != nil {
 					return err
 				}
-				answer.OutputMessages = string(msgs)
-
-				if cosmwasmOutput.Err != "" {
-					errorCiphertext, err := base64.StdEncoding.DecodeString(cosmwasmOutput.Err)
-					if err != nil {
-						return err
-					}
-					errorPlaintext, err := wasmCtx.Decrypt(errorCiphertext, nonce)
-					if err != nil {
-						return err
-					}
-					answer.OutputError = string(errorPlaintext)
-				}
+				answer.OutputData = string(dataPlaintext)
 			}
 
 			// decrypt logs
+			answer.OutputLogs = []sdk.StringEvent{}
 			for _, l := range result.Logs {
 				for _, e := range l.Events {
 					if e.Type == "wasm" {
@@ -408,14 +374,30 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 								e.Attributes[i] = a
 							}
 						}
+						answer.OutputLogs = append(answer.OutputLogs, e)
 					}
 				}
 			}
-			logs, err := json.Marshal(result.Logs)
-			if err != nil {
-				return err
+
+			if strings.Contains(result.RawLog, "wasm contract failed: generic: ") {
+				errorCipherB64 := strings.ReplaceAll(result.RawLog, answer.Type+" wasm contract failed: generic: ", "")
+				errorCipherB64 = strings.ReplaceAll(errorCipherB64, ": failed to execute message; message index: 0", "")
+
+				errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
+				if err != nil {
+					return err
+				}
+
+				errorPlainBz, err := wasmCtx.Decrypt(errorCipherBz, nonce)
+				if err != nil {
+					return err
+				}
+
+				err = json.Unmarshal(errorPlainBz, &answer.OutputError)
+				if err != nil {
+					return err
+				}
 			}
-			answer.OutputLogs = string(logs)
 
 			return cliCtx.PrintOutput(answer)
 		},

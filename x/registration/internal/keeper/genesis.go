@@ -2,9 +2,9 @@ package keeper
 
 import (
 	"encoding/json"
-	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
+	"github.com/enigmampc/cosmos-sdk/codec"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 )
 
 // InitGenesis sets supply information for genesis.

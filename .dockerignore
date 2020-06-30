@@ -12,8 +12,6 @@ third_party/vendor
 
 cosmwasm-js
 
-cosmwasm/lib/incubator-teaclave-sgx-sdk
-
 README.md
 .gitignore
 

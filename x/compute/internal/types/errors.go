@@ -1,7 +1,7 @@
 package types
 
 import (
-	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
+	sdkErrors "github.com/enigmampc/cosmos-sdk/types/errors"
 )
 
 // Codes for wasm contract errors
@@ -31,4 +31,10 @@ var (
 
 	// ErrQueryFailed error for rust smart query contract failure
 	ErrQueryFailed = sdkErrors.Register(DefaultCodespace, 8, "query wasm contract failed")
+
+	// ErrInvalidMsg error when we cannot process the error returned from the contract
+	ErrInvalidMsg = sdkErrors.Register(DefaultCodespace, 9, "invalid CosmosMsg from the contract")
+
+	// ErrMigrationFailed error for rust execution contract failure
+	ErrMigrationFailed = sdkErrors.Register(DefaultCodespace, 10, "migrate wasm contract failed")
 )

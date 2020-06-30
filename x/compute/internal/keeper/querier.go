@@ -5,9 +5,9 @@ import (
 	"sort"
 	"strconv"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmbytes "github.com/tendermint/tendermint/libs/bytes"
@@ -71,6 +71,8 @@ func queryContractInfo(ctx sdk.Context, bech string, req abci.RequestQuery, keep
 	}
 	// redact the Created field (just used for sorting, not part of public API)
 	info.Created = nil
+	info.LastUpdated = nil
+	info.PreviousCodeID = 0
 
 	infoWithAddress := ContractInfoWithAddress{
 		Address:      addr,
@@ -104,7 +106,7 @@ func queryContractListByCode(ctx sdk.Context, codeIDstr string, req abci.Request
 		return false
 	})
 
-	// now we sort them by CreatedAt
+	// now we sort them by AbsoluteTxPosition
 	sort.Slice(contracts, func(i, j int) bool {
 		return contracts[i].ContractInfo.Created.LessThan(contracts[j].ContractInfo.Created)
 	})

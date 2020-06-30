@@ -35,7 +35,7 @@ In mainnet we may also want to offer this service, since it really doesn't cost 
 certificate validation should make sure it can't be abused.
 
 With the available API being a single GET request at `/register` with a required `cert` parameter as a url-encoded base64 string
-of the certificate created by the `enigmad init-enclave` command
+of the certificate created by the `secretd init-enclave` command
 
 Example:
 
@@ -46,15 +46,15 @@ With the expected response being `200` (and the txhash, though this is unused) o
 #### Manual setup
 
 Since we only need one of these per network, the register command that is run by the service is a simple
-call to the `enigmacli`. This means we need some manual setup (to add SCRT to the service, and configure the node):
+call to the `secretcli`. This means we need some manual setup (to add SCRT to the service, and configure the node):
 
-`enigmacli config chain-id <chain-id>`
+`secretcli config chain-id <chain-id>`
 
-`enigmacli config trust-node true`
+`secretcli config trust-node true`
 
-`enigmacli config output json`
+`secretcli config output json`
 
-`enigmacli keys add a --recover`
+`secretcli keys add a --recover`
 
 The RPC address is set by the environment variable `RPC_URL` or defaults to the address of the bootstrap node used in
 internal testnet.

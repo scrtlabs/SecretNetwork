@@ -3,10 +3,10 @@ package keeper
 import (
 	"bytes"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
-	// authexported "github.com/cosmos/cosmos-sdk/x/auth/exported"
-	// "github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	// authexported "github.com/enigmampc/cosmos-sdk/x/auth/exported"
+	// "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 // InitGenesis sets supply information for genesis.
@@ -25,7 +25,7 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 	}
 
 	for _, contract := range data.Contracts {
-		keeper.setContractInfo(ctx, contract.ContractAddress, contract.ContractInfo)
+		keeper.setContractInfo(ctx, contract.ContractAddress, &contract.ContractInfo)
 		keeper.setContractState(ctx, contract.ContractAddress, contract.ContractState)
 	}
 

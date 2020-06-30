@@ -1,10 +1,10 @@
 package keeper
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	eng "github.com/enigmampc/EnigmaBlockchain/types"
-	"github.com/enigmampc/EnigmaBlockchain/x/registration/internal/types"
-	ra "github.com/enigmampc/EnigmaBlockchain/x/registration/remote_attestation"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	eng "github.com/enigmampc/SecretNetwork/types"
+	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
+	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"

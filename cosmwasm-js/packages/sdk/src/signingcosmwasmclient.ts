@@ -257,9 +257,33 @@ export class SigningCosmWasmClient extends CosmWasmClient {
       signatures: [signature],
     };
 
-    const result = await this.postTx(signedTx);
-
     const nonce = Encoding.fromBase64(executeMsg.value.msg).slice(0, 32);
+    let result;
+    try {
+      result = await this.postTx(signedTx);
+    } catch (err) {
+      try {
+        const errorMessageRgx = /wasm contract failed: generic: (.+?): failed to execute message; message index: 0/g;
+
+        const rgxMatches = errorMessageRgx.exec(err.message);
+        if (rgxMatches == null || rgxMatches.length != 2) {
+          throw err;
+        }
+
+        const errorCipherB64 = rgxMatches[1];
+        const errorCipherBz = Encoding.fromBase64(errorCipherB64);
+
+        const errorPlainBz = await this.restClient.enigmautils.decrypt(errorCipherBz, nonce);
+
+        err.message = err.message.replace(errorCipherB64, Encoding.fromUtf8(errorPlainBz));
+      } catch (decryptionError) {
+        throw new Error(
+          `Failed to decrypt the following error message: ${err.message}. Decryption error of the error message: ${decryptionError.message}`,
+        );
+      }
+
+      throw err;
+    }
 
     const data = await this.restClient.decryptDataField(result.data, nonce);
     const logs = await this.restClient.decryptLogs(result.logs, nonce);

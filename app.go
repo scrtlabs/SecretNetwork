@@ -2,35 +2,31 @@ package app
 
 import (
 	"encoding/json"
-	"io"
-	"log"
-	"os"
-	"path/filepath"
-
-	bam "github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/simapp"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/cosmos/cosmos-sdk/version"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	authvesting "github.com/cosmos/cosmos-sdk/x/auth/vesting"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/cosmos/cosmos-sdk/x/crisis"
-	distr "github.com/cosmos/cosmos-sdk/x/distribution"
-	"github.com/cosmos/cosmos-sdk/x/evidence"
-	"github.com/cosmos/cosmos-sdk/x/genutil"
-	"github.com/cosmos/cosmos-sdk/x/gov"
-	"github.com/cosmos/cosmos-sdk/x/mint"
-	"github.com/cosmos/cosmos-sdk/x/params"
-	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
-	"github.com/cosmos/cosmos-sdk/x/slashing"
-	"github.com/cosmos/cosmos-sdk/x/staking"
-	"github.com/cosmos/cosmos-sdk/x/supply"
-	"github.com/cosmos/cosmos-sdk/x/upgrade"
-	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
-	"github.com/enigmampc/EnigmaBlockchain/x/compute"
-	reg "github.com/enigmampc/EnigmaBlockchain/x/registration"
+	"github.com/enigmampc/SecretNetwork/x/compute"
+	reg "github.com/enigmampc/SecretNetwork/x/registration"
+	"github.com/enigmampc/SecretNetwork/x/tokenswap"
+	bam "github.com/enigmampc/cosmos-sdk/baseapp"
+	"github.com/enigmampc/cosmos-sdk/codec"
+	"github.com/enigmampc/cosmos-sdk/simapp"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	"github.com/enigmampc/cosmos-sdk/types/module"
+	"github.com/enigmampc/cosmos-sdk/version"
+	"github.com/enigmampc/cosmos-sdk/x/auth"
+	authvesting "github.com/enigmampc/cosmos-sdk/x/auth/vesting"
+	"github.com/enigmampc/cosmos-sdk/x/bank"
+	"github.com/enigmampc/cosmos-sdk/x/crisis"
+	distr "github.com/enigmampc/cosmos-sdk/x/distribution"
+	"github.com/enigmampc/cosmos-sdk/x/evidence"
+	"github.com/enigmampc/cosmos-sdk/x/genutil"
+	"github.com/enigmampc/cosmos-sdk/x/gov"
+	"github.com/enigmampc/cosmos-sdk/x/mint"
+	"github.com/enigmampc/cosmos-sdk/x/params"
+	paramsclient "github.com/enigmampc/cosmos-sdk/x/params/client"
+	"github.com/enigmampc/cosmos-sdk/x/slashing"
+	"github.com/enigmampc/cosmos-sdk/x/staking"
+	"github.com/enigmampc/cosmos-sdk/x/supply"
+	"github.com/enigmampc/cosmos-sdk/x/upgrade"
+	upgradeclient "github.com/enigmampc/cosmos-sdk/x/upgrade/client"
 	"github.com/spf13/viper"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/cli"
@@ -38,16 +34,20 @@ import (
 	tmos "github.com/tendermint/tendermint/libs/os"
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
+	"io"
+	"log"
+	"os"
+	"path/filepath"
 )
 
-const appName = "enigma"
+const appName = "secret"
 
 var (
 	// DefaultCLIHome default home directories for the application CLI
-	DefaultCLIHome = os.ExpandEnv("$HOME/.enigmacli")
+	DefaultCLIHome = os.ExpandEnv("$HOME/.secretcli")
 
 	// DefaultNodeHome sets the folder where the applcation data and configuration will be stored
-	DefaultNodeHome = os.ExpandEnv("$HOME/.enigmad")
+	DefaultNodeHome = os.ExpandEnv("$HOME/.secretd")
 
 	// ModuleBasics The module BasicManager is in charge of setting up basic,
 	// non-dependant module elements, such as codec registration
@@ -68,6 +68,7 @@ var (
 		supply.AppModuleBasic{},
 		upgrade.AppModuleBasic{},
 		evidence.AppModuleBasic{},
+		tokenswap.AppModuleBasic{},
 	)
 
 	// module account permissions
@@ -78,6 +79,7 @@ var (
 		staking.BondedPoolName:    {supply.Burner, supply.Staking},
 		staking.NotBondedPoolName: {supply.Burner, supply.Staking},
 		gov.ModuleName:            {supply.Burner},
+		tokenswap.ModuleName:      {supply.Minter},
 	}
 )
 
@@ -96,10 +98,10 @@ func MakeCodec() *codec.Codec {
 }
 
 // Verify app interface at compile time
-var _ simapp.App = (*EnigmaChainApp)(nil)
+var _ simapp.App = (*SecretNetworkApp)(nil)
 
-// EnigmaChainApp extended ABCI application
-type EnigmaChainApp struct {
+// SecretNetworkApp extended ABCI application
+type SecretNetworkApp struct {
 	*bam.BaseApp
 	cdc *codec.Codec
 
@@ -122,6 +124,7 @@ type EnigmaChainApp struct {
 	paramsKeeper   params.Keeper
 	upgradeKeeper  upgrade.Keeper
 	evidenceKeeper evidence.Keeper
+	tokenSwapKeeper tokenswap.SwapKeeper
 	computeKeeper  compute.Keeper
 	regKeeper      reg.Keeper
 	// the module manager
@@ -137,8 +140,8 @@ type WasmWrapper struct {
 	Wasm compute.WasmConfig `mapstructure:"wasm"`
 }
 
-// NewEnigmaChainApp is a constructor function for enigmaChainApp
-func NewEnigmaChainApp(
+// NewSecretNetworkApp is a constructor function for enigmaChainApp
+func NewSecretNetworkApp(
 	logger tmlog.Logger,
 	db dbm.DB,
 	traceStore io.Writer,
@@ -147,7 +150,7 @@ func NewEnigmaChainApp(
 	invCheckPeriod uint,
 	skipUpgradeHeights map[int64]bool,
 	baseAppOptions ...func(*bam.BaseApp),
-) *EnigmaChainApp {
+) *SecretNetworkApp {
 
 	// First define the top level codec that will be shared by the different modules
 	cdc := MakeCodec()
@@ -169,12 +172,13 @@ func NewEnigmaChainApp(
 		evidence.StoreKey,
 		compute.StoreKey,
 		reg.StoreKey,
+		tokenswap.StoreKey,
 	)
 
 	tKeys := sdk.NewTransientStoreKeys(staking.TStoreKey, params.TStoreKey)
 
 	// Initialize our application with the store keys it requires
-	app := &EnigmaChainApp{
+	app := &SecretNetworkApp{
 		BaseApp:        bApp,
 		cdc:            cdc,
 		invCheckPeriod: invCheckPeriod,
@@ -194,7 +198,7 @@ func NewEnigmaChainApp(
 	govSubspace := app.paramsKeeper.Subspace(gov.DefaultParamspace).WithKeyTable(gov.ParamKeyTable())
 	crisisSubspace := app.paramsKeeper.Subspace(crisis.DefaultParamspace)
 	evidenceSubspace := app.paramsKeeper.Subspace(evidence.DefaultParamspace)
-
+	tokenswapSubspace := app.paramsKeeper.Subspace(tokenswap.DefaultParamspace)
 	// The AccountKeeper handles address -> account lookups
 	app.accountKeeper = auth.NewAccountKeeper(
 		app.cdc,
@@ -271,6 +275,7 @@ func NewEnigmaChainApp(
 	// better way to get this dir???
 	homeDir := viper.GetString(cli.HomeFlag)
 	computeDir := filepath.Join(homeDir, ".compute")
+	app.tokenSwapKeeper = tokenswap.NewKeeper(app.cdc, keys[tokenswap.StoreKey], tokenswapSubspace, app.supplyKeeper)
 
 	wasmWrap := WasmWrapper{Wasm: compute.DefaultWasmConfig()}
 	err := viper.Unmarshal(&wasmWrap)
@@ -279,9 +284,14 @@ func NewEnigmaChainApp(
 	}
 	wasmConfig := wasmWrap.Wasm
 
+	supportedFeatures := ""
 	// replace with bootstrap flag when we figure out how to test properly and everything works
 	app.regKeeper = reg.NewKeeper(app.cdc, keys[reg.StoreKey], regRouter, reg.EnclaveApi{}, homeDir, app.bootstrap)
-	app.computeKeeper = compute.NewKeeper(app.cdc, keys[compute.StoreKey], app.accountKeeper, app.bankKeeper, computeRouter, computeDir, wasmConfig)
+	app.computeKeeper = compute.NewKeeper(
+		app.cdc,
+		keys[compute.StoreKey],
+		app.accountKeeper,
+		app.bankKeeper, app.stakingKeeper, computeRouter, computeDir, wasmConfig, supportedFeatures, nil, nil)
 	// register the proposal types
 	govRouter := gov.NewRouter()
 	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler).
@@ -318,6 +328,7 @@ func NewEnigmaChainApp(
 		evidence.NewAppModule(app.evidenceKeeper),
 		compute.NewAppModule(app.computeKeeper),
 		reg.NewAppModule(app.regKeeper),
+		tokenswap.NewAppModule(app.tokenSwapKeeper, app.supplyKeeper, app.accountKeeper),
 	)
 	// During begin block slashing happens after distr.BeginBlocker so that
 	// there is nothing left over in the validator fee pool, so as to keep the
@@ -342,6 +353,7 @@ func NewEnigmaChainApp(
 		evidence.ModuleName,
 		compute.ModuleName,
 		reg.ModuleName,
+		tokenswap.ModuleName,
 		genutil.ModuleName,
 	)
 
@@ -393,15 +405,15 @@ func NewEnigmaChainApp(
 }
 
 // Name returns the name of the App
-func (app *EnigmaChainApp) Name() string { return app.BaseApp.Name() }
+func (app *SecretNetworkApp) Name() string { return app.BaseApp.Name() }
 
 // BeginBlocker application updates every begin block
-func (app *EnigmaChainApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
+func (app *SecretNetworkApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
 	return app.mm.BeginBlock(ctx, req)
 }
 
 // EndBlocker application updates every end block
-func (app *EnigmaChainApp) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
+func (app *SecretNetworkApp) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
 	return app.mm.EndBlock(ctx, req)
 }
 
@@ -411,7 +423,7 @@ func NewDefaultGenesisState() simapp.GenesisState {
 }
 
 // InitChainer application update at chain initialization
-func (app *EnigmaChainApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
+func (app *SecretNetworkApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
 	var genesisState simapp.GenesisState
 	app.cdc.MustUnmarshalJSON(req.AppStateBytes, &genesisState)
 
@@ -421,12 +433,12 @@ func (app *EnigmaChainApp) InitChainer(ctx sdk.Context, req abci.RequestInitChai
 }
 
 // LoadHeight loads a particular height
-func (app *EnigmaChainApp) LoadHeight(height int64) error {
+func (app *SecretNetworkApp) LoadHeight(height int64) error {
 	return app.LoadVersion(height, app.keys[bam.MainStoreKey])
 }
 
 // ModuleAccountAddrs returns all the app's module account addresses.
-func (app *EnigmaChainApp) ModuleAccountAddrs() map[string]bool {
+func (app *SecretNetworkApp) ModuleAccountAddrs() map[string]bool {
 	modAccAddrs := make(map[string]bool)
 	for acc := range maccPerms {
 		modAccAddrs[supply.NewModuleAddress(acc).String()] = true
@@ -436,12 +448,12 @@ func (app *EnigmaChainApp) ModuleAccountAddrs() map[string]bool {
 }
 
 // Codec returns the application's sealed codec.
-func (app *EnigmaChainApp) Codec() *codec.Codec {
+func (app *SecretNetworkApp) Codec() *codec.Codec {
 	return app.cdc
 }
 
 // SimulationManager implements the SimulationApp interface
-func (app *EnigmaChainApp) SimulationManager() *module.SimulationManager {
+func (app *SecretNetworkApp) SimulationManager() *module.SimulationManager {
 	return app.sm
 }
 
@@ -454,7 +466,7 @@ func GetMaccPerms() map[string][]string {
 	return modAccPerms
 }
 
-func (app *EnigmaChainApp) ExportAppStateAndValidators(forZeroHeight bool, jailWhiteList []string,
+func (app *SecretNetworkApp) ExportAppStateAndValidators(forZeroHeight bool, jailWhiteList []string,
 ) (appState json.RawMessage, validators []tmtypes.GenesisValidator, err error) {
 	// as if they could withdraw from the start of the next block
 	ctx := app.NewContext(true, abci.Header{Height: app.LastBlockHeight()})
@@ -478,7 +490,7 @@ func (app *EnigmaChainApp) ExportAppStateAndValidators(forZeroHeight bool, jailW
 // prepare for fresh start at zero height
 // NOTE zero height genesis is a temporary feature which will be deprecated
 //      in favour of export at a block height
-func (app *EnigmaChainApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []string) {
+func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []string) {
 	applyWhiteList := false
 
 	//Check if there is a whitelist

@@ -1,11 +1,10 @@
 [package]
-name = "cw-mask"
-version = "0.1.0"
-authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
+name = "test-contract"
+version = "0.0.1"
+authors = ["Enigma <info@enigma.co>"]
 edition = "2018"
-description = "A Mask for CosmWasm - allows you to reflect arbitrary messages with the contract's address"
-license = "Apache-2.0"
-
+description = "A Test contract intended to use in system tests for the Secret Netowrk"
+license = "MIT"
 exclude = [
   # Those files are cosmwasm-opt artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
   "contract.wasm",
@@ -13,7 +12,6 @@ exclude = [
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -29,20 +27,19 @@ incremental = false
 overflow-checks = true
 
 [features]
-default = ["cranelift"]
-# for quicker tests, cargo test --lib
-# for more explicit tests, cargo test --features=backtraces
-backtraces = ["cosmwasm/backtraces", "cosmwasm-vm/backtraces"]
-cranelift = ["cosmwasm-vm/default-cranelift"]
-singlepass = ["cosmwasm-vm/default-singlepass"]
+default = ["backtraces"]
+backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-cosmwasm = { version = "0.7.0" }
-cw-storage = "0.2.0"
-schemars = "=0.5"
-serde = { version = "=1.0.103", default-features = false, features = ["derive"] }
-snafu = { version = "=0.5.0", default-features = false, features = ["rust_1_30"] }
+cosmwasm-std = { path = "../../../../../../cosmwasm/packages/std" }
+cosmwasm-storage = { path = "../../../../../../cosmwasm/packages/storage" }
+serde-json-wasm = { version = "0.2.1" }
+schemars = "0.7"
+serde = { version = "1.0.103", default-features = false, features = [
+  "derive",
+  "alloc"
+] }
 
 [dev-dependencies]
-cosmwasm-vm = { version = "0.7.0", default-features = false }
+cosmwasm-vm = { package = "cosmwasm-sgx-vm", path = "../../../../../../cosmwasm/packages/sgx-vm", default-features = false }
 serde_json = "1.0"

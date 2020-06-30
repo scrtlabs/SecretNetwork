@@ -9,3 +9,10 @@ libgo_cosmwasm*
 *.h
 *.c
 lib/
+
+# no static binaries (35MB+)
+libgo*.a
+# artifacts from compile tests
+muslc.exe
+tmp
+a.out

@@ -1,2 +1,7 @@
 all:
-	docker run --rm -v $(shell pwd):/code --mount type=volume,source=$(shell basename $(shell pwd))_cache,target=/code/target --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry confio/cosmwasm-opt:0.7.2
+	RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+	wasm-opt -Os ./target/wasm32-unknown-unknown/release/test_contract.wasm -o ./contract.wasm
+
+clean:
+	cargo clean
+	-rm -f ./contract.wasm
