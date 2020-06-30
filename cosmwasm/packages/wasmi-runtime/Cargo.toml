@@ -30,19 +30,20 @@ sgx_trts = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.g
 sgx_tseal = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tcrypto = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 aes-siv = { version = "0.2.0" }
-
 enclave-ffi-types = { path = "../enclave-ffi-types" }
 pwasm-utils = { version = "0.12.0", default-features = false }
 parity-wasm = { version = "0.41.0", default-features = false }
 wasmi = { git = "https://github.com/paritytech/wasmi", rev = "39a18a433a765a36383d34d4edd536ba1e0664d2", default-features = false, features = [
     "core"
 ] }
-serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = ["derive"] }
+serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
+    "derive"
+] }
 serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
 base64 = { version = "0.10", git = "https://github.com/mesalock-linux/rust-base64-sgx" }
 log = { version = "0.4.8" }
 ctor = "0.1.13"
-bech32 = "0.7"
+bech32 = "0.7.2"
 derive_more = "0.99"
 sha2 = "0.8.1"
 ring = { git = "https://github.com/mesalock-linux/ring-sgx", tag = "v0.16.5" }
@@ -57,11 +58,14 @@ base58 = { rev = "sgx_1.1.2", package = "rust-base58", git = "https://github.com
     "mesalock_sgx"
 ] }
 lazy_static = "1.4"
-
-x25519-dalek = { version = "0.6", default-features = false, features = ["u64_backend"]}
+x25519-dalek = { version = "0.6", default-features = false, features = [
+    "u64_backend"
+] }
 
 [patch.crates-io]
-rand_core = { git = "https://github.com/mesalock-linux/rand-sgx", default-features = false, features = ["mesalock_sgx"] }
+rand_core = { git = "https://github.com/mesalock-linux/rand-sgx", default-features = false, features = [
+    "mesalock_sgx"
+] }
 
 [dependencies.webpki]
 git = "https://github.com/mesalock-linux/webpki"
