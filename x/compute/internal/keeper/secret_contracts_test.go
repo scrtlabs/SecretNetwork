@@ -679,7 +679,7 @@ func TestQueryNotEncryptedInputError(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"state":{}}`, 0)
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
 	require.Empty(t, initErr)
 
 	_, err := keeper.QuerySmart(ctx, contractAddress, []byte(`{"owner":{}}`))
@@ -850,4 +850,32 @@ func TestInitCallbackBadParam(t *testing.T) {
 	require.Error(t, initErr.ParseErr)
 	require.Equal(t, initErr.ParseErr.Target, "test_contract::contract::InitMsg")
 	require.Contains(t, initErr.ParseErr.Msg, "unknown variant `callback_contract_bad_param`")
+}
+
+func TestState(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	// init first
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0)
+	require.Empty(t, initErr)
+	require.Equal(t, 1, len(initEvents))
+
+	data, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, `{"get_state":{"key":"banana"}}`, 1)
+	require.Empty(t, execErr)
+	require.Empty(t, data)
+
+	_, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, `{"set_state":{"key":"banana","value":"🍌"}}`, 1)
+	require.Empty(t, execErr)
+
+	data, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, `{"get_state":{"key":"banana"}}`, 1)
+	require.Empty(t, execErr)
+	require.Equal(t, "🍌", string(data))
+
+	_, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, `{"remove_state":{"key":"banana"}}`, 1)
+	require.Empty(t, execErr)
+
+	data, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, `{"get_state":{"key":"banana"}}`, 1)
+	require.Empty(t, execErr)
+	require.Empty(t, data)
 }
