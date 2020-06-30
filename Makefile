@@ -80,7 +80,9 @@ ldflags += -s -w
 ldflags += $(LDFLAGS)
 ldflags := $(strip $(ldflags))
 
-BUILD_FLAGS := -tags "$(build_tags)" -ldflags '$(ldflags)'
+GO_TAGS := $(build_tags)
+# -ldflags
+LD_FLAGS := $(ldflags)
 
 all: build_all
 
@@ -92,23 +94,23 @@ go.sum: go.mod
 	GO111MODULE=on go mod verify
 
 xgo_build_secretd: go.sum
-	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/SecretNetwork/cmd/secretd
+	xgo --go latest --targets $(XGO_TARGET) -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' github.com/enigmampc/SecretNetwork/cmd/secretd
 
 xgo_build_secretcli: go.sum
-	xgo --go latest --targets $(XGO_TARGET) -tags secretcli $(BUILD_FLAGS) github.com/enigmampc/SecretNetwork/cmd/secretcli
+	xgo --go latest --targets $(XGO_TARGET) -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' github.com/enigmampc/SecretNetwork/cmd/secretcli
 
 build_local_no_rust:
-	go build -mod=readonly -tags secretcli $(BUILD_FLAGS) ./cmd/secretcli
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
+	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
 #   this pulls out ELF symbols, 80% size reduction!
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretd
+	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 build-linux: vendor
 	BUILD_PROFILE=$(BUILD_PROFILE) $(MAKE) -C go-cosmwasm build-rust
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
 #   this pulls out ELF symbols, 80% size reduction!
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretd
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretcli
+	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
+	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
 
 build_windows:
 	# CLI only 
