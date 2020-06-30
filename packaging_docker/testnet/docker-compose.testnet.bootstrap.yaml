@@ -11,7 +11,7 @@ services:
     tty: true
 
   bootstrap:
-    image: cashmaney/secret-network-bootstrap:testnet
+    image: enigmampc/secret-network-bootstrap:testnet
     container_name: bootstrap
     devices:
       - /dev/sgx
