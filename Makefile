@@ -80,7 +80,9 @@ ldflags += -s -w
 ldflags += $(LDFLAGS)
 ldflags := $(strip $(ldflags))
 
-BUILD_FLAGS := -tags "$(build_tags)" -ldflags '$(ldflags)'
+GO_TAGS := $(build_tags)
+# -ldflags
+LD_FLAGS := $(ldflags)
 
 all: build_all
 
@@ -92,23 +94,23 @@ go.sum: go.mod
 	GO111MODULE=on go mod verify
 
 xgo_build_secretd: go.sum
-	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/SecretNetwork/cmd/secretd
+	xgo --go latest --targets $(XGO_TARGET) -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' github.com/enigmampc/SecretNetwork/cmd/secretd
 
 xgo_build_secretcli: go.sum
-	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/SecretNetwork/cmd/secretcli
+	xgo --go latest --targets $(XGO_TARGET) -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' github.com/enigmampc/SecretNetwork/cmd/secretcli
 
 build_local_no_rust:
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
+	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
 #   this pulls out ELF symbols, 80% size reduction!
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretd
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretcli
+	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 build-linux: vendor
 	BUILD_PROFILE=$(BUILD_PROFILE) $(MAKE) -C go-cosmwasm build-rust
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
 #   this pulls out ELF symbols, 80% size reduction!
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretd
-	go build -mod=readonly $(BUILD_FLAGS) ./cmd/secretcli
+	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
+	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
 
 build_windows:
 	# CLI only 
@@ -188,19 +190,19 @@ clean:
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
 # docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t cashmaney/secret-network-node:azuretestnet .
 build-azure:
-	docker build -f Dockerfile.azure -t cashmaney/secret-network-node:azuretestnet .
+	docker build -f Dockerfile.azure -t enigmampc/secret-network-node:azuretestnet .
 
 build-testnet:
-	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f Dockerfile.testnet -t cashmaney/secret-network-bootstrap:testnet  .
-	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t cashmaney/secret-network-node:testnet .
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f Dockerfile.testnet -t enigmampc/secret-network-bootstrap:testnet  .
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t enigmampc/secret-network-node:testnet .
 
 docker_bootstrap:
-	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t cashmaney/secret-network-bootstrap-${ext}:${DOCKER_TAG} .
+	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t enigmampc/secret-network-bootstrap-${ext}:${DOCKER_TAG} .
 
 docker_node:
 	docker build --build-arg SECRET_NODE_TYPE=NODE -t enigmampc/secret_node .
 
-	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=NODE -t cashmaney/secret-network-node-${ext}:${DOCKER_TAG} .
+	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=NODE -t enigmampc/secret-network-node-${ext}:${DOCKER_TAG} .
 # while developing:
 build-enclave:
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime
