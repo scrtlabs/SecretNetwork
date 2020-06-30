@@ -18,6 +18,19 @@ else
 $(error SGX_MODE must be either HW or SW)
 endif
 
+SGX_MODE ?= HW
+BRANCH ?= develop
+DEBUG ?= 0
+DOCKER_TAG ?= latest
+
+ifeq ($(SGX_MODE), HW)
+	ext := hw
+else ifeq ($(SGX_MODE), SW)
+	ext := sw
+else
+$(error SGX_MODE must be either HW or SW)
+endif
+
 build_tags = netgo
 ifeq ($(LEDGER_ENABLED),true)
   ifeq ($(OS),Windows_NT)
