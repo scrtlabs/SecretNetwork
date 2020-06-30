@@ -2,9 +2,9 @@ use cosmwasm_storage::PrefixedStorage;
 
 use cosmwasm_std::{
     generic_err, invalid_base64, invalid_utf8, log, not_found, null_pointer, parse_err,
-    serialize_err, to_binary, unauthorized, underflow, Api, Binary, CosmosMsg, Env, Extern,
-    HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse, Querier,
-    QueryResult, StdError, StdResult, Storage, WasmMsg,
+    serialize_err, to_binary, unauthorized, underflow, Api, Binary, CanonicalAddr, CosmosMsg, Env,
+    Extern, HandleResponse, HandleResult, HumanAddr, HumanAddr, InitResponse, InitResult,
+    MigrateResponse, Querier, QueryResult, ReadonlyStorage, StdError, StdResult, Storage, WasmMsg,
 };
 
 use crate::state::config_read;
@@ -370,6 +370,49 @@ fn exec_with_callback_contract_error(contract_addr: HumanAddr) -> HandleResponse
         log: vec![log("exec with a callback with contract error", "🤷‍♂️")],
         data: None,
     }
+}
+
+fn get_state<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    key: String,
+) -> HandleResponse {
+    let store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
+
+    match store.get(key.as_bytes()) {
+        Some(value) => HandleResponse {
+            data: Some(Binary(value)),
+            log: vec![],
+            messages: vec![],
+        },
+        None => HandleResponse::default(),
+    }
+}
+
+fn set_state<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    key: String,
+    value: String,
+) -> HandleResponse {
+    let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
+    store.set(key.as_bytes(), value.as_bytes());
+    HandleResponse::default()
+}
+
+fn remove_state<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    key: String,
+) -> HandleResponse {
+    let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
+    store.remove(key.as_bytes());
+    HandleResponse::default()
+}
+
+fn test_humanize_address<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+) -> HandleResponse {
+    deps.api.human_address(CanonicalAddr::from(&[1, 2]));
+
+    HandleResponse::default()
 }
 
 /////////////////////////////// Query ///////////////////////////////
