@@ -7,6 +7,8 @@ Enclave_u.h
 Enclave_u.o
 /secretcli*
 /secretd*
+/enigmacli*
+/enigmad*
 incubator-teaclave-sgx-sdk
 libenclave.a
 libEnclave_u.a
