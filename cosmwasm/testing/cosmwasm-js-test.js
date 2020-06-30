@@ -68,7 +68,7 @@ const assert = require("assert").strict;
     },
     {
       key: "sender",
-      value: "secret19hkhy46ute3g4xfr0vtcn9g6rp9824w29ut54k",
+      value: "secret18rxhudxdx6wen48rtnrf4jv5frf47qa9ws2ju3",
     },
     {
       key: "recipient",
@@ -83,7 +83,7 @@ const assert = require("assert").strict;
   assert.equal(+qRes.balance, initBalance + 10);
 
   const qRes2 = await client.queryContractSmart(contract, {
-    balance: { address: "secret19hkhy46ute3g4xfr0vtcn9g6rp9824w29ut54k" },
+    balance: { address: "secret18rxhudxdx6wen48rtnrf4jv5frf47qa9ws2ju3" },
   });
 
   try {

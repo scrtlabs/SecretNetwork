@@ -46,10 +46,10 @@ function prehash(bytes: Uint8Array, type: PrehashType): Uint8Array {
  * The Cosmoshub derivation path in the form `m/44'/118'/0'/0/a`
  * with 0-based account index `a`.
  */
-export function makeCosmoshubPath(a: number): readonly Slip10RawIndex[] {
+export function makeSecretNetworkPath(a: number): readonly Slip10RawIndex[] {
   return [
     Slip10RawIndex.hardened(44),
-    Slip10RawIndex.hardened(118),
+    Slip10RawIndex.hardened(529),
     Slip10RawIndex.hardened(0),
     Slip10RawIndex.normal(0),
     Slip10RawIndex.normal(a),
@@ -59,7 +59,7 @@ export function makeCosmoshubPath(a: number): readonly Slip10RawIndex[] {
 export class Secp256k1Pen implements Pen {
   public static async fromMnemonic(
     mnemonic: string,
-    hdPath: readonly Slip10RawIndex[] = makeCosmoshubPath(0),
+    hdPath: readonly Slip10RawIndex[] = makeSecretNetworkPath(0),
   ): Promise<Secp256k1Pen> {
     const seed = await Bip39.mnemonicToSeed(new EnglishMnemonic(mnemonic));
     const { privkey } = Slip10.derivePath(Slip10Curve.Secp256k1, seed, hdPath);

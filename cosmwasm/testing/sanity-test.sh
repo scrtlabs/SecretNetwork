@@ -107,7 +107,7 @@ wait_for_tx "$TRANSFER_TX_HASH" "Waiting for transfer to finish on-chain..."
 ./secretcli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\"}}" |
     jq -e '.balance == "63"'
 
-sleep infinity
+# sleep infinity
 
 (
     cd ./cosmwasm-js
