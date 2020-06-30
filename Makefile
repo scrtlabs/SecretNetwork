@@ -95,7 +95,7 @@ xgo_build_secretd: go.sum
 	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/SecretNetwork/cmd/secretd
 
 xgo_build_secretcli: go.sum
-	xgo --go latest --targets $(XGO_TARGET) $(BUILD_FLAGS) github.com/enigmampc/SecretNetwork/cmd/secretcli
+	xgo --go latest --targets $(XGO_TARGET) -tags secretcli $(BUILD_FLAGS) github.com/enigmampc/SecretNetwork/cmd/secretcli
 
 build_local_no_rust:
 	go build -mod=readonly -tags secretcli $(BUILD_FLAGS) ./cmd/secretcli
