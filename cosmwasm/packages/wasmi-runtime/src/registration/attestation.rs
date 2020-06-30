@@ -148,6 +148,44 @@ pub fn create_attestation_certificate(
     Ok((key_der, cert_der))
 }
 
+#[cfg(feature = "SGX_MODE_HW")]
+pub fn get_mr_enclave() -> Result<[u8; 32], sgx_status_t> {
+    let mut ti: sgx_target_info_t = sgx_target_info_t::default();
+    let mut eg: sgx_epid_group_id_t = sgx_epid_group_id_t::default();
+    let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+
+    let res = unsafe {
+        ocall_sgx_init_quote(
+            &mut rt as *mut sgx_status_t,
+            &mut ti as *mut sgx_target_info_t,
+            &mut eg as *mut sgx_epid_group_id_t,
+        )
+    };
+
+    if res != sgx_status_t::SGX_SUCCESS {
+        return Err(res);
+    }
+    if rt != sgx_status_t::SGX_SUCCESS {
+        return Err(rt);
+    }
+
+    // placeholder report
+    let report_data: sgx_report_data_t = sgx_report_data_t::default();
+
+    let rep = match rsgx_create_report(&ti, &report_data) {
+        Ok(r) => {
+            info!("Report creation => success {:?}", r.body.mr_enclave.m);
+            r.body.mr_enclave.m
+        }
+        Err(e) => {
+            info!("Report creation => failed {:?}", e);
+            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        }
+    };
+
+    Ok(rep)
+}
+
 //input: pub_k: &sgx_ec256_public_t, todo: make this the pubkey of the node
 #[cfg(feature = "SGX_MODE_HW")]
 #[allow(const_err)]

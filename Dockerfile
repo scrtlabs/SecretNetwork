@@ -1,7 +1,7 @@
 # Simple usage with a mounted data directory:
 # > docker build -t enigma .
-# > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.enigmad:/root/.enigmad -v ~/.enigmacli:/root/.enigmacli enigma enigmad init
-# > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.enigmad:/root/.enigmad -v ~/.enigmacli:/root/.enigmacli enigma enigmad start
+# > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli enigma secretd init
+# > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli enigma secretd start
 FROM baiduxlab/sgx-rust:1804-1.1.2 AS build-env-rust-go
 
 ENV PATH="/root/.cargo/bin:$PATH"
@@ -14,7 +14,7 @@ RUN curl -O https://dl.google.com/go/go1.14.2.linux-amd64.tar.gz
 RUN tar -C /usr/local -xzf go1.14.2.linux-amd64.tar.gz
 # Set working directory for the build
 
-WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/
+WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 
 ARG SGX_MODE=SW
 ENV SGX_MODE=${SGX_MODE}
@@ -26,18 +26,18 @@ COPY third_party/build third_party/build
 COPY go-cosmwasm/ go-cosmwasm/
 COPY cosmwasm/ cosmwasm/
 
-WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/
+WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 
 COPY Makefile Makefile
 
 # RUN make clean
 RUN make vendor
 
-WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain/go-cosmwasm
+WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
 RUN . /opt/sgxsdk/environment && env && SGX_MODE=${SGX_MODE} make build-rust
 
 # Set working directory for the build
-WORKDIR /go/src/github.com/enigmampc/EnigmaBlockchain
+WORKDIR /go/src/github.com/enigmampc/SecretNetwork
 
 # Add source files
 COPY go-cosmwasm go-cosmwasm
@@ -53,7 +53,7 @@ COPY go.sum .
 COPY cmd cmd
 COPY Makefile .
 
-# COPY /go/src/github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/libgo_cosmwasm.so go-cosmwasm/api
+# COPY /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/libgo_cosmwasm.so go-cosmwasm/api
 
 RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD SGX_MODE=${SGX_MODE} make build_local_no_rust
 
@@ -65,7 +65,8 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     #### Base utilities ####
     jq \
-    wget && \
+    wget \
+    curl && \
     rm -rf /var/lib/apt/lists/*
 
 
@@ -85,37 +86,37 @@ RUN cp /opt/sgxsdk/lib64/libsgx_uae_service_sim.so /usr/lib/libsgx_uae_service_s
 WORKDIR /root
 
 # Copy over binaries from the build-env
-COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/target/release/libgo_cosmwasm.so /usr/lib/
-COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/
-COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/enigmad /usr/bin/enigmad
-COPY --from=build-env-rust-go /go/src/github.com/enigmampc/EnigmaBlockchain/enigmacli /usr/bin/enigmacli
+COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /usr/lib/
+COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/
+COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretd /usr/bin/secretd
+COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretcli /usr/bin/secretcli
 
 COPY ./x/compute/internal/keeper/testdata/erc20.wasm erc20.wasm
 
 # COPY ./packaging_docker/devnet_init.sh .
-COPY ./packaging_docker/wasmi-sgx-test.sh .
-COPY ./packaging_docker/bootstrap_init.sh .
-COPY ./packaging_docker/node_init.sh .
-COPY ./packaging_docker/startup.sh .
+COPY packaging_docker/ci/wasmi-sgx-test.sh .
+COPY packaging_docker/ci/bootstrap_init.sh .
+COPY packaging_docker/ci/node_init.sh .
+COPY packaging_docker/ci/startup.sh .
+COPY packaging_docker/ci/node_key.json .
 
-RUN chmod +x /usr/bin/enigmad
-RUN chmod +x /usr/bin/enigmacli
+RUN chmod +x /usr/bin/secretd
+RUN chmod +x /usr/bin/secretcli
 RUN chmod +x wasmi-sgx-test.sh
 RUN chmod +x bootstrap_init.sh
 RUN chmod +x startup.sh
 RUN chmod +x node_init.sh
 
 
-RUN mkdir -p /root/.enigmad/.compute/
+RUN mkdir -p /root/.secretd/.compute/
 RUN mkdir -p /root/.sgx_secrets/
-RUN mkdir -p /root/.enigmad/.node/
-# COPY ./packaging_docker/seed.json /root/.enigmad/.compute/seed.json
+RUN mkdir -p /root/.secretd/.node/
+# COPY ./packaging_docker/seed.json /root/.secretd/.compute/seed.json
 
-COPY ./packaging_docker/node_key.json .
 COPY api_key.txt /root/
 COPY spid.txt /root/
 
 #ENV LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/:/opt/sgxsdk/lib64/
 
-# Run enigmad by default, omit entrypoint to ease using container with enigmacli
+# Run secretd by default, omit entrypoint to ease using container with secretcli
 ENTRYPOINT ["/bin/bash", "startup.sh"]

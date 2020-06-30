@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"syscall"
 
-	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
+	"github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 )
 
 // nice aliases to the rust names

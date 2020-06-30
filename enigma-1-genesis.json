@@ -52,7 +52,7 @@
         {
           "type": "cosmos-sdk/Account",
           "value": {
-            "address": "enigma1nsf2zmhe3ktn5fqtrpffnktc4g7uag052zn3pz",
+            "address": "secret1nsf2zmhe3ktn5fqtrpffnktc4g7uag052zn3pz",
             "coins": [
               {
                 "denom": "uscrt",
@@ -67,7 +67,7 @@
         {
           "type": "cosmos-sdk/Account",
           "value": {
-            "address": "enigma12kk7yhcn2xqeegwa7luwqdvem22uy4fd6ckdmy",
+            "address": "secret12kk7yhcn2xqeegwa7luwqdvem22uy4fd6ckdmy",
             "coins": [
               {
                 "denom": "uscrt",
@@ -82,7 +82,7 @@
         {
           "type": "cosmos-sdk/Account",
           "value": {
-            "address": "enigma1mp97ajv30nrd3zmzmuyu926y4dkkh0xn0fnclg",
+            "address": "secret1mp97ajv30nrd3zmzmuyu926y4dkkh0xn0fnclg",
             "coins": [
               {
                 "denom": "uscrt",

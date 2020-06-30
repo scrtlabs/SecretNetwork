@@ -3,12 +3,10 @@
 use bit_vec::BitVec;
 use chrono::Utc as TzUtc;
 use chrono::{Duration, TimeZone};
-#[cfg(feature = "SGX_MODE_HW")]
-use itertools::Itertools;
+
 #[cfg(feature = "SGX_MODE_HW")]
 use log::*;
 use num_bigint::BigUint;
-
 use sgx_tcrypto::SgxEccHandle;
 use sgx_types::{
     sgx_ec256_private_t, sgx_ec256_public_t, sgx_platform_info_t, sgx_status_t,
@@ -20,9 +18,13 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use std::untrusted::time::SystemTimeEx;
 use yasna::models::ObjectIdentifier;
 
-use crate::consts::CERTEXPIRYDAYS;
 #[cfg(feature = "SGX_MODE_HW")]
-use crate::consts::{SigningMethod, SIGNING_METHOD};
+use super::attestation::get_mr_enclave;
+
+use crate::consts::CERTEXPIRYDAYS;
+
+#[cfg(feature = "SGX_MODE_HW")]
+use crate::consts::{SigningMethod, MRSIGNER, SIGNING_METHOD};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use super::report::{AttestationReport, SgxQuoteStatus};
@@ -38,9 +40,6 @@ extern "C" {
 }
 
 pub const IAS_REPORT_CA: &[u8] = include_bytes!("../../Intel_SGX_Attestation_RootCA.pem");
-
-// todo: replace this with MRSIGNER/MRENCLAVE
-pub const ENCLAVE_SIGNATURE: &[u8] = include_bytes!("../../Intel_SGX_Attestation_RootCA.pem");
 
 const ISSUER: &str = "SecretTEE";
 const SUBJECT: &str = "Secret Network Node Certificate";
@@ -287,8 +286,10 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
 ///
 /// Logic:
 /// 1. Extract public key
-/// 2. Extract netscape comment == attestation report
-/// 3.
+/// 2. Extract netscape comment - where the attestation report is located
+/// 3. Parse the report itself (verify it is signed by intel)
+/// 4. Extract public key from report body
+/// 5. Verify enclave signature (mr enclave/signer)
 ///
 #[cfg(feature = "SGX_MODE_HW")]
 pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
@@ -310,42 +311,36 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
         }
     }
 
+    // verify certificate
     match SIGNING_METHOD {
         SigningMethod::MRENCLAVE => {
-            // todo: fill this in some time
-            debug!("Validating using MRENCLAVE");
-            if report.sgx_quote_body.isv_enclave_report.mr_enclave != ENCLAVE_SIGNATURE {
-                error!("Remote node signature MRENCLAVE is different from expected");
+            let this_mr_enclave = match get_mr_enclave() {
+                Ok(r) => r,
+                Err(_) => {
+                    return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+                }
+            };
+
+            if report.sgx_quote_body.isv_enclave_report.mr_enclave != this_mr_enclave {
+                error!("Got a different mr_enclave than expected. Invalid certificate");
                 debug!(
-                    "sgx quote mr_enclave = {:02x}",
-                    report
-                        .sgx_quote_body
-                        .isv_enclave_report
-                        .mr_enclave
-                        .iter()
-                        .format("")
+                    "received: {:?} \n expected: {:?}",
+                    report.sgx_quote_body.isv_enclave_report.mr_enclave, this_mr_enclave
                 );
                 return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
             }
         }
         SigningMethod::MRSIGNER => {
-            // todo: fill this in some time
-            debug!("Validating using MRSIGNER");
-            if report.sgx_quote_body.isv_enclave_report.mr_signer != ENCLAVE_SIGNATURE {
-                error!("Remote node signature MRSIGNER is different from expected");
+            if report.sgx_quote_body.isv_enclave_report.mr_signer != MRSIGNER {
+                error!("Got a different mrsigner than expected. Invalid certificate");
                 debug!(
-                    "sgx quote mr_signer = {:02x}",
-                    report
-                        .sgx_quote_body
-                        .isv_enclave_report
-                        .mr_signer
-                        .iter()
-                        .format("")
+                    "received: {:?} \n expected: {:?}",
+                    report.sgx_quote_body.isv_enclave_report.mr_signer, MRSIGNER
                 );
                 return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
             }
         }
-        _ => debug!("Ignoring signing method validation"),
+        SigningMethod::NONE => {}
     }
 
     let report_public_key = report.sgx_quote_body.isv_enclave_report.report_data[0..32].to_vec();

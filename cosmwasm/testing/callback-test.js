@@ -15,7 +15,7 @@ const assert = require("assert").strict;
   );
   const address = cosmwasmjs.pubkeyToAddress(
     cosmwasmjs.encodeSecp256k1Pubkey(pen.pubkey),
-    "enigma"
+    "secret"
   );
   const signingClient = new cosmwasmjs.SigningCosmWasmClient(
     "http://localhost:1337",

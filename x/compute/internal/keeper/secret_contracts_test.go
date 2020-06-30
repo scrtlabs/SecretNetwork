@@ -9,8 +9,8 @@ import (
 	"regexp"
 	"testing"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	cosmwasm "github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/types"
+	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 )
 

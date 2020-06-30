@@ -6,27 +6,26 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
+	eng "github.com/enigmampc/SecretNetwork/types"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	stypes "github.com/enigmampc/cosmos-sdk/store/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	"github.com/enigmampc/cosmos-sdk/x/auth"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/ed25519"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	stypes "github.com/cosmos/cosmos-sdk/store/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/enigmampc/EnigmaBlockchain/go-cosmwasm/api"
-	eng "github.com/enigmampc/EnigmaBlockchain/types"
-	"github.com/enigmampc/EnigmaBlockchain/x/compute/internal/types"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/crypto/ed25519"
-
-	wasmUtils "github.com/enigmampc/EnigmaBlockchain/x/compute/client/utils"
-	reg "github.com/enigmampc/EnigmaBlockchain/x/registration"
+	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
+	reg "github.com/enigmampc/SecretNetwork/x/registration"
 )
 
 // const SupportedFeatures = "staking"
@@ -234,7 +233,7 @@ func TestInstantiate(t *testing.T) {
 	// create with no balance is also legal
 	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", nil)
 	require.NoError(t, err)
-	require.Equal(t, "enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89d2p9uk", addr.String())
+	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", addr.String())
 
 	gasAfter := ctx.GasMeter().GasConsumed()
 	require.Equal(t, uint64(34133), gasAfter-gasBefore)
@@ -304,7 +303,7 @@ func TestExecute(t *testing.T) {
 
 	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 3", deposit)
 	require.NoError(t, err)
-	require.Equal(t, "enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89d2p9uk", addr.String())
+	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", addr.String())
 
 	// ensure bob doesn't exist
 	bobAcct := accKeeper.GetAccount(ctx, bob)
