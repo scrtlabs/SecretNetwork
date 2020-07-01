@@ -6,6 +6,12 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
 	eng "github.com/enigmampc/SecretNetwork/types"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
@@ -18,11 +24,6 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"testing"
-	"time"
 
 	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
@@ -323,7 +324,7 @@ func TestExecute(t *testing.T) {
 	// unauthorized - trialCtx so we don't change state
 	trialCtx := ctx.WithMultiStore(ctx.MultiStore().CacheWrap().(sdk.MultiStore))
 
-	_, _, trialExecErr := execHelper(t, keeper, trialCtx, addr, creator, `{"approve":{}}`, 0)
+	_, _, trialExecErr := execHelper(t, keeper, trialCtx, addr, creator, `{"approve":{}}`, 0, true)
 	require.Error(t, trialExecErr)
 	require.Error(t, trialExecErr.Unauthorized)
 	require.Contains(t, trialExecErr.Error(), "unauthorized")
