@@ -232,7 +232,7 @@ fn start_engine(
         .ok_or(EnclaveError::CannotInitializeWasmMemory)?;
 
     let maximum: u32 = 192; // 12 MiB
-    let minimum: u32 = std::cmp::max(maximum, memory_entry.limits().initial());
+    let minimum: u32 = std::cmp::min(maximum, memory_entry.limits().initial());
     *memory_section.entries_mut() = vec![MemoryType::new(minimum, Some(maximum))];
 
     trace!("Deserialized Wasm contract");
