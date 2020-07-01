@@ -27,3 +27,5 @@ __debug_bin
 id_tx_io.json
 .idea
 x/compute/internal/keeper/debug.test
+key_production.txt
+spid_production.txt

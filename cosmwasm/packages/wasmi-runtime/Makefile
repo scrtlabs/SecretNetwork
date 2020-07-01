@@ -1,9 +1,11 @@
 ######## SGX SDK Settings ########
 
+FEATURES ?=
 SGX_SDK ?= $(HOME)/.sgxsdk/sgxsdk
 SGX_MODE ?= HW
 SGX_ARCH ?= x64
 BUILD_PROFILE ?= release
+FEATURES += SGX_MODE_$(SGX_MODE)
 
 TOP_DIR := ../../../third_party/build
 include $(TOP_DIR)/buildenv.mk
@@ -103,7 +105,7 @@ librust_cosmwasm_enclave.so: $(CUSTOM_LIBRARY_PATH)/libenclave.a Enclave_t.o
 	$(CXX) Enclave_t.o -o $@ $(RustEnclave_Link_Flags)
 
 $(CUSTOM_LIBRARY_PATH)/libenclave.a: $(CUSTOM_LIBRARY_PATH) $(Rust_Crate_Source)
-	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS="-Z force-unstable-if-unmarked -Ctarget-feature=+aes,+ssse3" xargo build --features "SGX_MODE_$(SGX_MODE)" --target x86_64-unknown-linux-sgx -Z unstable-options --profile $(BUILD_PROFILE)
+	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS="-Z force-unstable-if-unmarked -Ctarget-feature=+aes,+ssse3" xargo build --features "$(FEATURES)" --target x86_64-unknown-linux-sgx -Z unstable-options --profile $(BUILD_PROFILE)
 	cp target/x86_64-unknown-linux-sgx/$(BUILD_PROFILE)/libwasmi_runtime_enclave.a $(CUSTOM_LIBRARY_PATH)/libenclave.a
 
 $(CUSTOM_LIBRARY_PATH):

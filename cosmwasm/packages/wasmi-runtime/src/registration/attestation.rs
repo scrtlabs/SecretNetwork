@@ -31,7 +31,6 @@ use std::str;
 use std::string::String;
 #[cfg(feature = "SGX_MODE_HW")]
 use std::sync::Arc;
-use std::untrusted::fs;
 use std::vec::Vec;
 
 #[cfg(feature = "SGX_MODE_HW")]
