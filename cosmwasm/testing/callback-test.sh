@@ -73,12 +73,12 @@ export INIT_TX_HASH=$(
 
 wait_for_tx "$INIT_TX_HASH" "Waiting for instantiate to finish on-chain..."
 
+./secretcli q compute tx "$INIT_TX_HASH"
+
 export CONTRACT_ADDRESS=$(
     ./secretcli q tx "$INIT_TX_HASH" |
         jq -er '.logs[].events[].attributes[] | select(.key == "contract_address") | .value' | head -1
 )
-
-./secretcli q compute tx "$INIT_TX_HASH"
 
 # exec (generate callbacks)
 export EXEC_TX_HASH=$(
@@ -95,6 +95,17 @@ wait_for_tx "$EXEC_TX_HASH" "Waiting for exec to finish on-chain..."
 export EXEC_ERR_TX_HASH=$(
     yes |
         ./secretcli tx compute execute --from a $CONTRACT_ADDRESS "{\"contract_error\":{\"error_type\":\"generic_err\"}}" |
+        jq -r .txhash
+)
+
+wait_for_tx "$EXEC_ERR_TX_HASH" "Waiting for exec to finish on-chain..."
+
+./secretcli q compute tx "$EXEC_ERR_TX_HASH"
+
+# exec (generate error inside WASM)
+export EXEC_ERR_TX_HASH=$(
+    yes |
+        ./secretcli tx compute execute --from a $CONTRACT_ADDRESS '{"allocate_on_heap":{"bytes":1073741824}}' |
         jq -r .txhash
 )
 
