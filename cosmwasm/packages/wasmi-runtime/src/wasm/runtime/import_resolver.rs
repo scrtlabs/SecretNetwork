@@ -1,4 +1,3 @@
-use log::*;
 use wasmi::{
     Error as InterpreterError, FuncInstance, FuncRef, ImportsBuilder, ModuleImportResolver,
     Signature, ValueType,
