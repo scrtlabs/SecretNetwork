@@ -8,6 +8,12 @@
         "description": "This is the unique DNS name of the for the public IP for your VM"
       }
     },
+    "applicationResourceName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the VM to be created"
+      }
+    },
     "adminUsername": {
       "type": "string",
       "metadata": {
@@ -107,7 +113,7 @@
     "publicIPAddressName": "publicIP",
     "publicIPAddressType": "Dynamic",
     "networkSecurityGroupName": "NSG-1",
-    "vmName": "[parameters('vmDnsPrefix')]",
+    "vmName": "[parameters('applicationResourceName')]",
     "virtualNetworkName": "VNET",
     "subnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]",
     "linuxConfiguration": {

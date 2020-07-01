@@ -99,9 +99,11 @@ xgo_build_secretd: go.sum
 xgo_build_secretcli: go.sum
 	xgo --go latest --targets $(XGO_TARGET) -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' github.com/enigmampc/SecretNetwork/cmd/secretcli
 
-build_local_no_rust:
-	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
+cli:
 	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
+
+build_local_no_rust: cli
+	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
 #   this pulls out ELF symbols, 80% size reduction!
 	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
