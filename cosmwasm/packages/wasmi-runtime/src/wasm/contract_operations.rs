@@ -214,7 +214,27 @@ fn start_engine(
 
     // Create a parity-wasm module first, so we can inject gas metering to it
     // (you need a parity-wasm module to use the pwasm-utils crate)
-    let p_modlue = elements::deserialize_buffer(contract).map_err(|_| EnclaveError::InvalidWasm)?;
+    let mut p_modlue: parity_wasm::elements::Module =
+        elements::deserialize_buffer(contract).map_err(|_| EnclaveError::InvalidWasm)?;
+
+    let memory_section = p_modlue
+        .memory_section_mut()
+        .ok_or(EnclaveError::CannotInitializeWasmMemory)?;
+
+    if memory_section.entries().len() != 1 {
+        return Err(EnclaveError::CannotInitializeWasmMemory);
+    }
+
+    let memory_entry = memory_section
+        .entries()
+        .first()
+        .ok_or(EnclaveError::CannotInitializeWasmMemory)?;
+
+    let minimum = std::cmp::max(17, memory_entry.limits().initial()); // no more than 17 (rust compiles it with 17, why???)
+    *memory_section.entries_mut() = vec![parity_wasm::elements::MemoryType::new(
+        minimum,
+        Some(192 /* 12 MiB */),
+    )];
 
     trace!("Deserialized Wasm contract");
 

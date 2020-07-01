@@ -99,11 +99,11 @@ func extractInnerError(t *testing.T, err error, nonce []byte, isEncrypted bool) 
 	match := contractErrorRegex.FindAllStringSubmatch(err.Error(), -1)
 
 	if match == nil {
-		require.True(t, !isEncrypted)
+		require.True(t, !isEncrypted, "Error message should be plaintext")
 		return cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: err.Error()}}
 	}
 
-	require.True(t, isEncrypted)
+	require.True(t, isEncrypted, "Error message should be encrypted")
 	require.NotEmpty(t, match)
 	require.Equal(t, len(match), 1)
 	require.Equal(t, len(match[0]), 2)
@@ -930,4 +930,19 @@ func TestQueryPanic(t *testing.T) {
 	require.Error(t, queryErr)
 	require.Error(t, queryErr.GenericErr)
 	require.Equal(t, queryErr.GenericErr.Msg, "query wasm contract failed: Error calling the VM: EnclaveErr: Got an error from the enclave: FailedFunctionCall")
+}
+
+func TestAllocateOnHeap(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, 0, true)
+	require.Empty(t, initErr)
+
+	data, _, execErr := execHelper(t, keeper, ctx, addr, walletA, `{"allocate_on_heap":{"bytes":1073741824}}`, 1, false)
+
+	require.Empty(t, data)
+	require.Error(t, execErr)
+	require.Error(t, execErr.GenericErr)
+	require.Equal(t, execErr.GenericErr.Msg, "execute wasm contract failed: Error calling the VM: EnclaveErr: Got an error from the enclave: FailedFunctionCall")
 }
