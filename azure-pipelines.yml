@@ -12,7 +12,7 @@ pool:
 
 steps:
 
-- script: echo $(spid) > spid.txt; echo $(api-key-dev) > api_key.txt
+- script: echo $(spid) > cosmwasm/packages/wasmi-runtime/attestation_keys/spid.txt; echo $(api-key-dev) > cosmwasm/packages/wasmi-runtime/attestation_keys/api_key.txt
   displayName: 'Save api keys'
 - task: Docker@2
   displayName: Build
