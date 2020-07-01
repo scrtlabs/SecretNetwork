@@ -34,6 +34,10 @@ COPY Makefile Makefile
 RUN make vendor
 
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
+
+COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/cosmwasm/packages/wasmi-runtime/
+COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/cosmwasm/packages/wasmi-runtime/
+
 RUN . /opt/sgxsdk/environment && env && SGX_MODE=${SGX_MODE} make build-rust
 
 # Set working directory for the build
@@ -112,9 +116,6 @@ RUN mkdir -p /root/.secretd/.compute/
 RUN mkdir -p /root/.sgx_secrets/
 RUN mkdir -p /root/.secretd/.node/
 # COPY ./packaging_docker/seed.json /root/.secretd/.compute/seed.json
-
-COPY api_key.txt /root/
-COPY spid.txt /root/
 
 #ENV LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/:/opt/sgxsdk/lib64/
 
