@@ -1,5 +1,6 @@
 use log::*;
 use parity_wasm::elements;
+use parity_wasm::elements::{MemoryType, Module};
 use wasmi::ModuleInstance;
 
 use enclave_ffi_types::{Ctx, EnclaveError};
@@ -214,7 +215,7 @@ fn start_engine(
 
     // Create a parity-wasm module first, so we can inject gas metering to it
     // (you need a parity-wasm module to use the pwasm-utils crate)
-    let mut p_modlue: parity_wasm::elements::Module =
+    let mut p_modlue: Module =
         elements::deserialize_buffer(contract).map_err(|_| EnclaveError::InvalidWasm)?;
 
     let memory_section = p_modlue
@@ -230,11 +231,9 @@ fn start_engine(
         .first()
         .ok_or(EnclaveError::CannotInitializeWasmMemory)?;
 
-    let minimum = std::cmp::max(17, memory_entry.limits().initial()); // no more than 17 (rust compiles it with 17, why???)
-    *memory_section.entries_mut() = vec![parity_wasm::elements::MemoryType::new(
-        minimum,
-        Some(192 /* 12 MiB */),
-    )];
+    let maximum: u32 = 192; // 12 MiB
+    let minimum: u32 = std::cmp::max(maximum, memory_entry.limits().initial());
+    *memory_section.entries_mut() = vec![MemoryType::new(minimum, Some(maximum))];
 
     trace!("Deserialized Wasm contract");
 
