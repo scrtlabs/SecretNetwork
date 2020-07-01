@@ -40,10 +40,10 @@ jobs:
           mv ./sccache*/sccache "$HOME/sccache"
       - name: Create fake api keys
         run: |
-          echo *** > cosmwasm/packages/wasmi-runtime/attestation_keys/spid.txt
-          echo *** > cosmwasm/packages/wasmi-runtime/attestation_keys/spid_production.txt
-          echo *** > cosmwasm/packages/wasmi-runtime/attestation_keys/api_key.txt
-          echo *** > cosmwasm/packages/wasmi-runtime/attestation_keys/api_key_production.txt
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/spid.txt
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/spid_production.txt
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/api_key.txt
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/api_key_production.txt
       - name: Clippy
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
