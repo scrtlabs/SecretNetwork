@@ -3,14 +3,14 @@
 pub use enclave_ffi_types::ENCRYPTED_SEED_SIZE;
 
 #[cfg(all(feature = "production", feature = "SGX_MODE_HW"))]
-pub static SPID_FILE: &[u8] = include_bytes!("../../../../spid_production.txt");
+pub static SPID_FILE: &[u8] = include_bytes!("../attestation_keys/spid_production.txt");
 #[cfg(all(feature = "production", feature = "SGX_MODE_HW"))]
-pub static API_KEY_FILE: &[u8] = include_bytes!("../../../../key_production.txt");
+pub static API_KEY_FILE: &[u8] = include_bytes!("../attestation_keys/api_key_production.txt");
 
 #[cfg(all(not(feature = "production"), feature = "SGX_MODE_HW"))]
-pub static SPID_FILE: &[u8] = include_bytes!("../../../../spid.txt");
+pub static SPID_FILE: &[u8] = include_bytes!("../attestation_keys/spid.txt");
 #[cfg(all(not(feature = "production"), feature = "SGX_MODE_HW"))]
-pub static API_KEY_FILE: &[u8] = include_bytes!("../../../../api_key.txt");
+pub static API_KEY_FILE: &[u8] = include_bytes!("../attestation_keys/api_key.txt");
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
