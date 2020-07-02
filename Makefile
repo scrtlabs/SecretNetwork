@@ -204,7 +204,7 @@ docker_node:
 
 	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=NODE -t enigmampc/secret-network-node-${ext}:${DOCKER_TAG} .
 # while developing:
-build-enclave:
+build-enclave: vendor
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime
 
 # while developing:
