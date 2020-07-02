@@ -13,7 +13,7 @@ use crate::state::config_read;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::mem;
+use std::{mem, ptr, slice};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -444,20 +444,20 @@ fn pass_null_pointer_to_imports_should_throw<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     pass_type: String,
 ) -> HandleResponse {
+    let null_ptr: &[u8] = unsafe { slice::from_raw_parts(ptr::null(), 0) };
+
     match &pass_type[..] {
         "read_db_key" => {
-            deps.storage.get(unsafe { mem::zeroed::<&[u8]>() });
+            deps.storage.get(null_ptr);
         }
         "write_db_key" => {
-            deps.storage
-                .set(unsafe { mem::zeroed::<&[u8]>() }, b"write value");
+            deps.storage.set(null_ptr, b"write value");
         }
         "write_db_value" => {
-            deps.storage
-                .set(b"write key", unsafe { mem::zeroed::<&[u8]>() });
+            deps.storage.set(b"write key", null_ptr);
         }
         "remove_db_key" => {
-            deps.storage.remove(unsafe { mem::zeroed::<&[u8]>() });
+            deps.storage.remove(null_ptr);
         }
         "canonicalize_address_input" => {
             deps.api
