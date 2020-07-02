@@ -13,6 +13,7 @@ use crate::state::config_read;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::{ptr, slice};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -76,6 +77,7 @@ pub enum HandleMsg {
     AllocateOnHeap {
         bytes: u32,
     },
+    PassNullPointerToImports {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -231,6 +233,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::TestCanonicalizeAddressErrors {} => test_canonicalize_address_errors(deps),
         HandleMsg::Panic {} => panic!("panic in exec"),
         HandleMsg::AllocateOnHeap { bytes } => Ok(allocate_on_heap(bytes as usize)),
+        HandleMsg::PassNullPointerToImports {} => Ok(pass_null_pointer_to_imports(deps)),
     }
 }
 
@@ -429,6 +432,25 @@ fn remove_state<S: Storage, A: Api, Q: Querier>(
     let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
     store.remove(key.as_bytes());
     HandleResponse::default()
+}
+
+fn pass_null_pointer_to_imports<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+) -> HandleResponse {
+    let key: &[u8] = unsafe { slice::from_raw_parts(ptr::null(), 0) };
+    let value = match deps.storage.get(key) {
+        Some(value) => value,
+        None => vec![],
+    };
+    HandleResponse {
+        data: Some(Binary(
+            format!("Got from storage: {}", String::from_utf8_lossy(&value))
+                .as_bytes()
+                .to_vec(),
+        )),
+        log: vec![],
+        messages: vec![],
+    }
 }
 
 fn test_canonicalize_address_errors<S: Storage, A: Api, Q: Querier>(
