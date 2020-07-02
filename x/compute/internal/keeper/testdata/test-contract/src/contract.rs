@@ -13,6 +13,7 @@ use crate::state::config_read;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::{ptr, slice};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -75,6 +76,9 @@ pub enum HandleMsg {
     Panic {},
     AllocateOnHeap {
         bytes: u32,
+    },
+    PassNullPointerToImportsShouldThrow {
+        pass_type: String,
     },
 }
 
@@ -231,6 +235,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::TestCanonicalizeAddressErrors {} => test_canonicalize_address_errors(deps),
         HandleMsg::Panic {} => panic!("panic in exec"),
         HandleMsg::AllocateOnHeap { bytes } => Ok(allocate_on_heap(bytes as usize)),
+        HandleMsg::PassNullPointerToImportsShouldThrow { pass_type } => {
+            Ok(pass_null_pointer_to_imports_should_throw(deps, pass_type))
+        }
     }
 }
 
@@ -428,6 +435,38 @@ fn remove_state<S: Storage, A: Api, Q: Querier>(
 ) -> HandleResponse {
     let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
     store.remove(key.as_bytes());
+    HandleResponse::default()
+}
+
+fn pass_null_pointer_to_imports_should_throw<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    pass_type: String,
+) -> HandleResponse {
+    let null_ptr: &[u8] = unsafe { slice::from_raw_parts(ptr::null(), 0) };
+
+    match &pass_type[..] {
+        "read_db_key" => {
+            deps.storage.get(null_ptr);
+        }
+        "write_db_key" => {
+            deps.storage.set(null_ptr, b"write value");
+        }
+        "write_db_value" => {
+            deps.storage.set(b"write key", null_ptr);
+        }
+        "remove_db_key" => {
+            deps.storage.remove(null_ptr);
+        }
+        "canonicalize_address_key" => {
+            // HumanAddr::from(null_ptr);
+            // deps.api.canonical_address(null_ptr);
+        }
+        "canonicalize_address_value" => {}
+        "humanize_address_key" => {}
+        "humanize_address_value" => {}
+        _ => {}
+    };
+
     HandleResponse::default()
 }
 
