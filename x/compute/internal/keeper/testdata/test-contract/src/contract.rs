@@ -2,9 +2,9 @@ use cosmwasm_storage::PrefixedStorage;
 
 use cosmwasm_std::{
     generic_err, invalid_base64, invalid_utf8, log, not_found, null_pointer, parse_err,
-    serialize_err, to_binary, unauthorized, underflow, Api, Binary, CosmosMsg, Env, Extern,
-    HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse, Querier,
-    QueryResult, ReadonlyStorage, StdError, StdResult, Storage, WasmMsg,
+    serialize_err, to_binary, unauthorized, underflow, Api, Binary, CanonicalAddr, CosmosMsg, Env,
+    Extern, HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse,
+    Querier, QueryResult, ReadonlyStorage, StdError, StdResult, Storage, WasmMsg,
 };
 
 use crate::state::config_read;
@@ -13,7 +13,7 @@ use crate::state::config_read;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::{ptr, slice};
+use std::mem;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -438,32 +438,37 @@ fn remove_state<S: Storage, A: Api, Q: Querier>(
     HandleResponse::default()
 }
 
+#[allow(invalid_value)]
+#[allow(unused_must_use)]
 fn pass_null_pointer_to_imports_should_throw<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     pass_type: String,
 ) -> HandleResponse {
-    let null_ptr: &[u8] = unsafe { slice::from_raw_parts(ptr::null(), 0) };
-
     match &pass_type[..] {
         "read_db_key" => {
-            deps.storage.get(null_ptr);
+            deps.storage.get(unsafe { mem::zeroed::<&[u8]>() });
         }
         "write_db_key" => {
-            deps.storage.set(null_ptr, b"write value");
+            deps.storage
+                .set(unsafe { mem::zeroed::<&[u8]>() }, b"write value");
         }
         "write_db_value" => {
-            deps.storage.set(b"write key", null_ptr);
+            deps.storage
+                .set(b"write key", unsafe { mem::zeroed::<&[u8]>() });
         }
         "remove_db_key" => {
-            deps.storage.remove(null_ptr);
+            deps.storage.remove(unsafe { mem::zeroed::<&[u8]>() });
         }
-        "canonicalize_address_key" => {
-            // HumanAddr::from(null_ptr);
-            // deps.api.canonical_address(null_ptr);
+        "canonicalize_address_input" => {
+            deps.api
+                .canonical_address(unsafe { mem::zeroed::<&HumanAddr>() });
         }
-        "canonicalize_address_value" => {}
-        "humanize_address_key" => {}
-        "humanize_address_value" => {}
+        "canonicalize_address_output" => {}
+        "humanize_address_input" => {
+            deps.api
+                .human_address(unsafe { mem::zeroed::<&CanonicalAddr>() });
+        }
+        "humanize_address_output" => {}
         _ => {}
     };
 
