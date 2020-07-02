@@ -77,7 +77,9 @@ pub enum HandleMsg {
     AllocateOnHeap {
         bytes: u32,
     },
-    PassNullPointerToImports {},
+    PassNullPointerToImportsShouldThrow {
+        pass_type: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -233,7 +235,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::TestCanonicalizeAddressErrors {} => test_canonicalize_address_errors(deps),
         HandleMsg::Panic {} => panic!("panic in exec"),
         HandleMsg::AllocateOnHeap { bytes } => Ok(allocate_on_heap(bytes as usize)),
-        HandleMsg::PassNullPointerToImports {} => Ok(pass_null_pointer_to_imports(deps)),
+        HandleMsg::PassNullPointerToImportsShouldThrow { pass_type } => {
+            Ok(pass_null_pointer_to_imports_should_throw(deps, pass_type))
+        }
     }
 }
 
@@ -434,23 +438,36 @@ fn remove_state<S: Storage, A: Api, Q: Querier>(
     HandleResponse::default()
 }
 
-fn pass_null_pointer_to_imports<S: Storage, A: Api, Q: Querier>(
+fn pass_null_pointer_to_imports_should_throw<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
+    pass_type: String,
 ) -> HandleResponse {
-    let key: &[u8] = unsafe { slice::from_raw_parts(ptr::null(), 0) };
-    let value = match deps.storage.get(key) {
-        Some(value) => value,
-        None => vec![],
+    let null_ptr: &[u8] = unsafe { slice::from_raw_parts(ptr::null(), 0) };
+
+    match &pass_type[..] {
+        "read_db_key" => {
+            deps.storage.get(null_ptr);
+        }
+        "write_db_key" => {
+            deps.storage.set(null_ptr, b"write value");
+        }
+        "write_db_value" => {
+            deps.storage.set(b"write key", null_ptr);
+        }
+        "remove_db_key" => {
+            deps.storage.remove(null_ptr);
+        }
+        "canonicalize_address_key" => {
+            // HumanAddr::from(null_ptr);
+            // deps.api.canonical_address(null_ptr);
+        }
+        "canonicalize_address_value" => {}
+        "humanize_address_key" => {}
+        "humanize_address_value" => {}
+        _ => {}
     };
-    HandleResponse {
-        data: Some(Binary(
-            format!("Got from storage: {}", String::from_utf8_lossy(&value))
-                .as_bytes()
-                .to_vec(),
-        )),
-        log: vec![],
-        messages: vec![],
-    }
+
+    HandleResponse::default()
 }
 
 fn test_canonicalize_address_errors<S: Storage, A: Api, Q: Querier>(
