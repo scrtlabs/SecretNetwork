@@ -21,9 +21,11 @@ SHA256SUMS*
 .vscode
 *.sealed
 *.der
-spid.txt
-api_key.txt
 __debug_bin
 id_tx_io.json
 .idea
 x/compute/internal/keeper/debug.test
+spid.txt
+api_key.txt
+api_key_production.txt
+spid_production.txt
