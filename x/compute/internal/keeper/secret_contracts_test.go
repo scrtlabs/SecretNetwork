@@ -864,7 +864,7 @@ func TestExecCallbackBadParam(t *testing.T) {
 	require.Error(t, execErr)
 	require.Error(t, execErr.ParseErr)
 	require.Equal(t, "test_contract::contract::HandleMsg", execErr.ParseErr.Target)
-	require.Contains(t, "unknown variant `callback_contract_bad_param`", execErr.ParseErr.Msg)
+	require.Contains(t, execErr.ParseErr.Msg, "unknown variant `callback_contract_bad_param`")
 	require.Empty(t, execEvents)
 	require.Empty(t, data)
 }
@@ -884,7 +884,7 @@ func TestInitCallbackBadParam(t *testing.T) {
 	require.Error(t, initErr)
 	require.Error(t, initErr.ParseErr)
 	require.Equal(t, "test_contract::contract::InitMsg", initErr.ParseErr.Target)
-	require.Contains(t, "unknown variant `callback_contract_bad_param`", initErr.ParseErr.Msg)
+	require.Contains(t, initErr.ParseErr.Msg, "unknown variant `callback_contract_bad_param`")
 }
 
 func TestState(t *testing.T) {
