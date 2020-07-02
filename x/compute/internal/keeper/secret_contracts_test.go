@@ -1030,7 +1030,14 @@ func TestPassNullPointerToImports(t *testing.T) {
 	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
 	require.Empty(t, initErr)
 
-	tests := []string{"read_db_key", "write_db_key", "write_db_value", "remove_db_key"}
+	tests := []string{
+		"read_db_key",
+		"write_db_key",
+		"write_db_value",
+		"remove_db_key",
+		"canonicalize_address_input",
+		"humanize_address_input",
+	}
 
 	for _, passType := range tests {
 		t.Run(passType, func(t *testing.T) {
