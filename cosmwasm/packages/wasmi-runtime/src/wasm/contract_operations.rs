@@ -1,5 +1,6 @@
 use log::*;
 use parity_wasm::elements;
+use parity_wasm::elements::Module;
 use wasmi::ModuleInstance;
 
 use enclave_ffi_types::{Ctx, EnclaveError};
@@ -14,7 +15,10 @@ use super::contract_validation::{
 use super::errors::wasmi_error_to_enclave_error;
 use super::gas::{gas_rules, WasmCosts};
 use super::io::encrypt_output;
-use super::runtime::{create_builder, ContractInstance, Engine, WasmiImportResolver};
+use super::{
+    memory::validate_memory,
+    runtime::{create_builder, ContractInstance, Engine, WasmiImportResolver},
+};
 use crate::wasm::types::SecretMessage;
 
 /*
@@ -214,9 +218,16 @@ fn start_engine(
 
     // Create a parity-wasm module first, so we can inject gas metering to it
     // (you need a parity-wasm module to use the pwasm-utils crate)
-    let p_modlue = elements::deserialize_buffer(contract).map_err(|_| EnclaveError::InvalidWasm)?;
+    let mut p_modlue: Module =
+        elements::deserialize_buffer(contract).map_err(|_| EnclaveError::InvalidWasm)?;
 
     trace!("Deserialized Wasm contract");
+
+    trace!("Validating WASM memory demands");
+
+    validate_memory(&mut p_modlue)?;
+
+    trace!("Validated WASM memory demands");
 
     // Set the gas costs for wasm op-codes (there is an inline stack_height limit in WasmCosts)
     let wasm_costs = WasmCosts::default();

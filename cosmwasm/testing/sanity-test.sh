@@ -77,12 +77,13 @@ export INIT_TX_HASH=$(
 
 wait_for_tx "$INIT_TX_HASH" "Waiting for instantiate to finish on-chain..."
 
+./secretcli q compute tx "$INIT_TX_HASH"
+
 export CONTRACT_ADDRESS=$(
     ./secretcli q tx "$INIT_TX_HASH" |
         jq -er '.logs[].events[].attributes[] | select(.key == "contract_address") | .value'
 )
 
-./secretcli q compute tx "$INIT_TX_HASH"
 
 # test balances after init (ocall_query + read_db + canonicalize_address)
 ./secretcli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"$(./secretcli keys show a -a)\"}}" |

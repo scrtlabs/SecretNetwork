@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -255,11 +256,12 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			}
 
 			var answer struct {
-				Type        string                 `json:"type"`
-				Input       json.RawMessage        `json:"input"`
-				OutputData  string                 `json:"output_data"`
-				OutputLogs  []sdk.StringEvent      `json:"output_log"`
-				OutputError cosmwasmTypes.StdError `json:"output_error"`
+				Type           string                 `json:"type"`
+				Input          json.RawMessage        `json:"input"`
+				OutputData     string                 `json:"output_data"`
+				OutputLogs     []sdk.StringEvent      `json:"output_log"`
+				OutputError    cosmwasmTypes.StdError `json:"output_error"`
+				PlaintextError string                 `json:"plaintext_error"`
 			}
 			var encryptedInput []byte
 			var dataOutputHexB64 string
@@ -397,6 +399,8 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 				if err != nil {
 					return err
 				}
+			} else if strings.Contains(result.RawLog, "EnclaveErr") {
+				answer.PlaintextError = result.RawLog
 			}
 
 			return cliCtx.PrintOutput(answer)
@@ -405,6 +409,8 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 
 	return cmd
 }
+
+var contractErrorRegex = regexp.MustCompile(`wasm contract failed: generic: (.+)`)
 
 func GetCmdGetContractStateSmart(cdc *codec.Codec) *cobra.Command {
 	decoder := newArgDecoder(asciiDecodeString)

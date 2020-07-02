@@ -66,7 +66,7 @@ whitespace += $(whitespace)
 comma := ,
 build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 
-ldflags = -X github.com/enigmampc/cosmos-sdk/version.Name=EnigmaBlockchain \
+ldflags = -X github.com/enigmampc/cosmos-sdk/version.Name=SecretNetwork \
 	-X github.com/enigmampc/cosmos-sdk/version.ServerName=secretd \
 	-X github.com/enigmampc/cosmos-sdk/version.ClientName=secretcli \
 	-X github.com/enigmampc/cosmos-sdk/version.Version=$(VERSION) \
@@ -129,28 +129,28 @@ deb: build-linux
     ifneq ($(UNAME_S),Linux)
 		exit 1
     endif
-	rm -rf /tmp/EnigmaBlockchain
+	rm -rf /tmp/SecretNetwork
 
-	mkdir -p /tmp/EnigmaBlockchain/deb/usr/local/bin
-	mv -f ./secretcli /tmp/EnigmaBlockchain/deb/usr/local/bin/secretcli
-	mv -f ./secretd /tmp/EnigmaBlockchain/deb/usr/local/bin/secretd
-	chmod +x /tmp/EnigmaBlockchain/deb/usr/local/bin/secretd /tmp/EnigmaBlockchain/deb/usr/local/bin/secretcli
+	mkdir -p /tmp/SecretNetwork/deb/usr/local/bin
+	mv -f ./secretcli /tmp/SecretNetwork/deb/usr/local/bin/secretcli
+	mv -f ./secretd /tmp/SecretNetwork/deb/usr/local/bin/secretd
+	chmod +x /tmp/SecretNetwork/deb/usr/local/bin/secretd /tmp/SecretNetwork/deb/usr/local/bin/secretcli
 
-	mkdir -p /tmp/EnigmaBlockchain/deb/usr/local/lib
-	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/EnigmaBlockchain/deb/usr/local/lib/
-	chmod +x /tmp/EnigmaBlockchain/deb/usr/local/lib/lib*.so
+	mkdir -p /tmp/SecretNetwork/deb/usr/local/lib
+	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/SecretNetwork/deb/usr/local/lib/
+	chmod +x /tmp/SecretNetwork/deb/usr/local/lib/lib*.so
 
-	mkdir -p /tmp/EnigmaBlockchain/deb/DEBIAN
-	cp ./packaging_ubuntu/control /tmp/EnigmaBlockchain/deb/DEBIAN/control
-	printf "Version: " >> /tmp/EnigmaBlockchain/deb/DEBIAN/control
-	git describe --tags | tr -d v >> /tmp/EnigmaBlockchain/deb/DEBIAN/control
-	echo "" >> /tmp/EnigmaBlockchain/deb/DEBIAN/control
-	cp ./packaging_ubuntu/postinst /tmp/EnigmaBlockchain/deb/DEBIAN/postinst
-	chmod 755 /tmp/EnigmaBlockchain/deb/DEBIAN/postinst
-	cp ./packaging_ubuntu/postrm /tmp/EnigmaBlockchain/deb/DEBIAN/postrm
-	chmod 755 /tmp/EnigmaBlockchain/deb/DEBIAN/postrm
-	dpkg-deb --build /tmp/EnigmaBlockchain/deb/ .
-	-rm -rf /tmp/EnigmaBlockchain
+	mkdir -p /tmp/SecretNetwork/deb/DEBIAN
+	cp ./packaging_ubuntu/control /tmp/SecretNetwork/deb/DEBIAN/control
+	printf "Version: " >> /tmp/SecretNetwork/deb/DEBIAN/control
+	git describe --tags | tr -d v >> /tmp/SecretNetwork/deb/DEBIAN/control
+	echo "" >> /tmp/SecretNetwork/deb/DEBIAN/control
+	cp ./packaging_ubuntu/postinst /tmp/SecretNetwork/deb/DEBIAN/postinst
+	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/postinst
+	cp ./packaging_ubuntu/postrm /tmp/SecretNetwork/deb/DEBIAN/postrm
+	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/postrm
+	dpkg-deb --build /tmp/SecretNetwork/deb/ .
+	-rm -rf /tmp/SecretNetwork
 
 rename_for_release:
 	-rename "s/windows-4.0-amd64/v${VERSION}-win64/" *.exe
@@ -171,7 +171,7 @@ release: sign_for_release
 	cp SHA256SUMS.asc ./release/
 
 clean:
-	-rm -rf /tmp/EnigmaBlockchain
+	-rm -rf /tmp/SecretNetwork
 	-rm -f ./secretcli*
 	-rm -f ./secretd*
 	-rm -f ./librust_cosmwasm_enclave.signed.so 
@@ -187,6 +187,7 @@ clean:
 	-rm -rf ./x/compute/internal/keeper/*.so
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
+
 # docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t cashmaney/secret-network-node:azuretestnet .
 build-azure:
 	docker build -f Dockerfile.azure -t enigmampc/secret-network-node:azuretestnet .
@@ -203,7 +204,7 @@ docker_node:
 
 	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=NODE -t enigmampc/secret-network-node-${ext}:${DOCKER_TAG} .
 # while developing:
-build-enclave:
+build-enclave: vendor
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime
 
 # while developing:

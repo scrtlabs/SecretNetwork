@@ -62,6 +62,7 @@ pub enum EnclaveError {
     },
     /// The WASM code was invalid and could not be loaded.
     InvalidWasm,
+    CannotInitializeWasmMemory,
     /// The WASM module contained a start section, which is not allowed.
     WasmModuleWithStart,
     /// The WASM module contained floating point operations, which is not allowed.
