@@ -33,13 +33,8 @@ backtraces = ["cosmwasm-std/backtraces"]
 [dependencies]
 cosmwasm-std = { path = "../../../../../../cosmwasm/packages/std" }
 cosmwasm-storage = { path = "../../../../../../cosmwasm/packages/storage" }
-serde-json-wasm = { version = "0.2.1" }
 schemars = "0.7"
-serde = { version = "1.0.103", default-features = false, features = [
+serde = { version = "1.0.114", default-features = false, features = [
   "derive",
   "alloc"
 ] }
-
-[dev-dependencies]
-cosmwasm-vm = { package = "cosmwasm-sgx-vm", path = "../../../../../../cosmwasm/packages/sgx-vm", default-features = false }
-serde_json = "1.0"

@@ -65,7 +65,7 @@ impl ModuleImportResolver for WasmiImportResolver {
             ),
             _ => {
                 return Err(InterpreterError::Function(format!(
-                    "host module doesn't export function with name {}",
+                    "WASM VM doesn't export function with name {}",
                     func_name
                 )));
             }

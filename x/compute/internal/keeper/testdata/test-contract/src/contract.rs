@@ -73,6 +73,9 @@ pub enum HandleMsg {
     },
     TestCanonicalizeAddressErrors {},
     Panic {},
+    AllocateOnHeap {
+        bytes: u32,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -227,6 +230,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::RemoveState { key } => Ok(remove_state(deps, key)),
         HandleMsg::TestCanonicalizeAddressErrors {} => test_canonicalize_address_errors(deps),
         HandleMsg::Panic {} => panic!("panic in exec"),
+        HandleMsg::AllocateOnHeap { bytes } => Ok(allocate_on_heap(bytes as usize)),
     }
 }
 
@@ -378,6 +382,17 @@ fn exec_with_callback_contract_error(contract_addr: HumanAddr) -> HandleResponse
         })],
         log: vec![log("exec with a callback with contract error", "🤷‍♂️")],
         data: None,
+    }
+}
+
+fn allocate_on_heap(bytes: usize) -> HandleResponse {
+    let mut values: Vec<u8> = vec![0; bytes];
+    values[bytes - 1] = 1;
+
+    HandleResponse {
+        data: Some(Binary("😅".as_bytes().to_vec())),
+        log: vec![],
+        messages: vec![],
     }
 }
 

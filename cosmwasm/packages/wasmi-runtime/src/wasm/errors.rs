@@ -1,5 +1,6 @@
 use derive_more::Display;
 use enclave_ffi_types::{EnclaveError, UntrustedVmError};
+use log::*;
 use wasmi::{Error as InterpreterError, HostError};
 
 #[derive(Debug, Display)]
@@ -41,6 +42,9 @@ pub fn wasmi_error_to_enclave_error(wasmi_error: InterpreterError) -> EnclaveErr
         // Unexpected WasmEngineError variant or unexpected HostError.
         Some(None) => EnclaveError::Unknown,
         // The error is not a HostError. In the future we might want to return more specific errors.
-        None => EnclaveError::FailedFunctionCall,
+        None => {
+            error!("Got an error from wasmi: {:?}", wasmi_error);
+            EnclaveError::FailedFunctionCall
+        }
     }
 }
