@@ -31,7 +31,6 @@ use std::str;
 use std::string::String;
 #[cfg(feature = "SGX_MODE_HW")]
 use std::sync::Arc;
-use std::untrusted::fs;
 use std::vec::Vec;
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -299,7 +298,7 @@ pub fn create_attestation_report(
     let p_report = (&rep.unwrap()) as *const sgx_report_t;
     let quote_type = sign_type;
 
-    let spid: sgx_spid_t = load_spid(SPID_FILE);
+    let spid: sgx_spid_t = hex::decode_spid(&String::from_utf8_lossy(SPID_FILE));
 
     let p_spid = &spid as *const sgx_spid_t;
     let p_nonce = &quote_nonce as *const sgx_quote_nonce_t;
@@ -538,7 +537,7 @@ pub fn make_ias_client_config() -> rustls::ClientConfig {
 pub fn get_sigrl_from_intel(fd: c_int, gid: u32) -> Vec<u8> {
     info!("get_sigrl_from_intel fd = {:?}", fd);
     let config = make_ias_client_config();
-    let ias_key = get_ias_api_key();
+    let ias_key = String::from_utf8_lossy(API_KEY_FILE).trim_end().to_owned();
 
     let req = format!("GET {}{:08x} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key: {}\r\nConnection: Close\r\n\r\n",
                       SIGRL_SUFFIX,
@@ -582,7 +581,7 @@ pub fn get_report_from_intel(fd: c_int, quote: Vec<u8>) -> (String, Vec<u8>, Vec
     let config = make_ias_client_config();
     let encoded_quote = base64::encode(&quote[..]);
     let encoded_json = format!("{{\"isvEnclaveQuote\":\"{}\"}}\r\n", encoded_quote);
-    let ias_key = get_ias_api_key();
+    let ias_key = String::from_utf8_lossy(API_KEY_FILE).trim_end().to_owned();
 
     let req = format!("POST {} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key:{}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
                       REPORT_SUFFIX,
@@ -619,28 +618,6 @@ fn as_u32_le(array: [u8; 4]) -> u32 {
         + ((array[1] as u32) << 8)
         + ((array[2] as u32) << 16)
         + ((array[3] as u32) << 24)
-}
-
-// todo: replace this with compile-time ID
-fn load_spid(filename: &str) -> sgx_spid_t {
-    let mut spidfile = fs::File::open(filename).expect("cannot open spid file");
-    let mut contents = String::new();
-    spidfile
-        .read_to_string(&mut contents)
-        .expect("cannot read the spid file");
-
-    hex::decode_spid(&contents)
-}
-
-// todo: replace this with compile-time API Key
-#[cfg(feature = "SGX_MODE_HW")]
-fn get_ias_api_key() -> String {
-    let mut keyfile = fs::File::open(API_KEY_FILE).expect("cannot open ias key file");
-    let mut key = String::new();
-    keyfile
-        .read_to_string(&mut key)
-        .expect("cannot read the ias key file");
-    key.trim_end().to_owned()
 }
 
 #[cfg(feature = "test")]

@@ -38,6 +38,12 @@ jobs:
           wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
           tar xf ./sccache-*.tar.gz
           mv ./sccache*/sccache "$HOME/sccache"
+      - name: Create fake api keys
+        run: |
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/spid.txt
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/spid_production.txt
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/api_key.txt
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/api_key_production.txt
       - name: Clippy
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
