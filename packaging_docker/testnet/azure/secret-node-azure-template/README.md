@@ -15,14 +15,14 @@ Using Azure CLI login to enigmampc using
 
 Then, create a resource group for the new secret node
 
-`az group create --name test04 --location "UK South"` 
+`az group create --name <resource-group-name> --location "UK South"` 
 
 Note: Only UK south, East US and Central Canada are available for SGX machines
 
 Finally, deploy the secret node using:
-`az deployment group create --resource-group test03 --template-file azuredeploy.json`
+`az deployment group create --resource-group <resource-group-name> --template-file azuredeploy.json`
 
-(or `az group deployment create --resource-group test03 --template-file azuredeploy.json` on newer az cli versions)
+(or `az group deployment create --resource-group <resource-group-name> --template-file azuredeploy.json` on newer az cli versions)
 
 By default the node will try to connect to our testnet node/registration service, so configure the parameters
 accordingly to what you want
