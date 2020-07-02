@@ -7,7 +7,7 @@
 2) Install:
 
    - Mac/Windows: Rename it from `secretcli-${VERSION}-${OS}` to `secretcli` or `secretcli.exe` and put it in your path.
-   - Ubuntu/Debian: `sudo dpkg -i enigma*.deb`
+   - Ubuntu/Debian: `sudo dpkg -i secret*.deb`
 
 3) Configure:
 
