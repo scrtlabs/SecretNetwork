@@ -43,6 +43,77 @@ Some users may not have their ledger recognized by their Linux host. To fix this
 wget -q -O - https://raw.githubusercontent.com/LedgerHQ/udev-rules/master/add_udev_rules.sh | sudo bash
 ```
 
+# Install the secretcli Secret Network light client
+
+Get the latest release of `secretcli` for your OS: https://github.com/secretnodes/TheRomulusUpgrade/releases/tag/v0.2.0.
+
+2) Install:
+
+   - Mac/Windows: Rename it from `secretcli-${VERSION}-${OS}` to `secretcli` or `secretcli.exe` and put it in your path.
+   - Ubuntu/Debian: `sudo dpkg -i enigma*.deb`
+
+2) Setup
+
+On OSX : Open terminal, and navigate to the directory with the binary you downloaded. You can do this by running the following command.
+
+```bash
+cd <type directory where binary is located>
+```
+
+If you are on OSX run this to give secretcli permissions to run. Be sure you renamed the downloaded file to secretcli.
+```
+sudo chmod +x secretcli
+```
+
+On Windows : Open CMD, and navigate to the directory with the exe you downloaded. You can do this by running the following command.
+
+```bash
+cd <type directory where binary is located>
+```
+
+3) Configure:
+
+Note: On OSX add the following before "secretcli"
+
+```bash
+./
+```
+
+The result should appear as such.
+
+```bash
+./secretcli status
+```
+
+   ```bash
+   # Set the mainnet chain-id
+   secretcli config chain-id secret-1
+   ```
+
+   ```bash
+   secretcli config output json
+   ```
+
+   ```bash
+   secretcli config indent true
+   ```
+
+   ```bash
+   # Set the full node address
+   secretcli config node tcp://client.secretnodes.org:26657
+   ```
+
+   ```bash
+   # Verify everything you receive from the full node
+   secretcli config trust-node false
+   ```
+
+4) Check the installation:
+
+   ```bash
+   secretcli status
+   ```
+
 ### Create an account
 
 > Note: You can use any number you'd like for your account number. Be sure to remember the number you used, so you can recover if needed.
@@ -70,12 +141,6 @@ secretcli keys add <account name> --ledger --account <account number on your Led
 ```
 
 **Note! If you run the above command without the `--ledger` flag, the CLI will prompt you to enter your BIP39 mnemonic, which is your Ledger recovery phrase. YOU DO NOT WANT TO DO THIS. This will essentially save your private key locally.**
-
-_Note: the commands below assume that you run them on the same machine where you have an Secret Network node running. However, if you need to connect to a remote Secret Network node (on the cloud) while you interact with your Ledger wallet locally, you will need to append the following to each command below:_
-
-```bash
---node http://node.domain:26657
-```
 
 ### Send tokens
 
