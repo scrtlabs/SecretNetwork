@@ -93,15 +93,14 @@ go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"
 	GO111MODULE=on go mod verify
 
-xgo_build_secretd: go.sum
-	xgo --go latest --targets $(XGO_TARGET) -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' github.com/enigmampc/SecretNetwork/cmd/secretd
-
 xgo_build_secretcli: go.sum
-	xgo --go latest --targets $(XGO_TARGET) -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' github.com/enigmampc/SecretNetwork/cmd/secretcli
+	cli
 
-build_local_no_rust:
-	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
+cli:
 	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
+
+build_local_no_rust: cli
+	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
 #   this pulls out ELF symbols, 80% size reduction!
 	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
@@ -114,15 +113,15 @@ build-linux: vendor
 
 build_windows:
 	# CLI only 
-	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
+	GOOS=windows GOARCH=amd64 $(MAKE) cli
 
 build_macos:
 	# CLI only 
-	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/amd64
+	GOOS=darwin GOARCH=amd64 $(MAKE) cli
 
 build_arm_linux:
 	# CLI only 
-	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
+	GOOS=linux GOARCH=arm64 $(MAKE) cli
 
 build_all: build-linux build_windows build_macos build_arm_linux
 
