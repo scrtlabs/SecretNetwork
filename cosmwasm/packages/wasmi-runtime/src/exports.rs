@@ -54,23 +54,24 @@ pub unsafe extern "C" fn ecall_init(
 ) -> InitResult {
     if let Err(_e) = validate_const_ptr(env, env_len as usize) {
         error!("Tried to access data outside enclave memory!");
-        return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
+        return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall), 0);
     }
     if let Err(_e) = validate_const_ptr(msg, msg_len as usize) {
         error!("Tried to access data outside enclave memory!");
-        return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
+        return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall), 0);
     }
     if let Err(_e) = validate_const_ptr(contract, contract_len as usize) {
         error!("Tried to access data outside enclave memory!");
-        return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
+        return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall), 0);
     }
 
     let contract = std::slice::from_raw_parts(contract, contract_len);
     let env = std::slice::from_raw_parts(env, env_len);
     let msg = std::slice::from_raw_parts(msg, msg_len);
     let result = panic::catch_unwind(|| {
-        let result = crate::wasm::init(context, gas_limit, contract, env, msg);
-        result_init_success_to_initresult(result)
+        let mut used_gas = 0;
+        let result = crate::wasm::init(context, gas_limit, &mut used_gas, contract, env, msg);
+        result_init_success_to_initresult(result, used_gas)
     });
     if let Ok(res) = result {
         res
@@ -78,6 +79,8 @@ pub unsafe extern "C" fn ecall_init(
         error!("Call ecall_init panicked unexpectedly!");
         InitResult::Failure {
             err: EnclaveError::Panic,
+            // here we have no choice but to return 0, since the enclave panicked :(
+            used_gas: 0,
         }
     }
 }
@@ -97,23 +100,24 @@ pub unsafe extern "C" fn ecall_handle(
 ) -> HandleResult {
     if let Err(_e) = validate_const_ptr(env, env_len as usize) {
         error!("Tried to access data outside enclave memory!");
-        return result_handle_success_to_handleresult(Err(EnclaveError::FailedFunctionCall));
+        return result_handle_success_to_handleresult(Err(EnclaveError::FailedFunctionCall), 0);
     }
     if let Err(_e) = validate_const_ptr(msg, msg_len as usize) {
         error!("Tried to access data outside enclave memory!");
-        return result_handle_success_to_handleresult(Err(EnclaveError::FailedFunctionCall));
+        return result_handle_success_to_handleresult(Err(EnclaveError::FailedFunctionCall), 0);
     }
     if let Err(_e) = validate_const_ptr(contract, contract_len as usize) {
         error!("Tried to access data outside enclave memory!");
-        return result_handle_success_to_handleresult(Err(EnclaveError::FailedFunctionCall));
+        return result_handle_success_to_handleresult(Err(EnclaveError::FailedFunctionCall), 0);
     }
 
     let contract = std::slice::from_raw_parts(contract, contract_len);
     let env = std::slice::from_raw_parts(env, env_len);
     let msg = std::slice::from_raw_parts(msg, msg_len);
     let result = panic::catch_unwind(|| {
-        let result = crate::wasm::handle(context, gas_limit, contract, env, msg);
-        result_handle_success_to_handleresult(result)
+        let mut used_gas = 0;
+        let result = crate::wasm::handle(context, gas_limit, &mut used_gas, contract, env, msg);
+        result_handle_success_to_handleresult(result, used_gas)
     });
     if let Ok(res) = result {
         res
@@ -121,6 +125,8 @@ pub unsafe extern "C" fn ecall_handle(
         error!("Call ecall_handle panic'd unexpectedly!");
         HandleResult::Failure {
             err: EnclaveError::Panic,
+            // here we have no choice but to return 0, since the enclave panicked :(
+            used_gas: 0,
         }
     }
 }
@@ -138,18 +144,19 @@ pub unsafe extern "C" fn ecall_query(
 ) -> QueryResult {
     if let Err(_e) = validate_const_ptr(msg, msg_len as usize) {
         error!("Tried to access data outside enclave memory!");
-        return result_query_success_to_queryresult(Err(EnclaveError::FailedFunctionCall));
+        return result_query_success_to_queryresult(Err(EnclaveError::FailedFunctionCall), 0);
     }
     if let Err(_e) = validate_const_ptr(contract, contract_len as usize) {
         error!("Tried to access data outside enclave memory!");
-        return result_query_success_to_queryresult(Err(EnclaveError::FailedFunctionCall));
+        return result_query_success_to_queryresult(Err(EnclaveError::FailedFunctionCall), 0);
     }
 
     let contract = std::slice::from_raw_parts(contract, contract_len);
     let msg = std::slice::from_raw_parts(msg, msg_len);
     let result = panic::catch_unwind(|| {
-        let result = crate::wasm::query(context, gas_limit, contract, msg);
-        result_query_success_to_queryresult(result)
+        let mut used_gas = 0;
+        let result = crate::wasm::query(context, gas_limit, &mut used_gas, contract, msg);
+        result_query_success_to_queryresult(result, used_gas)
     });
     if let Ok(res) = result {
         res
@@ -157,6 +164,8 @@ pub unsafe extern "C" fn ecall_query(
         error!("Call ecall_query panic'd unexpectedly!");
         QueryResult::Failure {
             err: EnclaveError::Panic,
+            // here we have no choice but to return 0, since the enclave panicked :(
+            used_gas: 0,
         }
     }
 }

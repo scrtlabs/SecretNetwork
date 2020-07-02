@@ -133,18 +133,20 @@ where
         // At this point we know that the ecall was successful and init_result was initialized.
         let init_result = unsafe { init_result.assume_init() };
 
-        init_result_to_result_initsuccess(init_result)
-            .map(|success| {
-                trace!(
-                    target: module_path!(),
-                    "init() returned with gas_used: {} (gas_limit: {})",
-                    success.used_gas(),
-                    self.gas_left
-                );
-                self.gas_left -= success.used_gas();
-                success
-            })
-            .map_err(Into::into)
+        let used_gas = match init_result {
+            InitResult::Success { used_gas, .. } => used_gas,
+            InitResult::Failure { used_gas, .. } => used_gas,
+        };
+
+        trace!(
+            target: module_path!(),
+            "init() returned with gas_used: {} (gas_limit: {})",
+            used_gas,
+            self.gas_left
+        );
+        self.gas_left -= used_gas;
+
+        init_result_to_result_initsuccess(init_result).map_err(Into::into)
     }
 
     pub fn handle(&mut self, env: &[u8], msg: &[u8]) -> VmResult<HandleSuccess> {
@@ -179,18 +181,20 @@ where
         // At this point we know that the ecall was successful and handle_result was initialized.
         let handle_result = unsafe { handle_result.assume_init() };
 
-        handle_result_to_result_handlesuccess(handle_result)
-            .map(|success| {
-                trace!(
-                    target: module_path!(),
-                    "handle() returned with gas_used: {} (gas_limit: {})",
-                    success.used_gas(),
-                    self.gas_left
-                );
-                self.gas_left -= success.used_gas();
-                success
-            })
-            .map_err(Into::into)
+        let used_gas = match handle_result {
+            HandleResult::Success { used_gas, .. } => used_gas,
+            HandleResult::Failure { used_gas, .. } => used_gas,
+        };
+
+        trace!(
+            target: module_path!(),
+            "handle() returned with gas_used: {} (gas_limit: {})",
+            used_gas,
+            self.gas_left
+        );
+        self.gas_left -= used_gas;
+
+        handle_result_to_result_handlesuccess(handle_result).map_err(Into::into)
     }
 
     pub fn query(&mut self, msg: &[u8]) -> VmResult<QuerySuccess> {
@@ -221,12 +225,14 @@ where
         // At this point we know that the ecall was successful and query_result was initialized.
         let query_result = unsafe { query_result.assume_init() };
 
-        query_result_to_result_querysuccess(query_result)
-            .map(|success| {
-                self.gas_left -= success.used_gas();
-                success
-            })
-            .map_err(Into::into)
+        let used_gas = match query_result {
+            QueryResult::Success { used_gas, .. } => used_gas,
+            QueryResult::Failure { used_gas, .. } => used_gas,
+        };
+
+        self.gas_left -= used_gas;
+
+        query_result_to_result_querysuccess(query_result).map_err(Into::into)
     }
 }
 

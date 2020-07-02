@@ -155,7 +155,10 @@ pub enum InitResult {
         signature: [u8; 64],
     },
     Failure {
+        /// The error that happened in the enclave
         err: EnclaveError,
+        /// The gas used by the execution.
+        used_gas: u64,
     },
 }
 
@@ -172,7 +175,10 @@ pub enum HandleResult {
         signature: [u8; 64],
     },
     Failure {
+        /// The error that happened in the enclave
         err: EnclaveError,
+        /// The gas used by the execution.
+        used_gas: u64,
     },
 }
 
@@ -189,6 +195,9 @@ pub enum QueryResult {
         signature: [u8; 64],
     },
     Failure {
+        /// The error that happened in the enclave
         err: EnclaveError,
+        /// The gas used by the execution.
+        used_gas: u64,
     },
 }

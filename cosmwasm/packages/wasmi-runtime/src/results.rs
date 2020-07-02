@@ -9,19 +9,16 @@ use crate::imports::ocall_allocate;
 pub struct InitSuccess {
     /// The output of the calculation
     pub output: Vec<u8>,
-    /// The gas used by the execution.
-    pub used_gas: u64,
     /// A signature by the enclave on all of the results.
     pub signature: [u8; 64],
 }
 
-pub fn result_init_success_to_initresult(result: Result<InitSuccess, EnclaveError>) -> InitResult {
+pub fn result_init_success_to_initresult(
+    result: Result<InitSuccess, EnclaveError>,
+    used_gas: u64,
+) -> InitResult {
     match result {
-        Ok(InitSuccess {
-            output,
-            used_gas,
-            signature,
-        }) => {
+        Ok(InitSuccess { output, signature }) => {
             let user_buffer = unsafe {
                 let mut user_buffer = std::mem::MaybeUninit::<UserSpaceBuffer>::uninit();
                 match ocall_allocate(user_buffer.as_mut_ptr(), output.as_ptr(), output.len()) {
@@ -31,6 +28,7 @@ pub fn result_init_success_to_initresult(result: Result<InitSuccess, EnclaveErro
                             err: EnclaveError::FailedOcall {
                                 vm_error: UntrustedVmError::default(),
                             },
+                            used_gas,
                         }
                     }
                 }
@@ -42,7 +40,7 @@ pub fn result_init_success_to_initresult(result: Result<InitSuccess, EnclaveErro
                 signature,
             }
         }
-        Err(err) => InitResult::Failure { err },
+        Err(err) => InitResult::Failure { err, used_gas },
     }
 }
 
@@ -50,21 +48,16 @@ pub fn result_init_success_to_initresult(result: Result<InitSuccess, EnclaveErro
 pub struct HandleSuccess {
     /// The output of the calculation
     pub output: Vec<u8>,
-    /// The gas used by the execution.
-    pub used_gas: u64,
     /// A signature by the enclave on all of the results.
     pub signature: [u8; 64],
 }
 
 pub fn result_handle_success_to_handleresult(
     result: Result<HandleSuccess, EnclaveError>,
+    used_gas: u64,
 ) -> HandleResult {
     match result {
-        Ok(HandleSuccess {
-            output,
-            used_gas,
-            signature,
-        }) => {
+        Ok(HandleSuccess { output, signature }) => {
             let user_buffer = unsafe {
                 let mut user_buffer = std::mem::MaybeUninit::<UserSpaceBuffer>::uninit();
                 match ocall_allocate(user_buffer.as_mut_ptr(), output.as_ptr(), output.len()) {
@@ -74,6 +67,7 @@ pub fn result_handle_success_to_handleresult(
                             err: EnclaveError::FailedOcall {
                                 vm_error: UntrustedVmError::default(),
                             },
+                            used_gas,
                         }
                     }
                 }
@@ -85,7 +79,7 @@ pub fn result_handle_success_to_handleresult(
                 signature,
             }
         }
-        Err(err) => HandleResult::Failure { err },
+        Err(err) => HandleResult::Failure { err, used_gas },
     }
 }
 
@@ -93,21 +87,16 @@ pub fn result_handle_success_to_handleresult(
 pub struct QuerySuccess {
     /// The output of the calculation
     pub output: Vec<u8>,
-    /// The gas used by the execution.
-    pub used_gas: u64,
     /// A signature by the enclave on all of the results.
     pub signature: [u8; 64],
 }
 
 pub fn result_query_success_to_queryresult(
     result: Result<QuerySuccess, EnclaveError>,
+    used_gas: u64,
 ) -> QueryResult {
     match result {
-        Ok(QuerySuccess {
-            output,
-            used_gas,
-            signature,
-        }) => {
+        Ok(QuerySuccess { output, signature }) => {
             let user_buffer = unsafe {
                 let mut user_buffer = std::mem::MaybeUninit::<UserSpaceBuffer>::uninit();
                 match ocall_allocate(user_buffer.as_mut_ptr(), output.as_ptr(), output.len()) {
@@ -117,6 +106,7 @@ pub fn result_query_success_to_queryresult(
                             err: EnclaveError::FailedOcall {
                                 vm_error: UntrustedVmError::default(),
                             },
+                            used_gas,
                         }
                     }
                 }
@@ -128,6 +118,6 @@ pub fn result_query_success_to_queryresult(
                 signature,
             }
         }
-        Err(err) => QueryResult::Failure { err },
+        Err(err) => QueryResult::Failure { err, used_gas },
     }
 }
