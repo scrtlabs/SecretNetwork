@@ -2,18 +2,19 @@ use cosmwasm_storage::PrefixedStorage;
 
 use cosmwasm_std::{
     generic_err, invalid_base64, invalid_utf8, log, not_found, null_pointer, parse_err,
-    serialize_err, to_binary, unauthorized, underflow, Api, Binary, CanonicalAddr, CosmosMsg, Env,
-    Extern, HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse,
-    Querier, QueryResult, ReadonlyStorage, StdError, StdResult, Storage, WasmMsg,
+    serialize_err, to_binary, unauthorized, underflow, Api, Binary, CosmosMsg, Env, Extern,
+    HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse, Querier,
+    QueryResult, ReadonlyStorage, StdError, StdResult, Storage, WasmMsg,
 };
 
 use crate::state::config_read;
 
 /////////////////////////////// Messages ///////////////////////////////
 
+use mem::MaybeUninit;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::{mem, ptr, slice};
+use std::mem;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -444,31 +445,31 @@ fn pass_null_pointer_to_imports_should_throw<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     pass_type: String,
 ) -> HandleResponse {
-    let null_ptr: &[u8] = unsafe { slice::from_raw_parts(ptr::null(), 0) };
+    let null_ptr_slice: &[u8] = unsafe { MaybeUninit::zeroed().assume_init() };
 
     match &pass_type[..] {
         "read_db_key" => {
-            deps.storage.get(null_ptr);
+            deps.storage.get(null_ptr_slice);
         }
         "write_db_key" => {
-            deps.storage.set(null_ptr, b"write value");
+            deps.storage.set(null_ptr_slice, b"write value");
         }
         "write_db_value" => {
-            deps.storage.set(b"write key", null_ptr);
+            deps.storage.set(b"write key", null_ptr_slice);
         }
         "remove_db_key" => {
-            deps.storage.remove(null_ptr);
+            deps.storage.remove(null_ptr_slice);
         }
         "canonicalize_address_input" => {
             deps.api
-                .canonical_address(unsafe { mem::zeroed::<&HumanAddr>() });
+                .canonical_address(unsafe { MaybeUninit::zeroed().assume_init() });
         }
-        "canonicalize_address_output" => {}
+        "canonicalize_address_output" => { /* TODO */ }
         "humanize_address_input" => {
             deps.api
-                .human_address(unsafe { mem::zeroed::<&CanonicalAddr>() });
+                .human_address(unsafe { MaybeUninit::zeroed().assume_init() });
         }
-        "humanize_address_output" => {}
+        "humanize_address_output" => { /* TODO */ }
         _ => {}
     };
 
