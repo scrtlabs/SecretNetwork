@@ -83,8 +83,9 @@ RustEnclave_Link_Flags := -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfi
 	$(ENCLAVE_LDFLAGS)
 
 
-Rust_Crate_Source := $(wildcard src/*.rs)
+Rust_Crate_Source := $(shell find -type f | grep -vP '(\.so|\.o|\.a)$$' | grep -vP '^\./target' | grep -v Enclave_t)
 Rust_Target_Path := $(CURDIR)/xargo
+Rust_Flags := "-Z force-unstable-if-unmarked -Ctarget-feature=+aes,+ssse3"
 
 .PHONY: all
 all: enclave
@@ -95,7 +96,7 @@ enclave: ffi-types librust_cosmwasm_enclave.signed.so
 ffi-types:
 	mkdir -p target/headers/
 	cd ../enclave-ffi-types && \
-	RUST_TARGET_PATH=$(Rust_Target_Path) xargo build --features "build_headers" --target x86_64-unknown-linux-sgx -Z unstable-options --profile $(BUILD_PROFILE) && \
+	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo build --features "build_headers" --target x86_64-unknown-linux-sgx -Z unstable-options --profile $(BUILD_PROFILE) && \
 	cp $(Rust_Target_Path)/../../../target/headers/enclave-ffi-types.h $(Rust_Target_Path)/../target/headers/
 
 librust_cosmwasm_enclave.signed.so: librust_cosmwasm_enclave.so
@@ -105,7 +106,7 @@ librust_cosmwasm_enclave.so: $(CUSTOM_LIBRARY_PATH)/libenclave.a Enclave_t.o
 	$(CXX) Enclave_t.o -o $@ $(RustEnclave_Link_Flags)
 
 $(CUSTOM_LIBRARY_PATH)/libenclave.a: $(CUSTOM_LIBRARY_PATH) $(Rust_Crate_Source)
-	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS="-Z force-unstable-if-unmarked -Ctarget-feature=+aes,+ssse3" xargo build --features "$(FEATURES)" --target x86_64-unknown-linux-sgx -Z unstable-options --profile $(BUILD_PROFILE)
+	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo build --features "$(FEATURES)" --target x86_64-unknown-linux-sgx -Z unstable-options --profile $(BUILD_PROFILE)
 	cp target/x86_64-unknown-linux-sgx/$(BUILD_PROFILE)/libwasmi_runtime_enclave.a $(CUSTOM_LIBRARY_PATH)/libenclave.a
 
 $(CUSTOM_LIBRARY_PATH):
@@ -118,11 +119,11 @@ $(Enclave_EDL_Products): Enclave.edl
 	sgx_edger8r --trusted $^ --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --trusted-dir ./
 
 check:
-	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS="-Z force-unstable-if-unmarked" xargo check --features "SGX_MODE_$(SGX_MODE)" --target x86_64-unknown-linux-sgx
+	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo check --features "SGX_MODE_$(SGX_MODE)" --target x86_64-unknown-linux-sgx
 
 clippy:
-	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS="-Z force-unstable-if-unmarked -D warnings" xargo clippy --features "SGX_MODE_$(SGX_MODE)" --target x86_64-unknown-linux-sgx
+	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo clippy --features "SGX_MODE_$(SGX_MODE)" --target x86_64-unknown-linux-sgx -- -D warnings
 
 clean:
 	rm -rf $(CUSTOM_LIBRARY_PATH) $(Enclave_EDL_Products) *.o *.so
-	xargo clean
+	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo clean
