@@ -51,6 +51,13 @@ impl ContractInstance {
     /// extract_vector extracts key into a buffer
     fn extract_vector(&self, vec_ptr_ptr: u32) -> Result<Vec<u8>, InterpreterError> {
         let ptr: u32 = self.get_memory().get_value(vec_ptr_ptr)?;
+
+        if ptr == 0 {
+            return Err(InterpreterError::Memory(String::from(
+                "Trying to read from null pointer in WASM memory",
+            )));
+        }
+
         let len: u32 = self.get_memory().get_value(vec_ptr_ptr + 8)?;
 
         self.get_memory().get(ptr, len as usize)
@@ -62,6 +69,9 @@ impl ContractInstance {
             &[RuntimeValue::I32(len as i32)],
             self,
         )? {
+            Some(RuntimeValue::I32(0)) => Err(InterpreterError::Memory(String::from(
+                "Allocate returned null pointer from WASM",
+            ))),
             Some(RuntimeValue::I32(offset)) => Ok(offset as u32),
             other => Err(InterpreterError::Value(format!(
                 "allocate method returned value which wasn't u32: {:?}",
@@ -83,6 +93,12 @@ impl ContractInstance {
         let buffer_addr_in_wasm: u32 = self
             .get_memory()
             .get_value::<u32>(ptr_to_region_in_wasm_vm)?;
+
+        if buffer_addr_in_wasm == 0 {
+            return Err(InterpreterError::Memory(String::from(
+                "Trying to write to null pointer in WASM memory",
+            )));
+        }
 
         let buffer_cap_in_wasm: u32 = self
             .get_memory()
