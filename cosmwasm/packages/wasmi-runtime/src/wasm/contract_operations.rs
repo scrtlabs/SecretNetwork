@@ -1,6 +1,6 @@
 use log::*;
 use parity_wasm::elements;
-use parity_wasm::elements::{MemoryType, Module};
+use parity_wasm::elements::Module;
 use wasmi::ModuleInstance;
 
 use enclave_ffi_types::{Ctx, EnclaveError};
