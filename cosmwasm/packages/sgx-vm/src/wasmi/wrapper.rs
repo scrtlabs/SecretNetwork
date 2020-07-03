@@ -51,7 +51,8 @@ where
     Q: Querier,
 {
     bytecode: Vec<u8>,
-    gas_left: u64,
+    gas_limit: u64,
+    used_gas: u64,
     enclave: &'static SgxEnclave,
     ctx: Ctx,
     finalizer: fn(*mut c_void),
@@ -79,7 +80,8 @@ where
         let ctx = Ctx { data };
         Self {
             bytecode,
-            gas_left: gas_limit,
+            gas_limit,
+            used_gas: 0,
             enclave,
             ctx,
             finalizer,
@@ -98,17 +100,17 @@ where
     }
 
     pub fn gas_left(&self) -> u64 {
-        self.gas_left
+        self.gas_limit.saturating_sub(self.used_gas)
     }
 
     pub fn init(&mut self, env: &[u8], msg: &[u8]) -> VmResult<InitSuccess> {
         trace!(
             target: module_path!(),
-            "init() called with env: {:?} msg: {:?} enclave_id: {:?} gas_limit: {}",
+            "init() called with env: {:?} msg: {:?} enclave_id: {:?} gas_left: {}",
             String::from_utf8_lossy(env),
             String::from_utf8_lossy(msg),
             self.enclave.geteid(),
-            self.gas_left
+            self.gas_left()
         );
 
         let mut init_result = MaybeUninit::<InitResult>::uninit();
@@ -118,7 +120,7 @@ where
                 self.enclave.geteid(),
                 init_result.as_mut_ptr(),
                 self.ctx.unsafe_clone(),
-                self.gas_left,
+                self.gas_left(),
                 self.bytecode.as_ptr(),
                 self.bytecode.len(),
                 env.as_ptr(),
@@ -142,9 +144,9 @@ where
             target: module_path!(),
             "init() returned with gas_used: {} (gas_limit: {})",
             used_gas,
-            self.gas_left
+            self.gas_limit
         );
-        self.gas_left -= used_gas;
+        self.used_gas = self.used_gas.saturating_add(used_gas);
 
         init_result_to_result_initsuccess(init_result).map_err(Into::into)
     }
@@ -152,11 +154,11 @@ where
     pub fn handle(&mut self, env: &[u8], msg: &[u8]) -> VmResult<HandleSuccess> {
         trace!(
             target: module_path!(),
-            "handle() called with env: {:?} msg: {:?} enclave_id: {:?} gas_limit: {}",
+            "handle() called with env: {:?} msg: {:?} enclave_id: {:?} gas_left: {}",
             String::from_utf8_lossy(env),
             String::from_utf8_lossy(msg),
             self.enclave.geteid(),
-            self.gas_left
+            self.gas_left()
         );
 
         let mut handle_result = MaybeUninit::<HandleResult>::uninit();
@@ -166,7 +168,7 @@ where
                 self.enclave.geteid(),
                 handle_result.as_mut_ptr(),
                 self.ctx.unsafe_clone(),
-                self.gas_left,
+                self.gas_left(),
                 self.bytecode.as_ptr(),
                 self.bytecode.len(),
                 env.as_ptr(),
@@ -190,9 +192,9 @@ where
             target: module_path!(),
             "handle() returned with gas_used: {} (gas_limit: {})",
             used_gas,
-            self.gas_left
+            self.gas_limit
         );
-        self.gas_left -= used_gas;
+        self.used_gas = self.used_gas.saturating_add(used_gas);
 
         handle_result_to_result_handlesuccess(handle_result).map_err(Into::into)
     }
@@ -212,7 +214,7 @@ where
                 self.enclave.geteid(),
                 query_result.as_mut_ptr(),
                 self.ctx.unsafe_clone(),
-                self.gas_left,
+                self.gas_left(),
                 self.bytecode.as_ptr(),
                 self.bytecode.len(),
                 msg.as_ptr(),
@@ -230,7 +232,7 @@ where
             QueryResult::Failure { used_gas, .. } => used_gas,
         };
 
-        self.gas_left -= used_gas;
+        self.used_gas = self.used_gas.saturating_add(used_gas);
 
         query_result_to_result_querysuccess(query_result).map_err(Into::into)
     }
