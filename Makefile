@@ -108,7 +108,7 @@ deb: build_local
 	mkdir -p /tmp/SecretNetwork/deb/DEBIAN
 	cp ./packaging_ubuntu/control /tmp/SecretNetwork/deb/DEBIAN/control
 	printf "Version: " >> /tmp/SecretNetwork/deb/DEBIAN/control
-	git tag | grep -P '^v' | tail -1 | tr -d v >> /tmp/SecretNetwork/deb/DEBIAN/control
+	git describe --tags | tr -d v >> /tmp/SecretNetwork/deb/DEBIAN/control
 	echo "" >> /tmp/SecretNetwork/deb/DEBIAN/control
 	cp ./packaging_ubuntu/postinst /tmp/SecretNetwork/deb/DEBIAN/postinst
 	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/postinst
