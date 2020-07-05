@@ -11,8 +11,10 @@ use crate::state::config_read;
 
 /////////////////////////////// Messages ///////////////////////////////
 
+use mem::MaybeUninit;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::mem;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -75,6 +77,9 @@ pub enum HandleMsg {
     Panic {},
     AllocateOnHeap {
         bytes: u32,
+    },
+    PassNullPointerToImportsShouldThrow {
+        pass_type: String,
     },
 }
 
@@ -231,6 +236,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::TestCanonicalizeAddressErrors {} => test_canonicalize_address_errors(deps),
         HandleMsg::Panic {} => panic!("panic in exec"),
         HandleMsg::AllocateOnHeap { bytes } => Ok(allocate_on_heap(bytes as usize)),
+        HandleMsg::PassNullPointerToImportsShouldThrow { pass_type } => {
+            Ok(pass_null_pointer_to_imports_should_throw(deps, pass_type))
+        }
     }
 }
 
@@ -428,6 +436,43 @@ fn remove_state<S: Storage, A: Api, Q: Querier>(
 ) -> HandleResponse {
     let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
     store.remove(key.as_bytes());
+    HandleResponse::default()
+}
+
+#[allow(invalid_value)]
+#[allow(unused_must_use)]
+fn pass_null_pointer_to_imports_should_throw<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    pass_type: String,
+) -> HandleResponse {
+    let null_ptr_slice: &[u8] = unsafe { MaybeUninit::zeroed().assume_init() };
+
+    match &pass_type[..] {
+        "read_db_key" => {
+            deps.storage.get(null_ptr_slice);
+        }
+        "write_db_key" => {
+            deps.storage.set(null_ptr_slice, b"write value");
+        }
+        "write_db_value" => {
+            deps.storage.set(b"write key", null_ptr_slice);
+        }
+        "remove_db_key" => {
+            deps.storage.remove(null_ptr_slice);
+        }
+        "canonicalize_address_input" => {
+            deps.api
+                .canonical_address(unsafe { MaybeUninit::zeroed().assume_init() });
+        }
+        "canonicalize_address_output" => { /* TODO */ }
+        "humanize_address_input" => {
+            deps.api
+                .human_address(unsafe { MaybeUninit::zeroed().assume_init() });
+        }
+        "humanize_address_output" => { /* TODO */ }
+        _ => {}
+    };
+
     HandleResponse::default()
 }
 

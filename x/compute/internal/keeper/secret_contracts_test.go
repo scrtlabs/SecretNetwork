@@ -1022,3 +1022,30 @@ func TestAllocateOnHeapMoreThanSGXHasFailBecauseMemoryLimit(t *testing.T) {
 	require.Error(t, execErr.GenericErr)
 	require.Equal(t, "execute wasm contract failed: Error calling the VM: EnclaveErr: Got an error from the enclave: FailedFunctionCall", execErr.GenericErr.Msg)
 }
+
+func TestPassNullPointerToImports(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	require.Empty(t, initErr)
+
+	tests := []string{
+		"read_db_key",
+		"write_db_key",
+		"write_db_value",
+		"remove_db_key",
+		"canonicalize_address_input",
+		"humanize_address_input",
+	}
+
+	for _, passType := range tests {
+		t.Run(passType, func(t *testing.T) {
+			_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"pass_null_pointer_to_imports_should_throw":{"pass_type":"%s"}}`, passType), false, defaultGas)
+
+			require.Error(t, execErr)
+			require.Error(t, execErr.GenericErr)
+			require.Equal(t, "execute wasm contract failed: Error calling the VM: EnclaveErr: Got an error from the enclave: Unknown", execErr.GenericErr.Msg)
+		})
+	}
+}
