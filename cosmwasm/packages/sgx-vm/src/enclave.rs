@@ -8,7 +8,7 @@ use sgx_urts::SgxEnclave;
 
 use lazy_static::lazy_static;
 
-static ENCLAVE_FILE: &'static str = "librust_cosmwasm_enclave.signed.so";
+static ENCLAVE_FILE: &str = "librust_cosmwasm_enclave.signed.so";
 
 fn init_enclave() -> SgxResult<SgxEnclave> {
     let mut launch_token: sgx_launch_token_t = [0; 1024];
@@ -23,7 +23,7 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
 
     // Step : try to create a .enigma folder for storing all the files
     // Create a directory, returns `io::Result<()>`
-    let enclave_directory = env::var("SCRT_ENCLAVE_DIR").unwrap_or('.'.to_string());
+    let enclave_directory = env::var("SCRT_ENCLAVE_DIR").unwrap_or_else(|_| '.'.to_string());
 
     let path = Path::new(&enclave_directory);
 
