@@ -4,13 +4,92 @@
 Secret Network secures the decentralized web
 </p>
 
+# The Romulus Upgrade
+
+This is the Romulus Upgrade for the Secret Network as specified in the mainnet _Romulus Upgrade Signal_ proposal.
+
+[Proposal 13](https://puzzle.report/enigma/chains/enigma-1/governance/proposals/13)
+
+
+```bash
+This proposal is intended to set a time to upgrade the Secret Network. This upgrade will rename the current enigma 
+prefix to secret in order to rebrand the address format, additionally it will bring other improvements such as the 
+addition of a new module.
+
+The proposed time for this upgrade is approximately 5am PT Wednesday June 17th 2020.
+
+The proposed time approximately corresponds to block 1,794,500
+
+All additions can be transparently reviewed in the following GitHub repo : https://github.com/chainofsecrets/TheRomulusUpgrade
+
+Note: The original date was moved from the 10th to the 17th to allow an additional week for testing.
+```
+
+# Upgrade Instructions
+
+### The Romulus Upgrade is scheduled for June 17th, 2020, Wednesday at 5:00am PST, 8:00am EST, 12:00pm UTC
+
+## Summary
+
+Chain of Secrets (CoS) will lead the Romulus Upgrade and you can follow along in these Rocket Chat channels:
+
+	https://chat.scrt.network/channel/mainnet-validators
+	https://chat.scrt.network/channel/romulus-upgrade
+
+### Step 1 - Gracefully Halt the `enigma-1` Chain
+
+All validators will full nodes will be restarted with a flag to stop the chain at the block height of *1,794,500*. The agreed upon
+block height should be reached at approximately 9am PDT, 12pm EDT, 4pm UTC. This step ensures that all nodes are stopped gracefully
+at the same block height.
+
+### Step 2 - Upgrade Genesis
+
+CoS will export the genesis state and modify the chain id from `enigma-1` to `secret-1`, and converting all addresses to the new `secret` format.
+
+The tokenswap parameters will be added to the exported genesis file.
+
+### Step 3 - Setup Secret Network
+
+All validators and those running full nodes will then install the `secretnetwork` release and perform configuration steps
+
+### Step 4 - Setup the Node/Validator
+
+Initialize the node and import config files. Set the new genesis file and validate the checksum.
+
+### Step 5 - Start the new Secret Node
+
+This is where the `secret-node` is enabled and started. Once 2/3 of online voting power comes online we'll be seeing blocks streaming.
+
+### Step 6 - Import Wallet Keys
+
+In this step the `enigmacli` keys are imported into `secretcli`.
+
+### Step 7 - Remove Old Chain
+
+If all went well and the Secret Network is live and stable, the old `enigma-1` node can be removed.
+
+
+## Romulus Upgrade Instructions
+
+For detailed steps follow the [Romulus Upgrade instructions](/docs/upgrades/romulus-upgrade-instructions.md).
+
+Wishing everyone much success on the day of the upgrade!!
+
+:tada: :tada: :tada:
+
+## Acknowledgements
+
+Special thanks to Ian and Jacob from SecretNodes.org for all of the work they did on the upgrade proposal, coding and 
+instructions! Chain of Secrets was able to pick-up the torch, complete the work and perform testing thanks to their efforts.
+
+We also had valuable contributors who aided us along the way and we're very grateful for their help as well!
+
+
 # What is Secret Network?
 
 Want to build a better internet? Solve for privacy.
 
 Secret Network is a blockchain-based, open-source protocol that lets anyone perform computations on encrypted data, bringing privacy to smart contracts and public blockchains. Our mission: improve the adoption and usability of decentralized technologies, for the benefit of all.
-
-Mainnet is out! Get the latest release at https://github.com/enigmampc/SecretNetwork/releases/latest.
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
 
@@ -31,7 +110,7 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 
 - [Cashmaney](https://explorer.cashmaney.com)
 - [SecretScan](https://secretscan.io)
-- [Puzzle](https://puzzle-staging.secretnodes.org/enigma/chains/enigma-1)
+- [Puzzle](https://puzzle.report/enigma/chains/enigma-1)
 
 # Wallets
 
@@ -40,23 +119,21 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 
 # Implementation Discussions
 
-- [An Update on the Encryption Protocol](https://forum.enigma.co/t/an-update-on-the-encryption-protocol/1641)
-- [Hard Forks and Network Upgrades](https://forum.enigma.co/t/hard-forks-and-network-upgrades/1670)
-- [Don’t trust, verify (an untrusted host)](https://forum.scrt.network/t/dont-trust-verify-an-untrusted-host/1669)
-- [Secret Contracts on Secret Network](https://forum.enigma.co/t/secret-contracts-on-enigma-blockchain/1284)
-- [Network key management/agreement](https://forum.enigma.co/t/network-key-management-agreement/1324)
-- [Input/Output/State Encryption/Decryption protocol](https://forum.enigma.co/t/input-output-state-encryption-decryption-protocol/1325)
-- [Why the Cosmos move doesn’t mean we’re leaving Ethereum](https://forum.enigma.co/t/why-the-cosmos-move-doesnt-mean-were-leaving-ethereum/1301)
-- [(Dev discussion/Issue) WASM implementation](https://forum.enigma.co/t/dev-discussion-issue-wasm-implementation/1303)
+- [An Update on the Encryption Protocol](https://forum.scrt.network/t/an-update-on-the-encryption-protocol/1641)
+- [Secret Contracts on Secret Network](https://forum.scrt.network/t/secret-contracts-on-enigma-blockchain/1284)
+- [Network key management/agreement](https://forum.scrt.network/t/network-key-management-agreement/1324)
+- [Input/Output/State Encryption/Decryption protocol](https://forum.scrt.network/t/input-output-state-encryption-decryption-protocol/1325)
+- [Why the Cosmos move doesn’t mean we’re leaving Ethereum](https://forum.scrt.network/t/why-the-cosmos-move-doesnt-mean-were-leaving-ethereum/1301)
+- [(Dev discussion/Issue) WASM implementation](https://forum.scrt.network/t/dev-discussion-issue-wasm-implementation/1303)
 
-# Blockchain REST Providers
+# Secret Network REST Providers
 
 - https://api.chainofsecrets.org
 
 # Docs
 
-- [Install the `enigmacli` light client (Windows, Mac & Linux)](/docs/light-client-mainnet.md)
-- [How to use the `enigmacli` light client](/docs/enigmacli.md)
+- [Install the `secretcli` light client (Windows, Mac & Linux)](/docs/light-client-mainnet.md)
+- [How to use the `secretcli` light client](/docs/secretcli.md)
 - [How to participate in on-chain governance](docs/using-governance.md)
 - [How to run a full node on mainnet](/docs/validators-and-full-nodes/run-full-node-mainnet.md)
 - [How to run an LCD server](/docs/lcd-server-example.service)
@@ -67,9 +144,12 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 - [How to verify software releases](/docs/verify-releases.md)
 - [How to setup SGX on your machine](/docs/dev/setup-sgx.md)
 
+# Upgrades
+- [How to upgrade to the Secret Network (rebranding)](/docs/upgrades/romulus-upgrade-instructions.md)
+
 # Archive
 
-- [For Blockchain developers](/docs/dev/for-enigma-blockchain-devs.md)
+- [For Secret Network developers](/docs/dev/for-secret-network-devs.md)
 - [How to be a mainnet genesis validator](/docs/genesis/genesis-validator-mainnet.md)
 
 # License

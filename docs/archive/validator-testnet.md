@@ -147,11 +147,11 @@ ERROR: unknown address: account enigmaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx do
 
 ### 18. Join the network as a new validator: replace `<MONIKER>` with your own from step 4 above, and adjust the amount you want to stake
 
-(remember 1 SCRT = 1,000,000 uSCRT, and so the command below stakes 100k SCRT).
+(remember 1 TSCRT = 1,000,000 uTSCRT, and so the command below stakes 100k TSCRT).
 
 ```
 engcli tx staking create-validator \
-  --amount=100000000000uscrt \
+  --amount=100000000000utscrt \
   --pubkey=$(engd tendermint show-validator) \
   --chain-id=enigma-testnet \
   --commission-rate="0.10" \
@@ -159,7 +159,7 @@ engcli tx staking create-validator \
   --commission-max-change-rate="0.01" \
   --min-self-delegation="1" \
   --gas=200000 \
-  --gas-prices="0.025uscrt" \
+  --gas-prices="0.025utscrt" \
   --moniker=<MONIKER> \
   --from=<key-alias>
 ```
@@ -174,12 +174,12 @@ If the above is too verbose, just run: `engcli q staking validators | grep monik
 
 ## Staking more tokens
 
-(remember 1 SCRT = 1,000,000 uSCRT)
+(remember 1 TSCRT = 1,000,000 uTSCRT)
 
 In order to stake more tokens beyond those in the initial transaction, run:
 
 ```
-engcli tx staking delegate $(engcli keys show <key-alias> --bech=val -a) 1uscrt --from <key-alias>
+engcli tx staking delegate $(engcli keys show <key-alias> --bech=val -a) 1utscrt --from <key-alias>
 ```
 
 ## Seeing your rewards from being a validator

@@ -36,6 +36,7 @@
   - [Deanonymizing with ciphertext byte count](#deanonymizing-with-ciphertext-byte-count)
   - [Two contracts with the same `contract_key` could deanonymize each other's states](#two-contracts-with-the-same-contract_key-could-deanonymize-each-others-states)
   - [Tx Replay attacks?](#tx-replay-attacks)
+  - [Tx outputs can leak data](#tx-outputs-can-leak-data)
 
 # Bootstrap Process
 
@@ -126,7 +127,7 @@ TODO reasoning
 
 # Node Startup
 
-When a full node resumes its participation in the network, it reads `consensus_seed` from `"$HOME/.enigmad/sgx-secrets/consensus_seed.sealed"` and again does [key derivation](#Key-Derivation) as outlined above.
+When a full node resumes its participation in the network, it reads `consensus_seed` from `"$HOME/.secretd/sgx-secrets/consensus_seed.sealed"` and again does [key derivation](#Key-Derivation) as outlined above.
 
 # New Node Registration
 
@@ -140,7 +141,7 @@ TODO reasoning
 - Create a remote attestation proof that the node's Enclave is genuine.
 - Generate inside the node's Enclave a true random curve25519 curve private key: `registration_privkey`.
 - From `registration_privkey` calculate `registration_pubkey`.
-- Send an `enigmacli tx register auth` transaction with the following inputs:
+- Send an `secretcli tx register auth` transaction with the following inputs:
   - The remote attestation proof that the node's Enclave is genuine.
   - `registration_pubkey`
   - 256 bits true random `nonce`
@@ -149,7 +150,7 @@ TODO reasoning
 
 TODO reasoning
 
-- Receive the `enigmacli tx register auth` transaction.
+- Receive the `secretcli tx register auth` transaction.
 - Verify the remote attestation proof that the new node's Enclave is genuine.
 
 ### `seed_exchange_key`
@@ -181,7 +182,7 @@ seed_exchange_key = hkdf({
 
 TODO reasoning
 
-- The output of the `enigmacli tx register auth` transaction is `consensus_seed` encrypted with AES-128-SIV, `seed_exchange_key` as the encryption key, using the public key of the registering node for the AD.
+- The output of the `secretcli tx register auth` transaction is `consensus_seed` encrypted with AES-128-SIV, `seed_exchange_key` as the encryption key, using the public key of the registering node for the AD.
 
 ```js
 encrypted_consensus_seed = aes_128_siv_encrypt({
@@ -195,7 +196,7 @@ return encrypted_consensus_seed;
 
 ## Back on the new node, inside its Enclave
 
-- Receive the `enigmacli tx register auth` transaction output (`encrypted_consensus_seed`).
+- Receive the `secretcli tx register auth` transaction output (`encrypted_consensus_seed`).
 
 ### `seed_exchange_key`
 
@@ -226,7 +227,7 @@ TODO reasoning
 
 - `encrypted_consensus_seed` is encrypted with AES-128-SIV, `seed_exchange_key` as the encryption key and the public key of the registering node as the `ad` as the decryption additional data.
 - The new node now has all of these^ parameters inside its Enclave, so it's able to decrypt `consensus_seed` from `encrypted_consensus_seed`.
-- Seal `consensus_seed` to disk at `"$HOME/.enigmad/sgx-secrets/consensus_seed.sealed"`.
+- Seal `consensus_seed` to disk at `"$HOME/.secretd/sgx-secrets/consensus_seed.sealed"`.
 
 ```js
 consensus_seed = aes_128_siv_decrypt({
@@ -238,7 +239,7 @@ consensus_seed = aes_128_siv_decrypt({
 seal({
   key: "MRENCLAVE",
   data: consensus_seed,
-  to_file: "$HOME/.enigmad/sgx-secrets/consensus_seed.sealed",
+  to_file: "$HOME/.secretd/sgx-secrets/consensus_seed.sealed",
 });
 ```
 
@@ -476,11 +477,11 @@ msg = aes_128_siv_decrypt({
         },
         {
           "key": "sender", // need to encrypt this value
-          "value": "enigma1v9tna8rkemndl7cd4ahru9t7ewa7kdq8d4zlr5" // need to encrypt this value
+          "value": "secret1v9tna8rkemndl7cd4ahru9t7ewa7kdq8d4zlr5" // need to encrypt this value
         },
         {
           "key": "recipient", // need to encrypt this value
-          "value": "enigma1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4" // need to encrypt this value
+          "value": "secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4" // need to encrypt this value
         }
       ],
       "data": "bla bla" // need to encrypt this value
@@ -608,4 +609,14 @@ If an attacker can create a contract with the same `contract_key` as another con
 
 For example, An original contract with a permissioned getter, such that only whitelisted addresses can query the getter. In the malicious contract the attacker can set themselves as the owner and ask the malicious contract to decrypt the state of the original contract via that permissioned getter.
 
-## Tx Replay attacks?
+## Tx Replay attacks
+
+After a contract runs on the chain, an attaker can sync up a node up to a specific block in the chain, and then call into the enclave with the same authenticated user inputs that were given to the enclave on-chain, but out-of-order, or omit selected messages. A contract that does not anticipate or protect against this might end up deanonimizing the information provided by users. for example, in a naive voting contract (or other personal data collection algorithm), we can deanonimize a voter by re-running the vote without the target's request, and analyze thedifference in final results.
+
+## Partial storage rollback during contract runtime
+
+Our current schema can verify that when reading from a field in storage, the value received from the host has been written by the same contract instance to the same field in storage. BUT we can not (yet) verify that the value is the most __recent__ value that wsa stored there. This means that a malicious host can (offline) run a transaction, and then selectively provide outdated values for some fields of the storage. In the worst case, this can cause a contract to expose old secrets with new permissions, or new secrets with old permissions. The contract can protect against this by either (e.g.) making sure that pieces of information that have to be synced with each other are saved under the same field (so they are never observed as desynchronised) or (e.g.) somehow verify their validity when reading them from two separate fields of storage.
+
+## Tx outputs can leak data
+
+E.g. a dev writes a contract with 2 functions, the first one always outputs 3 events and the second one always outputs 4 events. By counting the number of output events an attacker can know which funcation was invoked. Also applies with deposits, callbacks and transfers.

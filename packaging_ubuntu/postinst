@@ -3,14 +3,14 @@
 
 set -e
 
-cat <<EOF > /etc/systemd/system/enigma-node.service
+cat <<EOF > /etc/systemd/system/secret-node.service
 [Unit]
-Description=Enigma node service
+Description=Secret node service
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=$(which enigmad) start
+ExecStart=$(which secretd) start
 User=$(logname)
 Restart=always
 StartLimitInterval=0
@@ -22,4 +22,5 @@ WantedBy=multi-user.target
 EOF
 sudo systemctl daemon-reload
 
+sudo perl -i -pe 's/#SystemMaxUse=.*/SystemMaxUse=50M/' /etc/systemd/journald.conf
 sudo systemctl restart systemd-journald
