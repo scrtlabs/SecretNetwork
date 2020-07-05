@@ -17,8 +17,8 @@ use log::trace;
 use super::exports::FullContext;
 use super::imports;
 use super::results::{
-    handle_result_to_result_handlesuccess, init_result_to_result_initsuccess,
-    query_result_to_result_querysuccess, HandleSuccess, InitSuccess, QuerySuccess,
+    handle_result_to_vm_result, init_result_to_vm_result, query_result_to_vm_result, HandleSuccess,
+    InitSuccess, QuerySuccess,
 };
 
 /// This is a safe wrapper for allocating buffers inside the enclave.
@@ -145,7 +145,7 @@ where
         );
         self.used_gas = self.used_gas.saturating_add(used_gas);
 
-        init_result_to_result_initsuccess(init_result).map_err(Into::into)
+        init_result_to_vm_result(init_result)
     }
 
     pub fn handle(&mut self, env: &[u8], msg: &[u8]) -> VmResult<HandleSuccess> {
@@ -190,7 +190,7 @@ where
         );
         self.used_gas = self.used_gas.saturating_add(used_gas);
 
-        handle_result_to_result_handlesuccess(handle_result).map_err(Into::into)
+        handle_result_to_vm_result(handle_result)
     }
 
     pub fn query(&mut self, msg: &[u8]) -> VmResult<QuerySuccess> {
@@ -225,7 +225,7 @@ where
 
         self.used_gas = self.used_gas.saturating_add(used_gas);
 
-        query_result_to_result_querysuccess(query_result).map_err(Into::into)
+        query_result_to_vm_result(query_result)
     }
 }
 

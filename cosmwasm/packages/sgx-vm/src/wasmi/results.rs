@@ -1,5 +1,6 @@
 use super::exports;
-use enclave_ffi_types::{EnclaveError, HandleResult, InitResult, QueryResult};
+use crate::VmResult;
+use enclave_ffi_types::{HandleResult, InitResult, QueryResult};
 
 /// This struct is returned from module initialization.
 pub struct InitSuccess {
@@ -21,13 +22,13 @@ impl InitSuccess {
     }
 }
 
-pub fn init_result_to_result_initsuccess(other: InitResult) -> Result<InitSuccess, EnclaveError> {
+pub fn init_result_to_vm_result(other: InitResult) -> VmResult<InitSuccess> {
     match other {
         InitResult::Success { output, signature } => Ok(InitSuccess {
             output: unsafe { exports::recover_buffer(output) }.unwrap_or_else(|| Vec::new()),
             signature,
         }),
-        InitResult::Failure { err } => Err(err),
+        InitResult::Failure { err } => Err(err.into()),
     }
 }
 
@@ -49,15 +50,13 @@ impl HandleSuccess {
     }
 }
 
-pub fn handle_result_to_result_handlesuccess(
-    other: HandleResult,
-) -> Result<HandleSuccess, EnclaveError> {
+pub fn handle_result_to_vm_result(other: HandleResult) -> VmResult<HandleSuccess> {
     match other {
         HandleResult::Success { output, signature } => Ok(HandleSuccess {
             output: unsafe { exports::recover_buffer(output) }.unwrap_or_else(|| Vec::new()),
             signature,
         }),
-        HandleResult::Failure { err } => Err(err),
+        HandleResult::Failure { err } => Err(err.into()),
     }
 }
 
@@ -79,14 +78,12 @@ impl QuerySuccess {
     }
 }
 
-pub fn query_result_to_result_querysuccess(
-    other: QueryResult,
-) -> Result<QuerySuccess, EnclaveError> {
+pub fn query_result_to_vm_result(other: QueryResult) -> VmResult<QuerySuccess> {
     match other {
         QueryResult::Success { output, signature } => Ok(QuerySuccess {
             output: unsafe { exports::recover_buffer(output) }.unwrap_or_else(|| Vec::new()),
             signature,
         }),
-        QueryResult::Failure { err } => Err(err),
+        QueryResult::Failure { err } => Err(err.into()),
     }
 }
