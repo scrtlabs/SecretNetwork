@@ -158,7 +158,7 @@ impl ContractInstance {
     }
 
     fn is_gas_depleted(&self) -> bool {
-        self.gas_limit <= self.gas_used.saturating_add(self.gas_used_externally)
+        self.gas_limit < self.gas_used.saturating_add(self.gas_used_externally)
     }
 }
 
