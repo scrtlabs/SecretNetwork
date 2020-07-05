@@ -300,15 +300,9 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
 
     // 2. Verify quote status (mandatory field)
 
-    match report.sgx_quote_status {
-        SgxQuoteStatus::OK => (),
-        SgxQuoteStatus::SwHardeningNeeded => {
-            warn!("Attesting enclave is vulnerable, and should be patched");
-        }
-        _ => {
-            error!("Invalid attestation quote status - cannot verify remote node");
-            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-        }
+    match verify_quote_status(report.sgx_quote_status) {
+        Ok(_) => (),
+        Err(e) => return Err(e),
     }
 
     // verify certificate
@@ -345,6 +339,40 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
 
     let report_public_key = report.sgx_quote_body.isv_enclave_report.report_data[0..32].to_vec();
     Ok(report_public_key)
+}
+
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+fn verify_quote_status(quote_status: SgxQuoteStatus) -> Result<(), sgx_status_t> {
+    match quote_status {
+        SgxQuoteStatus::OK => return Ok(()),
+        SgxQuoteStatus::SwHardeningNeeded => {
+            warn!("Attesting enclave is vulnerable, and should be patched");
+            return Ok(());
+        }
+        _ => {
+            error!("Invalid attestation quote status - cannot verify remote node");
+            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        }
+    }
+}
+
+#[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
+fn verify_quote_status(quote_status: SgxQuoteStatus) -> Result<(), sgx_status_t> {
+    match quote_status {
+        SgxQuoteStatus::OK => return Ok(()),
+        SgxQuoteStatus::SwHardeningNeeded => {
+            warn!("Attesting enclave is vulnerable, and should be patched");
+            return Ok(());
+        }
+        SgxQuoteStatus::GroupOutOfDate => {
+            warn!("TCB level of SGX platform service is outdated. You should check for firmware updates");
+            return Ok(());
+        }
+        _ => {
+            error!("Invalid attestation quote status - cannot verify remote node");
+            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        }
+    }
 }
 
 #[cfg(feature = "test")]
