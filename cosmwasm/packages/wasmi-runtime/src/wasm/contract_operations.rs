@@ -12,7 +12,6 @@ use crate::wasm::contract_validation::ContractKey;
 use super::contract_validation::{
     extract_contract_key, generate_encryption_key, validate_contract_key, CONTRACT_KEY_LENGTH,
 };
-use super::errors::wasmi_error_to_enclave_error;
 use super::gas::{gas_rules, WasmCosts};
 use super::io::encrypt_output;
 use super::{
@@ -60,26 +59,18 @@ pub fn init(
 
     let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
 
-    let env_ptr = engine
-        .write_to_memory(env)
-        .map_err(wasmi_error_to_enclave_error)?;
+    let env_ptr = engine.write_to_memory(env)?;
 
     let secret_msg = SecretMessage::from_slice(msg)?;
 
-    let msg_ptr = engine
-        .write_to_memory(&secret_msg.decrypt()?)
-        .map_err(wasmi_error_to_enclave_error)?;
+    let msg_ptr = engine.write_to_memory(&secret_msg.decrypt()?)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
     let output = coalesce!(EnclaveError, {
-        let vec_ptr = engine
-            .init(env_ptr, msg_ptr)
-            .map_err(wasmi_error_to_enclave_error)?;
+        let vec_ptr = engine.init(env_ptr, msg_ptr)?;
 
-        let output = engine
-            .extract_vector(vec_ptr)
-            .map_err(wasmi_error_to_enclave_error)?;
+        let output = engine.extract_vector(vec_ptr)?;
 
         trace!("Init output before encryption: {:?}", output);
 
@@ -146,24 +137,16 @@ pub fn handle(
         secret_msg.nonce, secret_msg.user_public_key
     );
 
-    let env_ptr = engine
-        .write_to_memory(env)
-        .map_err(wasmi_error_to_enclave_error)?;
+    let env_ptr = engine.write_to_memory(env)?;
 
-    let msg_ptr = engine
-        .write_to_memory(&secret_msg.decrypt()?)
-        .map_err(wasmi_error_to_enclave_error)?;
+    let msg_ptr = engine.write_to_memory(&secret_msg.decrypt()?)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
     let output = coalesce!(EnclaveError, {
-        let vec_ptr = engine
-            .handle(env_ptr, msg_ptr)
-            .map_err(wasmi_error_to_enclave_error)?;
+        let vec_ptr = engine.handle(env_ptr, msg_ptr)?;
 
-        let output = engine
-            .extract_vector(vec_ptr)
-            .map_err(wasmi_error_to_enclave_error)?;
+        let output = engine.extract_vector(vec_ptr)?;
 
         info!(
             "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",
@@ -210,20 +193,14 @@ pub fn query(
 
     let secret_msg = SecretMessage::from_slice(msg)?;
 
-    let msg_ptr = engine
-        .write_to_memory(&secret_msg.decrypt()?)
-        .map_err(wasmi_error_to_enclave_error)?;
+    let msg_ptr = engine.write_to_memory(&secret_msg.decrypt()?)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
     let output = coalesce!(EnclaveError, {
-        let vec_ptr = engine
-            .query(msg_ptr)
-            .map_err(wasmi_error_to_enclave_error)?;
+        let vec_ptr = engine.query(msg_ptr)?;
 
-        let output = engine
-            .extract_vector(vec_ptr)
-            .map_err(wasmi_error_to_enclave_error)?;
+        let output = engine.extract_vector(vec_ptr)?;
 
         let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
         Ok(output)
