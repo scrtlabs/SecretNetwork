@@ -46,3 +46,28 @@ Suggestions for stuff to test while you're hacking away:
 * Upload a contract with an error so you can see what an error looks like to a contract developer
 * Start a node using a different version to see what a registration failure looks like
 * Create contracts that do silly things to try and crash the network
+
+# Install the `secretcli` Secret Blockchain light client
+
+1) Get the latest release of `secretcli` for your OS: https://github.com/enigmampc/SecretNetwork/releases/tag/v0.5.0-alpha2.
+
+2) Install:
+
+   - Mac/Windows: Rename it from `secretcli-${VERSION}-${OS}` to `secretcli` or `secretcli.exe` and put it in your path.
+   - Ubuntu/Debian: `sudo dpkg -i secret*.deb`
+
+3) Configure:
+
+   ```bash
+   secretcli config chain-id enigma-testnet-1
+   secretcli config output json
+   secretcli config indent true
+   secretcli config node tcp://bootstrap.int.testnet.enigma.co/:26657
+   secretcli config trust-node false
+   ```
+
+4) Check the installation:
+
+   ```bash
+   secretcli status
+   ```
