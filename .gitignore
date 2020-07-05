@@ -11,3 +11,5 @@ Enclave_t.h
 *.a
 *.o
 *.so
+api_key.txt
+spid.txt
