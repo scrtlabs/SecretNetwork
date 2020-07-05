@@ -1045,7 +1045,7 @@ func TestPassNullPointerToImports(t *testing.T) {
 
 			require.Error(t, execErr)
 			require.Error(t, execErr.GenericErr)
-			require.Equal(t, "execute wasm contract failed: Error calling the VM: EnclaveErr: Got an error from the enclave: Unknown", execErr.GenericErr.Msg)
+			require.Equal(t, "execute wasm contract failed: Error calling the VM: EnclaveErr: Got an error from the enclave: MemoryReadError", execErr.GenericErr.Msg)
 		})
 	}
 }
