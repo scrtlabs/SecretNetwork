@@ -344,14 +344,14 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 fn verify_quote_status(quote_status: SgxQuoteStatus) -> Result<(), sgx_status_t> {
     match quote_status {
-        SgxQuoteStatus::OK => return Ok(()),
+        SgxQuoteStatus::OK => Ok(()),
         SgxQuoteStatus::SwHardeningNeeded => {
             warn!("Attesting enclave is vulnerable, and should be patched");
-            return Ok(());
+            Ok(())
         }
         _ => {
             error!("Invalid attestation quote status - cannot verify remote node");
-            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
         }
     }
 }
@@ -359,18 +359,18 @@ fn verify_quote_status(quote_status: SgxQuoteStatus) -> Result<(), sgx_status_t>
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
 fn verify_quote_status(quote_status: SgxQuoteStatus) -> Result<(), sgx_status_t> {
     match quote_status {
-        SgxQuoteStatus::OK => return Ok(()),
+        SgxQuoteStatus::OK => Ok(()),
         SgxQuoteStatus::SwHardeningNeeded => {
             warn!("Attesting enclave is vulnerable, and should be patched");
-            return Ok(());
+            Ok(())
         }
         SgxQuoteStatus::GroupOutOfDate => {
             warn!("TCB level of SGX platform service is outdated. You should check for firmware updates");
-            return Ok(());
+            Ok(())
         }
         _ => {
             error!("Invalid attestation quote status - cannot verify remote node");
-            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
         }
     }
 }
