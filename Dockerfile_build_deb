@@ -1,0 +1,40 @@
+# Simple usage with a mounted data directory:
+# > docker build -t secret .
+# > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli secret secretd init
+# > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli secret secretd start
+FROM rust:1.42-stretch AS build-env-rust
+
+# Set working directory for the build
+WORKDIR /go/src/github.com/enigmampc/secretnetwork
+
+RUN rustup default nightly
+
+# Add source files
+COPY go-cosmwasm/ go-cosmwasm/
+
+WORKDIR /go/src/github.com/enigmampc/secretnetwork/go-cosmwasm
+RUN cargo build --release --features backtraces
+
+FROM golang:1.14-stretch AS build-env
+
+# Set up dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    make \
+    git && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set working directory for the build
+WORKDIR /go/src/github.com/enigmampc/secretnetwork
+
+# Add source files
+COPY . .
+
+COPY --from=build-env-rust /go/src/github.com/enigmampc/secretnetwork/go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
+
+RUN go mod tidy
+
+COPY ./packaging_docker/build_deb.sh .
+
+# Run secretd by default, omit entrypoint to ease using container with secretcli
+CMD ["/bin/bash", "build_deb.sh"]
