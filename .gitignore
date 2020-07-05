@@ -18,3 +18,5 @@ io-master-cert.der
 node-master-cert.der
 /docs/.vuepress/dist
 /node_modules
+spid.txt
+api_key.txt
