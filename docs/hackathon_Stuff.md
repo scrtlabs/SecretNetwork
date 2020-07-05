@@ -62,7 +62,7 @@ Suggestions for stuff to test while you're hacking away:
    secretcli config chain-id enigma-testnet-1
    secretcli config output json
    secretcli config indent true
-   secretcli config node tcp://bootstrap.int.testnet.enigma.co/:26657
+   secretcli config node tcp://bootstrap.int.testnet.enigma.co:26657
    secretcli config trust-node false
    ```
 
