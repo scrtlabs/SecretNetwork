@@ -146,7 +146,7 @@ sudo $HOME/.sgxsdk/sgx_linux_x64_driver_*.bin
 2. For enclave developers, by compiling a `hello-rust` project:
 
    ```bash
-   git clone --depth 1 -b v1.1.1 git@github.com:apache/incubator-teaclave-sgx-sdk.git
+   git clone --depth 1 -b v1.1.2 git@github.com:apache/incubator-teaclave-sgx-sdk.git
 
    cd incubator-teaclave-sgx-sdk/samplecode/hello-rust
    perl -i -pe 's/SGX_SDK \?=.+/SGX_SDK ?= \$(HOME)\/.sgxsdk\/sgxsdk/' Makefile
