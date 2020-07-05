@@ -114,6 +114,7 @@ where
         );
 
         let mut init_result = MaybeUninit::<InitResult>::uninit();
+        let mut used_gas = 0_u64;
 
         match unsafe {
             imports::ecall_init(
@@ -121,6 +122,7 @@ where
                 init_result.as_mut_ptr(),
                 self.ctx.unsafe_clone(),
                 self.gas_left(),
+                &mut used_gas as *mut _,
                 self.bytecode.as_ptr(),
                 self.bytecode.len(),
                 env.as_ptr(),
@@ -134,11 +136,6 @@ where
         }
         // At this point we know that the ecall was successful and init_result was initialized.
         let init_result = unsafe { init_result.assume_init() };
-
-        let used_gas = match init_result {
-            InitResult::Success { used_gas, .. } => used_gas,
-            InitResult::Failure { used_gas, .. } => used_gas,
-        };
 
         trace!(
             target: module_path!(),
@@ -162,6 +159,7 @@ where
         );
 
         let mut handle_result = MaybeUninit::<HandleResult>::uninit();
+        let mut used_gas = 0_u64;
 
         match unsafe {
             imports::ecall_handle(
@@ -169,6 +167,7 @@ where
                 handle_result.as_mut_ptr(),
                 self.ctx.unsafe_clone(),
                 self.gas_left(),
+                &mut used_gas as *mut _,
                 self.bytecode.as_ptr(),
                 self.bytecode.len(),
                 env.as_ptr(),
@@ -182,11 +181,6 @@ where
         }
         // At this point we know that the ecall was successful and handle_result was initialized.
         let handle_result = unsafe { handle_result.assume_init() };
-
-        let used_gas = match handle_result {
-            HandleResult::Success { used_gas, .. } => used_gas,
-            HandleResult::Failure { used_gas, .. } => used_gas,
-        };
 
         trace!(
             target: module_path!(),
@@ -208,6 +202,7 @@ where
         );
 
         let mut query_result = MaybeUninit::<QueryResult>::uninit();
+        let mut used_gas = 0_u64;
 
         match unsafe {
             imports::ecall_query(
@@ -215,6 +210,7 @@ where
                 query_result.as_mut_ptr(),
                 self.ctx.unsafe_clone(),
                 self.gas_left(),
+                &mut used_gas as *mut _,
                 self.bytecode.as_ptr(),
                 self.bytecode.len(),
                 msg.as_ptr(),
@@ -226,11 +222,6 @@ where
         }
         // At this point we know that the ecall was successful and query_result was initialized.
         let query_result = unsafe { query_result.assume_init() };
-
-        let used_gas = match query_result {
-            QueryResult::Success { used_gas, .. } => used_gas,
-            QueryResult::Failure { used_gas, .. } => used_gas,
-        };
 
         self.used_gas = self.used_gas.saturating_add(used_gas);
 

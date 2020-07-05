@@ -13,10 +13,7 @@ pub struct InitSuccess {
     pub signature: [u8; 64],
 }
 
-pub fn result_init_success_to_initresult(
-    result: Result<InitSuccess, EnclaveError>,
-    used_gas: u64,
-) -> InitResult {
+pub fn result_init_success_to_initresult(result: Result<InitSuccess, EnclaveError>) -> InitResult {
     match result {
         Ok(InitSuccess { output, signature }) => {
             let user_buffer = unsafe {
@@ -28,7 +25,6 @@ pub fn result_init_success_to_initresult(
                             err: EnclaveError::FailedOcall {
                                 vm_error: UntrustedVmError::default(),
                             },
-                            used_gas,
                         }
                     }
                 }
@@ -36,11 +32,10 @@ pub fn result_init_success_to_initresult(
             };
             InitResult::Success {
                 output: user_buffer,
-                used_gas,
                 signature,
             }
         }
-        Err(err) => InitResult::Failure { err, used_gas },
+        Err(err) => InitResult::Failure { err },
     }
 }
 
@@ -54,7 +49,6 @@ pub struct HandleSuccess {
 
 pub fn result_handle_success_to_handleresult(
     result: Result<HandleSuccess, EnclaveError>,
-    used_gas: u64,
 ) -> HandleResult {
     match result {
         Ok(HandleSuccess { output, signature }) => {
@@ -67,7 +61,6 @@ pub fn result_handle_success_to_handleresult(
                             err: EnclaveError::FailedOcall {
                                 vm_error: UntrustedVmError::default(),
                             },
-                            used_gas,
                         }
                     }
                 }
@@ -75,11 +68,10 @@ pub fn result_handle_success_to_handleresult(
             };
             HandleResult::Success {
                 output: user_buffer,
-                used_gas,
                 signature,
             }
         }
-        Err(err) => HandleResult::Failure { err, used_gas },
+        Err(err) => HandleResult::Failure { err },
     }
 }
 
@@ -93,7 +85,6 @@ pub struct QuerySuccess {
 
 pub fn result_query_success_to_queryresult(
     result: Result<QuerySuccess, EnclaveError>,
-    used_gas: u64,
 ) -> QueryResult {
     match result {
         Ok(QuerySuccess { output, signature }) => {
@@ -106,7 +97,6 @@ pub fn result_query_success_to_queryresult(
                             err: EnclaveError::FailedOcall {
                                 vm_error: UntrustedVmError::default(),
                             },
-                            used_gas,
                         }
                     }
                 }
@@ -114,10 +104,9 @@ pub fn result_query_success_to_queryresult(
             };
             QueryResult::Success {
                 output: user_buffer,
-                used_gas,
                 signature,
             }
         }
-        Err(err) => QueryResult::Failure { err, used_gas },
+        Err(err) => QueryResult::Failure { err },
     }
 }

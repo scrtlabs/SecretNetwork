@@ -23,15 +23,11 @@ impl InitSuccess {
 
 pub fn init_result_to_result_initsuccess(other: InitResult) -> Result<InitSuccess, EnclaveError> {
     match other {
-        InitResult::Success {
-            output,
-            used_gas: _,
-            signature,
-        } => Ok(InitSuccess {
+        InitResult::Success { output, signature } => Ok(InitSuccess {
             output: unsafe { exports::recover_buffer(output) }.unwrap_or_else(|| Vec::new()),
             signature,
         }),
-        InitResult::Failure { err, used_gas: _ } => Err(err),
+        InitResult::Failure { err } => Err(err),
     }
 }
 
@@ -57,15 +53,11 @@ pub fn handle_result_to_result_handlesuccess(
     other: HandleResult,
 ) -> Result<HandleSuccess, EnclaveError> {
     match other {
-        HandleResult::Success {
-            output,
-            used_gas: _,
-            signature,
-        } => Ok(HandleSuccess {
+        HandleResult::Success { output, signature } => Ok(HandleSuccess {
             output: unsafe { exports::recover_buffer(output) }.unwrap_or_else(|| Vec::new()),
             signature,
         }),
-        HandleResult::Failure { err, used_gas: _ } => Err(err),
+        HandleResult::Failure { err } => Err(err),
     }
 }
 
@@ -91,14 +83,10 @@ pub fn query_result_to_result_querysuccess(
     other: QueryResult,
 ) -> Result<QuerySuccess, EnclaveError> {
     match other {
-        QueryResult::Success {
-            output,
-            used_gas: _,
-            signature,
-        } => Ok(QuerySuccess {
+        QueryResult::Success { output, signature } => Ok(QuerySuccess {
             output: unsafe { exports::recover_buffer(output) }.unwrap_or_else(|| Vec::new()),
             signature,
         }),
-        QueryResult::Failure { err, used_gas: _ } => Err(err),
+        QueryResult::Failure { err } => Err(err),
     }
 }
