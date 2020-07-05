@@ -21,6 +21,8 @@ use super::{
 };
 use crate::wasm::types::SecretMessage;
 
+use crate::coalesce;
+
 /*
 Each contract is compiled with these functions alreadyy implemented in wasm:
 fn cosmwasm_api_0_6() -> i32;  // Seems unused, but we should support it anyways
@@ -70,7 +72,7 @@ pub fn init(
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
-    let mut wrapper = || -> Result<_, EnclaveError> {
+    let output = coalesce!(EnclaveError, {
         let vec_ptr = engine
             .init(env_ptr, msg_ptr)
             .map_err(wasmi_error_to_enclave_error)?;
@@ -88,8 +90,8 @@ pub fn init(
 
         trace!("Init output after encryption: {:?}", output);
         Ok(output)
-    };
-    let output = wrapper().map_err(|err| {
+    })
+    .map_err(|err| {
         *used_gas = engine.gas_used();
         err
     })?;
@@ -154,7 +156,7 @@ pub fn handle(
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
-    let mut wrapper = || -> Result<_, EnclaveError> {
+    let output = coalesce!(EnclaveError, {
         let vec_ptr = engine
             .handle(env_ptr, msg_ptr)
             .map_err(wasmi_error_to_enclave_error)?;
@@ -169,8 +171,8 @@ pub fn handle(
         );
         let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
         Ok(output)
-    };
-    let output = wrapper().map_err(|err| {
+    })
+    .map_err(|err| {
         *used_gas = engine.gas_used();
         err
     })?;
@@ -214,7 +216,7 @@ pub fn query(
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
-    let mut wrapper = || -> Result<_, EnclaveError> {
+    let output = coalesce!(EnclaveError, {
         let vec_ptr = engine
             .query(msg_ptr)
             .map_err(wasmi_error_to_enclave_error)?;
@@ -225,8 +227,8 @@ pub fn query(
 
         let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
         Ok(output)
-    };
-    let output = wrapper().map_err(|err| {
+    })
+    .map_err(|err| {
         *used_gas = engine.gas_used();
         err
     })?;
