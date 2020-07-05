@@ -16,7 +16,7 @@ ifeq ($(LEDGER_ENABLED),true)
   else
     UNAME_S = $(shell uname -s)
     ifeq ($(UNAME_S),OpenBSD)
-      $(warning OpenBSD detected, disabling ledger support (https://github.com/Cashmaney/cosmos-sdk/issues/1988))
+      $(warning OpenBSD detected, disabling ledger support (https://github.com/cosmos/cosmos-sdk/issues/1988))
     else
       GCC = $(shell command -v gcc 2> /dev/null)
       ifeq ($(GCC),)
@@ -39,20 +39,20 @@ whitespace += $(whitespace)
 comma := ,
 build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 
-ldflags = -X github.com/Cashmaney/cosmos-sdk/version.Name=SecretNetwork \
-	-X github.com/Cashmaney/cosmos-sdk/version.ServerName=secretd \
-	-X github.com/Cashmaney/cosmos-sdk/version.ClientName=secretcli \
-	-X github.com/Cashmaney/cosmos-sdk/version.Version=$(VERSION) \
-	-X github.com/Cashmaney/cosmos-sdk/version.Commit=$(COMMIT) \
-	-X "github.com/Cashmaney/cosmos-sdk/version.BuildTags=$(build_tags)"
+ldflags = -X github.com/enigmampc/cosmos-sdk/version.Name=SecretNetwork \
+	-X github.com/enigmampc/cosmos-sdk/version.ServerName=secretd \
+	-X github.com/enigmampc/cosmos-sdk/version.ClientName=secretcli \
+	-X github.com/enigmampc/cosmos-sdk/version.Version=$(VERSION) \
+	-X github.com/enigmampc/cosmos-sdk/version.Commit=$(COMMIT) \
+	-X "github.com/enigmampc/cosmos-sdk/version.BuildTags=$(build_tags)"
 
 ifeq ($(WITH_CLEVELDB),yes)
-  ldflags += -X github.com/Cashmaney/cosmos-sdk/types.DBBackend=cleveldb
+  ldflags += -X github.com/enigmampc/cosmos-sdk/types.DBBackend=cleveldb
 endif
 ldflags += $(LDFLAGS)
 ldflags := $(strip $(ldflags))
 
-BUILD_FLAGS := -tags "$(build_tags)" -ldflags '$(ldflags)'
+BUILD_FLAGS := -tags "$(build_tags)" -ldflags '$(ldflags) -s -w'
 
 all: build_all
 

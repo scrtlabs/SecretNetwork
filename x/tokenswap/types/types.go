@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	sdk "github.com/Cashmaney/cosmos-sdk/types"
-	authexported "github.com/Cashmaney/cosmos-sdk/x/auth/exported"
-	supplyexported "github.com/Cashmaney/cosmos-sdk/x/supply/exported"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	authexported "github.com/enigmampc/cosmos-sdk/x/auth/exported"
+	supplyexported "github.com/enigmampc/cosmos-sdk/x/supply/exported"
 )
 
 const (
