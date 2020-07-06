@@ -350,7 +350,10 @@ fn verify_quote_status(quote_status: SgxQuoteStatus) -> Result<(), sgx_status_t>
             Ok(())
         }
         _ => {
-            error!("Invalid attestation quote status - cannot verify remote node");
+            error!(
+                "Invalid attestation quote status - cannot verify remote node: {:?}",
+                quote_status
+            );
             Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
         }
     }
@@ -369,7 +372,10 @@ fn verify_quote_status(quote_status: SgxQuoteStatus) -> Result<(), sgx_status_t>
             Ok(())
         }
         _ => {
-            error!("Invalid attestation quote status - cannot verify remote node");
+            error!(
+                "Invalid attestation quote status - cannot verify remote node: {:?}",
+                quote_status
+            );
             Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
         }
     }
