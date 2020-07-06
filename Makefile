@@ -4,6 +4,8 @@ COMMIT := $(shell git log -1 --format='%H')
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
 BUILD_PROFILE ?= release
+DEB_BIN_DIR ?= /usr/local/bin
+DEB_LIB_DIR ?= /usr/lib
 
 SGX_MODE ?= HW
 BRANCH ?= develop
@@ -131,14 +133,14 @@ deb: build-linux
     endif
 	rm -rf /tmp/SecretNetwork
 
-	mkdir -p /tmp/SecretNetwork/deb/usr/local/bin
-	mv -f ./secretcli /tmp/SecretNetwork/deb/usr/local/bin/secretcli
-	mv -f ./secretd /tmp/SecretNetwork/deb/usr/local/bin/secretd
-	chmod +x /tmp/SecretNetwork/deb/usr/local/bin/secretd /tmp/SecretNetwork/deb/usr/local/bin/secretcli
+	mkdir -p /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)
+	mv -f ./secretcli /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretcli
+	mv -f ./secretd /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretd
+	chmod +x /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretd /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretcli
 
-	mkdir -p /tmp/SecretNetwork/deb/usr/local/lib
-	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/SecretNetwork/deb/usr/local/lib/
-	chmod +x /tmp/SecretNetwork/deb/usr/local/lib/lib*.so
+	mkdir -p /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)
+	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/
+	chmod +x /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/lib*.so
 
 	mkdir -p /tmp/SecretNetwork/deb/DEBIAN
 	cp ./packaging_ubuntu/control /tmp/SecretNetwork/deb/DEBIAN/control
