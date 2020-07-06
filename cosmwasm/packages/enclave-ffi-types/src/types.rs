@@ -83,6 +83,9 @@ pub enum EnclaveError {
     FailedToSerialize,
     EncryptionError,
     DecryptionError,
+    MemoryAllocationError,
+    MemoryReadError,
+    MemoryWriteError,
     NotImplemented,
     Panic,
     /// Unexpected Error happened, no more details available
@@ -149,12 +152,11 @@ pub enum InitResult {
     Success {
         /// A pointer to the output of the calculation
         output: UserSpaceBuffer,
-        /// The gas used by the execution.
-        used_gas: u64,
         /// A signature by the enclave on all of the results.
         signature: [u8; 64],
     },
     Failure {
+        /// The error that happened in the enclave
         err: EnclaveError,
     },
 }
@@ -166,12 +168,11 @@ pub enum HandleResult {
     Success {
         /// A pointer to the output of the calculation
         output: UserSpaceBuffer,
-        /// The gas used by the execution.
-        used_gas: u64,
         /// A signature by the enclave on all of the results.
         signature: [u8; 64],
     },
     Failure {
+        /// The error that happened in the enclave
         err: EnclaveError,
     },
 }
@@ -183,12 +184,11 @@ pub enum QueryResult {
     Success {
         /// A pointer to the output of the calculation
         output: UserSpaceBuffer,
-        /// The gas used by the execution.
-        used_gas: u64,
         /// A signature by the enclave on all of the results.
         signature: [u8; 64],
     },
     Failure {
+        /// The error that happened in the enclave
         err: EnclaveError,
     },
 }

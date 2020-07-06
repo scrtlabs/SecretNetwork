@@ -9,19 +9,13 @@ use crate::imports::ocall_allocate;
 pub struct InitSuccess {
     /// The output of the calculation
     pub output: Vec<u8>,
-    /// The gas used by the execution.
-    pub used_gas: u64,
     /// A signature by the enclave on all of the results.
     pub signature: [u8; 64],
 }
 
 pub fn result_init_success_to_initresult(result: Result<InitSuccess, EnclaveError>) -> InitResult {
     match result {
-        Ok(InitSuccess {
-            output,
-            used_gas,
-            signature,
-        }) => {
+        Ok(InitSuccess { output, signature }) => {
             let user_buffer = unsafe {
                 let mut user_buffer = std::mem::MaybeUninit::<UserSpaceBuffer>::uninit();
                 match ocall_allocate(user_buffer.as_mut_ptr(), output.as_ptr(), output.len()) {
@@ -38,7 +32,6 @@ pub fn result_init_success_to_initresult(result: Result<InitSuccess, EnclaveErro
             };
             InitResult::Success {
                 output: user_buffer,
-                used_gas,
                 signature,
             }
         }
@@ -50,8 +43,6 @@ pub fn result_init_success_to_initresult(result: Result<InitSuccess, EnclaveErro
 pub struct HandleSuccess {
     /// The output of the calculation
     pub output: Vec<u8>,
-    /// The gas used by the execution.
-    pub used_gas: u64,
     /// A signature by the enclave on all of the results.
     pub signature: [u8; 64],
 }
@@ -60,11 +51,7 @@ pub fn result_handle_success_to_handleresult(
     result: Result<HandleSuccess, EnclaveError>,
 ) -> HandleResult {
     match result {
-        Ok(HandleSuccess {
-            output,
-            used_gas,
-            signature,
-        }) => {
+        Ok(HandleSuccess { output, signature }) => {
             let user_buffer = unsafe {
                 let mut user_buffer = std::mem::MaybeUninit::<UserSpaceBuffer>::uninit();
                 match ocall_allocate(user_buffer.as_mut_ptr(), output.as_ptr(), output.len()) {
@@ -81,7 +68,6 @@ pub fn result_handle_success_to_handleresult(
             };
             HandleResult::Success {
                 output: user_buffer,
-                used_gas,
                 signature,
             }
         }
@@ -93,8 +79,6 @@ pub fn result_handle_success_to_handleresult(
 pub struct QuerySuccess {
     /// The output of the calculation
     pub output: Vec<u8>,
-    /// The gas used by the execution.
-    pub used_gas: u64,
     /// A signature by the enclave on all of the results.
     pub signature: [u8; 64],
 }
@@ -103,11 +87,7 @@ pub fn result_query_success_to_queryresult(
     result: Result<QuerySuccess, EnclaveError>,
 ) -> QueryResult {
     match result {
-        Ok(QuerySuccess {
-            output,
-            used_gas,
-            signature,
-        }) => {
+        Ok(QuerySuccess { output, signature }) => {
             let user_buffer = unsafe {
                 let mut user_buffer = std::mem::MaybeUninit::<UserSpaceBuffer>::uninit();
                 match ocall_allocate(user_buffer.as_mut_ptr(), output.as_ptr(), output.len()) {
@@ -124,7 +104,6 @@ pub fn result_query_success_to_queryresult(
             };
             QueryResult::Success {
                 output: user_buffer,
-                used_gas,
                 signature,
             }
         }

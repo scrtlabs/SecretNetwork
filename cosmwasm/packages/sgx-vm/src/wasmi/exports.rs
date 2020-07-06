@@ -56,7 +56,7 @@ pub extern "C" fn ocall_read_db(
                         .map(|val| {
                             super::allocate_enclave_buffer(&val).map_err(|_| OcallReturn::Failure)
                         })
-                        .unwrap_or(Ok(EnclaveBuffer::default()))
+                        .unwrap_or_else(|| Ok(EnclaveBuffer::default()))
                 }
                 Err(err) => {
                     unsafe { store_vm_error(err, vm_error) };
@@ -154,6 +154,7 @@ unsafe fn store_vm_error(vm_err: VmError, location: *mut UntrustedVmError) {
 /// original caller requested, without any downcasting magic.
 /// The side that calls into the enclave will call the `new()` method with the Generic arguments that are
 /// appropriate for it.
+#[allow(clippy::type_complexity)]
 struct ExportImplementations {
     read_db: fn(context: Ctx, key: &[u8]) -> VmResult<(Option<Vec<u8>>, u64)>,
     remove_db: fn(context: Ctx, key: &[u8]) -> VmResult<u64>,
