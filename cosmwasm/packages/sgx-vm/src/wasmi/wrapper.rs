@@ -17,8 +17,8 @@ use log::trace;
 use super::exports::FullContext;
 use super::imports;
 use super::results::{
-    handle_result_to_result_handlesuccess, init_result_to_result_initsuccess,
-    query_result_to_result_querysuccess, HandleSuccess, InitSuccess, QuerySuccess,
+    handle_result_to_vm_result, init_result_to_vm_result, query_result_to_vm_result, HandleSuccess,
+    InitSuccess, QuerySuccess,
 };
 
 /// This is a safe wrapper for allocating buffers inside the enclave.
@@ -114,6 +114,7 @@ where
         );
 
         let mut init_result = MaybeUninit::<InitResult>::uninit();
+        let mut used_gas = 0_u64;
 
         match unsafe {
             imports::ecall_init(
@@ -121,6 +122,7 @@ where
                 init_result.as_mut_ptr(),
                 self.ctx.unsafe_clone(),
                 self.gas_left(),
+                &mut used_gas as *mut _,
                 self.bytecode.as_ptr(),
                 self.bytecode.len(),
                 env.as_ptr(),
@@ -135,11 +137,6 @@ where
         // At this point we know that the ecall was successful and init_result was initialized.
         let init_result = unsafe { init_result.assume_init() };
 
-        let used_gas = match init_result {
-            InitResult::Success { used_gas, .. } => used_gas,
-            InitResult::Failure { used_gas, .. } => used_gas,
-        };
-
         trace!(
             target: module_path!(),
             "init() returned with gas_used: {} (gas_limit: {})",
@@ -148,7 +145,7 @@ where
         );
         self.used_gas = self.used_gas.saturating_add(used_gas);
 
-        init_result_to_result_initsuccess(init_result).map_err(Into::into)
+        init_result_to_vm_result(init_result)
     }
 
     pub fn handle(&mut self, env: &[u8], msg: &[u8]) -> VmResult<HandleSuccess> {
@@ -162,6 +159,7 @@ where
         );
 
         let mut handle_result = MaybeUninit::<HandleResult>::uninit();
+        let mut used_gas = 0_u64;
 
         match unsafe {
             imports::ecall_handle(
@@ -169,6 +167,7 @@ where
                 handle_result.as_mut_ptr(),
                 self.ctx.unsafe_clone(),
                 self.gas_left(),
+                &mut used_gas as *mut _,
                 self.bytecode.as_ptr(),
                 self.bytecode.len(),
                 env.as_ptr(),
@@ -183,11 +182,6 @@ where
         // At this point we know that the ecall was successful and handle_result was initialized.
         let handle_result = unsafe { handle_result.assume_init() };
 
-        let used_gas = match handle_result {
-            HandleResult::Success { used_gas, .. } => used_gas,
-            HandleResult::Failure { used_gas, .. } => used_gas,
-        };
-
         trace!(
             target: module_path!(),
             "handle() returned with gas_used: {} (gas_limit: {})",
@@ -196,7 +190,7 @@ where
         );
         self.used_gas = self.used_gas.saturating_add(used_gas);
 
-        handle_result_to_result_handlesuccess(handle_result).map_err(Into::into)
+        handle_result_to_vm_result(handle_result)
     }
 
     pub fn query(&mut self, msg: &[u8]) -> VmResult<QuerySuccess> {
@@ -208,6 +202,7 @@ where
         );
 
         let mut query_result = MaybeUninit::<QueryResult>::uninit();
+        let mut used_gas = 0_u64;
 
         match unsafe {
             imports::ecall_query(
@@ -215,6 +210,7 @@ where
                 query_result.as_mut_ptr(),
                 self.ctx.unsafe_clone(),
                 self.gas_left(),
+                &mut used_gas as *mut _,
                 self.bytecode.as_ptr(),
                 self.bytecode.len(),
                 msg.as_ptr(),
@@ -227,14 +223,9 @@ where
         // At this point we know that the ecall was successful and query_result was initialized.
         let query_result = unsafe { query_result.assume_init() };
 
-        let used_gas = match query_result {
-            QueryResult::Success { used_gas, .. } => used_gas,
-            QueryResult::Failure { used_gas, .. } => used_gas,
-        };
-
         self.used_gas = self.used_gas.saturating_add(used_gas);
 
-        query_result_to_result_querysuccess(query_result).map_err(Into::into)
+        query_result_to_vm_result(query_result)
     }
 }
 
