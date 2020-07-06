@@ -1,4 +1,4 @@
-# Overview
+# General Overview
 
 The Secret Network is a blockchain protocol that enables decentralized applications to use private or sensitive data. On the Secret Network, the code that enables applications to use this private data is referred to as a “secret contract”. Secret contracts are similar to smart contracts, such as those used with Ethereum. The key difference is that secret contracts can take encrypted inputs and produce encrypted outputs, without exposing any data while it is in-use. In addition, a contract state (its internal, persisted database), remains encrypted throughout executions.
 

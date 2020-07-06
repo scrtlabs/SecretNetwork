@@ -1,4 +1,5 @@
 module.exports = {
+    title: 'Secret Network',
     description: 'Privacy is a Public Good',
     head: [
         ['link', { rel: 'icon', href: '/logo.png' }]
@@ -15,7 +16,7 @@ module.exports = {
           ],
         sidebar: [
             {
-                title: 'Secret Network',   // required
+                title: 'Introduction',   // required
                 path: '/',      // optional, link of the title, which should be an absolute path and must exist
                 collapsable: true, // optional, defaults to true
                 sidebarDepth: 0,    // optional, defaults to 1
