@@ -11,7 +11,7 @@ services:
     tty: true
 
   node:
-    image: enigmampc/secret-network-node-azure:testnet
+    image: enigmampc/secret-network-node:testnet
     devices:
       - /dev/sgx
     volumes:
