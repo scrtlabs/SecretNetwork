@@ -15,21 +15,31 @@ steps:
 - script: echo $(spid) > spid.txt; echo $(api-key-dev) > api_key.txt
   displayName: 'Save api keys'
 - task: Docker@2
-  displayName: Build
+  displayName: 'Build base image'
+  inputs:
+    command: build
+    repository: rust-go-base-image
+    tags: latest
+    arguments: --build-arg SGX_MODE=HW -f Dockerfile.base
+- task: Docker@2
+  displayName: 'Build node'
   inputs:
     command: build
     repository: ci-enigma-sgx-node
     tags: latest
     arguments: --build-arg SECRET_NODE_TYPE=NODE --build-arg SGX_MODE=HW
 - task: Docker@2
-  displayName: Build
+  displayName: 'Build bootstrap'
   inputs:
     command: build
     repository: ci-enigma-sgx-bootstrap
     tags: latest
     arguments: --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg SGX_MODE=HW
 
-- script: docker-compose -f docker-compose.ci.yaml up --exit-code-from node
+- script: docker-compose -f docker-compose.ci.yaml up --exit-code-from base aesm base
+  displayName: 'Run system tests'    
+
+- script: docker-compose -f docker-compose.ci.yaml up --exit-code-from node aesm bootstrap node
   displayName: 'Run integration tests'
 
 - script: docker-compose -f docker-compose.ci.yaml down
