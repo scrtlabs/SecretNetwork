@@ -1,6 +1,6 @@
 {
   "name": "secretjs",
-  "version": "0.9.8",
+  "version": "0.9.9",
   "description": "CosmWasm SDK + Encryption for the Secret Network",
   "author": "Ethan Frey <ethanfrey@users.noreply.github.com>",
   "contributors": [
