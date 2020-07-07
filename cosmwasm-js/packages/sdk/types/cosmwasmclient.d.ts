@@ -125,7 +125,7 @@ export declare class CosmWasmClient {
    * @param apiUrl The URL of a Cosmos SDK light client daemon API (sometimes called REST server or REST API)
    * @param broadcastMode Defines at which point of the transaction processing the postTx method (i.e. transaction broadcasting) returns
    */
-  constructor(apiUrl: string, broadcastMode?: BroadcastMode);
+  constructor(apiUrl: string, broadcastMode?: BroadcastMode, seed?: Uint8Array);
   getChainId(): Promise<string>;
   getHeight(): Promise<number>;
   /**
