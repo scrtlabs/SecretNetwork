@@ -45,6 +45,7 @@ enclave {
         public InitResult ecall_init(
             Ctx context,
             uint64_t gas_limit,
+            [out] uint64_t* used_gas,
             [in, count=contract_len] const uint8_t* contract,
             uintptr_t contract_len,
             [in, count=env_len] const uint8_t* env,
@@ -56,6 +57,7 @@ enclave {
         public HandleResult ecall_handle(
             Ctx context,
             uint64_t gas_limit,
+            [out] uint64_t* used_gas,
             [in, count=contract_len] const uint8_t* contract,
             uintptr_t contract_len,
             [in, count=env_len] const uint8_t* env,
@@ -67,6 +69,7 @@ enclave {
         public QueryResult ecall_query(
             Ctx context,
             uint64_t gas_limit,
+            [out] uint64_t* used_gas,
             [in, count=contract_len] const uint8_t* contract,
             uintptr_t contract_len,
             [in, count=msg_len] const uint8_t* msg,
