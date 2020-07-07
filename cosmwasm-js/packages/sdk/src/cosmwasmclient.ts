@@ -162,7 +162,7 @@ export class CosmWasmClient {
    * @param apiUrl The URL of a Cosmos SDK light client daemon API (sometimes called REST server or REST API)
    * @param broadcastMode Defines at which point of the transaction processing the postTx method (i.e. transaction broadcasting) returns
    */
-  public constructor(apiUrl: string, broadcastMode = BroadcastMode.Block, seed?: Uint8Array) {
+  public constructor(apiUrl: string, seed?: Uint8Array, broadcastMode = BroadcastMode.Block) {
     this.restClient = new RestClient(apiUrl, broadcastMode, seed);
   }
 

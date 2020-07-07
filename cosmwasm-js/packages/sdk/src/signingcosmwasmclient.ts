@@ -125,7 +125,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     customFees?: Partial<FeeTable>,
     broadcastMode = BroadcastMode.Block,
   ) {
-    super(apiUrl, broadcastMode, seed);
+    super(apiUrl, seed, broadcastMode);
     this.anyValidAddress = senderAddress;
 
     this.senderAddress = senderAddress;
