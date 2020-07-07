@@ -444,30 +444,13 @@ func GetCmdGetContractStateSmart(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			nonce := queryData[:32]
 
 			res, _, err := cliCtx.QueryWithData(route, queryData)
 			if err != nil {
-				if strings.Contains(err.Error(), "wasm contract failed: generic: ") {
-					errorCipherB64 := strings.ReplaceAll(err.Error(), "query wasm contract failed: generic: ", "")
-
-					errorCipherBz, innerErr := base64.StdEncoding.DecodeString(errorCipherB64)
-					if innerErr != nil {
-						return fmt.Errorf("Got an error decoding base64 of the error: %w", innerErr)
-					}
-
-					errorPlainBz, innerErr := wasmCtx.Decrypt(errorCipherBz, nonce)
-					if innerErr != nil {
-						return fmt.Errorf("Got an error decrypting the error: %w", innerErr)
-					}
-
-					return fmt.Errorf("%v", string(errorPlainBz))
-				} else if strings.Contains(err.Error(), "EnclaveErr") {
-					return err
-				}
 				return err
 			}
 
+			nonce := queryData[:32]
 			resDecrypted := []byte{}
 			if len(res) > 0 {
 				resDecrypted, err = wasmCtx.Decrypt(res, nonce)
