@@ -63,6 +63,7 @@ Suggestions for stuff to test while you're hacking away:
    secretcli config output json
    secretcli config indent true
    secretcli config node tcp://bootstrap.int.testnet.enigma.co:26657
+   secretcli config keyring-backend test
    ```
 
 4) Check the installation:
