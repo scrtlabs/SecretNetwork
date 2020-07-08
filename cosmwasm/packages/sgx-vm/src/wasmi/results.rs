@@ -1,12 +1,11 @@
 use super::exports;
-use enclave_ffi_types::{EnclaveError, HandleResult, InitResult, QueryResult};
+use crate::VmResult;
+use enclave_ffi_types::{HandleResult, InitResult, QueryResult};
 
 /// This struct is returned from module initialization.
 pub struct InitSuccess {
     /// A pointer to the output of the execution
     output: Vec<u8>,
-    /// The gas used by the execution.
-    used_gas: u64,
     /// A signature by the enclave on all of the results.
     signature: [u8; 64],
 }
@@ -18,27 +17,18 @@ impl InitSuccess {
         out_vec
     }
 
-    pub fn used_gas(&self) -> u64 {
-        self.used_gas
-    }
-
     pub fn signature(&self) -> &[u8; 64] {
         &self.signature
     }
 }
 
-pub fn init_result_to_result_initsuccess(other: InitResult) -> Result<InitSuccess, EnclaveError> {
+pub fn init_result_to_vm_result(other: InitResult) -> VmResult<InitSuccess> {
     match other {
-        InitResult::Success {
-            output,
-            used_gas,
-            signature,
-        } => Ok(InitSuccess {
-            output: unsafe { exports::recover_buffer(output) }.unwrap_or_else(|| Vec::new()),
-            used_gas,
+        InitResult::Success { output, signature } => Ok(InitSuccess {
+            output: unsafe { exports::recover_buffer(output) }.unwrap_or_else(Vec::new),
             signature,
         }),
-        InitResult::Failure { err } => Err(err),
+        InitResult::Failure { err } => Err(err.into()),
     }
 }
 
@@ -46,8 +36,6 @@ pub fn init_result_to_result_initsuccess(other: InitResult) -> Result<InitSucces
 pub struct HandleSuccess {
     /// A pointer to the output of the execution
     output: Vec<u8>,
-    /// The gas used by the execution.
-    used_gas: u64,
     /// A signature by the enclave on all of the results.
     signature: [u8; 64],
 }
@@ -57,29 +45,18 @@ impl HandleSuccess {
         self.output
     }
 
-    pub fn used_gas(&self) -> u64 {
-        self.used_gas
-    }
-
     pub fn signature(&self) -> &[u8; 64] {
         &self.signature
     }
 }
 
-pub fn handle_result_to_result_handlesuccess(
-    other: HandleResult,
-) -> Result<HandleSuccess, EnclaveError> {
+pub fn handle_result_to_vm_result(other: HandleResult) -> VmResult<HandleSuccess> {
     match other {
-        HandleResult::Success {
-            output,
-            used_gas,
-            signature,
-        } => Ok(HandleSuccess {
-            output: unsafe { exports::recover_buffer(output) }.unwrap_or_else(|| Vec::new()),
-            used_gas,
+        HandleResult::Success { output, signature } => Ok(HandleSuccess {
+            output: unsafe { exports::recover_buffer(output) }.unwrap_or_else(Vec::new),
             signature,
         }),
-        HandleResult::Failure { err } => Err(err),
+        HandleResult::Failure { err } => Err(err.into()),
     }
 }
 
@@ -87,8 +64,6 @@ pub fn handle_result_to_result_handlesuccess(
 pub struct QuerySuccess {
     /// A pointer to the output of the execution
     output: Vec<u8>,
-    /// The gas used by the execution.
-    used_gas: u64,
     /// A signature by the enclave on all of the results.
     signature: [u8; 64],
 }
@@ -98,28 +73,17 @@ impl QuerySuccess {
         self.output
     }
 
-    pub fn used_gas(&self) -> u64 {
-        self.used_gas
-    }
-
     pub fn signature(&self) -> &[u8; 64] {
         &self.signature
     }
 }
 
-pub fn query_result_to_result_querysuccess(
-    other: QueryResult,
-) -> Result<QuerySuccess, EnclaveError> {
+pub fn query_result_to_vm_result(other: QueryResult) -> VmResult<QuerySuccess> {
     match other {
-        QueryResult::Success {
-            output,
-            used_gas,
-            signature,
-        } => Ok(QuerySuccess {
-            output: unsafe { exports::recover_buffer(output) }.unwrap_or_else(|| Vec::new()),
-            used_gas,
+        QueryResult::Success { output, signature } => Ok(QuerySuccess {
+            output: unsafe { exports::recover_buffer(output) }.unwrap_or_else(Vec::new),
             signature,
         }),
-        QueryResult::Failure { err } => Err(err),
+        QueryResult::Failure { err } => Err(err.into()),
     }
 }
