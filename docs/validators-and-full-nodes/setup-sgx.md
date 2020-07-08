@@ -35,7 +35,7 @@ echo "##### Installing missing packages #####"
 echo "#######################################\n\n"
 
 # Install needed packages for script
-sudo apt install -y lynx parallel gdebi
+sudo apt install -y lynx parallel gdebi make
 
 # Create a working directory to download and install the SDK inside
 mkdir -p "$HOME/.sgxsdk"
