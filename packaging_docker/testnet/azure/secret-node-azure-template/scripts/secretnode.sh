@@ -58,6 +58,9 @@ echo "export RPC_URL=$5" >> /home/"$1"/.bashrc
 echo "export REGISTRATION_SERVICE=$6" >> /home/"$1"/.bashrc
 # echo "export GENESIS_PATH=$5" >> /home/$1/.bashrc
 
+echo 'alias secretcli="docker exec -it secret-node_node_1 secretcli"' >> /home/"$1"/.bashrc
+echo 'alias secretd="docker exec -it secret-node_node_1 secretd"' >> /home/"$1"/.bashrc
+
 export CHAINID=$2
 export MONIKER=$3
 export PERSISTENT_PEERS=$4
