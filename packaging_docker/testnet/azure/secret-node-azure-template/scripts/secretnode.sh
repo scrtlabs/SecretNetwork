@@ -48,6 +48,7 @@ sudo curl -L https://raw.githubusercontent.com/enigmampc/SecretNetwork/develop/p
 
 sudo sed -i 's/\/tmp\/.secretd:/\/home\/'$1'\/.secretd:/g' /usr/local/bin/secret-node/docker-compose.yaml
 sudo sed -i 's/\/tmp\/.secretcli:/\/home\/'$1'\/.secretcli:/g' /usr/local/bin/secret-node/docker-compose.yaml
+sudo sed -i 's/\/tmp\/.sgx_secrets:/\/home\/'$1'\/.sgx_secrets:/g' /usr/local/bin/secret-node/docker-compose.yaml
 
 echo "Setting Secret Node environment variables" >> /home/$1/install.progress.txt
 
