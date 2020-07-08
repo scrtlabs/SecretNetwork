@@ -18,6 +18,7 @@ services:
       - /tmp/aesmd:/var/run/aesmd
       - /tmp/.secretd:/root/.secretd
       - /tmp/.secretcli:/root/.secretcli
+      - /tmp/.sgx_secrets:/root/.sgx_secrets
     environment:
       - SGX_MODE=HW
       - MONIKER
