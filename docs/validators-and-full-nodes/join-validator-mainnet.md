@@ -140,7 +140,8 @@ Currently deleting a validator is not possible. If you redelegate or unbond your
 
 ## Changing your validator's commission-rate
 
-You are currently unable to modifiy the  `--commission-max-rate="0.20"` and `--commission-max-change-rate="0.01"` once intitially set, but modifying the commision-rate can be done using this:
+You are currently unable to modifiy the  `--commission-max-rate` and `--commission-max-change-rate"` parameters. 
+Modifying the commision-rate can be done using this:
 ```
 secretcli tx staking edit-validator --commission-rate="0.05" --from <key-alias>
 ```
