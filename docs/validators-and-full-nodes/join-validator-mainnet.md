@@ -61,6 +61,7 @@ secretcli q staking validators | jq '.[] | select(.description.moniker == "<MONI
 
 Or run: `secretcli q staking validators | grep moniker`. You should see your moniker listed.
 
+
 ## Dangers in running a validator
 
 There are a couple of scenarios that can lead to losing a precentage of your and your delegators' stake. These are called slashing events.
@@ -136,3 +137,12 @@ secretcli tx distribution withdraw-rewards $(secretcli keys show --bech=val -a <
 ## Removing your validator
 
 Currently deleting a validator is not possible. If you redelegate or unbond your self-delegations then your validator will become offline and all your delegators will start to unbond.
+
+## Changing your validator's commission-rate
+
+You are currently unable to modifiy the  `--commission-max-rate` and `--commission-max-change-rate"` parameters.
+
+Modifying the commision-rate can be done using this:
+```
+secretcli tx staking edit-validator --commission-rate="0.05" --from <key-alias>
+```
