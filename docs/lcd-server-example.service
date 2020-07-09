@@ -25,16 +25,20 @@ WantedBy=multi-user.target
 # Edit /etc/caddy/Caddyfile to have this inside:
 
 bootstrap.int.testnet.enigma.co
+
 header {
         Access-Control-Allow-Origin *
         Access-Control-Allow-Methods *
         Access-Control-Allow-Headers *
 }
+
 @corspreflight {
 	method OPTIONS
 	path *
 }
+
 respond @corspreflight 204 
+
 reverse_proxy 127.0.0.1:1337
 
 # And then sudo systemctl enable caddy.service
