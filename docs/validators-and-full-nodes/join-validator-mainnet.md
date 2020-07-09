@@ -61,6 +61,12 @@ secretcli q staking validators | jq '.[] | select(.description.moniker == "<MONI
 
 Or run: `secretcli q staking validators | grep moniker`. You should see your moniker listed.
 
+## Changing the commission-rate
+
+You are unable to modifiy the  `--commission-max-rate="0.20"` & `--commission-max-change-rate="0.01"`
+```secretcli tx staking edit-validator --commission-rate="0.05" --from <key-alias>```
+
+
 ## Dangers in running a validator
 
 There are a couple of scenarios that can lead to losing a precentage of your and your delegators' stake. These are called slashing events.
