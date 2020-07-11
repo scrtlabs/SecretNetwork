@@ -140,7 +140,7 @@ Currently deleting a validator is not possible. If you redelegate or unbond your
 
 ## Changing your validator's commission-rate
 
-You are currently unable to modifiy the  `--commission-max-rate` and `--commission-max-change-rate"` parameters.
+You are currently unable to modify the  `--commission-max-rate` and `--commission-max-change-rate"` parameters.
 
 Modifying the commision-rate can be done using this:
 ```

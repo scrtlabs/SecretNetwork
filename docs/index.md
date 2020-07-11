@@ -12,25 +12,25 @@ Secret Network is a blockchain-based, open-source protocol that lets anyone perf
 
 Mainnet is out! Get the latest release at https://github.com/enigmampc/SecretNetwork/releases/latest.
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md) [![Contributor Covenant](https://chat.scrt.network/api/v1/shield.svg)](https://chat.scrt.network/home)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](https://github.com/enigmampc/SecretNetwork/CODE_OF_CONDUCT.md)
 
 # Community
 
-- Homepage: https://scrt.network
-- Forum: https://forum.scrt.network
-- Wiki: https://learn.scrt.network
-- Discord: https://discord.com/invite/SJK32GY
-- Blog: https://blog.scrt.network
-- Twitter: https://twitter.com/SecretNetwork
-- Main Chat: https://chat.scrt.network/channel/general
-- Telegram Channel: https://t.me/SCRTnetwork
-- Community Secret Nodes Telegram: https://t.me/secretnodes
+- [Homepage](https://scrt.network)
+- [Forum](https://forum.scrt.network)
+- [Wiki](https://learn.scrt.network)
+- [Discord](https://discord.com/invite/SJK32GY)
+- [Blog](https://blog.scrt.network)
+- [Twitter](https://twitter.com/SecretNetwork)
+- [Main Chat](https://chat.scrt.network/channel/general)
+- [Telegram Channel](https://t.me/SCRTnetwork)
 
 # Block Explorers
 
 Secret Network is secured by the SCRT coin (Secret), which is used for fees, staking, and governance. Transactions, validators, governance proposals, and more can be viewed using the following Secret Network block explorers:
 
-- [Secret Explorer](https://explorer.cashmaney.com)
+- [Cashmaney](https://explorer.cashmaney.com)
 - [SecretScan](https://secretscan.io)
 - [Puzzle](https://puzzle.report/secret/chains/secret-1)
 

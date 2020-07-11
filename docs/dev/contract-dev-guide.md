@@ -1,104 +1,61 @@
-# Contract Development Guide
+# Secret Contract Dev Guide
 
-This repository can be used to get up and running on a local developer testnet (enigmadev) to start working with the cosmwasm-based smart contracts (soon to be secret contracts!).
+This repository can be used to get up and running on a local Secret Network developer testnet (secretdev) to start working with CosmWasm-based smart contracts (soon to be secret contracts).
 
 A few important notes:
-- smart contracts in this repo are a precursor to Secret Contracts, which enable data privacy
-- smart contracts are written in Rust and based on cosmwasm, and the module is referred to as `compute` in the Secret Network. This will be also true of Secret Contracts!
-- these cosmwasm-based smart contracts should be reusable and easily modified once we incorporate data privacy
+- smart contracts in this repo are a precursor to secret contracts, which enable data privacy
+- smart contracts are written in Rust and based on CosmWasm, and the module is referred to as `compute` in the Secret Network
+- these CosmWasm-based smart contracts should be reusable and easily modified once we incorporate data privacy
 
 ## Setup the Local Developer Testnet
 
 The developer blockchain is configured to run inside a docker container. Install [Docker](https://docs.docker.com/install/) for your environment (Mac, Windows, Linux).
 
-Open a terminal window and change to your project directory. Then clone the Secret Network repository:
+Open a terminal window and change to your project directory.
+Then start SecretNetwork, labelled _secretdev_ from here on:
 
 ```
-$ git clone https://github.com/enigmampc/SecretNetwork.git
-```
-
-Change directory:
-
-```
-$ cd SecretNetwork
-```
-
-In the same terminal, create the docker image by issuing the build command and tagging it as _enigmadev_. We'll use that tag later instead of the container id, which can be a bit cryptic and hard to remember.
-
-The command below tells Docker to follow the instructions in the Dockerfile_devnet file to build the image.
-
-```
-# Checkout and build with the compute module enabled, so we can deploy contracts.
-git checkout 168d64f5b5bd5b998a171cd24bba5d405e3a8229
-
-docker build -f Dockerfile_devnet -t enigmadev .
-```
-
-![](docker-build.png)
-
-To verify the _enigmadev_ docker image was created:
-
-```
-docker image ls enigmadev
-```
-
-Now that we've created the local SecretNetwork docker image we can run it as a container:
-
-```
-docker run -d \
+$ docker run -it --rm \
  -p 26657:26657 -p 26656:26656 -p 1317:1317 \
- --name enigmadev enigmadev
+ --name secretdev enigmampc/secret-network-bootstrap-sw:latest
 ```
 
-**NOTE**: The _enigmadev_ docker container can be stopped by using (in a separate terminal) `docker stop enigmadev` and re-started 
-using `docker start enigmadev`.
+**NOTE**: The _secretdev_ docker container can be stopped by CTRL+C
 
-![](docker-run.png)
+![](/images/docker-run.png)
 
-At this point you're running a local SecretNetwork full-node. Let's connect to the container so we can view and manage the enigma keys:
+At this point you're running a local SecretNetwork full-node. Let's connect to the container so we can view and manage the secret keys:
+
+**NOTE**: In a new terminal
 
 ```
-docker exec -it enigmadev /bin/bash
+docker exec -it secretdev /bin/bash
 ```
 
 The local blockchain has a couple of keys setup for you (similar to accounts if you're familiar with Truffle Ganache). The keys are stored in the `test` keyring backend, which makes it easier for local development and testing.
 
 ```
-enigmacli keys list --keyring-backend test
-````
+secretcli keys list --keyring-backend test
+```
 
-![](enigmacli-keys-list.png)
+![](images/secretcli_keys_list.png)
 
 `exit` when you are done
 
+## Setup Secret Contracts (CosmWasm)
 
-At this point you've:
-
-1. Created the local developer testnet
-
-2. Started the Secret Network
-
-3. Listed the keys/accounts 
-
-
-This process is similar to the old `discovery init` and `discovery start` and may be streamlined in the future.
-
-
-## Setup Smart Contracts (cosmwasm)
-
-These smart contracts are based on [CosmWasm](https://www.cosmwasm.com) which is an implementation on the Cosmos network. The CosmWasm smart contracts are like Ethereum's smart contracts except they can be used on other blockchains using the [Inter Blockchain Protocol](https://cosmos.network/ibc) (IBC). CosmWasm smart contracts are written in the Rust language.
+Secret Contracts are based on [CosmWasm](https://www.cosmwasm.com) which is implementated on various Cosmos SDK blockchains. The CosmWasm smart contracts are like Ethereum's smart contracts except they can be used on other networks using the [Inter-Blockchain Protocol](https://cosmos.network/ibc) (IBC). CosmWasm smart contracts are written in the Rust language.
 
 The Secret Network has a _compute_ module that we'll use to store, query and instantiate the smart contract. Once stored on the blockchain the smart contract has to be created (or instantiated) in order to execute its methods. This is similar to doing an Ethereum `migrate` using truffle which handles the deployment and creation of a smart contract.
 
 Eventually the smart contracts will become secret contracts (in a future blockchain upgrade) running in an SGX enclave (Trusted Execution Environment) where computations are performed on the encrypted contract data (i.e. inputs, state). 
 
 Next we'll walkthrough steps to:
-- install Rust (you can check out the Rust book, rustlings course, examples and more at https://www.rust-lang.org/learn)
+- install Rust
 - install the Rust dependencies
 - create your first project
 
-The Rust dependencies include the Rust compiler, cargo (_package manager_), toolchain and a package to generate projects (you can check out the Rust book, rustlings course, examples and more at https://www.rust-lang.org/learn).
-
+The Rust dependencies include the Rust compiler, cargo (_package manager_), toolchain and a package to generate projects. You can check out the Rust book, rustlings course, examples and more [here](https://www.rust-lang.org/learn).
 
 1. Install Rust
 
@@ -127,7 +84,7 @@ apt install build-essential
 
 4. Run cargo install cargo-generate
 
-Cargo generate is the tool you'll use to create a smart contract project (https://doc.rust-lang.org/cargo).
+[Cargo generate](https://doc.rust-lang.org/cargo) is the tool you'll use to create a smart contract project.
 
 ```
 cargo install cargo-generate --features vendored-openssl
@@ -146,7 +103,7 @@ To create the smart contract you'll:
 Generate the smart contract project
 
 ```
-cargo generate --git https://github.com/confio/cosmwasm-template.git --name mysimplecounter
+cargo generate --git https://github.com/enigmampc/secret-template --name mysimplecounter
 ```
 
 The git project above is a cosmwasm smart contract template that implements a simple counter. The contract is created with a parameter for the initial count and allows subsequent incrementing.
@@ -172,7 +129,7 @@ Use the following command to compile the smart contract which produces the wasm 
 cargo wasm
 ```
 
-## Unit Tests
+## Unit Tests (NB Tests in this template currently fail unless you have SGX enabled)
 
 Run unit tests
 
@@ -206,10 +163,10 @@ Before deploying or storing the contract on the testnet, need to run the cosmwas
 ### Optimize compiled wasm
 
 ```
-docker run --rm -v $(pwd):/code \
-  --mount type=volume,source=$(basename $(pwd))_cache,target=/code/target \
+docker run --rm -v "$(pwd)":/code \
+  --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  confio/cosmwasm-opt:0.7.3
+  cosmwasm/rust-optimizer:0.8.0  
 ```
 The contract wasm needs to be optimized to get a smaller footprint. Cosmwasm notes state the contract would be too large for the blockchain unless optimized. This example contract.wasm is 1.8M before optimizing, 90K after.
 
@@ -221,37 +178,27 @@ The optimization creates two files:
 
 ```
 # First lets start it up again, this time mounting our project's code inside the container.
-docker run -d -p 26657:26657 -p 26656:26656 -p 1317:1317 \
+docker run -it --rm \
+ -p 26657:26657 -p 26656:26656 -p 1317:1317 \
  -v $(pwd):/root/code \
- --name enigmadev enigmadev
+ --name secretdev enigmampc/secret-network-bootstrap-sw:latest
  ```
 
-Upload the optimized contract.wasm to the enigma-testnet:
+Upload the optimized contract.wasm to _secretdev_ :
 
 ```
-docker exec -it enigmadev /bin/bash
+docker exec -it secretdev /bin/bash
 
 cd code
 
-enigmacli tx compute store contract.wasm --from a --gas auto -y --keyring-backend test
-```
-
-You can also store [verified code](https://www.cosmwasm.com/docs/tooling/verify)
-
-Uploading verified code requires 2 additional params, source of the crate, and the builder that optimized the compiled wasm.
-
-```
-enigmacli tx compute store contract.wasm \
---builder="confio/cosmwasm-opt:0.7.3" \
---source="https://crates.io/api/v1/crates/<your-project-name>/0.0.1/download" \
---from a --gas auto -y
+secretcli tx compute store contract.wasm --from a --gas auto -y --keyring-backend test
 ```
 
 ### Querying the Smart Contract and Code
 
-12. List current smart contract code
+List current smart contract code
 ```
-enigmacli query compute list-code
+secretcli query compute list-code
 [
   {
     "id": 1,
@@ -265,7 +212,7 @@ enigmacli query compute list-code
 
 ### Instantiate the Smart Contract
 
-At this point the contract's been uploaded and stored on the testnet, but there's no "instance." 
+At this point the contract's been uploaded and stored on the testnet, but there's no "instance."
 This is like `discovery migrate` which handles both the deploying and creation of the contract instance, except in Cosmos the deploy-execute process consists of 3 steps rather than 2 in Ethereum. You can read more about the logic behind this decision, and other comparisons to Solidity, in the [cosmwasm documentation](https://www.cosmwasm.com/docs/getting-started/smart-contracts). These steps are:
 1. Upload Code - Upload some optimized wasm code, no state nor contract address (example Standard ERC20 contract)
 2. Instantiate Contract - Instantiate a code reference with some initial state, creates new address (example set token name, max issuance, etc for my ERC20 token)
@@ -276,24 +223,24 @@ To create an instance of this project we must also provide some JSON input data,
 ```bash
 INIT="{\"count\": 100000000}"
 CODE_ID=1
-enigmacli tx compute instantiate $CODE_ID "$INIT" --from a --label "my counter" -y --keyring-backend test
+secretcli tx compute instantiate $CODE_ID "$INIT" --from a --label "my counter" -y --keyring-backend test
 ```
 
 With the contract now initialized, we can find its address
 ```bash
-enigmacli query compute list-contract-by-code 1
+secretcli query compute list-contract-by-code 1
 ```
-Our instance is enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89d2p9uk
+Our instance is secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg
 
 We can query the contract state
 ```bash
-CONTRACT=enigma18vd8fpwxzck93qlwghaj6arh4p7c5n89d2p9uk
-enigmacli query compute contract-state smart $CONTRACT "{\"get_count\": {}}"
+CONTRACT=secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg
+secretcli query compute contract-state smart $CONTRACT "{\"get_count\": {}}"
 ```
 
 And we can increment our counter
 ```bash
-enigmacli tx compute execute $CONTRACT "{\"increment\": {}}" --from a --keyring-backend test
+secretcli tx compute execute $CONTRACT "{\"increment\": {}}" --from a --keyring-backend test
 ```
 
 ## Smart Contract
@@ -305,16 +252,21 @@ The source directory (`src/`) has these files:
 contract.rs  lib.rs  msg.rs  state.rs
 ```
 
-The `contract.rs` file is the one that developers modify, though I found smart contract-specific code in `state.rs` and `msg.rs`. My understanding is that the developer will modify `contract.rs` for the logic, `state.rs` for the data the contract will use as state, and  `msg.rs` to define the messages handled by the contract.
+The developer modifies `contract.rs` for contract logic, contract entry points are `init`, `handle` and `query` functions.
 
-```
-state.rs
-msg.rs
-```
+`init` in the Counter contract initializes the storage, specifically the current count and the signer/owner of the instance being initialized.
+
+We also define `handle`, a generic handler for all functions writing to storage, the counter can be incremented and reset. These functions are provided the storage and the environment, the latter's used by the `reset` function to compare the signer with the contract owner.
+
+Finally we have `query` for all functions reading state, we only have `query_count`, returning the counter state.
+
+The rest of the contract file is unit tests so you can confidently change the contract logic.
+
+The `state.rs` file defines the State struct, used for storing the contract data, the only information persisted between multiple contract calls.
 
 The `msg.rs` file is where the InitMsg parameters are specified (like a constructor), the types of Query (GetCount) and Handle[r] (Increment) messages, and any custom structs for each query response.
 
-```
+```rs
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -349,7 +301,7 @@ pub struct CountResponse {
 
 Unit tests are coded in the `contract.rs` file itself:
 
-```
+```rs
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -375,7 +327,6 @@ mod tests {
         assert_eq!(17, value.count);
     }
 ```
-
 
 ## Resources
 Smart Contracts on the Secret Network use cosmwasm. Therefore, for troubleshooting and additional context, cosmwasm documentation may be very useful. Here are some of the links we relied on in putting together this guide:

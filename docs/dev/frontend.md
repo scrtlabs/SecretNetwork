@@ -1,6 +1,4 @@
-# Building a Frontend
-
-So far we've got a [local Secret Network developer testnet running](/dev/contract-dev-guide.md), and we've [exposed a rest API to interact with contracts with CosmWasm JS](/dev/cosmwasm-js.md).
+So far we've got a [local Secret Network developer testnet running](docs/dev/contract-dev-guide.md), and we've [exposed a rest API to interact with contracts with SecretJS](docs/dev/secret-js.md).
 
 In this guide we'll build a React application, you can roll your own or clone the [CosmWasm full stack example `name-app`](https://github.com/CosmWasm/name-app) to follow along.
 
@@ -37,7 +35,7 @@ export async function burnerWallet(): Promise<Wallet> {
   const mnemonic = loadOrCreateMnemonic();
   const pen = await Secp256k1Pen.fromMnemonic(mnemonic);
   const pubkey = encodeSecp256k1Pubkey(pen.pubkey);
-  const address = pubkeyToAddress(pubkey, "enigma");
+  const address = pubkeyToAddress(pubkey, "secret");
   const signer = (signBytes: Uint8Array): Promise<StdSignature> => pen.sign(signBytes);
   return { address, signer };
 }
@@ -58,9 +56,7 @@ export function BurnerWalletProvider(props: WalletProviderProps): JSX.Element {
 
 # Connect to the server
 
-Reading contract state is free so if our user only needs to know the current count, we can connect using the CosmWasmClient, and not need a wallet.
-
-We want to increment the counter, so we need the SigningCosmWasmClient, note that fees are in uscrt.
+Reading contract state is free so if our user only needs to know the current count, we can connect using the CosmWasmClient, and not need a wallet. We want to increment the counter, so we need the SigningCosmWasmClient, note that fees are in uscrt.
 
 ```ts
 export async function connect(httpUrl: string, { address, signer }: Wallet): Promise<ConnectResult> {
@@ -101,7 +97,7 @@ A [wallet service](https://github.com/CosmWasm/name-app/blob/master/src/service/
 
 In the browser's network tab we can see this play out, the account is queried but has no funds initially, then the faucet is hit, `/credit`
 
-![faucet](/images/faucet.png)
+![](images/faucet.png)
 
 With this connection in hand we can now focus on the [contract logic](https://github.com/CosmWasm/name-app/blob/master/src/components/ContractLogic/index.tsx), starting with a list of all the instances of the Counter contract.
 
@@ -124,7 +120,7 @@ With this connection in hand we can now focus on the [contract logic](https://gi
 
 ```
 
-![contract-items](/images/contract-items.png)
+![](images/contract-items.png)
 
 Selecting an instance [queries it's current count](https://github.com/levackt/devx2/blob/cb9b9206a77f9deed4f16f7b4d5a614cb38c392d/client/src/components/ContractLogic/Counter.tsx#L42)
 
@@ -206,7 +202,7 @@ Add the ResetForm to [the Counter component](https://github.com/levackt/devx2/bl
     <ResetForm handleReset={reset} loading={state.loading} />
 ```
 
-![reset](/images/reset.png)
+![](images/reset.png)
 
 All that's left is to [execute the reset](https://github.com/levackt/devx2/blob/cb9b9206a77f9deed4f16f7b4d5a614cb38c392d/client/src/components/ContractLogic/Counter.tsx#L85) when the user submits.
 
@@ -244,7 +240,7 @@ We could query the contract owner and only show the ResetForm if the current acc
     }
 ```
 
-![unauthorized](/images/unauthorized.png)
+![](images/unauthorized.png)
 
 
 # Resources

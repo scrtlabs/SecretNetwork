@@ -1,10 +1,8 @@
-﻿# Secret Blockchain Light Client
+﻿# Secret Network Light Client
 
 ## Secret CLI
 
-`secretcli` is the command-line tool that enables you to interact with a node that runs on the Secret Blockchain.
-
-[How to install and use `secretcli`](/light-client-mainnet.md).
+`secretcli` is the command-line interface tool that enables you to interact with a node that runs on the Secret Network. [How to install and use `secretcli`](/docs/light-client-mainnet.md).
 
 ## `secretcli` Guide
 
@@ -69,7 +67,7 @@ If you check your private keys, you'll now see `<key-alias>`:
 secretcli keys show <key-alias>
 ```
 
-If you want to just see your enigma address:
+If you want to just see your secret address:
 
 ```bash
 secretcli keys show <key-alias> -a
@@ -175,10 +173,10 @@ On a testnet, getting tokens is usually done via a faucet.
 After receiving tokens to your address, you can view your account's balance by typing:
 
 ```bash
-secretcli q account <enigma-address>
+secretcli q account <secret-address>
 ```
 
-Get your `<enigma-address>` using:
+Get your `<secret-address>` using:
 
 ```bash
 secretcli keys show -a <key-alias>
@@ -193,7 +191,7 @@ secretcli q account $(secretcli keys show -a <key-alias>)
 ```
 
 ::: warning Note
-When you query an account balance with zero tokens, you will get this error: `No account with address <enigma-address> was found in the state.` This can also happen if you fund the account before your node has fully synced with the chain. These are both normal.
+When you query an account balance with zero tokens, you will get this error: `No account with address <secret-address> was found in the state.` This can also happen if you fund the account before your node has fully synced with the chain. These are both normal.
 
 ### Send Tokens
 
@@ -220,14 +218,14 @@ Gas estimate might be inaccurate as state changes could occur in between the end
 Now, view the updated balances of the origin and destination accounts:
 
 ```bash
-secretcli q account <enigma-address>
+secretcli q account <secret-address>
 secretcli q account <recipient-address>
 ```
 
 You can also check your balance at a given block by using the `--block` flag:
 
 ```bash
-secretcli q account <enigma-address> --block=<block_height>
+secretcli q account <secret-address> --block=<block_height>
 ```
 
 You can simulate a transaction without actually broadcasting it by appending the
@@ -371,7 +369,7 @@ secretcli q mint annual-provisions
 
 #### Set up a Validator
 
-Please refer to [How to join mainnet as a validator](/validators-and-full-nodes/join-validator-mainnet.md) for a complete guide on how to set up a validator-candidate.
+Please refer to [How to join mainnet as a validator](/docs/validators-and-full-nodes/join-validator-mainnet.md) for a complete guide on how to set up a validator-candidate.
 
 Use the following commands to:
 
@@ -442,7 +440,7 @@ secretcli q staking validator <validator-address>
 
 ##### Bond Tokens
 
-On the Secret Network, we delegate `uscrt`, where `1scrt = 1000000uscrt`. Here's how you can bond tokens to a validator (_i.e._ delegate):
+On the Secret Network mainnet, we delegate `uscrt`, where `1scrt = 1000000uscrt`. Here's how you can bond tokens to a validator (_i.e._ delegate):
 
 ```bash
 secretcli tx staking delegate \
@@ -646,13 +644,16 @@ If you are running a full node or a validator node, view the status by typing:
 secretcli status
 ```
 
-[How to run a full node on mainnet](/validators-and-full-nodes/run-full-node-mainnet.md).
+[How to run a full node on mainnet](/docs/validators-and-full-nodes/run-full-node-mainnet.md).
 
 ### Governance
 
-Governance is the process by which users in the Secret Blockchain can come to consensus on software upgrades, parameters of the mainnet or signals through text proposals. This is done through voting on proposals, which will be submitted by `SCRT` holders on the mainnet.
+Governance is the process from which users in the Secret Network can come to consensus
+on software upgrades, parameters of the mainnet or signaling mechanisms through
+text proposals. This is done through voting on proposals, which will be submitted
+by `SCRT` holders on the mainnet.
 
-[How to participate in on-chain governance](/protocol/governance.md).
+[How to participate in on-chain governance](/docs/using-governance.md).
 
 ### Fee Distribution
 
