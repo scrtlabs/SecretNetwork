@@ -20,27 +20,13 @@ const defaultConfig: TokenConfiguration = {
     {
       fractionalDigits: 6,
       name: "Fee Token",
-      ticker: "COSM",
-      denom: "ucosm",
-    },
-    {
-      fractionalDigits: 6,
-      name: "Staking Token",
-      ticker: "STAKE",
-      denom: "ustake",
-    },
-  ],
-  erc20Tokens: [
-    {
-      contractAddress: "cosmos1hqrdl6wstt8qzshwc6mrumpjk9338k0lr4dqxd",
-      fractionalDigits: 0,
-      ticker: "ISA",
-      name: "Isa Token",
+      ticker: "SCRT",
+      denom: "uscrt",
     },
   ],
 };
-const defaultAddressPrefix = "cosmos";
-const defaultChainId = "cosmos:testing" as ChainId;
+const defaultAddressPrefix = "secret";
+const defaultChainId = "cosmos:enigma-testnet" as ChainId;
 const codec = new CosmWasmCodec(defaultAddressPrefix, defaultConfig.bankTokens, defaultConfig.erc20Tokens);
 
 function makeRandomAddress(): Address {
