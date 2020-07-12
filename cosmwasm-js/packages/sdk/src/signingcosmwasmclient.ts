@@ -121,10 +121,11 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     apiUrl: string,
     senderAddress: string,
     signCallback: SigningCallback,
+    seed?: Uint8Array,
     customFees?: Partial<FeeTable>,
     broadcastMode = BroadcastMode.Block,
   ) {
-    super(apiUrl, broadcastMode);
+    super(apiUrl, seed, broadcastMode);
     this.anyValidAddress = senderAddress;
 
     this.senderAddress = senderAddress;

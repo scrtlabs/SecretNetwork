@@ -291,7 +291,7 @@ export class RestClient {
    * @param apiUrl The URL of a Cosmos SDK light client daemon API (sometimes called REST server or REST API)
    * @param broadcastMode Defines at which point of the transaction processing the postTx method (i.e. transaction broadcasting) returns
    */
-  public constructor(apiUrl: string, broadcastMode = BroadcastMode.Block) {
+  public constructor(apiUrl: string, broadcastMode = BroadcastMode.Block, seed?: Uint8Array) {
     const headers = {
       post: { "Content-Type": "application/json" },
     };
@@ -300,7 +300,7 @@ export class RestClient {
       headers: headers,
     });
     this.broadcastMode = broadcastMode;
-    this.enigmautils = new EnigmaUtils(apiUrl);
+    this.enigmautils = new EnigmaUtils(apiUrl, seed);
   }
 
   public async get(path: string): Promise<RestClientResponse> {
@@ -567,7 +567,7 @@ export class RestClient {
       }
 
       const inputMsgPubkey = inputMsgEncrypted.slice(32, 64);
-      if (Encoding.toBase64(this.enigmautils.getMyPubkey()) === Encoding.toBase64(inputMsgPubkey)) {
+      if (Encoding.toBase64(this.enigmautils.pubkey) === Encoding.toBase64(inputMsgPubkey)) {
         // my pubkey, can decrypt
         const nonce = inputMsgEncrypted.slice(0, 32);
 
