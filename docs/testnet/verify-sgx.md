@@ -17,7 +17,7 @@ These instructions refer to an installation using:
 * SGX driver [sgx_linux_x64_driver_2.6.0_95eaa6f.bin](https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/sgx_linux_x64_driver_2.6.0_95eaa6f.bin "sgx_linux_x64_driver_2.6.0_95eaa6f.bin")
 * Intel SGX PSW 2.9.101.2
 
-See SGX installation instructions [here](/docs/validators-and-full-nodes/setup-sgx.md)
+See SGX installation instructions [here](/validators-and-full-nodes/setup-sgx.md)
 
 Other driver/OS combinations are not guaranteed to work with these instructions. Let us know on `chat.scrt.network` if you intend to run on a different setup.
 

@@ -17,7 +17,7 @@ https://github.com/enigmampc/SecretNetwork/blob/develop/docs/testnet/run-full-no
 ```
 https://github.com/enigmampc/SecretNetwork/blob/develop/docs/secretcli.md
 
-https://faucet.testnet.enigma.co/
+https://faucet.testnet.enigma.co
 ```
 ### 3. [Start a node](/validators-and-full-nodes/run-full-node-mainnet.html)
 

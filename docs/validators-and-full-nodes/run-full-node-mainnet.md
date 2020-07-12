@@ -38,7 +38,7 @@ See instructions [here](../dev/setup-sgx.md)
 wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.1.0/secretnetwork_0.1.0_amd64.deb
 ```
 
-([How to verify releases](/docs/verify-releases.md))
+([How to verify releases](/verify-releases.md))
 
 ### 2. Install the package:
 
