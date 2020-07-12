@@ -52,7 +52,7 @@ fn init_logger() {
         .unwrap();
 }
 
-#[cfg(not(feature = "SGX_MODE_SW"))]
+#[cfg(not(feature = "SGX_MODE_HW"))]
 #[ctor]
 fn init_logger() {
     log::set_logger(&LOGGER)

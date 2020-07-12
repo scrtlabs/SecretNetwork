@@ -177,7 +177,7 @@ pub fn get_mr_enclave() -> Result<[u8; 32], sgx_status_t> {
             debug!("This enclave MR_ENCLAVE is: {:?}", r.body.mr_enclave.m);
             r.body.mr_enclave.m
         }
-        Err(e) => {
+        Err(_e) => {
             error!("Failed to get local MR_ENCLAVE. Corrupted enclave or other unknown error");
             return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
         }
