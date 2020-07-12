@@ -30,7 +30,7 @@ Other driver/OS combinations are not guaranteed to work with these instructions.
 `sudo dpkg -i secretnetwork_0.5.0-alpha2_amd64.deb`
 
 ### 3. Initialize the enclave
-`secretd init-enclave`
+`secretd init-enclave | grep isvEnclaveQuoteStatus`
 
 This step, if successful, will create an output similar to this - 
 ```
