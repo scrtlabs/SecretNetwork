@@ -36,6 +36,23 @@ mod utils;
 
 static LOGGER: SimpleLogger = SimpleLogger;
 
+#[cfg(all(not(feature = "production"), feature = "SGX_MODE_HW"))]
+#[ctor]
+fn init_logger() {
+    log::set_logger(&LOGGER)
+        .map(|()| log::set_max_level(LevelFilter::Debug))
+        .unwrap();
+}
+
+#[cfg(all(feature = "production", feature = "SGX_MODE_HW"))]
+#[ctor]
+fn init_logger() {
+    log::set_logger(&LOGGER)
+        .map(|()| log::set_max_level(LevelFilter::Info))
+        .unwrap();
+}
+
+#[cfg(not(feature = "SGX_MODE_SW"))]
 #[ctor]
 fn init_logger() {
     log::set_logger(&LOGGER)

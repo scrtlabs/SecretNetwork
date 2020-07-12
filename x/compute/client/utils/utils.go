@@ -158,6 +158,7 @@ func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
 func (ctx WASMContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) ([]byte, error) {
 	consensusIoPubKeyBytes, err := ctx.getConsensusIoPubKey()
 	if err != nil {
+		fmt.Println("Failed to get IO key. Make sure the CLI and the node you are targeting are operating in the same SGX mode")
 		return nil, err
 	}
 

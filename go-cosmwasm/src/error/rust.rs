@@ -29,7 +29,7 @@ pub enum Error {
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
-    #[snafu(display("Error calling the VM: {}", msg))]
+    #[snafu(display("Execution error: {}", msg))]
     VmErr {
         msg: String,
         #[cfg(feature = "backtraces")]

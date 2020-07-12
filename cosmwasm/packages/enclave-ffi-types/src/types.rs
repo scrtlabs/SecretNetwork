@@ -68,6 +68,7 @@ pub enum EnclaveError {
     /// The WASM module contained floating point operations, which is not allowed.
     WasmModuleWithFP,
     /// Calling a function in the contract failed.
+    #[display(fmt = "Contract function call failed")]
     FailedFunctionCall,
     /// Fail to inject gas metering
     FailedGasMeteringInjection,
