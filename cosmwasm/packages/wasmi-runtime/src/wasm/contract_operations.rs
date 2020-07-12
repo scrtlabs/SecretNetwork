@@ -62,13 +62,13 @@ pub fn init(
     let env_ptr = engine.write_to_memory(env)?;
 
     debug!(
-        "Init input before encryption: {:?}",
+        "Init input before decryption: {:?}",
         String::from_utf8_lossy(&msg)
     );
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
     debug!(
-        "Init input afer encryption: {:?}",
+        "Init input afer decryption: {:?}",
         String::from_utf8_lossy(&decrypted_msg)
     );
 
@@ -136,13 +136,13 @@ pub fn handle(
     let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
 
     debug!(
-        "Handle input before encryption: {:?}",
+        "Handle input before decryption: {:?}",
         String::from_utf8_lossy(&msg)
     );
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
     debug!(
-        "Handle input afer encryption: {:?}",
+        "Handle input afer decryption: {:?}",
         String::from_utf8_lossy(&decrypted_msg)
     );
 
