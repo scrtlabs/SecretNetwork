@@ -44,7 +44,7 @@ func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 		GetCmdListContractByCode(cdc),
 		GetCmdQueryCode(cdc),
 		GetCmdGetContractInfo(cdc),
-		GetCmdGetContractState(cdc),
+		GetCmdQuery(cdc),
 		GetQueryDecryptTxCmd(cdc),
 	)...)
 	return queryCmd
@@ -160,24 +160,6 @@ func GetCmdGetContractInfo(cdc *codec.Codec) *cobra.Command {
 			return nil
 		},
 	}
-}
-
-// GetCmdGetContractState dumps full internal state of a given contract
-func GetCmdGetContractState(cdc *codec.Codec) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:                        "contract-state",
-		Short:                      "Querying commands for the wasm module",
-		DisableFlagParsing:         true,
-		SuggestionsMinimumDistance: 2,
-		RunE:                       client.ValidateCmd,
-	}
-	cmd.AddCommand(flags.GetCommands(
-		GetCmdGetContractStateAll(cdc),
-		GetCmdGetContractStateRaw(cdc),
-		GetCmdGetContractStateSmart(cdc),
-	)...)
-	return cmd
-
 }
 
 func GetCmdGetContractStateAll(cdc *codec.Codec) *cobra.Command {
@@ -412,11 +394,11 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 
 var contractErrorRegex = regexp.MustCompile(`wasm contract failed: generic: (.+)`)
 
-func GetCmdGetContractStateSmart(cdc *codec.Codec) *cobra.Command {
+func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 	decoder := newArgDecoder(asciiDecodeString)
 
 	cmd := &cobra.Command{
-		Use:   "smart [bech32_address] [query]", // TODO add --from wallet
+		Use:   "query [bech32_address] [query]", // TODO add --from wallet
 		Short: "Calls contract with given address  with query data and prints the returned result",
 		Long:  "Calls contract with given address  with query data and prints the returned result",
 		Args:  cobra.ExactArgs(2),
