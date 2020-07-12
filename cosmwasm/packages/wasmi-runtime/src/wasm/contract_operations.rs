@@ -61,9 +61,18 @@ pub fn init(
 
     let env_ptr = engine.write_to_memory(env)?;
 
+    debug!(
+        "Init input before encryption: {:?}",
+        String::from_utf8_lossy(&msg)
+    );
     let secret_msg = SecretMessage::from_slice(msg)?;
+    let decrypted_msg = secret_msg.decrypt()?;
+    debug!(
+        "Init input afer encryption: {:?}",
+        String::from_utf8_lossy(&decrypted_msg)
+    );
 
-    let msg_ptr = engine.write_to_memory(&secret_msg.decrypt()?)?;
+    let msg_ptr = engine.write_to_memory(&decrypted_msg)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
@@ -72,14 +81,11 @@ pub fn init(
 
         let output = engine.extract_vector(vec_ptr)?;
 
-        trace!("Init output before encryption: {:?}", output);
-
         // TODO: copy cosmwasm's structures to enclave
         // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
         // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
         let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
 
-        trace!("Init output after encryption: {:?}", output);
         Ok(output)
     })
     .map_err(|err| {
@@ -129,17 +135,20 @@ pub fn handle(
 
     let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
 
-    info!("AAAAAAAAAA msg = {:?}", msg);
+    debug!(
+        "Handle input before encryption: {:?}",
+        String::from_utf8_lossy(&msg)
+    );
     let secret_msg = SecretMessage::from_slice(msg)?;
-
-    info!(
-        "(1) nonce after parse: nonce = {:?} pubkey = {:?}",
-        secret_msg.nonce, secret_msg.user_public_key
+    let decrypted_msg = secret_msg.decrypt()?;
+    debug!(
+        "Handle input afer encryption: {:?}",
+        String::from_utf8_lossy(&decrypted_msg)
     );
 
     let env_ptr = engine.write_to_memory(env)?;
 
-    let msg_ptr = engine.write_to_memory(&secret_msg.decrypt()?)?;
+    let msg_ptr = engine.write_to_memory(&decrypted_msg)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
@@ -191,9 +200,18 @@ pub fn query(
 
     let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
 
+    debug!(
+        "Query input before encryption: {:?}",
+        String::from_utf8_lossy(&msg)
+    );
     let secret_msg = SecretMessage::from_slice(msg)?;
+    let decrypted_msg = secret_msg.decrypt()?;
+    debug!(
+        "Query input afer encryption: {:?}",
+        String::from_utf8_lossy(&decrypted_msg)
+    );
 
-    let msg_ptr = engine.write_to_memory(&secret_msg.decrypt()?)?;
+    let msg_ptr = engine.write_to_memory(&decrypted_msg)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
