@@ -113,6 +113,8 @@ wait_for_tx "$EXEC_ERR_TX_HASH" "Waiting for exec to finish on-chain..."
 
 ./secretcli q compute tx "$EXEC_ERR_TX_HASH"
 
+# sleep infinity
+
 (
     cd ./cosmwasm-js
     yarn
