@@ -60,7 +60,10 @@ pub fn encrypt_output(
 ) -> Result<Vec<u8>, EnclaveError> {
     let key = calc_encryption_key(&nonce, &user_public_key);
 
-    debug!("Before encryption: {:?}", String::from_utf8_lossy(&output));
+    debug!(
+        "Output before encryption: {:?}",
+        String::from_utf8_lossy(&output)
+    );
 
     // Because output is conditionally in totally different structures without useful methods
     // I'm not sure there's a better way to parse this (I mean, there probably is, but whatever)
@@ -151,7 +154,10 @@ pub fn encrypt_output(
         EnclaveError::FailedToSerialize
     })?;
 
-    debug!("After encryption: {:?}", String::from_utf8_lossy(&output));
+    debug!(
+        "Output after encryption: {:?}",
+        String::from_utf8_lossy(&output)
+    );
 
     Ok(output)
 }
