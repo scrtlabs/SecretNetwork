@@ -17,7 +17,7 @@ These instructions refer to an installation using:
 * SGX driver [sgx_linux_x64_driver_2.6.0_95eaa6f.bin](https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/sgx_linux_x64_driver_2.6.0_95eaa6f.bin "sgx_linux_x64_driver_2.6.0_95eaa6f.bin")
 * Intel SGX PSW 2.9.101.2
 
-See SGX installation instructions [here](https://github.com/enigmampc/SecretNetwork/blob/develop/docs/dev/setup-sgx.md)
+See SGX installation instructions [here](/docs/validators-and-full-nodes/setup-sgx.md)
 
 Other driver/OS combinations are not guaranteed to work with these instructions. Let us know on `chat.scrt.network` if you intend to run on a different setup.
 
@@ -47,7 +47,7 @@ With the following value accepted for __incentivized testnet only__:
 
 Consult with the [Intel API](https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf#page=21) for more on these values.
 
-If you do not see such an output, look for a file called `attestation_cert.der` which should have been created in your $(home) directory.  You can then use the command `secretd parse <path/to/attestation_cert.der>` to check the result a successful result should be a 64 byte hex string (e.g. `0x9efe0dc689447514d6514c05d1161cea15c461c62e6d72a2efabcc6b85ed953b`. 
+If you do not see such an output, look for a file called `attestation_cert.der` which should have been created in your `$HOME` directory.  You can then use the command `secretd parse <path/to/attestation_cert.der>` to check the result a successful result should be a 64 byte hex string (e.g. `0x9efe0dc689447514d6514c05d1161cea15c461c62e6d72a2efabcc6b85ed953b`. 
 
 ### 4. What to do if this didn't work?
 
