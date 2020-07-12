@@ -201,13 +201,13 @@ pub fn query(
     let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
 
     debug!(
-        "Query input before encryption: {:?}",
+        "Query input before decryption: {:?}",
         String::from_utf8_lossy(&msg)
     );
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
     debug!(
-        "Query input afer encryption: {:?}",
+        "Query input afer decryption: {:?}",
         String::from_utf8_lossy(&decrypted_msg)
     );
 
