@@ -5,17 +5,22 @@ import (
 	"compress/gzip"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
+	"strings"
 
-	"github.com/enigmampc/cosmos-sdk/client/context"
+	cosmwasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	regtypes "github.com/enigmampc/SecretNetwork/x/registration"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+
+	"github.com/enigmampc/cosmos-sdk/client/context"
 	"github.com/miscreant/miscreant.go"
 	"golang.org/x/crypto/curve25519"
 	"golang.org/x/crypto/hkdf"
@@ -222,4 +227,27 @@ func (ctx WASMContext) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) 
 	}
 
 	return cipher.Open(nil, ciphertext, []byte{})
+}
+
+func (ctx WASMContext) DecryptError(errString string, msgType string, nonce []byte) (cosmwasmTypes.StdError, error) {
+	errorCipherB64 := strings.ReplaceAll(errString, msgType+" wasm contract failed: generic: ", "")
+	errorCipherB64 = strings.ReplaceAll(errorCipherB64, ": failed to execute message; message index: 0", "")
+
+	errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
+	if err != nil {
+		return cosmwasmTypes.StdError{}, fmt.Errorf("Got an error decoding base64 of the error: %w", err)
+	}
+
+	errorPlainBz, err := ctx.Decrypt(errorCipherBz, nonce)
+	if err != nil {
+		return cosmwasmTypes.StdError{}, fmt.Errorf("Got an error decrypting the error: %w", err)
+	}
+
+	var stdErr cosmwasmTypes.StdError
+	err = json.Unmarshal(errorPlainBz, &stdErr)
+	if err != nil {
+		return cosmwasmTypes.StdError{}, fmt.Errorf("Error while trying to parse the error as json: '%s': %w", string(errorPlainBz), err)
+	}
+
+	return stdErr, nil
 }

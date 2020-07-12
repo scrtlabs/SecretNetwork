@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -391,23 +390,12 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			}
 
 			if strings.Contains(result.RawLog, "wasm contract failed: generic: ") {
-				errorCipherB64 := strings.ReplaceAll(result.RawLog, answer.Type+" wasm contract failed: generic: ", "")
-				errorCipherB64 = strings.ReplaceAll(errorCipherB64, ": failed to execute message; message index: 0", "")
-
-				errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
+				stdErr, err := wasmCtx.DecryptError(result.RawLog, answer.Type, nonce)
 				if err != nil {
-					return fmt.Errorf("Error while trying to decode the error from base64: %w", err)
+					return err
 				}
 
-				errorPlainBz, err := wasmCtx.Decrypt(errorCipherBz, nonce)
-				if err != nil {
-					return fmt.Errorf("Error while trying to decrypt the error: %w", err)
-				}
-
-				err = json.Unmarshal(errorPlainBz, &answer.OutputError)
-				if err != nil {
-					return fmt.Errorf("Error while trying to parse the error as json: '%s': %w", string(errorPlainBz), err)
-				}
+				answer.OutputError = stdErr
 			} else if strings.Contains(result.RawLog, "EnclaveErr") {
 				answer.PlaintextError = result.RawLog
 			}
@@ -418,8 +406,6 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 
 	return cmd
 }
-
-var contractErrorRegex = regexp.MustCompile(`wasm contract failed: generic: (.+)`)
 
 func GetCmdGetContractStateSmart(cdc *codec.Codec) *cobra.Command {
 	decoder := newArgDecoder(asciiDecodeString)
@@ -458,19 +444,11 @@ func GetCmdGetContractStateSmart(cdc *codec.Codec) *cobra.Command {
 			res, _, err := cliCtx.QueryWithData(route, queryData)
 			if err != nil {
 				if strings.Contains(err.Error(), "wasm contract failed: generic: ") {
-					errorCipherB64 := strings.ReplaceAll(err.Error(), "query wasm contract failed: generic: ", "")
-
-					errorCipherBz, innerErr := base64.StdEncoding.DecodeString(errorCipherB64)
-					if innerErr != nil {
-						return fmt.Errorf("Got an error decoding base64 of the error: %w", innerErr)
+					errorPlainBz, err := wasmCtx.DecryptError(err.Error(), "query", nonce)
+					if err != nil {
+						return err
 					}
-
-					errorPlainBz, innerErr := wasmCtx.Decrypt(errorCipherBz, nonce)
-					if innerErr != nil {
-						return fmt.Errorf("Got an error decrypting the error: %w", innerErr)
-					}
-
-					return fmt.Errorf("%v", string(errorPlainBz))
+					return fmt.Errorf("%v", errorPlainBz.Error())
 				} else if strings.Contains(err.Error(), "EnclaveErr") {
 					return err
 				}
