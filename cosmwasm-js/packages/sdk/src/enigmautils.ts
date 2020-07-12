@@ -7,22 +7,6 @@ const hkdf = require("js-crypto-hkdf");
 
 const cryptoProvider = new miscreant.PolyfillCryptoProvider();
 
-if (typeof process === "object") {
-  // nodejs
-  const LocalStorage = require("node-localstorage").LocalStorage;
-  const homedir = require("os").homedir();
-  const path = require("path");
-
-  var fs = require("fs");
-  var dir = path.join(homedir, ".cosmwasmjs");
-
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir);
-  }
-
-  var localStorage = new LocalStorage(path.join(dir, "id_tx_io.json"));
-}
-
 const hkdfSalt: Uint8Array = Uint8Array.from([
   0x00,
   0x00,
@@ -60,26 +44,33 @@ const hkdfSalt: Uint8Array = Uint8Array.from([
 
 export default class EnigmaUtils {
   private readonly apiUrl: string;
+  public readonly seed: Uint8Array;
+  private readonly privkey: Uint8Array;
+  public readonly pubkey: Uint8Array;
   private consensusIoPubKey: Uint8Array = new Uint8Array(); // cache
 
-  public constructor(apiUrl: string) {
+  public constructor(apiUrl: string, seed?: Uint8Array) {
     this.apiUrl = apiUrl;
+    if (!seed) {
+      this.seed = EnigmaUtils.GenerateNewSeed();
+    } else {
+      this.seed = seed;
+    }
+    const { privkey, pubkey } = EnigmaUtils.GenerateNewKeyPairFromSeed(this.seed);
+    this.privkey = privkey;
+    this.pubkey = pubkey;
   }
 
-  private getTxSenderKeyPair(): { privkey: Uint8Array; pubkey: Uint8Array } {
-    if (!localStorage.getItem("tx_sender_privkey") || !localStorage.getItem("tx_sender_pubkey")) {
-      const seedFor25519 = secureRandom(32, { type: "Uint8Array" });
-      const { private: privkey, public: pubkey } = generateKeyPair(seedFor25519);
+  public static GenerateNewKeyPair(): { privkey: Uint8Array; pubkey: Uint8Array } {
+    return EnigmaUtils.GenerateNewKeyPairFromSeed(EnigmaUtils.GenerateNewSeed());
+  }
 
-      localStorage.setItem("tx_sender_privkey", Encoding.toHex(privkey));
-      localStorage.setItem("tx_sender_pubkey", Encoding.toHex(pubkey));
-    }
+  public static GenerateNewSeed(): Uint8Array {
+    return secureRandom(32, { type: "Uint8Array" });
+  }
 
-    const privkey = Encoding.fromHex(localStorage.getItem("tx_sender_privkey"));
-    const pubkey = Encoding.fromHex(localStorage.getItem("tx_sender_pubkey"));
-
-    // TODO verify pubkey
-
+  public static GenerateNewKeyPairFromSeed(seed: Uint8Array): { privkey: Uint8Array; pubkey: Uint8Array } {
+    const { private: privkey, public: pubkey } = generateKeyPair(seed);
     return { privkey, pubkey };
   }
 
@@ -115,13 +106,11 @@ export default class EnigmaUtils {
   }
 
   public async encrypt(msg: object): Promise<Uint8Array> {
-    const { privkey: txSenderPrivKey, pubkey: txSenderPubKey } = this.getTxSenderKeyPair();
-
     const nonce = secureRandom(32, {
       type: "Uint8Array",
     });
 
-    const txEncryptionKey = await this.getTxEncryptionKey(txSenderPrivKey, nonce);
+    const txEncryptionKey = await this.getTxEncryptionKey(this.privkey, nonce);
 
     const siv = await miscreant.SIV.importKey(txEncryptionKey, "AES-SIV", cryptoProvider);
 
@@ -130,7 +119,7 @@ export default class EnigmaUtils {
     const ciphertext = await siv.seal(plaintext, [new Uint8Array()]);
 
     // ciphertext = nonce(32) || wallet_pubkey(32) || ciphertext
-    return Uint8Array.from([...nonce, ...txSenderPubKey, ...ciphertext]);
+    return Uint8Array.from([...nonce, ...this.pubkey, ...ciphertext]);
   }
 
   public async decrypt(ciphertext: Uint8Array, nonce: Uint8Array): Promise<Uint8Array> {
@@ -138,18 +127,12 @@ export default class EnigmaUtils {
       return new Uint8Array();
     }
 
-    const { privkey: txSenderPrivKey } = this.getTxSenderKeyPair();
-    const txEncryptionKey = await this.getTxEncryptionKey(txSenderPrivKey, nonce);
+    const txEncryptionKey = await this.getTxEncryptionKey(this.privkey, nonce);
 
     const siv = await miscreant.SIV.importKey(txEncryptionKey, "AES-SIV", cryptoProvider);
 
     const plaintext = await siv.open(ciphertext, [new Uint8Array()]);
     return plaintext;
-  }
-
-  public getMyPubkey(): Uint8Array {
-    const { pubkey } = this.getTxSenderKeyPair();
-    return pubkey;
   }
 }
 
