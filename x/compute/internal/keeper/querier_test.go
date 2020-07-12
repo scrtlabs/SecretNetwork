@@ -7,9 +7,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	sdkErrors "github.com/enigmampc/cosmos-sdk/types/errors"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
@@ -67,55 +67,18 @@ func TestQueryContractState(t *testing.T) {
 		expModelContains []types.Model
 		expErr           *sdkErrors.Error
 	}{
-		"query all": {
-			srcPath:     []string{QueryGetContractState, addr.String(), QueryMethodContractStateAll},
-			expModelLen: 3,
-			expModelContains: []types.Model{
-				{Key: []byte("foo"), Value: []byte(`"bar"`)},
-				{Key: []byte{0x0, 0x1}, Value: []byte(`{"count":8}`)},
-			},
-		},
-		"query raw key": {
-			srcPath:          []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
-			srcReq:           abci.RequestQuery{Data: []byte("foo")},
-			expModelLen:      1,
-			expModelContains: []types.Model{{Key: []byte("foo"), Value: []byte(`"bar"`)}},
-		},
-		"query raw binary key": {
-			srcPath:          []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
-			srcReq:           abci.RequestQuery{Data: []byte{0x0, 0x1}},
-			expModelLen:      1,
-			expModelContains: []types.Model{{Key: []byte{0x0, 0x1}, Value: []byte(`{"count":8}`)}},
-		},
-		"query smart": {
-			srcPath:     []string{QueryGetContractState, addr.String(), QueryMethodContractStateSmart},
+		"query": {
+			srcPath:     []string{QueryGetContractState, addr.String()},
 			srcReq:      abci.RequestQuery{Data: []byte(`{"verifier":{}}`)},
 			expSmartRes: fmt.Sprintf(`{"verifier":"%s"}`, anyAddr.String()),
 		},
-		"query smart invalid request": {
-			srcPath: []string{QueryGetContractState, addr.String(), QueryMethodContractStateSmart},
+		"query invalid request": {
+			srcPath: []string{QueryGetContractState, addr.String()},
 			srcReq:  abci.RequestQuery{Data: []byte(`{"raw":{"key":"config"}}`)},
 			expErr:  types.ErrQueryFailed,
 		},
-		"query unknown raw key": {
-			srcPath:     []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
-			srcReq:      abci.RequestQuery{Data: []byte("unknown")},
-			expModelLen: 0,
-		},
-		"query empty raw key": {
-			srcPath:     []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
-			expModelLen: 0,
-		},
-		"query raw with unknown address": {
-			srcPath:     []string{QueryGetContractState, anyAddr.String(), QueryMethodContractStateRaw},
-			expModelLen: 0,
-		},
-		"query all with unknown address": {
-			srcPath:     []string{QueryGetContractState, anyAddr.String(), QueryMethodContractStateAll},
-			expModelLen: 0,
-		},
-		"query smart with unknown address": {
-			srcPath:     []string{QueryGetContractState, anyAddr.String(), QueryMethodContractStateSmart},
+		"query with unknown address": {
+			srcPath:     []string{QueryGetContractState, anyAddr.String()},
 			expModelLen: 0,
 			expErr:      types.ErrNotFound,
 		},

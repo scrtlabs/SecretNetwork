@@ -17,6 +17,7 @@ import (
 )
 
 // MigrateContractCmd will migrate a contract to a new code version
+// NO SUPPORT FOR THIS COMMAND YET
 func MigrateContractCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "migrate [contract_addr_bech32] [new_code_id_int64] [json_encoded_migration_args]",
@@ -53,6 +54,7 @@ func MigrateContractCmd(cdc *codec.Codec) *cobra.Command {
 }
 
 // UpdateContractAdminCmd sets or clears an admin for a contract
+// NO SUPPORT FOR THIS COMMAND YET
 func UpdateContractAdminCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set-contract-admin [contract_addr_bech32] [new_admin_addr_bech32]",
