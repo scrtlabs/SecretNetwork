@@ -7,7 +7,8 @@ const cosmwasmjs = require(path.resolve(
 const assert = require("assert").strict;
 
 (async () => {
-  const client = new cosmwasmjs.CosmWasmClient("http://localhost:1337");
+  const seed = cosmwasmjs.EnigmaUtils.GenerateNewSeed();
+  const client = new cosmwasmjs.CosmWasmClient("http://localhost:1337", seed);
   const contract = (await client.getContracts(1))[0].address;
 
   const pen = await cosmwasmjs.Secp256k1Pen.fromMnemonic(
@@ -21,6 +22,7 @@ const assert = require("assert").strict;
     "http://localhost:1337",
     address,
     (signBytes) => pen.sign(signBytes),
+    seed,
     {
       upload: {
         amount: [{ amount: "25000", denom: "uscrt" }],

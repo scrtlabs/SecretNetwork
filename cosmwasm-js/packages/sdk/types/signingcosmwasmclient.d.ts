@@ -66,6 +66,7 @@ export declare class SigningCosmWasmClient extends CosmWasmClient {
     apiUrl: string,
     senderAddress: string,
     signCallback: SigningCallback,
+    seed?: Uint8Array,
     customFees?: Partial<FeeTable>,
     broadcastMode?: BroadcastMode,
   );

@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -182,12 +181,13 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			}
 
 			var answer struct {
-				Type           string                 `json:"type"`
-				Input          string                 `json:"input"`
-				OutputData     string                 `json:"output_data"`
-				OutputLogs     []sdk.StringEvent      `json:"output_log"`
-				OutputError    cosmwasmTypes.StdError `json:"output_error"`
-				PlaintextError string                 `json:"plaintext_error"`
+				Type               string                 `json:"type"`
+				Input              string                 `json:"input"`
+				OutputData         string                 `json:"output_data"`
+				OutputDataAsString string                 `json:"output_data_as_string"`
+				OutputLogs         []sdk.StringEvent      `json:"output_log"`
+				OutputError        cosmwasmTypes.StdError `json:"output_error"`
+				PlaintextError     string                 `json:"plaintext_error"`
 			}
 			var encryptedInput []byte
 			var dataOutputHexB64 string
@@ -229,7 +229,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
 			_, myPubkey, err := wasmCtx.GetTxSenderKeyPair()
 			if err != nil {
-				return err
+				return fmt.Errorf("Error in GetTxSenderKeyPair: %w", err)
 			}
 
 			if !bytes.Equal(originalTxSenderPubkey, myPubkey) {
@@ -241,7 +241,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			if len(ciphertextInput) > 0 {
 				plaintextInput, err = wasmCtx.Decrypt(ciphertextInput, nonce)
 				if err != nil {
-					return err
+					return fmt.Errorf("Error while trying to decrypt the tx input: %w", err)
 				}
 			}
 
@@ -251,19 +251,27 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			if answer.Type == "execute" {
 				dataOutputB64, err := hex.DecodeString(dataOutputHexB64)
 				if err != nil {
-					return err
+					return fmt.Errorf("Error while trying to decode the encryptrd output data from hex string: %w", err)
 				}
 
 				dataOutputCipherBz, err := base64.StdEncoding.DecodeString(string(dataOutputB64))
 				if err != nil {
-					return err
+					return fmt.Errorf("Error while trying to decode the encryptrd output data from base64: %w", err)
 				}
 
-				dataPlaintext, err := wasmCtx.Decrypt(dataOutputCipherBz, nonce)
+				dataPlaintextB64Bz, err := wasmCtx.Decrypt(dataOutputCipherBz, nonce)
 				if err != nil {
-					return err
+					return fmt.Errorf("Error while trying to decrypt the output data: %w", err)
 				}
-				answer.OutputData = string(dataPlaintext)
+				dataPlaintextB64 := string(dataPlaintextB64Bz)
+				answer.OutputData = dataPlaintextB64
+
+				dataPlaintext, err := base64.StdEncoding.DecodeString(dataPlaintextB64)
+				if err != nil {
+					return fmt.Errorf("Error while trying to decode the decrypted output data from base64: %w", err)
+				}
+
+				answer.OutputDataAsString = string(dataPlaintext)
 			}
 
 			// decrypt logs
@@ -277,11 +285,11 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 								if a.Key != "" {
 									keyCiphertext, err := base64.StdEncoding.DecodeString(a.Key)
 									if err != nil {
-										return err
+										return fmt.Errorf("Error while trying to decode the log key '%s' from base64: %w", a.Key, err)
 									}
 									keyPlaintext, err := wasmCtx.Decrypt(keyCiphertext, nonce)
 									if err != nil {
-										return err
+										return fmt.Errorf("Error while trying to decrypt the log key '%s' from base64: %w", a.Key, err)
 									}
 									a.Key = string(keyPlaintext)
 								}
@@ -290,11 +298,11 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 								if a.Value != "" {
 									valueCiphertext, err := base64.StdEncoding.DecodeString(a.Value)
 									if err != nil {
-										return err
+										return fmt.Errorf("Error while trying to decode the log value '%s' from base64: %w", a.Value, err)
 									}
 									valuePlaintext, err := wasmCtx.Decrypt(valueCiphertext, nonce)
 									if err != nil {
-										return err
+										return fmt.Errorf("Error while trying to decrypt the log value '%s' from base64: %w", a.Value, err)
 									}
 									a.Value = string(valuePlaintext)
 								}
@@ -308,23 +316,12 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			}
 
 			if strings.Contains(result.RawLog, "wasm contract failed: generic: ") {
-				errorCipherB64 := strings.ReplaceAll(result.RawLog, answer.Type+" wasm contract failed: generic: ", "")
-				errorCipherB64 = strings.ReplaceAll(errorCipherB64, ": failed to execute message; message index: 0", "")
-
-				errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
+				stdErr, err := wasmCtx.DecryptError(result.RawLog, answer.Type, nonce)
 				if err != nil {
 					return err
 				}
 
-				errorPlainBz, err := wasmCtx.Decrypt(errorCipherBz, nonce)
-				if err != nil {
-					return err
-				}
-
-				err = json.Unmarshal(errorPlainBz, &answer.OutputError)
-				if err != nil {
-					return err
-				}
+				answer.OutputError = stdErr
 			} else if strings.Contains(result.RawLog, "EnclaveErr") {
 				answer.PlaintextError = result.RawLog
 			}
@@ -336,7 +333,6 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 	return cmd
 }
 
-var contractErrorRegex = regexp.MustCompile(`wasm contract failed: generic: (.+)`)
 
 func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 	decoder := newArgDecoder(asciiDecodeString)
@@ -370,13 +366,22 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			nonce := queryData[:32]
 
 			res, _, err := cliCtx.QueryWithData(route, queryData)
 			if err != nil {
+				if strings.Contains(err.Error(), "wasm contract failed: generic: ") {
+					errorPlainBz, err := wasmCtx.DecryptError(err.Error(), "query", nonce)
+					if err != nil {
+						return err
+					}
+					return fmt.Errorf("%v", errorPlainBz.Error())
+				} else if strings.Contains(err.Error(), "EnclaveErr") {
+					return err
+				}
 				return err
 			}
 
-			nonce := queryData[:32]
 			resDecrypted := []byte{}
 			if len(res) > 0 {
 				resDecrypted, err = wasmCtx.Decrypt(res, nonce)
