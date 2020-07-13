@@ -8,7 +8,6 @@ use crate::cosmwasm::query::{QueryRequest, WasmQuery};
 
 use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError};
 use log::*;
-use serde_json;
 use sgx_types::sgx_status_t;
 
 pub fn encrypt_and_query_chain(
@@ -69,7 +68,7 @@ pub fn encrypt_and_query_chain(
                 let response_as_secret_msg = SecretMessage {
                     nonce,
                     user_public_key,
-                    msg: response.clone(),
+                    msg: response,
                 };
 
                 match response_as_secret_msg.decrypt() {
