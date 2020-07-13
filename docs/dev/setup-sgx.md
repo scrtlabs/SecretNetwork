@@ -63,7 +63,7 @@ fi
 sudo apt install -y $PSW_PACKAGES
 ```
 
-## For Contract Developers
+## For Enclave Developers
 
 ### Prerequisites
 
