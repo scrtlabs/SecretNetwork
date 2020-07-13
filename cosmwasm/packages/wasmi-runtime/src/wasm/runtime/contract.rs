@@ -200,9 +200,6 @@ impl WasmiApi for ContractInstance {
         let state_key_name = self
             .extract_vector(state_key_ptr_ptr as u32)
             .map_err(|err| {
-                // Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of
-                // deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a language
-                // other than rust, etc.
                 error!("read_db() error while trying to read state_key_name from wasm memory");
                 err
             })?;
@@ -230,9 +227,6 @@ impl WasmiApi for ContractInstance {
         );
 
         let ptr_to_region_in_wasm_vm = self.write_to_memory(&value).map_err(|err| {
-            // Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of
-            // deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a language
-            // other than rust, etc.
             error!(
                 "read_db() error while trying to allocate {} bytes for the value",
                 value.len(),
@@ -252,9 +246,6 @@ impl WasmiApi for ContractInstance {
         let state_key_name = self
             .extract_vector(state_key_ptr_ptr as u32)
             .map_err(|err| {
-                // Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of
-                // deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a language
-                // other than rust, etc.
                 error!("remove_db() error while trying to read state_key_name from wasm memory");
                 err
             })?;
@@ -284,16 +275,10 @@ impl WasmiApi for ContractInstance {
         let state_key_name = self
             .extract_vector(state_key_ptr_ptr as u32)
             .map_err(|err| {
-                // Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of
-                // deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a language
-                // other than rust, etc.
                 error!("write_db() error while trying to read state_key_name from wasm memory");
                 err
             })?;
         let value = self.extract_vector(value_ptr_ptr as u32).map_err(|err| {
-            // Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of
-            // deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a language
-            // other than rust, etc.
             error!("write_db() error while trying to read value from wasm memory");
             err
         })?;
@@ -329,9 +314,6 @@ impl WasmiApi for ContractInstance {
         canonical_ptr_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
         let human = self.extract_vector(human_ptr_ptr as u32).map_err(|err| {
-            // Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of
-            // deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a language
-            // other than rust, etc.
             error!(
                 "canonicalize_address() error while trying to read human address from wasm memory"
             );
@@ -346,9 +328,6 @@ impl WasmiApi for ContractInstance {
         // Turn Vec<u8> to str
         let mut human_addr_str = match std::str::from_utf8(&human) {
             Err(err) => {
-                // Assaf: I don't think the input can be invalid utf8, unless the caller overrides the CosmWasm
-                // implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract
-                // in a language other than rust, etc.
                 error!(
                     "canonicalize_address() error while trying to parse human address from bytes to string: {:?}",
                     err
@@ -399,9 +378,6 @@ impl WasmiApi for ContractInstance {
 
         self.write_to_allocated_memory(&canonical, canonical_ptr_ptr as u32)
             .map_err(|err| {
-                // Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation
-                // of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a
-                // language other than rust, etc.
                 error!(
                     "canonicalize_address() error while trying to write the answer {:?} to the destination buffer",
                     canonical,
@@ -426,9 +402,6 @@ impl WasmiApi for ContractInstance {
         let canonical = self
             .extract_vector(canonical_ptr_ptr as u32)
             .map_err(|err| {
-                // Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of
-                // deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a language
-                // other than rust, etc.
                 error!(
                     "humanize_address() error while trying to read canonical address from wasm memory",
                 );
@@ -454,9 +427,6 @@ impl WasmiApi for ContractInstance {
 
         self.write_to_allocated_memory(&human_bytes, human_ptr_ptr as u32)
             .map_err(|err| {
-                // Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation
-                // of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a
-                // language other than rust, etc.
                 error!(
                     "humanize_address() error while trying to write the answer {:?} to the destination buffer",
                     human_bytes,
