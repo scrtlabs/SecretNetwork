@@ -4,28 +4,23 @@ Developers can write secret contracts for CosmWasm running inside secure enclave
 
 ## Getting Started
 
-### 1. Start a node locally
-#### 1.1 Make sure SGX is installed
-```
-https://github.com/enigmampc/SecretNetwork/blob/develop/docs/dev/setup-sgx.md
-```
-#### 1.2 Download secret node package and follow the instructions
-```
-https://github.com/enigmampc/SecretNetwork/blob/develop/docs/testnet/run-full-node-testnet.md
-```
-### 2. Create a local scrt address & get tokens from faucet
-```
-https://github.com/enigmampc/SecretNetwork/blob/develop/docs/secretcli.md
+### 1. Start a Node Locally
 
-https://faucet.testnet.enigma.co
-```
-### 3. [Start a node](/validators-and-full-nodes/run-full-node-mainnet.html)
+#### 1.1 Make sure to [install SGX](/validators-and-full-nodes/setup-sgx.md)
+#### 1.2 Download the [secret node package](testnet/testnet-docs.md) and follow the instructions
+
+### 2. Get Your Testnet Account
+
+#### 2.1 Create a [local scrt address](secretcli.md)
+#### 2.2 Get some test SCRT from the [faucet](https://faucet.testnet.enigma.co)
+
+### 3. Start a [Node on Testnet](/testnet/run-full-node-testnet.md)
 
 #### 3.1 Make sure you can access the IP and DNS address you created
 #### 3.2 Try to add it as a validator
 #### 3.3 Use this node as the gateway node you use to deploy your contracts
 
-### 4. Create a development environment
+### 4. Create a Development Environment
 checkout the tag v0.5.0-alpha2
 ```
 make cli
@@ -34,11 +29,9 @@ docker run -p 26657:26657 enigmampc/secret-network-bootstrap-sw:latest
 #### 4.1 make sure the node is listening on port 26657
 #### 4.2 make sure cli works when using --node <node_ip>:26657
 
-### 5. Write a contract with an addition function
-```
-https://github.com/CosmWasm/cosmwasm
-https://github.com/CosmWasm/cosmwasm-template
-```
+### 5. Write a Secret Contract
+### [CosmWasm GitHub Repository](https://github.com/CosmWasm/cosmwasm) - [Template](https://github.com/CosmWasm/cosmwasm-template)
+
 #### 5.1 Deploy it to your local dev environment
 #### 5.2 Call it using the secretcli
 #### 5.3 Deploy it to the testnet

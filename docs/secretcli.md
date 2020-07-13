@@ -653,7 +653,7 @@ on software upgrades, parameters of the mainnet or signaling mechanisms through
 text proposals. This is done through voting on proposals, which will be submitted
 by `SCRT` holders on the mainnet.
 
-[How to participate in on-chain governance](/using-governance.md).
+[How to participate in on-chain governance](/protocol/governance.md).
 
 ### Fee Distribution
 

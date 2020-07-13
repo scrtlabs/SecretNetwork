@@ -1,4 +1,4 @@
-# Preprate your Hardware
+# Prepare your Hardware
 
 If you're running a local machine and not a cloud-based VM -
 
