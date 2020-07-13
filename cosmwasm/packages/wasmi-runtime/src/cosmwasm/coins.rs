@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::math::Uint128;
+use crate::cosmwasm::math::Uint128;
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct Coin {
