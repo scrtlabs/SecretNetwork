@@ -95,7 +95,7 @@ pub fn encrypt_output(
                         if msg["wasm"]["execute"]["msg"].is_string() {
                             if let Value::String(msg_b64) = &mut msg["wasm"]["execute"]["msg"] {
                                 let mut msg_to_pass = SecretMessage::from_base64(
-                                    (*msg_b64).to_string(),
+                                    msg_b64.clone(),
                                     nonce,
                                     user_public_key,
                                 )?;
@@ -107,7 +107,7 @@ pub fn encrypt_output(
                         } else if msg["wasm"]["instantiate"]["msg"].is_string() {
                             if let Value::String(msg_b64) = &mut msg["wasm"]["instantiate"]["msg"] {
                                 let mut msg_to_pass = SecretMessage::from_base64(
-                                    (*msg_b64).to_string(),
+                                    msg_b64.clone(),
                                     nonce,
                                     user_public_key,
                                 )?;

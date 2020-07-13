@@ -5,10 +5,12 @@ use wasmi::{Error as InterpreterError, MemoryInstance, MemoryRef, ModuleRef, Run
 use enclave_ffi_types::Ctx;
 
 use crate::consts::BECH32_PREFIX_ACC_ADDR;
+use crate::crypto::Ed25519PublicKey;
 use crate::wasm::contract_validation::ContractKey;
 use crate::wasm::db::{read_encrypted_key, remove_encrypted_key, write_encrypted_key};
 use crate::wasm::errors::WasmEngineError;
 use crate::wasm::runtime::traits::WasmiApi;
+use crate::wasm::{query_chain::encrypt_and_query_chain, types::IoNonce};
 
 /// SecretContract maps function index to implementation
 /// When instantiating a module we give it the SecretNetworkImportResolver resolver
@@ -23,6 +25,8 @@ pub struct ContractInstance {
     pub gas_used_externally: u64,
     pub contract_key: ContractKey,
     pub module: ModuleRef,
+    pub user_nonce: IoNonce,
+    pub user_public_key: Ed25519PublicKey,
 }
 
 impl ContractInstance {
@@ -30,7 +34,14 @@ impl ContractInstance {
         &*self.memory
     }
 
-    pub fn new(context: Ctx, module: ModuleRef, gas_limit: u64, contract_key: ContractKey) -> Self {
+    pub fn new(
+        context: Ctx,
+        module: ModuleRef,
+        gas_limit: u64,
+        contract_key: ContractKey,
+        user_nonce: IoNonce,
+        user_public_key: Ed25519PublicKey,
+    ) -> Self {
         let memory = (&*module)
             .export_by_name("memory")
             .expect("Module expected to have 'memory' export")
@@ -46,6 +57,8 @@ impl ContractInstance {
             gas_used_externally: 0,
             contract_key,
             module,
+            user_nonce,
+            user_public_key,
         }
     }
 
@@ -451,7 +464,20 @@ impl WasmiApi for ContractInstance {
         );
 
         // TODO pass query_buffer to ocall
-        let result: &[u8];
+        // Call query_chain (this bubbles up to x/compute via ocalls and FFI to Go code)
+        // Returns the value from x/compute
+        let (result, gas_used) = encrypt_and_query_chain(
+            &query_buffer,
+            &self.context,
+            self.user_nonce,
+            self.user_public_key,
+        )?;
+        self.use_gas_externally(gas_used)?;
+
+        let result = match result {
+            None => return Ok(Some(RuntimeValue::I32(0))), // Is this supposed to be 0 or Err?
+            Some(result) => result,
+        };
 
         let ptr_to_region_in_wasm_vm =   self.write_to_memory(&result)
             .map_err(|err| {

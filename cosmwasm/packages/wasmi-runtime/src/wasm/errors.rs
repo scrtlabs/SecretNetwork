@@ -13,13 +13,14 @@ pub enum WasmEngineError {
 
     EncryptionError,
     DecryptionError,
+    BadQueryChainRequest,
+    BadQueryChainResponse,
 
     MemoryAllocationError,
     MemoryReadError,
     MemoryWriteError,
 
     NonExistentImportFunction,
-    NotImplemented,
 }
 
 impl WasmEngineError {
@@ -40,7 +41,8 @@ impl WasmEngineError {
             MemoryWriteError => MemoryWriteError,
 
             NonExistentImportFunction => NonExistentImportFunction,
-            NotImplemented => NotImplemented,
+            BadQueryChainRequest => BadQueryChainRequest,
+            BadQueryChainResponse => BadQueryChainResponse,
         }
     }
 }
