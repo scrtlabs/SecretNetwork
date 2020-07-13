@@ -22,5 +22,7 @@ WantedBy=multi-user.target
 EOF
 sudo systemctl daemon-reload
 
+export SCRT_ENCLAVE_DIR=/usr/lib
+
 sudo perl -i -pe 's/#SystemMaxUse=.*/SystemMaxUse=50M/' /etc/systemd/journald.conf
 sudo systemctl restart systemd-journald
