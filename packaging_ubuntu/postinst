@@ -10,6 +10,7 @@ After=network.target
 
 [Service]
 Type=simple
+Environment=SCRT_ENCLAVE_DIR=/usr/lib
 ExecStart=$(which secretd) start
 User=$(logname)
 Restart=on-failure
@@ -21,8 +22,6 @@ LimitNOFILE=65535
 WantedBy=multi-user.target
 EOF
 sudo systemctl daemon-reload
-
-export SCRT_ENCLAVE_DIR=/usr/lib
 
 sudo perl -i -pe 's/#SystemMaxUse=.*/SystemMaxUse=50M/' /etc/systemd/journald.conf
 sudo systemctl restart systemd-journald
