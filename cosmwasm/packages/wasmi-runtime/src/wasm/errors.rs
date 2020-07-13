@@ -62,7 +62,8 @@ impl From<WasmEngineError> for EnclaveError {
             MemoryAllocationError => EnclaveError::MemoryAllocationError,
             MemoryReadError => EnclaveError::MemoryReadError,
             MemoryWriteError => EnclaveError::MemoryWriteError,
-            NotImplemented => EnclaveError::NotImplemented,
+            BadQueryChainRequest => EnclaveError::BadQueryChainRequest,
+            BadQueryChainResponse => EnclaveError::BadQueryChainResponse,
             // Unexpected WasmEngineError variant
             _other => EnclaveError::Unknown,
         }

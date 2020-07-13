@@ -34,7 +34,15 @@ pub fn encrypt_and_query_chain(
                 user_public_key,
                 nonce,
             };
-            encrypted_msg.encrypt_in_place();
+            encrypted_msg.encrypt_in_place().map_err(|err|{
+                error!(
+                    "query_chain() got an error while trying to encrypt the request for query {:?}, stopping wasm: {:?}",
+                    String::from_utf8_lossy(&query),
+                    err
+                );
+
+                WasmEngineError::EncryptionError
+            })?;
             let msg = Binary(encrypted_msg.to_slice());
             QueryRequest::Wasm(WasmQuery::Smart { contract_addr, msg })
         }
@@ -53,16 +61,18 @@ pub fn encrypt_and_query_chain(
 
     // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
     // This returns the value from Tendermint
-    match query_chain(context, &query) {
-        Ok((value, gas_used)) => match value {
-            Some(query) => {
-                let as_secret_msg = SecretMessage {
+    match query_chain(context, &encrypted_query) {
+        Ok((response, gas_used)) => match response {
+            Some(response) => {
+                // query response returns without nonce and user_public_key appended to it
+                // because the sender is supposed to have them already
+                let response_as_secret_msg = SecretMessage {
                     nonce,
                     user_public_key,
-                    msg: query.clone(),
+                    msg: response.clone(),
                 };
 
-                match as_secret_msg.decrypt() {
+                match response_as_secret_msg.decrypt() {
                     Ok(decrypted) => Ok((Some(decrypted), gas_used)),
                     // This error case is why we have all the matches here.
                     // If we successfully collected a value, but failed to decrypt it, then we propagate that error.

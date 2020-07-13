@@ -90,6 +90,9 @@ pub enum EnclaveError {
     Panic,
     /// Unexpected Error happened, no more details available
     Unknown,
+
+    BadQueryChainRequest,
+    BadQueryChainResponse,
 }
 
 /// This type holds a pointer to a VmError that is boxed on the untrusted side

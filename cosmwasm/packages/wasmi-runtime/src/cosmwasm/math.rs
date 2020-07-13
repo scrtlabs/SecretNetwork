@@ -14,46 +14,13 @@ pub struct Decimal(u128);
 const DECIMAL_FRACTIONAL: u128 = 1_000_000_000_000_000_000;
 
 impl Decimal {
-    pub const MAX: Decimal = Decimal(std::u128::MAX);
-
-    /// Create a 1.0 Decimal
-    pub const fn one() -> Decimal {
-        Decimal(DECIMAL_FRACTIONAL)
-    }
-
-    /// Create a 0.0 Decimal
-    pub const fn zero() -> Decimal {
-        Decimal(0)
-    }
-
-    /// Convert x% into Decimal
-    pub fn percent(x: u64) -> Decimal {
-        Decimal((x as u128) * 10_000_000_000_000_000)
-    }
-
-    /// Convert permille (x/1000) into Decimal
-    pub fn permille(x: u64) -> Decimal {
-        Decimal((x as u128) * 1_000_000_000_000_000)
-    }
-
-    /// Returns the ratio (nominator / denominator) as a Decimal
-    pub fn from_ratio<A: Into<u128>, B: Into<u128>>(nominator: A, denominator: B) -> Decimal {
-        let nominator: u128 = nominator.into();
-        let denominator: u128 = denominator.into();
-        if denominator == 0 {
-            panic!("Denominator must not be zero");
-        }
-        // TODO: better algorithm with less rounding potential?
-        Decimal(nominator * DECIMAL_FRACTIONAL / denominator)
-    }
-
     pub fn is_zero(&self) -> bool {
         self.0 == 0
     }
 }
 
 #[derive(Display)]
-struct DecimalParseErr(&'static str);
+pub struct DecimalParseErr(&'static str);
 
 impl FromStr for Decimal {
     type Err = DecimalParseErr;
@@ -202,7 +169,7 @@ impl From<u64> for Uint128 {
 }
 
 #[derive(Display)]
-struct Uint128ParseErr(String);
+pub struct Uint128ParseErr(String);
 
 impl TryFrom<&str> for Uint128 {
     type Error = Uint128ParseErr;
