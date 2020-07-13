@@ -6,8 +6,8 @@
 
 # Software Requirements
 
-First, have the latest microcode from Intel installed: https://github.com/intel/Intel-Linux-Processor-Microcode-Data-Files/releases  
-`sudo apt install intel-microcode -y` may also work.
+First, have the latest microcode from Intel installed: https://github.com/intel/Intel-Linux-Processor-Microcode-Data-Files/releases.  
+`sudo apt install intel-microcode -y` may also work, see [this guide](https://www.cyberciti.biz/faq/install-update-intel-microcode-firmware-linux/).
 
 Then, make sure you have Rust installed: https://www.rust-lang.org/tools/install
 
