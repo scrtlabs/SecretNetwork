@@ -31,6 +31,13 @@ Other driver/OS combinations are not guaranteed to work with these instructions.
 
 ### 3. Initialize the enclave
 
+Create the `.sgx_secrets` directory
+```bash
+mkdir .sgx_secrets
+``` 
+
+Then initialize the enclave
+
 ```bash
 SCRT_ENCLAVE_DIR=/usr/lib secretd init-enclave
 ``` 
