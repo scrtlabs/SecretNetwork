@@ -8,7 +8,7 @@ If you're running a local machine and not a cloud-based VM -
 
 # Installation
 
-## For Node runners
+## For Node Runners
 
 ### Install SGX
 
@@ -32,7 +32,7 @@ echo "#####       Installing Intel SGX driver       #####"
 echo "###############################################\n\n"
 
 # download SGX driver
-wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/$(OS)/sgx_linux_x64_driver_2.6.0_95eaa6f.bin
+wget "https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/${OS}/sgx_linux_x64_driver_2.6.0_95eaa6f.bin"
 
 # Make the driver and SDK installers executable
 chmod +x ./sgx_linux_*.bin
