@@ -34,9 +34,25 @@ echo "###############################################\n\n"
 # download SGX driver
 wget "https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/${OS}/sgx_linux_x64_driver_2.6.0_95eaa6f.bin"
 
-# Make the driver and SDK installers executable
-chmod +x ./sgx_linux_*.bin
+# Make the driver installer executable
+chmod +x ./sgx_linux_x64_driver_2.6.0_95eaa6f.bin
 
+# Remount /dev as exec, also at system startup
+sudo tee /etc/systemd/system/remount-dev-exec.service >/dev/null <<EOF
+[Unit]
+Description=Remount /dev as exec to allow AESM service to boot and load enclaves into SGX
+
+[Service]
+Type=oneshot
+ExecStart=/bin/mount -o remount,exec /dev
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl enable remount-dev-exec
+sudo systemctl start remount-dev-exec
 
 echo "\n\n###############################################"
 echo "#####       Installing Intel SGX PSW          #####"
