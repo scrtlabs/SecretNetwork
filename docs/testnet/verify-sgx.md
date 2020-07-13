@@ -31,8 +31,9 @@ Other driver/OS combinations are not guaranteed to work with these instructions.
 
 ### 3. Initialize the enclave
 
-`export SCRT_ENCLAVE_DIR=/usr/lib`
-`secretd init-enclave` 
+```bash
+SCRT_ENCLAVE_DIR=/usr/lib secretd init-enclave
+``` 
 
 (or `secretd init-enclave | grep isvEnclaveQuoteStatus`)
 
@@ -74,7 +75,7 @@ secretd init-enclave
 ERROR: failed to initialize enclave: Error calling the VM: SGX_ERROR_ENCLAVE_FILE_ACCESS
 ```
 
- Try running `export SCRT_ENCLAVE_DIR=/usr/lib` again
+ Make sure you have the environment variable `SCRT_ENCLAVE_DIR=/usr/lib` set before you run `secretd`. 
 
 * Output is:
 ```
