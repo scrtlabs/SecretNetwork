@@ -54,7 +54,7 @@ all: build test
 build: build-rust build-go
 
 build-rust: librust_cosmwasm_enclave.signed.so lib/libEnclave_u.a
-	cargo build -Z unstable-options --profile $(BUILD_PROFILE)
+	cargo build -Z unstable-options --profile $(BUILD_PROFILE) --features backtraces
 	cp target/$(BUILD_PROFILE)/libgo_cosmwasm.$(DLL_EXT) api
 	@ #this pulls out ELF symbols, 80% size reduction!
 
