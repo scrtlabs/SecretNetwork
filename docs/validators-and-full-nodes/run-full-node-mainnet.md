@@ -114,18 +114,17 @@ secretcli query register secret-network-params --node registration.enigma.co:266
 secretd configure-secret node-master-cert.der "$SEED"
 ```
 
-### 14. Add persistent peers to your configuration file.
+### 14. Add persistent peers and seeds to your configuration file.
 
-For an updated (partial) list of full nodes: http://bootstrap.mainnet.enigma.co/peers.txt
+For an updated (partial) list of full nodes: https://bootstrap.mainnet.enigma.co/peers.txt
 (Generated every minute with [this script](https://gist.github.com/assafmo/a39fdb535f74ce2d6493a1a3f695e4ca))
 
 You can also use Enigma's node:
 
 ```
 perl -i -pe 's/persistent_peers = ""/persistent_peers = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.secretd/config/config.toml
+perl -i -pe 's/seeds = ""/seeds = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.secretd/config/config.toml
 ```
-
-This configuration updates automatically by your node when it learns of new nodes in the network.
 
 ### 15. Listen for incoming RPC requests so that light nodes can connect to you:
 
