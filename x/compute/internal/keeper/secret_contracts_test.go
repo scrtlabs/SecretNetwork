@@ -949,7 +949,7 @@ func TestExecPanic(t *testing.T) {
 	_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, `{"panic":{}}`, false, defaultGas)
 	require.Error(t, execErr)
 	require.Error(t, execErr.GenericErr)
-	require.Equal(t, "execute contract failed: Execution error: EnclaveErr: FailedFunctionCall", execErr.GenericErr.Msg)
+	require.Equal(t, "execute contract failed: Execution error: Enclave Error: FailedFunctionCall", execErr.GenericErr.Msg)
 }
 
 func TestQueryPanic(t *testing.T) {
@@ -962,7 +962,7 @@ func TestQueryPanic(t *testing.T) {
 	_, queryErr := queryHelper(t, keeper, ctx, addr, `{"panic":{}}`, false, defaultGas)
 	require.Error(t, queryErr)
 	require.Error(t, queryErr.GenericErr)
-	require.Equal(t, "query contract failed: Execution error: EnclaveErr: FailedFunctionCall", queryErr.GenericErr.Msg)
+	require.Equal(t, "query contract failed: Execution error: Enclave Error: FailedFunctionCall", queryErr.GenericErr.Msg)
 }
 
 func TestAllocateOnHeapFailBecauseMemoryLimit(t *testing.T) {
@@ -979,7 +979,7 @@ func TestAllocateOnHeapFailBecauseMemoryLimit(t *testing.T) {
 	require.Empty(t, data)
 	require.Error(t, execErr)
 	require.Error(t, execErr.GenericErr)
-	require.Equal(t, "execute contract failed: Execution error: EnclaveErr: FailedFunctionCall", execErr.GenericErr.Msg)
+	require.Equal(t, "execute contract failed: Execution error: Enclave Error: FailedFunctionCall", execErr.GenericErr.Msg)
 }
 
 func TestAllocateOnHeapFailBecauseGasLimit(t *testing.T) {
@@ -1020,7 +1020,7 @@ func TestAllocateOnHeapMoreThanSGXHasFailBecauseMemoryLimit(t *testing.T) {
 	require.Empty(t, data)
 	require.Error(t, execErr)
 	require.Error(t, execErr.GenericErr)
-	require.Equal(t, "execute contract failed: Execution error: EnclaveErr: FailedFunctionCall", execErr.GenericErr.Msg)
+	require.Equal(t, "execute contract failed: Execution error: Enclave Error: FailedFunctionCall", execErr.GenericErr.Msg)
 }
 
 func TestPassNullPointerToImports(t *testing.T) {
@@ -1045,7 +1045,7 @@ func TestPassNullPointerToImports(t *testing.T) {
 
 			require.Error(t, execErr)
 			require.Error(t, execErr.GenericErr)
-			require.Equal(t, "execute contract failed: Execution error: EnclaveErr: Got an error from the enclave: MemoryReadError", execErr.GenericErr.Msg)
+			require.Equal(t, "execute contract failed: Execution error: Enclave Error: Got an error from the enclave: MemoryReadError", execErr.GenericErr.Msg)
 		})
 	}
 }
