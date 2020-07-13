@@ -69,6 +69,7 @@ secretcli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"ad
 secretcli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\"}}" |
     jq -e '.balance == "63"'
 
+(secretcli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1zzzzzzzzzzzzzzzzzz\"}}" || true) | grep 'generic: canonicalize_address returned error'
 
 echo "All is done. Yay!"
 
