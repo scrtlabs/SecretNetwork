@@ -8,7 +8,7 @@ If you're running a local machine and not a cloud-based VM -
 
 # Installation
 
-## For Node runners - Ubuntu16.04/18.04
+## For Node runners
 
 ### Install SGX
 
@@ -49,7 +49,7 @@ wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key |
    sudo apt-key add -
 sudo apt update
 
-
+# Install libprotobuf
 if (($UBUNTUVERSION > 18)); then
    sudo apt install -y gdebi
    # Install all the additional necessary dependencies (besides the driver and the SDK)
