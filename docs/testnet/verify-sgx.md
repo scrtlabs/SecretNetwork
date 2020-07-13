@@ -35,12 +35,14 @@ Other driver/OS combinations are not guaranteed to work with these instructions.
 SCRT_ENCLAVE_DIR=/usr/lib secretd init-enclave
 ``` 
 
-(or `secretd init-enclave | grep isvEnclaveQuoteStatus`)
+(or `SCRT_ENCLAVE_DIR=/usr/lib secretd init-enclave | grep -Po 'isvEnclaveQuoteStatus":".+?"'`)
 
 This step, if successful, will create an output similar to this - 
 ```
 INFO  [wasmi_runtime_enclave::registration::attestation] Attestation report: {"id":"183845695958032083367610248637243990718","timestamp":"2020-07-12T09:43:12.297820","version":4,"advisoryURL":"https://security-center.intel.com","advisoryIDs":["INTEL-SA-00334"],"isvEnclaveQuoteStatus":"SW_HARDENING_NEEDED","isvEnclaveQuoteBody":"AgAAAMYLAAALAAoAAAAAABf93MlHcUSizYTifNzpi+QD9Lqdmd+k62/B9e4nOc4sDw8DBf+ABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwAAAAAAAAAHAAAAAAAAAO40oSBNM9hG2mHlwrSwAbMCmy87uJSAiGpez88uqJlgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACD1xnnferKFHD2uvYqTXdDA8iZ22kCD5xw7h38CMfOngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADv56xwUqy2HPiT/uxTSwg1LQmFPJa2sD0Q2YwuzlJuLgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}
 ```
+
+(or `isvEnclaveQuoteStatus":"SW_HARDENING_NEEDED"`)
 
 Where the important field is __isvEnclaveQuoteStatus__. This is the field that marks trust level of our platform. The acceptable values for this field are:
 
