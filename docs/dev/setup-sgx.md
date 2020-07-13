@@ -12,7 +12,7 @@ If you're running a local machine and not a cloud-based VM -
 
 ### Install SGX
 
-Note: `sgx_linux_x64_driver_2.6.0_602374c.bin` is the latest driver as of July 13, 2020. Please check under https://download.01.org/intel-sgx/sgx-linux/ that this is still case. If not, please send us a PR or notify us.
+Note: `sgx_linux_x64_driver_2.6.0_602374c.bin` is the latest driver as of July 13, 2020. Please check under https://download.01.org/intel-sgx/sgx-linux/ that this is still the case. If not, please send us a PR or notify us.
 
 ```bash
 UBUNTUVERSION=$(lsb_release -r -s | cut -d '.' -f 1)
@@ -41,7 +41,7 @@ chmod +x ./sgx_linux_x64_driver_*.bin
 
 # Install the driver
 sudo ./sgx_linux_x64_driver_*.bin
-   
+
 # Remount /dev as exec, also at system startup
 sudo tee /etc/systemd/system/remount-dev-exec.service >/dev/null <<EOF
 [Unit]
@@ -214,52 +214,51 @@ sudo $HOME/.sgxsdk/sgx_linux_x64_driver_*.bin
 
 See https://github.com/enigmampc/SecretNetwork/blob/master/docs/testnet/verify-sgx.md for a guide how to test your setup
 
-## For Contract Developers 
-
+## For Contract Developers
 
 ### using `sgx-detect`:
 
-   ```bash
-   sudo apt install -y libssl-dev protobuf-compiler
-   cargo +nightly install fortanix-sgx-tools sgxs-tools
+```bash
+sudo apt install -y libssl-dev protobuf-compiler
+cargo +nightly install fortanix-sgx-tools sgxs-tools
 
-   sgx-detect
-   ```
+sgx-detect
+```
 
-   Should print at the end:
+Should print at the end:
 
-   ```
-   ✔  Able to launch enclaves
-      ✔  Debug mode
-      ✔  Production mode (Intel whitelisted)
+```
+✔  Able to launch enclaves
+   ✔  Debug mode
+   ✔  Production mode (Intel whitelisted)
 
-   You're all set to start running SGX programs!
-   ```
+You're all set to start running SGX programs!
+```
 
 ### Compiling a `hello-rust` project:
 
-   ```bash
-   git clone --depth 1 -b v1.1.2 git@github.com:apache/incubator-teaclave-sgx-sdk.git
+```bash
+git clone --depth 1 -b v1.1.2 git@github.com:apache/incubator-teaclave-sgx-sdk.git
 
-   cd incubator-teaclave-sgx-sdk/samplecode/hello-rust
-   perl -i -pe 's/SGX_SDK \?=.+/SGX_SDK ?= \$(HOME)\/.sgxsdk\/sgxsdk/' Makefile
-   make
-   cd bin
-   ./app
-   ```
+cd incubator-teaclave-sgx-sdk/samplecode/hello-rust
+perl -i -pe 's/SGX_SDK \?=.+/SGX_SDK ?= \$(HOME)\/.sgxsdk\/sgxsdk/' Makefile
+make
+cd bin
+./app
+```
 
-   Should print somting similar to this:
+Should print somting similar to this:
 
-   ```
-   [+] Init Enclave Successful 2!
-   This is a normal world string passed into Enclave!
-   This is a in-Enclave Rust string!
-   gd: 1 0 0 1
-   static: 1 eremove: 0 dyn: 0
-   EDMM: 0, feature: 9007268790009855
-   supported sgx
-   [+] say_something success...
-   ```
+```
+[+] Init Enclave Successful 2!
+This is a normal world string passed into Enclave!
+This is a in-Enclave Rust string!
+gd: 1 0 0 1
+static: 1 eremove: 0 dyn: 0
+EDMM: 0, feature: 9007268790009855
+supported sgx
+[+] say_something success...
+```
 
 # Uninstall
 
