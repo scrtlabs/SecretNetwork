@@ -43,7 +43,7 @@ func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 		GetCmdListContractByCode(cdc),
 		GetCmdQueryCode(cdc),
 		GetCmdGetContractInfo(cdc),
-		GetCmdGetContractState(cdc),
+		GetCmdQuery(cdc),
 		GetQueryDecryptTxCmd(cdc),
 	)...)
 	return queryCmd
@@ -159,80 +159,6 @@ func GetCmdGetContractInfo(cdc *codec.Codec) *cobra.Command {
 			return nil
 		},
 	}
-}
-
-// GetCmdGetContractState dumps full internal state of a given contract
-func GetCmdGetContractState(cdc *codec.Codec) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:                        "contract-state",
-		Short:                      "Querying commands for the wasm module",
-		DisableFlagParsing:         true,
-		SuggestionsMinimumDistance: 2,
-		RunE:                       client.ValidateCmd,
-	}
-	cmd.AddCommand(flags.GetCommands(
-		GetCmdGetContractStateAll(cdc),
-		GetCmdGetContractStateRaw(cdc),
-		GetCmdGetContractStateSmart(cdc),
-	)...)
-	return cmd
-
-}
-
-func GetCmdGetContractStateAll(cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
-		Use:   "all [bech32_address]",
-		Short: "Prints out all internal state of a contract given its address",
-		Long:  "Prints out all internal state of a contract given its address",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
-
-			addr, err := sdk.AccAddressFromBech32(args[0])
-			if err != nil {
-				return err
-			}
-
-			route := fmt.Sprintf("custom/%s/%s/%s/%s", types.QuerierRoute, keeper.QueryGetContractState, addr.String(), keeper.QueryMethodContractStateAll)
-			res, _, err := cliCtx.Query(route)
-			if err != nil {
-				return err
-			}
-			fmt.Println(string(res))
-			return nil
-		},
-	}
-}
-
-func GetCmdGetContractStateRaw(cdc *codec.Codec) *cobra.Command {
-	decoder := newArgDecoder(hex.DecodeString)
-	cmd := &cobra.Command{
-		Use:   "raw [bech32_address] [key]",
-		Short: "Prints out internal state for key of a contract given its address",
-		Long:  "Prints out internal state for of a contract given its address",
-		Args:  cobra.ExactArgs(2),
-		RunE: func(_ *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
-
-			addr, err := sdk.AccAddressFromBech32(args[0])
-			if err != nil {
-				return err
-			}
-			queryData, err := decoder.DecodeString(args[1])
-			if err != nil {
-				return err
-			}
-			route := fmt.Sprintf("custom/%s/%s/%s/%s", types.QuerierRoute, keeper.QueryGetContractState, addr.String(), keeper.QueryMethodContractStateRaw)
-			res, _, err := cliCtx.QueryWithData(route, queryData)
-			if err != nil {
-				return err
-			}
-			fmt.Println(string(res))
-			return nil
-		},
-	}
-	decoder.RegisterFlags(cmd.PersistentFlags(), "key argument")
-	return cmd
 }
 
 // QueryDecryptTxCmd the default command for a tx query + IO decryption if I'm the tx sender.
@@ -407,11 +333,12 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 	return cmd
 }
 
-func GetCmdGetContractStateSmart(cdc *codec.Codec) *cobra.Command {
+
+func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 	decoder := newArgDecoder(asciiDecodeString)
 
 	cmd := &cobra.Command{
-		Use:   "smart [bech32_address] [query]", // TODO add --from wallet
+		Use:   "query [bech32_address] [query]", // TODO add --from wallet
 		Short: "Calls contract with given address  with query data and prints the returned result",
 		Long:  "Calls contract with given address  with query data and prints the returned result",
 		Args:  cobra.ExactArgs(2),
@@ -426,7 +353,7 @@ func GetCmdGetContractStateSmart(cdc *codec.Codec) *cobra.Command {
 			if key == "" {
 				return errors.New("key must not be empty")
 			}
-			route := fmt.Sprintf("custom/%s/%s/%s/%s", types.QuerierRoute, keeper.QueryGetContractState, addr.String(), keeper.QueryMethodContractStateSmart)
+			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryGetContractState, addr.String())
 
 			queryData, err := decoder.DecodeString(args[1])
 			if err != nil {

@@ -85,9 +85,9 @@ export CONTRACT_ADDRESS=$(
 )
 
 # test balances after init (ocall_query + read_db + canonicalize_address)
-./secretcli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"$(./secretcli keys show a -a)\"}}" |
+./secretcli q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"$(./secretcli keys show a -a)\"}}" |
     jq -e '.balance == "108"'
-./secretcli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\"}}" |
+./secretcli q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\"}}" |
     jq -e '.balance == "53"'
 
 # transfer 10 balance (ocall_handle + read_db + write_db + humanize_address + canonicalize_address)
@@ -97,12 +97,12 @@ yes |
     xargs ./secretcli q compute tx
 
 # test balances after transfer (ocall_query + read_db)
-./secretcli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"$(./secretcli keys show a -a)\"}}" |
+./secretcli q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"$(./secretcli keys show a -a)\"}}" |
     jq -e '.balance == "98"'
-./secretcli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\"}}" |
+./secretcli q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\"}}" |
     jq -e '.balance == "63"'
 
-(./secretcli q compute contract-state smart "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1zzzzzzzzzzzzzzzzzz\"}}" || true) 2>&1 | grep 'generic: canonicalize_address returned error'
+(./secretcli q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1zzzzzzzzzzzzzzzzzz\"}}" || true) 2>&1 | grep 'generic: canonicalize_address returned error'
 
 # sleep infinity
 
