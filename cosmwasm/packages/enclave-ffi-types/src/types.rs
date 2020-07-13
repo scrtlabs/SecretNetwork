@@ -92,6 +92,28 @@ pub enum EnclaveError {
     Unknown,
 }
 
+/// This type represents the possible error conditions that can be encountered in the
+/// enclave while authenticating a new node in the network.
+/// cbindgen:prefix-with-name
+#[repr(C)]
+#[derive(Debug, Display, PartialEq, Eq)]
+pub enum NodeAuthResult {
+    Success,
+    #[display(fmt = "Enclave received invalid inputs")]
+    InvalidInput,
+    #[display(fmt = "The provided certificate was invalid")]
+    InvalidCert,
+    #[display(fmt = "Writing to file system from the enclave failed")]
+    CantWriteToStorage,
+    #[display(fmt = "The public key in the certificate appears to be malformed")]
+    MalformedPublicKey,
+    #[display(fmt = "Encrypting the seed failed")]
+    SeedEncryptionFailed,
+    EnclaveFailure,
+    #[display(fmt = "Enclave panicked :( please file a bug report!")]
+    Panic,
+}
+
 /// This type holds a pointer to a VmError that is boxed on the untrusted side
 // `VmError` is the standard error type for the `cosmwasm-sgx-vm` layer.
 // During an ocall, we call into the original implementation of `db_read`, `db_write`, and `db_remove`.

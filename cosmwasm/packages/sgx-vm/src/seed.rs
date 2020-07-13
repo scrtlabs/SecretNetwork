@@ -27,7 +27,7 @@ extern "C" {
     ) -> sgx_status_t;
 }
 
-pub fn untrusted_init_node(master_cert: &[u8], encrypted_seed: &[u8]) -> SgxResult<sgx_status_t> {
+pub fn untrusted_init_node(master_cert: &[u8], encrypted_seed: &[u8]) -> SgxResult<()> {
     info!("Hello from just before initializing - init_node");
     let enclave = get_enclave()?;
     info!("Hello from just after initializing - init_node");
@@ -54,7 +54,7 @@ pub fn untrusted_init_node(master_cert: &[u8], encrypted_seed: &[u8]) -> SgxResu
         return Err(ret);
     }
 
-    Ok(sgx_status_t::SGX_SUCCESS)
+    Ok(())
 }
 
 pub fn untrusted_key_gen() -> SgxResult<[u8; 32]> {

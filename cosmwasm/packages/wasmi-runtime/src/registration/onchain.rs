@@ -2,8 +2,9 @@
 /// These functions run on-chain and must be deterministic across all nodes
 ///
 use log::*;
-use sgx_types::{sgx_status_t, SgxResult};
 use std::panic;
+
+use enclave_ffi_types::NodeAuthResult;
 
 use crate::consts::ENCRYPTED_SEED_SIZE;
 use crate::crypto::PUBLIC_KEY_SIZE;
@@ -32,24 +33,22 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     cert: *const u8,
     cert_len: u32,
     seed: &mut [u8; ENCRYPTED_SEED_SIZE],
-) -> sgx_status_t {
+) -> NodeAuthResult {
     if let Err(_e) = validate_mut_ptr(seed.as_mut_ptr(), seed.len()) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        return NodeAuthResult::InvalidInput;
     }
-
     if let Err(_e) = validate_const_ptr(cert, cert_len as usize) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        return NodeAuthResult::InvalidInput;
     }
     let cert_slice = std::slice::from_raw_parts(cert, cert_len as usize);
 
-    let result = panic::catch_unwind(|| -> SgxResult<Vec<u8>> {
+    let result = panic::catch_unwind(|| -> Result<Vec<u8>, NodeAuthResult> {
         // verify certificate, and return the public key in the extra data of the report
         let pk = verify_ra_cert(cert_slice).map_err(|verification_status| {
             error!("Error in validating certificate: {:?}", verification_status);
-            if let Err(write_status) = write_to_untrusted(cert_slice, "failed_cert.der") {
-                write_status
-            } else {
-                verification_status
+            match write_to_untrusted(cert_slice, "failed_cert.der") {
+                Err(_) => NodeAuthResult::CantWriteToStorage,
+                Ok(_) => NodeAuthResult::InvalidCert,
             }
         })?;
 
@@ -59,7 +58,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
                 "Got public key from certificate with the wrong size: {:?}",
                 pk.len()
             );
-            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            return Err(NodeAuthResult::MalformedPublicKey);
         }
 
         let mut target_public_key: [u8; 32] = [0u8; 32];
@@ -69,7 +68,8 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
             &target_public_key.to_vec()
         );
 
-        let res: Vec<u8> = encrypt_seed(target_public_key)?;
+        let res: Vec<u8> =
+            encrypt_seed(target_public_key).map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
 
         Ok(res)
     });
@@ -78,12 +78,12 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
         match res {
             Ok(res) => {
                 seed.copy_from_slice(&res);
-                sgx_status_t::SGX_SUCCESS
+                NodeAuthResult::Success
             }
             Err(e) => e,
         }
     } else {
         error!("Enclave call ecall_authenticate_new_node panic!");
-        sgx_status_t::SGX_ERROR_UNEXPECTED
+        NodeAuthResult::Panic
     }
 }
