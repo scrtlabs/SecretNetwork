@@ -94,7 +94,7 @@ func getDecryptedData(t *testing.T, data []byte, nonce []byte) []byte {
 	return dataPlaintext
 }
 
-var contractErrorRegex = regexp.MustCompile(`contract failed: generic: (.+)`)
+var contractErrorRegex = regexp.MustCompile(`contract failed: encrypted: (.+)`)
 
 func extractInnerError(t *testing.T, err error, nonce []byte, isEncrypted bool) cosmwasm.StdError {
 	match := contractErrorRegex.FindAllStringSubmatch(err.Error(), -1)
@@ -936,7 +936,7 @@ func TestInitPanic(t *testing.T) {
 	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"panic":{}}`, false, defaultGas)
 	require.Error(t, initErr)
 	require.Error(t, initErr.GenericErr)
-	require.Equal(t, "instantiate contract failed: Execution error: FailedFunctionCall", initErr.GenericErr.Msg)
+	require.Equal(t, "instantiate contract failed: Execution error: Enclave failed function call", initErr.GenericErr.Msg)
 }
 
 func TestExecPanic(t *testing.T) {

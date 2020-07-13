@@ -40,7 +40,7 @@ var (
 	ErrInvalidMsg = sdkErrors.Register(DefaultCodespace, 10, "invalid CosmosMsg from the contract")
 )
 
-func IsEncryptedError(code uint32) bool {
+func IsEncryptedErrorCode(code uint32) bool {
 	return 5 >= code && code > 0
 }
 
@@ -49,7 +49,12 @@ func ErrContainsQueryError(err error) bool {
 }
 
 // ** Warning **
-// This is a magic string that depends on the output of the enclave. Beware when changing this, or the rust error string
+// Below are functions that check for magic strings that depends on the output of the enclave.
+// Beware when changing this, or the rust error string
 func ContainsEnclaveError(str string) bool {
-	return strings.Contains(str, "EnclaveErr")
+	return strings.Contains(str, "Enclave")
+}
+
+func ContainsEncryptedString(str string) bool {
+	return strings.Contains(str, "encrypted: ")
 }

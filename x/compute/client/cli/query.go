@@ -313,7 +313,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 				}
 			}
 
-			if types.IsEncryptedError(result.Code) {
+			if types.IsEncryptedErrorCode(result.Code) && types.ContainsEncryptedString(result.RawLog) {
 				stdErr, err := wasmCtx.DecryptError(result.RawLog, answer.Type, nonce)
 				if err != nil {
 					return err

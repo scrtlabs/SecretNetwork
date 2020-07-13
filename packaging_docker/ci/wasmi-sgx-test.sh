@@ -69,7 +69,7 @@ secretcli q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"$(sec
 secretcli q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\"}}" |
     jq -e '.balance == "63"'
 
-(secretcli q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1zzzzzzzzzzzzzzzzzz\"}}" || true) 2>&1 | grep -c 'generic: canonicalize_address returned error'
+(secretcli q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1zzzzzzzzzzzzzzzzzz\"}}" || true) 2>&1 | grep -c 'encrypted: canonicalize_address returned error'
 
 echo "All is done. Yay!"
 

@@ -45,7 +45,7 @@ var (
 	NewWasmCoins              = types.NewWasmCoins
 	CosmosResult              = types.CosmosResult
 	DefaultWasmConfig         = types.DefaultWasmConfig
-	IsEncryptedError          = types.IsEncryptedError
+	IsEncryptedError          = types.IsEncryptedErrorCode
 	ErrContainsQueryError     = types.ErrContainsQueryError
 	InitGenesis               = keeper.InitGenesis
 	ExportGenesis             = keeper.ExportGenesis
