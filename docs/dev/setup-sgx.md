@@ -1,10 +1,71 @@
-# Hardware
+# Preprate your Hardware
+
+If you're running a local machine and not a cloud-based VM -
 
 1. Go to your BIOS menu
 2. Enable SGX (Software controlled is not enough)
 3. Disable Secure Boot
 
-# Software
+# Installation
+
+## For Node runners - Ubuntu16.04/18.04
+
+### Install SGX
+
+```bash
+UBUNTUVERSION=$(lsb_release -r -s | cut -d '.' -f 1)
+PSW_PACKAGES='libsgx-enclave-common libsgx-urts sgx-aesm-service libsgx-uae-service autoconf libtool'
+
+if (($UBUNTUVERSION < 16)); then
+	echo "Your version of Ubuntu is not supported. Must have Ubuntu 16.04 and up. Aborting installation script..."
+	exit 1
+elif (($UBUNTUVERSION < 18)); then
+	DISTRO='xenial'
+	OS='ubuntu16.04-server'
+else
+	DISTRO='bionic'
+	OS='ubuntu18.04-server'
+fi
+
+echo "\n\n###############################################"
+echo "#####       Installing Intel SGX driver       #####"
+echo "###############################################\n\n"
+
+# download SGX driver
+wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/$(OS)/sgx_linux_x64_driver_2.6.0_95eaa6f.bin
+
+# Make the driver and SDK installers executable
+chmod +x ./sgx_linux_*.bin
+
+
+echo "\n\n###############################################"
+echo "#####       Installing Intel SGX PSW          #####"
+echo "###############################################\n\n"
+
+# Add Intels's SGX PPA
+echo "deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu $DISTRO main" |
+   sudo tee /etc/apt/sources.list.d/intel-sgx.list
+wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key |
+   sudo apt-key add -
+sudo apt update
+
+
+if (($UBUNTUVERSION > 18)); then
+   sudo apt install -y gdebi
+   # Install all the additional necessary dependencies (besides the driver and the SDK)
+   # for building a rust enclave
+   wget -O /tmp/libprotobuf10_3.0.0-9_amd64.deb http://ftp.br.debian.org/debian/pool/main/p/protobuf/libprotobuf10_3.0.0-9_amd64.deb
+   (sleep 3 ; echo y) | sudo gdebi /tmp/libprotobuf10_3.0.0-9_amd64.deb
+else
+   PSW_PACKAGES+=' libprotobuf-dev'
+fi
+
+sudo apt install -y $PSW_PACKAGES
+```
+
+## For Contract Developers
+
+### Prerequisites
 
 First, make sure you have Rust installed: https://www.rust-lang.org/tools/install
 
@@ -15,6 +76,8 @@ First, make sure you have Rust installed: https://www.rust-lang.org/tools/instal
   ```
 
 Then you can use this script (or run the commands one-by-one), which was tested on Ubuntu 20.04 with SGX driver/sdk version 2.9 intended for Ubuntu 18.04:
+
+### Install SGX
 
 ```bash
 UBUNTUVERSION=$(lsb_release -r -s | cut -d '.' -f 1)
@@ -124,7 +187,17 @@ sudo $HOME/.sgxsdk/sgx_linux_x64_driver_*.bin
 
 # Testing your SGX setup
 
-1. For node runners, by using `sgx-detect`:
+## For Node Runners
+
+### Run `secretd init-enclave`
+
+See https://github.com/enigmampc/SecretNetwork/blob/master/docs/testnet/verify-sgx.md for a guide how to test your setup
+
+## For Contract Developers 
+
+### Compiling a `hello-rust` project:
+
+### using `sgx-detect`:
 
    ```bash
    sudo apt install -y libssl-dev protobuf-compiler
@@ -141,9 +214,6 @@ sudo $HOME/.sgxsdk/sgx_linux_x64_driver_*.bin
       ✔  Production mode (Intel whitelisted)
 
    You're all set to start running SGX programs!
-   ```
-
-2. For enclave developers, by compiling a `hello-rust` project:
 
    ```bash
    git clone --depth 1 -b v1.1.2 git@github.com:apache/incubator-teaclave-sgx-sdk.git
