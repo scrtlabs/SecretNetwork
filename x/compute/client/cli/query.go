@@ -374,7 +374,7 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 					if err != nil {
 						return err
 					}
-					return fmt.Errorf("%v", errorPlainBz.Error())
+					return fmt.Errorf("query result: %v", errorPlainBz.Error())
 				}
 				// Itzik: Commenting this as it might have been a placeholder for encrypting
 				//else if strings.Contains(err.Error(), "EnclaveErr") {
@@ -383,7 +383,7 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			resDecrypted := []byte{}
+			var resDecrypted []byte
 			if len(res) > 0 {
 				resDecrypted, err = wasmCtx.Decrypt(res, nonce)
 				if err != nil {

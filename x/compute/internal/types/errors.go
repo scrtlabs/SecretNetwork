@@ -41,7 +41,7 @@ var (
 )
 
 func IsEncryptedError(code uint32) bool {
-	return 5 >= code
+	return 5 >= code && code > 0
 }
 
 func ErrContainsQueryError(err error) bool {
