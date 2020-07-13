@@ -59,7 +59,7 @@ pub fn encrypt_and_query_chain(
                 let as_secret_msg = SecretMessage {
                     nonce,
                     user_public_key,
-                    msg: query,
+                    msg: query.clone(),
                 };
 
                 match as_secret_msg.decrypt() {
