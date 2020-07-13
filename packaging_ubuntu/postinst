@@ -10,6 +10,7 @@ After=network.target
 
 [Service]
 Type=simple
+Environment=SCRT_ENCLAVE_DIR=/usr/lib
 ExecStart=$(which secretd) start
 User=$(logname)
 Restart=on-failure
