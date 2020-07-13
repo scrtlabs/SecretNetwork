@@ -439,8 +439,31 @@ impl WasmiApi for ContractInstance {
     }
 
     // stub, for now
-    fn query_chain_index(&mut self, _query_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
-        Err(WasmEngineError::NotImplemented.into())
+    fn query_chain_index(&mut self, query_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+        let query_buffer = self.extract_vector(query_ptr_ptr as u32).map_err(|err| {
+            error!("query_chain() error while trying to read canonical address from wasm memory",);
+            err
+        })?;
+
+        trace!(
+            "query_chain() was called from WASM code with {:?}",
+            String::from_utf8_lossy(&query_buffer)
+        );
+
+        // TODO pass query_buffer to ocall
+        let result: &[u8];
+
+        let ptr_to_region_in_wasm_vm =   self.write_to_memory(&result)
+            .map_err(|err| {
+                error!(
+                    "query_chain() error while trying to allocate and write the answer {:?} to the WASM VM",
+                    result,
+                );
+                err
+            })?;
+
+        // Return pointer to the allocated buffer with the value written to it
+        Ok(Some(RuntimeValue::I32(ptr_to_region_in_wasm_vm as i32)))
     }
 
     fn gas_index(&mut self, gas_amount: i32) -> Result<Option<RuntimeValue>, Trap> {
