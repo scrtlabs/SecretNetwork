@@ -67,22 +67,6 @@ impl Keychain {
         Ok(())
     }
 
-    // pub fn is_registration_key_set(&self) -> bool {
-    //     return self.registration_key.is_some();
-    // }
-    //
-    // pub fn is_consensus_state_ikm_set(&self) -> bool {
-    //     return self.consensus_state_ikm.is_some();
-    // }
-
-    // pub fn is_consensus_seed_exchange_keypair_set(&self) -> bool {
-    //     return self.consensus_seed_exchange_keypair.is_some();
-    // }
-
-    // pub fn is_consensus_io_exchange_keypair_set(&self) -> bool {
-    //     return self.consensus_io_exchange_keypair.is_some();
-    // }
-
     pub fn is_consensus_seed_set(&self) -> bool {
         self.consensus_seed.is_some()
     }
@@ -167,7 +151,7 @@ impl Keychain {
 
     pub fn generate_consensus_master_keys(&mut self) -> Result<(), EnclaveError> {
         if !self.is_consensus_seed_set() {
-            debug!("Seed not initialized! Cannot derive enclave keys");
+            trace!("Seed not initialized, skipping derivation of enclave keys");
             return Ok(());
         }
 

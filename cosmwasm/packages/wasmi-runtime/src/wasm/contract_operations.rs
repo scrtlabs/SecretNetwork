@@ -55,19 +55,19 @@ pub fn init(
 
     let contract_key = generate_encryption_key(&parsed_env, contract)?;
 
-    info!("Init: Contract Key: {:?}", contract_key.to_vec().as_slice());
+    trace!("Init: Contract Key: {:?}", contract_key.to_vec().as_slice());
 
     let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
 
     let env_ptr = engine.write_to_memory(env)?;
 
-    debug!(
+    trace!(
         "Init input before encryption: {:?}",
         String::from_utf8_lossy(&msg)
     );
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
-    debug!(
+    trace!(
         "Init input afer encryption: {:?}",
         String::from_utf8_lossy(&decrypted_msg)
     );
@@ -117,7 +117,7 @@ pub fn handle(
         EnclaveError::FailedToDeserialize
     })?;
 
-    debug!("handle parsed_envs: {:?}", parsed_env);
+    trace!("handle parsed_envs: {:?}", parsed_env);
 
     let contract_key = extract_contract_key(&parsed_env)?;
 
@@ -126,9 +126,9 @@ pub fn handle(
         return Err(EnclaveError::FailedContractAuthentication);
     }
 
-    debug!("Successfully authenticated the contract!");
+    trace!("Successfully authenticated the contract!");
 
-    info!(
+    trace!(
         "Handle: Contract Key: {:?}",
         contract_key.to_vec().as_slice()
     );
@@ -193,20 +193,20 @@ pub fn query(
     let mut contract_key = [0; CONTRACT_KEY_LENGTH];
     contract_key.copy_from_slice(key);
 
-    info!(
+    trace!(
         "Query: Contract Key: {:?}",
         contract_key.to_vec().as_slice()
     );
 
     let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
 
-    debug!(
+    trace!(
         "Query input before encryption: {:?}",
         String::from_utf8_lossy(&msg)
     );
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
-    debug!(
+    trace!(
         "Query input afer encryption: {:?}",
         String::from_utf8_lossy(&decrypted_msg)
     );
