@@ -159,7 +159,7 @@
     ```
 8. Then a problem occured with the `compute` module:
     ```
-    panic: create wasm contract failed: Wasm Error: Filesystem error: File exists (os error 17)
+    panic: create contract failed: Wasm Error: Filesystem error: File exists (os error 17)
     ```
     This one got fixed when deleted the `.secretd/.compute` directory.
 9. Reset state:

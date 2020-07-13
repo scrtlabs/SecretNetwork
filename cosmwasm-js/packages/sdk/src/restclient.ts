@@ -474,7 +474,7 @@ export class RestClient {
       responseData = (await this.get(path)) as WasmResponse<SmartQueryResponse>;
     } catch (err) {
       try {
-        const errorMessageRgx = /wasm contract failed: generic: (.+?) \(HTTP 500\)/g;
+        const errorMessageRgx = /contract failed: generic: (.+?) \(HTTP 500\)/g;
 
         const rgxMatches = errorMessageRgx.exec(err.message);
         if (rgxMatches == null || rgxMatches.length != 2) {
@@ -591,7 +591,7 @@ export class RestClient {
         }
 
         // decrypt error
-        const errorMessageRgx = /wasm contract failed: generic: (.+?): failed to execute message; message index: 0/g;
+        const errorMessageRgx = /contract failed: generic: (.+?): failed to execute message; message index: 0/g;
 
         const rgxMatches = errorMessageRgx.exec(txsResponse.raw_log);
         if (Array.isArray(rgxMatches) && rgxMatches.length === 2) {

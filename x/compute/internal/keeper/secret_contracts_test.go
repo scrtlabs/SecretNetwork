@@ -94,7 +94,7 @@ func getDecryptedData(t *testing.T, data []byte, nonce []byte) []byte {
 	return dataPlaintext
 }
 
-var contractErrorRegex = regexp.MustCompile(`wasm contract failed: generic: (.+)`)
+var contractErrorRegex = regexp.MustCompile(`contract failed: generic: (.+)`)
 
 func extractInnerError(t *testing.T, err error, nonce []byte, isEncrypted bool) cosmwasm.StdError {
 	match := contractErrorRegex.FindAllStringSubmatch(err.Error(), -1)
