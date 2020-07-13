@@ -98,7 +98,7 @@ First, make sure you have Rust installed: https://www.rust-lang.org/tools/instal
 
 Then you can use this script (or run the commands one-by-one), which was tested on Ubuntu 20.04 with SGX driver/sdk version 2.10 intended for Ubuntu 18.04:
 
-### Install SGX
+### Install SGX SDK + Driver
 
 ```bash
 UBUNTUVERSION=$(lsb_release -r -s | cut -d '.' -f 1)
@@ -216,7 +216,6 @@ See https://github.com/enigmampc/SecretNetwork/blob/master/docs/testnet/verify-s
 
 ## For Contract Developers 
 
-### Compiling a `hello-rust` project:
 
 ### using `sgx-detect`:
 
@@ -235,6 +234,9 @@ See https://github.com/enigmampc/SecretNetwork/blob/master/docs/testnet/verify-s
       ✔  Production mode (Intel whitelisted)
 
    You're all set to start running SGX programs!
+   ```
+
+### Compiling a `hello-rust` project:
 
    ```bash
    git clone --depth 1 -b v1.1.2 git@github.com:apache/incubator-teaclave-sgx-sdk.git
