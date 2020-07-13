@@ -146,3 +146,11 @@ Modifying the commision-rate can be done using this:
 ```
 secretcli tx staking edit-validator --commission-rate="0.05" --from <key-alias>
 ```
+
+
+## Unjailing your validator
+
+Using the following command you can unjail your node.:
+```
+secretcli tx slashing unjail --from =<key-alias>
+```
