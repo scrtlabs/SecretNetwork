@@ -3,7 +3,8 @@ use crate::crypto::Ed25519PublicKey;
 use crate::wasm::types::{IoNonce, SecretMessage};
 use crate::{exports, imports};
 
-use crate::cosmwasm::query::{Binary, QueryRequest, WasmQuery};
+use crate::cosmwasm::encoding::Binary;
+use crate::cosmwasm::query::{QueryRequest, WasmQuery};
 
 use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError};
 use log::*;

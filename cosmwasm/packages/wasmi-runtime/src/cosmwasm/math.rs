@@ -168,3 +168,145 @@ impl<'de> de::Visitor<'de> for DecimalVisitor {
         }
     }
 }
+
+//*** Uint128 ***/
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Uint128(pub u128);
+
+impl Uint128 {
+    /// Creates a Uint128(0)
+    pub const fn zero() -> Self {
+        Uint128(0)
+    }
+
+    /// Returns a copy of the internal data
+    pub fn u128(&self) -> u128 {
+        self.0
+    }
+
+    pub fn is_zero(&self) -> bool {
+        self.0 == 0
+    }
+}
+
+impl From<u128> for Uint128 {
+    fn from(val: u128) -> Self {
+        Uint128(val)
+    }
+}
+
+impl From<u64> for Uint128 {
+    fn from(val: u64) -> Self {
+        Uint128(val.into())
+    }
+}
+
+#[derive(Display)]
+struct Uint128ParseErr(String);
+
+impl TryFrom<&str> for Uint128 {
+    type Error = Uint128ParseErr;
+
+    fn try_from(val: &str) -> Result<Self, Self::Error> {
+        match val.parse::<u128>() {
+            Ok(u) => Ok(Uint128(u)),
+            Err(e) => Err(Uint128ParseErr(format!("Parsing coin: {}", e))),
+        }
+    }
+}
+
+impl Into<String> for Uint128 {
+    fn into(self) -> String {
+        self.0.to_string()
+    }
+}
+
+impl Into<u128> for Uint128 {
+    fn into(self) -> u128 {
+        self.0
+    }
+}
+
+impl fmt::Display for Uint128 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+/// Both d*u and u*d with d: Decimal and u: Uint128 returns an Uint128. There is no
+/// specific reason for this decision other than the initial use cases we have. If you
+/// need a Decimal result for the same calculation, use Decimal(d*u) or Decimal(u*d).
+impl ops::Mul<Decimal> for Uint128 {
+    type Output = Self;
+
+    #[allow(clippy::suspicious_arithmetic_impl)]
+    fn mul(self, rhs: Decimal) -> Self::Output {
+        // 0*a and b*0 is always 0
+        if self.is_zero() || rhs.is_zero() {
+            return Uint128::zero();
+        }
+        self.multiply_ratio(rhs.0, DECIMAL_FRACTIONAL)
+    }
+}
+
+impl ops::Mul<Uint128> for Decimal {
+    type Output = Uint128;
+
+    fn mul(self, rhs: Uint128) -> Self::Output {
+        rhs * self
+    }
+}
+
+impl Uint128 {
+    /// returns self * nom / denom
+    pub fn multiply_ratio<A: Into<u128>, B: Into<u128>>(&self, nom: A, denom: B) -> Uint128 {
+        let nominator: u128 = nom.into();
+        let denominator: u128 = denom.into();
+        if denominator == 0 {
+            panic!("Denominator must not be zero");
+        }
+        // TODO: minimize rounding that takes place (using gcd algorithm)
+        let val = self.u128() * nominator / denominator;
+        Uint128::from(val)
+    }
+}
+
+/// Serializes as a base64 string
+impl Serialize for Uint128 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+/// Deserializes as a base64 string
+impl<'de> Deserialize<'de> for Uint128 {
+    fn deserialize<D>(deserializer: D) -> Result<Uint128, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(Uint128Visitor)
+    }
+}
+
+struct Uint128Visitor;
+
+impl<'de> de::Visitor<'de> for Uint128Visitor {
+    type Value = Uint128;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("string-encoded integer")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        match v.parse::<u128>() {
+            Ok(u) => Ok(Uint128(u)),
+            Err(e) => Err(E::custom(format!("invalid Uint128 '{}' - {}", v, e))),
+        }
+    }
+}

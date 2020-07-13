@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::fmt;
 
 use super::coins::Coin;
 use super::encoding::Binary;
