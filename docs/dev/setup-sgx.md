@@ -12,6 +12,8 @@ If you're running a local machine and not a cloud-based VM -
 
 ### Install SGX
 
+Note: `sgx_linux_x64_driver_2.6.0_602374c.bin` is the latest driver as of July 13, 2020. Please check under https://download.01.org/intel-sgx/sgx-linux/ that this is still case. If not, please send us a PR or notify us.
+
 ```bash
 UBUNTUVERSION=$(lsb_release -r -s | cut -d '.' -f 1)
 PSW_PACKAGES='libsgx-enclave-common libsgx-urts sgx-aesm-service libsgx-uae-service autoconf libtool'
@@ -32,11 +34,14 @@ echo "#####       Installing Intel SGX driver       #####"
 echo "###############################################\n\n"
 
 # download SGX driver
-wget "https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/${OS}/sgx_linux_x64_driver_2.6.0_95eaa6f.bin"
+wget "https://download.01.org/intel-sgx/sgx-linux/2.10/distro/${OS}/sgx_linux_x64_driver_2.6.0_602374c.bin"
 
 # Make the driver installer executable
-chmod +x ./sgx_linux_x64_driver_2.6.0_95eaa6f.bin
+chmod +x ./sgx_linux_x64_driver_*.bin
 
+# Install the driver
+sudo ./sgx_linux_x64_driver_*.bin
+   
 # Remount /dev as exec, also at system startup
 sudo tee /etc/systemd/system/remount-dev-exec.service >/dev/null <<EOF
 [Unit]
@@ -91,7 +96,7 @@ First, make sure you have Rust installed: https://www.rust-lang.org/tools/instal
   rustup toolchain install nightly
   ```
 
-Then you can use this script (or run the commands one-by-one), which was tested on Ubuntu 20.04 with SGX driver/sdk version 2.9 intended for Ubuntu 18.04:
+Then you can use this script (or run the commands one-by-one), which was tested on Ubuntu 20.04 with SGX driver/sdk version 2.10 intended for Ubuntu 18.04:
 
 ### Install SGX
 
@@ -132,11 +137,11 @@ mkdir -p "$HOME/.sgxsdk"
    # 4. Download `sgx_linux_x64_driver_*.bin` and `sgx_linux_x64_sdk_*.bin`
    lynx -dump -listonly -nonumbers https://download.01.org/intel-sgx/sgx-linux/ |
       grep -P 'sgx-linux/(\d\.?)+/' |
-      sort |
+      sort -V |
       tail -1 |
       parallel --bar --verbose lynx -dump -listonly -nonumbers "{}/distro" |
       grep -P 'ubuntu\d\d' |
-      sort |
+      sort -V |
       tail -1 |
       parallel --bar --verbose lynx -dump -listonly -nonumbers |
       grep -P '\.bin$' |
