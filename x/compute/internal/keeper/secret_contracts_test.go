@@ -694,7 +694,7 @@ func TestInitNotEncryptedInputError(t *testing.T) {
 	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsg, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.Error(t, err)
 
-	require.Contains(t, err.Error(), "DecryptionError")
+	require.Contains(t, err.Error(), "failed to decrypt data")
 }
 
 func TestExecuteNotEncryptedInputError(t *testing.T) {
@@ -707,7 +707,7 @@ func TestExecuteNotEncryptedInputError(t *testing.T) {
 	_, err := keeper.Execute(ctx, contractAddress, walletA, []byte(`{"empty_log_key_value":{}}`), sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.Error(t, err)
 
-	require.Contains(t, err.Error(), "DecryptionError")
+	require.Contains(t, err.Error(), "failed to decrypt data")
 }
 
 func TestQueryNotEncryptedInputError(t *testing.T) {
@@ -720,7 +720,7 @@ func TestQueryNotEncryptedInputError(t *testing.T) {
 	_, err := keeper.QuerySmart(ctx, contractAddress, []byte(`{"owner":{}}`))
 	require.Error(t, err)
 
-	require.Contains(t, err.Error(), "DecryptionError")
+	require.Contains(t, err.Error(), "failed to decrypt data")
 }
 
 func TestInitNoLogs(t *testing.T) {
