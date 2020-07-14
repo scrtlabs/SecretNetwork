@@ -1,3 +1,5 @@
+//! must keep this file in sync with cosmwasm/packages/std/src/math.rs
+
 use derive_more::Display;
 use serde::{de, ser, Deserialize, Deserializer, Serialize};
 use std::convert::{TryFrom, TryInto};

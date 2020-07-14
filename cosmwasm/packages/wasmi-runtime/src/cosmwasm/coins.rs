@@ -1,3 +1,5 @@
+//! must keep this file in sync with cosmwasm/packages/std/src/coins.rs
+
 use serde::{Deserialize, Serialize};
 
 use crate::cosmwasm::math::Uint128;

@@ -1,3 +1,5 @@
+//! must keep this file in sync with cosmwasm/packages/std/src/types.rs
+
 #![allow(unused)]
 
 /// These types are are copied over from the cosmwasm_std package, and must be kept in sync with it.

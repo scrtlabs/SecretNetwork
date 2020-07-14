@@ -1,3 +1,5 @@
+//! must keep this file in sync with cosmwasm/packages/std/src/query.rs
+
 use serde::{Deserialize, Serialize};
 
 use super::coins::Coin;
