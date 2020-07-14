@@ -6,6 +6,9 @@ import (
 )
 
 // Codes for wasm contract errors
+// 1-5 are errors that contain an encrypted payload. If you add more to the list, add it at the end so we don't rename
+// the error codes every other day (though nothing outside this file actually depends on them) and update the
+// IsEncryptedErrorCode function.
 var (
 	DefaultCodespace = ModuleName
 
