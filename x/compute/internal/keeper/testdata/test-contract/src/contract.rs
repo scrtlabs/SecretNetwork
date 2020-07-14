@@ -2,12 +2,10 @@ use cosmwasm_storage::PrefixedStorage;
 
 use cosmwasm_std::{
     generic_err, invalid_base64, invalid_utf8, log, not_found, null_pointer, parse_err,
-    serialize_err, to_binary, unauthorized, underflow, Api, Binary, CosmosMsg, Env, Extern,
-    HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse, Querier,
-    QueryResult, ReadonlyStorage, StdError, StdResult, Storage, WasmMsg,
+    serialize_err, unauthorized, underflow, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
+    HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse, Querier, QueryRequest,
+    QueryResult, ReadonlyStorage, StdError, StdResult, Storage, WasmMsg, WasmQuery,
 };
-
-use crate::state::config_read;
 
 /////////////////////////////// Messages ///////////////////////////////
 
@@ -81,20 +79,17 @@ pub enum HandleMsg {
     PassNullPointerToImportsShouldThrow {
         pass_type: String,
     },
+    SendExternalQuery {
+        to: HumanAddr,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    Owner {},
     ContractError { error_type: String },
     Panic {},
-}
-
-// We define a custom struct for each query response
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct OwnerResponse {
-    pub owner: HumanAddr,
+    ReceiveExternalQuery { num: u64 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -239,8 +234,47 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::PassNullPointerToImportsShouldThrow { pass_type } => {
             Ok(pass_null_pointer_to_imports_should_throw(deps, pass_type))
         }
+        HandleMsg::SendExternalQuery { to } => send_external_query(deps, to),
     }
 }
+
+fn send_external_query<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    contract_addr: HumanAddr,
+) -> HandleResult {
+    let answer: String = deps
+        .querier
+        .query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr,
+            msg: Binary(r#"{"receive_external_query":{"num":2}}"#.as_bytes().to_vec()),
+        }))
+        .unwrap();
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(Binary(answer.as_bytes().to_vec())),
+    })
+}
+
+// fn send_external_query_contract_error<S: Storage, A: Api, Q: Querier>(
+//     deps: &mut Extern<S, A, Q>,
+//     contract_addr: HumanAddr,
+// ) -> HandleResult {
+//     let answer: String = deps
+//         .querier
+//         .query(&QueryRequest::Wasm(WasmQuery::Smart {
+//             contract_addr,
+//             msg: Binary(r#"{"receive_external_query":{"num":2}}"#.as_bytes().to_vec()),
+//         }))
+//         .unwrap();
+
+//     Ok(HandleResponse {
+//         messages: vec![],
+//         log: vec![],
+//         data: Some(Binary(answer.as_bytes().to_vec())),
+//     })
+// }
 
 fn exec_callback_bad_params(contract_addr: HumanAddr) -> HandleResponse {
     HandleResponse {
@@ -540,23 +574,16 @@ fn test_canonicalize_address_errors<S: Storage, A: Api, Q: Querier>(
 /////////////////////////////// Query ///////////////////////////////
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    _deps: &Extern<S, A, Q>,
     _msg: QueryMsg,
 ) -> QueryResult {
     match _msg {
-        QueryMsg::Owner {} => query_owner(deps),
         QueryMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
         QueryMsg::Panic {} => panic!("panic in query"),
+        QueryMsg::ReceiveExternalQuery { num } => Ok(Binary(
+            serde_json_wasm::to_vec(&format!("{}", num + 1)).unwrap(),
+        )),
     }
-}
-
-fn query_owner<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Binary> {
-    let state = config_read(&deps.storage).load()?;
-
-    let resp = OwnerResponse {
-        owner: deps.api.human_address(&state.owner)?,
-    };
-    to_binary(&resp)
 }
 
 /////////////////////////////// Migrate ///////////////////////////////
