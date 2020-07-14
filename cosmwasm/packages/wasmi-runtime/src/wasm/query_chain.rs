@@ -16,7 +16,6 @@ pub fn encrypt_and_query_chain(
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
 ) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
-    // TODO encrypt query
     let mut query_struct: QueryRequest = serde_json::from_slice(query).map_err(|err| {
         error!(
             "encrypt_and_query_chain() cannot parse struct from json {:?}: {:?}",
