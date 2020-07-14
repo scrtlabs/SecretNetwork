@@ -35,7 +35,7 @@ If you get the following message, it means that you have no tokens yet:
 ERROR: unknown address: account secret1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx does not exist
 ```
 
-### 6. Join the network as a new validator: replace `<MONIKER>` with your own from step 3 above, and adjust the amount you want to stake
+### 6. Join the network as a new validator: replace `<MONIKER>` with the moniker you configured in step 3 of [creating a full-node](https://github.com/enigmampc/SecretNetwork/blob/develop/docs/validators-and-full-nodes/run-full-node-mainnet.md), and adjust the amount you want to stake
 
 (remember 1 SCRT = 1,000,000 uSCRT, and so the command below stakes 100k SCRT).
 
