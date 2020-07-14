@@ -157,7 +157,7 @@ pub fn handle(
 
         let output = engine.extract_vector(vec_ptr)?;
 
-        info!(
+        debug!(
             "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",
             secret_msg.nonce, secret_msg.user_public_key
         );

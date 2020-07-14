@@ -346,7 +346,7 @@ fn verify_quote_status(quote_status: SgxQuoteStatus) -> Result<(), sgx_status_t>
     match quote_status {
         SgxQuoteStatus::OK => Ok(()),
         SgxQuoteStatus::SwHardeningNeeded => {
-            warn!("Attesting enclave is vulnerable, and should be patched");
+            // warn!("Attesting enclave is vulnerable, and should be patched");
             Ok(())
         }
         _ => {
@@ -364,7 +364,7 @@ fn verify_quote_status(quote_status: SgxQuoteStatus) -> Result<(), sgx_status_t>
     match quote_status {
         SgxQuoteStatus::OK => Ok(()),
         SgxQuoteStatus::SwHardeningNeeded => {
-            warn!("Attesting enclave is vulnerable, and should be patched");
+            // warn!("Attesting enclave is vulnerable, and should be patched");
             Ok(())
         }
         SgxQuoteStatus::GroupOutOfDate => {

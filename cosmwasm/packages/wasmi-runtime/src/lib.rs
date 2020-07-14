@@ -40,7 +40,7 @@ static LOGGER: SimpleLogger = SimpleLogger;
 #[ctor]
 fn init_logger() {
     log::set_logger(&LOGGER)
-        .map(|()| log::set_max_level(LevelFilter::Debug))
+        .map(|()| log::set_max_level(LevelFilter::Info))
         .unwrap();
 }
 
@@ -48,7 +48,7 @@ fn init_logger() {
 #[ctor]
 fn init_logger() {
     log::set_logger(&LOGGER)
-        .map(|()| log::set_max_level(LevelFilter::Info))
+        .map(|()| log::set_max_level(LevelFilter::Warn))
         .unwrap();
 }
 
