@@ -368,7 +368,6 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 			res, _, err := cliCtx.QueryWithData(route, queryData)
 
 			if err != nil {
-				// if this is a query error it contains a
 				if types.ErrContainsQueryError(err) {
 					errorPlainBz, err := wasmCtx.DecryptError(err.Error(), "query", nonce)
 					if err != nil {

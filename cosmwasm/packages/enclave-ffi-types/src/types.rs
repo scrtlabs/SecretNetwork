@@ -57,9 +57,7 @@ pub enum EnclaveError {
     /// 3. We failed to call the ocall due to an SGX fault. `vm_error` will be null.
     // TODO should we split these three cases for better diagnostics?
     #[display(fmt = "failed to execute ocall")]
-    FailedOcall {
-        vm_error: UntrustedVmError,
-    },
+    FailedOcall { vm_error: UntrustedVmError },
     /// The WASM code was invalid and could not be loaded.
     #[display(fmt = "tried to load invalid wasm code")]
     InvalidWasm,
@@ -85,11 +83,15 @@ pub enum EnclaveError {
     FailedSeal,
     #[display(fmt = "failed to unseal data")]
     FailedUnseal,
-    /// contract key was invalid
+    #[display(fmt = "failed to authenticate secret contract")]
     FailedContractAuthentication,
+    #[display(fmt = "failed to deserialize data")]
     FailedToDeserialize,
+    #[display(fmt = "failed to serialize data")]
     FailedToSerialize,
+    #[display(fmt = "failed to encrypt data")]
     EncryptionError,
+    #[display(fmt = "failed to decrypt data")]
     DecryptionError,
     #[display(fmt = "failed to allocate memory")]
     MemoryAllocationError,
