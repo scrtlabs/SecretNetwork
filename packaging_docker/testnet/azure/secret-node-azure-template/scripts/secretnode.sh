@@ -63,7 +63,7 @@ echo "Setting Secret Node environment variables" >> /home/$1/install.progress.tx
 echo 'alias secretcli="docker exec -it secret-node_node_1 secretcli"' >> /home/"$1"/.bashrc
 echo 'alias secretd="docker exec -it secret-node_node_1 secretd"' >> /home/"$1"/.bashrc
 echo 'alias show-node-id="docker exec -it bootstrap secretd tendermint show-node-id"' >> /home/"$1"/.bashrc
-echo 'alias show-validator="docker exec -it bootstrap secretd tendermint show-node-id"' >> /home/"$1"/.bashrc
+echo 'alias show-validator="docker exec -it bootstrap secretd tendermint show-validator"' >> /home/"$1"/.bashrc
 
 echo 'alias stop-secret-node="docker-compose -f /usr/local/bin/secret-node/docker-compose.yaml down"' >> /home/"$1"/.bashrc
 echo 'alias start-secret-node="docker-compose -f /usr/local/bin/secret-node/docker-compose.yaml up -d"' >> /home/"$1"/.bashrc
