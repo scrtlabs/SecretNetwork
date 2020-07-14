@@ -18,7 +18,7 @@ pub fn encrypt_and_query_chain(
 ) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
     let mut query_struct: QueryRequest = serde_json::from_slice(query).map_err(|err| {
         error!(
-            "encrypt_and_query_chain() cannot parse struct from json {:?}: {:?}",
+            "encrypt_and_query_chain() cannot build struct from json {:?}: {:?}",
             String::from_utf8_lossy(query),
             err
         );
@@ -51,7 +51,7 @@ pub fn encrypt_and_query_chain(
     let encrypted_query = serde_json::to_vec(&query_struct).map_err(|err| {
         // this should never happen
         error!(
-            "encrypt_and_query_chain() cannot parse json from struct {:?}: {:?}",
+            "encrypt_and_query_chain() cannot build json from struct {:?}: {:?}",
             query_struct, err
         );
         WasmEngineError::BadQueryChainRequest
