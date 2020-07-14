@@ -158,6 +158,7 @@ func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
 func (ctx WASMContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) ([]byte, error) {
 	consensusIoPubKeyBytes, err := ctx.getConsensusIoPubKey()
 	if err != nil {
+		fmt.Println("Failed to get IO key. Make sure the CLI and the node you are targeting are operating in the same SGX mode")
 		return nil, err
 	}
 
@@ -230,7 +231,7 @@ func (ctx WASMContext) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) 
 }
 
 func (ctx WASMContext) DecryptError(errString string, msgType string, nonce []byte) (cosmwasmTypes.StdError, error) {
-	errorCipherB64 := strings.ReplaceAll(errString, msgType+" wasm contract failed: generic: ", "")
+	errorCipherB64 := strings.ReplaceAll(errString, msgType+" contract failed: encrypted: ", "")
 	errorCipherB64 = strings.ReplaceAll(errorCipherB64, ": failed to execute message; message index: 0", "")
 
 	errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)

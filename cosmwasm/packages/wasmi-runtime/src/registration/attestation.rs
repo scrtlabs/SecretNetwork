@@ -41,6 +41,7 @@ use crate::imports::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote
 use crate::registration::report::EndorsedAttestationReport;
 
 use super::hex;
+use crate::consts::{SigningMethod, SIGNING_METHOD};
 
 pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
 
@@ -132,13 +133,13 @@ pub fn create_attestation_certificate(
     let signed_report = match create_attestation_report(&kp.get_pubkey(), sign_type) {
         Ok(r) => r,
         Err(e) => {
-            error!("Error in create_attestation_report: {:?}", e);
+            error!("Error creating attestation report");
             return Err(e);
         }
     };
 
     let payload: String = serde_json::to_string(&signed_report).map_err(|_| {
-        error!("Error serializing report");
+        error!("Error serializing report. May be malformed, or badly encoded");
         sgx_status_t::SGX_ERROR_UNEXPECTED
     })?;
     let (key_der, cert_der) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)?;
@@ -173,11 +174,11 @@ pub fn get_mr_enclave() -> Result<[u8; 32], sgx_status_t> {
 
     let rep = match rsgx_create_report(&ti, &report_data) {
         Ok(r) => {
-            info!("Report creation => success {:?}", r.body.mr_enclave.m);
+            debug!("This enclave MR_ENCLAVE is: {:?}", r.body.mr_enclave.m);
             r.body.mr_enclave.m
         }
-        Err(e) => {
-            info!("Report creation => failed {:?}", e);
+        Err(_e) => {
+            error!("Failed to get local MR_ENCLAVE. Corrupted enclave or other unknown error");
             return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
         }
     };
@@ -237,7 +238,7 @@ pub fn create_attestation_report(
         return Err(rt);
     }
 
-    debug!("Got ias_sock successfully = {}", ias_sock);
+    trace!("Got ias_sock successfully = {}", ias_sock);
 
     // Now sigrl_vec is the revocation list, a vec<u8>
     let sigrl_vec: Vec<u8> = get_sigrl_from_intel(ias_sock, eg_num);
@@ -261,19 +262,35 @@ pub fn create_attestation_report(
 
     let rep = match rsgx_create_report(&ti, &report_data) {
         Ok(r) => {
-            info!("Report creation => success {:?}", r.body.mr_signer.m);
-            Some(r)
+            match SIGNING_METHOD {
+                SigningMethod::MRENCLAVE => {
+                    debug!(
+                        "Report creation => success. Using MR_SIGNER: {:?}",
+                        r.body.mr_signer.m
+                    );
+                }
+                SigningMethod::MRSIGNER => {
+                    debug!(
+                        "Report creation => success. Got MR_ENCLAVE {:?}",
+                        r.body.mr_signer.m
+                    );
+                }
+                SigningMethod::NONE => {
+                    debug!("Report creation => success. Not using any verification");
+                }
+            }
+            r
         }
         Err(e) => {
-            info!("Report creation => failed {:?}", e);
-            None
+            error!("Report creation => failed {:?}", e);
+            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
         }
     };
 
     let mut quote_nonce = sgx_quote_nonce_t { rand: [0; 16] };
     let mut os_rng = os::SgxRng::new().unwrap();
     os_rng.fill_bytes(&mut quote_nonce.rand);
-    debug!("Nonce generated successfully");
+    trace!("Nonce generated successfully");
     let mut qe_report = sgx_report_t::default();
     const RET_QUOTE_BUF_LEN: u32 = 2048;
     let mut return_quote_buf: [u8; RET_QUOTE_BUF_LEN as usize] = [0; RET_QUOTE_BUF_LEN as usize];
@@ -295,7 +312,7 @@ pub fn create_attestation_report(
     } else {
         (sigrl_vec.as_ptr(), sigrl_vec.len() as u32)
     };
-    let p_report = (&rep.unwrap()) as *const sgx_report_t;
+    let p_report = (&rep) as *const sgx_report_t;
     let quote_type = sign_type;
 
     let spid: sgx_spid_t = hex::decode_spid(&String::from_utf8_lossy(SPID_FILE));
@@ -336,7 +353,7 @@ pub fn create_attestation_report(
     // Added 09-28-2018
     // Perform a check on qe_report to verify if the qe_report is valid
     match rsgx_verify_report(&qe_report) {
-        Ok(()) => println!("rsgx_verify_report passed!"),
+        Ok(()) => debug!("rsgx_verify_report passed!"),
         Err(x) => {
             error!("rsgx_verify_report failed with {:?}", x);
             return Err(x);
@@ -352,7 +369,7 @@ pub fn create_attestation_report(
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
-    info!("QE report check passed");
+    trace!("QE report check passed");
 
     // Debug
     // for i in 0..quote_len {
@@ -374,8 +391,8 @@ pub fn create_attestation_report(
     let rhs_hash = rsgx_sha256_slice(&rhs_vec[..]).unwrap();
     let lhs_hash = &qe_report.body.report_data.d[..REPORT_DATA_SIZE];
 
-    debug!("Report rhs hash = {:02X}", rhs_hash.iter().format(""));
-    debug!("Report lhs hash = {:02X}", lhs_hash.iter().format(""));
+    trace!("Report rhs hash = {:02X}", rhs_hash.iter().format(""));
+    trace!("Report lhs hash = {:02X}", lhs_hash.iter().format(""));
 
     if rhs_hash != lhs_hash {
         error!("Quote is tampered!");
@@ -404,11 +421,11 @@ pub fn create_attestation_report(
 
 #[cfg(feature = "SGX_MODE_HW")]
 fn parse_response_attn_report(resp: &[u8]) -> (String, Vec<u8>, Vec<u8>) {
-    debug!("parse_response_attn_report");
+    trace!("parse_response_attn_report");
     let mut headers = [httparse::EMPTY_HEADER; 16];
     let mut respp = httparse::Response::new(&mut headers);
     let result = respp.parse(resp);
-    debug!("parse result {:?}", result);
+    trace!("parse result {:?}", result);
 
     let msg: &'static str;
 
@@ -429,7 +446,7 @@ fn parse_response_attn_report(resp: &[u8]) -> (String, Vec<u8>, Vec<u8>) {
         }
     }
 
-    debug!("{}", msg);
+    trace!("{}", msg);
     let mut len_num: u32 = 0;
 
     let mut sig = String::new();
@@ -443,7 +460,7 @@ fn parse_response_attn_report(resp: &[u8]) -> (String, Vec<u8>, Vec<u8>) {
             "Content-Length" => {
                 let len_str = String::from_utf8(h.value.to_vec()).unwrap();
                 len_num = len_str.parse::<u32>().unwrap();
-                debug!("content length = {}", len_num);
+                trace!("content length = {}", len_num);
             }
             "X-IASReport-Signature" => sig = str::from_utf8(h.value).unwrap().to_string(),
             "X-IASReport-Signing-Certificate" => {
@@ -475,12 +492,12 @@ fn parse_response_attn_report(resp: &[u8]) -> (String, Vec<u8>, Vec<u8>) {
 
 #[cfg(feature = "SGX_MODE_HW")]
 fn parse_response_sigrl(resp: &[u8]) -> Vec<u8> {
-    println!("parse_response_sigrl");
+    trace!("parse_response_sigrl");
     let mut headers = [httparse::EMPTY_HEADER; 16];
     let mut respp = httparse::Response::new(&mut headers);
     let result = respp.parse(resp);
-    println!("parse result {:?}", result);
-    println!("parse response{:?}", respp);
+    trace!("parse result {:?}", result);
+    trace!("parse response{:?}", respp);
 
     let msg: &'static str;
 
@@ -498,7 +515,7 @@ fn parse_response_sigrl(resp: &[u8]) -> Vec<u8> {
         _ => msg = "Unknown error occured",
     }
 
-    println!("{}", msg);
+    trace!("{}", msg);
     let mut len_num: u32 = 0;
 
     for i in 0..respp.headers.len() {
@@ -506,14 +523,14 @@ fn parse_response_sigrl(resp: &[u8]) -> Vec<u8> {
         if h.name == "content-length" {
             let len_str = String::from_utf8(h.value.to_vec()).unwrap();
             len_num = len_str.parse::<u32>().unwrap();
-            println!("content length = {}", len_num);
+            trace!("content length = {}", len_num);
         }
     }
 
     if len_num != 0 {
         let header_len = result.unwrap().unwrap();
         let resp_body = &resp[header_len..];
-        println!("Base64-encoded SigRL: {:?}", resp_body);
+        trace!("Base64-encoded SigRL: {:?}", resp_body);
 
         return base64::decode(str::from_utf8(resp_body).unwrap()).unwrap();
     }
@@ -535,7 +552,7 @@ pub fn make_ias_client_config() -> rustls::ClientConfig {
 
 #[cfg(feature = "SGX_MODE_HW")]
 pub fn get_sigrl_from_intel(fd: c_int, gid: u32) -> Vec<u8> {
-    info!("get_sigrl_from_intel fd = {:?}", fd);
+    trace!("get_sigrl_from_intel fd = {:?}", fd);
     let config = make_ias_client_config();
     let ias_key = String::from_utf8_lossy(API_KEY_FILE).trim_end().to_owned();
 
@@ -545,7 +562,7 @@ pub fn get_sigrl_from_intel(fd: c_int, gid: u32) -> Vec<u8> {
                       DEV_HOSTNAME,
                       ias_key);
 
-    info!("get_sigrl_from_intel: {}", req);
+    trace!("get_sigrl_from_intel: {}", req);
 
     let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME).unwrap();
     let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
@@ -555,19 +572,19 @@ pub fn get_sigrl_from_intel(fd: c_int, gid: u32) -> Vec<u8> {
     let _result = tls.write(req.as_bytes());
     let mut plaintext = Vec::new();
 
-    info!("write complete");
+    trace!("write complete");
 
     match tls.read_to_end(&mut plaintext) {
         Ok(_) => (),
         Err(e) => {
-            info!("get_sigrl_from_intel tls.read_to_end: {:?}", e);
-            panic!("haha");
+            error!("get_sigrl_from_intel tls.read_to_end: {:?}", e);
+            panic!("Communication error with IAS");
         }
     }
-    info!("read_to_end complete");
+    trace!("read_to_end complete");
     let resp_string = String::from_utf8(plaintext.clone()).unwrap();
 
-    debug!("{}", resp_string);
+    trace!("{}", resp_string);
 
     // resp_string
 
@@ -577,7 +594,7 @@ pub fn get_sigrl_from_intel(fd: c_int, gid: u32) -> Vec<u8> {
 // TODO: support pse
 #[cfg(feature = "SGX_MODE_HW")]
 pub fn get_report_from_intel(fd: c_int, quote: Vec<u8>) -> (String, Vec<u8>, Vec<u8>) {
-    info!("get_report_from_intel fd = {:?}", fd);
+    trace!("get_report_from_intel fd = {:?}", fd);
     let config = make_ias_client_config();
     let encoded_quote = base64::encode(&quote[..]);
     let encoded_json = format!("{{\"isvEnclaveQuote\":\"{}\"}}\r\n", encoded_quote);
@@ -590,7 +607,7 @@ pub fn get_report_from_intel(fd: c_int, quote: Vec<u8>) -> (String, Vec<u8>, Vec
                       encoded_json.len(),
                       encoded_json);
 
-    info!("{}", req);
+    trace!("{}", req);
     let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME).unwrap();
     let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
     let mut sock = TcpStream::new(fd).unwrap();
@@ -599,13 +616,13 @@ pub fn get_report_from_intel(fd: c_int, quote: Vec<u8>) -> (String, Vec<u8>, Vec
     let _result = tls.write(req.as_bytes());
     let mut plaintext = Vec::new();
 
-    info!("write complete");
+    trace!("write complete");
 
     tls.read_to_end(&mut plaintext).unwrap();
-    info!("read_to_end complete");
+    trace!("read_to_end complete");
     let resp_string = String::from_utf8(plaintext.clone()).unwrap();
 
-    info!("resp_string = {}", resp_string);
+    trace!("resp_string = {}", resp_string);
 
     let (attn_report, sig, cert) = parse_response_attn_report(&plaintext);
 
