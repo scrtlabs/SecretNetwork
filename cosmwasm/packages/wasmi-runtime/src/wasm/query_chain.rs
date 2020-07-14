@@ -58,8 +58,8 @@ pub fn encrypt_and_query_chain(
         WasmEngineError::BadQueryChainRequest
     })?;
 
-    // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
-    // This returns the value from Tendermint
+    // Call query_chain (this bubbles up to x/compute via ocalls and FFI to Go code)
+    // This returns the value from x/compute
     match query_chain(context, &encrypted_query) {
         Ok((response, gas_used)) => match response {
             Some(response) => {
@@ -92,14 +92,14 @@ pub fn encrypt_and_query_chain(
     }
 }
 
-/// Safe wrapper around reads from the contract storage
+/// Safe wrapper around quering other contracts and modules
 fn query_chain(context: &Ctx, query: &[u8]) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
     let mut ocall_return = OcallReturn::Success;
     let mut enclave_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
     let mut vm_err = UntrustedVmError::default();
     let mut gas_used = 0_u64;
     let value = unsafe {
-        let status = imports::ocall_read_db(
+        let status = imports::ocall_query_chain(
             (&mut ocall_return) as *mut _,
             context.unsafe_clone(),
             (&mut vm_err) as *mut _,
