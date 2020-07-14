@@ -463,7 +463,6 @@ impl WasmiApi for ContractInstance {
             String::from_utf8_lossy(&query_buffer)
         );
 
-        // TODO pass query_buffer to ocall
         // Call query_chain (this bubbles up to x/compute via ocalls and FFI to Go code)
         // Returns the value from x/compute
         let (result, gas_used) = encrypt_and_query_chain(
