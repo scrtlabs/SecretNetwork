@@ -16,7 +16,7 @@
     },
     "chainId": {
       "type": "string",
-      "defaultValue": "enigma-testnet-2",
+      "defaultValue": "enigma-pub-testnet-1",
       "metadata": {
         "description": "Chain ID of the network"
       }
