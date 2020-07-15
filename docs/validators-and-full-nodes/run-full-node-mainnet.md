@@ -8,8 +8,6 @@ This document details how to join the Secret Network `mainnet` as a validator.
 - A public IP address
 - Open ports `TCP 26656 & 26657` _Note: If you're behind a router or firewall then you'll need to port forward on the network device._
 - Reading https://docs.tendermint.com/master/tendermint-core/running-in-production.html
-- RPC address of an already active node. You can use `registration.enigma.co:26657`, or any other node that exposes RPC services.
-- Account with at least 1 SCRT
 
 ### Minimum requirements
 
@@ -22,15 +20,8 @@ This document details how to join the Secret Network `mainnet` as a validator.
 - 2GB RAM
 - 256GB SSD
 - 2 dedicated cores of any Intel Skylake processor (Intel® 6th generation) or better
-- Motherboard with support for SGX in the BIOS
-
-Refer to https://ark.intel.com/content/www/us/en/ark.html#@Processors if unsure if your processor supports SGX
 
 ## Installation
-
-### 0. Step up SGX on your local machine
-
-See instructions [here](../dev/setup-sgx.md)
 
 ### 1. Download the Secret Network package installer for Debian/Ubuntu:
 
@@ -70,51 +61,7 @@ echo "e505aef445c7c5c2d007ba9705c0729b6da7e4b2099c4ad309f1c8b5404bce7f $HOME/.se
 secretd validate-genesis
 ```
 
-### 7. Initialize secret enclave
-
-Make sure SGX is enabled and running or this step might fail. 
-```shell script
-secretd init-enclave
-```
-
-### 8. Check that initialization was successful
-
-Attestation certificate should have been created by the previous step
-```shell script
-ls attestation_cert.der
-```
-
-### 9. Check your certificate is valid
-Should print your 64 character registration key if it was successful.
-```shell script
-PUBLIC_KEY=$(secretd parse attestation_cert.der 2> /dev/null | cut -c 3- )`
-echo $PUBLIC_KEY
-```
-
-### 10. Register your node on-chain
-This step can be run from any location (doesn't have to be from the same node)
-
-```shell script
-secretcli tx register auth <path/to/attestation_cert.der> --node registration.enigma.co:26657 --from <your account>
-```
-
-### 11. Pull your node's encrypted seed from the network
-```shell script
-secretcli query register seed "$PUBLIC_KEY" --node registration.enigma.co:26657
-```
-
-### 12. Get additional network parameters
-These are necessary to configure the node before it starts
-```shell script
-secretcli query register secret-network-params --node registration.enigma.co:26657
-```
-
-### 13. Configure your secret node
-```shell script
-secretd configure-secret node-master-cert.der "$SEED"
-```
-
-### 14. Add persistent peers and seeds to your configuration file.
+### 7. Add persistent peers and seeds to your configuration file.
 
 For an updated (partial) list of full nodes: https://bootstrap.mainnet.enigma.co/peers.txt
 (Generated every minute with [this script](https://gist.github.com/assafmo/a39fdb535f74ce2d6493a1a3f695e4ca))
@@ -126,25 +73,25 @@ perl -i -pe 's/persistent_peers = ""/persistent_peers = "201cff36d13c6352acfc4a3
 perl -i -pe 's/seeds = ""/seeds = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.secretd/config/config.toml
 ```
 
-### 15. Listen for incoming RPC requests so that light nodes can connect to you:
+### 8. Listen for incoming RPC requests so that light nodes can connect to you:
 
 ```bash
 perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.secretd/config/config.toml
 ```
 
-### 16. Enable `secret-node` as a system service:
+### 9. Enable `secret-node` as a system service:
 
 ```
 sudo systemctl enable secret-node
 ```
 
-### 17. Start `secret-node` as a system service:
+### 10. Start `secret-node` as a system service:
 
 ```
 sudo systemctl start secret-node
 ```
 
-### 18. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
+### 11. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
 
 ```bash
 journalctl -f -u secret-node
@@ -169,7 +116,7 @@ Feb 10 21:18:59 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:59.695] Commit
 
 You are now a full node. :tada:
 
-### 19. Add the following configuration settings (some of these avoid having to type some flags all the time):
+### 12. Add the following configuration settings (some of these avoid having to type some flags all the time):
 
 ```bash
 secretcli config chain-id secret-1
@@ -187,7 +134,7 @@ secretcli config indent true
 secretcli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
 ```
 
-### 20. Get your node ID with:
+### 13. Get your node ID with:
 
 ```bash
 secretd tendermint show-node-id
