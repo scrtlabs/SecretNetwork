@@ -1050,20 +1050,15 @@ func TestPassNullPointerToImports(t *testing.T) {
 	}
 }
 
-func TestThatExternalQueryWorks(t *testing.T) {
+func TestExternalQueryWorks(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
 	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
 	require.Empty(t, initErr)
 
-	data, events, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query":{"to":"%s"}}`, addr.String()), true, defaultGas)
+	data, _, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query":{"to":"%s"}}`, addr.String()), true, defaultGas)
 
-	require.Error(t, execErr)
-
-	fmt.Println(execErr)
-	fmt.Println(events)
-	fmt.Println(data)
-
+	require.Empty(t, execErr)
 	require.Equal(t, "3", data)
 }
