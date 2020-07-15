@@ -471,12 +471,26 @@ impl WasmiApi for ContractInstance {
             self.user_nonce,
             self.user_public_key,
         )?;
+
+        trace!(
+            "query_chain() got answer from outside with gas {}",
+            gas_used
+        );
+
         self.use_gas_externally(gas_used)?;
 
         let result = match result {
-            None => return Ok(Some(RuntimeValue::I32(0))), // Is this supposed to be 0 or Err?
+            None => {
+                trace!("query_chain() got no answer from outside, returning 0 to the contract");
+                return Ok(Some(RuntimeValue::I32(0))); // Is this supposed to be 0 or Err?
+            }
             Some(result) => result,
         };
+
+        trace!(
+            "query_chain() got answer from outside with result {:?}",
+            String::from_utf8_lossy(&result)
+        );
 
         let ptr_to_region_in_wasm_vm =   self.write_to_memory(&result)
             .map_err(|err| {

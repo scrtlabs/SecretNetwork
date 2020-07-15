@@ -13,6 +13,8 @@ pub enum WasmEngineError {
 
     EncryptionError,
     DecryptionError,
+    SerializationError,
+    DeserializationError,
     BadQueryChainRequest,
     BadQueryChainResponse,
 
@@ -35,6 +37,8 @@ impl WasmEngineError {
 
             EncryptionError => EncryptionError,
             DecryptionError => DecryptionError,
+            SerializationError => SerializationError,
+            DeserializationError => DeserializationError,
 
             MemoryAllocationError => MemoryAllocationError,
             MemoryReadError => MemoryReadError,

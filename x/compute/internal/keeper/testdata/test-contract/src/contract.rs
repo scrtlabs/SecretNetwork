@@ -242,19 +242,19 @@ fn send_external_query<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     contract_addr: HumanAddr,
 ) -> HandleResult {
-    let answer: String = deps
-        .querier
-        .query(&QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr,
-            msg: Binary(r#"{"receive_external_query":{"num":2}}"#.as_bytes().to_vec()),
-        }))
-        .unwrap();
+    let answer: QueryResult = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr,
+        msg: Binary(r#"{"receive_external_query":{"num":2}}"#.as_bytes().to_vec()),
+    }));
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(Binary(answer.as_bytes().to_vec())),
-    })
+    match answer {
+        Ok(x) => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(x),
+        }),
+        Err(err) => Err(err),
+    }
 }
 
 // fn send_external_query_contract_error<S: Storage, A: Api, Q: Querier>(
