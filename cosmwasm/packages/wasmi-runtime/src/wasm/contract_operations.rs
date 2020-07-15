@@ -56,7 +56,7 @@ pub fn init(
 
     let contract_key = generate_encryption_key(&parsed_env, contract)?;
 
-    info!("Init: Contract Key: {:?}", contract_key.to_vec().as_slice());
+    trace!("Init: Contract Key: {:?}", contract_key.to_vec().as_slice());
 
     let secret_msg = SecretMessage::from_slice(msg)?;
 
@@ -70,13 +70,13 @@ pub fn init(
     )?;
     let env_ptr = engine.write_to_memory(env)?;
 
-    debug!(
+    trace!(
         "Init input before decryption: {:?}",
         String::from_utf8_lossy(&msg)
     );
 
     let decrypted_msg = secret_msg.decrypt()?;
-    debug!(
+    trace!(
         "Init input afer decryption: {:?}",
         String::from_utf8_lossy(&decrypted_msg)
     );
@@ -126,7 +126,7 @@ pub fn handle(
         EnclaveError::FailedToDeserialize
     })?;
 
-    debug!("handle parsed_envs: {:?}", parsed_env);
+    trace!("handle parsed_envs: {:?}", parsed_env);
 
     let contract_key = extract_contract_key(&parsed_env)?;
 
@@ -135,9 +135,9 @@ pub fn handle(
         return Err(EnclaveError::FailedContractAuthentication);
     }
 
-    debug!("Successfully authenticated the contract!");
+    trace!("Successfully authenticated the contract!");
 
-    info!(
+    trace!(
         "Handle: Contract Key: {:?}",
         contract_key.to_vec().as_slice()
     );
@@ -153,12 +153,12 @@ pub fn handle(
         secret_msg.user_public_key,
     )?;
 
-    debug!(
+    trace!(
         "Handle input before decryption: {:?}",
         String::from_utf8_lossy(&msg)
     );
     let decrypted_msg = secret_msg.decrypt()?;
-    debug!(
+    trace!(
         "Handle input afer decryption: {:?}",
         String::from_utf8_lossy(&decrypted_msg)
     );
@@ -174,7 +174,7 @@ pub fn handle(
 
         let output = engine.extract_vector(vec_ptr)?;
 
-        info!(
+        debug!(
             "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",
             secret_msg.nonce, secret_msg.user_public_key
         );
@@ -210,7 +210,7 @@ pub fn query(
     let mut contract_key = [0; CONTRACT_KEY_LENGTH];
     contract_key.copy_from_slice(key);
 
-    info!(
+    trace!(
         "Query: Contract Key: {:?}",
         contract_key.to_vec().as_slice()
     );
@@ -226,12 +226,12 @@ pub fn query(
         secret_msg.user_public_key,
     )?;
 
-    debug!(
+    trace!(
         "Query input before decryption: {:?}",
         String::from_utf8_lossy(&msg)
     );
     let decrypted_msg = secret_msg.decrypt()?;
-    debug!(
+    trace!(
         "Query input afer decryption: {:?}",
         String::from_utf8_lossy(&decrypted_msg)
     );

@@ -300,10 +300,7 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
 
     // 2. Verify quote status (mandatory field)
 
-    match verify_quote_status(report.sgx_quote_status) {
-        Ok(_) => (),
-        Err(e) => return Err(e),
-    }
+    verify_quote_status(report.sgx_quote_status)?;
 
     // verify certificate
     match SIGNING_METHOD {
@@ -346,7 +343,7 @@ fn verify_quote_status(quote_status: SgxQuoteStatus) -> Result<(), sgx_status_t>
     match quote_status {
         SgxQuoteStatus::OK => Ok(()),
         SgxQuoteStatus::SwHardeningNeeded => {
-            warn!("Attesting enclave is vulnerable, and should be patched");
+            // warn!("Attesting enclave is vulnerable, and should be patched");
             Ok(())
         }
         _ => {
@@ -364,7 +361,7 @@ fn verify_quote_status(quote_status: SgxQuoteStatus) -> Result<(), sgx_status_t>
     match quote_status {
         SgxQuoteStatus::OK => Ok(()),
         SgxQuoteStatus::SwHardeningNeeded => {
-            warn!("Attesting enclave is vulnerable, and should be patched");
+            // warn!("Attesting enclave is vulnerable, and should be patched");
             Ok(())
         }
         SgxQuoteStatus::GroupOutOfDate => {

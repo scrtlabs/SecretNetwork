@@ -90,6 +90,7 @@ pub enum VmError {
     #[snafu(display("Must not call a writing storage function in this context."))]
     WriteAccessDenied { backtrace: snafu::Backtrace },
 
+    #[snafu(display("Enclave {}", source))]
     EnclaveErr {
         #[snafu(backtrace)]
         source: EnclaveError,
@@ -314,12 +315,12 @@ mod enclave {
     #[derive(Debug, Snafu)]
     #[non_exhaustive]
     pub enum EnclaveError {
-        #[snafu(display("Got an error from the enclave: {:?}", error))]
+        #[snafu(display("{}", error))]
         EnclaveErr {
             error: enclave_ffi_types::EnclaveError,
             backtrace: Backtrace,
         },
-        #[snafu(display("failed to call enclave function: {:?}", status))]
+        #[snafu(display("SGX error: {:?}", status))]
         SdkErr {
             status: sgx_types::sgx_status_t,
             backtrace: Backtrace,

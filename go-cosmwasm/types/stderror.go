@@ -62,7 +62,7 @@ type GenericErr struct {
 }
 
 func (e GenericErr) Error() string {
-	return fmt.Sprintf("generic: %s", e.Msg)
+	return fmt.Sprintf("encrypted: %s", e.Msg)
 }
 
 type InvalidBase64 struct {

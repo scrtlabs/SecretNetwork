@@ -56,43 +56,80 @@ pub enum EnclaveError {
     ///    caught memory-handling issues, or a failed ecall during an ocall. `vm_error` will be null.
     /// 3. We failed to call the ocall due to an SGX fault. `vm_error` will be null.
     // TODO should we split these three cases for better diagnostics?
-    #[display(fmt = "FailedOcall")]
-    FailedOcall {
-        vm_error: UntrustedVmError,
-    },
+    #[display(fmt = "failed to execute ocall")]
+    FailedOcall { vm_error: UntrustedVmError },
     /// The WASM code was invalid and could not be loaded.
+    #[display(fmt = "tried to load invalid wasm code")]
     InvalidWasm,
+    #[display(fmt = "failed to initialize wasm memory")]
     CannotInitializeWasmMemory,
     /// The WASM module contained a start section, which is not allowed.
     WasmModuleWithStart,
     /// The WASM module contained floating point operations, which is not allowed.
+    #[display(fmt = "found floating point operation in module code")]
     WasmModuleWithFP,
     /// Calling a function in the contract failed.
+    #[display(fmt = "failed function call")]
     FailedFunctionCall,
     /// Fail to inject gas metering
+    #[display(fmt = "failed to inject gas metering")]
     FailedGasMeteringInjection,
     /// Ran out of gas
+    #[display(fmt = "execution ran out of gas")]
     OutOfGas,
     // Errors in contract ABI:
     /// Failed to seal data
+    #[display(fmt = "failed to seal data")]
     FailedSeal,
+    #[display(fmt = "failed to unseal data")]
     FailedUnseal,
-    /// contract key was invalid
+    #[display(fmt = "failed to authenticate secret contract")]
     FailedContractAuthentication,
+    #[display(fmt = "failed to deserialize data")]
     FailedToDeserialize,
+    #[display(fmt = "failed to serialize data")]
     FailedToSerialize,
+    #[display(fmt = "failed to encrypt data")]
     EncryptionError,
+    #[display(fmt = "failed to decrypt data")]
     DecryptionError,
+    #[display(fmt = "failed to allocate memory")]
     MemoryAllocationError,
+    #[display(fmt = "failed to read memory")]
     MemoryReadError,
+    #[display(fmt = "failed to write memory")]
     MemoryWriteError,
+    #[display(fmt = "failed to seal data")]
     NotImplemented,
+    #[display(fmt = "panic'd due to unexpected behavior")]
     Panic,
     /// Unexpected Error happened, no more details available
+    #[display(fmt = "unknown error")]
     Unknown,
 
     BadQueryChainRequest,
     BadQueryChainResponse,
+}
+
+/// This type represents the possible error conditions that can be encountered in the
+/// enclave while authenticating a new node in the network.
+/// cbindgen:prefix-with-name
+#[repr(C)]
+#[derive(Debug, Display, PartialEq, Eq)]
+pub enum NodeAuthResult {
+    Success,
+    #[display(fmt = "Enclave received invalid inputs")]
+    InvalidInput,
+    #[display(fmt = "The provided certificate was invalid")]
+    InvalidCert,
+    #[display(fmt = "Writing to file system from the enclave failed")]
+    CantWriteToStorage,
+    #[display(fmt = "The public key in the certificate appears to be malformed")]
+    MalformedPublicKey,
+    #[display(fmt = "Encrypting the seed failed")]
+    SeedEncryptionFailed,
+    #[display(fmt = "Enclave panicked :( please file a bug report!")]
+    Panic,
 }
 
 /// This type holds a pointer to a VmError that is boxed on the untrusted side
