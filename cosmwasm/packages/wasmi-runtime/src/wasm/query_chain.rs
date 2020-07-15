@@ -127,41 +127,42 @@ pub fn encrypt_and_query_chain(
                         }
                     }
                 }
-                Ok(Err(StdError::GenericErr { msg })) => {
-                    let inner_error_bytes = base64::decode(&msg).map_err(|err| {
+                Ok(Err(StdError::GenericErr { msg })) => match base64::decode(&msg) {
+                    Err(err) => {
                         error!(
-                            "encrypt_and_query_chain() got an StdError as an answer, tried to decode the inner msg as bytes because it's encrypted, but got an error while trying to decode from base64: {:?}",
-                            err
+                            "encrypt_and_query_chain() got an StdError as an answer {:?}, tried to decode the inner msg as bytes because it's encrypted, but got an error while trying to decode from base64. This usually means that the called contract panicked and the error is plaintext: {:?}",
+                            msg, err
                         );
-                        WasmEngineError::DeserializationError
-                    })?;
+                        Ok(Err(StdError::GenericErr { msg }))
+                    }
+                    Ok(inner_error_bytes) => {
+                        // query response returns without nonce and user_public_key appended to it
+                        // because the sender is supposed to have them already
+                        let inner_error_as_secret_msg = SecretMessage {
+                            nonce,
+                            user_public_key,
+                            msg: inner_error_bytes,
+                        };
 
-                    // query response returns without nonce and user_public_key appended to it
-                    // because the sender is supposed to have them already
-                    let inner_error_as_secret_msg = SecretMessage {
-                        nonce,
-                        user_public_key,
-                        msg: inner_error_bytes,
-                    };
+                        match inner_error_as_secret_msg.decrypt() {
+                            Err(err) => {
+                                error!(
+                                    "encrypt_and_query_chain() got an error while trying to decrypt the inner error for query {:?}, stopping wasm: {:?}",
+                                    String::from_utf8_lossy(&query),
+                                    err
+                                );
 
-                    match inner_error_as_secret_msg.decrypt() {
-                        Err(err) => {
-                            error!(
-                                "encrypt_and_query_chain() got an error while trying to decrypt the inner error for query {:?}, stopping wasm: {:?}",
-                                String::from_utf8_lossy(&query),
-                                err
-                            );
-
-                            return Err(WasmEngineError::DecryptionError);
-                        }
-                        Ok(decrypted) => {
-                            serde_json::from_slice(&decrypted).map_err(|err| {
-                                error!("encrypt_and_query_chain() got an error while trying to deserialize the inner error as StdError: {:?}", err);
-                                WasmEngineError::DeserializationError
-                            })?
+                                return Err(WasmEngineError::DecryptionError);
+                            }
+                            Ok(decrypted) => {
+                                serde_json::from_slice(&decrypted).map_err(|err| {
+                                    error!("encrypt_and_query_chain() got an error while trying to deserialize the inner error as StdError: {:?}", err);
+                                    WasmEngineError::DeserializationError
+                                })?
+                            }
                         }
                     }
-                }
+                },
                 Ok(Err(std_error)) => {
                     error!(
                         "encrypt_and_query_chain() got an StdError as an answer, but it should be of type GenericErr and encrypted inside. Got instead: {:?}",
