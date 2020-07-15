@@ -101,24 +101,20 @@ pub extern "C" fn ocall_query_chain(
         // which will be converted to a success status.
         .map(|answer| -> Result<EnclaveBuffer, OcallReturn> {
             match answer {
-                Ok((Ok(ans), gas_cost)) => {
+                Ok((system_result, gas_cost)) => {
                     unsafe { *gas_used = gas_cost };
 
                     /*
-                        wasm code expects to get this as QueryResult which is defined as Result<Binary, StdError>
+                        wasm code expects to get this as Result<Result<Binary, StdError>, SystemError> which is called SystemResult
                         see CosmWasm's implementation https://github.com/enigmampc/SecretNetwork/blob/508e99c990dd656eb61f456584dab054487ba178/cosmwasm/packages/sgx-vm/src/imports.rs#L124
                     */
 
-                    crate::serde::to_vec(&ans)
+                    crate::serde::to_vec(&system_result)
                         .map_err(|_| OcallReturn::Failure)
                         .map(|val| {
                             super::allocate_enclave_buffer(&val).map_err(|_| OcallReturn::Failure)
                         })
                         .unwrap_or_else(|_| Ok(EnclaveBuffer::default()))
-                }
-                Ok((Err(_), gas_cost)) => {
-                    unsafe { *gas_used = gas_cost };
-                    Err(OcallReturn::Failure)
                 }
                 Err(err) => {
                     unsafe { store_vm_error(err, vm_error) };

@@ -89,7 +89,7 @@ pub enum HandleMsg {
 pub enum QueryMsg {
     ContractError { error_type: String },
     Panic {},
-    ReceiveExternalQuery { num: u64 },
+    ReceiveExternalQuery { num: u8 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -242,16 +242,16 @@ fn send_external_query<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     contract_addr: HumanAddr,
 ) -> HandleResult {
-    let answer: QueryResult = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+    let answer: StdResult<u8> = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr,
         msg: Binary(r#"{"receive_external_query":{"num":2}}"#.as_bytes().to_vec()),
     }));
 
     match answer {
-        Ok(x) => Ok(HandleResponse {
+        Ok(result) => Ok(HandleResponse {
             messages: vec![],
             log: vec![],
-            data: Some(x),
+            data: Some(vec![result].into()),
         }),
         Err(err) => Err(err),
     }
@@ -580,9 +580,9 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match _msg {
         QueryMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
         QueryMsg::Panic {} => panic!("panic in query"),
-        QueryMsg::ReceiveExternalQuery { num } => Ok(Binary(
-            serde_json_wasm::to_vec(&format!("{}", num + 1)).unwrap(),
-        )),
+        QueryMsg::ReceiveExternalQuery { num } => {
+            Ok(Binary(serde_json_wasm::to_vec(&(num + 1)).unwrap()))
+        }
     }
 }
 

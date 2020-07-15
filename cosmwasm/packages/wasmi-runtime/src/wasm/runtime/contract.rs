@@ -465,13 +465,16 @@ impl WasmiApi for ContractInstance {
 
         // Call query_chain (this bubbles up to x/compute via ocalls and FFI to Go code)
         // Returns the value from x/compute
-        let (result, gas_used) = encrypt_and_query_chain(
+        let (answer, gas_used) = encrypt_and_query_chain(
             &query_buffer,
             &self.context,
             self.user_nonce,
             self.user_public_key,
         )?;
-
+        trace!(
+            "query_chain() got answer from outside with result {:?}",
+            String::from_utf8_lossy(&answer)
+        );
         trace!(
             "query_chain() got answer from outside with gas {}",
             gas_used
@@ -479,24 +482,11 @@ impl WasmiApi for ContractInstance {
 
         self.use_gas_externally(gas_used)?;
 
-        let result = match result {
-            None => {
-                trace!("query_chain() got no answer from outside, returning 0 to the contract");
-                return Ok(Some(RuntimeValue::I32(0))); // Is this supposed to be 0 or Err?
-            }
-            Some(result) => result,
-        };
-
-        trace!(
-            "query_chain() got answer from outside with result {:?}",
-            String::from_utf8_lossy(&result)
-        );
-
-        let ptr_to_region_in_wasm_vm =   self.write_to_memory(&result)
+        let ptr_to_region_in_wasm_vm =   self.write_to_memory(&answer)
             .map_err(|err| {
                 error!(
                     "query_chain() error while trying to allocate and write the answer {:?} to the WASM VM",
-                    result,
+                    answer,
                 );
                 err
             })?;

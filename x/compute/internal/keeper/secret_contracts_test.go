@@ -1060,5 +1060,5 @@ func TestExternalQueryWorks(t *testing.T) {
 	data, _, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query":{"to":"%s"}}`, addr.String()), true, defaultGas)
 
 	require.Empty(t, execErr)
-	require.Equal(t, "3", data)
+	require.Equal(t, []byte{3}, data)
 }
