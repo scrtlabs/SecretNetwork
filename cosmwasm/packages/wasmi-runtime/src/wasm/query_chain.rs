@@ -59,7 +59,7 @@ pub fn encrypt_and_query_chain(
     })?;
 
     // Call query_chain (this bubbles up to x/compute via ocalls and FFI to Go code)
-    // This returns the value from x/compute
+    // This returns the answer from x/compute
     match query_chain(context, &encrypted_query) {
         Ok((answer, gas_used)) => match answer {
             Some(answer_as_vec) => {
@@ -88,7 +88,20 @@ pub fn encrypt_and_query_chain(
                         };
 
                         match as_secret_msg.decrypt() {
-                            Ok(decrypted) => Ok(Binary(decrypted)),
+                            Ok(b64_decrypted) => {
+                                let decrypted = match base64::decode(&b64_decrypted) {
+                                    Ok(decrypted) => decrypted,
+                                    Err(err) => {
+                                        error!(
+                                            "encrypt_and_query_chain() got an answer, managed to decrypt it, then tried to decode the output from base64 to bytes and failed: {:?}",
+                                            err
+                                        );
+                                        return Err(WasmEngineError::DeserializationError);
+                                    }
+                                };
+
+                                Ok(Binary(decrypted))
+                            }
                             Err(err) => {
                                 error!(
                                     "encrypt_and_query_chain() got an error while trying to decrypt the result for query {:?}, stopping wasm: {:?}",
@@ -110,7 +123,7 @@ pub fn encrypt_and_query_chain(
                                             "encrypt_and_query_chain() got an StdError as an answer, tried to decode the inner msg as bytes because it's encrypted, but got an error while trying to decode from base64: {:?}",
                                             err
                                         );
-                                        return Err(WasmEngineError::DecryptionError);
+                                        return Err(WasmEngineError::DeserializationError);
                                     }
                                 };
 
