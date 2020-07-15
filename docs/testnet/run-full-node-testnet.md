@@ -1,3 +1,4 @@
+# :warning: DEPRECATED
 # How To Join Secret Network as a Full Node on Testnet
 
 This document details how to join the Secret Network `testnet` as a validator.
