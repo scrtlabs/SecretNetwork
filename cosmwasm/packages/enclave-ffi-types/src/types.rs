@@ -109,7 +109,6 @@ pub enum NodeAuthResult {
     MalformedPublicKey,
     #[display(fmt = "Encrypting the seed failed")]
     SeedEncryptionFailed,
-    EnclaveFailure,
     #[display(fmt = "Enclave panicked :( please file a bug report!")]
     Panic,
 }
