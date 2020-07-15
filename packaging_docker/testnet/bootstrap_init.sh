@@ -7,13 +7,13 @@ then
   rm -rf ~/.secretd/*
   rm -rf ~/.secretcli/*
   rm -rf ~/.sgx_secrets/*
-  secretcli config chain-id enigma-testnet-1
+  secretcli config chain-id enigma-pub-testnet-1
   secretcli config output json
   secretcli config indent true
   secretcli config trust-node true
   secretcli config keyring-backend test
 
-  secretd init banana --chain-id enigma-testnet-1
+  secretd init banana --chain-id enigma-pub-testnet-1
 
   cp ~/node_key.json ~/.secretd/config/node_key.json
 
