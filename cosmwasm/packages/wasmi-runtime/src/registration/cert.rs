@@ -300,10 +300,7 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
 
     // 2. Verify quote status (mandatory field)
 
-    match verify_quote_status(report.sgx_quote_status) {
-        Ok(_) => (),
-        Err(e) => return Err(e),
-    }
+    verify_quote_status(report.sgx_quote_status)?;
 
     // verify certificate
     match SIGNING_METHOD {

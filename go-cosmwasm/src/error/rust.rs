@@ -35,6 +35,12 @@ pub enum Error {
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
+    #[snafu(display("{}", msg))]
+    GoCwEnclaveError {
+        msg: String,
+        #[cfg(feature = "backtraces")]
+        backtrace: snafu::Backtrace,
+    },
 }
 
 impl Error {
@@ -55,6 +61,13 @@ impl Error {
 
     pub fn vm_err<S: ToString>(msg: S) -> Self {
         VmErr {
+            msg: msg.to_string(),
+        }
+        .build()
+    }
+
+    pub fn enclave_err<S: ToString>(msg: S) -> Self {
+        GoCwEnclaveError {
             msg: msg.to_string(),
         }
         .build()

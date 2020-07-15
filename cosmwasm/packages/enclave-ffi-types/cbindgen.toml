@@ -32,6 +32,7 @@ style = "both"
 include = [
     "UserSpaceBuffer",
     "EnclaveBuffer",
+    "NodeAuthResult",
     "Ctx",
     "InitResult",
     "HandleResult",

@@ -7,7 +7,7 @@ use log::*;
 use sgx_types::*;
 use sgx_types::{sgx_status_t, SgxResult};
 
-use enclave_ffi_types::ENCRYPTED_SEED_SIZE;
+use enclave_ffi_types::{NodeAuthResult, ENCRYPTED_SEED_SIZE};
 
 use crate::enclave::get_enclave;
 
@@ -18,7 +18,7 @@ extern "C" {
     ) -> sgx_status_t;
     pub fn ecall_authenticate_new_node(
         eid: sgx_enclave_id_t,
-        retval: *mut sgx_status_t,
+        retval: *mut NodeAuthResult,
         cert: *const u8,
         cert_len: u32,
         seed: &mut [u8; ENCRYPTED_SEED_SIZE],
@@ -122,7 +122,7 @@ pub extern "C" fn ocall_get_update_info(
     unsafe { sgx_report_attestation_status(platform_blob, enclave_trusted, update_info) }
 }
 
-pub fn create_attestation_report_u() -> SgxResult<sgx_status_t> {
+pub fn create_attestation_report_u() -> SgxResult<()> {
     let enclave = get_enclave()?;
 
     let eid = enclave.geteid();
@@ -137,13 +137,15 @@ pub fn create_attestation_report_u() -> SgxResult<sgx_status_t> {
         return Err(retval);
     }
 
-    Ok(sgx_status_t::SGX_SUCCESS)
+    Ok(())
 }
 
-pub fn untrusted_get_encrypted_seed(cert: &[u8]) -> SgxResult<[u8; ENCRYPTED_SEED_SIZE]> {
+pub fn untrusted_get_encrypted_seed(
+    cert: &[u8],
+) -> SgxResult<Result<[u8; ENCRYPTED_SEED_SIZE], NodeAuthResult>> {
     let enclave = get_enclave()?;
     let eid = enclave.geteid();
-    let mut retval = sgx_status_t::SGX_SUCCESS;
+    let mut retval = NodeAuthResult::Success;
     let mut seed = [0u8; ENCRYPTED_SEED_SIZE];
     let status = unsafe {
         ecall_authenticate_new_node(
@@ -159,8 +161,8 @@ pub fn untrusted_get_encrypted_seed(cert: &[u8]) -> SgxResult<[u8; ENCRYPTED_SEE
         return Err(status);
     }
 
-    if retval != sgx_status_t::SGX_SUCCESS {
-        return Err(retval);
+    if retval != NodeAuthResult::Success {
+        return Ok(Err(retval));
     }
 
     if seed.is_empty() {
@@ -168,7 +170,7 @@ pub fn untrusted_get_encrypted_seed(cert: &[u8]) -> SgxResult<[u8; ENCRYPTED_SEE
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
-    Ok(seed)
+    Ok(Ok(seed))
 }
 
 #[cfg(test)]
