@@ -16,35 +16,34 @@
     },
     "chainId": {
       "type": "string",
-      "defaultValue": "enigma-testnet-1",
+      "defaultValue": "enigma-testnet-2",
       "metadata": {
-        "description": "The blockchain software to install on the VM"
+        "description": "Chain ID of the network"
       }
     },
     "moniker": {
       "type": "string",
-      "defaultValue": "AzureSecretNodeDefault2",
       "metadata": {
-        "description": "The blockchain software to install on the VM"
+        "description": "The network name of the node"
       }
     },
     "rpcUrl": {
       "type": "string",
-      "defaultValue": "51.132.225.152:26657",
+      "defaultValue": "bootstrap.pub.testnet.enigma.co:26657",
       "metadata": {
-        "description": "The blockchain software to install on the VM"
+        "description": "The URL of a RPC service used to communicate with the network"
       }
     },
     "registrationService": {
       "type": "string",
-      "defaultValue": "reg-snet-test1.uksouth.azurecontainer.io:8081",
+      "defaultValue": "reg-pubtestnet.uksouth.azurecontainer.io:8081",
       "metadata": {
-        "description": "The blockchain software to install on the VM"
+        "description": "The URL of a registeration service"
       }
     },
     "persistentPeers": {
       "type": "string",
-      "defaultValue": "115aa0a629f5d70dd1d464bc7e42799e00f4edae@51.132.225.152:26656",
+      "defaultValue": "115aa0a629f5d70dd1d464bc7e42799e00f4edae@51.132.233.98:26656",
       "metadata": {
         "description": "List of peers to intially connect to"
       }
