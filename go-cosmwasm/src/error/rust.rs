@@ -35,8 +35,8 @@ pub enum Error {
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
-    #[snafu(display("Error calling the enclave: {}", msg))]
-    EnclaveErr {
+    #[snafu(display("{}", msg))]
+    GoCwEnclaveError {
         msg: String,
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
@@ -67,7 +67,7 @@ impl Error {
     }
 
     pub fn enclave_err<S: ToString>(msg: S) -> Self {
-        EnclaveErr {
+        GoCwEnclaveError {
             msg: msg.to_string(),
         }
         .build()
