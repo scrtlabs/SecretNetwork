@@ -1,9 +1,10 @@
 1. Put this file in `/etc/systemd/system/secret-lcd.service`
 2. Make sure `/bin/secretcli` is the right path for secretcli
 3. Make sure port 443 is open 
-4. Make sure "secret-1" is the right chain ID 
-5. Enable on startup: `sudo systemctl enable secret-lcd`
-6. Start now:         `sudo systemctl start secret-lcd`
+4. Make sure `secret-1` is the right chain ID 
+5. Make sure `ubuntu` is the right user 
+6. Enable on startup: `sudo systemctl enable secret-lcd`
+7. Start now:         `sudo systemctl start secret-lcd`
 
 ```
 [Unit]
