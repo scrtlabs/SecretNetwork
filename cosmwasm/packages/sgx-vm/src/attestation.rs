@@ -30,7 +30,7 @@ pub extern "C" fn ocall_sgx_init_quote(
     ret_ti: *mut sgx_target_info_t,
     ret_gid: *mut sgx_epid_group_id_t,
 ) -> sgx_status_t {
-    info!("Entering ocall_sgx_init_quote");
+    trace!("Entering ocall_sgx_init_quote");
     unsafe { sgx_init_quote(ret_ti, ret_gid) }
 }
 
@@ -74,18 +74,18 @@ pub extern "C" fn ocall_get_quote(
     _maxlen: u32,
     p_quote_len: *mut u32,
 ) -> sgx_status_t {
-    println!("Entering ocall_get_quote");
+    trace!("Entering ocall_get_quote");
 
     let mut real_quote_len: u32 = 0;
 
     let ret = unsafe { sgx_calc_quote_size(p_sigrl, sigrl_len, &mut real_quote_len as *mut u32) };
 
     if ret != sgx_status_t::SGX_SUCCESS {
-        println!("sgx_calc_quote_size returned {}", ret);
+        trace!("sgx_calc_quote_size returned {}", ret);
         return ret;
     }
 
-    println!("quote size = {}", real_quote_len);
+    trace!("quote size = {}", real_quote_len);
     unsafe {
         *p_quote_len = real_quote_len;
     }
@@ -105,11 +105,11 @@ pub extern "C" fn ocall_get_quote(
     };
 
     if ret != sgx_status_t::SGX_SUCCESS {
-        println!("sgx_calc_quote_size returned {}", ret);
+        trace!("sgx_calc_quote_size returned {}", ret);
         return ret;
     }
 
-    println!("sgx_calc_quote_size returned {}", ret);
+    trace!("sgx_calc_quote_size returned {}", ret);
     ret
 }
 
@@ -123,11 +123,8 @@ pub extern "C" fn ocall_get_update_info(
 }
 
 pub fn create_attestation_report_u() -> SgxResult<()> {
-    info!("Hello from just before initializing - create_attestation_report_u");
     let enclave = get_enclave()?;
-    info!("Hello from just after initializing - create_attestation_report_u");
 
-    info!("Entered produce report");
     let eid = enclave.geteid();
     let mut retval = sgx_status_t::SGX_SUCCESS;
     let status = unsafe { ecall_get_attestation_report(eid, &mut retval) };
@@ -146,11 +143,7 @@ pub fn create_attestation_report_u() -> SgxResult<()> {
 pub fn untrusted_get_encrypted_seed(
     cert: &[u8],
 ) -> SgxResult<Result<[u8; ENCRYPTED_SEED_SIZE], NodeAuthResult>> {
-    info!("Hello from just before initializing - untrusted_get_encrypted_seed");
     let enclave = get_enclave()?;
-    info!("Hello from just after initializing - untrusted_get_encrypted_seed");
-
-    info!("Entered produce report");
     let eid = enclave.geteid();
     let mut retval = NodeAuthResult::Success;
     let mut seed = [0u8; ENCRYPTED_SEED_SIZE];

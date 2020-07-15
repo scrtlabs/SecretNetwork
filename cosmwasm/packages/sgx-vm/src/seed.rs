@@ -1,6 +1,6 @@
 use sgx_types::*;
 
-use log::info;
+use log::{debug, info};
 
 use crate::enclave::get_enclave;
 
@@ -28,9 +28,9 @@ extern "C" {
 }
 
 pub fn untrusted_init_node(master_cert: &[u8], encrypted_seed: &[u8]) -> SgxResult<()> {
-    info!("Hello from just before initializing - init_node");
+    info!("Initializing enclave..");
     let enclave = get_enclave()?;
-    info!("Hello from just after initializing - init_node");
+    debug!("Initialized enclave successfully!");
 
     let eid = enclave.geteid();
     let mut ret = sgx_status_t::SGX_SUCCESS;
@@ -58,9 +58,9 @@ pub fn untrusted_init_node(master_cert: &[u8], encrypted_seed: &[u8]) -> SgxResu
 }
 
 pub fn untrusted_key_gen() -> SgxResult<[u8; 32]> {
-    info!("Hello from just before initializing - untrusted_key_gen");
+    debug!("Initializing enclave..");
     let enclave = get_enclave()?;
-    info!("Hello from just after initializing - untrusted_key_gen");
+    debug!("Initialized enclave successfully!");
 
     let eid = enclave.geteid();
     let mut retval = sgx_status_t::SGX_SUCCESS;

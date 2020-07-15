@@ -33,7 +33,7 @@ use log::*;
 
 #[ctor]
 fn init_logger() {
-    simple_logger::init().unwrap();
+    simple_logger::init_with_level(log::Level::Info).unwrap();
 }
 
 #[repr(C)]
@@ -50,7 +50,7 @@ fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache<DB, GoApi, GoQue
 
 #[no_mangle]
 pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> Buffer {
-    info!("Hello from get_encrypted_seed");
+    debug!("Called get_encrypted_seed");
     let cert_slice = match unsafe { cert.read() } {
         None => {
             set_error(Error::empty_arg("attestation_cert"), err);
@@ -62,13 +62,11 @@ pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> 
     match untrusted_get_encrypted_seed(cert_slice) {
         Err(e) => {
             // An error happened in the SGX sdk.
-            error!("SGX error :( {}", e);
             set_error(Error::enclave_err(e.to_string()), err);
             Buffer::default()
         }
         Ok(Err(e)) => {
             // An error was returned from the enclave.
-            error!("Enclave error :( {}", e);
             set_error(Error::enclave_err(e.to_string()), err);
             Buffer::default()
         }
@@ -84,7 +82,6 @@ pub extern "C" fn init_bootstrap(err: Option<&mut Buffer>) -> Buffer {
     info!("Hello from right before init_bootstrap");
     match untrusted_init_bootstrap() {
         Err(e) => {
-            error!("Error :(");
             set_error(Error::enclave_err(e.to_string()), err);
             Buffer::default()
         }
@@ -469,10 +466,8 @@ fn do_query(
 
 #[no_mangle]
 pub extern "C" fn key_gen(err: Option<&mut Buffer>) -> Buffer {
-    info!("Hello from right before key_gen");
     match untrusted_key_gen() {
         Err(e) => {
-            error!("Error :(");
             set_error(Error::enclave_err(e.to_string()), err);
             Buffer::default()
         }

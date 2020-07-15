@@ -7,13 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"strconv"
-	"strings"
-
 	cosmwasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	flag "github.com/spf13/pflag"
 	"github.com/tendermint/go-amino"
+	"io/ioutil"
+	"strconv"
 
 	"github.com/spf13/cobra"
 
@@ -315,14 +313,14 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 				}
 			}
 
-			if strings.Contains(result.RawLog, "wasm contract failed: generic: ") {
+			if types.IsEncryptedErrorCode(result.Code) && types.ContainsEncryptedString(result.RawLog) {
 				stdErr, err := wasmCtx.DecryptError(result.RawLog, answer.Type, nonce)
 				if err != nil {
 					return err
 				}
 
 				answer.OutputError = stdErr
-			} else if strings.Contains(result.RawLog, "EnclaveErr") {
+			} else if types.ContainsEnclaveError(result.RawLog) {
 				answer.PlaintextError = result.RawLog
 			}
 
@@ -332,7 +330,6 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 
 	return cmd
 }
-
 
 func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 	decoder := newArgDecoder(asciiDecodeString)
@@ -369,20 +366,23 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 			nonce := queryData[:32]
 
 			res, _, err := cliCtx.QueryWithData(route, queryData)
+
 			if err != nil {
-				if strings.Contains(err.Error(), "wasm contract failed: generic: ") {
+				if types.ErrContainsQueryError(err) {
 					errorPlainBz, err := wasmCtx.DecryptError(err.Error(), "query", nonce)
 					if err != nil {
 						return err
 					}
-					return fmt.Errorf("%v", errorPlainBz.Error())
-				} else if strings.Contains(err.Error(), "EnclaveErr") {
-					return err
+					return fmt.Errorf("query result: %v", errorPlainBz.Error())
 				}
+				// Itzik: Commenting this as it might have been a placeholder for encrypting
+				//else if strings.Contains(err.Error(), "EnclaveErr") {
+				//	return err
+				//}
 				return err
 			}
 
-			resDecrypted := []byte{}
+			var resDecrypted []byte
 			if len(res) > 0 {
 				resDecrypted, err = wasmCtx.Decrypt(res, nonce)
 				if err != nil {

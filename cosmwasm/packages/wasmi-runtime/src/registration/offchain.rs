@@ -58,7 +58,7 @@ pub extern "C" fn ecall_init_bootstrap(public_key: &mut [u8; PUBLIC_KEY_SIZE]) -
     }
 
     public_key.copy_from_slice(&key_manager.seed_exchange_key().unwrap().get_pubkey());
-    debug!(
+    trace!(
         "ecall_init_bootstrap consensus_seed_exchange_keypair public key: {:?}",
         &public_key.to_vec()
     );
@@ -166,7 +166,7 @@ pub unsafe extern "C" fn ecall_init_node(
  */
 pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
     let kp = KEY_MANAGER.get_registration_key().unwrap();
-    info!(
+    trace!(
         "ecall_get_attestation_report key pk: {:?}",
         &kp.get_pubkey().to_vec()
     );
@@ -208,7 +208,6 @@ pub unsafe extern "C" fn ecall_key_gen(
 
     let pubkey = key_manager.get_registration_key().unwrap().get_pubkey();
     public_key.clone_from_slice(&pubkey);
-    // todo: remove this before production O.o
-    info!("ecall_key_gen key pk: {:?}", public_key.to_vec());
+    trace!("ecall_key_gen key pk: {:?}", public_key.to_vec());
     sgx_status_t::SGX_SUCCESS
 }

@@ -94,7 +94,7 @@ func getDecryptedData(t *testing.T, data []byte, nonce []byte) []byte {
 	return dataPlaintext
 }
 
-var contractErrorRegex = regexp.MustCompile(`wasm contract failed: generic: (.+)`)
+var contractErrorRegex = regexp.MustCompile(`contract failed: encrypted: (.+)`)
 
 func extractInnerError(t *testing.T, err error, nonce []byte, isEncrypted bool) cosmwasm.StdError {
 	match := contractErrorRegex.FindAllStringSubmatch(err.Error(), -1)
@@ -694,7 +694,7 @@ func TestInitNotEncryptedInputError(t *testing.T) {
 	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsg, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.Error(t, err)
 
-	require.Contains(t, err.Error(), "DecryptionError")
+	require.Contains(t, err.Error(), "failed to decrypt data")
 }
 
 func TestExecuteNotEncryptedInputError(t *testing.T) {
@@ -707,7 +707,7 @@ func TestExecuteNotEncryptedInputError(t *testing.T) {
 	_, err := keeper.Execute(ctx, contractAddress, walletA, []byte(`{"empty_log_key_value":{}}`), sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	require.Error(t, err)
 
-	require.Contains(t, err.Error(), "DecryptionError")
+	require.Contains(t, err.Error(), "failed to decrypt data")
 }
 
 func TestQueryNotEncryptedInputError(t *testing.T) {
@@ -720,7 +720,7 @@ func TestQueryNotEncryptedInputError(t *testing.T) {
 	_, err := keeper.QuerySmart(ctx, contractAddress, []byte(`{"owner":{}}`))
 	require.Error(t, err)
 
-	require.Contains(t, err.Error(), "DecryptionError")
+	require.Contains(t, err.Error(), "failed to decrypt data")
 }
 
 func TestInitNoLogs(t *testing.T) {
@@ -936,7 +936,7 @@ func TestInitPanic(t *testing.T) {
 	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"panic":{}}`, false, defaultGas)
 	require.Error(t, initErr)
 	require.Error(t, initErr.GenericErr)
-	require.Equal(t, "instantiate wasm contract failed: Error calling the VM: EnclaveErr: Got an error from the enclave: FailedFunctionCall", initErr.GenericErr.Msg)
+	require.Equal(t, "instantiate contract failed: Execution error: Enclave failed function call", initErr.GenericErr.Msg)
 }
 
 func TestExecPanic(t *testing.T) {
@@ -949,7 +949,7 @@ func TestExecPanic(t *testing.T) {
 	_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, `{"panic":{}}`, false, defaultGas)
 	require.Error(t, execErr)
 	require.Error(t, execErr.GenericErr)
-	require.Equal(t, "execute wasm contract failed: Error calling the VM: EnclaveErr: Got an error from the enclave: FailedFunctionCall", execErr.GenericErr.Msg)
+	require.Equal(t, "execute contract failed: Execution error: Enclave failed function call", execErr.GenericErr.Msg)
 }
 
 func TestQueryPanic(t *testing.T) {
@@ -962,7 +962,7 @@ func TestQueryPanic(t *testing.T) {
 	_, queryErr := queryHelper(t, keeper, ctx, addr, `{"panic":{}}`, false, defaultGas)
 	require.Error(t, queryErr)
 	require.Error(t, queryErr.GenericErr)
-	require.Equal(t, "query wasm contract failed: Error calling the VM: EnclaveErr: Got an error from the enclave: FailedFunctionCall", queryErr.GenericErr.Msg)
+	require.Equal(t, "query contract failed: Execution error: Enclave failed function call", queryErr.GenericErr.Msg)
 }
 
 func TestAllocateOnHeapFailBecauseMemoryLimit(t *testing.T) {
@@ -979,7 +979,7 @@ func TestAllocateOnHeapFailBecauseMemoryLimit(t *testing.T) {
 	require.Empty(t, data)
 	require.Error(t, execErr)
 	require.Error(t, execErr.GenericErr)
-	require.Equal(t, "execute wasm contract failed: Error calling the VM: EnclaveErr: Got an error from the enclave: FailedFunctionCall", execErr.GenericErr.Msg)
+	require.Equal(t, "execute contract failed: Execution error: Enclave failed function call", execErr.GenericErr.Msg)
 }
 
 func TestAllocateOnHeapFailBecauseGasLimit(t *testing.T) {
@@ -1001,7 +1001,7 @@ func TestAllocateOnHeapFailBecauseGasLimit(t *testing.T) {
 	require.Empty(t, data)
 	require.Error(t, execErr)
 	require.Error(t, execErr.GenericErr)
-	require.Equal(t, "execute wasm contract failed: Ran out of gas", execErr.GenericErr.Msg)
+	require.Equal(t, "execute contract failed: Ran out of gas", execErr.GenericErr.Msg)
 }
 
 func TestAllocateOnHeapMoreThanSGXHasFailBecauseMemoryLimit(t *testing.T) {
@@ -1020,7 +1020,7 @@ func TestAllocateOnHeapMoreThanSGXHasFailBecauseMemoryLimit(t *testing.T) {
 	require.Empty(t, data)
 	require.Error(t, execErr)
 	require.Error(t, execErr.GenericErr)
-	require.Equal(t, "execute wasm contract failed: Error calling the VM: EnclaveErr: Got an error from the enclave: FailedFunctionCall", execErr.GenericErr.Msg)
+	require.Equal(t, "execute contract failed: Execution error: Enclave failed function call", execErr.GenericErr.Msg)
 }
 
 func TestPassNullPointerToImports(t *testing.T) {
@@ -1045,7 +1045,7 @@ func TestPassNullPointerToImports(t *testing.T) {
 
 			require.Error(t, execErr)
 			require.Error(t, execErr.GenericErr)
-			require.Equal(t, "execute wasm contract failed: Error calling the VM: EnclaveErr: Got an error from the enclave: MemoryReadError", execErr.GenericErr.Msg)
+			require.Equal(t, "execute contract failed: Execution error: Enclave failed to read memory", execErr.GenericErr.Msg)
 		})
 	}
 }
