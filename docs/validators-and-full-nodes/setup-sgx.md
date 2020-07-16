@@ -218,6 +218,14 @@ See https://github.com/enigmampc/SecretNetwork/blob/master/docs/testnet/verify-s
 
 ### using `sgx-detect`:
 
+First, make sure you have Rust installed: https://www.rust-lang.org/tools/install
+
+- Once Rust is installed, install the `nightly` toolchain:
+
+```bash
+rustup toolchain install nightly
+```
+
 ```bash
 sudo apt install -y libssl-dev protobuf-compiler
 cargo +nightly install fortanix-sgx-tools sgxs-tools
