@@ -58,6 +58,8 @@ pub enum EnclaveError {
     // TODO should we split these three cases for better diagnostics?
     #[display(fmt = "failed to execute ocall")]
     FailedOcall { vm_error: UntrustedVmError },
+
+    // Problems with the module binary
     /// The WASM code was invalid and could not be loaded.
     #[display(fmt = "tried to load invalid wasm code")]
     InvalidWasm,
@@ -68,15 +70,45 @@ pub enum EnclaveError {
     /// The WASM module contained floating point operations, which is not allowed.
     #[display(fmt = "found floating point operation in module code")]
     WasmModuleWithFP,
-    /// Calling a function in the contract failed.
-    #[display(fmt = "failed function call")]
-    FailedFunctionCall,
     /// Fail to inject gas metering
     #[display(fmt = "failed to inject gas metering")]
     FailedGasMeteringInjection,
+
+    // runtime issues with the module
     /// Ran out of gas
     #[display(fmt = "execution ran out of gas")]
     OutOfGas,
+    /// Calling a function in the contract failed.
+    #[display(fmt = "calling a function in the contract failed for an unexpected reason")]
+    FailedFunctionCall,
+    // These variants mimic the variants of `wasmi::TrapKind`
+    /// The contract panicked during execution.
+    #[display(fmt = "the contract panicked")]
+    ContractPanicUnreachable,
+    /// The contract tried to access memory out of bounds.
+    #[display(fmt = "the contract tried to access memory out of bounds")]
+    ContractPanicMemoryAccessOutOfBounds,
+    /// The contract tried to access a nonexistent resource.
+    #[display(fmt = "the contract tried to access a nonexistent resource")]
+    ContractPanicTableAccessOutOfBounds,
+    /// The contract tried to access an uninitialized resource.
+    #[display(fmt = "the contract tried to access an uninitialized resource")]
+    ContractPanicElemUninitialized,
+    /// The contract tried to divide by zero.
+    #[display(fmt = "the contract tried to divide by zero")]
+    ContractPanicDivisionByZero,
+    /// The contract tried to perform an invalid conversion to an integer.
+    #[display(fmt = "the contract tried to perform an invalid conversion to an integer")]
+    ContractPanicInvalidConversionToInt,
+    /// The contract has run out of space on the stack.
+    #[display(fmt = "the contract has run out of space on the stack")]
+    ContractPanicStackOverflow,
+    /// The contract tried to call a function but expected an incorrect function signature.
+    #[display(
+        fmt = "the contract tried to call a function but expected an incorrect function signature"
+    )]
+    ContractPanicUnexpectedSignature,
+
     // Errors in contract ABI:
     /// Failed to seal data
     #[display(fmt = "failed to seal data")]
@@ -101,6 +133,8 @@ pub enum EnclaveError {
     MemoryWriteError,
     #[display(fmt = "failed to seal data")]
     NotImplemented,
+
+    // serious issues
     #[display(fmt = "panic'd due to unexpected behavior")]
     Panic,
     /// Unexpected Error happened, no more details available
