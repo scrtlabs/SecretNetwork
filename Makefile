@@ -1,5 +1,5 @@
 PACKAGES=$(shell go list ./... | grep -v '/simulation')
-VERSION := $(shell echo $(shell git describe --tags) | sed 's/^v//')
+VERSION ?= $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
@@ -127,7 +127,9 @@ build_arm_linux:
 
 build_all: build-linux build_windows build_macos build_arm_linux
 
-deb: build-linux
+deb: build-linux deb-no-compile
+
+deb-no-compile:
     ifneq ($(UNAME_S),Linux)
 		exit 1
     endif
@@ -145,7 +147,7 @@ deb: build-linux
 	mkdir -p /tmp/SecretNetwork/deb/DEBIAN
 	cp ./packaging_ubuntu/control /tmp/SecretNetwork/deb/DEBIAN/control
 	printf "Version: " >> /tmp/SecretNetwork/deb/DEBIAN/control
-	git describe --tags | tr -d v >> /tmp/SecretNetwork/deb/DEBIAN/control
+	printf "$(VERSION)" >> /tmp/SecretNetwork/deb/DEBIAN/control
 	echo "" >> /tmp/SecretNetwork/deb/DEBIAN/control
 	cp ./packaging_ubuntu/postinst /tmp/SecretNetwork/deb/DEBIAN/postinst
 	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/postinst
@@ -197,8 +199,11 @@ build-azure:
 	docker build -f Dockerfile.azure -t enigmampc/secret-network-node:azuretestnet .
 
 build-testnet:
+	mkdir build || true
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f Dockerfile.testnet -t enigmampc/secret-network-bootstrap:pubtestnet  .
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t enigmampc/secret-network-node:pubtestnet .
+	docker build --build-arg SGX_MODE=HW -f Dockerfile_build_deb -t deb_build .
+	docker run -e VERSION=0.5.0-rc1 -v $(pwd)/build:/build deb_build
 
 docker_base:
 	docker build --build-arg FEATURES=${FEATURES} --build-arg SGX_MODE=${SGX_MODE} -f Dockerfile.base -t rust-go-base-image .

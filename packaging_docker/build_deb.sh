@@ -1,5 +1,5 @@
 #!/bin/bash
 
-make deb || true
+make deb-no-compile
 
-cp ./secretnetwork_0.1.0_amd64.deb /build/
+cp ./secretnetwork_0.5.0-rc1_amd64.deb /build/
