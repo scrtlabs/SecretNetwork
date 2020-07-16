@@ -107,18 +107,18 @@ echo $PUBLIC_KEY
 This step can be run from any location (doesn't have to be from the same node)
 
 ```shell script
-secretcli tx register auth <path/to/attestation_cert.der> --node registration.enigma.co:26657 --from <your account>
+secretcli tx register auth <path/to/attestation_cert.der> --node bootstrap.pub.testnet.enigma.co:26657 --from <your account>
 ```
 
 ### 12. Pull your node's encrypted seed from the network
 ```shell script
-secretcli query register seed "$PUBLIC_KEY" --node registration.enigma.co:26657
+secretcli query register seed "$PUBLIC_KEY" --node bootstrap.pub.testnet.enigma.co:26657
 ```
 
 ### 13. Get additional network parameters
 These are necessary to configure the node before it starts
 ```shell script
-secretcli query register secret-network-params --node registration.enigma.co:26657
+secretcli query register secret-network-params --node bootstrap.pub.testnet.enigma.co:26657
 ```
 
 ### 14. Configure your secret node
@@ -128,13 +128,10 @@ secretd configure-secret node-master-cert.der "$SEED"
 
 ### 15. Add persistent peers to your configuration file.
 
-For an updated (partial) list of full nodes: http://bootstrap.mainnet.enigma.co/peers.txt
-(Generated every minute with [this script](https://gist.github.com/assafmo/a39fdb535f74ce2d6493a1a3f695e4ca))
-
 You can also use Enigma's node:
 
 ```
-perl -i -pe 's/persistent_peers = ""/persistent_peers = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.secretd/config/config.toml
+perl -i -pe 's/persistent_peers = ""/persistent_peers = "115aa0a629f5d70dd1d464bc7e42799e00f4edae\@bootstrap.pub.testnet.enigma.co:26656"/' ~/.secretd/config/config.toml
 ```
 
 This configuration updates automatically by your node when it learns of new nodes in the network.
