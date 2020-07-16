@@ -40,12 +40,6 @@ pub extern "C" fn ocall_read_db(
 
     let implementation = unsafe { get_implementations_from_context(&context).read_db };
 
-    // Returning `EnclaveBuffer { ptr: std::ptr::null_mut() }` is basically returning a null pointer,
-    // which in the enclave is interpreted as signaling that the key does not exist.
-    // We also interpret this potential panic here as a missing key because we have no way of handling
-    // it at the moment.
-    // In the future, if we see that panics do occur here, we should add a way to report this to the enclave.
-    // TODO add logging if we fail to write
     std::panic::catch_unwind(|| implementation(context, key))
         // Get either an error(`OcallReturn`), or a response(`EnclaveBuffer`)
         // which will be converted to a success status.
@@ -91,11 +85,6 @@ pub extern "C" fn ocall_query_chain(
 
     let implementation = unsafe { get_implementations_from_context(&context).query_chain };
 
-    // Returning `EnclaveBuffer { ptr: std::ptr::null_mut() }` is basically returning a null pointer,
-    // which in the enclave is interpreted as signaling that the answer does not exist.
-    // We also interpret this potential panic here as a missing key because we have no way of handling
-    // it at the moment.
-    // In the future, if we see that panics do occur here, we should add a way to report this to the enclave.
     std::panic::catch_unwind(|| implementation(context, query))
         // Get either an error(`OcallReturn`), or a response(`EnclaveBuffer`)
         // which will be converted to a success status.
