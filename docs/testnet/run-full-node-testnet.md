@@ -56,13 +56,13 @@ secretd init <MONIKER> --chain-id secret-1
 ### 4. Download a copy of the Genesis Block file: `genesis.json`
 
 ```bash
-wget -O ~/.secretd/config/genesis.json "https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/secret-1-genesis.json"
+wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v0.5.0-rc1/genesis.json"
 ```
 
 ### 5. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
 
 ```
-echo "86cd9864f5b8e7f540c5edd3954372df94bd23de62e06d5c33a84bd5f3d29114 $HOME/.secretd/config/genesis.json" | sha256sum --check
+echo "d12a38c37d7096b0c0d59a56af12de2e4e5eca598d53699119344b26a6794026 $HOME/.secretd/config/genesis.json" | sha256sum --check
 ```
 
 ### 6. Validate that the `genesis.json` is a valid genesis file:
@@ -71,7 +71,13 @@ echo "86cd9864f5b8e7f540c5edd3954372df94bd23de62e06d5c33a84bd5f3d29114 $HOME/.se
 secretd validate-genesis
 ```
 
-### 7. Initialize secret enclave
+### 7. Create the `.sgx_secrets` folder
+
+```shell script
+mkdir .sgx_secrets
+```
+
+### 8. Initialize secret enclave
 
 Make sure SGX is enabled and running or this step might fail. 
 
@@ -83,44 +89,44 @@ export SCRT_ENCLAVE_DIR=/usr/lib
 secretd init-enclave
 ```
 
-### 8. Check that initialization was successful
+### 9. Check that initialization was successful
 
 Attestation certificate should have been created by the previous step
 ```shell script
 ls attestation_cert.der
 ```
 
-### 9. Check your certificate is valid
+### 10. Check your certificate is valid
 Should print your 64 character registration key if it was successful.
 ```shell script
 PUBLIC_KEY=$(secretd parse attestation_cert.der 2> /dev/null | cut -c 3- )`
 echo $PUBLIC_KEY
 ```
 
-### 10. Register your node on-chain
+### 11. Register your node on-chain
 This step can be run from any location (doesn't have to be from the same node)
 
 ```shell script
 secretcli tx register auth <path/to/attestation_cert.der> --node registration.enigma.co:26657 --from <your account>
 ```
 
-### 11. Pull your node's encrypted seed from the network
+### 12. Pull your node's encrypted seed from the network
 ```shell script
 secretcli query register seed "$PUBLIC_KEY" --node registration.enigma.co:26657
 ```
 
-### 12. Get additional network parameters
+### 13. Get additional network parameters
 These are necessary to configure the node before it starts
 ```shell script
 secretcli query register secret-network-params --node registration.enigma.co:26657
 ```
 
-### 13. Configure your secret node
+### 14. Configure your secret node
 ```shell script
 secretd configure-secret node-master-cert.der "$SEED"
 ```
 
-### 14. Add persistent peers to your configuration file.
+### 15. Add persistent peers to your configuration file.
 
 For an updated (partial) list of full nodes: http://bootstrap.mainnet.enigma.co/peers.txt
 (Generated every minute with [this script](https://gist.github.com/assafmo/a39fdb535f74ce2d6493a1a3f695e4ca))
@@ -133,19 +139,19 @@ perl -i -pe 's/persistent_peers = ""/persistent_peers = "201cff36d13c6352acfc4a3
 
 This configuration updates automatically by your node when it learns of new nodes in the network.
 
-### 15. Listen for incoming RPC requests so that light nodes can connect to you:
+### 16. Listen for incoming RPC requests so that light nodes can connect to you:
 
 ```bash
 perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.secretd/config/config.toml
 ```
 
-### 16. Enable `secret-node` as a system service:
+### 17. Enable `secret-node` as a system service:
 
 ```
 sudo systemctl enable secret-node
 ```
 
-### 17. Start `secret-node` as a system service:
+### 18. Start `secret-node` as a system service:
 
 ```
 sudo systemctl start secret-node
