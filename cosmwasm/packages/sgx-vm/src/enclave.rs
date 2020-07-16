@@ -59,8 +59,8 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
 
     if !enclave_file_path.exists() {
         debug!(
-            "Cannot find the enclave file. Try pointing the SCRT_ENCLAVE_DIR envirinment variable to   {:?}",
-            enclave_file_path.to_str()
+            "Cannot find the enclave file. Try pointing the SCRT_ENCLAVE_DIR envirinment variable to the directory that has {:?}",
+            ENCLAVE_FILE
         );
         return Err(sgx_status_t::SGX_ERROR_INVALID_ENCLAVE);
     }
