@@ -141,6 +141,7 @@ secretcli query register secret-network-params
 ### 15. Configure your secret node
 
 ```bash
+mkdir -p ~/.secretd/.node
 secretd configure-secret node-master-cert.der "$SEED"
 ```
 
