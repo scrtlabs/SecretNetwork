@@ -151,6 +151,8 @@ deb: build-linux
 	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/postinst
 	cp ./packaging_ubuntu/postrm /tmp/SecretNetwork/deb/DEBIAN/postrm
 	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/postrm
+	cp ./packaging_ubuntu/triggers /tmp/SecretNetwork/deb/DEBIAN/triggers
+	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/triggers
 	dpkg-deb --build /tmp/SecretNetwork/deb/ .
 	-rm -rf /tmp/SecretNetwork
 
