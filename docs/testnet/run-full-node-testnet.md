@@ -35,7 +35,7 @@ See instructions [here](/docs/validators-and-full-nodes/setup-sgx.md)
 ### 1. Download the Secret Network package installer for Debian/Ubuntu:
 
 ```bash
-wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.1.0/secretnetwork_0.1.0_amd64.deb
+wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.5.0-rc1/secretnetwork_0.5.0-rc1_amd64.deb
 ```
 
 ([How to verify releases](/testnet/verify-sgx.md))
@@ -43,7 +43,7 @@ wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.1.0/secretn
 ### 2. Install the package:
 
 ```bash
-sudo dpkg -i secretnetwork_0.1.0_amd64.deb
+sudo dpkg -i secretnetwork_0.5.0-rc1_amd64.deb
 ```
 
 ### 3. Initialize your installation of the Secret Network. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
