@@ -93,7 +93,7 @@ secretd init-enclave
 Attestation certificate should have been created by the previous step
 
 ```bash
-ls attestation_cert.der
+ls -lh ./attestation_cert.der
 ```
 
 ### 10. Check your certificate is valid
@@ -136,6 +136,7 @@ These are necessary to configure the node before it starts
 
 ```bash
 secretcli query register secret-network-params
+ls -lh ./io-master-cert.der ./node-master-cert.der
 ```
 
 ### 15. Configure your secret node
