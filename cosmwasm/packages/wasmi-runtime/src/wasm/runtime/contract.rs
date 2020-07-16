@@ -482,14 +482,13 @@ impl WasmiApi for ContractInstance {
 
         self.use_gas_externally(gas_used)?;
 
-        let ptr_to_region_in_wasm_vm =   self.write_to_memory(&answer)
-            .map_err(|err| {
-                error!(
-                    "query_chain() error while trying to allocate and write the answer {:?} to the WASM VM",
-                    answer,
-                );
-                err
-            })?;
+        let ptr_to_region_in_wasm_vm = self.write_to_memory(&answer).map_err(|err| {
+            error!(
+                "query_chain() error while trying to allocate and write the answer {:?} to the WASM VM",
+                answer,
+            );
+            err
+        })?;
 
         // Return pointer to the allocated buffer with the value written to it
         Ok(Some(RuntimeValue::I32(ptr_to_region_in_wasm_vm as i32)))
