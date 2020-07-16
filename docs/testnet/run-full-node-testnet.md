@@ -70,10 +70,10 @@ echo "d12a38c37d7096b0c0d59a56af12de2e4e5eca598d53699119344b26a6794026 $HOME/.se
 secretd validate-genesis
 ```
 
-### 7. Create the `.sgx_secrets` folder
+### 7. The rest of the commands should be ran from the `~/` folder (`/home/<your_username>`)
 
 ```bash
-mkdir -p ~/.sgx_secrets
+cd ~/
 ```
 
 ### 8. Initialize secret enclave
