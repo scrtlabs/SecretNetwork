@@ -106,18 +106,18 @@ echo $PUBLIC_KEY
 This step can be run from any location (doesn't have to be from the same node)
 
 ```shell script
-secretcli tx register auth <path/to/attestation_cert.der> --node bootstrap.pub.testnet.enigma.co:26657 --from <your account>
+secretcli tx register auth <path/to/attestation_cert.der> --node tcp://bootstrap.pub.testnet.enigma.co:26657 --from <your account>
 ```
 
 ### 12. Pull your node's encrypted seed from the network
 ```shell script
-secretcli query register seed "$PUBLIC_KEY" --node bootstrap.pub.testnet.enigma.co:26657
+secretcli query register seed "$PUBLIC_KEY" --node tcp://bootstrap.pub.testnet.enigma.co:26657
 ```
 
 ### 13. Get additional network parameters
 These are necessary to configure the node before it starts
 ```shell script
-secretcli query register secret-network-params --node bootstrap.pub.testnet.enigma.co:26657
+secretcli query register secret-network-params --node tcp://bootstrap.pub.testnet.enigma.co:26657
 ```
 
 ### 14. Configure your secret node
