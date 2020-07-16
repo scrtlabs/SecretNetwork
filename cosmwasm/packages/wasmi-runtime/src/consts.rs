@@ -1,6 +1,9 @@
 #![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
 
+use std::env;
+
 pub use enclave_ffi_types::ENCRYPTED_SEED_SIZE;
+use lazy_static::lazy_static;
 
 #[cfg(all(feature = "production", feature = "SGX_MODE_HW"))]
 pub static SPID_FILE: &[u8] = include_bytes!("../spid_production.txt");
@@ -48,7 +51,11 @@ pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
 #[cfg(not(feature = "production"))]
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
 
-pub const CONSENSUS_SEED_SEALING_PATH: &str = "./.sgx_secrets/consensus_seed.sealed";
+lazy_static! {
+    pub static ref CONSENSUS_SEED_SEALING_PATH: &'static String = env::var("SCRT_SGX_STORAGE")
+        .unwrap_or("./.sgx_secrets/".to_string())
+        + "consensus_seed.sealed";
+}
 pub const REGISTRATION_KEY_SEALING_PATH: &str =
     "./.sgx_secrets/new_node_seed_exchange_keypair.sealed";
 
