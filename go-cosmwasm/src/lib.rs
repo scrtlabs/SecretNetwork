@@ -29,12 +29,11 @@ use cosmwasm_sgx_vm::{
 };
 
 use ctor::ctor;
-use log;
 use log::*;
 
 #[ctor]
 fn init_logger() {
-    simple_logger::init().unwrap();
+    simple_logger::init_with_level(log::Level::Info).unwrap();
 }
 
 #[repr(C)]
@@ -51,27 +50,31 @@ fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache<DB, GoApi, GoQue
 
 #[no_mangle]
 pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> Buffer {
-    info!("Hello from get_encrypted_seed");
+    debug!("Called get_encrypted_seed");
     let cert_slice = match unsafe { cert.read() } {
         None => {
-            set_error(Error::vm_err("Attestation Certificate is empty"), err);
+            set_error(Error::empty_arg("attestation_cert"), err);
             return Buffer::default();
         }
         Some(r) => r,
     };
     info!("Hello from right before untrusted_get_encrypted_seed");
-    let result = match untrusted_get_encrypted_seed(cert_slice) {
+    match untrusted_get_encrypted_seed(cert_slice) {
         Err(e) => {
-            error!("Error :(");
-            set_error(Error::vm_err(e.to_string()), err);
-            return Buffer::default();
+            // An error happened in the SGX sdk.
+            set_error(Error::enclave_err(e.to_string()), err);
+            Buffer::default()
         }
-        Ok(r) => {
+        Ok(Err(e)) => {
+            // An error was returned from the enclave.
+            set_error(Error::enclave_err(e.to_string()), err);
+            Buffer::default()
+        }
+        Ok(Ok(seed)) => {
             clear_error();
-            Buffer::from_vec(r.to_vec())
+            Buffer::from_vec(seed.to_vec())
         }
-    };
-    return result;
+    }
 }
 
 #[no_mangle]
@@ -79,8 +82,7 @@ pub extern "C" fn init_bootstrap(err: Option<&mut Buffer>) -> Buffer {
     info!("Hello from right before init_bootstrap");
     match untrusted_init_bootstrap() {
         Err(e) => {
-            error!("Error :(");
-            set_error(Error::vm_err(e.to_string()), err);
+            set_error(Error::enclave_err(e.to_string()), err);
             Buffer::default()
         }
         Ok(r) => {
@@ -98,37 +100,35 @@ pub extern "C" fn init_node(
 ) -> bool {
     let pk_slice = match unsafe { master_cert.read() } {
         None => {
-            set_error(Error::vm_err("Public key is empty"), err);
+            set_error(Error::empty_arg("master_cert"), err);
             return false;
         }
         Some(r) => r,
     };
     let encrypted_seed_slice = match unsafe { encrypted_seed.read() } {
         None => {
-            set_error(Error::vm_err("Encrypted seed is empty"), err);
+            set_error(Error::empty_arg("encrypted_seed"), err);
             return false;
         }
         Some(r) => r,
     };
 
-    let result = match untrusted_init_node(pk_slice, encrypted_seed_slice) {
+    match untrusted_init_node(pk_slice, encrypted_seed_slice) {
         Ok(_) => {
             clear_error();
             true
         }
         Err(e) => {
-            set_error(Error::vm_err(e.to_string()), err);
+            set_error(Error::enclave_err(e.to_string()), err);
             false
         }
-    };
-
-    result
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn create_attestation_report(err: Option<&mut Buffer>) -> bool {
     if let Err(status) = create_attestation_report_u() {
-        set_error(Error::vm_err(status.to_string()), err);
+        set_error(Error::enclave_err(status.to_string()), err);
         return false;
     }
     clear_error();
@@ -466,11 +466,9 @@ fn do_query(
 
 #[no_mangle]
 pub extern "C" fn key_gen(err: Option<&mut Buffer>) -> Buffer {
-    info!("Hello from right before key_gen");
     match untrusted_key_gen() {
         Err(e) => {
-            error!("Error :(");
-            set_error(Error::vm_err(e.to_string()), err);
+            set_error(Error::enclave_err(e.to_string()), err);
             Buffer::default()
         }
         Ok(r) => {

@@ -29,7 +29,7 @@ enclave {
 
         public sgx_status_t ecall_get_attestation_report();
 
-        public sgx_status_t ecall_authenticate_new_node(
+        public NodeAuthResult ecall_authenticate_new_node(
             [in, count=cert_len] const uint8_t* cert,
             uintptr_t cert_len,
             [out, count=48] uint8_t* seed

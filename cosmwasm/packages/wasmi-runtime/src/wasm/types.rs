@@ -83,7 +83,7 @@ impl SecretMessage {
         let mut user_pubkey = [0u8; 32];
         user_pubkey.copy_from_slice(&msg[32..64]);
 
-        info!(
+        debug!(
             "SecretMessage::from_slice nonce = {:?} pubkey = {:?}",
             nonce, user_pubkey
         );
