@@ -52,12 +52,16 @@ pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
 
 lazy_static! {
-    pub static ref CONSENSUS_SEED_SEALING_PATH: &'static String = env::var("SCRT_SGX_STORAGE")
+    pub static ref CONSENSUS_SEED_SEALING_PATH: String = env::var("SCRT_SGX_STORAGE")
         .unwrap_or("./.sgx_secrets/".to_string())
         + "consensus_seed.sealed";
+    pub static ref REGISTRATION_KEY_SEALING_PATH: String = env::var("SCRT_SGX_STORAGE")
+        .unwrap_or("./.sgx_secrets/".to_string())
+        + "new_node_seed_exchange_keypair.sealed";
 }
-pub const REGISTRATION_KEY_SEALING_PATH: &str =
-    "./.sgx_secrets/new_node_seed_exchange_keypair.sealed";
+
+// pub const REGISTRATION_KEY_SEALING_PATH: &str =
+//     "./.sgx_secrets/new_node_seed_exchange_keypair.sealed";
 
 pub const CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 1;
 pub const CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 2;
