@@ -1076,3 +1076,17 @@ func TestExternalQueryPanic(t *testing.T) {
 	require.Error(t, err.GenericErr)
 	require.Equal(t, "query contract failed: Execution error: Enclave failed function call", err.GenericErr.Msg)
 }
+
+func TestExternalQueryCalleeStdError(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	require.Empty(t, err)
+
+	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_error":{"to":"%s"}}`, addr.String()), true, defaultGas)
+
+	require.Error(t, err)
+	require.Error(t, err.GenericErr)
+	require.Equal(t, "query contract failed: Execution error: Enclave failed function call", err.GenericErr.Msg)
+}
