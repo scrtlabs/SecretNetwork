@@ -60,72 +60,90 @@ wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwo
 
 ### 5. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
 
-```
+```bash
 echo "d12a38c37d7096b0c0d59a56af12de2e4e5eca598d53699119344b26a6794026 $HOME/.secretd/config/genesis.json" | sha256sum --check
 ```
 
 ### 6. Validate that the `genesis.json` is a valid genesis file:
 
-```
+```bash
 secretd validate-genesis
 ```
 
 ### 7. Create the `.sgx_secrets` folder
 
-```shell script
+```bash
 mkdir .sgx_secrets
 ```
 
 ### 8. Initialize secret enclave
 
-Make sure SGX is enabled and running or this step might fail. 
+Make sure SGX is enabled and running or this step might fail.
 
-```shell script
+```bash
 export SCRT_ENCLAVE_DIR=/usr/lib
 ```
 
-```shell script
+```bash
 secretd init-enclave
 ```
 
 ### 9. Check that initialization was successful
 
 Attestation certificate should have been created by the previous step
-```shell script
+
+```bash
 ls attestation_cert.der
 ```
 
 ### 10. Check your certificate is valid
+
 Should print your 64 character registration key if it was successful.
-```shell script
+
+```bash
 PUBLIC_KEY=$(secretd parse attestation_cert.der 2> /dev/null | cut -c 3- )
 echo $PUBLIC_KEY
 ```
 
-### 11. Register your node on-chain
+### 11. Config `secretcli`
+
+```bash
+secretcli config chain-id enigma-pub-testnet-1
+secretcli config node tcp://bootstrap.pub.testnet.enigma.co:26657
+secretcli config broadcast-mode block
+secretcli config output json
+secretcli config indent true
+```
+
+### 12. Register your node on-chain
+
 This step can be run from any location (doesn't have to be from the same node)
 
-```shell script
-secretcli tx register auth <path/to/attestation_cert.der> --node tcp://bootstrap.pub.testnet.enigma.co:26657 --from <your account>
+```bash
+secretcli tx register auth <path/to/attestation_cert.der> --from <your account>
 ```
 
-### 12. Pull your node's encrypted seed from the network
-```shell script
-secretcli query register seed "$PUBLIC_KEY" --node tcp://bootstrap.pub.testnet.enigma.co:26657
+### 13. Pull your node's encrypted seed from the network
+
+```bash
+secretcli query register seed "$PUBLIC_KEY"
 ```
 
-### 13. Get additional network parameters
+### 14. Get additional network parameters
+
 These are necessary to configure the node before it starts
-```shell script
-secretcli query register secret-network-params --node tcp://bootstrap.pub.testnet.enigma.co:26657
+
+```bash
+secretcli query register secret-network-params
 ```
 
-### 14. Configure your secret node
-```shell script
+### 15. Configure your secret node
+
+```bash
 secretd configure-secret node-master-cert.der "$SEED"
 ```
 
-### 15. Add persistent peers to your configuration file.
+### 16. Add persistent peers to your configuration file.
 
 You can also use Enigma's node:
 
@@ -133,27 +151,25 @@ You can also use Enigma's node:
 perl -i -pe 's/persistent_peers = ""/persistent_peers = "115aa0a629f5d70dd1d464bc7e42799e00f4edae\@bootstrap.pub.testnet.enigma.co:26656"/' ~/.secretd/config/config.toml
 ```
 
-This configuration updates automatically by your node when it learns of new nodes in the network.
-
-### 16. Listen for incoming RPC requests so that light nodes can connect to you:
+### 17. Listen for incoming RPC requests so that light nodes can connect to you:
 
 ```bash
 perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.secretd/config/config.toml
 ```
 
-### 17. Enable `secret-node` as a system service:
+### 18. Enable `secret-node` as a system service:
 
 ```
 sudo systemctl enable secret-node
 ```
 
-### 18. Start `secret-node` as a system service:
+### 19. Start `secret-node` as a system service:
 
 ```
 sudo systemctl start secret-node
 ```
 
-### 18. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
+### 20. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
 
 ```bash
 journalctl -f -u secret-node
@@ -167,36 +183,12 @@ Feb 10 21:18:39 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:39.382] Execut
 Feb 10 21:18:39 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:39.392] Committed state                              module=state height=2630 txs=0 appHash=17114C79DFAAB82BB2A2B67B63850864A81A048DBADC94291EB626F584A798EA
 Feb 10 21:18:44 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:44.458] Executed block                               module=state height=2631 validTxs=0 invalidTxs=0
 Feb 10 21:18:44 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:44.468] Committed state                              module=state height=2631 txs=0 appHash=D2472874A63CE166615E5E2FDFB4006ADBAD5B49C57C6B0309F7933CACC24B10
-Feb 10 21:18:49 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:49.532] Executed block                               module=state height=2632 validTxs=0 invalidTxs=0
-Feb 10 21:18:49 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:49.543] Committed state                              module=state height=2632 txs=0 appHash=A14A58E80FB24115DD41E6D787667F2FBBE003895D1B79334A240F52FCBD97F2
-Feb 10 21:18:54 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:54.613] Executed block                               module=state height=2633 validTxs=0 invalidTxs=0
-Feb 10 21:18:54 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:54.623] Committed state                              module=state height=2633 txs=0 appHash=C00112BB0D9E6812CEB4EFF07D2205D86FCF1FD68DFAB37829A64F68B5E3B192
-Feb 10 21:18:59 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:59.685] Executed block                               module=state height=2634 validTxs=0 invalidTxs=0
-Feb 10 21:18:59 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:59.695] Committed state                              module=state height=2634 txs=0 appHash=1F371F3B26B37A2173563CC928833162DDB753D00EC2BCE5EDC088F921AD0D80
 ^C
 ```
 
 You are now a full node. :tada:
 
-### 19. Add the following configuration settings (some of these avoid having to type some flags all the time):
-
-```bash
-secretcli config chain-id secret-1
-```
-
-```bash
-secretcli config output json
-```
-
-```bash
-secretcli config indent true
-```
-
-```bash
-secretcli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
-```
-
-### 20. Get your node ID with:
+### 21. Get your node ID with:
 
 ```bash
 secretd tendermint show-node-id
@@ -212,21 +204,8 @@ So if someone wants to add you as a peer, have them add the above address to the
 And if someone wants to use you from their `secretcli` then have them run:
 
 ```bash
-secretcli config chain-id secret-1
-```
-
-```bash
+secretcli config chain-id enigma-pub-testnet-1
 secretcli config output json
-```
-
-```bash
 secretcli config indent true
-```
-
-```bash
-secretcli config trust-node false
-```
-
-```bash
 secretcli config node tcp://<your-public-ip>:26657
 ```
