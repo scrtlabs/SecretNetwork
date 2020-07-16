@@ -31,7 +31,7 @@ Refer to https://ark.intel.com/content/www/us/en/ark.html#@Processors if unsure 
 
 ### 0. Step up SGX on your local machine
 
-See instructions [here](../dev/setup-sgx.md)
+See instructions [here](https://github.com/enigmampc/SecretNetwork/blob/master/docs/validators-and-full-nodes/setup-sgx.md)
 
 ### 1. Download the Secret Network package installer for Debian/Ubuntu:
 
