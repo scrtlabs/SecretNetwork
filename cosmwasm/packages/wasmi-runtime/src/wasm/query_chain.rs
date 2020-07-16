@@ -31,11 +31,7 @@ pub fn encrypt_and_query_chain(
 
     let mut is_encrypted = false;
 
-    if let QueryRequest::Wasm(WasmQuery::Smart {
-        contract_addr: _,
-        msg,
-    }) = &mut query_struct
-    {
+    if let QueryRequest::Wasm(WasmQuery::Smart { msg, .. }) = &mut query_struct {
         is_encrypted = true;
 
         let mut encrypted_msg = SecretMessage {
