@@ -74,6 +74,11 @@ secretd validate-genesis
 ### 7. Initialize secret enclave
 
 Make sure SGX is enabled and running or this step might fail. 
+
+```shell script
+export SCRT_ENCLAVE_DIR=/usr/lib
+```
+
 ```shell script
 secretd init-enclave
 ```
