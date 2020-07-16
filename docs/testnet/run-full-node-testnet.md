@@ -73,7 +73,7 @@ secretd validate-genesis
 ### 7. Create the `.sgx_secrets` folder
 
 ```bash
-mkdir -p ~/.secretd/.sgx_secrets
+mkdir -p ~/.sgx_secrets
 ```
 
 ### 8. Initialize secret enclave
