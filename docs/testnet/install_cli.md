@@ -4,17 +4,17 @@
 
 * Linux
 ```
-
+https://github.com/enigmampc/SecretNetwork/releases/download/v0.5.0-rc1/secretcli
 ```
 
 * MacOS
 ```
-
+https://github.com/enigmampc/SecretNetwork/releases/download/v0.5.0-rc1/secretcli_macos
 ```
 
 * Windows
 ```
-
+https://github.com/enigmampc/SecretNetwork/releases/download/v0.5.0-rc1/secretcli.exe
 ```
 
 ## Create a new address
