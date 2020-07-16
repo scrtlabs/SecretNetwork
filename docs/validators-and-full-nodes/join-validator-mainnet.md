@@ -4,7 +4,20 @@
 
 ### 1. [Run a new full node](/validators-and-full-nodes/run-full-node-mainnet.md) on a new machine.
 
-### 2. Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):
+### 2. Set your `minimum-gas-price` parameter
+
+We recommend starting with `0.1uscrt` per gas unit:
+
+```bash
+perl -i -pe 's/^minimum-gas-prices = .+?$/minimum-gas-prices = "0.1uscrt"/' ~/.secretd/config/app.toml
+sudo systemctl restart secret-node
+```
+
+Your validator will not propose transactions that specify `--gas-price` lower than the `minimun-gas-price` you set here.
+
+This is the main parameter the affects your ROI, so you should adjust it with time.
+
+### 3. Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):
 
 ```bash
 secretcli keys add <key-alias>
@@ -15,18 +28,24 @@ secretcli keys add <key-alias>
 
 **Note**: If you already have a key you can import it with the bip39 mnemonic with `secretcli keys add <key-alias> --recover` or with `secretcli keys export` (exports to `stderr`!!) & `secretcli keys import`.
 
-### 3. Output your node address:
+### 4. Transfer tokens to your delegator's address:
+
+This is the `secret` wallet from which you delegate your funds to you own validator. You must delegate at least 1 SCRT (1000000uscrt) from this wallet to your validator.
+
+To create a `secret` wallet, run:
 
 ```bash
-secretcli keys show <key-alias> -a
+secretcli keys add <key-alias>
 ```
 
-### 4. Transfer tokens to the address displayed above.
+Make sure to backup the mnemonic you got from the above command!
 
-### 5. Check that you have the requested tokens:
+Then transfer funds to address you just created.
+
+### 5. Check that you have the funds:
 
 ```bash
-secretcli q account $(secretcli keys show -a <key_alias>)
+secretcli q account $(secretcli keys show -a <key-alias>)
 ```
 
 If you get the following message, it means that you have no tokens yet:
@@ -41,14 +60,12 @@ ERROR: unknown address: account secret1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx do
 
 ```bash
 secretcli tx staking create-validator \
-  --amount=100000000000uscrt \
+  --amount=<amount-to-delegate-to-yourself>uscrt \
   --pubkey=$(secretd tendermint show-validator) \
   --commission-rate="0.10" \
   --commission-max-rate="0.20" \
   --commission-max-change-rate="0.01" \
   --min-self-delegation="1" \
-  --gas=200000 \
-  --gas-prices="0.025uscrt" \
   --moniker=<MONIKER> \
   --from=<key-alias>
 ```
@@ -60,7 +77,6 @@ secretcli q staking validators | jq '.[] | select(.description.moniker == "<MONI
 ```
 
 Or run: `secretcli q staking validators | grep moniker`. You should see your moniker listed.
-
 
 ## Dangers in running a validator
 
@@ -140,17 +156,18 @@ Currently deleting a validator is not possible. If you redelegate or unbond your
 
 ## Changing your validator's commission-rate
 
-You are currently unable to modify the  `--commission-max-rate` and `--commission-max-change-rate"` parameters.
+You are currently unable to modify the `--commission-max-rate` and `--commission-max-change-rate"` parameters.
 
 Modifying the commision-rate can be done using this:
+
 ```
 secretcli tx staking edit-validator --commission-rate="0.05" --from <key-alias>
 ```
 
-
 ## Unjailing your validator
 
 Using the following command you can unjail your node.:
+
 ```
 secretcli tx slashing unjail --from =<key-alias>
 ```
