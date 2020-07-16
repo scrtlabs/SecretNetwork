@@ -50,7 +50,7 @@ sudo dpkg -i secretnetwork_0.1.0_amd64.deb
 ### 3. Initialize your installation of the Secret Network. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
 
 ```bash
-secretd init <MONIKER> --chain-id secret-1
+secretd init <MONIKER> --chain-id enigma-pub-testnet-1
 ```
 
 ### 4. Download a copy of the Genesis Block file: `genesis.json`
