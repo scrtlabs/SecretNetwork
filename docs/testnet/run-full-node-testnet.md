@@ -101,7 +101,7 @@ ls attestation_cert.der
 Should print your 64 character registration key if it was successful.
 
 ```bash
-PUBLIC_KEY=$(secretd parse attestation_cert.der 2> /dev/null | cut -c 3- )
+PUBLIC_KEY=$(secretd parse attestation_cert.der 2> /dev/null | cut -c 3-)
 echo $PUBLIC_KEY
 ```
 
@@ -123,10 +123,11 @@ This step can be run from any location (doesn't have to be from the same node)
 secretcli tx register auth <path/to/attestation_cert.der> --from <your account>
 ```
 
-### 13. Pull your node's encrypted seed from the network
+### 13. Pull & check your node's encrypted seed from the network
 
 ```bash
-secretcli query register seed "$PUBLIC_KEY"
+SEED=$(secretcli query register seed "$PUBLIC_KEY" | cut -c 3-)
+echo $SEED
 ```
 
 ### 14. Get additional network parameters
