@@ -27,11 +27,11 @@ Other driver/OS combinations are not guaranteed to work with these instructions.
 
 ### 2. Unpack 
 #### This will install `secretd`
-`sudo dpkg -i secretnetwork_0.5.0-alpha2_amd64.deb`
+`sudo dpkg -i secretnetwork_0.5.0-rc1_amd64.deb`
 
 ### 3. Initialize the enclave
 
-Create the `.sgx_secrets` directory
+Create the `.sgx_secrets` directory if it doesn't already exist
 ```bash
 mkdir .sgx_secrets
 ``` 
