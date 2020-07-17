@@ -468,7 +468,7 @@ export class RestClient {
     const nonce = encrypted.slice(0, 32);
 
     const encoded = Encoding.toHex(Encoding.toUtf8(Encoding.toBase64(encrypted)));
-    const path = `/wasm/contract/${address}/smart/${encoded}?encoding=hex`;
+    const path = `/wasm/contract/${address}/query/${encoded}?encoding=hex`;
     let responseData;
     try {
       responseData = (await this.get(path)) as WasmResponse<SmartQueryResponse>;
