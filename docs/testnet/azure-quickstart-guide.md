@@ -21,6 +21,8 @@ Now lets go over how to do that, and how to use the image once it's deployed.
 
 ## Installation - Quickstart Template
 
+__Note: This image is preconfigured to work with the incentivized testnet__
+
 Download this directory.
 
 Using Azure CLI login to enigmampc using 
