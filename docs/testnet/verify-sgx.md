@@ -23,7 +23,7 @@ Other driver/OS combinations are not guaranteed to work with these instructions.
 
 ### 1. Download the test package
 
-`wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.5.0-alpha2/secretnetwork_0.5.0-alpha2_amd64.deb`
+`wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.5.0-rc1/secretnetwork_0.5.0-rc1_amd64.deb`
 
 ### 2. Unpack 
 #### This will install `secretd`
