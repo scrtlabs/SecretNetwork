@@ -149,7 +149,7 @@ Note: If you delete or lose either the .secretd or the .sgx_secrets folder your 
 * MONIKER - your network name
 * RPC_URL - address of a node with an open RPC service (you can use `bootstrap.pub.testnet.enigma.co:26657`)
 * CHAINID - chain-id of the network
-* PERSISTENT_PEERS - List of peers to connect to initially (`115aa0a629f5d70dd1d464bc7e42799e00f4edae@51.132.233.98:26656`)
+* PERSISTENT_PEERS - List of peers to connect to initially (for this testnet use `115aa0a629f5d70dd1d464bc7e42799e00f4edae@51.132.233.98:26656`)
 * REGISTRATION_SERVICE - Address of registration service (this will help the node start automatically without going through all the manual steps in the other guide) - `reg-pubtestnet.uksouth.azurecontainer.io:8081`
 
 You can set an environment variable using the `export` syntax
