@@ -160,6 +160,16 @@ You can set an environment variable using the `export` syntax
 
 `docker-compose up -d`
 
+After creating the machine a healthy status of the node will have 2 containers active:
+
+```docker ps```
+
+```
+CONTAINER ID        IMAGE                                      COMMAND                  CREATED             STATUS                    PORTS                                  NAMES
+bf9ba8dd0802        enigmampc/secret-network-node:pubtestnet   "/bin/bash startup.sh"   13 minutes ago      Up 13 minutes (healthy)   0.0.0.0:26656-26657->26656-26657/tcp   secret-node_node_1
+2405b23aa1bd        cashmaney/aesm                             "/bin/sh -c './aesm_…"   13 minutes ago      Up 13 minutes                                                    secret-node_aesm_1
+```
+
 ### 7. Helpful aliases
 
 We recommend setting the following aliases, which will allow you to transparently use the `secretd` and `secretcli` commands from the host (rather than having to exec into the container)
@@ -172,17 +182,6 @@ echo 'alias secretd="docker exec -it secret-node_node_1 secretd"' >> $HOME/.bash
 Where `secret-node_node_1` should be the name of the node container (but it may be different, you can check with `docker ps`)
 
 ### 8. Troubleshooting
-
-
-After creating the machine a healthy status of the node will have 2 containers active:
-
-```docker ps```
-
-```
-CONTAINER ID        IMAGE                                      COMMAND                  CREATED             STATUS                    PORTS                                  NAMES
-bf9ba8dd0802        enigmampc/secret-network-node:pubtestnet   "/bin/bash startup.sh"   13 minutes ago      Up 13 minutes (healthy)   0.0.0.0:26656-26657->26656-26657/tcp   secret-node_node_1
-2405b23aa1bd        cashmaney/aesm                             "/bin/sh -c './aesm_…"   13 minutes ago      Up 13 minutes                                                    secret-node_aesm_1
-```
 
 You can see the logs of the node by checking the docker logs of the node container:
 
