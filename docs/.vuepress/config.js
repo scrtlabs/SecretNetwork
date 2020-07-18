@@ -28,13 +28,14 @@ module.exports = {
                 ]
             },
             {
-                title: 'App Developers',   // required
+                title: 'Developers',   // required
                 path: '/dev/developers',      // optional, link of the title, which should be an absolute path and must exist
                 collapsable: true, // optional, defaults to true
                 sidebarDepth: 0,    // optional, defaults to 1
                 children: [
+                  '/secretcli',
                   '/dev/contract-dev-guide',
-                  '/secretcli'
+                  '/dev/secret-js',
                 ]
             },
             {

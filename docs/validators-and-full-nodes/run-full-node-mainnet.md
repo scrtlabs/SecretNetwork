@@ -1,6 +1,6 @@
 # Run a Full Node
 
-This document details how to join the Secret Network mainnet as a validator.
+This document details how to join the Secret Network `mainnet` as a validator.
 
 ## Requirements
 
@@ -9,25 +9,24 @@ This document details how to join the Secret Network mainnet as a validator.
 - Open ports `TCP 26656 & 26657` _Note: If you're behind a router or firewall then you'll need to port forward on the network device._
 - Reading https://docs.tendermint.com/master/tendermint-core/running-in-production.html
 
-### While actual specs vary depending on the load and validators count, minimal requirements are:
+### Minimum requirements
 
-1GB RAM
-25GB of disk space
-1.4 GHz CPU
-SSD disks are preferable for applications with high transaction throughput.
+- 1GB RAM
+- 100GB HDD
+- 1 dedicated core of any Intel Skylake processor (Intel® 6th generation) or better
 
-### Recommended:
+### Recommended requirements
 
-2GB RAM
-100GB SSD
-x64 2.0 GHz 2v CPU
+- 2GB RAM
+- 256GB SSD
+- 2 dedicated cores of any Intel Skylake processor (Intel® 6th generation) or better
 
 ## Installation
 
-### 1. Download the Secret Blockchain package installer for Debian/Ubuntu:
+### 1. Download the Secret Network package installer for Debian/Ubuntu:
 
 ```bash
-wget https://github.com/chainofsecrets/TheRomulusUpgrade/releases/download/v0.2.0/secretnetwork_0.2.0_amd64.deb
+wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.2.1/secretnetwork_0.2.1_amd64.deb
 ```
 
 ([How to verify releases](/verify-releases.md))
@@ -35,10 +34,10 @@ wget https://github.com/chainofsecrets/TheRomulusUpgrade/releases/download/v0.2.
 ### 2. Install the package:
 
 ```bash
-sudo dpkg -i secretnetwork_0.2.0_amd64.deb
+sudo dpkg -i secretnetwork_0.2.1_amd64.deb
 ```
 
-### 3. Initialize your installation of the Secret Blockchain. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
+### 3. Initialize your installation of the Secret Network. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
 
 ```bash
 secretd init <MONIKER> --chain-id secret-1
@@ -73,8 +72,6 @@ You can also use Enigma's node:
 perl -i -pe 's/persistent_peers = ""/persistent_peers = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.secretd/config/config.toml
 perl -i -pe 's/seeds = ""/seeds = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.secretd/config/config.toml
 ```
-
-This configuration updates automatically by your node when it learns of new nodes in the network.
 
 ### 8. Listen for incoming RPC requests so that light nodes can connect to you:
 

@@ -19,7 +19,7 @@ The following process describes, step by step, how a contract is submitted and a
     - Outputs are encrypted.
     - In summary, at all times, data is carefully always encrypted when outside the Trusted Compute Base (TCB) of the TEE.
 6. The Block-proposing validator proposes a block containing the encrypted outputs and updated encrypted state.
-7. At least 2/3s participating validators achieve consensus on the encrypted output and state.
+7. At least 2/3 participating validators achieve consensus on the encrypted output and state.
 8. The encrypted output and state is committed on-chain.
 
 A secret contract’s code is always deployed publicly on-chain, so that users and developers know exactly what code will be executed on data that they submit. This is important: without knowing what that code does, users cannot trust it with their encrypted data. However, the data that is submitted is encrypted, so it cannot be read by a developer, anyone observing the chain, or anyone running a node. If the behavior of the code is also trusted (which is possible to achieve because it is recorded on chain), a user of secret contracts obtains strong privacy guarantees.
