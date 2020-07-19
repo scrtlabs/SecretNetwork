@@ -139,28 +139,24 @@ pub fn encrypt_and_query_chain(
                 msg: result.0,
             };
 
-            match as_secret_msg.decrypt() {
-                Ok(b64_decrypted) => {
-                    let decrypted = base64::decode(&b64_decrypted).map_err(|err| {
-                                error!(
-                                    "encrypt_and_query_chain() got an answer, managed to decrypt it, then tried to decode the output from base64 to bytes and failed: {:?}",
-                                    err
-                                );
-                                WasmEngineError::DeserializationError
-                            })?;
+            let b64_decrypted = as_secret_msg.decrypt().map_err(|err| {
+                error!(
+                    "encrypt_and_query_chain() got an error while trying to decrypt the result for query {:?}, stopping wasm: {:?}",
+                    String::from_utf8_lossy(&query),
+                    err
+                );
+                WasmEngineError::DecryptionError
+            })?;
 
-                    Ok(Ok(Binary(decrypted)))
-                }
-                Err(err) => {
-                    error!(
-                                    "encrypt_and_query_chain() got an error while trying to decrypt the result for query {:?}, stopping wasm: {:?}",
-                                    String::from_utf8_lossy(&query),
-                                    err
-                                );
+            let decrypted = base64::decode(&b64_decrypted).map_err(|err| {
+                error!(
+                    "encrypt_and_query_chain() got an answer, managed to decrypt it, then tried to decode the output from base64 to bytes and failed: {:?}",
+                    err
+                );
+                WasmEngineError::DeserializationError
+            })?;
 
-                    return Err(WasmEngineError::DecryptionError);
-                }
-            }
+            Ok(Ok(Binary(decrypted)))
         }
         Ok(Err(StdError::GenericErr { msg })) => match base64::decode(&msg) {
             Err(err) => {
