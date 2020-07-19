@@ -7,7 +7,7 @@ use crate::cosmwasm::encoding::Binary;
 use crate::cosmwasm::query::{QueryRequest, WasmQuery};
 use crate::cosmwasm::{
     std_error::{StdError, StdResult},
-    system_error::SystemResult,
+    system_error::{SystemError, SystemResult},
 };
 
 use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError};
@@ -28,10 +28,10 @@ pub fn encrypt_and_query_chain(
                 String::from_utf8_lossy(query),
                 err
             );
-            let answer: SystemResult<StdResult<Binary>> = Ok(Err(StdError::ParseErr {
-                target: String::from(""),
-                msg: String::from(format!("Cannot parse the input as QueryRequest: {}", err)),
-            }));
+            let answer: SystemResult<StdResult<Binary>> = Err(SystemError::InvalidRequest {
+                request: Binary(query.into()),
+                error: String::from(format!("{}", err)),
+            });
 
             let answer_as_vec = serde_json::to_vec(&answer).map_err(|err| {
                 // this should never happen
@@ -92,17 +92,36 @@ pub fn encrypt_and_query_chain(
 
     let (encrypted_answer_as_vec, gas_used) = answer?;
 
-    // answer is QueryResult (Result<Result<Binary,StdError>,SystemError>) encoded by serde to bytes
+    // answer is QueryResult (Result<Result<Binary,StdError>,SystemError>) encoded by serde to bytes.
     // we need to:
     //  (1) deserialize it from bytes
-    //  (2) decrypt the result/stderror
+    //  (2) decrypt the Result/StdError
     //  (3) turn in back to QueryResult as bytes
-    let encrypted_answer: SystemResult<StdResult<Binary>> = serde_json::from_slice(
-                &encrypted_answer_as_vec,
-            ).map_err(|err|{
-                  error!("encrypt_and_query_chain() got an error while trying to deserialize the answer as StdResult<Binary>: {:?}", err);
-                       WasmEngineError::DeserializationError
+    let encrypted_answer: SystemResult<StdResult<Binary>> = match serde_json::from_slice(
+        &encrypted_answer_as_vec,
+    ) {
+        Ok(encrypted_answer) => encrypted_answer,
+        Err(err) => {
+            // error!("encrypt_and_query_chain() got an error while trying to deserialize the answer as StdResult<Binary>: {:?}", err);
+            let answer: SystemResult<StdResult<Binary>> = Err(SystemError::InvalidResponse {
+                response: Binary(encrypted_answer_as_vec),
+                error: String::from(format!("{}", err)),
+            });
+
+            let answer_as_vec = serde_json::to_vec(&answer).map_err(|err| {
+                // this should never happen
+                error!(
+                    "encrypt_and_query_chain() got an error while trying to serialize the error {:?} returned to WASM: {:?}",
+                    answer,
+                    err
+                );
+
+                WasmEngineError::SerializationError
             })?;
+
+            return Ok((answer_as_vec, gas_used));
+        }
+    };
 
     trace!(
         "encrypt_and_query_chain() go encrypted answer: {:?}",
@@ -146,9 +165,9 @@ pub fn encrypt_and_query_chain(
         Ok(Err(StdError::GenericErr { msg })) => match base64::decode(&msg) {
             Err(err) => {
                 error!(
-                            "encrypt_and_query_chain() got an StdError as an answer {:?}, tried to decode the inner msg as bytes because it's encrypted, but got an error while trying to decode from base64. This usually means that the called contract panicked and the error is plaintext: {:?}",
-                            msg, err
-                        );
+                    "encrypt_and_query_chain() got an StdError as an answer {:?}, tried to decode the inner msg as bytes because it's encrypted, but got an error while trying to decode from base64. This usually means that the called contract panicked and the error is plaintext: {:?}",
+                    msg, err
+                );
                 Ok(Err(StdError::GenericErr { msg }))
             }
             Ok(inner_error_bytes) => {
@@ -161,29 +180,48 @@ pub fn encrypt_and_query_chain(
                 };
 
                 match inner_error_as_secret_msg.decrypt() {
-                            Err(err) => {
+                    Err(err) => {
+                        error!(
+                            "encrypt_and_query_chain() got an error while trying to decrypt the inner error for query {:?}, stopping wasm: {:?}",
+                            String::from_utf8_lossy(&query),
+                            err
+                        );
+
+                        return Err(WasmEngineError::DecryptionError);
+                    }
+                    Ok(decrypted) => match serde_json::from_slice(&decrypted) {
+                        Ok(answer) => answer,
+                        Err(err) => {
+                            error!("encrypt_and_query_chain() got an error while trying to deserialize the inner error as StdError: {:?}", err);
+
+                            let answer: SystemResult<StdResult<Binary>> =
+                                Err(SystemError::InvalidResponse {
+                                    response: Binary(decrypted),
+                                    error: String::from(format!("{}", err)),
+                                });
+
+                            let answer_as_vec = serde_json::to_vec(&answer).map_err(|err| {
+                                // this should never happen
                                 error!(
-                                    "encrypt_and_query_chain() got an error while trying to decrypt the inner error for query {:?}, stopping wasm: {:?}",
-                                    String::from_utf8_lossy(&query),
+                                    "encrypt_and_query_chain() got an error while trying to serialize the error {:?} returned to WASM: {:?}",
+                                    answer,
                                     err
                                 );
 
-                                return Err(WasmEngineError::DecryptionError);
-                            }
-                            Ok(decrypted) => {
-                                serde_json::from_slice(&decrypted).map_err(|err| {
-                                    error!("encrypt_and_query_chain() got an error while trying to deserialize the inner error as StdError: {:?}", err);
-                                    WasmEngineError::DeserializationError
-                                })?
-                            }
+                                WasmEngineError::SerializationError
+                            })?;
+
+                            return Ok((answer_as_vec, gas_used));
                         }
+                    },
+                }
             }
         },
         Ok(Err(std_error)) => {
             error!(
-                        "encrypt_and_query_chain() got an StdError as an answer, but it should be of type GenericErr and encrypted inside. Got instead: {:?}",
-                        std_error
-                    );
+                "encrypt_and_query_chain() got an StdError as an answer, but it should be of type GenericErr and encrypted inside. Got instead: {:?}",
+                std_error
+            );
             Ok(Err(std_error))
         }
     };
