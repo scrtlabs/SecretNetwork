@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # This `DEBIAN/postinst` script is run post-installation
 
 set -e
@@ -21,7 +21,6 @@ LimitNOFILE=65535
 [Install]
 WantedBy=multi-user.target
 EOF
-sudo systemctl daemon-reload
 
-sudo perl -i -pe 's/#SystemMaxUse=.*/SystemMaxUse=50M/' /etc/systemd/journald.conf
-sudo systemctl restart systemd-journald
+systemctl daemon-reload
+
