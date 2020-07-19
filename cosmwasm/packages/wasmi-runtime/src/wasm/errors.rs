@@ -15,8 +15,6 @@ pub enum WasmEngineError {
     DecryptionError,
     SerializationError,
     DeserializationError,
-    BadQueryChainRequest,
-    BadQueryChainResponse,
 
     MemoryAllocationError,
     MemoryReadError,
@@ -45,8 +43,6 @@ impl WasmEngineError {
             MemoryWriteError => MemoryWriteError,
 
             NonExistentImportFunction => NonExistentImportFunction,
-            BadQueryChainRequest => BadQueryChainRequest,
-            BadQueryChainResponse => BadQueryChainResponse,
         }
     }
 }
@@ -66,8 +62,6 @@ impl From<WasmEngineError> for EnclaveError {
             MemoryAllocationError => EnclaveError::MemoryAllocationError,
             MemoryReadError => EnclaveError::MemoryReadError,
             MemoryWriteError => EnclaveError::MemoryWriteError,
-            BadQueryChainRequest => EnclaveError::BadQueryChainRequest,
-            BadQueryChainResponse => EnclaveError::BadQueryChainResponse,
             // Unexpected WasmEngineError variant
             _other => EnclaveError::Unknown,
         }

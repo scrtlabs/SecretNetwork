@@ -20,14 +20,33 @@ pub fn encrypt_and_query_chain(
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
 ) -> Result<(Vec<u8>, u64), WasmEngineError> {
-    let mut query_struct: QueryRequest = serde_json::from_slice(query).map_err(|err| {
-        error!(
-            "encrypt_and_query_chain() cannot build struct from json {:?}: {:?}",
-            String::from_utf8_lossy(query),
-            err
-        );
-        WasmEngineError::BadQueryChainRequest
-    })?;
+    let mut query_struct: QueryRequest = match serde_json::from_slice(query) {
+        Ok(query_struct) => query_struct,
+        Err(err) => {
+            error!(
+                "encrypt_and_query_chain() cannot build struct from json {:?}: {:?}",
+                String::from_utf8_lossy(query),
+                err
+            );
+            let answer: SystemResult<StdResult<Binary>> = Ok(Err(StdError::ParseErr {
+                target: String::from(""),
+                msg: String::from(format!("Cannot parse the input as QueryRequest: {}", err)),
+            }));
+
+            let answer_as_vec = serde_json::to_vec(&answer).map_err(|err| {
+                // this should never happen
+                error!(
+                    "encrypt_and_query_chain() got an error while trying to serialize the error {:?} returned to WASM: {:?}",
+                    answer,
+                    err
+                );
+
+                WasmEngineError::SerializationError
+            })?;
+
+            return Ok((answer_as_vec, 500)); // Should we charge gas for this to prevent spam?
+        }
+    };
 
     let mut is_encrypted = false;
 
@@ -55,10 +74,12 @@ pub fn encrypt_and_query_chain(
     let encrypted_query = serde_json::to_vec(&query_struct).map_err(|err| {
         // this should never happen
         error!(
-            "encrypt_and_query_chain() cannot build json from struct {:?}: {:?}",
-            query_struct, err
+            "encrypt_and_query_chain() got an error while trying to serialize the query {:?} to pass to x/compute: {:?}",
+            query_struct,
+            err
         );
-        WasmEngineError::BadQueryChainRequest
+
+        WasmEngineError::SerializationError
     })?;
 
     let answer = query_chain(context, &encrypted_query);
