@@ -82,14 +82,14 @@ pub fn encrypt_and_query_chain(
         WasmEngineError::SerializationError
     })?;
 
+    // Call query_chain (this bubbles up to x/compute via ocalls and FFI to Go code)
+    // This returns the answer from x/compute
     let answer = query_chain(context, &encrypted_query);
 
     if !is_encrypted {
         return answer;
     }
 
-    // Call query_chain (this bubbles up to x/compute via ocalls and FFI to Go code)
-    // This returns the answer from x/compute
     let (encrypted_answer_as_vec, gas_used) = answer?;
 
     // answer is QueryResult (Result<Result<Binary,StdError>,SystemError>) encoded by serde to bytes
