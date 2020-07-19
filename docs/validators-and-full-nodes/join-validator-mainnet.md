@@ -13,9 +13,9 @@ perl -i -pe 's/^minimum-gas-prices = .+?$/minimum-gas-prices = "0.1uscrt"/' ~/.s
 sudo systemctl restart secret-node
 ```
 
-Your validator will not propose transactions that specify `--gas-price` lower than the `minimun-gas-price` you set here.
+Your node will not accept transactions that specify `--gas-price` lower than the `minimun-gas-price` you set here.
 
-This is the main parameter the affects your ROI, so you should adjust it with time.
+*Note: Your validator will process transactions with any `gas-price`, given it got broadcasted by another node on the network.*
 
 ### 3. Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):
 
