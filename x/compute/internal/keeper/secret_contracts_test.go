@@ -1088,5 +1088,34 @@ func TestExternalQueryCalleeStdError(t *testing.T) {
 
 	require.Error(t, err)
 	require.Error(t, err.GenericErr)
-	require.Equal(t, "query contract failed: Execution error: Enclave failed function call", err.GenericErr.Msg)
+	require.Equal(t, "la la 🤯", err.GenericErr.Msg)
+}
+
+func TestExternalQueryCalleeDoesntExist(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	require.Empty(t, err)
+
+	_, _, err = execHelper(t, keeper, ctx, addr, walletA, `{"send_external_query_error":{"to":"secret13l72vhjngmg55ykajxdnlalktwglyqjqv9pkq4"}}`, true, defaultGas)
+
+	require.Error(t, err)
+	require.Error(t, err.GenericErr)
+	require.Equal(t, "not found: contract", err.GenericErr.Msg)
+}
+
+func TestExternalQueryBadSenderABI(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	require.Empty(t, err)
+
+	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_bad_abi":{"to":"%s"}}`, addr.String()), true, defaultGas)
+
+	require.Error(t, err)
+	require.Error(t, err.ParseErr)
+	require.Contains(t, err.ParseErr.Target, "Handle")
+	require.Contains(t, err.ParseErr.Msg, "unknown variant `send_external_query_bad_abi`, expected one of")
 }
