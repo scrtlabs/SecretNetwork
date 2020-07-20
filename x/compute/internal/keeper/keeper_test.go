@@ -246,6 +246,10 @@ func TestInstantiate(t *testing.T) {
 	require.Equal(t, info.CodeID, contractID)
 	require.Equal(t, info.InitMsg, initMsgBz)
 	require.Equal(t, info.Label, "demo contract 1")
+
+	// test that creating again with the same label will fail
+	addr, err = keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", nil)
+	require.Error(t, err)
 }
 
 func TestInstantiateWithNonExistingCodeID(t *testing.T) {
