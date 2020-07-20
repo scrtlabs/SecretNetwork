@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	cosmwasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	sdkErrors "github.com/enigmampc/cosmos-sdk/types/errors"
 	flag "github.com/spf13/pflag"
 	"github.com/tendermint/go-amino"
 	"io/ioutil"
@@ -43,6 +44,7 @@ func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 		GetCmdGetContractInfo(cdc),
 		GetCmdQuery(cdc),
 		GetQueryDecryptTxCmd(cdc),
+		GetCmdQueryLabel(cdc),
 	)...)
 	return queryCmd
 }
@@ -63,6 +65,40 @@ func GetCmdListCode(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 			fmt.Println(string(res))
+			return nil
+		},
+	}
+}
+
+// GetCmdListCode lists all wasm code uploaded
+func GetCmdQueryLabel(cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "label [label]",
+		Short: "Check if a label is in use",
+		Long:  "Check if a label is in use",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, args[0])
+			res, _, err := cliCtx.Query(route)
+			if err != nil {
+				if err == sdkErrors.ErrUnknownAddress {
+					fmt.Printf("Label is available and not in use")
+					return nil
+				}
+
+				return fmt.Errorf("error querying: %s", err)
+			}
+
+			addr := sdk.AccAddress{}
+
+			err = addr.Unmarshal(res)
+			if err != nil {
+				return fmt.Errorf("error unwrapping address: %s", err)
+			}
+
+			fmt.Printf("Label is in use by contract address: %s", addr)
 			return nil
 		},
 	}
