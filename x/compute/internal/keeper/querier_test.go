@@ -67,7 +67,7 @@ func TestQueryContractLabel(t *testing.T) {
 			expErr:  sdkErrors.ErrUnknownAddress,
 		},
 		"query label exists": {
-			srcPath:     []string{QueryGetContractState, label},
+			srcPath:     []string{QueryContractAddress, label},
 			srcReq:      abci.RequestQuery{},
 			expSmartRes: fmt.Sprintf(`Label is in use by contract address:  %s`, addr.String()),
 		},
