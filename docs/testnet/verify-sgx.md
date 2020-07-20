@@ -125,7 +125,7 @@ Make sure the `aesmd-service` is running `systemctl status aesmd.service`
 
 * I'm seeing `CONFIGURATION_AND_SW_HARDENING_NEEDED` in the `isvEnclaveQuoteStatus` field
 
-This could mean a number of different things related to the configuration of the machine, but one such example we encountered was to if hyper-threading is enabled in the BIOS. It should be disabled (see: https://software.intel.com/security-software-guidance/software-guidance/l1-terminal-fault)
+This could mean a number of different things related to the configuration of the machine, but one such example we encountered was if hyper-threading is enabled in the BIOS. It must be disabled (see: https://software.intel.com/security-software-guidance/software-guidance/l1-terminal-fault)
 
 * I'm seeing `SGX_ERROR_DEVICE_BUSY` 
 
