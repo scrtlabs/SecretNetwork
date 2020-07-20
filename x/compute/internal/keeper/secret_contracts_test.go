@@ -1063,7 +1063,7 @@ func TestExternalQueryWorks(t *testing.T) {
 	require.Equal(t, []byte{3}, data)
 }
 
-func TestExternalQueryPanic(t *testing.T) {
+func TestExternalQueryCalleePanic(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 

@@ -131,12 +131,12 @@ pub enum EnclaveError {
     MemoryReadError,
     #[display(fmt = "failed to write memory")]
     MemoryWriteError,
-    #[display(fmt = "failed to seal data")]
-    NotImplemented,
 
     // serious issues
     #[display(fmt = "panic'd due to unexpected behavior")]
     Panic,
+    #[display(fmt = "enclave ran out of heap memory")]
+    OutOfMemory,
     /// Unexpected Error happened, no more details available
     #[display(fmt = "unknown error")]
     Unknown,

@@ -19,6 +19,7 @@ mod macros;
 pub mod exports;
 pub mod imports;
 pub mod logger;
+mod oom_handler;
 pub mod registration;
 
 mod consts;
