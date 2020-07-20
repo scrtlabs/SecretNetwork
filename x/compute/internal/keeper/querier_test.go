@@ -15,7 +15,6 @@ import (
 )
 
 func TestQueryContractLabel(t *testing.T) {
-	t.SkipNow() // cannot interact directly with state
 
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)

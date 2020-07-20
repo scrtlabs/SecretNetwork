@@ -199,7 +199,8 @@ func initHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, cre
 		log.NewNopLogger(),
 	).WithGasMeter(sdk.NewGasMeter(gas))
 
-	contractAddress, err := keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	// make the label a random base64 string, because why not?
+	contractAddress, err := keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, base64.RawURLEncoding.EncodeToString(nonce), sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 	if err != nil {
 		return nil, nil, extractInnerError(t, err, nonce, isErrorEncrypted)
 	}
