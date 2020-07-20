@@ -213,7 +213,7 @@ pub fn encrypt_and_query_chain(
             }
         },
         Ok(Err(std_error)) => {
-            warning!(
+            debug!(
                 "encrypt_and_query_chain() got an StdError as an answer, but it should be of type GenericErr and encrypted inside. Got instead: {:?}",
                 std_error
             );
