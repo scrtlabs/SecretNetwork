@@ -23,7 +23,7 @@ pub fn encrypt_and_query_chain(
     let mut query_struct: QueryRequest = match serde_json::from_slice(query) {
         Ok(query_struct) => query_struct,
         Err(err) => {
-            error!(
+            debug!(
                 "encrypt_and_query_chain() cannot build struct from json {:?}: {:?}",
                 String::from_utf8_lossy(query),
                 err
@@ -213,7 +213,7 @@ pub fn encrypt_and_query_chain(
             }
         },
         Ok(Err(std_error)) => {
-            error!(
+            warning!(
                 "encrypt_and_query_chain() got an StdError as an answer, but it should be of type GenericErr and encrypted inside. Got instead: {:?}",
                 std_error
             );
@@ -227,9 +227,9 @@ pub fn encrypt_and_query_chain(
     );
 
     let answer_as_vec = serde_json::to_vec(&answer).map_err(|err| {
-                error!("encrypt_and_query_chain() got an error while trying to serialize the decrypted answer to bytes: {:?}", err);
-                WasmEngineError::SerializationError
-            })?;
+        error!("encrypt_and_query_chain() got an error while trying to serialize the decrypted answer to bytes: {:?}", err);
+        WasmEngineError::SerializationError
+    })?;
 
     Ok((answer_as_vec, gas_used))
 }

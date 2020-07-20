@@ -1074,7 +1074,7 @@ func TestExternalQueryPanic(t *testing.T) {
 
 	require.Error(t, err)
 	require.Error(t, err.GenericErr)
-	require.Equal(t, "query contract failed: Execution error: Enclave failed function call", err.GenericErr.Msg)
+	require.Equal(t, "query contract failed: Execution error: Enclave: the contract panicked", err.GenericErr.Msg)
 }
 
 func TestExternalQueryCalleeStdError(t *testing.T) {

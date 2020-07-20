@@ -140,9 +140,6 @@ pub enum EnclaveError {
     /// Unexpected Error happened, no more details available
     #[display(fmt = "unknown error")]
     Unknown,
-
-    BadQueryChainRequest,
-    BadQueryChainResponse,
 }
 
 /// This type represents the possible error conditions that can be encountered in the

@@ -93,10 +93,8 @@ pub extern "C" fn ocall_query_chain(
                 Ok((system_result, gas_cost)) => {
                     unsafe { *gas_used = gas_cost };
 
-                    /*
-                        wasm code expects to get this as Result<Result<Binary, StdError>, SystemError> which is called SystemResult
-                        see CosmWasm's implementation https://github.com/enigmampc/SecretNetwork/blob/508e99c990dd656eb61f456584dab054487ba178/cosmwasm/packages/sgx-vm/src/imports.rs#L124
-                    */
+                    // wasm code expects to get this as Result<Result<Binary, StdError>, SystemError> which is called SystemResult
+                    // see CosmWasm's implementation https://github.com/enigmampc/SecretNetwork/blob/508e99c990dd656eb61f456584dab054487ba178/cosmwasm/packages/sgx-vm/src/imports.rs#L124
 
                     crate::serde::to_vec(&system_result)
                         .map_err(|_| OcallReturn::Failure)
@@ -261,11 +259,6 @@ where
         storage.get(key).map_err(Into::into)
     })
 }
-
-// get
-// FfiResult<(Option<Vec<u8>>, u64)>
-// FfiResult<(SystemResult<StdResult<Binary>>, u64)>
-// query
 
 fn ocall_query_chain_impl<S, Q>(
     mut context: Ctx,

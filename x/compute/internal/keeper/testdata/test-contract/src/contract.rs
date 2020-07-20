@@ -85,6 +85,9 @@ pub enum HandleMsg {
     SendExternalQueryPanic {
         to: HumanAddr,
     },
+    SendExternalQueryError {
+        to: HumanAddr,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -239,6 +242,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         }
         HandleMsg::SendExternalQuery { to } => send_external_query(deps, to),
         HandleMsg::SendExternalQueryPanic { to } => send_external_query_panic(deps, to),
+        HandleMsg::SendExternalQueryError { to } => send_external_query_stderror(deps, to),
     }
 }
 
@@ -250,7 +254,7 @@ fn send_external_query<S: Storage, A: Api, Q: Querier>(
         .querier
         .query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: Binary(r#"{"receive_external_query":{"num":2}}"#.as_bytes().to_vec()),
+            msg: Binary(r#"{"receive_external_query":{"num":2}}"#.into()),
         }))
         .unwrap();
 
@@ -269,11 +273,32 @@ fn send_external_query_panic<S: Storage, A: Api, Q: Querier>(
         .querier
         .query::<u8>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: Binary(r#"{"panic":{}}"#.as_bytes().to_vec()),
+            msg: Binary(r#"{"panic":{}}"#.into()),
         }))
         .unwrap_err();
 
     Err(err)
+}
+
+fn send_external_query_stderror<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    contract_addr: HumanAddr,
+) -> HandleResult {
+    let answer = deps
+        .querier
+        .query::<Binary>(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr,
+            msg: Binary(r#"{"contract_error":{"error_type":"generic_err"}}"#.into()),
+        }));
+
+    match answer {
+        Ok(wtf) => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(wtf),
+        }),
+        Err(e) => Err(e),
+    }
 }
 
 fn exec_callback_bad_params(contract_addr: HumanAddr) -> HandleResponse {
