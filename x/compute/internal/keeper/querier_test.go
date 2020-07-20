@@ -69,7 +69,7 @@ func TestQueryContractLabel(t *testing.T) {
 		"query label exists": {
 			srcPath:     []string{QueryContractAddress, label},
 			srcReq:      abci.RequestQuery{},
-			expSmartRes: fmt.Sprintf(`Label is in use by contract address:  %s`, addr.String()),
+			expSmartRes: string(addr),
 		},
 	}
 
