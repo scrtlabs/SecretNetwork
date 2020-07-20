@@ -7,7 +7,9 @@ package api
 import "C"
 
 import (
+	"encoding/binary"
 	"fmt"
+	"github.com/enigmampc/cosmos-sdk/x/auth"
 	"syscall"
 
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
@@ -103,7 +105,11 @@ func Instantiate(
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
+	signBytes [][]byte,
+	signatures []auth.StdSignature,
 ) ([]byte, uint64, error) {
+	_ = serializeSignBytes(signBytes)
+
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	p := sendSlice(params)
@@ -249,4 +255,23 @@ func errorWithMessage(err error, b C.Buffer) error {
 		return err
 	}
 	return fmt.Errorf("%s", string(msg))
+}
+
+func serializeSignBytes(signBytes [][]byte) []byte {
+	var flat []byte
+	sizeBuf := make([]byte, 4)
+	nSigs := uint32(len(signBytes))
+
+	// Put number of sign bytes
+	binary.LittleEndian.PutUint32(sizeBuf, nSigs)
+	flat = append(flat, sizeBuf...)
+
+	for _, sb := range signBytes {
+		size := uint32(len(sb))
+		binary.LittleEndian.PutUint32(sizeBuf, size)
+		flat = append(flat, sizeBuf...)
+		flat = append(flat, sb...)
+	}
+
+	return flat
 }

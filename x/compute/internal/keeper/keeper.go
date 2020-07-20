@@ -100,7 +100,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	}
 
 	// Get sign bytes for each tx signer
-	signBytes := make([][]byte, len(tx.GetSigners()))
+	var signBytes [][]byte
 	for _, signer := range tx.GetSigners() {
 		account, err := auth.GetSignerAcc(ctx, k.accountKeeper, signer)
 		if err != nil {
@@ -155,7 +155,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
-	res, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, params, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas)
+	res, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, params, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, signBytes, tx.Signatures)
 	consumeGas(ctx, gasUsed)
 	if err != nil {
 		return contractAddress, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
