@@ -124,7 +124,8 @@ pub fn encrypt_and_query_chain(
     };
 
     trace!(
-        "encrypt_and_query_chain() got encrypted answer: {:?}",
+        "encrypt_and_query_chain() got encrypted answer with gas {}: {:?}",
+        gas_used,
         encrypted_answer
     );
 
@@ -280,6 +281,8 @@ fn query_chain(context: &Ctx, query: &[u8]) -> Result<(Vec<u8>, u64), WasmEngine
             OcallReturn::Panic => return Err(WasmEngineError::Panic),
         }
     };
+
+    trace!("ocall_query_chain returned with gas {}", gas_used);
 
     Ok((value, gas_used))
 }

@@ -199,7 +199,6 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		return sdk.Result{}, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
 
-	consumeGas(ctx, gasUsed)
 	//var result wasmTypes.CosmosResponse
 	//err = json.Unmarshal(res, &result)
 	//if err != nil {
@@ -314,6 +313,7 @@ func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []b
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddr))
 
 	queryResult, gasUsed, qErr := k.wasmer.Query(codeInfo.CodeHash, append(contractKey[:], req[:]...), prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasForContract(ctx))
+	fmt.Printf("keeper: gas %d\n", gasUsed)
 	consumeGas(ctx, gasUsed)
 	if qErr != nil {
 		return nil, sdkerrors.Wrap(types.ErrQueryFailed, qErr.Error())
