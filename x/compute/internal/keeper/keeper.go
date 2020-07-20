@@ -15,6 +15,7 @@ import (
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
 	"github.com/enigmampc/cosmos-sdk/x/auth"
+	authtypes "github.com/enigmampc/cosmos-sdk/x/auth/types"
 	"github.com/enigmampc/cosmos-sdk/x/bank"
 	"github.com/enigmampc/cosmos-sdk/x/staking"
 
@@ -91,6 +92,24 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 
 // Instantiate creates an instance of a WASM contract
 func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins) (sdk.AccAddress, error) {
+	tx := authtypes.StdTx{}
+	txBytes := ctx.TxBytes()
+	err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
+	if err != nil {
+		return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+	}
+
+	// Get sign bytes for each tx signer
+	signBytes := make([][]byte, len(tx.GetSigners()))
+	for _, signer := range tx.GetSigners() {
+		account, err := auth.GetSignerAcc(ctx, k.accountKeeper, signer)
+		if err != nil {
+			return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
+		}
+
+		signBytes = append(signBytes, tx.GetSignBytes(ctx, account))
+	}
+
 	// create contract address
 	contractAddress := k.generateContractAddress(ctx, codeID)
 	existingAcct := k.accountKeeper.GetAccount(ctx, contractAddress)
