@@ -16,7 +16,7 @@ use super::gas::{gas_rules, WasmCosts};
 use super::io::encrypt_output;
 use super::{
     memory::validate_memory,
-    runtime::{create_builder, ContractInstance, Engine, WasmiImportResolver},
+    runtime::{create_builder, ContractInstance, ContractOperation, Engine, WasmiImportResolver},
 };
 use crate::wasm::types::SecretMessage;
 
@@ -57,7 +57,13 @@ pub fn init(
 
     trace!("Init: Contract Key: {:?}", contract_key.to_vec().as_slice());
 
-    let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
+    let mut engine = start_engine(
+        context,
+        gas_limit,
+        contract,
+        &contract_key,
+        ContractOperation::Init,
+    )?;
 
     let env_ptr = engine.write_to_memory(env)?;
 
@@ -133,7 +139,13 @@ pub fn handle(
         contract_key.to_vec().as_slice()
     );
 
-    let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
+    let mut engine = start_engine(
+        context,
+        gas_limit,
+        contract,
+        &contract_key,
+        ContractOperation::Handle,
+    )?;
 
     trace!(
         "Handle input before decryption: {:?}",
@@ -198,7 +210,13 @@ pub fn query(
         contract_key.to_vec().as_slice()
     );
 
-    let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
+    let mut engine = start_engine(
+        context,
+        gas_limit,
+        contract,
+        &contract_key,
+        ContractOperation::Query,
+    )?;
 
     trace!(
         "Query input before decryption: {:?}",
@@ -240,6 +258,7 @@ fn start_engine(
     gas_limit: u64,
     contract: &[u8],
     contract_key: &ContractKey,
+    operation: ContractOperation,
 ) -> Result<Engine, EnclaveError> {
     trace!("Deserializing Wasm contract");
 
@@ -291,7 +310,7 @@ fn start_engine(
     let module = module_instance.not_started_instance().clone();
 
     let contract_instance =
-        ContractInstance::new(context, module.clone(), gas_limit, *contract_key);
+        ContractInstance::new(context, module.clone(), gas_limit, *contract_key, operation);
 
     Ok(Engine::new(contract_instance, module))
 }
