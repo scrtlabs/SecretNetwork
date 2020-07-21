@@ -1116,6 +1116,21 @@ func TestExternalQueryBadSenderABI(t *testing.T) {
 
 	require.Error(t, err)
 	require.Error(t, err.ParseErr)
-	require.Contains(t, err.ParseErr.Target, "Handle")
-	require.Contains(t, err.ParseErr.Msg, "unknown variant `send_external_query_bad_abi`, expected one of")
+	require.Equal(t, "test_contract::contract::QueryMsg", err.ParseErr.Target)
+	require.Equal(t, "Invalid type", err.ParseErr.Msg)
+}
+
+func TestExternalQueryBadReceiverABI(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	require.Empty(t, err)
+
+	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_bad_abi_receiver":{"to":"%s"}}`, addr.String()), true, defaultGas)
+
+	require.Error(t, err)
+	require.Error(t, err.ParseErr)
+	require.Equal(t, "alloc::string::String", err.ParseErr.Target)
+	require.Equal(t, "Invalid type", err.ParseErr.Msg)
 }

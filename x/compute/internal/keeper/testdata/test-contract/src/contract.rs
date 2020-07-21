@@ -88,7 +88,10 @@ pub enum HandleMsg {
     SendExternalQueryError {
         to: HumanAddr,
     },
-    SendExternalQueryBadABI {
+    SendExternalQueryBadAbi {
+        to: HumanAddr,
+    },
+    SendExternalQueryBadAbiReceiver {
         to: HumanAddr,
     },
 }
@@ -246,7 +249,10 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::SendExternalQuery { to } => send_external_query(deps, to),
         HandleMsg::SendExternalQueryPanic { to } => send_external_query_panic(deps, to),
         HandleMsg::SendExternalQueryError { to } => send_external_query_stderror(deps, to),
-        HandleMsg::SendExternalQueryBadABI { to } => send_external_query_bad_abi(deps, to),
+        HandleMsg::SendExternalQueryBadAbi { to } => send_external_query_bad_abi(deps, to),
+        HandleMsg::SendExternalQueryBadAbiReceiver { to } => {
+            send_external_query_bad_abi_receiver(deps, to)
+        }
     }
 }
 
@@ -321,6 +327,27 @@ fn send_external_query_bad_abi<S: Storage, A: Api, Q: Querier>(
             messages: vec![],
             log: vec![],
             data: Some(wtf),
+        }),
+        Err(e) => Err(e),
+    }
+}
+
+fn send_external_query_bad_abi_receiver<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    contract_addr: HumanAddr,
+) -> HandleResult {
+    let answer = deps
+        .querier
+        .query::<String>(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr,
+            msg: Binary(r#"{"receive_external_query":{"num":25}}"#.into()),
+        }));
+
+    match answer {
+        Ok(wtf) => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![log("wtf", wtf)],
+            data: None,
         }),
         Err(e) => Err(e),
     }
