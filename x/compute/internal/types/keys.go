@@ -30,6 +30,7 @@ var (
 	ContractKeyPrefix       = []byte{0x02}
 	ContractStorePrefix     = []byte{0x03}
 	ContractEnclaveIdPrefix = []byte{0x04}
+	ContractLabelPrefix     = []byte{0x05}
 )
 
 // GetCodeKey constructs the key for retreiving the ID for the WASM code
@@ -51,4 +52,9 @@ func GetContractEnclaveKey(addr sdk.AccAddress) []byte {
 // GetContractStorePrefixKey returns the store prefix for the WASM contract instance
 func GetContractStorePrefixKey(addr sdk.AccAddress) []byte {
 	return append(ContractStorePrefix, addr...)
+}
+
+// GetContractStorePrefixKey returns the store prefix for the WASM contract instance
+func GetContractLabelPrefix(addr string) []byte {
+	return append(ContractLabelPrefix, []byte(addr)...)
 }
