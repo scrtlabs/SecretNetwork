@@ -173,6 +173,8 @@ static CODE_ID_ARG: &str = "code_id";
 static MSG_ARG: &str = "msg";
 static PARAMS_ARG: &str = "params";
 static GAS_USED_ARG: &str = "gas_used";
+static SIGN_BYTES_ARG: &str = "sign_bytes";
+static SIGNATURES_ARG: &str = "signatures";
 
 fn do_init_cache(
     data_dir: Buffer,
@@ -253,6 +255,8 @@ pub extern "C" fn instantiate(
     gas_limit: u64,
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
+    sign_bytes: Buffer,
+    signatures: Buffer,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
@@ -266,6 +270,8 @@ pub extern "C" fn instantiate(
                 querier,
                 gas_limit,
                 gas_used,
+                sign_bytes,
+                signatures,
             )
         }))
         .unwrap_or_else(|_| Err(Error::panic())),
@@ -285,6 +291,8 @@ fn do_init(
     querier: GoQuerier,
     gas_limit: u64,
     gas_used: Option<&mut u64>,
+    sign_bytes: Buffer,
+    signatures: Buffer,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
     let code_id: Checksum = unsafe { code_id.read() }
@@ -292,11 +300,15 @@ fn do_init(
         .try_into()?;
     let params = unsafe { params.read() }.ok_or_else(|| Error::empty_arg(PARAMS_ARG))?;
     let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
+    let sign_bytes =
+        unsafe { sign_bytes.read() }.ok_or_else(|| Error::empty_arg(SIGN_BYTES_ARG))?;
+    let signatures =
+        unsafe { signatures.read() }.ok_or_else(|| Error::empty_arg(SIGNATURES_ARG))?;
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
-    let res = call_init_raw(&mut instance, params, msg);
+    let res = call_init_raw(&mut instance, params, msg, sign_bytes, signatures);
     *gas_used = gas_limit - instance.get_gas_left();
     instance.recycle();
     Ok(res?)

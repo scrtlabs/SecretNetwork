@@ -103,7 +103,13 @@ where
         self.gas_limit.saturating_sub(self.used_gas)
     }
 
-    pub fn init(&mut self, env: &[u8], msg: &[u8]) -> VmResult<InitSuccess> {
+    pub fn init(
+        &mut self,
+        env: &[u8],
+        msg: &[u8],
+        sign_bytes: &[u8],
+        signatures: &[u8],
+    ) -> VmResult<InitSuccess> {
         trace!(
             target: module_path!(),
             "init() called with env: {:?} msg: {:?} enclave_id: {:?} gas_left: {}",

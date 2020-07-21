@@ -23,6 +23,8 @@ pub fn call_init<S, A, Q, U>(
     instance: &mut Instance<S, A, Q>,
     env: &Env,
     msg: &[u8],
+    sign_bytes: &[u8],
+    signatures: &[u8],
 ) -> VmResult<InitResult<U>>
 where
     S: Storage + 'static,
@@ -31,7 +33,7 @@ where
     U: DeserializeOwned + Clone + fmt::Debug + JsonSchema + PartialEq,
 {
     let env = to_vec(env)?;
-    let data = call_init_raw(instance, &env, msg)?;
+    let data = call_init_raw(instance, &env, msg, sign_bytes, signatures)?;
     let result: InitResult<U> = from_slice(&data)?;
     Ok(result)
 }
@@ -93,12 +95,14 @@ pub fn call_init_raw<S: Storage + 'static, A: Api + 'static, Q: Querier + 'stati
     instance: &mut Instance<S, A, Q>,
     env: &[u8],
     msg: &[u8],
+    sign_bytes: &[u8],
+    signatures: &[u8],
 ) -> VmResult<Vec<u8>> {
     instance.set_storage_readonly(false);
     /*
     call_raw(instance, "init", &[env, msg], MAX_LENGTH_INIT)
     */
-    instance.call_init(env, msg)
+    instance.call_init(env, msg, sign_bytes, signatures)
 }
 
 /// Calls Wasm export "handle" and returns raw data from the contract.

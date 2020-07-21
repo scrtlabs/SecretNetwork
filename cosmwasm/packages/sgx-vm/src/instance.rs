@@ -284,8 +284,14 @@ where
         Ok(function)
     }
 
-    pub fn call_init(&mut self, env: &[u8], msg: &[u8]) -> VmResult<Vec<u8>> {
-        let init_result = self.inner.init(env, msg)?;
+    pub fn call_init(
+        &mut self,
+        env: &[u8],
+        msg: &[u8],
+        sign_bytes: &[u8],
+        signatures: &[u8],
+    ) -> VmResult<Vec<u8>> {
+        let init_result = self.inner.init(env, msg, sign_bytes, signatures)?;
         // TODO verify signature
         Ok(init_result.into_output())
     }
