@@ -30,7 +30,7 @@ pub fn encrypt_and_query_chain(
             );
             let answer: SystemResult<StdResult<Binary>> = Err(SystemError::InvalidRequest {
                 request: Binary(query.into()),
-                error: String::from(format!("{}", err)),
+                error: format!("{}", err),
             });
 
             let answer_as_vec = serde_json::to_vec(&answer).map_err(|err| {
@@ -105,7 +105,7 @@ pub fn encrypt_and_query_chain(
             // error!("encrypt_and_query_chain() got an error while trying to deserialize the answer as StdResult<Binary>: {:?}", err);
             let answer: SystemResult<StdResult<Binary>> = Err(SystemError::InvalidResponse {
                 response: Binary(encrypted_answer_as_vec),
-                error: String::from(format!("{}", err)),
+                error: format!("{}", err),
             });
 
             let answer_as_vec = serde_json::to_vec(&answer).map_err(|err| {
@@ -197,7 +197,7 @@ pub fn encrypt_and_query_chain(
                                 let answer: SystemResult<StdResult<Binary>> =
                                     Err(SystemError::InvalidResponse {
                                         response: Binary(decrypted),
-                                        error: String::from(format!("{}", err)),
+                                        error: format!("{}", err),
                                     });
 
                                 let answer_as_vec = serde_json::to_vec(&answer).map_err(|err| {

@@ -14,9 +14,9 @@ pub fn register_oom_handler() {
     });
 }
 
-pub fn is_oom_happened() -> bool {
-    OOM_HAPPANED.with(|oom| *oom.borrow())
-}
+// pub fn is_oom_happened() -> bool {
+//     OOM_HAPPANED.with(|oom| *oom.borrow())
+// }
 
 pub fn return_and_clear_oom_happened() -> bool {
     OOM_HAPPANED.with(|oom| oom.replace(false))
