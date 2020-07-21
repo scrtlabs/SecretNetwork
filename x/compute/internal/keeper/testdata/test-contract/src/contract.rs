@@ -94,6 +94,10 @@ pub enum HandleMsg {
     SendExternalQueryBadAbiReceiver {
         to: HumanAddr,
     },
+    LogMsgSender {},
+    CallbackToLogMsgSender {
+        to: HumanAddr,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -102,6 +106,7 @@ pub enum QueryMsg {
     ContractError { error_type: String },
     Panic {},
     ReceiveExternalQuery { num: u8 },
+    SendExternalQueryInfiniteLoop { to: HumanAddr },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -253,6 +258,26 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::SendExternalQueryBadAbiReceiver { to } => {
             send_external_query_bad_abi_receiver(deps, to)
         }
+        HandleMsg::LogMsgSender {} => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![log(
+                "msg.sender",
+                deps.api
+                    .human_address(&env.message.sender)
+                    .unwrap()
+                    .to_string(),
+            )],
+            data: None,
+        }),
+        HandleMsg::CallbackToLogMsgSender { to } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: to.clone(),
+                msg: Binary(r#"{"log_msg_sender":{}}"#.into()),
+                send: vec![],
+            })],
+            log: vec![log("hi", "hey")],
+            data: None,
+        }),
     }
 }
 
@@ -377,7 +402,7 @@ pub fn a<S: Storage, A: Api, Q: Querier>(
             contract_addr: contract_addr.clone(),
             msg: Binary(
                 format!(
-                    "{{\"b\":{{\"x\":{} ,\"y\": {},\"contract_addr\": \"{}\" }}}}",
+                    r#"{{"b":{{"x":{} ,"y": {},"contract_addr": "{}" }}}}"#,
                     x,
                     y,
                     contract_addr.as_str()
@@ -651,7 +676,7 @@ fn test_canonicalize_address_errors<S: Storage, A: Api, Q: Querier>(
 /////////////////////////////// Query ///////////////////////////////
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    _deps: &Extern<S, A, Q>,
+    deps: &Extern<S, A, Q>,
     _msg: QueryMsg,
 ) -> QueryResult {
     match _msg {
@@ -660,6 +685,32 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::ReceiveExternalQuery { num } => {
             Ok(Binary(serde_json_wasm::to_vec(&(num + 1)).unwrap()))
         }
+        QueryMsg::SendExternalQueryInfiniteLoop { to } => {
+            send_external_query_infinite_loop(deps, to)
+        }
+    }
+}
+
+fn send_external_query_infinite_loop<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    contract_addr: HumanAddr,
+) -> QueryResult {
+    let answer = deps
+        .querier
+        .query::<Binary>(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: contract_addr.clone(),
+            msg: Binary(
+                format!(
+                    r#"{{"send_external_query_infinite_loop":{{"to":"{}"}}}}"#,
+                    contract_addr.clone().to_string()
+                )
+                .into(),
+            ),
+        }));
+
+    match answer {
+        Ok(wtf) => Ok(Binary(wtf.into())),
+        Err(e) => Err(e),
     }
 }
 

@@ -1134,3 +1134,24 @@ func TestExternalQueryBadReceiverABI(t *testing.T) {
 	require.Equal(t, "alloc::string::String", err.ParseErr.Target)
 	require.Equal(t, "Invalid type", err.ParseErr.Msg)
 }
+
+func TestMsgSenderInCallback(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	require.Empty(t, err)
+
+	_, events, err := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"callback_to_log_msg_sender":{"to":"%s"}}`, addr.String()), true, defaultGas)
+
+	require.Empty(t, err)
+	require.Equal(t, []ContractEvent{
+		{
+			{Key: "contract_address", Value: addr.String()},
+			{Key: "hi", Value: "hey"}},
+		{
+			{Key: "contract_address", Value: addr.String()},
+			{Key: "msg.sender", Value: addr.String()},
+		},
+	}, events)
+}
