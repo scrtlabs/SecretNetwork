@@ -89,6 +89,8 @@ pub enum QueryMsg {
     Owner {},
     ContractError { error_type: String },
     Panic {},
+    WriteToStorage {},
+    RemoveFromStorage {},
 }
 
 // We define a custom struct for each query response
@@ -547,6 +549,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::Owner {} => query_owner(deps),
         QueryMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
         QueryMsg::Panic {} => panic!("panic in query"),
+        QueryMsg::WriteToStorage {} => write_to_storage_in_query(deps),
+        QueryMsg::RemoveFromStorage {} => remove_from_storage_in_query(deps),
     }
 }
 
@@ -557,6 +561,24 @@ fn query_owner<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdRes
         owner: deps.api.human_address(&state.owner)?,
     };
     to_binary(&resp)
+}
+
+fn write_to_storage_in_query<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+) -> StdResult<Binary> {
+    let deps = unsafe { &mut *(deps as *const _ as *mut Extern<S, A, Q>) };
+    deps.storage.set(b"abcd", b"dcba");
+
+    Ok(Binary(vec![]))
+}
+
+fn remove_from_storage_in_query<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+) -> StdResult<Binary> {
+    let deps = unsafe { &mut *(deps as *const _ as *mut Extern<S, A, Q>) };
+    deps.storage.remove(b"abcd");
+
+    Ok(Binary(vec![]))
 }
 
 /////////////////////////////// Migrate ///////////////////////////////
