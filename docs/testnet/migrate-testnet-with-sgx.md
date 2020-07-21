@@ -4,7 +4,7 @@
 
 Please make sure you [backup your validator](/validators-and-full-nodes/backup-a-validator.md) before you migrate it.
 
-### 1. [Run a new full node](/testnet/run-full-node-testnet.md ) on a new machine but use the restore option for the key used to create the validator.
+### 1. [Run a new full node](/docs/testnet/run-full-node-testnet.md ) on a new machine but use the restore option for the key used to create the validator.
 
 ### 2. Confirm you have the recovery seed phrase information for the active key running on the old machine
 
