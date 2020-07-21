@@ -65,10 +65,21 @@ pub fn init(
         "Init input before decryption: {:?}",
         String::from_utf8_lossy(&msg)
     );
+
+    // let tx = serde_json::from_slice(msg).map_err(|err| {
+    //     error!(
+    //         "got an error while trying to deserialize tx bytes into json {:?}: {}",
+    //         msg, err
+    //     );
+    //     EnclaveError::FailedToDeserialize
+    // })?;
+
+    trace!("Init message before decryption: {:?}", msg);
+
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
     trace!(
-        "Init input afer decryption: {:?}",
+        "Init input after decryption: {:?}",
         String::from_utf8_lossy(&decrypted_msg)
     );
 

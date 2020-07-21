@@ -11,6 +11,7 @@ package api
 import (
 	//"fmt"
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	"github.com/enigmampc/cosmos-sdk/x/auth"
 )
 
 // nice aliases to the rust names
@@ -108,6 +109,8 @@ func Instantiate(
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
+	signBytes [][]byte,
+	signatures []auth.StdSignature,
 ) ([]byte, uint64, error) {
 	//id := sendSlice(code_id)
 	//defer freeAfterSend(id)

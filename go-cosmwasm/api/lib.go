@@ -13,6 +13,9 @@ import (
 	"syscall"
 
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	"github.com/tendermint/tendermint/crypto/ed25519"
+	"github.com/tendermint/tendermint/crypto/secp256k1"
+	"github.com/tendermint/tendermint/crypto/sr25519"
 )
 
 // nice aliases to the rust names
@@ -108,7 +111,9 @@ func Instantiate(
 	signBytes [][]byte,
 	signatures []auth.StdSignature,
 ) ([]byte, uint64, error) {
+	// TODO: actually use these values
 	_ = serializeSignBytes(signBytes)
+	_, _ = serializeSignatures(signatures)
 
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
@@ -259,19 +264,57 @@ func errorWithMessage(err error, b C.Buffer) error {
 
 func serializeSignBytes(signBytes [][]byte) []byte {
 	var flat []byte
-	sizeBuf := make([]byte, 4)
-	nSigs := uint32(len(signBytes))
-
-	// Put number of sign bytes
-	binary.LittleEndian.PutUint32(sizeBuf, nSigs)
-	flat = append(flat, sizeBuf...)
+	appendSize(&flat, uint32(len(signBytes)))
 
 	for _, sb := range signBytes {
-		size := uint32(len(sb))
-		binary.LittleEndian.PutUint32(sizeBuf, size)
-		flat = append(flat, sizeBuf...)
-		flat = append(flat, sb...)
+		appendSizeSlice(&flat, sb)
 	}
 
 	return flat
+}
+
+func serializeSignatures(signatures []auth.StdSignature) ([]byte, error) {
+	var flat []byte
+	appendSize(&flat, uint32(len(signatures)))
+
+	for _, sig := range signatures {
+		// Write public key
+		// `switch` is mandatory due to the `crypto.PubKey` interface
+		switch pk := sig.PubKey.(type) {
+		case ed25519.PubKeyEd25519:
+			{
+				appendSizeSlice(&flat, pk[:])
+			}
+		case secp256k1.PubKeySecp256k1:
+			{
+				appendSizeSlice(&flat, pk[:])
+			}
+		case sr25519.PubKeySr25519:
+			{
+				appendSizeSlice(&flat, pk[:])
+			}
+		default:
+			return nil, fmt.Errorf("unknown signature type: %T", pk)
+		}
+
+		// Write signature
+		appendSizeSlice(&flat, sig.Signature)
+	}
+
+	return flat, nil
+}
+
+func appendSizeSlice(outSlice *[]byte, toAppend []byte) {
+	appendSize(outSlice, uint32(len(toAppend)))
+
+	// Append slice itself
+	*outSlice = append(*outSlice, toAppend[:]...)
+}
+
+func appendSize(outSlice *[]byte, size uint32) {
+	sizeBuf := make([]byte, 4) // TODO: Can assume size will always be 32bit?
+
+	// Write size of the slice
+	binary.LittleEndian.PutUint32(sizeBuf, size)
+	*outSlice = append(*outSlice, sizeBuf...)
 }
