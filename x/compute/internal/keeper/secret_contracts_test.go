@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/enigmampc/SecretNetwork/x/compute/client/utils"
 	"io/ioutil"
 	"os"
 	"regexp"
@@ -154,7 +155,15 @@ func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.
 }
 
 func execHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string, isErrorEncrypted bool, gas uint64) ([]byte, []ContractEvent, cosmwasm.StdError) {
-	execMsgBz, err := wasmCtx.Encrypt([]byte(execMsg))
+
+	key := keeper.GetContractKey(ctx, contractAddress)
+
+	msg := utils.ExecuteMsg{
+		ContractKey: key,
+		Msg:         []byte(execMsg),
+	}
+
+	execMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 	nonce := execMsgBz[0:32]
 
@@ -185,7 +194,15 @@ func execHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sd
 }
 
 func initHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, creator sdk.AccAddress, initMsg string, isErrorEncrypted bool, gas uint64) (sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
-	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
+
+	hash := keeper.GetCodeInfo(ctx, codeID).CodeHash
+
+	msg := utils.InitMsg{
+		CodeHash: hash,
+		Msg:      []byte(initMsg),
+	}
+
+	initMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 	nonce := initMsgBz[0:32]
 

@@ -13,6 +13,7 @@ pub const CONTRACT_KEY_LENGTH: usize = HASH_SIZE + HASH_SIZE;
 pub fn generate_encryption_key(
     env: &Env,
     contract: &[u8],
+    contract_address: &[u8],
 ) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
     let consensus_state_ikm = KEY_MANAGER.get_consensus_state_ikm().unwrap();
 
@@ -22,8 +23,12 @@ pub fn generate_encryption_key(
 
     let mut encryption_key = [0u8; 64];
 
-    let authenticated_contract_id =
-        generate_contract_id(&consensus_state_ikm, &sender_id, &contract_hash);
+    let authenticated_contract_id = generate_contract_id(
+        &consensus_state_ikm,
+        &sender_id,
+        &contract_hash,
+        contract_address,
+    );
 
     encryption_key[0..32].copy_from_slice(&sender_id);
     encryption_key[32..].copy_from_slice(&authenticated_contract_id);
@@ -68,12 +73,13 @@ pub fn generate_contract_id(
     consensus_state_ikm: &AESKey,
     sender_id: &[u8; HASH_SIZE],
     code_hash: &[u8; HASH_SIZE],
+    contract_address: &[u8],
 ) -> [u8; HASH_SIZE] {
     let authentication_key = consensus_state_ikm.derive_key_from_this(sender_id.as_ref());
 
     let mut input_data = sender_id.to_vec();
     input_data.extend_from_slice(code_hash);
-
+    input_data.extend_from_slice(contract_address);
     authentication_key.sign_sha_256(&input_data)
 }
 
@@ -83,6 +89,7 @@ pub fn calc_contract_hash(contract_bytes: &[u8]) -> [u8; HASH_SIZE] {
 
 pub fn validate_contract_key(
     contract_key: &[u8; CONTRACT_KEY_LENGTH],
+    contract_address: &[u8],
     contract_code: &[u8],
 ) -> bool {
     // parse contract key -> < signer_id || authentication_code >
@@ -99,14 +106,40 @@ pub fn validate_contract_key(
     let enclave_key = KEY_MANAGER
         .get_consensus_state_ikm()
         .map_err(|_err| {
-            error!("Error extractling consensus_state_key");
+            error!("Error extracting consensus_state_key");
             false
         })
         .unwrap();
 
     // calculate the authentication_id
     let calculated_authentication_id =
-        generate_contract_id(&enclave_key, &signer_id, &contract_hash);
+        generate_contract_id(&enclave_key, &signer_id, &contract_hash, contract_address);
 
     calculated_authentication_id == expected_authentication_id
+}
+
+pub fn validate_init_msg(msg: &[u8], contract_code: &[u8]) -> Result<Vec<u8>, EnclaveError> {
+    let contract_hash = calc_contract_hash(contract_code);
+
+    let mut encrypted_contract_hash: [u8; HASH_SIZE] = [0u8; HASH_SIZE];
+    encrypted_contract_hash.copy_from_slice(&msg[0..HASH_SIZE]);
+
+    if encrypted_contract_hash != contract_hash {
+        error!("Got init message with mismatched contract hash");
+        return Err(EnclaveError::ValidationFailure);
+    }
+
+    Ok(msg[HASH_SIZE..].to_vec())
+}
+
+pub fn validate_exec_msg(msg: &[u8], contract_key: &[u8]) -> Result<Vec<u8>, EnclaveError> {
+    let mut encrypted_contract_hash: [u8; CONTRACT_KEY_LENGTH] = [0u8; CONTRACT_KEY_LENGTH];
+    encrypted_contract_hash.copy_from_slice(&msg[0..CONTRACT_KEY_LENGTH]);
+
+    if encrypted_contract_hash.to_vec() != contract_key.to_vec() {
+        error!("Got exec message with mismatched contract key");
+        return Err(EnclaveError::ValidationFailure);
+    }
+
+    Ok(msg[CONTRACT_KEY_LENGTH..].to_vec())
 }

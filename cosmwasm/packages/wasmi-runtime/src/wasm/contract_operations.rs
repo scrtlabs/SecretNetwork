@@ -10,7 +10,8 @@ use crate::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::wasm::contract_validation::ContractKey;
 
 use super::contract_validation::{
-    extract_contract_key, generate_encryption_key, validate_contract_key, CONTRACT_KEY_LENGTH,
+    extract_contract_key, generate_encryption_key, validate_contract_key, validate_exec_msg,
+    validate_init_msg, CONTRACT_KEY_LENGTH,
 };
 use super::gas::{gas_rules, WasmCosts};
 use super::io::encrypt_output;
@@ -53,7 +54,8 @@ pub fn init(
         EnclaveError::FailedToDeserialize
     })?;
 
-    let contract_key = generate_encryption_key(&parsed_env, contract)?;
+    let contract_address = &parsed_env.contract.address;
+    let contract_key = generate_encryption_key(&parsed_env, contract, contract_address.as_slice())?;
 
     trace!("Init: Contract Key: {:?}", contract_key.to_vec().as_slice());
 
@@ -67,17 +69,20 @@ pub fn init(
     );
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
+
+    let validated_msg = validate_init_msg(&decrypted_msg, contract)?;
+
     trace!(
         "Init input afer decryption: {:?}",
-        String::from_utf8_lossy(&decrypted_msg)
+        String::from_utf8_lossy(&validated_msg)
     );
 
-    let msg_ptr = engine.write_to_memory(&decrypted_msg)?;
+    let msg_ptr = engine.write_to_memory(&validated_msg)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
     let output = coalesce!(EnclaveError, {
-        let vec_ptr = engine.init(env_ptr, msg_ptr)?;
+        let vec_ptr = engine.init(env_ptr, msg_ptr, contract_key.to_vec().as_slice())?;
 
         let output = engine.extract_vector(vec_ptr)?;
 
@@ -95,6 +100,7 @@ pub fn init(
 
     *used_gas = engine.gas_used();
     // todo: can move the key to somewhere in the output message if we want
+
     Ok(InitSuccess {
         output,
         signature: contract_key,
@@ -119,9 +125,25 @@ pub fn handle(
 
     trace!("handle parsed_envs: {:?}", parsed_env);
 
+    let contract_address = &parsed_env.contract.address;
     let contract_key = extract_contract_key(&parsed_env)?;
 
-    if !validate_contract_key(&contract_key, contract) {
+    trace!(
+        "Handle input before decryption: {:?}",
+        String::from_utf8_lossy(&msg)
+    );
+
+    let secret_msg = SecretMessage::from_slice(msg)?;
+    let decrypted_msg = secret_msg.decrypt()?;
+
+    trace!(
+        "Handle input afer decryption: {:?}",
+        String::from_utf8_lossy(&decrypted_msg)
+    );
+
+    let validated_msg = validate_exec_msg(&decrypted_msg, contract_key.as_ref())?;
+
+    if !validate_contract_key(&contract_key, contract_address.as_slice(), contract) {
         error!("got an error while trying to deserialize output bytes");
         return Err(EnclaveError::FailedContractAuthentication);
     }
@@ -135,25 +157,13 @@ pub fn handle(
 
     let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
 
-    trace!(
-        "Handle input before decryption: {:?}",
-        String::from_utf8_lossy(&msg)
-    );
-    let secret_msg = SecretMessage::from_slice(msg)?;
-    let decrypted_msg = secret_msg.decrypt()?;
-    trace!(
-        "Handle input afer decryption: {:?}",
-        String::from_utf8_lossy(&decrypted_msg)
-    );
-
     let env_ptr = engine.write_to_memory(env)?;
-
-    let msg_ptr = engine.write_to_memory(&decrypted_msg)?;
+    let msg_ptr = engine.write_to_memory(&validated_msg)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
     let output = coalesce!(EnclaveError, {
-        let vec_ptr = engine.handle(env_ptr, msg_ptr)?;
+        let vec_ptr = engine.handle(env_ptr, msg_ptr, contract_key.to_vec().as_slice())?;
 
         let output = engine.extract_vector(vec_ptr)?;
 

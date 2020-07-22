@@ -118,6 +118,8 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 			inBuf := bufio.NewReader(cmd.InOrStdin())
 			txBldr := auth.NewTxBuilderFromCLI(inBuf).WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
+			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
+			initMsg := wasmUtils.InitMsg{}
 
 			// get the id of the code to instantiate
 			codeID, err := strconv.ParseUint(args[0], 10, 64)
@@ -135,16 +137,22 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 			if label == "" {
 				return fmt.Errorf("label is required on all contracts")
 			}
+
 			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
 			res, _, err := cliCtx.Query(route)
 			if res != nil {
 				return fmt.Errorf("label already exists. You must choose a unique label for your contract instance")
 			}
 
-			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
+			initMsg.CodeHash, err = wasmUtils.GetCodeHash(cliCtx, args[0])
+			if err != nil {
+				return err
+			}
 
-			initMsg := []byte(args[1])
-			initMsg, err = wasmCtx.Encrypt(initMsg)
+			// todo: Add check that this is valid json and stuff
+			initMsg.Msg = []byte(args[1])
+
+			encryptedMsg, err := wasmCtx.Encrypt(initMsg.Serialize())
 			if err != nil {
 				return err
 			}
@@ -164,7 +172,7 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 				Code:      codeID,
 				Label:     label,
 				InitFunds: amount,
-				InitMsg:   initMsg,
+				InitMsg:   encryptedMsg,
 				Admin:     adminAddr,
 			}
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
@@ -187,9 +195,11 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 			inBuf := bufio.NewReader(cmd.InOrStdin())
 			txBldr := auth.NewTxBuilderFromCLI(inBuf).WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
+			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
+			execMsg := wasmUtils.ExecuteMsg{}
+			contractAddr := sdk.AccAddress{}
 
-			var contractAddr = sdk.AccAddress{}
-			var execMsg []byte
+			// var execMsg []byte
 			if len(args) == 1 {
 				label := viper.GetString(flagLabel)
 				if label == "" {
@@ -203,7 +213,7 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 				}
 
 				contractAddr = res
-				execMsg = []byte(args[0])
+				execMsg.Msg = []byte(args[0])
 			} else {
 				// get the id of the code to instantiate
 				res, err := sdk.AccAddressFromBech32(args[0])
@@ -212,7 +222,7 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 				}
 
 				contractAddr = res
-				execMsg = []byte(args[1])
+				execMsg.Msg = []byte(args[1])
 			}
 
 			amounstStr := viper.GetString(flagAmount)
@@ -221,9 +231,12 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
+			execMsg.ContractKey, err = wasmUtils.GetContractKey(cliCtx, contractAddr.String())
+			if err != nil {
+				return err
+			}
 
-			execMsg, err = wasmCtx.Encrypt(execMsg)
+			encryptedMsg, err := wasmCtx.Encrypt(execMsg.Serialize())
 			if err != nil {
 				return err
 			}
@@ -233,7 +246,7 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 				Sender:    cliCtx.GetFromAddress(),
 				Contract:  contractAddr,
 				SentFunds: amount,
-				Msg:       execMsg,
+				Msg:       encryptedMsg,
 			}
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
 		},

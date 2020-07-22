@@ -371,6 +371,14 @@ func (k Keeper) contractInstance(ctx sdk.Context, contractAddress sdk.AccAddress
 	return codeInfo, prefixStore, nil
 }
 
+func (k Keeper) GetContractKey(ctx sdk.Context, contractAddress sdk.AccAddress) []byte {
+	store := ctx.KVStore(k.storeKey)
+
+	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
+
+	return contractKey
+}
+
 func (k Keeper) GetContractAddress(ctx sdk.Context, label string) sdk.AccAddress {
 	store := ctx.KVStore(k.storeKey)
 

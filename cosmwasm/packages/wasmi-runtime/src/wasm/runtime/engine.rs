@@ -2,7 +2,9 @@ use log::*;
 use wasmi::{ModuleRef, RuntimeValue};
 
 use super::contract::ContractInstance;
+use crate::wasm::db::{read_encrypted_key, write_encrypted_key};
 use crate::wasm::errors::{wasmi_error_to_enclave_error, WasmEngineError};
+
 use enclave_ffi_types::EnclaveError;
 
 pub struct Engine {
@@ -30,10 +32,15 @@ impl Engine {
         self.contract_instance.extract_vector(vec_ptr_ptr)
     }
 
-    pub fn init(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, EnclaveError> {
+    pub fn init(
+        &mut self,
+        env_ptr: u32,
+        msg_ptr: u32,
+        contract_key: &[u8],
+    ) -> Result<u32, EnclaveError> {
         trace!("Invoking init() in wasm");
 
-        match self
+        let result = match self
             .module
             .invoke_export(
                 "init",
@@ -50,11 +57,54 @@ impl Engine {
                 error!("init method returned value which wasn't u32: {:?}", other);
                 Err(EnclaveError::FailedFunctionCall)
             }
+        };
+        if result.is_ok() {
+            write_encrypted_key(
+                b"key",
+                contract_key,
+                &self.contract_instance.context,
+                &self.contract_instance.contract_key,
+            )
+            .map_err(|_| {
+                error!("Failed to write contract key to database");
+                EnclaveError::InternalError
+            })?;
         }
+
+        result
     }
 
-    pub fn handle(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, EnclaveError> {
+    pub fn handle(
+        &mut self,
+        env_ptr: u32,
+        msg_ptr: u32,
+        contract_key: &[u8],
+    ) -> Result<u32, EnclaveError> {
         trace!("Invoking handle() in wasm");
+
+        let stored_address = read_encrypted_key(
+            b"key",
+            &self.contract_instance.context,
+            &self.contract_instance.contract_key,
+        )
+        .map_err(|_| {
+            error!("WTF wrong contract key are you crazy???");
+            EnclaveError::InternalError
+        })?;
+
+        match stored_address.0 {
+            Some(addr) => {
+                if addr != contract_key.to_vec() {
+                    error!("WTF wrong contract key are you crazy???");
+                    return Err(EnclaveError::FailedUnseal);
+                }
+                Ok(())
+            }
+            None => {
+                error!("WTF no contract address found you must be trippin' dawg");
+                Err(EnclaveError::InternalError)
+            }
+        }?;
 
         match self
             .module

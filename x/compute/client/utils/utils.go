@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
 	"io"
 	"io/ioutil"
 	"log"
@@ -19,6 +20,8 @@ import (
 	cosmwasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	regtypes "github.com/enigmampc/SecretNetwork/x/registration"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 
 	"github.com/enigmampc/cosmos-sdk/client/context"
 	"github.com/miscreant/miscreant.go"
@@ -174,6 +177,16 @@ func (ctx WASMContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) 
 	return txEncryptionKey, nil
 }
 
+//
+//type SIVNonce [32]byte
+//type StoredContractKey []byte
+//
+//type EncryptionHeader struct {
+//	Nonce    SIVNonce
+//	PubKey   []byte
+//	ContractKey StoredContractKey
+//}
+
 // Encrypt encrypts
 func (ctx WASMContext) Encrypt(plaintext []byte) ([]byte, error) {
 	txSenderPrivKey, txSenderPubKey, err := ctx.GetTxSenderKeyPair()
@@ -251,4 +264,46 @@ func (ctx WASMContext) DecryptError(errString string, msgType string, nonce []by
 	}
 
 	return stdErr, nil
+}
+
+func GetContractKey(cliCtx context.CLIContext, contractAddr string) ([]byte, error) {
+	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractKey, contractAddr)
+	res, _, err := cliCtx.Query(route)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func GetCodeHash(cliCtx context.CLIContext, codeID string) ([]byte, error) {
+	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryGetCode, codeID)
+	res, _, err := cliCtx.Query(route)
+	if err != nil {
+		return nil, err
+	}
+
+	var codeResp keeper.GetCodeResponse
+
+	err = json.Unmarshal(res, &codeResp)
+
+	return codeResp.DataHash, nil
+}
+
+type ExecuteMsg struct {
+	ContractKey []byte
+	Msg         []byte
+}
+
+func (m ExecuteMsg) Serialize() []byte {
+	return append(m.ContractKey, m.Msg...)
+}
+
+type InitMsg struct {
+	CodeHash []byte
+	Msg      []byte
+}
+
+func (m InitMsg) Serialize() []byte {
+	return append(m.CodeHash, m.Msg...)
 }
