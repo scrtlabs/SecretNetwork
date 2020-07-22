@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/enigmampc/SecretNetwork/x/compute/client/utils"
+	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
 	"io/ioutil"
 	"os"
 	"regexp"
@@ -158,7 +158,7 @@ func execHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sd
 
 	key := keeper.GetContractKey(ctx, contractAddress)
 
-	msg := utils.ExecuteMsg{
+	msg := wasmUtils.ExecuteMsg{
 		ContractKey: key,
 		Msg:         []byte(execMsg),
 	}
@@ -197,7 +197,7 @@ func initHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, cre
 
 	hash := keeper.GetCodeInfo(ctx, codeID).CodeHash
 
-	msg := utils.InitMsg{
+	msg := wasmUtils.InitMsg{
 		CodeHash: hash,
 		Msg:      []byte(initMsg),
 	}

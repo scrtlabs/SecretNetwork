@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
 	"io/ioutil"
@@ -144,7 +145,7 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 				return fmt.Errorf("label already exists. You must choose a unique label for your contract instance")
 			}
 
-			initMsg.CodeHash, err = wasmUtils.GetCodeHash(cliCtx, args[0])
+			initMsg.CodeHash, err = GetCodeHash(cliCtx, args[0])
 			if err != nil {
 				return err
 			}
@@ -231,7 +232,8 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			execMsg.ContractKey, err = wasmUtils.GetContractKey(cliCtx, contractAddr.String())
+			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractKey, contractAddr.String())
+			execMsg.ContractKey, _, err = cliCtx.Query(route)
 			if err != nil {
 				return err
 			}
@@ -255,4 +257,18 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract along with command")
 	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
 	return cmd
+}
+
+func GetCodeHash(cliCtx context.CLIContext, codeID string) ([]byte, error) {
+	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryGetCode, codeID)
+	res, _, err := cliCtx.Query(route)
+	if err != nil {
+		return nil, err
+	}
+
+	var codeResp keeper.GetCodeResponse
+
+	err = json.Unmarshal(res, &codeResp)
+
+	return codeResp.DataHash, nil
 }
