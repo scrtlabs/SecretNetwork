@@ -5,6 +5,7 @@ use crate::wasm::io::calc_encryption_key;
 use enclave_ffi_types::EnclaveError;
 use log::*;
 use serde::{Deserialize, Serialize};
+use std::convert::TryInto;
 
 pub type IoNonce = [u8; 32];
 
@@ -100,6 +101,86 @@ impl SecretMessage {
         packed_msg.extend_from_slice(&self.user_public_key);
         packed_msg.extend_from_slice(self.msg.as_slice());
         packed_msg
+    }
+}
+
+pub struct Signature {
+    pub public_key: Vec<u8>, // TODO: replace with `secp256k1`'s structs
+    pub signature: Vec<u8>,
+}
+
+const SIZE_BYTES: usize = 4; // TODO: Is it ok to assume size is 32bit?
+
+impl Signature {
+    pub fn from_raw(signatures: &[u8]) -> Result<Vec<Self>, EnclaveError> {
+        // TODO: handle safety/errors in slice indexes
+        let mut reconstructed: Vec<Self> = Vec::new();
+
+        // First 4 bytes are the number of signatures, coded in little endian
+        let sig_number = u32::from_le_bytes(signatures[..SIZE_BYTES].try_into().unwrap());
+        debug!("Signature nubmer is: {:?}", sig_number);
+        let mut cursor: usize = SIZE_BYTES;
+
+        for i in 0..sig_number {
+            // Get pubkey size
+            let pk_len =
+                u32::from_le_bytes(signatures[cursor..cursor + SIZE_BYTES].try_into().unwrap());
+            cursor = cursor + SIZE_BYTES;
+
+            // Get pubkey
+            let curr_pk = &signatures[cursor..cursor + pk_len as usize];
+            cursor = cursor + pk_len as usize;
+
+            // Get signature size
+            let sig_len =
+                u32::from_le_bytes(signatures[cursor..cursor + SIZE_BYTES].try_into().unwrap());
+            cursor = cursor + SIZE_BYTES;
+
+            // Get signature
+            let curr_signature = &signatures[cursor..cursor + sig_len as usize];
+            cursor = cursor + sig_len as usize;
+
+            debug!("Public key number {:?} is with length {:?}", i + 1, pk_len);
+            debug!("Signature number {:?} is with length {:?}", i + 1, sig_len);
+
+            reconstructed.push(Signature {
+                public_key: curr_pk.to_vec(),
+                signature: curr_signature.to_vec(),
+            })
+        }
+
+        Ok(reconstructed)
+    }
+}
+
+pub struct SignBytes(pub Vec<u8>);
+
+impl SignBytes {
+    pub fn from_raw(sign_bytes: &[u8]) -> Result<Vec<Self>, EnclaveError> {
+        // TODO: handle safety/errors in slice indexes
+        let mut reconstructed: Vec<Self> = Vec::new();
+
+        // First 4 bytes are the number of sb's, coded in little endian
+        let sb_number = u32::from_le_bytes(sign_bytes[..SIZE_BYTES].try_into().unwrap());
+        debug!("Messages nubmer is: {:?}", sb_number);
+        let mut cursor: usize = SIZE_BYTES;
+
+        for i in 0..sb_number {
+            // Get sb size
+            let sb_len =
+                u32::from_le_bytes(sign_bytes[cursor..cursor + SIZE_BYTES].try_into().unwrap());
+            cursor = cursor + SIZE_BYTES;
+
+            // Get signature
+            let curr_sb = &sign_bytes[cursor..cursor + sb_len as usize];
+            cursor = cursor + sb_len as usize;
+
+            debug!("Message number {:?} is with length {:?}", i + 1, sb_len);
+
+            reconstructed.push(SignBytes(curr_sb.to_vec()));
+        }
+
+        Ok(reconstructed)
     }
 }
 

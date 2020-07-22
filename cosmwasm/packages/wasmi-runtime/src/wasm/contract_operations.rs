@@ -7,7 +7,7 @@ use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::cosmwasm::types::Env;
 use crate::results::{HandleSuccess, InitSuccess, QuerySuccess};
-use crate::wasm::contract_validation::ContractKey;
+use crate::wasm::contract_validation::{verify_signatures, ContractKey};
 
 use super::contract_validation::{
     extract_contract_key, generate_encryption_key, validate_contract_key, CONTRACT_KEY_LENGTH,
@@ -44,10 +44,10 @@ pub fn init(
     contract: &[u8],    // contract wasm bytes
     env: &[u8],         // blockchain state
     msg: &[u8],         // probably function call and args
-    sign_bytes: &[u8],
-    signatures: &[u8],
+    sign_bytes: &[u8],  // transaction sign bytes
+    signatures: &[u8],  // signatures on tx
 ) -> Result<InitSuccess, EnclaveError> {
-    trace!("\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\nThis is from inside the enclave!\nsign bytes: {:?}\nsignatures: {:?}\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n", sign_bytes, signatures);
+    verify_signatures(sign_bytes, signatures)?;
 
     let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
         error!(

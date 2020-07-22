@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"github.com/enigmampc/cosmos-sdk/x/auth/exported"
 	"path/filepath"
 
 	"github.com/tendermint/tendermint/crypto"
@@ -90,6 +91,21 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	return codeID, nil
 }
 
+// GetSignBytes returns the signBytes of the tx for a given signer
+// This is a copy of cosmos-sdk function (cosmos-sdk/x/auth/types/StdTx.GetSignBytes(), because the original takes a wrong sequence number
+func GetSignBytes(ctx sdk.Context, acc exported.Account, tx auth.StdTx) []byte {
+	genesis := ctx.BlockHeight() == 0
+	chainID := ctx.ChainID()
+	var accNum uint64
+	if !genesis {
+		accNum = acc.GetAccountNumber()
+	}
+
+	return authtypes.StdSignBytes(
+		chainID, accNum, acc.GetSequence()-1, tx.Fee, tx.Msgs, tx.Memo,
+	)
+}
+
 // Instantiate creates an instance of a WASM contract
 func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins) (sdk.AccAddress, error) {
 	tx := authtypes.StdTx{}
@@ -107,7 +123,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 			return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
 		}
 
-		signBytes = append(signBytes, tx.GetSignBytes(ctx, account))
+		signBytes = append(signBytes, GetSignBytes(ctx, account, tx))
 	}
 
 	// create contract address

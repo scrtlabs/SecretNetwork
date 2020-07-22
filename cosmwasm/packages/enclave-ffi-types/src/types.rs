@@ -131,11 +131,13 @@ pub enum EnclaveError {
     MemoryReadError,
     #[display(fmt = "failed to write memory")]
     MemoryWriteError,
-    #[display(fmt = "failed to seal data")]
+    #[display(fmt = "not implemented function")]
     NotImplemented,
+    #[display(fmt = "failed to verify transaction signature")]
+    FailedTxVerification,
 
     // serious issues
-    #[display(fmt = "panic'd due to unexpected behavior")]
+    #[display(fmt = "panicked due to unexpected behavior")]
     Panic,
     /// Unexpected Error happened, no more details available
     #[display(fmt = "unknown error")]

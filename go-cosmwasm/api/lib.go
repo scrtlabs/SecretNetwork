@@ -112,8 +112,8 @@ func Instantiate(
 	signatures []auth.StdSignature,
 ) ([]byte, uint64, error) {
 	// Preprocess sign bytes and signatures
-	flatSignBytes := flattenSignBytes(signBytes)
-	flatSigs, err := flattenSignatures(signatures)
+	flatSignBytes := flattenSignBytes(signBytes)   // TODO: does it remain it the same order?
+	flatSigs, err := flattenSignatures(signatures) // TODO: does it remain it the same order?
 	if err != nil {
 		return nil, 0, err
 	}
