@@ -1155,3 +1155,18 @@ func TestMsgSenderInCallback(t *testing.T) {
 		},
 	}, events)
 }
+
+func TestInfiniteQueryLoopKilledGracefullyByOOM(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	require.Empty(t, err)
+
+	data, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_infinite_loop":{"to":"%s"}}`, addr.String()), true, defaultGas)
+
+	require.Empty(t, data)
+	require.Error(t, err)
+	require.Error(t, err.GenericErr)
+	require.Equal(t, err.GenericErr.Msg, "query contract failed: Execution error: Enclave: enclave ran out of heap memory")
+}
