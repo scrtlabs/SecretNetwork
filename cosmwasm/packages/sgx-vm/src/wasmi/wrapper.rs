@@ -135,6 +135,10 @@ where
                 env.len(),
                 msg.as_ptr(),
                 msg.len(),
+                sign_bytes.as_ptr(),
+                sign_bytes.len(),
+                signatures.as_ptr(),
+                signatures.len(),
             )
         } {
             sgx_status_t::SGX_SUCCESS => { /* continue */ }

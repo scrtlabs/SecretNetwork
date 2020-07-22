@@ -44,7 +44,11 @@ pub fn init(
     contract: &[u8],    // contract wasm bytes
     env: &[u8],         // blockchain state
     msg: &[u8],         // probably function call and args
+    sign_bytes: &[u8],
+    signatures: &[u8],
 ) -> Result<InitSuccess, EnclaveError> {
+    trace!("\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\nThis is from inside the enclave!\nsign bytes: {:?}\nsignatures: {:?}\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n", sign_bytes, signatures);
+
     let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
         error!(
             "got an error while trying to deserialize env input bytes into json {:?}: {}",

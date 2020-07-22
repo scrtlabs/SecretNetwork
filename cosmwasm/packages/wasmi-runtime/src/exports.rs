@@ -52,6 +52,10 @@ pub unsafe extern "C" fn ecall_init(
     env_len: usize,
     msg: *const u8,
     msg_len: usize,
+    sign_bytes: *const u8,
+    sign_bytes_len: usize,
+    signatures: *const u8,
+    signatures_len: usize,
 ) -> InitResult {
     if let Err(_e) = validate_mut_ptr(used_gas as _, std::mem::size_of::<u64>()) {
         error!("Tried to access data outside enclave memory!");
@@ -69,13 +73,32 @@ pub unsafe extern "C" fn ecall_init(
         error!("Tried to access data outside enclave memory!");
         return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
     }
+    if let Err(_e) = validate_const_ptr(sign_bytes, sign_bytes_len as usize) {
+        error!("Tried to access data outside enclave memory!");
+        return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
+    }
+    if let Err(_e) = validate_const_ptr(signatures, signatures_len as usize) {
+        error!("Tried to access data outside enclave memory!");
+        return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
+    }
 
     let contract = std::slice::from_raw_parts(contract, contract_len);
     let env = std::slice::from_raw_parts(env, env_len);
     let msg = std::slice::from_raw_parts(msg, msg_len);
+    let sign_bytes = std::slice::from_raw_parts(sign_bytes, sign_bytes_len);
+    let signatures = std::slice::from_raw_parts(signatures, signatures_len);
     let result = panic::catch_unwind(|| {
         let used_gas_ref = &mut *used_gas;
-        let result = crate::wasm::init(context, gas_limit, used_gas_ref, contract, env, msg);
+        let result = crate::wasm::init(
+            context,
+            gas_limit,
+            used_gas_ref,
+            contract,
+            env,
+            msg,
+            sign_bytes,
+            signatures,
+        );
         result_init_success_to_initresult(result)
     });
     if let Ok(res) = result {
