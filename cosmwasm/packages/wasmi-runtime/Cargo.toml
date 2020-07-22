@@ -62,6 +62,8 @@ x25519-dalek = { version = "0.6", default-features = false, features = [
     "u64_backend"
 ] }
 
+hex = "0.4.2"
+
 [patch.crates-io]
 rand_core = { git = "https://github.com/mesalock-linux/rand-sgx", default-features = false, features = [
     "mesalock_sgx"

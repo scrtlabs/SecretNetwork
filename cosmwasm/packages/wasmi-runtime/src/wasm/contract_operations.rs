@@ -1,9 +1,9 @@
+use enclave_ffi_types::{Ctx, EnclaveError};
+use hex;
 use log::*;
 use parity_wasm::elements;
 use parity_wasm::elements::Module;
 use wasmi::ModuleInstance;
-
-use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::cosmwasm::types::Env;
 use crate::results::{HandleSuccess, InitSuccess, QuerySuccess};

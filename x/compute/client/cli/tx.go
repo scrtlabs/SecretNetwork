@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bufio"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
@@ -232,8 +233,7 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractKey, contractAddr.String())
-			execMsg.ContractKey, _, err = cliCtx.Query(route)
+			execMsg.ContractKey, err = GetContractKey(cliCtx, contractAddr)
 			if err != nil {
 				return err
 			}
@@ -271,4 +271,14 @@ func GetCodeHash(cliCtx context.CLIContext, codeID string) ([]byte, error) {
 	err = json.Unmarshal(res, &codeResp)
 
 	return codeResp.DataHash, nil
+}
+
+func GetContractKey(cliCtx context.CLIContext, contractAddr sdk.AccAddress) ([]byte, error) {
+	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractKey, contractAddr.String())
+	key, _, err := cliCtx.Query(route)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(hex.EncodeToString(key)), nil
 }

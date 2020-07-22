@@ -20,12 +20,26 @@ use std::mem;
 #[serde(rename_all = "snake_case")]
 pub enum InitMsg {
     Nop {},
-    Callback { contract_addr: HumanAddr },
-    CallbackContractError { contract_addr: HumanAddr },
-    ContractError { error_type: String },
+    Callback {
+        contract_addr: HumanAddr,
+        contract_key: String,
+    },
+    CallbackContractError {
+        contract_addr: HumanAddr,
+        contract_key: String,
+    },
+    ContractError {
+        error_type: String,
+    },
     NoLogs {},
-    CallbackToInit { code_id: u64 },
-    CallbackBadParams { contract_addr: HumanAddr },
+    CallbackToInit {
+        code_id: u64,
+        code_hash: String,
+    },
+    CallbackBadParams {
+        contract_addr: HumanAddr,
+        contract_key: String,
+    },
     Panic {},
 }
 
@@ -34,11 +48,13 @@ pub enum InitMsg {
 pub enum HandleMsg {
     A {
         contract_addr: HumanAddr,
+        contract_key: String,
         x: u8,
         y: u8,
     },
     B {
         contract_addr: HumanAddr,
+        contract_key: String,
         x: u8,
         y: u8,
     },
@@ -56,12 +72,15 @@ pub enum HandleMsg {
     NoLogs {},
     CallbackToInit {
         code_id: u64,
+        code_hash: String,
     },
     CallbackContractError {
         contract_addr: HumanAddr,
+        contract_key: String,
     },
     CallbackBadParams {
         contract_addr: HumanAddr,
+        contract_key: String,
     },
     SetState {
         key: String,
@@ -113,14 +132,26 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             messages: vec![],
             log: vec![log("init", "🌈")],
         }),
-        InitMsg::Callback { contract_addr } => Ok(init_with_callback(deps, env, contract_addr)),
+        InitMsg::Callback {
+            contract_addr,
+            contract_key,
+        } => Ok(init_with_callback(deps, env, contract_addr, contract_key)),
         InitMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
         InitMsg::NoLogs {} => Ok(InitResponse::default()),
-        InitMsg::CallbackToInit { code_id } => Ok(init_callback_to_init(deps, env, code_id)),
-        InitMsg::CallbackContractError { contract_addr } => {
-            Ok(init_with_callback_contract_error(contract_addr))
+        InitMsg::CallbackToInit { code_id, code_hash } => {
+            Ok(init_callback_to_init(deps, env, code_id, code_hash))
         }
-        InitMsg::CallbackBadParams { contract_addr } => Ok(init_callback_bad_params(contract_addr)),
+        InitMsg::CallbackContractError {
+            contract_addr,
+            contract_key,
+        } => Ok(init_with_callback_contract_error(
+            contract_addr,
+            contract_key,
+        )),
+        InitMsg::CallbackBadParams {
+            contract_addr,
+            contract_key,
+        } => Ok(init_callback_bad_params(contract_addr, contract_key)),
         InitMsg::Panic {} => panic!("panic in init"),
     }
 }
@@ -141,14 +172,18 @@ fn map_string_to_error(error_type: String) -> StdError {
     }
 }
 
-fn init_with_callback_contract_error(contract_addr: HumanAddr) -> InitResponse {
+fn init_with_callback_contract_error(
+    contract_addr: HumanAddr,
+    contract_key: String,
+) -> InitResponse {
     InitResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: Binary(
+            msg: create_callback_msg(
                 r#"{"contract_error":{"error_type":"generic_err"}}"#
                     .as_bytes()
                     .to_vec(),
+                &contract_key,
             ),
             send: vec![],
         })],
@@ -156,11 +191,22 @@ fn init_with_callback_contract_error(contract_addr: HumanAddr) -> InitResponse {
     }
 }
 
-fn init_callback_bad_params(contract_addr: HumanAddr) -> InitResponse {
+fn create_callback_msg(msg: Vec<u8>, contract_key: &String) -> Binary {
+    let mut new_msg = contract_key.as_bytes().to_vec();
+
+    new_msg.extend(msg);
+
+    Binary(new_msg)
+}
+
+fn init_callback_bad_params(contract_addr: HumanAddr, contract_key: String) -> InitResponse {
     InitResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: Binary(r#"{"c":{"x":"banana","y":3}}"#.as_bytes().to_vec()),
+            msg: create_callback_msg(
+                r#"{"c":{"x":"banana","y":3}}"#.as_bytes().to_vec(),
+                &contract_key,
+            ),
             send: vec![],
         })],
         log: vec![],
@@ -171,11 +217,15 @@ fn init_with_callback<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
     contract_addr: HumanAddr,
+    contract_key: String,
 ) -> InitResponse {
     InitResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: Binary("{\"c\":{\"x\":0,\"y\":13}}".as_bytes().to_vec()),
+            msg: create_callback_msg(
+                "{\"c\":{\"x\":0,\"y\":13}}".as_bytes().to_vec(),
+                &contract_key,
+            ),
             send: vec![],
         })],
         log: vec![log("init with a callback", "🦄")],
@@ -186,11 +236,12 @@ pub fn init_callback_to_init<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
     code_id: u64,
+    code_hash: String,
 ) -> InitResponse {
     InitResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
-            code_id: code_id,
-            msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
+            code_id,
+            msg: create_callback_msg("{\"nop\":{}}".as_bytes().to_vec(), &code_hash),
             send: vec![],
             label: None,
         })],
@@ -208,14 +259,16 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     match msg {
         HandleMsg::A {
             contract_addr,
+            contract_key,
             x,
             y,
-        } => Ok(a(deps, env, contract_addr, x, y)),
+        } => Ok(a(deps, env, contract_addr, contract_key, x, y)),
         HandleMsg::B {
             contract_addr,
+            contract_key,
             x,
             y,
-        } => Ok(b(deps, env, contract_addr, x, y)),
+        } => Ok(b(deps, env, contract_addr, contract_key, x, y)),
         HandleMsg::C { x, y } => Ok(c(deps, env, x, y)),
         HandleMsg::UnicodeData {} => Ok(unicode_data(deps, env)),
         HandleMsg::EmptyLogKeyValue {} => Ok(empty_log_key_value(deps, env)),
@@ -223,13 +276,20 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::NoData {} => Ok(no_data(deps, env)),
         HandleMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
         HandleMsg::NoLogs {} => Ok(HandleResponse::default()),
-        HandleMsg::CallbackToInit { code_id } => Ok(exec_callback_to_init(deps, env, code_id)),
-        HandleMsg::CallbackBadParams { contract_addr } => {
-            Ok(exec_callback_bad_params(contract_addr))
+        HandleMsg::CallbackToInit { code_id, code_hash } => {
+            Ok(exec_callback_to_init(deps, env, code_id, code_hash))
         }
-        HandleMsg::CallbackContractError { contract_addr } => {
-            Ok(exec_with_callback_contract_error(contract_addr))
-        }
+        HandleMsg::CallbackBadParams {
+            contract_addr,
+            contract_key,
+        } => Ok(exec_callback_bad_params(contract_addr, contract_key)),
+        HandleMsg::CallbackContractError {
+            contract_addr,
+            contract_key,
+        } => Ok(exec_with_callback_contract_error(
+            contract_addr,
+            contract_key,
+        )),
         HandleMsg::SetState { key, value } => Ok(set_state(deps, key, value)),
         HandleMsg::GetState { key } => Ok(get_state(deps, key)),
         HandleMsg::RemoveState { key } => Ok(remove_state(deps, key)),
@@ -242,11 +302,14 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-fn exec_callback_bad_params(contract_addr: HumanAddr) -> HandleResponse {
+fn exec_callback_bad_params(contract_addr: HumanAddr, contract_key: String) -> HandleResponse {
     HandleResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: Binary(r#"{"c":{"x":"banana","y":3}}"#.as_bytes().to_vec()),
+            msg: create_callback_msg(
+                r#"{"c":{"x":"banana","y":3}}"#.as_bytes().to_vec(),
+                &contract_key,
+            ),
             send: vec![],
         })],
         log: vec![],
@@ -258,13 +321,14 @@ pub fn a<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
     contract_addr: HumanAddr,
+    contract_key: String,
     x: u8,
     y: u8,
 ) -> HandleResponse {
     HandleResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: Binary(
+            msg: create_callback_msg(
                 format!(
                     "{{\"b\":{{\"x\":{} ,\"y\": {},\"contract_addr\": \"{}\" }}}}",
                     x,
@@ -273,6 +337,7 @@ pub fn a<S: Storage, A: Api, Q: Querier>(
                 )
                 .as_bytes()
                 .to_vec(),
+                &contract_key,
             ),
             send: vec![],
         })],
@@ -285,16 +350,18 @@ pub fn b<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
     contract_addr: HumanAddr,
+    contract_key: String,
     x: u8,
     y: u8,
 ) -> HandleResponse {
     HandleResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: Binary(
+            msg: create_callback_msg(
                 format!("{{\"c\":{{\"x\":{} ,\"y\": {} }}}}", x + 1, y + 1)
                     .as_bytes()
                     .to_vec(),
+                &contract_key,
             ),
             send: vec![],
         })],
@@ -364,11 +431,12 @@ pub fn exec_callback_to_init<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
     code_id: u64,
+    contract_key: String,
 ) -> HandleResponse {
     HandleResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
-            code_id: code_id,
-            msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
+            code_id,
+            msg: create_callback_msg("{\"nop\":{}}".as_bytes().to_vec(), &contract_key),
             send: vec![],
             label: None,
         })],
@@ -377,14 +445,18 @@ pub fn exec_callback_to_init<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-fn exec_with_callback_contract_error(contract_addr: HumanAddr) -> HandleResponse {
+fn exec_with_callback_contract_error(
+    contract_addr: HumanAddr,
+    contract_key: String,
+) -> HandleResponse {
     HandleResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: Binary(
+            msg: create_callback_msg(
                 r#"{"contract_error":{"error_type":"generic_err"}}"#
                     .as_bytes()
                     .to_vec(),
+                &contract_key,
             ),
             send: vec![],
         })],
