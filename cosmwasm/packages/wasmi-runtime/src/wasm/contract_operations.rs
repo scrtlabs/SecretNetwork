@@ -1,5 +1,4 @@
 use enclave_ffi_types::{Ctx, EnclaveError};
-use hex;
 use log::*;
 use parity_wasm::elements;
 use parity_wasm::elements::Module;
