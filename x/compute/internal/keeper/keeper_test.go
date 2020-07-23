@@ -231,7 +231,7 @@ func TestInstantiate(t *testing.T) {
 	//keyStr := hex.EncodeToString(key)
 
 	msg := wasmUtils.InitMsg{
-		CodeHash: key,
+		CodeHash: []byte(hex.EncodeToString(key)),
 		Msg:      initMsgBz,
 	}
 
@@ -454,7 +454,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	hash := keeper.GetCodeInfo(ctx, contractID).CodeHash
 
 	msg := wasmUtils.InitMsg{
-		CodeHash: hash,
+		CodeHash: []byte(hex.EncodeToString(hash)),
 		Msg:      initMsgBz,
 	}
 
