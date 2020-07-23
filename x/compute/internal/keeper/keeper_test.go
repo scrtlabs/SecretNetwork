@@ -246,7 +246,7 @@ func TestInstantiate(t *testing.T) {
 	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", addr.String())
 
 	gasAfter := ctx.GasMeter().GasConsumed()
-	require.Equal(t, uint64(37733), gasAfter-gasBefore)
+	require.Equal(t, uint64(45053), gasAfter-gasBefore)
 
 	// ensure it is stored properly
 	info := keeper.GetContractInfo(ctx, addr)
@@ -451,8 +451,18 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	addr, _, err := initHelper(t, keeper, ctx, contractID, creator, string(initMsgBz), false, defaultGas)
-	require.Empty(t, err)
+	hash := keeper.GetCodeInfo(ctx, contractID).CodeHash
+
+	msg := wasmUtils.InitMsg{
+		CodeHash: hash,
+		Msg:      initMsgBz,
+	}
+
+	msgBz, err := wasmCtx.Encrypt(msg.Serialize())
+	require.NoError(t, err)
+
+	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, msgBz, "demo contract 5", deposit)
+	require.NoError(t, err)
 
 	// make sure we set a limit before calling
 	var gasLimit uint64 = 400_000
@@ -462,12 +472,12 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	contractKey := keeper.GetContractKey(ctx, addr)
 	contractKeyStr := hex.EncodeToString(contractKey)
 
-	msg := wasmUtils.ExecuteMsg{
+	msg2 := wasmUtils.ExecuteMsg{
 		ContractKey: []byte(contractKeyStr),
 		Msg:         []byte(`{"cpu_loop":{}}`),
 	}
 
-	execMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
+	execMsgBz, err := wasmCtx.Encrypt(msg2.Serialize())
 	require.NoError(t, err)
 
 	// this must fail
