@@ -651,150 +651,150 @@ impl AttestationReport {
     }
 }
 
-#[cfg(feature = "test")]
-pub mod tests {
-    use serde_json::json;
-    use std::io::Read;
-    use std::untrusted::fs::File;
-
-    use super::*;
-
-    fn tls_ra_cert_der_v3() -> Vec<u8> {
-        let mut cert = vec![];
-        let mut f = File::open("fixtures/tls_ra_cert_v3.der").unwrap();
-        f.read_to_end(&mut cert).unwrap();
-
-        cert
-    }
-
-    fn tls_ra_cert_der_v4() -> Vec<u8> {
-        let mut cert = vec![];
-        let mut f = File::open("fixtures/tls_ra_cert_v4.der").unwrap();
-        f.read_to_end(&mut cert).unwrap();
-
-        cert
-    }
-
-    fn ias_root_ca_cert_der() -> Vec<u8> {
-        let mut cert = vec![];
-        let mut f = File::open("fixtures/ias_root_ca_cert.der").unwrap();
-        f.read_to_end(&mut cert).unwrap();
-
-        cert
-    }
-
-    fn attesation_report() -> Value {
-        let report = json!({
-            "version": 3,
-            "timestamp": "2020-02-11T22:25:59.682915",
-            "platformInfoBlob": "1502006504000900000D0D02040180030000000000000000000\
-                                 A00000B000000020000000000000B2FE0AE0F7FD4D552BF7EF4\
-                                 C938D44E349F1BD0E76F041362DC52B43B7B25994978D792137\
-                                 90362F6DAE91797ACF5BD5072E45F9A60795D1FFB10140421D8\
-                                 691FFD",
-            "isvEnclaveQuoteStatus": "GROUP_OUT_OF_DATE",
-            "isvEnclaveQuoteBody": "AgABAC8LAAAKAAkAAAAAAK1zRQOIpndiP4IhlnW2AkwAAAAA\
-                                    AAAAAAAAAAAAAAAABQ4CBf+AAAAAAAAAAAAAAAAAAAAAAAAA\
-                                    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwAAAAAAAAAHAAAA\
-                                    AAAAADMKqRCjd2eA4gAmrj2sB68OWpMfhPH4MH27hZAvWGlT\
-                                    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACD1xnn\
-                                    ferKFHD2uvYqTXdDA8iZ22kCD5xw7h38CMfOngAAAAAAAAAA\
-                                    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\
-                                    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\
-                                    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\
-                                    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\
-                                    AAAAAAAAAADYIY9k0MVmCdIDUuFLf/2bGIHAfPjO9nvC7fgz\
-                                    rQedeA3WW4dFeI6oe+RCLdV3XYD1n6lEZjITOzPPLWDxulGz",
-            "id": "53530608302195762335736519878284384788",
-            "epidPseudonym": "NRksaQej8R/SyyHpZXzQGNBXqfrzPy5KCxcmJrEjupXrq3xrm2y2+J\
-                              p0IBVtcW15MCekYs9K3UH82fPyj6F5ciJoMsgEMEIvRR+csX9uyd54\
-                              p+m+/RVyuGYhWbhUcpJigdI5Q3x04GG/A7EP10j/zypwqhYLQh0qN1\
-                              ykYt1N1P0="
-        });
-
-        report
-    }
-
-    // pub fn run_tests() -> bool {
-    //     run_tests!(
-    //         test_sgx_quote_parse_from,
-    //         test_attestation_report_from_cert,
-    //         test_attestation_report_from_cert_api_version_not_compatible
-    //     )
-    // }
-
-    fn test_sgx_quote_parse_from() {
-        let attn_report = attesation_report();
-        let sgx_quote_body_encoded = attn_report["isvEnclaveQuoteBody"].as_str().unwrap();
-        let quote_raw = base64::decode(&sgx_quote_body_encoded.as_bytes()).unwrap();
-        let sgx_quote = SgxQuote::parse_from(quote_raw.as_slice()).unwrap();
-
-        assert_eq!(
-            sgx_quote.version,
-            SgxQuoteVersion::V2(SgxEpidQuoteSigType::Linkable)
-        );
-        assert_eq!(sgx_quote.gid, 2863);
-        assert_eq!(sgx_quote.isv_svn_qe, 10);
-        assert_eq!(sgx_quote.isv_svn_pce, 9);
-        assert_eq!(
-            sgx_quote.qe_vendor_id,
-            Uuid::parse_str("00000000-ad73-4503-88a6-77623f822196").unwrap()
-        );
-        assert_eq!(
-            sgx_quote.user_data,
-            [117, 182, 2, 76, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        );
-
-        let isv_enclave_report = sgx_quote.isv_enclave_report;
-        assert_eq!(
-            isv_enclave_report.cpu_svn,
-            [5, 14, 2, 5, 255, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        );
-        assert_eq!(isv_enclave_report.misc_select, 0);
-        assert_eq!(
-            isv_enclave_report.attributes,
-            [7, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0]
-        );
-        assert_eq!(
-            isv_enclave_report.mr_enclave,
-            [
-                51, 10, 169, 16, 163, 119, 103, 128, 226, 0, 38, 174, 61, 172, 7, 175, 14, 90, 147,
-                31, 132, 241, 248, 48, 125, 187, 133, 144, 47, 88, 105, 83
-            ]
-        );
-        assert_eq!(
-            isv_enclave_report.mr_signer,
-            [
-                131, 215, 25, 231, 125, 234, 202, 20, 112, 246, 186, 246, 42, 77, 119, 67, 3, 200,
-                153, 219, 105, 2, 15, 156, 112, 238, 29, 252, 8, 199, 206, 158
-            ]
-        );
-        assert_eq!(isv_enclave_report.isv_prod_id, 0);
-        assert_eq!(isv_enclave_report.isv_svn, 0);
-        assert_eq!(
-            isv_enclave_report.report_data.to_vec(),
-            [
-                216, 33, 143, 100, 208, 197, 102, 9, 210, 3, 82, 225, 75, 127, 253, 155, 24, 129,
-                192, 124, 248, 206, 246, 123, 194, 237, 248, 51, 173, 7, 157, 120, 13, 214, 91,
-                135, 69, 120, 142, 168, 123, 228, 66, 45, 213, 119, 93, 128, 245, 159, 169, 68,
-                102, 50, 19, 59, 51, 207, 45, 96, 241, 186, 81, 179
-            ]
-            .to_vec()
-        );
-    }
-
-    fn test_attestation_report_from_cert() {
-        let tls_ra_cert = tls_ra_cert_der_v4();
-        let report = AttestationReport::from_cert(&tls_ra_cert);
-        assert!(report.is_ok());
-
-        let report = report.unwrap();
-        assert_eq!(report.sgx_quote_status, SgxQuoteStatus::GroupOutOfDate);
-    }
-
-    fn test_attestation_report_from_cert_api_version_not_compatible() {
-        let tls_ra_cert = tls_ra_cert_der_v3();
-        let report = AttestationReport::from_cert(&tls_ra_cert);
-        assert!(report.is_err());
-    }
-}
+// #[cfg(feature = "test")]
+// pub mod tests {
+//     use serde_json::json;
+//     use std::io::Read;
+//     use std::untrusted::fs::File;
+//
+//     use super::*;
+//
+//     fn tls_ra_cert_der_v3() -> Vec<u8> {
+//         let mut cert = vec![];
+//         let mut f = File::open("fixtures/tls_ra_cert_v3.der").unwrap();
+//         f.read_to_end(&mut cert).unwrap();
+//
+//         cert
+//     }
+//
+//     fn tls_ra_cert_der_v4() -> Vec<u8> {
+//         let mut cert = vec![];
+//         let mut f = File::open("fixtures/tls_ra_cert_v4.der").unwrap();
+//         f.read_to_end(&mut cert).unwrap();
+//
+//         cert
+//     }
+//
+//     fn ias_root_ca_cert_der() -> Vec<u8> {
+//         let mut cert = vec![];
+//         let mut f = File::open("fixtures/ias_root_ca_cert.der").unwrap();
+//         f.read_to_end(&mut cert).unwrap();
+//
+//         cert
+//     }
+//
+//     fn attesation_report() -> Value {
+//         let report = json!({
+//             "version": 3,
+//             "timestamp": "2020-02-11T22:25:59.682915",
+//             "platformInfoBlob": "1502006504000900000D0D02040180030000000000000000000\
+//                                  A00000B000000020000000000000B2FE0AE0F7FD4D552BF7EF4\
+//                                  C938D44E349F1BD0E76F041362DC52B43B7B25994978D792137\
+//                                  90362F6DAE91797ACF5BD5072E45F9A60795D1FFB10140421D8\
+//                                  691FFD",
+//             "isvEnclaveQuoteStatus": "GROUP_OUT_OF_DATE",
+//             "isvEnclaveQuoteBody": "AgABAC8LAAAKAAkAAAAAAK1zRQOIpndiP4IhlnW2AkwAAAAA\
+//                                     AAAAAAAAAAAAAAAABQ4CBf+AAAAAAAAAAAAAAAAAAAAAAAAA\
+//                                     AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwAAAAAAAAAHAAAA\
+//                                     AAAAADMKqRCjd2eA4gAmrj2sB68OWpMfhPH4MH27hZAvWGlT\
+//                                     AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACD1xnn\
+//                                     ferKFHD2uvYqTXdDA8iZ22kCD5xw7h38CMfOngAAAAAAAAAA\
+//                                     AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\
+//                                     AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\
+//                                     AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\
+//                                     AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\
+//                                     AAAAAAAAAADYIY9k0MVmCdIDUuFLf/2bGIHAfPjO9nvC7fgz\
+//                                     rQedeA3WW4dFeI6oe+RCLdV3XYD1n6lEZjITOzPPLWDxulGz",
+//             "id": "53530608302195762335736519878284384788",
+//             "epidPseudonym": "NRksaQej8R/SyyHpZXzQGNBXqfrzPy5KCxcmJrEjupXrq3xrm2y2+J\
+//                               p0IBVtcW15MCekYs9K3UH82fPyj6F5ciJoMsgEMEIvRR+csX9uyd54\
+//                               p+m+/RVyuGYhWbhUcpJigdI5Q3x04GG/A7EP10j/zypwqhYLQh0qN1\
+//                               ykYt1N1P0="
+//         });
+//
+//         report
+//     }
+//
+//     // pub fn run_tests() -> bool {
+//     //     run_tests!(
+//     //         test_sgx_quote_parse_from,
+//     //         test_attestation_report_from_cert,
+//     //         test_attestation_report_from_cert_api_version_not_compatible
+//     //     )
+//     // }
+//
+//     fn test_sgx_quote_parse_from() {
+//         let attn_report = attesation_report();
+//         let sgx_quote_body_encoded = attn_report["isvEnclaveQuoteBody"].as_str().unwrap();
+//         let quote_raw = base64::decode(&sgx_quote_body_encoded.as_bytes()).unwrap();
+//         let sgx_quote = SgxQuote::parse_from(quote_raw.as_slice()).unwrap();
+//
+//         assert_eq!(
+//             sgx_quote.version,
+//             SgxQuoteVersion::V2(SgxEpidQuoteSigType::Linkable)
+//         );
+//         assert_eq!(sgx_quote.gid, 2863);
+//         assert_eq!(sgx_quote.isv_svn_qe, 10);
+//         assert_eq!(sgx_quote.isv_svn_pce, 9);
+//         assert_eq!(
+//             sgx_quote.qe_vendor_id,
+//             Uuid::parse_str("00000000-ad73-4503-88a6-77623f822196").unwrap()
+//         );
+//         assert_eq!(
+//             sgx_quote.user_data,
+//             [117, 182, 2, 76, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+//         );
+//
+//         let isv_enclave_report = sgx_quote.isv_enclave_report;
+//         assert_eq!(
+//             isv_enclave_report.cpu_svn,
+//             [5, 14, 2, 5, 255, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+//         );
+//         assert_eq!(isv_enclave_report.misc_select, 0);
+//         assert_eq!(
+//             isv_enclave_report.attributes,
+//             [7, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0]
+//         );
+//         assert_eq!(
+//             isv_enclave_report.mr_enclave,
+//             [
+//                 51, 10, 169, 16, 163, 119, 103, 128, 226, 0, 38, 174, 61, 172, 7, 175, 14, 90, 147,
+//                 31, 132, 241, 248, 48, 125, 187, 133, 144, 47, 88, 105, 83
+//             ]
+//         );
+//         assert_eq!(
+//             isv_enclave_report.mr_signer,
+//             [
+//                 131, 215, 25, 231, 125, 234, 202, 20, 112, 246, 186, 246, 42, 77, 119, 67, 3, 200,
+//                 153, 219, 105, 2, 15, 156, 112, 238, 29, 252, 8, 199, 206, 158
+//             ]
+//         );
+//         assert_eq!(isv_enclave_report.isv_prod_id, 0);
+//         assert_eq!(isv_enclave_report.isv_svn, 0);
+//         assert_eq!(
+//             isv_enclave_report.report_data.to_vec(),
+//             [
+//                 216, 33, 143, 100, 208, 197, 102, 9, 210, 3, 82, 225, 75, 127, 253, 155, 24, 129,
+//                 192, 124, 248, 206, 246, 123, 194, 237, 248, 51, 173, 7, 157, 120, 13, 214, 91,
+//                 135, 69, 120, 142, 168, 123, 228, 66, 45, 213, 119, 93, 128, 245, 159, 169, 68,
+//                 102, 50, 19, 59, 51, 207, 45, 96, 241, 186, 81, 179
+//             ]
+//             .to_vec()
+//         );
+//     }
+//
+//     fn test_attestation_report_from_cert() {
+//         let tls_ra_cert = tls_ra_cert_der_v4();
+//         let report = AttestationReport::from_cert(&tls_ra_cert);
+//         assert!(report.is_ok());
+//
+//         let report = report.unwrap();
+//         assert_eq!(report.sgx_quote_status, SgxQuoteStatus::GroupOutOfDate);
+//     }
+//
+//     fn test_attestation_report_from_cert_api_version_not_compatible() {
+//         let tls_ra_cert = tls_ra_cert_der_v3();
+//         let report = AttestationReport::from_cert(&tls_ra_cert);
+//         assert!(report.is_err());
+//     }
+// }
