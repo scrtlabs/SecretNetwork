@@ -491,7 +491,7 @@ func assertBalance(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Ac
 	require.NoError(t, err)
 	queryBz, err = wasmCtx.Encrypt(queryBz)
 	require.NoError(t, err)
-	res, err := keeper.QuerySmart(ctx, contract, queryBz)
+	res, err := keeper.QuerySmart(ctx, contract, queryBz, false)
 	require.NoError(t, err)
 	var balance BalanceResponse
 	err = json.Unmarshal(res, &balance)
@@ -509,7 +509,7 @@ func assertClaims(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	require.NoError(t, err)
 	queryBz, err = wasmCtx.Encrypt(queryBz)
 	require.NoError(t, err)
-	res, err := keeper.QuerySmart(ctx, contract, queryBz)
+	res, err := keeper.QuerySmart(ctx, contract, queryBz, false)
 	require.NoError(t, err)
 	var claims ClaimsResponse
 	err = json.Unmarshal(res, &claims)
@@ -523,7 +523,7 @@ func assertSupply(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	require.NoError(t, err)
 	queryBz, err = wasmCtx.Encrypt(queryBz)
 	require.NoError(t, err)
-	res, err := keeper.QuerySmart(ctx, contract, queryBz)
+	res, err := keeper.QuerySmart(ctx, contract, queryBz, false)
 	require.NoError(t, err)
 	var invest InvestmentResponse
 	err = json.Unmarshal(res, &invest)

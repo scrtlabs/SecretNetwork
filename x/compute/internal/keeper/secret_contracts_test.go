@@ -139,7 +139,7 @@ func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.
 		log.NewNopLogger(),
 	).WithGasMeter(sdk.NewGasMeter(gas))
 
-	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz)
+	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz, false)
 	if err != nil {
 		return "", extractInnerError(t, err, nonce, isErrorEncrypted)
 	}
@@ -718,7 +718,7 @@ func TestQueryNotEncryptedInputError(t *testing.T) {
 	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
 	require.Empty(t, initErr)
 
-	_, err := keeper.QuerySmart(ctx, contractAddress, []byte(`{"owner":{}}`))
+	_, err := keeper.QuerySmart(ctx, contractAddress, []byte(`{"owner":{}}`), false)
 	require.Error(t, err)
 
 	require.Contains(t, err.Error(), "failed to decrypt data")

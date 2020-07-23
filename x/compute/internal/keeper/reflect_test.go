@@ -287,7 +287,7 @@ func TestMaskReflectCustomQuery(t *testing.T) {
 	require.NoError(t, err)
 	ownerQueryBz, err = wasmCtx.Encrypt(ownerQueryBz)
 	require.NoError(t, err)
-	ownerRes, err := keeper.QuerySmart(ctx, contractAddr, ownerQueryBz)
+	ownerRes, err := keeper.QuerySmart(ctx, contractAddr, ownerQueryBz, false)
 	require.NoError(t, err)
 	var res OwnerResponse
 	err = json.Unmarshal(ownerRes, &res)
@@ -304,7 +304,7 @@ func TestMaskReflectCustomQuery(t *testing.T) {
 	require.NoError(t, err)
 	customQueryBz, err = wasmCtx.Encrypt(customQueryBz)
 	require.NoError(t, err)
-	custom, err := keeper.QuerySmart(ctx, contractAddr, customQueryBz)
+	custom, err := keeper.QuerySmart(ctx, contractAddr, customQueryBz, false)
 	require.NoError(t, err)
 	var resp customQueryResponse
 	err = json.Unmarshal(custom, &resp)

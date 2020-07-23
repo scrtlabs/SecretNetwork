@@ -306,7 +306,11 @@ func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress sdk.AccAddr
 }
 
 // QuerySmart queries the smart contract itself.
-func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte) ([]byte, error) {
+func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, isQueryFromWasm bool) ([]byte, error) {
+	if !isQueryFromWasm {
+		ctx = ctx.WithGasMeter(sdk.NewGasMeter(k.queryGasLimit))
+	}
+
 	codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddr)
 	if err != nil {
 		return nil, err
