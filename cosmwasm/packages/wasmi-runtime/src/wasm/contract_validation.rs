@@ -121,15 +121,21 @@ pub fn validate_contract_key(
 pub fn validate_init_msg(msg: &[u8], contract_code: &[u8]) -> Result<Vec<u8>, EnclaveError> {
     let contract_hash = calc_contract_hash(contract_code);
 
-    let mut encrypted_contract_hash: [u8; HASH_SIZE] = [0u8; HASH_SIZE];
-    encrypted_contract_hash.copy_from_slice(&msg[0..HASH_SIZE]);
+    let mut encrypted_contract_hash: [u8; HASH_SIZE * 2] = [0u8; HASH_SIZE * 2];
+    encrypted_contract_hash.copy_from_slice(&msg[0..HASH_SIZE * 2]);
 
-    if encrypted_contract_hash != contract_hash {
+    let decoded_hash: Vec<u8> =
+        hex::decode(encrypted_contract_hash.to_vec().as_slice()).map_err(|_| {
+            error!("Got exec message with malformed contract hash");
+            EnclaveError::ValidationFailure
+        })?;
+
+    if decoded_hash != contract_hash {
         error!("Got init message with mismatched contract hash");
         return Err(EnclaveError::ValidationFailure);
     }
 
-    Ok(msg[HASH_SIZE..].to_vec())
+    Ok(msg[(HASH_SIZE * 2)..].to_vec())
 }
 
 pub fn validate_exec_msg(msg: &[u8], contract_key: &[u8]) -> Result<Vec<u8>, EnclaveError> {

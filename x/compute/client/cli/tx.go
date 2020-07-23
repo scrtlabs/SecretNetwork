@@ -270,7 +270,7 @@ func GetCodeHash(cliCtx context.CLIContext, codeID string) ([]byte, error) {
 
 	err = json.Unmarshal(res, &codeResp)
 
-	return codeResp.DataHash, nil
+	return []byte(hex.EncodeToString(codeResp.DataHash)), nil
 }
 
 func GetContractKey(cliCtx context.CLIContext, contractAddr sdk.AccAddress) ([]byte, error) {

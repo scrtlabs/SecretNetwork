@@ -201,7 +201,7 @@ func initHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, cre
 	hash := keeper.GetCodeInfo(ctx, codeID).CodeHash
 
 	msg := wasmUtils.InitMsg{
-		CodeHash: hash,
+		CodeHash: []byte(hex.EncodeToString(hash)),
 		Msg:      []byte(initMsg),
 	}
 
