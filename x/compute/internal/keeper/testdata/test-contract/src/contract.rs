@@ -330,10 +330,11 @@ pub fn a<S: Storage, A: Api, Q: Querier>(
             contract_addr: contract_addr.clone(),
             msg: create_callback_msg(
                 format!(
-                    "{{\"b\":{{\"x\":{} ,\"y\": {},\"contract_addr\": \"{}\" }}}}",
+                    "{{\"b\":{{\"x\":{} ,\"y\": {},\"contract_addr\": \"{}\",\"contract_key\": \"{}\" }}}}",
                     x,
                     y,
-                    contract_addr.as_str()
+                    contract_addr.as_str(),
+                    &contract_key
                 )
                 .as_bytes()
                 .to_vec(),

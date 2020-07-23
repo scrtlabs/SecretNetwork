@@ -228,10 +228,10 @@ func TestInstantiate(t *testing.T) {
 	require.NoError(t, err)
 
 	key := keeper.GetCodeInfo(ctx, contractID).CodeHash
-	keyStr := hex.EncodeToString(key)
+	//keyStr := hex.EncodeToString(key)
 
 	msg := wasmUtils.InitMsg{
-		CodeHash: []byte(keyStr),
+		CodeHash: key,
 		Msg:      initMsgBz,
 	}
 
@@ -452,15 +452,22 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	require.NoError(t, err)
 
 	addr, _, err := initHelper(t, keeper, ctx, contractID, creator, string(initMsgBz), false, defaultGas)
-
-	require.NoError(t, err)
+	require.Empty(t, err)
 
 	// make sure we set a limit before calling
 	var gasLimit uint64 = 400_000
 	ctx = ctx.WithGasMeter(sdk.NewGasMeter(gasLimit))
 	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
-	execMsgBz, err := wasmCtx.Encrypt([]byte(`{"cpu_loop":{}}`))
+	contractKey := keeper.GetContractKey(ctx, addr)
+	contractKeyStr := hex.EncodeToString(contractKey)
+
+	msg := wasmUtils.ExecuteMsg{
+		ContractKey: []byte(contractKeyStr),
+		Msg:         []byte(`{"cpu_loop":{}}`),
+	}
+
+	execMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 
 	// this must fail
@@ -511,7 +518,15 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 		require.True(t, ok, "%v", r)
 	}()
 
-	msgBz, err := wasmCtx.Encrypt([]byte(`{"storage_loop":{}}`))
+	contractKey := keeper.GetContractKey(ctx, addr)
+	contractKeyStr := hex.EncodeToString(contractKey)
+
+	msg := wasmUtils.ExecuteMsg{
+		ContractKey: []byte(contractKeyStr),
+		Msg:         []byte(`{"storage_loop":{}}`),
+	}
+
+	msgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 
 	// this should throw out of gas exception (panic)
