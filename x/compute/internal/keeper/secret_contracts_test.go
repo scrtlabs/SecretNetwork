@@ -128,7 +128,20 @@ func extractInnerError(t *testing.T, err error, nonce []byte, isEncrypted bool) 
 var defaultGas uint64 = 200_000
 
 func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.AccAddress, input string, isErrorEncrypted bool, gas uint64) (string, cosmwasm.StdError) {
-	queryBz, err := wasmCtx.Encrypt([]byte(input))
+
+	hash := keeper.GetContractHash(ctx, contractAddr)
+	if hash == nil {
+		return "", cosmwasm.StdError{}
+	}
+
+	hashStr := hex.EncodeToString(hash)
+
+	msg := wasmUtils.SecretMsg{
+		CodeHash: []byte(hashStr),
+		Msg:      []byte(input),
+	}
+
+	queryBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 	nonce := queryBz[0:32]
 

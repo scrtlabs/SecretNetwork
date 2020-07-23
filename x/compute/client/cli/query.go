@@ -395,7 +395,17 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 
 			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
 
-			queryData, err = wasmCtx.Encrypt(queryData)
+			codeHash, err := GetCodeHashByContractAddr(cliCtx, addr)
+			if err != nil {
+				return fmt.Errorf("contract not found: %s", addr)
+			}
+
+			msg := wasmUtils.SecretMsg{
+				CodeHash: codeHash,
+				Msg:      queryData,
+			}
+
+			queryData, err = wasmCtx.Encrypt(msg.Serialize())
 			if err != nil {
 				return err
 			}

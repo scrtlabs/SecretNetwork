@@ -1,7 +1,9 @@
 package keeper
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -285,7 +287,17 @@ func TestMaskReflectCustomQuery(t *testing.T) {
 	}
 	ownerQueryBz, err := json.Marshal(ownerQuery)
 	require.NoError(t, err)
-	ownerQueryBz, err = wasmCtx.Encrypt(ownerQueryBz)
+
+	hash := keeper.GetContractHash(ctx, contractAddr)
+	hashStr := hex.EncodeToString(hash)
+
+	msg := wasmUtils.SecretMsg{
+		CodeHash: []byte(hashStr),
+		Msg:      ownerQueryBz,
+	}
+
+	ownerQueryBz, err = wasmCtx.Encrypt(msg.Serialize())
+
 	require.NoError(t, err)
 	ownerRes, err := keeper.QuerySmart(ctx, contractAddr, ownerQueryBz)
 	require.NoError(t, err)
@@ -302,7 +314,17 @@ func TestMaskReflectCustomQuery(t *testing.T) {
 	}
 	customQueryBz, err := json.Marshal(customQuery)
 	require.NoError(t, err)
-	customQueryBz, err = wasmCtx.Encrypt(customQueryBz)
+
+	hash = keeper.GetContractHash(ctx, contractAddr)
+	hashStr = hex.EncodeToString(hash)
+
+	msg = wasmUtils.SecretMsg{
+		CodeHash: []byte(hashStr),
+		Msg:      customQueryBz,
+	}
+
+	customQueryBz, err = wasmCtx.Encrypt(msg.Serialize())
+
 	require.NoError(t, err)
 	custom, err := keeper.QuerySmart(ctx, contractAddr, customQueryBz)
 	require.NoError(t, err)

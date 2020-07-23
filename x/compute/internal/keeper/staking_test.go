@@ -1,7 +1,9 @@
 package keeper
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -489,8 +491,18 @@ func assertBalance(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Ac
 	}
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
-	queryBz, err = wasmCtx.Encrypt(queryBz)
+
+	hash := keeper.GetContractHash(ctx, contract)
+	hashStr := hex.EncodeToString(hash)
+
+	msg := wasmUtils.SecretMsg{
+		CodeHash: []byte(hashStr),
+		Msg:      queryBz,
+	}
+
+	queryBz, err = wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
+
 	res, err := keeper.QuerySmart(ctx, contract, queryBz)
 	require.NoError(t, err)
 	var balance BalanceResponse
@@ -507,8 +519,18 @@ func assertClaims(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	}
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
-	queryBz, err = wasmCtx.Encrypt(queryBz)
+
+	hash := keeper.GetContractHash(ctx, contract)
+	hashStr := hex.EncodeToString(hash)
+
+	msg := wasmUtils.SecretMsg{
+		CodeHash: []byte(hashStr),
+		Msg:      queryBz,
+	}
+
+	queryBz, err = wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
+
 	res, err := keeper.QuerySmart(ctx, contract, queryBz)
 	require.NoError(t, err)
 	var claims ClaimsResponse
@@ -521,8 +543,18 @@ func assertSupply(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	query := StakingQueryMsg{Investment: &struct{}{}}
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
-	queryBz, err = wasmCtx.Encrypt(queryBz)
+
+	hash := keeper.GetContractHash(ctx, contract)
+	hashStr := hex.EncodeToString(hash)
+
+	msg := wasmUtils.SecretMsg{
+		CodeHash: []byte(hashStr),
+		Msg:      queryBz,
+	}
+
+	queryBz, err = wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
+
 	res, err := keeper.QuerySmart(ctx, contract, queryBz)
 	require.NoError(t, err)
 	var invest InvestmentResponse

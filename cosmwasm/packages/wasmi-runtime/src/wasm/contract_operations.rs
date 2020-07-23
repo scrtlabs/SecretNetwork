@@ -219,7 +219,9 @@ pub fn query(
         String::from_utf8_lossy(&decrypted_msg)
     );
 
-    let msg_ptr = engine.write_to_memory(&decrypted_msg)?;
+    let validated_msg = validate_msg(&decrypted_msg, contract)?;
+
+    let msg_ptr = engine.write_to_memory(&validated_msg)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
