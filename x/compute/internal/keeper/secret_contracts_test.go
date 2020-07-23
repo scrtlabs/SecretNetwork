@@ -250,8 +250,10 @@ func TestCallbackSanity(t *testing.T) {
 		initEvents,
 	)
 
-	data, execEvents, err := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"a":{"contract_addr":"%s","x":2,"y":3}}`, contractAddress.String()), true, defaultGas)
+	contractKey := keeper.GetContractKey(ctx, contractAddress)
+	contractKeyStr := hex.EncodeToString(contractKey)
 
+	data, execEvents, err := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"a":{"contract_addr":"%s","contract_key":"%s","x":2,"y":3}}`, contractAddress.String(), contractKeyStr), true, defaultGas)
 	require.Empty(t, err)
 	require.Equal(t,
 		[]ContractEvent{
@@ -428,8 +430,11 @@ func TestCallbackFromInitAndCallbackEvents(t *testing.T) {
 		initEvents,
 	)
 
+	contractKey := keeper.GetContractKey(ctx, firstContractAddress)
+	contractKeyStr := hex.EncodeToString(contractKey)
+
 	// init second contract and callback to the first contract
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback":{"contract_addr":"%s"}}`, firstContractAddress.String()), true, defaultGas)
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback":{"contract_addr":"%s", "contract_key": "%s"}}`, firstContractAddress.String(), contractKeyStr), true, defaultGas)
 	require.Empty(t, initErr)
 
 	require.Equal(t,

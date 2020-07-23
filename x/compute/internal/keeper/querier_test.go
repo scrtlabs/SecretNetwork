@@ -1,8 +1,10 @@
 package keeper
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -45,6 +47,7 @@ func TestQueryContractLabel(t *testing.T) {
 	require.NoError(t, err)
 
 	label := "banana"
+
 	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, label, deposit)
 	require.NoError(t, err)
 
@@ -128,8 +131,15 @@ func TestQueryContractState(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
-	require.NoError(t, err)
+	key := keeper.GetCodeInfo(ctx, contractID).CodeHash
+	keyStr := hex.EncodeToString(key)
+
+	msg := wasmUtils.InitMsg{
+		CodeHash: []byte(keyStr),
+		Msg:      initMsgBz,
+	}
+
+	initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
 
 	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract to query", deposit)
 	require.NoError(t, err)
@@ -223,8 +233,15 @@ func TestListContractByCodeOrdering(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
-	require.NoError(t, err)
+	key := keeper.GetCodeInfo(ctx, codeID).CodeHash
+	keyStr := hex.EncodeToString(key)
+
+	msg := wasmUtils.InitMsg{
+		CodeHash: []byte(keyStr),
+		Msg:      initMsgBz,
+	}
+
+	initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
 
 	// manage some realistic block settings
 	var h int64 = 10
@@ -243,6 +260,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 			ctx = setBlock(ctx, h)
 			h++
 		}
+
 		_, err = keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, fmt.Sprintf("contract %d", i), topUp)
 		require.NoError(t, err)
 	}

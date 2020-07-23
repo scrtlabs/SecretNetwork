@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -31,6 +32,8 @@ import (
 
 // const SupportedFeatures = "staking"
 const SupportedFeatures = ""
+
+var defaultGas uint64 = 200_000
 
 var wasmCtx = wasmUtils.WASMContext{
 	TestKeyPairPath:  "/tmp/id_tx_io.json",
@@ -226,7 +229,15 @@ func TestInstantiate(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+	key := keeper.GetCodeInfo(ctx, contractID).CodeHash
+	keyStr := hex.EncodeToString(key)
+
+	msg := wasmUtils.InitMsg{
+		CodeHash: []byte(keyStr),
+		Msg:      initMsgBz,
+	}
+
+	initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 
 	gasBefore := ctx.GasMeter().GasConsumed()
@@ -267,6 +278,7 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 	initMsg := InitMsg{}
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
+
 	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
 	require.NoError(t, err)
 
@@ -302,12 +314,10 @@ func TestExecute(t *testing.T) {
 		Beneficiary: bob,
 	}
 	initMsgBz, err := json.Marshal(initMsg)
-	require.NoError(t, err)
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+
+	addr, _, err := initHelper(t, keeper, ctx, contractID, creator, string(initMsgBz), false, defaultGas)
 	require.NoError(t, err)
 
-	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 3", deposit)
-	require.NoError(t, err)
 	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", addr.String())
 
 	// ensure bob doesn't exist
@@ -407,11 +417,7 @@ func TestExecuteWithPanic(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
-	require.NoError(t, err)
-
-	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 4", deposit)
-	require.NoError(t, err)
+	addr, _, err := initHelper(t, keeper, ctx, contractID, creator, string(initMsgBz), false, defaultGas)
 
 	execMsgBz, err := wasmCtx.Encrypt([]byte(`{"panic":{}}`))
 	require.NoError(t, err)
@@ -447,10 +453,8 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
-	require.NoError(t, err)
+	addr, _, err := initHelper(t, keeper, ctx, contractID, creator, string(initMsgBz), false, defaultGas)
 
-	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 5", deposit)
 	require.NoError(t, err)
 
 	// make sure we set a limit before calling
@@ -493,12 +497,8 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 		Beneficiary: bob,
 	}
 	initMsgBz, err := json.Marshal(initMsg)
-	require.NoError(t, err)
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
-	require.NoError(t, err)
 
-	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 6", deposit)
-	require.NoError(t, err)
+	addr, _, err := initHelper(t, keeper, ctx, contractID, creator, string(initMsgBz), false, defaultGas)
 
 	// make sure we set a limit before calling
 	var gasLimit uint64 = 400_000

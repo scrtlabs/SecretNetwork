@@ -431,12 +431,12 @@ pub fn exec_callback_to_init<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
     code_id: u64,
-    contract_key: String,
+    code_hash: String,
 ) -> HandleResponse {
     HandleResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
             code_id,
-            msg: create_callback_msg("{\"nop\":{}}".as_bytes().to_vec(), &contract_key),
+            msg: create_callback_msg("{\"nop\":{}}".as_bytes().to_vec(), &code_hash),
             send: vec![],
             label: None,
         })],
