@@ -1051,7 +1051,7 @@ func TestAllocateOnHeapFailBecauseGasLimit(t *testing.T) {
 
 	_, _, _ = execHelper(t, keeper, ctx, addr, walletA, `{"allocate_on_heap":{"bytes":1073741824}}`, false, defaultGas)
 
-	// this should fail with out of gas because 1GiB will ask for
+	// This should fail with out of gas because 1GiB will ask for
 	// 134,217,728 gas units (8192 per page times 16,384 pages)
 	// the default gas limit in ctx is 200,000 which translates into
 	// 20,000,000 WASM gas units, so before the memory_grow opcode is reached
