@@ -97,7 +97,6 @@ pub extern "C" fn ocall_query_chain(
                     // see CosmWasm's implementation https://github.com/enigmampc/SecretNetwork/blob/508e99c990dd656eb61f456584dab054487ba178/cosmwasm/packages/sgx-vm/src/imports.rs#L124
 
                     crate::serde::to_vec(&system_result)
-                        .map_err(|_| OcallReturn::Failure)
                         .map(|val| {
                             super::allocate_enclave_buffer(&val).map_err(|_| OcallReturn::Failure)
                         })
