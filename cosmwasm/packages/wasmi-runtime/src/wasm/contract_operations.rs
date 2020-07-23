@@ -80,7 +80,7 @@ pub fn init(
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
     let output = coalesce!(EnclaveError, {
-        let vec_ptr = engine.init(env_ptr, msg_ptr, contract_key.to_vec().as_slice())?;
+        let vec_ptr = engine.init(env_ptr, msg_ptr)?;
 
         let output = engine.extract_vector(vec_ptr)?;
 
@@ -161,7 +161,7 @@ pub fn handle(
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
     let output = coalesce!(EnclaveError, {
-        let vec_ptr = engine.handle(env_ptr, msg_ptr, contract_key.to_vec().as_slice())?;
+        let vec_ptr = engine.handle(env_ptr, msg_ptr)?;
 
         let output = engine.extract_vector(vec_ptr)?;
 

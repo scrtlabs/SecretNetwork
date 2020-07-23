@@ -2,7 +2,6 @@ use log::*;
 use wasmi::{ModuleRef, RuntimeValue};
 
 use super::contract::ContractInstance;
-use crate::wasm::db::{read_encrypted_key, write_encrypted_key};
 use crate::wasm::errors::{wasmi_error_to_enclave_error, WasmEngineError};
 
 use enclave_ffi_types::EnclaveError;
@@ -32,15 +31,10 @@ impl Engine {
         self.contract_instance.extract_vector(vec_ptr_ptr)
     }
 
-    pub fn init(
-        &mut self,
-        env_ptr: u32,
-        msg_ptr: u32,
-        contract_key: &[u8],
-    ) -> Result<u32, EnclaveError> {
+    pub fn init(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, EnclaveError> {
         trace!("Invoking init() in wasm");
 
-        let result = match self
+        match self
             .module
             .invoke_export(
                 "init",
@@ -57,7 +51,7 @@ impl Engine {
                 error!("init method returned value which wasn't u32: {:?}", other);
                 Err(EnclaveError::FailedFunctionCall)
             }
-        };
+        }
 
         // Itzik: leaving this here as an example in case we will want to do something like this in the future
 
@@ -74,15 +68,10 @@ impl Engine {
         //     })?;
         // }
 
-        result
+        //result
     }
 
-    pub fn handle(
-        &mut self,
-        env_ptr: u32,
-        msg_ptr: u32,
-        contract_key: &[u8],
-    ) -> Result<u32, EnclaveError> {
+    pub fn handle(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, EnclaveError> {
         trace!("Invoking handle() in wasm");
 
         // Itzik: leaving this here as an example in case we will want to do something like this in the future
