@@ -103,6 +103,8 @@ Then you can use this script (or run the commands one-by-one), which was tested 
 ### Install SGX SDK + Driver
 
 ```bash
+#! /bin/bash
+
 UBUNTUVERSION=$(lsb_release -r -s | cut -d '.' -f 1)
 
 if (($UBUNTUVERSION < 16)); then
@@ -119,7 +121,7 @@ echo "##### Installing missing packages #####"
 echo "#######################################\n\n"
 
 # Install needed packages for script
-sudo apt install -y lynx parallel gdebi
+sudo apt install -y lynx parallel gdebi make
 
 # Create a working directory to download and install the SDK inside
 mkdir -p "$HOME/.sgxsdk"
