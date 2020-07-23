@@ -250,10 +250,10 @@ fn query_chain(context: &Ctx, query: &[u8]) -> Result<(Vec<u8>, u64), WasmEngine
     let mut gas_used = 0_u64;
     let value = unsafe {
         let status = imports::ocall_query_chain(
-            (&mut ocall_return) as *mut _,
+            &mut ocall_return,
             context.unsafe_clone(),
-            (&mut vm_err) as *mut _,
-            (&mut gas_used) as *mut _,
+            &mut vm_err,
+            &mut gas_used,
             enclave_buffer.as_mut_ptr(),
             query.as_ptr(),
             query.len(),
