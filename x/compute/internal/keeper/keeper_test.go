@@ -480,12 +480,18 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	execMsgBz, err := wasmCtx.Encrypt(msg2.Serialize())
 	require.NoError(t, err)
 
+	// ensure we get an out of gas panic
+	defer func() {
+		r := recover()
+		require.NotNil(t, r)
+		_, ok := r.(sdk.ErrorOutOfGas)
+		require.True(t, ok, "%v", r)
+	}()
+
 	// this must fail
 	_, err = keeper.Execute(ctx, addr, fred, execMsgBz, nil)
 	assert.Error(t, err)
 	// make sure gas ran out
-	// TODO: wasmer doesn't return gas used on error. we should consume it (for error on metering failure)
-	// require.Equal(t, gasLimit, ctx.GasMeter().GasConsumed())
 }
 
 func TestExecuteWithStorageLoop(t *testing.T) {
