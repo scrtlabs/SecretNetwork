@@ -33,8 +33,6 @@ import (
 // const SupportedFeatures = "staking"
 const SupportedFeatures = ""
 
-var defaultGas uint64 = 200_000
-
 var wasmCtx = wasmUtils.WASMContext{
 	TestKeyPairPath:  "/tmp/id_tx_io.json",
 	TestMasterIOCert: nil,
