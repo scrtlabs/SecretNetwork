@@ -107,6 +107,8 @@ pub enum QueryMsg {
     Panic {},
     ReceiveExternalQuery { num: u8 },
     SendExternalQueryInfiniteLoop { to: HumanAddr },
+    WriteToStorage {},
+    RemoveFromStorage {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -688,6 +690,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::SendExternalQueryInfiniteLoop { to } => {
             send_external_query_infinite_loop(deps, to)
         }
+        QueryMsg::WriteToStorage {} => write_to_storage_in_query(deps),
+        QueryMsg::RemoveFromStorage {} => remove_from_storage_in_query(deps),
     }
 }
 
@@ -712,6 +716,24 @@ fn send_external_query_infinite_loop<S: Storage, A: Api, Q: Querier>(
         Ok(wtf) => Ok(Binary(wtf.into())),
         Err(e) => Err(e),
     }
+}
+
+fn write_to_storage_in_query<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+) -> StdResult<Binary> {
+    let deps = unsafe { &mut *(deps as *const _ as *mut Extern<S, A, Q>) };
+    deps.storage.set(b"abcd", b"dcba");
+
+    Ok(Binary(vec![]))
+}
+
+fn remove_from_storage_in_query<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+) -> StdResult<Binary> {
+    let deps = unsafe { &mut *(deps as *const _ as *mut Extern<S, A, Q>) };
+    deps.storage.remove(b"abcd");
+
+    Ok(Binary(vec![]))
 }
 
 /////////////////////////////// Migrate ///////////////////////////////

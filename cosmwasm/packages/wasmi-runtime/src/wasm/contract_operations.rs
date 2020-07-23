@@ -16,7 +16,7 @@ use super::gas::{gas_rules, WasmCosts};
 use super::io::encrypt_output;
 use super::{
     memory::validate_memory,
-    runtime::{create_builder, ContractInstance, Engine, WasmiImportResolver},
+    runtime::{create_builder, ContractInstance, ContractOperation, Engine, WasmiImportResolver},
 };
 use crate::crypto::Ed25519PublicKey;
 use crate::wasm::types::{IoNonce, SecretMessage};
@@ -65,6 +65,7 @@ pub fn init(
         gas_limit,
         contract,
         &contract_key,
+        ContractOperation::Init,
         secret_msg.nonce,
         secret_msg.user_public_key,
     )?;
@@ -149,6 +150,7 @@ pub fn handle(
         gas_limit,
         contract,
         &contract_key,
+        ContractOperation::Handle,
         secret_msg.nonce,
         secret_msg.user_public_key,
     )?;
@@ -222,6 +224,7 @@ pub fn query(
         gas_limit,
         contract,
         &contract_key,
+        ContractOperation::Query,
         secret_msg.nonce,
         secret_msg.user_public_key,
     )?;
@@ -265,6 +268,7 @@ fn start_engine(
     gas_limit: u64,
     contract: &[u8],
     contract_key: &ContractKey,
+    operation: ContractOperation,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
 ) -> Result<Engine, EnclaveError> {
@@ -322,6 +326,7 @@ fn start_engine(
         module.clone(),
         gas_limit,
         *contract_key,
+        operation,
         nonce,
         user_public_key,
     );

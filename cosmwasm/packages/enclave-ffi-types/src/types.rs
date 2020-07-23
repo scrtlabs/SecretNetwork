@@ -131,6 +131,8 @@ pub enum EnclaveError {
     MemoryReadError,
     #[display(fmt = "failed to write memory")]
     MemoryWriteError,
+    #[display(fmt = "contract tried to write to storage during a query")]
+    UnauthorizedWrite,
 
     // serious issues
     #[display(fmt = "panic'd due to unexpected behavior")]

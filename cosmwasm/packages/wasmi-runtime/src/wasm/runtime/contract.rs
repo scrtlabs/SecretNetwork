@@ -12,6 +12,28 @@ use crate::wasm::errors::WasmEngineError;
 use crate::wasm::runtime::traits::WasmiApi;
 use crate::wasm::{query_chain::encrypt_and_query_chain, types::IoNonce};
 
+pub enum ContractOperation {
+    Init,
+    Handle,
+    Query,
+    // Migrate. // not implemented
+}
+
+#[allow(unused)]
+impl ContractOperation {
+    fn is_init(&self) -> bool {
+        matches!(self, ContractOperation::Init)
+    }
+
+    fn is_handle(&self) -> bool {
+        matches!(self, ContractOperation::Handle)
+    }
+
+    fn is_query(&self) -> bool {
+        matches!(self, ContractOperation::Query)
+    }
+}
+
 /// SecretContract maps function index to implementation
 /// When instantiating a module we give it the SecretNetworkImportResolver resolver
 /// When invoking a function inside the module we give it this runtime which is the actual functions implementation ()
@@ -25,20 +47,18 @@ pub struct ContractInstance {
     pub gas_used_externally: u64,
     pub contract_key: ContractKey,
     pub module: ModuleRef,
+    operation: ContractOperation,
     pub user_nonce: IoNonce,
     pub user_public_key: Ed25519PublicKey,
 }
 
 impl ContractInstance {
-    fn get_memory(&self) -> &MemoryInstance {
-        &*self.memory
-    }
-
     pub fn new(
         context: Ctx,
         module: ModuleRef,
         gas_limit: u64,
         contract_key: ContractKey,
+        operation: ContractOperation,
         user_nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
     ) -> Self {
@@ -57,9 +77,14 @@ impl ContractInstance {
             gas_used_externally: 0,
             contract_key,
             module,
+            operation,
             user_nonce,
             user_public_key,
         }
+    }
+
+    fn get_memory(&self) -> &MemoryInstance {
+        &*self.memory
     }
 
     /// extract_vector extracts a vector from the wasm memory space
@@ -256,6 +281,10 @@ impl WasmiApi for ContractInstance {
     /// key is a pointer to a region "struct" of "pointer" and "length"
     /// A Region looks like { ptr: u32, len: u32 }
     fn remove_db_index(&mut self, state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+        if self.operation.is_query() {
+            return Err(WasmEngineError::UnauthorizedWrite.into());
+        }
+
         let state_key_name = self
             .extract_vector(state_key_ptr_ptr as u32)
             .map_err(|err| {
@@ -285,6 +314,10 @@ impl WasmiApi for ContractInstance {
         state_key_ptr_ptr: i32,
         value_ptr_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
+        if self.operation.is_query() {
+            return Err(WasmEngineError::UnauthorizedWrite.into());
+        }
+
         let state_key_name = self
             .extract_vector(state_key_ptr_ptr as u32)
             .map_err(|err| {

@@ -237,7 +237,7 @@ func TestInstantiate(t *testing.T) {
 	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", addr.String())
 
 	gasAfter := ctx.GasMeter().GasConsumed()
-	require.Equal(t, uint64(34133), gasAfter-gasBefore)
+	require.Equal(t, uint64(37733), gasAfter-gasBefore)
 
 	// ensure it is stored properly
 	info := keeper.GetContractInfo(ctx, addr)
@@ -246,6 +246,10 @@ func TestInstantiate(t *testing.T) {
 	require.Equal(t, info.CodeID, contractID)
 	require.Equal(t, info.InitMsg, initMsgBz)
 	require.Equal(t, info.Label, "demo contract 1")
+
+	// test that creating again with the same label will fail
+	addr, err = keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", nil)
+	require.Error(t, err)
 }
 
 func TestInstantiateWithNonExistingCodeID(t *testing.T) {

@@ -19,6 +19,8 @@ pub enum WasmEngineError {
     MemoryAllocationError,
     MemoryReadError,
     MemoryWriteError,
+    /// The contract attempted to write to storage during a query
+    UnauthorizedWrite,
 
     NonExistentImportFunction,
 }
@@ -41,6 +43,7 @@ impl WasmEngineError {
             MemoryAllocationError => MemoryAllocationError,
             MemoryReadError => MemoryReadError,
             MemoryWriteError => MemoryWriteError,
+            UnauthorizedWrite => UnauthorizedWrite,
 
             NonExistentImportFunction => NonExistentImportFunction,
         }
@@ -62,6 +65,7 @@ impl From<WasmEngineError> for EnclaveError {
             MemoryAllocationError => EnclaveError::MemoryAllocationError,
             MemoryReadError => EnclaveError::MemoryReadError,
             MemoryWriteError => EnclaveError::MemoryWriteError,
+            UnauthorizedWrite => EnclaveError::UnauthorizedWrite,
             // Unexpected WasmEngineError variant
             _other => EnclaveError::Unknown,
         }

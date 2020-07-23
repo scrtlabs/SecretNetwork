@@ -92,6 +92,14 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 // Instantiate creates an instance of a WASM contract
 func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins) (sdk.AccAddress, error) {
 	// create contract address
+
+	store := ctx.KVStore(k.storeKey)
+	existingAddress := store.Get(types.GetContractLabelPrefix(label))
+
+	if existingAddress != nil {
+		return nil, sdkerrors.Wrap(types.ErrAccountExists, label)
+	}
+
 	contractAddress := k.generateContractAddress(ctx, codeID)
 	existingAcct := k.accountKeeper.GetAccount(ctx, contractAddress)
 	if existingAcct != nil {
@@ -112,11 +120,12 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	}
 
 	// get contact info
-	store := ctx.KVStore(k.storeKey)
+
 	bz := store.Get(types.GetCodeKey(codeID))
 	if bz == nil {
 		return nil, sdkerrors.Wrap(types.ErrNotFound, "contract")
 	}
+
 	var codeInfo types.CodeInfo
 	k.cdc.MustUnmarshalBinaryBare(bz, &codeInfo)
 
@@ -159,6 +168,8 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	fmt.Printf("Storing key: %s for account %s", key, contractAddress)
 
 	store.Set(types.GetContractEnclaveKey(contractAddress), key)
+
+	store.Set(types.GetContractLabelPrefix(label), contractAddress)
 
 	return contractAddress, nil
 }
@@ -356,6 +367,14 @@ func (k Keeper) contractInstance(ctx sdk.Context, contractAddress sdk.AccAddress
 	prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
 	return codeInfo, prefixStore, nil
+}
+
+func (k Keeper) GetContractAddress(ctx sdk.Context, label string) sdk.AccAddress {
+	store := ctx.KVStore(k.storeKey)
+
+	contractAddress := store.Get(types.GetContractLabelPrefix(label))
+
+	return contractAddress
 }
 
 func (k Keeper) GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *types.ContractInfo {
