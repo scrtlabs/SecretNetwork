@@ -158,9 +158,10 @@ func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.
 func execHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string, isErrorEncrypted bool, gas uint64) ([]byte, []ContractEvent, cosmwasm.StdError) {
 
 	key := keeper.GetContractKey(ctx, contractAddress)
+	keyStr := hex.EncodeToString(key)
 
 	msg := wasmUtils.ExecuteMsg{
-		ContractKey: key,
+		ContractKey: []byte(keyStr),
 		Msg:         []byte(execMsg),
 	}
 
@@ -669,7 +670,10 @@ func TestInitParamError(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"callback":{"contract_addr":"notanaddress"}}`, false, defaultGas)
+	contractKey := "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+	msg := fmt.Sprintf(`{"callback":{"contract_addr":"notanaddress", "contract_key":"%s"}}`, contractKey)
+
+	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, msg, false, defaultGas)
 
 	require.Contains(t, initErr.Error(), "invalid address")
 }
@@ -682,9 +686,12 @@ func TestCallbackExecuteParamError(t *testing.T) {
 	require.Empty(t, initErr)
 
 	// codeHash := keeper.GetCodeInfo(ctx, codeID).CodeHash
-	/// contractKey := keeper.GetContractKey(ctx, contractAddress)
+	contractKey := keeper.GetContractKey(ctx, contractAddress)
+	contractKeyStr := hex.EncodeToString(contractKey)
 
-	_, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, `{"a":{"contract_key": "notakey","contract_addr":"notanaddress","x":2,"y":3}}`, false, defaultGas)
+	msg := fmt.Sprintf(`{"a":{"contract_key": "%s","contract_addr":"notanaddress","x":2,"y":3}}`, contractKeyStr)
+
+	_, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, msg, false, defaultGas)
 
 	require.Contains(t, err.Error(), "invalid address")
 }
