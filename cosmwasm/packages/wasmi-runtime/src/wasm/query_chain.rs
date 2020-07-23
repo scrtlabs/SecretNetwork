@@ -19,7 +19,8 @@ pub fn encrypt_and_query_chain(
     context: &Ctx,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
-) -> Result<(Vec<u8>, u64), WasmEngineError> {
+    gas_used: &mut u64,
+) -> Result<Vec<u8>, WasmEngineError> {
     let mut query_struct: QueryRequest = match serde_json::from_slice(query) {
         Ok(query_struct) => query_struct,
         Err(err) => {
@@ -44,7 +45,9 @@ pub fn encrypt_and_query_chain(
                 WasmEngineError::SerializationError
             })?;
 
-            return Ok((answer_as_vec, 500)); // Should we charge gas for this to prevent spam?
+            *gas_used = 500; // Should we charge gas for this to prevent spam?
+
+            return Ok(answer_as_vec);
         }
     };
 
@@ -84,13 +87,14 @@ pub fn encrypt_and_query_chain(
 
     // Call query_chain (this bubbles up to x/compute via ocalls and FFI to Go code)
     // This returns the answer from x/compute
-    let answer = query_chain(context, &encrypted_query);
+    let result = query_chain(context, &encrypted_query);
+    *gas_used = result.1;
+
+    let encrypted_answer_as_vec = result.0?;
 
     if !is_encrypted {
-        return answer;
+        return Ok(encrypted_answer_as_vec);
     }
-
-    let (encrypted_answer_as_vec, gas_used) = answer?;
 
     // answer is QueryResult (Result<Result<Binary,StdError>,SystemError>) encoded by serde to bytes.
     // we need to:
@@ -119,7 +123,7 @@ pub fn encrypt_and_query_chain(
                 WasmEngineError::SerializationError
             })?;
 
-            return Ok((answer_as_vec, gas_used));
+            return Ok(answer_as_vec);
         }
     };
 
@@ -211,7 +215,7 @@ pub fn encrypt_and_query_chain(
                                     WasmEngineError::SerializationError
                                 })?;
 
-                                return Ok((answer_as_vec, gas_used));
+                                return Ok(answer_as_vec);
                             }
                         }
                     }
@@ -239,11 +243,11 @@ pub fn encrypt_and_query_chain(
         WasmEngineError::SerializationError
     })?;
 
-    Ok((answer_as_vec, gas_used))
+    Ok(answer_as_vec)
 }
 
 /// Safe wrapper around quering other contracts and modules
-fn query_chain(context: &Ctx, query: &[u8]) -> Result<(Vec<u8>, u64), WasmEngineError> {
+fn query_chain(context: &Ctx, query: &[u8]) -> (Result<Vec<u8>, WasmEngineError>, u64) {
     let mut ocall_return = OcallReturn::Success;
     let mut enclave_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
     let mut vm_err = UntrustedVmError::default();
@@ -258,6 +262,9 @@ fn query_chain(context: &Ctx, query: &[u8]) -> Result<(Vec<u8>, u64), WasmEngine
             query.as_ptr(),
             query.len(),
         );
+
+        trace!("ocall_query_chain returned with gas {}", gas_used);
+
         match status {
             sgx_status_t::SGX_SUCCESS => { /* continue */ }
             error_status => {
@@ -265,7 +272,7 @@ fn query_chain(context: &Ctx, query: &[u8]) -> Result<(Vec<u8>, u64), WasmEngine
                     "query_chain() got an error from ocall_query_chain, stopping wasm: {:?}",
                     error_status
                 );
-                return Err(WasmEngineError::FailedOcall(vm_err));
+                return (Err(WasmEngineError::FailedOcall(vm_err)), gas_used);
             }
         }
 
@@ -275,14 +282,10 @@ fn query_chain(context: &Ctx, query: &[u8]) -> Result<(Vec<u8>, u64), WasmEngine
                 // TODO add validation of this pointer before returning its contents.
                 exports::recover_buffer(enclave_buffer).unwrap_or_else(Vec::new)
             }
-            OcallReturn::Failure => {
-                return Err(WasmEngineError::FailedOcall(vm_err));
-            }
-            OcallReturn::Panic => return Err(WasmEngineError::Panic),
+            OcallReturn::Failure => return (Err(WasmEngineError::FailedOcall(vm_err)), gas_used),
+            OcallReturn::Panic => return (Err(WasmEngineError::Panic), gas_used),
         }
     };
 
-    trace!("ocall_query_chain returned with gas {}", gas_used);
-
-    Ok((value, gas_used))
+    (Ok(value), gas_used)
 }

@@ -498,12 +498,15 @@ impl WasmiApi for ContractInstance {
 
         // Call query_chain (this bubbles up to x/compute via ocalls and FFI to Go code)
         // Returns the value from x/compute
-        let (answer, gas_used) = encrypt_and_query_chain(
+        let mut gas_used: u64 = 0;
+        let answer = encrypt_and_query_chain(
             &query_buffer,
             &self.context,
             self.user_nonce,
             self.user_public_key,
+            &mut gas_used,
         )?;
+
         trace!(
             "query_chain() got answer from outside with gas {} and result {:?}",
             gas_used,
