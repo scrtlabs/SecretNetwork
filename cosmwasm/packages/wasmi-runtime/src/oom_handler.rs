@@ -1,5 +1,4 @@
 use core::sync::atomic::{AtomicBool, Ordering};
-use std::backtrace::{self, PrintFormat};
 
 // This is thread_local to prevent race conditions in case multiple
 // threads are running while OOM happens
@@ -11,9 +10,6 @@ pub fn register_oom_handler() {
     return_and_clear_oom_happened();
     std::alloc::set_alloc_error_hook(|layout| {
         OOM_HAPPANED.store(true, Ordering::SeqCst);
-
-        let _ = backtrace::enable_backtrace("librust_cosmwasm_enclave.so", PrintFormat::Full);
-
         panic!("memory allocation of {} bytes failed\n", layout.size());
     });
 }
