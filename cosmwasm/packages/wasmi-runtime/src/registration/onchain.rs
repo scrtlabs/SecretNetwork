@@ -10,7 +10,7 @@ use crate::consts::ENCRYPTED_SEED_SIZE;
 use crate::crypto::PUBLIC_KEY_SIZE;
 use crate::storage::write_to_untrusted;
 use crate::{
-    oom_handler::{register_oom_handler, return_and_clear_oom_happened},
+    oom_handler::{register_oom_handler, get_then_clear_oom_happened},
     utils::{validate_const_ptr, validate_mut_ptr},
 };
 
@@ -89,7 +89,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
         }
     } else {
         // There's no real need here to test if oom happened
-        return_and_clear_oom_happened();
+        get_then_clear_oom_happened();
         error!("Enclave call ecall_authenticate_new_node panic!");
         NodeAuthResult::Panic
     }

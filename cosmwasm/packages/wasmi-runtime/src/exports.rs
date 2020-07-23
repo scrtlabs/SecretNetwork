@@ -9,7 +9,7 @@ use crate::results::{
     result_query_success_to_queryresult,
 };
 use crate::{
-    oom_handler::{register_oom_handler, return_and_clear_oom_happened},
+    oom_handler::{get_then_clear_oom_happened, register_oom_handler},
     utils::{validate_const_ptr, validate_mut_ptr},
 };
 
@@ -39,7 +39,7 @@ pub unsafe extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> Enc
         // We can get here only by failing to allocate memory,
         // so there's no real need here to test if oom happened
         error!("Enclave ran out of memory: {:?}", err);
-        return_and_clear_oom_happened();
+        get_then_clear_oom_happened();
         EnclaveBuffer::default()
     })
 }
@@ -101,7 +101,7 @@ pub unsafe extern "C" fn ecall_init(
     } else {
         *used_gas = gas_limit;
 
-        if return_and_clear_oom_happened() {
+        if get_then_clear_oom_happened() {
             error!("Call ecall_init failed because the enclave ran out of memory!");
             InitResult::Failure {
                 err: EnclaveError::OutOfMemory,
@@ -161,7 +161,7 @@ pub unsafe extern "C" fn ecall_handle(
     } else {
         *used_gas = gas_limit;
 
-        if return_and_clear_oom_happened() {
+        if get_then_clear_oom_happened() {
             error!("Call ecall_handle failed because the enclave ran out of memory!");
             HandleResult::Failure {
                 err: EnclaveError::OutOfMemory,
@@ -219,7 +219,7 @@ pub unsafe extern "C" fn ecall_query(
             *used_gas, gas_limit
         );
 
-        if return_and_clear_oom_happened() {
+        if get_then_clear_oom_happened() {
             error!("Call ecall_query failed because the enclave ran out of memory!");
             QueryResult::Failure {
                 err: EnclaveError::OutOfMemory,
