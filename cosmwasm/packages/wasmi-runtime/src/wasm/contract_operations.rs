@@ -23,7 +23,7 @@ use crate::wasm::types::SecretMessage;
 use crate::coalesce;
 
 /*
-Each contract is compiled with these functions alreadyy implemented in wasm:
+Each contract is compiled with these functions already implemented in wasm:
 fn cosmwasm_api_0_6() -> i32;  // Seems unused, but we should support it anyways
 fn allocate(size: usize) -> *mut c_void;
 fn deallocate(pointer: *mut c_void);
