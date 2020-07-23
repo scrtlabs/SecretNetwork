@@ -935,7 +935,7 @@ func TestInitCallbackBadParam(t *testing.T) {
 	require.Empty(t, initEvents)
 	require.Error(t, initErr)
 	require.Error(t, initErr.ParseErr)
-	require.Equal(t, "test_contract::contract::SecretMsg", initErr.ParseErr.Target)
+	require.Equal(t, "test_contract::contract::InitMsg", initErr.ParseErr.Target)
 	require.Contains(t, initErr.ParseErr.Msg, "unknown variant `callback_contract_bad_param`")
 }
 

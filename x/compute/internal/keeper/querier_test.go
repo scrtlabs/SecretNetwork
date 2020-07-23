@@ -43,7 +43,14 @@ func TestQueryContractLabel(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+	hash := keeper.GetCodeInfo(ctx, contractID).CodeHash
+
+	msg := wasmUtils.SecretMsg{
+		CodeHash: []byte(hex.EncodeToString(hash)),
+		Msg:      initMsgBz,
+	}
+
+	initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 
 	label := "banana"
