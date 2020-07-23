@@ -230,7 +230,7 @@ func TestInstantiate(t *testing.T) {
 	key := keeper.GetCodeInfo(ctx, contractID).CodeHash
 	//keyStr := hex.EncodeToString(key)
 
-	msg := wasmUtils.InitMsg{
+	msg := wasmUtils.SecretMsg{
 		CodeHash: []byte(hex.EncodeToString(key)),
 		Msg:      initMsgBz,
 	}
@@ -454,7 +454,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 
 	hash := keeper.GetCodeInfo(ctx, contractID).CodeHash
 
-	msg := wasmUtils.InitMsg{
+	msg := wasmUtils.SecretMsg{
 		CodeHash: []byte(hex.EncodeToString(hash)),
 		Msg:      initMsgBz,
 	}
@@ -470,12 +470,12 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	ctx = ctx.WithGasMeter(sdk.NewGasMeter(gasLimit))
 	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
-	contractKey := keeper.GetContractKey(ctx, addr)
-	contractKeyStr := hex.EncodeToString(contractKey)
+	codeHash := keeper.GetContractHash(ctx, addr)
+	codeHashStr := hex.EncodeToString(codeHash)
 
-	msg2 := wasmUtils.ExecuteMsg{
-		ContractKey: []byte(contractKeyStr),
-		Msg:         []byte(`{"cpu_loop":{}}`),
+	msg2 := wasmUtils.SecretMsg{
+		CodeHash: []byte(codeHashStr),
+		Msg:      []byte(`{"cpu_loop":{}}`),
 	}
 
 	execMsgBz, err := wasmCtx.Encrypt(msg2.Serialize())
@@ -535,12 +535,12 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 		require.True(t, ok, "%v", r)
 	}()
 
-	contractKey := keeper.GetContractKey(ctx, addr)
-	contractKeyStr := hex.EncodeToString(contractKey)
+	codeHash := keeper.GetContractHash(ctx, addr)
+	codeHashStr := hex.EncodeToString(codeHash)
 
-	msg := wasmUtils.ExecuteMsg{
-		ContractKey: []byte(contractKeyStr),
-		Msg:         []byte(`{"storage_loop":{}}`),
+	msg := wasmUtils.SecretMsg{
+		CodeHash: []byte(codeHashStr),
+		Msg:      []byte(`{"storage_loop":{}}`),
 	}
 
 	msgBz, err := wasmCtx.Encrypt(msg.Serialize())

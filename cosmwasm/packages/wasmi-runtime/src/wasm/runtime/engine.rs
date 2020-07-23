@@ -58,18 +58,21 @@ impl Engine {
                 Err(EnclaveError::FailedFunctionCall)
             }
         };
-        if result.is_ok() {
-            write_encrypted_key(
-                b"key",
-                contract_key,
-                &self.contract_instance.context,
-                &self.contract_instance.contract_key,
-            )
-            .map_err(|_| {
-                error!("Failed to write contract key to database");
-                EnclaveError::InternalError
-            })?;
-        }
+
+        // Itzik: leaving this here as an example in case we will want to do something like this in the future
+
+        // if result.is_ok() {
+        //     write_encrypted_key(
+        //         b"key",
+        //         contract_key,
+        //         &self.contract_instance.context,
+        //         &self.contract_instance.contract_key,
+        //     )
+        //     .map_err(|_| {
+        //         error!("Failed to write contract key to database");
+        //         EnclaveError::InternalError
+        //     })?;
+        // }
 
         result
     }
@@ -82,29 +85,31 @@ impl Engine {
     ) -> Result<u32, EnclaveError> {
         trace!("Invoking handle() in wasm");
 
-        let stored_address = read_encrypted_key(
-            b"key",
-            &self.contract_instance.context,
-            &self.contract_instance.contract_key,
-        )
-        .map_err(|_| {
-            error!("WTF wrong contract key are you crazy???");
-            EnclaveError::InternalError
-        })?;
+        // Itzik: leaving this here as an example in case we will want to do something like this in the future
 
-        match stored_address.0 {
-            Some(addr) => {
-                if addr != contract_key.to_vec() {
-                    error!("WTF wrong contract key are you crazy???");
-                    return Err(EnclaveError::FailedUnseal);
-                }
-                Ok(())
-            }
-            None => {
-                error!("WTF no contract address found you must be trippin' dawg");
-                Err(EnclaveError::InternalError)
-            }
-        }?;
+        // let stored_address = read_encrypted_key(
+        //     b"key",
+        //     &self.contract_instance.context,
+        //     &self.contract_instance.contract_key,
+        // )
+        // .map_err(|_| {
+        //     error!("WTF wrong contract key are you crazy???");
+        //     EnclaveError::InternalError
+        // })?;
+        //
+        // match stored_address.0 {
+        //     Some(addr) => {
+        //         if addr != contract_key.to_vec() {
+        //             error!("WTF wrong contract key are you crazy???");
+        //             return Err(EnclaveError::FailedUnseal);
+        //         }
+        //         Ok(())
+        //     }
+        //     None => {
+        //         error!("WTF no contract address found you must be trippin' dawg");
+        //         Err(EnclaveError::InternalError)
+        //     }
+        // }?;
 
         match self
             .module

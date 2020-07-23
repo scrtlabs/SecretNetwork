@@ -158,12 +158,12 @@ func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.
 
 func execHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string, isErrorEncrypted bool, gas uint64) ([]byte, []ContractEvent, cosmwasm.StdError) {
 
-	key := keeper.GetContractKey(ctx, contractAddress)
-	keyStr := hex.EncodeToString(key)
+	hash := keeper.GetContractHash(ctx, contractAddress)
+	hashStr := hex.EncodeToString(hash)
 
-	msg := wasmUtils.ExecuteMsg{
-		ContractKey: []byte(keyStr),
-		Msg:         []byte(execMsg),
+	msg := wasmUtils.SecretMsg{
+		CodeHash: []byte(hashStr),
+		Msg:      []byte(execMsg),
 	}
 
 	execMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
@@ -200,7 +200,7 @@ func initHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, cre
 
 	hash := keeper.GetCodeInfo(ctx, codeID).CodeHash
 
-	msg := wasmUtils.InitMsg{
+	msg := wasmUtils.SecretMsg{
 		CodeHash: []byte(hex.EncodeToString(hash)),
 		Msg:      []byte(initMsg),
 	}
@@ -251,10 +251,10 @@ func TestCallbackSanity(t *testing.T) {
 		initEvents,
 	)
 
-	contractKey := keeper.GetContractKey(ctx, contractAddress)
-	contractKeyStr := hex.EncodeToString(contractKey)
+	codeHash := keeper.GetContractHash(ctx, contractAddress)
+	codeHashStr := hex.EncodeToString(codeHash)
 
-	data, execEvents, err := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"a":{"contract_addr":"%s","contract_key":"%s","x":2,"y":3}}`, contractAddress.String(), contractKeyStr), true, defaultGas)
+	data, execEvents, err := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"a":{"contract_addr":"%s","code_hash":"%s","x":2,"y":3}}`, contractAddress.String(), codeHashStr), true, defaultGas)
 	require.Empty(t, err)
 	require.Equal(t,
 		[]ContractEvent{
@@ -431,11 +431,11 @@ func TestCallbackFromInitAndCallbackEvents(t *testing.T) {
 		initEvents,
 	)
 
-	contractKey := keeper.GetContractKey(ctx, firstContractAddress)
-	contractKeyStr := hex.EncodeToString(contractKey)
+	codeHash := keeper.GetContractHash(ctx, firstContractAddress)
+	codeHashStr := hex.EncodeToString(codeHash)
 
 	// init second contract and callback to the first contract
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback":{"contract_addr":"%s", "contract_key": "%s"}}`, firstContractAddress.String(), contractKeyStr), true, defaultGas)
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback":{"contract_addr":"%s", "code_hash": "%s"}}`, firstContractAddress.String(), codeHashStr), true, defaultGas)
 	require.Empty(t, initErr)
 
 	require.Equal(t,
@@ -676,8 +676,8 @@ func TestInitParamError(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	contractKey := "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-	msg := fmt.Sprintf(`{"callback":{"contract_addr":"notanaddress", "contract_key":"%s"}}`, contractKey)
+	codeHash := "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+	msg := fmt.Sprintf(`{"callback":{"contract_addr":"notanaddress", "code_hash":"%s"}}`, codeHash)
 
 	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, msg, false, defaultGas)
 
@@ -692,10 +692,10 @@ func TestCallbackExecuteParamError(t *testing.T) {
 	require.Empty(t, initErr)
 
 	// codeHash := keeper.GetCodeInfo(ctx, codeID).CodeHash
-	contractKey := keeper.GetContractKey(ctx, contractAddress)
-	contractKeyStr := hex.EncodeToString(contractKey)
+	codeHash := keeper.GetContractHash(ctx, contractAddress)
+	codeHashStr := hex.EncodeToString(codeHash)
 
-	msg := fmt.Sprintf(`{"a":{"contract_key": "%s","contract_addr":"notanaddress","x":2,"y":3}}`, contractKeyStr)
+	msg := fmt.Sprintf(`{"a":{"code_hash":"%s","contract_addr":"notanaddress","x":2,"y":3}}`, codeHashStr)
 
 	_, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, msg, false, defaultGas)
 
@@ -792,7 +792,7 @@ func TestExecCallbackToInit(t *testing.T) {
 	require.Empty(t, initErr)
 
 	codeHash := keeper.GetCodeInfo(ctx, codeID).CodeHash
-	// contractKey := keeper.GetContractKey(ctx, contractAddress)
+	// codeHash := keeper.GetContractKey(ctx, contractAddress)
 
 	// init second contract and callback to the first contract
 	execData, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d, "code_hash":"%s"}}`, codeID, hex.EncodeToString(codeHash)), true, defaultGas)
@@ -829,7 +829,7 @@ func TestInitCallbackToInit(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	codeHash := keeper.GetCodeInfo(ctx, codeID).CodeHash
-	// contractKey := keeper.GetContractKey(ctx, contractAddress)
+	// codeHash := keeper.GetContractKey(ctx, contractAddress)
 
 	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d, "code_hash":"%s"}}`, codeID, hex.EncodeToString(codeHash)), true, defaultGas)
 	require.Empty(t, initErr)
@@ -868,10 +868,10 @@ func TestInitCallbackContractError(t *testing.T) {
 	require.Equal(t, 1, len(initEvents))
 
 	//codeHash := keeper.GetCodeInfo(ctx, codeID).CodeHash
-	contractKey := keeper.GetContractKey(ctx, contractAddress)
-	contractKeyStr := hex.EncodeToString(contractKey)
+	codeHash := keeper.GetContractHash(ctx, contractAddress)
+	codeHashStr := hex.EncodeToString(codeHash)
 
-	secondContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s", "contract_key": "%s"}}`, contractAddress, contractKeyStr), true, defaultGas)
+	secondContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s", "code_hash":"%s"}}`, contractAddress, codeHashStr), true, defaultGas)
 	require.Error(t, initErr)
 	require.Error(t, initErr.GenericErr)
 	require.Equal(t, "la la 🤯", initErr.GenericErr.Msg)
@@ -889,10 +889,10 @@ func TestExecCallbackContractError(t *testing.T) {
 	require.Equal(t, 1, len(initEvents))
 
 	//codeHash := keeper.GetCodeInfo(ctx, codeID).CodeHash
-	contractKey := keeper.GetContractKey(ctx, contractAddress)
-	contractKeyStr := hex.EncodeToString(contractKey)
+	codeHash := keeper.GetContractHash(ctx, contractAddress)
+	codeHashStr := hex.EncodeToString(codeHash)
 
-	data, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s", "contract_key": "%s"}}`, contractAddress, contractKeyStr), true, defaultGas)
+	data, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s", "code_hash":"%s"}}`, contractAddress, codeHashStr), true, defaultGas)
 	require.Error(t, execErr)
 	require.Error(t, execErr.GenericErr)
 	require.Equal(t, "la la 🤯", execErr.GenericErr.Msg)
@@ -909,10 +909,10 @@ func TestExecCallbackBadParam(t *testing.T) {
 	require.Empty(t, initErr)
 	require.Equal(t, 1, len(initEvents))
 
-	contractKey := keeper.GetContractKey(ctx, contractAddress)
-	contractKeyStr := hex.EncodeToString(contractKey)
+	codeHash := keeper.GetContractHash(ctx, contractAddress)
+	codeHashStr := hex.EncodeToString(codeHash)
 
-	data, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_contract_bad_param":{"contract_addr":"%s", "contract_key": "%s"}}`, contractAddress, contractKeyStr), true, defaultGas)
+	data, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_contract_bad_param":{"contract_addr":"%s", "code_hash":"%s"}}`, contractAddress, codeHashStr), true, defaultGas)
 	require.Error(t, execErr)
 	require.Error(t, execErr.ParseErr)
 	require.Equal(t, "test_contract::contract::HandleMsg", execErr.ParseErr.Target)
@@ -935,7 +935,7 @@ func TestInitCallbackBadParam(t *testing.T) {
 	require.Empty(t, initEvents)
 	require.Error(t, initErr)
 	require.Error(t, initErr.ParseErr)
-	require.Equal(t, "test_contract::contract::InitMsg", initErr.ParseErr.Target)
+	require.Equal(t, "test_contract::contract::SecretMsg", initErr.ParseErr.Target)
 	require.Contains(t, initErr.ParseErr.Msg, "unknown variant `callback_contract_bad_param`")
 }
 

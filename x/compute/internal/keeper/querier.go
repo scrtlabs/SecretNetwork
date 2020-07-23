@@ -21,6 +21,7 @@ const (
 	QueryListCode           = "list-code"
 	QueryContractAddress    = "label"
 	QueryContractKey        = "contract-key"
+	QueryContractHash       = "contract-hash"
 )
 
 // ContractInfoWithAddress adds the address (key) to the ContractInfo representation
@@ -51,6 +52,8 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 			return queryContractAddress(ctx, path[1], req, keeper)
 		case QueryContractKey:
 			return queryContractKey(ctx, path[1], req, keeper)
+		case QueryContractHash:
+			return queryContractHash(ctx, path[1], req, keeper)
 		default:
 			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "unknown data query endpoint")
 		}
@@ -220,4 +223,18 @@ func queryContractKey(ctx sdk.Context, address string, req abci.RequestQuery, ke
 	}
 
 	return res, nil
+}
+
+func queryContractHash(ctx sdk.Context, address string, req abci.RequestQuery, keeper Keeper) ([]byte, error) {
+	contractAddr, err := sdk.AccAddressFromBech32(address)
+	if err != nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, address)
+	}
+
+	res := keeper.GetContractInfo(ctx, contractAddr)
+	if res == nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownAddress, address)
+	}
+
+	return keeper.GetCodeInfo(ctx, res.CodeID).CodeHash, nil
 }

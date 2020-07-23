@@ -263,20 +263,11 @@ func (ctx WASMContext) DecryptError(errString string, msgType string, nonce []by
 	return stdErr, nil
 }
 
-type ExecuteMsg struct {
-	ContractKey []byte
-	Msg         []byte
-}
-
-func (m ExecuteMsg) Serialize() []byte {
-	return append(m.ContractKey, m.Msg...)
-}
-
-type InitMsg struct {
+type SecretMsg struct {
 	CodeHash []byte
 	Msg      []byte
 }
 
-func (m InitMsg) Serialize() []byte {
+func (m SecretMsg) Serialize() []byte {
 	return append(m.CodeHash, m.Msg...)
 }

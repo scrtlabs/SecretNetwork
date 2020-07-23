@@ -121,7 +121,7 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 			txBldr := auth.NewTxBuilderFromCLI(inBuf).WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
 			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
-			initMsg := wasmUtils.InitMsg{}
+			initMsg := wasmUtils.SecretMsg{}
 
 			// get the id of the code to instantiate
 			codeID, err := strconv.ParseUint(args[0], 10, 64)
@@ -146,7 +146,7 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 				return fmt.Errorf("label already exists. You must choose a unique label for your contract instance")
 			}
 
-			initMsg.CodeHash, err = GetCodeHash(cliCtx, args[0])
+			initMsg.CodeHash, err = GetCodeHashByCodeId(cliCtx, args[0])
 			if err != nil {
 				return err
 			}
@@ -198,7 +198,7 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 			txBldr := auth.NewTxBuilderFromCLI(inBuf).WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
 			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
-			execMsg := wasmUtils.ExecuteMsg{}
+			execMsg := wasmUtils.SecretMsg{}
 			contractAddr := sdk.AccAddress{}
 
 			// var execMsg []byte
@@ -233,7 +233,7 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			execMsg.ContractKey, err = GetContractKey(cliCtx, contractAddr)
+			execMsg.CodeHash, err = GetCodeHashByContractAddr(cliCtx, contractAddr)
 			if err != nil {
 				return err
 			}
@@ -259,7 +259,7 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 	return cmd
 }
 
-func GetCodeHash(cliCtx context.CLIContext, codeID string) ([]byte, error) {
+func GetCodeHashByCodeId(cliCtx context.CLIContext, codeID string) ([]byte, error) {
 	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryGetCode, codeID)
 	res, _, err := cliCtx.Query(route)
 	if err != nil {
@@ -269,16 +269,19 @@ func GetCodeHash(cliCtx context.CLIContext, codeID string) ([]byte, error) {
 	var codeResp keeper.GetCodeResponse
 
 	err = json.Unmarshal(res, &codeResp)
-
-	return []byte(hex.EncodeToString(codeResp.DataHash)), nil
-}
-
-func GetContractKey(cliCtx context.CLIContext, contractAddr sdk.AccAddress) ([]byte, error) {
-	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractKey, contractAddr.String())
-	key, _, err := cliCtx.Query(route)
 	if err != nil {
 		return nil, err
 	}
 
-	return []byte(hex.EncodeToString(key)), nil
+	return []byte(hex.EncodeToString(codeResp.DataHash)), nil
+}
+
+func GetCodeHashByContractAddr(cliCtx context.CLIContext, contractAddr sdk.AccAddress) ([]byte, error) {
+	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHash, contractAddr.String())
+	res, _, err := cliCtx.Query(route)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(hex.EncodeToString(res)), nil
 }

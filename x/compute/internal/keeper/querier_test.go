@@ -134,7 +134,7 @@ func TestQueryContractState(t *testing.T) {
 	key := keeper.GetCodeInfo(ctx, contractID).CodeHash
 	keyStr := hex.EncodeToString(key)
 
-	msg := wasmUtils.InitMsg{
+	msg := wasmUtils.SecretMsg{
 		CodeHash: []byte(keyStr),
 		Msg:      initMsgBz,
 	}
@@ -236,7 +236,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 	key := keeper.GetCodeInfo(ctx, codeID).CodeHash
 	keyStr := hex.EncodeToString(key)
 
-	msg := wasmUtils.InitMsg{
+	msg := wasmUtils.SecretMsg{
 		CodeHash: []byte(keyStr),
 		Msg:      initMsgBz,
 	}

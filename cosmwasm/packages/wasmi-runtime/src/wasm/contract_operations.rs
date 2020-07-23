@@ -9,8 +9,8 @@ use crate::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::wasm::contract_validation::ContractKey;
 
 use super::contract_validation::{
-    extract_contract_key, generate_encryption_key, validate_contract_key, validate_exec_msg,
-    validate_init_msg, CONTRACT_KEY_LENGTH,
+    extract_contract_key, generate_encryption_key, validate_contract_key, validate_msg,
+    CONTRACT_KEY_LENGTH,
 };
 use super::gas::{gas_rules, WasmCosts};
 use super::io::encrypt_output;
@@ -59,7 +59,6 @@ pub fn init(
     trace!("Init: Contract Key: {:?}", contract_key.to_vec().as_slice());
 
     let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
-
     let env_ptr = engine.write_to_memory(env)?;
 
     trace!(
@@ -69,7 +68,7 @@ pub fn init(
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
 
-    let validated_msg = validate_init_msg(&decrypted_msg, contract)?;
+    let validated_msg = validate_msg(&decrypted_msg, contract)?;
 
     trace!(
         "Init input afer decryption: {:?}",
@@ -140,7 +139,7 @@ pub fn handle(
         String::from_utf8_lossy(&decrypted_msg)
     );
 
-    let validated_msg = validate_exec_msg(&decrypted_msg, contract_key.as_ref())?;
+    let validated_msg = validate_msg(&decrypted_msg, contract)?;
 
     if !validate_contract_key(&contract_key, contract_address.as_slice(), contract) {
         error!("got an error while trying to deserialize output bytes");
