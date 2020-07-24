@@ -10,6 +10,8 @@ pub type ContractKey = [u8; CONTRACT_KEY_LENGTH];
 
 pub const CONTRACT_KEY_LENGTH: usize = HASH_SIZE + HASH_SIZE;
 
+const HEX_ENCODED_HASH_SIZE: usize = HASH_SIZE * 2;
+
 pub fn generate_encryption_key(
     env: &Env,
     contract: &[u8],
@@ -119,10 +121,15 @@ pub fn validate_contract_key(
 }
 
 pub fn validate_msg(msg: &[u8], contract_code: &[u8]) -> Result<Vec<u8>, EnclaveError> {
+    if msg.len() < HEX_ENCODED_HASH_SIZE {
+        error!("Got message that is missing contract hash for validation");
+        return Err(EnclaveError::ValidationFailure);
+    }
+
     let contract_hash = calc_contract_hash(contract_code);
 
-    let mut encrypted_contract_hash: [u8; HASH_SIZE * 2] = [0u8; HASH_SIZE * 2];
-    encrypted_contract_hash.copy_from_slice(&msg[0..HASH_SIZE * 2]);
+    let mut encrypted_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] = [0u8; HEX_ENCODED_HASH_SIZE];
+    encrypted_contract_hash.copy_from_slice(&msg[0..HEX_ENCODED_HASH_SIZE]);
 
     let decoded_hash: Vec<u8> =
         hex::decode(encrypted_contract_hash.to_vec().as_slice()).map_err(|_| {
@@ -135,23 +142,5 @@ pub fn validate_msg(msg: &[u8], contract_code: &[u8]) -> Result<Vec<u8>, Enclave
         return Err(EnclaveError::ValidationFailure);
     }
 
-    Ok(msg[(HASH_SIZE * 2)..].to_vec())
+    Ok(msg[HEX_ENCODED_HASH_SIZE..].to_vec())
 }
-
-// pub fn validate_exec_msg(msg: &[u8], contract_key: &[u8]) -> Result<Vec<u8>, EnclaveError> {
-//     let mut encrypted_contract_hash: [u8; CONTRACT_KEY_LENGTH * 2] = [0u8; CONTRACT_KEY_LENGTH * 2];
-//     encrypted_contract_hash.copy_from_slice(&msg[0..CONTRACT_KEY_LENGTH * 2]);
-//
-//     let decoded_key: Vec<u8> =
-//         hex::decode(encrypted_contract_hash.to_vec().as_slice()).map_err(|_| {
-//             error!("Got exec message with malformed contract key");
-//             EnclaveError::ValidationFailure
-//         })?;
-//
-//     if decoded_key != contract_key.to_vec() {
-//         error!("Got exec message with mismatched contract key");
-//         return Err(EnclaveError::ValidationFailure);
-//     }
-//
-//     Ok(msg[(CONTRACT_KEY_LENGTH * 2)..].to_vec())
-// }

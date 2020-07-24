@@ -5,12 +5,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"testing"
-
-	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
 
 	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
@@ -136,7 +135,7 @@ func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.
 
 	hashStr := hex.EncodeToString(hash)
 
-	msg := wasmUtils.SecretMsg{
+	msg := types.SecretMsg{
 		CodeHash: []byte(hashStr),
 		Msg:      []byte(input),
 	}
@@ -174,7 +173,7 @@ func execHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sd
 	hash := keeper.GetContractHash(ctx, contractAddress)
 	hashStr := hex.EncodeToString(hash)
 
-	msg := wasmUtils.SecretMsg{
+	msg := types.SecretMsg{
 		CodeHash: []byte(hashStr),
 		Msg:      []byte(execMsg),
 	}
@@ -213,7 +212,7 @@ func initHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, cre
 
 	hash := keeper.GetCodeInfo(ctx, codeID).CodeHash
 
-	msg := wasmUtils.SecretMsg{
+	msg := types.SecretMsg{
 		CodeHash: []byte(hex.EncodeToString(hash)),
 		Msg:      []byte(initMsg),
 	}

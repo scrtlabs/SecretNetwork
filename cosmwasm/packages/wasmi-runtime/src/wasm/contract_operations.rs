@@ -1,12 +1,15 @@
-use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
 use parity_wasm::elements;
 use parity_wasm::elements::Module;
 use wasmi::ModuleInstance;
 
+use enclave_ffi_types::{Ctx, EnclaveError};
+
+use crate::coalesce;
 use crate::cosmwasm::types::Env;
 use crate::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::wasm::contract_validation::ContractKey;
+use crate::wasm::types::SecretMessage;
 
 use super::contract_validation::{
     extract_contract_key, generate_encryption_key, validate_contract_key, validate_msg,
@@ -18,9 +21,6 @@ use super::{
     memory::validate_memory,
     runtime::{create_builder, ContractInstance, Engine, WasmiImportResolver},
 };
-use crate::wasm::types::SecretMessage;
-
-use crate::coalesce;
 
 /*
 Each contract is compiled with these functions already implemented in wasm:

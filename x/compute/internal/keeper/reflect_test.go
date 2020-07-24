@@ -3,7 +3,6 @@ package keeper
 import (
 	"encoding/hex"
 	"encoding/json"
-	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -291,7 +290,7 @@ func TestMaskReflectCustomQuery(t *testing.T) {
 	hash := keeper.GetContractHash(ctx, contractAddr)
 	hashStr := hex.EncodeToString(hash)
 
-	msg := wasmUtils.SecretMsg{
+	msg := types.SecretMsg{
 		CodeHash: []byte(hashStr),
 		Msg:      ownerQueryBz,
 	}
@@ -318,7 +317,7 @@ func TestMaskReflectCustomQuery(t *testing.T) {
 	hash = keeper.GetContractHash(ctx, contractAddr)
 	hashStr = hex.EncodeToString(hash)
 
-	msg = wasmUtils.SecretMsg{
+	msg = types.SecretMsg{
 		CodeHash: []byte(hashStr),
 		Msg:      customQueryBz,
 	}

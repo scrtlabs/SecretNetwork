@@ -3,7 +3,7 @@ package keeper
 import (
 	"encoding/hex"
 	"encoding/json"
-	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
+	types2 "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -495,7 +495,7 @@ func assertBalance(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Ac
 	hash := keeper.GetContractHash(ctx, contract)
 	hashStr := hex.EncodeToString(hash)
 
-	msg := wasmUtils.SecretMsg{
+	msg := types2.SecretMsg{
 		CodeHash: []byte(hashStr),
 		Msg:      queryBz,
 	}
@@ -523,7 +523,7 @@ func assertClaims(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	hash := keeper.GetContractHash(ctx, contract)
 	hashStr := hex.EncodeToString(hash)
 
-	msg := wasmUtils.SecretMsg{
+	msg := types2.SecretMsg{
 		CodeHash: []byte(hashStr),
 		Msg:      queryBz,
 	}
@@ -547,7 +547,7 @@ func assertSupply(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	hash := keeper.GetContractHash(ctx, contract)
 	hashStr := hex.EncodeToString(hash)
 
-	msg := wasmUtils.SecretMsg{
+	msg := types2.SecretMsg{
 		CodeHash: []byte(hashStr),
 		Msg:      queryBz,
 	}

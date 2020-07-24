@@ -121,7 +121,7 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 			txBldr := auth.NewTxBuilderFromCLI(inBuf).WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
 			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
-			initMsg := wasmUtils.SecretMsg{}
+			initMsg := types.SecretMsg{}
 
 			// get the id of the code to instantiate
 			codeID, err := strconv.ParseUint(args[0], 10, 64)
@@ -198,7 +198,7 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 			txBldr := auth.NewTxBuilderFromCLI(inBuf).WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
 			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
-			execMsg := wasmUtils.SecretMsg{}
+			execMsg := types.SecretMsg{}
 			contractAddr := sdk.AccAddress{}
 
 			// var execMsg []byte

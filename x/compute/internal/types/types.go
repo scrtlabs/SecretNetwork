@@ -181,3 +181,12 @@ func DefaultWasmConfig() WasmConfig {
 		CacheSize:          defaultLRUCacheSize,
 	}
 }
+
+type SecretMsg struct {
+	CodeHash []byte
+	Msg      []byte
+}
+
+func (m SecretMsg) Serialize() []byte {
+	return append(m.CodeHash, m.Msg...)
+}

@@ -230,7 +230,7 @@ func TestInstantiate(t *testing.T) {
 	key := keeper.GetCodeInfo(ctx, contractID).CodeHash
 	//keyStr := hex.EncodeToString(key)
 
-	msg := wasmUtils.SecretMsg{
+	msg := types.SecretMsg{
 		CodeHash: []byte(hex.EncodeToString(key)),
 		Msg:      initMsgBz,
 	}
@@ -454,7 +454,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 
 	hash := keeper.GetCodeInfo(ctx, contractID).CodeHash
 
-	msg := wasmUtils.SecretMsg{
+	msg := types.SecretMsg{
 		CodeHash: []byte(hex.EncodeToString(hash)),
 		Msg:      initMsgBz,
 	}
@@ -473,7 +473,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	codeHash := keeper.GetContractHash(ctx, addr)
 	codeHashStr := hex.EncodeToString(codeHash)
 
-	msg2 := wasmUtils.SecretMsg{
+	msg2 := types.SecretMsg{
 		CodeHash: []byte(codeHashStr),
 		Msg:      []byte(`{"cpu_loop":{}}`),
 	}
@@ -538,7 +538,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	codeHash := keeper.GetContractHash(ctx, addr)
 	codeHashStr := hex.EncodeToString(codeHash)
 
-	msg := wasmUtils.SecretMsg{
+	msg := types.SecretMsg{
 		CodeHash: []byte(codeHashStr),
 		Msg:      []byte(`{"storage_loop":{}}`),
 	}

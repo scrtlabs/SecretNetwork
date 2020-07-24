@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -45,7 +44,7 @@ func TestQueryContractLabel(t *testing.T) {
 
 	hash := keeper.GetCodeInfo(ctx, contractID).CodeHash
 
-	msg := wasmUtils.SecretMsg{
+	msg := types.SecretMsg{
 		CodeHash: []byte(hex.EncodeToString(hash)),
 		Msg:      initMsgBz,
 	}
@@ -141,7 +140,7 @@ func TestQueryContractState(t *testing.T) {
 	key := keeper.GetCodeInfo(ctx, contractID).CodeHash
 	keyStr := hex.EncodeToString(key)
 
-	msg := wasmUtils.SecretMsg{
+	msg := types.SecretMsg{
 		CodeHash: []byte(keyStr),
 		Msg:      initMsgBz,
 	}
@@ -243,7 +242,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 	key := keeper.GetCodeInfo(ctx, codeID).CodeHash
 	keyStr := hex.EncodeToString(key)
 
-	msg := wasmUtils.SecretMsg{
+	msg := types.SecretMsg{
 		CodeHash: []byte(keyStr),
 		Msg:      initMsgBz,
 	}

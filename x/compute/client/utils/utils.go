@@ -174,16 +174,6 @@ func (ctx WASMContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) 
 	return txEncryptionKey, nil
 }
 
-//
-//type SIVNonce [32]byte
-//type StoredContractKey []byte
-//
-//type EncryptionHeader struct {
-//	Nonce    SIVNonce
-//	PubKey   []byte
-//	ContractKey StoredContractKey
-//}
-
 // Encrypt encrypts
 func (ctx WASMContext) Encrypt(plaintext []byte) ([]byte, error) {
 	txSenderPrivKey, txSenderPubKey, err := ctx.GetTxSenderKeyPair()
@@ -261,13 +251,4 @@ func (ctx WASMContext) DecryptError(errString string, msgType string, nonce []by
 	}
 
 	return stdErr, nil
-}
-
-type SecretMsg struct {
-	CodeHash []byte
-	Msg      []byte
-}
-
-func (m SecretMsg) Serialize() []byte {
-	return append(m.CodeHash, m.Msg...)
 }
