@@ -77,6 +77,12 @@ cd ~/
 
 ### 8. Initialize secret enclave
 
+Make sure the directory `~/.sgx-secrets` exists:
+
+```bash
+mkdir ~/.sgx-secrets
+```
+
 Make sure SGX is enabled and running or this step might fail.
 
 ```bash
@@ -108,7 +114,7 @@ echo $PUBLIC_KEY
 
 The steps using `secretcli` can be run on any machine, they don't need to be on the full node itself. We'll refer to the machine where you are using `secretcli` as the "CLI machine" below.
 
-To run the steps with `secretcli` on another machine, [set up the CLI](https://github.com/enigmampc/SecretNetwork/blob/master/docs/testnet/install_cli.md) there.
+To run the steps with `secretcli` on another machine, [set up the CLI](install_cli.md) there.
 
 Configure `secretcli`. Initially you'll be using the bootstrap node, as you'll need to connect to a running node and your own node is not running yet.
 
