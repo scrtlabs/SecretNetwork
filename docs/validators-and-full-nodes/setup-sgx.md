@@ -15,8 +15,10 @@ If you're running a local machine and not a cloud-based VM -
 Note: `sgx_linux_x64_driver_2.6.0_602374c.bin` is the latest driver as of July 13, 2020. Please check under https://download.01.org/intel-sgx/sgx-linux/ that this is still the case. If not, please send us a PR or notify us.
 
 ```bash
+#! /bin/bash
+
 UBUNTUVERSION=$(lsb_release -r -s | cut -d '.' -f 1)
-PSW_PACKAGES='libsgx-enclave-common libsgx-urts sgx-aesm-service libsgx-uae-service autoconf libtool'
+PSW_PACKAGES='libsgx-enclave-common libsgx-urts sgx-aesm-service libsgx-uae-service autoconf libtool make'
 
 if (($UBUNTUVERSION < 16)); then
 	echo "Your version of Ubuntu is not supported. Must have Ubuntu 16.04 and up. Aborting installation script..."
@@ -101,6 +103,8 @@ Then you can use this script (or run the commands one-by-one), which was tested 
 ### Install SGX SDK + Driver
 
 ```bash
+#! /bin/bash
+
 UBUNTUVERSION=$(lsb_release -r -s | cut -d '.' -f 1)
 
 if (($UBUNTUVERSION < 16)); then
@@ -117,7 +121,7 @@ echo "##### Installing missing packages #####"
 echo "#######################################\n\n"
 
 # Install needed packages for script
-sudo apt install -y lynx parallel gdebi
+sudo apt install -y lynx parallel gdebi make
 
 # Create a working directory to download and install the SDK inside
 mkdir -p "$HOME/.sgxsdk"
