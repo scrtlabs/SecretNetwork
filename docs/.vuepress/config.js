@@ -19,23 +19,35 @@ module.exports = {
                 title: 'Introduction',   // required
                 path: '/',      // optional, link of the title, which should be an absolute path and must exist
                 collapsable: true, // optional, defaults to true
-                sidebarDepth: 0,    // optional, defaults to 1
+                sidebarDepth: 1,    // optional, defaults to 1
                 children: [
-                  '/overview',
-                  '/protocol/architecture',
-                  '/protocol/roadmap',
-                  '/ledger-nano-s'
+                  {
+                    title : 'Overview',
+                    path: '/overview'
+                  },
+                  {
+                    title : 'Network Architecture',
+                    path: '/protocol/architecture'
+                  },
+                  {
+                    title : 'Development Roadmap',
+                    path: '/protocol/roadmap'
+                  },
+                  {
+                    title : 'Using SCRT with Ledger (CLI)',
+                    path: '/ledger-nano-s',
+                  }
                 ]
             },
             {
                 title: 'Developers',   // required
                 path: '/dev/developers',      // optional, link of the title, which should be an absolute path and must exist
                 collapsable: true, // optional, defaults to true
-                sidebarDepth: 1,    // optional, defaults to 1
+                sidebarDepth: 0,    // optional, defaults to 1
                 children: [
                   {
                     title : 'Secret Contracts',
-                    path: '/dev/SecretContract/contract-dev-guide',
+                    path: '/dev/SecretContract/overview-guide',
                     children :[
                       {
                         title: 'Local Environment',
@@ -74,6 +86,10 @@ module.exports = {
                   {
                     title: 'SecretWasm/CosmWasm',
                     //path: '/dev/coming-soon'
+                  },
+                  {
+                    title: 'Resources',
+                    path : '/dev/resources.md'
                   }
                   //'/secretcli',
                   //'/dev/contract-dev-guide',
@@ -191,6 +207,11 @@ module.exports = {
                   '/protocol/governance',
                   '/protocol/sgx'
                 ]
+            },
+            {
+              title: 'Secret Wiki',
+              path : 'https://learn.scrt.network/'
+
             }
           ]
       }

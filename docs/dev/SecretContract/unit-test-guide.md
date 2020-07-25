@@ -1,7 +1,7 @@
 ---
 title: 'Unit Tests'
 ---
-#s Unit Tests
+# Unit Tests
 
 Unit tests are coded in the `contract.rs` file itself:
 

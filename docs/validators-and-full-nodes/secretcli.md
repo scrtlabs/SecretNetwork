@@ -4,7 +4,7 @@
 
 `secretcli` is the command-line interface tool that enables you to interact with a node that runs on the Secret Network. [How to install and use `secretcli`](/light-client-mainnet.md).
 
-## `secretcli` Guide
+## `secretcli`
 
 ### Keys
 
