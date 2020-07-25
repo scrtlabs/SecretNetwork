@@ -1,5 +1,3 @@
-## Registration
-
 ### Terms
 
 #### Attestation Certificate
@@ -10,7 +8,7 @@ The report contains both a report that the enclave is genuine, a code hash, and 
 this is a parameter that is shared between all enclaves on the network in order to garuantee determinisic calculations. 
 When a node authenticates succesfully, the network encrypts the seed and shares it with the node. Protocol internals are described [here](https://github.com/enigmampc/SecretNetwork/blob/master/docs/protocol/encryption-specs.md)  
 
-### Background
+## Background
 
 This section will explain node registration in the Secret Network. If you just care about installation you can just follow the setup guides and ignore this document.
 If, however, you want to learn more about what's going on behind the scenes here read on.
@@ -42,7 +40,7 @@ Note: Due to the way rust and C code are compiled recompilation of the enclave c
 This feature is refered to as a reproducable build, and is a feature that will be included in future releases.
 ```
 
-### Prerequisites
+## Prerequisites
 
 To register your node, you will need:
 
@@ -50,7 +48,7 @@ To register your node, you will need:
 
 * Account with some SCRT
 
-### Instructions
+## Instructions
 
 #### Initialize secret enclave
 
