@@ -11,7 +11,7 @@ Developers can write secret contracts for CosmWasm running inside secure enclave
 
 ### 2. Get Your Testnet Account
 
-#### 2.1 Create a [local scrt address](secretcli.md)
+#### 2.1 Create a [local scrt address](/validators-and-full-nodes/secretcli.md)
 #### 2.2 Get some test SCRT from the [faucet](https://faucet.testnet.enigma.co)
 
 ### 3. Start a [Node on Testnet](/testnet/run-full-node-testnet.md)

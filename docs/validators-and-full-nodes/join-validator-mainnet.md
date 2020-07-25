@@ -162,10 +162,28 @@ Modifying the commision-rate can be done using this:
 secretcli tx staking edit-validator --commission-rate="0.05" --from <key-alias>
 ```
 
-## Unjailing your validator
+## Slashing 
 
-Using the following command you can unjail your node.:
+#### Unjailing
 
+To unjail your jailed validator
+
+```bash
+secretcli tx slashing unjail --from <key-alias>
 ```
-secretcli tx slashing unjail --from =<key-alias>
+
+#### Signing Info
+
+To retrieve a validator's signing info:
+
+```bash
+secretcli q slashing signing-info <validator-conspub-key>
 ```
+
+#### Query Parameters
+
+You can get the current slashing parameters via:
+
+```bash
+secretcli q slashing params
+```s
