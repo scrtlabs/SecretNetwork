@@ -234,10 +234,10 @@ func HealthCheck(_ *server.Context, _ *codec.Codec) *cobra.Command {
 
 			res, err := api.HealthCheck()
 			if err != nil {
-				return fmt.Errorf("error: %s", err)
+				return fmt.Errorf("failed to start enclave. Enclave returned: %s", err)
 			}
 
-			fmt.Println(fmt.Sprintf("Enclave SGX status: %s", res))
+			fmt.Println(fmt.Sprintf("SGX enclave health status: %s", res))
 			return nil
 		},
 	}
