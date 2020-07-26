@@ -1,7 +1,7 @@
 use log::*;
 use std::ffi::c_void;
 
-use enclave_ffi_types::{Ctx, EnclaveBuffer, EnclaveError, HandleResult, InitResult, QueryResult};
+use enclave_ffi_types::{Ctx, EnclaveBuffer, EnclaveError, HandleResult, InitResult, QueryResult, HealthCheckResult};
 use std::panic;
 
 use crate::results::{
@@ -180,4 +180,12 @@ pub unsafe extern "C" fn ecall_query(
             err: EnclaveError::Panic,
         }
     }
+}
+
+/// # Safety
+/// Always use protection
+#[no_mangle]
+pub unsafe extern "C" fn ecall_health_check(
+) -> HealthCheckResult {
+    HealthCheckResult::Success
 }

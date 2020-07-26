@@ -52,6 +52,7 @@ func main() {
 	rootCmd.AddCommand(InitAttestation(ctx, cdc))
 	rootCmd.AddCommand(ParseCert(ctx, cdc))
 	rootCmd.AddCommand(ConfigureSecret(ctx, cdc))
+	rootCmd.AddCommand(HealthCheck(ctx, cdc))
 	rootCmd.AddCommand(InitBootstrapCmd(ctx, cdc, app.ModuleBasics))
 	rootCmd.AddCommand(genutilcli.InitCmd(ctx, cdc, app.ModuleBasics, app.DefaultNodeHome))
 	rootCmd.AddCommand(genutilcli.CollectGenTxsCmd(ctx, cdc, auth.GenesisAccountIterator{}, app.DefaultNodeHome))

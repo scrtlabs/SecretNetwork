@@ -49,6 +49,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 	return cmd
 }
 
+
 func InitBootstrapCmd(
 	ctx *server.Context, cdc *codec.Codec, mbm module.BasicManager) *cobra.Command {
 
@@ -216,6 +217,27 @@ func ConfigureSecret(_ *server.Context, _ *codec.Codec) *cobra.Command {
 				return err
 			}
 
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func HealthCheck(_ *server.Context, _ *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "check-enclave",
+		Short: "Test enclave status",
+		Long: "Help diagnose issues by performing a basic sanity test that SGX is working properly",
+		Args: cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			res, err := api.HealthCheck()
+			if err != nil {
+				return fmt.Errorf("error: %s", err)
+			}
+
+			fmt.Println(fmt.Sprintf("Enclave SGX status: %s", res))
 			return nil
 		},
 	}
