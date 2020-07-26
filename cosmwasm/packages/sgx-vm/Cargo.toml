@@ -32,6 +32,7 @@ backtraces = ["snafu/backtraces"]
 # we keep this optional, to allow possible future integration (or different Cosmos Backends)
 iterator = ["cosmwasm-std/iterator"]
 staking = ["cosmwasm-std/staking"]
+enclave-tests = []
 
 [dependencies]
 # Uses the path when built locally; uses the given version from crates.io when published

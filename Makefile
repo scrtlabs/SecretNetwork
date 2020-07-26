@@ -114,15 +114,15 @@ build-linux: vendor
 	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
 
 build_windows:
-	# CLI only 
+	# CLI only
 	GOOS=windows GOARCH=amd64 $(MAKE) cli
 
 build_macos:
-	# CLI only 
+	# CLI only
 	GOOS=darwin GOARCH=amd64 $(MAKE) cli
 
 build_arm_linux:
-	# CLI only 
+	# CLI only
 	GOOS=linux GOARCH=arm64 $(MAKE) cli
 
 build_all: build-linux build_windows build_macos build_arm_linux
@@ -180,8 +180,8 @@ clean:
 	-rm -rf /tmp/SecretNetwork
 	-rm -f ./secretcli*
 	-rm -f ./secretd*
-	-rm -f ./librust_cosmwasm_enclave.signed.so 
-	-rm -f ./x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so 
+	-rm -f ./librust_cosmwasm_enclave.signed.so
+	-rm -f ./x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so
 	-rm -f ./go-cosmwasm/api/libgo_cosmwasm.so
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*
@@ -257,6 +257,11 @@ go-tests: build-test-contract
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
 	SGX_MODE=SW go test -p 1 -v ./x/compute/internal/...
+
+.PHONY: enclave-tests
+enclave-tests:
+	$(MAKE) -C go-cosmwasm enclave-tests
+
 
 build-cosmwasm-test-contracts:
 	# echo "" | sudo add-apt-repository ppa:hnakamur/binaryen

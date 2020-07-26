@@ -59,7 +59,6 @@ build-rust: librust_cosmwasm_enclave.signed.so lib/libEnclave_u.a
 	@ #this pulls out ELF symbols, 80% size reduction!
 
 librust_cosmwasm_enclave.signed.so: build-enclave
-	cp ../cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./
 
 # This file will be picked up by the crates build script and linked into the library.
 # We make sure that the enclave is built before we compile the edl,
@@ -79,9 +78,26 @@ target/headers/enclave-ffi-types.h: build-enclave
 	mkdir -p $(dir $@)
 	cp ../cosmwasm/packages/wasmi-runtime/$(@) $@
 
+.PHONY: copy-enclave
+copy-enclave:
+	cp ../cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./
+
 .PHONY: build-enclave
 build-enclave:
 	$(MAKE) -C $(Enclave_Path) enclave
+	$(MAKE) copy-enclave
+
+.PHONY: build-test-enclave
+build-test-enclave:
+	FEATURES="test" $(MAKE) -C $(Enclave_Path) enclave
+	mkdir -p target/headers
+	cp ../cosmwasm/packages/wasmi-runtime/target/headers/enclave-ffi-types.h target/headers/enclave-ffi-types.h
+	cp ../cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./
+	sgx_edger8r --untrusted $(Enclave_Path)/Enclave.edl --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir ./
+	$(CC) $(App_C_Flags) -c Enclave_u.c -o Enclave_u.o
+	rm Enclave_u.c
+	mkdir -p lib
+	$(AR) rcsD lib/libEnclave_u.a Enclave_u.o
 
 # implement stripping based on os
 ifeq ($(DLL_EXT),so)
@@ -97,6 +113,10 @@ build-go:
 
 test:
 	RUST_BACKTRACE=1 go test -v ./api ./types .
+
+.PHONY: enclave-tests
+enclave-tests: build-test-enclave
+	RUST_BACKTRACE=1 cargo test --features="enclave-tests" enclave -- --nocapture
 
 # we should build all the docker images locally ONCE and publish them
 docker-image-centos7:
