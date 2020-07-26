@@ -378,28 +378,28 @@ fn verify_quote_status(quote_status: SgxQuoteStatus) -> Result<(), sgx_status_t>
     }
 }
 
-// #[cfg(feature = "test")]
-// pub mod tests {
-//     use crate::crypto::KeyPair;
-//
-//     use super::sgx_quote_sign_type_t;
-//     use super::verify_ra_cert;
-//
-//     fn test_validate_certificate_valid_sw_mode() {
-//         pub const cert: &[u8] = include_bytes!("../testdata/attestation_cert");
-//         let result = verify_ra_cert(cert);
-//     }
-//
-//     fn test_validate_certificate_valid_signed() {
-//         pub const cert: &[u8] = include_bytes!("../testdata/attestation_cert.der");
-//         let result = verify_ra_cert(cert);
-//     }
-//
-//     fn test_validate_certificate_invalid() {
-//         pub const cert: &[u8] = include_bytes!("../testdata/attestation_cert_invalid");
-//         let result = verify_ra_cert(cert);
-//     }
-//
-//     // we want a weird test because this should never crash
-//     fn test_random_bytes_as_certificate() {}
-// }
+#[cfg(feature = "test")]
+pub mod tests {
+    use crate::crypto::KeyPair;
+
+    use super::sgx_quote_sign_type_t;
+    use super::verify_ra_cert;
+
+    fn test_validate_certificate_valid_sw_mode() {
+        pub const cert: &[u8] = include_bytes!("../testdata/attestation_cert");
+        let result = verify_ra_cert(cert);
+    }
+
+    fn test_validate_certificate_valid_signed() {
+        pub const cert: &[u8] = include_bytes!("../testdata/attestation_cert.der");
+        let result = verify_ra_cert(cert);
+    }
+
+    fn test_validate_certificate_invalid() {
+        pub const cert: &[u8] = include_bytes!("../testdata/attestation_cert_invalid");
+        let result = verify_ra_cert(cert);
+    }
+
+    // we want a weird test because this should never crash
+    fn test_random_bytes_as_certificate() {}
+}

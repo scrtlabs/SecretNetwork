@@ -65,37 +65,37 @@ fn open(filepath: &str) -> Result<Ed25519PrivateKey, EnclaveError> {
     Ok(buf)
 }
 
-// #[cfg(feature = "test")]
-// pub mod tests {
-//
-//     use super::{open, seal};
-//
-//     // todo: fix test vectors to actually work
-//     fn test_seal() {
-//         let key = b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-//
-//         if let Err(e) = seal(key, "file") {
-//             error!("Failed to seal data: {:?}", e)
-//         };
-//     }
-//
-//     // todo: fix test vectors to actually work
-//     fn test_open() {
-//         let key = b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-//
-//         if let Err(e) = seal(key, "file") {
-//             error!("Failed to seal data: {:?}", e)
-//             // todo: fail
-//         };
-//
-//         data = match open("file") {
-//             Err(e) => {
-//                 error!("Failed to open data: {:?}", e)
-//                 // todo: fail
-//             }
-//             Ok(res) => res,
-//         };
-//
-//         assert_eq!(data, key);
-//     }
-// }
+#[cfg(feature = "test")]
+pub mod tests {
+
+    use super::{open, seal};
+
+    // todo: fix test vectors to actually work
+    fn test_seal() {
+        let key = b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+        if let Err(e) = seal(key, "file") {
+            error!("Failed to seal data: {:?}", e)
+        };
+    }
+
+    // todo: fix test vectors to actually work
+    fn test_open() {
+        let key = b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+        if let Err(e) = seal(key, "file") {
+            error!("Failed to seal data: {:?}", e)
+            // todo: fail
+        };
+
+        data = match open("file") {
+            Err(e) => {
+                error!("Failed to open data: {:?}", e)
+                // todo: fail
+            }
+            Ok(res) => res,
+        };
+
+        assert_eq!(data, key);
+    }
+}

@@ -103,57 +103,57 @@ impl SecretMessage {
     }
 }
 
-// #[cfg(feature = "test")]
-// pub mod tests {
-//
-//     use super::*;
-//     use crate::crypto::{key_manager, AESKey, SIVEncryptable, Seed};
-//
-//     // todo: fix test vectors to actually work
-//     fn test_new_from_slice() {
-//         let nonce = [0u8; 32];
-//         let user_public_key = [0u8; 32];
-//         let msg = "{\"ok\": \"{\"balance\": \"108\"}\"}";
-//
-//         let mut slice = nonce.to_vec();
-//         slice.extend_from_slice(&user_public_key);
-//         slice.extend_from_slice(msg.as_bytes());
-//
-//         let secret_msg = SecretMessage {
-//             nonce,
-//             user_public_key,
-//             msg: msg.as_bytes().to_vec(),
-//         };
-//
-//         let msg_from_slice = SecretMessage::from_slice(&slice);
-//
-//         assert_eq!(secret_msg, msg_from_slice);
-//     }
-//
-//     // todo: fix test vectors to actually work
-//     fn test_msg_decrypt() {
-//         let seed = Seed::new()?;
-//
-//         if let Err(e) = key_manager.set_consensus_seed(seed) {
-//             fail!("Failed to set seed")
-//         }
-//
-//         let nonce = [0u8; 32];
-//         let user_public_key = [0u8; 32];
-//
-//         let msg = "{\"ok\": \"{\"balance\": \"108\"}\"}";
-//         let ket = calc_encryption_key(&nonce, &user_public_key);
-//
-//         let encrypted_msg = key.encrypt_siv(msg.as_bytes(), &[&[]]);
-//
-//         let secret_msg = SecretMessage {
-//             nonce,
-//             user_public_key,
-//             msg: encrypted_msg,
-//         };
-//
-//         let decrypted_msg = secret_msg.decrypt()?;
-//
-//         assert_eq!(decrypted_msg, msg)
-//     }
-// }
+#[cfg(feature = "test")]
+pub mod tests {
+
+    use super::*;
+    use crate::crypto::{key_manager, AESKey, SIVEncryptable, Seed};
+
+    // todo: fix test vectors to actually work
+    fn test_new_from_slice() {
+        let nonce = [0u8; 32];
+        let user_public_key = [0u8; 32];
+        let msg = "{\"ok\": \"{\"balance\": \"108\"}\"}";
+
+        let mut slice = nonce.to_vec();
+        slice.extend_from_slice(&user_public_key);
+        slice.extend_from_slice(msg.as_bytes());
+
+        let secret_msg = SecretMessage {
+            nonce,
+            user_public_key,
+            msg: msg.as_bytes().to_vec(),
+        };
+
+        let msg_from_slice = SecretMessage::from_slice(&slice);
+
+        assert_eq!(secret_msg, msg_from_slice);
+    }
+
+    // todo: fix test vectors to actually work
+    fn test_msg_decrypt() {
+        let seed = Seed::new()?;
+
+        if let Err(e) = key_manager.set_consensus_seed(seed) {
+            fail!("Failed to set seed")
+        }
+
+        let nonce = [0u8; 32];
+        let user_public_key = [0u8; 32];
+
+        let msg = "{\"ok\": \"{\"balance\": \"108\"}\"}";
+        let ket = calc_encryption_key(&nonce, &user_public_key);
+
+        let encrypted_msg = key.encrypt_siv(msg.as_bytes(), &[&[]]);
+
+        let secret_msg = SecretMessage {
+            nonce,
+            user_public_key,
+            msg: encrypted_msg,
+        };
+
+        let decrypted_msg = secret_msg.decrypt()?;
+
+        assert_eq!(decrypted_msg, msg)
+    }
+}
