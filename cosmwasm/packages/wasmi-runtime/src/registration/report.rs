@@ -19,6 +19,7 @@ use uuid::Uuid;
 
 use super::cert::{get_ias_auth_config, get_netscape_comment};
 
+#[derive(Debug)]
 pub enum Error {
     ReportParseError,
     ReportValidationError,

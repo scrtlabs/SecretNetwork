@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 pub type IoNonce = [u8; 32];
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct SecretMessage {
     pub nonce: IoNonce,
     pub user_public_key: Ed25519PublicKey,
@@ -107,10 +107,10 @@ impl SecretMessage {
 pub mod tests {
 
     use super::*;
-    use crate::crypto::{key_manager, AESKey, SIVEncryptable, Seed};
+    use crate::crypto::{AESKey, SIVEncryptable, Seed, KEY_MANAGER};
 
     // todo: fix test vectors to actually work
-    fn test_new_from_slice() {
+    pub fn test_new_from_slice() {
         let nonce = [0u8; 32];
         let user_public_key = [0u8; 32];
         let msg = "{\"ok\": \"{\"balance\": \"108\"}\"}";
@@ -125,35 +125,36 @@ pub mod tests {
             msg: msg.as_bytes().to_vec(),
         };
 
-        let msg_from_slice = SecretMessage::from_slice(&slice);
+        let msg_from_slice = SecretMessage::from_slice(&slice).unwrap();
 
         assert_eq!(secret_msg, msg_from_slice);
     }
 
-    // todo: fix test vectors to actually work
-    fn test_msg_decrypt() {
-        let seed = Seed::new()?;
-
-        if let Err(e) = key_manager.set_consensus_seed(seed) {
-            fail!("Failed to set seed")
-        }
-
-        let nonce = [0u8; 32];
-        let user_public_key = [0u8; 32];
-
-        let msg = "{\"ok\": \"{\"balance\": \"108\"}\"}";
-        let ket = calc_encryption_key(&nonce, &user_public_key);
-
-        let encrypted_msg = key.encrypt_siv(msg.as_bytes(), &[&[]]);
-
-        let secret_msg = SecretMessage {
-            nonce,
-            user_public_key,
-            msg: encrypted_msg,
-        };
-
-        let decrypted_msg = secret_msg.decrypt()?;
-
-        assert_eq!(decrypted_msg, msg)
-    }
+    // This is commented out because it's trying to modify KEY_MANAGER which is immutable.
+    // // todo: fix test vectors to actually work
+    // pub fn test_msg_decrypt() {
+    //     let seed = Seed::new().unwrap();
+    //
+    //     KEY_MANAGER
+    //         .set_consensus_seed(seed)
+    //         .expect("Failed to set seed");
+    //
+    //     let nonce = [0u8; 32];
+    //     let user_public_key = [0u8; 32];
+    //
+    //     let msg = "{\"ok\": \"{\"balance\": \"108\"}\"}";
+    //     let key = calc_encryption_key(&nonce, &user_public_key);
+    //
+    //     let encrypted_msg = key.encrypt_siv(msg.as_bytes(), &[&[]]);
+    //
+    //     let secret_msg = SecretMessage {
+    //         nonce,
+    //         user_public_key,
+    //         msg: encrypted_msg,
+    //     };
+    //
+    //     let decrypted_msg = secret_msg.decrypt()?;
+    //
+    //     assert_eq!(decrypted_msg, msg)
+    // }
 }
