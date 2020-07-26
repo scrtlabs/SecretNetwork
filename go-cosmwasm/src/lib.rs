@@ -49,7 +49,7 @@ fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache<DB, GoApi, GoQue
 }
 
 #[no_mangle]
-pub extern "C" fn get_health_check() -> Buffer {
+pub extern "C" fn get_health_check(err: Option<&mut Buffer>) -> Buffer {
     match untrusted_health_check() {
         Err(e) => {
             set_error(Error::enclave_err(e.to_string()), err);
@@ -57,7 +57,7 @@ pub extern "C" fn get_health_check() -> Buffer {
         }
         Ok(res) => {
             clear_error();
-            Buffer::from_vec(seed.to_vec())
+            Buffer::from_vec(format!("{}", res).into_bytes())
         }
     }
 }
