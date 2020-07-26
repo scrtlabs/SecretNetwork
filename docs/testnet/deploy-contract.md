@@ -51,11 +51,9 @@ Remember the "id" of the code. We will be using it in the next step.
 
 ### 3. Instantiate the Smart Contract
 
-At this point the contract's been uploaded and stored on the testnet, but there's no "instance". The "instance" is a method to allow the deployment of multiple contract instances from the same code. For example, if you wanted to create multiple different "ERC-20" coins from the same base contract. You can read more about the logic behind this decision, and other comparisons to Solidity, in the  [cosmwasm documentation](https://www.cosmwasm.com/docs/getting-started/smart-contracts).
+At this point the code been uploaded and stored on the testnet, but it has not been initialized yet. This is how we can allow the deployment of multiple contract instances from the same code. For example, if you wanted to create multiple different "ERC-20" coins from the same base contract. You can read more about the logic behind this decision, and other comparisons to Solidity, in the  [cosmwasm documentation](https://www.cosmwasm.com/docs/getting-started/smart-contracts).
 
-To create an instance of this project we must also provide some initialization data, encoded as JSON data. To initialize it, we must provide it with a number of parameters. 
-
-Remember we're creating a new privacy coin, so we will have a number of different parameters to tune.
+To create a new contract instance we must provide some initialization data, encoded as JSON. Remember we're creating a new privacy coin, so we will have a number of different parameters to tune.
 
 These parameters are:
 
@@ -68,13 +66,18 @@ Example parameters:
 
 ```{"name": "Example Coin", "symbol": "EXC", "decimals": 6, "initial_balances": [{"address": "secret13flczxqyzvqrvv0npvap6qfg66zan4fy83la63", "amount": 1000}]}```
 
-A full command will look like this:
+
+Now, to initialize the contract we will use the following command (replace the parameters with values of your choosing): 
 
 ```
 secretcli tx compute instantiate <code_id> --label <choose-an-alias> '{"name": "<coin_name>", "symbol": "<coin_symbol>", "decimals": <num_of_decimals>, "initial_balances": []}' --from a
 ```
 
-With the contract now initialized, we can find its address in any number of ways:
+Be careful not to forget the quotes at the begining and end of the initialization parameters!
+
+#### Find the contract address
+
+The contract is now initialized, congratulations! Our final step is to find the newly deployed contract address. We can do this in a number of ways:
 
 * Check the explorer. If successful, your contract address should be displayed in the transactions tab
 
