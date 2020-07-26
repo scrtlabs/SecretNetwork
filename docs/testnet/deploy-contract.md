@@ -60,7 +60,7 @@ These parameters are:
 * `name`     - string  - name of the coin
 * `symbol`   - string  - short form of the coin (e.g. SCRT/BTC/ETH/etc.)
 * `decimals` - integer - number of decimals this coin supports (e.g. SCRT supports 6, ETH supports 18)
-* `initial_balances` - the initial distribution of coins. A list of values in the form {"address": "<address>", "amount": <num_of_coins>}. This can also be an empty array (`[]`) if you do not wish to allocate any tokens 
+* `initial_balances` - the initial distribution of coins. A list of values in the form `[{"address": "<address>", "amount": <num_of_coins>}, {"address": "<address2>"...]`. This can also be an empty array (`[]`) if you do not wish to allocate any tokens 
   
 Example parameters: 
 
