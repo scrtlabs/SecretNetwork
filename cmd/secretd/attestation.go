@@ -222,3 +222,43 @@ func ConfigureSecret(_ *server.Context, _ *codec.Codec) *cobra.Command {
 
 	return cmd
 }
+
+func ResetEnclave(_ *server.Context, _ *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "reset-enclave",
+		Short: "Reset registration & enclave parameters",
+		Long: "This will delete all registration and enclave parameters. Use when something goes wrong and you want to start fresh." +
+			"You will have to go through registration again to be able to start the node",
+		Args: cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			// remove .secretd/.node/seed.json
+			path := filepath.Join(app.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
+			if _, err := os.Stat(path); os.IsExist(err) {
+				err = os.Remove(path)
+				if err != nil {
+					return err
+				}
+			}
+
+			// remove sgx_secrets
+			sgxSecretsDir := os.Getenv("SCRT_SGX_STORAGE")
+			if sgxSecretsDir == "" {
+				sgxSecretsDir = os.ExpandEnv("$HOME/.sgx_secrets")
+			}
+			if _, err := os.Stat(sgxSecretsDir); os.IsExist(err) {
+				err = os.RemoveAll(sgxSecretsDir)
+				if err != nil {
+					return err
+				}
+				err := os.MkdirAll(sgxSecretsDir, 644)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	}
+
+	return cmd
+}
