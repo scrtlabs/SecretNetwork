@@ -306,8 +306,8 @@ func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress sdk.AccAddr
 }
 
 // QuerySmart queries the smart contract itself.
-func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, isQueryFromWasm bool) ([]byte, error) {
-	if !isQueryFromWasm {
+func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, useDefaultGasLimit bool) ([]byte, error) {
+	if !useDefaultGasLimit {
 		ctx = ctx.WithGasMeter(sdk.NewGasMeter(k.queryGasLimit))
 	}
 
@@ -328,6 +328,7 @@ func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []b
 
 	queryResult, gasUsed, qErr := k.wasmer.Query(codeInfo.CodeHash, append(contractKey[:], req[:]...), prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasForContract(ctx))
 	consumeGas(ctx, gasUsed)
+
 	if qErr != nil {
 		return nil, sdkerrors.Wrap(types.ErrQueryFailed, qErr.Error())
 	}
