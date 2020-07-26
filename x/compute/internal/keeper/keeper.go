@@ -92,7 +92,10 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 }
 
 // GetSignBytes returns the signBytes of the tx for a given signer
-// This is a copy of cosmos-sdk function (cosmos-sdk/x/auth/types/StdTx.GetSignBytes(), because the original takes a wrong sequence number
+// This is a copy of cosmos-sdk function (cosmos-sdk/x/auth/types/StdTx.GetSignBytes()
+// This is because the original `GetSignBytes` was probably meant to be used before the transaction gets processed, and the
+// sequence that gets returned is an increment of what we need.
+// This is why we use `acc.GetSequence() - 1`
 func GetSignBytes(ctx sdk.Context, acc exported.Account, tx auth.StdTx) []byte {
 	genesis := ctx.BlockHeight() == 0
 	chainID := ctx.ChainID()

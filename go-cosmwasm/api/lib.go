@@ -290,17 +290,11 @@ func flattenSignatures(signatures []auth.StdSignature) ([]byte, error) {
 		// `switch` is mandatory due to the `crypto.PubKey` interface
 		switch pk := sig.PubKey.(type) {
 		case ed25519.PubKeyEd25519:
-			{
-				appendSizeSlice(&flat, pk[:])
-			}
+			appendSizeSlice(&flat, pk[:])
 		case secp256k1.PubKeySecp256k1:
-			{
-				appendSizeSlice(&flat, pk[:])
-			}
+			appendSizeSlice(&flat, pk[:])
 		case sr25519.PubKeySr25519:
-			{
-				appendSizeSlice(&flat, pk[:])
-			}
+			appendSizeSlice(&flat, pk[:])
 		default:
 			return nil, fmt.Errorf("unknown signature type: %T", pk)
 		}
