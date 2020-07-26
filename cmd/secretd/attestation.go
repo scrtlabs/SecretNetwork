@@ -234,19 +234,26 @@ func ResetEnclave(_ *server.Context, _ *codec.Codec) *cobra.Command {
 
 			// remove .secretd/.node/seed.json
 			path := filepath.Join(app.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
-			if _, err := os.Stat(path); os.IsExist(err) {
+			if _, err := os.Stat(path); !os.IsNotExist(err) {
+				fmt.Printf("Removing %s\n", path)
 				err = os.Remove(path)
 				if err != nil {
 					return err
 				}
+			} else {
+				if err != nil {
+					println(err.Error())
+				}
 			}
+
 
 			// remove sgx_secrets
 			sgxSecretsDir := os.Getenv("SCRT_SGX_STORAGE")
 			if sgxSecretsDir == "" {
 				sgxSecretsDir = os.ExpandEnv("$HOME/.sgx_secrets")
 			}
-			if _, err := os.Stat(sgxSecretsDir); os.IsExist(err) {
+			if _, err := os.Stat(sgxSecretsDir); !os.IsNotExist(err) {
+				fmt.Printf("Removing %s\n", sgxSecretsDir)
 				err = os.RemoveAll(sgxSecretsDir)
 				if err != nil {
 					return err
@@ -254,6 +261,10 @@ func ResetEnclave(_ *server.Context, _ *codec.Codec) *cobra.Command {
 				err := os.MkdirAll(sgxSecretsDir, 644)
 				if err != nil {
 					return err
+				}
+			} else {
+				if err != nil {
+					println(err.Error())
 				}
 			}
 			return nil
