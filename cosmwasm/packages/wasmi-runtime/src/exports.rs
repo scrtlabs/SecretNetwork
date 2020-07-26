@@ -185,7 +185,6 @@ pub unsafe extern "C" fn ecall_query(
 /// # Safety
 /// Always use protection
 #[no_mangle]
-pub unsafe extern "C" fn ecall_health_check(
-) -> HealthCheckResult {
+pub unsafe extern "C" fn ecall_health_check() -> HealthCheckResult {
     HealthCheckResult::Success
 }
