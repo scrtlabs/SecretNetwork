@@ -10,3 +10,11 @@ mod onchain;
 mod report;
 
 mod seed_exchange;
+
+#[cfg(feature = "test")]
+pub mod tests {
+    use super::*;
+    pub fn run_tests() {
+        // attestation::tests::test_create_attestation_certificate();
+    }
+}

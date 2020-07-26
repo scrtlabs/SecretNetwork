@@ -1,5 +1,5 @@
 mod errors;
-mod kdf;
+pub(crate) mod kdf;
 pub mod key_manager;
 mod keys;
 mod storage;
@@ -23,3 +23,13 @@ pub use ed25519::{Ed25519PublicKey, KeyPair, PUBLIC_KEY_SIZE, SECRET_KEY_SIZE};
 
 pub use sha::{sha_256, HASH_SIZE};
 pub use traits::{Encryptable, Hmac, Kdf, SIVEncryptable, SealedKey, HMAC_SIGNATURE_SIZE};
+
+#[cfg(feature = "test")]
+pub mod tests {
+    use super::*;
+    pub fn run_tests() {
+        // kdf::tests::test_derive_key();
+        // storage::tests::test_open();
+        storage::tests::test_seal();
+    }
+}
