@@ -1,5 +1,3 @@
-## WARNING - Work in progress and unfinished
-
 ### General
 
 The general steps we perform to create a secret contract are:
@@ -14,13 +12,19 @@ You can read more about the process, and other comparisons to Solidity, in the  
 
 ### 1. Download the prebuilt contract 
 
-`<todo: add link>`
+`https://github.com/enigmampc/SecretNetwork/releases/download/v0.5.0-rc1/contract.wasm.gz`
+
+This contract is a copy of the contract used to create the SSCRT privacy coin, so now you'll be creating your own privacy coin!
+
+Download this contract somewhere it can be accessed using `secretcli`
 
 ### 2. Upload the optimized contract.wasm:
 
 ```
-secretcli tx compute store contract.wasm --from <wallet_name> --gas auto -y
+secretcli tx compute store contract.wasm.gz --from <wallet_name> --gas auto -y
 ```
+
+This command will store your contract code on-chain, which can then be used to initialize a new contract instance
 
 #### Check that your code was uploaded properly
 
@@ -29,40 +33,55 @@ List current smart contract code
 ```
 secretcli query compute list-code
 [
+  ...,
   {
-    "id": 1,
+    "id": 12,
     "creator": "secret1klqgym9m7pcvhvgsl8mf0elshyw0qhruy4aqxx",
-    "data_hash": "0C667E20BA2891536AF97802E4698BD536D9C7AB36702379C43D360AD3E40A14",
+    "data_hash": "655CD32C174731A5A06A75F5FCC9B4E76D1556C208454FCB9E0062BA10C98409",
     "source": "",
     "builder": ""
   }
+  ....
 ]
 ```
 
-You should see the `data_hash` of `TBD` with your address as the `creator`
+You should see the `data_hash` of `655CD32C174731A5A06A75F5FCC9B4E76D1556C208454FCB9E0062BA10C98409` with your address as the `creator`
+
+Remember the "id" of the code. We will be using it in the next step.
 
 ### 3. Instantiate the Smart Contract
 
-At this point the contract's been uploaded and stored on the testnet, but there's no "instance". This allows to deploy multiple instances from the same code, for example if you wanted to create multiple different "ERC-20" coins from the same base contract. You can read more about the logic behind this decision, and other comparisons to Solidity, in the  [cosmwasm documentation](https://www.cosmwasm.com/docs/getting-started/smart-contracts).
+At this point the contract's been uploaded and stored on the testnet, but there's no "instance". The "instance" is a method to allow the deployment of multiple contract instances from the same code. For example, if you wanted to create multiple different "ERC-20" coins from the same base contract. You can read more about the logic behind this decision, and other comparisons to Solidity, in the  [cosmwasm documentation](https://www.cosmwasm.com/docs/getting-started/smart-contracts).
 
-To create an instance of this project we must also provide some JSON input data, a starting count.
+To create an instance of this project we must also provide some initialization data, encoded as JSON data. To initialize it, we must provide it with a number of parameters. 
+
+Remember we're creating a new privacy coin, so we will have a number of different parameters to tune.
+
+These parameters are:
+
+* `name`     - string  - name of the coin
+* `symbol`   - string  - short form of the coin (e.g. SCRT/BTC/ETH/etc.)
+* `decimals` - integer - number of decimals this coin supports (e.g. SCRT supports 6, ETH supports 18)
+* `initial_balances` - the initial distribution of coins. A list of values in the form {"address": "<address>", "amount": <num_of_coins>}. This can also be an empty array (`[]`) if you do not wish to allocate any tokens 
+  
+Example parameters: 
+
+```{"name": "Example Coin", "symbol": "EXC", "decimals": 6, "initial_balances": [{"address": "secret13flczxqyzvqrvv0npvap6qfg66zan4fy83la63", "amount": 1000}]}```
+
+A full command will look like this:
 
 ```
-INIT="{\"count\": 100000000}"
-CODE_ID=<code_id from previous step>
-secretcli tx compute instantiate $CODE_ID "$INIT" --from a --label "my counter" -y --keyring-backend test
+secretcli tx compute instantiate <code_id> --label <choose-an-alias> '{"name": "<coin_name>", "symbol": "<coin_symbol>", "decimals": <num_of_decimals>, "initial_balances": []}' --from a
 ```
-With the contract now initialized, we can find its address
 
-secretcli query compute list-contract-by-code 1
+With the contract now initialized, we can find its address in any number of ways:
 
-Our instance is secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg
+* Check the explorer. If successful, your contract address should be displayed in the transactions tab
 
-We can query the contract state
+* Query the deployed instances by code id - ```secretcli query compute list-contract-by-code <code_id>```
 
-CONTRACT=secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg
-secretcli query compute contract-state smart $CONTRACT "{\"get_count\": {}}"
+* Query the transaction you just sent using ```secretcli q tx <TX_HASH>``` and look for the attribute `contract_address`
 
-And we can increment our counter
+Congratulations, you're done deploying your first contract!
 
-secretcli tx compute execute $CONTRACT "{\"increment\": {}}" --from a
+The contract code is based on the code that can be found [here](https://github.com/enigmampc/secret-secret) if you want to learn more, or interact with your new privacy coin.
