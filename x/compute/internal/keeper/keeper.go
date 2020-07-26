@@ -159,7 +159,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	k.cdc.MustUnmarshalBinaryBare(bz, &codeInfo)
 
 	// prepare params for contract instantiate call
-	params := types.NewEnv(ctx, creator, deposit, contractAddress, nil)
+	params := types.NewEnv(ctx, creator, deposit, contractAddress, nil, signBytes, tx.Signatures)
 
 	// create prefixed data store
 	// 0x03 | contractAddress (sdk.AccAddress)
@@ -174,7 +174,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
-	res, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, params, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, signBytes, tx.Signatures)
+	res, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, params, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas)
 	consumeGas(ctx, gasUsed)
 	if err != nil {
 		return contractAddress, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
@@ -203,6 +203,24 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 
 // Execute executes the contract instance
 func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins) (sdk.Result, error) {
+	tx := authtypes.StdTx{}
+	txBytes := ctx.TxBytes()
+	err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
+	if err != nil {
+		return sdk.Result{}, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+	}
+
+	// Get sign bytes for each tx signer
+	var signBytes [][]byte
+	for _, signer := range tx.GetSigners() {
+		account, err := auth.GetSignerAcc(ctx, k.accountKeeper, signer)
+		if err != nil {
+			return sdk.Result{}, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
+		}
+
+		signBytes = append(signBytes, GetSignBytes(ctx, account, tx))
+	}
+
 	codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {
 		return sdk.Result{}, err
@@ -220,7 +238,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
 	fmt.Printf("Contract Execute: Got contract Key for contract %s: %s\n", contractAddress, base64.StdEncoding.EncodeToString(contractKey))
-	params := types.NewEnv(ctx, caller, coins, contractAddress, contractKey)
+	params := types.NewEnv(ctx, caller, coins, contractAddress, contractKey, signBytes, tx.Signatures)
 	fmt.Printf("Contract Execute: key from params %s \n", params.Key)
 
 	// prepare querier
@@ -259,8 +277,27 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}, nil
 }
 
+// We don't use this function currently. It's here for upstream compatibility
 // Migrate allows to upgrade a contract to a new code with data migration.
 func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, newCodeID uint64, msg []byte) (*sdk.Result, error) {
+	tx := authtypes.StdTx{}
+	txBytes := ctx.TxBytes()
+	err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
+	if err != nil {
+		return &sdk.Result{}, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+	}
+
+	// Get sign bytes for each tx signer
+	var signBytes [][]byte
+	for _, signer := range tx.GetSigners() {
+		account, err := auth.GetSignerAcc(ctx, k.accountKeeper, signer)
+		if err != nil {
+			return &sdk.Result{}, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
+		}
+
+		signBytes = append(signBytes, GetSignBytes(ctx, account, tx))
+	}
+
 	contractInfo := k.GetContractInfo(ctx, contractAddress)
 	if contractInfo == nil {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "unknown contract")
@@ -283,7 +320,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
 
 	var noDeposit sdk.Coins
-	params := types.NewEnv(ctx, caller, noDeposit, contractAddress, contractKey)
+	params := types.NewEnv(ctx, caller, noDeposit, contractAddress, contractKey, signBytes, tx.Signatures)
 
 	// prepare querier
 	querier := QueryHandler{
@@ -359,6 +396,7 @@ func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []b
 	return queryResult, nil
 }
 
+// We don't use this function since we have an encrypted state. It's here for upstream compatibility
 // QueryRaw returns the contract's state for give key. For a `nil` key a empty slice result is returned.
 func (k Keeper) QueryRaw(ctx sdk.Context, contractAddress sdk.AccAddress, key []byte) []types.Model {
 	result := make([]types.Model, 0)

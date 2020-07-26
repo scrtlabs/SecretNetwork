@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/base64"
+	"github.com/enigmampc/cosmos-sdk/x/auth"
 	tmBytes "github.com/tendermint/tendermint/libs/bytes"
 
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
@@ -106,7 +107,7 @@ func NewContractInfo(codeID uint64, creator, admin sdk.AccAddress, initMsg []byt
 }
 
 // NewEnv initializes the environment for a contract instance
-func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contractAddr sdk.AccAddress, contractKey []byte) wasmTypes.Env {
+func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contractAddr sdk.AccAddress, contractKey []byte, signBytes [][]byte, signatures []auth.StdSignature) wasmTypes.Env {
 	// safety checks before casting below
 	if ctx.BlockHeight() < 0 {
 		panic("Block height must never be negative")
@@ -127,7 +128,9 @@ func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contract
 		Contract: wasmTypes.ContractInfo{
 			Address: wasmTypes.CanonicalAddress(contractAddr),
 		},
-		Key: wasmTypes.ContractKey(base64.StdEncoding.EncodeToString(contractKey)),
+		Key:        wasmTypes.ContractKey(base64.StdEncoding.EncodeToString(contractKey)),
+		Bytes:      signBytes,
+		Signatures: signatures,
 	}
 	return env
 }

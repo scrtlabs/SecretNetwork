@@ -3,8 +3,6 @@ package cosmwasm
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/enigmampc/cosmos-sdk/x/auth"
-
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 )
@@ -91,14 +89,12 @@ func (w *Wasmer) Instantiate(
 	querier Querier,
 	gasMeter api.GasMeter,
 	gasLimit uint64,
-	signBytes [][]byte,
-	signatures []auth.StdSignature,
 ) (*types.Result, []byte, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, nil, 0, err
 	}
-	data, gasUsed, err := api.Instantiate(w.cache, code, paramBin, initMsg, &gasMeter, &store, &goapi, &querier, gasLimit, signBytes, signatures)
+	data, gasUsed, err := api.Instantiate(w.cache, code, paramBin, initMsg, &gasMeter, &store, &goapi, &querier, gasLimit)
 	if err != nil {
 		return nil, nil, gasUsed, err
 	}

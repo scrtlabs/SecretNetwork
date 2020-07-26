@@ -3,11 +3,10 @@ use log::*;
 
 use enclave_ffi_types::EnclaveError;
 
-use crate::cosmwasm::types::{Env, Response};
+use crate::cosmwasm::encoding::Binary;
+use crate::cosmwasm::types::{CosmosSignature, Env};
 use crate::crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
-use crate::wasm::types::{SignBytes, Signature};
 use secp256k1::Secp256k1;
-use sgx_types::sgx_generic_ecresult_t::SGX_EC_IS_ZERO_DISCRIMINANT;
 use sha2::{Digest, Sha256};
 
 pub type ContractKey = [u8; CONTRACT_KEY_LENGTH];
@@ -115,15 +114,12 @@ pub fn validate_contract_key(
     calculated_authentication_id == expected_authentication_id
 }
 
-pub fn verify_signatures(raw_sign_bytes: &[u8], raw_signatures: &[u8]) -> Result<(), EnclaveError> {
+pub fn verify_signatures(env: &Env) -> Result<(), EnclaveError> {
     trace!("Verifying tx signatures..");
 
-    let sign_bytes = SignBytes::from_raw(raw_sign_bytes)?; // TODO: Catch error?
-    let signatures = Signature::from_raw(raw_signatures)?; // TODO: Catch error?
-
     // Verify each signature (given it is multi-sig)
-    for (sig, sb) in signatures.iter().zip(sign_bytes.iter()) {
-        verify_signature(sb, sig);
+    for (sig, sb) in env.signatures.iter().zip(env.sign_bytes.iter()) {
+        verify_signature(sb, sig)?;
     }
 
     trace!("All signatures verified!");
@@ -131,7 +127,7 @@ pub fn verify_signatures(raw_sign_bytes: &[u8], raw_signatures: &[u8]) -> Result
     Ok(())
 }
 
-fn verify_signature(sign_bytes: &SignBytes, signature: &Signature) -> Result<(), EnclaveError> {
+fn verify_signature(sign_bytes: &Binary, signature: &CosmosSignature) -> Result<(), EnclaveError> {
     // Hash the message
     // (https://docs.cosmos.network/master/spec/_ics/ics-030-signed-messages.html#preliminary)
     let sign_bytes_hash = Sha256::digest(sign_bytes.0.as_slice()).to_vec();
@@ -143,12 +139,12 @@ fn verify_signature(sign_bytes: &SignBytes, signature: &Signature) -> Result<(),
     let verifier = Secp256k1::verification_only();
 
     // Create `secp256k1`'s types
-    let sec_signature = secp256k1::Signature::from_compact(signature.signature.as_slice())
+    let sec_signature = secp256k1::Signature::from_compact(signature.get_signature().as_slice())
         .map_err(|err| {
             error!("Malformed signature: {:?}", err);
             EnclaveError::FailedTxVerification
         })?;
-    let sec_public_key = secp256k1::PublicKey::from_slice(signature.public_key.as_slice())
+    let sec_public_key = secp256k1::PublicKey::from_slice(signature.get_public_key().as_slice())
         .map_err(|err| {
             error!("Malformed public key: {:?}", err);
             EnclaveError::FailedTxVerification
@@ -156,7 +152,9 @@ fn verify_signature(sign_bytes: &SignBytes, signature: &Signature) -> Result<(),
 
     debug!(
         "Verifying message:\n{:?}\nsignature:\n{:?}\npublic key:\n{:?}",
-        sign_bytes.0, signature.signature, signature.public_key
+        sign_bytes.0,
+        signature.get_signature(),
+        signature.get_public_key()
     );
 
     // If didn't raise error -> then all is good

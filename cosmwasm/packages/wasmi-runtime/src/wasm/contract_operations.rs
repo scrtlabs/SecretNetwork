@@ -44,18 +44,17 @@ pub fn init(
     contract: &[u8],    // contract wasm bytes
     env: &[u8],         // blockchain state
     msg: &[u8],         // probably function call and args
-    sign_bytes: &[u8],  // transaction sign bytes
-    signatures: &[u8],  // signatures on tx
 ) -> Result<InitSuccess, EnclaveError> {
-    verify_signatures(sign_bytes, signatures)?;
-
     let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
         error!(
             "got an error while trying to deserialize env input bytes into json {:?}: {}",
-            env, err
+            String::from_utf8_lossy(&env),
+            err
         );
         EnclaveError::FailedToDeserialize
     })?;
+
+    verify_signatures(&parsed_env)?;
 
     let contract_key = generate_encryption_key(&parsed_env, contract)?;
 
@@ -121,6 +120,8 @@ pub fn handle(
         );
         EnclaveError::FailedToDeserialize
     })?;
+
+    verify_signatures(&parsed_env)?;
 
     trace!("handle parsed_envs: {:?}", parsed_env);
 

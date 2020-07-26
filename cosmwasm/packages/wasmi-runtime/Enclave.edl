@@ -53,11 +53,7 @@ enclave {
             [in, count=env_len] const uint8_t* env,
             uintptr_t env_len,
             [in, count=msg_len] const uint8_t* msg,
-            uintptr_t msg_len,
-            [in, count=sign_bytes_len] const uint8_t* sign_bytes,
-            uintptr_t sign_bytes_len,
-            [in, count=signatures_len] const uint8_t* signatures,
-            uintptr_t signatures_len
+            uintptr_t msg_len
         );
 
         public HandleResult ecall_handle(

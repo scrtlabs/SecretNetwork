@@ -71,6 +71,24 @@ pub struct Env {
     pub message: MessageInfo,
     pub contract: ContractInfo,
     pub contract_key: Option<String>,
+    pub sign_bytes: Vec<Binary>,
+    pub signatures: Vec<CosmosSignature>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+pub struct CosmosSignature {
+    pub_key: Vec<u8>,
+    signature: Binary,
+}
+
+impl CosmosSignature {
+    pub fn get_public_key(&self) -> Vec<u8> {
+        self.pub_key.clone()
+    }
+
+    pub fn get_signature(&self) -> Binary {
+        self.signature.clone()
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]

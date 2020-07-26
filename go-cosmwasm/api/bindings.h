@@ -156,9 +156,7 @@ Buffer instantiate(cache_t *cache,
                    GoQuerier querier,
                    uint64_t gas_limit,
                    uint64_t *gas_used,
-                   Buffer *err,
-                   Buffer sign_bytes,
-                   Buffer signatures);
+                   Buffer *err);
 
 Buffer key_gen(Buffer *err);
 
