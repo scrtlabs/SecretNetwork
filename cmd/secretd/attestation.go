@@ -49,7 +49,6 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 	return cmd
 }
 
-
 func InitBootstrapCmd(
 	ctx *server.Context, cdc *codec.Codec, mbm module.BasicManager) *cobra.Command {
 
@@ -238,6 +237,57 @@ func HealthCheck(_ *server.Context, _ *codec.Codec) *cobra.Command {
 			}
 
 			fmt.Println(fmt.Sprintf("SGX enclave health status: %s", res))
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func ResetEnclave(_ *server.Context, _ *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "reset-enclave",
+		Short: "Reset registration & enclave parameters",
+		Long: "This will delete all registration and enclave parameters. Use when something goes wrong and you want to start fresh." +
+			"You will have to go through registration again to be able to start the node",
+		Args: cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			// remove .secretd/.node/seed.json
+			path := filepath.Join(app.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
+			if _, err := os.Stat(path); !os.IsNotExist(err) {
+				fmt.Printf("Removing %s\n", path)
+				err = os.Remove(path)
+				if err != nil {
+					return err
+				}
+			} else {
+				if err != nil {
+					println(err.Error())
+				}
+			}
+
+
+			// remove sgx_secrets
+			sgxSecretsDir := os.Getenv("SCRT_SGX_STORAGE")
+			if sgxSecretsDir == "" {
+				sgxSecretsDir = os.ExpandEnv("$HOME/.sgx_secrets")
+			}
+			if _, err := os.Stat(sgxSecretsDir); !os.IsNotExist(err) {
+				fmt.Printf("Removing %s\n", sgxSecretsDir)
+				err = os.RemoveAll(sgxSecretsDir)
+				if err != nil {
+					return err
+				}
+				err := os.MkdirAll(sgxSecretsDir, 644)
+				if err != nil {
+					return err
+				}
+			} else {
+				if err != nil {
+					println(err.Error())
+				}
+			}
 			return nil
 		},
 	}
