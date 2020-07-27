@@ -237,7 +237,7 @@ func TestInstantiate(t *testing.T) {
 	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", addr.String())
 
 	gasAfter := ctx.GasMeter().GasConsumed()
-	require.Equal(t, uint64(37733), gasAfter-gasBefore)
+	require.Equal(t, uint64(37734), gasAfter-gasBefore)
 
 	// ensure it is stored properly
 	info := keeper.GetContractInfo(ctx, addr)
@@ -461,12 +461,18 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	execMsgBz, err := wasmCtx.Encrypt([]byte(`{"cpu_loop":{}}`))
 	require.NoError(t, err)
 
+	// ensure we get an out of gas panic
+	defer func() {
+		r := recover()
+		require.NotNil(t, r)
+		_, ok := r.(sdk.ErrorOutOfGas)
+		require.True(t, ok, "%v", r)
+	}()
+
 	// this must fail
 	_, err = keeper.Execute(ctx, addr, fred, execMsgBz, nil)
-	assert.Error(t, err)
+	assert.True(t, false)
 	// make sure gas ran out
-	// TODO: wasmer doesn't return gas used on error. we should consume it (for error on metering failure)
-	// require.Equal(t, gasLimit, ctx.GasMeter().GasConsumed())
 }
 
 func TestExecuteWithStorageLoop(t *testing.T) {
