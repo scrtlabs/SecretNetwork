@@ -990,7 +990,15 @@ func TestAllocateOnHeapFailBecauseGasLimit(t *testing.T) {
 	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
 	require.Empty(t, initErr)
 
-	data, _, execErr := execHelper(t, keeper, ctx, addr, walletA, `{"allocate_on_heap":{"bytes":1073741824}}`, false, defaultGas)
+	// ensure we get an out of gas panic
+	defer func() {
+		r := recover()
+		require.NotNil(t, r)
+		_, ok := r.(sdk.ErrorOutOfGas)
+		require.True(t, ok, "%v", r)
+	}()
+
+	_, _, _ = execHelper(t, keeper, ctx, addr, walletA, `{"allocate_on_heap":{"bytes":1073741824}}`, false, defaultGas)
 
 	// this should fail with out of gas because 1GiB will ask for
 	// 134,217,728 gas units (8192 per page times 16,384 pages)
@@ -999,10 +1007,7 @@ func TestAllocateOnHeapFailBecauseGasLimit(t *testing.T) {
 	// the gas metering sees a request that'll cost 134mn and the limit
 	// is 20mn, so it throws an out of gas exception
 
-	require.Empty(t, data)
-	require.Error(t, execErr)
-	require.Error(t, execErr.GenericErr)
-	require.Equal(t, "execute contract failed: Ran out of gas", execErr.GenericErr.Msg)
+	require.True(t, false)
 }
 
 func TestAllocateOnHeapMoreThanSGXHasFailBecauseMemoryLimit(t *testing.T) {
