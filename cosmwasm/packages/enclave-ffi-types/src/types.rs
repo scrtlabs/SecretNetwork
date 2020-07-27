@@ -165,6 +165,21 @@ pub enum NodeAuthResult {
     Panic,
 }
 
+/// This type represents the possible error conditions that can be encountered in the
+/// enclave while authenticating a new node in the network.
+/// cbindgen:prefix-with-name
+#[repr(C)]
+#[derive(Debug, Display, PartialEq, Eq)]
+pub enum HealthCheckResult {
+    Success,
+}
+
+impl Default for HealthCheckResult {
+    fn default() -> Self {
+        HealthCheckResult::Success
+    }
+}
+
 /// This type holds a pointer to a VmError that is boxed on the untrusted side
 // `VmError` is the standard error type for the `cosmwasm-sgx-vm` layer.
 // During an ocall, we call into the original implementation of `db_read`, `db_write`, and `db_remove`.

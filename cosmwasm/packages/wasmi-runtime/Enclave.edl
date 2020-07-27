@@ -78,6 +78,8 @@ enclave {
             uintptr_t msg_len
         );
 
+        public HealthCheckResult ecall_health_check();
+
     };
 
     untrusted {
