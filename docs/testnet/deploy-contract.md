@@ -60,11 +60,11 @@ These parameters are:
 * `name`     - string  - name of the coin
 * `symbol`   - string  - short form of the coin (e.g. SCRT/BTC/ETH/etc.)
 * `decimals` - integer - number of decimals this coin supports (e.g. SCRT supports 6, ETH supports 18)
-* `initial_balances` - the initial distribution of coins. A list of values in the form `[{"address": "<address>", "amount": <num_of_coins>}, {"address": "<address2>"...]`. This can also be an empty array (`[]`) if you do not wish to allocate any tokens 
+* `initial_balances` - the initial distribution of coins. A list of values in the form `[{"address": "<address>", "amount": "<num_of_coins>"}, {"address": "<address2>"...]`. This can also be an empty array (`[]`) if you do not wish to allocate any tokens 
   
 Example parameters: 
 
-```{"name": "Example Coin", "symbol": "EXC", "decimals": 6, "initial_balances": [{"address": "secret13flczxqyzvqrvv0npvap6qfg66zan4fy83la63", "amount": 1000}]}```
+```{"name": "Example Coin", "symbol": "EXC", "decimals": 6, "initial_balances": [{"address": "secret13flczxqyzvqrvv0npvap6qfg66zan4fy83la63", "amount": "1000"}]}```
 
 
 Now, to initialize the contract we will use the following command (replace the parameters with values of your choosing): 
