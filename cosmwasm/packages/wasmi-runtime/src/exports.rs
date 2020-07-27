@@ -1,7 +1,9 @@
 use log::*;
 use std::ffi::c_void;
 
-use enclave_ffi_types::{Ctx, EnclaveBuffer, EnclaveError, HandleResult, InitResult, QueryResult, HealthCheckResult};
+use enclave_ffi_types::{
+    Ctx, EnclaveBuffer, EnclaveError, HandleResult, HealthCheckResult, InitResult, QueryResult,
+};
 use std::panic;
 
 use crate::results::{
@@ -92,8 +94,9 @@ pub unsafe extern "C" fn ecall_init(
     let env = std::slice::from_raw_parts(env, env_len);
     let msg = std::slice::from_raw_parts(msg, msg_len);
     let result = panic::catch_unwind(|| {
-        let used_gas_ref = &mut *used_gas;
-        let result = crate::wasm::init(context, gas_limit, used_gas_ref, contract, env, msg);
+        let mut local_used_gas = *used_gas;
+        let result = crate::wasm::init(context, gas_limit, &mut local_used_gas, contract, env, msg);
+        *used_gas = local_used_gas;
         result_init_success_to_initresult(result)
     });
     if let Ok(res) = result {
@@ -152,8 +155,10 @@ pub unsafe extern "C" fn ecall_handle(
     let env = std::slice::from_raw_parts(env, env_len);
     let msg = std::slice::from_raw_parts(msg, msg_len);
     let result = panic::catch_unwind(|| {
-        let used_gas_ref = &mut *used_gas;
-        let result = crate::wasm::handle(context, gas_limit, used_gas_ref, contract, env, msg);
+        let mut local_used_gas = *used_gas;
+        let result =
+            crate::wasm::handle(context, gas_limit, &mut local_used_gas, contract, env, msg);
+        *used_gas = local_used_gas;
         result_handle_success_to_handleresult(result)
     });
     if let Ok(res) = result {
@@ -205,8 +210,9 @@ pub unsafe extern "C" fn ecall_query(
     let contract = std::slice::from_raw_parts(contract, contract_len);
     let msg = std::slice::from_raw_parts(msg, msg_len);
     let result = panic::catch_unwind(|| {
-        let used_gas_ref = &mut *used_gas;
-        let result = crate::wasm::query(context, gas_limit, used_gas_ref, contract, msg);
+        let mut local_used_gas = *used_gas;
+        let result = crate::wasm::query(context, gas_limit, &mut local_used_gas, contract, msg);
+        *used_gas = local_used_gas;
         result_query_success_to_queryresult(result)
     });
     if let Ok(res) = result {
