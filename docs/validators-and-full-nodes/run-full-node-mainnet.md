@@ -63,10 +63,7 @@ secretd validate-genesis
 
 ### 7. Add persistent peers and seeds to your configuration file.
 
-For an updated (partial) list of full nodes: https://bootstrap.mainnet.enigma.co/peers.txt
-(Generated every minute with [this script](https://gist.github.com/assafmo/a39fdb535f74ce2d6493a1a3f695e4ca))
-
-You can also use Enigma's node:
+This might be shared with you by full nodes. You can also use Enigma's node:
 
 ```
 perl -i -pe 's/persistent_peers = ""/persistent_peers = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.secretd/config/config.toml
