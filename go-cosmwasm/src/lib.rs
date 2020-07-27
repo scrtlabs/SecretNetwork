@@ -25,7 +25,7 @@ use cosmwasm_sgx_vm::{
 };
 use cosmwasm_sgx_vm::{
     create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_init_node,
-    untrusted_key_gen,
+    untrusted_key_gen, untrusted_health_check
 };
 
 use ctor::ctor;
@@ -45,6 +45,20 @@ fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache<DB, GoApi, GoQue
     } else {
         let c = unsafe { &mut *(ptr as *mut CosmCache<DB, GoApi, GoQuerier>) };
         Some(c)
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn get_health_check(err: Option<&mut Buffer>) -> Buffer {
+    match untrusted_health_check() {
+        Err(e) => {
+            set_error(Error::enclave_err(e.to_string()), err);
+            Buffer::default()
+        }
+        Ok(res) => {
+            clear_error();
+            Buffer::from_vec(format!("{}", res).into_bytes())
+        }
     }
 }
 

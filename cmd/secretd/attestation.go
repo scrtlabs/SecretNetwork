@@ -223,6 +223,27 @@ func ConfigureSecret(_ *server.Context, _ *codec.Codec) *cobra.Command {
 	return cmd
 }
 
+func HealthCheck(_ *server.Context, _ *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "check-enclave",
+		Short: "Test enclave status",
+		Long: "Help diagnose issues by performing a basic sanity test that SGX is working properly",
+		Args: cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			res, err := api.HealthCheck()
+			if err != nil {
+				return fmt.Errorf("failed to start enclave. Enclave returned: %s", err)
+			}
+
+			fmt.Println(fmt.Sprintf("SGX enclave health status: %s", res))
+			return nil
+		},
+	}
+
+	return cmd
+}
+
 func ResetEnclave(_ *server.Context, _ *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "reset-enclave",
