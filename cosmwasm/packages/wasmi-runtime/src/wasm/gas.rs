@@ -37,10 +37,10 @@ impl Default for WasmCosts {
             mem: 2,
             static_u256: 64,
             static_address: 40,
-            initial_mem: 4096,
+            initial_mem: 4096, // Assaf: I don't think this goes anywhere
             grow_mem: 8192,
             memcpy: 1,
-            max_stack_height: 64 * 1024,
+            max_stack_height: 64 * 1024, // Assaf: I don't think this goes anywhere
             opcodes_mul: 3,
             opcodes_div: 8,
         }
