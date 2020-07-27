@@ -100,6 +100,10 @@ where
         self.gas_limit.saturating_sub(self.used_gas)
     }
 
+    pub fn gas_used(&self) -> u64 {
+        self.used_gas
+    }
+
     pub fn init(&mut self, env: &[u8], msg: &[u8]) -> VmResult<InitSuccess> {
         println!(
             "init() called with env: {:?} msg: {:?} enclave_id: {:?} gas_left: {}",
