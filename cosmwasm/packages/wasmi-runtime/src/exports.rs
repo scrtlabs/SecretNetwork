@@ -102,7 +102,7 @@ pub unsafe extern "C" fn ecall_init(
     if let Ok(res) = result {
         res
     } else {
-        *used_gas = gas_limit;
+        *used_gas = gas_limit / 2;
 
         if get_then_clear_oom_happened() {
             error!("Call ecall_init failed because the enclave ran out of memory!");
@@ -164,7 +164,7 @@ pub unsafe extern "C" fn ecall_handle(
     if let Ok(res) = result {
         res
     } else {
-        *used_gas = gas_limit;
+        *used_gas = gas_limit / 2;
 
         if get_then_clear_oom_happened() {
             error!("Call ecall_handle failed because the enclave ran out of memory!");
@@ -218,7 +218,7 @@ pub unsafe extern "C" fn ecall_query(
     if let Ok(res) = result {
         res
     } else {
-        *used_gas = gas_limit;
+        *used_gas = gas_limit / 2;
 
         if get_then_clear_oom_happened() {
             error!("Call ecall_query failed because the enclave ran out of memory!");
