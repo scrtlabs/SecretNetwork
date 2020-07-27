@@ -214,11 +214,6 @@ pub unsafe extern "C" fn ecall_query(
     } else {
         *used_gas = gas_limit;
 
-        error!(
-            "ecall_query panic: used_gas {} gas_limit {}",
-            *used_gas, gas_limit
-        );
-
         if get_then_clear_oom_happened() {
             error!("Call ecall_query failed because the enclave ran out of memory!");
             QueryResult::Failure {
