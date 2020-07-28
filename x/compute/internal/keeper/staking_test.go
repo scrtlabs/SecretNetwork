@@ -483,12 +483,11 @@ func assertBalance(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Ac
 	}
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
-	queryBz, err = wasmCtx.Encrypt(queryBz)
-	require.NoError(t, err)
-	res, err := keeper.QuerySmart(ctx, contract, queryBz, false)
-	require.NoError(t, err)
+
+	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
+	require.Empty(t, qErr)
 	var balance BalanceResponse
-	err = json.Unmarshal(res, &balance)
+	err = json.Unmarshal([]byte(res), &balance)
 	require.NoError(t, err)
 	assert.Equal(t, expected, balance.Balance)
 }
@@ -501,12 +500,10 @@ func assertClaims(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	}
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
-	queryBz, err = wasmCtx.Encrypt(queryBz)
-	require.NoError(t, err)
-	res, err := keeper.QuerySmart(ctx, contract, queryBz, false)
-	require.NoError(t, err)
+	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
+	require.Empty(t, qErr)
 	var claims ClaimsResponse
-	err = json.Unmarshal(res, &claims)
+	err = json.Unmarshal([]byte(res), &claims)
 	require.NoError(t, err)
 	assert.Equal(t, expected, claims.Claims)
 }
@@ -515,12 +512,10 @@ func assertSupply(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	query := StakingQueryMsg{Investment: &struct{}{}}
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
-	queryBz, err = wasmCtx.Encrypt(queryBz)
-	require.NoError(t, err)
-	res, err := keeper.QuerySmart(ctx, contract, queryBz, false)
-	require.NoError(t, err)
+	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
+	require.Empty(t, qErr)
 	var invest InvestmentResponse
-	err = json.Unmarshal(res, &invest)
+	err = json.Unmarshal([]byte(res), &invest)
 	require.NoError(t, err)
 	assert.Equal(t, expectedIssued, invest.TokenSupply)
 	assert.Equal(t, expectedBonded, invest.StakedTokens)
