@@ -10,7 +10,7 @@ use crate::consts::ENCRYPTED_SEED_SIZE;
 use crate::crypto::PUBLIC_KEY_SIZE;
 use crate::storage::write_to_untrusted;
 use crate::{
-    oom_handler::{register_oom_handler, get_then_clear_oom_happened},
+    oom_handler::{get_then_clear_oom_happened, register_oom_handler},
     utils::{validate_const_ptr, validate_mut_ptr},
 };
 
