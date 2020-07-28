@@ -325,7 +325,7 @@ func TestExecute(t *testing.T) {
 	// unauthorized - trialCtx so we don't change state
 	trialCtx := ctx.WithMultiStore(ctx.MultiStore().CacheWrap().(sdk.MultiStore))
 
-	_, _, trialExecErr := execHelper(t, keeper, trialCtx, addr, creator, `{"approve":{}}`, true, defaultGasForTests)
+	_, _, trialExecErr := execHelper(t, keeper, trialCtx, addr, creator, `{"release":{}}`, true, defaultGasForTests)
 	require.Error(t, trialExecErr)
 	require.Error(t, trialExecErr.Unauthorized)
 	require.Contains(t, trialExecErr.Error(), "unauthorized")
@@ -334,7 +334,7 @@ func TestExecute(t *testing.T) {
 	start := time.Now()
 	gasBefore := ctx.GasMeter().GasConsumed()
 
-	msgBz, err := wasmCtx.Encrypt([]byte(`{"approve":{}}`))
+	msgBz, err := wasmCtx.Encrypt([]byte(`{"release":{}}`))
 	require.NoError(t, err)
 
 	res, err := keeper.Execute(ctx, addr, fred, msgBz, topUp)
@@ -344,7 +344,7 @@ func TestExecute(t *testing.T) {
 
 	// make sure gas is properly deducted from ctx
 	gasAfter := ctx.GasMeter().GasConsumed()
-	require.Equal(t, uint64(0x7f9e), gasAfter-gasBefore)
+	require.Equal(t, uint64(0x826f), gasAfter-gasBefore)
 
 	// ensure bob now exists and got both payments released
 	bobAcct = accKeeper.GetAccount(ctx, bob)
