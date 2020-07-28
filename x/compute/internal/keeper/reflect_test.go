@@ -53,8 +53,6 @@ type OwnerResponse struct {
 const MaskFeatures = "staking,mask"
 
 func TestMaskReflectContractSend(t *testing.T) {
-	t.SkipNow() // TODO make this work when we implement staking support
-
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -147,8 +145,6 @@ func TestMaskReflectContractSend(t *testing.T) {
 }
 
 func TestMaskReflectCustomMsg(t *testing.T) {
-	t.SkipNow() // TODO make this work when we implement staking support
-
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -253,8 +249,6 @@ func TestMaskReflectCustomMsg(t *testing.T) {
 }
 
 func TestMaskReflectCustomQuery(t *testing.T) {
-	t.SkipNow() // TODO make this work when we implement staking support
-
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -285,12 +279,10 @@ func TestMaskReflectCustomQuery(t *testing.T) {
 	}
 	ownerQueryBz, err := json.Marshal(ownerQuery)
 	require.NoError(t, err)
-	ownerQueryBz, err = wasmCtx.Encrypt(ownerQueryBz)
-	require.NoError(t, err)
-	ownerRes, err := keeper.QuerySmart(ctx, contractAddr, ownerQueryBz, false)
-	require.NoError(t, err)
+	ownerRes, qErr := queryHelper(t, keeper, ctx, contractAddr, string(ownerQueryBz), true, defaultGasForTests)
+	require.Empty(t, qErr)
 	var res OwnerResponse
-	err = json.Unmarshal(ownerRes, &res)
+	err = json.Unmarshal([]byte(ownerRes), &res)
 	require.NoError(t, err)
 	assert.Equal(t, res.Owner, creator.String())
 
@@ -302,12 +294,11 @@ func TestMaskReflectCustomQuery(t *testing.T) {
 	}
 	customQueryBz, err := json.Marshal(customQuery)
 	require.NoError(t, err)
-	customQueryBz, err = wasmCtx.Encrypt(customQueryBz)
-	require.NoError(t, err)
-	custom, err := keeper.QuerySmart(ctx, contractAddr, customQueryBz, false)
-	require.NoError(t, err)
+
+	custom, qErr := queryHelper(t, keeper, ctx, contractAddr, string(customQueryBz), true, defaultGasForTests)
+	require.Empty(t, qErr)
 	var resp customQueryResponse
-	err = json.Unmarshal(custom, &resp)
+	err = json.Unmarshal([]byte(custom), &resp)
 	require.NoError(t, err)
 	assert.Equal(t, resp.Msg, "ALL CAPS NOW")
 }
