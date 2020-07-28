@@ -29,8 +29,7 @@ import (
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
 )
 
-// const SupportedFeatures = "staking"
-const SupportedFeatures = ""
+const SupportedFeatures = "staking"
 
 var wasmCtx = wasmUtils.WASMContext{
 	TestKeyPairPath:  "/tmp/id_tx_io.json",
