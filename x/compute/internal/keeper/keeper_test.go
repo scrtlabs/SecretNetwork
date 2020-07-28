@@ -327,7 +327,7 @@ func TestExecute(t *testing.T) {
 	// unauthorized - trialCtx so we don't change state
 	trialCtx := ctx.WithMultiStore(ctx.MultiStore().CacheWrap().(sdk.MultiStore))
 
-	_, _, trialExecErr := execHelper(t, keeper, trialCtx, addr, creator, `{"approve":{}}`, true, defaultGas)
+	_, _, trialExecErr := execHelper(t, keeper, trialCtx, addr, creator, `{"approve":{}}`, true, defaultGasForTests)
 	require.Error(t, trialExecErr)
 	require.Error(t, trialExecErr.Unauthorized)
 	require.Contains(t, trialExecErr.Error(), "unauthorized")

@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -86,8 +87,6 @@ type InvestmentResponse struct {
 }
 
 func TestInitializeStaking(t *testing.T) {
-	t.SkipNow()
-
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -143,11 +142,12 @@ func TestInitializeStaking(t *testing.T) {
 	}
 	badBz, err := json.Marshal(&badInitMsg)
 	require.NoError(t, err)
-	initBz, err = wasmCtx.Encrypt(initBz)
-	require.NoError(t, err)
 
-	_, err = keeper.Instantiate(ctx, stakingID, creator, nil, badBz, "missing validator", nil)
-	require.Error(t, err)
+	_, _, initErr := initHelper(t, keeper, ctx, stakingID, creator, string(badBz), true, defaultGasForTests)
+	// _, err = keeper.Instantiate(ctx, stakingID, creator, nil, badBz, "missing validator", nil)
+	require.Error(t, initErr)
+	require.Error(t, initErr.GenericErr)
+	require.Equal(t, fmt.Sprintf("%s is not in the current validator set", sdk.ValAddress(bob).String()), initErr.GenericErr.Msg)
 
 	// no changes to bonding shares
 	val, _ := stakingKeeper.GetValidator(ctx, valAddr)
@@ -230,8 +230,6 @@ func initializeStaking(t *testing.T) initInfo {
 }
 
 func TestBonding(t *testing.T) {
-	t.SkipNow()
-
 	initInfo := initializeStaking(t)
 	defer initInfo.cleanup()
 	ctx, valAddr, contractAddr := initInfo.ctx, initInfo.valAddr, initInfo.contractAddr
@@ -283,8 +281,6 @@ func TestBonding(t *testing.T) {
 }
 
 func TestUnbonding(t *testing.T) {
-	t.SkipNow()
-
 	initInfo := initializeStaking(t)
 	defer initInfo.cleanup()
 	ctx, valAddr, contractAddr := initInfo.ctx, initInfo.valAddr, initInfo.contractAddr
@@ -355,8 +351,6 @@ func TestUnbonding(t *testing.T) {
 }
 
 func TestReinvest(t *testing.T) {
-	t.SkipNow()
-
 	initInfo := initializeStaking(t)
 	defer initInfo.cleanup()
 	ctx, valAddr, contractAddr := initInfo.ctx, initInfo.valAddr, initInfo.contractAddr
