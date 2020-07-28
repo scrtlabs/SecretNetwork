@@ -33,7 +33,7 @@ aes-siv = { version = "0.2.0" }
 enclave-ffi-types = { path = "../enclave-ffi-types" }
 pwasm-utils = { version = "0.12.0", default-features = false }
 parity-wasm = { version = "0.41.0", default-features = false }
-wasmi = { git = "https://github.com/paritytech/wasmi", rev = "39a18a433a765a36383d34d4edd536ba1e0664d2", default-features = false, features = [
+wasmi = { git = "https://github.com/paritytech/wasmi", rev = "84d2764594d80425373bf4949a58fa3df3d624c3", default-features = false, features = [
     "core"
 ] }
 serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
