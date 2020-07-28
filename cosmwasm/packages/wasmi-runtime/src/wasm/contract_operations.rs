@@ -7,10 +7,10 @@ use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::cosmwasm::types::Env;
 use crate::results::{HandleSuccess, InitSuccess, QuerySuccess};
-use crate::wasm::contract_validation::{verify_signatures, ContractKey};
 
 use super::contract_validation::{
-    extract_contract_key, generate_encryption_key, validate_contract_key, CONTRACT_KEY_LENGTH,
+    extract_contract_key, generate_encryption_key, validate_contract_key, verify_params,
+    ContractKey, CONTRACT_KEY_LENGTH,
 };
 use super::gas::{gas_rules, WasmCosts};
 use super::io::encrypt_output;
@@ -54,7 +54,8 @@ pub fn init(
         EnclaveError::FailedToDeserialize
     })?;
 
-    verify_signatures(&parsed_env)?;
+    // Verify env parameters against the signed tx
+    verify_params(&parsed_env)?;
 
     let contract_key = generate_encryption_key(&parsed_env, contract)?;
 
@@ -121,7 +122,8 @@ pub fn handle(
         EnclaveError::FailedToDeserialize
     })?;
 
-    verify_signatures(&parsed_env)?;
+    // Verify env parameters against the signed tx
+    verify_params(&parsed_env)?;
 
     trace!("handle parsed_envs: {:?}", parsed_env);
 

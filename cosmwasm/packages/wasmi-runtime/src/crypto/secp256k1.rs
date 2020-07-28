@@ -1,3 +1,67 @@
+use log::*;
+
+use crate::cosmwasm::encoding::Binary;
+use crate::cosmwasm::types::CosmosSignature;
+use enclave_ffi_types::EnclaveError;
+use ripemd160::{Digest, Ripemd160};
+use secp256k1::Secp256k1;
+use sha2::{Digest as Sha2Digest, Sha256};
+
+pub fn pubkey_to_tm_address(pubkey: &[u8]) -> Vec<u8> {
+    // Address = ripemd160(sha256(public_key))
+    // Ref: https://github.com/tendermint/spec/blob/master/spec/blockchain/encoding.md#secp256k1
+    let mut hasher = Ripemd160::new();
+    hasher.update(Sha256::digest(pubkey));
+    hasher.finalize().to_vec()
+}
+
+pub fn verify_signature(
+    sign_bytes: &Binary,
+    signature: &CosmosSignature,
+) -> Result<(), EnclaveError> {
+    // Hash the message
+    // (https://docs.cosmos.network/master/spec/_ics/ics-030-signed-messages.html#preliminary)
+    let sign_bytes_hash = Sha256::digest(sign_bytes.0.as_slice()).to_vec();
+    let msg = secp256k1::Message::from_slice(&sign_bytes_hash).map_err(|err| {
+        error!("Failed to create a secp256k1 message from tx: {:?}", err);
+        EnclaveError::FailedTxVerification
+    })?;
+
+    let verifier = Secp256k1::verification_only();
+
+    // Create `secp256k1`'s types
+    let sec_signature = secp256k1::Signature::from_compact(signature.get_signature().as_slice())
+        .map_err(|err| {
+            error!("Malformed signature: {:?}", err);
+            EnclaveError::FailedTxVerification
+        })?;
+    let sec_public_key = secp256k1::PublicKey::from_slice(signature.get_public_key().as_slice())
+        .map_err(|err| {
+            error!("Malformed public key: {:?}", err);
+            EnclaveError::FailedTxVerification
+        })?;
+
+    debug!(
+        "Verifying message:\n{:?}\nsignature:\n{:?}\npublic key:\n{:?}",
+        sign_bytes.0,
+        signature.get_signature(),
+        signature.get_public_key()
+    );
+
+    // If didn't raise error -> then all is good
+    verifier
+        .verify(&msg, &sec_signature, &sec_public_key)
+        .map_err(|err| {
+            error!(
+                "Failed to verify signatures for the given transaction: {:?}",
+                err
+            );
+            EnclaveError::FailedTxVerification
+        })?;
+
+    Ok(())
+}
+
 // use super::keys::SECRET_KEY_SIZE;
 // use super::KeyPair;
 // use crate::crypto::CryptoError;

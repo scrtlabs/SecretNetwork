@@ -226,6 +226,9 @@ build-enclave: vendor
 check-enclave:
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime check
 
+clippy-enclave:
+	$(MAKE) -C cosmwasm/packages/wasmi-runtime clippy
+
 # while developing:
 clean-enclave:
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean

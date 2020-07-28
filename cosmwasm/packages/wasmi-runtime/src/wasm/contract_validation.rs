@@ -1,13 +1,9 @@
-// use base64;
 use log::*;
 
 use enclave_ffi_types::EnclaveError;
 
-use crate::cosmwasm::encoding::Binary;
-use crate::cosmwasm::types::{CosmosSignature, Env};
-use crate::crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
-use secp256k1::Secp256k1;
-use sha2::{Digest, Sha256};
+use crate::cosmwasm::types::Env;
+use crate::crypto::{secp256k1, sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
 
 pub type ContractKey = [u8; CONTRACT_KEY_LENGTH];
 
@@ -114,12 +110,23 @@ pub fn validate_contract_key(
     calculated_authentication_id == expected_authentication_id
 }
 
-pub fn verify_signatures(env: &Env) -> Result<(), EnclaveError> {
+pub fn verify_params(env: &Env) -> Result<(), EnclaveError> {
     trace!("Verifying tx signatures..");
 
-    // Verify each signature (given it is multi-sig)
+    // Verify each signature
+    // We currently support only secp256k1 signatures
     for (sig, sb) in env.signatures.iter().zip(env.sign_bytes.iter()) {
-        verify_signature(sb, sig)?;
+        secp256k1::verify_signature(sb, sig)?;
+    }
+
+    // If sender does not match the sender's signed pubkey
+    if !verify_sender(env) {
+        error!(
+            "Message sender {:?} does not match with the signed pubkey's addres: {:?}",
+            env.message.sender,
+            env.signatures[0].get_public_key()
+        );
+        return Err(EnclaveError::FailedTxVerification);
     }
 
     trace!("All signatures verified!");
@@ -127,46 +134,11 @@ pub fn verify_signatures(env: &Env) -> Result<(), EnclaveError> {
     Ok(())
 }
 
-fn verify_signature(sign_bytes: &Binary, signature: &CosmosSignature) -> Result<(), EnclaveError> {
-    // Hash the message
-    // (https://docs.cosmos.network/master/spec/_ics/ics-030-signed-messages.html#preliminary)
-    let sign_bytes_hash = Sha256::digest(sign_bytes.0.as_slice()).to_vec();
-    let msg = secp256k1::Message::from_slice(&sign_bytes_hash).map_err(|err| {
-        error!("Failed to create a secp256k1 message from tx: {:?}", err);
-        EnclaveError::FailedTxVerification
-    })?;
+fn verify_sender(env: &Env) -> bool {
+    // Taking only the first signature, as it is the fee payer
+    // Ref: https://github.com/cosmos/cosmos-sdk/blob/v0.38.3/x/auth/types/stdtx.go#L24
+    let sender_pubkey = env.signatures[0].get_public_key();
+    let address = secp256k1::pubkey_to_tm_address(&sender_pubkey);
 
-    let verifier = Secp256k1::verification_only();
-
-    // Create `secp256k1`'s types
-    let sec_signature = secp256k1::Signature::from_compact(signature.get_signature().as_slice())
-        .map_err(|err| {
-            error!("Malformed signature: {:?}", err);
-            EnclaveError::FailedTxVerification
-        })?;
-    let sec_public_key = secp256k1::PublicKey::from_slice(signature.get_public_key().as_slice())
-        .map_err(|err| {
-            error!("Malformed public key: {:?}", err);
-            EnclaveError::FailedTxVerification
-        })?;
-
-    debug!(
-        "Verifying message:\n{:?}\nsignature:\n{:?}\npublic key:\n{:?}",
-        sign_bytes.0,
-        signature.get_signature(),
-        signature.get_public_key()
-    );
-
-    // If didn't raise error -> then all is good
-    verifier
-        .verify(&msg, &sec_signature, &sec_public_key)
-        .map_err(|err| {
-            error!(
-                "Failed to verify signatures for the given transaction: {:?}",
-                err
-            );
-            EnclaveError::FailedTxVerification
-        })?;
-
-    Ok(())
+    address.eq(&env.message.sender.as_slice())
 }

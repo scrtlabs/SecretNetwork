@@ -111,6 +111,8 @@ func GetSignBytes(ctx sdk.Context, acc exported.Account, tx auth.StdTx) []byte {
 
 // Instantiate creates an instance of a WASM contract
 func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins) (sdk.AccAddress, error) {
+	// Warning: This API may be deprecated:
+	// https://github.com/cosmos/cosmos-sdk/commit/c13809062ab16bf193ad3919c77ec03c79b76cc8#diff-a64b9f4b7565560002e3ac4a5eac008bR148
 	tx := authtypes.StdTx{}
 	txBytes := ctx.TxBytes()
 	err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
