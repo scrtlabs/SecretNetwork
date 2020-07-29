@@ -62,7 +62,7 @@ func TestMaskReflectContractSend(t *testing.T) {
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
+	creator, _ := createFakeFundedAccount(ctx, accKeeper, deposit)
 	_, _, bob := keyPubAddr()
 
 	// upload mask code
@@ -156,8 +156,8 @@ func TestMaskReflectCustomMsg(t *testing.T) {
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
-	bob := createFakeFundedAccount(ctx, accKeeper, deposit)
+	creator, _ := createFakeFundedAccount(ctx, accKeeper, deposit)
+	bob, _ := createFakeFundedAccount(ctx, accKeeper, deposit)
 	_, _, fred := keyPubAddr()
 
 	// upload code
@@ -262,7 +262,7 @@ func TestMaskReflectCustomQuery(t *testing.T) {
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
+	creator, _ := createFakeFundedAccount(ctx, accKeeper, deposit)
 
 	// upload code
 	maskCode, err := ioutil.ReadFile("./testdata/reflect.wasm")

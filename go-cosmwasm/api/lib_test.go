@@ -114,7 +114,7 @@ func TestInstantiate(t *testing.T) {
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
-	res, cost, err := Instantiate(cache, id, params, msg, &gasMeter, &store, api, &querier, 100000000, nil, nil)
+	res, cost, err := Instantiate(cache, id, params, msg, &gasMeter, &store, api, &querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	assert.Equal(t, uint64(0x11f57), cost)

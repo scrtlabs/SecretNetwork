@@ -18,8 +18,8 @@ func TestInitGenesis(t *testing.T) {
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator := createFakeFundedAccount(data.ctx, data.acctKeeper, deposit.Add(deposit...))
-	fred := createFakeFundedAccount(data.ctx, data.acctKeeper, topUp)
+	creator, _ := createFakeFundedAccount(data.ctx, data.acctKeeper, deposit.Add(deposit...))
+	fred, _ := createFakeFundedAccount(data.ctx, data.acctKeeper, topUp)
 
 	h := data.module.NewHandler()
 	q := data.module.NewQuerierHandler()

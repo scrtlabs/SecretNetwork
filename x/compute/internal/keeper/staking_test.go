@@ -101,7 +101,7 @@ func TestInitializeStaking(t *testing.T) {
 	assert.Equal(t, v.GetDelegatorShares(), sdk.NewDec(1234567))
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000), sdk.NewInt64Coin("stake", 500000))
-	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
+	creator, _ := createFakeFundedAccount(ctx, accKeeper, deposit)
 
 	// upload staking derivates code
 	stakingCode, err := ioutil.ReadFile("./testdata/staking.wasm")
@@ -189,7 +189,7 @@ func initializeStaking(t *testing.T) initInfo {
 	assert.Equal(t, v.Status, sdk.Bonded)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000), sdk.NewInt64Coin("stake", 500000))
-	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
+	creator, _ := createFakeFundedAccount(ctx, accKeeper, deposit)
 
 	// upload staking derivates code
 	stakingCode, err := ioutil.ReadFile("./testdata/staking.wasm")
@@ -245,7 +245,7 @@ func TestBonding(t *testing.T) {
 	// bob has 160k, putting 80k into the contract
 	full := sdk.NewCoins(sdk.NewInt64Coin("stake", 160000))
 	funds := sdk.NewCoins(sdk.NewInt64Coin("stake", 80000))
-	bob := createFakeFundedAccount(ctx, accKeeper, full)
+	bob, _ := createFakeFundedAccount(ctx, accKeeper, full)
 
 	// check contract state before
 	assertBalance(t, ctx, keeper, contractAddr, bob, "0")
@@ -298,7 +298,7 @@ func TestUnbonding(t *testing.T) {
 	// bob has 160k, putting 80k into the contract
 	full := sdk.NewCoins(sdk.NewInt64Coin("stake", 160000))
 	funds := sdk.NewCoins(sdk.NewInt64Coin("stake", 80000))
-	bob := createFakeFundedAccount(ctx, accKeeper, full)
+	bob, _ := createFakeFundedAccount(ctx, accKeeper, full)
 
 	bond := StakingHandleMsg{
 		Bond: &struct{}{},
@@ -372,7 +372,7 @@ func TestReinvest(t *testing.T) {
 	// full is 2x funds, 1x goes to the contract, other stays on his wallet
 	full := sdk.NewCoins(sdk.NewInt64Coin("stake", 400000))
 	funds := sdk.NewCoins(sdk.NewInt64Coin("stake", 200000))
-	bob := createFakeFundedAccount(ctx, accKeeper, full)
+	bob, _ := createFakeFundedAccount(ctx, accKeeper, full)
 
 	// we will stake 200k to a validator with 1M self-bond
 	// this means we should get 1/6 of the rewards
@@ -435,7 +435,7 @@ func addValidator(ctx sdk.Context, stakingKeeper staking.Keeper, accountKeeper a
 
 	addr := sdk.ValAddress(accAddr)
 
-	owner := createFakeFundedAccount(ctx, accountKeeper, sdk.Coins{value})
+	owner, _ := createFakeFundedAccount(ctx, accountKeeper, sdk.Coins{value})
 
 	msg := staking.MsgCreateValidator{
 		Description: types.Description{
