@@ -37,7 +37,7 @@ impl Default for WasmCosts {
             mem: 2,
             static_u256: 64,
             static_address: 40,
-            initial_mem: 4096, // Assaf: I don't think this goes anywhere
+            initial_mem: 8192,
             grow_mem: 8192,
             memcpy: 1,
             max_stack_height: 64 * 1024, // Assaf: I don't think this goes anywhere
@@ -65,6 +65,10 @@ pub fn gas_rules(wasm_costs: &WasmCosts) -> rules::Set {
         vals.insert(
             rules::InstructionType::Mul,
             rules::Metering::Fixed(wasm_costs.mul as u32),
+        );
+        vals.insert(
+            rules::InstructionType::CurrentMemory,
+            rules::Metering::Fixed(wasm_costs.initial_mem as u32),
         );
         vals
     })
