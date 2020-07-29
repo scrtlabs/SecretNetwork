@@ -7,12 +7,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"strconv"
+
 	cosmwasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	sdkErrors "github.com/enigmampc/cosmos-sdk/types/errors"
 	flag "github.com/spf13/pflag"
 	"github.com/tendermint/go-amino"
-	"io/ioutil"
-	"strconv"
 
 	"github.com/spf13/cobra"
 
@@ -86,7 +87,7 @@ func GetCmdQueryLabel(cdc *codec.Codec) *cobra.Command {
 			res, _, err := cliCtx.Query(route)
 			if err != nil {
 				if err == sdkErrors.ErrUnknownAddress {
-					fmt.Printf("Label is available and not in use")
+					fmt.Printf("Label is available and not in use\n")
 					return nil
 				}
 
@@ -100,7 +101,7 @@ func GetCmdQueryLabel(cdc *codec.Codec) *cobra.Command {
 				return fmt.Errorf("error unwrapping address: %s", err)
 			}
 
-			fmt.Printf("Label is in use by contract address: %s", addr)
+			fmt.Printf("Label is in use by contract address: %s\n", addr)
 			return nil
 		},
 	}

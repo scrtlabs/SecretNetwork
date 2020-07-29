@@ -54,8 +54,6 @@ type OwnerResponse struct {
 const MaskFeatures = "staking,mask"
 
 func TestMaskReflectContractSend(t *testing.T) {
-	t.SkipNow() // TODO make this work when we implement staking support
-
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -148,8 +146,6 @@ func TestMaskReflectContractSend(t *testing.T) {
 }
 
 func TestMaskReflectCustomMsg(t *testing.T) {
-	t.SkipNow() // TODO make this work when we implement staking support
-
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -254,8 +250,6 @@ func TestMaskReflectCustomMsg(t *testing.T) {
 }
 
 func TestMaskReflectCustomQuery(t *testing.T) {
-	t.SkipNow() // TODO make this work when we implement staking support
-
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -287,21 +281,23 @@ func TestMaskReflectCustomQuery(t *testing.T) {
 	ownerQueryBz, err := json.Marshal(ownerQuery)
 	require.NoError(t, err)
 
-	hash := keeper.GetContractHash(ctx, contractAddr)
-	hashStr := hex.EncodeToString(hash)
-
-	msg := types.SecretMsg{
-		CodeHash: []byte(hashStr),
-		Msg:      ownerQueryBz,
-	}
-
-	ownerQueryBz, err = wasmCtx.Encrypt(msg.Serialize())
-
-	require.NoError(t, err)
-	ownerRes, err := keeper.QuerySmart(ctx, contractAddr, ownerQueryBz)
-	require.NoError(t, err)
+	//hash := keeper.GetContractHash(ctx, contractAddr)
+	//hashStr := hex.EncodeToString(hash)
+	//
+	//msg := types.SecretMsg{
+	//	CodeHash: []byte(hashStr),
+	//	Msg:      ownerQueryBz,
+	//}
+	//
+	//ownerQueryBz, err = wasmCtx.Encrypt(msg.Serialize())
+	//
+	//require.NoError(t, err)
+	//ownerRes, err := keeper.QuerySmart(ctx, contractAddr, ownerQueryBz)
+	//require.NoError(t, err)
+	ownerRes, qErr := queryHelper(t, keeper, ctx, contractAddr, string(ownerQueryBz), true, defaultGasForTests)
+	require.Empty(t, qErr)
 	var res OwnerResponse
-	err = json.Unmarshal(ownerRes, &res)
+	err = json.Unmarshal([]byte(ownerRes), &res)
 	require.NoError(t, err)
 	assert.Equal(t, res.Owner, creator.String())
 
@@ -314,21 +310,24 @@ func TestMaskReflectCustomQuery(t *testing.T) {
 	customQueryBz, err := json.Marshal(customQuery)
 	require.NoError(t, err)
 
-	hash = keeper.GetContractHash(ctx, contractAddr)
-	hashStr = hex.EncodeToString(hash)
+	custom, qErr := queryHelper(t, keeper, ctx, contractAddr, string(customQueryBz), true, defaultGasForTests)
+	require.Empty(t, qErr)
 
-	msg = types.SecretMsg{
-		CodeHash: []byte(hashStr),
-		Msg:      customQueryBz,
-	}
-
-	customQueryBz, err = wasmCtx.Encrypt(msg.Serialize())
-
-	require.NoError(t, err)
-	custom, err := keeper.QuerySmart(ctx, contractAddr, customQueryBz)
-	require.NoError(t, err)
+	//hash = keeper.GetContractHash(ctx, contractAddr)
+	//hashStr = hex.EncodeToString(hash)
+	//
+	//msg = types.SecretMsg{
+	//	CodeHash: []byte(hashStr),
+	//	Msg:      customQueryBz,
+	//}
+	//
+	//customQueryBz, err = wasmCtx.Encrypt(msg.Serialize())
+	//
+	//require.NoError(t, err)
+	//custom, err := keeper.QuerySmart(ctx, contractAddr, customQueryBz)
+	//require.NoError(t, err)
 	var resp customQueryResponse
-	err = json.Unmarshal(custom, &resp)
+	err = json.Unmarshal([]byte(custom), &resp)
 	require.NoError(t, err)
 	assert.Equal(t, resp.Msg, "ALL CAPS NOW")
 }

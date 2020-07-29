@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	types2 "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -88,8 +89,6 @@ type InvestmentResponse struct {
 }
 
 func TestInitializeStaking(t *testing.T) {
-	t.SkipNow()
-
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -145,11 +144,12 @@ func TestInitializeStaking(t *testing.T) {
 	}
 	badBz, err := json.Marshal(&badInitMsg)
 	require.NoError(t, err)
-	initBz, err = wasmCtx.Encrypt(initBz)
-	require.NoError(t, err)
 
-	_, err = keeper.Instantiate(ctx, stakingID, creator, nil, badBz, "missing validator", nil)
-	require.Error(t, err)
+	_, _, initErr := initHelper(t, keeper, ctx, stakingID, creator, string(badBz), true, defaultGasForTests)
+	// _, err = keeper.Instantiate(ctx, stakingID, creator, nil, badBz, "missing validator", nil)
+	require.Error(t, initErr)
+	require.Error(t, initErr.GenericErr)
+	require.Equal(t, fmt.Sprintf("%s is not in the current validator set", sdk.ValAddress(bob).String()), initErr.GenericErr.Msg)
 
 	// no changes to bonding shares
 	val, _ := stakingKeeper.GetValidator(ctx, valAddr)
@@ -232,8 +232,6 @@ func initializeStaking(t *testing.T) initInfo {
 }
 
 func TestBonding(t *testing.T) {
-	t.SkipNow()
-
 	initInfo := initializeStaking(t)
 	defer initInfo.cleanup()
 	ctx, valAddr, contractAddr := initInfo.ctx, initInfo.valAddr, initInfo.contractAddr
@@ -285,8 +283,6 @@ func TestBonding(t *testing.T) {
 }
 
 func TestUnbonding(t *testing.T) {
-	t.SkipNow()
-
 	initInfo := initializeStaking(t)
 	defer initInfo.cleanup()
 	ctx, valAddr, contractAddr := initInfo.ctx, initInfo.valAddr, initInfo.contractAddr
@@ -357,8 +353,6 @@ func TestUnbonding(t *testing.T) {
 }
 
 func TestReinvest(t *testing.T) {
-	t.SkipNow()
-
 	initInfo := initializeStaking(t)
 	defer initInfo.cleanup()
 	ctx, valAddr, contractAddr := initInfo.ctx, initInfo.valAddr, initInfo.contractAddr
@@ -492,21 +486,24 @@ func assertBalance(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Ac
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
 
-	hash := keeper.GetContractHash(ctx, contract)
-	hashStr := hex.EncodeToString(hash)
+	//hash := keeper.GetContractHash(ctx, contract)
+	//hashStr := hex.EncodeToString(hash)
+	//
+	//msg := types2.SecretMsg{
+	//	CodeHash: []byte(hashStr),
+	//	Msg:      queryBz,
+	//}
+	//
+	//queryBz, err = wasmCtx.Encrypt(msg.Serialize())
+	//require.NoError(t, err)
+	//
+	//res, err := keeper.QuerySmart(ctx, contract, queryBz)
+	//require.NoError(t, err)
 
-	msg := types2.SecretMsg{
-		CodeHash: []byte(hashStr),
-		Msg:      queryBz,
-	}
-
-	queryBz, err = wasmCtx.Encrypt(msg.Serialize())
-	require.NoError(t, err)
-
-	res, err := keeper.QuerySmart(ctx, contract, queryBz)
-	require.NoError(t, err)
+	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
+	require.Empty(t, qErr)
 	var balance BalanceResponse
-	err = json.Unmarshal(res, &balance)
+	err = json.Unmarshal([]byte(res), &balance)
 	require.NoError(t, err)
 	assert.Equal(t, expected, balance.Balance)
 }
@@ -520,21 +517,23 @@ func assertClaims(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
 
-	hash := keeper.GetContractHash(ctx, contract)
-	hashStr := hex.EncodeToString(hash)
-
-	msg := types2.SecretMsg{
-		CodeHash: []byte(hashStr),
-		Msg:      queryBz,
-	}
-
-	queryBz, err = wasmCtx.Encrypt(msg.Serialize())
-	require.NoError(t, err)
-
-	res, err := keeper.QuerySmart(ctx, contract, queryBz)
-	require.NoError(t, err)
+	//hash := keeper.GetContractHash(ctx, contract)
+	//hashStr := hex.EncodeToString(hash)
+	//
+	//msg := types2.SecretMsg{
+	//	CodeHash: []byte(hashStr),
+	//	Msg:      queryBz,
+	//}
+	//
+	//queryBz, err = wasmCtx.Encrypt(msg.Serialize())
+	//require.NoError(t, err)
+	//
+	//res, err := keeper.QuerySmart(ctx, contract, queryBz)
+	//require.NoError(t, err)
+	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
+	require.Empty(t, qErr)
 	var claims ClaimsResponse
-	err = json.Unmarshal(res, &claims)
+	err = json.Unmarshal([]byte(res), &claims)
 	require.NoError(t, err)
 	assert.Equal(t, expected, claims.Claims)
 }
@@ -543,22 +542,24 @@ func assertSupply(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	query := StakingQueryMsg{Investment: &struct{}{}}
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
+	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
+	require.Empty(t, qErr)
 
-	hash := keeper.GetContractHash(ctx, contract)
-	hashStr := hex.EncodeToString(hash)
-
-	msg := types2.SecretMsg{
-		CodeHash: []byte(hashStr),
-		Msg:      queryBz,
-	}
-
-	queryBz, err = wasmCtx.Encrypt(msg.Serialize())
-	require.NoError(t, err)
-
-	res, err := keeper.QuerySmart(ctx, contract, queryBz)
-	require.NoError(t, err)
+	//hash := keeper.GetContractHash(ctx, contract)
+	//hashStr := hex.EncodeToString(hash)
+	//
+	//msg := types2.SecretMsg{
+	//	CodeHash: []byte(hashStr),
+	//	Msg:      queryBz,
+	//}
+	//
+	//queryBz, err = wasmCtx.Encrypt(msg.Serialize())
+	//require.NoError(t, err)
+	//
+	//res, err := keeper.QuerySmart(ctx, contract, queryBz)
+	//require.NoError(t, err)
 	var invest InvestmentResponse
-	err = json.Unmarshal(res, &invest)
+	err = json.Unmarshal([]byte(res), &invest)
 	require.NoError(t, err)
 	assert.Equal(t, expectedIssued, invest.TokenSupply)
 	assert.Equal(t, expectedBonded, invest.StakedTokens)

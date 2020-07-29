@@ -124,7 +124,7 @@ func extractInnerError(t *testing.T, err error, nonce []byte, isEncrypted bool) 
 	return innerErr
 }
 
-var defaultGas uint64 = 200_000
+const defaultGasForTests uint64 = 200_000
 
 func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.AccAddress, input string, isErrorEncrypted bool, gas uint64) (string, cosmwasm.StdError) {
 
@@ -154,7 +154,7 @@ func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.
 		log.NewNopLogger(),
 	).WithGasMeter(sdk.NewGasMeter(gas))
 
-	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz)
+	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz, false)
 	if err != nil {
 		return "", extractInnerError(t, err, nonce, isErrorEncrypted)
 	}
@@ -250,7 +250,7 @@ func TestCallbackSanity(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// init
-	contractAddress, initEvents, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddress, initEvents, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, err)
 
 	require.Equal(t,
@@ -266,7 +266,7 @@ func TestCallbackSanity(t *testing.T) {
 	codeHash := keeper.GetContractHash(ctx, contractAddress)
 	codeHashStr := hex.EncodeToString(codeHash)
 
-	data, execEvents, err := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"a":{"contract_addr":"%s","code_hash":"%s","x":2,"y":3}}`, contractAddress.String(), codeHashStr), true, defaultGas)
+	data, execEvents, err := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"a":{"contract_addr":"%s","code_hash":"%s","x":2,"y":3}}`, contractAddress.String(), codeHashStr), true, defaultGasForTests)
 	require.Empty(t, err)
 	require.Equal(t,
 		[]ContractEvent{
@@ -295,22 +295,22 @@ func TestSanity(t *testing.T) {
 	// init
 	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, walletA.String(), walletB.String())
 
-	contractAddress, initEvents, err := initHelper(t, keeper, ctx, codeID, walletA, initMsg, true, defaultGas)
+	contractAddress, initEvents, err := initHelper(t, keeper, ctx, codeID, walletA, initMsg, true, defaultGasForTests)
 	require.Empty(t, err)
 	require.Empty(t, initEvents)
 
 	// check state after init
-	qRes, qErr := queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletA.String()), true, defaultGas)
+	qRes, qErr := queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletA.String()), true, defaultGasForTests)
 	require.Empty(t, qErr)
 	require.JSONEq(t, `{"balance":"108"}`, qRes)
 
-	qRes, qErr = queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletB.String()), true, defaultGas)
+	qRes, qErr = queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletB.String()), true, defaultGasForTests)
 	require.Empty(t, qErr)
 	require.JSONEq(t, `{"balance":"53"}`, qRes)
 
 	// transfer 10 from A to B
 	data, wasmEvents, err := execHelper(t, keeper, ctx, contractAddress, walletA,
-		fmt.Sprintf(`{"transfer":{"amount":"10","recipient":"%s"}}`, walletB.String()), true, defaultGas)
+		fmt.Sprintf(`{"transfer":{"amount":"10","recipient":"%s"}}`, walletB.String()), true, defaultGasForTests)
 
 	require.Empty(t, err)
 	require.Empty(t, data)
@@ -327,11 +327,11 @@ func TestSanity(t *testing.T) {
 	)
 
 	// check state after transfer
-	qRes, qErr = queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletA.String()), true, defaultGas)
+	qRes, qErr = queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletA.String()), true, defaultGasForTests)
 	require.Empty(t, qErr)
 	require.JSONEq(t, `{"balance":"98"}`, qRes)
 
-	qRes, qErr = queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletB.String()), true, defaultGas)
+	qRes, qErr = queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletB.String()), true, defaultGasForTests)
 	require.Empty(t, qErr)
 	require.JSONEq(t, `{"balance":"63"}`, qRes)
 }
@@ -340,7 +340,7 @@ func TestInitLogs(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 	require.Equal(t, 1, len(initEvents))
 	require.Equal(t,
@@ -358,10 +358,10 @@ func TestEmptyLogKeyValue(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	_, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, `{"empty_log_key_value":{}}`, true, defaultGas)
+	_, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, `{"empty_log_key_value":{}}`, true, defaultGasForTests)
 
 	require.Empty(t, execErr)
 	require.Equal(t,
@@ -380,10 +380,10 @@ func TestEmptyData(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	data, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, `{"empty_data":{}}`, true, defaultGas)
+	data, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, `{"empty_data":{}}`, true, defaultGasForTests)
 
 	require.Empty(t, err)
 	require.Empty(t, data)
@@ -393,10 +393,10 @@ func TestNoData(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	data, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, `{"no_data":{}}`, true, defaultGas)
+	data, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, `{"no_data":{}}`, true, defaultGasForTests)
 
 	require.Empty(t, err)
 	require.Empty(t, data)
@@ -406,10 +406,10 @@ func TestExecuteIllegalInputError(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	_, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, `bad input`, true, defaultGas)
+	_, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, `bad input`, true, defaultGasForTests)
 
 	require.Error(t, execErr)
 	require.Error(t, execErr.ParseErr)
@@ -419,7 +419,7 @@ func TestInitIllegalInputError(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `bad input`, true, defaultGas)
+	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `bad input`, true, defaultGasForTests)
 
 	require.Error(t, initErr)
 	require.Error(t, initErr.ParseErr)
@@ -430,7 +430,7 @@ func TestCallbackFromInitAndCallbackEvents(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// init first contract so we'd have someone to callback
-	firstContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	firstContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
 	require.Equal(t,
@@ -447,7 +447,7 @@ func TestCallbackFromInitAndCallbackEvents(t *testing.T) {
 	codeHashStr := hex.EncodeToString(codeHash)
 
 	// init second contract and callback to the first contract
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback":{"contract_addr":"%s", "code_hash": "%s"}}`, firstContractAddress.String(), codeHashStr), true, defaultGas)
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback":{"contract_addr":"%s", "code_hash": "%s"}}`, firstContractAddress.String(), codeHashStr), true, defaultGasForTests)
 	require.Empty(t, initErr)
 
 	require.Equal(t,
@@ -472,11 +472,11 @@ func TestQueryInputParamError(t *testing.T) {
 	// init
 	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, walletA.String(), walletB.String())
 
-	contractAddress, initEvents, err := initHelper(t, keeper, ctx, codeID, walletA, initMsg, true, defaultGas)
+	contractAddress, initEvents, err := initHelper(t, keeper, ctx, codeID, walletA, initMsg, true, defaultGasForTests)
 	require.Empty(t, err)
 	require.Empty(t, initEvents)
 
-	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"address":"blabla"}}`, true, defaultGas)
+	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"address":"blabla"}}`, true, defaultGasForTests)
 	require.Error(t, qErr)
 	require.Error(t, qErr.GenericErr)
 	require.Equal(t, "canonicalize_address returned error", qErr.GenericErr.Msg)
@@ -486,10 +486,10 @@ func TestUnicodeData(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	data, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, `{"unicode_data":{}}`, true, defaultGas)
+	data, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, `{"unicode_data":{}}`, true, defaultGasForTests)
 
 	require.Empty(t, err)
 	require.Equal(t, "🍆🥑🍄", string(data))
@@ -500,55 +500,55 @@ func TestInitContractError(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	t.Run("generic_err", func(t *testing.T) {
-		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"generic_err"}}`, true, defaultGas)
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"generic_err"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.GenericErr)
 		require.Equal(t, "la la 🤯", err.GenericErr.Msg)
 	})
 	t.Run("invalid_base64", func(t *testing.T) {
-		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"invalid_base64"}}`, true, defaultGas)
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"invalid_base64"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.InvalidBase64)
 		require.Equal(t, "ra ra 🤯", err.InvalidBase64.Msg)
 	})
 	t.Run("invalid_utf8", func(t *testing.T) {
-		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"invalid_utf8"}}`, true, defaultGas)
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"invalid_utf8"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.InvalidUtf8)
 		require.Equal(t, "ka ka 🤯", err.InvalidUtf8.Msg)
 	})
 	t.Run("not_found", func(t *testing.T) {
-		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"not_found"}}`, true, defaultGas)
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"not_found"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.NotFound)
 		require.Equal(t, "za za 🤯", err.NotFound.Kind)
 	})
 	t.Run("null_pointer", func(t *testing.T) {
-		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"null_pointer"}}`, true, defaultGas)
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"null_pointer"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.NullPointer)
 	})
 	t.Run("parse_err", func(t *testing.T) {
-		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"parse_err"}}`, true, defaultGas)
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"parse_err"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.ParseErr)
 		require.Equal(t, "na na 🤯", err.ParseErr.Target)
 		require.Equal(t, "pa pa 🤯", err.ParseErr.Msg)
 	})
 	t.Run("serialize_err", func(t *testing.T) {
-		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"serialize_err"}}`, true, defaultGas)
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"serialize_err"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.SerializeErr)
 		require.Equal(t, "ba ba 🤯", err.SerializeErr.Source)
 		require.Equal(t, "ga ga 🤯", err.SerializeErr.Msg)
 	})
 	t.Run("unauthorized", func(t *testing.T) {
-		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"unauthorized"}}`, true, defaultGas)
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"unauthorized"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.Unauthorized)
 	})
 	t.Run("underflow", func(t *testing.T) {
-		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"underflow"}}`, true, defaultGas)
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"underflow"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.Underflow)
 		require.Equal(t, "minuend 🤯", err.Underflow.Minuend)
@@ -560,59 +560,59 @@ func TestExecContractError(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
 	t.Run("generic_err", func(t *testing.T) {
-		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"generic_err"}}`, true, defaultGas)
+		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"generic_err"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.GenericErr)
 		require.Equal(t, "la la 🤯", err.GenericErr.Msg)
 	})
 	t.Run("invalid_base64", func(t *testing.T) {
-		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"invalid_base64"}}`, true, defaultGas)
+		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"invalid_base64"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.InvalidBase64)
 		require.Equal(t, "ra ra 🤯", err.InvalidBase64.Msg)
 	})
 	t.Run("invalid_utf8", func(t *testing.T) {
-		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"invalid_utf8"}}`, true, defaultGas)
+		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"invalid_utf8"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.InvalidUtf8)
 		require.Equal(t, "ka ka 🤯", err.InvalidUtf8.Msg)
 	})
 	t.Run("not_found", func(t *testing.T) {
-		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"not_found"}}`, true, defaultGas)
+		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"not_found"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.NotFound)
 		require.Equal(t, "za za 🤯", err.NotFound.Kind)
 	})
 	t.Run("null_pointer", func(t *testing.T) {
-		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"null_pointer"}}`, true, defaultGas)
+		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"null_pointer"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.NullPointer)
 	})
 	t.Run("parse_err", func(t *testing.T) {
-		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"parse_err"}}`, true, defaultGas)
+		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"parse_err"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.ParseErr)
 		require.Equal(t, "na na 🤯", err.ParseErr.Target)
 		require.Equal(t, "pa pa 🤯", err.ParseErr.Msg)
 	})
 	t.Run("serialize_err", func(t *testing.T) {
-		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"serialize_err"}}`, true, defaultGas)
+		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"serialize_err"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.SerializeErr)
 		require.Equal(t, "ba ba 🤯", err.SerializeErr.Source)
 		require.Equal(t, "ga ga 🤯", err.SerializeErr.Msg)
 	})
 	t.Run("unauthorized", func(t *testing.T) {
-		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"unauthorized"}}`, true, defaultGas)
+		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"unauthorized"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.Unauthorized)
 	})
 	t.Run("underflow", func(t *testing.T) {
-		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"underflow"}}`, true, defaultGas)
+		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"underflow"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.Underflow)
 		require.Equal(t, "minuend 🤯", err.Underflow.Minuend)
@@ -624,59 +624,59 @@ func TestQueryContractError(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
 	t.Run("generic_err", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"generic_err"}}`, true, defaultGas)
+		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"generic_err"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.GenericErr)
 		require.Equal(t, "la la 🤯", err.GenericErr.Msg)
 	})
 	t.Run("invalid_base64", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"invalid_base64"}}`, true, defaultGas)
+		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"invalid_base64"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.InvalidBase64)
 		require.Equal(t, "ra ra 🤯", err.InvalidBase64.Msg)
 	})
 	t.Run("invalid_utf8", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"invalid_utf8"}}`, true, defaultGas)
+		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"invalid_utf8"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.InvalidUtf8)
 		require.Equal(t, "ka ka 🤯", err.InvalidUtf8.Msg)
 	})
 	t.Run("not_found", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"not_found"}}`, true, defaultGas)
+		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"not_found"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.NotFound)
 		require.Equal(t, "za za 🤯", err.NotFound.Kind)
 	})
 	t.Run("null_pointer", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"null_pointer"}}`, true, defaultGas)
+		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"null_pointer"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.NullPointer)
 	})
 	t.Run("parse_err", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"parse_err"}}`, true, defaultGas)
+		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"parse_err"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.ParseErr)
 		require.Equal(t, "na na 🤯", err.ParseErr.Target)
 		require.Equal(t, "pa pa 🤯", err.ParseErr.Msg)
 	})
 	t.Run("serialize_err", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"serialize_err"}}`, true, defaultGas)
+		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"serialize_err"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.SerializeErr)
 		require.Equal(t, "ba ba 🤯", err.SerializeErr.Source)
 		require.Equal(t, "ga ga 🤯", err.SerializeErr.Msg)
 	})
 	t.Run("unauthorized", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"unauthorized"}}`, true, defaultGas)
+		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"unauthorized"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.Unauthorized)
 	})
 	t.Run("underflow", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"underflow"}}`, true, defaultGas)
+		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"underflow"}}`, true, defaultGasForTests)
 		require.Error(t, err)
 		require.Error(t, err.Underflow)
 		require.Equal(t, "minuend 🤯", err.Underflow.Minuend)
@@ -691,7 +691,7 @@ func TestInitParamError(t *testing.T) {
 	codeHash := "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 	msg := fmt.Sprintf(`{"callback":{"contract_addr":"notanaddress", "code_hash":"%s"}}`, codeHash)
 
-	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, msg, false, defaultGas)
+	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, msg, false, defaultGasForTests)
 
 	require.Contains(t, initErr.Error(), "invalid address")
 }
@@ -700,7 +700,7 @@ func TestCallbackExecuteParamError(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
 	// codeHash := keeper.GetCodeInfo(ctx, codeID).CodeHash
@@ -709,7 +709,7 @@ func TestCallbackExecuteParamError(t *testing.T) {
 
 	msg := fmt.Sprintf(`{"a":{"code_hash":"%s","contract_addr":"notanaddress","x":2,"y":3}}`, codeHashStr)
 
-	_, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, msg, false, defaultGas)
+	_, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, msg, false, defaultGasForTests)
 
 	require.Contains(t, err.Error(), "invalid address")
 }
@@ -721,11 +721,11 @@ func TestQueryInputStructureError(t *testing.T) {
 	// init
 	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, walletA.String(), walletB.String())
 
-	contractAddress, initEvents, err := initHelper(t, keeper, ctx, codeID, walletA, initMsg, true, defaultGas)
+	contractAddress, initEvents, err := initHelper(t, keeper, ctx, codeID, walletA, initMsg, true, defaultGasForTests)
 	require.Empty(t, err)
 	require.Empty(t, initEvents)
 
-	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"invalidkey":"invalidval"}}`, true, defaultGas)
+	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"invalidkey":"invalidval"}}`, true, defaultGasForTests)
 	require.Error(t, qErr)
 	require.Error(t, qErr.ParseErr)
 	require.Contains(t, qErr.ParseErr.Msg, "missing field `address`")
@@ -748,7 +748,7 @@ func TestExecuteNotEncryptedInputError(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
 	_, err := keeper.Execute(ctx, contractAddress, walletA, []byte(`{"empty_log_key_value":{}}`), sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
@@ -761,10 +761,10 @@ func TestQueryNotEncryptedInputError(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	_, err := keeper.QuerySmart(ctx, contractAddress, []byte(`{"owner":{}}`))
+	_, err := keeper.QuerySmart(ctx, contractAddress, []byte(`{"owner":{}}`), false)
 	require.Error(t, err)
 
 	require.Contains(t, err.Error(), "failed to decrypt data")
@@ -775,7 +775,7 @@ func TestInitNoLogs(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// init
-	_, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"no_logs":{}}`, true, defaultGas)
+	_, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"no_logs":{}}`, true, defaultGasForTests)
 
 	require.Empty(t, initErr)
 	require.Empty(t, initEvents)
@@ -786,10 +786,10 @@ func TestExecNoLogs(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// init
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	_, execEvents, err := execHelper(t, keeper, ctx, contractAddress, walletA, `{"no_logs":{}}`, true, defaultGas)
+	_, execEvents, err := execHelper(t, keeper, ctx, contractAddress, walletA, `{"no_logs":{}}`, true, defaultGasForTests)
 
 	require.Empty(t, err)
 	require.Empty(t, execEvents)
@@ -800,14 +800,14 @@ func TestExecCallbackToInit(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// init first contract
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
 	codeHash := keeper.GetCodeInfo(ctx, codeID).CodeHash
 	// codeHash := keeper.GetContractKey(ctx, contractAddress)
 
 	// init second contract and callback to the first contract
-	execData, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d, "code_hash":"%s"}}`, codeID, hex.EncodeToString(codeHash)), true, defaultGas)
+	execData, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d, "code_hash":"%s"}}`, codeID, hex.EncodeToString(codeHash)), true, defaultGasForTests)
 	require.Empty(t, execErr)
 	require.Empty(t, execData)
 
@@ -829,7 +829,7 @@ func TestExecCallbackToInit(t *testing.T) {
 	secondContractAddress, err := sdk.AccAddressFromBech32(secondContractAddressBech32)
 	require.NoError(t, err)
 
-	data, execEvents, err := execHelper(t, keeper, ctx, secondContractAddress, walletA, `{"unicode_data":{}}`, true, defaultGas)
+	data, execEvents, err := execHelper(t, keeper, ctx, secondContractAddress, walletA, `{"unicode_data":{}}`, true, defaultGasForTests)
 
 	require.Empty(t, err)
 	require.Empty(t, execEvents)
@@ -843,7 +843,7 @@ func TestInitCallbackToInit(t *testing.T) {
 	codeHash := keeper.GetCodeInfo(ctx, codeID).CodeHash
 	// codeHash := keeper.GetContractKey(ctx, contractAddress)
 
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d, "code_hash":"%s"}}`, codeID, hex.EncodeToString(codeHash)), true, defaultGas)
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d, "code_hash":"%s"}}`, codeID, hex.EncodeToString(codeHash)), true, defaultGasForTests)
 	require.Empty(t, initErr)
 
 	require.Equal(t, 2, len(initEvents))
@@ -864,7 +864,7 @@ func TestInitCallbackToInit(t *testing.T) {
 	secondContractAddress, err := sdk.AccAddressFromBech32(secondContractAddressBech32)
 	require.NoError(t, err)
 
-	data, execEvents, err := execHelper(t, keeper, ctx, secondContractAddress, walletA, `{"unicode_data":{}}`, true, defaultGas)
+	data, execEvents, err := execHelper(t, keeper, ctx, secondContractAddress, walletA, `{"unicode_data":{}}`, true, defaultGasForTests)
 
 	require.Empty(t, err)
 	require.Empty(t, execEvents)
@@ -875,7 +875,7 @@ func TestInitCallbackContractError(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 	require.Equal(t, 1, len(initEvents))
 
@@ -883,7 +883,7 @@ func TestInitCallbackContractError(t *testing.T) {
 	codeHash := keeper.GetContractHash(ctx, contractAddress)
 	codeHashStr := hex.EncodeToString(codeHash)
 
-	secondContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s", "code_hash":"%s"}}`, contractAddress, codeHashStr), true, defaultGas)
+	secondContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s", "code_hash":"%s"}}`, contractAddress, codeHashStr), true, defaultGasForTests)
 	require.Error(t, initErr)
 	require.Error(t, initErr.GenericErr)
 	require.Equal(t, "la la 🤯", initErr.GenericErr.Msg)
@@ -896,7 +896,7 @@ func TestExecCallbackContractError(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// init
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 	require.Equal(t, 1, len(initEvents))
 
@@ -904,7 +904,7 @@ func TestExecCallbackContractError(t *testing.T) {
 	codeHash := keeper.GetContractHash(ctx, contractAddress)
 	codeHashStr := hex.EncodeToString(codeHash)
 
-	data, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s", "code_hash":"%s"}}`, contractAddress, codeHashStr), true, defaultGas)
+	data, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s", "code_hash":"%s"}}`, contractAddress, codeHashStr), true, defaultGasForTests)
 	require.Error(t, execErr)
 	require.Error(t, execErr.GenericErr)
 	require.Equal(t, "la la 🤯", execErr.GenericErr.Msg)
@@ -917,14 +917,14 @@ func TestExecCallbackBadParam(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// init
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 	require.Equal(t, 1, len(initEvents))
 
 	codeHash := keeper.GetContractHash(ctx, contractAddress)
 	codeHashStr := hex.EncodeToString(codeHash)
 
-	data, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_contract_bad_param":{"contract_addr":"%s", "code_hash":"%s"}}`, contractAddress, codeHashStr), true, defaultGas)
+	data, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_contract_bad_param":{"contract_addr":"%s", "code_hash":"%s"}}`, contractAddress, codeHashStr), true, defaultGasForTests)
 	require.Error(t, execErr)
 	require.Error(t, execErr.ParseErr)
 	require.Equal(t, "test_contract::contract::HandleMsg", execErr.ParseErr.Target)
@@ -938,11 +938,11 @@ func TestInitCallbackBadParam(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// init first
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 	require.Equal(t, 1, len(initEvents))
 
-	secondContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback_contract_bad_param":{"contract_addr":"%s"}}`, contractAddress), true, defaultGas)
+	secondContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback_contract_bad_param":{"contract_addr":"%s"}}`, contractAddress), true, defaultGasForTests)
 	require.Empty(t, secondContractAddress)
 	require.Empty(t, initEvents)
 	require.Error(t, initErr)
@@ -956,25 +956,25 @@ func TestState(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// init
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 	require.Equal(t, 1, len(initEvents))
 
-	data, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, `{"get_state":{"key":"banana"}}`, true, defaultGas)
+	data, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, `{"get_state":{"key":"banana"}}`, true, defaultGasForTests)
 	require.Empty(t, execErr)
 	require.Empty(t, data)
 
-	_, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, `{"set_state":{"key":"banana","value":"🍌"}}`, true, defaultGas)
+	_, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, `{"set_state":{"key":"banana","value":"🍌"}}`, true, defaultGasForTests)
 	require.Empty(t, execErr)
 
-	data, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, `{"get_state":{"key":"banana"}}`, true, defaultGas)
+	data, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, `{"get_state":{"key":"banana"}}`, true, defaultGasForTests)
 	require.Empty(t, execErr)
 	require.Equal(t, "🍌", string(data))
 
-	_, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, `{"remove_state":{"key":"banana"}}`, true, defaultGas)
+	_, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, `{"remove_state":{"key":"banana"}}`, true, defaultGasForTests)
 	require.Empty(t, execErr)
 
-	data, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, `{"get_state":{"key":"banana"}}`, true, defaultGas)
+	data, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, `{"get_state":{"key":"banana"}}`, true, defaultGasForTests)
 	require.Empty(t, execErr)
 	require.Empty(t, data)
 }
@@ -983,12 +983,12 @@ func TestCanonicalizeAddressErrors(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 	require.Equal(t, 1, len(initEvents))
 
 	// this function should handle errors internally and return gracefully
-	data, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, `{"test_canonicalize_address_errors":{}}`, true, defaultGas)
+	data, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, `{"test_canonicalize_address_errors":{}}`, true, defaultGasForTests)
 	require.Empty(t, execErr)
 	require.Equal(t, "🤟", string(data))
 }
@@ -997,7 +997,7 @@ func TestInitPanic(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"panic":{}}`, false, defaultGas)
+	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"panic":{}}`, false, defaultGasForTests)
 	require.Error(t, initErr)
 	require.Error(t, initErr.GenericErr)
 	require.Equal(t, "instantiate contract failed: Execution error: Enclave: the contract panicked", initErr.GenericErr.Msg)
@@ -1007,10 +1007,10 @@ func TestExecPanic(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, `{"panic":{}}`, false, defaultGas)
+	_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, `{"panic":{}}`, false, defaultGasForTests)
 	require.Error(t, execErr)
 	require.Error(t, execErr.GenericErr)
 	require.Equal(t, "execute contract failed: Execution error: Enclave: the contract panicked", execErr.GenericErr.Msg)
@@ -1020,10 +1020,10 @@ func TestQueryPanic(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	_, queryErr := queryHelper(t, keeper, ctx, addr, `{"panic":{}}`, false, defaultGas)
+	_, queryErr := queryHelper(t, keeper, ctx, addr, `{"panic":{}}`, false, defaultGasForTests)
 	require.Error(t, queryErr)
 	require.Error(t, queryErr.GenericErr)
 	require.Equal(t, "query contract failed: Execution error: Enclave: the contract panicked", queryErr.GenericErr.Msg)
@@ -1033,10 +1033,10 @@ func TestAllocateOnHeapFailBecauseMemoryLimit(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	data, _, execErr := execHelper(t, keeper, ctx, addr, walletA, `{"allocate_on_heap":{"bytes":13631488}}`, false, defaultGas)
+	data, _, execErr := execHelper(t, keeper, ctx, addr, walletA, `{"allocate_on_heap":{"bytes":13631488}}`, false, defaultGasForTests)
 
 	// this should fail with memory error because 13MiB is more than the allowed 12MiB
 
@@ -1050,18 +1050,18 @@ func TestAllocateOnHeapFailBecauseGasLimit(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
 	// ensure we get an out of gas panic
-	//defer func() {
-	//	r := recover()
-	//	require.NotNil(t, r)
-	//	_, ok := r.(sdk.ErrorOutOfGas)
-	//	require.True(t, ok, "%v", r)
-	//}()
+	defer func() {
+		r := recover()
+		require.NotNil(t, r)
+		_, ok := r.(sdk.ErrorOutOfGas)
+		require.True(t, ok, "%v", r)
+	}()
 
-	data, _, execErr := execHelper(t, keeper, ctx, addr, walletA, `{"allocate_on_heap":{"bytes":1073741824}}`, false, defaultGas)
+	_, _, _ = execHelper(t, keeper, ctx, addr, walletA, `{"allocate_on_heap":{"bytes":1073741824}}`, false, defaultGasForTests)
 
 	// this should fail with out of gas because 1GiB will ask for
 	// 134,217,728 gas units (8192 per page times 16,384 pages)
@@ -1070,17 +1070,14 @@ func TestAllocateOnHeapFailBecauseGasLimit(t *testing.T) {
 	// the gas metering sees a request that'll cost 134mn and the limit
 	// is 20mn, so it throws an out of gas exception
 
-	require.Empty(t, data)
-	require.Error(t, execErr)
-	require.Error(t, execErr.GenericErr)
-	require.Equal(t, "execute contract failed: Ran out of gas", execErr.GenericErr.Msg)
+	require.True(t, false)
 }
 
 func TestAllocateOnHeapMoreThanSGXHasFailBecauseMemoryLimit(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
 	data, _, execErr := execHelper(t, keeper, ctx, addr, walletA, `{"allocate_on_heap":{"bytes":1073741824}}`, false, 9_000_000)
@@ -1099,7 +1096,7 @@ func TestPassNullPointerToImports(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGas)
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
 	tests := []string{
@@ -1113,11 +1110,158 @@ func TestPassNullPointerToImports(t *testing.T) {
 
 	for _, passType := range tests {
 		t.Run(passType, func(t *testing.T) {
-			_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"pass_null_pointer_to_imports_should_throw":{"pass_type":"%s"}}`, passType), false, defaultGas)
+			_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"pass_null_pointer_to_imports_should_throw":{"pass_type":"%s"}}`, passType), false, defaultGasForTests)
 
 			require.Error(t, execErr)
 			require.Error(t, execErr.GenericErr)
 			require.Equal(t, "execute contract failed: Execution error: Enclave: failed to read memory", execErr.GenericErr.Msg)
 		})
 	}
+}
+
+func TestExternalQueryWorks(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	data, _, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query":{"to":"%s"}}`, addr.String()), true, defaultGasForTests)
+
+	require.Empty(t, execErr)
+	require.Equal(t, []byte{3}, data)
+}
+
+func TestExternalQueryCalleePanic(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_panic":{"to":"%s"}}`, addr.String()), true, defaultGasForTests)
+
+	require.Error(t, err)
+	require.Error(t, err.GenericErr)
+	require.Equal(t, "query contract failed: Execution error: Enclave: the contract panicked", err.GenericErr.Msg)
+}
+
+func TestExternalQueryCalleeStdError(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_error":{"to":"%s"}}`, addr.String()), true, defaultGasForTests)
+
+	require.Error(t, err)
+	require.Error(t, err.GenericErr)
+	require.Equal(t, "la la 🤯", err.GenericErr.Msg)
+}
+
+func TestExternalQueryCalleeDoesntExist(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, err = execHelper(t, keeper, ctx, addr, walletA, `{"send_external_query_error":{"to":"secret13l72vhjngmg55ykajxdnlalktwglyqjqv9pkq4"}}`, true, defaultGasForTests)
+
+	require.Error(t, err)
+	require.Error(t, err.GenericErr)
+	require.Equal(t, "not found: contract", err.GenericErr.Msg)
+}
+
+func TestExternalQueryBadSenderABI(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_bad_abi":{"to":"%s"}}`, addr.String()), true, defaultGasForTests)
+
+	require.Error(t, err)
+	require.Error(t, err.ParseErr)
+	require.Equal(t, "test_contract::contract::QueryMsg", err.ParseErr.Target)
+	require.Equal(t, "Invalid type", err.ParseErr.Msg)
+}
+
+func TestExternalQueryBadReceiverABI(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_bad_abi_receiver":{"to":"%s"}}`, addr.String()), true, defaultGasForTests)
+
+	require.Error(t, err)
+	require.Error(t, err.ParseErr)
+	require.Equal(t, "alloc::string::String", err.ParseErr.Target)
+	require.Equal(t, "Invalid type", err.ParseErr.Msg)
+}
+
+func TestMsgSenderInCallback(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, events, err := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"callback_to_log_msg_sender":{"to":"%s"}}`, addr.String()), true, defaultGasForTests)
+
+	require.Empty(t, err)
+	require.Equal(t, []ContractEvent{
+		{
+			{Key: "contract_address", Value: addr.String()},
+			{Key: "hi", Value: "hey"}},
+		{
+			{Key: "contract_address", Value: addr.String()},
+			{Key: "msg.sender", Value: addr.String()},
+		},
+	}, events)
+}
+
+func TestInfiniteQueryLoopKilledGracefullyByOOM(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	data, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_infinite_loop":{"to":"%s"}}`, addr.String()), true, defaultGasForTests)
+
+	require.Empty(t, data)
+	require.Error(t, err)
+	require.Error(t, err.GenericErr)
+	require.Equal(t, err.GenericErr.Msg, "query contract failed: Execution error: Enclave: enclave ran out of heap memory")
+}
+
+func TestWriteToStorageDuringQuery(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	_, queryErr := queryHelper(t, keeper, ctx, addr, `{"write_to_storage": {}}`, false, defaultGasForTests)
+	require.Error(t, queryErr)
+	require.Error(t, queryErr.GenericErr)
+	require.Equal(t, "query contract failed: Execution error: Enclave: contract tried to write to storage during a query", queryErr.GenericErr.Msg)
+}
+
+func TestRemoveFromStorageDuringQuery(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	_, queryErr := queryHelper(t, keeper, ctx, addr, `{"remove_from_storage": {}}`, false, defaultGasForTests)
+	require.Error(t, queryErr)
+	require.Error(t, queryErr.GenericErr)
+	require.Equal(t, "query contract failed: Execution error: Enclave: contract tried to write to storage during a query", queryErr.GenericErr.Msg)
 }

@@ -128,7 +128,7 @@ func queryContractState(ctx sdk.Context, bech string, req abci.RequestQuery, kee
 		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, bech)
 	}
 
-	return keeper.QuerySmart(ctx, contractAddr, req.Data)
+	return keeper.QuerySmart(ctx, contractAddr, req.Data, false)
 }
 
 type GetCodeResponse struct {
