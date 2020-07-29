@@ -69,7 +69,6 @@ pub fn gas_rules(wasm_costs: &WasmCosts) -> rules::Set {
         vals
     })
     .with_grow_cost(wasm_costs.grow_mem)
-    //.with_forbidden_floats()
 }
 
 #[derive(Debug, Clone)]
