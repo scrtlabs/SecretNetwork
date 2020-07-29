@@ -606,17 +606,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sgx_signal"
-version = "1.1.2"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2#8f065be7a442157bf16dc7106feb795ea1c578eb"
-dependencies = [
- "sgx_libc",
- "sgx_trts",
- "sgx_tstd",
- "sgx_types",
-]
-
-[[package]]
 name = "sgx_tcrypto"
 version = "1.1.2"
 source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2#8f065be7a442157bf16dc7106feb795ea1c578eb"
@@ -816,7 +805,6 @@ dependencies = [
  "serde_json",
  "sgx_edl",
  "sgx_rand",
- "sgx_signal",
  "sgx_tcrypto",
  "sgx_trts",
  "sgx_tse",
