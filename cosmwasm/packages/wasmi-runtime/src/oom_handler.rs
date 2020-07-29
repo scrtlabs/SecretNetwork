@@ -1,9 +1,5 @@
 use core::sync::atomic::{AtomicBool, Ordering};
 
-// This is thread_local to prevent race conditions in case multiple
-// threads are running while OOM happens
-// Mutex won't work because you cannot hold the Mutex between throwing
-// and catching the panic
 static OOM_HAPPANED: AtomicBool = AtomicBool::new(false);
 
 pub fn register_oom_handler() {
