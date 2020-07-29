@@ -31,9 +31,11 @@ pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> SgxResult<EnclaveBuffer>
         .expect("If we got here, surely the enclave has been loaded")
         .geteid();
 
-    println!(
+    trace!(
+        target: module_path!(),
         "allocate_enclave_buffer() called with len: {:?} enclave_id: {:?}",
-        len, enclave_id
+        len,
+        enclave_id,
     );
 
     match unsafe { imports::ecall_allocate(enclave_id, &mut enclave_buffer, ptr, len) } {
