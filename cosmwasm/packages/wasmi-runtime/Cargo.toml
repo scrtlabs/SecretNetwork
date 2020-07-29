@@ -29,7 +29,6 @@ sgx_rand = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.g
 sgx_trts = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tseal = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tcrypto = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_signal = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 aes-siv = { version = "0.2.0" }
 enclave-ffi-types = { path = "../enclave-ffi-types" }
 pwasm-utils = { version = "0.12.0", default-features = false }
