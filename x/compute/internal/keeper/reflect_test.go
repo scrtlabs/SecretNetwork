@@ -1,7 +1,6 @@
 package keeper
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
 	"os"
