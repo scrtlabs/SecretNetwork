@@ -1,9 +1,7 @@
 package keeper
 
 import (
-	"encoding/hex"
 	"encoding/json"
-	types2 "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -486,20 +484,6 @@ func assertBalance(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Ac
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
 
-	//hash := keeper.GetContractHash(ctx, contract)
-	//hashStr := hex.EncodeToString(hash)
-	//
-	//msg := types2.SecretMsg{
-	//	CodeHash: []byte(hashStr),
-	//	Msg:      queryBz,
-	//}
-	//
-	//queryBz, err = wasmCtx.Encrypt(msg.Serialize())
-	//require.NoError(t, err)
-	//
-	//res, err := keeper.QuerySmart(ctx, contract, queryBz)
-	//require.NoError(t, err)
-
 	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
 	require.Empty(t, qErr)
 	var balance BalanceResponse
@@ -517,19 +501,6 @@ func assertClaims(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
 
-	//hash := keeper.GetContractHash(ctx, contract)
-	//hashStr := hex.EncodeToString(hash)
-	//
-	//msg := types2.SecretMsg{
-	//	CodeHash: []byte(hashStr),
-	//	Msg:      queryBz,
-	//}
-	//
-	//queryBz, err = wasmCtx.Encrypt(msg.Serialize())
-	//require.NoError(t, err)
-	//
-	//res, err := keeper.QuerySmart(ctx, contract, queryBz)
-	//require.NoError(t, err)
 	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
 	require.Empty(t, qErr)
 	var claims ClaimsResponse
@@ -545,19 +516,6 @@ func assertSupply(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
 	require.Empty(t, qErr)
 
-	//hash := keeper.GetContractHash(ctx, contract)
-	//hashStr := hex.EncodeToString(hash)
-	//
-	//msg := types2.SecretMsg{
-	//	CodeHash: []byte(hashStr),
-	//	Msg:      queryBz,
-	//}
-	//
-	//queryBz, err = wasmCtx.Encrypt(msg.Serialize())
-	//require.NoError(t, err)
-	//
-	//res, err := keeper.QuerySmart(ctx, contract, queryBz)
-	//require.NoError(t, err)
 	var invest InvestmentResponse
 	err = json.Unmarshal([]byte(res), &invest)
 	require.NoError(t, err)
