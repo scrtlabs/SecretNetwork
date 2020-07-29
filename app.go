@@ -284,7 +284,7 @@ func NewSecretNetworkApp(
 	}
 	wasmConfig := wasmWrap.Wasm
 
-	supportedFeatures := ""
+	supportedFeatures := "staking"
 	// replace with bootstrap flag when we figure out how to test properly and everything works
 	app.regKeeper = reg.NewKeeper(app.cdc, keys[reg.StoreKey], regRouter, reg.EnclaveApi{}, homeDir, app.bootstrap)
 	app.computeKeeper = compute.NewKeeper(

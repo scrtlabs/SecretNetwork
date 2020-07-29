@@ -133,12 +133,12 @@ pub enum EnclaveError {
     MemoryWriteError,
     #[display(fmt = "contract tried to write to storage during a query")]
     UnauthorizedWrite,
-    #[display(fmt = "failed to seal data")]
-    NotImplemented,
 
     // serious issues
     #[display(fmt = "panic'd due to unexpected behavior")]
     Panic,
+    #[display(fmt = "enclave ran out of heap memory")]
+    OutOfMemory,
     /// Unexpected Error happened, no more details available
     #[display(fmt = "unknown error")]
     Unknown,

@@ -13,6 +13,8 @@ pub enum WasmEngineError {
 
     EncryptionError,
     DecryptionError,
+    SerializationError,
+    DeserializationError,
 
     MemoryAllocationError,
     MemoryReadError,
@@ -21,7 +23,6 @@ pub enum WasmEngineError {
     UnauthorizedWrite,
 
     NonExistentImportFunction,
-    NotImplemented,
 }
 
 impl HostError for WasmEngineError {}
@@ -40,7 +41,6 @@ impl From<WasmEngineError> for EnclaveError {
             MemoryReadError => EnclaveError::MemoryReadError,
             MemoryWriteError => EnclaveError::MemoryWriteError,
             UnauthorizedWrite => EnclaveError::UnauthorizedWrite,
-            NotImplemented => EnclaveError::NotImplemented,
             // Unexpected WasmEngineError variant
             _other => EnclaveError::Unknown,
         }

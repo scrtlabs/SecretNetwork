@@ -29,8 +29,7 @@ import (
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
 )
 
-// const SupportedFeatures = "staking"
-const SupportedFeatures = ""
+const SupportedFeatures = "staking"
 
 var wasmCtx = wasmUtils.WASMContext{
 	TestKeyPairPath:  "/tmp/id_tx_io.json",
@@ -237,7 +236,7 @@ func TestInstantiate(t *testing.T) {
 	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", addr.String())
 
 	gasAfter := ctx.GasMeter().GasConsumed()
-	require.Equal(t, uint64(37733), gasAfter-gasBefore)
+	require.Equal(t, uint64(37734), gasAfter-gasBefore)
 
 	// ensure it is stored properly
 	info := keeper.GetContractInfo(ctx, addr)
@@ -277,8 +276,6 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 }
 
 func TestExecute(t *testing.T) {
-	t.SkipNow() // escrow requires external query which isn't yet implemented
-
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -328,7 +325,7 @@ func TestExecute(t *testing.T) {
 	// unauthorized - trialCtx so we don't change state
 	trialCtx := ctx.WithMultiStore(ctx.MultiStore().CacheWrap().(sdk.MultiStore))
 
-	_, _, trialExecErr := execHelper(t, keeper, trialCtx, addr, creator, `{"approve":{}}`, true, defaultGas)
+	_, _, trialExecErr := execHelper(t, keeper, trialCtx, addr, creator, `{"release":{}}`, true, defaultGasForTests)
 	require.Error(t, trialExecErr)
 	require.Error(t, trialExecErr.Unauthorized)
 	require.Contains(t, trialExecErr.Error(), "unauthorized")
@@ -337,7 +334,7 @@ func TestExecute(t *testing.T) {
 	start := time.Now()
 	gasBefore := ctx.GasMeter().GasConsumed()
 
-	msgBz, err := wasmCtx.Encrypt([]byte(`{"approve":{}}`))
+	msgBz, err := wasmCtx.Encrypt([]byte(`{"release":{}}`))
 	require.NoError(t, err)
 
 	res, err := keeper.Execute(ctx, addr, fred, msgBz, topUp)
@@ -347,7 +344,7 @@ func TestExecute(t *testing.T) {
 
 	// make sure gas is properly deducted from ctx
 	gasAfter := ctx.GasMeter().GasConsumed()
-	require.Equal(t, uint64(0x7f9e), gasAfter-gasBefore)
+	require.Equal(t, uint64(0x826f), gasAfter-gasBefore)
 
 	// ensure bob now exists and got both payments released
 	bobAcct = accKeeper.GetAccount(ctx, bob)
@@ -461,12 +458,18 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	execMsgBz, err := wasmCtx.Encrypt([]byte(`{"cpu_loop":{}}`))
 	require.NoError(t, err)
 
+	// ensure we get an out of gas panic
+	defer func() {
+		r := recover()
+		require.NotNil(t, r)
+		_, ok := r.(sdk.ErrorOutOfGas)
+		require.True(t, ok, "%v", r)
+	}()
+
 	// this must fail
 	_, err = keeper.Execute(ctx, addr, fred, execMsgBz, nil)
-	assert.Error(t, err)
+	assert.True(t, false)
 	// make sure gas ran out
-	// TODO: wasmer doesn't return gas used on error. we should consume it (for error on metering failure)
-	// require.Equal(t, gasLimit, ctx.GasMeter().GasConsumed())
 }
 
 func TestExecuteWithStorageLoop(t *testing.T) {
@@ -522,7 +525,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 }
 
 func TestMigrate(t *testing.T) {
-	t.SkipNow()
+	t.SkipNow() // secret network does not support migrate
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -658,7 +661,7 @@ func TestMigrate(t *testing.T) {
 }
 
 func TestMigrateWithDispatchedMessage(t *testing.T) {
-	t.SkipNow()
+	t.SkipNow() // secret network does not support migrate
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -775,7 +778,7 @@ func mustMarshal(t *testing.T, r interface{}) []byte {
 }
 
 func TestUpdateContractAdmin(t *testing.T) {
-	t.SkipNow()
+	t.SkipNow() // secret network does not support migrate
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)

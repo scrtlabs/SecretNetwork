@@ -20,6 +20,16 @@ extern "C" {
         key_len: usize,
     ) -> sgx_status_t;
 
+    pub fn ocall_query_chain(
+        retval: *mut OcallReturn,
+        context: Ctx,
+        vm_error: *mut UntrustedVmError,
+        gas_used: *mut u64,
+        value: *mut EnclaveBuffer,
+        query: *const u8,
+        query_len: usize,
+    ) -> sgx_status_t;
+
     pub fn ocall_remove_db(
         retval: *mut OcallReturn,
         context: Ctx,
