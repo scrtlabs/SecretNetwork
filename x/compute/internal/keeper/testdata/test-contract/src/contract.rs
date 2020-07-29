@@ -2,12 +2,10 @@ use cosmwasm_storage::PrefixedStorage;
 
 use cosmwasm_std::{
     generic_err, invalid_base64, invalid_utf8, log, not_found, null_pointer, parse_err,
-    serialize_err, to_binary, unauthorized, underflow, Api, Binary, CosmosMsg, Env, Extern,
-    HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse, Querier,
-    QueryResult, ReadonlyStorage, StdError, StdResult, Storage, WasmMsg,
+    serialize_err, unauthorized, underflow, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
+    HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse, Querier, QueryRequest,
+    QueryResult, ReadonlyStorage, StdError, StdResult, Storage, WasmMsg, WasmQuery,
 };
-
-use crate::state::config_read;
 
 /////////////////////////////// Messages ///////////////////////////////
 
@@ -81,22 +79,36 @@ pub enum HandleMsg {
     PassNullPointerToImportsShouldThrow {
         pass_type: String,
     },
+    SendExternalQuery {
+        to: HumanAddr,
+    },
+    SendExternalQueryPanic {
+        to: HumanAddr,
+    },
+    SendExternalQueryError {
+        to: HumanAddr,
+    },
+    SendExternalQueryBadAbi {
+        to: HumanAddr,
+    },
+    SendExternalQueryBadAbiReceiver {
+        to: HumanAddr,
+    },
+    LogMsgSender {},
+    CallbackToLogMsgSender {
+        to: HumanAddr,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    Owner {},
     ContractError { error_type: String },
     Panic {},
+    ReceiveExternalQuery { num: u8 },
+    SendExternalQueryInfiniteLoop { to: HumanAddr },
     WriteToStorage {},
     RemoveFromStorage {},
-}
-
-// We define a custom struct for each query response
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct OwnerResponse {
-    pub owner: HumanAddr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -241,6 +253,130 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::PassNullPointerToImportsShouldThrow { pass_type } => {
             Ok(pass_null_pointer_to_imports_should_throw(deps, pass_type))
         }
+        HandleMsg::SendExternalQuery { to } => send_external_query(deps, to),
+        HandleMsg::SendExternalQueryPanic { to } => send_external_query_panic(deps, to),
+        HandleMsg::SendExternalQueryError { to } => send_external_query_stderror(deps, to),
+        HandleMsg::SendExternalQueryBadAbi { to } => send_external_query_bad_abi(deps, to),
+        HandleMsg::SendExternalQueryBadAbiReceiver { to } => {
+            send_external_query_bad_abi_receiver(deps, to)
+        }
+        HandleMsg::LogMsgSender {} => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![log(
+                "msg.sender",
+                deps.api
+                    .human_address(&env.message.sender)
+                    .unwrap()
+                    .to_string(),
+            )],
+            data: None,
+        }),
+        HandleMsg::CallbackToLogMsgSender { to } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: to.clone(),
+                msg: Binary(r#"{"log_msg_sender":{}}"#.into()),
+                send: vec![],
+            })],
+            log: vec![log("hi", "hey")],
+            data: None,
+        }),
+    }
+}
+
+fn send_external_query<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    contract_addr: HumanAddr,
+) -> HandleResult {
+    let answer: u8 = deps
+        .querier
+        .query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr,
+            msg: Binary(r#"{"receive_external_query":{"num":2}}"#.into()),
+        }))
+        .unwrap();
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(vec![answer].into()),
+    })
+}
+
+fn send_external_query_panic<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    contract_addr: HumanAddr,
+) -> HandleResult {
+    let err = deps
+        .querier
+        .query::<u8>(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr,
+            msg: Binary(r#"{"panic":{}}"#.into()),
+        }))
+        .unwrap_err();
+
+    Err(err)
+}
+
+fn send_external_query_stderror<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    contract_addr: HumanAddr,
+) -> HandleResult {
+    let answer = deps
+        .querier
+        .query::<Binary>(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr,
+            msg: Binary(r#"{"contract_error":{"error_type":"generic_err"}}"#.into()),
+        }));
+
+    match answer {
+        Ok(wtf) => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(wtf),
+        }),
+        Err(e) => Err(e),
+    }
+}
+
+fn send_external_query_bad_abi<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    contract_addr: HumanAddr,
+) -> HandleResult {
+    let answer = deps
+        .querier
+        .query::<Binary>(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr,
+            msg: Binary(r#""contract_error":{"error_type":"generic_err"}}"#.into()),
+        }));
+
+    match answer {
+        Ok(wtf) => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(wtf),
+        }),
+        Err(e) => Err(e),
+    }
+}
+
+fn send_external_query_bad_abi_receiver<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    contract_addr: HumanAddr,
+) -> HandleResult {
+    let answer = deps
+        .querier
+        .query::<String>(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr,
+            msg: Binary(r#"{"receive_external_query":{"num":25}}"#.into()),
+        }));
+
+    match answer {
+        Ok(wtf) => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![log("wtf", wtf)],
+            data: None,
+        }),
+        Err(e) => Err(e),
     }
 }
 
@@ -268,7 +404,7 @@ pub fn a<S: Storage, A: Api, Q: Querier>(
             contract_addr: contract_addr.clone(),
             msg: Binary(
                 format!(
-                    "{{\"b\":{{\"x\":{} ,\"y\": {},\"contract_addr\": \"{}\" }}}}",
+                    r#"{{"b":{{"x":{} ,"y": {},"contract_addr": "{}" }}}}"#,
                     x,
                     y,
                     contract_addr.as_str()
@@ -546,21 +682,40 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     _msg: QueryMsg,
 ) -> QueryResult {
     match _msg {
-        QueryMsg::Owner {} => query_owner(deps),
         QueryMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
         QueryMsg::Panic {} => panic!("panic in query"),
+        QueryMsg::ReceiveExternalQuery { num } => {
+            Ok(Binary(serde_json_wasm::to_vec(&(num + 1)).unwrap()))
+        }
+        QueryMsg::SendExternalQueryInfiniteLoop { to } => {
+            send_external_query_infinite_loop(deps, to)
+        }
         QueryMsg::WriteToStorage {} => write_to_storage_in_query(deps),
         QueryMsg::RemoveFromStorage {} => remove_from_storage_in_query(deps),
     }
 }
 
-fn query_owner<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Binary> {
-    let state = config_read(&deps.storage).load()?;
+fn send_external_query_infinite_loop<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    contract_addr: HumanAddr,
+) -> QueryResult {
+    let answer = deps
+        .querier
+        .query::<Binary>(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: contract_addr.clone(),
+            msg: Binary(
+                format!(
+                    r#"{{"send_external_query_infinite_loop":{{"to":"{}"}}}}"#,
+                    contract_addr.clone().to_string()
+                )
+                .into(),
+            ),
+        }));
 
-    let resp = OwnerResponse {
-        owner: deps.api.human_address(&state.owner)?,
-    };
-    to_binary(&resp)
+    match answer {
+        Ok(wtf) => Ok(Binary(wtf.into())),
+        Err(e) => Err(e),
+    }
 }
 
 fn write_to_storage_in_query<S: Storage, A: Api, Q: Querier>(

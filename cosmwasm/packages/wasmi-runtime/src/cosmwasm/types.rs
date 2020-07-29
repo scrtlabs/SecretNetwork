@@ -1,3 +1,5 @@
+//! must keep this file in sync with cosmwasm/packages/std/src/types.rs
+
 #![allow(unused)]
 
 /// These types are are copied over from the cosmwasm_std package, and must be kept in sync with it.
@@ -199,40 +201,5 @@ pub fn log(key: &str, value: &str) -> LogAttribute {
     LogAttribute {
         key: key.to_string(),
         value: value.to_string(),
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::serde::{from_slice, to_vec};
-
-    #[test]
-    fn can_deser_error_result() {
-        let fail = ContractResult::Err("foobar".to_string());
-        let bin = to_vec(&fail).expect("encode contract result");
-        println!("error: {}", std::str::from_utf8(&bin).unwrap());
-        let back: ContractResult = from_slice(&bin).expect("decode contract result");
-        assert_eq!(fail, back);
-    }
-
-    #[test]
-    fn can_deser_ok_result() {
-        let send = ContractResult::Ok(Response {
-            messages: vec![CosmosMsg::Send {
-                from_address: HumanAddr("me".to_string()),
-                to_address: HumanAddr("you".to_string()),
-                amount: coin("1015", "earth"),
-            }],
-            log: vec![LogAttribute {
-                key: "action".to_string(),
-                value: "release".to_string(),
-            }],
-            data: None,
-        });
-        let bin = to_vec(&send).expect("encode contract result");
-        println!("ok: {}", std::str::from_utf8(&bin).unwrap());
-        let back: ContractResult = from_slice(&bin).expect("decode contract result");
-        assert_eq!(send, back);
     }
 }

@@ -6,6 +6,8 @@ SGX_MODE ?= HW
 SGX_ARCH ?= x64
 BUILD_PROFILE ?= release
 FEATURES += SGX_MODE_$(SGX_MODE)
+FEATURES := $(strip $(FEATURES))
+
 
 TOP_DIR := ../../../third_party/build
 include $(TOP_DIR)/buildenv.mk

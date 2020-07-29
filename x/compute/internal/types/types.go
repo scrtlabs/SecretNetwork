@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/base64"
+
 	tmBytes "github.com/tendermint/tendermint/libs/bytes"
 
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
@@ -9,7 +10,7 @@ import (
 )
 
 const defaultLRUCacheSize = uint64(0)
-const defaultQueryGasLimit = uint64(3000000)
+const defaultQueryGasLimit = uint64(30000)
 
 // base64 of a 64 byte key
 type ContractKey string

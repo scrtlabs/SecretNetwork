@@ -38,3 +38,4 @@ serde = { version = "1.0.114", default-features = false, features = [
   "derive",
   "alloc"
 ] }
+serde-json-wasm = "0.2.1"

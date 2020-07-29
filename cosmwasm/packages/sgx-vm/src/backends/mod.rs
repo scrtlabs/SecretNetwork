@@ -27,4 +27,4 @@ pub use cranelift::{backend, compile, get_gas_left, set_gas_limit};
 pub use singlepass::{backend, compile, get_gas_left, set_gas_limit};
 
 #[cfg(feature = "default-enclave")]
-pub use enclave::get_gas_left;
+pub use enclave::{get_gas_left, get_gas_used};

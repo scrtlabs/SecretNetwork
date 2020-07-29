@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	wasm "github.com/CosmWasm/go-cosmwasm"
+	wasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
 )
 
 // This is just a demo to ensure we can compile a static go binary

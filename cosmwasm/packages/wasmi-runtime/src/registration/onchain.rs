@@ -9,7 +9,10 @@ use enclave_ffi_types::NodeAuthResult;
 use crate::consts::ENCRYPTED_SEED_SIZE;
 use crate::crypto::PUBLIC_KEY_SIZE;
 use crate::storage::write_to_untrusted;
-use crate::utils::{validate_const_ptr, validate_mut_ptr};
+use crate::{
+    oom_handler::{get_then_clear_oom_happened, register_oom_handler},
+    utils::{validate_const_ptr, validate_mut_ptr},
+};
 
 use super::cert::verify_ra_cert;
 use super::seed_exchange::encrypt_seed;
@@ -34,6 +37,8 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     cert_len: u32,
     seed: &mut [u8; ENCRYPTED_SEED_SIZE],
 ) -> NodeAuthResult {
+    register_oom_handler();
+
     if let Err(_e) = validate_mut_ptr(seed.as_mut_ptr(), seed.len()) {
         return NodeAuthResult::InvalidInput;
     }
@@ -83,6 +88,8 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
             Err(e) => e,
         }
     } else {
+        // There's no real need here to test if oom happened
+        get_then_clear_oom_happened();
         error!("Enclave call ecall_authenticate_new_node panic!");
         NodeAuthResult::Panic
     }
