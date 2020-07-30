@@ -322,7 +322,7 @@ secretcli q tx [hash]
 ### Slashing
  ::: tip Note
 You can find Slashing related CLI commands under
-[Validators/Slashing](validators-and-full-nodes/join-validator-mainnet.md#Slashing).
+[Validators/Slashing](join-validator-mainnet.md#Slashing).
  :::
 
 ### Minting
@@ -348,7 +348,7 @@ secretcli q mint annual-provisions
 ### Staking
 ::: tip Note
 You can find CLI commands related to delegating under
-[Delegate](validators-and-full-nodes/delegating-mainnet.md).
+[Delegate](delegating-mainnet.md).
 :::
 
 ### Nodes
