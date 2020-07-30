@@ -181,7 +181,7 @@ clean:
 	-rm -f ./secretcli*
 	-rm -f ./secretd*
 	-rm -f ./librust_cosmwasm_enclave.signed.so 
-	-rm -f ./x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so 
+	-rm -f ./x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so
 	-rm -f ./go-cosmwasm/api/libgo_cosmwasm.so
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*
