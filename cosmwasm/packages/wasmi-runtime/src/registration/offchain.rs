@@ -119,7 +119,7 @@ pub unsafe extern "C" fn ecall_init_node(
     let pk = match verify_ra_cert(cert_slice) {
         Err(e) => {
             error!("Error in validating certificate: {:?}", e);
-            return e;
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
         Ok(res) => res,
     };
