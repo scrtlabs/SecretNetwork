@@ -311,7 +311,22 @@ func TestExecute(t *testing.T) {
 	}
 	initMsgBz, err := json.Marshal(initMsg)
 
-	addr, _, err := initHelper(t, keeper, ctx, contractID, creator, string(initMsgBz), false, defaultGasForTests)
+	key := keeper.GetCodeInfo(ctx, contractID).CodeHash
+	//keyStr := hex.EncodeToString(key)
+
+	msg := types.SecretMsg{
+		CodeHash: []byte(hex.EncodeToString(key)),
+		Msg:      initMsgBz,
+	}
+
+	initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
+	require.NoError(t, err)
+
+	gasBefore := ctx.GasMeter().GasConsumed()
+
+	// create with no balance is also legal
+	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", deposit)
+
 	require.NoError(t, err)
 
 	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", addr.String())
@@ -341,19 +356,36 @@ func TestExecute(t *testing.T) {
 
 	// verifier can execute, and get proper gas amount
 	start := time.Now()
-	gasBefore := ctx.GasMeter().GasConsumed()
 
-	msgBz, err := wasmCtx.Encrypt([]byte(`{"release":{}}`))
+	gasBefore = ctx.GasMeter().GasConsumed()
+
+	require.NoError(t, err)
+	//res, _, err := execHelper(t, keeper, trialCtx, addr, creator, `{"release":{}}`, true, defaultGasForTests)
+
+	initMsgBz = []byte(`{"release":{}}`)
+
+	key = keeper.GetCodeInfo(ctx, contractID).CodeHash
+	//keyStr := hex.EncodeToString(key)
+
+	msg = types.SecretMsg{
+		CodeHash: []byte(hex.EncodeToString(key)),
+		Msg:      initMsgBz,
+	}
+
+
+	msgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 
 	res, err := keeper.Execute(ctx, addr, fred, msgBz, topUp)
+
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	require.NotNil(t, res)
 
 	// make sure gas is properly deducted from ctx
 	gasAfter := ctx.GasMeter().GasConsumed()
-	require.Equal(t, uint64(0x826f), gasAfter-gasBefore)
+	require.Greater(t, gasAfter-gasBefore, uint64(25000))
+	require.Less(t, gasAfter-gasBefore, uint64(50000))
 
 	// ensure bob now exists and got both payments released
 	bobAcct = accKeeper.GetAccount(ctx, bob)

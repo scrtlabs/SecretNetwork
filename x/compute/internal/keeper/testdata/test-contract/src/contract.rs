@@ -100,22 +100,28 @@ pub enum HandleMsg {
     },
     SendExternalQuery {
         to: HumanAddr,
+        code_hash: String,
     },
     SendExternalQueryPanic {
         to: HumanAddr,
+        code_hash: String,
     },
     SendExternalQueryError {
         to: HumanAddr,
+        code_hash: String,
     },
     SendExternalQueryBadAbi {
         to: HumanAddr,
+        code_hash: String,
     },
     SendExternalQueryBadAbiReceiver {
         to: HumanAddr,
+        code_hash: String,
     },
     LogMsgSender {},
     CallbackToLogMsgSender {
         to: HumanAddr,
+        code_hash: String,
     },
 }
 
@@ -125,7 +131,7 @@ pub enum QueryMsg {
     ContractError { error_type: String },
     Panic {},
     ReceiveExternalQuery { num: u8 },
-    SendExternalQueryInfiniteLoop { to: HumanAddr },
+    SendExternalQueryInfiniteLoop { to: HumanAddr, code_hash: String, },
     WriteToStorage {},
     RemoveFromStorage {},
 }
@@ -301,12 +307,12 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::PassNullPointerToImportsShouldThrow { pass_type } => {
             Ok(pass_null_pointer_to_imports_should_throw(deps, pass_type))
         }
-        HandleMsg::SendExternalQuery { to } => send_external_query(deps, to),
-        HandleMsg::SendExternalQueryPanic { to } => send_external_query_panic(deps, to),
-        HandleMsg::SendExternalQueryError { to } => send_external_query_stderror(deps, to),
-        HandleMsg::SendExternalQueryBadAbi { to } => send_external_query_bad_abi(deps, to),
-        HandleMsg::SendExternalQueryBadAbiReceiver { to } => {
-            send_external_query_bad_abi_receiver(deps, to)
+        HandleMsg::SendExternalQuery { to, code_hash } => send_external_query(deps, to, code_hash),
+        HandleMsg::SendExternalQueryPanic { to,code_hash } => send_external_query_panic(deps, to, code_hash),
+        HandleMsg::SendExternalQueryError { to,code_hash } => send_external_query_stderror(deps, to, code_hash),
+        HandleMsg::SendExternalQueryBadAbi { to,code_hash } => send_external_query_bad_abi(deps, to, code_hash),
+        HandleMsg::SendExternalQueryBadAbiReceiver { to, code_hash } => {
+            send_external_query_bad_abi_receiver(deps, to, code_hash)
         }
         HandleMsg::LogMsgSender {} => Ok(HandleResponse {
             messages: vec![],
@@ -319,10 +325,10 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             )],
             data: None,
         }),
-        HandleMsg::CallbackToLogMsgSender { to } => Ok(HandleResponse {
+        HandleMsg::CallbackToLogMsgSender { to, code_hash } => Ok(HandleResponse {
             messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: to.clone(),
-                msg: Binary(r#"{"log_msg_sender":{}}"#.into()),
+                msg: create_callback_msg(r#"{"log_msg_sender":{}}"#.into(), &code_hash),
                 send: vec![],
             })],
             log: vec![log("hi", "hey")],
@@ -334,12 +340,13 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 fn send_external_query<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     contract_addr: HumanAddr,
+    code_hash: String,
 ) -> HandleResult {
     let answer: u8 = deps
         .querier
         .query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: Binary(r#"{"receive_external_query":{"num":2}}"#.into()),
+            msg: create_callback_msg(r#"{"receive_external_query":{"num":2}}"#.into(), &code_hash),
         }))
         .unwrap();
 
@@ -353,12 +360,13 @@ fn send_external_query<S: Storage, A: Api, Q: Querier>(
 fn send_external_query_panic<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     contract_addr: HumanAddr,
+    code_hash: String,
 ) -> HandleResult {
     let err = deps
         .querier
         .query::<u8>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: Binary(r#"{"panic":{}}"#.into()),
+            msg: create_callback_msg(r#"{"panic":{}}"#.into(), &code_hash),
         }))
         .unwrap_err();
 
@@ -368,12 +376,13 @@ fn send_external_query_panic<S: Storage, A: Api, Q: Querier>(
 fn send_external_query_stderror<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     contract_addr: HumanAddr,
+    code_hash: String,
 ) -> HandleResult {
     let answer = deps
         .querier
         .query::<Binary>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: Binary(r#"{"contract_error":{"error_type":"generic_err"}}"#.into()),
+            msg: create_callback_msg(r#"{"contract_error":{"error_type":"generic_err"}}"#.into(), &code_hash),
         }));
 
     match answer {
@@ -389,12 +398,13 @@ fn send_external_query_stderror<S: Storage, A: Api, Q: Querier>(
 fn send_external_query_bad_abi<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     contract_addr: HumanAddr,
+    code_hash: String,
 ) -> HandleResult {
     let answer = deps
         .querier
         .query::<Binary>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: Binary(r#""contract_error":{"error_type":"generic_err"}}"#.into()),
+            msg: create_callback_msg(r#""contract_error":{"error_type":"generic_err"}}"#.into(), &code_hash)
         }));
 
     match answer {
@@ -410,12 +420,13 @@ fn send_external_query_bad_abi<S: Storage, A: Api, Q: Querier>(
 fn send_external_query_bad_abi_receiver<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     contract_addr: HumanAddr,
+    code_hash: String,
 ) -> HandleResult {
     let answer = deps
         .querier
         .query::<String>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: Binary(r#"{"receive_external_query":{"num":25}}"#.into()),
+            msg: create_callback_msg(r#"{"receive_external_query":{"num":25}}"#.into(), &code_hash),
         }));
 
     match answer {
@@ -748,8 +759,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::ReceiveExternalQuery { num } => {
             Ok(Binary(serde_json_wasm::to_vec(&(num + 1)).unwrap()))
         }
-        QueryMsg::SendExternalQueryInfiniteLoop { to } => {
-            send_external_query_infinite_loop(deps, to)
+        QueryMsg::SendExternalQueryInfiniteLoop { to, code_hash } => {
+            send_external_query_infinite_loop(deps, to, code_hash)
         }
         QueryMsg::WriteToStorage {} => write_to_storage_in_query(deps),
         QueryMsg::RemoveFromStorage {} => remove_from_storage_in_query(deps),
@@ -759,18 +770,18 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 fn send_external_query_infinite_loop<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     contract_addr: HumanAddr,
+    code_hash: String,
 ) -> QueryResult {
     let answer = deps
         .querier
         .query::<Binary>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: contract_addr.clone(),
-            msg: Binary(
+            msg: create_callback_msg(
                 format!(
-                    r#"{{"send_external_query_infinite_loop":{{"to":"{}"}}}}"#,
-                    contract_addr.clone().to_string()
-                )
-                .into(),
-            ),
+                    r#"{{"send_external_query_infinite_loop":{{"to":"{}", "code_hash":"{}"}}}}"#,
+                    contract_addr.clone().to_string(),
+                    &code_hash
+                ).into(), &code_hash),
         }));
 
     match answer {

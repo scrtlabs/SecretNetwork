@@ -19,6 +19,31 @@ import (
 
 type ContractEvent []cosmwasm.LogAttribute
 
+// if codeID isn't 0, it will try to use that. Otherwise will take the contractAddress
+func testEncrypt(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, codeId uint64, msg []byte) ([]byte, error) {
+
+	var hash []byte
+	if codeId != 0 {
+		hash = keeper.GetCodeInfo(ctx, codeId).CodeHash
+	} else {
+		hash = keeper.GetContractHash(ctx, contractAddress)
+	}
+
+	if hash == nil {
+		return nil, cosmwasm.StdError{}
+	}
+
+	intMsg := types.SecretMsg{
+		CodeHash: []byte(hex.EncodeToString(hash)),
+		Msg:      msg,
+	}
+
+	queryBz, err := wasmCtx.Encrypt(intMsg.Serialize())
+	require.NoError(t, err)
+
+	return queryBz, nil
+}
+
 func setupTest(t *testing.T, wasmPath string) (sdk.Context, Keeper, string, uint64, sdk.AccAddress, sdk.AccAddress) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
@@ -1124,9 +1149,12 @@ func TestExternalQueryWorks(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+
+	hash := hex.EncodeToString(keeper.GetContractHash(ctx, addr))
+
 	require.Empty(t, initErr)
 
-	data, _, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query":{"to":"%s"}}`, addr.String()), true, defaultGasForTests)
+	data, _, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query":{"to":"%s", "code_hash": "%s"}}`, addr.String(), hash), true, defaultGasForTests)
 
 	require.Empty(t, execErr)
 	require.Equal(t, []byte{3}, data)
@@ -1139,7 +1167,9 @@ func TestExternalQueryCalleePanic(t *testing.T) {
 	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, err)
 
-	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_panic":{"to":"%s"}}`, addr.String()), true, defaultGasForTests)
+	hash := hex.EncodeToString(keeper.GetContractHash(ctx, addr))
+
+	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_panic":{"to":"%s", "code_hash": "%s"}}`, addr.String(), hash), true, defaultGasForTests)
 
 	require.Error(t, err)
 	require.Error(t, err.GenericErr)
@@ -1153,7 +1183,9 @@ func TestExternalQueryCalleeStdError(t *testing.T) {
 	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, err)
 
-	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_error":{"to":"%s"}}`, addr.String()), true, defaultGasForTests)
+	hash := hex.EncodeToString(keeper.GetContractHash(ctx, addr))
+
+	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_error":{"to":"%s", "code_hash": "%s"}}`, addr.String(), hash), true, defaultGasForTests)
 
 	require.Error(t, err)
 	require.Error(t, err.GenericErr)
@@ -1167,7 +1199,9 @@ func TestExternalQueryCalleeDoesntExist(t *testing.T) {
 	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, err)
 
-	_, _, err = execHelper(t, keeper, ctx, addr, walletA, `{"send_external_query_error":{"to":"secret13l72vhjngmg55ykajxdnlalktwglyqjqv9pkq4"}}`, true, defaultGasForTests)
+	hash := hex.EncodeToString(keeper.GetContractHash(ctx, addr))
+
+	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_error":{"to":"secret13l72vhjngmg55ykajxdnlalktwglyqjqv9pkq4", "code_hash": "%s"}}`, hash), true, defaultGasForTests)
 
 	require.Error(t, err)
 	require.Error(t, err.GenericErr)
@@ -1181,7 +1215,9 @@ func TestExternalQueryBadSenderABI(t *testing.T) {
 	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, err)
 
-	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_bad_abi":{"to":"%s"}}`, addr.String()), true, defaultGasForTests)
+	hash := hex.EncodeToString(keeper.GetContractHash(ctx, addr))
+
+	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_bad_abi":{"to":"%s", "code_hash": "%s"}}`, addr.String(), hash), true, defaultGasForTests)
 
 	require.Error(t, err)
 	require.Error(t, err.ParseErr)
@@ -1196,7 +1232,9 @@ func TestExternalQueryBadReceiverABI(t *testing.T) {
 	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, err)
 
-	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_bad_abi_receiver":{"to":"%s"}}`, addr.String()), true, defaultGasForTests)
+	hash := hex.EncodeToString(keeper.GetContractHash(ctx, addr))
+
+	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_bad_abi_receiver":{"to":"%s","code_hash":"%s"}}`, addr.String(), hash), true, defaultGasForTests)
 
 	require.Error(t, err)
 	require.Error(t, err.ParseErr)
@@ -1211,7 +1249,9 @@ func TestMsgSenderInCallback(t *testing.T) {
 	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, err)
 
-	_, events, err := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"callback_to_log_msg_sender":{"to":"%s"}}`, addr.String()), true, defaultGasForTests)
+	hash := hex.EncodeToString(keeper.GetContractHash(ctx, addr))
+
+	_, events, err := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"callback_to_log_msg_sender":{"to":"%s","code_hash":"%s"}}`, addr.String(), hash), true, defaultGasForTests)
 
 	require.Empty(t, err)
 	require.Equal(t, []ContractEvent{
@@ -1232,7 +1272,9 @@ func TestInfiniteQueryLoopKilledGracefullyByOOM(t *testing.T) {
 	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, err)
 
-	data, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_infinite_loop":{"to":"%s"}}`, addr.String()), true, defaultGasForTests)
+	hash := hex.EncodeToString(keeper.GetContractHash(ctx, addr))
+
+	data, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_infinite_loop":{"to":"%s","code_hash":"%s"}}`, addr.String(), hash), true, defaultGasForTests)
 
 	require.Empty(t, data)
 	require.Error(t, err)

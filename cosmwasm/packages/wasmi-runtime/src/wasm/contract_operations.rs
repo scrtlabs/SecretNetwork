@@ -60,18 +60,6 @@ pub fn init(
     trace!("Init: Contract Key: {:?}", contract_key.to_vec().as_slice());
 
     let secret_msg = SecretMessage::from_slice(msg)?;
-
-    let mut engine = start_engine(
-        context,
-        gas_limit,
-        contract,
-        &contract_key,
-        ContractOperation::Init,
-        secret_msg.nonce,
-        secret_msg.user_public_key,
-    )?;
-    let env_ptr = engine.write_to_memory(env)?;
-
     trace!(
         "Init input before decryption: {:?}",
         String::from_utf8_lossy(&msg)
@@ -86,20 +74,28 @@ pub fn init(
         String::from_utf8_lossy(&validated_msg)
     );
 
+    let mut engine = start_engine(
+        context,
+        gas_limit,
+        contract,
+        &contract_key,
+        ContractOperation::Init,
+        secret_msg.nonce,
+        secret_msg.user_public_key,
+    )?;
+
+    let env_ptr = engine.write_to_memory(env)?;
     let msg_ptr = engine.write_to_memory(&validated_msg)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
     let output = coalesce!(EnclaveError, {
         let vec_ptr = engine.init(env_ptr, msg_ptr)?;
-
         let output = engine.extract_vector(vec_ptr)?;
-
         // TODO: copy cosmwasm's structures to enclave
         // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
         // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
         let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
-
         Ok(output)
     })
     .map_err(|err| {
@@ -145,12 +141,13 @@ pub fn handle(
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
 
+    let validated_msg = validate_msg(&decrypted_msg, contract)?;
+
     trace!(
         "Handle input afer decryption: {:?}",
-        String::from_utf8_lossy(&decrypted_msg)
+        String::from_utf8_lossy(&validated_msg)
     );
 
-    let validated_msg = validate_msg(&decrypted_msg, contract)?;
 
     if !validate_contract_key(&contract_key, contract_address.as_slice(), contract) {
         error!("got an error while trying to deserialize output bytes");
@@ -226,6 +223,16 @@ pub fn query(
     );
 
     let secret_msg = SecretMessage::from_slice(msg)?;
+    trace!(
+        "Query input before decryption: {:?}",
+        String::from_utf8_lossy(&msg)
+    );
+    let decrypted_msg = secret_msg.decrypt()?;
+    trace!(
+        "Query input afer decryption: {:?}",
+        String::from_utf8_lossy(&decrypted_msg)
+    );
+    let validated_msg = validate_msg(&decrypted_msg, contract)?;
 
     let mut engine = start_engine(
         context,
@@ -236,18 +243,6 @@ pub fn query(
         secret_msg.nonce,
         secret_msg.user_public_key,
     )?;
-
-    trace!(
-        "Query input before decryption: {:?}",
-        String::from_utf8_lossy(&msg)
-    );
-    let decrypted_msg = secret_msg.decrypt()?;
-    trace!(
-        "Query input afer decryption: {:?}",
-        String::from_utf8_lossy(&decrypted_msg)
-    );
-
-    let validated_msg = validate_msg(&decrypted_msg, contract)?;
 
     let msg_ptr = engine.write_to_memory(&validated_msg)?;
 
