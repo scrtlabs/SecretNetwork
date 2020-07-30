@@ -92,12 +92,14 @@ module.exports = {
                 sidebarDepth: 2, // optional, defaults to 1
                 children: [
                   {
-                    title : 'Secret Light Client (CLI)',
-                    path: '/validators-and-full-nodes/secretcli'
+                    title : 'Secret Light Client',
+                    path: '/validators-and-full-nodes/secretcli',
+                    sidebarDepth: 1,
                   },
                   {
-                    title : 'Validators (CLI)',
+                    title : 'Validators',
                     path: '/validators-and-full-nodes/secret-nodes',
+                    sidebarDepth: 1,
                     children : [
                       {
                         title: 'Setup SGX',
@@ -130,15 +132,9 @@ module.exports = {
                     ]
                   },
                   {
-                    title : 'Delegators (CLI)',
+                    title : 'Delegators',
                     path: '/validators-and-full-nodes/delegating-mainnet'
                   }
-                  //'/validators-and-full-nodes/setup-sgx',
-                  //'/validators-and-full-nodes/run-full-node-mainnet',
-                  //'/validators-and-full-nodes/join-validator-mainnet',
-                  //'/validators-and-full-nodes/backup-a-validator',
-                  //'/validators-and-full-nodes/migrate-a-validator',
-                  //'/validators-and-full-nodes/sentry-nodes'
                 ]
             },
             {
