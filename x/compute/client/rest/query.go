@@ -23,6 +23,8 @@ func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
 	r.HandleFunc("/wasm/code/{codeID}/contracts", listContractsByCodeHandlerFn(cliCtx)).Methods("GET")
 	r.HandleFunc("/wasm/contract/{contractAddr}", queryContractHandlerFn(cliCtx)).Methods("GET")
 	r.HandleFunc("/wasm/contract/{contractAddr}/query/{query}", queryContractStateHandlerFn(cliCtx)).Queries("encoding", "{encoding}").Methods("GET")
+	r.HandleFunc("/wasm/code/{codeID}/hash", queryCodeHashHandlerFn(cliCtx)).Methods("GET")
+	r.HandleFunc("/wasm/contract/{contractAddr}/code-hash", queryContractHashHandlerFn(cliCtx)).Methods("GET")
 }
 
 func listCodesHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
@@ -183,5 +185,71 @@ func (a *argumentDecoder) DecodeString(s string) ([]byte, error) {
 		return base64.StdEncoding.DecodeString(s)
 	default:
 		return a.dec(s)
+	}
+}
+
+func queryCodeHashHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		codeID, err := strconv.ParseUint(mux.Vars(r)["codeID"], 10, 64)
+		if err != nil {
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
+		if !ok {
+			return
+		}
+
+		route := fmt.Sprintf("custom/%s/%s/%d", types.QuerierRoute, keeper.QueryGetCode, codeID)
+		res, height, err := cliCtx.Query(route)
+		if err != nil {
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if len(res) == 0 {
+			rest.WriteErrorResponse(w, http.StatusNotFound, "contract not found")
+			return
+		}
+
+		var codeResp keeper.GetCodeResponse
+
+		err = json.Unmarshal(res, &codeResp)
+		if err != nil {
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("cannot parse as CodeResponse: %v", err))
+			return
+		}
+
+		cliCtx = cliCtx.WithHeight(height)
+		rest.PostProcessResponse(w, cliCtx, hex.EncodeToString(codeResp.DataHash))
+	}
+}
+
+func queryContractHashHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		contractAddr, err := sdk.AccAddressFromBech32(mux.Vars(r)["contractAddr"])
+		if err != nil {
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
+		if !ok {
+			return
+		}
+
+		route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHash, contractAddr.String())
+		res, height, err := cliCtx.Query(route)
+		if err != nil {
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if len(res) == 0 {
+			rest.WriteErrorResponse(w, http.StatusNotFound, "contract not found")
+			return
+		}
+
+		cliCtx = cliCtx.WithHeight(height)
+		rest.PostProcessResponse(w, cliCtx, hex.EncodeToString(res))
 	}
 }
