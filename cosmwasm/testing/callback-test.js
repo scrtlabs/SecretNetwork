@@ -14,8 +14,8 @@ process.on("unhandledRejection", (error) => {
 (async () => {
   const seed = cosmwasmjs.EnigmaUtils.GenerateNewSeed();
   const client = new cosmwasmjs.CosmWasmClient("http://localhost:1337", seed);
-  const contract = (await client.getContracts(1))[0].address;
-
+  const contractAddr = (await client.getContracts(1))[0].address;
+  const contractCodeHash = await client.getCodeHashByContractAddr(contractAddr);
   const pen = await cosmwasmjs.Secp256k1Pen.fromMnemonic(
     "cost member exercise evoke isolate gift cattle move bundle assume spell face balance lesson resemble orange bench surge now unhappy potato dress number acid"
   );
@@ -48,8 +48,8 @@ process.on("unhandledRejection", (error) => {
     }
   );
 
-  const execTx = await signingClient.execute(contract, {
-    a: { contract_addr: contract, x: 2, y: 3 },
+  const execTx = await signingClient.execute(contractAddr, {
+    a: { contract_addr: contractAddr, code_hash: contractCodeHash, x: 2, y: 3 },
   });
 
   const tx = await client.restClient.txById(execTx.transactionHash);
@@ -60,7 +60,7 @@ process.on("unhandledRejection", (error) => {
   assert.deepEqual(tx.logs[0].events[1].attributes, [
     {
       key: "contract_address",
-      value: contract,
+      value: contractAddr,
     },
     {
       key: "banana",
@@ -68,7 +68,7 @@ process.on("unhandledRejection", (error) => {
     },
     {
       key: "contract_address",
-      value: contract,
+      value: contractAddr,
     },
     {
       key: "kiwi",
@@ -76,7 +76,7 @@ process.on("unhandledRejection", (error) => {
     },
     {
       key: "contract_address",
-      value: contract,
+      value: contractAddr,
     },
     {
       key: "watermelon",
