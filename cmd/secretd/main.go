@@ -85,6 +85,10 @@ func main() {
 	}
 
 	// Set default gas limit for WASM queries
+	if viper.IsSet("query-gas-limit") {
+		return
+	}
+
 	queryGasLimitTemplate := `
 
 # query-gas-limit sets the gas limit under which your node will run smart sontracts queries.
