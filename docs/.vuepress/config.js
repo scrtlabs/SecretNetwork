@@ -43,11 +43,12 @@ module.exports = {
                 title: 'Developers',   // required
                 path: '/dev/developers',      // optional, link of the title, which should be an absolute path and must exist
                 collapsable: true, // optional, defaults to true
-                sidebarDepth: 0,    // optional, defaults to 1
+                sidebarDepth: 1,    // optional, defaults to 1
                 children: [
                   {
                     title : 'Secret Contracts',
                     path: '/dev/SecretContract/overview-guide',
+                    sidebarDepth: 1, 
                     children :[
                       {
                         title: 'Local Environment',
@@ -76,24 +77,13 @@ module.exports = {
                     ]
                   },
                   {
-                    title: 'Secret Template',
-                    //path: '/dev/coming-soon'
-                  },
-                  {
                     title: 'SecretJS',
-                    path: '/dev/secret-js'
-                  },
-                  {
-                    title: 'SecretWasm/CosmWasm',
-                    //path: '/dev/coming-soon'
+                    //path: '/dev/secret-js'
                   },
                   {
                     title: 'Resources',
                     path : '/dev/resources.md'
                   }
-                  //'/secretcli',
-                  //'/dev/contract-dev-guide',
-                  //'/dev/secret-js',
                 ]
             },
             {
