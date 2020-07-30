@@ -118,12 +118,13 @@ func TestMaskReflectContractSend(t *testing.T) {
 	// this 14k is added to the escrow, then the entire balance is sent to bob (total: 39k)
 
 	contractCodeHash := hex.EncodeToString(keeper.GetContractHash(ctx, escrowAddr))
-	approveMsg := []byte(contractCodeHash + `{"release":{}}`)
+	// approveMsg := []byte(contractCodeHash + `{"release":{}}`)
 	msgs := []wasmTypes.CosmosMsg{{
 		Wasm: &wasmTypes.WasmMsg{
 			Execute: &wasmTypes.ExecuteMsg{
 				ContractAddr: escrowAddr.String(),
-				Msg:          approveMsg,
+				CodeHash:     contractCodeHash,
+				Msg:          []byte(`{"release":{}}`),
 				Send: []wasmTypes.Coin{{
 					Denom:  "denom",
 					Amount: "14000",

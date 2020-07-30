@@ -4,11 +4,14 @@
 ///
 use super::types::{IoNonce, SecretMessage};
 
+use crate::cosmwasm::encoding::Binary;
+use crate::cosmwasm::types::{CosmosMsg, WasmMsg};
 use crate::crypto::{AESKey, Ed25519PublicKey, Kdf, SIVEncryptable, KEY_MANAGER};
 use enclave_ffi_types::EnclaveError;
 use log::*;
 use serde::Serialize;
 use serde_json::{json, Value};
+use std::io::Read;
 
 pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) -> AESKey {
     let enclave_io_key = KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap();
@@ -90,35 +93,85 @@ pub fn encrypt_output(
         // init or handle or migrate
         if let Value::Object(ok) = &mut v["Ok"] {
             if ok["messages"].is_array() {
-                if let Value::Array(msgs) = &mut ok["messages"] {
-                    for msg in msgs {
-                        if msg["wasm"]["execute"]["msg"].is_string() {
-                            if let Value::String(msg_b64) = &mut msg["wasm"]["execute"]["msg"] {
+                let mut new_msgs: Vec<CosmosMsg> = vec![];
+
+                let msgs: Vec<CosmosMsg> =
+                    serde_json::from_value(ok["messages"].clone()).map_err(|err| {
+                        error!(
+                            "got an error while trying to deserialize messages {:?}: {}",
+                            ok["messages"], err
+                        );
+                        EnclaveError::FailedToDeserialize
+                    })?;
+
+                for msg in msgs {
+                    let mut new_msg: CosmosMsg = msg.clone();
+
+                    match msg {
+                        CosmosMsg::Wasm(wasm_msg) => match wasm_msg {
+                            WasmMsg::Execute {
+                                contract_addr,
+                                code_hash,
+                                msg,
+                                send,
+                            } => {
+                                let mut hash_appended_msg = code_hash.as_bytes().to_vec();
+                                hash_appended_msg.extend_from_slice(&msg.0);
+
                                 let mut msg_to_pass = SecretMessage::from_base64(
-                                    msg_b64.clone(),
+                                    Binary(hash_appended_msg).to_base64(),
                                     nonce,
                                     user_public_key,
                                 )?;
-
                                 msg_to_pass.encrypt_in_place()?;
 
-                                msg["wasm"]["execute"]["msg"] = encode(&msg_to_pass.to_slice());
+                                let encoded_msg = Binary::from(msg_to_pass.to_vec().as_slice());
+
+                                new_msg = CosmosMsg::Wasm(WasmMsg::Execute {
+                                    contract_addr,
+                                    code_hash,
+                                    msg: encoded_msg,
+                                    send,
+                                });
                             }
-                        } else if msg["wasm"]["instantiate"]["msg"].is_string() {
-                            if let Value::String(msg_b64) = &mut msg["wasm"]["instantiate"]["msg"] {
+                            WasmMsg::Instantiate {
+                                code_id,
+                                msg,
+                                code_hash,
+                                send,
+                                label,
+                            } => {
+                                let mut hash_appended_msg = code_hash.as_bytes().to_vec();
+                                hash_appended_msg.extend_from_slice(&msg.0);
+
                                 let mut msg_to_pass = SecretMessage::from_base64(
-                                    msg_b64.clone(),
+                                    Binary(hash_appended_msg).to_base64(),
                                     nonce,
                                     user_public_key,
                                 )?;
-
                                 msg_to_pass.encrypt_in_place()?;
 
-                                msg["wasm"]["instantiate"]["msg"] = encode(&msg_to_pass.to_slice());
+                                let encoded_msg = Binary::from(msg_to_pass.to_vec().as_slice());
+
+                                new_msg = CosmosMsg::Wasm(WasmMsg::Instantiate {
+                                    code_id,
+                                    code_hash,
+                                    msg: encoded_msg,
+                                    send,
+                                    label,
+                                });
                             }
-                        }
+                        },
+                        _ => {}
                     }
+
+                    new_msgs.push(new_msg);
                 }
+
+                ok["messages"] = serde_json::to_value(new_msgs).map_err(|err| {
+                    error!("got an error while trying to serialize messages: {}", err);
+                    EnclaveError::FailedToSerialize
+                })?;
             }
 
             if ok["log"].is_array() {

@@ -20,7 +20,8 @@ impl Binary {
     /// take an (untrusted) string and decode it into bytes.
     /// fails if it is not valid base64
     pub fn from_base64(encoded: &str) -> SgxResult<Self> {
-        let binary = match base64::decode(&encoded) {
+        /// NOTE: This is changed from the original, possible due to mismatch between base64 crate versions
+        let binary = match base64::decode(encoded) {
             Ok(res) => res,
             Err(e) => {
                 error!("Failed to decode base64 string: {:?}", e.to_string());
@@ -86,7 +87,7 @@ impl<'de> de::Visitor<'de> for Base64Visitor {
         formatter.write_str("valid base64 encoded string")
     }
 
-    fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
     where
         E: de::Error,
     {

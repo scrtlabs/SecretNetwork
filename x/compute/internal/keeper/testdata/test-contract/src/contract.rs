@@ -193,12 +193,8 @@ fn init_with_callback_contract_error(contract_addr: HumanAddr, code_hash: String
     InitResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: create_callback_msg(
-                r#"{"contract_error":{"error_type":"generic_err"}}"#
-                    .as_bytes()
-                    .to_vec(),
-                &code_hash,
-            ),
+            code_hash,
+            msg: Binary::from(r#"{"contract_error":{"error_type":"generic_err"}}"#.as_bytes()),
             send: vec![],
         })],
         log: vec![log("init with a callback with contract error", "🤷‍♀️")],
@@ -217,10 +213,8 @@ fn init_callback_bad_params(contract_addr: HumanAddr, code_hash: String) -> Init
     InitResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: create_callback_msg(
-                r#"{"c":{"x":"banana","y":3}}"#.as_bytes().to_vec(),
-                &code_hash,
-            ),
+            code_hash,
+            msg: Binary::from(r#"{"c":{"x":"banana","y":3}}"#.as_bytes().to_vec()),
             send: vec![],
         })],
         log: vec![],
@@ -235,8 +229,9 @@ fn init_with_callback<S: Storage, A: Api, Q: Querier>(
 ) -> InitResponse {
     InitResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+            code_hash,
             contract_addr: contract_addr.clone(),
-            msg: create_callback_msg("{\"c\":{\"x\":0,\"y\":13}}".as_bytes().to_vec(), &code_hash),
+            msg: Binary::from("{\"c\":{\"x\":0,\"y\":13}}".as_bytes().to_vec()),
             send: vec![],
         })],
         log: vec![log("init with a callback", "🦄")],
@@ -252,7 +247,8 @@ pub fn init_callback_to_init<S: Storage, A: Api, Q: Querier>(
     InitResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
             code_id,
-            msg: create_callback_msg("{\"nop\":{}}".as_bytes().to_vec(), &code_hash),
+            msg: Binary::from("{\"nop\":{}}".as_bytes().to_vec()),
+            code_hash,
             send: vec![],
             label: None,
         })],
@@ -334,7 +330,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::CallbackToLogMsgSender { to, code_hash } => Ok(HandleResponse {
             messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: to.clone(),
-                msg: create_callback_msg(r#"{"log_msg_sender":{}}"#.into(), &code_hash),
+                code_hash,
+                msg: Binary::from(r#"{"log_msg_sender":{}}"#.as_bytes().to_vec()),
                 send: vec![],
             })],
             log: vec![log("hi", "hey")],
@@ -352,7 +349,8 @@ fn send_external_query<S: Storage, A: Api, Q: Querier>(
         .querier
         .query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: create_callback_msg(r#"{"receive_external_query":{"num":2}}"#.into(), &code_hash),
+            code_hash,
+            msg: Binary::from(r#"{"receive_external_query":{"num":2}}"#.as_bytes().to_vec()),
         }))
         .unwrap();
 
@@ -372,7 +370,8 @@ fn send_external_query_panic<S: Storage, A: Api, Q: Querier>(
         .querier
         .query::<u8>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: create_callback_msg(r#"{"panic":{}}"#.into(), &code_hash),
+            msg: Binary::from(r#"{"panic":{}}"#.as_bytes().to_vec()),
+            code_hash,
         }))
         .unwrap_err();
 
@@ -388,10 +387,12 @@ fn send_external_query_stderror<S: Storage, A: Api, Q: Querier>(
         .querier
         .query::<Binary>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: create_callback_msg(
-                r#"{"contract_error":{"error_type":"generic_err"}}"#.into(),
-                &code_hash,
+            msg: Binary::from(
+                r#"{"contract_error":{"error_type":"generic_err"}}"#
+                    .as_bytes()
+                    .to_vec(),
             ),
+            code_hash,
         }));
 
     match answer {
@@ -413,10 +414,10 @@ fn send_external_query_bad_abi<S: Storage, A: Api, Q: Querier>(
         .querier
         .query::<Binary>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: create_callback_msg(
-                r#""contract_error":{"error_type":"generic_err"}}"#.into(),
-                &code_hash,
+            msg: Binary::from(
+                r#""contract_error":{"error_type":"generic_err"}}"#.as_bytes().to_vec(),
             ),
+            code_hash,
         }));
 
     match answer {
@@ -438,10 +439,8 @@ fn send_external_query_bad_abi_receiver<S: Storage, A: Api, Q: Querier>(
         .querier
         .query::<String>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: create_callback_msg(
-                r#"{"receive_external_query":{"num":25}}"#.into(),
-                &code_hash,
-            ),
+            msg: Binary::from(r#"{"receive_external_query":{"num":25}}"#.as_bytes().to_vec()),
+            code_hash,
         }));
 
     match answer {
@@ -458,10 +457,8 @@ fn exec_callback_bad_params(contract_addr: HumanAddr, code_hash: String) -> Hand
     HandleResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: create_callback_msg(
-                r#"{"c":{"x":"banana","y":3}}"#.as_bytes().to_vec(),
-                &code_hash,
-            ),
+            code_hash,
+            msg: Binary::from(r#"{"c":{"x":"banana","y":3}}"#.as_bytes().to_vec()),
             send: vec![],
         })],
         log: vec![],
@@ -480,18 +477,16 @@ pub fn a<S: Storage, A: Api, Q: Querier>(
     HandleResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: create_callback_msg(
-                format!(
-                    "{{\"b\":{{\"x\":{} ,\"y\": {},\"contract_addr\": \"{}\",\"code_hash\": \"{}\" }}}}",
-                    x,
-                    y,
-                    contract_addr.as_str(),
-                    &code_hash
-                )
+            code_hash: code_hash.clone(),
+            msg: Binary::from(format!(
+                "{{\"b\":{{\"x\":{} ,\"y\": {},\"contract_addr\": \"{}\",\"code_hash\": \"{}\" }}}}",
+                x,
+                y,
+                contract_addr.as_str(),
+                &code_hash
+            )
                 .as_bytes()
-                .to_vec(),
-                &code_hash,
-            ),
+                .to_vec()),
             send: vec![],
         })],
         log: vec![log("banana", "🍌")],
@@ -510,11 +505,11 @@ pub fn b<S: Storage, A: Api, Q: Querier>(
     HandleResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: create_callback_msg(
+            code_hash,
+            msg: Binary::from(
                 format!("{{\"c\":{{\"x\":{} ,\"y\": {} }}}}", x + 1, y + 1)
                     .as_bytes()
                     .to_vec(),
-                &code_hash,
             ),
             send: vec![],
         })],
@@ -589,7 +584,8 @@ pub fn exec_callback_to_init<S: Storage, A: Api, Q: Querier>(
     HandleResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
             code_id,
-            msg: create_callback_msg("{\"nop\":{}}".as_bytes().to_vec(), &code_hash),
+            msg: Binary::from("{\"nop\":{}}".as_bytes().to_vec()),
+            code_hash,
             send: vec![],
             label: None,
         })],
@@ -605,11 +601,11 @@ fn exec_with_callback_contract_error(
     HandleResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: create_callback_msg(
+            code_hash,
+            msg: Binary::from(
                 r#"{"contract_error":{"error_type":"generic_err"}}"#
                     .as_bytes()
                     .to_vec(),
-                &code_hash,
             ),
             send: vec![],
         })],
@@ -791,14 +787,15 @@ fn send_external_query_infinite_loop<S: Storage, A: Api, Q: Querier>(
         .querier
         .query::<Binary>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: contract_addr.clone(),
-            msg: create_callback_msg(
+            code_hash: code_hash.clone(),
+            msg: Binary::from(
                 format!(
                     r#"{{"send_external_query_infinite_loop":{{"to":"{}", "code_hash":"{}"}}}}"#,
                     contract_addr.clone().to_string(),
                     &code_hash
                 )
-                .into(),
-                &code_hash,
+                .as_bytes()
+                .to_vec(),
             ),
         }));
 

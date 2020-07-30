@@ -35,6 +35,7 @@ pub enum WasmQuery {
     /// return value is whatever the contract returns (caller should know)
     Smart {
         contract_addr: HumanAddr,
+        code_hash: String,
         /// msg is the json-encoded QueryMsg struct
         msg: Binary,
     },
@@ -42,6 +43,7 @@ pub enum WasmQuery {
     /// returns the raw, unparsed data stored at that key (or `Ok(Err(StdError:NotFound{}))` if missing)
     Raw {
         contract_addr: HumanAddr,
+        code_hash: String,
         /// Key is the raw key used in the contracts Storage
         key: Binary,
     },

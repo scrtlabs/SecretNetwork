@@ -108,6 +108,7 @@ func TestEncoding(t *testing.T) {
 					Execute: &wasmTypes.ExecuteMsg{
 						ContractAddr: addr2.String(),
 						Msg:          jsonMsg,
+						CodeHash:     "",
 						Send: []wasmTypes.Coin{
 							wasmTypes.NewCoin(12, "eth"),
 						},
@@ -118,6 +119,7 @@ func TestEncoding(t *testing.T) {
 				types.MsgExecuteContract{
 					Sender:    addr1,
 					Contract:  addr2,
+					CodeHash:  "",
 					Msg:       jsonMsg,
 					SentFunds: sdk.NewCoins(sdk.NewInt64Coin("eth", 12)),
 				},
@@ -128,8 +130,9 @@ func TestEncoding(t *testing.T) {
 			input: wasmTypes.CosmosMsg{
 				Wasm: &wasmTypes.WasmMsg{
 					Instantiate: &wasmTypes.InstantiateMsg{
-						CodeID: 7,
-						Msg:    jsonMsg,
+						CodeID:   7,
+						CodeHash: "",
+						Msg:      jsonMsg,
 						Send: []wasmTypes.Coin{
 							wasmTypes.NewCoin(123, "eth"),
 						},

@@ -330,7 +330,8 @@ pub fn reinvest<S: Storage, A: Api, Q: Querier>(
             .into(),
             WasmMsg::Execute {
                 contract_addr,
-                msg: create_callback_msg(msg.0, &env.contract_code_hash.unwrap()),
+                code_hash: env.contract_code_hash.unwrap(),
+                msg,
                 send: vec![],
             }
             .into(),
