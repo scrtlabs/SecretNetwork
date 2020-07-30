@@ -2,7 +2,7 @@
 title : 'Intiting Contract'
 ---
 
-## Setup Secret Contracts (CosmWasm)
+# Setup Secret Contracts (CosmWasm)
 
 Secret Contracts are based on [CosmWasm](https://www.cosmwasm.com) which is implementated on various Cosmos SDK blockchains. The CosmWasm smart contracts are like Ethereum's smart contracts except they can be used on other networks using the [Inter-Blockchain Protocol](https://cosmos.network/ibc) (IBC). CosmWasm smart contracts are written in the Rust language.
 
@@ -50,7 +50,7 @@ apt install build-essential
 cargo install cargo-generate --features vendored-openssl
 ```
 
-## Create Initial Smart Contract
+### Create Initial Smart Contract
 
 To create the smart contract you'll:
 - generate the initial project
@@ -81,7 +81,7 @@ Cargo.lock	Developing.md	LICENSE		Publishing.md	examples	schema		tests
 Cargo.toml	Importing.md	NOTICE		README.md	rustfmt.toml	src
 ```
 
-## Compile
+### Compile
 
 Use the following command to compile the smart contract which produces the wasm contract file.
 
@@ -89,7 +89,7 @@ Use the following command to compile the smart contract which produces the wasm 
 cargo wasm
 ```
 
-## Unit Tests (NB Tests in this template currently fail unless you have SGX enabled)
+### Unit Tests (NB Tests in this template currently fail unless you have SGX enabled)
 
 Run unit tests
 
@@ -97,7 +97,7 @@ Run unit tests
 RUST_BACKTRACE=1 cargo unit-test
 ```
 
-## Integration Tests
+### Integration Tests
 
 The integration tests are under the `tests/` directory and run as:
 
@@ -105,7 +105,7 @@ The integration tests are under the `tests/` directory and run as:
 cargo integration-test
 ```
 
-## Generate Msg Schemas
+### Generate Msg Schemas
 
 We can also generate JSON Schemas that serve as a guide for anyone trying to use the contract, to specify which arguments they need.
 

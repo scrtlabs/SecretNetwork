@@ -6,8 +6,6 @@
 
 [How to install and use `secretcli`](/light-client-mainnet.md).
 
-## `secretcli`
-
 ### Keys
 
 #### Key Types

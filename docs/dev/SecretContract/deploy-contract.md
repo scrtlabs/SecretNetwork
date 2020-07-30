@@ -1,11 +1,11 @@
 ---
 title : 'Deploy Smart Contract'
 ---
-## Deploy Smart Contract
+# Deploy Smart Contract
 
 Before deploying or storing the contract on the testnet, need to run the cosmwasm optimizer.
 
-## Optimize compiled wasm
+### Optimize compiled wasm
 
 ```
 docker run --rm -v "$(pwd)":/code \
@@ -19,7 +19,7 @@ The optimization creates two files:
 - contract.wasm
 - hash.txt
 
-## Store the Smart Contract on our local Testnet
+### Store the Smart Contract on our local Testnet
 
 ```
 # First lets start it up again, this time mounting our project's code inside the container.
@@ -39,7 +39,7 @@ cd code
 secretcli tx compute store contract.wasm --from a --gas auto -y --keyring-backend test
 ```
 
-## Querying the Smart Contract and Code
+### Querying the Smart Contract and Code
 
 List current smart contract code
 ```
@@ -55,7 +55,7 @@ secretcli query compute list-code
 ]
 ```
 
-## Instantiate the Smart Contract
+### Instantiate the Smart Contract
 
 At this point the contract's been uploaded and stored on the testnet, but there's no "instance."
 This is like `discovery migrate` which handles both the deploying and creation of the contract instance, except in Cosmos the deploy-execute process consists of 3 steps rather than 2 in Ethereum. You can read more about the logic behind this decision, and other comparisons to Solidity, in the [cosmwasm documentation](https://www.cosmwasm.com/docs/getting-started/smart-contracts). These steps are:
