@@ -131,7 +131,7 @@ pub enum QueryMsg {
     ContractError { error_type: String },
     Panic {},
     ReceiveExternalQuery { num: u8 },
-    SendExternalQueryInfiniteLoop { to: HumanAddr, code_hash: String, },
+    SendExternalQueryInfiniteLoop { to: HumanAddr, code_hash: String },
     WriteToStorage {},
     RemoveFromStorage {},
 }
@@ -308,9 +308,15 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             Ok(pass_null_pointer_to_imports_should_throw(deps, pass_type))
         }
         HandleMsg::SendExternalQuery { to, code_hash } => send_external_query(deps, to, code_hash),
-        HandleMsg::SendExternalQueryPanic { to,code_hash } => send_external_query_panic(deps, to, code_hash),
-        HandleMsg::SendExternalQueryError { to,code_hash } => send_external_query_stderror(deps, to, code_hash),
-        HandleMsg::SendExternalQueryBadAbi { to,code_hash } => send_external_query_bad_abi(deps, to, code_hash),
+        HandleMsg::SendExternalQueryPanic { to, code_hash } => {
+            send_external_query_panic(deps, to, code_hash)
+        }
+        HandleMsg::SendExternalQueryError { to, code_hash } => {
+            send_external_query_stderror(deps, to, code_hash)
+        }
+        HandleMsg::SendExternalQueryBadAbi { to, code_hash } => {
+            send_external_query_bad_abi(deps, to, code_hash)
+        }
         HandleMsg::SendExternalQueryBadAbiReceiver { to, code_hash } => {
             send_external_query_bad_abi_receiver(deps, to, code_hash)
         }
@@ -382,7 +388,10 @@ fn send_external_query_stderror<S: Storage, A: Api, Q: Querier>(
         .querier
         .query::<Binary>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: create_callback_msg(r#"{"contract_error":{"error_type":"generic_err"}}"#.into(), &code_hash),
+            msg: create_callback_msg(
+                r#"{"contract_error":{"error_type":"generic_err"}}"#.into(),
+                &code_hash,
+            ),
         }));
 
     match answer {
@@ -404,7 +413,10 @@ fn send_external_query_bad_abi<S: Storage, A: Api, Q: Querier>(
         .querier
         .query::<Binary>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: create_callback_msg(r#""contract_error":{"error_type":"generic_err"}}"#.into(), &code_hash)
+            msg: create_callback_msg(
+                r#""contract_error":{"error_type":"generic_err"}}"#.into(),
+                &code_hash,
+            ),
         }));
 
     match answer {
@@ -426,7 +438,10 @@ fn send_external_query_bad_abi_receiver<S: Storage, A: Api, Q: Querier>(
         .querier
         .query::<String>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: create_callback_msg(r#"{"receive_external_query":{"num":25}}"#.into(), &code_hash),
+            msg: create_callback_msg(
+                r#"{"receive_external_query":{"num":25}}"#.into(),
+                &code_hash,
+            ),
         }));
 
     match answer {
@@ -781,7 +796,10 @@ fn send_external_query_infinite_loop<S: Storage, A: Api, Q: Querier>(
                     r#"{{"send_external_query_infinite_loop":{{"to":"{}", "code_hash":"{}"}}}}"#,
                     contract_addr.clone().to_string(),
                     &code_hash
-                ).into(), &code_hash),
+                )
+                .into(),
+                &code_hash,
+            ),
         }));
 
     match answer {

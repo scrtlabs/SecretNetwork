@@ -13,8 +13,8 @@ use crate::wasm::contract_validation::ContractKey;
 use crate::wasm::types::{IoNonce, SecretMessage};
 
 use super::contract_validation::{
-    extract_contract_key, generate_encryption_key, validate_contract_key, validate_msg,
-    CONTRACT_KEY_LENGTH,
+    calc_contract_hash, extract_contract_key, generate_encryption_key, validate_contract_key,
+    validate_msg, CONTRACT_KEY_LENGTH,
 };
 use super::gas::{gas_rules, WasmCosts};
 use super::io::encrypt_output;
@@ -46,7 +46,7 @@ pub fn init(
     env: &[u8],         // blockchain state
     msg: &[u8],         // probably function call and args
 ) -> Result<InitSuccess, EnclaveError> {
-    let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
+    let mut parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
         error!(
             "got an error while trying to deserialize env input bytes into json {:?}: {}",
             env, err
@@ -84,7 +84,17 @@ pub fn init(
         secret_msg.user_public_key,
     )?;
 
-    let env_ptr = engine.write_to_memory(env)?;
+    parsed_env.contract_code_hash = Some(hex::encode(calc_contract_hash(contract)));
+
+    let new_env = serde_json::to_vec(&parsed_env).map_err(|err| {
+        error!(
+            "got an error while trying to serialize parsed_env into bytes {:?}: {}",
+            parsed_env, err
+        );
+        EnclaveError::FailedToSerialize
+    })?;
+
+    let env_ptr = engine.write_to_memory(&new_env)?;
     let msg_ptr = engine.write_to_memory(&validated_msg)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
@@ -120,7 +130,7 @@ pub fn handle(
     env: &[u8],
     msg: &[u8],
 ) -> Result<HandleSuccess, EnclaveError> {
-    let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
+    let mut parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
         error!(
             "got an error while trying to deserialize env input bytes into json {:?}: {}",
             env, err
@@ -148,7 +158,6 @@ pub fn handle(
         String::from_utf8_lossy(&validated_msg)
     );
 
-
     if !validate_contract_key(&contract_key, contract_address.as_slice(), contract) {
         error!("got an error while trying to deserialize output bytes");
         return Err(EnclaveError::FailedContractAuthentication);
@@ -171,7 +180,17 @@ pub fn handle(
         secret_msg.user_public_key,
     )?;
 
-    let env_ptr = engine.write_to_memory(env)?;
+    parsed_env.contract_code_hash = Some(hex::encode(calc_contract_hash(contract)));
+
+    let new_env = serde_json::to_vec(&parsed_env).map_err(|err| {
+        error!(
+            "got an error while trying to serialize parsed_env into bytes {:?}: {}",
+            parsed_env, err
+        );
+        EnclaveError::FailedToSerialize
+    })?;
+
+    let env_ptr = engine.write_to_memory(&new_env)?;
     let msg_ptr = engine.write_to_memory(&validated_msg)?;
 
     // This wrapper is used to coalesce all errors in this block to one object

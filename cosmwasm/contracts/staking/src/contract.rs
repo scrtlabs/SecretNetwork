@@ -330,7 +330,7 @@ pub fn reinvest<S: Storage, A: Api, Q: Querier>(
             .into(),
             WasmMsg::Execute {
                 contract_addr,
-                msg,
+                msg: create_callback_msg(msg.0, &env.contract_code_hash.unwrap()),
                 send: vec![],
             }
             .into(),
@@ -339,6 +339,14 @@ pub fn reinvest<S: Storage, A: Api, Q: Querier>(
         data: None,
     };
     Ok(res)
+}
+
+fn create_callback_msg(msg: Vec<u8>, code_hash: &String) -> Binary {
+    let mut new_msg = code_hash.as_bytes().to_vec();
+
+    new_msg.extend(msg);
+
+    Binary(new_msg)
 }
 
 pub fn _bond_all_tokens<S: Storage, A: Api, Q: Querier>(
