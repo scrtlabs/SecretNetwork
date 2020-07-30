@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -53,7 +54,6 @@ type OwnerResponse struct {
 const MaskFeatures = "staking,mask"
 
 func TestMaskReflectContractSend(t *testing.T) {
-	t.Skip()
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -116,7 +116,9 @@ func TestMaskReflectContractSend(t *testing.T) {
 	// we also send an additional 14k tokens there.
 	// this should reduce the mask balance by 14k (to 26k)
 	// this 14k is added to the escrow, then the entire balance is sent to bob (total: 39k)
-	approveMsg := []byte(`{"release":{}}`)
+
+	contractCodeHash := hex.EncodeToString(keeper.GetContractHash(ctx, escrowAddr))
+	approveMsg := []byte(contractCodeHash + `{"release":{}}`)
 	msgs := []wasmTypes.CosmosMsg{{
 		Wasm: &wasmTypes.WasmMsg{
 			Execute: &wasmTypes.ExecuteMsg{
