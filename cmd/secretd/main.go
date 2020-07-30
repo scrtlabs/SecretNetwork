@@ -94,7 +94,7 @@ func main() {
 # query-gas-limit sets the gas limit under which your node will run smart sontracts queries.
 # Queries that consume more than this value will be terminated prematurely with an error.
 # This is a good way to protect your node from DoS by heavy queries.
-query-gas-limit = 50000
+query-gas-limit = 3000000
 `
 
 	appTomlFile, err := os.OpenFile(path.Join(ctx.Config.RootDir, "config", "app.toml"), os.O_WRONLY|os.O_APPEND, 0644)
