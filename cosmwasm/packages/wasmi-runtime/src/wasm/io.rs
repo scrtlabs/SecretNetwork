@@ -11,7 +11,6 @@ use enclave_ffi_types::EnclaveError;
 use log::*;
 use serde::Serialize;
 use serde_json::{json, Value};
-use std::io::Read;
 
 pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) -> AESKey {
     let enclave_io_key = KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap();
