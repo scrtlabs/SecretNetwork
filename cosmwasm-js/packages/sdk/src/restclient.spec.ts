@@ -141,6 +141,7 @@ async function executeContract(
     type: "wasm/execute",
     value: {
       sender: faucet.address,
+      code_hash: "",
       contract: contractAddress,
       msg: { release: {} },
       sent_funds: [],
