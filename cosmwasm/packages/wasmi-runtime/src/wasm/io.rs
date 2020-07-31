@@ -106,8 +106,8 @@ pub fn encrypt_output(
                 for msg in msgs {
                     let mut new_msg: CosmosMsg = msg.clone();
 
-                    match msg {
-                        CosmosMsg::Wasm(wasm_msg) => match wasm_msg {
+                    if let CosmosMsg::Wasm(wasm_msg) = msg {
+                        match wasm_msg {
                             WasmMsg::Execute {
                                 contract_addr,
                                 code_hash,
@@ -160,8 +160,7 @@ pub fn encrypt_output(
                                     label,
                                 });
                             }
-                        },
-                        _ => {}
+                        }
                     }
 
                     new_msgs.push(new_msg);
