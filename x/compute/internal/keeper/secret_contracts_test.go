@@ -1203,7 +1203,6 @@ func TestRemoveFromStorageDuringQuery(t *testing.T) {
 	require.Equal(t, "query contract failed: Execution error: Enclave: contract tried to write to storage during a query", queryErr.GenericErr.Msg)
 }
 
-
 func TestDepositToContract(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
@@ -1256,5 +1255,28 @@ func TestContractSendFunds(t *testing.T) {
 	require.Equal(t, "200000denom", walletCointsAfter.String())
 
 	require.Empty(t, execErr)
+}
 
+func TestContractTryToSendFundsFromSomeoneElse(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, `{"deposit_to_contract":{}}`, false, defaultGasForTests, 17)
+
+	require.Empty(t, execErr)
+
+	contractCoinsBefore := keeper.bankKeeper.GetCoins(ctx, addr)
+	walletCointsBefore := keeper.bankKeeper.GetCoins(ctx, walletA)
+
+	require.Equal(t, "17denom", contractCoinsBefore.String())
+	require.Equal(t, "199983denom", walletCointsBefore.String())
+
+	_, _, execErr = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_funds":{"from":"%s","to":"%s","denom":"%s","amount":%d}}`, walletA.String(), addr.String(), "denom", 17), false, defaultGasForTests, 0)
+
+	require.NotEmpty(t, execErr)
+	require.NotEmpty(t, execErr.GenericErr)
+	require.Equal(t, "unauthorized: contract doesn't have permission", execErr.GenericErr.Msg)
 }
