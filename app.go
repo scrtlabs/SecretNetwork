@@ -2,6 +2,11 @@ package app
 
 import (
 	"encoding/json"
+	"io"
+	"log"
+	"os"
+	"path/filepath"
+
 	"github.com/enigmampc/SecretNetwork/x/compute"
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
 	"github.com/enigmampc/SecretNetwork/x/tokenswap"
@@ -34,10 +39,6 @@ import (
 	tmos "github.com/tendermint/tendermint/libs/os"
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
-	"io"
-	"log"
-	"os"
-	"path/filepath"
 )
 
 const appName = "secret"
@@ -112,21 +113,21 @@ type SecretNetworkApp struct {
 	tKeys map[string]*sdk.TransientStoreKey
 
 	// keepers
-	accountKeeper  auth.AccountKeeper
-	bankKeeper     bank.Keeper
-	supplyKeeper   supply.Keeper
-	stakingKeeper  staking.Keeper
-	slashingKeeper slashing.Keeper
-	mintKeeper     mint.Keeper
-	distrKeeper    distr.Keeper
-	govKeeper      gov.Keeper
-	crisisKeeper   crisis.Keeper
-	paramsKeeper   params.Keeper
-	upgradeKeeper  upgrade.Keeper
-	evidenceKeeper evidence.Keeper
+	accountKeeper   auth.AccountKeeper
+	bankKeeper      bank.Keeper
+	supplyKeeper    supply.Keeper
+	stakingKeeper   staking.Keeper
+	slashingKeeper  slashing.Keeper
+	mintKeeper      mint.Keeper
+	distrKeeper     distr.Keeper
+	govKeeper       gov.Keeper
+	crisisKeeper    crisis.Keeper
+	paramsKeeper    params.Keeper
+	upgradeKeeper   upgrade.Keeper
+	evidenceKeeper  evidence.Keeper
 	tokenSwapKeeper tokenswap.SwapKeeper
-	computeKeeper  compute.Keeper
-	regKeeper      reg.Keeper
+	computeKeeper   compute.Keeper
+	regKeeper       reg.Keeper
 	// the module manager
 	mm *module.Manager
 
@@ -149,6 +150,7 @@ func NewSecretNetworkApp(
 	bootstrap bool,
 	invCheckPeriod uint,
 	skipUpgradeHeights map[int64]bool,
+	queryGasLimit uint64,
 	baseAppOptions ...func(*bam.BaseApp),
 ) *SecretNetworkApp {
 
@@ -277,12 +279,14 @@ func NewSecretNetworkApp(
 	computeDir := filepath.Join(homeDir, ".compute")
 	app.tokenSwapKeeper = tokenswap.NewKeeper(app.cdc, keys[tokenswap.StoreKey], tokenswapSubspace, app.supplyKeeper)
 
-	wasmWrap := WasmWrapper{Wasm: compute.DefaultWasmConfig()}
+	wasmConfig := compute.DefaultWasmConfig()
+	wasmConfig.SmartQueryGasLimit = queryGasLimit
+	wasmWrap := WasmWrapper{Wasm: wasmConfig}
 	err := viper.Unmarshal(&wasmWrap)
 	if err != nil {
 		panic("error while reading wasm config: " + err.Error())
 	}
-	wasmConfig := wasmWrap.Wasm
+	wasmConfig = wasmWrap.Wasm
 
 	supportedFeatures := "staking"
 	// replace with bootstrap flag when we figure out how to test properly and everything works

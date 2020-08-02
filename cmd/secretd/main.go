@@ -2,7 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"os"
+	"path"
 
 	"github.com/enigmampc/cosmos-sdk/server"
 	"github.com/enigmampc/cosmos-sdk/store"
@@ -17,10 +20,10 @@ import (
 	"github.com/enigmampc/cosmos-sdk/baseapp"
 	"github.com/enigmampc/cosmos-sdk/client/flags"
 
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	genutilcli "github.com/enigmampc/cosmos-sdk/x/genutil/client/cli"
 	app "github.com/enigmampc/SecretNetwork"
 	scrt "github.com/enigmampc/SecretNetwork/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	genutilcli "github.com/enigmampc/cosmos-sdk/x/genutil/client/cli"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
@@ -80,6 +83,30 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	// Set default gas limit for WASM queries
+	if viper.IsSet("query-gas-limit") {
+		return
+	}
+
+	queryGasLimitTemplate := `
+
+# query-gas-limit sets the gas limit under which your node will run smart sontracts queries.
+# Queries that consume more than this value will be terminated prematurely with an error.
+# This is a good way to protect your node from DoS by heavy queries.
+query-gas-limit = 3000000
+`
+
+	appTomlFile, err := os.OpenFile(path.Join(ctx.Config.RootDir, "config", "app.toml"), os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		panic(fmt.Sprintf("failed opening file '%s' for appending query-gas-limit.\n", err))
+	}
+	defer appTomlFile.Close()
+
+	_, err = appTomlFile.WriteString(queryGasLimitTemplate)
+	if err != nil {
+		panic(fmt.Sprintf("failed writing default query-gas-limit to file '%s'", err))
+	}
 }
 
 func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer) abci.Application {
@@ -90,6 +117,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer) abci.Application
 	}
 
 	bootstrap := viper.GetBool("bootstrap")
+	queryGasLimit := viper.GetUint64("query-gas-limit")
 
 	skipUpgradeHeights := make(map[int64]bool)
 	for _, h := range viper.GetIntSlice(server.FlagUnsafeSkipUpgrades) {
@@ -98,6 +126,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer) abci.Application
 
 	return app.NewSecretNetworkApp(
 		logger, db, traceStore, true, bootstrap, invCheckPeriod, skipUpgradeHeights,
+		queryGasLimit,
 		baseapp.SetPruning(store.NewPruningOptionsFromString(viper.GetString("pruning"))),
 		baseapp.SetMinGasPrices(viper.GetString(server.FlagMinGasPrices)),
 		baseapp.SetHaltHeight(viper.GetUint64(server.FlagHaltHeight)),
@@ -111,9 +140,10 @@ func exportAppStateAndTMValidators(
 ) (json.RawMessage, []tmtypes.GenesisValidator, error) {
 
 	bootstrap := viper.GetBool("bootstrap")
+	queryGasLimit := viper.GetUint64("query-gas-limit")
 
 	if height != -1 {
-		secretApp := app.NewSecretNetworkApp(logger, db, traceStore, false, bootstrap, uint(1), map[int64]bool{})
+		secretApp := app.NewSecretNetworkApp(logger, db, traceStore, false, bootstrap, uint(1), map[int64]bool{}, queryGasLimit)
 		err := secretApp.LoadHeight(height)
 		if err != nil {
 			return nil, nil, err
@@ -121,6 +151,6 @@ func exportAppStateAndTMValidators(
 		return secretApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 	}
 
-	secretApp := app.NewSecretNetworkApp(logger, db, traceStore, true, bootstrap, uint(1), map[int64]bool{})
+	secretApp := app.NewSecretNetworkApp(logger, db, traceStore, true, bootstrap, uint(1), map[int64]bool{}, queryGasLimit)
 	return secretApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 }
