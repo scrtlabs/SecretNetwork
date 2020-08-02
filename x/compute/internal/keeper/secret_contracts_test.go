@@ -1310,3 +1310,34 @@ func TestContractSendFundsToInitCallback(t *testing.T) {
 	require.Equal(t, "199983denom", walletCointsAfter.String())
 	require.Equal(t, "17denom", newContractCoins.String())
 }
+
+func TestContractSendFundsToExecCallback(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	addr2, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	contractCoinsBefore := keeper.bankKeeper.GetCoins(ctx, addr)
+	contract2CoinsBefore := keeper.bankKeeper.GetCoins(ctx, addr2)
+	walletCointsBefore := keeper.bankKeeper.GetCoins(ctx, walletA)
+
+	require.Equal(t, "", contractCoinsBefore.String())
+	require.Equal(t, "", contract2CoinsBefore.String())
+	require.Equal(t, "200000denom", walletCointsBefore.String())
+
+	_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_funds_to_exec_callback":{"to":"%s","denom":"%s","amount":%d}}`, addr2.String(), "denom", 17), true, defaultGasForTests, 17)
+
+	require.Empty(t, execErr)
+
+	contractCoinsAfter := keeper.bankKeeper.GetCoins(ctx, addr)
+	contract2CoinsAfter := keeper.bankKeeper.GetCoins(ctx, addr2)
+	walletCointsAfter := keeper.bankKeeper.GetCoins(ctx, walletA)
+
+	require.Equal(t, "", contractCoinsAfter.String())
+	require.Equal(t, "17denom", contract2CoinsAfter.String())
+	require.Equal(t, "199983denom", walletCointsAfter.String())
+}
