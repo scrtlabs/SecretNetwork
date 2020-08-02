@@ -6,9 +6,6 @@ mod iterator;
 mod memory;
 mod querier;
 
-#[cfg(feature = "enclave-tests")]
-pub mod enclave_tests;
-
 pub use api::GoApi;
 pub use db::{db_t, DB};
 pub use memory::{free_rust, Buffer};

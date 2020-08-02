@@ -30,6 +30,6 @@ pub mod tests {
     pub fn run_tests() {
         // kdf::tests::test_derive_key();
         // storage::tests::test_open();
-        storage::tests::test_seal();
+        // storage::tests::test_seal();
     }
 }

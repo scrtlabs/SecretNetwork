@@ -26,7 +26,6 @@ maintenance = { status = "actively-developed" }
 [features]
 default = ["backtraces"]
 backtraces = ["snafu/backtraces"]
-enclave-tests = ["cosmwasm-sgx-vm/enclave-tests"]
 
 [dependencies]
 cosmwasm-std = { path = "../cosmwasm/packages/std", features = ["iterator"] }
