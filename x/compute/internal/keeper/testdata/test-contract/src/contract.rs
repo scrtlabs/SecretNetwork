@@ -98,6 +98,7 @@ pub enum HandleMsg {
     CallbackToLogMsgSender {
         to: HumanAddr,
     },
+    DepositToContract {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -279,6 +280,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             })],
             log: vec![log("hi", "hey")],
             data: None,
+        }),
+        HandleMsg::DepositToContract {} => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(to_binary(&env.message.sent_funds).unwrap()),
         }),
     }
 }

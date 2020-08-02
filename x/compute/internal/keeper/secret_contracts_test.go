@@ -153,7 +153,7 @@ func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.
 	return string(resultBz), cosmwasm.StdError{}
 }
 
-func execHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string, isErrorEncrypted bool, gas uint64) ([]byte, []ContractEvent, cosmwasm.StdError) {
+func execHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string, isErrorEncrypted bool, gas uint64, coin ...int64) ([]byte, []ContractEvent, cosmwasm.StdError) {
 	execMsgBz, err := wasmCtx.Encrypt([]byte(execMsg))
 	require.NoError(t, err)
 	nonce := execMsgBz[0:32]
@@ -168,7 +168,7 @@ func execHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sd
 		log.NewNopLogger(),
 	).WithGasMeter(sdk.NewGasMeter(gas))
 
-	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", coin[0])))
 	if err != nil {
 		return nil, nil, extractInnerError(t, err, nonce, isErrorEncrypted)
 	}
@@ -1201,4 +1201,31 @@ func TestRemoveFromStorageDuringQuery(t *testing.T) {
 	require.Error(t, queryErr)
 	require.Error(t, queryErr.GenericErr)
 	require.Equal(t, "query contract failed: Execution error: Enclave: contract tried to write to storage during a query", queryErr.GenericErr.Msg)
+}
+
+
+func TestDepositToContract(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	contractCoinsBefore := keeper.bankKeeper.GetCoins(ctx, addr)
+	walletCointsBefore := keeper.bankKeeper.GetCoins(ctx, walletA)
+
+	require.Equal(t, "", contractCoinsBefore.String())
+	require.Equal(t, "200000denom", walletCointsBefore.String())
+
+	data, _, execErr := execHelper(t, keeper, ctx, addr, walletA, `{"deposit_to_contract":{}}`, false, defaultGasForTests, 17)
+
+	require.Empty(t, execErr)
+
+	contractCoinsAfter := keeper.bankKeeper.GetCoins(ctx, addr)
+	walletCointsAfter := keeper.bankKeeper.GetCoins(ctx, walletA)
+
+	require.Equal(t, "17denom", contractCoinsAfter.String())
+	require.Equal(t, "199983denom", walletCointsAfter.String())
+
+	require.Equal(t, `[{"denom":"denom","amount":"17"}]`, string(data))
 }
