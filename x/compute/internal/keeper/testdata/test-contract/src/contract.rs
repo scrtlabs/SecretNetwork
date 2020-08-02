@@ -2,9 +2,10 @@ use cosmwasm_storage::PrefixedStorage;
 
 use cosmwasm_std::{
     generic_err, invalid_base64, invalid_utf8, log, not_found, null_pointer, parse_err,
-    serialize_err, unauthorized, underflow, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
-    HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse, Querier, QueryRequest,
-    QueryResult, ReadonlyStorage, StdError, StdResult, Storage, WasmMsg, WasmQuery,
+    serialize_err, to_binary, unauthorized, underflow, Api, BankMsg, Binary, Coin, CosmosMsg, Env,
+    Extern, HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse,
+    Querier, QueryRequest, QueryResult, ReadonlyStorage, StdError, StdResult, Storage, Uint128,
+    WasmMsg, WasmQuery,
 };
 
 /////////////////////////////// Messages ///////////////////////////////
@@ -99,6 +100,12 @@ pub enum HandleMsg {
         to: HumanAddr,
     },
     DepositToContract {},
+    SendFunds {
+        amount: u32,
+        denom: String,
+        to: HumanAddr,
+        from: HumanAddr,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -281,10 +288,28 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             log: vec![log("hi", "hey")],
             data: None,
         }),
+        HandleMsg::AllocateOnStack {} => Ok(allocate_on_stack()),
         HandleMsg::DepositToContract {} => Ok(HandleResponse {
             messages: vec![],
             log: vec![],
             data: Some(to_binary(&env.message.sent_funds).unwrap()),
+        }),
+        HandleMsg::SendFunds {
+            amount,
+            from,
+            to,
+            denom,
+        } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Bank(BankMsg::Send {
+                from_address: from,
+                to_address: to,
+                amount: vec![Coin {
+                    amount: Uint128(amount as u128),
+                    denom: denom,
+                }],
+            })],
+            log: vec![],
+            data: None,
         }),
     }
 }
