@@ -202,7 +202,6 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 			execMsg := types.SecretMsg{}
 			contractAddr := sdk.AccAddress{}
 
-			// var execMsg []byte
 			if len(args) == 1 {
 				label := viper.GetString(flagLabel)
 				if label == "" {
