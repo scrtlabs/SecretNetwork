@@ -288,7 +288,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             log: vec![log("hi", "hey")],
             data: None,
         }),
-        HandleMsg::AllocateOnStack {} => Ok(allocate_on_stack()),
         HandleMsg::DepositToContract {} => Ok(HandleResponse {
             messages: vec![],
             log: vec![],
