@@ -122,7 +122,7 @@ pub fn validate_contract_key(
 
 pub fn validate_msg(msg: &[u8], contract_code: &[u8]) -> Result<Vec<u8>, EnclaveError> {
     if msg.len() < HEX_ENCODED_HASH_SIZE {
-        error!("Got message that is missing contract hash for validation");
+        error!("Malformed message - expected contract code hash to be appended");
         return Err(EnclaveError::ValidationFailure);
     }
 
@@ -132,13 +132,13 @@ pub fn validate_msg(msg: &[u8], contract_code: &[u8]) -> Result<Vec<u8>, Enclave
     encrypted_contract_hash.copy_from_slice(&msg[0..HEX_ENCODED_HASH_SIZE]);
 
     let decoded_hash: Vec<u8> =
-        hex::decode(encrypted_contract_hash.to_vec().as_slice()).map_err(|_| {
+        hex::decode(&encrypted_contract_hash[..]).map_err(|_| {
             error!("Got exec message with malformed contract hash");
             EnclaveError::ValidationFailure
         })?;
 
     if decoded_hash != contract_hash {
-        error!("Got init message with mismatched contract hash");
+        error!("Message contains mismatched contract hash");
         return Err(EnclaveError::ValidationFailure);
     }
 
