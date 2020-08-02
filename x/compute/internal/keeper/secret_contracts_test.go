@@ -1280,3 +1280,33 @@ func TestContractTryToSendFundsFromSomeoneElse(t *testing.T) {
 	require.NotEmpty(t, execErr.GenericErr)
 	require.Equal(t, "unauthorized: contract doesn't have permission", execErr.GenericErr.Msg)
 }
+
+func TestContractSendFundsToInitCallback(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	contractCoinsBefore := keeper.bankKeeper.GetCoins(ctx, addr)
+	walletCointsBefore := keeper.bankKeeper.GetCoins(ctx, walletA)
+
+	require.Equal(t, "", contractCoinsBefore.String())
+	require.Equal(t, "200000denom", walletCointsBefore.String())
+
+	_, execEvents, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_funds_to_init_callback":{"code_id":%d,"denom":"%s","amount":%d}}`, codeID, "denom", 17), true, defaultGasForTests, 17)
+
+	require.Empty(t, execErr)
+	require.NotEmpty(t, execEvents)
+
+	contractCoinsAfter := keeper.bankKeeper.GetCoins(ctx, addr)
+	walletCointsAfter := keeper.bankKeeper.GetCoins(ctx, walletA)
+
+	newContract, err := sdk.AccAddressFromBech32(execEvents[0][0].Value)
+	require.NoError(t, err)
+	newContractCoins := keeper.bankKeeper.GetCoins(ctx, newContract)
+
+	require.Equal(t, "", contractCoinsAfter.String())
+	require.Equal(t, "199983denom", walletCointsAfter.String())
+	require.Equal(t, "17denom", newContractCoins.String())
+}

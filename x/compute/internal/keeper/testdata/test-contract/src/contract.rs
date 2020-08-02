@@ -106,6 +106,11 @@ pub enum HandleMsg {
         to: HumanAddr,
         from: HumanAddr,
     },
+    SendFundsToInitCallback {
+        amount: u32,
+        denom: String,
+        code_id: u64,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -303,6 +308,23 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 from_address: from,
                 to_address: to,
                 amount: vec![Coin {
+                    amount: Uint128(amount as u128),
+                    denom: denom,
+                }],
+            })],
+            log: vec![],
+            data: None,
+        }),
+        HandleMsg::SendFundsToInitCallback {
+            amount,
+            denom,
+            code_id,
+        } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+                msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
+                code_id: code_id,
+                label: None,
+                send: vec![Coin {
                     amount: Uint128(amount as u128),
                     denom: denom,
                 }],
