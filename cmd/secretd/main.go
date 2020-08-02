@@ -86,18 +86,24 @@ func main() {
 
 	// Set default gas limit for WASM queries
 	if viper.IsSet("query-gas-limit") {
+		// already set, not going to overwrite it
+		return
+	}
+
+	appTomlPath := path.Join(ctx.Config.RootDir, "config", "app.toml")
+	if !fileExists(appTomlPath) {
+		// config file does not exist, this means `secretd init` still wasn't called
 		return
 	}
 
 	queryGasLimitTemplate := `
-
 # query-gas-limit sets the gas limit under which your node will run smart sontracts queries.
 # Queries that consume more than this value will be terminated prematurely with an error.
 # This is a good way to protect your node from DoS by heavy queries.
 query-gas-limit = 3000000
 `
 
-	appTomlFile, err := os.OpenFile(path.Join(ctx.Config.RootDir, "config", "app.toml"), os.O_WRONLY|os.O_APPEND, 0644)
+	appTomlFile, err := os.OpenFile(appTomlPath, os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		panic(fmt.Sprintf("failed opening file '%s' for appending query-gas-limit.\n", err))
 	}
@@ -107,6 +113,16 @@ query-gas-limit = 3000000
 	if err != nil {
 		panic(fmt.Sprintf("failed writing default query-gas-limit to file '%s'", err))
 	}
+}
+
+// fileExists checks if a file exists and is not a directory before we
+// try using it to prevent further errors.
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }
 
 func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer) abci.Application {
