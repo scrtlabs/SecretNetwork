@@ -117,15 +117,15 @@ func instantiateContractHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		res, err := GetCodeHashByCodeId(cliCtx, string(codeID))
-		if err != nil {
-			return
-		}
+		//res, err := GetCodeHashByCodeId(cliCtx, string(codeID))
+		//if err != nil {
+		//	return
+		//}
 
 		msg := types.MsgInstantiateContract{
 			Sender:            cliCtx.GetFromAddress(),
 			Code:      		   codeID,
-			CallbackCodeHash:  string(res),
+			CallbackCodeHash:  "",
 			InitFunds: 		   req.Deposit,
 			InitMsg:  		   req.InitMsg,
 			Admin:     	       req.Admin,
@@ -160,15 +160,15 @@ func executeContractHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		res, err := GetCodeHashByContractAddr(cliCtx, contractAddress)
-		if err != nil {
-			return
-		}
+		//res, err := GetCodeHashByContractAddr(cliCtx, contractAddress)
+		//if err != nil {
+		//	return
+		//}
 
 		msg := types.MsgExecuteContract{
 			Sender:           cliCtx.GetFromAddress(),
 			Contract:         contractAddress,
-			CallbackCodeHash: string(res),
+			CallbackCodeHash: "",
 			Msg:              req.ExecMsg,
 			SentFunds:        req.Amount,
 		}
