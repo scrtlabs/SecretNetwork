@@ -10,7 +10,7 @@ import (
 )
 
 const defaultLRUCacheSize = uint64(0)
-const defaultQueryGasLimit = uint64(30000)
+const defaultQueryGasLimit = uint64(3000000)
 
 // base64 of a 64 byte key
 type ContractKey string
