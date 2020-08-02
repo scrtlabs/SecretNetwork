@@ -728,7 +728,7 @@ func TestCallbackExecuteParamError(t *testing.T) {
 	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	// codeHash := keeper.GetCodeInfo(ctx, codeID).CodeHash
+	// codeHash := keeper.GetCodeInfo(ctx, codeID).CallbackCodeHash
 	codeHash := keeper.GetContractHash(ctx, contractAddress)
 	codeHashStr := hex.EncodeToString(codeHash)
 
@@ -904,7 +904,7 @@ func TestInitCallbackContractError(t *testing.T) {
 	require.Empty(t, initErr)
 	require.Equal(t, 1, len(initEvents))
 
-	//codeHash := keeper.GetCodeInfo(ctx, codeID).CodeHash
+	//codeHash := keeper.GetCodeInfo(ctx, codeID).CallbackCodeHash
 	codeHash := keeper.GetContractHash(ctx, contractAddress)
 	codeHashStr := hex.EncodeToString(codeHash)
 
@@ -925,7 +925,7 @@ func TestExecCallbackContractError(t *testing.T) {
 	require.Empty(t, initErr)
 	require.Equal(t, 1, len(initEvents))
 
-	//codeHash := keeper.GetCodeInfo(ctx, codeID).CodeHash
+	//codeHash := keeper.GetCodeInfo(ctx, codeID).CallbackCodeHash
 	codeHash := keeper.GetContractHash(ctx, contractAddress)
 	codeHashStr := hex.EncodeToString(codeHash)
 

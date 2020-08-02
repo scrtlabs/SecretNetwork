@@ -123,12 +123,12 @@ func instantiateContractHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 		}
 
 		msg := types.MsgInstantiateContract{
-			Sender:    cliCtx.GetFromAddress(),
-			Code:      codeID,
-			CodeHash:  string(res),
-			InitFunds: req.Deposit,
-			InitMsg:   req.InitMsg,
-			Admin:     req.Admin,
+			Sender:            cliCtx.GetFromAddress(),
+			Code:      		   codeID,
+			CallbackCodeHash:  string(res),
+			InitFunds: 		   req.Deposit,
+			InitMsg:  		   req.InitMsg,
+			Admin:     	       req.Admin,
 		}
 
 		err = msg.ValidateBasic()
@@ -166,11 +166,11 @@ func executeContractHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 		}
 
 		msg := types.MsgExecuteContract{
-			Sender:    cliCtx.GetFromAddress(),
-			Contract:  contractAddress,
-			CodeHash:  string(res),
-			Msg:       req.ExecMsg,
-			SentFunds: req.Amount,
+			Sender:           cliCtx.GetFromAddress(),
+			Contract:         contractAddress,
+			CallbackCodeHash: string(res),
+			Msg:              req.ExecMsg,
+			SentFunds:        req.Amount,
 		}
 
 		err = msg.ValidateBasic()

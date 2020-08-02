@@ -110,11 +110,11 @@ pub fn encrypt_output(
                         match wasm_msg {
                             WasmMsg::Execute {
                                 contract_addr,
-                                code_hash,
+                                callback_code_hash,
                                 msg,
                                 send,
                             } => {
-                                let mut hash_appended_msg = code_hash.as_bytes().to_vec();
+                                let mut hash_appended_msg = callback_code_hash.as_bytes().to_vec();
                                 hash_appended_msg.extend_from_slice(&msg.0);
 
                                 let mut msg_to_pass = SecretMessage::from_base64(
@@ -128,7 +128,7 @@ pub fn encrypt_output(
 
                                 new_msg = CosmosMsg::Wasm(WasmMsg::Execute {
                                     contract_addr,
-                                    code_hash,
+                                    callback_code_hash,
                                     msg: encoded_msg,
                                     send,
                                 });
@@ -136,11 +136,11 @@ pub fn encrypt_output(
                             WasmMsg::Instantiate {
                                 code_id,
                                 msg,
-                                code_hash,
+                                callback_code_hash,
                                 send,
                                 label,
                             } => {
-                                let mut hash_appended_msg = code_hash.as_bytes().to_vec();
+                                let mut hash_appended_msg = callback_code_hash.as_bytes().to_vec();
                                 hash_appended_msg.extend_from_slice(&msg.0);
 
                                 let mut msg_to_pass = SecretMessage::from_base64(
@@ -154,7 +154,7 @@ pub fn encrypt_output(
 
                                 new_msg = CosmosMsg::Wasm(WasmMsg::Instantiate {
                                     code_id,
-                                    code_hash,
+                                    callback_code_hash,
                                     msg: encoded_msg,
                                     send,
                                     label,

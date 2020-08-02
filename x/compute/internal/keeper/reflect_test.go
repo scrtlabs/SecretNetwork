@@ -122,9 +122,9 @@ func TestMaskReflectContractSend(t *testing.T) {
 	msgs := []wasmTypes.CosmosMsg{{
 		Wasm: &wasmTypes.WasmMsg{
 			Execute: &wasmTypes.ExecuteMsg{
-				ContractAddr: escrowAddr.String(),
-				CodeHash:     contractCodeHash,
-				Msg:          []byte(`{"release":{}}`),
+				ContractAddr:     escrowAddr.String(),
+				CallbackCodeHash: contractCodeHash,
+				Msg:              []byte(`{"release":{}}`),
 				Send: []wasmTypes.Coin{{
 					Denom:  "denom",
 					Amount: "14000",

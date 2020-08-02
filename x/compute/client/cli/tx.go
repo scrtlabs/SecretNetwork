@@ -171,7 +171,7 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 			// build and sign the transaction, then broadcast to Tendermint
 			msg := types.MsgInstantiateContract{
 				Sender:    cliCtx.GetFromAddress(),
-				CodeHash:  "",
+				CallbackCodeHash:  "",
 				Code:      codeID,
 				Label:     label,
 				InitFunds: amount,
@@ -246,11 +246,11 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 
 			// build and sign the transaction, then broadcast to Tendermint
 			msg := types.MsgExecuteContract{
-				Sender:    cliCtx.GetFromAddress(),
-				Contract:  contractAddr,
-				CodeHash:  string(execMsg.CodeHash),
-				SentFunds: amount,
-				Msg:       encryptedMsg,
+				Sender:           cliCtx.GetFromAddress(),
+				Contract:         contractAddr,
+				CallbackCodeHash: string(execMsg.CodeHash),
+				SentFunds:        amount,
+				Msg:              encryptedMsg,
 			}
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
 		},

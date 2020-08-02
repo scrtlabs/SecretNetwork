@@ -203,11 +203,11 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *wasmTypes.WasmMsg) ([]sdk.Msg, er
 		}
 
 		sdkMsg := types.MsgExecuteContract{
-			Sender:    sender,
-			Contract:  contractAddr,
-			CodeHash:  msg.Execute.CodeHash,
-			Msg:       msg.Execute.Msg,
-			SentFunds: coins,
+			Sender:           sender,
+			Contract:         contractAddr,
+			CallbackCodeHash: msg.Execute.CallbackCodeHash,
+			Msg:              msg.Execute.Msg,
+			SentFunds:        coins,
 		}
 		return []sdk.Msg{sdkMsg}, nil
 	}
@@ -222,7 +222,7 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *wasmTypes.WasmMsg) ([]sdk.Msg, er
 			Code:   msg.Instantiate.CodeID,
 			// TODO: add this to CosmWasm
 			Label:     fmt.Sprintf("Auto-created by %s", sender),
-			CodeHash:  msg.Instantiate.CodeHash,
+			CallbackCodeHash:  msg.Instantiate.CallbackCodeHash,
 			InitMsg:   msg.Instantiate.Msg,
 			InitFunds: coins,
 		}
