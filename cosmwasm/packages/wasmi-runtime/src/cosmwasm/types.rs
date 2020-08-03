@@ -1,4 +1,4 @@
-//! must keep this file in sync with cosmwasm/packages/std/src/types.rs
+//! must keep this file in sync with cosmwasm/packages/std/src/types.rs and cosmwasm/packages/std/src/init_handle.rs
 
 #![allow(unused)]
 
@@ -131,6 +131,7 @@ pub struct ContractResult {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
+// This should be in correlation with cosmwasm-std/init_handle's CosmosMsg
 // See https://github.com/serde-rs/serde/issues/1296 why we cannot add De-Serialize trait bounds to T
 pub enum CosmosMsg<T = CustomMsg>
 where
@@ -142,6 +143,21 @@ where
     Custom(T),
     Staking(StakingMsg),
     Wasm(WasmMsg),
+}
+
+/// Added this here for reflect tests....
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+/// CustomMsg is an override of CosmosMsg::Custom to show this works and can be extended in the contract
+pub enum CustomMsg {
+    Debug(String),
+    Raw(Binary),
+}
+
+impl Into<CosmosMsg<CustomMsg>> for CustomMsg {
+    fn into(self) -> CosmosMsg<CustomMsg> {
+        CosmosMsg::Custom(self)
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -266,20 +282,5 @@ pub fn log(key: &str, value: &str) -> LogAttribute {
     LogAttribute {
         key: key.to_string(),
         value: value.to_string(),
-    }
-}
-
-/// Added this here for reflect tests....
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-/// CustomMsg is an override of CosmosMsg::Custom to show this works and can be extended in the contract
-pub enum CustomMsg {
-    Debug(String),
-    Raw(Binary),
-}
-
-impl Into<CosmosMsg<CustomMsg>> for CustomMsg {
-    fn into(self) -> CosmosMsg<CustomMsg> {
-        CosmosMsg::Custom(self)
     }
 }

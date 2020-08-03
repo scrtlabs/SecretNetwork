@@ -10,7 +10,7 @@ use crate::crypto::{AESKey, Ed25519PublicKey, Kdf, SIVEncryptable, KEY_MANAGER};
 use enclave_ffi_types::EnclaveError;
 use log::*;
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::json;
 
 pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) -> AESKey {
     let enclave_io_key = KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap();
@@ -79,13 +79,10 @@ pub fn encrypt_output(
         // Output is error
         WasmOutput::ErrObject { err } => {
             // Encrypting the actual error
-            let encrypted_err = encrypt_serializeable(&key, &err)?;
+            let encrypted_err = encrypt_serializeable(&key, err)?;
 
-            // Creating a 'generic_err' envelope
-            let mut new_value: Value = json!({"generic_err":{"msg":""}});
-            new_value["generic_err"]["msg"] = Value::String(encrypted_err);
-
-            *err = new_value;
+            // Putting it inside a 'generic_err' envelope
+            *err = json!({"generic_err":{"msg":encrypted_err}});
         }
 
         // Output is a simple string
@@ -135,16 +132,9 @@ fn encrypt_wasm_msg(
     user_public_key: Ed25519PublicKey,
 ) -> Result<(), EnclaveError> {
     match wasm_msg {
-        WasmMsg::Execute { msg, .. } => {
+        WasmMsg::Execute { msg, .. } | WasmMsg::Instantiate { msg, .. } => {
             let mut msg_to_pass =
-                SecretMessage::from_base64((*msg).to_string(), nonce, user_public_key)?;
-
-            msg_to_pass.encrypt_in_place()?;
-            *msg = b64_encode(&msg_to_pass.to_slice());
-        }
-        WasmMsg::Instantiate { msg, .. } => {
-            let mut msg_to_pass =
-                SecretMessage::from_base64((*msg).to_string(), nonce, user_public_key)?;
+                SecretMessage::from_base64((*msg).clone(), nonce, user_public_key)?;
 
             msg_to_pass.encrypt_in_place()?;
             *msg = b64_encode(&msg_to_pass.to_slice());
