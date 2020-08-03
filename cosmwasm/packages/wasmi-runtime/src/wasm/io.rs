@@ -5,7 +5,7 @@
 use super::types::{IoNonce, SecretMessage};
 
 use crate::cosmwasm::encoding::Binary;
-use crate::cosmwasm::types::{CosmosMsg, WasmMsg, WasmOutput};
+use crate::cosmwasm::types::{CanonicalAddr, CosmosMsg, WasmMsg, WasmOutput};
 use crate::crypto::{AESKey, Ed25519PublicKey, Kdf, SIVEncryptable, KEY_MANAGER};
 use enclave_ffi_types::EnclaveError;
 use log::*;
@@ -105,6 +105,7 @@ pub fn encrypt_output(
     output: Vec<u8>,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
+    contract_addr: CanonicalAddr,
 ) -> Result<Vec<u8>, EnclaveError> {
     let key = calc_encryption_key(&nonce, &user_public_key);
 
@@ -141,7 +142,7 @@ pub fn encrypt_output(
         WasmOutput::OkObject { ok } => {
             for msg in &mut ok.messages {
                 if let CosmosMsg::Wasm(wasm_msg) = msg {
-                    encrypt_wasm_msg(wasm_msg, nonce, user_public_key)?;
+                    encrypt_wasm_msg(wasm_msg, nonce, user_public_key, &contract_addr)?;
                 }
             }
 
@@ -176,9 +177,35 @@ fn encrypt_wasm_msg(
     wasm_msg: &mut WasmMsg,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
+    contract_addr: &CanonicalAddr,
 ) -> Result<(), EnclaveError> {
     match wasm_msg {
-        WasmMsg::Execute { msg, .. } | WasmMsg::Instantiate { msg, .. } => {
+        WasmMsg::Execute {
+            msg,
+            contract_addr: receiver_addr,
+            cb_sig: msg_cb_sig,
+            ..
+        } => {
+            let mut msg_to_pass =
+                SecretMessage::from_base64((*msg).clone(), nonce, user_public_key)?;
+
+            msg_to_pass.encrypt_in_place()?;
+            *msg = b64_encode(&msg_to_pass.to_slice());
+
+            let receiver_canonical =
+                CanonicalAddr::from_human((*receiver_addr).clone()).map_err(|err| {
+                    error!(
+                        "Couldn't translate human address: {:?} to canonical: {}",
+                        receiver_addr, err
+                    );
+                    EnclaveError::FailedToDeserialize
+                })?;
+
+            let cb_sig =
+                create_callback_signature(contract_addr, &receiver_canonical, &msg_to_pass);
+            *msg_cb_sig = Some(cb_sig);
+        }
+        WasmMsg::Instantiate { msg, .. } => {
             let mut msg_to_pass =
                 SecretMessage::from_base64((*msg).clone(), nonce, user_public_key)?;
 
@@ -188,4 +215,24 @@ fn encrypt_wasm_msg(
     }
 
     Ok(())
+}
+
+pub fn create_callback_signature(
+    contract_addr: &CanonicalAddr,
+    receiver_addr: &CanonicalAddr,
+    msg_to_sign: &SecretMessage,
+) -> Vec<u8> {
+    // Hash(Enclave_secret | sender(current contract) | codeId (from json) | msg_to_pass)
+    let mut callback_sig_bytes = KEY_MANAGER
+        .get_consensus_callback_secret()
+        .unwrap()
+        .clone()
+        .get()
+        .to_vec();
+
+    callback_sig_bytes.extend(contract_addr.as_slice());
+    callback_sig_bytes.extend(receiver_addr.as_slice());
+    callback_sig_bytes.extend(msg_to_sign.msg.clone());
+
+    callback_sig_bytes
 }

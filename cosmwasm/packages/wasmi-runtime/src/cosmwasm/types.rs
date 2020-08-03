@@ -12,6 +12,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use super::encoding::Binary;
+use bech32::{FromBase32, ToBase32};
 use serde_json::Value;
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
@@ -19,6 +20,8 @@ pub struct HumanAddr(pub String);
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct CanonicalAddr(pub Binary);
+
+pub const BECH32_PREFIX_ACC_ADDR: &str = "secret";
 
 impl HumanAddr {
     pub fn as_str(&self) -> &str {
@@ -29,6 +32,12 @@ impl HumanAddr {
     }
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+    pub fn from_canonical(canonical_addr: CanonicalAddr) -> Result<Self, bech32::Error> {
+        let human_addr_str =
+            bech32::encode(BECH32_PREFIX_ACC_ADDR, (canonical_addr.0).0.to_base32())?;
+
+        Ok(HumanAddr(human_addr_str))
     }
 }
 
@@ -60,6 +69,12 @@ impl CanonicalAddr {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
+    pub fn from_human(human_addr: HumanAddr) -> Result<Self, bech32::Error> {
+        let (decoded_prefix, data) = bech32::decode(human_addr.as_str())?;
+        let canonical = Vec::<u8>::from_base32(&data)?;
+
+        Ok(CanonicalAddr(Binary(canonical)))
+    }
 }
 
 impl fmt::Display for CanonicalAddr {
@@ -74,6 +89,9 @@ pub struct Env {
     pub message: MessageInfo,
     pub contract: ContractInfo,
     pub contract_key: Option<String>,
+    pub sign_bytes: Vec<Binary>,
+    pub signatures: Vec<CosmosSignature>,
+    pub callback_signature: Option<Vec<u8>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
@@ -208,6 +226,7 @@ pub enum WasmMsg {
         /// msg is the json-encoded HandleMsg struct (as raw Binary)
         msg: String,
         send: Vec<Coin>,
+        cb_sig: Option<Vec<u8>>,
     },
     /// this instantiates a new contracts from previously uploaded wasm code
     Instantiate {
@@ -217,6 +236,7 @@ pub enum WasmMsg {
         send: Vec<Coin>,
         /// optional human-readable label for the contract
         label: Option<String>,
+        cb_sig: Option<Vec<u8>>,
     },
 }
 
@@ -282,5 +302,21 @@ pub fn log(key: &str, value: &str) -> LogAttribute {
     LogAttribute {
         key: key.to_string(),
         value: value.to_string(),
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+pub struct CosmosSignature {
+    pub_key: Vec<u8>,
+    signature: Binary,
+}
+
+impl CosmosSignature {
+    pub fn get_public_key(&self) -> Vec<u8> {
+        self.pub_key.clone()
+    }
+
+    pub fn get_signature(&self) -> Binary {
+        self.signature.clone()
     }
 }
