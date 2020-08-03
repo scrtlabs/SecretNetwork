@@ -307,3 +307,18 @@ pub fn log(key: &str, value: &str) -> LogAttribute {
         value: value.to_string(),
     }
 }
+
+/// Added this here for reflect tests....
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+/// CustomMsg is an override of CosmosMsg::Custom to show this works and can be extended in the contract
+pub enum CustomMsg {
+    Debug(String),
+    Raw(Binary),
+}
+
+impl Into<CosmosMsg<CustomMsg>> for CustomMsg {
+    fn into(self) -> CosmosMsg<CustomMsg> {
+        CosmosMsg::Custom(self)
+    }
+}
