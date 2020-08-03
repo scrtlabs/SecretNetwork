@@ -27,9 +27,19 @@ pub use traits::{Encryptable, Hmac, Kdf, SIVEncryptable, SealedKey, HMAC_SIGNATU
 #[cfg(feature = "test")]
 pub mod tests {
     use super::*;
+    use crate::count_failures;
+
     pub fn run_tests() {
-        // kdf::tests::test_derive_key();
-        // storage::tests::test_open();
-        // storage::tests::test_seal();
+        let mut failures = 0;
+
+        count_failures!(failures, {
+            // kdf::tests::test_derive_key();
+            // storage::tests::test_open();
+            // storage::tests::test_seal();
+        });
+
+        if failures != 0 {
+            panic!("{}: {} tests failed", file!(), failures);
+        }
     }
 }

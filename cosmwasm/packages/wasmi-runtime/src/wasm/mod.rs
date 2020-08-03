@@ -13,8 +13,18 @@ pub use contract_operations::{handle, init, query};
 #[cfg(feature = "test")]
 pub mod tests {
     use super::*;
+    use crate::count_failures;
+
     pub fn run_tests() {
-        types::tests::test_new_from_slice();
-        // types::tests::test_msg_decrypt();
+        let mut failures = 0;
+
+        count_failures!(failures, {
+            types::tests::test_new_from_slice();
+            // types::tests::test_msg_decrypt();
+        });
+
+        if failures != 0 {
+            panic!("{}: {} tests failed", file!(), failures);
+        }
     }
 }

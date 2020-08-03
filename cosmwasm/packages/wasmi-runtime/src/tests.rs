@@ -9,6 +9,7 @@ pub extern "C" fn ecall_run_tests() -> u32 {
 mod test {
     /// Catch failures like the standard test runner, and print similar information per test.
     /// Tests can only fail by panicking, not by returning a `Result` type.
+    #[macro_export]
     macro_rules! count_failures {
         ( $counter: ident, { $($test: expr;)* } ) => {
             $(
@@ -29,6 +30,7 @@ mod test {
         println!("Running tests!");
 
         let mut failures = 0;
+
         count_failures!(failures, {
             // This line is commented out because it was creating a file without removing it, which was annoying.
             // crate::registration::tests::run_tests();
