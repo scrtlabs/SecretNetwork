@@ -3,4 +3,7 @@ Priority: optional
 Architecture: amd64
 Homepage: https://github.com/enigmampc/SecretNetwork
 Maintainer: https://github.com/enigmampc
+Provides: secretnetwork
+Conflicts: secretnetwork
+Replaces: secretnetwork
 Description: The Secret Network

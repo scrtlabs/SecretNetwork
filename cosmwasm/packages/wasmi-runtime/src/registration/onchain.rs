@@ -8,8 +8,10 @@ use enclave_ffi_types::NodeAuthResult;
 
 use crate::consts::ENCRYPTED_SEED_SIZE;
 use crate::crypto::PUBLIC_KEY_SIZE;
-use crate::storage::write_to_untrusted;
-use crate::utils::{validate_const_ptr, validate_mut_ptr};
+use crate::{
+    oom_handler::{get_then_clear_oom_happened, register_oom_handler},
+    utils::{validate_const_ptr, validate_mut_ptr},
+};
 
 use super::cert::verify_ra_cert;
 use super::seed_exchange::encrypt_seed;
@@ -34,6 +36,8 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     cert_len: u32,
     seed: &mut [u8; ENCRYPTED_SEED_SIZE],
 ) -> NodeAuthResult {
+    register_oom_handler();
+
     if let Err(_e) = validate_mut_ptr(seed.as_mut_ptr(), seed.len()) {
         return NodeAuthResult::InvalidInput;
     }
@@ -44,13 +48,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
     let result = panic::catch_unwind(|| -> Result<Vec<u8>, NodeAuthResult> {
         // verify certificate, and return the public key in the extra data of the report
-        let pk = verify_ra_cert(cert_slice).map_err(|verification_status| {
-            error!("Error in validating certificate: {:?}", verification_status);
-            match write_to_untrusted(cert_slice, "failed_cert.der") {
-                Err(_) => NodeAuthResult::CantWriteToStorage,
-                Ok(_) => NodeAuthResult::InvalidCert,
-            }
-        })?;
+        let pk = verify_ra_cert(cert_slice)?;
 
         // just make sure the length isn't wrong for some reason (certificate may be malformed)
         if pk.len() != PUBLIC_KEY_SIZE {
@@ -83,6 +81,8 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
             Err(e) => e,
         }
     } else {
+        // There's no real need here to test if oom happened
+        get_then_clear_oom_happened();
         error!("Enclave call ecall_authenticate_new_node panic!");
         NodeAuthResult::Panic
     }

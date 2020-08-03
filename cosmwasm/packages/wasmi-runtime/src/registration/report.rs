@@ -18,6 +18,7 @@ use std::untrusted::time::SystemTimeEx;
 use uuid::Uuid;
 
 use super::cert::{get_ias_auth_config, get_netscape_comment};
+use enclave_ffi_types::NodeAuthResult;
 
 pub enum Error {
     ReportParseError,
@@ -331,6 +332,21 @@ pub enum SgxQuoteStatus {
     OutOfDateConfigurationNeeded,
     /// Other unknown bad status.
     UnknownBadStatus,
+}
+
+impl From<&SgxQuoteStatus> for NodeAuthResult {
+    fn from(status: &SgxQuoteStatus) -> Self {
+        match status {
+            SgxQuoteStatus::ConfigurationAndSwHardeningNeeded => NodeAuthResult::SwHardeningAndConfigurationNeeded,
+            SgxQuoteStatus::ConfigurationNeeded => NodeAuthResult::ConfigurationNeeded,
+            SgxQuoteStatus::GroupOutOfDate => NodeAuthResult::GroupOutOfDate,
+            SgxQuoteStatus::KeyRevoked => NodeAuthResult::KeyRevoked,
+            SgxQuoteStatus::SigrlVersionMismatch => NodeAuthResult::SigrlVersionMismatch,
+            SgxQuoteStatus::SignatureRevoked => NodeAuthResult::SignatureRevoked,
+            SgxQuoteStatus::GroupRevoked => NodeAuthResult::GroupRevoked,
+            _ =>  NodeAuthResult::BadQuoteStatus,
+        }
+    }
 }
 
 impl From<&str> for SgxQuoteStatus {

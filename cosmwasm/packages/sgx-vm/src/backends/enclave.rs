@@ -10,3 +10,12 @@ where
 {
     instance.gas_left()
 }
+
+/// Get how many gas units were used in the instance.
+pub fn get_gas_used<S, Q>(instance: &Module<S, Q>) -> u64
+where
+    S: Storage,
+    Q: Querier,
+{
+    instance.gas_used()
+}

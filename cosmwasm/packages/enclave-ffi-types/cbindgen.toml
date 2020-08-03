@@ -38,6 +38,7 @@ include = [
     "HandleResult",
     "QueryResult",
     "OcallReturn",
+    "HealthCheckResult",
 ]
 exclude = []
 prefix = ""

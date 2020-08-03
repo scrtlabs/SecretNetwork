@@ -9,7 +9,7 @@ use sgx_types::{
 use sgx_urts::SgxEnclave;
 
 use lazy_static::lazy_static;
-use log::{debug, error};
+use log::*;
 
 static ENCLAVE_FILE: &str = "librust_cosmwasm_enclave.signed.so";
 

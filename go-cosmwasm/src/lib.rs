@@ -24,8 +24,8 @@ use cosmwasm_sgx_vm::{
     CosmCache, Extern,
 };
 use cosmwasm_sgx_vm::{
-    create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_init_node,
-    untrusted_key_gen,
+    create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_health_check,
+    untrusted_init_node, untrusted_key_gen,
 };
 
 use ctor::ctor;
@@ -45,6 +45,20 @@ fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache<DB, GoApi, GoQue
     } else {
         let c = unsafe { &mut *(ptr as *mut CosmCache<DB, GoApi, GoQuerier>) };
         Some(c)
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn get_health_check(err: Option<&mut Buffer>) -> Buffer {
+    match untrusted_health_check() {
+        Err(e) => {
+            set_error(Error::enclave_err(e.to_string()), err);
+            Buffer::default()
+        }
+        Ok(res) => {
+            clear_error();
+            Buffer::from_vec(format!("{}", res).into_bytes())
+        }
     }
 }
 
@@ -297,7 +311,7 @@ fn do_init(
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = call_init_raw(&mut instance, params, msg);
-    *gas_used = gas_limit - instance.get_gas_left();
+    *gas_used = instance.get_gas_used();
     instance.recycle();
     Ok(res?)
 }
@@ -350,7 +364,7 @@ fn do_handle(
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = call_handle_raw(&mut instance, params, msg);
-    *gas_used = gas_limit - instance.get_gas_left();
+    *gas_used = instance.get_gas_used();
     instance.recycle();
     Ok(res?)
 }
@@ -411,7 +425,7 @@ fn do_migrate(
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = call_migrate_raw(&mut instance, params, msg);
-    *gas_used = gas_limit - instance.get_gas_left();
+    *gas_used = instance.get_gas_used();
     instance.recycle();
     Ok(res?)
 }
@@ -459,7 +473,7 @@ fn do_query(
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = call_query_raw(&mut instance, msg);
-    *gas_used = gas_limit - instance.get_gas_left();
+    *gas_used = instance.get_gas_used();
     instance.recycle();
     Ok(res?)
 }

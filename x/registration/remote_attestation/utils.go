@@ -29,7 +29,7 @@ func printCert(rawByte []byte) {
 		} else if b >= 0x20 && b < 0x7f {
 			print(string(rune(b)))
 		} else {
-			fmt.Printf("\\x%02x", int(b))
+			fmt.Printf("\\x%02x\n", int(b))
 		}
 	}
 	println("\")]")
