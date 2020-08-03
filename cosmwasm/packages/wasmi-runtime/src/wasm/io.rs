@@ -4,6 +4,7 @@
 ///
 use super::types::{IoNonce, SecretMessage};
 
+use crate::cosmwasm::encoding::Binary;
 use crate::cosmwasm::types::{CosmosMsg, WasmMsg, WasmOutput};
 use crate::crypto::{AESKey, Ed25519PublicKey, Kdf, SIVEncryptable, KEY_MANAGER};
 use enclave_ffi_types::EnclaveError;
@@ -109,7 +110,7 @@ pub fn encrypt_output(
 
             // If there's data at all
             if let Some(data) = &mut ok.data {
-                *data = encrypt_serializeable(&key, data)?;
+                *data = Binary::from_base64(&encrypt_serializeable(&key, data)?)?;
             }
         }
     };
