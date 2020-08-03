@@ -117,22 +117,16 @@ pub enum WasmOutput {
     },
     OkObject {
         #[serde(rename = "Ok")]
-        ok: OkObject,
+        ok: ContractResult,
     },
 }
 
+// This should be in correlation with cosmwasm-std/init_handle's InitResponse and HandleResponse
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct OkObject {
+pub struct ContractResult {
     pub messages: Vec<CosmosMsg>,
-    pub log: Vec<OutputLog>,
-    pub data: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub struct OutputLog {
-    pub key: String,
-    pub value: String,
+    pub log: Vec<LogAttribute>,
+    pub data: Option<Binary>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -229,43 +223,10 @@ impl<T: Clone + fmt::Debug + PartialEq> From<WasmMsg> for CosmosMsg<T> {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum ContractResult {
-    Ok(Response),
-    Err(String),
-}
-
-impl ContractResult {
-    // unwrap will panic on err, or give us the real data useful for tests
-    pub fn unwrap(self) -> Response {
-        match self {
-            ContractResult::Err(msg) => panic!("Unexpected error: {}", msg),
-            ContractResult::Ok(res) => res,
-        }
-    }
-
-    pub fn is_err(&self) -> bool {
-        match self {
-            ContractResult::Err(_) => true,
-            _ => false,
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct LogAttribute {
     pub key: String,
     pub value: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
-pub struct Response {
-    // let's make the positive case a struct, it contrains Msg: {...}, but also Data, Log, maybe later Events, etc.
-    pub messages: Vec<CosmosMsg>,
-    pub log: Vec<LogAttribute>, // abci defines this as string
-    pub data: Option<Binary>,   // abci defines this as bytes
-    pub contract_key: Option<Binary>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

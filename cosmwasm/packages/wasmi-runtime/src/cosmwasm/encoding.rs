@@ -4,6 +4,7 @@ use std::fmt;
 
 use serde::{de, ser, Deserialize, Deserializer, Serialize};
 
+use enclave_ffi_types::EnclaveError;
 use log::*;
 use sgx_types::*;
 
@@ -19,16 +20,14 @@ pub struct Binary(pub Vec<u8>);
 impl Binary {
     /// take an (untrusted) string and decode it into bytes.
     /// fails if it is not valid base64
-    pub fn from_base64(encoded: &str) -> SgxResult<Self> {
-        let binary = match base64::decode(&encoded) {
-            Ok(res) => res,
-            Err(e) => {
-                error!("Failed to decode base64 string: {:?}", e.to_string());
-                return Err(sgx_status_t::SGX_ERROR_INVALID_PARAMETER);
-            }
-        };
+    pub fn from_base64(encoded: &str) -> Result<Self, EnclaveError> {
+        let binary = base64::decode(&encoded).map_err(|err| {
+            error!("Failed to decode base64 string: {:?}", err.to_string());
+            EnclaveError::FailedToDeserialize
+        })?;
         Ok(Binary(binary))
     }
+
     /// encode to base64 string (guaranteed to be success as we control the data inside).
     /// this returns normalized form (with trailing = if needed)
     pub fn to_base64(&self) -> String {
