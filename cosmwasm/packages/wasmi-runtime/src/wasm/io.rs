@@ -76,21 +76,15 @@ pub fn encrypt_output(
     })?;
 
     match &mut output {
-        // Output is error
         WasmOutput::ErrObject { err } => {
-            // Encrypting the actual error
             let encrypted_err = encrypt_serializeable(&key, err)?;
 
-            // Putting it inside a 'generic_err' envelope
+            // Putting the error inside a 'generic_err' envelope, so we can encrypt the error itself
             *err = json!({"generic_err":{"msg":encrypted_err}});
         }
-
-        // Output is a simple string
         WasmOutput::OkString { ok } => {
             *ok = encrypt_serializeable(&key, ok)?;
         }
-
-        // Output is an object
         // Encrypt all Wasm messages (keeps Bank, Staking, etc.. as is)
         WasmOutput::OkObject { ok } => {
             for msg in &mut ok.messages {
@@ -99,13 +93,11 @@ pub fn encrypt_output(
                 }
             }
 
-            // Encrypt all logs
             for log in &mut ok.log {
                 log.key = encrypt_serializeable(&key, &log.key)?;
                 log.value = encrypt_serializeable(&key, &log.value)?;
             }
 
-            // If there's data at all
             if let Some(data) = &mut ok.data {
                 *data = Binary::from_base64(&encrypt_serializeable(&key, data)?)?;
             }
@@ -114,7 +106,6 @@ pub fn encrypt_output(
 
     debug!("WasmOutput: {:?}", output);
 
-    // Serialize back to json and return
     let encrypted_output = serde_json::to_vec(&output).map_err(|err| {
         error!(
             "got an error while trying to serialize output json into bytes {:?}: {}",
