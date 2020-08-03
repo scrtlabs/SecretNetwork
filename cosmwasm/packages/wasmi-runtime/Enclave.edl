@@ -77,7 +77,7 @@ enclave {
             uintptr_t msg_len
         );
 
-        public void ecall_run_tests();
+        public uint32_t ecall_run_tests();
     };
 
     untrusted {

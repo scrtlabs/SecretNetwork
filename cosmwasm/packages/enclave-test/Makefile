@@ -9,10 +9,12 @@ Enclave_Path := ../wasmi-runtime
 
 .PHONY: check
 check:
+	FEATURES="test" $(MAKE) -C $(Enclave_Path) check
 	cargo chcek
 
 .PHONY: clippy
 clippy:
+	FEATURES="test" $(MAKE) -C $(Enclave_Path) clippy
 	cargo clippy
 
 .PHONY: run
@@ -25,22 +27,20 @@ build-deps: lib/libEnclave_u.a build-enclave
 # This file will be picked up by the crates build script and linked into the library.
 # We make sure that the enclave is built before we compile the edl,
 # because the EDL depends on a header file that is generated in that process.
-lib/libEnclave_u.a: $(Enclave_Path)/Enclave.edl target/headers/enclave-ffi-types.h librust_cosmwasm_enclave.signed.so
+lib/libEnclave_u.a: $(Enclave_Path)/Enclave.edl target/headers/enclave-ffi-types.h build-enclave
 	sgx_edger8r --untrusted $< --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir ./
 	$(CC) $(App_C_Flags) -c Enclave_u.c -o Enclave_u.o
 	mkdir -p lib
 	$(AR) rcsD $@ Enclave_u.o
 
-target/headers/enclave-ffi-types.h: librust_cosmwasm_enclave.signed.so
+target/headers/enclave-ffi-types.h: build-enclave
 	mkdir -p $(dir $@)
 	cp $(Enclave_Path)/$(@) $@
 
 .PHONY: build-enclave
-build-enclave: librust_cosmwasm_enclave.signed.so
-
-librust_cosmwasm_enclave.signed.so:
+build-enclave:
 	FEATURES="test" $(MAKE) -C $(Enclave_Path) enclave
-	cp $(Enclave_Path)/$@ ./
+	cp $(Enclave_Path)/librust_cosmwasm_enclave.signed.so ./
 
 .PHONY: clean-all
 clean-all: clean clean-enclave

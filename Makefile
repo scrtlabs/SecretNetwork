@@ -260,7 +260,7 @@ go-tests: build-test-contract
 
 .PHONY: enclave-tests
 enclave-tests:
-	$(MAKE) -C go-cosmwasm enclave-tests
+	$(MAKE) -C cosmwasm/packages/enclave-test run
 
 
 build-cosmwasm-test-contracts:
