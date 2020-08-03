@@ -4,6 +4,8 @@
 ///
 use super::types::{IoNonce, SecretMessage};
 
+use crate::cosmwasm::types::WasmOutput;
+use crate::cosmwasm::types::WasmOutput::ErrString;
 use crate::crypto::{AESKey, Ed25519PublicKey, Kdf, SIVEncryptable, KEY_MANAGER};
 use enclave_ffi_types::EnclaveError;
 use log::*;
@@ -65,9 +67,7 @@ pub fn encrypt_output(
         String::from_utf8_lossy(&output)
     );
 
-    // Because output is conditionally in totally different structures without useful methods
-    // I'm not sure there's a better way to parse this (I mean, there probably is, but whatever)
-    let mut v: Value = serde_json::from_slice(&output).map_err(|err| {
+    let output: WasmOutput = serde_json::from_slice(&output).map_err(|err| {
         error!(
             "got an error while trying to deserialize output bytes into json {:?}: {}",
             output, err
@@ -75,89 +75,116 @@ pub fn encrypt_output(
         EnclaveError::FailedToDeserialize
     })?;
 
-    if v["Err"].is_object() {
-        if let Value::Object(err) = &mut v["Err"] {
-            let mut new_value: Value = json!({"generic_err":{"msg":""}});
-            new_value["generic_err"]["msg"] = encrypt_serializeable(&key, &err)?;
-            v["Err"] = new_value;
+    let mut new_output: Value;
+
+    match output.clone() {
+        WasmOutput::ErrString { err } => {}
+        WasmOutput::OkString { ok } => {
+            let encrypted = encrypt_serializeable(&key, &ok)?;
+
+            new_output = serde_json::to_value(output).unwrap();
+            new_output["Ok"] = encrypted;
         }
-    } else if v["Ok"].is_string() {
-        // query
-        if let Value::String(ok) = &v["Ok"] {
-            v["Ok"] = encrypt_serializeable(&key, &ok)?;
-        }
-    } else if v["Ok"].is_object() {
-        // init or handle or migrate
-        if let Value::Object(ok) = &mut v["Ok"] {
-            if ok["messages"].is_array() {
-                if let Value::Array(msgs) = &mut ok["messages"] {
-                    for msg in msgs {
-                        if msg["wasm"]["execute"]["msg"].is_string() {
-                            if let Value::String(msg_b64) = &mut msg["wasm"]["execute"]["msg"] {
-                                let mut msg_to_pass = SecretMessage::from_base64(
-                                    (*msg_b64).to_string(),
-                                    nonce,
-                                    user_public_key,
-                                )?;
+        WasmOutput::OkNested { ok } => {}
+    };
 
-                                msg_to_pass.encrypt_in_place()?;
+    debug!("WasmOutput: {:?}", new_output);
 
-                                msg["wasm"]["execute"]["msg"] = encode(&msg_to_pass.to_slice());
-                            }
-                        } else if msg["wasm"]["instantiate"]["msg"].is_string() {
-                            if let Value::String(msg_b64) = &mut msg["wasm"]["instantiate"]["msg"] {
-                                let mut msg_to_pass = SecretMessage::from_base64(
-                                    (*msg_b64).to_string(),
-                                    nonce,
-                                    user_public_key,
-                                )?;
+    // Because output is conditionally in totally different structures without useful methods
+    // I'm not sure there's a better way to parse this (I mean, there probably is, but whatever)
+    // let mut v: Value = serde_json::from_slice(&output).map_err(|err| {
+    //     error!(
+    //         "got an error while trying to deserialize output bytes into json {:?}: {}",
+    //         output, err
+    //     );
+    //     EnclaveError::FailedToDeserialize
+    // })?;
 
-                                msg_to_pass.encrypt_in_place()?;
+    // if v["Err"].is_object() {
+    //     if let Value::Object(err) = &mut v["Err"] {
+    //         let mut new_value: Value = json!({"generic_err":{"msg":""}});
+    //         new_value["generic_err"]["msg"] = encrypt_serializeable(&key, &err)?;
+    //         v["Err"] = new_value;
+    //     }
+    // } else if v["Ok"].is_string() {
+    //     // query
+    //     if let Value::String(ok) = &v["Ok"] {
+    //         v["Ok"] = encrypt_serializeable(&key, &ok)?;
+    //     }
+    // } else if v["Ok"].is_object() {
+    //     // init or handle or migrate
+    //     if let Value::Object(ok) = &mut v["Ok"] {
+    //         if ok["messages"].is_array() {
+    //             if let Value::Array(msgs) = &mut ok["messages"] {
+    //                 for msg in msgs {
+    //                     if msg["wasm"]["execute"]["msg"].is_string() {
+    //                         if let Value::String(msg_b64) = &mut msg["wasm"]["execute"]["msg"] {
+    //                             let mut msg_to_pass = SecretMessage::from_base64(
+    //                                 (*msg_b64).to_string(),
+    //                                 nonce,
+    //                                 user_public_key,
+    //                             )?;
+    //
+    //                             msg_to_pass.encrypt_in_place()?;
+    //
+    //                             msg["wasm"]["execute"]["msg"] = encode(&msg_to_pass.to_slice());
+    //                         }
+    //                     } else if msg["wasm"]["instantiate"]["msg"].is_string() {
+    //                         if let Value::String(msg_b64) = &mut msg["wasm"]["instantiate"]["msg"] {
+    //                             let mut msg_to_pass = SecretMessage::from_base64(
+    //                                 (*msg_b64).to_string(),
+    //                                 nonce,
+    //                                 user_public_key,
+    //                             )?;
+    //
+    //                             msg_to_pass.encrypt_in_place()?;
+    //
+    //                             msg["wasm"]["instantiate"]["msg"] = encode(&msg_to_pass.to_slice());
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //
+    //         if ok["log"].is_array() {
+    //             if let Value::Array(events) = &mut ok["log"] {
+    //                 for e in events {
+    //                     if e["key"].is_string() {
+    //                         if let Value::String(k) = &mut e["key"] {
+    //                             e["key"] = encrypt_serializeable(&key, k)?;
+    //                         }
+    //                     }
+    //                     if e["value"].is_string() {
+    //                         if let Value::String(v) = &mut e["value"] {
+    //                             e["value"] = encrypt_serializeable(&key, v)?;
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //
+    //         if v["Ok"]["data"].is_string() {
+    //             if let Value::String(data) = &mut v["Ok"]["data"] {
+    //                 v["Ok"]["data"] = encrypt_serializeable(&key, data)?;
+    //             }
+    //         }
+    //     }
+    // }
+    //
+    // let output = serde_json::ser::to_vec(&v).map_err(|err| {
+    //     error!(
+    //         "got an error while trying to serialize output json into bytes {:?}: {}",
+    //         v, err
+    //     );
+    //     EnclaveError::FailedToSerialize
+    // })?;
+    //
+    // debug!(
+    //     "Output after encryption: {:?}",
+    //     String::from_utf8_lossy(&output)
+    // );
+    //
+    // Ok(output)
 
-                                msg["wasm"]["instantiate"]["msg"] = encode(&msg_to_pass.to_slice());
-                            }
-                        }
-                    }
-                }
-            }
-
-            if ok["log"].is_array() {
-                if let Value::Array(events) = &mut ok["log"] {
-                    for e in events {
-                        if e["key"].is_string() {
-                            if let Value::String(k) = &mut e["key"] {
-                                e["key"] = encrypt_serializeable(&key, k)?;
-                            }
-                        }
-                        if e["value"].is_string() {
-                            if let Value::String(v) = &mut e["value"] {
-                                e["value"] = encrypt_serializeable(&key, v)?;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if v["Ok"]["data"].is_string() {
-                if let Value::String(data) = &mut v["Ok"]["data"] {
-                    v["Ok"]["data"] = encrypt_serializeable(&key, data)?;
-                }
-            }
-        }
-    }
-
-    let output = serde_json::ser::to_vec(&v).map_err(|err| {
-        error!(
-            "got an error while trying to serialize output json into bytes {:?}: {}",
-            v, err
-        );
-        EnclaveError::FailedToSerialize
-    })?;
-
-    debug!(
-        "Output after encryption: {:?}",
-        String::from_utf8_lossy(&output)
-    );
-
-    Ok(output)
+    unimplemented!()
 }
