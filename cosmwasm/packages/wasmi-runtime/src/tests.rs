@@ -36,8 +36,8 @@ mod test {
             crate::wasm::tests::run_tests();
 
             // example failing tests:
-            panic!("AAAAA");
-            panic!("BBBBB");
+            // panic!("AAAAA");
+            // panic!("BBBBB");
         });
 
         failures
