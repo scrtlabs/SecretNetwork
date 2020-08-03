@@ -87,3 +87,8 @@ jobs:
           mkdir -p ./x/compute/internal/keeper/.sgx_secrets
           go test -v ./x/compute/client/...
           go test -p 1 -v ./x/compute/internal/...
+      - name: Test enclave
+        run: |
+          source "$HOME/.sgxsdk/sgxsdk/environment"
+          export SGX_MODE=SW
+          make enclave-tests
