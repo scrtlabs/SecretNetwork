@@ -12,6 +12,52 @@ use log::*;
 use serde::Serialize;
 use serde_json::json;
 
+// {
+// let receiver_human =
+// msg_exec.get_mut("contract_addr").unwrap().as_str().unwrap();
+//
+// debug!("HERE 2?");
+//
+// // let test = msg_exec.as_object_mut().unwrap();
+// // // *test.get_mut("cb_signature").unwrap() = json!("toml");
+// // test.insert("cb_signature".to_string(), json!("toml"));
+// //
+// // debug!("LETS SEE {:?}", msg);
+//
+// let receiver_human = HumanAddr(receiver_human.to_string());
+//
+// let receiver_canonical_addr = CanonicalAddr::from_human(
+// receiver_human.clone(),
+// )
+// .map_err(|err| {
+// error!(
+// "Couldn't translate human address: {:?} to canonical: {}",
+// receiver_human, err
+// );
+// EnclaveError::FailedToDeserialize
+// })?;
+//
+// // Hash(Enclave_secret | sender(current contract) | receiver (from json) | msg_to_pass)
+// let callback_sig = create_callback_signature(
+// &contract_addr,
+// &receiver_canonical_addr,
+// &msg_to_pass,
+// );
+//
+// let new_msg_with_cb = msg_exec.as_object_mut().unwrap();
+// new_msg_with_cb.insert(
+// "cb_signature".to_string(),
+// encode(&Sha256::digest(callback_sig.as_slice())),
+// );
+//
+// debug!(
+// "Callback sig is: {:?}",
+// encode(&Sha256::digest(callback_sig.as_slice()))
+// );
+// // msg["wasm"]["execute"]["cb_signature"] =
+// //     encode(&Sha256::digest(callback_sig.as_slice()));
+// }
+
 pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) -> AESKey {
     let enclave_io_key = KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap();
 
