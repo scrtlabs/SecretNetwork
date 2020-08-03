@@ -10,6 +10,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use super::encoding::Binary;
+use serde_json::Value;
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct HumanAddr(pub String);
@@ -104,32 +105,32 @@ pub struct Coin {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum WasmOutput {
+    ErrObject {
+        #[serde(rename = "Err")]
+        err: Value,
+    },
     OkString {
         #[serde(rename = "Ok")]
         ok: String,
     },
-    ErrString {
-        #[serde(rename = "Err")]
-        err: String,
-    },
-    OkNested {
+    OkObject {
         #[serde(rename = "Ok")]
-        ok: OkNested,
+        ok: OkObject,
     },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct OkNested {
-    messages: Vec<CosmosMsg>,
-    log: Vec<OutputLog>,
-    data: Option<String>,
+pub struct OkObject {
+    pub messages: Vec<CosmosMsg>,
+    pub log: Vec<OutputLog>,
+    pub data: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
-struct OutputLog {
-    key: String,
-    value: String,
+pub struct OutputLog {
+    pub key: String,
+    pub value: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -193,14 +194,14 @@ pub enum WasmMsg {
     Execute {
         contract_addr: HumanAddr,
         /// msg is the json-encoded HandleMsg struct (as raw Binary)
-        msg: Binary,
+        msg: String,
         send: Vec<Coin>,
     },
     /// this instantiates a new contracts from previously uploaded wasm code
     Instantiate {
         code_id: u64,
         /// msg is the json-encoded InitMsg struct (as raw Binary)
-        msg: Binary,
+        msg: String,
         send: Vec<Coin>,
         /// optional human-readable label for the contract
         label: Option<String>,
