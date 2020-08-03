@@ -11,6 +11,7 @@ pub struct Keychain {
     consensus_state_ikm: Option<AESKey>,
     consensus_seed_exchange_keypair: Option<KeyPair>,
     consensus_io_exchange_keypair: Option<KeyPair>,
+    consensus_callback_secret: Option<AESKey>,
     registration_key: Option<KeyPair>,
 }
 
@@ -36,6 +37,7 @@ impl Keychain {
             consensus_state_ikm: None,
             consensus_seed_exchange_keypair: None,
             consensus_io_exchange_keypair: None,
+            consensus_callback_secret: None,
         };
 
         let _ = x.generate_consensus_master_keys();
@@ -109,6 +111,16 @@ impl Keychain {
         }
     }
 
+    pub fn get_consensus_callback_secret(&self) -> Result<AESKey, CryptoError> {
+        if self.consensus_callback_secret.is_some() {
+            // KeyPair does not implement copy (due to internal type not implementing it
+            Ok(self.consensus_callback_secret.clone().unwrap())
+        } else {
+            error!("Error accessing consensus_callback_secret (does not exist, or was not initialized)");
+            Err(CryptoError::ParsingError)
+        }
+    }
+
     pub fn get_registration_key(&self) -> Result<KeyPair, CryptoError> {
         if self.registration_key.is_some() {
             // KeyPair does not implement copy (due to internal type not implementing it
@@ -138,6 +150,10 @@ impl Keychain {
 
     pub fn set_consensus_state_ikm(&mut self, consensus_state_ikm: AESKey) {
         self.consensus_state_ikm = Some(consensus_state_ikm);
+    }
+
+    pub fn set_consensus_callback_secret(&mut self, consensus_callback_secret: AESKey) {
+        self.consensus_callback_secret = Some(consensus_callback_secret);
     }
 
     pub fn set_consensus_seed(&mut self, consensus_seed: Seed) -> Result<(), EnclaveError> {
@@ -190,6 +206,14 @@ impl Keychain {
 
         trace!("consensus_state_ikm: {:?}", consensus_state_ikm.get());
         self.set_consensus_state_ikm(consensus_state_ikm);
+
+        let consensus_callback_secret = self
+            .consensus_seed
+            .unwrap()
+            .derive_key_from_this(&CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER.to_be_bytes());
+
+        trace!("consensus_state_ikm: {:?}", consensus_state_ikm.get());
+        self.set_consensus_callback_secret(consensus_callback_secret);
 
         Ok(())
     }

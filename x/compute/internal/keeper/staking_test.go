@@ -124,7 +124,7 @@ func TestInitializeStaking(t *testing.T) {
 	initBz, err = wasmCtx.Encrypt(initBz)
 	require.NoError(t, err)
 
-	stakingAddr, err := keeper.Instantiate(ctx, stakingID, creator, nil, initBz, "staking derivates - DRV", nil)
+	stakingAddr, err := keeper.Instantiate(ctx, stakingID, creator, nil, initBz, "staking derivates - DRV", nil, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, stakingAddr)
 
@@ -146,7 +146,7 @@ func TestInitializeStaking(t *testing.T) {
 	initBz, err = wasmCtx.Encrypt(initBz)
 	require.NoError(t, err)
 
-	_, err = keeper.Instantiate(ctx, stakingID, creator, nil, badBz, "missing validator", nil)
+	_, err = keeper.Instantiate(ctx, stakingID, creator, nil, badBz, "missing validator", nil, nil)
 	require.Error(t, err)
 
 	// no changes to bonding shares
@@ -212,7 +212,7 @@ func initializeStaking(t *testing.T) initInfo {
 	initBz, err = wasmCtx.Encrypt(initBz)
 	require.NoError(t, err)
 
-	stakingAddr, err := keeper.Instantiate(ctx, stakingID, creator, nil, initBz, "staking derivates - DRV", nil)
+	stakingAddr, err := keeper.Instantiate(ctx, stakingID, creator, nil, initBz, "staking derivates - DRV", nil, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, stakingAddr)
 
@@ -259,7 +259,7 @@ func TestBonding(t *testing.T) {
 	require.NoError(t, err)
 	bondBz, err = wasmCtx.Encrypt(bondBz)
 	require.NoError(t, err)
-	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds)
+	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil)
 	require.NoError(t, err)
 
 	// check some account values - the money is on neither account (cuz it is bonded)
@@ -307,7 +307,7 @@ func TestUnbonding(t *testing.T) {
 	require.NoError(t, err)
 	bondBz, err = wasmCtx.Encrypt(bondBz)
 	require.NoError(t, err)
-	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds)
+	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil)
 	require.NoError(t, err)
 
 	// update height a bit
@@ -323,7 +323,7 @@ func TestUnbonding(t *testing.T) {
 	require.NoError(t, err)
 	unbondBz, err = wasmCtx.Encrypt(unbondBz)
 	require.NoError(t, err)
-	_, err = keeper.Execute(ctx, contractAddr, bob, unbondBz, nil)
+	_, err = keeper.Execute(ctx, contractAddr, bob, unbondBz, nil, nil)
 	require.NoError(t, err)
 
 	// check some account values - the money is on neither account (cuz it is bonded)
@@ -383,7 +383,7 @@ func TestReinvest(t *testing.T) {
 	require.NoError(t, err)
 	bondBz, err = wasmCtx.Encrypt(bondBz)
 	require.NoError(t, err)
-	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds)
+	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil)
 	require.NoError(t, err)
 
 	// update height a bit to solidify the delegation
@@ -399,7 +399,7 @@ func TestReinvest(t *testing.T) {
 	require.NoError(t, err)
 	reinvestBz, err = wasmCtx.Encrypt(reinvestBz)
 	require.NoError(t, err)
-	_, err = keeper.Execute(ctx, contractAddr, bob, reinvestBz, nil)
+	_, err = keeper.Execute(ctx, contractAddr, bob, reinvestBz, nil, nil)
 	require.NoError(t, err)
 
 	// check some account values - the money is on neither account (cuz it is bonded)

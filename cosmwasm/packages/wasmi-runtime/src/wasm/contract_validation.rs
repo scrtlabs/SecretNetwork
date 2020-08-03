@@ -2,8 +2,11 @@ use log::*;
 
 use enclave_ffi_types::EnclaveError;
 
-use crate::cosmwasm::types::Env;
+use crate::cosmwasm::encoding::Binary;
+use crate::cosmwasm::types::{CanonicalAddr, CosmosSignature, Env};
 use crate::crypto::{secp256k1, sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
+use crate::wasm::io;
+use crate::wasm::types::SecretMessage;
 
 pub type ContractKey = [u8; CONTRACT_KEY_LENGTH];
 
@@ -110,35 +113,82 @@ pub fn validate_contract_key(
     calculated_authentication_id == expected_authentication_id
 }
 
-pub fn verify_params(env: &Env) -> Result<(), EnclaveError> {
+pub fn verify_params(
+    signatures: Vec<CosmosSignature>,
+    sign_bytes: Vec<Binary>,
+    msg_sender: &CanonicalAddr,
+    callback_signature: Option<Vec<u8>>,
+    contract_address: &CanonicalAddr,
+    msg: &SecretMessage,
+) -> Result<(), EnclaveError> {
     trace!("Verifying tx signatures..");
 
     // Verify each signature
     // We currently support only secp256k1 signatures
-    for (sig, sb) in env.signatures.iter().zip(env.sign_bytes.iter()) {
+    for (sig, sb) in signatures.iter().zip(sign_bytes.iter()) {
         secp256k1::verify_signature(sb, sig)?;
     }
 
-    // If sender does not match the sender's signed pubkey
-    if !verify_sender(env) {
-        error!(
-            "Message sender {:?} does not match with the signed pubkey's addres: {:?}",
-            env.message.sender,
-            env.signatures[0].get_public_key()
-        );
-        return Err(EnclaveError::FailedTxVerification);
+    trace!("signatures verified");
+
+    // Check if sender does match the sender's signed pubkey
+    if verify_sender(&signatures[0], msg_sender) {
+        info!("msg.sender is the tx signer");
+
+        return Ok(());
     }
 
-    trace!("All signatures verified!");
+    info!(
+        "Message sender {:?} does not match with the signed pubkey's addres: {:?}",
+        msg_sender,
+        signatures[0].get_public_key()
+    );
 
-    Ok(())
+    // Check if there's a callback signature and if it is valid
+    if let Some(cb_sig) = callback_signature {
+        if verify_callback_sig(cb_sig, msg_sender, contract_address, msg) {
+            info!("msg.sender is the calling contract");
+
+            return Ok(());
+        }
+    } else {
+        error!("Did not provide callback signature");
+    }
+
+    error!("Signature verification failed");
+
+    Err(EnclaveError::FailedTxVerification)
 }
 
-fn verify_sender(env: &Env) -> bool {
+fn verify_sender(signature: &CosmosSignature, msg_sender: &CanonicalAddr) -> bool {
     // Taking only the first signature, as it is the fee payer
     // Ref: https://github.com/cosmos/cosmos-sdk/blob/v0.38.3/x/auth/types/stdtx.go#L24
-    let sender_pubkey = env.signatures[0].get_public_key();
+    let sender_pubkey = signature.get_public_key();
     let address = secp256k1::pubkey_to_tm_address(&sender_pubkey);
 
-    address.eq(&env.message.sender.as_slice())
+    address.eq(&msg_sender.as_slice())
+}
+
+fn verify_callback_sig(
+    callback_signature: Vec<u8>,
+    sender: &CanonicalAddr,
+    receiver: &CanonicalAddr,
+    msg: &SecretMessage,
+) -> bool {
+    // No signature
+    if callback_signature.is_empty() {
+        return false;
+    }
+
+    let callback_sig = io::create_callback_signature(sender, &receiver, msg);
+
+    if !callback_signature.eq(&callback_sig) {
+        info!(
+            "Contract signature does not match with the one sent: {:?}",
+            callback_signature
+        );
+        return false;
+    }
+
+    true
 }

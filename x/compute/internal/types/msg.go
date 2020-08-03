@@ -33,13 +33,10 @@ const (
 )
 
 type MsgStoreCode struct {
-	Sender sdk.AccAddress `json:"sender" yaml:"sender"`
-	// WASMByteCode can be raw or gzip compressed
-	WASMByteCode []byte `json:"wasm_byte_code" yaml:"wasm_byte_code"`
-	// Source is a valid absolute HTTPS URI to the contract's source code, optional
-	Source string `json:"source" yaml:"source"`
-	// Builder is a valid docker image name with tag, optional
-	Builder string `json:"builder" yaml:"builder"`
+	Sender       sdk.AccAddress `json:"sender" yaml:"sender"`
+	WASMByteCode []byte         `json:"wasm_byte_code" yaml:"wasm_byte_code"` // WASMByteCode can be raw or gzip compressed
+	Source       string         `json:"source" yaml:"source"`                 // Source is a valid absolute HTTPS URI to the contract's source code, optional
+	Builder      string         `json:"builder" yaml:"builder"`               // Builder is a valid docker image name with tag, optional
 }
 
 func (msg MsgStoreCode) Route() string {
@@ -103,13 +100,13 @@ func validateBuilder(buildTag string) error {
 }
 
 type MsgInstantiateContract struct {
-	Sender    sdk.AccAddress `json:"sender" yaml:"sender"`
-	// Admin is an optional address that can execute migrations
-	Admin     sdk.AccAddress  `json:"admin,omitempty" yaml:"admin"`
-	Code      uint64         `json:"code_id" yaml:"code_id"`
-	Label     string         `json:"label" yaml:"label"`
-	InitMsg   []byte         `json:"init_msg" yaml:"init_msg"`
-	InitFunds sdk.Coins      `json:"init_funds" yaml:"init_funds"`
+	Sender            sdk.AccAddress `json:"sender" yaml:"sender"`
+	Admin             sdk.AccAddress `json:"admin,omitempty" yaml:"admin"` // Admin is an optional address that can execute migrations
+	Code              uint64         `json:"code_id" yaml:"code_id"`
+	Label             string         `json:"label" yaml:"label"`
+	InitMsg           []byte         `json:"init_msg" yaml:"init_msg"`
+	InitFunds         sdk.Coins      `json:"init_funds" yaml:"init_funds"`
+	CallbackSignature []byte         `json:"cb_signature" yaml:"signature"` // Optional
 }
 
 func (msg MsgInstantiateContract) Route() string {
@@ -157,10 +154,11 @@ func (msg MsgInstantiateContract) GetSigners() []sdk.AccAddress {
 }
 
 type MsgExecuteContract struct {
-	Sender    sdk.AccAddress `json:"sender" yaml:"sender"`
-	Contract  sdk.AccAddress `json:"contract" yaml:"contract"`
-	Msg       []byte         `json:"msg" yaml:"msg"`
-	SentFunds sdk.Coins      `json:"sent_funds" yaml:"sent_funds"`
+	Sender            sdk.AccAddress `json:"sender" yaml:"sender"`
+	Contract          sdk.AccAddress `json:"contract" yaml:"contract"`
+	Msg               []byte         `json:"msg" yaml:"msg"`
+	SentFunds         sdk.Coins      `json:"sent_funds" yaml:"sent_funds"`
+	CallbackSignature []byte         `json:"cb_signature" yaml:"signature"` // Optional
 }
 
 func (msg MsgExecuteContract) Route() string {

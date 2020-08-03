@@ -3,6 +3,9 @@ package keeper
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/enigmampc/cosmos-sdk/x/auth"
+	authtypes "github.com/enigmampc/cosmos-sdk/x/auth/types"
+	"github.com/tendermint/tendermint/crypto"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -45,7 +48,7 @@ func TestQueryContractState(t *testing.T) {
 	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
 	require.NoError(t, err)
 
-	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract to query", deposit)
+	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract to query", deposit, nil)
 	require.NoError(t, err)
 
 	contractModel := []types.Model{
@@ -120,7 +123,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 1000000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 500))
-	creator, _ := createFakeFundedAccount(ctx, accKeeper, deposit)
+	creator, creatorPrivKey := createFakeFundedAccount(ctx, accKeeper, deposit)
 	anyAddr, _ := createFakeFundedAccount(ctx, accKeeper, topUp)
 
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
@@ -157,7 +160,27 @@ func TestListContractByCodeOrdering(t *testing.T) {
 			ctx = setBlock(ctx, h)
 			h++
 		}
-		_, err = keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, fmt.Sprintf("contract %d", i), topUp)
+		creatorAcc, err := auth.GetSignerAcc(ctx, accKeeper, creator)
+		require.NoError(t, err)
+
+		tx := authtypes.NewTestTx(ctx, []sdk.Msg{types.MsgInstantiateContract{
+			Sender:    creator,
+			Admin:     nil,
+			Code:      codeID,
+			Label:     fmt.Sprintf("contract %d", i),
+			InitMsg:   initMsgBz,
+			InitFunds: topUp,
+		}}, []crypto.PrivKey{creatorPrivKey}, []uint64{creatorAcc.GetAccountNumber()}, []uint64{creatorAcc.GetSequence() - 1}, authtypes.StdFee{
+			Amount: nil,
+			Gas:    0,
+		})
+
+		txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+		require.NoError(t, err)
+
+		ctx = ctx.WithTxBytes(txBytes)
+
+		_, err = keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, fmt.Sprintf("contract %d", i), topUp, nil)
 		require.NoError(t, err)
 	}
 

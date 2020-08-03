@@ -110,7 +110,7 @@ func GetSignBytes(ctx sdk.Context, acc exported.Account, tx auth.StdTx) []byte {
 }
 
 // Instantiate creates an instance of a WASM contract
-func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins) (sdk.AccAddress, error) {
+func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) {
 	// Warning: This API may be deprecated:
 	// https://github.com/cosmos/cosmos-sdk/commit/c13809062ab16bf193ad3919c77ec03c79b76cc8#diff-a64b9f4b7565560002e3ac4a5eac008bR148
 	tx := authtypes.StdTx{}
@@ -161,7 +161,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	k.cdc.MustUnmarshalBinaryBare(bz, &codeInfo)
 
 	// prepare params for contract instantiate call
-	params := types.NewEnv(ctx, creator, deposit, contractAddress, nil, signBytes, tx.Signatures)
+	params := types.NewEnv(ctx, creator, deposit, contractAddress, nil, signBytes, tx.Signatures, callbackSig)
 
 	// create prefixed data store
 	// 0x03 | contractAddress (sdk.AccAddress)
@@ -204,7 +204,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 }
 
 // Execute executes the contract instance
-func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins) (sdk.Result, error) {
+func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, callbackSig []byte) (sdk.Result, error) {
 	tx := authtypes.StdTx{}
 	txBytes := ctx.TxBytes()
 	err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
@@ -240,7 +240,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
 	fmt.Printf("Contract Execute: Got contract Key for contract %s: %s\n", contractAddress, base64.StdEncoding.EncodeToString(contractKey))
-	params := types.NewEnv(ctx, caller, coins, contractAddress, contractKey, signBytes, tx.Signatures)
+	params := types.NewEnv(ctx, caller, coins, contractAddress, contractKey, signBytes, tx.Signatures, callbackSig)
 	fmt.Printf("Contract Execute: key from params %s \n", params.Key)
 
 	// prepare querier
@@ -322,7 +322,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
 
 	var noDeposit sdk.Coins
-	params := types.NewEnv(ctx, caller, noDeposit, contractAddress, contractKey, signBytes, tx.Signatures)
+	params := types.NewEnv(ctx, caller, noDeposit, contractAddress, contractKey, signBytes, tx.Signatures, nil)
 
 	// prepare querier
 	querier := QueryHandler{

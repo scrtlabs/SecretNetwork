@@ -490,11 +490,11 @@ func assertContractInfo(t *testing.T, q sdk.Querier, ctx sdk.Context, addr sdk.A
 	assert.Equal(t, creator, res.Creator)
 }
 
-func createFakeFundedAccount(ctx sdk.Context, am auth.AccountKeeper, coins sdk.Coins) sdk.AccAddress {
-	_, _, addr := keyPubAddr()
+func createFakeFundedAccount(ctx sdk.Context, am auth.AccountKeeper, coins sdk.Coins) (sdk.AccAddress, crypto.PrivKey) {
+	priv, _, addr := keyPubAddr()
 	baseAcct := auth.NewBaseAccountWithAddress(addr)
 	_ = baseAcct.SetCoins(coins)
 	am.SetAccount(ctx, &baseAcct)
 
-	return addr
+	return addr, priv
 }

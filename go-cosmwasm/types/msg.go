@@ -98,7 +98,8 @@ type ExecuteMsg struct {
 	// as `userMsg` when calling `Handle` on the above-defined contract
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Send Coins `json:"send"`
+	Send              Coins  `json:"send"`
+	CallbackSignature []byte `json:"cb_signature"` // Optional
 }
 
 type InstantiateMsg struct {
@@ -108,5 +109,6 @@ type InstantiateMsg struct {
 	// as `userMsg` when calling `Handle` on the above-defined contract
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Send Coins `json:"send"`
+	Send              Coins  `json:"send"`
+	CallbackSignature []byte `json:"cb_signature"` // Optional
 }

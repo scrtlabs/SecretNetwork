@@ -77,6 +77,10 @@ impl<'de> Deserialize<'de> for Binary {
     }
 }
 
+// impl PartialEq<u8> for Binary {
+//     fn eq(&self, other: &Self) -> bool {}
+// }
+
 struct Base64Visitor;
 
 impl<'de> de::Visitor<'de> for Base64Visitor {

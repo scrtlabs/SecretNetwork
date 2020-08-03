@@ -174,7 +174,7 @@ func execHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sd
 
 	ctx = prepareExecSignedTx(t, keeper, ctx, txSender, senderPrivKey, execMsgBz, contractAddress)
 
-	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
 		return nil, nil, extractInnerError(t, err, nonce, isErrorEncrypted)
 	}
@@ -249,7 +249,7 @@ func initHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, cre
 
 	ctx = prepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initMsgBz, codeID)
 
-	contractAddress, err := keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	contractAddress, err := keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
 		return nil, nil, extractInnerError(t, err, nonce, isErrorEncrypted)
 	}
@@ -741,7 +741,7 @@ func TestInitNotEncryptedInputError(t *testing.T) {
 	initMsg := []byte(`{"nop":{}`)
 
 	// init
-	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsg, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsg, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	require.Error(t, err)
 
 	require.Contains(t, err.Error(), "failed to decrypt data")
@@ -754,7 +754,7 @@ func TestExecuteNotEncryptedInputError(t *testing.T) {
 	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGas)
 	require.Empty(t, initErr)
 
-	_, err := keeper.Execute(ctx, contractAddress, walletA, []byte(`{"empty_log_key_value":{}}`), sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	_, err := keeper.Execute(ctx, contractAddress, walletA, []byte(`{"empty_log_key_value":{}}`), sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	require.Error(t, err)
 
 	require.Contains(t, err.Error(), "failed to decrypt data")

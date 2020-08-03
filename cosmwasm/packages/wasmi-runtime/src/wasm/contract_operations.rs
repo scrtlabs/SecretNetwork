@@ -5,7 +5,7 @@ use wasmi::ModuleInstance;
 
 use enclave_ffi_types::{Ctx, EnclaveError};
 
-use crate::cosmwasm::types::Env;
+use crate::cosmwasm::types::{CanonicalAddr, Env};
 use crate::results::{HandleSuccess, InitSuccess, QuerySuccess};
 
 use super::contract_validation::{
@@ -21,6 +21,7 @@ use super::{
 use crate::wasm::types::SecretMessage;
 
 use crate::coalesce;
+use crate::cosmwasm::encoding::Binary;
 
 /*
 Each contract is compiled with these functions alreadyy implemented in wasm:
@@ -54,8 +55,17 @@ pub fn init(
         EnclaveError::FailedToDeserialize
     })?;
 
+    let secret_msg = SecretMessage::from_slice(msg)?;
+
     // Verify env parameters against the signed tx
-    verify_params(&parsed_env)?;
+    verify_params(
+        parsed_env.signatures.clone(),
+        parsed_env.sign_bytes.clone(),
+        &parsed_env.message.sender,
+        parsed_env.callback_signature.clone(),
+        &parsed_env.contract.address,
+        &secret_msg,
+    )?;
 
     let contract_key = generate_encryption_key(&parsed_env, contract)?;
 
@@ -70,7 +80,6 @@ pub fn init(
         String::from_utf8_lossy(&msg)
     );
 
-    let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
     trace!(
         "Init input after decryption: {:?}",
@@ -89,7 +98,12 @@ pub fn init(
         // TODO: copy cosmwasm's structures to enclave
         // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
         // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
-        let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
+        let output = encrypt_output(
+            output,
+            secret_msg.nonce,
+            secret_msg.user_public_key,
+            parsed_env.contract.address,
+        )?;
 
         Ok(output)
     })
@@ -122,10 +136,19 @@ pub fn handle(
         EnclaveError::FailedToDeserialize
     })?;
 
-    // Verify env parameters against the signed tx
-    verify_params(&parsed_env)?;
-
     trace!("handle parsed_envs: {:?}", parsed_env);
+
+    let secret_msg = SecretMessage::from_slice(msg)?;
+
+    // Verify env parameters against the signed tx
+    verify_params(
+        parsed_env.signatures.clone(),
+        parsed_env.sign_bytes.clone(),
+        &parsed_env.message.sender,
+        parsed_env.callback_signature.clone(),
+        &parsed_env.contract.address,
+        &secret_msg,
+    )?;
 
     let contract_key = extract_contract_key(&parsed_env)?;
 
@@ -147,7 +170,7 @@ pub fn handle(
         "Handle input before decryption: {:?}",
         String::from_utf8_lossy(&msg)
     );
-    let secret_msg = SecretMessage::from_slice(msg)?;
+
     let decrypted_msg = secret_msg.decrypt()?;
     trace!(
         "Handle input afer decryption: {:?}",
@@ -169,7 +192,12 @@ pub fn handle(
             "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",
             secret_msg.nonce, secret_msg.user_public_key
         );
-        let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
+        let output = encrypt_output(
+            output,
+            secret_msg.nonce,
+            secret_msg.user_public_key,
+            parsed_env.contract.address,
+        )?;
         Ok(output)
     })
     .map_err(|err| {
@@ -228,7 +256,12 @@ pub fn query(
 
         let output = engine.extract_vector(vec_ptr)?;
 
-        let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
+        let output = encrypt_output(
+            output,
+            secret_msg.nonce,
+            secret_msg.user_public_key,
+            CanonicalAddr(Binary(Vec::<u8>::new())), // Not used for queries
+        )?;
         Ok(output)
     })
     .map_err(|err| {

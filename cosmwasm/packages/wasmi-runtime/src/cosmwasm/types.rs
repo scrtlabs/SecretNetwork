@@ -7,15 +7,17 @@
 /// For some reason patching the dependencies didn't work, so we are forced to maintain this copy, for now :(
 use std::fmt;
 
-use serde::{Deserialize, Serialize};
-
 use super::encoding::Binary;
+use bech32::{FromBase32, ToBase32};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct HumanAddr(pub String);
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct CanonicalAddr(pub Binary);
+
+pub const BECH32_PREFIX_ACC_ADDR: &str = "secret";
 
 impl HumanAddr {
     pub fn as_str(&self) -> &str {
@@ -26,6 +28,12 @@ impl HumanAddr {
     }
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+    pub fn from_canonical(canonical_addr: CanonicalAddr) -> Result<Self, bech32::Error> {
+        let human_addr_str =
+            bech32::encode(BECH32_PREFIX_ACC_ADDR, (canonical_addr.0).0.to_base32())?;
+
+        Ok(HumanAddr(human_addr_str))
     }
 }
 
@@ -57,6 +65,12 @@ impl CanonicalAddr {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
+    pub fn from_human(human_addr: HumanAddr) -> Result<Self, bech32::Error> {
+        let (decoded_prefix, data) = bech32::decode(human_addr.as_str())?;
+        let canonical = Vec::<u8>::from_base32(&data)?;
+
+        Ok(CanonicalAddr(Binary(canonical)))
+    }
 }
 
 impl fmt::Display for CanonicalAddr {
@@ -73,6 +87,7 @@ pub struct Env {
     pub contract_key: Option<String>,
     pub sign_bytes: Vec<Binary>,
     pub signatures: Vec<CosmosSignature>,
+    pub callback_signature: Option<Vec<u8>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
