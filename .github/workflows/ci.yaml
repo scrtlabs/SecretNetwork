@@ -56,6 +56,20 @@ jobs:
           cd cosmwasm/packages/wasmi-runtime/
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
+      - name: Enclave Clippy
+        run: |
+          source "$HOME/.sgxsdk/sgxsdk/environment"
+          make vendor
+          export SGX_MODE=SW
+          cd cosmwasm/packages/enclave-test
+          RUSTC_WRAPPER="$HOME/sccache" make clippy
+      - name: Test enclave
+        run: |
+          source "$HOME/.sgxsdk/sgxsdk/environment"
+          make vendor
+          export SGX_MODE=SW
+          RUSTC_WRAPPER="$HOME/sccache" make enclave-tests
+          make clean-enclave
       - name: Build
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -87,8 +101,3 @@ jobs:
           mkdir -p ./x/compute/internal/keeper/.sgx_secrets
           go test -v ./x/compute/client/...
           go test -p 1 -v ./x/compute/internal/...
-      - name: Test enclave
-        run: |
-          source "$HOME/.sgxsdk/sgxsdk/environment"
-          export SGX_MODE=SW
-          make enclave-tests

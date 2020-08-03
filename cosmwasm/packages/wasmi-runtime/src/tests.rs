@@ -2,7 +2,7 @@
 #[no_mangle]
 pub extern "C" fn ecall_run_tests() -> u32 {
     println!("This enclave was not built for running tests.");
-    return 0;
+    0
 }
 
 #[cfg(feature = "test")]

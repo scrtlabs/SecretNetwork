@@ -19,7 +19,7 @@ clippy:
 
 .PHONY: run
 run: build-deps
-	cargo run
+	SGX_MODE=$(SGX_MODE) cargo run
 
 .PHONY: build-deps
 build-deps: lib/libEnclave_u.a build-enclave

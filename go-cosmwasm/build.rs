@@ -19,6 +19,7 @@ fn main() {
 
     match is_sim.as_ref() {
         "SW" => {
+            println!("cargo:rustc-link-lib=static=sgx_ukey_exchange");
             println!("cargo:rustc-link-lib=dylib=sgx_urts_sim");
             println!("cargo:rustc-link-lib=dylib=sgx_uae_service_sim");
         }
