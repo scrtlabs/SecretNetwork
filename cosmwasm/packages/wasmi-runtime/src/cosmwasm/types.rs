@@ -135,25 +135,128 @@ pub struct Coin {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum CosmosMsg {
+#[serde(untagged)]
+pub enum WasmOutput {
+    OkString {
+        #[serde(rename = "Ok")]
+        ok: String,
+    },
+    ErrString {
+        #[serde(rename = "Err")]
+        err: String,
+    },
+    OkNested {
+        #[serde(rename = "Ok")]
+        ok: OkNested,
+    },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct OkNested {
+    messages: Vec<CosmosMsg>,
+    log: Vec<OutputLog>,
+    data: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+struct OutputLog {
+    key: String,
+    value: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+// See https://github.com/serde-rs/serde/issues/1296 why we cannot add De-Serialize trait bounds to T
+pub enum CosmosMsg<T = CustomMsg>
+where
+    T: Clone + fmt::Debug + PartialEq,
+{
+    Bank(BankMsg),
+    // by default we use RawMsg, but a contract can override that
+    // to call into more app-specific code (whatever they define)
+    Custom(T),
+    Staking(StakingMsg),
+    Wasm(WasmMsg),
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum BankMsg {
     // this moves tokens in the underlying sdk
     Send {
         from_address: HumanAddr,
         to_address: HumanAddr,
         amount: Vec<Coin>,
     },
-    // this dispatches a call to another contract at a known address (with known ABI)
-    // msg is the json-encoded HandleMsg struct
-    Contract {
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum StakingMsg {
+    Delegate {
+        // delegator is automatically set to address of the calling contract
+        validator: HumanAddr,
+        amount: Coin,
+    },
+    Undelegate {
+        // delegator is automatically set to address of the calling contract
+        validator: HumanAddr,
+        amount: Coin,
+    },
+    Withdraw {
+        // delegator is automatically set to address of the calling contract
+        validator: HumanAddr,
+        /// this is the "withdraw address", the one that should receive the rewards
+        /// if None, then use delegator address
+        recipient: Option<HumanAddr>,
+    },
+    Redelegate {
+        // delegator is automatically set to address of the calling contract
+        src_validator: HumanAddr,
+        dst_validator: HumanAddr,
+        amount: Coin,
+    },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum WasmMsg {
+    /// this dispatches a call to another contract at a known address (with known ABI)
+    Execute {
         contract_addr: HumanAddr,
-        msg: Binary, // we pass this in as Vec<u8> to the contract, so allow any binary encoding (later, limit to rawjson?)
-        send: Option<Vec<Coin>>,
+        /// msg is the json-encoded HandleMsg struct (as raw Binary)
+        msg: Binary,
+        send: Vec<Coin>,
     },
-    // this should never be created here, just passed in from the user and later dispatched
-    Opaque {
-        data: Binary,
+    /// this instantiates a new contracts from previously uploaded wasm code
+    Instantiate {
+        code_id: u64,
+        /// msg is the json-encoded InitMsg struct (as raw Binary)
+        msg: Binary,
+        send: Vec<Coin>,
+        /// optional human-readable label for the contract
+        label: Option<String>,
     },
+}
+
+impl<T: Clone + fmt::Debug + PartialEq> From<BankMsg> for CosmosMsg<T> {
+    fn from(msg: BankMsg) -> Self {
+        CosmosMsg::Bank(msg)
+    }
+}
+
+#[cfg(feature = "staking")]
+impl<T: Clone + fmt::Debug + PartialEq> From<StakingMsg> for CosmosMsg<T> {
+    fn from(msg: StakingMsg) -> Self {
+        CosmosMsg::Staking(msg)
+    }
+}
+
+impl<T: Clone + fmt::Debug + PartialEq> From<WasmMsg> for CosmosMsg<T> {
+    fn from(msg: WasmMsg) -> Self {
+        CosmosMsg::Wasm(msg)
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -232,6 +335,21 @@ pub fn log(key: &str, value: &str) -> LogAttribute {
     LogAttribute {
         key: key.to_string(),
         value: value.to_string(),
+    }
+}
+
+/// Added this here for reflect tests....
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+/// CustomMsg is an override of CosmosMsg::Custom to show this works and can be extended in the contract
+pub enum CustomMsg {
+    Debug(String),
+    Raw(Binary),
+}
+
+impl Into<CosmosMsg<CustomMsg>> for CustomMsg {
+    fn into(self) -> CosmosMsg<CustomMsg> {
+        CosmosMsg::Custom(self)
     }
 }
 
