@@ -136,31 +136,34 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 			if label == "" {
 				return fmt.Errorf("label is required on all contracts")
 			}
-			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
-			res, _, err := cliCtx.Query(route)
-			if res != nil {
-				return fmt.Errorf("label already exists. You must choose a unique label for your contract instance")
-			}
+
 
 			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
 
 			initMsg := []byte(args[1])
 
 			if viper.GetBool(flags.FlagGenerateOnly) {
+				// if we're creating an offline transaction we just need the path to the io master key
 				ioKeyPath := viper.GetString(flagIoMasterKey)
 
 				if ioKeyPath == "" {
 					return fmt.Errorf("missing flag --%s. To create an offline transaction, you must specify path to the enclave key", flagIoMasterKey)
 				}
 
-				execMsg, err = wasmCtx.OfflineEncrypt(execMsg, ioKeyPath)
+				initMsg, err = wasmCtx.OfflineEncrypt(initMsg, ioKeyPath)
 			} else {
-				execMsg, err = wasmCtx.Encrypt(execMsg)
-			}
-			if err != nil {
-				return err
-			}
+				// if we aren't creating an offline transaction we can validate the chosen label
+				route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
+				res, _, err := cliCtx.Query(route)
+				if err != nil {
+					return fmt.Errorf("failed to query label: %s", err.Error())
+				}
+				if res != nil {
+					return fmt.Errorf("label already exists. You must choose a unique label for your contract instance")
+				}
 
+				initMsg, err = wasmCtx.Encrypt(initMsg)
+			}
 			if err != nil {
 				return err
 			}
@@ -187,6 +190,8 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().String(flagIoMasterKey, "", "For offline transactions, use this to specify the path to the " +
+		"io-master-cert.der file, which you can get using the command `secretcli q register secret-network-params` ")
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract during instantiation")
 	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
 	cmd.Flags().String(flagAdmin, "", "Address of an admin")
@@ -207,9 +212,14 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 			var contractAddr = sdk.AccAddress{}
 			var execMsg []byte
 			if len(args) == 1 {
+
+				if viper.GetBool(flags.FlagGenerateOnly) {
+					return fmt.Errorf("offline transactions must contain contract address")
+				}
+
 				label := viper.GetString(flagLabel)
 				if label == "" {
-					return fmt.Errorf("Label or bech32 contract address is required")
+					return fmt.Errorf("label or bech32 contract address is required")
 				}
 
 				route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
@@ -239,7 +249,17 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 
 			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
 
-			execMsg, err = wasmCtx.Encrypt(execMsg)
+			if viper.GetBool(flags.FlagGenerateOnly) {
+				ioKeyPath := viper.GetString(flagIoMasterKey)
+
+				if ioKeyPath == "" {
+					return fmt.Errorf("missing flag --%s. To create an offline transaction, you must specify path to the enclave key", flagIoMasterKey)
+				}
+
+				execMsg, err = wasmCtx.OfflineEncrypt(execMsg, ioKeyPath)
+			} else {
+				execMsg, err = wasmCtx.Encrypt(execMsg)
+			}
 			if err != nil {
 				return err
 			}
@@ -254,7 +274,8 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
 		},
 	}
-
+	cmd.Flags().String(flagIoMasterKey, "", "For offline transactions, use this to specify the path to the " +
+		"io-master-cert.der file, which you can get using the command `secretcli q register secret-network-params` ")
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract along with command")
 	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
 	return cmd

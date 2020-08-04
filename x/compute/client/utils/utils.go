@@ -155,6 +155,7 @@ func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
 	return ioPubkey, nil
 }
 
+
 func (ctx WASMContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) ([]byte, error) {
 	consensusIoPubKeyBytes, err := ctx.getConsensusIoPubKey()
 	if err != nil {
@@ -285,4 +286,20 @@ func encryptData(aesEncryptionKey []byte, txSenderPubKey []byte, plaintext []byt
 	ciphertext = append(nonce, append(txSenderPubKey, ciphertext...)...)
 
 	return ciphertext, nil
+}
+
+func GetTxEncryptionKeyOffline(pubkey []byte, txSenderPrivKey []byte, nonce []byte) ([]byte, error) {
+	txEncryptionIkm, err := curve25519.X25519(txSenderPrivKey, pubkey)
+	if err != nil {
+		return nil, err
+	}
+
+	kdfFunc := hkdf.New(sha256.New, append(txEncryptionIkm[:], nonce...), hkdfSalt, []byte{})
+
+	txEncryptionKey := make([]byte, 32)
+	if _, err := io.ReadFull(kdfFunc, txEncryptionKey); err != nil {
+		return nil, err
+	}
+
+	return txEncryptionKey, nil
 }
