@@ -6,7 +6,6 @@
 //! Types that contain information about attestation report.
 //! The implementation is based on Attestation Service API version 4.
 //! https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf
-use hex;
 use log::*;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;

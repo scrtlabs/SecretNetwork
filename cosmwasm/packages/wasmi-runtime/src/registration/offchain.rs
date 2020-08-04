@@ -1,12 +1,13 @@
+#[cfg(feature = "SGX_MODE_HW")]
+use enclave_ffi_types::NodeAuthResult;
 ///
 /// These functions run off chain, and so are not limited by deterministic limitations. Feel free
 /// to go crazy with random generation entropy, time requirements, or whatever else
 ///
 use log::*;
-use sgx_types::{sgx_platform_info_t, sgx_quote_sign_type_t, sgx_status_t, sgx_update_info_bit_t};
-
-use enclave_ffi_types::NodeAuthResult;
-
+#[cfg(feature = "SGX_MODE_HW")]
+use sgx_types::{sgx_platform_info_t, sgx_update_info_bit_t};
+use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 use std::slice;
 
 use crate::consts::{
@@ -14,13 +15,18 @@ use crate::consts::{
     SEED_EXCH_CERTIFICATE_SAVE_PATH,
 };
 use crate::crypto::{Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
+#[cfg(feature = "SGX_MODE_HW")]
+use crate::registration::report::AttestationReport;
 use crate::storage::write_to_untrusted;
 use crate::utils::{attest_from_key, validate_const_ptr, validate_mut_ptr, validate_mut_slice};
 
 use super::attestation::create_attestation_certificate;
-use super::cert::{ocall_get_update_info, verify_quote_status, verify_ra_cert};
+#[cfg(feature = "SGX_MODE_HW")]
+use super::cert::ocall_get_update_info;
+#[cfg(feature = "SGX_MODE_HW")]
+use super::cert::verify_quote_status;
+use super::cert::verify_ra_cert;
 use super::seed_exchange::decrypt_seed;
-use crate::registration::report::AttestationReport;
 
 ///
 /// `ecall_init_bootstrap`
@@ -188,7 +194,43 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
         return status;
     }
 
-    let report = match AttestationReport::from_cert(cert.as_slice()) {
+    let _ = verify_local_report(cert.as_slice());
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+///
+/// This function generates the registration_key, which is used in the attestation and registration
+/// process
+///
+#[no_mangle]
+pub unsafe extern "C" fn ecall_key_gen(
+    public_key: &mut [u8; PUBLIC_KEY_SIZE],
+) -> sgx_types::sgx_status_t {
+    if let Err(_e) = validate_mut_slice(public_key) {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    let mut key_manager = Keychain::new();
+    if let Err(_e) = key_manager.create_registration_key() {
+        error!("Failed to create registration key");
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    };
+
+    let pubkey = key_manager.get_registration_key().unwrap().get_pubkey();
+    public_key.clone_from_slice(&pubkey);
+    trace!("ecall_key_gen key pk: {:?}", public_key.to_vec());
+    sgx_status_t::SGX_SUCCESS
+}
+
+#[cfg(not(feature = "SGX_MODE_HW"))]
+fn verify_local_report(_cert: &[u8]) -> sgx_status_t {
+    sgx_status_t::SGX_SUCCESS
+}
+
+#[cfg(feature = "SGX_MODE_HW")]
+fn verify_local_report(cert: &[u8]) -> sgx_status_t {
+    let report = match AttestationReport::from_cert(cert) {
         Ok(r) => r,
         Err(_) => {
             error!("Error parsing report");
@@ -250,29 +292,5 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
         _ => {}
     }
 
-    sgx_status_t::SGX_SUCCESS
-}
-
-///
-/// This function generates the registration_key, which is used in the attestation and registration
-/// process
-///
-#[no_mangle]
-pub unsafe extern "C" fn ecall_key_gen(
-    public_key: &mut [u8; PUBLIC_KEY_SIZE],
-) -> sgx_types::sgx_status_t {
-    if let Err(_e) = validate_mut_slice(public_key) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
-
-    let mut key_manager = Keychain::new();
-    if let Err(_e) = key_manager.create_registration_key() {
-        error!("Failed to create registration key");
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    };
-
-    let pubkey = key_manager.get_registration_key().unwrap().get_pubkey();
-    public_key.clone_from_slice(&pubkey);
-    trace!("ecall_key_gen key pk: {:?}", public_key.to_vec());
     sgx_status_t::SGX_SUCCESS
 }
