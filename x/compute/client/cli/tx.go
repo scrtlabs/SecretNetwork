@@ -31,6 +31,7 @@ const (
 	flagLabel   = "label"
 	flagAdmin   = "admin"
 	flagNoAdmin = "no-admin"
+	flagIoMasterKey = "enclave-key"
 )
 
 // GetTxCmd returns the transaction commands for this module
@@ -144,7 +145,22 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
 
 			initMsg := []byte(args[1])
-			initMsg, err = wasmCtx.Encrypt(initMsg)
+
+			if viper.GetBool(flags.FlagGenerateOnly) {
+				ioKeyPath := viper.GetString(flagIoMasterKey)
+
+				if ioKeyPath == "" {
+					return fmt.Errorf("missing flag --%s. To create an offline transaction, you must specify path to the enclave key", flagIoMasterKey)
+				}
+
+				execMsg, err = wasmCtx.OfflineEncrypt(execMsg, ioKeyPath)
+			} else {
+				execMsg, err = wasmCtx.Encrypt(execMsg)
+			}
+			if err != nil {
+				return err
+			}
+
 			if err != nil {
 				return err
 			}
