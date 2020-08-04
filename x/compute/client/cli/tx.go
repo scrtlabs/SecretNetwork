@@ -154,10 +154,7 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 			} else {
 				// if we aren't creating an offline transaction we can validate the chosen label
 				route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
-				res, _, err := cliCtx.Query(route)
-				if err != nil {
-					return fmt.Errorf("failed to query label: %s", err.Error())
-				}
+				res, _, _ := cliCtx.Query(route)
 				if res != nil {
 					return fmt.Errorf("label already exists. You must choose a unique label for your contract instance")
 				}
