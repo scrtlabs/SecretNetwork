@@ -1,7 +1,7 @@
 use derive_more::Display;
 use enclave_ffi_types::{EnclaveError, UntrustedVmError};
 use log::*;
-use wasmi::{Error as InterpreterError, HostError};
+use wasmi::{Error as InterpreterError, HostError, TrapKind};
 
 #[derive(Debug, Display)]
 #[non_exhaustive]
@@ -13,38 +13,78 @@ pub enum WasmEngineError {
 
     EncryptionError,
     DecryptionError,
+    SerializationError,
+    DeserializationError,
 
     MemoryAllocationError,
     MemoryReadError,
     MemoryWriteError,
+    /// The contract attempted to write to storage during a query
+    UnauthorizedWrite,
 
     NonExistentImportFunction,
-    NotImplemented,
 }
 
 impl HostError for WasmEngineError {}
 
-pub fn wasmi_error_to_enclave_error(wasmi_error: InterpreterError) -> EnclaveError {
-    match wasmi_error
-        .as_host_error()
-        .map(|err| err.downcast_ref::<WasmEngineError>())
-    {
-        // An ocall failed during contract execution.
-        Some(Some(WasmEngineError::FailedOcall(vm_error))) => EnclaveError::FailedOcall {
-            vm_error: UntrustedVmError { ptr: vm_error.ptr },
-        },
-        // Ran out of gas
-        Some(Some(WasmEngineError::OutOfGas)) => EnclaveError::OutOfGas,
-        Some(Some(WasmEngineError::EncryptionError)) => EnclaveError::EncryptionError,
-        Some(Some(WasmEngineError::DecryptionError)) => EnclaveError::DecryptionError,
-        Some(Some(WasmEngineError::NotImplemented)) => EnclaveError::NotImplemented,
-        Some(Some(_other)) => EnclaveError::Unknown,
-        // Unexpected WasmEngineError variant or unexpected HostError.
-        Some(None) => EnclaveError::Unknown,
-        // The error is not a HostError. In the future we might want to return more specific errors.
-        None => {
-            error!("Got an error from wasmi: {:?}", wasmi_error);
-            EnclaveError::FailedFunctionCall
+impl From<WasmEngineError> for EnclaveError {
+    fn from(engine_err: WasmEngineError) -> Self {
+        use WasmEngineError::*;
+        match engine_err {
+            FailedOcall(vm_error) => EnclaveError::FailedOcall {
+                vm_error: UntrustedVmError { ptr: vm_error.ptr },
+            },
+            OutOfGas => EnclaveError::OutOfGas,
+            EncryptionError => EnclaveError::EncryptionError,
+            DecryptionError => EnclaveError::DecryptionError,
+            MemoryAllocationError => EnclaveError::MemoryAllocationError,
+            MemoryReadError => EnclaveError::MemoryReadError,
+            MemoryWriteError => EnclaveError::MemoryWriteError,
+            UnauthorizedWrite => EnclaveError::UnauthorizedWrite,
+            // Unexpected WasmEngineError variant
+            _other => EnclaveError::Unknown,
         }
+    }
+}
+
+// This is implemented just to make a `Result::map` invocation below nicer.
+// All this does is unbox the `WasmEngineError` and call the `From` implementation above.
+impl From<Box<WasmEngineError>> for EnclaveError {
+    fn from(engine_err: Box<WasmEngineError>) -> Self {
+        Self::from(*engine_err)
+    }
+}
+
+pub fn wasmi_error_to_enclave_error(wasmi_error: InterpreterError) -> EnclaveError {
+    wasmi_error
+        .try_into_host_error()
+        .map(|host_error| {
+            host_error
+                .downcast::<WasmEngineError>()
+                .map_or(EnclaveError::Unknown, EnclaveError::from)
+        })
+        .unwrap_or_else(|wasmi_error| {
+            error!("Got an error from wasmi: {:?}", wasmi_error);
+            match wasmi_error {
+                InterpreterError::Trap(trap) => trap_kind_to_enclave_error(trap.into_kind()),
+                _ => EnclaveError::FailedFunctionCall,
+            }
+        })
+}
+
+fn trap_kind_to_enclave_error(kind: TrapKind) -> EnclaveError {
+    match kind {
+        TrapKind::Unreachable => EnclaveError::ContractPanicUnreachable,
+        TrapKind::MemoryAccessOutOfBounds => EnclaveError::ContractPanicMemoryAccessOutOfBounds,
+        TrapKind::TableAccessOutOfBounds => EnclaveError::ContractPanicTableAccessOutOfBounds,
+        TrapKind::ElemUninitialized => EnclaveError::ContractPanicElemUninitialized,
+        TrapKind::DivisionByZero => EnclaveError::ContractPanicDivisionByZero,
+        TrapKind::InvalidConversionToInt => EnclaveError::ContractPanicInvalidConversionToInt,
+        TrapKind::StackOverflow => EnclaveError::ContractPanicStackOverflow,
+        TrapKind::UnexpectedSignature => EnclaveError::ContractPanicUnexpectedSignature,
+        // This is for cases that we don't care to represent, or were added in later versions of wasmi.
+        // Specifically `TrapKind::Host` should be handled in `wasmi_error_to_enclave_error` by calling
+        // `.as_host_error()` on the top-level error.
+        _ => EnclaveError::FailedFunctionCall,
     }
 }

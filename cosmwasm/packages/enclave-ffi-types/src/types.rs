@@ -56,37 +56,150 @@ pub enum EnclaveError {
     ///    caught memory-handling issues, or a failed ecall during an ocall. `vm_error` will be null.
     /// 3. We failed to call the ocall due to an SGX fault. `vm_error` will be null.
     // TODO should we split these three cases for better diagnostics?
-    #[display(fmt = "FailedOcall")]
-    FailedOcall {
-        vm_error: UntrustedVmError,
-    },
+    #[display(fmt = "failed to execute ocall")]
+    FailedOcall { vm_error: UntrustedVmError },
+
+    // Problems with the module binary
     /// The WASM code was invalid and could not be loaded.
+    #[display(fmt = "tried to load invalid wasm code")]
     InvalidWasm,
+    #[display(fmt = "failed to initialize wasm memory")]
     CannotInitializeWasmMemory,
     /// The WASM module contained a start section, which is not allowed.
     WasmModuleWithStart,
     /// The WASM module contained floating point operations, which is not allowed.
+    #[display(fmt = "found floating point operation in module code")]
     WasmModuleWithFP,
-    /// Calling a function in the contract failed.
-    FailedFunctionCall,
     /// Fail to inject gas metering
+    #[display(fmt = "failed to inject gas metering")]
     FailedGasMeteringInjection,
+
+    // runtime issues with the module
     /// Ran out of gas
+    #[display(fmt = "execution ran out of gas")]
     OutOfGas,
+    /// Calling a function in the contract failed.
+    #[display(fmt = "calling a function in the contract failed for an unexpected reason")]
+    FailedFunctionCall,
+    // These variants mimic the variants of `wasmi::TrapKind`
+    /// The contract panicked during execution.
+    #[display(fmt = "the contract panicked")]
+    ContractPanicUnreachable,
+    /// The contract tried to access memory out of bounds.
+    #[display(fmt = "the contract tried to access memory out of bounds")]
+    ContractPanicMemoryAccessOutOfBounds,
+    /// The contract tried to access a nonexistent resource.
+    #[display(fmt = "the contract tried to access a nonexistent resource")]
+    ContractPanicTableAccessOutOfBounds,
+    /// The contract tried to access an uninitialized resource.
+    #[display(fmt = "the contract tried to access an uninitialized resource")]
+    ContractPanicElemUninitialized,
+    /// The contract tried to divide by zero.
+    #[display(fmt = "the contract tried to divide by zero")]
+    ContractPanicDivisionByZero,
+    /// The contract tried to perform an invalid conversion to an integer.
+    #[display(fmt = "the contract tried to perform an invalid conversion to an integer")]
+    ContractPanicInvalidConversionToInt,
+    /// The contract has run out of space on the stack.
+    #[display(fmt = "the contract has run out of space on the stack")]
+    ContractPanicStackOverflow,
+    /// The contract tried to call a function but expected an incorrect function signature.
+    #[display(
+        fmt = "the contract tried to call a function but expected an incorrect function signature"
+    )]
+    ContractPanicUnexpectedSignature,
+
     // Errors in contract ABI:
     /// Failed to seal data
+    #[display(fmt = "failed to seal data")]
     FailedSeal,
+    #[display(fmt = "failed to unseal data")]
     FailedUnseal,
-    /// contract key was invalid
+    #[display(fmt = "failed to authenticate secret contract")]
     FailedContractAuthentication,
+    #[display(fmt = "failed to deserialize data")]
     FailedToDeserialize,
+    #[display(fmt = "failed to serialize data")]
     FailedToSerialize,
+    #[display(fmt = "failed to encrypt data")]
     EncryptionError,
+    #[display(fmt = "failed to decrypt data")]
     DecryptionError,
-    NotImplemented,
+    #[display(fmt = "failed to allocate memory")]
+    MemoryAllocationError,
+    #[display(fmt = "failed to read memory")]
+    MemoryReadError,
+    #[display(fmt = "failed to write memory")]
+    MemoryWriteError,
+    #[display(fmt = "contract tried to write to storage during a query")]
+    UnauthorizedWrite,
+
+    // serious issues
+    #[display(fmt = "panic'd due to unexpected behavior")]
     Panic,
+    #[display(fmt = "enclave ran out of heap memory")]
+    OutOfMemory,
     /// Unexpected Error happened, no more details available
+    #[display(fmt = "unknown error")]
     Unknown,
+}
+
+/// This type represents the possible error conditions that can be encountered in the
+/// enclave while authenticating a new node in the network.
+/// cbindgen:prefix-with-name
+#[repr(C)]
+#[derive(Debug, Display, PartialEq, Eq)]
+pub enum NodeAuthResult {
+    Success,
+    #[display(fmt = "Enclave quote status was GROUP_OUT_OF_DATE which is not allowed")]
+    GroupOutOfDate,
+    #[display(fmt = "Enclave quote status was SIGNATURE_INVALID which is not allowed")]
+    SignatureInvalid,
+    #[display(fmt = "Enclave quote status was SIGNATURE_REVOKED which is not allowed")]
+    SignatureRevoked,
+    #[display(fmt = "Enclave quote status was GROUP_REVOKED which is not allowed")]
+    GroupRevoked,
+    #[display(fmt = "Enclave quote status was KEY_REVOKED which is not allowed")]
+    KeyRevoked,
+    #[display(fmt = "Enclave quote status was SIGRL_VERSION_MISMATCH which is not allowed")]
+    SigrlVersionMismatch,
+    #[display(fmt = "Enclave quote status was CONFIGURATION_NEEDED which is not allowed")]
+    ConfigurationNeeded,
+    #[display(fmt = "Enclave quote status was CONFIGURATION_AND_SW_HARDENING_NEEDED which is not allowed")]
+    SwHardeningAndConfigurationNeeded,
+    #[display(fmt = "Enclave quote status invalid")]
+    BadQuoteStatus,
+    #[display(fmt = "Enclave version mismatch. Registering enclave had different code signature")]
+    MrEnclaveMismatch,
+    #[display(fmt = "Enclave version mismatch. Registering enclave had different signer")]
+    MrSignerMismatch,
+    #[display(fmt = "Enclave received invalid inputs")]
+    InvalidInput,
+    #[display(fmt = "The provided certificate was invalid")]
+    InvalidCert,
+    #[display(fmt = "Writing to file system from the enclave failed")]
+    CantWriteToStorage,
+    #[display(fmt = "The public key in the certificate appears to be malformed")]
+    MalformedPublicKey,
+    #[display(fmt = "Encrypting the seed failed")]
+    SeedEncryptionFailed,
+    #[display(fmt = "Unexpected panic during node authentication. Certificate may be malformed or invalid")]
+    Panic,
+}
+
+/// This type represents the possible error conditions that can be encountered in the
+/// enclave while authenticating a new node in the network.
+/// cbindgen:prefix-with-name
+#[repr(C)]
+#[derive(Debug, Display, PartialEq, Eq)]
+pub enum HealthCheckResult {
+    Success,
+}
+
+impl Default for HealthCheckResult {
+    fn default() -> Self {
+        HealthCheckResult::Success
+    }
 }
 
 /// This type holds a pointer to a VmError that is boxed on the untrusted side
@@ -149,12 +262,11 @@ pub enum InitResult {
     Success {
         /// A pointer to the output of the calculation
         output: UserSpaceBuffer,
-        /// The gas used by the execution.
-        used_gas: u64,
         /// A signature by the enclave on all of the results.
         signature: [u8; 64],
     },
     Failure {
+        /// The error that happened in the enclave
         err: EnclaveError,
     },
 }
@@ -166,12 +278,11 @@ pub enum HandleResult {
     Success {
         /// A pointer to the output of the calculation
         output: UserSpaceBuffer,
-        /// The gas used by the execution.
-        used_gas: u64,
         /// A signature by the enclave on all of the results.
         signature: [u8; 64],
     },
     Failure {
+        /// The error that happened in the enclave
         err: EnclaveError,
     },
 }
@@ -183,12 +294,11 @@ pub enum QueryResult {
     Success {
         /// A pointer to the output of the calculation
         output: UserSpaceBuffer,
-        /// The gas used by the execution.
-        used_gas: u64,
         /// A signature by the enclave on all of the results.
         signature: [u8; 64],
     },
     Failure {
+        /// The error that happened in the enclave
         err: EnclaveError,
     },
 }

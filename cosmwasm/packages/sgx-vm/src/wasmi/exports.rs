@@ -1,8 +1,9 @@
 use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError, UserSpaceBuffer};
 use std::ffi::c_void;
 
-use crate::context::with_storage_from_context;
+use crate::context::{with_querier_from_context, with_storage_from_context};
 use crate::{Querier, Storage, VmError, VmResult};
+use cosmwasm_std::{Binary, StdResult, SystemResult};
 
 /// Copy a buffer from the enclave memory space, and return an opaque pointer to it.
 #[no_mangle]
@@ -39,12 +40,6 @@ pub extern "C" fn ocall_read_db(
 
     let implementation = unsafe { get_implementations_from_context(&context).read_db };
 
-    // Returning `EnclaveBuffer { ptr: std::ptr::null_mut() }` is basically returning a null pointer,
-    // which in the enclave is interpreted as signaling that the key does not exist.
-    // We also interpret this potential panic here as a missing key because we have no way of handling
-    // it at the moment.
-    // In the future, if we see that panics do occur here, we should add a way to report this to the enclave.
-    // TODO add logging if we fail to write
     std::panic::catch_unwind(|| implementation(context, key))
         // Get either an error(`OcallReturn`), or a response(`EnclaveBuffer`)
         // which will be converted to a success status.
@@ -56,7 +51,56 @@ pub extern "C" fn ocall_read_db(
                         .map(|val| {
                             super::allocate_enclave_buffer(&val).map_err(|_| OcallReturn::Failure)
                         })
-                        .unwrap_or(Ok(EnclaveBuffer::default()))
+                        .unwrap_or_else(|| Ok(EnclaveBuffer::default()))
+                }
+                Err(err) => {
+                    unsafe { store_vm_error(err, vm_error) };
+                    Err(OcallReturn::Failure)
+                }
+            }
+        })
+        // Return the result or report the error
+        .map(|result| match result {
+            Ok(enclave_buffer) => {
+                unsafe { *value = enclave_buffer };
+                OcallReturn::Success
+            }
+            Err(err) => err,
+        })
+        // This will happen only when `catch_unwind` returns `Err`, which indicates a caught panic
+        .unwrap_or(OcallReturn::Panic)
+}
+
+/// Read a key from the contracts key-value store.
+#[no_mangle]
+pub extern "C" fn ocall_query_chain(
+    context: Ctx,
+    vm_error: *mut UntrustedVmError,
+    gas_used: *mut u64,
+    value: *mut EnclaveBuffer,
+    query: *const u8,
+    query_len: usize,
+) -> OcallReturn {
+    let query = unsafe { std::slice::from_raw_parts(query, query_len) };
+
+    let implementation = unsafe { get_implementations_from_context(&context).query_chain };
+
+    std::panic::catch_unwind(|| implementation(context, query))
+        // Get either an error(`OcallReturn`), or a response(`EnclaveBuffer`)
+        // which will be converted to a success status.
+        .map(|answer| -> Result<EnclaveBuffer, OcallReturn> {
+            match answer {
+                Ok((system_result, gas_cost)) => {
+                    unsafe { *gas_used = gas_cost };
+
+                    // wasm code expects to get this as Result<Result<Binary, StdError>, SystemError> which is called SystemResult
+                    // see CosmWasm's implementation https://github.com/enigmampc/SecretNetwork/blob/508e99c990dd656eb61f456584dab054487ba178/cosmwasm/packages/sgx-vm/src/imports.rs#L124
+
+                    crate::serde::to_vec(&system_result)
+                        .map(|val| {
+                            super::allocate_enclave_buffer(&val).map_err(|_| OcallReturn::Failure)
+                        })
+                        .unwrap_or_else(|_| Ok(EnclaveBuffer::default()))
                 }
                 Err(err) => {
                     unsafe { store_vm_error(err, vm_error) };
@@ -154,8 +198,10 @@ unsafe fn store_vm_error(vm_err: VmError, location: *mut UntrustedVmError) {
 /// original caller requested, without any downcasting magic.
 /// The side that calls into the enclave will call the `new()` method with the Generic arguments that are
 /// appropriate for it.
+#[allow(clippy::type_complexity)]
 struct ExportImplementations {
     read_db: fn(context: Ctx, key: &[u8]) -> VmResult<(Option<Vec<u8>>, u64)>,
+    query_chain: fn(context: Ctx, query: &[u8]) -> VmResult<(SystemResult<StdResult<Binary>>, u64)>,
     remove_db: fn(context: Ctx, key: &[u8]) -> VmResult<u64>,
     write_db: fn(context: Ctx, key: &[u8], value: &[u8]) -> VmResult<u64>,
 }
@@ -168,6 +214,7 @@ impl ExportImplementations {
     {
         Self {
             read_db: ocall_read_db_impl::<S, Q>,
+            query_chain: ocall_query_chain_impl::<S, Q>,
             remove_db: ocall_remove_db_impl::<S, Q>,
             write_db: ocall_write_db_impl::<S, Q>,
         }
@@ -209,6 +256,19 @@ where
 {
     with_storage_from_context::<S, Q, _, _>(&mut context, |storage: &mut S| {
         storage.get(key).map_err(Into::into)
+    })
+}
+
+fn ocall_query_chain_impl<S, Q>(
+    mut context: Ctx,
+    query: &[u8],
+) -> VmResult<(SystemResult<StdResult<Binary>>, u64)>
+where
+    S: Storage,
+    Q: Querier,
+{
+    with_querier_from_context::<S, Q, _, _>(&mut context, |querier: &mut Q| {
+        querier.raw_query(query).map_err(Into::into)
     })
 }
 

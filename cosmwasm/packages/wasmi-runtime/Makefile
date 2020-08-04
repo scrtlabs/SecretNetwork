@@ -6,6 +6,8 @@ SGX_MODE ?= HW
 SGX_ARCH ?= x64
 BUILD_PROFILE ?= release
 FEATURES += SGX_MODE_$(SGX_MODE)
+FEATURES := $(strip $(FEATURES))
+
 
 TOP_DIR := ../../../third_party/build
 include $(TOP_DIR)/buildenv.mk
@@ -119,10 +121,10 @@ $(Enclave_EDL_Products): Enclave.edl
 	sgx_edger8r --trusted $^ --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --trusted-dir ./
 
 check:
-	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo check --features "SGX_MODE_$(SGX_MODE)" --target x86_64-unknown-linux-sgx
+	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo check --features "$(FEATURES)" --target x86_64-unknown-linux-sgx
 
 clippy:
-	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo clippy --features "SGX_MODE_$(SGX_MODE)" --target x86_64-unknown-linux-sgx -- -D warnings
+	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo clippy --features "$(FEATURES)" --target x86_64-unknown-linux-sgx -- -D warnings
 
 clean:
 	rm -rf $(CUSTOM_LIBRARY_PATH) $(Enclave_EDL_Products) *.o *.so

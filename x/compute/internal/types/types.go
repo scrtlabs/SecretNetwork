@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/base64"
+
 	tmBytes "github.com/tendermint/tendermint/libs/bytes"
 
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"

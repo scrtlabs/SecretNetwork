@@ -14,9 +14,12 @@ use log::LevelFilter;
 
 use crate::logger::*;
 
+mod macros;
+
 pub mod exports;
 pub mod imports;
 pub mod logger;
+mod oom_handler;
 pub mod registration;
 
 mod consts;
@@ -34,6 +37,23 @@ mod utils;
 
 static LOGGER: SimpleLogger = SimpleLogger;
 
+#[cfg(all(not(feature = "production"), feature = "SGX_MODE_HW"))]
+#[ctor]
+fn init_logger() {
+    log::set_logger(&LOGGER)
+        .map(|()| log::set_max_level(LevelFilter::Info))
+        .unwrap();
+}
+
+#[cfg(all(feature = "production", feature = "SGX_MODE_HW"))]
+#[ctor]
+fn init_logger() {
+    log::set_logger(&LOGGER)
+        .map(|()| log::set_max_level(LevelFilter::Warn))
+        .unwrap();
+}
+
+#[cfg(not(feature = "SGX_MODE_HW"))]
 #[ctor]
 fn init_logger() {
     log::set_logger(&LOGGER)

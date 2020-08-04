@@ -5,10 +5,34 @@ use wasmi::{Error as InterpreterError, MemoryInstance, MemoryRef, ModuleRef, Run
 use enclave_ffi_types::Ctx;
 
 use crate::consts::BECH32_PREFIX_ACC_ADDR;
+use crate::crypto::Ed25519PublicKey;
 use crate::wasm::contract_validation::ContractKey;
 use crate::wasm::db::{read_encrypted_key, remove_encrypted_key, write_encrypted_key};
 use crate::wasm::errors::WasmEngineError;
 use crate::wasm::runtime::traits::WasmiApi;
+use crate::wasm::{query_chain::encrypt_and_query_chain, types::IoNonce};
+
+pub enum ContractOperation {
+    Init,
+    Handle,
+    Query,
+    // Migrate. // not implemented
+}
+
+#[allow(unused)]
+impl ContractOperation {
+    fn is_init(&self) -> bool {
+        matches!(self, ContractOperation::Init)
+    }
+
+    fn is_handle(&self) -> bool {
+        matches!(self, ContractOperation::Handle)
+    }
+
+    fn is_query(&self) -> bool {
+        matches!(self, ContractOperation::Query)
+    }
+}
 
 /// SecretContract maps function index to implementation
 /// When instantiating a module we give it the SecretNetworkImportResolver resolver
@@ -23,14 +47,21 @@ pub struct ContractInstance {
     pub gas_used_externally: u64,
     pub contract_key: ContractKey,
     pub module: ModuleRef,
+    operation: ContractOperation,
+    pub user_nonce: IoNonce,
+    pub user_public_key: Ed25519PublicKey,
 }
 
 impl ContractInstance {
-    fn get_memory(&self) -> &MemoryInstance {
-        &*self.memory
-    }
-
-    pub fn new(context: Ctx, module: ModuleRef, gas_limit: u64, contract_key: ContractKey) -> Self {
+    pub fn new(
+        context: Ctx,
+        module: ModuleRef,
+        gas_limit: u64,
+        contract_key: ContractKey,
+        operation: ContractOperation,
+        user_nonce: IoNonce,
+        user_public_key: Ed25519PublicKey,
+    ) -> Self {
         let memory = (&*module)
             .export_by_name("memory")
             .expect("Module expected to have 'memory' export")
@@ -46,10 +77,28 @@ impl ContractInstance {
             gas_used_externally: 0,
             contract_key,
             module,
+            operation,
+            user_nonce,
+            user_public_key,
         }
     }
-    /// extract_vector extracts key into a buffer
-    fn extract_vector(&self, vec_ptr_ptr: u32) -> Result<Vec<u8>, InterpreterError> {
+
+    fn get_memory(&self) -> &MemoryInstance {
+        &*self.memory
+    }
+
+    /// extract_vector extracts a vector from the wasm memory space
+    pub fn extract_vector(&self, vec_ptr_ptr: u32) -> Result<Vec<u8>, WasmEngineError> {
+        self.extract_vector_inner(vec_ptr_ptr).map_err(|err| {
+            error!(
+                "error while trying to read the buffer at {:?} : {:?}",
+                vec_ptr_ptr, err
+            );
+            WasmEngineError::MemoryReadError
+        })
+    }
+
+    fn extract_vector_inner(&self, vec_ptr_ptr: u32) -> Result<Vec<u8>, InterpreterError> {
         let ptr: u32 = self.get_memory().get_value(vec_ptr_ptr)?;
 
         if ptr == 0 {
@@ -63,7 +112,14 @@ impl ContractInstance {
         self.get_memory().get(ptr, len as usize)
     }
 
-    pub fn allocate(&mut self, len: u32) -> Result<u32, InterpreterError> {
+    pub fn allocate(&mut self, len: u32) -> Result<u32, WasmEngineError> {
+        self.allocate_inner(len).map_err(|err| {
+            error!("Failed to allocate {} bytes in wasm: {}", len, err);
+            WasmEngineError::MemoryAllocationError
+        })
+    }
+
+    fn allocate_inner(&mut self, len: u32) -> Result<u32, InterpreterError> {
         match self.module.clone().invoke_export(
             "allocate",
             &[RuntimeValue::I32(len as i32)],
@@ -81,6 +137,21 @@ impl ContractInstance {
     }
 
     pub fn write_to_allocated_memory(
+        &mut self,
+        buffer: &[u8],
+        ptr_to_region_in_wasm_vm: u32,
+    ) -> Result<u32, WasmEngineError> {
+        self.write_to_allocated_memory_inner(buffer, ptr_to_region_in_wasm_vm)
+            .map_err(|err| {
+                error!(
+                    "error while trying to write the buffer {:?} to the destination buffer at {:?} : {:?}",
+                    buffer, ptr_to_region_in_wasm_vm, err
+                );
+                WasmEngineError::MemoryWriteError
+            })
+    }
+
+    fn write_to_allocated_memory_inner(
         &mut self,
         buffer: &[u8],
         ptr_to_region_in_wasm_vm: u32,
@@ -121,11 +192,7 @@ impl ContractInstance {
         Ok(ptr_to_region_in_wasm_vm)
     }
 
-    pub fn write_to_memory(&mut self, buffer: &[u8]) -> Result<u32, InterpreterError> {
-        // WASM pointers are pointers to "Region"
-        // Region is a struct that looks like this:
-        // ptr_to_region -> | 4byte = buffer_addr | 4bytes = buffer_cap | 4bytes = buffer_len |
-
+    pub fn write_to_memory(&mut self, buffer: &[u8]) -> Result<u32, WasmEngineError> {
         // allocate return a pointer to a region
         let ptr_to_region_in_wasm_vm = self.allocate(buffer.len() as u32)?;
         self.write_to_allocated_memory(buffer, ptr_to_region_in_wasm_vm)
@@ -158,7 +225,7 @@ impl ContractInstance {
     }
 
     fn is_gas_depleted(&self) -> bool {
-        self.gas_limit <= self.gas_used.saturating_add(self.gas_used_externally)
+        self.gas_limit < self.gas_used.saturating_add(self.gas_used_externally)
     }
 }
 
@@ -171,14 +238,8 @@ impl WasmiApi for ContractInstance {
         let state_key_name = self
             .extract_vector(state_key_ptr_ptr as u32)
             .map_err(|err| {
-                error!(
-                    "read_db() error while trying to read state_key_name from wasm memory: {:?}",
-                    err
-                );
-                /*
-                    Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
-                */
-                WasmEngineError::MemoryReadError
+                error!("read_db() error while trying to read state_key_name from wasm memory");
+                err
             })?;
 
         trace!(
@@ -205,14 +266,10 @@ impl WasmiApi for ContractInstance {
 
         let ptr_to_region_in_wasm_vm = self.write_to_memory(&value).map_err(|err| {
             error!(
-                "read_db() error while trying to allocate {} bytes for the value: {:?}",
+                "read_db() error while trying to allocate {} bytes for the value",
                 value.len(),
-                err,
             );
-            /*
-                Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
-            */
-            WasmEngineError::MemoryAllocationError
+            err
         })?;
 
         // Return pointer to the allocated buffer with the value written to it
@@ -224,17 +281,15 @@ impl WasmiApi for ContractInstance {
     /// key is a pointer to a region "struct" of "pointer" and "length"
     /// A Region looks like { ptr: u32, len: u32 }
     fn remove_db_index(&mut self, state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+        if self.operation.is_query() {
+            return Err(WasmEngineError::UnauthorizedWrite.into());
+        }
+
         let state_key_name = self
             .extract_vector(state_key_ptr_ptr as u32)
             .map_err(|err| {
-                error!(
-                    "remove_db() error while trying to read state_key_name from wasm memory: {:?}",
-                    err
-                );
-                /*
-                    Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
-                */
-                WasmEngineError::MemoryReadError
+                error!("remove_db() error while trying to read state_key_name from wasm memory");
+                err
             })?;
 
         trace!(
@@ -259,27 +314,19 @@ impl WasmiApi for ContractInstance {
         state_key_ptr_ptr: i32,
         value_ptr_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
+        if self.operation.is_query() {
+            return Err(WasmEngineError::UnauthorizedWrite.into());
+        }
+
         let state_key_name = self
             .extract_vector(state_key_ptr_ptr as u32)
             .map_err(|err| {
-                error!(
-                    "write_db() error while trying to read state_key_name from wasm memory: {:?}",
-                    err
-                );
-                /*
-                    Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
-                */
-                WasmEngineError::MemoryReadError
+                error!("write_db() error while trying to read state_key_name from wasm memory");
+                err
             })?;
         let value = self.extract_vector(value_ptr_ptr as u32).map_err(|err| {
-            error!(
-                "write_db() error while trying to read value from wasm memory: {:?}",
-                err
-            );
-            /*
-                Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
-            */
-            WasmEngineError::MemoryReadError
+            error!("write_db() error while trying to read value from wasm memory");
+            err
         })?;
 
         trace!(
@@ -314,13 +361,9 @@ impl WasmiApi for ContractInstance {
     ) -> Result<Option<RuntimeValue>, Trap> {
         let human = self.extract_vector(human_ptr_ptr as u32).map_err(|err| {
             error!(
-                "canonicalize_address() error while trying to read human address from wasm memory: {:?}",
-                err
-             );
-            /*
-                Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
-            */
-            WasmEngineError::MemoryReadError
+                "canonicalize_address() error while trying to read human address from wasm memory"
+            );
+            err
         })?;
 
         trace!(
@@ -335,9 +378,6 @@ impl WasmiApi for ContractInstance {
                     "canonicalize_address() error while trying to parse human address from bytes to string: {:?}",
                     err
                 );
-                /*
-                    Assaf: I don't think the input can be invalid utf8, unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
-                */
                 return Ok(Some(RuntimeValue::I32(-1)));
             }
             Ok(x) => x,
@@ -351,9 +391,9 @@ impl WasmiApi for ContractInstance {
         let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
             Err(err) => {
                 error!(
-                "canonicalize_address() error while trying to decode human address {:?} as bech32: {:?}",
-                human_addr_str, err
-            );
+                    "canonicalize_address() error while trying to decode human address {:?} as bech32: {:?}",
+                    human_addr_str, err
+                );
                 return Ok(Some(RuntimeValue::I32(-3)));
             }
             Ok(x) => x,
@@ -371,13 +411,12 @@ impl WasmiApi for ContractInstance {
 
         let canonical = match Vec::<u8>::from_base32(&data) {
             Err(err) => {
+                // Assaf: From reading https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#607
+                // and https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#228 I don't think this can fail that way
                 warn!(
                     "canonicalize_address() error while trying to decode bytes from base32 {:?}: {:?}",
                     data, err
                 );
-                /*
-                    Assaf: From reading https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#607 and https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#228 I don't think this can fail that way
-                */
                 return Ok(Some(RuntimeValue::I32(-5)));
             }
             Ok(x) => x,
@@ -386,14 +425,10 @@ impl WasmiApi for ContractInstance {
         self.write_to_allocated_memory(&canonical, canonical_ptr_ptr as u32)
             .map_err(|err| {
                 error!(
-                    "canonicalize_address() error while trying to write the answer {:?} to the destination buffer: {:?}",
+                    "canonicalize_address() error while trying to write the answer {:?} to the destination buffer",
                     canonical,
-                    err,
                 );
-                /*
-                    Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
-                */
-                WasmEngineError::MemoryWriteError
+                err
             })?;
 
         // return 0 == ok
@@ -410,16 +445,14 @@ impl WasmiApi for ContractInstance {
         canonical_ptr_ptr: i32,
         human_ptr_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        let canonical = self.extract_vector(canonical_ptr_ptr as u32).map_err(|err| {
-            error!(
-                "humanize_address() error while trying to read canonical address from wasm memory: {:?}",
+        let canonical = self
+            .extract_vector(canonical_ptr_ptr as u32)
+            .map_err(|err| {
+                error!(
+                    "humanize_address() error while trying to read canonical address from wasm memory",
+                );
                 err
-            );
-            /*
-                Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
-            */
-            WasmEngineError::MemoryReadError
-        })?;
+            })?;
 
         trace!(
             "humanize_address() was called from WASM code with {:?}",
@@ -428,9 +461,8 @@ impl WasmiApi for ContractInstance {
 
         let human_addr_str = match bech32::encode(BECH32_PREFIX_ACC_ADDR, canonical.to_base32()) {
             Err(err) => {
-                /*
-                    Assaf: IMO This can never fail. From looking at bech32::encode, it only fails because input prefix issues. For us the prefix is always "secert" which is valid.
-                */
+                // Assaf: IMO This can never fail. From looking at bech32::encode, it only fails
+                // because input prefix issues. For us the prefix is always "secert" which is valid.
                 error!("humanize_address() error while trying to encode canonical address {:?} to human: {:?}",  canonical, err);
                 return Ok(Some(RuntimeValue::I32(-1)));
             }
@@ -442,14 +474,10 @@ impl WasmiApi for ContractInstance {
         self.write_to_allocated_memory(&human_bytes, human_ptr_ptr as u32)
             .map_err(|err| {
                 error!(
-                    "humanize_address() error while trying to write the answer {:?} to the destination buffer: {:?}",
+                    "humanize_address() error while trying to write the answer {:?} to the destination buffer",
                     human_bytes,
-                    err,
                 );
-                /*
-                    Assaf: I don't think this can happen unless the caller overrides the CosmWasm implementation of deps.api.canonical_address, not uses the CosmWasm std at all, writes the contract in a languege other than rust, etc.
-                */
-                WasmEngineError::MemoryWriteError
+                err
             })?;
 
         // return 0 == ok
@@ -457,8 +485,46 @@ impl WasmiApi for ContractInstance {
     }
 
     // stub, for now
-    fn query_chain_index(&mut self, _query_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
-        Err(WasmEngineError::NotImplemented.into())
+    fn query_chain_index(&mut self, query_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+        let query_buffer = self.extract_vector(query_ptr_ptr as u32).map_err(|err| {
+            error!("query_chain() error while trying to read canonical address from wasm memory",);
+            err
+        })?;
+
+        trace!(
+            "query_chain() was called from WASM code with {:?}",
+            String::from_utf8_lossy(&query_buffer)
+        );
+
+        // Call query_chain (this bubbles up to x/compute via ocalls and FFI to Go code)
+        // Returns the value from x/compute
+        let mut gas_used: u64 = 0;
+        let answer = encrypt_and_query_chain(
+            &query_buffer,
+            &self.context,
+            self.user_nonce,
+            self.user_public_key,
+            &mut gas_used,
+        )?;
+
+        trace!(
+            "query_chain() got answer from outside with gas {} and result {:?}",
+            gas_used,
+            String::from_utf8_lossy(&answer)
+        );
+
+        self.use_gas_externally(gas_used)?;
+
+        let ptr_to_region_in_wasm_vm = self.write_to_memory(&answer).map_err(|err| {
+            error!(
+                "query_chain() error while trying to allocate and write the answer {:?} to the WASM VM",
+                answer,
+            );
+            err
+        })?;
+
+        // Return pointer to the allocated buffer with the value written to it
+        Ok(Some(RuntimeValue::I32(ptr_to_region_in_wasm_vm as i32)))
     }
 
     fn gas_index(&mut self, gas_amount: i32) -> Result<Option<RuntimeValue>, Trap> {

@@ -121,10 +121,11 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     apiUrl: string,
     senderAddress: string,
     signCallback: SigningCallback,
+    seed?: Uint8Array,
     customFees?: Partial<FeeTable>,
     broadcastMode = BroadcastMode.Block,
   ) {
-    super(apiUrl, broadcastMode);
+    super(apiUrl, seed, broadcastMode);
     this.anyValidAddress = senderAddress;
 
     this.senderAddress = senderAddress;
@@ -263,7 +264,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
       result = await this.postTx(signedTx);
     } catch (err) {
       try {
-        const errorMessageRgx = /wasm contract failed: generic: (.+?): failed to execute message; message index: 0/g;
+        const errorMessageRgx = /contract failed: encrypted: (.+?): failed to execute message; message index: 0/g;
 
         const rgxMatches = errorMessageRgx.exec(err.message);
         if (rgxMatches == null || rgxMatches.length != 2) {

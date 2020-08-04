@@ -17,7 +17,7 @@ use wasmer_runtime_core::{
 };
 */
 
-use crate::backends::get_gas_left;
+use crate::backends::{get_gas_left, get_gas_used};
 use crate::context::{
     move_into_context, move_out_of_context, set_storage_readonly, setup_context,
     with_querier_from_context, with_storage_from_context,
@@ -222,6 +222,11 @@ where
     /// Returns the currently remaining gas.
     pub fn get_gas_left(&self) -> u64 {
         get_gas_left(&self.inner)
+    }
+
+    /// Returns the currently remaining gas.
+    pub fn get_gas_used(&self) -> u64 {
+        get_gas_used(&self.inner)
     }
 
     /// Sets the readonly storage flag on this instance. Since one instance can be used

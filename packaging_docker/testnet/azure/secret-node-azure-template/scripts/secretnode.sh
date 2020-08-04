@@ -46,10 +46,27 @@ mkdir -p /usr/local/bin/secret-node
 
 sudo curl -L https://raw.githubusercontent.com/enigmampc/SecretNetwork/develop/packaging_docker/testnet/azure/secret-node-azure-template/scripts/docker-compose.yaml -o /usr/local/bin/secret-node/docker-compose.yaml
 
+# replace the tmp paths with home directory ones
 sudo sed -i 's/\/tmp\/.secretd:/\/home\/'$1'\/.secretd:/g' /usr/local/bin/secret-node/docker-compose.yaml
 sudo sed -i 's/\/tmp\/.secretcli:/\/home\/'$1'\/.secretcli:/g' /usr/local/bin/secret-node/docker-compose.yaml
+sudo sed -i 's/\/tmp\/.sgx_secrets:/\/home\/'$1'\/.sgx_secrets:/g' /usr/local/bin/secret-node/docker-compose.yaml
+
+
+# Open RPC port to the public
+perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.secretd/config/config.toml
+
+# Open P2P port to the outside
+perl -i -pe 's/laddr = .+?26656"/laddr = "tcp:\/\/0.0.0.0:26656"/' ~/.secretd/config/config.toml
 
 echo "Setting Secret Node environment variables" >> /home/$1/install.progress.txt
+
+echo 'alias secretcli="docker exec -it secret-node_node_1 secretcli"' >> /home/"$1"/.bashrc
+echo 'alias secretd="docker exec -it secret-node_node_1 secretd"' >> /home/"$1"/.bashrc
+echo 'alias show-node-id="docker exec -it secret-node_node_1 secretd tendermint show-node-id"' >> /home/"$1"/.bashrc
+echo 'alias show-validator="docker exec -it secret-node_node_1 secretd tendermint show-validator"' >> /home/"$1"/.bashrc
+
+echo 'alias stop-secret-node="docker-compose -f /usr/local/bin/secret-node/docker-compose.yaml down"' >> /home/"$1"/.bashrc
+echo 'alias start-secret-node="docker-compose -f /usr/local/bin/secret-node/docker-compose.yaml up -d"' >> /home/"$1"/.bashrc
 
 echo "export CHAINID=$2" >> /home/"$1"/.bashrc
 echo "export MONIKER=$3" >> /home/"$1"/.bashrc

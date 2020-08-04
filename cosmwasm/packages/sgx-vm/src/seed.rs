@@ -1,6 +1,7 @@
 use sgx_types::*;
+use enclave_ffi_types::{HealthCheckResult};
 
-use log::info;
+use log::{debug, info};
 
 use crate::enclave::get_enclave;
 
@@ -25,12 +26,40 @@ extern "C" {
         retval: *mut sgx_status_t,
         public_key: &mut [u8; 32],
     ) -> sgx_status_t;
+
+    /// Trigger a query method in a wasm contract
+    pub fn ecall_health_check(
+        eid: sgx_enclave_id_t,
+        retval: *mut HealthCheckResult,
+    ) -> sgx_status_t;
 }
 
-pub fn untrusted_init_node(master_cert: &[u8], encrypted_seed: &[u8]) -> SgxResult<sgx_status_t> {
-    info!("Hello from just before initializing - init_node");
+pub fn untrusted_health_check() -> SgxResult<HealthCheckResult> {
+    //info!("Initializing enclave..");
     let enclave = get_enclave()?;
-    info!("Hello from just after initializing - init_node");
+    //debug!("Initialized enclave successfully!");
+
+    let eid = enclave.geteid();
+    let mut ret = HealthCheckResult::default();
+
+    let status = unsafe {
+        ecall_health_check(
+            eid,
+            &mut ret,
+        )
+    };
+
+    if status != sgx_status_t::SGX_SUCCESS {
+        return Err(status);
+    }
+
+    Ok(ret)
+}
+
+pub fn untrusted_init_node(master_cert: &[u8], encrypted_seed: &[u8]) -> SgxResult<()> {
+    info!("Initializing enclave..");
+    let enclave = get_enclave()?;
+    debug!("Initialized enclave successfully!");
 
     let eid = enclave.geteid();
     let mut ret = sgx_status_t::SGX_SUCCESS;
@@ -54,13 +83,13 @@ pub fn untrusted_init_node(master_cert: &[u8], encrypted_seed: &[u8]) -> SgxResu
         return Err(ret);
     }
 
-    Ok(sgx_status_t::SGX_SUCCESS)
+    Ok(())
 }
 
 pub fn untrusted_key_gen() -> SgxResult<[u8; 32]> {
-    info!("Hello from just before initializing - untrusted_key_gen");
+    debug!("Initializing enclave..");
     let enclave = get_enclave()?;
-    info!("Hello from just after initializing - untrusted_key_gen");
+    debug!("Initialized enclave successfully!");
 
     let eid = enclave.geteid();
     let mut retval = sgx_status_t::SGX_SUCCESS;
@@ -100,3 +129,4 @@ pub fn untrusted_init_bootstrap() -> SgxResult<[u8; 32]> {
 
     Ok(public_key)
 }
+

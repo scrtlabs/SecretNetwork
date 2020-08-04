@@ -29,6 +29,10 @@ import (
 
 type Cache struct{}
 
+func HealthCheck() ([]byte, error) {
+	return nil, nil
+}
+
 func InitBootstrap() ([]byte, error) {
 	//errmsg := C.Buffer{}
 	//

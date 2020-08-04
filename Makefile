@@ -1,9 +1,11 @@
 PACKAGES=$(shell go list ./... | grep -v '/simulation')
-VERSION := $(shell echo $(shell git describe --tags) | sed 's/^v//')
+VERSION ?= $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
 BUILD_PROFILE ?= release
+DEB_BIN_DIR ?= /usr/local/bin
+DEB_LIB_DIR ?= /usr/lib
 
 SGX_MODE ?= HW
 BRANCH ?= develop
@@ -125,30 +127,34 @@ build_arm_linux:
 
 build_all: build-linux build_windows build_macos build_arm_linux
 
-deb: build-linux
+deb: build-linux deb-no-compile
+
+deb-no-compile:
     ifneq ($(UNAME_S),Linux)
 		exit 1
     endif
 	rm -rf /tmp/SecretNetwork
 
-	mkdir -p /tmp/SecretNetwork/deb/usr/local/bin
-	mv -f ./secretcli /tmp/SecretNetwork/deb/usr/local/bin/secretcli
-	mv -f ./secretd /tmp/SecretNetwork/deb/usr/local/bin/secretd
-	chmod +x /tmp/SecretNetwork/deb/usr/local/bin/secretd /tmp/SecretNetwork/deb/usr/local/bin/secretcli
+	mkdir -p /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)
+	mv -f ./secretcli /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretcli
+	mv -f ./secretd /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretd
+	chmod +x /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretd /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretcli
 
-	mkdir -p /tmp/SecretNetwork/deb/usr/local/lib
-	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/SecretNetwork/deb/usr/local/lib/
-	chmod +x /tmp/SecretNetwork/deb/usr/local/lib/lib*.so
+	mkdir -p /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)
+	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/
+	chmod +x /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/lib*.so
 
 	mkdir -p /tmp/SecretNetwork/deb/DEBIAN
 	cp ./packaging_ubuntu/control /tmp/SecretNetwork/deb/DEBIAN/control
 	printf "Version: " >> /tmp/SecretNetwork/deb/DEBIAN/control
-	git describe --tags | tr -d v >> /tmp/SecretNetwork/deb/DEBIAN/control
+	printf "$(VERSION)" >> /tmp/SecretNetwork/deb/DEBIAN/control
 	echo "" >> /tmp/SecretNetwork/deb/DEBIAN/control
 	cp ./packaging_ubuntu/postinst /tmp/SecretNetwork/deb/DEBIAN/postinst
 	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/postinst
 	cp ./packaging_ubuntu/postrm /tmp/SecretNetwork/deb/DEBIAN/postrm
 	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/postrm
+	cp ./packaging_ubuntu/triggers /tmp/SecretNetwork/deb/DEBIAN/triggers
+	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/triggers
 	dpkg-deb --build /tmp/SecretNetwork/deb/ .
 	-rm -rf /tmp/SecretNetwork
 
@@ -193,16 +199,25 @@ build-azure:
 	docker build -f Dockerfile.azure -t enigmampc/secret-network-node:azuretestnet .
 
 build-testnet:
-	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f Dockerfile.testnet -t enigmampc/secret-network-bootstrap:testnet  .
-	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t enigmampc/secret-network-node:testnet .
+	mkdir build || true
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f Dockerfile.testnet -t enigmampc/secret-network-bootstrap:pubtestnet  .
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t enigmampc/secret-network-node:pubtestnet .
+	docker build --build-arg SGX_MODE=HW -f Dockerfile_build_deb -t deb_build .
+	docker run -e VERSION=0.5.0-rc1 -v $(pwd)/build:/build deb_build
 
-docker_bootstrap:
+docker_base:
+	docker build --build-arg FEATURES=${FEATURES} --build-arg SGX_MODE=${SGX_MODE} -f Dockerfile.base -t rust-go-base-image .
+
+docker_bootstrap: docker_base
 	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t enigmampc/secret-network-bootstrap-${ext}:${DOCKER_TAG} .
 
-docker_node:
-	docker build --build-arg SECRET_NODE_TYPE=NODE -t enigmampc/secret_node .
-
+docker_node: docker_base
 	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=NODE -t enigmampc/secret-network-node-${ext}:${DOCKER_TAG} .
+
+docker_local_azure_hw: docker_base
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -t ci-enigma-sgx-node .
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t ci-enigma-sgx-bootstrap .
+
 # while developing:
 build-enclave: vendor
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime
@@ -210,6 +225,10 @@ build-enclave: vendor
 # while developing:
 check-enclave:
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime check
+
+# while developing:
+clippy-enclave:
+	$(MAKE) -C cosmwasm/packages/wasmi-runtime clippy
 
 # while developing:
 clean-enclave:
@@ -240,8 +259,17 @@ go-tests: build-test-contract
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	SGX_MODE=SW $(MAKE) build-linux
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	rm -rf ./x/compute/internal/keeper/.sgx_secrets
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	SGX_MODE=SW go test -p 1 -v ./x/compute/internal/...
+	SGX_MODE=SW go test -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
+
+go-tests-hw: build-test-contract
+	# empty BUILD_PROFILE means debug mode which compiles faster
+	SGX_MODE=HW $(MAKE) build-linux
+	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	rm -rf ./x/compute/internal/keeper/.sgx_secrets
+	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
+	SGX_MODE=HW go test -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 build-cosmwasm-test-contracts:
 	# echo "" | sudo add-apt-repository ppa:hnakamur/binaryen

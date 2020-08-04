@@ -20,12 +20,12 @@ lazy_static! {
 
 impl Keychain {
     pub fn new() -> Self {
-        let consensus_seed = match Seed::unseal(CONSENSUS_SEED_SEALING_PATH) {
+        let consensus_seed = match Seed::unseal(&CONSENSUS_SEED_SEALING_PATH) {
             Ok(k) => Some(k),
             Err(_e) => None,
         };
 
-        let registration_key = match KeyPair::unseal(REGISTRATION_KEY_SEALING_PATH) {
+        let registration_key = match KeyPair::unseal(&REGISTRATION_KEY_SEALING_PATH) {
             Ok(k) => Some(k),
             Err(_e) => None,
         };
@@ -66,22 +66,6 @@ impl Keychain {
         };
         Ok(())
     }
-
-    // pub fn is_registration_key_set(&self) -> bool {
-    //     return self.registration_key.is_some();
-    // }
-    //
-    // pub fn is_consensus_state_ikm_set(&self) -> bool {
-    //     return self.consensus_state_ikm.is_some();
-    // }
-
-    // pub fn is_consensus_seed_exchange_keypair_set(&self) -> bool {
-    //     return self.consensus_seed_exchange_keypair.is_some();
-    // }
-
-    // pub fn is_consensus_io_exchange_keypair_set(&self) -> bool {
-    //     return self.consensus_io_exchange_keypair.is_some();
-    // }
 
     pub fn is_consensus_seed_set(&self) -> bool {
         self.consensus_seed.is_some()
@@ -136,7 +120,7 @@ impl Keychain {
     }
 
     pub fn set_registration_key(&mut self, kp: KeyPair) -> Result<(), EnclaveError> {
-        if let Err(e) = kp.seal(REGISTRATION_KEY_SEALING_PATH) {
+        if let Err(e) = kp.seal(&REGISTRATION_KEY_SEALING_PATH) {
             error!("Error sealing registration key");
             return Err(e);
         }
@@ -157,7 +141,7 @@ impl Keychain {
     }
 
     pub fn set_consensus_seed(&mut self, consensus_seed: Seed) -> Result<(), EnclaveError> {
-        if let Err(e) = consensus_seed.seal(CONSENSUS_SEED_SEALING_PATH) {
+        if let Err(e) = consensus_seed.seal(&CONSENSUS_SEED_SEALING_PATH) {
             error!("Error sealing consensus_seed");
             return Err(e);
         }
@@ -167,7 +151,7 @@ impl Keychain {
 
     pub fn generate_consensus_master_keys(&mut self) -> Result<(), EnclaveError> {
         if !self.is_consensus_seed_set() {
-            debug!("Seed not initialized! Cannot derive enclave keys");
+            trace!("Seed not initialized, skipping derivation of enclave keys");
             return Ok(());
         }
 
@@ -223,8 +207,8 @@ pub mod tests {
     // todo: fix test vectors to actually work
     fn test_initial_keychain_state() {
         // clear previous data (if any)
-        std::sgxfs::remove(CONSENSUS_SEED_SEALING_PATH);
-        std::sgxfs::remove(REGISTRATION_KEY_SEALING_PATH);
+        std::sgxfs::remove(&CONSENSUS_SEED_SEALING_PATH);
+        std::sgxfs::remove(&REGISTRATION_KEY_SEALING_PATH);
 
         let keys = Keychain::new();
 
@@ -238,8 +222,8 @@ pub mod tests {
     // todo: fix test vectors to actually work
     fn test_initialize_keychain_seed() {
         // clear previous data (if any)
-        std::sgxfs::remove(CONSENSUS_SEED_SEALING_PATH);
-        std::sgxfs::remove(REGISTRATION_KEY_SEALING_PATH);
+        std::sgxfs::remove(&CONSENSUS_SEED_SEALING_PATH);
+        std::sgxfs::remove(&REGISTRATION_KEY_SEALING_PATH);
 
         let mut keys = Keychain::new();
 
@@ -255,8 +239,8 @@ pub mod tests {
     // todo: fix test vectors to actually work
     fn test_initialize_keychain_registration() {
         // clear previous data (if any)
-        std::sgxfs::remove(CONSENSUS_SEED_SEALING_PATH);
-        std::sgxfs::remove(REGISTRATION_KEY_SEALING_PATH);
+        std::sgxfs::remove(&CONSENSUS_SEED_SEALING_PATH);
+        std::sgxfs::remove(&REGISTRATION_KEY_SEALING_PATH);
 
         let mut keys = Keychain::new();
 
@@ -270,8 +254,8 @@ pub mod tests {
     // todo: fix test vectors to actually work
     fn test_initialize_keys() {
         // clear previous data (if any)
-        std::sgxfs::remove(CONSENSUS_SEED_SEALING_PATH);
-        std::sgxfs::remove(REGISTRATION_KEY_SEALING_PATH);
+        std::sgxfs::remove(&CONSENSUS_SEED_SEALING_PATH);
+        std::sgxfs::remove(&REGISTRATION_KEY_SEALING_PATH);
 
         let mut keys = Keychain::new();
 
@@ -287,8 +271,8 @@ pub mod tests {
     // todo: fix test vectors to actually work
     fn test_key_manager() {
         // clear previous data (if any)
-        std::sgxfs::remove(CONSENSUS_SEED_SEALING_PATH);
-        std::sgxfs::remove(REGISTRATION_KEY_SEALING_PATH);
+        std::sgxfs::remove(&CONSENSUS_SEED_SEALING_PATH);
+        std::sgxfs::remove(&REGISTRATION_KEY_SEALING_PATH);
 
         let seed = Seed::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
         let mut keys = Keychain::new();

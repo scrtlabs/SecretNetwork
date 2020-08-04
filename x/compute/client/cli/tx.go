@@ -3,6 +3,7 @@ package cli
 import (
 	"bufio"
 	"fmt"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
 	"io/ioutil"
 	"strconv"
 
@@ -45,8 +46,9 @@ func GetTxCmd(cdc *codec.Codec) *cobra.Command {
 		StoreCodeCmd(cdc),
 		InstantiateContractCmd(cdc),
 		ExecuteContractCmd(cdc),
-		MigrateContractCmd(cdc),
-		UpdateContractAdminCmd(cdc),
+		// Currently not supporting these commands
+		// MigrateContractCmd(cdc),
+		// UpdateContractAdminCmd(cdc),
 	)...)
 	return txCmd
 }
@@ -131,7 +133,12 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 
 			label := viper.GetString(flagLabel)
 			if label == "" {
-				return fmt.Errorf("Label is required on all contracts")
+				return fmt.Errorf("label is required on all contracts")
+			}
+			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
+			res, _, err := cliCtx.Query(route)
+			if res != nil {
+				return fmt.Errorf("label already exists. You must choose a unique label for your contract instance")
 			}
 
 			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
@@ -173,18 +180,39 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 // ExecuteContractCmd will instantiate a contract from previously uploaded code.
 func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "execute [contract_addr_bech32] [json_encoded_send_args]",
+		Use:   "execute [optional: contract_addr_bech32] [json_encoded_send_args]",
 		Short: "Execute a command on a wasm contract",
-		Args:  cobra.ExactArgs(2),
+		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			inBuf := bufio.NewReader(cmd.InOrStdin())
 			txBldr := auth.NewTxBuilderFromCLI(inBuf).WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
 
-			// get the id of the code to instantiate
-			contractAddr, err := sdk.AccAddressFromBech32(args[0])
-			if err != nil {
-				return err
+			var contractAddr = sdk.AccAddress{}
+			var execMsg []byte
+			if len(args) == 1 {
+				label := viper.GetString(flagLabel)
+				if label == "" {
+					return fmt.Errorf("Label or bech32 contract address is required")
+				}
+
+				route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
+				res, _, err := cliCtx.Query(route)
+				if err != nil {
+					return err
+				}
+
+				contractAddr = res
+				execMsg = []byte(args[0])
+			} else {
+				// get the id of the code to instantiate
+				res, err := sdk.AccAddressFromBech32(args[0])
+				if err != nil {
+					return err
+				}
+
+				contractAddr = res
+				execMsg = []byte(args[1])
 			}
 
 			amounstStr := viper.GetString(flagAmount)
@@ -195,7 +223,6 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 
 			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
 
-			execMsg := []byte(args[1])
 			execMsg, err = wasmCtx.Encrypt(execMsg)
 			if err != nil {
 				return err
@@ -213,5 +240,6 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 	}
 
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract along with command")
+	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
 	return cmd
 }

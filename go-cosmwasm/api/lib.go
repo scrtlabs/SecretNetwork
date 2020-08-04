@@ -27,6 +27,16 @@ type Cache struct {
 	ptr *C.cache_t
 }
 
+func HealthCheck() ([]byte, error) {
+	errmsg := C.Buffer{}
+
+	res, err := C.get_health_check(&errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return receiveVector(res), nil
+}
+
 func InitBootstrap() ([]byte, error) {
 	errmsg := C.Buffer{}
 

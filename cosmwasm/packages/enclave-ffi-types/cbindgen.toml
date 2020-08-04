@@ -32,11 +32,13 @@ style = "both"
 include = [
     "UserSpaceBuffer",
     "EnclaveBuffer",
+    "NodeAuthResult",
     "Ctx",
     "InitResult",
     "HandleResult",
     "QueryResult",
     "OcallReturn",
+    "HealthCheckResult",
 ]
 exclude = []
 prefix = ""

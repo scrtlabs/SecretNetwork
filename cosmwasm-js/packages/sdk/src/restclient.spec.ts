@@ -1365,7 +1365,7 @@ describe("RestClient", () => {
         await client.queryContractSmart(contractAddress!, { nosuchkey: {} }).then(
           () => fail("shouldn't succeed"),
           (error) =>
-            expect(error).toMatch(/query wasm contract failed: parsing hackatom::contract::QueryMsg/),
+            expect(error).toMatch(/query contract failed: parsing hackatom::contract::QueryMsg/),
         );
 
         // invalid address throws an error

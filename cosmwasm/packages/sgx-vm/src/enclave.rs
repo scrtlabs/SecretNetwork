@@ -3,12 +3,15 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use sgx_types::{sgx_attributes_t, sgx_launch_token_t, sgx_misc_attribute_t, SgxResult};
+use sgx_types::{
+    sgx_attributes_t, sgx_launch_token_t, sgx_misc_attribute_t, sgx_status_t, SgxResult,
+};
 use sgx_urts::SgxEnclave;
 
 use lazy_static::lazy_static;
+use log::*;
 
-static ENCLAVE_FILE: &'static str = "librust_cosmwasm_enclave.signed.so";
+static ENCLAVE_FILE: &str = "librust_cosmwasm_enclave.signed.so";
 
 fn init_enclave() -> SgxResult<SgxEnclave> {
     let mut launch_token: sgx_launch_token_t = [0; 1024];
@@ -23,11 +26,44 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
 
     // Step : try to create a .enigma folder for storing all the files
     // Create a directory, returns `io::Result<()>`
-    let enclave_directory = env::var("SCRT_ENCLAVE_DIR").unwrap_or('.'.to_string());
+    let enclave_directory = env::var("SCRT_ENCLAVE_DIR").unwrap_or_else(|_| '.'.to_string());
 
     let path = Path::new(&enclave_directory);
 
-    let enclave_file_path: PathBuf = path.join(ENCLAVE_FILE);
+    let mut enclave_file_path: PathBuf = path.join(ENCLAVE_FILE);
+
+    debug!(
+        "Looking for the enclave file in {:?}",
+        enclave_file_path.to_str()
+    );
+
+    if !enclave_file_path.exists() {
+        enclave_file_path = Path::new("/lib").join(ENCLAVE_FILE);
+
+        debug!(
+            "Looking for the enclave file in {:?}",
+            enclave_file_path.to_str()
+        );
+        if !enclave_file_path.exists() {
+            enclave_file_path = Path::new("/usr/lib").join(ENCLAVE_FILE);
+
+            debug!(
+                "Looking for the enclave file in {:?}",
+                enclave_file_path.to_str()
+            );
+            if !enclave_file_path.exists() {
+                enclave_file_path = Path::new("/usr/local/lib").join(ENCLAVE_FILE);
+            }
+        }
+    }
+
+    if !enclave_file_path.exists() {
+        debug!(
+            "Cannot find the enclave file. Try pointing the SCRT_ENCLAVE_DIR envirinment variable to the directory that has {:?}",
+            ENCLAVE_FILE
+        );
+        return Err(sgx_status_t::SGX_ERROR_INVALID_ENCLAVE);
+    }
 
     SgxEnclave::create(
         enclave_file_path,

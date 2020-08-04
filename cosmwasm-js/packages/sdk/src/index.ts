@@ -38,3 +38,5 @@ export {
   UploadMeta,
   UploadResult,
 } from "./signingcosmwasmclient";
+import EnigmaUtils from "./enigmautils";
+export { EnigmaUtils };

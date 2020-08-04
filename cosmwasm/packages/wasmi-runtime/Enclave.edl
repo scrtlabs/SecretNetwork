@@ -9,6 +9,8 @@ enclave {
     from "sgx_tstdc.edl" import *;
     from "sgx_tprotected_fs.edl" import *;
 
+    from "sgx_env.edl" import u_getenv_ocall;
+
     // This header is generated during the build of enclave-ffi-types
     include "target/headers/enclave-ffi-types.h"
 
@@ -29,7 +31,7 @@ enclave {
 
         public sgx_status_t ecall_get_attestation_report();
 
-        public sgx_status_t ecall_authenticate_new_node(
+        public NodeAuthResult ecall_authenticate_new_node(
             [in, count=cert_len] const uint8_t* cert,
             uintptr_t cert_len,
             [out, count=48] uint8_t* seed
@@ -45,6 +47,7 @@ enclave {
         public InitResult ecall_init(
             Ctx context,
             uint64_t gas_limit,
+            [out] uint64_t* used_gas,
             [in, count=contract_len] const uint8_t* contract,
             uintptr_t contract_len,
             [in, count=env_len] const uint8_t* env,
@@ -56,6 +59,7 @@ enclave {
         public HandleResult ecall_handle(
             Ctx context,
             uint64_t gas_limit,
+            [out] uint64_t* used_gas,
             [in, count=contract_len] const uint8_t* contract,
             uintptr_t contract_len,
             [in, count=env_len] const uint8_t* env,
@@ -67,11 +71,14 @@ enclave {
         public QueryResult ecall_query(
             Ctx context,
             uint64_t gas_limit,
+            [out] uint64_t* used_gas,
             [in, count=contract_len] const uint8_t* contract,
             uintptr_t contract_len,
             [in, count=msg_len] const uint8_t* msg,
             uintptr_t msg_len
         );
+
+        public HealthCheckResult ecall_health_check();
 
     };
 
@@ -89,6 +96,15 @@ enclave {
             [in, count=key_len] const uint8_t* key,
             uintptr_t key_len
         ) allow (ecall_allocate);
+
+        OcallReturn ocall_query_chain(
+            Ctx context,
+            [out] UntrustedVmError* vm_error,
+            [out] uint64_t* gas_used,
+            [out] EnclaveBuffer* value,
+            [in, count=query_len] const uint8_t* query,
+            uintptr_t query_len
+        ) allow (ecall_allocate, ecall_query);
 
         OcallReturn ocall_remove_db(
             Ctx context,

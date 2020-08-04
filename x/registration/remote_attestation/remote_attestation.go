@@ -169,12 +169,14 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) ([]byte, error) {
 	}
 
 	// 2. Verify quote status (mandatory field)
+
 	if qr.IsvEnclaveQuoteStatus != "" {
 		//fmt.Println("isvEnclaveQuoteStatus = ", qr.IsvEnclaveQuoteStatus)
 		switch qr.IsvEnclaveQuoteStatus {
 		case "OK":
 			break
-		case "GROUP_OUT_OF_DATE", "GROUP_REVOKED", "CONFIGURATION_NEEDED", "CONFIGURATION_AND_SW_HARDENING_NEEDED":
+		case "GROUP_REVOKED", "CONFIGURATION_NEEDED", "CONFIGURATION_AND_SW_HARDENING_NEEDED":
+
 			// Verify platformInfoBlob for further info if status not OK
 			if qr.PlatformInfoBlob != "" {
 				platInfo, err := hex.DecodeString(qr.PlatformInfoBlob)
@@ -197,10 +199,8 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) ([]byte, error) {
 				if err != nil {
 					return nil, err
 				}
-				//fmt.Println("Warning - Advisory IDs: " + string(cves))
 			}
-			//return nil, errors.New("Quote status invalid")
-		case "SW_HARDENING_NEEDED":
+		case "SW_HARDENING_NEEDED", "GROUP_OUT_OF_DATE":
 			if len(qr.AdvisoryIDs) != 0 {
 				_, err := json.Marshal(qr.AdvisoryIDs)
 				if err != nil {

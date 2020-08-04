@@ -28,6 +28,7 @@ use crate::consts::{SigningMethod, MRSIGNER, SIGNING_METHOD};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use super::report::{AttestationReport, SgxQuoteStatus};
+use enclave_ffi_types::NodeAuthResult;
 
 extern "C" {
     #[allow(dead_code)]
@@ -273,11 +274,11 @@ pub fn get_ias_auth_config() -> (Vec<u8>, rustls::RootCertStore) {
 }
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
-pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
+pub fn verify_ra_cert(cert_der: &[u8]) -> Result<Vec<u8>, NodeAuthResult> {
     let payload =
-        get_netscape_comment(cert_der).map_err(|_err| sgx_status_t::SGX_ERROR_UNEXPECTED)?;
+        get_netscape_comment(cert_der).map_err(|_err| NodeAuthResult::InvalidCert)?;
 
-    let pk = base64::decode(&payload).unwrap();
+    let pk = base64::decode(&payload).map_err(|_err| NodeAuthResult::InvalidCert)?;
 
     Ok(pk)
 }
@@ -292,24 +293,15 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
 /// 5. Verify enclave signature (mr enclave/signer)
 ///
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
+pub fn verify_ra_cert(cert_der: &[u8]) -> Result<Vec<u8>, NodeAuthResult> {
     // Before we reach here, Webpki already verifed the cert is properly signed
 
     let report =
-        AttestationReport::from_cert(cert_der).map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?;
+        AttestationReport::from_cert(cert_der).map_err(|_| NodeAuthResult::InvalidCert)?;
 
     // 2. Verify quote status (mandatory field)
 
-    match report.sgx_quote_status {
-        SgxQuoteStatus::OK => (),
-        SgxQuoteStatus::SwHardeningNeeded => {
-            warn!("Attesting enclave is vulnerable, and should be patched");
-        }
-        _ => {
-            error!("Invalid attestation quote status - cannot verify remote node");
-            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-        }
-    }
+    verify_quote_status(report.sgx_quote_status)?;
 
     // verify certificate
     match SIGNING_METHOD {
@@ -317,7 +309,8 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
             let this_mr_enclave = match get_mr_enclave() {
                 Ok(r) => r,
                 Err(_) => {
-                    return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+                    error!("This should never happen. If you see this, your node isn't working anymore");
+                    return Err(NodeAuthResult::Panic);
                 }
             };
 
@@ -327,7 +320,7 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
                     "received: {:?} \n expected: {:?}",
                     report.sgx_quote_body.isv_enclave_report.mr_enclave, this_mr_enclave
                 );
-                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+                return Err(NodeAuthResult::MrEnclaveMismatch);
             }
         }
         SigningMethod::MRSIGNER => {
@@ -337,7 +330,7 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
                     "received: {:?} \n expected: {:?}",
                     report.sgx_quote_body.isv_enclave_report.mr_signer, MRSIGNER
                 );
-                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+                return Err(NodeAuthResult::MrSignerMismatch);
             }
         }
         SigningMethod::NONE => {}
@@ -345,6 +338,46 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
 
     let report_public_key = report.sgx_quote_body.isv_enclave_report.report_data[0..32].to_vec();
     Ok(report_public_key)
+}
+
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+fn verify_quote_status(quote_status: SgxQuoteStatus) -> Result<(), NodeAuthResult> {
+    match quote_status {
+        SgxQuoteStatus::OK => Ok(()),
+        SgxQuoteStatus::SwHardeningNeeded => {
+            // warn!("Attesting enclave is vulnerable, and should be patched");
+            Ok(())
+        }
+        _ => {
+            error!(
+                "Invalid attestation quote status - cannot verify remote node: {:?}",
+                quote_status
+            );
+            Err(NodeAuthResult::from(&quote_status))
+        }
+    }
+}
+
+#[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
+fn verify_quote_status(quote_status: SgxQuoteStatus) -> Result<(), NodeAuthResult> {
+    match quote_status {
+        SgxQuoteStatus::OK => Ok(()),
+        SgxQuoteStatus::SwHardeningNeeded => {
+            // warn!("Attesting enclave is vulnerable, and should be patched");
+            Ok(())
+        }
+        SgxQuoteStatus::GroupOutOfDate => {
+            warn!("TCB level of SGX platform service is outdated. You should check for firmware updates");
+            Ok(())
+        }
+        _ => {
+            error!(
+                "Invalid attestation quote status - cannot verify remote node: {:?}",
+                quote_status
+            );
+            Err(NodeAuthResult::from(&quote_status))
+        }
+    }
 }
 
 #[cfg(feature = "test")]
