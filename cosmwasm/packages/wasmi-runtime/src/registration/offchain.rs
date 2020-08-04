@@ -3,7 +3,9 @@
 /// to go crazy with random generation entropy, time requirements, or whatever else
 ///
 use log::*;
-use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
+use sgx_types::{sgx_platform_info_t, sgx_quote_sign_type_t, sgx_status_t, sgx_update_info_bit_t};
+
+use enclave_ffi_types::NodeAuthResult;
 
 use std::slice;
 
@@ -16,8 +18,9 @@ use crate::storage::write_to_untrusted;
 use crate::utils::{attest_from_key, validate_const_ptr, validate_mut_ptr, validate_mut_slice};
 
 use super::attestation::create_attestation_certificate;
-use super::cert::verify_ra_cert;
+use super::cert::{ocall_get_update_info, verify_quote_status, verify_ra_cert};
 use super::seed_exchange::decrypt_seed;
+use crate::registration::report::AttestationReport;
 
 ///
 /// `ecall_init_bootstrap`
@@ -183,6 +186,68 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
 
     if let Err(status) = write_to_untrusted(cert.as_slice(), ATTESTATION_CERTIFICATE_SAVE_PATH) {
         return status;
+    }
+
+    let report = match AttestationReport::from_cert(cert.as_slice()) {
+        Ok(r) => r,
+        Err(_) => {
+            error!("Error parsing report");
+            return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+        }
+    };
+
+    let node_auth_result = NodeAuthResult::from(&report.sgx_quote_status);
+    // print
+    match verify_quote_status(&report.sgx_quote_status) {
+        Err(status) => match status {
+            NodeAuthResult::SwHardeningAndConfigurationNeeded => {
+                println!("Platform status is SW_HARDENING_AND_CONFIGURATION_NEEDED. This means is updated but requires further BIOS configuration");
+            }
+            NodeAuthResult::GroupOutOfDate => {
+                println!("Platform status is GROUP_OUT_OF_DATE. This means that one of the system components is missing a security update");
+            }
+            _ => {
+                println!("Platform status is {}", status);
+            }
+        },
+        _ => println!("Platform Okay!"),
+    }
+
+    // print platform blob info
+    match node_auth_result {
+        NodeAuthResult::GroupOutOfDate | NodeAuthResult::SwHardeningAndConfigurationNeeded => unsafe {
+            if let Some(platform_info) = report.platform_info_blob {
+                let mut update_info = sgx_update_info_bit_t::default();
+                let mut rt = sgx_status_t::default();
+                let res = ocall_get_update_info(
+                    &mut rt as *mut sgx_status_t,
+                    platform_info.as_slice().as_ptr() as *const sgx_platform_info_t,
+                    1,
+                    &mut update_info as *mut sgx_update_info_bit_t,
+                );
+
+                if res != sgx_status_t::SGX_SUCCESS {
+                    println!("res={:?}", res);
+                    return res;
+                }
+
+                if rt != sgx_status_t::SGX_SUCCESS {
+                    println!("Processor Firmware Update (ucodeUpdate). A security upgrade for your computing
+                            device is required for this application to continue to provide you with a high degree of
+                            security. Please contact your device manufacturer’s support website for a BIOS update
+                            for this system. Update code: {}", update_info.ucodeUpdate);
+                    println!("Intel Manageability Engine Update (csmeFwUpdate). A security upgrade for your
+                            computing device is required for this application to continue to provide you with a high
+                            degree of security. Please contact your device manufacturer’s support website for a
+                            BIOS and/or Intel® Manageability Engine update for this system. Update code: {}", update_info.csmeFwUpdate);
+                    println!("Intel SGX Platform Software Update (pswUpdate). A security upgrade for your
+                              computing device is required for this application to continue to provide you with a high
+                              degree of security. Please visit this application’s support website for an Intel SGX
+                              Platform SW update. Update code: {}", update_info.pswUpdate);
+                }
+            }
+        },
+        _ => {}
     }
 
     sgx_status_t::SGX_SUCCESS

@@ -150,6 +150,7 @@ pub enum EnclaveError {
 #[repr(C)]
 #[derive(Debug, Display, PartialEq, Eq)]
 pub enum NodeAuthResult {
+    #[display(fmt = "Enclave quote is valid")]
     Success,
     #[display(fmt = "Enclave quote status was GROUP_OUT_OF_DATE which is not allowed")]
     GroupOutOfDate,
@@ -165,7 +166,9 @@ pub enum NodeAuthResult {
     SigrlVersionMismatch,
     #[display(fmt = "Enclave quote status was CONFIGURATION_NEEDED which is not allowed")]
     ConfigurationNeeded,
-    #[display(fmt = "Enclave quote status was CONFIGURATION_AND_SW_HARDENING_NEEDED which is not allowed")]
+    #[display(
+        fmt = "Enclave quote status was CONFIGURATION_AND_SW_HARDENING_NEEDED which is not allowed"
+    )]
     SwHardeningAndConfigurationNeeded,
     #[display(fmt = "Enclave quote status invalid")]
     BadQuoteStatus,
@@ -183,7 +186,9 @@ pub enum NodeAuthResult {
     MalformedPublicKey,
     #[display(fmt = "Encrypting the seed failed")]
     SeedEncryptionFailed,
-    #[display(fmt = "Unexpected panic during node authentication. Certificate may be malformed or invalid")]
+    #[display(
+        fmt = "Unexpected panic during node authentication. Certificate may be malformed or invalid"
+    )]
     Panic,
 }
 
