@@ -735,10 +735,19 @@ func TestQueryInputStructureError(t *testing.T) {
 }
 
 func TestInitNotEncryptedInputError(t *testing.T) {
-	ctx, keeper, tempDir, codeID, walletA, _, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	ctx, keeper, tempDir, codeID, walletA, privKey, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
+	ctx = sdk.NewContext(
+		ctx.MultiStore(),
+		ctx.BlockHeader(),
+		ctx.IsCheckTx(),
+		log.NewNopLogger(),
+	).WithGasMeter(sdk.NewGasMeter(defaultGas))
+
 	initMsg := []byte(`{"nop":{}`)
+
+	ctx = prepareInitSignedTx(t, keeper, ctx, walletA, privKey, initMsg, codeID)
 
 	// init
 	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsg, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
@@ -754,7 +763,18 @@ func TestExecuteNotEncryptedInputError(t *testing.T) {
 	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGas)
 	require.Empty(t, initErr)
 
-	_, err := keeper.Execute(ctx, contractAddress, walletA, []byte(`{"empty_log_key_value":{}}`), sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	ctx = sdk.NewContext(
+		ctx.MultiStore(),
+		ctx.BlockHeader(),
+		ctx.IsCheckTx(),
+		log.NewNopLogger(),
+	).WithGasMeter(sdk.NewGasMeter(defaultGas))
+
+	execMsg := []byte(`{"empty_log_key_value":{}}`)
+
+	ctx = prepareExecSignedTx(t, keeper, ctx, walletA, privKeyA, execMsg, contractAddress)
+
+	_, err := keeper.Execute(ctx, contractAddress, walletA, execMsg, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	require.Error(t, err)
 
 	require.Contains(t, err.Error(), "failed to decrypt data")

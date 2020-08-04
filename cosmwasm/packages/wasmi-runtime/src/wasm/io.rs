@@ -12,52 +12,6 @@ use log::*;
 use serde::Serialize;
 use serde_json::json;
 
-// {
-// let receiver_human =
-// msg_exec.get_mut("contract_addr").unwrap().as_str().unwrap();
-//
-// debug!("HERE 2?");
-//
-// // let test = msg_exec.as_object_mut().unwrap();
-// // // *test.get_mut("cb_signature").unwrap() = json!("toml");
-// // test.insert("cb_signature".to_string(), json!("toml"));
-// //
-// // debug!("LETS SEE {:?}", msg);
-//
-// let receiver_human = HumanAddr(receiver_human.to_string());
-//
-// let receiver_canonical_addr = CanonicalAddr::from_human(
-// receiver_human.clone(),
-// )
-// .map_err(|err| {
-// error!(
-// "Couldn't translate human address: {:?} to canonical: {}",
-// receiver_human, err
-// );
-// EnclaveError::FailedToDeserialize
-// })?;
-//
-// // Hash(Enclave_secret | sender(current contract) | receiver (from json) | msg_to_pass)
-// let callback_sig = create_callback_signature(
-// &contract_addr,
-// &receiver_canonical_addr,
-// &msg_to_pass,
-// );
-//
-// let new_msg_with_cb = msg_exec.as_object_mut().unwrap();
-// new_msg_with_cb.insert(
-// "cb_signature".to_string(),
-// encode(&Sha256::digest(callback_sig.as_slice())),
-// );
-//
-// debug!(
-// "Callback sig is: {:?}",
-// encode(&Sha256::digest(callback_sig.as_slice()))
-// );
-// // msg["wasm"]["execute"]["cb_signature"] =
-// //     encode(&Sha256::digest(callback_sig.as_slice()));
-// }
-
 pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) -> AESKey {
     let enclave_io_key = KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap();
 
@@ -70,7 +24,7 @@ pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) 
     tx_encryption_key
 }
 
-fn encrypt_serializeable<T>(key: &AESKey, val: &T) -> Result<String, EnclaveError>
+fn encrypt_serializable<T>(key: &AESKey, val: &T) -> Result<String, EnclaveError>
 where
     T: ?Sized + Serialize,
 {
@@ -126,7 +80,7 @@ pub fn encrypt_output(
         // Output is error
         WasmOutput::ErrObject { err } => {
             // Encrypting the actual error
-            let encrypted_err = encrypt_serializeable(&key, err)?;
+            let encrypted_err = encrypt_serializable(&key, err)?;
 
             // Putting it inside a 'generic_err' envelope
             *err = json!({"generic_err":{"msg":encrypted_err}});
@@ -134,7 +88,7 @@ pub fn encrypt_output(
 
         // Output is a simple string
         WasmOutput::OkString { ok } => {
-            *ok = encrypt_serializeable(&key, ok)?;
+            *ok = encrypt_serializable(&key, ok)?;
         }
 
         // Output is an object
@@ -148,13 +102,13 @@ pub fn encrypt_output(
 
             // Encrypt all logs
             for log in &mut ok.log {
-                log.key = encrypt_serializeable(&key, &log.key)?;
-                log.value = encrypt_serializeable(&key, &log.value)?;
+                log.key = encrypt_serializable(&key, &log.key)?;
+                log.value = encrypt_serializable(&key, &log.value)?;
             }
 
             // If there's data at all
             if let Some(data) = &mut ok.data {
-                *data = Binary::from_base64(&encrypt_serializeable(&key, data)?)?;
+                *data = Binary::from_base64(&encrypt_serializable(&key, data)?)?;
             }
         }
     };
@@ -182,7 +136,11 @@ fn encrypt_wasm_msg(
     match wasm_msg {
         WasmMsg::Execute {
             msg,
-            contract_addr: receiver_addr,
+            cb_sig: msg_cb_sig,
+            ..
+        }
+        | WasmMsg::Instantiate {
+            msg,
             cb_sig: msg_cb_sig,
             ..
         } => {
@@ -192,25 +150,8 @@ fn encrypt_wasm_msg(
             msg_to_pass.encrypt_in_place()?;
             *msg = b64_encode(&msg_to_pass.to_slice());
 
-            let receiver_canonical =
-                CanonicalAddr::from_human((*receiver_addr).clone()).map_err(|err| {
-                    error!(
-                        "Couldn't translate human address: {:?} to canonical: {}",
-                        receiver_addr, err
-                    );
-                    EnclaveError::FailedToDeserialize
-                })?;
-
-            let cb_sig =
-                create_callback_signature(contract_addr, &receiver_canonical, &msg_to_pass);
+            let cb_sig = create_callback_signature(contract_addr, &msg_to_pass);
             *msg_cb_sig = Some(cb_sig);
-        }
-        WasmMsg::Instantiate { msg, .. } => {
-            let mut msg_to_pass =
-                SecretMessage::from_base64((*msg).clone(), nonce, user_public_key)?;
-
-            msg_to_pass.encrypt_in_place()?;
-            *msg = b64_encode(&msg_to_pass.to_slice());
         }
     }
 
@@ -219,7 +160,6 @@ fn encrypt_wasm_msg(
 
 pub fn create_callback_signature(
     contract_addr: &CanonicalAddr,
-    receiver_addr: &CanonicalAddr,
     msg_to_sign: &SecretMessage,
 ) -> Vec<u8> {
     // Hash(Enclave_secret | sender(current contract) | codeId (from json) | msg_to_pass)
@@ -231,7 +171,6 @@ pub fn create_callback_signature(
         .to_vec();
 
     callback_sig_bytes.extend(contract_addr.as_slice());
-    callback_sig_bytes.extend(receiver_addr.as_slice());
     callback_sig_bytes.extend(msg_to_sign.msg.clone());
 
     callback_sig_bytes

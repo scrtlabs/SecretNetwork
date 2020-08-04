@@ -91,7 +91,7 @@ pub struct Env {
     pub contract_key: Option<String>,
     pub sign_bytes: Vec<Binary>,
     pub signatures: Vec<CosmosSignature>,
-    pub callback_signature: Option<Vec<u8>>,
+    pub cb_sig: Option<Binary>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]

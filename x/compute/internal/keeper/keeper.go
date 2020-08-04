@@ -196,7 +196,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	instance := types.NewContractInfo(codeID, creator, admin, initMsg, label, createdAt)
 	store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshalBinaryBare(instance))
 
-	fmt.Printf("Storing key: %s for account %s", key, contractAddress)
+	fmt.Printf("Storing key: %s for account %s\n", key, contractAddress)
 
 	store.Set(types.GetContractEnclaveKey(contractAddress), key)
 
@@ -256,13 +256,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	if execErr != nil {
 		return sdk.Result{}, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
-
 	consumeGas(ctx, gasUsed)
-	//var result wasmTypes.CosmosResponse
-	//err = json.Unmarshal(res, &result)
-	//if err != nil {
-	//	return sdk.Result{}, err
-	//}
 
 	// emit all events from this contract itself
 	value := types.CosmosResult(*result, contractAddress)

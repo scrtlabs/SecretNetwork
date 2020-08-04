@@ -117,8 +117,7 @@ pub fn verify_params(
     signatures: Vec<CosmosSignature>,
     sign_bytes: Vec<Binary>,
     msg_sender: &CanonicalAddr,
-    callback_signature: Option<Vec<u8>>,
-    contract_address: &CanonicalAddr,
+    callback_signature: Option<Binary>,
     msg: &SecretMessage,
 ) -> Result<(), EnclaveError> {
     trace!("Verifying tx signatures..");
@@ -138,7 +137,7 @@ pub fn verify_params(
         return Ok(());
     }
 
-    info!(
+    warn!(
         "Message sender {:?} does not match with the signed pubkey's addres: {:?}",
         msg_sender,
         signatures[0].get_public_key()
@@ -146,13 +145,13 @@ pub fn verify_params(
 
     // Check if there's a callback signature and if it is valid
     if let Some(cb_sig) = callback_signature {
-        if verify_callback_sig(cb_sig, msg_sender, contract_address, msg) {
+        if verify_callback_sig(cb_sig.0, msg_sender, msg) {
             info!("msg.sender is the calling contract");
 
             return Ok(());
         }
     } else {
-        error!("Did not provide callback signature");
+        warn!("Did not provide callback signature");
     }
 
     error!("Signature verification failed");
@@ -172,7 +171,6 @@ fn verify_sender(signature: &CosmosSignature, msg_sender: &CanonicalAddr) -> boo
 fn verify_callback_sig(
     callback_signature: Vec<u8>,
     sender: &CanonicalAddr,
-    receiver: &CanonicalAddr,
     msg: &SecretMessage,
 ) -> bool {
     // No signature
@@ -180,7 +178,7 @@ fn verify_callback_sig(
         return false;
     }
 
-    let callback_sig = io::create_callback_signature(sender, &receiver, msg);
+    let callback_sig = io::create_callback_signature(sender, msg);
 
     if !callback_signature.eq(&callback_sig) {
         info!(

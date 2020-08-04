@@ -62,8 +62,7 @@ pub fn init(
         parsed_env.signatures.clone(),
         parsed_env.sign_bytes.clone(),
         &parsed_env.message.sender,
-        parsed_env.callback_signature.clone(),
-        &parsed_env.contract.address,
+        parsed_env.cb_sig.clone(),
         &secret_msg,
     )?;
 
@@ -145,8 +144,7 @@ pub fn handle(
         parsed_env.signatures.clone(),
         parsed_env.sign_bytes.clone(),
         &parsed_env.message.sender,
-        parsed_env.callback_signature.clone(),
-        &parsed_env.contract.address,
+        parsed_env.cb_sig.clone(),
         &secret_msg,
     )?;
 
