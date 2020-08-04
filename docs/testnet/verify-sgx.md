@@ -59,6 +59,7 @@ Where the important field is __isvEnclaveQuoteStatus__. This is the field that m
 With the following value accepted for __testnet only__:
 * GROUP_OUT_OF_DATE
 * CONFIGURATION_AND_SW_HARDENING_NEEDED
+
 Consult with the [Intel API](https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf#page=21) for more on these values.
 
 If you do not see such an output, look for a file called `attestation_cert.der` which should have been created in your `$HOME` directory.  You can then use the command `secretd parse <path/to/attestation_cert.der>` to check the result a successful result should be a 64 byte hex string (e.g. `0x9efe0dc689447514d6514c05d1161cea15c461c62e6d72a2efabcc6b85ed953b`. 
