@@ -120,15 +120,15 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 		return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
 	}
 
-	// Get sign bytes for each tx signer
-	var signBytes [][]byte
-	for _, signer := range tx.GetSigners() {
+	// Get sign bytes for each message signer ( which is not necessarily the same set as tx signers)
+	signBytes := make([][]byte, len(tx.GetSigners()))
+	for i, signer := range tx.GetSigners() {
 		account, err := auth.GetSignerAcc(ctx, k.accountKeeper, signer)
 		if err != nil {
 			return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
 		}
 
-		signBytes = append(signBytes, GetSignBytes(ctx, account, tx))
+		signBytes[i] = GetSignBytes(ctx, account, tx)
 	}
 
 	// create contract address
@@ -213,14 +213,14 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	// Get sign bytes for each tx signer
-	var signBytes [][]byte
-	for _, signer := range tx.GetSigners() {
+	signBytes := make([][]byte, len(tx.GetSigners()))
+	for i, signer := range tx.GetSigners() {
 		account, err := auth.GetSignerAcc(ctx, k.accountKeeper, signer)
 		if err != nil {
 			return sdk.Result{}, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
 		}
 
-		signBytes = append(signBytes, GetSignBytes(ctx, account, tx))
+		signBytes[i] = GetSignBytes(ctx, account, tx)
 	}
 
 	codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
