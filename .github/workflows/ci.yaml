@@ -3,7 +3,7 @@ name: Tests
 on: [push]
 
 jobs:
-  Enclave Unit Tests:
+  Enclave-Unit-Tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -54,7 +54,7 @@ jobs:
           RUSTC_WRAPPER="$HOME/sccache" make enclave-tests
           make clean-enclave
 
-  Go Tests:
+  Go-Tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -166,7 +166,7 @@ jobs:
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
 
-  Integration Tests:
+  Integration-Tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
