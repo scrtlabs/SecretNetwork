@@ -10,10 +10,11 @@ use cosmwasm_std::{
 
 /////////////////////////////// Messages ///////////////////////////////
 
+use core::time;
 use mem::MaybeUninit;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::mem;
+use std::{mem, thread};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -115,6 +116,9 @@ pub enum HandleMsg {
         amount: u32,
         denom: String,
         to: HumanAddr,
+    },
+    Sleep {
+        ms: u64,
     },
 }
 
@@ -349,6 +353,17 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             log: vec![],
             data: None,
         }),
+        HandleMsg::Sleep { ms } => {
+            let ten_millis = time::Duration::from_millis(ms);
+
+            thread::sleep(ten_millis);
+
+            Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            })
+        }
     }
 }
 
