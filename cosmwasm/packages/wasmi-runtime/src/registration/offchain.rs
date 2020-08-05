@@ -262,6 +262,7 @@ fn print_local_report_info(cert: &[u8]) {
     }
 }
 
+#[cfg(feature = "SGX_MODE_HW")]
 unsafe fn print_platform_info(report: &AttestationReport) {
     if let Some(platform_info) = &report.platform_info_blob {
         let mut update_info = sgx_update_info_bit_t::default();
