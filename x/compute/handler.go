@@ -94,7 +94,7 @@ func handleInstantiate(ctx sdk.Context, k Keeper, msg *MsgInstantiateContract) (
 	contractAddr, err := k.Instantiate(
 		ctx,
 		msg.Code,
-		msg.Sender, // for MsgInstantiateContract, there is only one signer which is msg.Sender (https://github.com/enigmampc/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L192-L194)
+		msg.Sender,
 		msg.Admin,
 		msg.InitMsg,
 		msg.Label,
@@ -128,7 +128,7 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *MsgExecuteContract) (*sdk.Res
 	res, err := k.Execute(
 		ctx,
 		msg.Contract,
-		msg.Sender, // for MsgExecuteContract, there is only one signer which is msg.Sender (https://github.com/enigmampc/SecretNetwork/blob/develop/x/compute/internal/types/msg.go#L192-L194)
+		msg.Sender,
 		msg.Msg,
 		msg.SentFunds,
 		msg.CallbackSignature,

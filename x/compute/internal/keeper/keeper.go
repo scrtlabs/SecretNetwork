@@ -110,7 +110,6 @@ func GetSignBytes(ctx sdk.Context, acc exported.Account, tx auth.StdTx) []byte {
 }
 
 // GetSignerSignature returns the signature of an account on a tx
-// returns an empty struct if no signature found
 func GetSignerSignature(signer exported.Account, tx auth.StdTx) (authtypes.StdSignature, error) {
 	// Extract signature of signer from all tx signatures
 	for _, signature := range tx.Signatures {
@@ -142,7 +141,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 		}
 
 		// Get sign bytes for the message creator
-		signerAcc, err := auth.GetSignerAcc(ctx, k.accountKeeper, creator)
+		signerAcc, err := auth.GetSignerAcc(ctx, k.accountKeeper, creator) // for MsgInstantiateContract, there is only one signer which is msg.Sender (https://github.com/enigmampc/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L192-L194)
 		if err != nil {
 			return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
 		}
@@ -323,20 +322,6 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	if err != nil {
 		return &sdk.Result{}, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
 	}
-
-	//// Get sign bytes for the message signer
-	//signerAcc, err := auth.GetSignerAcc(ctx, k.accountKeeper, signer)
-	//if err != nil {
-	//	return &sdk.Result{}, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
-	//}
-
-	//signerSig, err := GetSignerSignature(signerAcc, tx)
-
-	//if (authtypes.StdSignature{}).Equals(signerSig) {
-	//	return &sdk.Result{}, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", signer, tx.Signatures))
-	//}
-
-	//signBytes := GetSignBytes(ctx, signerAcc, tx)
 
 	contractInfo := k.GetContractInfo(ctx, contractAddress)
 	if contractInfo == nil {
