@@ -194,7 +194,7 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
         return status;
     }
 
-    let _ = print_local_report_info(cert.as_slice());
+    print_local_report_info(cert.as_slice());
 
     sgx_status_t::SGX_SUCCESS
 }
