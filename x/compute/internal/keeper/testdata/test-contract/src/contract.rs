@@ -2,9 +2,10 @@ use cosmwasm_storage::PrefixedStorage;
 
 use cosmwasm_std::{
     generic_err, invalid_base64, invalid_utf8, log, not_found, null_pointer, parse_err,
-    serialize_err, unauthorized, underflow, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
-    HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse, Querier, QueryRequest,
-    QueryResult, ReadonlyStorage, StdError, StdResult, Storage, WasmMsg, WasmQuery,
+    serialize_err, to_binary, unauthorized, underflow, Api, BankMsg, Binary, Coin, CosmosMsg, Env,
+    Extern, HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse,
+    Querier, QueryRequest, QueryResult, ReadonlyStorage, StdError, StdResult, Storage, Uint128,
+    WasmMsg, WasmQuery,
 };
 
 /////////////////////////////// Messages ///////////////////////////////
@@ -122,6 +123,23 @@ pub enum HandleMsg {
     CallbackToLogMsgSender {
         to: HumanAddr,
         code_hash: String,
+    },
+    DepositToContract {},
+    SendFunds {
+        amount: u32,
+        denom: String,
+        to: HumanAddr,
+        from: HumanAddr,
+    },
+    SendFundsToInitCallback {
+        amount: u32,
+        denom: String,
+        code_id: u64,
+    },
+    SendFundsToExecCallback {
+        amount: u32,
+        denom: String,
+        to: HumanAddr,
     },
 }
 
@@ -327,6 +345,57 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 send: vec![],
             })],
             log: vec![log("hi", "hey")],
+            data: None,
+        }),
+        HandleMsg::DepositToContract {} => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(to_binary(&env.message.sent_funds).unwrap()),
+        }),
+        HandleMsg::SendFunds {
+            amount,
+            from,
+            to,
+            denom,
+        } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Bank(BankMsg::Send {
+                from_address: from,
+                to_address: to,
+                amount: vec![Coin {
+                    amount: Uint128(amount as u128),
+                    denom: denom,
+                }],
+            })],
+            log: vec![],
+            data: None,
+        }),
+        HandleMsg::SendFundsToInitCallback {
+            amount,
+            denom,
+            code_id,
+        } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+                msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
+                code_id: code_id,
+                label: None,
+                send: vec![Coin {
+                    amount: Uint128(amount as u128),
+                    denom: denom,
+                }],
+            })],
+            log: vec![],
+            data: None,
+        }),
+        HandleMsg::SendFundsToExecCallback { amount, denom, to } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                msg: Binary("{\"no_data\":{}}".as_bytes().to_vec()),
+                contract_addr: to,
+                send: vec![Coin {
+                    amount: Uint128(amount as u128),
+                    denom: denom,
+                }],
+            })],
+            log: vec![],
             data: None,
         }),
     }

@@ -10,7 +10,7 @@ use crate::wasm::contract_validation::ContractKey;
 use crate::wasm::db::{read_encrypted_key, remove_encrypted_key, write_encrypted_key};
 use crate::wasm::errors::WasmEngineError;
 use crate::wasm::runtime::traits::WasmiApi;
-use crate::wasm::{query_chain::encrypt_and_query_chain, types::IoNonce};
+use crate::wasm::{gas::WasmCosts, query_chain::encrypt_and_query_chain, types::IoNonce};
 
 pub enum ContractOperation {
     Init,
@@ -45,6 +45,7 @@ pub struct ContractInstance {
     pub gas_used: u64,
     /// Gas used by external services. This is tracked separately so we don't double-charge for external services later.
     pub gas_used_externally: u64,
+    pub gas_costs: WasmCosts,
     pub contract_key: ContractKey,
     pub module: ModuleRef,
     operation: ContractOperation,
@@ -53,10 +54,12 @@ pub struct ContractInstance {
 }
 
 impl ContractInstance {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         context: Ctx,
         module: ModuleRef,
         gas_limit: u64,
+        gas_costs: WasmCosts,
         contract_key: ContractKey,
         operation: ContractOperation,
         user_nonce: IoNonce,
@@ -75,6 +78,7 @@ impl ContractInstance {
             gas_limit,
             gas_used: 0,
             gas_used_externally: 0,
+            gas_costs,
             contract_key,
             module,
             operation,
@@ -359,6 +363,8 @@ impl WasmiApi for ContractInstance {
         human_ptr_ptr: i32,
         canonical_ptr_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
+        self.use_gas_externally(self.gas_costs.external_canonicalize_address as u64)?;
+
         let human = self.extract_vector(human_ptr_ptr as u32).map_err(|err| {
             error!(
                 "canonicalize_address() error while trying to read human address from wasm memory"
@@ -445,6 +451,8 @@ impl WasmiApi for ContractInstance {
         canonical_ptr_ptr: i32,
         human_ptr_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
+        self.use_gas_externally(self.gas_costs.external_humanize_address as u64)?;
+
         let canonical = self
             .extract_vector(canonical_ptr_ptr as u32)
             .map_err(|err| {

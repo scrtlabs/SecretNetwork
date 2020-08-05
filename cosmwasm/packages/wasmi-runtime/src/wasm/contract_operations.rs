@@ -349,6 +349,7 @@ fn start_engine(
         context,
         module.clone(),
         gas_limit,
+        wasm_costs,
         *contract_key,
         operation,
         nonce,
