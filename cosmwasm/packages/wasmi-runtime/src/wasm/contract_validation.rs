@@ -114,50 +114,37 @@ pub fn validate_contract_key(
 pub fn verify_params(env: Env, msg: &SecretMessage) -> Result<(), EnclaveError> {
     trace!("Verifying tx signatures..");
 
-    // Verify each signature
-    // We currently support only secp256k1 signatures
-    for (sig, sb) in env.signatures.iter().zip(env.sign_bytes.iter()) {
-        secp256k1::verify_signature(sb, sig)?;
-    }
-
-    trace!("signatures verified");
-
-    if verify_sender(env.signatures, &env.message.sender) {
-        info!("msg.sender is the tx signer");
-
-        return Ok(());
-    }
-
-    warn!(
-        "Message sender {:?} does not match with any of the tx signers",
-        &env.message.sender,
-    );
-
-    // Check if there's a callback signature and if it is valid
+    // If there's no callback signature - it's not a callback and there has to be a tx signer + signature
     if let Some(cb_sig) = env.cb_sig {
         if verify_callback_sig(cb_sig.0, &env.message.sender, msg) {
             info!("msg.sender is the calling contract");
-
             return Ok(());
+        } else {
+            error!("Callback signature verification failed");
         }
     } else {
-        warn!("Did not provide callback signature");
-    }
+        secp256k1::verify_signature(&env.sign_bytes, &env.signature)?;
 
-    error!("Signature verification failed");
+        if verify_sender(&env.signature, &env.message.sender) {
+            info!("msg.sender is the tx signer");
+            return Ok(());
+        } else {
+            error!(
+                "Message sender {:?} does not match with the message signer",
+                &env.message.sender
+            );
+        }
+    }
 
     Err(EnclaveError::FailedTxVerification)
 }
 
-fn verify_sender(signatures: Vec<CosmosSignature>, msg_sender: &CanonicalAddr) -> bool {
-    // msg_sender must be one of the signers of the message
-    for sig in signatures {
-        let sender_pubkey = sig.get_public_key();
-        let address = secp256k1::pubkey_to_tm_address(&sender_pubkey);
+fn verify_sender(signature: &CosmosSignature, msg_sender: &CanonicalAddr) -> bool {
+    let sender_pubkey = signature.get_public_key();
+    let address = secp256k1::pubkey_to_tm_address(&sender_pubkey);
 
-        if address.eq(&msg_sender.as_slice()) {
-            return true;
-        }
+    if address.eq(&msg_sender.as_slice()) {
+        return true;
     }
 
     false
@@ -168,7 +155,6 @@ fn verify_callback_sig(
     sender: &CanonicalAddr,
     msg: &SecretMessage,
 ) -> bool {
-    // No signature
     if callback_signature.is_empty() {
         return false;
     }

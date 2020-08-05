@@ -1031,9 +1031,10 @@ type InitMsg struct {
 }
 
 func createFakeFundedAccount(ctx sdk.Context, am auth.AccountKeeper, coins sdk.Coins) (sdk.AccAddress, crypto.PrivKey) {
-	priv, _, addr := keyPubAddr()
+	priv, pub, addr := keyPubAddr()
 	baseAcct := auth.NewBaseAccountWithAddress(addr)
 	_ = baseAcct.SetCoins(coins)
+	_ = baseAcct.SetPubKey(pub)
 	am.SetAccount(ctx, &baseAcct)
 
 	return addr, priv

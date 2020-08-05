@@ -162,7 +162,7 @@ pub fn create_callback_signature(
     contract_addr: &CanonicalAddr,
     msg_to_sign: &SecretMessage,
 ) -> Vec<u8> {
-    // Hash(Enclave_secret | sender(current contract) | codeId (from json) | msg_to_pass)
+    // Hash(Enclave_secret | sender(current contract) | msg_to_pass)
     let mut callback_sig_bytes = KEY_MANAGER
         .get_consensus_callback_secret()
         .unwrap()

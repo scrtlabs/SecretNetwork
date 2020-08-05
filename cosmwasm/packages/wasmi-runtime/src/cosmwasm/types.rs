@@ -89,8 +89,8 @@ pub struct Env {
     pub message: MessageInfo,
     pub contract: ContractInfo,
     pub contract_key: Option<String>,
-    pub sign_bytes: Vec<Binary>,
-    pub signatures: Vec<CosmosSignature>,
+    pub sign_bytes: Binary,
+    pub signature: CosmosSignature,
     pub cb_sig: Option<Binary>,
 }
 
@@ -319,4 +319,14 @@ impl CosmosSignature {
     pub fn get_signature(&self) -> Binary {
         self.signature.clone()
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+pub struct SignDoc {
+    account_number: String,
+    chain_id: String,
+    fee: Value,
+    memo: String,
+    msgs: Vec<Value>,
+    sequence: String,
 }

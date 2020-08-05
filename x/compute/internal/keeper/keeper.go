@@ -5,9 +5,9 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/enigmampc/cosmos-sdk/x/auth/exported"
-	"path/filepath"
-
 	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/secp256k1"
+	"path/filepath"
 
 	wasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
@@ -109,26 +109,50 @@ func GetSignBytes(ctx sdk.Context, acc exported.Account, tx auth.StdTx) []byte {
 	)
 }
 
-// Instantiate creates an instance of a WASM contract
-func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) {
-	// Warning: This API may be deprecated:
-	// https://github.com/cosmos/cosmos-sdk/commit/c13809062ab16bf193ad3919c77ec03c79b76cc8#diff-a64b9f4b7565560002e3ac4a5eac008bR148
-	tx := authtypes.StdTx{}
-	txBytes := ctx.TxBytes()
-	err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
-	if err != nil {
-		return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+// GetSignerSignature returns the signature of an account on a tx
+// returns an empty struct if no signature found
+func GetSignerSignature(signer exported.Account, tx auth.StdTx) (authtypes.StdSignature, error) {
+	// Extract signature of signer from all tx signatures
+	for _, signature := range tx.Signatures {
+		if signature.PubKey.Equals(signer.GetPubKey()) {
+			return signature, nil
+		}
 	}
 
-	// Get sign bytes for each message signer ( which is not necessarily the same set as tx signers)
-	signBytes := make([][]byte, len(tx.GetSigners()))
-	for i, signer := range tx.GetSigners() {
-		account, err := auth.GetSignerAcc(ctx, k.accountKeeper, signer)
+	return authtypes.StdSignature{}, fmt.Errorf("could not find signer signature")
+}
+
+// Instantiate creates an instance of a WASM contract
+func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) {
+	signerSig := authtypes.StdSignature{
+		PubKey:    secp256k1.PubKeySecp256k1{},
+		Signature: []byte{},
+	}
+	signBytes := []byte{}
+
+	// If no callback signature - we should send the actual msg sender sign bytes and signature
+	if callbackSig == nil {
+		// Warning: This API may be deprecated:
+		// https://github.com/cosmos/cosmos-sdk/commit/c13809062ab16bf193ad3919c77ec03c79b76cc8#diff-a64b9f4b7565560002e3ac4a5eac008bR148
+		tx := authtypes.StdTx{}
+		txBytes := ctx.TxBytes()
+		err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
+		if err != nil {
+			return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+		}
+
+		// Get sign bytes for the message creator
+		signerAcc, err := auth.GetSignerAcc(ctx, k.accountKeeper, creator)
 		if err != nil {
 			return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
 		}
 
-		signBytes[i] = GetSignBytes(ctx, account, tx)
+		signerSig, err = GetSignerSignature(signerAcc, tx)
+		if err != nil {
+			return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Message sender: %v is not found in the tx creator set: %v, callback signature not provided", creator, tx.Signatures))
+		}
+
+		signBytes = GetSignBytes(ctx, signerAcc, tx)
 	}
 
 	// create contract address
@@ -161,7 +185,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	k.cdc.MustUnmarshalBinaryBare(bz, &codeInfo)
 
 	// prepare params for contract instantiate call
-	params := types.NewEnv(ctx, creator, deposit, contractAddress, nil, signBytes, tx.Signatures, callbackSig)
+	params := types.NewEnv(ctx, creator, deposit, contractAddress, nil, signBytes, signerSig, callbackSig)
 
 	// create prefixed data store
 	// 0x03 | contractAddress (sdk.AccAddress)
@@ -205,22 +229,33 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 
 // Execute executes the contract instance
 func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, callbackSig []byte) (sdk.Result, error) {
-	tx := authtypes.StdTx{}
-	txBytes := ctx.TxBytes()
-	err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
-	if err != nil {
-		return sdk.Result{}, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+	signerSig := authtypes.StdSignature{
+		PubKey:    secp256k1.PubKeySecp256k1{},
+		Signature: []byte{},
 	}
+	signBytes := []byte{}
 
-	// Get sign bytes for each tx signer
-	signBytes := make([][]byte, len(tx.GetSigners()))
-	for i, signer := range tx.GetSigners() {
-		account, err := auth.GetSignerAcc(ctx, k.accountKeeper, signer)
+	if callbackSig == nil {
+		tx := authtypes.StdTx{}
+		txBytes := ctx.TxBytes()
+		err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
+		if err != nil {
+			return sdk.Result{}, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+		}
+
+		// Get sign bytes for the message signer
+		signerAcc, err := auth.GetSignerAcc(ctx, k.accountKeeper, caller)
 		if err != nil {
 			return sdk.Result{}, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
 		}
 
-		signBytes[i] = GetSignBytes(ctx, account, tx)
+		signerSig, err = GetSignerSignature(signerAcc, tx)
+
+		if err != nil {
+			return sdk.Result{}, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", caller, tx.Signatures))
+		}
+
+		signBytes = GetSignBytes(ctx, signerAcc, tx)
 	}
 
 	codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
@@ -240,7 +275,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
 	fmt.Printf("Contract Execute: Got contract Key for contract %s: %s\n", contractAddress, base64.StdEncoding.EncodeToString(contractKey))
-	params := types.NewEnv(ctx, caller, coins, contractAddress, contractKey, signBytes, tx.Signatures, callbackSig)
+	params := types.NewEnv(ctx, caller, coins, contractAddress, contractKey, signBytes, signerSig, callbackSig)
 	fmt.Printf("Contract Execute: key from params %s \n", params.Key)
 
 	// prepare querier
@@ -276,6 +311,12 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 // We don't use this function currently. It's here for upstream compatibility
 // Migrate allows to upgrade a contract to a new code with data migration.
 func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, newCodeID uint64, msg []byte) (*sdk.Result, error) {
+	signerSig := authtypes.StdSignature{
+		PubKey:    secp256k1.PubKeySecp256k1{},
+		Signature: []byte{},
+	}
+	signBytes := []byte{}
+
 	tx := authtypes.StdTx{}
 	txBytes := ctx.TxBytes()
 	err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
@@ -283,16 +324,19 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		return &sdk.Result{}, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
 	}
 
-	// Get sign bytes for each tx signer
-	var signBytes [][]byte
-	for _, signer := range tx.GetSigners() {
-		account, err := auth.GetSignerAcc(ctx, k.accountKeeper, signer)
-		if err != nil {
-			return &sdk.Result{}, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
-		}
+	//// Get sign bytes for the message signer
+	//signerAcc, err := auth.GetSignerAcc(ctx, k.accountKeeper, signer)
+	//if err != nil {
+	//	return &sdk.Result{}, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
+	//}
 
-		signBytes = append(signBytes, GetSignBytes(ctx, account, tx))
-	}
+	//signerSig, err := GetSignerSignature(signerAcc, tx)
+
+	//if (authtypes.StdSignature{}).Equals(signerSig) {
+	//	return &sdk.Result{}, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", signer, tx.Signatures))
+	//}
+
+	//signBytes := GetSignBytes(ctx, signerAcc, tx)
 
 	contractInfo := k.GetContractInfo(ctx, contractAddress)
 	if contractInfo == nil {
@@ -316,7 +360,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
 
 	var noDeposit sdk.Coins
-	params := types.NewEnv(ctx, caller, noDeposit, contractAddress, contractKey, signBytes, tx.Signatures, nil)
+	params := types.NewEnv(ctx, caller, noDeposit, contractAddress, contractKey, signBytes, signerSig, nil)
 
 	// prepare querier
 	querier := QueryHandler{
