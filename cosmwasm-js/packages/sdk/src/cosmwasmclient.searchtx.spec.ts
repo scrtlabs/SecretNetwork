@@ -428,6 +428,7 @@ describe("CosmWasmClient.searchTx", () => {
           label: "HASH",
           init_msg: jasmine.objectContaining({ symbol: "HASH" }),
           init_funds: [],
+          cb_sig: null,
         },
       });
 

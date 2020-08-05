@@ -60,6 +60,7 @@ export interface MsgInstantiateContract extends MsgTemplate {
     /** Init message as JavaScript object */
     init_msg: any;
     readonly init_funds: ReadonlyArray<Coin>;
+    readonly cb_sig: any;
   };
 }
 /**
@@ -77,6 +78,7 @@ export interface MsgExecuteContract extends MsgTemplate {
     /** Handle message as JavaScript object */
     msg: any;
     readonly sent_funds: ReadonlyArray<Coin>;
+    readonly cb_sig: any;
   };
 }
 export declare type Msg = MsgSend | MsgStoreCode | MsgInstantiateContract | MsgExecuteContract | MsgTemplate;
