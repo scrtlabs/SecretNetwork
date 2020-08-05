@@ -263,7 +263,7 @@ fn verify_local_report(cert: &[u8]) -> sgx_status_t {
                 let mut rt = sgx_status_t::default();
                 let res = ocall_get_update_info(
                     &mut rt as *mut sgx_status_t,
-                    platform_info.as_slice().as_ptr() as *const sgx_platform_info_t,
+                    platform_info[4..].as_ptr() as *const sgx_platform_info_t,
                     1,
                     &mut update_info as *mut sgx_update_info_bit_t,
                 );
