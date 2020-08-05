@@ -30,6 +30,7 @@ pub mod tests {
     use crate::count_failures;
 
     pub fn run_tests() {
+        println!();
         let mut failures = 0;
 
         count_failures!(failures, {
