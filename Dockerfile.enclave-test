@@ -1,0 +1,34 @@
+# Simple usage with a mounted data directory:
+# > docker build -t enigma .
+# > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli enigma secretd init
+# > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli enigma secretd start
+FROM baiduxlab/sgx-rust:1804-1.1.2
+
+ENV PATH="/root/.cargo/bin:$PATH"
+ARG SGX_MODE=SW
+ENV SGX_MODE=${SGX_MODE}
+ARG FEATURES="test"
+ENV FEATURES=${FEATURES}
+ENV PKG_CONFIG_PATH=""
+ENV LD_LIBRARY_PATH=""
+#ENV MITIGATION_CVE_2020_0551=LOAD
+
+# Set working directory for the build
+WORKDIR /enclave-test/
+
+# Add source files
+COPY third_party/build third_party/build
+COPY cosmwasm/ cosmwasm/
+COPY Makefile Makefile
+COPY api_key.txt /enclave-test/cosmwasm/packages/wasmi-runtime/
+COPY spid.txt /enclave-test/cosmwasm/packages/wasmi-runtime/
+
+RUN make vendor
+
+#RUN . /opt/sgxsdk/environment && env && FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build-rust
+#RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
+
+COPY packaging_docker/ci/enclave-test.sh .
+RUN chmod +x enclave-test.sh
+
+ENTRYPOINT ["/bin/bash", "enclave-test.sh"]

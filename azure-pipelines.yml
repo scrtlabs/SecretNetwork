@@ -15,6 +15,13 @@ steps:
 - script: echo $(spid) > spid.txt; echo $(api-key-dev) > api_key.txt
   displayName: 'Save api keys'
 - task: Docker@2
+  displayName: 'Test enclave'
+  inputs:
+      command: run
+      repository: rust-enclave-test
+      tags: latest
+      arguments: --build-arg SGX_MODE=HW -f Dockerfile.enclave-test
+- task: Docker@2
   displayName: 'Build base image'
   inputs:
     command: build
@@ -37,7 +44,7 @@ steps:
     arguments: --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg SGX_MODE=HW
 
 - script: docker-compose -f docker-compose.ci.yaml up --exit-code-from base aesm base
-  displayName: 'Run system tests'    
+  displayName: 'Run system tests'
 
 - script: docker-compose -f docker-compose.ci.yaml up --exit-code-from node aesm bootstrap node
   displayName: 'Run integration tests'
