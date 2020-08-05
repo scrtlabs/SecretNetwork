@@ -57,8 +57,7 @@ pub fn init(
 
     let secret_msg = SecretMessage::from_slice(msg)?;
 
-    // Verify env parameters against the signed tx
-    verify_params(parsed_env.to_owned(), &secret_msg)?;
+    verify_params(&parsed_env, &secret_msg)?;
 
     let contract_key = generate_encryption_key(&parsed_env, contract)?;
 
@@ -134,7 +133,7 @@ pub fn handle(
     let secret_msg = SecretMessage::from_slice(msg)?;
 
     // Verify env parameters against the signed tx
-    verify_params(parsed_env.to_owned(), &secret_msg)?;
+    verify_params(&parsed_env, &secret_msg)?;
 
     let contract_key = extract_contract_key(&parsed_env)?;
 

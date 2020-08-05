@@ -17,7 +17,6 @@ type Env struct {
 	Bytes             []byte            `json:"sign_bytes"`
 	Signature         auth.StdSignature `json:"signature"`
 	CallbackSignature []byte            `json:"cb_sig"` // Optional
-
 }
 
 type ContractKey string

@@ -111,22 +111,22 @@ pub fn validate_contract_key(
     calculated_authentication_id == expected_authentication_id
 }
 
-pub fn verify_params(env: Env, msg: &SecretMessage) -> Result<(), EnclaveError> {
-    trace!("Verifying tx signatures..");
+pub fn verify_params(env: &Env, msg: &SecretMessage) -> Result<(), EnclaveError> {
+    trace!("Verifying message signatures..");
 
     // If there's no callback signature - it's not a callback and there has to be a tx signer + signature
-    if let Some(cb_sig) = env.cb_sig {
+    if let Some(cb_sig) = env.cb_sig.clone() {
         if verify_callback_sig(cb_sig.0, &env.message.sender, msg) {
-            info!("msg.sender is the calling contract");
+            trace!("Message verified! msg.sender is the calling contract");
             return Ok(());
         } else {
             error!("Callback signature verification failed");
         }
     } else {
-        secp256k1::verify_signature(&env.sign_bytes, &env.signature)?;
+        secp256k1::verify_signature(&env.sign_bytes, &env.signature)?; // TODO: Generalize this to support an interface
 
         if verify_sender(&env.signature, &env.message.sender) {
-            info!("msg.sender is the tx signer");
+            trace!("Message verified! msg.sender is the tx signer");
             return Ok(());
         } else {
             error!(

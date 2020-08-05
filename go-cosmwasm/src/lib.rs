@@ -14,7 +14,6 @@ pub use querier::GoQuerier;
 use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
-// use std::Vec;
 
 use crate::error::{clear_error, handle_c_error, set_error, Error};
 
@@ -173,8 +172,6 @@ static CODE_ID_ARG: &str = "code_id";
 static MSG_ARG: &str = "msg";
 static PARAMS_ARG: &str = "params";
 static GAS_USED_ARG: &str = "gas_used";
-static SIGN_BYTES_ARG: &str = "sign_bytes";
-static SIGNATURES_ARG: &str = "signatures";
 
 fn do_init_cache(
     data_dir: Buffer,
