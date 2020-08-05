@@ -1232,8 +1232,9 @@ func TestMsgSenderInCallback(t *testing.T) {
 
 	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, err)
+	codeHashStr := hex.EncodeToString(keeper.GetContractHash(ctx, addr))
 
-	_, events, err := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"callback_to_log_msg_sender":{"to":"%s"}}`, addr.String()), true, defaultGasForTests, 0)
+	_, events, err := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"callback_to_log_msg_sender":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHashStr), true, defaultGasForTests, 0)
 
 	require.Empty(t, err)
 	require.Equal(t, []ContractEvent{
