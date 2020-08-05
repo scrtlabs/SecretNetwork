@@ -15,9 +15,9 @@ steps:
 - script: echo $(spid) > spid.txt; echo $(api-key-dev) > api_key.txt
   displayName: 'Save api keys'
 - task: Docker@2
-  displayName: 'Test enclave'
+  displayName: 'Build enclave tests'
   inputs:
-      command: run
+      command: build
       repository: rust-enclave-test
       tags: latest
       arguments: --build-arg SGX_MODE=HW -f Dockerfile.enclave-test
@@ -48,6 +48,9 @@ steps:
 
 - script: docker-compose -f docker-compose.ci.yaml up --exit-code-from node aesm bootstrap node
   displayName: 'Run integration tests'
+
+- script: docker-compose -f docker-compose.ci.yaml up --exit-code-from enclave-test aesm enclave-test
+  displayName: 'Run enclave tests'
 
 - script: docker-compose -f docker-compose.ci.yaml down
   condition: always()
