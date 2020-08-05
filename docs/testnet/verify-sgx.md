@@ -56,8 +56,9 @@ Where the important field is __isvEnclaveQuoteStatus__. This is the field that m
 * OK
 * SW_HARDENING_NEEDED
 
-With the following value accepted for __incentivized testnet only__:
+With the following value accepted for __testnet only__:
 * GROUP_OUT_OF_DATE
+* CONFIGURATION_AND_SW_HARDENING_NEEDED
 
 Consult with the [Intel API](https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf#page=21) for more on these values.
 
