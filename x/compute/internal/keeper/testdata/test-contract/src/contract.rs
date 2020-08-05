@@ -354,9 +354,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             data: None,
         }),
         HandleMsg::Sleep { ms } => {
-            let ten_millis = time::Duration::from_millis(ms);
-
-            thread::sleep(ten_millis);
+            thread::sleep(time::Duration::from_millis(ms));
 
             Ok(HandleResponse {
                 messages: vec![],
