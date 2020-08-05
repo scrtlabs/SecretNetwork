@@ -1,4 +1,4 @@
-//! must keep this file in sync with cosmwasm/packages/std/src/types.rs
+//! must keep this file in sync with cosmwasm/packages/std/src/types.rs and cosmwasm/packages/std/src/init_handle.rs
 
 #![allow(unused)]
 
@@ -12,6 +12,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use super::encoding::Binary;
+use serde_json::Value;
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct HumanAddr(pub String);
@@ -104,48 +105,137 @@ pub struct Coin {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum CosmosMsg {
+#[serde(untagged)]
+pub enum WasmOutput {
+    ErrObject {
+        #[serde(rename = "Err")]
+        err: Value,
+    },
+    OkString {
+        #[serde(rename = "Ok")]
+        ok: String,
+    },
+    OkObject {
+        #[serde(rename = "Ok")]
+        ok: ContractResult,
+    },
+}
+
+// This should be in correlation with cosmwasm-std/init_handle's InitResponse and HandleResponse
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ContractResult {
+    pub messages: Vec<CosmosMsg>,
+    pub log: Vec<LogAttribute>,
+    pub data: Option<Binary>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+// This should be in correlation with cosmwasm-std/init_handle's CosmosMsg
+// See https://github.com/serde-rs/serde/issues/1296 why we cannot add De-Serialize trait bounds to T
+pub enum CosmosMsg<T = CustomMsg>
+where
+    T: Clone + fmt::Debug + PartialEq,
+{
+    Bank(BankMsg),
+    // by default we use RawMsg, but a contract can override that
+    // to call into more app-specific code (whatever they define)
+    Custom(T),
+    Staking(StakingMsg),
+    Wasm(WasmMsg),
+}
+
+/// Added this here for reflect tests....
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+/// CustomMsg is an override of CosmosMsg::Custom to show this works and can be extended in the contract
+pub enum CustomMsg {
+    Debug(String),
+    Raw(Binary),
+}
+
+impl Into<CosmosMsg<CustomMsg>> for CustomMsg {
+    fn into(self) -> CosmosMsg<CustomMsg> {
+        CosmosMsg::Custom(self)
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum BankMsg {
     // this moves tokens in the underlying sdk
     Send {
         from_address: HumanAddr,
         to_address: HumanAddr,
         amount: Vec<Coin>,
     },
-    // this dispatches a call to another contract at a known address (with known ABI)
-    // msg is the json-encoded HandleMsg struct
-    Contract {
-        contract_addr: HumanAddr,
-        msg: Binary, // we pass this in as Vec<u8> to the contract, so allow any binary encoding (later, limit to rawjson?)
-        send: Option<Vec<Coin>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum StakingMsg {
+    Delegate {
+        // delegator is automatically set to address of the calling contract
+        validator: HumanAddr,
+        amount: Coin,
     },
-    // this should never be created here, just passed in from the user and later dispatched
-    Opaque {
-        data: Binary,
+    Undelegate {
+        // delegator is automatically set to address of the calling contract
+        validator: HumanAddr,
+        amount: Coin,
+    },
+    Withdraw {
+        // delegator is automatically set to address of the calling contract
+        validator: HumanAddr,
+        /// this is the "withdraw address", the one that should receive the rewards
+        /// if None, then use delegator address
+        recipient: Option<HumanAddr>,
+    },
+    Redelegate {
+        // delegator is automatically set to address of the calling contract
+        src_validator: HumanAddr,
+        dst_validator: HumanAddr,
+        amount: Coin,
     },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum ContractResult {
-    Ok(Response),
-    Err(String),
+#[serde(rename_all = "snake_case")]
+pub enum WasmMsg {
+    /// this dispatches a call to another contract at a known address (with known ABI)
+    Execute {
+        contract_addr: HumanAddr,
+        /// msg is the json-encoded HandleMsg struct (as raw Binary)
+        msg: String,
+        send: Vec<Coin>,
+    },
+    /// this instantiates a new contracts from previously uploaded wasm code
+    Instantiate {
+        code_id: u64,
+        /// msg is the json-encoded InitMsg struct (as raw Binary)
+        msg: String,
+        send: Vec<Coin>,
+        /// optional human-readable label for the contract
+        label: Option<String>,
+    },
 }
 
-impl ContractResult {
-    // unwrap will panic on err, or give us the real data useful for tests
-    pub fn unwrap(self) -> Response {
-        match self {
-            ContractResult::Err(msg) => panic!("Unexpected error: {}", msg),
-            ContractResult::Ok(res) => res,
-        }
+impl<T: Clone + fmt::Debug + PartialEq> From<BankMsg> for CosmosMsg<T> {
+    fn from(msg: BankMsg) -> Self {
+        CosmosMsg::Bank(msg)
     }
+}
 
-    pub fn is_err(&self) -> bool {
-        match self {
-            ContractResult::Err(_) => true,
-            _ => false,
-        }
+#[cfg(feature = "staking")]
+impl<T: Clone + fmt::Debug + PartialEq> From<StakingMsg> for CosmosMsg<T> {
+    fn from(msg: StakingMsg) -> Self {
+        CosmosMsg::Staking(msg)
+    }
+}
+
+impl<T: Clone + fmt::Debug + PartialEq> From<WasmMsg> for CosmosMsg<T> {
+    fn from(msg: WasmMsg) -> Self {
+        CosmosMsg::Wasm(msg)
     }
 }
 
@@ -153,15 +243,6 @@ impl ContractResult {
 pub struct LogAttribute {
     pub key: String,
     pub value: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
-pub struct Response {
-    // let's make the positive case a struct, it contrains Msg: {...}, but also Data, Log, maybe later Events, etc.
-    pub messages: Vec<CosmosMsg>,
-    pub log: Vec<LogAttribute>, // abci defines this as string
-    pub data: Option<Binary>,   // abci defines this as bytes
-    pub contract_key: Option<Binary>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
