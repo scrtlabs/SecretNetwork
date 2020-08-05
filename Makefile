@@ -218,6 +218,9 @@ docker_local_azure_hw: docker_base
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -t ci-enigma-sgx-node .
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t ci-enigma-sgx-bootstrap .
 
+docker_enclave_test:
+	docker build --build-arg FEATURES="test ${FEATURES}" --build-arg SGX_MODE=${SGX_MODE} -f Dockerfile.enclave-test -t rust-enclave-test .
+
 # while developing:
 build-enclave: vendor
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime
