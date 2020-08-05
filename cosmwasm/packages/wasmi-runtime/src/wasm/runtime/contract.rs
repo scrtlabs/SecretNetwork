@@ -363,7 +363,7 @@ impl WasmiApi for ContractInstance {
         human_ptr_ptr: i32,
         canonical_ptr_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        self.use_gas_externally(self.gas_costs.canonicalize_address as u64)?;
+        self.use_gas_externally(self.gas_costs.external_canonicalize_address as u64)?;
 
         let human = self.extract_vector(human_ptr_ptr as u32).map_err(|err| {
             error!(
@@ -451,7 +451,7 @@ impl WasmiApi for ContractInstance {
         canonical_ptr_ptr: i32,
         human_ptr_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        self.use_gas_externally(self.gas_costs.humanize_address as u64)?;
+        self.use_gas_externally(self.gas_costs.external_humanize_address as u64)?;
 
         let canonical = self
             .extract_vector(canonical_ptr_ptr as u32)
