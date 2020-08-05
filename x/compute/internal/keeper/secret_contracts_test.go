@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	"github.com/enigmampc/cosmos-sdk/store/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/libs/log"
@@ -124,22 +125,59 @@ func extractInnerError(t *testing.T, err error, nonce []byte, isEncrypted bool) 
 
 const defaultGasForTests uint64 = 200_000
 
+// wrap the defualt gas meter with a counter of wasm calls
+// in order to verify that every wasm call consumes gas
+type WasmCounterGasMeter struct {
+	wasmCounter uint64
+	gasMeter    types.GasMeter
+}
+
+func (wasmGasMeter *WasmCounterGasMeter) GasConsumed() types.Gas {
+	return wasmGasMeter.gasMeter.GasConsumed()
+}
+func (wasmGasMeter *WasmCounterGasMeter) GasConsumedToLimit() types.Gas {
+	return wasmGasMeter.gasMeter.GasConsumedToLimit()
+}
+func (wasmGasMeter *WasmCounterGasMeter) Limit() types.Gas {
+	return wasmGasMeter.gasMeter.Limit()
+}
+func (wasmGasMeter *WasmCounterGasMeter) ConsumeGas(amount types.Gas, descriptor string) {
+	if descriptor == "wasm contract" && amount > 0 {
+		wasmGasMeter.wasmCounter++
+	}
+	wasmGasMeter.gasMeter.ConsumeGas(amount, descriptor)
+}
+func (wasmGasMeter *WasmCounterGasMeter) IsPastLimit() bool {
+	return wasmGasMeter.gasMeter.IsPastLimit()
+}
+func (wasmGasMeter *WasmCounterGasMeter) IsOutOfGas() bool {
+	return wasmGasMeter.gasMeter.IsOutOfGas()
+}
+func (wasmGasMeter *WasmCounterGasMeter) GetWasmCounter() uint64 {
+	return wasmGasMeter.wasmCounter
+}
+
+var _ types.GasMeter = (*WasmCounterGasMeter)(nil) // check interface
+
 func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.AccAddress, input string, isErrorEncrypted bool, gas uint64) (string, cosmwasm.StdError) {
 	queryBz, err := wasmCtx.Encrypt([]byte(input))
 	require.NoError(t, err)
 	nonce := queryBz[0:32]
 
-	// create new ctx with the same storage and a gas limit
+	// create new ctx with the same storage and set our gas meter
 	// this is to reset the event manager, so we won't get
 	// events from past calls
+	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
 		log.NewNopLogger(),
-	).WithGasMeter(sdk.NewGasMeter(gas))
+	).WithGasMeter(gasMeter)
 
-	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz, false)
+	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz, true)
+	fmt.Println(gasMeter)
+	require.NotZero(t, gasMeter.GetWasmCounter())
 	if err != nil {
 		return "", extractInnerError(t, err, nonce, isErrorEncrypted)
 	}
@@ -161,14 +199,16 @@ func execHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sd
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
+	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
 		log.NewNopLogger(),
-	).WithGasMeter(sdk.NewGasMeter(gas))
+	).WithGasMeter(gasMeter)
 
 	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)))
+	require.NotZero(t, gasMeter.GetWasmCounter())
 	if err != nil {
 		return nil, nil, extractInnerError(t, err, nonce, isErrorEncrypted)
 	}
@@ -192,15 +232,17 @@ func initHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, cre
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
+	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
 		log.NewNopLogger(),
-	).WithGasMeter(sdk.NewGasMeter(gas))
+	).WithGasMeter(gasMeter)
 
 	// make the label a random base64 string, because why not?
 	contractAddress, err := keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, base64.RawURLEncoding.EncodeToString(nonce), sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.NotZero(t, gasMeter.GetWasmCounter())
 	if err != nil {
 		return nil, nil, extractInnerError(t, err, nonce, isErrorEncrypted)
 	}
