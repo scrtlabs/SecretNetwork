@@ -230,6 +230,10 @@ check-enclave:
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime check
 
 # while developing:
+clippy-enclave:
+	$(MAKE) -C cosmwasm/packages/wasmi-runtime clippy
+
+# while developing:
 clean-enclave:
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
 
@@ -258,8 +262,17 @@ go-tests: build-test-contract
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	SGX_MODE=SW $(MAKE) build-linux
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	rm -rf ./x/compute/internal/keeper/.sgx_secrets
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	SGX_MODE=SW go test -p 1 -v ./x/compute/internal/...
+	SGX_MODE=SW go test -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
+
+go-tests-hw: build-test-contract
+	# empty BUILD_PROFILE means debug mode which compiles faster
+	SGX_MODE=HW $(MAKE) build-linux
+	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	rm -rf ./x/compute/internal/keeper/.sgx_secrets
+	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
+	SGX_MODE=HW go test -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 .PHONY: enclave-tests
 enclave-tests:

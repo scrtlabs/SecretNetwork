@@ -77,6 +77,8 @@ enclave {
             uintptr_t msg_len
         );
 
+        public HealthCheckResult ecall_health_check();
+
         public uint32_t ecall_run_tests();
     };
 
@@ -94,6 +96,15 @@ enclave {
             [in, count=key_len] const uint8_t* key,
             uintptr_t key_len
         ) allow (ecall_allocate);
+
+        OcallReturn ocall_query_chain(
+            Ctx context,
+            [out] UntrustedVmError* vm_error,
+            [out] uint64_t* gas_used,
+            [out] EnclaveBuffer* value,
+            [in, count=query_len] const uint8_t* query,
+            uintptr_t query_len
+        ) allow (ecall_allocate, ecall_query);
 
         OcallReturn ocall_remove_db(
             Ctx context,

@@ -5,6 +5,7 @@ mod errors;
 mod gas;
 mod io;
 mod memory;
+mod query_chain;
 mod runtime;
 mod types;
 

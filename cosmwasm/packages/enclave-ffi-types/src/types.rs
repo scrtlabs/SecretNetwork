@@ -133,12 +133,12 @@ pub enum EnclaveError {
     MemoryWriteError,
     #[display(fmt = "contract tried to write to storage during a query")]
     UnauthorizedWrite,
-    #[display(fmt = "failed to seal data")]
-    NotImplemented,
 
     // serious issues
     #[display(fmt = "panic'd due to unexpected behavior")]
     Panic,
+    #[display(fmt = "enclave ran out of heap memory")]
+    OutOfMemory,
     /// Unexpected Error happened, no more details available
     #[display(fmt = "unknown error")]
     Unknown,
@@ -151,6 +151,28 @@ pub enum EnclaveError {
 #[derive(Debug, Display, PartialEq, Eq)]
 pub enum NodeAuthResult {
     Success,
+    #[display(fmt = "Enclave quote status was GROUP_OUT_OF_DATE which is not allowed")]
+    GroupOutOfDate,
+    #[display(fmt = "Enclave quote status was SIGNATURE_INVALID which is not allowed")]
+    SignatureInvalid,
+    #[display(fmt = "Enclave quote status was SIGNATURE_REVOKED which is not allowed")]
+    SignatureRevoked,
+    #[display(fmt = "Enclave quote status was GROUP_REVOKED which is not allowed")]
+    GroupRevoked,
+    #[display(fmt = "Enclave quote status was KEY_REVOKED which is not allowed")]
+    KeyRevoked,
+    #[display(fmt = "Enclave quote status was SIGRL_VERSION_MISMATCH which is not allowed")]
+    SigrlVersionMismatch,
+    #[display(fmt = "Enclave quote status was CONFIGURATION_NEEDED which is not allowed")]
+    ConfigurationNeeded,
+    #[display(fmt = "Enclave quote status was CONFIGURATION_AND_SW_HARDENING_NEEDED which is not allowed")]
+    SwHardeningAndConfigurationNeeded,
+    #[display(fmt = "Enclave quote status invalid")]
+    BadQuoteStatus,
+    #[display(fmt = "Enclave version mismatch. Registering enclave had different code signature")]
+    MrEnclaveMismatch,
+    #[display(fmt = "Enclave version mismatch. Registering enclave had different signer")]
+    MrSignerMismatch,
     #[display(fmt = "Enclave received invalid inputs")]
     InvalidInput,
     #[display(fmt = "The provided certificate was invalid")]
@@ -161,8 +183,23 @@ pub enum NodeAuthResult {
     MalformedPublicKey,
     #[display(fmt = "Encrypting the seed failed")]
     SeedEncryptionFailed,
-    #[display(fmt = "Enclave panicked :( please file a bug report!")]
+    #[display(fmt = "Unexpected panic during node authentication. Certificate may be malformed or invalid")]
     Panic,
+}
+
+/// This type represents the possible error conditions that can be encountered in the
+/// enclave while authenticating a new node in the network.
+/// cbindgen:prefix-with-name
+#[repr(C)]
+#[derive(Debug, Display, PartialEq, Eq)]
+pub enum HealthCheckResult {
+    Success,
+}
+
+impl Default for HealthCheckResult {
+    fn default() -> Self {
+        HealthCheckResult::Success
+    }
 }
 
 /// This type holds a pointer to a VmError that is boxed on the untrusted side

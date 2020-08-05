@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # This `DEBIAN/postinst` script is run post-installation
 
 set -e
@@ -23,10 +23,8 @@ LimitMEMLOCK=209715200
 [Install]
 WantedBy=multi-user.target
 EOF
-sudo systemctl daemon-reload
 
-sudo perl -i -pe 's/#SystemMaxUse=.*/SystemMaxUse=50M/' /etc/systemd/journald.conf
-sudo systemctl restart systemd-journald
+systemctl daemon-reload
 
 mkdir -p "$(eval echo ~$(logname))/.sgx_secrets"
-sudo chown -R $(logname):$(logname) "$(eval echo ~$(logname))/.sgx_secrets"
+chown -R $(logname):$(logname) "$(eval echo ~$(logname))/.sgx_secrets"

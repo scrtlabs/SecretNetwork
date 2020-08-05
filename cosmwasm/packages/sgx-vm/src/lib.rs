@@ -45,4 +45,4 @@ pub use crate::traits::{NextItem, StorageIterator};
 
 // Secret Network specific exports
 pub use crate::attestation::{create_attestation_report_u, untrusted_get_encrypted_seed};
-pub use crate::seed::{untrusted_init_bootstrap, untrusted_init_node, untrusted_key_gen};
+pub use crate::seed::{untrusted_init_bootstrap, untrusted_init_node, untrusted_key_gen, untrusted_health_check};

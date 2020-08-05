@@ -18,7 +18,8 @@ use super::{
     memory::validate_memory,
     runtime::{create_builder, ContractInstance, ContractOperation, Engine, WasmiImportResolver},
 };
-use crate::wasm::types::SecretMessage;
+use crate::crypto::Ed25519PublicKey;
+use crate::wasm::types::{IoNonce, SecretMessage};
 
 use crate::coalesce;
 
@@ -57,21 +58,24 @@ pub fn init(
 
     trace!("Init: Contract Key: {:?}", contract_key.to_vec().as_slice());
 
+    let secret_msg = SecretMessage::from_slice(msg)?;
+
     let mut engine = start_engine(
         context,
         gas_limit,
         contract,
         &contract_key,
         ContractOperation::Init,
+        secret_msg.nonce,
+        secret_msg.user_public_key,
     )?;
-
     let env_ptr = engine.write_to_memory(env)?;
 
     trace!(
         "Init input before decryption: {:?}",
         String::from_utf8_lossy(&msg)
     );
-    let secret_msg = SecretMessage::from_slice(msg)?;
+
     let decrypted_msg = secret_msg.decrypt()?;
     trace!(
         "Init input afer decryption: {:?}",
@@ -139,19 +143,22 @@ pub fn handle(
         contract_key.to_vec().as_slice()
     );
 
+    let secret_msg = SecretMessage::from_slice(msg)?;
+
     let mut engine = start_engine(
         context,
         gas_limit,
         contract,
         &contract_key,
         ContractOperation::Handle,
+        secret_msg.nonce,
+        secret_msg.user_public_key,
     )?;
 
     trace!(
         "Handle input before decryption: {:?}",
         String::from_utf8_lossy(&msg)
     );
-    let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
     trace!(
         "Handle input afer decryption: {:?}",
@@ -210,19 +217,22 @@ pub fn query(
         contract_key.to_vec().as_slice()
     );
 
+    let secret_msg = SecretMessage::from_slice(msg)?;
+
     let mut engine = start_engine(
         context,
         gas_limit,
         contract,
         &contract_key,
         ContractOperation::Query,
+        secret_msg.nonce,
+        secret_msg.user_public_key,
     )?;
 
     trace!(
         "Query input before decryption: {:?}",
         String::from_utf8_lossy(&msg)
     );
-    let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
     trace!(
         "Query input afer decryption: {:?}",
@@ -259,6 +269,8 @@ fn start_engine(
     contract: &[u8],
     contract_key: &ContractKey,
     operation: ContractOperation,
+    nonce: IoNonce,
+    user_public_key: Ed25519PublicKey,
 ) -> Result<Engine, EnclaveError> {
     trace!("Deserializing Wasm contract");
 
@@ -309,8 +321,16 @@ fn start_engine(
     }
     let module = module_instance.not_started_instance().clone();
 
-    let contract_instance =
-        ContractInstance::new(context, module.clone(), gas_limit, *contract_key, operation);
+    let contract_instance = ContractInstance::new(
+        context,
+        module.clone(),
+        gas_limit,
+        wasm_costs,
+        *contract_key,
+        operation,
+        nonce,
+        user_public_key,
+    );
 
     Ok(Engine::new(contract_instance, module))
 }
