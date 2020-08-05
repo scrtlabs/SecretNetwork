@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	"path/filepath"
@@ -192,7 +193,9 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
+	fmt.Printf("Contract Execute: Got contract Key for contract %s: %s\n", contractAddress, base64.StdEncoding.EncodeToString(contractKey))
 	params := types.NewEnv(ctx, caller, coins, contractAddress, contractKey)
+	fmt.Printf("Contract Execute: key from params %s \n", params.Key)
 
 	// prepare querier
 	querier := QueryHandler{
