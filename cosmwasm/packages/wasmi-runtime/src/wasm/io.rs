@@ -134,10 +134,7 @@ fn encrypt_wasm_msg(
             ..
         } => {
             let mut hash_appended_msg = callback_code_hash.as_bytes().to_vec();
-
-            //let decoded_msg = Binary::from_base64(msg)?;
-
-            hash_appended_msg.extend_from_slice(msg.as_ref());
+            hash_appended_msg.extend_from_slice(msg.as_slice());
 
             let mut msg_to_pass = SecretMessage::from_base64(
                 Binary(hash_appended_msg).to_base64(),
@@ -146,7 +143,7 @@ fn encrypt_wasm_msg(
             )?;
 
             msg_to_pass.encrypt_in_place()?;
-            *msg = b64_encode(&msg_to_pass.to_vec());
+            *msg = Binary::from(msg_to_pass.to_vec().as_slice());
         }
     }
 

@@ -210,7 +210,7 @@ pub enum WasmMsg {
         /// It is used to bind the request to a destination contract in a stronger way than just the contract address which can be faked
         callback_code_hash: String,
         /// msg is the json-encoded HandleMsg struct (as raw Binary)
-        msg: String,
+        msg: Binary,
         send: Vec<Coin>,
     },
     /// this instantiates a new contracts from previously uploaded wasm code
@@ -220,7 +220,7 @@ pub enum WasmMsg {
         /// It is used to bind the request to a destination contract in a stronger way than just the contract address which can be faked
         callback_code_hash: String,
         /// msg is the json-encoded InitMsg struct (as raw Binary)
-        msg: String,
+        msg: Binary,
         send: Vec<Coin>,
         /// optional human-readable label for the contract
         label: Option<String>,
