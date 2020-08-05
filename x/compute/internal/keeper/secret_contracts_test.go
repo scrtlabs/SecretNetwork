@@ -926,7 +926,9 @@ func TestExecCallbackContractError(t *testing.T) {
 	require.Empty(t, initErr)
 	require.Equal(t, 1, len(initEvents))
 
-	data, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s"}}`, contractAddress), true, defaultGasForTests, 0)
+	codeHashStr := hex.EncodeToString(keeper.GetContractHash(ctx, contractAddress))
+
+	data, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s","code_hash":"%s"}}`, contractAddress, codeHashStr), true, defaultGasForTests, 0)
 	require.Error(t, execErr)
 	require.Error(t, execErr.GenericErr)
 	require.Equal(t, "la la 🤯", execErr.GenericErr.Msg)
@@ -1160,7 +1162,9 @@ func TestExternalQueryCalleePanic(t *testing.T) {
 	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, err)
 
-	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_panic":{"to":"%s"}}`, addr.String()), true, defaultGasForTests, 0)
+	codeHashStr := hex.EncodeToString(keeper.GetContractHash(ctx, addr))
+
+	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_panic":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHashStr), true, defaultGasForTests, 0)
 
 	require.Error(t, err)
 	require.Error(t, err.GenericErr)
@@ -1174,7 +1178,9 @@ func TestExternalQueryCalleeStdError(t *testing.T) {
 	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, err)
 
-	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_error":{"to":"%s"}}`, addr.String()), true, defaultGasForTests, 0)
+	codeHashStr := hex.EncodeToString(keeper.GetContractHash(ctx, addr))
+
+	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_error":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHashStr), true, defaultGasForTests, 0)
 
 	require.Error(t, err)
 	require.Error(t, err.GenericErr)
