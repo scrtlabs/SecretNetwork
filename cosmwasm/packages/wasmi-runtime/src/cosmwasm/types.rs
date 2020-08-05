@@ -1,9 +1,7 @@
-//! must keep this file in sync with cosmwasm/packages/std/src/types.rs
+//! must keep this file in sync with cosmwasm/packages/std/src/types.rs and cosmwasm/packages/std/src/init_handle.rs
 
 #![allow(unused)]
 
-use crate::cosmwasm::std_error::StdResult;
-use serde::{Deserialize, Serialize};
 /// These types are are copied over from the cosmwasm_std package, and must be kept in sync with it.
 ///
 /// We copy these types instead of directly depending on them, because we require special versions of serde
@@ -11,7 +9,10 @@ use serde::{Deserialize, Serialize};
 /// For some reason patching the dependencies didn't work, so we are forced to maintain this copy, for now :(
 use std::fmt;
 
+use serde::{Deserialize, Serialize};
+
 use super::encoding::Binary;
+use serde_json::Value;
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct HumanAddr(pub String);
@@ -73,7 +74,6 @@ pub struct Env {
     pub message: MessageInfo,
     pub contract: ContractInfo,
     pub contract_key: Option<String>,
-    pub contract_code_hash: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
@@ -105,7 +105,33 @@ pub struct Coin {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(untagged)]
+pub enum WasmOutput {
+    ErrObject {
+        #[serde(rename = "Err")]
+        err: Value,
+    },
+    OkString {
+        #[serde(rename = "Ok")]
+        ok: String,
+    },
+    OkObject {
+        #[serde(rename = "Ok")]
+        ok: ContractResult,
+    },
+}
+
+// This should be in correlation with cosmwasm-std/init_handle's InitResponse and HandleResponse
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ContractResult {
+    pub messages: Vec<CosmosMsg>,
+    pub log: Vec<LogAttribute>,
+    pub data: Option<Binary>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
+// This should be in correlation with cosmwasm-std/init_handle's CosmosMsg
 // See https://github.com/serde-rs/serde/issues/1296 why we cannot add De-Serialize trait bounds to T
 pub enum CosmosMsg<T = CustomMsg>
 where
@@ -117,6 +143,21 @@ where
     Custom(T),
     Staking(StakingMsg),
     Wasm(WasmMsg),
+}
+
+/// Added this here for reflect tests....
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+/// CustomMsg is an override of CosmosMsg::Custom to show this works and can be extended in the contract
+pub enum CustomMsg {
+    Debug(String),
+    Raw(Binary),
+}
+
+impl Into<CosmosMsg<CustomMsg>> for CustomMsg {
+    fn into(self) -> CosmosMsg<CustomMsg> {
+        CosmosMsg::Custom(self)
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -164,21 +205,15 @@ pub enum WasmMsg {
     /// this dispatches a call to another contract at a known address (with known ABI)
     Execute {
         contract_addr: HumanAddr,
-        /// callback_code_hash is the hex encoded hash of the code. This is used by Secret Network to harden against replaying the contract
-        /// It is only used for callback messages, to bind them to a specific contract so they cannot be replayed
-        callback_code_hash: String,
         /// msg is the json-encoded HandleMsg struct (as raw Binary)
-        msg: Binary,
+        msg: String,
         send: Vec<Coin>,
     },
     /// this instantiates a new contracts from previously uploaded wasm code
     Instantiate {
         code_id: u64,
-        /// code_hash is the hex encoded hash of the code. This is used by Secret Network to harden against replaying the contract
-        /// It is only used for callback messages, to bind them to a specific contract so they cannot be replayed
-        callback_code_hash: String,
         /// msg is the json-encoded InitMsg struct (as raw Binary)
-        msg: Binary,
+        msg: String,
         send: Vec<Coin>,
         /// optional human-readable label for the contract
         label: Option<String>,
@@ -210,103 +245,42 @@ pub struct LogAttribute {
     pub value: String,
 }
 
-/// A shorthand to produce a log attribute
-pub fn log<K: ToString, V: ToString>(key: K, value: V) -> LogAttribute {
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum QueryResult {
+    Ok(Binary),
+    Err(String),
+}
+
+impl QueryResult {
+    // unwrap will panic on err, or give us the real data useful for tests
+    pub fn unwrap(self) -> Binary {
+        match self {
+            QueryResult::Err(msg) => panic!("Unexpected error: {}", msg),
+            QueryResult::Ok(res) => res,
+        }
+    }
+
+    pub fn is_err(&self) -> bool {
+        match self {
+            QueryResult::Err(_) => true,
+            _ => false,
+        }
+    }
+}
+
+// coin is a shortcut constructor for a set of one denomination of coins
+pub fn coin(amount: &str, denom: &str) -> Vec<Coin> {
+    vec![Coin {
+        amount: amount.to_string(),
+        denom: denom.to_string(),
+    }]
+}
+
+// log is shorthand to produce log messages
+pub fn log(key: &str, value: &str) -> LogAttribute {
     LogAttribute {
         key: key.to_string(),
         value: value.to_string(),
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct InitResponse<T = Never>
-where
-    T: Clone + fmt::Debug + PartialEq,
-{
-    pub messages: Vec<CosmosMsg<T>>,
-    pub log: Vec<LogAttribute>,
-}
-
-pub type InitResult<U = Never> = StdResult<InitResponse<U>>;
-
-impl<T> Default for InitResponse<T>
-where
-    T: Clone + fmt::Debug + PartialEq,
-{
-    fn default() -> Self {
-        InitResponse {
-            messages: vec![],
-            log: vec![],
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct HandleResponse<T = Never>
-where
-    T: Clone + fmt::Debug + PartialEq,
-{
-    pub messages: Vec<CosmosMsg<T>>,
-    pub log: Vec<LogAttribute>,
-    pub data: Option<Binary>,
-}
-
-pub type HandleResult<U = Never> = StdResult<HandleResponse<U>>;
-
-impl<T> Default for HandleResponse<T>
-where
-    T: Clone + fmt::Debug + PartialEq,
-{
-    fn default() -> Self {
-        HandleResponse {
-            messages: vec![],
-            log: vec![],
-            data: None,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct MigrateResponse<T = Never>
-where
-    T: Clone + fmt::Debug + PartialEq,
-{
-    pub messages: Vec<CosmosMsg<T>>,
-    pub log: Vec<LogAttribute>,
-    pub data: Option<Binary>,
-}
-
-pub type MigrateResult<U = Never> = StdResult<MigrateResponse<U>>;
-
-impl<T> Default for MigrateResponse<T>
-where
-    T: Clone + fmt::Debug + PartialEq,
-{
-    fn default() -> Self {
-        MigrateResponse {
-            messages: vec![],
-            log: vec![],
-            data: None,
-        }
-    }
-}
-
-/// Never can never be instantiated and is a no-op placeholder for
-/// unsupported enums, such as contracts that don't set a custom message.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub enum Never {}
-
-/// Added this here for reflect tests....
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-/// CustomMsg is an override of CosmosMsg::Custom to show this works and can be extended in the contract
-pub enum CustomMsg {
-    Debug(String),
-    Raw(Binary),
-}
-
-impl Into<CosmosMsg<CustomMsg>> for CustomMsg {
-    fn into(self) -> CosmosMsg<CustomMsg> {
-        CosmosMsg::Custom(self)
     }
 }
