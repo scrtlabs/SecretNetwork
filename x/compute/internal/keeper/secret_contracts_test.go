@@ -5,11 +5,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"testing"
+
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 
 	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
@@ -829,10 +830,10 @@ func TestExecCallbackToInit(t *testing.T) {
 	require.Empty(t, initErr)
 
 	codeHash := keeper.GetCodeInfo(ctx, codeID).CodeHash
-	// codeHash := keeper.GetContractKey(ctx, contractAddress)
+	codeHashStr := hex.EncodeToString(codeHash)
 
 	// init second contract and callback to the first contract
-	execData, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d}}`, codeID), true, defaultGasForTests, 0)
+	execData, execEvents, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d,"code_hash":"%s"}}`, codeID, codeHashStr), true, defaultGasForTests, 0)
 	require.Empty(t, execErr)
 	require.Empty(t, execData)
 
@@ -1142,12 +1143,11 @@ func TestExternalQueryWorks(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
-
-	hash := hex.EncodeToString(keeper.GetContractHash(ctx, addr))
-
 	require.Empty(t, initErr)
 
-	data, _, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query":{"to":"%s"}}`, addr.String()), true, defaultGasForTests, 0)
+	codeHashStr := hex.EncodeToString(keeper.GetContractHash(ctx, addr))
+
+	data, _, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHashStr), true, defaultGasForTests, 0)
 
 	require.Empty(t, execErr)
 	require.Equal(t, []byte{3}, data)
@@ -1380,7 +1380,9 @@ func TestContractSendFundsToInitCallback(t *testing.T) {
 	require.Equal(t, "", contractCoinsBefore.String())
 	require.Equal(t, "200000denom", walletCointsBefore.String())
 
-	_, execEvents, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_funds_to_init_callback":{"code_id":%d,"denom":"%s","amount":%d}}`, codeID, "denom", 17), true, defaultGasForTests, 17)
+	codeHashStr := hex.EncodeToString(keeper.GetContractHash(ctx, addr))
+
+	_, execEvents, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_funds_to_init_callback":{"code_id":%d,"denom":"%s","amount":%d,"code_hash":"%s"}}`, codeID, "denom", 17, codeHashStr), true, defaultGasForTests, 17)
 
 	require.Empty(t, execErr)
 	require.NotEmpty(t, execEvents)
@@ -1410,7 +1412,9 @@ func TestContractSendFundsToInitCallbackNotEnough(t *testing.T) {
 	require.Equal(t, "", contractCoinsBefore.String())
 	require.Equal(t, "200000denom", walletCointsBefore.String())
 
-	_, execEvents, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_funds_to_init_callback":{"code_id":%d,"denom":"%s","amount":%d}}`, codeID, "denom", 18), false, defaultGasForTests, 17)
+	codeHashStr := hex.EncodeToString(keeper.GetContractHash(ctx, addr))
+
+	_, execEvents, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_funds_to_init_callback":{"code_id":%d,"denom":"%s","amount":%d,"code_hash":"%s"}}`, codeID, "denom", 18, codeHashStr), false, defaultGasForTests, 17)
 
 	require.Empty(t, execEvents)
 	require.Error(t, execErr)
@@ -1442,7 +1446,9 @@ func TestContractSendFundsToExecCallback(t *testing.T) {
 	require.Equal(t, "", contract2CoinsBefore.String())
 	require.Equal(t, "200000denom", walletCointsBefore.String())
 
-	_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_funds_to_exec_callback":{"to":"%s","denom":"%s","amount":%d}}`, addr2.String(), "denom", 17), true, defaultGasForTests, 17)
+	codeHashStr := hex.EncodeToString(keeper.GetContractHash(ctx, addr2))
+
+	_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_funds_to_exec_callback":{"to":"%s","denom":"%s","amount":%d,"code_hash":"%s"}}`, addr2.String(), "denom", 17, codeHashStr), true, defaultGasForTests, 17)
 
 	require.Empty(t, execErr)
 
@@ -1473,7 +1479,9 @@ func TestContractSendFundsToExecCallbackNotEnough(t *testing.T) {
 	require.Equal(t, "", contract2CoinsBefore.String())
 	require.Equal(t, "200000denom", walletCointsBefore.String())
 
-	_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_funds_to_exec_callback":{"to":"%s","denom":"%s","amount":%d}}`, addr2.String(), "denom", 19), false, defaultGasForTests, 17)
+	codeHashStr := hex.EncodeToString(keeper.GetContractHash(ctx, addr2))
+
+	_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_funds_to_exec_callback":{"to":"%s","denom":"%s","amount":%d,"code_hash":"%s"}}`, addr2.String(), "denom", 19, codeHashStr), false, defaultGasForTests, 17)
 
 	require.Error(t, execErr)
 	require.Error(t, execErr.GenericErr)

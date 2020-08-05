@@ -135,11 +135,13 @@ pub enum HandleMsg {
         amount: u32,
         denom: String,
         code_id: u64,
+        code_hash: String,
     },
     SendFundsToExecCallback {
         amount: u32,
         denom: String,
         to: HumanAddr,
+        code_hash: String,
     },
 }
 
@@ -373,10 +375,12 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             amount,
             denom,
             code_id,
+            code_hash,
         } => Ok(HandleResponse {
             messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
                 msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
                 code_id: code_id,
+                callback_code_hash: code_hash,
                 label: None,
                 send: vec![Coin {
                     amount: Uint128(amount as u128),
@@ -386,10 +390,16 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             log: vec![],
             data: None,
         }),
-        HandleMsg::SendFundsToExecCallback { amount, denom, to } => Ok(HandleResponse {
+        HandleMsg::SendFundsToExecCallback {
+            amount,
+            denom,
+            to,
+            code_hash,
+        } => Ok(HandleResponse {
             messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 msg: Binary("{\"no_data\":{}}".as_bytes().to_vec()),
                 contract_addr: to,
+                callback_code_hash: code_hash,
                 send: vec![Coin {
                     amount: Uint128(amount as u128),
                     denom: denom,
