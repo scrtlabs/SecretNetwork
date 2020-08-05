@@ -1208,7 +1208,9 @@ func TestExternalQueryBadSenderABI(t *testing.T) {
 	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, err)
 
-	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_bad_abi":{"to":"%s"}}`, addr.String()), true, defaultGasForTests, 0)
+	codeHashStr := hex.EncodeToString(keeper.GetContractHash(ctx, addr))
+
+	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_bad_abi":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHashStr), true, defaultGasForTests, 0)
 
 	require.Error(t, err)
 	require.Error(t, err.ParseErr)
@@ -1223,10 +1225,11 @@ func TestExternalQueryBadReceiverABI(t *testing.T) {
 	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, err)
 
-	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_bad_abi_receiver":{"to":"%s"}}`, addr.String()), true, defaultGasForTests, 0)
+	codeHashStr := hex.EncodeToString(keeper.GetContractHash(ctx, addr))
 
-	require.Error(t, err)
-	require.Error(t, err.ParseErr)
+	_, _, err = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_bad_abi_receiver":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHashStr), true, defaultGasForTests, 0)
+
+	require.NotNil(t, err.ParseErr)
 	require.Equal(t, "alloc::string::String", err.ParseErr.Target)
 	require.Equal(t, "Invalid type", err.ParseErr.Msg)
 }
@@ -1264,8 +1267,7 @@ func TestInfiniteQueryLoopKilledGracefullyByOOM(t *testing.T) {
 	data, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_infinite_loop":{"to":"%s","code_hash":"%s"}}`, addr.String(), hash), true, defaultGasForTests)
 
 	require.Empty(t, data)
-	require.Error(t, err)
-	require.Error(t, err.GenericErr)
+	require.NotNil(t, err.GenericErr)
 	require.Equal(t, err.GenericErr.Msg, "query contract failed: Execution error: Enclave: enclave ran out of heap memory")
 }
 
@@ -1277,8 +1279,7 @@ func TestWriteToStorageDuringQuery(t *testing.T) {
 	require.Empty(t, initErr)
 
 	_, queryErr := queryHelper(t, keeper, ctx, addr, `{"write_to_storage": {}}`, false, defaultGasForTests)
-	require.Error(t, queryErr)
-	require.Error(t, queryErr.GenericErr)
+	require.NotNil(t, queryErr.GenericErr)
 	require.Equal(t, "query contract failed: Execution error: Enclave: contract tried to write to storage during a query", queryErr.GenericErr.Msg)
 }
 
