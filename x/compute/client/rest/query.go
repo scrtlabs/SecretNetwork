@@ -49,7 +49,7 @@ func queryCodeHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		codeID, err := strconv.ParseUint(mux.Vars(r)["codeID"], 10, 64)
 		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
@@ -78,7 +78,7 @@ func listContractsByCodeHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		codeID, err := strconv.ParseUint(mux.Vars(r)["codeID"], 10, 64)
 		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
@@ -102,7 +102,7 @@ func queryContractHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		addr, err := sdk.AccAddressFromBech32(mux.Vars(r)["contractAddr"])
 		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
@@ -131,7 +131,7 @@ func queryContractStateHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 		decoder := newArgDecoder(hex.DecodeString)
 		addr, err := sdk.AccAddressFromBech32(mux.Vars(r)["contractAddr"])
 		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		decoder.encoding = mux.Vars(r)["encoding"]
@@ -144,12 +144,12 @@ func queryContractStateHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 
 		queryData, err := decoder.DecodeString(mux.Vars(r)["query"])
 		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		queryData, err = base64.StdEncoding.DecodeString(string(queryData))
 		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
@@ -192,7 +192,7 @@ func queryCodeHashHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		codeID, err := strconv.ParseUint(mux.Vars(r)["codeID"], 10, 64)
 		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
 

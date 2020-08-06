@@ -1,10 +1,6 @@
 package rest
 
 import (
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
 	"net/http"
 	"strconv"
 
@@ -117,18 +113,13 @@ func instantiateContractHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		//res, err := GetCodeHashByCodeId(cliCtx, string(codeID))
-		//if err != nil {
-		//	return
-		//}
-
 		msg := types.MsgInstantiateContract{
-			Sender:            cliCtx.GetFromAddress(),
-			Code:      		   codeID,
-			CallbackCodeHash:  "",
-			InitFunds: 		   req.Deposit,
-			InitMsg:  		   req.InitMsg,
-			Admin:     	       req.Admin,
+			Sender:           cliCtx.GetFromAddress(),
+			Code:             codeID,
+			CallbackCodeHash: "",
+			InitFunds:        req.Deposit,
+			InitMsg:          req.InitMsg,
+			Admin:            req.Admin,
 		}
 
 		err = msg.ValidateBasic()
@@ -160,11 +151,6 @@ func executeContractHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		//res, err := GetCodeHashByContractAddr(cliCtx, contractAddress)
-		//if err != nil {
-		//	return
-		//}
-
 		msg := types.MsgExecuteContract{
 			Sender:           cliCtx.GetFromAddress(),
 			Contract:         contractAddress,
@@ -181,31 +167,4 @@ func executeContractHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 
 		utils.WriteGenerateStdTxResponse(w, cliCtx, req.BaseReq, []sdk.Msg{msg})
 	}
-}
-
-func GetCodeHashByContractAddr(cliCtx context.CLIContext, contractAddr sdk.AccAddress) ([]byte, error) {
-	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHash, contractAddr.String())
-	res, _, err := cliCtx.Query(route)
-	if err != nil {
-		return nil, err
-	}
-
-	return []byte(hex.EncodeToString(res)), nil
-}
-
-func GetCodeHashByCodeId(cliCtx context.CLIContext, codeID string) ([]byte, error) {
-	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryGetCode, codeID)
-	res, _, err := cliCtx.Query(route)
-	if err != nil {
-		return nil, err
-	}
-
-	var codeResp keeper.GetCodeResponse
-
-	err = json.Unmarshal(res, &codeResp)
-	if err != nil {
-		return nil, err
-	}
-
-	return []byte(hex.EncodeToString(codeResp.DataHash)), nil
 }

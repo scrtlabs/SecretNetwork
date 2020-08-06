@@ -1492,3 +1492,40 @@ func TestContractSendFundsToExecCallbackNotEnough(t *testing.T) {
 	require.Equal(t, "", contract2CoinsAfter.String())
 	require.Equal(t, "199983denom", walletCointsAfter.String())
 }
+
+func TestCodeHashInvalid(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+	initMsg := []byte(`AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA{"nop":{}`)
+	// init
+
+	enc, _ := wasmCtx.Encrypt(initMsg)
+
+	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to validate transaction")
+}
+
+func TestCodeHashNotSent(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+	initMsg := []byte(`{"nop":{}`)
+
+	enc, _ := wasmCtx.Encrypt(initMsg)
+
+	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to validate transaction")
+}
+
+func TestCodeHashNotHex(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+	initMsg := []byte(`🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉{"nop":{}}`)
+
+	enc, _ := wasmCtx.Encrypt(initMsg)
+
+	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to validate transaction")
+}
