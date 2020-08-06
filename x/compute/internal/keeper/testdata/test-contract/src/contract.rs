@@ -27,7 +27,7 @@ pub enum InitMsg {
     CallbackToInit { code_id: u64 },
     CallbackBadParams { contract_addr: HumanAddr },
     Panic {},
-    SendExternalQuery { to: HumanAddr },
+    SendExternalQueryDepthCounter { to: HumanAddr, depth: u8 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -121,6 +121,10 @@ pub enum HandleMsg {
     Sleep {
         ms: u64,
     },
+    SendExternalQueryDepthCounter {
+        to: HumanAddr,
+        depth: u8,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -132,7 +136,7 @@ pub enum QueryMsg {
     SendExternalQueryInfiniteLoop { to: HumanAddr },
     WriteToStorage {},
     RemoveFromStorage {},
-    SendExternalQuery { to: HumanAddr },
+    SendExternalQueryDepthCounter { to: HumanAddr, depth: u8 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -160,9 +164,12 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         }
         InitMsg::CallbackBadParams { contract_addr } => Ok(init_callback_bad_params(contract_addr)),
         InitMsg::Panic {} => panic!("panic in init"),
-        InitMsg::SendExternalQuery { to } => Ok(InitResponse {
+        InitMsg::SendExternalQueryDepthCounter { to, depth } => Ok(InitResponse {
             messages: vec![],
-            log: vec![log(format!("{}", send_external_query(deps, to)), "")],
+            log: vec![log(
+                format!("{}", send_external_query_depth_counter(deps, to, depth)),
+                "",
+            )],
         }),
     }
 }
@@ -286,6 +293,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             log: vec![],
             data: Some(vec![send_external_query(deps, to)].into()),
         }),
+        HandleMsg::SendExternalQueryDepthCounter { to, depth } => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(vec![send_external_query_depth_counter(deps, to, depth)].into()),
+        }),
         HandleMsg::SendExternalQueryPanic { to } => send_external_query_panic(deps, to),
         HandleMsg::SendExternalQueryError { to } => send_external_query_stderror(deps, to),
         HandleMsg::SendExternalQueryBadAbi { to } => send_external_query_bad_abi(deps, to),
@@ -387,6 +399,33 @@ fn send_external_query<S: Storage, A: Api, Q: Querier>(
         }))
         .unwrap();
     answer
+}
+
+fn send_external_query_depth_counter<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    contract_addr: HumanAddr,
+    depth: u8,
+) -> u8 {
+    if depth == 0 {
+        return 0;
+    }
+
+    let answer: u8 = deps
+        .querier
+        .query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: contract_addr.clone(),
+            msg: Binary(
+                format!(
+                    r#"{{"send_external_query_depth_counter":{{"to":"{}","depth":{}}}}}"#,
+                    contract_addr.clone().to_string(),
+                    depth - 1
+                )
+                .into(),
+            ),
+        }))
+        .unwrap();
+
+    answer + 1
 }
 
 fn send_external_query_panic<S: Storage, A: Api, Q: Querier>(
@@ -779,8 +818,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         }
         QueryMsg::WriteToStorage {} => write_to_storage_in_query(deps),
         QueryMsg::RemoveFromStorage {} => remove_from_storage_in_query(deps),
-        QueryMsg::SendExternalQuery { to } => {
-            Ok(to_binary(&send_external_query(deps, to)).unwrap())
+        QueryMsg::SendExternalQueryDepthCounter { to, depth } => {
+            Ok(to_binary(&send_external_query_depth_counter(deps, to, depth)).unwrap())
         }
     }
 }
