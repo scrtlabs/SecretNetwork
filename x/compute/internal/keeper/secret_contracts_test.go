@@ -192,10 +192,10 @@ func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.
 }
 
 func execHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string, isErrorEncrypted bool, gas uint64, coin int64) ([]byte, []ContractEvent, cosmwasm.StdError) {
-	return innerExecHelper(t, keeper, ctx, contractAddress, txSender, execMsg, isErrorEncrypted, gas, coin, -1)
+	return execHelperImpl(t, keeper, ctx, contractAddress, txSender, execMsg, isErrorEncrypted, gas, coin, -1)
 }
 
-func innerExecHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string, isErrorEncrypted bool, gas uint64, coin int64, wasmCallCount int64) ([]byte, []ContractEvent, cosmwasm.StdError) {
+func execHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string, isErrorEncrypted bool, gas uint64, coin int64, wasmCallCount int64) ([]byte, []ContractEvent, cosmwasm.StdError) {
 	execMsgBz, err := wasmCtx.Encrypt([]byte(execMsg))
 	require.NoError(t, err)
 	nonce := execMsgBz[0:32]
@@ -236,10 +236,10 @@ func innerExecHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddre
 }
 
 func initHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, creator sdk.AccAddress, initMsg string, isErrorEncrypted bool, gas uint64) (sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
-	return innerInitHelper(t, keeper, ctx, codeID, creator, initMsg, isErrorEncrypted, gas, -1)
+	return initHelperImpl(t, keeper, ctx, codeID, creator, initMsg, isErrorEncrypted, gas, -1)
 }
 
-func innerInitHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, creator sdk.AccAddress, initMsg string, isErrorEncrypted bool, gas uint64, wasmCallCount int64) (sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
+func initHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, creator sdk.AccAddress, initMsg string, isErrorEncrypted bool, gas uint64, wasmCallCount int64) (sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
 	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
 	require.NoError(t, err)
 	nonce := initMsgBz[0:32]
@@ -1484,7 +1484,7 @@ func TestGasIsChargedForInitCallbackToInit(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	_, _, err := innerInitHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d}}`, codeID), true, defaultGasForTests, 2)
+	_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d}}`, codeID), true, defaultGasForTests, 2)
 	require.Empty(t, err)
 }
 
@@ -1495,7 +1495,7 @@ func TestGasIsChargedForInitCallbackToExec(t *testing.T) {
 	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	_, _, err := innerInitHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback":{"contract_addr":"%s"}}`, addr), true, defaultGasForTests, 2)
+	_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback":{"contract_addr":"%s"}}`, addr), true, defaultGasForTests, 2)
 	require.Empty(t, err)
 }
 
@@ -1507,7 +1507,7 @@ func TestGasIsChargedForExecCallbackToInit(t *testing.T) {
 	require.Empty(t, initErr)
 
 	// exec callback to init
-	_, _, err := innerExecHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d}}`, codeID), true, defaultGasForTests, 0, 2)
+	_, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d}}`, codeID), true, defaultGasForTests, 0, 2)
 	require.Empty(t, err)
 }
 
@@ -1519,6 +1519,17 @@ func TestGasIsChargedForExecCallbackToExec(t *testing.T) {
 	require.Empty(t, initErr)
 
 	// exec callback to exec
-	_, _, err := innerExecHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"a":{"contract_addr":"%s","x":1,"y":2}}`, addr), true, defaultGasForTests, 0, 3)
+	_, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"a":{"contract_addr":"%s","x":1,"y":2}}`, addr), true, defaultGasForTests, 0, 3)
 	require.Empty(t, err)
+}
+
+func TestGasIsChargedForExecExternalQuery(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	_, _, execErr := execHelperImpl(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query":{"to":"%s"}}`, addr.String()), true, defaultGasForTests, 0, 2)
+	require.Empty(t, execErr)
 }
