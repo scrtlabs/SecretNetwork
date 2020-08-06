@@ -1,8 +1,10 @@
-# Implementing the Secret in Contracts
+# Encryption
 
-:warning: This is a very advanced WIP.
+:warning: :warning: :warning:
 
-- [Implementing the Secret in Contracts](#implementing-the-secret-in-contracts)
+This is a very advanced WIP.
+
+- [Encryption](#encryption)
 - [Bootstrap Process](#bootstrap-process)
   - [`consensus_seed`](#consensus_seed)
   - [Key Derivation](#key-derivation)
@@ -35,7 +37,9 @@
 - [Theoretical Attacks](#theoretical-attacks)
   - [Deanonymizing with ciphertext byte count](#deanonymizing-with-ciphertext-byte-count)
   - [Two contracts with the same `contract_key` could deanonymize each other's states](#two-contracts-with-the-same-contract_key-could-deanonymize-each-others-states)
-  - [Tx Replay attacks?](#tx-replay-attacks)
+  - [Tx Replay attacks](#tx-replay-attacks)
+  - [More Advanced Tx Replay attacks -- search to decision for Millionaire's problem](#more-advanced-tx-replay-attacks----search-to-decision-for-millionaires-problem)
+  - [Partial storage rollback during contract runtime](#partial-storage-rollback-during-contract-runtime)
   - [Tx outputs can leak data](#tx-outputs-can-leak-data)
 
 # Bootstrap Process
@@ -46,7 +50,7 @@ Before the genesis of a new chain, there must be a bootstrap node to generate ne
 
 - Create a remote attestation proof that the node's Enclave is genuine.
 - Generate inside the Enclave a true random 256 bits seed: `consensus_seed`.
-- Seal `consensus_seed` with MRENCLAVE to a local file: `$HOME/.secretd/sgx-secrets/consensus_seed.sealed`.
+- Seal `consensus_seed` with MRENCLAVE to a local file: `$HOME/.enigmad/sgx-secrets/consensus_seed.sealed`.
 
 ```js
 // 256 bits
@@ -55,7 +59,7 @@ consensus_seed = true_random({ bytes: 32 });
 seal({
   key: "MRENCLAVE",
   data: consensus_seed,
-  to_file: "$HOME/.secretd/sgx-secrets/consensus_seed.sealed",
+  to_file: "$HOME/.enigmad/sgx-secrets/consensus_seed.sealed",
 });
 ```
 
@@ -119,7 +123,7 @@ consensus_state_ikm = hkdf({
 
 TODO reasoning
 
-- Seal `consensus_seed` to disk at `"$HOME/.secretd/sgx-secrets/consensus_seed.sealed"`.
+- Seal `consensus_seed` to disk at `"$HOME/.enigmad/sgx-secrets/consensus_seed.sealed"`.
 - Publish to `genesis.json`:
   - The remote attestation proof that the Enclave is genuine.
   - `consensus_seed_exchange_pubkey`
@@ -127,7 +131,7 @@ TODO reasoning
 
 # Node Startup
 
-When a full node resumes its participation in the network, it reads `consensus_seed` from `"$HOME/.secretd/sgx-secrets/consensus_seed.sealed"` and again does [key derivation](#Key-Derivation) as outlined above.
+When a full node resumes its participation in the network, it reads `consensus_seed` from `"$HOME/.enigmad/sgx-secrets/consensus_seed.sealed"` and again does [key derivation](#Key-Derivation) as outlined above.
 
 # New Node Registration
 
@@ -141,7 +145,7 @@ TODO reasoning
 - Create a remote attestation proof that the node's Enclave is genuine.
 - Generate inside the node's Enclave a true random curve25519 curve private key: `registration_privkey`.
 - From `registration_privkey` calculate `registration_pubkey`.
-- Send an `secretcli tx register auth` transaction with the following inputs:
+- Send an `enigmacli tx register auth` transaction with the following inputs:
   - The remote attestation proof that the node's Enclave is genuine.
   - `registration_pubkey`
   - 256 bits true random `nonce`
@@ -150,7 +154,7 @@ TODO reasoning
 
 TODO reasoning
 
-- Receive the `secretcli tx register auth` transaction.
+- Receive the `enigmacli tx register auth` transaction.
 - Verify the remote attestation proof that the new node's Enclave is genuine.
 
 ### `seed_exchange_key`
@@ -182,7 +186,7 @@ seed_exchange_key = hkdf({
 
 TODO reasoning
 
-- The output of the `secretcli tx register auth` transaction is `consensus_seed` encrypted with AES-128-SIV, `seed_exchange_key` as the encryption key, using the public key of the registering node for the AD.
+- The output of the `enigmacli tx register auth` transaction is `consensus_seed` encrypted with AES-128-SIV, `seed_exchange_key` as the encryption key, using the public key of the registering node for the AD.
 
 ```js
 encrypted_consensus_seed = aes_128_siv_encrypt({
@@ -196,7 +200,7 @@ return encrypted_consensus_seed;
 
 ## Back on the new node, inside its Enclave
 
-- Receive the `secretcli tx register auth` transaction output (`encrypted_consensus_seed`).
+- Receive the `enigmacli tx register auth` transaction output (`encrypted_consensus_seed`).
 
 ### `seed_exchange_key`
 
@@ -227,7 +231,7 @@ TODO reasoning
 
 - `encrypted_consensus_seed` is encrypted with AES-128-SIV, `seed_exchange_key` as the encryption key and the public key of the registering node as the `ad` as the decryption additional data.
 - The new node now has all of these^ parameters inside its Enclave, so it's able to decrypt `consensus_seed` from `encrypted_consensus_seed`.
-- Seal `consensus_seed` to disk at `"$HOME/.secretd/sgx-secrets/consensus_seed.sealed"`.
+- Seal `consensus_seed` to disk at `"$HOME/.enigmad/sgx-secrets/consensus_seed.sealed"`.
 
 ```js
 consensus_seed = aes_128_siv_decrypt({
@@ -239,7 +243,7 @@ consensus_seed = aes_128_siv_decrypt({
 seal({
   key: "MRENCLAVE",
   data: consensus_seed,
-  to_file: "$HOME/.secretd/sgx-secrets/consensus_seed.sealed",
+  to_file: "$HOME/.enigmad/sgx-secrets/consensus_seed.sealed",
 });
 ```
 
@@ -260,10 +264,14 @@ TODO reasoning
   - `consensus_state_ikm`
   - `field_name`
   - `contact_key`
+- `ad` (Additional Data) is used to prevent leaking information about the same value written to the same key at different times.
 
 ## `contract_key`
 
-- `contract_key` is a concatenation of two values: `signer_id || authenticated_contract_key`.
+- `contract_key` is a **concatenation** of two values: `signer_id || authenticated_contract_key`.
+- Its purpose is to make sure each contract have a unique unforgable encryption key.
+  - Unique: Make sure the state of two contracts with the same code is different.
+  - Unforgable: Make sure a malicious node runner won't try to locally encrypt transactions with it's own encryption key and then decrypt the resulting state with the fake key.
 - When a contract is deployed (i.e., on contract init), `contract_key` is generated inside of the Enclave as follows:
 
 ```js
@@ -477,11 +485,11 @@ msg = aes_128_siv_decrypt({
         },
         {
           "key": "sender", // need to encrypt this value
-          "value": "secret1v9tna8rkemndl7cd4ahru9t7ewa7kdq8d4zlr5" // need to encrypt this value
+          "value": "secret1v9tna8rkemndl7cd4ahru9t7ewa7kdq87c02m2" // need to encrypt this value
         },
         {
           "key": "recipient", // need to encrypt this value
-          "value": "secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rp5vqd4" // need to encrypt this value
+          "value": "secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t" // need to encrypt this value
         }
       ],
       "data": "bla bla" // need to encrypt this value
@@ -613,9 +621,20 @@ For example, An original contract with a permissioned getter, such that only whi
 
 After a contract runs on the chain, an attaker can sync up a node up to a specific block in the chain, and then call into the enclave with the same authenticated user inputs that were given to the enclave on-chain, but out-of-order, or omit selected messages. A contract that does not anticipate or protect against this might end up deanonimizing the information provided by users. for example, in a naive voting contract (or other personal data collection algorithm), we can deanonimize a voter by re-running the vote without the target's request, and analyze thedifference in final results.
 
+## More Advanced Tx Replay attacks -- search to decision for Millionaire's problem
+
+This attack provides a specific example of a TX replay attack extracting the full information of a client based on replaying a TX.
+
+Specifically, assume for millionaire's that you have a contract where one person inputs their amount of money, then the other person does, then the contract sends them both a single bit saying who has more -- this is the simplest implementation for Millionaire's problem solving. As person 2, binary search the interval of possible money amounts person 1 could have -- say you know person 1 has less than N dollars. first, query with N/2 as your value with your node detached from the wider network, get the single bit out (whether the true value is higher or lower), then repeat by resyncing your node and calling in.
+By properties of binary search, in log(n) tries (where n is the size of the interval) you'll have the exact value of person 1's input.
+
+The naive solution to this is requiring the node to successfully broadcast the data of person 1 and person 2 to the network before revealing an answer (which is an implicit heartbeat test, that also ensures the transaction isn't replayable), but even that's imperfect since you can reload the contract and replay the network state up to that broadcast, restoring the original state of the contract, then perform the attack with repeated rollbacks.
+
+Assaf: You could maybe implement the contract with the help of a 3rd party. I.e. the 2 players send their amounts. When the 3rd party sends an approval tx only then the 2 players can query the result. However, this is not good UX.
+
 ## Partial storage rollback during contract runtime
 
-Our current schema can verify that when reading from a field in storage, the value received from the host has been written by the same contract instance to the same field in storage. BUT we can not (yet) verify that the value is the most __recent__ value that wsa stored there. This means that a malicious host can (offline) run a transaction, and then selectively provide outdated values for some fields of the storage. In the worst case, this can cause a contract to expose old secrets with new permissions, or new secrets with old permissions. The contract can protect against this by either (e.g.) making sure that pieces of information that have to be synced with each other are saved under the same field (so they are never observed as desynchronised) or (e.g.) somehow verify their validity when reading them from two separate fields of storage.
+Our current schema can verify that when reading from a field in storage, the value received from the host has been written by the same contract instance to the same field in storage. BUT we can not (yet) verify that the value is the most **recent** value that wsa stored there. This means that a malicious host can (offline) run a transaction, and then selectively provide outdated values for some fields of the storage. In the worst case, this can cause a contract to expose old secrets with new permissions, or new secrets with old permissions. The contract can protect against this by either (e.g.) making sure that pieces of information that have to be synced with each other are saved under the same field (so they are never observed as desynchronised) or (e.g.) somehow verify their validity when reading them from two separate fields of storage.
 
 ## Tx outputs can leak data
 

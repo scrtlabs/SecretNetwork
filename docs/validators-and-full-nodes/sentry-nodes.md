@@ -1,4 +1,6 @@
-# How to setup sentry nodes to make your node resilient to DDoS attacks
+# Sentry Nodes
+
+### Make your node resilient to DDoS attacks!
 
 The Sentry Node Architecture is an infrastructure example for DDoS mitigation on Tendermint-based networks.
 
@@ -12,7 +14,8 @@ Validator nodes should only connect to full-nodes they trust because they operat
 
 Sentry nodes can be quickly spun up or change their IP addresses. Because the links to the sentry nodes are in private IP space, an internet based attacked cannot disturb them directly. This will ensure validator block proposals and votes always make it to the rest of the network.
 
-###Notes:
+### Notes:
+
 For those implementing Sentry's on Validators who already have Public IP exposed. Currently any peer, be it a validator or full node, is given 16 attempts with exponential backoff, which in total amounts to around 35 hours, to connect. If the node remains unreachable then it is automatically removed from the address book..
 An unreachable validator node is not gossiped across the network i.e. all other nodes will each try to connect to the unreachable validator node before removing it from their address book.
 
@@ -43,6 +46,6 @@ Sentry Nodes should edit their config.toml:
 private_peer_ids = "node_ids_of_private_peers"
 ```
 
-Sources:
+### Resources:
 
-1. https://github.com/Cashmaney/gaia/blob/master/docs/validators/security.md
+[https://github.com/cosmos/gaia/blob/master/docs/validators/security.md](https://github.com/cosmos/gaia/blob/master/docs/validators/security.md)

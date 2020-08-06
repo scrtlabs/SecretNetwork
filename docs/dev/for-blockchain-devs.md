@@ -14,12 +14,12 @@ make install # installs secretd and secretcli
 ```
 
 ```bash
-secretcli config chain-id secret-testnet # now we won't need to type --chain-id secret-testnet every time
+secretcli config chain-id enigma-testnet # now we won't need to type --chain-id enigma-testnet every time
 secretcli config output json
 secretcli config indent true
 secretcli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
 
-secretd init banana --chain-id secret-testnet # banana==moniker==user-agent of this node
+secretd init banana --chain-id enigma-testnet # banana==moniker==user-agent of this node
 perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json # change the default staking denom from stake to uscrt
 
 secretcli keys add a
@@ -105,7 +105,7 @@ secretcli tx distribution withdraw-rewards $(secretcli keys show --bech=val -a a
 First, init your environment:
 
 ```bash
-secretd init [moniker] --chain-id secret-testnet
+secretd init [moniker] --chain-id enigma-testnet
 ```
 
 Now you need a valid running node to send you their `genesis.json` file (usually at `~/.secretd/config/genesis.json`).  
