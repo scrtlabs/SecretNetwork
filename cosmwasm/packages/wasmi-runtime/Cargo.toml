@@ -61,7 +61,6 @@ lazy_static = "1.4"
 x25519-dalek = { version = "0.6", default-features = false, features = [
     "u64_backend"
 ] }
-
 hex = "0.4.2"
 
 [patch.crates-io]
