@@ -35,19 +35,19 @@ process.on("unhandledRejection", (error) => {
     seed,
     {
       upload: {
-        amount: [{ amount: "25000", denom: "uscrt" }],
+        amount: [{ amount: "1000000", denom: "uscrt" }],
         gas: "1000000",
       },
       init: {
-        amount: [{ amount: "12500", denom: "uscrt" }],
+        amount: [{ amount: "500000", denom: "uscrt" }],
         gas: "500000",
       },
       exec: {
-        amount: [{ amount: "5000", denom: "uscrt" }],
+        amount: [{ amount: "200000", denom: "uscrt" }],
         gas: "200000",
       },
       send: {
-        amount: [{ amount: "2000", denom: "uscrt" }],
+        amount: [{ amount: "80000", denom: "uscrt" }],
         gas: "80000",
       },
     }
