@@ -27,6 +27,7 @@ pub enum InitMsg {
     CallbackToInit { code_id: u64 },
     CallbackBadParams { contract_addr: HumanAddr },
     Panic {},
+    SendExternalQuery { to: HumanAddr },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -131,6 +132,7 @@ pub enum QueryMsg {
     SendExternalQueryInfiniteLoop { to: HumanAddr },
     WriteToStorage {},
     RemoveFromStorage {},
+    SendExternalQuery { to: HumanAddr },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -158,6 +160,10 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         }
         InitMsg::CallbackBadParams { contract_addr } => Ok(init_callback_bad_params(contract_addr)),
         InitMsg::Panic {} => panic!("panic in init"),
+        InitMsg::SendExternalQuery { to } => Ok(InitResponse {
+            messages: vec![],
+            log: vec![log(format!("{}", send_external_query(deps, to)), "")],
+        }),
     }
 }
 
@@ -275,7 +281,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::PassNullPointerToImportsShouldThrow { pass_type } => {
             Ok(pass_null_pointer_to_imports_should_throw(deps, pass_type))
         }
-        HandleMsg::SendExternalQuery { to } => send_external_query(deps, to),
+        HandleMsg::SendExternalQuery { to } => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(vec![send_external_query(deps, to)].into()),
+        }),
         HandleMsg::SendExternalQueryPanic { to } => send_external_query_panic(deps, to),
         HandleMsg::SendExternalQueryError { to } => send_external_query_stderror(deps, to),
         HandleMsg::SendExternalQueryBadAbi { to } => send_external_query_bad_abi(deps, to),
@@ -366,9 +376,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 
 fn send_external_query<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: &Extern<S, A, Q>,
     contract_addr: HumanAddr,
-) -> HandleResult {
+) -> u8 {
     let answer: u8 = deps
         .querier
         .query(&QueryRequest::Wasm(WasmQuery::Smart {
@@ -376,12 +386,7 @@ fn send_external_query<S: Storage, A: Api, Q: Querier>(
             msg: Binary(r#"{"receive_external_query":{"num":2}}"#.into()),
         }))
         .unwrap();
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(vec![answer].into()),
-    })
+    answer
 }
 
 fn send_external_query_panic<S: Storage, A: Api, Q: Querier>(
@@ -774,6 +779,9 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         }
         QueryMsg::WriteToStorage {} => write_to_storage_in_query(deps),
         QueryMsg::RemoveFromStorage {} => remove_from_storage_in_query(deps),
+        QueryMsg::SendExternalQuery { to } => {
+            Ok(to_binary(&send_external_query(deps, to)).unwrap())
+        }
     }
 }
 

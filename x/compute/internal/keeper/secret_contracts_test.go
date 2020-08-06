@@ -160,6 +160,11 @@ func (wasmGasMeter *WasmCounterGasMeter) GetWasmCounter() uint64 {
 var _ types.GasMeter = (*WasmCounterGasMeter)(nil) // check interface
 
 func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.AccAddress, input string, isErrorEncrypted bool, gas uint64) (string, cosmwasm.StdError) {
+
+	return queryHelperImpl(t, keeper, ctx, contractAddr, input, isErrorEncrypted, gas, -1)
+}
+
+func queryHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.AccAddress, input string, isErrorEncrypted bool, gas uint64, wasmCallCount int64) (string, cosmwasm.StdError) {
 	queryBz, err := wasmCtx.Encrypt([]byte(input))
 	require.NoError(t, err)
 	nonce := queryBz[0:32]
@@ -176,8 +181,14 @@ func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.
 	).WithGasMeter(gasMeter)
 
 	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz, true)
-	fmt.Println(gasMeter)
-	require.NotZero(t, gasMeter.GetWasmCounter())
+
+	if wasmCallCount < 0 {
+		// default, just check that at least 1 call happend
+		require.NotZero(t, gasMeter.GetWasmCounter())
+	} else {
+		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter())
+	}
+
 	if err != nil {
 		return "", extractInnerError(t, err, nonce, isErrorEncrypted)
 	}
@@ -213,7 +224,7 @@ func execHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddres
 
 	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)))
 
-	if wasmCallCount == -1 {
+	if wasmCallCount < 0 {
 		// default, just check that at least 1 call happend
 		require.NotZero(t, gasMeter.GetWasmCounter())
 	} else {
@@ -258,7 +269,7 @@ func initHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64,
 	// make the label a random base64 string, because why not?
 	contractAddress, err := keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, base64.RawURLEncoding.EncodeToString(nonce), sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 
-	if wasmCallCount == -1 {
+	if wasmCallCount < 0 {
 		// default, just check that at least 1 call happend
 		require.NotZero(t, gasMeter.GetWasmCounter())
 	} else {
@@ -1530,6 +1541,28 @@ func TestGasIsChargedForExecExternalQuery(t *testing.T) {
 	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	_, _, execErr := execHelperImpl(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query":{"to":"%s"}}`, addr.String()), true, defaultGasForTests, 0, 2)
-	require.Empty(t, execErr)
+	_, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query":{"to":"%s"}}`, addr.String()), true, defaultGasForTests, 0, 2)
+	require.Empty(t, err)
+}
+
+func TestGasIsChargedForInitExternalQuery(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"send_external_query":{"to":"%s"}}`, addr.String()), true, defaultGasForTests, 2)
+	require.Empty(t, err)
+}
+
+func TestGasIsChargedForQueryExternalQuery(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	_, err := queryHelperImpl(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query":{"to":"%s"}}`, addr.String()), true, defaultGasForTests, 2)
+	require.Empty(t, err)
 }
