@@ -271,7 +271,7 @@ go-tests-hw: build-test-contract
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
 	SGX_MODE=HW go test -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
-build-cosmwasm-test-contracts:
+build-all-test-contracts: build-test-contract
 	# echo "" | sudo add-apt-repository ppa:hnakamur/binaryen
 	# sudo apt update
 	# sudo apt install -y binaryen
