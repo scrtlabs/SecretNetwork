@@ -1,99 +1,94 @@
-# How to join the Secret Network as a full node on mainnet
+# Run a Full Node
 
 This document details how to join the Secret Network `mainnet` as a validator.
 
-## Requirements
+### Requirements
 
 - Ubuntu/Debian host (with ZFS or LVM to be able to add more storage easily)
 - A public IP address
 - Open ports `TCP 26656 & 26657` _Note: If you're behind a router or firewall then you'll need to port forward on the network device._
 - Reading https://docs.tendermint.com/master/tendermint-core/running-in-production.html
 
-### While actual specs vary depending on the load and validators count, minimal requirements are:
+#### Minimum requirements
 
-1GB RAM
-25GB of disk space
-1.4 GHz CPU
-SSD disks are preferable for applications with high transaction throughput.
+- 1GB RAM
+- 100GB HDD
+- 1 dedicated core of any Intel Skylake processor (Intel® 6th generation) or better
 
-### Recommended:
+#### Recommended requirements
 
-2GB RAM
-100GB SSD
-x64 2.0 GHz 2v CPU
+- 2GB RAM
+- 256GB SSD
+- 2 dedicated cores of any Intel Skylake processor (Intel® 6th generation) or better
 
-## Installation
+### Installation
 
-### 1. Download the Secret Network package installer for Debian/Ubuntu:
-
-```bash
-wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.1.0/secretnetwork_0.1.0_amd64.deb
-```
-
-([How to verify releases](/docs/verify-releases.md))
-
-### 2. Install the package:
+#### 1. Download the Secret Network package installer for Debian/Ubuntu:
 
 ```bash
-sudo dpkg -i secretnetwork_0.1.0_amd64.deb
+wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.2.1/secretnetwork_0.2.1_amd64.deb
 ```
 
-### 3. Initialize your installation of the Secret Network. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
+([How to verify releases](/verify-releases.md))
+
+#### 2. Install the package:
+
+```bash
+sudo dpkg -i secretnetwork_0.2.1_amd64.deb
+```
+
+#### 3. Initialize your installation of the Secret Network. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
 
 ```bash
 secretd init <MONIKER> --chain-id secret-1
 ```
 
-### 4. Download a copy of the Genesis Block file: `genesis.json`
+#### 4. Download a copy of the Genesis Block file: `genesis.json`
 
 ```bash
 wget -O ~/.secretd/config/genesis.json "https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/secret-1-genesis.json"
 ```
 
-### 5. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
+#### 5. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
 
 ```
-echo "86cd9864f5b8e7f540c5edd3954372df94bd23de62e06d5c33a84bd5f3d29114 $HOME/.secretd/config/genesis.json" | sha256sum --check
+echo "e505aef445c7c5c2d007ba9705c0729b6da7e4b2099c4ad309f1c8b5404bce7f $HOME/.secretd/config/genesis.json" | sha256sum --check
 ```
 
-### 6. Validate that the `genesis.json` is a valid genesis file:
+#### 6. Validate that the `genesis.json` is a valid genesis file:
 
 ```
 secretd validate-genesis
 ```
 
-### 7. Add persistent peers to your configuration file.
+#### 7. Add persistent peers and seeds to your configuration file.
 
-For an updated (partial) list of full nodes: http://bootstrap.mainnet.enigma.co/peers.txt
-(Generated every minute with [this script](https://gist.github.com/assafmo/a39fdb535f74ce2d6493a1a3f695e4ca))
-
-You can also use Enigma's node:
+This might be shared with you by full nodes. You can also use Enigma's node:
 
 ```
 perl -i -pe 's/persistent_peers = ""/persistent_peers = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.secretd/config/config.toml
+perl -i -pe 's/seeds = ""/seeds = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.secretd/config/config.toml
 ```
 
-This configuration updates automatically by your node when it learns of new nodes in the network.
-
-### 8. Listen for incoming RPC requests so that light nodes can connect to you:
+#### 8. Listen for incoming RPC requests so that light nodes can connect to you:
 
 ```bash
 perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.secretd/config/config.toml
 ```
 
-### 9. Enable `secret-node` as a system service:
+#### 9. Enable `secret-node` as a system service:
 
 ```
 sudo systemctl enable secret-node
 ```
 
-### 10. Start `secret-node` as a system service:
+#### 10. Start `secret-node` as a system service:
 
 ```
 sudo systemctl start secret-node
 ```
 
-### 11. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
+#### 11. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
 
 ```bash
 journalctl -f -u secret-node
@@ -118,7 +113,7 @@ Feb 10 21:18:59 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:59.695] Commit
 
 You are now a full node. :tada:
 
-### 12. Add the following configuration settings (some of these avoid having to type some flags all the time):
+#### 12. Add the following configuration settings (some of these avoid having to type some flags all the time):
 
 ```bash
 secretcli config chain-id secret-1
@@ -136,7 +131,7 @@ secretcli config indent true
 secretcli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
 ```
 
-### 13. Get your node ID with:
+#### 13. Get your node ID with:
 
 ```bash
 secretd tendermint show-node-id
