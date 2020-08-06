@@ -1480,20 +1480,45 @@ func TestSleep(t *testing.T) {
 	require.Equal(t, "execute contract failed: Execution error: Enclave: the contract panicked", execErr.GenericErr.Msg)
 }
 
-func TestGasIsChargedForCallbacks(t *testing.T) {
+func TestGasIsChargedForInitCallbackToInit(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	contractAddress, _, initErr := innerInitHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests, 2)
+	_, _, err := innerInitHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d}}`, codeID), true, defaultGasForTests, 2)
+	require.Empty(t, err)
+}
+
+func TestGasIsChargedForInitCallbackToExec(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	_, _, err := innerInitHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"callback":{"contract_addr":"%s"}}`, addr), true, defaultGasForTests, 2)
+	require.Empty(t, err)
+}
+
+func TestGasIsChargedForExecCallbackToInit(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
 	// exec callback to init
-	_, _, execErr := innerExecHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d}}`, codeID), true, defaultGasForTests, 0, 2)
-	require.Empty(t, execErr)
+	_, _, err := innerExecHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d}}`, codeID), true, defaultGasForTests, 0, 2)
+	require.Empty(t, err)
+}
+
+func TestGasIsChargedForExecCallbackToExec(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, initErr)
 
 	// exec callback to exec
-
-	// init callback to init
-
-	// init callback to init
+	_, _, err := innerExecHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"a":{"contract_addr":"%s","x":1,"y":2}}`, addr), true, defaultGasForTests, 0, 3)
+	require.Empty(t, err)
 }
