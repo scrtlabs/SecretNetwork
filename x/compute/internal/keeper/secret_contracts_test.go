@@ -192,6 +192,10 @@ func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.
 }
 
 func execHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string, isErrorEncrypted bool, gas uint64, coin int64) ([]byte, []ContractEvent, cosmwasm.StdError) {
+	return innerExecHelper(t, keeper, ctx, contractAddress, txSender, execMsg, isErrorEncrypted, gas, coin, -1)
+}
+
+func innerExecHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, execMsg string, isErrorEncrypted bool, gas uint64, coin int64, wasmCallCount int64) ([]byte, []ContractEvent, cosmwasm.StdError) {
 	execMsgBz, err := wasmCtx.Encrypt([]byte(execMsg))
 	require.NoError(t, err)
 	nonce := execMsgBz[0:32]
@@ -208,7 +212,14 @@ func execHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sd
 	).WithGasMeter(gasMeter)
 
 	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)))
-	require.NotZero(t, gasMeter.GetWasmCounter())
+
+	if wasmCallCount == -1 {
+		// default, just check that at least 1 call happend
+		require.NotZero(t, gasMeter.GetWasmCounter())
+	} else {
+		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter())
+	}
+
 	if err != nil {
 		return nil, nil, extractInnerError(t, err, nonce, isErrorEncrypted)
 	}
@@ -225,6 +236,10 @@ func execHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sd
 }
 
 func initHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, creator sdk.AccAddress, initMsg string, isErrorEncrypted bool, gas uint64) (sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
+	return innerInitHelper(t, keeper, ctx, codeID, creator, initMsg, isErrorEncrypted, gas, -1)
+}
+
+func innerInitHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, creator sdk.AccAddress, initMsg string, isErrorEncrypted bool, gas uint64, wasmCallCount int64) (sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
 	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
 	require.NoError(t, err)
 	nonce := initMsgBz[0:32]
@@ -242,7 +257,14 @@ func initHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, cre
 
 	// make the label a random base64 string, because why not?
 	contractAddress, err := keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, base64.RawURLEncoding.EncodeToString(nonce), sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	require.NotZero(t, gasMeter.GetWasmCounter())
+
+	if wasmCallCount == -1 {
+		// default, just check that at least 1 call happend
+		require.NotZero(t, gasMeter.GetWasmCounter())
+	} else {
+		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter())
+	}
+
 	if err != nil {
 		return nil, nil, extractInnerError(t, err, nonce, isErrorEncrypted)
 	}
@@ -1456,4 +1478,22 @@ func TestSleep(t *testing.T) {
 	require.Error(t, execErr)
 	require.Error(t, execErr.GenericErr)
 	require.Equal(t, "execute contract failed: Execution error: Enclave: the contract panicked", execErr.GenericErr.Msg)
+}
+
+func TestGasIsChargedForCallbacks(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	contractAddress, _, initErr := innerInitHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests, 2)
+	require.Empty(t, initErr)
+
+	// exec callback to init
+	_, _, execErr := innerExecHelper(t, keeper, ctx, contractAddress, walletA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d}}`, codeID), true, defaultGasForTests, 0, 2)
+	require.Empty(t, execErr)
+
+	// exec callback to exec
+
+	// init callback to init
+
+	// init callback to init
 }
