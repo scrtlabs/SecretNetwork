@@ -101,6 +101,8 @@ func txCmd(cdc *amino.Codec) *cobra.Command {
 		Short: "Transactions subcommands",
 	}
 
+	viper.SetDefault(flags.FlagGasPrices, "1.0uscrt")
+
 	txCmd.AddCommand(
 		bankcmd.SendTxCmd(cdc),
 		flags.LineBreak,
