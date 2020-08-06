@@ -123,7 +123,7 @@ consensus_state_ikm = hkdf({
 
 TODO reasoning
 
-- Seal `consensus_seed` to disk at `"$HOME/.sgx_secrets/consensus_seed.sealed"`.
+- Seal `consensus_seed` to disk at `$HOME/.sgx_secrets/consensus_seed.sealed`.
 - Publish to `genesis.json`:
   - The remote attestation proof that the Enclave is genuine.
   - `consensus_seed_exchange_pubkey`
