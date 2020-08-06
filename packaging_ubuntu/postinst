@@ -3,6 +3,11 @@
 
 set -e
 
+if [[ -z $"SUDO_USER" ]]
+then
+    export SUDO_USER=root
+fi
+
 cat <<EOF > /etc/systemd/system/secret-node.service
 [Unit]
 Description=Secret node service
