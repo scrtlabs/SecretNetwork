@@ -1,0 +1,265 @@
+//! Types and helpers for init and handle
+
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::fmt;
+
+use crate::coins::Coin;
+use crate::encoding::Binary;
+use crate::errors::StdResult;
+use crate::types::{HumanAddr, Never};
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+// See https://github.com/serde-rs/serde/issues/1296 why we cannot add De-Serialize trait bounds to T
+pub enum CosmosMsg<T = Never>
+where
+    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+{
+    Bank(BankMsg),
+    // by default we use RawMsg, but a contract can override that
+    // to call into more app-specific code (whatever they define)
+    Custom(T),
+    Staking(StakingMsg),
+    Wasm(WasmMsg),
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum BankMsg {
+    // this moves tokens in the underlying sdk
+    Send {
+        from_address: HumanAddr,
+        to_address: HumanAddr,
+        amount: Vec<Coin>,
+    },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum StakingMsg {
+    Delegate {
+        // delegator is automatically set to address of the calling contract
+        validator: HumanAddr,
+        amount: Coin,
+    },
+    Undelegate {
+        // delegator is automatically set to address of the calling contract
+        validator: HumanAddr,
+        amount: Coin,
+    },
+    Withdraw {
+        // delegator is automatically set to address of the calling contract
+        validator: HumanAddr,
+        /// this is the "withdraw address", the one that should receive the rewards
+        /// if None, then use delegator address
+        recipient: Option<HumanAddr>,
+    },
+    Redelegate {
+        // delegator is automatically set to address of the calling contract
+        src_validator: HumanAddr,
+        dst_validator: HumanAddr,
+        amount: Coin,
+    },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum WasmMsg {
+    /// this dispatches a call to another contract at a known address (with known ABI)
+    Execute {
+        contract_addr: HumanAddr,
+        /// callback_code_hash is the hex encoded hash of the code. This is used by Secret Network to harden against replaying the contract
+        /// It is used to bind the request to a destination contract in a stronger way than just the contract address which can be faked
+        callback_code_hash: String,
+        /// msg is the json-encoded HandleMsg struct (as raw Binary)
+        msg: Binary,
+        send: Vec<Coin>,
+    },
+    /// this instantiates a new contracts from previously uploaded wasm code
+    Instantiate {
+        code_id: u64,
+        /// callback_code_hash is the hex encoded hash of the code. This is used by Secret Network to harden against replaying the contract
+        /// It is used to bind the request to a destination contract in a stronger way than just the contract address which can be faked
+        callback_code_hash: String,
+        /// msg is the json-encoded InitMsg struct (as raw Binary)
+        msg: Binary,
+        send: Vec<Coin>,
+        /// optional human-readbale label for the contract
+        label: Option<String>,
+    },
+}
+
+impl<T: Clone + fmt::Debug + PartialEq + JsonSchema> From<BankMsg> for CosmosMsg<T> {
+    fn from(msg: BankMsg) -> Self {
+        CosmosMsg::Bank(msg)
+    }
+}
+
+#[cfg(feature = "staking")]
+impl<T: Clone + fmt::Debug + PartialEq + JsonSchema> From<StakingMsg> for CosmosMsg<T> {
+    fn from(msg: StakingMsg) -> Self {
+        CosmosMsg::Staking(msg)
+    }
+}
+
+impl<T: Clone + fmt::Debug + PartialEq + JsonSchema> From<WasmMsg> for CosmosMsg<T> {
+    fn from(msg: WasmMsg) -> Self {
+        CosmosMsg::Wasm(msg)
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, JsonSchema)]
+pub struct LogAttribute {
+    pub key: String,
+    pub value: String,
+}
+
+/// A shorthand to produce a log attribute
+pub fn log<K: ToString, V: ToString>(key: K, value: V) -> LogAttribute {
+    LogAttribute {
+        key: key.to_string(),
+        value: value.to_string(),
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct InitResponse<T = Never>
+where
+    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+{
+    pub messages: Vec<CosmosMsg<T>>,
+    pub log: Vec<LogAttribute>,
+}
+
+pub type InitResult<U = Never> = StdResult<InitResponse<U>>;
+
+impl<T> Default for InitResponse<T>
+where
+    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+{
+    fn default() -> Self {
+        InitResponse {
+            messages: vec![],
+            log: vec![],
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct HandleResponse<T = Never>
+where
+    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+{
+    pub messages: Vec<CosmosMsg<T>>,
+    pub log: Vec<LogAttribute>,
+    pub data: Option<Binary>,
+}
+
+pub type HandleResult<U = Never> = StdResult<HandleResponse<U>>;
+
+impl<T> Default for HandleResponse<T>
+where
+    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+{
+    fn default() -> Self {
+        HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: None,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct MigrateResponse<T = Never>
+where
+    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+{
+    pub messages: Vec<CosmosMsg<T>>,
+    pub log: Vec<LogAttribute>,
+    pub data: Option<Binary>,
+}
+
+pub type MigrateResult<U = Never> = StdResult<MigrateResponse<U>>;
+
+impl<T> Default for MigrateResponse<T>
+where
+    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+{
+    fn default() -> Self {
+        MigrateResponse {
+            messages: vec![],
+            log: vec![],
+            data: None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::errors::StdError;
+    use crate::{coins, from_slice, to_vec, Uint128};
+
+    #[test]
+    fn log_works_for_different_types() {
+        let expeceted = LogAttribute {
+            key: "foo".to_string(),
+            value: "42".to_string(),
+        };
+
+        assert_eq!(log("foo", "42"), expeceted);
+        assert_eq!(log("foo".to_string(), "42"), expeceted);
+        assert_eq!(log("foo", "42".to_string()), expeceted);
+        assert_eq!(log("foo", HumanAddr::from("42")), expeceted);
+        assert_eq!(log("foo", Uint128(42)), expeceted);
+        assert_eq!(log("foo", 42), expeceted);
+    }
+
+    #[test]
+    fn can_deser_error_result() {
+        let fail = InitResult::Err(StdError::Unauthorized { backtrace: None });
+        let bin = to_vec(&fail).expect("encode contract result");
+        println!("error: {}", std::str::from_utf8(&bin).unwrap());
+        let back: InitResult = from_slice(&bin).expect("decode contract result");
+        assert_eq!(fail, back);
+    }
+
+    #[test]
+    fn can_deser_ok_result() {
+        let send = InitResult::Ok(InitResponse {
+            messages: vec![BankMsg::Send {
+                from_address: HumanAddr("me".to_string()),
+                to_address: HumanAddr("you".to_string()),
+                amount: coins(1015, "earth"),
+            }
+            .into()],
+            log: vec![LogAttribute {
+                key: "action".to_string(),
+                value: "release".to_string(),
+            }],
+        });
+        let bin = to_vec(&send).expect("encode contract result");
+        println!("ok: {}", std::str::from_utf8(&bin).unwrap());
+        let back: InitResult = from_slice(&bin).expect("decode contract result");
+        assert_eq!(send, back);
+    }
+
+    #[test]
+    fn msg_from_works() {
+        let from_address = HumanAddr("me".to_string());
+        let to_address = HumanAddr("you".to_string());
+        let amount = coins(1015, "earth");
+        let bank = BankMsg::Send {
+            from_address,
+            to_address,
+            amount,
+        };
+        let msg: CosmosMsg = bank.clone().into();
+        match msg {
+            CosmosMsg::Bank(msg) => assert_eq!(bank, msg),
+            _ => panic!("must encode in Bank variant"),
+        }
+    }
+}

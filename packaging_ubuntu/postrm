@@ -1,8 +1,9 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # This `DEBIAN/postrm` script is run post-uninstallation
 
 set -e
 
-systemctl stop secret-node    || true
-systemctl disable secret-node || true
-rm -f /etc/systemd/system/secret-node.service
+systemctl stop secret-node                    || true
+systemctl disable secret-node                 || true
+rm -f /etc/systemd/system/secret-node.service || true
+systemctl daemon-reload                       || true

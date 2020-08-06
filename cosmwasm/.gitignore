@@ -13,3 +13,6 @@ contracts/**/hash.txt
 .vscode/
 .idea/
 *.iml
+
+# Auto-gen
+.cargo-ok
