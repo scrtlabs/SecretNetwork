@@ -58,7 +58,8 @@ pub enum EnclaveError {
     // TODO should we split these three cases for better diagnostics?
     #[display(fmt = "failed to execute ocall")]
     FailedOcall { vm_error: UntrustedVmError },
-
+    #[display(fmt = "failed to validate transaction")]
+    ValidationFailure,
     // Problems with the module binary
     /// The WASM code was invalid and could not be loaded.
     #[display(fmt = "tried to load invalid wasm code")]
@@ -73,7 +74,8 @@ pub enum EnclaveError {
     /// Fail to inject gas metering
     #[display(fmt = "failed to inject gas metering")]
     FailedGasMeteringInjection,
-
+    #[display(fmt = "internal error during execution")]
+    InternalError,
     // runtime issues with the module
     /// Ran out of gas
     #[display(fmt = "execution ran out of gas")]

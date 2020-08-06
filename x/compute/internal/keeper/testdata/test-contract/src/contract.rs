@@ -19,12 +19,26 @@ use std::mem;
 #[serde(rename_all = "snake_case")]
 pub enum InitMsg {
     Nop {},
-    Callback { contract_addr: HumanAddr },
-    CallbackContractError { contract_addr: HumanAddr },
-    ContractError { error_type: String },
+    Callback {
+        contract_addr: HumanAddr,
+        code_hash: String,
+    },
+    CallbackContractError {
+        contract_addr: HumanAddr,
+        code_hash: String,
+    },
+    ContractError {
+        error_type: String,
+    },
     NoLogs {},
-    CallbackToInit { code_id: u64 },
-    CallbackBadParams { contract_addr: HumanAddr },
+    CallbackToInit {
+        code_id: u64,
+        code_hash: String,
+    },
+    CallbackBadParams {
+        contract_addr: HumanAddr,
+        code_hash: String,
+    },
     Panic {},
 }
 
@@ -33,11 +47,13 @@ pub enum InitMsg {
 pub enum HandleMsg {
     A {
         contract_addr: HumanAddr,
+        code_hash: String,
         x: u8,
         y: u8,
     },
     B {
         contract_addr: HumanAddr,
+        code_hash: String,
         x: u8,
         y: u8,
     },
@@ -55,12 +71,15 @@ pub enum HandleMsg {
     NoLogs {},
     CallbackToInit {
         code_id: u64,
+        code_hash: String,
     },
     CallbackContractError {
         contract_addr: HumanAddr,
+        code_hash: String,
     },
     CallbackBadParams {
         contract_addr: HumanAddr,
+        code_hash: String,
     },
     SetState {
         key: String,
@@ -82,22 +101,28 @@ pub enum HandleMsg {
     },
     SendExternalQuery {
         to: HumanAddr,
+        code_hash: String,
     },
     SendExternalQueryPanic {
         to: HumanAddr,
+        code_hash: String,
     },
     SendExternalQueryError {
         to: HumanAddr,
+        code_hash: String,
     },
     SendExternalQueryBadAbi {
         to: HumanAddr,
+        code_hash: String,
     },
     SendExternalQueryBadAbiReceiver {
         to: HumanAddr,
+        code_hash: String,
     },
     LogMsgSender {},
     CallbackToLogMsgSender {
         to: HumanAddr,
+        code_hash: String,
     },
     DepositToContract {},
     SendFunds {
@@ -110,11 +135,13 @@ pub enum HandleMsg {
         amount: u32,
         denom: String,
         code_id: u64,
+        code_hash: String,
     },
     SendFundsToExecCallback {
         amount: u32,
         denom: String,
         to: HumanAddr,
+        code_hash: String,
     },
 }
 
@@ -124,7 +151,7 @@ pub enum QueryMsg {
     ContractError { error_type: String },
     Panic {},
     ReceiveExternalQuery { num: u8 },
-    SendExternalQueryInfiniteLoop { to: HumanAddr },
+    SendExternalQueryInfiniteLoop { to: HumanAddr, code_hash: String },
     WriteToStorage {},
     RemoveFromStorage {},
 }
@@ -145,14 +172,23 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             messages: vec![],
             log: vec![log("init", "🌈")],
         }),
-        InitMsg::Callback { contract_addr } => Ok(init_with_callback(deps, env, contract_addr)),
+        InitMsg::Callback {
+            contract_addr,
+            code_hash,
+        } => Ok(init_with_callback(deps, env, contract_addr, code_hash)),
         InitMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
         InitMsg::NoLogs {} => Ok(InitResponse::default()),
-        InitMsg::CallbackToInit { code_id } => Ok(init_callback_to_init(deps, env, code_id)),
-        InitMsg::CallbackContractError { contract_addr } => {
-            Ok(init_with_callback_contract_error(contract_addr))
+        InitMsg::CallbackToInit { code_id, code_hash } => {
+            Ok(init_callback_to_init(deps, env, code_id, code_hash))
         }
-        InitMsg::CallbackBadParams { contract_addr } => Ok(init_callback_bad_params(contract_addr)),
+        InitMsg::CallbackContractError {
+            contract_addr,
+            code_hash,
+        } => Ok(init_with_callback_contract_error(contract_addr, code_hash)),
+        InitMsg::CallbackBadParams {
+            contract_addr,
+            code_hash,
+        } => Ok(init_callback_bad_params(contract_addr, code_hash)),
         InitMsg::Panic {} => panic!("panic in init"),
     }
 }
@@ -173,26 +209,24 @@ fn map_string_to_error(error_type: String) -> StdError {
     }
 }
 
-fn init_with_callback_contract_error(contract_addr: HumanAddr) -> InitResponse {
+fn init_with_callback_contract_error(contract_addr: HumanAddr, code_hash: String) -> InitResponse {
     InitResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: Binary(
-                r#"{"contract_error":{"error_type":"generic_err"}}"#
-                    .as_bytes()
-                    .to_vec(),
-            ),
+            callback_code_hash: code_hash,
+            msg: Binary::from(r#"{"contract_error":{"error_type":"generic_err"}}"#.as_bytes()),
             send: vec![],
         })],
         log: vec![log("init with a callback with contract error", "🤷‍♀️")],
     }
 }
 
-fn init_callback_bad_params(contract_addr: HumanAddr) -> InitResponse {
+fn init_callback_bad_params(contract_addr: HumanAddr, code_hash: String) -> InitResponse {
     InitResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: Binary(r#"{"c":{"x":"banana","y":3}}"#.as_bytes().to_vec()),
+            callback_code_hash: code_hash,
+            msg: Binary::from(r#"{"c":{"x":"banana","y":3}}"#.as_bytes().to_vec()),
             send: vec![],
         })],
         log: vec![],
@@ -203,11 +237,13 @@ fn init_with_callback<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
     contract_addr: HumanAddr,
+    code_hash: String,
 ) -> InitResponse {
     InitResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+            callback_code_hash: code_hash,
             contract_addr: contract_addr.clone(),
-            msg: Binary("{\"c\":{\"x\":0,\"y\":13}}".as_bytes().to_vec()),
+            msg: Binary::from("{\"c\":{\"x\":0,\"y\":13}}".as_bytes().to_vec()),
             send: vec![],
         })],
         log: vec![log("init with a callback", "🦄")],
@@ -218,11 +254,13 @@ pub fn init_callback_to_init<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
     code_id: u64,
+    code_hash: String,
 ) -> InitResponse {
     InitResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
-            code_id: code_id,
-            msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
+            code_id,
+            msg: Binary::from("{\"nop\":{}}".as_bytes().to_vec()),
+            callback_code_hash: code_hash,
             send: vec![],
             label: None,
         })],
@@ -240,14 +278,16 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     match msg {
         HandleMsg::A {
             contract_addr,
+            code_hash,
             x,
             y,
-        } => Ok(a(deps, env, contract_addr, x, y)),
+        } => Ok(a(deps, env, contract_addr, code_hash, x, y)),
         HandleMsg::B {
             contract_addr,
+            code_hash,
             x,
             y,
-        } => Ok(b(deps, env, contract_addr, x, y)),
+        } => Ok(b(deps, env, contract_addr, code_hash, x, y)),
         HandleMsg::C { x, y } => Ok(c(deps, env, x, y)),
         HandleMsg::UnicodeData {} => Ok(unicode_data(deps, env)),
         HandleMsg::EmptyLogKeyValue {} => Ok(empty_log_key_value(deps, env)),
@@ -255,13 +295,17 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::NoData {} => Ok(no_data(deps, env)),
         HandleMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
         HandleMsg::NoLogs {} => Ok(HandleResponse::default()),
-        HandleMsg::CallbackToInit { code_id } => Ok(exec_callback_to_init(deps, env, code_id)),
-        HandleMsg::CallbackBadParams { contract_addr } => {
-            Ok(exec_callback_bad_params(contract_addr))
+        HandleMsg::CallbackToInit { code_id, code_hash } => {
+            Ok(exec_callback_to_init(deps, env, code_id, code_hash))
         }
-        HandleMsg::CallbackContractError { contract_addr } => {
-            Ok(exec_with_callback_contract_error(contract_addr))
-        }
+        HandleMsg::CallbackBadParams {
+            contract_addr,
+            code_hash,
+        } => Ok(exec_callback_bad_params(contract_addr, code_hash)),
+        HandleMsg::CallbackContractError {
+            contract_addr,
+            code_hash,
+        } => Ok(exec_with_callback_contract_error(contract_addr, code_hash)),
         HandleMsg::SetState { key, value } => Ok(set_state(deps, key, value)),
         HandleMsg::GetState { key } => Ok(get_state(deps, key)),
         HandleMsg::RemoveState { key } => Ok(remove_state(deps, key)),
@@ -271,12 +315,18 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::PassNullPointerToImportsShouldThrow { pass_type } => {
             Ok(pass_null_pointer_to_imports_should_throw(deps, pass_type))
         }
-        HandleMsg::SendExternalQuery { to } => send_external_query(deps, to),
-        HandleMsg::SendExternalQueryPanic { to } => send_external_query_panic(deps, to),
-        HandleMsg::SendExternalQueryError { to } => send_external_query_stderror(deps, to),
-        HandleMsg::SendExternalQueryBadAbi { to } => send_external_query_bad_abi(deps, to),
-        HandleMsg::SendExternalQueryBadAbiReceiver { to } => {
-            send_external_query_bad_abi_receiver(deps, to)
+        HandleMsg::SendExternalQuery { to, code_hash } => send_external_query(deps, to, code_hash),
+        HandleMsg::SendExternalQueryPanic { to, code_hash } => {
+            send_external_query_panic(deps, to, code_hash)
+        }
+        HandleMsg::SendExternalQueryError { to, code_hash } => {
+            send_external_query_stderror(deps, to, code_hash)
+        }
+        HandleMsg::SendExternalQueryBadAbi { to, code_hash } => {
+            send_external_query_bad_abi(deps, to, code_hash)
+        }
+        HandleMsg::SendExternalQueryBadAbiReceiver { to, code_hash } => {
+            send_external_query_bad_abi_receiver(deps, to, code_hash)
         }
         HandleMsg::LogMsgSender {} => Ok(HandleResponse {
             messages: vec![],
@@ -289,10 +339,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             )],
             data: None,
         }),
-        HandleMsg::CallbackToLogMsgSender { to } => Ok(HandleResponse {
+        HandleMsg::CallbackToLogMsgSender { to, code_hash } => Ok(HandleResponse {
             messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: to.clone(),
-                msg: Binary(r#"{"log_msg_sender":{}}"#.into()),
+                callback_code_hash: code_hash,
+                msg: Binary::from(r#"{"log_msg_sender":{}}"#.as_bytes().to_vec()),
                 send: vec![],
             })],
             log: vec![log("hi", "hey")],
@@ -324,10 +375,12 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             amount,
             denom,
             code_id,
+            code_hash,
         } => Ok(HandleResponse {
             messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
                 msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
                 code_id: code_id,
+                callback_code_hash: code_hash,
                 label: None,
                 send: vec![Coin {
                     amount: Uint128(amount as u128),
@@ -337,10 +390,16 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             log: vec![],
             data: None,
         }),
-        HandleMsg::SendFundsToExecCallback { amount, denom, to } => Ok(HandleResponse {
+        HandleMsg::SendFundsToExecCallback {
+            amount,
+            denom,
+            to,
+            code_hash,
+        } => Ok(HandleResponse {
             messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 msg: Binary("{\"no_data\":{}}".as_bytes().to_vec()),
                 contract_addr: to,
+                callback_code_hash: code_hash,
                 send: vec![Coin {
                     amount: Uint128(amount as u128),
                     denom: denom,
@@ -355,12 +414,14 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 fn send_external_query<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     contract_addr: HumanAddr,
+    code_hash: String,
 ) -> HandleResult {
     let answer: u8 = deps
         .querier
         .query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: Binary(r#"{"receive_external_query":{"num":2}}"#.into()),
+            callback_code_hash: code_hash,
+            msg: Binary::from(r#"{"receive_external_query":{"num":2}}"#.as_bytes().to_vec()),
         }))
         .unwrap();
 
@@ -374,12 +435,14 @@ fn send_external_query<S: Storage, A: Api, Q: Querier>(
 fn send_external_query_panic<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     contract_addr: HumanAddr,
+    code_hash: String,
 ) -> HandleResult {
     let err = deps
         .querier
         .query::<u8>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: Binary(r#"{"panic":{}}"#.into()),
+            msg: Binary::from(r#"{"panic":{}}"#.as_bytes().to_vec()),
+            callback_code_hash: code_hash,
         }))
         .unwrap_err();
 
@@ -389,12 +452,18 @@ fn send_external_query_panic<S: Storage, A: Api, Q: Querier>(
 fn send_external_query_stderror<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     contract_addr: HumanAddr,
+    code_hash: String,
 ) -> HandleResult {
     let answer = deps
         .querier
         .query::<Binary>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: Binary(r#"{"contract_error":{"error_type":"generic_err"}}"#.into()),
+            msg: Binary::from(
+                r#"{"contract_error":{"error_type":"generic_err"}}"#
+                    .as_bytes()
+                    .to_vec(),
+            ),
+            callback_code_hash: code_hash,
         }));
 
     match answer {
@@ -410,12 +479,16 @@ fn send_external_query_stderror<S: Storage, A: Api, Q: Querier>(
 fn send_external_query_bad_abi<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     contract_addr: HumanAddr,
+    code_hash: String,
 ) -> HandleResult {
     let answer = deps
         .querier
         .query::<Binary>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: Binary(r#""contract_error":{"error_type":"generic_err"}}"#.into()),
+            callback_code_hash: code_hash,
+            msg: Binary::from(
+                r#""contract_error":{"error_type":"generic_err"}}"#.as_bytes().to_vec(),
+            ),
         }));
 
     match answer {
@@ -431,12 +504,14 @@ fn send_external_query_bad_abi<S: Storage, A: Api, Q: Querier>(
 fn send_external_query_bad_abi_receiver<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     contract_addr: HumanAddr,
+    code_hash: String,
 ) -> HandleResult {
     let answer = deps
         .querier
         .query::<String>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            msg: Binary(r#"{"receive_external_query":{"num":25}}"#.into()),
+            msg: Binary::from(r#"{"receive_external_query":{"num":25}}"#.as_bytes().to_vec()),
+            callback_code_hash: code_hash,
         }));
 
     match answer {
@@ -449,11 +524,12 @@ fn send_external_query_bad_abi_receiver<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-fn exec_callback_bad_params(contract_addr: HumanAddr) -> HandleResponse {
+fn exec_callback_bad_params(contract_addr: HumanAddr, code_hash: String) -> HandleResponse {
     HandleResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: Binary(r#"{"c":{"x":"banana","y":3}}"#.as_bytes().to_vec()),
+            callback_code_hash: code_hash,
+            msg: Binary::from(r#"{"c":{"x":"banana","y":3}}"#.as_bytes().to_vec()),
             send: vec![],
         })],
         log: vec![],
@@ -465,22 +541,23 @@ pub fn a<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
     contract_addr: HumanAddr,
+    code_hash: String,
     x: u8,
     y: u8,
 ) -> HandleResponse {
     HandleResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: Binary(
-                format!(
-                    r#"{{"b":{{"x":{} ,"y": {},"contract_addr": "{}" }}}}"#,
-                    x,
-                    y,
-                    contract_addr.as_str()
-                )
+            callback_code_hash: code_hash.clone(),
+            msg: Binary::from(format!(
+                "{{\"b\":{{\"x\":{} ,\"y\": {},\"contract_addr\": \"{}\",\"code_hash\": \"{}\" }}}}",
+                x,
+                y,
+                contract_addr.as_str(),
+                &code_hash
+            )
                 .as_bytes()
-                .to_vec(),
-            ),
+                .to_vec()),
             send: vec![],
         })],
         log: vec![log("banana", "🍌")],
@@ -492,13 +569,15 @@ pub fn b<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
     contract_addr: HumanAddr,
+    code_hash: String,
     x: u8,
     y: u8,
 ) -> HandleResponse {
     HandleResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: Binary(
+            callback_code_hash: code_hash,
+            msg: Binary::from(
                 format!("{{\"c\":{{\"x\":{} ,\"y\": {} }}}}", x + 1, y + 1)
                     .as_bytes()
                     .to_vec(),
@@ -571,11 +650,13 @@ pub fn exec_callback_to_init<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
     code_id: u64,
+    code_hash: String,
 ) -> HandleResponse {
     HandleResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
-            code_id: code_id,
-            msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
+            code_id,
+            msg: Binary::from("{\"nop\":{}}".as_bytes().to_vec()),
+            callback_code_hash: code_hash,
             send: vec![],
             label: None,
         })],
@@ -584,11 +665,15 @@ pub fn exec_callback_to_init<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-fn exec_with_callback_contract_error(contract_addr: HumanAddr) -> HandleResponse {
+fn exec_with_callback_contract_error(
+    contract_addr: HumanAddr,
+    code_hash: String,
+) -> HandleResponse {
     HandleResponse {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            msg: Binary(
+            callback_code_hash: code_hash,
+            msg: Binary::from(
                 r#"{"contract_error":{"error_type":"generic_err"}}"#
                     .as_bytes()
                     .to_vec(),
@@ -756,8 +841,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::ReceiveExternalQuery { num } => {
             Ok(Binary(serde_json_wasm::to_vec(&(num + 1)).unwrap()))
         }
-        QueryMsg::SendExternalQueryInfiniteLoop { to } => {
-            send_external_query_infinite_loop(deps, to)
+        QueryMsg::SendExternalQueryInfiniteLoop { to, code_hash } => {
+            send_external_query_infinite_loop(deps, to, code_hash)
         }
         QueryMsg::WriteToStorage {} => write_to_storage_in_query(deps),
         QueryMsg::RemoveFromStorage {} => remove_from_storage_in_query(deps),
@@ -767,17 +852,21 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 fn send_external_query_infinite_loop<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     contract_addr: HumanAddr,
+    code_hash: String,
 ) -> QueryResult {
     let answer = deps
         .querier
         .query::<Binary>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: contract_addr.clone(),
-            msg: Binary(
+            callback_code_hash: code_hash.clone(),
+            msg: Binary::from(
                 format!(
-                    r#"{{"send_external_query_infinite_loop":{{"to":"{}"}}}}"#,
-                    contract_addr.clone().to_string()
+                    r#"{{"send_external_query_infinite_loop":{{"to":"{}", "code_hash":"{}"}}}}"#,
+                    contract_addr.clone().to_string(),
+                    &code_hash
                 )
-                .into(),
+                .as_bytes()
+                .to_vec(),
             ),
         }));
 

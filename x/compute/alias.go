@@ -29,6 +29,7 @@ const (
 	QueryGetContractState    = keeper.QueryGetContractState
 	QueryGetCode             = keeper.QueryGetCode
 	QueryListCode            = keeper.QueryListCode
+	QueryContractKey         = keeper.QueryContractKey
 )
 
 var (

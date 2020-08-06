@@ -5,12 +5,16 @@ use wasmi::ModuleInstance;
 
 use enclave_ffi_types::{Ctx, EnclaveError};
 
+use crate::coalesce;
 use crate::cosmwasm::types::Env;
+use crate::crypto::Ed25519PublicKey;
 use crate::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::wasm::contract_validation::ContractKey;
+use crate::wasm::types::{IoNonce, SecretMessage};
 
 use super::contract_validation::{
-    extract_contract_key, generate_encryption_key, validate_contract_key, CONTRACT_KEY_LENGTH,
+    calc_contract_hash, extract_contract_key, generate_encryption_key, validate_contract_key,
+    validate_msg, CONTRACT_KEY_LENGTH,
 };
 use super::gas::{gas_rules, WasmCosts};
 use super::io::encrypt_output;
@@ -18,13 +22,9 @@ use super::{
     memory::validate_memory,
     runtime::{create_builder, ContractInstance, ContractOperation, Engine, WasmiImportResolver},
 };
-use crate::crypto::Ed25519PublicKey;
-use crate::wasm::types::{IoNonce, SecretMessage};
-
-use crate::coalesce;
 
 /*
-Each contract is compiled with these functions alreadyy implemented in wasm:
+Each contract is compiled with these functions already implemented in wasm:
 fn cosmwasm_api_0_6() -> i32;  // Seems unused, but we should support it anyways
 fn allocate(size: usize) -> *mut c_void;
 fn deallocate(pointer: *mut c_void);
@@ -46,7 +46,7 @@ pub fn init(
     env: &[u8],         // blockchain state
     msg: &[u8],         // probably function call and args
 ) -> Result<InitSuccess, EnclaveError> {
-    let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
+    let mut parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
         error!(
             "got an error while trying to deserialize env input bytes into json {:?}: {}",
             env, err
@@ -54,11 +54,25 @@ pub fn init(
         EnclaveError::FailedToDeserialize
     })?;
 
-    let contract_key = generate_encryption_key(&parsed_env, contract)?;
+    let contract_address = &parsed_env.contract.address;
+    let contract_key = generate_encryption_key(&parsed_env, contract, contract_address.as_slice())?;
 
     trace!("Init: Contract Key: {:?}", contract_key.to_vec().as_slice());
 
     let secret_msg = SecretMessage::from_slice(msg)?;
+    trace!(
+        "Init input before decryption: {:?}",
+        String::from_utf8_lossy(&msg)
+    );
+
+    let decrypted_msg = secret_msg.decrypt()?;
+
+    let validated_msg = validate_msg(&decrypted_msg, contract)?;
+
+    trace!(
+        "Init input afer decryption: {:?}",
+        String::from_utf8_lossy(&validated_msg)
+    );
 
     let mut engine = start_engine(
         context,
@@ -69,33 +83,29 @@ pub fn init(
         secret_msg.nonce,
         secret_msg.user_public_key,
     )?;
-    let env_ptr = engine.write_to_memory(env)?;
 
-    trace!(
-        "Init input before decryption: {:?}",
-        String::from_utf8_lossy(&msg)
-    );
+    parsed_env.contract_code_hash = Some(hex::encode(calc_contract_hash(contract)));
 
-    let decrypted_msg = secret_msg.decrypt()?;
-    trace!(
-        "Init input afer decryption: {:?}",
-        String::from_utf8_lossy(&decrypted_msg)
-    );
+    let new_env = serde_json::to_vec(&parsed_env).map_err(|err| {
+        error!(
+            "got an error while trying to serialize parsed_env into bytes {:?}: {}",
+            parsed_env, err
+        );
+        EnclaveError::FailedToSerialize
+    })?;
 
-    let msg_ptr = engine.write_to_memory(&decrypted_msg)?;
+    let env_ptr = engine.write_to_memory(&new_env)?;
+    let msg_ptr = engine.write_to_memory(&validated_msg)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
     let output = coalesce!(EnclaveError, {
         let vec_ptr = engine.init(env_ptr, msg_ptr)?;
-
         let output = engine.extract_vector(vec_ptr)?;
-
         // TODO: copy cosmwasm's structures to enclave
         // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
         // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
         let output = encrypt_output(output, secret_msg.nonce, secret_msg.user_public_key)?;
-
         Ok(output)
     })
     .map_err(|err| {
@@ -105,6 +115,7 @@ pub fn init(
 
     *used_gas = engine.gas_used();
     // todo: can move the key to somewhere in the output message if we want
+
     Ok(InitSuccess {
         output,
         signature: contract_key,
@@ -119,7 +130,7 @@ pub fn handle(
     env: &[u8],
     msg: &[u8],
 ) -> Result<HandleSuccess, EnclaveError> {
-    let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
+    let mut parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
         error!(
             "got an error while trying to deserialize env input bytes into json {:?}: {}",
             env, err
@@ -129,9 +140,25 @@ pub fn handle(
 
     trace!("handle parsed_envs: {:?}", parsed_env);
 
+    let contract_address = &parsed_env.contract.address;
     let contract_key = extract_contract_key(&parsed_env)?;
 
-    if !validate_contract_key(&contract_key, contract) {
+    trace!(
+        "Handle input before decryption: {:?}",
+        String::from_utf8_lossy(&msg)
+    );
+
+    let secret_msg = SecretMessage::from_slice(msg)?;
+    let decrypted_msg = secret_msg.decrypt()?;
+
+    let validated_msg = validate_msg(&decrypted_msg, contract)?;
+
+    trace!(
+        "Handle input afer decryption: {:?}",
+        String::from_utf8_lossy(&validated_msg)
+    );
+
+    if !validate_contract_key(&contract_key, contract_address.as_slice(), contract) {
         error!("got an error while trying to deserialize output bytes");
         return Err(EnclaveError::FailedContractAuthentication);
     }
@@ -143,8 +170,6 @@ pub fn handle(
         contract_key.to_vec().as_slice()
     );
 
-    let secret_msg = SecretMessage::from_slice(msg)?;
-
     let mut engine = start_engine(
         context,
         gas_limit,
@@ -155,19 +180,18 @@ pub fn handle(
         secret_msg.user_public_key,
     )?;
 
-    trace!(
-        "Handle input before decryption: {:?}",
-        String::from_utf8_lossy(&msg)
-    );
-    let decrypted_msg = secret_msg.decrypt()?;
-    trace!(
-        "Handle input afer decryption: {:?}",
-        String::from_utf8_lossy(&decrypted_msg)
-    );
+    parsed_env.contract_code_hash = Some(hex::encode(calc_contract_hash(contract)));
 
-    let env_ptr = engine.write_to_memory(env)?;
+    let new_env = serde_json::to_vec(&parsed_env).map_err(|err| {
+        error!(
+            "got an error while trying to serialize parsed_env into bytes {:?}: {}",
+            parsed_env, err
+        );
+        EnclaveError::FailedToSerialize
+    })?;
 
-    let msg_ptr = engine.write_to_memory(&decrypted_msg)?;
+    let env_ptr = engine.write_to_memory(&new_env)?;
+    let msg_ptr = engine.write_to_memory(&validated_msg)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
@@ -218,6 +242,16 @@ pub fn query(
     );
 
     let secret_msg = SecretMessage::from_slice(msg)?;
+    trace!(
+        "Query input before decryption: {:?}",
+        String::from_utf8_lossy(&msg)
+    );
+    let decrypted_msg = secret_msg.decrypt()?;
+    trace!(
+        "Query input afer decryption: {:?}",
+        String::from_utf8_lossy(&decrypted_msg)
+    );
+    let validated_msg = validate_msg(&decrypted_msg, contract)?;
 
     let mut engine = start_engine(
         context,
@@ -229,17 +263,7 @@ pub fn query(
         secret_msg.user_public_key,
     )?;
 
-    trace!(
-        "Query input before decryption: {:?}",
-        String::from_utf8_lossy(&msg)
-    );
-    let decrypted_msg = secret_msg.decrypt()?;
-    trace!(
-        "Query input afer decryption: {:?}",
-        String::from_utf8_lossy(&decrypted_msg)
-    );
-
-    let msg_ptr = engine.write_to_memory(&decrypted_msg)?;
+    let msg_ptr = engine.write_to_memory(&validated_msg)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them

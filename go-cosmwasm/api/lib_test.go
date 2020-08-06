@@ -96,6 +96,7 @@ func binaryAddr(human string) []byte {
 }
 
 func TestInstantiate(t *testing.T) {
+	t.SkipNow()
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
@@ -127,6 +128,7 @@ func TestInstantiate(t *testing.T) {
 }
 
 func TestHandle(t *testing.T) {
+	t.SkipNow()
 	cache, cleanup := withCache(t)
 	defer cleanup()
 	id := createTestContract(t, cache)
@@ -177,6 +179,7 @@ func TestHandle(t *testing.T) {
 }
 
 func TestMigrate(t *testing.T) {
+	t.SkipNow()
 	cache, cleanup := withCache(t)
 	defer cleanup()
 	id := createTestContract(t, cache)
@@ -223,6 +226,7 @@ func TestMigrate(t *testing.T) {
 }
 
 func TestMultipleInstances(t *testing.T) {
+	t.SkipNow()
 	cache, cleanup := withCache(t)
 	defer cleanup()
 	id := createTestContract(t, cache)
@@ -320,6 +324,7 @@ func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore, ap
 }
 
 func TestQuery(t *testing.T) {
+	t.SkipNow()
 	cache, cleanup := withCache(t)
 	defer cleanup()
 	id := createTestContract(t, cache)
@@ -363,6 +368,7 @@ func TestQuery(t *testing.T) {
 }
 
 func TestQueueIterator(t *testing.T) {
+	t.SkipNow()
 	cache, cleanup := withCache(t)
 	defer cleanup()
 	id := createQueueContract(t, cache)
@@ -417,6 +423,7 @@ func TestQueueIterator(t *testing.T) {
 }
 
 func TestHackatomQuerier(t *testing.T) {
+	t.SkipNow()
 	cache, cleanup := withCache(t)
 	defer cleanup()
 	id := createTestContract(t, cache)
@@ -443,6 +450,7 @@ func TestHackatomQuerier(t *testing.T) {
 }
 
 func TestCustomReflectQuerier(t *testing.T) {
+	t.SkipNow()
 	cache, cleanup := withCache(t)
 	defer cleanup()
 	id := createReflectContract(t, cache)
