@@ -1566,11 +1566,3 @@ func TestGasIsChargedForQueryExternalQuery(t *testing.T) {
 	_, err := queryHelperImpl(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_depth_counter":{"to":"%s","depth":3}}`, addr.String()), true, defaultGasForTests, 4)
 	require.Empty(t, err)
 }
-
-func TestImportMemory(t *testing.T) {
-	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/import-memory.wasm")
-	defer os.RemoveAll(tempDir)
-
-	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
-	require.Empty(t, initErr)
-}
