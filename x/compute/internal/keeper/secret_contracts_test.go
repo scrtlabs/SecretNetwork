@@ -1567,7 +1567,7 @@ func TestGasIsChargedForQueryExternalQuery(t *testing.T) {
 	require.Empty(t, err)
 }
 
-func TestWasmTooHighInitialMemoryFail(t *testing.T) {
+func TestWasmTooHighInitialMemoryRuntimeFail(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/too-high-initial-memory.wasm")
 	defer os.RemoveAll(tempDir)
 
@@ -1591,4 +1591,13 @@ func TestWasmTooHighInitialMemoryStaticFail(t *testing.T) {
 	_, err = keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.Error(t, err)
 	require.Equal(t, "create contract failed: Execution error: Error during static Wasm validation: Wasm contract memory's minimum must not exceed 512 pages.", err.Error())
+}
+
+func TestWasmWithFloatingPoints(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract_with_floats.wasm")
+	defer os.RemoveAll(tempDir)
+
+	_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, false, defaultGasForTests)
+	require.NotNil(t, err.GenericErr)
+	require.Equal(t, "instantiate contract failed: Execution error: Enclave: found floating point operation in module code", err.GenericErr.Msg)
 }

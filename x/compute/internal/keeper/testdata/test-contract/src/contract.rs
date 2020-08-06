@@ -125,6 +125,10 @@ pub enum HandleMsg {
         to: HumanAddr,
         depth: u8,
     },
+    WithFloats {
+        x: u8,
+        y: u8,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -384,7 +388,23 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 data: None,
             })
         }
+        HandleMsg::WithFloats { x, y } => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(use_floats(x, y)),
+        }),
     }
+}
+
+#[cfg(feature = "with_floats")]
+fn use_floats(x: u8, y: u8) -> Binary {
+    let res: f64 = (x as f64) / (y as f64);
+    to_binary(&format!("{}", res)).unwrap()
+}
+
+#[cfg(not(feature = "with_floats"))]
+fn use_floats(x: u8, y: u8) -> Binary {
+    Binary(vec![x, y])
 }
 
 fn send_external_query<S: Storage, A: Api, Q: Querier>(
