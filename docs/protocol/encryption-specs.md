@@ -396,7 +396,7 @@ TODO reasoning
 - `tx_encryption_key` is derived using HKDF-SHA256 with `tx_encryption_ikm` and a random number `nonce`. This is to prevent using the same key for the same tx sender multiple times.
 - The input (`msg`) to the contract is always prepended with the sha256 hash of the contract's code.
   - This is meant to prevent replaying an encrypted input of a legitimate contract to a malicious contract and asking the malicious contract to decrypt the input.
-  - In that case the output will still be encrypted with a `tx_encryption_key` that only the original sender knows, but the malicious contract can be written to save the decrypted input to its state and then via a getter without access control retrieve the encrypted input.
+  - In this^ attack example the output will still be encrypted with a `tx_encryption_key` that only the original sender knows, but the malicious contract can be written to save the decrypted input to its state and then via a getter without access control retrieve the encrypted input.
 
 ## Input
 
