@@ -281,23 +281,23 @@ unsafe fn print_platform_info(report: &AttestationReport) {
 
         if rt != sgx_status_t::SGX_SUCCESS {
             if update_info.ucodeUpdate != 0 {
-                println!("Processor Firmware Update (ucodeUpdate). A security upgrade for your computing
-                            device is required for this application to continue to provide you with a high degree of
-                            security. Please contact your device manufacturer’s support website for a BIOS update
+                println!("Processor Firmware Update (ucodeUpdate). A security upgrade for your computing\n\
+                            device is required for this application to continue to provide you with a high degree of\n\
+                            security. Please contact your device manufacturer’s support website for a BIOS update\n\
                             for this system");
             }
 
             if update_info.csmeFwUpdate != 0 {
-                println!("Intel Manageability Engine Update (csmeFwUpdate). A security upgrade for your
-                            computing device is required for this application to continue to provide you with a high
-                            degree of security. Please contact your device manufacturer’s support website for a
+                println!("Intel Manageability Engine Update (csmeFwUpdate). A security upgrade for your\n\
+                            computing device is required for this application to continue to provide you with a high\n\
+                            degree of security. Please contact your device manufacturer’s support website for a\n\
                             BIOS and/or Intel® Manageability Engine update for this system");
             }
 
             if update_info.pswUpdate != 0 {
-                println!("Intel SGX Platform Software Update (pswUpdate). A security upgrade for your
-                              computing device is required for this application to continue to provide you with a high
-                              degree of security. Please visit this application’s support website for an Intel SGX
+                println!("Intel SGX Platform Software Update (pswUpdate). A security upgrade for your\n\
+                              computing device is required for this application to continue to provide you with a high\n\
+                              degree of security. Please visit this application’s support website for an Intel SGX\n\
                               Platform SW update");
             }
         }
