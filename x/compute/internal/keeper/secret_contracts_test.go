@@ -1566,3 +1566,29 @@ func TestGasIsChargedForQueryExternalQuery(t *testing.T) {
 	_, err := queryHelperImpl(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_depth_counter":{"to":"%s","depth":3}}`, addr.String()), true, defaultGasForTests, 4)
 	require.Empty(t, err)
 }
+
+func TestWasmTooHighInitialMemoryFail(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/too-high-initial-memory.wasm")
+	defer os.RemoveAll(tempDir)
+
+	_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, false, defaultGasForTests)
+	require.NotNil(t, err.GenericErr)
+	require.Equal(t, "instantiate contract failed: Execution error: Enclave: failed to initialize wasm memory", err.GenericErr.Msg)
+}
+
+func TestWasmTooHighInitialMemoryStaticFail(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	defer os.RemoveAll(tempDir)
+	require.NoError(t, err)
+	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
+	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
+
+	walletA := createFakeFundedAccount(ctx, accKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 1)))
+
+	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/static-too-high-initial-memory.wasm")
+	require.NoError(t, err)
+
+	_, err = keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.Error(t, err)
+	require.Equal(t, "create contract failed: Execution error: Error during static Wasm validation: Wasm contract memory's minimum must not exceed 512 pages.", err.Error())
+}
