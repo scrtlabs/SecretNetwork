@@ -1,6 +1,6 @@
 1. Put this file in `/etc/systemd/system/secret-lcd.service`
 2. Make sure `/bin/secretcli` is the right path for secretcli
-3. Make sure port 443 is open 
+3. Make sure ports 80 and 443 are open 
 4. Make sure `--chain-id` is the right chain ID 
 5. Make sure `ubuntu` is the right user 
 
