@@ -1,8 +1,10 @@
-# How to migrate a validator to a new machine
+# Migrate a Validator
 
-:warning: Please make sure you [backup your validator](/docs/validators-and-full-nodes/backup-a-validator.md) before you migrate it.
+:warning: :warning: :warning:
 
-### 1. [Run a new full node](/docs/validators-and-full-nodes/run-full-node-mainnet.md) on a new machine.
+Please make sure you [backup your validator](/validators-and-full-nodes/backup-a-validator.md) before you migrate it.
+
+### 1. [Run a new full node](/validators-and-full-nodes/run-full-node-mainnet.md) on a new machine.
 
 ### 2. Confirm you have the recovery seed phrase information for the active key running on the old machine
 
@@ -48,9 +50,9 @@ secretcli status | jq .sync_info
 
 ### 5. After the new node have caught-up, stop the validator node and then stop the new full node.
 
-To prevert double signing, you should stop the validator node and only then stop the new full node.
+To prevent double signing, you should stop the validator node and only then stop the new full node.
 
-Please read about [the dangers in running a validator](/docs/validators-and-full-nodes/join-validator-mainnet.md#dangers-in-running-a-validator).
+Please read about [the dangers in running a validator](/validators-and-full-nodes/join-validator-mainnet.md#dangers-in-running-a-validator).
 
 On the validator node on the old machine:
 
