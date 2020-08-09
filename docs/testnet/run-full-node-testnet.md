@@ -34,7 +34,7 @@ See instructions [here](/docs/validators-and-full-nodes/setup-sgx.md)
 ### 1. Download the Secret Network package installer for Debian/Ubuntu:
 
 ```bash
-wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.7.0/secretnetwork_v0.7.0_amd64.deb
+wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.7.0/secretnetwork_0.7.0_amd64.deb
 ```
 
 ([How to verify releases](/testnet/verify-sgx.md))
