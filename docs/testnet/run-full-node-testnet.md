@@ -121,7 +121,6 @@ Configure `secretcli`. Initially you'll be using the bootstrap node, as you'll n
 ```bash
 secretcli config chain-id enigma-pub-testnet-2
 secretcli config node tcp://bootstrap.pub.testnet.enigma.co:26657
-secretcli config broadcast-mode block
 secretcli config output json
 secretcli config indent true
 ```
