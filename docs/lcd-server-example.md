@@ -51,6 +51,7 @@ reverse_proxy 127.0.0.1:1337
 
 And then:
 ```bash
-sudo systemctl enable caddy.service
-sudo systemctl start  caddy.service
+sudo systemctl enable  caddy.service
+sudo systemctl reload  caddy.service
+sudo systemctl restart caddy.service
 ```

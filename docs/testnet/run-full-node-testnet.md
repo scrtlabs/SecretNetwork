@@ -34,7 +34,7 @@ See instructions [here](/docs/validators-and-full-nodes/setup-sgx.md)
 ### 1. Download the Secret Network package installer for Debian/Ubuntu:
 
 ```bash
-wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.5.0-rc1/secretnetwork_0.5.0-rc1_amd64.deb
+wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.7.0/secretnetwork_v0.7.0_amd64.deb
 ```
 
 ([How to verify releases](/testnet/verify-sgx.md))
@@ -42,25 +42,25 @@ wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.5.0-rc1/sec
 ### 2. Install the package:
 
 ```bash
-sudo dpkg -i secretnetwork_0.5.0-rc1_amd64.deb
+sudo dpkg -i secretnetwork_v0.7.0_amd64.deb
 ```
 
 ### 3. Initialize your installation of the Secret Network. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
 
 ```bash
-secretd init <MONIKER> --chain-id enigma-pub-testnet-1
+secretd init <MONIKER> --chain-id enigma-pub-testnet-2
 ```
 
 ### 4. Download a copy of the Genesis Block file: `genesis.json`
 
 ```bash
-wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v0.5.0-rc1/genesis.json"
+wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v0.7.0/genesis.json"
 ```
 
 ### 5. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
 
 ```bash
-echo "d12a38c37d7096b0c0d59a56af12de2e4e5eca598d53699119344b26a6794026 $HOME/.secretd/config/genesis.json" | sha256sum --check
+echo "TODO $HOME/.secretd/config/genesis.json" | sha256sum --check
 ```
 
 ### 6. Validate that the `genesis.json` is a valid genesis file:
@@ -69,10 +69,10 @@ echo "d12a38c37d7096b0c0d59a56af12de2e4e5eca598d53699119344b26a6794026 $HOME/.se
 secretd validate-genesis
 ```
 
-### 7. The rest of the commands should be ran from the `~/` folder (`/home/<your_username>`)
+### 7. The rest of the commands should be ran from the home folder (`/home/<your_username>`)
 
 ```bash
-cd ~/
+cd ~
 ```
 
 ### 8. Initialize secret enclave
@@ -80,7 +80,7 @@ cd ~/
 Make sure the directory `~/.sgx-secrets` exists:
 
 ```bash
-mkdir ~/.sgx-secrets
+mkdir -p ~/.sgx-secrets
 ```
 
 Make sure SGX is enabled and running or this step might fail.
@@ -129,7 +129,7 @@ secretcli config indent true
 Set up a key. Make sure you backup the mnemonic and the keyring password.
 
 ```bash
-secretcli keys add mykey
+secretcli keys add $INSERT_YOUR_KEY_NAME
 ```
 
 This will output your address, a 45 character-string starting with `secret1...`. Copy/paste it to get some test-SCRT from [the faucet](https://faucet.pub.testnet.enigma.co/). Continue when you have confirmed your account has some test-SCRT in it.
@@ -139,7 +139,7 @@ This will output your address, a 45 character-string starting with `secret1...`.
 Run this step on the CLI machine. If you're using different CLI machine than the full node, copy `attestation_cert.der` from the full node to the CLI machine.
 
 ```bash
-secretcli tx register auth <path/to/attestation_cert.der> --from <key-alias>
+secretcli tx register auth <path/to/attestation_cert.der> --from $INSERT_YOUR_KEY_NAME
 ```
 
 ### 13. Pull & check your node's encrypted seed from the network
@@ -230,7 +230,7 @@ And publish yourself as a node with this ID:
 <your-node-id>@<your-public-ip>:26656
 ```
 
-If someone wants to add you as a peer, have them add the above address to their `persistent_peers` in their `~/.secretd/config/config.toml`.  
+If someone wants to add you as a peer, have them add the above address to their `persistent_peers` in their `~/.secretd/config/config.toml`.
 
 And if someone wants to use your node from their `secretcli` then have them run:
 
@@ -266,7 +266,7 @@ secretcli tx staking create-validator \
   --commission-max-change-rate="0.01" \
   --min-self-delegation="1" \
   --moniker="<moniker>" \
-  --from=<key-alias>
+  --from=$INSERT_YOUR_KEY_NAME
 ```
 
 The `create-validator` command allows using some more parameters. For more info on these and the additional parameters, run `secretcli tx staking create-validator --help`.
