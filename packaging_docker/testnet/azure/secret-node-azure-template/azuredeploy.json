@@ -16,7 +16,7 @@
     },
     "chainId": {
       "type": "string",
-      "defaultValue": "enigma-pub-testnet-1",
+      "defaultValue": "enigma-pub-testnet-2",
       "metadata": {
         "description": "Chain ID of the network"
       }
@@ -36,16 +36,16 @@
     },
     "registrationService": {
       "type": "string",
-      "defaultValue": "reg-pubtestnet.uksouth.azurecontainer.io:8081",
+      "defaultValue": "register.pub.testnet.enigma.co:26666",
       "metadata": {
-        "description": "The URL of a registeration service"
+        "description": "The URL of the registeration service"
       }
     },
     "persistentPeers": {
       "type": "string",
-      "defaultValue": "115aa0a629f5d70dd1d464bc7e42799e00f4edae@51.132.233.98:26656",
+      "defaultValue": "115aa0a629f5d70dd1d464bc7e42799e00f4edae@40.76.91.27:26656",
       "metadata": {
-        "description": "List of peers to intially connect to"
+        "description": "List of peers to initially connect to"
       }
     },
     "vmSize": {
@@ -64,7 +64,7 @@
       "metadata": {
         "description": "The base URI where artifacts required by this template are located. When the template is deployed using the accompanying scripts, a private location in the subscription will be used and this value will be automatically generated."
       },
-      "defaultValue": "https://raw.githubusercontent.com/enigmampc/SecretNetwork/develop/packaging_docker/testnet/azure/secret-node-azure-template/"
+      "defaultValue": "https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/packaging_docker/testnet/azure/secret-node-azure-template/"
     },
     "_artifactsLocationSasToken": {
       "type": "securestring",
