@@ -77,10 +77,10 @@ cd ~
 
 ### 8. Initialize secret enclave
 
-Make sure the directory `~/.sgx-secrets` exists:
+Make sure the directory `~/.sgx_secrets` exists:
 
 ```bash
-mkdir -p ~/.sgx-secrets
+mkdir -p ~/.sgx_secrets
 ```
 
 Make sure SGX is enabled and running or this step might fail.
