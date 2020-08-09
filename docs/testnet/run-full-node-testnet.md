@@ -119,7 +119,7 @@ To run the steps with `secretcli` on another machine, [set up the CLI](install_c
 Configure `secretcli`. Initially you'll be using the bootstrap node, as you'll need to connect to a running node and your own node is not running yet.
 
 ```bash
-secretcli config chain-id enigma-pub-testnet-1
+secretcli config chain-id enigma-pub-testnet-2
 secretcli config node tcp://bootstrap.pub.testnet.enigma.co:26657
 secretcli config broadcast-mode block
 secretcli config output json
@@ -235,7 +235,7 @@ If someone wants to add you as a peer, have them add the above address to their 
 And if someone wants to use your node from their `secretcli` then have them run:
 
 ```bash
-secretcli config chain-id enigma-pub-testnet-1
+secretcli config chain-id enigma-pub-testnet-2
 secretcli config output json
 secretcli config indent true
 secretcli config node tcp://<your-public-ip>:26657
