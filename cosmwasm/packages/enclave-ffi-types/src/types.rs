@@ -58,7 +58,8 @@ pub enum EnclaveError {
     // TODO should we split these three cases for better diagnostics?
     #[display(fmt = "failed to execute ocall")]
     FailedOcall { vm_error: UntrustedVmError },
-
+    #[display(fmt = "failed to validate transaction")]
+    ValidationFailure,
     // Problems with the module binary
     /// The WASM code was invalid and could not be loaded.
     #[display(fmt = "tried to load invalid wasm code")]
@@ -73,7 +74,8 @@ pub enum EnclaveError {
     /// Fail to inject gas metering
     #[display(fmt = "failed to inject gas metering")]
     FailedGasMeteringInjection,
-
+    #[display(fmt = "internal error during execution")]
+    InternalError,
     // runtime issues with the module
     /// Ran out of gas
     #[display(fmt = "execution ran out of gas")]
@@ -150,6 +152,7 @@ pub enum EnclaveError {
 #[repr(C)]
 #[derive(Debug, Display, PartialEq, Eq)]
 pub enum NodeAuthResult {
+    #[display(fmt = "Enclave quote is valid")]
     Success,
     #[display(fmt = "Enclave quote status was GROUP_OUT_OF_DATE which is not allowed")]
     GroupOutOfDate,
@@ -165,7 +168,9 @@ pub enum NodeAuthResult {
     SigrlVersionMismatch,
     #[display(fmt = "Enclave quote status was CONFIGURATION_NEEDED which is not allowed")]
     ConfigurationNeeded,
-    #[display(fmt = "Enclave quote status was CONFIGURATION_AND_SW_HARDENING_NEEDED which is not allowed")]
+    #[display(
+        fmt = "Enclave quote status was CONFIGURATION_AND_SW_HARDENING_NEEDED which is not allowed"
+    )]
     SwHardeningAndConfigurationNeeded,
     #[display(fmt = "Enclave quote status invalid")]
     BadQuoteStatus,
@@ -183,7 +188,9 @@ pub enum NodeAuthResult {
     MalformedPublicKey,
     #[display(fmt = "Encrypting the seed failed")]
     SeedEncryptionFailed,
-    #[display(fmt = "Unexpected panic during node authentication. Certificate may be malformed or invalid")]
+    #[display(
+        fmt = "Unexpected panic during node authentication. Certificate may be malformed or invalid"
+    )]
     Panic,
 }
 

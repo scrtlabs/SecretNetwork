@@ -95,7 +95,7 @@ impl SecretMessage {
         })
     }
 
-    pub fn to_slice(&self) -> Vec<u8> {
+    pub fn to_vec(&self) -> Vec<u8> {
         let mut packed_msg: Vec<u8> = self.nonce.to_vec();
         packed_msg.extend_from_slice(&self.user_public_key);
         packed_msg.extend_from_slice(self.msg.as_slice());

@@ -437,4 +437,12 @@ export class CosmWasmClient {
       }),
     );
   }
+
+  public getCodeHashByCodeId(id: number): Promise<string> {
+    return this.restClient.getCodeHashByCodeId(id);
+  }
+
+  public getCodeHashByContractAddr(addr: string): Promise<string> {
+    return this.restClient.getCodeHashByContractAddr(addr);
+  }
 }

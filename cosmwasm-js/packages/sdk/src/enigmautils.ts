@@ -105,7 +105,7 @@ export default class EnigmaUtils {
     return txEncryptionKey;
   }
 
-  public async encrypt(msg: object): Promise<Uint8Array> {
+  public async encrypt(contractCodeHash: string, msg: object): Promise<Uint8Array> {
     const nonce = secureRandom(32, {
       type: "Uint8Array",
     });
@@ -114,7 +114,7 @@ export default class EnigmaUtils {
 
     const siv = await miscreant.SIV.importKey(txEncryptionKey, "AES-SIV", cryptoProvider);
 
-    const plaintext = Encoding.toUtf8(JSON.stringify(msg));
+    const plaintext = Encoding.toUtf8(contractCodeHash + JSON.stringify(msg));
 
     const ciphertext = await siv.seal(plaintext, [new Uint8Array()]);
 

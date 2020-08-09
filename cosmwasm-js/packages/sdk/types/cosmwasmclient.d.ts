@@ -172,4 +172,6 @@ export declare class CosmWasmClient {
    */
   queryContractSmart(address: string, queryMsg: object): Promise<JsonObject>;
   private txsQuery;
+  getCodeHashByCodeId(id: number): Promise<string>;
+  getCodeHashByContractAddr(addr: string): Promise<string>;
 }

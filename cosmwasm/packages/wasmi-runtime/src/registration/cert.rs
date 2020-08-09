@@ -31,7 +31,6 @@ use super::report::{AttestationReport, SgxQuoteStatus};
 use enclave_ffi_types::NodeAuthResult;
 
 extern "C" {
-    #[allow(dead_code)]
     pub fn ocall_get_update_info(
         ret_val: *mut sgx_status_t,
         platformBlob: *const sgx_platform_info_t,
@@ -275,8 +274,7 @@ pub fn get_ias_auth_config() -> (Vec<u8>, rustls::RootCertStore) {
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
 pub fn verify_ra_cert(cert_der: &[u8]) -> Result<Vec<u8>, NodeAuthResult> {
-    let payload =
-        get_netscape_comment(cert_der).map_err(|_err| NodeAuthResult::InvalidCert)?;
+    let payload = get_netscape_comment(cert_der).map_err(|_err| NodeAuthResult::InvalidCert)?;
 
     let pk = base64::decode(&payload).map_err(|_err| NodeAuthResult::InvalidCert)?;
 
@@ -296,12 +294,11 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> Result<Vec<u8>, NodeAuthResult> {
 pub fn verify_ra_cert(cert_der: &[u8]) -> Result<Vec<u8>, NodeAuthResult> {
     // Before we reach here, Webpki already verifed the cert is properly signed
 
-    let report =
-        AttestationReport::from_cert(cert_der).map_err(|_| NodeAuthResult::InvalidCert)?;
+    let report = AttestationReport::from_cert(cert_der).map_err(|_| NodeAuthResult::InvalidCert)?;
 
     // 2. Verify quote status (mandatory field)
 
-    verify_quote_status(report.sgx_quote_status)?;
+    verify_quote_status(&report.sgx_quote_status)?;
 
     // verify certificate
     match SIGNING_METHOD {
@@ -341,7 +338,7 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> Result<Vec<u8>, NodeAuthResult> {
 }
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-fn verify_quote_status(quote_status: SgxQuoteStatus) -> Result<(), NodeAuthResult> {
+pub fn verify_quote_status(quote_status: &SgxQuoteStatus) -> Result<(), NodeAuthResult> {
     match quote_status {
         SgxQuoteStatus::OK => Ok(()),
         SgxQuoteStatus::SwHardeningNeeded => {
@@ -353,13 +350,13 @@ fn verify_quote_status(quote_status: SgxQuoteStatus) -> Result<(), NodeAuthResul
                 "Invalid attestation quote status - cannot verify remote node: {:?}",
                 quote_status
             );
-            Err(NodeAuthResult::from(&quote_status))
+            Err(NodeAuthResult::from(quote_status))
         }
     }
 }
 
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
-fn verify_quote_status(quote_status: SgxQuoteStatus) -> Result<(), NodeAuthResult> {
+pub fn verify_quote_status(quote_status: &SgxQuoteStatus) -> Result<(), NodeAuthResult> {
     match quote_status {
         SgxQuoteStatus::OK => Ok(()),
         SgxQuoteStatus::SwHardeningNeeded => {
@@ -370,12 +367,16 @@ fn verify_quote_status(quote_status: SgxQuoteStatus) -> Result<(), NodeAuthResul
             warn!("TCB level of SGX platform service is outdated. You should check for firmware updates");
             Ok(())
         }
+        SgxQuoteStatus::ConfigurationAndSwHardeningNeeded => {
+            warn!("Platform is updated but requires further BIOS configuration");
+            Ok(())
+        }
         _ => {
             error!(
                 "Invalid attestation quote status - cannot verify remote node: {:?}",
                 quote_status
             );
-            Err(NodeAuthResult::from(&quote_status))
+            Err(NodeAuthResult::from(quote_status))
         }
     }
 }
