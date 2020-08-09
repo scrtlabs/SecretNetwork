@@ -114,15 +114,15 @@ build-linux: vendor
 	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
 
 build_windows:
-	# CLI only 
+	# CLI only
 	GOOS=windows GOARCH=amd64 $(MAKE) cli
 
 build_macos:
-	# CLI only 
+	# CLI only
 	GOOS=darwin GOARCH=amd64 $(MAKE) cli
 
 build_arm_linux:
-	# CLI only 
+	# CLI only
 	GOOS=linux GOARCH=arm64 $(MAKE) cli
 
 build_all: build-linux build_windows build_macos build_arm_linux
@@ -180,7 +180,7 @@ clean:
 	-rm -rf /tmp/SecretNetwork
 	-rm -f ./secretcli*
 	-rm -f ./secretd*
-	-rm -f ./librust_cosmwasm_enclave.signed.so 
+	-rm -f ./librust_cosmwasm_enclave.signed.so
 	-rm -f ./x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so
 	-rm -f ./go-cosmwasm/api/libgo_cosmwasm.so
 	-rm -f ./enigma-blockchain*.deb
@@ -217,6 +217,9 @@ docker_node: docker_base
 docker_local_azure_hw: docker_base
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -t ci-enigma-sgx-node .
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t ci-enigma-sgx-bootstrap .
+
+docker_enclave_test:
+	docker build --build-arg FEATURES="test ${FEATURES}" --build-arg SGX_MODE=${SGX_MODE} -f Dockerfile.enclave-test -t rust-enclave-test .
 
 # while developing:
 build-enclave: vendor
@@ -275,6 +278,11 @@ go-tests-hw: build-test-contract
 	rm -rf ./x/compute/internal/keeper/.sgx_secrets
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
 	SGX_MODE=HW go test -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
+
+.PHONY: enclave-tests
+enclave-tests:
+	$(MAKE) -C cosmwasm/packages/enclave-test run
+
 
 build-cosmwasm-test-contracts:
 	# echo "" | sudo add-apt-repository ppa:hnakamur/binaryen

@@ -10,3 +10,22 @@ mod onchain;
 mod report;
 
 mod seed_exchange;
+
+#[cfg(feature = "test")]
+pub mod tests {
+    use super::*;
+    use crate::count_failures;
+
+    pub fn run_tests() {
+        println!();
+        let mut failures = 0;
+
+        count_failures!(failures, {
+            // attestation::tests::test_create_attestation_certificate();
+        });
+
+        if failures != 0 {
+            panic!("{}: {} tests failed", file!(), failures);
+        }
+    }
+}
