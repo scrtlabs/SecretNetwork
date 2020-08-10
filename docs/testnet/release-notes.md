@@ -53,6 +53,8 @@ any contracts you wish to send a message to, from another contract
 * Added local verification during attestation. `Platform Okay!` will be printed out if the platform is compatable with the 
 target network, as well as additional detail if patching is required
 
+* Registration service url switched to `register.pub.testnet.enigma.co:26666`
+
 #### General
 
 * Changed the .deb installer to choose the user that runs the command rather than the terminal owner
