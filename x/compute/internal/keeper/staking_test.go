@@ -1,7 +1,6 @@
 package keeper
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -485,9 +484,7 @@ func assertBalance(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Ac
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
 
-	codeHashStr := hex.EncodeToString(keeper.GetContractHash(ctx, contract))
-
-	res, qErr := queryHelper(t, keeper, ctx, contract, codeHashStr+string(queryBz), true, defaultGasForTests)
+	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
 	require.Empty(t, qErr)
 	var balance BalanceResponse
 	err = json.Unmarshal([]byte(res), &balance)
