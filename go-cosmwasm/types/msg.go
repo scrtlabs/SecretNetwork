@@ -94,6 +94,9 @@ type ExecuteMsg struct {
 	// ContractAddr is the sdk.AccAddress of the contract, which uniquely defines
 	// the contract ID and instance ID. The sdk module should maintain a reverse lookup table.
 	ContractAddr string `json:"contract_addr"`
+	// Custom addition to support binding a message to specific code to harden against offline & replay attacks
+	// This is only needed when creating a callback message
+	CallbackCodeHash string `json:"callback_code_hash"`
 	// Msg is assumed to be a json-encoded message, which will be passed directly
 	// as `userMsg` when calling `Handle` on the above-defined contract
 	Msg []byte `json:"msg"`
@@ -104,6 +107,9 @@ type ExecuteMsg struct {
 type InstantiateMsg struct {
 	// CodeID is the reference to the wasm byte code as used by the Cosmos-SDK
 	CodeID uint64 `json:"code_id"`
+	// Custom addition to support binding a message to specific code to harden against offline & replay attacks
+	// This is only needed when creating a callback message
+	CallbackCodeHash string `json:"callback_code_hash"`
 	// Msg is assumed to be a json-encoded message, which will be passed directly
 	// as `userMsg` when calling `Handle` on the above-defined contract
 	Msg []byte `json:"msg"`

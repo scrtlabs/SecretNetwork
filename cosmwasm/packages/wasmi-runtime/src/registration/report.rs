@@ -6,7 +6,6 @@
 //! Types that contain information about attestation report.
 //! The implementation is based on Attestation Service API version 4.
 //! https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf
-
 use log::*;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
@@ -20,6 +19,7 @@ use uuid::Uuid;
 use super::cert::{get_ias_auth_config, get_netscape_comment};
 use enclave_ffi_types::NodeAuthResult;
 
+#[derive(Debug)]
 pub enum Error {
     ReportParseError,
     ReportValidationError,
@@ -337,14 +337,16 @@ pub enum SgxQuoteStatus {
 impl From<&SgxQuoteStatus> for NodeAuthResult {
     fn from(status: &SgxQuoteStatus) -> Self {
         match status {
-            SgxQuoteStatus::ConfigurationAndSwHardeningNeeded => NodeAuthResult::SwHardeningAndConfigurationNeeded,
+            SgxQuoteStatus::ConfigurationAndSwHardeningNeeded => {
+                NodeAuthResult::SwHardeningAndConfigurationNeeded
+            }
             SgxQuoteStatus::ConfigurationNeeded => NodeAuthResult::ConfigurationNeeded,
             SgxQuoteStatus::GroupOutOfDate => NodeAuthResult::GroupOutOfDate,
             SgxQuoteStatus::KeyRevoked => NodeAuthResult::KeyRevoked,
             SgxQuoteStatus::SigrlVersionMismatch => NodeAuthResult::SigrlVersionMismatch,
             SgxQuoteStatus::SignatureRevoked => NodeAuthResult::SignatureRevoked,
             SgxQuoteStatus::GroupRevoked => NodeAuthResult::GroupRevoked,
-            _ =>  NodeAuthResult::BadQuoteStatus,
+            _ => NodeAuthResult::BadQuoteStatus,
         }
     }
 }
@@ -538,6 +540,7 @@ pub struct AttestationReport {
     pub sgx_quote_status: SgxQuoteStatus,
     /// Content of the quote
     pub sgx_quote_body: SgxQuote,
+    pub platform_info_blob: Option<Vec<u8>>,
 }
 
 impl AttestationReport {
@@ -631,6 +634,14 @@ impl AttestationReport {
         //     let quote_freshness = u64::try_from((now - ts).num_seconds())?;
         //     std::time::Duration::from_secs(quote_freshness)
         // };
+        let mut platform_info_blob = None;
+        if let Some(blob) = attn_report["platformInfoBlob"].as_str() {
+            let as_binary = hex::decode(blob).map_err(|_| {
+                error!("Error parsing platform info");
+                Error::ReportParseError
+            })?;
+            platform_info_blob = Some(as_binary)
+        }
 
         // Get quote status
         let sgx_quote_status = {
@@ -663,6 +674,7 @@ impl AttestationReport {
         Ok(Self {
             sgx_quote_status,
             sgx_quote_body,
+            platform_info_blob,
         })
     }
 }

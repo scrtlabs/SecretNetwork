@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -41,10 +42,18 @@ func TestQueryContractLabel(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+	hash := keeper.GetCodeInfo(ctx, contractID).CodeHash
+
+	msg := types.SecretMsg{
+		CodeHash: []byte(hex.EncodeToString(hash)),
+		Msg:      initMsgBz,
+	}
+
+	initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 
 	label := "banana"
+
 	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, label, deposit)
 	require.NoError(t, err)
 
@@ -128,8 +137,15 @@ func TestQueryContractState(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
-	require.NoError(t, err)
+	key := keeper.GetCodeInfo(ctx, contractID).CodeHash
+	keyStr := hex.EncodeToString(key)
+
+	msg := types.SecretMsg{
+		CodeHash: []byte(keyStr),
+		Msg:      initMsgBz,
+	}
+
+	initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
 
 	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract to query", deposit)
 	require.NoError(t, err)
@@ -223,8 +239,15 @@ func TestListContractByCodeOrdering(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
-	require.NoError(t, err)
+	key := keeper.GetCodeInfo(ctx, codeID).CodeHash
+	keyStr := hex.EncodeToString(key)
+
+	msg := types.SecretMsg{
+		CodeHash: []byte(keyStr),
+		Msg:      initMsgBz,
+	}
+
+	initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
 
 	// manage some realistic block settings
 	var h int64 = 10
@@ -243,6 +266,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 			ctx = setBlock(ctx, h)
 			h++
 		}
+
 		_, err = keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, fmt.Sprintf("contract %d", i), topUp)
 		require.NoError(t, err)
 	}

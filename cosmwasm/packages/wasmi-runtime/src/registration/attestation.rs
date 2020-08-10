@@ -637,24 +637,25 @@ fn as_u32_le(array: [u8; 4]) -> u32 {
         + ((array[3] as u32) << 24)
 }
 
-#[cfg(feature = "test")]
-pub mod tests {
-    use crate::crypto::KeyPair;
-    use crate::registration::cert::verify_ra_cert;
-
-    use super::sgx_quote_sign_type_t;
-    use super::{create_attestation_certificate, get_ias_api_key, load_spid};
-
-    // todo: replace public key with real value
-    fn test_create_attestation_certificate() {
-        let kp = KeyPair::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").unwrap();
-
-        let cert =
-            create_attestation_certificate(&kp, sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE)
-                .unwrap();
-
-        let result = verify_ra_cert(cert[1]).unwrap();
-
-        assert_eq!(result, kp.get_pubkey())
-    }
-}
+// commented out because it only contains one test
+// #[cfg(feature = "test")]
+// pub mod tests {
+//     use crate::crypto::KeyPair;
+//     use crate::registration::cert::verify_ra_cert;
+//
+//     use super::create_attestation_certificate;
+//     use super::sgx_quote_sign_type_t;
+//
+//     // todo: replace public key with real value
+//     pub fn test_create_attestation_certificate() {
+//         let kp = KeyPair::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").unwrap();
+//
+//         let cert =
+//             create_attestation_certificate(&kp, sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE)
+//                 .unwrap();
+//
+//         let result = verify_ra_cert(cert[1]).unwrap();
+//
+//         assert_eq!(result, kp.get_pubkey())
+//     }
+// }

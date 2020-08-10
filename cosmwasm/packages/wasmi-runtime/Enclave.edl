@@ -15,7 +15,6 @@ enclave {
     include "target/headers/enclave-ffi-types.h"
 
     trusted {
-
         EnclaveBuffer ecall_allocate(
             [in, count=length] const uint8_t* buffer,
             uintptr_t length
@@ -80,6 +79,7 @@ enclave {
 
         public HealthCheckResult ecall_health_check();
 
+        public uint32_t ecall_run_tests();
     };
 
     untrusted {
