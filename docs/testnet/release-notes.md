@@ -14,7 +14,7 @@ This release includes full secret contract functionality, stability, network con
 * You can now use `--label` to execute contracts instead of using a contract address. Use with the flag `--label` and omit the contract address
 (not available for queries on this release)
 
-* The default `--gas-prices` for the CLI is set to 1uscrt
+* The default `--gas-prices` for the CLI is set to `1uscrt`
 
 * Fixed a bug that caused the flag `--generate-only` to function incorrectly
 
