@@ -33,7 +33,7 @@ This release includes full secret contract functionality, stability, network con
 
 * Set max gas per block to 10,000,000 gas
 
-* Added an option to set max query gas allowed per node. The default is set at 3,000,000 gas. You can find this value in the node config.toml
+* Added an option to set max query gas allowed per node. The default is set at 3,000,000 gas. You can find this value in the `~/.sceretd/config/app.toml`
 
 #### Contracts
 
