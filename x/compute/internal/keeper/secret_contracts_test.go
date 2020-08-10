@@ -1319,9 +1319,9 @@ func TestInfiniteQueryLoopKilledGracefullyByOOM(t *testing.T) {
 	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, err)
 
-	hash := hex.EncodeToString(keeper.GetContractHash(ctx, addr))
+	codeHash := hex.EncodeToString(keeper.GetContractHash(ctx, addr))
 
-	data, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_infinite_loop":{"to":"%s","code_hash":"%s"}}`, addr.String(), hash), true, defaultGasForTests)
+	data, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_infinite_loop":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, defaultGasForTests)
 
 	require.Empty(t, data)
 	require.NotNil(t, err.GenericErr)
@@ -1700,7 +1700,6 @@ func TestCodeHashInvalid(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 	initMsg := []byte(`AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA{"nop":{}`)
-	// init
 
 	enc, _ := wasmCtx.Encrypt(initMsg)
 
@@ -1709,7 +1708,7 @@ func TestCodeHashInvalid(t *testing.T) {
 	require.Contains(t, err.Error(), "failed to validate transaction")
 }
 
-func TestCodeHashNotSent(t *testing.T) {
+func TestCodeHashEmpty(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 	initMsg := []byte(`{"nop":{}`)
@@ -1725,6 +1724,54 @@ func TestCodeHashNotHex(t *testing.T) {
 	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 	initMsg := []byte(`🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉{"nop":{}}`)
+
+	enc, _ := wasmCtx.Encrypt(initMsg)
+
+	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to validate transaction")
+}
+
+func TestCodeHashTooSmall(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	codeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)
+
+	initMsg := []byte(codeHash[0:63] + `{"nop":{}`)
+
+	enc, _ := wasmCtx.Encrypt(initMsg)
+
+	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to validate transaction")
+}
+
+func TestCodeHashTooBig(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	codeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)
+
+	initMsg := []byte(codeHash + "a" + `{"nop":{}`)
+
+	enc, _ := wasmCtx.Encrypt(initMsg)
+
+	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+	require.Error(t, err)
+
+	initErr := extractInnerError(t, err, enc[0:32], true)
+	require.NotEmpty(t, initErr)
+	require.NotNil(t, initErr.ParseErr)
+	require.Equal(t, "test_contract::contract::InitMsg", initErr.ParseErr.Target)
+	require.Equal(t, "Expected to parse either a `true`, `false`, or a `null`.", initErr.ParseErr.Msg)
+}
+
+func TestCodeHashWrong(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	initMsg := []byte(`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855{"nop":{}`)
 
 	enc, _ := wasmCtx.Encrypt(initMsg)
 
