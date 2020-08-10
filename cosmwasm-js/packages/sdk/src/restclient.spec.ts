@@ -107,6 +107,7 @@ async function instantiateContract(
       sender: faucet.address,
       code_id: codeId.toString(),
       label: "my escrow",
+      callback_code_hash: "",
       init_msg: {
         verifier: faucet.address,
         beneficiary: beneficiaryAddress,
@@ -141,6 +142,7 @@ async function executeContract(
     type: "wasm/execute",
     value: {
       sender: faucet.address,
+      callback_code_hash: "",
       contract: contractAddress,
       msg: { release: {} },
       sent_funds: [],
@@ -669,6 +671,7 @@ describe("RestClient", () => {
       expect(hash.value).toEqual({
         code_id: deployedErc20.codeId.toString(),
         init_funds: [],
+        callback_code_hash: "",
         init_msg: jasmine.objectContaining({
           symbol: "HASH",
         }),
@@ -678,6 +681,7 @@ describe("RestClient", () => {
       expect(isa.value).toEqual({
         code_id: deployedErc20.codeId.toString(),
         init_funds: [],
+        callback_code_hash: "",
         init_msg: jasmine.objectContaining({ symbol: "ISA" }),
         label: "ISA",
         sender: faucet.address,
@@ -685,6 +689,7 @@ describe("RestClient", () => {
       expect(jade.value).toEqual({
         code_id: deployedErc20.codeId.toString(),
         init_funds: [],
+        callback_code_hash: "",
         init_msg: jasmine.objectContaining({ symbol: "JADE" }),
         label: "JADE",
         sender: faucet.address,
@@ -725,6 +730,7 @@ describe("RestClient", () => {
         expect(hash.value).toEqual({
           code_id: deployedErc20.codeId.toString(),
           init_funds: [],
+          callback_code_hash: "",
           init_msg: jasmine.objectContaining({
             symbol: "HASH",
           }),
@@ -734,6 +740,7 @@ describe("RestClient", () => {
         expect(isa.value).toEqual({
           code_id: deployedErc20.codeId.toString(),
           init_funds: [],
+          callback_code_hash: "",
           init_msg: jasmine.objectContaining({ symbol: "ISA" }),
           label: "ISA",
           sender: faucet.address,
@@ -741,6 +748,7 @@ describe("RestClient", () => {
         expect(jade.value).toEqual({
           code_id: deployedErc20.codeId.toString(),
           init_funds: [],
+          callback_code_hash: "",
           init_msg: jasmine.objectContaining({ symbol: "JADE" }),
           label: "JADE",
           sender: faucet.address,
@@ -1364,8 +1372,7 @@ describe("RestClient", () => {
         // invalid query syntax throws an error
         await client.queryContractSmart(contractAddress!, { nosuchkey: {} }).then(
           () => fail("shouldn't succeed"),
-          (error) =>
-            expect(error).toMatch(/query contract failed: parsing hackatom::contract::QueryMsg/),
+          (error) => expect(error).toMatch(/query contract failed: parsing hackatom::contract::QueryMsg/),
         );
 
         // invalid address throws an error

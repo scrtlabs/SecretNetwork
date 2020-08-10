@@ -123,12 +123,27 @@ fn encrypt_wasm_msg(
     user_public_key: Ed25519PublicKey,
 ) -> Result<(), EnclaveError> {
     match wasm_msg {
-        WasmMsg::Execute { msg, .. } | WasmMsg::Instantiate { msg, .. } => {
-            let mut msg_to_pass =
-                SecretMessage::from_base64((*msg).clone(), nonce, user_public_key)?;
+        WasmMsg::Execute {
+            msg,
+            callback_code_hash,
+            ..
+        }
+        | WasmMsg::Instantiate {
+            msg,
+            callback_code_hash,
+            ..
+        } => {
+            let mut hash_appended_msg = callback_code_hash.as_bytes().to_vec();
+            hash_appended_msg.extend_from_slice(msg.as_slice());
+
+            let mut msg_to_pass = SecretMessage::from_base64(
+                Binary(hash_appended_msg).to_base64(),
+                nonce,
+                user_public_key,
+            )?;
 
             msg_to_pass.encrypt_in_place()?;
-            *msg = b64_encode(&msg_to_pass.to_slice());
+            *msg = Binary::from(msg_to_pass.to_vec().as_slice());
         }
     }
 

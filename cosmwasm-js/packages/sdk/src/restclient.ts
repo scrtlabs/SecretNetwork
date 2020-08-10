@@ -112,6 +112,11 @@ interface AuthAccountsResponse {
   };
 }
 
+interface ContractHashResponse {
+  readonly height: string;
+  readonly result: string;
+}
+
 // Currently all wasm query responses return json-encoded strings...
 // later deprecate this and use the specific types for result
 // (assuming it is inlined, no second parse needed)
@@ -219,7 +224,8 @@ type RestClientResponse =
   | WasmResponse<CodeInfo[]>
   | WasmResponse<CodeDetails>
   | WasmResponse<ContractInfo[] | null>
-  | WasmResponse<ContractDetails | null>;
+  | WasmResponse<ContractDetails | null>
+  | WasmResponse<ContractHashResponse | null>;
 
 /** Unfortunately, Cosmos SDK encodes empty arrays as null */
 type CosmosSdkArray<T> = ReadonlyArray<T> | null;
@@ -432,6 +438,18 @@ export class RestClient {
     return normalizeArray(await unwrapWasmResponse(responseData));
   }
 
+  public async getCodeHashByCodeId(id: number): Promise<string> {
+    const path = `/wasm/code/${id}/hash`;
+    const responseData = (await this.get(path)) as ContractHashResponse;
+    return responseData.result;
+  }
+
+  public async getCodeHashByContractAddr(addr: string): Promise<string> {
+    const path = `/wasm/contract/${addr}/code-hash`;
+    const responseData = (await this.get(path)) as ContractHashResponse;
+    return responseData.result;
+  }
+
   /**
    * Returns null when contract was not found at this address.
    */
@@ -464,7 +482,8 @@ export class RestClient {
    * Throws error if no such contract exists, the query format is invalid or the response is invalid.
    */
   public async queryContractSmart(address: string, query: object): Promise<JsonObject> {
-    const encrypted = await this.enigmautils.encrypt(query);
+    const contractCodeHash = await this.getCodeHashByContractAddr(address);
+    const encrypted = await this.enigmautils.encrypt(contractCodeHash, query);
     const nonce = encrypted.slice(0, 32);
 
     const encoded = Encoding.toHex(Encoding.toUtf8(Encoding.toBase64(encrypted)));

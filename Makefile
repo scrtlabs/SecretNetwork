@@ -181,7 +181,7 @@ clean:
 	-rm -f ./secretcli*
 	-rm -f ./secretd*
 	-rm -f ./librust_cosmwasm_enclave.signed.so 
-	-rm -f ./x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so 
+	-rm -f ./x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so
 	-rm -f ./go-cosmwasm/api/libgo_cosmwasm.so
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*
@@ -254,6 +254,11 @@ build-test-contract:
 	# sudo apt update
 	# sudo apt install -y binaryen
 	$(MAKE) -C ./x/compute/internal/keeper/testdata/test-contract
+
+prep-go-tests: build-test-contract
+	# empty BUILD_PROFILE means debug mode which compiles faster
+	SGX_MODE=SW $(MAKE) build-linux
+	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 
 go-tests: build-test-contract
 	# empty BUILD_PROFILE means debug mode which compiles faster
