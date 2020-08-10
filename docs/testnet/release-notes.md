@@ -6,8 +6,6 @@ We are currently on our second testnet, and the first open testnet release since
 
 This release includes full secret contract functionality, stability, network configuratin, and many other changes.
 
-Important note: This release is not a production release. We expect to release a production release-candidate during the open testnet.
-
 #### CLI
 
 * The default coin type for HD derivation in the CLI has changed from 118 (ATOM) to 529 (SCRT). To revert to the previous scheme,
