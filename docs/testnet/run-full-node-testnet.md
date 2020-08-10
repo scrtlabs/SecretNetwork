@@ -45,7 +45,10 @@ wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.7.0/secretn
 sudo dpkg -i secretnetwork_0.7.0_amd64.deb
 ```
 
-### 3. Initialize your installation of the Secret Network. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
+### 3. Initialize your installation of the Secret Network.
+
+Choose a **moniker** for yourself, and replace `<MONIKER>` with your moniker below.
+This moniker will serve as your public nickname in the network.
 
 ```bash
 secretd init <MONIKER> --chain-id enigma-pub-testnet-2
