@@ -1,7 +1,8 @@
 use log::*;
 
 use crate::cosmwasm::types::{CanonicalAddr, CosmosSignature, Env};
-use crate::crypto::{secp256k1, sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
+use crate::crypto::traits::PubKey;
+use crate::crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
 use crate::wasm::io;
 use crate::wasm::types::SecretMessage;
 use enclave_ffi_types::EnclaveError;
@@ -123,7 +124,16 @@ pub fn verify_params(env: &Env, msg: &SecretMessage) -> Result<(), EnclaveError>
             error!("Callback signature verification failed");
         }
     } else {
-        secp256k1::verify_signature(&env.sign_bytes, &env.signature)?; // TODO: Generalize this to support an interface
+        env.signature
+            .get_public_key()
+            .verify_bytes(
+                &env.sign_bytes.as_slice(),
+                &env.signature.get_signature().as_slice(),
+            )
+            .map_err(|err| {
+                error!("Signature verification failed: {:?}", err);
+                EnclaveError::FailedTxVerification
+            })?;
 
         if verify_sender(&env.signature, &env.message.sender) {
             trace!("Message verified! msg.sender is the tx signer");
@@ -141,9 +151,9 @@ pub fn verify_params(env: &Env, msg: &SecretMessage) -> Result<(), EnclaveError>
 
 fn verify_sender(signature: &CosmosSignature, msg_sender: &CanonicalAddr) -> bool {
     let sender_pubkey = signature.get_public_key();
-    let address = secp256k1::pubkey_to_tm_address(&sender_pubkey);
+    let address = sender_pubkey.get_address();
 
-    if address.eq(&msg_sender.as_slice()) {
+    if address.eq(&msg_sender) {
         return true;
     }
 

@@ -12,6 +12,9 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use super::encoding::Binary;
+use crate::crypto::secp256k1::Secp256k1PubKey;
+use crate::crypto::traits::PubKey;
+use crate::crypto::CryptoError;
 use bech32::{FromBase32, ToBase32};
 use serde_json::Value;
 
@@ -83,7 +86,7 @@ impl fmt::Display for CanonicalAddr {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Env {
     pub block: BlockInfo,
     pub message: MessageInfo,
@@ -305,19 +308,47 @@ pub fn log(key: &str, value: &str) -> LogAttribute {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CosmosSignature {
-    pub_key: Vec<u8>,
+    // This is an enum, because it can't be a boxed trait object (ot something similar)
+    // because it has to be Sized
+    pub_key: PubKeyKind,
     signature: Binary,
 }
 
 impl CosmosSignature {
-    pub fn get_public_key(&self) -> Vec<u8> {
+    pub fn get_public_key(&self) -> PubKeyKind {
         self.pub_key.clone()
     }
 
     pub fn get_signature(&self) -> Binary {
         self.signature.clone()
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(untagged)]
+pub enum PubKeyKind {
+    Secp256k1(Secp256k1PubKey),
+}
+
+impl PubKey for PubKeyKind {
+    fn get_address(&self) -> CanonicalAddr {
+        match self {
+            PubKeyKind::Secp256k1(pubkey) => pubkey.get_address(),
+        }
+    }
+
+    fn as_bytes(&self) -> Vec<u8> {
+        match self {
+            PubKeyKind::Secp256k1(pubkey) => pubkey.as_bytes(),
+        }
+    }
+
+    fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError> {
+        match self {
+            PubKeyKind::Secp256k1(pubkey) => pubkey.verify_bytes(bytes, sig),
+        }
     }
 }
 
