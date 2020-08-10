@@ -70,7 +70,7 @@ Example parameters:
 Now, to initialize the contract we will use the following command (replace the parameters with values of your choosing): 
 
 ```
-secretcli tx compute instantiate <code_id> --label <choose-an-alias> '{"name": "<coin_name>", "symbol": "<coin_symbol>", "decimals": <num_of_decimals>, "initial_balances": []}' --from a
+secretcli tx compute instantiate <code_id> --label <choose-an-alias> '{"name": "<coin_name>", "symbol": "<coin_symbol>", "decimals": <num_of_decimals>, "initial_balances": []}' --from <key-alias>
 ```
 
 Be careful not to forget the quotes at the begining and end of the initialization parameters!
