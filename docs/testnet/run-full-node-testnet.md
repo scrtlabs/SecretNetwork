@@ -42,7 +42,7 @@ wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.7.0/secretn
 ### 2. Install the package:
 
 ```bash
-sudo dpkg -i secretnetwork_v0.7.0_amd64.deb
+sudo dpkg -i secretnetwork_0.7.0_amd64.deb
 ```
 
 ### 3. Initialize your installation of the Secret Network. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
