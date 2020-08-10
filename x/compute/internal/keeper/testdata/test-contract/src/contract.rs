@@ -46,6 +46,21 @@ pub enum InitMsg {
         depth: u8,
         code_hash: String,
     },
+    CallToInit {
+        code_id: u64,
+        code_hash: String,
+        msg: String,
+    },
+    CallToExec {
+        addr: HumanAddr,
+        code_hash: String,
+        msg: String,
+    },
+    CallToQuery {
+        addr: HumanAddr,
+        code_hash: String,
+        msg: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -234,6 +249,53 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 "",
             )],
         }),
+        InitMsg::CallToInit {
+            code_id,
+            code_hash,
+            msg,
+        } => Ok(InitResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+                code_id,
+                callback_code_hash: code_hash,
+                msg: Binary(msg.as_bytes().into()),
+                send: vec![],
+                label: Some(String::from("arrr")),
+            })],
+            log: vec![log("a", "a")],
+        }),
+        InitMsg::CallToExec {
+            addr,
+            code_hash,
+            msg,
+        } => Ok(InitResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: addr,
+                callback_code_hash: code_hash,
+                msg: Binary(msg.as_bytes().into()),
+                send: vec![],
+            })],
+            log: vec![log("b", "b")],
+        }),
+        InitMsg::CallToQuery {
+            addr,
+            code_hash,
+            msg,
+        } => {
+            let result = deps
+                .querier
+                .query::<Binary>(&QueryRequest::Wasm(WasmQuery::Smart {
+                    contract_addr: addr.clone(),
+                    callback_code_hash: code_hash.clone(),
+                    msg: Binary(msg.as_bytes().into()),
+                }));
+
+            let answer = result?;
+
+            Ok(InitResponse {
+                messages: vec![],
+                log: vec![log("c", String::from_utf8_lossy(&answer.0))],
+            })
+        }
     }
 }
 
