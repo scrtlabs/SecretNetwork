@@ -1966,7 +1966,7 @@ func TestCodeHashExecCallInit(t *testing.T) {
 	})
 }
 
-func TestLabelCollisionWhenCallbackToInit(t *testing.T) {
+func TestLabelCollisionWhenMultipleCallbacksToInitFromSameContract(t *testing.T) {
 	ctx, keeper, tempDir, codeID, codeHash, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
