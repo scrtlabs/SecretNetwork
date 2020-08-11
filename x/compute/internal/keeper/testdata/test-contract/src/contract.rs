@@ -49,6 +49,7 @@ pub enum InitMsg {
     CallToInit {
         code_id: u64,
         code_hash: String,
+        label: String,
         msg: String,
     },
     CallToExec {
@@ -176,6 +177,22 @@ pub enum HandleMsg {
         x: u8,
         y: u8,
     },
+    CallToInit {
+        code_id: u64,
+        code_hash: String,
+        label: String,
+        msg: String,
+    },
+    CallToExec {
+        addr: HumanAddr,
+        code_hash: String,
+        msg: String,
+    },
+    CallToQuery {
+        addr: HumanAddr,
+        code_hash: String,
+        msg: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -248,6 +265,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         InitMsg::CallToInit {
             code_id,
             code_hash,
+            label,
             msg,
         } => Ok(InitResponse {
             messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
@@ -255,7 +273,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 callback_code_hash: code_hash,
                 msg: Binary(msg.as_bytes().into()),
                 send: vec![],
-                label: Some(String::from("arrr")),
+                label: label,
             })],
             log: vec![log("a", "a")],
         }),
@@ -363,7 +381,7 @@ pub fn init_callback_to_init<S: Storage, A: Api, Q: Querier>(
             msg: Binary::from("{\"nop\":{}}".as_bytes().to_vec()),
             callback_code_hash: code_hash,
             send: vec![],
-            label: None,
+            label: String::from("fi"),
         })],
         log: vec![log("instantiating a new contract from init!", "🐙")],
     }
@@ -500,7 +518,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
                 code_id: code_id,
                 callback_code_hash: code_hash,
-                label: None,
+                label: String::from("yo"),
                 send: vec![Coin {
                     amount: Uint128(amount as u128),
                     denom: denom,
@@ -541,6 +559,56 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             log: vec![],
             data: Some(use_floats(x, y)),
         }),
+        HandleMsg::CallToInit {
+            code_id,
+            code_hash,
+            label,
+            msg,
+        } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+                code_id,
+                callback_code_hash: code_hash,
+                msg: Binary(msg.as_bytes().into()),
+                send: vec![],
+                label: label,
+            })],
+            log: vec![log("a", "a")],
+            data: None,
+        }),
+        HandleMsg::CallToExec {
+            addr,
+            code_hash,
+            msg,
+        } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: addr,
+                callback_code_hash: code_hash,
+                msg: Binary(msg.as_bytes().into()),
+                send: vec![],
+            })],
+            log: vec![log("b", "b")],
+            data: None,
+        }),
+        HandleMsg::CallToQuery {
+            addr,
+            code_hash,
+            msg,
+        } => {
+            let answer: u32 = deps
+                .querier
+                .query(&QueryRequest::Wasm(WasmQuery::Smart {
+                    contract_addr: addr,
+                    callback_code_hash: code_hash,
+                    msg: Binary::from(msg.as_bytes().to_vec()),
+                }))
+                .map_err(|err| generic_err(format!("Got an error from query: {:?}", err)))?;
+
+            Ok(HandleResponse {
+                messages: vec![],
+                log: vec![log("c", format!("{}", answer))],
+                data: None,
+            })
+        }
     }
 }
 
@@ -827,7 +895,7 @@ pub fn exec_callback_to_init<S: Storage, A: Api, Q: Querier>(
             msg: Binary::from("{\"nop\":{}}".as_bytes().to_vec()),
             callback_code_hash: code_hash,
             send: vec![],
-            label: None,
+            label: String::from("hi"),
         })],
         log: vec![log("instantiating a new contract", "🪂")],
         data: None,
