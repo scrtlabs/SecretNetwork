@@ -1981,3 +1981,66 @@ func TestLabelCollisionWhenMultipleCallbacksToInitFromSameContract(t *testing.T)
 	require.NotNil(t, err.GenericErr)
 	require.Equal(t, "contract account already exists: 1", err.GenericErr.Msg)
 }
+
+func TestCodeHashExecCallExec(t *testing.T) {
+	ctx, keeper, tempDir, codeID, codeHash, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	t.Run("GoodCodeHash", func(t *testing.T) {
+		_, events, err := execHelperImpl(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr, codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, defaultGasForTests, 0, 2)
+
+		require.Empty(t, err)
+		require.Equal(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: addr.String()},
+					{Key: "b", Value: "b"},
+				},
+				{
+					{Key: "contract_address", Value: events[1][0].Value},
+					{Key: "watermelon", Value: "🍉"},
+				},
+			},
+			events,
+		)
+	})
+	t.Run("EmptyCodeHash", func(t *testing.T) {
+		_, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr, `{\"c\":{\"x\":1,\"y\":1}}`), false, defaultGasForTests, 0, 2)
+
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"execute contract failed: Execution error: Enclave: failed to validate transaction",
+		)
+	})
+	t.Run("TooBigCodeHash", func(t *testing.T) {
+		_, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr, codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, defaultGasForTests, 0, 2)
+
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"parsing test_contract::contract::HandleMsg: Expected to parse either a `true`, `false`, or a `null`.",
+		)
+	})
+	t.Run("TooSmallCodeHash", func(t *testing.T) {
+		_, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr, codeHash[0:63], `{\"c\":{\"x\":1,\"y\":1}}`), false, defaultGasForTests, 0, 2)
+
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"execute contract failed: Execution error: Enclave: failed to validate transaction",
+		)
+	})
+	t.Run("WrongCodeHash", func(t *testing.T) {
+		_, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr, `{\"c\":{\"x\":1,\"y\":1}}`), false, defaultGasForTests, 0, 2)
+
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"execute contract failed: Execution error: Enclave: failed to validate transaction",
+		)
+	})
+}
