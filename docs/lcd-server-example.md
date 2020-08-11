@@ -11,7 +11,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/bin/secretcli rest-server --chain-id secret-1 --laddr tcp://127.0.0.1:1337
+ExecStart=/bin/secretcli rest-server --trust-node=true --chain-id secret-1 --laddr tcp://127.0.0.1:1337
 User=ubuntu
 Restart=always
 StartLimitInterval=0
@@ -29,19 +29,19 @@ sudo systemctl start  secret-lcd
 ```
 
 Then, install caddy: https://caddyserver.com/docs/download#debian-ubuntu-raspbian  
-Edit `/etc/caddy/Caddyfile` to have this inside (Replace `bootstrap.int.testnet.enigma.co` with your domain name):
+Edit `/etc/caddy/Caddyfile` to have this as the whole content (Replace `bootstrap.int.testnet.enigma.co` with your domain name):
 ```
 bootstrap.int.testnet.enigma.co
 
 header {
-        Access-Control-Allow-Origin *
+        Access-Control-Allow-Origin  *
         Access-Control-Allow-Methods *
         Access-Control-Allow-Headers *
 }
 
 @corspreflight {
 	method OPTIONS
-	path *
+	path   *
 }
 
 respond @corspreflight 204 
