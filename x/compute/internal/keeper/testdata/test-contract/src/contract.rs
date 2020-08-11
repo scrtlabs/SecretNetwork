@@ -3,9 +3,9 @@ use cosmwasm_storage::PrefixedStorage;
 use cosmwasm_std::{
     generic_err, invalid_base64, invalid_utf8, log, not_found, null_pointer, parse_err,
     serialize_err, to_binary, unauthorized, underflow, Api, BankMsg, Binary, Coin, CosmosMsg, Env,
-    Extern, HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse,
-    Querier, QueryRequest, QueryResult, ReadonlyStorage, StdError, StdResult, Storage, Uint128,
-    WasmMsg, WasmQuery,
+    Extern, HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, Querier,
+    QueryRequest, QueryResult, ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg,
+    WasmQuery,
 };
 
 /////////////////////////////// Messages ///////////////////////////////
@@ -200,10 +200,6 @@ pub enum QueryMsg {
         code_hash: String,
     },
 }
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum MigrateMsg {}
 
 /////////////////////////////// Init ///////////////////////////////
 
@@ -1074,14 +1070,4 @@ fn remove_from_storage_in_query<S: Storage, A: Api, Q: Querier>(
     deps.storage.remove(b"abcd");
 
     Ok(Binary(vec![]))
-}
-
-/////////////////////////////// Migrate ///////////////////////////////
-
-pub fn migrate<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
-    _env: Env,
-    _msg: MigrateMsg,
-) -> StdResult<MigrateResponse> {
-    Ok(MigrateResponse::default())
 }
