@@ -1721,77 +1721,64 @@ func TestCodeHashWrong(t *testing.T) {
 	require.Contains(t, err.Error(), "failed to validate transaction")
 }
 
-func TestInitCallInitGoodCodeHash(t *testing.T) {
+func TestCodeHashInitCallInit(t *testing.T) {
 	ctx, keeper, tempDir, codeID, codeHash, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	addr, events, err := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s"}}`, codeID, codeHash, `{\"nop\":{}}`), true, defaultGasForTests)
-	require.Empty(t, err)
-	require.Equal(t,
-		[]ContractEvent{
-			{
-				{Key: "contract_address", Value: addr.String()},
-				{Key: "a", Value: "a"},
+	t.Run("GoodCodeHash", func(t *testing.T) {
+		addr, events, err := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s"}}`, codeID, codeHash, `{\"nop\":{}}`), true, defaultGasForTests)
+
+		require.Empty(t, err)
+		require.Equal(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: addr.String()},
+					{Key: "a", Value: "a"},
+				},
+				{
+					{Key: "contract_address", Value: events[1][0].Value},
+					{Key: "init", Value: "🌈"},
+				},
 			},
-			{
-				{Key: "contract_address", Value: events[1][0].Value},
-				{Key: "init", Value: "🌈"},
-			},
-		},
-		events,
-	)
-}
+			events,
+		)
+	})
+	t.Run("EmptyCodeHash", func(t *testing.T) {
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"","msg":"%s"}}`, codeID, `{\"nop\":{}}`), false, defaultGasForTests)
 
-func TestInitCallInitEmptyCodeHash(t *testing.T) {
-	ctx, keeper, tempDir, codeID, _, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
-	defer os.RemoveAll(tempDir)
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"instantiate contract failed: Execution error: Enclave: failed to validate transaction",
+		)
+	})
+	t.Run("TooBigCodeHash", func(t *testing.T) {
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%sa","msg":"%s"}}`, codeID, codeHash, `{\"nop\":{}}`), true, defaultGasForTests)
 
-	_, _, err := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"","msg":"%s"}}`, codeID, `{\"nop\":{}}`), false, defaultGasForTests)
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"parsing test_contract::contract::InitMsg: Expected to parse either a `true`, `false`, or a `null`.",
+		)
+	})
+	t.Run("TooSmallCodeHash", func(t *testing.T) {
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s"}}`, codeID, codeHash[0:63], `{\"nop\":{}}`), false, defaultGasForTests)
 
-	require.NotEmpty(t, err)
-	require.Contains(t,
-		err.Error(),
-		"instantiate contract failed: Execution error: Enclave: failed to validate transaction",
-	)
-}
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"instantiate contract failed: Execution error: Enclave: failed to validate transaction",
+		)
+	})
+	t.Run("WrongCodeHash", func(t *testing.T) {
+		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, codeID, `{\"nop\":{}}`), false, defaultGasForTests)
 
-func TestInitCallInitTooBigCodeHash(t *testing.T) {
-	ctx, keeper, tempDir, codeID, codeHash, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
-	defer os.RemoveAll(tempDir)
-
-	_, _, err := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%sa","msg":"%s"}}`, codeID, codeHash, `{\"nop\":{}}`), true, defaultGasForTests)
-
-	require.NotEmpty(t, err)
-	require.Contains(t,
-		err.Error(),
-		"parsing test_contract::contract::InitMsg: Expected to parse either a `true`, `false`, or a `null`.",
-	)
-}
-
-func TestInitCallInitTooSmallCodeHash(t *testing.T) {
-	ctx, keeper, tempDir, codeID, codeHash, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
-	defer os.RemoveAll(tempDir)
-
-	_, _, err := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s"}}`, codeID, codeHash[0:63], `{\"nop\":{}}`), false, defaultGasForTests)
-
-	require.NotEmpty(t, err)
-	require.Contains(t,
-		err.Error(),
-		"instantiate contract failed: Execution error: Enclave: failed to validate transaction",
-	)
-}
-
-func TestInitCallInitWrongCodeHash(t *testing.T) {
-	ctx, keeper, tempDir, codeID, _, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
-	defer os.RemoveAll(tempDir)
-
-	_, _, err := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, codeID, `{\"nop\":{}}`), false, defaultGasForTests)
-
-	require.NotEmpty(t, err)
-	require.Contains(t,
-		err.Error(),
-		"instantiate contract failed: Execution error: Enclave: failed to validate transaction",
-	)
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"instantiate contract failed: Execution error: Enclave: failed to validate transaction",
+		)
+	})
 }
 
 func TestCodeHashInitCallExec(t *testing.T) {
