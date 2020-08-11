@@ -34,14 +34,14 @@ Edit `/etc/caddy/Caddyfile` to have this as the whole content (Replace `bootstra
 bootstrap.int.testnet.enigma.co
 
 header {
-        Access-Control-Allow-Origin *
+        Access-Control-Allow-Origin  *
         Access-Control-Allow-Methods *
         Access-Control-Allow-Headers *
 }
 
 @corspreflight {
 	method OPTIONS
-	path *
+	path   *
 }
 
 respond @corspreflight 204 
