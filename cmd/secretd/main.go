@@ -104,7 +104,7 @@ func main() {
 	}
 
 	queryGasLimitTemplate := `
-# query-gas-limit sets the gas limit under which your node will run smart sontracts queries.
+# query-gas-limit sets the gas limit under which your node will run smart contracts queries.
 # Queries that consume more than this value will be terminated prematurely with an error.
 # This is a good way to protect your node from DoS by heavy queries.
 query-gas-limit = 3000000
