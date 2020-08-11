@@ -216,6 +216,11 @@ pub enum QueryMsg {
         depth: u8,
         code_hash: String,
     },
+    CallToQuery {
+        addr: HumanAddr,
+        code_hash: String,
+        msg: String,
+    },
 }
 
 /////////////////////////////// Init ///////////////////////////////
@@ -1091,6 +1096,21 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             deps, to, depth, code_hash,
         ))
         .unwrap()),
+        QueryMsg::CallToQuery {
+            addr,
+            code_hash,
+            msg,
+        } => {
+            let answer: u32 = deps
+                .querier
+                .query(&QueryRequest::Wasm(WasmQuery::Smart {
+                    contract_addr: addr,
+                    callback_code_hash: code_hash,
+                    msg: Binary::from(msg.as_bytes().to_vec()),
+                }))
+                .map_err(|err| generic_err(format!("Got an error from query: {:?}", err)))?;
+            return Ok(to_binary(&answer)?);
+        }
     }
 }
 
