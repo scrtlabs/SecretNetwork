@@ -1965,3 +1965,19 @@ func TestCodeHashExecCallInit(t *testing.T) {
 		)
 	})
 }
+
+func TestLabelCollisionWhenCallbackToInit(t *testing.T) {
+	ctx, keeper, tempDir, codeID, codeHash, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, err = execHelperImpl(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, defaultGasForTests, 0, 2)
+	require.Empty(t, err)
+
+	_, _, err = execHelperImpl(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), false, defaultGasForTests, 0, 1)
+	require.NotEmpty(t, err)
+	require.NotNil(t, err.GenericErr)
+	require.Equal(t, "contract account already exists: 1", err.GenericErr.Msg)
+}
