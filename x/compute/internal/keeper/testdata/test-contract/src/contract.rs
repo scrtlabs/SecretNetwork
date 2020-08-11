@@ -277,19 +277,18 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             code_hash,
             msg,
         } => {
-            let result = deps
+            let answer: u32 = deps
                 .querier
-                .query::<Binary>(&QueryRequest::Wasm(WasmQuery::Smart {
-                    contract_addr: addr.clone(),
-                    callback_code_hash: code_hash.clone(),
-                    msg: Binary(msg.as_bytes().into()),
-                }));
-
-            let answer = result?;
+                .query(&QueryRequest::Wasm(WasmQuery::Smart {
+                    contract_addr: addr,
+                    callback_code_hash: code_hash,
+                    msg: Binary::from(msg.as_bytes().to_vec()),
+                }))
+                .map_err(|err| generic_err(format!("Got an error from query: {:?}", err)))?;
 
             Ok(InitResponse {
                 messages: vec![],
-                log: vec![log("c", String::from_utf8_lossy(&answer.0))],
+                log: vec![log("c", format!("{}", answer))],
             })
         }
     }

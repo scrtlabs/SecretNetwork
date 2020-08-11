@@ -1855,5 +1855,63 @@ func TestCodeHashInitCallExec(t *testing.T) {
 			"execute contract failed: Execution error: Enclave: failed to validate transaction",
 		)
 	})
+}
 
+func TestCodeHashInitCallQuery(t *testing.T) {
+	ctx, keeper, tempDir, codeID, codeHash, walletA, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	t.Run("GoodCodeHash", func(t *testing.T) {
+		addr2, events, err := initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests)
+
+		require.Empty(t, err)
+		require.Equal(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: addr2.String()},
+					{Key: "c", Value: "2"},
+				},
+			},
+			events,
+		)
+	})
+	t.Run("EmptyCodeHash", func(t *testing.T) {
+		_, _, err = initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests)
+
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"query contract failed: Execution error: Enclave: failed to validate transaction",
+		)
+	})
+	t.Run("TooBigCodeHash", func(t *testing.T) {
+		_, _, err = initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests)
+
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"Got an error from query: ParseErr { target: \"test_contract::contract::QueryMsg\", msg: \"Expected to parse either a `true`, `false`, or a `null`.\", backtrace: None }",
+		)
+	})
+	t.Run("TooSmallCodeHash", func(t *testing.T) {
+		_, _, err = initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests)
+
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"query contract failed: Execution error: Enclave: failed to validate transaction",
+		)
+	})
+	t.Run("WrongCodeHash", func(t *testing.T) {
+		_, _, err = initHelper(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests)
+
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"query contract failed: Execution error: Enclave: failed to validate transaction",
+		)
+	})
 }
