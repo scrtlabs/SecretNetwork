@@ -29,7 +29,7 @@ sudo systemctl start  secret-lcd
 ```
 
 Then, install caddy: https://caddyserver.com/docs/download#debian-ubuntu-raspbian  
-Edit `/etc/caddy/Caddyfile` to have this inside (Replace `bootstrap.int.testnet.enigma.co` with your domain name):
+Edit `/etc/caddy/Caddyfile` to have this as the whole content (Replace `bootstrap.int.testnet.enigma.co` with your domain name):
 ```
 bootstrap.int.testnet.enigma.co
 
