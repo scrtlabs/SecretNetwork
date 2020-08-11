@@ -1,7 +1,7 @@
 package types
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
 )
 
 const (
@@ -26,9 +26,11 @@ var (
 	KeyLastCodeID     = []byte("lastCodeId")
 	KeyLastInstanceID = []byte("lastContractId")
 
-	CodeKeyPrefix       = []byte{0x01}
-	ContractKeyPrefix   = []byte{0x02}
-	ContractStorePrefix = []byte{0x03}
+	CodeKeyPrefix           = []byte{0x01}
+	ContractKeyPrefix       = []byte{0x02}
+	ContractStorePrefix     = []byte{0x03}
+	ContractEnclaveIdPrefix = []byte{0x04}
+	ContractLabelPrefix     = []byte{0x05}
 )
 
 // GetCodeKey constructs the key for retreiving the ID for the WASM code
@@ -42,7 +44,17 @@ func GetContractAddressKey(addr sdk.AccAddress) []byte {
 	return append(ContractKeyPrefix, addr...)
 }
 
+// GetContractAddressKey returns the key for the WASM contract instance
+func GetContractEnclaveKey(addr sdk.AccAddress) []byte {
+	return append(ContractEnclaveIdPrefix, addr...)
+}
+
 // GetContractStorePrefixKey returns the store prefix for the WASM contract instance
 func GetContractStorePrefixKey(addr sdk.AccAddress) []byte {
 	return append(ContractStorePrefix, addr...)
+}
+
+// GetContractStorePrefixKey returns the store prefix for the WASM contract instance
+func GetContractLabelPrefix(addr string) []byte {
+	return append(ContractLabelPrefix, []byte(addr)...)
 }

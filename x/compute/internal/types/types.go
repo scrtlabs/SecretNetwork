@@ -1,17 +1,19 @@
 package types
 
 import (
-	"encoding/json"
+	"encoding/base64"
 
 	tmBytes "github.com/tendermint/tendermint/libs/bytes"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	auth "github.com/cosmos/cosmos-sdk/x/auth/exported"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
 )
 
 const defaultLRUCacheSize = uint64(0)
 const defaultQueryGasLimit = uint64(3000000)
+
+// base64 of a 64 byte key
+type ContractKey string
 
 // Model is a struct that holds a KV pair
 type Model struct {
@@ -41,17 +43,26 @@ func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, source string, builder
 
 // ContractInfo stores a WASM contract instance
 type ContractInfo struct {
-	CodeID  uint64          `json:"code_id"`
-	Creator sdk.AccAddress  `json:"creator"`
-	Label   string          `json:"label"`
-	InitMsg json.RawMessage `json:"init_msg,omitempty"`
+	CodeID  uint64         `json:"code_id"`
+	Creator sdk.AccAddress `json:"creator"`
+	Admin   sdk.AccAddress `json:"admin,omitempty"`
+	Label   string         `json:"label"`
+	InitMsg []byte         `json:"init_msg,omitempty"`
 	// never show this in query results, just use for sorting
 	// (Note: when using json tag "-" amino refused to serialize it...)
-	Created *CreatedAt `json:"created,omitempty"`
+	Created        *AbsoluteTxPosition `json:"created,omitempty"`
+	LastUpdated    *AbsoluteTxPosition `json:"last_updated,omitempty"`
+	PreviousCodeID uint64              `json:"previous_code_id,omitempty"`
 }
 
-// CreatedAt can be used to sort contracts
-type CreatedAt struct {
+func (c *ContractInfo) UpdateCodeID(ctx sdk.Context, newCodeID uint64) {
+	c.PreviousCodeID = c.CodeID
+	c.CodeID = newCodeID
+	c.LastUpdated = NewCreatedAt(ctx)
+}
+
+// AbsoluteTxPosition can be used to sort contracts
+type AbsoluteTxPosition struct {
 	// BlockHeight is the block the contract was created at
 	BlockHeight int64
 	// TxIndex is a monotonic counter within the block (actual transaction index, or gas consumed)
@@ -59,7 +70,7 @@ type CreatedAt struct {
 }
 
 // LessThan can be used to sort
-func (a *CreatedAt) LessThan(b *CreatedAt) bool {
+func (a *AbsoluteTxPosition) LessThan(b *AbsoluteTxPosition) bool {
 	if a == nil {
 		return true
 	}
@@ -70,47 +81,56 @@ func (a *CreatedAt) LessThan(b *CreatedAt) bool {
 }
 
 // NewCreatedAt gets a timestamp from the context
-func NewCreatedAt(ctx sdk.Context) *CreatedAt {
+func NewCreatedAt(ctx sdk.Context) *AbsoluteTxPosition {
 	// we must safely handle nil gas meters
 	var index uint64
 	meter := ctx.BlockGasMeter()
 	if meter != nil {
 		index = meter.GasConsumed()
 	}
-	return &CreatedAt{
+	return &AbsoluteTxPosition{
 		BlockHeight: ctx.BlockHeight(),
 		TxIndex:     index,
 	}
 }
 
 // NewContractInfo creates a new instance of a given WASM contract info
-func NewContractInfo(codeID uint64, creator sdk.AccAddress, initMsg []byte, label string, createdAt *CreatedAt) ContractInfo {
+func NewContractInfo(codeID uint64, creator, admin sdk.AccAddress, initMsg []byte, label string, createdAt *AbsoluteTxPosition) ContractInfo {
 	return ContractInfo{
 		CodeID:  codeID,
 		Creator: creator,
+		Admin:   admin,
 		InitMsg: initMsg,
 		Label:   label,
 		Created: createdAt,
 	}
 }
 
-// NewParams initializes params for a contract instance
-func NewParams(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contractAcct auth.Account) wasmTypes.Env {
-	return wasmTypes.Env{
+// NewEnv initializes the environment for a contract instance
+func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contractAddr sdk.AccAddress, contractKey []byte) wasmTypes.Env {
+	// safety checks before casting below
+	if ctx.BlockHeight() < 0 {
+		panic("Block height must never be negative")
+	}
+	if ctx.BlockTime().Unix() < 0 {
+		panic("Block (unix) time must never be negative ")
+	}
+	env := wasmTypes.Env{
 		Block: wasmTypes.BlockInfo{
-			Height:  ctx.BlockHeight(),
-			Time:    ctx.BlockTime().Unix(),
+			Height:  uint64(ctx.BlockHeight()),
+			Time:    uint64(ctx.BlockTime().Unix()),
 			ChainID: ctx.ChainID(),
 		},
 		Message: wasmTypes.MessageInfo{
-			Signer:    wasmTypes.CanonicalAddress(creator),
+			Sender:    wasmTypes.CanonicalAddress(creator),
 			SentFunds: NewWasmCoins(deposit),
 		},
 		Contract: wasmTypes.ContractInfo{
-			Address: wasmTypes.CanonicalAddress(contractAcct.GetAddress()),
-			Balance: NewWasmCoins(contractAcct.GetCoins()),
+			Address: wasmTypes.CanonicalAddress(contractAddr),
 		},
+		Key: wasmTypes.ContractKey(base64.StdEncoding.EncodeToString(contractKey)),
 	}
+	return env
 }
 
 // NewWasmCoins translates between Cosmos SDK coins and Wasm coins
@@ -161,4 +181,13 @@ func DefaultWasmConfig() WasmConfig {
 		SmartQueryGasLimit: defaultQueryGasLimit,
 		CacheSize:          defaultLRUCacheSize,
 	}
+}
+
+type SecretMsg struct {
+	CodeHash []byte
+	Msg      []byte
+}
+
+func (m SecretMsg) Serialize() []byte {
+	return append(m.CodeHash, m.Msg...)
 }

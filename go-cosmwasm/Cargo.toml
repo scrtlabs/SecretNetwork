@@ -1,36 +1,45 @@
 [package]
 name = "go-cosmwasm"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2018"
 description = "Go bindings for cosmwasm contracts"
-repository = "https://github.com/confio/go-cosmwasm"
+repository = "https://github.com/CosmWasm/go-cosmwasm"
 license = "Apache-2.0"
 readme = "README.md"
 exclude = [".circleci/*", ".gitignore"]
 
 [lib]
+#crate-type = ["staticlib"]
 crate-type = ["cdylib"]
+
+[[example]]
+name = "muslc"
+path = "src/lib.rs"
+crate-type = ["staticlib"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [badges]
-circle-ci = { repository = "confio/go-cosmwasm", branch = "master" }
+circle-ci = { repository = "CosmWasm/go-cosmwasm", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [features]
-default = ["singlepass", "backtraces"]
+default = ["backtraces"]
 backtraces = ["snafu/backtraces"]
-singlepass = ["cosmwasm-vm/default-singlepass"]
-cranelift = ["cosmwasm-vm/default-cranelift"]
 
 [dependencies]
-cosmwasm = "0.7.0"
-cosmwasm-vm = "0.7.0"
+cosmwasm-std = { path = "../cosmwasm/packages/std", features = ["iterator"] }
+cosmwasm-sgx-vm = { path = "../cosmwasm/packages/sgx-vm", features = ["iterator"] }
 errno = "0.2"
-snafu = { version = "0.5.0", default-features = false, features = ["rust_1_30"] }
+snafu = "0.6.3"
+serde_json = "1.0"
+ctor = "0.1.13"
+simple_logger = "1.6.0"
+log = "0.4.8"
 
 [build-dependencies]
-cbindgen = { version = "0.9.1" }
+cbindgen = { version = "0.14" }
+sgx_edl = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "v1.1.2" }
 
 [profile.release]
 opt-level = 3

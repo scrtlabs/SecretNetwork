@@ -12,7 +12,7 @@ You can read more about the process, and other comparisons to Solidity, in the  
 
 ### 1. Download the prebuilt contract 
 
-`https://github.com/enigmampc/SecretNetwork/releases/download/v0.5.0-rc1/contract.wasm.gz`
+`https://github.com/enigmampc/SecretNetwork/releases/download/v0.7.0/contract.wasm.gz`
 
 This contract is a copy of the contract used to create the SSCRT privacy coin, so now you'll be creating your own privacy coin!
 
@@ -70,7 +70,7 @@ Example parameters:
 Now, to initialize the contract we will use the following command (replace the parameters with values of your choosing): 
 
 ```
-secretcli tx compute instantiate <code_id> --label <choose-an-alias> '{"name": "<coin_name>", "symbol": "<coin_symbol>", "decimals": <num_of_decimals>, "initial_balances": []}' --from a
+secretcli tx compute instantiate <code_id> --label <choose-an-alias> '{"name": "<coin_name>", "symbol": "<coin_symbol>", "decimals": <num_of_decimals>, "initial_balances": []}' --from <key-alias>
 ```
 
 Be careful not to forget the quotes at the begining and end of the initialization parameters!
