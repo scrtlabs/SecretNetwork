@@ -114,7 +114,7 @@ This means the the inputs for txs on this contract would look like:
 
 These^ inputs are encrypted, but by looking at their size an attacker can guess which function has been called by the user.
 
-A quick fix for this issue can be renamig `Transfer` to `Tsfr`:
+A quick fix for this issue might be renamig `Transfer` to `Tsfr`:
 
 ```rust
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
