@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -21,6 +22,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const flagReset = "reset"
+
 func InitAttestation(
 	_ *server.Context, _ *codec.Codec) *cobra.Command {
 
@@ -33,18 +36,42 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 `,
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			_, err := api.KeyGen()
-			if err != nil {
-				return fmt.Errorf("failed to initialize enclave: %w", err)
+
+			sgxSecretsPath := os.Getenv("SCRT_SGX_STORAGE")
+			if sgxSecretsPath == "" {
+				sgxSecretsPath = "./sgx_secrets"
 			}
 
-			_, err = api.CreateAttestationReport()
+			sgxSecretsPath += string(os.PathSeparator) + reg.EnclaveRegistrationKey
+
+			resetFlag := viper.GetBool(flagReset)
+
+			if !resetFlag {
+				if _, err := os.Stat(sgxSecretsPath); os.IsNotExist(err) {
+					fmt.Println("Creating new enclave registration key")
+					_, err := api.KeyGen()
+					if err != nil {
+						return fmt.Errorf("failed to initialize enclave: %w", err)
+					}
+				} else {
+					fmt.Println("Enclave key already exists. If you wish to overwrite and reset the node, use the --reset flag")
+				}
+			} else {
+				fmt.Println("Reset enclave flag set, generating new enclave registration key. You must now re-register the node")
+				_, err := api.KeyGen()
+				if err != nil {
+					return fmt.Errorf("failed to initialize enclave: %w", err)
+				}
+			}
+
+			_, err := api.CreateAttestationReport()
 			if err != nil {
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}
 			return nil
 		},
 	}
+	cmd.Flags().Bool(flagReset, false, "Optional flag to regenerate the enclave registration key")
 
 	return cmd
 }
