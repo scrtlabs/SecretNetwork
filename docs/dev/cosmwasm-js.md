@@ -1,6 +1,6 @@
 # CosmWasm JS
 
-Throughout the [Secret Network Contract Dev Guide](/dev/contract-dev-guide.md) we interacted with the blockchain using enigmacli, we can also run a rest server and expose the api to any rest client.
+Throughout the [Secret Network Contract Dev Guide](../archive/contract-dev-guide.md) we interacted with the blockchain using enigmacli, we can also run a rest server and expose the api to any rest client.
 
 In this guide we'll use [CosmWasm JS](https://github.com/CosmWasm/cosmwasm-js), `an SDK for building client-side applications that connect to Cosmos SDK based blockchains with CosmWasm enabled`
 
@@ -145,4 +145,4 @@ smartQuery(client, contractAddress, { get_count: {} })
 
 # What's next?
 
-[Frontend development](/dev/frontend.md)
+[Frontend development](frontend.md)

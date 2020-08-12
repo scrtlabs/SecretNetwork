@@ -1,4 +1,4 @@
-![Secret Network](/header.png)
+![Secret Network](.vuepress/public/header.png)
 
 <p align="center">
 Secret Network secures the decentralized web

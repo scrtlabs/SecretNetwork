@@ -13,6 +13,7 @@ The proxy also comes in handy for a faucet, to automatically fund users' account
 Previously we loaded the mnemonic from file, this time the "burner wallet" is kept in the browser's local storage.
 
 [Source](https://github.com/CosmWasm/name-app/blob/a0e2dd78625584f929fdedf964256931a3474616/src/service/sdk.ts#L18)
+
 ```ts
 // generateMnemonic will give you a fresh mnemonic
 // it is up to the app to store this somewhere
@@ -36,7 +37,8 @@ export async function burnerWallet(): Promise<Wallet> {
   const pen = await Secp256k1Pen.fromMnemonic(mnemonic);
   const pubkey = encodeSecp256k1Pubkey(pen.pubkey);
   const address = pubkeyToAddress(pubkey, "secret");
-  const signer = (signBytes: Uint8Array): Promise<StdSignature> => pen.sign(signBytes);
+  const signer = (signBytes: Uint8Array): Promise<StdSignature> =>
+    pen.sign(signBytes);
   return { address, signer };
 }
 ```
@@ -44,7 +46,6 @@ export async function burnerWallet(): Promise<Wallet> {
 [Source](https://github.com/CosmWasm/name-app/blob/a0e2dd78625584f929fdedf964256931a3474616/src/service/wallet.tsx#L39)
 
 ```tsx
-
 export function BurnerWalletProvider(props: WalletProviderProps): JSX.Element {
   return (
     <SdkProvider config={props.config} loadWallet={burnerWallet}>
@@ -59,9 +60,16 @@ export function BurnerWalletProvider(props: WalletProviderProps): JSX.Element {
 Reading contract state is free so if our user only needs to know the current count, we can connect using the CosmWasmClient, and not need a wallet. We want to increment the counter, so we need the SigningCosmWasmClient, note that fees are in uscrt.
 
 ```ts
-export async function connect(httpUrl: string, { address, signer }: Wallet): Promise<ConnectResult> {
-  const client = new SigningCosmWasmClient(httpUrl, address, signer,
-    buildFeeTable("uscrt", 1));
+export async function connect(
+  httpUrl: string,
+  { address, signer }: Wallet
+): Promise<ConnectResult> {
+  const client = new SigningCosmWasmClient(
+    httpUrl,
+    address,
+    signer,
+    buildFeeTable("uscrt", 1)
+  );
   return { address, client };
 }
 ```
@@ -102,22 +110,21 @@ In the browser's network tab we can see this play out, the account is queried bu
 With this connection in hand we can now focus on the [contract logic](https://github.com/CosmWasm/name-app/blob/master/src/components/ContractLogic/index.tsx), starting with a list of all the instances of the Counter contract.
 
 ```ts
-  // get the contracts
-  React.useEffect(() => {
-    getClient()
-      .getContracts(defaultCodeId)
-      .then(contracts => setContracts(contracts))
-      .catch(setError);
-  }, [getClient, setError]);
+// get the contracts
+React.useEffect(() => {
+  getClient()
+    .getContracts(defaultCodeId)
+    .then((contracts) => setContracts(contracts))
+    .catch(setError);
+}, [getClient, setError]);
 
-  return (
-    <List>
-      {contracts.map(props => (
-        <ContractItem {...props} key={props.address} />
-      ))}
-    </List>
-  );
-
+return (
+  <List>
+    {contracts.map((props) => (
+      <ContractItem {...props} key={props.address} />
+    ))}
+  </List>
+);
 ```
 
 ![](images/contract-items.png)
@@ -138,22 +145,21 @@ Selecting an instance [queries it's current count](https://github.com/levackt/de
 
 ```ts
 // increment maps to our contract's HandleMsg Increment
-    await getClient().execute(
-        props.contractAddress,
-        {
-            increment: { } },
-        );
-    setState({ loading: false });
+await getClient().execute(props.contractAddress, {
+  increment: {},
+});
+setState({ loading: false });
 
-    // refresh the account balance
-    refreshAccount();
+// refresh the account balance
+refreshAccount();
 
-    // query the counter and update the state
-    await getClient().queryContractSmart(contractAddress, { get_count: { } })
-    .then(res => {
-        const o = parseQueryJson<QueryResponse>(res);
-        setState({ count: o.count, loading: false });
-    })
+// query the counter and update the state
+await getClient()
+  .queryContractSmart(contractAddress, { get_count: {} })
+  .then((res) => {
+    const o = parseQueryJson<QueryResponse>(res);
+    setState({ count: o.count, loading: false });
+  });
 ```
 
 The Counter contract also handles reset messages, which accept a new count value, which we may implement as follows.
@@ -166,7 +172,6 @@ export const ResetValidationSchema = Yup.object().shape({
     .min(0, "Count invalid")
     .required("Count is required"),
 });
-
 ```
 
 We can then [Create a Form](https://github.com/levackt/devx2/blob/master/client/src/components/ContractLogic/ResetForm.tsx) using Formik for example, which keeps track of values/errors/visited fields, orchestrating validation, and handling submission.
@@ -198,8 +203,9 @@ We can then [Create a Form](https://github.com/levackt/devx2/blob/master/client/
 ```
 
 Add the ResetForm to [the Counter component](https://github.com/levackt/devx2/blob/cb9b9206a77f9deed4f16f7b4d5a614cb38c392d/client/src/components/ContractLogic/Counter.tsx#L114)
+
 ```html
-    <ResetForm handleReset={reset} loading={state.loading} />
+<ResetForm handleReset="{reset}" loading="{state.loading}" />
 ```
 
 ![](images/reset.png)
@@ -207,30 +213,27 @@ Add the ResetForm to [the Counter component](https://github.com/levackt/devx2/bl
 All that's left is to [execute the reset](https://github.com/levackt/devx2/blob/cb9b9206a77f9deed4f16f7b4d5a614cb38c392d/client/src/components/ContractLogic/Counter.tsx#L85) when the user submits.
 
 ```ts
-
-  const reset = async (values: FormValues): Promise<void> => {
-    const newCount = values[COUNT_FIELD];
-    setState({ loading: true });
-    try {
-      await getClient().execute(
-        props.contractAddress,
-        { reset: { count: parseInt(newCount) } }
-      );
-      setState({ count: newCount, loading: false });
-    } catch (err) {
-      setState({ loading: false });
-      setError(err);
-    }
-    try {
-      refreshAccount();
-    } catch(err) {
-      setError("Failed to reset account");
-    }
-  };
-
+const reset = async (values: FormValues): Promise<void> => {
+  const newCount = values[COUNT_FIELD];
+  setState({ loading: true });
+  try {
+    await getClient().execute(props.contractAddress, {
+      reset: { count: parseInt(newCount) },
+    });
+    setState({ count: newCount, loading: false });
+  } catch (err) {
+    setState({ loading: false });
+    setError(err);
+  }
+  try {
+    refreshAccount();
+  } catch (err) {
+    setError("Failed to reset account");
+  }
+};
 ```
 
-Because we're using the burner wallet, the user won't be authorized to reset, the contract ensures [only the contract owner](https://github.com/levackt/devx2/blob/cb9b9206a77f9deed4f16f7b4d5a614cb38c392d/src/contract.rs#L52) can execute that. 
+Because we're using the burner wallet, the user won't be authorized to reset, the contract ensures [only the contract owner](https://github.com/levackt/devx2/blob/cb9b9206a77f9deed4f16f7b4d5a614cb38c392d/src/contract.rs#L52) can execute that.
 
 We could query the contract owner and only show the ResetForm if the current account is the contract owner.
 
@@ -242,6 +245,6 @@ We could query the contract owner and only show the ResetForm if the current acc
 
 ![](images/unauthorized.png)
 
-
 # Resources
+
 [Full Stack CosmWasm](https://medium.com/confio/full-stack-cosmwasm-12fb3ae5cd5a)

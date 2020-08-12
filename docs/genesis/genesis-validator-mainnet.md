@@ -17,7 +17,7 @@ This document details how to join the EnigmaChain `mainnet` as a validator.
 wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.0.3/enigma-blockchain_0.0.3_amd64.deb
 ```
 
-([How to verify releases](/docs/verify-releases.md))
+([How to verify releases](../verify-releases.md))
 
 ### 2. Install the package:
 
