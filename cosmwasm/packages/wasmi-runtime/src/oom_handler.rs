@@ -52,7 +52,7 @@ pub fn register_oom_handler() {
 
     get_then_clear_oom_happened();
 
-    std::alloc::set_alloc_error_hook(|layout| {
+    std::alloc::set_alloc_error_hook(|_| {
         OOM_HAPPANED.store(true, Ordering::SeqCst);
         {
             SAFETY_BUFFER.lock().unwrap().clear();
