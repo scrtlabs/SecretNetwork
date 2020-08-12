@@ -1580,7 +1580,7 @@ func TestGasIsChargedForExecExternalQuery(t *testing.T) {
 	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	_, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_depth_counter":{"to":"%s","depth":3,"code_hash":"%s"}}`, addr.String(), codeHash), true, defaultGasForTests, 0, 4)
+	_, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_external_query_depth_counter":{"to":"%s","depth":2,"code_hash":"%s"}}`, addr.String(), codeHash), true, defaultGasForTests, 0, 3)
 	require.Empty(t, err)
 }
 
@@ -1591,7 +1591,7 @@ func TestGasIsChargedForInitExternalQuery(t *testing.T) {
 	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"send_external_query_depth_counter":{"to":"%s","depth":3,"code_hash":"%s"}}`, addr.String(), codeHash), true, defaultGasForTests, 4)
+	_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, fmt.Sprintf(`{"send_external_query_depth_counter":{"to":"%s","depth":2,"code_hash":"%s"}}`, addr.String(), codeHash), true, defaultGasForTests, 3)
 	require.Empty(t, err)
 }
 
@@ -1602,7 +1602,7 @@ func TestGasIsChargedForQueryExternalQuery(t *testing.T) {
 	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	_, err := queryHelperImpl(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_depth_counter":{"to":"%s","depth":3,"code_hash":"%s"}}`, addr.String(), codeHash), true, defaultGasForTests, 4)
+	_, err := queryHelperImpl(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_depth_counter":{"to":"%s","depth":2,"code_hash":"%s"}}`, addr.String(), codeHash), true, defaultGasForTests, 3)
 	require.Empty(t, err)
 }
 
