@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"github.com/enigmampc/cosmos-sdk/x/staking"
 	"path/filepath"
 
 	"github.com/tendermint/tendermint/crypto"
@@ -11,15 +12,13 @@ import (
 	wasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
 	wasmApi "github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"github.com/enigmampc/cosmos-sdk/codec"
 	"github.com/enigmampc/cosmos-sdk/store/prefix"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
 	"github.com/enigmampc/cosmos-sdk/x/auth"
 	"github.com/enigmampc/cosmos-sdk/x/bank"
-	"github.com/enigmampc/cosmos-sdk/x/staking"
-
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 // GasMultiplier is how many cosmwasm gas points = 1 sdk gas point
@@ -48,7 +47,7 @@ type Keeper struct {
 // NewKeeper creates a new contract Keeper instance
 // If customEncoders is non-nil, we can use this to override some of the message handler, especially custom
 func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.AccountKeeper, bankKeeper bank.Keeper,
-	stakingKeeper staking.Keeper,
+	stakingKeeper *staking.Keeper,
 	router sdk.Router, homeDir string, wasmConfig types.WasmConfig, supportedFeatures string, customEncoders *MessageEncoders, customPlugins *QueryPlugins) Keeper {
 	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize)
 	if err != nil {

@@ -2,7 +2,7 @@ package keeper
 
 import (
 	"encoding/json"
-
+	"fmt"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
@@ -46,7 +46,7 @@ type QueryPlugins struct {
 	Wasm    func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
 }
 
-func DefaultQueryPlugins(bank bank.ViewKeeper, staking staking.Keeper, wasm *Keeper) QueryPlugins {
+func DefaultQueryPlugins(bank bank.ViewKeeper, staking *staking.Keeper, wasm *Keeper) QueryPlugins {
 	return QueryPlugins{
 		Bank:    BankQuerier(bank),
 		Custom:  NoCustomQuerier,
@@ -111,7 +111,7 @@ func NoCustomQuerier(ctx sdk.Context, request json.RawMessage) ([]byte, error) {
 	return nil, wasmTypes.UnsupportedRequest{"custom"}
 }
 
-func StakingQuerier(keeper staking.Keeper) func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error) {
+func StakingQuerier(keeper *staking.Keeper) func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error) {
 	return func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error) {
 		if request.BondedDenom != nil {
 			denom := keeper.BondDenom(ctx)
@@ -121,6 +121,8 @@ func StakingQuerier(keeper staking.Keeper) func(ctx sdk.Context, request *wasmTy
 			return json.Marshal(res)
 		}
 		if request.Validators != nil {
+			fmt.Println("HELLO GUYS WE ARE HERE")
+			// fmt.Println(keeper.GetParams(ctx))
 			validators := keeper.GetBondedValidatorsByPower(ctx)
 			//validators := keeper.GetAllValidators(ctx)
 			wasmVals := make([]wasmTypes.Validator, len(validators))
@@ -176,7 +178,7 @@ func StakingQuerier(keeper staking.Keeper) func(ctx sdk.Context, request *wasmTy
 	}
 }
 
-func sdkToDelegations(ctx sdk.Context, keeper staking.Keeper, delegations []staking.Delegation) (wasmTypes.Delegations, error) {
+func sdkToDelegations(ctx sdk.Context, keeper *staking.Keeper, delegations []staking.Delegation) (wasmTypes.Delegations, error) {
 	result := make([]wasmTypes.Delegation, len(delegations))
 	bondDenom := keeper.BondDenom(ctx)
 
@@ -203,7 +205,7 @@ func sdkToDelegations(ctx sdk.Context, keeper staking.Keeper, delegations []stak
 	return result, nil
 }
 
-func sdkToFullDelegation(ctx sdk.Context, keeper staking.Keeper, delegation staking.Delegation) (*wasmTypes.FullDelegation, error) {
+func sdkToFullDelegation(ctx sdk.Context, keeper *staking.Keeper, delegation staking.Delegation) (*wasmTypes.FullDelegation, error) {
 	val, found := keeper.GetValidator(ctx, delegation.ValidatorAddress)
 	if !found {
 		return nil, sdkerrors.Wrap(staking.ErrNoValidatorFound, "can't load validator for delegation")
