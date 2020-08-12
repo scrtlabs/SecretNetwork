@@ -37,7 +37,7 @@
 ## Query
 
 - Read-only access to state
-- Metered by gas, but does not incure fees
+- Metered by gas, but does not incurs fees
 - Can be used to implement getters and decide what each user can see
 - No msg.sender
 - Access control: use passwords instead of checking for msg.sender
@@ -84,9 +84,9 @@
 
 ## De-anonymization attack by patterns of Contract usage
 
-Depending on the contract's implementation, an attacker might be able to de-anonymization information about the contract and its clients. Contract developers need to consider all of the following scenarios and more, and implement mitigation in case that some of these attack vectors can worsen the privacy aspect of their app.
+Depending on the contract's implementation, an attacker might be able to de-anonymization information about the contract and its clients. Contract developers need to consider all the following scenarios and more, and implement mitigation in case that some of these attack vectors can worsen the privacy aspect of their app.
 
-In all of the following scenarios, assume that an attacker has a local full node in its control. They cannot break into SGX, but they can thightly motinor and debug every other aspect of the node, including trying to feed old transactions directly to the contract inside SGX (replay). Also, though it's encrypted, they can also monitor memory (size), CPU (load) and disk usage (read/write timings and sizes) of the SGX chip.
+In all the following scenarios, assume that an attacker has a local full node in its control. They cannot break into SGX, but they can tightly monitor and debug every other aspect of the node, including trying to feed old transactions directly to the contract inside SGX (replay). Also, though it's encrypted, they can also monitor memory (size), CPU (load) and disk usage (read/write timings and sizes) of the SGX chip.
 
 For encryption, the Secret Network is using (AES-SIV)[https://tools.ietf.org/html/rfc5297], which does not pad the ciphertext. This means it leaks information about the plaintext data, specifically what is its size, though in most aspects it's more secure than other padded encryption schemes. Read more about the encryption specs [in here](protocol/encryption-specs.md).
 
@@ -107,14 +107,14 @@ pub enum HandleMsg {
 }
 ```
 
-This means the the inputs for txs on this contract would look like:
+This means that the inputs for txs on this contract would look like:
 
 1. `{"send":{"amount":123}}`
 2. `{"transfer":{"amount":123}}`
 
-These^ inputs are encrypted, but by looking at their size an attacker can guess which function has been called by the user.
+These inputs are encrypted, but by looking at their size an attacker can guess which function has been called by the user.
 
-A quick fix for this issue might be renamig `Transfer` to `Tsfr`:
+A quick fix for this issue might be renaming `Transfer` to `Tsfr`:
 
 ```rust
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -134,23 +134,23 @@ Now an attacker wouldn't be able to tell which function was called:
 1. `{"send":{"amount":123}}`
 2. `{"tsfr":{"amount":123}}`
 
-Altough, if the attacker would know for example that `send.amount` is likely smaller than `100` and `tsfr.amount` is likley bigger than `100`, then they could still guess with some probability which function was called:
+Although, if the attacker would know for example that `send.amount` is likely smaller than `100` and `tsfr.amount` is likely bigger than `100`, then they could still guess with some probability which function was called:
 
 1. `{"send":{"amount":55}}`
 2. `{"tsfr":{"amount":123}}`
 
-Note that a client side solution can also be appled, but this is considered a very bad practice in infosec, as you cannot guarantee control of the client. E.g. you could pad the input to the maximum possible in this contract before encrypting it on the client side:
+Note that a client side solution can also be applied, but this is considered a very bad practice in infosec, as you cannot guarantee control of the client. E.g. you could pad the input to the maximum possible in this contract before encrypting it on the client side:
 
 1. `{"send":{ "amount" : 55 } }`
 2. `{"transfer":{"amount":123}}`
 
-Again, this is very not recomended as you cannot guarantee control of the client!
+Again, this is very not recommended as you cannot guarantee control of the client!
 
 ### State key sizes
 
 Contracts' state is stored on-chain inside a key-value store, thus the `key` must remain constant between calls. This means that if a contract uses storage keys with different sizes, an attacker might find out information about the execution of a contract.
 
-Lets see an example for a contract with 2 `handle` functions:
+Let's see an example for a contract with 2 `handle` functions:
 
 ```rust
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -185,7 +185,7 @@ By looking at state write operation, an attacker can guess which function was ca
 
 Again, some quick fixes for this issue might be:
 
-1. Renamig `transfer` to `tsfr`.
+1. Renaming `transfer` to `tsfr`.
 2. Padding `send` to have the same length as `transfer`: `sendsend`.
 
 ```rust
