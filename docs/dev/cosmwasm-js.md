@@ -1,10 +1,11 @@
 # CosmWasm JS
 
-Throughout the [Secret Network Contract Dev Guide](/dev/contract-dev-guide.md) we interacted with the blockchain using enigmacli, we can also run a rest server and expose the api to any rest client. 
+Throughout the [Secret Network Contract Dev Guide](/dev/contract-dev-guide.md) we interacted with the blockchain using enigmacli, we can also run a rest server and expose the api to any rest client.
 
 In this guide we'll use [CosmWasm JS](https://github.com/CosmWasm/cosmwasm-js), `an SDK for building client-side applications that connect to Cosmos SDK based blockchains with CosmWasm enabled`
 
 # Resources
+
 - [cosmwasmclient-part-1](https://medium.com/confio/cosmwasmclient-part-1-reading-e0313472a158)
 - [cosmwasmclient-part-2](https://medium.com/confio/cosmwasmclient-part-2-writing-dfb608f1a7f9)
 - [Introduction to CosmWasm JS](https://medium.com/confio/introduction-to-cosmwasm-js-548f58d9f6af)
@@ -20,9 +21,11 @@ docker run -it --rm \
 ```
 
 ## Start the rest server
+
 This allows API access to the Secret Network
 
 **NOTE**: In a new terminal
+
 ```bash
 docker exec enigmadev \
   enigmacli rest-server \
@@ -31,7 +34,8 @@ docker exec enigmadev \
   --laddr tcp://0.0.0.0:1317
 ```
 
-## Install CosmWasm CLI 
+## Install CosmWasm CLI
+
 [Also see installation guide](https://github.com/CosmWasm/cosmwasm-js/tree/master/packages/cli#installation-and-first-run)
 
 Installing the CLI / REPL (read–eval–print loop) is optional, but does provide a handy playground for development. The script below can be executed from any Node.js script, web app or browser extension.
@@ -49,28 +53,28 @@ npx @cosmwasm/cli
 ```ts
 // connect to rest server
 // For reading, CosmWasmClient will suffice, we don't need to sign any transactions
-const client = new CosmWasmClient("http://localhost:1317")
+const client = new CosmWasmClient("http://localhost:1317");
 
 // query chain ID
-await client.getChainId()
+await client.getChainId();
 
 // query chain height
-await client.getHeight()
+await client.getHeight();
 
 // Get deployed code
-await client.getCodes()
+await client.getCodes();
 
 // Get the contracts for our simple counter
-const contracts = await client.getContracts(1)
+const contracts = await client.getContracts(1);
 
-const contractAddress = contracts[0].address
+const contractAddress = contracts[0].address;
 
 // Query the current count
-let count = await client.queryContractSmart(contractAddress, { "get_count": {}})
+let count = await client.queryContractSmart(contractAddress, { get_count: {} });
 
 // Note the result is JSON, so we have to parse it
 
-JSON.parse(fromUtf8(count))
+JSON.parse(fromUtf8(count));
 ```
 
 ## CosmWasmClient Part 2: Writing
@@ -136,6 +140,7 @@ client.execute(contractAddress, handleMsg);
 smartQuery(client, contractAddress, { get_count: {} })
 
 ```
+
 ![](cosmwasm-cli.png)
 
 # What's next?
