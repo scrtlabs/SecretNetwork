@@ -2,22 +2,30 @@ use core::sync::atomic::{AtomicBool, Ordering};
 use lazy_static::lazy_static;
 use std::sync::SgxMutex;
 
+/// SafetyBuffer is meant to occupy space on the heap, so when a memory
+/// allocation fails we will free this buffer to allow safe panic unwinding
+/// This is needed because while unwinding from panic some destructors try
+/// to allocate more memory which causes a double fault. This way we can
+/// make sure the unwind process has enough free memory to work properly.
 pub struct SafetyBuffer {
     size: usize,
     buffer: Vec<u8>,
 }
 
 impl SafetyBuffer {
+    /// Allocate `size` bytes on the heap
     pub fn new(size: usize) -> Self {
         let mut buffer: Vec<u8> = vec![0; size];
         buffer[size - 1] = 1;
         SafetyBuffer { size, buffer }
     }
 
+    /// Free the buffer to allow panic to safely unwind
     pub fn clear(&mut self) {
         self.buffer = vec![];
     }
 
+    // Reallocate the buffer, use this after a successful unwind
     pub fn restore(&mut self) {
         if self.buffer.capacity() < self.size {
             self.buffer = vec![0; self.size];
@@ -27,7 +35,9 @@ impl SafetyBuffer {
 }
 
 lazy_static! {
-    pub static ref SAFETY_BUFFER: SgxMutex<SafetyBuffer> = SgxMutex::new(SafetyBuffer::new(2 * 1024 * 1204 /* 1 MiB */));
+    /// SAFETY_BUFFER is a 2 MiB of SafetyBuffer. We should consider occupying 51% of available memory
+    /// to be extra sure this is enough.
+    pub static ref SAFETY_BUFFER: SgxMutex<SafetyBuffer> = SgxMutex::new(SafetyBuffer::new(2 * 1024 * 1204));
 }
 
 static OOM_HAPPANED: AtomicBool = AtomicBool::new(false);
