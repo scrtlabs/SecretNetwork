@@ -16,7 +16,7 @@
   - [Outputs](#outputs)
     - [Encrypted](#encrypted-2)
     - [Not encrypted](#not-encrypted-2)
-  - [De-anonymization attack by patterns of Contract usage](#de-anonymization-attack-by-patterns-of-contract-usage)
+  - [Data leakage attacks by detecting patterns in contract usage](#data-leakage-attacks-by-detecting-patterns-in-contract-usage)
     - [The input size](#the-input-size)
     - [State key sizes](#state-key-sizes)
     - [State read value size](#state-read-value-size)
@@ -82,7 +82,7 @@
 
 ### Not encrypted
 
-## De-anonymization attack by patterns of Contract usage
+## Data leakage attacks by detecting patterns in contract usage
 
 Depending on the contract's implementation, an attacker might be able to de-anonymization information about the contract and its clients. Contract developers need to consider all the following scenarios and more, and implement mitigation in case that some of these attack vectors can worsen the privacy aspect of their app.
 
