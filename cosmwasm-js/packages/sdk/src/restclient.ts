@@ -286,7 +286,7 @@ export class RestClient {
   private readonly broadcastMode: BroadcastMode;
   public readonly enigmautils: EnigmaUtils;
 
-  private codeHashCache: any;
+  private codeHashCache: Map<any, string>;
 
   /**
    * Creates a new client to interact with a Cosmos SDK light client daemon.
@@ -309,7 +309,7 @@ export class RestClient {
     });
     this.broadcastMode = broadcastMode;
     this.enigmautils = new EnigmaUtils(apiUrl, seed);
-    this.codeHashCache = {};
+    this.codeHashCache = new Map<any, string>();
   }
 
   public async get(path: string): Promise<RestClientResponse> {
@@ -442,7 +442,7 @@ export class RestClient {
   }
 
   public async getCodeHashByCodeId(id: number): Promise<string> {
-    const codeHashFromCache = this.codeHashCache[id];
+    const codeHashFromCache = this.codeHashCache.get(id);
     if (typeof codeHashFromCache === "string") {
       return codeHashFromCache;
     }
@@ -450,12 +450,12 @@ export class RestClient {
     const path = `/wasm/code/${id}/hash`;
     const responseData = (await this.get(path)) as ContractHashResponse;
 
-    this.codeHashCache[id] = responseData.result;
+    this.codeHashCache.set(id, responseData.result);
     return responseData.result;
   }
 
   public async getCodeHashByContractAddr(addr: string): Promise<string> {
-    const codeHashFromCache = this.codeHashCache[addr];
+    const codeHashFromCache = this.codeHashCache.get(addr);
     if (typeof codeHashFromCache === "string") {
       return codeHashFromCache;
     }
@@ -463,7 +463,7 @@ export class RestClient {
     const path = `/wasm/contract/${addr}/code-hash`;
     const responseData = (await this.get(path)) as ContractHashResponse;
 
-    this.codeHashCache[addr] = responseData.result;
+    this.codeHashCache.set(addr, responseData.result);
     return responseData.result;
   }
 

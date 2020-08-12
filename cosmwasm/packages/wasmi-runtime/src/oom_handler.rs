@@ -7,7 +7,7 @@ use std::sync::SgxMutex;
 /// This is needed because while unwinding from panic some destructors try
 /// to allocate more memory which causes a double fault. This way we can
 /// make sure the unwind process has enough free memory to work properly.
-pub struct SafetyBuffer {
+struct SafetyBuffer {
     size: usize,
     buffer: Vec<u8>,
 }
@@ -37,7 +37,7 @@ impl SafetyBuffer {
 lazy_static! {
     /// SAFETY_BUFFER is a 2 MiB of SafetyBuffer. We should consider occupying 51% of available memory
     /// to be extra sure this is enough.
-    pub static ref SAFETY_BUFFER: SgxMutex<SafetyBuffer> = SgxMutex::new(SafetyBuffer::new(2 * 1024 * 1204));
+    static ref SAFETY_BUFFER: SgxMutex<SafetyBuffer> = SgxMutex::new(SafetyBuffer::new(2 * 1024 * 1204));
 }
 
 static OOM_HAPPANED: AtomicBool = AtomicBool::new(false);
