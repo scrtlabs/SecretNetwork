@@ -198,6 +198,8 @@ export class SigningCosmWasmClient extends CosmWasmClient {
         code_id: codeId.toString(),
         label: label,
         // eslint-disable-next-line @typescript-eslint/camelcase
+        callback_code_hash: "",
+        // eslint-disable-next-line @typescript-eslint/camelcase
         init_msg: Encoding.toBase64(await this.restClient.enigmautils.encrypt(contractCodeHash, initMsg)),
         // eslint-disable-next-line @typescript-eslint/camelcase
         init_funds: transferAmount || [],

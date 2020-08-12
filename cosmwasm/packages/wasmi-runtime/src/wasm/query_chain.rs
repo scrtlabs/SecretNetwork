@@ -230,11 +230,16 @@ fn encrypt_query_request(
     let mut is_encrypted = false;
 
     // encrypt message
-    if let QueryRequest::Wasm(WasmQuery::Smart { msg, callback_code_hash, .. }) = query_struct {
+    if let QueryRequest::Wasm(WasmQuery::Smart {
+        msg,
+        callback_code_hash,
+        ..
+    }) = query_struct
+    {
         is_encrypted = true;
 
-        let mut hash_appended_msg = callback_code_hash.clone().as_bytes().to_vec();
-        hash_appended_msg.extend_from_slice(&msg.0.clone());
+        let mut hash_appended_msg = callback_code_hash.clone().into_bytes();
+        hash_appended_msg.extend_from_slice(&msg.0);
 
         let mut encrypted_msg = SecretMessage {
             msg: hash_appended_msg,

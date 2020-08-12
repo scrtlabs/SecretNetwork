@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"encoding/json"
-	"fmt"
 
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
@@ -221,10 +220,10 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *wasmTypes.WasmMsg) ([]sdk.Msg, er
 			Sender: sender,
 			Code:   msg.Instantiate.CodeID,
 			// TODO: add this to CosmWasm
-			Label:     fmt.Sprintf("Auto-created by %s", sender),
-			CallbackCodeHash:  msg.Instantiate.CallbackCodeHash,
-			InitMsg:   msg.Instantiate.Msg,
-			InitFunds: coins,
+			Label:            msg.Instantiate.Label,
+			CallbackCodeHash: msg.Instantiate.CallbackCodeHash,
+			InitMsg:          msg.Instantiate.Msg,
+			InitFunds:        coins,
 		}
 		return []sdk.Msg{sdkMsg}, nil
 	}
