@@ -318,13 +318,13 @@ fn start_engine(
     let contract_module = pwasm_utils::inject_gas_counter(p_modlue, &gas_rules(&wasm_costs))
         .map_err(|_| EnclaveError::FailedGasMeteringInjection)?;
 
-    trace!("Trying to create Wasmi module from parity..");
+    trace!("Trying to create Wasmi module from parity...");
 
     // Create a wasmi module from the parity module
     let module = wasmi::Module::from_parity_wasm_module(contract_module)
         .map_err(|_err| EnclaveError::InvalidWasm)?;
 
-    trace!("Created Wasmi module from parity. Now checking for floating points..");
+    trace!("Created Wasmi module from parity. Now checking for floating points...");
 
     module
         .deny_floating_point()

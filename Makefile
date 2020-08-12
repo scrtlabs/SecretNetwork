@@ -283,8 +283,7 @@ go-tests-hw: build-test-contract
 enclave-tests:
 	$(MAKE) -C cosmwasm/packages/enclave-test run
 
-
-build-cosmwasm-test-contracts:
+build-all-test-contracts: build-test-contract
 	# echo "" | sudo add-apt-repository ppa:hnakamur/binaryen
 	# sudo apt update
 	# sudo apt install -y binaryen

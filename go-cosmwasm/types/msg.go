@@ -113,6 +113,8 @@ type InstantiateMsg struct {
 	// Msg is assumed to be a json-encoded message, which will be passed directly
 	// as `userMsg` when calling `Handle` on the above-defined contract
 	Msg []byte `json:"msg"`
+	/// Label is a mandatory human-readbale label for the contract
+	Label string `json:"label"`
 	// Send is an optional amount of coins this contract sends to the called contract
 	Send Coins `json:"send"`
 }

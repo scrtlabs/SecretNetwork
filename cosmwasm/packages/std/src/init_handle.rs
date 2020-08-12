@@ -85,8 +85,8 @@ pub enum WasmMsg {
         /// msg is the json-encoded InitMsg struct (as raw Binary)
         msg: Binary,
         send: Vec<Coin>,
-        /// optional human-readbale label for the contract
-        label: Option<String>,
+        /// mandatory human-readbale label for the contract
+        label: String,
     },
 }
 
