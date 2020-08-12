@@ -51,7 +51,6 @@ sudo sed -i 's/\/tmp\/.secretd:/\/home\/'$1'\/.secretd:/g' /usr/local/bin/secret
 sudo sed -i 's/\/tmp\/.secretcli:/\/home\/'$1'\/.secretcli:/g' /usr/local/bin/secret-node/docker-compose.yaml
 sudo sed -i 's/\/tmp\/.sgx_secrets:/\/home\/'$1'\/.sgx_secrets:/g' /usr/local/bin/secret-node/docker-compose.yaml
 
-
 # Open RPC port to the public
 perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.secretd/config/config.toml
 
@@ -99,4 +98,15 @@ then
 fi
 
 docker-compose -f /usr/local/bin/secret-node/docker-compose.yaml up -d
+
+secretcli completion > /root/secretcli_completion
+secretd completion > /root/secretd_completion
+
+docker cp secret-node_node_1:/root/secretcli_completion /home/$1/secretcli_completion
+docker cp secret-node_node_1:/root/secretd_completion /home/$1/secretd_completion
+
+echo 'source /home/'$1'/secretd_completion' >> ~/.bashrc
+echo 'source /home/'$1'/secretcli_completion' >> ~/.bashrc
+
+
 echo "Secret Node has been setup successfully and is running..." >> /home/$1/install.progress.txt
