@@ -1,5 +1,5 @@
 ---
-title: 'Overview'
+title: "Overview"
 ---
 
 # General Overview
@@ -14,6 +14,6 @@ The Secret Network is decentralized, so governance decisions are made collective
 
 The Secret Network was built with the Cosmos SDK using Tendermint for consensus. Enigma is a company introducing a privacy-preserving applications and ecrypted computation services. As part of this work, Enigma is a core contributor to the Secret Network.
 
-To achieve data privacy, the Secret Network relies on a combination of key management and encryption protocols, along with Trusted Execution Environment (TEE) technology. 
+To achieve data privacy, the Secret Network relies on a combination of key management and encryption protocols, along with Trusted Execution Environment (TEE) technology.
 
-![contracts](/diagrams/contracts.png)
+![contracts](.vuepress/public/diagrams/contracts.png)

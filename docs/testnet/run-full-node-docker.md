@@ -6,7 +6,6 @@ This guide will help you set up a node, but you will need to maintain it, or cha
 
 The scripts in the guide will be for Linux (tested on Ubuntu 18.04), but you could get this working on Windows if you swing that way too.
 
-
 ## Requirements
 
 - A public IP address
@@ -33,11 +32,11 @@ Refer to https://ark.intel.com/content/www/us/en/ark.html#@Processors if unsure 
 
 ### 0. Step up SGX on your local machine
 
-See instructions [here](/docs/validators-and-full-nodes/setup-sgx.md)
+See instructions [here](../validators-and-full-nodes/setup-sgx.md)
 
 ### 1. Make sure you have the SGX device installed
 
-If you're using Linux either `/dev/sgx` or `/dev/isgx` should exist depending on the driver and hardware you're using. 
+If you're using Linux either `/dev/sgx` or `/dev/isgx` should exist depending on the driver and hardware you're using.
 
 ### 2. Install docker & docker-compose
 
@@ -87,7 +86,7 @@ chmod -R -f 777 /tmp/aesmd || sudo chmod -R -f 777 /tmp/aesmd || true
 Edit the path under `devices` to match to your device from step 1
 
 ```yaml
-version: '3.4'
+version: "3.4"
 
 services:
   aesm:
@@ -144,13 +143,13 @@ To something persistent (e.g. in your home directory) like:
 
 Note: If you delete or lose either the .secretd or the .sgx_secrets folder your node will have to reset and resync itself.
 
-### 5. Set up environment variables 
+### 5. Set up environment variables
 
-* MONIKER - your network name
-* RPC_URL - address of a node with an open RPC service (you can use `bootstrap.pub.testnet.enigma.co:26657`)
-* CHAINID - chain-id of the network
-* PERSISTENT_PEERS - List of peers to connect to initially (for this testnet use `115aa0a629f5d70dd1d464bc7e42799e00f4edae@40.76.91.27:26656`)
-* REGISTRATION_SERVICE - Address of registration service (this will help the node start automatically without going through all the manual steps in the other guide) - `register.pub.testnet.enigma.co:26666`
+- MONIKER - your network name
+- RPC_URL - address of a node with an open RPC service (you can use `bootstrap.pub.testnet.enigma.co:26657`)
+- CHAINID - chain-id of the network (for testnet this is `enigma-pub-testnet-2`)
+- PERSISTENT_PEERS - List of peers to connect to initially (for this testnet use `115aa0a629f5d70dd1d464bc7e42799e00f4edae@40.76.91.27:26656`)
+- REGISTRATION_SERVICE - Address of registration service (this will help the node start automatically without going through all the manual steps in the other guide) - `register.pub.testnet.enigma.co:26666`
 
 You can set an environment variable using the `export` syntax
 
@@ -162,7 +161,7 @@ You can set an environment variable using the `export` syntax
 
 After creating the machine a healthy status of the node will have 2 containers active:
 
-```docker ps```
+`docker ps`
 
 ```
 CONTAINER ID        IMAGE                                      COMMAND                  CREATED             STATUS                    PORTS                                  NAMES
@@ -185,11 +184,8 @@ Where `secret-node_node_1` should be the name of the node container (but it may 
 
 You can see the logs of the node by checking the docker logs of the node container:
 
-```docker logs secret-node_node_1```
+`docker logs secret-node_node_1`
 
 If you want to debug/do other stuff with your node you can exec into the actual node using
 
-```docker exec -it secret-node_node_1 /bin/bash```
-
-
-
+`docker exec -it secret-node_node_1 /bin/bash`

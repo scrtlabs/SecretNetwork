@@ -29,7 +29,7 @@ Refer to https://ark.intel.com/content/www/us/en/ark.html#@Processors if unsure 
 
 ### 0. Step up SGX on your local machine
 
-See instructions [here](/docs/validators-and-full-nodes/setup-sgx.md)
+See instructions for [setup](../validators-and-full-nodes/setup-sgx.md) and [verification](verify-sgx.md).
 
 ### 1. Download the Secret Network package installer for Debian/Ubuntu:
 
@@ -37,7 +37,7 @@ See instructions [here](/docs/validators-and-full-nodes/setup-sgx.md)
 wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.7.0/secretnetwork_0.7.0_amd64.deb
 ```
 
-([How to verify releases](/testnet/verify-sgx.md))
+([How to verify releases](../verify-releases.md))
 
 ### 2. Install the package:
 
@@ -230,6 +230,12 @@ And publish yourself as a node with this ID:
 
 ```
 <your-node-id>@<your-public-ip>:26656
+```
+
+Be sure to point your CLI to your running node instead of the bootstrap node
+
+```
+secretcli config node tcp://localhost:26657
 ```
 
 If someone wants to add you as a peer, have them add the above address to their `persistent_peers` in their `~/.secretd/config/config.toml`.

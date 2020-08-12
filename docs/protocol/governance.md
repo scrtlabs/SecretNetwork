@@ -93,7 +93,7 @@ Where `proposal.json` is:
 }
 ```
 
-You can see another `param-change` example here: [enigma-1-proposal-3.json](/enigma-1-proposal-3.json)
+You can see another `param-change` example here: [enigma-1-proposal-3.json](<[/docs/enigma-1-proposal-3.json](https://github.com/enigmampc/SecretNetwork/blob/4561c0904c7b7659f019b96147cde13ac8db0933/enigma-1-proposal-3.json)>)
 
 #### Subspaces, Keys and Values
 
