@@ -162,6 +162,7 @@ TODO reasoning
   - https://tools.ietf.org/html/rfc5297
   - https://github.com/miscreant/meta
   - The input key is 256 bits, but half of it is used to derive the internal IV.
+  - AES-SIV does not pad the cipertext, and this leaks information about the plaintext data, specifically its size.
 - `seed_exchange_key` is derived the following way:
   - `seed_exchange_ikm` is derived using [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) ([x25519](https://tools.ietf.org/html/rfc7748#section-6)) with `consensus_seed_exchange_privkey` and `registration_pubkey`.
   - `seed_exchange_key` is derived using HKDF-SHA256 from `seed_exchange_ikm` and `nonce`.
