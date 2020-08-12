@@ -179,8 +179,8 @@ secretd configure-secret node-master-cert.der "$SEED"
 
 You can also use Enigma's node:
 
-```
-perl -i -pe 's/persistent_peers = ""/persistent_peers = "115aa0a629f5d70dd1d464bc7e42799e00f4edae\@bootstrap.pub.testnet.enigma.co:26656"/' ~/.secretd/config/config.toml
+```bash
+perl -i -pe 's/persistent_peers = ""/persistent_peers = "dd4c198e2d54229ec08a60e5865cba01a66e263b\@bootstrap.pub.testnet.enigma.co:26656"/' ~/.secretd/config/config.toml
 ```
 
 ### 17. Listen for incoming RPC requests so that light nodes can connect to you:
@@ -191,13 +191,13 @@ perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.secretd/co
 
 ### 18. Enable `secret-node` as a system service:
 
-```
+```bash
 sudo systemctl enable secret-node
 ```
 
 ### 19. Start `secret-node` as a system service:
 
-```
+```bash
 sudo systemctl start secret-node
 ```
 
