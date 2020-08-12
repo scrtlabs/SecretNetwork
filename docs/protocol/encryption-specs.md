@@ -1,9 +1,5 @@
 # Encryption
 
-:warning: :warning: :warning:
-
-This is a very advanced WIP.
-
 - [Encryption](#encryption)
 - [Bootstrap Process](#bootstrap-process)
   - [`consensus_seed`](#consensus_seed)
