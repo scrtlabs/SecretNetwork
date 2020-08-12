@@ -22,6 +22,7 @@
   - [`contract_key`](#contract_key)
   - [write_db(field_name, value)](#write_dbfield_name-value)
   - [read_db(field_name)](#read_dbfield_name)
+  - [remove_db(field_name)](#remove_dbfield_name)
 - [Transaction Encryption](#transaction-encryption)
   - [Input](#input)
     - [On the transaction sender](#on-the-transaction-sender)
@@ -255,7 +256,7 @@ TODO reasoning
 
 TODO reasoning
 
-- While executing a function call inside the Enclave as part of a transaction, the contract code can call `write_db(field_name, value)` and `read_db(field_name)`.
+- While executing a function call inside the Enclave as part of a transaction, the contract code can call `write_db(field_name, value)`, `read_db(field_name)` and `remove_db(field_name)`.
 - Contracts' state is stored on-chain inside a key-value store, thus the `field_name` must remain constant between calls.
 - `encryption_key` is derived using HKDF-SHA256 from:
   - `consensus_state_ikm`
@@ -381,6 +382,24 @@ current_state_plaintext = aes_128_siv_decrypt({
 });
 
 return current_state_plaintext;
+```
+
+## remove_db(field_name)
+
+Very similar to `read_db`.
+
+```js
+encryption_key = hkdf({
+  salt: hkfd_salt,
+  ikm: concat(consensus_state_ikm, field_name, contract_key),
+});
+
+encrypted_field_name = aes_128_siv_encrypt({
+  key: encryption_key,
+  data: field_name,
+});
+
+internal_remove_db(encrypted_field_name);
 ```
 
 # Transaction Encryption

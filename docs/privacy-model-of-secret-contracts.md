@@ -18,7 +18,8 @@
     - [Not encrypted](#not-encrypted-2)
   - [De-anonymization attack by patterns of Contract usage](#de-anonymization-attack-by-patterns-of-contract-usage)
     - [The input size](#the-input-size)
-    - [State read size](#state-read-size)
+    - [State key sizes](#state-key-sizes)
+    - [State read value size](#state-read-value-size)
     - [State write size](#state-write-size)
     - [State access order](#state-access-order)
     - [Output data field size](#output-data-field-size)
@@ -46,24 +47,26 @@
 
 ### Encrypted
 
-- msg
+- `msg` - Only known to the tx sender and the contract
 
 ### Not encrypted
 
-- msg.sender
+- `msg.sender`
 - funds sent
 
 ### What inputs can be trusted
 
 - tx sender
 - funds sent
-- msg
+- `msg`
 
 ### What inputs cannot be trusted
 
-- Block height
+- `block.height`
 
 ## State
+
+- Only known to that specific contract
 
 ## External query
 
@@ -74,6 +77,8 @@
 ## Outputs
 
 ### Encrypted
+
+- Only known to the tx sender and the contract
 
 ### Not encrypted
 
@@ -129,19 +134,87 @@ Now an attacker wouldn't be able to tell which function was called:
 1. `{"send":{"amount":123}}`
 2. `{"tsfr":{"amount":123}}`
 
-Altough if the attacker would know for example that `send.amount` is usually smaller than `100` and `tsfr.amount` is likley bigger than `100`, then they could still guess with some probability which function was called:
+Altough, if the attacker would know for example that `send.amount` is likely smaller than `100` and `tsfr.amount` is likley bigger than `100`, then they could still guess with some probability which function was called:
 
 1. `{"send":{"amount":55}}`
 2. `{"tsfr":{"amount":123}}`
 
 Note that a client side solution can also be appled, but this is considered a very bad practice in infosec, as you cannot guarantee control of the client. E.g. you could pad the input to the maximum possible in this contract before encrypting it on the client side:
 
-1. `{"send":{"amount":55} }`
+1. `{"send":{ "amount" : 55 } }`
 2. `{"transfer":{"amount":123}}`
 
-Again, this is very not recomended!
+Again, this is very not recomended as you cannot guarantee control of the client!
 
-### State read size
+### State key sizes
+
+Contracts' state is stored on-chain inside a key-value store, thus the `key` must remain constant between calls. This means that if a contract uses storage keys with different sizes, an attacker might find out information about the execution of a contract.
+
+Lets see an example for a contract with 2 `handle` functions:
+
+```rust
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum HandleMsg {
+    Send { amount: u8 },
+    Tsfr { amount: u8 },
+}
+
+pub fn handle<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    _env: Env,
+    msg: HandleMsg,
+) -> HandleResult {
+    match msg {
+        HandleMsg::Send { amount } => {
+            deps.storage.set(b"send", &amount.to_be_bytes());
+            Ok(HandleResponse::default())
+        }
+        HandleMsg::Tsfr { amount } => {
+            deps.storage.set(b"transfer", &amount.to_be_bytes());
+            Ok(HandleResponse::default())
+        }
+    }
+}
+```
+
+By looking at state write operation, an attacker can guess which function was called based on the size of the key that was used to write to storage:
+
+1. `send`
+2. `transfer`
+
+Again, some quick fixes for this issue might be:
+
+1. Renamig `transfer` to `tsfr`.
+2. Padding `send` to have the same length as `transfer`: `sendsend`.
+
+```rust
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum HandleMsg {
+    Send { amount: u8 },
+    Tsfr { amount: u8 },
+}
+
+pub fn handle<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    _env: Env,
+    msg: HandleMsg,
+) -> HandleResult {
+    match msg {
+        HandleMsg::Send { amount } => {
+            deps.storage.set(b"sendsend", &amount.to_be_bytes());
+            Ok(HandleResponse::default())
+        }
+        HandleMsg::Tsfr { amount } => {
+            deps.storage.set(b"transfer", &amount.to_be_bytes());
+            Ok(HandleResponse::default())
+        }
+    }
+}
+```
+
+### State read value size
 
 ### State write size
 
@@ -160,7 +233,3 @@ Again, this is very not recomended!
 ### The size of output logs/events
 
 ### The order of output logs/events
-
-```
-
-```
