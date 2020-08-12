@@ -232,6 +232,12 @@ And publish yourself as a node with this ID:
 <your-node-id>@<your-public-ip>:26656
 ```
 
+Be sure to point your CLI to your running node instead of the bootstrap node
+
+```
+secretcli config node tcp://localhost:26657
+```
+
 If someone wants to add you as a peer, have them add the above address to their `persistent_peers` in their `~/.secretd/config/config.toml`.
 
 And if someone wants to use your node from their `secretcli` then have them run:
