@@ -39,7 +39,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 
 			sgxSecretsPath := os.Getenv("SCRT_SGX_STORAGE")
 			if sgxSecretsPath == "" {
-				sgxSecretsPath = "./sgx_secrets"
+				sgxSecretsPath = os.ExpandEnv("$HOME/.sgx_secrets")
 			}
 
 			sgxSecretsPath += string(os.PathSeparator) + reg.EnclaveRegistrationKey
