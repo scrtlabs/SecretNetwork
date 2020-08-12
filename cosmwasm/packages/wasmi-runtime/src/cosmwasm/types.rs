@@ -12,6 +12,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use super::encoding::Binary;
+use crate::crypto::multisig::MultisigThresholdPubKey;
 use crate::crypto::secp256k1::Secp256k1PubKey;
 use crate::crypto::traits::PubKey;
 use crate::crypto::CryptoError;
@@ -330,24 +331,28 @@ impl CosmosSignature {
 #[serde(untagged)]
 pub enum PubKeyKind {
     Secp256k1(Secp256k1PubKey),
+    Multisig(MultisigThresholdPubKey),
 }
 
 impl PubKey for PubKeyKind {
     fn get_address(&self) -> CanonicalAddr {
         match self {
             PubKeyKind::Secp256k1(pubkey) => pubkey.get_address(),
+            PubKeyKind::Multisig(pubkey) => pubkey.get_address(),
         }
     }
 
     fn as_bytes(&self) -> Vec<u8> {
         match self {
             PubKeyKind::Secp256k1(pubkey) => pubkey.as_bytes(),
+            PubKeyKind::Multisig(pubkey) => pubkey.as_bytes(),
         }
     }
 
     fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError> {
         match self {
             PubKeyKind::Secp256k1(pubkey) => pubkey.verify_bytes(bytes, sig),
+            PubKeyKind::Multisig(pubkey) => pubkey.verify_bytes(bytes, sig),
         }
     }
 }
