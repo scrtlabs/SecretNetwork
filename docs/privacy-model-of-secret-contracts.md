@@ -95,7 +95,7 @@ The fact that `deps.storage.get`, `deps.storage.set` or `deps.storage.remove` we
 Legend:
 
 - `Private invokation = Yes` means the request never exits SGX and thus an attacker cannot know it even occured.
-- `Private invokation = No` & `Private date = Yes` means an attacker can know that the contract used this API but cannot know the input parameters or return values.
+- `Private invokation = No` & `Private data = Yes` means an attacker can know that the contract used this API but cannot know the input parameters or return values.
 
 ## Outputs
 
