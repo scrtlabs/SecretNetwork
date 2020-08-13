@@ -17,18 +17,18 @@
     - [Encrypted](#encrypted-2)
     - [Not encrypted](#not-encrypted-2)
   - [Data leakage attacks by detecting patterns in contract usage](#data-leakage-attacks-by-detecting-patterns-in-contract-usage)
-    - [The input size](#the-input-size)
-    - [State key sizes](#state-key-sizes)
-    - [State read value size](#state-read-value-size)
-    - [State write size](#state-write-size)
-    - [State access order](#state-access-order)
-    - [Output data field size](#output-data-field-size)
-    - [Number of output messages/callbacks](#number-of-output-messagescallbacks)
-    - [The size of output messages/callbacks](#the-size-of-output-messagescallbacks)
-    - [The order of output messages/callbacks](#the-order-of-output-messagescallbacks)
-    - [Number of output logs/events](#number-of-output-logsevents)
-    - [The size of output logs/events](#the-size-of-output-logsevents)
-    - [The order of output logs/events](#the-order-of-output-logsevents)
+    - [Differences in input sizes](#differences-in-input-sizes)
+    - [Differences in state key sizes](#differences-in-state-key-sizes)
+    - [Differences in value sizes on state read](#differences-in-value-sizes-on-state-read)
+    - [Differences in key/value sizes on state write](#differences-in-keyvalue-sizes-on-state-write)
+    - [Differences in state access order](#differences-in-state-access-order)
+    - [Differences in output return values size](#differences-in-output-return-values-size)
+    - [Differences in the amounts of output messages/callbacks](#differences-in-the-amounts-of-output-messagescallbacks)
+    - [Differences in sizes of output messages/callbacks](#differences-in-sizes-of-output-messagescallbacks)
+    - [Differences in the orders of output messages/callbacks](#differences-in-the-orders-of-output-messagescallbacks)
+    - [Differences in the amounts of output logs/events](#differences-in-the-amounts-of-output-logsevents)
+    - [Differences in sizes of output logs/events](#differences-in-sizes-of-output-logsevents)
+    - [Differences in the orders of output logs/events](#differences-in-the-orders-of-output-logsevents)
 
 ## Init
 
@@ -90,7 +90,7 @@ In all the following scenarios, assume that an attacker has a local full node in
 
 For encryption, the Secret Network is using (AES-SIV)[https://tools.ietf.org/html/rfc5297], which does not pad the ciphertext. This means it leaks information about the plaintext data, specifically what is its size, though in most aspects it's more secure than other padded encryption schemes. Read more about the encryption specs [in here](protocol/encryption-specs.md).
 
-### The input size
+### Differences in input sizes
 
 An example input API for a contract with 2 `handle` functions:
 
@@ -146,7 +146,7 @@ Note that a client side solution can also be applied, but this is considered a v
 
 Again, this is very not recommended as you cannot guarantee control of the client!
 
-### State key sizes
+### Differences in state key sizes
 
 Contracts' state is stored on-chain inside a key-value store, thus the `key` must remain constant between calls. This means that if a contract uses storage keys with different sizes, an attacker might find out information about the execution of a contract.
 
@@ -214,22 +214,22 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 ```
 
-### State read value size
+### Differences in value sizes on state read
 
-### State write size
+### Differences in key/value sizes on state write
 
-### State access order
+### Differences in state access order
 
-### Output data field size
+### Differences in output return values size
 
-### Number of output messages/callbacks
+### Differences in the amounts of output messages/callbacks
 
-### The size of output messages/callbacks
+### Differences in sizes of output messages/callbacks
 
-### The order of output messages/callbacks
+### Differences in the orders of output messages/callbacks
 
-### Number of output logs/events
+### Differences in the amounts of output logs/events
 
-### The size of output logs/events
+### Differences in sizes of output logs/events
 
-### The order of output logs/events
+### Differences in the orders of output logs/events
