@@ -10,6 +10,7 @@ import (
 	"github.com/enigmampc/cosmos-sdk/x/distribution/types"
 	"github.com/enigmampc/cosmos-sdk/x/staking"
 	abci "github.com/tendermint/tendermint/abci/types"
+	"strings"
 )
 
 type QueryHandler struct {
@@ -31,6 +32,9 @@ func (q QueryHandler) Query(request wasmTypes.QueryRequest) ([]byte, error) {
 	}
 	if request.Wasm != nil {
 		return q.Plugins.Wasm(q.Ctx, request.Wasm)
+	}
+	if request.Dist != nil {
+		return q.Plugins.Dist(q.Ctx, request.Dist)
 	}
 	return nil, wasmTypes.Unknown{}
 }
@@ -76,6 +80,9 @@ func (e QueryPlugins) Merge(o *QueryPlugins) QueryPlugins {
 	if o.Wasm != nil {
 		e.Wasm = o.Wasm
 	}
+	if o.Dist != nil {
+		e.Dist = o.Dist
+	}
 	return e
 }
 
@@ -95,10 +102,40 @@ func DistQuerier(keeper *distr.Keeper) func(ctx sdk.Context, request *wasmTypes.
 				Data: jsonParams,
 			}
 
-			route := []string{types.ModuleName, types.QueryDelegatorTotalRewards}
-			query, _ := distr.NewQuerier(*keeper)(ctx, route, req)
+			route := []string{types.QueryDelegatorTotalRewards}
 
-			return query, nil
+			query, err := distr.NewQuerier(*keeper)(ctx, route, req)
+			if err != nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, err.Error())
+			}
+
+			var res wasmTypes.RewardsResponse
+
+			// this is here so we can remove fractions of uscrt from the result
+			err = json.Unmarshal(query, &res)
+			if err != nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
+			}
+
+			for i, valRewards := range res.Rewards {
+				res.Rewards[i].Validator = valRewards.Validator
+				for j, valReward := range valRewards.Reward {
+					res.Rewards[i].Reward[j].Amount = strings.Split(valReward.Amount, ".")[0]
+					res.Rewards[i].Reward[j].Denom = valReward.Denom
+				}
+			}
+
+			for i, val := range res.Total {
+				res.Total[i].Amount = strings.Split(val.Amount, ".")[0]
+				res.Total[i].Denom = val.Denom
+			}
+
+			ret, err := json.Marshal(res)
+			if err != nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
+			}
+
+			return ret, nil
 		}
 		return nil, wasmTypes.UnsupportedRequest{"unknown BankQuery variant"}
 	}

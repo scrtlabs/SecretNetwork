@@ -29,7 +29,7 @@ pub enum BankQuery {
     AllBalances { address: HumanAddr },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum DistQuery {
     /// This calls into the native bank module for all denominations.
@@ -158,5 +158,5 @@ pub struct RewardsResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ValidatorRewards {
     pub validator_address: HumanAddr,
-    pub rewards: Vec<Coin>,
+    pub reward: Vec<Coin>,
 }

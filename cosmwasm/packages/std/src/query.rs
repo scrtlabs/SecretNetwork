@@ -206,5 +206,11 @@ pub struct RewardsResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ValidatorRewards {
     pub validator_address: HumanAddr,
-    pub rewards: Vec<Coin>,
+    pub reward: Vec<Coin>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct RewardCoin {
+    pub coin: String,
+    pub demon: String,
 }
