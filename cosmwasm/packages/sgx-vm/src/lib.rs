@@ -22,6 +22,9 @@ mod enclave;
 mod seed;
 mod wasmi;
 
+#[cfg(feature = "enclave-tests")]
+pub mod enclave_tests;
+
 pub use crate::cache::CosmCache;
 pub use crate::calls::{
     call_handle, call_handle_raw, call_init, call_init_raw, call_migrate, call_migrate_raw,

@@ -84,6 +84,10 @@ interface AuthAccountsResponse {
     readonly value: CosmosSdkAccount;
   };
 }
+interface ContractHashResponse {
+  readonly height: string;
+  readonly result: string;
+}
 declare type WasmResponse<T = string> = WasmSuccess<T> | WasmError;
 interface WasmSuccess<T = string> {
   readonly height: string;
@@ -169,7 +173,8 @@ declare type RestClientResponse =
   | WasmResponse<CodeInfo[]>
   | WasmResponse<CodeDetails>
   | WasmResponse<ContractInfo[] | null>
-  | WasmResponse<ContractDetails | null>;
+  | WasmResponse<ContractDetails | null>
+  | WasmResponse<ContractHashResponse | null>;
 /**
  * The mode used to send transaction
  *
@@ -187,6 +192,7 @@ export declare class RestClient {
   private readonly client;
   private readonly broadcastMode;
   readonly enigmautils: EnigmaUtils;
+  private codeHashCache;
   /**
    * Creates a new client to interact with a Cosmos SDK light client daemon.
    * This class tries to be a direct mapping onto the API. Some basic decoding and normalizatin is done
@@ -220,6 +226,8 @@ export declare class RestClient {
   listCodeInfo(): Promise<readonly CodeInfo[]>;
   getCode(id: number): Promise<CodeDetails>;
   listContractsByCodeId(id: number): Promise<readonly ContractInfo[]>;
+  getCodeHashByCodeId(id: number): Promise<string>;
+  getCodeHashByContractAddr(addr: string): Promise<string>;
   /**
    * Returns null when contract was not found at this address.
    */

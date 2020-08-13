@@ -11,7 +11,7 @@ use crate::results::{
     result_query_success_to_queryresult,
 };
 use crate::{
-    oom_handler::{get_then_clear_oom_happened, register_oom_handler},
+    oom_handler,
     utils::{validate_const_ptr, validate_mut_ptr},
 };
 
@@ -20,7 +20,7 @@ use crate::{
 /// Always use protection
 #[no_mangle]
 pub unsafe extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
-    register_oom_handler();
+    oom_handler::register_oom_handler();
 
     if let Err(_e) = validate_const_ptr(buffer, length as usize) {
         error!("Tried to access data outside enclave memory space!");
@@ -36,12 +36,13 @@ pub unsafe extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> Enc
             ptr: heap_pointer as *mut c_void,
         }
     });
+    oom_handler::restore_safety_buffer();
 
     result.unwrap_or_else(|err| {
         // We can get here only by failing to allocate memory,
         // so there's no real need here to test if oom happened
         error!("Enclave ran out of memory: {:?}", err);
-        get_then_clear_oom_happened();
+        oom_handler::get_then_clear_oom_happened();
         EnclaveBuffer::default()
     })
 }
@@ -71,7 +72,7 @@ pub unsafe extern "C" fn ecall_init(
     msg: *const u8,
     msg_len: usize,
 ) -> InitResult {
-    register_oom_handler();
+    oom_handler::register_oom_handler();
 
     if let Err(_e) = validate_mut_ptr(used_gas as _, std::mem::size_of::<u64>()) {
         error!("Tried to access data outside enclave memory!");
@@ -99,12 +100,14 @@ pub unsafe extern "C" fn ecall_init(
         *used_gas = local_used_gas;
         result_init_success_to_initresult(result)
     });
+    oom_handler::restore_safety_buffer();
+
     if let Ok(res) = result {
         res
     } else {
         *used_gas = gas_limit / 2;
 
-        if get_then_clear_oom_happened() {
+        if oom_handler::get_then_clear_oom_happened() {
             error!("Call ecall_init failed because the enclave ran out of memory!");
             InitResult::Failure {
                 err: EnclaveError::OutOfMemory,
@@ -132,7 +135,7 @@ pub unsafe extern "C" fn ecall_handle(
     msg: *const u8,
     msg_len: usize,
 ) -> HandleResult {
-    register_oom_handler();
+    oom_handler::register_oom_handler();
 
     if let Err(_e) = validate_mut_ptr(used_gas as _, std::mem::size_of::<u64>()) {
         error!("Tried to access data outside enclave memory!");
@@ -161,12 +164,14 @@ pub unsafe extern "C" fn ecall_handle(
         *used_gas = local_used_gas;
         result_handle_success_to_handleresult(result)
     });
+    oom_handler::restore_safety_buffer();
+
     if let Ok(res) = result {
         res
     } else {
         *used_gas = gas_limit / 2;
 
-        if get_then_clear_oom_happened() {
+        if oom_handler::get_then_clear_oom_happened() {
             error!("Call ecall_handle failed because the enclave ran out of memory!");
             HandleResult::Failure {
                 err: EnclaveError::OutOfMemory,
@@ -192,7 +197,7 @@ pub unsafe extern "C" fn ecall_query(
     msg: *const u8,
     msg_len: usize,
 ) -> QueryResult {
-    register_oom_handler();
+    oom_handler::register_oom_handler();
 
     if let Err(_e) = validate_mut_ptr(used_gas as _, std::mem::size_of::<u64>()) {
         error!("Tried to access data outside enclave memory!");
@@ -215,12 +220,14 @@ pub unsafe extern "C" fn ecall_query(
         *used_gas = local_used_gas;
         result_query_success_to_queryresult(result)
     });
+    oom_handler::restore_safety_buffer();
+
     if let Ok(res) = result {
         res
     } else {
         *used_gas = gas_limit / 2;
 
-        if get_then_clear_oom_happened() {
+        if oom_handler::get_then_clear_oom_happened() {
             error!("Call ecall_query failed because the enclave ran out of memory!");
             QueryResult::Failure {
                 err: EnclaveError::OutOfMemory,

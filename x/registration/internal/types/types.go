@@ -6,6 +6,7 @@ import (
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 )
 
+const EnclaveRegistrationKey = "new_node_seed_exchange_keypair.sealed"
 const PublicKeyLength = 64    // encoded length
 const EncryptedKeyLength = 96 // encoded length
 const MasterNodeKeyId = "NodeExchMasterKey"

@@ -189,6 +189,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     memo = "",
     transferAmount?: readonly Coin[],
   ): Promise<InstantiateResult> {
+    const contractCodeHash = await this.restClient.getCodeHashByCodeId(codeId);
     const instantiateMsg: MsgInstantiateContract = {
       type: "wasm/instantiate",
       value: {
@@ -197,7 +198,9 @@ export class SigningCosmWasmClient extends CosmWasmClient {
         code_id: codeId.toString(),
         label: label,
         // eslint-disable-next-line @typescript-eslint/camelcase
-        init_msg: Encoding.toBase64(await this.restClient.enigmautils.encrypt(initMsg)),
+        callback_code_hash: "",
+        // eslint-disable-next-line @typescript-eslint/camelcase
+        init_msg: Encoding.toBase64(await this.restClient.enigmautils.encrypt(contractCodeHash, initMsg)),
         // eslint-disable-next-line @typescript-eslint/camelcase
         init_funds: transferAmount || [],
       },
@@ -236,12 +239,15 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     memo = "",
     transferAmount?: readonly Coin[],
   ): Promise<ExecuteResult> {
+    const contractCodeHash = await this.restClient.getCodeHashByContractAddr(contractAddress);
+
     const executeMsg: MsgExecuteContract = {
       type: "wasm/execute",
       value: {
         sender: this.senderAddress,
         contract: contractAddress,
-        msg: Encoding.toBase64(await this.restClient.enigmautils.encrypt(handleMsg)),
+        callback_code_hash: "",
+        msg: Encoding.toBase64(await this.restClient.enigmautils.encrypt(contractCodeHash, handleMsg)),
         // eslint-disable-next-line @typescript-eslint/camelcase
         sent_funds: transferAmount || [],
       },

@@ -112,6 +112,11 @@ interface AuthAccountsResponse {
   };
 }
 
+interface ContractHashResponse {
+  readonly height: string;
+  readonly result: string;
+}
+
 // Currently all wasm query responses return json-encoded strings...
 // later deprecate this and use the specific types for result
 // (assuming it is inlined, no second parse needed)
@@ -219,7 +224,8 @@ type RestClientResponse =
   | WasmResponse<CodeInfo[]>
   | WasmResponse<CodeDetails>
   | WasmResponse<ContractInfo[] | null>
-  | WasmResponse<ContractDetails | null>;
+  | WasmResponse<ContractDetails | null>
+  | WasmResponse<ContractHashResponse | null>;
 
 /** Unfortunately, Cosmos SDK encodes empty arrays as null */
 type CosmosSdkArray<T> = ReadonlyArray<T> | null;
@@ -280,6 +286,8 @@ export class RestClient {
   private readonly broadcastMode: BroadcastMode;
   public readonly enigmautils: EnigmaUtils;
 
+  private codeHashCache: Map<any, string>;
+
   /**
    * Creates a new client to interact with a Cosmos SDK light client daemon.
    * This class tries to be a direct mapping onto the API. Some basic decoding and normalizatin is done
@@ -301,6 +309,7 @@ export class RestClient {
     });
     this.broadcastMode = broadcastMode;
     this.enigmautils = new EnigmaUtils(apiUrl, seed);
+    this.codeHashCache = new Map<any, string>();
   }
 
   public async get(path: string): Promise<RestClientResponse> {
@@ -432,6 +441,32 @@ export class RestClient {
     return normalizeArray(await unwrapWasmResponse(responseData));
   }
 
+  public async getCodeHashByCodeId(id: number): Promise<string> {
+    const codeHashFromCache = this.codeHashCache.get(id);
+    if (typeof codeHashFromCache === "string") {
+      return codeHashFromCache;
+    }
+
+    const path = `/wasm/code/${id}/hash`;
+    const responseData = (await this.get(path)) as ContractHashResponse;
+
+    this.codeHashCache.set(id, responseData.result);
+    return responseData.result;
+  }
+
+  public async getCodeHashByContractAddr(addr: string): Promise<string> {
+    const codeHashFromCache = this.codeHashCache.get(addr);
+    if (typeof codeHashFromCache === "string") {
+      return codeHashFromCache;
+    }
+
+    const path = `/wasm/contract/${addr}/code-hash`;
+    const responseData = (await this.get(path)) as ContractHashResponse;
+
+    this.codeHashCache.set(addr, responseData.result);
+    return responseData.result;
+  }
+
   /**
    * Returns null when contract was not found at this address.
    */
@@ -464,7 +499,8 @@ export class RestClient {
    * Throws error if no such contract exists, the query format is invalid or the response is invalid.
    */
   public async queryContractSmart(address: string, query: object): Promise<JsonObject> {
-    const encrypted = await this.enigmautils.encrypt(query);
+    const contractCodeHash = await this.getCodeHashByContractAddr(address);
+    const encrypted = await this.enigmautils.encrypt(contractCodeHash, query);
     const nonce = encrypted.slice(0, 32);
 
     const encoded = Encoding.toHex(Encoding.toUtf8(Encoding.toBase64(encrypted)));

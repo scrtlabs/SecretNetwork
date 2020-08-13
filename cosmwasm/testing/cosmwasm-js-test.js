@@ -6,6 +6,11 @@ const cosmwasmjs = require(path.resolve(
 ));
 const assert = require("assert").strict;
 
+process.on("unhandledRejection", (error) => {
+  console.error(error.message);
+  process.exit(1);
+});
+
 (async () => {
   const seed = cosmwasmjs.EnigmaUtils.GenerateNewSeed();
   const client = new cosmwasmjs.CosmWasmClient("http://localhost:1337", seed);
