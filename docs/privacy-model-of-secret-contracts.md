@@ -99,6 +99,19 @@ Legend:
 
 ## Outputs
 
+Outputs that are encrypted are only known to the tx sender and to the contract.
+
+| Output         | Type                   | Encrypted? | Notes                                      |
+| -------------- | ---------------------- | ---------- | ------------------------------------------ |
+| `log`          | `Vec<{String,String}>` | No         | Structure not encrypted, data is encrypted |
+| `log[i].key`   | `String`               | Yes        |                                            |
+| `log[i].value` | `String`               | Yes        |                                            |
+| `messages`     | `Vec<CosmosMsg>>`      | No         | Structure not encrypted, data is encrypted |
+| `messages[i]`  | `CosmosMsg::Bank`      |            |                                            |
+| `messages[i]`  | `CosmosMsg::Custom`    |            |                                            |
+| `messages[i]`  | `CosmosMsg::Staking`   |            |                                            |
+| `messages[i]`  | `CosmosMsg::Wasm`      |            |                                            |
+
 # Handle
 
 # Query
