@@ -25,7 +25,7 @@ For an in depth look at the Secret Network encryption specs, visit [here](protoc
   - [Differences in input sizes](#differences-in-input-sizes)
   - [Differences in state key sizes](#differences-in-state-key-sizes)
   - [Differences in state value sizes](#differences-in-state-value-sizes)
-  - [Differences in state access order](#differences-in-state-access-order)
+  - [Differences in state accessing order](#differences-in-state-accessing-order)
   - [Differences in output return values size](#differences-in-output-return-values-size)
   - [Differences in the amounts of output messages/callbacks](#differences-in-the-amounts-of-output-messagescallbacks)
   - [Differences in sizes of output messages/callbacks](#differences-in-sizes-of-output-messagescallbacks)
@@ -94,6 +94,10 @@ In all the following scenarios, assume that an attacker has a local full node in
 
 For encryption, the Secret Network is using (AES-SIV)[https://tools.ietf.org/html/rfc5297], which does not pad the ciphertext. This means it leaks information about the plaintext data, specifically what is its size, though in most aspects it's more secure than other padded encryption schemes. Read more about the encryption specs [in here](protocol/encryption-specs.md).
 
+Most of the below examples talk about an attacker reveiling which function was executed on the contract, but this is not the only type of data leakage that an attacker might target.
+
+Secret Contract developers must analyze the privacy model of their contract - What kind of information must remain private and what kind of information, if revieled, won't affect the operation of the contract and its users.
+
 ## Differences in input sizes
 
 An example input API for a contract with 2 `handle` functions:
@@ -138,7 +142,7 @@ Now an attacker wouldn't be able to tell which function was called:
 1. `{"send":{"amount":123}}`
 2. `{"tsfr":{"amount":123}}`
 
-Be creative.
+Be creative. :rainbow:
 
 Another point to consider. If the attacker would have additional knowledge, for example that `send.amount` is likely smaller than `100` and `tsfr.amount` is likely bigger than `100`, then they might still guess with some probability which function was called:
 
@@ -220,7 +224,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 ```
 
-Be creative.
+Be creative. :rainbow:
 
 ## Differences in state value sizes
 
@@ -302,12 +306,83 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 ```
 
-Be creative.
+Be creative. :rainbow:
 
-## Differences in state access order
+## Differences in state accessing order
 
-1. read read write
-2. read write write
+An attacker can monitor requests from Smart Contracts to the API that the Secret Network exposes for Contracts. So while `key` and `value` are encrypted in `read_db(key)` and `write_db(key,value)`, it's public knowledge that `read_db` or `write_db` were called.
+
+Let's see an example for a contract with 2 `handle` functions:
+
+```rust
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum HandleMsg {
+    Hey {},
+    Bye {},
+}
+
+pub fn handle<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    _env: Env,
+    msg: HandleMsg,
+) -> HandleResult {
+    match msg {
+        HandleMsg::Hey {} => {
+            deps.storage.get(b"hi");
+            deps.storage.set(b"hi", b"bye");
+            deps.storage.get(b"hi");
+            Ok(HandleResponse::default())
+        }
+        HandleMsg::Bye {} => {
+            deps.storage.set(b"hi", b"bye");
+            deps.storage.get(b"hi");
+            deps.storage.get(b"hi");
+            Ok(HandleResponse::default())
+        }
+    }
+}
+```
+
+By looking at the order of state operation, an attacker can guess which function was called.
+
+1. `read_db()`, `write_db()`, `read_deb()` => `Hey` was called.
+2. `write_db()`, `read_db()`, `read_deb()` => `Bye` was called.
+
+This use case might be more difficult to solve, as it is highly depends on functionality, but an example solution would be to redesign the storage accessing patterns a bit to include one big read in the start of each function and one big write in the end of each function.
+
+```rust
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum HandleMsg {
+    Hey {},
+    Bye {},
+}
+
+pub fn handle<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    _env: Env,
+    msg: HandleMsg,
+) -> HandleResult {
+    match msg {
+        HandleMsg::Hey {} => {
+            deps.storage.get(b"data");
+            deps.storage.set(b"data", b"a: hey b: bye");
+            Ok(HandleResponse::default())
+        }
+        HandleMsg::Bye {} => {
+            deps.storage.get(b"data");
+            deps.storage.set(b"data", b"a: bye b: hey");
+            Ok(HandleResponse::default())
+        }
+    }
+}
+```
+
+Now, by looking at the order of state operation, an attacker cannot guess which function was called. It's always `read_db()` then `write_db()`.
+Note that this might affect gas usage for the worse (reading/writing data that isn't necessary to this function) or for the better (less reads and writes), so there's allways a trade-off between gas, performane, privacy and user experience.
+
+Be creative. :rainbow:
 
 ## Differences in output return values size
 
