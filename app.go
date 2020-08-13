@@ -295,7 +295,7 @@ func NewSecretNetworkApp(
 		app.cdc,
 		keys[compute.StoreKey],
 		app.accountKeeper,
-		&app.bankKeeper, &stakingKeeper, computeRouter, computeDir, wasmConfig, supportedFeatures, nil, nil)
+		&app.bankKeeper, &app.distrKeeper, &stakingKeeper, computeRouter, computeDir, wasmConfig, supportedFeatures, nil, nil)
 	// register the proposal types
 	govRouter := gov.NewRouter()
 	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler).

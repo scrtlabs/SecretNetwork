@@ -19,6 +19,7 @@ pub enum QueryRequest<T> {
     Custom(T),
     Staking(StakingQuery),
     Wasm(WasmQuery),
+    Dist(DistQuery),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -31,6 +32,15 @@ pub enum BankQuery {
     /// Note that this may be much more expensive than Balance and should be avoided if possible.
     /// Return value is AllBalanceResponse.
     AllBalances { address: HumanAddr },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum DistQuery {
+    /// This calls into the native bank module for all denominations.
+    /// Note that this may be much more expensive than Balance and should be avoided if possible.
+    /// Return value is AllBalanceResponse.
+    Rewards { delegator: HumanAddr },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -50,6 +60,12 @@ pub enum WasmQuery {
         /// Key is the raw key used in the contracts Storage
         key: Binary,
     },
+}
+
+impl<T: Clone + fmt::Debug + PartialEq + JsonSchema> From<DistQuery> for QueryRequest<T> {
+    fn from(msg: DistQuery) -> Self {
+        QueryRequest::Dist(msg)
+    }
 }
 
 impl<T: Clone + fmt::Debug + PartialEq + JsonSchema> From<BankQuery> for QueryRequest<T> {

@@ -64,6 +64,7 @@ type QueryRequest struct {
 	Custom  json.RawMessage `json:"custom,omitempty"`
 	Staking *StakingQuery   `json:"staking,omitempty"`
 	Wasm    *WasmQuery      `json:"wasm,omitempty"`
+	Dist    *DistQuery      `json:"distribution,omitempty"`
 }
 
 type BankQuery struct {
@@ -217,4 +218,27 @@ type SmartQuery struct {
 type RawQuery struct {
 	ContractAddr string `json:"contract_addr"`
 	Key          []byte `json:"key"`
+}
+
+type DistQuery struct {
+	Rewards *RewardsQuery `json:"rewards,omitempty"`
+}
+
+type RewardsQuery struct {
+	Delegator string `json:"delegator"`
+}
+
+// DelegationResponse is the expected response to DelegationsQuery
+type RewardsResponse struct {
+	Rewards []Rewards      `json:"rewards,omitempty"`
+	Total   []TotalRewards `json:"total,omitempty"`
+}
+
+type Rewards struct {
+	Validator string `json:"validator_address"`
+	Reward    []Coin `json:"reward"`
+}
+
+type TotalRewards struct {
+	Reward []Coin `json:"reward"`
 }

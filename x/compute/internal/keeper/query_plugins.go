@@ -2,12 +2,14 @@ package keeper
 
 import (
 	"encoding/json"
-
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
 	"github.com/enigmampc/cosmos-sdk/x/bank"
+	distr "github.com/enigmampc/cosmos-sdk/x/distribution"
+	"github.com/enigmampc/cosmos-sdk/x/distribution/types"
 	"github.com/enigmampc/cosmos-sdk/x/staking"
+	abci "github.com/tendermint/tendermint/abci/types"
 )
 
 type QueryHandler struct {
@@ -44,14 +46,16 @@ type QueryPlugins struct {
 	Custom  CustomQuerier
 	Staking func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error)
 	Wasm    func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
+	Dist    func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error)
 }
 
-func DefaultQueryPlugins(bank *bank.Keeper, staking *staking.Keeper, wasm *Keeper) QueryPlugins {
+func DefaultQueryPlugins(dist *distr.Keeper, bank *bank.Keeper, staking *staking.Keeper, wasm *Keeper) QueryPlugins {
 	return QueryPlugins{
 		Bank:    BankQuerier(bank),
 		Custom:  NoCustomQuerier,
 		Staking: StakingQuerier(staking),
 		Wasm:    WasmQuerier(wasm),
+		Dist:    DistQuerier(dist),
 	}
 }
 
@@ -73,6 +77,31 @@ func (e QueryPlugins) Merge(o *QueryPlugins) QueryPlugins {
 		e.Wasm = o.Wasm
 	}
 	return e
+}
+
+func DistQuerier(keeper *distr.Keeper) func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error) {
+	return func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error) {
+		if request.Rewards != nil {
+			addr, err := sdk.AccAddressFromBech32(request.Rewards.Delegator)
+			if err != nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.Rewards.Delegator)
+			}
+
+			params := types.NewQueryDelegatorParams(addr)
+
+			jsonParams, _ := json.Marshal(params)
+
+			req := abci.RequestQuery{
+				Data: jsonParams,
+			}
+
+			route := []string{types.ModuleName, types.QueryDelegatorTotalRewards}
+			query, _ := distr.NewQuerier(*keeper)(ctx, route, req)
+
+			return query, nil
+		}
+		return nil, wasmTypes.UnsupportedRequest{"unknown BankQuery variant"}
+	}
 }
 
 func BankQuerier(bank *bank.Keeper) func(ctx sdk.Context, request *wasmTypes.BankQuery) ([]byte, error) {
