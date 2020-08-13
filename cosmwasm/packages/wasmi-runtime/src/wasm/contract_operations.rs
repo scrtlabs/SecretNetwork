@@ -118,7 +118,7 @@ pub fn init(
 
     Ok(InitSuccess {
         output,
-        signature: contract_key,
+        contract_key,
     })
 }
 
@@ -213,10 +213,7 @@ pub fn handle(
     })?;
 
     *used_gas = engine.gas_used();
-    Ok(HandleSuccess {
-        output,
-        signature: [0u8; 64], // TODO this is not needed anymore as output is already authenticated
-    })
+    Ok(HandleSuccess { output })
 }
 
 pub fn query(
@@ -281,10 +278,7 @@ pub fn query(
     })?;
 
     *used_gas = engine.gas_used();
-    Ok(QuerySuccess {
-        output,
-        signature: [0; 64], // TODO this is not needed anymore as output is already authenticated
-    })
+    Ok(QuerySuccess { output })
 }
 
 fn start_engine(
