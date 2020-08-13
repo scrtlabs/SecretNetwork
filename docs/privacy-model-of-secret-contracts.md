@@ -101,16 +101,26 @@ Legend:
 
 Outputs that are encrypted are only known to the tx sender and to the contract.
 
-| Output         | Type                   | Encrypted? | Notes                                      |
-| -------------- | ---------------------- | ---------- | ------------------------------------------ |
-| `log`          | `Vec<{String,String}>` | No         | Structure not encrypted, data is encrypted |
-| `log[i].key`   | `String`               | Yes        |                                            |
-| `log[i].value` | `String`               | Yes        |                                            |
-| `messages`     | `Vec<CosmosMsg>>`      | No         | Structure not encrypted, data is encrypted |
-| `messages[i]`  | `CosmosMsg::Bank`      |            |                                            |
-| `messages[i]`  | `CosmosMsg::Custom`    |            |                                            |
-| `messages[i]`  | `CosmosMsg::Staking`   |            |                                            |
-| `messages[i]`  | `CosmosMsg::Wasm`      |            |                                            |
+| Output                                                        | Type                           | Encrypted? | Notes                                             |
+| ------------------------------------------------------------- | ------------------------------ | ---------- | ------------------------------------------------- |
+| `log`                                                         | `Vec<{String,String}>`         | No         | Structure not encrypted, data is encrypted        |
+| `log[i].key`                                                  | `String`                       | Yes        |                                                   |
+| `log[i].value`                                                | `String`                       | Yes        |                                                   |
+| `messages`                                                    | `Vec<CosmosMsg>>`              | No         | Structure not encrypted, data sometimes encrypted |
+| `messages[i]`                                                 | `CosmosMsg::Bank`              | No         |                                                   |
+| `messages[i]`                                                 | `CosmosMsg::Custom`            | No         |                                                   |
+| `messages[i]`                                                 | `CosmosMsg::Staking`           | No         |                                                   |
+| `messages[i]`                                                 | `CosmosMsg::Wasm::Instantiate` | No         | Only the `msg` field is encrypted inside          |
+| `messages[i].CosmosMsg::Wasm::Instantiate.code_id`            | `u64`                          | No         |                                                   |
+| `messages[i].CosmosMsg::Wasm::Instantiate.callback_code_hash` | `String`                       | No         |                                                   |
+| `messages[i].CosmosMsg::Wasm::Instantiate.msg`                | `Binary`                       | Yes        |                                                   |
+| `messages[i].CosmosMsg::Wasm::Instantiate.send`               | `Vec<Coin>`                    | No         |                                                   |
+| `messages[i].CosmosMsg::Wasm::Instantiate.label`              | `Option<String>`               | No         |                                                   |
+| `messages[i]`                                                 | `CosmosMsg::Wasm::Execute`     | No         | Only the `msg` field is encrypted inside          |
+| `messages[i].CosmosMsg::Wasm::Execute.contract_addr`          | `HumanAddr`                    | No         |
+| `messages[i].CosmosMsg::Wasm::Execute.callback_code_hash`     | `String`                       | No         |
+| `messages[i].CosmosMsg::Wasm::Execute.msg`                    | `Binary`                       | Yes        |
+| `messages[i].CosmosMsg::Wasm::Execute.send`                   | `Vec<Coin>`                    | No         |
 
 # Handle
 
