@@ -84,7 +84,7 @@ pub fn init(
         secret_msg.user_public_key,
     )?;
 
-    parsed_env.contract_code_hash = Some(hex::encode(calc_contract_hash(contract)));
+    parsed_env.contract_code_hash = hex::encode(calc_contract_hash(contract));
 
     let new_env = serde_json::to_vec(&parsed_env).map_err(|err| {
         error!(
@@ -138,7 +138,7 @@ pub fn handle(
         EnclaveError::FailedToDeserialize
     })?;
 
-    trace!("handle parsed_envs: {:?}", parsed_env);
+    trace!("handle parsed_env: {:?}", parsed_env);
 
     let contract_address = &parsed_env.contract.address;
     let contract_key = extract_contract_key(&parsed_env)?;
@@ -180,7 +180,7 @@ pub fn handle(
         secret_msg.user_public_key,
     )?;
 
-    parsed_env.contract_code_hash = Some(hex::encode(calc_contract_hash(contract)));
+    parsed_env.contract_code_hash = hex::encode(calc_contract_hash(contract));
 
     let new_env = serde_json::to_vec(&parsed_env).map_err(|err| {
         error!(
