@@ -84,7 +84,7 @@ The fact that `deps.storage.get`, `deps.storage.set` or `deps.storage.remove` we
 | `deps.storage.remove()`                | No                  | Yes           |                        |
 | `deps.api.canonical_address()`         | Yes                 | Yes           |                        |
 | `deps.api.human_address()`             | Yes                 | Yes           |                        |
-| `deps.querier.query()`                 | No                  | Yes           | Query another contract |
+| `deps.querier.query()`                 | No                  | Only `msg`    | Query another contract |
 | `deps.querier.query_balance()`         | No                  | No            |                        |
 | `deps.querier.query_all_balances()`    | No                  | No            |                        |
 | `deps.querier.query_validators()`      | No                  | No            |                        |
@@ -101,26 +101,53 @@ Legend:
 
 Outputs that are encrypted are only known to the tx sender and to the contract.
 
-| Output                                                        | Type                           | Encrypted? | Notes                                             |
-| ------------------------------------------------------------- | ------------------------------ | ---------- | ------------------------------------------------- |
-| `log`                                                         | `Vec<{String,String}>`         | No         | Structure not encrypted, data is encrypted        |
-| `log[i].key`                                                  | `String`                       | Yes        |                                                   |
-| `log[i].value`                                                | `String`                       | Yes        |                                                   |
-| `messages`                                                    | `Vec<CosmosMsg>>`              | No         | Structure not encrypted, data sometimes encrypted |
-| `messages[i]`                                                 | `CosmosMsg::Bank`              | No         |                                                   |
-| `messages[i]`                                                 | `CosmosMsg::Custom`            | No         |                                                   |
-| `messages[i]`                                                 | `CosmosMsg::Staking`           | No         |                                                   |
-| `messages[i]`                                                 | `CosmosMsg::Wasm::Instantiate` | No         | Only the `msg` field is encrypted inside          |
-| `messages[i].CosmosMsg::Wasm::Instantiate.code_id`            | `u64`                          | No         |                                                   |
-| `messages[i].CosmosMsg::Wasm::Instantiate.callback_code_hash` | `String`                       | No         |                                                   |
-| `messages[i].CosmosMsg::Wasm::Instantiate.msg`                | `Binary`                       | Yes        |                                                   |
-| `messages[i].CosmosMsg::Wasm::Instantiate.send`               | `Vec<Coin>`                    | No         |                                                   |
-| `messages[i].CosmosMsg::Wasm::Instantiate.label`              | `Option<String>`               | No         |                                                   |
-| `messages[i]`                                                 | `CosmosMsg::Wasm::Execute`     | No         | Only the `msg` field is encrypted inside          |
-| `messages[i].CosmosMsg::Wasm::Execute.contract_addr`          | `HumanAddr`                    | No         |
-| `messages[i].CosmosMsg::Wasm::Execute.callback_code_hash`     | `String`                       | No         |
-| `messages[i].CosmosMsg::Wasm::Execute.msg`                    | `Binary`                       | Yes        |
-| `messages[i].CosmosMsg::Wasm::Execute.send`                   | `Vec<Coin>`                    | No         |
+`contract_address` is the "return value" of `init`, and is public.
+
+| Output             | Type        | Encrypted? | Notes                                         |
+| ------------------ | ----------- | ---------- | --------------------------------------------- |
+| `contract_address` | `HumanAddr` | No         | The "return value", not visible inside `init` |
+
+Logs (or events) is a list of key-value pair. The keys and values are encrypted, but the list struture itself is not encrypted.
+
+| Output         | Type                   | Encrypted? | Notes                                      |
+| -------------- | ---------------------- | ---------- | ------------------------------------------ |
+| `log`          | `Vec<{String,String}>` | No         | Structure not encrypted, data is encrypted |
+| `log[i].key`   | `String`               | Yes        |                                            |
+| `log[i].value` | `String`               | Yes        |                                            |
+
+Messages are actions that will be taken after this contract call and will all be commited inside the current transaction. Types of messages:
+
+- `CosmosMsg::Custom`
+- `CosmosMsg::Bank::Send`
+- `CosmosMsg::Staking::Delegate`
+- `CosmosMsg::Staking::Undelegate`
+- `CosmosMsg::Staking::Withdraw`
+- `CosmosMsg::Staking::Redelegate`
+- `CosmosMsg::Wasm::Instantiate`
+- `CosmosMsg::Wasm::Execute`
+
+| Output        | Type                           | Encrypted? | Notes                                             |
+| ------------- | ------------------------------ | ---------- | ------------------------------------------------- |
+| `messages`    | `Vec<CosmosMsg>>`              | No         | Structure not encrypted, data sometimes encrypted |
+| `messages[i]` | `CosmosMsg::Bank`              | No         |                                                   |
+| `messages[i]` | `CosmosMsg::Custom`            | No         |                                                   |
+| `messages[i]` | `CosmosMsg::Staking`           | No         |                                                   |
+| `messages[i]` | `CosmosMsg::Wasm::Instantiate` | No         | Only the `msg` field is encrypted inside          |
+| `messages[i]` | `CosmosMsg::Wasm::Execute`     | No         | Only the `msg` field is encrypted inside          |
+
+`Wasm` messages are additional contract calls to be invoked right after the current call is done.
+
+| Type of `CosmosMsg::Wasm::*` message | Field                | Type             | Encrypted? | Notes |
+| ------------------------------------ | -------------------- | ---------------- | ---------- | ----- |
+| `Instantiate`                        | `code_id`            | `u64`            | No         |       |
+| `Instantiate`                        | `callback_code_hash` | `String`         | No         |       |
+| `Instantiate`                        | `msg`                | `Binary`         | Yes        |       |
+| `Instantiate`                        | `send`               | `Vec<Coin>`      | No         |       |
+| `Instantiate`                        | `label`              | `Option<String>` | No         |       |
+| `Execute`                            | `contract_addr`      | `HumanAddr`      | No         |       |
+| `Execute`                            | `callback_code_hash` | `String`         | No         |       |
+| `Execute`                            | `msg`                | `Binary`         | Yes        |       |
+| `Execute`                            | `send`               | `Vec<Coin>`      | No         |       |
 
 # Handle
 
