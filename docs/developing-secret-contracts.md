@@ -20,6 +20,7 @@ Secret Contacts are based on CosmWasm v0.10.
 - [External query](#external-query)
 - [Compiling](#compiling)
 - [Storing and deploying](#storing-and-deploying)
+- [Making your contract's code verified on exporers](#making-your-contracts-code-verified-on-exporers)
 - [Testing](#testing)
 - [Debugging](#debugging)
 - [Building secret apps with SecretJS](#building-secret-apps-with-secretjs)
@@ -134,6 +135,8 @@ For example:
 # Compiling
 
 # Storing and deploying
+
+# Making your contract's code verified on exporers
 
 # Testing
 
