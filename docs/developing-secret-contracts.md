@@ -127,6 +127,9 @@ For example:
 5. `get_random_number` must also add to the entropy pool, otherwise consecutive `get_random_number` calls will output the same random number. For example `seed = hash(seed + msg.sender + block.height + ...)`.
 6. `get_random_number` will just return the `hash(seed)` or some other non-reversible derivative of it, and update the `seed` with the new entropy like described in the previous point.
 7. Have `get_random_number` also callback to the caller contract with the random number.
+8. You can even have a cron job to send data from [random.org](https://www.random.org/) to `input_entropy`.
+
+This exmaple has a much worse UX than rolling your own randomness, but at least contracts won't have to rely on users to send entropy and also won't take the risk of messing up the implementation.
 
 # Outputs
 
