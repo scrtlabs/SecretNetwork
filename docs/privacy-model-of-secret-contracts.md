@@ -24,8 +24,7 @@ For an in depth look at the Secret Network encryption specs, visit [here](protoc
 - [Data leakage attacks by detecting patterns in contract usage](#data-leakage-attacks-by-detecting-patterns-in-contract-usage)
   - [Differences in input sizes](#differences-in-input-sizes)
   - [Differences in state key sizes](#differences-in-state-key-sizes)
-  - [Differences in value sizes on state read](#differences-in-value-sizes-on-state-read)
-  - [Differences in key/value sizes on state write](#differences-in-keyvalue-sizes-on-state-write)
+  - [Differences in state value sizes](#differences-in-state-value-sizes)
   - [Differences in state access order](#differences-in-state-access-order)
   - [Differences in output return values size](#differences-in-output-return-values-size)
   - [Differences in the amounts of output messages/callbacks](#differences-in-the-amounts-of-output-messagescallbacks)
@@ -139,7 +138,9 @@ Now an attacker wouldn't be able to tell which function was called:
 1. `{"send":{"amount":123}}`
 2. `{"tsfr":{"amount":123}}`
 
-Although, if the attacker would know for example that `send.amount` is likely smaller than `100` and `tsfr.amount` is likely bigger than `100`, then they could still guess with some probability which function was called:
+Be creative.
+
+Another point to consider. If the attacker would have additional knowledge, for example that `send.amount` is likely smaller than `100` and `tsfr.amount` is likely bigger than `100`, then they might still guess with some probability which function was called:
 
 1. `{"send":{"amount":55}}`
 2. `{"tsfr":{"amount":123}}`
@@ -219,11 +220,14 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 ```
 
-## Differences in value sizes on state read
+Be creative.
 
-## Differences in key/value sizes on state write
+## Differences in state value sizes
 
 ## Differences in state access order
+
+1. read read write
+2. read write write
 
 ## Differences in output return values size
 
