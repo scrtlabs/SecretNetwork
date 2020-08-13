@@ -224,6 +224,86 @@ Be creative.
 
 ## Differences in state value sizes
 
+Very similar to the state key sizes case, if a contract uses storage values with predictaby different sizes, an attacker might find out information about the execution of a contract.
+
+Let's see an example for a contract with 2 `handle` functions:
+
+```rust
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum HandleMsg {
+    Send { amount: u8 },
+    Tsfr { amount: u8 },
+}
+
+pub fn handle<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    _env: Env,
+    msg: HandleMsg,
+) -> HandleResult {
+    match msg {
+        HandleMsg::Send { amount } => {
+            deps.storage.set(
+                b"sendsend",
+                format!("Sent amount: {}", amount).as_bytes(),
+            );
+            Ok(HandleResponse::default())
+        }
+        HandleMsg::Tsfr { amount } => {
+            deps.storage.set(
+                b"transfer",
+                format!("Transfered amount: {}", amount).as_bytes(),
+            );
+            Ok(HandleResponse::default())
+        }
+    }
+}
+```
+
+By looking at state write operation, an attacker can guess which function was called based on the size of the value that was used to write to storage:
+
+1. `Sent amount: 123`
+2. `Transfered amount: 123`
+
+Again, some quick fixes for this issue might be:
+
+1. Changing the `Transfered` string to `Tsfr`.
+2. Padding `Sent` to have the same length as `Transfered`: `SentSentSe`.
+
+```rust
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum HandleMsg {
+    Send { amount: u8 },
+    Tsfr { amount: u8 },
+}
+
+pub fn handle<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    _env: Env,
+    msg: HandleMsg,
+) -> HandleResult {
+    match msg {
+        HandleMsg::Send { amount } => {
+            deps.storage.set(
+                b"sendsend",
+                format!("Sent amount: {}", amount).as_bytes(),
+            );
+            Ok(HandleResponse::default())
+        }
+        HandleMsg::Tsfr { amount } => {
+            deps.storage.set(
+                b"transfer",
+                format!("Tsfr amount: {}", amount).as_bytes(),
+            );
+            Ok(HandleResponse::default())
+        }
+    }
+}
+```
+
+Be creative.
+
 ## Differences in state access order
 
 1. read read write
