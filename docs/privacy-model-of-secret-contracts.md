@@ -1,40 +1,40 @@
 # The privacy model of Secret Contracts
 
 - [The privacy model of Secret Contracts](#the-privacy-model-of-secret-contracts)
-  - [Init](#init)
-  - [Handle](#handle)
-  - [Query](#query)
-  - [Inputs](#inputs)
-    - [Encrypted](#encrypted)
-    - [Not encrypted](#not-encrypted)
-    - [What inputs can be trusted](#what-inputs-can-be-trusted)
-    - [What inputs cannot be trusted](#what-inputs-cannot-be-trusted)
-  - [State](#state)
-  - [External query](#external-query)
-    - [Encrypted](#encrypted-1)
-    - [Not encrypted](#not-encrypted-1)
-  - [Outputs](#outputs)
-    - [Encrypted](#encrypted-2)
-    - [Not encrypted](#not-encrypted-2)
-  - [Data leakage attacks by detecting patterns in contract usage](#data-leakage-attacks-by-detecting-patterns-in-contract-usage)
-    - [Differences in input sizes](#differences-in-input-sizes)
-    - [Differences in state key sizes](#differences-in-state-key-sizes)
-    - [Differences in value sizes on state read](#differences-in-value-sizes-on-state-read)
-    - [Differences in key/value sizes on state write](#differences-in-keyvalue-sizes-on-state-write)
-    - [Differences in state access order](#differences-in-state-access-order)
-    - [Differences in output return values size](#differences-in-output-return-values-size)
-    - [Differences in the amounts of output messages/callbacks](#differences-in-the-amounts-of-output-messagescallbacks)
-    - [Differences in sizes of output messages/callbacks](#differences-in-sizes-of-output-messagescallbacks)
-    - [Differences in the orders of output messages/callbacks](#differences-in-the-orders-of-output-messagescallbacks)
-    - [Differences in the amounts of output logs/events](#differences-in-the-amounts-of-output-logsevents)
-    - [Differences in sizes of output logs/events](#differences-in-sizes-of-output-logsevents)
-    - [Differences in the orders of output logs/events](#differences-in-the-orders-of-output-logsevents)
+- [Init](#init)
+- [Handle](#handle)
+- [Query](#query)
+- [Inputs](#inputs)
+  - [Encrypted](#encrypted)
+  - [Not encrypted](#not-encrypted)
+  - [What inputs can be trusted](#what-inputs-can-be-trusted)
+  - [What inputs cannot be trusted](#what-inputs-cannot-be-trusted)
+- [State](#state)
+- [External query](#external-query)
+  - [Encrypted](#encrypted-1)
+  - [Not encrypted](#not-encrypted-1)
+- [Outputs](#outputs)
+  - [Encrypted](#encrypted-2)
+  - [Not encrypted](#not-encrypted-2)
+- [Data leakage attacks by detecting patterns in contract usage](#data-leakage-attacks-by-detecting-patterns-in-contract-usage)
+  - [Differences in input sizes](#differences-in-input-sizes)
+  - [Differences in state key sizes](#differences-in-state-key-sizes)
+  - [Differences in value sizes on state read](#differences-in-value-sizes-on-state-read)
+  - [Differences in key/value sizes on state write](#differences-in-keyvalue-sizes-on-state-write)
+  - [Differences in state access order](#differences-in-state-access-order)
+  - [Differences in output return values size](#differences-in-output-return-values-size)
+  - [Differences in the amounts of output messages/callbacks](#differences-in-the-amounts-of-output-messagescallbacks)
+  - [Differences in sizes of output messages/callbacks](#differences-in-sizes-of-output-messagescallbacks)
+  - [Differences in the orders of output messages/callbacks](#differences-in-the-orders-of-output-messagescallbacks)
+  - [Differences in the amounts of output logs/events](#differences-in-the-amounts-of-output-logsevents)
+  - [Differences in sizes of output logs/events](#differences-in-sizes-of-output-logsevents)
+  - [Differences in the orders of output logs/events](#differences-in-the-orders-of-output-logsevents)
 
-## Init
+# Init
 
-## Handle
+# Handle
 
-## Query
+# Query
 
 - Read-only access to state
 - Metered by gas, but does not incurs fees
@@ -43,46 +43,46 @@
 - Access control: use passwords instead of checking for msg.sender
 - Passwords can be generated for users via `Init` or `Handle`.
 
-## Inputs
+# Inputs
 
-### Encrypted
+## Encrypted
 
 - `msg` - Only known to the tx sender and the contract
 
-### Not encrypted
+## Not encrypted
 
 - `msg.sender`
 - funds sent
 
-### What inputs can be trusted
+## What inputs can be trusted
 
 - tx sender
 - funds sent
 - `msg`
 
-### What inputs cannot be trusted
+## What inputs cannot be trusted
 
 - `block.height`
 
-## State
+# State
 
 - Only known to that specific contract
 
-## External query
+# External query
 
-### Encrypted
+## Encrypted
 
-### Not encrypted
+## Not encrypted
 
-## Outputs
+# Outputs
 
-### Encrypted
+## Encrypted
 
 - Only known to the tx sender and the contract
 
-### Not encrypted
+## Not encrypted
 
-## Data leakage attacks by detecting patterns in contract usage
+# Data leakage attacks by detecting patterns in contract usage
 
 Depending on the contract's implementation, an attacker might be able to de-anonymization information about the contract and its clients. Contract developers need to consider all the following scenarios and more, and implement mitigation in case that some of these attack vectors can worsen the privacy aspect of their app.
 
@@ -90,7 +90,7 @@ In all the following scenarios, assume that an attacker has a local full node in
 
 For encryption, the Secret Network is using (AES-SIV)[https://tools.ietf.org/html/rfc5297], which does not pad the ciphertext. This means it leaks information about the plaintext data, specifically what is its size, though in most aspects it's more secure than other padded encryption schemes. Read more about the encryption specs [in here](protocol/encryption-specs.md).
 
-### Differences in input sizes
+## Differences in input sizes
 
 An example input API for a contract with 2 `handle` functions:
 
@@ -146,7 +146,7 @@ Note that a client side solution can also be applied, but this is considered a v
 
 Again, this is very not recommended as you cannot guarantee control of the client!
 
-### Differences in state key sizes
+## Differences in state key sizes
 
 Contracts' state is stored on-chain inside a key-value store, thus the `key` must remain constant between calls. This means that if a contract uses storage keys with different sizes, an attacker might find out information about the execution of a contract.
 
@@ -214,22 +214,22 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 ```
 
-### Differences in value sizes on state read
+## Differences in value sizes on state read
 
-### Differences in key/value sizes on state write
+## Differences in key/value sizes on state write
 
-### Differences in state access order
+## Differences in state access order
 
-### Differences in output return values size
+## Differences in output return values size
 
-### Differences in the amounts of output messages/callbacks
+## Differences in the amounts of output messages/callbacks
 
-### Differences in sizes of output messages/callbacks
+## Differences in sizes of output messages/callbacks
 
-### Differences in the orders of output messages/callbacks
+## Differences in the orders of output messages/callbacks
 
-### Differences in the amounts of output logs/events
+## Differences in the amounts of output logs/events
 
-### Differences in sizes of output logs/events
+## Differences in sizes of output logs/events
 
-### Differences in the orders of output logs/events
+## Differences in the orders of output logs/events
