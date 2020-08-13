@@ -146,3 +146,17 @@ pub struct Validator {
     /// TODO: what units are these (in terms of time)?
     pub max_change_rate: Decimal,
 }
+
+/// Delegation is basic (cheap to query) data about a delegation
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct RewardsResponse {
+    pub rewards: Vec<ValidatorRewards>,
+    pub total: Vec<Coin>,
+}
+
+/// Delegation is basic (cheap to query) data about a delegation
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ValidatorRewards {
+    pub validator_address: HumanAddr,
+    pub rewards: Vec<Coin>,
+}
