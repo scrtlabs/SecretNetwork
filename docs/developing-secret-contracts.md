@@ -121,11 +121,11 @@ No implementation exists yet, but it's not that hard to implement.
 For example:
 
 1. Have a `handle` function `input_entropy` for users to send entropy in.
-2. `input_entropy` will have a storage key named `seed`
+2. `input_entropy` will have a storage key named `seed`.
 3. On each input to `input_entropy`, `seed = hash(seed + input)`.
 4. Have another `handle` function `get_random_number` for users to get a random number.
 5. `get_random_number` must also add to the entropy pool, otherwise consecutive `get_random_number` calls will output the same random number. For example `seed = hash(seed + msg.sender + block.height + ...)`.
-6. `get_random_number` will just return the `hash(seed)` or some other non-reversible derivative of it, and update the `seed` with the new entropy like describe in the previous point.
+6. `get_random_number` will just return the `hash(seed)` or some other non-reversible derivative of it, and update the `seed` with the new entropy like described in the previous point.
 7. Have `get_random_number` also callback to the caller contract with the random number.
 
 # Outputs
