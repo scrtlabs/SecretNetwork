@@ -2,11 +2,17 @@
 
 Secret Contracts are based on CosmWasm v0.10, but have additional privacy properties that can only be found in the Secret Network.
 
-If you're a contract developer, you might want to first catch up on [developing Secret Contracts](developing-secret-contracts.md).
+If you're a contract developer, you might want to first catch up on [developing Secret Contracts](developing-secret-contracts.md).  
 For an in depth look at the Secret Network encryption specs, visit [here](protocol/encryption-specs.md).
+
+Secret Contract developers must always consider the trade-off between privacy, user experience, performance and gas usage.
 
 - [The privacy model of Secret Contracts](#the-privacy-model-of-secret-contracts)
 - [Init](#init)
+  - [Inputs to `init`](#inputs-to-init)
+  - [State operations from `init`](#state-operations-from-init)
+  - [API calls from `init`](#api-calls-from-init)
+  - [Outputs](#outputs)
 - [Handle](#handle)
 - [Query](#query)
 - [Inputs](#inputs)
@@ -18,7 +24,7 @@ For an in depth look at the Secret Network encryption specs, visit [here](protoc
 - [External query](#external-query)
   - [Encrypted](#encrypted-1)
   - [Not encrypted](#not-encrypted-1)
-- [Outputs](#outputs)
+- [Outputs](#outputs-1)
   - [Encrypted](#encrypted-2)
   - [Not encrypted](#not-encrypted-2)
 - [Data leakage attacks by detecting patterns in contract usage](#data-leakage-attacks-by-detecting-patterns-in-contract-usage)
@@ -35,6 +41,63 @@ For an in depth look at the Secret Network encryption specs, visit [here](protoc
   - [Differences in the orders of output logs/events](#differences-in-the-orders-of-output-logsevents)
 
 # Init
+
+`init` is the constructor of your contract. This function is called only once in the lifetime of the contract.
+
+The fact that `init` was invoked is public.
+
+## Inputs to `init`
+
+Inputs that are encrypted are only known to the tx sender and to the contract.
+
+| Input                    | Type            | Encrypted? | Trusted? | Notes |
+| ------------------------ | --------------- | ---------- | -------- | ----- |
+| `env.block.height`       | `u64`           | No         | No       |       |
+| `env.block.time`         | `u64`           | No         | No       |       |
+| `env.block.chain_id`     | `String`        | No         | No       |       |
+| `env.message.sender`     | `CanonicalAddr` | No         | Yes      |       |
+| `env.message.sent_funds` | `Vec<Coin>`     | No         | Yes      |       |
+| `env.contract.address`   | `CanonicalAddr` | No         | Yes      |       |
+| `env.contract_code_hash` | `String`        | No         | Yes      |       |
+| `msg`                    | `InitMsg`       | Yes        | Yes      |       |
+
+## State operations from `init`
+
+The state of the contract is only known to the contract itself.
+
+The fact that `deps.storage.get`, `deps.storage.set` or `deps.storage.remove` were invoked from inside `init` is public.
+
+| Operation                       | Field   | Encrypted? | Notes |
+| ------------------------------- | ------- | ---------- | ----- |
+| `value = deps.storage.get(key)` | `key`   | Yes        |       |
+| `value = deps.storage.get(key)` | `value` | Yes        |       |
+| `deps.storage.set(key,value)`   | `key`   | Yes        |       |
+| `deps.storage.set(key,value)`   | `value` | Yes        |       |
+| `deps.storage.remove(key)`      | `key`   | Yes        |       |
+
+## API calls from `init`
+
+| Operation                              | Private invokation? | Private data? | Notes                  |
+| -------------------------------------- | ------------------- | ------------- | ---------------------- |
+| `deps.storage.get()`                   | No                  | Yes           |                        |
+| `deps.storage.set()`                   | No                  | Yes           |                        |
+| `deps.storage.remove()`                | No                  | Yes           |                        |
+| `deps.api.canonical_address()`         | Yes                 | Yes           |                        |
+| `deps.api.human_address()`             | Yes                 | Yes           |                        |
+| `deps.querier.query()`                 | No                  | Yes           | Query another contract |
+| `deps.querier.query_balance()`         | No                  | No            |                        |
+| `deps.querier.query_all_balances()`    | No                  | No            |                        |
+| `deps.querier.query_validators()`      | No                  | No            |                        |
+| `deps.querier.query_bonded_denom()`    | No                  | No            |                        |
+| `deps.querier.query_all_delegations()` | No                  | No            |                        |
+| `deps.querier.query_delegation()`      | No                  | No            |                        |
+
+Legend:
+
+- `Private invokation = Yes` means the request never exits SGX and thus an attacker cannot know it even occured.
+- `Private invokation = No` & `Private date = Yes` means an attacker can know that the contract used this API but cannot know the input parameters or return values.
+
+## Outputs
 
 # Handle
 
@@ -381,7 +444,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
 Now by looking at the order of state operation, an attacker cannot guess which function was called. It's always `read_db()` then `write_db()`.
 
-Note that this might affect gas usage for the worse (reading/writing data that isn't necessary to this function) or for the better (fewer reads and writes), so there's always a trade-off between gas, performance, privacy and user experience.
+Note that this might affect gas usage for the worse (reading/writing data that isn't necessary to this function) or for the better (fewer reads and writes), so there's always a trade-off between privacy, user experience, performance and gas usage.
 
 Be creative. :rainbow:
 

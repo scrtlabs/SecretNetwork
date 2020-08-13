@@ -100,6 +100,7 @@ Still not implemented in wallets. Can implement a local wallet but this will pro
 Secret Contacts are based on CosmWasm v0.10, but in order to preserve privacy, they diverge in functionality in some cases.
 
 - `code_hash` in callbacks
+- access to the current contract's `code_hash` via `env.contract_code_hash`
 - contract labels are unique, thus mandatory on callback to `init`
 - `migrate` and `admin` for contracts is not allowed
 - iterator (`db_scan`, `db_next`) on contract state keys is not allowed
