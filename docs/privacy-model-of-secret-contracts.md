@@ -48,7 +48,7 @@ The fact that `init` was invoked is public.
 
 ## Inputs to `init`
 
-Inputs that are encrypted are only known to the tx sender and to the contract.
+Inputs that are encrypted are only known to the transaction sender and to the contract.
 
 | Input                    | Type            | Encrypted? | Trusted? | Notes |
 | ------------------------ | --------------- | ---------- | -------- | ----- |
@@ -60,6 +60,10 @@ Inputs that are encrypted are only known to the tx sender and to the contract.
 | `env.contract.address`   | `CanonicalAddr` | No         | Yes      |       |
 | `env.contract_code_hash` | `String`        | No         | Yes      |       |
 | `msg`                    | `InitMsg`       | Yes        | Yes      |       |
+
+Legend:
+
+- `Trusted = No` means this data is easily forgeable. If an attacker wants to take its node off-chain and replay old inputs, they can pass a legitimate user input and false `env.block` input. Therefore, this data by itself cannot be trusted in order to reveal secret or change the state of secrets.
 
 ## State operations from `init`
 
@@ -77,7 +81,7 @@ The fact that `deps.storage.get`, `deps.storage.set` or `deps.storage.remove` we
 
 ## API calls from `init`
 
-| Operation                              | Private invokation? | Private data? | Notes                  |
+| Operation                              | Private invocation? | Private data? | Notes                  |
 | -------------------------------------- | ------------------- | ------------- | ---------------------- |
 | `deps.storage.get()`                   | No                  | Yes           |                        |
 | `deps.storage.set()`                   | No                  | Yes           |                        |
@@ -94,12 +98,12 @@ The fact that `deps.storage.get`, `deps.storage.set` or `deps.storage.remove` we
 
 Legend:
 
-- `Private invokation = Yes` means the request never exits SGX and thus an attacker cannot know it even occured.
-- `Private invokation = No` & `Private data = Yes` means an attacker can know that the contract used this API but cannot know the input parameters or return values.
+- `Private invocation = Yes` means the request never exits SGX and thus an attacker cannot know it even occurred.
+- `Private invocation = No` & `Private data = Yes` means an attacker can know that the contract used this API but cannot know the input parameters or return values.
 
 ## Outputs
 
-Outputs that are encrypted are only known to the tx sender and to the contract.
+Outputs that are encrypted are only known to the transaction sender and to the contract.
 
 `contract_address` is the "return value" of `init`, and is public.
 
@@ -115,7 +119,7 @@ Logs (or events) is a list of key-value pair. The keys and values are encrypted,
 | `log[i].key`   | `String`               | Yes        |                                            |
 | `log[i].value` | `String`               | Yes        |                                            |
 
-Messages are actions that will be taken after this contract call and will all be commited inside the current transaction. Types of messages:
+Messages are actions that will be taken after this contract call and will all be committed inside the current transaction. Types of messages:
 
 - `CosmosMsg::Custom`
 - `CosmosMsg::Bank::Send`
@@ -128,7 +132,7 @@ Messages are actions that will be taken after this contract call and will all be
 
 | Output        | Type                           | Encrypted? | Notes                                             |
 | ------------- | ------------------------------ | ---------- | ------------------------------------------------- |
-| `messages`    | `Vec<CosmosMsg>>`              | No         | Structure not encrypted, data sometimes encrypted |
+| `messages`    | `Vec<CosmosMsg>`               | No         | Structure not encrypted, data sometimes encrypted |
 | `messages[i]` | `CosmosMsg::Bank`              | No         |                                                   |
 | `messages[i]` | `CosmosMsg::Custom`            | No         |                                                   |
 | `messages[i]` | `CosmosMsg::Staking`           | No         |                                                   |
@@ -164,7 +168,7 @@ Messages are actions that will be taken after this contract call and will all be
 
 ## Encrypted
 
-- `msg` - Only known to the tx sender and the contract
+- `msg` - Only known to the transaction sender and the contract
 
 ## Not encrypted
 
@@ -173,7 +177,7 @@ Messages are actions that will be taken after this contract call and will all be
 
 ## What inputs can be trusted
 
-- tx sender
+- transaction sender
 - funds sent
 - `msg`
 
@@ -195,17 +199,17 @@ Messages are actions that will be taken after this contract call and will all be
 
 ## Encrypted
 
-- Only known to the tx sender and the contract
+- Only known to the transaction sender and the contract
 
 ## Not encrypted
 
 # Data leakage attacks by detecting patterns in contract usage
 
-Depending on the contract's implementation, an attacker might be able to de-anonymization information about the contract and its clients. Contract developers need to consider all the following scenarios and more, and implement mitigation in case that some of these attack vectors can worsen the privacy aspect of their app.
+Depending on the contract's implementation, an attacker might be able to de-anonymization information about the contract and its clients. Contract developers must consider all the following scenarios and more, and implement mitigations in case some of these attack vectors can compromise privacy aspects of their application.
 
 In all the following scenarios, assume that an attacker has a local full node in its control. They cannot break into SGX, but they can tightly monitor and debug every other aspect of the node, including trying to feed old transactions directly to the contract inside SGX (replay). Also, though it's encrypted, they can also monitor memory (size), CPU (load) and disk usage (read/write timings and sizes) of the SGX chip.
 
-For encryption, the Secret Network is using (AES-SIV)[https://tools.ietf.org/html/rfc5297], which does not pad the ciphertext. This means it leaks information about the plaintext data, specifically what is its size, though in most cases it's more secure than other padded encryption schemes. Read more about the encryption specs [in here](protocol/encryption-specs.md).
+For encryption, the Secret Network is using [AES-SIV](https://tools.ietf.org/html/rfc5297), which does not pad the ciphertext. This means it leaks information about the plaintext data, specifically what is its size, though in most cases it's more secure than other padded encryption schemes. Read more about the encryption specs [in here](protocol/encryption-specs.md).
 
 Most of the below examples talk about an attacker revealing which function was executed on the contract, but this is not the only type of data leakage that an attacker might target.
 
@@ -228,7 +232,7 @@ pub enum HandleMsg {
 }
 ```
 
-This means that the inputs for txs on this contract would look like:
+This means that the inputs for transactions on this contract would look like:
 
 1. `{"send":{"amount":123}}`
 2. `{"transfer":{"amount":123}}`
@@ -423,7 +427,7 @@ Be creative. :rainbow:
 
 ## Differences in state accessing order
 
-An attacker can monitor requests from Smart Contracts to the API that the Secret Network exposes for Contracts. So while `key` and `value` are encrypted in `read_db(key)` and `write_db(key,value)`, it is public knowledge that `read_db` or `write_db` were called.
+An attacker can monitor requests from Smart Contracts to the API that the Secret Network exposes for contracts. So while `key` and `value` are encrypted in `read_db(key)` and `write_db(key,value)`, it is public knowledge that `read_db` or `write_db` were called.
 
 Let's see an example for a contract with 2 `handle` functions:
 
