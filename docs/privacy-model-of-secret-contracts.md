@@ -92,11 +92,11 @@ Depending on the contract's implementation, an attacker might be able to de-anon
 
 In all the following scenarios, assume that an attacker has a local full node in its control. They cannot break into SGX, but they can tightly monitor and debug every other aspect of the node, including trying to feed old transactions directly to the contract inside SGX (replay). Also, though it's encrypted, they can also monitor memory (size), CPU (load) and disk usage (read/write timings and sizes) of the SGX chip.
 
-For encryption, the Secret Network is using (AES-SIV)[https://tools.ietf.org/html/rfc5297], which does not pad the ciphertext. This means it leaks information about the plaintext data, specifically what is its size, though in most aspects it's more secure than other padded encryption schemes. Read more about the encryption specs [in here](protocol/encryption-specs.md).
+For encryption, the Secret Network is using (AES-SIV)[https://tools.ietf.org/html/rfc5297], which does not pad the ciphertext. This means it leaks information about the plaintext data, specifically what is its size, though in most cases it's more secure than other padded encryption schemes. Read more about the encryption specs [in here](protocol/encryption-specs.md).
 
-Most of the below examples talk about an attacker reveiling which function was executed on the contract, but this is not the only type of data leakage that an attacker might target.
+Most of the below examples talk about an attacker revealing which function was executed on the contract, but this is not the only type of data leakage that an attacker might target.
 
-Secret Contract developers must analyze the privacy model of their contract - What kind of information must remain private and what kind of information, if revieled, won't affect the operation of the contract and its users.
+Secret Contract developers must analyze the privacy model of their contract - What kind of information must remain private and what kind of information, if revealed, won't affect the operation of the contract and its users.
 
 ## Differences in input sizes
 
@@ -144,7 +144,7 @@ Now an attacker wouldn't be able to tell which function was called:
 
 Be creative. :rainbow:
 
-Another point to consider. If the attacker would have additional knowledge, for example that `send.amount` is likely smaller than `100` and `tsfr.amount` is likely bigger than `100`, then they might still guess with some probability which function was called:
+Another point to consider. If the attacker had additional knowledge, for example that `send.amount` is likely smaller than `100` and `tsfr.amount` is likely bigger than `100`, then they might still guess with some probability which function was called:
 
 1. `{"send":{"amount":55}}`
 2. `{"tsfr":{"amount":123}}`
@@ -228,7 +228,7 @@ Be creative. :rainbow:
 
 ## Differences in state value sizes
 
-Very similar to the state key sizes case, if a contract uses storage values with predictaby different sizes, an attacker might find out information about the execution of a contract.
+Very similar to the state key sizes case, if a contract uses storage values with predictably different sizes, an attacker might find out information about the execution of a contract.
 
 Let's see an example for a contract with 2 `handle` functions:
 
@@ -267,12 +267,12 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 By looking at state write operation, an attacker can guess which function was called based on the size of the value that was used to write to storage:
 
 1. `Sent amount: 123`
-2. `Transfered amount: 123`
+2. `Transferred amount: 123`
 
 Again, some quick fixes for this issue might be:
 
-1. Changing the `Transfered` string to `Tsfr`.
-2. Padding `Sent` to have the same length as `Transfered`: `SentSentSe`.
+1. Changing the `Transferred` string to `Tsfr`.
+2. Padding `Sent` to have the same length as `Transferred`: `SentSentSen`.
 
 ```rust
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -310,7 +310,7 @@ Be creative. :rainbow:
 
 ## Differences in state accessing order
 
-An attacker can monitor requests from Smart Contracts to the API that the Secret Network exposes for Contracts. So while `key` and `value` are encrypted in `read_db(key)` and `write_db(key,value)`, it's public knowledge that `read_db` or `write_db` were called.
+An attacker can monitor requests from Smart Contracts to the API that the Secret Network exposes for Contracts. So while `key` and `value` are encrypted in `read_db(key)` and `write_db(key,value)`, it is public knowledge that `read_db` or `write_db` were called.
 
 Let's see an example for a contract with 2 `handle` functions:
 
@@ -379,8 +379,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 ```
 
-Now, by looking at the order of state operation, an attacker cannot guess which function was called. It's always `read_db()` then `write_db()`.
-Note that this might affect gas usage for the worse (reading/writing data that isn't necessary to this function) or for the better (less reads and writes), so there's allways a trade-off between gas, performane, privacy and user experience.
+Now by looking at the order of state operation, an attacker cannot guess which function was called. It's always `read_db()` then `write_db()`.
+
+Note that this might affect gas usage for the worse (reading/writing data that isn't necessary to this function) or for the better (fewer reads and writes), so there's always a trade-off between gas, performance, privacy and user experience.
 
 Be creative. :rainbow:
 
