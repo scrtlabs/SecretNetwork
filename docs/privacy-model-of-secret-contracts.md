@@ -137,17 +137,17 @@ Messages are actions that will be taken after this contract call and will all be
 
 `Wasm` messages are additional contract calls to be invoked right after the current call is done.
 
-| Type of `CosmosMsg::Wasm::*` message | Field                | Type             | Encrypted? | Notes |
-| ------------------------------------ | -------------------- | ---------------- | ---------- | ----- |
-| `Instantiate`                        | `code_id`            | `u64`            | No         |       |
-| `Instantiate`                        | `callback_code_hash` | `String`         | No         |       |
-| `Instantiate`                        | `msg`                | `Binary`         | Yes        |       |
-| `Instantiate`                        | `send`               | `Vec<Coin>`      | No         |       |
-| `Instantiate`                        | `label`              | `Option<String>` | No         |       |
-| `Execute`                            | `contract_addr`      | `HumanAddr`      | No         |       |
-| `Execute`                            | `callback_code_hash` | `String`         | No         |       |
-| `Execute`                            | `msg`                | `Binary`         | Yes        |       |
-| `Execute`                            | `send`               | `Vec<Coin>`      | No         |       |
+| Type of `CosmosMsg::Wasm::*` message | Field                | Type        | Encrypted? | Notes |
+| ------------------------------------ | -------------------- | ----------- | ---------- | ----- |
+| `Instantiate`                        | `code_id`            | `u64`       | No         |       |
+| `Instantiate`                        | `callback_code_hash` | `String`    | No         |       |
+| `Instantiate`                        | `msg`                | `Binary`    | Yes        |       |
+| `Instantiate`                        | `send`               | `Vec<Coin>` | No         |       |
+| `Instantiate`                        | `label`              | `String`    | No         |       |
+| `Execute`                            | `contract_addr`      | `HumanAddr` | No         |       |
+| `Execute`                            | `callback_code_hash` | `String`    | No         |       |
+| `Execute`                            | `msg`                | `Binary`    | Yes        |       |
+| `Execute`                            | `send`               | `Vec<Coin>` | No         |       |
 
 # Handle
 
