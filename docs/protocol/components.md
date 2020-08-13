@@ -2,7 +2,7 @@
 
 This section provides an overview of Secret Network, component by component. For more information, please refer to specific pages which go into more detail.
 
-![network](../.vuepress/public/diagrams/secret-network.png)
+![network](../images/diagrams/secret-network.png)
 
 ## Validators
 
@@ -39,7 +39,7 @@ The Secret Network blockchain currently contains the following modules. For a fu
 
 Enigma is currently implementing the `compute` module, or `x/compute` for the Secret Network. This module will enable secret contract functionality, including encryption and decryption of state, as well as encrypted input/outputs for users.
 
-![modules](../.vuepress/public/diagrams/module-map.png)
+![modules](../images/diagrams/module-map.png)
 
 ## Client Library
 

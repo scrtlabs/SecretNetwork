@@ -12,7 +12,7 @@ The Secret Network performs computations in a Trusted Execution Environment. Mor
 
 As requested by SGX technology, the Secret Network Protocol code is partitioned into trusted and untrusted parts. The trusted part contains sensitive data and it is executed inside an “enclave,” which is a term referring to the secure component of a Trusted Execution Environment. The untrusted part includes the rest of the code, along with code for managing the enclave (load and destroy).
 
-![enclave](../.vuepress/public/diagrams/enclave.png)
+![enclave](../images/diagrams/enclave.png)
 
 Figure: diagram of Core, trusted and untrusted components
 

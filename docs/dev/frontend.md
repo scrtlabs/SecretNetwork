@@ -105,7 +105,7 @@ A [wallet service](https://github.com/CosmWasm/name-app/blob/master/src/service/
 
 In the browser's network tab we can see this play out, the account is queried but has no funds initially, then the faucet is hit, `/credit`
 
-![](images/faucet.png)
+![](../images/images/faucet.png)
 
 With this connection in hand we can now focus on the [contract logic](https://github.com/CosmWasm/name-app/blob/master/src/components/ContractLogic/index.tsx), starting with a list of all the instances of the Counter contract.
 
@@ -127,7 +127,7 @@ return (
 );
 ```
 
-![](images/contract-items.png)
+![](../images/images/contract-items.png)
 
 Selecting an instance [queries it's current count](https://github.com/levackt/devx2/blob/cb9b9206a77f9deed4f16f7b4d5a614cb38c392d/client/src/components/ContractLogic/Counter.tsx#L42)
 
@@ -208,7 +208,7 @@ Add the ResetForm to [the Counter component](https://github.com/levackt/devx2/bl
 <ResetForm handleReset="{reset}" loading="{state.loading}" />
 ```
 
-![](images/reset.png)
+![](../images/images/reset.png)
 
 All that's left is to [execute the reset](https://github.com/levackt/devx2/blob/cb9b9206a77f9deed4f16f7b4d5a614cb38c392d/client/src/components/ContractLogic/Counter.tsx#L85) when the user submits.
 
@@ -243,7 +243,7 @@ We could query the contract owner and only show the ResetForm if the current acc
     }
 ```
 
-![](images/unauthorized.png)
+![](../images/images/unauthorized.png)
 
 # Resources
 

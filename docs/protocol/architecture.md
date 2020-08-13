@@ -33,7 +33,7 @@ This encrypted data can only be accessed from within the “trusted execution en
 
 The Secret Network’s `compute` module currently requires that validators run nodes with Intel SGX chips (enclaves). These enclaves contain signing keys that are generated within the enclave. For more details on how enclaves function and are verified, see [intel SGX](sgx.md).
 
-![enclave](../.vuepress/public/diagrams/enclave.png)
+![enclave](../images/diagrams/enclave.png)
 
 Diagram: Trusted and Untrusted aspects of Secret Network code. `compute` enables cosmwasm with encryption to be executed within the trusted component of the enclave.
 
