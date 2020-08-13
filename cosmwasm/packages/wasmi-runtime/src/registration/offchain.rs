@@ -1,20 +1,22 @@
-#[cfg(feature = "SGX_MODE_HW")]
-use enclave_ffi_types::NodeAuthResult;
-///
+//!
 /// These functions run off chain, and so are not limited by deterministic limitations. Feel free
 /// to go crazy with random generation entropy, time requirements, or whatever else
 ///
+
 use log::*;
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_types::{sgx_platform_info_t, sgx_update_info_bit_t};
 use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 use std::slice;
 
+#[cfg(feature = "SGX_MODE_HW")]
+use enclave_ffi_types::NodeAuthResult;
+
 use crate::consts::{
     ATTESTATION_CERTIFICATE_SAVE_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH,
     SEED_EXCH_CERTIFICATE_SAVE_PATH,
 };
-use crate::crypto::{Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
+use crate::crypto::{KEY_MANAGER, Keychain, PUBLIC_KEY_SIZE};
 #[cfg(feature = "SGX_MODE_HW")]
 use crate::registration::report::AttestationReport;
 use crate::storage::write_to_untrusted;
@@ -22,9 +24,7 @@ use crate::utils::{attest_from_key, validate_const_ptr, validate_mut_ptr, valida
 
 use super::attestation::create_attestation_certificate;
 #[cfg(feature = "SGX_MODE_HW")]
-use super::cert::ocall_get_update_info;
-#[cfg(feature = "SGX_MODE_HW")]
-use super::cert::verify_quote_status;
+use super::cert::{ocall_get_update_info, verify_quote_status};
 use super::cert::verify_ra_cert;
 use super::seed_exchange::decrypt_seed;
 
@@ -194,7 +194,7 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
         return status;
     }
 
-    let _ = verify_local_report(cert.as_slice());
+    print_local_report_info(cert.as_slice());
 
     sgx_status_t::SGX_SUCCESS
 }
@@ -224,17 +224,15 @@ pub unsafe extern "C" fn ecall_key_gen(
 }
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
-fn verify_local_report(_cert: &[u8]) -> sgx_status_t {
-    sgx_status_t::SGX_SUCCESS
-}
+fn print_local_report_info(_cert: &[u8]) {}
 
 #[cfg(feature = "SGX_MODE_HW")]
-fn verify_local_report(cert: &[u8]) -> sgx_status_t {
+fn print_local_report_info(cert: &[u8]) {
     let report = match AttestationReport::from_cert(cert) {
         Ok(r) => r,
         Err(_) => {
             error!("Error parsing report");
-            return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+            return;
         }
     };
 
@@ -258,39 +256,50 @@ fn verify_local_report(cert: &[u8]) -> sgx_status_t {
     // print platform blob info
     match node_auth_result {
         NodeAuthResult::GroupOutOfDate | NodeAuthResult::SwHardeningAndConfigurationNeeded => unsafe {
-            if let Some(platform_info) = report.platform_info_blob {
-                let mut update_info = sgx_update_info_bit_t::default();
-                let mut rt = sgx_status_t::default();
-                let res = ocall_get_update_info(
-                    &mut rt as *mut sgx_status_t,
-                    platform_info.as_slice().as_ptr() as *const sgx_platform_info_t,
-                    1,
-                    &mut update_info as *mut sgx_update_info_bit_t,
-                );
-
-                if res != sgx_status_t::SGX_SUCCESS {
-                    println!("res={:?}", res);
-                    return res;
-                }
-
-                if rt != sgx_status_t::SGX_SUCCESS {
-                    println!("Processor Firmware Update (ucodeUpdate). A security upgrade for your computing
-                            device is required for this application to continue to provide you with a high degree of
-                            security. Please contact your device manufacturer’s support website for a BIOS update
-                            for this system. Update code: {}", update_info.ucodeUpdate);
-                    println!("Intel Manageability Engine Update (csmeFwUpdate). A security upgrade for your
-                            computing device is required for this application to continue to provide you with a high
-                            degree of security. Please contact your device manufacturer’s support website for a
-                            BIOS and/or Intel® Manageability Engine update for this system. Update code: {}", update_info.csmeFwUpdate);
-                    println!("Intel SGX Platform Software Update (pswUpdate). A security upgrade for your
-                              computing device is required for this application to continue to provide you with a high
-                              degree of security. Please visit this application’s support website for an Intel SGX
-                              Platform SW update. Update code: {}", update_info.pswUpdate);
-                }
-            }
+            print_platform_info(&report)
         },
         _ => {}
     }
+}
 
-    sgx_status_t::SGX_SUCCESS
+#[cfg(feature = "SGX_MODE_HW")]
+unsafe fn print_platform_info(report: &AttestationReport) {
+    if let Some(platform_info) = &report.platform_info_blob {
+        let mut update_info = sgx_update_info_bit_t::default();
+        let mut rt = sgx_status_t::default();
+        let res = ocall_get_update_info(
+            &mut rt as *mut sgx_status_t,
+            platform_info[4..].as_ptr() as *const sgx_platform_info_t,
+            1,
+            &mut update_info,
+        );
+
+        if res != sgx_status_t::SGX_SUCCESS {
+            println!("res={:?}", res);
+            return;
+        }
+
+        if rt != sgx_status_t::SGX_SUCCESS {
+            if update_info.ucodeUpdate != 0 {
+                println!("Processor Firmware Update (ucodeUpdate). A security upgrade for your computing\n\
+                            device is required for this application to continue to provide you with a high degree of\n\
+                            security. Please contact your device manufacturer’s support website for a BIOS update\n\
+                            for this system");
+            }
+
+            if update_info.csmeFwUpdate != 0 {
+                println!("Intel Manageability Engine Update (csmeFwUpdate). A security upgrade for your\n\
+                            computing device is required for this application to continue to provide you with a high\n\
+                            degree of security. Please contact your device manufacturer’s support website for a\n\
+                            BIOS and/or Intel® Manageability Engine update for this system");
+            }
+
+            if update_info.pswUpdate != 0 {
+                println!("Intel SGX Platform Software Update (pswUpdate). A security upgrade for your\n\
+                              computing device is required for this application to continue to provide you with a high\n\
+                              degree of security. Please visit this application’s support website for an Intel SGX\n\
+                              Platform SW update");
+            }
+        }
+    }
 }

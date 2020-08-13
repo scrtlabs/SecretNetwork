@@ -35,6 +35,8 @@ mod results;
 mod storage;
 mod utils;
 
+mod tests;
+
 static LOGGER: SimpleLogger = SimpleLogger;
 
 #[cfg(all(not(feature = "production"), feature = "SGX_MODE_HW"))]
@@ -59,10 +61,4 @@ fn init_logger() {
     log::set_logger(&LOGGER)
         .map(|()| log::set_max_level(LevelFilter::Trace))
         .unwrap();
-}
-
-// todo: figure out how we want to turn this on
-#[cfg(feature = "test")]
-fn run_test() {
-    println!("placeholder")
 }

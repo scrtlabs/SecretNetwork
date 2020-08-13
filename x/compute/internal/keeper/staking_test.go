@@ -120,7 +120,7 @@ func TestInitializeStaking(t *testing.T) {
 	}
 	initBz, err := json.Marshal(&initMsg)
 	require.NoError(t, err)
-	initBz, err = wasmCtx.Encrypt(initBz)
+	initBz, err = testEncrypt(t, keeper, ctx, nil, stakingID, initBz)
 	require.NoError(t, err)
 
 	stakingAddr, err := keeper.Instantiate(ctx, stakingID, creator, nil, initBz, "staking derivates - DRV", nil)
@@ -209,7 +209,7 @@ func initializeStaking(t *testing.T) initInfo {
 	}
 	initBz, err := json.Marshal(&initMsg)
 	require.NoError(t, err)
-	initBz, err = wasmCtx.Encrypt(initBz)
+	initBz, err = testEncrypt(t, keeper, ctx, nil, stakingID, initBz)
 	require.NoError(t, err)
 
 	stakingAddr, err := keeper.Instantiate(ctx, stakingID, creator, nil, initBz, "staking derivates - DRV", nil)
@@ -255,7 +255,7 @@ func TestBonding(t *testing.T) {
 	}
 	bondBz, err := json.Marshal(bond)
 	require.NoError(t, err)
-	bondBz, err = wasmCtx.Encrypt(bondBz)
+	bondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, bondBz)
 	require.NoError(t, err)
 	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds)
 	require.NoError(t, err)
@@ -301,7 +301,7 @@ func TestUnbonding(t *testing.T) {
 	}
 	bondBz, err := json.Marshal(bond)
 	require.NoError(t, err)
-	bondBz, err = wasmCtx.Encrypt(bondBz)
+	bondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, bondBz)
 	require.NoError(t, err)
 	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds)
 	require.NoError(t, err)
@@ -317,7 +317,7 @@ func TestUnbonding(t *testing.T) {
 	}
 	unbondBz, err := json.Marshal(unbond)
 	require.NoError(t, err)
-	unbondBz, err = wasmCtx.Encrypt(unbondBz)
+	unbondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, unbondBz)
 	require.NoError(t, err)
 	_, err = keeper.Execute(ctx, contractAddr, bob, unbondBz, nil)
 	require.NoError(t, err)
@@ -375,7 +375,7 @@ func TestReinvest(t *testing.T) {
 	}
 	bondBz, err := json.Marshal(bond)
 	require.NoError(t, err)
-	bondBz, err = wasmCtx.Encrypt(bondBz)
+	bondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, bondBz)
 	require.NoError(t, err)
 	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds)
 	require.NoError(t, err)
@@ -391,7 +391,7 @@ func TestReinvest(t *testing.T) {
 	}
 	reinvestBz, err := json.Marshal(reinvest)
 	require.NoError(t, err)
-	reinvestBz, err = wasmCtx.Encrypt(reinvestBz)
+	reinvestBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, reinvestBz)
 	require.NoError(t, err)
 	_, err = keeper.Execute(ctx, contractAddr, bob, reinvestBz, nil)
 	require.NoError(t, err)
@@ -500,6 +500,7 @@ func assertClaims(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	}
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
+
 	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
 	require.Empty(t, qErr)
 	var claims ClaimsResponse
@@ -514,6 +515,7 @@ func assertSupply(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	require.NoError(t, err)
 	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
 	require.Empty(t, qErr)
+
 	var invest InvestmentResponse
 	err = json.Unmarshal([]byte(res), &invest)
 	require.NoError(t, err)

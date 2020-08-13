@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	distr "github.com/enigmampc/cosmos-sdk/x/distribution"
@@ -193,7 +194,9 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
+	fmt.Printf("Contract Execute: Got contract Key for contract %s: %s\n", contractAddress, base64.StdEncoding.EncodeToString(contractKey))
 	params := types.NewEnv(ctx, caller, coins, contractAddress, contractKey)
+	fmt.Printf("Contract Execute: key from params %s \n", params.Key)
 
 	// prepare querier
 	querier := QueryHandler{
@@ -372,12 +375,29 @@ func (k Keeper) contractInstance(ctx sdk.Context, contractAddress sdk.AccAddress
 	return codeInfo, prefixStore, nil
 }
 
+func (k Keeper) GetContractKey(ctx sdk.Context, contractAddress sdk.AccAddress) []byte {
+	store := ctx.KVStore(k.storeKey)
+
+	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
+
+	return contractKey
+}
+
 func (k Keeper) GetContractAddress(ctx sdk.Context, label string) sdk.AccAddress {
 	store := ctx.KVStore(k.storeKey)
 
 	contractAddress := store.Get(types.GetContractLabelPrefix(label))
 
 	return contractAddress
+}
+
+func (k Keeper) GetContractHash(ctx sdk.Context, contractAddress sdk.AccAddress) []byte {
+
+	codeId := k.GetContractInfo(ctx, contractAddress).CodeID
+
+	hash := k.GetCodeInfo(ctx, codeId).CodeHash
+
+	return hash
 }
 
 func (k Keeper) GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *types.ContractInfo {
