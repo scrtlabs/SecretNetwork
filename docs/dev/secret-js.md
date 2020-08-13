@@ -138,7 +138,6 @@ client.execute(contractAddress, handleMsg);
 
 // Query again to confirm it worked
 smartQuery(client, contractAddress, { get_count: {} })
-
 ```
 
 ![](cosmwasm-cli.png)

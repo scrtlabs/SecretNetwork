@@ -18,16 +18,17 @@ Secret Contacts are based on CosmWasm v0.10.
 - [Storing and deploying](#storing-and-deploying)
 - [Testing](#testing)
 - [Debugging](#debugging)
-- [Building sApps with SecretJS](#building-sapps-with-secretjs)
+- [Building secret apps with SecretJS](#building-secret-apps-with-secretjs)
   - [Wallet integration](#wallet-integration)
 - [Differences from CosmWasm](#differences-from-cosmwasm)
 
 # IDE
 
+Secret Contracts are developed with the [Rust](https://www.rust-lang.org/) programming language and are compiled to [WASM](https://webassembly.org/) binaries.
 These IDEs are known to work very well for developing Secret Contracts:
 
 - [CLion](https://www.jetbrains.com/clion/)
-- [VSCode](https://code.visualstudio.com/) with the [rust-analyzer](https://rust-analyzer.github.io/) extention
+- [VSCode](https://code.visualstudio.com/) with the [rust-analyzer](https://rust-analyzer.github.io/) extension
 
 # Personal Secret Network for Secret Contract development
 
@@ -41,7 +42,7 @@ secretcli tx compute instantiate "$CODE_ID" "$INPUT_MSG" --label "$UNIQUE_LABEL"
 
 # Handle
 
-`handle` is the implementation of execute trasactions.
+`handle` is the implementation of execute transactions.
 
 ```bash
 secretcli tx compute execute "$CONTRACT_ADDRESS" "$INPUT_ARGS" --from "$MY_KEY" # Option A
@@ -79,11 +80,19 @@ secretcli q compute query "$CONTRACT_ADDRESS" "$INPUT_ARGS"
 
 # Debugging
 
-# Building sApps with SecretJS
+# Building secret apps with SecretJS
+
+A Secret App, or a SApp, is is a DApp with computational and data privacy.
+A Secret App is usually comprised of the following components:
+
+- A Secret Contract deployed on the Secret Network
+- A frontend app built with a JavaScript framework (E.g. ReactJS, VueJS, AngularJS, etc.)
+- The frontend app connects to the Secret Network using SecretJS,
+- SecretJS interacts with a REST API exposed by nodes in the Secret Network. The REST API/HTTPS server is commonly refered to as LCD Server (Light Client Daemon :shrug:). Usually by connecting SecretJS with a wallet, the wallet handles the interactions with the LCD server.
 
 ## Wallet integration
 
-Still not there. Can implement a local wallet but this will probably won't be needed anymore after 2020.
+Still not implemented in wallets. Can implement a local wallet but this will probably won't be needed anymore after 2020.
 
 # Differences from CosmWasm
 

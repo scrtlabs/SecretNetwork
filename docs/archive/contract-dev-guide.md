@@ -1,10 +1,10 @@
 # Secret Contract Dev Guide
 
-This repository can be used to get up and running on a local Secret Network developer testnet (secretdev) to start working with CosmWasm-based smart contracts (soon to be secret contracts).
+This repository can be used to get up and running on a local Secret Network developer testnet (secretdev) to start working with CosmWasm-based smart contracts (soon to be Secret Contracts).
 
 A few important notes:
 
-- smart contracts in this repo are a precursor to secret contracts, which enable data privacy
+- smart contracts in this repo are a precursor to Secret Contracts, which enable data privacy
 - smart contracts are written in Rust and based on CosmWasm, and the module is referred to as `compute` in the Secret Network
 - these CosmWasm-based smart contracts should be reusable and easily modified once we incorporate data privacy
 
@@ -49,7 +49,7 @@ Secret Contracts are based on [CosmWasm](https://www.cosmwasm.com) which is impl
 
 The Secret Network has a _compute_ module that we'll use to store, query and instantiate the smart contract. Once stored on the blockchain the smart contract has to be created (or instantiated) in order to execute its methods. This is similar to doing an Ethereum `migrate` using truffle which handles the deployment and creation of a smart contract.
 
-Eventually the smart contracts will become secret contracts (in a future blockchain upgrade) running in an SGX enclave (Trusted Execution Environment) where computations are performed on the encrypted contract data (i.e. inputs, state).
+Eventually the smart contracts will become Secret Contracts (in a future blockchain upgrade) running in an SGX enclave (Trusted Execution Environment) where computations are performed on the encrypted contract data (i.e. inputs, state).
 
 Next we'll walkthrough steps to:
 

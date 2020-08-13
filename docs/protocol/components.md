@@ -10,7 +10,7 @@ The Secret Network validators are responsible for proposing new blocks to the bl
 
 ## Secret Contracts
 
-Secret contracts are code which executes over encrypted data. Secret contracts are currently written in Rust (though this could be potentially expanded in the future to include AssemblyScript), and compile to WASM. Secret contracts are public while the data they execute over is not. This enables users to have confidence that contracts will perform as functioned, while simultaneously ensuring that the data users submit cannot be viewed by any counterparty.
+Secret Contracts are code which executes over encrypted data. Secret Contracts are currently written in Rust (though this could be potentially expanded in the future to include AssemblyScript), and compile to WASM. Secret Contracts are public while the data they execute over is not. This enables users to have confidence that contracts will perform as functioned, while simultaneously ensuring that the data users submit cannot be viewed by any counterparty.
 
 Contracts are stored on the Secret blockchain, where their code is publicly available. They execute inside the trusted part of Secret Network.
 
@@ -37,13 +37,13 @@ The Secret Network blockchain currently contains the following modules. For a fu
 
 ## Compute Module
 
-Enigma is currently implementing the `compute` module, or `x/compute` for the Secret Network. This module will enable secret contract functionality, including encryption and decryption of state, as well as encrypted input/outputs for users.
+Enigma is currently implementing the `compute` module, or `x/compute` for the Secret Network. This module will enable Secret Contract functionality, including encryption and decryption of state, as well as encrypted input/outputs for users.
 
 ![modules](../images/diagrams/module-map.png)
 
 ## Client Library
 
-The Secret Network client library is an API included in decentralized applications that enables them to easily communicate with secret contracts on the Secret blockchain. This component is still under development, but will most likely be built on top of CosmWasmJS, and include novel functions for specific tasks.
+The Secret Network client library is an API included in decentralized applications that enables them to easily communicate with Secret Contracts on the Secret blockchain. This component is still under development, but will most likely be built on top of CosmWasmJS, and include novel functions for specific tasks.
 
 ## Bootstrap Node
 

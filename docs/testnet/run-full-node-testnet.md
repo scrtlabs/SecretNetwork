@@ -251,7 +251,7 @@ secretcli config node tcp://<your-public-ip>:26657
 
 ### 22. Optional: make your full node a validator
 
-Your full node is now part of the network, storing and verifying chain data and secret contracts, and helping to distribute transactions and blocks. It's usable as a sentry node, for people to connect their CLI or light clients, or just to support the network.
+Your full node is now part of the network, storing and verifying chain data and Secret Contracts, and helping to distribute transactions and blocks. It's usable as a sentry node, for people to connect their CLI or light clients, or just to support the network.
 
 It is however not producing blocks yet, and you can't delegate funds to it for staking. To do that that you'll have to turn it into a validator by submitting a `create-validator` transaction.
 
