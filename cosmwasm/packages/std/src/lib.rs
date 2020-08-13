@@ -1,7 +1,9 @@
 // Exposed on all platforms
 
+mod addresses;
 mod coins;
 mod encoding;
+mod entry_points;
 mod errors;
 mod init_handle;
 #[cfg(feature = "iterator")]
@@ -13,15 +15,13 @@ mod storage;
 mod traits;
 mod types;
 
+pub use crate::addresses::{CanonicalAddr, HumanAddr};
 pub use crate::coins::{coin, coins, has_coins, Coin};
 pub use crate::encoding::Binary;
-pub use crate::errors::{
-    generic_err, invalid_base64, invalid_utf8, not_found, null_pointer, parse_err, serialize_err,
-    unauthorized, underflow, StdError, StdResult, SystemError, SystemResult,
-};
+pub use crate::errors::{StdError, StdResult, SystemError, SystemResult};
 pub use crate::init_handle::{
-    log, BankMsg, CosmosMsg, HandleResponse, HandleResult, InitResponse, InitResult, LogAttribute,
-    MigrateResponse, MigrateResult, StakingMsg, WasmMsg,
+    log, BankMsg, Context, CosmosMsg, HandleResponse, HandleResult, InitResponse, InitResult,
+    LogAttribute, MigrateResponse, MigrateResult, StakingMsg, WasmMsg,
 };
 #[cfg(feature = "iterator")]
 pub use crate::iterator::{Order, KV};
@@ -34,9 +34,7 @@ pub use crate::query::{
 pub use crate::serde::{from_binary, from_slice, to_binary, to_vec};
 pub use crate::storage::MemoryStorage;
 pub use crate::traits::{Api, Extern, Querier, QuerierResult, ReadonlyStorage, Storage};
-pub use crate::types::{
-    BlockInfo, CanonicalAddr, ContractInfo, Env, HumanAddr, MessageInfo, Never,
-};
+pub use crate::types::{BlockInfo, ContractInfo, Empty, Env, MessageInfo};
 
 // Exposed in wasm build only
 
