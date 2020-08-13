@@ -1,9 +1,11 @@
 use log::*;
 
+use crate::cosmwasm::encoding::Binary;
 use crate::cosmwasm::types::{CanonicalAddr, PubKeyKind};
 use crate::crypto::traits::PubKey;
 use crate::crypto::CryptoError;
 use serde::{Deserialize, Serialize};
+use sha2::Digest;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct MultisigThresholdPubKey {
@@ -13,11 +15,30 @@ pub struct MultisigThresholdPubKey {
 
 impl PubKey for MultisigThresholdPubKey {
     fn get_address(&self) -> CanonicalAddr {
-        unimplemented!()
+        // Spec: https://docs.tendermint.com/master/spec/core/encoding.html#key-types
+        // Multisig is undocumented, but we figured out it s the same as ed25519
+        let address_bytes = &sha2::Sha256::digest(self.as_bytes().as_slice())[..20];
+
+        CanonicalAddr(Binary::from(address_bytes))
     }
 
     fn as_bytes(&self) -> Vec<u8> {
-        unimplemented!()
+        let threshold_prefix: Vec<u8> = vec![34, 193, 247, 226, 8];
+        let pubkey_prefix: Vec<u8> = vec![18, 38, 235, 90, 233, 135];
+        let mut encoded: Vec<u8> = vec![];
+
+        encoded.extend_from_slice(&threshold_prefix);
+        encoded.push(self.threshold as u8);
+
+        for pubkey in &self.pubkeys {
+            let pubkey_bytes = pubkey.as_bytes();
+            encoded.extend_from_slice(&pubkey_prefix);
+            encoded.push(pubkey.as_bytes().len() as u8);
+            encoded.extend_from_slice(&pubkey_bytes);
+        }
+
+        trace!("pubkey bytes are: {:?}", encoded);
+        encoded
     }
 
     fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError> {
@@ -106,3 +127,27 @@ fn decode_multisig_signature(raw_blob: &[u8]) -> Result<MultisigSignature, Crypt
 
     Ok(signatures)
 }
+
+// fn encode_multisig_pubkey(
+//     multisig_pubkey: MultisigThresholdPubKey,
+// ) -> Result<Vec<u8>, CryptoError> {
+//     if multisig_pubkey.pubkeys.len() < multisig_pubkey.threshold {
+//         error!("Malformed multisig pubkey, threshold is bigger than number of pubkeys");
+//         return Err(CryptoError::ParsingError);
+//     }
+//
+//     let threshold_prefix: Vec<u8> = vec![34, 193, 247, 226, 8];
+//     let pubkey_prefix: Vec<u8> = vec![18, 38, 235, 90, 233, 135];
+//     let mut encoded: Vec<u8> = vec![];
+//
+//     encoded.extend_from_slice(&threshold_prefix);
+//     encoded.push(multisig_pubkey.threshold as u8);
+//
+//     for pubkey in multisig_pubkey.pubkeys {
+//         let pubkey_bytes = pubkey.as_bytes();
+//         encoded.extend_from_slice(&pubkey_prefix);
+//         encoded.extend_from_slice(&pubkey_bytes);
+//     }
+//
+//     Ok(encoded)
+// }

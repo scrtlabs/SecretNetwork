@@ -140,8 +140,9 @@ pub fn verify_params(env: &Env, msg: &SecretMessage) -> Result<(), EnclaveError>
             return Ok(());
         } else {
             error!(
-                "Message sender {:?} does not match with the message signer",
-                &env.message.sender
+                "Message sender {:?} does not match with the message signer {:?}",
+                &env.message.sender,
+                &env.signature.get_public_key().get_address()
             );
         }
     }

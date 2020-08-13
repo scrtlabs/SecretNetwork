@@ -46,7 +46,7 @@ impl PubKey for Secp256k1PubKey {
         verifier
             .verify(&msg, &sec_signature, &sec_public_key)
             .map_err(|err| {
-                error!(
+                warn!(
                     "Failed to verify signatures for the given transaction: {:?}",
                     err
                 );
