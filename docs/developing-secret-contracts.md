@@ -11,7 +11,7 @@ Secret Contacts are based on CosmWasm v0.10.
 - [Inputs](#inputs)
 - [APIs](#apis)
 - [State](#state)
-  - [Serializing libraries that are known to work](#serializing-libraries-that-are-known-to-work)
+  - [Some libraries/crates consideations](#some-librariescrates-consideations)
 - [Outputs](#outputs)
 - [External query](#external-query)
 - [Compiling](#compiling)
@@ -63,10 +63,11 @@ secretcli q compute query "$CONTRACT_ADDRESS" "$INPUT_ARGS"
 
 # State
 
-## Serializing libraries that are known to work
+## Some libraries/crates consideations
 
-- `serde_json_wasm` instead of `serde_json`
-- `bincode2` instead of `bincode`
+- `bincode2` instead of `bincode` for serializing data.
+- `serde_json_wasm` instead of `serde_json` for serializing data.
+- `bech32` instead of `deps.api.canonical_address` and `deps.api.human_address`, as they only support `secret` prefix (E.g. not `secretvaloper` for staking use-cases).
 
 # Outputs
 
