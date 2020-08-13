@@ -6,6 +6,12 @@ We are currently on our second testnet, and the first open testnet release since
 
 This release includes full Secret Contract functionality, stability, network configuratin, and many other changes.
 
+#### Known Issues
+
+- Running `init-enclave` twice will reset registraion parameters and cause you to have to wipe and re-register the node
+- `--label` doesn't work for `secretcli q compute query`
+- A contract trying to call staking queries may function incorrectly 
+
 #### CLI
 
 - The default coin type for HD derivation in the CLI has changed from 118 (ATOM) to 529 (SCRT). To revert to the previous scheme,
@@ -42,6 +48,8 @@ This release includes full Secret Contract functionality, stability, network con
 
 - Changed the Wasm message types to include a new field: `callback_code_hash`. This field must include the code hash of
   any contracts you wish to send a message to, from another contract
+  
+- Added the field `contract_code_hash` to `env` passed into `handle`, `init` and `query` methods
 
 - Added Staking for Secret Contracts! You can now perform staking operations directly from Secret Contracts
 
