@@ -136,7 +136,7 @@ pub fn mock_env<T: Api, U: Into<HumanAddr>>(api: &T, sender: U, sent: &[Coin]) -
                 .unwrap(),
         },
         contract_key: Some("".to_string()),
-        contract_code_hash: Some("".to_string()),
+        contract_code_hash: "".to_string(),
     }
 }
 
