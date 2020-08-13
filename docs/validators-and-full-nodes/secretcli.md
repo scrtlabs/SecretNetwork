@@ -262,7 +262,7 @@ Thus when such flag is supplied `<sender-key-alias-or-address>` must be an addre
 You can validate the transaction's signatures by typing the following:
 
 ```bash
-secretcli tx sign --validate-signatures signedSendTx.json
+secretcli tx sign --validate-signatures --from=<key-alias> signedSendTx.json
 ```
 
 You can broadcast the signed transaction to a node by providing the JSON file to the following command:
