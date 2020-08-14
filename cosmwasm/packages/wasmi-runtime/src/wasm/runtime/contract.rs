@@ -384,14 +384,18 @@ impl WasmiApi for ContractInstance {
                     "canonicalize_address() error while trying to parse human address from bytes to string: {:?}",
                     err
                 );
-                return Ok(Some(RuntimeValue::I32(-1)));
+                return Ok(Some(RuntimeValue::I32(
+                    self.write_to_memory(b"input is not valid UTF-8")? as i32,
+                )));
             }
             Ok(x) => x,
         };
 
         human_addr_str = human_addr_str.trim();
         if human_addr_str.is_empty() {
-            return Ok(Some(RuntimeValue::I32(-2)));
+            return Ok(Some(RuntimeValue::I32(
+                self.write_to_memory(b"input is empty")? as i32,
+            )));
         }
 
         let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
@@ -400,7 +404,9 @@ impl WasmiApi for ContractInstance {
                     "canonicalize_address() error while trying to decode human address {:?} as bech32: {:?}",
                     human_addr_str, err
                 );
-                return Ok(Some(RuntimeValue::I32(-3)));
+                return Ok(Some(RuntimeValue::I32(
+                    self.write_to_memory(err.to_string().as_bytes())? as i32,
+                )));
             }
             Ok(x) => x,
         };
@@ -412,21 +418,22 @@ impl WasmiApi for ContractInstance {
                 BECH32_PREFIX_ACC_ADDR,
                 human_addr_str
             );
-            return Ok(Some(RuntimeValue::I32(-4)));
+            return Ok(Some(RuntimeValue::I32(
+                self.write_to_memory(
+                    format!("wrong address prefix: {:?}", decoded_prefix).as_bytes(),
+                )? as i32,
+            )));
         }
 
-        let canonical = match Vec::<u8>::from_base32(&data) {
-            Err(err) => {
-                // Assaf: From reading https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#607
-                // and https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#228 I don't think this can fail that way
-                warn!(
-                    "canonicalize_address() error while trying to decode bytes from base32 {:?}: {:?}",
-                    data, err
-                );
-                return Ok(Some(RuntimeValue::I32(-5)));
-            }
-            Ok(x) => x,
-        };
+        let canonical = Vec::<u8>::from_base32(&data).map_err(|err| {
+            // Assaf: From reading https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#607
+            // and https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#228 I don't think this can fail that way
+            warn!(
+                "canonicalize_address() error while trying to decode bytes from base32 {:?}: {:?}",
+                data, err
+            );
+            WasmEngineError::Base32Error
+        })?;
 
         self.write_to_allocated_memory(&canonical, canonical_ptr_ptr as u32)
             .map_err(|err| {
@@ -472,7 +479,9 @@ impl WasmiApi for ContractInstance {
                 // Assaf: IMO This can never fail. From looking at bech32::encode, it only fails
                 // because input prefix issues. For us the prefix is always "secert" which is valid.
                 error!("humanize_address() error while trying to encode canonical address {:?} to human: {:?}",  canonical, err);
-                return Ok(Some(RuntimeValue::I32(-1)));
+                return Ok(Some(RuntimeValue::I32(
+                    self.write_to_memory(err.to_string().as_bytes())? as i32,
+                )));
             }
             Ok(x) => x,
         };
