@@ -294,8 +294,8 @@ func NewSecretNetworkApp(
 	app.computeKeeper = compute.NewKeeper(
 		app.cdc,
 		keys[compute.StoreKey],
-		app.accountKeeper,
-		&app.bankKeeper, &app.distrKeeper, &stakingKeeper, computeRouter, computeDir, wasmConfig, supportedFeatures, nil, nil)
+		app.accountKeeper, &app.bankKeeper, &app.distrKeeper, &app.mintKeeper, &stakingKeeper,
+		computeRouter, computeDir, wasmConfig, supportedFeatures, nil, nil)
 	// register the proposal types
 	govRouter := gov.NewRouter()
 	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler).

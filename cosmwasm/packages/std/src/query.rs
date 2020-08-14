@@ -20,6 +20,7 @@ pub enum QueryRequest<T> {
     Staking(StakingQuery),
     Wasm(WasmQuery),
     Dist(DistQuery),
+    Mint(MintQuery),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -45,6 +46,16 @@ pub enum DistQuery {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+pub enum MintQuery {
+    /// This calls into the native bank module for all denominations.
+    /// Note that this may be much more expensive than Balance and should be avoided if possible.
+    /// Return value is AllBalanceResponse.
+    Inflation {},
+    BondedRatio {},
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum WasmQuery {
     /// this queries the public API of another contract at a known address (with known ABI)
     /// return value is whatever the contract returns (caller should know)
@@ -66,6 +77,12 @@ pub enum WasmQuery {
         /// It is used to bind the request to a destination contract in a stronger way than just the contract address which can be faked
         callback_code_hash: String,
     },
+}
+
+impl<T: Clone + fmt::Debug + PartialEq + JsonSchema> From<MintQuery> for QueryRequest<T> {
+    fn from(msg: MintQuery) -> Self {
+        QueryRequest::Mint(msg)
+    }
 }
 
 impl<T: Clone + fmt::Debug + PartialEq + JsonSchema> From<DistQuery> for QueryRequest<T> {
@@ -213,4 +230,16 @@ pub struct ValidatorRewards {
 pub struct RewardCoin {
     pub coin: String,
     pub demon: String,
+}
+
+/// Inflation response
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct InflationResponse {
+    pub inflation_rate: String,
+}
+
+/// Bonded Ratio response
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct BondedRatioResponse {
+    pub bonded_ratio: String,
 }

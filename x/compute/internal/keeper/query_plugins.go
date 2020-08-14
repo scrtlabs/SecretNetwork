@@ -8,6 +8,7 @@ import (
 	"github.com/enigmampc/cosmos-sdk/x/bank"
 	distr "github.com/enigmampc/cosmos-sdk/x/distribution"
 	"github.com/enigmampc/cosmos-sdk/x/distribution/types"
+	"github.com/enigmampc/cosmos-sdk/x/mint"
 	"github.com/enigmampc/cosmos-sdk/x/staking"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"strings"
@@ -36,6 +37,9 @@ func (q QueryHandler) Query(request wasmTypes.QueryRequest) ([]byte, error) {
 	if request.Dist != nil {
 		return q.Plugins.Dist(q.Ctx, request.Dist)
 	}
+	if request.Mint != nil {
+		return q.Plugins.Mint(q.Ctx, request.Mint)
+	}
 	return nil, wasmTypes.Unknown{}
 }
 
@@ -51,15 +55,17 @@ type QueryPlugins struct {
 	Staking func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error)
 	Wasm    func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
 	Dist    func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error)
+	Mint    func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error)
 }
 
-func DefaultQueryPlugins(dist *distr.Keeper, bank *bank.Keeper, staking *staking.Keeper, wasm *Keeper) QueryPlugins {
+func DefaultQueryPlugins(dist *distr.Keeper, mint *mint.Keeper, bank *bank.Keeper, staking *staking.Keeper, wasm *Keeper) QueryPlugins {
 	return QueryPlugins{
 		Bank:    BankQuerier(bank),
 		Custom:  NoCustomQuerier,
 		Staking: StakingQuerier(staking),
 		Wasm:    WasmQuerier(wasm),
 		Dist:    DistQuerier(dist),
+		Mint:    MintQuerier(mint),
 	}
 }
 
@@ -83,7 +89,36 @@ func (e QueryPlugins) Merge(o *QueryPlugins) QueryPlugins {
 	if o.Dist != nil {
 		e.Dist = o.Dist
 	}
+	if o.Mint != nil {
+		e.Mint = o.Mint
+	}
 	return e
+}
+
+func MintQuerier(keeper *mint.Keeper) func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error) {
+	return func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error) {
+		if request.BondedRatio != nil {
+			total := keeper.BondedRatio(ctx)
+
+			resp := wasmTypes.MintingBondedRatioResponse{
+				BondedRatio: total.String(),
+			}
+
+			return json.Marshal(resp)
+		}
+		if request.Inflation != nil {
+			minter := keeper.GetMinter(ctx)
+			inflation := minter.Inflation
+
+			resp := wasmTypes.MintingInflationResponse{
+				InflationRate: inflation.String(),
+			}
+
+			return json.Marshal(resp)
+		}
+		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown MintQuery variant"}
+	}
+
 }
 
 func DistQuerier(keeper *distr.Keeper) func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error) {
@@ -137,7 +172,7 @@ func DistQuerier(keeper *distr.Keeper) func(ctx sdk.Context, request *wasmTypes.
 
 			return ret, nil
 		}
-		return nil, wasmTypes.UnsupportedRequest{"unknown BankQuery variant"}
+		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown DistQuery variant"}
 	}
 }
 
@@ -169,12 +204,12 @@ func BankQuerier(bank *bank.Keeper) func(ctx sdk.Context, request *wasmTypes.Ban
 			}
 			return json.Marshal(res)
 		}
-		return nil, wasmTypes.UnsupportedRequest{"unknown BankQuery variant"}
+		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown BankQuery variant"}
 	}
 }
 
-func NoCustomQuerier(ctx sdk.Context, request json.RawMessage) ([]byte, error) {
-	return nil, wasmTypes.UnsupportedRequest{"custom"}
+func NoCustomQuerier(sdk.Context, json.RawMessage) ([]byte, error) {
+	return nil, wasmTypes.UnsupportedRequest{Kind: "custom"}
 }
 
 func StakingQuerier(keeper *staking.Keeper) func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error) {
@@ -238,7 +273,7 @@ func StakingQuerier(keeper *staking.Keeper) func(ctx sdk.Context, request *wasmT
 			}
 			return json.Marshal(res)
 		}
-		return nil, wasmTypes.UnsupportedRequest{"unknown Staking variant"}
+		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown Staking variant"}
 	}
 }
 

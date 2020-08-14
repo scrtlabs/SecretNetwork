@@ -65,6 +65,7 @@ type QueryRequest struct {
 	Staking *StakingQuery   `json:"staking,omitempty"`
 	Wasm    *WasmQuery      `json:"wasm,omitempty"`
 	Dist    *DistQuery      `json:"dist,omitempty"`
+	Mint    *MintQuery      `json:"mint,omitempty"`
 }
 
 type BankQuery struct {
@@ -222,6 +223,22 @@ type RawQuery struct {
 
 type DistQuery struct {
 	Rewards *RewardsQuery `json:"rewards,omitempty"`
+}
+
+type MintQuery struct {
+	Inflation   *MintingInflationQuery   `json:"inflation,omitempty"`
+	BondedRatio *MintingBondedRatioQuery `json:"total_staked,omitempty"`
+}
+
+type MintingBondedRatioQuery struct{}
+type MintingInflationQuery struct{}
+
+type MintingInflationResponse struct {
+	InflationRate string `json:"inflation_rate"`
+}
+
+type MintingBondedRatioResponse struct {
+	BondedRatio string `json:"bonded_ratio"`
 }
 
 type RewardsQuery struct {

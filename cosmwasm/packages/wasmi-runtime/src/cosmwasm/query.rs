@@ -15,6 +15,17 @@ pub enum QueryRequest {
     Staking(StakingQuery),
     Wasm(WasmQuery),
     Dist(DistQuery),
+    Mint(MintQuery),
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum MintQuery {
+    /// This calls into the native bank module for all denominations.
+    /// Note that this may be much more expensive than Balance and should be avoided if possible.
+    /// Return value is AllBalanceResponse.
+    Inflation {},
+    BondedRatio {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -159,4 +170,16 @@ pub struct RewardsResponse {
 pub struct ValidatorRewards {
     pub validator_address: HumanAddr,
     pub reward: Vec<Coin>,
+}
+
+/// Inflation response
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct InflationResponse {
+    pub inflation_rate: String,
+}
+
+/// Bonded Ratio response
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct BondedRatioResponse {
+    pub bonded_ratio: String,
 }

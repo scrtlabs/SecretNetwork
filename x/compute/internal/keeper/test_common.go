@@ -3,6 +3,7 @@ package keeper
 import (
 	"fmt"
 	"github.com/enigmampc/cosmos-sdk/x/distribution"
+	"github.com/enigmampc/cosmos-sdk/x/mint"
 	"testing"
 	"time"
 
@@ -162,7 +163,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 
 	// bank := bankKeeper.
 	bk := bank.Keeper(bankKeeper)
-	keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &distKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
+	mintKeeper := mint.Keeper{}
+	keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &distKeeper, &mintKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
 	// add wasm handler so we can loop-back (contracts calling contracts)
 	router.AddRoute(wasmTypes.RouterKey, TestHandler(keeper))
 
