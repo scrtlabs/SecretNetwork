@@ -13,7 +13,7 @@ use crate::serde::{from_slice, to_binary};
 use crate::storage::MemoryStorage;
 use crate::traits::{Api, Extern, Querier, QuerierResult};
 use crate::types::{BlockInfo, CanonicalAddr, ContractInfo, Env, HumanAddr, MessageInfo, Never};
-use crate::RewardsResponse;
+use crate::{RewardsResponse, UnbondingDelegationsResponse};
 
 pub const MOCK_CONTRACT_ADDR: &str = "cosmos2contract";
 
@@ -360,6 +360,17 @@ impl StakingQuerier {
                 let res = DelegationResponse {
                     delegation: delegation.cloned(),
                 };
+                Ok(to_binary(&res))
+            }
+            StakingQuery::UnbondingDelegations { delegator } => {
+                let delegations: Vec<_> = self
+                    .delegations
+                    .iter()
+                    .filter(|d| &d.delegator == delegator)
+                    .cloned()
+                    .map(|d| d.into())
+                    .collect();
+                let res = UnbondingDelegationsResponse { delegations };
                 Ok(to_binary(&res))
             }
         }

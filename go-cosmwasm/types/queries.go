@@ -93,10 +93,15 @@ type AllBalancesResponse struct {
 }
 
 type StakingQuery struct {
-	Validators     *ValidatorsQuery     `json:"validators,omitempty"`
-	AllDelegations *AllDelegationsQuery `json:"all_delegations,omitempty"`
-	Delegation     *DelegationQuery     `json:"delegation,omitempty"`
-	BondedDenom    *struct{}            `json:"bonded_denom,omitempty"`
+	Validators           *ValidatorsQuery         `json:"validators,omitempty"`
+	AllDelegations       *AllDelegationsQuery     `json:"all_delegations,omitempty"`
+	Delegation           *DelegationQuery         `json:"delegation,omitempty"`
+	UnBondingDelegations *UnbondingDeletionsQuery `json:"unbonding_delegations, omitempty"`
+	BondedDenom          *struct{}                `json:"bonded_denom,omitempty"`
+}
+
+type UnbondingDeletionsQuery struct {
+	Delegator string `json:"delegator"`
 }
 
 type ValidatorsQuery struct{}
@@ -198,6 +203,10 @@ type FullDelegation struct {
 	Amount             Coin   `json:"amount"`
 	AccumulatedRewards Coin   `json:"accumulated_rewards"`
 	CanRedelegate      Coin   `json:"can_redelegate"`
+}
+
+type UnbondingDelegationsResponse struct {
+	Delegations Delegations `json:"delegations"`
 }
 
 type BondedDenomResponse struct {

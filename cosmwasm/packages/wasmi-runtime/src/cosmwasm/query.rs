@@ -72,6 +72,12 @@ pub enum WasmQuery {
     },
 }
 
+impl From<MintQuery> for QueryRequest {
+    fn from(msg: MintQuery) -> Self {
+        QueryRequest::Mint(msg)
+    }
+}
+
 impl From<DistQuery> for QueryRequest {
     fn from(msg: DistQuery) -> Self {
         QueryRequest::Dist(msg)
@@ -112,6 +118,8 @@ pub enum StakingQuery {
     },
     /// Returns all registered Validators on the system
     Validators {},
+    /// Returns all the unbonding delegations by the delegator
+    UnbondingDelegations { delegator: HumanAddr },
 }
 
 /// Delegation is basic (cheap to query) data about a delegation
@@ -131,6 +139,13 @@ impl From<FullDelegation> for Delegation {
             amount: full.amount,
         }
     }
+}
+
+/// UnbondingDelegationsResponse is data format returned from StakingRequest::UnbondingDelegations query
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub struct UnbondingDelegationsResponse {
+    pub delegations: Vec<Delegation>,
 }
 
 /// FullDelegation is all the info on the delegation, some (like accumulated_reward and can_redelegate)

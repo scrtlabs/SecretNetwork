@@ -273,8 +273,57 @@ func StakingQuerier(keeper *staking.Keeper) func(ctx sdk.Context, request *wasmT
 			}
 			return json.Marshal(res)
 		}
+		if request.UnBondingDelegations != nil {
+
+			bondDenom := keeper.BondDenom(ctx)
+
+			delegator, err := sdk.AccAddressFromBech32(request.UnBondingDelegations.Delegator)
+			if err != nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.Delegation.Delegator)
+			}
+
+			unbondingDelegations := keeper.GetAllUnbondingDelegations(ctx, delegator)
+			if unbondingDelegations == nil {
+				unbondingDelegations = staking.UnbondingDelegations{}
+			}
+
+			delegations, err := sdkToUnbondingDelegations(bondDenom, unbondingDelegations)
+			if err != nil {
+				return nil, err
+			}
+
+			var res wasmTypes.UnbondingDelegationsResponse
+			res.Delegations = delegations
+
+			return json.Marshal(res)
+
+		}
 		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown Staking variant"}
 	}
+}
+
+func sdkToUnbondingDelegations(bondDenom string, delegations staking.UnbondingDelegations) ([]wasmTypes.Delegation, error) {
+	result := make([]wasmTypes.Delegation, len(delegations))
+
+	for i, d := range delegations {
+
+		for _, e := range d.Entries {
+
+			wasmCoin := wasmTypes.Coin{
+				Denom:  bondDenom,
+				Amount: e.Balance.String(),
+			}
+
+			result[i] = wasmTypes.Delegation{
+				Delegator: d.DelegatorAddress.String(),
+				Validator: d.ValidatorAddress.String(),
+				Amount:    wasmCoin,
+			}
+
+		}
+
+	}
+	return result, nil
 }
 
 func sdkToDelegations(ctx sdk.Context, keeper *staking.Keeper, delegations []staking.Delegation) (wasmTypes.Delegations, error) {

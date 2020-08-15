@@ -28,8 +28,9 @@ pub use crate::iterator::{Order, KV};
 pub use crate::math::{Decimal, Uint128};
 pub use crate::query::{
     AllBalanceResponse, AllDelegationsResponse, BalanceResponse, BankQuery, BondedDenomResponse,
-    Delegation, DistQuery, FullDelegation, QueryRequest, QueryResponse, QueryResult,
-    RewardsResponse, StakingQuery, Validator, ValidatorsResponse, WasmQuery,
+    BondedRatioResponse, Delegation, DistQuery, FullDelegation, InflationResponse, MintQuery,
+    QueryRequest, QueryResponse, QueryResult, RewardsResponse, StakingQuery,
+    UnbondingDelegationsResponse, Validator, ValidatorsResponse, WasmQuery,
 };
 pub use crate::serde::{from_binary, from_slice, to_binary, to_vec};
 pub use crate::storage::MemoryStorage;

@@ -140,6 +140,8 @@ pub enum StakingQuery {
     },
     /// Returns all registered Validators on the system
     Validators {},
+    /// Returns all the unbonding delegations by the delegator
+    UnbondingDelegations { delegator: HumanAddr },
 }
 
 /// BondedDenomResponse is data format returned from StakingRequest::BondedDenom query
@@ -147,6 +149,13 @@ pub enum StakingQuery {
 #[serde(rename_all = "snake_case")]
 pub struct BondedDenomResponse {
     pub denom: String,
+}
+
+/// UnbondingDelegationsResponse is data format returned from StakingRequest::UnbondingDelegations query
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct UnbondingDelegationsResponse {
+    pub delegations: Vec<Delegation>,
 }
 
 /// DelegationsResponse is data format returned from StakingRequest::AllDelegations query
