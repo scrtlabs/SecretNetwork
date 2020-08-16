@@ -8,25 +8,28 @@ For an in depth look at the Secret Network encryption specs, visit [here](protoc
 Secret Contract developers must always consider the trade-off between privacy, user experience, performance and gas usage.
 
 - [The privacy model of Secret Contracts](#the-privacy-model-of-secret-contracts)
-- [Init](#init)
-  - [Inputs to `init`](#inputs-to-init)
-  - [State operations from `init`](#state-operations-from-init)
-  - [API calls from `init`](#api-calls-from-init)
+- [`Init` and `Handle`](#init-and-handle)
+  - [Inputs](#inputs)
+  - [State operations](#state-operations)
+  - [API calls](#api-calls)
   - [Outputs](#outputs)
-- [Handle](#handle)
+    - [Return value of `init`](#return-value-of-init)
+    - [Return value of `handle`](#return-value-of-handle)
+    - [Logs and Messages (Same for `init` and `handle`)](#logs-and-messages-same-for-init-and-handle)
 - [Query](#query)
-- [Inputs](#inputs)
+  - [Inputs](#inputs-1)
+  - [State operations](#state-operations-1)
+  - [API calls](#api-calls-1)
+  - [Outputs](#outputs-1)
+    - [Return value of `init`](#return-value-of-init-1)
+    - [Return value of `handle`](#return-value-of-handle-1)
+    - [Logs and Messages (Same for `init` and `handle`)](#logs-and-messages-same-for-init-and-handle-1)
+- [External query](#external-query)
   - [Encrypted](#encrypted)
   - [Not encrypted](#not-encrypted)
-  - [What inputs can be trusted](#what-inputs-can-be-trusted)
-  - [What inputs cannot be trusted](#what-inputs-cannot-be-trusted)
-- [State](#state)
-- [External query](#external-query)
+- [Outputs](#outputs-2)
   - [Encrypted](#encrypted-1)
   - [Not encrypted](#not-encrypted-1)
-- [Outputs](#outputs-1)
-  - [Encrypted](#encrypted-2)
-  - [Not encrypted](#not-encrypted-2)
 - [Errors](#errors)
   - [Contract errors](#contract-errors)
   - [Contract panic](#contract-panic)
@@ -41,32 +44,36 @@ Secret Contract developers must always consider the trade-off between privacy, u
   - [Differences in output events](#differences-in-output-events)
   - [Differences in output types - success vs. error](#differences-in-output-types---success-vs-error)
 
-# Init
+# `Init` and `Handle`
 
-`init` is the constructor of your contract. This function is called only once in the lifetime of the contract.
+`init` is the constructor of a contract. This function is called only once in the lifetime of the contract.  
+`handle` is a regular execute transaction within a contract.
 
-The fact that `init` was invoked is public.
+- They have a read and write access to the storage (state) of the contract.
+- The fact that `init` or `handle` was invoked is public.
+- They are metered by gas and incur fees acording to the gas price of the sending node.
+- Access control: Can use `env.message.sender`.
 
-## Inputs to `init`
+## Inputs
 
-Inputs that are encrypted are only known to the transaction sender and to the contract.
+Inputs that are encrypted and known only to the transaction sender and to the contract.
 
-| Input                    | Type            | Encrypted? | Trusted? | Notes |
-| ------------------------ | --------------- | ---------- | -------- | ----- |
-| `env.block.height`       | `u64`           | No         | No       |       |
-| `env.block.time`         | `u64`           | No         | No       |       |
-| `env.block.chain_id`     | `String`        | No         | No       |       |
-| `env.message.sender`     | `CanonicalAddr` | No         | Yes      |       |
-| `env.message.sent_funds` | `Vec<Coin>`     | No         | Yes      |       |
-| `env.contract.address`   | `CanonicalAddr` | No         | Yes      |       |
-| `env.contract_code_hash` | `String`        | No         | Yes      |       |
-| `msg`                    | `InitMsg`       | Yes        | Yes      |       |
+| Input                    | Type                     | Encrypted? | Trusted? | Notes |
+| ------------------------ | ------------------------ | ---------- | -------- | ----- |
+| `env.block.height`       | `u64`                    | No         | No       |       |
+| `env.block.time`         | `u64`                    | No         | No       |       |
+| `env.block.chain_id`     | `String`                 | No         | No       |       |
+| `env.message.sender`     | `CanonicalAddr`          | No         | Yes      |       |
+| `env.message.sent_funds` | `Vec<Coin>`              | No         | Yes      |       |
+| `env.contract.address`   | `CanonicalAddr`          | No         | Yes      |       |
+| `env.contract_code_hash` | `String`                 | No         | Yes      |       |
+| `msg`                    | `InitMsg` or `HandleMsg` | Yes        | Yes      |       |
 
 Legend:
 
 - `Trusted = No` means this data is easily forgeable. If an attacker wants to take its node off-chain and replay old inputs, they can pass a legitimate user input and false `env.block` input. Therefore, this data by itself cannot be trusted in order to reveal secret or change the state of secrets.
 
-## State operations from `init`
+## State operations
 
 The state of the contract is only known to the contract itself.
 
@@ -80,7 +87,7 @@ The fact that `deps.storage.get`, `deps.storage.set` or `deps.storage.remove` we
 | `deps.storage.set(key,value)`   | `value` | Yes        |       |
 | `deps.storage.remove(key)`      | `key`   | Yes        |       |
 
-## API calls from `init`
+## API calls
 
 | Operation                              | Private invocation? | Private data? | Notes                  |
 | -------------------------------------- | ------------------- | ------------- | ---------------------- |
@@ -106,13 +113,25 @@ Legend:
 
 Outputs that are encrypted are only known to the transaction sender and to the contract.
 
-`contract_address` is the "return value" of `init`, and is public.
+### Return value of `init`
 
-| Output             | Type        | Encrypted? | Notes                                         |
-| ------------------ | ----------- | ---------- | --------------------------------------------- |
-| `contract_address` | `HumanAddr` | No         | The "return value", not visible inside `init` |
+The return value of `init` is the new `contract_address`. It is not encrypted.
 
-Logs (or events) is a list of key-value pair. The keys and values are encrypted, but the list struture itself is not encrypted.
+| Output             | Type        | Encrypted? | Notes |
+| ------------------ | ----------- | ---------- | ----- |
+| `contract_address` | `HumanAddr` | No         |       |
+
+### Return value of `handle`
+
+The return value of `handle` is called `data`. It is encrypted.
+
+| Output | Type     | Encrypted? | Notes |
+| ------ | -------- | ---------- | ----- |
+| `data` | `Binary` | Yes        |       |
+
+### Logs and Messages (Same for `init` and `handle`)
+
+Logs (or events) is a list of key-value pair. The keys and values are encrypted, but the list structure itself is not encrypted.
 
 | Output         | Type                   | Encrypted? | Notes                                      |
 | -------------- | ---------------------- | ---------- | ------------------------------------------ |
@@ -120,7 +139,8 @@ Logs (or events) is a list of key-value pair. The keys and values are encrypted,
 | `log[i].key`   | `String`               | Yes        |                                            |
 | `log[i].value` | `String`               | Yes        |                                            |
 
-Messages are actions that will be taken after this contract call and will all be committed inside the current transaction. Types of messages:
+Messages are actions that will be taken after the current execution and will all be part of the current transaction.  
+Types of messages:
 
 - `CosmosMsg::Custom`
 - `CosmosMsg::Bank::Send`
@@ -137,10 +157,10 @@ Messages are actions that will be taken after this contract call and will all be
 | `messages[i]` | `CosmosMsg::Bank`              | No         |                                                   |
 | `messages[i]` | `CosmosMsg::Custom`            | No         |                                                   |
 | `messages[i]` | `CosmosMsg::Staking`           | No         |                                                   |
-| `messages[i]` | `CosmosMsg::Wasm::Instantiate` | No         | Only the `msg` field is encrypted inside          |
-| `messages[i]` | `CosmosMsg::Wasm::Execute`     | No         | Only the `msg` field is encrypted inside          |
+| `messages[i]` | `CosmosMsg::Wasm::Instantiate` | No         | Only the `msg` field inside is encrypted          |
+| `messages[i]` | `CosmosMsg::Wasm::Execute`     | No         | Only the `msg` field inside is encrypted          |
 
-`Wasm` messages are additional contract calls to be invoked right after the current call is done.
+`Wasm` messages are additional contract calls to be invoked right after the current call.
 
 | Type of `CosmosMsg::Wasm::*` message | Field                | Type        | Encrypted? | Notes |
 | ------------------------------------ | -------------------- | ----------- | ---------- | ----- |
@@ -154,41 +174,135 @@ Messages are actions that will be taken after this contract call and will all be
 | `Execute`                            | `msg`                | `Binary`    | Yes        |       |
 | `Execute`                            | `send`               | `Vec<Coin>` | No         |       |
 
-# Handle
-
 # Query
 
-- Read-only access to state
-- Metered by gas, but does not incurs fees
-- Can be used to implement getters and decide what each user can see
-- No msg.sender
-- Access control: use passwords instead of checking for msg.sender
-- Passwords can be generated for users via `Init` or `Handle`.
+`query` is an execution of a contract on the node of the query sender.
 
-# Inputs
+- It Cannot affect transactions on-chain.
+- It has a read-only access to the storage (state) of the contract.
+- The fact that `query` was invoked is known only for the executing node.
+- Queries are metered by gas but don't incur fees. The executing node decides its gas limit for queries.
+- Access control: Cannot use `env.message.sender` as it's not a transaction. Can use pre-configured passwords or API keys that are were stored in state previously by `init` and `handle`.
 
-## Encrypted
+## Inputs
 
-- `msg` - Only known to the transaction sender and the contract
+Inputs that are encrypted and known only to the transaction sender and to the contract.
 
-## Not encrypted
+| Input                    | Type                     | Encrypted? | Trusted? | Notes |
+| ------------------------ | ------------------------ | ---------- | -------- | ----- |
+| `env.block.height`       | `u64`                    | No         | No       |       |
+| `env.block.time`         | `u64`                    | No         | No       |       |
+| `env.block.chain_id`     | `String`                 | No         | No       |       |
+| `env.message.sender`     | `CanonicalAddr`          | No         | Yes      |       |
+| `env.message.sent_funds` | `Vec<Coin>`              | No         | Yes      |       |
+| `env.contract.address`   | `CanonicalAddr`          | No         | Yes      |       |
+| `env.contract_code_hash` | `String`                 | No         | Yes      |       |
+| `msg`                    | `InitMsg` or `HandleMsg` | Yes        | Yes      |       |
 
-- `msg.sender`
-- funds sent
+Legend:
 
-## What inputs can be trusted
+- `Trusted = No` means this data is easily forgeable. If an attacker wants to take its node off-chain and replay old inputs, they can pass a legitimate user input and false `env.block` input. Therefore, this data by itself cannot be trusted in order to reveal secret or change the state of secrets.
 
-- transaction sender
-- funds sent
-- `msg`
+## State operations
 
-## What inputs cannot be trusted
+The state of the contract is only known to the contract itself.
 
-- `block.height`
+The fact that `deps.storage.get`, `deps.storage.set` or `deps.storage.remove` were invoked from inside `init` is public.
 
-# State
+| Operation                       | Field   | Encrypted? | Notes |
+| ------------------------------- | ------- | ---------- | ----- |
+| `value = deps.storage.get(key)` | `key`   | Yes        |       |
+| `value = deps.storage.get(key)` | `value` | Yes        |       |
+| `deps.storage.set(key,value)`   | `key`   | Yes        |       |
+| `deps.storage.set(key,value)`   | `value` | Yes        |       |
+| `deps.storage.remove(key)`      | `key`   | Yes        |       |
 
-- Only known to that specific contract
+## API calls
+
+| Operation                              | Private invocation? | Private data? | Notes                  |
+| -------------------------------------- | ------------------- | ------------- | ---------------------- |
+| `deps.storage.get()`                   | No                  | Yes           |                        |
+| `deps.storage.set()`                   | No                  | Yes           |                        |
+| `deps.storage.remove()`                | No                  | Yes           |                        |
+| `deps.api.canonical_address()`         | Yes                 | Yes           |                        |
+| `deps.api.human_address()`             | Yes                 | Yes           |                        |
+| `deps.querier.query()`                 | No                  | Only `msg`    | Query another contract |
+| `deps.querier.query_balance()`         | No                  | No            |                        |
+| `deps.querier.query_all_balances()`    | No                  | No            |                        |
+| `deps.querier.query_validators()`      | No                  | No            |                        |
+| `deps.querier.query_bonded_denom()`    | No                  | No            |                        |
+| `deps.querier.query_all_delegations()` | No                  | No            |                        |
+| `deps.querier.query_delegation()`      | No                  | No            |                        |
+
+Legend:
+
+- `Private invocation = Yes` means the request never exits SGX and thus an attacker cannot know it even occurred.
+- `Private invocation = No` & `Private data = Yes` means an attacker can know that the contract used this API but cannot know the input parameters or return values.
+
+## Outputs
+
+Outputs that are encrypted are only known to the transaction sender and to the contract.
+
+### Return value of `init`
+
+The return value of `init` is the new `contract_address`. It is not encrypted.
+
+| Output             | Type        | Encrypted? | Notes |
+| ------------------ | ----------- | ---------- | ----- |
+| `contract_address` | `HumanAddr` | No         |       |
+
+### Return value of `handle`
+
+The return value of `handle` is called `data`. It is encrypted.
+
+| Output | Type     | Encrypted? | Notes |
+| ------ | -------- | ---------- | ----- |
+| `data` | `Binary` | Yes        |       |
+
+### Logs and Messages (Same for `init` and `handle`)
+
+Logs (or events) is a list of key-value pair. The keys and values are encrypted, but the list structure itself is not encrypted.
+
+| Output         | Type                   | Encrypted? | Notes                                      |
+| -------------- | ---------------------- | ---------- | ------------------------------------------ |
+| `log`          | `Vec<{String,String}>` | No         | Structure not encrypted, data is encrypted |
+| `log[i].key`   | `String`               | Yes        |                                            |
+| `log[i].value` | `String`               | Yes        |                                            |
+
+Messages are actions that will be taken after the current execution and will all be part of the current transaction.  
+Types of messages:
+
+- `CosmosMsg::Custom`
+- `CosmosMsg::Bank::Send`
+- `CosmosMsg::Staking::Delegate`
+- `CosmosMsg::Staking::Undelegate`
+- `CosmosMsg::Staking::Withdraw`
+- `CosmosMsg::Staking::Redelegate`
+- `CosmosMsg::Wasm::Instantiate`
+- `CosmosMsg::Wasm::Execute`
+
+| Output        | Type                           | Encrypted? | Notes                                             |
+| ------------- | ------------------------------ | ---------- | ------------------------------------------------- |
+| `messages`    | `Vec<CosmosMsg>`               | No         | Structure not encrypted, data sometimes encrypted |
+| `messages[i]` | `CosmosMsg::Bank`              | No         |                                                   |
+| `messages[i]` | `CosmosMsg::Custom`            | No         |                                                   |
+| `messages[i]` | `CosmosMsg::Staking`           | No         |                                                   |
+| `messages[i]` | `CosmosMsg::Wasm::Instantiate` | No         | Only the `msg` field inside is encrypted          |
+| `messages[i]` | `CosmosMsg::Wasm::Execute`     | No         | Only the `msg` field inside is encrypted          |
+
+`Wasm` messages are additional contract calls to be invoked right after the current call.
+
+| Type of `CosmosMsg::Wasm::*` message | Field                | Type        | Encrypted? | Notes |
+| ------------------------------------ | -------------------- | ----------- | ---------- | ----- |
+| `Instantiate`                        | `code_id`            | `u64`       | No         |       |
+| `Instantiate`                        | `callback_code_hash` | `String`    | No         |       |
+| `Instantiate`                        | `msg`                | `Binary`    | Yes        |       |
+| `Instantiate`                        | `send`               | `Vec<Coin>` | No         |       |
+| `Instantiate`                        | `label`              | `String`    | No         |       |
+| `Execute`                            | `contract_addr`      | `HumanAddr` | No         |       |
+| `Execute`                            | `callback_code_hash` | `String`    | No         |       |
+| `Execute`                            | `msg`                | `Binary`    | Yes        |       |
+| `Execute`                            | `send`               | `Vec<Coin>` | No         |       |
 
 # External query
 
