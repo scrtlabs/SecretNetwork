@@ -5,6 +5,7 @@ mod gas_meter;
 mod iterator;
 mod memory;
 mod querier;
+mod tests;
 
 pub use api::GoApi;
 pub use db::{db_t, DB};
@@ -161,10 +162,11 @@ fn to_extern(storage: DB, api: GoApi, querier: GoQuerier) -> Extern<DB, GoApi, G
 pub extern "C" fn init_cache(
     data_dir: Buffer,
     supported_features: Buffer,
-    cache_size: usize,
+    // TODO: remove unused cache size
+    _cache_size: usize,
     err: Option<&mut Buffer>,
 ) -> *mut cache_t {
-    let r = catch_unwind(|| do_init_cache(data_dir, supported_features, cache_size))
+    let r = catch_unwind(|| do_init_cache(data_dir, supported_features))
         .unwrap_or_else(|_| Err(Error::panic()));
     match r {
         Ok(t) => {
@@ -191,7 +193,6 @@ static GAS_USED_ARG: &str = "gas_used";
 fn do_init_cache(
     data_dir: Buffer,
     supported_features: Buffer,
-    cache_size: usize,
 ) -> Result<*mut CosmCache<DB, GoApi, GoQuerier>, Error> {
     let dir = unsafe { data_dir.read() }.ok_or_else(|| Error::empty_arg(DATA_DIR_ARG))?;
     let dir_str = from_utf8(dir)?;
@@ -200,7 +201,7 @@ fn do_init_cache(
         unsafe { supported_features.read() }.ok_or_else(|| Error::empty_arg(FEATURES_ARG))?;
     let features_str = from_utf8(features_bin)?;
     let features = features_from_csv(features_str);
-    let cache = unsafe { CosmCache::new(dir_str, features, cache_size) }?;
+    let cache = unsafe { CosmCache::new(dir_str, features) }?;
     let out = Box::new(cache);
     Ok(Box::into_raw(out))
 }
@@ -311,7 +312,7 @@ fn do_init(
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = call_init_raw(&mut instance, params, msg);
-    *gas_used = instance.get_gas_used();
+    *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)
 }
@@ -364,7 +365,7 @@ fn do_handle(
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = call_handle_raw(&mut instance, params, msg);
-    *gas_used = instance.get_gas_used();
+    *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)
 }
@@ -425,7 +426,7 @@ fn do_migrate(
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = call_migrate_raw(&mut instance, params, msg);
-    *gas_used = instance.get_gas_used();
+    *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)
 }
@@ -473,7 +474,7 @@ fn do_query(
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = call_query_raw(&mut instance, msg);
-    *gas_used = instance.get_gas_used();
+    *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)
 }
