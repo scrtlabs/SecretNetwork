@@ -29,7 +29,8 @@ Secret Contract developers must always consider the trade-off between privacy, u
   - [Not encrypted](#not-encrypted-2)
 - [Errors](#errors)
   - [Contract errors](#contract-errors)
-  - [VM errors](#vm-errors)
+  - [Contract panic](#contract-panic)
+  - [External errors (VM or interaction with the blockchain)](#external-errors-vm-or-interaction-with-the-blockchain)
 - [Data leakage attacks by detecting patterns in contract usage](#data-leakage-attacks-by-detecting-patterns-in-contract-usage)
   - [Differences in input sizes](#differences-in-input-sizes)
   - [Differences in state key sizes](#differences-in-state-key-sizes)
@@ -38,7 +39,7 @@ Secret Contract developers must always consider the trade-off between privacy, u
   - [Differences in output return values size](#differences-in-output-return-values-size)
   - [Differences in output messages/callbacks](#differences-in-output-messagescallbacks)
   - [Differences in output events](#differences-in-output-events)
-  - [Differences in output types - ok vs. error](#differences-in-output-types---ok-vs-error)
+  - [Differences in output types - success vs. error](#differences-in-output-types---success-vs-error)
 
 # Init
 
@@ -209,9 +210,19 @@ Messages are actions that will be taken after this contract call and will all be
 
 - Encrypted
 
-## VM errors
+## Contract panic
+
+- No Encrypted
+
+## External errors (VM or interaction with the blockchain)
 
 - Not Encrypted
+  - Memory allocation errors (Trying to allocate too much)
+  - Contract out of gas
+  - Got out of gas while accessing storage
+  - Passing null pointers from the contract to the VM
+  - Trying to write to read-only storage (query)
+  - Passing a faulty message to the blockchain (Trying to send fund you don't have, trying to callback to a non-existing contract)
 
 # Data leakage attacks by detecting patterns in contract usage
 
@@ -636,7 +647,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 ```
 
-Those outputs are plaintext as they are fowarded to the Secret Network for processing. By looking at these two outputs, an attacker will know which function was called based on the type of messages - `BankMsg::Send` vs `StakingMsg::Delegate`.
+Those outputs are plaintext as they are fowarded to the Secret Network for processing. By looking at these two outputs, an attacker will know which function was called based on the type of messages - `BankMsg::Send` vs. `StakingMsg::Delegate`.
 
 Some messages are partially encrypted, like `Wasm::Instantiate` and `Wasm::Execute`, but only the `msg` field is encrypted, so differences in `contract_addr`, `callback_code_hash`, `send` can reveal unintended data, as well as the size of `msg` which is encrypted but can reveal data the same way as previos examples.
 
@@ -694,7 +705,7 @@ More scenarios to be mindful of:
 
 - Ordering of messages (E.g. `Bank` and then `Staking` vs. `Staking` and `Bank`)
 - Size of the encrypted `msg` field
-- Number of messages (E.g. 3 `Execute` vs 2 `Execute`)
+- Number of messages (E.g. 3 `Execute` vs. 2 `Execute`)
 
 Again, be creative if that's affecting your secrets. :rainbow:
 
@@ -705,8 +716,10 @@ Output events:
 - "Push notifications" for GUIs with SecretJS
 - To make the tx searchable on-chain
 
+Examples:
+
 - number of logs
 - size of logs
 - ordering of logs (short,long vs. long,short)
 
-## Differences in output types - ok vs. error
+## Differences in output types - success vs. error

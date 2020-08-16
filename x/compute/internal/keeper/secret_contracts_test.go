@@ -1301,7 +1301,7 @@ func TestDepositToContract(t *testing.T) {
 	require.Equal(t, "", contractCoinsBefore.String())
 	require.Equal(t, "200000denom", walletCointsBefore.String())
 
-	data, _, execErr := execHelper(t, keeper, ctx, addr, walletA, `{"deposit_to_contract":{}}`, false, defaultGasForTests, 17)
+	data, _, execErr := execHelper(t, keeper, ctx, addr, walletA, `{"deposit_to_contract":{}}`, true, defaultGasForTests, 17)
 
 	require.Empty(t, execErr)
 
@@ -1321,7 +1321,7 @@ func TestContractSendFunds(t *testing.T) {
 	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, `{"deposit_to_contract":{}}`, false, defaultGasForTests, 17)
+	_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, `{"deposit_to_contract":{}}`, true, defaultGasForTests, 17)
 
 	require.Empty(t, execErr)
 
@@ -1331,7 +1331,7 @@ func TestContractSendFunds(t *testing.T) {
 	require.Equal(t, "17denom", contractCoinsBefore.String())
 	require.Equal(t, "199983denom", walletCointsBefore.String())
 
-	_, _, execErr = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_funds":{"from":"%s","to":"%s","denom":"%s","amount":%d}}`, addr.String(), walletA.String(), "denom", 17), false, defaultGasForTests, 0)
+	_, _, execErr = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_funds":{"from":"%s","to":"%s","denom":"%s","amount":%d}}`, addr.String(), walletA.String(), "denom", 17), true, defaultGasForTests, 0)
 
 	contractCoinsAfter := keeper.bankKeeper.GetCoins(ctx, addr)
 	walletCointsAfter := keeper.bankKeeper.GetCoins(ctx, walletA)
@@ -1349,7 +1349,7 @@ func TestContractTryToSendFundsFromSomeoneElse(t *testing.T) {
 	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, `{"deposit_to_contract":{}}`, false, defaultGasForTests, 17)
+	_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, `{"deposit_to_contract":{}}`, true, defaultGasForTests, 17)
 
 	require.Empty(t, execErr)
 
@@ -1359,7 +1359,7 @@ func TestContractTryToSendFundsFromSomeoneElse(t *testing.T) {
 	require.Equal(t, "17denom", contractCoinsBefore.String())
 	require.Equal(t, "199983denom", walletCointsBefore.String())
 
-	_, _, execErr = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_funds":{"from":"%s","to":"%s","denom":"%s","amount":%d}}`, walletA.String(), addr.String(), "denom", 17), false, defaultGasForTests, 0)
+	_, _, execErr = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_funds":{"from":"%s","to":"%s","denom":"%s","amount":%d}}`, walletA.String(), addr.String(), "denom", 17), true, defaultGasForTests, 0)
 
 	require.NotNil(t, execErr.GenericErr)
 	require.Equal(t, "unauthorized: contract doesn't have permission", execErr.GenericErr.Msg)
