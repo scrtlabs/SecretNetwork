@@ -27,6 +27,9 @@ Secret Contract developers must always consider the trade-off between privacy, u
 - [Outputs](#outputs-1)
   - [Encrypted](#encrypted-2)
   - [Not encrypted](#not-encrypted-2)
+- [Errors](#errors)
+  - [Contract errors](#contract-errors)
+  - [VM errors](#vm-errors)
 - [Data leakage attacks by detecting patterns in contract usage](#data-leakage-attacks-by-detecting-patterns-in-contract-usage)
   - [Differences in input sizes](#differences-in-input-sizes)
   - [Differences in state key sizes](#differences-in-state-key-sizes)
@@ -39,6 +42,7 @@ Secret Contract developers must always consider the trade-off between privacy, u
   - [Differences in the amounts of output logs/events](#differences-in-the-amounts-of-output-logsevents)
   - [Differences in sizes of output logs/events](#differences-in-sizes-of-output-logsevents)
   - [Differences in the orders of output logs/events](#differences-in-the-orders-of-output-logsevents)
+  - [Differences in output types - ok vs. error](#differences-in-output-types---ok-vs-error)
 
 # Init
 
@@ -202,6 +206,16 @@ Messages are actions that will be taken after this contract call and will all be
 - Only known to the transaction sender and the contract
 
 ## Not encrypted
+
+# Errors
+
+## Contract errors
+
+- Encrypted
+
+## VM errors
+
+- Not Encrypted
 
 # Data leakage attacks by detecting patterns in contract usage
 
@@ -504,6 +518,79 @@ Be creative. :rainbow:
 
 ## Differences in output return values size
 
+Secret Contracts can have return values that are decryptable only by the contract and the transaction sender.
+
+Very similar to previous cases, if a contract uses return values with different sizes, an attacker might find out information about the execution of a contract.
+
+Let's see an example for a contract with 2 `handle` functions:
+
+```rust
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum HandleMsg {
+    Send { amount: u8 },
+    Tsfr { amount: u8 },
+}
+
+pub fn handle<S: Storage, A: Api, Q: Querier>(
+    _deps: &mut Extern<S, A, Q>,
+    _env: Env,
+    msg: HandleMsg,
+) -> HandleResult {
+    match msg {
+        HandleMsg::Send { amount } => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(Binary::from(amount.to_be_bytes().to_vec())),
+        }),
+        HandleMsg::Tsfr { amount } => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(Binary::from(format!("amount: {}", amount).as_bytes())),
+        }),
+    }
+}
+```
+
+By looking at the encrypted output, an attacker can guess which function was called based on the size of the return value:
+
+1. 1 byte (uint8): `123`
+2. 11 bytes (formatted string): `amount: 123`
+
+Again, a quick fix will be to padd the shorter case to be as long as the longest case (assuming it's harder to shrink the longer case):
+
+```rust
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum HandleMsg {
+    Send { amount: u8 },
+    Tsfr { amount: u8 },
+}
+
+pub fn handle<S: Storage, A: Api, Q: Querier>(
+    _deps: &mut Extern<S, A, Q>,
+    _env: Env,
+    msg: HandleMsg,
+) -> HandleResult {
+    match msg {
+        HandleMsg::Send { amount } => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(Binary::from(format!("padding {}", amount).as_bytes())),
+        }),
+        HandleMsg::Tsfr { amount } => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(Binary::from(format!("amount: {}", amount).as_bytes())),
+        }),
+    }
+}
+```
+
+Note that `"padding "` and `"amount: "` have the same UTF8 size of 8 bytes.
+
+Be creative. :rainbow:
+
 ## Differences in the amounts of output messages/callbacks
 
 ## Differences in sizes of output messages/callbacks
@@ -515,3 +602,5 @@ Be creative. :rainbow:
 ## Differences in sizes of output logs/events
 
 ## Differences in the orders of output logs/events
+
+## Differences in output types - ok vs. error
