@@ -18,12 +18,9 @@ Secret Contract developers must always consider the trade-off between privacy, u
     - [Logs and Messages (Same for `init` and `handle`)](#logs-and-messages-same-for-init-and-handle)
 - [Query](#query)
   - [Inputs](#inputs-1)
-  - [State operations](#state-operations-1)
   - [API calls](#api-calls-1)
   - [Outputs](#outputs-1)
-    - [Return value of `init`](#return-value-of-init-1)
-    - [Return value of `handle`](#return-value-of-handle-1)
-    - [Logs and Messages (Same for `init` and `handle`)](#logs-and-messages-same-for-init-and-handle-1)
+    - [Return value of `query`](#return-value-of-query)
 - [External query](#external-query)
   - [Encrypted](#encrypted)
   - [Not encrypted](#not-encrypted)
@@ -71,7 +68,7 @@ Inputs that are encrypted and known only to the transaction sender and to the co
 
 Legend:
 
-- `Trusted = No` means this data is easily forgeable. If an attacker wants to take its node off-chain and replay old inputs, they can pass a legitimate user input and false `env.block` input. Therefore, this data by itself cannot be trusted in order to reveal secret or change the state of secrets.
+- `Trusted = No` means this data is easily forgeable. If an attacker wants to take its node offline and replay old inputs, they can pass a legitimate user input and false `env.block` input. Therefore, this data by itself cannot be trusted in order to reveal secrets or change the state of secrets.
 
 ## State operations
 
@@ -180,50 +177,25 @@ Types of messages:
 
 - It Cannot affect transactions on-chain.
 - It has a read-only access to the storage (state) of the contract.
-- The fact that `query` was invoked is known only for the executing node.
+- The fact that `query` was invoked is known only to the executing node. And to whoever monitors your internet traffic, in case the executing node is on your local machine.
 - Queries are metered by gas but don't incur fees. The executing node decides its gas limit for queries.
 - Access control: Cannot use `env.message.sender` as it's not a transaction. Can use pre-configured passwords or API keys that are were stored in state previously by `init` and `handle`.
 
 ## Inputs
 
-Inputs that are encrypted and known only to the transaction sender and to the contract.
+Inputs that are encrypted and known only to the query sender and to the contract. In `query` we don't have an `env` like we do in `init` and `handle`.
 
-| Input                    | Type                     | Encrypted? | Trusted? | Notes |
-| ------------------------ | ------------------------ | ---------- | -------- | ----- |
-| `env.block.height`       | `u64`                    | No         | No       |       |
-| `env.block.time`         | `u64`                    | No         | No       |       |
-| `env.block.chain_id`     | `String`                 | No         | No       |       |
-| `env.message.sender`     | `CanonicalAddr`          | No         | Yes      |       |
-| `env.message.sent_funds` | `Vec<Coin>`              | No         | Yes      |       |
-| `env.contract.address`   | `CanonicalAddr`          | No         | Yes      |       |
-| `env.contract_code_hash` | `String`                 | No         | Yes      |       |
-| `msg`                    | `InitMsg` or `HandleMsg` | Yes        | Yes      |       |
+| Input | Type       | Encrypted? | Trusted? | Notes |
+| ----- | ---------- | ---------- | -------- | ----- |
+| `msg` | `QueryMsg` | Yes        | Yes      |       |
 
-Legend:
-
-- `Trusted = No` means this data is easily forgeable. If an attacker wants to take its node off-chain and replay old inputs, they can pass a legitimate user input and false `env.block` input. Therefore, this data by itself cannot be trusted in order to reveal secret or change the state of secrets.
-
-## State operations
-
-The state of the contract is only known to the contract itself.
-
-The fact that `deps.storage.get`, `deps.storage.set` or `deps.storage.remove` were invoked from inside `init` is public.
-
-| Operation                       | Field   | Encrypted? | Notes |
-| ------------------------------- | ------- | ---------- | ----- |
-| `value = deps.storage.get(key)` | `key`   | Yes        |       |
-| `value = deps.storage.get(key)` | `value` | Yes        |       |
-| `deps.storage.set(key,value)`   | `key`   | Yes        |       |
-| `deps.storage.set(key,value)`   | `value` | Yes        |       |
-| `deps.storage.remove(key)`      | `key`   | Yes        |       |
+Note that `Trusted = No` means this data is easily forgeable. An attacker can take its node offline and replay old inputs. This data that is `Trusted = No` by itself cannot be trusted in order to reveal secrets. This is more applicable to `init` and `handle`, but know that an attacker can replay the input `msg` to its offline node. Although `query` cannot change the contract's state and the attcker cannot decrypt the query output, the attacker might be able to deduce private information by monitoring output sizes at different times. See [differences in output return values size](#differences-in-output-return-values-size) to learn more about this kind of attack and how to mitigate it.
 
 ## API calls
 
 | Operation                              | Private invocation? | Private data? | Notes                  |
 | -------------------------------------- | ------------------- | ------------- | ---------------------- |
 | `deps.storage.get()`                   | No                  | Yes           |                        |
-| `deps.storage.set()`                   | No                  | Yes           |                        |
-| `deps.storage.remove()`                | No                  | Yes           |                        |
 | `deps.api.canonical_address()`         | Yes                 | Yes           |                        |
 | `deps.api.human_address()`             | Yes                 | Yes           |                        |
 | `deps.querier.query()`                 | No                  | Only `msg`    | Query another contract |
@@ -236,73 +208,20 @@ The fact that `deps.storage.get`, `deps.storage.set` or `deps.storage.remove` we
 
 Legend:
 
-- `Private invocation = Yes` means the request never exits SGX and thus an attacker cannot know it even occurred.
-- `Private invocation = No` & `Private data = Yes` means an attacker can know that the contract used this API but cannot know the input parameters or return values.
+- `Private invocation = Yes` means the request never exits SGX and thus an attacker cannot know it even occurred. Only applicable if the executing node is remote.
+- `Private invocation = No` & `Private data = Yes` means an attacker can know that the contract used this API but cannot know the input parameters or return values. Only applicable if the executing node is remote.
 
 ## Outputs
 
-Outputs that are encrypted are only known to the transaction sender and to the contract.
+Outputs that are encrypted are only known to the query sender and to the contract.
 
-### Return value of `init`
+### Return value of `query`
 
-The return value of `init` is the new `contract_address`. It is not encrypted.
-
-| Output             | Type        | Encrypted? | Notes |
-| ------------------ | ----------- | ---------- | ----- |
-| `contract_address` | `HumanAddr` | No         |       |
-
-### Return value of `handle`
-
-The return value of `handle` is called `data`. It is encrypted.
+The return value of `query` is similar to `data` in `handle`. It is encrypted.
 
 | Output | Type     | Encrypted? | Notes |
 | ------ | -------- | ---------- | ----- |
 | `data` | `Binary` | Yes        |       |
-
-### Logs and Messages (Same for `init` and `handle`)
-
-Logs (or events) is a list of key-value pair. The keys and values are encrypted, but the list structure itself is not encrypted.
-
-| Output         | Type                   | Encrypted? | Notes                                      |
-| -------------- | ---------------------- | ---------- | ------------------------------------------ |
-| `log`          | `Vec<{String,String}>` | No         | Structure not encrypted, data is encrypted |
-| `log[i].key`   | `String`               | Yes        |                                            |
-| `log[i].value` | `String`               | Yes        |                                            |
-
-Messages are actions that will be taken after the current execution and will all be part of the current transaction.  
-Types of messages:
-
-- `CosmosMsg::Custom`
-- `CosmosMsg::Bank::Send`
-- `CosmosMsg::Staking::Delegate`
-- `CosmosMsg::Staking::Undelegate`
-- `CosmosMsg::Staking::Withdraw`
-- `CosmosMsg::Staking::Redelegate`
-- `CosmosMsg::Wasm::Instantiate`
-- `CosmosMsg::Wasm::Execute`
-
-| Output        | Type                           | Encrypted? | Notes                                             |
-| ------------- | ------------------------------ | ---------- | ------------------------------------------------- |
-| `messages`    | `Vec<CosmosMsg>`               | No         | Structure not encrypted, data sometimes encrypted |
-| `messages[i]` | `CosmosMsg::Bank`              | No         |                                                   |
-| `messages[i]` | `CosmosMsg::Custom`            | No         |                                                   |
-| `messages[i]` | `CosmosMsg::Staking`           | No         |                                                   |
-| `messages[i]` | `CosmosMsg::Wasm::Instantiate` | No         | Only the `msg` field inside is encrypted          |
-| `messages[i]` | `CosmosMsg::Wasm::Execute`     | No         | Only the `msg` field inside is encrypted          |
-
-`Wasm` messages are additional contract calls to be invoked right after the current call.
-
-| Type of `CosmosMsg::Wasm::*` message | Field                | Type        | Encrypted? | Notes |
-| ------------------------------------ | -------------------- | ----------- | ---------- | ----- |
-| `Instantiate`                        | `code_id`            | `u64`       | No         |       |
-| `Instantiate`                        | `callback_code_hash` | `String`    | No         |       |
-| `Instantiate`                        | `msg`                | `Binary`    | Yes        |       |
-| `Instantiate`                        | `send`               | `Vec<Coin>` | No         |       |
-| `Instantiate`                        | `label`              | `String`    | No         |       |
-| `Execute`                            | `contract_addr`      | `HumanAddr` | No         |       |
-| `Execute`                            | `callback_code_hash` | `String`    | No         |       |
-| `Execute`                            | `msg`                | `Binary`    | Yes        |       |
-| `Execute`                            | `send`               | `Vec<Coin>` | No         |       |
 
 # External query
 
