@@ -36,12 +36,8 @@ Secret Contract developers must always consider the trade-off between privacy, u
   - [Differences in state value sizes](#differences-in-state-value-sizes)
   - [Differences in state accessing order](#differences-in-state-accessing-order)
   - [Differences in output return values size](#differences-in-output-return-values-size)
-  - [Differences in the amounts of output messages/callbacks](#differences-in-the-amounts-of-output-messagescallbacks)
-  - [Differences in sizes of output messages/callbacks](#differences-in-sizes-of-output-messagescallbacks)
-  - [Differences in the orders of output messages/callbacks](#differences-in-the-orders-of-output-messagescallbacks)
+  - [Differences in output messages/callbacks](#differences-in-output-messagescallbacks)
   - [Differences in the amounts of output logs/events](#differences-in-the-amounts-of-output-logsevents)
-  - [Differences in sizes of output logs/events](#differences-in-sizes-of-output-logsevents)
-  - [Differences in the orders of output logs/events](#differences-in-the-orders-of-output-logsevents)
   - [Differences in output types - ok vs. error](#differences-in-output-types---ok-vs-error)
 
 # Init
@@ -227,7 +223,7 @@ For encryption, the Secret Network is using [AES-SIV](https://tools.ietf.org/htm
 
 Most of the below examples talk about an attacker revealing which function was executed on the contract, but this is not the only type of data leakage that an attacker might target.
 
-Secret Contract developers must analyze the privacy model of their contract - What kind of information must remain private and what kind of information, if revealed, won't affect the operation of the contract and its users.
+Secret Contract developers must analyze the privacy model of their contract - What kind of information must remain private and what kind of information, if revealed, won't affect the operation of the contract and its users. **Analyze what it is that you need to keep private and structure your Secret Contract's boundries to protect that.**
 
 ## Differences in input sizes
 
@@ -587,20 +583,125 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 ```
 
-Note that `"padding "` and `"amount: "` have the same UTF8 size of 8 bytes.
+Note that `"padding "` and `"amount: "` have the same UTF-8 size of 8 bytes.
 
 Be creative. :rainbow:
 
-## Differences in the amounts of output messages/callbacks
+## Differences in output messages/callbacks
 
-## Differences in sizes of output messages/callbacks
+Secret Contracts can output messages to be executed right after, in the same transaction as the current execution.have out that are decryptable only by the contract and the transaction sender.
 
-## Differences in the orders of output messages/callbacks
+Very similar to previous cases, if a contract output mesasges that are different or with different structures, an attacker might find out information about the execution of a contract.
+
+Let's see an example for a contract with 2 `handle` functions:
+
+```rust
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum HandleMsg {
+    Send { amount: u8, to: HumanAddr },
+    Tsfr { amount: u8, to: HumanAddr },
+}
+
+pub fn handle<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    msg: HandleMsg,
+) -> HandleResult {
+    match msg {
+        HandleMsg::Send { amount, to } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Bank(BankMsg::Send {
+                from_address: deps.api.human_address(&env.contract.address).unwrap(),
+                to_address: to,
+                amount: vec![Coin {
+                    denom: "uscrt".into(),
+                    amount: Uint128(amount.into()),
+                }],
+            })],
+            log: vec![],
+            data: None,
+        }),
+        HandleMsg::Tsfr { amount, to } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Staking(StakingMsg::Delegate {
+                validator: to,
+                amount: Coin {
+                    denom: "uscrt".into(),
+                    amount: Uint128(amount.into()),
+                },
+            })],
+            log: vec![],
+            data: None,
+        }),
+    }
+}
+```
+
+Those outputs are plaintext as they are fowarded to the Secret Network for processing. By looking at these two outputs, an attacker will know which function was called based on the type of messages - `BankMsg::Send` vs `StakingMsg::Delegate`.
+
+Some messages are partially encrypted, like `Wasm::Instantiate` and `Wasm::Execute`, but only the `msg` field is encrypted, so differences in `contract_addr`, `callback_code_hash`, `send` can reveal unintended data, as well as the size of `msg` which is encrypted but can reveal data the same way as previos examples.
+
+```rust
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum HandleMsg {
+    Send { amount: u8 },
+    Tsfr { amount: u8 },
+}
+
+pub fn handle<S: Storage, A: Api, Q: Querier>(
+    _deps: &mut Extern<S, A, Q>,
+    _env: Env,
+    msg: HandleMsg,
+) -> HandleResult {
+    match msg {
+        HandleMsg::Send { amount } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+/*plaintext->*/ contract_addr: "secret108j9v845gxdtfeu95qgg42ch4rwlj6vlkkaety".into(),
+/*plaintext->*/ callback_code_hash:
+                     "cd372fb85148700fa88095e3492d3f9f5beb43e555e5ff26d95f5a6adc36f8e6".into(),
+/*encrypted->*/ msg: Binary(
+                     format!(r#"{{\"aaa\":{}}}"#, amount)
+                         .to_string()
+                         .as_bytes()
+                         .to_vec(),
+                 ),
+/*plaintext->*/ send: Vec::default(),
+            })],
+            log: vec![],
+            data: None,
+        }),
+        HandleMsg::Tsfr { amount } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+/*plaintext->*/ contract_addr: "secret1suct80ctmt6m9kqmyafjl7ysyenavkmm0z9ca8".into(),
+/*plaintext->*/ callback_code_hash:
+                    "e67e72111b363d80c8124d28193926000980e1211c7986cacbd26aacc5528d48".into(),
+/*encrypted->*/ msg: Binary(
+                    format!(r#"{{\"bbb\":{}}}"#, amount)
+                        .to_string()
+                        .as_bytes()
+                        .to_vec(),
+                ),
+/*plaintext->*/ send: Vec::default(),
+            })],
+            log: vec![],
+            data: None,
+        }),
+    }
+}
+```
+
+More scenarios to be mindful of:
+
+- Ordering of messages (E.g. `Bank` and then `Staking` vs. `Staking` and `Bank`)
+- Size of the encrypted `msg` field
+- Number of messages (E.g. 3 `Execute` vs 2 `Execute`)
+
+Again, be creative if that's affecting your secrets. :rainbow:
 
 ## Differences in the amounts of output logs/events
 
-## Differences in sizes of output logs/events
-
-## Differences in the orders of output logs/events
+- number of logs
+- size of logs
+- ordering of logs (short,long vs. long,short)
 
 ## Differences in output types - ok vs. error
