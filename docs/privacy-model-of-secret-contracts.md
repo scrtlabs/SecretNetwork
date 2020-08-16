@@ -37,7 +37,7 @@ Secret Contract developers must always consider the trade-off between privacy, u
   - [Differences in state accessing order](#differences-in-state-accessing-order)
   - [Differences in output return values size](#differences-in-output-return-values-size)
   - [Differences in output messages/callbacks](#differences-in-output-messagescallbacks)
-  - [Differences in the amounts of output logs/events](#differences-in-the-amounts-of-output-logsevents)
+  - [Differences in output events](#differences-in-output-events)
   - [Differences in output types - ok vs. error](#differences-in-output-types---ok-vs-error)
 
 # Init
@@ -698,7 +698,12 @@ More scenarios to be mindful of:
 
 Again, be creative if that's affecting your secrets. :rainbow:
 
-## Differences in the amounts of output logs/events
+## Differences in output events
+
+Output events:
+
+- "Push notifications" for GUIs with SecretJS
+- To make the tx searchable on-chain
 
 - number of logs
 - size of logs
