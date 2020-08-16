@@ -22,11 +22,6 @@ Secret Contract developers must always consider the trade-off between privacy, u
   - [Outputs](#outputs-1)
     - [Return value of `query`](#return-value-of-query)
 - [External query](#external-query)
-  - [Encrypted](#encrypted)
-  - [Not encrypted](#not-encrypted)
-- [Outputs](#outputs-2)
-  - [Encrypted](#encrypted-1)
-  - [Not encrypted](#not-encrypted-1)
 - [Errors](#errors)
   - [Contract errors](#contract-errors)
   - [Contract panic](#contract-panic)
@@ -175,7 +170,7 @@ Types of messages:
 
 `query` is an execution of a contract on the node of the query sender.
 
-- It Cannot affect transactions on-chain.
+- It doesn't affect transactions on-chain.
 - It has a read-only access to the storage (state) of the contract.
 - The fact that `query` was invoked is known only to the executing node. And to whoever monitors your internet traffic, in case the executing node is on your local machine.
 - Queries are metered by gas but don't incur fees. The executing node decides its gas limit for queries.
@@ -225,17 +220,33 @@ The return value of `query` is similar to `data` in `handle`. It is encrypted.
 
 # External query
 
-## Encrypted
+External `query` is an execution of a contract from another contract in the middle of its run.
 
-## Not encrypted
+- Can be called from another `init`, `handle` or `query`.
+- It has a read-only access to the storage (state) of the contract.
+- `init` & `handle`: The fact that external `query` was invoked public.
+- `query`: The fact that `query` was invoked is known only to the executing node. And to whoever monitors your internet traffic, in case the executing node is on your local machine.
+- External `query` is metered by the gas limit of the caller contract.
+- Access control: Cannot use `env.message.sender`, just like `query`.
 
-# Outputs
+Types of external `query`:
 
-## Encrypted
+| Operation                               | Private invocation? | Private data? | Notes                  |
+| --------------------------------------- | ------------------- | ------------- | ---------------------- |
+| `Bank::BankQuery::Balance`              | No                  | No            |                        |
+| `Bank::BankQuery::AllBalances`          | No                  | No            |                        |
+| `Staking::StakingQuery::BondedDenom`    | No                  | No            |                        |
+| `Staking::StakingQuery::AllDelegations` | No                  | No            |                        |
+| `Staking::StakingQuery::Delegation`     | No                  | No            |                        |
+| `Staking::StakingQuery::Validators`     | No                  | No            |                        |
+| `Wasm::WasmQuery::Smart`                | No                  | Only `msg`    | Query another contract |
 
-- Only known to the transaction sender and the contract
+Legend:
 
-## Not encrypted
+- `Private invocation = Yes` means the request never exits SGX and thus an attacker cannot know it even occurred. Only applicable if the executing node is remote.
+- `Private invocation = No` & `Private data = Yes` means an attacker can know that the contract used this API but cannot know the input parameters or return values. Only applicable if the executing node is remote.
+
+External queries of type `WasmQuery` work exectly like [Queries](#query), except that if an external query of type `WasmQuery` is invoked from `init` or `handle` it is executed on-chain, so it is exposed to monitoring by every node in the Secret Network.
 
 # Errors
 
