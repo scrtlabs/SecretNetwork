@@ -6,12 +6,12 @@ interface Options {
   bech32prefix: string;
 };
 
-const defaultOptions: Options = {
-  httpUrl: "https://lcd.demo-071.cosmwasm.com",
-  networkId: "testing",
-  feeToken: "ucosm",
-  gasPrice: 0.025,
-  bech32prefix: "cosmos",
+const defaultOptions = {
+  httpUrl: "https://bootstrap.pub.testnet.enigma.co",
+  networkId: "enigma-pub-testnet-2",
+  feeToken: "uscrt",
+  gasPrice: 1,
+  bech32prefix: "secret",
 }
 
 const defaultFaucetUrl = "https://faucet.demo-071.cosmwasm.com/credit";
@@ -50,12 +50,19 @@ const connect = async (mnemonic: string, opts: Partial<Options>): Promise<{
   client: SigningCosmWasmClient,
   address: string,
 }> => {
+  const txEncryptionSeed = EnigmaUtils.GenerateNewSeed();
   const options: Options = {...defaultOptions, ...opts};
   const feeTable = buildFeeTable(options.feeToken, options.gasPrice);
   const pen = await Secp256k1Pen.fromMnemonic(mnemonic);
   const address = penAddress(pen, options.bech32prefix);
 
-  const client = new SigningCosmWasmClient(options.httpUrl, address, signBytes => pen.sign(signBytes), feeTable);
+  const client = new SigningCosmWasmClient(
+    options.httpUrl,
+    address,
+    (signBytes) => pen.sign(signBytes),
+    txEncryptionSeed, feeTable
+  );
+
   return {client, address};
 };
 

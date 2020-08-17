@@ -30,7 +30,7 @@ export function main(originalArgs: readonly string[]): void {
 
   const imports = new Map<string, readonly string[]>([
     [
-      "@cosmwasm/sdk",
+      "secretjs",
       [
         "encodeSecp256k1Pubkey",
         "encodeSecp256k1Signature",
@@ -52,6 +52,7 @@ export function main(originalArgs: readonly string[]): void {
         "Contract",
         "ContractDetails",
         "CosmWasmClient",
+        "EnigmaUtils",
         "GetNonceResult",
         "IndexedTx",
         "PostTxResult",
