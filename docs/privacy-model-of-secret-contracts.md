@@ -47,7 +47,7 @@ Secret Contract developers must always consider the trade-off between privacy, u
 
 - They have a read and write access to the storage (state) of the contract.
 - The fact that `init` or `handle` was invoked is public.
-- They are metered by gas and incur fees acording to the gas price of the sending node.
+- They are metered by gas and incur fees according to the gas price of the sending node.
 - Access control: Can use `env.message.sender`.
 
 ## Inputs
@@ -199,7 +199,7 @@ Contract developers should test their contracts rigorously and make sure they ca
 
 #### External errors (VM or interaction with the blockchain)
 
-A `VMError` occurs when there's an error during the contract's execution but outside of the contarct's code.  
+A `VMError` occurs when there's an error during the contract's execution but outside the contract's code.  
 In this case the error message is not encrypted as well.
 
 Some examples of `VMErrors`:
@@ -216,10 +216,10 @@ Some examples of `VMErrors`:
 `query` is an execution of a contract on the node of the query sender.
 
 - It doesn't affect transactions on-chain.
-- It has a read-only access to the storage (state) of the contract.
+- It has read-only access to the storage (state) of the contract.
 - The fact that `query` was invoked is known only to the executing node. And to whoever monitors your internet traffic, in case the executing node is on your local machine.
 - Queries are metered by gas but don't incur fees. The executing node decides its gas limit for queries.
-- Access control: Cannot use `env.message.sender` as it's not a transaction. Can use pre-configured passwords or API keys that are were stored in state previously by `init` and `handle`.
+- Access control: Cannot use `env.message.sender` as it's not a transaction. Can use pre-configured passwords or API keys that have been stored in state previously by `init` and `handle`.
 
 ## Inputs
 
@@ -229,7 +229,7 @@ Inputs that are encrypted and known only to the query sender and to the contract
 | ----- | ---------- | ---------- | -------- | ----- |
 | `msg` | `QueryMsg` | Yes        | Yes      |       |
 
-Note that `Trusted = No` means this data is easily forgeable. An attacker can take its node offline and replay old inputs. This data that is `Trusted = No` by itself cannot be trusted in order to reveal secrets. This is more applicable to `init` and `handle`, but know that an attacker can replay the input `msg` to its offline node. Although `query` cannot change the contract's state and the attcker cannot decrypt the query output, the attacker might be able to deduce private information by monitoring output sizes at different times. See [differences in output return values size](#differences-in-output-return-values-size) to learn more about this kind of attack and how to mitigate it.
+Note that `Trusted = No` means this data is easily forgeable. An attacker can take its node offline and replay old inputs. This data that is `Trusted = No` by itself cannot be trusted in order to reveal secrets. This is more applicable to `init` and `handle`, but know that an attacker can replay the input `msg` to its offline node. Although `query` cannot change the contract's state and the attacker cannot decrypt the query output, the attacker might be able to deduce private information by monitoring output sizes at different times. See [differences in output return values size](#differences-in-output-return-values-size) to learn more about this kind of attack and how to mitigate it.
 
 ## API calls
 
@@ -292,7 +292,7 @@ Contract developers should test their contracts rigorously and make sure they ca
 
 #### External errors (VM or interaction with the blockchain)
 
-A `VMError` occurs when there's an error during the contract's execution but outside of the contarct's code.  
+A `VMError` occurs when there's an error during the contract's execution but outside of the contract's code.  
 In this case the error message is not encrypted as well.
 
 Some examples of `VMErrors`:
@@ -309,7 +309,7 @@ Some examples of `VMErrors`:
 External `query` is an execution of a contract from another contract in the middle of its run.
 
 - Can be called from another `init`, `handle` or `query`.
-- It has a read-only access to the storage (state) of the contract.
+- It has read-only access to the storage (state) of the contract.
 - `init` & `handle`: The fact that external `query` was invoked public.
 - `query`: The fact that `query` was invoked is known only to the executing node. And to whoever monitors your internet traffic, in case the executing node is on your local machine.
 - External `query` is metered by the gas limit of the caller contract.
@@ -332,7 +332,7 @@ Legend:
 - `Private invocation = Yes` means the request never exits SGX and thus an attacker cannot know it even occurred. Only applicable if the executing node is remote.
 - `Private invocation = No` & `Private data = Yes` means an attacker can know that the contract used this API but cannot know the input parameters or return values. Only applicable if the executing node is remote.
 
-External queries of type `WasmQuery` work exectly like [Queries](#query), except that if an external query of type `WasmQuery` is invoked from `init` or `handle` it is executed on-chain, so it is exposed to monitoring by every node in the Secret Network.
+External queries of type `WasmQuery` work exactly like [Queries](#query), except that if an external query of type `WasmQuery` is invoked from `init` or `handle` it is executed on-chain, so it is exposed to monitoring by every node in the Secret Network.
 
 # Data leakage attacks by detecting patterns in contract usage
 
@@ -344,7 +344,7 @@ For encryption, the Secret Network is using [AES-SIV](https://tools.ietf.org/htm
 
 Most of the below examples talk about an attacker revealing which function was executed on the contract, but this is not the only type of data leakage that an attacker might target.
 
-Secret Contract developers must analyze the privacy model of their contract - What kind of information must remain private and what kind of information, if revealed, won't affect the operation of the contract and its users. **Analyze what it is that you need to keep private and structure your Secret Contract's boundries to protect that.**
+Secret Contract developers must analyze the privacy model of their contract - What kind of information must remain private and what kind of information, if revealed, won't affect the operation of the contract and its users. **Analyze what it is that you need to keep private and structure your Secret Contract's boundaries to protect that.**
 
 ## Differences in input sizes
 
