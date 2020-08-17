@@ -16,16 +16,20 @@ Secret Contract developers must always consider the trade-off between privacy, u
     - [Return value of `init`](#return-value-of-init)
     - [Return value of `handle`](#return-value-of-handle)
     - [Logs and Messages (Same for `init` and `handle`)](#logs-and-messages-same-for-init-and-handle)
+    - [Errors](#errors)
+      - [Contract errors](#contract-errors)
+      - [Contract panic](#contract-panic)
+      - [External errors (VM or interaction with the blockchain)](#external-errors-vm-or-interaction-with-the-blockchain)
 - [Query](#query)
   - [Inputs](#inputs-1)
   - [API calls](#api-calls-1)
   - [Outputs](#outputs-1)
     - [Return value of `query`](#return-value-of-query)
+    - [Errors](#errors-1)
+      - [Contract errors](#contract-errors-1)
+      - [Contract panic](#contract-panic-1)
+      - [External errors (VM or interaction with the blockchain)](#external-errors-vm-or-interaction-with-the-blockchain-1)
 - [External query](#external-query)
-- [Errors](#errors)
-  - [Contract errors](#contract-errors)
-  - [Contract panic](#contract-panic)
-  - [External errors (VM or interaction with the blockchain)](#external-errors-vm-or-interaction-with-the-blockchain)
 - [Data leakage attacks by detecting patterns in contract usage](#data-leakage-attacks-by-detecting-patterns-in-contract-usage)
   - [Differences in input sizes](#differences-in-input-sizes)
   - [Differences in state key sizes](#differences-in-state-key-sizes)
@@ -166,6 +170,47 @@ Types of messages:
 | `Execute`                            | `msg`                | `Binary`    | Yes        |       |
 | `Execute`                            | `send`               | `Vec<Coin>` | No         |       |
 
+### Errors
+
+Contract execution can result in multiple types of errors.  
+The fact that the contract returned an error is public.
+
+#### Contract errors
+
+A contract can choose to return an `StdError`. The error message is encrypted.
+
+Types of `StdError`:
+
+- `GenericErr`
+- `InvalidBase64`
+- `InvalidUtf8`
+- `NotFound`
+- `NullPointer`
+- `ParseErr`
+- `SerializeErr`
+- `Unauthorized`
+- `Underflow`
+
+#### Contract panic
+
+If a contract receives a panic (exception) during its execution, the error message is not encrypted and will always be `Execution error: Enclave: the contract panicked`.
+
+Contract developers should test their contracts rigorously and make sure they can never panic.
+
+#### External errors (VM or interaction with the blockchain)
+
+A `VMError` occurs when there's an error during the contract's execution but outside of the contarct's code.  
+In this case the error message is not encrypted as well.
+
+Some examples of `VMErrors`:
+
+- Memory allocation errors (The contract tried to allocate too much)
+- Contract out of gas
+- Got out of gas while accessing storage
+- Passing null pointers from the contract to the VM (E.g. `read_db(null)`)
+- Trying to write to read-only storage (E.g. inside a `query`)
+- Passing a faulty message to the blockchain (Trying to send fund you don't have, trying to callback to a non-existing contract)
+
 # Query
 
 `query` is an execution of a contract on the node of the query sender.
@@ -218,6 +263,47 @@ The return value of `query` is similar to `data` in `handle`. It is encrypted.
 | ------ | -------- | ---------- | ----- |
 | `data` | `Binary` | Yes        |       |
 
+### Errors
+
+Contract execution can result in multiple types of errors.  
+The fact that the contract returned an error is public.
+
+#### Contract errors
+
+A contract can choose to return an `StdError`. The error message is encrypted.
+
+Types of `StdError`:
+
+- `GenericErr`
+- `InvalidBase64`
+- `InvalidUtf8`
+- `NotFound`
+- `NullPointer`
+- `ParseErr`
+- `SerializeErr`
+- `Unauthorized`
+- `Underflow`
+
+#### Contract panic
+
+If a contract receives a panic (exception) during its execution, the error message is not encrypted and will always be `Execution error: Enclave: the contract panicked`.
+
+Contract developers should test their contracts rigorously and make sure they can never panic.
+
+#### External errors (VM or interaction with the blockchain)
+
+A `VMError` occurs when there's an error during the contract's execution but outside of the contarct's code.  
+In this case the error message is not encrypted as well.
+
+Some examples of `VMErrors`:
+
+- Memory allocation errors (The contract tried to allocate too much)
+- Contract out of gas
+- Got out of gas while accessing storage
+- Passing null pointers from the contract to the VM (E.g. `read_db(null)`)
+- Trying to write to read-only storage
+- Passing a faulty message to the blockchain (Trying to send fund you don't have, trying to callback to a non-existing contract)
+
 # External query
 
 External `query` is an execution of a contract from another contract in the middle of its run.
@@ -247,26 +333,6 @@ Legend:
 - `Private invocation = No` & `Private data = Yes` means an attacker can know that the contract used this API but cannot know the input parameters or return values. Only applicable if the executing node is remote.
 
 External queries of type `WasmQuery` work exectly like [Queries](#query), except that if an external query of type `WasmQuery` is invoked from `init` or `handle` it is executed on-chain, so it is exposed to monitoring by every node in the Secret Network.
-
-# Errors
-
-## Contract errors
-
-- Encrypted
-
-## Contract panic
-
-- No Encrypted
-
-## External errors (VM or interaction with the blockchain)
-
-- Not Encrypted
-  - Memory allocation errors (Trying to allocate too much)
-  - Contract out of gas
-  - Got out of gas while accessing storage
-  - Passing null pointers from the contract to the VM
-  - Trying to write to read-only storage (query)
-  - Passing a faulty message to the blockchain (Trying to send fund you don't have, trying to callback to a non-existing contract)
 
 # Data leakage attacks by detecting patterns in contract usage
 
