@@ -1,0 +1,66 @@
+[package]
+name = "cosmwasm-sgx-vm"
+version = "0.9.0-alpha1"
+authors = [
+    "Ethan Frey <ethanfrey@users.noreply.github.com>",
+    "Enigma Team <info@enigma.co>",
+]
+edition = "2018"
+description = "VM bindings to run cosmwams contracts"
+repository = "https://github.com/CosmWasm/cosmwasm/tree/master/packages/sgx-vm"
+license = "Apache-2.0"
+
+[badges]
+circle-ci = { repository = "CosmWasm/cosmwasm", branch = "master" }
+maintenance = { status = "actively-developed" }
+
+[features]
+default = ["default-enclave", "staking"]
+# multiple backends may be activated here (available through eg. backends::cranelift::*)
+cranelift = [] # ["wasmer-clif-backend"]
+singlepass = [] # ["wasmer-singlepass-backend"]
+# default selects which *one* is re-exported in backends/mod.rs (available through eg backends::*)
+default-cranelift = [] # ["wasmer-clif-backend"]
+default-singlepass = [] # ["wasmer-singlepass-backend"]
+default-enclave = []
+# enable this for better error reporting
+backtraces = ["snafu/backtraces"]
+# iterator allows us to iterate over all DB items in a given range
+# this must be enabled to support cosmwasm contracts compiled with the 'iterator' feature
+# optional as some merkle stores (like tries) don't support this
+# given Ethereum 1.0, 2.0, Substrate, and other major projects use Tries
+# we keep this optional, to allow possible future integration (or different Cosmos Backends)
+iterator = ["cosmwasm-std/iterator"]
+staking = ["cosmwasm-std/staking"]
+
+[dependencies]
+# Uses the path when built locally; uses the given version from crates.io when published
+cosmwasm-std = { path = "../std", version = "0.9.0-alpha1" }
+serde_json = "1.0"
+# wasmer-runtime-core = "0.17"
+# wasmer-middleware-common = "0.17"
+# wasmer-clif-backend = { version = "0.17", optional = true }
+# wasmer-singlepass-backend = { version = "0.17", optional = true }
+schemars = "0.7"
+serde = { version = "1.0.103", default-features = false, features = [
+    "derive",
+    "alloc"
+] }
+snafu = { version = "0.6.3" }
+sha2 = "0.8.0"
+hex = "0.4"
+memmap = "0.7"
+parity-wasm = "0.41"
+# requirements specific to Secret Network
+lazy_static = "1.4"
+enclave-ffi-types = { path = "../enclave-ffi-types", features = [
+    "build_headers"
+] }
+sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "v1.1.2" }
+sgx_urts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "v1.1.2" }
+log = "0.4.8"
+base64 = "0.12.0"
+
+[dev-dependencies]
+tempfile = "3.1.0"
+wabt = "0.9.1"

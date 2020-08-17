@@ -1,4 +1,4 @@
-![Secret Network](/header.png)
+![Secret Network](images/header.png)
 
 <p align="center">
 Secret Network secures the decentralized web
@@ -36,7 +36,7 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 
 # Wallets
 
-- [Ledger Nano S and Ledger Nano X](/ledger-nano-s.md)
+- [Ledger Nano S and Ledger Nano X](ledger-nano-s.md)
 - [Math Wallet](https://mathwallet.org/web/enigma)
 
 # Blockchain REST Providers

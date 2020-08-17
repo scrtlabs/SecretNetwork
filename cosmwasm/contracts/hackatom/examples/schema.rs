@@ -1,34 +1,22 @@
 use std::env::current_dir;
-use std::fs::{create_dir_all, write};
-use std::path::PathBuf;
+use std::fs::create_dir_all;
 
-use schemars::{schema::RootSchema, schema_for};
+use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
+use cosmwasm_std::BalanceResponse;
 
-use hackatom::contract::{HandleMsg, InitMsg, QueryMsg, State};
+use hackatom::contract::{HandleMsg, InitMsg, MigrateMsg, QueryMsg, State, VerifierResponse};
 
 fn main() {
-    let mut pwd = current_dir().unwrap();
-    pwd.push("schema");
-    create_dir_all(&pwd).unwrap();
+    let mut out_dir = current_dir().unwrap();
+    out_dir.push("schema");
+    create_dir_all(&out_dir).unwrap();
+    remove_schemas(&out_dir).unwrap();
 
-    let schema = schema_for!(InitMsg);
-    export_schema(&schema, &pwd, "init_msg.json");
-
-    let schema = schema_for!(HandleMsg);
-    export_schema(&schema, &pwd, "handle_msg.json");
-
-    let schema = schema_for!(QueryMsg);
-    export_schema(&schema, &pwd, "query_msg.json");
-
-    let schema = schema_for!(State);
-    export_schema(&schema, &pwd, "state.json");
-}
-
-// panics if any error writing out the schema
-// overwrites any existing schema
-fn export_schema(schema: &RootSchema, dir: &PathBuf, name: &str) -> () {
-    let path = dir.join(name);
-    let json = serde_json::to_string_pretty(schema).unwrap();
-    write(&path, json.as_bytes()).unwrap();
-    println!("{}", path.to_str().unwrap());
+    export_schema(&schema_for!(InitMsg), &out_dir);
+    export_schema(&schema_for!(HandleMsg), &out_dir);
+    export_schema(&schema_for!(MigrateMsg), &out_dir);
+    export_schema(&schema_for!(QueryMsg), &out_dir);
+    export_schema(&schema_for!(State), &out_dir);
+    export_schema(&schema_for!(VerifierResponse), &out_dir);
+    export_schema(&schema_for!(BalanceResponse), &out_dir);
 }

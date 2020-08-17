@@ -1,10 +1,10 @@
 # Go-CosmWasm
 
-This provides go bindings to the [cosmwasm](https://github.com/confio/cosmwasm) smart
+This provides go bindings to the [CosmWasm](https://github.com/CosmWasm/cosmwasm) smart
 contract framework. In particular, it allows you to easily compile, initialize,
 and execute these contracts from Go.
 
-As of the 0.6.0 release, we support [cosmwasm](https://github.com/confio/cosmwasm) 0.6.3
+As of the 0.7.0 release, we support [CosmWasm](https://github.com/CosmWasm/cosmwasm) 0.7.0
 and any compatible smart contracts.
 
 ## Structure
@@ -23,12 +23,16 @@ but need to be on a system that works with an existing dll. Currently this is Li
 but it is not supported by the wasmer singlepass backend which we rely upon for gas
 metering.
 
+*Note: CentOS support is currently disabled due to work on CD tooling. We require Linux with glibc 2.18+*
+
 *Note: Windows is not supported currently*
+
+*Note: We only currently support i686/amd64 architectures, although AMD support is an open issue*
 
 ## Design
 
 Please read the [Documentation](./spec/Index.md) to understand both the general
-[Architecture](./spec/Architecture.md), as well as the more detailed 
+[Architecture](./spec/Architecture.md), as well as the more detailed
 [Specification](./spec/Specification.md) of the parameters and entry points.
 
 ## Development
@@ -46,5 +50,14 @@ with a PR (on your fork). We will set up a proper CI system for building these b
 but we are not there yet.
 
 To build the rust side, try `make build-rust` and wait for it to compile. This depends on
-`cargo` being installed with `rustc` version 1.37+. Generally, you can just use `rustup` to
+`cargo` being installed with `rustc` version 1.39+. Generally, you can just use `rustup` to
 install all this with no problems.
+
+## Toolchain
+
+The Rust toolchain is pinned in the file `rust-toolchain`. It must be in sync with `Dockerfile.cross`
+and `Dockerfile.centos7`.
+When choosing a version, please use version with clippy, rustfmt and rls available to make Simon happy.
+
+- Mac: https://rust-lang.github.io/rustup-components-history/x86_64-apple-darwin.html
+- Linux: https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu.html

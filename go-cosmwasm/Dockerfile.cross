@@ -17,7 +17,8 @@ ENV LLVM_SYS_80_PREFIX=/usr/lib/llvm-8
 
 WORKDIR /opt
 
-# Add macOS Rust target
+# Pin to proper nightly and add macOS Rust target
+RUN rustup default nightly-2020-06-08
 RUN rustup target add x86_64-apple-darwin
 
 # Build osxcross
@@ -46,8 +47,8 @@ RUN chmod -R 777 /usr/local/cargo
 WORKDIR /code
 RUN rm -rf /scratch
 
-COPY build/build_osx.sh /opt
-RUN chmod +x /opt/build*
+COPY build/*.sh /opt/
+RUN chmod +x /opt/*.sh
 
 RUN mkdir /.cargo
 RUN chmod +rx /.cargo
