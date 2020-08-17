@@ -2,7 +2,7 @@
 
 1. Get the latest release of `secretcli` for your OS: https://github.com/enigmampc/SecretNetwork/releases/latest.
 
-   ([How to verify releases](/verify-releases.md))
+   ([How to verify releases](verify-releases.md))
 
 2) Install:
 

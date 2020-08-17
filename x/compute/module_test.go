@@ -10,16 +10,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	"github.com/enigmampc/cosmos-sdk/types/module"
+	"github.com/enigmampc/cosmos-sdk/x/auth"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/libs/kv"
-
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
 )
 
 type testData struct {
@@ -34,7 +32,8 @@ func setupTest(t *testing.T) (testData, func()) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 
-	ctx, acctKeeper, keeper := CreateTestInput(t, false, tempDir)
+	ctx, keepers := CreateTestInput(t, false, tempDir, "staking", nil, nil)
+	acctKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 	data := testData{
 		module:     NewAppModule(keeper),
 		ctx:        ctx,
@@ -63,7 +62,8 @@ func mustLoad(path string) []byte {
 var (
 	key1, pub1, addr1 = keyPubAddr()
 	testContract      = mustLoad("./internal/keeper/testdata/contract.wasm")
-	escrowContract    = mustLoad("./testdata/escrow.wasm")
+	maskContract      = mustLoad("./internal/keeper/testdata/reflect.wasm")
+	oldContract       = mustLoad("./testdata/escrow_0.7.wasm")
 )
 
 func TestHandleCreate(t *testing.T) {
@@ -92,9 +92,16 @@ func TestHandleCreate(t *testing.T) {
 		"other valid wasm": {
 			msg: MsgStoreCode{
 				Sender:       addr1,
-				WASMByteCode: escrowContract,
+				WASMByteCode: maskContract,
 			},
 			isValid: true,
+		},
+		"old wasm (0.7)": {
+			msg: MsgStoreCode{
+				Sender:       addr1,
+				WASMByteCode: oldContract,
+			},
+			isValid: false,
 		},
 	}
 
@@ -169,7 +176,7 @@ func TestHandleInstantiate(t *testing.T) {
 	res, err = h(data.ctx, initCmd)
 	require.NoError(t, err)
 	contractAddr := sdk.AccAddress(res.Data)
-	require.Equal(t, "cosmos18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5", contractAddr.String())
+	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", contractAddr.String())
 	// this should be standard x/compute init event, nothing from contract
 	require.Equal(t, 1, len(res.Events), prettyEvents(res.Events))
 	assert.Equal(t, "message", res.Events[0].Type)
@@ -180,11 +187,11 @@ func TestHandleInstantiate(t *testing.T) {
 
 	assertContractList(t, q, data.ctx, 1, []string{contractAddr.String()})
 	assertContractInfo(t, q, data.ctx, contractAddr, 1, creator)
-	assertContractState(t, q, data.ctx, contractAddr, state{
-		Verifier:    []byte(fred),
-		Beneficiary: []byte(bob),
-		Funder:      []byte(creator),
-	})
+	// assertContractState(t, q, data.ctx, contractAddr, state{
+	// 	Verifier:    []byte(fred),
+	// 	Beneficiary: []byte(bob),
+	// 	Funder:      []byte(creator),
+	// })
 }
 
 func TestHandleExecute(t *testing.T) {
@@ -224,7 +231,7 @@ func TestHandleExecute(t *testing.T) {
 	res, err = h(data.ctx, initCmd)
 	require.NoError(t, err)
 	contractAddr := sdk.AccAddress(res.Data)
-	require.Equal(t, "cosmos18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5", contractAddr.String())
+	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", contractAddr.String())
 	// this should be standard x/compute init event, plus a bank send event (2), with no custom contract events
 	require.Equal(t, 2, len(res.Events), prettyEvents(res.Events))
 	assert.Equal(t, "transfer", res.Events[0].Type)
@@ -290,11 +297,11 @@ func TestHandleExecute(t *testing.T) {
 
 	assertContractList(t, q, data.ctx, 1, []string{contractAddr.String()})
 	assertContractInfo(t, q, data.ctx, contractAddr, 1, creator)
-	assertContractState(t, q, data.ctx, contractAddr, state{
-		Verifier:    []byte(fred),
-		Beneficiary: []byte(bob),
-		Funder:      []byte(creator),
-	})
+	// assertContractState(t, q, data.ctx, contractAddr, state{
+	// 	Verifier:    []byte(fred),
+	// 	Beneficiary: []byte(bob),
+	// 	Funder:      []byte(creator),
+	// })
 }
 
 func TestHandleExecuteEscrow(t *testing.T) {
@@ -310,7 +317,7 @@ func TestHandleExecuteEscrow(t *testing.T) {
 
 	msg := MsgStoreCode{
 		Sender:       creator,
-		WASMByteCode: escrowContract,
+		WASMByteCode: testContract,
 	}
 	res, err := h(data.ctx, &msg)
 	require.NoError(t, err)
@@ -318,10 +325,8 @@ func TestHandleExecuteEscrow(t *testing.T) {
 
 	_, _, bob := keyPubAddr()
 	initMsg := map[string]interface{}{
-		"arbiter":    fred.String(),
-		"recipient":  bob.String(),
-		"end_time":   0,
-		"end_height": 0,
+		"verifier":    fred.String(),
+		"beneficiary": bob.String(),
 	}
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
@@ -335,10 +340,10 @@ func TestHandleExecuteEscrow(t *testing.T) {
 	res, err = h(data.ctx, initCmd)
 	require.NoError(t, err)
 	contractAddr := sdk.AccAddress(res.Data)
-	require.Equal(t, "cosmos18vd8fpwxzck93qlwghaj6arh4p7c5n89uzcee5", contractAddr.String())
+	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", contractAddr.String())
 
 	handleMsg := map[string]interface{}{
-		"approve": map[string]interface{}{},
+		"release": map[string]interface{}{},
 	}
 	handleMsgBz, err := json.Marshal(handleMsg)
 	require.NoError(t, err)
@@ -362,19 +367,6 @@ func TestHandleExecuteEscrow(t *testing.T) {
 	contractAcct := data.acctKeeper.GetAccount(data.ctx, contractAddr)
 	require.NotNil(t, contractAcct)
 	assert.Equal(t, sdk.Coins(nil), contractAcct.GetCoins())
-
-	// q := data.module.NewQuerierHandler()
-	// // ensure all contract state is as after init
-	// assertCodeList(t, q, data.ctx, 1)
-	// assertCodeBytes(t, q, data.ctx, 1, testContract)
-
-	// assertContractList(t, q, data.ctx, []string{contractAddr.String()})
-	// assertContractInfo(t, q, data.ctx, contractAddr, 1, creator)
-	// assertContractState(t, q, data.ctx, contractAddr, state{
-	// 	Verifier:    fred.String(),
-	// 	Beneficiary: bob.String(),
-	// 	Funder:      creator.String(),
-	// })
 }
 
 type prettyEvent struct {
@@ -469,21 +461,21 @@ func assertContractList(t *testing.T, q sdk.Querier, ctx sdk.Context, codeID uin
 	assert.Equal(t, hasAddrs, addrs)
 }
 
-func assertContractState(t *testing.T, q sdk.Querier, ctx sdk.Context, addr sdk.AccAddress, expected state) {
-	path := []string{QueryGetContractState, addr.String(), keeper.QueryMethodContractStateAll}
-	bz, sdkerr := q(ctx, path, abci.RequestQuery{})
-	require.NoError(t, sdkerr)
+// func assertContractState(t *testing.T, q sdk.Querier, ctx sdk.Context, addr sdk.AccAddress, expected state) {
+// 	path := []string{QueryGetContractState, addr.String(), keeper.QueryMethodContractStateAll}
+// 	bz, sdkerr := q(ctx, path, abci.RequestQuery{})
+// 	require.NoError(t, sdkerr)
 
-	var res []Model
-	err := json.Unmarshal(bz, &res)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(res), "#v", res)
-	require.Equal(t, []byte("config"), []byte(res[0].Key))
+// 	var res []Model
+// 	err := json.Unmarshal(bz, &res)
+// 	require.NoError(t, err)
+// 	require.Equal(t, 1, len(res), "#v", res)
+// 	require.Equal(t, []byte("config"), []byte(res[0].Key))
 
-	expectedBz, err := json.Marshal(expected)
-	require.NoError(t, err)
-	assert.Equal(t, expectedBz, res[0].Value)
-}
+// 	expectedBz, err := json.Marshal(expected)
+// 	require.NoError(t, err)
+// 	assert.Equal(t, expectedBz, res[0].Value)
+// }
 
 func assertContractInfo(t *testing.T, q sdk.Querier, ctx sdk.Context, addr sdk.AccAddress, codeID uint64, creator sdk.AccAddress) {
 	path := []string{QueryGetContract, addr.String()}
