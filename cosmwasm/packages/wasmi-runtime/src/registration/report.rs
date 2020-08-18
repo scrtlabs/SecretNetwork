@@ -534,13 +534,16 @@ const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
 
+
 #[cfg(not(feature = "SGX_MODE_HW"))]
+#[allow(dead_code)]
 const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
 
 #[derive(Debug)]
 pub struct AdvisoryIDs (pub Vec<String>);
 
 impl AdvisoryIDs {
+    #[allow(dead_code)]
     pub(crate) fn vulnerable(&self) -> Vec<String> {
         let it = self.0.iter();
         let mut vulnerable: Vec<String> = vec![];
