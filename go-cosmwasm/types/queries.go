@@ -256,11 +256,36 @@ type RewardsQuery struct {
 
 // DelegationResponse is the expected response to DelegationsQuery
 type RewardsResponse struct {
-	Rewards []Rewards `json:"rewards,omitempty"`
-	Total   []Coin    `json:"total,omitempty"`
+	Rewards []Rewards   `json:"rewards,omitempty"`
+	Total   RewardCoins `json:"total,omitempty"`
 }
 
 type Rewards struct {
-	Validator string `json:"validator_address"`
-	Reward    []Coin `json:"reward"`
+	Validator string      `json:"validator_address"`
+	Reward    RewardCoins `json:"reward"`
+}
+
+type RewardCoins []Coin
+
+// MarshalJSON ensures that we get [] for empty arrays
+func (d RewardCoins) MarshalJSON() ([]byte, error) {
+	if len(d) == 0 {
+		return []byte("[]"), nil
+	}
+	var raw []Coin = d
+	return json.Marshal(raw)
+}
+
+// UnmarshalJSON ensures that we get [] for empty arrays
+func (d *RewardCoins) UnmarshalJSON(data []byte) error {
+	// make sure we deserialize [] back to null
+	if string(data) == "[]" || string(data) == "null" {
+		return nil
+	}
+	var raw []Coin
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*d = raw
+	return nil
 }
