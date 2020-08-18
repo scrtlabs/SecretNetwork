@@ -106,7 +106,7 @@ type MsgInstantiateContract struct {
 	Label             string         `json:"label" yaml:"label"`
 	InitMsg           []byte         `json:"init_msg" yaml:"init_msg"`
 	InitFunds         sdk.Coins      `json:"init_funds" yaml:"init_funds"`
-	CallbackSignature []byte         `json:"cb_sig" yaml:"cb_sig"` // Optional
+	CallbackSignature []byte         `json:"callback_sig" yaml:"callback_sig"` // Optional
 }
 
 func (msg MsgInstantiateContract) Route() string {
@@ -158,7 +158,7 @@ type MsgExecuteContract struct {
 	Contract          sdk.AccAddress `json:"contract" yaml:"contract"`
 	Msg               []byte         `json:"msg" yaml:"msg"`
 	SentFunds         sdk.Coins      `json:"sent_funds" yaml:"sent_funds"`
-	CallbackSignature []byte         `json:"cb_sig" yaml:"cb_sig"` // Optional
+	CallbackSignature []byte         `json:"callback_sig" yaml:"callback_sig"` // Optional
 }
 
 func (msg MsgExecuteContract) Route() string {

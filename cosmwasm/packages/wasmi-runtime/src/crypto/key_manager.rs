@@ -74,51 +74,38 @@ impl Keychain {
     }
 
     pub fn get_consensus_state_ikm(&self) -> Result<AESKey, CryptoError> {
-        if self.consensus_state_ikm.is_some() {
-            Ok(self.consensus_state_ikm.unwrap())
-        } else {
+        self.consensus_state_ikm.clone().ok_or_else(|| {
             error!("Error accessing base_state_key (does not exist, or was not initialized)");
-            Err(CryptoError::ParsingError)
-        }
+            CryptoError::ParsingError
+        })
     }
 
     pub fn get_consensus_seed(&self) -> Result<Seed, CryptoError> {
-        if self.consensus_seed.is_some() {
-            Ok(self.consensus_seed.unwrap())
-        } else {
+        self.consensus_seed.clone().ok_or_else(|| {
             error!("Error accessing consensus_seed (does not exist, or was not initialized)");
-            Err(CryptoError::ParsingError)
-        }
+            CryptoError::ParsingError
+        })
     }
 
     pub fn seed_exchange_key(&self) -> Result<KeyPair, CryptoError> {
-        if self.consensus_seed_exchange_keypair.is_some() {
-            // KeyPair does not implement copy (due to internal type not implementing it
-            Ok(self.consensus_seed_exchange_keypair.clone().unwrap())
-        } else {
+        self.consensus_seed_exchange_keypair.clone().ok_or_else(|| {
             error!("Error accessing consensus_seed_exchange_keypair (does not exist, or was not initialized)");
-            Err(CryptoError::ParsingError)
-        }
+            CryptoError::ParsingError
+        })
     }
 
     pub fn get_consensus_io_exchange_keypair(&self) -> Result<KeyPair, CryptoError> {
-        if self.consensus_io_exchange_keypair.is_some() {
-            // KeyPair does not implement copy (due to internal type not implementing it
-            Ok(self.consensus_io_exchange_keypair.clone().unwrap())
-        } else {
+        self.consensus_io_exchange_keypair.clone().ok_or_else(|| {
             error!("Error accessing consensus_io_exchange_keypair (does not exist, or was not initialized)");
-            Err(CryptoError::ParsingError)
-        }
+            CryptoError::ParsingError
+        })
     }
 
     pub fn get_consensus_callback_secret(&self) -> Result<AESKey, CryptoError> {
-        if self.consensus_callback_secret.is_some() {
-            // KeyPair does not implement copy (due to internal type not implementing it
-            Ok(self.consensus_callback_secret.clone().unwrap())
-        } else {
+        self.consensus_callback_secret.clone().ok_or_else(|| {
             error!("Error accessing consensus_callback_secret (does not exist, or was not initialized)");
-            Err(CryptoError::ParsingError)
-        }
+            CryptoError::ParsingError
+        })
     }
 
     pub fn get_registration_key(&self) -> Result<KeyPair, CryptoError> {

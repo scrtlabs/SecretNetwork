@@ -45,6 +45,6 @@ pub trait ExportECKey {
 // https://github.com/tendermint/tendermint/blob/v0.33.3/crypto/crypto.go#L22
 pub trait PubKey: PartialEq {
     fn get_address(&self) -> CanonicalAddr;
-    fn as_bytes(&self) -> Vec<u8>;
+    fn bytes(&self) -> Vec<u8>;
     fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError>;
 }

@@ -103,7 +103,7 @@ where
         self.gas_limit.saturating_sub(self.used_gas)
     }
 
-    pub fn init(&mut self, env: &[u8], msg: &[u8]) -> VmResult<InitSuccess> {
+    pub fn init(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<InitSuccess> {
         trace!(
             target: module_path!(),
             "init() called with env: {:?} msg: {:?} enclave_id: {:?} gas_left: {}",
@@ -129,6 +129,8 @@ where
                 env.len(),
                 msg.as_ptr(),
                 msg.len(),
+                sig_info.as_ptr(),
+                sig_info.len(),
             )
         } {
             sgx_status_t::SGX_SUCCESS => { /* continue */ }
@@ -148,7 +150,7 @@ where
         init_result_to_vm_result(init_result)
     }
 
-    pub fn handle(&mut self, env: &[u8], msg: &[u8]) -> VmResult<HandleSuccess> {
+    pub fn handle(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<HandleSuccess> {
         trace!(
             target: module_path!(),
             "handle() called with env: {:?} msg: {:?} enclave_id: {:?} gas_left: {}",
@@ -174,6 +176,8 @@ where
                 env.len(),
                 msg.as_ptr(),
                 msg.len(),
+                sig_info.as_ptr(),
+                sig_info.len(),
             )
         } {
             sgx_status_t::SGX_SUCCESS => { /* continue */ }

@@ -136,12 +136,12 @@ fn encrypt_wasm_msg(
     match wasm_msg {
         WasmMsg::Execute {
             msg,
-            cb_sig: msg_cb_sig,
+            callback_sig: msg_callback_sig,
             ..
         }
         | WasmMsg::Instantiate {
             msg,
-            cb_sig: msg_cb_sig,
+            callback_sig: msg_callback_sig,
             ..
         } => {
             let mut msg_to_pass =
@@ -150,8 +150,8 @@ fn encrypt_wasm_msg(
             msg_to_pass.encrypt_in_place()?;
             *msg = b64_encode(&msg_to_pass.to_slice());
 
-            let cb_sig = create_callback_signature(contract_addr, &msg_to_pass);
-            *msg_cb_sig = Some(cb_sig);
+            let callback_sig = create_callback_signature(contract_addr, &msg_to_pass);
+            *msg_callback_sig = Some(callback_sig);
         }
     }
 
@@ -166,12 +166,11 @@ pub fn create_callback_signature(
     let mut callback_sig_bytes = KEY_MANAGER
         .get_consensus_callback_secret()
         .unwrap()
-        .clone()
         .get()
         .to_vec();
 
     callback_sig_bytes.extend(contract_addr.as_slice());
-    callback_sig_bytes.extend(msg_to_sign.msg.clone());
+    callback_sig_bytes.extend(msg_to_sign.msg.as_slice());
 
     callback_sig_bytes
 }

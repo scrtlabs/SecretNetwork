@@ -12,6 +12,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use super::encoding::Binary;
+use crate::consts::BECH32_PREFIX_ACC_ADDR;
 use crate::crypto::multisig::MultisigThresholdPubKey;
 use crate::crypto::secp256k1::Secp256k1PubKey;
 use crate::crypto::traits::PubKey;
@@ -25,8 +26,6 @@ pub struct HumanAddr(pub String);
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct CanonicalAddr(pub Binary);
 
-pub const BECH32_PREFIX_ACC_ADDR: &str = "secret";
-
 impl HumanAddr {
     pub fn as_str(&self) -> &str {
         &self.0
@@ -38,8 +37,10 @@ impl HumanAddr {
         self.0.is_empty()
     }
     pub fn from_canonical(canonical_addr: CanonicalAddr) -> Result<Self, bech32::Error> {
-        let human_addr_str =
-            bech32::encode(BECH32_PREFIX_ACC_ADDR, (canonical_addr.0).0.to_base32())?;
+        let human_addr_str = bech32::encode(
+            BECH32_PREFIX_ACC_ADDR,
+            canonical_addr.as_slice().to_base32(),
+        )?;
 
         Ok(HumanAddr(human_addr_str))
     }
@@ -93,9 +94,6 @@ pub struct Env {
     pub message: MessageInfo,
     pub contract: ContractInfo,
     pub contract_key: Option<String>,
-    pub sign_bytes: Binary,
-    pub signature: CosmosSignature,
-    pub cb_sig: Option<Binary>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
@@ -230,7 +228,7 @@ pub enum WasmMsg {
         /// msg is the json-encoded HandleMsg struct (as raw Binary)
         msg: String,
         send: Vec<Coin>,
-        cb_sig: Option<Vec<u8>>,
+        callback_sig: Option<Vec<u8>>,
     },
     /// this instantiates a new contracts from previously uploaded wasm code
     Instantiate {
@@ -240,7 +238,7 @@ pub enum WasmMsg {
         send: Vec<Coin>,
         /// optional human-readable label for the contract
         label: Option<String>,
-        cb_sig: Option<Vec<u8>>,
+        callback_sig: Option<Vec<u8>>,
     },
 }
 
@@ -342,10 +340,10 @@ impl PubKey for PubKeyKind {
         }
     }
 
-    fn as_bytes(&self) -> Vec<u8> {
+    fn bytes(&self) -> Vec<u8> {
         match self {
-            PubKeyKind::Secp256k1(pubkey) => pubkey.as_bytes(),
-            PubKeyKind::Multisig(pubkey) => pubkey.as_bytes(),
+            PubKeyKind::Secp256k1(pubkey) => pubkey.bytes(),
+            PubKeyKind::Multisig(pubkey) => pubkey.bytes(),
         }
     }
 
@@ -365,4 +363,11 @@ pub struct SignDoc {
     memo: String,
     msgs: Vec<Value>,
     sequence: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SigInfo {
+    pub sign_bytes: Binary,
+    pub signature: CosmosSignature,
+    pub callback_sig: Option<Binary>,
 }

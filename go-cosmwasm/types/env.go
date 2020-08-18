@@ -1,7 +1,5 @@
 package types
 
-import "github.com/enigmampc/cosmos-sdk/x/auth"
-
 //---------- Env ---------
 
 // Env defines the state of the blockchain environment this contract is
@@ -10,13 +8,10 @@ import "github.com/enigmampc/cosmos-sdk/x/auth"
 //
 // Env are json encoded to a byte slice before passing to the wasm contract.
 type Env struct {
-	Block             BlockInfo         `json:"block"`
-	Message           MessageInfo       `json:"message"`
-	Contract          ContractInfo      `json:"contract"`
-	Key               ContractKey       `json:"contract_key"`
-	Bytes             []byte            `json:"sign_bytes"`
-	Signature         auth.StdSignature `json:"signature"`
-	CallbackSignature []byte            `json:"cb_sig"` // Optional
+	Block    BlockInfo    `json:"block"`
+	Message  MessageInfo  `json:"message"`
+	Contract ContractInfo `json:"contract"`
+	Key      ContractKey  `json:"contract_key"`
 }
 
 type ContractKey string

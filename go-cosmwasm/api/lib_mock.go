@@ -108,6 +108,7 @@ func Instantiate(
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
+	sigInfo []byte,
 ) ([]byte, uint64, error) {
 	//id := sendSlice(code_id)
 	//defer freeAfterSend(id)
@@ -139,6 +140,7 @@ func Handle(
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
+	sigInfo []byte,
 ) ([]byte, uint64, error) {
 	//id := sendSlice(code_id)
 	//defer freeAfterSend(id)

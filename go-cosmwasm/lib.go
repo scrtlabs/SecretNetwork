@@ -89,12 +89,17 @@ func (w *Wasmer) Instantiate(
 	querier Querier,
 	gasMeter api.GasMeter,
 	gasLimit uint64,
+	sigInfo types.VerificationInfo,
 ) (*types.Result, []byte, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, nil, 0, err
 	}
-	data, gasUsed, err := api.Instantiate(w.cache, code, paramBin, initMsg, &gasMeter, &store, &goapi, &querier, gasLimit)
+	sigInfoBin, err := json.Marshal(sigInfo)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	data, gasUsed, err := api.Instantiate(w.cache, code, paramBin, initMsg, &gasMeter, &store, &goapi, &querier, gasLimit, sigInfoBin)
 	if err != nil {
 		return nil, nil, gasUsed, err
 	}
@@ -127,13 +132,18 @@ func (w *Wasmer) Execute(
 	querier Querier,
 	gasMeter api.GasMeter,
 	gasLimit uint64,
+	sigInfo types.VerificationInfo,
 ) (*types.Result, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
 	}
+	sigInfoBin, err := json.Marshal(sigInfo)
+	if err != nil {
+		return nil, 0, err
+	}
 
-	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, &gasMeter, &store, &goapi, &querier, gasLimit)
+	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, &gasMeter, &store, &goapi, &querier, gasLimit, sigInfoBin)
 
 	if err != nil {
 		return nil, gasUsed, err

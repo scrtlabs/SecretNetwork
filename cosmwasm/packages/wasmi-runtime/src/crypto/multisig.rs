@@ -21,12 +21,12 @@ impl PubKey for MultisigThresholdPubKey {
     fn get_address(&self) -> CanonicalAddr {
         // Spec: https://docs.tendermint.com/master/spec/core/encoding.html#key-types
         // Multisig is undocumented, but we figured out it s the same as ed25519
-        let address_bytes = &sha2::Sha256::digest(self.as_bytes().as_slice())[..20];
+        let address_bytes = &sha2::Sha256::digest(self.bytes().as_slice())[..20];
 
         CanonicalAddr(Binary::from(address_bytes))
     }
 
-    fn as_bytes(&self) -> Vec<u8> {
+    fn bytes(&self) -> Vec<u8> {
         // Encoding for multisig is basically:
         // threshold_prefix | threshold | generic_prefix | encoded_pubkey_length | ...encoded_pubkey... | generic_prefix | encoded_pubkey_length | ...encoded_pubkey...
         let mut encoded: Vec<u8> = vec![];
@@ -41,15 +41,15 @@ impl PubKey for MultisigThresholdPubKey {
             let mut length = Vec::<u8>::new();
 
             // This line should never fail since it could only fail if `length` does not have sufficient capacity to encode
-            if prost::encode_length_delimiter(pubkey.as_bytes().len(), &mut length).is_err() {
+            if prost::encode_length_delimiter(pubkey.bytes().len(), &mut length).is_err() {
                 error!(
                     "Could not encode length delimiter: {:?}. This should not happen",
-                    pubkey.as_bytes().len()
+                    pubkey.bytes().len()
                 );
                 return vec![];
             }
             encoded.extend_from_slice(&length);
-            encoded.extend_from_slice(&pubkey.as_bytes());
+            encoded.extend_from_slice(&pubkey.bytes());
         }
 
         trace!("pubkey bytes are: {:?}", encoded);

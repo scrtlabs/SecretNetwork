@@ -1,6 +1,6 @@
 use log::*;
 
-use crate::cosmwasm::types::{CanonicalAddr, CosmosSignature, Env};
+use crate::cosmwasm::types::{CanonicalAddr, CosmosSignature, Env, SigInfo};
 use crate::crypto::traits::PubKey;
 use crate::crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
 use crate::wasm::io;
@@ -112,37 +112,42 @@ pub fn validate_contract_key(
     calculated_authentication_id == expected_authentication_id
 }
 
-pub fn verify_params(env: &Env, msg: &SecretMessage) -> Result<(), EnclaveError> {
+pub fn verify_params(
+    sig_info: &SigInfo,
+    env: &Env,
+    msg: &SecretMessage,
+) -> Result<(), EnclaveError> {
     trace!("Verifying message signatures..");
 
     // If there's no callback signature - it's not a callback and there has to be a tx signer + signature
-    if let Some(cb_sig) = env.cb_sig.clone() {
-        if verify_callback_sig(cb_sig.0, &env.message.sender, msg) {
+    if let Some(callback_sig) = &sig_info.callback_sig {
+        if verify_callback_sig(callback_sig.as_slice(), &env.message.sender, msg) {
             trace!("Message verified! msg.sender is the calling contract");
             return Ok(());
         } else {
             error!("Callback signature verification failed");
         }
     } else {
-        env.signature
+        sig_info
+            .signature
             .get_public_key()
             .verify_bytes(
-                &env.sign_bytes.as_slice(),
-                &env.signature.get_signature().as_slice(),
+                &sig_info.sign_bytes.as_slice(),
+                &sig_info.signature.get_signature().as_slice(),
             )
             .map_err(|err| {
                 error!("Signature verification failed: {:?}", err);
                 EnclaveError::FailedTxVerification
             })?;
 
-        if verify_sender(&env.signature, &env.message.sender) {
+        if verify_sender(&sig_info.signature, &env.message.sender) {
             trace!("Message verified! msg.sender is the tx signer");
             return Ok(());
         } else {
             error!(
                 "Message sender {:?} does not match with the message signer {:?}",
                 &env.message.sender,
-                &env.signature.get_public_key().get_address()
+                &sig_info.signature.get_public_key().get_address()
             );
         }
     }
@@ -162,7 +167,7 @@ fn verify_sender(signature: &CosmosSignature, msg_sender: &CanonicalAddr) -> boo
 }
 
 fn verify_callback_sig(
-    callback_signature: Vec<u8>,
+    callback_signature: &[u8],
     sender: &CanonicalAddr,
     msg: &SecretMessage,
 ) -> bool {
@@ -172,7 +177,7 @@ fn verify_callback_sig(
 
     let callback_sig = io::create_callback_signature(sender, msg);
 
-    if !callback_signature.eq(&callback_sig) {
+    if !callback_signature.eq(callback_sig.as_slice()) {
         info!(
             "Contract signature does not match with the one sent: {:?}",
             callback_signature

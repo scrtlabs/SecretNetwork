@@ -5,7 +5,7 @@ use wasmi::ModuleInstance;
 
 use enclave_ffi_types::{Ctx, EnclaveError};
 
-use crate::cosmwasm::types::{CanonicalAddr, Env};
+use crate::cosmwasm::types::{CanonicalAddr, Env, SigInfo};
 use crate::results::{HandleSuccess, InitSuccess, QuerySuccess};
 
 use super::contract_validation::{
@@ -45,6 +45,7 @@ pub fn init(
     contract: &[u8],    // contract wasm bytes
     env: &[u8],         // blockchain state
     msg: &[u8],         // probably function call and args
+    sig_info: &[u8],    // info about signature verification
 ) -> Result<InitSuccess, EnclaveError> {
     let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
         error!(
@@ -55,9 +56,18 @@ pub fn init(
         EnclaveError::FailedToDeserialize
     })?;
 
+    let parsed_sig_info: SigInfo = serde_json::from_slice(sig_info).map_err(|err| {
+        error!(
+            "got an error while trying to deserialize env input bytes into json {:?}: {}",
+            String::from_utf8_lossy(&sig_info),
+            err
+        );
+        EnclaveError::FailedToDeserialize
+    })?;
+
     let secret_msg = SecretMessage::from_slice(msg)?;
 
-    verify_params(&parsed_env, &secret_msg)?;
+    verify_params(&parsed_sig_info, &parsed_env, &secret_msg)?;
 
     let contract_key = generate_encryption_key(&parsed_env, contract)?;
 
@@ -119,6 +129,7 @@ pub fn handle(
     contract: &[u8],
     env: &[u8],
     msg: &[u8],
+    sig_info: &[u8],
 ) -> Result<HandleSuccess, EnclaveError> {
     let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
         error!(
@@ -130,10 +141,19 @@ pub fn handle(
 
     trace!("handle parsed_envs: {:?}", parsed_env);
 
+    let parsed_sig_info: SigInfo = serde_json::from_slice(sig_info).map_err(|err| {
+        error!(
+            "got an error while trying to deserialize env input bytes into json {:?}: {}",
+            String::from_utf8_lossy(&sig_info),
+            err
+        );
+        EnclaveError::FailedToDeserialize
+    })?;
+
     let secret_msg = SecretMessage::from_slice(msg)?;
 
     // Verify env parameters against the signed tx
-    verify_params(&parsed_env, &secret_msg)?;
+    verify_params(&parsed_sig_info, &parsed_env, &secret_msg)?;
 
     let contract_key = extract_contract_key(&parsed_env)?;
 
@@ -245,7 +265,7 @@ pub fn query(
             output,
             secret_msg.nonce,
             secret_msg.user_public_key,
-            CanonicalAddr(Binary(Vec::<u8>::new())), // Not used for queries
+            CanonicalAddr(Binary(Vec::new())), // Not used for queries
         )?;
         Ok(output)
     })

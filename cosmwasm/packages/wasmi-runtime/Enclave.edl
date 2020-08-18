@@ -53,7 +53,9 @@ enclave {
             [in, count=env_len] const uint8_t* env,
             uintptr_t env_len,
             [in, count=msg_len] const uint8_t* msg,
-            uintptr_t msg_len
+            uintptr_t msg_len,
+            [in, count=sig_info_len] const uint8_t* sig_info,
+            uintptr_t sig_info_len
         );
 
         public HandleResult ecall_handle(
@@ -65,7 +67,9 @@ enclave {
             [in, count=env_len] const uint8_t* env,
             uintptr_t env_len,
             [in, count=msg_len] const uint8_t* msg,
-            uintptr_t msg_len
+            uintptr_t msg_len,
+            [in, count=sig_info_len] const uint8_t* sig_info,
+            uintptr_t sig_info_len
         );
 
         public QueryResult ecall_query(

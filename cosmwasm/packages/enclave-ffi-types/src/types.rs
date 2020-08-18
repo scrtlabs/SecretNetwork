@@ -131,7 +131,7 @@ pub enum EnclaveError {
     MemoryReadError,
     #[display(fmt = "failed to write memory")]
     MemoryWriteError,
-    #[display(fmt = "not implemented function")]
+    #[display(fmt = "function not implemented")]
     NotImplemented,
     #[display(fmt = "failed to verify transaction signature")]
     FailedTxVerification,

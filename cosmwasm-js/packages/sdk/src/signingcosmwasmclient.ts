@@ -201,7 +201,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
         // eslint-disable-next-line @typescript-eslint/camelcase
         init_funds: transferAmount || [],
         // eslint-disable-next-line @typescript-eslint/camelcase
-        cb_sig: null,
+        callback_sig: null,
       },
     };
     const fee = this.fees.init;
@@ -247,7 +247,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
         // eslint-disable-next-line @typescript-eslint/camelcase
         sent_funds: transferAmount || [],
         // eslint-disable-next-line @typescript-eslint/camelcase
-        cb_sig: null,
+        callback_sig: null,
       },
     };
     const fee = this.fees.exec;

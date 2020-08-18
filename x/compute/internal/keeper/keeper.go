@@ -154,6 +154,8 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 		signBytes = GetSignBytes(ctx, signerAcc, tx)
 	}
 
+	verificationInfo := types.NewVerificationInfo(signBytes, signerSig, callbackSig)
+
 	// create contract address
 	contractAddress := k.generateContractAddress(ctx, codeID)
 	existingAcct := k.accountKeeper.GetAccount(ctx, contractAddress)
@@ -184,7 +186,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	k.cdc.MustUnmarshalBinaryBare(bz, &codeInfo)
 
 	// prepare params for contract instantiate call
-	params := types.NewEnv(ctx, creator, deposit, contractAddress, nil, signBytes, signerSig, callbackSig)
+	params := types.NewEnv(ctx, creator, deposit, contractAddress, nil)
 
 	// create prefixed data store
 	// 0x03 | contractAddress (sdk.AccAddress)
@@ -199,7 +201,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
-	res, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, params, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas)
+	res, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, params, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo)
 	consumeGas(ctx, gasUsed)
 	if err != nil {
 		return contractAddress, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
@@ -257,6 +259,8 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		signBytes = GetSignBytes(ctx, signerAcc, tx)
 	}
 
+	verificationInfo := types.NewVerificationInfo(signBytes, signerSig, callbackSig)
+
 	codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {
 		return sdk.Result{}, err
@@ -274,7 +278,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
 	fmt.Printf("Contract Execute: Got contract Key for contract %s: %s\n", contractAddress, base64.StdEncoding.EncodeToString(contractKey))
-	params := types.NewEnv(ctx, caller, coins, contractAddress, contractKey, signBytes, signerSig, callbackSig)
+	params := types.NewEnv(ctx, caller, coins, contractAddress, contractKey)
 	fmt.Printf("Contract Execute: key from params %s \n", params.Key)
 
 	// prepare querier
@@ -284,7 +288,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	gas := gasForContract(ctx)
-	result, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, params, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas)
+	result, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, params, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo)
 	consumeGas(ctx, gasUsed)
 
 	if execErr != nil {
@@ -310,11 +314,11 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 // We don't use this function currently. It's here for upstream compatibility
 // Migrate allows to upgrade a contract to a new code with data migration.
 func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, newCodeID uint64, msg []byte) (*sdk.Result, error) {
-	signerSig := authtypes.StdSignature{
+	_ = authtypes.StdSignature{
 		PubKey:    secp256k1.PubKeySecp256k1{},
 		Signature: []byte{},
 	}
-	signBytes := []byte{}
+	_ = []byte{}
 
 	tx := authtypes.StdTx{}
 	txBytes := ctx.TxBytes()
@@ -345,7 +349,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
 
 	var noDeposit sdk.Coins
-	params := types.NewEnv(ctx, caller, noDeposit, contractAddress, contractKey, signBytes, signerSig, nil)
+	params := types.NewEnv(ctx, caller, noDeposit, contractAddress, contractKey)
 
 	// prepare querier
 	querier := QueryHandler{

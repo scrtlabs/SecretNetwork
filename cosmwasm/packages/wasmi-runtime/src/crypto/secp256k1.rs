@@ -17,11 +17,11 @@ impl PubKey for Secp256k1PubKey {
     fn get_address(&self) -> CanonicalAddr {
         // Ref: https://github.com/tendermint/spec/blob/master/spec/blockchain/encoding.md#secp256k1
         let mut hasher = Ripemd160::new();
-        hasher.update(Sha256::digest(self.as_slice()));
-        CanonicalAddr(Binary::from(hasher.finalize().as_slice()))
+        hasher.update(Sha256::digest(self));
+        CanonicalAddr(Binary(hasher.finalize().to_vec()))
     }
 
-    fn as_bytes(&self) -> Vec<u8> {
+    fn bytes(&self) -> Vec<u8> {
         // Amino encoding is basically: prefix | leb128 encoded length | ..bytes..
         let mut encoded = Vec::<u8>::new();
         encoded.extend_from_slice(&SECP256K1_PREFIX);
