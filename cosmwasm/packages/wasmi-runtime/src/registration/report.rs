@@ -528,6 +528,31 @@ impl SgxQuote {
     }
 }
 
+#[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
+const WHITELISTED_ADVISORIES: &'static [&'static str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
+
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+const WHITELISTED_ADVISORIES: &'static [&'static str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
+
+#[cfg(not(feature = "SGX_MODE_HW"))]
+const WHITELISTED_ADVISORIES: &'static [&'static str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
+
+#[derive(Debug)]
+pub struct AdvisoryIDs (pub Vec<String>);
+
+impl AdvisoryIDs {
+    pub(crate) fn vulnerable(&self) -> Vec<String> {
+        let it = self.0.iter();
+        let mut vulnerable: Vec<String> = vec![];
+        for i in it {
+            if !WHITELISTED_ADVISORIES.contains(&i.as_str()) {
+                vulnerable.push(i.clone());
+            }
+        }
+        vulnerable
+    }
+}
+
 /// A report that can be signed by Intel EPID (which generates
 /// `EndorsedAttestationReport`) and then sent off of the platform to be
 /// verified by remote client.
@@ -541,6 +566,7 @@ pub struct AttestationReport {
     /// Content of the quote
     pub sgx_quote_body: SgxQuote,
     pub platform_info_blob: Option<Vec<u8>>,
+    pub advisroy_ids: AdvisoryIDs,
 }
 
 impl AttestationReport {
@@ -621,19 +647,6 @@ impl AttestationReport {
             return Err(Error::ReportParseError);
         };
 
-        // Get quote freshness
-        // todo: this happens on-chain, so we cannot validate time like this or we will encounter non-deterministic behaviour
-        // let freshness = {
-        //     let time = attn_report["timestamp"]
-        //         .as_str()
-        //         .ok_or_else(|| Error::GenericError)?;
-        //     let time_fixed = String::from(time) + "+0000";
-        //     let date_time = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z")?;
-        //     let ts = date_time.naive_utc();
-        //     let now = DateTime::<chrono::offset::Utc>::from(SystemTime::now()).naive_utc();
-        //     let quote_freshness = u64::try_from((now - ts).num_seconds())?;
-        //     std::time::Duration::from_secs(quote_freshness)
-        // };
         let mut platform_info_blob = None;
         if let Some(blob) = attn_report["platformInfoBlob"].as_str() {
             let as_binary = hex::decode(blob).map_err(|_| {
@@ -667,6 +680,12 @@ impl AttestationReport {
             SgxQuote::parse_from(quote_raw.as_slice())?
         };
 
+        // Get advisories
+        let advisories: Vec<String> = serde_json::from_value(attn_report["advisoryIDs"].clone()).map_err(|_| {
+            error!("Failed to decode advisories");
+            Error::ReportParseError
+        })?;
+
         // We don't actually validate the public key, since we use ephemeral certificates,
         // and all we really care about that the report is valid and the key that is saved in the
         // report_data field
@@ -675,6 +694,7 @@ impl AttestationReport {
             sgx_quote_status,
             sgx_quote_body,
             platform_info_blob,
+            advisroy_ids: AdvisoryIDs(advisories)
         })
     }
 }

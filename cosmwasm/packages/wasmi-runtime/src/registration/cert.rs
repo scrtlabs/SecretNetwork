@@ -29,6 +29,7 @@ use crate::consts::{SigningMethod, MRSIGNER, SIGNING_METHOD};
 #[cfg(feature = "SGX_MODE_HW")]
 use super::report::{AttestationReport, SgxQuoteStatus};
 use enclave_ffi_types::NodeAuthResult;
+use crate::registration::report::AdvisoryIDs;
 
 extern "C" {
     pub fn ocall_get_update_info(
@@ -298,7 +299,7 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> Result<Vec<u8>, NodeAuthResult> {
 
     // 2. Verify quote status (mandatory field)
 
-    verify_quote_status(&report.sgx_quote_status)?;
+    verify_quote_status(&report.sgx_quote_status, &report.advisroy_ids)?;
 
     // verify certificate
     match SIGNING_METHOD {
@@ -338,12 +339,21 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> Result<Vec<u8>, NodeAuthResult> {
 }
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-pub fn verify_quote_status(quote_status: &SgxQuoteStatus) -> Result<(), NodeAuthResult> {
+pub fn verify_quote_status(quote_status: &SgxQuoteStatus, advisories: &AdvisoryIDs) -> Result<(), NodeAuthResult> {
     match quote_status {
         SgxQuoteStatus::OK => Ok(()),
         SgxQuoteStatus::SwHardeningNeeded => {
-            // warn!("Attesting enclave is vulnerable, and should be patched");
             Ok(())
+        }
+        SgxQuoteStatus::ConfigurationAndSwHardeningNeeded => {
+            let vulnerable =  advisories.vulnerable();
+            if vulnerable.is_empty() {
+                Ok(())
+            } else {
+                warn!("Platform is updated but requires further BIOS configuration");
+                warn!("The following vulnerabilities must be mitigated: {:?}", vulnerable);
+                Err(NodeAuthResult::from(quote_status))
+            }
         }
         _ => {
             error!(
@@ -356,20 +366,26 @@ pub fn verify_quote_status(quote_status: &SgxQuoteStatus) -> Result<(), NodeAuth
 }
 
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
-pub fn verify_quote_status(quote_status: &SgxQuoteStatus) -> Result<(), NodeAuthResult> {
+pub fn verify_quote_status(quote_status: &SgxQuoteStatus, advisories: &AdvisoryIDs) -> Result<(), NodeAuthResult> {
     match quote_status {
         SgxQuoteStatus::OK => Ok(()),
         SgxQuoteStatus::SwHardeningNeeded => {
-            // warn!("Attesting enclave is vulnerable, and should be patched");
             Ok(())
         }
         SgxQuoteStatus::GroupOutOfDate => {
             warn!("TCB level of SGX platform service is outdated. You should check for firmware updates");
+            warn!("The following vulnerabilities must be mitigated: {:?}", advisories.vulnerable());
             Ok(())
         }
         SgxQuoteStatus::ConfigurationAndSwHardeningNeeded => {
-            warn!("Platform is updated but requires further BIOS configuration");
-            Ok(())
+            let vulnerable =  advisories.vulnerable();
+            if vulnerable.is_empty() {
+                Ok(())
+            } else {
+                warn!("Platform is updated but requires further BIOS configuration");
+                warn!("The following vulnerabilities must be mitigated: {:?}", vulnerable);
+                Err(NodeAuthResult::from(quote_status))
+            }
         }
         _ => {
             error!(
