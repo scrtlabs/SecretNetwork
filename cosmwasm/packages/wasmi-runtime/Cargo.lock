@@ -58,6 +58,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyhow"
+version = "1.0.28"
+source = "git+https://github.com/mesalock-linux/anyhow-sgx#b78ca3528c24fb2e37aa33f3b76c030ad3c1d719"
+
+[[package]]
 name = "autocfg"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -139,6 +144,14 @@ name = "byteorder"
 version = "1.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08c48aae112d48ed9f069b33538ea9e3e90aa263cfa3d1c24309612b1f7472de"
+
+[[package]]
+name = "bytes"
+version = "0.5.4"
+source = "git+https://github.com/mesalock-linux/bytes-sgx#a653b10f67641750a6dfa302ef4242a64e6eeb5f"
+dependencies = [
+ "sgx_tstd",
+]
 
 [[package]]
 name = "cc"
@@ -480,6 +493,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f5f085b5d71e2188cb8271e5da0161ad52c3f227a661a3c135fdf28e258b12"
 dependencies = [
  "unicode-xid",
+]
+
+[[package]]
+name = "prost"
+version = "0.6.1"
+source = "git+https://github.com/mesalock-linux/prost-sgx#ded9d2a18e770f2f2e857c633c77bdbf9f81a4a5"
+dependencies = [
+ "bytes",
+ "prost-derive",
+]
+
+[[package]]
+name = "prost-derive"
+version = "0.6.1"
+source = "git+https://github.com/mesalock-linux/prost-sgx#ded9d2a18e770f2f2e857c633c77bdbf9f81a4a5"
+dependencies = [
+ "anyhow",
+ "itertools",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -859,6 +893,7 @@ dependencies = [
  "log",
  "num-bigint",
  "parity-wasm",
+ "prost",
  "pwasm-utils",
  "ring",
  "ripemd160",

@@ -63,6 +63,7 @@ x25519-dalek = { version = "0.6", default-features = false, features = [
     "u64_backend"
 ] }
 ripemd160 = "0.9.1"
+prost = { version = "0.6", default-features = false, features = ["prost-derive"], git = "https://github.com/mesalock-linux/prost-sgx" }
 
 [patch.crates-io]
 rand_core = { git = "https://github.com/mesalock-linux/rand-sgx", default-features = false, features = [

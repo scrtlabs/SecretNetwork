@@ -4,8 +4,13 @@ use crate::cosmwasm::encoding::Binary;
 use crate::cosmwasm::types::{CanonicalAddr, PubKeyKind};
 use crate::crypto::traits::PubKey;
 use crate::crypto::CryptoError;
+
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
+
+const THRESHOLD_PREFIX: [u8; 5] = [34, 193, 247, 226, 8];
+const GENERIC_PREFIX: u8 = 18;
+const SECP256K1_PREFIX: [u8; 5] = [38, 235, 90, 233, 135];
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct MultisigThresholdPubKey {
@@ -23,18 +28,33 @@ impl PubKey for MultisigThresholdPubKey {
     }
 
     fn as_bytes(&self) -> Vec<u8> {
-        let threshold_prefix: Vec<u8> = vec![34, 193, 247, 226, 8];
-        let pubkey_prefix: Vec<u8> = vec![18, 38, 235, 90, 233, 135];
+        // Encoding for multisig is basically:
+        // threshold_prefix | threshold
         let mut encoded: Vec<u8> = vec![];
 
-        encoded.extend_from_slice(&threshold_prefix);
+        encoded.extend_from_slice(&THRESHOLD_PREFIX);
         encoded.push(self.threshold as u8);
 
         for pubkey in &self.pubkeys {
-            let pubkey_bytes = pubkey.as_bytes();
-            encoded.extend_from_slice(&pubkey_prefix);
-            encoded.push(pubkey.as_bytes().len() as u8);
-            encoded.extend_from_slice(&pubkey_bytes);
+            encoded.push(GENERIC_PREFIX);
+
+            if let PubKeyKind::Secp256k1(_) = pubkey {
+                encoded.extend_from_slice(&SECP256K1_PREFIX);
+            }
+
+            // Length may be more than 1 byte and it is protobuf encoded
+            let length: &mut Vec<u8> = &mut vec![];
+
+            // This line can't fail since it could only fail if `length` does not have sufficient capacity to encode
+            if prost::encode_length_delimiter(pubkey.as_bytes().len(), length).is_err() {
+                error!(
+                    "Could not encode length delimiter: {:?}. This should not happen",
+                    pubkey.as_bytes().len()
+                );
+                return vec![];
+            }
+            encoded.extend_from_slice(length);
+            encoded.extend_from_slice(&pubkey.as_bytes());
         }
 
         trace!("pubkey bytes are: {:?}", encoded);
@@ -43,6 +63,7 @@ impl PubKey for MultisigThresholdPubKey {
 
     fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError> {
         trace!("verifying multisig");
+        debug!("Sign bytes are: {:?}", bytes);
         let signatures = decode_multisig_signature(sig)?;
 
         if signatures.len() < self.threshold || signatures.len() > self.pubkeys.len() {
@@ -61,6 +82,7 @@ impl PubKey for MultisigThresholdPubKey {
             trace!("Checking sig: {:?}", current_sig);
             // TODO: can we somehow easily skip already verified signatures?
             for current_pubkey in &self.pubkeys {
+                debug!("Checking pubkey: {:?}", current_pubkey);
                 // This technically support that one of the multisig signers is a multisig itself
                 let result = current_pubkey.verify_bytes(bytes, &current_sig);
 
@@ -75,6 +97,7 @@ impl PubKey for MultisigThresholdPubKey {
             error!("Failed to verify some or all signatures");
             Err(CryptoError::VerificationError)
         } else {
+            debug!("Miltusig verified successfully");
             Ok(())
         }
     }
@@ -105,18 +128,26 @@ fn decode_multisig_signature(raw_blob: &[u8]) -> Result<MultisigSignature, Crypt
         if current_sig_prefix != 0x12 {
             error!("Multisig signature wrong prefix. decoding failed!");
             return Err(CryptoError::ParsingError);
-        } else if let Some(current_sig_len) = curr_blob_window.get(1) {
-            trace!("sig len is: {:?}", current_sig_len);
-            if let Some(current_sig) = curr_blob_window.get(2..(*current_sig_len as usize) + 2) {
-                signatures.push((&current_sig).to_vec());
-                idx += 2 + (*current_sig_len as usize); // prefix_byte + length_byte + len(sig)
+        } else if let Some(sig_including_len) = curr_blob_window.get(1..) {
+            if let Ok(current_sig_len) = prost::decode_length_delimiter(sig_including_len) {
+                let len_size = prost::length_delimiter_len(current_sig_len);
+
+                // if let Some(current_sig_len) = curr_blob_window.get(1) {
+                trace!("sig len is: {:?}", current_sig_len);
+                if let Some(raw_signature) =
+                    sig_including_len.get(len_size..current_sig_len + len_size)
+                {
+                    signatures.push((&raw_signature).to_vec());
+                    idx += 1 + len_size + current_sig_len; // prefix_byte + length_byte + len(sig)
+                } else {
+                    error!("Multisig signature malformed. decoding failed!");
+                    return Err(CryptoError::ParsingError);
+                }
+            // }
             } else {
                 error!("Multisig signature malformed. decoding failed!");
                 return Err(CryptoError::ParsingError);
             }
-        } else {
-            error!("Multisig signature malformed. decoding failed!");
-            return Err(CryptoError::ParsingError);
         }
     }
 

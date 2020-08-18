@@ -101,7 +101,13 @@ func generateMultisigAddr(n int, threshold int, ctx sdk.Context, keeper Keeper) 
 		pubkeys[i] = privKey.PubKey()
 	}
 
-	multisigPubkey, _ := multisig.NewPubKeyMultisigThreshold(threshold, pubkeys).(multisig.PubKeyMultisigThreshold)
+	multisigPubkey := generateMultisigAddrExisting(threshold, ctx, keeper, pubkeys)
+
+	return privkeys, pubkeys, multisigPubkey
+}
+
+func generateMultisigAddrExisting(threshold int, ctx sdk.Context, keeper Keeper, pubKeys []crypto.PubKey) multisig.PubKeyMultisigThreshold {
+	multisigPubkey, _ := multisig.NewPubKeyMultisigThreshold(threshold, pubKeys).(multisig.PubKeyMultisigThreshold)
 
 	// Register to keeper
 	addr := multisigPubkey.Address().Bytes()
@@ -111,7 +117,7 @@ func generateMultisigAddr(n int, threshold int, ctx sdk.Context, keeper Keeper) 
 	_ = baseAcct.SetPubKey(multisigPubkey)
 	keeper.accountKeeper.SetAccount(ctx, &baseAcct)
 
-	return privkeys, pubkeys, multisigPubkey
+	return multisigPubkey
 }
 
 func prepareInitSignedTxMultipleMsgs(t *testing.T, keeper Keeper, ctx sdk.Context, creators []sdk.AccAddress, privKeys []crypto.PrivKey, initMsgs []sdk.Msg, codeID uint64) sdk.Context {
@@ -423,5 +429,171 @@ func TestMultiSigExecute(t *testing.T) {
 }
 
 func TestMultiSigCallbacks(t *testing.T) {
+	ctx, keeper, tempDir, codeID, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
 
+	// init
+	contractAddress, initEvents, error := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGas)
+	require.Empty(t, error)
+
+	require.Equal(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "init", Value: "🌈"},
+			},
+		},
+		initEvents,
+	)
+
+	execMsg := fmt.Sprintf(`{"a":{"contract_addr":"%s","x":2,"y":3}}`, contractAddress.String())
+
+	execMsgBz, err := wasmCtx.Encrypt([]byte(execMsg))
+	require.NoError(t, err)
+	nonce := execMsgBz[0:32]
+
+	sdkMsg := types.MsgExecuteContract{
+		Contract:          contractAddress,
+		Msg:               execMsgBz,
+		SentFunds:         sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
+		CallbackSignature: nil,
+	}
+
+	multisigAddr := multisigTxCreator(t, &ctx, keeper, 3, 2, 2, sdkMsg)
+
+	execRes, err := keeper.Execute(ctx, contractAddress, multisigAddr, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	if err != nil {
+		err = extractInnerError(t, err, nonce, true)
+	}
+	data := getDecryptedData(t, execRes.Data, nonce)
+	execEvents := getDecryptedWasmEvents(t, ctx, nonce)
+
+	require.Empty(t, err)
+	require.Equal(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "banana", Value: "🍌"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "kiwi", Value: "🥝"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "watermelon", Value: "🍉"},
+			},
+		},
+		execEvents,
+	)
+	require.Equal(t, []byte{2, 3}, data)
+}
+
+func TestMultiSigInMultiSig(t *testing.T) {
+	ctx, keeper, tempDir, codeID, _, privKeyA, _, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	privKeys, pubKeys, multisigPubkey := generateMultisigAddr(5, 3, ctx, keeper)
+	multimultisigPubkey := generateMultisigAddrExisting(2, ctx, keeper, []crypto.PubKey{multisigPubkey, privKeyA.PubKey(), privKeyB.PubKey()})
+
+	fmt.Printf("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ %v\n", pubKeys[0].Bytes())
+
+	initMsg := `{"nop":{}}`
+
+	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
+	require.NoError(t, err)
+	nonce := initMsgBz[0:32]
+
+	sdkMsg := types.MsgInstantiateContract{
+		Sender:    sdk.AccAddress(multimultisigPubkey.Address()),
+		Admin:     nil,
+		Code:      codeID,
+		Label:     "demo contract 1",
+		InitMsg:   initMsgBz,
+		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
+	}
+
+	tx := authtypes.StdTx{
+		Msgs:       []sdk.Msg{sdkMsg},
+		Fee:        authtypes.StdFee{},
+		Signatures: []authtypes.StdSignature{},
+		Memo:       "",
+	}
+
+	multimultisigAcc := keeper.accountKeeper.GetAccount(ctx, sdk.AccAddress(multimultisigPubkey.Address()))
+	multimultiSignBytes := getSignBytes(ctx, multimultisigAcc, tx)
+	multimultiSig := multisig.NewMultisig(3)
+
+	var signDoc authtypes.StdSignDoc
+	keeper.cdc.MustUnmarshalJSON(multimultiSignBytes, &signDoc)
+
+	// Sign by multisig
+	multiSignature := generateSignatures(t, ctx, keeper, privKeys, pubKeys, multimultisigPubkey.Address().Bytes(), tx, 3)
+	fmt.Printf("multisig sig: %v\n", multiSignature.Marshal())
+	////multisigAcc := keeper.accountKeeper.GetAccount(ctx, sdk.AccAddress(multimultisigPubkey.Address()))
+	////multiSignBytes := getSignBytes(ctx, multisigAcc, tx)
+	//multiSig := multisig.NewMultisig(len(privKeys))
+	////fmt.Printf("Sign Doc is %+v\n", signDoc)
+	////fmt.Printf("Sign Bytes is %v\n", signBytes)
+	//for i := 0; i < len(privKeys); i++ {
+	//	signature, _ := privKeys[i].Sign(multimultiSignBytes)
+	//
+	//	fmt.Printf("Signature %d  is %v\n", i, signature)
+	//	fmt.Printf("Signer is %v\n", pubKeys[i].Bytes())
+	//
+	//	err := multiSig.AddSignatureFromPubKey(signature, pubKeys[i], pubKeys)
+	//	require.NoError(t, err)
+	//}
+	//
+	//fmt.Printf("Multisig is %v\n", multiSig)
+
+	// Sign by wallet A
+	walletASignature, _ := privKeyA.Sign(multimultiSignBytes)
+
+	fmt.Printf("wallet A sig: %v\n", walletASignature)
+
+	err = multimultiSig.AddSignatureFromPubKey(multiSignature.Marshal(), multisigPubkey, []crypto.PubKey{multisigPubkey, privKeyA.PubKey(), privKeyB.PubKey()})
+	err = multimultiSig.AddSignatureFromPubKey(walletASignature, privKeyA.PubKey(), []crypto.PubKey{multisigPubkey, privKeyA.PubKey(), privKeyB.PubKey()})
+
+	//multimultisigPubkey.VerifyBytes(multimultiSignBytes, multimultiSig.Marshal())
+
+	fmt.Printf("multimultisig sig: %v\n", multimultiSig.Marshal())
+
+	stdSig := authtypes.StdSignature{
+		PubKey:    multimultisigPubkey,
+		Signature: multimultiSig.Marshal(),
+	}
+
+	tx.Signatures = []authtypes.StdSignature{stdSig}
+	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	require.NoError(t, err)
+
+	ctx = ctx.WithTxBytes(txBytes)
+
+	contractAddressA, err := keeper.Instantiate(
+		ctx,
+		codeID,
+		sdk.AccAddress(multimultisigPubkey.Address()),
+		nil,
+		initMsgBz,
+		"demo contract 1",
+		sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
+		nil,
+	)
+	if err != nil {
+		err = extractInnerError(t, err, nonce, true)
+	}
+	require.NoError(t, err)
+
+	wasmEvents := getDecryptedWasmEvents(t, ctx, nonce)
+
+	require.Equal(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddressA.String()},
+				{Key: "init", Value: "🌈"},
+			},
+		},
+		wasmEvents,
+	)
 }
