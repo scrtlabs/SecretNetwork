@@ -8,6 +8,8 @@ use ripemd160::{Digest, Ripemd160};
 use secp256k1::Secp256k1;
 use sha2::{Digest as Sha2Digest, Sha256};
 
+const SECP256K1_PREFIX: [u8; 4] = [235, 90, 233, 135];
+
 // TODO: Find a way to implement this better. secp256k1 is not ported to sgx, thus does not implement mesalock's serde and cannot be used
 pub type Secp256k1PubKey = Vec<u8>;
 
@@ -20,7 +22,26 @@ impl PubKey for Secp256k1PubKey {
     }
 
     fn as_bytes(&self) -> Vec<u8> {
-        self.clone()
+        // Amino encoding is basically: prefix | leb128 encoded length | ..bytes..
+        let mut encoded = Vec::<u8>::new();
+        encoded.extend_from_slice(&SECP256K1_PREFIX);
+
+        // Length may be more than 1 byte and it is protobuf encoded
+        let mut length = Vec::<u8>::new();
+
+        // This line can't fail since it could only fail if `length` does not have sufficient capacity to encode
+        if prost::encode_length_delimiter(self.len(), &mut length).is_err() {
+            error!(
+                "Could not encode length delimiter: {:?}. This should not happen",
+                self.len()
+            );
+            return vec![];
+        }
+
+        encoded.extend_from_slice(&length);
+        encoded.extend_from_slice(self);
+
+        encoded
     }
 
     fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError> {
@@ -56,6 +77,8 @@ impl PubKey for Secp256k1PubKey {
         Ok(())
     }
 }
+
+// TODO: Can we get rid of this comment below?
 
 // use super::keys::SECRET_KEY_SIZE;
 // use super::KeyPair;

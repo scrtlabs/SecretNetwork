@@ -10,7 +10,6 @@ use sha2::Digest;
 
 const THRESHOLD_PREFIX: [u8; 5] = [34, 193, 247, 226, 8];
 const GENERIC_PREFIX: u8 = 18;
-const SECP256K1_PREFIX: [u8; 5] = [38, 235, 90, 233, 135];
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct MultisigThresholdPubKey {
@@ -29,7 +28,7 @@ impl PubKey for MultisigThresholdPubKey {
 
     fn as_bytes(&self) -> Vec<u8> {
         // Encoding for multisig is basically:
-        // threshold_prefix | threshold
+        // threshold_prefix | threshold | generic_prefix | encoded_pubkey_length | ...encoded_pubkey... | generic_prefix | encoded_pubkey_length | ...encoded_pubkey...
         let mut encoded: Vec<u8> = vec![];
 
         encoded.extend_from_slice(&THRESHOLD_PREFIX);
@@ -38,22 +37,18 @@ impl PubKey for MultisigThresholdPubKey {
         for pubkey in &self.pubkeys {
             encoded.push(GENERIC_PREFIX);
 
-            if let PubKeyKind::Secp256k1(_) = pubkey {
-                encoded.extend_from_slice(&SECP256K1_PREFIX);
-            }
-
             // Length may be more than 1 byte and it is protobuf encoded
-            let length: &mut Vec<u8> = &mut vec![];
+            let mut length = Vec::<u8>::new();
 
-            // This line can't fail since it could only fail if `length` does not have sufficient capacity to encode
-            if prost::encode_length_delimiter(pubkey.as_bytes().len(), length).is_err() {
+            // This line should never fail since it could only fail if `length` does not have sufficient capacity to encode
+            if prost::encode_length_delimiter(pubkey.as_bytes().len(), &mut length).is_err() {
                 error!(
                     "Could not encode length delimiter: {:?}. This should not happen",
                     pubkey.as_bytes().len()
                 );
                 return vec![];
             }
-            encoded.extend_from_slice(length);
+            encoded.extend_from_slice(&length);
             encoded.extend_from_slice(&pubkey.as_bytes());
         }
 
@@ -158,27 +153,3 @@ fn decode_multisig_signature(raw_blob: &[u8]) -> Result<MultisigSignature, Crypt
 
     Ok(signatures)
 }
-
-// fn encode_multisig_pubkey(
-//     multisig_pubkey: MultisigThresholdPubKey,
-// ) -> Result<Vec<u8>, CryptoError> {
-//     if multisig_pubkey.pubkeys.len() < multisig_pubkey.threshold {
-//         error!("Malformed multisig pubkey, threshold is bigger than number of pubkeys");
-//         return Err(CryptoError::ParsingError);
-//     }
-//
-//     let threshold_prefix: Vec<u8> = vec![34, 193, 247, 226, 8];
-//     let pubkey_prefix: Vec<u8> = vec![18, 38, 235, 90, 233, 135];
-//     let mut encoded: Vec<u8> = vec![];
-//
-//     encoded.extend_from_slice(&threshold_prefix);
-//     encoded.push(multisig_pubkey.threshold as u8);
-//
-//     for pubkey in multisig_pubkey.pubkeys {
-//         let pubkey_bytes = pubkey.as_bytes();
-//         encoded.extend_from_slice(&pubkey_prefix);
-//         encoded.extend_from_slice(&pubkey_bytes);
-//     }
-//
-//     Ok(encoded)
-// }

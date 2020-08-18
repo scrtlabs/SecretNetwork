@@ -496,7 +496,94 @@ func TestMultiSigInMultiSig(t *testing.T) {
 	privKeys, pubKeys, multisigPubkey := generateMultisigAddr(5, 3, ctx, keeper)
 	multimultisigPubkey := generateMultisigAddrExisting(2, ctx, keeper, []crypto.PubKey{multisigPubkey, privKeyA.PubKey(), privKeyB.PubKey()})
 
-	fmt.Printf("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ %v\n", pubKeys[0].Bytes())
+	initMsg := `{"nop":{}}`
+
+	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
+	require.NoError(t, err)
+	nonce := initMsgBz[0:32]
+
+	sdkMsg := types.MsgInstantiateContract{
+		Sender:    sdk.AccAddress(multimultisigPubkey.Address()),
+		Admin:     nil,
+		Code:      codeID,
+		Label:     "demo contract 1",
+		InitMsg:   initMsgBz,
+		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
+	}
+
+	tx := authtypes.StdTx{
+		Msgs:       []sdk.Msg{sdkMsg},
+		Fee:        authtypes.StdFee{},
+		Signatures: []authtypes.StdSignature{},
+		Memo:       "",
+	}
+
+	multimultisigAcc := keeper.accountKeeper.GetAccount(ctx, sdk.AccAddress(multimultisigPubkey.Address()))
+	multimultiSignBytes := getSignBytes(ctx, multimultisigAcc, tx)
+	multimultiSig := multisig.NewMultisig(3)
+
+	var signDoc authtypes.StdSignDoc
+	keeper.cdc.MustUnmarshalJSON(multimultiSignBytes, &signDoc)
+
+	// Sign by multisig
+	multiSignature := generateSignatures(t, ctx, keeper, privKeys, pubKeys, multimultisigPubkey.Address().Bytes(), tx, 3)
+	fmt.Printf("multisig sig: %v\n", multiSignature.Marshal())
+
+	// Sign by wallet A
+	walletASignature, _ := privKeyA.Sign(multimultiSignBytes)
+
+	fmt.Printf("wallet A sig: %v\n", walletASignature)
+
+	err = multimultiSig.AddSignatureFromPubKey(multiSignature.Marshal(), multisigPubkey, []crypto.PubKey{multisigPubkey, privKeyA.PubKey(), privKeyB.PubKey()})
+	err = multimultiSig.AddSignatureFromPubKey(walletASignature, privKeyA.PubKey(), []crypto.PubKey{multisigPubkey, privKeyA.PubKey(), privKeyB.PubKey()})
+
+	fmt.Printf("multimultisig sig: %v\n", multimultiSig.Marshal())
+
+	stdSig := authtypes.StdSignature{
+		PubKey:    multimultisigPubkey,
+		Signature: multimultiSig.Marshal(),
+	}
+
+	tx.Signatures = []authtypes.StdSignature{stdSig}
+	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	require.NoError(t, err)
+
+	ctx = ctx.WithTxBytes(txBytes)
+
+	contractAddressA, err := keeper.Instantiate(
+		ctx,
+		codeID,
+		sdk.AccAddress(multimultisigPubkey.Address()),
+		nil,
+		initMsgBz,
+		"demo contract 1",
+		sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
+		nil,
+	)
+	if err != nil {
+		err = extractInnerError(t, err, nonce, true)
+	}
+	require.NoError(t, err)
+
+	wasmEvents := getDecryptedWasmEvents(t, ctx, nonce)
+
+	require.Equal(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddressA.String()},
+				{Key: "init", Value: "🌈"},
+			},
+		},
+		wasmEvents,
+	)
+}
+
+func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
+	ctx, keeper, tempDir, codeID, _, privKeyA, _, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	privKeys, pubKeys, multisigPubkey := generateMultisigAddr(5, 3, ctx, keeper)
+	multimultisigPubkey := generateMultisigAddrExisting(2, ctx, keeper, []crypto.PubKey{privKeyA.PubKey(), privKeyB.PubKey(), multisigPubkey})
 
 	initMsg := `{"nop":{}}`
 
@@ -530,32 +617,17 @@ func TestMultiSigInMultiSig(t *testing.T) {
 	// Sign by multisig
 	multiSignature := generateSignatures(t, ctx, keeper, privKeys, pubKeys, multimultisigPubkey.Address().Bytes(), tx, 3)
 	fmt.Printf("multisig sig: %v\n", multiSignature.Marshal())
-	////multisigAcc := keeper.accountKeeper.GetAccount(ctx, sdk.AccAddress(multimultisigPubkey.Address()))
-	////multiSignBytes := getSignBytes(ctx, multisigAcc, tx)
-	//multiSig := multisig.NewMultisig(len(privKeys))
-	////fmt.Printf("Sign Doc is %+v\n", signDoc)
-	////fmt.Printf("Sign Bytes is %v\n", signBytes)
-	//for i := 0; i < len(privKeys); i++ {
-	//	signature, _ := privKeys[i].Sign(multimultiSignBytes)
-	//
-	//	fmt.Printf("Signature %d  is %v\n", i, signature)
-	//	fmt.Printf("Signer is %v\n", pubKeys[i].Bytes())
-	//
-	//	err := multiSig.AddSignatureFromPubKey(signature, pubKeys[i], pubKeys)
-	//	require.NoError(t, err)
-	//}
-	//
-	//fmt.Printf("Multisig is %v\n", multiSig)
 
 	// Sign by wallet A
 	walletASignature, _ := privKeyA.Sign(multimultiSignBytes)
 
 	fmt.Printf("wallet A sig: %v\n", walletASignature)
 
-	err = multimultiSig.AddSignatureFromPubKey(multiSignature.Marshal(), multisigPubkey, []crypto.PubKey{multisigPubkey, privKeyA.PubKey(), privKeyB.PubKey()})
-	err = multimultiSig.AddSignatureFromPubKey(walletASignature, privKeyA.PubKey(), []crypto.PubKey{multisigPubkey, privKeyA.PubKey(), privKeyB.PubKey()})
+	//err = multimultiSig.AddSignatureFromPubKey(walletASignature, privKeyA.PubKey(), []crypto.PubKey{multisigPubkey, privKeyA.PubKey(), privKeyB.PubKey()})
+	//err = multimultiSig.AddSignatureFromPubKey(multiSignature.Marshal(), multisigPubkey, []crypto.PubKey{multisigPubkey, privKeyA.PubKey(), privKeyB.PubKey()})
 
-	//multimultisigPubkey.VerifyBytes(multimultiSignBytes, multimultiSig.Marshal())
+	err = multimultiSig.AddSignatureFromPubKey(walletASignature, privKeyA.PubKey(), []crypto.PubKey{privKeyA.PubKey(), privKeyB.PubKey(), multisigPubkey})
+	err = multimultiSig.AddSignatureFromPubKey(multiSignature.Marshal(), multisigPubkey, []crypto.PubKey{privKeyA.PubKey(), privKeyB.PubKey(), multisigPubkey})
 
 	fmt.Printf("multimultisig sig: %v\n", multimultiSig.Marshal())
 
