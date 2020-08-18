@@ -19,9 +19,16 @@ const (
 	QueryGetContractState   = "query"
 	QueryGetCode            = "code"
 	QueryListCode           = "list-code"
+	QueryContractHistory    = "contract-history"
 	QueryContractAddress    = "label"
 	QueryContractKey        = "contract-key"
 	QueryContractHash       = "contract-hash"
+)
+
+const (
+	QueryMethodContractStateSmart = "smart"
+	QueryMethodContractStateAll   = "all"
+	QueryMethodContractStateRaw   = "raw"
 )
 
 // ContractInfoWithAddress adds the address (key) to the ContractInfo representation
@@ -31,23 +38,22 @@ type ContractInfoWithAddress struct {
 	Address sdk.AccAddress `json:"address"`
 }
 
-// controls error output on querier - set true when testing/debugging
-const debug = false
-
 // NewQuerier creates a new querier
 func NewQuerier(keeper Keeper) sdk.Querier {
 	return func(ctx sdk.Context, path []string, req abci.RequestQuery) ([]byte, error) {
 		switch path[0] {
 		case QueryGetContract:
-			return queryContractInfo(ctx, path[1], req, keeper)
+			return queryContractInfo(ctx, path[1], keeper)
 		case QueryListContractByCode:
-			return queryContractListByCode(ctx, path[1], req, keeper)
+			return queryContractListByCode(ctx, path[1], keeper)
 		case QueryGetContractState:
 			return queryContractState(ctx, path[1], req, keeper)
 		case QueryGetCode:
-			return queryCode(ctx, path[1], req, keeper)
+			return queryCode(ctx, path[1], keeper)
 		case QueryListCode:
-			return queryCodeList(ctx, req, keeper)
+			return queryCodeList(ctx, keeper)
+		case QueryContractHistory:
+			return queryContractHistory(ctx, path[1], keeper)
 		case QueryContractAddress:
 			return queryContractAddress(ctx, path[1], req, keeper)
 		case QueryContractKey:
@@ -60,7 +66,7 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 	}
 }
 
-func queryContractInfo(ctx sdk.Context, bech string, req abci.RequestQuery, keeper Keeper) ([]byte, error) {
+func queryContractInfo(ctx sdk.Context, bech string, keeper Keeper) ([]byte, error) {
 	addr, err := sdk.AccAddressFromBech32(bech)
 	if err != nil {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
@@ -69,11 +75,7 @@ func queryContractInfo(ctx sdk.Context, bech string, req abci.RequestQuery, keep
 	if info == nil {
 		return []byte("null"), nil
 	}
-	// redact the Created field (just used for sorting, not part of public API)
-	info.Created = nil
-	info.LastUpdated = nil
-	info.PreviousCodeID = 0
-
+	redact(info)
 	infoWithAddress := ContractInfoWithAddress{
 		Address:      addr,
 		ContractInfo: info,
@@ -85,17 +87,20 @@ func queryContractInfo(ctx sdk.Context, bech string, req abci.RequestQuery, keep
 	return bz, nil
 }
 
-func queryContractListByCode(ctx sdk.Context, codeIDstr string, req abci.RequestQuery, keeper Keeper) ([]byte, error) {
+// redact clears all fields not in the public api
+func redact(info *types.ContractInfo) {
+	info.Created = nil
+}
+
+func queryContractListByCode(ctx sdk.Context, codeIDstr string, keeper Keeper) ([]byte, error) {
 	codeID, err := strconv.ParseUint(codeIDstr, 10, 64)
 	if err != nil {
 		return nil, err
 	}
 
 	var contracts []ContractInfoWithAddress
-	keeper.ListContractInfo(ctx, func(addr sdk.AccAddress, info types.ContractInfo) bool {
+	keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, info types.ContractInfo) bool {
 		if info.CodeID == codeID {
-			// remove init message on list
-			info.InitMsg = nil
 			// and add the address
 			infoWithAddress := ContractInfoWithAddress{
 				Address:      addr,
@@ -112,7 +117,7 @@ func queryContractListByCode(ctx sdk.Context, codeIDstr string, req abci.Request
 	})
 	// and remove that info for the final json (yes, the json:"-" tag doesn't work)
 	for i := range contracts {
-		contracts[i].Created = nil
+		redact(contracts[i].ContractInfo)
 	}
 
 	bz, err := json.MarshalIndent(contracts, "", "  ")
@@ -137,7 +142,7 @@ type GetCodeResponse struct {
 	Data []byte `json:"data" yaml:"data"`
 }
 
-func queryCode(ctx sdk.Context, codeIDstr string, req abci.RequestQuery, keeper Keeper) ([]byte, error) {
+func queryCode(ctx sdk.Context, codeIDstr string, keeper Keeper) ([]byte, error) {
 	codeID, err := strconv.ParseUint(codeIDstr, 10, 64)
 	if err != nil {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "invalid codeID: "+err.Error())
@@ -176,7 +181,7 @@ type ListCodeResponse struct {
 	Builder  string           `json:"builder"`
 }
 
-func queryCodeList(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, error) {
+func queryCodeList(ctx sdk.Context, keeper Keeper) ([]byte, error) {
 	var info []ListCodeResponse
 
 	var i uint64
@@ -196,6 +201,28 @@ func queryCodeList(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byt
 	}
 
 	bz, err := json.MarshalIndent(info, "", "  ")
+	if err != nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
+	}
+	return bz, nil
+}
+
+func queryContractHistory(ctx sdk.Context, bech string, keeper Keeper) ([]byte, error) {
+	contractAddr, err := sdk.AccAddressFromBech32(bech)
+	if err != nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
+	}
+	entries := keeper.GetContractHistory(ctx, contractAddr)
+	if entries == nil {
+		// nil, nil leads to 404 in rest handler
+		return nil, nil
+	}
+	// redact response
+	for i := range entries {
+		entries[i].Updated = nil
+	}
+
+	bz, err := json.MarshalIndent(entries, "", "  ")
 	if err != nil {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
 	}

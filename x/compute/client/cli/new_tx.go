@@ -2,7 +2,6 @@ package cli
 
 import (
 	"bufio"
-	"errors"
 	"strconv"
 
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
@@ -13,7 +12,6 @@ import (
 	"github.com/enigmampc/cosmos-sdk/x/auth"
 	"github.com/enigmampc/cosmos-sdk/x/auth/client/utils"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // MigrateContractCmd will migrate a contract to a new code version
@@ -28,24 +26,12 @@ func MigrateContractCmd(cdc *codec.Codec) *cobra.Command {
 			txBldr := auth.NewTxBuilderFromCLI(inBuf).WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
 
-			contractAddr, err := sdk.AccAddressFromBech32(args[0])
+			msg, err := parseMigrateContractArgs(args, cliCtx)
 			if err != nil {
-				return sdkerrors.Wrap(err, "contract")
+				return err
 			}
-
-			// get the id of the code to instantiate
-			codeID, err := strconv.ParseUint(args[1], 10, 64)
-			if err != nil {
-				return sdkerrors.Wrap(err, "code id")
-			}
-
-			migrateMsg := args[2]
-
-			msg := types.MsgMigrateContract{
-				Sender:     cliCtx.GetFromAddress(),
-				Contract:   contractAddr,
-				Code:       codeID,
-				MigrateMsg: []byte(migrateMsg),
+			if err := msg.ValidateBasic(); err != nil {
+				return nil
 			}
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
 		},
@@ -53,13 +39,79 @@ func MigrateContractCmd(cdc *codec.Codec) *cobra.Command {
 	return cmd
 }
 
-// UpdateContractAdminCmd sets or clears an admin for a contract
+func parseMigrateContractArgs(args []string, cliCtx context.CLIContext) (types.MsgMigrateContract, error) {
+	contractAddr, err := sdk.AccAddressFromBech32(args[0])
+	if err != nil {
+		return types.MsgMigrateContract{}, sdkerrors.Wrap(err, "contract")
+	}
+
+	// get the id of the code to instantiate
+	codeID, err := strconv.ParseUint(args[1], 10, 64)
+	if err != nil {
+		return types.MsgMigrateContract{}, sdkerrors.Wrap(err, "code id")
+	}
+
+	migrateMsg := args[2]
+
+	msg := types.MsgMigrateContract{
+		Sender:     cliCtx.GetFromAddress(),
+		Contract:   contractAddr,
+		CodeID:     codeID,
+		MigrateMsg: []byte(migrateMsg),
+	}
+	return msg, nil
+}
+
+// UpdateContractAdminCmd sets an new admin for a contract
 // NO SUPPORT FOR THIS COMMAND YET
 func UpdateContractAdminCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set-contract-admin [contract_addr_bech32] [new_admin_addr_bech32]",
-		Short: "Set new admin for a contract. Can be empty to prevent further migrations",
-		Args:  cobra.RangeArgs(1, 2),
+		Short: "Set new admin for a contract",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			inBuf := bufio.NewReader(cmd.InOrStdin())
+			txBldr := auth.NewTxBuilderFromCLI(inBuf).WithTxEncoder(utils.GetTxEncoder(cdc))
+			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
+
+			msg, err := parseUpdateContractAdminArgs(args, cliCtx)
+			if err != nil {
+				return err
+			}
+			if err := msg.ValidateBasic(); err != nil {
+				return err
+			}
+			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
+		},
+	}
+	return cmd
+}
+
+func parseUpdateContractAdminArgs(args []string, cliCtx context.CLIContext) (types.MsgUpdateAdmin, error) {
+	contractAddr, err := sdk.AccAddressFromBech32(args[0])
+	if err != nil {
+		return types.MsgUpdateAdmin{}, sdkerrors.Wrap(err, "contract")
+	}
+	newAdmin, err := sdk.AccAddressFromBech32(args[1])
+	if err != nil {
+		return types.MsgUpdateAdmin{}, sdkerrors.Wrap(err, "new admin")
+	}
+
+	msg := types.MsgUpdateAdmin{
+		Sender:   cliCtx.GetFromAddress(),
+		Contract: contractAddr,
+		NewAdmin: newAdmin,
+	}
+	return msg, nil
+}
+
+// ClearContractAdminCmd clears an admin for a contract
+// NO SUPPORT FOR THIS COMMAND YET
+func ClearContractAdminCmd(cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "clear-contract-admin [contract_addr_bech32]",
+		Short: "Clears admin for a contract to prevent further migrations",
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			inBuf := bufio.NewReader(cmd.InOrStdin())
 			txBldr := auth.NewTxBuilderFromCLI(inBuf).WithTxEncoder(utils.GetTxEncoder(cdc))
@@ -69,28 +121,16 @@ func UpdateContractAdminCmd(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return sdkerrors.Wrap(err, "contract")
 			}
-			var newAdmin sdk.AccAddress
-			if len(args) > 1 && len(args[1]) != 0 {
-				newAdmin, err = sdk.AccAddressFromBech32(args[1])
-				if err != nil {
-					return sdkerrors.Wrap(err, "new admin")
-				}
-			} else {
-				// safety net to not accidentally clear an admin
-				clearAdmin := viper.GetBool(flagNoAdmin)
-				if !clearAdmin {
-					return errors.New("new admin address required or no admin flag")
-				}
-			}
 
-			msg := types.MsgUpdateAdministrator{
+			msg := types.MsgClearAdmin{
 				Sender:   cliCtx.GetFromAddress(),
 				Contract: contractAddr,
-				NewAdmin: newAdmin,
+			}
+			if err := msg.ValidateBasic(); err != nil {
+				return err
 			}
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
 		},
 	}
-	cmd.Flags().Bool(flagNoAdmin, false, "Remove admin which disables future admin updates and migrations")
 	return cmd
 }

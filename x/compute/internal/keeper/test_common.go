@@ -2,9 +2,12 @@ package keeper
 
 import (
 	"fmt"
-	"github.com/enigmampc/cosmos-sdk/x/distribution"
 	"testing"
 	"time"
+
+	"github.com/cosmos/cosmos-sdk/x/distribution"
+	"github.com/cosmos/cosmos-sdk/x/gov"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -39,10 +42,11 @@ func MakeTestCodec() *codec.Codec {
 	supply.AppModuleBasic{}.RegisterCodec(cdc)
 	staking.AppModuleBasic{}.RegisterCodec(cdc)
 	distribution.AppModuleBasic{}.RegisterCodec(cdc)
-	wasmTypes.RegisterCodec(cdc)
+	gov.RegisterCodec(cdc)
+	wasmtypes.RegisterCodec(cdc)
 	sdk.RegisterCodec(cdc)
 	codec.RegisterCrypto(cdc)
-
+	params.RegisterCodec(cdc)
 	return cdc
 }
 
@@ -60,17 +64,20 @@ type TestKeepers struct {
 	WasmKeeper    Keeper
 	DistKeeper    distribution.Keeper
 	SupplyKeeper  supply.Keeper
+	GovKeeper     gov.Keeper
+	BankKeeper    bank.Keeper
 }
 
 // encoders can be nil to accept the defaults, or set it to override some of the message handlers (like default)
 func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeatures string, encoders *MessageEncoders, queriers *QueryPlugins) (sdk.Context, TestKeepers) {
-	keyContract := sdk.NewKVStoreKey(wasmTypes.StoreKey)
+	keyContract := sdk.NewKVStoreKey(wasmtypes.StoreKey)
 	keyAcc := sdk.NewKVStoreKey(auth.StoreKey)
 	keyStaking := sdk.NewKVStoreKey(staking.StoreKey)
 	keySupply := sdk.NewKVStoreKey(supply.StoreKey)
 	keyDistro := sdk.NewKVStoreKey(distribution.StoreKey)
 	keyParams := sdk.NewKVStoreKey(params.StoreKey)
 	tkeyParams := sdk.NewTransientStoreKey(params.TStoreKey)
+	keyGov := sdk.NewKVStoreKey(govtypes.StoreKey)
 
 	db := dbm.NewMemDB()
 	ms := store.NewCommitMultiStore(db)
@@ -81,6 +88,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 	ms.MountStoreWithDB(keySupply, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keyDistro, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(tkeyParams, sdk.StoreTypeTransient, db)
+	ms.MountStoreWithDB(keyGov, sdk.StoreTypeIAVL, db)
 	err := ms.LoadLatestVersion()
 	require.Nil(t, err)
 
@@ -90,21 +98,14 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 	}, isCheckTx, log.NewNopLogger())
 	cdc := MakeTestCodec()
 
-	pk := params.NewKeeper(cdc, keyParams, tkeyParams)
+	paramsKeeper := params.NewKeeper(cdc, keyParams, tkeyParams)
 
 	accountKeeper := auth.NewAccountKeeper(
 		cdc,    // amino codec
 		keyAcc, // target store
-		pk.Subspace(auth.DefaultParamspace),
+		paramsKeeper.Subspace(auth.DefaultParamspace),
 		auth.ProtoBaseAccount, // prototype
 	)
-
-	bankKeeper := bank.NewBaseKeeper(
-		accountKeeper,
-		pk.Subspace(bank.DefaultParamspace),
-		nil,
-	)
-	bankKeeper.SetSendEnabled(ctx, true)
 
 	// this is also used to initialize module accounts (so nil is meaningful here)
 	maccPerms := map[string][]string{
@@ -113,14 +114,24 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 		//mint.ModuleName:           {supply.Minter},
 		staking.BondedPoolName:    {supply.Burner, supply.Staking},
 		staking.NotBondedPoolName: {supply.Burner, supply.Staking},
-		//gov.ModuleName:            {supply.Burner},
+		gov.ModuleName:            {supply.Burner},
 	}
+	blockedAddr := make(map[string]bool, len(maccPerms))
+	for acc := range maccPerms {
+		blockedAddr[supply.NewModuleAddress(acc).String()] = true
+	}
+	bankKeeper := bank.NewBaseKeeper(
+		accountKeeper,
+		paramsKeeper.Subspace(bank.DefaultParamspace),
+		blockedAddr,
+	)
+	bankKeeper.SetSendEnabled(ctx, true)
 
 	supplyKeeper := supply.NewKeeper(cdc, keySupply, accountKeeper, bankKeeper, maccPerms)
-	stakingKeeper := staking.NewKeeper(cdc, keyStaking, supplyKeeper, pk.Subspace(staking.DefaultParamspace))
+	stakingKeeper := staking.NewKeeper(cdc, keyStaking, supplyKeeper, paramsKeeper.Subspace(staking.DefaultParamspace))
 	stakingKeeper.SetParams(ctx, TestingStakeParams)
 
-	distKeeper := distribution.NewKeeper(cdc, keyDistro, pk.Subspace(distribution.DefaultParamspace), stakingKeeper, supplyKeeper, auth.FeeCollectorName, nil)
+	distKeeper := distribution.NewKeeper(cdc, keyDistro, paramsKeeper.Subspace(distribution.DefaultParamspace), stakingKeeper, supplyKeeper, auth.FeeCollectorName, nil)
 	distKeeper.SetParams(ctx, distribution.DefaultParams())
 	stakingKeeper.SetHooks(distKeeper.Hooks())
 
@@ -158,11 +169,28 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 	router.AddRoute(distribution.RouterKey, dh)
 
 	// Load default wasm config
-	wasmConfig := wasmTypes.DefaultWasmConfig()
-
-	keeper := NewKeeper(cdc, keyContract, accountKeeper, bankKeeper, stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
+	wasmConfig := wasmtypes.DefaultWasmConfig()
+	keeper := NewKeeper(cdc, keyContract, paramsKeeper.Subspace(wasmtypes.DefaultParamspace),
+		accountKeeper, bankKeeper, stakingKeeper, router, tempDir, wasmConfig,
+		supportedFeatures, encoders, queriers,
+	)
+	keeper.setParams(ctx, wasmtypes.DefaultParams())
 	// add wasm handler so we can loop-back (contracts calling contracts)
-	router.AddRoute(wasmTypes.RouterKey, TestHandler(keeper))
+	router.AddRoute(wasmtypes.RouterKey, TestHandler(keeper))
+
+	govRouter := gov.NewRouter().
+		AddRoute(params.RouterKey, params.NewParamChangeProposalHandler(paramsKeeper)).
+		AddRoute(govtypes.RouterKey, govtypes.ProposalHandler).
+		AddRoute(wasmtypes.RouterKey, NewWasmProposalHandler(keeper, wasmtypes.EnableAllProposals))
+
+	govKeeper := gov.NewKeeper(
+		cdc, keyGov, paramsKeeper.Subspace(govtypes.DefaultParamspace).WithKeyTable(gov.ParamKeyTable()), supplyKeeper, stakingKeeper, govRouter,
+	)
+
+	govKeeper.SetProposalID(ctx, govtypes.DefaultStartingProposalID)
+	govKeeper.SetDepositParams(ctx, govtypes.DefaultDepositParams())
+	govKeeper.SetVotingParams(ctx, govtypes.DefaultVotingParams())
+	govKeeper.SetTallyParams(ctx, govtypes.DefaultTallyParams())
 
 	keepers := TestKeepers{
 		AccountKeeper: accountKeeper,
@@ -170,6 +198,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 		StakingKeeper: stakingKeeper,
 		DistKeeper:    distKeeper,
 		WasmKeeper:    keeper,
+		GovKeeper:     govKeeper,
+		BankKeeper:    bankKeeper,
 	}
 	return ctx, keepers
 }
@@ -180,14 +210,14 @@ func TestHandler(k Keeper) sdk.Handler {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
 
 		switch msg := msg.(type) {
-		case wasmTypes.MsgInstantiateContract:
+		case wasmtypes.MsgInstantiateContract:
 			return handleInstantiate(ctx, k, &msg)
-		case *wasmTypes.MsgInstantiateContract:
+		case *wasmtypes.MsgInstantiateContract:
 			return handleInstantiate(ctx, k, msg)
 
-		case wasmTypes.MsgExecuteContract:
+		case wasmtypes.MsgExecuteContract:
 			return handleExecute(ctx, k, &msg)
-		case *wasmTypes.MsgExecuteContract:
+		case *wasmtypes.MsgExecuteContract:
 			return handleExecute(ctx, k, msg)
 
 		default:
@@ -197,8 +227,8 @@ func TestHandler(k Keeper) sdk.Handler {
 	}
 }
 
-func handleInstantiate(ctx sdk.Context, k Keeper, msg *wasmTypes.MsgInstantiateContract) (*sdk.Result, error) {
-	contractAddr, err := k.Instantiate(ctx, msg.Code, msg.Sender, msg.Admin, msg.InitMsg, msg.Label, msg.InitFunds)
+func handleInstantiate(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgInstantiateContract) (*sdk.Result, error) {
+	contractAddr, err := k.Instantiate(ctx, msg.CodeID, msg.Sender, msg.Admin, msg.InitMsg, msg.Label, msg.InitFunds)
 	if err != nil {
 		return nil, err
 	}
@@ -209,12 +239,12 @@ func handleInstantiate(ctx sdk.Context, k Keeper, msg *wasmTypes.MsgInstantiateC
 	}, nil
 }
 
-func handleExecute(ctx sdk.Context, k Keeper, msg *wasmTypes.MsgExecuteContract) (*sdk.Result, error) {
+func handleExecute(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgExecuteContract) (*sdk.Result, error) {
 	res, err := k.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds)
 	if err != nil {
 		return nil, err
 	}
 
 	res.Events = ctx.EventManager().Events()
-	return &res, nil
+	return res, nil
 }

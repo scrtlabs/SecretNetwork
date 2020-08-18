@@ -48,6 +48,7 @@ func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 		GetCmdQueryLabel(cdc),
 		GetCmdCodeHashByContract(cdc),
 		CmdDecryptText(cdc),
+		GetCmdGetContractHistory(cdc),
 	)...)
 	return queryCmd
 }
@@ -436,8 +437,8 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "query [bech32_address] [query]", // TODO add --from wallet
-		Short: "Calls contract with given address  with query data and prints the returned result",
-		Long:  "Calls contract with given address  with query data and prints the returned result",
+		Short: "Calls contract with given address with query data and prints the returned result",
+		Long:  "Calls contract with given address with query data and prints the returned result",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -455,6 +456,10 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 			queryData, err := decoder.DecodeString(args[1])
 			if err != nil {
 				return fmt.Errorf("decode query: %s", err)
+			}
+
+			if !json.Valid(queryData) {
+				return errors.New("query data must be json")
 			}
 
 			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
@@ -511,6 +516,32 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 	}
 	decoder.RegisterFlags(cmd.PersistentFlags(), "query argument")
 	return cmd
+}
+
+// GetCmdGetContractHistory prints the code history for a given contract
+func GetCmdGetContractHistory(cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "contract-history [bech32_address]",
+		Short: "Prints out the code history for a contract given its address",
+		Long:  "Prints out the code history for a contract given its address",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			addr, err := sdk.AccAddressFromBech32(args[0])
+			if err != nil {
+				return err
+			}
+
+			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHistory, addr.String())
+			res, _, err := cliCtx.Query(route)
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(res))
+			return nil
+		},
+	}
 }
 
 type argumentDecoder struct {

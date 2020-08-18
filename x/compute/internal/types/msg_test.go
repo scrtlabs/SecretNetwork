@@ -107,6 +107,14 @@ func TestStoreCodeValidation(t *testing.T) {
 			},
 			valid: false,
 		},
+		"invalid InstantiatePermission": {
+			msg: MsgStoreCode{
+				Sender:                goodAddress,
+				WASMByteCode:          []byte("foo"),
+				InstantiatePermission: &AccessConfig{Type: OnlyAddress, Address: badAddress},
+			},
+			valid: false,
+		},
 	}
 
 	for name, tc := range cases {
@@ -119,7 +127,6 @@ func TestStoreCodeValidation(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestInstantiateContractValidation(t *testing.T) {
@@ -139,7 +146,7 @@ func TestInstantiateContractValidation(t *testing.T) {
 		"correct minimal": {
 			msg: MsgInstantiateContract{
 				Sender:  goodAddress,
-				Code:    1,
+				CodeID:  1,
 				Label:   "foo",
 				InitMsg: []byte("{}"),
 			},
@@ -170,7 +177,7 @@ func TestInstantiateContractValidation(t *testing.T) {
 		"bad sender minimal": {
 			msg: MsgInstantiateContract{
 				Sender:  badAddress,
-				Code:    1,
+				CodeID:  1,
 				Label:   "foo",
 				InitMsg: []byte("{}"),
 			},
@@ -179,7 +186,7 @@ func TestInstantiateContractValidation(t *testing.T) {
 		"correct maximal": {
 			msg: MsgInstantiateContract{
 				Sender:    goodAddress,
-				Code:      1,
+				CodeID:    1,
 				Label:     "foo",
 				InitMsg:   []byte(`{"some": "data"}`),
 				InitFunds: sdk.Coins{sdk.Coin{Denom: "foobar", Amount: sdk.NewInt(200)}},
@@ -189,11 +196,136 @@ func TestInstantiateContractValidation(t *testing.T) {
 		"negative funds": {
 			msg: MsgInstantiateContract{
 				Sender:  goodAddress,
-				Code:    1,
+				CodeID:  1,
 				Label:   "foo",
 				InitMsg: []byte(`{"some": "data"}`),
 				// we cannot use sdk.NewCoin() constructors as they panic on creating invalid data (before we can test)
 				InitFunds: sdk.Coins{sdk.Coin{Denom: "foobar", Amount: sdk.NewInt(-200)}},
+			},
+			valid: false,
+		},
+		"non json init msg": {
+			msg: MsgInstantiateContract{
+				Sender:  goodAddress,
+				CodeID:  1,
+				Label:   "foo",
+				InitMsg: []byte("invalid-json"),
+			},
+			valid: false,
+		},
+		"empty init msg": {
+			msg: MsgInstantiateContract{
+				Sender: goodAddress,
+				CodeID: 1,
+				Label:  "foo",
+			},
+			valid: false,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.msg.ValidateBasic()
+			if tc.valid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestExecuteContractValidation(t *testing.T) {
+	badAddress, err := sdk.AccAddressFromHex("012345")
+	require.NoError(t, err)
+	// proper address size
+	goodAddress := sdk.AccAddress(make([]byte, 20))
+
+	cases := map[string]struct {
+		msg   MsgExecuteContract
+		valid bool
+	}{
+		"empty": {
+			msg:   MsgExecuteContract{},
+			valid: false,
+		},
+		"correct minimal": {
+			msg: MsgExecuteContract{
+				Sender:   goodAddress,
+				Contract: goodAddress,
+				Msg:      []byte("{}"),
+			},
+			valid: true,
+		},
+		"correct all": {
+			msg: MsgExecuteContract{
+				Sender:    goodAddress,
+				Contract:  goodAddress,
+				Msg:       []byte(`{"some": "data"}`),
+				SentFunds: sdk.Coins{sdk.Coin{Denom: "foobar", Amount: sdk.NewInt(200)}},
+			},
+			valid: true,
+		},
+		"bad sender": {
+			msg: MsgExecuteContract{
+				Sender:   badAddress,
+				Contract: goodAddress,
+				Msg:      []byte(`{"some": "data"}`),
+			},
+			valid: false,
+		},
+		"empty sender": {
+			msg: MsgExecuteContract{
+				Contract: goodAddress,
+				Msg:      []byte(`{"some": "data"}`),
+			},
+			valid: false,
+		},
+		"bad contract": {
+			msg: MsgExecuteContract{
+				Sender:   goodAddress,
+				Contract: badAddress,
+				Msg:      []byte(`{"some": "data"}`),
+			},
+			valid: false,
+		},
+		"empty contract": {
+			msg: MsgExecuteContract{
+				Sender: goodAddress,
+				Msg:    []byte(`{"some": "data"}`),
+			},
+			valid: false,
+		},
+		"negative funds": {
+			msg: MsgExecuteContract{
+				Sender:    goodAddress,
+				Contract:  goodAddress,
+				Msg:       []byte(`{"some": "data"}`),
+				SentFunds: sdk.Coins{sdk.Coin{Denom: "foobar", Amount: sdk.NewInt(-1)}},
+			},
+			valid: false,
+		},
+		"duplicate funds": {
+			msg: MsgExecuteContract{
+				Sender:    goodAddress,
+				Contract:  goodAddress,
+				Msg:       []byte(`{"some": "data"}`),
+				SentFunds: sdk.Coins{sdk.Coin{Denom: "foobar", Amount: sdk.NewInt(1)}, sdk.Coin{Denom: "foobar", Amount: sdk.NewInt(1)}},
+			},
+			valid: false,
+		},
+		"non json msg": {
+			msg: MsgExecuteContract{
+				Sender:   goodAddress,
+				Contract: goodAddress,
+				Msg:      []byte("invalid-json"),
+			},
+			valid: false,
+		},
+		"empty msg": {
+			msg: MsgExecuteContract{
+				Sender:   goodAddress,
+				Contract: goodAddress,
 			},
 			valid: false,
 		},
@@ -220,24 +352,25 @@ func TestMsgUpdateAdministrator(t *testing.T) {
 	anotherGoodAddress := sdk.AccAddress(bytes.Repeat([]byte{0x2}, 20))
 
 	specs := map[string]struct {
-		src    MsgUpdateAdministrator
+		src    MsgUpdateAdmin
 		expErr bool
 	}{
 		"all good": {
-			src: MsgUpdateAdministrator{
+			src: MsgUpdateAdmin{
 				Sender:   goodAddress,
 				NewAdmin: otherGoodAddress,
 				Contract: anotherGoodAddress,
 			},
 		},
-		"new admin optional": {
-			src: MsgUpdateAdministrator{
+		"new admin required": {
+			src: MsgUpdateAdmin{
 				Sender:   goodAddress,
 				Contract: anotherGoodAddress,
 			},
+			expErr: true,
 		},
 		"bad sender": {
-			src: MsgUpdateAdministrator{
+			src: MsgUpdateAdmin{
 				Sender:   badAddress,
 				NewAdmin: otherGoodAddress,
 				Contract: anotherGoodAddress,
@@ -245,7 +378,7 @@ func TestMsgUpdateAdministrator(t *testing.T) {
 			expErr: true,
 		},
 		"bad new admin": {
-			src: MsgUpdateAdministrator{
+			src: MsgUpdateAdmin{
 				Sender:   goodAddress,
 				NewAdmin: badAddress,
 				Contract: anotherGoodAddress,
@@ -253,7 +386,7 @@ func TestMsgUpdateAdministrator(t *testing.T) {
 			expErr: true,
 		},
 		"bad contract addr": {
-			src: MsgUpdateAdministrator{
+			src: MsgUpdateAdmin{
 				Sender:   goodAddress,
 				NewAdmin: otherGoodAddress,
 				Contract: badAddress,
@@ -261,10 +394,60 @@ func TestMsgUpdateAdministrator(t *testing.T) {
 			expErr: true,
 		},
 		"new admin same as old admin": {
-			src: MsgUpdateAdministrator{
+			src: MsgUpdateAdmin{
 				Sender:   goodAddress,
 				NewAdmin: goodAddress,
 				Contract: anotherGoodAddress,
+			},
+			expErr: true,
+		},
+	}
+	for msg, spec := range specs {
+		t.Run(msg, func(t *testing.T) {
+			err := spec.src.ValidateBasic()
+			if spec.expErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestMsgClearAdministrator(t *testing.T) {
+	badAddress, err := sdk.AccAddressFromHex("012345")
+	require.NoError(t, err)
+	// proper address size
+	goodAddress := sdk.AccAddress(make([]byte, 20))
+	anotherGoodAddress := sdk.AccAddress(bytes.Repeat([]byte{0x2}, 20))
+
+	specs := map[string]struct {
+		src    MsgClearAdmin
+		expErr bool
+	}{
+		"all good": {
+			src: MsgClearAdmin{
+				Sender:   goodAddress,
+				Contract: anotherGoodAddress,
+			},
+		},
+		"bad sender": {
+			src: MsgClearAdmin{
+				Sender:   badAddress,
+				Contract: anotherGoodAddress,
+			},
+			expErr: true,
+		},
+		"bad contract addr": {
+			src: MsgClearAdmin{
+				Sender:   goodAddress,
+				Contract: badAddress,
+			},
+			expErr: true,
+		},
+		"contract missing": {
+			src: MsgClearAdmin{
+				Sender: goodAddress,
 			},
 			expErr: true,
 		},
@@ -296,29 +479,22 @@ func TestMsgMigrateContract(t *testing.T) {
 			src: MsgMigrateContract{
 				Sender:     goodAddress,
 				Contract:   anotherGoodAddress,
-				Code:       1,
-				MigrateMsg: []byte{1},
-			},
-		},
-		"MigrateMsg optional": {
-			src: MsgMigrateContract{
-				Sender:   goodAddress,
-				Contract: anotherGoodAddress,
-				Code:     1,
+				CodeID:     1,
+				MigrateMsg: []byte("{}"),
 			},
 		},
 		"bad sender": {
 			src: MsgMigrateContract{
 				Sender:   badAddress,
 				Contract: anotherGoodAddress,
-				Code:     1,
+				CodeID:   1,
 			},
 			expErr: true,
 		},
 		"empty sender": {
 			src: MsgMigrateContract{
 				Contract: anotherGoodAddress,
-				Code:     1,
+				CodeID:   1,
 			},
 			expErr: true,
 		},
@@ -333,14 +509,31 @@ func TestMsgMigrateContract(t *testing.T) {
 			src: MsgMigrateContract{
 				Sender:   goodAddress,
 				Contract: badAddress,
-				Code:     1,
+				CodeID:   1,
 			},
 			expErr: true,
 		},
 		"empty contract addr": {
 			src: MsgMigrateContract{
 				Sender: goodAddress,
-				Code:   1,
+				CodeID: 1,
+			},
+			expErr: true,
+		},
+		"non json migrateMsg": {
+			src: MsgMigrateContract{
+				Sender:     goodAddress,
+				Contract:   anotherGoodAddress,
+				CodeID:     1,
+				MigrateMsg: []byte("invalid json"),
+			},
+			expErr: true,
+		},
+		"empty migrateMsg": {
+			src: MsgMigrateContract{
+				Sender:   goodAddress,
+				Contract: anotherGoodAddress,
+				CodeID:   1,
 			},
 			expErr: true,
 		},

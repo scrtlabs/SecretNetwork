@@ -17,18 +17,28 @@ type QueryHandler struct {
 
 var _ wasmTypes.Querier = QueryHandler{}
 
-func (q QueryHandler) Query(request wasmTypes.QueryRequest) ([]byte, error) {
+func (q QueryHandler) Query(request wasmTypes.QueryRequest, gasLimit uint64) ([]byte, error) {
+	// set a limit for a subctx
+	sdkGas := gasLimit / GasMultiplier
+	subctx := q.Ctx.WithGasMeter(sdk.NewGasMeter(sdkGas))
+
+	// make sure we charge the higher level context even on panic
+	defer func() {
+		q.Ctx.GasMeter().ConsumeGas(subctx.GasMeter().GasConsumed(), "contract sub-query")
+	}()
+
+	// do the query
 	if request.Bank != nil {
-		return q.Plugins.Bank(q.Ctx, request.Bank)
+		return q.Plugins.Bank(subctx, request.Bank)
 	}
 	if request.Custom != nil {
-		return q.Plugins.Custom(q.Ctx, request.Custom)
+		return q.Plugins.Custom(subctx, request.Custom)
 	}
 	if request.Staking != nil {
-		return q.Plugins.Staking(q.Ctx, request.Staking)
+		return q.Plugins.Staking(subctx, request.Staking)
 	}
 	if request.Wasm != nil {
-		return q.Plugins.Wasm(q.Ctx, request.Wasm)
+		return q.Plugins.Wasm(subctx, request.Wasm)
 	}
 	return nil, wasmTypes.Unknown{}
 }
@@ -103,12 +113,12 @@ func BankQuerier(bank bank.ViewKeeper) func(ctx sdk.Context, request *wasmTypes.
 			}
 			return json.Marshal(res)
 		}
-		return nil, wasmTypes.UnsupportedRequest{"unknown BankQuery variant"}
+		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown BankQuery variant"}
 	}
 }
 
-func NoCustomQuerier(ctx sdk.Context, request json.RawMessage) ([]byte, error) {
-	return nil, wasmTypes.UnsupportedRequest{"custom"}
+func NoCustomQuerier(sdk.Context, json.RawMessage) ([]byte, error) {
+	return nil, wasmTypes.UnsupportedRequest{Kind: "custom"}
 }
 
 func StakingQuerier(keeper staking.Keeper) func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error) {
@@ -172,7 +182,7 @@ func StakingQuerier(keeper staking.Keeper) func(ctx sdk.Context, request *wasmTy
 			}
 			return json.Marshal(res)
 		}
-		return nil, wasmTypes.UnsupportedRequest{"unknown Staking variant"}
+		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown Staking variant"}
 	}
 }
 
@@ -243,7 +253,7 @@ func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuer
 			// TODO: do we want to change the return value?
 			return json.Marshal(models)
 		}
-		return nil, wasmTypes.UnsupportedRequest{"unknown WasmQuery variant"}
+		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown WasmQuery variant"}
 	}
 }
 

@@ -67,14 +67,14 @@ func TestMaskReflectContractSend(t *testing.T) {
 	// upload mask code
 	maskCode, err := ioutil.ReadFile("./testdata/reflect.wasm")
 	require.NoError(t, err)
-	maskID, err := keeper.Create(ctx, creator, maskCode, "", "")
+	maskID, err := keeper.Create(ctx, creator, maskCode, "", "", nil)
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), maskID)
 
 	// upload hackatom escrow code
 	escrowCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
-	escrowID, err := keeper.Create(ctx, creator, escrowCode, "", "")
+	escrowID, err := keeper.Create(ctx, creator, escrowCode, "", "", nil)
 	require.NoError(t, err)
 	require.Equal(t, uint64(2), escrowID)
 
@@ -169,7 +169,7 @@ func TestMaskReflectCustomMsg(t *testing.T) {
 	// upload code
 	maskCode, err := ioutil.ReadFile("./testdata/reflect.wasm")
 	require.NoError(t, err)
-	codeID, err := keeper.Create(ctx, creator, maskCode, "", "")
+	codeID, err := keeper.Create(ctx, creator, maskCode, "", "", nil)
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), codeID)
 
@@ -271,7 +271,7 @@ func TestMaskReflectCustomQuery(t *testing.T) {
 	// upload code
 	maskCode, err := ioutil.ReadFile("./testdata/reflect.wasm")
 	require.NoError(t, err)
-	codeID, err := keeper.Create(ctx, creator, maskCode, "", "")
+	codeID, err := keeper.Create(ctx, creator, maskCode, "", "", nil)
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), codeID)
 

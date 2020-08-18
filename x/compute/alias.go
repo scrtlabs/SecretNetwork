@@ -11,43 +11,49 @@ import (
 )
 
 const (
-	ModuleName               = types.ModuleName
-	StoreKey                 = types.StoreKey
-	TStoreKey                = types.TStoreKey
-	QuerierRoute             = types.QuerierRoute
-	RouterKey                = types.RouterKey
-	MaxWasmSize              = types.MaxWasmSize
-	MaxLabelSize             = types.MaxLabelSize
-	BuildTagRegexp           = types.BuildTagRegexp
-	MaxBuildTagSize          = types.MaxBuildTagSize
-	CustomEventType          = types.CustomEventType
-	AttributeKeyContractAddr = types.AttributeKeyContractAddr
-	GasMultiplier            = keeper.GasMultiplier
-	MaxGas                   = keeper.MaxGas
-	QueryListContractByCode  = keeper.QueryListContractByCode
-	QueryGetContract         = keeper.QueryGetContract
-	QueryGetContractState    = keeper.QueryGetContractState
-	QueryGetCode             = keeper.QueryGetCode
-	QueryListCode            = keeper.QueryListCode
-	QueryContractKey         = keeper.QueryContractKey
+	DefaultParamspace             = types.DefaultParamspace
+	ModuleName                    = types.ModuleName
+	StoreKey                      = types.StoreKey
+	TStoreKey                     = types.TStoreKey
+	QuerierRoute                  = types.QuerierRoute
+	RouterKey                     = types.RouterKey
+	MaxWasmSize                   = types.MaxWasmSize
+	MaxLabelSize                  = types.MaxLabelSize
+	BuildTagRegexp                = types.BuildTagRegexp
+	MaxBuildTagSize               = types.MaxBuildTagSize
+	CustomEventType               = types.CustomEventType
+	AttributeKeyContractAddr      = types.AttributeKeyContractAddr
+	GasMultiplier                 = keeper.GasMultiplier
+	MaxGas                        = keeper.MaxGas
+	QueryListContractByCode       = keeper.QueryListContractByCode
+	QueryGetContract              = keeper.QueryGetContract
+	QueryGetContractState         = keeper.QueryGetContractState
+	QueryGetCode                  = keeper.QueryGetCode
+	QueryListCode                 = keeper.QueryListCode
+	QueryContractKey              = keeper.QueryContractKey
+	QueryMethodContractStateSmart = keeper.QueryMethodContractStateSmart
+	QueryMethodContractStateAll   = keeper.QueryMethodContractStateAll
+	QueryMethodContractStateRaw   = keeper.QueryMethodContractStateRaw
 )
 
 var (
 	// functions aliases
 	RegisterCodec             = types.RegisterCodec
 	ValidateGenesis           = types.ValidateGenesis
+	ConvertToProposals        = types.ConvertToProposals
 	GetCodeKey                = types.GetCodeKey
 	GetContractAddressKey     = types.GetContractAddressKey
 	GetContractStorePrefixKey = types.GetContractStorePrefixKey
 	NewCodeInfo               = types.NewCodeInfo
-	NewCreatedAt              = types.NewCreatedAt
+	NewAbsoluteTxPosition     = types.NewAbsoluteTxPosition
 	NewContractInfo           = types.NewContractInfo
 	NewEnv                    = types.NewEnv
 	NewWasmCoins              = types.NewWasmCoins
-	CosmosResult              = types.CosmosResult
+	ParseEvents               = types.ParseEvents
 	DefaultWasmConfig         = types.DefaultWasmConfig
 	IsEncryptedError          = types.IsEncryptedErrorCode
 	ErrContainsQueryError     = types.ErrContainsQueryError
+	DefaultParams             = types.DefaultParams
 	InitGenesis               = keeper.InitGenesis
 	ExportGenesis             = keeper.ExportGenesis
 	NewMessageHandler         = keeper.NewMessageHandler
@@ -66,6 +72,7 @@ var (
 	MakeTestCodec             = keeper.MakeTestCodec
 	CreateTestInput           = keeper.CreateTestInput
 	TestHandler               = keeper.TestHandler
+	NewWasmProposalHandler    = keeper.NewWasmProposalHandler
 
 	// variable aliases
 	ModuleCdc            = types.ModuleCdc
@@ -84,9 +91,12 @@ var (
 	CodeKeyPrefix        = types.CodeKeyPrefix
 	ContractKeyPrefix    = types.ContractKeyPrefix
 	ContractStorePrefix  = types.ContractStorePrefix
+	EnableAllProposals   = types.EnableAllProposals
+	DisableAllProposals  = types.DisableAllProposals
 )
 
 type (
+	ProposalType            = types.ProposalType
 	GenesisState            = types.GenesisState
 	Code                    = types.Code
 	Contract                = types.Contract
@@ -94,7 +104,8 @@ type (
 	MsgInstantiateContract  = types.MsgInstantiateContract
 	MsgExecuteContract      = types.MsgExecuteContract
 	MsgMigrateContract      = types.MsgMigrateContract
-	MsgUpdateAdministrator  = types.MsgUpdateAdministrator
+	MsgUpdateAdmin          = types.MsgUpdateAdmin
+	MsgClearAdmin           = types.MsgClearAdmin
 	Model                   = types.Model
 	CodeInfo                = types.CodeInfo
 	ContractInfo            = types.ContractInfo

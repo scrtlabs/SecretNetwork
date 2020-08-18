@@ -1,6 +1,8 @@
 package types
 
 import (
+	"encoding/binary"
+
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 )
 
@@ -21,22 +23,34 @@ const (
 	RouterKey = ModuleName
 )
 
+const ( // event attributes
+	AttributeKeyContract = "contract_address"
+	AttributeKeyCodeID   = "code_id"
+	AttributeKeySigner   = "signer"
+)
+
 // nolint
 var (
-	KeyLastCodeID     = []byte("lastCodeId")
-	KeyLastInstanceID = []byte("lastContractId")
+	CodeKeyPrefix              = []byte{0x01}
+	ContractKeyPrefix          = []byte{0x02}
+	ContractStorePrefix        = []byte{0x03}
+	SequenceKeyPrefix          = []byte{0x04}
+	ContractHistoryStorePrefix = []byte{0x05}
+	ContractEnclaveIdPrefix    = []byte{0x06}
+	ContractLabelPrefix        = []byte{0x07}
 
-	CodeKeyPrefix           = []byte{0x01}
-	ContractKeyPrefix       = []byte{0x02}
-	ContractStorePrefix     = []byte{0x03}
-	ContractEnclaveIdPrefix = []byte{0x04}
-	ContractLabelPrefix     = []byte{0x05}
+	KeyLastCodeID     = append(SequenceKeyPrefix, []byte("lastCodeId")...)
+	KeyLastInstanceID = append(SequenceKeyPrefix, []byte("lastContractId")...)
 )
 
 // GetCodeKey constructs the key for retreiving the ID for the WASM code
-func GetCodeKey(contractID uint64) []byte {
-	contractIDBz := sdk.Uint64ToBigEndian(contractID)
+func GetCodeKey(codeID uint64) []byte {
+	contractIDBz := sdk.Uint64ToBigEndian(codeID)
 	return append(CodeKeyPrefix, contractIDBz...)
+}
+
+func decodeCodeKey(src []byte) uint64 {
+	return binary.BigEndian.Uint64(src[len(CodeKeyPrefix):])
 }
 
 // GetContractAddressKey returns the key for the WASM contract instance
