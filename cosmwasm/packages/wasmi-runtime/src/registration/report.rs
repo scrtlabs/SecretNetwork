@@ -529,13 +529,13 @@ impl SgxQuote {
 }
 
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
-const WHITELISTED_ADVISORIES: &'static [&'static str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
+const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-const WHITELISTED_ADVISORIES: &'static [&'static str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
+const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
-const WHITELISTED_ADVISORIES: &'static [&'static str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
+const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
 
 #[derive(Debug)]
 pub struct AdvisoryIDs (pub Vec<String>);
