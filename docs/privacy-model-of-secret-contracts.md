@@ -52,7 +52,7 @@ Secret Contract developers must always consider the trade-off between privacy, u
 
 ## Inputs
 
-Inputs that are encrypted and known only to the transaction sender and to the contract.
+Inputs that are encrypted are known only to the transaction sender and to the contract.
 
 | Input                    | Type                     | Encrypted? | Trusted? | Notes |
 | ------------------------ | ------------------------ | ---------- | -------- | ----- |
