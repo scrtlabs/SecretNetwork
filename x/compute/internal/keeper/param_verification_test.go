@@ -9,7 +9,9 @@ import (
 	authtypes "github.com/enigmampc/cosmos-sdk/x/auth/types"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/crypto/multisig"
+	"github.com/tendermint/tendermint/crypto/sr25519"
 	"os"
 	"testing"
 )
@@ -623,9 +625,6 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 
 	fmt.Printf("wallet A sig: %v\n", walletASignature)
 
-	//err = multimultiSig.AddSignatureFromPubKey(walletASignature, privKeyA.PubKey(), []crypto.PubKey{multisigPubkey, privKeyA.PubKey(), privKeyB.PubKey()})
-	//err = multimultiSig.AddSignatureFromPubKey(multiSignature.Marshal(), multisigPubkey, []crypto.PubKey{multisigPubkey, privKeyA.PubKey(), privKeyB.PubKey()})
-
 	err = multimultiSig.AddSignatureFromPubKey(walletASignature, privKeyA.PubKey(), []crypto.PubKey{privKeyA.PubKey(), privKeyB.PubKey(), multisigPubkey})
 	err = multimultiSig.AddSignatureFromPubKey(multiSignature.Marshal(), multisigPubkey, []crypto.PubKey{privKeyA.PubKey(), privKeyB.PubKey(), multisigPubkey})
 
@@ -668,4 +667,123 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 		},
 		wasmEvents,
 	)
+}
+
+func TestInvalidKeyType(t *testing.T) {
+	ctx, keeper, tempDir, codeID, _, _, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	edKey := ed25519.GenPrivKey()
+	edPub := edKey.PubKey()
+	edAddr := sdk.AccAddress(edPub.Address())
+	baseAcct := auth.NewBaseAccountWithAddress(edAddr)
+	_ = baseAcct.SetCoins(sdk.NewCoins(sdk.NewInt64Coin("denom", 100000)))
+	_ = baseAcct.SetPubKey(edPub)
+	keeper.accountKeeper.SetAccount(ctx, &baseAcct)
+
+	initMsg := `{"nop":{}}`
+
+	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
+	require.NoError(t, err)
+	//nonce := initMsgBz[0:32]
+
+	sdkMsg := types.MsgInstantiateContract{
+		Sender:    edAddr,
+		Admin:     nil,
+		Code:      codeID,
+		Label:     "demo contract 1",
+		InitMsg:   initMsgBz,
+		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
+	}
+
+	ctx = prepareInitSignedTxMultipleMsgs(t, keeper, ctx, []sdk.AccAddress{edAddr}, []crypto.PrivKey{edKey}, []sdk.Msg{sdkMsg}, codeID)
+
+	_, err = keeper.Instantiate(ctx, codeID, edAddr, nil, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	require.Contains(t, err.Error(), "failed to verify transaction signature")
+
+	ctx, keeper, tempDir, codeID, _, _, _, _ = setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	srKey := sr25519.GenPrivKey()
+	srPub := srKey.PubKey()
+	srAddr := sdk.AccAddress(srPub.Address())
+	baseAcct = auth.NewBaseAccountWithAddress(srAddr)
+	_ = baseAcct.SetCoins(sdk.NewCoins(sdk.NewInt64Coin("denom", 100000)))
+	_ = baseAcct.SetPubKey(srPub)
+	keeper.accountKeeper.SetAccount(ctx, &baseAcct)
+
+	ctx = prepareInitSignedTxMultipleMsgs(t, keeper, ctx, []sdk.AccAddress{srAddr}, []crypto.PrivKey{srKey}, []sdk.Msg{sdkMsg}, codeID)
+
+	_, err = keeper.Instantiate(ctx, codeID, srAddr, nil, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	require.Contains(t, err.Error(), "failed to verify transaction signature")
+}
+
+func TestInvalidKeyTypeInMultisig(t *testing.T) {
+	ctx, keeper, tempDir, codeID, _, privKeyA, _, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	edKey := ed25519.GenPrivKey()
+	edPub := edKey.PubKey()
+	edAddr := sdk.AccAddress(edPub.Address())
+	baseAcct := auth.NewBaseAccountWithAddress(edAddr)
+	_ = baseAcct.SetCoins(sdk.NewCoins(sdk.NewInt64Coin("denom", 100000)))
+	_ = baseAcct.SetPubKey(edPub)
+	keeper.accountKeeper.SetAccount(ctx, &baseAcct)
+
+	multisigPubkey := generateMultisigAddrExisting(2, ctx, keeper, []crypto.PubKey{edPub, privKeyA.PubKey(), privKeyB.PubKey()})
+
+	initMsg := `{"nop":{}}`
+
+	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
+	require.NoError(t, err)
+
+	sdkMsg := types.MsgInstantiateContract{
+		Sender:    sdk.AccAddress(multisigPubkey.Address()),
+		Admin:     nil,
+		Code:      codeID,
+		Label:     "demo contract 1",
+		InitMsg:   initMsgBz,
+		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
+	}
+
+	tx := authtypes.StdTx{
+		Msgs:       []sdk.Msg{sdkMsg},
+		Fee:        authtypes.StdFee{},
+		Signatures: []authtypes.StdSignature{},
+		Memo:       "",
+	}
+
+	multiSignature := generateSignatures(
+		t,
+		ctx,
+		keeper,
+		[]crypto.PrivKey{privKeyA, privKeyB, edKey},
+		[]crypto.PubKey{privKeyA.PubKey(), privKeyB.PubKey(), edPub},
+		multisigPubkey.Address().Bytes(),
+		tx,
+		3,
+	)
+
+	stdSig := authtypes.StdSignature{
+		PubKey:    multisigPubkey,
+		Signature: multiSignature.Marshal(),
+	}
+
+	tx.Signatures = []authtypes.StdSignature{stdSig}
+	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	require.NoError(t, err)
+
+	ctx = ctx.WithTxBytes(txBytes)
+
+	_, err = keeper.Instantiate(
+		ctx,
+		codeID,
+		sdk.AccAddress(multisigPubkey.Address()),
+		nil,
+		initMsgBz,
+		"demo contract 1",
+		sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
+		nil,
+	)
+	require.Contains(t, err.Error(), "failed to verify transaction signature")
 }
