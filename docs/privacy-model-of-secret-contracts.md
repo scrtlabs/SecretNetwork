@@ -59,8 +59,8 @@ Inputs that are encrypted are known only to the transaction sender and to the co
 | `env.block.height`       | `u64`                    | No         | No       |       |
 | `env.block.time`         | `u64`                    | No         | No       |       |
 | `env.block.chain_id`     | `String`                 | No         | No       |       |
-| `env.message.sender`     | `CanonicalAddr`          | No         | Yes      |       |
 | `env.message.sent_funds` | `Vec<Coin>`              | No         | No       |       |
+| `env.message.sender`     | `CanonicalAddr`          | No         | Yes      |       |
 | `env.contract.address`   | `CanonicalAddr`          | No         | Yes      |       |
 | `env.contract_code_hash` | `String`                 | No         | Yes      |       |
 | `msg`                    | `InitMsg` or `HandleMsg` | Yes        | Yes      |       |
