@@ -73,6 +73,7 @@ pub enum QueryMsg {
         depth: u32,
         work: u32,
         contract: HumanAddr,
+        contract_code_hash: String,
     },
 }
 
@@ -297,7 +298,14 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             depth,
             work,
             contract,
-        } => to_binary(&query_recurse(deps, depth, work, contract)?),
+            contract_code_hash,
+        } => to_binary(&query_recurse(
+            deps,
+            depth,
+            work,
+            contract,
+            contract_code_hash,
+        )?),
     }
 }
 
@@ -326,6 +334,7 @@ fn query_recurse<S: Storage, A: Api, Q: Querier>(
     depth: u32,
     work: u32,
     contract: HumanAddr,
+    contract_code_hash: String,
 ) -> StdResult<RecurseResponse> {
     // perform all hashes as requested
     let mut hashed: Vec<u8> = contract.as_str().as_bytes().to_vec();
@@ -344,10 +353,12 @@ fn query_recurse<S: Storage, A: Api, Q: Querier>(
             depth: depth - 1,
             work,
             contract: contract.clone(),
+            contract_code_hash: contract_code_hash.clone(),
         };
         let query = QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: contract,
             msg: to_binary(&req)?,
+            callback_code_hash: contract_code_hash.clone(),
         });
         deps.querier.query(&query)
     }

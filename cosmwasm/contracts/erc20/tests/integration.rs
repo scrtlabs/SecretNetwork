@@ -8,11 +8,11 @@
 //!      let mut deps = mock_dependencies(20, &[]);
 //!    to
 //!      let mut deps = mock_instance(WASM, &[]);
-//! 3. If you access raw storage, where ever you see something like:
-//!      deps.storage.get(CONFIG_KEY).expect("no data stored");
+//! 3. If you access raw storage, wherever you see something like:
+//!      deps.storage.get(CONFIG_KEY).0.expect("error getting data").expect("no data stored");
 //!    replace it with:
 //!      deps.with_storage(|store| {
-//!          let data = store.get(CONFIG_KEY).expect("no data stored");
+//!          let data = store.get(CONFIG_KEY).0.expect("error getting data").expect("no data stored");
 //!          //...
 //!      });
 //! 4. Anywhere you see query(&deps, ...) you must replace it with query(&mut deps, ...)
@@ -30,8 +30,8 @@ use cw_erc20::msg::{HandleMsg, InitMsg, InitialBalance, QueryMsg};
 
 static WASM: &[u8] = include_bytes!("../target/wasm32-unknown-unknown/release/cw_erc20.wasm");
 
-fn mock_env_height<A: Api>(api: &A, signer: &HumanAddr, height: u64, time: u64) -> Env {
-    let mut env = mock_env(api, signer, &[]);
+fn mock_env_height(signer: &HumanAddr, height: u64, time: u64) -> Env {
+    let mut env = mock_env(signer, &[]);
     env.block.height = height;
     env.block.time = time;
     env
@@ -41,8 +41,8 @@ fn get_constants<S: Storage>(storage: &S) -> Constants {
     let key = [&to_length_prefixed(PREFIX_CONFIG), KEY_CONSTANTS].concat();
     let data = storage
         .get(&key)
-        .expect("error getting data")
         .0
+        .expect("error getting data")
         .expect("no config data stored");
     from_slice(&data).expect("invalid data")
 }
@@ -51,8 +51,8 @@ fn get_total_supply<S: Storage>(storage: &S) -> u128 {
     let key = [&to_length_prefixed(PREFIX_CONFIG), KEY_TOTAL_SUPPLY].concat();
     let data = storage
         .get(&key)
-        .expect("error getting data")
         .0
+        .expect("error getting data")
         .expect("no decimals data stored");
     bytes_to_u128(&data).unwrap()
 }
@@ -60,6 +60,7 @@ fn get_total_supply<S: Storage>(storage: &S) -> u128 {
 fn get_balance<S: Storage, A: Api>(api: &A, storage: &S, address: &HumanAddr) -> u128 {
     let address_key = api
         .canonical_address(address)
+        .0
         .expect("canonical_address failed");
     let key = [
         &to_length_prefixed(&PREFIX_BALANCES),
@@ -77,9 +78,11 @@ fn get_allowance<S: Storage, A: Api>(
 ) -> u128 {
     let owner_raw_address = api
         .canonical_address(owner)
+        .0
         .expect("canonical_address failed");
     let spender_raw_address = api
         .canonical_address(spender)
+        .0
         .expect("canonical_address failed");
     let key = [
         &to_length_prefixed_nested(&[PREFIX_ALLOWANCES, owner_raw_address.as_slice()]),
@@ -92,7 +95,7 @@ fn get_allowance<S: Storage, A: Api>(
 // Reads 16 byte storage value into u128
 // Returns zero if key does not exist. Errors if data found that is not 16 bytes
 fn read_u128<S: Storage>(store: &S, key: &[u8]) -> u128 {
-    let result = store.get(key).unwrap().0;
+    let result = store.get(key).0.unwrap();
     match result {
         Some(data) => bytes_to_u128(&data).unwrap(),
         None => 0u128,
@@ -136,7 +139,7 @@ fn init_msg() -> InitMsg {
 fn init_works() {
     let mut deps = mock_instance(WASM, &[]);
     let init_msg = init_msg();
-    let params = mock_env_height(&deps.api, &address(0), 876, 0);
+    let params = mock_env_height(&address(0), 876, 0);
     let res: InitResponse = init(&mut deps, params, init_msg).unwrap();
     assert_eq!(0, res.messages.len());
 
@@ -164,7 +167,7 @@ fn init_works() {
 fn transfer_works() {
     let mut deps = mock_instance(WASM, &[]);
     let init_msg = init_msg();
-    let env1 = mock_env_height(&deps.api, &address(0), 876, 0);
+    let env1 = mock_env_height(&address(0), 876, 0);
     let res: InitResponse = init(&mut deps, env1, init_msg).unwrap();
     assert_eq!(0, res.messages.len());
 
@@ -185,7 +188,7 @@ fn transfer_works() {
         recipient: recipient.clone(),
         amount: Uint128::from(1u128),
     };
-    let env2 = mock_env_height(&deps.api, &sender, 877, 0);
+    let env2 = mock_env_height(&sender, 877, 0);
     let transfer_response: HandleResponse = handle(&mut deps, env2, transfer_msg).unwrap();
     assert_eq!(transfer_response.messages.len(), 0);
     assert_eq!(
@@ -210,7 +213,7 @@ fn transfer_works() {
 fn approve_works() {
     let mut deps = mock_instance(WASM, &[]);
     let init_msg = init_msg();
-    let env1 = mock_env_height(&deps.api, &address(0), 876, 0);
+    let env1 = mock_env_height(&address(0), 876, 0);
     let res: InitResponse = init(&mut deps, env1, init_msg).unwrap();
     assert_eq!(0, res.messages.len());
 
@@ -230,7 +233,7 @@ fn approve_works() {
         spender: spender.clone(),
         amount: Uint128::from(42u128),
     };
-    let env2 = mock_env_height(&deps.api, &owner, 877, 0);
+    let env2 = mock_env_height(&owner, 877, 0);
     let approve_response: HandleResponse = handle(&mut deps, env2, approve_msg).unwrap();
     assert_eq!(approve_response.messages.len(), 0);
     assert_eq!(
@@ -254,7 +257,7 @@ fn approve_works() {
 fn transfer_from_works() {
     let mut deps = mock_instance(WASM, &[]);
     let init_msg = init_msg();
-    let env1 = mock_env_height(&deps.api, &address(0), 876, 0);
+    let env1 = mock_env_height(&address(0), 876, 0);
     let res: InitResponse = init(&mut deps, env1, init_msg).unwrap();
     assert_eq!(0, res.messages.len());
 
@@ -277,7 +280,7 @@ fn transfer_from_works() {
         spender: spender.clone(),
         amount: Uint128::from(42u128),
     };
-    let env2 = mock_env_height(&deps.api, &owner, 877, 0);
+    let env2 = mock_env_height(&owner, 877, 0);
     let approve_response: HandleResponse = handle(&mut deps, env2, approve_msg).unwrap();
     assert_eq!(approve_response.messages.len(), 0);
     assert_eq!(
@@ -295,7 +298,7 @@ fn transfer_from_works() {
         recipient: recipient.clone(),
         amount: Uint128::from(2u128),
     };
-    let env3 = mock_env_height(&deps.api, &spender, 878, 0);
+    let env3 = mock_env_height(&spender, 878, 0);
     let transfer_from_response: HandleResponse =
         handle(&mut deps, env3, transfer_from_msg).unwrap();
     assert_eq!(transfer_from_response.messages.len(), 0);
@@ -323,7 +326,7 @@ fn transfer_from_works() {
 fn burn_works() {
     let mut deps = mock_instance(WASM, &[]);
     let init_msg = init_msg();
-    let env1 = mock_env_height(&deps.api, &address(0), 876, 0);
+    let env1 = mock_env_height(&address(0), 876, 0);
     let res: InitResponse = init(&mut deps, env1, init_msg).unwrap();
     assert_eq!(0, res.messages.len());
 
@@ -341,7 +344,7 @@ fn burn_works() {
     let burn_msg = HandleMsg::Burn {
         amount: Uint128::from(1u128),
     };
-    let env2 = mock_env_height(&deps.api, &owner, 877, 0);
+    let env2 = mock_env_height(&owner, 877, 0);
     let burn_response: HandleResponse = handle(&mut deps, env2, burn_msg).unwrap();
     assert_eq!(burn_response.messages.len(), 0);
     assert_eq!(
@@ -365,7 +368,7 @@ fn burn_works() {
 fn can_query_balance_of_existing_address() {
     let mut deps = mock_instance(WASM, &[]);
     let init_msg = init_msg();
-    let env1 = mock_env_height(&deps.api, &address(0), 450, 550);
+    let env1 = mock_env_height(&address(0), 450, 550);
     let res: InitResponse = init(&mut deps, env1, init_msg).unwrap();
     assert_eq!(0, res.messages.len());
 
