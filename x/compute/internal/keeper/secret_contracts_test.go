@@ -607,11 +607,6 @@ func TestInitContractError(t *testing.T) {
 		require.NotNil(t, err.NotFound)
 		require.Equal(t, "za za 🤯", err.NotFound.Kind)
 	})
-	t.Run("null_pointer", func(t *testing.T) {
-		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"null_pointer"}}`, true, defaultGasForTests)
-
-		require.NotNil(t, err.NullPointer)
-	})
 	t.Run("parse_err", func(t *testing.T) {
 		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, `{"contract_error":{"error_type":"parse_err"}}`, true, defaultGasForTests)
 
@@ -671,11 +666,6 @@ func TestExecContractError(t *testing.T) {
 		require.NotNil(t, err.NotFound)
 		require.Equal(t, "za za 🤯", err.NotFound.Kind)
 	})
-	t.Run("null_pointer", func(t *testing.T) {
-		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"null_pointer"}}`, true, defaultGasForTests, 0)
-
-		require.NotNil(t, err.NullPointer)
-	})
 	t.Run("parse_err", func(t *testing.T) {
 		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, `{"contract_error":{"error_type":"parse_err"}}`, true, defaultGasForTests, 0)
 
@@ -734,11 +724,6 @@ func TestQueryContractError(t *testing.T) {
 
 		require.NotNil(t, err.NotFound)
 		require.Equal(t, "za za 🤯", err.NotFound.Kind)
-	})
-	t.Run("null_pointer", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"null_pointer"}}`, true, defaultGasForTests)
-
-		require.NotNil(t, err.NullPointer)
 	})
 	t.Run("parse_err", func(t *testing.T) {
 		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"parse_err"}}`, true, defaultGasForTests)
