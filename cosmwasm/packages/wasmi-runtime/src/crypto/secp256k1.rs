@@ -6,18 +6,20 @@ use crate::crypto::traits::PubKey;
 use crate::crypto::CryptoError;
 use ripemd160::{Digest, Ripemd160};
 use secp256k1::Secp256k1;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest as Sha2Digest, Sha256};
 
 const SECP256K1_PREFIX: [u8; 4] = [235, 90, 233, 135];
 
 // TODO: Find a way to implement this better. secp256k1 is not ported to sgx, thus does not implement mesalock's serde and cannot be used
-pub type Secp256k1PubKey = Vec<u8>;
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Secp256k1PubKey(Vec<u8>);
 
 impl PubKey for Secp256k1PubKey {
     fn get_address(&self) -> CanonicalAddr {
         // Ref: https://github.com/tendermint/spec/blob/master/spec/blockchain/encoding.md#secp256k1
         let mut hasher = Ripemd160::new();
-        hasher.update(Sha256::digest(self));
+        hasher.update(Sha256::digest(&self.0));
         CanonicalAddr(Binary(hasher.finalize().to_vec()))
     }
 
@@ -30,16 +32,16 @@ impl PubKey for Secp256k1PubKey {
         let mut length = Vec::<u8>::new();
 
         // This line can't fail since it could only fail if `length` does not have sufficient capacity to encode
-        if prost::encode_length_delimiter(self.len(), &mut length).is_err() {
+        if prost::encode_length_delimiter(self.0.len(), &mut length).is_err() {
             error!(
                 "Could not encode length delimiter: {:?}. This should not happen",
-                self.len()
+                self.0.len()
             );
             return vec![];
         }
 
         encoded.extend_from_slice(&length);
-        encoded.extend_from_slice(self);
+        encoded.extend_from_slice(&self.0);
 
         encoded
     }
@@ -59,10 +61,11 @@ impl PubKey for Secp256k1PubKey {
             error!("Malformed signature: {:?}", err);
             CryptoError::VerificationError
         })?;
-        let sec_public_key = secp256k1::PublicKey::from_slice(self.as_slice()).map_err(|err| {
-            error!("Malformed public key: {:?}", err);
-            CryptoError::VerificationError
-        })?;
+        let sec_public_key =
+            secp256k1::PublicKey::from_slice(self.0.as_slice()).map_err(|err| {
+                error!("Malformed public key: {:?}", err);
+                CryptoError::VerificationError
+            })?;
 
         verifier
             .verify(&msg, &sec_signature, &sec_public_key)
@@ -77,6 +80,12 @@ impl PubKey for Secp256k1PubKey {
         Ok(())
     }
 }
+//
+// impl PartialEq for Secp256k1PubKey {
+//     fn eq(&self, other: &Self) -> bool {
+//         unimplemented!()
+//     }
+// }
 
 // TODO: Can we get rid of this comment below?
 

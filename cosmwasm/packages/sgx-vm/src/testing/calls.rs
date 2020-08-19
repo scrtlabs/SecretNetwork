@@ -1,6 +1,8 @@
 //! This file has some helpers for integration tests.
 //! They should be imported via full path to ensure there is no confusion
 //! use cosmwasm_vm::testing::X
+
+/*
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt;
@@ -82,3 +84,4 @@ pub fn query<
     let serialized_msg = to_vec(&msg)?;
     call_query(instance, &serialized_msg).expect("VM error")
 }
+*/
