@@ -1,14 +1,14 @@
 package keeper
 
 import (
-	"encoding/base64"
 	"bytes"
+	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	"path/filepath"
 
-	"github.com/tendermint/tendermint/crypto"
 	"github.com/pkg/errors"
+	"github.com/tendermint/tendermint/crypto"
 
 	wasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
@@ -81,10 +81,10 @@ func NewKeeper(
 	}
 
 	/*
-	// set KeyTable if it has not already been set
-	if !paramSpace.HasKeyTable() {
-		paramSpace = paramSpace.WithKeyTable(types.ParamKeyTable())
-	}
+		// set KeyTable if it has not already been set
+		if !paramSpace.HasKeyTable() {
+			paramSpace = paramSpace.WithKeyTable(types.ParamKeyTable())
+		}
 	*/
 
 	keeper := Keeper{
@@ -95,7 +95,7 @@ func NewKeeper(
 		bankKeeper:    bankKeeper,
 		messenger:     NewMessageHandler(router, customEncoders),
 		queryGasLimit: wasmConfig.SmartQueryGasLimit,
-		authZPolicy:   DefaultAuthorizationPolicy{},
+		// authZPolicy:   DefaultAuthorizationPolicy{},
 		//paramSpace:    paramSpace,
 	}
 	keeper.queryPlugins = DefaultQueryPlugins(bankKeeper, stakingKeeper, &keeper).Merge(customPlugins)
@@ -128,34 +128,37 @@ func (k Keeper) setParams(ctx sdk.Context, ps types.Params) {
 */
 
 // Create uploads and compiles a WASM contract, returning a short identifier for the contract
-func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, source string, builder string, instantiateAccess *types.AccessConfig) (codeID uint64, err error) {
-	return k.create(ctx, creator, wasmCode, source, builder, instantiateAccess, k.authZPolicy)
+func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, source string, builder string) (codeID uint64, err error) {
+	return k.create(ctx, creator, wasmCode, source, builder, &types.AccessConfig{Type: types.Everybody}, k.authZPolicy)
 }
 
 func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, source string, builder string, instantiateAccess *types.AccessConfig, authZ AuthorizationPolicy) (codeID uint64, err error) {
 	/*
-	if !authZ.CanCreateCode(k.getUploadAccessConfig(ctx), creator) {
-		return 0, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "can not create code")
-	}
+		if !authZ.CanCreateCode(k.getUploadAccessConfig(ctx), creator) {
+			return 0, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "can not create code")
+		}
 	*/
 	wasmCode, err = uncompress(wasmCode)
 	if err != nil {
+		fmt.Println("111111111")
 		return 0, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
 	}
 	ctx.GasMeter().ConsumeGas(CompileCost*uint64(len(wasmCode)), "Compiling WASM Bytecode")
 
 	codeHash, err := k.wasmer.Create(wasmCode)
 	if err != nil {
+		fmt.Println("2222222222")
+
 		// return 0, sdkerrors.Wrap(err, "cosmwasm create")
 		return 0, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
 	}
 	store := ctx.KVStore(k.storeKey)
 	codeID = k.autoIncrementID(ctx, types.KeyLastCodeID)
 	/*
-	if instantiateAccess == nil {
-		defaultAccessConfig := k.getInstantiateAccessConfig(ctx).With(creator)
-		instantiateAccess = &defaultAccessConfig
-	}
+		if instantiateAccess == nil {
+			defaultAccessConfig := k.getInstantiateAccessConfig(ctx).With(creator)
+			instantiateAccess = &defaultAccessConfig
+		}
 	*/
 	codeInfo := types.NewCodeInfo(codeHash, creator, source, builder, *instantiateAccess)
 	// 0x01 | codeID (uint64) -> ContractInfo
@@ -189,10 +192,10 @@ func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeIn
 
 // Instantiate creates an instance of a WASM contract
 func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins) (sdk.AccAddress, error) {
-	return k.instantiate(ctx, codeID, creator, admin, initMsg, label, deposit, k.authZPolicy)
+	return k.instantiate(ctx, codeID, creator, admin, initMsg, label, deposit)
 }
 
-func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, authZ AuthorizationPolicy) (sdk.AccAddress, error) {
+func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins) (sdk.AccAddress, error) {
 	ctx.GasMeter().ConsumeGas(InstanceCost, "Loading CosmWasm module: init")
 
 	// create contract address
@@ -236,9 +239,9 @@ func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	var codeInfo types.CodeInfo
 	k.cdc.MustUnmarshalBinaryBare(bz, &codeInfo)
 
-	if !authZ.CanInstantiateContract(codeInfo.InstantiateConfig, creator) {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "can not instantiate")
-	}
+	// if !authZ.CanInstantiateContract(codeInfo.InstantiateConfig, creator) {
+	// 	return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "can not instantiate")
+	// }
 
 	// prepare params for contract instantiate call
 	params := types.NewEnv(ctx, creator, deposit, contractAddress, nil)

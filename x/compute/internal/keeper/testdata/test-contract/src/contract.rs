@@ -471,13 +471,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         }
         HandleMsg::LogMsgSender {} => Ok(HandleResponse {
             messages: vec![],
-            log: vec![log(
-                "msg.sender",
-                deps.api
-                    .human_address(&env.message.sender)
-                    .unwrap()
-                    .to_string(),
-            )],
+            log: vec![log("msg.sender", env.message.sender.to_string())],
             data: None,
         }),
         HandleMsg::CallbackToLogMsgSender { to, code_hash } => Ok(HandleResponse {

@@ -1,8 +1,9 @@
 package types
 
 import (
-	sdkErrors "github.com/enigmampc/cosmos-sdk/types/errors"
 	"strings"
+
+	sdkErrors "github.com/enigmampc/cosmos-sdk/types/errors"
 )
 
 // Codes for wasm contract errors
@@ -13,7 +14,7 @@ var (
 	DefaultCodespace = ModuleName
 
 	// ErrCreateFailed error for wasm code that has already been uploaded or failed
-	ErrCreateFailed = sdkErrors.Register(DefaultCodespace, 11, "create contract failed")
+	ErrCreateFailed = sdkErrors.Register(DefaultCodespace, 1, "create contract failed")
 
 	// ErrInstantiateFailed error for rust instantiate contract failure
 	ErrInstantiateFailed = sdkErrors.Register(DefaultCodespace, 2, "instantiate contract failed")

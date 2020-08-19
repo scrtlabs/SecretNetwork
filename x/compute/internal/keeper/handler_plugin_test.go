@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
@@ -143,7 +142,7 @@ func TestEncoding(t *testing.T) {
 			output: []sdk.Msg{
 				types.MsgInstantiateContract{
 					Sender:    addr1,
-					CodeID:      7,
+					CodeID:    7,
 					Label:     "",
 					InitMsg:   jsonMsg,
 					InitFunds: sdk.NewCoins(sdk.NewInt64Coin("eth", 123)),

@@ -46,7 +46,7 @@ func TestGenesisExportImport(t *testing.T) {
 		f.Fuzz(&contract)
 		f.Fuzz(&stateModels)
 		f.NilChance(0).Fuzz(&history)
-		codeID, err := srcKeeper.Create(srcCtx, codeInfo.Creator, wasmCode, codeInfo.Source, codeInfo.Builder, &codeInfo.InstantiateConfig)
+		codeID, err := srcKeeper.Create(srcCtx, codeInfo.Creator, wasmCode, codeInfo.Source, codeInfo.Builder)
 		require.NoError(t, err)
 		contract.CodeID = codeID
 		contractAddr := srcKeeper.generateContractAddress(srcCtx, codeID)
@@ -56,7 +56,7 @@ func TestGenesisExportImport(t *testing.T) {
 	}
 	var wasmParams types.Params
 	f.Fuzz(&wasmParams)
-	srcKeeper.setParams(srcCtx, wasmParams)
+	// srcKeeper.setParams(srcCtx, wasmParams)
 
 	// export
 	exportedState := ExportGenesis(srcCtx, srcKeeper)
@@ -492,10 +492,10 @@ func setupKeeper(t *testing.T) (Keeper, sdk.Context, []sdk.StoreKey, func()) {
 		Time:   time.Date(2020, time.April, 22, 12, 0, 0, 0, time.UTC),
 	}, false, log.NewNopLogger())
 	cdc := MakeTestCodec()
-	pk := params.NewKeeper(cdc, keyParams, tkeyParams)
+	// pk := params.NewKeeper(cdc, keyParams, tkeyParams)
 	wasmConfig := wasmTypes.DefaultWasmConfig()
-	srcKeeper := NewKeeper(cdc, keyWasm, pk.Subspace(wasmTypes.DefaultParamspace), auth.AccountKeeper{}, nil, staking.Keeper{}, nil, tempDir, wasmConfig, "", nil, nil)
-	srcKeeper.setParams(ctx, wasmTypes.DefaultParams())
+	srcKeeper := NewKeeper(cdc, keyWasm, auth.AccountKeeper{}, nil, staking.Keeper{}, nil, tempDir, wasmConfig, "", nil, nil)
+	// srcKeeper.setParams(ctx, wasmTypes.DefaultParams())
 
 	return srcKeeper, ctx, []sdk.StoreKey{keyWasm, keyParams}, cleanup
 }

@@ -76,7 +76,7 @@ func TestCreate(t *testing.T) {
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
-	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "", nil)
+	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), contractID)
 	// and verify content
@@ -122,13 +122,9 @@ func TestCreateStoresInstantiatePermission(t *testing.T) {
 
 			ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
 			accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-			keeper.setParams(ctx, types.Params{
-				UploadAccess:                 types.AllowEverybody,
-				DefaultInstantiatePermission: spec.srcPermission,
-			})
 			fundAccounts(ctx, accKeeper, myAddr, deposit)
 
-			codeID, err := keeper.Create(ctx, myAddr, wasmCode, "https://github.com/CosmWasm/wasmd/blob/master/x/wasm/testdata/escrow.wasm", "any/builder:tag", nil)
+			codeID, err := keeper.Create(ctx, myAddr, wasmCode, "https://github.com/CosmWasm/wasmd/blob/master/x/wasm/testdata/escrow.wasm", "any/builder:tag")
 			require.NoError(t, err)
 
 			codeInfo := keeper.GetCodeInfo(ctx, codeID)
@@ -176,10 +172,7 @@ func TestCreateWithParamPermissions(t *testing.T) {
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
-			params := types.DefaultParams()
-			params.UploadAccess = spec.srcPermission
-			keeper.setParams(ctx, params)
-			_, err := keeper.Create(ctx, creator, wasmCode, "https://github.com/CosmWasm/wasmd/blob/master/x/wasm/testdata/escrow.wasm", "any/builder:tag", nil)
+			_, err := keeper.Create(ctx, creator, wasmCode, "https://github.com/CosmWasm/wasmd/blob/master/x/wasm/testdata/escrow.wasm", "any/builder:tag")
 			require.True(t, spec.expError.Is(err), err)
 			if spec.expError != nil {
 				return
@@ -202,12 +195,12 @@ func TestCreateDuplicate(t *testing.T) {
 	require.NoError(t, err)
 
 	// create one copy
-	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "", nil)
+	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), contractID)
 
 	// create second copy
-	duplicateID, err := keeper.Create(ctx, creator, wasmCode, "", "", nil)
+	duplicateID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 	require.Equal(t, uint64(2), duplicateID)
 
@@ -237,14 +230,14 @@ func TestCreateWithSimulation(t *testing.T) {
 	require.NoError(t, err)
 
 	// create this once in simulation mode
-	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "", nil)
+	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), contractID)
 
 	// then try to create it in non-simulation mode (should not fail)
 	ctx, keepers = CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
 	accKeeper, keeper = keepers.AccountKeeper, keepers.WasmKeeper
-	contractID, err = keeper.Create(ctx, creator, wasmCode, "", "", nil)
+	contractID, err = keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), contractID)
 
@@ -272,7 +265,7 @@ func TestIsSimulationMode(t *testing.T) {
 			exp: true,
 		},
 	}
-	for msg, _ := range specs {
+	for msg := range specs {
 		t.Run(msg, func(t *testing.T) {
 			//require.Equal(t, spec.exp, isSimulationMode(spec.ctx))
 		})
@@ -292,7 +285,7 @@ func TestCreateWithGzippedPayload(t *testing.T) {
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm.gzip")
 	require.NoError(t, err)
 
-	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "", nil)
+	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), contractID)
 	// and verify content
@@ -316,7 +309,7 @@ func TestInstantiate(t *testing.T) {
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
-	contractID, err := keeper.Create(ctx, creator, wasmCode, "https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/contracts/hackatom/src/contract.rs", "", nil)
+	contractID, err := keeper.Create(ctx, creator, wasmCode, "https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/contracts/hackatom/src/contract.rs", "")
 	require.NoError(t, err)
 
 	_, _, bob := keyPubAddr()
@@ -356,16 +349,15 @@ func TestInstantiate(t *testing.T) {
 	require.NotNil(t, info)
 	require.Equal(t, info.Creator, creator)
 	require.Equal(t, info.CodeID, contractID)
-	require.Equal(t, info.InitMsg, initMsgBz)
 	require.Equal(t, info.Label, "demo contract 1")
 
 	// test that creating again with the same label will fail
-	addr, err = keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", nil)
+	_, err = keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", nil)
 	require.Error(t, err)
 
 	exp := []types.ContractCodeHistoryEntry{{
 		Operation: types.InitContractCodeHistoryType,
-		CodeID:    codeID,
+		CodeID:    contractID,
 		Updated:   types.NewAbsoluteTxPosition(ctx),
 		Msg:       json.RawMessage(initMsgBz),
 	}}
@@ -417,7 +409,7 @@ func TestInstantiateWithDeposit(t *testing.T) {
 			if spec.fundAddr {
 				fundAccounts(ctx, accKeeper, spec.srcActor, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)))
 			}
-			contractID, err := keeper.Create(ctx, spec.srcActor, wasmCode, "https://github.com/CosmWasm/wasmd/blob/master/x/wasm/testdata/escrow.wasm", "", nil)
+			contractID, err := keeper.Create(ctx, spec.srcActor, wasmCode, "https://github.com/CosmWasm/wasmd/blob/master/x/wasm/testdata/escrow.wasm", "")
 			require.NoError(t, err)
 
 			// when
@@ -489,7 +481,7 @@ func TestInstantiateWithPermissions(t *testing.T) {
 			accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 			fundAccounts(ctx, accKeeper, spec.srcActor, deposit)
 
-			contractID, err := keeper.Create(ctx, myAddr, wasmCode, "https://github.com/CosmWasm/wasmd/blob/master/x/wasm/testdata/escrow.wasm", "", &spec.srcPermission)
+			contractID, err := keeper.Create(ctx, myAddr, wasmCode, "https://github.com/CosmWasm/wasmd/blob/master/x/wasm/testdata/escrow.wasm", "")
 			require.NoError(t, err)
 
 			_, err = keeper.Instantiate(ctx, contractID, spec.srcActor, nil, initMsgBz, "demo contract 1", nil)
@@ -538,7 +530,7 @@ func TestExecute(t *testing.T) {
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
-	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "", nil)
+	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 
 	_, _, bob := keyPubAddr()
@@ -608,7 +600,6 @@ func TestExecute(t *testing.T) {
 		CodeHash: []byte(hex.EncodeToString(key)),
 		Msg:      initMsgBz,
 	}
-
 
 	msgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
@@ -689,7 +680,7 @@ func TestExecuteWithDeposit(t *testing.T) {
 			if spec.fundAddr {
 				fundAccounts(ctx, accKeeper, spec.srcActor, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)))
 			}
-			codeID, err := keeper.Create(ctx, spec.srcActor, wasmCode, "https://example.com/escrow.wasm", "", nil)
+			codeID, err := keeper.Create(ctx, spec.srcActor, wasmCode, "https://example.com/escrow.wasm", "")
 			require.NoError(t, err)
 
 			initMsg := InitMsg{Verifier: spec.srcActor, Beneficiary: spec.beneficiary}
@@ -747,7 +738,7 @@ func TestExecuteWithPanic(t *testing.T) {
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
-	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "", nil)
+	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 
 	_, _, bob := keyPubAddr()
@@ -783,7 +774,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
-	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "", nil)
+	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 
 	_, _, bob := keyPubAddr()
@@ -854,7 +845,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
-	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "", nil)
+	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 
 	_, _, bob := keyPubAddr()
@@ -911,9 +902,9 @@ func TestMigrate(t *testing.T) {
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
-	originalCodeID, err := keeper.Create(ctx, creator, wasmCode, "", "", nil)
+	originalCodeID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
-	newCodeID, err := keeper.Create(ctx, creator, wasmCode, "", "", nil)
+	newCodeID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 	require.NotEqual(t, originalCodeID, newCodeID)
 
@@ -1060,9 +1051,9 @@ func TestMigrateWithDispatchedMessage(t *testing.T) {
 	burnerCode, err := ioutil.ReadFile("./testdata/burner.wasm")
 	require.NoError(t, err)
 
-	originalContractID, err := keeper.Create(ctx, creator, wasmCode, "", "", nil)
+	originalContractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
-	burnerContractID, err := keeper.Create(ctx, creator, burnerCode, "", "", nil)
+	burnerContractID, err := keeper.Create(ctx, creator, burnerCode, "", "")
 	require.NoError(t, err)
 	require.NotEqual(t, originalContractID, burnerContractID)
 
@@ -1174,7 +1165,7 @@ func TestUpdateContractAdmin(t *testing.T) {
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
-	originalContractID, err := keeper.Create(ctx, creator, wasmCode, "", "", nil)
+	originalContractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 
 	_, _, anyAddr := keyPubAddr()
@@ -1251,7 +1242,7 @@ func TestClearContractAdmin(t *testing.T) {
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
-	originalContractID, err := keeper.Create(ctx, creator, wasmCode, "", "", nil)
+	originalContractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 
 	_, _, anyAddr := keyPubAddr()

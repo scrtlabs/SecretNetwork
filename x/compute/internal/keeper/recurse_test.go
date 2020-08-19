@@ -61,7 +61,7 @@ func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.Acc
 	// store the code
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
-	codeID, err := keeper.Create(ctx, creator, wasmCode, "", "", nil)
+	codeID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 
 	// instantiate the contract
@@ -148,7 +148,7 @@ func TestGasCostOnQuery(t *testing.T) {
 			recurse := tc.msg
 			recurse.Contract = contractAddr
 			msg := buildQuery(t, recurse)
-			data, err := keeper.QuerySmart(ctx, contractAddr, msg)
+			data, err := keeper.QuerySmart(ctx, contractAddr, msg, true)
 			require.NoError(t, err)
 
 			// check the gas is what we expected
@@ -314,7 +314,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			// if we expect out of gas, make sure this panics
 			if tc.expectOutOfGas {
 				require.Panics(t, func() {
-					_, err := keeper.QuerySmart(ctx, contractAddr, msg)
+					_, err := keeper.QuerySmart(ctx, contractAddr, msg, true)
 					t.Logf("Got error not panic: %#v", err)
 				})
 				assert.Equal(t, tc.expectQueriesFromContract, totalWasmQueryCounter)
@@ -322,7 +322,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			}
 
 			// otherwise, we expect a successful call
-			_, err := keeper.QuerySmart(ctx, contractAddr, msg)
+			_, err := keeper.QuerySmart(ctx, contractAddr, msg, true)
 			require.NoError(t, err)
 			assert.Equal(t, tc.expectedGas, ctx.GasMeter().GasConsumed())
 
