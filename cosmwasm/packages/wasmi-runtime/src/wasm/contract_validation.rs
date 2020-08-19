@@ -1,6 +1,9 @@
 use log::*;
 
-use crate::cosmwasm::types::{CanonicalAddr, CosmosSignature, Env, SigInfo};
+use crate::cosmwasm::encoding::Binary;
+use crate::cosmwasm::types::{
+    CanonicalAddr, CosmosSignature, Env, HumanAddr, SigInfo, SignDoc, SignDocWasmMsg,
+};
 use crate::crypto::traits::PubKey;
 use crate::crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
 use crate::wasm::io;
@@ -128,6 +131,24 @@ pub fn verify_params(
             error!("Callback signature verification failed");
         }
     } else {
+        trace!(
+            "Sign bytes are: {:?}",
+            String::from_utf8_lossy(sig_info.sign_bytes.as_slice())
+        );
+
+        let sign_doc: SignDoc =
+            serde_json::from_slice(sig_info.sign_bytes.as_slice()).map_err(|err| {
+                error!(
+                    "got an error while trying to deserialize sign doc bytes into json {:?}: {}",
+                    sig_info.sign_bytes.as_slice(),
+                    err
+                );
+                EnclaveError::FailedToDeserialize
+            })?;
+
+        trace!("sign doc: {:?}", sign_doc);
+
+        // Verify that signatures and sign bytes match
         sig_info
             .signature
             .get_public_key()
@@ -140,15 +161,11 @@ pub fn verify_params(
                 EnclaveError::FailedTxVerification
             })?;
 
-        if verify_sender(&sig_info.signature, &env.message.sender) {
-            trace!("Message verified! msg.sender is the tx signer");
+        if verify_signature_params(&sign_doc, sig_info, env, msg) {
+            trace!("Parameters verified successfully");
             return Ok(());
         } else {
-            error!(
-                "Message sender {:?} does not match with the message signer {:?}",
-                &env.message.sender,
-                &sig_info.signature.get_public_key().get_address()
-            );
+            error!("Parameter verification failed");
         }
     }
 
@@ -183,6 +200,81 @@ fn verify_callback_sig(
             callback_signature
         );
         return false;
+    }
+
+    true
+}
+
+fn verify_signature_params(
+    sign_doc: &SignDoc,
+    sig_info: &SigInfo,
+    env: &Env,
+    sent_msg: &SecretMessage,
+) -> bool {
+    trace!("Verifying sender..");
+    if !verify_sender(&sig_info.signature, &env.message.sender) {
+        error!(
+            "Message sender {:?} does not match with the message signer {:?}",
+            &env.message.sender,
+            &sig_info.signature.get_public_key().get_address()
+        );
+        return false;
+    }
+
+    trace!("Verifying message..");
+    let msg = sign_doc.msgs.iter().find(|&m| match m {
+        SignDocWasmMsg::Execute { msg, .. } | SignDocWasmMsg::Instantiate { init_msg: msg, .. } => {
+            let binary_msg_result = Binary::from_base64(msg);
+            if let Ok(binary_msg) = binary_msg_result {
+                return Binary(sent_msg.to_slice().to_vec()) == binary_msg;
+            }
+
+            false
+        }
+    });
+
+    if msg.is_none() {
+        error!(
+            "Message sent to contract {:?} is not equal to any signed messages {:?}",
+            sent_msg.to_slice(),
+            sign_doc.msgs
+        );
+        return false;
+    }
+    let msg = msg.unwrap();
+
+    // Contract address is relevant only to execute, since during sending an instantiate message the contract address is not yet known
+    if let SignDocWasmMsg::Execute { contract, .. } = msg {
+        trace!("Verifying contract address..");
+        if let Ok(human_addr) = HumanAddr::from_canonical(env.contract.address.clone()) {
+            if human_addr != *contract {
+                error!(
+                    "Contract address sent to enclave {:?} is not the same as the signed one {:?}",
+                    human_addr, *contract
+                );
+                return false;
+            }
+        }
+    }
+
+    trace!("Verifying funds..");
+    match msg {
+        SignDocWasmMsg::Execute { sent_funds, .. }
+        | SignDocWasmMsg::Instantiate {
+            init_funds: sent_funds,
+            ..
+        } => {
+            if (env.message.sent_funds.is_some()
+                && env.message.sent_funds.clone().unwrap() != *sent_funds)
+                || (env.message.sent_funds.is_none() && !sent_funds.is_empty())
+            {
+                error!(
+                    "Funds sent to enclave {:?} are not the same as the signed one {:?}",
+                    env.message.sent_funds, *sent_funds,
+                );
+                return false;
+            }
+        }
     }
 
     true

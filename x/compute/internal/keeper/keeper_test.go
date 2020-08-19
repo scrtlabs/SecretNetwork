@@ -475,7 +475,7 @@ func TestExecuteWithPanic(t *testing.T) {
 		Code:      contractID,
 		Label:     "demo contract 1",
 		InitMsg:   initMsgBz,
-		InitFunds: nil,
+		InitFunds: deposit,
 	}}, []crypto.PrivKey{creatorPrivKey}, []uint64{creatorAcc.GetAccountNumber()}, []uint64{creatorAcc.GetSequence() - 1}, authtypes.StdFee{
 		Amount: nil,
 		Gas:    0,

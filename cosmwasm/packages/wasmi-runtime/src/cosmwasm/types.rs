@@ -355,14 +355,15 @@ impl PubKey for PubKeyKind {
     }
 }
 
+// Should be in sync with https://github.com/cosmos/cosmos-sdk/blob/v0.38.3/x/auth/types/stdtx.go#L216
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct SignDoc {
-    account_number: String,
-    chain_id: String,
-    fee: Value,
-    memo: String,
-    msgs: Vec<Value>,
-    sequence: String,
+    pub account_number: String,
+    pub chain_id: String,
+    pub fee: Value,
+    pub memo: String,
+    pub msgs: Vec<SignDocWasmMsg>,
+    pub sequence: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -370,4 +371,26 @@ pub struct SigInfo {
     pub sign_bytes: Binary,
     pub signature: CosmosSignature,
     pub callback_sig: Option<Binary>,
+}
+
+// This struct is basically the smae as WasmMsg, but serializes/deserializes differently
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case", tag = "type", content = "value")]
+pub enum SignDocWasmMsg {
+    #[serde(alias = "wasm/execute")]
+    Execute {
+        contract: HumanAddr,
+        /// msg is the json-encoded HandleMsg struct (as raw Binary)
+        msg: String,
+        sent_funds: Vec<Coin>,
+        callback_sig: Option<Vec<u8>>,
+    },
+    #[serde(alias = "wasm/instantiate")]
+    Instantiate {
+        code_id: String,
+        init_msg: String,
+        init_funds: Vec<Coin>,
+        label: Option<String>,
+        callback_sig: Option<Vec<u8>>,
+    },
 }
