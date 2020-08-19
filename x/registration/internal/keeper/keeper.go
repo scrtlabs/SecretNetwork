@@ -42,7 +42,7 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	seedPath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
 
 	if !fileExists(seedPath) {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, "Seed configuration not found. Did you initialize the node?"))
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Searching for Seed configuration in path: %s was not found. Did you initialize the node?", seedPath)))
 	}
 
 	// get PK from CLI

@@ -10,7 +10,8 @@ pub struct Env {
     pub message: MessageInfo,
     pub contract: ContractInfo,
     pub contract_key: Option<String>,
-    pub contract_code_hash: Option<String>,
+    #[serde(default)]
+    pub contract_code_hash: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, JsonSchema)]

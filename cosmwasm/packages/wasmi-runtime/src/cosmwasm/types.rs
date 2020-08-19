@@ -74,7 +74,8 @@ pub struct Env {
     pub message: MessageInfo,
     pub contract: ContractInfo,
     pub contract_key: Option<String>,
-    pub contract_code_hash: Option<String>,
+    #[serde(default)]
+    pub contract_code_hash: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
@@ -222,8 +223,9 @@ pub enum WasmMsg {
         /// msg is the json-encoded InitMsg struct (as raw Binary)
         msg: Binary,
         send: Vec<Coin>,
-        /// optional human-readable label for the contract
-        label: Option<String>,
+        /// Human-readable label for the contract
+        #[serde(default)]
+        label: String,
     },
 }
 

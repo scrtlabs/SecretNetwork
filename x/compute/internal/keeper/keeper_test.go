@@ -85,6 +85,7 @@ func TestCreate(t *testing.T) {
 	require.Equal(t, wasmCode, storedCode)
 }
 
+/*
 func TestCreateStoresInstantiatePermission(t *testing.T) {
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
@@ -180,6 +181,7 @@ func TestCreateWithParamPermissions(t *testing.T) {
 		})
 	}
 }
+*/
 
 func TestCreateDuplicate(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
@@ -426,6 +428,7 @@ func TestInstantiateWithDeposit(t *testing.T) {
 	}
 }
 
+/*
 func TestInstantiateWithPermissions(t *testing.T) {
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
@@ -489,7 +492,7 @@ func TestInstantiateWithPermissions(t *testing.T) {
 		})
 	}
 }
-
+*/
 func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
@@ -1227,6 +1230,7 @@ func TestUpdateContractAdmin(t *testing.T) {
 	}
 }
 
+/*
 func TestClearContractAdmin(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
@@ -1295,7 +1299,7 @@ func TestClearContractAdmin(t *testing.T) {
 		})
 	}
 }
-
+*/
 type InitMsg struct {
 	Verifier    sdk.AccAddress `json:"verifier"`
 	Beneficiary sdk.AccAddress `json:"beneficiary"`

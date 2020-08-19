@@ -56,7 +56,7 @@ type QueryPlugins struct {
 	Wasm    func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
 }
 
-func DefaultQueryPlugins(bank bank.ViewKeeper, staking staking.Keeper, wasm *Keeper) QueryPlugins {
+func DefaultQueryPlugins(bank *bank.Keeper, staking *staking.Keeper, wasm *Keeper) QueryPlugins {
 	return QueryPlugins{
 		Bank:    BankQuerier(bank),
 		Custom:  NoCustomQuerier,
@@ -85,14 +85,14 @@ func (e QueryPlugins) Merge(o *QueryPlugins) QueryPlugins {
 	return e
 }
 
-func BankQuerier(bank bank.ViewKeeper) func(ctx sdk.Context, request *wasmTypes.BankQuery) ([]byte, error) {
+func BankQuerier(bank *bank.Keeper) func(ctx sdk.Context, request *wasmTypes.BankQuery) ([]byte, error) {
 	return func(ctx sdk.Context, request *wasmTypes.BankQuery) ([]byte, error) {
 		if request.AllBalances != nil {
 			addr, err := sdk.AccAddressFromBech32(request.AllBalances.Address)
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.AllBalances.Address)
 			}
-			coins := bank.GetCoins(ctx, addr)
+			coins := (*bank).GetCoins(ctx, addr)
 			res := wasmTypes.AllBalancesResponse{
 				Amount: convertSdkCoinsToWasmCoins(coins),
 			}
@@ -103,7 +103,7 @@ func BankQuerier(bank bank.ViewKeeper) func(ctx sdk.Context, request *wasmTypes.
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.Balance.Address)
 			}
-			coins := bank.GetCoins(ctx, addr)
+			coins := (*bank).GetCoins(ctx, addr)
 			amount := coins.AmountOf(request.Balance.Denom)
 			res := wasmTypes.BalanceResponse{
 				Amount: wasmTypes.Coin{
@@ -121,7 +121,7 @@ func NoCustomQuerier(sdk.Context, json.RawMessage) ([]byte, error) {
 	return nil, wasmTypes.UnsupportedRequest{Kind: "custom"}
 }
 
-func StakingQuerier(keeper staking.Keeper) func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error) {
+func StakingQuerier(keeper *staking.Keeper) func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error) {
 	return func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error) {
 		if request.BondedDenom != nil {
 			denom := keeper.BondDenom(ctx)
@@ -186,7 +186,7 @@ func StakingQuerier(keeper staking.Keeper) func(ctx sdk.Context, request *wasmTy
 	}
 }
 
-func sdkToDelegations(ctx sdk.Context, keeper staking.Keeper, delegations []staking.Delegation) (wasmTypes.Delegations, error) {
+func sdkToDelegations(ctx sdk.Context, keeper *staking.Keeper, delegations []staking.Delegation) (wasmTypes.Delegations, error) {
 	result := make([]wasmTypes.Delegation, len(delegations))
 	bondDenom := keeper.BondDenom(ctx)
 
@@ -213,7 +213,7 @@ func sdkToDelegations(ctx sdk.Context, keeper staking.Keeper, delegations []stak
 	return result, nil
 }
 
-func sdkToFullDelegation(ctx sdk.Context, keeper staking.Keeper, delegation staking.Delegation) (*wasmTypes.FullDelegation, error) {
+func sdkToFullDelegation(ctx sdk.Context, keeper *staking.Keeper, delegation staking.Delegation) (*wasmTypes.FullDelegation, error) {
 	val, found := keeper.GetValidator(ctx, delegation.ValidatorAddress)
 	if !found {
 		return nil, sdkerrors.Wrap(staking.ErrNoValidatorFound, "can't load validator for delegation")

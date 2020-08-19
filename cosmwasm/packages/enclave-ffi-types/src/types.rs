@@ -269,8 +269,8 @@ pub enum InitResult {
     Success {
         /// A pointer to the output of the calculation
         output: UserSpaceBuffer,
-        /// A signature by the enclave on all of the results.
-        signature: [u8; 64],
+        /// The contract_key for this contract.
+        contract_key: [u8; 64],
     },
     Failure {
         /// The error that happened in the enclave
@@ -285,8 +285,6 @@ pub enum HandleResult {
     Success {
         /// A pointer to the output of the calculation
         output: UserSpaceBuffer,
-        /// A signature by the enclave on all of the results.
-        signature: [u8; 64],
     },
     Failure {
         /// The error that happened in the enclave
@@ -301,8 +299,6 @@ pub enum QueryResult {
     Success {
         /// A pointer to the output of the calculation
         output: UserSpaceBuffer,
-        /// A signature by the enclave on all of the results.
-        signature: [u8; 64],
     },
     Failure {
         /// The error that happened in the enclave
