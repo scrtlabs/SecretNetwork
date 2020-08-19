@@ -5,7 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
 	"github.com/tendermint/tendermint/libs/rand"
 )
 

@@ -3,10 +3,10 @@ package keeper
 import (
 	"fmt"
 
-	"github.com/CosmWasm/wasmd/x/wasm/internal/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	govtypes "github.com/enigmampc/cosmos-sdk/x/gov/types"
 )
 
 // NewWasmProposalHandler creates a new governance Handler for wasm proposals

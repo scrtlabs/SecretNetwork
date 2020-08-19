@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/CosmWasm/go-cosmwasm/types"
+	"github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 )
 
 type queueData struct {

@@ -8,10 +8,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/CosmWasm/wasmd/x/wasm/internal/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/gov"
-	"github.com/cosmos/cosmos-sdk/x/params"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	"github.com/enigmampc/cosmos-sdk/x/gov"
+	"github.com/enigmampc/cosmos-sdk/x/params"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

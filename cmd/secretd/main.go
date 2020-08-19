@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 
-	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/enigmampc/cosmos-sdk/server"
 	"github.com/enigmampc/cosmos-sdk/store"
 	"github.com/enigmampc/cosmos-sdk/x/auth"
@@ -19,7 +18,6 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/enigmampc/cosmos-sdk/baseapp"
-	"github.com/enigmampc/cosmos-sdk/client/debug"
 	"github.com/enigmampc/cosmos-sdk/client/flags"
 
 	//"github.com/CosmWasm/wasmd/app"
@@ -139,18 +137,13 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer) abci.Application
 	bootstrap := viper.GetBool("bootstrap")
 	queryGasLimit := viper.GetUint64("query-gas-limit")
 
-	pruningOpts, err := server.GetPruningOptionsFromFlags()
-	if err != nil {
-		panic(err)
-	}
-
 	skipUpgradeHeights := make(map[int64]bool)
 	for _, h := range viper.GetIntSlice(server.FlagUnsafeSkipUpgrades) {
 		skipUpgradeHeights[int64(h)] = true
 	}
 
 	return app.NewSecretNetworkApp(
-		logger, db, traceStore, true, bootstrap, invCheckPeriod, []wasm.ProposalType{}, skipUpgradeHeights,
+		logger, db, traceStore, true, bootstrap, invCheckPeriod, skipUpgradeHeights,
 		queryGasLimit,
 		baseapp.SetPruning(store.NewPruningOptionsFromString(viper.GetString("pruning"))),
 		baseapp.SetMinGasPrices(viper.GetString(server.FlagMinGasPrices)),

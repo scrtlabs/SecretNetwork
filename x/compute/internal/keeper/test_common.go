@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/x/distribution"
-	"github.com/cosmos/cosmos-sdk/x/gov"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	"github.com/enigmampc/cosmos-sdk/x/distribution"
+	"github.com/enigmampc/cosmos-sdk/x/gov"
+	govtypes "github.com/enigmampc/cosmos-sdk/x/gov/types"
 
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -25,7 +25,7 @@ import (
 	"github.com/enigmampc/cosmos-sdk/x/staking"
 	"github.com/enigmampc/cosmos-sdk/x/supply"
 
-	wasmTypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	wasmtypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 const flagLRUCacheSize = "lru_size"
@@ -170,11 +170,11 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 
 	// Load default wasm config
 	wasmConfig := wasmtypes.DefaultWasmConfig()
-	keeper := NewKeeper(cdc, keyContract, paramsKeeper.Subspace(wasmtypes.DefaultParamspace),
+	keeper := NewKeeper(cdc, keyContract,
 		accountKeeper, bankKeeper, stakingKeeper, router, tempDir, wasmConfig,
 		supportedFeatures, encoders, queriers,
 	)
-	keeper.setParams(ctx, wasmtypes.DefaultParams())
+	//keeper.setParams(ctx, wasmtypes.DefaultParams())
 	// add wasm handler so we can loop-back (contracts calling contracts)
 	router.AddRoute(wasmtypes.RouterKey, TestHandler(keeper))
 

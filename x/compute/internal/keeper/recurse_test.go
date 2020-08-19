@@ -6,11 +6,11 @@ import (
 	"os"
 	"testing"
 
-	wasmTypes "github.com/CosmWasm/go-cosmwasm/types"
+	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 

@@ -113,7 +113,7 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *MsgExecuteContract) (*sdk.Res
 
 	res.Events = append(events, ourEvent)
 
-	return &res, nil
+	return res, nil
 }
 
 func handleMigration(ctx sdk.Context, k Keeper, msg *MsgMigrateContract) (*sdk.Result, error) {

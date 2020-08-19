@@ -8,11 +8,9 @@ import (
 	"path/filepath"
 
 	"github.com/tendermint/tendermint/crypto"
-	"github.com/cosmos/cosmos-sdk/x/params/subspace"
 	"github.com/pkg/errors"
 
 	wasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
-	wasmApi "github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	"github.com/enigmampc/cosmos-sdk/codec"
 	"github.com/enigmampc/cosmos-sdk/store/prefix"
@@ -58,23 +56,36 @@ type Keeper struct {
 	// queryGasLimit is the max wasm gas that can be spent on executing a query with a contract
 	queryGasLimit uint64
 	authZPolicy   AuthorizationPolicy
-	paramSpace    subspace.Subspace
+	//paramSpace    subspace.Subspace
 }
 
 // NewKeeper creates a new contract Keeper instance
 // If customEncoders is non-nil, we can use this to override some of the message handler, especially custom
-func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, paramSpace params.Subspace, accountKeeper auth.AccountKeeper, bankKeeper bank.Keeper,
+func NewKeeper(
+	cdc *codec.Codec,
+	storeKey sdk.StoreKey,
+	//paramSpace params.Subspace,
+	accountKeeper auth.AccountKeeper,
+	bankKeeper bank.Keeper,
 	stakingKeeper staking.Keeper,
-	router sdk.Router, homeDir string, wasmConfig types.WasmConfig, supportedFeatures string, customEncoders *MessageEncoders, customPlugins *QueryPlugins) Keeper {
+	router sdk.Router,
+	homeDir string,
+	wasmConfig types.WasmConfig,
+	supportedFeatures string,
+	customEncoders *MessageEncoders,
+	customPlugins *QueryPlugins,
+) Keeper {
 	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize)
 	if err != nil {
 		panic(err)
 	}
 
+	/*
 	// set KeyTable if it has not already been set
 	if !paramSpace.HasKeyTable() {
 		paramSpace = paramSpace.WithKeyTable(types.ParamKeyTable())
 	}
+	*/
 
 	keeper := Keeper{
 		storeKey:      storeKey,
@@ -85,12 +96,13 @@ func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, paramSpace params.Subspa
 		messenger:     NewMessageHandler(router, customEncoders),
 		queryGasLimit: wasmConfig.SmartQueryGasLimit,
 		authZPolicy:   DefaultAuthorizationPolicy{},
-		paramSpace:    paramSpace,
+		//paramSpace:    paramSpace,
 	}
 	keeper.queryPlugins = DefaultQueryPlugins(bankKeeper, stakingKeeper, &keeper).Merge(customPlugins)
 	return keeper
 }
 
+/*
 func (k Keeper) getUploadAccessConfig(ctx sdk.Context) types.AccessConfig {
 	var a types.AccessConfig
 	k.paramSpace.Get(ctx, types.ParamStoreKeyUploadAccess, &a)
@@ -113,6 +125,7 @@ func (k Keeper) GetParams(ctx sdk.Context) types.Params {
 func (k Keeper) setParams(ctx sdk.Context, ps types.Params) {
 	k.paramSpace.SetParamSet(ctx, &ps)
 }
+*/
 
 // Create uploads and compiles a WASM contract, returning a short identifier for the contract
 func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, source string, builder string, instantiateAccess *types.AccessConfig) (codeID uint64, err error) {
@@ -120,9 +133,11 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 }
 
 func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, source string, builder string, instantiateAccess *types.AccessConfig, authZ AuthorizationPolicy) (codeID uint64, err error) {
+	/*
 	if !authZ.CanCreateCode(k.getUploadAccessConfig(ctx), creator) {
 		return 0, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "can not create code")
 	}
+	*/
 	wasmCode, err = uncompress(wasmCode)
 	if err != nil {
 		return 0, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
@@ -136,10 +151,12 @@ func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	}
 	store := ctx.KVStore(k.storeKey)
 	codeID = k.autoIncrementID(ctx, types.KeyLastCodeID)
+	/*
 	if instantiateAccess == nil {
 		defaultAccessConfig := k.getInstantiateAccessConfig(ctx).With(creator)
 		instantiateAccess = &defaultAccessConfig
 	}
+	*/
 	codeInfo := types.NewCodeInfo(codeHash, creator, source, builder, *instantiateAccess)
 	// 0x01 | codeID (uint64) -> ContractInfo
 	store.Set(types.GetCodeKey(codeID), k.cdc.MustMarshalBinaryBare(codeInfo))
@@ -322,7 +339,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	ctx.EventManager().EmitEvents(events)
 
 	// TODO: capture events here as well
-	err = k.dispatchMessages(ctx, contractAddress, (*result).Messages)
+	err = k.dispatchMessages(ctx, contractAddress, res.Messages)
 	if err != nil {
 		return nil, err
 	}

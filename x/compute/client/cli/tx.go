@@ -141,8 +141,6 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 			inBuf := bufio.NewReader(cmd.InOrStdin())
 			txBldr := auth.NewTxBuilderFromCLI(inBuf).WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
-			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
-			initMsg := types.SecretMsg{}
 
 			msg, err := parseInstantiateArgs(args, cliCtx)
 			if err != nil {
@@ -181,6 +179,9 @@ func parseInstantiateArgs(args []string, cliCtx context.CLIContext) (types.MsgIn
 	if label == "" {
 		return types.MsgInstantiateContract{}, fmt.Errorf("Label is required on all contracts")
 	}
+
+	wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
+	initMsg := types.SecretMsg{}
 
 	var encryptedMsg []byte
 	if viper.GetBool(flags.FlagGenerateOnly) {
