@@ -48,8 +48,11 @@ pub const MRSIGNER: [u8; 32] = [
 #[cfg(feature = "production")]
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
 
-#[cfg(not(feature = "production"))]
+#[cfg(all(not(feature = "production"), not(feature = "test")))]
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
+
+#[cfg(all(not(feature = "production"), feature = "test"))]
+pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRSIGNER;
 
 lazy_static! {
     pub static ref CONSENSUS_SEED_SEALING_PATH: String = env::var("SCRT_SGX_STORAGE")
