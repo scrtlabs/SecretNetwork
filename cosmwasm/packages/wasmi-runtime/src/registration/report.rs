@@ -719,7 +719,7 @@ pub mod tests {
 
     fn tls_ra_cert_der_v4() -> Vec<u8> {
         let mut cert = vec![];
-        let mut f = File::open("../wasmi-runtime/src/registration/fixtures/tls_ra_cert_v4.der").unwrap();
+        let mut f = File::open("../wasmi-runtime/src/registration/fixtures/attestation_cert_out_of_date.der").unwrap();
         f.read_to_end(&mut cert).unwrap();
 
         cert
@@ -727,7 +727,7 @@ pub mod tests {
 
     fn tls_ra_cert_der_out_of_date() -> Vec<u8> {
         let mut cert = vec![];
-        let mut f = File::open("../wasmi-runtime/src/registration/fixtures/attestation_cert_out_of_date.der").unwrap();
+        let mut f = File::open("../wasmi-runtime/src/registration/fixtures/attestation_cert_sw_config_needed.der").unwrap();
         f.read_to_end(&mut cert).unwrap();
 
         cert

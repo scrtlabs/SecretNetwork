@@ -407,10 +407,17 @@ pub mod tests {
     use crate::registration::report::AttestationReport;
     use enclave_ffi_types::NodeAuthResult;
 
-
     fn tls_ra_cert_der_out_of_date() -> Vec<u8> {
         let mut cert = vec![];
         let mut f = File::open("../wasmi-runtime/src/registration/fixtures/attestation_cert_out_of_date.der").unwrap();
+        f.read_to_end(&mut cert).unwrap();
+
+        cert
+    }
+
+    fn tls_ra_cert_der_sw_config_needed() -> Vec<u8> {
+        let mut cert = vec![];
+        let mut f = File::open("../wasmi-runtime/src/registration/fixtures/attestation_cert_sw_config_needed.der").unwrap();
         f.read_to_end(&mut cert).unwrap();
 
         cert
@@ -439,7 +446,7 @@ pub mod tests {
 
     #[cfg(feature = "SGX_MODE_HW")]
     pub fn test_certificate_invalid_configuration_needed() {
-        let tls_ra_cert = tls_ra_cert_der_out_of_date();
+        let tls_ra_cert = tls_ra_cert_der_sw_config_needed();
         let report = AttestationReport::from_cert(&tls_ra_cert);
         assert!(report.is_ok());
 
@@ -448,11 +455,22 @@ pub mod tests {
         assert_eq!(result, NodeAuthResult::SwHardeningAndConfigurationNeeded)
     }
 
-    pub fn test_certificate_valid() {
-        let tls_ra_cert = tls_ra_cert_der_valid();
+    #[cfg(not(feature = "SGX_MODE_HW"))]
+    pub fn test_certificate_invalid_group_out_of_date() {}
+
+    #[cfg(feature = "SGX_MODE_HW")]
+    pub fn test_certificate_invalid_group_out_of_date() {
+        let tls_ra_cert = tls_ra_cert_der_out_of_date();
         let report = AttestationReport::from_cert(&tls_ra_cert);
         assert!(report.is_ok());
 
+        let result = verify_ra_cert(&tls_ra_cert).expect_err("Certificate should not pass validation");
+
+        assert_eq!(result, NodeAuthResult::GroupOutOfDate)
+    }
+
+    pub fn test_certificate_valid() {
+        let tls_ra_cert = tls_ra_cert_der_valid();
         let result = verify_ra_cert(&tls_ra_cert).unwrap();
     }
 }
