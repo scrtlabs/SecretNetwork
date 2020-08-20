@@ -80,24 +80,31 @@ pub struct Env {
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct BlockInfo {
-    pub height: i64,
+    pub height: u64,
     // time is seconds since epoch begin (Jan. 1, 1970)
-    pub time: i64,
+    pub time: u64,
     pub chain_id: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct MessageInfo {
-    pub sender: CanonicalAddr,
-    // go likes to return null for empty array, make sure we can parse it (use option)
-    pub sent_funds: Option<Vec<Coin>>,
+    /// The `sender` field from the wasm/store-code, wasm/instantiate or wasm/execute message.
+    /// You can think of this as the address that initiated the action (i.e. the message). What that
+    /// means exactly heavily depends on the application.
+    ///
+    /// The x/wasm module ensures that the sender address signed the transaction.
+    /// Additional signers of the transaction that are either needed for other messages or contain unnecessary
+    /// signatures are not propagated into the contract.
+    ///
+    /// There is a discussion to open up this field to multiple initiators, which you're welcome to join
+    /// if you have a specific need for that feature: https://github.com/CosmWasm/cosmwasm/issues/293
+    pub sender: HumanAddr,
+    pub sent_funds: Vec<Coin>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct ContractInfo {
-    pub address: CanonicalAddr,
-    // go likes to return null for empty array, make sure we can parse it (use option)
-    pub balance: Option<Vec<Coin>>,
+    pub address: HumanAddr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]

@@ -21,7 +21,16 @@ pub fn generate_encryption_key(
 
     let contract_hash = calc_contract_hash(contract);
 
-    let sender_id = generate_sender_id(env.message.sender.as_slice(), env.block.height as u64);
+    let (_, sender_address_u5) = bech32::decode(env.message.sender.as_str()).map_err(|err| {
+        error!(
+            "got an error while trying to deserialize env.message.sender from bech32 string to bytes {:?}: {}",
+            env.message.sender, err
+        );
+        EnclaveError::FailedToDeserialize
+    })?;
+    let snder_address: Vec<u8> = sender_address_u5.iter().map(|x| x.to_u8()).collect();
+
+    let sender_id = generate_sender_id(&snder_address, env.block.height as u64);
 
     let mut encryption_key = [0u8; 64];
 
@@ -126,17 +135,17 @@ pub fn validate_msg(msg: &[u8], contract_code: &[u8]) -> Result<Vec<u8>, Enclave
         return Err(EnclaveError::ValidationFailure);
     }
 
-    let contract_hash = calc_contract_hash(contract_code);
+    let calc_contract_hash = calc_contract_hash(contract_code);
 
-    let mut encrypted_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] = [0u8; HEX_ENCODED_HASH_SIZE];
-    encrypted_contract_hash.copy_from_slice(&msg[0..HEX_ENCODED_HASH_SIZE]);
+    let mut received_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] = [0u8; HEX_ENCODED_HASH_SIZE];
+    received_contract_hash.copy_from_slice(&msg[0..HEX_ENCODED_HASH_SIZE]);
 
-    let decoded_hash: Vec<u8> = hex::decode(&encrypted_contract_hash[..]).map_err(|_| {
-        error!("Got exec message with malformed contract hash");
+    let decoded_hash: Vec<u8> = hex::decode(&received_contract_hash[..]).map_err(|_| {
+        error!("Got message with malformed contract hash");
         EnclaveError::ValidationFailure
     })?;
 
-    if decoded_hash != contract_hash {
+    if decoded_hash != calc_contract_hash {
         error!("Message contains mismatched contract hash");
         return Err(EnclaveError::ValidationFailure);
     }
