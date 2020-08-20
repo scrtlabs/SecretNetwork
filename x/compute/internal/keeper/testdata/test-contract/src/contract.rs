@@ -1010,32 +1010,30 @@ fn test_canonicalize_address_errors<S: Storage, A: Api, Q: Querier>(
 ) -> HandleResult {
     match deps.api.canonical_address(&HumanAddr(String::from(""))) {
         Err(StdError::GenericErr { msg, backtrace: _ }) => {
-            if msg != String::from("canonicalize_address returned error") {
+            if msg != String::from("canonicalize_address errored: input is empty") {
                 return Err(StdError::generic_err(
-                    "empty address should have failed with -2",
+                    "empty address should have failed with 'canonicalize_address errored: input is empty'",
                 ));
             }
             // all is good, continue
         }
-        _ => {
-            return Err(StdError::generic_err(
-                "empty address should have failed with -2",
-            ))
-        }
+        _ => return Err(StdError::generic_err(
+            "empty address should have failed with 'canonicalize_address errored: input is empty'",
+        )),
     }
 
     match deps.api.canonical_address(&HumanAddr(String::from("   "))) {
         Err(StdError::GenericErr { msg, backtrace: _ }) => {
-            if msg != String::from("canonicalize_address returned error") {
+            if msg != String::from("canonicalize_address errored: input is empty") {
                 return Err(StdError::generic_err(
-                    "empty trimmed address should have failed with -2",
+                    "empty trimmed address should have failed with 'canonicalize_address errored: input is empty'",
                 ));
             }
             // all is good, continue
         }
         _ => {
             return Err(StdError::generic_err(
-                "empty trimmed address should have failed with -2",
+                "empty trimmed address should have failed with 'canonicalize_address errored: input is empty'",
             ))
         }
     }
@@ -1045,34 +1043,33 @@ fn test_canonicalize_address_errors<S: Storage, A: Api, Q: Querier>(
         .canonical_address(&HumanAddr(String::from("cosmos1h99hrcc54ms9lxxxx")))
     {
         Err(StdError::GenericErr { msg, backtrace: _ }) => {
-            if msg != String::from("canonicalize_address returned error") {
+            if msg != String::from("canonicalize_address errored: invalid checksum") {
                 return Err(StdError::generic_err(
-                    "bad bech32 should have failed with -3",
+                    "bad bech32 should have failed with 'canonicalize_address errored: invalid checksum'",
                 ));
             }
             // all is good, continue
         }
-        _ => {
-            return Err(StdError::generic_err(
-                "bad bech32 should have failed with -3",
-            ))
-        }
+        _ => return Err(StdError::generic_err(
+            "bad bech32 should have failed with 'canonicalize_address errored: invalid checksum'",
+        )),
     }
 
     match deps.api.canonical_address(&HumanAddr(String::from(
         "cosmos1h99hrcc54ms9luwpex9kw0rwdt7etvfdyxh6gu",
     ))) {
         Err(StdError::GenericErr { msg, backtrace: _ }) => {
-            if msg != String::from("canonicalize_address returned error") {
+            if msg != String::from("canonicalize_address errored: wrong address prefix: \"cosmos\"")
+            {
                 return Err(StdError::generic_err(
-                    "bad prefix should have failed with -4",
+                    "bad prefix should have failed with 'canonicalize_address errored: wrong address prefix: \"cosmos\"'",
                 ));
             }
             // all is good, continue
         }
         _ => {
             return Err(StdError::generic_err(
-                "bad prefix should have failed with -4",
+                "bad prefix should have failed with 'canonicalize_address errored: wrong address prefix: \"cosmos\"'",
             ))
         }
     }

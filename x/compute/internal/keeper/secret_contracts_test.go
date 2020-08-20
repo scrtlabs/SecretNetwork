@@ -560,7 +560,7 @@ func TestQueryInputParamError(t *testing.T) {
 	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"address":"blabla"}}`, true, defaultGasForTests)
 
 	require.NotNil(t, qErr.GenericErr)
-	require.Equal(t, "canonicalize_address returned error", qErr.GenericErr.Msg)
+	require.Equal(t, "canonicalize_address errored: invalid length", qErr.GenericErr.Msg)
 }
 
 func TestUnicodeData(t *testing.T) {
