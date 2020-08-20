@@ -1,29 +1,24 @@
 package keeper
 
+/*
 import (
-	"bytes"
-	"crypto/sha256"
-	"encoding/json"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	wasmTypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"github.com/enigmampc/cosmos-sdk/store"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	"github.com/enigmampc/cosmos-sdk/x/auth"
 	"github.com/enigmampc/cosmos-sdk/x/params"
 	"github.com/enigmampc/cosmos-sdk/x/staking"
-	fuzz "github.com/google/gofuzz"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
 )
+
 
 func TestGenesisExportImport(t *testing.T) {
 	srcKeeper, srcCtx, srcStoreKeys, srcCleanup := setupKeeper(t)
@@ -356,7 +351,6 @@ func TestFailFastImport(t *testing.T) {
 	}
 }
 
-/*
 func TestImportContractWithCodeHistoryReset(t *testing.T) {
 	genesis := `
 {
@@ -466,7 +460,7 @@ func TestImportContractWithCodeHistoryReset(t *testing.T) {
 	}
 	assert.Equal(t, expHistory, keeper.GetContractHistory(ctx, contractAddr))
 }
-*/
+
 
 func setupKeeper(t *testing.T) (Keeper, sdk.Context, []sdk.StoreKey, func()) {
 	t.Helper()
@@ -499,3 +493,4 @@ func setupKeeper(t *testing.T) (Keeper, sdk.Context, []sdk.StoreKey, func()) {
 
 	return srcKeeper, ctx, []sdk.StoreKey{keyWasm, keyParams}, cleanup
 }
+*/
