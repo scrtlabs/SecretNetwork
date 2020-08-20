@@ -148,7 +148,7 @@ pub fn verify_params(
 
         trace!("sign doc: {:?}", sign_doc);
 
-        // Verify that signatures and sign bytes match
+        // This verifies that signatures and sign bytes are self consistent
         sig_info
             .signature
             .get_public_key()
@@ -170,17 +170,6 @@ pub fn verify_params(
     }
 
     Err(EnclaveError::FailedTxVerification)
-}
-
-fn verify_sender(signature: &CosmosSignature, msg_sender: &CanonicalAddr) -> bool {
-    let sender_pubkey = signature.get_public_key();
-    let address = sender_pubkey.get_address();
-
-    if address.eq(&msg_sender) {
-        return true;
-    }
-
-    false
 }
 
 fn verify_callback_sig(
@@ -205,24 +194,22 @@ fn verify_callback_sig(
     true
 }
 
-fn verify_signature_params(
-    sign_doc: &SignDoc,
-    sig_info: &SigInfo,
-    env: &Env,
-    sent_msg: &SecretMessage,
-) -> bool {
-    trace!("Verifying sender..");
-    if !verify_sender(&sig_info.signature, &env.message.sender) {
-        error!(
-            "Message sender {:?} does not match with the message signer {:?}",
-            &env.message.sender,
-            &sig_info.signature.get_public_key().get_address()
-        );
-        return false;
+fn verify_sender(signature: &CosmosSignature, msg_sender: &CanonicalAddr) -> bool {
+    let sender_pubkey = signature.get_public_key();
+    let address = sender_pubkey.get_address();
+
+    if address.eq(&msg_sender) {
+        return true;
     }
 
-    trace!("Verifying message..");
-    let msg = sign_doc.msgs.iter().find(|&m| match m {
+    false
+}
+
+fn get_verified_msg<'a>(
+    sign_doc: &'a SignDoc,
+    sent_msg: &'a SecretMessage,
+) -> Option<&'a SignDocWasmMsg> {
+    sign_doc.msgs.iter().find(|&m| match m {
         SignDocWasmMsg::Execute { msg, .. } | SignDocWasmMsg::Instantiate { init_msg: msg, .. } => {
             let binary_msg_result = Binary::from_base64(msg);
             if let Ok(binary_msg) = binary_msg_result {
@@ -231,18 +218,10 @@ fn verify_signature_params(
 
             false
         }
-    });
+    })
+}
 
-    if msg.is_none() {
-        error!(
-            "Message sent to contract {:?} is not equal to any signed messages {:?}",
-            sent_msg.to_slice(),
-            sign_doc.msgs
-        );
-        return false;
-    }
-    let msg = msg.unwrap();
-
+fn verify_contract(msg: &SignDocWasmMsg, env: &Env) -> bool {
     // Contract address is relevant only to execute, since during sending an instantiate message the contract address is not yet known
     if let SignDocWasmMsg::Execute { contract, .. } = msg {
         trace!("Verifying contract address..");
@@ -257,7 +236,10 @@ fn verify_signature_params(
         }
     }
 
-    trace!("Verifying funds..");
+    true
+}
+
+fn verify_funds(msg: &SignDocWasmMsg, env: &Env) -> bool {
     match msg {
         SignDocWasmMsg::Execute { sent_funds, .. }
         | SignDocWasmMsg::Instantiate {
@@ -275,6 +257,50 @@ fn verify_signature_params(
                 return false;
             }
         }
+    }
+
+    true
+}
+
+fn verify_signature_params(
+    sign_doc: &SignDoc,
+    sig_info: &SigInfo,
+    env: &Env,
+    sent_msg: &SecretMessage,
+) -> bool {
+    trace!("Verifying sender..");
+    if !verify_sender(&sig_info.signature, &env.message.sender) {
+        error!("Sender verification failed!");
+        debug!(
+            "Message sender {:?} does not match with the message signer {:?}",
+            &env.message.sender,
+            &sig_info.signature.get_public_key().get_address()
+        );
+        return false;
+    }
+
+    trace!("Verifying message..");
+    // If msg is not found (is None) then it means message verification failed,
+    // since it didn't find a matching signed message
+    let msg = get_verified_msg(sign_doc, sent_msg);
+    if msg.is_none() {
+        error!("Message verification failed!");
+        debug!(
+            "Message sent to contract {:?} is not equal to any signed messages {:?}",
+            sent_msg.to_slice(),
+            sign_doc.msgs
+        );
+        return false;
+    }
+    let msg = msg.unwrap();
+
+    if !verify_contract(msg, env) {
+        return false;
+    }
+
+    trace!("Verifying funds..");
+    if !verify_funds(msg, env) {
+        return false;
     }
 
     true
