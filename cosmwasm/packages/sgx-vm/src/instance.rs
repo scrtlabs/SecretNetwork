@@ -17,7 +17,7 @@ use wasmer_runtime_core::{
 };
 */
 
-use crate::backends::get_gas_left;
+use crate::backends::{get_gas_left, get_gas_used};
 use crate::context::{
     move_into_context, move_out_of_context, set_storage_readonly, setup_context,
     with_querier_from_context, with_storage_from_context,
@@ -224,6 +224,11 @@ where
         get_gas_left(&self.inner)
     }
 
+    /// Returns the currently remaining gas.
+    pub fn get_gas_used(&self) -> u64 {
+        get_gas_used(&self.inner)
+    }
+
     /// Sets the readonly storage flag on this instance. Since one instance can be used
     /// for multiple calls in integration tests, this should be set to the desired value
     /// right before every call.
@@ -291,7 +296,6 @@ where
 
     pub fn call_handle(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<Vec<u8>> {
         let init_result = self.inner.handle(env, msg, sig_info)?;
-        // TODO verify signature
         Ok(init_result.into_output())
     }
 
@@ -301,7 +305,6 @@ where
 
     pub fn call_query(&mut self, msg: &[u8]) -> VmResult<Vec<u8>> {
         let init_result = self.inner.query(msg)?;
-        // TODO verify signature
         Ok(init_result.into_output())
     }
 }

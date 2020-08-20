@@ -145,12 +145,17 @@ func prepareInitSignedTxMultipleMsgs(t *testing.T, keeper Keeper, ctx sdk.Contex
 }
 
 func TestMultipleSigners(t *testing.T) {
-	ctx, keeper, tempDir, codeID, walletA, privKeyA, walletB, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
+	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, walletB, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
 	initMsg := `{"nop":{}}`
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
+	msg := types.SecretMsg{
+		CodeHash: []byte(codeHash),
+		Msg:      []byte(initMsg),
+	}
+
+	initMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 	nonce := initMsgBz[0:32]
 
@@ -166,14 +171,14 @@ func TestMultipleSigners(t *testing.T) {
 		Sender:    walletB,
 		Admin:     nil,
 		Code:      codeID,
-		Label:     "demo contract 1",
+		Label:     "demo contract 2",
 		InitMsg:   initMsgBz,
 		InitFunds: nil,
 	}
 
 	ctx = prepareInitSignedTxMultipleMsgs(t, keeper, ctx, []sdk.AccAddress{walletA, walletB}, []crypto.PrivKey{privKeyA, privKeyB}, []sdk.Msg{sdkMsgA, sdkMsgB}, codeID)
 
-	contractAddressA, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	contractAddressA, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
 		err = extractInnerError(t, err, nonce, true)
 	}
@@ -191,9 +196,9 @@ func TestMultipleSigners(t *testing.T) {
 		wasmEvents,
 	)
 
-	contractAddressB, err := keeper.Instantiate(ctx, codeID, walletB, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	contractAddressB, err := keeper.Instantiate(ctx, codeID, walletB, nil, initMsgBz, "demo contract 2", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
-		err = extractInnerError(t, err, nonce, true)
+		err = extractInnerError(t, err, nonce, false)
 	}
 	require.NoError(t, err)
 
@@ -215,7 +220,7 @@ func TestMultipleSigners(t *testing.T) {
 }
 
 func TestWrongSigner(t *testing.T) {
-	ctx, keeper, tempDir, codeID, walletA, _, walletB, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
+	ctx, keeper, tempDir, codeID, _, walletA, _, walletB, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
 	initMsg := `{"nop":{}}`
@@ -243,28 +248,34 @@ func TestWrongSigner(t *testing.T) {
 }
 
 func TestMultiSig(t *testing.T) {
-	ctx, keeper, tempDir, codeID, _, _, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	ctx, keeper, tempDir, codeID, codeHash, _, _, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
 	initMsg := `{"nop":{}}`
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
+	msg := types.SecretMsg{
+		CodeHash: []byte(codeHash),
+		Msg:      []byte(initMsg),
+	}
+
+	initMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 	nonce := initMsgBz[0:32]
 
-	sdkMsg := types.MsgInstantiateContract{
-		Admin:     nil,
-		Code:      codeID,
-		Label:     "demo contract 1",
-		InitMsg:   initMsgBz,
-		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
-	}
-
 	for i := 0; i < 5; i++ {
 		for j := 0; j <= i; j++ {
+			label := fmt.Sprintf("demo contract %d%d", i, j)
+			sdkMsg := types.MsgInstantiateContract{
+				Admin:     nil,
+				Code:      codeID,
+				Label:     label,
+				InitMsg:   initMsgBz,
+				InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
+			}
+
 			multisigAddr := multisigTxCreator(t, &ctx, keeper, i+1, j+1, i+1, sdkMsg)
 
-			contractAddressA, err := keeper.Instantiate(ctx, codeID, multisigAddr, nil, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+			contractAddressA, err := keeper.Instantiate(ctx, codeID, multisigAddr, nil, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 			if err != nil {
 				err = extractInnerError(t, err, nonce, true)
 			}
@@ -283,34 +294,40 @@ func TestMultiSig(t *testing.T) {
 			)
 
 			// Reset wasm events
-			ctx, keeper, tempDir, codeID, _, _, _, _ = setupTest(t, "./testdata/test-contract/contract.wasm")
+			ctx, keeper, tempDir, codeID, codeHash, _, _, _, _ = setupTest(t, "./testdata/test-contract/contract.wasm")
 		}
 	}
 }
 
 func TestMultiSigThreshold(t *testing.T) {
-	ctx, keeper, tempDir, codeID, _, _, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	ctx, keeper, tempDir, codeID, codeHash, _, _, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
 	initMsg := `{"nop":{}}`
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
+	msg := types.SecretMsg{
+		CodeHash: []byte(codeHash),
+		Msg:      []byte(initMsg),
+	}
+
+	initMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 	nonce := initMsgBz[0:32]
 
-	sdkMsg := types.MsgInstantiateContract{
-		Admin:     nil,
-		Code:      codeID,
-		Label:     "demo contract 1",
-		InitMsg:   initMsgBz,
-		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
-	}
-
 	for i := 0; i < 5; i++ {
 		for j := 0; j <= i; j++ {
+			label := fmt.Sprintf("demo contract %d%d", i, j)
+			sdkMsg := types.MsgInstantiateContract{
+				Admin:     nil,
+				Code:      codeID,
+				Label:     label,
+				InitMsg:   initMsgBz,
+				InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
+			}
+
 			multisigAddr := multisigTxCreator(t, &ctx, keeper, i+1, j+1, j+1, sdkMsg)
 
-			contractAddressA, err := keeper.Instantiate(ctx, codeID, multisigAddr, nil, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+			contractAddressA, err := keeper.Instantiate(ctx, codeID, multisigAddr, nil, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 			if err != nil {
 				err = extractInnerError(t, err, nonce, true)
 			}
@@ -329,18 +346,23 @@ func TestMultiSigThreshold(t *testing.T) {
 			)
 
 			// Reset wasm events
-			ctx, keeper, tempDir, codeID, _, _, _, _ = setupTest(t, "./testdata/test-contract/contract.wasm")
+			ctx, keeper, tempDir, codeID, _, _, _, _, _ = setupTest(t, "./testdata/test-contract/contract.wasm")
 		}
 	}
 }
 
 func TestMultiSigThresholdNotMet(t *testing.T) {
-	ctx, keeper, tempDir, codeID, _, _, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	ctx, keeper, tempDir, codeID, codeHash, _, _, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
 	initMsg := `{"nop":{}}`
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
+	msg := types.SecretMsg{
+		CodeHash: []byte(codeHash),
+		Msg:      []byte(initMsg),
+	}
+
+	initMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 	nonce := initMsgBz[0:32]
 
@@ -362,7 +384,7 @@ func TestMultiSigThresholdNotMet(t *testing.T) {
 }
 
 func TestMultiSigExecute(t *testing.T) {
-	ctx, keeper, tempDir, codeID, _, _, walletB, privKeyB := setupTest(t, "./testdata/erc20.wasm")
+	ctx, keeper, tempDir, codeID, codeHash, _, _, walletB, privKeyB := setupTest(t, "./testdata/erc20.wasm")
 	defer os.RemoveAll(tempDir)
 
 	privKeys, pubKeys, multisigPubKey := generateMultisigAddr(5, 4, ctx, keeper)
@@ -370,12 +392,17 @@ func TestMultiSigExecute(t *testing.T) {
 
 	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, multisigAddr, walletB.String())
 
-	contractAddress, _, error := initHelper(t, keeper, ctx, codeID, walletB, privKeyB, initMsg, true, defaultGas)
+	contractAddress, _, error := initHelper(t, keeper, ctx, codeID, walletB, privKeyB, initMsg, true, defaultGasForTests)
 	require.Empty(t, error)
 
 	execMsg := fmt.Sprintf(`{"transfer":{"amount":"10","recipient":"%s"}}`, walletB.String())
 
-	execMsgBz, err := wasmCtx.Encrypt([]byte(execMsg))
+	msg := types.SecretMsg{
+		CodeHash: []byte(codeHash),
+		Msg:      []byte(execMsg),
+	}
+
+	execMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 	nonce := execMsgBz[0:32]
 
@@ -431,11 +458,11 @@ func TestMultiSigExecute(t *testing.T) {
 }
 
 func TestMultiSigCallbacks(t *testing.T) {
-	ctx, keeper, tempDir, codeID, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
 	// init
-	contractAddress, initEvents, error := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGas)
+	contractAddress, initEvents, error := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, error)
 
 	require.Equal(t,
@@ -448,9 +475,14 @@ func TestMultiSigCallbacks(t *testing.T) {
 		initEvents,
 	)
 
-	execMsg := fmt.Sprintf(`{"a":{"contract_addr":"%s","x":2,"y":3}}`, contractAddress.String())
+	execMsg := fmt.Sprintf(`{"a":{"contract_addr":"%s","code_hash":"%s","x":2,"y":3}}`, contractAddress.String(), codeHash)
 
-	execMsgBz, err := wasmCtx.Encrypt([]byte(execMsg))
+	msg := types.SecretMsg{
+		CodeHash: []byte(codeHash),
+		Msg:      []byte(execMsg),
+	}
+
+	execMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 	nonce := execMsgBz[0:32]
 
@@ -492,7 +524,7 @@ func TestMultiSigCallbacks(t *testing.T) {
 }
 
 func TestMultiSigInMultiSig(t *testing.T) {
-	ctx, keeper, tempDir, codeID, _, privKeyA, _, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
+	ctx, keeper, tempDir, codeID, codeHash, _, privKeyA, _, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
 	privKeys, pubKeys, multisigPubkey := generateMultisigAddr(5, 3, ctx, keeper)
@@ -500,7 +532,12 @@ func TestMultiSigInMultiSig(t *testing.T) {
 
 	initMsg := `{"nop":{}}`
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
+	msg := types.SecretMsg{
+		CodeHash: []byte(codeHash),
+		Msg:      []byte(initMsg),
+	}
+
+	initMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 	nonce := initMsgBz[0:32]
 
@@ -581,7 +618,7 @@ func TestMultiSigInMultiSig(t *testing.T) {
 }
 
 func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
-	ctx, keeper, tempDir, codeID, _, privKeyA, _, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
+	ctx, keeper, tempDir, codeID, codeHash, _, privKeyA, _, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
 	privKeys, pubKeys, multisigPubkey := generateMultisigAddr(5, 3, ctx, keeper)
@@ -589,7 +626,12 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 
 	initMsg := `{"nop":{}}`
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
+	msg := types.SecretMsg{
+		CodeHash: []byte(codeHash),
+		Msg:      []byte(initMsg),
+	}
+
+	initMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 	nonce := initMsgBz[0:32]
 
@@ -670,7 +712,7 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 }
 
 func TestInvalidKeyType(t *testing.T) {
-	ctx, keeper, tempDir, codeID, _, _, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	ctx, keeper, tempDir, codeID, codeHash, _, _, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
 	edKey := ed25519.GenPrivKey()
@@ -683,7 +725,12 @@ func TestInvalidKeyType(t *testing.T) {
 
 	initMsg := `{"nop":{}}`
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
+	msg := types.SecretMsg{
+		CodeHash: []byte(codeHash),
+		Msg:      []byte(initMsg),
+	}
+
+	initMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 	//nonce := initMsgBz[0:32]
 
@@ -701,7 +748,7 @@ func TestInvalidKeyType(t *testing.T) {
 	_, err = keeper.Instantiate(ctx, codeID, edAddr, nil, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	require.Contains(t, err.Error(), "failed to verify transaction signature")
 
-	ctx, keeper, tempDir, codeID, _, _, _, _ = setupTest(t, "./testdata/test-contract/contract.wasm")
+	ctx, keeper, tempDir, codeID, _, _, _, _, _ = setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
 	srKey := sr25519.GenPrivKey()
@@ -719,7 +766,7 @@ func TestInvalidKeyType(t *testing.T) {
 }
 
 func TestInvalidKeyTypeInMultisig(t *testing.T) {
-	ctx, keeper, tempDir, codeID, _, privKeyA, _, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
+	ctx, keeper, tempDir, codeID, codeHash, _, privKeyA, _, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
 	edKey := ed25519.GenPrivKey()
@@ -734,7 +781,12 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 
 	initMsg := `{"nop":{}}`
 
-	initMsgBz, err := wasmCtx.Encrypt([]byte(initMsg))
+	msg := types.SecretMsg{
+		CodeHash: []byte(codeHash),
+		Msg:      []byte(initMsg),
+	}
+
+	initMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 
 	sdkMsg := types.MsgInstantiateContract{

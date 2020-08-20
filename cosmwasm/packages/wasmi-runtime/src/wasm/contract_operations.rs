@@ -6,25 +6,26 @@ use wasmi::ModuleInstance;
 use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::cosmwasm::types::{CanonicalAddr, Env, SigInfo};
+use crate::crypto::Ed25519PublicKey;
 use crate::results::{HandleSuccess, InitSuccess, QuerySuccess};
+use crate::wasm::types::{IoNonce, SecretMessage};
 
 use super::contract_validation::{
-    extract_contract_key, generate_encryption_key, validate_contract_key, verify_params,
-    ContractKey, CONTRACT_KEY_LENGTH,
+    calc_contract_hash, extract_contract_key, generate_encryption_key, validate_contract_key,
+    validate_msg, verify_params, ContractKey, CONTRACT_KEY_LENGTH,
 };
 use super::gas::{gas_rules, WasmCosts};
 use super::io::encrypt_output;
 use super::{
     memory::validate_memory,
-    runtime::{create_builder, ContractInstance, Engine, WasmiImportResolver},
+    runtime::{create_builder, ContractInstance, ContractOperation, Engine, WasmiImportResolver},
 };
-use crate::wasm::types::SecretMessage;
 
 use crate::coalesce;
 use crate::cosmwasm::encoding::Binary;
 
 /*
-Each contract is compiled with these functions alreadyy implemented in wasm:
+Each contract is compiled with these functions already implemented in wasm:
 fn cosmwasm_api_0_6() -> i32;  // Seems unused, but we should support it anyways
 fn allocate(size: usize) -> *mut c_void;
 fn deallocate(pointer: *mut c_void);
@@ -47,7 +48,7 @@ pub fn init(
     msg: &[u8],         // probably function call and args
     sig_info: &[u8],    // info about signature verification
 ) -> Result<InitSuccess, EnclaveError> {
-    let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
+    let mut parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
         error!(
             "got an error while trying to deserialize env input bytes into json {:?}: {}",
             String::from_utf8_lossy(&env),
@@ -66,37 +67,55 @@ pub fn init(
     })?;
 
     let secret_msg = SecretMessage::from_slice(msg)?;
-
-    verify_params(&parsed_sig_info, &parsed_env, &secret_msg)?;
-
-    let contract_key = generate_encryption_key(&parsed_env, contract)?;
-
-    trace!("Init: Contract Key: {:?}", contract_key.to_vec().as_slice());
-
-    let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
-
-    let env_ptr = engine.write_to_memory(env)?;
-
     trace!(
         "Init input before decryption: {:?}",
         String::from_utf8_lossy(&msg)
     );
 
+    verify_params(&parsed_sig_info, &parsed_env, &secret_msg)?;
+
+    let contract_address = &parsed_env.contract.address;
+    let contract_key = generate_encryption_key(&parsed_env, contract, contract_address.as_slice())?;
+
+    trace!("Init: Contract Key: {:?}", contract_key.to_vec().as_slice());
+
     let decrypted_msg = secret_msg.decrypt()?;
+
+    let validated_msg = validate_msg(&decrypted_msg, contract)?;
+
     trace!(
         "Init input after decryption: {:?}",
-        String::from_utf8_lossy(&decrypted_msg)
+        String::from_utf8_lossy(&validated_msg)
     );
 
-    let msg_ptr = engine.write_to_memory(&decrypted_msg)?;
+    let mut engine = start_engine(
+        context,
+        gas_limit,
+        contract,
+        &contract_key,
+        ContractOperation::Init,
+        secret_msg.nonce,
+        secret_msg.user_public_key,
+    )?;
+
+    parsed_env.contract_code_hash = hex::encode(calc_contract_hash(contract));
+
+    let new_env = serde_json::to_vec(&parsed_env).map_err(|err| {
+        error!(
+            "got an error while trying to serialize parsed_env into bytes {:?}: {}",
+            parsed_env, err
+        );
+        EnclaveError::FailedToSerialize
+    })?;
+
+    let env_ptr = engine.write_to_memory(&new_env)?;
+    let msg_ptr = engine.write_to_memory(&validated_msg)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
     let output = coalesce!(EnclaveError, {
         let vec_ptr = engine.init(env_ptr, msg_ptr)?;
-
         let output = engine.extract_vector(vec_ptr)?;
-
         // TODO: copy cosmwasm's structures to enclave
         // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
         // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
@@ -104,7 +123,7 @@ pub fn init(
             output,
             secret_msg.nonce,
             secret_msg.user_public_key,
-            parsed_env.contract.address,
+            contract_address,
         )?;
 
         Ok(output)
@@ -116,9 +135,10 @@ pub fn init(
 
     *used_gas = engine.gas_used();
     // todo: can move the key to somewhere in the output message if we want
+
     Ok(InitSuccess {
         output,
-        signature: contract_key,
+        contract_key,
     })
 }
 
@@ -131,7 +151,7 @@ pub fn handle(
     msg: &[u8],
     sig_info: &[u8],
 ) -> Result<HandleSuccess, EnclaveError> {
-    let parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
+    let mut parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
         error!(
             "got an error while trying to deserialize env input bytes into json {:?}: {}",
             env, err
@@ -139,7 +159,7 @@ pub fn handle(
         EnclaveError::FailedToDeserialize
     })?;
 
-    trace!("handle parsed_envs: {:?}", parsed_env);
+    trace!("handle parsed_env: {:?}", parsed_env);
 
     let parsed_sig_info: SigInfo = serde_json::from_slice(sig_info).map_err(|err| {
         error!(
@@ -155,9 +175,25 @@ pub fn handle(
     // Verify env parameters against the signed tx
     verify_params(&parsed_sig_info, &parsed_env, &secret_msg)?;
 
+    let contract_address = &parsed_env.contract.address;
     let contract_key = extract_contract_key(&parsed_env)?;
 
-    if !validate_contract_key(&contract_key, contract) {
+    trace!(
+        "Handle input before decryption: {:?}",
+        String::from_utf8_lossy(&msg)
+    );
+
+    let secret_msg = SecretMessage::from_slice(msg)?;
+    let decrypted_msg = secret_msg.decrypt()?;
+
+    let validated_msg = validate_msg(&decrypted_msg, contract)?;
+
+    trace!(
+        "Handle input afer decryption: {:?}",
+        String::from_utf8_lossy(&validated_msg)
+    );
+
+    if !validate_contract_key(&contract_key, contract_address.as_slice(), contract) {
         error!("got an error while trying to deserialize output bytes");
         return Err(EnclaveError::FailedContractAuthentication);
     }
@@ -169,22 +205,28 @@ pub fn handle(
         contract_key.to_vec().as_slice()
     );
 
-    let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
+    let mut engine = start_engine(
+        context,
+        gas_limit,
+        contract,
+        &contract_key,
+        ContractOperation::Handle,
+        secret_msg.nonce,
+        secret_msg.user_public_key,
+    )?;
 
-    trace!(
-        "Handle input before decryption: {:?}",
-        String::from_utf8_lossy(&msg)
-    );
+    parsed_env.contract_code_hash = hex::encode(calc_contract_hash(contract));
 
-    let decrypted_msg = secret_msg.decrypt()?;
-    trace!(
-        "Handle input afer decryption: {:?}",
-        String::from_utf8_lossy(&decrypted_msg)
-    );
+    let new_env = serde_json::to_vec(&parsed_env).map_err(|err| {
+        error!(
+            "got an error while trying to serialize parsed_env into bytes {:?}: {}",
+            parsed_env, err
+        );
+        EnclaveError::FailedToSerialize
+    })?;
 
-    let env_ptr = engine.write_to_memory(env)?;
-
-    let msg_ptr = engine.write_to_memory(&decrypted_msg)?;
+    let env_ptr = engine.write_to_memory(&new_env)?;
+    let msg_ptr = engine.write_to_memory(&validated_msg)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
@@ -201,7 +243,7 @@ pub fn handle(
             output,
             secret_msg.nonce,
             secret_msg.user_public_key,
-            parsed_env.contract.address,
+            contract_address,
         )?;
         Ok(output)
     })
@@ -211,10 +253,7 @@ pub fn handle(
     })?;
 
     *used_gas = engine.gas_used();
-    Ok(HandleSuccess {
-        output,
-        signature: [0u8; 64], // TODO this is not needed anymore as output is already authenticated
-    })
+    Ok(HandleSuccess { output })
 }
 
 pub fn query(
@@ -239,20 +278,29 @@ pub fn query(
         contract_key.to_vec().as_slice()
     );
 
-    let mut engine = start_engine(context, gas_limit, contract, &contract_key)?;
-
+    let secret_msg = SecretMessage::from_slice(msg)?;
     trace!(
         "Query input before decryption: {:?}",
         String::from_utf8_lossy(&msg)
     );
-    let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
     trace!(
         "Query input afer decryption: {:?}",
         String::from_utf8_lossy(&decrypted_msg)
     );
+    let validated_msg = validate_msg(&decrypted_msg, contract)?;
 
-    let msg_ptr = engine.write_to_memory(&decrypted_msg)?;
+    let mut engine = start_engine(
+        context,
+        gas_limit,
+        contract,
+        &contract_key,
+        ContractOperation::Query,
+        secret_msg.nonce,
+        secret_msg.user_public_key,
+    )?;
+
+    let msg_ptr = engine.write_to_memory(&validated_msg)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
@@ -265,7 +313,7 @@ pub fn query(
             output,
             secret_msg.nonce,
             secret_msg.user_public_key,
-            CanonicalAddr(Binary(Vec::new())), // Not used for queries
+            &CanonicalAddr(Binary(Vec::new())), // Not used for queries
         )?;
         Ok(output)
     })
@@ -275,10 +323,7 @@ pub fn query(
     })?;
 
     *used_gas = engine.gas_used();
-    Ok(QuerySuccess {
-        output,
-        signature: [0; 64], // TODO this is not needed anymore as output is already authenticated
-    })
+    Ok(QuerySuccess { output })
 }
 
 fn start_engine(
@@ -286,6 +331,9 @@ fn start_engine(
     gas_limit: u64,
     contract: &[u8],
     contract_key: &ContractKey,
+    operation: ContractOperation,
+    nonce: IoNonce,
+    user_public_key: Ed25519PublicKey,
 ) -> Result<Engine, EnclaveError> {
     trace!("Deserializing Wasm contract");
 
@@ -309,13 +357,13 @@ fn start_engine(
     let contract_module = pwasm_utils::inject_gas_counter(p_modlue, &gas_rules(&wasm_costs))
         .map_err(|_| EnclaveError::FailedGasMeteringInjection)?;
 
-    trace!("Trying to create Wasmi module from parity..");
+    trace!("Trying to create Wasmi module from parity...");
 
     // Create a wasmi module from the parity module
     let module = wasmi::Module::from_parity_wasm_module(contract_module)
         .map_err(|_err| EnclaveError::InvalidWasm)?;
 
-    trace!("Created Wasmi module from parity. Now checking for floating points..");
+    trace!("Created Wasmi module from parity. Now checking for floating points...");
 
     module
         .deny_floating_point()
@@ -336,8 +384,16 @@ fn start_engine(
     }
     let module = module_instance.not_started_instance().clone();
 
-    let contract_instance =
-        ContractInstance::new(context, module.clone(), gas_limit, *contract_key);
+    let contract_instance = ContractInstance::new(
+        context,
+        module.clone(),
+        gas_limit,
+        wasm_costs,
+        *contract_key,
+        operation,
+        nonce,
+        user_public_key,
+    );
 
     Ok(Engine::new(contract_instance, module))
 }

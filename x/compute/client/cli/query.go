@@ -7,11 +7,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	cosmwasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	flag "github.com/spf13/pflag"
-	"github.com/tendermint/go-amino"
 	"io/ioutil"
 	"strconv"
+
+	cosmwasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	sdkErrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	flag "github.com/spf13/pflag"
+	"github.com/tendermint/go-amino"
 
 	"github.com/spf13/cobra"
 
@@ -43,6 +45,9 @@ func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 		GetCmdGetContractInfo(cdc),
 		GetCmdQuery(cdc),
 		GetQueryDecryptTxCmd(cdc),
+		GetCmdQueryLabel(cdc),
+		GetCmdCodeHashByContract(cdc),
+		CmdDecryptText(cdc),
 	)...)
 	return queryCmd
 }
@@ -63,6 +68,63 @@ func GetCmdListCode(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 			fmt.Println(string(res))
+			return nil
+		},
+	}
+}
+
+// GetCmdListCode lists all wasm code uploaded
+func GetCmdQueryLabel(cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "label [label]",
+		Short: "Check if a label is in use",
+		Long:  "Check if a label is in use",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, args[0])
+			res, _, err := cliCtx.Query(route)
+			if err != nil {
+				if err == sdkErrors.ErrUnknownAddress {
+					fmt.Printf("Label is available and not in use\n")
+					return nil
+				}
+
+				return fmt.Errorf("error querying: %s", err)
+			}
+
+			addr := sdk.AccAddress{}
+
+			err = addr.Unmarshal(res)
+			if err != nil {
+				return fmt.Errorf("error unwrapping address: %s", err)
+			}
+
+			fmt.Printf("Label is in use by contract address: %s\n", addr)
+			return nil
+		},
+	}
+}
+
+// GetCmdListCode lists all wasm code uploaded
+func GetCmdCodeHashByContract(cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "contract-hash [address]",
+		Short: "Return the code hash of a contract",
+		Long:  "Return the code hash of a contract",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHash, args[0])
+			res, _, err := cliCtx.Query(route)
+			if err != nil {
+				return fmt.Errorf("error querying contract hash: %s", err)
+			}
+
+			addr := hex.EncodeToString(res)
+			fmt.Printf("0x%s", addr)
 			return nil
 		},
 	}
@@ -159,6 +221,44 @@ func GetCmdGetContractInfo(cdc *codec.Codec) *cobra.Command {
 	}
 }
 
+func CmdDecryptText(cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "decrypt [encrypted_data]",
+		Short: "Attempt to decrypt an encrypted blob",
+		Long: "Attempt to decrypt a base-64 encoded encrypted message. This is intended to be used if manual decrypt" +
+			"is required for data that is unavailable to be decrypted using the 'query compute tx' command",
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			encodedInput := args[0]
+
+			dataCipherBz, err := base64.StdEncoding.DecodeString(encodedInput)
+			if err != nil {
+				return fmt.Errorf("error while trying to decode the encrypted output data from base64: %w", err)
+			}
+
+			nonce := dataCipherBz[0:32]
+			originalTxSenderPubkey := dataCipherBz[32:64]
+
+			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
+			_, myPubkey, err := wasmCtx.GetTxSenderKeyPair()
+
+			if !bytes.Equal(originalTxSenderPubkey, myPubkey) {
+				return fmt.Errorf("cannot decrypt, not original tx sender")
+			}
+
+			dataPlaintextB64Bz, err := wasmCtx.Decrypt(dataCipherBz[64:], nonce)
+			if err != nil {
+				return fmt.Errorf("error while trying to decrypt the output data: %w", err)
+			}
+
+			fmt.Printf("Decrypted data: %s", dataPlaintextB64Bz)
+			return nil
+		},
+	}
+}
+
 // QueryDecryptTxCmd the default command for a tx query + IO decryption if I'm the tx sender.
 // Coppied from https://github.com/enigmampc/cosmos-sdk/blob/v0.38.4/x/auth/client/cli/query.go#L157-L184 and added IO decryption (Could not wrap it because it prints directly to stdout)
 func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
@@ -192,14 +292,14 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 
 			txInputs := result.Tx.GetMsgs()
 			if len(txInputs) != 1 {
-				return fmt.Errorf("Can only decrypt txs with 1 input. Got %d", len(txInputs))
+				return fmt.Errorf("can only decrypt txs with 1 input. Got %d", len(txInputs))
 			}
 			txInput := txInputs[0]
 
 			if txInput.Type() == "execute" {
 				execTx, ok := txInput.(*types.MsgExecuteContract)
 				if !ok {
-					return fmt.Errorf("Error parsing tx as type 'execute': %v", txInput)
+					return fmt.Errorf("error parsing tx as type 'execute': %v", txInput)
 				}
 
 				encryptedInput = execTx.Msg
@@ -207,18 +307,18 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			} else if txInput.Type() == "instantiate" {
 				initTx, ok := txInput.(*types.MsgInstantiateContract)
 				if !ok {
-					return fmt.Errorf("Error parsing tx as type 'instantiate': %v", txInput)
+					return fmt.Errorf("error parsing tx as type 'instantiate': %v", txInput)
 				}
 
 				encryptedInput = initTx.InitMsg
 			} else {
-				return fmt.Errorf("Tx %s is not of type 'execute' or 'instantiate'. Got type '%s'", args[0], txInput.Type())
+				return fmt.Errorf("tx %s is not of type 'execute' or 'instantiate'. Got type '%s'", args[0], txInput.Type())
 			}
 			answer.Type = txInput.Type()
 
 			// decrypt input
 			if len(encryptedInput) < 64 {
-				return fmt.Errorf("Input must be > 64 bytes. Got %d", len(encryptedInput))
+				return fmt.Errorf("input must be > 64 bytes. Got %d", len(encryptedInput))
 			}
 
 			nonce := encryptedInput[0:32]
@@ -227,19 +327,19 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
 			_, myPubkey, err := wasmCtx.GetTxSenderKeyPair()
 			if err != nil {
-				return fmt.Errorf("Error in GetTxSenderKeyPair: %w", err)
+				return fmt.Errorf("error in GetTxSenderKeyPair: %w", err)
 			}
 
 			if !bytes.Equal(originalTxSenderPubkey, myPubkey) {
-				return fmt.Errorf("Cannot decrypt, not original tx sender")
+				return fmt.Errorf("cannot decrypt, not original tx sender")
 			}
 
 			ciphertextInput := encryptedInput[64:]
-			plaintextInput := []byte{}
+			var plaintextInput []byte
 			if len(ciphertextInput) > 0 {
 				plaintextInput, err = wasmCtx.Decrypt(ciphertextInput, nonce)
 				if err != nil {
-					return fmt.Errorf("Error while trying to decrypt the tx input: %w", err)
+					return fmt.Errorf("error while trying to decrypt the tx input: %w", err)
 				}
 			}
 
@@ -249,24 +349,24 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			if answer.Type == "execute" {
 				dataOutputB64, err := hex.DecodeString(dataOutputHexB64)
 				if err != nil {
-					return fmt.Errorf("Error while trying to decode the encryptrd output data from hex string: %w", err)
+					return fmt.Errorf("error while trying to decode the encrypted output data from hex string: %w", err)
 				}
 
 				dataOutputCipherBz, err := base64.StdEncoding.DecodeString(string(dataOutputB64))
 				if err != nil {
-					return fmt.Errorf("Error while trying to decode the encryptrd output data from base64: %w", err)
+					return fmt.Errorf("error while trying to decode the encrypted output data from base64: %w", err)
 				}
 
 				dataPlaintextB64Bz, err := wasmCtx.Decrypt(dataOutputCipherBz, nonce)
 				if err != nil {
-					return fmt.Errorf("Error while trying to decrypt the output data: %w", err)
+					return fmt.Errorf("error while trying to decrypt the output data: %w", err)
 				}
 				dataPlaintextB64 := string(dataPlaintextB64Bz)
 				answer.OutputData = dataPlaintextB64
 
 				dataPlaintext, err := base64.StdEncoding.DecodeString(dataPlaintextB64)
 				if err != nil {
-					return fmt.Errorf("Error while trying to decode the decrypted output data from base64: %w", err)
+					return fmt.Errorf("error while trying to decode the decrypted output data from base64: %w", err)
 				}
 
 				answer.OutputDataAsString = string(dataPlaintext)
@@ -283,11 +383,11 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 								if a.Key != "" {
 									keyCiphertext, err := base64.StdEncoding.DecodeString(a.Key)
 									if err != nil {
-										return fmt.Errorf("Error while trying to decode the log key '%s' from base64: %w", a.Key, err)
+										return fmt.Errorf("error while trying to decode the log key '%s' from base64: %w", a.Key, err)
 									}
 									keyPlaintext, err := wasmCtx.Decrypt(keyCiphertext, nonce)
 									if err != nil {
-										return fmt.Errorf("Error while trying to decrypt the log key '%s' from base64: %w", a.Key, err)
+										return fmt.Errorf("error while trying to decrypt the log key '%s' from base64: %w", a.Key, err)
 									}
 									a.Key = string(keyPlaintext)
 								}
@@ -296,11 +396,11 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 								if a.Value != "" {
 									valueCiphertext, err := base64.StdEncoding.DecodeString(a.Value)
 									if err != nil {
-										return fmt.Errorf("Error while trying to decode the log value '%s' from base64: %w", a.Value, err)
+										return fmt.Errorf("error while trying to decode the log value '%s' from base64: %w", a.Value, err)
 									}
 									valuePlaintext, err := wasmCtx.Decrypt(valueCiphertext, nonce)
 									if err != nil {
-										return fmt.Errorf("Error while trying to decrypt the log value '%s' from base64: %w", a.Value, err)
+										return fmt.Errorf("error while trying to decrypt the log value '%s' from base64: %w", a.Value, err)
 									}
 									a.Value = string(valuePlaintext)
 								}
@@ -359,7 +459,17 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 
 			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
 
-			queryData, err = wasmCtx.Encrypt(queryData)
+			codeHash, err := GetCodeHashByContractAddr(cliCtx, addr)
+			if err != nil {
+				return fmt.Errorf("contract not found: %s", addr)
+			}
+
+			msg := types.SecretMsg{
+				CodeHash: codeHash,
+				Msg:      queryData,
+			}
+
+			queryData, err = wasmCtx.Encrypt(msg.Serialize())
 			if err != nil {
 				return err
 			}

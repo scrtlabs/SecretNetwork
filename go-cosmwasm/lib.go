@@ -177,7 +177,7 @@ func (w *Wasmer) Query(
 ) ([]byte, uint64, error) {
 	data, gasUsed, err := api.Query(w.cache, code, queryMsg, &gasMeter, &store, &goapi, &querier, gasLimit)
 	if err != nil {
-		return nil, 0, err
+		return nil, gasUsed, err
 	}
 
 	var resp types.QueryResponse

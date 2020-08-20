@@ -268,6 +268,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "downcast-rs"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
+
+[[package]]
 name = "either"
 version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -312,6 +318,12 @@ source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.2#8f065be7
 dependencies = [
  "autocfg 1.0.0",
 ]
+
+[[package]]
+name = "hex"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "644f9158b2f133fd50f5fb3242878846d9eb792e445c893805ff0e3824006e35"
 
 [[package]]
 name = "httparse"
@@ -811,9 +823,9 @@ checksum = "502d53007c02d7605a05df1c1a73ee436952781653da5d0bf57ad608f66932c1"
 
 [[package]]
 name = "syn"
-version = "1.0.38"
+version = "1.0.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e69abc24912995b3038597a7a593be5053eb0fb44f3cc5beec0deb421790c1f4"
+checksum = "936cae2873c940d92e697597c5eee105fb570cd5689c695806f672883653349b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -865,8 +877,9 @@ checksum = "b5a972e5669d67ba988ce3dc826706fb0a8b01471c088cb0b6110b805cc36aed"
 [[package]]
 name = "wasmi"
 version = "0.6.2"
-source = "git+https://github.com/paritytech/wasmi?rev=39a18a433a765a36383d34d4edd536ba1e0664d2#39a18a433a765a36383d34d4edd536ba1e0664d2"
+source = "git+https://github.com/paritytech/wasmi?rev=84d2764594d80425373bf4949a58fa3df3d624c3#84d2764594d80425373bf4949a58fa3df3d624c3"
 dependencies = [
+ "downcast-rs",
  "libm",
  "memory_units",
  "num-rational 0.2.4",
@@ -887,6 +900,7 @@ dependencies = [
  "ctor",
  "derive_more",
  "enclave-ffi-types",
+ "hex",
  "httparse",
  "itertools",
  "lazy_static",
@@ -922,7 +936,7 @@ dependencies = [
 [[package]]
 name = "wasmi-validation"
 version = "0.3.0"
-source = "git+https://github.com/paritytech/wasmi?rev=39a18a433a765a36383d34d4edd536ba1e0664d2#39a18a433a765a36383d34d4edd536ba1e0664d2"
+source = "git+https://github.com/paritytech/wasmi?rev=84d2764594d80425373bf4949a58fa3df3d624c3#84d2764594d80425373bf4949a58fa3df3d624c3"
 dependencies = [
  "parity-wasm",
 ]

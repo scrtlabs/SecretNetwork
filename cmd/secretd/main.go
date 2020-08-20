@@ -2,7 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"os"
+	"path"
 
 	"github.com/enigmampc/cosmos-sdk/server"
 	"github.com/enigmampc/cosmos-sdk/store"
@@ -17,10 +20,10 @@ import (
 	"github.com/enigmampc/cosmos-sdk/baseapp"
 	"github.com/enigmampc/cosmos-sdk/client/flags"
 
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	genutilcli "github.com/enigmampc/cosmos-sdk/x/genutil/client/cli"
 	app "github.com/enigmampc/SecretNetwork"
 	scrt "github.com/enigmampc/SecretNetwork/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
+	genutilcli "github.com/enigmampc/cosmos-sdk/x/genutil/client/cli"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
@@ -52,6 +55,8 @@ func main() {
 	rootCmd.AddCommand(InitAttestation(ctx, cdc))
 	rootCmd.AddCommand(ParseCert(ctx, cdc))
 	rootCmd.AddCommand(ConfigureSecret(ctx, cdc))
+	rootCmd.AddCommand(HealthCheck(ctx, cdc))
+	rootCmd.AddCommand(ResetEnclave(ctx, cdc))
 	rootCmd.AddCommand(InitBootstrapCmd(ctx, cdc, app.ModuleBasics))
 	rootCmd.AddCommand(genutilcli.InitCmd(ctx, cdc, app.ModuleBasics, app.DefaultNodeHome))
 	rootCmd.AddCommand(genutilcli.CollectGenTxsCmd(ctx, cdc, auth.GenesisAccountIterator{}, app.DefaultNodeHome))
@@ -78,6 +83,46 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	// Set default gas limit for WASM queries
+	if viper.IsSet("query-gas-limit") {
+		// already set, not going to overwrite it
+		return
+	}
+
+	appTomlPath := path.Join(ctx.Config.RootDir, "config", "app.toml")
+	if !fileExists(appTomlPath) {
+		// config file does not exist, this means `secretd init` still wasn't called
+		return
+	}
+
+	queryGasLimitTemplate := `
+# query-gas-limit sets the gas limit under which your node will run smart sontracts queries.
+# Queries that consume more than this value will be terminated prematurely with an error.
+# This is a good way to protect your node from DoS by heavy queries.
+query-gas-limit = 3000000
+`
+
+	appTomlFile, err := os.OpenFile(appTomlPath, os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		panic(fmt.Sprintf("failed opening file '%s' for appending query-gas-limit.\n", err))
+	}
+	defer appTomlFile.Close()
+
+	_, err = appTomlFile.WriteString(queryGasLimitTemplate)
+	if err != nil {
+		panic(fmt.Sprintf("failed writing default query-gas-limit to file '%s'", err))
+	}
+}
+
+// fileExists checks if a file exists and is not a directory before we
+// try using it to prevent further errors.
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }
 
 func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer) abci.Application {
@@ -88,6 +133,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer) abci.Application
 	}
 
 	bootstrap := viper.GetBool("bootstrap")
+	queryGasLimit := viper.GetUint64("query-gas-limit")
 
 	skipUpgradeHeights := make(map[int64]bool)
 	for _, h := range viper.GetIntSlice(server.FlagUnsafeSkipUpgrades) {
@@ -96,6 +142,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer) abci.Application
 
 	return app.NewSecretNetworkApp(
 		logger, db, traceStore, true, bootstrap, invCheckPeriod, skipUpgradeHeights,
+		queryGasLimit,
 		baseapp.SetPruning(store.NewPruningOptionsFromString(viper.GetString("pruning"))),
 		baseapp.SetMinGasPrices(viper.GetString(server.FlagMinGasPrices)),
 		baseapp.SetHaltHeight(viper.GetUint64(server.FlagHaltHeight)),
@@ -109,9 +156,10 @@ func exportAppStateAndTMValidators(
 ) (json.RawMessage, []tmtypes.GenesisValidator, error) {
 
 	bootstrap := viper.GetBool("bootstrap")
+	queryGasLimit := viper.GetUint64("query-gas-limit")
 
 	if height != -1 {
-		secretApp := app.NewSecretNetworkApp(logger, db, traceStore, false, bootstrap, uint(1), map[int64]bool{})
+		secretApp := app.NewSecretNetworkApp(logger, db, traceStore, false, bootstrap, uint(1), map[int64]bool{}, queryGasLimit)
 		err := secretApp.LoadHeight(height)
 		if err != nil {
 			return nil, nil, err
@@ -119,6 +167,6 @@ func exportAppStateAndTMValidators(
 		return secretApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 	}
 
-	secretApp := app.NewSecretNetworkApp(logger, db, traceStore, true, bootstrap, uint(1), map[int64]bool{})
+	secretApp := app.NewSecretNetworkApp(logger, db, traceStore, true, bootstrap, uint(1), map[int64]bool{}, queryGasLimit)
 	return secretApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 }

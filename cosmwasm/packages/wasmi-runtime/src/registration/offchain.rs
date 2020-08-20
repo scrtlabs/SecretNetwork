@@ -1,21 +1,30 @@
-///
+//!
 /// These functions run off chain, and so are not limited by deterministic limitations. Feel free
 /// to go crazy with random generation entropy, time requirements, or whatever else
 ///
-use log::*;
-use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 
+use log::*;
+#[cfg(feature = "SGX_MODE_HW")]
+use sgx_types::{sgx_platform_info_t, sgx_update_info_bit_t};
+use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 use std::slice;
+
+#[cfg(feature = "SGX_MODE_HW")]
+use enclave_ffi_types::NodeAuthResult;
 
 use crate::consts::{
     ATTESTATION_CERTIFICATE_SAVE_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH,
     SEED_EXCH_CERTIFICATE_SAVE_PATH,
 };
-use crate::crypto::{Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
+use crate::crypto::{KEY_MANAGER, Keychain, PUBLIC_KEY_SIZE};
+#[cfg(feature = "SGX_MODE_HW")]
+use crate::registration::report::AttestationReport;
 use crate::storage::write_to_untrusted;
 use crate::utils::{attest_from_key, validate_const_ptr, validate_mut_ptr, validate_mut_slice};
 
 use super::attestation::create_attestation_certificate;
+#[cfg(feature = "SGX_MODE_HW")]
+use super::cert::{ocall_get_update_info, verify_quote_status};
 use super::cert::verify_ra_cert;
 use super::seed_exchange::decrypt_seed;
 
@@ -119,7 +128,7 @@ pub unsafe extern "C" fn ecall_init_node(
     let pk = match verify_ra_cert(cert_slice) {
         Err(e) => {
             error!("Error in validating certificate: {:?}", e);
-            return e;
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
         Ok(res) => res,
     };
@@ -185,6 +194,8 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
         return status;
     }
 
+    print_local_report_info(cert.as_slice());
+
     sgx_status_t::SGX_SUCCESS
 }
 
@@ -210,4 +221,85 @@ pub unsafe extern "C" fn ecall_key_gen(
     public_key.clone_from_slice(&pubkey);
     trace!("ecall_key_gen key pk: {:?}", public_key.to_vec());
     sgx_status_t::SGX_SUCCESS
+}
+
+#[cfg(not(feature = "SGX_MODE_HW"))]
+fn print_local_report_info(_cert: &[u8]) {}
+
+#[cfg(feature = "SGX_MODE_HW")]
+fn print_local_report_info(cert: &[u8]) {
+    let report = match AttestationReport::from_cert(cert) {
+        Ok(r) => r,
+        Err(_) => {
+            error!("Error parsing report");
+            return;
+        }
+    };
+
+    let node_auth_result = NodeAuthResult::from(&report.sgx_quote_status);
+    // print
+    match verify_quote_status(&report.sgx_quote_status) {
+        Err(status) => match status {
+            NodeAuthResult::SwHardeningAndConfigurationNeeded => {
+                println!("Platform status is SW_HARDENING_AND_CONFIGURATION_NEEDED. This means is updated but requires further BIOS configuration");
+            }
+            NodeAuthResult::GroupOutOfDate => {
+                println!("Platform status is GROUP_OUT_OF_DATE. This means that one of the system components is missing a security update");
+            }
+            _ => {
+                println!("Platform status is {}", status);
+            }
+        },
+        _ => println!("Platform Okay!"),
+    }
+
+    // print platform blob info
+    match node_auth_result {
+        NodeAuthResult::GroupOutOfDate | NodeAuthResult::SwHardeningAndConfigurationNeeded => unsafe {
+            print_platform_info(&report)
+        },
+        _ => {}
+    }
+}
+
+#[cfg(feature = "SGX_MODE_HW")]
+unsafe fn print_platform_info(report: &AttestationReport) {
+    if let Some(platform_info) = &report.platform_info_blob {
+        let mut update_info = sgx_update_info_bit_t::default();
+        let mut rt = sgx_status_t::default();
+        let res = ocall_get_update_info(
+            &mut rt as *mut sgx_status_t,
+            platform_info[4..].as_ptr() as *const sgx_platform_info_t,
+            1,
+            &mut update_info,
+        );
+
+        if res != sgx_status_t::SGX_SUCCESS {
+            println!("res={:?}", res);
+            return;
+        }
+
+        if rt != sgx_status_t::SGX_SUCCESS {
+            if update_info.ucodeUpdate != 0 {
+                println!("Processor Firmware Update (ucodeUpdate). A security upgrade for your computing\n\
+                            device is required for this application to continue to provide you with a high degree of\n\
+                            security. Please contact your device manufacturer’s support website for a BIOS update\n\
+                            for this system");
+            }
+
+            if update_info.csmeFwUpdate != 0 {
+                println!("Intel Manageability Engine Update (csmeFwUpdate). A security upgrade for your\n\
+                            computing device is required for this application to continue to provide you with a high\n\
+                            degree of security. Please contact your device manufacturer’s support website for a\n\
+                            BIOS and/or Intel® Manageability Engine update for this system");
+            }
+
+            if update_info.pswUpdate != 0 {
+                println!("Intel SGX Platform Software Update (pswUpdate). A security upgrade for your\n\
+                              computing device is required for this application to continue to provide you with a high\n\
+                              degree of security. Please visit this application’s support website for an Intel SGX\n\
+                              Platform SW update");
+            }
+        }
+    }
 }

@@ -94,6 +94,8 @@ pub struct Env {
     pub message: MessageInfo,
     pub contract: ContractInfo,
     pub contract_key: Option<String>,
+    #[serde(default)]
+    pub contract_code_hash: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
@@ -225,19 +227,26 @@ pub enum WasmMsg {
     /// this dispatches a call to another contract at a known address (with known ABI)
     Execute {
         contract_addr: HumanAddr,
+        /// callback_code_hash is the hex encoded hash of the code. This is used by Secret Network to harden against replaying the contract
+        /// It is used to bind the request to a destination contract in a stronger way than just the contract address which can be faked
+        callback_code_hash: String,
         /// msg is the json-encoded HandleMsg struct (as raw Binary)
-        msg: String,
+        msg: Binary,
         send: Vec<Coin>,
         callback_sig: Option<Vec<u8>>,
     },
     /// this instantiates a new contracts from previously uploaded wasm code
     Instantiate {
         code_id: u64,
+        /// callback_code_hash is the hex encoded hash of the code. This is used by Secret Network to harden against replaying the contract
+        /// It is used to bind the request to a destination contract in a stronger way than just the contract address which can be faked
+        callback_code_hash: String,
         /// msg is the json-encoded InitMsg struct (as raw Binary)
-        msg: String,
+        msg: Binary,
         send: Vec<Coin>,
-        /// optional human-readable label for the contract
-        label: Option<String>,
+        /// Human-readable label for the contract
+        #[serde(default)]
+        label: String,
         callback_sig: Option<Vec<u8>>,
     },
 }

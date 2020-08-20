@@ -14,9 +14,12 @@ pub type ContractKey = [u8; CONTRACT_KEY_LENGTH];
 
 pub const CONTRACT_KEY_LENGTH: usize = HASH_SIZE + HASH_SIZE;
 
+const HEX_ENCODED_HASH_SIZE: usize = HASH_SIZE * 2;
+
 pub fn generate_encryption_key(
     env: &Env,
     contract: &[u8],
+    contract_address: &[u8],
 ) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
     let consensus_state_ikm = KEY_MANAGER.get_consensus_state_ikm().unwrap();
 
@@ -26,8 +29,12 @@ pub fn generate_encryption_key(
 
     let mut encryption_key = [0u8; 64];
 
-    let authenticated_contract_id =
-        generate_contract_id(&consensus_state_ikm, &sender_id, &contract_hash);
+    let authenticated_contract_id = generate_contract_id(
+        &consensus_state_ikm,
+        &sender_id,
+        &contract_hash,
+        contract_address,
+    );
 
     encryption_key[0..32].copy_from_slice(&sender_id);
     encryption_key[32..].copy_from_slice(&authenticated_contract_id);
@@ -72,12 +79,13 @@ pub fn generate_contract_id(
     consensus_state_ikm: &AESKey,
     sender_id: &[u8; HASH_SIZE],
     code_hash: &[u8; HASH_SIZE],
+    contract_address: &[u8],
 ) -> [u8; HASH_SIZE] {
     let authentication_key = consensus_state_ikm.derive_key_from_this(sender_id.as_ref());
 
     let mut input_data = sender_id.to_vec();
     input_data.extend_from_slice(code_hash);
-
+    input_data.extend_from_slice(contract_address);
     authentication_key.sign_sha_256(&input_data)
 }
 
@@ -87,6 +95,7 @@ pub fn calc_contract_hash(contract_bytes: &[u8]) -> [u8; HASH_SIZE] {
 
 pub fn validate_contract_key(
     contract_key: &[u8; CONTRACT_KEY_LENGTH],
+    contract_address: &[u8],
     contract_code: &[u8],
 ) -> bool {
     // parse contract key -> < signer_id || authentication_code >
@@ -103,16 +112,40 @@ pub fn validate_contract_key(
     let enclave_key = KEY_MANAGER
         .get_consensus_state_ikm()
         .map_err(|_err| {
-            error!("Error extractling consensus_state_key");
+            error!("Error extracting consensus_state_key");
             false
         })
         .unwrap();
 
     // calculate the authentication_id
     let calculated_authentication_id =
-        generate_contract_id(&enclave_key, &signer_id, &contract_hash);
+        generate_contract_id(&enclave_key, &signer_id, &contract_hash, contract_address);
 
     calculated_authentication_id == expected_authentication_id
+}
+
+pub fn validate_msg(msg: &[u8], contract_code: &[u8]) -> Result<Vec<u8>, EnclaveError> {
+    if msg.len() < HEX_ENCODED_HASH_SIZE {
+        error!("Malformed message - expected contract code hash to be prepended to the msg");
+        return Err(EnclaveError::ValidationFailure);
+    }
+
+    let contract_hash = calc_contract_hash(contract_code);
+
+    let mut encrypted_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] = [0u8; HEX_ENCODED_HASH_SIZE];
+    encrypted_contract_hash.copy_from_slice(&msg[0..HEX_ENCODED_HASH_SIZE]);
+
+    let decoded_hash: Vec<u8> = hex::decode(&encrypted_contract_hash[..]).map_err(|_| {
+        error!("Got exec message with malformed contract hash");
+        EnclaveError::ValidationFailure
+    })?;
+
+    if decoded_hash != contract_hash {
+        error!("Message contains mismatched contract hash");
+        return Err(EnclaveError::ValidationFailure);
+    }
+
+    Ok(msg[HEX_ENCODED_HASH_SIZE..].to_vec())
 }
 
 pub fn verify_params(
@@ -213,7 +246,7 @@ fn get_verified_msg<'a>(
         SignDocWasmMsg::Execute { msg, .. } | SignDocWasmMsg::Instantiate { init_msg: msg, .. } => {
             let binary_msg_result = Binary::from_base64(msg);
             if let Ok(binary_msg) = binary_msg_result {
-                return Binary(sent_msg.to_slice().to_vec()) == binary_msg;
+                return Binary(sent_msg.to_vec()) == binary_msg;
             }
 
             false
@@ -287,7 +320,7 @@ fn verify_signature_params(
         error!("Message verification failed!");
         debug!(
             "Message sent to contract {:?} is not equal to any signed messages {:?}",
-            sent_msg.to_slice(),
+            sent_msg.to_vec(),
             sign_doc.msgs
         );
         return false;

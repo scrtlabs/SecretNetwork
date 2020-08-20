@@ -183,6 +183,15 @@ func DefaultWasmConfig() WasmConfig {
 	}
 }
 
+type SecretMsg struct {
+	CodeHash []byte
+	Msg      []byte
+}
+
+func (m SecretMsg) Serialize() []byte {
+	return append(m.CodeHash, m.Msg...)
+}
+
 func NewVerificationInfo(signBytes []byte, signature auth.StdSignature, callbackSig []byte) wasmTypes.VerificationInfo {
 	return wasmTypes.VerificationInfo{
 		Bytes:             signBytes,

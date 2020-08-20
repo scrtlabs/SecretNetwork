@@ -101,7 +101,8 @@ func validateBuilder(buildTag string) error {
 
 type MsgInstantiateContract struct {
 	Sender            sdk.AccAddress `json:"sender" yaml:"sender"`
-	Admin             sdk.AccAddress `json:"admin,omitempty" yaml:"admin"` // Admin is an optional address that can execute migrations
+	Admin             sdk.AccAddress `json:"admin,omitempty" yaml:"admin"`                 // Admin is an optional address that can execute migrations
+	CallbackCodeHash  string         `json:"callback_code_hash" yaml:"callback_code_hash"` // This field is only used for callbacks constructed with this message type
 	Code              uint64         `json:"code_id" yaml:"code_id"`
 	Label             string         `json:"label" yaml:"label"`
 	InitMsg           []byte         `json:"init_msg" yaml:"init_msg"`
@@ -157,6 +158,7 @@ type MsgExecuteContract struct {
 	Sender            sdk.AccAddress `json:"sender" yaml:"sender"`
 	Contract          sdk.AccAddress `json:"contract" yaml:"contract"`
 	Msg               []byte         `json:"msg" yaml:"msg"`
+	CallbackCodeHash  string         `json:"callback_code_hash" yaml:"callback_code_hash"`
 	SentFunds         sdk.Coins      `json:"sent_funds" yaml:"sent_funds"`
 	CallbackSignature []byte         `json:"callback_sig" yaml:"callback_sig"` // Optional
 }

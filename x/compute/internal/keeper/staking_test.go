@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -86,8 +87,6 @@ type InvestmentResponse struct {
 }
 
 func TestInitializeStaking(t *testing.T) {
-	t.SkipNow()
-
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -101,7 +100,7 @@ func TestInitializeStaking(t *testing.T) {
 	assert.Equal(t, v.GetDelegatorShares(), sdk.NewDec(1234567))
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000), sdk.NewInt64Coin("stake", 500000))
-	creator, _ := createFakeFundedAccount(ctx, accKeeper, deposit)
+	creator, creatorPrivKey := createFakeFundedAccount(ctx, accKeeper, deposit)
 
 	// upload staking derivates code
 	stakingCode, err := ioutil.ReadFile("./testdata/staking.wasm")
@@ -121,9 +120,10 @@ func TestInitializeStaking(t *testing.T) {
 	}
 	initBz, err := json.Marshal(&initMsg)
 	require.NoError(t, err)
-	initBz, err = wasmCtx.Encrypt(initBz)
+	initBz, err = testEncrypt(t, keeper, ctx, nil, stakingID, initBz)
 	require.NoError(t, err)
 
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initBz, stakingID, nil)
 	stakingAddr, err := keeper.Instantiate(ctx, stakingID, creator, nil, initBz, "staking derivates - DRV", nil, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, stakingAddr)
@@ -143,11 +143,11 @@ func TestInitializeStaking(t *testing.T) {
 	}
 	badBz, err := json.Marshal(&badInitMsg)
 	require.NoError(t, err)
-	initBz, err = wasmCtx.Encrypt(initBz)
-	require.NoError(t, err)
 
-	_, err = keeper.Instantiate(ctx, stakingID, creator, nil, badBz, "missing validator", nil, nil)
-	require.Error(t, err)
+	_, _, initErr := initHelper(t, keeper, ctx, stakingID, creator, creatorPrivKey, string(badBz), true, defaultGasForTests)
+	require.Error(t, initErr)
+	require.Error(t, initErr.GenericErr)
+	require.Equal(t, fmt.Sprintf("%s is not in the current validator set", sdk.ValAddress(bob).String()), initErr.GenericErr.Msg)
 
 	// no changes to bonding shares
 	val, _ := stakingKeeper.GetValidator(ctx, valAddr)
@@ -189,7 +189,7 @@ func initializeStaking(t *testing.T) initInfo {
 	assert.Equal(t, v.Status, sdk.Bonded)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000), sdk.NewInt64Coin("stake", 500000))
-	creator, _ := createFakeFundedAccount(ctx, accKeeper, deposit)
+	creator, creatorPrivKey := createFakeFundedAccount(ctx, accKeeper, deposit)
 
 	// upload staking derivates code
 	stakingCode, err := ioutil.ReadFile("./testdata/staking.wasm")
@@ -209,9 +209,10 @@ func initializeStaking(t *testing.T) initInfo {
 	}
 	initBz, err := json.Marshal(&initMsg)
 	require.NoError(t, err)
-	initBz, err = wasmCtx.Encrypt(initBz)
+	initBz, err = testEncrypt(t, keeper, ctx, nil, stakingID, initBz)
 	require.NoError(t, err)
 
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initBz, stakingID, nil)
 	stakingAddr, err := keeper.Instantiate(ctx, stakingID, creator, nil, initBz, "staking derivates - DRV", nil, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, stakingAddr)
@@ -230,8 +231,6 @@ func initializeStaking(t *testing.T) initInfo {
 }
 
 func TestBonding(t *testing.T) {
-	t.SkipNow()
-
 	initInfo := initializeStaking(t)
 	defer initInfo.cleanup()
 	ctx, valAddr, contractAddr := initInfo.ctx, initInfo.valAddr, initInfo.contractAddr
@@ -245,7 +244,7 @@ func TestBonding(t *testing.T) {
 	// bob has 160k, putting 80k into the contract
 	full := sdk.NewCoins(sdk.NewInt64Coin("stake", 160000))
 	funds := sdk.NewCoins(sdk.NewInt64Coin("stake", 80000))
-	bob, _ := createFakeFundedAccount(ctx, accKeeper, full)
+	bob, privBob := createFakeFundedAccount(ctx, accKeeper, full)
 
 	// check contract state before
 	assertBalance(t, ctx, keeper, contractAddr, bob, "0")
@@ -257,8 +256,9 @@ func TestBonding(t *testing.T) {
 	}
 	bondBz, err := json.Marshal(bond)
 	require.NoError(t, err)
-	bondBz, err = wasmCtx.Encrypt(bondBz)
+	bondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, bondBz)
 	require.NoError(t, err)
+	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, bondBz, contractAddr, funds)
 	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil)
 	require.NoError(t, err)
 
@@ -283,8 +283,6 @@ func TestBonding(t *testing.T) {
 }
 
 func TestUnbonding(t *testing.T) {
-	t.SkipNow()
-
 	initInfo := initializeStaking(t)
 	defer initInfo.cleanup()
 	ctx, valAddr, contractAddr := initInfo.ctx, initInfo.valAddr, initInfo.contractAddr
@@ -298,15 +296,16 @@ func TestUnbonding(t *testing.T) {
 	// bob has 160k, putting 80k into the contract
 	full := sdk.NewCoins(sdk.NewInt64Coin("stake", 160000))
 	funds := sdk.NewCoins(sdk.NewInt64Coin("stake", 80000))
-	bob, _ := createFakeFundedAccount(ctx, accKeeper, full)
+	bob, privBob := createFakeFundedAccount(ctx, accKeeper, full)
 
 	bond := StakingHandleMsg{
 		Bond: &struct{}{},
 	}
 	bondBz, err := json.Marshal(bond)
 	require.NoError(t, err)
-	bondBz, err = wasmCtx.Encrypt(bondBz)
+	bondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, bondBz)
 	require.NoError(t, err)
+	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, bondBz, contractAddr, funds)
 	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil)
 	require.NoError(t, err)
 
@@ -321,8 +320,9 @@ func TestUnbonding(t *testing.T) {
 	}
 	unbondBz, err := json.Marshal(unbond)
 	require.NoError(t, err)
-	unbondBz, err = wasmCtx.Encrypt(unbondBz)
+	unbondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, unbondBz)
 	require.NoError(t, err)
+	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, unbondBz, contractAddr, nil)
 	_, err = keeper.Execute(ctx, contractAddr, bob, unbondBz, nil, nil)
 	require.NoError(t, err)
 
@@ -355,8 +355,6 @@ func TestUnbonding(t *testing.T) {
 }
 
 func TestReinvest(t *testing.T) {
-	t.SkipNow()
-
 	initInfo := initializeStaking(t)
 	defer initInfo.cleanup()
 	ctx, valAddr, contractAddr := initInfo.ctx, initInfo.valAddr, initInfo.contractAddr
@@ -372,7 +370,7 @@ func TestReinvest(t *testing.T) {
 	// full is 2x funds, 1x goes to the contract, other stays on his wallet
 	full := sdk.NewCoins(sdk.NewInt64Coin("stake", 400000))
 	funds := sdk.NewCoins(sdk.NewInt64Coin("stake", 200000))
-	bob, _ := createFakeFundedAccount(ctx, accKeeper, full)
+	bob, privBob := createFakeFundedAccount(ctx, accKeeper, full)
 
 	// we will stake 200k to a validator with 1M self-bond
 	// this means we should get 1/6 of the rewards
@@ -381,8 +379,9 @@ func TestReinvest(t *testing.T) {
 	}
 	bondBz, err := json.Marshal(bond)
 	require.NoError(t, err)
-	bondBz, err = wasmCtx.Encrypt(bondBz)
+	bondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, bondBz)
 	require.NoError(t, err)
+	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, bondBz, contractAddr, funds)
 	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil)
 	require.NoError(t, err)
 
@@ -397,8 +396,9 @@ func TestReinvest(t *testing.T) {
 	}
 	reinvestBz, err := json.Marshal(reinvest)
 	require.NoError(t, err)
-	reinvestBz, err = wasmCtx.Encrypt(reinvestBz)
+	reinvestBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, reinvestBz)
 	require.NoError(t, err)
+	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, reinvestBz, contractAddr, nil)
 	_, err = keeper.Execute(ctx, contractAddr, bob, reinvestBz, nil, nil)
 	require.NoError(t, err)
 
@@ -489,12 +489,11 @@ func assertBalance(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Ac
 	}
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
-	queryBz, err = wasmCtx.Encrypt(queryBz)
-	require.NoError(t, err)
-	res, err := keeper.QuerySmart(ctx, contract, queryBz)
-	require.NoError(t, err)
+
+	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
+	require.Empty(t, qErr)
 	var balance BalanceResponse
-	err = json.Unmarshal(res, &balance)
+	err = json.Unmarshal([]byte(res), &balance)
 	require.NoError(t, err)
 	assert.Equal(t, expected, balance.Balance)
 }
@@ -507,12 +506,11 @@ func assertClaims(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	}
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
-	queryBz, err = wasmCtx.Encrypt(queryBz)
-	require.NoError(t, err)
-	res, err := keeper.QuerySmart(ctx, contract, queryBz)
-	require.NoError(t, err)
+
+	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
+	require.Empty(t, qErr)
 	var claims ClaimsResponse
-	err = json.Unmarshal(res, &claims)
+	err = json.Unmarshal([]byte(res), &claims)
 	require.NoError(t, err)
 	assert.Equal(t, expected, claims.Claims)
 }
@@ -521,12 +519,11 @@ func assertSupply(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	query := StakingQueryMsg{Investment: &struct{}{}}
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
-	queryBz, err = wasmCtx.Encrypt(queryBz)
-	require.NoError(t, err)
-	res, err := keeper.QuerySmart(ctx, contract, queryBz)
-	require.NoError(t, err)
+	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
+	require.Empty(t, qErr)
+
 	var invest InvestmentResponse
-	err = json.Unmarshal(res, &invest)
+	err = json.Unmarshal([]byte(res), &invest)
 	require.NoError(t, err)
 	assert.Equal(t, expectedIssued, invest.TokenSupply)
 	assert.Equal(t, expectedBonded, invest.StakedTokens)

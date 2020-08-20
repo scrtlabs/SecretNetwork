@@ -25,7 +25,7 @@ services:
       - /tmp/secretcli:/root/.secretcli
     stdin_open: true
     tty: true
-  
+
   bootstrap:
     image: ci-enigma-sgx-bootstrap
     container_name: bootstrap
@@ -50,6 +50,22 @@ services:
     image: ci-enigma-sgx-node
     depends_on:
       - bootstrap
+    devices:
+      - /dev/sgx
+    volumes:
+      - /tmp/aesmd:/var/run/aesmd
+      - /tmp/secretd:/tmp/.secretd
+      - /tmp/secretcli:/root/.secretcli
+    stdin_open: true
+    tty: true
+    environment:
+      - http_proxy
+      - https_proxy
+
+  enclave-test:
+    image: rust-enclave-test
+    depends_on:
+      - aesm
     devices:
       - /dev/sgx
     volumes:

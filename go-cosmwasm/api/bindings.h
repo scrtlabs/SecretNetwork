@@ -130,6 +130,8 @@ Buffer get_code(cache_t *cache, Buffer id, Buffer *err);
 
 Buffer get_encrypted_seed(Buffer cert, Buffer *err);
 
+Buffer get_health_check(Buffer *err);
+
 Buffer handle(cache_t *cache,
               Buffer code_id,
               Buffer params,

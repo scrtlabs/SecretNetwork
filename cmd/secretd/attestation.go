@@ -5,21 +5,24 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	"github.com/enigmampc/cosmos-sdk/types/module"
-	"github.com/enigmampc/cosmos-sdk/x/genutil"
 	app "github.com/enigmampc/SecretNetwork"
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	"github.com/enigmampc/cosmos-sdk/types/module"
+	"github.com/enigmampc/cosmos-sdk/x/genutil"
 
 	"github.com/enigmampc/cosmos-sdk/codec"
 	"github.com/enigmampc/cosmos-sdk/server"
 	"github.com/spf13/cobra"
 )
+
+const flagReset = "reset"
 
 func InitAttestation(
 	_ *server.Context, _ *codec.Codec) *cobra.Command {
@@ -33,18 +36,42 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 `,
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			_, err := api.KeyGen()
-			if err != nil {
-				return fmt.Errorf("failed to initialize enclave: %w", err)
+
+			sgxSecretsPath := os.Getenv("SCRT_SGX_STORAGE")
+			if sgxSecretsPath == "" {
+				sgxSecretsPath = os.ExpandEnv("$HOME/.sgx_secrets")
 			}
 
-			_, err = api.CreateAttestationReport()
+			sgxSecretsPath += string(os.PathSeparator) + reg.EnclaveRegistrationKey
+
+			resetFlag := viper.GetBool(flagReset)
+
+			if !resetFlag {
+				if _, err := os.Stat(sgxSecretsPath); os.IsNotExist(err) {
+					fmt.Println("Creating new enclave registration key")
+					_, err := api.KeyGen()
+					if err != nil {
+						return fmt.Errorf("failed to initialize enclave: %w", err)
+					}
+				} else {
+					fmt.Println("Enclave key already exists. If you wish to overwrite and reset the node, use the --reset flag")
+				}
+			} else {
+				fmt.Println("Reset enclave flag set, generating new enclave registration key. You must now re-register the node")
+				_, err := api.KeyGen()
+				if err != nil {
+					return fmt.Errorf("failed to initialize enclave: %w", err)
+				}
+			}
+
+			_, err := api.CreateAttestationReport()
 			if err != nil {
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}
 			return nil
 		},
 	}
+	cmd.Flags().Bool(flagReset, false, "Optional flag to regenerate the enclave registration key")
 
 	return cmd
 }
@@ -216,6 +243,77 @@ func ConfigureSecret(_ *server.Context, _ *codec.Codec) *cobra.Command {
 				return err
 			}
 
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func HealthCheck(_ *server.Context, _ *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "check-enclave",
+		Short: "Test enclave status",
+		Long:  "Help diagnose issues by performing a basic sanity test that SGX is working properly",
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			res, err := api.HealthCheck()
+			if err != nil {
+				return fmt.Errorf("failed to start enclave. Enclave returned: %s", err)
+			}
+
+			fmt.Println(fmt.Sprintf("SGX enclave health status: %s", res))
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func ResetEnclave(_ *server.Context, _ *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "reset-enclave",
+		Short: "Reset registration & enclave parameters",
+		Long: "This will delete all registration and enclave parameters. Use when something goes wrong and you want to start fresh." +
+			"You will have to go through registration again to be able to start the node",
+		Args: cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			// remove .secretd/.node/seed.json
+			path := filepath.Join(app.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
+			if _, err := os.Stat(path); !os.IsNotExist(err) {
+				fmt.Printf("Removing %s\n", path)
+				err = os.Remove(path)
+				if err != nil {
+					return err
+				}
+			} else {
+				if err != nil {
+					println(err.Error())
+				}
+			}
+
+			// remove sgx_secrets
+			sgxSecretsDir := os.Getenv("SCRT_SGX_STORAGE")
+			if sgxSecretsDir == "" {
+				sgxSecretsDir = os.ExpandEnv("$HOME/.sgx_secrets")
+			}
+			if _, err := os.Stat(sgxSecretsDir); !os.IsNotExist(err) {
+				fmt.Printf("Removing %s\n", sgxSecretsDir)
+				err = os.RemoveAll(sgxSecretsDir)
+				if err != nil {
+					return err
+				}
+				err := os.MkdirAll(sgxSecretsDir, 644)
+				if err != nil {
+					return err
+				}
+			} else {
+				if err != nil {
+					println(err.Error())
+				}
+			}
 			return nil
 		},
 	}

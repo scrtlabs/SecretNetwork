@@ -21,7 +21,9 @@ test = []
 # when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_types = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tstd = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
+    "backtrace"
+] }
 
 [dependencies]
 sgx_tse = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
@@ -33,7 +35,7 @@ aes-siv = { version = "0.2.0" }
 enclave-ffi-types = { path = "../enclave-ffi-types" }
 pwasm-utils = { version = "0.12.0", default-features = false }
 parity-wasm = { version = "0.41.0", default-features = false }
-wasmi = { git = "https://github.com/paritytech/wasmi", rev = "39a18a433a765a36383d34d4edd536ba1e0664d2", default-features = false, features = [
+wasmi = { git = "https://github.com/paritytech/wasmi", rev = "84d2764594d80425373bf4949a58fa3df3d624c3", default-features = false, features = [
     "core"
 ] }
 serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
@@ -62,6 +64,7 @@ lazy_static = "1.4"
 x25519-dalek = { version = "0.6", default-features = false, features = [
     "u64_backend"
 ] }
+hex = "0.4.2"
 ripemd160 = "0.9.1"
 prost = { version = "0.6", default-features = false, features = ["prost-derive"], git = "https://github.com/mesalock-linux/prost-sgx" }
 

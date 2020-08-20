@@ -2,6 +2,7 @@ package compute
 
 import (
 	"encoding/json"
+	compute "github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,13 +13,35 @@ import (
 type contractState struct {
 }
 
+//func prepareInitSignedTx(t *testing.T, keeper keeper.Keeper, ctx sdk.Context, creator sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, codeID uint64, funds sdk.Coins) sdk.Context {
+//	creatorAcc, err := auth.GetSignerAcc(ctx, keeper.accountKeeper, creator)
+//	require.NoError(t, err)
+//
+//	tx := authtypes.NewTestTx(ctx, []sdk.Msg{types.MsgInstantiateContract{
+//		Sender:    creator,
+//		Admin:     nil,
+//		Code:      codeID,
+//		Label:     "demo contract 1",
+//		InitMsg:   encMsg,
+//		InitFunds: funds,
+//	}}, []crypto.PrivKey{privKey}, []uint64{creatorAcc.GetAccountNumber()}, []uint64{creatorAcc.GetSequence() - 1}, authtypes.StdFee{
+//		Amount: nil,
+//		Gas:    0,
+//	})
+//
+//	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+//	require.NoError(t, err)
+//
+//	return ctx.WithTxBytes(txBytes)
+//}
+
 func TestInitGenesis(t *testing.T) {
 	data, cleanup := setupTest(t)
 	defer cleanup()
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator, _ := createFakeFundedAccount(data.ctx, data.acctKeeper, deposit.Add(deposit...))
+	creator, privCreator := createFakeFundedAccount(data.ctx, data.acctKeeper, deposit.Add(deposit...))
 	fred, _ := createFakeFundedAccount(data.ctx, data.acctKeeper, topUp)
 
 	h := data.module.NewHandler()
@@ -94,6 +117,10 @@ func TestInitGenesis(t *testing.T) {
 		InitMsg:   initMsgBz,
 		InitFunds: deposit,
 	}
+
+	//compute.PrepareInitSignedTx()
+	data.ctx = compute.PrepareInitSignedTx(t, data.keeper, data.ctx, creator, privCreator, initMsgBz, 1, deposit)
+
 	res, err = h(data.ctx, initCmd)
 	require.NoError(t, err)
 	contractAddr := sdk.AccAddress(res.Data)

@@ -174,6 +174,36 @@ func (ctx WASMContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) 
 	return txEncryptionKey, nil
 }
 
+func (ctx WASMContext) OfflineEncrypt(plaintext []byte, pathToMasterIoKey string) ([]byte, error) {
+	// parse coins trying to be sent
+	cert, err := ioutil.ReadFile(pathToMasterIoKey)
+	if err != nil {
+		return nil, err
+	}
+
+	pubkey, err := ra.VerifyRaCert(cert)
+	if err != nil {
+		return nil, err
+	}
+
+	txSenderPrivKey, txSenderPubKey, err := ctx.GetTxSenderKeyPair()
+
+	nonce := make([]byte, 32)
+	_, err = rand.Read(nonce)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	txEncryptionKey, err := GetTxEncryptionKeyOffline(pubkey, txSenderPrivKey, nonce)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return encryptData(txEncryptionKey, txSenderPubKey, plaintext, nonce)
+}
+
 // Encrypt encrypts
 func (ctx WASMContext) Encrypt(plaintext []byte) ([]byte, error) {
 	txSenderPrivKey, txSenderPubKey, err := ctx.GetTxSenderKeyPair()
@@ -191,22 +221,7 @@ func (ctx WASMContext) Encrypt(plaintext []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	cipher, err := miscreant.NewAESCMACSIV(txEncryptionKey)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	ciphertext, err := cipher.Seal(nil, plaintext, []byte{})
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	// ciphertext = nonce(32) || wallet_pubkey(32) || ciphertext
-	ciphertext = append(nonce, append(txSenderPubKey, ciphertext...)...)
-
-	return ciphertext, nil
+	return encryptData(txEncryptionKey, txSenderPubKey, plaintext, nonce)
 }
 
 // Decrypt decrypts
@@ -251,4 +266,39 @@ func (ctx WASMContext) DecryptError(errString string, msgType string, nonce []by
 	}
 
 	return stdErr, nil
+}
+
+func encryptData(aesEncryptionKey []byte, txSenderPubKey []byte, plaintext []byte, nonce []byte) ([]byte, error) {
+	cipher, err := miscreant.NewAESCMACSIV(aesEncryptionKey)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	ciphertext, err := cipher.Seal(nil, plaintext, []byte{})
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	// ciphertext = nonce(32) || wallet_pubkey(32) || ciphertext
+	ciphertext = append(nonce, append(txSenderPubKey, ciphertext...)...)
+
+	return ciphertext, nil
+}
+
+func GetTxEncryptionKeyOffline(pubkey []byte, txSenderPrivKey []byte, nonce []byte) ([]byte, error) {
+	txEncryptionIkm, err := curve25519.X25519(txSenderPrivKey, pubkey)
+	if err != nil {
+		return nil, err
+	}
+
+	kdfFunc := hkdf.New(sha256.New, append(txEncryptionIkm[:], nonce...), hkdfSalt, []byte{})
+
+	txEncryptionKey := make([]byte, 32)
+	if _, err := io.ReadFull(kdfFunc, txEncryptionKey); err != nil {
+		return nil, err
+	}
+
+	return txEncryptionKey, nil
 }

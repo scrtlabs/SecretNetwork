@@ -426,6 +426,7 @@ describe("CosmWasmClient.searchTx", () => {
           sender: faucet.address,
           code_id: deployedErc20.codeId.toString(),
           label: "HASH",
+          callback_code_hash: "",
           init_msg: jasmine.objectContaining({ symbol: "HASH" }),
           init_funds: [],
           callback_sig: null,

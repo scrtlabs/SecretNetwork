@@ -29,6 +29,7 @@ const (
 	QueryGetContractState    = keeper.QueryGetContractState
 	QueryGetCode             = keeper.QueryGetCode
 	QueryListCode            = keeper.QueryListCode
+	QueryContractKey         = keeper.QueryContractKey
 )
 
 var (
@@ -65,6 +66,8 @@ var (
 	MakeTestCodec             = keeper.MakeTestCodec
 	CreateTestInput           = keeper.CreateTestInput
 	TestHandler               = keeper.TestHandler
+	PrepareInitSignedTx       = keeper.PrepareInitSignedTx
+	PrepareExecSignedTx       = keeper.PrepareExecSignedTx
 
 	// variable aliases
 	ModuleCdc            = types.ModuleCdc

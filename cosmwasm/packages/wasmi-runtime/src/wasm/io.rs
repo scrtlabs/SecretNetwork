@@ -59,7 +59,7 @@ pub fn encrypt_output(
     output: Vec<u8>,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
-    contract_addr: CanonicalAddr,
+    contract_addr: &CanonicalAddr,
 ) -> Result<Vec<u8>, EnclaveError> {
     let key = calc_encryption_key(&nonce, &user_public_key);
 
@@ -77,36 +77,30 @@ pub fn encrypt_output(
     })?;
 
     match &mut output {
-        // Output is error
         WasmOutput::ErrObject { err } => {
-            // Encrypting the actual error
             let encrypted_err = encrypt_serializable(&key, err)?;
 
-            // Putting it inside a 'generic_err' envelope
+            // Putting the error inside a 'generic_err' envelope, so we can encrypt the error itself
             *err = json!({"generic_err":{"msg":encrypted_err}});
         }
 
-        // Output is a simple string
         WasmOutput::OkString { ok } => {
             *ok = encrypt_serializable(&key, ok)?;
         }
 
-        // Output is an object
         // Encrypt all Wasm messages (keeps Bank, Staking, etc.. as is)
         WasmOutput::OkObject { ok } => {
             for msg in &mut ok.messages {
                 if let CosmosMsg::Wasm(wasm_msg) = msg {
-                    encrypt_wasm_msg(wasm_msg, nonce, user_public_key, &contract_addr)?;
+                    encrypt_wasm_msg(wasm_msg, nonce, user_public_key, contract_addr)?;
                 }
             }
 
-            // Encrypt all logs
             for log in &mut ok.log {
                 log.key = encrypt_serializable(&key, &log.key)?;
                 log.value = encrypt_serializable(&key, &log.value)?;
             }
 
-            // If there's data at all
             if let Some(data) = &mut ok.data {
                 *data = Binary::from_base64(&encrypt_serializable(&key, data)?)?;
             }
@@ -115,7 +109,6 @@ pub fn encrypt_output(
 
     debug!("WasmOutput: {:?}", output);
 
-    // Serialize back to json and return
     let encrypted_output = serde_json::to_vec(&output).map_err(|err| {
         error!(
             "got an error while trying to serialize output json into bytes {:?}: {}",
@@ -136,22 +129,29 @@ fn encrypt_wasm_msg(
     match wasm_msg {
         WasmMsg::Execute {
             msg,
-            callback_sig: msg_callback_sig,
+            callback_code_hash,
+            callback_sig,
             ..
         }
         | WasmMsg::Instantiate {
             msg,
-            callback_sig: msg_callback_sig,
+            callback_code_hash,
+            callback_sig,
             ..
         } => {
-            let mut msg_to_pass =
-                SecretMessage::from_base64((*msg).clone(), nonce, user_public_key)?;
+            let mut hash_appended_msg = callback_code_hash.as_bytes().to_vec();
+            hash_appended_msg.extend_from_slice(msg.as_slice());
+
+            let mut msg_to_pass = SecretMessage::from_base64(
+                Binary(hash_appended_msg).to_base64(),
+                nonce,
+                user_public_key,
+            )?;
 
             msg_to_pass.encrypt_in_place()?;
-            *msg = b64_encode(&msg_to_pass.to_slice());
+            *msg = Binary::from(msg_to_pass.to_vec().as_slice());
 
-            let callback_sig = create_callback_signature(contract_addr, &msg_to_pass);
-            *msg_callback_sig = Some(callback_sig);
+            *callback_sig = Some(create_callback_signature(contract_addr, &msg_to_pass));
         }
     }
 

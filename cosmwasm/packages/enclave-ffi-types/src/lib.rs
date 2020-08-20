@@ -5,7 +5,7 @@ mod types;
 
 pub use types::{
     Ctx, EnclaveBuffer, EnclaveError, HandleResult, InitResult, NodeAuthResult, OcallReturn,
-    QueryResult, UntrustedVmError, UserSpaceBuffer,
+    QueryResult, UntrustedVmError, UserSpaceBuffer, HealthCheckResult
 };
 
 pub const ENCRYPTED_SEED_SIZE: usize = 48;

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	authtypes "github.com/enigmampc/cosmos-sdk/x/auth/types"
@@ -29,8 +30,7 @@ import (
 	"github.com/tendermint/tendermint/crypto"
 )
 
-// const SupportedFeatures = "staking"
-const SupportedFeatures = ""
+const SupportedFeatures = "staking"
 
 var wasmCtx = wasmUtils.WASMContext{
 	TestKeyPairPath:  "/tmp/id_tx_io.json",
@@ -226,10 +226,18 @@ func TestInstantiate(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+	key := keeper.GetCodeInfo(ctx, contractID).CodeHash
+	//keyStr := hex.EncodeToString(key)
+
+	msg := types.SecretMsg{
+		CodeHash: []byte(hex.EncodeToString(key)),
+		Msg:      initMsgBz,
+	}
+
+	initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 
-	//gasBefore := ctx.GasMeter().GasConsumed()
+	gasBefore := ctx.GasMeter().GasConsumed()
 
 	creatorAcc, err := auth.GetSignerAcc(ctx, accKeeper, creator)
 	require.NoError(t, err)
@@ -256,8 +264,9 @@ func TestInstantiate(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", addr.String())
 
-	//gasAfter := ctx.GasMeter().GasConsumed()
-	//require.Equal(t, uint64(0x91fe), gasAfter-gasBefore)
+	gasAfter := ctx.GasMeter().GasConsumed()
+	require.Greater(t, gasAfter-gasBefore, uint64(20000))
+	require.Less(t, gasAfter-gasBefore, uint64(60000))
 
 	// ensure it is stored properly
 	info := keeper.GetContractInfo(ctx, addr)
@@ -266,6 +275,10 @@ func TestInstantiate(t *testing.T) {
 	require.Equal(t, info.CodeID, contractID)
 	require.Equal(t, info.InitMsg, initMsgBz)
 	require.Equal(t, info.Label, "demo contract 1")
+
+	// test that creating again with the same label will fail
+	addr, err = keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", nil, nil)
+	require.Error(t, err)
 }
 
 func TestInstantiateWithNonExistingCodeID(t *testing.T) {
@@ -285,6 +298,7 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 	initMsg := InitMsg{}
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
+
 	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
 	require.NoError(t, err)
 
@@ -314,8 +328,6 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 }
 
 func TestExecute(t *testing.T) {
-	t.SkipNow() // escrow requires external query which isn't yet implemented
-
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -325,7 +337,7 @@ func TestExecute(t *testing.T) {
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
 	creator, creatorPrivKey := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
-	fred, _ := createFakeFundedAccount(ctx, accKeeper, topUp)
+	fred, privFred := createFakeFundedAccount(ctx, accKeeper, topUp)
 
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
@@ -339,12 +351,26 @@ func TestExecute(t *testing.T) {
 		Beneficiary: bob,
 	}
 	initMsgBz, err := json.Marshal(initMsg)
-	require.NoError(t, err)
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+
+	key := keeper.GetCodeInfo(ctx, contractID).CodeHash
+	//keyStr := hex.EncodeToString(key)
+
+	msg := types.SecretMsg{
+		CodeHash: []byte(hex.EncodeToString(key)),
+		Msg:      initMsgBz,
+	}
+
+	initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 
-	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 3", deposit, nil)
+	gasBefore := ctx.GasMeter().GasConsumed()
+
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initMsgBz, contractID, deposit)
+	// create with no balance is also legal
+	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", deposit, nil)
+
 	require.NoError(t, err)
+
 	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", addr.String())
 
 	// ensure bob doesn't exist
@@ -365,17 +391,33 @@ func TestExecute(t *testing.T) {
 	// unauthorized - trialCtx so we don't change state
 	trialCtx := ctx.WithMultiStore(ctx.MultiStore().CacheWrap().(sdk.MultiStore))
 
-	_, _, trialExecErr := execHelper(t, keeper, trialCtx, addr, creator, creatorPrivKey, `{"approve":{}}`, true, defaultGas)
+	_, _, trialExecErr := execHelper(t, keeper, trialCtx, addr, creator, creatorPrivKey, `{"release":{}}`, true, defaultGasForTests, 0)
 	require.Error(t, trialExecErr)
 	require.Error(t, trialExecErr.Unauthorized)
 	require.Contains(t, trialExecErr.Error(), "unauthorized")
 
 	// verifier can execute, and get proper gas amount
 	start := time.Now()
-	gasBefore := ctx.GasMeter().GasConsumed()
 
-	msgBz, err := wasmCtx.Encrypt([]byte(`{"approve":{}}`))
+	gasBefore = ctx.GasMeter().GasConsumed()
+
 	require.NoError(t, err)
+	//res, _, err := execHelper(t, keeper, trialCtx, addr, creator, `{"release":{}}`, true, defaultGasForTests)
+
+	initMsgBz = []byte(`{"release":{}}`)
+
+	key = keeper.GetCodeInfo(ctx, contractID).CodeHash
+	//keyStr := hex.EncodeToString(key)
+
+	msg = types.SecretMsg{
+		CodeHash: []byte(hex.EncodeToString(key)),
+		Msg:      initMsgBz,
+	}
+
+	msgBz, err := wasmCtx.Encrypt(msg.Serialize())
+	require.NoError(t, err)
+
+	ctx = PrepareExecSignedTx(t, keeper, ctx, fred, privFred, msgBz, addr, topUp)
 
 	res, err := keeper.Execute(ctx, addr, fred, msgBz, topUp, nil)
 	diff := time.Now().Sub(start)
@@ -384,7 +426,8 @@ func TestExecute(t *testing.T) {
 
 	// make sure gas is properly deducted from ctx
 	gasAfter := ctx.GasMeter().GasConsumed()
-	require.Equal(t, uint64(0x7f9e), gasAfter-gasBefore)
+	require.Greater(t, gasAfter-gasBefore, uint64(25000))
+	require.Less(t, gasAfter-gasBefore, uint64(50000))
 
 	// ensure bob now exists and got both payments released
 	bobAcct = accKeeper.GetAccount(ctx, bob)
@@ -463,31 +506,7 @@ func TestExecuteWithPanic(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
-	require.NoError(t, err)
-
-	creatorAcc, err := auth.GetSignerAcc(ctx, accKeeper, creator)
-	require.NoError(t, err)
-
-	tx := authtypes.NewTestTx(ctx, []sdk.Msg{types.MsgInstantiateContract{
-		Sender:    creator,
-		Admin:     nil,
-		Code:      contractID,
-		Label:     "demo contract 1",
-		InitMsg:   initMsgBz,
-		InitFunds: deposit,
-	}}, []crypto.PrivKey{creatorPrivKey}, []uint64{creatorAcc.GetAccountNumber()}, []uint64{creatorAcc.GetSequence() - 1}, authtypes.StdFee{
-		Amount: nil,
-		Gas:    0,
-	})
-
-	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
-	require.NoError(t, err)
-
-	ctx = ctx.WithTxBytes(txBytes)
-
-	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 4", deposit, nil)
-	require.NoError(t, err)
+	addr, _, err := initHelper(t, keeper, ctx, contractID, creator, creatorPrivKey, string(initMsgBz), false, defaultGasForTests)
 
 	execMsgBz, err := wasmCtx.Encrypt([]byte(`{"panic":{}}`))
 	require.NoError(t, err)
@@ -495,7 +514,7 @@ func TestExecuteWithPanic(t *testing.T) {
 	fredAcc, err := auth.GetSignerAcc(ctx, accKeeper, fred)
 	require.NoError(t, err)
 
-	tx = authtypes.NewTestTx(ctx, []sdk.Msg{types.MsgExecuteContract{
+	tx := authtypes.NewTestTx(ctx, []sdk.Msg{types.MsgExecuteContract{
 		Sender:    fred,
 		Contract:  addr,
 		Msg:       execMsgBz,
@@ -505,7 +524,7 @@ func TestExecuteWithPanic(t *testing.T) {
 		Gas:    0,
 	})
 
-	txBytes, err = keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
@@ -541,7 +560,14 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
+	hash := keeper.GetCodeInfo(ctx, contractID).CodeHash
+
+	msg := types.SecretMsg{
+		CodeHash: []byte(hex.EncodeToString(hash)),
+		Msg:      initMsgBz,
+	}
+
+	msgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 
 	creatorAcc, err := auth.GetSignerAcc(ctx, accKeeper, creator)
@@ -552,7 +578,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 		Admin:     nil,
 		Code:      contractID,
 		Label:     "demo contract 1",
-		InitMsg:   initMsgBz,
+		InitMsg:   msgBz,
 		InitFunds: deposit,
 	}}, []crypto.PrivKey{creatorPrivKey}, []uint64{creatorAcc.GetAccountNumber()}, []uint64{creatorAcc.GetSequence() - 1}, authtypes.StdFee{
 		Amount: nil,
@@ -564,7 +590,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 
 	ctx = ctx.WithTxBytes(txBytes)
 
-	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 5", deposit, nil)
+	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, msgBz, "demo contract 5", deposit, nil)
 	require.NoError(t, err)
 
 	// make sure we set a limit before calling
@@ -572,8 +598,24 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	ctx = ctx.WithGasMeter(sdk.NewGasMeter(gasLimit))
 	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
-	execMsgBz, err := wasmCtx.Encrypt([]byte(`{"cpu_loop":{}}`))
+	codeHash := keeper.GetContractHash(ctx, addr)
+	codeHashStr := hex.EncodeToString(codeHash)
+
+	msg2 := types.SecretMsg{
+		CodeHash: []byte(codeHashStr),
+		Msg:      []byte(`{"cpu_loop":{}}`),
+	}
+
+	execMsgBz, err := wasmCtx.Encrypt(msg2.Serialize())
 	require.NoError(t, err)
+
+	// ensure we get an out of gas panic
+	defer func() {
+		r := recover()
+		require.NotNil(t, r)
+		_, ok := r.(sdk.ErrorOutOfGas)
+		require.True(t, ok, "%v", r)
+	}()
 
 	fredAcc, err := auth.GetSignerAcc(ctx, accKeeper, fred)
 	require.NoError(t, err)
@@ -595,7 +637,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 
 	// this must fail
 	_, err = keeper.Execute(ctx, addr, fred, execMsgBz, nil, nil)
-	assert.Error(t, err)
+	assert.True(t, false)
 	// make sure gas ran out
 	// TODO: wasmer doesn't return gas used on error. we should consume it (for error on metering failure)
 	// require.Equal(t, gasLimit, ctx.GasMeter().GasConsumed())
@@ -625,32 +667,8 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 		Beneficiary: bob,
 	}
 	initMsgBz, err := json.Marshal(initMsg)
-	require.NoError(t, err)
-	initMsgBz, err = wasmCtx.Encrypt(initMsgBz)
-	require.NoError(t, err)
 
-	creatorAcc, err := auth.GetSignerAcc(ctx, accKeeper, creator)
-	require.NoError(t, err)
-
-	tx := authtypes.NewTestTx(ctx, []sdk.Msg{types.MsgInstantiateContract{
-		Sender:    creator,
-		Admin:     nil,
-		Code:      contractID,
-		Label:     "demo contract 1",
-		InitMsg:   initMsgBz,
-		InitFunds: deposit,
-	}}, []crypto.PrivKey{creatorPrivKey}, []uint64{creatorAcc.GetAccountNumber()}, []uint64{creatorAcc.GetSequence() - 1}, authtypes.StdFee{
-		Amount: nil,
-		Gas:    0,
-	})
-
-	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
-	require.NoError(t, err)
-
-	ctx = ctx.WithTxBytes(txBytes)
-
-	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 6", deposit, nil)
-	require.NoError(t, err)
+	addr, _, err := initHelper(t, keeper, ctx, contractID, creator, creatorPrivKey, string(initMsgBz), false, defaultGasForTests)
 
 	// make sure we set a limit before calling
 	var gasLimit uint64 = 400_000
@@ -665,13 +683,21 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 		require.True(t, ok, "%v", r)
 	}()
 
-	msgBz, err := wasmCtx.Encrypt([]byte(`{"storage_loop":{}}`))
+	codeHash := keeper.GetContractHash(ctx, addr)
+	codeHashStr := hex.EncodeToString(codeHash)
+
+	msg := types.SecretMsg{
+		CodeHash: []byte(codeHashStr),
+		Msg:      []byte(`{"storage_loop":{}}`),
+	}
+
+	msgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 
 	fredAcc, err := auth.GetSignerAcc(ctx, accKeeper, fred)
 	require.NoError(t, err)
 
-	tx = authtypes.NewTestTx(ctx, []sdk.Msg{types.MsgExecuteContract{
+	tx := authtypes.NewTestTx(ctx, []sdk.Msg{types.MsgExecuteContract{
 		Sender:    creator,
 		Contract:  addr,
 		Msg:       msgBz,
@@ -681,7 +707,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 		Gas:    0,
 	})
 
-	txBytes, err = keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
@@ -692,7 +718,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 }
 
 func TestMigrate(t *testing.T) {
-	t.SkipNow()
+	t.SkipNow() // secret network does not support migrate
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -828,7 +854,7 @@ func TestMigrate(t *testing.T) {
 }
 
 func TestMigrateWithDispatchedMessage(t *testing.T) {
-	t.SkipNow()
+	t.SkipNow() // secret network does not support migrate
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -945,7 +971,7 @@ func mustMarshal(t *testing.T, r interface{}) []byte {
 }
 
 func TestUpdateContractAdmin(t *testing.T) {
-	t.SkipNow()
+	t.SkipNow() // secret network does not support migrate
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)

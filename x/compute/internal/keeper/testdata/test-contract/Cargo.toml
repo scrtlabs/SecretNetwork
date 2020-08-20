@@ -29,6 +29,7 @@ overflow-checks = true
 [features]
 default = ["backtraces"]
 backtraces = ["cosmwasm-std/backtraces"]
+with_floats = []
 
 [dependencies]
 cosmwasm-std = { path = "../../../../../../cosmwasm/packages/std" }
@@ -38,3 +39,4 @@ serde = { version = "1.0.114", default-features = false, features = [
   "derive",
   "alloc"
 ] }
+serde-json-wasm = "0.2.1"

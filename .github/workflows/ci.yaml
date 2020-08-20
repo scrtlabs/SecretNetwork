@@ -3,9 +3,8 @@ name: Tests
 on: [push]
 
 jobs:
-  Tests:
+  Enclave-Unit-Tests:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v2
       - name: Install Intel's SGX SDK
@@ -13,9 +12,119 @@ jobs:
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
           SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
-
           wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
+          chmod +x "$SDK_BIN"
+          echo yes | ./"$SDK_BIN"
+      - name: Cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache xargo sysroot
+        uses: actions/cache@v1
+        with:
+          path: ~/.xargo
+          key: ${{ runner.os }}-xargo-sysroot
+      - name: Cache build artifacts
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/sccache
+          key: ${{ runner.os }}-sccache
+      - run: rustup component add rust-src clippy
+      - name: Install xargo
+        run: |
+          cargo +stable install xargo
+          xargo --version
+      - name: Download sccache
+        run: |
+          wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
+          tar xf ./sccache-*.tar.gz
+          mv ./sccache*/sccache "$HOME/sccache"
+      - name: Create fake api keys
+        run: |
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/spid.txt
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/spid_production.txt
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/api_key.txt
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/api_key_production.txt
+      - name: Test enclave
+        run: |
+          source "$HOME/.sgxsdk/sgxsdk/environment"
+          make vendor
+          export SGX_MODE=SW
+          RUSTC_WRAPPER="$HOME/sccache" make enclave-tests
+          make clean-enclave
 
+  Go-Tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Intel's SGX SDK
+        run: |
+          mkdir -p "$HOME/.sgxsdk"
+          cd "$HOME/.sgxsdk"
+          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
+          chmod +x "$SDK_BIN"
+          echo yes | ./"$SDK_BIN"
+      - name: Cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache xargo sysroot
+        uses: actions/cache@v1
+        with:
+          path: ~/.xargo
+          key: ${{ runner.os }}-xargo-sysroot
+      - name: Cache build artifacts
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/sccache
+          key: ${{ runner.os }}-sccache
+      - run: rustup component add rust-src clippy
+      - name: Install xargo
+        run: |
+          cargo +stable install xargo
+          xargo --version
+      - name: Download sccache
+        run: |
+          wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
+          tar xf ./sccache-*.tar.gz
+          mv ./sccache*/sccache "$HOME/sccache"
+      - name: Create fake api keys
+        run: |
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/spid.txt
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/spid_production.txt
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/api_key.txt
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/api_key_production.txt
+      - name: Build
+        run: |
+          source "$HOME/.sgxsdk/sgxsdk/environment"
+          make vendor
+          SGX_MODE=SW BUILD_PROFILE="minimal" RUSTC_WRAPPER="$HOME/sccache" make build-linux
+      - name: Test x/registration
+        run: |
+          source "$HOME/.sgxsdk/sgxsdk/environment"
+          go test -v ./x/registration/internal/...
+      - name: Test x/compute
+        run: |
+          source "$HOME/.sgxsdk/sgxsdk/environment"
+          export SGX_MODE=SW
+          cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+          mkdir -p ./x/compute/internal/keeper/.sgx_secrets
+          go test -v ./x/compute/client/...
+          go test -p 1 -v ./x/compute/internal/...
+
+  Clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Intel's SGX SDK
+        run: |
+          mkdir -p "$HOME/.sgxsdk"
+          cd "$HOME/.sgxsdk"
+          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
@@ -56,6 +165,50 @@ jobs:
           cd cosmwasm/packages/wasmi-runtime/
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
+
+  Integration-Tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Intel's SGX SDK
+        run: |
+          mkdir -p "$HOME/.sgxsdk"
+          cd "$HOME/.sgxsdk"
+          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
+          chmod +x "$SDK_BIN"
+          echo yes | ./"$SDK_BIN"
+      - name: Cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache xargo sysroot
+        uses: actions/cache@v1
+        with:
+          path: ~/.xargo
+          key: ${{ runner.os }}-xargo-sysroot
+      - name: Cache build artifacts
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/sccache
+          key: ${{ runner.os }}-sccache
+      - run: rustup component add rust-src clippy
+      - name: Install xargo
+        run: |
+          cargo +stable install xargo
+          xargo --version
+      - name: Download sccache
+        run: |
+          wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
+          tar xf ./sccache-*.tar.gz
+          mv ./sccache*/sccache "$HOME/sccache"
+      - name: Create fake api keys
+        run: |
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/spid.txt
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/spid_production.txt
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/api_key.txt
+          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/api_key_production.txt
       - name: Build
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -75,15 +228,3 @@ jobs:
           mkdir -p ./.sgx_secrets
           cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
           ./cosmwasm/testing/callback-test.sh
-      - name: Test x/registration
-        run: |
-          source "$HOME/.sgxsdk/sgxsdk/environment"
-          go test -v ./x/registration/internal/...
-      - name: Test x/compute
-        run: |
-          source "$HOME/.sgxsdk/sgxsdk/environment"
-          export SGX_MODE=SW
-          cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
-          mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-          go test -v ./x/compute/client/...
-          go test -p 1 -v ./x/compute/internal/...

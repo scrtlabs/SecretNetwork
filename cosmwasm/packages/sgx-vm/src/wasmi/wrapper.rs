@@ -12,7 +12,7 @@ use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResul
 use sgx_types::{sgx_status_t, SgxResult};
 use sgx_urts::SgxEnclave;
 
-use log::trace;
+use log::*;
 
 use super::exports::FullContext;
 use super::imports;
@@ -35,11 +35,10 @@ pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> SgxResult<EnclaveBuffer>
         target: module_path!(),
         "allocate_enclave_buffer() called with len: {:?} enclave_id: {:?}",
         len,
-        enclave_id
+        enclave_id,
     );
 
-    match unsafe { imports::ecall_allocate(enclave_id, (&mut enclave_buffer) as *mut _, ptr, len) }
-    {
+    match unsafe { imports::ecall_allocate(enclave_id, &mut enclave_buffer, ptr, len) } {
         sgx_status_t::SGX_SUCCESS => Ok(enclave_buffer),
         failure_status => Err(failure_status),
     }
@@ -103,9 +102,12 @@ where
         self.gas_limit.saturating_sub(self.used_gas)
     }
 
+    pub fn gas_used(&self) -> u64 {
+        self.used_gas
+    }
+
     pub fn init(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<InitSuccess> {
-        trace!(
-            target: module_path!(),
+        println!(
             "init() called with env: {:?} msg: {:?} enclave_id: {:?} gas_left: {}",
             String::from_utf8_lossy(env),
             String::from_utf8_lossy(msg),
@@ -116,13 +118,13 @@ where
         let mut init_result = MaybeUninit::<InitResult>::uninit();
         let mut used_gas = 0_u64;
 
-        match unsafe {
+        let status = unsafe {
             imports::ecall_init(
                 self.enclave.geteid(),
                 init_result.as_mut_ptr(),
                 self.ctx.unsafe_clone(),
                 self.gas_left(),
-                &mut used_gas as *mut _,
+                &mut used_gas,
                 self.bytecode.as_ptr(),
                 self.bytecode.len(),
                 env.as_ptr(),
@@ -132,27 +134,25 @@ where
                 sig_info.as_ptr(),
                 sig_info.len(),
             )
-        } {
-            sgx_status_t::SGX_SUCCESS => { /* continue */ }
-            failure_status => return Err(EnclaveError::sdk_err(failure_status).into()),
-        }
-        // At this point we know that the ecall was successful and init_result was initialized.
-        let init_result = unsafe { init_result.assume_init() };
+        };
 
-        trace!(
-            target: module_path!(),
+        println!(
             "init() returned with gas_used: {} (gas_limit: {})",
-            used_gas,
-            self.gas_limit
+            used_gas, self.gas_limit
         );
-        self.used_gas = self.used_gas.saturating_add(used_gas);
+        self.consume_gas(used_gas);
 
-        init_result_to_vm_result(init_result)
+        match status {
+            sgx_status_t::SGX_SUCCESS => {
+                let init_result = unsafe { init_result.assume_init() };
+                init_result_to_vm_result(init_result)
+            }
+            failure_status => Err(EnclaveError::sdk_err(failure_status).into()),
+        }
     }
 
     pub fn handle(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<HandleSuccess> {
-        trace!(
-            target: module_path!(),
+        println!(
             "handle() called with env: {:?} msg: {:?} enclave_id: {:?} gas_left: {}",
             String::from_utf8_lossy(env),
             String::from_utf8_lossy(msg),
@@ -163,13 +163,13 @@ where
         let mut handle_result = MaybeUninit::<HandleResult>::uninit();
         let mut used_gas = 0_u64;
 
-        match unsafe {
+        let status = unsafe {
             imports::ecall_handle(
                 self.enclave.geteid(),
                 handle_result.as_mut_ptr(),
                 self.ctx.unsafe_clone(),
                 self.gas_left(),
-                &mut used_gas as *mut _,
+                &mut used_gas,
                 self.bytecode.as_ptr(),
                 self.bytecode.len(),
                 env.as_ptr(),
@@ -179,27 +179,25 @@ where
                 sig_info.as_ptr(),
                 sig_info.len(),
             )
-        } {
-            sgx_status_t::SGX_SUCCESS => { /* continue */ }
-            failure_status => return Err(EnclaveError::sdk_err(failure_status).into()),
-        }
-        // At this point we know that the ecall was successful and handle_result was initialized.
-        let handle_result = unsafe { handle_result.assume_init() };
+        };
 
-        trace!(
-            target: module_path!(),
+        println!(
             "handle() returned with gas_used: {} (gas_limit: {})",
-            used_gas,
-            self.gas_limit
+            used_gas, self.gas_limit
         );
-        self.used_gas = self.used_gas.saturating_add(used_gas);
+        self.consume_gas(used_gas);
 
-        handle_result_to_vm_result(handle_result)
+        match status {
+            sgx_status_t::SGX_SUCCESS => {
+                let handle_result = unsafe { handle_result.assume_init() };
+                handle_result_to_vm_result(handle_result)
+            }
+            failure_status => Err(EnclaveError::sdk_err(failure_status).into()),
+        }
     }
 
     pub fn query(&mut self, msg: &[u8]) -> VmResult<QuerySuccess> {
-        trace!(
-            target: module_path!(),
+        println!(
             "query() called with msg: {:?} enclave_id: {:?}",
             String::from_utf8_lossy(msg),
             self.enclave.geteid()
@@ -208,28 +206,37 @@ where
         let mut query_result = MaybeUninit::<QueryResult>::uninit();
         let mut used_gas = 0_u64;
 
-        match unsafe {
+        let status = unsafe {
             imports::ecall_query(
                 self.enclave.geteid(),
                 query_result.as_mut_ptr(),
                 self.ctx.unsafe_clone(),
                 self.gas_left(),
-                &mut used_gas as *mut _,
+                &mut used_gas,
                 self.bytecode.as_ptr(),
                 self.bytecode.len(),
                 msg.as_ptr(),
                 msg.len(),
             )
-        } {
-            sgx_status_t::SGX_SUCCESS => { /* continue */ }
-            failure_status => return Err(EnclaveError::sdk_err(failure_status).into()),
+        };
+
+        println!(
+            "query() returned with gas_used: {} (gas_limit: {})",
+            used_gas, self.gas_limit
+        );
+        self.consume_gas(used_gas);
+
+        match status {
+            sgx_status_t::SGX_SUCCESS => {
+                let query_result = unsafe { query_result.assume_init() };
+                query_result_to_vm_result(query_result)
+            }
+            failure_status => Err(EnclaveError::sdk_err(failure_status).into()),
         }
-        // At this point we know that the ecall was successful and query_result was initialized.
-        let query_result = unsafe { query_result.assume_init() };
+    }
 
+    fn consume_gas(&mut self, used_gas: u64) {
         self.used_gas = self.used_gas.saturating_add(used_gas);
-
-        query_result_to_vm_result(query_result)
     }
 }
 

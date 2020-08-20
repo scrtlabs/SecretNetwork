@@ -19,6 +19,7 @@ mod macros;
 pub mod exports;
 pub mod imports;
 pub mod logger;
+mod oom_handler;
 pub mod registration;
 
 mod consts;
@@ -33,6 +34,8 @@ mod results;
 //mod runtime;
 mod storage;
 mod utils;
+
+mod tests;
 
 static LOGGER: SimpleLogger = SimpleLogger;
 
@@ -58,10 +61,4 @@ fn init_logger() {
     log::set_logger(&LOGGER)
         .map(|()| log::set_max_level(LevelFilter::Trace))
         .unwrap();
-}
-
-// todo: figure out how we want to turn this on
-#[cfg(feature = "test")]
-fn run_test() {
-    println!("placeholder")
 }
