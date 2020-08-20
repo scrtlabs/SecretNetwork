@@ -35,9 +35,9 @@ impl SafetyBuffer {
 }
 
 lazy_static! {
-    /// SAFETY_BUFFER is a 2 MiB of SafetyBuffer. We should consider occupying 51% of available memory
+    /// SAFETY_BUFFER is a 32 MiB of SafetyBuffer. This occupying 50% of available memory
     /// to be extra sure this is enough.
-    static ref SAFETY_BUFFER: SgxMutex<SafetyBuffer> = SgxMutex::new(SafetyBuffer::new(3 * 1024 * 1204));
+    static ref SAFETY_BUFFER: SgxMutex<SafetyBuffer> = SgxMutex::new(SafetyBuffer::new(32 * 1024 * 1204));
 }
 
 static OOM_HAPPANED: AtomicBool = AtomicBool::new(false);
