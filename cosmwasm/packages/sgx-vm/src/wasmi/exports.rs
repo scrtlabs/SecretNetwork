@@ -77,11 +77,11 @@ pub extern "C" fn ocall_query_chain(
     context: Ctx,
     vm_error: *mut UntrustedVmError,
     gas_used: *mut u64,
+    gas_limit: u64,
     value: *mut EnclaveBuffer,
     query: *const u8,
     query_len: usize,
 ) -> OcallReturn {
-    let gas_limit = 10_000_000;
     let query = unsafe { std::slice::from_raw_parts(query, query_len) };
 
     let implementation = unsafe { get_implementations_from_context(&context).query_chain };

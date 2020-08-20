@@ -344,7 +344,7 @@ func TestInstantiate(t *testing.T) {
 
 	gasAfter := ctx.GasMeter().GasConsumed()
 	require.Greater(t, gasAfter-gasBefore, uint64(20000))
-	require.Less(t, gasAfter-gasBefore, uint64(60000))
+	require.Less(t, gasAfter-gasBefore, uint64(90000))
 
 	// ensure it is stored properly
 	info := keeper.GetContractInfo(ctx, contractAddr)
@@ -412,6 +412,14 @@ func TestInstantiateWithDeposit(t *testing.T) {
 				fundAccounts(ctx, accKeeper, spec.srcActor, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)))
 			}
 			contractID, err := keeper.Create(ctx, spec.srcActor, wasmCode, "https://github.com/CosmWasm/wasmd/blob/master/x/wasm/testdata/escrow.wasm", "")
+			require.NoError(t, err)
+
+			msg := types.SecretMsg{
+				CodeHash: []byte(hex.EncodeToString(keeper.GetCodeInfo(ctx, contractID).CodeHash)),
+				Msg:      initMsgBz,
+			}
+
+			initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
 			require.NoError(t, err)
 
 			// when
@@ -616,7 +624,7 @@ func TestExecute(t *testing.T) {
 	// make sure gas is properly deducted from ctx
 	gasAfter := ctx.GasMeter().GasConsumed()
 	require.Greater(t, gasAfter-gasBefore, uint64(25000))
-	require.Less(t, gasAfter-gasBefore, uint64(50000))
+	require.Less(t, gasAfter-gasBefore, uint64(90000))
 
 	// ensure bob now exists and got both payments released
 	bobAcct = accKeeper.GetAccount(ctx, bob)
@@ -690,11 +698,27 @@ func TestExecuteWithDeposit(t *testing.T) {
 			initMsgBz, err := json.Marshal(initMsg)
 			require.NoError(t, err)
 
+			msg := types.SecretMsg{
+				CodeHash: []byte(hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)),
+				Msg:      initMsgBz,
+			}
+
+			initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
+			require.NoError(t, err)
+
 			contractAddr, err := keeper.Instantiate(ctx, codeID, spec.srcActor, nil, initMsgBz, "my label", nil)
 			require.NoError(t, err)
 
+			execMsg := types.SecretMsg{
+				CodeHash: []byte(hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)),
+				Msg:      []byte(`{"release":{}}`),
+			}
+
+			execMsgBz, err := wasmCtx.Encrypt(execMsg.Serialize())
+			require.NoError(t, err)
+
 			// when
-			_, err = keeper.Execute(ctx, contractAddr, spec.srcActor, []byte(`{"release":{}}`), deposit)
+			_, err = keeper.Execute(ctx, contractAddr, spec.srcActor, execMsgBz, deposit)
 
 			// then
 			if spec.expError {
@@ -859,7 +883,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 
 	addr, _, err := initHelper(t, keeper, ctx, contractID, creator, string(initMsgBz), false, defaultGasForTests)
-	require.NoError(t, err)
+	require.Empty(t, err)
 
 	// make sure we set a limit before calling
 	var gasLimit uint64 = 400_002

@@ -231,6 +231,12 @@ impl ContractInstance {
     fn is_gas_depleted(&self) -> bool {
         self.gas_limit < self.gas_used.saturating_add(self.gas_used_externally)
     }
+
+    fn gas_left(&self) -> u64 {
+        self.gas_limit
+            .saturating_sub(self.gas_used)
+            .saturating_sub(self.gas_used_externally)
+    }
 }
 
 impl WasmiApi for ContractInstance {
@@ -522,6 +528,7 @@ impl WasmiApi for ContractInstance {
             self.user_nonce,
             self.user_public_key,
             &mut gas_used,
+            self.gas_left(),
         )?;
 
         trace!(

@@ -108,14 +108,11 @@ func getDecryptedWasmEvents(t *testing.T, ctx sdk.Context, nonce []byte) []Contr
 // getDecryptedData decrytes the output of the first function to be called
 // Only returns the data, logs and messages from the first function call
 func getDecryptedData(t *testing.T, data []byte, nonce []byte) []byte {
-	// data
 	if len(data) == 0 {
 		return data
 	}
 
-	dataCiphertextBz, err := base64.StdEncoding.DecodeString(string(data))
-	require.NoError(t, err)
-	dataPlaintextBase64, err := wasmCtx.Decrypt(dataCiphertextBz, nonce)
+	dataPlaintextBase64, err := wasmCtx.Decrypt(data, nonce)
 	require.NoError(t, err)
 
 	dataPlaintext, err := base64.StdEncoding.DecodeString(string(dataPlaintextBase64))
@@ -215,7 +212,7 @@ func queryHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr 
 		log.NewNopLogger(),
 	).WithGasMeter(gasMeter)
 
-	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz, true)
+	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz, false)
 
 	if wasmCallCount < 0 {
 		// default, just check that at least 1 call happend

@@ -25,6 +25,7 @@ extern "C" {
         context: Ctx,
         vm_error: *mut UntrustedVmError,
         gas_used: *mut u64,
+        gas_limit: u64,
         value: *mut EnclaveBuffer,
         query: *const u8,
         query_len: usize,

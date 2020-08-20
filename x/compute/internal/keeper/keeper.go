@@ -448,7 +448,7 @@ func (k Keeper) GetContractHistory(ctx sdk.Context, contractAddr sdk.AccAddress)
 
 // QuerySmart queries the smart contract itself.
 func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, useDefaultGasLimit bool) ([]byte, error) {
-	if !useDefaultGasLimit {
+	if useDefaultGasLimit {
 		ctx = ctx.WithGasMeter(sdk.NewGasMeter(k.queryGasLimit))
 	}
 	ctx.GasMeter().ConsumeGas(InstanceCost, "Loading CosmWasm module: query")

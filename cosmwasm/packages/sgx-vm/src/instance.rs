@@ -256,7 +256,7 @@ where
         let limit = self.inner.gas_limit();
         let remaining = self.inner.gas_left();
         let used_internally = self.inner.gas_used();
-        let used_externally = limit - remaining - used_internally;
+        let used_externally = limit.saturating_sub(remaining).saturating_sub(used_internally);
         GasReport {
             limit,
             remaining,
