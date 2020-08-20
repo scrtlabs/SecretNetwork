@@ -1,13 +1,12 @@
-# The privacy model of Secret Contracts
+# Privacy Model of Secret Contracts
 
-Secret Contracts are based on CosmWasm v0.10, but have additional privacy properties that can only be found in the Secret Network.
+Secret Contracts are based on CosmWasm v0.10, but they have additional privacy properties that can only be found on Secret Network.
 
-If you're a contract developer, you might want to first catch up on [developing Secret Contracts](developing-secret-contracts.md).  
+If you're a contract developer, you might want to first catch up on [developing Secret Contracts](dev/developing-secret-contracts.md).  
 For an in depth look at the Secret Network encryption specs, visit [here](protocol/encryption-specs.md).
 
 Secret Contract developers must always consider the trade-off between privacy, user experience, performance and gas usage.
 
-- [The privacy model of Secret Contracts](#the-privacy-model-of-secret-contracts)
 - [`Init` and `Handle`](#init-and-handle)
   - [Inputs](#inputs)
   - [State operations](#state-operations)

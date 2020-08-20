@@ -46,42 +46,27 @@ module.exports = {
                 sidebarDepth: 1,    // optional, defaults to 1
                 children: [
                   {
-                    title : 'Secret Contracts',
-                    path: '/dev/SecretContract/overview-guide',
-                    sidebarDepth: 1, 
-                    children :[
-                      {
-                        title: 'Local Environment',
-                        path: '/dev/SecretContract/local-dev-testnet'
-                      },
-                      {
-                        title: 'Project Structure',
-                        path: '/dev/SecretContract/project-structure-guide'
-                      },
-                      {
-                        title: 'Initiating Contracts',
-                        path: '/dev/SecretContract/initiate-contract'
-                      },
-                      {
-                        title: 'Deploying Contracts',
-                        path: '/dev/SecretContract/deploy-contract'
-                      },
-                      {
-                        title: 'Query Contracts',
-                        //path: '/dev/SecretContract/project-structure-guide'
-                      },
-                      {
-                        title: 'Testing Contracts',
-                        path: '/dev/SecretContract/unit-test-guide'
-                      }
-                    ]
+                    title: 'Secret Contracts',
+                    path : '/dev/secret-contracts.md'
+                  },
+                  {
+                    title: 'Development Guide',
+                    path : '/dev/developing-secret-contracts.md'
+                  },
+                  {
+                    title: 'Template: Secret Counter',
+                    path : '/dev/secret-template.md'
+                  },
+                  {
+                    title: 'Example: Secret Voting',
+                    path : '/dev/secret-voting.md'
                   },
                   {
                     title: 'SecretJS',
-                    //path: '/dev/secret-js'
+                    path: '/dev/secret-js'
                   },
                   {
-                    title: 'Resources',
+                    title: 'Additional Resources',
                     path : '/dev/resources.md'
                   }
                 ]
