@@ -534,7 +534,6 @@ const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
 
-
 #[cfg(not(feature = "SGX_MODE_HW"))]
 #[allow(dead_code)]
 const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
@@ -712,7 +711,7 @@ pub mod tests {
 
     fn tls_ra_cert_der_v3() -> Vec<u8> {
         let mut cert = vec![];
-        let mut f = File::open("fixtures/tls_ra_cert_v3.der").unwrap();
+        let mut f = File::open("../wasmi-runtime/src/registration/fixtures/tls_ra_cert_v3.der").unwrap();
         f.read_to_end(&mut cert).unwrap();
 
         cert
@@ -720,7 +719,15 @@ pub mod tests {
 
     fn tls_ra_cert_der_v4() -> Vec<u8> {
         let mut cert = vec![];
-        let mut f = File::open("fixtures/tls_ra_cert_v4.der").unwrap();
+        let mut f = File::open("../wasmi-runtime/src/registration/fixtures/tls_ra_cert_v4.der").unwrap();
+        f.read_to_end(&mut cert).unwrap();
+
+        cert
+    }
+
+    fn tls_ra_cert_der_out_of_date() -> Vec<u8> {
+        let mut cert = vec![];
+        let mut f = File::open("../wasmi-runtime/src/registration/fixtures/attestation_cert_out_of_date.der").unwrap();
         f.read_to_end(&mut cert).unwrap();
 
         cert
@@ -728,7 +735,7 @@ pub mod tests {
 
     fn ias_root_ca_cert_der() -> Vec<u8> {
         let mut cert = vec![];
-        let mut f = File::open("fixtures/ias_root_ca_cert.der").unwrap();
+        let mut f = File::open("../wasmi-runtime/src/registration/fixtures/ias_root_ca_cert.der").unwrap();
         f.read_to_end(&mut cert).unwrap();
 
         cert
@@ -766,15 +773,7 @@ pub mod tests {
         report
     }
 
-    // pub fn run_tests() -> bool {
-    //     run_tests!(
-    //         test_sgx_quote_parse_from,
-    //         test_attestation_report_from_cert,
-    //         test_attestation_report_from_cert_api_version_not_compatible
-    //     )
-    // }
-
-    fn test_sgx_quote_parse_from() {
+    pub fn test_sgx_quote_parse_from() {
         let attn_report = attesation_report();
         let sgx_quote_body_encoded = attn_report["isvEnclaveQuoteBody"].as_str().unwrap();
         let quote_raw = base64::decode(&sgx_quote_body_encoded.as_bytes()).unwrap();
@@ -834,7 +833,7 @@ pub mod tests {
         );
     }
 
-    fn test_attestation_report_from_cert() {
+    pub fn test_attestation_report_from_cert() {
         let tls_ra_cert = tls_ra_cert_der_v4();
         let report = AttestationReport::from_cert(&tls_ra_cert);
         assert!(report.is_ok());
@@ -843,7 +842,16 @@ pub mod tests {
         assert_eq!(report.sgx_quote_status, SgxQuoteStatus::GroupOutOfDate);
     }
 
-    fn test_attestation_report_from_cert_api_version_not_compatible() {
+    pub fn test_attestation_report_from_cert_invalid() {
+        let tls_ra_cert = tls_ra_cert_der_v4();
+        let report = AttestationReport::from_cert(&tls_ra_cert);
+        assert!(report.is_ok());
+
+        let report = report.unwrap();
+        assert_eq!(report.sgx_quote_status, SgxQuoteStatus::ConfigurationAndSwHardeningNeeded);
+    }
+
+    pub fn test_attestation_report_from_cert_api_version_not_compatible() {
         let tls_ra_cert = tls_ra_cert_der_v3();
         let report = AttestationReport::from_cert(&tls_ra_cert);
         assert!(report.is_err());

@@ -397,28 +397,63 @@ pub fn verify_quote_status(quote_status: &SgxQuoteStatus, advisories: &AdvisoryI
     }
 }
 
-// #[cfg(feature = "test")]
-// pub mod tests {
-//     use crate::crypto::KeyPair;
-//
-//     use super::sgx_quote_sign_type_t;
-//     use super::verify_ra_cert;
-//
-//     fn test_validate_certificate_valid_sw_mode() {
-//         pub const cert: &[u8] = include_bytes!("../testdata/attestation_cert");
-//         let result = verify_ra_cert(cert);
-//     }
-//
-//     fn test_validate_certificate_valid_signed() {
-//         pub const cert: &[u8] = include_bytes!("../testdata/attestation_cert.der");
-//         let result = verify_ra_cert(cert);
-//     }
-//
-//     fn test_validate_certificate_invalid() {
-//         pub const cert: &[u8] = include_bytes!("../testdata/attestation_cert_invalid");
-//         let result = verify_ra_cert(cert);
-//     }
-//
-//     // we want a weird test because this should never crash
-//     fn test_random_bytes_as_certificate() {}
-// }
+#[cfg(feature = "test")]
+pub mod tests {
+    use crate::crypto::KeyPair;
+
+    use super::sgx_quote_sign_type_t;
+    use super::verify_ra_cert;
+    use std::untrusted::fs::File;
+    use std::io::Read;
+    use crate::registration::report::AttestationReport;
+    use enclave_ffi_types::NodeAuthResult;
+
+
+    fn tls_ra_cert_der_out_of_date() -> Vec<u8> {
+        let mut cert = vec![];
+        let mut f = File::open("../wasmi-runtime/src/registration/fixtures/attestation_cert_out_of_date.der").unwrap();
+        f.read_to_end(&mut cert).unwrap();
+
+        cert
+    }
+
+    #[cfg(feature = "SGX_MODE_HW")]
+    fn tls_ra_cert_der_valid() -> Vec<u8> {
+        let mut cert = vec![];
+        let mut f = File::open("../wasmi-runtime/src/registration/fixtures/attestation_cert_hw_v2").unwrap();
+        f.read_to_end(&mut cert).unwrap();
+
+        cert
+    }
+
+    #[cfg(not(feature = "SGX_MODE_HW"))]
+    fn tls_ra_cert_der_valid() -> Vec<u8> {
+        let mut cert = vec![];
+        let mut f = File::open("../wasmi-runtime/src/registration/fixtures/attestation_cert_sw").unwrap();
+        f.read_to_end(&mut cert).unwrap();
+
+        cert
+    }
+
+    #[cfg(not(feature = "SGX_MODE_HW"))]
+    fn test_certificate_invalid_configuration_needed() {}
+
+    #[cfg(feature = "SGX_MODE_HW")]
+    fn test_certificate_invalid_configuration_needed() {
+        let tls_ra_cert = tls_ra_cert_der_out_of_date();
+        let report = AttestationReport::from_cert(&tls_ra_cert);
+        assert!(report.is_ok());
+
+        let result = verify_ra_cert(&tls_ra_cert).expect_err("Certificate should not pass validation");
+
+        assert_eq!(result, NodeAuthResult::SwHardeningAndConfigurationNeeded)
+    }
+
+    fn test_certificate_valid() {
+        let tls_ra_cert = tls_ra_cert_der_valid();
+        let report = AttestationReport::from_cert(&tls_ra_cert);
+        assert!(report.is_ok());
+
+        let result = verify_ra_cert(&tls_ra_cert).unwrap();
+    }
+}
