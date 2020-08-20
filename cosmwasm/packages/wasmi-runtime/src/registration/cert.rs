@@ -436,10 +436,10 @@ pub mod tests {
     }
 
     #[cfg(not(feature = "SGX_MODE_HW"))]
-    fn test_certificate_invalid_configuration_needed() {}
+    pub fn test_certificate_invalid_configuration_needed() {}
 
     #[cfg(feature = "SGX_MODE_HW")]
-    fn test_certificate_invalid_configuration_needed() {
+    pub fn test_certificate_invalid_configuration_needed() {
         let tls_ra_cert = tls_ra_cert_der_out_of_date();
         let report = AttestationReport::from_cert(&tls_ra_cert);
         assert!(report.is_ok());
@@ -449,7 +449,7 @@ pub mod tests {
         assert_eq!(result, NodeAuthResult::SwHardeningAndConfigurationNeeded)
     }
 
-    fn test_certificate_valid() {
+    pub fn test_certificate_valid() {
         let tls_ra_cert = tls_ra_cert_der_valid();
         let report = AttestationReport::from_cert(&tls_ra_cert);
         assert!(report.is_ok());
