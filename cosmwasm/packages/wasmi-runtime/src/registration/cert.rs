@@ -401,7 +401,6 @@ pub fn verify_quote_status(quote_status: &SgxQuoteStatus, advisories: &AdvisoryI
 pub mod tests {
     use crate::crypto::KeyPair;
 
-    use super::sgx_quote_sign_type_t;
     use super::verify_ra_cert;
     use std::untrusted::fs::File;
     use std::io::Read;
