@@ -11,10 +11,11 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 use std::array::TryFromSliceError;
 use std::convert::TryFrom;
-// use std::prelude::v1::*;
+use lazy_static::lazy_static;
 use std::time::SystemTime;
 use std::untrusted::time::SystemTimeEx;
 use uuid::Uuid;
+use std::collections::HashMap;
 
 use super::cert::{get_ias_auth_config, get_netscape_comment};
 use enclave_ffi_types::NodeAuthResult;
@@ -538,6 +539,13 @@ const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
 #[allow(dead_code)]
 const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
 
+lazy_static!{
+    static ref ADVISORY_DESC: HashMap<&'static str, &'static str> = [
+        ("INTEL-SA-00161", "You must disable hyperthreading in the BIOS"),
+        ("INTEL-SA-00289", "You must disable overclocking/undervolting in the BIOS"),
+    ].iter().copied().collect();
+}
+
 #[derive(Debug)]
 pub struct AdvisoryIDs (pub Vec<String>);
 
@@ -549,6 +557,9 @@ impl AdvisoryIDs {
         for i in it {
             if !WHITELISTED_ADVISORIES.contains(&i.as_str()) {
                 vulnerable.push(i.clone());
+                if !ADVISORY_DESC.contains_key(&i.as_str()) {
+                    vulnerable.push(ADVISORY_DESC.get::<str>(&i.as_str()).unwrap().to_string());
+                }
             }
         }
         vulnerable
