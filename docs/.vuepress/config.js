@@ -54,6 +54,10 @@ module.exports = {
                     path : '/dev/developing-secret-contracts.md'
                   },
                   {
+                    title: 'Quickstart',
+                    path : '/dev/quickstart.md'
+                  },
+                  {
                     title: 'Template: Secret Counter',
                     path : '/dev/secret-template.md'
                   },
