@@ -561,12 +561,11 @@ pub struct AdvisoryIDs(pub Vec<String>);
 impl AdvisoryIDs {
     #[allow(dead_code)]
     pub(crate) fn vulnerable(&self) -> Vec<String> {
-        let it = self.0.iter();
         let mut vulnerable: Vec<String> = vec![];
-        for i in it {
+        for i in self.0.iter() {
             if !WHITELISTED_ADVISORIES.contains(&i.as_str()) {
                 vulnerable.push(i.clone());
-                if !ADVISORY_DESC.contains_key(&i.as_str()) {
+                if ADVISORY_DESC.contains_key(&i.as_str()) {
                     vulnerable.push((*ADVISORY_DESC.get::<str>(&i.as_str()).unwrap()).to_string());
                 }
             }
