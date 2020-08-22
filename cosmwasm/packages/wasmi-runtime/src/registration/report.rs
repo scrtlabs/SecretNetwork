@@ -6,16 +6,16 @@
 //! Types that contain information about attestation report.
 //! The implementation is based on Attestation Service API version 4.
 //! https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf
+use lazy_static::lazy_static;
 use log::*;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 use std::array::TryFromSliceError;
+use std::collections::HashMap;
 use std::convert::TryFrom;
-use lazy_static::lazy_static;
 use std::time::SystemTime;
 use std::untrusted::time::SystemTimeEx;
 use uuid::Uuid;
-use std::collections::HashMap;
 
 use super::cert::{get_ias_auth_config, get_netscape_comment};
 use enclave_ffi_types::NodeAuthResult;
@@ -539,15 +539,24 @@ const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
 #[allow(dead_code)]
 const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
 
-lazy_static!{
+lazy_static! {
     static ref ADVISORY_DESC: HashMap<&'static str, &'static str> = [
-        ("INTEL-SA-00161", "You must disable hyperthreading in the BIOS"),
-        ("INTEL-SA-00289", "You must disable overclocking/undervolting in the BIOS"),
-    ].iter().copied().collect();
+        (
+            "INTEL-SA-00161",
+            "You must disable hyperthreading in the BIOS"
+        ),
+        (
+            "INTEL-SA-00289",
+            "You must disable overclocking/undervolting in the BIOS"
+        ),
+    ]
+    .iter()
+    .copied()
+    .collect();
 }
 
 #[derive(Debug)]
-pub struct AdvisoryIDs (pub Vec<String>);
+pub struct AdvisoryIDs(pub Vec<String>);
 
 impl AdvisoryIDs {
     #[allow(dead_code)]
@@ -558,7 +567,7 @@ impl AdvisoryIDs {
             if !WHITELISTED_ADVISORIES.contains(&i.as_str()) {
                 vulnerable.push(i.clone());
                 if !ADVISORY_DESC.contains_key(&i.as_str()) {
-                    vulnerable.push(ADVISORY_DESC.get::<str>(&i.as_str()).unwrap().to_string());
+                    vulnerable.push((*ADVISORY_DESC.get::<str>(&i.as_str()).unwrap()).to_string());
                 }
             }
         }
@@ -694,10 +703,11 @@ impl AttestationReport {
         };
 
         // Get advisories
-        let advisories: Vec<String> = serde_json::from_value(attn_report["advisoryIDs"].clone()).map_err(|_| {
-            error!("Failed to decode advisories");
-            Error::ReportParseError
-        })?;
+        let advisories: Vec<String> = serde_json::from_value(attn_report["advisoryIDs"].clone())
+            .map_err(|_| {
+                error!("Failed to decode advisories");
+                Error::ReportParseError
+            })?;
 
         // We don't actually validate the public key, since we use ephemeral certificates,
         // and all we really care about that the report is valid and the key that is saved in the
@@ -707,7 +717,7 @@ impl AttestationReport {
             sgx_quote_status,
             sgx_quote_body,
             platform_info_blob,
-            advisroy_ids: AdvisoryIDs(advisories)
+            advisroy_ids: AdvisoryIDs(advisories),
         })
     }
 }
@@ -722,7 +732,8 @@ pub mod tests {
 
     fn tls_ra_cert_der_v3() -> Vec<u8> {
         let mut cert = vec![];
-        let mut f = File::open("../wasmi-runtime/src/registration/fixtures/tls_ra_cert_v3.der").unwrap();
+        let mut f =
+            File::open("../wasmi-runtime/src/registration/fixtures/tls_ra_cert_v3.der").unwrap();
         f.read_to_end(&mut cert).unwrap();
 
         cert
@@ -730,7 +741,10 @@ pub mod tests {
 
     fn tls_ra_cert_der_v4() -> Vec<u8> {
         let mut cert = vec![];
-        let mut f = File::open("../wasmi-runtime/src/registration/fixtures/attestation_cert_out_of_date.der").unwrap();
+        let mut f = File::open(
+            "../wasmi-runtime/src/registration/fixtures/attestation_cert_out_of_date.der",
+        )
+        .unwrap();
         f.read_to_end(&mut cert).unwrap();
 
         cert
@@ -738,7 +752,10 @@ pub mod tests {
 
     fn tls_ra_cert_der_out_of_date() -> Vec<u8> {
         let mut cert = vec![];
-        let mut f = File::open("../wasmi-runtime/src/registration/fixtures/attestation_cert_sw_config_needed.der").unwrap();
+        let mut f = File::open(
+            "../wasmi-runtime/src/registration/fixtures/attestation_cert_sw_config_needed.der",
+        )
+        .unwrap();
         f.read_to_end(&mut cert).unwrap();
 
         cert
@@ -746,7 +763,8 @@ pub mod tests {
 
     fn ias_root_ca_cert_der() -> Vec<u8> {
         let mut cert = vec![];
-        let mut f = File::open("../wasmi-runtime/src/registration/fixtures/ias_root_ca_cert.der").unwrap();
+        let mut f =
+            File::open("../wasmi-runtime/src/registration/fixtures/ias_root_ca_cert.der").unwrap();
         f.read_to_end(&mut cert).unwrap();
 
         cert
@@ -859,7 +877,10 @@ pub mod tests {
         assert!(report.is_ok());
 
         let report = report.unwrap();
-        assert_eq!(report.sgx_quote_status, SgxQuoteStatus::ConfigurationAndSwHardeningNeeded);
+        assert_eq!(
+            report.sgx_quote_status,
+            SgxQuoteStatus::ConfigurationAndSwHardeningNeeded
+        );
     }
 
     pub fn test_attestation_report_from_cert_api_version_not_compatible() {
