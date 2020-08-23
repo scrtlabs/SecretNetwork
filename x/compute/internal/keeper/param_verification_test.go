@@ -839,3 +839,118 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 	)
 	require.Contains(t, err.Error(), "failed to verify transaction signature")
 }
+
+func TestWrongFundsNoFunds(t *testing.T) {
+	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	initMsg := `{"nop":{}}`
+
+	msg := types.SecretMsg{
+		CodeHash: []byte(codeHash),
+		Msg:      []byte(initMsg),
+	}
+
+	initMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
+	require.NoError(t, err)
+	nonce := initMsgBz[0:32]
+
+	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privKeyA, initMsgBz, codeID, nil)
+
+	_, err = keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
+	if err != nil {
+		err = extractInnerError(t, err, nonce, false)
+	}
+	require.Contains(t, err.Error(), "failed to verify transaction signature")
+}
+
+func TestWrongFundsSomeFunds(t *testing.T) {
+	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	initMsg := `{"nop":{}}`
+
+	msg := types.SecretMsg{
+		CodeHash: []byte(codeHash),
+		Msg:      []byte(initMsg),
+	}
+
+	initMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
+	require.NoError(t, err)
+	nonce := initMsgBz[0:32]
+
+	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privKeyA, initMsgBz, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)))
+
+	_, err = keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
+	if err != nil {
+		err = extractInnerError(t, err, nonce, false)
+	}
+	require.Contains(t, err.Error(), "failed to verify transaction signature")
+}
+
+func TestWrongMessage(t *testing.T) {
+	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	initMsg := `{"nop":{}}`
+
+	msg := types.SecretMsg{
+		CodeHash: []byte(codeHash),
+		Msg:      []byte(initMsg),
+	}
+
+	initMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
+	require.NoError(t, err)
+	nonce := initMsgBz[0:32]
+
+	notTheRealMsg := `{"no_logs":{}}`
+
+	notReallyTheMsg := types.SecretMsg{
+		CodeHash: []byte(codeHash),
+		Msg:      []byte(notTheRealMsg),
+	}
+
+	notTheRealMsgBz, err := wasmCtx.Encrypt(notReallyTheMsg.Serialize())
+	require.NoError(t, err)
+
+	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privKeyA, initMsgBz, codeID, nil)
+
+	_, err = keeper.Instantiate(ctx, codeID, walletA, nil, notTheRealMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
+	if err != nil {
+		err = extractInnerError(t, err, nonce, false)
+	}
+	require.Contains(t, err.Error(), "failed to verify transaction signature")
+}
+
+func TestWrongContractAddress(t *testing.T) {
+	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, walletB, privKeyB := setupTest(t, "./testdata/erc20.wasm")
+	defer os.RemoveAll(tempDir)
+
+	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, walletA.String(), walletB.String())
+
+	contractAddress, _, error := initHelper(t, keeper, ctx, codeID, walletB, privKeyB, initMsg, true, defaultGasForTests)
+	require.Empty(t, error)
+	differentContractAddress, _, error := initHelper(t, keeper, ctx, codeID, walletB, privKeyB, initMsg, true, defaultGasForTests)
+	require.Empty(t, error)
+
+	require.NotEqual(t, contractAddress, differentContractAddress)
+
+	execMsg := fmt.Sprintf(`{"transfer":{"amount":"10","recipient":"%s"}}`, walletB.String())
+
+	msg := types.SecretMsg{
+		CodeHash: []byte(codeHash),
+		Msg:      []byte(execMsg),
+	}
+
+	execMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
+	require.NoError(t, err)
+	nonce := execMsgBz[0:32]
+
+	ctx = PrepareExecSignedTx(t, keeper, ctx, walletA, privKeyA, execMsgBz, contractAddress, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+	_, err = keeper.Execute(ctx, differentContractAddress, walletA, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	if err != nil {
+		err = extractInnerError(t, err, nonce, false)
+	}
+	require.Contains(t, err.Error(), "failed to verify transaction signature")
+}
