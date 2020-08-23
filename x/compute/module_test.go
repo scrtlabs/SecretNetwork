@@ -143,7 +143,7 @@ func TestHandleInstantiate(t *testing.T) {
 	defer cleanup()
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator := createFakeFundedAccount(data.ctx, data.acctKeeper, deposit)
+	creator, _ := createFakeFundedAccount(data.ctx, data.acctKeeper, deposit)
 
 	h := data.module.NewHandler()
 	q := data.module.NewQuerierHandler()
@@ -200,8 +200,8 @@ func TestHandleExecute(t *testing.T) {
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator := createFakeFundedAccount(data.ctx, data.acctKeeper, deposit.Add(deposit...))
-	fred := createFakeFundedAccount(data.ctx, data.acctKeeper, topUp)
+	creator, _ := createFakeFundedAccount(data.ctx, data.acctKeeper, deposit.Add(deposit...))
+	fred, _ := createFakeFundedAccount(data.ctx, data.acctKeeper, topUp)
 
 	h := data.module.NewHandler()
 	q := data.module.NewQuerierHandler()
@@ -310,8 +310,8 @@ func TestHandleExecuteEscrow(t *testing.T) {
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator := createFakeFundedAccount(data.ctx, data.acctKeeper, deposit.Add(deposit...))
-	fred := createFakeFundedAccount(data.ctx, data.acctKeeper, topUp)
+	creator, _ := createFakeFundedAccount(data.ctx, data.acctKeeper, deposit.Add(deposit...))
+	fred, _ := createFakeFundedAccount(data.ctx, data.acctKeeper, topUp)
 
 	h := data.module.NewHandler()
 
@@ -490,11 +490,11 @@ func assertContractInfo(t *testing.T, q sdk.Querier, ctx sdk.Context, addr sdk.A
 	assert.Equal(t, creator, res.Creator)
 }
 
-func createFakeFundedAccount(ctx sdk.Context, am auth.AccountKeeper, coins sdk.Coins) sdk.AccAddress {
-	_, _, addr := keyPubAddr()
+func createFakeFundedAccount(ctx sdk.Context, am auth.AccountKeeper, coins sdk.Coins) (sdk.AccAddress, crypto.PrivKey) {
+	priv, _, addr := keyPubAddr()
 	baseAcct := auth.NewBaseAccountWithAddress(addr)
 	_ = baseAcct.SetCoins(coins)
 	am.SetAccount(ctx, &baseAcct)
 
-	return addr
+	return addr, priv
 }
