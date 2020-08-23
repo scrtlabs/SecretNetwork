@@ -160,9 +160,9 @@ pub fn verify_params(
         if verify_callback_sig(callback_sig.as_slice(), &env.message.sender, msg) {
             trace!("Message verified! msg.sender is the calling contract");
             return Ok(());
-        } else {
-            error!("Callback signature verification failed");
         }
+
+        error!("Callback signature verification failed");
     } else {
         trace!(
             "Sign bytes are: {:?}",
@@ -197,9 +197,9 @@ pub fn verify_params(
         if verify_signature_params(&sign_doc, sig_info, env, msg) {
             trace!("Parameters verified successfully");
             return Ok(());
-        } else {
-            error!("Parameter verification failed");
         }
+
+        error!("Parameter verification failed");
     }
 
     Err(EnclaveError::FailedTxVerification)
@@ -278,21 +278,18 @@ fn verify_funds(msg: &SignDocWasmMsg, env: &Env) -> bool {
         | SignDocWasmMsg::Instantiate {
             init_funds: sent_funds,
             ..
-        } => {
-            if (env.message.sent_funds.is_some()
-                && env.message.sent_funds.clone().unwrap() != *sent_funds)
-                || (env.message.sent_funds.is_none() && !sent_funds.is_empty())
-            {
+        } => match &env.message.sent_funds {
+            Some(env_sent_funds) if env_sent_funds == sent_funds => true,
+            None if sent_funds.is_empty() => true,
+            _ => {
                 error!(
                     "Funds sent to enclave {:?} are not the same as the signed one {:?}",
                     env.message.sent_funds, *sent_funds,
                 );
-                return false;
+                false
             }
-        }
+        },
     }
-
-    true
 }
 
 fn verify_signature_params(
