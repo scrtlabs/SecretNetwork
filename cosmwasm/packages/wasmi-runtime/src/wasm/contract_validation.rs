@@ -260,7 +260,7 @@ fn verify_contract(msg: &SignDocWasmMsg, env: &Env) -> bool {
         trace!("Verifying contract address..");
         if let Ok(human_addr) = HumanAddr::from_canonical(env.contract.address.clone()) {
             if human_addr != *contract {
-                error!(
+                debug!(
                     "Contract address sent to enclave {:?} is not the same as the signed one {:?}",
                     human_addr, *contract
                 );
@@ -282,7 +282,7 @@ fn verify_funds(msg: &SignDocWasmMsg, env: &Env) -> bool {
             Some(env_sent_funds) if env_sent_funds == sent_funds => true,
             None if sent_funds.is_empty() => true,
             _ => {
-                error!(
+                debug!(
                     "Funds sent to enclave {:?} are not the same as the signed one {:?}",
                     env.message.sent_funds, *sent_funds,
                 );
@@ -325,11 +325,13 @@ fn verify_signature_params(
     let msg = msg.unwrap();
 
     if !verify_contract(msg, env) {
+        error!("Contract address verification failed!");
         return false;
     }
 
     trace!("Verifying funds..");
     if !verify_funds(msg, env) {
+        error!("Funds verification failed!");
         return false;
     }
 

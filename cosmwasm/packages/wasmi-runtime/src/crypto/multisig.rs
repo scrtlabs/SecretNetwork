@@ -138,7 +138,6 @@ fn decode_multisig_signature(raw_blob: &[u8]) -> Result<MultisigSignature, Crypt
                     error!("Multisig signature malformed. decoding failed!");
                     return Err(CryptoError::ParsingError);
                 }
-            // }
             } else {
                 error!("Multisig signature malformed. decoding failed!");
                 return Err(CryptoError::ParsingError);

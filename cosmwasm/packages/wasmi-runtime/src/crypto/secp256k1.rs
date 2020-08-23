@@ -24,7 +24,7 @@ impl PubKey for Secp256k1PubKey {
     }
 
     fn bytes(&self) -> Vec<u8> {
-        // Amino encoding is basically: prefix | leb128 encoded length | ..bytes..
+        // Amino encoding here is basically: prefix | leb128 encoded length | ..bytes..
         let mut encoded = Vec::<u8>::new();
         encoded.extend_from_slice(&SECP256K1_PREFIX);
 
@@ -80,12 +80,6 @@ impl PubKey for Secp256k1PubKey {
         Ok(())
     }
 }
-//
-// impl PartialEq for Secp256k1PubKey {
-//     fn eq(&self, other: &Self) -> bool {
-//         unimplemented!()
-//     }
-// }
 
 // TODO: Can we get rid of this comment below?
 
