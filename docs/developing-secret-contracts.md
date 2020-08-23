@@ -113,7 +113,7 @@ Example Invocation from `SecretJS`:
 3. With that seed, the [deck is shuffled](https://github.com/enigmampc/SecretHoldEm/blob/4f67c469bb4a0f53522c7ad069e54ae5c1effb6b/contract/src/contract.rs#L356-L357).
 4. Each round a [game counter is incremented](https://github.com/enigmampc/SecretHoldEm/blob/4f67c469bb4a0f53522c7ad069e54ae5c1effb6b/contract/src/contract.rs#L602-L614), and along with the players' secrets is used to create a new seed for re-shuffling the deck.
 5. On the frondend side, [SecretJS is used to generate a secure random number](https://github.com/enigmampc/SecretHoldEm/blob/4f67c469bb4a0f53522c7ad069e54ae5c1effb6b/gui/src/App.js#L334-L354) and sends it as a secret when a player joins the table. A random number is not really necessary, and every secret number would work just as well.
-6. As long as at least one player is not colluding with the rest, and by properties of sha256, the seeds for shuffling the deck are known only to the contract and to no one else. If all players are colluding then they might as well all play with open hands. :joy:
+6. As long as at least one player is not colluding with the rest, and by properties of sha256, the seeds for shuffling the deck are known only to the contract and to no one else. If all players are colluding, they might as well all play with open hands. :joy:
 
 ## Use an external oracle
 
