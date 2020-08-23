@@ -280,6 +280,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 		expectQueriesFromContract int
 		expectedGas               uint64
 		expectOutOfGas            bool
+		expectOOM                 bool
 	}{
 		"no recursion, lots of work": {
 			gasLimit: 4_000_000,
@@ -298,7 +299,8 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			},
 			expectQueriesFromContract: 5,
 			expectedGas:               GasWork2k + 5*(GasWork2k+GasReturnHashed),
-			expectOutOfGas:            true,
+			expectOutOfGas:            false,
+			expectOOM:                 true,
 		},
 		// this is where we expect an error...
 		// it has enough gas to run 4 times and die on the 5th (4th time dispatching to sub-contract)
@@ -312,6 +314,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			},
 			expectQueriesFromContract: 4,
 			expectOutOfGas:            false,
+			expectOOM:                 true,
 		},
 	}
 
@@ -332,27 +335,28 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			recurse.Contract = contractAddr
 			msg := buildQuery(t, recurse, hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr)))
 
-			secretMsg := types.SecretMsg{
-				CodeHash: []byte(hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr))),
-				Msg:      msg,
-			}
-
-			msg, err := wasmCtx.Encrypt(secretMsg.Serialize())
-			require.NoError(t, err)
-
 			// if we expect out of gas, make sure this panics
 			if tc.expectOutOfGas {
 				require.Panics(t, func() {
-					_, err := keeper.QuerySmart(ctx, contractAddr, msg, true)
-					t.Logf("Got error not panic: %#v", err)
+					_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, tc.gasLimit)
+					t.Logf("Got error not panic: %#v", qErr)
 				})
 				assert.Equal(t, tc.expectQueriesFromContract, totalWasmQueryCounter)
 				return
 			}
 
+			// if we expect out of memory
+			if tc.expectOOM {
+				_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, tc.gasLimit)
+				require.NotEmpty(t, qErr)
+				require.NotNil(t, qErr.GenericErr)
+				require.Contains(t, qErr.GenericErr.Msg, "Execution error: Enclave: enclave ran out of heap memory")
+				return
+			}
+
 			// otherwise, we expect a successful call
-			_, err = keeper.QuerySmart(ctx, contractAddr, msg, true)
-			require.NoError(t, err)
+			_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, tc.gasLimit)
+			require.Empty(t, qErr)
 			// assert.Equal(t, tc.expectedGas, ctx.GasMeter().GasConsumed())
 
 			assert.Equal(t, tc.expectQueriesFromContract, totalWasmQueryCounter)
