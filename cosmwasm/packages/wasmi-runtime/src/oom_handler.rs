@@ -9,7 +9,7 @@ use std::sync::SgxMutex;
 /// make sure the unwind process has enough free memory to work properly.
 struct SafetyBuffer {
     size: usize,
-    buffer: Vec<u8>,
+    buffer: *mut u8,
 }
 
 impl SafetyBuffer {
@@ -17,27 +17,35 @@ impl SafetyBuffer {
     pub fn new(size: usize) -> Self {
         let mut buffer: Vec<u8> = vec![0; size];
         buffer[size - 1] = 1;
-        SafetyBuffer { size, buffer }
+        let ptr = buffer.as_mut_ptr();
+        std::mem::forget(buffer);
+        SafetyBuffer { size, buffer: ptr }
     }
 
     /// Free the buffer to allow panic to safely unwind
     pub fn clear(&mut self) {
-        self.buffer = vec![];
+        let buffer = unsafe { Vec::<u8>::from_raw_parts(self.buffer, self.size, self.size) };
+        drop(buffer);
+        self.buffer = std::ptr::null_mut();
     }
 
     // Reallocate the buffer, use this after a successful unwind
     pub fn restore(&mut self) {
-        if self.buffer.capacity() < self.size {
-            self.buffer = vec![0; self.size];
-            self.buffer[self.size - 1] = 1;
+        if self.buffer.is_null() {
+            let mut buffer: Vec<u8> = vec![0; self.size];
+            buffer[self.size - 1] = 1;
+            self.buffer = buffer.as_mut_ptr();
+            std::mem::forget(buffer);
         }
     }
 }
 
+unsafe impl Send for SafetyBuffer {}
+
 lazy_static! {
     /// SAFETY_BUFFER is a 32 MiB of SafetyBuffer. This occupying 50% of available memory
     /// to be extra sure this is enough.
-    static ref SAFETY_BUFFER: SgxMutex<SafetyBuffer> = SgxMutex::new(SafetyBuffer::new(32 * 1024 * 1204));
+    static ref SAFETY_BUFFER: SgxMutex<SafetyBuffer> = SgxMutex::new(SafetyBuffer::new(2 * 1024 * 1204));
 }
 
 static OOM_HAPPANED: AtomicBool = AtomicBool::new(false);
@@ -52,12 +60,15 @@ pub fn register_oom_handler() {
 
     get_then_clear_oom_happened();
 
-    std::alloc::set_alloc_error_hook(|_| {
+    std::alloc::set_alloc_error_hook(|layout| {
         OOM_HAPPANED.store(true, Ordering::SeqCst);
         {
             SAFETY_BUFFER.lock().unwrap().clear();
         }
-        panic!("SGX: Memory allocation failed. Trying to recover...\n");
+        panic!(
+            "SGX: Memory allocation of {} bytes failed. Trying to recover...\n",
+            layout.size()
+        );
     });
 }
 
