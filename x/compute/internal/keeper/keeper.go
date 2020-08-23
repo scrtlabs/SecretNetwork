@@ -7,7 +7,6 @@ import (
 	"github.com/enigmampc/cosmos-sdk/x/auth/exported"
 	distr "github.com/enigmampc/cosmos-sdk/x/distribution"
 	"github.com/enigmampc/cosmos-sdk/x/mint"
-	"path/filepath"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
 	"path/filepath"
