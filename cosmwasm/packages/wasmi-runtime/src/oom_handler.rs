@@ -8,23 +8,29 @@ use std::sync::SgxMutex;
 /// to allocate more memory which causes a double fault. This way we can
 /// make sure the unwind process has enough free memory to work properly.
 struct SafetyBuffer {
-    size: usize,
+    length: usize,
+    capacity: usize,
     buffer: *mut u8,
 }
 
 impl SafetyBuffer {
-    /// Allocate `size` bytes on the heap
-    pub fn new(size: usize) -> Self {
-        let mut buffer: Vec<u8> = vec![0; size];
-        buffer[size - 1] = 1;
+    /// Allocate `length` bytes on the heap
+    pub fn new(length: usize) -> Self {
+        let mut buffer: Vec<u8> = vec![0; length];
+        buffer[length - 1] = 1;
         let ptr = buffer.as_mut_ptr();
+        let capacity = buffer.capacity();
         std::mem::forget(buffer);
-        SafetyBuffer { size, buffer: ptr }
+        SafetyBuffer {
+            length,
+            capacity,
+            buffer: ptr,
+        }
     }
 
     /// Free the buffer to allow panic to safely unwind
     pub fn clear(&mut self) {
-        let buffer = unsafe { Vec::<u8>::from_raw_parts(self.buffer, self.size, self.size) };
+        let buffer = unsafe { Vec::<u8>::from_raw_parts(self.buffer, self.length, self.capacity) };
         drop(buffer);
         self.buffer = std::ptr::null_mut();
     }
@@ -32,9 +38,10 @@ impl SafetyBuffer {
     // Reallocate the buffer, use this after a successful unwind
     pub fn restore(&mut self) {
         if self.buffer.is_null() {
-            let mut buffer: Vec<u8> = vec![0; self.size];
-            buffer[self.size - 1] = 1;
+            let mut buffer: Vec<u8> = vec![0; self.length];
+            buffer[self.length - 1] = 1;
             self.buffer = buffer.as_mut_ptr();
+            self.capacity = buffer.capacity();
             std::mem::forget(buffer);
         }
     }
