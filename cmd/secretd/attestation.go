@@ -10,12 +10,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/enigmampc/cosmos-sdk/types/module"
-	"github.com/enigmampc/cosmos-sdk/x/genutil"
 	app "github.com/enigmampc/SecretNetwork"
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	"github.com/enigmampc/cosmos-sdk/types/module"
+	"github.com/enigmampc/cosmos-sdk/x/genutil"
 
 	"github.com/enigmampc/cosmos-sdk/codec"
 	"github.com/enigmampc/cosmos-sdk/server"
@@ -254,8 +254,8 @@ func HealthCheck(_ *server.Context, _ *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "check-enclave",
 		Short: "Test enclave status",
-		Long: "Help diagnose issues by performing a basic sanity test that SGX is working properly",
-		Args: cobra.ExactArgs(0),
+		Long:  "Help diagnose issues by performing a basic sanity test that SGX is working properly",
+		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			res, err := api.HealthCheck()
@@ -293,7 +293,6 @@ func ResetEnclave(_ *server.Context, _ *codec.Codec) *cobra.Command {
 					println(err.Error())
 				}
 			}
-
 
 			// remove sgx_secrets
 			sgxSecretsDir := os.Getenv("SCRT_SGX_STORAGE")

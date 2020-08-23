@@ -133,11 +133,15 @@ pub enum EnclaveError {
     MemoryReadError,
     #[display(fmt = "failed to write memory")]
     MemoryWriteError,
+    #[display(fmt = "function not implemented")]
+    NotImplemented,
+    #[display(fmt = "failed to verify transaction signature")]
+    FailedTxVerification,
     #[display(fmt = "contract tried to write to storage during a query")]
     UnauthorizedWrite,
 
     // serious issues
-    #[display(fmt = "panic'd due to unexpected behavior")]
+    #[display(fmt = "panicked due to unexpected behavior")]
     Panic,
     #[display(fmt = "enclave ran out of heap memory")]
     OutOfMemory,

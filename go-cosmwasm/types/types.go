@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"github.com/enigmampc/cosmos-sdk/x/auth"
 	"strconv"
 )
 
@@ -45,4 +46,10 @@ func (c *Coins) UnmarshalJSON(data []byte) error {
 	}
 	*c = d
 	return nil
+}
+
+type VerificationInfo struct {
+	Bytes             []byte            `json:"sign_bytes"`
+	Signature         auth.StdSignature `json:"signature"`
+	CallbackSignature []byte            `json:"callback_sig"` // Optional
 }

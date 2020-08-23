@@ -66,6 +66,8 @@ var (
 	MakeTestCodec             = keeper.MakeTestCodec
 	CreateTestInput           = keeper.CreateTestInput
 	TestHandler               = keeper.TestHandler
+	PrepareInitSignedTx       = keeper.PrepareInitSignedTx
+	PrepareExecSignedTx       = keeper.PrepareExecSignedTx
 
 	// variable aliases
 	ModuleCdc            = types.ModuleCdc
