@@ -8,51 +8,45 @@ use std::sync::SgxMutex;
 /// to allocate more memory which causes a double fault. This way we can
 /// make sure the unwind process has enough free memory to work properly.
 struct SafetyBuffer {
-    length: usize,
-    capacity: usize,
-    buffer: *mut u8,
+    chunks: usize,
+    buffer: Vec<Vec<u8>>,
 }
 
 impl SafetyBuffer {
-    /// Allocate `length` bytes on the heap
-    pub fn new(length: usize) -> Self {
-        let mut buffer: Vec<u8> = vec![0; length];
-        buffer[length - 1] = 1;
-        let ptr = buffer.as_mut_ptr();
-        let capacity = buffer.capacity();
-        std::mem::forget(buffer);
+    /// Allocate `chunks` KiB on the heap
+    pub fn new(chunks: usize) -> Self {
         SafetyBuffer {
-            length,
-            capacity,
-            buffer: ptr,
+            chunks,
+            buffer: SafetyBuffer::build_buffer(chunks),
         }
     }
 
     /// Free the buffer to allow panic to safely unwind
     pub fn clear(&mut self) {
-        let buffer = unsafe { Vec::<u8>::from_raw_parts(self.buffer, self.length, self.capacity) };
-        drop(buffer);
-        self.buffer = std::ptr::null_mut();
+        self.buffer = Vec::new();
+    }
+
+    fn build_buffer(chunks: usize) -> Vec<Vec<u8>> {
+        let mut buffer: Vec<Vec<u8>> = Vec::with_capacity(chunks);
+        for _i in 0..chunks {
+            let kb: Vec<u8> = Vec::with_capacity(1024);
+            buffer.push(kb)
+        }
+        buffer
     }
 
     // Reallocate the buffer, use this after a successful unwind
     pub fn restore(&mut self) {
-        if self.buffer.is_null() {
-            let mut buffer: Vec<u8> = vec![0; self.length];
-            buffer[self.length - 1] = 1;
-            self.buffer = buffer.as_mut_ptr();
-            self.capacity = buffer.capacity();
-            std::mem::forget(buffer);
+        if self.buffer.capacity() < self.chunks {
+            self.buffer = SafetyBuffer::build_buffer(self.chunks);
         }
     }
 }
 
-unsafe impl Send for SafetyBuffer {}
-
 lazy_static! {
     /// SAFETY_BUFFER is a 32 MiB of SafetyBuffer. This occupying 50% of available memory
     /// to be extra sure this is enough.
-    static ref SAFETY_BUFFER: SgxMutex<SafetyBuffer> = SgxMutex::new(SafetyBuffer::new(2 * 1024 * 1204));
+    static ref SAFETY_BUFFER: SgxMutex<SafetyBuffer> = SgxMutex::new(SafetyBuffer::new(32 * 1024));
 }
 
 static OOM_HAPPANED: AtomicBool = AtomicBool::new(false);
@@ -69,9 +63,11 @@ pub fn register_oom_handler() {
 
     std::alloc::set_alloc_error_hook(|layout| {
         OOM_HAPPANED.store(true, Ordering::SeqCst);
+
         {
             SAFETY_BUFFER.lock().unwrap().clear();
         }
+
         panic!(
             "SGX: Memory allocation of {} bytes failed. Trying to recover...\n",
             layout.size()
