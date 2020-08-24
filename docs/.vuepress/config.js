@@ -50,6 +50,10 @@ module.exports = {
                     path : '/dev/secret-contracts.md'
                   },
                   {
+                    title: 'Privacy Model',
+                    path : '/dev/privacy-model-of-secret-contracts.md'
+                  },
+                  {
                     title: 'Development Guide',
                     path : '/dev/developing-secret-contracts.md'
                   },
@@ -58,20 +62,8 @@ module.exports = {
                     path : '/dev/quickstart.md'
                   },
                   {
-                    title: 'Template: Secret Counter',
-                    path : '/dev/secret-template.md'
-                  },
-                  {
-                    title: 'Example: Secret Voting',
-                    path : '/dev/secret-voting.md'
-                  },
-                  {
                     title: 'SecretJS',
                     path: '/dev/secret-js'
-                  },
-                  {
-                    title: 'Additional Resources',
-                    path : '/dev/resources.md'
                   }
                 ]
             },
