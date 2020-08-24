@@ -16,7 +16,7 @@ type MsgStoreCode struct {
 	// Builder is a valid docker image name with tag, optional
 	Builder string `json:"builder" yaml:"builder"`
 	// InstantiatePermission to apply on contract creation, optional
-	InstantiatePermission *AccessConfig `json:"instantiate_permission,omitempty" yaml:"instantiate_permission"`
+	// InstantiatePermission *AccessConfig `json:"instantiate_permission,omitempty" yaml:"instantiate_permission"`
 }
 
 func (msg MsgStoreCode) Route() string {
@@ -43,11 +43,13 @@ func (msg MsgStoreCode) ValidateBasic() error {
 	if err := validateBuilder(msg.Builder); err != nil {
 		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "builder %s", err.Error())
 	}
-	if msg.InstantiatePermission != nil {
-		if err := msg.InstantiatePermission.ValidateBasic(); err != nil {
-			return sdkerrors.Wrap(err, "instantiate permission")
+	/*
+		if msg.InstantiatePermission != nil {
+			if err := msg.InstantiatePermission.ValidateBasic(); err != nil {
+				return sdkerrors.Wrap(err, "instantiate permission")
+			}
 		}
-	}
+	*/
 	return nil
 }
 
@@ -65,10 +67,11 @@ type MsgInstantiateContract struct {
 	Admin sdk.AccAddress `json:"admin,omitempty" yaml:"admin"`
 	// This field is only used for callbacks constructed with this message type
 	CallbackCodeHash  string    `json:"callback_code_hash" yaml:"callback_code_hash"`
-	CodeID      uint64    `json:"code_id" yaml:"code_id"`
-	Label     string    `json:"label" yaml:"label"`
-	InitMsg   []byte    `json:"init_msg" yaml:"init_msg"`
-	InitFunds sdk.Coins `json:"init_funds" yaml:"init_funds"`
+	CodeID            uint64    `json:"code_id" yaml:"code_id"`
+	Label             string    `json:"label" yaml:"label"`
+	InitMsg           []byte    `json:"init_msg" yaml:"init_msg"`
+	InitFunds         sdk.Coins `json:"init_funds" yaml:"init_funds"`
+	CallbackSignature []byte    `json:"callback_sig" yaml:"callback_sig"` // Optional
 }
 
 func (msg MsgInstantiateContract) Route() string {
@@ -116,11 +119,12 @@ func (msg MsgInstantiateContract) GetSigners() []sdk.AccAddress {
 }
 
 type MsgExecuteContract struct {
-	Sender           sdk.AccAddress `json:"sender" yaml:"sender"`
-	Contract         sdk.AccAddress `json:"contract" yaml:"contract"`
-	Msg              []byte         `json:"msg" yaml:"msg"`
-	CallbackCodeHash string         `json:"callback_code_hash" yaml:"callback_code_hash"`
-	SentFunds        sdk.Coins      `json:"sent_funds" yaml:"sent_funds"`
+	Sender            sdk.AccAddress `json:"sender" yaml:"sender"`
+	Contract          sdk.AccAddress `json:"contract" yaml:"contract"`
+	Msg               []byte         `json:"msg" yaml:"msg"`
+	CallbackCodeHash  string         `json:"callback_code_hash" yaml:"callback_code_hash"`
+	SentFunds         sdk.Coins      `json:"sent_funds" yaml:"sent_funds"`
+	CallbackSignature []byte         `json:"callback_sig" yaml:"callback_sig"` // Optional
 }
 
 func (msg MsgExecuteContract) Route() string {

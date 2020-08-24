@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	"github.com/enigmampc/cosmos-sdk/x/auth"
 	tmBytes "github.com/tendermint/tendermint/libs/bytes"
 
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
@@ -192,7 +193,7 @@ func NewAbsoluteTxPosition(ctx sdk.Context) *AbsoluteTxPosition {
 }
 
 // NewEnv initializes the environment for a contract instance
-func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contractAddr sdk.AccAddress, contractKey []byte) wasmTypes.Env {
+func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contractAddr sdk.AccAddress, contractKey []byte /*, signBytes []byte, signature auth.StdSignature, callbackSig []byte*/) wasmTypes.Env {
 	// safety checks before casting below
 	if ctx.BlockHeight() < 0 {
 		panic("Block height must never be negative")
@@ -271,4 +272,12 @@ type SecretMsg struct {
 
 func (m SecretMsg) Serialize() []byte {
 	return append(m.CodeHash, m.Msg...)
+}
+
+func NewVerificationInfo(signBytes []byte, signature auth.StdSignature, callbackSig []byte) wasmTypes.VerificationInfo {
+	return wasmTypes.VerificationInfo{
+		Bytes:             signBytes,
+		Signature:         signature,
+		CallbackSignature: callbackSig,
+	}
 }

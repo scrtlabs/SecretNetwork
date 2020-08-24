@@ -110,7 +110,7 @@ where
         self.used_gas
     }
 
-    pub fn init(&mut self, env: &[u8], msg: &[u8]) -> VmResult<InitSuccess> {
+    pub fn init(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<InitSuccess> {
         println!(
             "init() called with env: {:?} msg: {:?} enclave_id: {:?} gas_left: {}",
             String::from_utf8_lossy(env),
@@ -135,6 +135,8 @@ where
                 env.len(),
                 msg.as_ptr(),
                 msg.len(),
+                sig_info.as_ptr(),
+                sig_info.len(),
             )
         };
 
@@ -153,7 +155,7 @@ where
         }
     }
 
-    pub fn handle(&mut self, env: &[u8], msg: &[u8]) -> VmResult<HandleSuccess> {
+    pub fn handle(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<HandleSuccess> {
         println!(
             "handle() called with env: {:?} msg: {:?} enclave_id: {:?} gas_left: {}",
             String::from_utf8_lossy(env),
@@ -178,6 +180,8 @@ where
                 env.len(),
                 msg.as_ptr(),
                 msg.len(),
+                sig_info.as_ptr(),
+                sig_info.len(),
             )
         };
 

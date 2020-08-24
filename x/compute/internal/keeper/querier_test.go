@@ -5,6 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/enigmampc/cosmos-sdk/x/auth"
+	authtypes "github.com/enigmampc/cosmos-sdk/x/auth/types"
+	"github.com/tendermint/tendermint/crypto"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -27,8 +30,8 @@ func TestQueryContractLabel(t *testing.T) {
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
-	anyAddr := createFakeFundedAccount(ctx, accKeeper, topUp)
+	creator, privCreator := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
+	anyAddr, _ := createFakeFundedAccount(ctx, accKeeper, topUp)
 
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
@@ -56,7 +59,9 @@ func TestQueryContractLabel(t *testing.T) {
 
 	label := "banana"
 
-	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, label, deposit)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, privCreator, initMsgBz, contractID, deposit)
+
+	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, label, deposit, nil)
 	require.NoError(t, err)
 
 	// this gets us full error, not redacted sdk.Error
@@ -122,8 +127,8 @@ func TestQueryContractState(t *testing.T) {
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
-	anyAddr := createFakeFundedAccount(ctx, accKeeper, topUp)
+	creator, _ := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
+	anyAddr, _ := createFakeFundedAccount(ctx, accKeeper, topUp)
 
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
@@ -149,7 +154,7 @@ func TestQueryContractState(t *testing.T) {
 
 	initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
 
-	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract to query", deposit)
+	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract to query", deposit, nil)
 	require.NoError(t, err)
 
 	contractModel := []types.Model{
@@ -256,8 +261,8 @@ func TestListContractByCodeOrdering(t *testing.T) {
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 1000000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 500))
-	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
-	anyAddr := createFakeFundedAccount(ctx, accKeeper, topUp)
+	creator, creatorPrivKey := createFakeFundedAccount(ctx, accKeeper, deposit)
+	anyAddr, _ := createFakeFundedAccount(ctx, accKeeper, topUp)
 
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
@@ -300,8 +305,27 @@ func TestListContractByCodeOrdering(t *testing.T) {
 			ctx = setBlock(ctx, h)
 			h++
 		}
+		creatorAcc, err := auth.GetSignerAcc(ctx, accKeeper, creator)
+		require.NoError(t, err)
 
-		_, err = keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, fmt.Sprintf("contract %d", i), topUp)
+		tx := authtypes.NewTestTx(ctx, []sdk.Msg{types.MsgInstantiateContract{
+			Sender:    creator,
+			Admin:     nil,
+			Code:      codeID,
+			Label:     fmt.Sprintf("contract %d", i),
+			InitMsg:   initMsgBz,
+			InitFunds: topUp,
+		}}, []crypto.PrivKey{creatorPrivKey}, []uint64{creatorAcc.GetAccountNumber()}, []uint64{creatorAcc.GetSequence() - 1}, authtypes.StdFee{
+			Amount: nil,
+			Gas:    0,
+		})
+
+		txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+		require.NoError(t, err)
+
+		ctx = ctx.WithTxBytes(txBytes)
+
+		_, err = keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, fmt.Sprintf("contract %d", i), topUp, nil)
 		require.NoError(t, err)
 	}
 

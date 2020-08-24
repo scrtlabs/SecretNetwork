@@ -5,7 +5,11 @@ import (
 	"testing"
 	"time"
 
+	authtypes "github.com/enigmampc/cosmos-sdk/x/auth/types"
 	"github.com/enigmampc/cosmos-sdk/x/distribution"
+	"github.com/enigmampc/cosmos-sdk/x/mint"
+	"github.com/tendermint/tendermint/crypto"
+
 	"github.com/enigmampc/cosmos-sdk/x/gov"
 	govtypes "github.com/enigmampc/cosmos-sdk/x/gov/types"
 
@@ -172,11 +176,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 	wasmConfig := wasmtypes.DefaultWasmConfig()
 
 	bk := bank.Keeper(bankKeeper)
-	keeper := NewKeeper(cdc, keyContract,
-		accountKeeper, &bk, &stakingKeeper, router, tempDir, wasmConfig,
-		supportedFeatures, encoders, queriers,
-	)
-	//keeper.setParams(ctx, wasmtypes.DefaultParams())
+	mintKeeper := mint.Keeper{}
+	keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &distKeeper, &mintKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
 	// add wasm handler so we can loop-back (contracts calling contracts)
 	router.AddRoute(wasmtypes.RouterKey, TestHandler(keeper))
 
@@ -230,7 +231,7 @@ func TestHandler(k Keeper) sdk.Handler {
 }
 
 func handleInstantiate(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgInstantiateContract) (*sdk.Result, error) {
-	contractAddr, err := k.Instantiate(ctx, msg.CodeID, msg.Sender, msg.Admin, msg.InitMsg, msg.Label, msg.InitFunds)
+	contractAddr, err := k.Instantiate(ctx, msg.CodeID, msg.Sender, msg.Admin, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSignature)
 	if err != nil {
 		return nil, err
 	}
@@ -242,11 +243,53 @@ func handleInstantiate(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgInstantiateC
 }
 
 func handleExecute(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgExecuteContract) (*sdk.Result, error) {
-	res, err := k.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds)
+	res, err := k.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSignature)
 	if err != nil {
 		return nil, err
 	}
 
 	res.Events = ctx.EventManager().Events()
 	return res, nil
+}
+
+func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, codeID uint64, funds sdk.Coins) sdk.Context {
+	creatorAcc, err := auth.GetSignerAcc(ctx, keeper.accountKeeper, creator)
+	require.NoError(t, err)
+
+	tx := authtypes.NewTestTx(ctx, []sdk.Msg{wasmtypes.MsgInstantiateContract{
+		Sender:    creator,
+		Admin:     nil,
+		CodeID:    codeID,
+		Label:     "demo contract 1",
+		InitMsg:   encMsg,
+		InitFunds: funds,
+	}}, []crypto.PrivKey{privKey}, []uint64{creatorAcc.GetAccountNumber()}, []uint64{creatorAcc.GetSequence() - 1}, authtypes.StdFee{
+		Amount: nil,
+		Gas:    0,
+	})
+
+	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	require.NoError(t, err)
+
+	return ctx.WithTxBytes(txBytes)
+}
+
+func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, contract sdk.AccAddress, funds sdk.Coins) sdk.Context {
+	creatorAcc, err := auth.GetSignerAcc(ctx, keeper.accountKeeper, sender)
+	require.NoError(t, err)
+
+	tx := authtypes.NewTestTx(ctx, []sdk.Msg{wasmtypes.MsgExecuteContract{
+		Sender:    sender,
+		Contract:  contract,
+		Msg:       encMsg,
+		SentFunds: funds,
+	}}, []crypto.PrivKey{privKey}, []uint64{creatorAcc.GetAccountNumber()}, []uint64{creatorAcc.GetSequence() - 1}, authtypes.StdFee{
+		Amount: nil,
+		Gas:    0,
+	})
+
+	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	require.NoError(t, err)
+
+	return ctx.WithTxBytes(txBytes)
 }

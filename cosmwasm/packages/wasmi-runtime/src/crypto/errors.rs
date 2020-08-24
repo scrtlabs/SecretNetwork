@@ -24,4 +24,6 @@ pub enum CryptoError {
     KeyError,
     /// The random function had failed generating randomness
     RandomError,
+    /// An error related to signature verification
+    VerificationError,
 }

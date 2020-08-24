@@ -330,13 +330,13 @@ where
         Ok(function)
     }
 
-    pub fn call_init(&mut self, env: &[u8], msg: &[u8]) -> VmResult<Vec<u8>> {
-        let init_result = self.inner.init(env, msg)?;
+    pub fn call_init(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<Vec<u8>> {
+        let init_result = self.inner.init(env, msg, sig_info)?;
         Ok(init_result.into_output())
     }
 
-    pub fn call_handle(&mut self, env: &[u8], msg: &[u8]) -> VmResult<Vec<u8>> {
-        let init_result = self.inner.handle(env, msg)?;
+    pub fn call_handle(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<Vec<u8>> {
+        let init_result = self.inner.handle(env, msg, sig_info)?;
         Ok(init_result.into_output())
     }
 

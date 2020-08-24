@@ -3,6 +3,8 @@ package types
 import (
 	"encoding/json"
 	"strconv"
+
+	"github.com/enigmampc/cosmos-sdk/x/auth"
 )
 
 // HumanAddress is a printable (typically bech32 encoded) address string. Just use it as a label for developers.
@@ -56,4 +58,10 @@ var _ error = OutOfGasError{}
 
 func (o OutOfGasError) Error() string {
 	return "Out of gas"
+}
+
+type VerificationInfo struct {
+	Bytes             []byte            `json:"sign_bytes"`
+	Signature         auth.StdSignature `json:"signature"`
+	CallbackSignature []byte            `json:"callback_sig"` // Optional
 }

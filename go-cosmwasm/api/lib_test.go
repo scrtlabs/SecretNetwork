@@ -109,7 +109,7 @@ func TestInstantiate(t *testing.T) {
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
-	res, cost, err := Instantiate(cache, id, params, msg, &igasMeter, store, api, &querier, 100000000)
+	res, cost, err := Instantiate(cache, id, params, msg, &igasMeter, store, api, &querier, 100000000, nil)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	assert.Equal(t, uint64(0x109a0), cost)
@@ -140,7 +140,7 @@ func TestHandle(t *testing.T) {
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
 	start := time.Now()
-	res, cost, err := Instantiate(cache, id, params, msg, &igasMeter1, store, api, &querier, 100000000)
+	res, cost, err := Instantiate(cache, id, params, msg, &igasMeter1, store, api, &querier, 100000000, nil)
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
@@ -154,7 +154,7 @@ func TestHandle(t *testing.T) {
 	params, err = json.Marshal(mockEnv("fred"))
 	require.NoError(t, err)
 	start = time.Now()
-	res, cost, err = Handle(cache, id, params, []byte(`{"release":{}}`), &igasMeter2, store, api, &querier, 100000000)
+	res, cost, err = Handle(cache, id, params, []byte(`{"release":{}}`), &igasMeter2, store, api, &querier, 100000000, nil)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(0x19c40), cost)
@@ -196,7 +196,7 @@ func TestHandleCpuLoop(t *testing.T) {
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
 	start := time.Now()
-	res, cost, err := Instantiate(cache, id, params, msg, &igasMeter1, store, api, &querier, 100000000)
+	res, cost, err := Instantiate(cache, id, params, msg, &igasMeter1, store, api, &querier, 100000000, nil)
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
@@ -211,7 +211,7 @@ func TestHandleCpuLoop(t *testing.T) {
 	params, err = json.Marshal(mockEnv("fred"))
 	require.NoError(t, err)
 	start = time.Now()
-	res, cost, err = Handle(cache, id, params, []byte(`{"cpu_loop":{}}`), &igasMeter2, store, api, &querier, maxGas)
+	res, cost, err = Handle(cache, id, params, []byte(`{"cpu_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, nil)
 	diff = time.Now().Sub(start)
 	require.Error(t, err)
 	assert.Equal(t, cost, maxGas)
@@ -236,7 +236,7 @@ func TestHandleStorageLoop(t *testing.T) {
 
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
-	res, cost, err := Instantiate(cache, id, params, msg, &igasMeter1, store, api, &querier, maxGas)
+	res, cost, err := Instantiate(cache, id, params, msg, &igasMeter1, store, api, &querier, maxGas, nil)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 
@@ -247,7 +247,7 @@ func TestHandleStorageLoop(t *testing.T) {
 	params, err = json.Marshal(mockEnv("fred"))
 	require.NoError(t, err)
 	start := time.Now()
-	res, cost, err = Handle(cache, id, params, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas)
+	res, cost, err = Handle(cache, id, params, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, nil)
 	diff := time.Now().Sub(start)
 	require.Error(t, err)
 	t.Logf("StorageLoop Time (%d gas): %s\n", cost, diff)
@@ -276,7 +276,7 @@ func TestHandleUserErrorsInApiCalls(t *testing.T) {
 
 	defaultApi := NewMockAPI()
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	res, _, err := Instantiate(cache, id, params, msg, &igasMeter1, store, defaultApi, &querier, maxGas)
+	res, _, err := Instantiate(cache, id, params, msg, &igasMeter1, store, defaultApi, &querier, maxGas, nil)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 
@@ -286,7 +286,7 @@ func TestHandleUserErrorsInApiCalls(t *testing.T) {
 	params, err = json.Marshal(mockEnv("fred"))
 	require.NoError(t, err)
 	failingApi := NewMockFailureAPI()
-	res, _, err = Handle(cache, id, params, []byte(`{"user_errors_in_api_calls":{}}`), &igasMeter2, store, failingApi, &querier, maxGas)
+	res, _, err = Handle(cache, id, params, []byte(`{"user_errors_in_api_calls":{}}`), &igasMeter2, store, failingApi, &querier, maxGas, nil)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 }
@@ -308,7 +308,7 @@ func TestMigrate(t *testing.T) {
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
-	res, _, err := Instantiate(cache, id, params, msg, &igasMeter, store, api, &querier, 100000000)
+	res, _, err := Instantiate(cache, id, params, msg, &igasMeter, store, api, &querier, 100000000, nil)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 
@@ -354,7 +354,7 @@ func TestMultipleInstances(t *testing.T) {
 	params, err := json.Marshal(mockEnv("regen"))
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	res, cost, err := Instantiate(cache, id, params, msg, &igasMeter1, store1, api, &querier, 100000000)
+	res, cost, err := Instantiate(cache, id, params, msg, &igasMeter1, store1, api, &querier, 100000000, nil)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	// we now count wasm gas charges and db writes
@@ -367,7 +367,7 @@ func TestMultipleInstances(t *testing.T) {
 	params, err = json.Marshal(mockEnv("chorus"))
 	require.NoError(t, err)
 	msg = []byte(`{"verifier": "mary", "beneficiary": "sue"}`)
-	res, cost, err = Instantiate(cache, id, params, msg, &igasMeter2, store2, api, &querier, 100000000)
+	res, cost, err = Instantiate(cache, id, params, msg, &igasMeter2, store2, api, &querier, 100000000, nil)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	assert.Equal(t, uint64(0x1093d), cost)
@@ -431,7 +431,7 @@ func exec(t *testing.T, cache Cache, id []byte, signer types.HumanAddress, store
 	igasMeter := GasMeter(gasMeter)
 	params, err := json.Marshal(mockEnv(signer))
 	require.NoError(t, err)
-	res, cost, err := Handle(cache, id, params, []byte(`{"release":{}}`), &igasMeter, store, api, &querier, 100000000)
+	res, cost, err := Handle(cache, id, params, []byte(`{"release":{}}`), &igasMeter, store, api, &querier, 100000000, nil)
 	require.NoError(t, err)
 	assert.Equal(t, gasExpected, cost)
 
@@ -456,7 +456,7 @@ func TestQuery(t *testing.T) {
 	params, err := json.Marshal(mockEnv("creator"))
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	_, _, err = Instantiate(cache, id, params, msg, &igasMeter1, store, api, &querier, 100000000)
+	_, _, err = Instantiate(cache, id, params, msg, &igasMeter1, store, api, &querier, 100000000, nil)
 	require.NoError(t, err)
 
 	// invalid query
@@ -490,6 +490,7 @@ func TestQuery(t *testing.T) {
 	require.Equal(t, string(qres.Ok), `{"verifier":"fred"}`)
 }
 
+/*
 func TestQueueIterator(t *testing.T) {
 	t.SkipNow()
 	cache, cleanup := withCache(t)
@@ -505,7 +506,7 @@ func TestQueueIterator(t *testing.T) {
 	require.NoError(t, err)
 	msg := []byte(`{}`)
 
-	res, _, err := Instantiate(cache, id, params, msg, &gasMeter1, &store, api, &querier, 100000000)
+	res, _, err := Instantiate(cache, id, params, msg, &gasMeter1, &store, api, &querier, 100000000, nil, nil)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 
@@ -544,6 +545,7 @@ func TestQueueIterator(t *testing.T) {
 	require.Nil(t, reduced.Err, "%v", reduced.Err)
 	require.Equal(t, string(reduced.Ok), `{"counters":[[17,22],[22,0]]}`)
 }
+*/
 
 func TestHackatomQuerier(t *testing.T) {
 	t.SkipNow()

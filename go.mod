@@ -7,7 +7,6 @@ require (
 	github.com/google/gofuzz v1.0.0
 	github.com/gorilla/mux v1.7.4
 	github.com/miscreant/miscreant.go v0.0.0-20200214223636-26d376326b75
-	github.com/otiai10/copy v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/common v0.10.0
 	github.com/spf13/cobra v1.0.0

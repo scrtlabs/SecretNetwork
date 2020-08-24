@@ -113,6 +113,7 @@ func Instantiate(
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
+	sigInfo []byte,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
@@ -127,12 +128,16 @@ func Instantiate(
 
 	dbState := buildDBState(store, counter)
 	db := buildDB(&dbState, gasMeter)
+
+	s := sendSlice(sigInfo)
+	defer freeAfterSend(s)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
+
 	errmsg := C.Buffer{}
 
-	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
+	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -150,6 +155,7 @@ func Handle(
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
+	sigInfo []byte,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
@@ -164,12 +170,14 @@ func Handle(
 
 	dbState := buildDBState(store, counter)
 	db := buildDB(&dbState, gasMeter)
+	s := sendSlice(sigInfo)
+	defer freeAfterSend(s)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
-	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
+	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)

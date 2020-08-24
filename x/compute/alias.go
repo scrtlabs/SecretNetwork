@@ -72,7 +72,8 @@ var (
 	MakeTestCodec             = keeper.MakeTestCodec
 	CreateTestInput           = keeper.CreateTestInput
 	TestHandler               = keeper.TestHandler
-	NewWasmProposalHandler    = keeper.NewWasmProposalHandler
+	PrepareInitSignedTx       = keeper.PrepareInitSignedTx
+	PrepareExecSignedTx       = keeper.PrepareExecSignedTx
 
 	// variable aliases
 	ModuleCdc            = types.ModuleCdc

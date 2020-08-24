@@ -203,6 +203,8 @@ export class SigningCosmWasmClient extends CosmWasmClient {
         init_msg: Encoding.toBase64(await this.restClient.enigmautils.encrypt(contractCodeHash, initMsg)),
         // eslint-disable-next-line @typescript-eslint/camelcase
         init_funds: transferAmount || [],
+        // eslint-disable-next-line @typescript-eslint/camelcase
+        callback_sig: null,
       },
     };
     const fee = this.fees.init;
@@ -250,6 +252,8 @@ export class SigningCosmWasmClient extends CosmWasmClient {
         msg: Encoding.toBase64(await this.restClient.enigmautils.encrypt(contractCodeHash, handleMsg)),
         // eslint-disable-next-line @typescript-eslint/camelcase
         sent_funds: transferAmount || [],
+        // eslint-disable-next-line @typescript-eslint/camelcase
+        callback_sig: null,
       },
     };
     const fee = this.fees.exec;

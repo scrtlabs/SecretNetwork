@@ -19,6 +19,8 @@ pub enum QueryRequest<T> {
     Custom(T),
     Staking(StakingQuery),
     Wasm(WasmQuery),
+    Dist(DistQuery),
+    Mint(MintQuery),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -31,6 +33,25 @@ pub enum BankQuery {
     /// Note that this may be much more expensive than Balance and should be avoided if possible.
     /// Return value is AllBalanceResponse.
     AllBalances { address: HumanAddr },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum DistQuery {
+    /// This calls into the native bank module for all denominations.
+    /// Note that this may be much more expensive than Balance and should be avoided if possible.
+    /// Return value is AllBalanceResponse.
+    Rewards { delegator: HumanAddr },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum MintQuery {
+    /// This calls into the native bank module for all denominations.
+    /// Note that this may be much more expensive than Balance and should be avoided if possible.
+    /// Return value is AllBalanceResponse.
+    Inflation {},
+    BondedRatio {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -56,6 +77,18 @@ pub enum WasmQuery {
         /// It is used to bind the request to a destination contract in a stronger way than just the contract address which can be faked
         callback_code_hash: String,
     },
+}
+
+impl<T: Clone + fmt::Debug + PartialEq + JsonSchema> From<MintQuery> for QueryRequest<T> {
+    fn from(msg: MintQuery) -> Self {
+        QueryRequest::Mint(msg)
+    }
+}
+
+impl<T: Clone + fmt::Debug + PartialEq + JsonSchema> From<DistQuery> for QueryRequest<T> {
+    fn from(msg: DistQuery) -> Self {
+        QueryRequest::Dist(msg)
+    }
 }
 
 impl<T: Clone + fmt::Debug + PartialEq + JsonSchema> From<BankQuery> for QueryRequest<T> {
@@ -107,6 +140,8 @@ pub enum StakingQuery {
     },
     /// Returns all registered Validators on the system
     Validators {},
+    /// Returns all the unbonding delegations by the delegator
+    UnbondingDelegations { delegator: HumanAddr },
 }
 
 /// BondedDenomResponse is data format returned from StakingRequest::BondedDenom query
@@ -114,6 +149,13 @@ pub enum StakingQuery {
 #[serde(rename_all = "snake_case")]
 pub struct BondedDenomResponse {
     pub denom: String,
+}
+
+/// UnbondingDelegationsResponse is data format returned from StakingRequest::UnbondingDelegations query
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct UnbondingDelegationsResponse {
+    pub delegations: Vec<Delegation>,
 }
 
 /// DelegationsResponse is data format returned from StakingRequest::AllDelegations query
@@ -178,4 +220,35 @@ pub struct Validator {
     pub max_commission: Decimal,
     /// TODO: what units are these (in terms of time)?
     pub max_change_rate: Decimal,
+}
+
+/// Rewards response
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct RewardsResponse {
+    pub rewards: Vec<ValidatorRewards>,
+    pub total: Vec<Coin>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct ValidatorRewards {
+    pub validator_address: HumanAddr,
+    pub reward: Vec<Coin>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct RewardCoin {
+    pub coin: String,
+    pub demon: String,
+}
+
+/// Inflation response
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct InflationResponse {
+    pub inflation_rate: String,
+}
+
+/// Bonded Ratio response
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct BondedRatioResponse {
+    pub bonded_ratio: String,
 }

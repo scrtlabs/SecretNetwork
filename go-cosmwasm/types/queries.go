@@ -64,6 +64,8 @@ type QueryRequest struct {
 	Custom  json.RawMessage `json:"custom,omitempty"`
 	Staking *StakingQuery   `json:"staking,omitempty"`
 	Wasm    *WasmQuery      `json:"wasm,omitempty"`
+	Dist    *DistQuery      `json:"dist,omitempty"`
+	Mint    *MintQuery      `json:"mint,omitempty"`
 }
 
 type BankQuery struct {
@@ -91,10 +93,15 @@ type AllBalancesResponse struct {
 }
 
 type StakingQuery struct {
-	Validators     *ValidatorsQuery     `json:"validators,omitempty"`
-	AllDelegations *AllDelegationsQuery `json:"all_delegations,omitempty"`
-	Delegation     *DelegationQuery     `json:"delegation,omitempty"`
-	BondedDenom    *struct{}            `json:"bonded_denom,omitempty"`
+	Validators           *ValidatorsQuery         `json:"validators,omitempty"`
+	AllDelegations       *AllDelegationsQuery     `json:"all_delegations,omitempty"`
+	Delegation           *DelegationQuery         `json:"delegation,omitempty"`
+	UnBondingDelegations *UnbondingDeletionsQuery `json:"unbonding_delegations, omitempty"`
+	BondedDenom          *struct{}                `json:"bonded_denom,omitempty"`
+}
+
+type UnbondingDeletionsQuery struct {
+	Delegator string `json:"delegator"`
 }
 
 type ValidatorsQuery struct{}
@@ -198,6 +205,10 @@ type FullDelegation struct {
 	CanRedelegate      Coin   `json:"can_redelegate"`
 }
 
+type UnbondingDelegationsResponse struct {
+	Delegations Delegations `json:"delegations"`
+}
+
 type BondedDenomResponse struct {
 	Denom string `json:"denom"`
 }
@@ -217,4 +228,64 @@ type SmartQuery struct {
 type RawQuery struct {
 	ContractAddr string `json:"contract_addr"`
 	Key          []byte `json:"key"`
+}
+
+type DistQuery struct {
+	Rewards *RewardsQuery `json:"rewards,omitempty"`
+}
+
+type MintQuery struct {
+	Inflation   *MintingInflationQuery   `json:"inflation,omitempty"`
+	BondedRatio *MintingBondedRatioQuery `json:"total_staked,omitempty"`
+}
+
+type MintingBondedRatioQuery struct{}
+type MintingInflationQuery struct{}
+
+type MintingInflationResponse struct {
+	InflationRate string `json:"inflation_rate"`
+}
+
+type MintingBondedRatioResponse struct {
+	BondedRatio string `json:"bonded_ratio"`
+}
+
+type RewardsQuery struct {
+	Delegator string `json:"delegator"`
+}
+
+// DelegationResponse is the expected response to DelegationsQuery
+type RewardsResponse struct {
+	Rewards []Rewards   `json:"rewards,omitempty"`
+	Total   RewardCoins `json:"total,omitempty"`
+}
+
+type Rewards struct {
+	Validator string      `json:"validator_address"`
+	Reward    RewardCoins `json:"reward"`
+}
+
+type RewardCoins []Coin
+
+// MarshalJSON ensures that we get [] for empty arrays
+func (d RewardCoins) MarshalJSON() ([]byte, error) {
+	if len(d) == 0 {
+		return []byte("[]"), nil
+	}
+	var raw []Coin = d
+	return json.Marshal(raw)
+}
+
+// UnmarshalJSON ensures that we get [] for empty arrays
+func (d *RewardCoins) UnmarshalJSON(data []byte) error {
+	// make sure we deserialize [] back to null
+	if string(data) == "[]" || string(data) == "null" {
+		return nil
+	}
+	var raw []Coin
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*d = raw
+	return nil
 }

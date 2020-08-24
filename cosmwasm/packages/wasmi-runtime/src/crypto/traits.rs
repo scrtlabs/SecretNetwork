@@ -1,5 +1,6 @@
 use enclave_ffi_types::EnclaveError;
 
+use crate::cosmwasm::types::CanonicalAddr;
 use crate::crypto::CryptoError;
 
 pub const HMAC_SIGNATURE_SIZE: usize = 32;
@@ -39,4 +40,11 @@ pub trait AlignedMemory {}
 
 pub trait ExportECKey {
     fn key_ref(&self) -> &[u8; EC_256_PRIVATE_KEY_SIZE];
+}
+
+// https://github.com/tendermint/tendermint/blob/v0.33.3/crypto/crypto.go#L22
+pub trait PubKey: PartialEq {
+    fn get_address(&self) -> CanonicalAddr;
+    fn bytes(&self) -> Vec<u8>;
+    fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError>;
 }

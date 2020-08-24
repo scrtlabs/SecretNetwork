@@ -5,10 +5,15 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+
 	"path/filepath"
 
+	"github.com/enigmampc/cosmos-sdk/x/auth/exported"
+	distr "github.com/enigmampc/cosmos-sdk/x/distribution"
+	"github.com/enigmampc/cosmos-sdk/x/mint"
 	"github.com/pkg/errors"
 	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/secp256k1"
 
 	wasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
@@ -17,6 +22,7 @@ import (
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
 	"github.com/enigmampc/cosmos-sdk/x/auth"
+	authtypes "github.com/enigmampc/cosmos-sdk/x/auth/types"
 	"github.com/enigmampc/cosmos-sdk/x/bank"
 	"github.com/enigmampc/cosmos-sdk/x/staking"
 
@@ -61,19 +67,9 @@ type Keeper struct {
 
 // NewKeeper creates a new contract Keeper instance
 // If customEncoders is non-nil, we can use this to override some of the message handler, especially custom
-func NewKeeper(
-	cdc *codec.Codec,
-	storeKey sdk.StoreKey,
-	accountKeeper auth.AccountKeeper,
-	bankKeeper *bank.Keeper,
-	stakingKeeper *staking.Keeper,
-	router sdk.Router,
-	homeDir string,
-	wasmConfig types.WasmConfig,
-	supportedFeatures string,
-	customEncoders *MessageEncoders,
-	customPlugins *QueryPlugins,
-) Keeper {
+func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.AccountKeeper,
+	bankKeeper *bank.Keeper, distKeeper *distr.Keeper, mintKeeper *mint.Keeper, stakingKeeper *staking.Keeper,
+	router sdk.Router, homeDir string, wasmConfig types.WasmConfig, supportedFeatures string, customEncoders *MessageEncoders, customPlugins *QueryPlugins) Keeper {
 	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize)
 	if err != nil {
 		panic(err)
@@ -97,7 +93,7 @@ func NewKeeper(
 		// authZPolicy:   DefaultAuthorizationPolicy{},
 		//paramSpace:    paramSpace,
 	}
-	keeper.queryPlugins = DefaultQueryPlugins(bankKeeper, stakingKeeper, &keeper).Merge(customPlugins)
+	keeper.queryPlugins = DefaultQueryPlugins(distKeeper, mintKeeper, bankKeeper, stakingKeeper, &keeper).Merge(customPlugins)
 	return keeper
 }
 
@@ -163,6 +159,36 @@ func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	return codeID, nil
 }
 
+// GetSignBytes returns the signBytes of the tx for a given signer
+// This is a copy of cosmos-sdk function (cosmos-sdk/x/auth/types/StdTx.GetSignBytes()
+// This is because the original `GetSignBytes` was probably meant to be used before the transaction gets processed, and the
+// sequence that gets returned is an increment of what we need.
+// This is why we use `acc.GetSequence() - 1`
+func GetSignBytes(ctx sdk.Context, acc exported.Account, tx auth.StdTx) []byte {
+	genesis := ctx.BlockHeight() == 0
+	chainID := ctx.ChainID()
+	var accNum uint64
+	if !genesis {
+		accNum = acc.GetAccountNumber()
+	}
+
+	return authtypes.StdSignBytes(
+		chainID, accNum, acc.GetSequence()-1, tx.Fee, tx.Msgs, tx.Memo,
+	)
+}
+
+// GetSignerSignature returns the signature of an account on a tx
+func GetSignerSignature(signer exported.Account, tx auth.StdTx) (authtypes.StdSignature, error) {
+	// Extract signature of signer from all tx signatures
+	for _, signature := range tx.Signatures {
+		if signature.PubKey.Equals(signer.GetPubKey()) {
+			return signature, nil
+		}
+	}
+
+	return authtypes.StdSignature{}, fmt.Errorf("could not find signer signature")
+}
+
 func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeInfo, wasmCode []byte) error {
 	wasmCode, err := uncompress(wasmCode)
 	if err != nil {
@@ -187,12 +213,45 @@ func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeIn
 }
 
 // Instantiate creates an instance of a WASM contract
-func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins) (sdk.AccAddress, error) {
-	return k.instantiate(ctx, codeID, creator, admin, initMsg, label, deposit)
+func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) {
+	return k.instantiate(ctx, codeID, creator, admin, initMsg, label, deposit, callbackSig)
 }
 
-func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins) (sdk.AccAddress, error) {
+func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) {
 	ctx.GasMeter().ConsumeGas(InstanceCost, "Loading CosmWasm module: init")
+
+	signerSig := authtypes.StdSignature{
+		PubKey:    secp256k1.PubKeySecp256k1{},
+		Signature: []byte{},
+	}
+	signBytes := []byte{}
+
+	// If no callback signature - we should send the actual msg sender sign bytes and signature
+	if callbackSig == nil {
+		// Warning: This API may be deprecated:
+		// https://github.com/cosmos/cosmos-sdk/commit/c13809062ab16bf193ad3919c77ec03c79b76cc8#diff-a64b9f4b7565560002e3ac4a5eac008bR148
+		tx := authtypes.StdTx{}
+		txBytes := ctx.TxBytes()
+		err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
+		if err != nil {
+			return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+		}
+
+		// Get sign bytes for the message creator
+		signerAcc, err := auth.GetSignerAcc(ctx, k.accountKeeper, creator) // for MsgInstantiateContract, there is only one signer which is msg.Sender (https://github.com/enigmampc/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L192-L194)
+		if err != nil {
+			return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
+		}
+
+		signerSig, err = GetSignerSignature(signerAcc, tx)
+		if err != nil {
+			return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Message sender: %v is not found in the tx creator set: %v, callback signature not provided", creator, tx.Signatures))
+		}
+
+		signBytes = GetSignBytes(ctx, signerAcc, tx)
+	}
+
+	verificationInfo := types.NewVerificationInfo(signBytes, signerSig, callbackSig)
 
 	// create contract address
 
@@ -255,7 +314,7 @@ func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
-	res, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, params, initMsg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas)
+	res, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, params, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo)
 	consumeGas(ctx, gasUsed)
 	if err != nil {
 		return contractAddress, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
@@ -286,8 +345,39 @@ func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 }
 
 // Execute executes the contract instance
-func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins) (*sdk.Result, error) {
+func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, callbackSig []byte) (*sdk.Result, error) {
 	ctx.GasMeter().ConsumeGas(InstanceCost, "Loading CosmWasm module: execute")
+
+	signerSig := authtypes.StdSignature{
+		PubKey:    secp256k1.PubKeySecp256k1{},
+		Signature: []byte{},
+	}
+	signBytes := []byte{}
+
+	if callbackSig == nil {
+		tx := authtypes.StdTx{}
+		txBytes := ctx.TxBytes()
+		err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
+		if err != nil {
+			return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+		}
+
+		// Get sign bytes for the message signer
+		signerAcc, err := auth.GetSignerAcc(ctx, k.accountKeeper, caller)
+		if err != nil {
+			return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
+		}
+
+		signerSig, err = GetSignerSignature(signerAcc, tx)
+
+		if err != nil {
+			return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", caller, tx.Signatures))
+		}
+
+		signBytes = GetSignBytes(ctx, signerAcc, tx)
+	}
+
+	verificationInfo := types.NewVerificationInfo(signBytes, signerSig, callbackSig)
 
 	codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {
@@ -320,7 +410,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	gas := gasForContract(ctx)
-	res, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, params, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas)
+	res, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, params, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo)
 	consumeGas(ctx, gasUsed)
 
 	if execErr != nil {
@@ -348,6 +438,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}, nil
 }
 
+// We don't use this function currently. It's here for upstream compatibility
 // Migrate allows to upgrade a contract to a new code with data migration.
 func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, newCodeID uint64, msg []byte) (*sdk.Result, error) {
 	return k.migrate(ctx, contractAddress, caller, newCodeID, msg, k.authZPolicy)
@@ -355,6 +446,18 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 func (k Keeper) migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, newCodeID uint64, msg []byte, authZ AuthorizationPolicy) (*sdk.Result, error) {
 	ctx.GasMeter().ConsumeGas(InstanceCost, "Loading CosmWasm module: migrate")
+	_ = authtypes.StdSignature{
+		PubKey:    secp256k1.PubKeySecp256k1{},
+		Signature: []byte{},
+	}
+	_ = []byte{}
+
+	tx := authtypes.StdTx{}
+	txBytes := ctx.TxBytes()
+	err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
+	if err != nil {
+		return &sdk.Result{}, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+	}
 
 	contractInfo := k.GetContractInfo(ctx, contractAddress)
 	if contractInfo == nil {
@@ -477,6 +580,7 @@ func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []b
 	return queryResult, nil
 }
 
+// We don't use this function since we have an encrypted state. It's here for upstream compatibility
 // QueryRaw returns the contract's state for give key. For a `nil` key a empty slice result is returned.
 func (k Keeper) QueryRaw(ctx sdk.Context, contractAddress sdk.AccAddress, key []byte) []types.Model {
 	result := make([]types.Model, 0)
