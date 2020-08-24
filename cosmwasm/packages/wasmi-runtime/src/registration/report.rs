@@ -535,10 +535,6 @@ const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
 
-#[cfg(not(feature = "SGX_MODE_HW"))]
-#[allow(dead_code)]
-const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
-
 lazy_static! {
     static ref ADVISORY_DESC: HashMap<&'static str, &'static str> = [
         (
@@ -558,8 +554,8 @@ lazy_static! {
 #[derive(Debug)]
 pub struct AdvisoryIDs(pub Vec<String>);
 
+#[cfg(feature = "SGX_MODE_HW")]
 impl AdvisoryIDs {
-    #[allow(dead_code)]
     pub(crate) fn vulnerable(&self) -> Vec<String> {
         let mut vulnerable: Vec<String> = vec![];
         for i in self.0.iter() {
