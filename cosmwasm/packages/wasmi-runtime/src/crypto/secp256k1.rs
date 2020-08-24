@@ -1,3 +1,88 @@
+use log::*;
+
+use crate::cosmwasm::encoding::Binary;
+use crate::cosmwasm::types::CanonicalAddr;
+use crate::crypto::traits::PubKey;
+use crate::crypto::CryptoError;
+use ripemd160::{Digest, Ripemd160};
+use secp256k1::Secp256k1;
+use serde::{Deserialize, Serialize};
+use sha2::{Digest as Sha2Digest, Sha256};
+
+const SECP256K1_PREFIX: [u8; 4] = [235, 90, 233, 135];
+
+// TODO: Find a way to implement this better. secp256k1 is not ported to sgx, thus does not implement mesalock's serde and cannot be used
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Secp256k1PubKey(Vec<u8>);
+
+impl PubKey for Secp256k1PubKey {
+    fn get_address(&self) -> CanonicalAddr {
+        // Ref: https://github.com/tendermint/spec/blob/master/spec/blockchain/encoding.md#secp256k1
+        let mut hasher = Ripemd160::new();
+        hasher.update(Sha256::digest(&self.0));
+        CanonicalAddr(Binary(hasher.finalize().to_vec()))
+    }
+
+    fn bytes(&self) -> Vec<u8> {
+        // Amino encoding here is basically: prefix | leb128 encoded length | ..bytes..
+        let mut encoded = Vec::<u8>::new();
+        encoded.extend_from_slice(&SECP256K1_PREFIX);
+
+        // Length may be more than 1 byte and it is protobuf encoded
+        let mut length = Vec::<u8>::new();
+
+        // This line can't fail since it could only fail if `length` does not have sufficient capacity to encode
+        if prost::encode_length_delimiter(self.0.len(), &mut length).is_err() {
+            error!(
+                "Could not encode length delimiter: {:?}. This should not happen",
+                self.0.len()
+            );
+            return vec![];
+        }
+
+        encoded.extend_from_slice(&length);
+        encoded.extend_from_slice(&self.0);
+
+        encoded
+    }
+
+    fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError> {
+        // Signing ref: https://docs.cosmos.network/master/spec/_ics/ics-030-signed-messages.html#preliminary
+        let sign_bytes_hash = Sha256::digest(bytes);
+        let msg = secp256k1::Message::from_slice(sign_bytes_hash.as_slice()).map_err(|err| {
+            error!("Failed to create a secp256k1 message from tx: {:?}", err);
+            CryptoError::VerificationError
+        })?;
+
+        let verifier = Secp256k1::verification_only();
+
+        // Create `secp256k1`'s types
+        let sec_signature = secp256k1::Signature::from_compact(sig).map_err(|err| {
+            error!("Malformed signature: {:?}", err);
+            CryptoError::VerificationError
+        })?;
+        let sec_public_key =
+            secp256k1::PublicKey::from_slice(self.0.as_slice()).map_err(|err| {
+                error!("Malformed public key: {:?}", err);
+                CryptoError::VerificationError
+            })?;
+
+        verifier
+            .verify(&msg, &sec_signature, &sec_public_key)
+            .map_err(|err| {
+                warn!(
+                    "Failed to verify signatures for the given transaction: {:?}",
+                    err
+                );
+                CryptoError::VerificationError
+            })?;
+
+        Ok(())
+    }
+}
+
+// TODO: Can we get rid of this comment below?
+
 // use super::keys::SECRET_KEY_SIZE;
 // use super::KeyPair;
 // use crate::crypto::CryptoError;

@@ -12,7 +12,8 @@ mod rng;
 mod sha;
 
 mod ed25519;
-mod secp256k1;
+pub mod multisig;
+pub mod secp256k1;
 
 pub use errors::CryptoError;
 pub use key_manager::Keychain;

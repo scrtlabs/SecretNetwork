@@ -113,6 +113,7 @@ async function instantiateContract(
         beneficiary: beneficiaryAddress,
       },
       init_funds: transferAmount || [],
+      callback_sig: null,
     },
   };
   const fee: StdFee = {
@@ -146,6 +147,7 @@ async function executeContract(
       contract: contractAddress,
       msg: { release: {} },
       sent_funds: [],
+      callback_sig: null,
     },
   };
   const fee: StdFee = {
@@ -677,6 +679,7 @@ describe("RestClient", () => {
         }),
         label: "HASH",
         sender: faucet.address,
+        callback_sig: null,
       });
       expect(isa.value).toEqual({
         code_id: deployedErc20.codeId.toString(),
@@ -685,6 +688,7 @@ describe("RestClient", () => {
         init_msg: jasmine.objectContaining({ symbol: "ISA" }),
         label: "ISA",
         sender: faucet.address,
+        callback_sig: null,
       });
       expect(jade.value).toEqual({
         code_id: deployedErc20.codeId.toString(),
@@ -693,6 +697,7 @@ describe("RestClient", () => {
         init_msg: jasmine.objectContaining({ symbol: "JADE" }),
         label: "JADE",
         sender: faucet.address,
+        callback_sig: null,
       });
     });
 
@@ -736,6 +741,7 @@ describe("RestClient", () => {
           }),
           label: "HASH",
           sender: faucet.address,
+          callback_sig: null,
         });
         expect(isa.value).toEqual({
           code_id: deployedErc20.codeId.toString(),
@@ -744,6 +750,7 @@ describe("RestClient", () => {
           init_msg: jasmine.objectContaining({ symbol: "ISA" }),
           label: "ISA",
           sender: faucet.address,
+          callback_sig: null,
         });
         expect(jade.value).toEqual({
           code_id: deployedErc20.codeId.toString(),
@@ -752,6 +759,7 @@ describe("RestClient", () => {
           init_msg: jasmine.objectContaining({ symbol: "JADE" }),
           label: "JADE",
           sender: faucet.address,
+          callback_sig: null,
         });
       }
     });

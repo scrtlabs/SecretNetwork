@@ -6,13 +6,14 @@ use crate::encoding::Binary;
 use crate::errors::{generic_err, invalid_utf8, StdResult, SystemError, SystemResult};
 use crate::query::{
     AllBalanceResponse, AllDelegationsResponse, BalanceResponse, BankQuery, BondedDenomResponse,
-    DelegationResponse, FullDelegation, QueryRequest, StakingQuery, Validator, ValidatorsResponse,
-    WasmQuery,
+    DelegationResponse, DistQuery, FullDelegation, MintQuery, QueryRequest, StakingQuery,
+    Validator, ValidatorsResponse, WasmQuery,
 };
 use crate::serde::{from_slice, to_binary};
 use crate::storage::MemoryStorage;
 use crate::traits::{Api, Extern, Querier, QuerierResult};
 use crate::types::{BlockInfo, CanonicalAddr, ContractInfo, Env, HumanAddr, MessageInfo, Never};
+use crate::{RewardsResponse, UnbondingDelegationsResponse};
 
 pub const MOCK_CONTRACT_ADDR: &str = "cosmos2contract";
 
@@ -140,6 +141,8 @@ pub struct MockQuerier<C: DeserializeOwned = Never> {
     staking: StakingQuerier,
     // placeholder to add support later
     wasm: NoWasmQuerier,
+    dist: DistQuerier,
+    mint: MintQuerier,
     /// A handler to handle custom queries. This is set to a dummy handler that
     /// always errors by default. Update it via `with_custom_handler`.
     ///
@@ -153,6 +156,8 @@ impl<C: DeserializeOwned> MockQuerier<C> {
             bank: BankQuerier::new(balances),
             staking: StakingQuerier::default(),
             wasm: NoWasmQuerier {},
+            dist: DistQuerier {},
+            mint: MintQuerier {},
             // strange argument notation suggested as a workaround here: https://github.com/rust-lang/rust/issues/41078#issuecomment-294296365
             custom_handler: Box::from(|_: &_| -> MockQuerierCustomHandlerResult {
                 Err(SystemError::UnsupportedRequest {
@@ -212,6 +217,8 @@ impl<C: DeserializeOwned> MockQuerier<C> {
             QueryRequest::Custom(custom_query) => (*self.custom_handler)(custom_query),
             QueryRequest::Staking(staking_query) => self.staking.query(staking_query),
             QueryRequest::Wasm(msg) => self.wasm.query(msg),
+            QueryRequest::Dist(msg) => self.dist.query(msg),
+            QueryRequest::Mint(msg) => self.mint.query(msg),
         }
     }
 }
@@ -229,6 +236,33 @@ impl NoWasmQuerier {
         }
         .clone();
         Err(SystemError::NoSuchContract { addr })
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct MintQuerier {}
+
+impl MintQuerier {
+    pub fn query(&self, _request: &MintQuery) -> QuerierResult {
+        QuerierResult::Ok(Ok(Binary::default()))
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct DistQuerier {}
+
+impl DistQuerier {
+    pub fn query(&self, request: &DistQuery) -> QuerierResult {
+        match request {
+            DistQuery::Rewards { .. } => {
+                // proper error on not found, serialize result on found
+                let resp = RewardsResponse {
+                    rewards: vec![],
+                    total: vec![],
+                };
+                Ok(to_binary(&resp))
+            }
+        }
     }
 }
 
@@ -326,6 +360,17 @@ impl StakingQuerier {
                 let res = DelegationResponse {
                     delegation: delegation.cloned(),
                 };
+                Ok(to_binary(&res))
+            }
+            StakingQuery::UnbondingDelegations { delegator } => {
+                let delegations: Vec<_> = self
+                    .delegations
+                    .iter()
+                    .filter(|d| &d.delegator == delegator)
+                    .cloned()
+                    .map(|d| d.into())
+                    .collect();
+                let res = UnbondingDelegationsResponse { delegations };
                 Ok(to_binary(&res))
             }
         }

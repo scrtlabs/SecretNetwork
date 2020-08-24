@@ -2,12 +2,16 @@ package keeper
 
 import (
 	"encoding/json"
-
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
 	"github.com/enigmampc/cosmos-sdk/x/bank"
+	distr "github.com/enigmampc/cosmos-sdk/x/distribution"
+	"github.com/enigmampc/cosmos-sdk/x/distribution/types"
+	"github.com/enigmampc/cosmos-sdk/x/mint"
 	"github.com/enigmampc/cosmos-sdk/x/staking"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"strings"
 )
 
 type QueryHandler struct {
@@ -30,6 +34,12 @@ func (q QueryHandler) Query(request wasmTypes.QueryRequest) ([]byte, error) {
 	if request.Wasm != nil {
 		return q.Plugins.Wasm(q.Ctx, request.Wasm)
 	}
+	if request.Dist != nil {
+		return q.Plugins.Dist(q.Ctx, request.Dist)
+	}
+	if request.Mint != nil {
+		return q.Plugins.Mint(q.Ctx, request.Mint)
+	}
 	return nil, wasmTypes.Unknown{}
 }
 
@@ -44,14 +54,18 @@ type QueryPlugins struct {
 	Custom  CustomQuerier
 	Staking func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error)
 	Wasm    func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
+	Dist    func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error)
+	Mint    func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error)
 }
 
-func DefaultQueryPlugins(bank *bank.Keeper, staking *staking.Keeper, wasm *Keeper) QueryPlugins {
+func DefaultQueryPlugins(dist *distr.Keeper, mint *mint.Keeper, bank *bank.Keeper, staking *staking.Keeper, wasm *Keeper) QueryPlugins {
 	return QueryPlugins{
 		Bank:    BankQuerier(bank),
 		Custom:  NoCustomQuerier,
 		Staking: StakingQuerier(staking),
 		Wasm:    WasmQuerier(wasm),
+		Dist:    DistQuerier(dist),
+		Mint:    MintQuerier(mint),
 	}
 }
 
@@ -72,7 +86,94 @@ func (e QueryPlugins) Merge(o *QueryPlugins) QueryPlugins {
 	if o.Wasm != nil {
 		e.Wasm = o.Wasm
 	}
+	if o.Dist != nil {
+		e.Dist = o.Dist
+	}
+	if o.Mint != nil {
+		e.Mint = o.Mint
+	}
 	return e
+}
+
+func MintQuerier(keeper *mint.Keeper) func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error) {
+	return func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error) {
+		if request.BondedRatio != nil {
+			total := keeper.BondedRatio(ctx)
+
+			resp := wasmTypes.MintingBondedRatioResponse{
+				BondedRatio: total.String(),
+			}
+
+			return json.Marshal(resp)
+		}
+		if request.Inflation != nil {
+			minter := keeper.GetMinter(ctx)
+			inflation := minter.Inflation
+
+			resp := wasmTypes.MintingInflationResponse{
+				InflationRate: inflation.String(),
+			}
+
+			return json.Marshal(resp)
+		}
+		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown MintQuery variant"}
+	}
+
+}
+
+func DistQuerier(keeper *distr.Keeper) func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error) {
+	return func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error) {
+		if request.Rewards != nil {
+			addr, err := sdk.AccAddressFromBech32(request.Rewards.Delegator)
+			if err != nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.Rewards.Delegator)
+			}
+
+			params := types.NewQueryDelegatorParams(addr)
+
+			jsonParams, _ := json.Marshal(params)
+
+			req := abci.RequestQuery{
+				Data: jsonParams,
+			}
+
+			route := []string{types.QueryDelegatorTotalRewards}
+
+			query, err := distr.NewQuerier(*keeper)(ctx, route, req)
+			if err != nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, err.Error())
+			}
+
+			var res wasmTypes.RewardsResponse
+
+			// this is here so we can remove fractions of uscrt from the result
+			err = json.Unmarshal(query, &res)
+			if err != nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
+			}
+
+			for i, valRewards := range res.Rewards {
+				res.Rewards[i].Validator = valRewards.Validator
+				for j, valReward := range valRewards.Reward {
+					res.Rewards[i].Reward[j].Amount = strings.Split(valReward.Amount, ".")[0]
+					res.Rewards[i].Reward[j].Denom = valReward.Denom
+				}
+			}
+
+			for i, val := range res.Total {
+				res.Total[i].Amount = strings.Split(val.Amount, ".")[0]
+				res.Total[i].Denom = val.Denom
+			}
+
+			ret, err := json.Marshal(res)
+			if err != nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
+			}
+
+			return ret, nil
+		}
+		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown DistQuery variant"}
+	}
 }
 
 func BankQuerier(bank *bank.Keeper) func(ctx sdk.Context, request *wasmTypes.BankQuery) ([]byte, error) {
@@ -103,12 +204,12 @@ func BankQuerier(bank *bank.Keeper) func(ctx sdk.Context, request *wasmTypes.Ban
 			}
 			return json.Marshal(res)
 		}
-		return nil, wasmTypes.UnsupportedRequest{"unknown BankQuery variant"}
+		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown BankQuery variant"}
 	}
 }
 
-func NoCustomQuerier(ctx sdk.Context, request json.RawMessage) ([]byte, error) {
-	return nil, wasmTypes.UnsupportedRequest{"custom"}
+func NoCustomQuerier(sdk.Context, json.RawMessage) ([]byte, error) {
+	return nil, wasmTypes.UnsupportedRequest{Kind: "custom"}
 }
 
 func StakingQuerier(keeper *staking.Keeper) func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error) {
@@ -172,8 +273,57 @@ func StakingQuerier(keeper *staking.Keeper) func(ctx sdk.Context, request *wasmT
 			}
 			return json.Marshal(res)
 		}
-		return nil, wasmTypes.UnsupportedRequest{"unknown Staking variant"}
+		if request.UnBondingDelegations != nil {
+
+			bondDenom := keeper.BondDenom(ctx)
+
+			delegator, err := sdk.AccAddressFromBech32(request.UnBondingDelegations.Delegator)
+			if err != nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.Delegation.Delegator)
+			}
+
+			unbondingDelegations := keeper.GetAllUnbondingDelegations(ctx, delegator)
+			if unbondingDelegations == nil {
+				unbondingDelegations = staking.UnbondingDelegations{}
+			}
+
+			delegations, err := sdkToUnbondingDelegations(bondDenom, unbondingDelegations)
+			if err != nil {
+				return nil, err
+			}
+
+			var res wasmTypes.UnbondingDelegationsResponse
+			res.Delegations = delegations
+
+			return json.Marshal(res)
+
+		}
+		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown Staking variant"}
 	}
+}
+
+func sdkToUnbondingDelegations(bondDenom string, delegations staking.UnbondingDelegations) ([]wasmTypes.Delegation, error) {
+	result := make([]wasmTypes.Delegation, len(delegations))
+
+	for i, d := range delegations {
+
+		for _, e := range d.Entries {
+
+			wasmCoin := wasmTypes.Coin{
+				Denom:  bondDenom,
+				Amount: e.Balance.String(),
+			}
+
+			result[i] = wasmTypes.Delegation{
+				Delegator: d.DelegatorAddress.String(),
+				Validator: d.ValidatorAddress.String(),
+				Amount:    wasmCoin,
+			}
+
+		}
+
+	}
+	return result, nil
 }
 
 func sdkToDelegations(ctx sdk.Context, keeper *staking.Keeper, delegations []staking.Delegation) (wasmTypes.Delegations, error) {

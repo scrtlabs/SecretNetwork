@@ -71,6 +71,8 @@ pub unsafe extern "C" fn ecall_init(
     env_len: usize,
     msg: *const u8,
     msg_len: usize,
+    sig_info: *const u8,
+    sig_info_len: usize,
 ) -> InitResult {
     oom_handler::register_oom_handler();
 
@@ -90,13 +92,26 @@ pub unsafe extern "C" fn ecall_init(
         error!("Tried to access data outside enclave memory!");
         return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
     }
+    if let Err(_e) = validate_const_ptr(sig_info, sig_info_len as usize) {
+        error!("Tried to access data outside enclave memory!");
+        return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
+    }
 
     let contract = std::slice::from_raw_parts(contract, contract_len);
     let env = std::slice::from_raw_parts(env, env_len);
     let msg = std::slice::from_raw_parts(msg, msg_len);
+    let sig_info = std::slice::from_raw_parts(sig_info, sig_info_len);
     let result = panic::catch_unwind(|| {
         let mut local_used_gas = *used_gas;
-        let result = crate::wasm::init(context, gas_limit, &mut local_used_gas, contract, env, msg);
+        let result = crate::wasm::init(
+            context,
+            gas_limit,
+            &mut local_used_gas,
+            contract,
+            env,
+            msg,
+            sig_info,
+        );
         *used_gas = local_used_gas;
         result_init_success_to_initresult(result)
     });
@@ -134,6 +149,8 @@ pub unsafe extern "C" fn ecall_handle(
     env_len: usize,
     msg: *const u8,
     msg_len: usize,
+    sig_info: *const u8,
+    sig_info_len: usize,
 ) -> HandleResult {
     oom_handler::register_oom_handler();
 
@@ -153,14 +170,26 @@ pub unsafe extern "C" fn ecall_handle(
         error!("Tried to access data outside enclave memory!");
         return result_handle_success_to_handleresult(Err(EnclaveError::FailedFunctionCall));
     }
+    if let Err(_e) = validate_const_ptr(sig_info, sig_info_len as usize) {
+        error!("Tried to access data outside enclave memory!");
+        return result_handle_success_to_handleresult(Err(EnclaveError::FailedFunctionCall));
+    }
 
     let contract = std::slice::from_raw_parts(contract, contract_len);
     let env = std::slice::from_raw_parts(env, env_len);
     let msg = std::slice::from_raw_parts(msg, msg_len);
+    let sig_info = std::slice::from_raw_parts(sig_info, sig_info_len);
     let result = panic::catch_unwind(|| {
         let mut local_used_gas = *used_gas;
-        let result =
-            crate::wasm::handle(context, gas_limit, &mut local_used_gas, contract, env, msg);
+        let result = crate::wasm::handle(
+            context,
+            gas_limit,
+            &mut local_used_gas,
+            contract,
+            env,
+            msg,
+            sig_info,
+        );
         *used_gas = local_used_gas;
         result_handle_success_to_handleresult(result)
     });
