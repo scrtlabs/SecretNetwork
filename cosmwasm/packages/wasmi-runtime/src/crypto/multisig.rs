@@ -20,7 +20,7 @@ pub struct MultisigThresholdPubKey {
 impl PubKey for MultisigThresholdPubKey {
     fn get_address(&self) -> CanonicalAddr {
         // Spec: https://docs.tendermint.com/master/spec/core/encoding.html#key-types
-        // Multisig is undocumented, but we figured out it s the same as ed25519
+        // Multisig is undocumented, but we figured out it's the same as ed25519
         let address_bytes = &sha2::Sha256::digest(self.bytes().as_slice())[..20];
 
         CanonicalAddr(Binary::from(address_bytes))
@@ -127,7 +127,6 @@ fn decode_multisig_signature(raw_blob: &[u8]) -> Result<MultisigSignature, Crypt
             if let Ok(current_sig_len) = prost::decode_length_delimiter(sig_including_len) {
                 let len_size = prost::length_delimiter_len(current_sig_len);
 
-                // if let Some(current_sig_len) = curr_blob_window.get(1) {
                 trace!("sig len is: {:?}", current_sig_len);
                 if let Some(raw_signature) =
                     sig_including_len.get(len_size..current_sig_len + len_size)
@@ -151,4 +150,114 @@ fn decode_multisig_signature(raw_blob: &[u8]) -> Result<MultisigSignature, Crypt
     }
 
     Ok(signatures)
+}
+
+#[cfg(feature = "test")]
+pub mod tests_decode_multisig_signature {
+    use crate::crypto::multisig::{decode_multisig_signature, MultisigSignature};
+
+    pub fn test_decode_sig_sanity() {
+        let sig: Vec<u8> = vec![
+            0, 0, 0, 0, 0, 0, 0, 0x12, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0x12, 4, 1, 2, 3, 4,
+        ];
+
+        let result = decode_multisig_signature(sig.as_slice());
+        assert!(result.is_ok());
+
+        let result = result.unwrap();
+        assert_eq!(
+            result,
+            vec![vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10], vec![1, 2, 3, 4]],
+            "Signature is: {:?} and result is: {:?}",
+            sig,
+            result
+        )
+    }
+
+    pub fn test_decode_long_leb128() {
+        let sig: Vec<u8> = vec![
+            0, 0, 0, 0, 0, 0, 0, 0x12, 200, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+
+        let result = decode_multisig_signature(sig.as_slice());
+        assert!(result.is_ok());
+
+        let result = result.unwrap();
+        assert_eq!(
+            result,
+            vec![vec![
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0,
+            ]],
+            "Signature is: {:?} and result is: {:?}",
+            sig,
+            result
+        )
+    }
+
+    pub fn test_decode_wrong_long_leb128() {
+        let malformed_sig: Vec<u8> = vec![
+            0, 0, 0, 0, 0, 0, 0, 0x12, 205, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+        ];
+
+        let result = decode_multisig_signature(malformed_sig.as_slice());
+        assert!(
+            result.is_err(),
+            "Signature is: {:?} and result is: {:?}",
+            malformed_sig,
+            result
+        );
+    }
+
+    pub fn test_decode_malformed_sig_only_prefix() {
+        let malformed_sig: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 0x12];
+
+        let result = decode_multisig_signature(malformed_sig.as_slice());
+        assert!(
+            result.is_err(),
+            "Signature is: {:?} and result is: {:?}",
+            malformed_sig,
+            result
+        );
+    }
+
+    pub fn test_decode_sig_length_zero() {
+        let sig: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 0x12, 0];
+
+        let result = decode_multisig_signature(sig.as_slice());
+        assert!(result.is_ok());
+
+        let result = result.unwrap();
+        let expected: Vec<Vec<u8>> = vec![vec![]];
+        assert_eq!(
+            result, expected,
+            "Signature is: {:?} and result is: {:?}",
+            sig, result
+        )
+    }
+
+    pub fn test_decode_malformed_sig_wrong_length() {
+        let malformed_sig: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 0x12, 10, 0, 0];
+
+        let result = decode_multisig_signature(malformed_sig.as_slice());
+        assert!(
+            result.is_err(),
+            "Signature is: {:?} and result is: {:?}",
+            malformed_sig,
+            result
+        );
+    }
 }
