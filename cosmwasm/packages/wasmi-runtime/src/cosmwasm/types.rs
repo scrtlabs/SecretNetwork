@@ -36,7 +36,7 @@ impl HumanAddr {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
-    pub fn from_canonical(canonical_addr: CanonicalAddr) -> Result<Self, bech32::Error> {
+    pub fn from_canonical(canonical_addr: &CanonicalAddr) -> Result<Self, bech32::Error> {
         let human_addr_str = bech32::encode(
             BECH32_PREFIX_ACC_ADDR,
             canonical_addr.as_slice().to_base32(),
@@ -74,7 +74,7 @@ impl CanonicalAddr {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
-    pub fn from_human(human_addr: HumanAddr) -> Result<Self, bech32::Error> {
+    pub fn from_human(human_addr: &HumanAddr) -> Result<Self, bech32::Error> {
         let (decoded_prefix, data) = bech32::decode(human_addr.as_str())?;
         let canonical = Vec::<u8>::from_base32(&data)?;
 

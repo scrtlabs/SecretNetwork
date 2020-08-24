@@ -3,9 +3,10 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/require"
 
@@ -36,7 +37,7 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 	msg := []byte(`{}`)
 
 	igasMeter1 := GasMeter(gasMeter1)
-	res, _, err := Instantiate(cache, id, params, msg, &igasMeter1, store, api, &querier, 100000000)
+	res, _, err := Instantiate(cache, id, params, msg, &igasMeter1, store, api, &querier, 100000000, nil)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 
@@ -44,7 +45,7 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 		// push 17
 		var gasMeter2 GasMeter = NewMockGasMeter(100000000)
 		push := []byte(fmt.Sprintf(`{"enqueue":{"value":%d}}`, value))
-		res, _, err = Handle(cache, id, params, push, &gasMeter2, store, api, &querier, 100000000)
+		res, _, err = Handle(cache, id, params, push, &gasMeter2, store, api, &querier, 100000000, nil)
 		require.NoError(t, err)
 		requireOkResponse(t, res, 0)
 	}

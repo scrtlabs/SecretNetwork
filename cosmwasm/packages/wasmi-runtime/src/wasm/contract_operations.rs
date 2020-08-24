@@ -129,7 +129,7 @@ pub fn init(
             output,
             secret_msg.nonce,
             secret_msg.user_public_key,
-            contract_address,
+            &CanonicalAddr(Binary(contract_address)),
         )?;
 
         Ok(output)
@@ -252,7 +252,7 @@ pub fn handle(
             output,
             secret_msg.nonce,
             secret_msg.user_public_key,
-            contract_address,
+            &CanonicalAddr(Binary(contract_address)),
         )?;
         Ok(output)
     })

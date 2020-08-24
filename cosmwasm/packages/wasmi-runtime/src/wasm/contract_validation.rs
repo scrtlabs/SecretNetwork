@@ -2,7 +2,7 @@ use log::*;
 
 use crate::cosmwasm::encoding::Binary;
 use crate::cosmwasm::types::{
-    CanonicalAddr, CosmosSignature, Env, HumanAddr, SigInfo, SignDoc, SignDocWasmMsg,
+    CanonicalAddr, CosmosSignature, Env, SigInfo, SignDoc, SignDocWasmMsg,
 };
 use crate::crypto::traits::PubKey;
 use crate::crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
@@ -166,7 +166,12 @@ pub fn verify_params(
 
     // If there's no callback signature - it's not a callback and there has to be a tx signer + signature
     if let Some(callback_sig) = &sig_info.callback_sig {
-        if verify_callback_sig(callback_sig.as_slice(), &env.message.sender, msg) {
+        if verify_callback_sig(
+            callback_sig.as_slice(),
+            &CanonicalAddr::from_human(&env.message.sender)
+                .or(Err(EnclaveError::FailedToSerialize))?,
+            msg,
+        ) {
             trace!("Message verified! msg.sender is the calling contract");
             return Ok(());
         }
@@ -267,14 +272,12 @@ fn verify_contract(msg: &SignDocWasmMsg, env: &Env) -> bool {
     // Contract address is relevant only to execute, since during sending an instantiate message the contract address is not yet known
     if let SignDocWasmMsg::Execute { contract, .. } = msg {
         trace!("Verifying contract address..");
-        if let Ok(human_addr) = HumanAddr::from_canonical(env.contract.address.clone()) {
-            if human_addr != *contract {
-                debug!(
-                    "Contract address sent to enclave {:?} is not the same as the signed one {:?}",
-                    human_addr, *contract
-                );
-                return false;
-            }
+        if env.contract.address != *contract {
+            debug!(
+                "Contract address sent to enclave {:?} is not the same as the signed one {:?}",
+                env.contract.address, *contract
+            );
+            return false;
         }
     }
 
@@ -287,17 +290,7 @@ fn verify_funds(msg: &SignDocWasmMsg, env: &Env) -> bool {
         | SignDocWasmMsg::Instantiate {
             init_funds: sent_funds,
             ..
-        } => match &env.message.sent_funds {
-            Some(env_sent_funds) if env_sent_funds == sent_funds => true,
-            None if sent_funds.is_empty() => true,
-            _ => {
-                debug!(
-                    "Funds sent to enclave {:?} are not the same as the signed one {:?}",
-                    env.message.sent_funds, *sent_funds,
-                );
-                false
-            }
-        },
+        } => &env.message.sent_funds == sent_funds,
     }
 }
 
@@ -308,7 +301,14 @@ fn verify_signature_params(
     sent_msg: &SecretMessage,
 ) -> bool {
     trace!("Verifying sender..");
-    if !verify_sender(&sig_info.signature, &env.message.sender) {
+
+    let msg_sender = if let Ok(msg_sender) = CanonicalAddr::from_human(&env.message.sender) {
+        msg_sender
+    } else {
+        return false;
+    };
+
+    if !verify_sender(&sig_info.signature, &msg_sender) {
         error!("Sender verification failed!");
         debug!(
             "Message sender {:?} does not match with the message signer {:?}",
