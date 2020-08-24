@@ -7,6 +7,16 @@ trigger:
   branches:
     include:
     - '*'  # must quote since "*" is a YAML reserved character; we want a string
+  paths:
+    exclude:
+      - '*.md'
+      - '*.png'
+      - 'docs/*'
+      - '.gitignore'
+      - 'LICENSE'
+
+pr: none
+
 pool:
   name: 'default'
 

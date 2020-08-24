@@ -2,4 +2,4 @@
 
 make deb-no-compile
 
-cp ./secretnetwork_0.5.0-rc1_amd64.deb /build/
+cp ./secretnetwork_"$VERSION"_amd64.deb /build/
