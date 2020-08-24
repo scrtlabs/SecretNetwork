@@ -221,15 +221,19 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			inBuf := bufio.NewReader(cmd.InOrStdin())
-			txBldr := auth.NewTxBuilderFromCLI(inBuf).WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
-			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
-			execMsg := types.SecretMsg{}
-			contractAddr := sdk.AccAddress{}
+
+			var contractAddr []byte
+			var msg []byte
+			var codeHash string
+			var ioKeyPath string
+
+			genOnly := viper.GetBool(flags.FlagGenerateOnly)
+			amountStr := viper.GetString(flagAmount)
 
 			if len(args) == 1 {
 
-				if viper.GetBool(flags.FlagGenerateOnly) {
+				if genOnly {
 					return fmt.Errorf("offline transactions must contain contract address")
 				}
 
@@ -245,7 +249,7 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 				}
 
 				contractAddr = res
-				execMsg.Msg = []byte(args[0])
+				msg = []byte(args[0])
 			} else {
 				// get the id of the code to instantiate
 				res, err := sdk.AccAddressFromBech32(args[0])
@@ -254,17 +258,10 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 				}
 
 				contractAddr = res
-				execMsg.Msg = []byte(args[1])
+				msg = []byte(args[1])
 			}
 
-			amounstStr := viper.GetString(flagAmount)
-			amount, err := sdk.ParseCoins(amounstStr)
-			if err != nil {
-				return err
-			}
-
-			var encryptedMsg []byte
-			if viper.GetBool(flags.FlagGenerateOnly) {
+			if genOnly {
 				ioKeyPath := viper.GetString(flagIoMasterKey)
 
 				if ioKeyPath == "" {
@@ -275,30 +272,9 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 				if codeHash == "" {
 					return fmt.Errorf("missing flag --%s. To create an offline transaction, you must set the target contract's code hash", flagCodeHash)
 				}
-				execMsg.CodeHash = []byte(codeHash)
-
-				encryptedMsg, err = wasmCtx.OfflineEncrypt(execMsg.Serialize(), ioKeyPath)
-			} else {
-				execMsg.CodeHash, err = GetCodeHashByContractAddr(cliCtx, contractAddr)
-				if err != nil {
-					return err
-				}
-
-				encryptedMsg, err = wasmCtx.Encrypt(execMsg.Serialize())
-			}
-			if err != nil {
-				return err
 			}
 
-			// build and sign the transaction, then broadcast to Tendermint
-			msg := types.MsgExecuteContract{
-				Sender:           cliCtx.GetFromAddress(),
-				Contract:         contractAddr,
-				CallbackCodeHash: "",
-				SentFunds:        amount,
-				Msg:              encryptedMsg,
-			}
-			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
+			return ExecuteWithData(cmd, contractAddr, msg, amountStr, genOnly, ioKeyPath, codeHash, cdc)
 		},
 	}
 
@@ -308,6 +284,44 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract along with command")
 	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
 	return cmd
+}
+
+func ExecuteWithData(cmd *cobra.Command, contractAddress sdk.AccAddress, msg []byte, amount string, genOnly bool, ioMasterKeyPath string, codeHash string, cdc *codec.Codec) error {
+	inBuf := bufio.NewReader(cmd.InOrStdin())
+	txBldr := auth.NewTxBuilderFromCLI(inBuf).WithTxEncoder(utils.GetTxEncoder(cdc))
+	cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
+	wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
+	execMsg := types.SecretMsg{}
+
+	coins, err := sdk.ParseCoins(amount)
+	if err != nil {
+		return err
+	}
+
+	var encryptedMsg []byte
+	if genOnly {
+		execMsg.CodeHash = []byte(codeHash)
+		encryptedMsg, err = wasmCtx.OfflineEncrypt(execMsg.Serialize(), ioMasterKeyPath)
+	} else {
+		execMsg.CodeHash, err = GetCodeHashByContractAddr(cliCtx, contractAddress)
+		if err != nil {
+			return err
+		}
+		encryptedMsg, err = wasmCtx.Encrypt(execMsg.Serialize())
+	}
+	if err != nil {
+		return err
+	}
+
+	// build and sign the transaction, then broadcast to Tendermint
+	msgExec := types.MsgExecuteContract{
+		Sender:           cliCtx.GetFromAddress(),
+		Contract:         contractAddress,
+		CallbackCodeHash: "",
+		SentFunds:        coins,
+		Msg:              encryptedMsg,
+	}
+	return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msgExec})
 }
 
 func GetCodeHashByCodeId(cliCtx context.CLIContext, codeID string) ([]byte, error) {
