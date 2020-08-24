@@ -293,6 +293,8 @@ func ExecuteWithData(cmd *cobra.Command, contractAddress sdk.AccAddress, msg []b
 	wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
 	execMsg := types.SecretMsg{}
 
+	execMsg.Msg = msg
+
 	coins, err := sdk.ParseCoins(amount)
 	if err != nil {
 		return err

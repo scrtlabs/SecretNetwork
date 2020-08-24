@@ -1,12 +1,14 @@
 package cli
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
 	"io/ioutil"
 	"strconv"
 
@@ -438,25 +440,52 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 		Use:   "query [bech32_address] [query]", // TODO add --from wallet
 		Short: "Calls contract with given address  with query data and prints the returned result",
 		Long:  "Calls contract with given address  with query data and prints the returned result",
-		Args:  cobra.ExactArgs(2),
+		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			inBuf := bufio.NewReader(cmd.InOrStdin())
+			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
 
-			queryData, err := decoder.DecodeString(args[1])
+			var contractAddr string
+			var msg string
+
+			if len(args) == 1 {
+
+				label := viper.GetString(flagLabel)
+				if label == "" {
+					return fmt.Errorf("label or bech32 contract address is required")
+				}
+
+				route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
+				res, _, err := cliCtx.Query(route)
+				if err != nil {
+					return err
+				}
+
+				contractAddr = string(res)
+				msg = args[0]
+			} else {
+				// get the id of the code to instantiate
+				contractAddr = args[0]
+				msg = args[1]
+			}
+
+			queryData, err := decoder.DecodeString(msg)
 			if err != nil {
 				return fmt.Errorf("decode query: %s", err)
 			}
 
-			return QueryWithData(cmd, args, cdc, queryData)
+			return QueryWithData(cmd, contractAddr, cdc, queryData)
 		},
 	}
 	decoder.RegisterFlags(cmd.PersistentFlags(), "query argument")
+	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
 	return cmd
 }
 
-func QueryWithData(_ *cobra.Command, args []string, cdc *codec.Codec, queryData []byte) error {
+func QueryWithData(_ *cobra.Command, contractAddress string, cdc *codec.Codec, queryData []byte) error {
 	cliCtx := context.NewCLIContext().WithCodec(cdc)
 
-	addr, err := sdk.AccAddressFromBech32(args[0])
+	addr, err := sdk.AccAddressFromBech32(contractAddress)
 	if err != nil {
 		return err
 	}

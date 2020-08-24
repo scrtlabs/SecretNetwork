@@ -30,6 +30,7 @@ const (
 	QueryGetCode             = keeper.QueryGetCode
 	QueryListCode            = keeper.QueryListCode
 	QueryContractKey         = keeper.QueryContractKey
+	QueryContractAddress     = keeper.QueryContractAddress
 )
 
 var (
