@@ -3,28 +3,27 @@
 Secret Contacts are based on CosmWasm v0.10.
 Check out their docs as well, they are probably more extensive: https://docs.cosmwasm.com. Don't forget to go over the [differences between SecretWasm and CosmWasm](#differences-from-cosmwasm).
 
-- [IDEs](#ides)
-- [Init](#init)
-- [Handle](#handle)
-- [Query](#query)
-- [Inputs](#inputs)
-- [APIs](#apis)
-- [State](#state)
-- [Some libraries/crates considerations](#some-librariescrates-considerations)
-- [Randomness](#randomness)
-  - [Roll your own](#roll-your-own)
-    - [Poker deck shuffling example](#poker-deck-shuffling-example)
-  - [Use an external oracle](#use-an-external-oracle)
-- [Outputs](#outputs)
-- [External query](#external-query)
-- [Compiling](#compiling)
-- [Storing and deploying](#storing-and-deploying)
-- [Making your contract's code verified on exporers](#making-your-contracts-code-verified-on-exporers)
-- [Testing](#testing)
-- [Debugging](#debugging)
-- [Building secret apps with SecretJS](#building-secret-apps-with-secretjs)
-  - [Wallet integration](#wallet-integration)
-- [Differences from CosmWasm](#differences-from-cosmwasm)
+- [Developing Secret Contracts](#Developing-Secret-Contracts)
+  - [IDEs](#IDEs)
+  - [Init](#Init)
+  - [Handle](#Handle)
+  - [Query](#Query)
+  - [Inputs](#Inputs)
+  - [APIs](#APIs)
+  - [State](#State)
+  - [Some libraries/crates considerations](#Some-librariescrates-considerations)
+  - [Randomness](#Randomness)
+    - [Roll your own](#Roll-your-own)
+      - [Poker deck shuffling example](#Poker-deck-shuffling-example)
+    - [Use an external oracle](#Use-an-external-oracle)
+  - [Outputs](#Outputs)
+  - [External query](#External-query)
+  - [Compiling](#Compiling)
+  - [Storing and deploying](#Storing-and-deploying)
+  - [Verifying your contract code on explorers](#Verifying-your-contract-code-on-explorers)
+  - [Testing](#Testing)
+  - [Debugging](#Debugging)
+- [Differences from CosmWasm](#Differences-from-CosmWasm)
 
 ## IDEs
 
@@ -107,7 +106,7 @@ Example Invocation from `SecretJS`:
 3. With that seed, the [deck is shuffled](https://github.com/enigmampc/SecretHoldEm/blob/4f67c469bb4a0f53522c7ad069e54ae5c1effb6b/contract/src/contract.rs#L356-L357).
 4. Each round a [game counter is incremented](https://github.com/enigmampc/SecretHoldEm/blob/4f67c469bb4a0f53522c7ad069e54ae5c1effb6b/contract/src/contract.rs#L602-L614), and along with the players' secrets is used to create a new seed for re-shuffling the deck.
 5. On the frondend side, [SecretJS is used to generate a secure random number](https://github.com/enigmampc/SecretHoldEm/blob/4f67c469bb4a0f53522c7ad069e54ae5c1effb6b/gui/src/App.js#L334-L354) and sends it as a secret when a player joins the table. A random number is not really necessary, and every secret number would work just as well.
-6. As long as at least one player is not colluding with the rest, and by properties of sha256, the seeds for shuffling the deck are known only to the contract and to no one else. If all players are colliding then they might as well play with open hands. :joy:
+6. As long as at least one player is not colluding with the rest, and by properties of sha256, the seeds for shuffling the deck are known only to the contract and to no one else. If all players are colliding, they might as well play with open hands. :joy:
 
 ### Use an external oracle
 
