@@ -386,71 +386,53 @@ func TestInstantiate(t *testing.T) {
 }
 
 func TestInstantiateWithDeposit(t *testing.T) {
-	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
-	require.NoError(t, err)
-
-	var (
-		bob  = bytes.Repeat([]byte{1}, sdk.AddrLen)
-		fred = bytes.Repeat([]byte{2}, sdk.AddrLen)
-
-		deposit = sdk.NewCoins(sdk.NewInt64Coin("denom", 100))
-		initMsg = InitMsg{Verifier: fred, Beneficiary: bob}
-	)
-
-	initMsgBz, err := json.Marshal(initMsg)
-	require.NoError(t, err)
 
 	specs := map[string]struct {
-		srcActor sdk.AccAddress
-		expError bool
 		fundAddr bool
+		expError bool
 	}{
 		"address with funds": {
-			srcActor: bob,
 			fundAddr: true,
 		},
 		"address without funds": {
-			srcActor: bob,
+			fundAddr: false,
 			expError: true,
 		},
-		"blocked address": {
+		/* "blocked address": {
 			srcActor: supply.NewModuleAddress(auth.FeeCollectorName),
 			fundAddr: true,
 			expError: true,
-		},
+		}, */
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
-			tempDir, err := ioutil.TempDir("", "wasm")
-			require.NoError(t, err)
+			ctx, keeper, tempDir, codeID, _, _, _, _, _ := setupTest(t, "./testdata/contract.wasm")
 			defer os.RemoveAll(tempDir)
-			ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-			accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
+			deposit := 100
+			var bob sdk.AccAddress
+			var bobPriv crypto.PrivKey
 			if spec.fundAddr {
-				fundAccounts(ctx, accKeeper, spec.srcActor, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)), nil)
-			}
-			contractID, err := keeper.Create(ctx, spec.srcActor, wasmCode, "https://github.com/CosmWasm/wasmd/blob/master/x/wasm/testdata/escrow.wasm", "")
-			require.NoError(t, err)
-
-			msg := types.SecretMsg{
-				CodeHash: []byte(hex.EncodeToString(keeper.GetCodeInfo(ctx, contractID).CodeHash)),
-				Msg:      initMsgBz,
+				bob, bobPriv = createFakeFundedAccount(ctx, keeper.accountKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)))
+			} else {
+				bob, bobPriv = createFakeFundedAccount(ctx, keeper.accountKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)))
 			}
 
-			initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
+			fred, _ := createFakeFundedAccount(ctx, keeper.accountKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+
+			initMsgBz, err := json.Marshal(InitMsg{Verifier: fred, Beneficiary: bob})
 			require.NoError(t, err)
 
 			// when
-			addr, err := keeper.Instantiate(ctx, contractID, spec.srcActor, nil, initMsgBz, "my label", deposit, nil)
+			addr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, bobPriv, string(initMsgBz), false, defaultGasForTests, -1, int64(deposit))
 			// then
 			if spec.expError {
 				require.Error(t, err)
 				return
 			}
-			require.NoError(t, err)
-			contractAccount := accKeeper.GetAccount(ctx, addr)
-			assert.Equal(t, deposit, contractAccount.GetCoins())
+			require.Empty(t, err)
+			contractAccount := keeper.accountKeeper.GetAccount(ctx, addr)
+			assert.Equal(t, sdk.NewCoins(sdk.NewInt64Coin("denom", 100)), contractAccount.GetCoins())
 		})
 	}
 }
@@ -731,7 +713,7 @@ func TestExecuteWithDeposit(t *testing.T) {
 			accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 			if spec.fundAddr {
-				fundAccounts(ctx, accKeeper, spec.srcActor, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)), nil)
+				fundAccounts(ctx, accKeeper, spec.srcActor, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)))
 			}
 			codeID, err := keeper.Create(ctx, spec.srcActor, wasmCode, "https://example.com/escrow.wasm", "")
 			require.NoError(t, err)
@@ -1464,15 +1446,18 @@ type InitMsg struct {
 
 func createFakeFundedAccount(ctx sdk.Context, am auth.AccountKeeper, coins sdk.Coins) (sdk.AccAddress, crypto.PrivKey) {
 	priv, pub, addr := keyPubAddr()
-	fundAccounts(ctx, am, addr, coins, pub)
+	baseAcct := auth.NewBaseAccountWithAddress(addr)
+	_ = baseAcct.SetPubKey(pub)
+	am.SetAccount(ctx, &baseAcct)
+
+	fundAccounts(ctx, am, addr, coins)
 	return addr, priv
 }
 
-func fundAccounts(ctx sdk.Context, am auth.AccountKeeper, addr sdk.AccAddress, coins sdk.Coins, pub crypto.PubKey) {
-	baseAcct := auth.NewBaseAccountWithAddress(addr)
+func fundAccounts(ctx sdk.Context, am auth.AccountKeeper, addr sdk.AccAddress, coins sdk.Coins) {
+	baseAcct := am.GetAccount(ctx, addr)
 	_ = baseAcct.SetCoins(coins)
-	_ = baseAcct.SetPubKey(pub)
-	am.SetAccount(ctx, &baseAcct)
+	am.SetAccount(ctx, baseAcct)
 }
 
 var keyCounter uint64 = 0
