@@ -244,7 +244,7 @@ func TestWrongSigner(t *testing.T) {
 	if err != nil {
 		err = extractInnerError(t, err, nonce, false)
 	}
-	require.Contains(t, err.Error(), "is not found in the tx creator set")
+	require.Contains(t, err.Error(), "is not found in the tx signer set")
 }
 
 func TestMultiSig(t *testing.T) {
