@@ -393,7 +393,7 @@ pub struct SigInfo {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case", tag = "type", content = "value")]
 pub enum SignDocWasmMsg {
-    #[serde(alias = "wasm/execute")]
+    #[serde(alias = "wasm/MsgExecuteContract")]
     Execute {
         contract: HumanAddr,
         /// msg is the json-encoded HandleMsg struct (as raw Binary)
@@ -401,7 +401,7 @@ pub enum SignDocWasmMsg {
         sent_funds: Vec<Coin>,
         callback_sig: Option<Vec<u8>>,
     },
-    #[serde(alias = "wasm/instantiate")]
+    #[serde(alias = "wasm/MsgInstantiateContract")]
     Instantiate {
         code_id: String,
         init_msg: String,

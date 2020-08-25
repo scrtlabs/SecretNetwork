@@ -325,7 +325,6 @@ func TestInstantiate(t *testing.T) {
 	require.NoError(t, err)
 
 	key := keeper.GetCodeInfo(ctx, contractID).CodeHash
-	//keyStr := hex.EncodeToString(key)
 
 	msg := types.SecretMsg{
 		CodeHash: []byte(hex.EncodeToString(key)),
@@ -429,7 +428,7 @@ func TestInstantiateWithDeposit(t *testing.T) {
 			accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 			if spec.fundAddr {
-				fundAccounts(ctx, accKeeper, spec.srcActor, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)))
+				fundAccounts(ctx, accKeeper, spec.srcActor, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)), nil)
 			}
 			contractID, err := keeper.Create(ctx, spec.srcActor, wasmCode, "https://github.com/CosmWasm/wasmd/blob/master/x/wasm/testdata/escrow.wasm", "")
 			require.NoError(t, err)
@@ -732,7 +731,7 @@ func TestExecuteWithDeposit(t *testing.T) {
 			accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 			if spec.fundAddr {
-				fundAccounts(ctx, accKeeper, spec.srcActor, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)))
+				fundAccounts(ctx, accKeeper, spec.srcActor, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)), nil)
 			}
 			codeID, err := keeper.Create(ctx, spec.srcActor, wasmCode, "https://example.com/escrow.wasm", "")
 			require.NoError(t, err)
@@ -1464,14 +1463,15 @@ type InitMsg struct {
 }
 
 func createFakeFundedAccount(ctx sdk.Context, am auth.AccountKeeper, coins sdk.Coins) (sdk.AccAddress, crypto.PrivKey) {
-	priv, _, addr := keyPubAddr()
-	fundAccounts(ctx, am, addr, coins)
+	priv, pub, addr := keyPubAddr()
+	fundAccounts(ctx, am, addr, coins, pub)
 	return addr, priv
 }
 
-func fundAccounts(ctx sdk.Context, am auth.AccountKeeper, addr sdk.AccAddress, coins sdk.Coins) {
+func fundAccounts(ctx sdk.Context, am auth.AccountKeeper, addr sdk.AccAddress, coins sdk.Coins, pub crypto.PubKey) {
 	baseAcct := auth.NewBaseAccountWithAddress(addr)
 	_ = baseAcct.SetCoins(coins)
+	_ = baseAcct.SetPubKey(pub)
 	am.SetAccount(ctx, &baseAcct)
 }
 
