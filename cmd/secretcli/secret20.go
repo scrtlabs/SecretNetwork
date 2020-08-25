@@ -63,9 +63,9 @@ func S20GetTxCmd(cdc *codec.Codec) *cobra.Command {
 func S20TransferHistoryCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "history [contract address] [account] [viewing_key]",
-		Short: "history",
-		Long: `history`,
-		Args: cobra.ExactArgs(3),
+		Short: "View your transaction history",
+		Long:  `Print out all transactions you have been a part of - either as a sender or recipient`,
+		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -102,8 +102,9 @@ func S20TransferHistoryCmd(cdc *codec.Codec) *cobra.Command {
 func S20BalanceCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "balance [contract address] [account] [viewing_key]",
-		Short: "balance",
-		Long: `balance`,
+		Short: "See your current balance for a token",
+		Long: `See your current balance for a token. Viewing key must be set for this command to work. If you did not set your viewing 
+key yet, use the "create-viewing-key" command. Otherwise, you can still see your current balance using a raw transaction`,
 		Args: cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
@@ -161,9 +162,9 @@ func s20SendCmd(cdc *codec.Codec) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "send [contract address or label] [to account] [amount]",
-		Short: "send",
-		Long: `send`,
-		Args: cobra.MinimumNArgs(3),
+		Short: "send tokens to another address",
+		Long:  `send tokens to another address`,
+		Args:  cobra.MinimumNArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			inBuf := bufio.NewReader(cmd.InOrStdin())
@@ -203,8 +204,11 @@ func s20CreatingViewingKey(cdc *codec.Codec) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create-viewing-key [contract address or label]",
-		Short: "create-viewing-key",
-		Long: `create-viewing-key`,
+		Short: "Create a new viewing key. To view the resulting key, use 'secretcli q compute tx <TX_HASH>'",
+		Long: `This allows a user to generate a key that enables off-chain queries. 
+This way you can perform balance and transaction history queries without waiting for a transaction on-chain. 
+This transaction will be expensive, so you must have about 3,000,000 gas in your account to perform this step.
+ This is intended to make queries take a long time to execute to be resistant to brute-force attacks.`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
@@ -276,9 +280,9 @@ func s20DepositCmd(cdc *codec.Codec) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "deposit [contract address or label]",
-		Short: "deposit",
-		Long: `deposit`,
-		Args: cobra.MinimumNArgs(1),
+		Short: "Convert your SCRT into a secret token",
+		Long:  `Convert your SCRT into a secret token. This command will only work if the token supports native currency conversion`,
+		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			inBuf := bufio.NewReader(cmd.InOrStdin())
@@ -309,9 +313,9 @@ func s20Withdraw(cdc *codec.Codec) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "withdraw [contract address or label] [amount]",
-		Short: "withdraw",
-		Long: `withdraw`,
-		Args: cobra.MinimumNArgs(2),
+		Short: "Convert your secret token back to SCRT",
+		Long:  `Convert your secret token back to SCRT. This command will only work if the token supports native currency conversion`,
+		Args:  cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			inBuf := bufio.NewReader(cmd.InOrStdin())
