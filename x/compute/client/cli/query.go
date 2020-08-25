@@ -48,7 +48,7 @@ func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 		GetCmdQueryLabel(cdc),
 		GetCmdCodeHashByContract(cdc),
 		CmdDecryptText(cdc),
-		GetCmdGetContractHistory(cdc),
+		// GetCmdGetContractHistory(cdc),
 	)...)
 	return queryCmd
 }
@@ -519,7 +519,7 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 }
 
 // GetCmdGetContractHistory prints the code history for a given contract
-func GetCmdGetContractHistory(cdc *codec.Codec) *cobra.Command {
+/* func GetCmdGetContractHistory(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use:   "contract-history [bech32_address]",
 		Short: "Prints out the code history for a contract given its address",
@@ -542,7 +542,7 @@ func GetCmdGetContractHistory(cdc *codec.Codec) *cobra.Command {
 			return nil
 		},
 	}
-}
+} */
 
 type argumentDecoder struct {
 	// dec is the default decoder

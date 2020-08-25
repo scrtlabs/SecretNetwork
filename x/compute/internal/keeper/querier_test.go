@@ -1,16 +1,16 @@
 package keeper
 
 import (
-	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/enigmampc/cosmos-sdk/x/auth"
-	authtypes "github.com/enigmampc/cosmos-sdk/x/auth/types"
-	"github.com/tendermint/tendermint/crypto"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/enigmampc/cosmos-sdk/x/auth"
+	authtypes "github.com/enigmampc/cosmos-sdk/x/auth/types"
+	"github.com/tendermint/tendermint/crypto"
 
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
@@ -311,7 +311,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 		tx := authtypes.NewTestTx(ctx, []sdk.Msg{types.MsgInstantiateContract{
 			Sender:    creator,
 			Admin:     nil,
-			Code:      codeID,
+			CodeID:    codeID,
 			Label:     fmt.Sprintf("contract %d", i),
 			InitMsg:   initMsgBz,
 			InitFunds: topUp,
@@ -351,7 +351,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 	}
 }
 
-func TestQueryContractHistory(t *testing.T) {
+/* func TestQueryContractHistory(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
@@ -451,3 +451,4 @@ func TestQueryContractHistory(t *testing.T) {
 		})
 	}
 }
+*/

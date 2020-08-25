@@ -1,5 +1,6 @@
 package rest
 
+/*
 import (
 	"net/http"
 
@@ -95,3 +96,4 @@ func migrateContractHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 		utils.WriteGenerateStdTxResponse(w, cliCtx, req.BaseReq, []sdk.Msg{msg})
 	}
 }
+*/

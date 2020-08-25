@@ -2,6 +2,9 @@ package keeper
 
 import (
 	"fmt"
+	"os"
+	"testing"
+
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	"github.com/enigmampc/cosmos-sdk/x/auth"
@@ -12,8 +15,6 @@ import (
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/crypto/multisig"
 	"github.com/tendermint/tendermint/crypto/sr25519"
-	"os"
-	"testing"
 )
 
 func multisigTxCreator(t *testing.T, ctx *sdk.Context, keeper Keeper, n int, threshold int, actualSigners int, sdkMsg sdk.Msg) sdk.AccAddress {
@@ -162,7 +163,7 @@ func TestMultipleSigners(t *testing.T) {
 	sdkMsgA := types.MsgInstantiateContract{
 		Sender:    walletA,
 		Admin:     nil,
-		Code:      codeID,
+		CodeID:    codeID,
 		Label:     "demo contract 1",
 		InitMsg:   initMsgBz,
 		InitFunds: nil,
@@ -170,7 +171,7 @@ func TestMultipleSigners(t *testing.T) {
 	sdkMsgB := types.MsgInstantiateContract{
 		Sender:    walletB,
 		Admin:     nil,
-		Code:      codeID,
+		CodeID:    codeID,
 		Label:     "demo contract 2",
 		InitMsg:   initMsgBz,
 		InitFunds: nil,
@@ -232,7 +233,7 @@ func TestWrongSigner(t *testing.T) {
 	sdkMsgA := types.MsgInstantiateContract{
 		Sender:    walletB,
 		Admin:     nil,
-		Code:      codeID,
+		CodeID:    codeID,
 		Label:     "demo contract 1",
 		InitMsg:   initMsgBz,
 		InitFunds: nil,
@@ -267,7 +268,7 @@ func TestMultiSig(t *testing.T) {
 			label := fmt.Sprintf("demo contract %d%d", i, j)
 			sdkMsg := types.MsgInstantiateContract{
 				Admin:     nil,
-				Code:      codeID,
+				CodeID:    codeID,
 				Label:     label,
 				InitMsg:   initMsgBz,
 				InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
@@ -319,7 +320,7 @@ func TestMultiSigThreshold(t *testing.T) {
 			label := fmt.Sprintf("demo contract %d%d", i, j)
 			sdkMsg := types.MsgInstantiateContract{
 				Admin:     nil,
-				Code:      codeID,
+				CodeID:    codeID,
 				Label:     label,
 				InitMsg:   initMsgBz,
 				InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
@@ -368,7 +369,7 @@ func TestMultiSigThresholdNotMet(t *testing.T) {
 
 	sdkMsg := types.MsgInstantiateContract{
 		Admin:     nil,
-		Code:      codeID,
+		CodeID:    codeID,
 		Label:     "demo contract 1",
 		InitMsg:   initMsgBz,
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
@@ -544,7 +545,7 @@ func TestMultiSigInMultiSig(t *testing.T) {
 	sdkMsg := types.MsgInstantiateContract{
 		Sender:    sdk.AccAddress(multimultisigPubkey.Address()),
 		Admin:     nil,
-		Code:      codeID,
+		CodeID:    codeID,
 		Label:     "demo contract 1",
 		InitMsg:   initMsgBz,
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
@@ -638,7 +639,7 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 	sdkMsg := types.MsgInstantiateContract{
 		Sender:    sdk.AccAddress(multimultisigPubkey.Address()),
 		Admin:     nil,
-		Code:      codeID,
+		CodeID:    codeID,
 		Label:     "demo contract 1",
 		InitMsg:   initMsgBz,
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
@@ -737,7 +738,7 @@ func TestInvalidKeyType(t *testing.T) {
 	sdkMsg := types.MsgInstantiateContract{
 		Sender:    edAddr,
 		Admin:     nil,
-		Code:      codeID,
+		CodeID:    codeID,
 		Label:     "demo contract 1",
 		InitMsg:   initMsgBz,
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
@@ -792,7 +793,7 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 	sdkMsg := types.MsgInstantiateContract{
 		Sender:    sdk.AccAddress(multisigPubkey.Address()),
 		Admin:     nil,
-		Code:      codeID,
+		CodeID:    codeID,
 		Label:     "demo contract 1",
 		InitMsg:   initMsgBz,
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),

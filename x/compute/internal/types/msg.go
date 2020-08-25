@@ -160,7 +160,7 @@ func (msg MsgExecuteContract) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Sender}
 }
 
-type MsgMigrateContract struct {
+/* type MsgMigrateContract struct {
 	Sender     sdk.AccAddress  `json:"sender" yaml:"sender"`
 	Contract   sdk.AccAddress  `json:"contract" yaml:"contract"`
 	CodeID     uint64          `json:"code_id" yaml:"code_id"`
@@ -198,9 +198,9 @@ func (msg MsgMigrateContract) GetSignBytes() []byte {
 
 func (msg MsgMigrateContract) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Sender}
-}
+} */
 
-type MsgUpdateAdmin struct {
+/* type MsgUpdateAdmin struct {
 	Sender   sdk.AccAddress `json:"sender" yaml:"sender"`
 	NewAdmin sdk.AccAddress `json:"new_admin" yaml:"new_admin"`
 	Contract sdk.AccAddress `json:"contract" yaml:"contract"`
@@ -236,9 +236,9 @@ func (msg MsgUpdateAdmin) GetSignBytes() []byte {
 
 func (msg MsgUpdateAdmin) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Sender}
-}
+} */
 
-type MsgClearAdmin struct {
+/* type MsgClearAdmin struct {
 	Sender   sdk.AccAddress `json:"sender" yaml:"sender"`
 	Contract sdk.AccAddress `json:"contract" yaml:"contract"`
 }
@@ -267,4 +267,4 @@ func (msg MsgClearAdmin) GetSignBytes() []byte {
 
 func (msg MsgClearAdmin) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Sender}
-}
+} */

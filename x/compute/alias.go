@@ -98,15 +98,15 @@ var (
 
 type (
 	// ProposalType            = types.ProposalType
-	GenesisState            = types.GenesisState
-	Code                    = types.Code
-	Contract                = types.Contract
-	MsgStoreCode            = types.MsgStoreCode
-	MsgInstantiateContract  = types.MsgInstantiateContract
-	MsgExecuteContract      = types.MsgExecuteContract
-	MsgMigrateContract      = types.MsgMigrateContract
-	MsgUpdateAdmin          = types.MsgUpdateAdmin
-	MsgClearAdmin           = types.MsgClearAdmin
+	GenesisState           = types.GenesisState
+	Code                   = types.Code
+	Contract               = types.Contract
+	MsgStoreCode           = types.MsgStoreCode
+	MsgInstantiateContract = types.MsgInstantiateContract
+	MsgExecuteContract     = types.MsgExecuteContract
+	// MsgMigrateContract      = types.MsgMigrateContract
+	// MsgUpdateAdmin          = types.MsgUpdateAdmin
+	// MsgClearAdmin           = types.MsgClearAdmin
 	Model                   = types.Model
 	CodeInfo                = types.CodeInfo
 	ContractInfo            = types.ContractInfo

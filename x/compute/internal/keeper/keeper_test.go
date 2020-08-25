@@ -22,7 +22,6 @@ import (
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
 	stypes "github.com/enigmampc/cosmos-sdk/store/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
-	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
 	"github.com/enigmampc/cosmos-sdk/x/auth"
 	"github.com/enigmampc/cosmos-sdk/x/supply"
 	"github.com/stretchr/testify/assert"
@@ -378,13 +377,13 @@ func TestInstantiate(t *testing.T) {
 	_, err = keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", nil, nil)
 	require.Error(t, err)
 
-	exp := []types.ContractCodeHistoryEntry{{
+	/* exp := []types.ContractCodeHistoryEntry{{
 		Operation: types.InitContractCodeHistoryType,
 		CodeID:    contractID,
 		Updated:   types.NewAbsoluteTxPosition(ctx),
 		Msg:       json.RawMessage(initMsgBz),
 	}}
-	assert.Equal(t, exp, keeper.GetContractHistory(ctx, contractAddr))
+	assert.Equal(t, exp, keeper.GetContractHistory(ctx, contractAddr)) */
 }
 
 func TestInstantiateWithDeposit(t *testing.T) {
@@ -1050,7 +1049,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	require.True(t, false, "We must panic before this line")
 }
 
-func TestMigrate(t *testing.T) {
+/* func TestMigrate(t *testing.T) {
 	t.SkipNow() // secret network does not support migrate
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
@@ -1285,7 +1284,7 @@ func TestMigrateWithDispatchedMessage(t *testing.T) {
 	// and all deposit tokens sent to myPayoutAddr
 	balance := accKeeper.GetAccount(ctx, myPayoutAddr).GetCoins()
 	assert.Equal(t, deposit, balance)
-}
+} */
 
 func prettyEvents(t *testing.T, events sdk.Events) string {
 	t.Helper()
@@ -1312,6 +1311,7 @@ func mustMarshal(t *testing.T, r interface{}) []byte {
 	return bz
 }
 
+/*
 func TestUpdateContractAdmin(t *testing.T) {
 	t.SkipNow() // secret network does not support migrate
 	tempDir, err := ioutil.TempDir("", "wasm")
@@ -1389,7 +1389,6 @@ func TestUpdateContractAdmin(t *testing.T) {
 	}
 }
 
-/*
 func TestClearContractAdmin(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
