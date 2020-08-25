@@ -21,7 +21,11 @@ pub mod tests {
         let mut failures = 0;
 
         count_failures!(failures, {
-            // attestation::tests::test_create_attestation_certificate();
+            report::tests::test_sgx_quote_parse_from();
+            report::tests::test_attestation_report_from_cert();
+            report::tests::test_attestation_report_from_cert_api_version_not_compatible();
+            cert::tests::test_certificate_valid();
+            cert::tests::test_certificate_invalid_configuration_needed();
         });
 
         if failures != 0 {
