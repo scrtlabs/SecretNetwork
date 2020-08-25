@@ -217,9 +217,9 @@ func queryHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr 
 
 	if wasmCallCount < 0 {
 		// default, just check that at least 1 call happend
-		require.NotZero(t, gasMeter.GetWasmCounter())
+		require.NotZero(t, gasMeter.GetWasmCounter(), err)
 	} else {
-		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter())
+		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), err)
 	}
 
 	if err != nil {
@@ -267,9 +267,9 @@ func execHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddres
 
 	if wasmCallCount < 0 {
 		// default, just check that at least 1 call happend
-		require.NotZero(t, gasMeter.GetWasmCounter())
+		require.NotZero(t, gasMeter.GetWasmCounter(), err)
 	} else {
-		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter())
+		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), err)
 	}
 
 	if err != nil {
@@ -320,9 +320,9 @@ func initHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64,
 
 	if wasmCallCount < 0 {
 		// default, just check that at least 1 call happend
-		require.NotZero(t, gasMeter.GetWasmCounter())
+		require.NotZero(t, gasMeter.GetWasmCounter(), err)
 	} else {
-		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter())
+		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), err)
 	}
 
 	if err != nil {

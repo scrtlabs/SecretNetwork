@@ -1,7 +1,6 @@
 package keeper
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -23,7 +22,6 @@ import (
 	stypes "github.com/enigmampc/cosmos-sdk/store/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	"github.com/enigmampc/cosmos-sdk/x/auth"
-	"github.com/enigmampc/cosmos-sdk/x/supply"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -386,7 +384,6 @@ func TestInstantiate(t *testing.T) {
 }
 
 func TestInstantiateWithDeposit(t *testing.T) {
-
 	specs := map[string]struct {
 		fundAddr bool
 		expError bool
@@ -415,7 +412,7 @@ func TestInstantiateWithDeposit(t *testing.T) {
 			if spec.fundAddr {
 				bob, bobPriv = createFakeFundedAccount(ctx, keeper.accountKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)))
 			} else {
-				bob, bobPriv = createFakeFundedAccount(ctx, keeper.accountKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)))
+				bob, bobPriv = createFakeFundedAccount(ctx, keeper.accountKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 			}
 
 			fred, _ := createFakeFundedAccount(ctx, keeper.accountKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
@@ -665,16 +662,6 @@ func TestExecute(t *testing.T) {
 }
 
 func TestExecuteWithDeposit(t *testing.T) {
-	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
-	require.NoError(t, err)
-
-	var (
-		bob         = bytes.Repeat([]byte{1}, sdk.AddrLen)
-		fred        = bytes.Repeat([]byte{2}, sdk.AddrLen)
-		blockedAddr = supply.NewModuleAddress(auth.FeeCollectorName)
-		deposit     = sdk.NewCoins(sdk.NewInt64Coin("denom", 100))
-	)
-
 	specs := map[string]struct {
 		srcActor    sdk.AccAddress
 		beneficiary sdk.AccAddress
@@ -682,76 +669,67 @@ func TestExecuteWithDeposit(t *testing.T) {
 		fundAddr    bool
 	}{
 		"actor with funds": {
-			srcActor:    bob,
-			fundAddr:    true,
-			beneficiary: fred,
+			fundAddr: true,
+			expError: false,
 		},
 		"actor without funds": {
-			srcActor:    bob,
-			beneficiary: fred,
-			expError:    true,
+			fundAddr: false,
+			expError: true,
 		},
-		"blocked address as actor": {
+		/*"blocked address as actor": {
 			srcActor:    blockedAddr,
 			fundAddr:    true,
 			beneficiary: fred,
 			expError:    true,
 		},
-		"blocked address as beneficiary": {
+		 "blocked address as beneficiary": {
 			srcActor:    bob,
 			fundAddr:    true,
 			beneficiary: blockedAddr,
 			expError:    true,
-		},
+		}, */
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
-			tempDir, err := ioutil.TempDir("", "wasm")
-			require.NoError(t, err)
+			ctx, keeper, tempDir, codeID, _, _, _, _, _ := setupTest(t, "./testdata/contract.wasm")
 			defer os.RemoveAll(tempDir)
-			ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-			accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
+
+			deposit := int64(100)
+			var bob sdk.AccAddress
+			var bobPriv crypto.PrivKey
+			if spec.fundAddr {
+				bob, bobPriv = createFakeFundedAccount(ctx, keeper.accountKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)))
+			}
+
+			bob, bobPriv = createFakeFundedAccount(ctx, keeper.accountKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+			fred, _ := createFakeFundedAccount(ctx, keeper.accountKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 
 			if spec.fundAddr {
-				fundAccounts(ctx, accKeeper, spec.srcActor, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)))
-			}
-			codeID, err := keeper.Create(ctx, spec.srcActor, wasmCode, "https://example.com/escrow.wasm", "")
-			require.NoError(t, err)
-
-			initMsg := InitMsg{Verifier: spec.srcActor, Beneficiary: spec.beneficiary}
-			initMsgBz, err := json.Marshal(initMsg)
-			require.NoError(t, err)
-
-			msg := types.SecretMsg{
-				CodeHash: []byte(hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)),
-				Msg:      initMsgBz,
+				fundAccounts(ctx, keeper.accountKeeper, bob, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)))
 			}
 
-			initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
+			initMsgBz, err := json.Marshal(InitMsg{Verifier: bob, Beneficiary: fred})
 			require.NoError(t, err)
 
-			contractAddr, err := keeper.Instantiate(ctx, codeID, spec.srcActor, nil, initMsgBz, "my label", nil, nil)
-			require.NoError(t, err)
+			contractAddr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, bobPriv, string(initMsgBz), true, defaultGasForTests, -1, 0)
+			require.Empty(t, err)
 
-			execMsg := types.SecretMsg{
-				CodeHash: []byte(hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)),
-				Msg:      []byte(`{"release":{}}`),
+			wasmCalls := int64(-1)
+			if spec.expError {
+				wasmCalls = 0
 			}
-
-			execMsgBz, err := wasmCtx.Encrypt(execMsg.Serialize())
-			require.NoError(t, err)
 
 			// when
-			_, err = keeper.Execute(ctx, contractAddr, spec.srcActor, execMsgBz, deposit, nil)
+			_, _, err = execHelperImpl(t, keeper, ctx, contractAddr, bob, bobPriv, `{"release":{}}`, false, defaultGasForTests, deposit, wasmCalls)
 
 			// then
 			if spec.expError {
 				require.Error(t, err)
 				return
 			}
-			require.NoError(t, err)
-			beneficiaryAccount := accKeeper.GetAccount(ctx, spec.beneficiary)
-			assert.Equal(t, deposit, beneficiaryAccount.GetCoins())
+			require.Empty(t, err)
+			beneficiaryAccount := keeper.accountKeeper.GetAccount(ctx, fred)
+			assert.Equal(t, sdk.NewCoins(sdk.NewInt64Coin("denom", deposit)), beneficiaryAccount.GetCoins())
 		})
 	}
 }
