@@ -420,8 +420,13 @@ func TestInstantiateWithDeposit(t *testing.T) {
 			initMsgBz, err := json.Marshal(InitMsg{Verifier: fred, Beneficiary: bob})
 			require.NoError(t, err)
 
+			wasmCalls := int64(-1)
+			if spec.expError {
+				wasmCalls = 0
+			}
+
 			// when
-			addr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, bobPriv, string(initMsgBz), false, defaultGasForTests, -1, int64(deposit))
+			addr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, bobPriv, string(initMsgBz), false, defaultGasForTests, wasmCalls, int64(deposit))
 			// then
 			if spec.expError {
 				require.Error(t, err)
