@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/enigmampc/cosmos-sdk/x/auth/exported"
 	distr "github.com/enigmampc/cosmos-sdk/x/distribution"
+	"github.com/enigmampc/cosmos-sdk/x/gov"
 	"github.com/enigmampc/cosmos-sdk/x/mint"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
@@ -52,7 +53,7 @@ type Keeper struct {
 // NewKeeper creates a new contract Keeper instance
 // If customEncoders is non-nil, we can use this to override some of the message handler, especially custom
 func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.AccountKeeper,
-	bankKeeper *bank.Keeper, distKeeper *distr.Keeper, mintKeeper *mint.Keeper, stakingKeeper *staking.Keeper,
+	bankKeeper *bank.Keeper, govKeeper *gov.Keeper, distKeeper *distr.Keeper, mintKeeper *mint.Keeper, stakingKeeper *staking.Keeper,
 	router sdk.Router, homeDir string, wasmConfig types.WasmConfig, supportedFeatures string, customEncoders *MessageEncoders, customPlugins *QueryPlugins) Keeper {
 	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize)
 	if err != nil {
@@ -70,7 +71,7 @@ func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.Accou
 		messenger:     messenger,
 		queryGasLimit: wasmConfig.SmartQueryGasLimit,
 	}
-	keeper.queryPlugins = DefaultQueryPlugins(distKeeper, mintKeeper, bankKeeper, stakingKeeper, &keeper).Merge(customPlugins)
+	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, &keeper).Merge(customPlugins)
 	return keeper
 }
 

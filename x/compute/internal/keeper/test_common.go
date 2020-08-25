@@ -4,8 +4,10 @@ import (
 	"fmt"
 	authtypes "github.com/enigmampc/cosmos-sdk/x/auth/types"
 	"github.com/enigmampc/cosmos-sdk/x/distribution"
-	"github.com/tendermint/tendermint/crypto"
+	"github.com/enigmampc/cosmos-sdk/x/gov"
+	govtypes "github.com/enigmampc/cosmos-sdk/x/gov/types"
 	"github.com/enigmampc/cosmos-sdk/x/mint"
+	"github.com/tendermint/tendermint/crypto"
 	"testing"
 	"time"
 
@@ -45,7 +47,7 @@ func MakeTestCodec() *codec.Codec {
 	wasmTypes.RegisterCodec(cdc)
 	sdk.RegisterCodec(cdc)
 	codec.RegisterCrypto(cdc)
-
+	govtypes.RegisterCodec(cdc)
 	return cdc
 }
 
@@ -63,6 +65,8 @@ type TestKeepers struct {
 	WasmKeeper    Keeper
 	DistKeeper    distribution.Keeper
 	SupplyKeeper  supply.Keeper
+	MintKeeper    mint.Keeper
+	GovKeeper     gov.Keeper
 }
 
 // encoders can be nil to accept the defaults, or set it to override some of the message handlers (like default)
@@ -72,6 +76,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 	keyStaking := sdk.NewKVStoreKey(staking.StoreKey)
 	keySupply := sdk.NewKVStoreKey(supply.StoreKey)
 	keyDistro := sdk.NewKVStoreKey(distribution.StoreKey)
+	govDistro := sdk.NewKVStoreKey(gov.StoreKey)
+
 	keyParams := sdk.NewKVStoreKey(params.StoreKey)
 	tkeyParams := sdk.NewTransientStoreKey(params.TStoreKey)
 
@@ -82,6 +88,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 	ms.MountStoreWithDB(keyParams, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keyStaking, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keySupply, sdk.StoreTypeIAVL, db)
+	ms.MountStoreWithDB(govDistro, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keyDistro, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(tkeyParams, sdk.StoreTypeTransient, db)
 	err := ms.LoadLatestVersion()
@@ -111,12 +118,12 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 
 	// this is also used to initialize module accounts (so nil is meaningful here)
 	maccPerms := map[string][]string{
-		auth.FeeCollectorName:   nil,
-		distribution.ModuleName: nil,
-		//mint.ModuleName:           {supply.Minter},
+		auth.FeeCollectorName:     nil,
+		distribution.ModuleName:   nil,
+		mint.ModuleName:           {supply.Minter},
 		staking.BondedPoolName:    {supply.Burner, supply.Staking},
 		staking.NotBondedPoolName: {supply.Burner, supply.Staking},
-		//gov.ModuleName:            {supply.Burner},
+		gov.ModuleName:            {supply.Burner},
 	}
 
 	supplyKeeper := supply.NewKeeper(cdc, keySupply, accountKeeper, bankKeeper, maccPerms)
@@ -163,10 +170,22 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 	// Load default wasm config
 	wasmConfig := wasmTypes.DefaultWasmConfig()
 
+	govRouter := gov.NewRouter()
+	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler)
+	govKeeper := gov.NewKeeper(
+		cdc,
+		govDistro,
+		pk.Subspace(gov.DefaultParamspace).WithKeyTable(gov.ParamKeyTable()),
+		supplyKeeper,
+		stakingKeeper,
+		govRouter,
+	)
+	gh := gov.NewHandler(govKeeper)
+	router.AddRoute(gov.RouterKey, gh)
 	// bank := bankKeeper.
 	bk := bank.Keeper(bankKeeper)
 	mintKeeper := mint.Keeper{}
-	keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &distKeeper, &mintKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
+	keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &govKeeper, &distKeeper, &mintKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
 	// add wasm handler so we can loop-back (contracts calling contracts)
 	router.AddRoute(wasmTypes.RouterKey, TestHandler(keeper))
 
@@ -176,6 +195,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 		StakingKeeper: stakingKeeper,
 		DistKeeper:    distKeeper,
 		WasmKeeper:    keeper,
+		GovKeeper:     govKeeper,
+		MintKeeper:    mintKeeper,
 	}
 	return ctx, keepers
 }

@@ -107,6 +107,7 @@ type (
 	CustomEncoder           = keeper.CustomEncoder
 	StakingEncoder          = keeper.StakingEncoder
 	WasmEncoder             = keeper.WasmEncoder
+	GovEncoder              = keeper.GovEncoder
 	MessageEncoders         = keeper.MessageEncoders
 	Keeper                  = keeper.Keeper
 	ContractInfoWithAddress = keeper.ContractInfoWithAddress

@@ -35,10 +35,22 @@ type CosmosMsg struct {
 	Custom  json.RawMessage `json:"custom,omitempty"`
 	Staking *StakingMsg     `json:"staking,omitempty"`
 	Wasm    *WasmMsg        `json:"wasm,omitempty"`
+	Gov     *GovMsg         `json:"gov,omitempty"`
 }
 
 type BankMsg struct {
 	Send *SendMsg `json:"send,omitempty"`
+}
+
+type GovMsg struct {
+	Vote *VoteMsg `json:"vote,omitempty"`
+}
+
+// VoteMsg contains instructions for a Cosmos-SDK/GovVote
+// It has a fixed interface here and should be converted into the proper SDK format before dispatching
+type VoteMsg struct {
+	Proposal   uint64 `json:"proposal"`
+	VoteOption string `json:"vote_option"`
 }
 
 // SendMsg contains instructions for a Cosmos-SDK/SendMsg

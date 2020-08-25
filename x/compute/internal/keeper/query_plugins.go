@@ -8,6 +8,7 @@ import (
 	"github.com/enigmampc/cosmos-sdk/x/bank"
 	distr "github.com/enigmampc/cosmos-sdk/x/distribution"
 	"github.com/enigmampc/cosmos-sdk/x/distribution/types"
+	"github.com/enigmampc/cosmos-sdk/x/gov"
 	"github.com/enigmampc/cosmos-sdk/x/mint"
 	"github.com/enigmampc/cosmos-sdk/x/staking"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -40,6 +41,9 @@ func (q QueryHandler) Query(request wasmTypes.QueryRequest) ([]byte, error) {
 	if request.Mint != nil {
 		return q.Plugins.Mint(q.Ctx, request.Mint)
 	}
+	if request.Gov != nil {
+		return q.Plugins.Gov(q.Ctx, request.Gov)
+	}
 	return nil, wasmTypes.Unknown{}
 }
 
@@ -56,9 +60,10 @@ type QueryPlugins struct {
 	Wasm    func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
 	Dist    func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error)
 	Mint    func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error)
+	Gov     func(ctx sdk.Context, request *wasmTypes.GovQuery) ([]byte, error)
 }
 
-func DefaultQueryPlugins(dist *distr.Keeper, mint *mint.Keeper, bank *bank.Keeper, staking *staking.Keeper, wasm *Keeper) QueryPlugins {
+func DefaultQueryPlugins(gov *gov.Keeper, dist *distr.Keeper, mint *mint.Keeper, bank *bank.Keeper, staking *staking.Keeper, wasm *Keeper) QueryPlugins {
 	return QueryPlugins{
 		Bank:    BankQuerier(bank),
 		Custom:  NoCustomQuerier,
@@ -66,6 +71,7 @@ func DefaultQueryPlugins(dist *distr.Keeper, mint *mint.Keeper, bank *bank.Keepe
 		Wasm:    WasmQuerier(wasm),
 		Dist:    DistQuerier(dist),
 		Mint:    MintQuerier(mint),
+		Gov:     GovQuerier(gov),
 	}
 }
 
@@ -92,7 +98,38 @@ func (e QueryPlugins) Merge(o *QueryPlugins) QueryPlugins {
 	if o.Mint != nil {
 		e.Mint = o.Mint
 	}
+	if o.Gov != nil {
+		e.Gov = o.Gov
+	}
 	return e
+}
+
+func GovQuerier(keeper *gov.Keeper) func(ctx sdk.Context, request *wasmTypes.GovQuery) ([]byte, error) {
+	return func(ctx sdk.Context, request *wasmTypes.GovQuery) ([]byte, error) {
+		if request.Proposals != nil {
+			proposals := keeper.GetProposals(ctx)
+
+			if len(proposals) == 0 {
+				return json.Marshal(wasmTypes.ProposalsResponse{
+					Proposals: []wasmTypes.Proposal{},
+				})
+			}
+
+			var activeProps []wasmTypes.Proposal
+			for _, val := range proposals {
+				if val.Status == gov.StatusVotingPeriod {
+					activeProps = append(activeProps, wasmTypes.Proposal{
+						ProposalID:      val.ProposalID,
+						VotingStartTime: uint64(val.VotingStartTime.Unix()),
+						VotingEndTime:   uint64(val.VotingEndTime.Unix()),
+					})
+				}
+			}
+
+			return json.Marshal(wasmTypes.ProposalsResponse{Proposals: activeProps})
+		}
+		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown GovQuery variant"}
+	}
 }
 
 func MintQuerier(keeper *mint.Keeper) func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error) {

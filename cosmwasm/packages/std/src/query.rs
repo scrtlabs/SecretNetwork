@@ -21,6 +21,7 @@ pub enum QueryRequest<T> {
     Wasm(WasmQuery),
     Dist(DistQuery),
     Mint(MintQuery),
+    Gov(GovQuery),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -33,6 +34,14 @@ pub enum BankQuery {
     /// Note that this may be much more expensive than Balance and should be avoided if possible.
     /// Return value is AllBalanceResponse.
     AllBalances { address: HumanAddr },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum GovQuery {
+    /// Returns all the currently active proposals. Might be useful to filter out invalid votes, and trigger
+    /// in-contract voting periods
+    Proposals {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -77,6 +86,12 @@ pub enum WasmQuery {
         /// It is used to bind the request to a destination contract in a stronger way than just the contract address which can be faked
         callback_code_hash: String,
     },
+}
+
+impl<T: Clone + fmt::Debug + PartialEq + JsonSchema> From<GovQuery> for QueryRequest<T> {
+    fn from(msg: GovQuery) -> Self {
+        QueryRequest::Gov(msg)
+    }
 }
 
 impl<T: Clone + fmt::Debug + PartialEq + JsonSchema> From<MintQuery> for QueryRequest<T> {
@@ -142,6 +157,24 @@ pub enum StakingQuery {
     Validators {},
     /// Returns all the unbonding delegations by the delegator
     UnbondingDelegations { delegator: HumanAddr },
+}
+
+/// ProposalsResponse is data format returned from GovQuery::Proposals query
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct ProposalsResponse {
+    pub proposals: Vec<Proposal>,
+}
+
+/// ProposalsResponse is data format returned from GovQuery::Proposals query
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Proposal {
+    pub id: u64,
+    /// Time of the block where MinDeposit was reached. -1 if MinDeposit is not reached
+    pub voting_start_time: u64,
+    /// Time that the VotingPeriod for this proposal will end and votes will be tallied
+    pub voting_end_time: u64,
 }
 
 /// BondedDenomResponse is data format returned from StakingRequest::BondedDenom query

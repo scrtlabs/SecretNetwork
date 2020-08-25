@@ -165,6 +165,7 @@ where
     Custom(T),
     Staking(StakingMsg),
     Wasm(WasmMsg),
+    Gov(GovMsg),
 }
 
 /// Added this here for reflect tests....
@@ -180,6 +181,24 @@ impl Into<CosmosMsg<CustomMsg>> for CustomMsg {
     fn into(self) -> CosmosMsg<CustomMsg> {
         CosmosMsg::Custom(self)
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum GovMsg {
+    // Let contract vote on a governance proposal
+    Vote {
+        proposal: u64,
+        vote_option: VoteOption,
+    },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub enum VoteOption {
+    Yes,
+    No,
+    Abstain,
+    NoWithVeto,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -249,6 +268,12 @@ pub enum WasmMsg {
         label: String,
         callback_sig: Option<Vec<u8>>,
     },
+}
+
+impl<T: Clone + fmt::Debug + PartialEq> From<GovMsg> for CosmosMsg<T> {
+    fn from(msg: GovMsg) -> Self {
+        CosmosMsg::Gov(msg)
+    }
 }
 
 impl<T: Clone + fmt::Debug + PartialEq> From<BankMsg> for CosmosMsg<T> {
