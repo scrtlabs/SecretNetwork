@@ -561,8 +561,9 @@ impl AdvisoryIDs {
         for i in self.0.iter() {
             if !WHITELISTED_ADVISORIES.contains(&i.as_str()) {
                 vulnerable.push(i.clone());
-                if let Some(v) = ADVISORY_DESC
-                     .get(&i.as_str()) { vulnerable.push((*v).to_string()) }
+                if let Some(v) = ADVISORY_DESC.get(&i.as_str()) {
+                    vulnerable.push((*v).to_string())
+                }
             }
         }
         vulnerable
