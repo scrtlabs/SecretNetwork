@@ -338,8 +338,8 @@ func TestInstantiate(t *testing.T) {
 	require.NoError(t, err)
 
 	tx := authtypes.NewTestTx(ctx, []sdk.Msg{types.MsgInstantiateContract{
-		Sender:    creator,
-		Admin:     nil,
+		Sender: creator,
+		// Admin:     nil,
 		CodeID:    contractID,
 		Label:     "demo contract 1",
 		InitMsg:   initMsgBz,
@@ -355,7 +355,7 @@ func TestInstantiate(t *testing.T) {
 	ctx = ctx.WithTxBytes(txBytes)
 
 	// create with no balance is also legal
-	contractAddr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", nil, nil)
+	contractAddr, err := keeper.Instantiate(ctx, contractID, creator /* , nil */, initMsgBz, "demo contract 1", nil, nil)
 	require.NoError(t, err)
 	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", contractAddr.String())
 
@@ -371,7 +371,7 @@ func TestInstantiate(t *testing.T) {
 	require.Equal(t, info.Label, "demo contract 1")
 
 	// test that creating again with the same label will fail
-	_, err = keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", nil, nil)
+	_, err = keeper.Instantiate(ctx, contractID, creator /* , nil */, initMsgBz, "demo contract 1", nil, nil)
 	require.Error(t, err)
 
 	/* exp := []types.ContractCodeHistoryEntry{{
@@ -529,8 +529,8 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 	require.NoError(t, err)
 
 	tx := authtypes.NewTestTx(ctx, []sdk.Msg{types.MsgInstantiateContract{
-		Sender:    creator,
-		Admin:     nil,
+		Sender: creator,
+		// Admin:     nil,
 		CodeID:    nonExistingCodeID,
 		Label:     "demo contract 1",
 		InitMsg:   initMsgBz,
@@ -545,7 +545,7 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 
 	ctx = ctx.WithTxBytes(txBytes)
 
-	addr, err := keeper.Instantiate(ctx, nonExistingCodeID, creator, nil, initMsgBz, "demo contract 2", nil, nil)
+	addr, err := keeper.Instantiate(ctx, nonExistingCodeID, creator /* , nil */, initMsgBz, "demo contract 2", nil, nil)
 	require.True(t, types.ErrNotFound.Is(err), err)
 	require.Nil(t, addr)
 }
@@ -590,7 +590,7 @@ func TestExecute(t *testing.T) {
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initMsgBz, contractID, deposit)
 	// create with no balance is also legal
-	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", deposit, nil)
+	addr, err := keeper.Instantiate(ctx, contractID, creator /* , nil */, initMsgBz, "demo contract 1", deposit, nil)
 
 	require.NoError(t, err)
 
@@ -870,8 +870,8 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	require.NoError(t, err)
 
 	tx := authtypes.NewTestTx(ctx, []sdk.Msg{types.MsgInstantiateContract{
-		Sender:    creator,
-		Admin:     nil,
+		Sender: creator,
+		// Admin:     nil,
 		CodeID:    contractID,
 		Label:     "demo contract 1",
 		InitMsg:   msgBz,
@@ -886,7 +886,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 
 	ctx = ctx.WithTxBytes(txBytes)
 
-	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, msgBz, "demo contract 5", deposit, nil)
+	addr, err := keeper.Instantiate(ctx, contractID, creator /* , nil */, msgBz, "demo contract 5", deposit, nil)
 	require.NoError(t, err)
 
 	// make sure we set a limit before calling

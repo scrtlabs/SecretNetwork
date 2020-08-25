@@ -64,7 +64,7 @@ func (msg MsgStoreCode) GetSigners() []sdk.AccAddress {
 type MsgInstantiateContract struct {
 	Sender sdk.AccAddress `json:"sender" yaml:"sender"`
 	// Admin is an optional address that can execute migrations
-	Admin sdk.AccAddress `json:"admin,omitempty" yaml:"admin"`
+	// Admin sdk.AccAddress `json:"admin,omitempty" yaml:"admin"`
 	// This field is only used for callbacks constructed with this message type
 	CallbackCodeHash  string    `json:"callback_code_hash" yaml:"callback_code_hash"`
 	CodeID            uint64    `json:"code_id" yaml:"code_id"`
@@ -99,11 +99,11 @@ func (msg MsgInstantiateContract) ValidateBasic() error {
 		return sdkerrors.ErrInvalidCoins
 	}
 
-	if len(msg.Admin) != 0 {
+	/* 	if len(msg.Admin) != 0 {
 		if err := sdk.VerifyAddressFormat(msg.Admin); err != nil {
 			return err
 		}
-	}
+	} */
 	if !json.Valid(msg.InitMsg) {
 		return sdkerrors.Wrap(ErrInvalid, "init msg json")
 	}

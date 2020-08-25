@@ -1,5 +1,6 @@
 package client
 
+/*
 import (
 	"bytes"
 	"encoding/json"
@@ -232,3 +233,4 @@ func MakeCodec() *codec.Codec {
 	return cdc.Seal()
 
 }
+*/

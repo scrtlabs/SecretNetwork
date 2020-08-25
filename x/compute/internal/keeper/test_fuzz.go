@@ -22,7 +22,7 @@ func FuzzAbsoluteTxPosition(m *types.AbsoluteTxPosition, c fuzz.Continue) {
 func FuzzContractInfo(m *types.ContractInfo, c fuzz.Continue) {
 	m.CodeID = c.RandUint64()
 	FuzzAddr(&m.Creator, c)
-	FuzzAddr(&m.Admin, c)
+	// FuzzAddr(&m.Admin, c)
 	m.Label = c.RandString()
 	c.Fuzz(&m.Created)
 }

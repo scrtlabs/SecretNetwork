@@ -1,5 +1,6 @@
 package keeper
 
+/*
 import (
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
@@ -40,3 +41,4 @@ func (p GovAuthorizationPolicy) CanInstantiateContract(types.AccessConfig, sdk.A
 func (p GovAuthorizationPolicy) CanModifyContract(sdk.AccAddress, sdk.AccAddress) bool {
 	return true
 }
+*/

@@ -93,19 +93,19 @@ type ContractCodeHistoryEntry struct {
 type ContractInfo struct {
 	CodeID  uint64         `json:"code_id"`
 	Creator sdk.AccAddress `json:"creator"`
-	Admin   sdk.AccAddress `json:"admin,omitempty"`
-	Label   string         `json:"label"`
+	// Admin   sdk.AccAddress `json:"admin,omitempty"`
+	Label string `json:"label"`
 	// never show this in query results, just use for sorting
 	// (Note: when using json tag "-" amino refused to serialize it...)
 	Created *AbsoluteTxPosition `json:"created,omitempty"`
 }
 
 // NewContractInfo creates a new instance of a given WASM contract info
-func NewContractInfo(codeID uint64, creator, admin sdk.AccAddress, label string, createdAt *AbsoluteTxPosition) ContractInfo {
+func NewContractInfo(codeID uint64, creator /* , admin */ sdk.AccAddress, label string, createdAt *AbsoluteTxPosition) ContractInfo {
 	return ContractInfo{
 		CodeID:  codeID,
 		Creator: creator,
-		Admin:   admin,
+		// Admin:   admin,
 		Label:   label,
 		Created: createdAt,
 	}
@@ -117,11 +117,11 @@ func (c *ContractInfo) ValidateBasic() error {
 	if err := sdk.VerifyAddressFormat(c.Creator); err != nil {
 		return sdkerrors.Wrap(err, "creator")
 	}
-	if c.Admin != nil {
+	/* if c.Admin != nil {
 		if err := sdk.VerifyAddressFormat(c.Admin); err != nil {
 			return sdkerrors.Wrap(err, "admin")
 		}
-	}
+	} */
 	if err := validateLabel(c.Label); err != nil {
 		return sdkerrors.Wrap(err, "label")
 	}

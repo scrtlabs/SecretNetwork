@@ -232,7 +232,7 @@ func TestHandler(k Keeper) sdk.Handler {
 }
 
 func handleInstantiate(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgInstantiateContract) (*sdk.Result, error) {
-	contractAddr, err := k.Instantiate(ctx, msg.CodeID, msg.Sender, msg.Admin, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSignature)
+	contractAddr, err := k.Instantiate(ctx, msg.CodeID, msg.Sender /* msg.Admin, */, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSignature)
 	if err != nil {
 		return nil, err
 	}
@@ -258,8 +258,8 @@ func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator s
 	require.NoError(t, err)
 
 	tx := authtypes.NewTestTx(ctx, []sdk.Msg{wasmtypes.MsgInstantiateContract{
-		Sender:    creator,
-		Admin:     nil,
+		Sender: creator,
+		// Admin:     nil,
 		CodeID:    codeID,
 		Label:     "demo contract 1",
 		InitMsg:   encMsg,

@@ -18,7 +18,6 @@ import (
 	"github.com/enigmampc/cosmos-sdk/client/flags"
 	"github.com/enigmampc/cosmos-sdk/codec"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
-	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
 	"github.com/enigmampc/cosmos-sdk/x/auth"
 	"github.com/enigmampc/cosmos-sdk/x/auth/client/utils"
 
@@ -27,11 +26,11 @@ import (
 )
 
 const (
-	flagAmount                 = "amount"
-	flagSource                 = "source"
-	flagBuilder                = "builder"
-	flagLabel                  = "label"
-	flagAdmin                  = "admin"
+	flagAmount  = "amount"
+	flagSource  = "source"
+	flagBuilder = "builder"
+	flagLabel   = "label"
+	// flagAdmin                  = "admin"
 	flagRunAs                  = "run-as"
 	flagInstantiateByEverybody = "instantiate-everybody"
 	flagInstantiateByAddress   = "instantiate-only-address"
@@ -135,7 +134,7 @@ func parseStoreCodeArgs(args []string, cliCtx context.CLIContext) (types.MsgStor
 // InstantiateContractCmd will instantiate a contract from previously uploaded code.
 func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "instantiate [code_id_int64] [json_encoded_init_args] --label [text] --admin [address,optional] --amount [coins,optional]",
+		Use:   "instantiate [code_id_int64] [json_encoded_init_args] --label [text] " /* --admin [address,optional] */ + "--amount [coins,optional]",
 		Short: "Instantiate a wasm contract",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -159,7 +158,7 @@ func InstantiateContractCmd(cdc *codec.Codec) *cobra.Command {
 		"io-master-cert.der file, which you can get using the command `secretcli q register secret-network-params` ")
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract during instantiation")
 	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
-	cmd.Flags().String(flagAdmin, "", "Address of an admin")
+	// cmd.Flags().String(flagAdmin, "", "Address of an admin")
 	return cmd
 }
 
@@ -223,14 +222,14 @@ func parseInstantiateArgs(args []string, cliCtx context.CLIContext) (types.MsgIn
 		return types.MsgInstantiateContract{}, err
 	}
 
-	adminStr := viper.GetString(flagAdmin)
-	var adminAddr sdk.AccAddress
-	if len(adminStr) != 0 {
-		adminAddr, err = sdk.AccAddressFromBech32(adminStr)
-		if err != nil {
-			return types.MsgInstantiateContract{}, sdkerrors.Wrap(err, "admin")
-		}
-	}
+	/* 	adminStr := viper.GetString(flagAdmin)
+	   	var adminAddr sdk.AccAddress
+	   	if len(adminStr) != 0 {
+	   		adminAddr, err = sdk.AccAddressFromBech32(adminStr)
+	   		if err != nil {
+	   			return types.MsgInstantiateContract{}, sdkerrors.Wrap(err, "admin")
+	   		}
+	   	} */
 
 	// build and sign the transaction, then broadcast to Tendermint
 	msg := types.MsgInstantiateContract{
@@ -240,7 +239,7 @@ func parseInstantiateArgs(args []string, cliCtx context.CLIContext) (types.MsgIn
 		Label:            label,
 		InitFunds:        amount,
 		InitMsg:          encryptedMsg,
-		Admin:            adminAddr,
+		// Admin:            adminAddr,
 	}
 	return msg, nil
 }
