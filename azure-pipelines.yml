@@ -15,8 +15,6 @@ trigger:
       - '.gitignore'
       - 'LICENSE'
 
-pr: none
-
 pool:
   name: 'default'
 
