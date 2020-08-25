@@ -273,9 +273,10 @@ fn verify_contract(msg: &SignDocWasmMsg, env: &Env) -> bool {
     if let SignDocWasmMsg::Execute { contract, .. } = msg {
         trace!("Verifying contract address..");
         if env.contract.address != *contract {
-            debug!(
+            trace!(
                 "Contract address sent to enclave {:?} is not the same as the signed one {:?}",
-                env.contract.address, *contract
+                env.contract.address,
+                *contract
             );
             return false;
         }

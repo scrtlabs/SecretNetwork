@@ -325,7 +325,7 @@ pub fn log(key: &str, value: &str) -> LogAttribute {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CosmosSignature {
-    // This is an enum, because it can't be a boxed trait object (ot something similar)
+    // pub_key is an enum, because it can't be a boxed trait object (or something similar)
     // because it has to be Sized
     pub_key: PubKeyKind,
     signature: Binary,

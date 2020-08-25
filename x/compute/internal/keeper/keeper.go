@@ -1,7 +1,6 @@
 package keeper
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
@@ -189,27 +188,35 @@ func GetSignerSignature(signer exported.Account, tx auth.StdTx) (authtypes.StdSi
 	return authtypes.StdSignature{}, fmt.Errorf("could not find signer signature")
 }
 
-func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeInfo, wasmCode []byte) error {
-	wasmCode, err := uncompress(wasmCode)
-	if err != nil {
-		return sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
-	}
-	newCodeHash, err := k.wasmer.Create(wasmCode)
-	if err != nil {
-		return sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
-	}
-	if !bytes.Equal(codeInfo.CodeHash, newCodeHash) {
-		return sdkerrors.Wrap(types.ErrInvalid, "code hashes not same")
+func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) (authtypes.StdSignature, []byte, error) {
+	var defaultSignature = authtypes.StdSignature{
+		PubKey:    secp256k1.PubKeySecp256k1{},
+		Signature: []byte{},
 	}
 
-	store := ctx.KVStore(k.storeKey)
-	key := types.GetCodeKey(codeID)
-	if store.Has(key) {
-		return sdkerrors.Wrapf(types.ErrDuplicate, "duplicate code: %d", codeID)
+	// Warning: This API may be deprecated:
+	// https://github.com/cosmos/cosmos-sdk/commit/c13809062ab16bf193ad3919c77ec03c79b76cc8#diff-a64b9f4b7565560002e3ac4a5eac008bR148
+	tx := authtypes.StdTx{}
+	txBytes := ctx.TxBytes()
+	err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
+	if err != nil {
+		return defaultSignature, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
 	}
-	// 0x01 | codeID (uint64) -> ContractInfo
-	store.Set(key, k.cdc.MustMarshalBinaryBare(codeInfo))
-	return nil
+
+	// Get sign bytes for the message creator
+	signerAcc, err := auth.GetSignerAcc(ctx, k.accountKeeper, signer) // for MsgInstantiateContract, there is only one signer which is msg.Sender (https://github.com/enigmampc/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L192-L194)
+	if err != nil {
+		return defaultSignature, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
+	}
+
+	signerSig, err := GetSignerSignature(signerAcc, tx)
+	if err != nil {
+		return defaultSignature, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", signer, tx.Signatures))
+	}
+
+	signBytes := GetSignBytes(ctx, signerAcc, tx)
+
+	return signerSig, signBytes, nil
 }
 
 // Instantiate creates an instance of a WASM contract
@@ -225,30 +232,14 @@ func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator /* , admin *
 		Signature: []byte{},
 	}
 	signBytes := []byte{}
+	var err error
 
 	// If no callback signature - we should send the actual msg sender sign bytes and signature
 	if callbackSig == nil {
-		// Warning: This API may be deprecated:
-		// https://github.com/cosmos/cosmos-sdk/commit/c13809062ab16bf193ad3919c77ec03c79b76cc8#diff-a64b9f4b7565560002e3ac4a5eac008bR148
-		tx := authtypes.StdTx{}
-		txBytes := ctx.TxBytes()
-		err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
+		signerSig, signBytes, err = k.GetSignerInfo(ctx, creator)
 		if err != nil {
-			return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+			return nil, err
 		}
-
-		// Get sign bytes for the message creator
-		signerAcc, err := auth.GetSignerAcc(ctx, k.accountKeeper, creator) // for MsgInstantiateContract, there is only one signer which is msg.Sender (https://github.com/enigmampc/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L192-L194)
-		if err != nil {
-			return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
-		}
-
-		signerSig, err = GetSignerSignature(signerAcc, tx)
-		if err != nil {
-			return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Message sender: %v is not found in the tx creator set: %v, callback signature not provided", creator, tx.Signatures))
-		}
-
-		signBytes = GetSignBytes(ctx, signerAcc, tx)
 	}
 
 	verificationInfo := types.NewVerificationInfo(signBytes, signerSig, callbackSig)
@@ -353,28 +344,13 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		Signature: []byte{},
 	}
 	signBytes := []byte{}
+	var err error
 
 	if callbackSig == nil {
-		tx := authtypes.StdTx{}
-		txBytes := ctx.TxBytes()
-		err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
+		signerSig, signBytes, err = k.GetSignerInfo(ctx, caller)
 		if err != nil {
-			return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+			return nil, err
 		}
-
-		// Get sign bytes for the message signer
-		signerAcc, err := auth.GetSignerAcc(ctx, k.accountKeeper, caller)
-		if err != nil {
-			return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
-		}
-
-		signerSig, err = GetSignerSignature(signerAcc, tx)
-
-		if err != nil {
-			return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", caller, tx.Signatures))
-		}
-
-		signBytes = GetSignBytes(ctx, signerAcc, tx)
 	}
 
 	verificationInfo := types.NewVerificationInfo(signBytes, signerSig, callbackSig)

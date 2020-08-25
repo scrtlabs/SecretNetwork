@@ -6,12 +6,13 @@
 //! Types that contain information about attestation report.
 //! The implementation is based on Attestation Service API version 4.
 //! https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf
+use lazy_static::lazy_static;
 use log::*;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 use std::array::TryFromSliceError;
+use std::collections::HashMap;
 use std::convert::TryFrom;
-// use std::prelude::v1::*;
 use std::time::SystemTime;
 use std::untrusted::time::SystemTimeEx;
 use uuid::Uuid;
@@ -528,6 +529,47 @@ impl SgxQuote {
     }
 }
 
+#[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
+const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
+
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
+
+lazy_static! {
+    static ref ADVISORY_DESC: HashMap<&'static str, &'static str> = [
+        (
+            "INTEL-SA-00161",
+            "You must disable hyperthreading in the BIOS"
+        ),
+        (
+            "INTEL-SA-00289",
+            "You must disable overclocking/undervolting in the BIOS"
+        ),
+    ]
+    .iter()
+    .copied()
+    .collect();
+}
+
+#[derive(Debug)]
+pub struct AdvisoryIDs(pub Vec<String>);
+
+#[cfg(feature = "SGX_MODE_HW")]
+impl AdvisoryIDs {
+    pub(crate) fn vulnerable(&self) -> Vec<String> {
+        let mut vulnerable: Vec<String> = vec![];
+        for i in self.0.iter() {
+            if !WHITELISTED_ADVISORIES.contains(&i.as_str()) {
+                vulnerable.push(i.clone());
+                if let Some(v) = ADVISORY_DESC.get(&i.as_str()) {
+                    vulnerable.push((*v).to_string())
+                }
+            }
+        }
+        vulnerable
+    }
+}
+
 /// A report that can be signed by Intel EPID (which generates
 /// `EndorsedAttestationReport`) and then sent off of the platform to be
 /// verified by remote client.
@@ -541,6 +583,7 @@ pub struct AttestationReport {
     /// Content of the quote
     pub sgx_quote_body: SgxQuote,
     pub platform_info_blob: Option<Vec<u8>>,
+    pub advisroy_ids: AdvisoryIDs,
 }
 
 impl AttestationReport {
@@ -621,19 +664,6 @@ impl AttestationReport {
             return Err(Error::ReportParseError);
         };
 
-        // Get quote freshness
-        // todo: this happens on-chain, so we cannot validate time like this or we will encounter non-deterministic behaviour
-        // let freshness = {
-        //     let time = attn_report["timestamp"]
-        //         .as_str()
-        //         .ok_or_else(|| Error::GenericError)?;
-        //     let time_fixed = String::from(time) + "+0000";
-        //     let date_time = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z")?;
-        //     let ts = date_time.naive_utc();
-        //     let now = DateTime::<chrono::offset::Utc>::from(SystemTime::now()).naive_utc();
-        //     let quote_freshness = u64::try_from((now - ts).num_seconds())?;
-        //     std::time::Duration::from_secs(quote_freshness)
-        // };
         let mut platform_info_blob = None;
         if let Some(blob) = attn_report["platformInfoBlob"].as_str() {
             let as_binary = hex::decode(blob).map_err(|_| {
@@ -667,6 +697,13 @@ impl AttestationReport {
             SgxQuote::parse_from(quote_raw.as_slice())?
         };
 
+        // Get advisories
+        let advisories: Vec<String> = serde_json::from_value(attn_report["advisoryIDs"].clone())
+            .map_err(|_| {
+                error!("Failed to decode advisories");
+                Error::ReportParseError
+            })?;
+
         // We don't actually validate the public key, since we use ephemeral certificates,
         // and all we really care about that the report is valid and the key that is saved in the
         // report_data field
@@ -675,6 +712,7 @@ impl AttestationReport {
             sgx_quote_status,
             sgx_quote_body,
             platform_info_blob,
+            advisroy_ids: AdvisoryIDs(advisories),
         })
     }
 }
@@ -689,7 +727,8 @@ pub mod tests {
 
     fn tls_ra_cert_der_v3() -> Vec<u8> {
         let mut cert = vec![];
-        let mut f = File::open("fixtures/tls_ra_cert_v3.der").unwrap();
+        let mut f =
+            File::open("../wasmi-runtime/src/registration/fixtures/tls_ra_cert_v3.der").unwrap();
         f.read_to_end(&mut cert).unwrap();
 
         cert
@@ -697,7 +736,21 @@ pub mod tests {
 
     fn tls_ra_cert_der_v4() -> Vec<u8> {
         let mut cert = vec![];
-        let mut f = File::open("fixtures/tls_ra_cert_v4.der").unwrap();
+        let mut f = File::open(
+            "../wasmi-runtime/src/registration/fixtures/attestation_cert_out_of_date.der",
+        )
+        .unwrap();
+        f.read_to_end(&mut cert).unwrap();
+
+        cert
+    }
+
+    fn tls_ra_cert_der_out_of_date() -> Vec<u8> {
+        let mut cert = vec![];
+        let mut f = File::open(
+            "../wasmi-runtime/src/registration/fixtures/attestation_cert_sw_config_needed.der",
+        )
+        .unwrap();
         f.read_to_end(&mut cert).unwrap();
 
         cert
@@ -705,7 +758,8 @@ pub mod tests {
 
     fn ias_root_ca_cert_der() -> Vec<u8> {
         let mut cert = vec![];
-        let mut f = File::open("fixtures/ias_root_ca_cert.der").unwrap();
+        let mut f =
+            File::open("../wasmi-runtime/src/registration/fixtures/ias_root_ca_cert.der").unwrap();
         f.read_to_end(&mut cert).unwrap();
 
         cert
@@ -743,15 +797,7 @@ pub mod tests {
         report
     }
 
-    // pub fn run_tests() -> bool {
-    //     run_tests!(
-    //         test_sgx_quote_parse_from,
-    //         test_attestation_report_from_cert,
-    //         test_attestation_report_from_cert_api_version_not_compatible
-    //     )
-    // }
-
-    fn test_sgx_quote_parse_from() {
+    pub fn test_sgx_quote_parse_from() {
         let attn_report = attesation_report();
         let sgx_quote_body_encoded = attn_report["isvEnclaveQuoteBody"].as_str().unwrap();
         let quote_raw = base64::decode(&sgx_quote_body_encoded.as_bytes()).unwrap();
@@ -811,7 +857,7 @@ pub mod tests {
         );
     }
 
-    fn test_attestation_report_from_cert() {
+    pub fn test_attestation_report_from_cert() {
         let tls_ra_cert = tls_ra_cert_der_v4();
         let report = AttestationReport::from_cert(&tls_ra_cert);
         assert!(report.is_ok());
@@ -820,7 +866,19 @@ pub mod tests {
         assert_eq!(report.sgx_quote_status, SgxQuoteStatus::GroupOutOfDate);
     }
 
-    fn test_attestation_report_from_cert_api_version_not_compatible() {
+    pub fn test_attestation_report_from_cert_invalid() {
+        let tls_ra_cert = tls_ra_cert_der_v4();
+        let report = AttestationReport::from_cert(&tls_ra_cert);
+        assert!(report.is_ok());
+
+        let report = report.unwrap();
+        assert_eq!(
+            report.sgx_quote_status,
+            SgxQuoteStatus::ConfigurationAndSwHardeningNeeded
+        );
+    }
+
+    pub fn test_attestation_report_from_cert_api_version_not_compatible() {
         let tls_ra_cert = tls_ra_cert_der_v3();
         let report = AttestationReport::from_cert(&tls_ra_cert);
         assert!(report.is_err());
