@@ -1,5 +1,6 @@
 package keeper
 
+/*
 import (
 	"fmt"
 
@@ -63,7 +64,7 @@ func handleInstantiateProposal(ctx sdk.Context, k Keeper, p types.InstantiateCon
 		return err
 	}
 
-	contractAddr, err := k.instantiate(ctx, p.CodeID, p.RunAs, p.Admin, p.InitMsg, p.Label, p.InitFunds)
+	contractAddr, err := k.instantiate(ctx, p.CodeID, p.RunAs, p.Admin, p.InitMsg, p.Label, p.InitFunds, nil)
 	if err != nil {
 		return err
 	}
@@ -130,4 +131,4 @@ func handleClearAdminProposal(ctx sdk.Context, k Keeper, p types.ClearAdminPropo
 	)
 	ctx.EventManager().EmitEvent(ourEvent)
 	return nil
-}
+} */

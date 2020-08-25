@@ -38,9 +38,9 @@ const (
 
 var (
 	// functions aliases
-	RegisterCodec             = types.RegisterCodec
-	ValidateGenesis           = types.ValidateGenesis
-	ConvertToProposals        = types.ConvertToProposals
+	RegisterCodec   = types.RegisterCodec
+	ValidateGenesis = types.ValidateGenesis
+	// ConvertToProposals        = types.ConvertToProposals
 	GetCodeKey                = types.GetCodeKey
 	GetContractAddressKey     = types.GetContractAddressKey
 	GetContractStorePrefixKey = types.GetContractStorePrefixKey
@@ -92,12 +92,12 @@ var (
 	CodeKeyPrefix        = types.CodeKeyPrefix
 	ContractKeyPrefix    = types.ContractKeyPrefix
 	ContractStorePrefix  = types.ContractStorePrefix
-	EnableAllProposals   = types.EnableAllProposals
-	DisableAllProposals  = types.DisableAllProposals
+	// EnableAllProposals   = types.EnableAllProposals
+	// DisableAllProposals  = types.DisableAllProposals
 )
 
 type (
-	ProposalType            = types.ProposalType
+	// ProposalType            = types.ProposalType
 	GenesisState            = types.GenesisState
 	Code                    = types.Code
 	Contract                = types.Contract

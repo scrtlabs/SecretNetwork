@@ -1,5 +1,6 @@
 package cli
 
+/*
 import (
 	"bufio"
 
@@ -293,3 +294,4 @@ func ProposalClearContractAdminCmd(cdc *codec.Codec) *cobra.Command {
 	cmd.Flags().String(flagProposalType, "", "Type of proposal, types: store-code/instantiate/migrate/update-admin/clear-admin/text/parameter_change/software_upgrade")
 	return cmd
 }
+*/

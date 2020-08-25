@@ -1,5 +1,6 @@
 package types
 
+/*
 import (
 	"encoding/base64"
 	"encoding/json"
@@ -381,3 +382,4 @@ func (p ClearAdminProposal) String() string {
   Contract:    %s
 `, p.Title, p.Description, p.Contract)
 }
+*/

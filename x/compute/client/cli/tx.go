@@ -5,9 +5,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
 	"io/ioutil"
 	"strconv"
+
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -35,8 +36,8 @@ const (
 	flagInstantiateByEverybody = "instantiate-everybody"
 	flagInstantiateByAddress   = "instantiate-only-address"
 	flagProposalType           = "type"
-	flagIoMasterKey = "enclave-key"
-	flagCodeHash    = "code-hash"
+	flagIoMasterKey            = "enclave-key"
+	flagCodeHash               = "code-hash"
 )
 
 // GetTxCmd returns the transaction commands for this module
@@ -108,7 +109,7 @@ func parseStoreCodeArgs(args []string, cliCtx context.CLIContext) (types.MsgStor
 		return types.MsgStoreCode{}, fmt.Errorf("invalid input file. Use wasm binary or gzip")
 	}
 
-	var perm *types.AccessConfig
+	/* var perm *types.AccessConfig
 	if onlyAddrStr := viper.GetString(flagInstantiateByAddress); onlyAddrStr != "" {
 		allowedAddr, err := sdk.AccAddressFromBech32(onlyAddrStr)
 		if err != nil {
@@ -118,15 +119,15 @@ func parseStoreCodeArgs(args []string, cliCtx context.CLIContext) (types.MsgStor
 		perm = &x
 	} else if everybody := viper.GetBool(flagInstantiateByEverybody); everybody {
 		perm = &types.AllowEverybody
-	}
+	} */
 
 	// build and sign the transaction, then broadcast to Tendermint
 	msg := types.MsgStoreCode{
-		Sender:                cliCtx.GetFromAddress(),
-		WASMByteCode:          wasm,
-		Source:                viper.GetString(flagSource),
-		Builder:               viper.GetString(flagBuilder),
-		InstantiatePermission: perm,
+		Sender:       cliCtx.GetFromAddress(),
+		WASMByteCode: wasm,
+		Source:       viper.GetString(flagSource),
+		Builder:      viper.GetString(flagBuilder),
+		// InstantiatePermission: perm,
 	}
 	return msg, nil
 }

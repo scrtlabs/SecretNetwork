@@ -1,5 +1,6 @@
 package rest
 
+/*
 import (
 	"encoding/json"
 	"net/http"
@@ -268,3 +269,4 @@ func toStdTxResponse(cliCtx context.CLIContext, w http.ResponseWriter, data wasm
 	}
 	utils.WriteGenerateStdTxResponse(w, cliCtx, baseReq, []sdk.Msg{msg})
 }
+*/

@@ -181,10 +181,11 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 	// add wasm handler so we can loop-back (contracts calling contracts)
 	router.AddRoute(wasmtypes.RouterKey, TestHandler(keeper))
 
-	govRouter := gov.NewRouter().
-		AddRoute(params.RouterKey, params.NewParamChangeProposalHandler(paramsKeeper)).
-		AddRoute(govtypes.RouterKey, govtypes.ProposalHandler).
-		AddRoute(wasmtypes.RouterKey, NewWasmProposalHandler(keeper, wasmtypes.EnableAllProposals))
+	govRouter := gov.NewRouter() /*.
+	AddRoute(params.RouterKey, params.NewParamChangeProposalHandler(paramsKeeper)).
+	AddRoute(govtypes.RouterKey, govtypes.ProposalHandler).
+	AddRoute(wasmtypes.RouterKey, NewWasmProposalHandler(keeper, wasmtypes.EnableAllProposals))
+	*/
 
 	govKeeper := gov.NewKeeper(
 		cdc, keyGov, paramsKeeper.Subspace(govtypes.DefaultParamspace).WithKeyTable(gov.ParamKeyTable()), supplyKeeper, stakingKeeper, govRouter,

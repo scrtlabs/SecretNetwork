@@ -3,9 +3,7 @@ package types
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/json"
 
-	sdk "github.com/enigmampc/cosmos-sdk/types"
 	"github.com/tendermint/tendermint/libs/rand"
 )
 
@@ -112,6 +110,7 @@ func WithSHA256CodeHash(wasmCode []byte) func(info *CodeInfo) {
 	}
 }
 
+/*
 func StoreCodeProposalFixture(mutators ...func(*StoreCodeProposal)) StoreCodeProposal {
 	var anyValidAddress sdk.AccAddress = bytes.Repeat([]byte{0x1}, sdk.AddrLen)
 	p := StoreCodeProposal{
@@ -241,3 +240,4 @@ func ClearAdminProposalFixture(mutators ...func(p *ClearAdminProposal)) ClearAdm
 	}
 	return p
 }
+*/
