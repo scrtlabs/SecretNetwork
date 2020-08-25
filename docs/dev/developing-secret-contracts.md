@@ -2,7 +2,9 @@
 
 Secret Contacts are based on CosmWasm v0.10.
 
-Check out the [CosmWasm docs](https://docs.cosmwasm.com) as well. They are probably more extensive. Don't forget to go over the [differences between SecretWasm and CosmWasm](#differences-from-cosmwasm).
+Check out the [CosmWasm docs](https://docs.cosmwasm.com) as well. They are probably more extensive.
+
+Don't forget to go over the [differences between SecretWasm and CosmWasm](#differences-from-cosmwasm).
 
 - [Developing Secret Contracts](#Developing-Secret-Contracts)
   - [IDEs](#IDEs)
