@@ -19,10 +19,10 @@ const (
 	QueryGetContractState   = "query"
 	QueryGetCode            = "code"
 	QueryListCode           = "list-code"
-	QueryContractHistory    = "contract-history"
-	QueryContractAddress    = "label"
-	QueryContractKey        = "contract-key"
-	QueryContractHash       = "contract-hash"
+	// QueryContractHistory    = "contract-history"
+	QueryContractAddress = "label"
+	QueryContractKey     = "contract-key"
+	QueryContractHash    = "contract-hash"
 )
 
 const (
@@ -52,8 +52,8 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 			return queryCode(ctx, path[1], keeper)
 		case QueryListCode:
 			return queryCodeList(ctx, keeper)
-		case QueryContractHistory:
-			return queryContractHistory(ctx, path[1], keeper)
+		/* case QueryContractHistory:
+		return queryContractHistory(ctx, path[1], keeper) */
 		case QueryContractAddress:
 			return queryContractAddress(ctx, path[1], req, keeper)
 		case QueryContractKey:
@@ -207,7 +207,7 @@ func queryCodeList(ctx sdk.Context, keeper Keeper) ([]byte, error) {
 	return bz, nil
 }
 
-func queryContractHistory(ctx sdk.Context, bech string, keeper Keeper) ([]byte, error) {
+/* func queryContractHistory(ctx sdk.Context, bech string, keeper Keeper) ([]byte, error) {
 	contractAddr, err := sdk.AccAddressFromBech32(bech)
 	if err != nil {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
@@ -227,7 +227,7 @@ func queryContractHistory(ctx sdk.Context, bech string, keeper Keeper) ([]byte, 
 		return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
 	}
 	return bz, nil
-}
+} */
 
 func queryContractAddress(ctx sdk.Context, label string, req abci.RequestQuery, keeper Keeper) ([]byte, error) {
 	res := keeper.GetContractAddress(ctx, label)

@@ -340,7 +340,7 @@ func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 
 	store.Set(types.GetContractLabelPrefix(label), contractAddress)
 
-	k.appendToContractHistory(ctx, contractAddress, instance.InitialHistory(initMsg))
+	// k.appendToContractHistory(ctx, contractAddress, instance.InitialHistory(initMsg))
 	return contractAddress, nil
 }
 
@@ -438,7 +438,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}, nil
 }
 
-// We don't use this function currently. It's here for upstream compatibility
+/* // We don't use this function currently. It's here for upstream compatibility
 // Migrate allows to upgrade a contract to a new code with data migration.
 func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, newCodeID uint64, msg []byte) (*sdk.Result, error) {
 	return k.migrate(ctx, contractAddress, caller, newCodeID, msg, k.authZPolicy)
@@ -547,7 +547,7 @@ func (k Keeper) GetContractHistory(ctx sdk.Context, contractAddr sdk.AccAddress)
 		k.cdc.MustUnmarshalBinaryBare(bz, &entries)
 	}
 	return entries
-}
+} */
 
 // QuerySmart queries the smart contract itself.
 func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, useDefaultGasLimit bool) ([]byte, error) {
@@ -832,8 +832,8 @@ func (k Keeper) importContract(ctx sdk.Context, contractAddr sdk.AccAddress, c *
 		return errors.Wrapf(types.ErrDuplicate, "contract: %s", contractAddr)
 	}
 
-	historyEntry := c.ResetFromGenesis(ctx)
-	k.appendToContractHistory(ctx, contractAddr, historyEntry)
+	// historyEntry := c.ResetFromGenesis(ctx)
+	// k.appendToContractHistory(ctx, contractAddr, historyEntry)
 	k.setContractInfo(ctx, contractAddr, c)
 	return k.importContractState(ctx, contractAddr, state)
 }

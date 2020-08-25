@@ -2,7 +2,6 @@ package types
 
 import (
 	"encoding/base64"
-	"encoding/json"
 
 	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
 	"github.com/enigmampc/cosmos-sdk/x/auth"
@@ -72,7 +71,7 @@ func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, source string, builder
 	}
 }
 
-type ContractCodeHistoryOperationType string
+/* type ContractCodeHistoryOperationType string
 
 const (
 	InitContractCodeHistoryType    ContractCodeHistoryOperationType = "Init"
@@ -88,7 +87,7 @@ type ContractCodeHistoryEntry struct {
 	CodeID    uint64                           `json:"code_id"`
 	Updated   *AbsoluteTxPosition              `json:"updated,omitempty"`
 	Msg       json.RawMessage                  `json:"msg,omitempty"`
-}
+} */
 
 // ContractInfo stores a WASM contract instance
 type ContractInfo struct {
@@ -129,7 +128,7 @@ func (c *ContractInfo) ValidateBasic() error {
 	return nil
 }
 
-func (c ContractInfo) InitialHistory(initMsg []byte) ContractCodeHistoryEntry {
+/* func (c ContractInfo) InitialHistory(initMsg []byte) ContractCodeHistoryEntry {
 	return ContractCodeHistoryEntry{
 		Operation: InitContractCodeHistoryType,
 		CodeID:    c.CodeID,
@@ -157,7 +156,7 @@ func (c *ContractInfo) ResetFromGenesis(ctx sdk.Context) ContractCodeHistoryEntr
 		CodeID:    c.CodeID,
 		Updated:   c.Created,
 	}
-}
+} */
 
 // AbsoluteTxPosition can be used to sort contracts
 type AbsoluteTxPosition struct {

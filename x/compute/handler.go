@@ -21,12 +21,12 @@ func NewHandler(k Keeper) sdk.Handler {
 			return handleInstantiate(ctx, k, &msg)
 		case MsgExecuteContract:
 			return handleExecute(ctx, k, &msg)
-		case MsgMigrateContract:
-			return handleMigration(ctx, k, &msg)
-		case MsgUpdateAdmin:
-			return handleUpdateContractAdmin(ctx, k, &msg)
-		case MsgClearAdmin:
-			return handleClearContractAdmin(ctx, k, &msg)
+			/* 	case MsgMigrateContract:
+				return handleMigration(ctx, k, &msg)
+			case MsgUpdateAdmin:
+				return handleUpdateContractAdmin(ctx, k, &msg)
+			case MsgClearAdmin:
+				return handleClearContractAdmin(ctx, k, &msg) */
 		default:
 			errMsg := fmt.Sprintf("unrecognized wasm message type: %T", msg)
 			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, errMsg)
@@ -123,7 +123,7 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *MsgExecuteContract) (*sdk.Res
 	return res, nil
 }
 
-func handleMigration(ctx sdk.Context, k Keeper, msg *MsgMigrateContract) (*sdk.Result, error) {
+/* func handleMigration(ctx sdk.Context, k Keeper, msg *MsgMigrateContract) (*sdk.Result, error) {
 	res, err := k.Migrate(ctx, msg.Contract, msg.Sender, msg.CodeID, msg.MigrateMsg) // for MsgMigrateContract, there is only one signer which is msg.Sender (https://github.com/enigmampc/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L228-L230)
 	if err != nil {
 		return nil, err
@@ -171,3 +171,4 @@ func handleClearContractAdmin(ctx sdk.Context, k Keeper, msg *MsgClearAdmin) (*s
 		Events: append(events, ourEvent),
 	}, nil
 }
+*/

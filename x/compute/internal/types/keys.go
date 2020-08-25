@@ -31,13 +31,13 @@ const ( // event attributes
 
 // nolint
 var (
-	CodeKeyPrefix              = []byte{0x01}
-	ContractKeyPrefix          = []byte{0x02}
-	ContractStorePrefix        = []byte{0x03}
-	SequenceKeyPrefix          = []byte{0x04}
-	ContractHistoryStorePrefix = []byte{0x05}
-	ContractEnclaveIdPrefix    = []byte{0x06}
-	ContractLabelPrefix        = []byte{0x07}
+	CodeKeyPrefix       = []byte{0x01}
+	ContractKeyPrefix   = []byte{0x02}
+	ContractStorePrefix = []byte{0x03}
+	SequenceKeyPrefix   = []byte{0x04}
+	// ContractHistoryStorePrefix = []byte{0x05}
+	ContractEnclaveIdPrefix = []byte{0x06}
+	ContractLabelPrefix     = []byte{0x07}
 
 	KeyLastCodeID     = append(SequenceKeyPrefix, []byte("lastCodeId")...)
 	KeyLastInstanceID = append(SequenceKeyPrefix, []byte("lastContractId")...)

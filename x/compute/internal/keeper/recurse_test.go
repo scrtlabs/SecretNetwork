@@ -60,7 +60,7 @@ func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.Acc
 	realWasmQuerier = WasmQuerier(&keeper)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator = createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
+	creator, creatorPriv := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
 
 	// store the code
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
@@ -78,7 +78,7 @@ func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.Acc
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, creator, string(initMsgBz), true, defaultGasForTests)
+	contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, creator, creatorPriv, string(initMsgBz), true, defaultGasForTests)
 	require.Empty(t, initErr)
 
 	return contractAddr, creator, ctx, keeper, cleanup

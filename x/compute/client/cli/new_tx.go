@@ -1,5 +1,6 @@
 package cli
 
+/*
 import (
 	"bufio"
 	"strconv"
@@ -134,3 +135,4 @@ func ClearContractAdminCmd(cdc *codec.Codec) *cobra.Command {
 	}
 	return cmd
 }
+*/

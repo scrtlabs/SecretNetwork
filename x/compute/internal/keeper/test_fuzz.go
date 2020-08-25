@@ -1,15 +1,13 @@
 package keeper
 
 import (
-	"encoding/json"
-
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	fuzz "github.com/google/gofuzz"
 	tmBytes "github.com/tendermint/tendermint/libs/bytes"
 )
 
-var ModelFuzzers = []interface{}{FuzzAddr, FuzzAbsoluteTxPosition, FuzzContractInfo, FuzzStateModel, FuzzAccessType, FuzzAccessConfig, FuzzContractCodeHistory}
+var ModelFuzzers = []interface{}{FuzzAddr, FuzzAbsoluteTxPosition, FuzzContractInfo, FuzzStateModel, FuzzAccessType, FuzzAccessConfig /* FuzzContractCodeHistory */}
 
 func FuzzAddr(m *sdk.AccAddress, c fuzz.Continue) {
 	*m = make([]byte, 20)
@@ -29,7 +27,7 @@ func FuzzContractInfo(m *types.ContractInfo, c fuzz.Continue) {
 	c.Fuzz(&m.Created)
 }
 
-func FuzzContractCodeHistory(m *types.ContractCodeHistoryEntry, c fuzz.Continue) {
+/* func FuzzContractCodeHistory(m *types.ContractCodeHistoryEntry, c fuzz.Continue) {
 	const maxMsgSize = 128
 	m.CodeID = c.RandUint64()
 	msg := make([]byte, c.RandUint64()%maxMsgSize)
@@ -40,7 +38,7 @@ func FuzzContractCodeHistory(m *types.ContractCodeHistoryEntry, c fuzz.Continue)
 	}
 	c.Fuzz(&m.Updated)
 	m.Operation = types.AllCodeHistoryTypes[c.Int()%len(types.AllCodeHistoryTypes)]
-}
+} */
 
 func FuzzStateModel(m *types.Model, c fuzz.Continue) {
 	m.Key = tmBytes.HexBytes(c.RandString())
