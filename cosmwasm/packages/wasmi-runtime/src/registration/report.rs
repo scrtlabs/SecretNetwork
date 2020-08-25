@@ -563,7 +563,7 @@ impl AdvisoryIDs {
                 vulnerable.push(i.clone());
                 ADVISORY_DESC
                     .get(&i.as_str())
-                    .map(|v| vulnerable.push(v.to_string()));
+                    .map(|v| vulnerable.push((*v).to_string()));
             }
         }
         vulnerable
