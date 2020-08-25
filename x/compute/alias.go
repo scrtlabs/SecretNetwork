@@ -32,8 +32,8 @@ const (
 	QueryListCode                 = keeper.QueryListCode
 	QueryContractKey              = keeper.QueryContractKey
 	QueryMethodContractStateSmart = keeper.QueryMethodContractStateSmart
-	QueryMethodContractStateAll   = keeper.QueryMethodContractStateAll
-	QueryMethodContractStateRaw   = keeper.QueryMethodContractStateRaw
+	/* QueryMethodContractStateAll   = keeper.QueryMethodContractStateAll
+	QueryMethodContractStateRaw   = keeper.QueryMethodContractStateRaw */
 )
 
 var (

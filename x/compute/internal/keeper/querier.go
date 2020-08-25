@@ -25,11 +25,13 @@ const (
 	QueryContractHash    = "contract-hash"
 )
 
-const (
+const QueryMethodContractStateSmart = "smart"
+
+/* const (
 	QueryMethodContractStateSmart = "smart"
 	QueryMethodContractStateAll   = "all"
 	QueryMethodContractStateRaw   = "raw"
-)
+) */
 
 // ContractInfoWithAddress adds the address (key) to the ContractInfo representation
 type ContractInfoWithAddress struct {
