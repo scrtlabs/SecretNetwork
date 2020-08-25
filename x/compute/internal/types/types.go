@@ -107,7 +107,7 @@ func NewContractInfo(codeID uint64, creator, admin sdk.AccAddress, initMsg []byt
 }
 
 // NewEnv initializes the environment for a contract instance
-func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contractAddr sdk.AccAddress, contractKey []byte /*, signBytes []byte, signature auth.StdSignature, callbackSig []byte*/) wasmTypes.Env {
+func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contractAddr sdk.AccAddress, contractKey []byte) wasmTypes.Env {
 	// safety checks before casting below
 	if ctx.BlockHeight() < 0 {
 		panic("Block height must never be negative")

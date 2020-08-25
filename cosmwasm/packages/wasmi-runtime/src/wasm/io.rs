@@ -11,6 +11,7 @@ use enclave_ffi_types::EnclaveError;
 use log::*;
 use serde::Serialize;
 use serde_json::json;
+use sha2::Digest;
 
 pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) -> AESKey {
     let enclave_io_key = KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap();
@@ -172,5 +173,5 @@ pub fn create_callback_signature(
     callback_sig_bytes.extend(contract_addr.as_slice());
     callback_sig_bytes.extend(msg_to_sign.msg.as_slice());
 
-    callback_sig_bytes
+    sha2::Sha256::digest(callback_sig_bytes.as_slice()).to_vec()
 }

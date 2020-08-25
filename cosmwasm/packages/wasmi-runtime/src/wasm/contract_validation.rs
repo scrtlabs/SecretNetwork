@@ -260,12 +260,16 @@ fn verify_contract(msg: &SignDocWasmMsg, env: &Env) -> bool {
         trace!("Verifying contract address..");
         if let Ok(human_addr) = HumanAddr::from_canonical(env.contract.address.clone()) {
             if human_addr != *contract {
-                debug!(
+                trace!(
                     "Contract address sent to enclave {:?} is not the same as the signed one {:?}",
-                    human_addr, *contract
+                    human_addr,
+                    *contract
                 );
                 return false;
             }
+        } else {
+            trace!("Address sent to the enclave is malformed!");
+            return false;
         }
     }
 

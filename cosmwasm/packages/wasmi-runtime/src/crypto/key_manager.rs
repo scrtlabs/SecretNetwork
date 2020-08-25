@@ -74,48 +74,45 @@ impl Keychain {
     }
 
     pub fn get_consensus_state_ikm(&self) -> Result<AESKey, CryptoError> {
-        self.consensus_state_ikm.clone().ok_or_else(|| {
+        self.consensus_state_ikm.ok_or_else(|| {
             error!("Error accessing base_state_key (does not exist, or was not initialized)");
             CryptoError::ParsingError
         })
     }
 
     pub fn get_consensus_seed(&self) -> Result<Seed, CryptoError> {
-        self.consensus_seed.clone().ok_or_else(|| {
+        self.consensus_seed.ok_or_else(|| {
             error!("Error accessing consensus_seed (does not exist, or was not initialized)");
             CryptoError::ParsingError
         })
     }
 
     pub fn seed_exchange_key(&self) -> Result<KeyPair, CryptoError> {
-        self.consensus_seed_exchange_keypair.clone().ok_or_else(|| {
+        self.consensus_seed_exchange_keypair.ok_or_else(|| {
             error!("Error accessing consensus_seed_exchange_keypair (does not exist, or was not initialized)");
             CryptoError::ParsingError
         })
     }
 
     pub fn get_consensus_io_exchange_keypair(&self) -> Result<KeyPair, CryptoError> {
-        self.consensus_io_exchange_keypair.clone().ok_or_else(|| {
+        self.consensus_io_exchange_keypair.ok_or_else(|| {
             error!("Error accessing consensus_io_exchange_keypair (does not exist, or was not initialized)");
             CryptoError::ParsingError
         })
     }
 
     pub fn get_consensus_callback_secret(&self) -> Result<AESKey, CryptoError> {
-        self.consensus_callback_secret.clone().ok_or_else(|| {
+        self.consensus_callback_secret.ok_or_else(|| {
             error!("Error accessing consensus_callback_secret (does not exist, or was not initialized)");
             CryptoError::ParsingError
         })
     }
 
     pub fn get_registration_key(&self) -> Result<KeyPair, CryptoError> {
-        if self.registration_key.is_some() {
-            // KeyPair does not implement copy (due to internal type not implementing it
-            Ok(self.registration_key.clone().unwrap())
-        } else {
+        self.registration_key.ok_or_else(|| {
             error!("Error accessing registration_key (does not exist, or was not initialized)");
-            Err(CryptoError::ParsingError)
-        }
+            CryptoError::ParsingError
+        })
     }
 
     pub fn set_registration_key(&mut self, kp: KeyPair) -> Result<(), EnclaveError> {
