@@ -561,9 +561,9 @@ impl AdvisoryIDs {
         for i in self.0.iter() {
             if !WHITELISTED_ADVISORIES.contains(&i.as_str()) {
                 vulnerable.push(i.clone());
-                if ADVISORY_DESC.contains_key(&i.as_str()) {
-                    vulnerable.push((*ADVISORY_DESC.get::<str>(&i.as_str()).unwrap()).to_string());
-                }
+                ADVISORY_DESC
+                    .get(&i.as_str())
+                    .map(|v| vulnerable.push(v.to_string()));
             }
         }
         vulnerable
