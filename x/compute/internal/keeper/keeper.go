@@ -125,33 +125,29 @@ func GetSignerSignature(signer exported.Account, tx auth.StdTx) (authtypes.StdSi
 }
 
 func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) (authtypes.StdSignature, []byte, error) {
+	var defaultSignature = authtypes.StdSignature{
+		PubKey:    secp256k1.PubKeySecp256k1{},
+		Signature: []byte{},
+	}
+
 	// Warning: This API may be deprecated:
 	// https://github.com/cosmos/cosmos-sdk/commit/c13809062ab16bf193ad3919c77ec03c79b76cc8#diff-a64b9f4b7565560002e3ac4a5eac008bR148
 	tx := authtypes.StdTx{}
 	txBytes := ctx.TxBytes()
 	err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
 	if err != nil {
-		return authtypes.StdSignature{
-			PubKey:    secp256k1.PubKeySecp256k1{},
-			Signature: []byte{},
-		}, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+		return defaultSignature, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
 	}
 
 	// Get sign bytes for the message creator
 	signerAcc, err := auth.GetSignerAcc(ctx, k.accountKeeper, signer) // for MsgInstantiateContract, there is only one signer which is msg.Sender (https://github.com/enigmampc/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L192-L194)
 	if err != nil {
-		return authtypes.StdSignature{
-			PubKey:    secp256k1.PubKeySecp256k1{},
-			Signature: []byte{},
-		}, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
+		return defaultSignature, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
 	}
 
 	signerSig, err := GetSignerSignature(signerAcc, tx)
 	if err != nil {
-		return authtypes.StdSignature{
-			PubKey:    secp256k1.PubKeySecp256k1{},
-			Signature: []byte{},
-		}, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", signer, tx.Signatures))
+		return defaultSignature, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", signer, tx.Signatures))
 	}
 
 	signBytes := GetSignBytes(ctx, signerAcc, tx)
