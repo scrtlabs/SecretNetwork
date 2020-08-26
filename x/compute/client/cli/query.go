@@ -298,7 +298,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			txInput := txInputs[0]
 
 			if txInput.Type() == "execute" {
-				execTx, ok := txInput.(*types.MsgExecuteContract)
+				execTx, ok := txInput.(types.MsgExecuteContract)
 				if !ok {
 					return fmt.Errorf("error parsing tx as type 'execute': %v", txInput)
 				}
@@ -306,7 +306,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 				encryptedInput = execTx.Msg
 				dataOutputHexB64 = result.Data
 			} else if txInput.Type() == "instantiate" {
-				initTx, ok := txInput.(*types.MsgInstantiateContract)
+				initTx, ok := txInput.(types.MsgInstantiateContract)
 				if !ok {
 					return fmt.Errorf("error parsing tx as type 'instantiate': %v", txInput)
 				}
