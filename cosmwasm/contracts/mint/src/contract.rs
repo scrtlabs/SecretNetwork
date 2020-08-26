@@ -1,7 +1,7 @@
 use cosmwasm_std::{
-    generic_err, log, to_binary, unauthorized, Api, Binary, BondedRatioResponse, Coin, CosmosMsg,
-    Env, Extern, HandleResponse, HumanAddr, InflationResponse, InitResponse, InitResult, MintQuery,
-    Querier, RewardsResponse, StdResult, Storage, VoteOption,
+    log, to_binary, Api, Binary, BondedRatioResponse, Coin, CosmosMsg, Env, Extern, HandleResponse,
+    HumanAddr, InflationResponse, InitResponse, InitResult, MintQuery, Querier, RewardsResponse,
+    StdResult, Storage, VoteOption,
 };
 
 use crate::msg::{HandleMsg, InitMsg};
@@ -10,7 +10,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
     _msg: InitMsg,
-) -> InitResult {
+) -> StdResult<InitResponse> {
     Ok(InitResponse::default())
 }
 

@@ -1,7 +1,6 @@
 use cosmwasm_std::{
-    generic_err, log, to_binary, unauthorized, Api, Binary, Coin, CosmosMsg, DistQuery, Env,
-    Extern, GovQuery, HandleResponse, HumanAddr, InitResponse, InitResult, Querier,
-    RewardsResponse, StdResult, Storage, VoteOption,
+    log, to_binary, Api, Binary, Coin, CosmosMsg, DistQuery, Env, Extern, GovQuery, HandleResponse,
+    HumanAddr, InitResponse, InitResult, Querier, RewardsResponse, StdResult, Storage, VoteOption,
 };
 
 use crate::msg::{HandleMsg, InitMsg};

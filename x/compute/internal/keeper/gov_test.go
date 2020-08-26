@@ -74,7 +74,7 @@ func TestGovQueryProposals(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initBz, govId, nil)
-	govAddr, err := keeper.Instantiate(ctx, govId, creator, nil, initBz, "gidi gov", nil, nil)
+	govAddr, err := keeper.Instantiate(ctx, govId, creator, initBz, "gidi gov", nil, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, govAddr)
 
@@ -141,7 +141,7 @@ func TestGovVote(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initBz, govId, deposit2)
-	govAddr, err := keeper.Instantiate(ctx, govId, creator, nil, initBz, "gidi gov", deposit2, nil)
+	govAddr, err := keeper.Instantiate(ctx, govId, creator, initBz, "gidi gov", deposit2, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, govAddr)
 

@@ -80,9 +80,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 	keyStaking := sdk.NewKVStoreKey(staking.StoreKey)
 	keySupply := sdk.NewKVStoreKey(supply.StoreKey)
 	keyDistro := sdk.NewKVStoreKey(distribution.StoreKey)
-	govDistro := sdk.NewKVStoreKey(gov.StoreKey)
 	mintStore := sdk.NewKVStoreKey(mint.StoreKey)
-
 	keyParams := sdk.NewKVStoreKey(params.StoreKey)
 	tkeyParams := sdk.NewTransientStoreKey(params.TStoreKey)
 	keyGov := sdk.NewKVStoreKey(govtypes.StoreKey)
@@ -184,8 +182,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler)
 	govKeeper := gov.NewKeeper(
 		cdc,
-		govDistro,
-		pk.Subspace(gov.DefaultParamspace).WithKeyTable(gov.ParamKeyTable()),
+		keyGov,
+		paramsKeeper.Subspace(gov.DefaultParamspace).WithKeyTable(gov.ParamKeyTable()),
 		supplyKeeper,
 		stakingKeeper,
 		govRouter,
@@ -195,16 +193,11 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 	// bank := bankKeeper.
 	bk := bank.Keeper(bankKeeper)
 
-	mintKeeper := mint.NewKeeper(cdc, mintStore, pk.Subspace(mint.DefaultParamspace), stakingKeeper, supplyKeeper, auth.FeeCollectorName)
+	mintKeeper := mint.NewKeeper(cdc, mintStore, paramsKeeper.Subspace(mint.DefaultParamspace), stakingKeeper, supplyKeeper, auth.FeeCollectorName)
 	mintKeeper.SetMinter(ctx, mint.DefaultInitialMinter())
 	keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &govKeeper, &distKeeper, &mintKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
 	// add wasm handler so we can loop-back (contracts calling contracts)
 	router.AddRoute(wasmtypes.RouterKey, TestHandler(keeper))
-
-	govKeeper.SetProposalID(ctx, govtypes.DefaultStartingProposalID)
-	govKeeper.SetDepositParams(ctx, govtypes.DefaultDepositParams())
-	govKeeper.SetVotingParams(ctx, govtypes.DefaultVotingParams())
-	govKeeper.SetTallyParams(ctx, govtypes.DefaultTallyParams())
 
 	keepers := TestKeepers{
 		AccountKeeper: accountKeeper,
