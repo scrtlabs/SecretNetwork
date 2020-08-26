@@ -240,7 +240,7 @@ type GovQuery struct {
 }
 type MintQuery struct {
 	Inflation   *MintingInflationQuery   `json:"inflation,omitempty"`
-	BondedRatio *MintingBondedRatioQuery `json:"total_staked,omitempty"`
+	BondedRatio *MintingBondedRatioQuery `json:"bonded_ratio,omitempty"`
 }
 
 type MintingBondedRatioQuery struct{}

@@ -77,6 +77,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 	keySupply := sdk.NewKVStoreKey(supply.StoreKey)
 	keyDistro := sdk.NewKVStoreKey(distribution.StoreKey)
 	govDistro := sdk.NewKVStoreKey(gov.StoreKey)
+	mintStore := sdk.NewKVStoreKey(mint.StoreKey)
 
 	keyParams := sdk.NewKVStoreKey(params.StoreKey)
 	tkeyParams := sdk.NewTransientStoreKey(params.TStoreKey)
@@ -89,6 +90,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 	ms.MountStoreWithDB(keyStaking, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keySupply, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(govDistro, sdk.StoreTypeIAVL, db)
+	ms.MountStoreWithDB(mintStore, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keyDistro, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(tkeyParams, sdk.StoreTypeTransient, db)
 	err := ms.LoadLatestVersion()
@@ -184,7 +186,9 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 	router.AddRoute(gov.RouterKey, gh)
 	// bank := bankKeeper.
 	bk := bank.Keeper(bankKeeper)
-	mintKeeper := mint.Keeper{}
+
+	mintKeeper := mint.NewKeeper(cdc, mintStore, pk.Subspace(mint.DefaultParamspace), stakingKeeper, supplyKeeper, auth.FeeCollectorName)
+	mintKeeper.SetMinter(ctx, mint.DefaultInitialMinter())
 	keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &govKeeper, &distKeeper, &mintKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
 	// add wasm handler so we can loop-back (contracts calling contracts)
 	router.AddRoute(wasmTypes.RouterKey, TestHandler(keeper))

@@ -183,7 +183,6 @@ func DistQuerier(keeper *distr.Keeper) func(ctx sdk.Context, request *wasmTypes.
 
 			var res wasmTypes.RewardsResponse
 
-			// this is here so we can remove fractions of uscrt from the result
 			err = json.Unmarshal(query, &res)
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
@@ -192,6 +191,7 @@ func DistQuerier(keeper *distr.Keeper) func(ctx sdk.Context, request *wasmTypes.
 			for i, valRewards := range res.Rewards {
 				res.Rewards[i].Validator = valRewards.Validator
 				for j, valReward := range valRewards.Reward {
+					// this is here so we can remove fractions of uscrt from the result
 					res.Rewards[i].Reward[j].Amount = strings.Split(valReward.Amount, ".")[0]
 					res.Rewards[i].Reward[j].Denom = valReward.Denom
 				}
