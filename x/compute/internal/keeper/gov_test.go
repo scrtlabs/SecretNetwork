@@ -85,7 +85,7 @@ func TestGovQueryProposals(t *testing.T) {
 	res, _, err := execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, defaultGasForTests, 0)
 	require.Empty(t, err)
 
-	require.Equal(t, uint32(0), binary.BigEndian.Uint32(res))
+	require.Equal(t, uint64(0), binary.BigEndian.Uint64(res))
 
 	tp := TestProposal
 	// check that gov is working
@@ -101,8 +101,8 @@ func TestGovQueryProposals(t *testing.T) {
 	require.True(t, votingStarted)
 
 	res, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, defaultGasForTests, 0)
-	require.NotEmpty(t, err)
-	require.Equal(t, uint32(1), binary.BigEndian.Uint32(res))
+	require.Empty(t, err)
+	require.Equal(t, uint64(1), binary.BigEndian.Uint64(res))
 }
 
 // TestGovQueryProposals tests reading how many proposals are active - first testing 0 proposals, then adding
