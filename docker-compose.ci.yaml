@@ -4,7 +4,7 @@ services:
   aesm:
     image: cashmaney/aesm
     devices:
-      - /dev/sgx
+      - /dev/isgx
     volumes:
       - /tmp/aesmd:/var/run/aesmd
     stdin_open: true
@@ -18,7 +18,7 @@ services:
     depends_on:
       - aesm
     devices:
-      - /dev/sgx
+      - /dev/isgx
     volumes:
       - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/root/.secretd
@@ -32,7 +32,7 @@ services:
     depends_on:
       - aesm
     devices:
-      - /dev/sgx
+      - /dev/isgx
     volumes:
       - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/root/.secretd
@@ -51,7 +51,7 @@ services:
     depends_on:
       - bootstrap
     devices:
-      - /dev/sgx
+      - /dev/isgx
     volumes:
       - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/tmp/.secretd
@@ -67,7 +67,7 @@ services:
     depends_on:
       - aesm
     devices:
-      - /dev/sgx
+      - /dev/isgx
     volumes:
       - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/tmp/.secretd

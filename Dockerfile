@@ -70,4 +70,4 @@ RUN echo 'source /root/secretcli_completion' >> ~/.bashrc
 #ENV LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/:/opt/sgxsdk/lib64/
 
 # Run secretd by default, omit entrypoint to ease using container with secretcli
-ENTRYPOINT ["/bin/bash", "startup.sh"]
+ENTRYPOINT ["/bin/bash"]

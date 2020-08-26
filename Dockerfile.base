@@ -9,7 +9,6 @@ ENV GOROOT=/usr/local/go
 ENV GOPATH=/go/
 ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 
-
 RUN curl -O https://dl.google.com/go/go1.14.2.linux-amd64.tar.gz
 RUN tar -C /usr/local -xzf go1.14.2.linux-amd64.tar.gz
 # Set working directory for the build
@@ -37,8 +36,10 @@ RUN make vendor
 
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
 
-COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/cosmwasm/packages/wasmi-runtime/
-COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/cosmwasm/packages/wasmi-runtime/
+COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/
+COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/
+#COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/
+#COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/
 
 RUN . /opt/sgxsdk/environment && env && FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build-rust
 
@@ -74,4 +75,4 @@ RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/x/compute/internal/keepe
 COPY packaging_docker/ci/go-tests.sh .
 RUN chmod +x go-tests.sh
 
-ENTRYPOINT ["/bin/bash", "go-tests.sh"]
+ENTRYPOINT ["/bin/bash"]

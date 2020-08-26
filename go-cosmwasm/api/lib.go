@@ -37,10 +37,14 @@ func HealthCheck() ([]byte, error) {
 	return receiveVector(res), nil
 }
 
-func InitBootstrap() ([]byte, error) {
+func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	errmsg := C.Buffer{}
+	spidSlice := sendSlice(spid)
+	defer freeAfterSend(spidSlice)
+	apiKeySlice := sendSlice(apiKey)
+	defer freeAfterSend(apiKeySlice)
 
-	res, err := C.init_bootstrap(&errmsg)
+	res, err := C.init_bootstrap(spidSlice, apiKeySlice, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -237,10 +241,15 @@ func KeyGen() ([]byte, error) {
 	return receiveVector(res), nil
 }
 
-// KeyGen Seng KeyGen request to enclave
-func CreateAttestationReport() (bool, error) {
+// CreateAttestationReport Send CreateAttestationReport request to enclave
+func CreateAttestationReport(spid []byte, apiKey []byte) (bool, error) {
 	errmsg := C.Buffer{}
-	_, err := C.create_attestation_report(&errmsg)
+	spidSlice := sendSlice(spid)
+	defer freeAfterSend(spidSlice)
+	apiKeySlice := sendSlice(apiKey)
+	defer freeAfterSend(apiKeySlice)
+
+	_, err := C.create_attestation_report(spidSlice, apiKeySlice, &errmsg)
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
 	}

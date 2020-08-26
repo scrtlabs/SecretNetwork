@@ -42,10 +42,12 @@ jobs:
           mv ./sccache*/sccache "$HOME/sccache"
       - name: Create fake api keys
         run: |
-          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/spid.txt
-          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/spid_production.txt
-          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/api_key.txt
-          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/api_key_production.txt
+          mkdir -p ias_keys/sw_dummy
+          mkdir -p ias_keys/develop
+          echo "not_a_key" > ias_keys/sw_dummy/spid.txt
+          echo "not_a_key" > ias_keys/develop/spid.txt
+          echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
+          echo "not_a_key" > ias_keys/develop/api_key.txt
       - name: Test enclave
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -93,10 +95,12 @@ jobs:
           mv ./sccache*/sccache "$HOME/sccache"
       - name: Create fake api keys
         run: |
-          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/spid.txt
-          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/spid_production.txt
-          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/api_key.txt
-          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/api_key_production.txt
+          mkdir -p ias_keys/sw_dummy
+          mkdir -p ias_keys/develop
+          echo "not_a_key" > ias_keys/sw_dummy/spid.txt
+          echo "not_a_key" > ias_keys/develop/spid.txt
+          echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
+          echo "not_a_key" > ias_keys/develop/api_key.txt
       - name: Build
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -154,10 +158,12 @@ jobs:
           mv ./sccache*/sccache "$HOME/sccache"
       - name: Create fake api keys
         run: |
-          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/spid.txt
-          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/spid_production.txt
-          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/api_key.txt
-          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/api_key_production.txt
+          mkdir -p ias_keys/sw_dummy
+          mkdir -p ias_keys/develop
+          echo "not_a_key" > ias_keys/sw_dummy/spid.txt
+          echo "not_a_key" > ias_keys/develop/spid.txt
+          echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
+          echo "not_a_key" > ias_keys/develop/api_key.txt
       - name: Clippy
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -205,10 +211,12 @@ jobs:
           mv ./sccache*/sccache "$HOME/sccache"
       - name: Create fake api keys
         run: |
-          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/spid.txt
-          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/spid_production.txt
-          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/api_key.txt
-          echo "not_a_key" > cosmwasm/packages/wasmi-runtime/api_key_production.txt
+          mkdir -p ias_keys/sw_dummy
+          mkdir -p ias_keys/develop
+          echo "not_a_key" > ias_keys/sw_dummy/spid.txt
+          echo "not_a_key" > ias_keys/develop/spid.txt
+          echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
+          echo "not_a_key" > ias_keys/develop/api_key.txt
       - name: Build
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
