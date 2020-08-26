@@ -1,8 +1,6 @@
 package types
 
 import (
-	"encoding/json"
-
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
 )
@@ -103,10 +101,10 @@ func (msg MsgInstantiateContract) ValidateBasic() error {
 		if err := sdk.VerifyAddressFormat(msg.Admin); err != nil {
 			return err
 		}
-	} */
+	}
 	if !json.Valid(msg.InitMsg) {
 		return sdkerrors.Wrap(ErrInvalid, "init msg json")
-	}
+	} */
 	return nil
 }
 
@@ -146,9 +144,9 @@ func (msg MsgExecuteContract) ValidateBasic() error {
 	if !msg.SentFunds.IsValid() {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidCoins, "sentFunds")
 	}
-	if !json.Valid(msg.Msg) {
+	/* if !json.Valid(msg.Msg) {
 		return sdkerrors.Wrap(ErrInvalid, "msg json")
-	}
+	} */
 	return nil
 }
 
