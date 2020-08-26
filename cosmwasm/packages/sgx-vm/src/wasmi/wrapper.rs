@@ -98,6 +98,10 @@ where
         &mut self.ctx
     }
 
+    pub fn gas_limit(&self) -> u64 {
+        self.gas_limit
+    }
+
     pub fn gas_left(&self) -> u64 {
         self.gas_limit.saturating_sub(self.used_gas)
     }

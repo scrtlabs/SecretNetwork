@@ -4,16 +4,18 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/enigmampc/cosmos-sdk/x/auth"
-	authtypes "github.com/enigmampc/cosmos-sdk/x/auth/types"
-	"github.com/tendermint/tendermint/crypto"
 	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/enigmampc/cosmos-sdk/x/auth"
+	authtypes "github.com/enigmampc/cosmos-sdk/x/auth/types"
+	"github.com/tendermint/tendermint/crypto"
+
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	sdkErrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
@@ -59,7 +61,7 @@ func TestQueryContractLabel(t *testing.T) {
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, privCreator, initMsgBz, contractID, deposit)
 
-	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, label, deposit, nil)
+	addr, err := keeper.Instantiate(ctx, contractID, creator /* nil,*/, initMsgBz, label, deposit, nil)
 	require.NoError(t, err)
 
 	// this gets us full error, not redacted sdk.Error
@@ -152,14 +154,14 @@ func TestQueryContractState(t *testing.T) {
 
 	initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
 
-	addr, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract to query", deposit, nil)
+	addr, err := keeper.Instantiate(ctx, contractID, creator /* nil,*/, initMsgBz, "demo contract to query", deposit, nil)
 	require.NoError(t, err)
 
 	contractModel := []types.Model{
 		{Key: []byte("foo"), Value: []byte(`"bar"`)},
 		{Key: []byte{0x0, 0x1}, Value: []byte(`{"count":8}`)},
 	}
-	keeper.setContractState(ctx, addr, contractModel)
+	keeper.importContractState(ctx, addr, contractModel)
 
 	// this gets us full error, not redacted sdk.Error
 	q := NewQuerier(keeper)
@@ -184,6 +186,38 @@ func TestQueryContractState(t *testing.T) {
 			srcReq:  abci.RequestQuery{Data: []byte(`{"raw":{"key":"config"}}`)},
 			expErr:  types.ErrQueryFailed,
 		},
+		/*	"query raw key": {
+				srcPath:          []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
+				srcReq:           abci.RequestQuery{Data: []byte("foo")},
+				expModelLen:      1,
+				expModelContains: []types.Model{{Key: []byte("foo"), Value: []byte(`"bar"`)}},
+			},
+			 	"query raw binary key": {
+				srcPath:          []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
+				srcReq:           abci.RequestQuery{Data: []byte{0x0, 0x1}},
+				expModelLen:      1,
+				expModelContains: []types.Model{{Key: []byte{0x0, 0x1}, Value: []byte(`{"count":8}`)}},
+			}, */
+		"query smart": {
+			srcPath:     []string{QueryGetContractState, addr.String(), QueryMethodContractStateSmart},
+			srcReq:      abci.RequestQuery{Data: []byte(`{"verifier":{}}`)},
+			expSmartRes: fmt.Sprintf(`{"verifier":"%s"}`, anyAddr.String()),
+		},
+		"query smart invalid request": {
+			srcPath: []string{QueryGetContractState, addr.String(), QueryMethodContractStateSmart},
+			srcReq:  abci.RequestQuery{Data: []byte(`{"raw":{"key":"config"}}`)},
+			expErr:  types.ErrQueryFailed,
+		},
+		"query smart with invalid json": {
+			srcPath: []string{QueryGetContractState, addr.String(), QueryMethodContractStateSmart},
+			srcReq:  abci.RequestQuery{Data: []byte(`not a json string`)},
+			expErr:  types.ErrQueryFailed,
+		},
+		/* "query unknown raw key": {
+			srcPath:     []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
+			srcReq:      abci.RequestQuery{Data: []byte("unknown")},
+			expModelLen: 0,
+		}, */
 		"query with unknown address": {
 			srcPath:     []string{QueryGetContractState, anyAddr.String()},
 			expModelLen: 0,
@@ -275,9 +309,9 @@ func TestListContractByCodeOrdering(t *testing.T) {
 		require.NoError(t, err)
 
 		tx := authtypes.NewTestTx(ctx, []sdk.Msg{types.MsgInstantiateContract{
-			Sender:    creator,
-			Admin:     nil,
-			Code:      codeID,
+			Sender: creator,
+			// Admin:     nil,
+			CodeID:    codeID,
 			Label:     fmt.Sprintf("contract %d", i),
 			InitMsg:   initMsgBz,
 			InitFunds: topUp,
@@ -291,7 +325,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 
 		ctx = ctx.WithTxBytes(txBytes)
 
-		_, err = keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, fmt.Sprintf("contract %d", i), topUp, nil)
+		_, err = keeper.Instantiate(ctx, codeID, creator /* nil,*/, initMsgBz, fmt.Sprintf("contract %d", i), topUp, nil)
 		require.NoError(t, err)
 	}
 
@@ -312,7 +346,109 @@ func TestListContractByCodeOrdering(t *testing.T) {
 		require.Equal(t, fmt.Sprintf("contract %d", i), contract.Label)
 		require.NotEmpty(t, contract.Address)
 		// ensure these are not shown
-		require.Nil(t, contract.InitMsg)
-		require.Nil(t, contract.Created)
+		// assert.Nil(t, contract.InitMsg)
+		assert.Nil(t, contract.Created)
 	}
 }
+
+/* func TestQueryContractHistory(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
+	keeper := keepers.WasmKeeper
+
+	var (
+		otherAddr sdk.AccAddress = bytes.Repeat([]byte{0x2}, sdk.AddrLen)
+	)
+
+	specs := map[string]struct {
+		srcQueryAddr sdk.AccAddress
+		srcHistory   []types.ContractCodeHistoryEntry
+		expContent   []types.ContractCodeHistoryEntry
+	}{
+		"response with internal fields cleared": {
+			srcHistory: []types.ContractCodeHistoryEntry{{
+				Operation: types.GenesisContractCodeHistoryType,
+				CodeID:    1,
+				Updated:   types.NewAbsoluteTxPosition(ctx),
+				Msg:       []byte(`"init message"`),
+			}},
+			expContent: []types.ContractCodeHistoryEntry{{
+				Operation: types.GenesisContractCodeHistoryType,
+				CodeID:    1,
+				Msg:       []byte(`"init message"`),
+			}},
+		},
+		"response with multiple entries": {
+			srcHistory: []types.ContractCodeHistoryEntry{{
+				Operation: types.InitContractCodeHistoryType,
+				CodeID:    1,
+				Updated:   types.NewAbsoluteTxPosition(ctx),
+				Msg:       []byte(`"init message"`),
+			}, {
+				Operation: types.MigrateContractCodeHistoryType,
+				CodeID:    2,
+				Updated:   types.NewAbsoluteTxPosition(ctx),
+				Msg:       []byte(`"migrate message 1"`),
+			}, {
+				Operation: types.MigrateContractCodeHistoryType,
+				CodeID:    3,
+				Updated:   types.NewAbsoluteTxPosition(ctx),
+				Msg:       []byte(`"migrate message 2"`),
+			}},
+			expContent: []types.ContractCodeHistoryEntry{{
+				Operation: types.InitContractCodeHistoryType,
+				CodeID:    1,
+				Msg:       []byte(`"init message"`),
+			}, {
+				Operation: types.MigrateContractCodeHistoryType,
+				CodeID:    2,
+				Msg:       []byte(`"migrate message 1"`),
+			}, {
+				Operation: types.MigrateContractCodeHistoryType,
+				CodeID:    3,
+				Msg:       []byte(`"migrate message 2"`),
+			}},
+		},
+		"unknown contract address": {
+			srcQueryAddr: otherAddr,
+			srcHistory: []types.ContractCodeHistoryEntry{{
+				Operation: types.GenesisContractCodeHistoryType,
+				CodeID:    1,
+				Updated:   types.NewAbsoluteTxPosition(ctx),
+				Msg:       []byte(`"init message"`),
+			}},
+			expContent: nil,
+		},
+	}
+	for msg, spec := range specs {
+		t.Run(msg, func(t *testing.T) {
+			_, _, myContractAddr := keyPubAddr()
+			keeper.appendToContractHistory(ctx, myContractAddr, spec.srcHistory...)
+			q := NewQuerier(keeper)
+			queryContractAddr := spec.srcQueryAddr
+			if queryContractAddr == nil {
+				queryContractAddr = myContractAddr
+			}
+
+			// when
+			query := []string{QueryContractHistory, queryContractAddr.String()}
+			data := abci.RequestQuery{}
+			resData, err := q(ctx, query, data)
+
+			// then
+			require.NoError(t, err)
+			if spec.expContent == nil {
+				require.Nil(t, resData)
+				return
+			}
+			var got []types.ContractCodeHistoryEntry
+			err = json.Unmarshal(resData, &got)
+			require.NoError(t, err)
+
+			assert.Equal(t, spec.expContent, got)
+		})
+	}
+}
+*/

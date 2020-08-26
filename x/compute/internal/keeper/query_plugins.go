@@ -2,6 +2,8 @@ package keeper
 
 import (
 	"encoding/json"
+	"strings"
+
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
@@ -11,7 +13,6 @@ import (
 	"github.com/enigmampc/cosmos-sdk/x/mint"
 	"github.com/enigmampc/cosmos-sdk/x/staking"
 	abci "github.com/tendermint/tendermint/abci/types"
-	"strings"
 )
 
 type QueryHandler struct {
@@ -21,18 +22,28 @@ type QueryHandler struct {
 
 var _ wasmTypes.Querier = QueryHandler{}
 
-func (q QueryHandler) Query(request wasmTypes.QueryRequest) ([]byte, error) {
+func (q QueryHandler) Query(request wasmTypes.QueryRequest, gasLimit uint64) ([]byte, error) {
+	// set a limit for a subctx
+	sdkGas := gasLimit / GasMultiplier
+	subctx := q.Ctx.WithGasMeter(sdk.NewGasMeter(sdkGas))
+
+	// make sure we charge the higher level context even on panic
+	defer func() {
+		q.Ctx.GasMeter().ConsumeGas(subctx.GasMeter().GasConsumed(), "contract sub-query")
+	}()
+
+	// do the query
 	if request.Bank != nil {
-		return q.Plugins.Bank(q.Ctx, request.Bank)
+		return q.Plugins.Bank(subctx, request.Bank)
 	}
 	if request.Custom != nil {
-		return q.Plugins.Custom(q.Ctx, request.Custom)
+		return q.Plugins.Custom(subctx, request.Custom)
 	}
 	if request.Staking != nil {
-		return q.Plugins.Staking(q.Ctx, request.Staking)
+		return q.Plugins.Staking(subctx, request.Staking)
 	}
 	if request.Wasm != nil {
-		return q.Plugins.Wasm(q.Ctx, request.Wasm)
+		return q.Plugins.Wasm(subctx, request.Wasm)
 	}
 	if request.Dist != nil {
 		return q.Plugins.Dist(q.Ctx, request.Dist)
@@ -274,7 +285,6 @@ func StakingQuerier(keeper *staking.Keeper) func(ctx sdk.Context, request *wasmT
 			return json.Marshal(res)
 		}
 		if request.UnBondingDelegations != nil {
-
 			bondDenom := keeper.BondDenom(ctx)
 
 			delegator, err := sdk.AccAddressFromBech32(request.UnBondingDelegations.Delegator)
@@ -393,7 +403,7 @@ func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuer
 			// TODO: do we want to change the return value?
 			return json.Marshal(models)
 		}
-		return nil, wasmTypes.UnsupportedRequest{"unknown WasmQuery variant"}
+		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown WasmQuery variant"}
 	}
 }
 

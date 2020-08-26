@@ -1,7 +1,10 @@
-use crate::errors::FfiResult;
 use cosmwasm_std::{Binary, CanonicalAddr, HumanAddr, StdResult, SystemResult};
 #[cfg(feature = "iterator")]
 use cosmwasm_std::{Order, KV};
+
+#[cfg(feature = "iterator")]
+use crate::ffi::FfiError;
+use crate::ffi::FfiResult;
 
 /// Holds all external dependencies of the contract.
 /// Designed to allow easy dependency injection at runtime.
@@ -27,20 +30,22 @@ impl<S: Storage, A: Api, Q: Querier> Extern<S, A, Q> {
 }
 
 #[cfg(feature = "iterator")]
-pub type NextItem = (Option<KV>, u64);
-
-#[cfg(feature = "iterator")]
 pub trait StorageIterator {
-    fn next(&mut self) -> FfiResult<NextItem>;
+    fn next(&mut self) -> FfiResult<Option<KV>>;
 
     /// Collects all elements, ignoring gas costs
-    fn elements(mut self) -> FfiResult<Vec<KV>>
+    fn elements(mut self) -> Result<Vec<KV>, FfiError>
     where
         Self: Sized,
     {
         let mut out: Vec<KV> = Vec::new();
-        while let (Some(kv), _gas_used) = self.next()? {
-            out.push(kv);
+        loop {
+            let (result, _gas_info) = self.next();
+            match result {
+                Ok(Some(kv)) => out.push(kv),
+                Ok(None) => break,
+                Err(err) => return Err(err),
+            }
         }
         Ok(out)
     }
@@ -48,13 +53,13 @@ pub trait StorageIterator {
 
 #[cfg(feature = "iterator")]
 impl<I: StorageIterator + ?Sized> StorageIterator for Box<I> {
-    fn next(&mut self) -> FfiResult<NextItem> {
+    fn next(&mut self) -> FfiResult<Option<KV>> {
         (**self).next()
     }
 }
 
-/// ReadonlyStorage is access to the contracts persistent data store
-pub trait ReadonlyStorage
+/// Access to the VM's backend storage, i.e. the chain
+pub trait Storage
 where
     Self: 'static,
 {
@@ -64,7 +69,7 @@ where
     ///
     /// Note: Support for differentiating between a non-existent key and a key with empty value
     /// is not great yet and might not be possible in all backends. But we're trying to get there.
-    fn get(&self, key: &[u8]) -> FfiResult<(Option<Vec<u8>>, u64)>;
+    fn get(&self, key: &[u8]) -> FfiResult<Option<Vec<u8>>>;
 
     #[cfg(feature = "iterator")]
     /// Allows iteration over a set of key/value pairs, either forwards or backwards.
@@ -77,17 +82,15 @@ where
         start: Option<&[u8]>,
         end: Option<&[u8]>,
         order: Order,
-    ) -> FfiResult<(Box<dyn StorageIterator + 'a>, u64)>;
-}
+    ) -> FfiResult<Box<dyn StorageIterator + 'a>>;
 
-// Storage extends ReadonlyStorage to give mutable access
-pub trait Storage: ReadonlyStorage {
-    fn set(&mut self, key: &[u8], value: &[u8]) -> FfiResult<u64>;
+    fn set(&mut self, key: &[u8], value: &[u8]) -> FfiResult<()>;
+
     /// Removes a database entry at `key`.
     ///
     /// The current interface does not allow to differentiate between a key that existed
     /// before and one that didn't exist. See https://github.com/CosmWasm/cosmwasm/issues/290
-    fn remove(&mut self, key: &[u8]) -> FfiResult<u64>;
+    fn remove(&mut self, key: &[u8]) -> FfiResult<()>;
 }
 
 /// Api are callbacks to system functions defined outside of the wasm modules.
@@ -104,16 +107,19 @@ pub trait Api: Copy + Clone + Send {
     fn human_address(&self, canonical: &CanonicalAddr) -> FfiResult<HumanAddr>;
 }
 
-/// A short-hand alias for the three-level query result
-/// 1. Passing the query message to the backend
-/// 2. Accessing the contract
-/// 3. Executing query in the contract
-pub type QuerierResult = FfiResult<(SystemResult<StdResult<Binary>>, u64)>;
-
 pub trait Querier {
-    /// raw_query is all that must be implemented for the Querier.
+    /// This is all that must be implemented for the Querier.
     /// This allows us to pass through binary queries from one level to another without
     /// knowing the custom format, or we can decode it, with the knowledge of the allowed
     /// types.
-    fn raw_query(&self, bin_request: &[u8]) -> QuerierResult;
+    ///
+    /// The gas limit describes how much VM gas this particular query is allowed
+    /// to comsume when measured separately from the rest of the contract.
+    /// The returned gas info (in FfiResult) can exceed the gas limit in cases
+    /// where the query could not be aborted exactly at the limit.
+    fn query_raw(
+        &self,
+        request: &[u8],
+        gas_limit: u64,
+    ) -> FfiResult<SystemResult<StdResult<Binary>>>;
 }

@@ -98,6 +98,9 @@ build-go:
 test:
 	RUST_BACKTRACE=1 go test -v ./api ./types .
 
+test-safety:
+	GODEBUG=cgocheck=2 go test -race -v -count 1 ./api
+
 # we should build all the docker images locally ONCE and publish them
 docker-image-centos7:
 	docker build . -t cosmwasm/go-ext-builder:$(DOCKER_TAG)-centos7 -f ./Dockerfile.centos7

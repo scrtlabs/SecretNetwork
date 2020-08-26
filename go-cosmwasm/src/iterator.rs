@@ -1,14 +1,16 @@
-use cosmwasm_sgx_vm::{FfiError, FfiResult, NextItem, StorageIterator};
-use std::convert::TryInto;
+use cosmwasm_sgx_vm::{FfiError, FfiResult, GasInfo, StorageIterator};
+use cosmwasm_std::KV;
 
 use crate::error::GoResult;
 use crate::gas_meter::gas_meter_t;
 use crate::memory::Buffer;
 
-// this represents something passed in from the caller side of FFI
+// Iterator maintains integer references to some tables on the Go side
 #[repr(C)]
+#[derive(Default, Copy, Clone)]
 pub struct iterator_t {
-    _private: [u8; 0],
+    pub db_counter: u64,
+    pub iterator_index: u64,
 }
 
 // These functions should return GoResult but because we don't trust them here, we treat the return value as i32
@@ -17,36 +19,47 @@ pub struct iterator_t {
 #[derive(Default)]
 pub struct Iterator_vtable {
     pub next_db: Option<
-        extern "C" fn(*mut iterator_t, *mut gas_meter_t, *mut u64, *mut Buffer, *mut Buffer) -> i32,
+        extern "C" fn(
+            iterator_t,
+            *mut gas_meter_t,
+            *mut u64,
+            *mut Buffer,
+            *mut Buffer,
+            *mut Buffer,
+        ) -> i32,
     >,
 }
 
 #[repr(C)]
 pub struct GoIter {
     pub gas_meter: *mut gas_meter_t,
-    pub state: *mut iterator_t,
+    pub state: iterator_t,
     pub vtable: Iterator_vtable,
 }
 
-impl Default for GoIter {
-    fn default() -> Self {
+impl GoIter {
+    pub fn new(gas_meter: *mut gas_meter_t) -> Self {
         GoIter {
-            gas_meter: std::ptr::null_mut(),
-            state: std::ptr::null_mut(),
+            gas_meter,
+            state: iterator_t::default(),
             vtable: Iterator_vtable::default(),
         }
     }
 }
 
 impl StorageIterator for GoIter {
-    fn next(&mut self) -> FfiResult<NextItem> {
+    fn next(&mut self) -> FfiResult<Option<KV>> {
         let next_db = match self.vtable.next_db {
             Some(f) => f,
-            None => return Err(FfiError::other("iterator vtable not set")),
+            None => {
+                let result = Err(FfiError::unknown("iterator vtable not set"));
+                return (result, GasInfo::free());
+            }
         };
 
         let mut key_buf = Buffer::default();
         let mut value_buf = Buffer::default();
+        let mut err = Buffer::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (next_db)(
             self.state,
@@ -54,27 +67,33 @@ impl StorageIterator for GoIter {
             &mut used_gas as *mut u64,
             &mut key_buf as *mut Buffer,
             &mut value_buf as *mut Buffer,
+            &mut err as *mut Buffer,
         )
         .into();
-        let go_result: FfiResult<()> = go_result
-            .try_into()
-            .unwrap_or_else(|_| Err(FfiError::other("Failed to fetch next item from iterator")));
-        go_result?;
+        let gas_info = GasInfo::with_externally_used(used_gas);
+
+        // return complete error message (reading from buffer for GoResult::Other)
+        let default = || "Failed to fetch next item from iterator".to_string();
+        unsafe {
+            if let Err(err) = go_result.into_ffi_result(err, default) {
+                return (Err(err), gas_info);
+            }
+        }
 
         let okey = unsafe { key_buf.read() };
-        match okey {
+        let result = match okey {
             Some(key) => {
                 let value = unsafe { value_buf.read() };
                 if let Some(value) = value {
-                    let kv = (key.to_vec(), value.to_vec());
-                    Ok((Some(kv), used_gas))
+                    Ok(Some((key.into(), value.into())))
                 } else {
-                    Err(FfiError::other(
+                    Err(FfiError::unknown(
                         "Failed to read value while reading the next key in the db",
                     ))
                 }
             }
-            None => Ok((None, used_gas)),
-        }
+            None => Ok(None),
+        };
+        (result, gas_info)
     }
 }

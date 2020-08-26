@@ -14,18 +14,18 @@ type QueryResponse struct {
 //-------- Querier -----------
 
 type Querier interface {
-	Query(request QueryRequest) ([]byte, error)
+	Query(request QueryRequest, gasLimit uint64) ([]byte, error)
 	GasConsumed() uint64
 }
 
 // this is a thin wrapper around the desired Go API to give us types closer to Rust FFI
-func RustQuery(querier Querier, binRequest []byte) QuerierResult {
+func RustQuery(querier Querier, binRequest []byte, gasLimit uint64) QuerierResult {
 	var request QueryRequest
 	err := json.Unmarshal(binRequest, &request)
 	if err != nil {
 		return ToQuerierResult(nil, UnsupportedRequest{err.Error()})
 	}
-	bz, err := querier.Query(request)
+	bz, err := querier.Query(request, gasLimit)
 	return ToQuerierResult(bz, err)
 }
 

@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    generic_err, log, Api, BankMsg, Binary, Env, Extern, HandleResponse, InitResponse,
-    MigrateResponse, Order, Querier, StdResult, Storage,
+    log, Api, BankMsg, Binary, Env, Extern, HandleResponse, InitResponse, MigrateResponse, Order,
+    Querier, StdError, StdResult, Storage,
 };
 
 use crate::msg::{HandleMsg, InitMsg, MigrateMsg, QueryMsg};
@@ -10,7 +10,9 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     _env: Env,
     _msg: InitMsg,
 ) -> StdResult<InitResponse> {
-    Err(generic_err("You can only use this contract for migrations"))
+    Err(StdError::generic_err(
+        "You can only use this contract for migrations",
+    ))
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
@@ -18,7 +20,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     _env: Env,
     _msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
-    Err(generic_err("You can only use this contract for migrations"))
+    Err(StdError::generic_err(
+        "You can only use this contract for migrations",
+    ))
 }
 
 pub fn migrate<S: Storage, A: Api, Q: Querier>(
@@ -38,10 +42,9 @@ pub fn migrate<S: Storage, A: Api, Q: Querier>(
     }
 
     // get balance and send all to recipient
-    let from_addr = deps.api.human_address(&env.contract.address)?;
-    let balance = deps.querier.query_all_balances(&from_addr)?;
+    let balance = deps.querier.query_all_balances(&env.contract.address)?;
     let send = BankMsg::Send {
-        from_address: from_addr,
+        from_address: env.contract.address,
         to_address: msg.payout.clone(),
         amount: balance,
     };
@@ -59,7 +62,9 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     _deps: &Extern<S, A, Q>,
     _msg: QueryMsg,
 ) -> StdResult<Binary> {
-    Err(generic_err("You can only use this contract for migrations"))
+    Err(StdError::generic_err(
+        "You can only use this contract for migrations",
+    ))
 }
 
 #[cfg(test)]
@@ -73,7 +78,7 @@ mod tests {
         let mut deps = mock_dependencies(20, &[]);
 
         let msg = InitMsg {};
-        let env = mock_env(&deps.api, "creator", &coins(1000, "earth"));
+        let env = mock_env("creator", &coins(1000, "earth"));
         // we can just call .unwrap() to assert this was a success
         let res = init(&mut deps, env, msg);
         match res.unwrap_err() {
@@ -100,7 +105,7 @@ mod tests {
         let msg = MigrateMsg {
             payout: payout.clone(),
         };
-        let env = mock_env(&deps.api, "creator", &[]);
+        let env = mock_env("creator", &[]);
         let res = migrate(&mut deps, env, msg).unwrap();
         // check payout
         assert_eq!(1, res.messages.len());
