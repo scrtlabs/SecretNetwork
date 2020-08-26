@@ -36,7 +36,7 @@ impl HumanAddr {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
-    pub fn from_canonical(canonical_addr: CanonicalAddr) -> Result<Self, bech32::Error> {
+    pub fn from_canonical(canonical_addr: &CanonicalAddr) -> Result<Self, bech32::Error> {
         let human_addr_str = bech32::encode(
             BECH32_PREFIX_ACC_ADDR,
             canonical_addr.as_slice().to_base32(),
@@ -74,7 +74,7 @@ impl CanonicalAddr {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
-    pub fn from_human(human_addr: HumanAddr) -> Result<Self, bech32::Error> {
+    pub fn from_human(human_addr: &HumanAddr) -> Result<Self, bech32::Error> {
         let (decoded_prefix, data) = bech32::decode(human_addr.as_str())?;
         let canonical = Vec::<u8>::from_base32(&data)?;
 
@@ -100,24 +100,31 @@ pub struct Env {
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct BlockInfo {
-    pub height: i64,
+    pub height: u64,
     // time is seconds since epoch begin (Jan. 1, 1970)
-    pub time: i64,
+    pub time: u64,
     pub chain_id: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct MessageInfo {
-    pub sender: CanonicalAddr,
-    // go likes to return null for empty array, make sure we can parse it (use option)
-    pub sent_funds: Option<Vec<Coin>>,
+    /// The `sender` field from the wasm/MsgStoreCode, wasm/MsgInstantiateContract or wasm/MsgExecuteContract message.
+    /// You can think of this as the address that initiated the action (i.e. the message). What that
+    /// means exactly heavily depends on the application.
+    ///
+    /// The x/wasm module ensures that the sender address signed the transaction.
+    /// Additional signers of the transaction that are either needed for other messages or contain unnecessary
+    /// signatures are not propagated into the contract.
+    ///
+    /// There is a discussion to open up this field to multiple initiators, which you're welcome to join
+    /// if you have a specific need for that feature: https://github.com/CosmWasm/cosmwasm/issues/293
+    pub sender: HumanAddr,
+    pub sent_funds: Vec<Coin>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct ContractInfo {
-    pub address: CanonicalAddr,
-    // go likes to return null for empty array, make sure we can parse it (use option)
-    pub balance: Option<Vec<Coin>>,
+    pub address: HumanAddr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
@@ -411,7 +418,7 @@ pub struct SigInfo {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case", tag = "type", content = "value")]
 pub enum SignDocWasmMsg {
-    #[serde(alias = "wasm/execute")]
+    #[serde(alias = "wasm/MsgExecuteContract")]
     Execute {
         contract: HumanAddr,
         /// msg is the json-encoded HandleMsg struct (as raw Binary)
@@ -419,7 +426,7 @@ pub enum SignDocWasmMsg {
         sent_funds: Vec<Coin>,
         callback_sig: Option<Vec<u8>>,
     },
-    #[serde(alias = "wasm/instantiate")]
+    #[serde(alias = "wasm/MsgInstantiateContract")]
     Instantiate {
         code_id: String,
         init_msg: String,

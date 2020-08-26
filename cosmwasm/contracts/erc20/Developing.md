@@ -3,12 +3,12 @@
 If you have recently created a contract with this template, you probably could use some
 help on how to build and test the contract, as well as prepare it for production. This
 file attempts to provide a brief overview, assuming you have installed a recent
-version of Rust already (eg. 1.40+).
+version of Rust already (eg. 1.44.1+).
 
 ## Prerequisites
 
 Before starting, make sure you have [rustup](https://rustup.rs/) along with a
-recent `rustc` and `cargo` version installed. Currently, we are testing on 1.40+.
+recent `rustc` and `cargo` version installed. Currently, we are testing on 1.44.1+.
 
 And you need to have the `wasm32-unknown-unknown` target installed as well.
 
@@ -106,7 +106,7 @@ to run it is this:
 docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  cosmwasm/rust-optimizer:0.8.0
+  cosmwasm/rust-optimizer:0.9.0
 ```
 
 We must mount the contract code to `/code`. You can use a absolute path instead

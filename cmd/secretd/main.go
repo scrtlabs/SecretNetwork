@@ -20,6 +20,8 @@ import (
 	"github.com/enigmampc/cosmos-sdk/baseapp"
 	"github.com/enigmampc/cosmos-sdk/client/flags"
 
+	//"github.com/CosmWasm/wasmd/app"
+
 	app "github.com/enigmampc/SecretNetwork"
 	scrt "github.com/enigmampc/SecretNetwork/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
@@ -147,8 +149,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer) abci.Application
 		baseapp.SetMinGasPrices(viper.GetString(server.FlagMinGasPrices)),
 		baseapp.SetHaltHeight(viper.GetUint64(server.FlagHaltHeight)),
 		baseapp.SetHaltTime(viper.GetUint64(server.FlagHaltTime)),
-		baseapp.SetInterBlockCache(cache),
-	)
+		baseapp.SetInterBlockCache(cache))
 }
 
 func exportAppStateAndTMValidators(

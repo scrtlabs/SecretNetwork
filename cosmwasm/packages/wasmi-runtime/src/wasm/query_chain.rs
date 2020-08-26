@@ -20,6 +20,7 @@ pub fn encrypt_and_query_chain(
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
     gas_used: &mut u64,
+    gas_limit: u64,
 ) -> Result<Vec<u8>, WasmEngineError> {
     let mut query_struct: QueryRequest = match serde_json::from_slice(query) {
         Ok(query_struct) => query_struct,
@@ -43,7 +44,7 @@ pub fn encrypt_and_query_chain(
 
     // Call query_chain (this bubbles up to x/compute via ocalls and FFI to Go code)
     // This returns the answer from x/compute
-    let (result, query_used_gas) = query_chain(context, &encrypted_query);
+    let (result, query_used_gas) = query_chain(context, &encrypted_query, gas_limit);
     *gas_used = query_used_gas;
     let encrypted_answer_as_vec = result?;
 
@@ -132,7 +133,11 @@ pub fn encrypt_and_query_chain(
 }
 
 /// Safe wrapper around quering other contracts and modules
-fn query_chain(context: &Ctx, query: &[u8]) -> (Result<Vec<u8>, WasmEngineError>, u64) {
+fn query_chain(
+    context: &Ctx,
+    query: &[u8],
+    gas_limit: u64,
+) -> (Result<Vec<u8>, WasmEngineError>, u64) {
     let mut ocall_return = OcallReturn::Success;
     let mut enclave_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
     let mut vm_err = UntrustedVmError::default();
@@ -143,6 +148,7 @@ fn query_chain(context: &Ctx, query: &[u8]) -> (Result<Vec<u8>, WasmEngineError>
             context.unsafe_clone(),
             &mut vm_err,
             &mut gas_used,
+            gas_limit,
             enclave_buffer.as_mut_ptr(),
             query.as_ptr(),
             query.len(),
