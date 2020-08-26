@@ -594,9 +594,9 @@ export class RestClient {
       const msg: Msg = txsResponse.tx.value.msg[0];
 
       let inputMsgEncrypted: Uint8Array;
-      if (msg.type === "wasm/execute") {
+      if (msg.type === "wasm/MsgExecuteContract") {
         inputMsgEncrypted = Encoding.fromBase64((msg as MsgExecuteContract).value.msg);
-      } else if (msg.type === "wasm/instantiate") {
+      } else if (msg.type === "wasm/MsgInstantiateContract") {
         inputMsgEncrypted = Encoding.fromBase64((msg as MsgInstantiateContract).value.init_msg);
       } else {
         return txsResponse;
@@ -612,9 +612,9 @@ export class RestClient {
           await this.enigmautils.decrypt(inputMsgEncrypted.slice(64), nonce),
         );
 
-        if (msg.type === "wasm/execute") {
+        if (msg.type === "wasm/MsgExecuteContract") {
           (txsResponse.tx.value.msg[0] as MsgExecuteContract).value.msg = inputMsg;
-        } else if (msg.type === "wasm/instantiate") {
+        } else if (msg.type === "wasm/MsgInstantiateContract") {
           (txsResponse.tx.value.msg[0] as MsgInstantiateContract).value.init_msg = inputMsg;
         }
 
