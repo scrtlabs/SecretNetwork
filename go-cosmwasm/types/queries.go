@@ -324,7 +324,7 @@ func (d ProposalsResponse) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON ensures that we get [] for empty arrays
 func (d *ProposalsResponse) UnmarshalJSON(data []byte) error {
 	// make sure we deserialize [] back to null
-	if string(data) == "{\"proposals\": []}" || string(data) == "null" {
+	if string(data) == "{\"proposals\": []}" || string(data) == "null" || string(data) == "{\"proposals\":[]}" {
 		return nil
 	}
 	var raw []Proposal
