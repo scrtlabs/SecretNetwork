@@ -3,7 +3,6 @@ use enclave_ffi_types::EnclaveError;
 use lazy_static::lazy_static;
 use std::backtrace::{self, PrintFormat};
 use std::sync::SgxMutex;
-
 /// SafetyBuffer is meant to occupy space on the heap, so when a memory
 /// allocation fails we will free this buffer to allow safe panic unwinding
 /// This is needed because while unwinding from panic some destructors try
@@ -27,7 +26,9 @@ impl SafetyBuffer {
 
     /// Free the buffer to allow panic to safely unwind
     pub fn clear(&mut self) {
-        self.buffer = Vec::new();
+        let mut temp = Vec::new();
+        std::mem::swap(&mut self.buffer, &mut temp);
+        drop(temp)
     }
 
     fn build_buffer(chunks: usize, min_chunks: usize) -> Result<Vec<Vec<u8>>, EnclaveError> {
@@ -73,10 +74,10 @@ lazy_static! {
     /// 2 MiB is the minimum allowed buffer. If we don't succeed to allocate 2 MiB, we throw a panic,
     /// if we do succeed to allocate 2 MiB but less than 32 MiB than we move on and will try to allocate
     /// the rest on the next entry to the enclave.
-    static ref SAFETY_BUFFER: SgxMutex<SafetyBuffer> = SgxMutex::new(SafetyBuffer::new(32 * 1024, 2 * 1024));
+    static ref SAFETY_BUFFER: SgxMutex<SafetyBuffer> = SgxMutex::new(SafetyBuffer::new(16 * 1024, 2 * 1024));
 }
 
-static OOM_HAPPANED: AtomicBool = AtomicBool::new(false);
+static OOM_HAPPENED: AtomicBool = AtomicBool::new(false);
 
 pub fn register_oom_handler() -> Result<(), EnclaveError> {
     let _ = backtrace::enable_backtrace("librust_cosmwasm_enclave.signed.so", PrintFormat::Full);
@@ -88,7 +89,7 @@ pub fn register_oom_handler() -> Result<(), EnclaveError> {
     get_then_clear_oom_happened();
 
     std::alloc::set_alloc_error_hook(|layout| {
-        OOM_HAPPANED.store(true, Ordering::SeqCst);
+        OOM_HAPPENED.store(true, Ordering::SeqCst);
 
         {
             SAFETY_BUFFER.lock().unwrap().clear();
@@ -104,7 +105,7 @@ pub fn register_oom_handler() -> Result<(), EnclaveError> {
 }
 
 pub fn get_then_clear_oom_happened() -> bool {
-    OOM_HAPPANED.swap(false, Ordering::SeqCst)
+    OOM_HAPPENED.swap(false, Ordering::SeqCst)
 }
 
 pub fn restore_safety_buffer() -> Result<(), EnclaveError> {

@@ -24,6 +24,26 @@ where
     Custom(T),
     Staking(StakingMsg),
     Wasm(WasmMsg),
+    Gov(GovMsg),
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum GovMsg {
+    // Let contract vote on a governance proposal
+    Vote {
+        proposal: u64,
+        vote_option: VoteOption,
+    },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+// don't use rename_all here or you will break this
+pub enum VoteOption {
+    Yes,
+    No,
+    Abstain,
+    NoWithVeto,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -90,6 +110,12 @@ pub enum WasmMsg {
         /// mandatory human-readbale label for the contract
         label: String,
     },
+}
+
+impl<T: Clone + fmt::Debug + PartialEq + JsonSchema> From<GovMsg> for CosmosMsg<T> {
+    fn from(msg: GovMsg) -> Self {
+        CosmosMsg::Gov(msg)
+    }
 }
 
 impl<T: Clone + fmt::Debug + PartialEq + JsonSchema> From<BankMsg> for CosmosMsg<T> {
