@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
@@ -219,12 +220,35 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) (authtypes
 	return signerSig, signBytes, nil
 }
 
-// Instantiate creates an instance of a WASM contract
-func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin */ sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) {
-	return k.instantiate(ctx, codeID, creator /* admin, */, initMsg, label, deposit, callbackSig)
+func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeInfo, wasmCode []byte) error {
+	wasmCode, err := uncompress(wasmCode)
+	if err != nil {
+		return sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
+	}
+	newCodeHash, err := k.wasmer.Create(wasmCode)
+	if err != nil {
+		return sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
+	}
+	if !bytes.Equal(codeInfo.CodeHash, newCodeHash) {
+		return sdkerrors.Wrap(types.ErrInvalid, "code hashes not same")
+	}
+
+	store := ctx.KVStore(k.storeKey)
+	key := types.GetCodeKey(codeID)
+	if store.Has(key) {
+		return sdkerrors.Wrapf(types.ErrDuplicate, "duplicate code: %d", codeID)
+	}
+	// 0x01 | codeID (uint64) -> ContractInfo
+	store.Set(key, k.cdc.MustMarshalBinaryBare(codeInfo))
+	return nil
 }
 
-func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator /* , admin */ sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) {
+// Instantiate creates an instance of a WASM contract
+func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin */ sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) {
+	/* 	return k.instantiate(ctx, codeID, creator admin,, initMsg, label, deposit, callbackSig)
+	}
+
+	func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator , admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) { */
 	ctx.GasMeter().ConsumeGas(InstanceCost, "Loading CosmWasm module: init")
 
 	signerSig := authtypes.StdSignature{
