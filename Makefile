@@ -180,17 +180,17 @@ clean:
 	-rm -rf /tmp/SecretNetwork
 	-rm -f ./secretcli*
 	-rm -f ./secretd*
-	-rm -f ./librust_cosmwasm_enclave.signed.so
-	-rm -f ./x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so
-	-rm -f ./go-cosmwasm/api/libgo_cosmwasm.so
+	-find -name librust_cosmwasm_enclave.signed.so -delete
+	-find -name libgo_cosmwasm.so -delete
+	-find -name '*.so' -delete
+	-find -name 'target' -type d -exec rm -rf \;
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*
 	-rm -rf ./third_party/vendor/
 	-rm -rf ./.sgx_secrets/*
 	-rm -rf ./x/compute/internal/keeper/.sgx_secrets/*
-	-rm -rf ./x/compute/internal/keeper/*.der
 	-rm -rf ./*.der
-	-rm -rf ./x/compute/internal/keeper/*.so
+	-rm -rf ./x/compute/internal/keeper/*.der
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
 
