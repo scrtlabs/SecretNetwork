@@ -167,15 +167,18 @@ fn query_chain(
             }
         }
 
-        match ocall_return {
+        let value = match ocall_return {
             OcallReturn::Success => {
                 let enclave_buffer = enclave_buffer.assume_init();
-                // TODO add validation of this pointer before returning its contents.
-                exports::recover_buffer(enclave_buffer).unwrap_or_else(Vec::new)
+                match exports::recover_buffer(enclave_buffer) {
+                    Ok(buff) => buff.unwrap_or_default(),
+                    Err(err) => return (Err(err.into()), gas_used),
+                }
             }
             OcallReturn::Failure => return (Err(WasmEngineError::FailedOcall(vm_err)), gas_used),
             OcallReturn::Panic => return (Err(WasmEngineError::Panic), gas_used),
-        }
+        };
+        value
     };
 
     (Ok(value), gas_used)

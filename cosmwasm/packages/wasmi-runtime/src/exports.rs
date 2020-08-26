@@ -70,12 +70,14 @@ pub unsafe extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> Enc
     })
 }
 
+pub struct BufferRecoveryError;
+
 /// Take a pointer as returned by `ecall_allocate` and recover the Vec<u8> inside of it.
 /// # Safety
 ///  This is a text
-pub unsafe fn recover_buffer(ptr: EnclaveBuffer) -> Option<Vec<u8>> {
+pub unsafe fn recover_buffer(ptr: EnclaveBuffer) -> Result<Option<Vec<u8>>, BufferRecoveryError> {
     if ptr.ptr.is_null() {
-        return None;
+        return Ok(None);
     }
 
     let mut alloc_stack = ECALL_ALLOCATE_STACK.lock().unwrap();
@@ -91,10 +93,10 @@ pub unsafe fn recover_buffer(ptr: EnclaveBuffer) -> Option<Vec<u8>> {
         let index = alloc_stack.len() - index_from_the_end - 1;
         alloc_stack.swap_remove(index);
     } else {
-        return None;
+        return Err(BufferRecoveryError);
     }
     let boxed_vector = Box::from_raw(ptr.ptr as *mut Vec<u8>);
-    Some(*boxed_vector)
+    Ok(Some(*boxed_vector))
 }
 
 /// # Safety
