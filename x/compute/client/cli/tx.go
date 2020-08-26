@@ -26,17 +26,17 @@ import (
 )
 
 const (
-	flagAmount  = "amount"
-	flagSource  = "source"
-	flagBuilder = "builder"
-	flagLabel   = "label"
-	// flagAdmin                  = "admin"
+	flagAmount                 = "amount"
+	flagSource                 = "source"
+	flagBuilder                = "builder"
+	flagLabel                  = "label"
 	flagRunAs                  = "run-as"
 	flagInstantiateByEverybody = "instantiate-everybody"
 	flagInstantiateByAddress   = "instantiate-only-address"
 	flagProposalType           = "type"
 	flagIoMasterKey            = "enclave-key"
 	flagCodeHash               = "code-hash"
+	// flagAdmin                  = "admin"
 )
 
 // GetTxCmd returns the transaction commands for this module

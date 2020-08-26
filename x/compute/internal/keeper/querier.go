@@ -19,10 +19,10 @@ const (
 	QueryGetContractState   = "query"
 	QueryGetCode            = "code"
 	QueryListCode           = "list-code"
+	QueryContractAddress    = "label"
+	QueryContractKey        = "contract-key"
+	QueryContractHash       = "contract-hash"
 	// QueryContractHistory    = "contract-history"
-	QueryContractAddress = "label"
-	QueryContractKey     = "contract-key"
-	QueryContractHash    = "contract-hash"
 )
 
 const QueryMethodContractStateSmart = "smart"

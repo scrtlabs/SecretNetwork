@@ -38,9 +38,9 @@ const (
 
 var (
 	// functions aliases
-	RegisterCodec   = types.RegisterCodec
-	ValidateGenesis = types.ValidateGenesis
 	// ConvertToProposals        = types.ConvertToProposals
+	RegisterCodec             = types.RegisterCodec
+	ValidateGenesis           = types.ValidateGenesis
 	GetCodeKey                = types.GetCodeKey
 	GetContractAddressKey     = types.GetContractAddressKey
 	GetContractStorePrefixKey = types.GetContractStorePrefixKey
@@ -98,15 +98,12 @@ var (
 
 type (
 	// ProposalType            = types.ProposalType
-	GenesisState           = types.GenesisState
-	Code                   = types.Code
-	Contract               = types.Contract
-	MsgStoreCode           = types.MsgStoreCode
-	MsgInstantiateContract = types.MsgInstantiateContract
-	MsgExecuteContract     = types.MsgExecuteContract
-	// MsgMigrateContract      = types.MsgMigrateContract
-	// MsgUpdateAdmin          = types.MsgUpdateAdmin
-	// MsgClearAdmin           = types.MsgClearAdmin
+	GenesisState            = types.GenesisState
+	Code                    = types.Code
+	Contract                = types.Contract
+	MsgStoreCode            = types.MsgStoreCode
+	MsgInstantiateContract  = types.MsgInstantiateContract
+	MsgExecuteContract      = types.MsgExecuteContract
 	Model                   = types.Model
 	CodeInfo                = types.CodeInfo
 	ContractInfo            = types.ContractInfo
@@ -125,4 +122,7 @@ type (
 	QueryHandler            = keeper.QueryHandler
 	CustomQuerier           = keeper.CustomQuerier
 	QueryPlugins            = keeper.QueryPlugins
+	// MsgMigrateContract      = types.MsgMigrateContract
+	// MsgUpdateAdmin          = types.MsgUpdateAdmin
+	// MsgClearAdmin           = types.MsgClearAdmin
 )
