@@ -23,6 +23,9 @@ impl EnclaveBuffer {
     }
 }
 
+/// This is safe because `Vec<u8>`s are `Send`
+unsafe impl Send for EnclaveBuffer {}
+
 impl Default for EnclaveBuffer {
     fn default() -> Self {
         Self {

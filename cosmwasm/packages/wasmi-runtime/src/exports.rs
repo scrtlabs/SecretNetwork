@@ -1,3 +1,4 @@
+use lazy_static::lazy_static;
 use log::*;
 use std::ffi::c_void;
 
@@ -5,6 +6,7 @@ use enclave_ffi_types::{
     Ctx, EnclaveBuffer, EnclaveError, HandleResult, HealthCheckResult, InitResult, QueryResult,
 };
 use std::panic;
+use std::sync::SgxMutex;
 
 use crate::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
@@ -15,7 +17,16 @@ use crate::{
     utils::{validate_const_ptr, validate_mut_ptr},
 };
 
-// todo: add description
+lazy_static! {
+    static ref ECALL_ALLOCATE_STACK: SgxMutex<Vec<EnclaveBuffer>> = SgxMutex::new(Vec::new());
+}
+
+/// Allocate a buffer in the enclave and return a pointer to it. This is useful for ocalls that
+/// want to return a response of unknown length to the enclave. Instead of pre-allocating it on the
+/// ecall side, the ocall can call this ecall and return the EnclaveBuffer to the ecall that called
+/// it.
+///
+/// host -> ecall_x -> ocall_x -> ecall_allocate
 /// # Safety
 /// Always use protection
 #[no_mangle]
@@ -35,9 +46,14 @@ pub unsafe extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> Enc
         let vector_copy = slice.to_vec();
         let boxed_vector = Box::new(vector_copy);
         let heap_pointer = Box::into_raw(boxed_vector);
-        EnclaveBuffer {
+        let enclave_buffer = EnclaveBuffer {
             ptr: heap_pointer as *mut c_void,
-        }
+        };
+        ECALL_ALLOCATE_STACK
+            .lock()
+            .unwrap()
+            .push(enclave_buffer.unsafe_clone());
+        enclave_buffer
     });
 
     if let Err(_err) = oom_handler::restore_safety_buffer() {
@@ -59,6 +75,22 @@ pub unsafe extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> Enc
 ///  This is a text
 pub unsafe fn recover_buffer(ptr: EnclaveBuffer) -> Option<Vec<u8>> {
     if ptr.ptr.is_null() {
+        return None;
+    }
+
+    let mut alloc_stack = ECALL_ALLOCATE_STACK.lock().unwrap();
+
+    // search the stack from the end for this pointer
+    let maybe_index = alloc_stack
+        .iter()
+        .rev()
+        .position(|buffer| buffer.ptr as usize == ptr.ptr as usize);
+    if let Some(index_from_the_end) = maybe_index {
+        // This index is probably at the end of the stack, but we give it a little more flexibility
+        // in case access patterns change in the future
+        let index = alloc_stack.len() - index_from_the_end - 1;
+        alloc_stack.swap_remove(index);
+    } else {
         return None;
     }
     let boxed_vector = Box::from_raw(ptr.ptr as *mut Vec<u8>);
