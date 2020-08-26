@@ -203,7 +203,7 @@ func TestInstantiateContractValidation(t *testing.T) {
 			},
 			valid: false,
 		},
-		"non json init msg": {
+		/* "non json init msg": {
 			msg: MsgInstantiateContract{
 				Sender:  goodAddress,
 				CodeID:  1,
@@ -219,7 +219,7 @@ func TestInstantiateContractValidation(t *testing.T) {
 				Label:  "foo",
 			},
 			valid: false,
-		},
+		}, */
 	}
 
 	for name, tc := range cases {
@@ -313,7 +313,7 @@ func TestExecuteContractValidation(t *testing.T) {
 			},
 			valid: false,
 		},
-		"non json msg": {
+		/* 	"non json msg": {
 			msg: MsgExecuteContract{
 				Sender:   goodAddress,
 				Contract: goodAddress,
@@ -327,7 +327,7 @@ func TestExecuteContractValidation(t *testing.T) {
 				Contract: goodAddress,
 			},
 			valid: false,
-		},
+		}, */
 	}
 
 	for name, tc := range cases {
