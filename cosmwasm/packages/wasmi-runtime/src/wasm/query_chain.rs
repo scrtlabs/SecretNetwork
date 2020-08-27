@@ -167,7 +167,7 @@ fn query_chain(
             }
         }
 
-        let value = match ocall_return {
+        match ocall_return {
             OcallReturn::Success => {
                 let enclave_buffer = enclave_buffer.assume_init();
                 match exports::recover_buffer(enclave_buffer) {
@@ -177,8 +177,7 @@ fn query_chain(
             }
             OcallReturn::Failure => return (Err(WasmEngineError::FailedOcall(vm_err)), gas_used),
             OcallReturn::Panic => return (Err(WasmEngineError::Panic), gas_used),
-        };
-        value
+        }
     };
 
     (Ok(value), gas_used)
