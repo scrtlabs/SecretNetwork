@@ -16,6 +16,7 @@ pub enum QueryRequest {
     Wasm(WasmQuery),
     Dist(DistQuery),
     Mint(MintQuery),
+    Gov(GovQuery),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -38,6 +39,32 @@ pub enum BankQuery {
     /// Note that this may be much more expensive than Balance and should be avoided if possible.
     /// Return value is AllBalanceResponse.
     AllBalances { address: HumanAddr },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum GovQuery {
+    /// Returns all the currently active proposals. Might be useful to filter out invalid votes, and trigger
+    /// in-contract voting periods
+    Proposals {},
+}
+
+/// ProposalsResponse is data format returned from GovQuery::Proposals query
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub struct ProposalsResponse {
+    pub proposals: Vec<Proposal>,
+}
+
+/// ProposalsResponse is data format returned from GovQuery::Proposals query
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub struct Proposal {
+    pub id: u64,
+    /// Time of the block where MinDeposit was reached. -1 if MinDeposit is not reached
+    pub voting_start_time: u64,
+    /// Time that the VotingPeriod for this proposal will end and votes will be tallied
+    pub voting_end_time: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -70,6 +97,12 @@ pub enum WasmQuery {
         /// Key is the raw key used in the contracts Storage
         key: Binary,
     },
+}
+
+impl From<GovQuery> for QueryRequest {
+    fn from(msg: GovQuery) -> Self {
+        QueryRequest::Gov(msg)
+    }
 }
 
 impl From<MintQuery> for QueryRequest {
