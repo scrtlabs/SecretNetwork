@@ -484,7 +484,7 @@ func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhite
 	for _, addr := range jailWhiteList {
 		_, err := sdk.ValAddressFromBech32(addr)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 		whiteListMap[addr] = true
 	}
@@ -498,7 +498,7 @@ func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhite
 	app.stakingKeeper.IterateValidators(ctx, func(_ int64, val staking.ValidatorI) (stop bool) {
 		_, err := app.distrKeeper.WithdrawValidatorCommission(ctx, val.GetOperator())
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 		return false
 	})
@@ -508,7 +508,7 @@ func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhite
 	for _, delegation := range dels {
 		_, err := app.distrKeeper.WithdrawDelegationRewards(ctx, delegation.DelegatorAddress, delegation.ValidatorAddress)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 	}
 
