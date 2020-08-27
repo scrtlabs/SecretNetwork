@@ -1,12 +1,11 @@
 [package]
 name = "hackatom"
-version = "0.9.0-alpha1"
+version = "0.10.0"
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2018"
 publish = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -32,6 +31,7 @@ singlepass = ["cosmwasm-vm/default-singlepass"]
 cosmwasm-std = { path = "../../packages/std" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+sha2 = "0.9.1"
 
 [dev-dependencies]
 cosmwasm-schema = { path = "../../packages/schema" }

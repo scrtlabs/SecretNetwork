@@ -31,24 +31,29 @@ const (
 	QueryListCode            = keeper.QueryListCode
 	QueryContractKey         = keeper.QueryContractKey
 	QueryContractAddress     = keeper.QueryContractAddress
+	QueryMethodContractStateSmart = keeper.QueryMethodContractStateSmart
+	/* QueryMethodContractStateAll   = keeper.QueryMethodContractStateAll
+	QueryMethodContractStateRaw   = keeper.QueryMethodContractStateRaw */
 )
 
 var (
 	// functions aliases
+	// ConvertToProposals        = types.ConvertToProposals
 	RegisterCodec             = types.RegisterCodec
 	ValidateGenesis           = types.ValidateGenesis
 	GetCodeKey                = types.GetCodeKey
 	GetContractAddressKey     = types.GetContractAddressKey
 	GetContractStorePrefixKey = types.GetContractStorePrefixKey
 	NewCodeInfo               = types.NewCodeInfo
-	NewCreatedAt              = types.NewCreatedAt
+	NewAbsoluteTxPosition     = types.NewAbsoluteTxPosition
 	NewContractInfo           = types.NewContractInfo
 	NewEnv                    = types.NewEnv
 	NewWasmCoins              = types.NewWasmCoins
-	CosmosResult              = types.CosmosResult
+	ParseEvents               = types.ParseEvents
 	DefaultWasmConfig         = types.DefaultWasmConfig
 	IsEncryptedError          = types.IsEncryptedErrorCode
 	ErrContainsQueryError     = types.ErrContainsQueryError
+	DefaultParams             = types.DefaultParams
 	InitGenesis               = keeper.InitGenesis
 	ExportGenesis             = keeper.ExportGenesis
 	NewMessageHandler         = keeper.NewMessageHandler
@@ -87,17 +92,18 @@ var (
 	CodeKeyPrefix        = types.CodeKeyPrefix
 	ContractKeyPrefix    = types.ContractKeyPrefix
 	ContractStorePrefix  = types.ContractStorePrefix
+	// EnableAllProposals   = types.EnableAllProposals
+	// DisableAllProposals  = types.DisableAllProposals
 )
 
 type (
+	// ProposalType            = types.ProposalType
 	GenesisState            = types.GenesisState
 	Code                    = types.Code
 	Contract                = types.Contract
 	MsgStoreCode            = types.MsgStoreCode
 	MsgInstantiateContract  = types.MsgInstantiateContract
 	MsgExecuteContract      = types.MsgExecuteContract
-	MsgMigrateContract      = types.MsgMigrateContract
-	MsgUpdateAdministrator  = types.MsgUpdateAdministrator
 	Model                   = types.Model
 	CodeInfo                = types.CodeInfo
 	ContractInfo            = types.ContractInfo
@@ -108,6 +114,7 @@ type (
 	CustomEncoder           = keeper.CustomEncoder
 	StakingEncoder          = keeper.StakingEncoder
 	WasmEncoder             = keeper.WasmEncoder
+	GovEncoder              = keeper.GovEncoder
 	MessageEncoders         = keeper.MessageEncoders
 	Keeper                  = keeper.Keeper
 	ContractInfoWithAddress = keeper.ContractInfoWithAddress
@@ -116,4 +123,7 @@ type (
 	QueryHandler            = keeper.QueryHandler
 	CustomQuerier           = keeper.CustomQuerier
 	QueryPlugins            = keeper.QueryPlugins
+	// MsgMigrateContract      = types.MsgMigrateContract
+	// MsgUpdateAdmin          = types.MsgUpdateAdmin
+	// MsgClearAdmin           = types.MsgClearAdmin
 )

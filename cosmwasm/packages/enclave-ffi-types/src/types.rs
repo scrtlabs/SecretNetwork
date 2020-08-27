@@ -129,6 +129,8 @@ pub enum EnclaveError {
     DecryptionError,
     #[display(fmt = "failed to allocate memory")]
     MemoryAllocationError,
+    #[display(fmt = "failed to allocate minimal safety buffer")]
+    MemorySafetyAllocationError,
     #[display(fmt = "failed to read memory")]
     MemoryReadError,
     #[display(fmt = "failed to write memory")]
@@ -192,6 +194,8 @@ pub enum NodeAuthResult {
     MalformedPublicKey,
     #[display(fmt = "Encrypting the seed failed")]
     SeedEncryptionFailed,
+    #[display(fmt = "failed to allocate minimal safety buffer")]
+    MemorySafetyAllocationError,
     #[display(
         fmt = "Unexpected panic during node authentication. Certificate may be malformed or invalid"
     )]

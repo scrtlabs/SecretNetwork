@@ -20,7 +20,10 @@ use crate::{
 /// Always use protection
 #[no_mangle]
 pub unsafe extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
-    oom_handler::register_oom_handler();
+    if let Err(_err) = oom_handler::register_oom_handler() {
+        error!("Could not register OOM handler!");
+        return EnclaveBuffer::default();
+    }
 
     if let Err(_e) = validate_const_ptr(buffer, length as usize) {
         error!("Tried to access data outside enclave memory space!");
@@ -36,7 +39,11 @@ pub unsafe extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> Enc
             ptr: heap_pointer as *mut c_void,
         }
     });
-    oom_handler::restore_safety_buffer();
+
+    if let Err(_err) = oom_handler::restore_safety_buffer() {
+        error!("Could not restore OOM safety buffer!");
+        return EnclaveBuffer::default();
+    }
 
     result.unwrap_or_else(|err| {
         // We can get here only by failing to allocate memory,
@@ -74,8 +81,10 @@ pub unsafe extern "C" fn ecall_init(
     sig_info: *const u8,
     sig_info_len: usize,
 ) -> InitResult {
-    oom_handler::register_oom_handler();
-
+    if let Err(err) = oom_handler::register_oom_handler() {
+        error!("Could not register OOM handler!");
+        return InitResult::Failure { err };
+    }
     if let Err(_e) = validate_mut_ptr(used_gas as _, std::mem::size_of::<u64>()) {
         error!("Tried to access data outside enclave memory!");
         return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
@@ -115,7 +124,11 @@ pub unsafe extern "C" fn ecall_init(
         *used_gas = local_used_gas;
         result_init_success_to_initresult(result)
     });
-    oom_handler::restore_safety_buffer();
+
+    if let Err(err) = oom_handler::restore_safety_buffer() {
+        error!("Could not restore OOM safety buffer!");
+        return InitResult::Failure { err };
+    }
 
     if let Ok(res) = result {
         res
@@ -152,8 +165,10 @@ pub unsafe extern "C" fn ecall_handle(
     sig_info: *const u8,
     sig_info_len: usize,
 ) -> HandleResult {
-    oom_handler::register_oom_handler();
-
+    if let Err(err) = oom_handler::register_oom_handler() {
+        error!("Could not register OOM handler!");
+        return HandleResult::Failure { err };
+    }
     if let Err(_e) = validate_mut_ptr(used_gas as _, std::mem::size_of::<u64>()) {
         error!("Tried to access data outside enclave memory!");
         return result_handle_success_to_handleresult(Err(EnclaveError::FailedFunctionCall));
@@ -193,7 +208,11 @@ pub unsafe extern "C" fn ecall_handle(
         *used_gas = local_used_gas;
         result_handle_success_to_handleresult(result)
     });
-    oom_handler::restore_safety_buffer();
+
+    if let Err(err) = oom_handler::restore_safety_buffer() {
+        error!("Could not restore OOM safety buffer!");
+        return HandleResult::Failure { err };
+    }
 
     if let Ok(res) = result {
         res
@@ -226,8 +245,10 @@ pub unsafe extern "C" fn ecall_query(
     msg: *const u8,
     msg_len: usize,
 ) -> QueryResult {
-    oom_handler::register_oom_handler();
-
+    if let Err(err) = oom_handler::register_oom_handler() {
+        error!("Could not register OOM handler!");
+        return QueryResult::Failure { err };
+    }
     if let Err(_e) = validate_mut_ptr(used_gas as _, std::mem::size_of::<u64>()) {
         error!("Tried to access data outside enclave memory!");
         return result_query_success_to_queryresult(Err(EnclaveError::FailedFunctionCall));
@@ -249,7 +270,11 @@ pub unsafe extern "C" fn ecall_query(
         *used_gas = local_used_gas;
         result_query_success_to_queryresult(result)
     });
-    oom_handler::restore_safety_buffer();
+
+    if let Err(err) = oom_handler::restore_safety_buffer() {
+        error!("Could not restore OOM safety buffer!");
+        return QueryResult::Failure { err };
+    }
 
     if let Ok(res) = result {
         res

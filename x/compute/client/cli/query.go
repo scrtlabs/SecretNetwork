@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/base64"
 	"encoding/hex"
@@ -50,6 +49,7 @@ func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 		GetCmdQueryLabel(cdc),
 		GetCmdCodeHashByContract(cdc),
 		CmdDecryptText(cdc),
+		// GetCmdGetContractHistory(cdc),
 	)...)
 	return queryCmd
 }
@@ -299,7 +299,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			txInput := txInputs[0]
 
 			if txInput.Type() == "execute" {
-				execTx, ok := txInput.(*types.MsgExecuteContract)
+				execTx, ok := txInput.(types.MsgExecuteContract)
 				if !ok {
 					return fmt.Errorf("error parsing tx as type 'execute': %v", txInput)
 				}
@@ -307,7 +307,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 				encryptedInput = execTx.Msg
 				dataOutputHexB64 = result.Data
 			} else if txInput.Type() == "instantiate" {
-				initTx, ok := txInput.(*types.MsgInstantiateContract)
+				initTx, ok := txInput.(types.MsgInstantiateContract)
 				if !ok {
 					return fmt.Errorf("error parsing tx as type 'instantiate': %v", txInput)
 				}
@@ -438,15 +438,14 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "query [bech32_address] [query]", // TODO add --from wallet
-		Short: "Calls contract with given address  with query data and prints the returned result",
-		Long:  "Calls contract with given address  with query data and prints the returned result",
-		Args:  cobra.MinimumNArgs(1),
+		Short: "Calls contract with given address with query data and prints the returned result",
+		Long:  "Calls contract with given address with query data and prints the returned result",
+		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			inBuf := bufio.NewReader(cmd.InOrStdin())
-			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
-			var contractAddr string
 			var msg string
+			var contractAddr string
 
 			if len(args) == 1 {
 
@@ -474,7 +473,11 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 				return fmt.Errorf("decode query: %s", err)
 			}
 
-			return QueryWithData(cmd, contractAddr, cdc, queryData)
+			if !json.Valid(queryData) {
+				return errors.New("query data must be json")
+			}
+
+			return QueryWithData(contractAddr, cdc, queryData)
 		},
 	}
 	decoder.RegisterFlags(cmd.PersistentFlags(), "query argument")
@@ -482,7 +485,7 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 	return cmd
 }
 
-func QueryWithData(_ *cobra.Command, contractAddress string, cdc *codec.Codec, queryData []byte) error {
+func QueryWithData(contractAddress string, cdc *codec.Codec, queryData []byte) error {
 	cliCtx := context.NewCLIContext().WithCodec(cdc)
 
 	addr, err := sdk.AccAddressFromBech32(contractAddress)
@@ -543,6 +546,32 @@ func QueryWithData(_ *cobra.Command, contractAddress string, cdc *codec.Codec, q
 	fmt.Println(string(decodedResp))
 	return nil
 }
+
+// GetCmdGetContractHistory prints the code history for a given contract
+/* func GetCmdGetContractHistory(cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "contract-history [bech32_address]",
+		Short: "Prints out the code history for a contract given its address",
+		Long:  "Prints out the code history for a contract given its address",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			addr, err := sdk.AccAddressFromBech32(args[0])
+			if err != nil {
+				return err
+			}
+
+			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHistory, addr.String())
+			res, _, err := cliCtx.Query(route)
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(res))
+			return nil
+		},
+	}
+} */
 
 type argumentDecoder struct {
 	// dec is the default decoder

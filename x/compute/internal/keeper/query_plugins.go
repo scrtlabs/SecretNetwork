@@ -2,16 +2,18 @@ package keeper
 
 import (
 	"encoding/json"
+	"strings"
+
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
 	"github.com/enigmampc/cosmos-sdk/x/bank"
 	distr "github.com/enigmampc/cosmos-sdk/x/distribution"
 	"github.com/enigmampc/cosmos-sdk/x/distribution/types"
+	"github.com/enigmampc/cosmos-sdk/x/gov"
 	"github.com/enigmampc/cosmos-sdk/x/mint"
 	"github.com/enigmampc/cosmos-sdk/x/staking"
 	abci "github.com/tendermint/tendermint/abci/types"
-	"strings"
 )
 
 type QueryHandler struct {
@@ -21,24 +23,37 @@ type QueryHandler struct {
 
 var _ wasmTypes.Querier = QueryHandler{}
 
-func (q QueryHandler) Query(request wasmTypes.QueryRequest) ([]byte, error) {
+func (q QueryHandler) Query(request wasmTypes.QueryRequest, gasLimit uint64) ([]byte, error) {
+	// set a limit for a subctx
+	sdkGas := gasLimit / GasMultiplier
+	subctx := q.Ctx.WithGasMeter(sdk.NewGasMeter(sdkGas))
+
+	// make sure we charge the higher level context even on panic
+	defer func() {
+		q.Ctx.GasMeter().ConsumeGas(subctx.GasMeter().GasConsumed(), "contract sub-query")
+	}()
+
+	// do the query
 	if request.Bank != nil {
-		return q.Plugins.Bank(q.Ctx, request.Bank)
+		return q.Plugins.Bank(subctx, request.Bank)
 	}
 	if request.Custom != nil {
-		return q.Plugins.Custom(q.Ctx, request.Custom)
+		return q.Plugins.Custom(subctx, request.Custom)
 	}
 	if request.Staking != nil {
-		return q.Plugins.Staking(q.Ctx, request.Staking)
+		return q.Plugins.Staking(subctx, request.Staking)
 	}
 	if request.Wasm != nil {
-		return q.Plugins.Wasm(q.Ctx, request.Wasm)
+		return q.Plugins.Wasm(subctx, request.Wasm)
 	}
 	if request.Dist != nil {
 		return q.Plugins.Dist(q.Ctx, request.Dist)
 	}
 	if request.Mint != nil {
 		return q.Plugins.Mint(q.Ctx, request.Mint)
+	}
+	if request.Gov != nil {
+		return q.Plugins.Gov(q.Ctx, request.Gov)
 	}
 	return nil, wasmTypes.Unknown{}
 }
@@ -56,9 +71,10 @@ type QueryPlugins struct {
 	Wasm    func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
 	Dist    func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error)
 	Mint    func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error)
+	Gov     func(ctx sdk.Context, request *wasmTypes.GovQuery) ([]byte, error)
 }
 
-func DefaultQueryPlugins(dist *distr.Keeper, mint *mint.Keeper, bank *bank.Keeper, staking *staking.Keeper, wasm *Keeper) QueryPlugins {
+func DefaultQueryPlugins(gov *gov.Keeper, dist *distr.Keeper, mint *mint.Keeper, bank *bank.Keeper, staking *staking.Keeper, wasm *Keeper) QueryPlugins {
 	return QueryPlugins{
 		Bank:    BankQuerier(bank),
 		Custom:  NoCustomQuerier,
@@ -66,6 +82,7 @@ func DefaultQueryPlugins(dist *distr.Keeper, mint *mint.Keeper, bank *bank.Keepe
 		Wasm:    WasmQuerier(wasm),
 		Dist:    DistQuerier(dist),
 		Mint:    MintQuerier(mint),
+		Gov:     GovQuerier(gov),
 	}
 }
 
@@ -92,7 +109,38 @@ func (e QueryPlugins) Merge(o *QueryPlugins) QueryPlugins {
 	if o.Mint != nil {
 		e.Mint = o.Mint
 	}
+	if o.Gov != nil {
+		e.Gov = o.Gov
+	}
 	return e
+}
+
+func GovQuerier(keeper *gov.Keeper) func(ctx sdk.Context, request *wasmTypes.GovQuery) ([]byte, error) {
+	return func(ctx sdk.Context, request *wasmTypes.GovQuery) ([]byte, error) {
+		if request.Proposals != nil {
+			proposals := keeper.GetProposals(ctx)
+
+			if len(proposals) == 0 {
+				return json.Marshal(wasmTypes.ProposalsResponse{
+					Proposals: []wasmTypes.Proposal{},
+				})
+			}
+
+			var activeProps []wasmTypes.Proposal
+			for _, val := range proposals {
+				if val.Status == gov.StatusVotingPeriod {
+					activeProps = append(activeProps, wasmTypes.Proposal{
+						ProposalID:      val.ProposalID,
+						VotingStartTime: uint64(val.VotingStartTime.Unix()),
+						VotingEndTime:   uint64(val.VotingEndTime.Unix()),
+					})
+				}
+			}
+
+			return json.Marshal(wasmTypes.ProposalsResponse{Proposals: activeProps})
+		}
+		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown GovQuery variant"}
+	}
 }
 
 func MintQuerier(keeper *mint.Keeper) func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error) {
@@ -146,7 +194,6 @@ func DistQuerier(keeper *distr.Keeper) func(ctx sdk.Context, request *wasmTypes.
 
 			var res wasmTypes.RewardsResponse
 
-			// this is here so we can remove fractions of uscrt from the result
 			err = json.Unmarshal(query, &res)
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
@@ -155,6 +202,7 @@ func DistQuerier(keeper *distr.Keeper) func(ctx sdk.Context, request *wasmTypes.
 			for i, valRewards := range res.Rewards {
 				res.Rewards[i].Validator = valRewards.Validator
 				for j, valReward := range valRewards.Reward {
+					// this is here so we can remove fractions of uscrt from the result
 					res.Rewards[i].Reward[j].Amount = strings.Split(valReward.Amount, ".")[0]
 					res.Rewards[i].Reward[j].Denom = valReward.Denom
 				}
@@ -274,7 +322,6 @@ func StakingQuerier(keeper *staking.Keeper) func(ctx sdk.Context, request *wasmT
 			return json.Marshal(res)
 		}
 		if request.UnBondingDelegations != nil {
-
 			bondDenom := keeper.BondDenom(ctx)
 
 			delegator, err := sdk.AccAddressFromBech32(request.UnBondingDelegations.Delegator)
@@ -393,7 +440,7 @@ func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuer
 			// TODO: do we want to change the return value?
 			return json.Marshal(models)
 		}
-		return nil, wasmTypes.UnsupportedRequest{"unknown WasmQuery variant"}
+		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown WasmQuery variant"}
 	}
 }
 

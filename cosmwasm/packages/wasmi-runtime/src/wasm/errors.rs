@@ -15,6 +15,8 @@ pub enum WasmEngineError {
     DecryptionError,
     SerializationError,
     DeserializationError,
+    // This is for unexpected error while processing base32 data.
+    Base32Error,
 
     MemoryAllocationError,
     MemoryReadError,

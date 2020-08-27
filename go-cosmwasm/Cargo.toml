@@ -1,6 +1,6 @@
 [package]
 name = "go-cosmwasm"
-version = "0.8.0"
+version = "0.10.0"
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2018"
 description = "Go bindings for cosmwasm contracts"
@@ -13,6 +13,8 @@ exclude = [".circleci/*", ".gitignore"]
 #crate-type = ["staticlib"]
 crate-type = ["cdylib", "lib"]
 
+# the example is to allow us to compile a muslc static lib with the same codebase as we compile the
+# normal dynamic libs (best workaround I could find to override crate-type on the command line)
 [[example]]
 name = "muslc"
 path = "src/lib.rs"
@@ -36,6 +38,10 @@ serde_json = "1.0"
 ctor = "0.1.13"
 simple_logger = "1.6.0"
 log = "0.4.8"
+
+[dev-dependencies]
+serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+tempfile = "3.1.0"
 
 [build-dependencies]
 cbindgen = { version = "0.14" }

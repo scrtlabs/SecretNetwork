@@ -2,6 +2,9 @@ package keeper
 
 import (
 	"fmt"
+	"os"
+	"testing"
+
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	"github.com/enigmampc/cosmos-sdk/x/auth"
@@ -12,8 +15,6 @@ import (
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/crypto/multisig"
 	"github.com/tendermint/tendermint/crypto/sr25519"
-	"os"
-	"testing"
 )
 
 func multisigTxCreator(t *testing.T, ctx *sdk.Context, keeper Keeper, n int, threshold int, actualSigners int, sdkMsg sdk.Msg) sdk.AccAddress {
@@ -160,17 +161,17 @@ func TestMultipleSigners(t *testing.T) {
 	nonce := initMsgBz[0:32]
 
 	sdkMsgA := types.MsgInstantiateContract{
-		Sender:    walletA,
-		Admin:     nil,
-		Code:      codeID,
+		Sender: walletA,
+		// Admin:     nil,
+		CodeID:    codeID,
 		Label:     "demo contract 1",
 		InitMsg:   initMsgBz,
 		InitFunds: nil,
 	}
 	sdkMsgB := types.MsgInstantiateContract{
-		Sender:    walletB,
-		Admin:     nil,
-		Code:      codeID,
+		Sender: walletB,
+		// Admin:     nil,
+		CodeID:    codeID,
 		Label:     "demo contract 2",
 		InitMsg:   initMsgBz,
 		InitFunds: nil,
@@ -178,7 +179,7 @@ func TestMultipleSigners(t *testing.T) {
 
 	ctx = prepareInitSignedTxMultipleMsgs(t, keeper, ctx, []sdk.AccAddress{walletA, walletB}, []crypto.PrivKey{privKeyA, privKeyB}, []sdk.Msg{sdkMsgA, sdkMsgB}, codeID)
 
-	contractAddressA, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	contractAddressA, err := keeper.Instantiate(ctx, codeID, walletA /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
 		err = extractInnerError(t, err, nonce, true)
 	}
@@ -196,7 +197,7 @@ func TestMultipleSigners(t *testing.T) {
 		wasmEvents,
 	)
 
-	contractAddressB, err := keeper.Instantiate(ctx, codeID, walletB, nil, initMsgBz, "demo contract 2", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	contractAddressB, err := keeper.Instantiate(ctx, codeID, walletB /* nil,*/, initMsgBz, "demo contract 2", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
 		err = extractInnerError(t, err, nonce, false)
 	}
@@ -230,9 +231,9 @@ func TestWrongSigner(t *testing.T) {
 	nonce := initMsgBz[0:32]
 
 	sdkMsgA := types.MsgInstantiateContract{
-		Sender:    walletB,
-		Admin:     nil,
-		Code:      codeID,
+		Sender: walletB,
+		// Admin:     nil,
+		CodeID:    codeID,
 		Label:     "demo contract 1",
 		InitMsg:   initMsgBz,
 		InitFunds: nil,
@@ -240,7 +241,7 @@ func TestWrongSigner(t *testing.T) {
 
 	ctx = prepareInitSignedTxMultipleMsgs(t, keeper, ctx, []sdk.AccAddress{walletB}, []crypto.PrivKey{privKeyB}, []sdk.Msg{sdkMsgA}, codeID)
 
-	_, err = keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	_, err = keeper.Instantiate(ctx, codeID, walletA /* nil,*/, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
 		err = extractInnerError(t, err, nonce, false)
 	}
@@ -266,8 +267,8 @@ func TestMultiSig(t *testing.T) {
 		for j := 0; j <= i; j++ {
 			label := fmt.Sprintf("demo contract %d%d", i, j)
 			sdkMsg := types.MsgInstantiateContract{
-				Admin:     nil,
-				Code:      codeID,
+				// Admin:     nil,
+				CodeID:    codeID,
 				Label:     label,
 				InitMsg:   initMsgBz,
 				InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
@@ -275,7 +276,7 @@ func TestMultiSig(t *testing.T) {
 
 			multisigAddr := multisigTxCreator(t, &ctx, keeper, i+1, j+1, i+1, sdkMsg)
 
-			contractAddressA, err := keeper.Instantiate(ctx, codeID, multisigAddr, nil, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+			contractAddressA, err := keeper.Instantiate(ctx, codeID, multisigAddr /* nil, */, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 			if err != nil {
 				err = extractInnerError(t, err, nonce, true)
 			}
@@ -318,8 +319,8 @@ func TestMultiSigThreshold(t *testing.T) {
 		for j := 0; j <= i; j++ {
 			label := fmt.Sprintf("demo contract %d%d", i, j)
 			sdkMsg := types.MsgInstantiateContract{
-				Admin:     nil,
-				Code:      codeID,
+				// Admin:     nil,
+				CodeID:    codeID,
 				Label:     label,
 				InitMsg:   initMsgBz,
 				InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
@@ -327,7 +328,7 @@ func TestMultiSigThreshold(t *testing.T) {
 
 			multisigAddr := multisigTxCreator(t, &ctx, keeper, i+1, j+1, j+1, sdkMsg)
 
-			contractAddressA, err := keeper.Instantiate(ctx, codeID, multisigAddr, nil, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+			contractAddressA, err := keeper.Instantiate(ctx, codeID, multisigAddr /* nil,*/, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 			if err != nil {
 				err = extractInnerError(t, err, nonce, true)
 			}
@@ -367,8 +368,8 @@ func TestMultiSigThresholdNotMet(t *testing.T) {
 	nonce := initMsgBz[0:32]
 
 	sdkMsg := types.MsgInstantiateContract{
-		Admin:     nil,
-		Code:      codeID,
+		// Admin:     nil,
+		CodeID:    codeID,
 		Label:     "demo contract 1",
 		InitMsg:   initMsgBz,
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
@@ -376,7 +377,7 @@ func TestMultiSigThresholdNotMet(t *testing.T) {
 
 	multisigAddr := multisigTxCreator(t, &ctx, keeper, 3, 2, 1, sdkMsg)
 
-	_, err = keeper.Instantiate(ctx, codeID, multisigAddr, nil, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	_, err = keeper.Instantiate(ctx, codeID, multisigAddr /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
 		err = extractInnerError(t, err, nonce, false)
 	}
@@ -542,9 +543,9 @@ func TestMultiSigInMultiSig(t *testing.T) {
 	nonce := initMsgBz[0:32]
 
 	sdkMsg := types.MsgInstantiateContract{
-		Sender:    sdk.AccAddress(multimultisigPubkey.Address()),
-		Admin:     nil,
-		Code:      codeID,
+		Sender: sdk.AccAddress(multimultisigPubkey.Address()),
+		// Admin:     nil,
+		CodeID:    codeID,
 		Label:     "demo contract 1",
 		InitMsg:   initMsgBz,
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
@@ -593,7 +594,7 @@ func TestMultiSigInMultiSig(t *testing.T) {
 		ctx,
 		codeID,
 		sdk.AccAddress(multimultisigPubkey.Address()),
-		nil,
+		/* nil, */
 		initMsgBz,
 		"demo contract 1",
 		sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
@@ -636,9 +637,9 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 	nonce := initMsgBz[0:32]
 
 	sdkMsg := types.MsgInstantiateContract{
-		Sender:    sdk.AccAddress(multimultisigPubkey.Address()),
-		Admin:     nil,
-		Code:      codeID,
+		Sender: sdk.AccAddress(multimultisigPubkey.Address()),
+		// Admin:     nil,
+		CodeID:    codeID,
 		Label:     "demo contract 1",
 		InitMsg:   initMsgBz,
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
@@ -687,7 +688,7 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 		ctx,
 		codeID,
 		sdk.AccAddress(multimultisigPubkey.Address()),
-		nil,
+		/* nil, */
 		initMsgBz,
 		"demo contract 1",
 		sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
@@ -735,9 +736,9 @@ func TestInvalidKeyType(t *testing.T) {
 	//nonce := initMsgBz[0:32]
 
 	sdkMsg := types.MsgInstantiateContract{
-		Sender:    edAddr,
-		Admin:     nil,
-		Code:      codeID,
+		Sender: edAddr,
+		// Admin:     nil,
+		CodeID:    codeID,
 		Label:     "demo contract 1",
 		InitMsg:   initMsgBz,
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
@@ -745,7 +746,7 @@ func TestInvalidKeyType(t *testing.T) {
 
 	ctx = prepareInitSignedTxMultipleMsgs(t, keeper, ctx, []sdk.AccAddress{edAddr}, []crypto.PrivKey{edKey}, []sdk.Msg{sdkMsg}, codeID)
 
-	_, err = keeper.Instantiate(ctx, codeID, edAddr, nil, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	_, err = keeper.Instantiate(ctx, codeID, edAddr /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	require.Contains(t, err.Error(), "failed to verify transaction signature")
 
 	ctx, keeper, tempDir, codeID, _, _, _, _, _ = setupTest(t, "./testdata/test-contract/contract.wasm")
@@ -761,7 +762,7 @@ func TestInvalidKeyType(t *testing.T) {
 
 	ctx = prepareInitSignedTxMultipleMsgs(t, keeper, ctx, []sdk.AccAddress{srAddr}, []crypto.PrivKey{srKey}, []sdk.Msg{sdkMsg}, codeID)
 
-	_, err = keeper.Instantiate(ctx, codeID, srAddr, nil, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	_, err = keeper.Instantiate(ctx, codeID, srAddr /* , nil */, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	require.Contains(t, err.Error(), "failed to verify transaction signature")
 }
 
@@ -790,9 +791,9 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 	require.NoError(t, err)
 
 	sdkMsg := types.MsgInstantiateContract{
-		Sender:    sdk.AccAddress(multisigPubkey.Address()),
-		Admin:     nil,
-		Code:      codeID,
+		Sender: sdk.AccAddress(multisigPubkey.Address()),
+		// Admin:     nil,
+		CodeID:    codeID,
 		Label:     "demo contract 1",
 		InitMsg:   initMsgBz,
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
@@ -831,7 +832,7 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 		ctx,
 		codeID,
 		sdk.AccAddress(multisigPubkey.Address()),
-		nil,
+		/* nil, */
 		initMsgBz,
 		"demo contract 1",
 		sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
@@ -857,7 +858,7 @@ func TestWrongFundsNoFunds(t *testing.T) {
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privKeyA, initMsgBz, codeID, nil)
 
-	_, err = keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
+	_, err = keeper.Instantiate(ctx, codeID, walletA /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
 	if err != nil {
 		err = extractInnerError(t, err, nonce, false)
 	}
@@ -881,7 +882,7 @@ func TestWrongFundsSomeFunds(t *testing.T) {
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privKeyA, initMsgBz, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)))
 
-	_, err = keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
+	_, err = keeper.Instantiate(ctx, codeID, walletA /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
 	if err != nil {
 		err = extractInnerError(t, err, nonce, false)
 	}
@@ -915,7 +916,7 @@ func TestWrongMessage(t *testing.T) {
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privKeyA, initMsgBz, codeID, nil)
 
-	_, err = keeper.Instantiate(ctx, codeID, walletA, nil, notTheRealMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
+	_, err = keeper.Instantiate(ctx, codeID, walletA /* nil, */, notTheRealMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
 	if err != nil {
 		err = extractInnerError(t, err, nonce, false)
 	}

@@ -8,55 +8,48 @@ use cosmwasm_std::Order;
 use cosmwasm_std::{Binary, CanonicalAddr, HumanAddr};
 use wasmer_runtime_core::vm::Ctx;
 
+use crate::backends::get_gas_left;
 #[cfg(feature = "iterator")]
 use crate::context::{add_iterator, with_iterator_from_context};
 use crate::context::{
-    is_storage_readonly, try_consume_gas, with_func_from_context, with_querier_from_context,
+    is_storage_readonly, process_gas_info, with_func_from_context, with_querier_from_context,
     with_storage_from_context,
 };
 use crate::conversion::to_u32;
 use crate::errors::{CommunicationError, VmError, VmResult};
+use crate::ffi::FfiError;
 #[cfg(feature = "iterator")]
 use crate::memory::maybe_read_region;
-use crate::memory::{read_region, read_string_region, write_region};
+use crate::memory::{read_region, write_region};
 use crate::serde::to_vec;
 use crate::traits::{Api, Querier, Storage};
 
 /// A kibi (kilo binary)
-static KI: usize = 1024;
+const KI: usize = 1024;
 /// Max key length for db_write (i.e. when VM reads from Wasm memory)
-static MAX_LENGTH_DB_KEY: usize = 64 * KI;
+const MAX_LENGTH_DB_KEY: usize = 64 * KI;
 /// Max key length for db_write (i.e. when VM reads from Wasm memory)
-static MAX_LENGTH_DB_VALUE: usize = 128 * KI;
+const MAX_LENGTH_DB_VALUE: usize = 128 * KI;
 /// Typically 20 (Cosmos SDK, Ethereum) or 32 (Nano, Substrate)
 const MAX_LENGTH_CANONICAL_ADDRESS: usize = 32;
 /// The maximum allowed size for bech32 (https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki#bech32)
 const MAX_LENGTH_HUMAN_ADDRESS: usize = 90;
-static MAX_LENGTH_QUERY_CHAIN_REQUEST: usize = 64 * KI;
+const MAX_LENGTH_QUERY_CHAIN_REQUEST: usize = 64 * KI;
 
 /// Reads a storage entry from the VM's storage into Wasm memory
 pub fn do_read<S: Storage, Q: Querier>(ctx: &mut Ctx, key_ptr: u32) -> VmResult<u32> {
     let key = read_region(ctx, key_ptr, MAX_LENGTH_DB_KEY)?;
-    // `Ok(expr?)` used to convert the error variant.
-    let (value, used_gas): (Option<Vec<u8>>, u64) =
-        with_storage_from_context::<S, Q, _, _>(ctx, |store| Ok(store.get(&key)?))?;
-    try_consume_gas::<S, Q>(ctx, used_gas)?;
+
+    let (result, gas_info) =
+        with_storage_from_context::<S, Q, _, _>(ctx, |store| Ok(store.get(&key)))?;
+    process_gas_info::<S, Q>(ctx, gas_info)?;
+    let value = result?;
 
     let out_data = match value {
         Some(data) => data,
         None => return Ok(0),
     };
-
-    let out_ptr = with_func_from_context::<S, Q, u32, u32, _, _>(ctx, "allocate", |allocate| {
-        let out_size = to_u32(out_data.len())?;
-        let ptr = allocate.call(out_size)?;
-        if ptr == 0 {
-            return Err(CommunicationError::zero_address().into());
-        }
-        Ok(ptr)
-    })?;
-    write_region(ctx, out_ptr, &out_data)?;
-    Ok(out_ptr)
+    write_to_contract::<S, Q>(ctx, &out_data)
 }
 
 /// Writes a storage entry from Wasm memory into the VM's storage
@@ -71,9 +64,11 @@ pub fn do_write<S: Storage, Q: Querier>(
 
     let key = read_region(ctx, key_ptr, MAX_LENGTH_DB_KEY)?;
     let value = read_region(ctx, value_ptr, MAX_LENGTH_DB_VALUE)?;
-    let used_gas =
-        with_storage_from_context::<S, Q, _, _>(ctx, |store| Ok(store.set(&key, &value)?))?;
-    try_consume_gas::<S, Q>(ctx, used_gas)?;
+
+    let (result, gas_info) =
+        with_storage_from_context::<S, Q, _, _>(ctx, |store| Ok(store.set(&key, &value)))?;
+    process_gas_info::<S, Q>(ctx, gas_info)?;
+    result?;
 
     Ok(())
 }
@@ -84,54 +79,88 @@ pub fn do_remove<S: Storage, Q: Querier>(ctx: &mut Ctx, key_ptr: u32) -> VmResul
     }
 
     let key = read_region(ctx, key_ptr, MAX_LENGTH_DB_KEY)?;
-    let used_gas = with_storage_from_context::<S, Q, _, _>(ctx, |store| Ok(store.remove(&key)?))?;
-    try_consume_gas::<S, Q>(ctx, used_gas)?;
+
+    let (result, gas_info) =
+        with_storage_from_context::<S, Q, _, _>(ctx, |store| Ok(store.remove(&key)))?;
+    process_gas_info::<S, Q>(ctx, gas_info)?;
+    result?;
 
     Ok(())
 }
 
-pub fn do_canonicalize_address<A: Api>(
+pub fn do_canonicalize_address<A: Api, S: Storage, Q: Querier>(
     api: A,
     ctx: &mut Ctx,
     source_ptr: u32,
     destination_ptr: u32,
-) -> VmResult<()> {
-    let human: HumanAddr = read_string_region(ctx, source_ptr, MAX_LENGTH_HUMAN_ADDRESS)?.into();
-    let canon = api.canonical_address(&human)?;
-    write_region(ctx, destination_ptr, canon.as_slice())?;
-    Ok(())
+) -> VmResult<u32> {
+    let source_data = read_region(ctx, source_ptr, MAX_LENGTH_HUMAN_ADDRESS)?;
+    if source_data.is_empty() {
+        return Ok(write_to_contract::<S, Q>(ctx, b"Input is empty")?);
+    }
+
+    let source_string = match String::from_utf8(source_data) {
+        Ok(s) => s,
+        Err(_) => return Ok(write_to_contract::<S, Q>(ctx, b"Input is not valid UTF-8")?),
+    };
+    let human: HumanAddr = source_string.into();
+
+    let (result, gas_info) = api.canonical_address(&human);
+    process_gas_info::<S, Q>(ctx, gas_info)?;
+    match result {
+        Ok(canonical) => {
+            write_region(ctx, destination_ptr, canonical.as_slice())?;
+            Ok(0)
+        }
+        Err(FfiError::UserErr { msg, .. }) => Ok(write_to_contract::<S, Q>(ctx, msg.as_bytes())?),
+        Err(err) => Err(VmError::from(err)),
+    }
 }
 
-pub fn do_humanize_address<A: Api>(
+pub fn do_humanize_address<A: Api, S: Storage, Q: Querier>(
     api: A,
     ctx: &mut Ctx,
     source_ptr: u32,
     destination_ptr: u32,
-) -> VmResult<()> {
+) -> VmResult<u32> {
     let canonical = Binary(read_region(ctx, source_ptr, MAX_LENGTH_CANONICAL_ADDRESS)?);
-    let human = api.human_address(&CanonicalAddr(canonical))?;
-    write_region(ctx, destination_ptr, human.as_str().as_bytes())?;
-    Ok(())
+
+    let (result, gas_info) = api.human_address(&CanonicalAddr(canonical));
+    process_gas_info::<S, Q>(ctx, gas_info)?;
+    match result {
+        Ok(human) => {
+            write_region(ctx, destination_ptr, human.as_str().as_bytes())?;
+            Ok(0)
+        }
+        Err(FfiError::UserErr { msg, .. }) => Ok(write_to_contract::<S, Q>(ctx, msg.as_bytes())?),
+        Err(err) => Err(VmError::from(err)),
+    }
 }
 
-pub fn do_query_chain<S: Storage, Q: Querier>(ctx: &mut Ctx, request_ptr: u32) -> VmResult<u32> {
-    let request = read_region(ctx, request_ptr, MAX_LENGTH_QUERY_CHAIN_REQUEST)?;
-
-    let (res, used_gas) =
-        with_querier_from_context::<S, Q, _, _>(ctx, |querier| Ok(querier.raw_query(&request)?))?;
-    try_consume_gas::<S, Q>(ctx, used_gas)?;
-
-    let serialized = to_vec(&res)?;
-    let out_ptr = with_func_from_context::<S, Q, u32, u32, _, _>(ctx, "allocate", |allocate| {
-        let out_size = to_u32(serialized.len())?;
+/// Creates a Region in the contract, writes the given data to it and returns the memory location
+fn write_to_contract<S: Storage, Q: Querier>(ctx: &mut Ctx, input: &[u8]) -> VmResult<u32> {
+    let target_ptr = with_func_from_context::<S, Q, u32, u32, _, _>(ctx, "allocate", |allocate| {
+        let out_size = to_u32(input.len())?;
         let ptr = allocate.call(out_size)?;
         if ptr == 0 {
             return Err(CommunicationError::zero_address().into());
         }
         Ok(ptr)
     })?;
-    write_region(ctx, out_ptr, &serialized)?;
-    Ok(out_ptr)
+    write_region(ctx, target_ptr, input)?;
+    Ok(target_ptr)
+}
+
+pub fn do_query_chain<S: Storage, Q: Querier>(ctx: &mut Ctx, request_ptr: u32) -> VmResult<u32> {
+    let request = read_region(ctx, request_ptr, MAX_LENGTH_QUERY_CHAIN_REQUEST)?;
+
+    let gas_remaining = get_gas_left(ctx);
+    let (result, gas_info) = with_querier_from_context::<S, Q, _, _>(ctx, |querier| {
+        Ok(querier.query_raw(&request, gas_remaining))
+    })?;
+    process_gas_info::<S, Q>(ctx, gas_info)?;
+    let serialized = to_vec(&result?)?;
+    write_to_contract::<S, Q>(ctx, &serialized)
 }
 
 #[cfg(feature = "iterator")]
@@ -146,25 +175,24 @@ pub fn do_scan<S: Storage + 'static, Q: Querier>(
     let order: Order = order
         .try_into()
         .map_err(|_| CommunicationError::invalid_order(order))?;
-    let (iterator, used_gas) = with_storage_from_context::<S, Q, _, _>(ctx, |store| {
-        Ok(store.range(start.as_deref(), end.as_deref(), order)?)
-    })?;
-    // Gas is consumed for creating an iterator if the first key in the DB has a value
-    try_consume_gas::<S, Q>(ctx, used_gas)?;
 
-    let new_id = add_iterator::<S, Q>(ctx, iterator);
-    Ok(new_id)
+    let (result, gas_info) = with_storage_from_context::<S, Q, _, _>(ctx, |store| {
+        Ok(store.range(start.as_deref(), end.as_deref(), order))
+    })?;
+    process_gas_info::<S, Q>(ctx, gas_info)?;
+    let iterator = result?;
+    let iterator_id = add_iterator::<S, Q>(ctx, iterator);
+    Ok(iterator_id)
 }
 
 #[cfg(feature = "iterator")]
 pub fn do_next<S: Storage, Q: Querier>(ctx: &mut Ctx, iterator_id: u32) -> VmResult<u32> {
-    let item = with_iterator_from_context::<S, Q, _, _>(ctx, iterator_id, |iter| Ok(iter.next()))?;
-
-    let (kv, used_gas) = item?;
-    try_consume_gas::<S, Q>(ctx, used_gas)?;
+    let (result, gas_info) =
+        with_iterator_from_context::<S, Q, _, _>(ctx, iterator_id, |iter| Ok(iter.next()))?;
+    process_gas_info::<S, Q>(ctx, gas_info)?;
 
     // Empty key will later be treated as _no more element_.
-    let (key, value) = kv.unwrap_or_else(|| (Vec::<u8>::new(), Vec::<u8>::new()));
+    let (key, value) = result?.unwrap_or_else(|| (Vec::<u8>::new(), Vec::<u8>::new()));
 
     // Build value || key || keylen
     let keylen_bytes = to_u32(key.len())?.to_be_bytes();
@@ -173,23 +201,14 @@ pub fn do_next<S: Storage, Q: Querier>(ctx: &mut Ctx, iterator_id: u32) -> VmRes
     out_data.extend(key);
     out_data.extend_from_slice(&keylen_bytes);
 
-    let out_ptr = with_func_from_context::<S, Q, u32, u32, _, _>(ctx, "allocate", |allocate| {
-        let out_size = to_u32(out_data.len())?;
-        let ptr = allocate.call(out_size)?;
-        if ptr == 0 {
-            return Err(CommunicationError::zero_address().into());
-        }
-        Ok(ptr)
-    })?;
-    write_region(ctx, out_ptr, &out_data)?;
-    Ok(out_ptr)
+    write_to_contract::<S, Q>(ctx, &out_data)
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use cosmwasm_std::{
-        coins, from_binary, AllBalanceResponse, BankQuery, HumanAddr, Never, QueryRequest,
+        coins, from_binary, AllBalanceResponse, BankQuery, Empty, HumanAddr, QueryRequest,
         SystemError, WasmQuery,
     };
     use std::ptr::NonNull;
@@ -200,30 +219,28 @@ mod test {
         move_into_context, set_storage_readonly, set_wasmer_instance, setup_context,
     };
     use crate::testing::{MockApi, MockQuerier, MockStorage};
-    use crate::traits::ReadonlyStorage;
+    use crate::traits::Storage;
     use crate::FfiError;
 
     static CONTRACT: &[u8] = include_bytes!("../testdata/contract.wasm");
 
     // shorthands for function generics below
+    type MA = MockApi;
     type MS = MockStorage;
     type MQ = MockQuerier;
 
     // prepared data
-    static KEY1: &[u8] = b"ant";
-    static VALUE1: &[u8] = b"insect";
-    static KEY2: &[u8] = b"tree";
-    static VALUE2: &[u8] = b"plant";
+    const KEY1: &[u8] = b"ant";
+    const VALUE1: &[u8] = b"insect";
+    const KEY2: &[u8] = b"tree";
+    const VALUE2: &[u8] = b"plant";
 
     // this account has some coins
-    static INIT_ADDR: &str = "someone";
-    static INIT_AMOUNT: u128 = 500;
-    static INIT_DENOM: &str = "TOKEN";
+    const INIT_ADDR: &str = "someone";
+    const INIT_AMOUNT: u128 = 500;
+    const INIT_DENOM: &str = "TOKEN";
 
-    #[cfg(feature = "singlepass")]
-    use crate::backends::singlepass::GAS_LIMIT;
-    #[cfg(not(feature = "singlepass"))]
-    const GAS_LIMIT: u64 = 10_000_000_000;
+    const GAS_LIMIT: u64 = 5_000_000;
 
     fn make_instance() -> Box<WasmerInstance> {
         let module = compile(&CONTRACT).unwrap();
@@ -237,8 +254,8 @@ mod test {
                 "db_scan" => Func::new(|_a: u32, _b: u32, _c: i32| -> u32 { 0 }),
                 "db_next" => Func::new(|_a: u32| -> u32 { 0 }),
                 "query_chain" => Func::new(|_a: u32| -> u32 { 0 }),
-                "canonicalize_address" => Func::new(|_a: i32, _b: i32| -> i32 { 0 }),
-                "humanize_address" => Func::new(|_a: i32, _b: i32| -> i32 { 0 }),
+                "canonicalize_address" => Func::new(|_a: i32, _b: i32| -> u32 { 0 }),
+                "humanize_address" => Func::new(|_a: i32, _b: i32| -> u32 { 0 }),
             },
         };
         let mut instance = Box::from(module.instantiate(&import_obj).unwrap());
@@ -253,9 +270,9 @@ mod test {
     fn leave_default_data(ctx: &mut Ctx) {
         // create some mock data
         let mut storage = MockStorage::new();
-        storage.set(KEY1, VALUE1).expect("error setting");
-        storage.set(KEY2, VALUE2).expect("error setting");
-        let querier: MockQuerier<Never> =
+        storage.set(KEY1, VALUE1).0.expect("error setting");
+        storage.set(KEY2, VALUE2).0.expect("error setting");
+        let querier: MockQuerier<Empty> =
             MockQuerier::new(&[(&HumanAddr::from(INIT_ADDR), &coins(INIT_AMOUNT, INIT_DENOM))]);
         move_into_context(ctx, storage, querier);
     }
@@ -338,8 +355,11 @@ mod test {
 
         do_write::<MS, MQ>(ctx, key_ptr, value_ptr).unwrap();
 
-        let (val, _used_gas) = with_storage_from_context::<MS, MQ, _, _>(ctx, |store| {
-            Ok(store.get(b"new storage key").expect("error getting value"))
+        let val = with_storage_from_context::<MS, MQ, _, _>(ctx, |store| {
+            Ok(store
+                .get(b"new storage key")
+                .0
+                .expect("error getting value"))
         })
         .unwrap();
         assert_eq!(val, Some(b"new value".to_vec()));
@@ -357,8 +377,8 @@ mod test {
 
         do_write::<MS, MQ>(ctx, key_ptr, value_ptr).unwrap();
 
-        let (val, _used_gas) = with_storage_from_context::<MS, MQ, _, _>(ctx, |store| {
-            Ok(store.get(KEY1).expect("error getting value"))
+        let val = with_storage_from_context::<MS, MQ, _, _>(ctx, |store| {
+            Ok(store.get(KEY1).0.expect("error getting value"))
         })
         .unwrap();
         assert_eq!(val, Some(VALUE2.to_vec()));
@@ -376,8 +396,11 @@ mod test {
 
         do_write::<MS, MQ>(ctx, key_ptr, value_ptr).unwrap();
 
-        let (val, _used_gas) = with_storage_from_context::<MS, MQ, _, _>(ctx, |store| {
-            Ok(store.get(b"new storage key").expect("error getting value"))
+        let val = with_storage_from_context::<MS, MQ, _, _>(ctx, |store| {
+            Ok(store
+                .get(b"new storage key")
+                .0
+                .expect("error getting value"))
         })
         .unwrap();
         assert_eq!(val, Some(b"".to_vec()));
@@ -463,8 +486,8 @@ mod test {
 
         do_remove::<MS, MQ>(ctx, key_ptr).unwrap();
 
-        let (value, _used_gas) = with_storage_from_context::<MS, MQ, _, _>(ctx, |store| {
-            Ok(store.get(existing_key).expect("error getting value"))
+        let value = with_storage_from_context::<MS, MQ, _, _>(ctx, |store| {
+            Ok(store.get(existing_key).0.expect("error getting value"))
         })
         .unwrap();
         assert_eq!(value, None);
@@ -483,8 +506,8 @@ mod test {
         // Note: right now we cannot differnetiate between an existent and a non-existent key
         do_remove::<MS, MQ>(ctx, key_ptr).unwrap();
 
-        let (value, _used_gas) = with_storage_from_context::<MS, MQ, _, _>(ctx, |store| {
-            Ok(store.get(non_existent_key).expect("error getting value"))
+        let value = with_storage_from_context::<MS, MQ, _, _>(ctx, |store| {
+            Ok(store.get(non_existent_key).0.expect("error getting value"))
         })
         .unwrap();
         assert_eq!(value, None);
@@ -542,12 +565,12 @@ mod test {
         leave_default_data(ctx);
 
         let api = MockApi::new(8);
-        do_canonicalize_address(api, ctx, source_ptr, dest_ptr).unwrap();
+        do_canonicalize_address::<MA, MS, MQ>(api, ctx, source_ptr, dest_ptr).unwrap();
         assert_eq!(force_read(ctx, dest_ptr), b"foo\0\0\0\0\0");
     }
 
     #[test]
-    fn do_canonicalize_address_fails_for_invalid_input() {
+    fn do_canonicalize_address_reports_invalid_input_back_to_contract() {
         let mut instance = make_instance();
 
         let source_ptr1 = write_data(&mut instance, b"fo\x80o"); // invalid UTF-8 (fo�o)
@@ -559,31 +582,42 @@ mod test {
         leave_default_data(ctx);
         let api = MockApi::new(8);
 
-        let result = do_canonicalize_address(api, ctx, source_ptr1, dest_ptr);
+        let res = do_canonicalize_address::<MA, MS, MQ>(api, ctx, source_ptr1, dest_ptr).unwrap();
+        assert_ne!(res, 0);
+        let err = String::from_utf8(force_read(ctx, res)).unwrap();
+        assert_eq!(err, "Input is not valid UTF-8");
+
+        let res = do_canonicalize_address::<MA, MS, MQ>(api, ctx, source_ptr2, dest_ptr).unwrap();
+        assert_ne!(res, 0);
+        let err = String::from_utf8(force_read(ctx, res)).unwrap();
+        assert_eq!(err, "Input is empty");
+
+        let res = do_canonicalize_address::<MA, MS, MQ>(api, ctx, source_ptr3, dest_ptr).unwrap();
+        assert_ne!(res, 0);
+        let err = String::from_utf8(force_read(ctx, res)).unwrap();
+        assert_eq!(err, "Invalid input: human address too long");
+    }
+
+    #[test]
+    fn do_canonicalize_address_fails_for_broken_backend() {
+        let mut instance = make_instance();
+
+        let source_ptr = write_data(&mut instance, b"foo");
+        let dest_ptr = create_empty(&mut instance, 7);
+
+        let ctx = instance.context_mut();
+        leave_default_data(ctx);
+
+        let api = MockApi::new_failing(8, "Temporarily unavailable");
+        let result = do_canonicalize_address::<MA, MS, MQ>(api, ctx, source_ptr, dest_ptr);
         match result.unwrap_err() {
-            VmError::CommunicationErr {
-                source: CommunicationError::InvalidUtf8 { .. },
-            } => {}
+            VmError::FfiErr {
+                source: FfiError::Unknown { msg, .. },
+            } => {
+                assert_eq!(msg.unwrap(), "Temporarily unavailable");
+            }
             err => panic!("Incorrect error returned: {:?}", err),
         }
-
-        // TODO: would be nice if do_canonicalize_address could differentiate between different errors
-        // from Api.canonical_address and return INVALID_INPUT for those cases as well.
-        let result = do_canonicalize_address(api, ctx, source_ptr2, dest_ptr);
-        match result.unwrap_err() {
-            VmError::FfiErr {
-                source: FfiError::Other { .. },
-            } => {}
-            err => panic!("Incorrect error returned: {:?}", err),
-        };
-
-        let result = do_canonicalize_address(api, ctx, source_ptr3, dest_ptr);
-        match result.unwrap_err() {
-            VmError::FfiErr {
-                source: FfiError::Other { .. },
-            } => {}
-            err => panic!("Incorrect error returned: {:?}", err),
-        };
     }
 
     #[test]
@@ -597,7 +631,7 @@ mod test {
         leave_default_data(ctx);
 
         let api = MockApi::new(8);
-        let result = do_canonicalize_address(api, ctx, source_ptr, dest_ptr);
+        let result = do_canonicalize_address::<MA, MS, MQ>(api, ctx, source_ptr, dest_ptr);
         match result.unwrap_err() {
             VmError::CommunicationErr {
                 source:
@@ -623,7 +657,7 @@ mod test {
         leave_default_data(ctx);
 
         let api = MockApi::new(8);
-        let result = do_canonicalize_address(api, ctx, source_ptr, dest_ptr);
+        let result = do_canonicalize_address::<MA, MS, MQ>(api, ctx, source_ptr, dest_ptr);
         match result.unwrap_err() {
             VmError::CommunicationErr {
                 source: CommunicationError::RegionTooSmall { size, required, .. },
@@ -646,26 +680,44 @@ mod test {
         leave_default_data(ctx);
 
         let api = MockApi::new(8);
-        do_humanize_address(api, ctx, source_ptr, dest_ptr).unwrap();
+        let error_ptr = do_humanize_address::<MA, MS, MQ>(api, ctx, source_ptr, dest_ptr).unwrap();
+        assert_eq!(error_ptr, 0);
         assert_eq!(force_read(ctx, dest_ptr), b"foo");
     }
 
     #[test]
-    fn do_humanize_address_fails_for_invalid_canonical_length() {
+    fn do_humanize_address_reports_invalid_input_back_to_contract() {
         let mut instance = make_instance();
 
-        let source_ptr = write_data(&mut instance, b"foo\0\0");
+        let source_ptr = write_data(&mut instance, b"foo"); // too short
         let dest_ptr = create_empty(&mut instance, 50);
 
         let ctx = instance.context_mut();
         leave_default_data(ctx);
 
         let api = MockApi::new(8);
-        let result = do_humanize_address(api, ctx, source_ptr, dest_ptr);
+        let res = do_humanize_address::<MA, MS, MQ>(api, ctx, source_ptr, dest_ptr).unwrap();
+        assert_ne!(res, 0);
+        let err = String::from_utf8(force_read(ctx, res)).unwrap();
+        assert_eq!(err, "Invalid input: canonical address length not correct");
+    }
+
+    #[test]
+    fn do_humanize_address_fails_for_broken_backend() {
+        let mut instance = make_instance();
+
+        let source_ptr = write_data(&mut instance, b"foo\0\0\0\0\0");
+        let dest_ptr = create_empty(&mut instance, 50);
+
+        let ctx = instance.context_mut();
+        leave_default_data(ctx);
+
+        let api = MockApi::new_failing(8, "Temporarily unavailable");
+        let result = do_humanize_address::<MA, MS, MQ>(api, ctx, source_ptr, dest_ptr);
         match result.unwrap_err() {
             VmError::FfiErr {
-                source: FfiError::Other { .. },
-            } => {}
+                source: FfiError::Unknown { msg, .. },
+            } => assert_eq!(msg.unwrap(), "Temporarily unavailable"),
             err => panic!("Incorrect error returned: {:?}", err),
         };
     }
@@ -681,7 +733,7 @@ mod test {
         leave_default_data(ctx);
 
         let api = MockApi::new(8);
-        let result = do_humanize_address(api, ctx, source_ptr, dest_ptr);
+        let result = do_humanize_address::<MA, MS, MQ>(api, ctx, source_ptr, dest_ptr);
         match result.unwrap_err() {
             VmError::CommunicationErr {
                 source:
@@ -707,7 +759,7 @@ mod test {
         leave_default_data(ctx);
 
         let api = MockApi::new(8);
-        let result = do_humanize_address(api, ctx, source_ptr, dest_ptr);
+        let result = do_humanize_address::<MA, MS, MQ>(api, ctx, source_ptr, dest_ptr);
         match result.unwrap_err() {
             VmError::CommunicationErr {
                 source: CommunicationError::RegionTooSmall { size, required, .. },
@@ -723,7 +775,7 @@ mod test {
     fn do_query_chain_works() {
         let mut instance = make_instance();
 
-        let request: QueryRequest<Never> = QueryRequest::Bank(BankQuery::AllBalances {
+        let request: QueryRequest<Empty> = QueryRequest::Bank(BankQuery::AllBalances {
             address: HumanAddr::from(INIT_ADDR),
         });
         let request_data = cosmwasm_std::to_vec(&request).unwrap();
@@ -771,7 +823,7 @@ mod test {
     fn do_query_chain_fails_for_missing_contract() {
         let mut instance = make_instance();
 
-        let request: QueryRequest<Never> = QueryRequest::Wasm(WasmQuery::Smart {
+        let request: QueryRequest<Empty> = QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: HumanAddr::from("non-existent"),
             msg: Binary::from(b"{}" as &[u8]),
         });
@@ -808,15 +860,15 @@ mod test {
 
         let item =
             with_iterator_from_context::<MS, MQ, _, _>(ctx, id, |iter| Ok(iter.next())).unwrap();
-        assert_eq!(item.unwrap().0.unwrap(), (KEY1.to_vec(), VALUE1.to_vec()));
+        assert_eq!(item.0.unwrap().unwrap(), (KEY1.to_vec(), VALUE1.to_vec()));
 
         let item =
             with_iterator_from_context::<MS, MQ, _, _>(ctx, id, |iter| Ok(iter.next())).unwrap();
-        assert_eq!(item.unwrap().0.unwrap(), (KEY2.to_vec(), VALUE2.to_vec()));
+        assert_eq!(item.0.unwrap().unwrap(), (KEY2.to_vec(), VALUE2.to_vec()));
 
         let item =
             with_iterator_from_context::<MS, MQ, _, _>(ctx, id, |iter| Ok(iter.next())).unwrap();
-        assert!(item.unwrap().0.is_none());
+        assert!(item.0.unwrap().is_none());
     }
 
     #[test]
@@ -832,15 +884,15 @@ mod test {
 
         let item =
             with_iterator_from_context::<MS, MQ, _, _>(ctx, id, |iter| Ok(iter.next())).unwrap();
-        assert_eq!(item.unwrap().0.unwrap(), (KEY2.to_vec(), VALUE2.to_vec()));
+        assert_eq!(item.0.unwrap().unwrap(), (KEY2.to_vec(), VALUE2.to_vec()));
 
         let item =
             with_iterator_from_context::<MS, MQ, _, _>(ctx, id, |iter| Ok(iter.next())).unwrap();
-        assert_eq!(item.unwrap().0.unwrap(), (KEY1.to_vec(), VALUE1.to_vec()));
+        assert_eq!(item.0.unwrap().unwrap(), (KEY1.to_vec(), VALUE1.to_vec()));
 
         let item =
             with_iterator_from_context::<MS, MQ, _, _>(ctx, id, |iter| Ok(iter.next())).unwrap();
-        assert!(item.unwrap().0.is_none());
+        assert!(item.0.unwrap().is_none());
     }
 
     #[test]
@@ -858,11 +910,11 @@ mod test {
 
         let item =
             with_iterator_from_context::<MS, MQ, _, _>(ctx, id, |iter| Ok(iter.next())).unwrap();
-        assert_eq!(item.unwrap().0.unwrap(), (KEY1.to_vec(), VALUE1.to_vec()));
+        assert_eq!(item.0.unwrap().unwrap(), (KEY1.to_vec(), VALUE1.to_vec()));
 
         let item =
             with_iterator_from_context::<MS, MQ, _, _>(ctx, id, |iter| Ok(iter.next())).unwrap();
-        assert!(item.unwrap().0.is_none());
+        assert!(item.0.unwrap().is_none());
     }
 
     #[test]
@@ -881,27 +933,27 @@ mod test {
         // first item, first iterator
         let item =
             with_iterator_from_context::<MS, MQ, _, _>(ctx, id1, |iter| Ok(iter.next())).unwrap();
-        assert_eq!(item.unwrap().0.unwrap(), (KEY1.to_vec(), VALUE1.to_vec()));
+        assert_eq!(item.0.unwrap().unwrap(), (KEY1.to_vec(), VALUE1.to_vec()));
 
         // second item, first iterator
         let item =
             with_iterator_from_context::<MS, MQ, _, _>(ctx, id1, |iter| Ok(iter.next())).unwrap();
-        assert_eq!(item.unwrap().0.unwrap(), (KEY2.to_vec(), VALUE2.to_vec()));
+        assert_eq!(item.0.unwrap().unwrap(), (KEY2.to_vec(), VALUE2.to_vec()));
 
         // first item, second iterator
         let item =
             with_iterator_from_context::<MS, MQ, _, _>(ctx, id2, |iter| Ok(iter.next())).unwrap();
-        assert_eq!(item.unwrap().0.unwrap(), (KEY2.to_vec(), VALUE2.to_vec()));
+        assert_eq!(item.0.unwrap().unwrap(), (KEY2.to_vec(), VALUE2.to_vec()));
 
         // end, first iterator
         let item =
             with_iterator_from_context::<MS, MQ, _, _>(ctx, id1, |iter| Ok(iter.next())).unwrap();
-        assert!(item.unwrap().0.is_none());
+        assert!(item.0.unwrap().is_none());
 
         // second item, second iterator
         let item =
             with_iterator_from_context::<MS, MQ, _, _>(ctx, id2, |iter| Ok(iter.next())).unwrap();
-        assert_eq!(item.unwrap().0.unwrap(), (KEY1.to_vec(), VALUE1.to_vec()));
+        assert_eq!(item.0.unwrap().unwrap(), (KEY1.to_vec(), VALUE1.to_vec()));
     }
 
     #[test]

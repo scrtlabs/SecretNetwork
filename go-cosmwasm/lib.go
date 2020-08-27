@@ -3,6 +3,7 @@ package cosmwasm
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 )
@@ -21,6 +22,9 @@ type GoAPI = api.GoAPI
 
 // Querier lets us make read-only queries on other modules
 type Querier = types.Querier
+
+// GasMeter is a read-only version of the sdk gas meter
+type GasMeter = api.GasMeter
 
 // Wasmer is the main entry point to this library.
 // You should create an instance with it's own subdirectory to manage state inside,
@@ -87,25 +91,27 @@ func (w *Wasmer) Instantiate(
 	store KVStore,
 	goapi GoAPI,
 	querier Querier,
-	gasMeter api.GasMeter,
+	gasMeter GasMeter,
 	gasLimit uint64,
 	sigInfo types.VerificationInfo,
-) (*types.Result, []byte, uint64, error) {
+) (*types.InitResponse, []byte, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, nil, 0, err
 	}
+
 	sigInfoBin, err := json.Marshal(sigInfo)
 	if err != nil {
 		return nil, nil, 0, err
 	}
-	data, gasUsed, err := api.Instantiate(w.cache, code, paramBin, initMsg, &gasMeter, &store, &goapi, &querier, gasLimit, sigInfoBin)
+
+	data, gasUsed, err := api.Instantiate(w.cache, code, paramBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin)
 	if err != nil {
 		return nil, nil, gasUsed, err
 	}
 
 	key := data[0:64]
-	var resp types.CosmosResponse
+	var resp types.InitResult
 	err = json.Unmarshal(data[64:], &resp)
 	if err != nil {
 		return nil, nil, gasUsed, err
@@ -130,10 +136,10 @@ func (w *Wasmer) Execute(
 	store KVStore,
 	goapi GoAPI,
 	querier Querier,
-	gasMeter api.GasMeter,
+	gasMeter GasMeter,
 	gasLimit uint64,
 	sigInfo types.VerificationInfo,
-) (*types.Result, uint64, error) {
+) (*types.HandleResponse, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -143,13 +149,12 @@ func (w *Wasmer) Execute(
 		return nil, 0, err
 	}
 
-	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, &gasMeter, &store, &goapi, &querier, gasLimit, sigInfoBin)
-
+	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin)
 	if err != nil {
 		return nil, gasUsed, err
 	}
 
-	var resp types.CosmosResponse
+	var resp types.HandleResult
 	err = json.Unmarshal(data, &resp)
 
 	if err != nil {
@@ -172,10 +177,10 @@ func (w *Wasmer) Query(
 	store KVStore,
 	goapi GoAPI,
 	querier Querier,
-	gasMeter api.GasMeter,
+	gasMeter GasMeter,
 	gasLimit uint64,
 ) ([]byte, uint64, error) {
-	data, gasUsed, err := api.Query(w.cache, code, queryMsg, &gasMeter, &store, &goapi, &querier, gasLimit)
+	data, gasUsed, err := api.Query(w.cache, code, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -197,17 +202,26 @@ func (w *Wasmer) Query(
 // the given data.
 //
 // MigrateMsg has some data on how to perform the migration.
-func (w *Wasmer) Migrate(code CodeID, env types.Env, migrateMsg []byte, store KVStore, goapi GoAPI, querier Querier, gasMeter api.GasMeter, gasLimit uint64) (*types.Result, uint64, error) {
+func (w *Wasmer) Migrate(
+	code CodeID,
+	env types.Env,
+	migrateMsg []byte,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+) (*types.MigrateResponse, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Migrate(w.cache, code, paramBin, migrateMsg, &gasMeter, &store, &goapi, &querier, gasLimit)
+	data, gasUsed, err := api.Migrate(w.cache, code, paramBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit)
 	if err != nil {
 		return nil, gasUsed, err
 	}
 
-	var resp types.CosmosResponse
+	var resp types.MigrateResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
 		return nil, gasUsed, err

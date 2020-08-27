@@ -25,7 +25,7 @@ const flagAmount = "amount"
 func S20GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 	s20QueryCmd := &cobra.Command{
 		Use:                        "secret20",
-		Short:                      "Querying commands for the secret20 contracts",
+		Short:                      "*EXPERIMENTAL* Querying commands for the secret20 contracts",
 		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
@@ -43,7 +43,7 @@ func S20GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 func S20GetTxCmd(cdc *codec.Codec) *cobra.Command {
 	s20TxCmd := &cobra.Command{
 		Use:                        "secret20",
-		Short:                      "Secret20 transactions subcommands",
+		Short:                      "*EXPERIMENTAL* Secret20 transactions subcommands",
 		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
@@ -63,7 +63,7 @@ func S20GetTxCmd(cdc *codec.Codec) *cobra.Command {
 func S20TransferHistoryCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "history [contract address] [account] [viewing_key]",
-		Short: "View your transaction history",
+		Short: "*EXPERIMENTAL* View your transaction history",
 		Long:  `Print out all transactions you have been a part of - either as a sender or recipient`,
 		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -87,7 +87,7 @@ func S20TransferHistoryCmd(cdc *codec.Codec) *cobra.Command {
 
 			queryData := transferHistoryMsg(addr, key)
 
-			err = cli.QueryWithData(cmd, contractAddr, cdc, queryData)
+			err = cli.QueryWithData(contractAddr, cdc, queryData)
 			if err != nil {
 				return err
 			}
@@ -102,7 +102,7 @@ func S20TransferHistoryCmd(cdc *codec.Codec) *cobra.Command {
 func S20BalanceCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "balance [contract address] [account] [viewing_key]",
-		Short: "See your current balance for a token",
+		Short: "*EXPERIMENTAL* See your current balance for a token",
 		Long: `See your current balance for a token. Viewing key must be set for this command to work. If you did not set your viewing 
 key yet, use the "create-viewing-key" command. Otherwise, you can still see your current balance using a raw transaction`,
 		Args: cobra.ExactArgs(3),
@@ -127,7 +127,7 @@ key yet, use the "create-viewing-key" command. Otherwise, you can still see your
 
 			queryData := balanceMsg(addr, key)
 
-			err = cli.QueryWithData(cmd, contractAddr, cdc, queryData)
+			err = cli.QueryWithData(contractAddr, cdc, queryData)
 			if err != nil {
 				return err
 			}
@@ -162,7 +162,7 @@ func s20SendCmd(cdc *codec.Codec) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "send [contract address or label] [to account] [amount]",
-		Short: "send tokens to another address",
+		Short: "*EXPERIMENTAL* send tokens to another address",
 		Long:  `send tokens to another address`,
 		Args:  cobra.MinimumNArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -204,7 +204,7 @@ func s20CreatingViewingKey(cdc *codec.Codec) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create-viewing-key [contract address or label]",
-		Short: "Create a new viewing key. To view the resulting key, use 'secretcli q compute tx <TX_HASH>'",
+		Short: "*EXPERIMENTAL* Create a new viewing key. To view the resulting key, use 'secretcli q compute tx <TX_HASH>'",
 		Long: `This allows a user to generate a key that enables off-chain queries. 
 This way you can perform balance and transaction history queries without waiting for a transaction on-chain. 
 This transaction will be expensive, so you must have about 3,000,000 gas in your account to perform this step.
@@ -246,9 +246,9 @@ This transaction will be expensive, so you must have about 3,000,000 gas in your
 func s20SetViewingKey(cdc *codec.Codec) *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "set-viewing-key [contract address or label]",
-		Short: "sets the viewing key for your account",
-		Long: `This command is useful if you want to manage multiple secret tokens with the same viewing key. WARNING:
+		Use:   "set-viewing-key [contract address or label] [viewing-key]",
+		Short: "*EXPERIMENTAL* sets the viewing key for your account",
+		Long: `This command is useful if you want to manage multiple secret tokens with the same viewing key. *WARNING*:
 This should only be used to duplicate keys created with the create-viewing-key command, or if you really really know what
 you're doing`,
 		Args: cobra.MinimumNArgs(1),

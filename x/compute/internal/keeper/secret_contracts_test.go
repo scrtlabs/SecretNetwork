@@ -5,12 +5,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
-	"github.com/tendermint/tendermint/crypto"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"testing"
+
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/tendermint/tendermint/crypto"
 
 	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
@@ -108,14 +109,11 @@ func getDecryptedWasmEvents(t *testing.T, ctx sdk.Context, nonce []byte) []Contr
 // getDecryptedData decrytes the output of the first function to be called
 // Only returns the data, logs and messages from the first function call
 func getDecryptedData(t *testing.T, data []byte, nonce []byte) []byte {
-	// data
 	if len(data) == 0 {
 		return data
 	}
 
-	dataCiphertextBz, err := base64.StdEncoding.DecodeString(string(data))
-	require.NoError(t, err)
-	dataPlaintextBase64, err := wasmCtx.Decrypt(dataCiphertextBz, nonce)
+	dataPlaintextBase64, err := wasmCtx.Decrypt(data, nonce)
 	require.NoError(t, err)
 
 	dataPlaintext, err := base64.StdEncoding.DecodeString(string(dataPlaintextBase64))
@@ -171,7 +169,7 @@ func (wasmGasMeter *WasmCounterGasMeter) Limit() sdk.Gas {
 	return wasmGasMeter.gasMeter.Limit()
 }
 func (wasmGasMeter *WasmCounterGasMeter) ConsumeGas(amount sdk.Gas, descriptor string) {
-	if descriptor == "wasm contract" && amount > 0 {
+	if (descriptor == "wasm contract" || descriptor == "contract sub-query") && amount > 0 {
 		wasmGasMeter.wasmCounter++
 	}
 	wasmGasMeter.gasMeter.ConsumeGas(amount, descriptor)
@@ -215,13 +213,13 @@ func queryHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr 
 		log.NewNopLogger(),
 	).WithGasMeter(gasMeter)
 
-	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz, true)
+	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz, false)
 
 	if wasmCallCount < 0 {
 		// default, just check that at least 1 call happend
-		require.NotZero(t, gasMeter.GetWasmCounter())
+		require.NotZero(t, gasMeter.GetWasmCounter(), err)
 	} else {
-		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter())
+		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), err)
 	}
 
 	if err != nil {
@@ -269,9 +267,9 @@ func execHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddres
 
 	if wasmCallCount < 0 {
 		// default, just check that at least 1 call happend
-		require.NotZero(t, gasMeter.GetWasmCounter())
+		require.NotZero(t, gasMeter.GetWasmCounter(), err)
 	} else {
-		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter())
+		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), err)
 	}
 
 	if err != nil {
@@ -290,10 +288,10 @@ func execHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddres
 }
 
 func initHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, creator sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string, isErrorEncrypted bool, gas uint64) (sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
-	return initHelperImpl(t, keeper, ctx, codeID, creator, creatorPrivKey, initMsg, isErrorEncrypted, gas, -1)
+	return initHelperImpl(t, keeper, ctx, codeID, creator, creatorPrivKey, initMsg, isErrorEncrypted, gas, -1, 0)
 }
 
-func initHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, creator sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string, isErrorEncrypted bool, gas uint64, wasmCallCount int64) (sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
+func initHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, creator sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string, isErrorEncrypted bool, gas uint64, wasmCallCount int64, coin int64) (sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
 	hashStr := hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)
 
 	msg := types.SecretMsg{
@@ -316,15 +314,15 @@ func initHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64,
 		log.NewNopLogger(),
 	).WithGasMeter(gasMeter)
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initMsgBz, codeID, nil)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initMsgBz, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)))
 	// make the label a random base64 string, because why not?
-	contractAddress, err := keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, base64.RawURLEncoding.EncodeToString(nonce), sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	contractAddress, err := keeper.Instantiate(ctx, codeID, creator /* nil,*/, initMsgBz, base64.RawURLEncoding.EncodeToString(nonce), sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), nil)
 
 	if wasmCallCount < 0 {
 		// default, just check that at least 1 call happend
-		require.NotZero(t, gasMeter.GetWasmCounter())
+		require.NotZero(t, gasMeter.GetWasmCounter(), err)
 	} else {
-		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter())
+		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), err)
 	}
 
 	if err != nil {
@@ -565,7 +563,7 @@ func TestQueryInputParamError(t *testing.T) {
 	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"address":"blabla"}}`, true, defaultGasForTests)
 
 	require.NotNil(t, qErr.GenericErr)
-	require.Equal(t, "canonicalize_address returned error", qErr.GenericErr.Msg)
+	require.Equal(t, "canonicalize_address errored: invalid length", qErr.GenericErr.Msg)
 }
 
 func TestUnicodeData(t *testing.T) {
@@ -608,11 +606,6 @@ func TestInitContractError(t *testing.T) {
 
 		require.NotNil(t, err.NotFound)
 		require.Equal(t, "za za 🤯", err.NotFound.Kind)
-	})
-	t.Run("null_pointer", func(t *testing.T) {
-		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"null_pointer"}}`, true, defaultGasForTests)
-
-		require.NotNil(t, err.NullPointer)
 	})
 	t.Run("parse_err", func(t *testing.T) {
 		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"parse_err"}}`, true, defaultGasForTests)
@@ -673,11 +666,6 @@ func TestExecContractError(t *testing.T) {
 		require.NotNil(t, err.NotFound)
 		require.Equal(t, "za za 🤯", err.NotFound.Kind)
 	})
-	t.Run("null_pointer", func(t *testing.T) {
-		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"null_pointer"}}`, true, defaultGasForTests, 0)
-
-		require.NotNil(t, err.NullPointer)
-	})
 	t.Run("parse_err", func(t *testing.T) {
 		_, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"parse_err"}}`, true, defaultGasForTests, 0)
 
@@ -736,11 +724,6 @@ func TestQueryContractError(t *testing.T) {
 
 		require.NotNil(t, err.NotFound)
 		require.Equal(t, "za za 🤯", err.NotFound.Kind)
-	})
-	t.Run("null_pointer", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"null_pointer"}}`, true, defaultGasForTests)
-
-		require.NotNil(t, err.NullPointer)
 	})
 	t.Run("parse_err", func(t *testing.T) {
 		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"parse_err"}}`, true, defaultGasForTests)
@@ -829,7 +812,7 @@ func TestInitNotEncryptedInputError(t *testing.T) {
 	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privKey, initMsg, codeID, nil)
 
 	// init
-	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, initMsg, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	_, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, initMsg, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	require.Error(t, err)
 
 	require.Contains(t, err.Error(), "failed to decrypt data")
@@ -1556,7 +1539,7 @@ func TestGasIsChargedForInitCallbackToInit(t *testing.T) {
 	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d,"code_hash":"%s"}}`, codeID, codeHash), true, defaultGasForTests, 2)
+	_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d,"code_hash":"%s"}}`, codeID, codeHash), true, defaultGasForTests, 2, 0)
 	require.Empty(t, err)
 }
 
@@ -1567,7 +1550,7 @@ func TestGasIsChargedForInitCallbackToExec(t *testing.T) {
 	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback":{"contract_addr":"%s","code_hash":"%s"}}`, addr, codeHash), true, defaultGasForTests, 2)
+	_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback":{"contract_addr":"%s","code_hash":"%s"}}`, addr, codeHash), true, defaultGasForTests, 2, 0)
 	require.Empty(t, err)
 }
 
@@ -1596,6 +1579,8 @@ func TestGasIsChargedForExecCallbackToExec(t *testing.T) {
 }
 
 func TestGasIsChargedForExecExternalQuery(t *testing.T) {
+	t.SkipNow() // as of v0.10 CowmWasm are overriding the default gas meter
+
 	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
@@ -1607,17 +1592,21 @@ func TestGasIsChargedForExecExternalQuery(t *testing.T) {
 }
 
 func TestGasIsChargedForInitExternalQuery(t *testing.T) {
+	t.SkipNow() // as of v0.10 CowmWasm are overriding the default gas meter
+
 	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
 	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_depth_counter":{"to":"%s","depth":2,"code_hash":"%s"}}`, addr.String(), codeHash), true, defaultGasForTests, 3)
+	_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_depth_counter":{"to":"%s","depth":2,"code_hash":"%s"}}`, addr.String(), codeHash), true, defaultGasForTests, 3, 0)
 	require.Empty(t, err)
 }
 
 func TestGasIsChargedForQueryExternalQuery(t *testing.T) {
+	t.SkipNow() // as of v0.10 CowmWasm are overriding the default gas meter
+
 	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
@@ -1671,7 +1660,7 @@ func TestCodeHashInvalid(t *testing.T) {
 	enc, _ := wasmCtx.Encrypt(initMsg)
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privWalletA, enc, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	_, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to validate transaction")
 }
@@ -1684,7 +1673,7 @@ func TestCodeHashEmpty(t *testing.T) {
 	enc, _ := wasmCtx.Encrypt(initMsg)
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privWalletA, enc, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	_, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to validate transaction")
 }
@@ -1697,7 +1686,7 @@ func TestCodeHashNotHex(t *testing.T) {
 	enc, _ := wasmCtx.Encrypt(initMsg)
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privWalletA, enc, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	_, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to validate transaction")
 }
@@ -1711,7 +1700,7 @@ func TestCodeHashTooSmall(t *testing.T) {
 	enc, _ := wasmCtx.Encrypt(initMsg)
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privWalletA, enc, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	_, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to validate transaction")
 }
@@ -1725,7 +1714,7 @@ func TestCodeHashTooBig(t *testing.T) {
 	enc, _ := wasmCtx.Encrypt(initMsg)
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privWalletA, enc, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	_, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	require.Error(t, err)
 
 	initErr := extractInnerError(t, err, enc[0:32], true)
@@ -1744,7 +1733,7 @@ func TestCodeHashWrong(t *testing.T) {
 	enc, _ := wasmCtx.Encrypt(initMsg)
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privWalletA, enc, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	_, err := keeper.Instantiate(ctx, codeID, walletA, nil, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	_, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to validate transaction")
 }
@@ -1754,7 +1743,7 @@ func TestCodeHashInitCallInit(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	t.Run("GoodCodeHash", func(t *testing.T) {
-		addr, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, defaultGasForTests, 2)
+		addr, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, defaultGasForTests, 2, 0)
 
 		require.Empty(t, err)
 		require.Equal(t,
@@ -1772,7 +1761,7 @@ func TestCodeHashInitCallInit(t *testing.T) {
 		)
 	})
 	t.Run("EmptyCodeHash", func(t *testing.T) {
-		_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"","msg":"%s","label":"2"}}`, codeID, `{\"nop\":{}}`), false, defaultGasForTests, 2)
+		_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"","msg":"%s","label":"2"}}`, codeID, `{\"nop\":{}}`), false, defaultGasForTests, 2, 0)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -1781,7 +1770,7 @@ func TestCodeHashInitCallInit(t *testing.T) {
 		)
 	})
 	t.Run("TooBigCodeHash", func(t *testing.T) {
-		_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%sa","msg":"%s","label":"3"}}`, codeID, codeHash, `{\"nop\":{}}`), true, defaultGasForTests, 2)
+		_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%sa","msg":"%s","label":"3"}}`, codeID, codeHash, `{\"nop\":{}}`), true, defaultGasForTests, 2, 0)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -1790,7 +1779,7 @@ func TestCodeHashInitCallInit(t *testing.T) {
 		)
 	})
 	t.Run("TooSmallCodeHash", func(t *testing.T) {
-		_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"4"}}`, codeID, codeHash[0:63], `{\"nop\":{}}`), false, defaultGasForTests, 2)
+		_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"4"}}`, codeID, codeHash[0:63], `{\"nop\":{}}`), false, defaultGasForTests, 2, 0)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -1799,7 +1788,7 @@ func TestCodeHashInitCallInit(t *testing.T) {
 		)
 	})
 	t.Run("WrongCodeHash", func(t *testing.T) {
-		_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s","label":"5"}}`, codeID, `{\"nop\":{}}`), false, defaultGasForTests, 2)
+		_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s","label":"5"}}`, codeID, `{\"nop\":{}}`), false, defaultGasForTests, 2, 0)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -1813,11 +1802,11 @@ func TestCodeHashInitCallExec(t *testing.T) {
 	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
-	addr, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests, 1)
+	addr, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests, 1, 0)
 	require.Empty(t, err)
 
 	t.Run("GoodCodeHash", func(t *testing.T) {
-		addr2, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, defaultGasForTests, 2)
+		addr2, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, defaultGasForTests, 2, 0)
 
 		require.Empty(t, err)
 		require.Equal(t,
@@ -1835,7 +1824,7 @@ func TestCodeHashInitCallExec(t *testing.T) {
 		)
 	})
 	t.Run("EmptyCodeHash", func(t *testing.T) {
-		_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"c\":{\"x\":1,\"y\":1}}`), false, defaultGasForTests, 2)
+		_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"c\":{\"x\":1,\"y\":1}}`), false, defaultGasForTests, 2, 0)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -1844,7 +1833,7 @@ func TestCodeHashInitCallExec(t *testing.T) {
 		)
 	})
 	t.Run("TooBigCodeHash", func(t *testing.T) {
-		_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, defaultGasForTests, 2)
+		_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, defaultGasForTests, 2, 0)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -1853,7 +1842,7 @@ func TestCodeHashInitCallExec(t *testing.T) {
 		)
 	})
 	t.Run("TooSmallCodeHash", func(t *testing.T) {
-		_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"c\":{\"x\":1,\"y\":1}}`), false, defaultGasForTests, 2)
+		_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"c\":{\"x\":1,\"y\":1}}`), false, defaultGasForTests, 2, 0)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -1862,7 +1851,7 @@ func TestCodeHashInitCallExec(t *testing.T) {
 		)
 	})
 	t.Run("WrongCodeHash", func(t *testing.T) {
-		_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"c\":{\"x\":1,\"y\":1}}`), false, defaultGasForTests, 2)
+		_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"c\":{\"x\":1,\"y\":1}}`), false, defaultGasForTests, 2, 0)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -1880,7 +1869,7 @@ func TestCodeHashInitCallQuery(t *testing.T) {
 	require.Empty(t, err)
 
 	t.Run("GoodCodeHash", func(t *testing.T) {
-		addr2, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 2)
+		addr2, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests)
 
 		require.Empty(t, err)
 		require.Equal(t,
@@ -1894,7 +1883,7 @@ func TestCodeHashInitCallQuery(t *testing.T) {
 		)
 	})
 	t.Run("EmptyCodeHash", func(t *testing.T) {
-		_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 2)
+		_, _, err = initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -1903,7 +1892,7 @@ func TestCodeHashInitCallQuery(t *testing.T) {
 		)
 	})
 	t.Run("TooBigCodeHash", func(t *testing.T) {
-		_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 2)
+		_, _, err = initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -1912,7 +1901,7 @@ func TestCodeHashInitCallQuery(t *testing.T) {
 		)
 	})
 	t.Run("TooSmallCodeHash", func(t *testing.T) {
-		_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 2)
+		_, _, err = initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -1921,7 +1910,7 @@ func TestCodeHashInitCallQuery(t *testing.T) {
 		)
 	})
 	t.Run("WrongCodeHash", func(t *testing.T) {
-		_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 2)
+		_, _, err = initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -2018,7 +2007,7 @@ func TestCodeHashExecCallExec(t *testing.T) {
 	require.Empty(t, err)
 
 	t.Run("GoodCodeHash", func(t *testing.T) {
-		_, events, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr, codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, defaultGasForTests, 0, 2)
+		_, events, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr, codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, defaultGasForTests, 0)
 
 		require.Empty(t, err)
 		require.Equal(t,
@@ -2036,7 +2025,7 @@ func TestCodeHashExecCallExec(t *testing.T) {
 		)
 	})
 	t.Run("EmptyCodeHash", func(t *testing.T) {
-		_, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr, `{\"c\":{\"x\":1,\"y\":1}}`), false, defaultGasForTests, 0, 2)
+		_, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr, `{\"c\":{\"x\":1,\"y\":1}}`), false, defaultGasForTests, 0)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -2045,7 +2034,7 @@ func TestCodeHashExecCallExec(t *testing.T) {
 		)
 	})
 	t.Run("TooBigCodeHash", func(t *testing.T) {
-		_, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr, codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, defaultGasForTests, 0, 2)
+		_, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr, codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, defaultGasForTests, 0)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -2054,7 +2043,7 @@ func TestCodeHashExecCallExec(t *testing.T) {
 		)
 	})
 	t.Run("TooSmallCodeHash", func(t *testing.T) {
-		_, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr, codeHash[0:63], `{\"c\":{\"x\":1,\"y\":1}}`), false, defaultGasForTests, 0, 2)
+		_, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr, codeHash[0:63], `{\"c\":{\"x\":1,\"y\":1}}`), false, defaultGasForTests, 0)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -2063,7 +2052,7 @@ func TestCodeHashExecCallExec(t *testing.T) {
 		)
 	})
 	t.Run("WrongCodeHash", func(t *testing.T) {
-		_, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr, `{\"c\":{\"x\":1,\"y\":1}}`), false, defaultGasForTests, 0, 2)
+		_, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr, `{\"c\":{\"x\":1,\"y\":1}}`), false, defaultGasForTests, 0)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -2081,7 +2070,7 @@ func TestCodeHashExecCallQuery(t *testing.T) {
 	require.Empty(t, err)
 
 	t.Run("GoodCodeHash", func(t *testing.T) {
-		_, events, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 0, 2)
+		_, events, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 0)
 
 		require.Empty(t, err)
 		require.Equal(t,
@@ -2095,7 +2084,7 @@ func TestCodeHashExecCallQuery(t *testing.T) {
 		)
 	})
 	t.Run("EmptyCodeHash", func(t *testing.T) {
-		_, _, err = execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 0, 2)
+		_, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 0)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -2104,7 +2093,7 @@ func TestCodeHashExecCallQuery(t *testing.T) {
 		)
 	})
 	t.Run("TooBigCodeHash", func(t *testing.T) {
-		_, _, err = execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 0, 2)
+		_, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 0)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -2113,7 +2102,7 @@ func TestCodeHashExecCallQuery(t *testing.T) {
 		)
 	})
 	t.Run("TooSmallCodeHash", func(t *testing.T) {
-		_, _, err = execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 0, 2)
+		_, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 0)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -2122,7 +2111,7 @@ func TestCodeHashExecCallQuery(t *testing.T) {
 		)
 	})
 	t.Run("WrongCodeHash", func(t *testing.T) {
-		_, _, err = execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 0, 2)
+		_, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 0)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -2140,13 +2129,13 @@ func TestCodeHashQueryCallQuery(t *testing.T) {
 	require.Empty(t, err)
 
 	t.Run("GoodCodeHash", func(t *testing.T) {
-		output, err := queryHelperImpl(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 2)
+		output, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests)
 
 		require.Empty(t, err)
 		require.Equal(t, "2", output)
 	})
 	t.Run("EmptyCodeHash", func(t *testing.T) {
-		_, err := queryHelperImpl(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 2)
+		_, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -2155,7 +2144,7 @@ func TestCodeHashQueryCallQuery(t *testing.T) {
 		)
 	})
 	t.Run("TooBigCodeHash", func(t *testing.T) {
-		_, err := queryHelperImpl(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 2)
+		_, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -2164,7 +2153,7 @@ func TestCodeHashQueryCallQuery(t *testing.T) {
 		)
 	})
 	t.Run("TooSmallCodeHash", func(t *testing.T) {
-		_, err := queryHelperImpl(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 2)
+		_, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,
@@ -2173,7 +2162,7 @@ func TestCodeHashQueryCallQuery(t *testing.T) {
 		)
 	})
 	t.Run("WrongCodeHash", func(t *testing.T) {
-		_, err := queryHelperImpl(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 2)
+		_, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests)
 
 		require.NotEmpty(t, err)
 		require.Contains(t,

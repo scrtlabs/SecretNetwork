@@ -6,8 +6,8 @@ use std::ops::{Bound, RangeBounds};
 use cosmwasm_std::{Order, KV};
 
 #[cfg(feature = "iterator")]
-use crate::traits::{NextItem, StorageIterator};
-use crate::{FfiResult, ReadonlyStorage, Storage};
+use crate::traits::StorageIterator;
+use crate::{FfiResult, GasInfo, Storage};
 
 #[cfg(feature = "iterator")]
 const GAS_COST_LAST_ITERATION: u64 = 37;
@@ -33,12 +33,14 @@ impl MockIterator<'_> {
 
 #[cfg(feature = "iterator")]
 impl StorageIterator for MockIterator<'_> {
-    fn next(&mut self) -> FfiResult<NextItem> {
-        let item = match self.source.next() {
-            Some((kv, gas_used)) => (Some(kv), gas_used),
-            None => (None, GAS_COST_LAST_ITERATION),
-        };
-        Ok(item)
+    fn next(&mut self) -> FfiResult<Option<KV>> {
+        match self.source.next() {
+            Some((kv, gas_used)) => (Ok(Some(kv)), GasInfo::with_externally_used(gas_used)),
+            None => (
+                Ok(None),
+                GasInfo::with_externally_used(GAS_COST_LAST_ITERATION),
+            ),
+        }
     }
 }
 
@@ -53,10 +55,10 @@ impl MockStorage {
     }
 }
 
-impl ReadonlyStorage for MockStorage {
-    fn get(&self, key: &[u8]) -> FfiResult<(Option<Vec<u8>>, u64)> {
-        let gas_cost = key.len() as u64;
-        Ok((self.data.get(key).cloned(), gas_cost))
+impl Storage for MockStorage {
+    fn get(&self, key: &[u8]) -> FfiResult<Option<Vec<u8>>> {
+        let gas_info = GasInfo::with_externally_used(key.len() as u64);
+        (Ok(self.data.get(key).cloned()), gas_info)
     }
 
     #[cfg(feature = "iterator")]
@@ -67,14 +69,15 @@ impl ReadonlyStorage for MockStorage {
         start: Option<&[u8]>,
         end: Option<&[u8]>,
         order: Order,
-    ) -> FfiResult<(Box<dyn StorageIterator + 'a>, u64)> {
+    ) -> FfiResult<Box<dyn StorageIterator + 'a>> {
+        let gas_info = GasInfo::with_externally_used(GAS_COST_RANGE);
         let bounds = range_bounds(start, end);
 
         // BTreeMap.range panics if range is start > end.
         // However, this cases represent just empty range and we treat it as such.
         match (bounds.start_bound(), bounds.end_bound()) {
             (Bound::Included(start), Bound::Excluded(end)) if start > end => {
-                return Ok((Box::new(MockIterator::empty()), GAS_COST_RANGE));
+                return (Ok(Box::new(MockIterator::empty())), gas_info);
             }
             _ => {}
         }
@@ -90,8 +93,19 @@ impl ReadonlyStorage for MockStorage {
                 (item, gas_cost)
             })),
         };
+        (Ok(Box::new(MockIterator { source: iter })), gas_info)
+    }
 
-        Ok((Box::new(MockIterator { source: iter }), GAS_COST_RANGE))
+    fn set(&mut self, key: &[u8], value: &[u8]) -> FfiResult<()> {
+        self.data.insert(key.to_vec(), value.to_vec());
+        let gas_info = GasInfo::with_externally_used((key.len() + value.len()) as u64);
+        (Ok(()), gas_info)
+    }
+
+    fn remove(&mut self, key: &[u8]) -> FfiResult<()> {
+        self.data.remove(key);
+        let gas_info = GasInfo::with_externally_used(key.len() as u64);
+        (Ok(()), gas_info)
     }
 }
 
@@ -114,36 +128,43 @@ fn clone_item<T: Clone>(item_ref: BTreeMapPairRef<T>) -> KV<T> {
     (key.clone(), value.clone())
 }
 
-impl Storage for MockStorage {
-    fn set(&mut self, key: &[u8], value: &[u8]) -> FfiResult<u64> {
-        self.data.insert(key.to_vec(), value.to_vec());
-        let gas_cost = (key.len() + value.len()) as u64;
-        Ok(gas_cost)
-    }
-
-    fn remove(&mut self, key: &[u8]) -> FfiResult<u64> {
-        self.data.remove(key);
-        let gas_cost = key.len() as u64;
-        Ok(gas_cost)
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
 
+    #[test]
+    fn get_and_set() {
+        let mut store = MockStorage::new();
+        assert_eq!(None, store.get(b"foo").0.unwrap());
+        store.set(b"foo", b"bar").0.unwrap();
+        assert_eq!(Some(b"bar".to_vec()), store.get(b"foo").0.unwrap());
+        assert_eq!(None, store.get(b"food").0.unwrap());
+    }
+
+    #[test]
+    fn delete() {
+        let mut store = MockStorage::new();
+        store.set(b"foo", b"bar").0.unwrap();
+        store.set(b"food", b"bank").0.unwrap();
+        store.remove(b"foo").0.unwrap();
+
+        assert_eq!(None, store.get(b"foo").0.unwrap());
+        assert_eq!(Some(b"bank".to_vec()), store.get(b"food").0.unwrap());
+    }
+
+    #[test]
     #[cfg(feature = "iterator")]
-    // iterator_test_suite takes a storage, adds data and runs iterator tests
-    // the storage must previously have exactly one key: "foo" = "bar"
-    // (this allows us to test StorageTransaction and other wrapped storage better)
-    fn iterator_test_suite<S: Storage>(store: &mut S) {
+    fn iterator() {
+        let mut store = MockStorage::new();
+        store.set(b"foo", b"bar").0.expect("error setting value");
+
         // ensure we had previously set "foo" = "bar"
-        assert_eq!(store.get(b"foo").unwrap().0, Some(b"bar".to_vec()));
+        assert_eq!(store.get(b"foo").0.unwrap(), Some(b"bar".to_vec()));
         assert_eq!(
             store
                 .range(None, None, Order::Ascending)
-                .unwrap()
                 .0
+                .unwrap()
                 .elements()
                 .unwrap()
                 .len(),
@@ -151,16 +172,16 @@ mod test {
         );
 
         // setup - add some data, and delete part of it as well
-        store.set(b"ant", b"hill").expect("error setting value");
-        store.set(b"ze", b"bra").expect("error setting value");
+        store.set(b"ant", b"hill").0.expect("error setting value");
+        store.set(b"ze", b"bra").0.expect("error setting value");
 
         // noise that should be ignored
-        store.set(b"bye", b"bye").expect("error setting value");
-        store.remove(b"bye").expect("error removing key");
+        store.set(b"bye", b"bye").0.expect("error setting value");
+        store.remove(b"bye").0.expect("error removing key");
 
         // unbounded
         {
-            let iter = store.range(None, None, Order::Ascending).unwrap().0;
+            let iter = store.range(None, None, Order::Ascending).0.unwrap();
             let elements = iter.elements().unwrap();
             assert_eq!(
                 elements,
@@ -174,7 +195,7 @@ mod test {
 
         // unbounded (descending)
         {
-            let iter = store.range(None, None, Order::Descending).unwrap().0;
+            let iter = store.range(None, None, Order::Descending).0.unwrap();
             let elements = iter.elements().unwrap();
             assert_eq!(
                 elements,
@@ -190,8 +211,8 @@ mod test {
         {
             let iter = store
                 .range(Some(b"f"), Some(b"n"), Order::Ascending)
-                .unwrap()
-                .0;
+                .0
+                .unwrap();
             let elements = iter.elements().unwrap();
             assert_eq!(elements, vec![(b"foo".to_vec(), b"bar".to_vec())]);
         }
@@ -200,8 +221,8 @@ mod test {
         {
             let iter = store
                 .range(Some(b"air"), Some(b"loop"), Order::Descending)
-                .unwrap()
-                .0;
+                .0
+                .unwrap();
             let elements = iter.elements().unwrap();
             assert_eq!(
                 elements,
@@ -216,8 +237,8 @@ mod test {
         {
             let iter = store
                 .range(Some(b"foo"), Some(b"foo"), Order::Ascending)
-                .unwrap()
-                .0;
+                .0
+                .unwrap();
             let elements = iter.elements().unwrap();
             assert_eq!(elements, vec![]);
         }
@@ -226,8 +247,8 @@ mod test {
         {
             let iter = store
                 .range(Some(b"foo"), Some(b"foo"), Order::Descending)
-                .unwrap()
-                .0;
+                .0
+                .unwrap();
             let elements = iter.elements().unwrap();
             assert_eq!(elements, vec![]);
         }
@@ -236,8 +257,8 @@ mod test {
         {
             let iter = store
                 .range(Some(b"z"), Some(b"a"), Order::Ascending)
-                .unwrap()
-                .0;
+                .0
+                .unwrap();
             let elements = iter.elements().unwrap();
             assert_eq!(elements, vec![]);
         }
@@ -246,15 +267,15 @@ mod test {
         {
             let iter = store
                 .range(Some(b"z"), Some(b"a"), Order::Descending)
-                .unwrap()
-                .0;
+                .0
+                .unwrap();
             let elements = iter.elements().unwrap();
             assert_eq!(elements, vec![]);
         }
 
         // right unbounded
         {
-            let iter = store.range(Some(b"f"), None, Order::Ascending).unwrap().0;
+            let iter = store.range(Some(b"f"), None, Order::Ascending).0.unwrap();
             let elements = iter.elements().unwrap();
             assert_eq!(
                 elements,
@@ -267,7 +288,7 @@ mod test {
 
         // right unbounded (descending)
         {
-            let iter = store.range(Some(b"f"), None, Order::Descending).unwrap().0;
+            let iter = store.range(Some(b"f"), None, Order::Descending).0.unwrap();
             let elements = iter.elements().unwrap();
             assert_eq!(
                 elements,
@@ -280,14 +301,14 @@ mod test {
 
         // left unbounded
         {
-            let iter = store.range(None, Some(b"f"), Order::Ascending).unwrap().0;
+            let iter = store.range(None, Some(b"f"), Order::Ascending).0.unwrap();
             let elements = iter.elements().unwrap();
             assert_eq!(elements, vec![(b"ant".to_vec(), b"hill".to_vec()),]);
         }
 
         // left unbounded (descending)
         {
-            let iter = store.range(None, Some(b"no"), Order::Descending).unwrap().0;
+            let iter = store.range(None, Some(b"no"), Order::Descending).0.unwrap();
             let elements = iter.elements().unwrap();
             assert_eq!(
                 elements,
@@ -297,33 +318,5 @@ mod test {
                 ]
             );
         }
-    }
-
-    #[test]
-    fn get_and_set() {
-        let mut store = MockStorage::new();
-        assert_eq!(None, store.get(b"foo").unwrap().0);
-        store.set(b"foo", b"bar").unwrap();
-        assert_eq!(Some(b"bar".to_vec()), store.get(b"foo").unwrap().0);
-        assert_eq!(None, store.get(b"food").unwrap().0);
-    }
-
-    #[test]
-    fn delete() {
-        let mut store = MockStorage::new();
-        store.set(b"foo", b"bar").unwrap();
-        store.set(b"food", b"bank").unwrap();
-        store.remove(b"foo").unwrap();
-
-        assert_eq!(None, store.get(b"foo").unwrap().0);
-        assert_eq!(Some(b"bank".to_vec()), store.get(b"food").unwrap().0);
-    }
-
-    #[test]
-    #[cfg(feature = "iterator")]
-    fn iterator() {
-        let mut store = MockStorage::new();
-        store.set(b"foo", b"bar").expect("error setting value");
-        iterator_test_suite(&mut store);
     }
 }

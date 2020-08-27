@@ -64,7 +64,7 @@ async function uploadCustomContract(
 ): Promise<PostTxsResponse> {
   const memo = "My first contract on chain";
   const theMsg: MsgStoreCode = {
-    type: "wasm/store-code",
+    type: "wasm/MsgStoreCode",
     value: {
       sender: faucet.address,
       wasm_byte_code: toBase64(wasmCode),
@@ -102,7 +102,7 @@ async function instantiateContract(
 ): Promise<PostTxsResponse> {
   const memo = "Create an escrow instance";
   const theMsg: MsgInstantiateContract = {
-    type: "wasm/instantiate",
+    type: "wasm/MsgInstantiateContract",
     value: {
       sender: faucet.address,
       code_id: codeId.toString(),
@@ -140,7 +140,7 @@ async function executeContract(
 ): Promise<PostTxsResponse> {
   const memo = "Time for action";
   const theMsg: MsgExecuteContract = {
-    type: "wasm/execute",
+    type: "wasm/MsgExecuteContract",
     value: {
       sender: faucet.address,
       callback_code_hash: "",

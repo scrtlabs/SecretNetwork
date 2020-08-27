@@ -105,6 +105,7 @@ enclave {
             Ctx context,
             [out] UntrustedVmError* vm_error,
             [out] uint64_t* gas_used,
+            uint64_t gas_limit,
             [out] EnclaveBuffer* value,
             [in, count=query_len] const uint8_t* query,
             uintptr_t query_len
