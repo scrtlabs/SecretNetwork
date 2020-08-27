@@ -34,7 +34,7 @@ func TestCanonicalAddressFailure(t *testing.T) {
 
 	// make sure the call doesn't error, but we get a JSON-encoded error result from InitResult
 	igasMeter := GasMeter(gasMeter)
-	res, _, err := Instantiate(cache, id, params, msg, &igasMeter, store, api, &querier, 100000000)
+	res, _, err := Instantiate(cache, id, params, msg, &igasMeter, store, api, &querier, 100000000, nil)
 	require.NoError(t, err)
 	var resp types.InitResult
 	err = json.Unmarshal(res, &resp)
@@ -70,7 +70,7 @@ func TestHumanAddressFailure(t *testing.T) {
 	// instantiate it normally
 	msg := []byte(`{"verifier": "short", "beneficiary": "bob"}`)
 	igasMeter := GasMeter(gasMeter)
-	_, _, err = Instantiate(cache, id, params, msg, &igasMeter, store, api, &querier, 100000000)
+	_, _, err = Instantiate(cache, id, params, msg, &igasMeter, store, api, &querier, 100000000, nil)
 	require.NoError(t, err)
 
 	// call query which will call canonicalize address

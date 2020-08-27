@@ -7,7 +7,7 @@ import (
 	tmBytes "github.com/tendermint/tendermint/libs/bytes"
 )
 
-var ModelFuzzers = []interface{}{FuzzAddr, FuzzAbsoluteTxPosition, FuzzContractInfo, FuzzStateModel, FuzzAccessType, FuzzAccessConfig /* FuzzContractCodeHistory */}
+var ModelFuzzers = []interface{}{FuzzAddr, FuzzAbsoluteTxPosition, FuzzContractInfo, FuzzStateModel /*FuzzAccessType, FuzzAccessConfig  FuzzContractCodeHistory */}
 
 func FuzzAddr(m *sdk.AccAddress, c fuzz.Continue) {
 	*m = make([]byte, 20)
@@ -27,7 +27,8 @@ func FuzzContractInfo(m *types.ContractInfo, c fuzz.Continue) {
 	c.Fuzz(&m.Created)
 }
 
-/* func FuzzContractCodeHistory(m *types.ContractCodeHistoryEntry, c fuzz.Continue) {
+/*
+func FuzzContractCodeHistory(m *types.ContractCodeHistoryEntry, c fuzz.Continue) {
 	const maxMsgSize = 128
 	m.CodeID = c.RandUint64()
 	msg := make([]byte, c.RandUint64()%maxMsgSize)
@@ -38,13 +39,15 @@ func FuzzContractInfo(m *types.ContractInfo, c fuzz.Continue) {
 	}
 	c.Fuzz(&m.Updated)
 	m.Operation = types.AllCodeHistoryTypes[c.Int()%len(types.AllCodeHistoryTypes)]
-} */
+}
+*/
 
 func FuzzStateModel(m *types.Model, c fuzz.Continue) {
 	m.Key = tmBytes.HexBytes(c.RandString())
 	c.Fuzz(&m.Value)
 }
 
+/*
 func FuzzAccessType(m *types.AccessType, c fuzz.Continue) {
 	pos := c.Int() % len(types.AllAccessTypes)
 	for k, _ := range types.AllAccessTypes {
@@ -61,3 +64,4 @@ func FuzzAccessConfig(m *types.AccessConfig, c fuzz.Continue) {
 	FuzzAddr(&add, c)
 	*m = m.Type.With(add)
 }
+*/

@@ -1,6 +1,7 @@
 package client
 
-/* import (
+/*
+import (
 	"github.com/enigmampc/SecretNetwork/x/compute/client/cli"
 	"github.com/enigmampc/SecretNetwork/x/compute/client/rest"
 	govclient "github.com/enigmampc/cosmos-sdk/x/gov/client"
@@ -13,4 +14,5 @@ var ProposalHandlers = []govclient.ProposalHandler{
 	govclient.NewProposalHandler(cli.ProposalMigrateContractCmd, rest.MigrateProposalHandler),
 	govclient.NewProposalHandler(cli.ProposalUpdateContractAdminCmd, rest.UpdateContractAdminProposalHandler),
 	govclient.NewProposalHandler(cli.ProposalClearContractAdminCmd, rest.ClearContractAdminProposalHandler),
-} */
+}
+*/

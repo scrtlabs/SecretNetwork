@@ -106,14 +106,16 @@ func TestStoreCodeValidation(t *testing.T) {
 			},
 			valid: false,
 		},
-		/* "invalid InstantiatePermission": {
-			msg: MsgStoreCode{
-				Sender:       goodAddress,
-				WASMByteCode: []byte("foo"),
-				InstantiatePermission: &AccessConfig{Type: OnlyAddress, Address: badAddress},
+		/*
+			"invalid InstantiatePermission": {
+				msg: MsgStoreCode{
+					Sender:       goodAddress,
+					WASMByteCode: []byte("foo"),
+					InstantiatePermission: &AccessConfig{Type: OnlyAddress, Address: badAddress},
+				},
+				valid: false,
 			},
-			valid: false,
-		}, */
+		*/
 	}
 
 	for name, tc := range cases {
@@ -203,23 +205,25 @@ func TestInstantiateContractValidation(t *testing.T) {
 			},
 			valid: false,
 		},
-		/* "non json init msg": {
-			msg: MsgInstantiateContract{
-				Sender:  goodAddress,
-				CodeID:  1,
-				Label:   "foo",
-				InitMsg: []byte("invalid-json"),
+		/*
+			"non json init msg": {
+				msg: MsgInstantiateContract{
+					Sender:  goodAddress,
+					CodeID:  1,
+					Label:   "foo",
+					InitMsg: []byte("invalid-json"),
+				},
+				valid: false,
 			},
-			valid: false,
-		},
-		"empty init msg": {
-			msg: MsgInstantiateContract{
-				Sender: goodAddress,
-				CodeID: 1,
-				Label:  "foo",
+			"empty init msg": {
+				msg: MsgInstantiateContract{
+					Sender: goodAddress,
+					CodeID: 1,
+					Label:  "foo",
+				},
+				valid: false,
 			},
-			valid: false,
-		}, */
+		*/
 	}
 
 	for name, tc := range cases {
@@ -313,21 +317,23 @@ func TestExecuteContractValidation(t *testing.T) {
 			},
 			valid: false,
 		},
-		/* 	"non json msg": {
-			msg: MsgExecuteContract{
-				Sender:   goodAddress,
-				Contract: goodAddress,
-				Msg:      []byte("invalid-json"),
+		/*
+			"non json msg": {
+				msg: MsgExecuteContract{
+					Sender:   goodAddress,
+					Contract: goodAddress,
+					Msg:      []byte("invalid-json"),
+				},
+				valid: false,
 			},
-			valid: false,
-		},
-		"empty msg": {
-			msg: MsgExecuteContract{
-				Sender:   goodAddress,
-				Contract: goodAddress,
+			"empty msg": {
+				msg: MsgExecuteContract{
+					Sender:   goodAddress,
+					Contract: goodAddress,
+				},
+				valid: false,
 			},
-			valid: false,
-		}, */
+		*/
 	}
 
 	for name, tc := range cases {
@@ -342,7 +348,8 @@ func TestExecuteContractValidation(t *testing.T) {
 	}
 }
 
-/* func TestMsgUpdateAdministrator(t *testing.T) {
+/*
+func TestMsgUpdateAdministrator(t *testing.T) {
 	badAddress, err := sdk.AccAddressFromHex("012345")
 	require.NoError(t, err)
 	// proper address size
@@ -547,4 +554,5 @@ func TestMsgMigrateContract(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
-} */
+}
+*/
