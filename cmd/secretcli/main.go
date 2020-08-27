@@ -92,6 +92,7 @@ func queryCmd(cdc *amino.Codec) *cobra.Command {
 		authcmd.QueryTxsByEventsCmd(cdc),
 		authcmd.QueryTxCmd(cdc), // TODO add another one like this that decrypts the output if it's from the wallet that sent the tx
 		flags.LineBreak,
+		S20GetQueryCmd(cdc),
 	)
 
 	// add modules' query commands
@@ -116,6 +117,7 @@ func txCmd(cdc *amino.Codec) *cobra.Command {
 		authcmd.GetEncodeCommand(cdc),
 		authcmd.GetDecodeCommand(cdc),
 		flags.LineBreak,
+		S20GetTxCmd(cdc),
 	)
 
 	// add modules' tx commands
