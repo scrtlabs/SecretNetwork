@@ -34,11 +34,11 @@ func (m Model) ValidateBasic() error {
 
 // CodeInfo is data for the uploaded contract WASM code
 type CodeInfo struct {
-	CodeHash          []byte         `json:"code_hash"`
-	Creator           sdk.AccAddress `json:"creator"`
-	Source            string         `json:"source"`
-	Builder           string         `json:"builder"`
-	InstantiateConfig AccessConfig   `json:"instantiate_config"`
+	CodeHash []byte         `json:"code_hash"`
+	Creator  sdk.AccAddress `json:"creator"`
+	Source   string         `json:"source"`
+	Builder  string         `json:"builder"`
+	// InstantiateConfig AccessConfig   `json:"instantiate_config"`
 }
 
 func (c CodeInfo) ValidateBasic() error {
@@ -54,24 +54,27 @@ func (c CodeInfo) ValidateBasic() error {
 	if err := validateBuilder(c.Builder); err != nil {
 		return sdkerrors.Wrap(err, "builder")
 	}
-	if err := c.InstantiateConfig.ValidateBasic(); err != nil {
-		return sdkerrors.Wrap(err, "instantiate config")
-	}
+	/*
+		if err := c.InstantiateConfig.ValidateBasic(); err != nil {
+			return sdkerrors.Wrap(err, "instantiate config")
+		}
+	*/
 	return nil
 }
 
 // NewCodeInfo fills a new Contract struct
-func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, source string, builder string, instantiatePermission AccessConfig) CodeInfo {
+func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, source string, builder string /* , instantiatePermission AccessConfig */) CodeInfo {
 	return CodeInfo{
-		CodeHash:          codeHash,
-		Creator:           creator,
-		Source:            source,
-		Builder:           builder,
-		InstantiateConfig: instantiatePermission,
+		CodeHash: codeHash,
+		Creator:  creator,
+		Source:   source,
+		Builder:  builder,
+		// InstantiateConfig: instantiatePermission,
 	}
 }
 
-/* type ContractCodeHistoryOperationType string
+/*
+type ContractCodeHistoryOperationType string
 
 const (
 	InitContractCodeHistoryType    ContractCodeHistoryOperationType = "Init"
@@ -87,7 +90,8 @@ type ContractCodeHistoryEntry struct {
 	CodeID    uint64                           `json:"code_id"`
 	Updated   *AbsoluteTxPosition              `json:"updated,omitempty"`
 	Msg       json.RawMessage                  `json:"msg,omitempty"`
-} */
+}
+*/
 
 // ContractInfo stores a WASM contract instance
 type ContractInfo struct {
@@ -117,18 +121,21 @@ func (c *ContractInfo) ValidateBasic() error {
 	if err := sdk.VerifyAddressFormat(c.Creator); err != nil {
 		return sdkerrors.Wrap(err, "creator")
 	}
-	/* if c.Admin != nil {
-		if err := sdk.VerifyAddressFormat(c.Admin); err != nil {
-			return sdkerrors.Wrap(err, "admin")
+	/*
+		if c.Admin != nil {
+			if err := sdk.VerifyAddressFormat(c.Admin); err != nil {
+				return sdkerrors.Wrap(err, "admin")
+			}
 		}
-	} */
+	*/
 	if err := validateLabel(c.Label); err != nil {
 		return sdkerrors.Wrap(err, "label")
 	}
 	return nil
 }
 
-/* func (c ContractInfo) InitialHistory(initMsg []byte) ContractCodeHistoryEntry {
+/*
+func (c ContractInfo) InitialHistory(initMsg []byte) ContractCodeHistoryEntry {
 	return ContractCodeHistoryEntry{
 		Operation: InitContractCodeHistoryType,
 		CodeID:    c.CodeID,
@@ -156,7 +163,8 @@ func (c *ContractInfo) ResetFromGenesis(ctx sdk.Context) ContractCodeHistoryEntr
 		CodeID:    c.CodeID,
 		Updated:   c.Created,
 	}
-} */
+}
+*/
 
 // AbsoluteTxPosition can be used to sort contracts
 type AbsoluteTxPosition struct {

@@ -15,7 +15,7 @@ func GenesisFixture(mutators ...func(*GenesisState)) GenesisState {
 	)
 
 	fixture := GenesisState{
-		Params:    DefaultParams(),
+		// Params:    DefaultParams(),
 		Codes:     make([]Code, numCodes),
 		Contracts: make([]Contract, numContracts),
 		Sequences: make([]Sequence, numSequences),
@@ -58,11 +58,11 @@ func CodeInfoFixture(mutators ...func(*CodeInfo)) CodeInfo {
 	codeHash := sha256.Sum256(wasmCode)
 	anyAddress := make([]byte, 20)
 	fixture := CodeInfo{
-		CodeHash:          codeHash[:],
-		Creator:           anyAddress,
-		Source:            "https://example.com",
-		Builder:           "my/builder:tag",
-		InstantiateConfig: AllowEverybody,
+		CodeHash: codeHash[:],
+		Creator:  anyAddress,
+		Source:   "https://example.com",
+		Builder:  "my/builder:tag",
+		// InstantiateConfig: AllowEverybody,
 	}
 	for _, m := range mutators {
 		m(&fixture)

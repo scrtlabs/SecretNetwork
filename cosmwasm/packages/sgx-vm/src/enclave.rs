@@ -13,12 +13,19 @@ use log::*;
 
 static ENCLAVE_FILE: &str = "librust_cosmwasm_enclave.signed.so";
 
+#[cfg(feature = "production")]
+const ENCLAVE_DEBUG: i32 = 0;
+
+#[cfg(not(feature = "production"))]
+const ENCLAVE_DEBUG: i32 = 1;
+
+
 fn init_enclave() -> SgxResult<SgxEnclave> {
     let mut launch_token: sgx_launch_token_t = [0; 1024];
     let mut launch_token_updated: i32 = 0;
     // call sgx_create_enclave to initialize an enclave instance
     // Debug Support: set 2nd parameter to 1
-    let debug = 1;
+    let debug: i32 = ENCLAVE_DEBUG;
     let mut misc_attr = sgx_misc_attribute_t {
         secs_attr: sgx_attributes_t { flags: 0, xfrm: 0 },
         misc_select: 0,
