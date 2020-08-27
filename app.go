@@ -490,7 +490,7 @@ func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhite
 	}
 
 	/* Just to be safe, assert the invariants on current state. */
-	app.crisisKeeper.AssertInvariants(ctx)
+	// app.crisisKeeper.AssertInvariants(ctx)
 
 	/* Handle fee distribution state. */
 
