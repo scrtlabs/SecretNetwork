@@ -84,7 +84,7 @@ static OOM_HAPPENED: AtomicBool = AtomicBool::new(false);
 
 #[cfg(not(feature = "production"))]
 fn enable_backtraces() {
-    backtrace::enable_backtrace("librust_cosmwasm_enclave.signed.so", PrintFormat::Full);
+    let _ = backtrace::enable_backtrace("librust_cosmwasm_enclave.signed.so", PrintFormat::Full);
 }
 
 #[cfg(feature = "production")]
