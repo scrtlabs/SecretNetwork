@@ -3,7 +3,7 @@ module github.com/enigmampc/SecretNetwork
 go 1.14
 
 require (
-	github.com/enigmampc/cosmos-sdk v0.38.3-scrt-0.2.1
+	github.com/enigmampc/cosmos-sdk v0.38.3-scrt-0.2.2
 	github.com/gorilla/mux v1.7.3
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.6.3
