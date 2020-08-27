@@ -205,6 +205,13 @@ build-testnet:
 	docker build --build-arg SGX_MODE=HW -f Dockerfile_build_deb -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(pwd)/build:/build deb_build
 
+build-mainnet:
+	@mkdir build 2>&3 || true
+	docker build --build-arg FEATURES=production --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f Dockerfile.testnet -t enigmampc/secret-network-bootstrap:v$(VERSION)-mainnet .
+	docker build --build-arg FEATURES=production --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t enigmampc/secret-network-node:v$(VERSION)-mainnet .
+	docker build --build-arg SGX_MODE=HW -f Dockerfile_build_deb -t deb_build .
+	docker run -e VERSION=${VERSION} -v $(pwd)/build:/build deb_build
+
 docker_base:
 	docker build --build-arg FEATURES=${FEATURES} --build-arg SGX_MODE=${SGX_MODE} -f Dockerfile.base -t rust-go-base-image .
 
@@ -269,7 +276,7 @@ go-tests: build-test-contract
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	rm -rf ./x/compute/internal/keeper/.sgx_secrets
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	SGX_MODE=SW go test -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	SGX_MODE=SW go test -timeout 1200s -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 go-tests-hw: build-test-contract
 	# empty BUILD_PROFILE means debug mode which compiles faster

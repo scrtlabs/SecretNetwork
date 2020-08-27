@@ -25,14 +25,9 @@ pub mod registration;
 
 mod consts;
 mod wasm;
-//mod contract_operations;
-//mod contract_validation;
 mod cosmwasm;
 mod crypto;
-// mod errors;
-// mod gas;
 mod results;
-//mod runtime;
 mod storage;
 mod utils;
 

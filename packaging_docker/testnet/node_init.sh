@@ -66,4 +66,4 @@ then
   secretd validate-genesis
 
 fi
-RUST_BACKTRACE=1 secretd start
+secretd start
