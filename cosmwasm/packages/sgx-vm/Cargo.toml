@@ -33,6 +33,7 @@ backtraces = ["snafu/backtraces"]
 iterator = ["cosmwasm-std/iterator"]
 staking = ["cosmwasm-std/staking"]
 enclave-tests = []
+production = []
 
 [dependencies]
 # Uses the path when built locally; uses the given version from crates.io when published

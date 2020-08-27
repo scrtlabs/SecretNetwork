@@ -1,7 +1,10 @@
 use core::sync::atomic::{AtomicBool, Ordering};
 use enclave_ffi_types::EnclaveError;
 use lazy_static::lazy_static;
+
+#[cfg(not(feature = "production"))]
 use std::backtrace::{self, PrintFormat};
+
 use std::sync::SgxMutex;
 /// SafetyBuffer is meant to occupy space on the heap, so when a memory
 /// allocation fails we will free this buffer to allow safe panic unwinding
@@ -79,8 +82,16 @@ lazy_static! {
 
 static OOM_HAPPENED: AtomicBool = AtomicBool::new(false);
 
-pub fn register_oom_handler() -> Result<(), EnclaveError> {
+#[cfg(not(feature = "production"))]
+fn enable_backtraces() {
     let _ = backtrace::enable_backtrace("librust_cosmwasm_enclave.signed.so", PrintFormat::Full);
+}
+
+#[cfg(feature = "production")]
+fn enable_backtraces() {}
+
+pub fn register_oom_handler() -> Result<(), EnclaveError> {
+    enable_backtraces();
 
     {
         SAFETY_BUFFER.lock().unwrap().restore()?;
