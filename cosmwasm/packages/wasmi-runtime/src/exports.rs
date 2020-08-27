@@ -70,6 +70,7 @@ pub unsafe extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> Enc
     })
 }
 
+#[derive(Debug, PartialEq)]
 pub struct BufferRecoveryError;
 
 /// Take a pointer as returned by `ecall_allocate` and recover the Vec<u8> inside of it.
@@ -334,4 +335,209 @@ pub unsafe extern "C" fn ecall_query(
 #[no_mangle]
 pub unsafe extern "C" fn ecall_health_check() -> HealthCheckResult {
     HealthCheckResult::Success
+}
+
+#[cfg(feature = "test")]
+pub mod tests {
+    use super::*;
+    use crate::count_failures;
+
+    pub fn run_tests() {
+        println!();
+        let mut failures = 0;
+
+        count_failures!(failures, {
+            test_recover_enclave_buffer_valid();
+            test_recover_enclave_buffer_invalid();
+            test_recover_enclave_buffer_invalid_but_similar();
+            test_recover_enclave_buffer_in_recursion_valid();
+            test_recover_enclave_buffer_in_recursion_invalid();
+            test_recover_enclave_buffer_multiple_out_of_order_valid();
+            test_recover_enclave_buffer_multiple_out_of_order_invalid();
+        });
+
+        if failures != 0 {
+            println!("{}: {} tests failed", file!(), failures);
+            panic!()
+        }
+    }
+
+    fn test_recover_enclave_buffer_valid() {
+        let message = b"some example text";
+        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0);
+        let enclave_buffer = unsafe { ecall_allocate(message.as_ptr(), message.len()) };
+        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 1);
+        let recovered = unsafe { recover_buffer(enclave_buffer) };
+        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0);
+        assert_eq!(recovered.unwrap().unwrap(), message);
+    }
+
+    fn test_recover_enclave_buffer_invalid() {
+        let enclave_buffer = EnclaveBuffer {
+            ptr: 0x12345678_usize as _,
+        };
+        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0);
+        let recovered = unsafe { recover_buffer(enclave_buffer) };
+        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0);
+        assert_eq!(recovered.unwrap_err(), BufferRecoveryError);
+    }
+
+    fn test_recover_enclave_buffer_invalid_but_similar() {
+        let message = Box::new(Vec::<u8>::from(&b"some example text"[..]));
+        let enclave_buffer = EnclaveBuffer {
+            ptr: message.as_ptr() as _,
+        };
+        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0);
+        let recovered = unsafe { recover_buffer(enclave_buffer) };
+        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0);
+        assert_eq!(recovered.unwrap_err(), BufferRecoveryError);
+    }
+
+    fn test_recover_enclave_buffer_in_recursion_valid() {
+        let recursion_depth = 10;
+        let messages: Vec<String> = (0..recursion_depth)
+            .map(|num| format!("message-{}", num))
+            .collect();
+
+        // simulate building up the stack recursively
+        let enclave_buffers: Vec<EnclaveBuffer> = messages
+            .iter()
+            .enumerate()
+            .map(|(index, message)| {
+                assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), index);
+                unsafe { ecall_allocate(message.as_ptr(), message.len()) }
+            })
+            .collect();
+
+        // simulate clearing the stack recursively
+        for (index, (message, enclave_buffer)) in messages
+            .into_iter()
+            .zip(enclave_buffers.into_iter())
+            .enumerate()
+            .rev()
+        {
+            assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), index + 1);
+            let recovered = unsafe { recover_buffer(enclave_buffer) };
+            assert_eq!(recovered.unwrap().unwrap(), message.as_bytes())
+        }
+        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0)
+    }
+
+    // This test is very similar to the test above, except it tries to give incorrect
+    // inputs in the deepest part of the recursion
+    fn test_recover_enclave_buffer_in_recursion_invalid() {
+        let recursion_depth = 10;
+        let messages: Vec<String> = (0..recursion_depth)
+            .map(|num| format!("message-{}", num))
+            .collect();
+
+        // simulate building up the stack recursively
+        let enclave_buffers: Vec<EnclaveBuffer> = messages
+            .iter()
+            .enumerate()
+            .map(|(index, message)| {
+                assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), index);
+                unsafe { ecall_allocate(message.as_ptr(), message.len()) }
+            })
+            .collect();
+
+        let message = Box::new(Vec::<u8>::from(&b"some example text"[..]));
+        let enclave_buffer = EnclaveBuffer {
+            ptr: message.as_ptr() as _,
+        };
+        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), recursion_depth);
+        let recovered = unsafe { recover_buffer(enclave_buffer) };
+        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), recursion_depth);
+        assert_eq!(recovered.unwrap_err(), BufferRecoveryError);
+
+        // simulate clearing the stack recursively
+        for (index, (message, enclave_buffer)) in messages
+            .into_iter()
+            .zip(enclave_buffers.into_iter())
+            .enumerate()
+            .rev()
+        {
+            assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), index + 1);
+            let recovered = unsafe { recover_buffer(enclave_buffer) };
+            assert_eq!(recovered.unwrap().unwrap(), message.as_bytes())
+        }
+        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0)
+    }
+
+    // These tests are vry similar to the recursion tests,
+    // except that they don't release the buffers in a FIFO order.
+    // In this case, I just release them in a FILO order, which should be worst-case.
+
+    fn test_recover_enclave_buffer_multiple_out_of_order_valid() {
+        let recursion_depth = 10;
+        let messages: Vec<String> = (0..recursion_depth)
+            .map(|num| format!("message-{}", num))
+            .collect();
+
+        // simulate building up the stack recursively
+        let enclave_buffers: Vec<EnclaveBuffer> = messages
+            .iter()
+            .enumerate()
+            .map(|(index, message)| {
+                assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), index);
+                unsafe { ecall_allocate(message.as_ptr(), message.len()) }
+            })
+            .collect();
+
+        // simulate clearing the stack recursively
+        // `.rev().enumerate().rev()` means that we'll be iterating over the lists in order, with reversed indexes.
+        for (index, (message, enclave_buffer)) in messages
+            .into_iter()
+            .zip(enclave_buffers.into_iter())
+            .rev()
+            .enumerate()
+            .rev()
+        {
+            assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), index + 1);
+            let recovered = unsafe { recover_buffer(enclave_buffer) };
+            assert_eq!(recovered.unwrap().unwrap(), message.as_bytes())
+        }
+        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0)
+    }
+
+    fn test_recover_enclave_buffer_multiple_out_of_order_invalid() {
+        let recursion_depth = 10;
+        let messages: Vec<String> = (0..recursion_depth)
+            .map(|num| format!("message-{}", num))
+            .collect();
+
+        // simulate building up the stack recursively
+        let enclave_buffers: Vec<EnclaveBuffer> = messages
+            .iter()
+            .enumerate()
+            .map(|(index, message)| {
+                assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), index);
+                unsafe { ecall_allocate(message.as_ptr(), message.len()) }
+            })
+            .collect();
+
+        let message = Box::new(Vec::<u8>::from(&b"some example text"[..]));
+        let enclave_buffer = EnclaveBuffer {
+            ptr: message.as_ptr() as _,
+        };
+        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), recursion_depth);
+        let recovered = unsafe { recover_buffer(enclave_buffer) };
+        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), recursion_depth);
+        assert_eq!(recovered.unwrap_err(), BufferRecoveryError);
+
+        // simulate clearing the stack recursively
+        // `.rev().enumerate().rev()` means that we'll be iterating over the lists in order, with reversed indexes.
+        for (index, (message, enclave_buffer)) in messages
+            .into_iter()
+            .zip(enclave_buffers.into_iter())
+            .rev()
+            .enumerate()
+            .rev()
+        {
+            assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), index + 1);
+            let recovered = unsafe { recover_buffer(enclave_buffer) };
+            assert_eq!(recovered.unwrap().unwrap(), message.as_bytes())
+        }
+        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0)
+    }
 }
