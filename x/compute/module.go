@@ -8,12 +8,12 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 
+	"github.com/enigmampc/SecretNetwork/x/compute/client/cli"
+	"github.com/enigmampc/SecretNetwork/x/compute/client/rest"
 	"github.com/enigmampc/cosmos-sdk/client/context"
 	"github.com/enigmampc/cosmos-sdk/codec"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	"github.com/enigmampc/cosmos-sdk/types/module"
-	"github.com/enigmampc/SecretNetwork/x/compute/client/cli"
-	"github.com/enigmampc/SecretNetwork/x/compute/client/rest"
 )
 
 var (
@@ -38,7 +38,7 @@ func (AppModuleBasic) RegisterCodec(cdc *codec.Codec) {
 // module.
 func (AppModuleBasic) DefaultGenesis() json.RawMessage {
 	return ModuleCdc.MustMarshalJSON(&GenesisState{
-		Params: DefaultParams(),
+		// Params: DefaultParams(),
 	})
 }
 

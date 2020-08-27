@@ -97,14 +97,16 @@ func (msg MsgInstantiateContract) ValidateBasic() error {
 		return sdkerrors.ErrInvalidCoins
 	}
 
-	/* 	if len(msg.Admin) != 0 {
-		if err := sdk.VerifyAddressFormat(msg.Admin); err != nil {
-			return err
+	/*
+		if len(msg.Admin) != 0 {
+			if err := sdk.VerifyAddressFormat(msg.Admin); err != nil {
+				return err
+			}
 		}
-	}
-	if !json.Valid(msg.InitMsg) {
-		return sdkerrors.Wrap(ErrInvalid, "init msg json")
-	} */
+		if !json.Valid(msg.InitMsg) {
+			return sdkerrors.Wrap(ErrInvalid, "init msg json")
+		}
+	*/
 	return nil
 }
 
@@ -144,9 +146,11 @@ func (msg MsgExecuteContract) ValidateBasic() error {
 	if !msg.SentFunds.IsValid() {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidCoins, "sentFunds")
 	}
-	/* if !json.Valid(msg.Msg) {
-		return sdkerrors.Wrap(ErrInvalid, "msg json")
-	} */
+	/*
+		if !json.Valid(msg.Msg) {
+			return sdkerrors.Wrap(ErrInvalid, "msg json")
+		}
+	*/
 	return nil
 }
 
@@ -158,7 +162,8 @@ func (msg MsgExecuteContract) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Sender}
 }
 
-/* type MsgMigrateContract struct {
+/*
+type MsgMigrateContract struct {
 	Sender     sdk.AccAddress  `json:"sender" yaml:"sender"`
 	Contract   sdk.AccAddress  `json:"contract" yaml:"contract"`
 	CodeID     uint64          `json:"code_id" yaml:"code_id"`
@@ -196,9 +201,9 @@ func (msg MsgMigrateContract) GetSignBytes() []byte {
 
 func (msg MsgMigrateContract) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Sender}
-} */
+}
 
-/* type MsgUpdateAdmin struct {
+type MsgUpdateAdmin struct {
 	Sender   sdk.AccAddress `json:"sender" yaml:"sender"`
 	NewAdmin sdk.AccAddress `json:"new_admin" yaml:"new_admin"`
 	Contract sdk.AccAddress `json:"contract" yaml:"contract"`
@@ -234,9 +239,9 @@ func (msg MsgUpdateAdmin) GetSignBytes() []byte {
 
 func (msg MsgUpdateAdmin) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Sender}
-} */
+}
 
-/* type MsgClearAdmin struct {
+type MsgClearAdmin struct {
 	Sender   sdk.AccAddress `json:"sender" yaml:"sender"`
 	Contract sdk.AccAddress `json:"contract" yaml:"contract"`
 }
@@ -265,4 +270,5 @@ func (msg MsgClearAdmin) GetSignBytes() []byte {
 
 func (msg MsgClearAdmin) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Sender}
-} */
+}
+*/

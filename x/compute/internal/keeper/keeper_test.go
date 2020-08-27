@@ -374,13 +374,15 @@ func TestInstantiate(t *testing.T) {
 	_, err = keeper.Instantiate(ctx, contractID, creator /* , nil */, initMsgBz, "demo contract 1", nil, nil)
 	require.Error(t, err)
 
-	/* exp := []types.ContractCodeHistoryEntry{{
-		Operation: types.InitContractCodeHistoryType,
-		CodeID:    contractID,
-		Updated:   types.NewAbsoluteTxPosition(ctx),
-		Msg:       json.RawMessage(initMsgBz),
-	}}
-	assert.Equal(t, exp, keeper.GetContractHistory(ctx, contractAddr)) */
+	/*
+		exp := []types.ContractCodeHistoryEntry{{
+			Operation: types.InitContractCodeHistoryType,
+			CodeID:    contractID,
+			Updated:   types.NewAbsoluteTxPosition(ctx),
+			Msg:       json.RawMessage(initMsgBz),
+		}}
+		assert.Equal(t, exp, keeper.GetContractHistory(ctx, contractAddr))
+	*/
 }
 
 func TestInstantiateWithDeposit(t *testing.T) {
@@ -395,11 +397,13 @@ func TestInstantiateWithDeposit(t *testing.T) {
 			fundAddr: false,
 			expError: true,
 		},
-		/* "blocked address": {
-			srcActor: supply.NewModuleAddress(auth.FeeCollectorName),
-			fundAddr: true,
-			expError: true,
-		}, */
+		/*
+			"blocked address": {
+				srcActor: supply.NewModuleAddress(auth.FeeCollectorName),
+				fundAddr: true,
+				expError: true,
+			},
+		*/
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
@@ -681,18 +685,20 @@ func TestExecuteWithDeposit(t *testing.T) {
 			fundAddr: false,
 			expError: true,
 		},
-		/*"blocked address as actor": {
-			srcActor:    blockedAddr,
-			fundAddr:    true,
-			beneficiary: fred,
-			expError:    true,
-		},
-		 "blocked address as beneficiary": {
-			srcActor:    bob,
-			fundAddr:    true,
-			beneficiary: blockedAddr,
-			expError:    true,
-		}, */
+		/*
+			"blocked address as actor": {
+				srcActor:    blockedAddr,
+				fundAddr:    true,
+				beneficiary: fred,
+				expError:    true,
+			},
+			 "blocked address as beneficiary": {
+				srcActor:    bob,
+				fundAddr:    true,
+				beneficiary: blockedAddr,
+				expError:    true,
+			},
+		*/
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
@@ -1013,7 +1019,8 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	require.True(t, false, "We must panic before this line")
 }
 
-/* func TestMigrate(t *testing.T) {
+/*
+func TestMigrate(t *testing.T) {
 	t.SkipNow() // secret network does not support migrate
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
@@ -1248,7 +1255,8 @@ func TestMigrateWithDispatchedMessage(t *testing.T) {
 	// and all deposit tokens sent to myPayoutAddr
 	balance := accKeeper.GetAccount(ctx, myPayoutAddr).GetCoins()
 	assert.Equal(t, deposit, balance)
-} */
+}
+*/
 
 func prettyEvents(t *testing.T, events sdk.Events) string {
 	t.Helper()
@@ -1422,6 +1430,7 @@ func TestClearContractAdmin(t *testing.T) {
 	}
 }
 */
+
 type InitMsg struct {
 	Verifier    sdk.AccAddress `json:"verifier"`
 	Beneficiary sdk.AccAddress `json:"beneficiary"`

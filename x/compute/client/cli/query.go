@@ -7,9 +7,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/spf13/viper"
 	"io/ioutil"
 	"strconv"
+
+	"github.com/spf13/viper"
 
 	cosmwasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	sdkErrors "github.com/enigmampc/cosmos-sdk/types/errors"
@@ -547,8 +548,9 @@ func QueryWithData(contractAddress string, cdc *codec.Codec, queryData []byte) e
 	return nil
 }
 
+/*
 // GetCmdGetContractHistory prints the code history for a given contract
-/* func GetCmdGetContractHistory(cdc *codec.Codec) *cobra.Command {
+func GetCmdGetContractHistory(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use:   "contract-history [bech32_address]",
 		Short: "Prints out the code history for a contract given its address",
@@ -571,7 +573,8 @@ func QueryWithData(contractAddress string, cdc *codec.Codec, queryData []byte) e
 			return nil
 		},
 	}
-} */
+}
+*/
 
 type argumentDecoder struct {
 	// dec is the default decoder

@@ -1,5 +1,6 @@
 package types
 
+/*
 import (
 	"fmt"
 
@@ -172,3 +173,4 @@ func (v AccessConfig) Allowed(actor sdk.AccAddress) bool {
 		panic("unknown type")
 	}
 }
+*/

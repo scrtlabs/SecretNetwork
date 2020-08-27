@@ -125,11 +125,11 @@ func (k Keeper) setParams(ctx sdk.Context, ps types.Params) {
 
 // Create uploads and compiles a WASM contract, returning a short identifier for the contract
 func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, source string, builder string) (codeID uint64, err error) {
-	return k.create(ctx, creator, wasmCode, source, builder, &types.AccessConfig{Type: types.Everybody} /* , k.authZPolicy */)
-}
-
-func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, source string, builder string, instantiateAccess *types.AccessConfig /* , authZ AuthorizationPolicy */) (codeID uint64, err error) {
 	/*
+		return k.create(ctx, creator, wasmCode, source, builder, &types.AccessConfig{Type: types.Everybody}  , k.authZPolicy )
+		}
+
+		func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, source string, builder string, instantiateAccess *types.AccessConfig ) (codeID uint64, err error) {
 		if !authZ.CanCreateCode(k.getUploadAccessConfig(ctx), creator) {
 			return 0, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "can not create code")
 		}
@@ -153,7 +153,7 @@ func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 			instantiateAccess = &defaultAccessConfig
 		}
 	*/
-	codeInfo := types.NewCodeInfo(codeHash, creator, source, builder, *instantiateAccess)
+	codeInfo := types.NewCodeInfo(codeHash, creator, source, builder /* , *instantiateAccess */)
 	// 0x01 | codeID (uint64) -> ContractInfo
 	store.Set(types.GetCodeKey(codeID), k.cdc.MustMarshalBinaryBare(codeInfo))
 
@@ -246,10 +246,12 @@ func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeIn
 
 // Instantiate creates an instance of a WASM contract
 func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin */ sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) {
-	/* 	return k.instantiate(ctx, codeID, creator admin,, initMsg, label, deposit, callbackSig)
-	}
+	/*
+		return k.instantiate(ctx, codeID, creator admin,, initMsg, label, deposit, callbackSig)
+		}
 
-	func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator , admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) { */
+		func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator , admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) {
+	*/
 	ctx.GasMeter().ConsumeGas(InstanceCost, "Loading CosmWasm module: init")
 
 	signerSig := authtypes.StdSignature{
@@ -439,7 +441,8 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}, nil
 }
 
-/* // We don't use this function currently. It's here for upstream compatibility
+/*
+// We don't use this function currently. It's here for upstream compatibility
 // Migrate allows to upgrade a contract to a new code with data migration.
 func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, newCodeID uint64, msg []byte) (*sdk.Result, error) {
 	return k.migrate(ctx, contractAddress, caller, newCodeID, msg, k.authZPolicy)
@@ -548,7 +551,8 @@ func (k Keeper) GetContractHistory(ctx sdk.Context, contractAddr sdk.AccAddress)
 		k.cdc.MustUnmarshalBinaryBare(bz, &entries)
 	}
 	return entries
-} */
+}
+*/
 
 // QuerySmart queries the smart contract itself.
 func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, useDefaultGasLimit bool) ([]byte, error) {
