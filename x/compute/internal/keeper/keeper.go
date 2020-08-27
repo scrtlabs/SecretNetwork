@@ -125,14 +125,15 @@ func (k Keeper) setParams(ctx sdk.Context, ps types.Params) {
 
 // Create uploads and compiles a WASM contract, returning a short identifier for the contract
 func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, source string, builder string) (codeID uint64, err error) {
-	return k.create(ctx, creator, wasmCode, source, builder, &types.AccessConfig{Type: types.Everybody} /* , k.authZPolicy */)
-}
-
-func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, source string, builder string, instantiateAccess *types.AccessConfig /* , authZ AuthorizationPolicy */) (codeID uint64, err error) {
 	/*
-		if !authZ.CanCreateCode(k.getUploadAccessConfig(ctx), creator) {
-			return 0, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "can not create code")
-		}
+			   	return k.create(ctx, creator, wasmCode, source, builder, &types.AccessConfig{Type: types.Everybody}  , k.authZPolicy )
+			   }
+
+			   func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, source string, builder string, instantiateAccess *types.AccessConfig ) (codeID uint64, err error) {
+		/*
+			   		if !authZ.CanCreateCode(k.getUploadAccessConfig(ctx), creator) {
+			   			return 0, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "can not create code")
+			   		}
 	*/
 	wasmCode, err = uncompress(wasmCode)
 	if err != nil {
@@ -153,7 +154,7 @@ func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 			instantiateAccess = &defaultAccessConfig
 		}
 	*/
-	codeInfo := types.NewCodeInfo(codeHash, creator, source, builder, *instantiateAccess)
+	codeInfo := types.NewCodeInfo(codeHash, creator, source, builder /* , *instantiateAccess */)
 	// 0x01 | codeID (uint64) -> ContractInfo
 	store.Set(types.GetCodeKey(codeID), k.cdc.MustMarshalBinaryBare(codeInfo))
 

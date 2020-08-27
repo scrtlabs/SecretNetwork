@@ -34,11 +34,11 @@ func (m Model) ValidateBasic() error {
 
 // CodeInfo is data for the uploaded contract WASM code
 type CodeInfo struct {
-	CodeHash          []byte         `json:"code_hash"`
-	Creator           sdk.AccAddress `json:"creator"`
-	Source            string         `json:"source"`
-	Builder           string         `json:"builder"`
-	InstantiateConfig AccessConfig   `json:"instantiate_config"`
+	CodeHash []byte         `json:"code_hash"`
+	Creator  sdk.AccAddress `json:"creator"`
+	Source   string         `json:"source"`
+	Builder  string         `json:"builder"`
+	// InstantiateConfig AccessConfig   `json:"instantiate_config"`
 }
 
 func (c CodeInfo) ValidateBasic() error {
@@ -54,20 +54,20 @@ func (c CodeInfo) ValidateBasic() error {
 	if err := validateBuilder(c.Builder); err != nil {
 		return sdkerrors.Wrap(err, "builder")
 	}
-	if err := c.InstantiateConfig.ValidateBasic(); err != nil {
+	/* 	if err := c.InstantiateConfig.ValidateBasic(); err != nil {
 		return sdkerrors.Wrap(err, "instantiate config")
-	}
+	} */
 	return nil
 }
 
 // NewCodeInfo fills a new Contract struct
-func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, source string, builder string, instantiatePermission AccessConfig) CodeInfo {
+func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, source string, builder string /* , instantiatePermission AccessConfig */) CodeInfo {
 	return CodeInfo{
-		CodeHash:          codeHash,
-		Creator:           creator,
-		Source:            source,
-		Builder:           builder,
-		InstantiateConfig: instantiatePermission,
+		CodeHash: codeHash,
+		Creator:  creator,
+		Source:   source,
+		Builder:  builder,
+		// InstantiateConfig: instantiatePermission,
 	}
 }
 

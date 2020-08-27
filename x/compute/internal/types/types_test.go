@@ -101,10 +101,10 @@ func TestCodeInfoValidateBasic(t *testing.T) {
 			srcMutator: func(c *CodeInfo) { c.Builder = "invalid" },
 			expError:   true,
 		},
-		"Instantiate config invalid": {
+		/* 	"Instantiate config invalid": {
 			srcMutator: func(c *CodeInfo) { c.InstantiateConfig = AccessConfig{} },
 			expError:   true,
-		},
+		}, */
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
