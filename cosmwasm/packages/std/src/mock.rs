@@ -7,7 +7,7 @@ use crate::encoding::Binary;
 use crate::errors::{StdError, StdResult, SystemError, SystemResult};
 use crate::query::{
     AllBalanceResponse, AllDelegationsResponse, BalanceResponse, BankQuery, BondedDenomResponse,
-    DelegationResponse, DistQuery, FullDelegation, MintQuery, QueryRequest, StakingQuery,
+    DelegationResponse, DistQuery, FullDelegation, GovQuery, MintQuery, QueryRequest, StakingQuery,
     Validator, ValidatorsResponse, WasmQuery,
 };
 use crate::serde::{from_slice, to_binary};
@@ -146,6 +146,7 @@ pub struct MockQuerier<C: DeserializeOwned = Empty> {
     wasm: NoWasmQuerier,
     dist: DistQuerier,
     mint: MintQuerier,
+    gov: GovQuerier,
     /// A handler to handle custom queries. This is set to a dummy handler that
     /// always errors by default. Update it via `with_custom_handler`.
     ///
@@ -161,6 +162,7 @@ impl<C: DeserializeOwned> MockQuerier<C> {
             wasm: NoWasmQuerier {},
             dist: DistQuerier {},
             mint: MintQuerier {},
+            gov: GovQuerier {},
             // strange argument notation suggested as a workaround here: https://github.com/rust-lang/rust/issues/41078#issuecomment-294296365
             custom_handler: Box::from(|_: &_| -> MockQuerierCustomHandlerResult {
                 Err(SystemError::UnsupportedRequest {
@@ -222,6 +224,7 @@ impl<C: DeserializeOwned> MockQuerier<C> {
             QueryRequest::Wasm(msg) => self.wasm.query(msg),
             QueryRequest::Dist(msg) => self.dist.query(msg),
             QueryRequest::Mint(msg) => self.mint.query(msg),
+            QueryRequest::Gov(msg) => self.gov.query(msg),
         }
     }
 }
@@ -239,6 +242,15 @@ impl NoWasmQuerier {
         }
         .clone();
         Err(SystemError::NoSuchContract { addr })
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct GovQuerier {}
+
+impl GovQuerier {
+    pub fn query(&self, _request: &GovQuery) -> QuerierResult {
+        QuerierResult::Ok(Ok(Binary::default()))
     }
 }
 

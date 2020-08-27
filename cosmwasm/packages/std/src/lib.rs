@@ -20,17 +20,17 @@ pub use crate::coins::{coin, coins, has_coins, Coin};
 pub use crate::encoding::Binary;
 pub use crate::errors::{StdError, StdResult, SystemError, SystemResult};
 pub use crate::init_handle::{
-    log, BankMsg, Context, CosmosMsg, HandleResponse, HandleResult, InitResponse, InitResult,
-    LogAttribute, MigrateResponse, MigrateResult, StakingMsg, WasmMsg,
+    log, BankMsg, Context, CosmosMsg, GovMsg, HandleResponse, HandleResult, InitResponse,
+    InitResult, LogAttribute, MigrateResponse, MigrateResult, StakingMsg, VoteOption, WasmMsg,
 };
 #[cfg(feature = "iterator")]
 pub use crate::iterator::{Order, KV};
 pub use crate::math::{Decimal, Uint128};
 pub use crate::query::{
     AllBalanceResponse, AllDelegationsResponse, BalanceResponse, BankQuery, BondedDenomResponse,
-    BondedRatioResponse, Delegation, DistQuery, FullDelegation, InflationResponse, MintQuery,
-    QueryRequest, QueryResponse, QueryResult, RewardsResponse, StakingQuery,
-    UnbondingDelegationsResponse, Validator, ValidatorsResponse, WasmQuery,
+    BondedRatioResponse, Delegation, DistQuery, FullDelegation, GovQuery, InflationResponse,
+    MintQuery, ProposalsResponse, QueryRequest, QueryResponse, QueryResult, RewardsResponse,
+    StakingQuery, UnbondingDelegationsResponse, Validator, ValidatorsResponse, WasmQuery,
 };
 pub use crate::serde::{from_binary, from_slice, to_binary, to_vec};
 pub use crate::storage::MemoryStorage;
