@@ -309,7 +309,8 @@ func queryContractHashHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 	}
 }
 
-/* func queryContractHistoryFn(cliCtx context.CLIContext) http.HandlerFunc {
+/*
+func queryContractHistoryFn(cliCtx context.CLIContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		addr, err := sdk.AccAddressFromBech32(mux.Vars(r)["contractAddr"])
 		if err != nil {
@@ -330,7 +331,8 @@ func queryContractHashHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 		cliCtx = cliCtx.WithHeight(height)
 		rest.PostProcessResponse(w, cliCtx, json.RawMessage(res))
 	}
-} */
+}
+*/
 
 type argumentDecoder struct {
 	// dec is the default decoder

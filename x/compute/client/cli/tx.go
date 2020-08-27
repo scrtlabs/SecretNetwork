@@ -108,17 +108,19 @@ func parseStoreCodeArgs(args []string, cliCtx context.CLIContext) (types.MsgStor
 		return types.MsgStoreCode{}, fmt.Errorf("invalid input file. Use wasm binary or gzip")
 	}
 
-	/* var perm *types.AccessConfig
-	if onlyAddrStr := viper.GetString(flagInstantiateByAddress); onlyAddrStr != "" {
-		allowedAddr, err := sdk.AccAddressFromBech32(onlyAddrStr)
-		if err != nil {
-			return types.MsgStoreCode{}, sdkerrors.Wrap(err, flagInstantiateByAddress)
+	/*
+		var perm *types.AccessConfig
+		if onlyAddrStr := viper.GetString(flagInstantiateByAddress); onlyAddrStr != "" {
+			allowedAddr, err := sdk.AccAddressFromBech32(onlyAddrStr)
+			if err != nil {
+				return types.MsgStoreCode{}, sdkerrors.Wrap(err, flagInstantiateByAddress)
+			}
+			x := types.OnlyAddress.With(allowedAddr)
+			perm = &x
+		} else if everybody := viper.GetBool(flagInstantiateByEverybody); everybody {
+			perm = &types.AllowEverybody
 		}
-		x := types.OnlyAddress.With(allowedAddr)
-		perm = &x
-	} else if everybody := viper.GetBool(flagInstantiateByEverybody); everybody {
-		perm = &types.AllowEverybody
-	} */
+	*/
 
 	// build and sign the transaction, then broadcast to Tendermint
 	msg := types.MsgStoreCode{

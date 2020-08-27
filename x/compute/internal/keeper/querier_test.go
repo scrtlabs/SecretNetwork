@@ -186,18 +186,20 @@ func TestQueryContractState(t *testing.T) {
 			srcReq:  abci.RequestQuery{Data: []byte(`{"raw":{"key":"config"}}`)},
 			expErr:  types.ErrQueryFailed,
 		},
-		/*	"query raw key": {
+		/*
+			"query raw key": {
 				srcPath:          []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
 				srcReq:           abci.RequestQuery{Data: []byte("foo")},
 				expModelLen:      1,
 				expModelContains: []types.Model{{Key: []byte("foo"), Value: []byte(`"bar"`)}},
 			},
-			 	"query raw binary key": {
+			"query raw binary key": {
 				srcPath:          []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
 				srcReq:           abci.RequestQuery{Data: []byte{0x0, 0x1}},
 				expModelLen:      1,
 				expModelContains: []types.Model{{Key: []byte{0x0, 0x1}, Value: []byte(`{"count":8}`)}},
-			}, */
+			},
+		*/
 		"query smart": {
 			srcPath:     []string{QueryGetContractState, addr.String(), QueryMethodContractStateSmart},
 			srcReq:      abci.RequestQuery{Data: []byte(`{"verifier":{}}`)},
@@ -213,11 +215,13 @@ func TestQueryContractState(t *testing.T) {
 			srcReq:  abci.RequestQuery{Data: []byte(`not a json string`)},
 			expErr:  types.ErrQueryFailed,
 		},
-		/* "query unknown raw key": {
-			srcPath:     []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
-			srcReq:      abci.RequestQuery{Data: []byte("unknown")},
-			expModelLen: 0,
-		}, */
+		/*
+			"query unknown raw key": {
+				srcPath:     []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
+				srcReq:      abci.RequestQuery{Data: []byte("unknown")},
+				expModelLen: 0,
+			},
+		*/
 		"query with unknown address": {
 			srcPath:     []string{QueryGetContractState, anyAddr.String()},
 			expModelLen: 0,
@@ -351,7 +355,8 @@ func TestListContractByCodeOrdering(t *testing.T) {
 	}
 }
 
-/* func TestQueryContractHistory(t *testing.T) {
+/*
+func TestQueryContractHistory(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)

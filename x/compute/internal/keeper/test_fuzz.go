@@ -27,7 +27,8 @@ func FuzzContractInfo(m *types.ContractInfo, c fuzz.Continue) {
 	c.Fuzz(&m.Created)
 }
 
-/* func FuzzContractCodeHistory(m *types.ContractCodeHistoryEntry, c fuzz.Continue) {
+/*
+func FuzzContractCodeHistory(m *types.ContractCodeHistoryEntry, c fuzz.Continue) {
 	const maxMsgSize = 128
 	m.CodeID = c.RandUint64()
 	msg := make([]byte, c.RandUint64()%maxMsgSize)
@@ -38,14 +39,16 @@ func FuzzContractInfo(m *types.ContractInfo, c fuzz.Continue) {
 	}
 	c.Fuzz(&m.Updated)
 	m.Operation = types.AllCodeHistoryTypes[c.Int()%len(types.AllCodeHistoryTypes)]
-} */
+}
+*/
 
 func FuzzStateModel(m *types.Model, c fuzz.Continue) {
 	m.Key = tmBytes.HexBytes(c.RandString())
 	c.Fuzz(&m.Value)
 }
 
-/* func FuzzAccessType(m *types.AccessType, c fuzz.Continue) {
+/*
+func FuzzAccessType(m *types.AccessType, c fuzz.Continue) {
 	pos := c.Int() % len(types.AllAccessTypes)
 	for k, _ := range types.AllAccessTypes {
 		if pos == 0 {
@@ -60,4 +63,5 @@ func FuzzAccessConfig(m *types.AccessConfig, c fuzz.Continue) {
 	var add sdk.AccAddress
 	FuzzAddr(&add, c)
 	*m = m.Type.With(add)
-} */
+}
+*/
