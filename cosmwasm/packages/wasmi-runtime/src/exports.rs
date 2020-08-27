@@ -350,6 +350,7 @@ pub mod tests {
             test_recover_enclave_buffer_valid();
             test_recover_enclave_buffer_invalid();
             test_recover_enclave_buffer_invalid_but_similar();
+            test_recover_enclave_buffer_invalid_null();
             test_recover_enclave_buffer_in_recursion_valid();
             test_recover_enclave_buffer_in_recursion_invalid();
             test_recover_enclave_buffer_multiple_out_of_order_valid();
@@ -391,6 +392,16 @@ pub mod tests {
         let recovered = unsafe { recover_buffer(enclave_buffer) };
         assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0);
         assert_eq!(recovered.unwrap_err(), BufferRecoveryError);
+    }
+
+    fn test_recover_enclave_buffer_invalid_null() {
+        let enclave_buffer = EnclaveBuffer {
+            ptr: std::ptr::null_mut(),
+        };
+        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0);
+        let recovered = unsafe { recover_buffer(enclave_buffer) };
+        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0);
+        assert_eq!(recovered.unwrap(), None);
     }
 
     fn test_recover_enclave_buffer_in_recursion_valid() {
