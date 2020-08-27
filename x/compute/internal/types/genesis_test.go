@@ -15,12 +15,12 @@ func TestValidateGenesisState(t *testing.T) {
 		"all good": {
 			srcMutator: func(s *GenesisState) {},
 		},
-		"params invalid": {
+		/* 	"params invalid": {
 			srcMutator: func(s *GenesisState) {
 				s.Params = Params{}
 			},
 			expError: true,
-		},
+		}, */
 		"codeinfo invalid": {
 			srcMutator: func(s *GenesisState) {
 				s.Codes[0].CodeInfo.CodeHash = nil
