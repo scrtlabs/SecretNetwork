@@ -57,6 +57,20 @@ ifeq ($(LEDGER_ENABLED),true)
   endif
 endif
 
+IAS_BUILD = sw
+
+ifeq ($(SGX_MODE), HW)
+  ifneq (,$(findstring production,$(FEATURES)))
+    IAS_BUILD = production
+  else
+    IAS_BUILD = develop
+  endif
+
+  build_tags += hw
+endif
+
+build_tags += $(IAS_BUILD)
+
 ifeq ($(WITH_CLEVELDB),yes)
   build_tags += gcc
 endif
@@ -101,17 +115,16 @@ xgo_build_secretcli: go.sum
 cli:
 	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
 
-build_local_no_rust: cli
+build_local_no_rust: cli bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
-#   this pulls out ELF symbols, 80% size reduction!
 	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
-build-linux: vendor
+build-linux: vendor bin-data-$(IAS_BUILD)
 	BUILD_PROFILE=$(BUILD_PROFILE) $(MAKE) -C go-cosmwasm build-rust
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
 #   this pulls out ELF symbols, 80% size reduction!
-	go build -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
-	go build -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
+	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
+	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
 
 build_windows:
 	# CLI only
@@ -191,6 +204,7 @@ clean:
 	-rm -rf ./x/compute/internal/keeper/.sgx_secrets/*
 	-rm -rf ./*.der
 	-rm -rf ./x/compute/internal/keeper/*.der
+	-rm -rf ./cmd/secretd/ias_bin*
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
 
@@ -319,3 +333,12 @@ build-all-test-contracts: build-test-contract
 	cd ./cosmwasm/contracts/hackatom && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
 	wasm-opt -Os ./cosmwasm/contracts/hackatom/target/wasm32-unknown-unknown/release/hackatom.wasm -o ./x/compute/internal/keeper/testdata/contract.wasm
 	cat ./x/compute/internal/keeper/testdata/contract.wasm | gzip > ./x/compute/internal/keeper/testdata/contract.wasm.gzip
+
+bin-data-sw:
+	cd ./cmd/secretd && go-bindata -o ias_bin_sw.go -prefix "../../ias_keys/sw_dummy/" -tags "!hw" ../../ias_keys/sw_dummy/...
+
+bin-data-develop:
+	cd ./cmd/secretd && go-bindata -o ias_bin_dev.go -prefix "../../ias_keys/develop/" -tags "develop,hw" ../../ias_keys/develop/...
+
+bin-data-production:
+	cd ./cmd/secretd && go-bindata -o ias_bin_prod.go -prefix "../../ias_keys/production/" -tags "production,hw" ../../ias_keys/production/...

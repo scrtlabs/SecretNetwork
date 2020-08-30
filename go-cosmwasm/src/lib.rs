@@ -92,9 +92,30 @@ pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> 
 }
 
 #[no_mangle]
-pub extern "C" fn init_bootstrap(err: Option<&mut Buffer>) -> Buffer {
+pub extern "C" fn init_bootstrap(
+    spid: Buffer,
+    api_key: Buffer,
+    err: Option<&mut Buffer>,
+) -> Buffer {
     info!("Hello from right before init_bootstrap");
-    match untrusted_init_bootstrap() {
+
+    let spid_slice = match unsafe { spid.read() } {
+        None => {
+            set_error(Error::empty_arg("spid"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+
+    let api_key_slice = match unsafe { api_key.read() } {
+        None => {
+            set_error(Error::empty_arg("api_key"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+
+    match untrusted_init_bootstrap(spid_slice, api_key_slice) {
         Err(e) => {
             set_error(Error::enclave_err(e.to_string()), err);
             Buffer::default()
@@ -140,8 +161,28 @@ pub extern "C" fn init_node(
 }
 
 #[no_mangle]
-pub extern "C" fn create_attestation_report(err: Option<&mut Buffer>) -> bool {
-    if let Err(status) = create_attestation_report_u() {
+pub extern "C" fn create_attestation_report(
+    spid: Buffer,
+    api_key: Buffer,
+    err: Option<&mut Buffer>,
+) -> bool {
+    let spid_slice = match unsafe { spid.read() } {
+        None => {
+            set_error(Error::empty_arg("spid"), err);
+            return false;
+        }
+        Some(r) => r,
+    };
+
+    let api_key_slice = match unsafe { api_key.read() } {
+        None => {
+            set_error(Error::empty_arg("api_key"), err);
+            return false;
+        }
+        Some(r) => r,
+    };
+
+    if let Err(status) = create_attestation_report_u(spid_slice, api_key_slice) {
         set_error(Error::enclave_err(status.to_string()), err);
         return false;
     }

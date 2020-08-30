@@ -127,7 +127,7 @@ Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
-bool create_attestation_report(Buffer *err);
+bool create_attestation_report(Buffer spid, Buffer api_key, Buffer *err);
 
 void free_rust(Buffer buf);
 
@@ -149,7 +149,7 @@ Buffer handle(cache_t *cache,
               Buffer *err,
               Buffer sig_info);
 
-Buffer init_bootstrap(Buffer *err);
+Buffer init_bootstrap(Buffer spid, Buffer api_key, Buffer *err);
 
 cache_t *init_cache(Buffer data_dir, Buffer supported_features, uintptr_t _cache_size, Buffer *err);
 
