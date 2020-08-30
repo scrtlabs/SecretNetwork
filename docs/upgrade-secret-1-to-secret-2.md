@@ -1,6 +1,6 @@
 # :warning: WIP :warning:
 
-## Bootstrap node
+## Bootstrap validator
 
 Must run [`v0.2.2`](https://github.com/enigmampc/SecretNetwork/releases/tag/v0.2.2).
 
