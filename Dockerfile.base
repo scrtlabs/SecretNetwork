@@ -11,8 +11,9 @@ ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 
 RUN curl -O https://dl.google.com/go/go1.14.2.linux-amd64.tar.gz
 RUN tar -C /usr/local -xzf go1.14.2.linux-amd64.tar.gz
-# Set working directory for the build
+RUN go get -u github.com/jteeuwen/go-bindata/...
 
+# Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 
 ARG SGX_MODE=SW
@@ -75,4 +76,4 @@ RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/x/compute/internal/keepe
 COPY packaging_docker/ci/go-tests.sh .
 RUN chmod +x go-tests.sh
 
-ENTRYPOINT ["/bin/bash"]
+ENTRYPOINT ["/bin/bash", "go-tests.sh"]

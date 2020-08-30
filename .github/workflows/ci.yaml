@@ -40,14 +40,6 @@ jobs:
           wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
           tar xf ./sccache-*.tar.gz
           mv ./sccache*/sccache "$HOME/sccache"
-      - name: Create fake api keys
-        run: |
-          mkdir -p ias_keys/sw_dummy
-          mkdir -p ias_keys/develop
-          echo "not_a_key" > ias_keys/sw_dummy/spid.txt
-          echo "not_a_key" > ias_keys/develop/spid.txt
-          echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
-          echo "not_a_key" > ias_keys/develop/api_key.txt
       - name: Test enclave
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -60,6 +52,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.14' # The Go version to download (if necessary) and use.
       - name: Install Intel's SGX SDK
         run: |
           mkdir -p "$HOME/.sgxsdk"
@@ -96,11 +91,10 @@ jobs:
       - name: Create fake api keys
         run: |
           mkdir -p ias_keys/sw_dummy
-          mkdir -p ias_keys/develop
           echo "not_a_key" > ias_keys/sw_dummy/spid.txt
-          echo "not_a_key" > ias_keys/develop/spid.txt
           echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
-          echo "not_a_key" > ias_keys/develop/api_key.txt
+      - name: Install go-bindata
+        run: go get -u github.com/jteeuwen/go-bindata/...
       - name: Build
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -156,14 +150,6 @@ jobs:
           wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
           tar xf ./sccache-*.tar.gz
           mv ./sccache*/sccache "$HOME/sccache"
-      - name: Create fake api keys
-        run: |
-          mkdir -p ias_keys/sw_dummy
-          mkdir -p ias_keys/develop
-          echo "not_a_key" > ias_keys/sw_dummy/spid.txt
-          echo "not_a_key" > ias_keys/develop/spid.txt
-          echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
-          echo "not_a_key" > ias_keys/develop/api_key.txt
       - name: Clippy
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -176,6 +162,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.14' # The Go version to download (if necessary) and use.
       - name: Install Intel's SGX SDK
         run: |
           mkdir -p "$HOME/.sgxsdk"
@@ -212,11 +201,10 @@ jobs:
       - name: Create fake api keys
         run: |
           mkdir -p ias_keys/sw_dummy
-          mkdir -p ias_keys/develop
           echo "not_a_key" > ias_keys/sw_dummy/spid.txt
-          echo "not_a_key" > ias_keys/develop/spid.txt
           echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
-          echo "not_a_key" > ias_keys/develop/api_key.txt
+      - name: Install go-bindata
+        run: go get -u github.com/jteeuwen/go-bindata/...
       - name: Build
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
