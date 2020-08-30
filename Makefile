@@ -198,7 +198,7 @@ clean:
 build-azure:
 	docker build -f Dockerfile.azure -t enigmampc/secret-network-node:azuretestnet .
 
-build-testnet:
+build-testnet: docker_base
 	@mkdir build 2>&3 || true
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f Dockerfile.testnet -t enigmampc/secret-network-bootstrap:v$(VERSION)-testnet .
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t enigmampc/secret-network-node:v$(VERSION)-testnet .
@@ -207,8 +207,9 @@ build-testnet:
 
 build-mainnet:
 	@mkdir build 2>&3 || true
-	docker build --build-arg FEATURES=production --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f Dockerfile.testnet -t enigmampc/secret-network-bootstrap:v$(VERSION)-mainnet .
-	docker build --build-arg FEATURES=production --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t enigmampc/secret-network-node:v$(VERSION)-mainnet .
+	docker build --build-arg SGX_MODE=HW --build-arg FEATURES=production -f Dockerfile.base -t rust-go-base-image .
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f Dockerfile.testnet -t enigmampc/secret-network-bootstrap:v$(VERSION)-mainnet .
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t enigmampc/secret-network-node:v$(VERSION)-mainnet .
 	docker build --build-arg SGX_MODE=HW -f Dockerfile_build_deb -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(pwd)/build:/build deb_build
 
