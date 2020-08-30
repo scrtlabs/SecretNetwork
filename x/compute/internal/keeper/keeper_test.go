@@ -42,7 +42,13 @@ func init() {
 	config.SetBech32PrefixForConsensusNode(eng.Bech32PrefixConsAddr, eng.Bech32PrefixConsPub)
 	config.Seal()
 
-	_, err := api.InitBootstrap()
+	spid, err := ioutil.ReadFile("../../../../ias_keys/develop/spid.txt")
+	apiKey, err := ioutil.ReadFile("../../../../ias_keys/develop/api_key.txt")
+
+	fmt.Printf("This IS spid: %v\n", spid)
+	fmt.Printf("This IS api key: %v\n", apiKey)
+
+	_, err = api.InitBootstrap(spid, apiKey)
 	if err != nil {
 		panic(fmt.Sprintf("Error initializing the enclave: %v", err))
 	}

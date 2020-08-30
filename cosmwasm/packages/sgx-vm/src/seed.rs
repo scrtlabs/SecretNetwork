@@ -1,5 +1,5 @@
+use enclave_ffi_types::HealthCheckResult;
 use sgx_types::*;
-use enclave_ffi_types::{HealthCheckResult};
 
 use log::{debug, info};
 
@@ -19,6 +19,10 @@ extern "C" {
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
         public_key: &mut [u8; 32],
+        spid: *const u8,
+        spid_len: u32,
+        api_key: *const u8,
+        api_key_len: u32,
     ) -> sgx_status_t;
 
     pub fn ecall_key_gen(
@@ -42,12 +46,7 @@ pub fn untrusted_health_check() -> SgxResult<HealthCheckResult> {
     let eid = enclave.geteid();
     let mut ret = HealthCheckResult::default();
 
-    let status = unsafe {
-        ecall_health_check(
-            eid,
-            &mut ret,
-        )
-    };
+    let status = unsafe { ecall_health_check(eid, &mut ret) };
 
     if status != sgx_status_t::SGX_SUCCESS {
         return Err(status);
@@ -108,7 +107,7 @@ pub fn untrusted_key_gen() -> SgxResult<[u8; 32]> {
     Ok(public_key)
 }
 
-pub fn untrusted_init_bootstrap() -> SgxResult<[u8; 32]> {
+pub fn untrusted_init_bootstrap(spid: &[u8], api_key: &[u8]) -> SgxResult<[u8; 32]> {
     info!("Hello from just before initializing - untrusted_init_bootstrap");
     let enclave = get_enclave()?;
     info!("Hello from just after initializing - untrusted_init_bootstrap");
@@ -117,7 +116,17 @@ pub fn untrusted_init_bootstrap() -> SgxResult<[u8; 32]> {
     let mut retval = sgx_status_t::SGX_SUCCESS;
     let mut public_key = [0u8; 32];
     // let status = unsafe { ecall_get_encrypted_seed(eid, &mut retval, cert, cert_len, & mut seed) };
-    let status = unsafe { ecall_init_bootstrap(eid, &mut retval, &mut public_key) };
+    let status = unsafe {
+        ecall_init_bootstrap(
+            eid,
+            &mut retval,
+            &mut public_key,
+            spid.as_ptr(),
+            spid.len() as u32,
+            api_key.as_ptr(),
+            api_key.len() as u32,
+        )
+    };
 
     if status != sgx_status_t::SGX_SUCCESS {
         return Err(status);
@@ -129,4 +138,3 @@ pub fn untrusted_init_bootstrap() -> SgxResult<[u8; 32]> {
 
     Ok(public_key)
 }
-

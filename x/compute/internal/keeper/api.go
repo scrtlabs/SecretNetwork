@@ -3,8 +3,8 @@ package keeper
 import (
 	"fmt"
 
-	sdk "github.com/enigmampc/cosmos-sdk/types"
 	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
 )
 
 var (

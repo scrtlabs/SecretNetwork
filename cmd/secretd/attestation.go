@@ -64,7 +64,17 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 				}
 			}
 
-			_, err := api.CreateAttestationReport()
+			spidFile, err := Asset("spid.txt")
+			if err != nil {
+				return fmt.Errorf("failed to initialize enclave: %w", err)
+			}
+
+			apiKeyFile, err := Asset("api_key.txt")
+			if err != nil {
+				return fmt.Errorf("failed to initialize enclave: %w", err)
+			}
+
+			_, err = api.CreateAttestationReport(spidFile, apiKeyFile)
 			if err != nil {
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}
@@ -98,8 +108,18 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 
 			regGenState := reg.GetGenesisStateFromAppState(cdc, appState)
 
+			spidFile, err := Asset("spid.txt")
+			if err != nil {
+				return fmt.Errorf("failed to initialize enclave: %w", err)
+			}
+
+			apiKeyFile, err := Asset("api_key.txt")
+			if err != nil {
+				return fmt.Errorf("failed to initialize enclave: %w", err)
+			}
+
 			// the master key of the generated certificate is returned here
-			masterKey, err := api.InitBootstrap()
+			masterKey, err := api.InitBootstrap(spidFile, apiKeyFile)
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
