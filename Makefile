@@ -122,8 +122,9 @@ build_local_no_rust: cli bin-data-$(IAS_BUILD)
 build-linux: vendor bin-data-$(IAS_BUILD)
 	BUILD_PROFILE=$(BUILD_PROFILE) $(MAKE) -C go-cosmwasm build-rust
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
+#   this pulls out ELF symbols, 80% size reduction!
+	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
-	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' -tags '$(IAS_BUILD)' ./cmd/secretd
 
 build_windows:
 	# CLI only
@@ -192,17 +193,17 @@ clean:
 	-rm -rf /tmp/SecretNetwork
 	-rm -f ./secretcli*
 	-rm -f ./secretd*
-	-rm -f ./librust_cosmwasm_enclave.signed.so
-	-rm -f ./x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so
-	-rm -f ./go-cosmwasm/api/libgo_cosmwasm.so
+	-find -name librust_cosmwasm_enclave.signed.so -delete
+	-find -name libgo_cosmwasm.so -delete
+	-find -name '*.so' -delete
+	-find -name 'target' -type d -exec rm -rf \;
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*
 	-rm -rf ./third_party/vendor/
 	-rm -rf ./.sgx_secrets/*
 	-rm -rf ./x/compute/internal/keeper/.sgx_secrets/*
-	-rm -rf ./x/compute/internal/keeper/*.der
 	-rm -rf ./*.der
-	-rm -rf ./x/compute/internal/keeper/*.so
+	-rm -rf ./x/compute/internal/keeper/*.der
 	-rm -rf ./cmd/secretd/ias_bin*
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
@@ -215,6 +216,13 @@ build-testnet:
 	@mkdir build 2>&3 || true
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f Dockerfile.testnet -t enigmampc/secret-network-bootstrap:v$(VERSION)-testnet .
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t enigmampc/secret-network-node:v$(VERSION)-testnet .
+	docker build --build-arg SGX_MODE=HW -f Dockerfile_build_deb -t deb_build .
+	docker run -e VERSION=${VERSION} -v $(pwd)/build:/build deb_build
+
+build-mainnet:
+	@mkdir build 2>&3 || true
+	docker build --build-arg FEATURES=production --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f Dockerfile.testnet -t enigmampc/secret-network-bootstrap:v$(VERSION)-mainnet .
+	docker build --build-arg FEATURES=production --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t enigmampc/secret-network-node:v$(VERSION)-mainnet .
 	docker build --build-arg SGX_MODE=HW -f Dockerfile_build_deb -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(pwd)/build:/build deb_build
 
@@ -282,7 +290,7 @@ go-tests: build-test-contract
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	rm -rf ./x/compute/internal/keeper/.sgx_secrets
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	SGX_MODE=SW go test -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	SGX_MODE=SW go test -timeout 1200s -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 go-tests-hw: build-test-contract
 	# empty BUILD_PROFILE means debug mode which compiles faster
@@ -300,6 +308,15 @@ build-all-test-contracts: build-test-contract
 	# echo "" | sudo add-apt-repository ppa:hnakamur/binaryen
 	# sudo apt update
 	# sudo apt install -y binaryen
+	cd ./cosmwasm/contracts/gov && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+	wasm-opt -Os ./cosmwasm/contracts/gov/target/wasm32-unknown-unknown/release/gov.wasm -o ./x/compute/internal/keeper/testdata/gov.wasm
+
+	cd ./cosmwasm/contracts/dist && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+	wasm-opt -Os ./cosmwasm/contracts/dist/target/wasm32-unknown-unknown/release/dist.wasm -o ./x/compute/internal/keeper/testdata/dist.wasm
+
+	cd ./cosmwasm/contracts/mint && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+	wasm-opt -Os ./cosmwasm/contracts/mint/target/wasm32-unknown-unknown/release/mint.wasm -o ./x/compute/internal/keeper/testdata/mint.wasm
+
 	cd ./cosmwasm/contracts/staking && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
 	wasm-opt -Os ./cosmwasm/contracts/staking/target/wasm32-unknown-unknown/release/staking.wasm -o ./x/compute/internal/keeper/testdata/staking.wasm
 
@@ -310,7 +327,7 @@ build-all-test-contracts: build-test-contract
 	wasm-opt -Os ./cosmwasm/contracts/burner/target/wasm32-unknown-unknown/release/burner.wasm -o ./x/compute/internal/keeper/testdata/burner.wasm
 
 	cd ./cosmwasm/contracts/erc20 && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
-	wasm-opt -Os ./cosmwasm/contracts/erc20/target/wasm32-unknown-unknown/release/erc20.wasm -o ./x/compute/internal/keeper/testdata/erc20.wasm
+	wasm-opt -Os ./cosmwasm/contracts/erc20/target/wasm32-unknown-unknown/release/cw_erc20.wasm -o ./x/compute/internal/keeper/testdata/erc20.wasm
 
 	cd ./cosmwasm/contracts/hackatom && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
 	wasm-opt -Os ./cosmwasm/contracts/hackatom/target/wasm32-unknown-unknown/release/hackatom.wasm -o ./x/compute/internal/keeper/testdata/contract.wasm

@@ -10,6 +10,8 @@ import (
 	"io/ioutil"
 	"strconv"
 
+	"github.com/spf13/viper"
+
 	cosmwasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	sdkErrors "github.com/enigmampc/cosmos-sdk/types/errors"
 	flag "github.com/spf13/pflag"
@@ -48,6 +50,7 @@ func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 		GetCmdQueryLabel(cdc),
 		GetCmdCodeHashByContract(cdc),
 		CmdDecryptText(cdc),
+		// GetCmdGetContractHistory(cdc),
 	)...)
 	return queryCmd
 }
@@ -297,7 +300,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			txInput := txInputs[0]
 
 			if txInput.Type() == "execute" {
-				execTx, ok := txInput.(*types.MsgExecuteContract)
+				execTx, ok := txInput.(types.MsgExecuteContract)
 				if !ok {
 					return fmt.Errorf("error parsing tx as type 'execute': %v", txInput)
 				}
@@ -305,7 +308,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 				encryptedInput = execTx.Msg
 				dataOutputHexB64 = result.Data
 			} else if txInput.Type() == "instantiate" {
-				initTx, ok := txInput.(*types.MsgInstantiateContract)
+				initTx, ok := txInput.(types.MsgInstantiateContract)
 				if !ok {
 					return fmt.Errorf("error parsing tx as type 'instantiate': %v", txInput)
 				}
@@ -436,82 +439,142 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "query [bech32_address] [query]", // TODO add --from wallet
-		Short: "Calls contract with given address  with query data and prints the returned result",
-		Long:  "Calls contract with given address  with query data and prints the returned result",
+		Short: "Calls contract with given address with query data and prints the returned result",
+		Long:  "Calls contract with given address with query data and prints the returned result",
 		Args:  cobra.ExactArgs(2),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			var msg string
+			var contractAddr string
+
+			if len(args) == 1 {
+
+				label := viper.GetString(flagLabel)
+				if label == "" {
+					return fmt.Errorf("label or bech32 contract address is required")
+				}
+
+				route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
+				res, _, err := cliCtx.Query(route)
+				if err != nil {
+					return err
+				}
+
+				contractAddr = string(res)
+				msg = args[0]
+			} else {
+				// get the id of the code to instantiate
+				contractAddr = args[0]
+				msg = args[1]
+			}
+
+			queryData, err := decoder.DecodeString(msg)
+			if err != nil {
+				return fmt.Errorf("decode query: %s", err)
+			}
+
+			if !json.Valid(queryData) {
+				return errors.New("query data must be json")
+			}
+
+			return QueryWithData(contractAddr, cdc, queryData)
+		},
+	}
+	decoder.RegisterFlags(cmd.PersistentFlags(), "query argument")
+	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
+	return cmd
+}
+
+func QueryWithData(contractAddress string, cdc *codec.Codec, queryData []byte) error {
+	cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+	addr, err := sdk.AccAddressFromBech32(contractAddress)
+	if err != nil {
+		return err
+	}
+
+	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryGetContractState, addr.String())
+
+	wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
+
+	codeHash, err := GetCodeHashByContractAddr(cliCtx, addr)
+	if err != nil {
+		return fmt.Errorf("contract not found: %s", addr)
+	}
+
+	msg := types.SecretMsg{
+		CodeHash: codeHash,
+		Msg:      queryData,
+	}
+
+	queryData, err = wasmCtx.Encrypt(msg.Serialize())
+	if err != nil {
+		return err
+	}
+	nonce := queryData[:32]
+
+	res, _, err := cliCtx.QueryWithData(route, queryData)
+
+	if err != nil {
+		if types.ErrContainsQueryError(err) {
+			errorPlainBz, err := wasmCtx.DecryptError(err.Error(), "query", nonce)
+			if err != nil {
+				return err
+			}
+			return fmt.Errorf("query result: %v", errorPlainBz.Error())
+		}
+		// Itzik: Commenting this as it might have been a placeholder for encrypting
+		//else if strings.Contains(err.Error(), "EnclaveErr") {
+		//	return err
+		//}
+		return err
+	}
+
+	var resDecrypted []byte
+	if len(res) > 0 {
+		resDecrypted, err = wasmCtx.Decrypt(res, nonce)
+		if err != nil {
+			return err
+		}
+	}
+
+	decodedResp, err := base64.StdEncoding.DecodeString(string(resDecrypted))
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(decodedResp))
+	return nil
+}
+
+/*
+// GetCmdGetContractHistory prints the code history for a given contract
+func GetCmdGetContractHistory(cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "contract-history [bech32_address]",
+		Short: "Prints out the code history for a contract given its address",
+		Long:  "Prints out the code history for a contract given its address",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
 			addr, err := sdk.AccAddressFromBech32(args[0])
 			if err != nil {
 				return err
 			}
-			key := args[1]
-			if key == "" {
-				return errors.New("key must not be empty")
-			}
-			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryGetContractState, addr.String())
 
-			queryData, err := decoder.DecodeString(args[1])
-			if err != nil {
-				return fmt.Errorf("decode query: %s", err)
-			}
-
-			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
-
-			codeHash, err := GetCodeHashByContractAddr(cliCtx, addr)
-			if err != nil {
-				return fmt.Errorf("contract not found: %s", addr)
-			}
-
-			msg := types.SecretMsg{
-				CodeHash: codeHash,
-				Msg:      queryData,
-			}
-
-			queryData, err = wasmCtx.Encrypt(msg.Serialize())
+			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHistory, addr.String())
+			res, _, err := cliCtx.Query(route)
 			if err != nil {
 				return err
 			}
-			nonce := queryData[:32]
-
-			res, _, err := cliCtx.QueryWithData(route, queryData)
-
-			if err != nil {
-				if types.ErrContainsQueryError(err) {
-					errorPlainBz, err := wasmCtx.DecryptError(err.Error(), "query", nonce)
-					if err != nil {
-						return err
-					}
-					return fmt.Errorf("query result: %v", errorPlainBz.Error())
-				}
-				// Itzik: Commenting this as it might have been a placeholder for encrypting
-				//else if strings.Contains(err.Error(), "EnclaveErr") {
-				//	return err
-				//}
-				return err
-			}
-
-			var resDecrypted []byte
-			if len(res) > 0 {
-				resDecrypted, err = wasmCtx.Decrypt(res, nonce)
-				if err != nil {
-					return err
-				}
-			}
-
-			decodedResp, err := base64.StdEncoding.DecodeString(string(resDecrypted))
-			if err != nil {
-				return err
-			}
-
-			fmt.Println(string(decodedResp))
+			fmt.Println(string(res))
 			return nil
 		},
 	}
-	decoder.RegisterFlags(cmd.PersistentFlags(), "query argument")
-	return cmd
 }
+*/
 
 type argumentDecoder struct {
 	// dec is the default decoder

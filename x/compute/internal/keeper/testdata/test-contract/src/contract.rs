@@ -1,11 +1,9 @@
 use cosmwasm_storage::PrefixedStorage;
 
 use cosmwasm_std::{
-    generic_err, invalid_base64, invalid_utf8, log, not_found, null_pointer, parse_err,
-    serialize_err, to_binary, unauthorized, underflow, Api, BankMsg, Binary, Coin, CosmosMsg, Env,
-    Extern, HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, Querier,
-    QueryRequest, QueryResult, ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg,
-    WasmQuery,
+    log, to_binary, Api, BankMsg, Binary, Coin, CosmosMsg, Env, Extern, HandleResponse,
+    HandleResult, HumanAddr, InitResponse, InitResult, Querier, QueryRequest, QueryResult,
+    ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg, WasmQuery,
 };
 
 /////////////////////////////// Messages ///////////////////////////////
@@ -307,7 +305,9 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                     callback_code_hash: code_hash,
                     msg: Binary::from(msg.as_bytes().to_vec()),
                 }))
-                .map_err(|err| generic_err(format!("Got an error from query: {:?}", err)))?;
+                .map_err(|err| {
+                    StdError::generic_err(format!("Got an error from query: {:?}", err))
+                })?;
 
             Ok(InitResponse {
                 messages: vec![],
@@ -320,16 +320,15 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 fn map_string_to_error(error_type: String) -> StdError {
     let as_str: &str = &error_type[..];
     match as_str {
-        "generic_err" => generic_err("la la 🤯"),
-        "invalid_base64" => invalid_base64("ra ra 🤯"),
-        "invalid_utf8" => invalid_utf8("ka ka 🤯"),
-        "not_found" => not_found("za za 🤯"),
-        "null_pointer" => null_pointer(),
-        "parse_err" => parse_err("na na 🤯", "pa pa 🤯"),
-        "serialize_err" => serialize_err("ba ba 🤯", "ga ga 🤯"),
-        "unauthorized" => unauthorized(),
-        "underflow" => underflow("minuend 🤯", "subtrahend 🤯"),
-        _ => generic_err("catch-all 🤯"),
+        "generic_err" => StdError::generic_err("la la 🤯"),
+        "invalid_base64" => StdError::invalid_base64("ra ra 🤯"),
+        "invalid_utf8" => StdError::invalid_utf8("ka ka 🤯"),
+        "not_found" => StdError::not_found("za za 🤯"),
+        "parse_err" => StdError::parse_err("na na 🤯", "pa pa 🤯"),
+        "serialize_err" => StdError::serialize_err("ba ba 🤯", "ga ga 🤯"),
+        "unauthorized" => StdError::unauthorized(),
+        "underflow" => StdError::underflow("minuend 🤯", "subtrahend 🤯"),
+        _ => StdError::generic_err("catch-all 🤯"),
     }
 }
 
@@ -472,13 +471,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         }
         HandleMsg::LogMsgSender {} => Ok(HandleResponse {
             messages: vec![],
-            log: vec![log(
-                "msg.sender",
-                deps.api
-                    .human_address(&env.message.sender)
-                    .unwrap()
-                    .to_string(),
-            )],
+            log: vec![log("msg.sender", env.message.sender.to_string())],
             data: None,
         }),
         HandleMsg::CallbackToLogMsgSender { to, code_hash } => Ok(HandleResponse {
@@ -606,7 +599,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                     callback_code_hash: code_hash,
                     msg: Binary::from(msg.as_bytes().to_vec()),
                 }))
-                .map_err(|err| generic_err(format!("Got an error from query: {:?}", err)))?;
+                .map_err(|err| {
+                    StdError::generic_err(format!("Got an error from query: {:?}", err))
+                })?;
 
             Ok(HandleResponse {
                 messages: vec![],
@@ -1015,26 +1010,30 @@ fn test_canonicalize_address_errors<S: Storage, A: Api, Q: Querier>(
 ) -> HandleResult {
     match deps.api.canonical_address(&HumanAddr(String::from(""))) {
         Err(StdError::GenericErr { msg, backtrace: _ }) => {
-            if msg != String::from("canonicalize_address returned error") {
-                return Err(generic_err("empty address should have failed with -2"));
+            if msg != String::from("canonicalize_address errored: input is empty") {
+                return Err(StdError::generic_err(
+                    "empty address should have failed with 'canonicalize_address errored: input is empty'",
+                ));
             }
             // all is good, continue
         }
-        _ => return Err(generic_err("empty address should have failed with -2")),
+        _ => return Err(StdError::generic_err(
+            "empty address should have failed with 'canonicalize_address errored: input is empty'",
+        )),
     }
 
     match deps.api.canonical_address(&HumanAddr(String::from("   "))) {
         Err(StdError::GenericErr { msg, backtrace: _ }) => {
-            if msg != String::from("canonicalize_address returned error") {
-                return Err(generic_err(
-                    "empty trimmed address should have failed with -2",
+            if msg != String::from("canonicalize_address errored: input is empty") {
+                return Err(StdError::generic_err(
+                    "empty trimmed address should have failed with 'canonicalize_address errored: input is empty'",
                 ));
             }
             // all is good, continue
         }
         _ => {
-            return Err(generic_err(
-                "empty trimmed address should have failed with -2",
+            return Err(StdError::generic_err(
+                "empty trimmed address should have failed with 'canonicalize_address errored: input is empty'",
             ))
         }
     }
@@ -1044,24 +1043,35 @@ fn test_canonicalize_address_errors<S: Storage, A: Api, Q: Querier>(
         .canonical_address(&HumanAddr(String::from("cosmos1h99hrcc54ms9lxxxx")))
     {
         Err(StdError::GenericErr { msg, backtrace: _ }) => {
-            if msg != String::from("canonicalize_address returned error") {
-                return Err(generic_err("bad bech32 should have failed with -3"));
+            if msg != String::from("canonicalize_address errored: invalid checksum") {
+                return Err(StdError::generic_err(
+                    "bad bech32 should have failed with 'canonicalize_address errored: invalid checksum'",
+                ));
             }
             // all is good, continue
         }
-        _ => return Err(generic_err("bad bech32 should have failed with -3")),
+        _ => return Err(StdError::generic_err(
+            "bad bech32 should have failed with 'canonicalize_address errored: invalid checksum'",
+        )),
     }
 
     match deps.api.canonical_address(&HumanAddr(String::from(
         "cosmos1h99hrcc54ms9luwpex9kw0rwdt7etvfdyxh6gu",
     ))) {
         Err(StdError::GenericErr { msg, backtrace: _ }) => {
-            if msg != String::from("canonicalize_address returned error") {
-                return Err(generic_err("bad prefix should have failed with -4"));
+            if msg != String::from("canonicalize_address errored: wrong address prefix: \"cosmos\"")
+            {
+                return Err(StdError::generic_err(
+                    "bad prefix should have failed with 'canonicalize_address errored: wrong address prefix: \"cosmos\"'",
+                ));
             }
             // all is good, continue
         }
-        _ => return Err(generic_err("bad prefix should have failed with -4")),
+        _ => {
+            return Err(StdError::generic_err(
+                "bad prefix should have failed with 'canonicalize_address errored: wrong address prefix: \"cosmos\"'",
+            ))
+        }
     }
 
     Ok(HandleResponse {
@@ -1108,7 +1118,9 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
                     callback_code_hash: code_hash,
                     msg: Binary::from(msg.as_bytes().to_vec()),
                 }))
-                .map_err(|err| generic_err(format!("Got an error from query: {:?}", err)))?;
+                .map_err(|err| {
+                    StdError::generic_err(format!("Got an error from query: {:?}", err))
+                })?;
             return Ok(to_binary(&answer)?);
         }
     }

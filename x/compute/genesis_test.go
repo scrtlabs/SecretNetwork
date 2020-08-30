@@ -91,7 +91,7 @@ func TestInitGenesis(t *testing.T) {
 
 	initCmd := MsgInstantiateContract{
 		Sender:    creator,
-		Code:      1,
+		CodeID:    1,
 		InitMsg:   initMsgBz,
 		InitFunds: deposit,
 	}

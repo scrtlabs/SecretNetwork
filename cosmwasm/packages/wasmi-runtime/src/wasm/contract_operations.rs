@@ -57,6 +57,17 @@ pub fn init(
         EnclaveError::FailedToDeserialize
     })?;
 
+    let canonical_contract_address = CanonicalAddr::from_human(&parsed_env.contract.address).map_err(|err| {
+        error!(
+            "got an error while trying to deserialize parsed_env.contract.address from bech32 string to bytes {:?}: {}",
+            parsed_env.contract.address, err
+        );
+        EnclaveError::FailedToDeserialize
+    })?;
+    let contract_key =
+        generate_encryption_key(&parsed_env, contract, &(canonical_contract_address.0).0)?;
+    trace!("Init: Contract Key: {:?}", contract_key.to_vec().as_slice());
+
     let parsed_sig_info: SigInfo = serde_json::from_slice(sig_info).map_err(|err| {
         error!(
             "got an error while trying to deserialize env input bytes into json {:?}: {}",
@@ -73,11 +84,6 @@ pub fn init(
     );
 
     verify_params(&parsed_sig_info, &parsed_env, &secret_msg)?;
-
-    let contract_address = &parsed_env.contract.address;
-    let contract_key = generate_encryption_key(&parsed_env, contract, contract_address.as_slice())?;
-
-    trace!("Init: Contract Key: {:?}", contract_key.to_vec().as_slice());
 
     let decrypted_msg = secret_msg.decrypt()?;
 
@@ -123,7 +129,7 @@ pub fn init(
             output,
             secret_msg.nonce,
             secret_msg.user_public_key,
-            contract_address,
+            &canonical_contract_address,
         )?;
 
         Ok(output)
@@ -175,13 +181,7 @@ pub fn handle(
     // Verify env parameters against the signed tx
     verify_params(&parsed_sig_info, &parsed_env, &secret_msg)?;
 
-    let contract_address = &parsed_env.contract.address;
     let contract_key = extract_contract_key(&parsed_env)?;
-
-    trace!(
-        "Handle input before decryption: {:?}",
-        String::from_utf8_lossy(&msg)
-    );
 
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
@@ -193,7 +193,15 @@ pub fn handle(
         String::from_utf8_lossy(&validated_msg)
     );
 
-    if !validate_contract_key(&contract_key, contract_address.as_slice(), contract) {
+    let canonical_contract_address = CanonicalAddr::from_human(&parsed_env.contract.address).map_err(|err| {
+        error!(
+            "got an error while trying to deserialize parsed_env.contract.address from bech32 string to bytes {:?}: {}",
+            parsed_env.contract.address, err
+        );
+        EnclaveError::FailedToDeserialize
+    })?;
+
+    if !validate_contract_key(&contract_key, &(canonical_contract_address.0).0, contract) {
         error!("got an error while trying to deserialize output bytes");
         return Err(EnclaveError::FailedContractAuthentication);
     }
@@ -243,7 +251,7 @@ pub fn handle(
             output,
             secret_msg.nonce,
             secret_msg.user_public_key,
-            contract_address,
+            &canonical_contract_address,
         )?;
         Ok(output)
     })
@@ -279,10 +287,6 @@ pub fn query(
     );
 
     let secret_msg = SecretMessage::from_slice(msg)?;
-    trace!(
-        "Query input before decryption: {:?}",
-        String::from_utf8_lossy(&msg)
-    );
     let decrypted_msg = secret_msg.decrypt()?;
     trace!(
         "Query input afer decryption: {:?}",

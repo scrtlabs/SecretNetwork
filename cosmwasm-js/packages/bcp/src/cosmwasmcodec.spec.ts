@@ -90,7 +90,7 @@ describe("CosmWasmCodec", () => {
 
       const expected = {
         bytes: toUtf8(
-          '{"account_number":"0","chain_id":"cosmoshub-3","fee":{"amount":[{"amount":"2500","denom":"uatom"}],"gas":"100000"},"memo":"My first ISA payment","msgs":[{"type":"wasm/execute","value":{"contract":"cosmos1hqrdl6wstt8qzshwc6mrumpjk9338k0lr4dqxd","msg":{"transfer":{"amount":"345","recipient":"cosmos1dddd"}},"sender":"cosmos1txqfn5jmcts0x0q7krdxj8tgf98tj0965vqlmq","sent_funds":[]}}],"sequence":"99"}',
+          '{"account_number":"0","chain_id":"cosmoshub-3","fee":{"amount":[{"amount":"2500","denom":"uatom"}],"gas":"100000"},"memo":"My first ISA payment","msgs":[{"type":"wasm/MsgExecuteContract","value":{"contract":"cosmos1hqrdl6wstt8qzshwc6mrumpjk9338k0lr4dqxd","msg":{"transfer":{"amount":"345","recipient":"cosmos1dddd"}},"sender":"cosmos1txqfn5jmcts0x0q7krdxj8tgf98tj0965vqlmq","sent_funds":[]}}],"sequence":"99"}',
         ),
         prehashType: PrehashType.Sha256,
       };

@@ -138,8 +138,8 @@ extern "C" {
     #[cfg(feature = "iterator")]
     fn db_next(iterator_id: u32) -> u32;
 
-    fn canonicalize_address(source: u32, destination: u32) -> i32;
-    fn humanize_address(source: u32, destination: u32) -> i32;
+    fn canonicalize_address(source: u32, destination: u32) -> u32;
+    fn humanize_address(source: u32, destination: u32) -> u32;
 
     /// Executes a query on the chain (import). Not to be confused with the
     /// query export, which queries the state of the contract.
@@ -288,7 +288,7 @@ nightly toolchain installed as well.
 
 ```sh
 cargo fmt \
-  && (cd packages/std && cargo wasm-debug --features iterator && cargo test --features iterator && cargo clippy --features iterator -- -D warnings) \
+  && (cd packages/std && cargo wasm-debug --features iterator && cargo test --features iterator && cargo clippy --features iterator -- -D warnings && cargo schema) \
   && (cd packages/storage && cargo build && cargo test --features iterator && cargo clippy --features iterator -- -D warnings) \
   && (cd packages/schema && cargo build && cargo test && cargo clippy -- -D warnings) \
   && (cd packages/vm && cargo +nightly build --features iterator && cargo +nightly test --features iterator && cargo +nightly clippy --features iterator -- -D warnings)
@@ -299,7 +299,7 @@ cargo fmt \
 Step 1 (fast checks)
 
 ```sh
-for contract_dir in contracts/*/; do (cd "$contract_dir" && cargo fmt && cargo unit-test && cargo wasm-debug && cargo clippy -- -D warnings && cargo schema) || break; done
+for contract_dir in contracts/*/; do (cd "$contract_dir" && cargo fmt && cargo check --tests && cargo wasm-debug && cargo unit-test && cargo clippy -- -D warnings && cargo schema) || break; done
 ```
 
 Step 2 (slower checks)

@@ -142,7 +142,7 @@ func TestEncoding(t *testing.T) {
 			output: []sdk.Msg{
 				types.MsgInstantiateContract{
 					Sender:    addr1,
-					Code:      7,
+					CodeID:    7,
 					Label:     "",
 					InitMsg:   jsonMsg,
 					InitFunds: sdk.NewCoins(sdk.NewInt64Coin("eth", 123)),

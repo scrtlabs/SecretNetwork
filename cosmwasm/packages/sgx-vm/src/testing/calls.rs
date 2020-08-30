@@ -18,17 +18,14 @@ use crate::{Api, Querier, Storage};
 // init mimicks the call signature of the smart contracts.
 // thus it moves env and msg rather than take them as reference.
 // this is inefficient here, but only used in test code
-pub fn init<
+pub fn init<S, A, Q, M, U>(instance: &mut Instance<S, A, Q>, env: Env, msg: M) -> InitResult<U>
+where
     S: Storage + 'static,
     A: Api + 'static,
     Q: Querier + 'static,
-    T: Serialize + JsonSchema,
+    M: Serialize + JsonSchema,
     U: DeserializeOwned + Clone + PartialEq + JsonSchema + fmt::Debug,
->(
-    instance: &mut Instance<S, A, Q>,
-    env: Env,
-    msg: T,
-) -> InitResult<U> {
+{
     let serialized_msg = to_vec(&msg)?;
     call_init(instance, &env, &serialized_msg).expect("VM error")
 }
@@ -36,17 +33,14 @@ pub fn init<
 // handle mimicks the call signature of the smart contracts.
 // thus it moves env and msg rather than take them as reference.
 // this is inefficient here, but only used in test code
-pub fn handle<
+pub fn handle<S, A, Q, M, U>(instance: &mut Instance<S, A, Q>, env: Env, msg: M) -> HandleResult<U>
+where
     S: Storage + 'static,
     A: Api + 'static,
     Q: Querier + 'static,
-    T: Serialize + JsonSchema,
+    M: Serialize + JsonSchema,
     U: DeserializeOwned + Clone + PartialEq + JsonSchema + fmt::Debug,
->(
-    instance: &mut Instance<S, A, Q>,
-    env: Env,
-    msg: T,
-) -> HandleResult<U> {
+{
     let serialized_msg = to_vec(&msg)?;
     call_handle(instance, &env, &serialized_msg).expect("VM error")
 }
@@ -54,17 +48,18 @@ pub fn handle<
 // migrate mimicks the call signature of the smart contracts.
 // thus it moves env and msg rather than take them as reference.
 // this is inefficient here, but only used in test code
-pub fn migrate<
+pub fn migrate<S, A, Q, M, U>(
+    instance: &mut Instance<S, A, Q>,
+    env: Env,
+    msg: M,
+) -> MigrateResult<U>
+where
     S: Storage + 'static,
     A: Api + 'static,
     Q: Querier + 'static,
-    T: Serialize + JsonSchema,
+    M: Serialize + JsonSchema,
     U: DeserializeOwned + Clone + PartialEq + JsonSchema + fmt::Debug,
->(
-    instance: &mut Instance<S, A, Q>,
-    env: Env,
-    msg: T,
-) -> MigrateResult<U> {
+{
     let serialized_msg = to_vec(&msg)?;
     call_migrate(instance, &env, &serialized_msg).expect("VM error")
 }
@@ -72,15 +67,13 @@ pub fn migrate<
 // query mimicks the call signature of the smart contracts.
 // thus it moves env and msg rather than take them as reference.
 // this is inefficient here, but only used in test code
-pub fn query<
+pub fn query<S, A, Q, M>(instance: &mut Instance<S, A, Q>, msg: M) -> StdResult<QueryResponse>
+where
     S: Storage + 'static,
     A: Api + 'static,
     Q: Querier + 'static,
-    T: Serialize + JsonSchema,
->(
-    instance: &mut Instance<S, A, Q>,
-    msg: T,
-) -> StdResult<QueryResponse> {
+    M: Serialize + JsonSchema,
+{
     let serialized_msg = to_vec(&msg)?;
     call_query(instance, &serialized_msg).expect("VM error")
 }

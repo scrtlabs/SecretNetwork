@@ -1,6 +1,84 @@
 # CHANGELOG
 
-## 0.9.0 (not yet released)
+## 0.10.0 (2020-07-30)
+
+**all**
+
+- Drop support for Rust versions lower than 1.44.1.
+
+**cosmwasm-std**
+
+- Remove error helpers `generic_err`, `invalid_base64`, `invalid_utf8`,
+  `not_found`, `parse_err`, `serialize_err`, `underflow`, `unauthorized` in
+  favour of `StdError::generic_err` and friends.
+- Implement `From<&[u8; $N]> for Binary` and `From<[u8; $N]> for Binary` for all
+  `$N <= 32`.
+- Add `Context` object that can be used to build Init/Handle/Migrate response
+  via `add_log`, `add_message`, `set_data` and then convert to the proper type
+  via `into` or `try_into`. Option to simplify response construction.
+- Env uses `HumanAddr` for `message.sender` and `contract_address`
+- Remove `Api` argument from `mock_env`
+- Implement `From<&[u8]>` and `From<Vec<u8>>` for `CanonicalAddr`
+
+**cosmwasm-vm**
+
+- Remove unused cache size argument from `CosmCache`.
+- `set_gas_limit` now panics if the given gas limit exceeds the max. supported
+  value.
+- Increase the max. supported value for gas limit from 10_000_000_000 to
+  0x7FFFFFFFFFFFFFFF.
+- Add checks to `get_region` for failing early when the contract sends a Region
+  pointer to the VM that is not backed by a plausible Region. This helps
+  development of standard libraries.
+- Create dedicated `RegionValidationError` and `RegionValidationResult`.
+- `Api::human_address` and `Api::canonical_address` now return a pair of return
+  data and gas usage.
+- Remove `NextItem` in favour of a more advanced `FfiResult<T>`, which is used
+  to store the return result and the gas information consistently across all
+  APIs. `FfiResult<T>` was changed to `(Result<T, FfiError>, GasInfo)`.
+- Create error type `FfiError::InvalidUtf8` for the cases where the backend
+  sends invalid UTF-8 in places that expect strings.
+- Remove `FfiError::Other` in favour of `FfiError::UserErr` and
+  `FfiError::Unknown`.
+- The `canonicalize_address` and `humanize_address` imports now report user
+  errors to the contract.
+- Bump `cosmwasm_vm_version_2` to `cosmwasm_vm_version_3`.
+- `Querier::raw_query` and `QuerierResult` were removed in favour of the new
+  `Querier::query_raw`, which includes a gas limit parameter for the query.
+
+## 0.9.4 (2020-07-16)
+
+**cosmwasm-vm**
+
+- Add `Instance::create_gas_report` returning a gas report including the
+  original limit, the remaining gas and the internally/externally used gas.
+
+## 0.9.3 (2020-07-08)
+
+**cosmwasm-storage**
+
+- Add `.remove()` method to `Bucket` and `Singleton`.
+
+## 0.9.2 (2020-06-29)
+
+- Downgrade wasmer to 0.17.0.
+
+## 0.9.1 (2020-06-25)
+
+**cosmwasm-std**
+
+- Replace type `Never` with `Empty` because enums with no cases cannot be
+  expressed in valid JSON Schema.
+
+## 0.9.0 (2020-06-25)
+
+Note: this version contains an API bug and should not be used (see
+https://github.com/CosmWasm/cosmwasm/issues/451).
+
+**all**
+
+- Upgrade wasmer to 0.17.1.
+- Drop support for Rust versions lower than 1.43.1
 
 **cosmwasm-std**
 
@@ -24,6 +102,10 @@
   can still make use of the field.
 - Rename `MockQuerier::with_staking` to `MockQuerier::update_staking` to match
   `::update_balance`.
+- The obsolete `StdError::NullPointer` and `null_pointer` were removed.
+- Error creator functions are now in type itself, e.g.
+  `StdError::invalid_base64` instead of `invalid_base64`. The free functions are
+  deprecated and will be removed before 1.0.
 
 **cosmwasm-storage**
 
@@ -77,6 +159,10 @@
   in `CommunicationError::InvalidUtf8`, which is not reported back to the
   contract. A standard library should ensure this never happens by correctly
   encoding string input values.
+- Merge trait `ReadonlyStorage` into `Storage`.
+- The imports `canonicalize_address` and `humanize_address` now return a memory
+  address to an error `Region`. If this address is 0, the call succeeded.
+- Bump `cosmwasm_vm_version_1` to `cosmwasm_vm_version_2`.
 
 ## 0.8.1 (2020-06-08)
 

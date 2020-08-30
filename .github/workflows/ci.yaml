@@ -91,6 +91,7 @@ jobs:
       - name: Create fake api keys
         run: |
           mkdir -p ias_keys/sw_dummy
+          mkdir -p ias_keys/develop
           echo "not_a_key" > ias_keys/sw_dummy/spid.txt
           echo "not_a_key" > ias_keys/develop/spid.txt
           echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
@@ -113,7 +114,7 @@ jobs:
           cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
           mkdir -p ./x/compute/internal/keeper/.sgx_secrets
           go test -v ./x/compute/client/...
-          go test -p 1 -v ./x/compute/internal/...
+          go test -p 1 -timeout 20m -v ./x/compute/internal/...
 
   Clippy:
     runs-on: ubuntu-latest

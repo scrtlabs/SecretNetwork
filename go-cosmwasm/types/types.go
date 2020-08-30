@@ -2,9 +2,13 @@ package types
 
 import (
 	"encoding/json"
-	"github.com/enigmampc/cosmos-sdk/x/auth"
 	"strconv"
+
+	"github.com/enigmampc/cosmos-sdk/x/auth"
 )
+
+// HumanAddress is a printable (typically bech32 encoded) address string. Just use it as a label for developers.
+type HumanAddress = string
 
 // CanonicalAddress uses standard base64 encoding, just use it as a label for developers
 type CanonicalAddress = []byte
@@ -46,6 +50,14 @@ func (c *Coins) UnmarshalJSON(data []byte) error {
 	}
 	*c = d
 	return nil
+}
+
+type OutOfGasError struct{}
+
+var _ error = OutOfGasError{}
+
+func (o OutOfGasError) Error() string {
+	return "Out of gas"
 }
 
 type VerificationInfo struct {
