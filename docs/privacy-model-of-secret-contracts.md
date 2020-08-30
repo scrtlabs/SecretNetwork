@@ -30,7 +30,7 @@ Secret Contract developers must always consider the trade-off between privacy, u
       - [Contract panic](#contract-panic-1)
       - [External errors (VM or interaction with the blockchain)](#external-errors-vm-or-interaction-with-the-blockchain-1)
 - [External query](#external-query)
-- [Data leakage attacks by detecting patterns in contract usage](#data-leakage-attacks-by-detecting-patterns-in-contract-usage)
+- [Data leakage attacks by analyzing metadata of contract usage](#data-leakage-attacks-by-analyzing-metadata-of-contract-usage)
   - [Differences in input sizes](#differences-in-input-sizes)
   - [Differences in state key sizes](#differences-in-state-key-sizes)
   - [Differences in state value sizes](#differences-in-state-value-sizes)
@@ -334,7 +334,7 @@ Legend:
 
 External queries of type `WasmQuery` work exactly like [Queries](#query), except that if an external query of type `WasmQuery` is invoked from `init` or `handle` it is executed on-chain, so it is exposed to monitoring by every node in the Secret Network.
 
-# Data leakage attacks by detecting patterns in contract usage
+# Data leakage attacks by analyzing metadata of contract usage
 
 Depending on the contract's implementation, an attacker might be able to de-anonymization information about the contract and its clients. Contract developers must consider all the following scenarios and more, and implement mitigations in case some of these attack vectors can compromise privacy aspects of their application.
 
