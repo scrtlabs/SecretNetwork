@@ -574,9 +574,12 @@ func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhite
 		validator.UnbondingHeight = 0
 		if applyWhiteList && !whiteListMap[addr.String()] {
 			validator.Jailed = true
+			app.stakingKeeper.SetValidator(ctx, validator)
+			app.stakingKeeper.DeleteValidatorByPowerIndex(ctx, validator)
+		} else {
+			app.stakingKeeper.SetValidator(ctx, validator)
 		}
 
-		app.stakingKeeper.SetValidator(ctx, validator)
 		counter++
 	}
 
