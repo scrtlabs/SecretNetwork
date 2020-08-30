@@ -112,15 +112,10 @@ go.sum: go.mod
 xgo_build_secretcli: go.sum
 	cli
 
-d:
-	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
-
-
 cli:
 	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
 
 build_local_no_rust: cli bin-data-$(IAS_BUILD)
-	echo $(IAS_BUILD)
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
 	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
@@ -208,7 +203,7 @@ clean:
 	-rm -rf ./x/compute/internal/keeper/*.der
 	-rm -rf ./*.der
 	-rm -rf ./x/compute/internal/keeper/*.so
-	-#rm -rf ./cmd/secretd/ias_bin*
+	-rm -rf ./cmd/secretd/ias_bin*
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
 

@@ -64,17 +64,17 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 				}
 			}
 
-			spid_file, err := Asset("spid.txt")
+			spidFile, err := Asset("spid.txt")
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
 
-			api_key_file, err := Asset("api_key.txt")
+			apiKeyFile, err := Asset("api_key.txt")
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
 
-			_, err = api.CreateAttestationReport(spid_file, api_key_file)
+			_, err = api.CreateAttestationReport(spidFile, apiKeyFile)
 			if err != nil {
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}
