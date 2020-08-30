@@ -54,7 +54,7 @@ Must run [`v0.2.2`](https://github.com/enigmampc/SecretNetwork/releases/tag/v0.2
 18. `sudo systemctl enable secret-node`
 19. `sudo systemctl start secret-node` (Now your new node is up)
 20. `secretcli config node tcp://localhost:26657`
-21. Wait until you're done catching up: `watch 'secretcli status | jq ".sync_info.catching_up == false"'` (This should output true)
+21. Wait until you're done catching up: `watch 'secretcli status | jq ".sync_info.catching_up == false"'` (This should output `true`)
 22. `secretcli tx slashing unjail --from $YOUR_KEY_NAME --gas-prices TODOuscrt` :tada:
 23. Profit.
 
