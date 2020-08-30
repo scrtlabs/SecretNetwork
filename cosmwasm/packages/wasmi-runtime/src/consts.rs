@@ -5,16 +5,6 @@ use std::env;
 pub use enclave_ffi_types::ENCRYPTED_SEED_SIZE;
 use lazy_static::lazy_static;
 
-#[cfg(all(feature = "production", feature = "SGX_MODE_HW"))]
-pub static SPID_FILE: &[u8] = include_bytes!("../spid_production.txt");
-#[cfg(all(feature = "production", feature = "SGX_MODE_HW"))]
-pub static API_KEY_FILE: &[u8] = include_bytes!("../api_key_production.txt");
-
-#[cfg(all(not(feature = "production"), feature = "SGX_MODE_HW"))]
-pub static SPID_FILE: &[u8] = include_bytes!("../spid.txt");
-#[cfg(all(not(feature = "production"), feature = "SGX_MODE_HW"))]
-pub static API_KEY_FILE: &[u8] = include_bytes!("../api_key.txt");
-
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
 pub const BECH32_PREFIX_ACC_ADDR: &str = "secret";

@@ -62,10 +62,17 @@ pub fn validate_mut_slice(mut_slice: &mut [u8]) -> SgxResult<()> {
     Ok(())
 }
 
-pub fn attest_from_key(kp: &KeyPair, save_path: &str) -> SgxResult<()> {
+pub fn attest_from_key(
+    kp: &KeyPair,
+    save_path: &str,
+    spid: &[u8],
+    api_key: &[u8],
+) -> SgxResult<()> {
     let (_, cert) = match create_attestation_certificate(
         &kp,
         sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+        spid,
+        api_key,
     ) {
         Err(e) => {
             error!("Error in create_attestation_certificate: {:?}", e);
