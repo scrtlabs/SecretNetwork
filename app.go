@@ -3,7 +3,6 @@ package app
 import (
 	"encoding/json"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -508,32 +507,26 @@ func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhite
 	for _, addr := range jailWhiteList {
 		_, err := sdk.ValAddressFromBech32(addr)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 		whiteListMap[addr] = true
 	}
 
 	/* Just to be safe, assert the invariants on current state. */
-	app.crisisKeeper.AssertInvariants(ctx)
+	// app.crisisKeeper.AssertInvariants(ctx)
 
 	/* Handle fee distribution state. */
 
 	// withdraw all validator commission
 	app.stakingKeeper.IterateValidators(ctx, func(_ int64, val staking.ValidatorI) (stop bool) {
-		_, err := app.distrKeeper.WithdrawValidatorCommission(ctx, val.GetOperator())
-		if err != nil {
-			log.Fatal(err)
-		}
+		_, _ = app.distrKeeper.WithdrawValidatorCommission(ctx, val.GetOperator())
 		return false
 	})
 
 	// withdraw all delegator rewards
 	dels := app.stakingKeeper.GetAllDelegations(ctx)
 	for _, delegation := range dels {
-		_, err := app.distrKeeper.WithdrawDelegationRewards(ctx, delegation.DelegatorAddress, delegation.ValidatorAddress)
-		if err != nil {
-			log.Fatal(err)
-		}
+		_, _ = app.distrKeeper.WithdrawDelegationRewards(ctx, delegation.DelegatorAddress, delegation.ValidatorAddress)
 	}
 
 	// clear validator slash events
@@ -604,9 +597,12 @@ func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhite
 		validator.UnbondingHeight = 0
 		if applyWhiteList && !whiteListMap[addr.String()] {
 			validator.Jailed = true
+			app.stakingKeeper.SetValidator(ctx, validator)
+			app.stakingKeeper.DeleteValidatorByPowerIndex(ctx, validator)
+		} else {
+			app.stakingKeeper.SetValidator(ctx, validator)
 		}
 
-		app.stakingKeeper.SetValidator(ctx, validator)
 		counter++
 	}
 

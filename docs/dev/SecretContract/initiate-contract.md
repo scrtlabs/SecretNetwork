@@ -1,5 +1,5 @@
 ---
-title : 'Intiting Contract'
+title: "Intiting Contract"
 ---
 
 # Setup Secret Contracts (CosmWasm)
@@ -8,9 +8,10 @@ Secret Contracts are based on [CosmWasm](https://www.cosmwasm.com) which is impl
 
 The Secret Network has a _compute_ module that we'll use to store, query and instantiate the smart contract. Once stored on the blockchain the smart contract has to be created (or instantiated) in order to execute its methods. This is similar to doing an Ethereum `migrate` using truffle which handles the deployment and creation of a smart contract.
 
-Eventually the smart contracts will become secret contracts (in a future blockchain upgrade) running in an SGX enclave (Trusted Execution Environment) where computations are performed on the encrypted contract data (i.e. inputs, state). 
+Eventually the smart contracts will become Secret Contracts (in a future blockchain upgrade) running in an SGX enclave (Trusted Execution Environment) where computations are performed on the encrypted contract data (i.e. inputs, state).
 
 Next we'll walkthrough steps to:
+
 - install Rust
 - install the Rust dependencies
 - create your first project
@@ -38,6 +39,7 @@ rustup target add wasm32-unknown-unknown --toolchain nightly
 ```
 
 3. If using linux, install the standard build tools:
+
 ```
 apt install build-essential
 ```
@@ -53,6 +55,7 @@ cargo install cargo-generate --features vendored-openssl
 ### Create Initial Smart Contract
 
 To create the smart contract you'll:
+
 - generate the initial project
 - compile the smart contract
 - run unit tests
@@ -114,4 +117,3 @@ Auto-generate msg schemas (when changed):
 ```
 cargo schema
 ```
-

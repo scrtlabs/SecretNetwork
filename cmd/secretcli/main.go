@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	scrt "github.com/enigmampc/SecretNetwork/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
 	"os"
 	"path"
 
@@ -10,7 +12,6 @@ import (
 	"github.com/enigmampc/cosmos-sdk/client/keys"
 	"github.com/enigmampc/cosmos-sdk/client/lcd"
 	"github.com/enigmampc/cosmos-sdk/client/rpc"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
 	"github.com/enigmampc/cosmos-sdk/version"
 	"github.com/enigmampc/cosmos-sdk/x/auth"
 	authcmd "github.com/enigmampc/cosmos-sdk/x/auth/client/cli"
@@ -24,22 +25,15 @@ import (
 	"github.com/tendermint/tendermint/libs/cli"
 
 	app "github.com/enigmampc/SecretNetwork"
-	scrt "github.com/enigmampc/SecretNetwork/types"
 )
+
+// thanks @terra-project for this fix
+const flagLegacyHdPath = "legacy-hd-path"
 
 func main() {
 	cobra.EnableCommandSorting = false
 
 	cdc := app.MakeCodec()
-
-	// Read in the configuration file for the sdk
-	config := sdk.GetConfig()
-	config.SetCoinType(529)
-	config.SetFullFundraiserPath("44'/529'/0'/0/0")
-	config.SetBech32PrefixForAccount(scrt.Bech32PrefixAccAddr, scrt.Bech32PrefixAccPub)
-	config.SetBech32PrefixForValidator(scrt.Bech32PrefixValAddr, scrt.Bech32PrefixValPub)
-	config.SetBech32PrefixForConsensusNode(scrt.Bech32PrefixConsAddr, scrt.Bech32PrefixConsPub)
-	config.Seal()
 
 	rootCmd := &cobra.Command{
 		Use:   "secretcli",
@@ -47,6 +41,7 @@ func main() {
 	}
 
 	// Add --chain-id to persistent flags and mark it required
+	rootCmd.PersistentFlags().Bool(flagLegacyHdPath, false, "Flag to specify the command uses old HD path - use this for ledger compatibility")
 	rootCmd.PersistentFlags().String(flags.FlagChainID, "", "Chain ID of tendermint node")
 	rootCmd.PersistentPreRunE = func(_ *cobra.Command, _ []string) error {
 		return initConfig(rootCmd)
@@ -107,6 +102,8 @@ func txCmd(cdc *amino.Codec) *cobra.Command {
 		Short: "Transactions subcommands",
 	}
 
+	viper.SetDefault(flags.FlagGasPrices, "1.0uscrt")
+
 	txCmd.AddCommand(
 		bankcmd.SendTxCmd(cdc),
 		flags.LineBreak,
@@ -147,6 +144,24 @@ func registerRoutes(rs *lcd.RestServer) {
 }
 
 func initConfig(cmd *cobra.Command) error {
+	oldHDPath, err := cmd.PersistentFlags().GetBool(flagLegacyHdPath)
+	if err != nil {
+		return err
+	}
+
+	// Read in the configuration file for the sdk
+	config := sdk.GetConfig()
+
+	if !oldHDPath {
+		config.SetCoinType(529)
+		config.SetFullFundraiserPath("44'/529'/0'/0/0")
+	}
+
+	config.SetBech32PrefixForAccount(scrt.Bech32PrefixAccAddr, scrt.Bech32PrefixAccPub)
+	config.SetBech32PrefixForValidator(scrt.Bech32PrefixValAddr, scrt.Bech32PrefixValPub)
+	config.SetBech32PrefixForConsensusNode(scrt.Bech32PrefixConsAddr, scrt.Bech32PrefixConsPub)
+	config.Seal()
+
 	home, err := cmd.PersistentFlags().GetString(cli.HomeFlag)
 	if err != nil {
 		return err

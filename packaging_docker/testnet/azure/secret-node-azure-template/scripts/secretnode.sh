@@ -44,7 +44,7 @@ echo "Creating secret node runner" >> /home/$1/install.progress.txt
 
 mkdir -p /usr/local/bin/secret-node
 
-sudo curl -L https://raw.githubusercontent.com/enigmampc/SecretNetwork/develop/packaging_docker/testnet/azure/secret-node-azure-template/scripts/docker-compose.yaml -o /usr/local/bin/secret-node/docker-compose.yaml
+sudo curl -L https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/packaging_docker/testnet/azure/secret-node-azure-template/scripts/docker-compose.yaml -o /usr/local/bin/secret-node/docker-compose.yaml
 
 # replace the tmp paths with home directory ones
 sudo sed -i 's/\/tmp\/.secretd:/\/home\/'$1'\/.secretd:/g' /usr/local/bin/secret-node/docker-compose.yaml
