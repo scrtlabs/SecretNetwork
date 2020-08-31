@@ -37,6 +37,7 @@ mod test {
             crate::crypto::tests::run_tests();
             crate::wasm::tests::run_tests();
             crate::registration::tests::run_tests();
+            crate::exports::tests::run_tests();
 
             // example failing tests:
             // panic!("AAAAA");
