@@ -65,7 +65,7 @@ wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwo
 ### 5. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
 
 ```bash
-echo "093ebc2fabdddf7b22ee38eaebbbea2201474bc63321bd38b933b2b091f13f8d $HOME/.secretd/config/genesis.json" | sha256sum --check
+echo "8e1601fb6faf15c10d325ba070ad5a57119c287a14c53706e3d05b8fa8690da0 $HOME/.secretd/config/genesis.json" | sha256sum --check
 ```
 
 ### 6. Validate that the `genesis.json` is a valid genesis file:
