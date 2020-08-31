@@ -16,17 +16,21 @@ Secret Contract developers must always consider the trade-off between privacy, u
     - [Return value of `init`](#return-value-of-init)
     - [Return value of `handle`](#return-value-of-handle)
     - [Logs and Messages (Same for `init` and `handle`)](#logs-and-messages-same-for-init-and-handle)
+    - [Errors](#errors)
+      - [Contract errors](#contract-errors)
+      - [Contract panic](#contract-panic)
+      - [External errors (VM or interaction with the blockchain)](#external-errors-vm-or-interaction-with-the-blockchain)
 - [Query](#query)
   - [Inputs](#inputs-1)
   - [API calls](#api-calls-1)
   - [Outputs](#outputs-1)
     - [Return value of `query`](#return-value-of-query)
+    - [Errors](#errors-1)
+      - [Contract errors](#contract-errors-1)
+      - [Contract panic](#contract-panic-1)
+      - [External errors (VM or interaction with the blockchain)](#external-errors-vm-or-interaction-with-the-blockchain-1)
 - [External query](#external-query)
-- [Errors](#errors)
-  - [Contract errors](#contract-errors)
-  - [Contract panic](#contract-panic)
-  - [External errors (VM or interaction with the blockchain)](#external-errors-vm-or-interaction-with-the-blockchain)
-- [Data leakage attacks by detecting patterns in contract usage](#data-leakage-attacks-by-detecting-patterns-in-contract-usage)
+- [Data leakage attacks by analyzing metadata of contract usage](#data-leakage-attacks-by-analyzing-metadata-of-contract-usage)
   - [Differences in input sizes](#differences-in-input-sizes)
   - [Differences in state key sizes](#differences-in-state-key-sizes)
   - [Differences in state value sizes](#differences-in-state-value-sizes)
@@ -43,20 +47,20 @@ Secret Contract developers must always consider the trade-off between privacy, u
 
 - They have a read and write access to the storage (state) of the contract.
 - The fact that `init` or `handle` was invoked is public.
-- They are metered by gas and incur fees acording to the gas price of the sending node.
+- They are metered by gas and incur fees according to the gas price of the sending node.
 - Access control: Can use `env.message.sender`.
 
 ## Inputs
 
-Inputs that are encrypted and known only to the transaction sender and to the contract.
+Inputs that are encrypted are known only to the transaction sender and to the contract.
 
 | Input                    | Type                     | Encrypted? | Trusted? | Notes |
 | ------------------------ | ------------------------ | ---------- | -------- | ----- |
 | `env.block.height`       | `u64`                    | No         | No       |       |
 | `env.block.time`         | `u64`                    | No         | No       |       |
 | `env.block.chain_id`     | `String`                 | No         | No       |       |
+| `env.message.sent_funds` | `Vec<Coin>`              | No         | No       |       |
 | `env.message.sender`     | `CanonicalAddr`          | No         | Yes      |       |
-| `env.message.sent_funds` | `Vec<Coin>`              | No         | Yes      |       |
 | `env.contract.address`   | `CanonicalAddr`          | No         | Yes      |       |
 | `env.contract_code_hash` | `String`                 | No         | Yes      |       |
 | `msg`                    | `InitMsg` or `HandleMsg` | Yes        | Yes      |       |
@@ -166,15 +170,56 @@ Types of messages:
 | `Execute`                            | `msg`                | `Binary`    | Yes        |       |
 | `Execute`                            | `send`               | `Vec<Coin>` | No         |       |
 
+### Errors
+
+Contract execution can result in multiple types of errors.  
+The fact that the contract returned an error is public.
+
+#### Contract errors
+
+A contract can choose to return an `StdError`. The error message is encrypted.
+
+Types of `StdError`:
+
+- `GenericErr`
+- `InvalidBase64`
+- `InvalidUtf8`
+- `NotFound`
+- `NullPointer`
+- `ParseErr`
+- `SerializeErr`
+- `Unauthorized`
+- `Underflow`
+
+#### Contract panic
+
+If a contract receives a panic (exception) during its execution, the error message is not encrypted and will always be `Execution error: Enclave: the contract panicked`.
+
+Contract developers should test their contracts rigorously and make sure they can never panic.
+
+#### External errors (VM or interaction with the blockchain)
+
+A `VMError` occurs when there's an error during the contract's execution but outside the contract's code.  
+In this case the error message is not encrypted as well.
+
+Some examples of `VMErrors`:
+
+- Memory allocation errors (The contract tried to allocate too much)
+- Contract out of gas
+- Got out of gas while accessing storage
+- Passing null pointers from the contract to the VM (E.g. `read_db(null)`)
+- Trying to write to read-only storage (E.g. inside a `query`)
+- Passing a faulty message to the blockchain (Trying to send fund you don't have, trying to callback to a non-existing contract)
+
 # Query
 
 `query` is an execution of a contract on the node of the query sender.
 
 - It doesn't affect transactions on-chain.
-- It has a read-only access to the storage (state) of the contract.
+- It has read-only access to the storage (state) of the contract.
 - The fact that `query` was invoked is known only to the executing node. And to whoever monitors your internet traffic, in case the executing node is on your local machine.
 - Queries are metered by gas but don't incur fees. The executing node decides its gas limit for queries.
-- Access control: Cannot use `env.message.sender` as it's not a transaction. Can use pre-configured passwords or API keys that are were stored in state previously by `init` and `handle`.
+- Access control: Cannot use `env.message.sender` as it's not a transaction. Can use pre-configured passwords or API keys that have been stored in state previously by `init` and `handle`.
 
 ## Inputs
 
@@ -184,7 +229,7 @@ Inputs that are encrypted and known only to the query sender and to the contract
 | ----- | ---------- | ---------- | -------- | ----- |
 | `msg` | `QueryMsg` | Yes        | Yes      |       |
 
-Note that `Trusted = No` means this data is easily forgeable. An attacker can take its node offline and replay old inputs. This data that is `Trusted = No` by itself cannot be trusted in order to reveal secrets. This is more applicable to `init` and `handle`, but know that an attacker can replay the input `msg` to its offline node. Although `query` cannot change the contract's state and the attcker cannot decrypt the query output, the attacker might be able to deduce private information by monitoring output sizes at different times. See [differences in output return values size](#differences-in-output-return-values-size) to learn more about this kind of attack and how to mitigate it.
+Note that `Trusted = No` means this data is easily forgeable. An attacker can take its node offline and replay old inputs. This data that is `Trusted = No` by itself cannot be trusted in order to reveal secrets. This is more applicable to `init` and `handle`, but know that an attacker can replay the input `msg` to its offline node. Although `query` cannot change the contract's state and the attacker cannot decrypt the query output, the attacker might be able to deduce private information by monitoring output sizes at different times. See [differences in output return values size](#differences-in-output-return-values-size) to learn more about this kind of attack and how to mitigate it.
 
 ## API calls
 
@@ -218,12 +263,53 @@ The return value of `query` is similar to `data` in `handle`. It is encrypted.
 | ------ | -------- | ---------- | ----- |
 | `data` | `Binary` | Yes        |       |
 
+### Errors
+
+Contract execution can result in multiple types of errors.  
+The fact that the contract returned an error is public.
+
+#### Contract errors
+
+A contract can choose to return an `StdError`. The error message is encrypted.
+
+Types of `StdError`:
+
+- `GenericErr`
+- `InvalidBase64`
+- `InvalidUtf8`
+- `NotFound`
+- `NullPointer`
+- `ParseErr`
+- `SerializeErr`
+- `Unauthorized`
+- `Underflow`
+
+#### Contract panic
+
+If a contract receives a panic (exception) during its execution, the error message is not encrypted and will always be `Execution error: Enclave: the contract panicked`.
+
+Contract developers should test their contracts rigorously and make sure they can never panic.
+
+#### External errors (VM or interaction with the blockchain)
+
+A `VMError` occurs when there's an error during the contract's execution but outside of the contract's code.  
+In this case the error message is not encrypted as well.
+
+Some examples of `VMErrors`:
+
+- Memory allocation errors (The contract tried to allocate too much)
+- Contract out of gas
+- Got out of gas while accessing storage
+- Passing null pointers from the contract to the VM (E.g. `read_db(null)`)
+- Trying to write to read-only storage
+- Passing a faulty message to the blockchain (Trying to send fund you don't have, trying to callback to a non-existing contract)
+
 # External query
 
 External `query` is an execution of a contract from another contract in the middle of its run.
 
 - Can be called from another `init`, `handle` or `query`.
-- It has a read-only access to the storage (state) of the contract.
+- It has read-only access to the storage (state) of the contract.
 - `init` & `handle`: The fact that external `query` was invoked public.
 - `query`: The fact that `query` was invoked is known only to the executing node. And to whoever monitors your internet traffic, in case the executing node is on your local machine.
 - External `query` is metered by the gas limit of the caller contract.
@@ -246,39 +332,19 @@ Legend:
 - `Private invocation = Yes` means the request never exits SGX and thus an attacker cannot know it even occurred. Only applicable if the executing node is remote.
 - `Private invocation = No` & `Private data = Yes` means an attacker can know that the contract used this API but cannot know the input parameters or return values. Only applicable if the executing node is remote.
 
-External queries of type `WasmQuery` work exectly like [Queries](#query), except that if an external query of type `WasmQuery` is invoked from `init` or `handle` it is executed on-chain, so it is exposed to monitoring by every node in the Secret Network.
+External queries of type `WasmQuery` work exactly like [Queries](#query), except that if an external query of type `WasmQuery` is invoked from `init` or `handle` it is executed on-chain, so it is exposed to monitoring by every node in the Secret Network.
 
-# Errors
-
-## Contract errors
-
-- Encrypted
-
-## Contract panic
-
-- No Encrypted
-
-## External errors (VM or interaction with the blockchain)
-
-- Not Encrypted
-  - Memory allocation errors (Trying to allocate too much)
-  - Contract out of gas
-  - Got out of gas while accessing storage
-  - Passing null pointers from the contract to the VM
-  - Trying to write to read-only storage (query)
-  - Passing a faulty message to the blockchain (Trying to send fund you don't have, trying to callback to a non-existing contract)
-
-# Data leakage attacks by detecting patterns in contract usage
+# Data leakage attacks by analyzing metadata of contract usage
 
 Depending on the contract's implementation, an attacker might be able to de-anonymization information about the contract and its clients. Contract developers must consider all the following scenarios and more, and implement mitigations in case some of these attack vectors can compromise privacy aspects of their application.
 
 In all the following scenarios, assume that an attacker has a local full node in its control. They cannot break into SGX, but they can tightly monitor and debug every other aspect of the node, including trying to feed old transactions directly to the contract inside SGX (replay). Also, though it's encrypted, they can also monitor memory (size), CPU (load) and disk usage (read/write timings and sizes) of the SGX chip.
 
-For encryption, the Secret Network is using [AES-SIV](https://tools.ietf.org/html/rfc5297), which does not pad the ciphertext. This means it leaks information about the plaintext data, specifically what is its size, though in most cases it's more secure than other padded encryption schemes. Read more about the encryption specs [in here](protocol/encryption-specs.md).
+For encryption, the Secret Network is using [AES-SIV](https://tools.ietf.org/html/rfc5297), which does not pad the ciphertext. This means it leaks information about the plaintext data, specifically about its size, though in most cases it's more secure than other padded encryption schemes. Read more about the encryption specs [in here](protocol/encryption-specs.md).
 
 Most of the below examples talk about an attacker revealing which function was executed on the contract, but this is not the only type of data leakage that an attacker might target.
 
-Secret Contract developers must analyze the privacy model of their contract - What kind of information must remain private and what kind of information, if revealed, won't affect the operation of the contract and its users. **Analyze what it is that you need to keep private and structure your Secret Contract's boundries to protect that.**
+Secret Contract developers must analyze the privacy model of their contract - What kind of information must remain private and what kind of information, if revealed, won't affect the operation of the contract and its users. **Analyze what it is that you need to keep private and structure your Secret Contract's boundaries to protect that.**
 
 ## Differences in input sizes
 

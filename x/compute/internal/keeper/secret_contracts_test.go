@@ -1359,7 +1359,7 @@ func TestContractTryToSendFundsFromSomeoneElse(t *testing.T) {
 	require.Equal(t, "17denom", contractCoinsBefore.String())
 	require.Equal(t, "199983denom", walletCointsBefore.String())
 
-	_, _, execErr = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_funds":{"from":"%s","to":"%s","denom":"%s","amount":%d}}`, walletA.String(), addr.String(), "denom", 17), true, defaultGasForTests, 0)
+	_, _, execErr = execHelper(t, keeper, ctx, addr, walletA, fmt.Sprintf(`{"send_funds":{"from":"%s","to":"%s","denom":"%s","amount":%d}}`, walletA.String(), addr.String(), "denom", 17), false, defaultGasForTests, 0)
 
 	require.NotNil(t, execErr.GenericErr)
 	require.Equal(t, "unauthorized: contract doesn't have permission", execErr.GenericErr.Msg)

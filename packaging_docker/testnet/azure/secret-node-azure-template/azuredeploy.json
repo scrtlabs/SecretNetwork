@@ -43,7 +43,7 @@
     },
     "persistentPeers": {
       "type": "string",
-      "defaultValue": "115aa0a629f5d70dd1d464bc7e42799e00f4edae@40.76.91.27:26656",
+      "defaultValue": "dd4c198e2d54229ec08a60e5865cba01a66e263b@40.76.35.106:26656",
       "metadata": {
         "description": "List of peers to initially connect to"
       }
