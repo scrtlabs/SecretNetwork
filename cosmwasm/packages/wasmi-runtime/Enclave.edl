@@ -15,21 +15,29 @@ enclave {
     include "target/headers/enclave-ffi-types.h"
 
     trusted {
-
         EnclaveBuffer ecall_allocate(
             [in, count=length] const uint8_t* buffer,
             uintptr_t length
         );
 
         public sgx_status_t ecall_init_bootstrap(
-            [out, count=32] uint8_t* seed
+            [out, count=32] uint8_t* public_key,
+            [in, count=spid_len] const uint8_t* spid,
+            uint32_t spid_len,
+            [in, count=api_key_len] const uint8_t* api_key,
+            uint32_t api_key_len
         );
 
         public sgx_status_t ecall_key_gen(
             [out, count=32] uint8_t* public_key
         );
 
-        public sgx_status_t ecall_get_attestation_report();
+        public sgx_status_t ecall_get_attestation_report(
+            [in, count=spid_len] const uint8_t* spid,
+            uint32_t spid_len,
+            [in, count=api_key_len] const uint8_t* api_key,
+            uint32_t api_key_len
+        );
 
         public NodeAuthResult ecall_authenticate_new_node(
             [in, count=cert_len] const uint8_t* cert,
@@ -53,7 +61,9 @@ enclave {
             [in, count=env_len] const uint8_t* env,
             uintptr_t env_len,
             [in, count=msg_len] const uint8_t* msg,
-            uintptr_t msg_len
+            uintptr_t msg_len,
+            [in, count=sig_info_len] const uint8_t* sig_info,
+            uintptr_t sig_info_len
         );
 
         public HandleResult ecall_handle(
@@ -65,7 +75,9 @@ enclave {
             [in, count=env_len] const uint8_t* env,
             uintptr_t env_len,
             [in, count=msg_len] const uint8_t* msg,
-            uintptr_t msg_len
+            uintptr_t msg_len,
+            [in, count=sig_info_len] const uint8_t* sig_info,
+            uintptr_t sig_info_len
         );
 
         public QueryResult ecall_query(
@@ -80,6 +92,7 @@ enclave {
 
         public HealthCheckResult ecall_health_check();
 
+        public uint32_t ecall_run_tests();
     };
 
     untrusted {
@@ -101,6 +114,7 @@ enclave {
             Ctx context,
             [out] UntrustedVmError* vm_error,
             [out] uint64_t* gas_used,
+            uint64_t gas_limit,
             [out] EnclaveBuffer* value,
             [in, count=query_len] const uint8_t* query,
             uintptr_t query_len

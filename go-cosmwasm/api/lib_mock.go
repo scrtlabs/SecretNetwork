@@ -108,10 +108,11 @@ func Instantiate(
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store *KVStore,
+	store KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
+	sigInfo []byte,
 ) ([]byte, uint64, error) {
 	//id := sendSlice(code_id)
 	//defer freeAfterSend(id)
@@ -139,10 +140,11 @@ func Handle(
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store *KVStore,
+	store KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
+	sigInfo []byte,
 ) ([]byte, uint64, error) {
 	//id := sendSlice(code_id)
 	//defer freeAfterSend(id)
@@ -170,7 +172,7 @@ func Migrate(
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store *KVStore,
+	store KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
@@ -200,7 +202,7 @@ func Query(
 	code_id []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store *KVStore,
+	store KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,

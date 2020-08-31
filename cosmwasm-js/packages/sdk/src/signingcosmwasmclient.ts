@@ -148,7 +148,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
 
     const compressed = pako.gzip(wasmCode, { level: 9 });
     const storeCodeMsg: MsgStoreCode = {
-      type: "wasm/store-code",
+      type: "wasm/MsgStoreCode",
       value: {
         sender: this.senderAddress,
         // eslint-disable-next-line @typescript-eslint/camelcase
@@ -191,16 +191,20 @@ export class SigningCosmWasmClient extends CosmWasmClient {
   ): Promise<InstantiateResult> {
     const contractCodeHash = await this.restClient.getCodeHashByCodeId(codeId);
     const instantiateMsg: MsgInstantiateContract = {
-      type: "wasm/instantiate",
+      type: "wasm/MsgInstantiateContract",
       value: {
         sender: this.senderAddress,
         // eslint-disable-next-line @typescript-eslint/camelcase
         code_id: codeId.toString(),
         label: label,
         // eslint-disable-next-line @typescript-eslint/camelcase
+        callback_code_hash: "",
+        // eslint-disable-next-line @typescript-eslint/camelcase
         init_msg: Encoding.toBase64(await this.restClient.enigmautils.encrypt(contractCodeHash, initMsg)),
         // eslint-disable-next-line @typescript-eslint/camelcase
         init_funds: transferAmount || [],
+        // eslint-disable-next-line @typescript-eslint/camelcase
+        callback_sig: null,
       },
     };
     const fee = this.fees.init;
@@ -240,7 +244,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     const contractCodeHash = await this.restClient.getCodeHashByContractAddr(contractAddress);
 
     const executeMsg: MsgExecuteContract = {
-      type: "wasm/execute",
+      type: "wasm/MsgExecuteContract",
       value: {
         sender: this.senderAddress,
         contract: contractAddress,
@@ -248,6 +252,8 @@ export class SigningCosmWasmClient extends CosmWasmClient {
         msg: Encoding.toBase64(await this.restClient.enigmautils.encrypt(contractCodeHash, handleMsg)),
         // eslint-disable-next-line @typescript-eslint/camelcase
         sent_funds: transferAmount || [],
+        // eslint-disable-next-line @typescript-eslint/camelcase
+        callback_sig: null,
       },
     };
     const fee = this.fees.exec;

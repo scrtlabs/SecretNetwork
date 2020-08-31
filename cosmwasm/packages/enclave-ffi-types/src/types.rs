@@ -23,6 +23,9 @@ impl EnclaveBuffer {
     }
 }
 
+/// This is safe because `Vec<u8>`s are `Send`
+unsafe impl Send for EnclaveBuffer {}
+
 impl Default for EnclaveBuffer {
     fn default() -> Self {
         Self {
@@ -129,15 +132,25 @@ pub enum EnclaveError {
     DecryptionError,
     #[display(fmt = "failed to allocate memory")]
     MemoryAllocationError,
+    #[display(fmt = "failed to allocate minimal safety buffer")]
+    MemorySafetyAllocationError,
     #[display(fmt = "failed to read memory")]
     MemoryReadError,
     #[display(fmt = "failed to write memory")]
     MemoryWriteError,
+    #[display(fmt = "function not implemented")]
+    NotImplemented,
+    #[display(fmt = "failed to verify transaction signature")]
+    FailedTxVerification,
     #[display(fmt = "contract tried to write to storage during a query")]
     UnauthorizedWrite,
 
     // serious issues
-    #[display(fmt = "panic'd due to unexpected behavior")]
+    /// The host was caught trying to disrupt the enclave.
+    /// This can happen if e.g. the host provides invalid pointers as responses from ocalls.
+    #[display(fmt = "communication with the enclave's host failed")]
+    HostMisbehavior,
+    #[display(fmt = "panicked due to unexpected behavior")]
     Panic,
     #[display(fmt = "enclave ran out of heap memory")]
     OutOfMemory,
@@ -188,6 +201,8 @@ pub enum NodeAuthResult {
     MalformedPublicKey,
     #[display(fmt = "Encrypting the seed failed")]
     SeedEncryptionFailed,
+    #[display(fmt = "failed to allocate minimal safety buffer")]
+    MemorySafetyAllocationError,
     #[display(
         fmt = "Unexpected panic during node authentication. Certificate may be malformed or invalid"
     )]
@@ -269,8 +284,8 @@ pub enum InitResult {
     Success {
         /// A pointer to the output of the calculation
         output: UserSpaceBuffer,
-        /// A signature by the enclave on all of the results.
-        signature: [u8; 64],
+        /// The contract_key for this contract.
+        contract_key: [u8; 64],
     },
     Failure {
         /// The error that happened in the enclave
@@ -285,8 +300,6 @@ pub enum HandleResult {
     Success {
         /// A pointer to the output of the calculation
         output: UserSpaceBuffer,
-        /// A signature by the enclave on all of the results.
-        signature: [u8; 64],
     },
     Failure {
         /// The error that happened in the enclave
@@ -301,8 +314,6 @@ pub enum QueryResult {
     Success {
         /// A pointer to the output of the calculation
         output: UserSpaceBuffer,
-        /// A signature by the enclave on all of the results.
-        signature: [u8; 64],
     },
     Failure {
         /// The error that happened in the enclave

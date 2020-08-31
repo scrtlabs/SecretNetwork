@@ -61,7 +61,7 @@ func TestMaskReflectContractSend(t *testing.T) {
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
+	creator, privCreator := createFakeFundedAccount(ctx, accKeeper, deposit)
 	_, _, bob := keyPubAddr()
 
 	// upload mask code
@@ -83,7 +83,9 @@ func TestMaskReflectContractSend(t *testing.T) {
 	initMsgBz, err := testEncrypt(t, keeper, ctx, nil, maskID, []byte("{}"))
 	require.NoError(t, err)
 
-	maskAddr, err := keeper.Instantiate(ctx, maskID, creator, nil, initMsgBz, "mask contract 2", maskStart)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, privCreator, initMsgBz, maskID, maskStart)
+
+	maskAddr, err := keeper.Instantiate(ctx, maskID, creator /* nil,*/, initMsgBz, "mask contract 2", maskStart, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, maskAddr)
 
@@ -101,7 +103,9 @@ func TestMaskReflectContractSend(t *testing.T) {
 
 	escrowStart := sdk.NewCoins(sdk.NewInt64Coin("denom", 25000))
 
-	escrowAddr, err := keeper.Instantiate(ctx, escrowID, creator, nil, initMsgBz, "escrow contract 2", escrowStart)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, privCreator, initMsgBz, escrowID, escrowStart)
+
+	escrowAddr, err := keeper.Instantiate(ctx, escrowID, creator /* nil,*/, initMsgBz, "escrow contract 2", escrowStart, nil)
 
 	require.NoError(t, err)
 	require.NotEmpty(t, escrowAddr)
@@ -143,7 +147,9 @@ func TestMaskReflectContractSend(t *testing.T) {
 	reflectSendBz, err = testEncrypt(t, keeper, ctx, maskAddr, 0, reflectSendBz)
 	require.NoError(t, err)
 
-	_, err = keeper.Execute(ctx, maskAddr, creator, reflectSendBz, nil)
+	ctx = PrepareExecSignedTx(t, keeper, ctx, creator, privCreator, reflectSendBz, maskAddr, nil)
+
+	_, err = keeper.Execute(ctx, maskAddr, creator, reflectSendBz, nil, nil)
 	require.NoError(t, err)
 
 	// did this work???
@@ -162,8 +168,8 @@ func TestMaskReflectCustomMsg(t *testing.T) {
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
-	bob := createFakeFundedAccount(ctx, accKeeper, deposit)
+	creator, privCreator := createFakeFundedAccount(ctx, accKeeper, deposit)
+	bob, privBob := createFakeFundedAccount(ctx, accKeeper, deposit)
 	_, _, fred := keyPubAddr()
 
 	// upload code
@@ -177,7 +183,8 @@ func TestMaskReflectCustomMsg(t *testing.T) {
 	initMsgBz, err := testEncrypt(t, keeper, ctx, nil, codeID, []byte("{}"))
 	require.NoError(t, err)
 	contractStart := sdk.NewCoins(sdk.NewInt64Coin("denom", 40000))
-	contractAddr, err := keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, "mask contract 1", contractStart)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, privCreator, initMsgBz, codeID, contractStart)
+	contractAddr, err := keeper.Instantiate(ctx, codeID, creator /* nil,*/, initMsgBz, "mask contract 1", contractStart, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, contractAddr)
 
@@ -191,7 +198,8 @@ func TestMaskReflectCustomMsg(t *testing.T) {
 	require.NoError(t, err)
 	transferBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, transferBz)
 	require.NoError(t, err)
-	_, err = keeper.Execute(ctx, contractAddr, creator, transferBz, nil)
+	ctx = PrepareExecSignedTx(t, keeper, ctx, creator, privCreator, transferBz, contractAddr, nil)
+	_, err = keeper.Execute(ctx, contractAddr, creator, transferBz, nil, nil)
 	require.NoError(t, err)
 
 	// check some account values
@@ -221,7 +229,8 @@ func TestMaskReflectCustomMsg(t *testing.T) {
 	require.NoError(t, err)
 	reflectSendBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, reflectSendBz)
 	require.NoError(t, err)
-	_, err = keeper.Execute(ctx, contractAddr, bob, reflectSendBz, nil)
+	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, reflectSendBz, contractAddr, nil)
+	_, err = keeper.Execute(ctx, contractAddr, bob, reflectSendBz, nil, nil)
 	require.NoError(t, err)
 
 	// fred got coins
@@ -248,7 +257,8 @@ func TestMaskReflectCustomMsg(t *testing.T) {
 	reflectOpaqueBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, reflectOpaqueBz)
 	require.NoError(t, err)
 
-	_, err = keeper.Execute(ctx, contractAddr, bob, reflectOpaqueBz, nil)
+	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, reflectOpaqueBz, contractAddr, nil)
+	_, err = keeper.Execute(ctx, contractAddr, bob, reflectOpaqueBz, nil, nil)
 	require.NoError(t, err)
 
 	// fred got more coins
@@ -266,7 +276,7 @@ func TestMaskReflectCustomQuery(t *testing.T) {
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
+	creator, privCreator := createFakeFundedAccount(ctx, accKeeper, deposit)
 
 	// upload code
 	maskCode, err := ioutil.ReadFile("./testdata/reflect.wasm")
@@ -279,7 +289,8 @@ func TestMaskReflectCustomQuery(t *testing.T) {
 	initMsgBz, err := testEncrypt(t, keeper, ctx, nil, codeID, []byte("{}"))
 	require.NoError(t, err)
 	contractStart := sdk.NewCoins(sdk.NewInt64Coin("denom", 40000))
-	contractAddr, err := keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, "mask contract 1", contractStart)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, privCreator, initMsgBz, codeID, contractStart)
+	contractAddr, err := keeper.Instantiate(ctx, codeID, creator /* nil,*/, initMsgBz, "mask contract 1", contractStart, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, contractAddr)
 

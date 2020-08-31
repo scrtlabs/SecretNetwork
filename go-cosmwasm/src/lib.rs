@@ -5,6 +5,7 @@ mod gas_meter;
 mod iterator;
 mod memory;
 mod querier;
+mod tests;
 
 pub use api::GoApi;
 pub use db::{db_t, DB};
@@ -14,7 +15,6 @@ pub use querier::GoQuerier;
 use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
-// use std::Vec;
 
 use crate::error::{clear_error, handle_c_error, set_error, Error};
 
@@ -92,9 +92,30 @@ pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> 
 }
 
 #[no_mangle]
-pub extern "C" fn init_bootstrap(err: Option<&mut Buffer>) -> Buffer {
+pub extern "C" fn init_bootstrap(
+    spid: Buffer,
+    api_key: Buffer,
+    err: Option<&mut Buffer>,
+) -> Buffer {
     info!("Hello from right before init_bootstrap");
-    match untrusted_init_bootstrap() {
+
+    let spid_slice = match unsafe { spid.read() } {
+        None => {
+            set_error(Error::empty_arg("spid"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+
+    let api_key_slice = match unsafe { api_key.read() } {
+        None => {
+            set_error(Error::empty_arg("api_key"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+
+    match untrusted_init_bootstrap(spid_slice, api_key_slice) {
         Err(e) => {
             set_error(Error::enclave_err(e.to_string()), err);
             Buffer::default()
@@ -140,8 +161,28 @@ pub extern "C" fn init_node(
 }
 
 #[no_mangle]
-pub extern "C" fn create_attestation_report(err: Option<&mut Buffer>) -> bool {
-    if let Err(status) = create_attestation_report_u() {
+pub extern "C" fn create_attestation_report(
+    spid: Buffer,
+    api_key: Buffer,
+    err: Option<&mut Buffer>,
+) -> bool {
+    let spid_slice = match unsafe { spid.read() } {
+        None => {
+            set_error(Error::empty_arg("spid"), err);
+            return false;
+        }
+        Some(r) => r,
+    };
+
+    let api_key_slice = match unsafe { api_key.read() } {
+        None => {
+            set_error(Error::empty_arg("api_key"), err);
+            return false;
+        }
+        Some(r) => r,
+    };
+
+    if let Err(status) = create_attestation_report_u(spid_slice, api_key_slice) {
         set_error(Error::enclave_err(status.to_string()), err);
         return false;
     }
@@ -161,10 +202,11 @@ fn to_extern(storage: DB, api: GoApi, querier: GoQuerier) -> Extern<DB, GoApi, G
 pub extern "C" fn init_cache(
     data_dir: Buffer,
     supported_features: Buffer,
-    cache_size: usize,
+    // TODO: remove unused cache size
+    _cache_size: usize,
     err: Option<&mut Buffer>,
 ) -> *mut cache_t {
-    let r = catch_unwind(|| do_init_cache(data_dir, supported_features, cache_size))
+    let r = catch_unwind(|| do_init_cache(data_dir, supported_features))
         .unwrap_or_else(|_| Err(Error::panic()));
     match r {
         Ok(t) => {
@@ -187,11 +229,11 @@ static CODE_ID_ARG: &str = "code_id";
 static MSG_ARG: &str = "msg";
 static PARAMS_ARG: &str = "params";
 static GAS_USED_ARG: &str = "gas_used";
+static SIG_INFO_ARG: &str = "sig_info";
 
 fn do_init_cache(
     data_dir: Buffer,
     supported_features: Buffer,
-    cache_size: usize,
 ) -> Result<*mut CosmCache<DB, GoApi, GoQuerier>, Error> {
     let dir = unsafe { data_dir.read() }.ok_or_else(|| Error::empty_arg(DATA_DIR_ARG))?;
     let dir_str = from_utf8(dir)?;
@@ -200,7 +242,7 @@ fn do_init_cache(
         unsafe { supported_features.read() }.ok_or_else(|| Error::empty_arg(FEATURES_ARG))?;
     let features_str = from_utf8(features_bin)?;
     let features = features_from_csv(features_str);
-    let cache = unsafe { CosmCache::new(dir_str, features, cache_size) }?;
+    let cache = unsafe { CosmCache::new(dir_str, features) }?;
     let out = Box::new(cache);
     Ok(Box::into_raw(out))
 }
@@ -267,6 +309,7 @@ pub extern "C" fn instantiate(
     gas_limit: u64,
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
+    sig_info: Buffer,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
@@ -280,6 +323,7 @@ pub extern "C" fn instantiate(
                 querier,
                 gas_limit,
                 gas_used,
+                sig_info,
             )
         }))
         .unwrap_or_else(|_| Err(Error::panic())),
@@ -299,6 +343,7 @@ fn do_init(
     querier: GoQuerier,
     gas_limit: u64,
     gas_used: Option<&mut u64>,
+    sig_info: Buffer,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
     let code_id: Checksum = unsafe { code_id.read() }
@@ -306,12 +351,13 @@ fn do_init(
         .try_into()?;
     let params = unsafe { params.read() }.ok_or_else(|| Error::empty_arg(PARAMS_ARG))?;
     let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
+    let sig_info = unsafe { sig_info.read() }.ok_or_else(|| Error::empty_arg(SIG_INFO_ARG))?;
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
-    let res = call_init_raw(&mut instance, params, msg);
-    *gas_used = instance.get_gas_used();
+    let res = call_init_raw(&mut instance, params, msg, sig_info);
+    *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)
 }
@@ -328,11 +374,12 @@ pub extern "C" fn handle(
     gas_limit: u64,
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
+    sig_info: Buffer,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
             do_handle(
-                c, code_id, params, msg, db, api, querier, gas_limit, gas_used,
+                c, code_id, params, msg, db, api, querier, gas_limit, gas_used, sig_info,
             )
         }))
         .unwrap_or_else(|_| Err(Error::panic())),
@@ -352,6 +399,7 @@ fn do_handle(
     querier: GoQuerier,
     gas_limit: u64,
     gas_used: Option<&mut u64>,
+    sig_info: Buffer,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
     let code_id: Checksum = unsafe { code_id.read() }
@@ -359,12 +407,13 @@ fn do_handle(
         .try_into()?;
     let params = unsafe { params.read() }.ok_or_else(|| Error::empty_arg(PARAMS_ARG))?;
     let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
+    let sig_info = unsafe { sig_info.read() }.ok_or_else(|| Error::empty_arg(SIG_INFO_ARG))?;
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
-    let res = call_handle_raw(&mut instance, params, msg);
-    *gas_used = instance.get_gas_used();
+    let res = call_handle_raw(&mut instance, params, msg, sig_info);
+    *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)
 }
@@ -425,7 +474,7 @@ fn do_migrate(
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = call_migrate_raw(&mut instance, params, msg);
-    *gas_used = instance.get_gas_used();
+    *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)
 }
@@ -473,7 +522,7 @@ fn do_query(
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = call_query_raw(&mut instance, msg);
-    *gas_used = instance.get_gas_used();
+    *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)
 }

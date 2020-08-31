@@ -14,6 +14,19 @@ pub enum QueryRequest {
     Custom(serde_json::Value),
     Staking(StakingQuery),
     Wasm(WasmQuery),
+    Dist(DistQuery),
+    Mint(MintQuery),
+    Gov(GovQuery),
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum MintQuery {
+    /// This calls into the native bank module for all denominations.
+    /// Note that this may be much more expensive than Balance and should be avoided if possible.
+    /// Return value is AllBalanceResponse.
+    Inflation {},
+    BondedRatio {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -26,6 +39,41 @@ pub enum BankQuery {
     /// Note that this may be much more expensive than Balance and should be avoided if possible.
     /// Return value is AllBalanceResponse.
     AllBalances { address: HumanAddr },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum GovQuery {
+    /// Returns all the currently active proposals. Might be useful to filter out invalid votes, and trigger
+    /// in-contract voting periods
+    Proposals {},
+}
+
+/// ProposalsResponse is data format returned from GovQuery::Proposals query
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub struct ProposalsResponse {
+    pub proposals: Vec<Proposal>,
+}
+
+/// ProposalsResponse is data format returned from GovQuery::Proposals query
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub struct Proposal {
+    pub id: u64,
+    /// Time of the block where MinDeposit was reached. -1 if MinDeposit is not reached
+    pub voting_start_time: u64,
+    /// Time that the VotingPeriod for this proposal will end and votes will be tallied
+    pub voting_end_time: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum DistQuery {
+    /// This calls into the native bank module for all denominations.
+    /// Note that this may be much more expensive than Balance and should be avoided if possible.
+    /// Return value is AllBalanceResponse.
+    Rewards { delegator: HumanAddr },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -49,6 +97,24 @@ pub enum WasmQuery {
         /// Key is the raw key used in the contracts Storage
         key: Binary,
     },
+}
+
+impl From<GovQuery> for QueryRequest {
+    fn from(msg: GovQuery) -> Self {
+        QueryRequest::Gov(msg)
+    }
+}
+
+impl From<MintQuery> for QueryRequest {
+    fn from(msg: MintQuery) -> Self {
+        QueryRequest::Mint(msg)
+    }
+}
+
+impl From<DistQuery> for QueryRequest {
+    fn from(msg: DistQuery) -> Self {
+        QueryRequest::Dist(msg)
+    }
 }
 
 impl From<BankQuery> for QueryRequest {
@@ -85,6 +151,8 @@ pub enum StakingQuery {
     },
     /// Returns all registered Validators on the system
     Validators {},
+    /// Returns all the unbonding delegations by the delegator
+    UnbondingDelegations { delegator: HumanAddr },
 }
 
 /// Delegation is basic (cheap to query) data about a delegation
@@ -104,6 +172,13 @@ impl From<FullDelegation> for Delegation {
             amount: full.amount,
         }
     }
+}
+
+/// UnbondingDelegationsResponse is data format returned from StakingRequest::UnbondingDelegations query
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub struct UnbondingDelegationsResponse {
+    pub delegations: Vec<Delegation>,
 }
 
 /// FullDelegation is all the info on the delegation, some (like accumulated_reward and can_redelegate)
@@ -129,4 +204,30 @@ pub struct Validator {
     pub max_commission: Decimal,
     /// TODO: what units are these (in terms of time)?
     pub max_change_rate: Decimal,
+}
+
+/// Delegation is basic (cheap to query) data about a delegation
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct RewardsResponse {
+    pub rewards: Vec<ValidatorRewards>,
+    pub total: Vec<Coin>,
+}
+
+/// Delegation is basic (cheap to query) data about a delegation
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ValidatorRewards {
+    pub validator_address: HumanAddr,
+    pub reward: Vec<Coin>,
+}
+
+/// Inflation response
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct InflationResponse {
+    pub inflation_rate: String,
+}
+
+/// Bonded Ratio response
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct BondedRatioResponse {
+    pub bonded_ratio: String,
 }

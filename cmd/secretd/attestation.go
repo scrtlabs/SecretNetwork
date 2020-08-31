@@ -5,21 +5,24 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	"github.com/enigmampc/cosmos-sdk/types/module"
-	"github.com/enigmampc/cosmos-sdk/x/genutil"
 	app "github.com/enigmampc/SecretNetwork"
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	"github.com/enigmampc/cosmos-sdk/types/module"
+	"github.com/enigmampc/cosmos-sdk/x/genutil"
 
 	"github.com/enigmampc/cosmos-sdk/codec"
 	"github.com/enigmampc/cosmos-sdk/server"
 	"github.com/spf13/cobra"
 )
+
+const flagReset = "reset"
 
 func InitAttestation(
 	_ *server.Context, _ *codec.Codec) *cobra.Command {
@@ -33,18 +36,52 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 `,
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			_, err := api.KeyGen()
+
+			sgxSecretsPath := os.Getenv("SCRT_SGX_STORAGE")
+			if sgxSecretsPath == "" {
+				sgxSecretsPath = os.ExpandEnv("$HOME/.sgx_secrets")
+			}
+
+			sgxSecretsPath += string(os.PathSeparator) + reg.EnclaveRegistrationKey
+
+			resetFlag := viper.GetBool(flagReset)
+
+			if !resetFlag {
+				if _, err := os.Stat(sgxSecretsPath); os.IsNotExist(err) {
+					fmt.Println("Creating new enclave registration key")
+					_, err := api.KeyGen()
+					if err != nil {
+						return fmt.Errorf("failed to initialize enclave: %w", err)
+					}
+				} else {
+					fmt.Println("Enclave key already exists. If you wish to overwrite and reset the node, use the --reset flag")
+				}
+			} else {
+				fmt.Println("Reset enclave flag set, generating new enclave registration key. You must now re-register the node")
+				_, err := api.KeyGen()
+				if err != nil {
+					return fmt.Errorf("failed to initialize enclave: %w", err)
+				}
+			}
+
+			spidFile, err := Asset("spid.txt")
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
 
-			_, err = api.CreateAttestationReport()
+			apiKeyFile, err := Asset("api_key.txt")
+			if err != nil {
+				return fmt.Errorf("failed to initialize enclave: %w", err)
+			}
+
+			_, err = api.CreateAttestationReport(spidFile, apiKeyFile)
 			if err != nil {
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}
 			return nil
 		},
 	}
+	cmd.Flags().Bool(flagReset, false, "Optional flag to regenerate the enclave registration key")
 
 	return cmd
 }
@@ -71,8 +108,18 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 
 			regGenState := reg.GetGenesisStateFromAppState(cdc, appState)
 
+			spidFile, err := Asset("spid.txt")
+			if err != nil {
+				return fmt.Errorf("failed to initialize enclave: %w", err)
+			}
+
+			apiKeyFile, err := Asset("api_key.txt")
+			if err != nil {
+				return fmt.Errorf("failed to initialize enclave: %w", err)
+			}
+
 			// the master key of the generated certificate is returned here
-			masterKey, err := api.InitBootstrap()
+			masterKey, err := api.InitBootstrap(spidFile, apiKeyFile)
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
@@ -227,8 +274,8 @@ func HealthCheck(_ *server.Context, _ *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "check-enclave",
 		Short: "Test enclave status",
-		Long: "Help diagnose issues by performing a basic sanity test that SGX is working properly",
-		Args: cobra.ExactArgs(0),
+		Long:  "Help diagnose issues by performing a basic sanity test that SGX is working properly",
+		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			res, err := api.HealthCheck()
@@ -266,7 +313,6 @@ func ResetEnclave(_ *server.Context, _ *codec.Codec) *cobra.Command {
 					println(err.Error())
 				}
 			}
-
 
 			// remove sgx_secrets
 			sgxSecretsDir := os.Getenv("SCRT_SGX_STORAGE")

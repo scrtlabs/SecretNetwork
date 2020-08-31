@@ -9,6 +9,17 @@ description = "An enclave running wasmi, to be used by cosmwasm-sgx-vm"
 name = "wasmi_runtime_enclave"
 crate-type = ["staticlib"]
 
+[profile.release]
+opt-level = 3
+debug = false
+debug-assertions = false
+overflow-checks = false
+lto = false
+panic = 'unwind'
+incremental = false
+codegen-units = 16
+rpath = false
+
 [features]
 default = ["SGX_MODE_SW"]
 SGX_MODE_SW = []
@@ -21,7 +32,9 @@ test = []
 # when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_types = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tstd = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
+    "backtrace"
+] }
 
 [dependencies]
 sgx_tse = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
@@ -47,6 +60,7 @@ bech32 = "0.7.2"
 derive_more = "0.99"
 sha2 = "0.8.1"
 ring = { git = "https://github.com/mesalock-linux/ring-sgx", tag = "v0.16.5" }
+secp256k1 = "0.17.2"
 # for attestation
 chrono = { version = "0.4.7", git = "https://github.com/mesalock-linux/chrono-sgx" }
 num-bigint = { version = "0.2", git = "https://github.com/mesalock-linux/num-bigint-sgx" }
@@ -62,6 +76,8 @@ x25519-dalek = { version = "0.6", default-features = false, features = [
     "u64_backend"
 ] }
 hex = "0.4.2"
+ripemd160 = "0.9.1"
+prost = { version = "0.6", default-features = false, features = ["prost-derive"], git = "https://github.com/mesalock-linux/prost-sgx" }
 
 [patch.crates-io]
 rand_core = { git = "https://github.com/mesalock-linux/rand-sgx", default-features = false, features = [

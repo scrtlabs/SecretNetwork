@@ -12,6 +12,12 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use super::encoding::Binary;
+use crate::consts::BECH32_PREFIX_ACC_ADDR;
+use crate::crypto::multisig::MultisigThresholdPubKey;
+use crate::crypto::secp256k1::Secp256k1PubKey;
+use crate::crypto::traits::PubKey;
+use crate::crypto::CryptoError;
+use bech32::{FromBase32, ToBase32};
 use serde_json::Value;
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
@@ -29,6 +35,14 @@ impl HumanAddr {
     }
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+    pub fn from_canonical(canonical_addr: &CanonicalAddr) -> Result<Self, bech32::Error> {
+        let human_addr_str = bech32::encode(
+            BECH32_PREFIX_ACC_ADDR,
+            canonical_addr.as_slice().to_base32(),
+        )?;
+
+        Ok(HumanAddr(human_addr_str))
     }
 }
 
@@ -60,6 +74,12 @@ impl CanonicalAddr {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
+    pub fn from_human(human_addr: &HumanAddr) -> Result<Self, bech32::Error> {
+        let (decoded_prefix, data) = bech32::decode(human_addr.as_str())?;
+        let canonical = Vec::<u8>::from_base32(&data)?;
+
+        Ok(CanonicalAddr(Binary(canonical)))
+    }
 }
 
 impl fmt::Display for CanonicalAddr {
@@ -68,35 +88,43 @@ impl fmt::Display for CanonicalAddr {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Env {
     pub block: BlockInfo,
     pub message: MessageInfo,
     pub contract: ContractInfo,
     pub contract_key: Option<String>,
-    pub contract_code_hash: Option<String>,
+    #[serde(default)]
+    pub contract_code_hash: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct BlockInfo {
-    pub height: i64,
+    pub height: u64,
     // time is seconds since epoch begin (Jan. 1, 1970)
-    pub time: i64,
+    pub time: u64,
     pub chain_id: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct MessageInfo {
-    pub sender: CanonicalAddr,
-    // go likes to return null for empty array, make sure we can parse it (use option)
-    pub sent_funds: Option<Vec<Coin>>,
+    /// The `sender` field from the wasm/MsgStoreCode, wasm/MsgInstantiateContract or wasm/MsgExecuteContract message.
+    /// You can think of this as the address that initiated the action (i.e. the message). What that
+    /// means exactly heavily depends on the application.
+    ///
+    /// The x/wasm module ensures that the sender address signed the transaction.
+    /// Additional signers of the transaction that are either needed for other messages or contain unnecessary
+    /// signatures are not propagated into the contract.
+    ///
+    /// There is a discussion to open up this field to multiple initiators, which you're welcome to join
+    /// if you have a specific need for that feature: https://github.com/CosmWasm/cosmwasm/issues/293
+    pub sender: HumanAddr,
+    pub sent_funds: Vec<Coin>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct ContractInfo {
-    pub address: CanonicalAddr,
-    // go likes to return null for empty array, make sure we can parse it (use option)
-    pub balance: Option<Vec<Coin>>,
+    pub address: HumanAddr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
@@ -144,6 +172,7 @@ where
     Custom(T),
     Staking(StakingMsg),
     Wasm(WasmMsg),
+    Gov(GovMsg),
 }
 
 /// Added this here for reflect tests....
@@ -159,6 +188,24 @@ impl Into<CosmosMsg<CustomMsg>> for CustomMsg {
     fn into(self) -> CosmosMsg<CustomMsg> {
         CosmosMsg::Custom(self)
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum GovMsg {
+    // Let contract vote on a governance proposal
+    Vote {
+        proposal: u64,
+        vote_option: VoteOption,
+    },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub enum VoteOption {
+    Yes,
+    No,
+    Abstain,
+    NoWithVeto,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -212,6 +259,7 @@ pub enum WasmMsg {
         /// msg is the json-encoded HandleMsg struct (as raw Binary)
         msg: Binary,
         send: Vec<Coin>,
+        callback_sig: Option<Vec<u8>>,
     },
     /// this instantiates a new contracts from previously uploaded wasm code
     Instantiate {
@@ -222,9 +270,17 @@ pub enum WasmMsg {
         /// msg is the json-encoded InitMsg struct (as raw Binary)
         msg: Binary,
         send: Vec<Coin>,
-        /// optional human-readable label for the contract
-        label: Option<String>,
+        /// Human-readable label for the contract
+        #[serde(default)]
+        label: String,
+        callback_sig: Option<Vec<u8>>,
     },
+}
+
+impl<T: Clone + fmt::Debug + PartialEq> From<GovMsg> for CosmosMsg<T> {
+    fn from(msg: GovMsg) -> Self {
+        CosmosMsg::Gov(msg)
+    }
 }
 
 impl<T: Clone + fmt::Debug + PartialEq> From<BankMsg> for CosmosMsg<T> {
@@ -290,4 +346,92 @@ pub fn log(key: &str, value: &str) -> LogAttribute {
         key: key.to_string(),
         value: value.to_string(),
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CosmosSignature {
+    // pub_key is an enum, because it can't be a boxed trait object (or something similar)
+    // because it has to be Sized
+    pub_key: PubKeyKind,
+    signature: Binary,
+}
+
+impl CosmosSignature {
+    pub fn get_public_key(&self) -> PubKeyKind {
+        self.pub_key.clone()
+    }
+
+    pub fn get_signature(&self) -> Binary {
+        self.signature.clone()
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(untagged)]
+pub enum PubKeyKind {
+    Secp256k1(Secp256k1PubKey),
+    Multisig(MultisigThresholdPubKey),
+}
+
+impl PubKey for PubKeyKind {
+    fn get_address(&self) -> CanonicalAddr {
+        match self {
+            PubKeyKind::Secp256k1(pubkey) => pubkey.get_address(),
+            PubKeyKind::Multisig(pubkey) => pubkey.get_address(),
+        }
+    }
+
+    fn bytes(&self) -> Vec<u8> {
+        match self {
+            PubKeyKind::Secp256k1(pubkey) => pubkey.bytes(),
+            PubKeyKind::Multisig(pubkey) => pubkey.bytes(),
+        }
+    }
+
+    fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError> {
+        match self {
+            PubKeyKind::Secp256k1(pubkey) => pubkey.verify_bytes(bytes, sig),
+            PubKeyKind::Multisig(pubkey) => pubkey.verify_bytes(bytes, sig),
+        }
+    }
+}
+
+// Should be in sync with https://github.com/cosmos/cosmos-sdk/blob/v0.38.3/x/auth/types/stdtx.go#L216
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+pub struct SignDoc {
+    pub account_number: String,
+    pub chain_id: String,
+    pub fee: Value,
+    pub memo: String,
+    pub msgs: Vec<SignDocWasmMsg>,
+    pub sequence: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SigInfo {
+    pub sign_bytes: Binary,
+    pub signature: CosmosSignature,
+    pub callback_sig: Option<Binary>,
+}
+
+// This struct is basically the smae as WasmMsg, but serializes/deserializes differently
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case", tag = "type", content = "value")]
+pub enum SignDocWasmMsg {
+    #[serde(alias = "wasm/MsgExecuteContract")]
+    Execute {
+        contract: HumanAddr,
+        /// msg is the json-encoded HandleMsg struct (as raw Binary)
+        msg: String,
+        sent_funds: Vec<Coin>,
+        callback_sig: Option<Vec<u8>>,
+    },
+    #[serde(alias = "wasm/MsgInstantiateContract")]
+    Instantiate {
+        code_id: String,
+        init_msg: String,
+        init_funds: Vec<Coin>,
+        label: Option<String>,
+        callback_sig: Option<Vec<u8>>,
+    },
 }

@@ -421,13 +421,15 @@ describe("CosmWasmClient.searchTx", () => {
       const first = fromOneElementArray(results[0].tx.value.msg);
       assert(isMsgInstantiateContract(first), "First contract search result must be an instantiation");
       expect(first).toEqual({
-        type: "wasm/instantiate",
+        type: "wasm/MsgInstantiateContract",
         value: {
           sender: faucet.address,
           code_id: deployedErc20.codeId.toString(),
           label: "HASH",
+          callback_code_hash: "",
           init_msg: jasmine.objectContaining({ symbol: "HASH" }),
           init_funds: [],
+          callback_sig: null,
         },
       });
 

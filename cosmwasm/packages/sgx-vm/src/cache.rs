@@ -16,9 +16,9 @@ use crate::modules::FileSystemCache;
 */
 use crate::traits::{Api, Extern, Querier, Storage};
 
-static WASM_DIR: &str = "wasm";
+const WASM_DIR: &str = "wasm";
 /*
-static MODULES_DIR: &str = "modules";
+const MODULES_DIR: &str = "modules";
 */
 
 #[derive(Debug, Default, Clone)]
@@ -58,7 +58,6 @@ where
     pub unsafe fn new<P: Into<PathBuf>>(
         base_dir: P,
         supported_features: HashSet<String>,
-        _cache_size: usize,
     ) -> VmResult<Self> {
         let base = base_dir.into();
         let wasm_path = base.join(WASM_DIR);
@@ -173,13 +172,13 @@ mod test {
     use crate::errors::VmError;
     use crate::features::features_from_csv;
     use crate::testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage};
-    use cosmwasm_std::{coins, Never};
+    use cosmwasm_std::{coins, Empty};
     use std::fs::OpenOptions;
     use std::io::Write;
     use tempfile::TempDir;
     use wabt::wat2wasm;
 
-    static TESTING_GAS_LIMIT: u64 = 400_000;
+    const TESTING_GAS_LIMIT: u64 = 400_000;
     static CONTRACT: &[u8] = include_bytes!("../testdata/contract.wasm");
 
     fn default_features() -> HashSet<String> {
@@ -190,7 +189,7 @@ mod test {
     fn save_wasm_works() {
         let tmp_dir = TempDir::new().unwrap();
         let mut cache: CosmCache<MockStorage, MockApi, MockQuerier> =
-            unsafe { CosmCache::new(tmp_dir.path(), default_features(), 10).unwrap() };
+            unsafe { CosmCache::new(tmp_dir.path(), default_features()).unwrap() };
         cache.save_wasm(CONTRACT).unwrap();
     }
 
@@ -199,7 +198,7 @@ mod test {
     fn save_wasm_allows_saving_multiple_times() {
         let tmp_dir = TempDir::new().unwrap();
         let mut cache: CosmCache<MockStorage, MockApi, MockQuerier> =
-            unsafe { CosmCache::new(tmp_dir.path(), default_features(), 10).unwrap() };
+            unsafe { CosmCache::new(tmp_dir.path(), default_features()).unwrap() };
         cache.save_wasm(CONTRACT).unwrap();
         cache.save_wasm(CONTRACT).unwrap();
     }
@@ -220,7 +219,7 @@ mod test {
 
         let tmp_dir = TempDir::new().unwrap();
         let mut cache: CosmCache<MockStorage, MockApi, MockQuerier> =
-            unsafe { CosmCache::new(tmp_dir.path(), default_features(), 10).unwrap() };
+            unsafe { CosmCache::new(tmp_dir.path(), default_features()).unwrap() };
         let save_result = cache.save_wasm(&wasm);
         match save_result.unwrap_err() {
             VmError::StaticValidationErr { msg, .. } => {
@@ -234,7 +233,7 @@ mod test {
     fn load_wasm_works() {
         let tmp_dir = TempDir::new().unwrap();
         let mut cache: CosmCache<MockStorage, MockApi, MockQuerier> =
-            unsafe { CosmCache::new(tmp_dir.path(), default_features(), 10).unwrap() };
+            unsafe { CosmCache::new(tmp_dir.path(), default_features()).unwrap() };
         let id = cache.save_wasm(CONTRACT).unwrap();
 
         let restored = cache.load_wasm(&id).unwrap();
@@ -249,13 +248,13 @@ mod test {
 
         {
             let mut cache1: CosmCache<MockStorage, MockApi, MockQuerier> =
-                unsafe { CosmCache::new(tmp_path, default_features(), 10).unwrap() };
+                unsafe { CosmCache::new(tmp_path, default_features()).unwrap() };
             id = cache1.save_wasm(CONTRACT).unwrap();
         }
 
         {
             let cache2: CosmCache<MockStorage, MockApi, MockQuerier> =
-                unsafe { CosmCache::new(tmp_path, default_features(), 10).unwrap() };
+                unsafe { CosmCache::new(tmp_path, default_features()).unwrap() };
             let restored = cache2.load_wasm(&id).unwrap();
             assert_eq!(restored, CONTRACT);
         }
@@ -265,7 +264,7 @@ mod test {
     fn load_wasm_errors_for_non_existent_id() {
         let tmp_dir = TempDir::new().unwrap();
         let cache: CosmCache<MockStorage, MockApi, MockQuerier> =
-            unsafe { CosmCache::new(tmp_dir.path(), default_features(), 10).unwrap() };
+            unsafe { CosmCache::new(tmp_dir.path(), default_features()).unwrap() };
         let checksum = Checksum::from([
             5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
             5, 5, 5,
@@ -284,7 +283,7 @@ mod test {
     fn load_wasm_errors_for_corrupted_wasm() {
         let tmp_dir = TempDir::new().unwrap();
         let mut cache: CosmCache<MockStorage, MockApi, MockQuerier> =
-            unsafe { CosmCache::new(tmp_dir.path(), default_features(), 10).unwrap() };
+            unsafe { CosmCache::new(tmp_dir.path(), default_features()).unwrap() };
         let checksum = cache.save_wasm(CONTRACT).unwrap();
 
         // Corrupt cache file
@@ -303,7 +302,7 @@ mod test {
     #[test]
     fn get_instance_finds_cached_module() {
         let tmp_dir = TempDir::new().unwrap();
-        let mut cache = unsafe { CosmCache::new(tmp_dir.path(), default_features(), 10).unwrap() };
+        let mut cache = unsafe { CosmCache::new(tmp_dir.path(), default_features()).unwrap() };
         let id = cache.save_wasm(CONTRACT).unwrap();
         let deps = mock_dependencies(20, &[]);
         let _instance = cache.get_instance(&id, deps, TESTING_GAS_LIMIT).unwrap();
@@ -314,7 +313,7 @@ mod test {
     #[test]
     fn get_instance_finds_cached_instance() {
         let tmp_dir = TempDir::new().unwrap();
-        let mut cache = unsafe { CosmCache::new(tmp_dir.path(), default_features(), 10).unwrap() };
+        let mut cache = unsafe { CosmCache::new(tmp_dir.path(), default_features()).unwrap() };
         let id = cache.save_wasm(CONTRACT).unwrap();
         let deps1 = mock_dependencies(20, &[]);
         let deps2 = mock_dependencies(20, &[]);
@@ -329,17 +328,17 @@ mod test {
     #[test]
     fn init_cached_contract() {
         let tmp_dir = TempDir::new().unwrap();
-        let mut cache = unsafe { CosmCache::new(tmp_dir.path(), default_features(), 10).unwrap() };
+        let mut cache = unsafe { CosmCache::new(tmp_dir.path(), default_features()).unwrap() };
         let id = cache.save_wasm(CONTRACT).unwrap();
         let deps = mock_dependencies(20, &[]);
         let mut instance = cache.get_instance(&id, deps, TESTING_GAS_LIMIT).unwrap();
 
         // run contract
-        let env = mock_env(&instance.api, "creator", &coins(1000, "earth"));
+        let env = mock_env("creator", &coins(1000, "earth"));
         let msg = r#"{"verifier": "verifies", "beneficiary": "benefits"}"#.as_bytes();
 
         // call and check
-        let res = call_init::<_, _, _, Never>(&mut instance, &env, msg).unwrap();
+        let res = call_init::<_, _, _, Empty>(&mut instance, &env, msg).unwrap();
         let msgs = res.unwrap().messages;
         assert_eq!(msgs.len(), 0);
     }
@@ -347,23 +346,23 @@ mod test {
     #[test]
     fn run_cached_contract() {
         let tmp_dir = TempDir::new().unwrap();
-        let mut cache = unsafe { CosmCache::new(tmp_dir.path(), default_features(), 10).unwrap() };
+        let mut cache = unsafe { CosmCache::new(tmp_dir.path(), default_features()).unwrap() };
         let id = cache.save_wasm(CONTRACT).unwrap();
         // TODO: contract balance
         let deps = mock_dependencies(20, &[]);
         let mut instance = cache.get_instance(&id, deps, TESTING_GAS_LIMIT).unwrap();
 
         // init contract
-        let env = mock_env(&instance.api, "creator", &coins(1000, "earth"));
+        let env = mock_env("creator", &coins(1000, "earth"));
         let msg = r#"{"verifier": "verifies", "beneficiary": "benefits"}"#.as_bytes();
-        let res = call_init::<_, _, _, Never>(&mut instance, &env, msg).unwrap();
+        let res = call_init::<_, _, _, Empty>(&mut instance, &env, msg).unwrap();
         let msgs = res.unwrap().messages;
         assert_eq!(msgs.len(), 0);
 
         // run contract - just sanity check - results validate in contract unit tests
-        let env = mock_env(&instance.api, "verifies", &coins(15, "earth"));
+        let env = mock_env("verifies", &coins(15, "earth"));
         let msg = br#"{"release":{}}"#;
-        let res = call_handle::<_, _, _, Never>(&mut instance, &env, msg).unwrap();
+        let res = call_handle::<_, _, _, Empty>(&mut instance, &env, msg).unwrap();
         let msgs = res.unwrap().messages;
         assert_eq!(1, msgs.len());
     }
@@ -371,7 +370,7 @@ mod test {
     #[test]
     fn use_multiple_cached_instances_of_same_contract() {
         let tmp_dir = TempDir::new().unwrap();
-        let mut cache = unsafe { CosmCache::new(tmp_dir.path(), default_features(), 10).unwrap() };
+        let mut cache = unsafe { CosmCache::new(tmp_dir.path(), default_features()).unwrap() };
         let id = cache.save_wasm(CONTRACT).unwrap();
 
         // these differentiate the two instances of the same contract
@@ -380,35 +379,35 @@ mod test {
 
         // init instance 1
         let mut instance = cache.get_instance(&id, deps1, TESTING_GAS_LIMIT).unwrap();
-        let env = mock_env(&instance.api, "owner1", &coins(1000, "earth"));
+        let env = mock_env("owner1", &coins(1000, "earth"));
         let msg = r#"{"verifier": "sue", "beneficiary": "mary"}"#.as_bytes();
-        let res = call_init::<_, _, _, Never>(&mut instance, &env, msg).unwrap();
+        let res = call_init::<_, _, _, Empty>(&mut instance, &env, msg).unwrap();
         let msgs = res.unwrap().messages;
         assert_eq!(msgs.len(), 0);
         let deps1 = instance.recycle().unwrap();
 
         // init instance 2
         let mut instance = cache.get_instance(&id, deps2, TESTING_GAS_LIMIT).unwrap();
-        let env = mock_env(&instance.api, "owner2", &coins(500, "earth"));
+        let env = mock_env("owner2", &coins(500, "earth"));
         let msg = r#"{"verifier": "bob", "beneficiary": "john"}"#.as_bytes();
-        let res = call_init::<_, _, _, Never>(&mut instance, &env, msg).unwrap();
+        let res = call_init::<_, _, _, Empty>(&mut instance, &env, msg).unwrap();
         let msgs = res.unwrap().messages;
         assert_eq!(msgs.len(), 0);
         let deps2 = instance.recycle().unwrap();
 
         // run contract 2 - just sanity check - results validate in contract unit tests
         let mut instance = cache.get_instance(&id, deps2, TESTING_GAS_LIMIT).unwrap();
-        let env = mock_env(&instance.api, "bob", &coins(15, "earth"));
+        let env = mock_env("bob", &coins(15, "earth"));
         let msg = br#"{"release":{}}"#;
-        let res = call_handle::<_, _, _, Never>(&mut instance, &env, msg).unwrap();
+        let res = call_handle::<_, _, _, Empty>(&mut instance, &env, msg).unwrap();
         let msgs = res.unwrap().messages;
         assert_eq!(1, msgs.len());
 
         // run contract 1 - just sanity check - results validate in contract unit tests
         let mut instance = cache.get_instance(&id, deps1, TESTING_GAS_LIMIT).unwrap();
-        let env = mock_env(&instance.api, "sue", &coins(15, "earth"));
+        let env = mock_env("sue", &coins(15, "earth"));
         let msg = br#"{"release":{}}"#;
-        let res = call_handle::<_, _, _, Never>(&mut instance, &env, msg).unwrap();
+        let res = call_handle::<_, _, _, Empty>(&mut instance, &env, msg).unwrap();
         let msgs = res.unwrap().messages;
         assert_eq!(1, msgs.len());
     }
@@ -417,7 +416,7 @@ mod test {
     #[cfg(feature = "default-singlepass")]
     fn resets_gas_when_reusing_instance() {
         let tmp_dir = TempDir::new().unwrap();
-        let mut cache = unsafe { CosmCache::new(tmp_dir.path(), default_features(), 10).unwrap() };
+        let mut cache = unsafe { CosmCache::new(tmp_dir.path(), default_features()).unwrap() };
         let id = cache.save_wasm(CONTRACT).unwrap();
 
         let deps1 = mock_dependencies(20, &[]);
@@ -430,9 +429,9 @@ mod test {
         let original_gas = instance1.get_gas_left();
 
         // Consume some gas
-        let env = mock_env(&instance1.api, "owner1", &coins(1000, "earth"));
+        let env = mock_env("owner1", &coins(1000, "earth"));
         let msg = r#"{"verifier": "sue", "beneficiary": "mary"}"#.as_bytes();
-        call_init::<_, _, _, Never>(&mut instance1, &env, msg)
+        call_init::<_, _, _, Empty>(&mut instance1, &env, msg)
             .unwrap()
             .unwrap();
         assert!(instance1.get_gas_left() < original_gas);
@@ -448,7 +447,7 @@ mod test {
     #[cfg(feature = "default-singlepass")]
     fn recovers_from_out_of_gas() {
         let tmp_dir = TempDir::new().unwrap();
-        let mut cache = unsafe { CosmCache::new(tmp_dir.path(), default_features(), 10).unwrap() };
+        let mut cache = unsafe { CosmCache::new(tmp_dir.path(), default_features()).unwrap() };
         let id = cache.save_wasm(CONTRACT).unwrap();
 
         let deps1 = mock_dependencies(20, &[]);
@@ -460,9 +459,9 @@ mod test {
         assert_eq!(cache.stats.misses, 0);
 
         // Consume some gas. This fails
-        let env1 = mock_env(&instance1.api, "owner1", &coins(1000, "earth"));
+        let env1 = mock_env("owner1", &coins(1000, "earth"));
         let msg1 = r#"{"verifier": "sue", "beneficiary": "mary"}"#.as_bytes();
-        match call_init::<_, _, _, Never>(&mut instance1, &env1, msg1).unwrap_err() {
+        match call_init::<_, _, _, Empty>(&mut instance1, &env1, msg1).unwrap_err() {
             VmError::GasDepletion { .. } => (), // all good, continue
             e => panic!("unexpected error, {:?}", e),
         }
@@ -475,9 +474,9 @@ mod test {
         assert_eq!(instance2.get_gas_left(), TESTING_GAS_LIMIT);
 
         // Now it works
-        let env2 = mock_env(&instance2.api, "owner2", &coins(500, "earth"));
+        let env2 = mock_env("owner2", &coins(500, "earth"));
         let msg2 = r#"{"verifier": "bob", "beneficiary": "john"}"#.as_bytes();
-        call_init::<_, _, _, Never>(&mut instance2, &env2, msg2)
+        call_init::<_, _, _, Empty>(&mut instance2, &env2, msg2)
             .unwrap()
             .unwrap();
     }

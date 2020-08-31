@@ -92,11 +92,6 @@ type Gas = uint64
 //// https://github.com/cosmos/cosmos-sdk/blob/18890a225b46260a9adc587be6fa1cc2aff101cd/store/types/gas.go#L34
 type GasMeter interface {
 	GasConsumed() Gas
-	GasConsumedToLimit() Gas
-	Limit() Gas
-	ConsumeGas(amount Gas, descriptor string)
-	IsPastLimit() bool
-	IsOutOfGas() bool
 }
 
 //
@@ -301,8 +296,8 @@ type KVStore interface {
 //
 ///***** GoAPI *******/
 //
-type HumanAddress func([]byte) (string, error)
-type CanonicalAddress func(string) ([]byte, error)
+type HumanAddress func([]byte) (string, uint64, error)
+type CanonicalAddress func(string) ([]byte, uint64, error)
 
 //
 type GoAPI struct {

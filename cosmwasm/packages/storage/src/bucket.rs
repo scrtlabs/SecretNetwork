@@ -8,7 +8,7 @@ use cosmwasm_std::{Order, KV};
 use crate::length_prefixed::{to_length_prefixed, to_length_prefixed_nested};
 #[cfg(feature = "iterator")]
 use crate::namespace_helpers::range_with_prefix;
-use crate::namespace_helpers::{get_with_prefix, set_with_prefix};
+use crate::namespace_helpers::{get_with_prefix, remove_with_prefix, set_with_prefix};
 #[cfg(feature = "iterator")]
 use crate::type_helpers::deserialize_kv;
 use crate::type_helpers::{may_deserialize, must_deserialize};
@@ -64,6 +64,10 @@ where
     pub fn save(&mut self, key: &[u8], data: &T) -> StdResult<()> {
         set_with_prefix(self.storage, &self.prefix, key, &to_vec(data)?);
         Ok(())
+    }
+
+    pub fn remove(&mut self, key: &[u8]) {
+        remove_with_prefix(self.storage, &self.prefix, key)
     }
 
     /// load will return an error if no data is set at the given key, or on parse error
@@ -168,7 +172,7 @@ where
 mod test {
     use super::*;
     use cosmwasm_std::testing::MockStorage;
-    use cosmwasm_std::{generic_err, not_found};
+    use cosmwasm_std::StdError;
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
@@ -192,6 +196,28 @@ mod test {
         // load it properly
         let loaded = bucket.load(b"maria").unwrap();
         assert_eq!(data, loaded);
+    }
+
+    #[test]
+    fn remove_works() {
+        let mut store = MockStorage::new();
+        let mut bucket = bucket::<_, Data>(b"data", &mut store);
+
+        // save data
+        let data = Data {
+            name: "Maria".to_string(),
+            age: 42,
+        };
+        bucket.save(b"maria", &data).unwrap();
+        assert_eq!(data, bucket.load(b"maria").unwrap());
+
+        // deleting random key does nothing
+        bucket.remove(b"foobar");
+        assert_eq!(data, bucket.load(b"maria").unwrap());
+
+        // deleting maria removes the data
+        bucket.remove(b"maria");
+        assert_eq!(None, bucket.may_load(b"maria").unwrap());
     }
 
     #[test]
@@ -267,7 +293,7 @@ mod test {
 
         // it's my birthday
         let birthday = |mayd: Option<Data>| -> StdResult<Data> {
-            let mut d = mayd.ok_or(not_found("Data"))?;
+            let mut d = mayd.ok_or(StdError::not_found("Data"))?;
             d.age += 1;
             Ok(d)
         };
@@ -297,7 +323,7 @@ mod test {
         let mut old_age = 0i32;
         bucket
             .update(b"maria", |mayd: Option<Data>| {
-                let mut d = mayd.ok_or(not_found("Data"))?;
+                let mut d = mayd.ok_or(StdError::not_found("Data"))?;
                 old_age = d.age;
                 d.age += 1;
                 Ok(d)
@@ -319,7 +345,9 @@ mod test {
         bucket.save(b"maria", &init).unwrap();
 
         // it's my birthday
-        let output = bucket.update(b"maria", |_d| Err(generic_err("cuz i feel like it")));
+        let output = bucket.update(b"maria", |_d| {
+            Err(StdError::generic_err("cuz i feel like it"))
+        });
         assert!(output.is_err());
 
         // load it properly
@@ -340,7 +368,7 @@ mod test {
         // it's my birthday
         let output = bucket
             .update(b"maria", |d| match d {
-                Some(_) => Err(generic_err("Ensure this was empty")),
+                Some(_) => Err(StdError::generic_err("Ensure this was empty")),
                 None => Ok(init_value.clone()),
             })
             .unwrap();

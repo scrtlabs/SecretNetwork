@@ -75,9 +75,9 @@ pub mod tests {
         let plaintext = b"7468697320697320736f6d6520706c61696e7465787420746f20656e6372797074207573696e67205349562d414553";
         let ciphertext = b"7bdb6e3b432667eb06f4d14bff2fbd0fcb900f2fddbe404326601965c889bf17dba77ceb094fa663b7a3f748ba8af829ea64ad544a272e9c485b62a3fd5c0d";
 
-        let result = aes_siv_encrypt(plaintext, &aad, &key).unwrap();
+        let result = aes_siv_encrypt(plaintext, Some(&aad), &key).unwrap();
 
-        assert_eq!(result.as_slice(), &ciphertext)
+        assert_eq!(result.as_slice(), &ciphertext[..])
     }
 
     // todo: fix test vectors to actually work
@@ -91,9 +91,9 @@ pub mod tests {
         let plaintext = b"7468697320697320736f6d6520706c61696e7465787420746f20656e6372797074207573696e67205349562d414553";
         let ciphertext = b"7bdb6e3b432667eb06f4d14bff2fbd0fcb900f2fddbe404326601965c889bf17dba77ceb094fa663b7a3f748ba8af829ea64ad544a272e9c485b62a3fd5c0d";
 
-        let result = aes_siv_decrypt(ciphertext, &aad, &key).unwrap();
+        let result = aes_siv_decrypt(ciphertext, Some(&aad), &key).unwrap();
 
-        assert_eq!(result.as_slice(), &plaintext)
+        assert_eq!(result.as_slice(), &plaintext[..])
     }
 
     // todo: fix test vectors to actually work
@@ -103,8 +103,8 @@ pub mod tests {
         let plaintext = b"7468697320697320736f6d6520706c61696e7465787420746f20656e6372797074207573696e67205349562d414553";
         let ciphertext = b"7bdb6e3b432667eb06f4d14bff2fbd0fcb900f2fddbe404326601965c889bf17dba77ceb094fa663b7a3f748ba8af829ea64ad544a272e9c485b62a3fd5c0d";
 
-        let result = aes_siv_encrypt(plaintext, &aad, &key).unwrap();
+        let result = aes_siv_encrypt(plaintext, Some(&aad), &key).unwrap();
 
-        assert_eq!(result.as_slice(), &ciphertext)
+        assert_eq!(result.as_slice(), &ciphertext[..])
     }
 }
