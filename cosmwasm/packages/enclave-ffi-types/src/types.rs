@@ -23,6 +23,9 @@ impl EnclaveBuffer {
     }
 }
 
+/// This is safe because `Vec<u8>`s are `Send`
+unsafe impl Send for EnclaveBuffer {}
+
 impl Default for EnclaveBuffer {
     fn default() -> Self {
         Self {
@@ -143,6 +146,10 @@ pub enum EnclaveError {
     UnauthorizedWrite,
 
     // serious issues
+    /// The host was caught trying to disrupt the enclave.
+    /// This can happen if e.g. the host provides invalid pointers as responses from ocalls.
+    #[display(fmt = "communication with the enclave's host failed")]
+    HostMisbehavior,
     #[display(fmt = "panicked due to unexpected behavior")]
     Panic,
     #[display(fmt = "enclave ran out of heap memory")]
