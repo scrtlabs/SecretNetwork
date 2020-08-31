@@ -32,7 +32,7 @@ to be able to test their setups on a configuration which will mirror the mainnet
 #### General
 
 - Made the world a better place
-
+- Security and stablility fixes
 
 ## Previous releases
 
