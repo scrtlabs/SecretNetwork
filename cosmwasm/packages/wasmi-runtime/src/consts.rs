@@ -53,9 +53,6 @@ lazy_static! {
         + "new_node_seed_exchange_keypair.sealed";
 }
 
-// pub const REGISTRATION_KEY_SEALING_PATH: &str =
-//     "./.sgx_secrets/new_node_seed_exchange_keypair.sealed";
-
 pub const CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 1;
 pub const CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 2;
 pub const CONSENSUS_STATE_IKM_DERIVE_ORDER: u32 = 3;
