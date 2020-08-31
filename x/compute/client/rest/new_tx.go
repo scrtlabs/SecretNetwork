@@ -1,5 +1,6 @@
 package rest
 
+/*
 import (
 	"net/http"
 
@@ -47,7 +48,7 @@ func setContractAdminHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		msg := types.MsgUpdateAdministrator{
+		msg := types.MsgUpdateAdmin{
 			Sender:   cliCtx.GetFromAddress(),
 			NewAdmin: req.Admin,
 			Contract: contractAddress,
@@ -84,7 +85,7 @@ func migrateContractHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 		msg := types.MsgMigrateContract{
 			Sender:     cliCtx.GetFromAddress(),
 			Contract:   contractAddress,
-			Code:       req.CodeID,
+			CodeID:     req.CodeID,
 			MigrateMsg: req.MigrateMsg,
 		}
 		if err = msg.ValidateBasic(); err != nil {
@@ -95,3 +96,4 @@ func migrateContractHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 		utils.WriteGenerateStdTxResponse(w, cliCtx, req.BaseReq, []sdk.Msg{msg})
 	}
 }
+*/

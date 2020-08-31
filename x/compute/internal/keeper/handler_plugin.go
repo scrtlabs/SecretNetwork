@@ -2,7 +2,7 @@ package keeper
 
 import (
 	"encoding/json"
-	"fmt"
+	"github.com/enigmampc/cosmos-sdk/x/gov"
 
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
@@ -30,12 +30,14 @@ type BankEncoder func(sender sdk.AccAddress, msg *wasmTypes.BankMsg) ([]sdk.Msg,
 type CustomEncoder func(sender sdk.AccAddress, msg json.RawMessage) ([]sdk.Msg, error)
 type StakingEncoder func(sender sdk.AccAddress, msg *wasmTypes.StakingMsg) ([]sdk.Msg, error)
 type WasmEncoder func(sender sdk.AccAddress, msg *wasmTypes.WasmMsg) ([]sdk.Msg, error)
+type GovEncoder func(sender sdk.AccAddress, msg *wasmTypes.GovMsg) ([]sdk.Msg, error)
 
 type MessageEncoders struct {
 	Bank    BankEncoder
 	Custom  CustomEncoder
 	Staking StakingEncoder
 	Wasm    WasmEncoder
+	Gov     GovEncoder
 }
 
 func DefaultEncoders() MessageEncoders {
@@ -44,6 +46,7 @@ func DefaultEncoders() MessageEncoders {
 		Custom:  NoCustomMsg,
 		Staking: EncodeStakingMsg,
 		Wasm:    EncodeWasmMsg,
+		Gov:     EncodeGovMsg,
 	}
 }
 
@@ -63,6 +66,9 @@ func (e MessageEncoders) Merge(o *MessageEncoders) MessageEncoders {
 	if o.Wasm != nil {
 		e.Wasm = o.Wasm
 	}
+	if o.Gov != nil {
+		e.Gov = o.Gov
+	}
 	return e
 }
 
@@ -76,8 +82,25 @@ func (e MessageEncoders) Encode(contractAddr sdk.AccAddress, msg wasmTypes.Cosmo
 		return e.Staking(contractAddr, msg.Staking)
 	case msg.Wasm != nil:
 		return e.Wasm(contractAddr, msg.Wasm)
+	case msg.Gov != nil:
+		return e.Gov(contractAddr, msg.Gov)
 	}
+
 	return nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Unknown variant of Wasm")
+}
+
+func EncodeGovMsg(sender sdk.AccAddress, msg *wasmTypes.GovMsg) ([]sdk.Msg, error) {
+	if msg.Vote == nil {
+		return nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Unknown variant of Gov")
+	}
+
+	option, err := gov.VoteOptionFromString(msg.Vote.VoteOption)
+	if err != nil {
+		return nil, err
+	}
+
+	sdkMsg := gov.NewMsgVote(sender, msg.Vote.Proposal, option)
+	return []sdk.Msg{sdkMsg}, nil
 }
 
 func EncodeBankMsg(sender sdk.AccAddress, msg *wasmTypes.BankMsg) ([]sdk.Msg, error) {
@@ -203,11 +226,12 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *wasmTypes.WasmMsg) ([]sdk.Msg, er
 		}
 
 		sdkMsg := types.MsgExecuteContract{
-			Sender:           sender,
-			Contract:         contractAddr,
-			CallbackCodeHash: msg.Execute.CallbackCodeHash,
-			Msg:              msg.Execute.Msg,
-			SentFunds:        coins,
+			Sender:            sender,
+			Contract:          contractAddr,
+			CallbackCodeHash:  msg.Execute.CallbackCodeHash,
+			Msg:               msg.Execute.Msg,
+			SentFunds:         coins,
+			CallbackSignature: msg.Execute.CallbackSignature,
 		}
 		return []sdk.Msg{sdkMsg}, nil
 	}
@@ -219,12 +243,13 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *wasmTypes.WasmMsg) ([]sdk.Msg, er
 
 		sdkMsg := types.MsgInstantiateContract{
 			Sender: sender,
-			Code:   msg.Instantiate.CodeID,
+			CodeID: msg.Instantiate.CodeID,
 			// TODO: add this to CosmWasm
-			Label:     fmt.Sprintf("Auto-created by %s", sender),
+			Label:             msg.Instantiate.Label,
 			CallbackCodeHash:  msg.Instantiate.CallbackCodeHash,
-			InitMsg:   msg.Instantiate.Msg,
-			InitFunds: coins,
+			InitMsg:           msg.Instantiate.Msg,
+			InitFunds:         coins,
+			CallbackSignature: msg.Instantiate.CallbackSignature,
 		}
 		return []sdk.Msg{sdkMsg}, nil
 	}

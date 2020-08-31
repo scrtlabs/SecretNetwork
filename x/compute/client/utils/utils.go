@@ -155,7 +155,6 @@ func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
 	return ioPubkey, nil
 }
 
-
 func (ctx WASMContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) ([]byte, error) {
 	consensusIoPubKeyBytes, err := ctx.getConsensusIoPubKey()
 	if err != nil {

@@ -7,48 +7,48 @@ package api
 #include <stdio.h>
 
 // imports (db)
-GoResult cSet(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer val);
-GoResult cGet(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val);
-GoResult cDelete(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key);
-GoResult cScan(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer start, Buffer end, int32_t order, GoIter *out);
+GoResult cSet(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer val, Buffer *errOut);
+GoResult cGet(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val, Buffer *errOut);
+GoResult cDelete(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *errOut);
+GoResult cScan(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer start, Buffer end, int32_t order, GoIter *out, Buffer *errOut);
 // imports (iterator)
-GoResult cNext(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val);
+GoResult cNext(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val, Buffer *errOut);
 // imports (api)
-GoResult cHumanAddress(api_t *ptr, Buffer canon, Buffer *human);
-GoResult cCanonicalAddress(api_t *ptr, Buffer human, Buffer *canon);
+GoResult cHumanAddress(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut, uint64_t *used_gas);
+GoResult cCanonicalAddress(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut, uint64_t *used_gas);
 // imports (querier)
-GoResult cQueryExternal(querier_t *ptr, uint64_t *used_gas, Buffer request, Buffer *result);
+GoResult cQueryExternal(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, Buffer *result, Buffer *errOut);
 
 // Gateway functions (db)
-GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val) {
-	return cGet(ptr, gas_meter, used_gas, key, val);
+GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val, Buffer *errOut) {
+	return cGet(ptr, gas_meter, used_gas, key, val, errOut);
 }
-GoResult cSet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer val) {
-	return cSet(ptr, gas_meter, used_gas, key, val);
+GoResult cSet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer val, Buffer *errOut) {
+	return cSet(ptr, gas_meter, used_gas, key, val, errOut);
 }
-GoResult cDelete_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key) {
-	return cDelete(ptr, gas_meter, used_gas, key);
+GoResult cDelete_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *errOut) {
+	return cDelete(ptr, gas_meter, used_gas, key, errOut);
 }
-GoResult cScan_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer start, Buffer end, int32_t order, GoIter *out) {
-	return cScan(ptr, gas_meter, used_gas, start, end, order, out);
+GoResult cScan_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer start, Buffer end, int32_t order, GoIter *out, Buffer *errOut) {
+	return cScan(ptr, gas_meter, used_gas, start, end, order, out, errOut);
 }
 
 // Gateway functions (iterator)
-GoResult cNext_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val) {
-	return cNext(ptr, gas_meter, used_gas, key, val);
+GoResult cNext_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val, Buffer *errOut) {
+	return cNext(ptr, gas_meter, used_gas, key, val, errOut);
 }
 
 // Gateway functions (api)
-GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon) {
-    return cCanonicalAddress(ptr, human, canon);
+GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut, uint64_t *used_gas) {
+    return cCanonicalAddress(ptr, human, canon, errOut, used_gas);
 }
-GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human) {
-    return cHumanAddress(ptr, canon, human);
+GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut, uint64_t *used_gas) {
+    return cHumanAddress(ptr, canon, human, errOut, used_gas);
 }
 
 // Gateway functions (querier)
-GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t *used_gas, Buffer request, Buffer *result) {
-    return cQueryExternal(ptr, used_gas, request, result);
+GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, Buffer *result, Buffer *errOut) {
+    return cQueryExternal(ptr, gas_limit, used_gas, request, result, errOut);
 }
 */
 import "C"

@@ -29,10 +29,10 @@ type storeCodeReq struct {
 }
 
 type instantiateContractReq struct {
-	BaseReq rest.BaseReq   `json:"base_req" yaml:"base_req"`
-	Deposit sdk.Coins      `json:"deposit" yaml:"deposit"`
-	Admin   sdk.AccAddress `json:"admin,omitempty" yaml:"admin"`
-	InitMsg []byte         `json:"init_msg" yaml:"init_msg"`
+	BaseReq rest.BaseReq `json:"base_req" yaml:"base_req"`
+	Deposit sdk.Coins    `json:"deposit" yaml:"deposit"`
+	// Admin   sdk.AccAddress `json:"admin,omitempty" yaml:"admin"`
+	InitMsg []byte `json:"init_msg" yaml:"init_msg"`
 }
 
 type executeContractReq struct {
@@ -115,11 +115,11 @@ func instantiateContractHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 
 		msg := types.MsgInstantiateContract{
 			Sender:           cliCtx.GetFromAddress(),
-			Code:             codeID,
+			CodeID:           codeID,
 			CallbackCodeHash: "",
 			InitFunds:        req.Deposit,
 			InitMsg:          req.InitMsg,
-			Admin:            req.Admin,
+			// Admin:            req.Admin,
 		}
 
 		err = msg.ValidateBasic()

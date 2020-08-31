@@ -64,7 +64,7 @@ async function uploadCustomContract(
 ): Promise<PostTxsResponse> {
   const memo = "My first contract on chain";
   const theMsg: MsgStoreCode = {
-    type: "wasm/store-code",
+    type: "wasm/MsgStoreCode",
     value: {
       sender: faucet.address,
       wasm_byte_code: toBase64(wasmCode),
@@ -102,16 +102,18 @@ async function instantiateContract(
 ): Promise<PostTxsResponse> {
   const memo = "Create an escrow instance";
   const theMsg: MsgInstantiateContract = {
-    type: "wasm/instantiate",
+    type: "wasm/MsgInstantiateContract",
     value: {
       sender: faucet.address,
       code_id: codeId.toString(),
       label: "my escrow",
+      callback_code_hash: "",
       init_msg: {
         verifier: faucet.address,
         beneficiary: beneficiaryAddress,
       },
       init_funds: transferAmount || [],
+      callback_sig: null,
     },
   };
   const fee: StdFee = {
@@ -138,13 +140,14 @@ async function executeContract(
 ): Promise<PostTxsResponse> {
   const memo = "Time for action";
   const theMsg: MsgExecuteContract = {
-    type: "wasm/execute",
+    type: "wasm/MsgExecuteContract",
     value: {
       sender: faucet.address,
       callback_code_hash: "",
       contract: contractAddress,
       msg: { release: {} },
       sent_funds: [],
+      callback_sig: null,
     },
   };
   const fee: StdFee = {
@@ -670,25 +673,31 @@ describe("RestClient", () => {
       expect(hash.value).toEqual({
         code_id: deployedErc20.codeId.toString(),
         init_funds: [],
+        callback_code_hash: "",
         init_msg: jasmine.objectContaining({
           symbol: "HASH",
         }),
         label: "HASH",
         sender: faucet.address,
+        callback_sig: null,
       });
       expect(isa.value).toEqual({
         code_id: deployedErc20.codeId.toString(),
         init_funds: [],
+        callback_code_hash: "",
         init_msg: jasmine.objectContaining({ symbol: "ISA" }),
         label: "ISA",
         sender: faucet.address,
+        callback_sig: null,
       });
       expect(jade.value).toEqual({
         code_id: deployedErc20.codeId.toString(),
         init_funds: [],
+        callback_code_hash: "",
         init_msg: jasmine.objectContaining({ symbol: "JADE" }),
         label: "JADE",
         sender: faucet.address,
+        callback_sig: null,
       });
     });
 
@@ -726,25 +735,31 @@ describe("RestClient", () => {
         expect(hash.value).toEqual({
           code_id: deployedErc20.codeId.toString(),
           init_funds: [],
+          callback_code_hash: "",
           init_msg: jasmine.objectContaining({
             symbol: "HASH",
           }),
           label: "HASH",
           sender: faucet.address,
+          callback_sig: null,
         });
         expect(isa.value).toEqual({
           code_id: deployedErc20.codeId.toString(),
           init_funds: [],
+          callback_code_hash: "",
           init_msg: jasmine.objectContaining({ symbol: "ISA" }),
           label: "ISA",
           sender: faucet.address,
+          callback_sig: null,
         });
         expect(jade.value).toEqual({
           code_id: deployedErc20.codeId.toString(),
           init_funds: [],
+          callback_code_hash: "",
           init_msg: jasmine.objectContaining({ symbol: "JADE" }),
           label: "JADE",
           sender: faucet.address,
+          callback_sig: null,
         });
       }
     });
@@ -1365,8 +1380,7 @@ describe("RestClient", () => {
         // invalid query syntax throws an error
         await client.queryContractSmart(contractAddress!, { nosuchkey: {} }).then(
           () => fail("shouldn't succeed"),
-          (error) =>
-            expect(error).toMatch(/query contract failed: parsing hackatom::contract::QueryMsg/),
+          (error) => expect(error).toMatch(/query contract failed: parsing hackatom::contract::QueryMsg/),
         );
 
         // invalid address throws an error

@@ -31,7 +31,7 @@ export interface MsgSend extends MsgTemplate {
  * @see https://github.com/cosmwasm/wasmd/blob/9842678d89/x/wasm/internal/types/msg.go#L17
  */
 export interface MsgStoreCode extends MsgTemplate {
-  readonly type: "wasm/store-code";
+  readonly type: "wasm/MsgStoreCode";
   readonly value: {
     /** Bech32 account address */
     readonly sender: string;
@@ -49,7 +49,7 @@ export interface MsgStoreCode extends MsgTemplate {
  * @see https://github.com/cosmwasm/wasmd/blob/9842678d89/x/wasm/internal/types/msg.go#L73
  */
 export interface MsgInstantiateContract extends MsgTemplate {
-  readonly type: "wasm/instantiate";
+  readonly type: "wasm/MsgInstantiateContract";
   readonly value: {
     /** Bech32 account address */
     readonly sender: string;
@@ -57,9 +57,12 @@ export interface MsgInstantiateContract extends MsgTemplate {
     readonly code_id: string;
     /** Human-readable label for this contract */
     readonly label: string;
+    /** callback_code_hash should always be an empty string when coming from the user */
+    readonly callback_code_hash: string;
     /** Init message as JavaScript object */
     init_msg: any;
     readonly init_funds: ReadonlyArray<Coin>;
+    readonly callback_sig: any;
   };
 }
 /**
@@ -68,15 +71,18 @@ export interface MsgInstantiateContract extends MsgTemplate {
  * @see https://github.com/cosmwasm/wasmd/blob/9842678d89/x/wasm/internal/types/msg.go#L103
  */
 export interface MsgExecuteContract extends MsgTemplate {
-  readonly type: "wasm/execute";
+  readonly type: "wasm/MsgExecuteContract";
   readonly value: {
     /** Bech32 account address */
     readonly sender: string;
     /** Bech32 account address */
     readonly contract: string;
+    /** callback_code_hash should always be an empty string when coming from the user */
+    readonly callback_code_hash: string;
     /** Handle message as JavaScript object */
     msg: any;
     readonly sent_funds: ReadonlyArray<Coin>;
+    readonly callback_sig: any;
   };
 }
 export declare type Msg = MsgSend | MsgStoreCode | MsgInstantiateContract | MsgExecuteContract | MsgTemplate;

@@ -118,7 +118,7 @@ export function buildUnsignedTx(
       value: {
         msg: [
           {
-            type: "wasm/execute",
+            type: "wasm/MsgExecuteContract",
             value: {
               sender: tx.sender,
               contract: matchingErc20Token.contractAddress,

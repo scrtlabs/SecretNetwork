@@ -5,6 +5,11 @@ BUILD_PROFILE ?= release
 TOP_DIR := ../third_party/build
 include $(TOP_DIR)/buildenv.mk
 
+FEATURES ?=
+FEATURES_U += $(FEATURES)
+FEATURES_U += backtraces
+FEATURES_U := $(strip $(FEATURES_U))
+
 DOCKER_TAG := 0.8.2
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
@@ -54,7 +59,7 @@ all: build test
 build: build-rust build-go
 
 build-rust: librust_cosmwasm_enclave.signed.so lib/libEnclave_u.a
-	cargo build -Z unstable-options --profile $(BUILD_PROFILE) --features backtraces
+	cargo build -Z unstable-options --profile $(BUILD_PROFILE) --features "$(FEATURES_U)"
 	cp target/$(BUILD_PROFILE)/libgo_cosmwasm.$(DLL_EXT) api
 	@ #this pulls out ELF symbols, 80% size reduction!
 
@@ -77,7 +82,7 @@ lib/libEnclave_u.a: $(Enclave_Path)/Enclave.edl target/headers/enclave-ffi-types
 # So here we do the minimum required work to generate this file correctly, and copy it to the right location
 target/headers/enclave-ffi-types.h: build-enclave
 	mkdir -p $(dir $@)
-	cp ../cosmwasm/packages/wasmi-runtime/$(@) $@
+	cp $(Enclave_Path)/$@ $@
 
 .PHONY: build-enclave
 build-enclave:
@@ -97,6 +102,9 @@ build-go:
 
 test:
 	RUST_BACKTRACE=1 go test -v ./api ./types .
+
+test-safety:
+	GODEBUG=cgocheck=2 go test -race -v -count 1 ./api
 
 # we should build all the docker images locally ONCE and publish them
 docker-image-centos7:
@@ -141,4 +149,4 @@ clean:
 
 .PHONY: clean-all
 clean-all: clean
-	$(MAKE) -C ../cosmwasm/packages/wasmi-runtime clean
+	$(MAKE) -C $(Enclave_Path) clean

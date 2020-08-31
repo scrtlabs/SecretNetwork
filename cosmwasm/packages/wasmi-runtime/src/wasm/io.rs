@@ -5,12 +5,13 @@
 use super::types::{IoNonce, SecretMessage};
 
 use crate::cosmwasm::encoding::Binary;
-use crate::cosmwasm::types::{CosmosMsg, WasmMsg, WasmOutput};
+use crate::cosmwasm::types::{CanonicalAddr, CosmosMsg, WasmMsg, WasmOutput};
 use crate::crypto::{AESKey, Ed25519PublicKey, Kdf, SIVEncryptable, KEY_MANAGER};
 use enclave_ffi_types::EnclaveError;
 use log::*;
 use serde::Serialize;
 use serde_json::json;
+use sha2::Digest;
 
 pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) -> AESKey {
     let enclave_io_key = KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap();
@@ -24,7 +25,7 @@ pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) 
     tx_encryption_key
 }
 
-fn encrypt_serializeable<T>(key: &AESKey, val: &T) -> Result<String, EnclaveError>
+fn encrypt_serializable<T>(key: &AESKey, val: &T) -> Result<String, EnclaveError>
 where
     T: ?Sized + Serialize,
 {
@@ -59,6 +60,7 @@ pub fn encrypt_output(
     output: Vec<u8>,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
+    contract_addr: &CanonicalAddr,
 ) -> Result<Vec<u8>, EnclaveError> {
     let key = calc_encryption_key(&nonce, &user_public_key);
 
@@ -77,29 +79,31 @@ pub fn encrypt_output(
 
     match &mut output {
         WasmOutput::ErrObject { err } => {
-            let encrypted_err = encrypt_serializeable(&key, err)?;
+            let encrypted_err = encrypt_serializable(&key, err)?;
 
             // Putting the error inside a 'generic_err' envelope, so we can encrypt the error itself
             *err = json!({"generic_err":{"msg":encrypted_err}});
         }
+
         WasmOutput::OkString { ok } => {
-            *ok = encrypt_serializeable(&key, ok)?;
+            *ok = encrypt_serializable(&key, ok)?;
         }
+
         // Encrypt all Wasm messages (keeps Bank, Staking, etc.. as is)
         WasmOutput::OkObject { ok } => {
             for msg in &mut ok.messages {
                 if let CosmosMsg::Wasm(wasm_msg) = msg {
-                    encrypt_wasm_msg(wasm_msg, nonce, user_public_key)?;
+                    encrypt_wasm_msg(wasm_msg, nonce, user_public_key, contract_addr)?;
                 }
             }
 
             for log in &mut ok.log {
-                log.key = encrypt_serializeable(&key, &log.key)?;
-                log.value = encrypt_serializeable(&key, &log.value)?;
+                log.key = encrypt_serializable(&key, &log.key)?;
+                log.value = encrypt_serializable(&key, &log.value)?;
             }
 
             if let Some(data) = &mut ok.data {
-                *data = Binary::from_base64(&encrypt_serializeable(&key, data)?)?;
+                *data = Binary::from_base64(&encrypt_serializable(&key, data)?)?;
             }
         }
     };
@@ -121,16 +125,19 @@ fn encrypt_wasm_msg(
     wasm_msg: &mut WasmMsg,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
+    contract_addr: &CanonicalAddr,
 ) -> Result<(), EnclaveError> {
     match wasm_msg {
         WasmMsg::Execute {
             msg,
             callback_code_hash,
+            callback_sig,
             ..
         }
         | WasmMsg::Instantiate {
             msg,
             callback_code_hash,
+            callback_sig,
             ..
         } => {
             let mut hash_appended_msg = callback_code_hash.as_bytes().to_vec();
@@ -144,8 +151,27 @@ fn encrypt_wasm_msg(
 
             msg_to_pass.encrypt_in_place()?;
             *msg = Binary::from(msg_to_pass.to_vec().as_slice());
+
+            *callback_sig = Some(create_callback_signature(contract_addr, &msg_to_pass));
         }
     }
 
     Ok(())
+}
+
+pub fn create_callback_signature(
+    contract_addr: &CanonicalAddr,
+    msg_to_sign: &SecretMessage,
+) -> Vec<u8> {
+    // Hash(Enclave_secret | sender(current contract) | msg_to_pass)
+    let mut callback_sig_bytes = KEY_MANAGER
+        .get_consensus_callback_secret()
+        .unwrap()
+        .get()
+        .to_vec();
+
+    callback_sig_bytes.extend(contract_addr.as_slice());
+    callback_sig_bytes.extend(msg_to_sign.msg.as_slice());
+
+    sha2::Sha256::digest(callback_sig_bytes.as_slice()).to_vec()
 }

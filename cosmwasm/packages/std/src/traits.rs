@@ -1,8 +1,9 @@
 use serde::{de::DeserializeOwned, Serialize};
 
+use crate::addresses::{CanonicalAddr, HumanAddr};
 use crate::coins::Coin;
 use crate::encoding::Binary;
-use crate::errors::{generic_err, StdResult, SystemResult};
+use crate::errors::{StdError, StdResult, SystemResult};
 #[cfg(feature = "iterator")]
 use crate::iterator::{Order, KV};
 use crate::query::{AllBalanceResponse, BalanceResponse, BankQuery, QueryRequest};
@@ -12,7 +13,7 @@ use crate::query::{
     StakingQuery, Validator, ValidatorsResponse,
 };
 use crate::serde::{from_binary, to_vec};
-use crate::types::{CanonicalAddr, HumanAddr, Never};
+use crate::types::Empty;
 
 /// Holds all external dependencies of the contract.
 /// Designed to allow easy dependency injection at runtime.
@@ -96,8 +97,8 @@ pub trait Querier {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult;
 
     /// query is a shorthand for custom_query when we are not using a custom type,
-    /// this allows us to avoid specifying "Never" in all the type definitions.
-    fn query<T: DeserializeOwned>(&self, request: &QueryRequest<Never>) -> StdResult<T> {
+    /// this allows us to avoid specifying "Empty" in all the type definitions.
+    fn query<T: DeserializeOwned>(&self, request: &QueryRequest<Empty>) -> StdResult<T> {
         self.custom_query(request)
     }
 
@@ -114,10 +115,18 @@ pub trait Querier {
     ) -> StdResult<U> {
         let raw = match to_vec(request) {
             Ok(raw) => raw,
-            Err(e) => return Err(generic_err(format!("Serializing QueryRequest: {}", e))),
+            Err(e) => {
+                return Err(StdError::generic_err(format!(
+                    "Serializing QueryRequest: {}",
+                    e
+                )))
+            }
         };
         match self.raw_query(&raw) {
-            Err(sys) => Err(generic_err(format!("Querier system error: {}", sys))),
+            Err(sys) => Err(StdError::generic_err(format!(
+                "Querier system error: {}",
+                sys
+            ))),
             Ok(Err(err)) => Err(err),
             // in theory we would process the response, but here it is the same type, so just pass through
             Ok(Ok(res)) => from_binary(&res),

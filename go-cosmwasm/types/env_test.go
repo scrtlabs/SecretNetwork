@@ -10,7 +10,7 @@ import (
 
 func TestMessageInfoHandlesMultipleCoins(t *testing.T) {
 	info := MessageInfo{
-		Sender: []byte("foobar"),
+		Sender: "foobar",
 		SentFunds: []Coin{
 			{Denom: "peth", Amount: "12345"},
 			{Denom: "uatom", Amount: "789876"},
@@ -28,7 +28,7 @@ func TestMessageInfoHandlesMultipleCoins(t *testing.T) {
 
 func TestMessageInfoHandlesMissingCoins(t *testing.T) {
 	info := MessageInfo{
-		Sender: []byte("baz"),
+		Sender: "baz",
 	}
 	bz, err := json.Marshal(info)
 	require.NoError(t, err)

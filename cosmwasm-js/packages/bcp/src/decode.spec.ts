@@ -165,7 +165,7 @@ describe("decode", () => {
 
     it("works for ERC20 send transaction", () => {
       const msg: types.MsgExecuteContract = {
-        type: "wasm/execute",
+        type: "wasm/MsgExecuteContract",
         value: {
           sender: "cosmos1h806c7khnvmjlywdrkdgk2vrayy2mmvf9rxk2r",
           contract: defaultErc20Tokens[0].contractAddress,
@@ -219,7 +219,7 @@ describe("decode", () => {
 
     it("works for ERC20 send transaction", () => {
       const msg: types.MsgExecuteContract = {
-        type: "wasm/execute",
+        type: "wasm/MsgExecuteContract",
         value: {
           sender: "cosmos1h806c7khnvmjlywdrkdgk2vrayy2mmvf9rxk2r",
           contract: defaultErc20Tokens[0].contractAddress,

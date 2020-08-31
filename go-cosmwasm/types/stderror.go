@@ -12,7 +12,6 @@ type StdError struct {
 	InvalidBase64 *InvalidBase64 `json:"invalid_base64,omitempty"`
 	InvalidUtf8   *InvalidUtf8   `json:"invalid_utf8,omitempty"`
 	NotFound      *NotFound      `json:"not_found,omitempty"`
-	NullPointer   *NullPointer   `json:"null_pointer,omitempty"`
 	ParseErr      *ParseErr      `json:"parse_err,omitempty"`
 	SerializeErr  *SerializeErr  `json:"serialize_err,omitempty"`
 	Unauthorized  *Unauthorized  `json:"unauthorized,omitempty"`
@@ -25,7 +24,6 @@ var (
 	_ error = InvalidBase64{}
 	_ error = InvalidUtf8{}
 	_ error = NotFound{}
-	_ error = NullPointer{}
 	_ error = ParseErr{}
 	_ error = SerializeErr{}
 	_ error = Unauthorized{}
@@ -42,8 +40,6 @@ func (a StdError) Error() string {
 		return a.InvalidUtf8.Error()
 	case a.NotFound != nil:
 		return a.NotFound.Error()
-	case a.NullPointer != nil:
-		return a.NullPointer.Error()
 	case a.ParseErr != nil:
 		return a.ParseErr.Error()
 	case a.SerializeErr != nil:
@@ -87,12 +83,6 @@ type NotFound struct {
 
 func (e NotFound) Error() string {
 	return fmt.Sprintf("not found: %s", e.Kind)
-}
-
-type NullPointer struct{}
-
-func (e NullPointer) Error() string {
-	return "null pointer"
 }
 
 type ParseErr struct {
@@ -159,10 +149,6 @@ func ToStdError(err error) *StdError {
 		return &StdError{NotFound: &t}
 	case *NotFound:
 		return &StdError{NotFound: t}
-	case NullPointer:
-		return &StdError{NullPointer: &t}
-	case *NullPointer:
-		return &StdError{NullPointer: t}
 	case ParseErr:
 		return &StdError{ParseErr: &t}
 	case *ParseErr:

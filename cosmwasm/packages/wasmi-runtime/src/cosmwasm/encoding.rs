@@ -86,8 +86,8 @@ impl<'de> de::Visitor<'de> for Base64Visitor {
     }
 
     fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-        where
-            E: de::Error,
+    where
+        E: de::Error,
     {
         match Binary::from_base64(v) {
             Ok(binary) => Ok(binary),

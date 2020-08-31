@@ -77,6 +77,7 @@ pub extern "C" fn ocall_query_chain(
     context: Ctx,
     vm_error: *mut UntrustedVmError,
     gas_used: *mut u64,
+    gas_limit: u64,
     value: *mut EnclaveBuffer,
     query: *const u8,
     query_len: usize,
@@ -85,7 +86,7 @@ pub extern "C" fn ocall_query_chain(
 
     let implementation = unsafe { get_implementations_from_context(&context).query_chain };
 
-    std::panic::catch_unwind(|| implementation(context, query))
+    std::panic::catch_unwind(|| implementation(context, query, gas_limit))
         // Get either an error(`OcallReturn`), or a response(`EnclaveBuffer`)
         // which will be converted to a success status.
         .map(|answer| -> Result<EnclaveBuffer, OcallReturn> {
@@ -201,7 +202,11 @@ unsafe fn store_vm_error(vm_err: VmError, location: *mut UntrustedVmError) {
 #[allow(clippy::type_complexity)]
 struct ExportImplementations {
     read_db: fn(context: Ctx, key: &[u8]) -> VmResult<(Option<Vec<u8>>, u64)>,
-    query_chain: fn(context: Ctx, query: &[u8]) -> VmResult<(SystemResult<StdResult<Binary>>, u64)>,
+    query_chain: fn(
+        context: Ctx,
+        query: &[u8],
+        gas_limit: u64,
+    ) -> VmResult<(SystemResult<StdResult<Binary>>, u64)>,
     remove_db: fn(context: Ctx, key: &[u8]) -> VmResult<u64>,
     write_db: fn(context: Ctx, key: &[u8], value: &[u8]) -> VmResult<u64>,
 }
@@ -255,20 +260,27 @@ where
     Q: Querier,
 {
     with_storage_from_context::<S, Q, _, _>(&mut context, |storage: &mut S| {
-        storage.get(key).map_err(Into::into)
+        let (ffi_result, gas_info) = storage.get(key);
+        ffi_result
+            .map(|value| (value, gas_info.externally_used))
+            .map_err(Into::into)
     })
 }
 
 fn ocall_query_chain_impl<S, Q>(
     mut context: Ctx,
     query: &[u8],
+    gas_limit: u64,
 ) -> VmResult<(SystemResult<StdResult<Binary>>, u64)>
 where
     S: Storage,
     Q: Querier,
 {
     with_querier_from_context::<S, Q, _, _>(&mut context, |querier: &mut Q| {
-        querier.raw_query(query).map_err(Into::into)
+        let (ffi_result, gas_info) = querier.query_raw(query, gas_limit);
+        ffi_result
+            .map(|system_result| (system_result, gas_info.externally_used))
+            .map_err(Into::into)
     })
 }
 
@@ -278,7 +290,10 @@ where
     Q: Querier,
 {
     with_storage_from_context::<S, Q, _, _>(&mut context, |storage: &mut S| {
-        storage.remove(key).map_err(Into::into)
+        let (ffi_result, gas_info) = storage.remove(key);
+        ffi_result
+            .and(Ok(gas_info.externally_used))
+            .map_err(Into::into)
     })
 }
 
@@ -288,6 +303,9 @@ where
     Q: Querier,
 {
     with_storage_from_context::<S, Q, _, _>(&mut context, |storage: &mut S| {
-        storage.set(key, value).map_err(Into::into)
+        let (ffi_result, gas_info) = storage.set(key, value);
+        ffi_result
+            .and(Ok(gas_info.externally_used))
+            .map_err(Into::into)
     })
 }

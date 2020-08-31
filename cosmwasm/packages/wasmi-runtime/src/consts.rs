@@ -5,16 +5,6 @@ use std::env;
 pub use enclave_ffi_types::ENCRYPTED_SEED_SIZE;
 use lazy_static::lazy_static;
 
-#[cfg(all(feature = "production", feature = "SGX_MODE_HW"))]
-pub static SPID_FILE: &[u8] = include_bytes!("../spid_production.txt");
-#[cfg(all(feature = "production", feature = "SGX_MODE_HW"))]
-pub static API_KEY_FILE: &[u8] = include_bytes!("../api_key_production.txt");
-
-#[cfg(all(not(feature = "production"), feature = "SGX_MODE_HW"))]
-pub static SPID_FILE: &[u8] = include_bytes!("../spid.txt");
-#[cfg(all(not(feature = "production"), feature = "SGX_MODE_HW"))]
-pub static API_KEY_FILE: &[u8] = include_bytes!("../api_key.txt");
-
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
 pub const BECH32_PREFIX_ACC_ADDR: &str = "secret";
@@ -48,8 +38,11 @@ pub const MRSIGNER: [u8; 32] = [
 #[cfg(feature = "production")]
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
 
-#[cfg(not(feature = "production"))]
+#[cfg(all(not(feature = "production"), not(feature = "test")))]
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
+
+#[cfg(all(not(feature = "production"), feature = "test"))]
+pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRSIGNER;
 
 lazy_static! {
     pub static ref CONSENSUS_SEED_SEALING_PATH: String = env::var("SCRT_SGX_STORAGE")
@@ -66,3 +59,4 @@ lazy_static! {
 pub const CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 1;
 pub const CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 2;
 pub const CONSENSUS_STATE_IKM_DERIVE_ORDER: u32 = 3;
+pub const CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER: u32 = 4;

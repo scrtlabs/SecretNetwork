@@ -19,6 +19,7 @@ const MAX_LENGTH_MIGRATE: usize = 100_000;
 const MAX_LENGTH_QUERY: usize = 100_000;
 */
 
+/*
 pub fn call_init<S, A, Q, U>(
     instance: &mut Instance<S, A, Q>,
     env: &Env,
@@ -86,6 +87,7 @@ pub fn call_query<S: Storage + 'static, A: Api + 'static, Q: Querier + 'static>(
 
     Ok(result)
 }
+*/
 
 /// Calls Wasm export "init" and returns raw data from the contract.
 /// The result is length limited to prevent abuse but otherwise unchecked.
@@ -93,12 +95,13 @@ pub fn call_init_raw<S: Storage + 'static, A: Api + 'static, Q: Querier + 'stati
     instance: &mut Instance<S, A, Q>,
     env: &[u8],
     msg: &[u8],
+    sig_info: &[u8],
 ) -> VmResult<Vec<u8>> {
     instance.set_storage_readonly(false);
     /*
     call_raw(instance, "init", &[env, msg], MAX_LENGTH_INIT)
     */
-    instance.call_init(env, msg)
+    instance.call_init(env, msg, sig_info)
 }
 
 /// Calls Wasm export "handle" and returns raw data from the contract.
@@ -107,12 +110,13 @@ pub fn call_handle_raw<S: Storage + 'static, A: Api + 'static, Q: Querier + 'sta
     instance: &mut Instance<S, A, Q>,
     env: &[u8],
     msg: &[u8],
+    sig_info: &[u8],
 ) -> VmResult<Vec<u8>> {
     instance.set_storage_readonly(false);
     /*
     call_raw(instance, "handle", &[env, msg], MAX_LENGTH_HANDLE)
     */
-    instance.call_handle(env, msg)
+    instance.call_handle(env, msg, sig_info)
 }
 
 /// Calls Wasm export "migrate" and returns raw data from the contract.

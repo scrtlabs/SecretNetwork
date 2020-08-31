@@ -37,10 +37,14 @@ func HealthCheck() ([]byte, error) {
 	return receiveVector(res), nil
 }
 
-func InitBootstrap() ([]byte, error) {
+func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	errmsg := C.Buffer{}
+	spidSlice := sendSlice(spid)
+	defer freeAfterSend(spidSlice)
+	apiKeySlice := sendSlice(apiKey)
+	defer freeAfterSend(apiKeySlice)
 
-	res, err := C.init_bootstrap(&errmsg)
+	res, err := C.init_bootstrap(spidSlice, apiKeySlice, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -109,10 +113,11 @@ func Instantiate(
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store *KVStore,
+	store KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
+	sigInfo []byte,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
@@ -120,12 +125,23 @@ func Instantiate(
 	defer freeAfterSend(p)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
-	db := buildDB(store, gasMeter)
+
+	// set up a new stack frame to handle iterators
+	counter := startContract()
+	defer endContract(counter)
+
+	dbState := buildDBState(store, counter)
+	db := buildDB(&dbState, gasMeter)
+
+	s := sendSlice(sigInfo)
+	defer freeAfterSend(s)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
+
 	errmsg := C.Buffer{}
-	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
+
+	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -139,10 +155,11 @@ func Handle(
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store *KVStore,
+	store KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
+	sigInfo []byte,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
@@ -150,12 +167,21 @@ func Handle(
 	defer freeAfterSend(p)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
-	db := buildDB(store, gasMeter)
+
+	// set up a new stack frame to handle iterators
+	counter := startContract()
+	defer endContract(counter)
+
+	dbState := buildDBState(store, counter)
+	db := buildDB(&dbState, gasMeter)
+	s := sendSlice(sigInfo)
+	defer freeAfterSend(s)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
 	errmsg := C.Buffer{}
-	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
+
+	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -169,7 +195,7 @@ func Migrate(
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store *KVStore,
+	store KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
@@ -180,11 +206,18 @@ func Migrate(
 	defer freeAfterSend(p)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
-	db := buildDB(store, gasMeter)
+
+	// set up a new stack frame to handle iterators
+	counter := startContract()
+	defer endContract(counter)
+
+	dbState := buildDBState(store, counter)
+	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
 	errmsg := C.Buffer{}
+
 	res, err := C.migrate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
@@ -198,7 +231,7 @@ func Query(
 	code_id []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store *KVStore,
+	store KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
@@ -207,11 +240,18 @@ func Query(
 	defer freeAfterSend(id)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
-	db := buildDB(store, gasMeter)
+
+	// set up a new stack frame to handle iterators
+	counter := startContract()
+	defer endContract(counter)
+
+	dbState := buildDBState(store, counter)
+	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
 	errmsg := C.Buffer{}
+
 	res, err := C.query(cache.ptr, id, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
@@ -230,10 +270,15 @@ func KeyGen() ([]byte, error) {
 	return receiveVector(res), nil
 }
 
-// KeyGen Seng KeyGen request to enclave
-func CreateAttestationReport() (bool, error) {
+// CreateAttestationReport Send CreateAttestationReport request to enclave
+func CreateAttestationReport(spid []byte, apiKey []byte) (bool, error) {
 	errmsg := C.Buffer{}
-	_, err := C.create_attestation_report(&errmsg)
+	spidSlice := sendSlice(spid)
+	defer freeAfterSend(spidSlice)
+	apiKeySlice := sendSlice(apiKey)
+	defer freeAfterSend(apiKeySlice)
+
+	_, err := C.create_attestation_report(spidSlice, apiKeySlice, &errmsg)
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
 	}
@@ -254,6 +299,10 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 /**** To error module ***/
 
 func errorWithMessage(err error, b C.Buffer) error {
+	// this checks for out of gas as a special case
+	if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+		return types.OutOfGasError{}
+	}
 	msg := receiveVector(b)
 	if msg == nil {
 		return err

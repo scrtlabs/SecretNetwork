@@ -348,7 +348,6 @@ secretcli q mint annual-provisions
 ```
 
 ### Staking
-
 ::: tip Note
 You can find CLI commands related to delegating under
 [Delegate](delegating-mainnet.md).

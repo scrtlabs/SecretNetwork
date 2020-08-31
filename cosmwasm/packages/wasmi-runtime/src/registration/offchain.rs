@@ -2,7 +2,6 @@
 /// These functions run off chain, and so are not limited by deterministic limitations. Feel free
 /// to go crazy with random generation entropy, time requirements, or whatever else
 ///
-
 use log::*;
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_types::{sgx_platform_info_t, sgx_update_info_bit_t};
@@ -16,16 +15,16 @@ use crate::consts::{
     ATTESTATION_CERTIFICATE_SAVE_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH,
     SEED_EXCH_CERTIFICATE_SAVE_PATH,
 };
-use crate::crypto::{KEY_MANAGER, Keychain, PUBLIC_KEY_SIZE};
+use crate::crypto::{Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
 #[cfg(feature = "SGX_MODE_HW")]
 use crate::registration::report::AttestationReport;
 use crate::storage::write_to_untrusted;
 use crate::utils::{attest_from_key, validate_const_ptr, validate_mut_ptr, validate_mut_slice};
 
 use super::attestation::create_attestation_certificate;
+use super::cert::verify_ra_cert;
 #[cfg(feature = "SGX_MODE_HW")]
 use super::cert::{ocall_get_update_info, verify_quote_status};
-use super::cert::verify_ra_cert;
 use super::seed_exchange::decrypt_seed;
 
 ///
@@ -35,12 +34,30 @@ use super::seed_exchange::decrypt_seed;
 /// key (seed + pk_io/sk_io). This happens once at the initialization of a chain. Returns the master
 /// public key (pk_io), which is saved on-chain, and used to propagate the seed to registering nodes
 ///
+/// # Safety
+///  Something should go here
 ///
 #[no_mangle]
-pub extern "C" fn ecall_init_bootstrap(public_key: &mut [u8; PUBLIC_KEY_SIZE]) -> sgx_status_t {
+pub unsafe extern "C" fn ecall_init_bootstrap(
+    public_key: &mut [u8; PUBLIC_KEY_SIZE],
+    spid: *const u8,
+    spid_len: u32,
+    api_key: *const u8,
+    api_key_len: u32,
+) -> sgx_status_t {
     if let Err(_e) = validate_mut_ptr(public_key.as_mut_ptr(), public_key.len()) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
+
+    if let Err(_e) = validate_const_ptr(spid, spid_len as usize) {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+    let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
+
+    if let Err(_e) = validate_const_ptr(api_key, api_key_len as usize) {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+    let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
     let mut key_manager = Keychain::new();
 
@@ -57,12 +74,17 @@ pub extern "C" fn ecall_init_bootstrap(public_key: &mut [u8; PUBLIC_KEY_SIZE]) -
     }
 
     let kp = key_manager.seed_exchange_key().unwrap();
-    if let Err(status) = attest_from_key(&kp, SEED_EXCH_CERTIFICATE_SAVE_PATH) {
+    if let Err(status) = attest_from_key(
+        &kp,
+        SEED_EXCH_CERTIFICATE_SAVE_PATH,
+        spid_slice,
+        api_key_slice,
+    ) {
         return status;
     }
 
     let kp = key_manager.get_consensus_io_exchange_keypair().unwrap();
-    if let Err(status) = attest_from_key(&kp, IO_CERTIFICATE_SAVE_PATH) {
+    if let Err(status) = attest_from_key(&kp, IO_CERTIFICATE_SAVE_PATH, spid_slice, api_key_slice) {
         return status;
     }
 
@@ -172,8 +194,25 @@ pub unsafe extern "C" fn ecall_init_node(
  *
  * This x509 certificate can be used in the future for mutual-RA cross-enclave TLS channels, or for
  * other creative usages.
+ * # Safety
+ * Something should go here
  */
-pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
+pub unsafe extern "C" fn ecall_get_attestation_report(
+    spid: *const u8,
+    spid_len: u32,
+    api_key: *const u8,
+    api_key_len: u32,
+) -> sgx_status_t {
+    if let Err(_e) = validate_const_ptr(spid, spid_len as usize) {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+    let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
+
+    if let Err(_e) = validate_const_ptr(api_key, api_key_len as usize) {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+    let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
+
     let kp = KEY_MANAGER.get_registration_key().unwrap();
     trace!(
         "ecall_get_attestation_report key pk: {:?}",
@@ -182,6 +221,8 @@ pub extern "C" fn ecall_get_attestation_report() -> sgx_status_t {
     let (_private_key_der, cert) = match create_attestation_certificate(
         &kp,
         sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+        spid_slice,
+        api_key_slice,
     ) {
         Err(e) => {
             error!("Error in create_attestation_certificate: {:?}", e);
@@ -238,7 +279,7 @@ fn print_local_report_info(cert: &[u8]) {
 
     let node_auth_result = NodeAuthResult::from(&report.sgx_quote_status);
     // print
-    match verify_quote_status(&report.sgx_quote_status) {
+    match verify_quote_status(&report.sgx_quote_status, &report.advisroy_ids) {
         Err(status) => match status {
             NodeAuthResult::SwHardeningAndConfigurationNeeded => {
                 println!("Platform status is SW_HARDENING_AND_CONFIGURATION_NEEDED. This means is updated but requires further BIOS configuration");

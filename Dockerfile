@@ -10,9 +10,12 @@ RUN apt-get update && \
     #### Base utilities ####
     jq \
     wget \
-    curl && \
+    curl \
+    bash-completion && \
     rm -rf /var/lib/apt/lists/*
 
+
+RUN echo "source /etc/profile.d/bash_completion.sh" >> ~/.bashrc
 
 ARG SGX_MODE=SW
 ENV SGX_MODE=${SGX_MODE}
@@ -56,6 +59,13 @@ RUN mkdir -p /root/.secretd/.compute/
 RUN mkdir -p /root/.sgx_secrets/
 RUN mkdir -p /root/.secretd/.node/
 # COPY ./packaging_docker/seed.json /root/.secretd/.compute/seed.json
+
+# Enable autocomplete
+RUN secretcli completion > /root/secretcli_completion
+RUN secretd completion > /root/secretd_completion
+
+RUN echo 'source /root/secretd_completion' >> ~/.bashrc
+RUN echo 'source /root/secretcli_completion' >> ~/.bashrc
 
 #ENV LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/:/opt/sgxsdk/lib64/
 

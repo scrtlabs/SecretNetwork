@@ -33,8 +33,6 @@ use std::string::String;
 use std::sync::Arc;
 use std::vec::Vec;
 
-#[cfg(feature = "SGX_MODE_HW")]
-use crate::consts::{API_KEY_FILE, SPID_FILE};
 use crate::crypto::KeyPair;
 #[cfg(feature = "SGX_MODE_HW")]
 use crate::imports::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote};
@@ -62,6 +60,8 @@ const REPORT_DATA_SIZE: usize = 32;
 pub fn create_attestation_certificate(
     kp: &KeyPair,
     sign_type: sgx_quote_sign_type_t,
+    _spid: &[u8],
+    _api_key: &[u8],
 ) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     // init sgx ecc
     let ecc_handle = SgxEccHandle::new();
@@ -121,6 +121,8 @@ pub fn create_report_with_data(
 pub fn create_attestation_certificate(
     kp: &KeyPair,
     sign_type: sgx_quote_sign_type_t,
+    spid: &[u8],
+    api_key: &[u8],
 ) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     // extract private key from KeyPair
     let ecc_handle = SgxEccHandle::new();
@@ -130,7 +132,8 @@ pub fn create_attestation_certificate(
     let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
 
     // call create_report using the secp256k1 public key, and __not__ the P256 one
-    let signed_report = match create_attestation_report(&kp.get_pubkey(), sign_type) {
+    let signed_report = match create_attestation_report(&kp.get_pubkey(), sign_type, spid, api_key)
+    {
         Ok(r) => r,
         Err(e) => {
             error!("Error creating attestation report");
@@ -192,6 +195,8 @@ pub fn get_mr_enclave() -> Result<[u8; 32], sgx_status_t> {
 pub fn create_attestation_report(
     pub_k: &[u8; 32],
     sign_type: sgx_quote_sign_type_t,
+    spid_file: &[u8],
+    api_key_file: &[u8],
 ) -> Result<EndorsedAttestationReport, sgx_status_t> {
     // Workflow:
     // (1) ocall to get the target_info structure (ti) and epid group id (eg)
@@ -241,7 +246,7 @@ pub fn create_attestation_report(
     trace!("Got ias_sock successfully = {}", ias_sock);
 
     // Now sigrl_vec is the revocation list, a vec<u8>
-    let sigrl_vec: Vec<u8> = get_sigrl_from_intel(ias_sock, eg_num);
+    let sigrl_vec: Vec<u8> = get_sigrl_from_intel(ias_sock, eg_num, api_key_file);
 
     // (2) Generate the report
     // Fill ecc256 public key into report_data
@@ -315,7 +320,7 @@ pub fn create_attestation_report(
     let p_report = (&rep) as *const sgx_report_t;
     let quote_type = sign_type;
 
-    let spid: sgx_spid_t = hex::decode_spid(&String::from_utf8_lossy(SPID_FILE));
+    let spid: sgx_spid_t = hex::decode_spid(&String::from_utf8_lossy(spid_file));
 
     let p_spid = &spid as *const sgx_spid_t;
     let p_nonce = &quote_nonce as *const sgx_quote_nonce_t;
@@ -411,7 +416,8 @@ pub fn create_attestation_report(
         return Err(rt);
     }
 
-    let (attn_report, signature, signing_cert) = get_report_from_intel(ias_sock, quote_vec);
+    let (attn_report, signature, signing_cert) =
+        get_report_from_intel(ias_sock, quote_vec, api_key_file);
     Ok(EndorsedAttestationReport {
         report: attn_report.into_bytes(),
         signature,
@@ -551,10 +557,10 @@ pub fn make_ias_client_config() -> rustls::ClientConfig {
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn get_sigrl_from_intel(fd: c_int, gid: u32) -> Vec<u8> {
+pub fn get_sigrl_from_intel(fd: c_int, gid: u32, api_key_file: &[u8]) -> Vec<u8> {
     trace!("get_sigrl_from_intel fd = {:?}", fd);
     let config = make_ias_client_config();
-    let ias_key = String::from_utf8_lossy(API_KEY_FILE).trim_end().to_owned();
+    let ias_key = String::from_utf8_lossy(api_key_file).trim_end().to_owned();
 
     let req = format!("GET {}{:08x} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key: {}\r\nConnection: Close\r\n\r\n",
                       SIGRL_SUFFIX,
@@ -593,12 +599,16 @@ pub fn get_sigrl_from_intel(fd: c_int, gid: u32) -> Vec<u8> {
 
 // TODO: support pse
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn get_report_from_intel(fd: c_int, quote: Vec<u8>) -> (String, Vec<u8>, Vec<u8>) {
+pub fn get_report_from_intel(
+    fd: c_int,
+    quote: Vec<u8>,
+    api_key_file: &[u8],
+) -> (String, Vec<u8>, Vec<u8>) {
     trace!("get_report_from_intel fd = {:?}", fd);
     let config = make_ias_client_config();
     let encoded_quote = base64::encode(&quote[..]);
     let encoded_json = format!("{{\"isvEnclaveQuote\":\"{}\"}}\r\n", encoded_quote);
-    let ias_key = String::from_utf8_lossy(API_KEY_FILE).trim_end().to_owned();
+    let ias_key = String::from_utf8_lossy(api_key_file).trim_end().to_owned();
 
     let req = format!("POST {} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key:{}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
                       REPORT_SUFFIX,
@@ -637,24 +647,25 @@ fn as_u32_le(array: [u8; 4]) -> u32 {
         + ((array[3] as u32) << 24)
 }
 
-#[cfg(feature = "test")]
-pub mod tests {
-    use crate::crypto::KeyPair;
-    use crate::registration::cert::verify_ra_cert;
-
-    use super::sgx_quote_sign_type_t;
-    use super::{create_attestation_certificate, get_ias_api_key, load_spid};
-
-    // todo: replace public key with real value
-    fn test_create_attestation_certificate() {
-        let kp = KeyPair::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").unwrap();
-
-        let cert =
-            create_attestation_certificate(&kp, sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE)
-                .unwrap();
-
-        let result = verify_ra_cert(cert[1]).unwrap();
-
-        assert_eq!(result, kp.get_pubkey())
-    }
-}
+// commented out because it only contains one test
+// #[cfg(feature = "test")]
+// pub mod tests {
+//     use crate::crypto::KeyPair;
+//     use crate::registration::cert::verify_ra_cert;
+//
+//     use super::create_attestation_certificate;
+//     use super::sgx_quote_sign_type_t;
+//
+//     // todo: replace public key with real value
+//     pub fn test_create_attestation_certificate() {
+//         let kp = KeyPair::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").unwrap();
+//
+//         let cert =
+//             create_attestation_certificate(&kp, sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE)
+//                 .unwrap();
+//
+//         let result = verify_ra_cert(cert[1]).unwrap();
+//
+//         assert_eq!(result, kp.get_pubkey())
+//     }
+// }

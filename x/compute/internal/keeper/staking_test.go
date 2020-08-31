@@ -100,7 +100,7 @@ func TestInitializeStaking(t *testing.T) {
 	assert.Equal(t, v.GetDelegatorShares(), sdk.NewDec(1234567))
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000), sdk.NewInt64Coin("stake", 500000))
-	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
+	creator, creatorPrivKey := createFakeFundedAccount(ctx, accKeeper, deposit)
 
 	// upload staking derivates code
 	stakingCode, err := ioutil.ReadFile("./testdata/staking.wasm")
@@ -123,7 +123,8 @@ func TestInitializeStaking(t *testing.T) {
 	initBz, err = testEncrypt(t, keeper, ctx, nil, stakingID, initBz)
 	require.NoError(t, err)
 
-	stakingAddr, err := keeper.Instantiate(ctx, stakingID, creator, nil, initBz, "staking derivates - DRV", nil)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initBz, stakingID, nil)
+	stakingAddr, err := keeper.Instantiate(ctx, stakingID, creator /* , nil */, initBz, "staking derivates - DRV", nil, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, stakingAddr)
 
@@ -143,8 +144,7 @@ func TestInitializeStaking(t *testing.T) {
 	badBz, err := json.Marshal(&badInitMsg)
 	require.NoError(t, err)
 
-	_, _, initErr := initHelper(t, keeper, ctx, stakingID, creator, string(badBz), true, defaultGasForTests)
-	// _, err = keeper.Instantiate(ctx, stakingID, creator, nil, badBz, "missing validator", nil)
+	_, _, initErr := initHelper(t, keeper, ctx, stakingID, creator, creatorPrivKey, string(badBz), true, defaultGasForTests)
 	require.Error(t, initErr)
 	require.Error(t, initErr.GenericErr)
 	require.Equal(t, fmt.Sprintf("%s is not in the current validator set", sdk.ValAddress(bob).String()), initErr.GenericErr.Msg)
@@ -189,7 +189,7 @@ func initializeStaking(t *testing.T) initInfo {
 	assert.Equal(t, v.Status, sdk.Bonded)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000), sdk.NewInt64Coin("stake", 500000))
-	creator := createFakeFundedAccount(ctx, accKeeper, deposit)
+	creator, creatorPrivKey := createFakeFundedAccount(ctx, accKeeper, deposit)
 
 	// upload staking derivates code
 	stakingCode, err := ioutil.ReadFile("./testdata/staking.wasm")
@@ -212,7 +212,8 @@ func initializeStaking(t *testing.T) initInfo {
 	initBz, err = testEncrypt(t, keeper, ctx, nil, stakingID, initBz)
 	require.NoError(t, err)
 
-	stakingAddr, err := keeper.Instantiate(ctx, stakingID, creator, nil, initBz, "staking derivates - DRV", nil)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initBz, stakingID, nil)
+	stakingAddr, err := keeper.Instantiate(ctx, stakingID, creator /* , nil */, initBz, "staking derivates - DRV", nil, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, stakingAddr)
 
@@ -243,7 +244,7 @@ func TestBonding(t *testing.T) {
 	// bob has 160k, putting 80k into the contract
 	full := sdk.NewCoins(sdk.NewInt64Coin("stake", 160000))
 	funds := sdk.NewCoins(sdk.NewInt64Coin("stake", 80000))
-	bob := createFakeFundedAccount(ctx, accKeeper, full)
+	bob, privBob := createFakeFundedAccount(ctx, accKeeper, full)
 
 	// check contract state before
 	assertBalance(t, ctx, keeper, contractAddr, bob, "0")
@@ -257,7 +258,8 @@ func TestBonding(t *testing.T) {
 	require.NoError(t, err)
 	bondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, bondBz)
 	require.NoError(t, err)
-	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds)
+	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, bondBz, contractAddr, funds)
+	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil)
 	require.NoError(t, err)
 
 	// check some account values - the money is on neither account (cuz it is bonded)
@@ -294,7 +296,7 @@ func TestUnbonding(t *testing.T) {
 	// bob has 160k, putting 80k into the contract
 	full := sdk.NewCoins(sdk.NewInt64Coin("stake", 160000))
 	funds := sdk.NewCoins(sdk.NewInt64Coin("stake", 80000))
-	bob := createFakeFundedAccount(ctx, accKeeper, full)
+	bob, privBob := createFakeFundedAccount(ctx, accKeeper, full)
 
 	bond := StakingHandleMsg{
 		Bond: &struct{}{},
@@ -303,7 +305,8 @@ func TestUnbonding(t *testing.T) {
 	require.NoError(t, err)
 	bondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, bondBz)
 	require.NoError(t, err)
-	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds)
+	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, bondBz, contractAddr, funds)
+	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil)
 	require.NoError(t, err)
 
 	// update height a bit
@@ -319,7 +322,8 @@ func TestUnbonding(t *testing.T) {
 	require.NoError(t, err)
 	unbondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, unbondBz)
 	require.NoError(t, err)
-	_, err = keeper.Execute(ctx, contractAddr, bob, unbondBz, nil)
+	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, unbondBz, contractAddr, nil)
+	_, err = keeper.Execute(ctx, contractAddr, bob, unbondBz, nil, nil)
 	require.NoError(t, err)
 
 	// check some account values - the money is on neither account (cuz it is bonded)
@@ -366,7 +370,7 @@ func TestReinvest(t *testing.T) {
 	// full is 2x funds, 1x goes to the contract, other stays on his wallet
 	full := sdk.NewCoins(sdk.NewInt64Coin("stake", 400000))
 	funds := sdk.NewCoins(sdk.NewInt64Coin("stake", 200000))
-	bob := createFakeFundedAccount(ctx, accKeeper, full)
+	bob, privBob := createFakeFundedAccount(ctx, accKeeper, full)
 
 	// we will stake 200k to a validator with 1M self-bond
 	// this means we should get 1/6 of the rewards
@@ -377,7 +381,8 @@ func TestReinvest(t *testing.T) {
 	require.NoError(t, err)
 	bondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, bondBz)
 	require.NoError(t, err)
-	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds)
+	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, bondBz, contractAddr, funds)
+	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil)
 	require.NoError(t, err)
 
 	// update height a bit to solidify the delegation
@@ -393,7 +398,8 @@ func TestReinvest(t *testing.T) {
 	require.NoError(t, err)
 	reinvestBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, reinvestBz)
 	require.NoError(t, err)
-	_, err = keeper.Execute(ctx, contractAddr, bob, reinvestBz, nil)
+	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, reinvestBz, contractAddr, nil)
+	_, err = keeper.Execute(ctx, contractAddr, bob, reinvestBz, nil, nil)
 	require.NoError(t, err)
 
 	// check some account values - the money is on neither account (cuz it is bonded)
@@ -429,7 +435,7 @@ func addValidator(ctx sdk.Context, stakingKeeper staking.Keeper, accountKeeper a
 
 	addr := sdk.ValAddress(accAddr)
 
-	owner := createFakeFundedAccount(ctx, accountKeeper, sdk.Coins{value})
+	owner, _ := createFakeFundedAccount(ctx, accountKeeper, sdk.Coins{value})
 
 	msg := staking.MsgCreateValidator{
 		Description: types.Description{

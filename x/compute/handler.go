@@ -3,14 +3,9 @@ package compute
 import (
 	"fmt"
 
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
-)
-
-const (
-	AttributeKeyContract = "contract_address"
-	AttributeKeyCodeID   = "code_id"
-	AttributeSigner      = "signer"
 )
 
 // NewHandler returns a handler for "bank" type messages.
@@ -22,29 +17,18 @@ func NewHandler(k Keeper) sdk.Handler {
 
 		case MsgStoreCode:
 			return handleStoreCode(ctx, k, &msg)
-		case *MsgStoreCode:
-			return handleStoreCode(ctx, k, msg)
-
 		case MsgInstantiateContract:
 			return handleInstantiate(ctx, k, &msg)
-		case *MsgInstantiateContract:
-			return handleInstantiate(ctx, k, msg)
-
 		case MsgExecuteContract:
 			return handleExecute(ctx, k, &msg)
-		case *MsgExecuteContract:
-			return handleExecute(ctx, k, msg)
-
-		case *MsgMigrateContract:
-			return handleMigration(ctx, k, msg)
-		case MsgMigrateContract:
-			return handleMigration(ctx, k, &msg)
-
-		case *MsgUpdateAdministrator:
-			return handleUpdateContractAdmin(ctx, k, msg)
-		case MsgUpdateAdministrator:
-			return handleUpdateContractAdmin(ctx, k, &msg)
-
+			/*
+				case MsgMigrateContract:
+					return handleMigration(ctx, k, &msg)
+				case MsgUpdateAdmin:
+					return handleUpdateContractAdmin(ctx, k, &msg)
+				case MsgClearAdmin:
+					return handleClearContractAdmin(ctx, k, &msg)
+			*/
 		default:
 			errMsg := fmt.Sprintf("unrecognized wasm message type: %T", msg)
 			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, errMsg)
@@ -80,8 +64,8 @@ func handleStoreCode(ctx sdk.Context, k Keeper, msg *MsgStoreCode) (*sdk.Result,
 	ourEvent := sdk.NewEvent(
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-		sdk.NewAttribute(AttributeSigner, msg.Sender.String()),
-		sdk.NewAttribute(AttributeKeyCodeID, fmt.Sprintf("%d", codeID)),
+		sdk.NewAttribute(types.AttributeKeySigner, msg.Sender.String()),
+		sdk.NewAttribute(types.AttributeKeyCodeID, fmt.Sprintf("%d", codeID)),
 	)
 
 	return &sdk.Result{
@@ -91,7 +75,7 @@ func handleStoreCode(ctx sdk.Context, k Keeper, msg *MsgStoreCode) (*sdk.Result,
 }
 
 func handleInstantiate(ctx sdk.Context, k Keeper, msg *MsgInstantiateContract) (*sdk.Result, error) {
-	contractAddr, err := k.Instantiate(ctx, msg.Code, msg.Sender, msg.Admin, msg.InitMsg, msg.Label, msg.InitFunds)
+	contractAddr, err := k.Instantiate(ctx, msg.CodeID, msg.Sender, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSignature)
 	if err != nil {
 		return nil, err
 	}
@@ -100,9 +84,9 @@ func handleInstantiate(ctx sdk.Context, k Keeper, msg *MsgInstantiateContract) (
 	ourEvent := sdk.NewEvent(
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-		sdk.NewAttribute(AttributeSigner, msg.Sender.String()),
-		sdk.NewAttribute(AttributeKeyCodeID, fmt.Sprintf("%d", msg.Code)),
-		sdk.NewAttribute(AttributeKeyContract, contractAddr.String()),
+		sdk.NewAttribute(types.AttributeKeySigner, msg.Sender.String()),
+		sdk.NewAttribute(types.AttributeKeyCodeID, fmt.Sprintf("%d", msg.CodeID)),
+		sdk.NewAttribute(types.AttributeKeyContract, contractAddr.String()),
 	)
 
 	// TODO Assaf:
@@ -116,7 +100,14 @@ func handleInstantiate(ctx sdk.Context, k Keeper, msg *MsgInstantiateContract) (
 }
 
 func handleExecute(ctx sdk.Context, k Keeper, msg *MsgExecuteContract) (*sdk.Result, error) {
-	res, err := k.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds)
+	res, err := k.Execute(
+		ctx,
+		msg.Contract,
+		msg.Sender,
+		msg.Msg,
+		msg.SentFunds,
+		msg.CallbackSignature,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -125,17 +116,18 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *MsgExecuteContract) (*sdk.Res
 	ourEvent := sdk.NewEvent(
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-		sdk.NewAttribute(AttributeSigner, msg.Sender.String()),
-		sdk.NewAttribute(AttributeKeyContract, msg.Contract.String()),
+		sdk.NewAttribute(types.AttributeKeySigner, msg.Sender.String()),
+		sdk.NewAttribute(types.AttributeKeyContract, msg.Contract.String()),
 	)
 
 	res.Events = append(events, ourEvent)
 
-	return &res, nil
+	return res, nil
 }
 
+/*
 func handleMigration(ctx sdk.Context, k Keeper, msg *MsgMigrateContract) (*sdk.Result, error) {
-	res, err := k.Migrate(ctx, msg.Contract, msg.Sender, msg.Code, msg.MigrateMsg)
+	res, err := k.Migrate(ctx, msg.Contract, msg.Sender, msg.CodeID, msg.MigrateMsg) // for MsgMigrateContract, there is only one signer which is msg.Sender (https://github.com/enigmampc/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L228-L230)
 	if err != nil {
 		return nil, err
 	}
@@ -144,14 +136,14 @@ func handleMigration(ctx sdk.Context, k Keeper, msg *MsgMigrateContract) (*sdk.R
 	ourEvent := sdk.NewEvent(
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-		sdk.NewAttribute(AttributeSigner, msg.Sender.String()),
-		sdk.NewAttribute(AttributeKeyContract, msg.Contract.String()),
+		sdk.NewAttribute(types.AttributeKeySigner, msg.Sender.String()),
+		sdk.NewAttribute(types.AttributeKeyContract, msg.Contract.String()),
 	)
 	res.Events = append(events, ourEvent)
 	return res, nil
 }
 
-func handleUpdateContractAdmin(ctx sdk.Context, k Keeper, msg *MsgUpdateAdministrator) (*sdk.Result, error) {
+func handleUpdateContractAdmin(ctx sdk.Context, k Keeper, msg *MsgUpdateAdmin) (*sdk.Result, error) {
 	if err := k.UpdateContractAdmin(ctx, msg.Contract, msg.Sender, msg.NewAdmin); err != nil {
 		return nil, err
 	}
@@ -159,10 +151,27 @@ func handleUpdateContractAdmin(ctx sdk.Context, k Keeper, msg *MsgUpdateAdminist
 	ourEvent := sdk.NewEvent(
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-		sdk.NewAttribute(AttributeSigner, msg.Sender.String()),
-		sdk.NewAttribute(AttributeKeyContract, msg.Contract.String()),
+		sdk.NewAttribute(types.AttributeKeySigner, msg.Sender.String()),
+		sdk.NewAttribute(types.AttributeKeyContract, msg.Contract.String()),
 	)
 	return &sdk.Result{
 		Events: append(events, ourEvent),
 	}, nil
 }
+
+func handleClearContractAdmin(ctx sdk.Context, k Keeper, msg *MsgClearAdmin) (*sdk.Result, error) {
+	if err := k.ClearContractAdmin(ctx, msg.Contract, msg.Sender); err != nil {
+		return nil, err
+	}
+	events := ctx.EventManager().Events()
+	ourEvent := sdk.NewEvent(
+		sdk.EventTypeMessage,
+		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
+		sdk.NewAttribute(types.AttributeKeySigner, msg.Sender.String()),
+		sdk.NewAttribute(types.AttributeKeyContract, msg.Contract.String()),
+	)
+	return &sdk.Result{
+		Events: append(events, ourEvent),
+	}, nil
+}
+*/
