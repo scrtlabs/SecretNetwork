@@ -1,6 +1,5 @@
 package types
 
-import "C"
 import (
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
