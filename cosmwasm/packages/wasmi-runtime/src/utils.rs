@@ -37,7 +37,7 @@ impl<T, S> UnwrapOrSgxErrorUnexpected for Result<T, S> {
 
 pub fn validate_mut_ptr(ptr: *mut u8, ptr_len: usize) -> SgxResult<()> {
     if rsgx_raw_is_outside_enclave(ptr, ptr_len) {
-        error!("Tried to access memory outside enclave -- rsgx_slice_is_outside_enclave");
+        warn!("Tried to access memory outside enclave -- rsgx_slice_is_outside_enclave");
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
     rsgx_sfence();
@@ -46,7 +46,7 @@ pub fn validate_mut_ptr(ptr: *mut u8, ptr_len: usize) -> SgxResult<()> {
 
 pub fn validate_const_ptr(ptr: *const u8, ptr_len: usize) -> SgxResult<()> {
     if ptr.is_null() || ptr_len == 0 {
-        error!("Tried to access an empty pointer - ptr.is_null()");
+        warn!("Tried to access an empty pointer - ptr.is_null()");
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
     rsgx_lfence();
@@ -55,7 +55,7 @@ pub fn validate_const_ptr(ptr: *const u8, ptr_len: usize) -> SgxResult<()> {
 
 pub fn validate_mut_slice(mut_slice: &mut [u8]) -> SgxResult<()> {
     if rsgx_slice_is_outside_enclave(mut_slice) {
-        error!("Tried to access memory outside enclave -- rsgx_slice_is_outside_enclave");
+        warn!("Tried to access memory outside enclave -- rsgx_slice_is_outside_enclave");
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
     rsgx_sfence();
@@ -80,7 +80,6 @@ pub fn attest_from_key(
         }
         Ok(res) => res,
     };
-    // info!("private key {:?}, cert: {:?}", private_key_der, cert);
 
     if let Err(status) = write_to_untrusted(cert.as_slice(), save_path) {
         return Err(status);
