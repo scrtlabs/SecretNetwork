@@ -210,9 +210,9 @@ jobs:
       - name: Install go-bindata
         run: go get -u github.com/jteeuwen/go-bindata/...
       - name: Build MacOS CLI
-          run: |
-            source "$HOME/.sgxsdk/sgxsdk/environment"
-            make build_macos
+        run: |
+          source "$HOME/.sgxsdk/sgxsdk/environment"
+          make build_macos
       - name: Build Windows CLI
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
