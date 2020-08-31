@@ -69,9 +69,10 @@ fn open(filepath: &str) -> Result<Ed25519PrivateKey, EnclaveError> {
 pub mod tests {
 
     use super::{open, seal};
+    use log::*;
 
     // todo: fix test vectors to actually work
-    fn test_seal() {
+    pub fn test_seal() {
         let key = b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
         if let Err(e) = seal(key, "file") {
@@ -79,23 +80,17 @@ pub mod tests {
         };
     }
 
-    // todo: fix test vectors to actually work
-    fn test_open() {
-        let key = b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-
-        if let Err(e) = seal(key, "file") {
-            error!("Failed to seal data: {:?}", e)
-            // todo: fail
-        };
-
-        data = match open("file") {
-            Err(e) => {
-                error!("Failed to open data: {:?}", e)
-                // todo: fail
-            }
-            Ok(res) => res,
-        };
-
-        assert_eq!(data, key);
-    }
+    // // todo: fix test vectors to actually work
+    // pub fn test_open() {
+    //     let key = b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    //
+    //     if let Err(e) = seal(key, "file") {
+    //         error!("Failed to seal data: {:?}", e)
+    //         // todo: fail
+    //     };
+    //
+    //     let data = open("file").expect(&format!("Failed to open data: {:?}", e));
+    //
+    //     assert_eq!(data, key);
+    // }
 }

@@ -10,5 +10,5 @@ import (
 func RegisterRoutes(cliCtx context.CLIContext, r *mux.Router) {
 	registerQueryRoutes(cliCtx, r)
 	registerTxRoutes(cliCtx, r)
-	registerNewTxRoutes(cliCtx, r)
+	// registerNewTxRoutes(cliCtx, r)
 }

@@ -29,6 +29,7 @@ overflow-checks = true
 [features]
 default = ["backtraces"]
 backtraces = ["cosmwasm-std/backtraces"]
+with_floats = []
 
 [dependencies]
 cosmwasm-std = { path = "../../../../../../cosmwasm/packages/std" }

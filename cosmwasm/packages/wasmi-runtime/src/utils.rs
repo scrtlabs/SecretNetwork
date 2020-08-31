@@ -46,7 +46,7 @@ pub fn validate_mut_ptr(ptr: *mut u8, ptr_len: usize) -> SgxResult<()> {
 
 pub fn validate_const_ptr(ptr: *const u8, ptr_len: usize) -> SgxResult<()> {
     if ptr.is_null() || ptr_len == 0 {
-        error!("Tried to access an empty pointer - encrypted_seed.is_null()");
+        error!("Tried to access an empty pointer - ptr.is_null()");
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
     rsgx_lfence();
@@ -62,10 +62,17 @@ pub fn validate_mut_slice(mut_slice: &mut [u8]) -> SgxResult<()> {
     Ok(())
 }
 
-pub fn attest_from_key(kp: &KeyPair, save_path: &str) -> SgxResult<()> {
+pub fn attest_from_key(
+    kp: &KeyPair,
+    save_path: &str,
+    spid: &[u8],
+    api_key: &[u8],
+) -> SgxResult<()> {
     let (_, cert) = match create_attestation_certificate(
         &kp,
         sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+        spid,
+        api_key,
     ) {
         Err(e) => {
             error!("Error in create_attestation_certificate: {:?}", e);

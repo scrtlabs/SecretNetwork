@@ -1,18 +1,20 @@
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 
+use crate::addresses::{CanonicalAddr, HumanAddr};
 use crate::coins::Coin;
 use crate::encoding::Binary;
-use crate::errors::{generic_err, invalid_utf8, StdResult, SystemError, SystemResult};
+use crate::errors::{StdError, StdResult, SystemError, SystemResult};
 use crate::query::{
     AllBalanceResponse, AllDelegationsResponse, BalanceResponse, BankQuery, BondedDenomResponse,
-    DelegationResponse, FullDelegation, QueryRequest, StakingQuery, Validator, ValidatorsResponse,
-    WasmQuery,
+    DelegationResponse, DistQuery, FullDelegation, GovQuery, MintQuery, QueryRequest, StakingQuery,
+    Validator, ValidatorsResponse, WasmQuery,
 };
 use crate::serde::{from_slice, to_binary};
 use crate::storage::MemoryStorage;
 use crate::traits::{Api, Extern, Querier, QuerierResult};
-use crate::types::{BlockInfo, CanonicalAddr, ContractInfo, Env, HumanAddr, MessageInfo, Never};
+use crate::types::{BlockInfo, ContractInfo, Empty, Env, MessageInfo};
+use crate::{RewardsResponse, UnbondingDelegationsResponse};
 
 pub const MOCK_CONTRACT_ADDR: &str = "cosmos2contract";
 
@@ -71,10 +73,14 @@ impl Api for MockApi {
     fn canonical_address(&self, human: &HumanAddr) -> StdResult<CanonicalAddr> {
         // Dummy input validation. This is more sophisticated for formats like bech32, where format and checksum are validated.
         if human.len() < 3 {
-            return Err(generic_err("Invalid input: human address too short"));
+            return Err(StdError::generic_err(
+                "Invalid input: human address too short",
+            ));
         }
         if human.len() > self.canonical_length {
-            return Err(generic_err("Invalid input: human address too long"));
+            return Err(StdError::generic_err(
+                "Invalid input: human address too long",
+            ));
         }
 
         let mut out = Vec::from(human.as_str());
@@ -87,7 +93,7 @@ impl Api for MockApi {
 
     fn human_address(&self, canonical: &CanonicalAddr) -> StdResult<HumanAddr> {
         if canonical.len() != self.canonical_length {
-            return Err(generic_err(
+            return Err(StdError::generic_err(
                 "Invalid input: canonical address length not correct",
             ));
         }
@@ -100,7 +106,7 @@ impl Api for MockApi {
             .filter(|&x| x != 0)
             .collect();
         // decode UTF-8 bytes into string
-        let human = String::from_utf8(trimmed).map_err(invalid_utf8)?;
+        let human = String::from_utf8(trimmed).map_err(StdError::invalid_utf8)?;
         Ok(HumanAddr(human))
     }
 }
@@ -108,7 +114,7 @@ impl Api for MockApi {
 /// Just set sender and sent funds for the message. The rest uses defaults.
 /// The sender will be canonicalized internally to allow developers pasing in human readable senders.
 /// This is intended for use in test code only.
-pub fn mock_env<T: Api, U: Into<HumanAddr>>(api: &T, sender: U, sent: &[Coin]) -> Env {
+pub fn mock_env<U: Into<HumanAddr>>(sender: U, sent: &[Coin]) -> Env {
     Env {
         block: BlockInfo {
             height: 12_345,
@@ -116,16 +122,14 @@ pub fn mock_env<T: Api, U: Into<HumanAddr>>(api: &T, sender: U, sent: &[Coin]) -
             chain_id: "cosmos-testnet-14002".to_string(),
         },
         message: MessageInfo {
-            sender: api.canonical_address(&sender.into()).unwrap(),
+            sender: sender.into(),
             sent_funds: sent.to_vec(),
         },
         contract: ContractInfo {
-            address: api
-                .canonical_address(&HumanAddr::from(MOCK_CONTRACT_ADDR))
-                .unwrap(),
+            address: HumanAddr::from(MOCK_CONTRACT_ADDR),
         },
         contract_key: Some("".to_string()),
-        contract_code_hash: Some("".to_string()),
+        contract_code_hash: "".to_string(),
     }
 }
 
@@ -135,11 +139,14 @@ pub type MockQuerierCustomHandlerResult = SystemResult<StdResult<Binary>>;
 
 /// MockQuerier holds an immutable table of bank balances
 /// TODO: also allow querying contracts
-pub struct MockQuerier<C: DeserializeOwned = Never> {
+pub struct MockQuerier<C: DeserializeOwned = Empty> {
     bank: BankQuerier,
     staking: StakingQuerier,
     // placeholder to add support later
     wasm: NoWasmQuerier,
+    dist: DistQuerier,
+    mint: MintQuerier,
+    gov: GovQuerier,
     /// A handler to handle custom queries. This is set to a dummy handler that
     /// always errors by default. Update it via `with_custom_handler`.
     ///
@@ -153,6 +160,9 @@ impl<C: DeserializeOwned> MockQuerier<C> {
             bank: BankQuerier::new(balances),
             staking: StakingQuerier::default(),
             wasm: NoWasmQuerier {},
+            dist: DistQuerier {},
+            mint: MintQuerier {},
+            gov: GovQuerier {},
             // strange argument notation suggested as a workaround here: https://github.com/rust-lang/rust/issues/41078#issuecomment-294296365
             custom_handler: Box::from(|_: &_| -> MockQuerierCustomHandlerResult {
                 Err(SystemError::UnsupportedRequest {
@@ -212,6 +222,9 @@ impl<C: DeserializeOwned> MockQuerier<C> {
             QueryRequest::Custom(custom_query) => (*self.custom_handler)(custom_query),
             QueryRequest::Staking(staking_query) => self.staking.query(staking_query),
             QueryRequest::Wasm(msg) => self.wasm.query(msg),
+            QueryRequest::Dist(msg) => self.dist.query(msg),
+            QueryRequest::Mint(msg) => self.mint.query(msg),
+            QueryRequest::Gov(msg) => self.gov.query(msg),
         }
     }
 }
@@ -229,6 +242,42 @@ impl NoWasmQuerier {
         }
         .clone();
         Err(SystemError::NoSuchContract { addr })
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct GovQuerier {}
+
+impl GovQuerier {
+    pub fn query(&self, _request: &GovQuery) -> QuerierResult {
+        QuerierResult::Ok(Ok(Binary::default()))
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct MintQuerier {}
+
+impl MintQuerier {
+    pub fn query(&self, _request: &MintQuery) -> QuerierResult {
+        QuerierResult::Ok(Ok(Binary::default()))
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct DistQuerier {}
+
+impl DistQuerier {
+    pub fn query(&self, request: &DistQuery) -> QuerierResult {
+        match request {
+            DistQuery::Rewards { .. } => {
+                // proper error on not found, serialize result on found
+                let resp = RewardsResponse {
+                    rewards: vec![],
+                    total: vec![],
+                };
+                Ok(to_binary(&resp))
+            }
+        }
     }
 }
 
@@ -328,6 +377,17 @@ impl StakingQuerier {
                 };
                 Ok(to_binary(&res))
             }
+            StakingQuery::UnbondingDelegations { delegator } => {
+                let delegations: Vec<_> = self
+                    .delegations
+                    .iter()
+                    .filter(|d| &d.delegator == delegator)
+                    .cloned()
+                    .map(|d| d.into())
+                    .collect();
+                let res = UnbondingDelegationsResponse { delegations };
+                Ok(to_binary(&res))
+            }
         }
     }
 }
@@ -341,12 +401,11 @@ mod test {
     #[test]
     fn mock_env_arguments() {
         let name = HumanAddr("my name".to_string());
-        let api = MockApi::new(20);
 
         // make sure we can generate with &str, &HumanAddr, and HumanAddr
-        let a = mock_env(&api, "my name", &coins(100, "atom"));
-        let b = mock_env(&api, &name, &coins(100, "atom"));
-        let c = mock_env(&api, name, &coins(100, "atom"));
+        let a = mock_env("my name", &coins(100, "atom"));
+        let b = mock_env(&name, &coins(100, "atom"));
+        let c = mock_env(name, &coins(100, "atom"));
 
         // and the results are the same
         assert_eq!(a, b);

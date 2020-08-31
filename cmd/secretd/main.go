@@ -24,6 +24,8 @@ import (
 	"github.com/enigmampc/cosmos-sdk/baseapp"
 	"github.com/enigmampc/cosmos-sdk/client/flags"
 
+	//"github.com/CosmWasm/wasmd/app"
+
 	app "github.com/enigmampc/SecretNetwork"
 	scrt "github.com/enigmampc/SecretNetwork/types"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
@@ -104,7 +106,7 @@ func main() {
 	}
 
 	queryGasLimitTemplate := `
-# query-gas-limit sets the gas limit under which your node will run smart sontracts queries.
+# query-gas-limit sets the gas limit under which your node will run smart contracts queries.
 # Queries that consume more than this value will be terminated prematurely with an error.
 # This is a good way to protect your node from DoS by heavy queries.
 query-gas-limit = 3000000
@@ -154,8 +156,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer) abci.Application
 		baseapp.SetMinGasPrices(viper.GetString(server.FlagMinGasPrices)),
 		baseapp.SetHaltHeight(viper.GetUint64(server.FlagHaltHeight)),
 		baseapp.SetHaltTime(viper.GetUint64(server.FlagHaltTime)),
-		baseapp.SetInterBlockCache(cache),
-	)
+		baseapp.SetInterBlockCache(cache))
 }
 
 func exportAppStateAndTMValidators(

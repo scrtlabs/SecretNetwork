@@ -1,3 +1,4 @@
+#![feature(try_reserve)]
 // similar trick to get the IDE to use sgx_tstd even when it doesn't know we're targeting SGX
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
@@ -24,16 +25,13 @@ pub mod registration;
 
 mod consts;
 mod wasm;
-//mod contract_operations;
-//mod contract_validation;
 mod cosmwasm;
 mod crypto;
-// mod errors;
-// mod gas;
 mod results;
-//mod runtime;
 mod storage;
 mod utils;
+
+mod tests;
 
 static LOGGER: SimpleLogger = SimpleLogger;
 
@@ -59,10 +57,4 @@ fn init_logger() {
     log::set_logger(&LOGGER)
         .map(|()| log::set_max_level(LevelFilter::Trace))
         .unwrap();
-}
-
-// todo: figure out how we want to turn this on
-#[cfg(feature = "test")]
-fn run_test() {
-    println!("placeholder")
 }

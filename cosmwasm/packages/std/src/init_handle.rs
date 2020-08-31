@@ -2,17 +2,19 @@
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 use std::fmt;
 
+use crate::addresses::HumanAddr;
 use crate::coins::Coin;
 use crate::encoding::Binary;
-use crate::errors::StdResult;
-use crate::types::{HumanAddr, Never};
+use crate::errors::{StdError, StdResult};
+use crate::types::Empty;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 // See https://github.com/serde-rs/serde/issues/1296 why we cannot add De-Serialize trait bounds to T
-pub enum CosmosMsg<T = Never>
+pub enum CosmosMsg<T = Empty>
 where
     T: Clone + fmt::Debug + PartialEq + JsonSchema,
 {
@@ -22,6 +24,26 @@ where
     Custom(T),
     Staking(StakingMsg),
     Wasm(WasmMsg),
+    Gov(GovMsg),
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum GovMsg {
+    // Let contract vote on a governance proposal
+    Vote {
+        proposal: u64,
+        vote_option: VoteOption,
+    },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+// don't use rename_all here or you will break this
+pub enum VoteOption {
+    Yes,
+    No,
+    Abstain,
+    NoWithVeto,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -85,9 +107,15 @@ pub enum WasmMsg {
         /// msg is the json-encoded InitMsg struct (as raw Binary)
         msg: Binary,
         send: Vec<Coin>,
-        /// optional human-readbale label for the contract
-        label: Option<String>,
+        /// mandatory human-readbale label for the contract
+        label: String,
     },
+}
+
+impl<T: Clone + fmt::Debug + PartialEq + JsonSchema> From<GovMsg> for CosmosMsg<T> {
+    fn from(msg: GovMsg) -> Self {
+        CosmosMsg::Gov(msg)
+    }
 }
 
 impl<T: Clone + fmt::Debug + PartialEq + JsonSchema> From<BankMsg> for CosmosMsg<T> {
@@ -124,7 +152,7 @@ pub fn log<K: ToString, V: ToString>(key: K, value: V) -> LogAttribute {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct InitResponse<T = Never>
+pub struct InitResponse<T = Empty>
 where
     T: Clone + fmt::Debug + PartialEq + JsonSchema,
 {
@@ -132,7 +160,7 @@ where
     pub log: Vec<LogAttribute>,
 }
 
-pub type InitResult<U = Never> = StdResult<InitResponse<U>>;
+pub type InitResult<U = Empty> = StdResult<InitResponse<U>>;
 
 impl<T> Default for InitResponse<T>
 where
@@ -146,8 +174,28 @@ where
     }
 }
 
+impl<T> TryFrom<Context<T>> for InitResponse<T>
+where
+    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+{
+    type Error = StdError;
+
+    fn try_from(ctx: Context<T>) -> Result<Self, Self::Error> {
+        if ctx.data.is_some() {
+            Err(StdError::generic_err(
+                "cannot convert Context with data to InitResponse",
+            ))
+        } else {
+            Ok(InitResponse {
+                messages: ctx.messages,
+                log: ctx.log,
+            })
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct HandleResponse<T = Never>
+pub struct HandleResponse<T = Empty>
 where
     T: Clone + fmt::Debug + PartialEq + JsonSchema,
 {
@@ -156,7 +204,7 @@ where
     pub data: Option<Binary>,
 }
 
-pub type HandleResult<U = Never> = StdResult<HandleResponse<U>>;
+pub type HandleResult<U = Empty> = StdResult<HandleResponse<U>>;
 
 impl<T> Default for HandleResponse<T>
 where
@@ -171,8 +219,21 @@ where
     }
 }
 
+impl<T> From<Context<T>> for HandleResponse<T>
+where
+    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+{
+    fn from(ctx: Context<T>) -> Self {
+        HandleResponse {
+            messages: ctx.messages,
+            log: ctx.log,
+            data: ctx.data,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct MigrateResponse<T = Never>
+pub struct MigrateResponse<T = Empty>
 where
     T: Clone + fmt::Debug + PartialEq + JsonSchema,
 {
@@ -181,7 +242,7 @@ where
     pub data: Option<Binary>,
 }
 
-pub type MigrateResult<U = Never> = StdResult<MigrateResponse<U>>;
+pub type MigrateResult<U = Empty> = StdResult<MigrateResponse<U>>;
 
 impl<T> Default for MigrateResponse<T>
 where
@@ -196,11 +257,69 @@ where
     }
 }
 
+impl<T> From<Context<T>> for MigrateResponse<T>
+where
+    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+{
+    fn from(ctx: Context<T>) -> Self {
+        MigrateResponse {
+            messages: ctx.messages,
+            log: ctx.log,
+            data: ctx.data,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Context<T = Empty>
+where
+    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+{
+    messages: Vec<CosmosMsg<T>>,
+    log: Vec<LogAttribute>,
+    data: Option<Binary>,
+}
+
+impl<T> Default for Context<T>
+where
+    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+{
+    fn default() -> Self {
+        Context {
+            messages: vec![],
+            log: vec![],
+            data: None,
+        }
+    }
+}
+
+impl<T> Context<T>
+where
+    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+{
+    pub fn new() -> Self {
+        Context::default()
+    }
+
+    pub fn add_log<K: ToString, V: ToString>(&mut self, key: K, value: V) {
+        self.log.push(log(key, value));
+    }
+
+    pub fn add_message<U: Into<CosmosMsg<T>>>(&mut self, msg: U) {
+        self.messages.push(msg.into());
+    }
+
+    pub fn set_data<U: Into<Binary>>(&mut self, data: U) {
+        self.data = Some(data.into());
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::errors::StdError;
     use crate::{coins, from_slice, to_vec, Uint128};
+    use std::convert::TryInto;
 
     #[test]
     fn log_works_for_different_types() {
@@ -261,5 +380,69 @@ mod test {
             CosmosMsg::Bank(msg) => assert_eq!(bank, msg),
             _ => panic!("must encode in Bank variant"),
         }
+    }
+
+    #[test]
+    fn empty_context() {
+        let ctx = Context::new();
+
+        let init: InitResponse = ctx.clone().try_into().unwrap();
+        assert_eq!(init, InitResponse::default());
+
+        let init: HandleResponse = ctx.clone().try_into().unwrap();
+        assert_eq!(init, HandleResponse::default());
+
+        let init: MigrateResponse = ctx.clone().try_into().unwrap();
+        assert_eq!(init, MigrateResponse::default());
+    }
+
+    #[test]
+    fn full_context() {
+        let mut ctx = Context::new();
+
+        // build it up with the builder commands
+        ctx.add_log("sender", &HumanAddr::from("john"));
+        ctx.add_log("action", "test");
+        ctx.add_message(BankMsg::Send {
+            from_address: HumanAddr::from("goo"),
+            to_address: HumanAddr::from("foo"),
+            amount: coins(128, "uint"),
+        });
+
+        // and this is what is should return
+        let expected_log = vec![log("sender", "john"), log("action", "test")];
+        let expected_msgs = vec![CosmosMsg::Bank(BankMsg::Send {
+            from_address: HumanAddr::from("goo"),
+            to_address: HumanAddr::from("foo"),
+            amount: coins(128, "uint"),
+        })];
+        let expected_data = Some(Binary::from(b"banana"));
+
+        // try InitResponse before setting data
+        let init: InitResponse = ctx.clone().try_into().unwrap();
+        assert_eq!(&init.messages, &expected_msgs);
+        assert_eq!(&init.log, &expected_log);
+
+        ctx.set_data(b"banana");
+        // should fail with data set
+        let init_err: StdResult<InitResponse> = ctx.clone().try_into();
+        match init_err.unwrap_err() {
+            StdError::GenericErr { msg, .. } => {
+                assert_eq!(msg, "cannot convert Context with data to InitResponse")
+            }
+            e => panic!("Unexpected error: {}", e),
+        }
+
+        // try Handle with everything set
+        let handle: HandleResponse = ctx.clone().try_into().unwrap();
+        assert_eq!(&handle.messages, &expected_msgs);
+        assert_eq!(&handle.log, &expected_log);
+        assert_eq!(&handle.data, &expected_data);
+
+        // try Migrate with everything set
+        let migrate: MigrateResponse = ctx.clone().try_into().unwrap();
+        assert_eq!(&migrate.messages, &expected_msgs);
+        assert_eq!(&migrate.log, &expected_log);
+        assert_eq!(&migrate.data, &expected_data);
     }
 }

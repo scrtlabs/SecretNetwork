@@ -8,12 +8,12 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 
+	"github.com/enigmampc/SecretNetwork/x/compute/client/cli"
+	"github.com/enigmampc/SecretNetwork/x/compute/client/rest"
 	"github.com/enigmampc/cosmos-sdk/client/context"
 	"github.com/enigmampc/cosmos-sdk/codec"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	"github.com/enigmampc/cosmos-sdk/types/module"
-	"github.com/enigmampc/SecretNetwork/x/compute/client/cli"
-	"github.com/enigmampc/SecretNetwork/x/compute/client/rest"
 )
 
 var (
@@ -37,7 +37,9 @@ func (AppModuleBasic) RegisterCodec(cdc *codec.Codec) {
 // DefaultGenesis returns default genesis state as raw bytes for the compute
 // module.
 func (AppModuleBasic) DefaultGenesis() json.RawMessage {
-	return ModuleCdc.MustMarshalJSON(&GenesisState{})
+	return ModuleCdc.MustMarshalJSON(&GenesisState{
+		// Params: DefaultParams(),
+	})
 }
 
 // ValidateGenesis performs genesis state validation for the compute module.
@@ -114,7 +116,9 @@ func (am AppModule) NewQuerierHandler() sdk.Querier {
 func (am AppModule) InitGenesis(ctx sdk.Context, data json.RawMessage) []abci.ValidatorUpdate {
 	var genesisState GenesisState
 	ModuleCdc.MustUnmarshalJSON(data, &genesisState)
-	InitGenesis(ctx, am.keeper, genesisState)
+	if err := InitGenesis(ctx, am.keeper, genesisState); err != nil {
+		panic(err)
+	}
 	return []abci.ValidatorUpdate{}
 }
 
