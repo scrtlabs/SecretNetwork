@@ -140,15 +140,16 @@ module.exports = {
             {
               title : 'Testnet',
               sidebarDepth: 1,
+              collapsable: true, // optional, defaults to trues
               children : [
                 {
                   title : 'Validators (CLI)',
                   sidebarDepth: 0,
-                  path: '',
+                  path: '/testnet/install_cli',
                   children : [
                     {
                       title: 'Setup SGX',
-                      //path: '/testnet/setup-sgx'
+                      path: '/testnet/setup-sgx-testnet'
                     },
                     {
                       title: 'Verify SGX',
@@ -164,20 +165,21 @@ module.exports = {
                     },
                     {
                       title: 'Join as a Validator',
-                      //path: '/validators-and-full-nodes/join-validator-mainnet'
+                      path: '/testnet/join-validator-testnet'
                     },
                     {
                       title: 'Backup a Validator',
-                      //path: '/validators-and-full-nodes/backup-a-validator'
+                      path: '/testnet/backup-a-testnet-validator'
                     },
                     {
                       title: 'Migrate a Validator',
-                      //path: '/validators-and-full-nodes/migrate-a-validator'
+                      path: '/testnet/migrate-a-testnet-validator'
                     }
                   ]
                 },
                 {
-                  title: 'Delegators (CLI)'
+                  title: 'Delegators (CLI)',
+                  path: ''
                 }
               ]
             },
