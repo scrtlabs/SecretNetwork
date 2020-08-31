@@ -5,6 +5,7 @@ If you're running a local machine and not a cloud-based VM -
 1. Go to your BIOS menu
 2. Enable SGX (Software controlled is not enough)
 3. Disable Secure Boot
+4. Disbale HyperV 
 
 # Installation
 
