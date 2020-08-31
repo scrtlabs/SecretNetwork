@@ -114,9 +114,6 @@ This is the information the contract can return:
 ```go
 // Result defines the return value on a successful
 type Result struct {
-	// GasUsed is what is calculated from the VM, assuming it didn't run out of gas
-	// This is set by the calling code, not the contract itself
-	GasUsed int64 `json:"gas_used"`
 	// Messages comes directly from the contract and is it's request for action
 	Messages []CosmosMsg `json:"msgs"`
 	// base64-encoded bytes to return as ABCI.Data field

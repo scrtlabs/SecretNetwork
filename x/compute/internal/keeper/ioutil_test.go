@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -73,7 +72,7 @@ func TestUncompress(t *testing.T) {
 			if spec.expError != nil {
 				return
 			}
-			assert.Equal(t, spec.expResult, r)
+			require.Equal(t, spec.expResult, r)
 		})
 	}
 

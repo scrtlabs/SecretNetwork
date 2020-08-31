@@ -1,0 +1,12 @@
+[package]
+name = "eng_edl"
+version = "0.0.0"
+authors = ["The Teaclave Authors"]
+build = "build.rs"
+edition = "2018"
+
+[lib]
+name = "eng_edl"
+
+[dependencies]
+sgx_edl = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }

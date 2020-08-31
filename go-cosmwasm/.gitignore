@@ -3,3 +3,16 @@
 *.iml
 .idea
 libgo_cosmwasm*
+
+*.so
+*.o
+*.h
+*.c
+lib/
+
+# no static binaries (35MB+)
+libgo*.a
+# artifacts from compile tests
+muslc.exe
+tmp
+a.out

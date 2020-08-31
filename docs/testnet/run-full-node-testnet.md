@@ -29,38 +29,41 @@ Refer to https://ark.intel.com/content/www/us/en/ark.html#@Processors if unsure 
 
 ### 0. Step up SGX on your local machine
 
-See instructions [here](/docs/validators-and-full-nodes/setup-sgx.md)
+See instructions for [setup](../validators-and-full-nodes/setup-sgx.md) and [verification](verify-sgx.md).
 
 ### 1. Download the Secret Network package installer for Debian/Ubuntu:
 
 ```bash
-wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.5.0-rc1/secretnetwork_0.5.0-rc1_amd64.deb
+wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.7.0/secretnetwork_0.7.0_amd64.deb
 ```
 
-([How to verify releases](/testnet/verify-sgx.md))
+([How to verify releases](../verify-releases.md))
 
 ### 2. Install the package:
 
 ```bash
-sudo dpkg -i secretnetwork_0.5.0-rc1_amd64.deb
+sudo dpkg -i secretnetwork_0.7.0_amd64.deb
 ```
 
-### 3. Initialize your installation of the Secret Network. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
+### 3. Initialize your installation of the Secret Network.
+
+Choose a **moniker** for yourself, and replace `<MONIKER>` with your moniker below.
+This moniker will serve as your public nickname in the network.
 
 ```bash
-secretd init <MONIKER> --chain-id enigma-pub-testnet-1
+secretd init <MONIKER> --chain-id enigma-pub-testnet-2
 ```
 
 ### 4. Download a copy of the Genesis Block file: `genesis.json`
 
 ```bash
-wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v0.5.0-rc1/genesis.json"
+wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v0.7.0/genesis.json"
 ```
 
 ### 5. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
 
 ```bash
-echo "d12a38c37d7096b0c0d59a56af12de2e4e5eca598d53699119344b26a6794026 $HOME/.secretd/config/genesis.json" | sha256sum --check
+echo "093ebc2fabdddf7b22ee38eaebbbea2201474bc63321bd38b933b2b091f13f8d $HOME/.secretd/config/genesis.json" | sha256sum --check
 ```
 
 ### 6. Validate that the `genesis.json` is a valid genesis file:
@@ -69,18 +72,18 @@ echo "d12a38c37d7096b0c0d59a56af12de2e4e5eca598d53699119344b26a6794026 $HOME/.se
 secretd validate-genesis
 ```
 
-### 7. The rest of the commands should be ran from the `~/` folder (`/home/<your_username>`)
+### 7. The rest of the commands should be ran from the home folder (`/home/<your_username>`)
 
 ```bash
-cd ~/
+cd ~
 ```
 
 ### 8. Initialize secret enclave
 
-Make sure the directory `~/.sgx-secrets` exists:
+Make sure the directory `~/.sgx_secrets` exists:
 
 ```bash
-mkdir ~/.sgx-secrets
+mkdir -p ~/.sgx_secrets
 ```
 
 Make sure SGX is enabled and running or this step might fail.
@@ -119,9 +122,8 @@ To run the steps with `secretcli` on another machine, [set up the CLI](install_c
 Configure `secretcli`. Initially you'll be using the bootstrap node, as you'll need to connect to a running node and your own node is not running yet.
 
 ```bash
-secretcli config chain-id enigma-pub-testnet-1
+secretcli config chain-id enigma-pub-testnet-2
 secretcli config node tcp://bootstrap.pub.testnet.enigma.co:26657
-secretcli config broadcast-mode block
 secretcli config output json
 secretcli config indent true
 ```
@@ -129,7 +131,7 @@ secretcli config indent true
 Set up a key. Make sure you backup the mnemonic and the keyring password.
 
 ```bash
-secretcli keys add mykey
+secretcli keys add $INSERT_YOUR_KEY_NAME
 ```
 
 This will output your address, a 45 character-string starting with `secret1...`. Copy/paste it to get some test-SCRT from [the faucet](https://faucet.pub.testnet.enigma.co/). Continue when you have confirmed your account has some test-SCRT in it.
@@ -139,7 +141,7 @@ This will output your address, a 45 character-string starting with `secret1...`.
 Run this step on the CLI machine. If you're using different CLI machine than the full node, copy `attestation_cert.der` from the full node to the CLI machine.
 
 ```bash
-secretcli tx register auth <path/to/attestation_cert.der> --from <key-alias>
+secretcli tx register auth <path/to/attestation_cert.der> --from $INSERT_YOUR_KEY_NAME --gas 250000
 ```
 
 ### 13. Pull & check your node's encrypted seed from the network
@@ -177,8 +179,8 @@ secretd configure-secret node-master-cert.der "$SEED"
 
 You can also use Enigma's node:
 
-```
-perl -i -pe 's/persistent_peers = ""/persistent_peers = "115aa0a629f5d70dd1d464bc7e42799e00f4edae\@bootstrap.pub.testnet.enigma.co:26656"/' ~/.secretd/config/config.toml
+```bash
+perl -i -pe 's/persistent_peers = ""/persistent_peers = "dd4c198e2d54229ec08a60e5865cba01a66e263b\@bootstrap.pub.testnet.enigma.co:26656"/' ~/.secretd/config/config.toml
 ```
 
 ### 17. Listen for incoming RPC requests so that light nodes can connect to you:
@@ -189,13 +191,13 @@ perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.secretd/co
 
 ### 18. Enable `secret-node` as a system service:
 
-```
+```bash
 sudo systemctl enable secret-node
 ```
 
 ### 19. Start `secret-node` as a system service:
 
-```
+```bash
 sudo systemctl start secret-node
 ```
 
@@ -230,12 +232,18 @@ And publish yourself as a node with this ID:
 <your-node-id>@<your-public-ip>:26656
 ```
 
-If someone wants to add you as a peer, have them add the above address to their `persistent_peers` in their `~/.secretd/config/config.toml`.  
+Be sure to point your CLI to your running node instead of the bootstrap node
+
+```
+secretcli config node tcp://localhost:26657
+```
+
+If someone wants to add you as a peer, have them add the above address to their `persistent_peers` in their `~/.secretd/config/config.toml`.
 
 And if someone wants to use your node from their `secretcli` then have them run:
 
 ```bash
-secretcli config chain-id enigma-pub-testnet-1
+secretcli config chain-id enigma-pub-testnet-2
 secretcli config output json
 secretcli config indent true
 secretcli config node tcp://<your-public-ip>:26657
@@ -243,7 +251,7 @@ secretcli config node tcp://<your-public-ip>:26657
 
 ### 22. Optional: make your full node a validator
 
-Your full node is now part of the network, storing and verifying chain data and secret contracts, and helping to distribute transactions and blocks. It's usable as a sentry node, for people to connect their CLI or light clients, or just to support the network.
+Your full node is now part of the network, storing and verifying chain data and Secret Contracts, and helping to distribute transactions and blocks. It's usable as a sentry node, for people to connect their CLI or light clients, or just to support the network.
 
 It is however not producing blocks yet, and you can't delegate funds to it for staking. To do that that you'll have to turn it into a validator by submitting a `create-validator` transaction.
 
@@ -266,7 +274,7 @@ secretcli tx staking create-validator \
   --commission-max-change-rate="0.01" \
   --min-self-delegation="1" \
   --moniker="<moniker>" \
-  --from=<key-alias>
+  --from=$INSERT_YOUR_KEY_NAME
 ```
 
 The `create-validator` command allows using some more parameters. For more info on these and the additional parameters, run `secretcli tx staking create-validator --help`.

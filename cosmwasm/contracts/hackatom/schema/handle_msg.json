@@ -3,6 +3,7 @@
   "title": "HandleMsg",
   "anyOf": [
     {
+      "description": "Releasing all funds in the contract to the beneficiary. This is the only \"proper\" action of this demo contract.",
       "type": "object",
       "required": [
         "release"
@@ -16,10 +17,10 @@
     {
       "type": "object",
       "required": [
-        "cpuloop"
+        "cpu_loop"
       ],
       "properties": {
-        "cpuloop": {
+        "cpu_loop": {
           "type": "object"
         }
       }
@@ -27,10 +28,34 @@
     {
       "type": "object",
       "required": [
-        "storageloop"
+        "storage_loop"
       ],
       "properties": {
-        "storageloop": {
+        "storage_loop": {
+          "type": "object"
+        }
+      }
+    },
+    {
+      "description": "Infinite loop reading and writing memory",
+      "type": "object",
+      "required": [
+        "memory_loop"
+      ],
+      "properties": {
+        "memory_loop": {
+          "type": "object"
+        }
+      }
+    },
+    {
+      "description": "Allocate large amounts of memory without consuming much gas",
+      "type": "object",
+      "required": [
+        "allocate_large_memory"
+      ],
+      "properties": {
+        "allocate_large_memory": {
           "type": "object"
         }
       }

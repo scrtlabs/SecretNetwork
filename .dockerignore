@@ -1,5 +1,22 @@
 Dockerfile
+docker-compose*
 docs
+*.md
+**/target
+**/*.a
+**/*.so
+**/Enclave_t.*
+**/Enclave_u.*
+**/*.lock
+third_party/vendor
+
+cosmwasm-js
 
 README.md
 .gitignore
+
+.vscode
+.github
+.git
+.idea
+**/.idea
