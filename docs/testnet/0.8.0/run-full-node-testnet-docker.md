@@ -1,3 +1,5 @@
+*This is identical to the 0.7.0 version, with updated bootstrap, node addresses & package versions*
+
 # SGX-enabled Secret Node in Docker
 
 So you don't want to fiddle with the .deb file, and just want to run your node? We got you, with this quick and easy guide to getting a node started without much tinkering.
