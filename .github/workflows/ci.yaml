@@ -209,19 +209,19 @@ jobs:
           echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
       - name: Install go-bindata
         run: go get -u github.com/jteeuwen/go-bindata/...
+      - name: Build MacOS CLI
+          run: |
+            source "$HOME/.sgxsdk/sgxsdk/environment"
+            make build_macos
+      - name: Build Windows CLI
+        run: |
+          source "$HOME/.sgxsdk/sgxsdk/environment"
+          make build_windows
       - name: Build
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           make vendor
           SGX_MODE=SW BUILD_PROFILE="minimal" RUSTC_WRAPPER="$HOME/sccache" make build-linux
-      - name: Build MacOS CLI
-        run: |
-          source "$HOME/.sgxsdk/sgxsdk/environment"
-          make build_macos
-      - name: Build Windows CLI
-        run: |
-          source "$HOME/.sgxsdk/sgxsdk/environment"
-          make build_windows
       - name: Old bash+js sanity tests
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
