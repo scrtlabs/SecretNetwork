@@ -2,7 +2,7 @@
 
 ## Bootstrap validator
 
-Must run [`v0.2.2`](https://github.com/enigmampc/SecretNetwork/releases/tag/v0.2.2).
+Must be running [`v0.2.2`](https://github.com/enigmampc/SecretNetwork/releases/tag/v0.2.2).
 
 1. Export state on the old machine
 
