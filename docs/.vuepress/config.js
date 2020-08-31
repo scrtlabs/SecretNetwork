@@ -128,6 +128,10 @@ module.exports = {
                       {
                         title: 'Active Node Peers',
                         //path: '/validators-and-full-nodes/active-node-peers'
+                      },
+                      {
+                        title: 'Vulcan Netwrok Upgrade',
+                        path: '/upgrade-secret-1-to-secret-2'
                       }
                     ]
                   },
