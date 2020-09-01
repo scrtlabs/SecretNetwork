@@ -107,6 +107,8 @@ You can see another `param-change` example here: [enigma-1-proposal-3.json](http
 | `bank`         | `sendenabled`             | bool             | `true`                                                                                                    |
 | `crisis`       | `ConstantFee`             | object (coin)    | `{"denom": "uscrt", "amount": "1000"}`                                                                    |
 | `distribution` | `communitytax`            | string (dec)     | `"0.020000000000000000"`                                                                                  |
+| `distribution` | `secretfoundationtax`     | string (dec)     | `"0.030000000000000000"`                                                                                  |
+| `distribution` | `secretfoundationaddress` | string           | `"secret164z7wwzv84h4hwn6rvjjkns6j4ht43jv8u9k0c"`                                                          |
 | `distribution` | `baseproposerreward`      | string (dec)     | `"0.010000000000000000"`                                                                                  |
 | `distribution` | `bonusproposerreward`     | string (dec)     | `"0.040000000000000000"`                                                                                  |
 | `distribution` | `withdrawaddrenabled`     | bool             | `true`                                                                                                    |
