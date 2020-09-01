@@ -33,7 +33,7 @@ impl PubKey for Secp256k1PubKey {
 
         // This line can't fail since it could only fail if `length` does not have sufficient capacity to encode
         if prost::encode_length_delimiter(self.0.len(), &mut length).is_err() {
-            error!(
+            warn!(
                 "Could not encode length delimiter: {:?}. This should not happen",
                 self.0.len()
             );
@@ -50,7 +50,7 @@ impl PubKey for Secp256k1PubKey {
         // Signing ref: https://docs.cosmos.network/master/spec/_ics/ics-030-signed-messages.html#preliminary
         let sign_bytes_hash = Sha256::digest(bytes);
         let msg = secp256k1::Message::from_slice(sign_bytes_hash.as_slice()).map_err(|err| {
-            error!("Failed to create a secp256k1 message from tx: {:?}", err);
+            warn!("Failed to create a secp256k1 message from tx: {:?}", err);
             CryptoError::VerificationError
         })?;
 
@@ -58,12 +58,12 @@ impl PubKey for Secp256k1PubKey {
 
         // Create `secp256k1`'s types
         let sec_signature = secp256k1::Signature::from_compact(sig).map_err(|err| {
-            error!("Malformed signature: {:?}", err);
+            warn!("Malformed signature: {:?}", err);
             CryptoError::VerificationError
         })?;
         let sec_public_key =
             secp256k1::PublicKey::from_slice(self.0.as_slice()).map_err(|err| {
-                error!("Malformed public key: {:?}", err);
+                warn!("Malformed public key: {:?}", err);
                 CryptoError::VerificationError
             })?;
 
