@@ -18,7 +18,7 @@ pub fn write_encrypted_key(
 
     let scrambled_field_name = field_name_digest(key, contract_key);
 
-    debug!(
+    info!(
         "Writing to scrambled field name: {:?}",
         scrambled_field_name
     );
@@ -32,7 +32,7 @@ pub fn write_encrypted_key(
 
     // Write the new data as concat(ad, encrypted_val)
     let write_used_gas = write_db(context, &scrambled_field_name, &db_data).map_err(|err| {
-        error!(
+        warn!(
             "write_db() go an error from ocall_write_db, stopping wasm: {:?}",
             err
         );
@@ -49,7 +49,7 @@ pub fn read_encrypted_key(
 ) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
     let scrambled_field_name = field_name_digest(key, contract_key);
 
-    debug!(
+    info!(
         "Reading from scrambled field name: {:?}",
         scrambled_field_name
     );
@@ -77,12 +77,12 @@ pub fn remove_encrypted_key(
 ) -> Result<u64, WasmEngineError> {
     let scrambled_field_name = field_name_digest(key, contract_key);
 
-    debug!("Removing scrambled field name: {:?}", scrambled_field_name);
+    info!("Removing scrambled field name: {:?}", scrambled_field_name);
 
     // Call remove_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
     // fn remove_db(context: Ctx, key: &[u8]) {
     let gas_used = remove_db(context, &scrambled_field_name).map_err(|err| {
-        error!(
+        warn!(
             "remove_db() got an error from ocall_remove_db, stopping wasm: {:?}",
             err
         );
@@ -117,7 +117,7 @@ fn read_db(context: &Ctx, key: &[u8]) -> Result<(Option<Vec<u8>>, u64), WasmEngi
         match status {
             sgx_status_t::SGX_SUCCESS => { /* continue */ }
             error_status => {
-                error!(
+                warn!(
                     "read_db() got an error from ocall_read_db, stopping wasm: {:?}",
                     error_status
                 );
@@ -222,7 +222,7 @@ fn encrypt_key(
     encryption_key
         .encrypt_siv(&value, Some(&[ad]))
         .map_err(|err| {
-            error!(
+            warn!(
                 "write_db() got an error while trying to encrypt the value {:?}, stopping wasm: {:?}",
                 String::from_utf8_lossy(&value),
                 err
@@ -242,7 +242,7 @@ fn decrypt_key(
     let (ad, encrypted_value) = value.split_at(32);
 
     decryption_key.decrypt_siv(&encrypted_value, Some(&[ad])).map_err(|err| {
-        error!(
+        warn!(
             "read_db() got an error while trying to decrypt the value for key {:?}, stopping wasm: {:?}",
             String::from_utf8_lossy(&field_name),
             err
