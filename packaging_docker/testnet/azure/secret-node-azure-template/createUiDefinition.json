@@ -172,11 +172,7 @@
               "allowedValues": [
                 {
                   "label": "Testnet",
-                  "value": "reg-snet-test1.uksouth.azurecontainer.io:8081"
-                },
-                {
-                  "label": "Mainnet",
-                  "value": "reg-snet-test1.uksouth.azurecontainer.io:8081"
+                  "value": "register.pub.testnet.enigma.co:26667"
                 }
               ],
               "required": true

@@ -44,7 +44,12 @@ echo "Creating secret node runner" >> /home/$1/install.progress.txt
 
 mkdir -p /usr/local/bin/secret-node
 
-sudo curl -L https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/packaging_docker/testnet/azure/secret-node-azure-template/scripts/docker-compose.yaml -o /usr/local/bin/secret-node/docker-compose.yaml
+if [[ $6 == *"mainnet"* ]]; then
+  sudo curl -L https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/packaging_docker/mainnet/azure/secret-node-azure-template/scripts/docker-compose.yaml -o /usr/local/bin/secret-node/docker-compose.yaml
+else
+  sudo curl -L https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/packaging_docker/testnet/azure/secret-node-azure-template/scripts/docker-compose.yaml -o /usr/local/bin/secret-node/docker-compose.yaml
+fi
+
 
 # replace the tmp paths with home directory ones
 sudo sed -i 's/\/tmp\/.secretd:/\/home\/'$1'\/.secretd:/g' /usr/local/bin/secret-node/docker-compose.yaml
@@ -85,6 +90,7 @@ echo "MONIKER=$3" >> /home/"$1"/install.progress.txt
 echo "PRSISTENT_PEERS=$4" >> /home/"$1"/install.progress.txt
 echo "export RPC_URL=$5" >> /home/"$1"/install.progress.txt
 echo "export REGISTRATION_SERVICE=$6" >> /home/"$1"/install.progress.txt
+
 
 ################################################################
 # Configure to auto start at boot					    #
