@@ -10,7 +10,7 @@ Must be running [`v0.2.2`](https://github.com/enigmampc/SecretNetwork/releases/t
    # TODO: update $HEIGHT to be as close as possible to 2020-09-15T14:00:00Z
    # Use this one-liner and play with the block time and block height until
    # you get as closest to 2020-09-15T14:00:00 UTC.
-   #We should probaly settle on a final $HEIGHT before Sep 14th.
+   # We should probably settle on a final $HEIGHT before Sep 14th.
    # curl -s http://bootstrap.mainnet.enigma.co:26657/status | jq -r '6.18*(1247100-(.result.sync_info.latest_block_height | tonumber))' | xargs -I {} date -u -d "now + {} sec"
    export HEIGHT=1247100
 
