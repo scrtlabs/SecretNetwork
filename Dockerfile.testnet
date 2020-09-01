@@ -1,61 +1,5 @@
-# Simple usage with a mounted data directory:
-# > docker build -t enigma .
-# > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli enigma secretd init
-# > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli enigma secretd start
-FROM baiduxlab/sgx-rust:1804-1.1.2 AS build-env-rust-go
-
-ENV PATH="/root/.cargo/bin:$PATH"
-ENV GOROOT=/usr/local/go
-ENV GOPATH=/go/
-ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
-
-
-RUN curl -O https://dl.google.com/go/go1.14.2.linux-amd64.tar.gz
-RUN tar -C /usr/local -xzf go1.14.2.linux-amd64.tar.gz
-# Set working directory for the build
-
-WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
-
-ARG SGX_MODE=SW
-ENV SGX_MODE=${SGX_MODE}
-ENV MITIGATION_CVE_2020_0551=LOAD
-
-COPY third_party/build third_party/build
-
-# Add source files
-COPY go-cosmwasm/ go-cosmwasm/
-COPY cosmwasm/ cosmwasm/
-
-WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
-
-COPY Makefile Makefile
-
-# RUN make clean
-RUN make vendor
-
-WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
-
-COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/cosmwasm/packages/wasmi-runtime/
-COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/cosmwasm/packages/wasmi-runtime/
-
-RUN . /opt/sgxsdk/environment && env && SGX_MODE=${SGX_MODE} make build-rust
-
-# Set working directory for the build
-WORKDIR /go/src/github.com/enigmampc/SecretNetwork
-
-# Add source files
-COPY go-cosmwasm go-cosmwasm
-COPY x x
-COPY types types
-COPY app.go .
-COPY go.mod .
-COPY go.sum .
-COPY cmd cmd
-COPY Makefile .
-
-# COPY /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/libgo_cosmwasm.so go-cosmwasm/api
-
-RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD SGX_MODE=${SGX_MODE} make build_local_no_rust
+# Base image
+FROM rust-go-base-image AS build-env-rust-go
 
 # Final image
 FROM cashmaney/enigma-sgx-base
@@ -67,9 +11,11 @@ RUN apt-get update && \
     jq \
     openssl \
     curl \
-    wget && \
+    wget \
+    bash-completion && \
     rm -rf /var/lib/apt/lists/*
 
+RUN echo "source /etc/profile.d/bash_completion.sh" >> ~/.bashrc
 
 ARG SGX_MODE=SW
 ENV SGX_MODE=${SGX_MODE}
@@ -104,6 +50,12 @@ RUN chmod +x bootstrap_init.sh
 RUN chmod +x startup.sh
 RUN chmod +x node_init.sh
 
+# Enable autocomplete
+RUN secretcli completion > /root/secretcli_completion
+RUN secretd completion > /root/secretd_completion
+
+RUN echo 'source /root/secretd_completion' >> ~/.bashrc
+RUN echo 'source /root/secretcli_completion' >> ~/.bashrc
 
 RUN mkdir -p /root/.secretd/.compute/
 RUN mkdir -p /root/.sgx_secrets/

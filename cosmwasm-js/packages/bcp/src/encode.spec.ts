@@ -314,7 +314,7 @@ describe("encode", () => {
         value: {
           msg: [
             {
-              type: "wasm/execute",
+              type: "wasm/MsgExecuteContract",
               value: {
                 sender: "cosmos1txqfn5jmcts0x0q7krdxj8tgf98tj0965vqlmq",
                 contract: "cosmos1hqrdl6wstt8qzshwc6mrumpjk9338k0lr4dqxd",

@@ -1,19 +1,18 @@
 use cosmwasm_storage::PrefixedStorage;
 
 use cosmwasm_std::{
-    generic_err, invalid_base64, invalid_utf8, log, not_found, null_pointer, parse_err,
-    serialize_err, to_binary, unauthorized, underflow, Api, BankMsg, Binary, Coin, CosmosMsg, Env,
-    Extern, HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse,
-    Querier, QueryRequest, QueryResult, ReadonlyStorage, StdError, StdResult, Storage, Uint128,
-    WasmMsg, WasmQuery,
+    log, to_binary, Api, BankMsg, Binary, Coin, CosmosMsg, Env, Extern, HandleResponse,
+    HandleResult, HumanAddr, InitResponse, InitResult, Querier, QueryRequest, QueryResult,
+    ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg, WasmQuery,
 };
 
 /////////////////////////////// Messages ///////////////////////////////
 
+use core::time;
 use mem::MaybeUninit;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::mem;
+use std::{mem, thread};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -40,6 +39,27 @@ pub enum InitMsg {
         code_hash: String,
     },
     Panic {},
+    SendExternalQueryDepthCounter {
+        to: HumanAddr,
+        depth: u8,
+        code_hash: String,
+    },
+    CallToInit {
+        code_id: u64,
+        code_hash: String,
+        label: String,
+        msg: String,
+    },
+    CallToExec {
+        addr: HumanAddr,
+        code_hash: String,
+        msg: String,
+    },
+    CallToQuery {
+        addr: HumanAddr,
+        code_hash: String,
+        msg: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -143,22 +163,63 @@ pub enum HandleMsg {
         to: HumanAddr,
         code_hash: String,
     },
+    Sleep {
+        ms: u64,
+    },
+    SendExternalQueryDepthCounter {
+        to: HumanAddr,
+        code_hash: String,
+        depth: u8,
+    },
+    WithFloats {
+        x: u8,
+        y: u8,
+    },
+    CallToInit {
+        code_id: u64,
+        code_hash: String,
+        label: String,
+        msg: String,
+    },
+    CallToExec {
+        addr: HumanAddr,
+        code_hash: String,
+        msg: String,
+    },
+    CallToQuery {
+        addr: HumanAddr,
+        code_hash: String,
+        msg: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    ContractError { error_type: String },
+    ContractError {
+        error_type: String,
+    },
     Panic {},
-    ReceiveExternalQuery { num: u8 },
-    SendExternalQueryInfiniteLoop { to: HumanAddr, code_hash: String },
+    ReceiveExternalQuery {
+        num: u8,
+    },
+    SendExternalQueryInfiniteLoop {
+        to: HumanAddr,
+        code_hash: String,
+    },
     WriteToStorage {},
     RemoveFromStorage {},
+    SendExternalQueryDepthCounter {
+        to: HumanAddr,
+        depth: u8,
+        code_hash: String,
+    },
+    CallToQuery {
+        addr: HumanAddr,
+        code_hash: String,
+        msg: String,
+    },
 }
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum MigrateMsg {}
 
 /////////////////////////////// Init ///////////////////////////////
 
@@ -190,22 +251,84 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             code_hash,
         } => Ok(init_callback_bad_params(contract_addr, code_hash)),
         InitMsg::Panic {} => panic!("panic in init"),
+        InitMsg::SendExternalQueryDepthCounter {
+            to,
+            depth,
+            code_hash,
+        } => Ok(InitResponse {
+            messages: vec![],
+            log: vec![log(
+                format!(
+                    "{}",
+                    send_external_query_depth_counter(deps, to, depth, code_hash)
+                ),
+                "",
+            )],
+        }),
+        InitMsg::CallToInit {
+            code_id,
+            code_hash,
+            label,
+            msg,
+        } => Ok(InitResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+                code_id,
+                callback_code_hash: code_hash,
+                msg: Binary(msg.as_bytes().into()),
+                send: vec![],
+                label: label,
+            })],
+            log: vec![log("a", "a")],
+        }),
+        InitMsg::CallToExec {
+            addr,
+            code_hash,
+            msg,
+        } => Ok(InitResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: addr,
+                callback_code_hash: code_hash,
+                msg: Binary(msg.as_bytes().into()),
+                send: vec![],
+            })],
+            log: vec![log("b", "b")],
+        }),
+        InitMsg::CallToQuery {
+            addr,
+            code_hash,
+            msg,
+        } => {
+            let answer: u32 = deps
+                .querier
+                .query(&QueryRequest::Wasm(WasmQuery::Smart {
+                    contract_addr: addr,
+                    callback_code_hash: code_hash,
+                    msg: Binary::from(msg.as_bytes().to_vec()),
+                }))
+                .map_err(|err| {
+                    StdError::generic_err(format!("Got an error from query: {:?}", err))
+                })?;
+
+            Ok(InitResponse {
+                messages: vec![],
+                log: vec![log("c", format!("{}", answer))],
+            })
+        }
     }
 }
 
 fn map_string_to_error(error_type: String) -> StdError {
     let as_str: &str = &error_type[..];
     match as_str {
-        "generic_err" => generic_err("la la 🤯"),
-        "invalid_base64" => invalid_base64("ra ra 🤯"),
-        "invalid_utf8" => invalid_utf8("ka ka 🤯"),
-        "not_found" => not_found("za za 🤯"),
-        "null_pointer" => null_pointer(),
-        "parse_err" => parse_err("na na 🤯", "pa pa 🤯"),
-        "serialize_err" => serialize_err("ba ba 🤯", "ga ga 🤯"),
-        "unauthorized" => unauthorized(),
-        "underflow" => underflow("minuend 🤯", "subtrahend 🤯"),
-        _ => generic_err("catch-all 🤯"),
+        "generic_err" => StdError::generic_err("la la 🤯"),
+        "invalid_base64" => StdError::invalid_base64("ra ra 🤯"),
+        "invalid_utf8" => StdError::invalid_utf8("ka ka 🤯"),
+        "not_found" => StdError::not_found("za za 🤯"),
+        "parse_err" => StdError::parse_err("na na 🤯", "pa pa 🤯"),
+        "serialize_err" => StdError::serialize_err("ba ba 🤯", "ga ga 🤯"),
+        "unauthorized" => StdError::unauthorized(),
+        "underflow" => StdError::underflow("minuend 🤯", "subtrahend 🤯"),
+        _ => StdError::generic_err("catch-all 🤯"),
     }
 }
 
@@ -262,7 +385,7 @@ pub fn init_callback_to_init<S: Storage, A: Api, Q: Querier>(
             msg: Binary::from("{\"nop\":{}}".as_bytes().to_vec()),
             callback_code_hash: code_hash,
             send: vec![],
-            label: None,
+            label: String::from("fi"),
         })],
         log: vec![log("instantiating a new contract from init!", "🐙")],
     }
@@ -315,7 +438,25 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::PassNullPointerToImportsShouldThrow { pass_type } => {
             Ok(pass_null_pointer_to_imports_should_throw(deps, pass_type))
         }
-        HandleMsg::SendExternalQuery { to, code_hash } => send_external_query(deps, to, code_hash),
+        HandleMsg::SendExternalQuery { to, code_hash } => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(vec![send_external_query(deps, to, code_hash)].into()),
+        }),
+        HandleMsg::SendExternalQueryDepthCounter {
+            to,
+            code_hash,
+            depth,
+        } => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(
+                vec![send_external_query_depth_counter(
+                    deps, to, depth, code_hash,
+                )]
+                .into(),
+            ),
+        }),
         HandleMsg::SendExternalQueryPanic { to, code_hash } => {
             send_external_query_panic(deps, to, code_hash)
         }
@@ -330,13 +471,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         }
         HandleMsg::LogMsgSender {} => Ok(HandleResponse {
             messages: vec![],
-            log: vec![log(
-                "msg.sender",
-                deps.api
-                    .human_address(&env.message.sender)
-                    .unwrap()
-                    .to_string(),
-            )],
+            log: vec![log("msg.sender", env.message.sender.to_string())],
             data: None,
         }),
         HandleMsg::CallbackToLogMsgSender { to, code_hash } => Ok(HandleResponse {
@@ -381,7 +516,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
                 code_id: code_id,
                 callback_code_hash: code_hash,
-                label: None,
+                label: String::from("yo"),
                 send: vec![Coin {
                     amount: Uint128(amount as u128),
                     denom: denom,
@@ -408,14 +543,91 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             log: vec![],
             data: None,
         }),
+        HandleMsg::Sleep { ms } => {
+            thread::sleep(time::Duration::from_millis(ms));
+
+            Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            })
+        }
+        HandleMsg::WithFloats { x, y } => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(use_floats(x, y)),
+        }),
+        HandleMsg::CallToInit {
+            code_id,
+            code_hash,
+            label,
+            msg,
+        } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+                code_id,
+                callback_code_hash: code_hash,
+                msg: Binary(msg.as_bytes().into()),
+                send: vec![],
+                label: label,
+            })],
+            log: vec![log("a", "a")],
+            data: None,
+        }),
+        HandleMsg::CallToExec {
+            addr,
+            code_hash,
+            msg,
+        } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: addr,
+                callback_code_hash: code_hash,
+                msg: Binary(msg.as_bytes().into()),
+                send: vec![],
+            })],
+            log: vec![log("b", "b")],
+            data: None,
+        }),
+        HandleMsg::CallToQuery {
+            addr,
+            code_hash,
+            msg,
+        } => {
+            let answer: u32 = deps
+                .querier
+                .query(&QueryRequest::Wasm(WasmQuery::Smart {
+                    contract_addr: addr,
+                    callback_code_hash: code_hash,
+                    msg: Binary::from(msg.as_bytes().to_vec()),
+                }))
+                .map_err(|err| {
+                    StdError::generic_err(format!("Got an error from query: {:?}", err))
+                })?;
+
+            Ok(HandleResponse {
+                messages: vec![],
+                log: vec![log("c", format!("{}", answer))],
+                data: None,
+            })
+        }
     }
 }
 
+#[cfg(feature = "with_floats")]
+fn use_floats(x: u8, y: u8) -> Binary {
+    let res: f64 = (x as f64) / (y as f64);
+    to_binary(&format!("{}", res)).unwrap()
+}
+
+#[cfg(not(feature = "with_floats"))]
+fn use_floats(x: u8, y: u8) -> Binary {
+    Binary(vec![x, y])
+}
+
 fn send_external_query<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: &Extern<S, A, Q>,
     contract_addr: HumanAddr,
     code_hash: String,
-) -> HandleResult {
+) -> u8 {
     let answer: u8 = deps
         .querier
         .query(&QueryRequest::Wasm(WasmQuery::Smart {
@@ -424,12 +636,37 @@ fn send_external_query<S: Storage, A: Api, Q: Querier>(
             msg: Binary::from(r#"{"receive_external_query":{"num":2}}"#.as_bytes().to_vec()),
         }))
         .unwrap();
+    answer
+}
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(vec![answer].into()),
-    })
+fn send_external_query_depth_counter<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    contract_addr: HumanAddr,
+    depth: u8,
+    code_hash: String,
+) -> u8 {
+    if depth == 0 {
+        return 0;
+    }
+
+    let answer: u8 = deps
+        .querier
+        .query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: contract_addr.clone(),
+            callback_code_hash: code_hash.clone(),
+            msg: Binary(
+                format!(
+                    r#"{{"send_external_query_depth_counter":{{"to":"{}","code_hash":"{}","depth":{}}}}}"#,
+                    contract_addr.clone().to_string(),
+                    code_hash.clone().to_string(),
+                    depth - 1
+                )
+                .into(),
+            ),
+        }))
+        .unwrap();
+
+    answer + 1
 }
 
 fn send_external_query_panic<S: Storage, A: Api, Q: Querier>(
@@ -658,7 +895,7 @@ pub fn exec_callback_to_init<S: Storage, A: Api, Q: Querier>(
             msg: Binary::from("{\"nop\":{}}".as_bytes().to_vec()),
             callback_code_hash: code_hash,
             send: vec![],
-            label: None,
+            label: String::from("hi"),
         })],
         log: vec![log("instantiating a new contract", "🪂")],
         data: None,
@@ -773,26 +1010,30 @@ fn test_canonicalize_address_errors<S: Storage, A: Api, Q: Querier>(
 ) -> HandleResult {
     match deps.api.canonical_address(&HumanAddr(String::from(""))) {
         Err(StdError::GenericErr { msg, backtrace: _ }) => {
-            if msg != String::from("canonicalize_address returned error") {
-                return Err(generic_err("empty address should have failed with -2"));
+            if msg != String::from("canonicalize_address errored: input is empty") {
+                return Err(StdError::generic_err(
+                    "empty address should have failed with 'canonicalize_address errored: input is empty'",
+                ));
             }
             // all is good, continue
         }
-        _ => return Err(generic_err("empty address should have failed with -2")),
+        _ => return Err(StdError::generic_err(
+            "empty address should have failed with 'canonicalize_address errored: input is empty'",
+        )),
     }
 
     match deps.api.canonical_address(&HumanAddr(String::from("   "))) {
         Err(StdError::GenericErr { msg, backtrace: _ }) => {
-            if msg != String::from("canonicalize_address returned error") {
-                return Err(generic_err(
-                    "empty trimmed address should have failed with -2",
+            if msg != String::from("canonicalize_address errored: input is empty") {
+                return Err(StdError::generic_err(
+                    "empty trimmed address should have failed with 'canonicalize_address errored: input is empty'",
                 ));
             }
             // all is good, continue
         }
         _ => {
-            return Err(generic_err(
-                "empty trimmed address should have failed with -2",
+            return Err(StdError::generic_err(
+                "empty trimmed address should have failed with 'canonicalize_address errored: input is empty'",
             ))
         }
     }
@@ -802,24 +1043,35 @@ fn test_canonicalize_address_errors<S: Storage, A: Api, Q: Querier>(
         .canonical_address(&HumanAddr(String::from("cosmos1h99hrcc54ms9lxxxx")))
     {
         Err(StdError::GenericErr { msg, backtrace: _ }) => {
-            if msg != String::from("canonicalize_address returned error") {
-                return Err(generic_err("bad bech32 should have failed with -3"));
+            if msg != String::from("canonicalize_address errored: invalid checksum") {
+                return Err(StdError::generic_err(
+                    "bad bech32 should have failed with 'canonicalize_address errored: invalid checksum'",
+                ));
             }
             // all is good, continue
         }
-        _ => return Err(generic_err("bad bech32 should have failed with -3")),
+        _ => return Err(StdError::generic_err(
+            "bad bech32 should have failed with 'canonicalize_address errored: invalid checksum'",
+        )),
     }
 
     match deps.api.canonical_address(&HumanAddr(String::from(
         "cosmos1h99hrcc54ms9luwpex9kw0rwdt7etvfdyxh6gu",
     ))) {
         Err(StdError::GenericErr { msg, backtrace: _ }) => {
-            if msg != String::from("canonicalize_address returned error") {
-                return Err(generic_err("bad prefix should have failed with -4"));
+            if msg != String::from("canonicalize_address errored: wrong address prefix: \"cosmos\"")
+            {
+                return Err(StdError::generic_err(
+                    "bad prefix should have failed with 'canonicalize_address errored: wrong address prefix: \"cosmos\"'",
+                ));
             }
             // all is good, continue
         }
-        _ => return Err(generic_err("bad prefix should have failed with -4")),
+        _ => {
+            return Err(StdError::generic_err(
+                "bad prefix should have failed with 'canonicalize_address errored: wrong address prefix: \"cosmos\"'",
+            ))
+        }
     }
 
     Ok(HandleResponse {
@@ -846,6 +1098,31 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         }
         QueryMsg::WriteToStorage {} => write_to_storage_in_query(deps),
         QueryMsg::RemoveFromStorage {} => remove_from_storage_in_query(deps),
+        QueryMsg::SendExternalQueryDepthCounter {
+            to,
+            depth,
+            code_hash,
+        } => Ok(to_binary(&send_external_query_depth_counter(
+            deps, to, depth, code_hash,
+        ))
+        .unwrap()),
+        QueryMsg::CallToQuery {
+            addr,
+            code_hash,
+            msg,
+        } => {
+            let answer: u32 = deps
+                .querier
+                .query(&QueryRequest::Wasm(WasmQuery::Smart {
+                    contract_addr: addr,
+                    callback_code_hash: code_hash,
+                    msg: Binary::from(msg.as_bytes().to_vec()),
+                }))
+                .map_err(|err| {
+                    StdError::generic_err(format!("Got an error from query: {:?}", err))
+                })?;
+            return Ok(to_binary(&answer)?);
+        }
     }
 }
 
@@ -892,14 +1169,4 @@ fn remove_from_storage_in_query<S: Storage, A: Api, Q: Querier>(
     deps.storage.remove(b"abcd");
 
     Ok(Binary(vec![]))
-}
-
-/////////////////////////////// Migrate ///////////////////////////////
-
-pub fn migrate<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
-    _env: Env,
-    _msg: MigrateMsg,
-) -> StdResult<MigrateResponse> {
-    Ok(MigrateResponse::default())
 }

@@ -39,7 +39,6 @@ rustup target add wasm32-unknown-unknown --toolchain nightly
 ```
 
 3. If using linux, install the standard build tools:
-
 ```
 apt install build-essential
 ```
@@ -55,7 +54,6 @@ cargo install cargo-generate --features vendored-openssl
 ### Create Initial Smart Contract
 
 To create the smart contract you'll:
-
 - generate the initial project
 - compile the smart contract
 - run unit tests

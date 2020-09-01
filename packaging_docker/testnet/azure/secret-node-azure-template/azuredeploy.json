@@ -16,7 +16,7 @@
     },
     "chainId": {
       "type": "string",
-      "defaultValue": "enigma-pub-testnet-2",
+      "defaultValue": "enigma-pub-testnet-3",
       "metadata": {
         "description": "Chain ID of the network"
       }
@@ -29,21 +29,21 @@
     },
     "rpcUrl": {
       "type": "string",
-      "defaultValue": "bootstrap.pub.testnet.enigma.co:26657",
+      "defaultValue": "bootstrap.pub.testnet2.enigma.co:26657",
       "metadata": {
         "description": "The URL of a RPC service used to communicate with the network"
       }
     },
     "registrationService": {
       "type": "string",
-      "defaultValue": "register.pub.testnet.enigma.co:26666",
+      "defaultValue": "register.pub.testnet.enigma.co:26667",
       "metadata": {
         "description": "The URL of the registeration service"
       }
     },
     "persistentPeers": {
       "type": "string",
-      "defaultValue": "dd4c198e2d54229ec08a60e5865cba01a66e263b@40.76.35.106:26656",
+      "defaultValue": "115aa0a629f5d70dd1d464bc7e42799e00f4edae@bootstrap.pub.testnet2.enigma.co",
       "metadata": {
         "description": "List of peers to initially connect to"
       }

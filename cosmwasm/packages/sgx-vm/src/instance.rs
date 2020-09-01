@@ -17,7 +17,7 @@ use wasmer_runtime_core::{
 };
 */
 
-use crate::backends::{get_gas_left, get_gas_used};
+use crate::backends::get_gas_used;
 use crate::context::{
     move_into_context, move_out_of_context, set_storage_readonly, setup_context,
     with_querier_from_context, with_storage_from_context,
@@ -41,8 +41,21 @@ use crate::enclave::get_enclave;
 use crate::wasmi::Module;
 
 /*
-static WASM_PAGE_SIZE: u64 = 64 * 1024;
+const WASM_PAGE_SIZE: u64 = 64 * 1024;
 */
+
+#[derive(Copy, Clone, Debug)]
+pub struct GasReport {
+    /// The original limit the instance was created with
+    pub limit: u64,
+    /// The remaining gas that can be spend
+    pub remaining: u64,
+    /// The amount of gas that was spend and metered externally in operations triggered by this instance
+    pub used_externally: u64,
+    /// The amount of gas that was spend and metered internally (i.e. by executing Wasm and calling
+    /// API methods which are not metered externally)
+    pub used_internally: u64,
+}
 
 pub struct Instance<S: Storage + 'static, A: Api + 'static, Q: Querier + 'static> {
     /*
@@ -106,7 +119,6 @@ where
                 }),
                 // Writes the given value into the database entry at the given key.
                 // Ownership of both input and output pointer is not transferred to the host.
-                // Returns 0 on success. Returns negative value on error.
                 "db_write" => Func::new(move |ctx: &mut Ctx, key_ptr: u32, value_ptr: u32| -> VmResult<()> {
                     do_write::<S, Q>(ctx, key_ptr, value_ptr)
                 }),
@@ -114,25 +126,22 @@ where
                 // scans will not find this key.
                 // At the moment it is not possible to differentiate between a key that existed before and one that did not exist (https://github.com/CosmWasm/cosmwasm/issues/290).
                 // Ownership of both key pointer is not transferred to the host.
-                // Returns 0 on success. Returns negative value on error.
                 "db_remove" => Func::new(move |ctx: &mut Ctx, key_ptr: u32| -> VmResult<()> {
                     do_remove::<S, Q>(ctx, key_ptr)
                 }),
                 // Reads human address from source_ptr and writes canonicalized representation to destination_ptr.
                 // A prepared and sufficiently large memory Region is expected at destination_ptr that points to pre-allocated memory.
-                // Returns 0 on success. Returns negative value on error.
+                // Returns 0 on success. Returns a non-zero memory location to a Region containing an UTF-8 encoded error string for invalid inputs.
                 // Ownership of both input and output pointer is not transferred to the host.
-                "canonicalize_address" => Func::new(move |ctx: &mut Ctx, source_ptr: u32, destination_ptr: u32| -> VmResult<i32> {
-                    do_canonicalize_address(api, ctx, source_ptr, destination_ptr)?;
-                    Ok(0) // TODO: work out error handling strategy (https://github.com/CosmWasm/cosmwasm/issues/433)
+                "canonicalize_address" => Func::new(move |ctx: &mut Ctx, source_ptr: u32, destination_ptr: u32| -> VmResult<u32> {
+                    do_canonicalize_address::<A, S, Q>(api, ctx, source_ptr, destination_ptr)
                 }),
                 // Reads canonical address from source_ptr and writes humanized representation to destination_ptr.
                 // A prepared and sufficiently large memory Region is expected at destination_ptr that points to pre-allocated memory.
-                // Returns 0 on success. Returns negative value on error.
+                // Returns 0 on success. Returns a non-zero memory location to a Region containing an UTF-8 encoded error string for invalid inputs.
                 // Ownership of both input and output pointer is not transferred to the host.
-                "humanize_address" => Func::new(move |ctx: &mut Ctx, source_ptr: u32, destination_ptr: u32| -> VmResult<i32> {
-                    do_humanize_address(api, ctx, source_ptr, destination_ptr)?;
-                    Ok(0) // TODO: work out error handling strategy (https://github.com/CosmWasm/cosmwasm/issues/433)
+                "humanize_address" => Func::new(move |ctx: &mut Ctx, source_ptr: u32, destination_ptr: u32| -> VmResult<u32> {
+                    do_humanize_address::<A, S, Q>(api, ctx, source_ptr, destination_ptr)
                 }),
                 "query_chain" => Func::new(move |ctx: &mut Ctx, request_ptr: u32| -> VmResult<u32> {
                     do_query_chain::<S, Q>(ctx, request_ptr)
@@ -178,8 +187,8 @@ where
         _gas_limit: u64,
     ) -> Self {
         /*
-        set_gas_limit(wasmer_instance.as_mut(), gas_limit);
-        get_gas_state::<S, Q>(wasmer_instance.context_mut()).set_gas_limit(gas_limit);
+        set_gas_left(wasmer_instance.context_mut(), gas_limit);
+        get_gas_state_mut::<S, Q>(wasmer_instance.context_mut()).set_gas_limit(gas_limit);
         let required_features = required_features_from_wasmer_instance(wasmer_instance.as_ref());
         let instance_ptr = NonNull::from(wasmer_instance.as_ref());
         set_wasmer_instance::<S, Q>(wasmer_instance.context_mut(), Some(instance_ptr));
@@ -221,7 +230,39 @@ where
 
     /// Returns the currently remaining gas.
     pub fn get_gas_left(&self) -> u64 {
-        get_gas_left(&self.inner)
+        self.create_gas_report().remaining
+    }
+
+    /// Creates and returns a gas report.
+    /// This is a snapshot and multiple reports can be created during the lifetime of
+    /// an instance.
+    #[cfg(not(feature = "default-enclave"))]
+    pub fn create_gas_report(&self) -> GasReport {
+        let state = get_gas_state::<S, Q>(self.inner.context()).clone();
+        let gas_left = get_gas_left(self.inner.context());
+        GasReport {
+            limit: state.gas_limit,
+            remaining: gas_left,
+            used_externally: state.externally_used_gas,
+            used_internally: state.get_gas_used_in_wasmer(gas_left),
+        }
+    }
+
+    /// Creates and returns a gas report.
+    /// This is a snapshot and multiple reports can be created during the lifetime of
+    /// an instance.
+    #[cfg(feature = "default-enclave")]
+    pub fn create_gas_report(&self) -> GasReport {
+        let limit = self.inner.gas_limit();
+        let remaining = self.inner.gas_left();
+        let used_internally = self.inner.gas_used();
+        let used_externally = limit.saturating_sub(remaining).saturating_sub(used_internally);
+        GasReport {
+            limit,
+            remaining,
+            used_externally,
+            used_internally,
+        }
     }
 
     /// Returns the currently remaining gas.
@@ -289,15 +330,13 @@ where
         Ok(function)
     }
 
-    pub fn call_init(&mut self, env: &[u8], msg: &[u8]) -> VmResult<Vec<u8>> {
-        let init_result = self.inner.init(env, msg)?;
-        // TODO verify signature
+    pub fn call_init(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<Vec<u8>> {
+        let init_result = self.inner.init(env, msg, sig_info)?;
         Ok(init_result.into_output())
     }
 
-    pub fn call_handle(&mut self, env: &[u8], msg: &[u8]) -> VmResult<Vec<u8>> {
-        let init_result = self.inner.handle(env, msg)?;
-        // TODO verify signature
+    pub fn call_handle(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<Vec<u8>> {
+        let init_result = self.inner.handle(env, msg, sig_info)?;
         Ok(init_result.into_output())
     }
 
@@ -307,7 +346,6 @@ where
 
     pub fn call_query(&mut self, msg: &[u8]) -> VmResult<Vec<u8>> {
         let init_result = self.inner.query(msg)?;
-        // TODO verify signature
         Ok(init_result.into_output())
     }
 }
@@ -319,21 +357,21 @@ mod test {
     use crate::errors::VmError;
     use crate::testing::{
         mock_dependencies, mock_env, mock_instance, mock_instance_with_balances,
-        mock_instance_with_failing_api, mock_instance_with_gas_limit, MockApi, MockQuerier,
-        MockStorage, MOCK_CONTRACT_ADDR,
+        mock_instance_with_failing_api, mock_instance_with_gas_limit, MockQuerier, MockStorage,
     };
-    use crate::traits::ReadonlyStorage;
+    use crate::traits::Storage;
     use crate::{call_init, FfiError};
     use cosmwasm_std::{
-        coin, from_binary, AllBalanceResponse, BalanceResponse, BankQuery, HumanAddr, Never,
+        coin, coins, from_binary, AllBalanceResponse, BalanceResponse, BankQuery, Empty, HumanAddr,
         QueryRequest,
     };
     use wabt::wat2wasm;
 
-    static KIB: usize = 1024;
-    static MIB: usize = 1024 * 1024;
+    const KIB: usize = 1024;
+    const MIB: usize = 1024 * 1024;
+    const DEFAULT_GAS_LIMIT: u64 = 500_000;
+    const DEFAULT_QUERY_GAS_LIMIT: u64 = 300_000;
     static CONTRACT: &[u8] = include_bytes!("../testdata/contract.wasm");
-    static DEFAULT_GAS_LIMIT: u64 = 500_000;
 
     // shorthands for function generics below
     type MS = MockStorage;
@@ -470,7 +508,7 @@ mod test {
         let mut instance = mock_instance_with_failing_api(&CONTRACT, &[], error_message);
         let init_result = call_init::<_, _, _, serde_json::Value>(
             &mut instance,
-            &mock_env(&MockApi::new(MOCK_CONTRACT_ADDR.len()), "someone", &[]),
+            &mock_env("someone", &[]),
             b"{\"verifier\": \"some1\", \"beneficiary\": \"some2\"}",
         );
 
@@ -478,8 +516,8 @@ mod test {
         // from wasmer `RuntimeError` to `VmError` unwraps errors that happen in WASM imports.
         match init_result.unwrap_err() {
             VmError::FfiErr {
-                source: FfiError::Other { error, .. },
-            } if error == error_message => {}
+                source: FfiError::Unknown { msg, .. },
+            } if msg == Some(error_message.to_string()) => {}
             other => panic!("unexpected error: {:?}", other),
         }
     }
@@ -547,6 +585,63 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "default-cranelift")]
+    fn create_gas_report_works_cranelift() {
+        const LIMIT: u64 = 7_000_000;
+        /// Value hardcoded in cranelift backend
+        const FAKE_REMANING: u64 = 1_000_000;
+        let mut instance = mock_instance_with_gas_limit(&CONTRACT, LIMIT);
+
+        let report1 = instance.create_gas_report();
+        assert_eq!(report1.used_externally, 0);
+        assert_eq!(report1.used_internally, LIMIT - FAKE_REMANING);
+        assert_eq!(report1.limit, LIMIT);
+        assert_eq!(report1.remaining, FAKE_REMANING);
+
+        // init contract
+        let env = mock_env("creator", &coins(1000, "earth"));
+        let msg = r#"{"verifier": "verifies", "beneficiary": "benefits"}"#.as_bytes();
+        call_init::<_, _, _, Empty>(&mut instance, &env, msg)
+            .unwrap()
+            .unwrap();
+
+        let report2 = instance.create_gas_report();
+        assert_eq!(report2.used_externally, 0);
+        assert_eq!(report2.used_internally, LIMIT - FAKE_REMANING);
+        assert_eq!(report2.limit, LIMIT);
+        assert_eq!(report2.remaining, FAKE_REMANING);
+    }
+
+    #[test]
+    #[cfg(feature = "default-singlepass")]
+    fn create_gas_report_works_singlepass() {
+        const LIMIT: u64 = 7_000_000;
+        let mut instance = mock_instance_with_gas_limit(&CONTRACT, LIMIT);
+
+        let report1 = instance.create_gas_report();
+        assert_eq!(report1.used_externally, 0);
+        assert_eq!(report1.used_internally, 0);
+        assert_eq!(report1.limit, LIMIT);
+        assert_eq!(report1.remaining, LIMIT);
+
+        // init contract
+        let env = mock_env("creator", &coins(1000, "earth"));
+        let msg = r#"{"verifier": "verifies", "beneficiary": "benefits"}"#.as_bytes();
+        call_init::<_, _, _, Empty>(&mut instance, &env, msg)
+            .unwrap()
+            .unwrap();
+
+        let report2 = instance.create_gas_report();
+        assert_eq!(report2.used_externally, 134);
+        assert_eq!(report2.used_internally, 63027);
+        assert_eq!(report2.limit, LIMIT);
+        assert_eq!(
+            report2.remaining,
+            LIMIT - report2.used_externally - report2.used_internally
+        );
+    }
+
+    #[test]
     fn set_storage_readonly_works() {
         let mut instance = mock_instance(&CONTRACT, &[]);
 
@@ -581,7 +676,7 @@ mod test {
         // initial check
         instance
             .with_storage(|store| {
-                assert!(store.get(b"foo").unwrap().0.is_none());
+                assert!(store.get(b"foo").0.unwrap().is_none());
                 Ok(())
             })
             .unwrap();
@@ -589,7 +684,7 @@ mod test {
         // write some data
         instance
             .with_storage(|store| {
-                store.set(b"foo", b"bar").unwrap();
+                store.set(b"foo", b"bar").0.unwrap();
                 Ok(())
             })
             .unwrap();
@@ -597,7 +692,7 @@ mod test {
         // read some data
         instance
             .with_storage(|store| {
-                assert_eq!(store.get(b"foo").unwrap().0, Some(b"bar".to_vec()));
+                assert_eq!(store.get(b"foo").0.unwrap(), Some(b"bar".to_vec()));
                 Ok(())
             })
             .unwrap();
@@ -623,11 +718,15 @@ mod test {
         instance
             .with_querier(|querier| {
                 let response = querier
-                    .handle_query::<Never>(&QueryRequest::Bank(BankQuery::Balance {
-                        address: rich_addr.clone(),
-                        denom: "silver".to_string(),
-                    }))?
+                    .query::<Empty>(
+                        &QueryRequest::Bank(BankQuery::Balance {
+                            address: rich_addr.clone(),
+                            denom: "silver".to_string(),
+                        }),
+                        DEFAULT_QUERY_GAS_LIMIT,
+                    )
                     .0
+                    .unwrap()
                     .unwrap()
                     .unwrap();
                 let BalanceResponse { amount } = from_binary(&response).unwrap();
@@ -641,10 +740,14 @@ mod test {
         instance
             .with_querier(|querier| {
                 let response = querier
-                    .handle_query::<Never>(&QueryRequest::Bank(BankQuery::AllBalances {
-                        address: rich_addr.clone(),
-                    }))?
+                    .query::<Empty>(
+                        &QueryRequest::Bank(BankQuery::AllBalances {
+                            address: rich_addr.clone(),
+                        }),
+                        DEFAULT_QUERY_GAS_LIMIT,
+                    )
                     .0
+                    .unwrap()
                     .unwrap()
                     .unwrap();
                 let AllBalanceResponse { amount } = from_binary(&response).unwrap();
@@ -671,11 +774,15 @@ mod test {
         instance
             .with_querier(|querier| {
                 let response = querier
-                    .handle_query::<Never>(&QueryRequest::Bank(BankQuery::Balance {
-                        address: rich_addr.clone(),
-                        denom: "silver".to_string(),
-                    }))?
+                    .query::<Empty>(
+                        &QueryRequest::Bank(BankQuery::Balance {
+                            address: rich_addr.clone(),
+                            denom: "silver".to_string(),
+                        }),
+                        DEFAULT_QUERY_GAS_LIMIT,
+                    )
                     .0
+                    .unwrap()
                     .unwrap()
                     .unwrap();
                 let BalanceResponse { amount } = from_binary(&response).unwrap();
@@ -696,11 +803,15 @@ mod test {
         instance
             .with_querier(|querier| {
                 let response = querier
-                    .handle_query::<Never>(&QueryRequest::Bank(BankQuery::Balance {
-                        address: rich_addr.clone(),
-                        denom: "silver".to_string(),
-                    }))?
+                    .query::<Empty>(
+                        &QueryRequest::Bank(BankQuery::Balance {
+                            address: rich_addr.clone(),
+                            denom: "silver".to_string(),
+                        }),
+                        DEFAULT_QUERY_GAS_LIMIT,
+                    )
                     .0
+                    .unwrap()
                     .unwrap()
                     .unwrap();
                 let BalanceResponse { amount } = from_binary(&response).unwrap();
@@ -714,7 +825,7 @@ mod test {
 #[cfg(test)]
 #[cfg(feature = "default-singlepass")]
 mod singlepass_test {
-    use cosmwasm_std::{coins, Never};
+    use cosmwasm_std::{coins, Empty};
 
     use crate::calls::{call_handle, call_init, call_query};
     use crate::testing::{mock_env, mock_instance, mock_instance_with_gas_limit};
@@ -727,15 +838,15 @@ mod singlepass_test {
         let orig_gas = instance.get_gas_left();
 
         // init contract
-        let env = mock_env(&instance.api, "creator", &coins(1000, "earth"));
+        let env = mock_env("creator", &coins(1000, "earth"));
         let msg = r#"{"verifier": "verifies", "beneficiary": "benefits"}"#.as_bytes();
-        call_init::<_, _, _, Never>(&mut instance, &env, msg)
+        call_init::<_, _, _, Empty>(&mut instance, &env, msg)
             .unwrap()
             .unwrap();
 
         let init_used = orig_gas - instance.get_gas_left();
         println!("init used: {}", init_used);
-        assert_eq!(init_used, 65338);
+        assert_eq!(init_used, 63161);
     }
 
     #[test]
@@ -743,23 +854,23 @@ mod singlepass_test {
         let mut instance = mock_instance(&CONTRACT, &[]);
 
         // init contract
-        let env = mock_env(&instance.api, "creator", &coins(1000, "earth"));
+        let env = mock_env("creator", &coins(1000, "earth"));
         let msg = r#"{"verifier": "verifies", "beneficiary": "benefits"}"#.as_bytes();
-        call_init::<_, _, _, Never>(&mut instance, &env, msg)
+        call_init::<_, _, _, Empty>(&mut instance, &env, msg)
             .unwrap()
             .unwrap();
 
         // run contract - just sanity check - results validate in contract unit tests
         let gas_before_handle = instance.get_gas_left();
-        let env = mock_env(&instance.api, "verifies", &coins(15, "earth"));
+        let env = mock_env("verifies", &coins(15, "earth"));
         let msg = br#"{"release":{}}"#;
-        call_handle::<_, _, _, Never>(&mut instance, &env, msg)
+        call_handle::<_, _, _, Empty>(&mut instance, &env, msg)
             .unwrap()
             .unwrap();
 
         let handle_used = gas_before_handle - instance.get_gas_left();
         println!("handle used: {}", handle_used);
-        assert_eq!(handle_used, 96318);
+        assert_eq!(handle_used, 193119);
     }
 
     #[test]
@@ -767,9 +878,9 @@ mod singlepass_test {
         let mut instance = mock_instance_with_gas_limit(&CONTRACT, 20_000);
 
         // init contract
-        let env = mock_env(&instance.api, "creator", &coins(1000, "earth"));
+        let env = mock_env("creator", &coins(1000, "earth"));
         let msg = r#"{"verifier": "verifies", "beneficiary": "benefits"}"#.as_bytes();
-        let res = call_init::<_, _, _, Never>(&mut instance, &env, msg);
+        let res = call_init::<_, _, _, Empty>(&mut instance, &env, msg);
         assert!(res.is_err());
     }
 
@@ -778,9 +889,9 @@ mod singlepass_test {
         let mut instance = mock_instance(&CONTRACT, &[]);
 
         // init contract
-        let env = mock_env(&instance.api, "creator", &coins(1000, "earth"));
+        let env = mock_env("creator", &coins(1000, "earth"));
         let msg = r#"{"verifier": "verifies", "beneficiary": "benefits"}"#.as_bytes();
-        let _res = call_init::<_, _, _, Never>(&mut instance, &env, msg)
+        let _res = call_init::<_, _, _, Empty>(&mut instance, &env, msg)
             .unwrap()
             .unwrap();
 
@@ -794,6 +905,6 @@ mod singlepass_test {
 
         let query_used = gas_before_query - instance.get_gas_left();
         println!("query used: {}", query_used);
-        assert_eq!(query_used, 32558);
+        assert_eq!(query_used, 32070);
     }
 }

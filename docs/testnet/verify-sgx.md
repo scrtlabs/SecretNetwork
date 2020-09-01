@@ -58,7 +58,7 @@ INFO  [wasmi_runtime_enclave::registration::attestation] Attestation report: {"i
 
 (or `isvEnclaveQuoteStatus":"SW_HARDENING_NEEDED"`)
 
-Where the important field is **isvEnclaveQuoteStatus**. This is the field that marks trust level of our platform. The acceptable values for this field are:
+Where the important fields are **isvEnclaveQuoteStatus** and **advisoryIDs**. This is are fields that mark the trust level of our platform. The acceptable values for the `isvEnclaveQuoteStatus` field are:
 
 - OK
 - SW_HARDENING_NEEDED
@@ -66,7 +66,11 @@ Where the important field is **isvEnclaveQuoteStatus**. This is the field that m
 With the following value accepted for **testnet only**:
 
 - GROUP_OUT_OF_DATE
-- CONFIGURATION_AND_SW_HARDENING_NEEDED
+
+For the status `CONFIGURATION_AND_SW_HARDENING_NEEDED` we perform a deeper inspection of the exact vulnerabilities that remain. The acceptable values **for mainnet** are:
+
+* `"INTEL-SA-00334"`
+* `"INTEL-SA-00219"`
 
 Consult with the [Intel API](https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf#page=21) for more on these values.
 
@@ -84,7 +88,7 @@ If you do not see such an output, look for a file called `attestation_cert.der` 
 
 ### 5. Troubleshooting
 
-- Output is:
+####  Output is:
 
 ```
 secretd init-enclave
@@ -96,7 +100,7 @@ ERROR: failed to initialize enclave: Error calling the VM: SGX_ERROR_ENCLAVE_FIL
 
 Make sure you have the environment variable `SCRT_ENCLAVE_DIR=/usr/lib` set before you run `secretd`.
 
-- Output is:
+####  Output is:
 
 ```
 secretd init-enclave
@@ -112,7 +116,7 @@ ERROR: failed to initialize enclave: Error calling the VM: SGX_ERROR_UNEXPECTED
 
 Make sure the directory `~/.sgx_secrets/` is created. If that still doesn't work, try to create `/root/.sgx_secrets`
 
-- Output is:
+####  Output is:
 
 ```
 secretd init-enclave
@@ -135,10 +139,14 @@ ERROR: failed to create attestation report: Error calling the VM: SGX_ERROR_SERV
 
 Make sure the `aesmd-service` is running `systemctl status aesmd.service`
 
-- I'm seeing `CONFIGURATION_AND_SW_HARDENING_NEEDED` in the `isvEnclaveQuoteStatus` field
+####  I'm seeing `CONFIGURATION_AND_SW_HARDENING_NEEDED` in the `isvEnclaveQuoteStatus` field, but with more advisories than what is allowed
 
-This could mean a number of different things related to the configuration of the machine, but one such example we encountered was if hyper-threading is enabled in the BIOS. It must be disabled (see: https://software.intel.com/security-software-guidance/software-guidance/l1-terminal-fault)
+This could mean a number of different things related to the configuration of the machine. Most common are:
 
-- I'm seeing `SGX_ERROR_DEVICE_BUSY`
+   * ["INTEL-SA-00161", "INTEL-SA-00233"] - Hyper-threading must be disabled in the BIOS
+   * ["INTEL-SA-00289"] - Overclocking/undervolting must be disabled by the BIOS
+   * ["INTEL-SA-00219"] - Integrated graphics should be disabled in the BIOS - we recommend performing this step if you can, though it isn't required
+
+#### I'm seeing `SGX_ERROR_DEVICE_BUSY`
 
 Most likely you tried reinstalling the driver and rerunning the enclave - restarting should solve the problem

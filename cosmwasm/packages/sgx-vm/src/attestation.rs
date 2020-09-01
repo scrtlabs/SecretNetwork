@@ -15,6 +15,10 @@ extern "C" {
     pub fn ecall_get_attestation_report(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
+        spid: *const u8,
+        spid_len: u32,
+        api_key: *const u8,
+        api_key_len: u32,
     ) -> sgx_status_t;
     pub fn ecall_authenticate_new_node(
         eid: sgx_enclave_id_t,
@@ -122,12 +126,21 @@ pub extern "C" fn ocall_get_update_info(
     unsafe { sgx_report_attestation_status(platform_blob, enclave_trusted, update_info) }
 }
 
-pub fn create_attestation_report_u() -> SgxResult<()> {
+pub fn create_attestation_report_u(spid: &[u8], api_key: &[u8]) -> SgxResult<()> {
     let enclave = get_enclave()?;
 
     let eid = enclave.geteid();
     let mut retval = sgx_status_t::SGX_SUCCESS;
-    let status = unsafe { ecall_get_attestation_report(eid, &mut retval) };
+    let status = unsafe {
+        ecall_get_attestation_report(
+            eid,
+            &mut retval,
+            spid.as_ptr(),
+            spid.len() as u32,
+            api_key.as_ptr(),
+            api_key.len() as u32,
+        )
+    };
 
     if status != sgx_status_t::SGX_SUCCESS {
         return Err(status);

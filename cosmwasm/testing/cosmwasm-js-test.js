@@ -122,7 +122,10 @@ process.on("unhandledRejection", (error) => {
       balance: { address: "blabla" },
     });
   } catch (err) {
-    assert(err.message.includes("canonicalize_address returned error"));
+    assert(
+      err.message.includes("canonicalize_address errored: invalid length"),
+      `'${err.message}' does not include 'canonicalize_address errored: invalid length'`
+    );
   }
 
   console.log("ok 👌");

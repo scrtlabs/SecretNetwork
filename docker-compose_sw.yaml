@@ -2,7 +2,7 @@ version: '3'
 
 services:
   bootstrap:
-    image: enigmampc/secret-network-bootstrap-sw
+    image: enigmampc/secret-network-bootstrap-sw:latest
     container_name: bootstrap
     volumes:
       - /tmp/secretd:/root/.secretd

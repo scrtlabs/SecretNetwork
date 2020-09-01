@@ -46,6 +46,13 @@ else
 	SGX_COMMON_CFLAGS += -O2
 endif
 
+ifneq (,$(findstring production,$(FEATURES)))
+  ENCLAVE_CONFIG = Enclave.config.prod.xml
+else
+  ENCLAVE_CONFIG = Enclave.config.xml
+endif
+
+
 SGX_COMMON_CFLAGS += -fstack-protector
 
 ######## CUSTOM Settings ########
@@ -87,7 +94,7 @@ RustEnclave_Link_Flags := -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfi
 
 Rust_Crate_Source := $(shell find -type f | grep -vP '(\.so|\.o|\.a)$$' | grep -vP '^\./target' | grep -v Enclave_t)
 Rust_Target_Path := $(CURDIR)/xargo
-Rust_Flags := "-Z force-unstable-if-unmarked -Ctarget-feature=+aes,+ssse3"
+Rust_Flags := "-Z force-unstable-if-unmarked -C target-cpu=skylake"
 
 .PHONY: all
 all: enclave
@@ -102,7 +109,7 @@ ffi-types:
 	cp $(Rust_Target_Path)/../../../target/headers/enclave-ffi-types.h $(Rust_Target_Path)/../target/headers/
 
 librust_cosmwasm_enclave.signed.so: librust_cosmwasm_enclave.so
-	sgx_sign sign -key Enclave_private.pem -enclave $^ -out $@ -config Enclave.config.xml
+	sgx_sign sign -key Enclave_private.pem -enclave $^ -out $@ -config $(ENCLAVE_CONFIG)
 
 librust_cosmwasm_enclave.so: $(CUSTOM_LIBRARY_PATH)/libenclave.a Enclave_t.o
 	$(CXX) Enclave_t.o -o $@ $(RustEnclave_Link_Flags)

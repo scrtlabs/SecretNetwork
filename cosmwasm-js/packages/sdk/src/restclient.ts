@@ -286,6 +286,8 @@ export class RestClient {
   private readonly broadcastMode: BroadcastMode;
   public readonly enigmautils: EnigmaUtils;
 
+  private codeHashCache: Map<any, string>;
+
   /**
    * Creates a new client to interact with a Cosmos SDK light client daemon.
    * This class tries to be a direct mapping onto the API. Some basic decoding and normalizatin is done
@@ -307,6 +309,7 @@ export class RestClient {
     });
     this.broadcastMode = broadcastMode;
     this.enigmautils = new EnigmaUtils(apiUrl, seed);
+    this.codeHashCache = new Map<any, string>();
   }
 
   public async get(path: string): Promise<RestClientResponse> {
@@ -439,14 +442,28 @@ export class RestClient {
   }
 
   public async getCodeHashByCodeId(id: number): Promise<string> {
+    const codeHashFromCache = this.codeHashCache.get(id);
+    if (typeof codeHashFromCache === "string") {
+      return codeHashFromCache;
+    }
+
     const path = `/wasm/code/${id}/hash`;
     const responseData = (await this.get(path)) as ContractHashResponse;
+
+    this.codeHashCache.set(id, responseData.result);
     return responseData.result;
   }
 
   public async getCodeHashByContractAddr(addr: string): Promise<string> {
+    const codeHashFromCache = this.codeHashCache.get(addr);
+    if (typeof codeHashFromCache === "string") {
+      return codeHashFromCache;
+    }
+
     const path = `/wasm/contract/${addr}/code-hash`;
     const responseData = (await this.get(path)) as ContractHashResponse;
+
+    this.codeHashCache.set(addr, responseData.result);
     return responseData.result;
   }
 
@@ -541,7 +558,7 @@ export class RestClient {
   }
 
   public async decryptDataField(dataField: string = "", nonce: Uint8Array): Promise<Uint8Array> {
-    const wasmOutputDataCipherBz = Encoding.fromBase64(Encoding.fromUtf8(Encoding.fromHex(dataField)));
+    const wasmOutputDataCipherBz = Encoding.fromHex(dataField);
 
     // data
     const data = Encoding.fromBase64(
@@ -577,7 +594,7 @@ export class RestClient {
       const msg: Msg = txsResponse.tx.value.msg[0];
 
       let inputMsgEncrypted: Uint8Array;
-      if (msg.type === "wasm/execute") {
+      if (msg.type === "wasm/MsgExecuteContract") {
         inputMsgEncrypted = Encoding.fromBase64((msg as MsgExecuteContract).value.msg);
       } else if (msg.type === "wasm/instantiate") {
         inputMsgEncrypted = Encoding.fromBase64((msg as MsgInstantiateContract).value.init_msg);
@@ -595,7 +612,7 @@ export class RestClient {
           await this.enigmautils.decrypt(inputMsgEncrypted.slice(64), nonce),
         );
 
-        if (msg.type === "wasm/execute") {
+        if (msg.type === "wasm/MsgExecuteContract") {
           (txsResponse.tx.value.msg[0] as MsgExecuteContract).value.msg = inputMsg;
         } else if (msg.type === "wasm/instantiate") {
           (txsResponse.tx.value.msg[0] as MsgInstantiateContract).value.init_msg = inputMsg;

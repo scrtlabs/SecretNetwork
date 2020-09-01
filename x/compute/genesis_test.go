@@ -2,6 +2,7 @@ package compute
 
 import (
 	"encoding/json"
+	compute "github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -18,8 +19,8 @@ func TestInitGenesis(t *testing.T) {
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator := createFakeFundedAccount(data.ctx, data.acctKeeper, deposit.Add(deposit...))
-	fred := createFakeFundedAccount(data.ctx, data.acctKeeper, topUp)
+	creator, privCreator := createFakeFundedAccount(data.ctx, data.acctKeeper, deposit.Add(deposit...))
+	fred, _ := createFakeFundedAccount(data.ctx, data.acctKeeper, topUp)
 
 	h := data.module.NewHandler()
 	q := data.module.NewQuerierHandler()
@@ -90,10 +91,14 @@ func TestInitGenesis(t *testing.T) {
 
 	initCmd := MsgInstantiateContract{
 		Sender:    creator,
-		Code:      1,
+		CodeID:    1,
 		InitMsg:   initMsgBz,
 		InitFunds: deposit,
 	}
+
+	//compute.PrepareInitSignedTx()
+	data.ctx = compute.PrepareInitSignedTx(t, data.keeper, data.ctx, creator, privCreator, initMsgBz, 1, deposit)
+
 	res, err = h(data.ctx, initCmd)
 	require.NoError(t, err)
 	contractAddr := sdk.AccAddress(res.Data)

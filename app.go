@@ -3,7 +3,6 @@ package app
 import (
 	"encoding/json"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -288,16 +287,8 @@ func NewSecretNetworkApp(
 	}
 	wasmConfig = wasmWrap.Wasm
 
-	supportedFeatures := "staking"
-	// replace with bootstrap flag when we figure out how to test properly and everything works
-	app.regKeeper = reg.NewKeeper(app.cdc, keys[reg.StoreKey], regRouter, reg.EnclaveApi{}, homeDir, app.bootstrap)
-	app.computeKeeper = compute.NewKeeper(
-		app.cdc,
-		keys[compute.StoreKey],
-		app.accountKeeper,
-		app.bankKeeper, app.stakingKeeper, computeRouter, computeDir, wasmConfig, supportedFeatures, nil, nil)
-	// register the proposal types
 	govRouter := gov.NewRouter()
+	// register the proposal types
 	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler).
 		AddRoute(params.RouterKey, params.NewParamChangeProposalHandler(app.paramsKeeper)).
 		AddRoute(distr.RouterKey, distr.NewCommunityPoolSpendProposalHandler(app.distrKeeper)).
@@ -306,6 +297,15 @@ func NewSecretNetworkApp(
 		app.cdc, keys[gov.StoreKey], govSubspace,
 		app.supplyKeeper, &stakingKeeper, govRouter,
 	)
+
+	supportedFeatures := "staking"
+	// replace with bootstrap flag when we figure out how to test properly and everything works
+	app.regKeeper = reg.NewKeeper(app.cdc, keys[reg.StoreKey], regRouter, reg.EnclaveApi{}, homeDir, app.bootstrap)
+	app.computeKeeper = compute.NewKeeper(
+		app.cdc,
+		keys[compute.StoreKey],
+		app.accountKeeper, &app.bankKeeper, &app.govKeeper, &app.distrKeeper, &app.mintKeeper, &stakingKeeper,
+		computeRouter, computeDir, wasmConfig, supportedFeatures, nil, nil)
 
 	// register the staking hooks
 	// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks
@@ -507,32 +507,26 @@ func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhite
 	for _, addr := range jailWhiteList {
 		_, err := sdk.ValAddressFromBech32(addr)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 		whiteListMap[addr] = true
 	}
 
 	/* Just to be safe, assert the invariants on current state. */
-	app.crisisKeeper.AssertInvariants(ctx)
+	// app.crisisKeeper.AssertInvariants(ctx)
 
 	/* Handle fee distribution state. */
 
 	// withdraw all validator commission
 	app.stakingKeeper.IterateValidators(ctx, func(_ int64, val staking.ValidatorI) (stop bool) {
-		_, err := app.distrKeeper.WithdrawValidatorCommission(ctx, val.GetOperator())
-		if err != nil {
-			log.Fatal(err)
-		}
+		_, _ = app.distrKeeper.WithdrawValidatorCommission(ctx, val.GetOperator())
 		return false
 	})
 
 	// withdraw all delegator rewards
 	dels := app.stakingKeeper.GetAllDelegations(ctx)
 	for _, delegation := range dels {
-		_, err := app.distrKeeper.WithdrawDelegationRewards(ctx, delegation.DelegatorAddress, delegation.ValidatorAddress)
-		if err != nil {
-			log.Fatal(err)
-		}
+		_, _ = app.distrKeeper.WithdrawDelegationRewards(ctx, delegation.DelegatorAddress, delegation.ValidatorAddress)
 	}
 
 	// clear validator slash events
@@ -603,9 +597,12 @@ func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhite
 		validator.UnbondingHeight = 0
 		if applyWhiteList && !whiteListMap[addr.String()] {
 			validator.Jailed = true
+			app.stakingKeeper.SetValidator(ctx, validator)
+			app.stakingKeeper.DeleteValidatorByPowerIndex(ctx, validator)
+		} else {
+			app.stakingKeeper.SetValidator(ctx, validator)
 		}
 
-		app.stakingKeeper.SetValidator(ctx, validator)
 		counter++
 	}
 

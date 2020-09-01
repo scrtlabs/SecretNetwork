@@ -17,6 +17,7 @@ const (
 	TStoreKey              = types.TStoreKey
 	QuerierRoute           = types.QuerierRoute
 	RouterKey              = types.RouterKey
+	EnclaveRegistrationKey = types.EnclaveRegistrationKey
 	QueryEncryptedSeed     = keeper.QueryEncryptedSeed
 	QueryMasterCertificate = keeper.QueryMasterCertificate
 	SecretNodeSeedConfig   = types.SecretNodeSeedConfig

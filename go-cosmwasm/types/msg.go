@@ -6,18 +6,48 @@ import (
 
 //------- Results / Msgs -------------
 
-// CosmosResponse is the raw response from the init / handle calls
-type CosmosResponse struct {
-	Ok  *Result   `json:"Ok,omitempty"`
-	Err *StdError `json:"Err,omitempty"`
+// HandleResult is the raw response from the handle call
+type HandleResult struct {
+	Ok  *HandleResponse `json:"Ok,omitempty"`
+	Err *StdError       `json:"Err,omitempty"`
 }
 
-// Result defines the return value on a successful
-type Result struct {
+// HandleResponse defines the return value on a successful handle
+type HandleResponse struct {
 	// Messages comes directly from the contract and is it's request for action
 	Messages []CosmosMsg `json:"messages"`
 	// base64-encoded bytes to return as ABCI.Data field
-	Data string `json:"data"`
+	Data []byte `json:"data"`
+	// log message to return over abci interface
+	Log []LogAttribute `json:"log"`
+}
+
+// InitResult is the raw response from the handle call
+type InitResult struct {
+	Ok  *InitResponse `json:"Ok,omitempty"`
+	Err *StdError     `json:"Err,omitempty"`
+}
+
+// InitResponse defines the return value on a successful handle
+type InitResponse struct {
+	// Messages comes directly from the contract and is it's request for action
+	Messages []CosmosMsg `json:"messages"`
+	// log message to return over abci interface
+	Log []LogAttribute `json:"log"`
+}
+
+// MigrateResult is the raw response from the handle call
+type MigrateResult struct {
+	Ok  *MigrateResponse `json:"Ok,omitempty"`
+	Err *StdError        `json:"Err,omitempty"`
+}
+
+// MigrateResponse defines the return value on a successful handle
+type MigrateResponse struct {
+	// Messages comes directly from the contract and is it's request for action
+	Messages []CosmosMsg `json:"messages"`
+	// base64-encoded bytes to return as ABCI.Data field
+	Data []byte `json:"data"`
 	// log message to return over abci interface
 	Log []LogAttribute `json:"log"`
 }
@@ -35,10 +65,22 @@ type CosmosMsg struct {
 	Custom  json.RawMessage `json:"custom,omitempty"`
 	Staking *StakingMsg     `json:"staking,omitempty"`
 	Wasm    *WasmMsg        `json:"wasm,omitempty"`
+	Gov     *GovMsg         `json:"gov,omitempty"`
 }
 
 type BankMsg struct {
 	Send *SendMsg `json:"send,omitempty"`
+}
+
+type GovMsg struct {
+	Vote *VoteMsg `json:"vote,omitempty"`
+}
+
+// VoteMsg contains instructions for a Cosmos-SDK/GovVote
+// It has a fixed interface here and should be converted into the proper SDK format before dispatching
+type VoteMsg struct {
+	Proposal   uint64 `json:"proposal"`
+	VoteOption string `json:"vote_option"`
 }
 
 // SendMsg contains instructions for a Cosmos-SDK/SendMsg
@@ -101,7 +143,8 @@ type ExecuteMsg struct {
 	// as `userMsg` when calling `Handle` on the above-defined contract
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Send Coins `json:"send"`
+	Send              Coins  `json:"send"`
+	CallbackSignature []byte `json:"callback_sig"` // Optional
 }
 
 type InstantiateMsg struct {
@@ -113,6 +156,9 @@ type InstantiateMsg struct {
 	// Msg is assumed to be a json-encoded message, which will be passed directly
 	// as `userMsg` when calling `Handle` on the above-defined contract
 	Msg []byte `json:"msg"`
+	/// Label is a mandatory human-readbale label for the contract
+	Label string `json:"label"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Send Coins `json:"send"`
+	Send              Coins  `json:"send"`
+	CallbackSignature []byte `json:"callback_sig"` // Optional
 }

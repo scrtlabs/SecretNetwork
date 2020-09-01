@@ -93,7 +93,7 @@ export SCRT_ENCLAVE_DIR=/usr/lib
 ```
 
 ```bash
-secretd init-enclave
+secretd init-enclave 
 ```
 
 ### 9. Check that initialization was successful
@@ -126,6 +126,7 @@ secretcli config chain-id enigma-pub-testnet-2
 secretcli config node tcp://bootstrap.pub.testnet.enigma.co:26657
 secretcli config output json
 secretcli config indent true
+secretcli config trust-node true
 ```
 
 Set up a key. Make sure you backup the mnemonic and the keyring password.

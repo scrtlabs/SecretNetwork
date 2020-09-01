@@ -187,3 +187,11 @@ You can get the current slashing parameters via:
 ```bash
 secretcli q slashing params
 ```
+
+##### Query Parameters
+
+You can get the current slashing parameters via:
+
+```bash
+secretcli q slashing params
+```s
