@@ -115,12 +115,12 @@ You can see another `param-change` example here: [enigma-1-proposal-3.json](http
 | `gov`          | `votingparams`            | object           | `{"voting_period": "172800000000000"}`                                                                    |
 | `gov`          | `tallyparams`             | object           | `{"quorum": "0.334000000000000000", "threshold": "0.500000000000000000", "veto": "0.334000000000000000"}` |
 | `mint`         | `MintDenom`               | string           | `"uscrt"`                                                                                                 |
-| `mint`         | `InflationRateChange`     | string (dec)     | `"0.130000000000000000"`                                                                                  |
-| `mint`         | `InflationMax`            | string (dec)     | `"0.200000000000000000"`                                                                                  |
+| `mint`         | `InflationRateChange`     | string (dec)     | `"0.080000000000000000"`                                                                                  |
+| `mint`         | `InflationMax`            | string (dec)     | `"0.150000000000000000"`                                                                                  |
 | `mint`         | `InflationMin`            | string (dec)     | `"0.070000000000000000"`                                                                                  |
 | `mint`         | `GoalBonded`              | string (dec)     | `"0.670000000000000000"`                                                                                  |
 | `mint`         | `BlocksPerYear`           | string (uint64)  | `"6311520"`                                                                                               |
-| `slashing`     | `SignedBlocksWindow`      | string (int64)   | `"100"`                                                                                                   |
+| `slashing`     | `SignedBlocksWindow`      | string (int64)   | `"5000"`                                                                                                   |
 | `slashing`     | `MinSignedPerWindow`      | string (dec)     | `"0.500000000000000000"`                                                                                  |
 | `slashing`     | `DowntimeJailDuration`    | string (time ns) | `"600000000000"`                                                                                          |
 | `slashing`     | `SlashFractionDoubleSign` | string (dec)     | `"0.050000000000000000"`                                                                                  |
