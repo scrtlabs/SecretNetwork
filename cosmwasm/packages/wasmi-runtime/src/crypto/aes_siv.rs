@@ -40,7 +40,7 @@ fn aes_siv_encrypt(
 
     let mut cipher = Aes128Siv::new(GenericArray::clone_from_slice(key));
     cipher.encrypt(ad, plaintext).map_err(|e| {
-        error!("aes_siv_encrypt error: {:?}", e);
+        warn!("aes_siv_encrypt error: {:?}", e);
         CryptoError::EncryptionError
     })
 }
@@ -54,7 +54,7 @@ fn aes_siv_decrypt(
 
     let mut cipher = Aes128Siv::new(GenericArray::clone_from_slice(key));
     cipher.decrypt(ad, ciphertext).map_err(|e| {
-        error!("aes_siv_decrypt error: {:?}", e);
+        warn!("aes_siv_decrypt error: {:?}", e);
         CryptoError::DecryptionError
     })
 }

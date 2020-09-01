@@ -205,7 +205,7 @@ impl SgxEnclaveReport {
         }
 
         if pos != bytes.len() {
-            error!("Enclave report parsing error.");
+            warn!("Enclave report parsing error.");
             return Err(Error::ReportParseError);
         };
 
@@ -421,7 +421,7 @@ impl SgxQuote {
                 pos += n;
                 Ok(ret)
             } else {
-                error!("Quote parsing error.");
+                warn!("Quote parsing error.");
                 Err(Error::ReportParseError)
             }
         };
@@ -436,7 +436,7 @@ impl SgxQuote {
                     0 => SgxEpidQuoteSigType::Unlinkable,
                     1 => SgxEpidQuoteSigType::Linkable,
                     _ => {
-                        error!("Invalid v1 quote signature type");
+                        warn!("Invalid v1 quote signature type");
                         return Err(Error::ReportParseError);
                     }
                 };
@@ -449,7 +449,7 @@ impl SgxQuote {
                     0 => SgxEpidQuoteSigType::Unlinkable,
                     1 => SgxEpidQuoteSigType::Linkable,
                     _ => {
-                        error!("Invalid v2 quote signature type");
+                        warn!("Invalid v2 quote signature type");
                         return Err(Error::ReportParseError);
                     }
                 };
@@ -462,33 +462,33 @@ impl SgxQuote {
                     2 => SgxEcdsaQuoteAkType::P256_256,
                     3 => SgxEcdsaQuoteAkType::P384_384,
                     _ => {
-                        error!("Quote parsing error - ecdsa quote type invalid");
+                        warn!("Quote parsing error - ecdsa quote type invalid");
                         return Err(Error::ReportParseError);
                     }
                 };
                 SgxQuoteVersion::V3(attestation_key_type)
             }
             _ => {
-                error!("Quote parsing error - Unknown quote version");
+                warn!("Quote parsing error - Unknown quote version");
                 return Err(Error::ReportParseError);
             }
         };
 
         // off 4, size 4
         let gid = u32::from_le_bytes(<[u8; 4]>::try_from(take(4).map_err(|_| {
-            error!("Failed to parse quote gid");
+            warn!("Failed to parse quote gid");
             Error::ReportParseError
         })?)?);
 
         // off 8, size 2
         let isv_svn_qe = u16::from_le_bytes(<[u8; 2]>::try_from(take(2).map_err(|_| {
-            error!("Failed to parse quote isv svn qe");
+            warn!("Failed to parse quote isv svn qe");
             Error::ReportParseError
         })?)?);
 
         // off 10, size 2
         let isv_svn_pce = u16::from_le_bytes(<[u8; 2]>::try_from(take(2).map_err(|_| {
-            error!("Failed to parse quote isv svn");
+            warn!("Failed to parse quote isv svn");
             Error::ReportParseError
         })?)?);
 
@@ -496,24 +496,24 @@ impl SgxQuote {
         let qe_vendor_id_raw =
             <[u8; 16]>::try_from(take(16).map_err(|_| Error::ReportParseError)?)?;
         let qe_vendor_id = Uuid::from_slice(&qe_vendor_id_raw).map_err(|_| {
-            error!("Failed to parse quote vendor id");
+            warn!("Failed to parse quote vendor id");
             Error::ReportParseError
         })?;
 
         // off 28, size 20
         let user_data = <[u8; 20]>::try_from(take(20).map_err(|_| {
-            error!("Failed to parse quote user data");
+            warn!("Failed to parse quote user data");
             Error::ReportParseError
         })?)?;
 
         // off 48, size 384
         let isv_enclave_report = SgxEnclaveReport::parse_from(take(384).map_err(|_| {
-            error!("Failed to parse enclave report");
+            warn!("Failed to parse enclave report");
             Error::ReportParseError
         })?)?;
 
         if pos != bytes.len() {
-            error!("Quote parsing error - Quote size different from expected");
+            warn!("Quote parsing error - Quote size different from expected");
             return Err(Error::ReportParseError);
         };
 
@@ -630,9 +630,9 @@ impl AttestationReport {
             &chain,
             now_func,
         ) {
-            Ok(_) => debug!("Certificate verified successfully"),
+            Ok(_) => info!("Certificate verified successfully"),
             Err(e) => {
-                error!("Certificate verification error {:?}", e);
+                warn!("Certificate verification error {:?}", e);
                 return Err(Error::ReportValidationError);
             }
         }
@@ -643,16 +643,16 @@ impl AttestationReport {
             &report.report,
             &report.signature,
         ) {
-            Ok(_) => debug!("Signature verified successfully"),
+            Ok(_) => info!("Signature verified successfully"),
             Err(e) => {
-                error!("Signature verification error {:?}", e);
+                warn!("Signature verification error {:?}", e);
                 return Err(Error::ReportParseError);
             }
         }
 
         // Verify and extract information from attestation report
         let attn_report: Value = serde_json::from_slice(&report.report)?;
-        debug!("attn_report: {}", attn_report);
+        trace!("attn_report: {}", attn_report);
 
         // Verify API version is supported
         let version = attn_report["version"]
@@ -660,14 +660,14 @@ impl AttestationReport {
             .ok_or_else(|| Error::ReportParseError)?;
 
         if version != 4 {
-            error!("API version incompatible");
+            warn!("API version incompatible");
             return Err(Error::ReportParseError);
         };
 
         let mut platform_info_blob = None;
         if let Some(blob) = attn_report["platformInfoBlob"].as_str() {
             let as_binary = hex::decode(blob).map_err(|_| {
-                error!("Error parsing platform info");
+                warn!("Error parsing platform info");
                 Error::ReportParseError
             })?;
             platform_info_blob = Some(as_binary)
@@ -678,7 +678,7 @@ impl AttestationReport {
             let status_string = attn_report["isvEnclaveQuoteStatus"]
                 .as_str()
                 .ok_or_else(|| {
-                    error!("Error parsing enclave quote status");
+                    warn!("Error parsing enclave quote status");
                     Error::ReportParseError
                 })?;
             SgxQuoteStatus::from(status_string)
@@ -687,11 +687,11 @@ impl AttestationReport {
         // Get quote body
         let sgx_quote_body = {
             let quote_encoded = attn_report["isvEnclaveQuoteBody"].as_str().ok_or_else(|| {
-                error!("Error unpacking enclave quote body");
+                warn!("Error unpacking enclave quote body");
                 Error::ReportParseError
             })?;
             let quote_raw = base64::decode(&quote_encoded.as_bytes()).map_err(|_| {
-                error!("Error decoding encoded quote body");
+                warn!("Error decoding encoded quote body");
                 Error::ReportParseError
             })?;
             SgxQuote::parse_from(quote_raw.as_slice())?
@@ -700,7 +700,7 @@ impl AttestationReport {
         // Get advisories
         let advisories: Vec<String> = serde_json::from_value(attn_report["advisoryIDs"].clone())
             .map_err(|_| {
-                error!("Failed to decode advisories");
+                warn!("Failed to decode advisories");
                 Error::ReportParseError
             })?;
 

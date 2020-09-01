@@ -177,7 +177,7 @@ pub fn get_mr_enclave() -> Result<[u8; 32], sgx_status_t> {
 
     let rep = match rsgx_create_report(&ti, &report_data) {
         Ok(r) => {
-            debug!("This enclave MR_ENCLAVE is: {:?}", r.body.mr_enclave.m);
+            trace!("This enclave MR_ENCLAVE is: {:?}", r.body.mr_enclave.m);
             r.body.mr_enclave.m
         }
         Err(_e) => {
@@ -217,7 +217,7 @@ pub fn create_attestation_report(
         )
     };
 
-    debug!("EPID group = {:?}", eg);
+    trace!("EPID group = {:?}", eg);
 
     if res != sgx_status_t::SGX_SUCCESS {
         return Err(res);
@@ -269,19 +269,19 @@ pub fn create_attestation_report(
         Ok(r) => {
             match SIGNING_METHOD {
                 SigningMethod::MRENCLAVE => {
-                    debug!(
+                    trace!(
                         "Report creation => success. Using MR_SIGNER: {:?}",
                         r.body.mr_signer.m
                     );
                 }
                 SigningMethod::MRSIGNER => {
-                    debug!(
+                    trace!(
                         "Report creation => success. Got MR_ENCLAVE {:?}",
                         r.body.mr_signer.m
                     );
                 }
                 SigningMethod::NONE => {
-                    debug!("Report creation => success. Not using any verification");
+                    trace!("Report creation => success. Not using any verification");
                 }
             }
             r
@@ -346,21 +346,21 @@ pub fn create_attestation_report(
     };
 
     if result != sgx_status_t::SGX_SUCCESS {
-        error!("ocall_get_quote returned {}", result);
+        warn!("ocall_get_quote returned {}", result);
         return Err(result);
     }
 
     if rt != sgx_status_t::SGX_SUCCESS {
-        error!("ocall_get_quote returned {}", rt);
+        warn!("ocall_get_quote returned {}", rt);
         return Err(rt);
     }
 
     // Added 09-28-2018
     // Perform a check on qe_report to verify if the qe_report is valid
     match rsgx_verify_report(&qe_report) {
-        Ok(()) => debug!("rsgx_verify_report passed!"),
+        Ok(()) => trace!("rsgx_verify_report passed!"),
         Err(x) => {
-            error!("rsgx_verify_report failed with {:?}", x);
+            warn!("rsgx_verify_report failed with {:?}", x);
             return Err(x);
         }
     }
@@ -447,12 +447,12 @@ fn parse_response_attn_report(resp: &[u8]) -> (String, Vec<u8>, Vec<u8>) {
             some time. "
         }
         _ => {
-            error!("DBG:{}", respp.code.unwrap());
+            warn!("DBG:{}", respp.code.unwrap());
             msg = "Unknown error occured"
         }
     }
 
-    trace!("{}", msg);
+    info!("{}", msg);
     let mut len_num: u32 = 0;
 
     let mut sig = String::new();
@@ -521,7 +521,7 @@ fn parse_response_sigrl(resp: &[u8]) -> Vec<u8> {
         _ => msg = "Unknown error occured",
     }
 
-    trace!("{}", msg);
+    info!("{}", msg);
     let mut len_num: u32 = 0;
 
     for i in 0..respp.headers.len() {
@@ -578,16 +578,16 @@ pub fn get_sigrl_from_intel(fd: c_int, gid: u32, api_key_file: &[u8]) -> Vec<u8>
     let _result = tls.write(req.as_bytes());
     let mut plaintext = Vec::new();
 
-    trace!("write complete");
+    info!("write complete");
 
     match tls.read_to_end(&mut plaintext) {
         Ok(_) => (),
         Err(e) => {
-            error!("get_sigrl_from_intel tls.read_to_end: {:?}", e);
+            warn!("get_sigrl_from_intel tls.read_to_end: {:?}", e);
             panic!("Communication error with IAS");
         }
     }
-    trace!("read_to_end complete");
+    info!("read_to_end complete");
     let resp_string = String::from_utf8(plaintext.clone()).unwrap();
 
     trace!("{}", resp_string);
@@ -626,10 +626,10 @@ pub fn get_report_from_intel(
     let _result = tls.write(req.as_bytes());
     let mut plaintext = Vec::new();
 
-    trace!("write complete");
+    info!("write complete");
 
     tls.read_to_end(&mut plaintext).unwrap();
-    trace!("read_to_end complete");
+    info!("read_to_end complete");
     let resp_string = String::from_utf8(plaintext.clone()).unwrap();
 
     trace!("resp_string = {}", resp_string);

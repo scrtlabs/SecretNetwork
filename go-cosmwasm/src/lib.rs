@@ -64,7 +64,7 @@ pub extern "C" fn get_health_check(err: Option<&mut Buffer>) -> Buffer {
 
 #[no_mangle]
 pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> Buffer {
-    debug!("Called get_encrypted_seed");
+    trace!("Called get_encrypted_seed");
     let cert_slice = match unsafe { cert.read() } {
         None => {
             set_error(Error::empty_arg("attestation_cert"), err);
@@ -72,7 +72,7 @@ pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> 
         }
         Some(r) => r,
     };
-    info!("Hello from right before untrusted_get_encrypted_seed");
+    trace!("Hello from right before untrusted_get_encrypted_seed");
     match untrusted_get_encrypted_seed(cert_slice) {
         Err(e) => {
             // An error happened in the SGX sdk.
@@ -97,7 +97,7 @@ pub extern "C" fn init_bootstrap(
     api_key: Buffer,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    info!("Hello from right before init_bootstrap");
+    trace!("Hello from right before init_bootstrap");
 
     let spid_slice = match unsafe { spid.read() } {
         None => {

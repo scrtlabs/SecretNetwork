@@ -34,7 +34,7 @@ pub fn encrypt_and_query_chain(
 
     let encrypted_query = serde_json::to_vec(&query_struct).map_err(|err| {
         // this should never happen
-        error!(
+        debug!(
             "encrypt_and_query_chain() got an error while trying to serialize the query {:?} to pass to x/compute: {:?}",
             query_struct,
             err
@@ -65,10 +65,9 @@ pub fn encrypt_and_query_chain(
         }
     };
 
-    trace!(
+    debug!(
         "encrypt_and_query_chain() got encrypted answer with gas {}: {:?}",
-        gas_used,
-        encrypted_answer
+        gas_used, encrypted_answer
     );
 
     // decrypt query response
@@ -87,7 +86,7 @@ pub fn encrypt_and_query_chain(
                 let msg_b64_encrypted = msg.replace("query contract failed: encrypted: ", "");
                 match base64::decode(&msg_b64_encrypted) {
                     Err(err) => {
-                        error!(
+                        debug!(
                             "encrypt_and_query_chain() got an StdError as an answer {:?}, tried to decode \
                             the inner msg as bytes because it's encrypted, but got an error while trying to \
                             decode from base64: {}",
@@ -101,7 +100,7 @@ pub fn encrypt_and_query_chain(
                         match serde_json::from_slice::<StdError>(&decrypted) {
                             Ok(answer) => Ok(Err(answer)),
                             Err(err) => {
-                                error!("encrypt_and_query_chain() got an error while trying to deserialize the inner error as StdError: {:?}", err);
+                                debug!("encrypt_and_query_chain() got an error while trying to deserialize the inner error as StdError: {:?}", err);
                                 return system_error_invalid_response(decrypted, err);
                             }
                         }
@@ -125,7 +124,7 @@ pub fn encrypt_and_query_chain(
     );
 
     let answer_as_vec = serde_json::to_vec(&answer).map_err(|err| {
-        error!("encrypt_and_query_chain() got an error while trying to serialize the decrypted answer to bytes: {:?}", err);
+        debug!("encrypt_and_query_chain() got an error while trying to serialize the decrypted answer to bytes: {:?}", err);
         WasmEngineError::SerializationError
     })?;
 
@@ -159,7 +158,7 @@ fn query_chain(
         match status {
             sgx_status_t::SGX_SUCCESS => { /* continue */ }
             error_status => {
-                error!(
+                warn!(
                     "query_chain() got an error from ocall_query_chain, stopping wasm: {:?}",
                     error_status
                 );
@@ -199,7 +198,7 @@ where
 
     serde_json::to_vec(&answer).map_err(|err| {
         // this should never happen
-        error!(
+        debug!(
             "encrypt_and_query_chain() got an error while trying to serialize the error {:?} returned to WASM: {:?}",
             answer,
             err
@@ -220,7 +219,7 @@ where
 
     serde_json::to_vec(&answer).map_err(|err| {
         // this should never happen
-        error!(
+        debug!(
             "encrypt_and_query_chain() got an error while trying to serialize the error {:?} returned to WASM: {:?}",
             answer,
             err
@@ -255,7 +254,7 @@ fn encrypt_query_request(
             nonce,
         };
         encrypted_msg.encrypt_in_place().map_err(|err| {
-            error!(
+            debug!(
                 "encrypt_and_query_chain() got an error while trying to encrypt the request for query {:?}, stopping wasm: {:?}",
                 String::from_utf8_lossy(&msg.0),
                 err
@@ -285,7 +284,7 @@ fn decrypt_query_response(
     };
 
     let b64_decrypted = as_secret_msg.decrypt().map_err(|err| {
-        error!(
+        debug!(
             "encrypt_and_query_chain() got an error while trying to decrypt the result for query {:?}, stopping wasm: {:?}",
             String::from_utf8_lossy(query),
             err
@@ -294,7 +293,7 @@ fn decrypt_query_response(
     })?;
 
     base64::decode(&b64_decrypted).map_err(|err| {
-        error!(
+        debug!(
             "encrypt_and_query_chain() got an answer, managed to decrypt it, then tried to decode the output from base64 to bytes and failed: {:?}",
             err
         );
@@ -315,7 +314,7 @@ fn decrypt_query_response_error(
     };
 
     error_msg.decrypt().map_err(|err| {
-        error!(
+        debug!(
             "encrypt_and_query_chain() got an error while trying to decrypt the inner error for query {:?}, stopping wasm: {:?}",
             String::from_utf8_lossy(&query),
             err
