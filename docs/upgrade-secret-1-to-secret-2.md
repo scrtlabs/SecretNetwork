@@ -7,11 +7,22 @@ Must be running [`v0.2.2`](https://github.com/enigmampc/SecretNetwork/releases/t
 1. Export state on the old machine
 
    ```bash
-   export HEIGHT=1247800 # TODO update in time to be closest to 2020-09-15T14:00:00Z
+   # TODO: update $HEIGHT to be as close as possible to 2020-09-15T14:00:00Z
+   # Use this one-liner and play with the block time and block height until
+   # you get as closest to 2020-09-15T14:00:00 UTC.
+   #We should probaly settle on a final $HEIGHT before Sep 14th.
+   # curl -s http://bootstrap.mainnet.enigma.co:26657/status | jq -r '6.18*(1247100-(.result.sync_info.latest_block_height | tonumber))' | xargs -I {} date -u -d "now + {} sec"
+   export HEIGHT=1247100
 
-   # TODO add gas limit per block
    secretd export --height $HEIGHT --for-zero-height --jail-whitelist secretvaloper13l72vhjngmg55ykajxdnlalktwglyqjqaz0tdu |
-       jq -Sc '.chain_id = "secret-2" | .genesis_time = (now | todate) | .app_state.register = { "reg_info": null, "node_exch_cert": null, "io_exch_cert": null } | .app_state.compute = { "codes": null, "contracts": null }' > genesis.json
+       jq -Sc -f <(
+           echo '.chain_id = "secret-2" |'
+           echo '.genesis_time = "2020-09-15T14:00:00Z" |'
+           echo '.consensus_params.block.max_gas = "10000000" |'
+           echo '.app_state.distribution.params = { "secret_foundation_tax": "0.15", "secret_foundation_address": "secret1TODO" } |'
+           echo '.app_state.register = { "reg_info": null, "node_exch_cert": null, "io_exch_cert": null } |'
+           echo '.app_state.compute = { "codes": null, "contracts": null }'
+       ) > genesis.json
    ```
 
 2. Install `secretnetwork_1.0.0_amd64.deb` on the new SGX machine
