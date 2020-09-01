@@ -1,5 +1,41 @@
 ## Release notes
 
+## Current Release - v0.8.0
+
+Our release candidate. This is running 99% of the code which is going to run in the mainnet release. The primary goal of this version is for node runners and validators 
+to be able to test their setups on a configuration which will mirror the mainnet release.
+
+#### Contracts
+
+- Upgraded CosmWasm to v0.10
+- Added ability to vote on governance proposals from secret contracts
+- Added ability to query staking rewards from secret contracts
+- Added ability to query current interest rates from secret contracts
+
+#### Registration Process
+
+- Added even more details in attestation. You will now be notified of the exact advisories that will cause the registration to fail, and possible remedies.
+
+#### Network
+
+- `SW_HARDENING_AND_CONFIGURATION_NEEDED` is now an acceptable attestation status for _mainnet_ for the advisory "INTEL-SA-00219"
+
+#### CLI
+
+- Added `secret20` commands to interact with contracts which implement the `secret20` standard. This is highly experimental
+
+#### Bug fixes
+
+- Fixed an issue where running `init-enclave` twice will reset registraion parameters
+- Fixed queries using `--label` instead of contract address in `secretcli q compute query`
+
+#### General
+
+- Made the world a better place
+- Security and stablility fixes
+
+## Previous releases
+
 ### v0.7.0
 
 We are currently on our second testnet, and the first open testnet release since the launch of the Secret Network.
