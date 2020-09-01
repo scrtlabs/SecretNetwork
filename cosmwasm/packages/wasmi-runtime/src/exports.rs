@@ -181,7 +181,7 @@ pub unsafe extern "C" fn ecall_init(
                 err: EnclaveError::OutOfMemory,
             }
         } else {
-            error!("Call ecall_init panic'd unexpectedly!");
+            error!("Call ecall_init panicked unexpectedly!");
             InitResult::Failure {
                 err: EnclaveError::Panic,
             }
@@ -270,7 +270,7 @@ pub unsafe extern "C" fn ecall_handle(
                 err: EnclaveError::OutOfMemory,
             }
         } else {
-            error!("Call ecall_handle panic'd unexpectedly!");
+            error!("Call ecall_handle panicked unexpectedly!");
             HandleResult::Failure {
                 err: EnclaveError::Panic,
             }
@@ -337,7 +337,7 @@ pub unsafe extern "C" fn ecall_query(
                 err: EnclaveError::OutOfMemory,
             }
         } else {
-            error!("Call ecall_query panic'd unexpectedly!");
+            error!("Call ecall_query panicked unexpectedly!");
             QueryResult::Failure {
                 err: EnclaveError::Panic,
             }

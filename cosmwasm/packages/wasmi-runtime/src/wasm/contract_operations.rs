@@ -49,7 +49,7 @@ pub fn init(
     sig_info: &[u8],    // info about signature verification
 ) -> Result<InitSuccess, EnclaveError> {
     let mut parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
-        error!(
+        warn!(
             "got an error while trying to deserialize env input bytes into json {:?}: {}",
             String::from_utf8_lossy(&env),
             err
@@ -58,7 +58,7 @@ pub fn init(
     })?;
 
     let canonical_contract_address = CanonicalAddr::from_human(&parsed_env.contract.address).map_err(|err| {
-        error!(
+        warn!(
             "got an error while trying to deserialize parsed_env.contract.address from bech32 string to bytes {:?}: {}",
             parsed_env.contract.address, err
         );
@@ -69,7 +69,7 @@ pub fn init(
     trace!("Init: Contract Key: {:?}", contract_key.to_vec().as_slice());
 
     let parsed_sig_info: SigInfo = serde_json::from_slice(sig_info).map_err(|err| {
-        error!(
+        warn!(
             "got an error while trying to deserialize env input bytes into json {:?}: {}",
             String::from_utf8_lossy(&sig_info),
             err
@@ -107,7 +107,7 @@ pub fn init(
     parsed_env.contract_code_hash = hex::encode(calc_contract_hash(contract));
 
     let new_env = serde_json::to_vec(&parsed_env).map_err(|err| {
-        error!(
+        warn!(
             "got an error while trying to serialize parsed_env into bytes {:?}: {}",
             parsed_env, err
         );
@@ -158,7 +158,7 @@ pub fn handle(
     sig_info: &[u8],
 ) -> Result<HandleSuccess, EnclaveError> {
     let mut parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
-        error!(
+        warn!(
             "got an error while trying to deserialize env input bytes into json {:?}: {}",
             env, err
         );
@@ -168,7 +168,7 @@ pub fn handle(
     trace!("handle parsed_env: {:?}", parsed_env);
 
     let parsed_sig_info: SigInfo = serde_json::from_slice(sig_info).map_err(|err| {
-        error!(
+        warn!(
             "got an error while trying to deserialize env input bytes into json {:?}: {}",
             String::from_utf8_lossy(&sig_info),
             err
@@ -194,7 +194,7 @@ pub fn handle(
     );
 
     let canonical_contract_address = CanonicalAddr::from_human(&parsed_env.contract.address).map_err(|err| {
-        error!(
+        warn!(
             "got an error while trying to deserialize parsed_env.contract.address from bech32 string to bytes {:?}: {}",
             parsed_env.contract.address, err
         );
@@ -202,7 +202,7 @@ pub fn handle(
     })?;
 
     if !validate_contract_key(&contract_key, &(canonical_contract_address.0).0, contract) {
-        error!("got an error while trying to deserialize output bytes");
+        warn!("got an error while trying to deserialize output bytes");
         return Err(EnclaveError::FailedContractAuthentication);
     }
 
@@ -226,7 +226,7 @@ pub fn handle(
     parsed_env.contract_code_hash = hex::encode(calc_contract_hash(contract));
 
     let new_env = serde_json::to_vec(&parsed_env).map_err(|err| {
-        error!(
+        warn!(
             "got an error while trying to serialize parsed_env into bytes {:?}: {}",
             parsed_env, err
         );
@@ -272,7 +272,7 @@ pub fn query(
     msg: &[u8],
 ) -> Result<QuerySuccess, EnclaveError> {
     if msg.len() < CONTRACT_KEY_LENGTH {
-        error!("Input query is shorter than the minimum expected. Msg is malformed");
+        warn!("Input query is shorter than the minimum expected. Msg is malformed");
         return Err(EnclaveError::FailedFunctionCall);
     }
 
@@ -339,20 +339,20 @@ fn start_engine(
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
 ) -> Result<Engine, EnclaveError> {
-    trace!("Deserializing Wasm contract");
+    info!("Deserializing Wasm contract");
 
     // Create a parity-wasm module first, so we can inject gas metering to it
     // (you need a parity-wasm module to use the pwasm-utils crate)
     let mut p_modlue: Module =
         elements::deserialize_buffer(contract).map_err(|_| EnclaveError::InvalidWasm)?;
 
-    trace!("Deserialized Wasm contract");
+    info!("Deserialized Wasm contract");
 
-    trace!("Validating WASM memory demands");
+    info!("Validating WASM memory demands");
 
     validate_memory(&mut p_modlue)?;
 
-    trace!("Validated WASM memory demands");
+    info!("Validated WASM memory demands");
 
     // Set the gas costs for wasm op-codes (there is an inline stack_height limit in WasmCosts)
     let wasm_costs = WasmCosts::default();
@@ -361,13 +361,13 @@ fn start_engine(
     let contract_module = pwasm_utils::inject_gas_counter(p_modlue, &gas_rules(&wasm_costs))
         .map_err(|_| EnclaveError::FailedGasMeteringInjection)?;
 
-    trace!("Trying to create Wasmi module from parity...");
+    info!("Trying to create Wasmi module from parity...");
 
     // Create a wasmi module from the parity module
     let module = wasmi::Module::from_parity_wasm_module(contract_module)
         .map_err(|_err| EnclaveError::InvalidWasm)?;
 
-    trace!("Created Wasmi module from parity. Now checking for floating points...");
+    info!("Created Wasmi module from parity. Now checking for floating points...");
 
     module
         .deny_floating_point()
@@ -380,7 +380,7 @@ fn start_engine(
 
     // Instantiate a module with our imports and assert that there is no `start` function.
     let module_instance = ModuleInstance::new(&module, &imports_builder).map_err(|err| {
-        error!("Error in instantiation: {:?}", err);
+        warn!("Error in instantiation: {:?}", err);
         EnclaveError::InvalidWasm
     })?;
     if module_instance.has_start() {

@@ -20,7 +20,7 @@ pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) 
 
     let tx_encryption_key = AESKey::new_from_slice(&tx_encryption_ikm).derive_key_from_this(nonce);
 
-    debug!("rust tx_encryption_key {:?}", tx_encryption_key.get());
+    trace!("rust tx_encryption_key {:?}", tx_encryption_key.get());
 
     tx_encryption_key
 }
@@ -30,10 +30,7 @@ where
     T: ?Sized + Serialize,
 {
     let serialized: String = serde_json::to_string(val).map_err(|err| {
-        error!(
-            "got an error while trying to encrypt output error {:?}: {}",
-            err, err
-        );
+        debug!("got an error while trying to encrypt output error {}", err);
         EnclaveError::EncryptionError
     })?;
 
@@ -42,7 +39,7 @@ where
     let trimmed = serialized.trim_start_matches('"').trim_end_matches('"');
 
     let encrypted_data = key.encrypt_siv(trimmed.as_bytes(), None).map_err(|err| {
-        error!(
+        debug!(
             "got an error while trying to encrypt output error {:?}: {}",
             err, err
         );
@@ -64,16 +61,14 @@ pub fn encrypt_output(
 ) -> Result<Vec<u8>, EnclaveError> {
     let key = calc_encryption_key(&nonce, &user_public_key);
 
-    debug!(
+    trace!(
         "Output before encryption: {:?}",
         String::from_utf8_lossy(&output)
     );
 
     let mut output: WasmOutput = serde_json::from_slice(&output).map_err(|err| {
-        error!(
-            "got an error while trying to deserialize output bytes into json {:?}: {}",
-            output, err
-        );
+        warn!("got an error while trying to deserialize output bytes into json");
+        trace!("output: {:?} error: {:?}", output, err);
         EnclaveError::FailedToDeserialize
     })?;
 
@@ -108,10 +103,10 @@ pub fn encrypt_output(
         }
     };
 
-    debug!("WasmOutput: {:?}", output);
+    trace!("WasmOutput: {:?}", output);
 
     let encrypted_output = serde_json::to_vec(&output).map_err(|err| {
-        error!(
+        debug!(
             "got an error while trying to serialize output json into bytes {:?}: {}",
             output, err
         );
