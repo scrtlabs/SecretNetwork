@@ -3,11 +3,15 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/enigmampc/cosmos-sdk/codec"
+	"github.com/enigmampc/cosmos-sdk/types/module"
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/enigmampc/cosmos-sdk/server"
+	serverconfig "github.com/enigmampc/cosmos-sdk/server/config"
 	"github.com/enigmampc/cosmos-sdk/store"
 	"github.com/enigmampc/cosmos-sdk/x/auth"
 	"github.com/enigmampc/cosmos-sdk/x/staking"
@@ -41,6 +45,8 @@ func main() {
 	cdc := app.MakeCodec()
 
 	config := sdk.GetConfig()
+	config.SetCoinType(529)
+	config.SetFullFundraiserPath("44'/529'/0'/0/0")
 	config.SetBech32PrefixForAccount(scrt.Bech32PrefixAccAddr, scrt.Bech32PrefixAccPub)
 	config.SetBech32PrefixForValidator(scrt.Bech32PrefixValAddr, scrt.Bech32PrefixValPub)
 	config.SetBech32PrefixForConsensusNode(scrt.Bech32PrefixConsAddr, scrt.Bech32PrefixConsPub)
@@ -53,6 +59,7 @@ func main() {
 		Short:             "The Secret Network App Daemon (server)",
 		PersistentPreRunE: server.PersistentPreRunEFn(ctx),
 	}
+
 	// CLI commands to initialize the chain
 	rootCmd.AddCommand(InitAttestation(ctx, cdc))
 	rootCmd.AddCommand(ParseCert(ctx, cdc))
@@ -60,7 +67,7 @@ func main() {
 	rootCmd.AddCommand(HealthCheck(ctx, cdc))
 	rootCmd.AddCommand(ResetEnclave(ctx, cdc))
 	rootCmd.AddCommand(InitBootstrapCmd(ctx, cdc, app.ModuleBasics))
-	rootCmd.AddCommand(genutilcli.InitCmd(ctx, cdc, app.ModuleBasics, app.DefaultNodeHome))
+	rootCmd.AddCommand(updateTmParamsAndInit(ctx, cdc, app.ModuleBasics, app.DefaultNodeHome))
 	rootCmd.AddCommand(genutilcli.CollectGenTxsCmd(ctx, cdc, auth.GenesisAccountIterator{}, app.DefaultNodeHome))
 	rootCmd.AddCommand(genutilcli.MigrateGenesisCmd(ctx, cdc))
 	rootCmd.AddCommand(
@@ -99,7 +106,7 @@ func main() {
 	}
 
 	queryGasLimitTemplate := `
-# query-gas-limit sets the gas limit under which your node will run smart sontracts queries.
+# query-gas-limit sets the gas limit under which your node will run smart contracts queries.
 # Queries that consume more than this value will be terminated prematurely with an error.
 # This is a good way to protect your node from DoS by heavy queries.
 query-gas-limit = 3000000
@@ -170,4 +177,31 @@ func exportAppStateAndTMValidators(
 
 	secretApp := app.NewSecretNetworkApp(logger, db, traceStore, true, bootstrap, uint(1), map[int64]bool{}, queryGasLimit)
 	return secretApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
+}
+
+// writeParamsAndConfigCmd patches the write-params cmd to additionally update the app pruning config.
+func updateTmParamsAndInit(ctx *server.Context, cdc *codec.Codec, mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
+	cmd := genutilcli.InitCmd(ctx, cdc, mbm, defaultNodeHome)
+	originalFunc := cmd.RunE
+
+	wrappedFunc := func(cmd *cobra.Command, args []string) error {
+
+		// time is in NS
+		ctx.Config.Consensus.TimeoutPrecommit = 2_000_000_000
+
+		appConfigFilePath := filepath.Join(defaultNodeHome, "config/app.toml")
+		appConf, _ := serverconfig.ParseConfig()
+		appConf.MinGasPrices = "1.0uscrt"
+
+		serverconfig.WriteConfigFile(appConfigFilePath, appConf)
+
+		if err := originalFunc(cmd, args); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	cmd.RunE = wrappedFunc
+	return cmd
 }

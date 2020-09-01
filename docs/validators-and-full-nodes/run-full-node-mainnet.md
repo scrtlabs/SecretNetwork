@@ -29,7 +29,7 @@ This document details how to join the Secret Network `mainnet` as a validator.
 wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.2.1/secretnetwork_0.2.1_amd64.deb
 ```
 
-([How to verify releases](/verify-releases.md))
+([How to verify releases](../verify-releases.md))
 
 #### 2. Install the package:
 

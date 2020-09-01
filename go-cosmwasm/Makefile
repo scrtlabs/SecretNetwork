@@ -5,6 +5,11 @@ BUILD_PROFILE ?= release
 TOP_DIR := ../third_party/build
 include $(TOP_DIR)/buildenv.mk
 
+FEATURES ?=
+FEATURES_U += $(FEATURES)
+FEATURES_U += backtraces
+FEATURES_U := $(strip $(FEATURES_U))
+
 DOCKER_TAG := 0.8.2
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
@@ -54,7 +59,7 @@ all: build test
 build: build-rust build-go
 
 build-rust: librust_cosmwasm_enclave.signed.so lib/libEnclave_u.a
-	cargo build -Z unstable-options --profile $(BUILD_PROFILE) --features backtraces
+	cargo build -Z unstable-options --profile $(BUILD_PROFILE) --features "$(FEATURES_U)"
 	cp target/$(BUILD_PROFILE)/libgo_cosmwasm.$(DLL_EXT) api
 	@ #this pulls out ELF symbols, 80% size reduction!
 

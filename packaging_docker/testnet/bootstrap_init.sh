@@ -7,13 +7,13 @@ then
   rm -rf ~/.secretd/*
   rm -rf ~/.secretcli/*
   rm -rf ~/.sgx_secrets/*
-  secretcli config chain-id enigma-pub-testnet-1
+  secretcli config chain-id enigma-pub-testnet-3
   secretcli config output json
   secretcli config indent true
   secretcli config trust-node true
   secretcli config keyring-backend test
 
-  secretd init banana --chain-id enigma-pub-testnet-1
+  secretd init banana --chain-id enigma-pub-testnet-3
 
   cp ~/node_key.json ~/.secretd/config/node_key.json
 
@@ -40,4 +40,6 @@ then
   secretd init-bootstrap
   secretd validate-genesis
 fi
-source /opt/sgxsdk/environment && RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap
+
+sleep infinity
+# source /opt/sgxsdk/environment && RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap

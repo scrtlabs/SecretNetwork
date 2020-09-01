@@ -28,6 +28,7 @@ maintenance = { status = "actively-developed" }
 [features]
 default = ["backtraces"]
 backtraces = ["snafu/backtraces"]
+production = ["cosmwasm-sgx-vm/production"]
 
 [dependencies]
 cosmwasm-std = { path = "../cosmwasm/packages/std", features = ["iterator"] }
