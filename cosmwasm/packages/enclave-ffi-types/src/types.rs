@@ -154,6 +154,8 @@ pub enum EnclaveError {
     Panic,
     #[display(fmt = "enclave ran out of heap memory")]
     OutOfMemory,
+    #[display(fmt = "query recursion limit exceeded")]
+    ExceededRecursionLimit,
     /// Unexpected Error happened, no more details available
     #[display(fmt = "unknown error")]
     Unknown,

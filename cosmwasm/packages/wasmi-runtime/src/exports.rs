@@ -13,7 +13,7 @@ use crate::results::{
     result_query_success_to_queryresult,
 };
 use crate::{
-    oom_handler,
+    oom_handler, recursion_depth,
     utils::{validate_const_ptr, validate_mut_ptr},
 };
 
@@ -116,6 +116,10 @@ pub unsafe extern "C" fn ecall_init(
     sig_info: *const u8,
     sig_info_len: usize,
 ) -> InitResult {
+    if let Err(err) = recursion_depth::increment() {
+        error!("recursion limit exceeded, can not perform query!");
+        return InitResult::Failure { err };
+    }
     if let Err(err) = oom_handler::register_oom_handler() {
         error!("Could not register OOM handler!");
         return InitResult::Failure { err };
@@ -160,6 +164,7 @@ pub unsafe extern "C" fn ecall_init(
         result_init_success_to_initresult(result)
     });
 
+    recursion_depth::decrement();
     if let Err(err) = oom_handler::restore_safety_buffer() {
         error!("Could not restore OOM safety buffer!");
         return InitResult::Failure { err };
@@ -200,6 +205,10 @@ pub unsafe extern "C" fn ecall_handle(
     sig_info: *const u8,
     sig_info_len: usize,
 ) -> HandleResult {
+    if let Err(err) = recursion_depth::increment() {
+        error!("recursion limit exceeded, can not perform query!");
+        return HandleResult::Failure { err };
+    }
     if let Err(err) = oom_handler::register_oom_handler() {
         error!("Could not register OOM handler!");
         return HandleResult::Failure { err };
@@ -244,6 +253,7 @@ pub unsafe extern "C" fn ecall_handle(
         result_handle_success_to_handleresult(result)
     });
 
+    recursion_depth::decrement();
     if let Err(err) = oom_handler::restore_safety_buffer() {
         error!("Could not restore OOM safety buffer!");
         return HandleResult::Failure { err };
@@ -280,6 +290,10 @@ pub unsafe extern "C" fn ecall_query(
     msg: *const u8,
     msg_len: usize,
 ) -> QueryResult {
+    if let Err(err) = recursion_depth::increment() {
+        error!("recursion limit exceeded, can not perform query!");
+        return QueryResult::Failure { err };
+    }
     if let Err(err) = oom_handler::register_oom_handler() {
         error!("Could not register OOM handler!");
         return QueryResult::Failure { err };
@@ -306,6 +320,7 @@ pub unsafe extern "C" fn ecall_query(
         result_query_success_to_queryresult(result)
     });
 
+    recursion_depth::decrement();
     if let Err(err) = oom_handler::restore_safety_buffer() {
         error!("Could not restore OOM safety buffer!");
         return QueryResult::Failure { err };

@@ -44,6 +44,11 @@ pub enum InitMsg {
         depth: u8,
         code_hash: String,
     },
+    SendExternalQueryRecursionLimit {
+        to: HumanAddr,
+        depth: u8,
+        code_hash: String,
+    },
     CallToInit {
         code_id: u64,
         code_hash: String,
@@ -171,6 +176,11 @@ pub enum HandleMsg {
         code_hash: String,
         depth: u8,
     },
+    SendExternalQueryRecursionLimit {
+        to: HumanAddr,
+        code_hash: String,
+        depth: u8,
+    },
     WithFloats {
         x: u8,
         y: u8,
@@ -210,6 +220,11 @@ pub enum QueryMsg {
     WriteToStorage {},
     RemoveFromStorage {},
     SendExternalQueryDepthCounter {
+        to: HumanAddr,
+        depth: u8,
+        code_hash: String,
+    },
+    SendExternalQueryRecursionLimit {
         to: HumanAddr,
         depth: u8,
         code_hash: String,
@@ -263,6 +278,17 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                     send_external_query_depth_counter(deps, to, depth, code_hash)
                 ),
                 "",
+            )],
+        }),
+        InitMsg::SendExternalQueryRecursionLimit {
+            to,
+            depth,
+            code_hash,
+        } => Ok(InitResponse {
+            messages: vec![],
+            log: vec![log(
+                "message",
+                send_external_query_recursion_limit(deps, to, depth, code_hash)?,
             )],
         }),
         InitMsg::CallToInit {
@@ -456,6 +482,17 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 )]
                 .into(),
             ),
+        }),
+        HandleMsg::SendExternalQueryRecursionLimit {
+            to,
+            code_hash,
+            depth,
+        } => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(to_binary(&send_external_query_recursion_limit(
+                deps, to, depth, code_hash,
+            )?)?),
         }),
         HandleMsg::SendExternalQueryPanic { to, code_hash } => {
             send_external_query_panic(deps, to, code_hash)
@@ -667,6 +704,45 @@ fn send_external_query_depth_counter<S: Storage, A: Api, Q: Querier>(
         .unwrap();
 
     answer + 1
+}
+
+fn send_external_query_recursion_limit<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    contract_addr: HumanAddr,
+    depth: u8,
+    code_hash: String,
+) -> StdResult<String> {
+    let result = deps
+        .querier
+        .query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: contract_addr.clone(),
+            callback_code_hash: code_hash.clone(),
+            msg: Binary(
+                format!(
+                    r#"{{"send_external_query_recursion_limit":{{"to":"{}","code_hash":"{}","depth":{}}}}}"#,
+                    contract_addr.clone().to_string(),
+                    code_hash.clone().to_string(),
+                    depth + 1
+                )
+                .into_bytes(),
+            ),
+        }));
+
+    // 5 is the current recursion limit.
+    if depth != 5 {
+        result
+    } else {
+        match result {
+            Err(StdError::GenericErr { msg, .. })
+                if msg == "Querier system error: Query recursion limit exceeded" =>
+            {
+                Ok(String::from("Recursion limit was correctly enforced"))
+            }
+            _ => Err(StdError::generic_err(
+                "Recursion limit was bypassed! this is a bug!",
+            )),
+        }
+    }
 }
 
 fn send_external_query_panic<S: Storage, A: Api, Q: Querier>(
@@ -1106,6 +1182,16 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             deps, to, depth, code_hash,
         ))
         .unwrap()),
+        QueryMsg::SendExternalQueryRecursionLimit {
+            to,
+            depth,
+            code_hash,
+        } => {
+            to_binary(&send_external_query_recursion_limit(
+                deps, to, depth, code_hash,
+            )?)
+            // to_binary(&from_binary(&to_binary(&String::from("BBBB!"))?)?)
+        }
         QueryMsg::CallToQuery {
             addr,
             code_hash,

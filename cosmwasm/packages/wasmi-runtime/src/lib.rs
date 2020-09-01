@@ -21,15 +21,16 @@ pub mod exports;
 pub mod imports;
 pub mod logger;
 mod oom_handler;
+mod recursion_depth;
 pub mod registration;
 
 mod consts;
-mod wasm;
 mod cosmwasm;
 mod crypto;
 mod results;
 mod storage;
 mod utils;
+mod wasm;
 
 mod tests;
 
