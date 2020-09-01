@@ -111,7 +111,7 @@ where
     }
 
     pub fn init(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<InitSuccess> {
-        println!(
+        trace!(
             "init() called with env: {:?} msg: {:?} enclave_id: {:?} gas_left: {}",
             String::from_utf8_lossy(env),
             String::from_utf8_lossy(msg),
@@ -140,9 +140,10 @@ where
             )
         };
 
-        println!(
+        trace!(
             "init() returned with gas_used: {} (gas_limit: {})",
-            used_gas, self.gas_limit
+            used_gas,
+            self.gas_limit
         );
         self.consume_gas(used_gas);
 
@@ -156,7 +157,7 @@ where
     }
 
     pub fn handle(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<HandleSuccess> {
-        println!(
+        trace!(
             "handle() called with env: {:?} msg: {:?} enclave_id: {:?} gas_left: {}",
             String::from_utf8_lossy(env),
             String::from_utf8_lossy(msg),
@@ -185,9 +186,10 @@ where
             )
         };
 
-        println!(
+        trace!(
             "handle() returned with gas_used: {} (gas_limit: {})",
-            used_gas, self.gas_limit
+            used_gas,
+            self.gas_limit
         );
         self.consume_gas(used_gas);
 
@@ -201,7 +203,7 @@ where
     }
 
     pub fn query(&mut self, msg: &[u8]) -> VmResult<QuerySuccess> {
-        println!(
+        trace!(
             "query() called with msg: {:?} enclave_id: {:?}",
             String::from_utf8_lossy(msg),
             self.enclave.geteid()
@@ -224,9 +226,10 @@ where
             )
         };
 
-        println!(
+        trace!(
             "query() returned with gas_used: {} (gas_limit: {})",
-            used_gas, self.gas_limit
+            used_gas,
+            self.gas_limit
         );
         self.consume_gas(used_gas);
 
