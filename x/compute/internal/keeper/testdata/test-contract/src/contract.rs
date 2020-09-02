@@ -1186,12 +1186,9 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             to,
             depth,
             code_hash,
-        } => {
-            to_binary(&send_external_query_recursion_limit(
-                deps, to, depth, code_hash,
-            )?)
-            // to_binary(&from_binary(&to_binary(&String::from("BBBB!"))?)?)
-        }
+        } => to_binary(&send_external_query_recursion_limit(
+            deps, to, depth, code_hash,
+        )?),
         QueryMsg::CallToQuery {
             addr,
             code_hash,

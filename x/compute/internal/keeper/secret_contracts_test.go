@@ -1347,9 +1347,6 @@ func TestQueryRecursionLimitEnforcedInInits(t *testing.T) {
 	require.Nil(t, err.GenericErr)
 
 	require.Equal(t, []ContractEvent{
-		//{
-		//	{Key: "message", Value: "Recursion limit was correctly enforced"},
-		//},
 		{
 			{Key: "contract_address", Value: addr.String()},
 			{Key: "message", Value: "Recursion limit was correctly enforced"},
