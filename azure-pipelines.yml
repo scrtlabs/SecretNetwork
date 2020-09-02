@@ -63,3 +63,4 @@ steps:
 - script: docker-compose -f docker-compose.ci.yaml down
   condition: always()
   displayName: 'Shutdown'
+
