@@ -119,7 +119,13 @@ pub unsafe extern "C" fn ecall_init(
     let _recursion_guard = match recursion_depth::guard() {
         Ok(rg) => rg,
         Err(err) => {
-            warn!("recursion limit exceeded, can not perform init!");
+            // https://github.com/enigmampc/SecretNetwork/pull/517#discussion_r481924571
+            // I believe that this error condition is currently unreachable.
+            // I think we can safely remove it completely right now, and have
+            // recursion_depth::increment() simply increment the counter with no further checks,
+            // but i wanted to stay on the safe side here, in case something changes in the
+            // future, and we can easily spot that we forgot to add a limit somewhere.
+            error!("recursion limit exceeded, can not perform init!");
             return InitResult::Failure { err };
         }
     };
@@ -210,7 +216,13 @@ pub unsafe extern "C" fn ecall_handle(
     let _recursion_guard = match recursion_depth::guard() {
         Ok(rg) => rg,
         Err(err) => {
-            warn!("recursion limit exceeded, can not perform handle!");
+            // https://github.com/enigmampc/SecretNetwork/pull/517#discussion_r481924571
+            // I believe that this error condition is currently unreachable.
+            // I think we can safely remove it completely right now, and have
+            // recursion_depth::increment() simply increment the counter with no further checks,
+            // but i wanted to stay on the safe side here, in case something changes in the
+            // future, and we can easily spot that we forgot to add a limit somewhere.
+            error!("recursion limit exceeded, can not perform handle!");
             return HandleResult::Failure { err };
         }
     };
@@ -297,7 +309,13 @@ pub unsafe extern "C" fn ecall_query(
     let _recursion_guard = match recursion_depth::guard() {
         Ok(rg) => rg,
         Err(err) => {
-            warn!("recursion limit exceeded, can not perform query!");
+            // https://github.com/enigmampc/SecretNetwork/pull/517#discussion_r481924571
+            // I believe that this error condition is currently unreachable.
+            // I think we can safely remove it completely right now, and have
+            // recursion_depth::increment() simply increment the counter with no further checks,
+            // but i wanted to stay on the safe side here, in case something changes in the
+            // future, and we can easily spot that we forgot to add a limit somewhere.
+            error!("recursion limit exceeded, can not perform query!");
             return QueryResult::Failure { err };
         }
     };

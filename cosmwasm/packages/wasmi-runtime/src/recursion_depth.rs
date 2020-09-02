@@ -4,14 +4,14 @@ use lazy_static::lazy_static;
 
 use enclave_ffi_types::EnclaveError;
 
-const RECURSION_LIMIT: i32 = 5;
+const RECURSION_LIMIT: u8 = 5;
 
 lazy_static! {
     /// This counter tracks the recursion depth of queries,
     /// and effectively the amount of loaded instances of WASMI.
     ///
     /// It is incremented before each computation begins and is decremented after each computation ends.
-    static ref RECURSION_DEPTH: SgxMutex<i32> = SgxMutex::new(0);
+    static ref RECURSION_DEPTH: SgxMutex<u8> = SgxMutex::new(0);
 }
 
 fn increment() -> Result<(), EnclaveError> {
@@ -19,13 +19,13 @@ fn increment() -> Result<(), EnclaveError> {
     if *depth == RECURSION_LIMIT {
         return Err(EnclaveError::ExceededRecursionLimit);
     }
-    *depth += 1;
+    *depth = depth.saturating_add(1);
     Ok(())
 }
 
 fn decrement() {
     let mut depth = RECURSION_DEPTH.lock().unwrap();
-    *depth -= 1;
+    *depth = depth.saturating_sub(1);
 }
 
 /// Returns whether or not this is the last possible level of recursion
