@@ -14,7 +14,7 @@ lazy_static! {
     static ref RECURSION_DEPTH: SgxMutex<i32> = SgxMutex::new(0);
 }
 
-pub fn increment() -> Result<(), EnclaveError> {
+fn increment() -> Result<(), EnclaveError> {
     let mut depth = RECURSION_DEPTH.lock().unwrap();
     if *depth == RECURSION_LIMIT {
         return Err(EnclaveError::ExceededRecursionLimit);
@@ -23,7 +23,7 @@ pub fn increment() -> Result<(), EnclaveError> {
     Ok(())
 }
 
-pub fn decrement() {
+fn decrement() {
     let mut depth = RECURSION_DEPTH.lock().unwrap();
     *depth -= 1;
 }
@@ -31,4 +31,25 @@ pub fn decrement() {
 /// Returns whether or not this is the last possible level of recursion
 pub fn limit_reached() -> bool {
     *RECURSION_DEPTH.lock().unwrap() == RECURSION_LIMIT
+}
+
+pub struct RecursionGuard {
+    _private: (), // prevent direct instantiation outside this module
+}
+
+impl RecursionGuard {
+    pub fn new() -> Result<Self, EnclaveError> {
+        increment()?;
+        Ok(Self { _private: () })
+    }
+}
+
+impl Drop for RecursionGuard {
+    fn drop(&mut self) {
+        decrement();
+    }
+}
+
+pub fn guard() -> Result<RecursionGuard, EnclaveError> {
+    RecursionGuard::new()
 }
