@@ -36,22 +36,18 @@ mod tests;
 
 static LOGGER: SimpleLogger = SimpleLogger;
 
-#[cfg(all(not(feature = "production"), feature = "SGX_MODE_HW"))]
-#[ctor]
-fn init_logger() {
-    set_log_level_or_default(LevelFilter::Info, LevelFilter::Info);
-}
-
 #[cfg(all(feature = "production", feature = "SGX_MODE_HW"))]
 #[ctor]
 fn init_logger() {
-    set_log_level_or_default(LevelFilter::Error, LevelFilter::Warn)
+    log::set_logger(&LOGGER).unwrap(); // It's ok to panic at this stage. This shouldn't happen though
+    set_log_level_or_default(LevelFilter::Error, LevelFilter::Warn);
 }
 
-#[cfg(not(feature = "SGX_MODE_HW"))]
+#[cfg(not(feature = "production"))]
 #[ctor]
 fn init_logger() {
-    set_log_level_or_default(LevelFilter::Trace, LevelFilter::Trace)
+    log::set_logger(&LOGGER).unwrap(); // It's ok to panic at this stage. This shouldn't happen though
+    set_log_level_or_default(LevelFilter::Trace, LevelFilter::Trace);
 }
 
 fn log_level_from_str(env_log_level: &str) -> Option<LevelFilter> {
@@ -67,6 +63,13 @@ fn log_level_from_str(env_log_level: &str) -> Option<LevelFilter> {
 }
 
 fn set_log_level_or_default(default: LevelFilter, max_level: LevelFilter) {
+    if default > max_level {
+        panic!(
+            "Logging configuration is broken, stopping to prevent secret leaking. default: {:?}, max level: {:?}",
+            default, max_level
+        );
+    }
+
     let mut log_level = default;
 
     if let Some(env_log_level) =
@@ -78,7 +81,50 @@ fn set_log_level_or_default(default: LevelFilter, max_level: LevelFilter) {
         }
     }
 
-    log::set_logger(&LOGGER)
-        .map(|()| log::set_max_level(log_level))
-        .unwrap();
+    log::set_max_level(log_level);
+}
+
+#[cfg(feature = "test")]
+pub mod logging_tests {
+    use crate::{count_failures, set_log_level_or_default};
+    use log::*;
+    use std::{env, panic};
+
+    pub fn run_tests() {
+        println!();
+        let mut failures = 0;
+
+        count_failures!(failures, {
+            test_log_level();
+            test_log_default_greater_than_max();
+        });
+
+        if failures != 0 {
+            panic!("{}: {} tests failed", file!(), failures);
+        }
+    }
+
+    fn test_log_level() {
+        env::set_var("LOG_LEVEL", "WARN");
+        set_log_level_or_default(LevelFilter::Error, LevelFilter::Info);
+        assert_eq!(log::max_level(), LevelFilter::Warn);
+        info!("If you see this, logging is not working correctly!"); // This is not ideal, but checking stdout will be an overkill
+
+        env::set_var("LOG_LEVEL", "TRACE");
+        set_log_level_or_default(LevelFilter::Error, LevelFilter::Info);
+        assert_eq!(log::max_level(), LevelFilter::Error);
+        debug!("If you see this, logging is not working correctly!"); // This is not ideal, but checking stdout will be an overkill
+
+        env::set_var("LOG_LEVEL", "WARN");
+        set_log_level_or_default(LevelFilter::Warn, LevelFilter::Warn);
+        assert_eq!(log::max_level(), LevelFilter::Warn);
+        trace!("If you see this, logging is not working correctly!"); // This is not ideal, but checking stdout will be an overkill
+    }
+
+    fn test_log_default_greater_than_max() {
+        let result = panic::catch_unwind(|| {
+            set_log_level_or_default(LevelFilter::Trace, LevelFilter::Error);
+        });
+        assert!(result.is_err());
+    }
 }
