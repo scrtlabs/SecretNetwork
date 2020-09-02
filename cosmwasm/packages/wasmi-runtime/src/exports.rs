@@ -117,7 +117,7 @@ pub unsafe extern "C" fn ecall_init(
     sig_info_len: usize,
 ) -> InitResult {
     if let Err(err) = recursion_depth::increment() {
-        error!("recursion limit exceeded, can not perform query!");
+        warn!("recursion limit exceeded, can not perform init!");
         return InitResult::Failure { err };
     }
     if let Err(err) = oom_handler::register_oom_handler() {
@@ -206,7 +206,7 @@ pub unsafe extern "C" fn ecall_handle(
     sig_info_len: usize,
 ) -> HandleResult {
     if let Err(err) = recursion_depth::increment() {
-        error!("recursion limit exceeded, can not perform query!");
+        warn!("recursion limit exceeded, can not perform handle!");
         return HandleResult::Failure { err };
     }
     if let Err(err) = oom_handler::register_oom_handler() {
@@ -291,7 +291,7 @@ pub unsafe extern "C" fn ecall_query(
     msg_len: usize,
 ) -> QueryResult {
     if let Err(err) = recursion_depth::increment() {
-        error!("recursion limit exceeded, can not perform query!");
+        warn!("recursion limit exceeded, can not perform query!");
         return QueryResult::Failure { err };
     }
     if let Err(err) = oom_handler::register_oom_handler() {
