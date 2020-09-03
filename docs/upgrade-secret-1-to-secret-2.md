@@ -17,7 +17,7 @@ Must be running [`v0.2.2`](https://github.com/enigmampc/SecretNetwork/releases/t
    secretd export --height $HEIGHT --for-zero-height --jail-whitelist secretvaloper13l72vhjngmg55ykajxdnlalktwglyqjqaz0tdu |
        jq -Sc -f <(
            echo '.chain_id = "secret-2" |'
-           echo '.genesis_time = "2020-09-15T14:00:00Z" |'
+           echo '.genesis_time = (now | todate) |'
            echo '.consensus_params.block.max_gas = "10000000" |'
            echo '.app_state.distribution.params = { "secret_foundation_tax": "0.15", "secret_foundation_address": "secret1TODO" } |'
            echo '.app_state.register = { "reg_info": null, "node_exch_cert": null, "io_exch_cert": null } |'
