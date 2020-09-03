@@ -9,7 +9,7 @@ https://github.com/enigmampc/SecretNetwork/releases/download/v0.8.0/secretcli
 
 * MacOS
 ```
-https://github.com/enigmampc/SecretNetwork/releases/download/v0.8.0/secretcli_darwin
+https://github.com/enigmampc/SecretNetwork/releases/download/v0.8.0/secretcli_macos
 ```
 
 * Windows
