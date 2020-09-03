@@ -1,11 +1,8 @@
 # Secret Network Contracts Introduction
 
-This repository can be used to get up and running on Secret Network testnet (enigma-pub-testnet-2) to start working with secret contracts.
+Get up and running on Secret Network testnet (enigma-pub-testnet-2) to start working with Secret Contracts.
 
-A few important notes:
-- smart contracts in this repo are a precursor to Enigma's Secret Contracts, which enable data privacy
-- smart contracts are written in Rust and based on cosmwasm, and the module is referred to as `compute` in the Secret Network!
-- these cosmwasm-based smart contracts should be reusable and easily modified once we incorporate data privacy
+Secret Contracts are written in Rust and based on CosmWasm. The module is referred to as `compute` in the Secret Network
 
 ## Setup the Secret Network light client
 - [Install the secretcli](https://github.com/enigmampc/SecretNetwork/blob/master/docs/testnet/install_cli.md)
@@ -14,15 +11,13 @@ A few important notes:
   secretcli config node tcp://bootstrap.pub.testnet.enigma.co:26657
   ```
 
-## Setup Secret Contracts (cosmwasm)
+## Setup Secret Contracts
 
-Secret Contracts are based on [Cosmwasm](https://www.cosmwasm.com) which is an implementation on the Cosmos network. The CosmWasm smart contracts are like Ethereum's smart contracts except they can be used on other blockchains using the [Inter Blockchain Protocol](https://cosmos.network/ibc) (IBC). CosmWasm smart contracts are written in the Rust language.
+Secret Contracts are based on [CosmWasm](https://www.cosmwasm.com), which is the de facto standard for smart contracts in the Cosmos ecosystem. CosmWasm is kind of like the EVM in Ethereum; however, CosmWasm enables multi-chain smart contracts utilizing the [Inter-Blockchain Communication Protocol](https://cosmos.network/ibc) (IBC). For now, Secret Contracts are written in the Rust programming language.
 
-The SecretNetwork has a _compute_ module that we'll use to store, query and instantiate the smart contract. Once stored on the blockchain the smart contract has to be created (or instantiated) in order to execute its methods. This is similar to doing an Ethereum `migrate` using truffle which handles the deployment and creation of a smart contract.
+The SecretNetwork has a _compute_ module that we use to store, query and instantiate the smart contract. Once stored on the blockchain the smart contract has to be created (or instantiated) in order to execute its methods. This is similar to doing an Ethereum `migrate` using truffle, which handles the deployment and creation of a smart contract. Secret Contracts run inside secure enclaves or Trusted Execution Environments (TEEs), where computations are performed on encrypted contract data (i.e. inputs & state).
 
-Eventually the smart contracts will become secret contracts (in a future blockchain upgrade) running in an SGX enclave (Trusted Execution Environment) where computations are performed on the encrypted contract data (i.e. inputs, state).
-
-Next we'll walkthrough steps to:
+Next, we'll walkthrough steps to:
 - install Rust (you can check out the Rust book, rustlings course, examples and more at https://www.rust-lang.org/learn)
 - install the Rust dependencies
 - create your first project
