@@ -81,7 +81,9 @@ lazy_static! {
     static ref SAFETY_BUFFER: SgxMutex<SafetyBuffer> = SgxMutex::new(SafetyBuffer::new(4 * 1024, 2 * 1024));
 }
 
-static OOM_HAPPENED: AtomicBool = AtomicBool::new(false);
+thread_local! {
+    static OOM_HAPPENED: AtomicBool = AtomicBool::new(false);
+}
 
 #[cfg(not(feature = "production"))]
 fn enable_backtraces() {
@@ -101,7 +103,7 @@ pub fn register_oom_handler() -> Result<(), EnclaveError> {
     get_then_clear_oom_happened();
 
     std::alloc::set_alloc_error_hook(|layout| {
-        OOM_HAPPENED.store(true, Ordering::SeqCst);
+        OOM_HAPPENED.with(|oom_happened| oom_happened.store(true, Ordering::SeqCst));
 
         {
             SAFETY_BUFFER.lock().unwrap().clear();
@@ -117,7 +119,7 @@ pub fn register_oom_handler() -> Result<(), EnclaveError> {
 }
 
 pub fn get_then_clear_oom_happened() -> bool {
-    OOM_HAPPENED.swap(false, Ordering::SeqCst)
+    OOM_HAPPENED.with(|oom_happened| oom_happened.swap(false, Ordering::SeqCst))
 }
 
 pub fn restore_safety_buffer() -> Result<(), EnclaveError> {
