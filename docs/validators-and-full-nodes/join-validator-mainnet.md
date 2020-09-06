@@ -2,7 +2,7 @@
 
 ### How to become a validator on Secret Network
 
-#### 1. [Run a new full node](/validators-and-full-nodes/run-full-node-mainnet.md) on a new machine.
+#### 1. [Run a new full node](run-full-node-mainnet.md) on a new machine.
 
 #### 2. Set your `minimum-gas-price` parameter
 
@@ -22,7 +22,7 @@ secretcli keys add <key-alias>
 ```
 
 **:warning:Note:warning:: Backup the mnemonics!**
-**:warning:Note:warning:: Please make sure you also [backup your validator](/validators-and-full-nodes/backup-a-validator.md)**
+**:warning:Note:warning:: Please make sure you also [backup your validator](backup-a-validator.md)**
 
 **Note**: If you already have a key you can import it with the bip39 mnemonic with `secretcli keys add <key-alias> --recover` or with `secretcli keys export` (exports to `stderr`!!) & `secretcli keys import`.
 
@@ -106,7 +106,7 @@ Penalties for double-signing:
 
 ### Protecting your validator agains DDoS attacks
 
-See [Sentry Nodes](/validators-and-full-nodes/sentry-nodes.md).
+See [Sentry Nodes](sentry-nodes.md).
 
 ### Staking more tokens
 
@@ -162,7 +162,7 @@ Modifying the commision-rate can be done using this:
 secretcli tx staking edit-validator --commission-rate="0.05" --from <key-alias>
 ```
 
-### Slashing 
+### Slashing
 
 ##### Unjailing
 
@@ -178,6 +178,14 @@ To retrieve a validator's signing info:
 
 ```bash
 secretcli q slashing signing-info <validator-conspub-key>
+```
+
+##### Query Parameters
+
+You can get the current slashing parameters via:
+
+```bash
+secretcli q slashing params
 ```
 
 ##### Query Parameters

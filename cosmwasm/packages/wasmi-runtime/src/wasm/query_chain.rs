@@ -1,11 +1,12 @@
 use super::errors::WasmEngineError;
 use crate::crypto::Ed25519PublicKey;
+use crate::recursion_depth;
 use crate::wasm::types::{IoNonce, SecretMessage};
 use crate::{exports, imports};
 
-use crate::cosmwasm::encoding::Binary;
-use crate::cosmwasm::query::{QueryRequest, WasmQuery};
 use crate::cosmwasm::{
+    encoding::Binary,
+    query::{QueryRequest, WasmQuery},
     std_error::{StdError, StdResult},
     system_error::{SystemError, SystemResult},
 };
@@ -22,6 +23,10 @@ pub fn encrypt_and_query_chain(
     gas_used: &mut u64,
     gas_limit: u64,
 ) -> Result<Vec<u8>, WasmEngineError> {
+    if let Some(answer) = check_recursion_limit() {
+        return serialize_error_response(&answer);
+    }
+
     let mut query_struct: QueryRequest = match serde_json::from_slice(query) {
         Ok(query_struct) => query_struct,
         Err(err) => {
@@ -169,8 +174,10 @@ fn query_chain(
         match ocall_return {
             OcallReturn::Success => {
                 let enclave_buffer = enclave_buffer.assume_init();
-                // TODO add validation of this pointer before returning its contents.
-                exports::recover_buffer(enclave_buffer).unwrap_or_else(Vec::new)
+                match exports::recover_buffer(enclave_buffer) {
+                    Ok(buff) => buff.unwrap_or_default(),
+                    Err(err) => return (Err(err.into()), gas_used),
+                }
             }
             OcallReturn::Failure => return (Err(WasmEngineError::FailedOcall(vm_err)), gas_used),
             OcallReturn::Panic => return (Err(WasmEngineError::Panic), gas_used),
@@ -178,6 +185,21 @@ fn query_chain(
     };
 
     (Ok(value), gas_used)
+}
+
+/// Check whether the query is allowed to run.
+///
+/// We make sure that a recursion limit is in place in order to
+/// mitigate cases where the enclave runs out of memory.
+fn check_recursion_limit() -> Option<SystemResult<StdResult<Binary>>> {
+    if recursion_depth::limit_reached() {
+        debug!(
+            "Recursion limit reached while performing nested queries. Returning error to contract."
+        );
+        Some(Err(SystemError::ExceededRecursionLimit {}))
+    } else {
+        None
+    }
 }
 
 fn system_error_invalid_request<T>(request: &[u8], err: T) -> Result<Vec<u8>, WasmEngineError>
@@ -194,16 +216,7 @@ where
         error: err.to_string(),
     });
 
-    serde_json::to_vec(&answer).map_err(|err| {
-        // this should never happen
-        debug!(
-            "encrypt_and_query_chain() got an error while trying to serialize the error {:?} returned to WASM: {:?}",
-            answer,
-            err
-        );
-
-        WasmEngineError::SerializationError
-    })
+    serialize_error_response(&answer)
 }
 
 fn system_error_invalid_response<T>(response: Vec<u8>, err: T) -> Result<Vec<u8>, WasmEngineError>
@@ -215,7 +228,13 @@ where
         error: err.to_string(),
     });
 
-    serde_json::to_vec(&answer).map_err(|err| {
+    serialize_error_response(&answer)
+}
+
+fn serialize_error_response(
+    answer: &SystemResult<StdResult<Binary>>,
+) -> Result<Vec<u8>, WasmEngineError> {
+    serde_json::to_vec(answer).map_err(|err| {
         // this should never happen
         debug!(
             "encrypt_and_query_chain() got an error while trying to serialize the error {:?} returned to WASM: {:?}",

@@ -10,7 +10,7 @@ Enclave_Path := ../wasmi-runtime
 .PHONY: check
 check:
 	FEATURES="test" $(MAKE) -C $(Enclave_Path) check
-	cargo chcek
+	cargo check
 
 .PHONY: clippy
 clippy:
