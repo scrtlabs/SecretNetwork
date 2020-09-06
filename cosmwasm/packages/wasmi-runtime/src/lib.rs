@@ -44,7 +44,7 @@ fn init_logger() {
     set_log_level_or_default(LevelFilter::Error, LevelFilter::Warn);
 }
 
-#[cfg(not(feature = "production"))]
+#[cfg(all(not(feature = "production"), not(feature = "test")))]
 #[ctor]
 fn init_logger() {
     log::set_logger(&LOGGER).unwrap(); // It's ok to panic at this stage. This shouldn't happen though
@@ -88,8 +88,36 @@ fn set_log_level_or_default(default: LevelFilter, max_level: LevelFilter) {
 #[cfg(feature = "test")]
 pub mod logging_tests {
     use crate::{count_failures, set_log_level_or_default};
+    use ctor::*;
+    use lazy_static::lazy_static;
     use log::*;
+    use log::{Metadata, Record};
+    use std::sync::SgxMutex;
     use std::{env, panic};
+
+    lazy_static! {
+        static ref LOG_BUF: SgxMutex<Vec<String>> = SgxMutex::new(Vec::new());
+    }
+    pub struct TestLogger;
+    impl log::Log for TestLogger {
+        fn enabled(&self, _metadata: &Metadata) -> bool {
+            true
+        }
+        fn log(&self, record: &Record) {
+            LOG_BUF.lock().unwrap().push(format!(
+                "{}  [{}] {}",
+                record.level(),
+                record.target(),
+                record.args()
+            ));
+        }
+        fn flush(&self) {}
+    }
+
+    #[ctor]
+    fn init_logger_test() {
+        log::set_logger(&TestLogger).unwrap();
+    }
 
     pub fn run_tests() {
         println!();
@@ -109,17 +137,23 @@ pub mod logging_tests {
         env::set_var("LOG_LEVEL", "WARN");
         set_log_level_or_default(LevelFilter::Error, LevelFilter::Info);
         assert_eq!(log::max_level(), LevelFilter::Warn);
-        info!("If you see this, logging is not working correctly!"); // This is not ideal, but checking stdout will be an overkill
+        info!("Should not process");
+        assert!(LOG_BUF.lock().unwrap().is_empty());
 
         env::set_var("LOG_LEVEL", "TRACE");
         set_log_level_or_default(LevelFilter::Error, LevelFilter::Info);
         assert_eq!(log::max_level(), LevelFilter::Error);
-        debug!("If you see this, logging is not working correctly!"); // This is not ideal, but checking stdout will be an overkill
+        debug!("Should not process");
+        assert!(LOG_BUF.lock().unwrap().is_empty());
 
         env::set_var("LOG_LEVEL", "WARN");
         set_log_level_or_default(LevelFilter::Warn, LevelFilter::Warn);
         assert_eq!(log::max_level(), LevelFilter::Warn);
-        trace!("If you see this, logging is not working correctly!"); // This is not ideal, but checking stdout will be an overkill
+        trace!("Should not process");
+        assert!(LOG_BUF.lock().unwrap().is_empty());
+
+        warn!("This should process");
+        assert_eq!(LOG_BUF.lock().unwrap().len(), 1);
     }
 
     fn test_log_default_greater_than_max() {
