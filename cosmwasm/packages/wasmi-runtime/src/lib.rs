@@ -21,6 +21,7 @@ pub mod exports;
 pub mod imports;
 pub mod logger;
 mod oom_handler;
+mod recursion_depth;
 pub mod registration;
 use std::env;
 

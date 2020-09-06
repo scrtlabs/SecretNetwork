@@ -3,11 +3,14 @@ use enclave_ffi_types::{EnclaveError, UntrustedVmError};
 use log::*;
 use wasmi::{Error as InterpreterError, HostError, TrapKind};
 
+use crate::exports::BufferRecoveryError;
+
 #[derive(Debug, Display)]
 #[non_exhaustive]
 pub enum WasmEngineError {
     #[display(fmt = "FailedOcall")]
     FailedOcall(UntrustedVmError),
+    HostMisbehavior,
     OutOfGas,
     Panic,
 
@@ -43,9 +46,16 @@ impl From<WasmEngineError> for EnclaveError {
             MemoryReadError => EnclaveError::MemoryReadError,
             MemoryWriteError => EnclaveError::MemoryWriteError,
             UnauthorizedWrite => EnclaveError::UnauthorizedWrite,
+            HostMisbehavior => EnclaveError::HostMisbehavior,
             // Unexpected WasmEngineError variant
             _other => EnclaveError::Unknown,
         }
+    }
+}
+
+impl From<BufferRecoveryError> for WasmEngineError {
+    fn from(_err: BufferRecoveryError) -> Self {
+        WasmEngineError::HostMisbehavior
     }
 }
 

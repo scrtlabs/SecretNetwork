@@ -128,8 +128,7 @@ fn read_db(context: &Ctx, key: &[u8]) -> Result<(Option<Vec<u8>>, u64), WasmEngi
         match ocall_return {
             OcallReturn::Success => {
                 let enclave_buffer = enclave_buffer.assume_init();
-                // TODO add validation of this pointer before returning its contents.
-                exports::recover_buffer(enclave_buffer)
+                exports::recover_buffer(enclave_buffer)?
             }
             OcallReturn::Failure => {
                 return Err(WasmEngineError::FailedOcall(vm_err));

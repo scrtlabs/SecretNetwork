@@ -21,6 +21,7 @@ pub enum SystemError {
     NoSuchContract { addr: HumanAddr },
     Unknown {},
     UnsupportedRequest { kind: String },
+    ExceededRecursionLimit {},
 }
 
 impl std::error::Error for SystemError {}
@@ -45,6 +46,7 @@ impl std::fmt::Display for SystemError {
             SystemError::UnsupportedRequest { kind } => {
                 write!(f, "Unsupported query type: {}", kind)
             }
+            SystemError::ExceededRecursionLimit {} => write!(f, "Query recursion limit exceeded"),
         }
     }
 }

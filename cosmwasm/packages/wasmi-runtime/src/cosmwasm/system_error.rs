@@ -23,6 +23,7 @@ pub enum SystemError {
     NoSuchContract { addr: HumanAddr },
     Unknown {},
     UnsupportedRequest { kind: String },
+    ExceededRecursionLimit {},
 }
 
 pub type SystemResult<T> = Result<T, SystemError>;

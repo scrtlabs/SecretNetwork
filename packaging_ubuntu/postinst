@@ -3,6 +3,11 @@
 
 set -e
 
+if [[ -z $"SUDO_USER" ]]
+then
+    export SUDO_USER=root
+fi
+
 cat <<EOF > /etc/systemd/system/secret-node.service
 [Unit]
 Description=Secret node service
@@ -11,9 +16,9 @@ After=network.target
 [Service]
 Type=simple
 Environment=SCRT_ENCLAVE_DIR=/usr/lib
-WorkingDirectory=$(eval echo ~$(logname))
+WorkingDirectory=$(eval echo ~"$SUDO_USER")
 ExecStart=$(which secretd) start
-User=$(logname)
+User=$SUDO_USER
 Restart=on-failure
 StartLimitInterval=0
 RestartSec=3
@@ -26,5 +31,5 @@ EOF
 
 systemctl daemon-reload
 
-mkdir -p "$(eval echo ~$(logname))/.sgx_secrets"
-chown -R $(logname):$(logname) "$(eval echo ~$(logname))/.sgx_secrets"
+mkdir -p "$(eval echo ~"$SUDO_USER")/.sgx_secrets"
+chown -R "$SUDO_USER":"$SUDO_USER" "$(eval echo ~"$SUDO_USER")/.sgx_secrets"
