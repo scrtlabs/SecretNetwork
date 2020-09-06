@@ -37,22 +37,18 @@ mod tests;
 
 static LOGGER: SimpleLogger = SimpleLogger;
 
-#[cfg(all(not(feature = "production"), feature = "SGX_MODE_HW"))]
-#[ctor]
-fn init_logger() {
-    set_log_level_or_default(LevelFilter::Info, LevelFilter::Info);
-}
-
 #[cfg(all(feature = "production", feature = "SGX_MODE_HW"))]
 #[ctor]
 fn init_logger() {
-    set_log_level_or_default(LevelFilter::Error, LevelFilter::Warn)
+    log::set_logger(&LOGGER).unwrap(); // It's ok to panic at this stage. This shouldn't happen though
+    set_log_level_or_default(LevelFilter::Error, LevelFilter::Warn);
 }
 
-#[cfg(not(feature = "SGX_MODE_HW"))]
+#[cfg(all(not(feature = "production"), not(feature = "test")))]
 #[ctor]
 fn init_logger() {
-    set_log_level_or_default(LevelFilter::Trace, LevelFilter::Trace)
+    log::set_logger(&LOGGER).unwrap(); // It's ok to panic at this stage. This shouldn't happen though
+    set_log_level_or_default(LevelFilter::Trace, LevelFilter::Trace);
 }
 
 fn log_level_from_str(env_log_level: &str) -> Option<LevelFilter> {
@@ -68,6 +64,13 @@ fn log_level_from_str(env_log_level: &str) -> Option<LevelFilter> {
 }
 
 fn set_log_level_or_default(default: LevelFilter, max_level: LevelFilter) {
+    if default > max_level {
+        panic!(
+            "Logging configuration is broken, stopping to prevent secret leaking. default: {:?}, max level: {:?}",
+            default, max_level
+        );
+    }
+
     let mut log_level = default;
 
     if let Some(env_log_level) =
@@ -79,7 +82,84 @@ fn set_log_level_or_default(default: LevelFilter, max_level: LevelFilter) {
         }
     }
 
-    log::set_logger(&LOGGER)
-        .map(|()| log::set_max_level(log_level))
-        .unwrap();
+    log::set_max_level(log_level);
+}
+
+#[cfg(feature = "test")]
+pub mod logging_tests {
+    use crate::{count_failures, set_log_level_or_default};
+    use ctor::*;
+    use lazy_static::lazy_static;
+    use log::*;
+    use log::{Metadata, Record};
+    use std::sync::SgxMutex;
+    use std::{env, panic};
+
+    lazy_static! {
+        static ref LOG_BUF: SgxMutex<Vec<String>> = SgxMutex::new(Vec::new());
+    }
+    pub struct TestLogger;
+    impl log::Log for TestLogger {
+        fn enabled(&self, _metadata: &Metadata) -> bool {
+            true
+        }
+        fn log(&self, record: &Record) {
+            LOG_BUF.lock().unwrap().push(format!(
+                "{}  [{}] {}",
+                record.level(),
+                record.target(),
+                record.args()
+            ));
+        }
+        fn flush(&self) {}
+    }
+
+    #[ctor]
+    fn init_logger_test() {
+        log::set_logger(&TestLogger).unwrap();
+    }
+
+    pub fn run_tests() {
+        println!();
+        let mut failures = 0;
+
+        count_failures!(failures, {
+            test_log_level();
+            test_log_default_greater_than_max();
+        });
+
+        if failures != 0 {
+            panic!("{}: {} tests failed", file!(), failures);
+        }
+    }
+
+    fn test_log_level() {
+        env::set_var("LOG_LEVEL", "WARN");
+        set_log_level_or_default(LevelFilter::Error, LevelFilter::Info);
+        assert_eq!(log::max_level(), LevelFilter::Warn);
+        info!("Should not process");
+        assert!(LOG_BUF.lock().unwrap().is_empty());
+
+        env::set_var("LOG_LEVEL", "TRACE");
+        set_log_level_or_default(LevelFilter::Error, LevelFilter::Info);
+        assert_eq!(log::max_level(), LevelFilter::Error);
+        debug!("Should not process");
+        assert!(LOG_BUF.lock().unwrap().is_empty());
+
+        env::set_var("LOG_LEVEL", "WARN");
+        set_log_level_or_default(LevelFilter::Warn, LevelFilter::Warn);
+        assert_eq!(log::max_level(), LevelFilter::Warn);
+        trace!("Should not process");
+        assert!(LOG_BUF.lock().unwrap().is_empty());
+
+        warn!("This should process");
+        assert_eq!(LOG_BUF.lock().unwrap().len(), 1);
+    }
+
+    fn test_log_default_greater_than_max() {
+        let result = panic::catch_unwind(|| {
+            set_log_level_or_default(LevelFilter::Trace, LevelFilter::Error);
+        });
+        assert!(result.is_err());
+    }
 }
