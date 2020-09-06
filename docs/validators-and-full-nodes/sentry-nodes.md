@@ -21,13 +21,13 @@ An unreachable validator node is not gossiped across the network i.e. all other 
 
 To setup your sentry node architecture you can follow the instructions below:
 
-Validators nodes should edit their .secretd/config/config.toml:
+Validators nodes should edit their `.secretd/config/config.toml`:
 
 ```bash
 nano /.secretd/config/config.toml
 ```
 
-Proceed to make the following changes.
+Proceed to make the following changes:
 
 ```bash
 # Comma separated list of nodes to keep persistent connections to
