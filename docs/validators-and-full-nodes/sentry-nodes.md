@@ -16,7 +16,7 @@ Sentry nodes can be quickly spun up or change their IP addresses. Because the li
 
 ### Notes:
 
-For those implementing Sentry's on Validators who already have Public IP exposed. Currently any peer, be it a validator or full node, is given 16 attempts with exponential backoff, which in total amounts to around 35 hours, to connect. If the node remains unreachable then it is automatically removed from the address book..
+For those implementing Sentries on Validators who already have Public IP exposed. Currently any peer, be it a validator or full node, is given 16 attempts with exponential backoff, which in total amounts to around 35 hours, to connect. If the node remains unreachable then it is automatically removed from the address book.
 An unreachable validator node is not gossiped across the network i.e. all other nodes will each try to connect to the unreachable validator node before removing it from their address book.
 
 To setup your sentry node architecture you can follow the instructions below:
