@@ -24,7 +24,7 @@ rpath = false
 default = ["SGX_MODE_SW"]
 SGX_MODE_SW = []
 SGX_MODE_HW = []
-production = []
+production = ["SGX_MODE_HW", "log/max_level_warn", "log/release_max_level_warn"]
 test = []
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
@@ -54,7 +54,6 @@ serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
 ] }
 serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
 base64 = { version = "0.10", git = "https://github.com/mesalock-linux/rust-base64-sgx" }
-log = { version = "0.4.8" }
 ctor = "0.1.13"
 bech32 = "0.7.2"
 derive_more = "0.99"
@@ -78,6 +77,7 @@ x25519-dalek = { version = "0.6", default-features = false, features = [
 hex = "0.4.2"
 ripemd160 = "0.9.1"
 prost = { version = "0.6", default-features = false, features = ["prost-derive"], git = "https://github.com/mesalock-linux/prost-sgx" }
+log = "0.4.8"
 
 [patch.crates-io]
 rand_core = { git = "https://github.com/mesalock-linux/rand-sgx", default-features = false, features = [

@@ -9,7 +9,7 @@ enclave {
     from "sgx_tstdc.edl" import *;
     from "sgx_tprotected_fs.edl" import *;
 
-    from "sgx_env.edl" import u_getenv_ocall;
+    from "sgx_env.edl" import u_getenv_ocall, u_setenv_ocall;
 
     // This header is generated during the build of enclave-ffi-types
     include "target/headers/enclave-ffi-types.h"
