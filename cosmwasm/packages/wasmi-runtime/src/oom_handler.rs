@@ -72,12 +72,13 @@ impl SafetyBuffer {
 }
 
 lazy_static! {
-    /// SAFETY_BUFFER is a 32 MiB of SafetyBuffer. This is occupying 50% of available memory
-    /// to be extra sure this is enough.
+    /// SAFETY_BUFFER is a 4 MiB of SafetyBuffer. This is twice the bare minimum to unwind after
+    /// a best-case OOM event. thanks to the recursion limit on queries, together with other memory
+    /// limits, we don't expect to hit OOM, and this mechanism remains in place just in case.
     /// 2 MiB is the minimum allowed buffer. If we don't succeed to allocate 2 MiB, we throw a panic,
-    /// if we do succeed to allocate 2 MiB but less than 32 MiB than we move on and will try to allocate
+    /// if we do succeed to allocate 2 MiB but less than 4 MiB than we move on and will try to allocate
     /// the rest on the next entry to the enclave.
-    static ref SAFETY_BUFFER: SgxMutex<SafetyBuffer> = SgxMutex::new(SafetyBuffer::new(16 * 1024, 2 * 1024));
+    static ref SAFETY_BUFFER: SgxMutex<SafetyBuffer> = SgxMutex::new(SafetyBuffer::new(4 * 1024, 2 * 1024));
 }
 
 static OOM_HAPPENED: AtomicBool = AtomicBool::new(false);

@@ -131,7 +131,7 @@ pub unsafe extern "C" fn ecall_init_node(
     let cert_slice = slice::from_raw_parts(master_cert, master_cert_len as usize);
 
     if (encrypted_seed_len as usize) != ENCRYPTED_SEED_SIZE {
-        error!(
+        warn!(
             "Got encrypted seed with the wrong size: {:?}",
             encrypted_seed_len
         );
@@ -225,7 +225,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         api_key_slice,
     ) {
         Err(e) => {
-            error!("Error in create_attestation_certificate: {:?}", e);
+            warn!("Error in create_attestation_certificate: {:?}", e);
             return e;
         }
         Ok(res) => res,

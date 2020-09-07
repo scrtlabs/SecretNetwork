@@ -19,7 +19,6 @@ const ENCLAVE_DEBUG: i32 = 0;
 #[cfg(not(feature = "production"))]
 const ENCLAVE_DEBUG: i32 = 1;
 
-
 fn init_enclave() -> SgxResult<SgxEnclave> {
     let mut launch_token: sgx_launch_token_t = [0; 1024];
     let mut launch_token_updated: i32 = 0;
@@ -39,7 +38,7 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
 
     let mut enclave_file_path: PathBuf = path.join(ENCLAVE_FILE);
 
-    debug!(
+    trace!(
         "Looking for the enclave file in {:?}",
         enclave_file_path.to_str()
     );
@@ -47,14 +46,14 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
     if !enclave_file_path.exists() {
         enclave_file_path = Path::new("/lib").join(ENCLAVE_FILE);
 
-        debug!(
+        trace!(
             "Looking for the enclave file in {:?}",
             enclave_file_path.to_str()
         );
         if !enclave_file_path.exists() {
             enclave_file_path = Path::new("/usr/lib").join(ENCLAVE_FILE);
 
-            debug!(
+            trace!(
                 "Looking for the enclave file in {:?}",
                 enclave_file_path.to_str()
             );
@@ -65,7 +64,7 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
     }
 
     if !enclave_file_path.exists() {
-        debug!(
+        warn!(
             "Cannot find the enclave file. Try pointing the SCRT_ENCLAVE_DIR envirinment variable to the directory that has {:?}",
             ENCLAVE_FILE
         );

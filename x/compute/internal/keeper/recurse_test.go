@@ -281,6 +281,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 		expectedGas               uint64
 		expectOutOfGas            bool
 		expectOOM                 bool
+		expectRecursionLimit      bool
 	}{
 		"no recursion, lots of work": {
 			gasLimit: 4_000_000,
@@ -291,6 +292,18 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			expectQueriesFromContract: 0,
 			expectedGas:               GasWork2k,
 		},
+		"recursion 4, lots of work": {
+			gasLimit: 4_000_000,
+			msg: Recurse{
+				Depth: 4,
+				Work:  2000,
+			},
+			expectQueriesFromContract: 4,
+			expectedGas:               GasWork2k + 9*(GasWork2k+GasReturnHashed),
+			expectOutOfGas:            false,
+			expectOOM:                 false,
+			expectRecursionLimit:      false,
+		},
 		"recursion 9, lots of work": {
 			gasLimit: 4_000_000,
 			msg: Recurse{
@@ -300,7 +313,8 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			expectQueriesFromContract: 9,
 			expectedGas:               GasWork2k + 9*(GasWork2k+GasReturnHashed),
 			expectOutOfGas:            false,
-			expectOOM:                 true,
+			expectOOM:                 false,
+			expectRecursionLimit:       true,
 		},
 		// this is where we expect an error...
 		// it has enough gas to run 4 times and die on the 5th (4th time dispatching to sub-contract)
@@ -314,7 +328,8 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			},
 			expectQueriesFromContract: 4,
 			expectOutOfGas:            false,
-			expectOOM:                 true,
+			expectOOM:                 false,
+			expectRecursionLimit:       true,
 		},
 	}
 
@@ -351,6 +366,14 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 				require.NotEmpty(t, qErr)
 				require.NotNil(t, qErr.GenericErr)
 				require.Contains(t, qErr.GenericErr.Msg, "Execution error: Enclave: enclave ran out of heap memory")
+				return
+			}
+
+			if tc.expectRecursionLimit {
+				_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, tc.gasLimit)
+				require.NotEmpty(t, qErr)
+				require.NotNil(t, qErr.GenericErr)
+				require.Contains(t, qErr.GenericErr.Msg, "Querier system error: Query recursion limit exceeded")
 				return
 			}
 

@@ -12,6 +12,7 @@ type SystemError struct {
 	NoSuchContract     *NoSuchContract     `json:"no_such_contract,omitempty"`
 	Unknown            *Unknown            `json:"unknown,omitempty"`
 	UnsupportedRequest *UnsupportedRequest `json:"unsupported_request,omitempty"`
+	ExceededRecursionLimit	*ExceededRecursionLimit	`json:"exceeded_recursion_limit,omitempty"`
 }
 
 var (
@@ -21,6 +22,7 @@ var (
 	_ error = NoSuchContract{}
 	_ error = Unknown{}
 	_ error = UnsupportedRequest{}
+	_ error = ExceededRecursionLimit{}
 )
 
 func (a SystemError) Error() string {
@@ -35,6 +37,8 @@ func (a SystemError) Error() string {
 		return a.Unknown.Error()
 	case a.UnsupportedRequest != nil:
 		return a.UnsupportedRequest.Error()
+	case a.ExceededRecursionLimit != nil:
+		return a.ExceededRecursionLimit.Error()
 	default:
 		panic("unknown error variant")
 	}
@@ -80,6 +84,12 @@ func (e UnsupportedRequest) Error() string {
 	return fmt.Sprintf("unsupported request: %s", e.Kind)
 }
 
+type ExceededRecursionLimit struct{}
+
+func (e ExceededRecursionLimit) Error() string {
+	return "unknown system error"
+}
+
 // ToSystemError will try to convert the given error to an SystemError.
 // This is important to returning any Go error back to Rust.
 //
@@ -118,6 +128,10 @@ func ToSystemError(err error) *SystemError {
 		return &SystemError{UnsupportedRequest: &t}
 	case *UnsupportedRequest:
 		return &SystemError{UnsupportedRequest: t}
+	case ExceededRecursionLimit:
+		return &SystemError{ExceededRecursionLimit: &t}
+	case *ExceededRecursionLimit:
+		return &SystemError{ExceededRecursionLimit: t}
 	default:
 		return nil
 	}

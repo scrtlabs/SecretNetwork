@@ -55,7 +55,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
         // just make sure the length isn't wrong for some reason (certificate may be malformed)
         if pk.len() != PUBLIC_KEY_SIZE {
-            error!(
+            warn!(
                 "Got public key from certificate with the wrong size: {:?}",
                 pk.len()
             );
@@ -64,7 +64,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
         let mut target_public_key: [u8; 32] = [0u8; 32];
         target_public_key.copy_from_slice(&pk);
-        debug!(
+        trace!(
             "ecall_get_encrypted_seed target_public_key key pk: {:?}",
             &target_public_key.to_vec()
         );
@@ -91,7 +91,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     } else {
         // There's no real need here to test if oom happened
         get_then_clear_oom_happened();
-        error!("Enclave call ecall_authenticate_new_node panic!");
+        warn!("Enclave call ecall_authenticate_new_node panic!");
         NodeAuthResult::Panic
     }
 }

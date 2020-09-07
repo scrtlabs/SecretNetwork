@@ -32,7 +32,7 @@ impl Engine {
     }
 
     pub fn init(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, EnclaveError> {
-        trace!("Invoking init() in wasm");
+        info!("Invoking init() in wasm");
 
         match self
             .module
@@ -48,7 +48,7 @@ impl Engine {
         {
             Some(RuntimeValue::I32(offset)) => Ok(offset as u32),
             other => {
-                error!("init method returned value which wasn't u32: {:?}", other);
+                warn!("init method returned value which wasn't u32: {:?}", other);
                 Err(EnclaveError::FailedFunctionCall)
             }
         }
@@ -72,7 +72,7 @@ impl Engine {
     }
 
     pub fn handle(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, EnclaveError> {
-        trace!("Invoking handle() in wasm");
+        info!("Invoking handle() in wasm");
 
         // Itzik: leaving this here as an example in case we will want to do something like this in the future
 
@@ -114,14 +114,14 @@ impl Engine {
         {
             Some(RuntimeValue::I32(offset)) => Ok(offset as u32),
             other => {
-                error!("handle method returned value which wasn't u32: {:?}", other);
+                warn!("handle method returned value which wasn't u32: {:?}", other);
                 Err(EnclaveError::FailedFunctionCall)
             }
         }
     }
 
     pub fn query(&mut self, msg_ptr: u32) -> Result<u32, EnclaveError> {
-        trace!("Invoking query() in wasm");
+        info!("Invoking query() in wasm");
 
         match self
             .module
@@ -134,7 +134,7 @@ impl Engine {
         {
             Some(RuntimeValue::I32(offset)) => Ok(offset as u32),
             other => {
-                error!("query method returned value which wasn't u32: {:?}", other);
+                warn!("query method returned value which wasn't u32: {:?}", other);
                 Err(EnclaveError::FailedFunctionCall)
             }
         }
