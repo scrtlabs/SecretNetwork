@@ -1,45 +1,11 @@
 # :warning: WIP :warning:
 
 - [:warning: WIP :warning:](#warning-wip-warning)
-  - [Bootstrap validator](#bootstrap-validator)
-  - [All other validators](#all-other-validators)
+  - [Validators](#validators)
     - [In case of an upgrade failure](#in-case-of-an-upgrade-failure)
+  - [Bootstrap validator](#bootstrap-validator)
 
-## Bootstrap validator
-
-Must be running [`v0.2.2`](https://github.com/enigmampc/SecretNetwork/releases/tag/v0.2.2).
-
-1. Export state on the old machine
-
-   ```bash
-   export HALT_HEIGHT=1246400
-
-   perl -i -pe "s/^halt-height =.*/halt-height = $HALT_HEIGHT/" ~/.secretd/config/app.toml
-   sudo systemctl restart secret-node.service
-
-   # Wait for $HALT_HEIGHT...
-
-   secretd export --height $HALT_HEIGHT --for-zero-height --jail-whitelist secretvaloper13l72vhjngmg55ykajxdnlalktwglyqjqaz0tdu |
-       jq -Sc -f <(
-           echo '.chain_id = "secret-2" |'
-           echo '.genesis_time = (now | todate) |'
-           echo '.consensus_params.block.max_gas = "10000000" |'
-           echo '.app_state.distribution.params = { "secret_foundation_tax": "0.15", "secret_foundation_address": "secret1c7rjffp9clkvrzul20yy60yhy6arnv7sde0kjj" } |'
-           echo '.app_state.register = { "reg_info": null, "node_exch_cert": null, "io_exch_cert": null } |'
-           echo '.app_state.compute = { "codes": null, "contracts": null }'
-       ) > genesis.json
-   ```
-
-2. Install `secretnetwork_1.0.0_amd64.deb` on the new SGX machine
-3. Copy `~/.secretd/config/priv_validator_key.json` to the new SGX machine
-4. Export the self-delegator wallet from the old machine and import to the new SGX machine
-5. Copy `genesis.json` from the old to `~/.secretd/config/genesis.json` on the new machine
-6. `secretd validate-genesis`
-7. `secretd init-bootstrap`
-8. `secretd validate-genesis`
-9. `secretd start --bootstrap`
-
-## All other validators
+## Validators
 
 All coordination efforts will be done in the [#mainnet-validators](https://chat.scrt.network/channel/mainnet-validators) channel in the Secret Network Rocket.Chat.
 
@@ -53,7 +19,7 @@ All coordination efforts will be done in the [#mainnet-validators](https://chat.
    sudo systemctl restart secret-node.service
    ```
 
-   Note: Although halt heihgt is 1246400 on `secret-1`, the halt time might not be exactly September 15th, 2020 at 14:00:00 UTC. The halt height was calculated on September 7th to be as close a possible to September 15th, 2020 at 14:00:00 UTC, using `secret-1` block time of 6.19 seconds.
+   Note: Although halt height is 1246400 on `secret-1`, the halt time might not be exactly September 15th, 2020 at 14:00:00 UTC. The halt height was calculated on September 7th to be as close a possible to September 15th, 2020 at 14:00:00 UTC, using `secret-1` block time of 6.19 seconds.
 
 2. Install `secretnetwork_1.0.0_amd64.deb` on the new SGX machine
 3. Copy `~/.secretd/config/priv_validator_key.json` to the new SGX machine
@@ -104,3 +70,37 @@ TODO: Define what counts as a network upgrade failure.
    ```
 
 2. Wait for 67% of voting power to come back online.
+
+## Bootstrap validator
+
+Must be running [`v0.2.2`](https://github.com/enigmampc/SecretNetwork/releases/tag/v0.2.2).
+
+1. Export state on the old machine
+
+   ```bash
+   export HALT_HEIGHT=1246400
+
+   perl -i -pe "s/^halt-height =.*/halt-height = $HALT_HEIGHT/" ~/.secretd/config/app.toml
+   sudo systemctl restart secret-node.service
+
+   # Wait for $HALT_HEIGHT...
+
+   secretd export --height $HALT_HEIGHT --for-zero-height --jail-whitelist secretvaloper13l72vhjngmg55ykajxdnlalktwglyqjqaz0tdu |
+       jq -Sc -f <(
+           echo '.chain_id = "secret-2" |'
+           echo '.genesis_time = (now | todate) |'
+           echo '.consensus_params.block.max_gas = "10000000" |'
+           echo '.app_state.distribution.params = { "secret_foundation_tax": "0.15", "secret_foundation_address": "secret1c7rjffp9clkvrzul20yy60yhy6arnv7sde0kjj" } |'
+           echo '.app_state.register = { "reg_info": null, "node_exch_cert": null, "io_exch_cert": null } |'
+           echo '.app_state.compute = { "codes": null, "contracts": null }'
+       ) > genesis.json
+   ```
+
+2. Install `secretnetwork_1.0.0_amd64.deb` on the new SGX machine
+3. Copy `~/.secretd/config/priv_validator_key.json` to the new SGX machine
+4. Export the self-delegator wallet from the old machine and import to the new SGX machine
+5. Copy `genesis.json` from the old to `~/.secretd/config/genesis.json` on the new machine
+6. `secretd validate-genesis`
+7. `secretd init-bootstrap`
+8. `secretd validate-genesis`
+9. `secretd start --bootstrap`
