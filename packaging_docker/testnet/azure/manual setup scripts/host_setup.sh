@@ -23,3 +23,5 @@ curl -L https://github.com/docker/compose/releases/download/1.26.0/docker-compos
 chmod +x /usr/local/bin/docker-compose
 
 docker-compose --version
+
+usermod -aG docker ${USER}
