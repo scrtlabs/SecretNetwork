@@ -24,7 +24,7 @@ Must be running [`v0.2.2`](https://github.com/enigmampc/SecretNetwork/releases/t
            echo '.chain_id = "secret-2" |'
            echo '.genesis_time = (now | todate) |'
            echo '.consensus_params.block.max_gas = "10000000" |'
-           echo '.app_state.distribution.params = { "secret_foundation_tax": "0.15", "secret_foundation_address": "secret1TODO" } |'
+           echo '.app_state.distribution.params = { "secret_foundation_tax": "0.15", "secret_foundation_address": "secret1c7rjffp9clkvrzul20yy60yhy6arnv7sde0kjj" } |'
            echo '.app_state.register = { "reg_info": null, "node_exch_cert": null, "io_exch_cert": null } |'
            echo '.app_state.compute = { "codes": null, "contracts": null }'
        ) > genesis.json
