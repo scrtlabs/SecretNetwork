@@ -8,7 +8,7 @@ This document details how to join the Secret Network `testnet` as a full node. O
 - A public IP address
 - Open ports `TCP 26656 & 26657` _Note: If you're behind a router or firewall then you'll need to port forward on the network device._
 - Reading https://docs.tendermint.com/master/tendermint-core/running-in-production.html
-- RPC address of an already active node. You can use `bootstrap.pub.testnet.enigma.co:26657`, or any other node that exposes RPC services.
+- RPC address of an already active node. You can use `bootstrap.pub.testnet3.enigma.co:26657`, or any other node that exposes RPC services.
 
 ### Minimum requirements
 
@@ -34,7 +34,7 @@ See instructions for [setup](../validators-and-full-nodes/setup-sgx.md) and [ver
 ### 1. Download the Secret Network package installer for Debian/Ubuntu:
 
 ```bash
-wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.7.0/secretnetwork_0.7.0_amd64.deb
+wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.8.1/secretnetwork_0.8.1_amd64.deb
 ```
 
 ([How to verify releases](../verify-releases.md))
@@ -42,7 +42,7 @@ wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.7.0/secretn
 ### 2. Install the package:
 
 ```bash
-sudo dpkg -i secretnetwork_0.7.0_amd64.deb
+sudo dpkg -i secretnetwork_0.8.1_amd64.deb
 ```
 
 ### 3. Initialize your installation of the Secret Network.
@@ -51,19 +51,19 @@ Choose a **moniker** for yourself, and replace `<MONIKER>` with your moniker bel
 This moniker will serve as your public nickname in the network.
 
 ```bash
-secretd init <MONIKER> --chain-id enigma-pub-testnet-2
+secretd init <MONIKER> --chain-id enigma-pub-testnet-4
 ```
 
 ### 4. Download a copy of the Genesis Block file: `genesis.json`
 
 ```bash
-wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v0.7.0/genesis.json"
+wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v0.8.1/genesis.json"
 ```
 
 ### 5. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
 
 ```bash
-echo "093ebc2fabdddf7b22ee38eaebbbea2201474bc63321bd38b933b2b091f13f8d $HOME/.secretd/config/genesis.json" | sha256sum --check
+echo "0ccbe047a8dbdc43ee2f3de74f7a26fc36376aec130b8813ac76a1f95e5a6e8f $HOME/.secretd/config/genesis.json" | sha256sum --check
 ```
 
 ### 6. Validate that the `genesis.json` is a valid genesis file:
@@ -122,8 +122,8 @@ To run the steps with `secretcli` on another machine, [set up the CLI](install_c
 Configure `secretcli`. Initially you'll be using the bootstrap node, as you'll need to connect to a running node and your own node is not running yet.
 
 ```bash
-secretcli config chain-id enigma-pub-testnet-2
-secretcli config node tcp://bootstrap.pub.testnet.enigma.co:26657
+secretcli config chain-id enigma-pub-testnet-4
+secretcli config node tcp://bootstrap.pub.testnet3.enigma.co:26657
 secretcli config output json
 secretcli config indent true
 secretcli config trust-node true
@@ -181,7 +181,7 @@ secretd configure-secret node-master-cert.der "$SEED"
 You can also use Enigma's node:
 
 ```bash
-perl -i -pe 's/persistent_peers = ""/persistent_peers = "dd4c198e2d54229ec08a60e5865cba01a66e263b\@bootstrap.pub.testnet.enigma.co:26656"/' ~/.secretd/config/config.toml
+perl -i -pe 's/persistent_peers = ""/persistent_peers = "115aa0a629f5d70dd1d464bc7e42799e00f4edae\@bootstrap.pub.testnet3.enigma.co:26656"/' ~/.secretd/config/config.toml
 ```
 
 ### 17. Listen for incoming RPC requests so that light nodes can connect to you:
@@ -244,7 +244,7 @@ If someone wants to add you as a peer, have them add the above address to their 
 And if someone wants to use your node from their `secretcli` then have them run:
 
 ```bash
-secretcli config chain-id enigma-pub-testnet-2
+secretcli config chain-id enigma-pub-testnet-4
 secretcli config output json
 secretcli config indent true
 secretcli config node tcp://<your-public-ip>:26657

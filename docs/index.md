@@ -1,4 +1,4 @@
-![Secret Network](images/header.png)
+![Secret Network](header.png)
 
 <p align="center">
 Secret Network secures the decentralized web

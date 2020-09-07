@@ -24,14 +24,14 @@ Other driver/OS combinations are not guaranteed to work with these instructions.
 
 ### 1. Download the test package
 
-`wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.7.0/secretnetwork_0.7.0_amd64.deb`
+`wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.8.0/secretnetwork_0.8.0_amd64.deb`
 
 ### 2. Unpack
 
 #### This will install `secretd`
 
 ```bash
-sudo dpkg -i secretnetwork_0.7.0_amd64.deb
+sudo dpkg -i secretnetwork_0.8.0_amd64.deb
 ```
 
 ### 3. Initialize the enclave
