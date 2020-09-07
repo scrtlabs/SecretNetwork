@@ -2,7 +2,7 @@
 
 ### How to become a validator on Secret Network
 
-#### 1. [Run a new full node](/validators-and-full-nodes/run-full-node-mainnet.md) on a new machine.
+#### 1. [Run a new full node](run-full-node-testnet.md) on a new machine.
 
 #### 2. Set your `minimum-gas-price` parameter
 
@@ -22,7 +22,7 @@ secretcli keys add <key-alias>
 ```
 
 **:warning:Note:warning:: Backup the mnemonics!**
-**:warning:Note:warning:: Please make sure you also [backup your validator](/validators-and-full-nodes/backup-a-validator.md)**
+**:warning:Note:warning:: Please make sure you also [backup your validator](../validators-and-full-nodes/backup-a-validator.md)**
 
 **Note**: If you already have a key you can import it with the bip39 mnemonic with `secretcli keys add <key-alias> --recover` or with `secretcli keys export` (exports to `stderr`!!) & `secretcli keys import`.
 
@@ -52,7 +52,7 @@ If you get the following message, it means that you have no tokens yet:
 ERROR: unknown address: account secret1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx does not exist
 ```
 
-#### 6. Join the network as a new validator: replace `<MONIKER>` with the moniker you configured in step 3 of [creating a full-node](https://github.com/enigmampc/SecretNetwork/blob/develop/docs/validators-and-full-nodes/run-full-node-mainnet.md), and adjust the amount you want to stake
+#### 6. Join the network as a new validator: replace `<MONIKER>` with the moniker you configured in step 3 of [creating a full-node](run-full-node-testnet.md), and adjust the amount you want to stake
 
 (remember 1 SCRT = 1,000,000 uSCRT, and so the command below stakes 100k SCRT).
 
@@ -106,7 +106,7 @@ Penalties for double-signing:
 
 ### Protecting your validator agains DDoS attacks
 
-See [Sentry Nodes](/validators-and-full-nodes/sentry-nodes.md).
+See [Sentry Nodes](../validators-and-full-nodes/sentry-nodes.md).
 
 ### Staking more tokens
 
@@ -162,7 +162,7 @@ Modifying the commision-rate can be done using this:
 secretcli tx staking edit-validator --commission-rate="0.05" --from <key-alias>
 ```
 
-### Slashing 
+### Slashing
 
 ##### Unjailing
 
@@ -186,4 +186,4 @@ You can get the current slashing parameters via:
 
 ```bash
 secretcli q slashing params
-```s
+```

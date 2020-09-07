@@ -216,7 +216,7 @@ sudo $HOME/.sgxsdk/sgx_linux_x64_driver_*.bin
 
 ### Run `secretd init-enclave`
 
-See https://github.com/enigmampc/SecretNetwork/blob/master/docs/testnet/verify-sgx.md for a guide how to test your setup
+See https://github.com/enigmampc/SecretNetwork/blob/master/docs/validators-and-full-nodes/verify-sgx.md for a guide how to test your setup
 
 ## For Contract Developers
 
