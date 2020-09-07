@@ -76,7 +76,7 @@ pub fn wasmi_error_to_enclave_error(wasmi_error: InterpreterError) -> EnclaveErr
                 .map_or(EnclaveError::Unknown, EnclaveError::from)
         })
         .unwrap_or_else(|wasmi_error| {
-            error!("Got an error from wasmi: {:?}", wasmi_error);
+            warn!("Got an error from wasmi: {:?}", wasmi_error);
             match wasmi_error {
                 InterpreterError::Trap(trap) => trap_kind_to_enclave_error(trap.into_kind()),
                 _ => EnclaveError::FailedFunctionCall,

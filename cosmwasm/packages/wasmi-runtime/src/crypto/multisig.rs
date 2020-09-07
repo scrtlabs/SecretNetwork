@@ -43,7 +43,7 @@ impl PubKey for MultisigThresholdPubKey {
             let pubkey_bytes = pubkey.bytes();
             // This line should never fail since it could only fail if `length` does not have sufficient capacity to encode
             if prost::encode_length_delimiter(pubkey_bytes.len(), &mut length).is_err() {
-                error!(
+                warn!(
                     "Could not encode length delimiter: {:?}. This should not happen",
                     pubkey_bytes.len()
                 );
@@ -58,12 +58,12 @@ impl PubKey for MultisigThresholdPubKey {
     }
 
     fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError> {
-        trace!("verifying multisig");
-        debug!("Sign bytes are: {:?}", bytes);
+        debug!("verifying multisig");
+        trace!("Sign bytes are: {:?}", bytes);
         let signatures = decode_multisig_signature(sig)?;
 
         if signatures.len() < (self.threshold as usize) || signatures.len() > self.pubkeys.len() {
-            error!(
+            warn!(
                 "Wrong number of signatures! min expected: {:?}, max expected: {:?}, provided: {:?}",
                 self.threshold,
                 self.pubkeys.len(),
@@ -78,7 +78,7 @@ impl PubKey for MultisigThresholdPubKey {
             trace!("Checking sig: {:?}", current_sig);
             // TODO: can we somehow easily skip already verified signatures?
             for current_pubkey in &self.pubkeys {
-                debug!("Checking pubkey: {:?}", current_pubkey);
+                trace!("Checking pubkey: {:?}", current_pubkey);
                 // This technically support that one of the multisig signers is a multisig itself
                 let result = current_pubkey.verify_bytes(bytes, &current_sig);
 
@@ -90,7 +90,7 @@ impl PubKey for MultisigThresholdPubKey {
         }
 
         if verified_counter < signatures.len() {
-            error!("Failed to verify some or all signatures");
+            warn!("Failed to verify some or all signatures");
             Err(CryptoError::VerificationError)
         } else {
             debug!("Miltusig verified successfully");
@@ -105,7 +105,7 @@ fn decode_multisig_signature(raw_blob: &[u8]) -> Result<MultisigSignature, Crypt
     trace!("decoding blob: {:?}", raw_blob);
     let blob_size = raw_blob.len();
     if blob_size < 8 {
-        error!("Multisig signature too short. decoding failed!");
+        warn!("Multisig signature too short. decoding failed!");
         return Err(CryptoError::ParsingError);
     }
 
@@ -122,7 +122,7 @@ fn decode_multisig_signature(raw_blob: &[u8]) -> Result<MultisigSignature, Crypt
         let current_sig_prefix = curr_blob_window[0];
 
         if current_sig_prefix != 0x12 {
-            error!("Multisig signature wrong prefix. decoding failed!");
+            warn!("Multisig signature wrong prefix. decoding failed!");
             return Err(CryptoError::ParsingError);
         // The condition below can't fail because:
         // (1) curr_blob_window.get(1..) will return a Some(empty_slice) if curr_blob_window.len()=1
@@ -141,18 +141,18 @@ fn decode_multisig_signature(raw_blob: &[u8]) -> Result<MultisigSignature, Crypt
                     signatures.push((&raw_signature).to_vec());
                     idx += 1 + len_size + current_sig_len; // prefix_byte + length_byte + len(sig)
                 } else {
-                    error!("Multisig signature malformed. decoding failed!");
+                    warn!("Multisig signature malformed. decoding failed!");
                     return Err(CryptoError::ParsingError);
                 }
             } else {
-                error!("Multisig signature malformed. decoding failed!");
+                warn!("Multisig signature malformed. decoding failed!");
                 return Err(CryptoError::ParsingError);
             }
         }
     }
 
     if signatures.is_empty() {
-        error!("Multisig signature empty. decoding failed!");
+        warn!("Multisig signature empty. decoding failed!");
         return Err(CryptoError::ParsingError);
     }
 

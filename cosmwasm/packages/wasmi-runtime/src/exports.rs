@@ -13,7 +13,7 @@ use crate::results::{
     result_query_success_to_queryresult,
 };
 use crate::{
-    oom_handler,
+    oom_handler, recursion_depth,
     utils::{validate_const_ptr, validate_mut_ptr},
 };
 
@@ -116,6 +116,19 @@ pub unsafe extern "C" fn ecall_init(
     sig_info: *const u8,
     sig_info_len: usize,
 ) -> InitResult {
+    let _recursion_guard = match recursion_depth::guard() {
+        Ok(rg) => rg,
+        Err(err) => {
+            // https://github.com/enigmampc/SecretNetwork/pull/517#discussion_r481924571
+            // I believe that this error condition is currently unreachable.
+            // I think we can safely remove it completely right now, and have
+            // recursion_depth::increment() simply increment the counter with no further checks,
+            // but i wanted to stay on the safe side here, in case something changes in the
+            // future, and we can easily spot that we forgot to add a limit somewhere.
+            error!("recursion limit exceeded, can not perform init!");
+            return InitResult::Failure { err };
+        }
+    };
     if let Err(err) = oom_handler::register_oom_handler() {
         error!("Could not register OOM handler!");
         return InitResult::Failure { err };
@@ -176,7 +189,7 @@ pub unsafe extern "C" fn ecall_init(
                 err: EnclaveError::OutOfMemory,
             }
         } else {
-            error!("Call ecall_init panic'd unexpectedly!");
+            error!("Call ecall_init panicked unexpectedly!");
             InitResult::Failure {
                 err: EnclaveError::Panic,
             }
@@ -200,6 +213,19 @@ pub unsafe extern "C" fn ecall_handle(
     sig_info: *const u8,
     sig_info_len: usize,
 ) -> HandleResult {
+    let _recursion_guard = match recursion_depth::guard() {
+        Ok(rg) => rg,
+        Err(err) => {
+            // https://github.com/enigmampc/SecretNetwork/pull/517#discussion_r481924571
+            // I believe that this error condition is currently unreachable.
+            // I think we can safely remove it completely right now, and have
+            // recursion_depth::increment() simply increment the counter with no further checks,
+            // but i wanted to stay on the safe side here, in case something changes in the
+            // future, and we can easily spot that we forgot to add a limit somewhere.
+            error!("recursion limit exceeded, can not perform handle!");
+            return HandleResult::Failure { err };
+        }
+    };
     if let Err(err) = oom_handler::register_oom_handler() {
         error!("Could not register OOM handler!");
         return HandleResult::Failure { err };
@@ -260,7 +286,7 @@ pub unsafe extern "C" fn ecall_handle(
                 err: EnclaveError::OutOfMemory,
             }
         } else {
-            error!("Call ecall_handle panic'd unexpectedly!");
+            error!("Call ecall_handle panicked unexpectedly!");
             HandleResult::Failure {
                 err: EnclaveError::Panic,
             }
@@ -280,6 +306,19 @@ pub unsafe extern "C" fn ecall_query(
     msg: *const u8,
     msg_len: usize,
 ) -> QueryResult {
+    let _recursion_guard = match recursion_depth::guard() {
+        Ok(rg) => rg,
+        Err(err) => {
+            // https://github.com/enigmampc/SecretNetwork/pull/517#discussion_r481924571
+            // I believe that this error condition is currently unreachable.
+            // I think we can safely remove it completely right now, and have
+            // recursion_depth::increment() simply increment the counter with no further checks,
+            // but i wanted to stay on the safe side here, in case something changes in the
+            // future, and we can easily spot that we forgot to add a limit somewhere.
+            error!("recursion limit exceeded, can not perform query!");
+            return QueryResult::Failure { err };
+        }
+    };
     if let Err(err) = oom_handler::register_oom_handler() {
         error!("Could not register OOM handler!");
         return QueryResult::Failure { err };
@@ -322,7 +361,7 @@ pub unsafe extern "C" fn ecall_query(
                 err: EnclaveError::OutOfMemory,
             }
         } else {
-            error!("Call ecall_query panic'd unexpectedly!");
+            error!("Call ecall_query panicked unexpectedly!");
             QueryResult::Failure {
                 err: EnclaveError::Panic,
             }

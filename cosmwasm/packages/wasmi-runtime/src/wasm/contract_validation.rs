@@ -26,7 +26,7 @@ pub fn generate_encryption_key(
     let contract_hash = calc_contract_hash(contract);
 
     let (_, sender_address_u5) = bech32::decode(env.message.sender.as_str()).map_err(|err| {
-        error!(
+        warn!(
             "got an error while trying to deserialize env.message.sender from bech32 string to bytes {:?}: {}",
             env.message.sender, err
         );
@@ -53,13 +53,13 @@ pub fn generate_encryption_key(
 
 pub fn extract_contract_key(env: &Env) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
     if env.contract_key.is_none() {
-        error!("Contract execute with empty contract key");
+        warn!("Contract execute with empty contract key");
         return Err(EnclaveError::FailedContractAuthentication);
     }
 
     let contract_key =
         base64::decode(env.contract_key.as_ref().unwrap().as_bytes()).map_err(|err| {
-            error!(
+            warn!(
                 "got an error while trying to deserialize output bytes into json {:?}: {}",
                 env, err
             );
@@ -67,7 +67,7 @@ pub fn extract_contract_key(env: &Env) -> Result<[u8; CONTRACT_KEY_LENGTH], Encl
         })?;
 
     if contract_key.len() != CONTRACT_KEY_LENGTH {
-        error!("Contract execute with empty contract key");
+        warn!("Contract execute with empty contract key");
         return Err(EnclaveError::FailedContractAuthentication);
     }
 
@@ -121,7 +121,7 @@ pub fn validate_contract_key(
     let enclave_key = KEY_MANAGER
         .get_consensus_state_ikm()
         .map_err(|_err| {
-            error!("Error extracting consensus_state_key");
+            warn!("Error extracting consensus_state_key");
             false
         })
         .unwrap();
@@ -135,7 +135,7 @@ pub fn validate_contract_key(
 
 pub fn validate_msg(msg: &[u8], contract_code: &[u8]) -> Result<Vec<u8>, EnclaveError> {
     if msg.len() < HEX_ENCODED_HASH_SIZE {
-        error!("Malformed message - expected contract code hash to be prepended to the msg");
+        warn!("Malformed message - expected contract code hash to be prepended to the msg");
         return Err(EnclaveError::ValidationFailure);
     }
 
@@ -145,12 +145,12 @@ pub fn validate_msg(msg: &[u8], contract_code: &[u8]) -> Result<Vec<u8>, Enclave
     received_contract_hash.copy_from_slice(&msg[0..HEX_ENCODED_HASH_SIZE]);
 
     let decoded_hash: Vec<u8> = hex::decode(&received_contract_hash[..]).map_err(|_| {
-        error!("Got message with malformed contract hash");
+        warn!("Got message with malformed contract hash");
         EnclaveError::ValidationFailure
     })?;
 
     if decoded_hash != calc_contract_hash {
-        error!("Message contains mismatched contract hash");
+        warn!("Message contains mismatched contract hash");
         return Err(EnclaveError::ValidationFailure);
     }
 
@@ -162,7 +162,7 @@ pub fn verify_params(
     env: &Env,
     msg: &SecretMessage,
 ) -> Result<(), EnclaveError> {
-    trace!("Verifying message signatures..");
+    info!("Verifying message signatures..");
 
     // If there's no callback signature - it's not a callback and there has to be a tx signer + signature
     if let Some(callback_sig) = &sig_info.callback_sig {
@@ -172,11 +172,11 @@ pub fn verify_params(
                 .or(Err(EnclaveError::FailedToSerialize))?,
             msg,
         ) {
-            trace!("Message verified! msg.sender is the calling contract");
+            info!("Message verified! msg.sender is the calling contract");
             return Ok(());
         }
 
-        error!("Callback signature verification failed");
+        warn!("Callback signature verification failed");
     } else {
         trace!(
             "Sign bytes are: {:?}",
@@ -185,7 +185,7 @@ pub fn verify_params(
 
         let sign_doc: SignDoc =
             serde_json::from_slice(sig_info.sign_bytes.as_slice()).map_err(|err| {
-                error!(
+                warn!(
                     "got an error while trying to deserialize sign doc bytes into json {:?}: {}",
                     sig_info.sign_bytes.as_slice(),
                     err
@@ -204,16 +204,16 @@ pub fn verify_params(
                 &sig_info.signature.get_signature().as_slice(),
             )
             .map_err(|err| {
-                error!("Signature verification failed: {:?}", err);
+                warn!("Signature verification failed: {:?}", err);
                 EnclaveError::FailedTxVerification
             })?;
 
         if verify_signature_params(&sign_doc, sig_info, env, msg) {
-            trace!("Parameters verified successfully");
+            info!("Parameters verified successfully");
             return Ok(());
         }
 
-        error!("Parameter verification failed");
+        warn!("Parameter verification failed");
     }
 
     Err(EnclaveError::FailedTxVerification)
@@ -231,7 +231,7 @@ fn verify_callback_sig(
     let callback_sig = io::create_callback_signature(sender, msg);
 
     if !callback_signature.eq(callback_sig.as_slice()) {
-        info!(
+        trace!(
             "Contract signature does not match with the one sent: {:?}",
             callback_signature
         );
@@ -271,7 +271,7 @@ fn get_verified_msg<'a>(
 fn verify_contract(msg: &SignDocWasmMsg, env: &Env) -> bool {
     // Contract address is relevant only to execute, since during sending an instantiate message the contract address is not yet known
     if let SignDocWasmMsg::Execute { contract, .. } = msg {
-        trace!("Verifying contract address..");
+        info!("Verifying contract address..");
         if env.contract.address != *contract {
             trace!(
                 "Contract address sent to enclave {:?} is not the same as the signed one {:?}",
@@ -301,7 +301,7 @@ fn verify_signature_params(
     env: &Env,
     sent_msg: &SecretMessage,
 ) -> bool {
-    trace!("Verifying sender..");
+    info!("Verifying sender..");
 
     let msg_sender = if let Ok(msg_sender) = CanonicalAddr::from_human(&env.message.sender) {
         msg_sender
@@ -310,8 +310,8 @@ fn verify_signature_params(
     };
 
     if !verify_sender(&sig_info.signature, &msg_sender) {
-        error!("Sender verification failed!");
-        debug!(
+        warn!("Sender verification failed!");
+        trace!(
             "Message sender {:?} does not match with the message signer {:?}",
             &env.message.sender,
             &sig_info.signature.get_public_key().get_address()
@@ -319,13 +319,13 @@ fn verify_signature_params(
         return false;
     }
 
-    trace!("Verifying message..");
+    info!("Verifying message..");
     // If msg is not found (is None) then it means message verification failed,
     // since it didn't find a matching signed message
     let msg = get_verified_msg(sign_doc, sent_msg);
     if msg.is_none() {
-        error!("Message verification failed!");
-        debug!(
+        warn!("Message verification failed!");
+        trace!(
             "Message sent to contract {:?} is not equal to any signed messages {:?}",
             sent_msg.to_vec(),
             sign_doc.msgs
@@ -335,13 +335,13 @@ fn verify_signature_params(
     let msg = msg.unwrap();
 
     if !verify_contract(msg, env) {
-        error!("Contract address verification failed!");
+        warn!("Contract address verification failed!");
         return false;
     }
 
-    trace!("Verifying funds..");
+    info!("Verifying funds..");
     if !verify_funds(msg, env) {
-        error!("Funds verification failed!");
+        warn!("Funds verification failed!");
         return false;
     }
 

@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
 
+use log::*;
 use sgx_types::sgx_spid_t;
 use std::char;
 
@@ -17,7 +18,7 @@ pub fn decode_spid(hex: &str) -> sgx_spid_t {
     let hex = hex.trim();
 
     if hex.len() < 16 * 2 {
-        println!("Input spid file len ({}) is incorrect!", hex.len());
+        warn!("Input spid file len ({}) is incorrect!", hex.len());
         return spid;
     }
 

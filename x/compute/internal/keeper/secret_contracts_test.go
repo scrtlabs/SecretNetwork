@@ -1278,7 +1278,8 @@ func TestMsgSenderInCallback(t *testing.T) {
 	require.Equal(t, []ContractEvent{
 		{
 			{Key: "contract_address", Value: addr.String()},
-			{Key: "hi", Value: "hey"}},
+			{Key: "hi", Value: "hey"},
+		},
 		{
 			{Key: "contract_address", Value: addr.String()},
 			{Key: "msg.sender", Value: addr.String()},
@@ -1287,6 +1288,7 @@ func TestMsgSenderInCallback(t *testing.T) {
 }
 
 func TestInfiniteQueryLoopKilledGracefullyByOOM(t *testing.T) {
+	t.SkipNow() // We no longer expect to hit OOM trivially
 	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 	defer os.RemoveAll(tempDir)
 
@@ -1298,6 +1300,58 @@ func TestInfiniteQueryLoopKilledGracefullyByOOM(t *testing.T) {
 	require.Empty(t, data)
 	require.NotNil(t, err.GenericErr)
 	require.Equal(t, err.GenericErr.Msg, "query contract failed: Execution error: Enclave: enclave ran out of heap memory")
+}
+
+func TestQueryRecursionLimitEnforcedInQueries(t *testing.T) {
+	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	data, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, defaultGasForTests)
+
+	require.NotEmpty(t, data)
+	require.Equal(t, data, "\"Recursion limit was correctly enforced\"")
+
+	require.Nil(t, err.GenericErr)
+}
+
+func TestQueryRecursionLimitEnforcedInHandles(t *testing.T) {
+	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	data, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, defaultGasForTests, 0)
+
+	require.NotEmpty(t, data)
+	require.Equal(t, string(data), "\"Recursion limit was correctly enforced\"")
+
+	require.Nil(t, err.GenericErr)
+}
+
+func TestQueryRecursionLimitEnforcedInInits(t *testing.T) {
+	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	defer os.RemoveAll(tempDir)
+
+	// Initialize a contract that we will be querying
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	// Initialize the contract that will be running the test
+	addr, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, defaultGasForTests)
+	require.Empty(t, err)
+
+	require.Nil(t, err.GenericErr)
+
+	require.Equal(t, []ContractEvent{
+		{
+			{Key: "contract_address", Value: addr.String()},
+			{Key: "message", Value: "Recursion limit was correctly enforced"},
+		},
+	}, events)
 }
 
 func TestWriteToStorageDuringQuery(t *testing.T) {

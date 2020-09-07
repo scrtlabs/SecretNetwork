@@ -58,7 +58,7 @@ pub fn untrusted_health_check() -> SgxResult<HealthCheckResult> {
 pub fn untrusted_init_node(master_cert: &[u8], encrypted_seed: &[u8]) -> SgxResult<()> {
     info!("Initializing enclave..");
     let enclave = get_enclave()?;
-    debug!("Initialized enclave successfully!");
+    info!("Initialized enclave successfully!");
 
     let eid = enclave.geteid();
     let mut ret = sgx_status_t::SGX_SUCCESS;
@@ -86,9 +86,9 @@ pub fn untrusted_init_node(master_cert: &[u8], encrypted_seed: &[u8]) -> SgxResu
 }
 
 pub fn untrusted_key_gen() -> SgxResult<[u8; 32]> {
-    debug!("Initializing enclave..");
+    info!("Initializing enclave..");
     let enclave = get_enclave()?;
-    debug!("Initialized enclave successfully!");
+    info!("Initialized enclave successfully!");
 
     let eid = enclave.geteid();
     let mut retval = sgx_status_t::SGX_SUCCESS;
