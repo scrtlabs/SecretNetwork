@@ -39,6 +39,29 @@ Secret Contract developers must always consider the trade-off between privacy, u
   - [Differences in output events](#differences-in-output-events)
   - [Differences in output types - success vs. error](#differences-in-output-types---success-vs-error)
 
+# Verified Values During Contract Execution
+
+During execution, some contracts may want to use "external-data" - meaning data that is generated outside of the enclave and sent into the enclave - such as the tx sender address, the funds sent with the tx, block height, etc..
+As these parameters get sent to the enclave, they can theoretically be tampered with, and an attacker might send false data.
+Thus, relying on such data might be risky.
+
+As an example, let's say we are implementing an admin interface for a contract, i.e. functionality that is open only for a predefined address.
+In that case, we want to know that the `env.message.sender` parameter that is given during contract execution is legit, then we want to check that `env.message.sender == predefined_address` and provide admin functionality if that condition is met.
+If the `env.message.sender` parameter can be tampered with - we effectively can't rely on it and cannot implement the admin interface.
+
+## Tx Parameter Verification
+Some parameters are easier to verify, but for others it is less trivial to do so. Exact details about individual parameters are detailed further in this document.
+
+The parameter verification method depends on the contract caller:
+ - If the contract is called by a transaction (i.e. someone sends a compute tx) we use the already-signed transaction and verify it's data inside the enclave. More specifically:
+   - Verify signature inside the enclave.
+   - Verify that the parameters sent to the enclave matches with the signed data.
+ - If the contract is called by another contract (i.e. we don't have a signed tx to rely on) we create a callback signature, effectively signing the parameters sent to the next contract:
+   - Caller contract creates `callback_signature` based on parameters it sends, passes it on to the next contract.
+   - Receiver contract creates `callback_signature` based on the parameter it got.
+   - Receiver contract verifies that the signature it created matches the signature it got from the caller.
+   - For the specifics, visit the [encryption specs](../protocol/encryption-specs.md#Output).
+
 # `Init` and `Handle`
 
 `init` is the constructor of a contract. This function is called only once in the lifetime of the contract.  
