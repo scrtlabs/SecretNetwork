@@ -99,7 +99,7 @@ Must be running [`v0.2.2`](https://github.com/enigmampc/SecretNetwork/releases/t
 
 2. Install `secretnetwork_1.0.0_amd64.deb` on the new SGX machine
 3. Copy `~/.secretd/config/priv_validator_key.json` to the new SGX machine
-4. Export the self-delegator wallet from the old machine and import to the new SGX machine
+4. Export the self-delegator wallet from the old machine and import to the new SGX machine (Note that if you're recovering using `secretcli keys add $NAME --recover` you should also add `--hd-path "44'/118'/0'/0/0"`)
 5. Copy `genesis_base.json` from the old to `~/.secretd/config/genesis.json` on the new machine
 6. `secretd validate-genesis`
 7. `secretd init-bootstrap`
