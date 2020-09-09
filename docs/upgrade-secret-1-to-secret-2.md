@@ -23,7 +23,7 @@ All coordination efforts will be done in the [#mainnet-validators](https://chat.
 
 2. Install `secretnetwork_1.0.0_amd64.deb` on the new SGX machine
 3. Copy `~/.secretd/config/priv_validator_key.json` to the new SGX machine
-4. Export the self-delegator wallet from the old machine and import to the new SGX machine
+4. Export the self-delegator wallet from the old machine and import to the new SGX machine (Note that if you're recovering using `secretcli keys add $NAME --recover` you should also add `--hd-path "44'/118'/0'/0/0"`)
 5. `secretd init $MONIKER --chain-id secret-2`
 6. `wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/genesis.json"`
 7. `secretd validate-genesis`
@@ -94,14 +94,15 @@ Must be running [`v0.2.2`](https://github.com/enigmampc/SecretNetwork/releases/t
            echo '.app_state.distribution.params.secret_foundation_address = "secret1c7rjffp9clkvrzul20yy60yhy6arnv7sde0kjj" |'
            echo '.app_state.register = { "reg_info": null, "node_exch_cert": null, "io_exch_cert": null } |'
            echo '.app_state.compute = { "codes": null, "contracts": null }'
-       ) > genesis.json
+       ) > genesis_base.json
    ```
 
 2. Install `secretnetwork_1.0.0_amd64.deb` on the new SGX machine
 3. Copy `~/.secretd/config/priv_validator_key.json` to the new SGX machine
-4. Export the self-delegator wallet from the old machine and import to the new SGX machine
-5. Copy `genesis.json` from the old to `~/.secretd/config/genesis.json` on the new machine
+4. Export the self-delegator wallet from the old machine and import to the new SGX machine (Note that if you're recovering using `secretcli keys add $NAME --recover` you should also add `--hd-path "44'/118'/0'/0/0"`)
+5. Copy `genesis_base.json` from the old to `~/.secretd/config/genesis.json` on the new machine
 6. `secretd validate-genesis`
 7. `secretd init-bootstrap`
 8. `secretd validate-genesis`
 9. `secretd start --bootstrap`
+10. Publish `~/.secretd/config/genesis.json` (now contains initialized `register` state)
