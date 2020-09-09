@@ -7,6 +7,7 @@ For an in depth look at the Secret Network encryption specs, visit [here](protoc
 
 Secret Contract developers must always consider the trade-off between privacy, user experience, performance and gas usage.
 
+- [Privacy Model of Secret Contracts](#privacy-model-of-secret-contracts)
 - [`Init` and `Handle`](#init-and-handle)
   - [Inputs](#inputs)
   - [State operations](#state-operations)
@@ -832,3 +833,21 @@ Examples:
 - ordering of logs (short,long vs. long,short)
 
 ## Differences in output types - success vs. error
+
+If a contract returns an `StdError`, the output looks like this:
+
+```json
+{
+  "Error": "<encrypted>"
+}
+```
+
+Otherwise the output looks like this:
+
+```json
+{
+  "Ok": "<encrypted>"
+}
+```
+
+Therefore similar to previous examples, an attacker might guess what happned in an execution. E.g. if a contract have only a `send` function, if an error was returned an attacker can know that the `msg.sender` tried to send funds to someone unknown and the `send` didn't went through.
