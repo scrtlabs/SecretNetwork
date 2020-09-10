@@ -191,7 +191,7 @@ func updateTmParamsAndInit(ctx *server.Context, cdc *codec.Codec, mbm module.Bas
 
 		appConfigFilePath := filepath.Join(defaultNodeHome, "config/app.toml")
 		appConf, _ := serverconfig.ParseConfig()
-		appConf.MinGasPrices = "1.0uscrt"
+		appConf.MinGasPrices = "0.25uscrt"
 
 		serverconfig.WriteConfigFile(appConfigFilePath, appConf)
 

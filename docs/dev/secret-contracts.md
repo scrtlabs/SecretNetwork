@@ -25,6 +25,14 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source $HOME/.cargo/env
 ```
 
+**Update the rust compiler**
+
+In case rust is installed already, make sure to update the rust compiler.
+
+```
+rustup update
+```
+
 2. Add rustup target wasm32 for both stable and nightly
 
 ```

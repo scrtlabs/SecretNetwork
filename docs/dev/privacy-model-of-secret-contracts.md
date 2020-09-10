@@ -7,6 +7,7 @@ For an in depth look at the Secret Network encryption specs, visit [here](protoc
 
 Secret Contract developers must always consider the trade-off between privacy, user experience, performance and gas usage.
 
+- [Privacy Model of Secret Contracts](#privacy-model-of-secret-contracts)
 - [`Init` and `Handle`](#init-and-handle)
   - [Inputs](#inputs)
   - [State operations](#state-operations)
@@ -38,6 +39,29 @@ Secret Contract developers must always consider the trade-off between privacy, u
   - [Differences in output messages/callbacks](#differences-in-output-messagescallbacks)
   - [Differences in output events](#differences-in-output-events)
   - [Differences in output types - success vs. error](#differences-in-output-types---success-vs-error)
+
+# Verified Values During Contract Execution
+
+During execution, some contracts may want to use "external-data" - meaning data that is generated outside of the enclave and sent into the enclave - such as the tx sender address, the funds sent with the tx, block height, etc..
+As these parameters get sent to the enclave, they can theoretically be tampered with, and an attacker might send false data.
+Thus, relying on such data might be risky.
+
+As an example, let's say we are implementing an admin interface for a contract, i.e. functionality that is open only for a predefined address.
+In that case, we want to know that the `env.message.sender` parameter that is given during contract execution is legit, then we want to check that `env.message.sender == predefined_address` and provide admin functionality if that condition is met.
+If the `env.message.sender` parameter can be tampered with - we effectively can't rely on it and cannot implement the admin interface.
+
+## Tx Parameter Verification
+Some parameters are easier to verify, but for others it is less trivial to do so. Exact details about individual parameters are detailed further in this document.
+
+The parameter verification method depends on the contract caller:
+ - If the contract is called by a transaction (i.e. someone sends a compute tx) we use the already-signed transaction and verify it's data inside the enclave. More specifically:
+   - Verify that the signed data and the signature bytes are self consistent.
+   - Verify that the parameters sent to the enclave matches with the signed data.
+ - If the contract is called by another contract (i.e. we don't have a signed tx to rely on) we create a callback signature (which can only be created inside the enclave), effectively signing the parameters sent to the next contract:
+   - Caller contract creates `callback_signature` based on parameters it sends, passes it on to the next contract.
+   - Receiver contract creates `callback_signature` based on the parameter it got.
+   - Receiver contract verifies that the signature it created matches the signature it got from the caller.
+   - For the specifics, visit the [encryption specs](../protocol/encryption-specs.md#Output).
 
 # `Init` and `Handle`
 
@@ -832,3 +856,21 @@ Examples:
 - ordering of logs (short,long vs. long,short)
 
 ## Differences in output types - success vs. error
+
+If a contract returns an `StdError`, the output looks like this:
+
+```json
+{
+  "Error": "<encrypted>"
+}
+```
+
+Otherwise the output looks like this:
+
+```json
+{
+  "Ok": "<encrypted>"
+}
+```
+
+Therefore similar to previous examples, an attacker might guess what happned in an execution. E.g. if a contract have only a `send` function, if an error was returned an attacker can know that the `msg.sender` tried to send funds to someone unknown and the `send` didn't went through.
