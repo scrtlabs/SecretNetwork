@@ -78,8 +78,8 @@ RUN cp /go/src/github.com/enigmampc/SecretNetwork/cosmwasm/packages/wasmi-runtim
 RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/x/compute/internal/keeper/.sgx_secrets
 
 RUN rustup target add wasm32-unknown-unknown
-RUN make build-test-contract
 RUN ./install-wasm-tools.sh
+RUN make build-test-contract
 
 COPY packaging_docker/ci/go-tests.sh .
 RUN chmod +x go-tests.sh
