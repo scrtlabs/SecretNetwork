@@ -13,9 +13,6 @@ import (
 var (
 	DefaultCodespace = ModuleName
 
-	// ErrCreateFailed error for wasm code that has already been uploaded or failed
-	ErrCreateFailed = sdkErrors.Register(DefaultCodespace, 1, "create contract failed")
-
 	// ErrInstantiateFailed error for rust instantiate contract failure
 	ErrInstantiateFailed = sdkErrors.Register(DefaultCodespace, 2, "instantiate contract failed")
 
@@ -54,6 +51,9 @@ var (
 
 	// ErrDuplicate error for content that exsists
 	ErrDuplicate = sdkErrors.Register(DefaultCodespace, 14, "duplicate")
+
+	// ErrCreateFailed error for wasm code that has already been uploaded or failed
+	ErrCreateFailed = sdkErrors.Register(DefaultCodespace, 15, "create contract failed")
 )
 
 func IsEncryptedErrorCode(code uint32) bool {
