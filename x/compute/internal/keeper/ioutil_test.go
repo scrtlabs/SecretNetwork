@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -41,8 +42,8 @@ func TestUncompress(t *testing.T) {
 			expResult: []byte{0x1, 0x2},
 		},
 		"handle big input slice": {
-			src:       []byte(strings.Repeat("a", maxSize+1)),
-			expResult: []byte(strings.Repeat("a", maxSize+1)),
+			src:       []byte(strings.Repeat("a", types.MaxWasmSize+1)),
+			expResult: []byte(strings.Repeat("a", types.MaxWasmSize+1)),
 		},
 		"handle gzip identifier only": {
 			src:      gzipIdent,
@@ -57,11 +58,11 @@ func TestUncompress(t *testing.T) {
 			expError: io.ErrUnexpectedEOF,
 		},
 		"handle big gzip output": {
-			src:      asGzip(strings.Repeat("a", maxSize+1)),
+			src:      asGzip(strings.Repeat("a", types.MaxWasmSize+1)),
 			expError: io.ErrUnexpectedEOF,
 		},
 		"handle other big gzip output": {
-			src:      asGzip(strings.Repeat("a", 2*maxSize)),
+			src:      asGzip(strings.Repeat("a", 2*types.MaxWasmSize)),
 			expError: io.ErrUnexpectedEOF,
 		},
 	}
