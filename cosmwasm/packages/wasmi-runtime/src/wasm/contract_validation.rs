@@ -171,7 +171,7 @@ pub fn verify_params(
             &CanonicalAddr::from_human(&env.message.sender)
                 .or(Err(EnclaveError::FailedToSerialize))?,
             msg,
-            env.message.sent_funds.clone(),
+            &env.message.sent_funds,
         ) {
             info!("Message verified! msg.sender is the calling contract");
             return Ok(());
@@ -224,7 +224,7 @@ fn verify_callback_sig(
     callback_signature: &[u8],
     sender: &CanonicalAddr,
     msg: &SecretMessage,
-    sent_funds: Vec<Coin>,
+    sent_funds: &[Coin],
 ) -> bool {
     if callback_signature.is_empty() {
         return false;

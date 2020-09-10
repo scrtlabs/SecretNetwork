@@ -149,11 +149,7 @@ fn encrypt_wasm_msg(
             msg_to_pass.encrypt_in_place()?;
             *msg = Binary::from(msg_to_pass.to_vec().as_slice());
 
-            *callback_sig = Some(create_callback_signature(
-                contract_addr,
-                &msg_to_pass,
-                send.clone(),
-            ));
+            *callback_sig = Some(create_callback_signature(contract_addr, &msg_to_pass, send));
         }
     }
 
@@ -163,7 +159,7 @@ fn encrypt_wasm_msg(
 pub fn create_callback_signature(
     contract_addr: &CanonicalAddr,
     msg_to_sign: &SecretMessage,
-    funds_to_send: Vec<Coin>,
+    funds_to_send: &[Coin],
 ) -> Vec<u8> {
     // Hash(Enclave_secret | sender(current contract) | msg_to_pass | sent_funds)
     let mut callback_sig_bytes = KEY_MANAGER
@@ -174,7 +170,7 @@ pub fn create_callback_signature(
 
     callback_sig_bytes.extend(contract_addr.as_slice());
     callback_sig_bytes.extend(msg_to_sign.msg.as_slice());
-    callback_sig_bytes.extend(serde_json::to_vec(&funds_to_send).unwrap());
+    callback_sig_bytes.extend(serde_json::to_vec(funds_to_send).unwrap());
 
     sha2::Sha256::digest(callback_sig_bytes.as_slice()).to_vec()
 }
