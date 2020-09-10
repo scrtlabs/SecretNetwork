@@ -63,6 +63,7 @@ COPY go.mod .
 COPY go.sum .
 COPY cmd cmd
 COPY Makefile .
+COPY install-wasm-tools.sh .
 
 # COPY /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/libgo_cosmwasm.so go-cosmwasm/api
 
@@ -78,6 +79,7 @@ RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/x/compute/internal/keepe
 
 RUN rustup target add wasm32-unknown-unknown
 RUN make build-test-contract
+RUN ./install-wasm-tools.sh
 
 COPY packaging_docker/ci/go-tests.sh .
 RUN chmod +x go-tests.sh
