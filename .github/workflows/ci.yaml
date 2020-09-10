@@ -103,7 +103,7 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           make vendor
           SGX_MODE=SW BUILD_PROFILE="minimal" RUSTC_WRAPPER="$HOME/sccache" make build-linux
-
+          make build-test-contract
       - name: Test x/registration
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -222,6 +222,7 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           make vendor
           SGX_MODE=SW BUILD_PROFILE="minimal" RUSTC_WRAPPER="$HOME/sccache" make build-linux
+          make build-test-contract
       - name: Old bash+js sanity tests
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
