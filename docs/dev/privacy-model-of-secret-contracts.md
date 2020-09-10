@@ -55,9 +55,9 @@ Some parameters are easier to verify, but for others it is less trivial to do so
 
 The parameter verification method depends on the contract caller:
  - If the contract is called by a transaction (i.e. someone sends a compute tx) we use the already-signed transaction and verify it's data inside the enclave. More specifically:
-   - Verify signature inside the enclave.
+   - Verify that the signed data and the signature bytes are self consistent.
    - Verify that the parameters sent to the enclave matches with the signed data.
- - If the contract is called by another contract (i.e. we don't have a signed tx to rely on) we create a callback signature, effectively signing the parameters sent to the next contract:
+ - If the contract is called by another contract (i.e. we don't have a signed tx to rely on) we create a callback signature (which can only be created inside the enclave), effectively signing the parameters sent to the next contract:
    - Caller contract creates `callback_signature` based on parameters it sends, passes it on to the next contract.
    - Receiver contract creates `callback_signature` based on the parameter it got.
    - Receiver contract verifies that the signature it created matches the signature it got from the caller.
