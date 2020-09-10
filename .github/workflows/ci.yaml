@@ -96,10 +96,8 @@ jobs:
           echo "not_a_key" > ias_keys/develop/spid.txt
           echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
           echo "not_a_key" > ias_keys/develop/api_key.txt
-      - name: Install misc.
-        run: |
-          go get -u github.com/jteeuwen/go-bindata/...
-          sudo apt install binaryen
+      - name: Install go-bindata
+        run: go get -u github.com/jteeuwen/go-bindata/...
       - name: Build
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -210,10 +208,8 @@ jobs:
           mkdir -p ias_keys/sw_dummy
           echo "not_a_key" > ias_keys/sw_dummy/spid.txt
           echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
-      - name: Install misc.
-        run: |
-          go get -u github.com/jteeuwen/go-bindata/...
-          sudo apt install binaryen
+      - name: Install go-bindata
+        run: go get -u github.com/jteeuwen/go-bindata/...
       - name: Build MacOS CLI
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
