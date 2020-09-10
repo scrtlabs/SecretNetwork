@@ -1,6 +1,5 @@
 # Build results
 /target
-*.wasm
 
 # Text file backups
 **/*.rs.bk
