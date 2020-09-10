@@ -295,7 +295,7 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 			}
 
 			if genOnly {
-				ioKeyPath := viper.GetString(flagIoMasterKey)
+				ioKeyPath = viper.GetString(flagIoMasterKey)
 
 				if ioKeyPath == "" {
 					return fmt.Errorf("missing flag --%s. To create an offline transaction, you must specify path to the enclave key", flagIoMasterKey)
