@@ -1,3 +1,5 @@
+#! /bin/bash
+
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	set -e
 
