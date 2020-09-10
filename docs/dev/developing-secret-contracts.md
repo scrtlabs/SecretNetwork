@@ -6,27 +6,29 @@ Check out the [CosmWasm docs](https://docs.cosmwasm.com) as well. They are proba
 
 Don't forget to go over the [differences between SecretWasm and CosmWasm](#differences-from-cosmwasm).
 
-- [Developing Secret Contracts](#Developing-Secret-Contracts)
-  - [IDEs](#IDEs)
-  - [Init](#Init)
-  - [Handle](#Handle)
-  - [Query](#Query)
-  - [Inputs](#Inputs)
-  - [APIs](#APIs)
-  - [State](#State)
-  - [Some libraries/crates considerations](#Some-librariescrates-considerations)
-  - [Randomness](#Randomness)
-    - [Roll your own](#Roll-your-own)
-      - [Poker deck shuffling example](#Poker-deck-shuffling-example)
-    - [Use an external oracle](#Use-an-external-oracle)
-  - [Outputs](#Outputs)
-  - [External query](#External-query)
-  - [Compiling](#Compiling)
-  - [Storing and deploying](#Storing-and-deploying)
-  - [Verifying your contract code on explorers](#Verifying-your-contract-code-on-explorers)
-  - [Testing](#Testing)
-  - [Debugging](#Debugging)
-- [Differences from CosmWasm](#Differences-from-CosmWasm)
+- [Developing Secret Contracts](#developing-secret-contracts)
+  - [IDEs](#ides)
+  - [Init](#init)
+  - [Handle](#handle)
+  - [Query](#query)
+  - [Inputs](#inputs)
+  - [APIs](#apis)
+  - [State](#state)
+  - [Some libraries/crates considerations](#some-librariescrates-considerations)
+  - [Randomness](#randomness)
+    - [Roll your own](#roll-your-own)
+      - [Poker deck shuffling example](#poker-deck-shuffling-example)
+    - [Use an external oracle](#use-an-external-oracle)
+  - [Outputs](#outputs)
+  - [External query](#external-query)
+  - [Compiling](#compiling)
+    - [With docker](#with-docker)
+    - [Without docker](#without-docker)
+  - [Storing and deploying](#storing-and-deploying)
+  - [Verifying your contract code on explorers](#verifying-your-contract-code-on-explorers)
+  - [Testing](#testing)
+  - [Debugging](#debugging)
+- [Differences from CosmWasm](#differences-from-cosmwasm)
 
 ## IDEs
 
@@ -133,6 +135,35 @@ This exmaple has a much worse UX than rolling your own randomness, but at least 
 ## External query
 
 ## Compiling
+
+### With docker
+
+```console
+$ docker run -v /absolute/path/to/contract/project:/contract enigmampc/secret-contract-optimizer
+```
+
+Where `/absolute/path/to/contract/project` is pointing to the directory that contains your Secret Contract's `Cargo.toml`.
+
+This will output an optimized build file `/absolute/path/to/contract/project/contract.wasm.gz`.
+
+### Without docker
+
+```console
+$ rustup target add wasm32-unknown-unknown
+$ sudo apt install binaryen
+```
+
+```console
+$ RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+$ wasm-opt -Os ./target/wasm32-unknown-unknown/release/*.wasm -o ./contract.wasm
+$ cat ./contract.wasm | gzip -9 > ./contract.wasm.gz
+```
+
+Breakdown:
+
+1. Build a release mode WASM file, strip symbols
+2. Further optimize with [wasm-opt](https://github.com/WebAssembly/binaryen)
+3. Gzip
 
 ## Storing and deploying
 
