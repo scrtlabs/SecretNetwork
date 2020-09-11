@@ -347,4 +347,5 @@ bin-data-production:
 	cd ./cmd/secretd && go-bindata -o ias_bin_prod.go -prefix "../../ias_keys/production/" -tags "production,hw" ../../ias_keys/production/...
 
 secret-contract-optimizer:
-	docker build -f secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:latest .
+	docker build -f secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} .
+	docker tag enigmampc/secret-contract-optimizer:${TAG} enigmampc/secret-contract-optimizer:latest
