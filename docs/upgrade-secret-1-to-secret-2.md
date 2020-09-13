@@ -24,13 +24,14 @@ All coordination efforts will be done in the [#mainnet-validators](https://chat.
 2. Install `secretnetwork_1.0.0_amd64.deb` on the new SGX machine
 3. Copy `~/.secretd/config/priv_validator_key.json` to the new SGX machine
 4. Export the self-delegator wallet from the old machine and import to the new SGX machine (Note that if you're recovering using `secretcli keys add $NAME --recover` you should also add `--hd-path "44'/118'/0'/0/0"`)
-5. `secretd init $MONIKER --chain-id secret-2`
-6. `wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/genesis.json"`
-7. `secretd validate-genesis`
-8. `cd ~`
-9. `secretd init-enclave`
-10. `PUBLIC_KEY=$(secretd parse attestation_cert.der 2> /dev/null | cut -c 3-)`
-11. Configure `secretcli`:
+5. `cd ~`
+6. `secretd init $MONIKER --chain-id secret-2`
+7. `wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/genesis.json"`
+8. `secretd validate-genesis`
+9. `cd ~`
+10. `secretd init-enclave`
+11. `PUBLIC_KEY=$(secretd parse attestation_cert.der 2> /dev/null | cut -c 3-)`
+12. Configure `secretcli`:
 
     ```bash
     secretcli config chain-id secret-2
@@ -40,17 +41,17 @@ All coordination efforts will be done in the [#mainnet-validators](https://chat.
     secretcli config indent true
     ```
 
-12. `secretcli tx register auth ./attestation_cert.der --from $YOUR_KEY_NAME --gas 250000 --gas-prices TODOuscrt`
-13. `SEED=$(secretcli query register seed "$PUBLIC_KEY" | cut -c 3-)`
-14. `secretcli query register secret-network-params`
-15. `mkdir -p ~/.secretd/.node`
-16. `secretd configure-secret node-master-cert.der "$SEED"`
-17. `perl -i -pe 's/persistent_peers = ""/persistent_peers = "bee0edb320d50c839349224b9be1575ca4e67948\@secret-2.node.enigma.co:26656"/' ~/.secretd/config/config.toml`
-18. `sudo systemctl enable secret-node`
-19. `sudo systemctl start secret-node` (Now your new node is up)
-20. `secretcli config node tcp://localhost:26657`
-21. Wait until you're done catching up: `watch 'secretcli status | jq ".sync_info.catching_up == false"'` (This should output `true`)
-22. `secretcli tx slashing unjail --from $YOUR_KEY_NAME --gas-prices TODOuscrt` :tada:
+13. `secretcli tx register auth ./attestation_cert.der --from $YOUR_KEY_NAME --gas 250000 --gas-prices TODOuscrt`
+14. `SEED=$(secretcli query register seed "$PUBLIC_KEY" | cut -c 3-)`
+15. `secretcli query register secret-network-params`
+16. `mkdir -p ~/.secretd/.node`
+17. `secretd configure-secret node-master-cert.der "$SEED"`
+18. `perl -i -pe 's/persistent_peers = ""/persistent_peers = "bee0edb320d50c839349224b9be1575ca4e67948\@secret-2.node.enigma.co:26656"/' ~/.secretd/config/config.toml`
+19. `sudo systemctl enable secret-node`
+20. `sudo systemctl start secret-node` (Now your new node is up)
+21. `secretcli config node tcp://localhost:26657`
+22. Wait until you're done catching up: `watch 'secretcli status | jq ".sync_info.catching_up == false"'` (This should output `true`)
+23. `secretcli tx slashing unjail --from $YOUR_KEY_NAME --gas-prices TODOuscrt` :tada:
 
 ([Ref](testnet/run-full-node-testnet.md))
 
