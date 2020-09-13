@@ -57,7 +57,7 @@ All coordination efforts will be done in the [#mainnet-validators](https://chat.
 
 ### In case of an upgrade failure
 
-TODO: Define what counts as a network upgrade failure.
+If after a few hours the Enigma team announces on the chat that the upgrade failed, we will relaunch `secret-1`.
 
 1. On the old machine (`secret-1`):
 
