@@ -34,7 +34,7 @@ All coordination efforts will be done in the [#mainnet-validators](https://chat.
 
     ```bash
     secretcli config chain-id secret-2
-    secretcli config node tcp://TODO:26657
+    secretcli config node tcp://secret-2.node.enigma.co:26657
     secretcli config trust-node true
     secretcli config output json
     secretcli config indent true
@@ -45,13 +45,12 @@ All coordination efforts will be done in the [#mainnet-validators](https://chat.
 14. `secretcli query register secret-network-params`
 15. `mkdir -p ~/.secretd/.node`
 16. `secretd configure-secret node-master-cert.der "$SEED"`
-17. `perl -i -pe 's/persistent_peers = ""/persistent_peers = "TODO\@TODO:26656"/' ~/.secretd/config/config.toml`
-18. `perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.secretd/config/config.toml`
-19. `sudo systemctl enable secret-node`
-20. `sudo systemctl start secret-node` (Now your new node is up)
-21. `secretcli config node tcp://localhost:26657`
-22. Wait until you're done catching up: `watch 'secretcli status | jq ".sync_info.catching_up == false"'` (This should output `true`)
-23. `secretcli tx slashing unjail --from $YOUR_KEY_NAME --gas-prices TODOuscrt` :tada:
+17. `perl -i -pe 's/persistent_peers = ""/persistent_peers = "bee0edb320d50c839349224b9be1575ca4e67948\@secret-2.node.enigma.co:26656"/' ~/.secretd/config/config.toml`
+18. `sudo systemctl enable secret-node`
+19. `sudo systemctl start secret-node` (Now your new node is up)
+20. `secretcli config node tcp://localhost:26657`
+21. Wait until you're done catching up: `watch 'secretcli status | jq ".sync_info.catching_up == false"'` (This should output `true`)
+22. `secretcli tx slashing unjail --from $YOUR_KEY_NAME --gas-prices TODOuscrt` :tada:
 
 ([Ref](testnet/run-full-node-testnet.md))
 
