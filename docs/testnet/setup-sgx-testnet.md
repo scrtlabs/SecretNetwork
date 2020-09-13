@@ -5,7 +5,7 @@ If you're running a local machine and not a cloud-based VM -
 1. Go to your BIOS menu
 2. Enable SGX (Software controlled is not enough)
 3. Disable Secure Boot
-4. Disbale HyperV 
+4. Disbale HyperV
 
 # Installation
 
@@ -79,7 +79,7 @@ if (($UBUNTUVERSION > 18)); then
    # Install all the additional necessary dependencies (besides the driver and the SDK)
    # for building a rust enclave
    wget -O /tmp/libprotobuf10_3.0.0-9_amd64.deb http://ftp.br.debian.org/debian/pool/main/p/protobuf/libprotobuf10_3.0.0-9_amd64.deb
-   (sleep 3 ; echo y) | sudo gdebi /tmp/libprotobuf10_3.0.0-9_amd64.deb
+   yes | sudo gdebi /tmp/libprotobuf10_3.0.0-9_amd64.deb
 else
    PSW_PACKAGES+=' libprotobuf-dev'
 fi
