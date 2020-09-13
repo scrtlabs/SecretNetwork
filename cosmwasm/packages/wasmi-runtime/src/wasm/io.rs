@@ -5,7 +5,7 @@
 use super::types::{IoNonce, SecretMessage};
 
 use crate::cosmwasm::encoding::Binary;
-use crate::cosmwasm::types::{CanonicalAddr, CosmosMsg, WasmMsg, WasmOutput};
+use crate::cosmwasm::types::{CanonicalAddr, Coin, CosmosMsg, WasmMsg, WasmOutput};
 use crate::crypto::{AESKey, Ed25519PublicKey, Kdf, SIVEncryptable, KEY_MANAGER};
 use enclave_ffi_types::EnclaveError;
 use log::*;
@@ -127,12 +127,14 @@ fn encrypt_wasm_msg(
             msg,
             callback_code_hash,
             callback_sig,
+            send,
             ..
         }
         | WasmMsg::Instantiate {
             msg,
             callback_code_hash,
             callback_sig,
+            send,
             ..
         } => {
             let mut hash_appended_msg = callback_code_hash.as_bytes().to_vec();
@@ -147,7 +149,7 @@ fn encrypt_wasm_msg(
             msg_to_pass.encrypt_in_place()?;
             *msg = Binary::from(msg_to_pass.to_vec().as_slice());
 
-            *callback_sig = Some(create_callback_signature(contract_addr, &msg_to_pass));
+            *callback_sig = Some(create_callback_signature(contract_addr, &msg_to_pass, send));
         }
     }
 
@@ -157,8 +159,9 @@ fn encrypt_wasm_msg(
 pub fn create_callback_signature(
     contract_addr: &CanonicalAddr,
     msg_to_sign: &SecretMessage,
+    funds_to_send: &[Coin],
 ) -> Vec<u8> {
-    // Hash(Enclave_secret | sender(current contract) | msg_to_pass)
+    // Hash(Enclave_secret | sender(current contract) | msg_to_pass | sent_funds)
     let mut callback_sig_bytes = KEY_MANAGER
         .get_consensus_callback_secret()
         .unwrap()
@@ -167,6 +170,7 @@ pub fn create_callback_signature(
 
     callback_sig_bytes.extend(contract_addr.as_slice());
     callback_sig_bytes.extend(msg_to_sign.msg.as_slice());
+    callback_sig_bytes.extend(serde_json::to_vec(funds_to_send).unwrap());
 
     sha2::Sha256::digest(callback_sig_bytes.as_slice()).to_vec()
 }
