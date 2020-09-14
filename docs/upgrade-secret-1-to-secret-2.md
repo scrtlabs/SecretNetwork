@@ -24,6 +24,11 @@ rm -rf ~/.secretcli/*
 rm -rf ~/.secretd/*
 ```
 
+You're probably familiar with SGX by now:
+
+- [Setup SGX](validators-and-full-nodes/setup-sgx.md)
+- [Verify SGX](validators-and-full-nodes/verify-sgx.md)
+
 ## 1. Prepare your `secret-1` validtor to halt after block #1,246,400
 
 On the old machine (`secret-1`):
