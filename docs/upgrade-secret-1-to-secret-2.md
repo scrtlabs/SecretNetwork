@@ -1,9 +1,9 @@
 - [Validators](#validators)
-  - [1.](#1)
-  - [2.](#2)
-  - [3.](#3)
-  - [4.](#4)
-  - [5.](#5)
+  - [1. Prepare your `secret-1` validtor to halt at 1246400](#1-prepare-your-secret-1-validtor-to-halt-at-1246400)
+  - [2. Install the new binaries on your SGX machine](#2-install-the-new-binaries-on-your-sgx-machine)
+  - [3. Migrate your validator's private key](#3-migrate-your-validators-private-key)
+  - [4. Migrate your validator's wallet](#4-migrate-your-validators-wallet)
+  - [5. Set up your SGX machine and become a `secret-2` validator](#5-set-up-your-sgx-machine-and-become-a-secret-2-validator)
 - [In case of an upgrade failure](#in-case-of-an-upgrade-failure)
 - [Bootstrap validator](#bootstrap-validator)
 
@@ -21,7 +21,7 @@ rm -rf .secretcli/*
 rm -rf .secretd/*
 ```
 
-## 1.
+## 1. Prepare your `secret-1` validtor to halt at 1246400
 
 On the old machine (`secret-1`):
 
@@ -35,7 +35,7 @@ sudo systemctl restart secret-node.service
 
 Note: Although halt height is 1246400 on `secret-1`, the halt time might not be exactly September 15th, 2020 at 14:00:00 UTC. The halt height was calculated on September 7th to be as close a possible to September 15th, 2020 at 14:00:00 UTC, using `secret-1` block time of 6.19 seconds.
 
-## 2.
+## 2. Install the new binaries on your SGX machine
 
 On the new SGX machine (`secret-2`):
 
@@ -51,11 +51,11 @@ sudo apt install -y ./secretnetwork_1.0.0_amd64.deb
 secretd init $MONIKER
 ```
 
-## 3.
+## 3. Migrate your validator's private key
 
 Copy your `~/.secretd/config/priv_validator_key.json` from the old machine (`secret-1`) to the new SGX machine (`secret-2`) at the same location.
 
-## 4.
+## 4. Migrate your validator's wallet
 
 Export the self-delegator wallet from the old machine (`secret-1`) and import to the new SGX machine (`secret-2`).
 
@@ -64,7 +64,7 @@ On the new SGX machine (`secret-2`) use `secretcli import $YOUR_KEY_NAME $FROM_F
 
 Note that if you're recovering it using `secretcli keys add $YOUR_KEY_NAME --recover` you should also use `--hd-path "44'/118'/0'/0/0"`.
 
-## 5.
+## 5. Set up your SGX machine and become a `secret-2` validator
 
 On the new SGX machine (`secret-2`):
 
