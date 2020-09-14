@@ -17,12 +17,12 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/SecretNet
 - Homepage: https://scrt.network
 - Forum: https://forum.scrt.network
 - Wiki: https://learn.scrt.network
-- Discord: https://discord.com/invite/SJK32GY
+- Main Chat: https://chat.scrt.network/channel/general
 - Blog: https://blog.scrt.network
 - Twitter: https://twitter.com/SecretNetwork
-- Main Chat: https://chat.scrt.network/channel/general
 - Telegram Channel: https://t.me/SCRTnetwork
 - Community Secret Nodes Telegram: https://t.me/secretnodes
+- Discord: https://discord.com/invite/SJK32GY
 
 # Block Explorers
 
