@@ -125,7 +125,7 @@ secretcli tx slashing unjail --from $YOUR_KEY_NAME --gas-prices 0.25uscrt
 
 You’re now a validator in `secret-2`! :tada:
 
-To make sure your validator is unjailed, look for it here:
+To make sure your validator is unjailed, look for it in here:
 
 ```bash
 secretcli q staking validators | jq -r '.[] | select(.status == 2) | .description.moniker'
@@ -143,13 +143,9 @@ If after a few hours the Enigma team announces on the chat that the upgrade fail
    perl -i -pe 's/^halt-height =.*/halt-height = 0/' ~/.secretd/config/app.toml
    ```
 
-```
-
-```
-
-```bash
-sudo systemctl restart secret-node.service
-```
+   ```bash
+   sudo systemctl restart secret-node.service
+   ```
 
 2. Wait for 67% of voting power to come back online.
 
