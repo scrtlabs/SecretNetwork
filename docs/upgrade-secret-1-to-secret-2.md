@@ -11,7 +11,7 @@
 
 All coordination efforts will be done in the [#mainnet-validators](https://chat.scrt.network/channel/mainnet-validators) channel in the Secret Network Rocket.Chat.
 
-:warning: Note that if you're new SGX machine has a previous `secretnetwork` installation on it (e.g. from the testnet), you will need to remove it before you continue:
+:warning: If your SGX machine has a previous `secretnetwork` installation on it (e.g. from the testnet), you will need to remove it before you continue:
 
 ```bash
 cd ~
