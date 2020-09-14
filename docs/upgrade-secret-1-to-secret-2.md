@@ -36,7 +36,7 @@ On the old machine (`secret-1`):
 ```bash
 perl -i -pe 's/^halt-height =.*/halt-height = 1246400/' ~/.secretd/config/app.toml
 
-sudo systemctl restart secret-node.service
+sudo systemctl restart secret-node
 ```
 
 ## 2. Install the new binaries on your SGX machine
@@ -153,7 +153,7 @@ If after a few hours the Enigma team announces on the chat that the upgrade fail
    ```bash
    perl -i -pe 's/^halt-height =.*/halt-height = 0/' ~/.secretd/config/app.toml
 
-   sudo systemctl restart secret-node.service
+   sudo systemctl restart secret-node
    ```
 
 2. Wait for 67% of voting power to come back online.
