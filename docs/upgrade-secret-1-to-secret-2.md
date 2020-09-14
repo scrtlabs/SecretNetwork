@@ -1,3 +1,6 @@
+# Network Upgrade from `secret-1` to `secret-2`
+
+- [Network Upgrade from `secret-1` to `secret-2`](#network-upgrade-from-secret-1-to-secret-2)
 - [Validators](#validators)
   - [1. Prepare your `secret-1` validtor to halt after block #1,246,400](#1-prepare-your-secret-1-validtor-to-halt-after-block-1246400)
   - [2. Install the new binaries on your SGX machine](#2-install-the-new-binaries-on-your-sgx-machine)
