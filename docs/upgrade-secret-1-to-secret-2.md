@@ -65,8 +65,8 @@ Copy your `~/.secretd/config/priv_validator_key.json` from the old machine (`sec
 
 Export the self-delegator wallet from the old machine (`secret-1`) and import to the new SGX machine (`secret-2`).
 
-On the old machine (`secret-1`) use `secretcli export $YOUR_KEY_NAME`.  
-On the new SGX machine (`secret-2`) use `secretcli import $YOUR_KEY_NAME $FROM_FILE_NAME`
+On the old machine (`secret-1`) use `secretcli keys export $YOUR_KEY_NAME`.  
+On the new SGX machine (`secret-2`) use `secretcli keys import $YOUR_KEY_NAME $FROM_FILE_NAME`
 
 Notes:
 
