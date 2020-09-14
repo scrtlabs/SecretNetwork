@@ -64,6 +64,7 @@ secretcli tx staking create-validator \
   --commission-max-rate="0.20" \
   --commission-max-change-rate="0.01" \
   --min-self-delegation="1" \
+  --gas-prices="0.1uscrt" \
   --moniker=<MONIKER> \
   --from=<key-alias>
 ```
