@@ -41,7 +41,7 @@ All coordination efforts will be done in the [#mainnet-validators](https://chat.
     secretcli config indent true
     ```
 
-13. `secretcli tx register auth ./attestation_cert.der --from $YOUR_KEY_NAME --gas 250000 --gas-prices TODOuscrt`
+13. `secretcli tx register auth ./attestation_cert.der --from $YOUR_KEY_NAME --gas 250000 --gas-prices 0.25uscrt`
 14. `SEED=$(secretcli query register seed "$PUBLIC_KEY" | cut -c 3-)`
 15. `secretcli query register secret-network-params`
 16. `mkdir -p ~/.secretd/.node`
@@ -51,7 +51,7 @@ All coordination efforts will be done in the [#mainnet-validators](https://chat.
 20. `sudo systemctl start secret-node` (Now your new node is up)
 21. `secretcli config node tcp://localhost:26657`
 22. Wait until you're done catching up: `watch 'secretcli status | jq ".sync_info.catching_up == false"'` (This should output `true`)
-23. `secretcli tx slashing unjail --from $YOUR_KEY_NAME --gas-prices TODOuscrt` :tada:
+23. `secretcli tx slashing unjail --from $YOUR_KEY_NAME --gas-prices 0.25uscrt` :tada:
 
 ([Ref](testnet/run-full-node-testnet.md))
 
