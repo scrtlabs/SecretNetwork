@@ -1,6 +1,7 @@
 # Bootstrap Validator for `secret-2`
 
-Must be running [`v0.2.2`](https://github.com/enigmampc/SecretNetwork/releases/tag/v0.2.2).
+- The bootstrap validator must be running [`v0.2.2`](https://github.com/enigmampc/SecretNetwork/releases/tag/v0.2.2).
+- This document pairs with the instructions for all other validators: [Network Upgrade Instructions from `secret-1` to `secret-2`](upgrade-secret-1-to-secret-2.md).
 
 1. Export state on the old machine
 
