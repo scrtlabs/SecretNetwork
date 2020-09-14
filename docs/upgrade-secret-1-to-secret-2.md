@@ -13,7 +13,7 @@
 
 All coordination efforts will be done in the [#mainnet-validators](https://chat.scrt.network/channel/mainnet-validators) channel in the Secret Network Rocket.Chat.
 
-:warning: Don't delete your `secret-1` machine as we might have to relaunch it.
+:warning: Don't delete your `secret-1` machine, as we might have to relaunch it.
 
 :warning: If your SGX machine has a previous `secretnetwork` installation on it (e.g. from the testnet), you will need to remove it before you continue:
 
