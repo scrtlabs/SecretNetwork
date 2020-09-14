@@ -56,6 +56,8 @@ $ secretcli keys list
 ]
 ```
 
+Note: If the mnemonics were generated using a `secretci` version of `v0.0.x` or `v0.2.x`, you'll need to use this command: `secretcli keys add mykey-restored --recover --hd-path "44'/118'/0'/0/0"`.
+
 ## Export
 
 To backup a local key without the mnemonic phrase, backup the output of `secretcli keys export`:
