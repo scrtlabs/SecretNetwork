@@ -46,7 +46,7 @@ On the new SGX machine (`secret-2`):
 ```bash
 cd ~
 
-wget "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/secretnetwork_1.0.0_amd64.deb" # TODO
+wget "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/secretnetwork_1.0.0_amd64.deb"
 
 echo "87aee80a112f429db0b8b6703b1eba33accea0f08af9e65339d14d92a5186b24 secretnetwork_1.0.0_amd64.deb" | sha256sum --check
 
