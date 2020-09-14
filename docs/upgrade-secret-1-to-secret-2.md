@@ -27,9 +27,7 @@ On the old machine (`secret-1`):
 
 ```bash
 perl -i -pe 's/^halt-height =.*/halt-height = 1246400/' ~/.secretd/config/app.toml
-```
 
-```bash
 sudo systemctl restart secret-node.service
 ```
 
