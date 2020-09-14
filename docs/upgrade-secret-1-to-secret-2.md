@@ -82,6 +82,7 @@ secretd validate-genesis
 secretd init-enclave
 
 PUBLIC_KEY=$(secretd parse attestation_cert.der 2> /dev/null | cut -c 3-)
+echo $PUBLIC_KEY
 
 secretcli config chain-id secret-2
 secretcli config node tcp://secret-2.node.enigma.co:26657
@@ -92,6 +93,7 @@ secretcli config indent true
 secretcli tx register auth ./attestation_cert.der --from $YOUR_KEY_NAME --gas 250000 --gas-prices 0.25uscrt
 
 SEED=$(secretcli query register seed "$PUBLIC_KEY" | cut -c 3-)
+echo $SEED
 
 secretcli query register secret-network-params
 
