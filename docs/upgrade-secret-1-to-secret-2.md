@@ -105,7 +105,7 @@ mkdir -p ~/.secretd/.node
 
 secretd configure-secret node-master-cert.der "$SEED"
 
-perl -i -pe 's/persistent_peers = ""/persistent_peers = "bee0edb320d50c839349224b9be1575ca4e67948\@secret-2.node.enigma.co:26656"/' ~/.secretd/config/config.toml
+perl -i -pe 's/persistent_peers =.*/persistent_peers = "bee0edb320d50c839349224b9be1575ca4e67948\@secret-2.node.enigma.co:26656"/' ~/.secretd/config/config.toml
 
 sudo systemctl enable secret-node
 
