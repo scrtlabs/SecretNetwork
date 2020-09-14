@@ -11,7 +11,7 @@
 
 All coordination efforts will be done in the [#mainnet-validators](https://chat.scrt.network/channel/mainnet-validators) channel in the Secret Network Rocket.Chat.
 
-:warning: Note that if you're new SGX machine has a previous `secretnetwork` installation on it (e.g. from the testnet), you will need remove it before you continue:
+:warning: Note that if you're new SGX machine has a previous `secretnetwork` installation on it (e.g. from the testnet), you will need to remove it before you continue:
 
 ```bash
 cd ~
@@ -115,13 +115,13 @@ Once the following command outputs `true` you can continue:
 watch 'secretcli status | jq ".sync_info.catching_up == false"'
 ```
 
-Once your node is done catching up, you can unjail your validaor:
+Once your node is done catching up, you can unjail your validator:
 
 ```bash
 secretcli tx slashing unjail --from $YOUR_KEY_NAME --gas-prices 0.25uscrt
 ```
 
-Your now a validator in `secret-2`! :tada:
+You’re now a validator in `secret-2`! :tada:
 
 To make sure your validator is unjailed, look for it here:
 
@@ -129,7 +129,7 @@ To make sure your validator is unjailed, look for it here:
 secretcli q staking validators | jq -r '.[] | select(.status == 2) | .description.moniker'
 ```
 
-([Ref for testnet instrustions](testnet/run-full-node-testnet.md))
+([Ref for testnet instructions](testnet/run-full-node-testnet.md))
 
 # In case of an upgrade failure
 
