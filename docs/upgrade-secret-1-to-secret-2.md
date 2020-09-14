@@ -1,7 +1,7 @@
 - [Validators](#validators)
   - [1. Prepare your `secret-1` validtor to halt after block #1,246,400](#1-prepare-your-secret-1-validtor-to-halt-after-block-1246400)
   - [2. Install the new binaries on your SGX machine](#2-install-the-new-binaries-on-your-sgx-machine)
-  - [3. Migrate your validator's private key](#3-migrate-your-validators-private-key)
+  - [3. Migrate your validator's signing key](#3-migrate-your-validators-signing-key)
   - [4. Migrate your validator's wallet](#4-migrate-your-validators-wallet)
   - [5. Set up your SGX machine and become a `secret-2` validator](#5-set-up-your-sgx-machine-and-become-a-secret-2-validator)
 - [In case of an upgrade failure](#in-case-of-an-upgrade-failure)
@@ -49,7 +49,7 @@ sudo apt install -y ./secretnetwork_1.0.0_amd64.deb
 secretd init $MONIKER
 ```
 
-## 3. Migrate your validator's private key
+## 3. Migrate your validator's signing key
 
 Copy your `~/.secretd/config/priv_validator_key.json` from the old machine (`secret-1`) to the new SGX machine (`secret-2`) at the same location.
 
