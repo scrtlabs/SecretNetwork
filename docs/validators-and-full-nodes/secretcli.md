@@ -6,6 +6,43 @@
 
 [How to install and use `secretcli`](../light-client-mainnet.md).
 
+- [Secret Network Light Client](#secret-network-light-client)
+  - [Secret CLI](#secret-cli)
+    - [Keys](#keys)
+      - [Key Types](#key-types)
+      - [Generate Keys](#generate-keys)
+      - [Generate Multisig Public Keys](#generate-multisig-public-keys)
+    - [Tx Broadcasting](#tx-broadcasting)
+    - [Fees & Gas](#fees--gas)
+    - [Account](#account)
+      - [Get Tokens](#get-tokens)
+      - [Query Account Balance](#query-account-balance)
+    - [Send Tokens](#send-tokens)
+    - [Query Transactions](#query-transactions)
+      - [Matching a Set of Events](#matching-a-set-of-events)
+      - [Matching a Transaction's Hash](#matching-a-transactions-hash)
+    - [Secret Contracts](#secret-contracts)
+      - [Uploading a Secret Contract](#uploading-a-secret-contract)
+      - [Deploting a Secret Contract](#deploting-a-secret-contract)
+      - [Executing a Secret Contract](#executing-a-secret-contract)
+      - [Reading the output of a Secret Contract tx](#reading-the-output-of-a-secret-contract-tx)
+      - [Querying a Secret Contract](#querying-a-secret-contract)
+    - [Slashing](#slashing)
+    - [Minting](#minting)
+    - [Staking](#staking)
+    - [Nodes](#nodes)
+    - [Governance](#governance)
+    - [Fee Distribution](#fee-distribution)
+      - [Query Distribution Parameters](#query-distribution-parameters)
+      - [Query distribution Community Pool](#query-distribution-community-pool)
+      - [Query Outstanding Validator rewards](#query-outstanding-validator-rewards)
+      - [Query Validator Commission](#query-validator-commission)
+      - [Query Validator Slashes](#query-validator-slashes)
+      - [Query Delegator Rewards](#query-delegator-rewards)
+      - [Query All Delegator Rewards](#query-all-delegator-rewards)
+    - [Multisig Transactions](#multisig-transactions)
+  - [Shells Completion Scripts](#shells-completion-scripts)
+
 ### Keys
 
 #### Key Types
@@ -320,6 +357,61 @@ You can also query a single transaction by its hash using the following command:
 secretcli q tx [hash]
 ```
 
+### Secret Contracts
+
+#### Uploading a Secret Contract
+
+To upload a contract:
+
+```bash
+secretcli tx compute store ./contract.wasm.gz --from mykey --source "https://github.com/<username>/<repo>/tarball/<version>" --builder "enigmampc/secret-contract-optimizer:1.0.2"
+```
+
+- `--source`: Optional tarball of the source code, so that your contract will be [verifiable](https://github.com/CosmWasm/cosmwasm-verify).
+- `--builder`: Optional docker image that was used to compile `./contract.wasm.gz`, so that your contract will be [verifiable](https://github.com/CosmWasm/cosmwasm-verify).
+
+To get the contract's code ID:
+
+```bash
+secretcli q tx [hash]
+```
+
+#### Deploting a Secret Contract
+
+```bash
+secretcli tx compute instantiate $CODE_ID "$INIT_INPUT_MSG" --from mykey --label "$UNIQUE_LABEL"
+```
+
+To get the contract's address:
+
+```bash
+secretcli q tx [hash]
+```
+
+#### Executing a Secret Contract
+
+```bash
+secretcli tx compute execute $CONTRACT_ADDRESS "$EXEC_INPUT_MSG"
+```
+
+Or:
+
+```bash
+secretcli tx compute execute --label "$UNIQUE_LABEL" "$EXEC_INPUT_MSG"
+```
+
+#### Reading the output of a Secret Contract tx
+
+```bash
+secretcli q compute tx [hash]
+```
+
+#### Querying a Secret Contract
+
+```bash
+secretcli q compute query $CONTRACT_ADDRESS "$QUERY_INPUT_MSG"
+```
+
 ### Slashing
 
 ::: tip Note
@@ -348,6 +440,7 @@ secretcli q mint annual-provisions
 ```
 
 ### Staking
+
 ::: tip Note
 You can find CLI commands related to delegating under
 [Delegate](delegating-mainnet.md).
