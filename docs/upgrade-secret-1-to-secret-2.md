@@ -8,11 +8,12 @@
   - [4. Migrate your validator's wallet](#4-migrate-your-validators-wallet)
   - [5. Set up your SGX machine and become a `secret-2` validator](#5-set-up-your-sgx-machine-and-become-a-secret-2-validator)
 - [In case of an upgrade failure](#in-case-of-an-upgrade-failure)
-- [Bootstrap validator](#bootstrap-validator)
 
 # Validators
 
 All coordination efforts will be done in the [#mainnet-validators](https://chat.scrt.network/channel/mainnet-validators) channel in the Secret Network Rocket.Chat.
+
+:warning: Don't delete your `secret-1` machine as we might have to relaunch it.
 
 :warning: If your SGX machine has a previous `secretnetwork` installation on it (e.g. from the testnet), you will need to remove it before you continue:
 
@@ -34,8 +35,6 @@ perl -i -pe 's/^halt-height =.*/halt-height = 1246400/' ~/.secretd/config/app.to
 sudo systemctl restart secret-node.service
 ```
 
-Note: Although halt height is 1246400 on `secret-1`, the halt time might not be exactly September 15th, 2020 at 14:00:00 UTC. The halt height was calculated on September 7th to be as close a possible to September 15th, 2020 at 14:00:00 UTC, using `secret-1` block time of 6.19 seconds.
-
 ## 2. Install the new binaries on your SGX machine
 
 On the new SGX machine (`secret-2`):
@@ -56,6 +55,8 @@ secretd init $MONIKER
 
 Copy your `~/.secretd/config/priv_validator_key.json` from the old machine (`secret-1`) to the new SGX machine (`secret-2`) at the same location.
 
+:warning: Don't delete your `secret-1` machine as we might have to relaunch it.
+
 ## 4. Migrate your validator's wallet
 
 Export the self-delegator wallet from the old machine (`secret-1`) and import to the new SGX machine (`secret-2`).
@@ -67,6 +68,8 @@ Notes:
 
 1. If you're recovering the wallet using `secretcli keys add $YOUR_KEY_NAME --recover` you should also use `--hd-path "44'/118'/0'/0/0"`.
 2. If the wallet is stored on a Ledger device, use `--legacy-hd-path` when importing it with `secretcli keys add`.
+
+:warning: Don't delete your `secret-1` machine as we might have to relaunch it.
 
 ## 5. Set up your SGX machine and become a `secret-2` validator
 
@@ -150,39 +153,3 @@ If after a few hours the Enigma team announces on the chat that the upgrade fail
    ```
 
 2. Wait for 67% of voting power to come back online.
-
-# Bootstrap validator
-
-Must be running [`v0.2.2`](https://github.com/enigmampc/SecretNetwork/releases/tag/v0.2.2).
-
-1. Export state on the old machine
-
-   ```bash
-   export HALT_HEIGHT=1246400
-
-   perl -i -pe "s/^halt-height =.*/halt-height = $HALT_HEIGHT/" ~/.secretd/config/app.toml
-   sudo systemctl restart secret-node.service
-
-   # Wait for $HALT_HEIGHT...
-
-   secretd export --height $HALT_HEIGHT --for-zero-height --jail-whitelist secretvaloper13l72vhjngmg55ykajxdnlalktwglyqjqaz0tdu |
-       jq -Sc -f <(
-           echo '.chain_id = "secret-2" |'
-           echo '.genesis_time = (now | todate) |'
-           echo '.consensus_params.block.max_gas = "10000000" |'
-           echo '.app_state.distribution.params.secret_foundation_tax = "0.15" |'
-           echo '.app_state.distribution.params.secret_foundation_address = "secret1c7rjffp9clkvrzul20yy60yhy6arnv7sde0kjj" |'
-           echo '.app_state.register = { "reg_info": null, "node_exch_cert": null, "io_exch_cert": null } |'
-           echo '.app_state.compute = { "codes": null, "contracts": null }'
-       ) > genesis_base.json
-   ```
-
-2. Install `secretnetwork_1.0.0_amd64.deb` on the new SGX machine
-3. Copy `~/.secretd/config/priv_validator_key.json` to the new SGX machine
-4. Export the self-delegator wallet from the old machine and import to the new SGX machine (Note that if you're recovering using `secretcli keys add $NAME --recover` you should also add `--hd-path "44'/118'/0'/0/0"`)
-5. Copy `genesis_base.json` from the old to `~/.secretd/config/genesis.json` on the new machine
-6. `secretd validate-genesis`
-7. `secretd init-bootstrap`
-8. `secretd validate-genesis`
-9. `secretd start --bootstrap`
-10. Publish `~/.secretd/config/genesis.json` (now contains initialized `register` state)
