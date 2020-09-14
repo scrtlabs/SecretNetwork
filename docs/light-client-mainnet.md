@@ -12,7 +12,6 @@
 3) Configure:
 
    ```bash
-   # Set the mainnet chain-id
    secretcli config chain-id secret-1
    ```
 
@@ -25,13 +24,11 @@
    ```
 
    ```bash
-   # Set the full node address
    secretcli config node tcp://bootstrap.mainnet.enigma.co:26657
    ```
 
    ```bash
-   # Verify everything you receive from the full node
-   secretcli config trust-node false
+   secretcli config trust-node true
    ```
 
 4) Check the installation:

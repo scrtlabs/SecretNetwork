@@ -1,61 +1,137 @@
-# :warning: WIP :warning:
+- [Validators](#validators)
+  - [1.](#1)
+  - [2.](#2)
+  - [3.](#3)
+  - [4.](#4)
+  - [5.](#5)
+- [In case of an upgrade failure](#in-case-of-an-upgrade-failure)
+- [Bootstrap validator](#bootstrap-validator)
 
-- [:warning: WIP :warning:](#warning-wip-warning)
-  - [Validators](#validators)
-    - [In case of an upgrade failure](#in-case-of-an-upgrade-failure)
-  - [Bootstrap validator](#bootstrap-validator)
-
-## Validators
+# Validators
 
 All coordination efforts will be done in the [#mainnet-validators](https://chat.scrt.network/channel/mainnet-validators) channel in the Secret Network Rocket.Chat.
 
-1. On the old machine (`secret-1`):
+:warning: Note that if you're new SGX machine has a previous `secretnetwork` installation on it (e.g. from the testnet), you will need remove it before you continue:
 
-   ```bash
-   perl -i -pe 's/^halt-height =.*/halt-height = 1246400/' ~/.secretd/config/app.toml
-   ```
+```bash
+cd ~
+sudo apt purge -y secretnetwork
+rm -rf .sgx_secrets/*
+rm -rf .secretcli/*
+rm -rf .secretd/*
+```
 
-   ```bash
-   sudo systemctl restart secret-node.service
-   ```
+## 1.
 
-   Note: Although halt height is 1246400 on `secret-1`, the halt time might not be exactly September 15th, 2020 at 14:00:00 UTC. The halt height was calculated on September 7th to be as close a possible to September 15th, 2020 at 14:00:00 UTC, using `secret-1` block time of 6.19 seconds.
+On the old machine (`secret-1`):
 
-2. Install `secretnetwork_1.0.0_amd64.deb` on the new SGX machine
-3. Copy `~/.secretd/config/priv_validator_key.json` to the new SGX machine
-4. Export the self-delegator wallet from the old machine and import to the new SGX machine (Note that if you're recovering using `secretcli keys add $NAME --recover` you should also add `--hd-path "44'/118'/0'/0/0"`)
-5. `cd ~`
-6. `secretd init $MONIKER --chain-id secret-2`
-7. `wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/genesis.json"`
-8. `secretd validate-genesis`
-9. `cd ~`
-10. `secretd init-enclave`
-11. `PUBLIC_KEY=$(secretd parse attestation_cert.der 2> /dev/null | cut -c 3-)`
-12. Configure `secretcli`:
+```bash
+perl -i -pe 's/^halt-height =.*/halt-height = 1246400/' ~/.secretd/config/app.toml
+```
 
-    ```bash
-    secretcli config chain-id secret-2
-    secretcli config node tcp://secret-2.node.enigma.co:26657
-    secretcli config trust-node true
-    secretcli config output json
-    secretcli config indent true
-    ```
+```bash
+sudo systemctl restart secret-node.service
+```
 
-13. `secretcli tx register auth ./attestation_cert.der --from $YOUR_KEY_NAME --gas 250000 --gas-prices 0.25uscrt`
-14. `SEED=$(secretcli query register seed "$PUBLIC_KEY" | cut -c 3-)`
-15. `secretcli query register secret-network-params`
-16. `mkdir -p ~/.secretd/.node`
-17. `secretd configure-secret node-master-cert.der "$SEED"`
-18. `perl -i -pe 's/persistent_peers = ""/persistent_peers = "bee0edb320d50c839349224b9be1575ca4e67948\@secret-2.node.enigma.co:26656"/' ~/.secretd/config/config.toml`
-19. `sudo systemctl enable secret-node`
-20. `sudo systemctl start secret-node` (Now your new node is up)
-21. `secretcli config node tcp://localhost:26657`
-22. Wait until you're done catching up: `watch 'secretcli status | jq ".sync_info.catching_up == false"'` (This should output `true`)
-23. `secretcli tx slashing unjail --from $YOUR_KEY_NAME --gas-prices 0.25uscrt` :tada:
+Note: Although halt height is 1246400 on `secret-1`, the halt time might not be exactly September 15th, 2020 at 14:00:00 UTC. The halt height was calculated on September 7th to be as close a possible to September 15th, 2020 at 14:00:00 UTC, using `secret-1` block time of 6.19 seconds.
 
-([Ref](testnet/run-full-node-testnet.md))
+## 2.
 
-### In case of an upgrade failure
+On the new SGX machine (`secret-2`):
+
+```bash
+cd ~
+
+wget "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/secretnetwork_1.0.0_amd64.deb" # TODO
+
+echo "87aee80a112f429db0b8b6703b1eba33accea0f08af9e65339d14d92a5186b24 secretnetwork_1.0.0_amd64.deb" | sha256sum --check
+
+sudo apt install -y ./secretnetwork_1.0.0_amd64.deb
+
+secretd init $MONIKER
+```
+
+## 3.
+
+Copy your `~/.secretd/config/priv_validator_key.json` from the old machine (`secret-1`) to the new SGX machine (`secret-2`).
+
+## 4.
+
+Export the self-delegator wallet from the old machine (`secret-1`) and import to the new SGX machine (`secret-2`).
+
+On the old machine (`secret-1`) use `secretcli export $YOUR_KEY_NAME`.
+On the new SGX machine (`secret-2`) use `secretcli import $YOUR_KEY_NAME $FROM_FILE_NAME`
+
+Note that if you're recovering it using `secretcli keys add $YOUR_KEY_NAME --recover` you should also use `--hd-path "44'/118'/0'/0/0"`.
+
+## 5.
+
+On the new SGX machine (`secret-2`):
+
+```bash
+cd ~
+
+secretd init $MONIKER --chain-id secret-2
+
+wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/genesis.json" # TODO
+
+echo "TODO .secretd/config/genesis.json" | sha256sum --check
+
+secretd validate-genesis
+
+secretd init-enclave
+
+PUBLIC_KEY=$(secretd parse attestation_cert.der 2> /dev/null | cut -c 3-)
+
+secretcli config chain-id secret-2
+secretcli config node tcp://secret-2.node.enigma.co:26657
+secretcli config trust-node true
+secretcli config output json
+secretcli config indent true
+
+secretcli tx register auth ./attestation_cert.der --from $YOUR_KEY_NAME --gas 250000 --gas-prices 0.25uscrt
+
+SEED=$(secretcli query register seed "$PUBLIC_KEY" | cut -c 3-)
+
+secretcli query register secret-network-params
+
+mkdir -p ~/.secretd/.node
+
+secretd configure-secret node-master-cert.der "$SEED"
+
+perl -i -pe 's/persistent_peers = ""/persistent_peers = "bee0edb320d50c839349224b9be1575ca4e67948\@secret-2.node.enigma.co:26656"/' ~/.secretd/config/config.toml
+
+sudo systemctl enable secret-node
+
+sudo systemctl start secret-node # (Now your new node is live and catching up)
+
+secretcli config node tcp://localhost:26657
+```
+
+Now wait until you're done catching up. This is fast.  
+Once the following command outputs `true` you can continue:
+
+```bash
+watch 'secretcli status | jq ".sync_info.catching_up == false"'
+```
+
+Once your node is done catching up, you can unjail your validaor:
+
+```bash
+secretcli tx slashing unjail --from $YOUR_KEY_NAME --gas-prices 0.25uscrt
+```
+
+Your now a validator in `secret-2`! :tada:
+
+To make sure your validator is unjailed, look for it here:
+
+```bash
+secretcli q staking validators | jq -r '.[] | select(.status == 2) | .description.moniker'
+```
+
+([Ref for testnet instrustions](testnet/run-full-node-testnet.md))
+
+# In case of an upgrade failure
 
 If after a few hours the Enigma team announces on the chat that the upgrade failed, we will relaunch `secret-1`.
 
@@ -65,13 +141,17 @@ If after a few hours the Enigma team announces on the chat that the upgrade fail
    perl -i -pe 's/^halt-height =.*/halt-height = 0/' ~/.secretd/config/app.toml
    ```
 
-   ```bash
-   sudo systemctl restart secret-node.service
-   ```
+```
+
+```
+
+```bash
+sudo systemctl restart secret-node.service
+```
 
 2. Wait for 67% of voting power to come back online.
 
-## Bootstrap validator
+# Bootstrap validator
 
 Must be running [`v0.2.2`](https://github.com/enigmampc/SecretNetwork/releases/tag/v0.2.2).
 
