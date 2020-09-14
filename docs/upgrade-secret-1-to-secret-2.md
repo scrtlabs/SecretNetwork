@@ -60,7 +60,10 @@ Export the self-delegator wallet from the old machine (`secret-1`) and import to
 On the old machine (`secret-1`) use `secretcli export $YOUR_KEY_NAME`.  
 On the new SGX machine (`secret-2`) use `secretcli import $YOUR_KEY_NAME $FROM_FILE_NAME`
 
-Note that if you're recovering it using `secretcli keys add $YOUR_KEY_NAME --recover` you should also use `--hd-path "44'/118'/0'/0/0"`.
+Notes:
+
+1. If you're recovering the wallet using `secretcli keys add $YOUR_KEY_NAME --recover` you should also use `--hd-path "44'/118'/0'/0/0"`.
+2. If the wallet is stored on a Ledger device, use `--legacy-hd-path` when importing it with `secretcli keys add`.
 
 ## 5. Set up your SGX machine and become a `secret-2` validator
 
