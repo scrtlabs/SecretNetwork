@@ -18,11 +18,10 @@ All coordination efforts will be done in the [#mainnet-validators](https://chat.
 :warning: If your SGX machine has a previous `secretnetwork` installation on it (e.g. from the testnet), you will need to remove it before you continue:
 
 ```bash
-cd ~
 sudo apt purge -y secretnetwork
-rm -rf .sgx_secrets/*
-rm -rf .secretcli/*
-rm -rf .secretd/*
+rm -rf ~/.sgx_secrets/*
+rm -rf ~/.secretcli/*
+rm -rf ~/.secretd/*
 ```
 
 ## 1. Prepare your `secret-1` validtor to halt after block #1,246,400
