@@ -53,7 +53,7 @@ secretd init $MONIKER
 
 ## 3.
 
-Copy your `~/.secretd/config/priv_validator_key.json` from the old machine (`secret-1`) to the new SGX machine (`secret-2`).
+Copy your `~/.secretd/config/priv_validator_key.json` from the old machine (`secret-1`) to the new SGX machine (`secret-2`) at the same location.
 
 ## 4.
 
