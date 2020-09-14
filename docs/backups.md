@@ -5,7 +5,7 @@
   - [Mnemonics](#mnemonics)
   - [Export](#export)
 - [Client Transaction Encryption Key for Secret Contracs](#client-transaction-encryption-key-for-secret-contracs)
-- [Vaidator Private Key](#vaidator-private-key)
+- [Validator Private Key](#validator-private-key)
 - [Full Node Private key](#full-node-private-key)
 - [Full Node Data](#full-node-data)
 
@@ -123,7 +123,7 @@ $ secretcli keys list
 
 This key encrypts you inputs and decrypts the outputs to/of Secret Contracts.
 
-# Vaidator Private Key
+# Validator Private Key
 
 1. Backup `~/.secretd/config/priv_validator_key.json`.
 2. Backup the self-delegator wallet. See the [wallet section](#wallet).
