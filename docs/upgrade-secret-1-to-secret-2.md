@@ -141,9 +141,7 @@ If after a few hours the Enigma team announces on the chat that the upgrade fail
 
    ```bash
    perl -i -pe 's/^halt-height =.*/halt-height = 0/' ~/.secretd/config/app.toml
-   ```
 
-   ```bash
    sudo systemctl restart secret-node.service
    ```
 
