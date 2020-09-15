@@ -29,29 +29,13 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/SecretNet
 Secret Network is secured by the SCRT coin (Secret), which is used for fees, staking, and governance. Transactions, validators, governance proposals, and more can be viewed using the following Secret Network block explorers:
 
 - [Cashmaney](https://explorer.cashmaney.com)
-- [SecretScan](https://secretscan.io)
-- [Puzzle](https://puzzle.report/secret/chains/secret-1)
+- [Puzzle](https://puzzle.report)
 
 # Wallets
 
 - [Ledger Nano S and Ledger Nano X](docs/ledger-nano-s.md)
-- [Math Wallet](https://mathwallet.org/web/enigma)
 - [Kepler](https://wallet.keplr.app)
-
-# Implementation Discussions
-
-- [An Update on the Encryption Protocol](https://forum.scrt.network/t/an-update-on-the-encryption-protocol/1641)
-- [Hard Forks and Network Upgrades](https://forum.scrt.network/t/hard-forks-and-network-upgrades/1670)
-- [Don’t trust, verify (an untrusted host)](https://forum.scrt.network/t/dont-trust-verify-an-untrusted-host/1669)
-- [Secret Contracts on Secret Network](https://forum.scrt.network/t/secret-contracts-on-enigma-blockchain/1284)
-- [Network key management/agreement](https://forum.scrt.network/t/network-key-management-agreement/1324)
-- [Input/Output/State Encryption/Decryption protocol](https://forum.scrt.network/t/input-output-state-encryption-decryption-protocol/1325)
-- [Why the Cosmos move doesn’t mean we’re leaving Ethereum](https://forum.scrt.network/t/why-the-cosmos-move-doesnt-mean-were-leaving-ethereum/1301)
-- [(Dev discussion/Issue) WASM implementation](https://forum.scrt.network/t/dev-discussion-issue-wasm-implementation/1303)
-
-# Blockchain REST Providers
-
-- https://api.chainofsecrets.org
+- [Math Wallet](https://mathwallet.org/web/enigma)
 
 # Docs
 
@@ -63,14 +47,21 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 - [Ledger Nano S (and X) support](docs/ledger-nano-s.md)
 - [How to join as a mainnet validator](docs/validators-and-full-nodes/join-validator-mainnet.md)
 - [How to backup a validator](docs/validators-and-full-nodes/backup-a-validator.md)
-- [How to backup a everything](docs/backups.md)
+- [How to backup a everything (Validators, Full Nodes, Wallets)](docs/backups.md)
 - [How to migrate a validator to a new machine](docs/validators-and-full-nodes/migrate-a-validator.md)
 - [How to setup SGX on your machine](docs/validators-and-full-nodes/setup-sgx.md)
 - [How to verify the SGX setup on your machine](docs/validators-and-full-nodes/verify-sgx.md)
 
-# Archive
+# Implementation Discussions
 
-- [How to be a mainnet genesis validator](docs/genesis/genesis-validator-mainnet.md)
+- [An Update on the Encryption Protocol](https://forum.scrt.network/t/an-update-on-the-encryption-protocol/1641)
+- [Hard Forks and Network Upgrades](https://forum.scrt.network/t/hard-forks-and-network-upgrades/1670)
+- [Don’t trust, verify (an untrusted host)](https://forum.scrt.network/t/dont-trust-verify-an-untrusted-host/1669)
+- [Secret Contracts on Secret Network](https://forum.scrt.network/t/secret-contracts-on-enigma-blockchain/1284)
+- [Network key management/agreement](https://forum.scrt.network/t/network-key-management-agreement/1324)
+- [Input/Output/State Encryption/Decryption protocol](https://forum.scrt.network/t/input-output-state-encryption-decryption-protocol/1325)
+- [Why the Cosmos move doesn’t mean we’re leaving Ethereum](https://forum.scrt.network/t/why-the-cosmos-move-doesnt-mean-were-leaving-ethereum/1301)
+- [(Dev discussion/Issue) WASM implementation](https://forum.scrt.network/t/dev-discussion-issue-wasm-implementation/1303)
 
 # License
 
