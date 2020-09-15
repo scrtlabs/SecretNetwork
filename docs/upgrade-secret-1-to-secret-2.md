@@ -65,12 +65,12 @@ Copy your `~/.secretd/config/priv_validator_key.json` from the old machine (`sec
 
 Export the self-delegator wallet from the old machine (`secret-1`) and import to the new SGX machine (`secret-2`).
 
-On the old machine (`secret-1`) use `secretcli keys export $YOUR_KEY_NAME`.  
-On the new SGX machine (`secret-2`) use `secretcli keys import $YOUR_KEY_NAME $FROM_FILE_NAME`
+On the old machine (`secret-1`) use `secretcli keys export "$YOUR_KEY_NAME"`.  
+On the new SGX machine (`secret-2`) use `secretcli keys import "$YOUR_KEY_NAME" "$FROM_FILE_NAME"`
 
 Notes:
 
-1. If you're recovering the wallet using `secretcli keys add $YOUR_KEY_NAME --recover` you should also use `--hd-path "44'/118'/0'/0/0"`.
+1. If you're recovering the wallet using `secretcli keys add "$YOUR_KEY_NAME" --recover` you should also use `--hd-path "44'/118'/0'/0/0"`.
 2. If the wallet is stored on a Ledger device, use `--legacy-hd-path` when importing it with `secretcli keys add`.
 
 :warning: Don't delete your `secret-1` machine as we might have to relaunch it.
@@ -101,7 +101,7 @@ secretcli config trust-node true
 secretcli config output json
 secretcli config indent true
 
-secretcli tx register auth ./attestation_cert.der --from $YOUR_KEY_NAME --gas 250000 --gas-prices 0.25uscrt
+secretcli tx register auth ./attestation_cert.der --from "$YOUR_KEY_NAME" --gas 250000 --gas-prices 0.25uscrt
 
 SEED=$(secretcli query register seed "$PUBLIC_KEY" | cut -c 3-)
 echo $SEED
@@ -131,7 +131,7 @@ watch 'secretcli status | jq ".sync_info.catching_up == false"'
 Once your node is done catching up, you can unjail your validator:
 
 ```bash
-secretcli tx slashing unjail --from $YOUR_KEY_NAME --gas-prices 0.25uscrt
+secretcli tx slashing unjail --from "$YOUR_KEY_NAME" --gas-prices 0.25uscrt
 ```
 
 You’re now a validator in `secret-2`! :tada:
