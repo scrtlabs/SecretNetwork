@@ -59,8 +59,6 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 - [How to use the `secretcli` light client](docs/validators-and-full-nodes/secretcli.md)
 - [How to participate in on-chain governance](docs/protocol/governance.md)
 - [How to run a full node on mainnet](docs/validators-and-full-nodes/run-full-node-mainnet.md)
-- [How to upgrade your full node from `enigma-1` v0.0.3 to `secret-1` v0.2.0](https://github.com/chainofsecrets/TheRomulusUpgrade/blob/romulus-upgrade/docs/upgrades/romulus-upgrade-instructions.md#upgrade-procedure)
-- [How to upgrade your full node from `secret-1` v0.2.0 to `secret-1` v0.2.1](https://github.com/enigmampc/SecretNetwork/releases/tag/v0.2.1)
 - [How to run an LCD server](docs/lcd-server-example.md)
 - [Ledger Nano S (and X) support](docs/ledger-nano-s.md)
 - [How to join as a mainnet validator](docs/validators-and-full-nodes/join-validator-mainnet.md)
