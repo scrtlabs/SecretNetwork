@@ -111,7 +111,8 @@ go.sum: go.mod
 	GO111MODULE=on go mod verify
 
 xgo_build_secretcli: go.sum
-	cli
+	@echo "--> WARNING! This builds from origin/master!"
+	xgo --go latest --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' github.com/enigmampc/SecretNetwork/cmd/secretcli
 
 cli:
 	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
@@ -129,15 +130,15 @@ build-linux: vendor bin-data-$(IAS_BUILD)
 
 build_windows:
 	# CLI only
-	GOOS=windows GOARCH=amd64 $(MAKE) cli
+	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
 
 build_macos:
 	# CLI only
-	GOOS=darwin GOARCH=amd64 $(MAKE) cli
+	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/amd64
 
 build_arm_linux:
 	# CLI only
-	GOOS=linux GOARCH=arm64 $(MAKE) cli
+	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
 
 build_all: build-linux build_windows build_macos build_arm_linux
 
