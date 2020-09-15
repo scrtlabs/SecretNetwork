@@ -6,7 +6,7 @@
 1. Export state on the old machine
 
    ```bash
-   export HALT_HEIGHT=1246400
+   HALT_HEIGHT=1246400
 
    perl -i -pe "s/^halt-height =.*/halt-height = $HALT_HEIGHT/" ~/.secretd/config/app.toml
    sudo systemctl restart secret-node.service
