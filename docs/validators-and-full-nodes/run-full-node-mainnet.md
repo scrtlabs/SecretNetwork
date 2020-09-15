@@ -31,7 +31,7 @@ cd ~
 
 wget https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/secretnetwork_1.0.0_amd64.deb
 
-sudo apt install ./secretnetwork_0.2.1_amd64.deb
+sudo apt install ./secretnetwork_1.0.0_amd64.deb
 
 secretd init $MONIKER --chain-id secret-2
 
