@@ -82,9 +82,9 @@ cd ~
 
 secretd init $MONIKER --chain-id secret-2
 
-wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/genesis.json" # TODO
+wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/genesis.json"
 
-echo "TODO .secretd/config/genesis.json" | sha256sum --check
+echo "bf7c536f91dd307cd5778aa364416c9444773ecd8a7b48621b3298b8d96c1e75 .secretd/config/genesis.json" | sha256sum --check
 
 secretd validate-genesis
 
