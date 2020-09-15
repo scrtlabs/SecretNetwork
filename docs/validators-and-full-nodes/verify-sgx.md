@@ -24,14 +24,14 @@ Other driver/OS combinations are not guaranteed to work with these instructions.
 
 ### 1. Download the test package
 
-`wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.8.1/secretnetwork_0.8.1_amd64.deb`
+`wget https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/secretnetwork_1.0.0_amd64.deb`
 
 ### 2. Unpack
 
 #### This will install `secretd`
 
 ```bash
-sudo dpkg -i secretnetwork_0.8.1_amd64.deb
+sudo dpkg -i secretnetwork_1.0.0_amd64.deb
 ```
 
 ### 3. Initialize the enclave
@@ -69,8 +69,8 @@ With the following value accepted for **testnet only**:
 
 For the status `CONFIGURATION_AND_SW_HARDENING_NEEDED` we perform a deeper inspection of the exact vulnerabilities that remain. The acceptable values **for mainnet** are:
 
-* `"INTEL-SA-00334"`
-* `"INTEL-SA-00219"`
+- `"INTEL-SA-00334"`
+- `"INTEL-SA-00219"`
 
 Consult with the [Intel API](https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf#page=21) for more on these values.
 
@@ -88,7 +88,7 @@ If you do not see such an output, look for a file called `attestation_cert.der` 
 
 ### 5. Troubleshooting
 
-####  Output is:
+#### Output is:
 
 ```
 secretd init-enclave
@@ -98,7 +98,7 @@ ERROR: failed to initialize enclave: Error calling the VM: SGX_ERROR_ENCLAVE_FIL
 
 Make sure you have the environment variable `SCRT_ENCLAVE_DIR=/usr/lib` set before you run `secretd`.
 
-####  Output is:
+#### Output is:
 
 ```
 secretd init-enclave
@@ -110,7 +110,7 @@ ERROR: failed to initialize enclave: Error calling the VM: SGX_ERROR_UNEXPECTED
 
 Make sure the directory `~/.sgx_secrets/` is created. If that still doesn't work, try to create `/root/.sgx_secrets`
 
-####  Output is:
+#### Output is:
 
 ```
 secretd init-enclave
@@ -121,13 +121,13 @@ ERROR: failed to create attestation report: Error calling the VM: SGX_ERROR_SERV
 
 Make sure the `aesmd-service` is running `systemctl status aesmd.service`
 
-####  I'm seeing `CONFIGURATION_AND_SW_HARDENING_NEEDED` in the `isvEnclaveQuoteStatus` field, but with more advisories than what is allowed
+#### I'm seeing `CONFIGURATION_AND_SW_HARDENING_NEEDED` in the `isvEnclaveQuoteStatus` field, but with more advisories than what is allowed
 
 This could mean a number of different things related to the configuration of the machine. Most common are:
 
-   * ["INTEL-SA-00161", "INTEL-SA-00233"] - Hyper-threading must be disabled in the BIOS
-   * ["INTEL-SA-00289"] - Overclocking/undervolting must be disabled by the BIOS
-   * ["INTEL-SA-00219"] - Integrated graphics should be disabled in the BIOS - we recommend performing this step if you can, though it isn't required
+- ["INTEL-SA-00161", "INTEL-SA-00233"] - Hyper-threading must be disabled in the BIOS
+- ["INTEL-SA-00289"] - Overclocking/undervolting must be disabled by the BIOS
+- ["INTEL-SA-00219"] - Integrated graphics should be disabled in the BIOS - we recommend performing this step if you can, though it isn't required
 
 #### I'm seeing `SGX_ERROR_DEVICE_BUSY`
 
