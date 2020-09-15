@@ -1,8 +1,10 @@
 # Network Upgrade Instructions from `secret-1` to `secret-2`
 
+:warning: Please read carefully before you begin the upgrade.
+
 - [Network Upgrade Instructions from `secret-1` to `secret-2`](#network-upgrade-instructions-from-secret-1-to-secret-2)
 - [Validators](#validators)
-  - [1. Prepare your `secret-1` validtor to halt after block #1,246,400](#1-prepare-your-secret-1-validtor-to-halt-after-block-1246400)
+  - [1. Prepare your `secret-1` validator to halt after block #1,246,400](#1-prepare-your-secret-1-validator-to-halt-after-block-1246400)
   - [2. Install the new binaries on your SGX machine](#2-install-the-new-binaries-on-your-sgx-machine)
   - [3. Migrate your validator's signing key](#3-migrate-your-validators-signing-key)
   - [4. Migrate your validator's wallet](#4-migrate-your-validators-wallet)
@@ -29,7 +31,7 @@ You're probably familiar with SGX by now:
 - [Setup SGX](validators-and-full-nodes/setup-sgx.md)
 - [Verify SGX](validators-and-full-nodes/verify-sgx.md)
 
-## 1. Prepare your `secret-1` validtor to halt after block #1,246,400
+## 1. Prepare your `secret-1` validator to halt after block #1,246,400
 
 On the old machine (`secret-1`):
 
@@ -59,8 +61,6 @@ secretd init "$MONIKER" --chain-id secret-2
 
 Copy your `~/.secretd/config/priv_validator_key.json` from the old machine (`secret-1`) to the new SGX machine (`secret-2`) at the same location.
 
-:warning: Don't delete your `secret-1` machine as we might have to relaunch it.
-
 ## 4. Migrate your validator's wallet
 
 Export the self-delegator wallet from the old machine (`secret-1`) and import to the new SGX machine (`secret-2`).
@@ -72,8 +72,6 @@ Notes:
 
 1. If you're recovering the wallet using `secretcli keys add "$YOUR_KEY_NAME" --recover` you should also use `--hd-path "44'/118'/0'/0/0"`.
 2. If the wallet is stored on a Ledger device, use `--legacy-hd-path` when importing it with `secretcli keys add`.
-
-:warning: Don't delete your `secret-1` machine as we might have to relaunch it.
 
 ## 5. Set up your SGX machine and become a `secret-2` validator
 
