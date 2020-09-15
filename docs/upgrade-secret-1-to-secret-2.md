@@ -52,7 +52,7 @@ echo "87aee80a112f429db0b8b6703b1eba33accea0f08af9e65339d14d92a5186b24 secretnet
 
 sudo apt install -y ./secretnetwork_1.0.0_amd64.deb
 
-secretd init $MONIKER
+secretd init $MONIKER --chain-id secret-2
 ```
 
 ## 3. Migrate your validator's signing key
