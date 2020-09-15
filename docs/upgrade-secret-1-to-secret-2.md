@@ -20,10 +20,15 @@ All coordination efforts will be done in the [#mainnet-validators](https://chat.
 :warning: If your SGX machine has a previous `secretnetwork` installation on it (e.g. from the testnet), you will need to remove it before you continue:
 
 ```bash
+cd ~
+sudo systemctl stop secret-node
+secretd unsafe-reset-all
+secretd reset-enclave
+secretd init-enclave --reset
 sudo apt purge -y secretnetwork
-rm -rf ~/.sgx_secrets/*
 rm -rf ~/.secretcli/*
 rm -rf ~/.secretd/*
+rm -rf ~/.sgx_secrets/*
 ```
 
 You're probably familiar with SGX by now:
