@@ -107,12 +107,23 @@ consensus_io_exchange_pubkey = calculate_curve25519_pubkey(
 
 ### `consensus_state_ikm`
 
-- `consensus_state_ikm`: An input keying material (IKM) for HKDF-SHA256 to derive encryption keys for contracts' state.
+- `consensus_state_ikm`: An input keyring material (IKM) for HKDF-SHA256 to derive encryption keys for contracts' state.
 
 ```js
 consensus_state_ikm = hkdf({
   salt: hkfd_salt,
   ikm: consensus_seed.append(uint8(3)),
+}); // 256 bits
+```
+
+### `consensus_callback_secret`
+
+- `consensus_callback_secret`: A curve25519 private key. Will be used to create callback signatures when contracts call other contracts.
+
+```js
+consensus_state_ikm = hkdf({
+  salt: hkfd_salt,
+  ikm: consensus_seed.append(uint8(4)),
 }); // 256 bits
 ```
 
@@ -532,6 +543,11 @@ msg = codeHashAndMsg.slice(64);
   ```
 
 - Notice on a `Contract` message, the `msg` value should be the same `msg` as in our `tx_input`, so we need to prepend the `nonce` and `tx_sender_wallet_pubkey` just like we did on the tx sender above.
+- On a `Contract` message, we also send a `callback_signature`, so we can later on verify the parameters sent to the enclave:
+  ```
+  callback_signature = sha256(consensus_callback_secret | calling_contract_addr | encrypted_msg | funds_to_send)
+  ```
+  For more on that, [read here](../dev/privacy-model-of-secret-contracts.md#verified-values-during-contract-execution).
 - For the rest of the encrypted outputs we only need to send the ciphertext, as the tx sender can get `consensus_io_exchange_prubkey` from `genesis.json` and `nonce` from the `tx_input` that is attached to the `tx_output`.
 - An example output with an error:
   ```js

@@ -41,5 +41,5 @@ then
   secretd validate-genesis
 fi
 
-sleep infinity
-# source /opt/sgxsdk/environment && RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap
+# sleep infinity
+source /opt/sgxsdk/environment && RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap

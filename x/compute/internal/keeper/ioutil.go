@@ -3,6 +3,7 @@ package keeper
 import (
 	"bytes"
 	"compress/gzip"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"io"
 	"io/ioutil"
 )
@@ -11,9 +12,6 @@ import (
 // See https://www.ietf.org/rfc/rfc1952.txt
 // and https://github.com/golang/go/blob/master/src/net/http/sniff.go#L186
 var gzipIdent = []byte("\x1F\x8B\x08")
-
-// limit max bytes read to prevent gzip bombs
-const maxSize = 400 * 1024
 
 // uncompress returns gzip uncompressed content or given src when not gzip.
 func uncompress(src []byte) ([]byte, error) {
@@ -29,5 +27,5 @@ func uncompress(src []byte) ([]byte, error) {
 	}
 	zr.Multistream(false)
 
-	return ioutil.ReadAll(io.LimitReader(zr, maxSize))
+	return ioutil.ReadAll(io.LimitReader(zr, types.MaxWasmSize))
 }

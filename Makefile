@@ -24,6 +24,7 @@ SGX_MODE ?= HW
 BRANCH ?= develop
 DEBUG ?= 0
 DOCKER_TAG ?= latest
+CUR_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 ifeq ($(SGX_MODE), HW)
 	ext := hw
@@ -216,16 +217,16 @@ build-testnet: docker_base
 	@mkdir build 2>&3 || true
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f Dockerfile.testnet -t enigmampc/secret-network-bootstrap:v$(VERSION)-testnet .
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t enigmampc/secret-network-node:v$(VERSION)-testnet .
-	docker build --build-arg SGX_MODE=HW -f Dockerfile_build_deb -t deb_build .
-	docker run -e VERSION=${VERSION} -v $(pwd)/build:/build deb_build
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f Dockerfile_build_deb -t deb_build .
+	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
 build-mainnet:
 	@mkdir build 2>&3 || true
-	docker build --build-arg SGX_MODE=HW --build-arg FEATURES=production -f Dockerfile.base -t rust-go-base-image .
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg FEATURES=production -f Dockerfile.base -t rust-go-base-image .
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f Dockerfile.testnet -t enigmampc/secret-network-bootstrap:v$(VERSION)-mainnet .
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t enigmampc/secret-network-node:v$(VERSION)-mainnet .
-	docker build --build-arg SGX_MODE=HW -f Dockerfile_build_deb -t deb_build .
-	docker run -e VERSION=${VERSION} -v $(pwd)/build:/build deb_build
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f Dockerfile_build_deb -t deb_build .
+	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
 docker_base:
 	docker build --build-arg FEATURES=${FEATURES} --build-arg SGX_MODE=${SGX_MODE} -f Dockerfile.base -t rust-go-base-image .
