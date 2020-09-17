@@ -283,7 +283,8 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 
 			var answer struct {
 				Type               string                 `json:"type"`
-				Input              string                 `json:"input"`
+				RawInput           string                 `json:"raw_input"`
+				Input              json.RawMessage        `json:"input"`
 				OutputData         string                 `json:"output_data"`
 				OutputDataAsString string                 `json:"output_data_as_string"`
 				OutputLogs         []sdk.StringEvent      `json:"output_log"`
@@ -346,7 +347,8 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 				}
 			}
 
-			answer.Input = string(plaintextInput)
+			answer.RawInput = string(plaintextInput)
+			answer.Input = []byte(plaintextInput[64:])
 
 			// decrypt data
 			if answer.Type == "execute" {
