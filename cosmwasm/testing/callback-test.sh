@@ -114,6 +114,12 @@ wait_for_tx "$EXEC_ERR_TX_HASH" "Waiting for exec to finish on-chain..."
 
 secretcli q compute tx "$EXEC_ERR_TX_HASH"
 
+# test output data decryption
+yes |
+    secretcli tx compute execute --from a "$CONTRACT_ADDRESS" '{"unicode_data":{}}' -b block |
+    jq -r .txhash |
+    xargs secretcli q compute tx
+
 # sleep infinity
 
 (
