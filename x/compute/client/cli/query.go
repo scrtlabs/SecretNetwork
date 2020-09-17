@@ -283,7 +283,8 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 
 			var answer struct {
 				Type               string                 `json:"type"`
-				Input              string                 `json:"input"`
+				RawInput           string                 `json:"raw_input"`
+				Input              json.RawMessage        `json:"input"`
 				OutputData         string                 `json:"output_data"`
 				OutputDataAsString string                 `json:"output_data_as_string"`
 				OutputLogs         []sdk.StringEvent      `json:"output_log"`
@@ -291,7 +292,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 				PlaintextError     string                 `json:"plaintext_error"`
 			}
 			var encryptedInput []byte
-			var dataOutputHexB64 string
+			var dataOutputHex string
 
 			txInputs := result.Tx.GetMsgs()
 			if len(txInputs) != 1 {
@@ -306,7 +307,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 				}
 
 				encryptedInput = execTx.Msg
-				dataOutputHexB64 = result.Data
+				dataOutputHex = result.Data
 			} else if txInput.Type() == "instantiate" {
 				initTx, ok := txInput.(types.MsgInstantiateContract)
 				if !ok {
@@ -346,18 +347,14 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 				}
 			}
 
-			answer.Input = string(plaintextInput)
+			answer.RawInput = string(plaintextInput)
+			answer.Input = []byte(plaintextInput[64:])
 
 			// decrypt data
 			if answer.Type == "execute" {
-				dataOutputB64, err := hex.DecodeString(dataOutputHexB64)
+				dataOutputCipherBz, err := hex.DecodeString(dataOutputHex)
 				if err != nil {
 					return fmt.Errorf("error while trying to decode the encrypted output data from hex string: %w", err)
-				}
-
-				dataOutputCipherBz, err := base64.StdEncoding.DecodeString(string(dataOutputB64))
-				if err != nil {
-					return fmt.Errorf("error while trying to decode the encrypted output data from base64: %w", err)
 				}
 
 				dataPlaintextB64Bz, err := wasmCtx.Decrypt(dataOutputCipherBz, nonce)

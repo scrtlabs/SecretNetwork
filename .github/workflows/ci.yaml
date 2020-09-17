@@ -214,11 +214,11 @@ jobs:
       - name: Build MacOS CLI
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          make build_macos
+          make build_macos_cli
       - name: Build Windows CLI
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          make build_windows
+          make build_windows_cli
       - name: Build
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"

@@ -1,6 +1,7 @@
 PACKAGES=$(shell go list ./... | grep -v '/simulation')
 VERSION ?= $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
+CURRENT_BRANCH := $(shell git branch --show-current)
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
 BUILD_PROFILE ?= release
@@ -111,13 +112,13 @@ go.sum: go.mod
 	GO111MODULE=on go mod verify
 
 xgo_build_secretcli: go.sum
-	@echo "--> WARNING! This builds from origin/master!"
-	xgo --go latest --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' github.com/enigmampc/SecretNetwork/cmd/secretcli
+	@echo "--> WARNING! This builds from origin/$(CURRENT_BRANCH)!"
+	xgo --go latest --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --branch "$(CURRENT_BRANCH)" github.com/enigmampc/SecretNetwork/cmd/secretcli
 
-cli:
+build_local_cli:
 	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
 
-build_local_no_rust: cli bin-data-$(IAS_BUILD)
+build_local_no_rust: build_local_cli bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
 	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
@@ -128,19 +129,19 @@ build-linux: vendor bin-data-$(IAS_BUILD)
 	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
 
-build_windows:
-	# CLI only
+build_windows_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
 
-build_macos:
-	# CLI only
+build_macos_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/amd64
 
-build_arm_linux:
-	# CLI only
+build_linux_cli:
+	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/amd64
+
+build_linux_arm64_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
 
-build_all: build-linux build_windows build_macos build_arm_linux
+build_all: build-linux build_windows_cli build_macos_cli build_arm_linux_cli
 
 deb: build-linux deb-no-compile
 
