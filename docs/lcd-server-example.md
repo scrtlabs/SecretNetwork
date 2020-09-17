@@ -11,7 +11,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/bin/secretcli rest-server --trust-node=true --chain-id secret-1 --laddr tcp://127.0.0.1:1337
+ExecStart=/usr/local/bin/secretcli rest-server --trust-node=true --chain-id secret-2 --laddr tcp://127.0.0.1:1337
 User=ubuntu
 Restart=always
 StartLimitInterval=0

@@ -145,8 +145,7 @@ Why you might want to backup your node ID:
 1. Gracefully shut down the node:
 
    ```bash
-   perl -i -pe 's/^halt-time =.*/halt-time = 1/' ~/.secretd/config/app.toml
-   sudo systemctl restart secret-node
+   sudo systemctl stop secret-node
    ```
 
 2. Backup the `~/.secretd/data/` directory except for the `~/.secretd/data/priv_validator_state.json` file.
@@ -154,6 +153,5 @@ Why you might want to backup your node ID:
 4. Restart the node:
 
    ```bash
-   perl -i -pe 's/^halt-time =.*/halt-time = 0/' ~/.secretd/config/app.toml
-   sudo systemctl restart secret-node
+   sudo systemctl start secret-node
    ```
