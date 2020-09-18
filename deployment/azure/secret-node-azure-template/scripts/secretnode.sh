@@ -9,16 +9,16 @@
 
 export DEBIAN_FRONTEND=noninteractive
 
-sudo /bin/date +%H:%M:%S > /home/$1/install.progress.txt
+sudo /bin/date +%H:%M:%S > /home/"$1"/install.progress.txt
 
-echo "Creating tmp folder for aesm" >> /home/$1/install.progress.txt
+echo "Creating tmp folder for aesm" >> /home/"$1"/install.progress.txt
 
 # Aesm service relies on this folder and having write permissions
 # shellcheck disable=SC2174
 mkdir -p -m 777 /tmp/aesmd
 chmod -R -f 777 /tmp/aesmd || sudo chmod -R -f 777 /tmp/aesmd || true
 
-echo "Installing docker" >> /home/$1/install.progress.txt
+echo "Installing docker" >> /home/"$1"/install.progress.txt
 
 sudo apt update
 sudo apt install apt-transport-https ca-certificates curl software-properties-common -y
@@ -28,28 +28,28 @@ sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubun
 sudo apt update
 sudo apt install docker-ce -y
 
-echo "Adding user $1 to docker group" >> /home/$1/install.progress.txt
+echo "Adding user $1 to docker group" >> /home/"$1"/install.progress.txt
 sudo service docker start
 sudo systemctl enable docker
 sudo groupadd docker
-sudo usermod -aG docker $1
+sudo usermod -aG docker "$1"
 
-echo "Installing docker-compose" >> /home/$1/install.progress.txt
+echo "Installing docker-compose" >> /home/"$1"/install.progress.txt
 # systemctl status docker
 sudo curl -L https://github.com/docker/compose/releases/download/1.26.0/docker-compose-"$(uname -s)"-"$(uname -m)" -o /usr/local/bin/docker-compose
 
 sudo chmod +x /usr/local/bin/docker-compose
 
-echo "Creating secret node runner" >> /home/$1/install.progress.txt
+echo "Creating secret node runner" >> /home/"$1"/install.progress.txt
 
 mkdir -p /usr/local/bin/secret-node
 
 if [[ $6 == *"mainnet"* ]]; then
-  sudo curl -L https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/packaging_docker/azure/mainnet/docker-compose.yaml -o /usr/local/bin/secret-node/docker-compose.yaml
-  echo "Downloaded mainnet compose file " >> /home/$1/install.progress.txt
+  sudo curl -L https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/deployment/azure/mainnet/docker-compose.yaml -o /usr/local/bin/secret-node/docker-compose.yaml
+  echo "Downloaded mainnet compose file" >> /home/"$1"/install.progress.txt
 else
-  sudo curl -L https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/packaging_docker/azure/testnet/docker-compose.yaml -o /usr/local/bin/secret-node/docker-compose.yaml
-  echo "Downloaded testnet compose file " >> /home/$1/install.progress.txt
+  sudo curl -L https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/deployment/azure/testnet/docker-compose.yaml -o /usr/local/bin/secret-node/docker-compose.yaml
+  echo "Downloaded testnet compose file" >> /home/"$1"/install.progress.txt
 fi
 
 
@@ -64,22 +64,22 @@ perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.secretd/co
 # Open P2P port to the outside
 perl -i -pe 's/laddr = .+?26656"/laddr = "tcp:\/\/0.0.0.0:26656"/' ~/.secretd/config/config.toml
 
-echo "Setting Secret Node environment variables" >> /home/$1/install.progress.txt
+echo "Setting Secret Node environment variables and aliases" >> /home/"$1"/install.progress.txt
 
-echo 'alias secretcli="docker exec -it secret-node_node_1 secretcli"' >> /home/"$1"/.bashrc
-echo 'alias secretd="docker exec -it secret-node_node_1 secretd"' >> /home/"$1"/.bashrc
-echo 'alias show-node-id="docker exec -it secret-node_node_1 secretd tendermint show-node-id"' >> /home/"$1"/.bashrc
-echo 'alias show-validator="docker exec -it secret-node_node_1 secretd tendermint show-validator"' >> /home/"$1"/.bashrc
-
-echo 'alias stop-secret-node="docker-compose -f /usr/local/bin/secret-node/docker-compose.yaml down"' >> /home/"$1"/.bashrc
-echo 'alias start-secret-node="docker-compose -f /usr/local/bin/secret-node/docker-compose.yaml up -d"' >> /home/"$1"/.bashrc
-
-echo "export CHAINID=$2" >> /home/"$1"/.bashrc
-echo "export MONIKER=$3" >> /home/"$1"/.bashrc
-echo "export PERSISTENT_PEERS=$4" >> /home/"$1"/.bashrc
-echo "export RPC_URL=$5" >> /home/"$1"/.bashrc
-echo "export REGISTRATION_SERVICE=$6" >> /home/"$1"/.bashrc
-# echo "export GENESIS_PATH=$5" >> /home/$1/.bashrc
+# set Aliases and environment variables
+{
+  echo 'alias secretcli="docker exec -it secret-node_node_1 secretcli"'
+  echo 'alias secretd="docker exec -it secret-node_node_1 secretd"'
+  echo 'alias show-node-id="docker exec -it secret-node_node_1 secretd tendermint show-node-id"'
+  echo 'alias show-validator="docker exec -it secret-node_node_1 secretd tendermint show-validator"'
+  echo 'alias stop-secret-node="docker-compose -f /usr/local/bin/secret-node/docker-compose.yaml down"'
+  echo 'alias start-secret-node="docker-compose -f /usr/local/bin/secret-node/docker-compose.yaml up -d"'
+  echo "export CHAINID=$2"
+  echo "export MONIKER=$3"
+  echo "export PERSISTENT_PEERS=$4"
+  echo "export RPC_URL=$5"
+  echo "export REGISTRATION_SERVICE=$6"
+} >> /home/"$1"/.bashrc
 
 export CHAINID=$2
 export MONIKER=$3
@@ -87,12 +87,14 @@ export PERSISTENT_PEERS=$4
 export RPC_URL=$5
 export REGISTRATION_SERVICE=$6
 
-echo "CHAINID=$2" >> /home/"$1"/install.progress.txt
-echo "MONIKER=$3" >> /home/"$1"/install.progress.txt
-echo "PRSISTENT_PEERS=$4" >> /home/"$1"/install.progress.txt
-echo "export RPC_URL=$5" >> /home/"$1"/install.progress.txt
-echo "export REGISTRATION_SERVICE=$6" >> /home/"$1"/install.progress.txt
-
+# Log these for debugging purposes
+{
+  echo "CHAINID=$2"
+  echo "MONIKER=$3"
+  echo "PRSISTENT_PEERS=$4"
+  echo "export RPC_URL=$5"
+  echo "export REGISTRATION_SERVICE=$6"
+} >> /home/"$1"/install.progress.txt
 
 ################################################################
 # Configure to auto start at boot					    #
@@ -110,11 +112,10 @@ docker-compose -f /usr/local/bin/secret-node/docker-compose.yaml up -d
 secretcli completion > /root/secretcli_completion
 secretd completion > /root/secretd_completion
 
-docker cp secret-node_node_1:/root/secretcli_completion /home/$1/secretcli_completion
-docker cp secret-node_node_1:/root/secretd_completion /home/$1/secretd_completion
+docker cp secret-node_node_1:/root/secretcli_completion /home/"$1"/secretcli_completion
+docker cp secret-node_node_1:/root/secretd_completion /home/"$1"/secretd_completion
 
-echo 'source /home/'$1'/secretd_completion' >> ~/.bashrc
-echo 'source /home/'$1'/secretcli_completion' >> ~/.bashrc
+echo 'source /home/'$1'/secretd_completion' >> /home/"$1"/.bashrc
+echo 'source /home/'$1'/secretcli_completion' >> /home/"$1"/.bashrc
 
-
-echo "Secret Node has been setup successfully and is running..." >> /home/$1/install.progress.txt
+echo "Secret Node has been setup successfully and is running..." >> /home/"$1"/install.progress.txt

@@ -30,7 +30,7 @@ COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosm
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretd secretd
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretcli secretcli
 
-COPY ./deployment/deb packaging_ubuntu
+COPY ./deployment/deb ./deployment/deb
 COPY ./deployment/docker/builder/build_deb.sh .
 
 RUN chmod +x build_deb.sh

@@ -22,7 +22,7 @@
     },
     "chainId": {
       "type": "string",
-      "defaultValue": "enigma-pub-testnet-2",
+      "defaultValue": "secret-2",
       "metadata": {
         "description": "The blockchain software to install on the VM"
       }
@@ -36,21 +36,21 @@
     },
     "rpcUrl": {
       "type": "string",
-      "defaultValue": "bootstrap.pub.testnet.enigma.co:26657",
+      "defaultValue": "secret-2.node.enigma.co:26657",
       "metadata": {
         "description": "The blockchain software to install on the VM"
       }
     },
     "registrationService": {
       "type": "string",
-      "defaultValue": "register.pub.testnet.enigma.co:26666",
+      "defaultValue": "register.mainnet.enigma.co:26667",
       "metadata": {
         "description": "The blockchain software to install on the VM"
       }
     },
     "persistentPeers": {
       "type": "string",
-      "defaultValue": "115aa0a629f5d70dd1d464bc7e42799e00f4edae@40.76.91.27:26656",
+      "defaultValue": "115aa0a629f5d70dd1d464bc7e42799e00f4edae@secret-2.node.enigma.co:26656",
       "metadata": {
         "description": "List of peers to intially connect to"
       }

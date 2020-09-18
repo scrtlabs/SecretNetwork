@@ -40,7 +40,6 @@ COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretc
 
 COPY x/compute/internal/keeper/testdata/erc20.wasm erc20.wasm
 
-# COPY ./packaging_docker/devnet_init.sh .
 COPY deployment/ci/wasmi-sgx-test.sh .
 COPY deployment/ci/bootstrap_init.sh .
 COPY deployment/ci/node_init.sh .
@@ -58,7 +57,6 @@ RUN chmod +x node_init.sh
 RUN mkdir -p /root/.secretd/.compute/
 RUN mkdir -p /root/.sgx_secrets/
 RUN mkdir -p /root/.secretd/.node/
-# COPY ./packaging_docker/seed.json /root/.secretd/.compute/seed.json
 
 # Enable autocomplete
 RUN secretcli completion > /root/secretcli_completion

@@ -161,15 +161,15 @@ deb-no-compile:
 	chmod +x /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/lib*.so
 
 	mkdir -p /tmp/SecretNetwork/deb/DEBIAN
-	cp ./packaging_ubuntu/control /tmp/SecretNetwork/deb/DEBIAN/control
+	cp ./deployment/deb/control /tmp/SecretNetwork/deb/DEBIAN/control
 	printf "Version: " >> /tmp/SecretNetwork/deb/DEBIAN/control
 	printf "$(VERSION)" >> /tmp/SecretNetwork/deb/DEBIAN/control
 	echo "" >> /tmp/SecretNetwork/deb/DEBIAN/control
-	cp ./packaging_ubuntu/postinst /tmp/SecretNetwork/deb/DEBIAN/postinst
+	cp ./deployment/deb/postinst /tmp/SecretNetwork/deb/DEBIAN/postinst
 	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/postinst
-	cp ./packaging_ubuntu/postrm /tmp/SecretNetwork/deb/DEBIAN/postrm
+	cp ./deployment/deb/postrm /tmp/SecretNetwork/deb/DEBIAN/postrm
 	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/postrm
-	cp ./packaging_ubuntu/triggers /tmp/SecretNetwork/deb/DEBIAN/triggers
+	cp ./deployment/deb/triggers /tmp/SecretNetwork/deb/DEBIAN/triggers
 	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/triggers
 	dpkg-deb --build /tmp/SecretNetwork/deb/ .
 	-rm -rf /tmp/SecretNetwork
@@ -212,38 +212,38 @@ clean:
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
 
 build-dev-image: docker_base
-	SGX_MODE=SW docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/Dockerfile.release -t enigmampc/secret-network-sw-dev:${DOCKER_TAG} .
+	SGX_MODE=SW docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-sw-dev:${DOCKER_TAG} .
 
 build-testnet: docker_base
 	@mkdir build 2>&3 || true
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/Dockerfile.release -t enigmampc/secret-network-bootstrap:v$(VERSION)-testnet .
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/Dockerfile.release -t enigmampc/secret-network-node:v$(VERSION)-testnet .
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/Dockerfile_build_deb -t deb_build .
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-testnet .
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-testnet .
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
 build-mainnet:
 	@mkdir build 2>&3 || true
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg FEATURES=production -f deployment/dockerfiles/Dockerfile.base -t rust-go-base-image .
-	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/Dockerfile.release -t enigmampc/secret-network-bootstrap:v$(VERSION)-mainnet .
-	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/Dockerfile.release -t enigmampc/secret-network-node:v$(VERSION)-mainnet .
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/Dockerfile_build_deb -t deb_build .
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg FEATURES=production -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-mainnet .
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-mainnet .
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
 docker_base:
-	docker build --build-arg FEATURES=${FEATURES} --build-arg SGX_MODE=${SGX_MODE} -f deployment/dockerfiles/Dockerfile.base -t rust-go-base-image .
+	docker build --build-arg FEATURES=${FEATURES} --build-arg SGX_MODE=${SGX_MODE} -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
 
 docker_bootstrap: docker_base
-	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/Dockerfile -t enigmampc/secret-network-bootstrap-${ext}:${DOCKER_TAG} .
+	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/local-node.Dockerfile -t enigmampc/secret-network-bootstrap-${ext}:${DOCKER_TAG} .
 
 docker_node: docker_base
-	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/Dockerfile -t enigmampc/secret-network-node-${ext}:${DOCKER_TAG} .
+	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/local-node.Dockerfile -t enigmampc/secret-network-node-${ext}:${DOCKER_TAG} .
 
 docker_local_azure_hw: docker_base
-	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/Dockerfile -t ci-enigma-sgx-node .
-	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/Dockerfile -t ci-enigma-sgx-bootstrap .
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/local-node.Dockerfile -t ci-enigma-sgx-node .
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/local-node.Dockerfile -t ci-enigma-sgx-bootstrap .
 
 docker_enclave_test:
-	docker build --build-arg FEATURES="test ${FEATURES}" --build-arg SGX_MODE=${SGX_MODE} -f deployment/dockerfiles/Dockerfile.enclave-test -t rust-enclave-test .
+	docker build --build-arg FEATURES="test ${FEATURES}" --build-arg SGX_MODE=${SGX_MODE} -f deployment/dockerfiles/enclave-test.Dockerfile -t rust-enclave-test .
 
 # while developing:
 build-enclave: vendor
