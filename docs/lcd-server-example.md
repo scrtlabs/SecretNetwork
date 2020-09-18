@@ -70,7 +70,7 @@ After=network.target
 [Service]
 Type=simple
 ExecStart=$(which secretcli) rest-server --trust-node=true --chain-id secret-2 --laddr tcp://127.0.0.1:1337
-User=ubuntu
+User=$USER
 Restart=always
 StartLimitInterval=0
 RestartSec=3
@@ -85,8 +85,8 @@ sudo systemctl start  secret-lcd
 
 echo "deb [trusted=yes] https://apt.fury.io/caddy/ /" |
         sudo tee -a /etc/apt/sources.list.d/caddy-fury.list
-sudo apt update
-sudo apt install -y caddy
+sudo apt-get update
+sudo apt-get install -y caddy
 
 echo "
 $DOMAIN_NAME
