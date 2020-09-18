@@ -45,9 +45,11 @@ echo "Creating secret node runner" >> /home/$1/install.progress.txt
 mkdir -p /usr/local/bin/secret-node
 
 if [[ $6 == *"mainnet"* ]]; then
-  sudo curl -L https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/packaging_docker/mainnet/azure/secret-node-azure-template/scripts/docker-compose.yaml -o /usr/local/bin/secret-node/docker-compose.yaml
+  sudo curl -L https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/packaging_docker/azure/mainnet/docker-compose.yaml -o /usr/local/bin/secret-node/docker-compose.yaml
+  echo "Downloaded mainnet compose file " >> /home/$1/install.progress.txt
 else
-  sudo curl -L https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/packaging_docker/testnet/azure/secret-node-azure-template/scripts/docker-compose.yaml -o /usr/local/bin/secret-node/docker-compose.yaml
+  sudo curl -L https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/packaging_docker/azure/testnet/docker-compose.yaml -o /usr/local/bin/secret-node/docker-compose.yaml
+  echo "Downloaded testnet compose file " >> /home/$1/install.progress.txt
 fi
 
 

@@ -28,8 +28,8 @@ ENV MITIGATION_CVE_2020_0551=LOAD
 COPY third_party/build third_party/build
 
 # Add source files
-COPY go-cosmwasm/ go-cosmwasm/
-COPY cosmwasm/ cosmwasm/
+COPY go-cosmwasm go-cosmwasm/
+COPY cosmwasm cosmwasm/
 
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 
@@ -76,7 +76,7 @@ RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${
 RUN cp /go/src/github.com/enigmampc/SecretNetwork/cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so x/compute/internal/keeper
 RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/x/compute/internal/keeper/.sgx_secrets
 
-COPY packaging_docker/ci/go-tests.sh .
+COPY deployment/ci/go-tests.sh .
 RUN chmod +x go-tests.sh
 
 ENTRYPOINT ["/bin/bash", "go-tests.sh"]
