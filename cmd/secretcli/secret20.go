@@ -187,7 +187,7 @@ func s20SendCmd(cdc *codec.Codec) *cobra.Command {
 
 			amount := args[2]
 			_, err = strconv.ParseUint(amount, 10, 64)
-			if err == nil {
+			if err != nil {
 				return errors.New("invalid amount format")
 			}
 
