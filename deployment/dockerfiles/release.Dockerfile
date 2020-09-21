@@ -38,11 +38,10 @@ COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosm
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretd /usr/bin/secretd
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretcli /usr/bin/secretcli
 
-# COPY ./packaging_docker/devnet_init.sh .
-COPY packaging_docker/testnet/bootstrap_init.sh .
-COPY packaging_docker/testnet/node_init.sh .
-COPY packaging_docker/testnet/startup.sh .
-COPY packaging_docker/testnet/node_key.json .
+COPY deployment/docker/bootstrap/bootstrap_init.sh .
+COPY deployment/docker/node/node_init.sh .
+COPY deployment/docker/startup.sh .
+COPY deployment/docker/node_key.json .
 
 RUN chmod +x /usr/bin/secretd
 RUN chmod +x /usr/bin/secretcli
@@ -60,7 +59,6 @@ RUN echo 'source /root/secretcli_completion' >> ~/.bashrc
 RUN mkdir -p /root/.secretd/.compute/
 RUN mkdir -p /root/.sgx_secrets/
 RUN mkdir -p /root/.secretd/.node/
-# COPY ./packaging_docker/seed.json /root/.secretd/.compute/seed.json
 
 ####### Node parameters
 ARG MONIKER=default

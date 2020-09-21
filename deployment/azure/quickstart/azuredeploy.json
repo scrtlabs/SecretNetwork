@@ -8,12 +8,6 @@
         "description": "This is the unique DNS name of the for the public IP for your VM"
       }
     },
-    "applicationResourceName": {
-      "type": "string",
-      "metadata": {
-        "description": "The name of the VM to be created"
-      }
-    },
     "adminUsername": {
       "type": "string",
       "metadata": {
@@ -22,37 +16,36 @@
     },
     "chainId": {
       "type": "string",
-      "defaultValue": "enigma-pub-testnet-2",
+      "defaultValue": "enigma-pub-testnet-4",
       "metadata": {
-        "description": "The blockchain software to install on the VM"
+        "description": "Chain ID of the network"
       }
     },
     "moniker": {
       "type": "string",
-      "defaultValue": "AzureSecretNodeDefault2",
       "metadata": {
-        "description": "The blockchain software to install on the VM"
+        "description": "The network name of the node"
       }
     },
     "rpcUrl": {
       "type": "string",
-      "defaultValue": "bootstrap.pub.testnet.enigma.co:26657",
+      "defaultValue": "bootstrap.pub.testnet3.enigma.co:26657",
       "metadata": {
-        "description": "The blockchain software to install on the VM"
+        "description": "The URL of a RPC service used to communicate with the network"
       }
     },
     "registrationService": {
       "type": "string",
-      "defaultValue": "register.pub.testnet.enigma.co:26666",
+      "defaultValue": "register.pub.testnet.enigma.co:26667",
       "metadata": {
-        "description": "The blockchain software to install on the VM"
+        "description": "The URL of the registeration service"
       }
     },
     "persistentPeers": {
       "type": "string",
-      "defaultValue": "115aa0a629f5d70dd1d464bc7e42799e00f4edae@40.76.91.27:26656",
+      "defaultValue": "115aa0a629f5d70dd1d464bc7e42799e00f4edae@bootstrap.pub.testnet3.enigma.co",
       "metadata": {
-        "description": "List of peers to intially connect to"
+        "description": "List of peers to initially connect to"
       }
     },
     "vmSize": {
@@ -71,7 +64,7 @@
       "metadata": {
         "description": "The base URI where artifacts required by this template are located. When the template is deployed using the accompanying scripts, a private location in the subscription will be used and this value will be automatically generated."
       },
-      "defaultValue": "[deployment().properties.templateLink.uri]"
+      "defaultValue": "https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/deployment/azure/secret-node-azure-template/"
     },
     "_artifactsLocationSasToken": {
       "type": "securestring",
@@ -91,7 +84,8 @@
       "type": "string",
       "defaultValue": "sshPublicKey",
       "allowedValues": [
-        "sshPublicKey"
+        "sshPublicKey",
+        "password"
       ],
       "metadata": {
         "description": "Type of authentication to use on the Virtual Machine. SSH key is recommended."
@@ -113,7 +107,7 @@
     "publicIPAddressName": "publicIP",
     "publicIPAddressType": "Dynamic",
     "networkSecurityGroupName": "NSG-1",
-    "vmName": "[parameters('applicationResourceName')]",
+    "vmName": "[parameters('vmDnsPrefix')]",
     "virtualNetworkName": "VNET",
     "subnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]",
     "linuxConfiguration": {
@@ -147,7 +141,11 @@
               "destinationAddressPrefix": "*",
               "access": "Allow",
               "priority": 2000,
-              "direction": "Inbound"
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
             }
           },
           {
@@ -160,7 +158,11 @@
               "destinationAddressPrefix": "*",
               "access": "Allow",
               "priority": 2100,
-              "direction": "Inbound"
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
             }
           }
         ]
@@ -203,6 +205,7 @@
             }
           }
         ],
+        "virtualNetworkPeerings": [],
         "enableDdosProtection": false,
         "enableVmProtection": false
       }
@@ -319,20 +322,7 @@
           "commandToExecute": "[concat('sh secretnode.sh',' ',parameters('adminUsername'),' ',parameters('chainId'),' ',parameters('moniker'),' ',parameters('persistentPeers'),' ',parameters('rpcUrl'),' ',parameters('registrationService'))]"
         }
       }
-    },
-	{
-		"apiVersion": "2018-02-01",
-		"name": "pid-7f40ee20-4ee6-5b1e-a2aa-47f9a3fb5631",
-		"type": "Microsoft.Resources/deployments",
-		"properties": {
-			"mode": "Incremental",
-			"template": {
-				"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-				"contentVersion": "1.0.0.0",
-				"resources": []
-			}
-		}
-	}
+    }
   ],
   "outputs": {
     "adminUsername": {

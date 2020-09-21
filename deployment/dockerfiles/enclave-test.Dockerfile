@@ -21,7 +21,7 @@ COPY spid.txt /enclave-test/cosmwasm/packages/wasmi-runtime/
 
 RUN make vendor
 
-COPY packaging_docker/ci/enclave-test.sh .
+COPY deployment/ci/enclave-test.sh .
 RUN chmod +x enclave-test.sh
 
 ENTRYPOINT ["/bin/bash", "enclave-test.sh"]

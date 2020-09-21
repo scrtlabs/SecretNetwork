@@ -38,14 +38,13 @@ COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosm
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretd /usr/bin/secretd
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretcli /usr/bin/secretcli
 
-COPY ./x/compute/internal/keeper/testdata/erc20.wasm erc20.wasm
+COPY x/compute/internal/keeper/testdata/erc20.wasm erc20.wasm
 
-# COPY ./packaging_docker/devnet_init.sh .
-COPY packaging_docker/ci/wasmi-sgx-test.sh .
-COPY packaging_docker/ci/bootstrap_init.sh .
-COPY packaging_docker/ci/node_init.sh .
-COPY packaging_docker/ci/startup.sh .
-COPY packaging_docker/ci/node_key.json .
+COPY deployment/ci/wasmi-sgx-test.sh .
+COPY deployment/ci/bootstrap_init.sh .
+COPY deployment/ci/node_init.sh .
+COPY deployment/ci/startup.sh .
+COPY deployment/ci/node_key.json .
 
 RUN chmod +x /usr/bin/secretd
 RUN chmod +x /usr/bin/secretcli
@@ -58,7 +57,6 @@ RUN chmod +x node_init.sh
 RUN mkdir -p /root/.secretd/.compute/
 RUN mkdir -p /root/.sgx_secrets/
 RUN mkdir -p /root/.secretd/.node/
-# COPY ./packaging_docker/seed.json /root/.secretd/.compute/seed.json
 
 # Enable autocomplete
 RUN secretcli completion > /root/secretcli_completion

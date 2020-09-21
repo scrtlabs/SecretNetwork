@@ -21,10 +21,10 @@ application = Flask(__name__)
 CORS(application)
 
 wallet_name = 'a'
-node_url = os.getenv("RPC_URL", '51.132.225.152:26657')
+node_url = os.getenv("RPC_URL", 'secret-2.node.enigma.co:26657')
 cert_file = 'attestation_cert.der'
 
-executable = ['secretcli', 'tx', 'register', 'auth', cert_file, '--node', 'tcp://' + node_url, '-y', '--from', wallet_name, '--gas', '500000']
+executable = ['secretcli', 'tx', 'register', 'auth', cert_file, '--node', 'tcp://' + node_url, '-y', '--from', wallet_name, '--gas', '250000']
 
 
 # @ns.param('cert', 'Base64 encoded certificate file', 'query')
