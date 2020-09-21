@@ -1,7 +1,7 @@
 # Azure Image Guide
 
-This file is a copy of the file [here](https://github.com/enigmampc/SecretNetwork/blob/develop/packaging_docker/testnet/azure/secret-node-azure-template/Usage.md) and is mainly here for visibility.
-The files you need to run this guide are [here](https://github.com/enigmampc/SecretNetwork/tree/develop/packaging_docker/testnet/azure/secret-node-azure-template)
+This file is a copy of the file [here](https://github.com/enigmampc/SecretNetwork/blob/master/deployment/azure/secret-node-azure-template/Usage.md) and is mainly here for visibility.
+The files you need to run this guide are [here](https://github.com/enigmampc/SecretNetwork/tree/master/deployment/azure/secret-node-azure-template)
 
 ## Requirements
 
@@ -21,7 +21,7 @@ Now lets go over how to do that, and how to use the image once it's deployed.
 
 ## Installation - Quickstart Template
 
-__Note: This image is preconfigured to work with the incentivized testnet__
+__Note: This image is preconfigured to work with the testnet__
 
 Download this directory.
 
