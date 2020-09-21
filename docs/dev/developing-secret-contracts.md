@@ -139,7 +139,7 @@ This exmaple has a much worse UX than rolling your own randomness, but at least 
 ### With docker
 
 ```console
-$ docker run -v /absolute/path/to/contract/project:/contract enigmampc/secret-contract-optimizer
+$ docker run --rm -it -v /absolute/path/to/contract/project:/contract enigmampc/secret-contract-optimizer
 ```
 
 Where `/absolute/path/to/contract/project` is pointing to the directory that contains your Secret Contract's `Cargo.toml`.
