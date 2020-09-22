@@ -1,14 +1,20 @@
 # Secret Network Contracts Introduction
 
-Get up and running on Secret Network testnet (enigma-pub-testnet-2) to start working with Secret Contracts.
+Get up and running on Secret Network testnet (enigma-pub-testnet-4) to start working with Secret Contracts.
 
 Secret Contracts are written in Rust and based on CosmWasm. The module is referred to as `compute` in the Secret Network
 
 ## Setup the Secret Network light client
-- [Install the secretcli](https://github.com/enigmampc/SecretNetwork/blob/master/docs/testnet/install_cli.md)
+- install [secretcli](https://github.com/enigmampc/SecretNetwork/blob/master/docs/testnet/install_cli.md)
+- use [version 0.8.1](https://github.com/enigmampc/SecretNetwork/releases/tag/v0.8.1) for testnet
 - configure secretcli to use the testnet
+
   ```
-  secretcli config node tcp://bootstrap.pub.testnet.enigma.co:26657
+  ssecretcli config node tcp://bootstrap.pub.testnet3.enigma.co:26657
+
+  secretcli config chain-id enigma-pub-testnet-4
+
+  secretcli config trust-node true
   ```
 
 ## Setup Secret Contracts
