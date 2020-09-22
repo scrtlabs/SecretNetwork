@@ -272,7 +272,7 @@ TODO reasoning
 - `encryption_key` is derived using HKDF-SHA256 from:
   - `consensus_state_ikm`
   - `field_name`
-  - `contact_key`
+  - `contract_key`
 - `ad` (Additional Data) is used to prevent leaking information about the same value written to the same key at different times.
 
 ## `contract_key`

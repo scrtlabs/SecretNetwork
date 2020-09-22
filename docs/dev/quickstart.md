@@ -1,14 +1,21 @@
 # Secret Network Contracts Introduction
 
-Get up and running on Secret Network testnet (enigma-pub-testnet-2) to start working with Secret Contracts.
+Get up and running on Secret Network testnet (enigma-pub-testnet-4) to start working with Secret Contracts.
 
 Secret Contracts are written in Rust and based on CosmWasm. The module is referred to as `compute` in the Secret Network
 
 ## Setup the Secret Network light client
-- [Install the secretcli](https://github.com/enigmampc/SecretNetwork/blob/master/docs/testnet/install_cli.md)
+
+- install [secretcli](https://github.com/enigmampc/SecretNetwork/blob/master/docs/testnet/install_cli.md)
+- use [version 0.8.1](https://github.com/enigmampc/SecretNetwork/releases/tag/v0.8.1) for testnet
 - configure secretcli to use the testnet
+
   ```
-  secretcli config node tcp://bootstrap.pub.testnet.enigma.co:26657
+  secretcli config node tcp://bootstrap.pub.testnet3.enigma.co:26657
+
+  secretcli config chain-id enigma-pub-testnet-4
+
+  secretcli config trust-node true
   ```
 
 ## Setup Secret Contracts
@@ -18,12 +25,12 @@ Secret Contracts are based on [CosmWasm](https://www.cosmwasm.com), which is the
 The SecretNetwork has a _compute_ module that we use to store, query and instantiate the smart contract. Once stored on the blockchain the smart contract has to be created (or instantiated) in order to execute its methods. This is similar to doing an Ethereum `migrate` using truffle, which handles the deployment and creation of a smart contract. Secret Contracts run inside secure enclaves or Trusted Execution Environments (TEEs), where computations are performed on encrypted contract data (i.e. inputs & state).
 
 Next, we'll walkthrough steps to:
+
 - install Rust (you can check out the Rust book, rustlings course, examples and more at https://www.rust-lang.org/learn)
 - install the Rust dependencies
 - create your first project
 
 The Rust dependencies include the Rust compiler, cargo (_package manager_), toolchain and a package to generate projects (you can check out the Rust book, rustlings course, examples and more at https://www.rust-lang.org/learn).
-
 
 1. Install Rust
 
@@ -46,6 +53,7 @@ rustup target add wasm32-unknown-unknown --toolchain nightly
 ```
 
 3. If using linux, install the standard build tools:
+
 ```
 apt install build-essential
 ```
@@ -61,6 +69,7 @@ cargo install cargo-generate --features vendored-openssl
 ## Create Initial Smart Contract
 
 To create the smart contract you'll:
+
 - generate the initial project
 - compile the smart contract
 - run unit tests
@@ -123,7 +132,6 @@ Auto-generate msg schemas (when changed):
 cargo schema
 ```
 
-
 ## Deploy Smart Contract
 
 Before deploying or storing the contract on the testnet, need to run the cosmwasm optimizer.
@@ -134,11 +142,13 @@ Before deploying or storing the contract on the testnet, need to run the cosmwas
 docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  cosmwasm/rust-optimizer:0.8.0  
+  cosmwasm/rust-optimizer:0.8.0
 ```
+
 The contract wasm needs to be optimized to get a smaller footprint. Cosmwasm notes state the contract would be too large for the blockchain unless optimized. This example contract.wasm is 1.8M before optimizing, 90K after.
 
 The optimization creates two files:
+
 - contract.wasm
 - hash.txt
 
@@ -151,6 +161,7 @@ secretcli tx compute store contract.wasm --from <your account alias> --gas 50000
 ```
 
 The result is a txhash, query it you can see the code_id in the logs, in this case it's 93 as shown below. We'll need the code_id to create an instance of the contract.
+
 ```
 secretcli q tx 9A07B4A7FDD23BF654A6A8C1CE44EF410252AA3707590D347D4761D70B8C4B44
 ```
@@ -160,6 +171,7 @@ secretcli q tx 9A07B4A7FDD23BF654A6A8C1CE44EF410252AA3707590D347D4761D70B8C4B44
 ### Querying the Smart Contract and Code
 
 List current smart contract code
+
 ```
 secretcli query compute list-code
 [
@@ -191,12 +203,15 @@ secretcli tx compute instantiate $CODE_ID "$INIT" --from <your account alias> --
 ```
 
 With the contract now initialized, we can find its address
+
 ```bash
 secretcli query compute list-contract-by-code $CODE_ID
 ```
+
 Our instance is secret1tss72nzwqzverru7fy5s49czqepmvdgwdz3gcx
 
 We can query the contract state
+
 ```bash
 CONTRACT=secret1tss72nzwqzverru7fy5s49czqepmvdgwdz3gcx
 
@@ -204,9 +219,11 @@ secretcli query compute query $CONTRACT "{\"get_count\": {}}"
 ```
 
 And we can increment our counter
+
 ```bash
 secretcli tx compute execute $CONTRACT "{\"increment\": {}}" --from <your account alias>
 ```
+
 ![](contract_interactions.png)
 
 ## Smart Contract
@@ -214,6 +231,7 @@ secretcli tx compute execute $CONTRACT "{\"increment\": {}}" --from <your accoun
 ### Project Structure
 
 The source directory (`src/`) has these files:
+
 ```
 contract.rs  lib.rs  msg.rs  state.rs
 ```
@@ -294,14 +312,14 @@ mod tests {
     }
 ```
 
-
 ## Resources
+
 Smart Contracts in the Secret Network use cosmwasm. Therefore, for troubleshooting and additional context, cosmwasm documentation may be very useful. Here are some of the links we relied on in putting together this guide:
 
 - [cosmwasm repo](https://github.com/CosmWasm/cosmwasm)
 - [cosmwasm starter pack - project template](https://github.com/CosmWasm/cosmwasm-template)
 - [Setting up a local "testnet"](https://www.cosmwasm.com/docs/getting-started/using-the-sdk)
-- [cosmwasm docs](https://www.cosmwasm.com/docs/intro/overview) 
+- [cosmwasm docs](https://www.cosmwasm.com/docs/intro/overview)
 
 # What's next?
 
