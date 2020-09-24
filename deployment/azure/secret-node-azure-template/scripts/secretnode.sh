@@ -44,7 +44,9 @@ echo "Creating secret node runner" >> /home/"$1"/install.progress.txt
 
 mkdir -p /usr/local/bin/secret-node
 
-if [[ $6 == *"mainnet"* ]]; then
+mainnetstr="mainnet"
+if test "${6#*$mainnetstr}" != "$6"
+then
   sudo curl -L https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/deployment/azure/mainnet/docker-compose.yaml -o /usr/local/bin/secret-node/docker-compose.yaml
   echo "Downloaded mainnet compose file" >> /home/"$1"/install.progress.txt
 else
@@ -66,6 +68,12 @@ perl -i -pe 's/laddr = .+?26656"/laddr = "tcp:\/\/0.0.0.0:26656"/' ~/.secretd/co
 
 echo "Setting Secret Node environment variables and aliases" >> /home/"$1"/install.progress.txt
 
+export CHAINID=$2
+export MONIKER=$3
+export PERSISTENT_PEERS=$4
+export RPC_URL=$5
+export REGISTRATION_SERVICE=$6
+
 # set Aliases and environment variables
 {
   echo 'alias secretcli="docker exec -it secret-node_node_1 secretcli"'
@@ -81,19 +89,13 @@ echo "Setting Secret Node environment variables and aliases" >> /home/"$1"/insta
   echo "export REGISTRATION_SERVICE=$6"
 } >> /home/"$1"/.bashrc
 
-export CHAINID=$2
-export MONIKER=$3
-export PERSISTENT_PEERS=$4
-export RPC_URL=$5
-export REGISTRATION_SERVICE=$6
-
 # Log these for debugging purposes
 {
   echo "CHAINID=$2"
   echo "MONIKER=$3"
   echo "PRSISTENT_PEERS=$4"
-  echo "export RPC_URL=$5"
-  echo "export REGISTRATION_SERVICE=$6"
+  echo "RPC_URL=$5"
+  echo "REGISTRATION_SERVICE=$6"
 } >> /home/"$1"/install.progress.txt
 
 ################################################################
@@ -102,7 +104,30 @@ export REGISTRATION_SERVICE=$6
 file=/etc/init.d/secret-node
 if [ ! -e "$file" ]
 then
-	printf '%s\n%s\n' '#!/bin/sh' 'docker-compose -f /usr/local/bin/secret-node/docker-compose.yaml up -d' | sudo tee /etc/init.d/secret-node
+  {
+    echo '#!/bin/sh'
+    printf '\n'
+    # shellcheck disable=SC2016
+    printf '### BEGIN INIT INFO
+# Provides:       secret-node
+# Required-Start:    $all
+# Required-Stop:     $local_fs $network $syslog $named $docker
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: starts secret node
+# Description:       starts secret node running in docker
+### END INIT INFO\n\n'
+    printf 'mkdir -p -m 777 /tmp/aesmd\n'
+    printf 'chmod -R -f 777 /tmp/aesmd || sudo chmod -R -f 777 /tmp/aesmd || true\n'
+    printf '\n'
+    echo "export CHAINID=$2"
+    echo "export MONIKER=$3"
+    echo "export PRSISTENT_PEERS=$4"
+    echo "export RPC_URL=$5"
+    echo "export REGISTRATION_SERVICE=$6"
+    printf 'docker-compose -f /usr/local/bin/secret-node/docker-compose.yaml up -d\n'
+  } | sudo tee /etc/init.d/secret-node
+
 	sudo chmod +x /etc/init.d/secret-node
 	sudo update-rc.d secret-node defaults
 fi
