@@ -162,7 +162,7 @@ dependencies = [
  "base64 0.11.0",
  "schemars",
  "serde",
- "serde-json-wasm",
+ "serde_json",
  "snafu",
 ]
 
@@ -435,15 +435,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e54c9a88f2da7238af84b5101443f0c0d0a3bbdc455e34a5c9497b1903ed55d5"
 dependencies = [
  "serde_derive",
-]
-
-[[package]]
-name = "serde-json-wasm"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7294d94d390f1d2334697c065ea591d7074c676e2d20aa6f1df752fced29823f"
-dependencies = [
- "serde",
 ]
 
 [[package]]
