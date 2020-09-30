@@ -369,9 +369,9 @@ fn start_engine(
 
     info!("Created Wasmi module from parity. Now checking for floating points...");
 
-    module
-        .deny_floating_point()
-        .map_err(|_err| EnclaveError::WasmModuleWithFP)?;
+    // module
+    //     .deny_floating_point()
+    //     .map_err(|_err| EnclaveError::WasmModuleWithFP)?;
 
     // Create new imports resolver.
     // These are the signatures of rust functions available to invoke from wasm code.
