@@ -348,7 +348,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			}
 
 			answer.RawInput = string(plaintextInput)
-			answer.Input = []byte(plaintextInput[64:])
+			_ = json.Unmarshal(plaintextInput[64:], answer.Input)
 
 			// decrypt data
 			if answer.Type == "execute" {
