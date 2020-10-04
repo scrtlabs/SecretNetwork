@@ -44,6 +44,8 @@ COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/
 COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/
 COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/
 COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/
+COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/
+COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/
 
 RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build-rust
 
