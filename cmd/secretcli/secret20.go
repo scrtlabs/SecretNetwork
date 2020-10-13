@@ -55,7 +55,7 @@ func S20GetTxCmd(cdc *codec.Codec) *cobra.Command {
 		s20TransferCmd(cdc),
 		s20CreatingViewingKey(cdc),
 		s20DepositCmd(cdc),
-		s20Withdraw(cdc),
+		s20Redeem(cdc),
 		s20SetViewingKey(cdc),
 	)...)
 
@@ -64,10 +64,10 @@ func S20GetTxCmd(cdc *codec.Codec) *cobra.Command {
 
 func S20TransferHistoryCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "history [contract address] [account] [viewing_key]",
+		Use:   "history [contract address] [account] [viewing_key] [optional: page, default: 0] [optional: page_size, default: 10]",
 		Short: "*EXPERIMENTAL* View your transaction history",
-		Long:  `Print out all transactions you have been a part of - either as a sender or recipient`,
-		Args:  cobra.ExactArgs(3),
+		Long:  `Print out transactions you have been a part of - either as a sender or recipient`,
+		Args:  cobra.MinimumNArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -87,7 +87,24 @@ func S20TransferHistoryCmd(cdc *codec.Codec) *cobra.Command {
 				return errors.New("viewing key must not be empty")
 			}
 
-			queryData := transferHistoryMsg(addr, key)
+			var page uint64 = 0
+			var pageSize uint64 = 10
+
+			if len(args) == 4 {
+				page, err = strconv.ParseUint(args[3], 10, 32)
+				if err != nil {
+					return err
+				}
+			}
+
+			if len(args) == 5 {
+				pageSize, err = strconv.ParseUint(args[3], 10, 32)
+				if err != nil {
+					return err
+				}
+			}
+
+			queryData := queryTransferHistoryMsg(addr, key, uint32(page), uint32(pageSize))
 
 			err = cli.QueryWithData(contractAddr, cdc, queryData)
 			if err != nil {
@@ -127,7 +144,7 @@ key yet, use the "create-viewing-key" command. Otherwise, you can still see your
 				return errors.New("viewing key must not be empty")
 			}
 
-			queryData := balanceMsg(addr, key)
+			queryData := queryBalanceMsg(addr, key)
 
 			err = cli.QueryWithData(contractAddr, cdc, queryData)
 			if err != nil {
@@ -192,7 +209,7 @@ func s20TransferCmd(cdc *codec.Codec) *cobra.Command {
 				return errors.New("invalid amount format")
 			}
 
-			msg := transferCoinMsg(toAddr, amount)
+			msg := handleTransferMsg(toAddr, amount)
 
 			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cdc)
 		},
@@ -207,9 +224,7 @@ func s20CreatingViewingKey(cdc *codec.Codec) *cobra.Command {
 		Use:   "create-viewing-key [contract address or label]",
 		Short: "*EXPERIMENTAL* Create a new viewing key. To view the resulting key, use 'secretcli q compute tx <TX_HASH>'",
 		Long: `This allows a user to generate a key that enables off-chain queries. 
-This way you can perform balance and transaction history queries without waiting for a transaction on-chain. 
-This transaction will be expensive, so you must have about 3,000,000 gas in your account to perform this step.
- This is intended to make queries take a long time to execute to be resistant to brute-force attacks.`,
+This way you can perform balance and transaction history queries without waiting for a transaction on-chain.`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
@@ -235,7 +250,7 @@ This transaction will be expensive, so you must have about 3,000,000 gas in your
 
 			randomData := hex.EncodeToString(byteArr)[:64]
 
-			msg := createViewingKeyMsg(randomData)
+			msg := handleCreateViewingKeyMsg(randomData)
 
 			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cdc)
 		},
@@ -268,7 +283,7 @@ you're doing`,
 				return errors.New("invalid contract address or label")
 			}
 
-			msg := setViewingKeyMsg(args[1])
+			msg := handleSetViewingKeyMsg(args[1])
 
 			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cdc)
 		},
@@ -299,7 +314,7 @@ func s20DepositCmd(cdc *codec.Codec) *cobra.Command {
 				return errors.New("invalid contract address or label")
 			}
 
-			msg := depositMsg()
+			msg := handleDepositMsg()
 
 			amountStr := viper.GetString(flagAmount)
 
@@ -310,10 +325,10 @@ func s20DepositCmd(cdc *codec.Codec) *cobra.Command {
 	return cmd
 }
 
-func s20Withdraw(cdc *codec.Codec) *cobra.Command {
+func s20Redeem(cdc *codec.Codec) *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "withdraw [contract address or label] [amount]",
+		Use:   "redeem [contract address or label] [amount]",
 		Short: "Convert your secret token back to SCRT",
 		Long:  `Convert your secret token back to SCRT. This command will only work if the token supports native currency conversion`,
 		Args:  cobra.MinimumNArgs(2),
@@ -334,7 +349,7 @@ func s20Withdraw(cdc *codec.Codec) *cobra.Command {
 
 			amount := args[1]
 
-			msg := withdrawMsg(amount)
+			msg := handleRedeemMsg(amount)
 
 			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cdc)
 		},
@@ -353,30 +368,35 @@ func spacePad(blockSize int, message string) string {
 	return message + strings.Repeat(" ", missing)
 }
 
-func transferHistoryMsg(fromAddress sdk.AccAddress, viewingKey string) []byte {
-	return []byte(spacePad(MESSAGE_BLOCK_SIZE, fmt.Sprintf("{\"transfers\": {\"address\": \"%s\", \"key\": \"%s\"}}", fromAddress.String(), viewingKey)))
+func queryTransferHistoryMsg(fromAddress sdk.AccAddress, viewingKey string, page uint32, pageSize uint32) []byte {
+	return []byte(spacePad(MESSAGE_BLOCK_SIZE,
+		fmt.Sprintf("{\"transfer_history\": {\"address\": \"%s\", \"key\": \"%s\", \"page\": %d, \"page_size\": %d}}",
+			fromAddress.String(),
+			viewingKey,
+			page,
+			pageSize)))
 }
 
-func balanceMsg(fromAddress sdk.AccAddress, viewingKey string) []byte {
+func queryBalanceMsg(fromAddress sdk.AccAddress, viewingKey string) []byte {
 	return []byte(spacePad(MESSAGE_BLOCK_SIZE, fmt.Sprintf("{\"balance\": {\"address\": \"%s\", \"key\": \"%s\"}}", fromAddress.String(), viewingKey)))
 }
 
-func transferCoinMsg(toAddress sdk.AccAddress, amount string) []byte {
+func handleTransferMsg(toAddress sdk.AccAddress, amount string) []byte {
 	return []byte(spacePad(MESSAGE_BLOCK_SIZE, fmt.Sprintf("{\"transfer\": {\"recipient\": \"%s\", \"amount\": \"%s\"}}", toAddress.String(), amount)))
 }
 
-func depositMsg() []byte {
+func handleDepositMsg() []byte {
 	return []byte(spacePad(MESSAGE_BLOCK_SIZE, fmt.Sprintf("{\"deposit\": {}}")))
 }
 
-func withdrawMsg(amount string) []byte {
-	return []byte(spacePad(MESSAGE_BLOCK_SIZE, fmt.Sprintf("{\"withdraw\": {\"amount\": \"%s\"}}", amount)))
+func handleRedeemMsg(amount string) []byte {
+	return []byte(spacePad(MESSAGE_BLOCK_SIZE, fmt.Sprintf("{\"redeem\": {\"amount\": \"%s\"}}", amount)))
 }
 
-func createViewingKeyMsg(data string) []byte {
+func handleCreateViewingKeyMsg(data string) []byte {
 	return []byte(spacePad(MESSAGE_BLOCK_SIZE, fmt.Sprintf("{\"create_viewing_key\": {\"entropy\": \"%s\"}}", data)))
 }
 
-func setViewingKeyMsg(data string) []byte {
+func handleSetViewingKeyMsg(data string) []byte {
 	return []byte(spacePad(MESSAGE_BLOCK_SIZE, fmt.Sprintf("{\"set_viewing_key\": {\"key\": \"%s\"}}", data)))
 }
