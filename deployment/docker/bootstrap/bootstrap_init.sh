@@ -16,8 +16,8 @@ then
   secretd init banana --chain-id enigma-pub-testnet-3
 
   cp ~/node_key.json ~/.secretd/config/node_key.json
-
   perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json
+  perl -i -pe 's/"22020096"/"104857600"/g' ~/.secretd/config/genesis.json
   secretcli keys add a
   secretcli keys add b
   secretcli keys add c
@@ -39,6 +39,9 @@ then
 
   secretd init-bootstrap
   secretd validate-genesis
+  perl -i -pe 's/"body"/"body2"/g' ~/.secretd/config/config.toml
+  perl -i -pe 's/max_body_bytes = 1000000/max_body_bytes = 100000000/g' ~/.secretd/config/config.toml
+  perl -i -pe 's/max_tx_bytes = 1048576/max_tx_bytes = 100000000/g' ~/.secretd/config/config.toml
 fi
 
 # sleep infinity

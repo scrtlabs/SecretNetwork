@@ -1,6 +1,7 @@
 pub use pwasm_utils::{inject_gas_counter, rules};
 
 /// Wasm cost table
+#[derive(Default)]
 pub struct WasmCosts {
     /// Default opcode cost
     pub regular: u32,
@@ -32,26 +33,26 @@ pub struct WasmCosts {
     pub external_canonicalize_address: u32,
 }
 
-impl Default for WasmCosts {
-    fn default() -> Self {
-        WasmCosts {
-            regular: 1,
-            div: 16,
-            mul: 4,
-            mem: 2,
-            static_u256: 64,
-            static_address: 40,
-            initial_mem: 8192,
-            grow_mem: 8192,
-            memcpy: 1,
-            max_stack_height: 64 * 1024, // Assaf: I don't think this goes anywhere
-            opcodes_mul: 3,
-            opcodes_div: 8,
-            external_humanize_address: 8192,
-            external_canonicalize_address: 8192,
-        }
-    }
-}
+// impl Default for WasmCosts {
+//     fn default() -> Self {
+//         WasmCosts {
+//             regular: 0,
+//             div: 0,
+//             mul: 0,
+//             mem: 0,
+//             static_u256: 0,
+//             static_address: 0,
+//             initial_mem: 0,
+//             grow_mem: 0,
+//             memcpy: 0,
+//             max_stack_height: 0 * 0, // Assaf: I don't think this goes anywhere
+//             opcodes_mul: 0,
+//             opcodes_div: 0,
+//             external_humanize_address: 0,
+//             external_canonicalize_address: 0,
+//         }
+//     }
+// }
 
 pub fn gas_rules(wasm_costs: &WasmCosts) -> rules::Set {
     rules::Set::new(wasm_costs.regular, {
@@ -79,7 +80,7 @@ pub fn gas_rules(wasm_costs: &WasmCosts) -> rules::Set {
         vals
     })
     .with_grow_cost(wasm_costs.grow_mem)
-    .with_forbidden_floats()
+    //.with_forbidden_floats()
 }
 
 #[derive(Debug, Clone)]

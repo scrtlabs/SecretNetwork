@@ -37,6 +37,7 @@ const (
 	flagIoMasterKey            = "enclave-key"
 	flagCodeHash               = "code-hash"
 	// flagAdmin                  = "admin"
+	flagMsgFromFile = "file"
 )
 
 // GetTxCmd returns the transaction commands for this module
@@ -260,9 +261,11 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 			var msg []byte
 			var codeHash string
 			var ioKeyPath string
-
+			msgArg := 0
 			genOnly := viper.GetBool(flags.FlagGenerateOnly)
 			amountStr := viper.GetString(flagAmount)
+
+			fileFlag := viper.GetBool(flagMsgFromFile)
 
 			if len(args) == 1 {
 
@@ -282,16 +285,32 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 				}
 
 				contractAddr = res
-				msg = []byte(args[0])
+
 			} else {
 				// get the id of the code to instantiate
 				res, err := sdk.AccAddressFromBech32(args[0])
 				if err != nil {
-					return err
+					route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, args[0])
+					res, _, err = cliCtx.Query(route)
+					if err != nil {
+						return fmt.Errorf("invalid contract address or label: %s", args[0])
+					}
 				}
 
 				contractAddr = res
-				msg = []byte(args[1])
+				// if we have 2 args the second will be the msg (either data or path)
+				msgArg = 1
+			}
+
+			// either read the msg from a file, or take it as a string
+			if fileFlag {
+				data, err := ioutil.ReadFile(args[msgArg])
+				if err != nil {
+					return err
+				}
+				msg = data
+			} else {
+				msg = []byte(args[msgArg])
 			}
 
 			if genOnly {
@@ -316,6 +335,7 @@ func ExecuteContractCmd(cdc *codec.Codec) *cobra.Command {
 		"io-master-cert.der file, which you can get using the command `secretcli q register secret-network-params` ")
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract along with command")
 	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
+	cmd.Flags().Bool(flagMsgFromFile, false, "Set to read the message data from file path")
 	return cmd
 }
 

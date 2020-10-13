@@ -48,7 +48,7 @@ fn init_logger() {
 #[ctor]
 fn init_logger() {
     log::set_logger(&LOGGER).unwrap(); // It's ok to panic at this stage. This shouldn't happen though
-    set_log_level_or_default(LevelFilter::Trace, LevelFilter::Trace);
+    set_log_level_or_default(LevelFilter::Info, LevelFilter::Info);
 }
 
 fn log_level_from_str(env_log_level: &str) -> Option<LevelFilter> {
