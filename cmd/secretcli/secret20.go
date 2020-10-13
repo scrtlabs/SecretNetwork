@@ -16,15 +16,17 @@ import (
 	"github.com/spf13/viper"
 	"math/rand"
 	"strconv"
+	"strings"
 	"time"
 )
 
+const MESSAGE_BLOCK_SIZE = 256
 const flagAmount = "amount"
 
 // GetQueryCmd returns the cli query commands for this module
 func S20GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 	s20QueryCmd := &cobra.Command{
-		Use:                        "secret20",
+		Use:                        "snip20",
 		Short:                      "*EXPERIMENTAL* Querying commands for the secret20 contracts",
 		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
@@ -42,7 +44,7 @@ func S20GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 // GetTxCmd returns the transaction commands for this module
 func S20GetTxCmd(cdc *codec.Codec) *cobra.Command {
 	s20TxCmd := &cobra.Command{
-		Use:                        "secret20",
+		Use:                        "snip20",
 		Short:                      "*EXPERIMENTAL* Secret20 transactions subcommands",
 		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
@@ -50,7 +52,7 @@ func S20GetTxCmd(cdc *codec.Codec) *cobra.Command {
 	}
 
 	s20TxCmd.AddCommand(flags.PostCommands(
-		s20SendCmd(cdc),
+		s20TransferCmd(cdc),
 		s20CreatingViewingKey(cdc),
 		s20DepositCmd(cdc),
 		s20Withdraw(cdc),
@@ -140,7 +142,6 @@ key yet, use the "create-viewing-key" command. Otherwise, you can still see your
 }
 
 func addressFromBechOrLabel(addressOrLabel string, cliCtx context.CLIContext) (string, error) {
-
 	var contractAddr string
 
 	_, err := sdk.AccAddressFromBech32(addressOrLabel)
@@ -158,7 +159,7 @@ func addressFromBechOrLabel(addressOrLabel string, cliCtx context.CLIContext) (s
 	return contractAddr, nil
 }
 
-func s20SendCmd(cdc *codec.Codec) *cobra.Command {
+func s20TransferCmd(cdc *codec.Codec) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "send [contract address or label] [to account] [amount]",
@@ -191,7 +192,7 @@ func s20SendCmd(cdc *codec.Codec) *cobra.Command {
 				return errors.New("invalid amount format")
 			}
 
-			msg := sendCoinMsg(toAddr, amount)
+			msg := transferCoinMsg(toAddr, amount)
 
 			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cdc)
 		},
@@ -342,30 +343,40 @@ func s20Withdraw(cdc *codec.Codec) *cobra.Command {
 	return cmd
 }
 
+func spacePad(blockSize int, message string) string {
+	surplus := len(message) % blockSize
+	if surplus == 0 {
+		return message
+	}
+
+	missing := blockSize - surplus
+	return message + strings.Repeat(" ", missing)
+}
+
 func transferHistoryMsg(fromAddress sdk.AccAddress, viewingKey string) []byte {
-	return []byte(fmt.Sprintf("{\"transfers\": {\"address\": \"%s\", \"key\": \"%s\"}}", fromAddress.String(), viewingKey))
+	return []byte(spacePad(MESSAGE_BLOCK_SIZE, fmt.Sprintf("{\"transfers\": {\"address\": \"%s\", \"key\": \"%s\"}}", fromAddress.String(), viewingKey)))
 }
 
 func balanceMsg(fromAddress sdk.AccAddress, viewingKey string) []byte {
-	return []byte(fmt.Sprintf("{\"balance\": {\"address\": \"%s\", \"key\": \"%s\"}}", fromAddress.String(), viewingKey))
+	return []byte(spacePad(MESSAGE_BLOCK_SIZE, fmt.Sprintf("{\"balance\": {\"address\": \"%s\", \"key\": \"%s\"}}", fromAddress.String(), viewingKey)))
 }
 
-func sendCoinMsg(toAddress sdk.AccAddress, amount string) []byte {
-	return []byte(fmt.Sprintf("{\"transfer\": {\"recipient\": \"%s\", \"amount\": \"%s\"}}", toAddress.String(), amount))
+func transferCoinMsg(toAddress sdk.AccAddress, amount string) []byte {
+	return []byte(spacePad(MESSAGE_BLOCK_SIZE, fmt.Sprintf("{\"transfer\": {\"recipient\": \"%s\", \"amount\": \"%s\"}}", toAddress.String(), amount)))
 }
 
 func depositMsg() []byte {
-	return []byte(fmt.Sprintf("{\"deposit\": {}}"))
+	return []byte(spacePad(MESSAGE_BLOCK_SIZE, fmt.Sprintf("{\"deposit\": {}}")))
 }
 
 func withdrawMsg(amount string) []byte {
-	return []byte(fmt.Sprintf("{\"withdraw\": {\"amount\": \"%s\"}}", amount))
+	return []byte(spacePad(MESSAGE_BLOCK_SIZE, fmt.Sprintf("{\"withdraw\": {\"amount\": \"%s\"}}", amount)))
 }
 
 func createViewingKeyMsg(data string) []byte {
-	return []byte(fmt.Sprintf("{\"create_viewing_key\": {\"entropy\": \"%s\"}}", data))
+	return []byte(spacePad(MESSAGE_BLOCK_SIZE, fmt.Sprintf("{\"create_viewing_key\": {\"entropy\": \"%s\"}}", data)))
 }
 
 func setViewingKeyMsg(data string) []byte {
-	return []byte(fmt.Sprintf("{\"set_viewing_key\": {\"key\": \"%s\"}}", data))
+	return []byte(spacePad(MESSAGE_BLOCK_SIZE, fmt.Sprintf("{\"set_viewing_key\": {\"key\": \"%s\"}}", data)))
 }
