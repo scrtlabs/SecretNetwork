@@ -53,10 +53,12 @@ func S20GetTxCmd(cdc *codec.Codec) *cobra.Command {
 
 	s20TxCmd.AddCommand(flags.PostCommands(
 		s20TransferCmd(cdc),
+		s20SendCmd(cdc),
 		s20CreatingViewingKey(cdc),
 		s20DepositCmd(cdc),
 		s20Redeem(cdc),
 		s20SetViewingKey(cdc),
+		s20BurnCmd(cdc),
 	)...)
 
 	return s20TxCmd
@@ -177,12 +179,11 @@ func addressFromBechOrLabel(addressOrLabel string, cliCtx context.CLIContext) (s
 }
 
 func s20TransferCmd(cdc *codec.Codec) *cobra.Command {
-
 	cmd := &cobra.Command{
-		Use:   "send [contract address or label] [to account] [amount]",
-		Short: "*EXPERIMENTAL* send tokens to another address",
-		Long:  `send tokens to another address`,
-		Args:  cobra.MinimumNArgs(3),
+		Use:   "transfer [contract address or label] [to account] [amount]",
+		Short: "*EXPERIMENTAL* Transfer tokens to another address",
+		Long:  `transfer tokens to another address`,
+		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			inBuf := bufio.NewReader(cmd.InOrStdin())
@@ -219,13 +220,12 @@ func s20TransferCmd(cdc *codec.Codec) *cobra.Command {
 }
 
 func s20CreatingViewingKey(cdc *codec.Codec) *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "create-viewing-key [contract address or label]",
 		Short: "*EXPERIMENTAL* Create a new viewing key. To view the resulting key, use 'secretcli q compute tx <TX_HASH>'",
 		Long: `This allows a user to generate a key that enables off-chain queries. 
 This way you can perform balance and transaction history queries without waiting for a transaction on-chain.`,
-		Args: cobra.MinimumNArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			inBuf := bufio.NewReader(cmd.InOrStdin())
@@ -260,14 +260,13 @@ This way you can perform balance and transaction history queries without waiting
 }
 
 func s20SetViewingKey(cdc *codec.Codec) *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "set-viewing-key [contract address or label] [viewing-key]",
-		Short: "*EXPERIMENTAL* sets the viewing key for your account",
+		Short: "*EXPERIMENTAL* Sets the viewing key for your account",
 		Long: `This command is useful if you want to manage multiple secret tokens with the same viewing key. *WARNING*:
 This should only be used to duplicate keys created with the create-viewing-key command, or if you really really know what
 you're doing`,
-		Args: cobra.MinimumNArgs(1),
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			inBuf := bufio.NewReader(cmd.InOrStdin())
@@ -293,12 +292,11 @@ you're doing`,
 }
 
 func s20DepositCmd(cdc *codec.Codec) *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "deposit [contract address or label]",
-		Short: "Convert your SCRT into a secret token",
+		Short: "*EXPERIMENTAL* convert your SCRT into a secret token",
 		Long:  `Convert your SCRT into a secret token. This command will only work if the token supports native currency conversion`,
-		Args:  cobra.MinimumNArgs(1),
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			inBuf := bufio.NewReader(cmd.InOrStdin())
@@ -329,9 +327,9 @@ func s20Redeem(cdc *codec.Codec) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "redeem [contract address or label] [amount]",
-		Short: "Convert your secret token back to SCRT",
+		Short: "*EXPERIMENTAL* convert your secret token back to SCRT",
 		Long:  `Convert your secret token back to SCRT. This command will only work if the token supports native currency conversion`,
-		Args:  cobra.MinimumNArgs(2),
+		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			inBuf := bufio.NewReader(cmd.InOrStdin())
@@ -350,6 +348,92 @@ func s20Redeem(cdc *codec.Codec) *cobra.Command {
 			amount := args[1]
 
 			msg := handleRedeemMsg(amount)
+
+			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cdc)
+		},
+	}
+
+	return cmd
+}
+
+func s20SendCmd(cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "send [contract_address or label] [to_account] [amount] [optional: callback_message]",
+		Short: "*EXPERIMENTAL* send tokens to another address. Optionally add a callback message",
+		Long: `Send tokens to another address (contract or not). If 'to_account' is a contract, you can optionally add a callback message to this contract.
+If no callback provided, this is identical to 'transfer'.
+WARNING! The tokens will be transferred even if the callback message fails!`,
+		Args: cobra.MinimumNArgs(3),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			inBuf := bufio.NewReader(cmd.InOrStdin())
+			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
+
+			contractAddrStr, err := addressFromBechOrLabel(args[0], cliCtx)
+			if err != nil {
+				return err
+			}
+
+			contractAddr, err := sdk.AccAddressFromBech32(contractAddrStr)
+			if err != nil {
+				return errors.New("invalid contract address or label")
+			}
+
+			toAddr, err := sdk.AccAddressFromBech32(args[1])
+			if err != nil {
+				return errors.New("invalid recipient address")
+			}
+
+			amount := args[2]
+			_, err = strconv.ParseUint(amount, 10, 64)
+			if err != nil {
+				return errors.New("invalid amount format")
+			}
+
+			var msg []byte
+			if len(args) > 3 {
+				callback := args[3]
+				msg = handleSendWithCallbackMsg(toAddr, amount, callback)
+			} else {
+				msg = handleSendMsg(toAddr, amount)
+			}
+
+			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cdc)
+		},
+	}
+
+	return cmd
+}
+
+func s20BurnCmd(cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "burn [contract_address or label] [amount]",
+		Short: "*EXPERIMENTAL* burn tokens forever",
+		Long: `Burn tokens. The tokens will be removed from your account and will be lost forever.
+WARNING! This action is irreversible and permanent! use at your own risk`,
+		Args: cobra.MinimumNArgs(3),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			inBuf := bufio.NewReader(cmd.InOrStdin())
+			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
+
+			contractAddrStr, err := addressFromBechOrLabel(args[0], cliCtx)
+			if err != nil {
+				return err
+			}
+
+			contractAddr, err := sdk.AccAddressFromBech32(contractAddrStr)
+			if err != nil {
+				return errors.New("invalid contract address or label")
+			}
+
+			amount := args[1]
+			_, err = strconv.ParseUint(amount, 10, 64)
+			if err != nil {
+				return errors.New("invalid amount format")
+			}
+
+			msg := handleBurnMsg(contractAddr, amount)
 
 			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cdc)
 		},
@@ -399,4 +483,20 @@ func handleCreateViewingKeyMsg(data string) []byte {
 
 func handleSetViewingKeyMsg(data string) []byte {
 	return []byte(spacePad(MESSAGE_BLOCK_SIZE, fmt.Sprintf("{\"set_viewing_key\": {\"key\": \"%s\"}}", data)))
+}
+
+func handleSendWithCallbackMsg(toAddress sdk.AccAddress, amount string, message string) []byte {
+	return []byte(spacePad(MESSAGE_BLOCK_SIZE,
+		fmt.Sprintf("{\"send\": {\"recipient\": \"%s\", \"amount\": \"%s\", \"msg\": \"%s\"}}",
+			toAddress.String(),
+			amount,
+			message)))
+}
+
+func handleSendMsg(toAddress sdk.AccAddress, amount string) []byte {
+	return []byte(spacePad(MESSAGE_BLOCK_SIZE, fmt.Sprintf("{\"send\": {\"recipient\": \"%s\", \"amount\": \"%s\"}}", toAddress.String(), amount)))
+}
+
+func handleBurnMsg(toAddress sdk.AccAddress, amount string) []byte {
+	return []byte(spacePad(MESSAGE_BLOCK_SIZE, fmt.Sprintf("{\"burn\": {\"amount\": \"%s\"}}", amount)))
 }
