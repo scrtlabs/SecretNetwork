@@ -361,8 +361,7 @@ func s20SendCmd(cdc *codec.Codec) *cobra.Command {
 		Use:   "send [contract_address or label] [to_account] [amount] [optional: callback_message]",
 		Short: "*EXPERIMENTAL* send tokens to another address. Optionally add a callback message",
 		Long: `Send tokens to another address (contract or not). If 'to_account' is a contract, you can optionally add a callback message to this contract.
-If no callback provided, this is identical to 'transfer'.
-WARNING! The tokens will be transferred even if the callback message fails!`,
+If no callback provided, this is identical to 'transfer'.`,
 		Args: cobra.MinimumNArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
