@@ -49,6 +49,23 @@ where
     Ok(b64_encode(encrypted_data.as_slice()))
 }
 
+// use this to encrypt a String that has already been serialized.  When that is the case, if
+// encrypt_serializable is called instead, it will get double serialized, and any escaped
+// characters will be double escaped
+fn encrypt_preserialized_string(key: &AESKey, val: &String) -> Result<String, EnclaveError>
+{
+
+    let encrypted_data = key.encrypt_siv(val.as_bytes(), None).map_err(|err| {
+        debug!(
+            "got an error while trying to encrypt output error {:?}: {}",
+            err, err
+        );
+        EnclaveError::EncryptionError
+    })?;
+
+    Ok(b64_encode(encrypted_data.as_slice()))
+}
+
 fn b64_encode(data: &[u8]) -> String {
     base64::encode(data)
 }
@@ -93,8 +110,8 @@ pub fn encrypt_output(
             }
 
             for log in &mut ok.log {
-                log.key = encrypt_serializable(&key, &log.key)?;
-                log.value = encrypt_serializable(&key, &log.value)?;
+                log.key = encrypt_preserialized_string(&key, &log.key)?;
+                log.value = encrypt_preserialized_string(&key, &log.value)?;
             }
 
             if let Some(data) = &mut ok.data {
