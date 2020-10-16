@@ -34,8 +34,6 @@ where
         EnclaveError::EncryptionError
     })?;
 
-    // todo: think about if we should just move this function to handle only serde_json::Value::Strings
-    // instead of removing the extra quotes like this
     let trimmed = serialized.trim_start_matches('"').trim_end_matches('"');
 
     let encrypted_data = key.encrypt_siv(trimmed.as_bytes(), None).map_err(|err| {
@@ -52,9 +50,7 @@ where
 // use this to encrypt a String that has already been serialized.  When that is the case, if
 // encrypt_serializable is called instead, it will get double serialized, and any escaped
 // characters will be double escaped
-fn encrypt_preserialized_string(key: &AESKey, val: &String) -> Result<String, EnclaveError>
-{
-
+fn encrypt_preserialized_string(key: &AESKey, val: &String) -> Result<String, EnclaveError> {
     let encrypted_data = key.encrypt_siv(val.as_bytes(), None).map_err(|err| {
         debug!(
             "got an error while trying to encrypt output error {:?}: {}",
