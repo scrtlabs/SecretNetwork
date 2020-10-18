@@ -116,6 +116,7 @@
     "vmName": "[parameters('applicationResourceName')]",
     "virtualNetworkName": "VNET",
     "subnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]",
+    "composeFileUri": "[uri(parameters('_artifactsLocation'), concat('docker/docker-compose.yaml', parameters('_artifactsLocationSasToken')))]",
     "linuxConfiguration": {
       "disablePasswordAuthentication": true,
       "ssh": {
@@ -131,7 +132,7 @@
   "resources": [
     {
       "type": "Microsoft.Network/networkSecurityGroups",
-      "apiVersion": "2020-04-01",
+      "apiVersion": "2020-05-01",
       "name": "[variables('networkSecurityGroupName')]",
       "location": "[parameters('location')]",
       "properties": {
@@ -167,7 +168,7 @@
       }
     },
     {
-      "apiVersion": "2019-11-01",
+      "apiVersion": "2020-05-01",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[variables('publicIPAddressName')]",
       "location": "[parameters('location')]",
@@ -179,7 +180,7 @@
       }
     },
     {
-      "apiVersion": "2020-04-01",
+      "apiVersion": "2020-05-01",
       "type": "Microsoft.Network/virtualNetworks",
       "name": "[variables('virtualNetworkName')]",
       "location": "[parameters('location')]",
@@ -208,7 +209,7 @@
       }
     },
     {
-      "apiVersion": "2019-11-01",
+      "apiVersion": "2020-05-01",
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[variables('nicName')]",
       "location": "[parameters('location')]",
@@ -234,7 +235,7 @@
       }
     },
     {
-      "apiVersion": "2019-12-01",
+      "apiVersion": "2020-06-01",
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[variables('vmName')]",
       "location": "[parameters('location')]",
@@ -300,7 +301,7 @@
     {
       "type": "Microsoft.Compute/virtualMachines/extensions",
       "name": "[concat(variables('vmName'),'/newuserscript')]",
-      "apiVersion": "2019-12-01",
+      "apiVersion": "2020-06-01",
       "location": "[parameters('location')]",
       "dependsOn": [
         "[concat('Microsoft.Compute/virtualMachines/', variables('vmName'))]"
@@ -316,12 +317,12 @@
           ]
         },
         "protectedSettings": {
-          "commandToExecute": "[concat('sh secretnode.sh',' ',parameters('adminUsername'),' ',parameters('chainId'),' ',parameters('moniker'),' ',parameters('persistentPeers'),' ',parameters('rpcUrl'),' ',parameters('registrationService'))]"
+          "commandToExecute": "[concat('sh secretnode.sh',' ',parameters('adminUsername'),' ',parameters('chainId'),' ',parameters('moniker'),' ',parameters('persistentPeers'),' ',parameters('rpcUrl'),' ',parameters('registrationService'),' ',parameters('composeFileUri')]"
         }
       }
     },
 	{
-		"apiVersion": "2018-02-01",
+		"apiVersion": "2020-06-01",
 		"name": "pid-7f40ee20-4ee6-5b1e-a2aa-47f9a3fb5631",
 		"type": "Microsoft.Resources/deployments",
 		"properties": {
