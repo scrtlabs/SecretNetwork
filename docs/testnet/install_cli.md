@@ -2,20 +2,35 @@
 
 ## Download the appropriate version
 
-* Linux
+* Linux AMD64
 ```
-https://github.com/enigmampc/SecretNetwork/releases/download/v0.8.1/secretcli
+https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.2/secretcli-linux-amd64
+```
+
+* Linux ARM64
+```
+https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.2/secretcli-linux-arm64
 ```
 
 * MacOS
 ```
-https://github.com/enigmampc/SecretNetwork/releases/download/v0.8.1/secretcli_darwin
+https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.2/secretcli-darwin-10.6-amd64
 ```
 
 * Windows
 ```
-https://github.com/enigmampc/SecretNetwork/releases/download/v0.8.1/secretcli.exe
+https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.2/secretcli-windows-4.0-amd64.exe
 ```
+
+## Setup the executable
+
+Rename the file to `secretcli`.
+
+Linux and MacOS users:
+```
+chmod +x ./secretcli
+```
+
 
 ## Create a new address
 
