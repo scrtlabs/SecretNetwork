@@ -475,7 +475,7 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 				return errors.New("query data must be json")
 			}
 
-			return QueryWithData(contractAddr, cdc, queryData, cliCtx)
+			return QueryWithData(contractAddr, cliCtx, queryData)
 		},
 	}
 	decoder.RegisterFlags(cmd.PersistentFlags(), "query argument")
@@ -483,7 +483,7 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 	return cmd
 }
 
-func QueryWithData(contractAddress string, cdc *codec.Codec, queryData []byte, cliCtx context.CLIContext) error {
+func QueryWithData(contractAddress string, cliCtx context.CLIContext, queryData []byte) error {
 	addr, err := sdk.AccAddressFromBech32(contractAddress)
 	if err != nil {
 		return err

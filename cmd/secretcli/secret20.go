@@ -108,7 +108,7 @@ func S20TransferHistoryCmd(cdc *codec.Codec) *cobra.Command {
 
 			queryData := queryTransferHistoryMsg(addr, key, uint32(page), uint32(pageSize))
 
-			err = cli.QueryWithData(contractAddr, cdc, queryData, cliCtx)
+			err = cli.QueryWithData(contractAddr, cliCtx, queryData)
 			if err != nil {
 				return err
 			}
@@ -148,7 +148,7 @@ key yet, use the "create-viewing-key" command. Otherwise, you can still see your
 
 			queryData := queryBalanceMsg(addr, key)
 
-			err = cli.QueryWithData(contractAddr, cdc, queryData, cliCtx)
+			err = cli.QueryWithData(contractAddr, cliCtx, queryData)
 			if err != nil {
 				return err
 			}
