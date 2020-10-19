@@ -6,6 +6,7 @@
 # 4 = persistent peers
 # 5 = rpc url (to get genesis file from)
 # 6 = registration service (our custom registration helper)
+# 7 = docker compose file location
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -44,7 +45,9 @@ echo "Creating secret node runner" >> /home/"$1"/install.progress.txt
 
 mkdir -p /usr/local/bin/secret-node
 
-sudo cp "$7" /usr/local/bin/secret-node/docker-compose.yaml
+echo "Copying docker compose file from $7" >> /home/"$1"/install.progress.txt
+sudo curl -L "$7" -o /usr/local/bin/secret-node/docker-compose.yaml
+
 mainnetstr="mainnet"
 if test "${6#*$mainnetstr}" != "$6"
 then
