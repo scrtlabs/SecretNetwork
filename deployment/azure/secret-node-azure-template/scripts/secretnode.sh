@@ -6,6 +6,7 @@
 # 4 = persistent peers
 # 5 = rpc url (to get genesis file from)
 # 6 = registration service (our custom registration helper)
+# 7 = docker compose file location
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -44,14 +45,16 @@ echo "Creating secret node runner" >> /home/"$1"/install.progress.txt
 
 mkdir -p /usr/local/bin/secret-node
 
+echo "Copying docker compose file from $7" >> /home/"$1"/install.progress.txt
+sudo curl -L "$7" -o /usr/local/bin/secret-node/docker-compose.yaml
+
 mainnetstr="mainnet"
 if test "${6#*$mainnetstr}" != "$6"
 then
-  sudo curl -L https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/deployment/azure/mainnet/docker-compose.yaml -o /usr/local/bin/secret-node/docker-compose.yaml
-  echo "Downloaded mainnet compose file" >> /home/"$1"/install.progress.txt
+  echo "Running with mainnet config" >> /home/"$1"/install.progress.txt
 else
-  sudo curl -L https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/deployment/azure/testnet/docker-compose.yaml -o /usr/local/bin/secret-node/docker-compose.yaml
-  echo "Downloaded testnet compose file" >> /home/"$1"/install.progress.txt
+  # leaving this here as a placeholder for future versions where we might have to change stuff for testnet vs. mainnet
+  echo "Running with testnet config" >> /home/"$1"/install.progress.txt
 fi
 
 
