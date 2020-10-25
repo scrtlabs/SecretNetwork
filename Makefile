@@ -141,7 +141,7 @@ build_linux_cli:
 build_linux_arm64_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
 
-build_all: build-linux build_windows_cli build_macos_cli build_arm_linux_cli
+build_all: build-linux build_windows_cli build_macos_cli build_linux_arm64_cli
 
 deb: build-linux deb-no-compile
 
