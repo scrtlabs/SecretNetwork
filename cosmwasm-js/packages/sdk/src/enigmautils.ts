@@ -7,6 +7,12 @@ const hkdf = require("js-crypto-hkdf");
 
 const cryptoProvider = new miscreant.PolyfillCryptoProvider();
 
+export interface SecretUtils {
+  readonly pubkey: Uint8Array;
+  decrypt: (ciphertext: Uint8Array, nonce: Uint8Array) => Promise<Uint8Array>;
+  encrypt: (contractCodeHash: string, msg: object) => Promise<Uint8Array>;
+}
+
 const hkdfSalt: Uint8Array = Uint8Array.from([
   0x00,
   0x00,
@@ -42,7 +48,7 @@ const hkdfSalt: Uint8Array = Uint8Array.from([
   0x6d,
 ]);
 
-export default class EnigmaUtils {
+export default class EnigmaUtils implements SecretUtils {
   private readonly apiUrl: string;
   public readonly seed: Uint8Array;
   private readonly privkey: Uint8Array;
