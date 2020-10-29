@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	"github.com/enigmampc/cosmos-sdk/types/module"
-	"github.com/enigmampc/cosmos-sdk/x/auth"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/module"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"

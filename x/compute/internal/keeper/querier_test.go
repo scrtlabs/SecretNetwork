@@ -8,13 +8,13 @@ import (
 	"os"
 	"testing"
 
-	"github.com/enigmampc/cosmos-sdk/x/auth"
-	authtypes "github.com/enigmampc/cosmos-sdk/x/auth/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/tendermint/tendermint/crypto"
 
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	sdkErrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"

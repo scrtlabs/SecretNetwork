@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"strings"
 
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
-	govtypes "github.com/enigmampc/cosmos-sdk/x/gov/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 )
 
 type ProposalType string

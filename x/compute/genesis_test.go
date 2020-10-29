@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	sdk "github.com/enigmampc/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 type contractState struct {

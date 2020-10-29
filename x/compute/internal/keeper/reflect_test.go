@@ -9,16 +9,16 @@ import (
 	"testing"
 
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
-	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	"github.com/enigmampc/cosmos-sdk/codec"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	"github.com/enigmampc/cosmos-sdk/x/auth"
-	"github.com/enigmampc/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/bank"
 )
 
 // MaskInitMsg is {}

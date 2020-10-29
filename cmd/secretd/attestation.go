@@ -5,20 +5,20 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	app2 "github.com/enigmampc/SecretNetwork/app"
 	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	app "github.com/enigmampc/SecretNetwork"
+	"github.com/cosmos/cosmos-sdk/types/module"
+	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
-	"github.com/enigmampc/cosmos-sdk/types/module"
-	"github.com/enigmampc/cosmos-sdk/x/genutil"
 
-	"github.com/enigmampc/cosmos-sdk/codec"
-	"github.com/enigmampc/cosmos-sdk/server"
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/spf13/cobra"
 )
 
@@ -248,7 +248,7 @@ func ConfigureSecret(_ *server.Context, _ *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			path := filepath.Join(app.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
+			path := filepath.Join(app2.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
 			// fmt.Println("File Created Successfully", path)
 			if os.IsNotExist(err) {
 				var file, err = os.Create(path)
@@ -301,7 +301,7 @@ func ResetEnclave(_ *server.Context, _ *codec.Codec) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			// remove .secretd/.node/seed.json
-			path := filepath.Join(app.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
+			path := filepath.Join(app2.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
 			if _, err := os.Stat(path); !os.IsNotExist(err) {
 				fmt.Printf("Removing %s\n", path)
 				err = os.Remove(path)

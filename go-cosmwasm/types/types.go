@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/enigmampc/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 )
 
 // HumanAddress is a printable (typically bech32 encoded) address string. Just use it as a label for developers.

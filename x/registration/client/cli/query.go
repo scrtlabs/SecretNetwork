@@ -13,10 +13,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/enigmampc/cosmos-sdk/client"
-	"github.com/enigmampc/cosmos-sdk/client/context"
-	"github.com/enigmampc/cosmos-sdk/client/flags"
-	"github.com/enigmampc/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 )
 

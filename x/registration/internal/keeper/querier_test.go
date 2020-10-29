@@ -5,7 +5,7 @@ package keeper
 import (
 	"encoding/hex"
 	"encoding/json"
-	sdkErrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 	"io/ioutil"

@@ -3,8 +3,8 @@ package registration
 import (
 	"encoding/hex"
 	"fmt"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 )

@@ -14,7 +14,7 @@ import (
 	"github.com/tendermint/tendermint/crypto"
 
 	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/libs/log"
 )

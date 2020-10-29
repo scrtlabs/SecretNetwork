@@ -83,15 +83,15 @@ whitespace += $(whitespace)
 comma := ,
 build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 
-ldflags = -X github.com/enigmampc/cosmos-sdk/version.Name=SecretNetwork \
-	-X github.com/enigmampc/cosmos-sdk/version.ServerName=secretd \
-	-X github.com/enigmampc/cosmos-sdk/version.ClientName=secretcli \
-	-X github.com/enigmampc/cosmos-sdk/version.Version=$(VERSION) \
-	-X github.com/enigmampc/cosmos-sdk/version.Commit=$(COMMIT) \
-	-X "github.com/enigmampc/cosmos-sdk/version.BuildTags=$(build_tags)"
+ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=SecretNetwork \
+	-X github.com/cosmos/cosmos-sdk/version.ServerName=secretd \
+	-X github.com/cosmos/cosmos-sdk/version.ClientName=secretcli \
+	-X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
+	-X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
+	-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags)"
 
 ifeq ($(WITH_CLEVELDB),yes)
-  ldflags += -X github.com/enigmampc/cosmos-sdk/types.DBBackend=cleveldb
+  ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=cleveldb
 endif
 ldflags += -s -w
 ldflags += $(LDFLAGS)

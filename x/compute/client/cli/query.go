@@ -13,18 +13,18 @@ import (
 	"github.com/spf13/viper"
 
 	cosmwasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	sdkErrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
 	flag "github.com/spf13/pflag"
 	"github.com/tendermint/go-amino"
 
 	"github.com/spf13/cobra"
 
-	"github.com/enigmampc/cosmos-sdk/client"
-	"github.com/enigmampc/cosmos-sdk/client/context"
-	"github.com/enigmampc/cosmos-sdk/client/flags"
-	"github.com/enigmampc/cosmos-sdk/codec"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	"github.com/enigmampc/cosmos-sdk/x/auth/client/utils"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 
 	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
 
@@ -263,7 +263,7 @@ func CmdDecryptText(cdc *codec.Codec) *cobra.Command {
 }
 
 // QueryDecryptTxCmd the default command for a tx query + IO decryption if I'm the tx sender.
-// Coppied from https://github.com/enigmampc/cosmos-sdk/blob/v0.38.4/x/auth/client/cli/query.go#L157-L184 and added IO decryption (Could not wrap it because it prints directly to stdout)
+// Coppied from https://github.com/cosmos/cosmos-sdk/blob/v0.38.4/x/auth/client/cli/query.go#L157-L184 and added IO decryption (Could not wrap it because it prints directly to stdout)
 func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tx [hash]",

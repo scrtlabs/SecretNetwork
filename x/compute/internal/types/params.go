@@ -4,9 +4,9 @@ package types
 import (
 	"fmt"
 
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
-	"github.com/enigmampc/cosmos-sdk/x/params"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )

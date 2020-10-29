@@ -3,8 +3,8 @@ package keeper
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/enigmampc/cosmos-sdk/store/prefix"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/store/prefix"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 )

@@ -5,15 +5,15 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	"github.com/enigmampc/cosmos-sdk/x/gov"
+	"github.com/cosmos/cosmos-sdk/x/gov"
 	"io/ioutil"
 	"os"
 	"testing"
 
-	"github.com/enigmampc/cosmos-sdk/x/gov/types"
+	"github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/stretchr/testify/require"
 
-	sdk "github.com/enigmampc/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 var (

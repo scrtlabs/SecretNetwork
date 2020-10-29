@@ -3,7 +3,7 @@ package types
 import (
 	"strings"
 
-	sdkErrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
 // Codes for wasm contract errors

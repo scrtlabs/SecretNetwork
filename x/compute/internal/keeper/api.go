@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 var (

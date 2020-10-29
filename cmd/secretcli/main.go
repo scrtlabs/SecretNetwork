@@ -2,22 +2,23 @@ package main
 
 import (
 	"fmt"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	app2 "github.com/enigmampc/SecretNetwork/app"
 	scrt "github.com/enigmampc/SecretNetwork/types"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
 	"os"
 	"path"
 
-	"github.com/enigmampc/cosmos-sdk/client"
-	"github.com/enigmampc/cosmos-sdk/client/flags"
-	"github.com/enigmampc/cosmos-sdk/client/keys"
-	"github.com/enigmampc/cosmos-sdk/client/lcd"
-	"github.com/enigmampc/cosmos-sdk/client/rpc"
-	"github.com/enigmampc/cosmos-sdk/version"
-	"github.com/enigmampc/cosmos-sdk/x/auth"
-	authcmd "github.com/enigmampc/cosmos-sdk/x/auth/client/cli"
-	authrest "github.com/enigmampc/cosmos-sdk/x/auth/client/rest"
-	"github.com/enigmampc/cosmos-sdk/x/bank"
-	bankcmd "github.com/enigmampc/cosmos-sdk/x/bank/client/cli"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/client/keys"
+	"github.com/cosmos/cosmos-sdk/client/lcd"
+	"github.com/cosmos/cosmos-sdk/client/rpc"
+	"github.com/cosmos/cosmos-sdk/version"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
+	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
+	"github.com/cosmos/cosmos-sdk/x/bank"
+	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -50,7 +51,7 @@ func main() {
 	// Construct Root Command
 	rootCmd.AddCommand(
 		rpc.StatusCommand(),
-		client.ConfigCmd(app.DefaultCLIHome),
+		client.ConfigCmd(app2.DefaultCLIHome),
 		queryCmd(cdc),
 		txCmd(cdc),
 		flags.LineBreak,
@@ -63,7 +64,7 @@ func main() {
 	)
 
 	// Add flags and prefix all env exposed with EN
-	executor := cli.PrepareMainCmd(rootCmd, "EN", app.DefaultCLIHome)
+	executor := cli.PrepareMainCmd(rootCmd, "EN", app2.DefaultCLIHome)
 
 	err := executor.Execute()
 	if err != nil {
@@ -91,7 +92,7 @@ func queryCmd(cdc *amino.Codec) *cobra.Command {
 	)
 
 	// add modules' query commands
-	app.ModuleBasics.AddQueryCommands(queryCmd, cdc)
+	app2.ModuleBasics.AddQueryCommands(queryCmd, cdc)
 
 	return queryCmd
 }
@@ -118,7 +119,7 @@ func txCmd(cdc *amino.Codec) *cobra.Command {
 	)
 
 	// add modules' tx commands
-	app.ModuleBasics.AddTxCommands(txCmd, cdc)
+	app2.ModuleBasics.AddTxCommands(txCmd, cdc)
 
 	// remove auth and bank commands as they're mounted under the root tx command
 	var cmdsToRemove []*cobra.Command
@@ -140,7 +141,7 @@ func txCmd(cdc *amino.Codec) *cobra.Command {
 func registerRoutes(rs *lcd.RestServer) {
 	client.RegisterRoutes(rs.CliCtx, rs.Mux)
 	authrest.RegisterTxRoutes(rs.CliCtx, rs.Mux)
-	app.ModuleBasics.RegisterRESTRoutes(rs.CliCtx, rs.Mux)
+	app2.ModuleBasics.RegisterRESTRoutes(rs.CliCtx, rs.Mux)
 }
 
 func initConfig(cmd *cobra.Command) error {

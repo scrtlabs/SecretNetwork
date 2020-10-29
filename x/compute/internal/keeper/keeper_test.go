@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	authtypes "github.com/enigmampc/cosmos-sdk/x/auth/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
 
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
@@ -19,9 +19,9 @@ import (
 	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
-	stypes "github.com/enigmampc/cosmos-sdk/store/types"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	"github.com/enigmampc/cosmos-sdk/x/auth"
+	stypes "github.com/cosmos/cosmos-sdk/store/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"

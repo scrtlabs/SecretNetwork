@@ -10,10 +10,10 @@ import (
 
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	"github.com/enigmampc/cosmos-sdk/types/rest"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/rest"
 
-	"github.com/enigmampc/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/gorilla/mux"
 )
 

@@ -2,8 +2,8 @@ package keeper
 
 import (
 	"encoding/json"
-	"github.com/enigmampc/cosmos-sdk/codec"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 )
 

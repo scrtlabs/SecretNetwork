@@ -6,12 +6,12 @@ import (
 	"strconv"
 
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
-	"github.com/enigmampc/cosmos-sdk/client/context"
-	"github.com/enigmampc/cosmos-sdk/codec"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
-	"github.com/enigmampc/cosmos-sdk/x/auth"
-	"github.com/enigmampc/cosmos-sdk/x/auth/client/utils"
+	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 	"github.com/spf13/cobra"
 )
 

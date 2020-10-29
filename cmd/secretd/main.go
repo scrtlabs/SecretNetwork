@@ -3,33 +3,34 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/enigmampc/cosmos-sdk/codec"
-	"github.com/enigmampc/cosmos-sdk/types/module"
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/types/module"
+	app2 "github.com/enigmampc/SecretNetwork/app"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
 
-	"github.com/enigmampc/cosmos-sdk/server"
-	serverconfig "github.com/enigmampc/cosmos-sdk/server/config"
-	"github.com/enigmampc/cosmos-sdk/store"
-	"github.com/enigmampc/cosmos-sdk/x/auth"
-	"github.com/enigmampc/cosmos-sdk/x/staking"
+	"github.com/cosmos/cosmos-sdk/server"
+	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
+	"github.com/cosmos/cosmos-sdk/store"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/staking"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/enigmampc/cosmos-sdk/baseapp"
-	"github.com/enigmampc/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 
 	//"github.com/CosmWasm/wasmd/app"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	app "github.com/enigmampc/SecretNetwork"
 	scrt "github.com/enigmampc/SecretNetwork/types"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	genutilcli "github.com/enigmampc/cosmos-sdk/x/genutil/client/cli"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
@@ -66,24 +67,24 @@ func main() {
 	rootCmd.AddCommand(ConfigureSecret(ctx, cdc))
 	rootCmd.AddCommand(HealthCheck(ctx, cdc))
 	rootCmd.AddCommand(ResetEnclave(ctx, cdc))
-	rootCmd.AddCommand(InitBootstrapCmd(ctx, cdc, app.ModuleBasics))
-	rootCmd.AddCommand(updateTmParamsAndInit(ctx, cdc, app.ModuleBasics, app.DefaultNodeHome))
-	rootCmd.AddCommand(genutilcli.CollectGenTxsCmd(ctx, cdc, auth.GenesisAccountIterator{}, app.DefaultNodeHome))
+	rootCmd.AddCommand(InitBootstrapCmd(ctx, cdc, app2.ModuleBasics))
+	rootCmd.AddCommand(updateTmParamsAndInit(ctx, cdc, app2.ModuleBasics, app2.DefaultNodeHome))
+	rootCmd.AddCommand(genutilcli.CollectGenTxsCmd(ctx, cdc, auth.GenesisAccountIterator{}, app2.DefaultNodeHome))
 	rootCmd.AddCommand(genutilcli.MigrateGenesisCmd(ctx, cdc))
 	rootCmd.AddCommand(
 		genutilcli.GenTxCmd(
-			ctx, cdc, app.ModuleBasics, staking.AppModuleBasic{},
-			auth.GenesisAccountIterator{}, app.DefaultNodeHome, app.DefaultCLIHome,
+			ctx, cdc, app2.ModuleBasics, staking.AppModuleBasic{},
+			auth.GenesisAccountIterator{}, app2.DefaultNodeHome, app2.DefaultCLIHome,
 		),
 	)
-	rootCmd.AddCommand(genutilcli.ValidateGenesisCmd(ctx, cdc, app.ModuleBasics))
-	rootCmd.AddCommand(AddGenesisAccountCmd(ctx, cdc, app.DefaultNodeHome, app.DefaultCLIHome))
+	rootCmd.AddCommand(genutilcli.ValidateGenesisCmd(ctx, cdc, app2.ModuleBasics))
+	rootCmd.AddCommand(AddGenesisAccountCmd(ctx, cdc, app2.DefaultNodeHome, app2.DefaultCLIHome))
 	rootCmd.AddCommand(flags.NewCompletionCmd(rootCmd, true))
 
 	server.AddCommands(ctx, cdc, rootCmd, newApp, exportAppStateAndTMValidators)
 
 	// prepare and add flags
-	executor := cli.PrepareBaseCmd(rootCmd, "EN", app.DefaultNodeHome)
+	executor := cli.PrepareBaseCmd(rootCmd, "EN", app2.DefaultNodeHome)
 	rootCmd.PersistentFlags().UintVar(&invCheckPeriod, flagInvCheckPeriod,
 		0, "Assert registered invariants every N blocks")
 	rootCmd.PersistentFlags().BoolVar(&bootstrap, flagIsBootstrap,
@@ -149,7 +150,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer) abci.Application
 		skipUpgradeHeights[int64(h)] = true
 	}
 
-	return app.NewSecretNetworkApp(
+	return app2.NewSecretNetworkApp(
 		logger, db, traceStore, true, bootstrap, invCheckPeriod, skipUpgradeHeights,
 		queryGasLimit,
 		baseapp.SetPruning(store.NewPruningOptionsFromString(viper.GetString("pruning"))),
@@ -167,7 +168,7 @@ func exportAppStateAndTMValidators(
 	queryGasLimit := viper.GetUint64("query-gas-limit")
 
 	if height != -1 {
-		secretApp := app.NewSecretNetworkApp(logger, db, traceStore, false, bootstrap, uint(1), map[int64]bool{}, queryGasLimit)
+		secretApp := app2.NewSecretNetworkApp(logger, db, traceStore, false, bootstrap, uint(1), map[int64]bool{}, queryGasLimit)
 		err := secretApp.LoadHeight(height)
 		if err != nil {
 			return nil, nil, err
@@ -175,7 +176,7 @@ func exportAppStateAndTMValidators(
 		return secretApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 	}
 
-	secretApp := app.NewSecretNetworkApp(logger, db, traceStore, true, bootstrap, uint(1), map[int64]bool{}, queryGasLimit)
+	secretApp := app2.NewSecretNetworkApp(logger, db, traceStore, true, bootstrap, uint(1), map[int64]bool{}, queryGasLimit)
 	return secretApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 }
 

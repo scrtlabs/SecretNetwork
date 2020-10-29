@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"regexp"
 
-	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
 const (

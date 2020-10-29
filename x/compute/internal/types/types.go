@@ -3,12 +3,12 @@ package types
 import (
 	"encoding/base64"
 
-	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
-	"github.com/enigmampc/cosmos-sdk/x/auth"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 	tmBytes "github.com/tendermint/tendermint/libs/bytes"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
 )
 
 const defaultLRUCacheSize = uint64(0)

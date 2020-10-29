@@ -3,14 +3,14 @@ package keeper
 import (
 	"fmt"
 
-	paramtypes "github.com/enigmampc/cosmos-sdk/x/params/subspace"
+	paramtypes "github.com/cosmos/cosmos-sdk/x/params/subspace"
 	"github.com/enigmampc/SecretNetwork/x/tokenswap/types"
 
-	"github.com/enigmampc/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/tendermint/tendermint/libs/log"
 
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
 // Keeper maintains the link to data storage and exposes getter/setter methods for the various parts of the state machine

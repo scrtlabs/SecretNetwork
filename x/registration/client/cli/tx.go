@@ -9,13 +9,13 @@ import (
 	"github.com/spf13/cobra"
 	//"github.com/spf13/viper"
 
-	"github.com/enigmampc/cosmos-sdk/client"
-	"github.com/enigmampc/cosmos-sdk/client/context"
-	"github.com/enigmampc/cosmos-sdk/client/flags"
-	"github.com/enigmampc/cosmos-sdk/codec"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	"github.com/enigmampc/cosmos-sdk/x/auth"
-	"github.com/enigmampc/cosmos-sdk/x/auth/client/utils"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 )
