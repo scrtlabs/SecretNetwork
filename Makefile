@@ -351,3 +351,12 @@ bin-data-production:
 secret-contract-optimizer:
 	docker build -f deployment/dockerfiles/secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} .
 	docker tag enigmampc/secret-contract-optimizer:${TAG} enigmampc/secret-contract-optimizer:latest
+
+secretjs-build:
+	cd cosmwasm-js/packages/sdk && yarn && yarn build
+
+# Before running this, first make sure:
+# 1. To `npm login` with enigma-dev
+# 2. The new version is updated in `cosmwasm-js/packages/sdk/package.json` 
+secretjs-publish-npm: secretjs-build
+	cd cosmwasm-js/packages/sdk && npm publish
