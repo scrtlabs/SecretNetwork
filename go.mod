@@ -6,8 +6,13 @@ require (
 	github.com/btcsuite/btcd v0.21.0-beta
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/cosmos/cosmos-sdk v0.40.0-rc1
+	//google.golang.org/genproto v0.0.0-20201014134559-03b6142f0dc9
+	//google.golang.org/grpc v1.33.0
+	github.com/gogo/protobuf v1.3.1
+	github.com/golang/protobuf v1.4.2
 	github.com/google/gofuzz v1.0.0
 	github.com/gorilla/mux v1.8.0
+	github.com/grpc-ecosystem/grpc-gateway v1.15.2
 	github.com/miscreant/miscreant.go v0.0.0-20200214223636-26d376326b75
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/common v0.14.0
@@ -19,7 +24,10 @@ require (
 	github.com/tendermint/tendermint v0.34.0-rc5
 	github.com/tendermint/tm-db v0.6.2
 	golang.org/x/crypto v0.0.0-20201012173705-84dcc777aaee
+	google.golang.org/genproto v0.0.0-20201014134559-03b6142f0dc9
+	google.golang.org/grpc v1.33.0
 	gopkg.in/yaml.v2 v2.3.0
+
 //github.com/btcsuite/btcd v0.21.0-beta
 //github.com/btcsuite/btcutil v1.0.2
 //github.com/cosmos/cosmos-sdk v0.40.0-rc1

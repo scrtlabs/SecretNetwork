@@ -42,7 +42,8 @@ var (
 	// functions aliases
 	// ConvertToProposals        = types.ConvertToProposals
 	// DefaultParams             = types.DefaultParams
-	RegisterCodec             = types.RegisterCodec
+	RegisterCodec             = types.RegisterLegacyAminoCodec
+	RegisterInterfaces        = types.RegisterInterfaces
 	ValidateGenesis           = types.ValidateGenesis
 	GetCodeKey                = types.GetCodeKey
 	GetContractAddressKey     = types.GetContractAddressKey
@@ -66,6 +67,7 @@ var (
 	EncodeWasmMsg             = keeper.EncodeWasmMsg
 	NewKeeper                 = keeper.NewKeeper
 	NewQuerier                = keeper.NewQuerier
+	NewLegacyQuerier          = keeper.NewLegacyQuerier
 	DefaultQueryPlugins       = keeper.DefaultQueryPlugins
 	BankQuerier               = keeper.BankQuerier
 	NoCustomQuerier           = keeper.NoCustomQuerier
@@ -111,6 +113,7 @@ type (
 	ContractInfo            = types.ContractInfo
 	CreatedAt               = types.AbsoluteTxPosition
 	WasmConfig              = types.WasmConfig
+	CodeInfoResponse        = types.CodeInfoResponse
 	MessageHandler          = keeper.MessageHandler
 	BankEncoder             = keeper.BankEncoder
 	CustomEncoder           = keeper.CustomEncoder
@@ -120,8 +123,6 @@ type (
 	MessageEncoders         = keeper.MessageEncoders
 	Keeper                  = keeper.Keeper
 	ContractInfoWithAddress = keeper.ContractInfoWithAddress
-	GetCodeResponse         = keeper.GetCodeResponse
-	ListCodeResponse        = keeper.ListCodeResponse
 	QueryHandler            = keeper.QueryHandler
 	CustomQuerier           = keeper.CustomQuerier
 	QueryPlugins            = keeper.QueryPlugins

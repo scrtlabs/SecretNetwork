@@ -9,22 +9,19 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strconv"
+	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
 
 	"github.com/spf13/viper"
 
 	cosmwasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
 	flag "github.com/spf13/pflag"
-	"github.com/tendermint/go-amino"
 
 	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 
 	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
 
@@ -32,7 +29,7 @@ import (
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
-func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
+func GetQueryCmd() *cobra.Command {
 	queryCmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      "Querying commands for the compute module",
@@ -40,33 +37,37 @@ func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
 	}
-	queryCmd.AddCommand(flags.GetCommands(
-		GetCmdListCode(cdc),
-		GetCmdListContractByCode(cdc),
-		GetCmdQueryCode(cdc),
-		GetCmdGetContractInfo(cdc),
-		GetCmdQuery(cdc),
-		GetQueryDecryptTxCmd(cdc),
-		GetCmdQueryLabel(cdc),
-		GetCmdCodeHashByContract(cdc),
-		CmdDecryptText(cdc),
+	queryCmd.AddCommand(
+		GetCmdListCode(),
+		GetCmdListContractByCode(),
+		GetCmdQueryCode(),
+		GetCmdGetContractInfo(),
+		GetCmdQuery(),
+		GetQueryDecryptTxCmd(),
+		GetCmdQueryLabel(),
+		GetCmdCodeHashByContract(),
+		CmdDecryptText(),
 		// GetCmdGetContractHistory(cdc),
-	)...)
+	)
 	return queryCmd
 }
 
 // GetCmdListCode lists all wasm code uploaded
-func GetCmdListCode(cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
+func GetCmdListCode() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "list-code",
 		Short: "List all wasm bytecode on the chain",
 		Long:  "List all wasm bytecode on the chain",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
 			route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, keeper.QueryListCode)
-			res, _, err := cliCtx.Query(route)
+			res, _, err := clientCtx.Query(route)
 			if err != nil {
 				return err
 			}
@@ -74,20 +75,27 @@ func GetCmdListCode(cdc *codec.Codec) *cobra.Command {
 			return nil
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
 }
 
 // GetCmdListCode lists all wasm code uploaded
-func GetCmdQueryLabel(cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
+func GetCmdQueryLabel() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "label [label]",
 		Short: "Check if a label is in use",
 		Long:  "Check if a label is in use",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
 			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, args[0])
-			res, _, err := cliCtx.Query(route)
+			res, _, err := clientCtx.Query(route)
 			if err != nil {
 				if err == sdkErrors.ErrUnknownAddress {
 					fmt.Printf("Label is available and not in use\n")
@@ -108,20 +116,27 @@ func GetCmdQueryLabel(cdc *codec.Codec) *cobra.Command {
 			return nil
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
 }
 
 // GetCmdListCode lists all wasm code uploaded
-func GetCmdCodeHashByContract(cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
+func GetCmdCodeHashByContract() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "contract-hash [address]",
 		Short: "Return the code hash of a contract",
 		Long:  "Return the code hash of a contract",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
 			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHash, args[0])
-			res, _, err := cliCtx.Query(route)
+			res, _, err := clientCtx.Query(route)
 			if err != nil {
 				return fmt.Errorf("error querying contract hash: %s", err)
 			}
@@ -131,17 +146,24 @@ func GetCmdCodeHashByContract(cdc *codec.Codec) *cobra.Command {
 			return nil
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
 }
 
 // GetCmdListContractByCode lists all wasm code uploaded for given code id
-func GetCmdListContractByCode(cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
+func GetCmdListContractByCode() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "list-contract-by-code [code_id]",
 		Short: "List wasm all bytecode on the chain for given code id",
 		Long:  "List wasm all bytecode on the chain for given code id",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
 			codeID, err := strconv.ParseUint(args[0], 10, 64)
 			if err != nil {
@@ -149,7 +171,7 @@ func GetCmdListContractByCode(cdc *codec.Codec) *cobra.Command {
 			}
 
 			route := fmt.Sprintf("custom/%s/%s/%d", types.QuerierRoute, keeper.QueryListContractByCode, codeID)
-			res, _, err := cliCtx.Query(route)
+			res, _, err := clientCtx.Query(route)
 			if err != nil {
 				return err
 			}
@@ -157,17 +179,24 @@ func GetCmdListContractByCode(cdc *codec.Codec) *cobra.Command {
 			return nil
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
 }
 
 // GetCmdQueryCode returns the bytecode for a given contract
-func GetCmdQueryCode(cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
+func GetCmdQueryCode() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "code [code_id] [output filename]",
 		Short: "Downloads wasm bytecode for given code id",
 		Long:  "Downloads wasm bytecode for given code id",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
 			codeID, err := strconv.ParseUint(args[0], 10, 64)
 			if err != nil {
@@ -175,7 +204,7 @@ func GetCmdQueryCode(cdc *codec.Codec) *cobra.Command {
 			}
 
 			route := fmt.Sprintf("custom/%s/%s/%d", types.QuerierRoute, keeper.QueryGetCode, codeID)
-			res, _, err := cliCtx.Query(route)
+			res, _, err := clientCtx.Query(route)
 			if err != nil {
 				return err
 			}
@@ -196,17 +225,24 @@ func GetCmdQueryCode(cdc *codec.Codec) *cobra.Command {
 			return ioutil.WriteFile(args[1], code.Data, 0644)
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
 }
 
 // GetCmdGetContractInfo gets details about a given contract
-func GetCmdGetContractInfo(cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
+func GetCmdGetContractInfo() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "contract [bech32_address]",
 		Short: "Prints out metadata of a contract given its address",
 		Long:  "Prints out metadata of a contract given its address",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
 			addr, err := sdk.AccAddressFromBech32(args[0])
 			if err != nil {
@@ -214,7 +250,7 @@ func GetCmdGetContractInfo(cdc *codec.Codec) *cobra.Command {
 			}
 
 			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryGetContract, addr.String())
-			res, _, err := cliCtx.Query(route)
+			res, _, err := clientCtx.Query(route)
 			if err != nil {
 				return err
 			}
@@ -222,17 +258,24 @@ func GetCmdGetContractInfo(cdc *codec.Codec) *cobra.Command {
 			return nil
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
 }
 
-func CmdDecryptText(cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
+func CmdDecryptText() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "decrypt [encrypted_data]",
 		Short: "Attempt to decrypt an encrypted blob",
 		Long: "Attempt to decrypt a base-64 encoded encrypted message. This is intended to be used if manual decrypt" +
 			"is required for data that is unavailable to be decrypted using the 'query compute tx' command",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
 			encodedInput := args[0]
 
@@ -244,7 +287,7 @@ func CmdDecryptText(cdc *codec.Codec) *cobra.Command {
 			nonce := dataCipherBz[0:32]
 			originalTxSenderPubkey := dataCipherBz[32:64]
 
-			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
+			wasmCtx := wasmUtils.WASMContext{CLIContext: clientCtx}
 			_, myPubkey, err := wasmCtx.GetTxSenderKeyPair()
 
 			if !bytes.Equal(originalTxSenderPubkey, myPubkey) {
@@ -260,19 +303,26 @@ func CmdDecryptText(cdc *codec.Codec) *cobra.Command {
 			return nil
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
 }
 
 // QueryDecryptTxCmd the default command for a tx query + IO decryption if I'm the tx sender.
 // Coppied from https://github.com/cosmos/cosmos-sdk/blob/v0.38.4/x/auth/client/cli/query.go#L157-L184 and added IO decryption (Could not wrap it because it prints directly to stdout)
-func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
+func GetQueryDecryptTxCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tx [hash]",
 		Short: "Query for a transaction by hash in a committed block, decrypt input and outputs if I'm the tx sender",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
-			result, err := utils.QueryTx(cliCtx, args[0])
+			result, err := authclient.QueryTx(clientCtx, args[0])
 			if err != nil {
 				return err
 			}
@@ -293,7 +343,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			var encryptedInput []byte
 			var dataOutputHexB64 string
 
-			txInputs := result.Tx.GetMsgs()
+			txInputs := result.GetTx().GetMsgs()
 			if len(txInputs) != 1 {
 				return fmt.Errorf("can only decrypt txs with 1 input. Got %d", len(txInputs))
 			}
@@ -327,7 +377,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			nonce := encryptedInput[0:32]
 			originalTxSenderPubkey := encryptedInput[32:64]
 
-			wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
+			wasmCtx := wasmUtils.WASMContext{CLIContext: clientCtx}
 			_, myPubkey, err := wasmCtx.GetTxSenderKeyPair()
 			if err != nil {
 				return fmt.Errorf("error in GetTxSenderKeyPair: %w", err)
@@ -427,14 +477,14 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 				answer.PlaintextError = result.RawLog
 			}
 
-			return cliCtx.PrintOutput(answer)
+			return clientCtx.PrintOutput(answer)
 		},
 	}
 
 	return cmd
 }
 
-func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
+func GetCmdQuery() *cobra.Command {
 	decoder := newArgDecoder(asciiDecodeString)
 
 	cmd := &cobra.Command{
@@ -443,7 +493,11 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 		Long:  "Calls contract with given address with query data and prints the returned result",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
 			var msg string
 			var contractAddr string
@@ -456,7 +510,7 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 				}
 
 				route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
-				res, _, err := cliCtx.Query(route)
+				res, _, err := clientCtx.Query(route)
 				if err != nil {
 					return err
 				}
@@ -478,7 +532,7 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 				return errors.New("query data must be json")
 			}
 
-			return QueryWithData(contractAddr, cdc, queryData)
+			return QueryWithData(contractAddr, queryData, clientCtx)
 		},
 	}
 	decoder.RegisterFlags(cmd.PersistentFlags(), "query argument")
@@ -486,9 +540,7 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 	return cmd
 }
 
-func QueryWithData(contractAddress string, cdc *codec.Codec, queryData []byte) error {
-	cliCtx := context.NewCLIContext().WithCodec(cdc)
-
+func QueryWithData(contractAddress string, queryData []byte, cliCtx client.Context) error {
 	addr, err := sdk.AccAddressFromBech32(contractAddress)
 	if err != nil {
 		return err
@@ -550,14 +602,18 @@ func QueryWithData(contractAddress string, cdc *codec.Codec, queryData []byte) e
 
 /*
 // GetCmdGetContractHistory prints the code history for a given contract
-func GetCmdGetContractHistory(cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
+func GetCmdGetContractHistory() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "contract-history [bech32_address]",
 		Short: "Prints out the code history for a contract given its address",
 		Long:  "Prints out the code history for a contract given its address",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
 			addr, err := sdk.AccAddressFromBech32(args[0])
 			if err != nil {
@@ -565,7 +621,7 @@ func GetCmdGetContractHistory(cdc *codec.Codec) *cobra.Command {
 			}
 
 			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHistory, addr.String())
-			res, _, err := cliCtx.Query(route)
+			res, _, err := clientCtx.Query(route)
 			if err != nil {
 				return err
 			}
