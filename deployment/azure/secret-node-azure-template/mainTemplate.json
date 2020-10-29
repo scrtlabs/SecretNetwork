@@ -102,6 +102,13 @@
       "metadata": {
         "description": "SSH Key or password for the Virtual Machine. SSH key is recommended."
       }
+    },
+    "cfUri": {
+      "type": "string",
+      "metadata": {
+        "description": "The URI where the docker-compose file used to launch the node will be located"
+      },
+      "defaultValue": "[uri(parameters('_artifactsLocation'), concat('docker/docker-compose.yaml', parameters('_artifactsLocationSasToken')))]"
     }
   },
   "variables": {
@@ -131,7 +138,7 @@
   "resources": [
     {
       "type": "Microsoft.Network/networkSecurityGroups",
-      "apiVersion": "2020-04-01",
+      "apiVersion": "2020-05-01",
       "name": "[variables('networkSecurityGroupName')]",
       "location": "[parameters('location')]",
       "properties": {
@@ -167,7 +174,7 @@
       }
     },
     {
-      "apiVersion": "2019-11-01",
+      "apiVersion": "2020-05-01",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[variables('publicIPAddressName')]",
       "location": "[parameters('location')]",
@@ -179,7 +186,7 @@
       }
     },
     {
-      "apiVersion": "2020-04-01",
+      "apiVersion": "2020-05-01",
       "type": "Microsoft.Network/virtualNetworks",
       "name": "[variables('virtualNetworkName')]",
       "location": "[parameters('location')]",
@@ -208,7 +215,7 @@
       }
     },
     {
-      "apiVersion": "2019-11-01",
+      "apiVersion": "2020-05-01",
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[variables('nicName')]",
       "location": "[parameters('location')]",
@@ -234,7 +241,7 @@
       }
     },
     {
-      "apiVersion": "2019-12-01",
+      "apiVersion": "2020-06-01",
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[variables('vmName')]",
       "location": "[parameters('location')]",
@@ -300,7 +307,7 @@
     {
       "type": "Microsoft.Compute/virtualMachines/extensions",
       "name": "[concat(variables('vmName'),'/newuserscript')]",
-      "apiVersion": "2019-12-01",
+      "apiVersion": "2020-06-01",
       "location": "[parameters('location')]",
       "dependsOn": [
         "[concat('Microsoft.Compute/virtualMachines/', variables('vmName'))]"
@@ -312,16 +319,17 @@
         "autoUpgradeMinorVersion": true,
         "settings": {
           "fileUris": [
-            "[uri(parameters('_artifactsLocation'), concat('scripts/secretnode.sh', parameters('_artifactsLocationSasToken')))]"
+            "[uri(parameters('_artifactsLocation'), concat('scripts/secretnode.sh', parameters('_artifactsLocationSasToken')))]",
+            "[parameters('cfUri')]"
           ]
         },
         "protectedSettings": {
-          "commandToExecute": "[concat('sh secretnode.sh',' ',parameters('adminUsername'),' ',parameters('chainId'),' ',parameters('moniker'),' ',parameters('persistentPeers'),' ',parameters('rpcUrl'),' ',parameters('registrationService'))]"
+          "commandToExecute": "[concat('sh secretnode.sh',' ',parameters('adminUsername'),' ',parameters('chainId'),' ',parameters('moniker'),' ',parameters('persistentPeers'),' ',parameters('rpcUrl'),' ',parameters('registrationService'),' ',parameters('cfUri'))]"
         }
       }
     },
 	{
-		"apiVersion": "2018-02-01",
+		"apiVersion": "2020-06-01",
 		"name": "pid-7f40ee20-4ee6-5b1e-a2aa-47f9a3fb5631",
 		"type": "Microsoft.Resources/deployments",
 		"properties": {
@@ -329,7 +337,7 @@
 			"template": {
 				"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 				"contentVersion": "1.0.0.0",
-				"resources": []
+                "resources": []
 			}
 		}
 	}

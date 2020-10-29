@@ -172,7 +172,7 @@
               "allowedValues": [
                 {
                   "label": "Testnet",
-                  "value": "register.pub.testnet.enigma.co:26667"
+                  "value": "register.testnet.enigma.co:16667"
                 },
                 {
                   "label": "Mainnet",
