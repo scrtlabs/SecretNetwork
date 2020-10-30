@@ -88,8 +88,6 @@ secretcli config trust-node true
 secretcli config output json
 secretcli config indent true
 
-export YOUR_KEY_NAME="<key-alias>"
-
 secretcli tx register auth ./attestation_cert.der --from "$YOUR_KEY_NAME" --gas 250000 --gas-prices 0.25uscrt
 
 SEED=$(secretcli query register seed "$PUBLIC_KEY" | cut -c 3-)
