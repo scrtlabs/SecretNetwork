@@ -67,8 +67,6 @@ wget https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/secretn
 
 sudo apt install ./secretnetwork_1.0.0_amd64.deb
 
-YOUR_MONIKER="<moniker>"
-
 secretd init "$YOUR_MONIKER" --chain-id secret-2
 
 wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/genesis.json"
