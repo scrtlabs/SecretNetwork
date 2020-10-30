@@ -42,7 +42,7 @@ secretcli keys add <key-alias>
 
 Then transfer funds to address you just created.
 
-### 2. Check that you have the funds:
+#### 2. Check that you have the funds:
 
 ```bash
 secretcli q account $(secretcli keys show -a <key-alias>)
