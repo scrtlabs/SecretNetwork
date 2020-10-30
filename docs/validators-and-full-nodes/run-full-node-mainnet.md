@@ -24,7 +24,41 @@ This document details how to join the Secret Network `mainnet` as a validator.
 - 256GB SSD
 - 2 dedicated cores of any Intel Skylake processor (Intel® 6th generation) or better
 
+### Pre-Installation Steps
+
+Use these steps to create your secret key and send it some SCRT. The key will be used during the installation
+when registering your node on the network.
+
+### 1. Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):
+
+```bash
+secretcli keys add <key-alias>
+```
+
+**:warning:Note:warning:: Backup the mnemonics!**
+**:warning:Note:warning:: Please make sure you also [backup your validator](backup-a-validator.md)**
+
+**Note**: If you already have a key you can import it with the bip39 mnemonic with `secretcli keys add <key-alias> --recover` or with `secretcli keys export` (exports to `stderr`!!) & `secretcli keys import`.
+
+Then transfer funds to address you just created.
+
+### 2. Check that you have the funds:
+
+```bash
+secretcli q account $(secretcli keys show -a <key-alias>)
+```
+
+If you get the following message, it means that you have no tokens yet:
+
+```bash
+ERROR: unknown address: account secret1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx does not exist
+```
+
+
 ### Installation
+
+*NOTE*: Set *YOUR_MONIKER* and *YOUR_KEY_NAME* (below) by substituting `<moniker>` and `<key-alias>` to your node's 
+moniker and the name of your key.
 
 ```bash
 cd ~
@@ -32,6 +66,8 @@ cd ~
 wget https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/secretnetwork_1.0.0_amd64.deb
 
 sudo apt install ./secretnetwork_1.0.0_amd64.deb
+
+export YOUR_MONIKER="<moniker>"
 
 secretd init "$YOUR_MONIKER" --chain-id secret-2
 
@@ -51,6 +87,8 @@ secretcli config node tcp://secret-2.node.enigma.co:26657
 secretcli config trust-node true
 secretcli config output json
 secretcli config indent true
+
+export YOUR_KEY_NAME="<key-alias>"
 
 secretcli tx register auth ./attestation_cert.der --from "$YOUR_KEY_NAME" --gas 250000 --gas-prices 0.25uscrt
 
@@ -78,7 +116,7 @@ You are now a full node. :tada:
 #### See your node's logs:
 
 ```bash
-journalctrl -u secret-node -f
+journalctl -u secret-node -f
 ```
 
 #### Get your node ID with:
