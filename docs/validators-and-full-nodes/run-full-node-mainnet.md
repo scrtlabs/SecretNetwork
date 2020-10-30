@@ -26,10 +26,10 @@ This document details how to join the Secret Network `mainnet` as a validator.
 
 ### Pre-Installation Steps
 
-Use these steps to create your secret key and send it some SCRT. The key will be used during the installation
+Use these steps to create your key and send it some SCRT. The key will be used during the installation
 when registering your node on the network.
 
-### 1. Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):
+#### 1. Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):
 
 ```bash
 secretcli keys add <key-alias>
@@ -57,8 +57,8 @@ ERROR: unknown address: account secret1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx do
 
 ### Installation
 
-*NOTE*: Set *YOUR_MONIKER* and *YOUR_KEY_NAME* (below) by substituting `<moniker>` and `<key-alias>` to your node's 
-moniker and the name of your key.
+*NOTE*: Substitute **$YOUR_MONIKER** and **$YOUR_KEY_NAME** (below) with your node's moniker and the `<key-alias>` 
+you created above.
 
 ```bash
 cd ~
@@ -67,7 +67,7 @@ wget https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/secretn
 
 sudo apt install ./secretnetwork_1.0.0_amd64.deb
 
-export YOUR_MONIKER="<moniker>"
+YOUR_MONIKER="<moniker>"
 
 secretd init "$YOUR_MONIKER" --chain-id secret-2
 
