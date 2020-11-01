@@ -78,7 +78,7 @@ You are now a full node. :tada:
 #### See your node's logs:
 
 ```bash
-journalctrl -u secret-node -f
+journalctl -u secret-node -f
 ```
 
 #### Get your node ID with:
