@@ -102,6 +102,20 @@ message QuerySmartContractStateRequest {
     bytes query_data = 2;
 }
 
+message QueryContractAddressByLabelRequest {
+    string label = 1;
+}
+
+message QueryContractKeyRequest {
+    // address is the address of the contract
+    bytes address = 1 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
+}
+
+message QueryContractHashRequest {
+    // address is the address of the contract
+    bytes address = 1 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
+}
+
 message QuerySmartContractStateResponse {
     bytes data = 1 [(gogoproto.casttype) = "encoding/json.RawMessage"];
 }
@@ -125,6 +139,20 @@ message QueryCodeResponse {
 
 message QueryCodesResponse {
     repeated CodeInfoResponse code_infos = 1 [(gogoproto.nullable) = false];
+}
+
+message QueryContractAddressByLabelResponse {
+    // address is the address of the contract
+    bytes address = 1 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
+}
+
+message QueryContractKeyResponse {
+    // address is the address of the contract
+    bytes key = 1 [(gogoproto.casttype) = "github.com/tendermint/tendermint/libs/bytes.HexBytes"];
+}
+
+message QueryContractHashResponse {
+    bytes code_hash = 1 [(gogoproto.casttype) = "github.com/tendermint/tendermint/libs/bytes.HexBytes"];
 }
 
 //// DecryptedAnswer is a struct that represents a decrypted tx-query

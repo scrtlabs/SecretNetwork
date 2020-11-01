@@ -180,7 +180,7 @@ func NewSecretNetworkApp(
 	homePath string,
 	invCheckPeriod uint,
 	queryGasLimit uint64,
-	enabledProposals []compute.ProposalType,
+	//enabledProposals []compute.ProposalType,
 	bootstrap bool,
 	baseAppOptions ...func(*bam.BaseApp),
 ) *SecretNetworkApp {
@@ -298,12 +298,13 @@ func NewSecretNetworkApp(
 	app.computeKeeper = compute.NewKeeper(
 		appCodec,
 		keys[compute.StoreKey],
-		app.getSubspace(compute.ModuleName),
+		//app.getSubspace(compute.ModuleName),
 		app.accountKeeper,
 		app.bankKeeper,
-		app.stakingKeeper,
+		app.govKeeper,
 		app.distrKeeper,
 		app.mintKeeper,
+		app.stakingKeeper,
 		computeRouter,
 		computeDir,
 		wasmConfig,
@@ -320,10 +321,12 @@ func NewSecretNetworkApp(
 			app.slashingKeeper.Hooks()),
 	)
 
+	/*
 	// The gov proposal types can be individually enabled
 	if len(enabledProposals) != 0 {
 		govRouter.AddRoute(compute.RouterKey, compute.NewWasmProposalHandler(app.computeKeeper, enabledProposals))
 	}
+	*/
 
 	app.govKeeper = govkeeper.NewKeeper(
 		appCodec,

@@ -2,9 +2,8 @@ package types
 
 import (
 	"encoding/json"
+	authlegacy "github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	"strconv"
-
-	"github.com/cosmos/cosmos-sdk/x/auth"
 )
 
 // HumanAddress is a printable (typically bech32 encoded) address string. Just use it as a label for developers.
@@ -61,7 +60,7 @@ func (o OutOfGasError) Error() string {
 }
 
 type VerificationInfo struct {
-	Bytes             []byte            `json:"sign_bytes"`
-	Signature         auth.StdSignature `json:"signature"`
-	CallbackSignature []byte            `json:"callback_sig"` // Optional
+	Bytes             []byte                  `json:"sign_bytes"`
+	Signature         authlegacy.StdSignature `json:"signature"`
+	CallbackSignature []byte                  `json:"callback_sig"` // Optional
 }

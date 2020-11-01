@@ -211,7 +211,7 @@ func GetCmdQueryCode() *cobra.Command {
 			if len(res) == 0 {
 				return fmt.Errorf("contract not found")
 			}
-			var code keeper.GetCodeResponse
+			var code types.QueryCodeResponse
 			err = json.Unmarshal(res, &code)
 			if err != nil {
 				return err

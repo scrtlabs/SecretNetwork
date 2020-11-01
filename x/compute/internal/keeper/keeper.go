@@ -5,27 +5,28 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
+	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
+	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
+	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
+	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 
 	"path/filepath"
 
-	"github.com/cosmos/cosmos-sdk/x/auth/exported"
-	distr "github.com/cosmos/cosmos-sdk/x/distribution"
-	"github.com/cosmos/cosmos-sdk/x/gov"
-	"github.com/cosmos/cosmos-sdk/x/mint"
-	"github.com/pkg/errors"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
+	//"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 
-	wasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
-	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/auth/ante"
+	authlegacy "github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/cosmos/cosmos-sdk/x/staking"
+	wasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
+	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
@@ -53,9 +54,9 @@ const CompileCost uint64 = 2
 // Keeper will have a reference to Wasmer with it's own data directory.
 type Keeper struct {
 	storeKey      sdk.StoreKey
-	cdc           *codec.Codec
-	accountKeeper auth.AccountKeeper
-	bankKeeper    bank.Keeper
+	cdc           codec.Marshaler
+	accountKeeper authkeeper.AccountKeeper
+	bankKeeper    bankkeeper.Keeper
 
 	wasmer       wasm.Wasmer
 	queryPlugins QueryPlugins
@@ -68,8 +69,8 @@ type Keeper struct {
 
 // NewKeeper creates a new contract Keeper instance
 // If customEncoders is non-nil, we can use this to override some of the message handler, especially custom
-func NewKeeper(cdc codec.Marshaler, storeKey sdk.StoreKey, accountKeeper auth.AccountKeeper,
-	bankKeeper *bank.Keeper, govKeeper *gov.Keeper, distKeeper *distr.Keeper, mintKeeper *mint.Keeper, stakingKeeper *staking.Keeper,
+func NewKeeper(cdc codec.Marshaler, storeKey sdk.StoreKey, accountKeeper authkeeper.AccountKeeper,
+	bankKeeper bankkeeper.Keeper, govKeeper govkeeper.Keeper, distKeeper distrkeeper.Keeper, mintKeeper mintkeeper.Keeper, stakingKeeper stakingkeeper.Keeper,
 	router sdk.Router, homeDir string, wasmConfig types.WasmConfig, supportedFeatures string, customEncoders *MessageEncoders, customPlugins *QueryPlugins) Keeper {
 	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize)
 	if err != nil {
@@ -88,7 +89,7 @@ func NewKeeper(cdc codec.Marshaler, storeKey sdk.StoreKey, accountKeeper auth.Ac
 		cdc:           cdc,
 		wasmer:        *wasmer,
 		accountKeeper: accountKeeper,
-		bankKeeper:    *bankKeeper,
+		bankKeeper:    bankKeeper,
 		messenger:     NewMessageHandler(router, customEncoders),
 		queryGasLimit: wasmConfig.SmartQueryGasLimit,
 		// authZPolicy:   DefaultAuthorizationPolicy{},
@@ -155,7 +156,7 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	*/
 	codeInfo := types.NewCodeInfo(codeHash, creator, source, builder /* , *instantiateAccess */)
 	// 0x01 | codeID (uint64) -> ContractInfo
-	store.Set(types.GetCodeKey(codeID), k.cdc.MustMarshalBinaryBare(codeInfo))
+	store.Set(types.GetCodeKey(codeID), k.cdc.MustMarshalBinaryBare(&codeInfo))
 
 	return codeID, nil
 }
@@ -165,7 +166,7 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 // This is because the original `GetSignBytes` was probably meant to be used before the transaction gets processed, and the
 // sequence that gets returned is an increment of what we need.
 // This is why we use `acc.GetSequence() - 1`
-func GetSignBytes(ctx sdk.Context, acc exported.Account, tx auth.StdTx) []byte {
+func GetSignBytes(ctx sdk.Context, acc authtypes.AccountI, tx authlegacy.StdTx) []byte {
 	genesis := ctx.BlockHeight() == 0
 	chainID := ctx.ChainID()
 	var accNum uint64
@@ -173,13 +174,13 @@ func GetSignBytes(ctx sdk.Context, acc exported.Account, tx auth.StdTx) []byte {
 		accNum = acc.GetAccountNumber()
 	}
 
-	return authtypes.StdSignBytes(
-		chainID, accNum, acc.GetSequence()-1, tx.Fee, tx.Msgs, tx.Memo,
+	return authlegacy.StdSignBytes(
+		chainID, accNum, acc.GetSequence()-1, tx.TimeoutHeight, tx.Fee, tx.Msgs, tx.Memo,
 	)
 }
 
 // GetSignerSignature returns the signature of an account on a tx
-func GetSignerSignature(signer exported.Account, tx auth.StdTx) (authtypes.StdSignature, error) {
+func GetSignerSignature(signer authtypes.AccountI, tx authlegacy.StdTx) (authlegacy.StdSignature, error) {
 	// Extract signature of signer from all tx signatures
 	for _, signature := range tx.Signatures {
 		if signature.PubKey.Equals(signer.GetPubKey()) {
@@ -187,18 +188,18 @@ func GetSignerSignature(signer exported.Account, tx auth.StdTx) (authtypes.StdSi
 		}
 	}
 
-	return authtypes.StdSignature{}, fmt.Errorf("could not find signer signature")
+	return authlegacy.StdSignature{}, fmt.Errorf("could not find signer signature")
 }
 
-func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) (authtypes.StdSignature, []byte, error) {
-	var defaultSignature = authtypes.StdSignature{
-		PubKey:    secp256k1.PubKeySecp256k1{},
+func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) (authlegacy.StdSignature, []byte, error) {
+	var defaultSignature = authlegacy.StdSignature{
+		PubKey:    secp256k1.PubKey{},
 		Signature: []byte{},
 	}
 
 	// Warning: This API may be deprecated:
 	// https://github.com/cosmos/cosmos-sdk/commit/c13809062ab16bf193ad3919c77ec03c79b76cc8#diff-a64b9f4b7565560002e3ac4a5eac008bR148
-	tx := authtypes.StdTx{}
+	tx := authlegacy.StdTx{}
 	txBytes := ctx.TxBytes()
 	err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
 	if err != nil {
@@ -206,7 +207,7 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) (authtypes
 	}
 
 	// Get sign bytes for the message creator
-	signerAcc, err := auth.GetSignerAcc(ctx, k.accountKeeper, signer) // for MsgInstantiateContract, there is only one signer which is msg.Sender (https://github.com/enigmampc/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L192-L194)
+	signerAcc, err := ante.GetSignerAcc(ctx, k.accountKeeper, signer) // for MsgInstantiateContract, there is only one signer which is msg.Sender (https://github.com/enigmampc/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L192-L194)
 	if err != nil {
 		return defaultSignature, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
 	}
@@ -240,7 +241,7 @@ func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeIn
 		return sdkerrors.Wrapf(types.ErrDuplicate, "duplicate code: %d", codeID)
 	}
 	// 0x01 | codeID (uint64) -> ContractInfo
-	store.Set(key, k.cdc.MustMarshalBinaryBare(codeInfo))
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&codeInfo))
 	return nil
 }
 
@@ -253,9 +254,8 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin *
 		func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator , admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) {
 	*/
 	ctx.GasMeter().ConsumeGas(InstanceCost, "Loading CosmWasm module: init")
-
-	signerSig := authtypes.StdSignature{
-		PubKey:    secp256k1.PubKeySecp256k1{},
+	signerSig := authlegacy.StdSignature{
+		PubKey:    secp256k1.PubKey{},
 		Signature: []byte{},
 	}
 	signBytes := []byte{}
@@ -288,7 +288,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin *
 
 	// deposit initial contract funds
 	if !deposit.IsZero() {
-		if k.bankKeeper.BlacklistedAddr(creator) {
+		if k.bankKeeper.BlockedAddr(creator) {
 			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "blocked address can not be used")
 		}
 		sdkerr := k.bankKeeper.SendCoins(ctx, creator, contractAddress, deposit)
@@ -350,7 +350,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin *
 	// persist instance
 	createdAt := types.NewAbsoluteTxPosition(ctx)
 	instance := types.NewContractInfo(codeID, creator /* admin, */, label, createdAt)
-	store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshalBinaryBare(instance))
+	store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshalBinaryBare(&instance))
 
 	fmt.Printf("Storing key: %s for account %s\n", key, contractAddress)
 
@@ -366,8 +366,8 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin *
 func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, callbackSig []byte) (*sdk.Result, error) {
 	ctx.GasMeter().ConsumeGas(InstanceCost, "Loading CosmWasm module: execute")
 
-	signerSig := authtypes.StdSignature{
-		PubKey:    secp256k1.PubKeySecp256k1{},
+	signerSig := authlegacy.StdSignature{
+		PubKey:    secp256k1.PubKey{},
 		Signature: []byte{},
 	}
 	signBytes := []byte{}
@@ -391,7 +391,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	// add more funds
 	if !coins.IsZero() {
-		if k.bankKeeper.BlacklistedAddr(caller) {
+		if k.bankKeeper.BlockedAddr(caller) {
 			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "blocked address can not be used")
 		}
 
@@ -831,10 +831,10 @@ func (k Keeper) importAutoIncrementID(ctx sdk.Context, lastIDKey []byte, val uin
 
 func (k Keeper) importContract(ctx sdk.Context, contractAddr sdk.AccAddress, c *types.ContractInfo, state []types.Model) error {
 	if !k.containsCodeInfo(ctx, c.CodeID) {
-		return errors.Wrapf(types.ErrNotFound, "code id: %d", c.CodeID)
+		return sdkerrors.Wrapf(types.ErrNotFound, "code id: %d", c.CodeID)
 	}
 	if k.containsContractInfo(ctx, contractAddr) {
-		return errors.Wrapf(types.ErrDuplicate, "contract: %s", contractAddr)
+		return sdkerrors.Wrapf(types.ErrDuplicate, "contract: %s", contractAddr)
 	}
 
 	// historyEntry := c.ResetFromGenesis(ctx)

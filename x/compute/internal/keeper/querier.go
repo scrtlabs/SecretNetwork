@@ -1,114 +1,217 @@
 package keeper
 
 import (
-	"encoding/json"
+	"context"
+	"github.com/golang/protobuf/ptypes/empty"
 	"sort"
-	"strconv"
 
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-
-	abci "github.com/tendermint/tendermint/abci/types"
-	tmbytes "github.com/tendermint/tendermint/libs/bytes"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
-const (
-	QueryListContractByCode = "list-contracts-by-code"
-	QueryGetContract        = "contract-info"
-	QueryGetContractState   = "query"
-	QueryGetCode            = "code"
-	QueryListCode           = "list-code"
-	QueryContractAddress    = "label"
-	QueryContractKey        = "contract-key"
-	QueryContractHash       = "contract-hash"
-	// QueryContractHistory    = "contract-history"
-)
+type grpcQuerier struct {
+	keeper Keeper
+}
 
-const QueryMethodContractStateSmart = "smart"
+// todo: this needs proper tests and doc
+func NewQuerier(keeper Keeper) grpcQuerier {
+	return grpcQuerier{keeper: keeper}
+}
+
+func (q grpcQuerier) ContractInfo(c context.Context, req *types.QueryContractInfoRequest) (*types.QueryContractInfoResponse, error) {
+	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
+		return nil, err
+	}
+	rsp, err := queryContractInfo(sdk.UnwrapSDKContext(c), req.Address, q.keeper)
+	switch {
+	case err != nil:
+		return nil, err
+	case rsp == nil:
+		return nil, types.ErrNotFound
+	}
+	return &types.QueryContractInfoResponse{
+		Address:      rsp.Address,
+		ContractInfo: rsp.ContractInfo,
+	}, nil
+}
 
 /*
-const (
-	QueryMethodContractStateSmart = "smart"
-	QueryMethodContractStateAll   = "all"
-	QueryMethodContractStateRaw   = "raw"
-)
+func (q grpcQuerier) ContractHistory(c context.Context, req *types.QueryContractHistoryRequest) (*types.QueryContractHistoryResponse, error) {
+	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
+		return nil, err
+	}
+	rsp, err := queryContractHistory(sdk.UnwrapSDKContext(c), req.Address, q.keeper)
+	switch {
+	case err != nil:
+		return nil, err
+	case rsp == nil:
+		return nil, types.ErrNotFound
+	}
+	return &types.QueryContractHistoryResponse{
+		Entries: rsp,
+	}, nil
+}
 */
 
-// ContractInfoWithAddress adds the address (key) to the ContractInfo representation
-type ContractInfoWithAddress struct {
-	// embedded here, so all json items remain top level
-	*types.ContractInfo
-	Address sdk.AccAddress `json:"address"`
+func (q grpcQuerier) ContractsByCode(c context.Context, req *types.QueryContractsByCodeRequest) (*types.QueryContractsByCodeResponse, error) {
+	if req.CodeId == 0 {
+		return nil, sdkerrors.Wrap(types.ErrInvalid, "code id")
+	}
+	rsp, err := queryContractListByCode(sdk.UnwrapSDKContext(c), req.CodeId, q.keeper)
+	switch {
+	case err != nil:
+		return nil, err
+	case rsp == nil:
+		return nil, types.ErrNotFound
+	}
+	return &types.QueryContractsByCodeResponse{
+		ContractInfos: rsp,
+	}, nil
 }
 
-// NewQuerier creates a new querier
-func NewQuerier(keeper Keeper) sdk.Querier {
-	return func(ctx sdk.Context, path []string, req abci.RequestQuery) ([]byte, error) {
-		switch path[0] {
-		case QueryGetContract:
-			return queryContractInfo(ctx, path[1], keeper)
-		case QueryListContractByCode:
-			return queryContractListByCode(ctx, path[1], keeper)
-		case QueryGetContractState:
-			return queryContractState(ctx, path[1], req, keeper)
-		case QueryGetCode:
-			return queryCode(ctx, path[1], keeper)
-		case QueryListCode:
-			return queryCodeList(ctx, keeper)
-		/*
-			case QueryContractHistory:
-				return queryContractHistory(ctx, path[1], keeper)
-		*/
-		case QueryContractAddress:
-			return queryContractAddress(ctx, path[1], req, keeper)
-		case QueryContractKey:
-			return queryContractKey(ctx, path[1], req, keeper)
-		case QueryContractHash:
-			return queryContractHash(ctx, path[1], req, keeper)
-		default:
-			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "unknown data query endpoint")
-		}
+/*
+func (q grpcQuerier) AllContractState(c context.Context, req *types.QueryAllContractStateRequest) (*types.QueryAllContractStateResponse, error) {
+	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
+		return nil, err
 	}
+	ctx := sdk.UnwrapSDKContext(c)
+	if !q.keeper.containsContractInfo(ctx, req.Address) {
+		return nil, types.ErrNotFound
+	}
+	var resultData []types.Model
+	for iter := q.keeper.GetContractState(ctx, req.Address); iter.Valid(); iter.Next() {
+		resultData = append(resultData, types.Model{
+			Key:   iter.Key(),
+			Value: iter.Value(),
+		})
+	}
+	return &types.QueryAllContractStateResponse{Models: resultData}, nil
 }
 
-func queryContractInfo(ctx sdk.Context, bech string, keeper Keeper) ([]byte, error) {
-	addr, err := sdk.AccAddressFromBech32(bech)
-	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
-	}
-	info := keeper.GetContractInfo(ctx, addr)
-	if info == nil {
-		return []byte("null"), nil
-	}
-	redact(info)
-	infoWithAddress := ContractInfoWithAddress{
-		Address:      addr,
-		ContractInfo: info,
-	}
-	bz, err := json.MarshalIndent(infoWithAddress, "", "  ")
-	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
-	}
-	return bz, nil
-}
+func (q grpcQuerier) RawContractState(c context.Context, req *types.QueryRawContractStateRequest) (*types.QueryRawContractStateResponse, error) {
+	ctx := sdk.UnwrapSDKContext(c)
 
-// redact clears all fields not in the public api
-func redact(info *types.ContractInfo) {
-	info.Created = nil
-}
-
-func queryContractListByCode(ctx sdk.Context, codeIDstr string, keeper Keeper) ([]byte, error) {
-	codeID, err := strconv.ParseUint(codeIDstr, 10, 64)
-	if err != nil {
+	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
 		return nil, err
 	}
 
-	var contracts []ContractInfoWithAddress
+	if !q.keeper.containsContractInfo(ctx, req.Address) {
+		return nil, types.ErrNotFound
+	}
+	rsp := q.keeper.QueryRaw(ctx, req.Address, req.QueryData)
+	return &types.QueryRawContractStateResponse{Data: rsp}, nil
+}
+*/
+
+func (q grpcQuerier) SmartContractState(c context.Context, req *types.QuerySmartContractStateRequest) (*types.QuerySmartContractStateResponse, error) {
+	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
+		return nil, err
+	}
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
+	rsp, err := q.keeper.QuerySmart(ctx, req.Address, req.QueryData, false)
+	switch {
+	case err != nil:
+		return nil, err
+	case rsp == nil:
+		return nil, types.ErrNotFound
+	}
+	return &types.QuerySmartContractStateResponse{Data: rsp}, nil
+
+}
+
+func (q grpcQuerier) Code(c context.Context, req *types.QueryCodeRequest) (*types.QueryCodeResponse, error) {
+	if req.CodeId == 0 {
+		return nil, sdkerrors.Wrap(types.ErrInvalid, "code id")
+	}
+	rsp, err := queryCode(sdk.UnwrapSDKContext(c), req.CodeId, q.keeper)
+	switch {
+	case err != nil:
+		return nil, err
+	case rsp == nil:
+		return nil, types.ErrNotFound
+	}
+	return &types.QueryCodeResponse{
+		CodeInfoResponse: rsp.CodeInfoResponse,
+		Data:             rsp.Data,
+	}, nil
+}
+
+func (q grpcQuerier) Codes(c context.Context, _ *empty.Empty) (*types.QueryCodesResponse, error) {
+	rsp, err := queryCodeList(sdk.UnwrapSDKContext(c), q.keeper)
+	switch {
+	case err != nil:
+		return nil, err
+	case rsp == nil:
+		return nil, types.ErrNotFound
+	}
+	return &types.QueryCodesResponse{CodeInfos: rsp}, nil
+}
+
+func (q grpcQuerier) AddressByLabel(c context.Context, req *types.QueryContractAddressByLabelRequest) (*types.QueryContractAddressByLabelResponse, error) {
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
+	rsp, err := queryContractAddress(ctx, req.Label, q.keeper)
+	switch {
+	case err != nil:
+		return nil, err
+	case rsp == nil:
+		return nil, types.ErrNotFound
+	}
+	return &types.QueryContractAddressByLabelResponse{Address: rsp}, nil
+
+}
+
+func (q grpcQuerier) ContractKey(c context.Context, req *types.QueryContractKeyRequest) (*types.QueryContractKeyResponse, error) {
+	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
+		return nil, err
+	}
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
+	rsp, err := queryContractKey(ctx, req.Address, q.keeper)
+	switch {
+	case err != nil:
+		return nil, err
+	case rsp == nil:
+		return nil, types.ErrNotFound
+	}
+	return &types.QueryContractKeyResponse{Key: rsp}, nil
+
+}
+
+func (q grpcQuerier) ContractHash(c context.Context, req *types.QueryContractHashRequest) (*types.QueryContractHashResponse, error) {
+	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
+		return nil, err
+	}
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
+	rsp, err := queryContractHash(ctx, req.Address, q.keeper)
+	switch {
+	case err != nil:
+		return nil, err
+	case rsp == nil:
+		return nil, types.ErrNotFound
+	}
+	return &types.QueryContractHashResponse{CodeHash: rsp}, nil
+
+}
+
+func queryContractInfo(ctx sdk.Context, addr sdk.AccAddress, keeper Keeper) (*types.ContractInfoWithAddress, error) {
+	info := keeper.GetContractInfo(ctx, addr)
+	if info == nil {
+		return nil, nil
+	}
+	// redact the Created field (just used for sorting, not part of public API)
+	info.Created = nil
+	return &types.ContractInfoWithAddress{
+		Address:      addr,
+		ContractInfo: info,
+	}, nil
+}
+
+func queryContractListByCode(ctx sdk.Context, codeID uint64, keeper Keeper) ([]types.ContractInfoWithAddress, error) {
+	var contracts []types.ContractInfoWithAddress
 	keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, info types.ContractInfo) bool {
 		if info.CodeID == codeID {
 			// and add the address
-			infoWithAddress := ContractInfoWithAddress{
+			infoWithAddress := types.ContractInfoWithAddress{
 				Address:      addr,
 				ContractInfo: &info,
 			}
@@ -123,44 +226,23 @@ func queryContractListByCode(ctx sdk.Context, codeIDstr string, keeper Keeper) (
 	})
 	// and remove that info for the final json (yes, the json:"-" tag doesn't work)
 	for i := range contracts {
-		redact(contracts[i].ContractInfo)
+		contracts[i].Created = nil
 	}
 
-	bz, err := json.MarshalIndent(contracts, "", "  ")
-	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
-	}
-	return bz, nil
+	return contracts, nil
 }
 
-func queryContractState(ctx sdk.Context, bech string, req abci.RequestQuery, keeper Keeper) ([]byte, error) {
-	contractAddr, err := sdk.AccAddressFromBech32(bech)
-	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, bech)
+func queryCode(ctx sdk.Context, codeID uint64, keeper Keeper) (*types.QueryCodeResponse, error) {
+	if codeID == 0 {
+		return nil, nil
 	}
-
-	return keeper.QuerySmart(ctx, contractAddr, req.Data, false)
-}
-
-type GetCodeResponse struct {
-	ListCodeResponse
-	// Data is the entire wasm bytecode
-	Data []byte `json:"data" yaml:"data"`
-}
-
-func queryCode(ctx sdk.Context, codeIDstr string, keeper Keeper) ([]byte, error) {
-	codeID, err := strconv.ParseUint(codeIDstr, 10, 64)
-	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "invalid codeID: "+err.Error())
-	}
-
 	res := keeper.GetCodeInfo(ctx, codeID)
 	if res == nil {
 		// nil, nil leads to 404 in rest handler
 		return nil, nil
 	}
-	info := ListCodeResponse{
-		ID:       codeID,
+	info := types.CodeInfoResponse{
+		CodeID:   codeID,
 		Creator:  res.Creator,
 		DataHash: res.CodeHash,
 		Source:   res.Source,
@@ -172,45 +254,22 @@ func queryCode(ctx sdk.Context, codeIDstr string, keeper Keeper) ([]byte, error)
 		return nil, sdkerrors.Wrap(err, "loading wasm code")
 	}
 
-	bz, err := json.MarshalIndent(GetCodeResponse{info, code}, "", "  ")
-	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
-	}
-	return bz, nil
+	return &types.QueryCodeResponse{CodeInfoResponse: &info, Data: code}, nil
 }
 
-type ListCodeResponse struct {
-	ID       uint64           `json:"id"`
-	Creator  sdk.AccAddress   `json:"creator"`
-	DataHash tmbytes.HexBytes `json:"data_hash"`
-	Source   string           `json:"source"`
-	Builder  string           `json:"builder"`
-}
-
-func queryCodeList(ctx sdk.Context, keeper Keeper) ([]byte, error) {
-	var info []ListCodeResponse
-
-	var i uint64
-	for true {
-		i++
-		res := keeper.GetCodeInfo(ctx, i)
-		if res == nil {
-			break
-		}
-		info = append(info, ListCodeResponse{
-			ID:       i,
+func queryCodeList(ctx sdk.Context, keeper Keeper) ([]types.CodeInfoResponse, error) {
+	var info []types.CodeInfoResponse
+	keeper.IterateCodeInfos(ctx, func(i uint64, res types.CodeInfo) bool {
+		info = append(info, types.CodeInfoResponse{
+			CodeID:   i,
 			Creator:  res.Creator,
 			DataHash: res.CodeHash,
 			Source:   res.Source,
 			Builder:  res.Builder,
 		})
-	}
-
-	bz, err := json.MarshalIndent(info, "", "  ")
-	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
-	}
-	return bz, nil
+		return false
+	})
+	return info, nil
 }
 
 /*
@@ -237,38 +296,28 @@ func queryContractHistory(ctx sdk.Context, bech string, keeper Keeper) ([]byte, 
 }
 */
 
-func queryContractAddress(ctx sdk.Context, label string, req abci.RequestQuery, keeper Keeper) ([]byte, error) {
+func queryContractAddress(ctx sdk.Context, label string, keeper Keeper) (sdk.AccAddress, error) {
 	res := keeper.GetContractAddress(ctx, label)
 	if res == nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownAddress, label)
+		return nil, nil
 	}
 
 	return res, nil
 }
 
-func queryContractKey(ctx sdk.Context, address string, req abci.RequestQuery, keeper Keeper) ([]byte, error) {
-	contractAddr, err := sdk.AccAddressFromBech32(address)
-	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, address)
-	}
-
-	res := keeper.GetContractKey(ctx, contractAddr)
+func queryContractKey(ctx sdk.Context, address sdk.AccAddress, keeper Keeper) ([]byte, error) {
+	res := keeper.GetContractKey(ctx, address)
 	if res == nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownAddress, address)
+		return nil, nil
 	}
 
 	return res, nil
 }
 
-func queryContractHash(ctx sdk.Context, address string, req abci.RequestQuery, keeper Keeper) ([]byte, error) {
-	contractAddr, err := sdk.AccAddressFromBech32(address)
-	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, address)
-	}
-
-	res := keeper.GetContractInfo(ctx, contractAddr)
+func queryContractHash(ctx sdk.Context, address sdk.AccAddress, keeper Keeper) ([]byte, error) {
+	res := keeper.GetContractInfo(ctx, address)
 	if res == nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownAddress, address)
+		return nil, nil
 	}
 
 	return keeper.GetCodeInfo(ctx, res.CodeID).CodeHash, nil
