@@ -55,6 +55,7 @@ const CompileCost uint64 = 2
 type Keeper struct {
 	storeKey      sdk.StoreKey
 	cdc           codec.Marshaler
+	legacyAmino   codec.LegacyAmino
 	accountKeeper authkeeper.AccountKeeper
 	bankKeeper    bankkeeper.Keeper
 
@@ -69,7 +70,7 @@ type Keeper struct {
 
 // NewKeeper creates a new contract Keeper instance
 // If customEncoders is non-nil, we can use this to override some of the message handler, especially custom
-func NewKeeper(cdc codec.Marshaler, storeKey sdk.StoreKey, accountKeeper authkeeper.AccountKeeper,
+func NewKeeper(cdc codec.Marshaler, legacyAmino codec.LegacyAmino, storeKey sdk.StoreKey, accountKeeper authkeeper.AccountKeeper,
 	bankKeeper bankkeeper.Keeper, govKeeper govkeeper.Keeper, distKeeper distrkeeper.Keeper, mintKeeper mintkeeper.Keeper, stakingKeeper stakingkeeper.Keeper,
 	router sdk.Router, homeDir string, wasmConfig types.WasmConfig, supportedFeatures string, customEncoders *MessageEncoders, customPlugins *QueryPlugins) Keeper {
 	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize)
@@ -87,6 +88,7 @@ func NewKeeper(cdc codec.Marshaler, storeKey sdk.StoreKey, accountKeeper authkee
 	keeper := Keeper{
 		storeKey:      storeKey,
 		cdc:           cdc,
+		legacyAmino:   legacyAmino,
 		wasmer:        *wasmer,
 		accountKeeper: accountKeeper,
 		bankKeeper:    bankKeeper,
@@ -201,7 +203,7 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) (authlegac
 	// https://github.com/cosmos/cosmos-sdk/commit/c13809062ab16bf193ad3919c77ec03c79b76cc8#diff-a64b9f4b7565560002e3ac4a5eac008bR148
 	tx := authlegacy.StdTx{}
 	txBytes := ctx.TxBytes()
-	err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
+	err := k.legacyAmino.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
 	if err != nil {
 		return defaultSignature, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
 	}

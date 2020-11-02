@@ -331,15 +331,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 				return fmt.Errorf("no transaction found with hash %s", args[0])
 			}
 
-			var answer struct {
-				Type               string                 `json:"type"`
-				Input              string                 `json:"input"`
-				OutputData         string                 `json:"output_data"`
-				OutputDataAsString string                 `json:"output_data_as_string"`
-				OutputLogs         []sdk.StringEvent      `json:"output_log"`
-				OutputError        cosmwasmTypes.StdError `json:"output_error"`
-				PlaintextError     string                 `json:"plaintext_error"`
-			}
+			var answer types.DecryptedAnswer
 			var encryptedInput []byte
 			var dataOutputHexB64 string
 
@@ -350,7 +342,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 			txInput := txInputs[0]
 
 			if txInput.Type() == "execute" {
-				execTx, ok := txInput.(types.MsgExecuteContract)
+				execTx, ok := txInput.(*types.MsgExecuteContract)
 				if !ok {
 					return fmt.Errorf("error parsing tx as type 'execute': %v", txInput)
 				}
@@ -358,7 +350,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 				encryptedInput = execTx.Msg
 				dataOutputHexB64 = result.Data
 			} else if txInput.Type() == "instantiate" {
-				initTx, ok := txInput.(types.MsgInstantiateContract)
+				initTx, ok := txInput.(*types.MsgInstantiateContract)
 				if !ok {
 					return fmt.Errorf("error parsing tx as type 'instantiate': %v", txInput)
 				}
@@ -477,7 +469,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 				answer.PlaintextError = result.RawLog
 			}
 
-			return clientCtx.PrintOutput(answer)
+			return clientCtx.PrintOutput(&answer)
 		},
 	}
 
@@ -574,7 +566,12 @@ func QueryWithData(contractAddress string, queryData []byte, cliCtx client.Conte
 			if err != nil {
 				return err
 			}
-			return fmt.Errorf("query result: %v", errorPlainBz.Error())
+			var stdErr cosmwasmTypes.StdError
+			err = json.Unmarshal(errorPlainBz, &stdErr)
+			if err != nil {
+				return fmt.Errorf("Error while trying to parse the error as json: '%s': %w", string(errorPlainBz), err)
+			}
+			return fmt.Errorf("query result: %v", stdErr.Error())
 		}
 		// Itzik: Commenting this as it might have been a placeholder for encrypting
 		//else if strings.Contains(err.Error(), "EnclaveErr") {

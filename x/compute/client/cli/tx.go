@@ -359,7 +359,7 @@ func GetCodeHashByCodeId(cliCtx client.Context, codeID string) ([]byte, error) {
 		return nil, err
 	}
 
-	var codeResp keeper.GetCodeResponse
+	var codeResp types.QueryCodeResponse
 
 	err = json.Unmarshal(res, &codeResp)
 	if err != nil {

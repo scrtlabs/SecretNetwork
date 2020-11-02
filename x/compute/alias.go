@@ -122,7 +122,7 @@ type (
 	GovEncoder              = keeper.GovEncoder
 	MessageEncoders         = keeper.MessageEncoders
 	Keeper                  = keeper.Keeper
-	ContractInfoWithAddress = keeper.ContractInfoWithAddress
+	ContractInfoWithAddress = types.ContractInfoWithAddress
 	QueryHandler            = keeper.QueryHandler
 	CustomQuerier           = keeper.CustomQuerier
 	QueryPlugins            = keeper.QueryPlugins

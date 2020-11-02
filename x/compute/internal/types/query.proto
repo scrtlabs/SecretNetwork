@@ -5,6 +5,7 @@ import "gogoproto/gogo.proto";
 import "x/compute/internal/types/types.proto";
 import "google/protobuf/empty.proto";
 import "google/api/annotations.proto";
+import "cosmos/base/abci/v1beta1/abci.proto";
 
 option go_package = "github.com/enigmampc/SecretNetwork/x/compute/internal/types";
 option (gogoproto.goproto_getters_all) = false;
@@ -23,12 +24,14 @@ service Query {
     rpc ContractsByCode (QueryContractsByCodeRequest) returns (QueryContractsByCodeResponse) {
         option (google.api.http).get = "/compute/v1beta1/code/{code_id}/contracts";
     }
+    /*
     rpc AllContractState (QueryAllContractStateRequest) returns (QueryAllContractStateResponse) {
         option (google.api.http).get = "/compute/v1beta1/contract/{address}/state";
     }
     rpc RawContractState (QueryRawContractStateRequest) returns (QueryRawContractStateResponse) {
         option (google.api.http).get = "/compute/v1beta1/contract/{address}/raw/{query_data}";
     }
+    */
     rpc SmartContractState (QuerySmartContractStateRequest) returns (QuerySmartContractStateResponse) {
         option (google.api.http).get = "/compute/v1beta1/contract/{address}/smart/{query_data}";
     }
@@ -77,6 +80,7 @@ message QueryContractsByCodeResponse {
     repeated ContractInfoWithAddress contract_infos = 1 [(gogoproto.nullable) = false];
 }
 
+/*
 message QueryAllContractStateRequest {
     // address is the address of the contract
     bytes address = 1 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
@@ -95,6 +99,7 @@ message QueryRawContractStateRequest {
 message QueryRawContractStateResponse {
     bytes data = 1;
 }
+*/
 
 message QuerySmartContractStateRequest {
     // address is the address of the contract
@@ -155,12 +160,15 @@ message QueryContractHashResponse {
     bytes code_hash = 1 [(gogoproto.casttype) = "github.com/tendermint/tendermint/libs/bytes.HexBytes"];
 }
 
-//// DecryptedAnswer is a struct that represents a decrypted tx-query
-//message DecryptedAnswer {
-//    string type = 1;
-//    string input = 2;
-//    string output_data = 3;
-//    string output_data_as_string = 4;
-//    repeated StringEvent output_logs = 5 [(gogoproto.embed) = true, (gogoproto.jsontag) = "output_logs"];
-//
-//}
+// DecryptedAnswer is a struct that represents a decrypted tx-query
+message DecryptedAnswer {
+    option (gogoproto.equal) = false;
+
+    string type = 1;
+    string input = 2;
+    string output_data = 3;
+    string output_data_as_string = 4;
+    repeated cosmos.base.abci.v1beta1.StringEvent output_logs = 5 [(gogoproto.nullable) = false];
+    bytes output_error = 6 [(gogoproto.casttype) = "encoding/json.RawMessage"];
+    string plaintext_error = 7;
+}

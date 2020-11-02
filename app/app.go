@@ -297,6 +297,7 @@ func NewSecretNetworkApp(
 
 	app.computeKeeper = compute.NewKeeper(
 		appCodec,
+		*legacyAmino,
 		keys[compute.StoreKey],
 		//app.getSubspace(compute.ModuleName),
 		app.accountKeeper,

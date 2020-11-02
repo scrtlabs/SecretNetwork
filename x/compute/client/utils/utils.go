@@ -17,7 +17,6 @@ import (
 	"path"
 	"strings"
 
-	cosmwasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	regtypes "github.com/enigmampc/SecretNetwork/x/registration"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 
@@ -245,27 +244,21 @@ func (ctx WASMContext) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) 
 	return cipher.Open(nil, ciphertext, []byte{})
 }
 
-func (ctx WASMContext) DecryptError(errString string, msgType string, nonce []byte) (cosmwasmTypes.StdError, error) {
+func (ctx WASMContext) DecryptError(errString string, msgType string, nonce []byte) (json.RawMessage, error) {
 	errorCipherB64 := strings.ReplaceAll(errString, msgType+" contract failed: encrypted: ", "")
 	errorCipherB64 = strings.ReplaceAll(errorCipherB64, ": failed to execute message; message index: 0", "")
 
 	errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
 	if err != nil {
-		return cosmwasmTypes.StdError{}, fmt.Errorf("Got an error decoding base64 of the error: %w", err)
+		return nil, fmt.Errorf("Got an error decoding base64 of the error: %w", err)
 	}
 
 	errorPlainBz, err := ctx.Decrypt(errorCipherBz, nonce)
 	if err != nil {
-		return cosmwasmTypes.StdError{}, fmt.Errorf("Got an error decrypting the error: %w", err)
+		return nil, fmt.Errorf("Got an error decrypting the error: %w", err)
 	}
 
-	var stdErr cosmwasmTypes.StdError
-	err = json.Unmarshal(errorPlainBz, &stdErr)
-	if err != nil {
-		return cosmwasmTypes.StdError{}, fmt.Errorf("Error while trying to parse the error as json: '%s': %w", string(errorPlainBz), err)
-	}
-
-	return stdErr, nil
+	return errorPlainBz, nil
 }
 
 func encryptData(aesEncryptionKey []byte, txSenderPubKey []byte, plaintext []byte, nonce []byte) ([]byte, error) {
