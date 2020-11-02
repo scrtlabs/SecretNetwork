@@ -1,16 +1,12 @@
 package main
 
 import (
-	"bufio"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/enigmampc/SecretNetwork/x/compute"
 	"github.com/enigmampc/SecretNetwork/x/compute/client/cli"
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -22,7 +18,7 @@ import (
 const flagAmount = "amount"
 
 // GetQueryCmd returns the cli query commands for this module
-func S20GetQueryCmd(cdc *codec.Codec) *cobra.Command {
+func S20GetQueryCmd() *cobra.Command {
 	s20QueryCmd := &cobra.Command{
 		Use:                        "secret20",
 		Short:                      "*EXPERIMENTAL* Querying commands for the secret20 contracts",
@@ -31,16 +27,16 @@ func S20GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 		RunE:                       client.ValidateCmd,
 	}
 
-	s20QueryCmd.AddCommand(flags.GetCommands(
-		S20BalanceCmd(cdc),
-		S20TransferHistoryCmd(cdc),
-	)...)
+	s20QueryCmd.AddCommand(
+		S20BalanceCmd(),
+		S20TransferHistoryCmd(),
+	)
 
 	return s20QueryCmd
 }
 
 // GetTxCmd returns the transaction commands for this module
-func S20GetTxCmd(cdc *codec.Codec) *cobra.Command {
+func S20GetTxCmd() *cobra.Command {
 	s20TxCmd := &cobra.Command{
 		Use:                        "secret20",
 		Short:                      "*EXPERIMENTAL* Secret20 transactions subcommands",
@@ -49,18 +45,18 @@ func S20GetTxCmd(cdc *codec.Codec) *cobra.Command {
 		RunE:                       client.ValidateCmd,
 	}
 
-	s20TxCmd.AddCommand(flags.PostCommands(
-		s20SendCmd(cdc),
-		s20CreatingViewingKey(cdc),
-		s20DepositCmd(cdc),
-		s20Withdraw(cdc),
-		s20SetViewingKey(cdc),
-	)...)
+	s20TxCmd.AddCommand(
+		s20SendCmd(),
+		s20CreatingViewingKey(),
+		s20DepositCmd(),
+		s20Withdraw(),
+		s20SetViewingKey(),
+	)
 
 	return s20TxCmd
 }
 
-func S20TransferHistoryCmd(cdc *codec.Codec) *cobra.Command {
+func S20TransferHistoryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "history [contract address] [account] [viewing_key]",
 		Short: "*EXPERIMENTAL* View your transaction history",
@@ -68,7 +64,7 @@ func S20TransferHistoryCmd(cdc *codec.Codec) *cobra.Command {
 		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			cliCtx := client.GetClientContextFromCmd(cmd)
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
@@ -87,7 +83,7 @@ func S20TransferHistoryCmd(cdc *codec.Codec) *cobra.Command {
 
 			queryData := transferHistoryMsg(addr, key)
 
-			err = cli.QueryWithData(contractAddr, cdc, queryData)
+			err = cli.QueryWithData(contractAddr, queryData, cliCtx)
 			if err != nil {
 				return err
 			}
@@ -99,7 +95,7 @@ func S20TransferHistoryCmd(cdc *codec.Codec) *cobra.Command {
 	return cmd
 }
 
-func S20BalanceCmd(cdc *codec.Codec) *cobra.Command {
+func S20BalanceCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "balance [contract address] [account] [viewing_key]",
 		Short: "*EXPERIMENTAL* See your current balance for a token",
@@ -108,7 +104,7 @@ key yet, use the "create-viewing-key" command. Otherwise, you can still see your
 		Args: cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			cliCtx := client.GetClientContextFromCmd(cmd)
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
@@ -127,7 +123,7 @@ key yet, use the "create-viewing-key" command. Otherwise, you can still see your
 
 			queryData := balanceMsg(addr, key)
 
-			err = cli.QueryWithData(contractAddr, cdc, queryData)
+			err = cli.QueryWithData(contractAddr, queryData, cliCtx)
 			if err != nil {
 				return err
 			}
@@ -139,7 +135,7 @@ key yet, use the "create-viewing-key" command. Otherwise, you can still see your
 	return cmd
 }
 
-func addressFromBechOrLabel(addressOrLabel string, cliCtx context.CLIContext) (string, error) {
+func addressFromBechOrLabel(addressOrLabel string, cliCtx client.Context) (string, error) {
 
 	var contractAddr string
 
@@ -158,7 +154,7 @@ func addressFromBechOrLabel(addressOrLabel string, cliCtx context.CLIContext) (s
 	return contractAddr, nil
 }
 
-func s20SendCmd(cdc *codec.Codec) *cobra.Command {
+func s20SendCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "send [contract address or label] [to account] [amount]",
@@ -167,8 +163,11 @@ func s20SendCmd(cdc *codec.Codec) *cobra.Command {
 		Args:  cobra.MinimumNArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			inBuf := bufio.NewReader(cmd.InOrStdin())
-			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
+			cliCtx := client.GetClientContextFromCmd(cmd)
+			cliCtx, err := client.ReadTxCommandFlags(cliCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
 			contractAddrStr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
@@ -193,14 +192,14 @@ func s20SendCmd(cdc *codec.Codec) *cobra.Command {
 
 			msg := sendCoinMsg(toAddr, amount)
 
-			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cdc)
+			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cliCtx)
 		},
 	}
 
 	return cmd
 }
 
-func s20CreatingViewingKey(cdc *codec.Codec) *cobra.Command {
+func s20CreatingViewingKey() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create-viewing-key [contract address or label]",
@@ -212,8 +211,11 @@ This transaction will be expensive, so you must have about 3,000,000 gas in your
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			inBuf := bufio.NewReader(cmd.InOrStdin())
-			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
+			cliCtx := client.GetClientContextFromCmd(cmd)
+			cliCtx, err := client.ReadTxCommandFlags(cliCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
 			contractAddrStr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
@@ -236,14 +238,14 @@ This transaction will be expensive, so you must have about 3,000,000 gas in your
 
 			msg := createViewingKeyMsg(randomData)
 
-			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cdc)
+			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cliCtx)
 		},
 	}
 
 	return cmd
 }
 
-func s20SetViewingKey(cdc *codec.Codec) *cobra.Command {
+func s20SetViewingKey() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "set-viewing-key [contract address or label] [viewing-key]",
@@ -254,8 +256,11 @@ you're doing`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			inBuf := bufio.NewReader(cmd.InOrStdin())
-			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
+			cliCtx := client.GetClientContextFromCmd(cmd)
+			cliCtx, err := client.ReadTxCommandFlags(cliCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
 			contractAddrStr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
@@ -269,14 +274,14 @@ you're doing`,
 
 			msg := setViewingKeyMsg(args[1])
 
-			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cdc)
+			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cliCtx)
 		},
 	}
 
 	return cmd
 }
 
-func s20DepositCmd(cdc *codec.Codec) *cobra.Command {
+func s20DepositCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "deposit [contract address or label]",
@@ -285,8 +290,11 @@ func s20DepositCmd(cdc *codec.Codec) *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			inBuf := bufio.NewReader(cmd.InOrStdin())
-			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
+			cliCtx := client.GetClientContextFromCmd(cmd)
+			cliCtx, err := client.ReadTxCommandFlags(cliCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
 			contractAddrStr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
@@ -302,14 +310,14 @@ func s20DepositCmd(cdc *codec.Codec) *cobra.Command {
 
 			amountStr := viper.GetString(flagAmount)
 
-			return cli.ExecuteWithData(cmd, contractAddr, msg, amountStr, false, "", "", cdc)
+			return cli.ExecuteWithData(cmd, contractAddr, msg, amountStr, false, "", "", cliCtx)
 		},
 	}
 	cmd.Flags().String(flagAmount, "", "")
 	return cmd
 }
 
-func s20Withdraw(cdc *codec.Codec) *cobra.Command {
+func s20Withdraw() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "withdraw [contract address or label] [amount]",
@@ -318,8 +326,11 @@ func s20Withdraw(cdc *codec.Codec) *cobra.Command {
 		Args:  cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			inBuf := bufio.NewReader(cmd.InOrStdin())
-			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
+			cliCtx := client.GetClientContextFromCmd(cmd)
+			cliCtx, err := client.ReadTxCommandFlags(cliCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
 			contractAddrStr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
@@ -335,7 +346,7 @@ func s20Withdraw(cdc *codec.Codec) *cobra.Command {
 
 			msg := withdrawMsg(amount)
 
-			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cdc)
+			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cliCtx)
 		},
 	}
 

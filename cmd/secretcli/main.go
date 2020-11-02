@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	app2 "github.com/enigmampc/SecretNetwork/app"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	scrt "github.com/enigmampc/SecretNetwork/types"
 	"os"
 	"path"
@@ -11,61 +14,91 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
-	"github.com/cosmos/cosmos-sdk/client/lcd"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/version"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
-	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
-	"github.com/cosmos/cosmos-sdk/x/bank"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/libs/cli"
 
-	app "github.com/enigmampc/SecretNetwork"
+	"github.com/enigmampc/SecretNetwork/app"
 )
+
+const flagIsBootstrap = "bootstrap"
+
+// ClientName is set via build process
+const ClientName = "wasmcli"
 
 // thanks @terra-project for this fix
 const flagLegacyHdPath = "legacy-hd-path"
 
+var bootstrap bool
+
 func main() {
 	cobra.EnableCommandSorting = false
 
-	cdc := app.MakeCodec()
+	encodingConfig := app.MakeEncodingConfig()
+
+	initClientCtx := client.Context{}.
+		WithJSONMarshaler(encodingConfig.Marshaler).
+		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
+		WithTxConfig(encodingConfig.TxConfig).
+		WithLegacyAmino(encodingConfig.Amino).
+		WithInput(os.Stdin).
+		WithAccountRetriever(authtypes.AccountRetriever{}).
+		WithBroadcastMode(flags.BroadcastBlock).
+		WithHomeDir(app.DefaultCLIHome)
 
 	rootCmd := &cobra.Command{
-		Use:   "secretcli",
-		Short: "The Secret Network Client",
+		Use:   ClientName,
+		Short: "Command line interface for interacting with " + version.AppName,
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+			err := initConfig(cmd)
+			if err != nil {
+				return err
+			}
+
+			if err = client.SetCmdClientContextHandler(initClientCtx, cmd); err != nil {
+				return err
+			}
+
+			return server.InterceptConfigsPreRunHandler(cmd)
+		},
 	}
 
 	// Add --chain-id to persistent flags and mark it required
 	rootCmd.PersistentFlags().Bool(flagLegacyHdPath, false, "Flag to specify the command uses old HD path - use this for ledger compatibility")
 	rootCmd.PersistentFlags().String(flags.FlagChainID, "", "Chain ID of tendermint node")
-	rootCmd.PersistentPreRunE = func(_ *cobra.Command, _ []string) error {
-		return initConfig(rootCmd)
-	}
+	rootCmd.PersistentFlags().BoolVar(&bootstrap, flagIsBootstrap,
+		false, "Start the node as the bootstrap node for the network (only used when starting a new network)")
 
 	// Construct Root Command
 	rootCmd.AddCommand(
 		rpc.StatusCommand(),
-		client.ConfigCmd(app2.DefaultCLIHome),
-		queryCmd(cdc),
-		txCmd(cdc),
+		queryCmd(),
+		txCmd(),
 		flags.LineBreak,
-		lcd.ServeCommand(cdc, registerRoutes),
 		flags.LineBreak,
-		keys.Commands(),
+		keys.Commands(app.DefaultNodeHome),
 		flags.LineBreak,
-		version.Cmd,
-		flags.NewCompletionCmd(rootCmd, true),
+		//version.Cmd,
+		cli.NewCompletionCmd(rootCmd, true),
 	)
 
-	// Add flags and prefix all env exposed with EN
-	executor := cli.PrepareMainCmd(rootCmd, "EN", app2.DefaultCLIHome)
+	// Create and set a client.Context on the command's Context. During the pre-run
+	// of the root command, a default initialized client.Context is provided to
+	// seed child command execution with values such as AccountRetriver, Keyring,
+	// and a Tendermint RPC. This requires the use of a pointer reference when
+	// getting and setting the client.Context. Ideally, we utilize
+	// https://github.com/spf13/cobra/pull/1118.
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, client.ClientContextKey, &client.Context{})
+	ctx = context.WithValue(ctx, server.ServerContextKey, server.NewDefaultContext())
 
+	// Add flags and prefix all env exposed with EN
+	executor := cli.PrepareBaseCmd(rootCmd, "EN", app.DefaultCLIHome)
 	err := executor.Execute()
 	if err != nil {
 		fmt.Printf("Failed executing CLI command: %s, exiting...\n", err)
@@ -73,59 +106,63 @@ func main() {
 	}
 }
 
-func queryCmd(cdc *amino.Codec) *cobra.Command {
+func queryCmd() *cobra.Command {
 	queryCmd := &cobra.Command{
-		Use:     "query",
-		Aliases: []string{"q"},
-		Short:   "Querying subcommands",
+		Use:                        "query",
+		Aliases:                    []string{"q"},
+		Short:                      "Querying subcommands",
+		SuggestionsMinimumDistance: 2,
+		RunE:                       client.ValidateCmd,
 	}
 
 	queryCmd.AddCommand(
-		authcmd.GetAccountCmd(cdc),
+		authcmd.GetAccountCmd(),
 		flags.LineBreak,
-		rpc.ValidatorCommand(cdc),
+		rpc.ValidatorCommand(),
 		rpc.BlockCommand(),
-		authcmd.QueryTxsByEventsCmd(cdc),
-		authcmd.QueryTxCmd(cdc), // TODO add another one like this that decrypts the output if it's from the wallet that sent the tx
+		authcmd.QueryTxsByEventsCmd(),
+		authcmd.QueryTxCmd(), // TODO add another one like this that decrypts the output if it's from the wallet that sent the tx
 		flags.LineBreak,
-		S20GetQueryCmd(cdc),
+		S20GetQueryCmd(),
 	)
 
 	// add modules' query commands
-	app2.ModuleBasics.AddQueryCommands(queryCmd, cdc)
+	app.ModuleBasics.AddQueryCommands(queryCmd)
 
 	return queryCmd
 }
 
-func txCmd(cdc *amino.Codec) *cobra.Command {
+func txCmd() *cobra.Command {
 	txCmd := &cobra.Command{
-		Use:   "tx",
-		Short: "Transactions subcommands",
+		Use:                        "tx",
+		Short:                      "Transactions subcommands",
+		SuggestionsMinimumDistance: 2,
+		RunE:                       client.ValidateCmd,
 	}
 
-	viper.SetDefault(flags.FlagGasPrices, "1.0uscrt")
+	viper.SetDefault(flags.FlagGasPrices, "0.25uscrt")
 
 	txCmd.AddCommand(
-		bankcmd.SendTxCmd(cdc),
+		bankcmd.NewSendTxCmd(),
 		flags.LineBreak,
-		authcmd.GetSignCommand(cdc),
-		authcmd.GetMultiSignCommand(cdc),
+		authcmd.GetSignCommand(),
+		authcmd.GetMultiSignCommand(),
 		flags.LineBreak,
-		authcmd.GetBroadcastCommand(cdc),
-		authcmd.GetEncodeCommand(cdc),
-		authcmd.GetDecodeCommand(cdc),
+		authcmd.GetBroadcastCommand(),
+		authcmd.GetEncodeCommand(),
+		authcmd.GetDecodeCommand(),
 		flags.LineBreak,
-		S20GetTxCmd(cdc),
+		S20GetTxCmd(),
 	)
 
 	// add modules' tx commands
-	app2.ModuleBasics.AddTxCommands(txCmd, cdc)
+	app.ModuleBasics.AddTxCommands(txCmd)
 
 	// remove auth and bank commands as they're mounted under the root tx command
 	var cmdsToRemove []*cobra.Command
 
 	for _, cmd := range txCmd.Commands() {
-		if cmd.Use == auth.ModuleName || cmd.Use == bank.ModuleName {
+		if cmd.Use == authtypes.ModuleName || cmd.Use == banktypes.ModuleName {
 			cmdsToRemove = append(cmdsToRemove, cmd)
 		}
 	}
@@ -133,15 +170,6 @@ func txCmd(cdc *amino.Codec) *cobra.Command {
 	txCmd.RemoveCommand(cmdsToRemove...)
 
 	return txCmd
-}
-
-// registerRoutes registers the routes from the different modules for the LCD.
-// NOTE: details on the routes added for each module are in the module documentation
-// NOTE: If making updates here you also need to update the test helper in client/lcd/test_helper.go
-func registerRoutes(rs *lcd.RestServer) {
-	client.RegisterRoutes(rs.CliCtx, rs.Mux)
-	authrest.RegisterTxRoutes(rs.CliCtx, rs.Mux)
-	app2.ModuleBasics.RegisterRESTRoutes(rs.CliCtx, rs.Mux)
 }
 
 func initConfig(cmd *cobra.Command) error {
