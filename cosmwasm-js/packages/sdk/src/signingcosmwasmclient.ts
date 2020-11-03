@@ -1,21 +1,14 @@
-import { Sha256 } from "@iov/crypto";
-import { Encoding } from "@iov/encoding";
+import {Sha256} from "@iov/crypto";
+import {Encoding} from "@iov/encoding";
 import pako from "pako";
 
-import { isValidBuilder } from "./builder";
-import { Account, CosmWasmClient, GetNonceResult, PostTxResult } from "./cosmwasmclient";
-import { makeSignBytes } from "./encoding";
-import { findAttribute, Log, Attribute } from "./logs";
-import { BroadcastMode } from "./restclient";
-import {
-  Coin,
-  MsgExecuteContract,
-  MsgInstantiateContract,
-  MsgSend,
-  MsgStoreCode,
-  StdFee,
-  StdSignature,
-} from "./types";
+import {isValidBuilder} from "./builder";
+import {Account, CosmWasmClient, GetNonceResult, PostTxResult} from "./cosmwasmclient";
+import {makeSignBytes} from "./encoding";
+import {findAttribute, Log} from "./logs";
+import {BroadcastMode} from "./restclient";
+import {Coin, MsgExecuteContract, MsgInstantiateContract, MsgSend, MsgStoreCode, StdFee, StdSignature,} from "./types";
+import {OfflineSigner} from "./wallet";
 
 export interface SigningCallback {
   (signBytes: Uint8Array): Promise<StdSignature>;
@@ -101,8 +94,8 @@ export interface ExecuteResult {
 
 export class SigningCosmWasmClient extends CosmWasmClient {
   public readonly senderAddress: string;
-
-  private readonly signCallback: SigningCallback;
+  private readonly signer: OfflineSigner | undefined;
+  private readonly signCallback: SigningCallback | undefined;
   private readonly fees: FeeTable;
 
   /**
@@ -114,22 +107,25 @@ export class SigningCosmWasmClient extends CosmWasmClient {
    * @param apiUrl The URL of a Cosmos SDK light client daemon API (sometimes called REST server or REST API)
    * @param senderAddress The address that will sign and send transactions using this instance
    * @param signCallback An asynchonous callback to create a signature for a given transaction. This can be implemented using secure key stores that require user interaction.
+   * @param signer
+   * @param seed
    * @param customFees The fees that are paid for transactions
    * @param broadcastMode Defines at which point of the transaction processing the postTx method (i.e. transaction broadcasting) returns
    */
   public constructor(
     apiUrl: string,
     senderAddress: string,
-    signCallback: SigningCallback,
+    signCallback?: SigningCallback,
+    signer?: OfflineSigner,
     seed?: Uint8Array,
     customFees?: Partial<FeeTable>,
     broadcastMode = BroadcastMode.Block,
   ) {
     super(apiUrl, seed, broadcastMode);
     this.anyValidAddress = senderAddress;
-
     this.senderAddress = senderAddress;
-    this.signCallback = signCallback;
+    this.signCallback = signCallback ? signCallback : undefined;
+    this.signer = signer ? signer : undefined;
     this.fees = { ...defaultFees, ...(customFees || {}) };
   }
 
@@ -139,6 +135,19 @@ export class SigningCosmWasmClient extends CosmWasmClient {
 
   public async getAccount(address?: string): Promise<Account | undefined> {
     return super.getAccount(address || this.senderAddress);
+  }
+
+  async signAdapter(signBytes: Uint8Array) {
+    // offline signer interface
+    if (this.signer !== undefined) {
+      return await this.signer.sign(this.senderAddress, signBytes);
+    } else if (this.signCallback !== undefined) {
+      // legacy interface
+      return await this.signCallback(signBytes);
+    }
+    else {
+      throw("Don't have signCallback or signer!")
+    }
   }
 
   /** Uploads code and returns a receipt, including the code ID */
@@ -161,7 +170,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     const { accountNumber, sequence } = await this.getNonce();
     const chainId = await this.getChainId();
     const signBytes = makeSignBytes([storeCodeMsg], fee, chainId, memo, accountNumber, sequence);
-    const signature = await this.signCallback(signBytes);
+    const signature = await this.signAdapter(signBytes);
     const signedTx = {
       msg: [storeCodeMsg],
       fee: fee,
@@ -212,7 +221,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     const chainId = await this.getChainId();
     const signBytes = makeSignBytes([instantiateMsg], fee, chainId, memo, accountNumber, sequence);
 
-    const signature = await this.signCallback(signBytes);
+    const signature = await this.signAdapter(signBytes);
     const signedTx = {
       msg: [instantiateMsg],
       fee: fee,
@@ -260,7 +269,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     const { accountNumber, sequence } = await this.getNonce();
     const chainId = await this.getChainId();
     const signBytes = makeSignBytes([executeMsg], fee, chainId, memo, accountNumber, sequence);
-    const signature = await this.signCallback(signBytes);
+    const signature = await this.signAdapter(signBytes);
     const signedTx = {
       msg: [executeMsg],
       fee: fee,
@@ -325,7 +334,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     const { accountNumber, sequence } = await this.getNonce();
     const chainId = await this.getChainId();
     const signBytes = makeSignBytes([sendMsg], fee, chainId, memo, accountNumber, sequence);
-    const signature = await this.signCallback(signBytes);
+    const signature = await this.signAdapter(signBytes);
     const signedTx = {
       msg: [sendMsg],
       fee: fee,
