@@ -94,8 +94,7 @@ export interface ExecuteResult {
 
 export class SigningCosmWasmClient extends CosmWasmClient {
   public readonly senderAddress: string;
-  private readonly signer: OfflineSigner | undefined;
-  private readonly signCallback: SigningCallback | undefined;
+  private readonly signer: OfflineSigner | SigningCallback;
   private readonly fees: FeeTable;
 
   /**
@@ -106,8 +105,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
    *
    * @param apiUrl The URL of a Cosmos SDK light client daemon API (sometimes called REST server or REST API)
    * @param senderAddress The address that will sign and send transactions using this instance
-   * @param signCallback An asynchonous callback to create a signature for a given transaction. This can be implemented using secure key stores that require user interaction.
-   * @param signer
+   * @param signer An asynchronous callback to create a signature for a given transaction. This can be implemented using secure key stores that require user interaction. Or a newer OfflineSigner type that handles that stuff
    * @param seed
    * @param customFees The fees that are paid for transactions
    * @param broadcastMode Defines at which point of the transaction processing the postTx method (i.e. transaction broadcasting) returns
@@ -115,8 +113,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
   public constructor(
     apiUrl: string,
     senderAddress: string,
-    signCallback?: SigningCallback,
-    signer?: OfflineSigner,
+    signer: SigningCallback | OfflineSigner,
     seed?: Uint8Array,
     customFees?: Partial<FeeTable>,
     broadcastMode = BroadcastMode.Block,
@@ -124,8 +121,8 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     super(apiUrl, seed, broadcastMode);
     this.anyValidAddress = senderAddress;
     this.senderAddress = senderAddress;
-    this.signCallback = signCallback ? signCallback : undefined;
-    this.signer = signer ? signer : undefined;
+    //this.signCallback = signCallback ? signCallback : undefined;
+    this.signer = signer;
     this.fees = { ...defaultFees, ...(customFees || {}) };
   }
 
@@ -137,16 +134,13 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     return super.getAccount(address || this.senderAddress);
   }
 
-  async signAdapter(signBytes: Uint8Array) {
+  async signAdapter(signBytes: Uint8Array): Promise<StdSignature> {
     // offline signer interface
-    if (this.signer !== undefined) {
+    if ("sign" in this.signer) {
       return await this.signer.sign(this.senderAddress, signBytes);
-    } else if (this.signCallback !== undefined) {
+    } else {
       // legacy interface
-      return await this.signCallback(signBytes);
-    }
-    else {
-      throw("Don't have signCallback or signer!")
+      return await this.signer(signBytes);
     }
   }
 
