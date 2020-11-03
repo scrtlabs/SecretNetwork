@@ -26,7 +26,7 @@ func TestNewQuerier(t *testing.T) {
 
 	nodeIdValid := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
-	querier := NewQuerier(keeper)
+	querier := NewLegacyQuerier(keeper) // TODO: Should test NewQuerier() as well
 
 	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
@@ -45,8 +45,8 @@ func TestNewQuerier(t *testing.T) {
 
 	expectedSecretParams, _ := json.Marshal(types.GenesisState{
 		Registration:              nil,
-		NodeExchMasterCertificate: regInfo.Certificate,
-		IoMasterCertificate:       regInfo.Certificate,
+		NodeExchMasterCertificate: &types.MasterCertificate{Bytes: regInfo.Certificate},
+		IoMasterCertificate:       &types.MasterCertificate{Bytes: regInfo.Certificate},
 	})
 
 	specs := map[string]struct {
@@ -95,8 +95,8 @@ func TestNewQuerier(t *testing.T) {
 		})
 	}
 
-	keeper.setMasterCertificate(ctx, types.MasterCertificate(regInfo.Certificate), types.MasterNodeKeyId)
-	keeper.setMasterCertificate(ctx, types.MasterCertificate(regInfo.Certificate), types.MasterIoKeyId)
+	keeper.setMasterCertificate(ctx, types.MasterCertificate{Bytes: regInfo.Certificate}, types.MasterNodeKeyId)
+	keeper.setMasterCertificate(ctx, types.MasterCertificate{Bytes: regInfo.Certificate}, types.MasterIoKeyId)
 
 	binResult, err := querier(ctx, []string{QueryMasterCertificate}, abci.RequestQuery{Data: []byte("")})
 	require.Equal(t, string(binResult), string(expectedSecretParams))

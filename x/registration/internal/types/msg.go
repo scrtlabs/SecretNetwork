@@ -11,15 +11,6 @@ const (
 )
 
 type PublicKey []byte
-type MasterCertificate []byte
-
-type RaAuthenticate struct {
-	Sender sdk.AccAddress `json:"sender" yaml:"sender"`
-	// Certificate can be raw or gzip compressed
-	Certificate ra.Certificate `json:"ra_cert" yaml:"ra_cert"`
-	// Node ID is the identifier of the node we're going to fun
-	// PubKey NodeID `json:"node_id" yaml:"node_id"`
-}
 
 func (msg RaAuthenticate) Route() string {
 	return RouterKey
@@ -46,7 +37,7 @@ func (msg RaAuthenticate) ValidateBasic() error {
 }
 
 func (msg RaAuthenticate) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(msg))
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
 func (msg RaAuthenticate) GetSigners() []sdk.AccAddress {

@@ -5,26 +5,25 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/client"
 	"net/http"
 
-	// sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/keeper"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/gorilla/mux"
 )
 
-func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
+func registerQueryRoutes(cliCtx client.Context, r *mux.Router) {
 	r.HandleFunc("/reg/code", listCodesHandlerFn(cliCtx)).Methods("GET")
 	r.HandleFunc("/reg/consensus-io-exch-pubkey", ioPubkeyHandlerFn(cliCtx)).Methods("GET")
 	r.HandleFunc("/reg/consensus-seed-exch-pubkey", seedPubkeyHandlerFn(cliCtx)).Methods("GET")
 }
 
-func listCodesHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+func listCodesHandlerFn(cliCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
 		if !ok {
@@ -42,7 +41,7 @@ func listCodesHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 	}
 }
 
-func ioPubkeyHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+func ioPubkeyHandlerFn(cliCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
 		if !ok {
@@ -65,7 +64,7 @@ func ioPubkeyHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		ioExchPubkey, err := ra.VerifyRaCert(certs.IoMasterCertificate)
+		ioExchPubkey, err := ra.VerifyRaCert(certs.IoMasterCertificate.Bytes)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
@@ -77,7 +76,7 @@ func ioPubkeyHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 	}
 }
 
-func seedPubkeyHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+func seedPubkeyHandlerFn(cliCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
 		if !ok {
@@ -100,7 +99,7 @@ func seedPubkeyHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		nodeExchPubkey, err := ra.VerifyRaCert(certs.NodeExchMasterCertificate)
+		nodeExchPubkey, err := ra.VerifyRaCert(certs.NodeExchMasterCertificate.Bytes)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return

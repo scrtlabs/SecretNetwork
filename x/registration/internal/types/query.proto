@@ -1,0 +1,35 @@
+syntax = "proto3";
+package SecretNetwork.x.registration.v1beta1;
+
+import "gogoproto/gogo.proto";
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+
+option go_package = "github.com/enigmampc/SecretNetwork/x/registration/internal/types";
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.equal_all) = true;
+
+// Query provides defines the gRPC querier service
+service Query {
+  rpc MasterKey (google.protobuf.Empty) returns (QueryMasterKeyResponse) {
+    option (google.api.http).get = "/registration/v1beta1/master-key";
+  }
+
+  rpc EncryptedSeed (QueryEncryptedSeedRequest) returns (QueryEncryptedSeedResponse) {
+    option (google.api.http).get = "/registration/v1beta1/encrypted-seed/{pub_key}";
+  }
+}
+
+message QueryMasterKeyResponse {
+  bytes master_key = 1 [(gogoproto.nullable) = false];
+}
+
+message QueryEncryptedSeedRequest {
+  bytes pub_key = 1;
+}
+
+message QueryEncryptedSeedResponse {
+  bytes encrypted_seed = 1 [(gogoproto.nullable) = false];
+}
+
+

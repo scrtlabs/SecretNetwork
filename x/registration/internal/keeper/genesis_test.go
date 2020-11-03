@@ -38,8 +38,8 @@ func TestInitGenesis(t *testing.T) {
 
 	data := types.GenesisState{
 		Registration:              nil,
-		IoMasterCertificate:       cert,
-		NodeExchMasterCertificate: cert,
+		IoMasterCertificate:       &types.MasterCertificate{Bytes: cert},
+		NodeExchMasterCertificate: &types.MasterCertificate{Bytes: cert},
 	}
 
 	InitGenesis(ctx, keeper, data)
@@ -56,15 +56,15 @@ func TestExportGenesis(t *testing.T) {
 
 	data := types.GenesisState{
 		Registration:              nil,
-		IoMasterCertificate:       cert,
-		NodeExchMasterCertificate: cert,
+		IoMasterCertificate:       &types.MasterCertificate{Bytes: cert},
+		NodeExchMasterCertificate: &types.MasterCertificate{Bytes: cert},
 	}
 
 	InitGenesis(ctx, keeper, data)
 
 	data2 := ExportGenesis(ctx, keeper)
 
-	require.Equal(t, string(data.IoMasterCertificate), string(data2.IoMasterCertificate))
-	require.Equal(t, string(data.NodeExchMasterCertificate), string(data2.NodeExchMasterCertificate))
+	require.Equal(t, string(data.IoMasterCertificate.Bytes), string(data2.IoMasterCertificate.Bytes))
+	require.Equal(t, string(data.NodeExchMasterCertificate.Bytes), string(data2.NodeExchMasterCertificate.Bytes))
 	require.Equal(t, data2.Registration, data2.Registration)
 }

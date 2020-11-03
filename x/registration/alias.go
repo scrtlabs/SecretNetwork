@@ -30,12 +30,14 @@ const (
 
 var (
 	// functions aliases
-	RegisterCodec               = types.RegisterCodec
+	RegisterCodec               = types.RegisterLegacyAminoCodec
+	RegisterInterfaces          = types.RegisterInterfaces
 	ValidateGenesis             = types.ValidateGenesis
 	InitGenesis                 = keeper.InitGenesis
 	ExportGenesis               = keeper.ExportGenesis
 	NewKeeper                   = keeper.NewKeeper
 	NewQuerier                  = keeper.NewQuerier
+	NewLegacyQuerier            = keeper.NewLegacyQuerier
 	GetGenesisStateFromAppState = keeper.GetGenesisStateFromAppState
 	IsHexString                 = keeper.IsHexString
 

@@ -3,7 +3,6 @@ package types
 import (
 	"encoding/base64"
 	"encoding/hex"
-	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 )
 
 const EnclaveRegistrationKey = "new_node_seed_exchange_keypair.sealed"
@@ -21,13 +20,6 @@ const AttestationCertPath = "attestation_cert.der"
 
 type NodeID []byte
 
-// User struct which contains a name
-// a type and a list of social links
-type SeedConfig struct {
-	MasterCert   string `json:"pk"`
-	EncryptedKey string `json:"encKey"`
-}
-
 func (c SeedConfig) Decode() ([]byte, []byte, error) {
 	enc, err := hex.DecodeString(c.EncryptedKey)
 	if err != nil {
@@ -39,9 +31,4 @@ func (c SeedConfig) Decode() ([]byte, []byte, error) {
 	}
 
 	return pk, enc, nil
-}
-
-type RegistrationNodeInfo struct {
-	Certificate   ra.Certificate
-	EncryptedSeed []byte
 }

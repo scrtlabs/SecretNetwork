@@ -17,13 +17,13 @@ import (
 // Keeper will have a reference to Wasmer with it's own data directory.
 type Keeper struct {
 	storeKey sdk.StoreKey
-	cdc      *codec.Codec
+	cdc      codec.Marshaler
 	enclave  EnclaveInterface
 	router   sdk.Router
 }
 
 // NewKeeper creates a new contract Keeper instance
-func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, router sdk.Router, enclave EnclaveInterface, homeDir string, bootstrap bool) Keeper {
+func NewKeeper(cdc codec.Marshaler, storeKey sdk.StoreKey, router sdk.Router, enclave EnclaveInterface, homeDir string, bootstrap bool) Keeper {
 
 	if !bootstrap {
 		InitializeNode(homeDir, enclave)
@@ -137,8 +137,14 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 	if err != nil {
 		return err
 	}
+
+	events := make(sdk.Events, len(res.Events))
+	for i := range res.Events {
+		events[i] = sdk.Event(res.Events[i])
+	}
+
 	// redispatch all events, (type sdk.EventTypeMessage will be filtered out in the handler)
-	ctx.EventManager().EmitEvents(res.Events)
+	ctx.EventManager().EmitEvents(events)
 
 	return nil
 }
