@@ -600,11 +600,11 @@ impl AttestationReport {
         // Convert to endorsed report
         let report: EndorsedAttestationReport = serde_json::from_slice(&payload)?;
 
-        // Verify report's signature
+        // Verify report's signature - aka intel's signing cert
         let signing_cert = webpki::EndEntityCert::from(&report.signing_cert)
             .map_err(|_| Error::ReportParseError)?;
 
-        let (cert, root_store) = get_ias_auth_config();
+        let (ias_cert, root_store) = get_ias_auth_config();
 
         let trust_anchors: Vec<webpki::TrustAnchor> = root_store
             .roots
@@ -613,29 +613,26 @@ impl AttestationReport {
             .collect();
 
         let mut chain: Vec<&[u8]> = Vec::new();
-        chain.push(&cert);
+        chain.push(&ias_cert);
 
-        let now_func = match webpki::Time::try_from(SystemTime::now()) {
-            Ok(val) => val,
-            Err(_e) => {
-                error!("Failed to get local time");
-                return Err(Error::ReportParseError);
-            }
-        };
+        // set as 04.11.23(dd.mm.yy) - should be valid for the foreseeable future, and not rely on SystemTime
+        let time_stamp = webpki::Time::from_seconds_since_unix_epoch(1699088856);
 
-        // todo: figure out what to do when the certificate expires
+        // note: there's no way to not validate the time, and we don't want to write this code
+        // ourselves. We also can't just ignore the error message, since that means that the rest of
+        // the validation didn't happen (time is validated early on)
         match signing_cert.verify_is_valid_tls_server_cert(
             SUPPORTED_SIG_ALGS,
             &webpki::TLSServerTrustAnchors(&trust_anchors),
             &chain,
-            now_func,
+            time_stamp,
         ) {
             Ok(_) => info!("Certificate verified successfully"),
             Err(e) => {
-                warn!("Certificate verification error {:?}", e);
+                error!("Certificate verification error {:?}", e);
                 return Err(Error::ReportValidationError);
             }
-        }
+        };
 
         // Verify the signature against the signing cert
         match signing_cert.verify_signature(
