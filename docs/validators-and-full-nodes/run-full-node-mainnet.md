@@ -129,6 +129,7 @@ You are now a full node. :tada:
 ```bash
 journalctl -u secret-node -f
 ```
+
 You can stop viewing the logs by pressing `ctrl + C` which sends a signal to `journalctl` to exit.
 
 #### Point `secretcli` to your node and query its status:
