@@ -20,8 +20,10 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/capability"
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
+	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	crisiskeeper "github.com/cosmos/cosmos-sdk/x/crisis/keeper"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
@@ -31,6 +33,7 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
 	evidencekeeper "github.com/cosmos/cosmos-sdk/x/evidence/keeper"
+	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
@@ -42,37 +45,34 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/params"
 	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
+	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
+	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/cosmos/cosmos-sdk/x/upgrade"
+	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
+	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	"github.com/enigmampc/SecretNetwork/x/compute"
-	//reg "github.com/enigmampc/SecretNetwork/x/registration"
+	reg "github.com/enigmampc/SecretNetwork/x/registration"
 	//"github.com/enigmampc/SecretNetwork/x/tokenswap"
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
+	"github.com/spf13/viper"
+	abci "github.com/tendermint/tendermint/abci/types"
 	tmjson "github.com/tendermint/tendermint/libs/json"
+	tmlog "github.com/tendermint/tendermint/libs/log"
+	tmos "github.com/tendermint/tendermint/libs/os"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
+	dbm "github.com/tendermint/tm-db"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
-	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
-	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
-	"github.com/cosmos/cosmos-sdk/x/upgrade"
-	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	"github.com/spf13/viper"
-	abci "github.com/tendermint/tendermint/abci/types"
-	tmlog "github.com/tendermint/tendermint/libs/log"
-	tmos "github.com/tendermint/tendermint/libs/os"
-	dbm "github.com/tendermint/tm-db"
 )
 
 const appName = "secret"
@@ -97,7 +97,7 @@ var (
 		gov.NewAppModuleBasic(paramsclient.ProposalHandler, distrclient.ProposalHandler, upgradeclient.ProposalHandler),
 		params.AppModuleBasic{},
 		compute.AppModuleBasic{},
-		//reg.AppModuleBasic{},
+		reg.AppModuleBasic{},
 		crisis.AppModuleBasic{},
 		slashing.AppModuleBasic{},
 		//supply.AppModuleBasic{},
@@ -155,7 +155,9 @@ type SecretNetworkApp struct {
 	upgradeKeeper    upgradekeeper.Keeper
 	paramsKeeper     paramskeeper.Keeper
 	evidenceKeeper   evidencekeeper.Keeper
-	computeKeeper    compute.Keeper
+	//tokenSwapKeeper tokenswap.SwapKeeper
+	computeKeeper compute.Keeper
+	regKeeper     reg.Keeper
 
 	// the module manager
 	mm *module.Manager
@@ -274,7 +276,7 @@ func NewSecretNetworkApp(
 
 	// Just re-use the full router - do we want to limit this more?
 	computeRouter := bApp.Router()
-	//regRouter := bApp.Router()
+	regRouter := bApp.Router()
 
 	computeDir := filepath.Join(homePath, ".compute")
 	//app.tokenSwapKeeper = tokenswap.NewKeeper(app.cdc, keys[tokenswap.StoreKey], tokenswapSubspace, app.supplyKeeper)
@@ -293,7 +295,7 @@ func NewSecretNetworkApp(
 	supportedFeatures := "staking"
 
 	// Replace with bootstrap flag when we figure out how to test properly and everything works
-	//app.regKeeper = reg.NewKeeper(app.cdc, keys[reg.StoreKey], regRouter, reg.EnclaveApi{}, homeDir, app.bootstrap)
+	app.regKeeper = reg.NewKeeper(appCodec, keys[reg.StoreKey], regRouter, reg.EnclaveApi{}, DefaultCLIHome, app.bootstrap)
 
 	app.computeKeeper = compute.NewKeeper(
 		appCodec,
@@ -323,10 +325,10 @@ func NewSecretNetworkApp(
 	)
 
 	/*
-	// The gov proposal types can be individually enabled
-	if len(enabledProposals) != 0 {
-		govRouter.AddRoute(compute.RouterKey, compute.NewWasmProposalHandler(app.computeKeeper, enabledProposals))
-	}
+		// The gov proposal types can be individually enabled
+		if len(enabledProposals) != 0 {
+			govRouter.AddRoute(compute.RouterKey, compute.NewWasmProposalHandler(app.computeKeeper, enabledProposals))
+		}
 	*/
 
 	app.govKeeper = govkeeper.NewKeeper(
@@ -356,7 +358,7 @@ func NewSecretNetworkApp(
 		evidence.NewAppModule(app.evidenceKeeper),
 		compute.NewAppModule(app.computeKeeper),
 		params.NewAppModule(app.paramsKeeper),
-		//reg.NewAppModule(app.regKeeper),
+		reg.NewAppModule(app.regKeeper),
 		//tokenswap.NewAppModule(app.tokenSwapKeeper, app.supplyKeeper, app.accountKeeper),
 	)
 	// During begin block slashing happens after distr.BeginBlocker so that
@@ -383,7 +385,7 @@ func NewSecretNetworkApp(
 		genutiltypes.ModuleName,
 		evidencetypes.ModuleName,
 		compute.ModuleName,
-		//reg.ModuleName,
+		reg.ModuleName,
 		//tokenswap.ModuleName,
 	)
 

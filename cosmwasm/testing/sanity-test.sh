@@ -15,11 +15,12 @@ rm -rf ./.sgx_secrets
 mkdir -p ./.sgx_secrets
 
 rm -rf ~/.secret*
-./secretcli config chain-id secret-sanity
-./secretcli config output json
-./secretcli config indent true
-./secretcli config trust-node true
-./secretcli config keyring-backend test
+mkdir -p ~/.secretcli/config
+echo 'chain-id "secret-sanity"
+output "json"
+indent true
+trust-node true
+keyring-backend "test"' > ~/.secretcli/config/config.toml
 
 ./secretd init banana --chain-id secret-sanity
 perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json

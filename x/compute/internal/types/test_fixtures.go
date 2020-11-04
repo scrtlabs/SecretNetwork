@@ -42,9 +42,9 @@ func CodeFixture(mutators ...func(*Code)) Code {
 	wasmCode := rand.Bytes(100)
 
 	fixture := Code{
-		CodeID:     1,
-		CodeInfo:   CodeInfoFixture(WithSHA256CodeHash(wasmCode)),
-		CodesBytes: wasmCode,
+		CodeID:    1,
+		CodeInfo:  CodeInfoFixture(WithSHA256CodeHash(wasmCode)),
+		CodeBytes: wasmCode,
 	}
 
 	for _, m := range mutators {

@@ -84,8 +84,8 @@ comma := ,
 build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 
 ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=SecretNetwork \
-	-X github.com/cosmos/cosmos-sdk/version.ServerName=secretd \
-	-X github.com/cosmos/cosmos-sdk/version.ClientName=secretcli \
+	-X github.com/cosmos/cosmos-sdk/version.AppName=secretd \
+	-X github.com/enigmampc/SecretNetwork/cmd/secretcli/version.ClientName=secretcli \
 	-X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
 	-X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
 	-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags)"
@@ -124,8 +124,8 @@ build-linux: vendor bin-data-$(IAS_BUILD)
 	BUILD_PROFILE=$(BUILD_PROFILE) $(MAKE) -C go-cosmwasm build-rust
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
 #   this pulls out ELF symbols, 80% size reduction!
-	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
-	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
+	go build -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
+	go build -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
 
 build_windows:
 	# CLI only

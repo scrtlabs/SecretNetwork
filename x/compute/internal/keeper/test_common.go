@@ -2,6 +2,40 @@ package keeper
 
 import (
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/codec/types"
+	params2 "github.com/cosmos/cosmos-sdk/simapp/params"
+	"github.com/cosmos/cosmos-sdk/std"
+	"github.com/cosmos/cosmos-sdk/types/module"
+	"github.com/cosmos/cosmos-sdk/x/auth/ante"
+	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
+	authlegacy "github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
+	"github.com/cosmos/cosmos-sdk/x/auth/tx"
+	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/cosmos/cosmos-sdk/x/capability"
+	"github.com/cosmos/cosmos-sdk/x/crisis"
+	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
+	distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
+	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	"github.com/cosmos/cosmos-sdk/x/evidence"
+	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
+	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
+	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
+	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
+	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
+	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
+	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
+	"github.com/cosmos/cosmos-sdk/x/slashing"
+	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
+	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/cosmos/cosmos-sdk/x/upgrade"
+	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
+	"github.com/enigmampc/SecretNetwork/x/registration"
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
+	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -13,7 +47,6 @@ import (
 	"github.com/tendermint/tendermint/crypto"
 
 	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
 
@@ -26,7 +59,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/staking"
-	"github.com/cosmos/cosmos-sdk/x/supply"
 
 	wasmtypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
@@ -34,27 +66,49 @@ import (
 const flagLRUCacheSize = "lru_size"
 const flagQueryGasLimit = "query_gas_limit"
 
-func MakeTestCodec() *codec.Codec {
-	var cdc = codec.New()
+var ModuleBasics = module.NewBasicManager(
+	auth.AppModuleBasic{},
+	bank.AppModuleBasic{},
+	capability.AppModuleBasic{},
+	staking.AppModuleBasic{},
+	mint.AppModuleBasic{},
+	distribution.AppModuleBasic{},
+	gov.NewAppModuleBasic(
+		paramsclient.ProposalHandler, distrclient.ProposalHandler, upgradeclient.ProposalHandler,
+	),
+	params.AppModuleBasic{},
+	crisis.AppModuleBasic{},
+	slashing.AppModuleBasic{},
+	//ibc.AppModuleBasic{},
+	upgrade.AppModuleBasic{},
+	evidence.AppModuleBasic{},
+	//transfer.AppModuleBasic{},
+	registration.AppModuleBasic{},
+)
 
-	// Register AppAccount
-	// cdc.RegisterInterface((*authexported.Account)(nil), nil)
-	// cdc.RegisterConcrete(&auth.BaseAccount{}, "test/wasm/BaseAccount", nil)
-	auth.AppModuleBasic{}.RegisterCodec(cdc)
-	bank.AppModuleBasic{}.RegisterCodec(cdc)
-	supply.AppModuleBasic{}.RegisterCodec(cdc)
-	staking.AppModuleBasic{}.RegisterCodec(cdc)
-	distribution.AppModuleBasic{}.RegisterCodec(cdc)
-	gov.RegisterCodec(cdc)
-	wasmtypes.RegisterCodec(cdc)
-	sdk.RegisterCodec(cdc)
-	codec.RegisterCrypto(cdc)
-	params.RegisterCodec(cdc)
-	//govtypes.RegisterCodec(cdc)
-	return cdc
+func MakeTestCodec() codec.Marshaler {
+	return MakeEncodingConfig().Marshaler
+}
+func MakeEncodingConfig() params2.EncodingConfig {
+	amino := codec.NewLegacyAmino()
+	interfaceRegistry := types.NewInterfaceRegistry()
+	marshaler := codec.NewProtoCodec(interfaceRegistry)
+	txCfg := tx.NewTxConfig(marshaler, tx.DefaultSignModes)
+
+	std.RegisterInterfaces(interfaceRegistry)
+	std.RegisterLegacyAminoCodec(amino)
+
+	ModuleBasics.RegisterLegacyAminoCodec(amino)
+	ModuleBasics.RegisterInterfaces(interfaceRegistry)
+	return params2.EncodingConfig{
+		InterfaceRegistry: interfaceRegistry,
+		Marshaler:         marshaler,
+		TxConfig:          txCfg,
+		Amino:             amino,
+	}
 }
 
-var TestingStakeParams = staking.Params{
+var TestingStakeParams = stakingtypes.Params{
 	UnbondingTime:     100,
 	MaxValidators:     10,
 	MaxEntries:        10,
@@ -63,27 +117,30 @@ var TestingStakeParams = staking.Params{
 }
 
 type TestKeepers struct {
-	AccountKeeper auth.AccountKeeper
-	StakingKeeper staking.Keeper
+	AccountKeeper authkeeper.AccountKeeper
+	StakingKeeper stakingkeeper.Keeper
 	WasmKeeper    Keeper
-	DistKeeper    distribution.Keeper
-	SupplyKeeper  supply.Keeper
-	MintKeeper    mint.Keeper
-	GovKeeper     gov.Keeper
-	BankKeeper    bank.Keeper
+	DistKeeper    distrkeeper.Keeper
+	GovKeeper     govkeeper.Keeper
+	BankKeeper    bankkeeper.Keeper
+	MintKeeper    mintkeeper.Keeper
 }
 
 // encoders can be nil to accept the defaults, or set it to override some of the message handlers (like default)
-func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeatures string, encoders *MessageEncoders, queriers *QueryPlugins) (sdk.Context, TestKeepers) {
+func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, encoders *MessageEncoders, queriers *QueryPlugins) (sdk.Context, TestKeepers) {
+	tempDir, err := ioutil.TempDir("", "wasm")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tempDir) })
+
 	keyContract := sdk.NewKVStoreKey(wasmtypes.StoreKey)
-	keyAcc := sdk.NewKVStoreKey(auth.StoreKey)
-	keyStaking := sdk.NewKVStoreKey(staking.StoreKey)
-	keySupply := sdk.NewKVStoreKey(supply.StoreKey)
-	keyDistro := sdk.NewKVStoreKey(distribution.StoreKey)
-	mintStore := sdk.NewKVStoreKey(mint.StoreKey)
-	keyParams := sdk.NewKVStoreKey(params.StoreKey)
-	tkeyParams := sdk.NewTransientStoreKey(params.TStoreKey)
+	keyAcc := sdk.NewKVStoreKey(authtypes.StoreKey)
+	keyStaking := sdk.NewKVStoreKey(stakingtypes.StoreKey)
+	keyDistro := sdk.NewKVStoreKey(distrtypes.StoreKey)
+	mintStore := sdk.NewKVStoreKey(minttypes.StoreKey)
+	keyParams := sdk.NewKVStoreKey(paramstypes.StoreKey)
+	tkeyParams := sdk.NewTransientStoreKey(paramstypes.TStoreKey)
 	keyGov := sdk.NewKVStoreKey(govtypes.StoreKey)
+	keyBank := sdk.NewKVStoreKey(banktypes.StoreKey)
 
 	db := dbm.NewMemDB()
 	ms := store.NewCommitMultiStore(db)
@@ -91,117 +148,142 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 	ms.MountStoreWithDB(keyAcc, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keyParams, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keyStaking, sdk.StoreTypeIAVL, db)
-	ms.MountStoreWithDB(keySupply, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(mintStore, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keyDistro, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(tkeyParams, sdk.StoreTypeTransient, db)
 	ms.MountStoreWithDB(keyGov, sdk.StoreTypeIAVL, db)
-	err := ms.LoadLatestVersion()
-	require.Nil(t, err)
+	ms.MountStoreWithDB(keyBank, sdk.StoreTypeIAVL, db)
+	require.NoError(t, ms.LoadLatestVersion())
 
-	ctx := sdk.NewContext(ms, abci.Header{
+	ctx := sdk.NewContext(ms, tmproto.Header{
 		Height: 1234567,
 		Time:   time.Date(2020, time.April, 22, 12, 0, 0, 0, time.UTC),
 	}, isCheckTx, log.NewNopLogger())
-	cdc := MakeTestCodec()
-
-	paramsKeeper := params.NewKeeper(cdc, keyParams, tkeyParams)
-
-	accountKeeper := auth.NewAccountKeeper(
-		cdc,    // amino codec
-		keyAcc, // target store
-		paramsKeeper.Subspace(auth.DefaultParamspace),
-		auth.ProtoBaseAccount, // prototype
-	)
+	encodingConfig := MakeEncodingConfig
+	paramsKeeper := paramskeeper.NewKeeper(encodingConfig().Marshaler, encodingConfig().Amino, keyParams, tkeyParams)
+	paramsKeeper.Subspace(authtypes.ModuleName)
+	paramsKeeper.Subspace(banktypes.ModuleName)
+	paramsKeeper.Subspace(stakingtypes.ModuleName)
+	paramsKeeper.Subspace(minttypes.ModuleName)
+	paramsKeeper.Subspace(distrtypes.ModuleName)
+	paramsKeeper.Subspace(slashingtypes.ModuleName)
+	paramsKeeper.Subspace(crisistypes.ModuleName)
 
 	// this is also used to initialize module accounts (so nil is meaningful here)
 	maccPerms := map[string][]string{
-		auth.FeeCollectorName:     nil,
-		distribution.ModuleName:   nil,
-		mint.ModuleName:           {supply.Minter},
-		staking.BondedPoolName:    {supply.Burner, supply.Staking},
-		staking.NotBondedPoolName: {supply.Burner, supply.Staking},
-		gov.ModuleName:            {supply.Burner},
+		authtypes.FeeCollectorName:     nil,
+		distrtypes.ModuleName:          nil,
+		minttypes.ModuleName:           {authtypes.Minter},
+		stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
+		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
+		govtypes.ModuleName:            {authtypes.Burner},
 	}
-	blockedAddr := make(map[string]bool, len(maccPerms))
-	for acc := range maccPerms {
-		blockedAddr[supply.NewModuleAddress(acc).String()] = true
-	}
-	bankKeeper := bank.NewBaseKeeper(
-		accountKeeper,
-		paramsKeeper.Subspace(bank.DefaultParamspace),
-		blockedAddr,
+	authSubsp, _ := paramsKeeper.GetSubspace(authtypes.ModuleName)
+	authKeeper := authkeeper.NewAccountKeeper(
+		encodingConfig().Marshaler,
+		keyAcc, // target store
+		authSubsp,
+		authtypes.ProtoBaseAccount, // prototype
+		maccPerms,
 	)
-	bankKeeper.SetSendEnabled(ctx, true)
+	blockedAddrs := make(map[string]bool)
+	for acc := range maccPerms {
+		allowReceivingFunds := acc != distrtypes.ModuleName
+		blockedAddrs[authtypes.NewModuleAddress(acc).String()] = allowReceivingFunds
+	}
 
-	supplyKeeper := supply.NewKeeper(cdc, keySupply, accountKeeper, bankKeeper, maccPerms)
-	stakingKeeper := staking.NewKeeper(cdc, keyStaking, supplyKeeper, paramsKeeper.Subspace(staking.DefaultParamspace))
+	bankSubsp, _ := paramsKeeper.GetSubspace(banktypes.ModuleName)
+	bankKeeper := bankkeeper.NewBaseKeeper(
+		encodingConfig().Marshaler,
+		keyBank,
+		authKeeper,
+		bankSubsp,
+		blockedAddrs,
+	)
+	bankParams := banktypes.DefaultParams()
+	bankParams = bankParams.SetSendEnabledParam("stake", true)
+	bankKeeper.SetParams(ctx, bankParams)
+
+	stakingSubsp, _ := paramsKeeper.GetSubspace(stakingtypes.ModuleName)
+	stakingKeeper := stakingkeeper.NewKeeper(encodingConfig().Marshaler, keyStaking, authKeeper, bankKeeper, stakingSubsp)
 	stakingKeeper.SetParams(ctx, TestingStakeParams)
 
-	distKeeper := distribution.NewKeeper(cdc, keyDistro, paramsKeeper.Subspace(distribution.DefaultParamspace), stakingKeeper, supplyKeeper, auth.FeeCollectorName, nil)
-	distKeeper.SetParams(ctx, distribution.DefaultParams())
+	distSubsp, _ := paramsKeeper.GetSubspace(distrtypes.ModuleName)
+	distKeeper := distrkeeper.NewKeeper(encodingConfig().Marshaler, keyDistro, distSubsp, authKeeper, bankKeeper, stakingKeeper, authtypes.FeeCollectorName, nil)
+	distKeeper.SetParams(ctx, distrtypes.DefaultParams())
 	stakingKeeper.SetHooks(distKeeper.Hooks())
 
 	// set genesis items required for distribution
-	distKeeper.SetFeePool(ctx, distribution.InitialFeePool())
+	distKeeper.SetFeePool(ctx, distrtypes.InitialFeePool())
 
-	// total supply to track this
-	totalSupply := sdk.NewCoins(sdk.NewInt64Coin("stake", 100000000))
-	supplyKeeper.SetSupply(ctx, supply.NewSupply(totalSupply))
-
-	// set up initial accounts
-	for name, perms := range maccPerms {
-		mod := supply.NewEmptyModuleAccount(name, perms...)
-		if name == staking.NotBondedPoolName {
-			err = mod.SetCoins(totalSupply)
-			require.NoError(t, err)
-		} else if name == distribution.ModuleName {
-			// some big pot to pay out
-			err = mod.SetCoins(sdk.NewCoins(sdk.NewInt64Coin("stake", 500000)))
-			require.NoError(t, err)
-		}
-		supplyKeeper.SetModuleAccount(ctx, mod)
-	}
-
-	stakeAddr := supply.NewModuleAddress(staking.BondedPoolName)
-	moduleAcct := accountKeeper.GetAccount(ctx, stakeAddr)
-	require.NotNil(t, moduleAcct)
+	// set some funds ot pay out validatores, based on code from:
+	// https://github.com/cosmos/cosmos-sdk/blob/fea231556aee4d549d7551a6190389c4328194eb/x/distribution/keeper/keeper_test.go#L50-L57
+	distrAcc := distKeeper.GetDistributionAccount(ctx)
+	err = bankKeeper.SetBalances(ctx, distrAcc.GetAddress(), sdk.NewCoins(
+		sdk.NewCoin("stake", sdk.NewInt(2000000)),
+	))
+	require.NoError(t, err)
+	authKeeper.SetModuleAccount(ctx, distrAcc)
 
 	router := baseapp.NewRouter()
 	bh := bank.NewHandler(bankKeeper)
-	router.AddRoute(bank.RouterKey, bh)
+	router.AddRoute(sdk.NewRoute(banktypes.RouterKey, bh))
 	sh := staking.NewHandler(stakingKeeper)
-	router.AddRoute(staking.RouterKey, sh)
+	router.AddRoute(sdk.NewRoute(stakingtypes.RouterKey, sh))
 	dh := distribution.NewHandler(distKeeper)
-	router.AddRoute(distribution.RouterKey, dh)
+	router.AddRoute(sdk.NewRoute(distrtypes.RouterKey, dh))
+
+	govRouter := govtypes.NewRouter().
+		AddRoute(govtypes.RouterKey, govtypes.ProposalHandler).
+		AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(paramsKeeper)).
+		AddRoute(distrtypes.RouterKey, distribution.NewCommunityPoolSpendProposalHandler(distKeeper))
+		//AddRoute(wasmtypes.RouterKey, NewWasmProposalHandler(keeper, wasmtypes.EnableAllProposals))
+
+	govKeeper := govkeeper.NewKeeper(
+		encodingConfig().Marshaler, keyGov, paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable()), authKeeper, bankKeeper, stakingKeeper, govRouter,
+	)
+
+	govKeeper.SetProposalID(ctx, govtypes.DefaultStartingProposalID)
+	govKeeper.SetDepositParams(ctx, govtypes.DefaultDepositParams())
+	govKeeper.SetVotingParams(ctx, govtypes.DefaultVotingParams())
+	govKeeper.SetTallyParams(ctx, govtypes.DefaultTallyParams())
+	// bank := bankKeeper.
+	//bk := bank.Keeper(bankKeeper)
+
+	mintSubsp, _ := paramsKeeper.GetSubspace(minttypes.ModuleName)
+	mintKeeper := mintkeeper.NewKeeper(encodingConfig().Marshaler, mintStore, mintSubsp, stakingKeeper, authKeeper, bankKeeper, authtypes.FeeCollectorName)
+	mintKeeper.SetMinter(ctx, minttypes.DefaultInitialMinter())
+
+	//keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &govKeeper, &distKeeper, &mintKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
+	//// add wasm handler so we can loop-back (contracts calling contracts)
+	//router.AddRoute(wasmtypes.RouterKey, TestHandler(keeper))
 
 	// Load default wasm config
 	wasmConfig := wasmtypes.DefaultWasmConfig()
 
-	govRouter := gov.NewRouter()
-	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler)
-	govKeeper := gov.NewKeeper(
-		cdc,
-		keyGov,
-		paramsKeeper.Subspace(gov.DefaultParamspace).WithKeyTable(gov.ParamKeyTable()),
-		supplyKeeper,
+	keeper := NewKeeper(
+		encodingConfig().Marshaler,
+		*encodingConfig().Amino,
+		keyContract,
+		authKeeper,
+		bankKeeper,
+		govKeeper,
+		distKeeper,
+		mintKeeper,
 		stakingKeeper,
-		govRouter,
+		router,
+		tempDir,
+		wasmConfig,
+		supportedFeatures,
+		encoders,
+		queriers,
 	)
-	gh := gov.NewHandler(govKeeper)
-	router.AddRoute(gov.RouterKey, gh)
-	// bank := bankKeeper.
-	bk := bank.Keeper(bankKeeper)
-
-	mintKeeper := mint.NewKeeper(cdc, mintStore, paramsKeeper.Subspace(mint.DefaultParamspace), stakingKeeper, supplyKeeper, auth.FeeCollectorName)
-	mintKeeper.SetMinter(ctx, mint.DefaultInitialMinter())
-	keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &govKeeper, &distKeeper, &mintKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
+	//keeper.setParams(ctx, wasmtypes.DefaultParams())
 	// add wasm handler so we can loop-back (contracts calling contracts)
-	router.AddRoute(wasmtypes.RouterKey, TestHandler(keeper))
+	router.AddRoute(sdk.NewRoute(wasmtypes.RouterKey, TestHandler(keeper)))
 
 	keepers := TestKeepers{
-		AccountKeeper: accountKeeper,
-		SupplyKeeper:  supplyKeeper,
+		AccountKeeper: authKeeper,
 		StakingKeeper: stakingKeeper,
 		DistKeeper:    distKeeper,
 		WasmKeeper:    keeper,
@@ -209,6 +291,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 		BankKeeper:    bankKeeper,
 		MintKeeper:    mintKeeper,
 	}
+
 	return ctx, keepers
 }
 
@@ -218,13 +301,9 @@ func TestHandler(k Keeper) sdk.Handler {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
 
 		switch msg := msg.(type) {
-		case wasmtypes.MsgInstantiateContract:
-			return handleInstantiate(ctx, k, &msg)
 		case *wasmtypes.MsgInstantiateContract:
 			return handleInstantiate(ctx, k, msg)
 
-		case wasmtypes.MsgExecuteContract:
-			return handleExecute(ctx, k, &msg)
 		case *wasmtypes.MsgExecuteContract:
 			return handleExecute(ctx, k, msg)
 
@@ -236,65 +315,82 @@ func TestHandler(k Keeper) sdk.Handler {
 }
 
 func handleInstantiate(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgInstantiateContract) (*sdk.Result, error) {
-	contractAddr, err := k.Instantiate(ctx, msg.CodeID, msg.Sender /* msg.Admin, */, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSignature)
+	contractAddr, err := k.Instantiate(ctx, msg.CodeID, msg.Sender /* msg.Admin, */, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
 	if err != nil {
 		return nil, err
 	}
 
 	return &sdk.Result{
 		Data:   contractAddr,
-		Events: ctx.EventManager().Events(),
+		Events: ctx.EventManager().Events().ToABCIEvents(),
 	}, nil
 }
 
 func handleExecute(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgExecuteContract) (*sdk.Result, error) {
-	res, err := k.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSignature)
+	res, err := k.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig)
 	if err != nil {
 		return nil, err
 	}
 
-	res.Events = ctx.EventManager().Events()
+	res.Events = ctx.EventManager().Events().ToABCIEvents()
 	return res, nil
 }
 
 func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, codeID uint64, funds sdk.Coins) sdk.Context {
-	creatorAcc, err := auth.GetSignerAcc(ctx, keeper.accountKeeper, creator)
+	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, creator)
 	require.NoError(t, err)
 
-	tx := authtypes.NewTestTx(ctx, []sdk.Msg{wasmtypes.MsgInstantiateContract{
+	tx := NewTestTx(ctx, []sdk.Msg{&wasmtypes.MsgInstantiateContract{
 		Sender: creator,
 		// Admin:     nil,
 		CodeID:    codeID,
 		Label:     "demo contract 1",
 		InitMsg:   encMsg,
 		InitFunds: funds,
-	}}, []crypto.PrivKey{privKey}, []uint64{creatorAcc.GetAccountNumber()}, []uint64{creatorAcc.GetSequence() - 1}, authtypes.StdFee{
+	}}, []crypto.PrivKey{privKey}, []uint64{creatorAcc.GetAccountNumber()}, []uint64{creatorAcc.GetSequence() - 1}, 0, authlegacy.StdFee{
 		Amount: nil,
 		Gas:    0,
 	})
 
-	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	txBytes, err := keeper.legacyAmino.MarshalBinaryLengthPrefixed(tx)
 	require.NoError(t, err)
 
 	return ctx.WithTxBytes(txBytes)
 }
 
 func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, contract sdk.AccAddress, funds sdk.Coins) sdk.Context {
-	creatorAcc, err := auth.GetSignerAcc(ctx, keeper.accountKeeper, sender)
+	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
 	require.NoError(t, err)
 
-	tx := authtypes.NewTestTx(ctx, []sdk.Msg{wasmtypes.MsgExecuteContract{
+	tx := NewTestTx(ctx, []sdk.Msg{&wasmtypes.MsgExecuteContract{
 		Sender:    sender,
 		Contract:  contract,
 		Msg:       encMsg,
 		SentFunds: funds,
-	}}, []crypto.PrivKey{privKey}, []uint64{creatorAcc.GetAccountNumber()}, []uint64{creatorAcc.GetSequence() - 1}, authtypes.StdFee{
+	}}, []crypto.PrivKey{privKey}, []uint64{creatorAcc.GetAccountNumber()}, []uint64{creatorAcc.GetSequence() - 1}, 0, authlegacy.StdFee{
 		Amount: nil,
 		Gas:    0,
 	})
 
-	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	txBytes, err := keeper.legacyAmino.MarshalBinaryLengthPrefixed(tx)
 	require.NoError(t, err)
 
 	return ctx.WithTxBytes(txBytes)
+}
+
+func NewTestTx(ctx sdk.Context, msgs []sdk.Msg, privs []crypto.PrivKey, accNums []uint64, seqs []uint64, timeout uint64, fee authlegacy.StdFee) sdk.Tx {
+	sigs := make([]authlegacy.StdSignature, len(privs))
+	for i, priv := range privs {
+		signBytes := authlegacy.StdSignBytes(ctx.ChainID(), accNums[i], seqs[i], timeout, fee, msgs, "")
+
+		sig, err := priv.Sign(signBytes)
+		if err != nil {
+			panic(err)
+		}
+
+		sigs[i] = authlegacy.StdSignature{PubKey: priv.PubKey(), Signature: sig}
+	}
+
+	tx := authlegacy.NewStdTx(msgs, fee, sigs, "")
+	return tx
 }

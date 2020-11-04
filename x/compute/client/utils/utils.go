@@ -132,8 +132,8 @@ var hkdfSalt = []byte{
 
 func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
 	var certs regtypes.GenesisState
-	if ctx.TestMasterIOCert != nil { // TODO check length?
-		certs.IoMasterCertificate = ctx.TestMasterIOCert
+	if ctx.TestMasterIOCert.Bytes != nil { // TODO check length?
+		certs.IoMasterCertificate.Bytes = ctx.TestMasterIOCert.Bytes
 	} else {
 		res, _, err := ctx.CLIContext.Query("custom/register/master-cert")
 		if err != nil {
@@ -146,7 +146,7 @@ func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
 		}
 	}
 
-	ioPubkey, err := ra.VerifyRaCert(certs.IoMasterCertificate)
+	ioPubkey, err := ra.VerifyRaCert(certs.IoMasterCertificate.Bytes)
 	if err != nil {
 		return nil, err
 	}

@@ -3,33 +3,31 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/server"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	scrt "github.com/enigmampc/SecretNetwork/types"
-	"os"
-	"path"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
+	"github.com/cosmos/cosmos-sdk/server"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	scrt "github.com/enigmampc/SecretNetwork/types"
+	"os"
 
+	"github.com/enigmampc/SecretNetwork/app"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/tendermint/tendermint/libs/cli"
-
-	"github.com/enigmampc/SecretNetwork/app"
+	tmcli "github.com/tendermint/tendermint/libs/cli"
 )
 
 const flagIsBootstrap = "bootstrap"
 
 // ClientName is set via build process
-const ClientName = "wasmcli"
+const ClientName = "secretcli"
 
 // thanks @terra-project for this fix
 const flagLegacyHdPath = "legacy-hd-path"
@@ -38,6 +36,12 @@ var bootstrap bool
 
 func main() {
 	cobra.EnableCommandSorting = false
+
+	// Read in the configuration file for the sdk
+	config := sdk.GetConfig()
+	config.SetBech32PrefixForAccount(scrt.Bech32PrefixAccAddr, scrt.Bech32PrefixAccPub)
+	config.SetBech32PrefixForValidator(scrt.Bech32PrefixValAddr, scrt.Bech32PrefixValPub)
+	config.SetBech32PrefixForConsensusNode(scrt.Bech32PrefixConsAddr, scrt.Bech32PrefixConsPub)
 
 	encodingConfig := app.MakeEncodingConfig()
 
@@ -55,12 +59,22 @@ func main() {
 		Use:   ClientName,
 		Short: "Command line interface for interacting with " + version.AppName,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-			err := initConfig(cmd)
+			cmd.PersistentFlags().Bool(flagLegacyHdPath, false, "Flag to specify the command uses old HD path - use this for ledger compatibility")
+
+			oldHDPath, err := cmd.PersistentFlags().GetBool(flagLegacyHdPath)
 			if err != nil {
-				return err
+				fmt.Printf("Failed executing CLI command: %s, exiting...\n", err)
+				os.Exit(1)
 			}
 
-			if err = client.SetCmdClientContextHandler(initClientCtx, cmd); err != nil {
+			if !oldHDPath {
+				config.SetCoinType(529)
+				config.SetFullFundraiserPath("44'/529'/0'/0/0")
+			}
+
+			config.Seal()
+
+			if err := client.SetCmdClientContextHandler(initClientCtx, cmd); err != nil {
 				return err
 			}
 
@@ -68,11 +82,9 @@ func main() {
 		},
 	}
 
-	// Add --chain-id to persistent flags and mark it required
-	rootCmd.PersistentFlags().Bool(flagLegacyHdPath, false, "Flag to specify the command uses old HD path - use this for ledger compatibility")
-	rootCmd.PersistentFlags().String(flags.FlagChainID, "", "Chain ID of tendermint node")
-	rootCmd.PersistentFlags().BoolVar(&bootstrap, flagIsBootstrap,
-		false, "Start the node as the bootstrap node for the network (only used when starting a new network)")
+	//rootCmd.PersistentFlags().String(flags.FlagChainID, "", "Chain ID of tendermint node")
+	//rootCmd.PersistentFlags().BoolVar(&bootstrap, flagIsBootstrap,
+	//	false, "Start the node as the bootstrap node for the network (only used when starting a new network)")
 
 	// Construct Root Command
 	rootCmd.AddCommand(
@@ -83,7 +95,7 @@ func main() {
 		flags.LineBreak,
 		keys.Commands(app.DefaultNodeHome),
 		flags.LineBreak,
-		//version.Cmd,
+		version.NewVersionCommand(),
 		cli.NewCompletionCmd(rootCmd, true),
 	)
 
@@ -98,8 +110,8 @@ func main() {
 	ctx = context.WithValue(ctx, server.ServerContextKey, server.NewDefaultContext())
 
 	// Add flags and prefix all env exposed with EN
-	executor := cli.PrepareBaseCmd(rootCmd, "EN", app.DefaultCLIHome)
-	err := executor.Execute()
+	executor := tmcli.PrepareBaseCmd(rootCmd, "EN", app.DefaultCLIHome)
+	err := executor.ExecuteContext(ctx)
 	if err != nil {
 		fmt.Printf("Failed executing CLI command: %s, exiting...\n", err)
 		os.Exit(1)
@@ -128,6 +140,7 @@ func queryCmd() *cobra.Command {
 
 	// add modules' query commands
 	app.ModuleBasics.AddQueryCommands(queryCmd)
+	queryCmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 
 	return queryCmd
 }
@@ -168,47 +181,51 @@ func txCmd() *cobra.Command {
 	}
 
 	txCmd.RemoveCommand(cmdsToRemove...)
+	txCmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 
 	return txCmd
 }
 
-func initConfig(cmd *cobra.Command) error {
-	oldHDPath, err := cmd.PersistentFlags().GetBool(flagLegacyHdPath)
-	if err != nil {
-		return err
-	}
-
-	// Read in the configuration file for the sdk
-	config := sdk.GetConfig()
-
-	if !oldHDPath {
-		config.SetCoinType(529)
-		config.SetFullFundraiserPath("44'/529'/0'/0/0")
-	}
-
-	config.SetBech32PrefixForAccount(scrt.Bech32PrefixAccAddr, scrt.Bech32PrefixAccPub)
-	config.SetBech32PrefixForValidator(scrt.Bech32PrefixValAddr, scrt.Bech32PrefixValPub)
-	config.SetBech32PrefixForConsensusNode(scrt.Bech32PrefixConsAddr, scrt.Bech32PrefixConsPub)
-	config.Seal()
-
-	home, err := cmd.PersistentFlags().GetString(cli.HomeFlag)
-	if err != nil {
-		return err
-	}
-
-	cfgFile := path.Join(home, "config", "config.toml")
-	if _, err := os.Stat(cfgFile); err == nil {
-		viper.SetConfigFile(cfgFile)
-
-		if err := viper.ReadInConfig(); err != nil {
-			return err
-		}
-	}
-	if err := viper.BindPFlag(flags.FlagChainID, cmd.PersistentFlags().Lookup(flags.FlagChainID)); err != nil {
-		return err
-	}
-	if err := viper.BindPFlag(cli.EncodingFlag, cmd.PersistentFlags().Lookup(cli.EncodingFlag)); err != nil {
-		return err
-	}
-	return viper.BindPFlag(cli.OutputFlag, cmd.PersistentFlags().Lookup(cli.OutputFlag))
-}
+//func initConfig(cmd *cobra.Command) error {
+//	oldHDPath, err := cmd.PersistentFlags().GetBool(flagLegacyHdPath)
+//	if err != nil {
+//		return err
+//	}
+//	txCmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
+//
+//	// Read in the configuration file for the sdk
+//	config := sdk.GetConfig()
+//
+//	if !oldHDPath {
+//		config.SetCoinType(529)
+//		config.SetFullFundraiserPath("44'/529'/0'/0/0")
+//	}
+//
+//	config.SetBech32PrefixForAccount(scrt.Bech32PrefixAccAddr, scrt.Bech32PrefixAccPub)
+//	config.SetBech32PrefixForValidator(scrt.Bech32PrefixValAddr, scrt.Bech32PrefixValPub)
+//	config.SetBech32PrefixForConsensusNode(scrt.Bech32PrefixConsAddr, scrt.Bech32PrefixConsPub)
+//	config.Seal()
+//
+//	//home, err := cmd.PersistentFlags().GetString(cli.HomeFlag)
+//	//if err != nil {
+//	//	return err
+//	//}
+//
+//	//cfgFile := path.Join(home, "config", "config.toml")
+//	//if _, err := os.Stat(cfgFile); err == nil {
+//	//	viper.SetConfigFile(cfgFile)
+//	//
+//	//	if err := viper.ReadInConfig(); err != nil {
+//	//		return err
+//	//	}
+//	//}
+//
+//	// Add --chain-id to persistent flags and mark it required
+//	if err := viper.BindPFlag(flags.FlagChainID, cmd.PersistentFlags().Lookup(flags.FlagChainID)); err != nil {
+//		return err
+//	}
+//	if err := viper.BindPFlag(cli.EncodingFlag, cmd.PersistentFlags().Lookup(cli.EncodingFlag)); err != nil {
+//		return err
+//	}
+//	return viper.BindPFlag(cli.OutputFlag, cmd.PersistentFlags().Lookup(cli.OutputFlag))
+//}

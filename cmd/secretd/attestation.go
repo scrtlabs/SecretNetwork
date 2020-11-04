@@ -5,6 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/server"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	app2 "github.com/enigmampc/SecretNetwork/app"
 	"github.com/spf13/viper"
@@ -12,20 +15,17 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 
-	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/spf13/cobra"
 )
 
 const flagReset = "reset"
 
-func InitAttestation(
-	_ *server.Context) *cobra.Command {
+func InitAttestation() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "init-enclave [output-file]",
@@ -86,8 +86,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 	return cmd
 }
 
-func InitBootstrapCmd(
-	ctx *server.Context, mbm module.BasicManager) *cobra.Command {
+func InitBootstrapCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "init-bootstrap [node-exchange-file] [io-exchange-file]",
@@ -98,10 +97,15 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 `,
 		Args: cobra.MaximumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			config := ctx.Config
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			depCdc := clientCtx.JSONMarshaler
+			cdc := depCdc.(codec.Marshaler)
+
+			serverCtx := server.GetServerContextFromCmd(cmd)
+			config := serverCtx.Config
 
 			genFile := config.GenesisFile()
-			appState, genDoc, err := genutiltypes.GenesisStateFromGenFile(cdc, genFile)
+			appState, genDoc, err := genutiltypes.GenesisStateFromGenFile(genFile)
 			if err != nil {
 				return fmt.Errorf("failed to unmarshal genesis state: %w", err)
 			}
@@ -153,7 +157,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 				return fmt.Errorf("invalid certificate for master public key")
 			}
 
-			regGenState.NodeExchMasterCertificate = cert
+			regGenState.NodeExchMasterCertificate.Bytes = cert
 
 			// Load consensus_io_exchange_pubkey
 			if len(args) == 2 {
@@ -167,17 +171,17 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 					return err
 				}
 			}
-			regGenState.IoMasterCertificate = cert
+			regGenState.IoMasterCertificate.Bytes = cert
 
 			// Create genesis state from certificates
-			regGenStateBz, err := cdc.MarshalJSON(regGenState)
+			regGenStateBz, err := cdc.MarshalJSON(&regGenState)
 			if err != nil {
 				return fmt.Errorf("failed to marshal auth genesis state: %w", err)
 			}
 
 			appState[reg.ModuleName] = regGenStateBz
 
-			appStateJSON, err := cdc.MarshalJSON(appState)
+			appStateJSON, err := json.Marshal(appState)
 			if err != nil {
 				return fmt.Errorf("failed to marshal application genesis state: %w", err)
 			}
@@ -190,7 +194,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 	return cmd
 }
 
-func ParseCert(_ *server.Context) *cobra.Command {
+func ParseCert() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "parse [cert file]",
 		Short: "Verify and parse a certificate file",
@@ -218,7 +222,7 @@ func ParseCert(_ *server.Context) *cobra.Command {
 	return cmd
 }
 
-func ConfigureSecret(_ *server.Context) *cobra.Command {
+func ConfigureSecret() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "configure-secret [master-cert] [seed]",
 		Short: "After registration is successful, configure the secret node with the credentials file and the encrypted" +
@@ -270,7 +274,7 @@ func ConfigureSecret(_ *server.Context) *cobra.Command {
 	return cmd
 }
 
-func HealthCheck(_ *server.Context) *cobra.Command {
+func HealthCheck() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "check-enclave",
 		Short: "Test enclave status",
@@ -291,7 +295,7 @@ func HealthCheck(_ *server.Context) *cobra.Command {
 	return cmd
 }
 
-func ResetEnclave(_ *server.Context) *cobra.Command {
+func ResetEnclave() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "reset-enclave",
 		Short: "Reset registration & enclave parameters",
