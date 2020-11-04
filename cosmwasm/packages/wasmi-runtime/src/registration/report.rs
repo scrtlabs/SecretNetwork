@@ -13,8 +13,6 @@ use serde_json::Value;
 use std::array::TryFromSliceError;
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::time::SystemTime;
-use std::untrusted::time::SystemTimeEx;
 use uuid::Uuid;
 
 use super::cert::{get_ias_auth_config, get_netscape_comment};
@@ -616,7 +614,7 @@ impl AttestationReport {
         chain.push(&ias_cert);
 
         // set as 04.11.23(dd.mm.yy) - should be valid for the foreseeable future, and not rely on SystemTime
-        let time_stamp = webpki::Time::from_seconds_since_unix_epoch(1699088856);
+        let time_stamp = webpki::Time::from_seconds_since_unix_epoch(1_699_088_856);
 
         // note: there's no way to not validate the time, and we don't want to write this code
         // ourselves. We also can't just ignore the error message, since that means that the rest of
