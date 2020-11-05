@@ -22,6 +22,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway v1.15.2
 	github.com/jteeuwen/go-bindata v3.0.7+incompatible // indirect
 	github.com/miscreant/miscreant.go v0.0.0-20200214223636-26d376326b75
+	github.com/pelletier/go-toml v1.8.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/common v0.14.0
 	github.com/rakyll/statik v0.1.7

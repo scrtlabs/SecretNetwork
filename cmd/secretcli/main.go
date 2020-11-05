@@ -16,6 +16,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	scrt "github.com/enigmampc/SecretNetwork/types"
 	"os"
+	"path"
 
 	"github.com/enigmampc/SecretNetwork/app"
 	"github.com/spf13/cobra"
@@ -78,6 +79,32 @@ func main() {
 				return err
 			}
 
+			// TODO: Find a better way to set config file values
+			cfgFile := path.Join(app.DefaultCLIHome, "config", "config.toml")
+			if _, err := os.Stat(cfgFile); err == nil {
+				viper.SetConfigFile(cfgFile)
+
+				if err := viper.ReadInConfig(); err != nil {
+					return err
+				}
+			}
+
+			// Chain-id
+			if viper.GetString(flags.FlagChainID) != "" {
+				cmd.Flags().Set(flags.FlagChainID, viper.GetString(flags.FlagChainID))
+			}
+
+			// Keyring-backend
+			if viper.GetString(flags.FlagKeyringBackend) != "" {
+				cmd.Flags().Set(flags.FlagKeyringBackend, viper.GetString(flags.FlagKeyringBackend))
+			}
+
+			// Output
+			if viper.GetString(cli.OutputFlag) != "" {
+				//cmd.Flags().Set(cli.OutputFlag, viper.GetString(cli.OutputFlag))
+				initClientCtx.OutputFormat = viper.GetString(cli.OutputFlag)
+			}
+
 			return server.InterceptConfigsPreRunHandler(cmd)
 		},
 	}
@@ -89,6 +116,7 @@ func main() {
 	// Construct Root Command
 	rootCmd.AddCommand(
 		rpc.StatusCommand(),
+		ConfigCmd(app.DefaultCLIHome),
 		queryCmd(),
 		txCmd(),
 		flags.LineBreak,
