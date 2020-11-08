@@ -21,7 +21,7 @@ service Query {
 }
 
 message QueryMasterKeyResponse {
-  bytes master_key = 1 [(gogoproto.nullable) = false];
+  bytes master_key = 1; // [(gogoproto.nullable) = false];
 }
 
 message QueryEncryptedSeedRequest {
@@ -29,7 +29,7 @@ message QueryEncryptedSeedRequest {
 }
 
 message QueryEncryptedSeedResponse {
-  bytes encrypted_seed = 1 [(gogoproto.nullable) = false];
+  bytes encrypted_seed = 1; // [(gogoproto.nullable) = false];
 }
 
 

@@ -47,7 +47,10 @@ func (AppModuleBasic) Name() string {
 // DefaultGenesis returns default genesis state as raw bytes for the compute
 // module.
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONMarshaler) json.RawMessage {
-	return cdc.MustMarshalJSON(&GenesisState{})
+	return cdc.MustMarshalJSON(&GenesisState{
+		NodeExchMasterCertificate: &MasterCertificate{},
+		IoMasterCertificate:       &MasterCertificate{},
+	})
 }
 
 // ValidateGenesis performs genesis state validation for the compute module.
