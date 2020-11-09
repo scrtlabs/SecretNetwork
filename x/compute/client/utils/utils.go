@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/client"
+	"google.golang.org/grpc/encoding"
+	"google.golang.org/grpc/encoding/proto"
 	"io"
 	"io/ioutil"
 	"log"
@@ -131,22 +133,22 @@ var hkdfSalt = []byte{
 }
 
 func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
-	var certs regtypes.GenesisState
+	var masterIoKey regtypes.MasterCertificate
 	if ctx.TestMasterIOCert.Bytes != nil { // TODO check length?
-		certs.IoMasterCertificate.Bytes = ctx.TestMasterIOCert.Bytes
+		masterIoKey.Bytes = ctx.TestMasterIOCert.Bytes
 	} else {
-		res, _, err := ctx.CLIContext.Query("custom/register/master-cert")
+		res, _, err := ctx.CLIContext.Query("/SecretNetwork.x.registration.v1beta1.Query/MasterKey")
 		if err != nil {
 			return nil, err
 		}
 
-		err = json.Unmarshal(res, &certs)
+		err = encoding.GetCodec(proto.Name).Unmarshal(res, &masterIoKey)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	ioPubkey, err := ra.VerifyRaCert(certs.IoMasterCertificate.Bytes)
+	ioPubkey, err := ra.VerifyRaCert(masterIoKey.Bytes)
 	if err != nil {
 		return nil, err
 	}

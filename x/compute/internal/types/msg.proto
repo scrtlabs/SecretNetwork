@@ -32,7 +32,7 @@ message MsgInstantiateContract {
   string callback_code_hash = 2;
   uint64 code_id = 3 [(gogoproto.customname) = "CodeID"];
   string label = 4;
-  bytes init_msg = 5 [(gogoproto.casttype) = "encoding/json.RawMessage"];
+  bytes init_msg = 5;
   repeated cosmos.base.v1beta1.Coin init_funds = 6 [(gogoproto.nullable) = false, (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"];
   bytes callback_sig = 7;
 }
@@ -42,7 +42,7 @@ message MsgExecuteContract {
 
   bytes sender = 1 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
   bytes contract = 2 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
-  bytes msg = 3 [(gogoproto.casttype) = "encoding/json.RawMessage"];
+  bytes msg = 3;
   string callback_code_hash = 4;
   repeated cosmos.base.v1beta1.Coin sent_funds = 5 [(gogoproto.nullable) = false, (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"];
   bytes callback_sig = 6;
