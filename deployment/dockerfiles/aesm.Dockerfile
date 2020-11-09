@@ -18,8 +18,8 @@ RUN mkdir /etc/init && \
 
 
 # SGX version parameters
-ARG SGX_MAJOR_VERSION=2.9.1
-ARG SGX_MINOR_VERSION=01.2
+ARG SGX_MAJOR_VERSION=2.11.1
+ARG SGX_MINOR_VERSION=00.2
 ARG OS_REVESION=bionic1
 ARG OS_NAME=ubuntu18.04-server
 
@@ -39,9 +39,9 @@ ADD https://download.01.org/intel-sgx/sgx-linux/${SGX_MAJOR_VERSION}/distro/${OS
 ADD https://download.01.org/intel-sgx/sgx-linux/${SGX_MAJOR_VERSION}/distro/${OS_NAME}/debian_pkgs/utils/libsgx-aesm-ecdsa-plugin/libsgx-aesm-ecdsa-plugin_${SGX_VERSION}-${OS_REVESION}_amd64.deb ./sgx/
 ADD https://download.01.org/intel-sgx/sgx-linux/${SGX_MAJOR_VERSION}/distro/${OS_NAME}/debian_pkgs/utils/libsgx-ae-le/libsgx-ae-le_${SGX_VERSION}-${OS_REVESION}_amd64.deb ./sgx/
 
-ADD https://download.01.org/intel-sgx/sgx-linux/${SGX_MAJOR_VERSION}/distro/${OS_NAME}/debian_pkgs/libs/libsgx-pce-logic/libsgx-pce-logic_1.6.100.2-${OS_REVESION}_amd64.deb ./sgx/
-ADD https://download.01.org/intel-sgx/sgx-linux/${SGX_MAJOR_VERSION}/distro/${OS_NAME}/debian_pkgs/libs/libsgx-qe3-logic/libsgx-qe3-logic_1.6.100.2-${OS_REVESION}_amd64.deb ./sgx/
-ADD https://download.01.org/intel-sgx/sgx-linux/${SGX_MAJOR_VERSION}/distro/${OS_NAME}/debian_pkgs/libs/libsgx-ae-qe3/libsgx-ae-qe3_1.6.100.2-${OS_REVESION}_amd64.deb ./sgx/
+ADD https://download.01.org/intel-sgx/sgx-linux/${SGX_MAJOR_VERSION}/distro/${OS_NAME}/debian_pkgs/libs/libsgx-pce-logic/libsgx-pce-logic_1.8.100.2-${OS_REVESION}_amd64.deb ./sgx/
+ADD https://download.01.org/intel-sgx/sgx-linux/${SGX_MAJOR_VERSION}/distro/${OS_NAME}/debian_pkgs/libs/libsgx-qe3-logic/libsgx-qe3-logic_1.8.100.2-${OS_REVESION}_amd64.deb ./sgx/
+ADD https://download.01.org/intel-sgx/sgx-linux/${SGX_MAJOR_VERSION}/distro/${OS_NAME}/debian_pkgs/libs/libsgx-ae-qe3/libsgx-ae-qe3_1.8.100.2-${OS_REVESION}_amd64.deb ./sgx/
 
 
 RUN dpkg -i ./sgx/libsgx-enclave-common_${SGX_VERSION}-${OS_REVESION}_amd64.deb && \
@@ -51,9 +51,9 @@ RUN dpkg -i ./sgx/libsgx-enclave-common_${SGX_VERSION}-${OS_REVESION}_amd64.deb 
     dpkg -i ./sgx/libsgx-ae-epid_${SGX_VERSION}-${OS_REVESION}_amd64.deb && \
     dpkg -i ./sgx/libsgx-ae-pce_${SGX_VERSION}-${OS_REVESION}_amd64.deb&& \
     dpkg -i ./sgx/libsgx-ae-le_${SGX_VERSION}-${OS_REVESION}_amd64.deb&& \
-    dpkg -i ./sgx/libsgx-pce-logic_1.6.100.2-${OS_REVESION}_amd64.deb&& \
-    dpkg -i ./sgx/libsgx-ae-qe3_1.6.100.2-${OS_REVESION}_amd64.deb&& \
-    dpkg -i ./sgx/libsgx-qe3-logic_1.6.100.2-${OS_REVESION}_amd64.deb&& \
+    dpkg -i ./sgx/libsgx-pce-logic_1.8.100.2-${OS_REVESION}_amd64.deb&& \
+    dpkg -i ./sgx/libsgx-ae-qe3_1.8.100.2-${OS_REVESION}_amd64.deb&& \
+    dpkg -i ./sgx/libsgx-qe3-logic_1.8.100.2-${OS_REVESION}_amd64.deb&& \
     # AESM plugins
     dpkg -i ./sgx/libsgx-aesm-pce-plugin_${SGX_VERSION}-${OS_REVESION}_amd64.deb && \
     dpkg -i ./sgx/libsgx-aesm-ecdsa-plugin_${SGX_VERSION}-${OS_REVESION}_amd64.deb && \

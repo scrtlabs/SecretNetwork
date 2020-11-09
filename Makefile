@@ -196,10 +196,10 @@ clean:
 	-rm -rf /tmp/SecretNetwork
 	-rm -f ./secretcli*
 	-rm -f ./secretd*
-	-find -name librust_cosmwasm_enclave.signed.so -delete
-	-find -name libgo_cosmwasm.so -delete
-	-find -name '*.so' -delete
-	-find -name 'target' -type d -exec rm -rf \;
+#	-find -name librust_cosmwasm_enclave.signed.so -delete
+#	-find -name libgo_cosmwasm.so -delete
+#	-find -name '*.so' -delete
+#	-find -name 'target' -type d -exec rm -rf \;
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*
 	-rm -rf ./third_party/vendor/
