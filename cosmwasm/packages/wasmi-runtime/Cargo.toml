@@ -54,8 +54,8 @@ sha2 = "0.8.1"
 ring = { git = "https://github.com/mesalock-linux/ring-sgx", tag = "v0.16.5" }
 secp256k1 = "0.17.2"
 # for attestation
-chrono = { rev = "sgx_1.1.3", git = "https://github.com/mesalock-linux/chrono-sgx" }
-num-bigint = { rev = "sgx_1.1.3", git = "https://github.com/mesalock-linux/num-bigint-sgx" }
+chrono = { git = "https://github.com/mesalock-linux/chrono-sgx" }
+num-bigint = { git = "https://github.com/mesalock-linux/num-bigint-sgx" }
 uuid = "0.8.1"
 httparse = { version = "1.3", default-features = false }
 itertools = { version = "0.8", default-features = false, features = [] }
@@ -88,7 +88,7 @@ rev = "sgx_1.1.3"
 
 [dependencies.webpki]
 git = "https://github.com/mesalock-linux/webpki"
-rev = "sgx_1.1.3"
+branch = "mesalock_sgx"
 
 [dependencies.webpki-roots]
 git = "https://github.com/mesalock-linux/webpki-roots"
