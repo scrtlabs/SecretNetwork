@@ -1,4 +1,4 @@
-So far we've got a [local Secret Network developer testnet running](docs/dev/contract-dev-guide.md), and we've [exposed a rest API to interact with contracts with SecretJS](docs/dev/secret-js.md).
+So far we've got a [local Secret Network developer testnet running](../archive/contract-dev-guide.md), and we've [exposed a rest API to interact with contracts with SecretJS](secret-js.md).
 
 In this guide we'll build a React application, you can roll your own or clone the [CosmWasm full stack example `name-app`](https://github.com/CosmWasm/name-app) to follow along.
 

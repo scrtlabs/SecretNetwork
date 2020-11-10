@@ -12,4 +12,4 @@ Currently, we have a [contract development guide for developers](../archive/cont
 
 - [Quickstart](quickstart.md)
 
-- [SecretJS](secret-js)
+- [SecretJS](secret-js.md)
