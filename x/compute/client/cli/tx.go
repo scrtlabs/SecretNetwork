@@ -44,7 +44,7 @@ func GetTxCmd() *cobra.Command {
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
 	}
-		txCmd.AddCommand(
+	txCmd.AddCommand(
 		StoreCodeCmd(),
 		InstantiateContractCmd(),
 		ExecuteContractCmd(),
@@ -52,7 +52,7 @@ func GetTxCmd() *cobra.Command {
 		//MigrateContractCmd(cdc),
 		//UpdateContractAdminCmd(cdc),
 		//ClearContractAdminCmd(cdc),
-		)
+	)
 	return txCmd
 }
 

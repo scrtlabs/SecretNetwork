@@ -116,7 +116,7 @@ xgo_build_secretcli: go.sum
 cli:
 	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
 
-build_local_no_rust: cli bin-data-$(IAS_BUILD)
+build_local_no_rust: bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
 	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
@@ -125,7 +125,6 @@ build-linux: vendor bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
 #   this pulls out ELF symbols, 80% size reduction!
 	go build -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
-	go build -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
 
 build_windows:
 	# CLI only

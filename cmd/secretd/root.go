@@ -2,13 +2,18 @@ package main
 
 import (
 	"context"
+	"github.com/cosmos/cosmos-sdk/codec"
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	scrt "github.com/enigmampc/SecretNetwork/types"
 	"github.com/spf13/viper"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
+
+	//"github.com/tendermint/tendermint/libs/cli"
 
 	"github.com/cosmos/cosmos-sdk/snapshots"
 	"github.com/enigmampc/SecretNetwork/app"
@@ -35,18 +40,17 @@ import (
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 )
 
+// thanks @terra-project for this fix
+const flagLegacyHdPath = "legacy-hd-path"
+const flagIsBootstrap = "bootstrap"
+const cfgFileName = "config.toml"
+
+var bootstrap bool
+
 // NewRootCmd creates a new root command for simd. It is called once in the
 // main function.
 func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 	encodingConfig := app.MakeEncodingConfig()
-
-	config := sdk.GetConfig()
-	config.SetCoinType(529)
-	config.SetFullFundraiserPath("44'/529'/0'/0/0")
-	config.SetBech32PrefixForAccount(scrt.Bech32PrefixAccAddr, scrt.Bech32PrefixAccPub)
-	config.SetBech32PrefixForValidator(scrt.Bech32PrefixValAddr, scrt.Bech32PrefixValPub)
-	config.SetBech32PrefixForConsensusNode(scrt.Bech32PrefixConsAddr, scrt.Bech32PrefixConsPub)
-	config.Seal()
 
 	initClientCtx := client.Context{}.
 		WithJSONMarshaler(encodingConfig.Marshaler).
@@ -62,15 +66,12 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 		Use:   "secretd",
 		Short: "The Secret Network App Daemon (server)",
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-			if err := client.SetCmdClientContextHandler(initClientCtx, cmd); err != nil {
-				return err
-			}
-
-			return server.InterceptConfigsPreRunHandler(cmd)
+			return initConfig(&initClientCtx, cmd)
 		},
 	}
 
 	initRootCmd(rootCmd, encodingConfig)
+
 	return rootCmd, encodingConfig
 }
 
@@ -86,7 +87,7 @@ func Execute(rootCmd *cobra.Command) error {
 	ctx = context.WithValue(ctx, client.ClientContextKey, &client.Context{})
 	ctx = context.WithValue(ctx, server.ServerContextKey, server.NewDefaultContext())
 
-	executor := tmcli.PrepareBaseCmd(rootCmd, "EN", app.DefaultNodeHome)
+	executor := tmcli.PrepareBaseCmd(rootCmd, "", app.DefaultNodeHome)
 	return executor.ExecuteContext(ctx)
 }
 
@@ -94,7 +95,8 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 	authclient.Codec = encodingConfig.Marshaler
 
 	rootCmd.AddCommand(
-		genutilcli.InitCmd(app.ModuleBasics, app.DefaultNodeHome),
+		//genutilcli.InitCmd(app.ModuleBasics, app.DefaultNodeHome),
+		updateTmParamsAndInit(app.ModuleBasics, app.DefaultNodeHome),
 		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome),
 		genutilcli.MigrateGenesisCmd(),
 		genutilcli.GenTxCmd(app.ModuleBasics, encodingConfig.TxConfig, banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome),
@@ -102,7 +104,6 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 		AddGenesisAccountCmd(app.DefaultNodeHome),
 		tmcli.NewCompletionCmd(rootCmd, true),
 		// testnetCmd(app.ModuleBasics, banktypes.GenesisBalancesIterator{}),
-		updateTmParamsAndInit(app.ModuleBasics, app.DefaultNodeHome),
 		debug.Cmd(),
 	)
 
@@ -111,8 +112,76 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 	// add keybase, auxiliary RPC, query, and tx child commands
 	rootCmd.AddCommand(
 		rpc.StatusCommand(),
+		queryCommand(),
+		txCommand(),
+		InitAttestation(),
+		InitBootstrapCmd(),
+		ParseCert(),
+		ConfigureSecret(),
+		HealthCheck(),
+		ResetEnclave(),
 		keys.Commands(app.DefaultNodeHome),
 	)
+
+	// This is needed for `newApp` and `exportAppStateAndTMValidators`
+	rootCmd.PersistentFlags().BoolVar(&bootstrap, flagIsBootstrap,
+		false, "Start the node as the bootstrap node for the network (only used when starting a new network)")
+}
+
+func queryCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:                        "query",
+		Aliases:                    []string{"q"},
+		Short:                      "Querying subcommands",
+		DisableFlagParsing:         true,
+		SuggestionsMinimumDistance: 2,
+		RunE:                       client.ValidateCmd,
+	}
+
+	cmd.AddCommand(
+		authcmd.GetAccountCmd(),
+		rpc.ValidatorCommand(),
+		rpc.BlockCommand(),
+		authcmd.QueryTxsByEventsCmd(),
+		authcmd.QueryTxCmd(),
+		S20GetQueryCmd(),
+	)
+
+	app.ModuleBasics.AddQueryCommands(cmd)
+	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
+	cmd.PersistentFlags().String(tmcli.OutputFlag, "text", "Output format (text|json)")
+
+	return cmd
+}
+
+func txCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:                        "tx",
+		Short:                      "Transactions subcommands",
+		DisableFlagParsing:         true,
+		SuggestionsMinimumDistance: 2,
+		RunE:                       client.ValidateCmd,
+	}
+
+	cmd.AddCommand(
+		authcmd.GetSignCommand(),
+		authcmd.GetSignBatchCommand(),
+		authcmd.GetMultiSignCommand(),
+		authcmd.GetValidateSignaturesCommand(),
+		flags.LineBreak,
+		authcmd.GetBroadcastCommand(),
+		authcmd.GetEncodeCommand(),
+		authcmd.GetDecodeCommand(),
+		flags.LineBreak,
+		//vestingcli.GetTxCmd(),
+		S20GetTxCmd(),
+	)
+
+	app.ModuleBasics.AddTxCommands(cmd)
+	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
+	cmd.PersistentFlags().String(tmcli.OutputFlag, "text", "Output format (text|json)")
+
+	return cmd
 }
 
 func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts servertypes.AppOptions) servertypes.Application {
@@ -126,10 +195,12 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 	for _, h := range cast.ToIntSlice(appOpts.Get(server.FlagUnsafeSkipUpgrades)) {
 		skipUpgradeHeights[int64(h)] = true
 	}
+
 	pruningOpts, err := server.GetPruningOptionsFromFlags(appOpts)
 	if err != nil {
 		panic(err)
 	}
+
 	snapshotDir := filepath.Join(cast.ToString(appOpts.Get(flags.FlagHome)), "data", "snapshots")
 	snapshotDB, err := sdk.NewLevelDB("metadata", snapshotDir)
 	if err != nil {
@@ -170,6 +241,8 @@ func exportAppStateAndTMValidators(
 	bootstrap := viper.GetBool("bootstrap")
 	queryGasLimit := viper.GetUint64("query-gas-limit")
 
+	encCfg := app.MakeEncodingConfig()
+	encCfg.Marshaler = codec.NewProtoCodec(encCfg.InterfaceRegistry)
 	var wasmApp *app.SecretNetworkApp
 	if height != -1 {
 		wasmApp = app.NewSecretNetworkApp(logger, db, traceStore, false, map[int64]bool{}, "", uint(1), queryGasLimit, bootstrap)
@@ -210,4 +283,55 @@ func updateTmParamsAndInit(mbm module.BasicManager, defaultNodeHome string) *cob
 
 	cmd.RunE = wrappedFunc
 	return cmd
+}
+
+func initConfig(ctx *client.Context, cmd *cobra.Command) error {
+	cmd.PersistentFlags().Bool(flagLegacyHdPath, false, "Flag to specify the command uses old HD path - use this for ledger compatibility")
+
+	config := sdk.GetConfig()
+	config.SetBech32PrefixForAccount(scrt.Bech32PrefixAccAddr, scrt.Bech32PrefixAccPub)
+	config.SetBech32PrefixForValidator(scrt.Bech32PrefixValAddr, scrt.Bech32PrefixValPub)
+	config.SetBech32PrefixForConsensusNode(scrt.Bech32PrefixConsAddr, scrt.Bech32PrefixConsPub)
+
+	oldHDPath, err := cmd.PersistentFlags().GetBool(flagLegacyHdPath)
+	if err != nil {
+		return err
+	}
+	if !oldHDPath {
+		config.SetCoinType(529)
+		config.SetFullFundraiserPath("44'/529'/0'/0/0")
+	}
+
+	config.Seal()
+
+	cfgFilePath := path.Join(app.DefaultCLIHome, "config", cfgFileName)
+	if _, err := os.Stat(cfgFilePath); err == nil {
+		viper.SetConfigFile(cfgFilePath)
+
+		if err := viper.ReadInConfig(); err != nil {
+			return err
+		}
+	}
+
+	// Chain-id
+	if viper.GetString(flags.FlagChainID) != "" && cmd.Flags().Lookup(flags.FlagChainID) != nil {
+		err = cmd.Flags().Set(flags.FlagChainID, viper.GetString(flags.FlagChainID))
+		if err != nil {
+			return err
+		}
+	}
+
+	// Keyring-backend
+	if viper.GetString(flags.FlagKeyringBackend) != "" && cmd.Flags().Lookup(flags.FlagKeyringBackend) != nil {
+		err = cmd.Flags().Set(flags.FlagKeyringBackend, viper.GetString(flags.FlagKeyringBackend))
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := client.SetCmdClientContextHandler(*ctx, cmd); err != nil {
+		return err
+	}
+
+	return server.InterceptConfigsPreRunHandler(cmd)
 }
