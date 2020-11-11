@@ -2,6 +2,7 @@ import { Account, CosmWasmClient, GetNonceResult, PostTxResult } from "./cosmwas
 import { Log } from "./logs";
 import { BroadcastMode } from "./restclient";
 import { Coin, StdFee, StdSignature } from "./types";
+import { OfflineSigner } from "./wallet";
 export interface SigningCallback {
   (signBytes: Uint8Array): Promise<StdSignature>;
 }
@@ -48,7 +49,7 @@ export interface ExecuteResult {
 }
 export declare class SigningCosmWasmClient extends CosmWasmClient {
   readonly senderAddress: string;
-  private readonly signCallback;
+  private readonly signer;
   private readonly fees;
   /**
    * Creates a new client with signing capability to interact with a CosmWasm blockchain. This is the bigger brother of CosmWasmClient.
@@ -58,20 +59,22 @@ export declare class SigningCosmWasmClient extends CosmWasmClient {
    *
    * @param apiUrl The URL of a Cosmos SDK light client daemon API (sometimes called REST server or REST API)
    * @param senderAddress The address that will sign and send transactions using this instance
-   * @param signCallback An asynchonous callback to create a signature for a given transaction. This can be implemented using secure key stores that require user interaction.
+   * @param signer An asynchronous callback to create a signature for a given transaction. This can be implemented using secure key stores that require user interaction. Or a newer OfflineSigner type that handles that stuff
+   * @param seed
    * @param customFees The fees that are paid for transactions
    * @param broadcastMode Defines at which point of the transaction processing the postTx method (i.e. transaction broadcasting) returns
    */
   constructor(
     apiUrl: string,
     senderAddress: string,
-    signCallback: SigningCallback,
+    signer: SigningCallback | OfflineSigner,
     seed?: Uint8Array,
     customFees?: Partial<FeeTable>,
     broadcastMode?: BroadcastMode,
   );
   getNonce(address?: string): Promise<GetNonceResult>;
   getAccount(address?: string): Promise<Account | undefined>;
+  signAdapter(signBytes: Uint8Array): Promise<StdSignature>;
   /** Uploads code and returns a receipt, including the code ID */
   upload(wasmCode: Uint8Array, meta?: UploadMeta, memo?: string): Promise<UploadResult>;
   instantiate(
