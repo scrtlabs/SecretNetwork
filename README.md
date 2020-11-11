@@ -51,6 +51,7 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 - [How to migrate a validator to a new machine](docs/validators-and-full-nodes/migrate-a-validator.md)
 - [How to setup SGX on your machine](docs/validators-and-full-nodes/setup-sgx.md)
 - [How to verify the SGX setup on your machine](docs/validators-and-full-nodes/verify-sgx.md)
+- [How to use SecretJS to develop Secret dApps](https://github.com/enigmampc/enigma-blockchain-contracts-guide/blob/master/cosmwasm-js.md)
 
 # Implementation Discussions
 
