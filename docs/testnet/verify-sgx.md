@@ -15,7 +15,7 @@ For this reason it is recommended to check ahead of time the result of the attes
 These instructions refer to an installation using:
 
 - Ubuntu 18.04 or 20.04
-- SGX driver [sgx_linux_x64_driver_2.6.0_95eaa6f.bin](https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/sgx_linux_x64_driver_2.6.0_95eaa6f.bin "sgx_linux_x64_driver_2.6.0_95eaa6f.bin")
+- SGX driver [sgx_linux_x64_driver_2.6.0_602374c.bin](https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/sgx_linux_x64_driver_2.6.0_602374c.binn "sgx_linux_x64_driver_2.6.0_602374c.bin")
 - Intel SGX PSW 2.9.101.2
 
 See SGX installation instructions [here](../validators-and-full-nodes/setup-sgx.md)
@@ -24,14 +24,14 @@ Other driver/OS combinations are not guaranteed to work with these instructions.
 
 ### 1. Download the test package
 
-`wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.7.0/secretnetwork_0.7.0_amd64.deb`
+ wget https://github.com/chainofsecrets/SecretNetwork/releases/download/v1.0.0/secretnetwork_1.0.0_amd64.deb
 
 ### 2. Unpack
 
 #### This will install `secretd`
 
 ```bash
-sudo dpkg -i secretnetwork_0.7.0_amd64.deb
+sudo dpkg -i secretnetwork_1.0.0_amd64.deb
 ```
 
 ### 3. Initialize the enclave
