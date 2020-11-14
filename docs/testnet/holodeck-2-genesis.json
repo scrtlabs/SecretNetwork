@@ -1,0 +1,278 @@
+{
+  "genesis_time": "2020-11-08T18:55:54.619701766Z",
+  "chain_id": "holodeck-2",
+  "consensus_params": {
+    "block": {
+      "max_bytes": "22020096",
+      "max_gas": "-1",
+      "time_iota_ms": "1000"
+    },
+    "evidence": {
+      "max_age_num_blocks": "100000",
+      "max_age_duration": "172800000000000"
+    },
+    "validator": {
+      "pub_key_types": [
+        "ed25519"
+      ]
+    }
+  },
+  "app_hash": "",
+  "app_state": {
+    "mint": {
+      "minter": {
+        "inflation": "0.130000000000000000",
+        "annual_provisions": "0.000000000000000000"
+      },
+      "params": {
+        "mint_denom": "uscrt",
+        "inflation_rate_change": "0.130000000000000000",
+        "inflation_max": "0.200000000000000000",
+        "inflation_min": "0.070000000000000000",
+        "goal_bonded": "0.670000000000000000",
+        "blocks_per_year": "6311520"
+      }
+    },
+    "params": null,
+    "distribution": {
+      "params": {
+        "community_tax": "0.020000000000000000",
+        "base_proposer_reward": "0.010000000000000000",
+        "bonus_proposer_reward": "0.040000000000000000",
+        "withdraw_addr_enabled": true,
+        "secret_foundation_tax": "0.000000000000000000",
+        "secret_foundation_address": ""
+      },
+      "fee_pool": {
+        "community_pool": []
+      },
+      "delegator_withdraw_infos": [],
+      "previous_proposer": "",
+      "outstanding_rewards": [],
+      "validator_accumulated_commissions": [],
+      "validator_historical_rewards": [],
+      "validator_current_rewards": [],
+      "delegator_starting_infos": [],
+      "validator_slash_events": []
+    },
+    "tokenswap": {
+      "params": {
+        "minting_approver_address": "secret1n4pc2w3us9n4axa0ppadd3kv3c0sar8cxl30wq",
+        "minting_multiplier": "1.000000000000000000",
+        "minting_enabled": true
+      },
+      "swaps": null
+    },
+    "slashing": {
+      "params": {
+        "signed_blocks_window": "100",
+        "min_signed_per_window": "0.500000000000000000",
+        "downtime_jail_duration": "600000000000",
+        "slash_fraction_double_sign": "0.050000000000000000",
+        "slash_fraction_downtime": "0.010000000000000000"
+      },
+      "signing_infos": {},
+      "missed_blocks": {}
+    },
+    "supply": {
+      "supply": []
+    },
+    "bank": {
+      "send_enabled": true
+    },
+    "gov": {
+      "starting_proposal_id": "1",
+      "deposits": null,
+      "votes": null,
+      "proposals": null,
+      "deposit_params": {
+        "min_deposit": [
+          {
+            "denom": "uscrt",
+            "amount": "10000000"
+          }
+        ],
+        "max_deposit_period": "172800000000000"
+      },
+      "voting_params": {
+        "voting_period": "172800000000000"
+      },
+      "tally_params": {
+        "quorum": "0.334000000000000000",
+        "threshold": "0.500000000000000000",
+        "veto": "0.334000000000000000"
+      }
+    },
+    "register": {
+      "reg_info": null,
+      "node_exch_cert": "MIINVDCCDPqgAwIBAgIBATAKBggqhkjOPQQDAjAUMRIwEAYDVQQDDAlTZWNyZXRURUUwHhcNMjAxMTA4MTkwMzIxWhcNMjEwMjA2MTkwMzIxWjAqMSgwJgYDVQQDDB9TZWNyZXQgTmV0d29yayBOb2RlIENlcnRpZmljYXRlMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwQ/VNG9ZM6zUR1vRRGol1fCENFhrRXjj9VMvFiNwmBBcOkfMoAW2idA3kGNoSQIaF2vyvzmZfpWBGGefIhMUSqOCDCUwggwhMIIMHQYJYIZIAYb4QgENBIIMDnsicmVwb3J0IjoiZXlKcFpDSTZJakl6TlRneU9UY3hPRGMwTkRNMU1EYzFNemd3TURRd05EWTBOVEF4T1RBM05EY3dNalkzT1NJc0luUnBiV1Z6ZEdGdGNDSTZJakl3TWpBdE1URXRNRGhVTVRrNk1ETTZNakV1TURNNU5UQXhJaXdpZG1WeWMybHZiaUk2TkN3aVlXUjJhWE52Y25sVlVrd2lPaUpvZEhSd2N6b3ZMM05sWTNWeWFYUjVMV05sYm5SbGNpNXBiblJsYkM1amIyMGlMQ0poWkhacGMyOXllVWxFY3lJNld5SkpUbFJGVEMxVFFTMHdNRE16TkNKZExDSnBjM1pGYm1Oc1lYWmxVWFZ2ZEdWVGRHRjBkWE1pT2lKVFYxOUlRVkpFUlU1SlRrZGZUa1ZGUkVWRUlpd2lhWE4yUlc1amJHRjJaVkYxYjNSbFFtOWtlU0k2SWtGblFVRkJUV05NUVVGQlRFRkJiMEZCUVVGQlFWQTRkSEZ6VlU0NE0yaHBSbmwyU1V0bE5GSjRXRzUxUWpoUFZrNUhTVUZ3WkRka2NIVkxNMnhqTVZoRlFrRkRMeTg0UTBKM1FVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFsRkJRVUZCUVVGQlFVRklRVUZCUVVGQlFVRkJRbkUzTjFONFVTdExURWN6T1RNdlJqazJjbHBNYVVJMGEyeEhlRzl3U0U5UU1YWXdkWEpsUVZrNWVrRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVORldGQk9TVVpRVWxac1kyTm5LMEk1TUdWVk1UUlhWRVpKVkRCUlJqRjFWVVJpZG1sSVJTODRMM0JuUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJXVGh1WmtvMU9VcFVNMEpFVG13clNGVnRjbWh3ZDBwUGNXeE1TRU5JTUdScE5IVnVRWE5RTTB0VFFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVNKOSIsInNpZ25hdHVyZSI6IkQrakZGUTRxcCs5alViTHZsVzdWaHZJaG10MTBqdWpGV3F4OVBZZk1jQTFHVVpVSWhiSjgrZDd6YkVDbGNUYlphTTdhdkxzbTRMbHlBOWM1bDFBZCtoNTVlZFpuMllKdGQzY0kyZmp3blJaTWRXNXV1QUdZUTlxbGFDMEcrVGRlaFo0SjF0RzZwOEJtcXgvZnI0eTA3NWt2aWhsbW95VTBEc1ora0ZMdFYyK25WYXliOWJwNFc5d0QzN2hnaUNlZkpDdGJzeGZtdkhLbk1MMll6OWx3c29aNmlBSkQ3RUlPTHpNQjJ6dFd6WlNrSnNpTkt4dDhCY1k1S292MVNiS3piMDVIRC9QWk1FV0FGUHQ1T0V4aG5CR05KdUMrYkhpVkZUSkpSSFI3NlF5cjg3L3pScW8yVVluNkxvNlk0bjR4K3FSWFUxZ0RiZmZvNksyQW80bURiQT09Iiwic2lnbmluZ19jZXJ0IjoiTUlJRW9UQ0NBd21nQXdJQkFnSUpBTkVIZGwweW83Q1dNQTBHQ1NxR1NJYjNEUUVCQ3dVQU1INHhDekFKQmdOVkJBWVRBbFZUTVFzd0NRWURWUVFJREFKRFFURVVNQklHQTFVRUJ3d0xVMkZ1ZEdFZ1EyeGhjbUV4R2pBWUJnTlZCQW9NRVVsdWRHVnNJRU52Y25CdmNtRjBhVzl1TVRBd0xnWURWUVFERENkSmJuUmxiQ0JUUjFnZ1FYUjBaWE4wWVhScGIyNGdVbVZ3YjNKMElGTnBaMjVwYm1jZ1EwRXdIaGNOTVRZeE1USXlNRGt6TmpVNFdoY05Nall4TVRJd01Ea3pOalU0V2pCN01Rc3dDUVlEVlFRR0V3SlZVekVMTUFrR0ExVUVDQXdDUTBFeEZEQVNCZ05WQkFjTUMxTmhiblJoSUVOc1lYSmhNUm93R0FZRFZRUUtEQkZKYm5SbGJDQkRiM0p3YjNKaGRHbHZiakV0TUNzR0ExVUVBd3drU1c1MFpXd2dVMGRZSUVGMGRHVnpkR0YwYVc5dUlGSmxjRzl5ZENCVGFXZHVhVzVuTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUFxWG90NE9adXBoUjhudWRGckFGaWFHeHhrZ21hL0VzL0JBK3RiZUNUVVIxMDZBTDFFTmNXQTRGWDNLK0U5QkJMMC83WDVyajVuSWdYL1IvMXViaGtLV3c5Z2ZxUEczS2VBdElkY3YvdVRPMXlYdjUwdnFhUHZFMUNSQ2h2emRTL1pFQnFRNW9WdkxUUFozVkVpY1FqbHl0S2dOOWNMbnhid3R1dkxVSzdleVJQZkpXL2tzZGRPelA4VkJCbmlvbFluUkNEMmpyTVJaOG5CTTJaV1l3blhud1llT0FIVitXOXRPaEFJbXdSd0tGLzk1eUFzVndkMjFyeUhNSkJjR0g3MHFMYWdaN1R0eXQrK3FPLzYrS0FYSnVLd1pxalJsRXRTRXo4Z1pRZUZmVllnY3dTZm85Nm9TTUF6VnI3VjBMNkhTRExSbnBiNnh4bWJQZHFOb2w0dFFJREFRQUJvNEdrTUlHaE1COEdBMVVkSXdRWU1CYUFGSGhEZTNhbWZyelFyMzVDTitzMWZEdUhBVkU4TUE0R0ExVWREd0VCL3dRRUF3SUd3REFNQmdOVkhSTUJBZjhFQWpBQU1HQUdBMVVkSHdSWk1GY3dWYUJUb0ZHR1QyaDBkSEE2THk5MGNuVnpkR1ZrYzJWeWRtbGpaWE11YVc1MFpXd3VZMjl0TDJOdmJuUmxiblF2UTFKTUwxTkhXQzlCZEhSbGMzUmhkR2x2YmxKbGNHOXlkRk5wWjI1cGJtZERRUzVqY213d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dHQkFHY0l0aHRjSzlJVlJ6NHJScStaS0UrN2s1MC9PeFVzbVc4YWF2T3pLYjBpQ3gwN1lROXJ6aTVuVTczdE1FMnlHUkx6aFNWaUZzL0xwRmE5bHBRTDZKTDFhUXdtRFI3NFR4WUdCQUlpNWY0STVUSm9DQ0VxUkh6OTFrcEc2VXZ5bjJ0TG1uSWRKYlBFNHZZdldMcnRYWGZGQlNTUEQ0QWZuNyszL1hVZ2dBbGM3b0NUaXpPZmJidE9GbFlBNGc1S2NZZ1MxSjJaQWVNUXFiVWRac2VaQ2NhWlpabjY1dGRxZWU4VVhabER2eDArTmRPMExSKzVwRnkranVNMHdXYnU1OU12emNtVFhianNpN0hZNnpkNTNZcTVLMjQ0ZndGSFJROGVPQjBJV0IrNFBmTTdGZUFBcFp2bGZxbEtPbExjWkwydXlWbXpSa3lSNXlXNzJ1bzltZWhYNDRDaVBKMmZzZTlZNmVRdGNmRWhNUGttSFhJMDFzTitLd1BicEEzOSt4T3NTdGpoUDlOMVkxYTJ0UUFWbyt5VmdMZ1YySHdzNzNGYzBvM3dDNzhxUEVBK3YyYVJzL0JlM1pGRGdEeWdoYy8xZmdVKzdDK1A2a2JxZDRwb3liNklXOEtDSmJ4Zk1KdmtvcmROT2dPVVV4bmRQSEVpL3RiL1U3dUxqTE9nUEE9PSJ9MAoGCCqGSM49BAMCA0gAMEUCIQC5FisZTaPEvpDKgo9StS5QlSmo7rqgxpJjcdp+EOdp/wIgRFIWN7JSqbQNPROYyMtakrfS/mohb/tqh4pLsR3ERuE=",
+      "io_exch_cert": "MIINVDCCDPqgAwIBAgIBATAKBggqhkjOPQQDAjAUMRIwEAYDVQQDDAlTZWNyZXRURUUwHhcNMjAxMTA4MTkwMzIyWhcNMjEwMjA2MTkwMzIyWjAqMSgwJgYDVQQDDB9TZWNyZXQgTmV0d29yayBOb2RlIENlcnRpZmljYXRlMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEcdXS48JJpTChzN3r/v6abO4zBZikoMAGZWeiKxEAyga72865KP/8cJZJBz3U4Dy7q3LX93IJmKcq27wz9H9W0KOCDCUwggwhMIIMHQYJYIZIAYb4QgENBIIMDnsicmVwb3J0IjoiZXlKcFpDSTZJak14TlRJNE56azNNVEUyTlRZd05UVXlPVE13TXpRek56STNOekUwT0RjNE5UTTVNelE1T1NJc0luUnBiV1Z6ZEdGdGNDSTZJakl3TWpBdE1URXRNRGhVTVRrNk1ETTZNakl1TURBM016STRJaXdpZG1WeWMybHZiaUk2TkN3aVlXUjJhWE52Y25sVlVrd2lPaUpvZEhSd2N6b3ZMM05sWTNWeWFYUjVMV05sYm5SbGNpNXBiblJsYkM1amIyMGlMQ0poWkhacGMyOXllVWxFY3lJNld5SkpUbFJGVEMxVFFTMHdNRE16TkNKZExDSnBjM1pGYm1Oc1lYWmxVWFZ2ZEdWVGRHRjBkWE1pT2lKVFYxOUlRVkpFUlU1SlRrZGZUa1ZGUkVWRUlpd2lhWE4yUlc1amJHRjJaVkYxYjNSbFFtOWtlU0k2SWtGblFVRkJUV05NUVVGQlRFRkJiMEZCUVVGQlFWQTRkSEZ6VlU0NE0yaHBSbmwyU1V0bE5GSjRXRzFFZG5nd2IyVnBSVGhvUXpaVllUVTNTazEyUjNaRlFrRkRMeTg0UTBKM1FVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFsRkJRVUZCUVVGQlFVRklRVUZCUVVGQlFVRkJRbkUzTjFONFVTdExURWN6T1RNdlJqazJjbHBNYVVJMGEyeEhlRzl3U0U5UU1YWXdkWEpsUVZrNWVrRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVORldGQk9TVVpRVWxac1kyTm5LMEk1TUdWVk1UUlhWRVpKVkRCUlJqRjFWVVJpZG1sSVJTODRMM0JuUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkVVMUJMU1RWQ1pYazFiMjVPWkdaemNrOTRhMnhIZHl0dlJIaGtSRXN6ZGpKaGJIbEthV0pwTkN0UlVVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVVGQlFVRkJRVUZCUVNKOSIsInNpZ25hdHVyZSI6ImJ6dVB3RGZQRlhjODVDZE1aVDRmRDdreTZla2ZvRVNsK29LOG00WXdhNkJNaE1LVVhKSGExenJVWWlhamc2R1pnd29MVWJiUXl5Z3BSQ210MjUyVzRxUE8xQ1N1ZzBURmliTUpYT0Y0Q0VBZElSK3hjakZHMWxqUGg5N2QxWCtUNHlNbVl4OUhySWRCQ3l3bkk4WEdqK3ZydDFIS2xjNmxoZFRVWUQ0WklwWTJEUmJFMmN0RTl1a1g3TVh0Y2YvQmI5a0NrWWliRHV4V1hMdkplRmhXWXIrRDF0NDVzcGpkVHd6cXZoRVNyTlJCOC9JRlQ1dERaTXZ4SXo1QzQ2OVhNUWFzQVViQW0wRlVrRERGOXRSMGJSblJoZjJrZ3NvUDZrYXZrZXdPNUhhTzdIdTdpYmhwMXJtTVEzZXJVWTh5Yk1pSUNsRXRBUnVDc1o1NzhtZ0FNZz09Iiwic2lnbmluZ19jZXJ0IjoiTUlJRW9UQ0NBd21nQXdJQkFnSUpBTkVIZGwweW83Q1dNQTBHQ1NxR1NJYjNEUUVCQ3dVQU1INHhDekFKQmdOVkJBWVRBbFZUTVFzd0NRWURWUVFJREFKRFFURVVNQklHQTFVRUJ3d0xVMkZ1ZEdFZ1EyeGhjbUV4R2pBWUJnTlZCQW9NRVVsdWRHVnNJRU52Y25CdmNtRjBhVzl1TVRBd0xnWURWUVFERENkSmJuUmxiQ0JUUjFnZ1FYUjBaWE4wWVhScGIyNGdVbVZ3YjNKMElGTnBaMjVwYm1jZ1EwRXdIaGNOTVRZeE1USXlNRGt6TmpVNFdoY05Nall4TVRJd01Ea3pOalU0V2pCN01Rc3dDUVlEVlFRR0V3SlZVekVMTUFrR0ExVUVDQXdDUTBFeEZEQVNCZ05WQkFjTUMxTmhiblJoSUVOc1lYSmhNUm93R0FZRFZRUUtEQkZKYm5SbGJDQkRiM0p3YjNKaGRHbHZiakV0TUNzR0ExVUVBd3drU1c1MFpXd2dVMGRZSUVGMGRHVnpkR0YwYVc5dUlGSmxjRzl5ZENCVGFXZHVhVzVuTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUFxWG90NE9adXBoUjhudWRGckFGaWFHeHhrZ21hL0VzL0JBK3RiZUNUVVIxMDZBTDFFTmNXQTRGWDNLK0U5QkJMMC83WDVyajVuSWdYL1IvMXViaGtLV3c5Z2ZxUEczS2VBdElkY3YvdVRPMXlYdjUwdnFhUHZFMUNSQ2h2emRTL1pFQnFRNW9WdkxUUFozVkVpY1FqbHl0S2dOOWNMbnhid3R1dkxVSzdleVJQZkpXL2tzZGRPelA4VkJCbmlvbFluUkNEMmpyTVJaOG5CTTJaV1l3blhud1llT0FIVitXOXRPaEFJbXdSd0tGLzk1eUFzVndkMjFyeUhNSkJjR0g3MHFMYWdaN1R0eXQrK3FPLzYrS0FYSnVLd1pxalJsRXRTRXo4Z1pRZUZmVllnY3dTZm85Nm9TTUF6VnI3VjBMNkhTRExSbnBiNnh4bWJQZHFOb2w0dFFJREFRQUJvNEdrTUlHaE1COEdBMVVkSXdRWU1CYUFGSGhEZTNhbWZyelFyMzVDTitzMWZEdUhBVkU4TUE0R0ExVWREd0VCL3dRRUF3SUd3REFNQmdOVkhSTUJBZjhFQWpBQU1HQUdBMVVkSHdSWk1GY3dWYUJUb0ZHR1QyaDBkSEE2THk5MGNuVnpkR1ZrYzJWeWRtbGpaWE11YVc1MFpXd3VZMjl0TDJOdmJuUmxiblF2UTFKTUwxTkhXQzlCZEhSbGMzUmhkR2x2YmxKbGNHOXlkRk5wWjI1cGJtZERRUzVqY213d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dHQkFHY0l0aHRjSzlJVlJ6NHJScStaS0UrN2s1MC9PeFVzbVc4YWF2T3pLYjBpQ3gwN1lROXJ6aTVuVTczdE1FMnlHUkx6aFNWaUZzL0xwRmE5bHBRTDZKTDFhUXdtRFI3NFR4WUdCQUlpNWY0STVUSm9DQ0VxUkh6OTFrcEc2VXZ5bjJ0TG1uSWRKYlBFNHZZdldMcnRYWGZGQlNTUEQ0QWZuNyszL1hVZ2dBbGM3b0NUaXpPZmJidE9GbFlBNGc1S2NZZ1MxSjJaQWVNUXFiVWRac2VaQ2NhWlpabjY1dGRxZWU4VVhabER2eDArTmRPMExSKzVwRnkranVNMHdXYnU1OU12emNtVFhianNpN0hZNnpkNTNZcTVLMjQ0ZndGSFJROGVPQjBJV0IrNFBmTTdGZUFBcFp2bGZxbEtPbExjWkwydXlWbXpSa3lSNXlXNzJ1bzltZWhYNDRDaVBKMmZzZTlZNmVRdGNmRWhNUGttSFhJMDFzTitLd1BicEEzOSt4T3NTdGpoUDlOMVkxYTJ0UUFWbyt5VmdMZ1YySHdzNzNGYzBvM3dDNzhxUEVBK3YyYVJzL0JlM1pGRGdEeWdoYy8xZmdVKzdDK1A2a2JxZDRwb3liNklXOEtDSmJ4Zk1KdmtvcmROT2dPVVV4bmRQSEVpL3RiL1U3dUxqTE9nUEE9PSJ9MAoGCCqGSM49BAMCA0gAMEUCICDoJMkPXTXHuefB/5R/1EoYZCbbbJyDyYwbncknBOe6AiEAzzVr5NkS7XUCqC5wdYWzHeXNADu3E2el1ruuPDnVdbg="
+    },
+    "staking": {
+      "params": {
+        "unbonding_time": "1814400000000000",
+        "max_validators": 100,
+        "max_entries": 7,
+        "historical_entries": 0,
+        "bond_denom": "uscrt"
+      },
+      "last_total_power": "0",
+      "last_validator_powers": null,
+      "validators": null,
+      "delegations": null,
+      "unbonding_delegations": null,
+      "redelegations": null,
+      "exported": false
+    },
+    "evidence": {
+      "params": {
+        "max_evidence_age": "120000000000"
+      },
+      "evidence": []
+    },
+    "upgrade": {},
+    "crisis": {
+      "constant_fee": {
+        "denom": "uscrt",
+        "amount": "1000"
+      }
+    },
+    "genutil": {
+      "gentxs": [
+        {
+          "type": "cosmos-sdk/StdTx",
+          "value": {
+            "msg": [
+              {
+                "type": "cosmos-sdk/MsgCreateValidator",
+                "value": {
+                  "description": {
+                    "moniker": "ChainofSecretsBootstrap",
+                    "identity": "",
+                    "website": "",
+                    "security_contact": "",
+                    "details": ""
+                  },
+                  "commission": {
+                    "rate": "0.100000000000000000",
+                    "max_rate": "0.200000000000000000",
+                    "max_change_rate": "0.010000000000000000"
+                  },
+                  "min_self_delegation": "1",
+                  "delegator_address": "secret1c6zs2yuay590zgrs5ccd7g2vxl4j5ayzdzrnz4",
+                  "validator_address": "secretvaloper1c6zs2yuay590zgrs5ccd7g2vxl4j5ayzu9dw0u",
+                  "pubkey": "secretvalconspub1zcjduepq939wufs6hsml3ruhrc0q2wzf0px2avj8uhumvcdnaxswfgaf27dscsakze",
+                  "value": {
+                    "denom": "uscrt",
+                    "amount": "1000000"
+                  }
+                }
+              }
+            ],
+            "fee": {
+              "amount": [],
+              "gas": "200000"
+            },
+            "signatures": [
+              {
+                "pub_key": {
+                  "type": "tendermint/PubKeySecp256k1",
+                  "value": "A8V3T6Gf1zMlBkEUIaUN9Bh7K0FpyGuRLTBsJpszBqvw"
+                },
+                "signature": "wWl8Fofp50ySNTmoscZN12/zZuQznRR2/4Guy16qgcV3vH7iRBXb1Gh2BqF0SAOkDjL/XZIJKoIeB7KZjlYbCA=="
+              }
+            ],
+            "memo": "64b03220d97e5dc21ec65bf7ee1d839afb6f7193@104.129.46.89:26656"
+          }
+        }
+      ]
+    },
+    "compute": {},
+    "auth": {
+      "params": {
+        "max_memo_characters": "256",
+        "tx_sig_limit": "7",
+        "tx_size_cost_per_byte": "10",
+        "sig_verify_cost_ed25519": "590",
+        "sig_verify_cost_secp256k1": "1000"
+      },
+      "accounts": [
+        {
+          "type": "cosmos-sdk/Account",
+          "value": {
+            "address": "",
+            "coins": [
+              {
+                "denom": "uscrt",
+                "amount": "1000000000000000000"
+              }
+            ],
+            "public_key": "",
+            "account_number": 0,
+            "sequence": 0
+          }
+        },
+        {
+          "type": "cosmos-sdk/Account",
+          "value": {
+            "address": "secret1c6zs2yuay590zgrs5ccd7g2vxl4j5ayzdzrnz4",
+            "coins": [
+              {
+                "denom": "uscrt",
+                "amount": "1000000000000000000"
+              }
+            ],
+            "public_key": "",
+            "account_number": 0,
+            "sequence": 0
+          }
+        },
+        {
+          "type": "cosmos-sdk/Account",
+          "value": {
+            "address": "secret1snzrncgy6p8aqtamr0w8gk7arhg2lmp2glwfaj",
+            "coins": [
+              {
+                "denom": "uscrt",
+                "amount": "1000000000000000000"
+              }
+            ],
+            "public_key": "",
+            "account_number": 0,
+            "sequence": 0
+          }
+        },
+        {
+          "type": "cosmos-sdk/Account",
+          "value": {
+            "address": "secret1nkd6vs95qwtmpwcqyn4zqyseqdh0u7gst0r6rn",
+            "coins": [
+              {
+                "denom": "uscrt",
+                "amount": "1000000000000000000"
+              }
+            ],
+            "public_key": "",
+            "account_number": 0,
+            "sequence": 0
+          }
+        },
+        {
+          "type": "cosmos-sdk/Account",
+          "value": {
+            "address": "secret1x6k4enydxtzt3dz8pgh6t58ce7m2ncz3c6l3dt",
+            "coins": [
+              {
+                "denom": "uscrt",
+                "amount": "1000000000000000000"
+              }
+            ],
+            "public_key": "",
+            "account_number": 0,
+            "sequence": 0
+          }
+        }
+      ]
+    }
+  }
+}
