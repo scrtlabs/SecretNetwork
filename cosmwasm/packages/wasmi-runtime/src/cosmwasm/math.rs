@@ -43,7 +43,7 @@ impl FromStr for Decimal {
 
                 let whole_as_atomics = whole
                     .checked_mul(DECIMAL_FRACTIONAL)
-                    .ok_or_else(|| DecimalParseErr("Value too big"))?;
+                    .ok_or(DecimalParseErr("Value too big"))?;
                 Ok(Decimal(whole_as_atomics))
             }
             2 => {
@@ -53,19 +53,19 @@ impl FromStr for Decimal {
                 let fractional = parts[1]
                     .parse::<u128>()
                     .map_err(|_| DecimalParseErr("Error parsing fractional"))?;
-                let exp = (18usize.checked_sub(parts[1].len())).ok_or_else(|| {
-                    DecimalParseErr("Cannot parse more than 18 fractional digits")
-                })?;
+                let exp = (18usize.checked_sub(parts[1].len())).ok_or(DecimalParseErr(
+                    "Cannot parse more than 18 fractional digits",
+                ))?;
                 let fractional_factor = 10u128
                     .checked_pow(exp.try_into().unwrap())
-                    .ok_or_else(|| DecimalParseErr("Cannot compute fractional factor"))?;
+                    .ok_or(DecimalParseErr("Cannot compute fractional factor"))?;
 
                 let whole_as_atomics = whole
                     .checked_mul(DECIMAL_FRACTIONAL)
-                    .ok_or_else(|| DecimalParseErr("Value too big"))?;
+                    .ok_or(DecimalParseErr("Value too big"))?;
                 let atomics = whole_as_atomics
                     .checked_add(fractional * fractional_factor)
-                    .ok_or_else(|| DecimalParseErr("Value too big"))?;
+                    .ok_or(DecimalParseErr("Value too big"))?;
                 Ok(Decimal(atomics))
             }
             _ => Err(DecimalParseErr("Unexpected number of dots")),

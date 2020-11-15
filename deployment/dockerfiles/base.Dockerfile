@@ -9,8 +9,8 @@ ENV GOROOT=/usr/local/go
 ENV GOPATH=/go/
 ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 
-RUN curl -O https://dl.google.com/go/go1.14.2.linux-amd64.tar.gz
-RUN tar -C /usr/local -xzf go1.14.2.linux-amd64.tar.gz
+RUN curl -O https://dl.google.com/go/go1.15.5.linux-amd64.tar.gz
+RUN tar -C /usr/local -xzf go1.15.5.linux-amd64.tar.gz
 RUN go get -u github.com/jteeuwen/go-bindata/...
 
 # Set working directory for the build
