@@ -8,6 +8,7 @@ Don't forget to go over the [differences between SecretWasm and CosmWasm](#diffe
 
 - [Developing Secret Contracts](#developing-secret-contracts)
   - [IDEs](#ides)
+  - [Personal Secret Network for Secret Contract development](#personal-secret-network-for-secret-contract-development)
   - [Init](#init)
   - [Handle](#handle)
   - [Query](#query)
@@ -28,7 +29,9 @@ Don't forget to go over the [differences between SecretWasm and CosmWasm](#diffe
   - [Verifying your contract code on explorers](#verifying-your-contract-code-on-explorers)
   - [Testing](#testing)
   - [Debugging](#debugging)
-- [Differences from CosmWasm](#differences-from-cosmwasm)
+  - [Building secret apps with SecretJS](#building-secret-apps-with-secretjs)
+    - [Wallet integration](#wallet-integration)
+  - [Differences from CosmWasm](#differences-from-cosmwasm)
 
 ## IDEs
 
@@ -38,6 +41,39 @@ These IDEs are known to work very well for developing Secret Contracts:
 
 - [CLion](https://www.jetbrains.com/clion/)
 - [VSCode](https://code.visualstudio.com/) with the [rust-analyzer](https://rust-analyzer.github.io/) extension
+
+## Personal Secret Network for Secret Contract development
+
+The developer blockchain is configured to run inside a docker container. Install [Docker](https://docs.docker.com/install/) for your environment (Mac, Windows, Linux).
+
+Open a terminal window and change to your project directory.
+Then start SecretNetwork, labelled _secretdev_:
+
+```
+$ docker run -it --rm \
+ -p 26657:26657 -p 26656:26656 -p 1317:1317 \
+ --name secretdev enigmampc/secret-network-bootstrap-sw:latest
+```
+
+**NOTE**: The _secretdev_ docker container can be stopped with Ctrl+C
+
+At this point you're running a local SecretNetwork full-node. Let's connect to the container so we can view and manage the secret keys:
+
+**NOTE**: In a new terminal
+
+```
+docker exec -it secretdev /bin/bash
+```
+
+The local blockchain has a couple of keys setup for you (similar to accounts if you're familiar with Truffle Ganache). The keys are stored in the `test` keyring backend, which makes it easier for local development and testing.
+
+```
+secretcli keys list --keyring-backend test
+```
+
+![](../images/images/secretcli_keys_list.png)
+
+`exit` when you are done.
 
 ## Init
 
@@ -111,7 +147,7 @@ Example Invocation from `SecretJS`:
 3. With that seed, the [deck is shuffled](https://github.com/enigmampc/SecretHoldEm/blob/4f67c469bb4a0f53522c7ad069e54ae5c1effb6b/contract/src/contract.rs#L356-L357).
 4. Each round a [game counter is incremented](https://github.com/enigmampc/SecretHoldEm/blob/4f67c469bb4a0f53522c7ad069e54ae5c1effb6b/contract/src/contract.rs#L602-L614), and along with the players' secrets is used to create a new seed for re-shuffling the deck.
 5. On the frondend side, [SecretJS is used to generate a secure random number](https://github.com/enigmampc/SecretHoldEm/blob/4f67c469bb4a0f53522c7ad069e54ae5c1effb6b/gui/src/App.js#L334-L354) and sends it as a secret when a player joins the table. A random number is not really necessary, and every secret number would work just as well.
-6. As long as at least one player is not colluding with the rest, and by properties of sha256, the seeds for shuffling the deck are known only to the contract and to no one else. If all players are colliding, they might as well play with open hands. :joy:
+6. As long as at least one player is not colluding with the rest, and by properties of sha256, the seeds for shuffling the deck are known only to the contract and to no one else. If all players are colliding, they might as well all play with open hands. :joy:
 
 ### Use an external oracle
 
@@ -172,6 +208,20 @@ Breakdown:
 ## Testing
 
 ## Debugging
+
+## Building secret apps with SecretJS
+
+A Secret App, or a SApp, is a DApp with computational and data privacy.
+A Secret App is usually comprised of the following components:
+
+- A Secret Contract deployed on the Secret Network
+- A frontend app built with a JavaScript framework (E.g. ReactJS, VueJS, AngularJS, etc.)
+- The frontend app connects to the Secret Network using SecretJS,
+- SecretJS interacts with a REST API exposed by nodes in the Secret Network. The REST API/HTTPS server is commonly referred to as LCD Server (Light Client Daemon :shrug:). Usually by connecting SecretJS with a wallet, the wallet handles the interactions with the LCD server.
+
+### Wallet integration
+
+Still not implemented in wallets. Can implement a local wallet but this will probably won't be needed anymore after 2020.
 
 # Differences from CosmWasm
 
