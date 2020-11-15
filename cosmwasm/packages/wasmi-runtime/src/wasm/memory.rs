@@ -36,7 +36,7 @@ pub fn validate_memory(p_modlue: &mut Module) -> Result<(), EnclaveError> {
         })?;
 
     let requested_initial_pages: u32 = memory_entry.limits().initial();
-    let maximum_allowed_pages: u32 = 192; // 12 MiB
+    let maximum_allowed_pages: u32 = 19200; // 1.2 GiB
 
     if requested_initial_pages > maximum_allowed_pages {
         error!(

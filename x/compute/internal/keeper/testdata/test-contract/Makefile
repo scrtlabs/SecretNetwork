@@ -1,9 +1,9 @@
 all:
-	RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+	RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown
 	wasm-opt -Os ./target/wasm32-unknown-unknown/release/test_contract.wasm -o ./contract.wasm
 
 	# Compile with floats
-	RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked --features with_floats
+	RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --features with_floats
 	wasm-opt -Os ./target/wasm32-unknown-unknown/release/test_contract.wasm -o ./contract_with_floats.wasm
 
 	# Create a wasm with more than 192 memory pages (fails in init, handle & query, this is our limit)
