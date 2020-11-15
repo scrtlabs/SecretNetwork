@@ -1,175 +1,122 @@
-# Developing Secret Contracts
+---
+title : 'Secret Contracts'
+---
+# Secret Contracts
 
-Secret Contacts are based on CosmWasm v0.10.
-Check out their docs as well, they are probably more extensive: https://docs.cosmwasm.com. Don't forget to go over our [Differences from CosmWasm](#differences-from-cosmwasm).
+Secret Contracts are based on [CosmWasm](https://www.cosmwasm.com) which is implementated on various Cosmos SDK blockchains. The CosmWasm smart contracts are like Ethereum's smart contracts except they can be used on other networks using the [Inter-Blockchain Protocol](https://cosmos.network/ibc) (IBC). CosmWasm smart contracts are written in the Rust language.
 
-- [Developing Secret Contracts](#developing-secret-contracts)
-- [IDEs](#ides)
-- [Personal Secret Network for Secret Contract development](#personal-secret-network-for-secret-contract-development)
-- [Init](#init)
-- [Handle](#handle)
-- [Query](#query)
-- [Inputs](#inputs)
-- [APIs](#apis)
-- [State](#state)
-- [Some libraries/crates considerations](#some-librariescrates-considerations)
-- [Randomness](#randomness)
-  - [Roll your own](#roll-your-own)
-    - [Poker deck shuffling example](#poker-deck-shuffling-example)
-  - [Use an external oracle](#use-an-external-oracle)
-- [Outputs](#outputs)
-- [External query](#external-query)
-- [Compiling](#compiling)
-- [Storing and deploying](#storing-and-deploying)
-- [Making your contract's code verified on exporers](#making-your-contracts-code-verified-on-exporers)
-- [Testing](#testing)
-- [Debugging](#debugging)
-- [Building secret apps with SecretJS](#building-secret-apps-with-secretjs)
-  - [Wallet integration](#wallet-integration)
-- [Differences from CosmWasm](#differences-from-cosmwasm)
+The Secret Network has a _compute_ module that we'll use to store, query and instantiate the smart contract. Once stored on the blockchain the contract has to be created (or instantiated) in order to execute its methods. This is similar to doing `migrate` on Ethereum using Truffle, which handles the deployment and creation of a smart contract.
 
-# IDEs
+**Secret contracts run inside Trusted Execution Environments (TEEs), where computations are performed using encrypted data (inputs, outouts, and contract state).**
 
-Secret Contracts are developed with the [Rust](https://www.rust-lang.org/) programming language and compiled to [WASM](https://webassembly.org/) binaries.
+Next, we will go through steps to:
+- install Rust
+- install the Rust dependencies
+- create your first project
 
-These IDEs are known to work very well for developing Secret Contracts:
+The Rust dependencies include the Rust compiler, cargo (_package manager_), toolchain and a package to generate projects. You can check out the Rust book, rustlings course, examples and more [here](https://www.rust-lang.org/learn).
 
-- [CLion](https://www.jetbrains.com/clion/)
-- [VSCode](https://code.visualstudio.com/) with the [rust-analyzer](https://rust-analyzer.github.io/) extension
+1. Install Rust
 
-# Personal Secret Network for Secret Contract development
+More information about installing Rust can be found here: https://www.rust-lang.org/tools/install.
 
-TODO docker example
-
-# Init
-
-`init` is the constructor of your contract. This function is called only once in the lifetime of the contract.
-
-Example Invocation from `secretcli`:
-
-```bash
-secretcli tx compute instantiate "$CODE_ID" "$INPUT_MSG" --label "$UNIQUE_LABEL" --from "$MY_KEY"
+```
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source $HOME/.cargo/env
 ```
 
-Example Invocation from `SecretJS`:
+**Update the rust compiler**
 
-```js
-// TODO
+In case rust is installed already, make sure to update the rust compiler.
+
+```
+rustup update
 ```
 
-# Handle
+2. Add rustup target wasm32 for both stable and nightly
 
-`handle` is the implementation of execute transactions.
+```
+rustup default stable
+rustup target list --installed
+rustup target add wasm32-unknown-unknown
 
-Example Invocation from `secretcli`:
-
-```bash
-secretcli tx compute execute "$CONTRACT_ADDRESS" "$INPUT_ARGS" --from "$MY_KEY" # Option A
-secretcli tx compute execute --label "$LABEL" "$INPUT_ARGS" --from "$MY_KEY"    # Option B
+rustup install nightly
+rustup target add wasm32-unknown-unknown --toolchain nightly
 ```
 
-Example Invocation from `SecretJS`:
-
-```js
-// TODO
+3. If using linux, install the standard build tools:
+```
+apt install build-essential
 ```
 
-# Query
+4. Run cargo install cargo-generate
 
-`query` is the implementation of read-only queries. Queries run over the current blockchain state but don't incur fees and don't have access to `msg.sender`. They are still metered by a gas limit that is set on the executing node.
+[Cargo generate](https://doc.rust-lang.org/cargo) is the tool you'll use to create a secret contract project.
 
-Example Invocation from `secretcli`:
-
-```bash
-secretcli q compute query "$CONTRACT_ADDRESS" "$INPUT_ARGS"
+```
+cargo install cargo-generate --features vendored-openssl
 ```
 
-Example Invocation from `SecretJS`:
+### Create your first Secret Contract
 
-```js
-// TODO
+1. generate the initial project
+2. compile the secret contract
+3. run unit tests
+4. optimize the wasm contract bytecode to prepare for deployment
+5. deploy the secret contract to your local Secret Network
+6. instantiate it with contract parameters
+
+#### Generate the Secret Contract Project
+
+```
+cargo generate --git https://github.com/enigmampc/secret-template --name mysimplecounter
 ```
 
-# Inputs
+The git project above is a secret contract template that implements a simple counter. The contract is created with a parameter for the initial count and allows subsequent incrementing.
 
-# APIs
+Change directory to the project you created and view the structure and files that were created.
 
-# State
+```
+cd mysimplecounter
+```
 
-# Some libraries/crates considerations
+The generate creates a directory with the project name and has this structure:
 
-- `bincode2` instead of `bincode` for serializing data.
-- `serde_json_wasm` instead of `serde_json` for serializing data.
-- `bech32` instead of `deps.api.canonical_address` and `deps.api.human_address`, as they only support `secret` prefix (E.g. not `secretvaloper` for staking use-cases).
+```
+Cargo.lock	Developing.md	LICENSE		Publishing.md	examples	schema		tests
+Cargo.toml	Importing.md	NOTICE		README.md	rustfmt.toml	src
+```
 
-# Randomness
+#### Compile the Secret Contract
 
-## Roll your own
+Use the following command to compile the Secret Contract, which produces the wasm contract file.
 
-### Poker deck shuffling example
+```
+cargo wasm
+```
 
-1. When joining a room, [each player sends a secret number](https://github.com/enigmampc/SecretHoldEm/blob/4f67c469bb4a0f53522c7ad069e54ae5c1effb6b/contract/src/contract.rs#L172).
-2. Once the room is full, all secrets are combined with sha256 to [create a random seed](https://github.com/enigmampc/SecretHoldEm/blob/4f67c469bb4a0f53522c7ad069e54ae5c1effb6b/contract/src/contract.rs#L349-L355).
-3. With that seed, the [deck is shuffled](https://github.com/enigmampc/SecretHoldEm/blob/4f67c469bb4a0f53522c7ad069e54ae5c1effb6b/contract/src/contract.rs#L356-L357).
-4. Each round a [game counter is incremented](https://github.com/enigmampc/SecretHoldEm/blob/4f67c469bb4a0f53522c7ad069e54ae5c1effb6b/contract/src/contract.rs#L602-L614), and along with the players' secrets is used to create a new seed for re-shuffling the deck.
-5. On the frondend side, [SecretJS is used to generate a secure random number](https://github.com/enigmampc/SecretHoldEm/blob/4f67c469bb4a0f53522c7ad069e54ae5c1effb6b/gui/src/App.js#L334-L354) and sends it as a secret when a player joins the table. A random number is not really necessary, and every secret number would work just as well.
-6. As long as at least one player is not colluding with the rest, and by properties of sha256, the seeds for shuffling the deck are known only to the contract and to no one else. If all players are colluding, they might as well all play with open hands. :joy:
+#### Run Unit Tests
 
-## Use an external oracle
+*Tests in this template currently fail unless you have SGX enabled.*
 
-No implementation exists yet, but it's not that hard to implement.
+```
+RUST_BACKTRACE=1 cargo unit-test
+```
 
-For example:
+#### Integration Tests
 
-1. Have a `handle` function `input_entropy` for users to send entropy in.
-2. `input_entropy` will have a storage key named `seed`.
-3. On each input to `input_entropy`, `seed = hash(seed + input)`.
-4. Have another `handle` function `get_random_number` for users to get a random number.
-5. `get_random_number` must also add to the entropy pool, otherwise consecutive `get_random_number` calls will output the same random number. For example `seed = hash(seed + msg.sender + block.height + ...)`.
-6. `get_random_number` will just return the `hash(seed)` or some other non-reversible derivative of it, and update the `seed` with the new entropy like described in the previous point.
-7. Have `get_random_number` also callback to the caller contract with the random number.
-8. You can even have a cron job to send data from [random.org](https://www.random.org/) to `input_entropy`.
+The integration tests are under the `tests/` directory and run as:
 
-This exmaple has a much worse UX than rolling your own randomness, but at least contracts won't have to rely on users to send entropy and also won't take the risk of messing up the implementation.
+```
+cargo integration-test
+```
 
-# Outputs
+#### Generate Msg Schemas
 
-# External query
+We can also generate JSON Schemas that serve as a guide for anyone trying to use the contract, to specify which arguments they need.
 
-# Compiling
+Auto-generate msg schemas (when changed):
 
-# Storing and deploying
-
-# Making your contract's code verified on exporers
-
-# Testing
-
-# Debugging
-
-# Building secret apps with SecretJS
-
-A Secret App, or a SApp, is a DApp with computational and data privacy.
-A Secret App is usually comprised of the following components:
-
-- A Secret Contract deployed on the Secret Network
-- A frontend app built with a JavaScript framework (E.g. ReactJS, VueJS, AngularJS, etc.)
-- The frontend app connects to the Secret Network using SecretJS,
-- SecretJS interacts with a REST API exposed by nodes in the Secret Network. The REST API/HTTPS server is commonly referred to as LCD Server (Light Client Daemon :shrug:). Usually by connecting SecretJS with a wallet, the wallet handles the interactions with the LCD server.
-
-## Wallet integration
-
-Still not implemented in wallets. Can implement a local wallet but this will probably won't be needed anymore after 2020.
-
-# Differences from CosmWasm
-
-Secret Contacts are based on CosmWasm v0.10, but in order to preserve privacy, they diverge in functionality in some cases.
-
-- `code_hash` in callbacks
-- Can access the current contract's `code_hash` via `env.contract_code_hash`
-- contract labels are unique, thus mandatory on callback to `init`
-- `migrate` and `admin` for contracts is not allowed
-- iterator (`db_scan`, `db_next`) on contract state keys is not allowed
-- `cosmwasm_std` changes...
-- SGX memory limits (30 MiB total, 12 MiB per contract vs 32 MiB per contract)
-- We charge gas for memory allocations, vanilla CosmWasm don't
-- `SecretJS` has a new function - `GenerateNewSeed` to help apps to get a secure 32 byte random number
+```
+cargo schema
+```
