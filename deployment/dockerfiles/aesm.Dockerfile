@@ -7,7 +7,7 @@ RUN apt-get update && \
     #### Base utilities ####
     logrotate \
     #### SGX installer dependencies ####
-    g++ make libcurl4 libssl1.1 libprotobuf10 module-init-tools  && \
+    g++ make libcurl4 libssl1.1 libprotobuf17 && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /root

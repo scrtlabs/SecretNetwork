@@ -351,3 +351,6 @@ bin-data-production:
 secret-contract-optimizer:
 	docker build -f secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} .
 	docker tag enigmampc/secret-contract-optimizer:${TAG} enigmampc/secret-contract-optimizer:latest
+
+aesm-image:
+	docker build -f deployment/dockerfiles/aesm.Dockerfile -t enigmampc/aesm .
