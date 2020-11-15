@@ -2,7 +2,7 @@
 # > docker build -t enigma .
 # > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli enigma secretd init
 # > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli enigma secretd start
-FROM baiduxlab/sgx-rust:1804-1.1.3 AS build-env-rust-go
+FROM baiduxlab/sgx-rust:2004-1.1.3 AS build-env-rust-go
 
 ENV PATH="/root/.cargo/bin:$PATH"
 ENV GOROOT=/usr/local/go

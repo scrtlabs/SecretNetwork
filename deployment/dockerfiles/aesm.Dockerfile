@@ -1,4 +1,4 @@
-FROM ubuntu:bionic as runtime_base
+FROM ubuntu:focal as runtime_base
 
 LABEL maintainer=enigmampc
 
@@ -20,8 +20,8 @@ RUN mkdir /etc/init && \
 # SGX version parameters
 ARG SGX_MAJOR_VERSION=2.12
 ARG SGX_MINOR_VERSION=.100.3
-ARG OS_REVESION=bionic1
-ARG OS_NAME=ubuntu18.04-server
+ARG OS_REVESION=focal1
+ARG OS_NAME=ubuntu20.04-server
 
 ARG SGX_VERSION=${SGX_MAJOR_VERSION}${SGX_MINOR_VERSION}
 
