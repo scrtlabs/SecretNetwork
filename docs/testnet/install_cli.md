@@ -4,22 +4,22 @@
 
 * Linux AMD64
 ```
-https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.2/secretcli-linux-amd64
+https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.3/secretcli-linux-amd64
 ```
 
 * Linux ARM64
 ```
-https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.2/secretcli-linux-arm64
+https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.3/secretcli-linux-arm64
 ```
 
 * MacOS
 ```
-https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.2/secretcli-darwin-10.6-amd64
+https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.3/secretcli-darwin-10.6-amd64
 ```
 
 * Windows
 ```
-https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.2/secretcli-windows-4.0-amd64.exe
+https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.3/secretcli-windows-4.0-amd64.exe
 ```
 
 ## Setup the executable

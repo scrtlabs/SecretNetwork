@@ -44,7 +44,7 @@ This feature is refered to as a reproducable build, and is a feature that will b
 
 To register your node, you will need:
 
-* RPC address of an already active node. You can use `bootstrap.pub.testnet.enigma.co:26657`, or any other node that exposes RPC services.
+* RPC address of an already active node. You can use `bootstrap.secrettestnet.io:26657`, or any other node that exposes RPC services.
 
 * Account with some SCRT
 
