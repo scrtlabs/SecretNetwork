@@ -17,7 +17,7 @@ Learn more about the [privacy model](https://github.com/SecretFoundation/SecretW
     ```
     secretcli config node http://bootstrap.secrettestnet.io:26657
     
-    secretcli config chain-id holodeck
+    secretcli config chain-id holodeck-2
     
     secretcli config trust-node true
     
