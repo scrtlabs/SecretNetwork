@@ -1,7 +1,7 @@
 PACKAGES=$(shell go list ./... | grep -v '/simulation')
 VERSION ?= $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
-CURRENT_BRANCH := $(shell git branch --show-current)
+CURRENT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
 BUILD_PROFILE ?= release
@@ -141,7 +141,7 @@ build_linux_cli:
 build_linux_arm64_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
 
-build_all: build-linux build_windows_cli build_macos_cli build_arm_linux_cli
+build_all: build-linux build_windows_cli build_macos_cli build_linux_arm64_cli
 
 deb: build-linux deb-no-compile
 
@@ -196,10 +196,10 @@ clean:
 	-rm -rf /tmp/SecretNetwork
 	-rm -f ./secretcli*
 	-rm -f ./secretd*
-	-find -name librust_cosmwasm_enclave.signed.so -delete
-	-find -name libgo_cosmwasm.so -delete
-	-find -name '*.so' -delete
-	-find -name 'target' -type d -exec rm -rf \;
+#	-find -name librust_cosmwasm_enclave.signed.so -delete
+#	-find -name libgo_cosmwasm.so -delete
+#	-find -name '*.so' -delete
+#	-find -name 'target' -type d -exec rm -rf \;
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*
 	-rm -rf ./third_party/vendor/
@@ -211,9 +211,10 @@ clean:
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
 
-build-dev-image:
-	docker build --build-arg FEATURES=${FEATURES} --build-arg SGX_MODE=SW -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
-	SGX_MODE=SW docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-sw-dev:${DOCKER_TAG} .
+
+build-dev-image: docker_base
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=SW --build-arg FEATURES=${FEATURES} -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
+	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-sw-dev:${DOCKER_TAG} .
 
 build-testnet: docker_base
 	@mkdir build 2>&3 || true
@@ -351,3 +352,6 @@ bin-data-production:
 secret-contract-optimizer:
 	docker build -f secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} .
 	docker tag enigmampc/secret-contract-optimizer:${TAG} enigmampc/secret-contract-optimizer:latest
+
+aesm-image:
+	docker build -f deployment/dockerfiles/aesm.Dockerfile -t enigmampc/aesm .

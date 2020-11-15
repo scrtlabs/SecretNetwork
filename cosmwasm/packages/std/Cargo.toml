@@ -31,7 +31,7 @@ backtraces = ["snafu/backtraces"]
 base64 = "0.11.0"
 serde_json = { version = "1.0.57", default-features = false, features = ["alloc"]}
 schemars = "0.7"
-serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
+serde = { version = "1.0.117", default-features = false, features = ["derive", "alloc"] }
 snafu = { version = "0.6.6" }
 
 [dev-dependencies]

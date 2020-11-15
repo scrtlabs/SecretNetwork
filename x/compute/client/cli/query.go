@@ -348,7 +348,7 @@ func GetQueryDecryptTxCmd(cdc *amino.Codec) *cobra.Command {
 			}
 
 			answer.RawInput = string(plaintextInput)
-			answer.Input = []byte(plaintextInput[64:])
+			_ = json.Unmarshal(plaintextInput[64:], answer.Input)
 
 			// decrypt data
 			if answer.Type == "execute" {
@@ -475,7 +475,7 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 				return errors.New("query data must be json")
 			}
 
-			return QueryWithData(contractAddr, cdc, queryData)
+			return QueryWithData(contractAddr, cliCtx, queryData)
 		},
 	}
 	decoder.RegisterFlags(cmd.PersistentFlags(), "query argument")
@@ -483,9 +483,7 @@ func GetCmdQuery(cdc *codec.Codec) *cobra.Command {
 	return cmd
 }
 
-func QueryWithData(contractAddress string, cdc *codec.Codec, queryData []byte) error {
-	cliCtx := context.NewCLIContext().WithCodec(cdc)
-
+func QueryWithData(contractAddress string, cliCtx context.CLIContext, queryData []byte) error {
 	addr, err := sdk.AccAddressFromBech32(contractAddress)
 	if err != nil {
 		return err
