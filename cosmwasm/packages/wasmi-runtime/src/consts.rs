@@ -46,11 +46,13 @@ pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRSIGNER;
 
 lazy_static! {
     pub static ref CONSENSUS_SEED_SEALING_PATH: String = env::var(SCRT_SGX_STORAGE_ENV_VAR)
-        .unwrap_or_else(|_| "./.sgx_secrets/".to_string())
+        .unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
         + "consensus_seed.sealed";
     pub static ref REGISTRATION_KEY_SEALING_PATH: String = env::var(SCRT_SGX_STORAGE_ENV_VAR)
-        .unwrap_or_else(|_| "./.sgx_secrets/".to_string())
+        .unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
         + "new_node_seed_exchange_keypair.sealed";
+    pub static ref ATTESTATION_CERT_PATH: String =
+        env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECERT_PATH.to_string());
 }
 
 pub const CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 1;
@@ -60,3 +62,5 @@ pub const CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER: u32 = 4;
 
 pub const LOG_LEVEL_ENV_VAR: &str = "LOG_LEVEL";
 pub const SCRT_SGX_STORAGE_ENV_VAR: &str = "SCRT_SGX_STORAGE";
+
+const DEFAULT_SGX_SECRET_PATH: &str = "./.sgx_secrets/";
