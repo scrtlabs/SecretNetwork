@@ -1,8 +1,14 @@
 ## Release notes
 
-## Current Release - v0.8.0
+## Current Release - v1.0.0
 
-Our release candidate. This is running 99% of the code which is going to run in the mainnet release. The primary goal of this version is for node runners and validators 
+- Secret Contracts
+
+## Previous releases
+
+### v0.8.0
+
+Release candidate running 99% of the code which is in the v1.0.0 mainnet release. The primary goal of this version was for node runners and validators 
 to be able to test their setups on a configuration which will mirror the mainnet release.
 
 #### Contracts
@@ -33,8 +39,6 @@ to be able to test their setups on a configuration which will mirror the mainnet
 
 - Made the world a better place
 - Security and stablility fixes
-
-## Previous releases
 
 ### v0.7.0
 

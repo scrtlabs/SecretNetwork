@@ -8,7 +8,7 @@ const hkdf = require("js-crypto-hkdf");
 const cryptoProvider = new miscreant.PolyfillCryptoProvider();
 
 export interface SecretUtils {
-  readonly pubkey: Uint8Array;
+  getPubkey: () => Promise<Uint8Array>;
   decrypt: (ciphertext: Uint8Array, nonce: Uint8Array) => Promise<Uint8Array>;
   encrypt: (contractCodeHash: string, msg: object) => Promise<Uint8Array>;
 }
@@ -139,6 +139,10 @@ export default class EnigmaUtils implements SecretUtils {
 
     const plaintext = await siv.open(ciphertext, [new Uint8Array()]);
     return plaintext;
+  }
+
+  getPubkey(): Promise<Uint8Array> {
+    return Promise.resolve(this.pubkey);
   }
 }
 

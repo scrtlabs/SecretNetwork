@@ -604,7 +604,7 @@ export class RestClient {
       }
 
       const inputMsgPubkey = inputMsgEncrypted.slice(32, 64);
-      if (Encoding.toBase64(this.enigmautils.pubkey) === Encoding.toBase64(inputMsgPubkey)) {
+      if (Encoding.toBase64(await this.enigmautils.getPubkey()) === Encoding.toBase64(inputMsgPubkey)) {
         // my pubkey, can decrypt
         const nonce = inputMsgEncrypted.slice(0, 32);
 
