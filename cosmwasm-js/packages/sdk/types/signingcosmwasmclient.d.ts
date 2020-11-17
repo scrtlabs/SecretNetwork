@@ -1,7 +1,8 @@
 import { Account, CosmWasmClient, GetNonceResult, PostTxResult } from "./cosmwasmclient";
+import { SecretUtils } from "./enigmautils";
 import { Log } from "./logs";
 import { BroadcastMode } from "./restclient";
-import { Coin, StdFee, StdSignature } from "./types";
+import { Coin, Msg, StdFee, StdSignature } from "./types";
 import { OfflineSigner } from "./wallet";
 export interface SigningCallback {
   (signBytes: Uint8Array): Promise<StdSignature>;
@@ -60,7 +61,7 @@ export declare class SigningCosmWasmClient extends CosmWasmClient {
    * @param apiUrl The URL of a Cosmos SDK light client daemon API (sometimes called REST server or REST API)
    * @param senderAddress The address that will sign and send transactions using this instance
    * @param signer An asynchronous callback to create a signature for a given transaction. This can be implemented using secure key stores that require user interaction. Or a newer OfflineSigner type that handles that stuff
-   * @param seed
+   * @param seedOrEnigmaUtils
    * @param customFees The fees that are paid for transactions
    * @param broadcastMode Defines at which point of the transaction processing the postTx method (i.e. transaction broadcasting) returns
    */
@@ -68,13 +69,20 @@ export declare class SigningCosmWasmClient extends CosmWasmClient {
     apiUrl: string,
     senderAddress: string,
     signer: SigningCallback | OfflineSigner,
-    seed?: Uint8Array,
+    seedOrEnigmaUtils?: Uint8Array | SecretUtils,
     customFees?: Partial<FeeTable>,
     broadcastMode?: BroadcastMode,
   );
   getNonce(address?: string): Promise<GetNonceResult>;
   getAccount(address?: string): Promise<Account | undefined>;
-  signAdapter(signBytes: Uint8Array): Promise<StdSignature>;
+  signAdapter(
+    msgs: readonly Msg[],
+    fee: StdFee,
+    chainId: string,
+    memo: string,
+    accountNumber: number,
+    sequence: number,
+  ): Promise<StdSignature>;
   /** Uploads code and returns a receipt, including the code ID */
   upload(wasmCode: Uint8Array, meta?: UploadMeta, memo?: string): Promise<UploadResult>;
   instantiate(
