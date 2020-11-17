@@ -116,7 +116,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
    * @param apiUrl The URL of a Cosmos SDK light client daemon API (sometimes called REST server or REST API)
    * @param senderAddress The address that will sign and send transactions using this instance
    * @param signer An asynchronous callback to create a signature for a given transaction. This can be implemented using secure key stores that require user interaction. Or a newer OfflineSigner type that handles that stuff
-   * @param seed
+   * @param seedOrEnigmaUtils
    * @param customFees The fees that are paid for transactions
    * @param broadcastMode Defines at which point of the transaction processing the postTx method (i.e. transaction broadcasting) returns
    */
