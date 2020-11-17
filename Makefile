@@ -349,8 +349,18 @@ bin-data-production:
 	cd ./cmd/secretd && go-bindata -o ias_bin_prod.go -prefix "../../ias_keys/production/" -tags "production,hw" ../../ias_keys/production/...
 
 secret-contract-optimizer:
-	docker build -f secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} .
+	docker build -f deployment/dockerfiles/secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} .
 	docker tag enigmampc/secret-contract-optimizer:${TAG} enigmampc/secret-contract-optimizer:latest
 
-aesm-image:
+secretjs-build:
+	cd cosmwasm-js/packages/sdk && yarn && yarn build
+
+# Before running this, first make sure:
+# 1. To `npm login` with enigma-dev
+# 2. The new version is updated in `cosmwasm-js/packages/sdk/package.json` 
+secretjs-publish-npm: secretjs-build
+	cd cosmwasm-js/packages/sdk && npm publish
+  
+ aesm-image:
 	docker build -f deployment/dockerfiles/aesm.Dockerfile -t enigmampc/aesm .
+ 
