@@ -3,16 +3,23 @@ FROM ubuntu:focal as runtime_base
 LABEL maintainer=enigmampc
 
 # SGX version parameters
-ARG SGX_VERSION=2.9.101.2
-ARG OS_REVESION=bionic1
+ARG SGX_VERSION=2.12.100.3
+ARG OS_REVESION=focal1
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     #### Base utilities ####
     logrotate \
+    gdebi \
+    wget \
+    libprotobuf17 \
     #### SGX installer dependencies ####
-    g++ make libcurl4 libssl1.1 libprotobuf10 module-init-tools  && \
+    g++ make libcurl4 libssl1.1 && \
     rm -rf /var/lib/apt/lists/*
+
+
+#RUN wget -O /tmp/libprotobuf10_3.0.0-9_amd64.deb http://ftp.br.debian.org/debian/pool/main/p/protobuf/libprotobuf10_3.0.0-9_amd64.deb
+#RUN yes | gdebi /tmp/libprotobuf10_3.0.0-9_amd64.deb
 
 WORKDIR /root
 
@@ -22,12 +29,12 @@ RUN mkdir /etc/init && \
 
 
 ##### Install SGX Binaries ######
-ADD https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/debian_pkgs/libs/libsgx-enclave-common/libsgx-enclave-common_2.9.101.2-bionic1_amd64.deb ./sgx/
-ADD https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/debian_pkgs/libs/libsgx-urts/libsgx-urts_2.9.101.2-bionic1_amd64.deb ./sgx/
-ADD https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/debian_pkgs/libs/libsgx-uae-service/libsgx-uae-service_2.9.101.2-bionic1_amd64.deb ./sgx/
-ADD https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/debian_pkgs/libs/libsgx-quote-ex/libsgx-quote-ex_2.9.101.2-bionic1_amd64.deb ./sgx/
-ADD https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/debian_pkgs/libs/libsgx-epid/libsgx-epid_2.9.101.2-bionic1_amd64.deb ./sgx/
-ADD https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/debian_pkgs/libs/libsgx-launch/libsgx-launch_2.9.101.2-bionic1_amd64.deb ./sgx/
+ADD https://download.01.org/intel-sgx/sgx-linux/2.12/distro/ubuntu20.04-server/debian_pkgs/libs/libsgx-enclave-common/libsgx-enclave-common_${SGX_VERSION}-${OS_REVESION}_amd64.deb ./sgx/
+ADD https://download.01.org/intel-sgx/sgx-linux/2.12/distro/ubuntu20.04-server/debian_pkgs/libs/libsgx-urts/libsgx-urts_${SGX_VERSION}-${OS_REVESION}_amd64.deb ./sgx/
+ADD https://download.01.org/intel-sgx/sgx-linux/2.12/distro/ubuntu20.04-server/debian_pkgs/libs/libsgx-uae-service/libsgx-uae-service_${SGX_VERSION}-${OS_REVESION}_amd64.deb ./sgx/
+ADD https://download.01.org/intel-sgx/sgx-linux/2.12/distro/ubuntu20.04-server/debian_pkgs/libs/libsgx-quote-ex/libsgx-quote-ex_${SGX_VERSION}-${OS_REVESION}_amd64.deb ./sgx/
+ADD https://download.01.org/intel-sgx/sgx-linux/2.12/distro/ubuntu20.04-server/debian_pkgs/libs/libsgx-epid/libsgx-epid_${SGX_VERSION}-${OS_REVESION}_amd64.deb ./sgx/
+ADD https://download.01.org/intel-sgx/sgx-linux/2.12/distro/ubuntu20.04-server/debian_pkgs/libs/libsgx-launch/libsgx-launch_${SGX_VERSION}-${OS_REVESION}_amd64.deb ./sgx/
 
 
 RUN dpkg -i ./sgx/libsgx-enclave-common_${SGX_VERSION}-${OS_REVESION}_amd64.deb && \
@@ -37,7 +44,7 @@ RUN dpkg -i ./sgx/libsgx-enclave-common_${SGX_VERSION}-${OS_REVESION}_amd64.deb 
     dpkg -i ./sgx/libsgx-quote-ex_${SGX_VERSION}-${OS_REVESION}_amd64.deb && \
     dpkg -i ./sgx/libsgx-uae-service_${SGX_VERSION}-${OS_REVESION}_amd64.deb
 
-ADD https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/sgx_linux_x64_sdk_${SGX_VERSION}.bin ./sgx/
+ADD https://download.01.org/intel-sgx/sgx-linux/2.12/distro/ubuntu20.04-server/sgx_linux_x64_sdk_${SGX_VERSION}.bin ./sgx/
 # ADD https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/sgx_linux_x64_driver_2.6.0_95eaa6f.bin ./sgx/
 
 RUN chmod +x ./sgx/sgx_linux_x64_sdk_${SGX_VERSION}.bin

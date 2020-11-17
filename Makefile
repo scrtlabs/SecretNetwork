@@ -141,7 +141,7 @@ build_linux_cli:
 build_linux_arm64_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
 
-build_all: build-linux build_windows_cli build_macos_cli build_arm_linux_cli
+build_all: build-linux build_windows_cli build_macos_cli build_linux_arm64_cli
 
 deb: build-linux deb-no-compile
 
@@ -196,10 +196,10 @@ clean:
 	-rm -rf /tmp/SecretNetwork
 	-rm -f ./secretcli*
 	-rm -f ./secretd*
-	-find -name librust_cosmwasm_enclave.signed.so -delete
-	-find -name libgo_cosmwasm.so -delete
-	-find -name '*.so' -delete
-	-find -name 'target' -type d -exec rm -rf \;
+#	-find -name librust_cosmwasm_enclave.signed.so -delete
+#	-find -name libgo_cosmwasm.so -delete
+#	-find -name '*.so' -delete
+#	-find -name 'target' -type d -exec rm -rf \;
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*
 	-rm -rf ./third_party/vendor/
@@ -360,3 +360,6 @@ secretjs-build:
 # 2. The new version is updated in `cosmwasm-js/packages/sdk/package.json` 
 secretjs-publish-npm: secretjs-build
 	cd cosmwasm-js/packages/sdk && npm publish
+
+aesm-image:
+	docker build -f deployment/dockerfiles/aesm.Dockerfile -t enigmampc/aesm .

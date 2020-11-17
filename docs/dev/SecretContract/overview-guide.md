@@ -3,11 +3,9 @@ title : 'Secret Contract Dev Guide'
 ---
 # Secret Contract Dev Guide
 
-Secret Contracts are based on [CosmWasm](https://www.cosmwasm.com) which is implementated on various Cosmos SDK blockchains. The CosmWasm smart contracts are like Ethereum's smart contracts except they can be used on other networks using the [Inter-Blockchain Protocol](https://cosmos.network/ibc) (IBC). CosmWasm smart contracts are written in the Rust language.
+Secret Contracts are the first implementation of general purpose privacy preserving computations on public blockchain. While similar to Ethereum smart contracts in design, Secret Contracts work with encrypted data (inputs, encrypted outputs and encrypted state). These privacy guarantees are made possible by a decentralized network of validators, who run Secret Contracts execution inside Trusted Execution Environments (TEEs).
 
-The Secret Network has a _compute_ module that we'll use to store, query and instantiate the smart contract. Once stored on the blockchain the smart contract has to be created (or instantiated) in order to execute its methods. This is similar to doing an Ethereum `migrate` using truffle which handles the deployment and creation of a smart contract.
-
-Secret contracts run in a Trusted Execution Environments (TEEs), where computations are performed using encrypted data (inputs, outouts, and contract state).
+Secret Contracts are Rust based smart contracts that compile to WebAssembly. Secret Contracts, which are based on [CosmWasm](https://www.cosmwasm.com), introduce the _compute_ module that runs inside the TEE to enable secure data processing.
 
 Next we'll walkthrough steps to:
 - install Rust
