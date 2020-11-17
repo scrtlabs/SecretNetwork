@@ -1,10 +1,10 @@
 all:
-	RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
-	wasm-opt -Os ./target/wasm32-unknown-unknown/release/test_contract.wasm -o ./contract.wasm
+	RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown
+	cp ./target/wasm32-unknown-unknown/release/test_contract.wasm ./contract.wasm
 
 	# Compile with floats
-	RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked --features with_floats
-	wasm-opt -Os ./target/wasm32-unknown-unknown/release/test_contract.wasm -o ./contract_with_floats.wasm
+	RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --features with_floats
+	cp ./target/wasm32-unknown-unknown/release/test_contract.wasm ./contract_with_floats.wasm
 
 	# Create a wasm with more than 192 memory pages (fails in init, handle & query, this is our limit)
 	# https://github.com/enigmampc/SecretNetwork/blob/9eef8591b2c04c586ceee12f424b92062598123e/cosmwasm/packages/wasmi-runtime/src/wasm/memory.rs#L39

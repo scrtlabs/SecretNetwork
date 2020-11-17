@@ -5,7 +5,7 @@ use std::env;
 pub use enclave_ffi_types::ENCRYPTED_SEED_SIZE;
 use lazy_static::lazy_static;
 
-pub const CERTEXPIRYDAYS: i64 = 90i64;
+pub const CERTEXPIRYDAYS: i64 = 3652i64;
 
 pub const BECH32_PREFIX_ACC_ADDR: &str = "secret";
 

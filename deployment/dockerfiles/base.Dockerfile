@@ -65,6 +65,8 @@ COPY go.mod .
 COPY go.sum .
 COPY cmd cmd
 COPY Makefile .
+RUN true
+COPY install-wasm-tools.sh .
 
 # COPY /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/libgo_cosmwasm.so go-cosmwasm/api
 
@@ -78,7 +80,15 @@ RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${
 RUN cp /go/src/github.com/enigmampc/SecretNetwork/cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so x/compute/internal/keeper
 RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/x/compute/internal/keeper/.sgx_secrets
 
+<<<<<<< HEAD:deployment/dockerfiles/base.Dockerfile
 COPY deployment/ci/go-tests.sh .
+=======
+RUN rustup target add wasm32-unknown-unknown
+RUN ./install-wasm-tools.sh
+RUN make build-test-contract
+
+COPY packaging_docker/ci/go-tests.sh .
+>>>>>>> origin/dev/v1.1.x:Dockerfile.base
 RUN chmod +x go-tests.sh
 
 ENTRYPOINT ["/bin/bash", "go-tests.sh"]

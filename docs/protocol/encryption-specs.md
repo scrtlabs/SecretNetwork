@@ -7,6 +7,7 @@
     - [`consensus_seed_exchange_privkey`](#consensus_seed_exchange_privkey)
     - [`consensus_io_exchange_privkey`](#consensus_io_exchange_privkey)
     - [`consensus_state_ikm`](#consensus_state_ikm)
+    - [`consensus_callback_secret`](#consensus_callback_secret)
   - [Bootstrap Process Epilogue](#bootstrap-process-epilogue)
 - [Node Startup](#node-startup)
 - [New Node Registration](#new-node-registration)
@@ -545,7 +546,7 @@ msg = codeHashAndMsg.slice(64);
 - Notice on a `Contract` message, the `msg` value should be the same `msg` as in our `tx_input`, so we need to prepend the `nonce` and `tx_sender_wallet_pubkey` just like we did on the tx sender above.
 - On a `Contract` message, we also send a `callback_signature`, so we can later on verify the parameters sent to the enclave:
   ```
-  callback_signature = sha256(consensus_callback_secret | calling_contract_addr | encrypted_msg)
+  callback_signature = sha256(consensus_callback_secret | calling_contract_addr | encrypted_msg | funds_to_send)
   ```
   For more on that, [read here](../dev/privacy-model-of-secret-contracts.md#verified-values-during-contract-execution).
 - For the rest of the encrypted outputs we only need to send the ciphertext, as the tx sender can get `consensus_io_exchange_prubkey` from `genesis.json` and `nonce` from the `tx_input` that is attached to the `tx_output`.
