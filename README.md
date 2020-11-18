@@ -15,14 +15,13 @@ Mainnet is out! Get the latest release at https://github.com/enigmampc/SecretNet
 # Community
 
 - Homepage: https://scrt.network
+- Blog: https://blog.scrt.network
 - Forum: https://forum.scrt.network
 - Wiki: https://learn.scrt.network
-- Main Chat: https://chat.scrt.network/channel/general
-- Blog: https://blog.scrt.network
-- Twitter: https://twitter.com/SecretNetwork
-- Telegram Channel: https://t.me/SCRTnetwork
-- Community Secret Nodes Telegram: https://t.me/secretnodes
 - Discord: https://discord.com/invite/SJK32GY
+- Twitter: https://twitter.com/SecretNetwork
+- Community Telegram Channel: https://t.me/SCRTnetwork
+- Community Secret Nodes Telegram: https://t.me/secretnodes
 
 # Block Explorers
 
