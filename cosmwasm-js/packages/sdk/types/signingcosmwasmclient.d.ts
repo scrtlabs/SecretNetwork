@@ -2,7 +2,7 @@ import { Account, CosmWasmClient, GetNonceResult, PostTxResult } from "./cosmwas
 import { SecretUtils } from "./enigmautils";
 import { Log } from "./logs";
 import { BroadcastMode } from "./restclient";
-import { Coin, Msg, StdFee, StdSignature } from "./types";
+import { Coin, Msg, StdFee, StdSignature, StdTx } from "./types";
 import { OfflineSigner } from "./wallet";
 export interface SigningCallback {
   (signBytes: Uint8Array): Promise<StdSignature>;
@@ -76,13 +76,13 @@ export declare class SigningCosmWasmClient extends CosmWasmClient {
   getNonce(address?: string): Promise<GetNonceResult>;
   getAccount(address?: string): Promise<Account | undefined>;
   signAdapter(
-    msgs: readonly Msg[],
+    msgs: Msg[],
     fee: StdFee,
     chainId: string,
     memo: string,
     accountNumber: number,
     sequence: number,
-  ): Promise<StdSignature>;
+  ): Promise<StdTx>;
   /** Uploads code and returns a receipt, including the code ID */
   upload(wasmCode: Uint8Array, meta?: UploadMeta, memo?: string): Promise<UploadResult>;
   instantiate(
