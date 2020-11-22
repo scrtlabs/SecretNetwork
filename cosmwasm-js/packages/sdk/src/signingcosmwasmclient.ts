@@ -17,6 +17,7 @@ import {
   MsgStoreCode,
   StdFee,
   StdSignature,
+  StdTx,
 } from "./types";
 import { OfflineSigner } from "./wallet";
 
@@ -153,29 +154,40 @@ export class SigningCosmWasmClient extends CosmWasmClient {
   }
 
   async signAdapter(
-    msgs: readonly Msg[],
+    msgs: Msg[],
     fee: StdFee,
     chainId: string,
     memo: string,
     accountNumber: number,
     sequence: number,
-  ): Promise<StdSignature> {
+  ): Promise<StdTx> {
     // offline signer interface
     if ("sign" in this.signer) {
-      return (
-        await this.signer.sign(this.senderAddress, {
-          chain_id: chainId,
-          account_number: String(accountNumber),
-          sequence: String(sequence),
-          fee: fee,
-          msgs: msgs,
-          memo: memo,
-        })
-      ).signature;
+      const signResponse = await this.signer.sign(this.senderAddress, {
+        chain_id: chainId,
+        account_number: String(accountNumber),
+        sequence: String(sequence),
+        fee: fee,
+        msgs: msgs,
+        memo: memo,
+      });
+
+      return {
+        msg: msgs,
+        fee: signResponse.signed.fee,
+        memo: signResponse.signed.memo,
+        signatures: [signResponse.signature],
+      };
     } else {
       // legacy interface
       const signBytes = makeSignBytes(msgs, fee, chainId, memo, accountNumber, sequence);
-      return await this.signer(signBytes);
+      const signature = await this.signer(signBytes);
+      return {
+        msg: msgs,
+        fee: fee,
+        memo: memo,
+        signatures: [signature],
+      };
     }
   }
 
@@ -198,13 +210,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     const fee = this.fees.upload;
     const { accountNumber, sequence } = await this.getNonce();
     const chainId = await this.getChainId();
-    const signature = await this.signAdapter([storeCodeMsg], fee, chainId, memo, accountNumber, sequence);
-    const signedTx = {
-      msg: [storeCodeMsg],
-      fee: fee,
-      memo: memo,
-      signatures: [signature],
-    };
+    const signedTx = await this.signAdapter([storeCodeMsg], fee, chainId, memo, accountNumber, sequence);
 
     const result = await this.postTx(signedTx);
     const codeIdAttr = findAttribute(result.logs, "message", "code_id");
@@ -247,13 +253,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     const fee = this.fees.init;
     const { accountNumber, sequence } = await this.getNonce();
     const chainId = await this.getChainId();
-    const signature = await this.signAdapter([instantiateMsg], fee, chainId, memo, accountNumber, sequence);
-    const signedTx = {
-      msg: [instantiateMsg],
-      fee: fee,
-      memo: memo,
-      signatures: [signature],
-    };
+    const signedTx = await this.signAdapter([instantiateMsg], fee, chainId, memo, accountNumber, sequence);
 
     const result = await this.postTx(signedTx);
     const contractAddressAttr = findAttribute(result.logs, "message", "contract_address");
@@ -294,13 +294,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     const fee = this.fees.exec;
     const { accountNumber, sequence } = await this.getNonce();
     const chainId = await this.getChainId();
-    const signature = await this.signAdapter([executeMsg], fee, chainId, memo, accountNumber, sequence);
-    const signedTx = {
-      msg: [executeMsg],
-      fee: fee,
-      memo: memo,
-      signatures: [signature],
-    };
+    const signedTx = await this.signAdapter([executeMsg], fee, chainId, memo, accountNumber, sequence);
 
     const nonce = Encoding.fromBase64(executeMsg.value.msg).slice(0, 32);
     let result;
@@ -358,13 +352,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     const fee = this.fees.send;
     const { accountNumber, sequence } = await this.getNonce();
     const chainId = await this.getChainId();
-    const signature = await this.signAdapter([sendMsg], fee, chainId, memo, accountNumber, sequence);
-    const signedTx = {
-      msg: [sendMsg],
-      fee: fee,
-      memo: memo,
-      signatures: [signature],
-    };
+    const signedTx = await this.signAdapter([sendMsg], fee, chainId, memo, accountNumber, sequence);
 
     return this.postTx(signedTx);
   }
