@@ -3,7 +3,7 @@
 Secret Contracts are based on CosmWasm v0.10, but they have additional privacy properties that can only be found on Secret Network.
 
 If you're a contract developer, you might want to first catch up on [developing Secret Contracts](./developing-secret-contracts.md).  
-For an in depth look at the Secret Network encryption specs, visit [here](../protocol/encryption-specs.md).
+For an in depth look at the Secret Network encryption specs, visit [here](../protocol/encryption-specs.md#encryption).
 
 Secret Contract developers must always consider the trade-off between privacy, user experience, performance and gas usage.
 
