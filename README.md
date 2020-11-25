@@ -10,7 +10,7 @@ Secret Network is a blockchain-based, open-source protocol that lets anyone perf
 
 Mainnet is out! Get the latest release at https://github.com/enigmampc/SecretNetwork/releases/latest.
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md) [![Contributor Covenant](https://chat.scrt.network/api/v1/shield.svg)](https://chat.scrt.network/home)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
 
 # Community
 
@@ -33,8 +33,8 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 # Wallets
 
 - [Ledger Nano S and Ledger Nano X](docs/ledger-nano-s.md)
-- [Kepler](https://wallet.keplr.app)
-- [Math Wallet](https://mathwallet.org/web/enigma)
+- [Keplr](https://wallet.keplr.app)
+- [Math Wallet](https://mathwallet.org/secretnetwork-wallet/)
 - [Citadel.one](https://app.citadel.one)
 
 # Docs
