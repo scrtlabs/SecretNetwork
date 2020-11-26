@@ -27,7 +27,7 @@ This encrypted data can only be accessed from within the “trusted execution en
 - An updated contract state (i.e., the user’s data should update the state or be stored for future computations)
 - A computation result encrypted for the transaction sender (i.e., a result should be returned privately to the sender)
 - Callbacks to other contracts (i.e., a contract is called conditional on the outcome of a Secret Contract function)
-- Send Messages to other modules (i.e., for sending value transfer messages that depend on the outcome of a computation). Currently a contract can only queue "send funds" msg and "invoke another contract" msg. See [from cosmwasm code](https://github.com/enigmampc/SecretNetwork/blob/e1c25ed06a9b3abba0378bdd858bad376dd828c9/cosmwasm/src/types.rs#L99-L112)
+- Send Messages to other modules (i.e., for sending value transfer messages that depend on the outcome of a computation). See [from go-cosmwasm code](https://github.com/enigmampc/SecretNetwork/blob/master/go-cosmwasm/types/msg.go#L63-L69)
 
 The Secret Network’s `compute` module currently requires that validators run nodes with Intel SGX chips (enclaves). These enclaves contain signing keys that are generated within the enclave. For more details on how enclaves function and are verified, see [intel SGX](sgx.md).
 
