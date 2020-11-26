@@ -37,6 +37,10 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 - [Math Wallet](https://mathwallet.org/secretnetwork-wallet/)
 - [Citadel.one](https://app.citadel.one)
 
+# Blockchain REST Providers
+
+- [SecretAPI.io by ChainofSecrets.org](https://secretapi.io)
+
 # Docs
 
 - [Install the `secretcli` light client (Windows, Mac & Linux)](docs/light-client-mainnet.md)
