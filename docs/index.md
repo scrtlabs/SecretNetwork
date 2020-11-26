@@ -32,7 +32,7 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 
 # Wallets
 
-- [Ledger Nano S and Ledger Nano X](docs/ledger-nano-s.md)
+- [Ledger Nano S and Ledger Nano X](./ledger-nano-s.md)
 - [Keplr](https://wallet.keplr.app)
 - [Math Wallet](https://mathwallet.org/secretnetwork-wallet/)
 - [Citadel.one](https://app.citadel.one)
@@ -43,18 +43,18 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 
 # Docs
 
-- [Install the `secretcli` light client (Windows, Mac & Linux)](docs/light-client-mainnet.md)
-- [How to use the `secretcli` light client](docs/validators-and-full-nodes/secretcli.md)
-- [How to participate in on-chain governance](docs/protocol/governance.md)
-- [How to run a full node on mainnet](docs/validators-and-full-nodes/run-full-node-mainnet.md)
-- [How to run an LCD server](docs/lcd-server-example.md)
-- [Ledger Nano S (and X) support](docs/ledger-nano-s.md)
-- [How to join as a mainnet validator](docs/validators-and-full-nodes/join-validator-mainnet.md)
-- [How to backup a validator](docs/validators-and-full-nodes/backup-a-validator.md)
-- [How to backup a everything (Validators, Full Nodes, Wallets)](docs/backups.md)
-- [How to migrate a validator to a new machine](docs/validators-and-full-nodes/migrate-a-validator.md)
-- [How to setup SGX on your machine](docs/validators-and-full-nodes/setup-sgx.md)
-- [How to verify the SGX setup on your machine](docs/validators-and-full-nodes/verify-sgx.md)
+- [Install the `secretcli` light client (Windows, Mac & Linux)](./light-client-mainnet.md)
+- [How to use the `secretcli` light client](./validators-and-full-nodes/secretcli.md)
+- [How to participate in on-chain governance](./protocol/governance.md)
+- [How to run a full node on mainnet](./validators-and-full-nodes/run-full-node-mainnet.md)
+- [How to run an LCD server](./lcd-server-example.md)
+- [Ledger Nano S (and X) support](./ledger-nano-s.md)
+- [How to join as a mainnet validator](./validators-and-full-nodes/join-validator-mainnet.md)
+- [How to backup a validator](./validators-and-full-nodes/backup-a-validator.md)
+- [How to backup a everything (Validators, Full Nodes, Wallets)](./backups.md)
+- [How to migrate a validator to a new machine](./validators-and-full-nodes/migrate-a-validator.md)
+- [How to setup SGX on your machine](./validators-and-full-nodes/setup-sgx.md)
+- [How to verify the SGX setup on your machine](./validators-and-full-nodes/verify-sgx.md)
 - [How to use SecretJS to develop Secret dApps](https://github.com/enigmampc/enigma-blockchain-contracts-guide/blob/master/cosmwasm-js.md)
 
 # Implementation Discussions
