@@ -4,6 +4,8 @@
 Secret Network secures the decentralized web
 </p>
 
+# What is Secret Network?
+
 Want to build a better internet? Solve for privacy.
 
 Secret Network is a blockchain-based, open-source protocol that lets anyone perform computations on encrypted data, bringing privacy to smart contracts and public blockchains. Our mission: improve the adoption and usability of decentralized technologies, for the benefit of all.
