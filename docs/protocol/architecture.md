@@ -33,6 +33,6 @@ The Secret Network’s `compute` module currently requires that validators run n
 
 ![enclave](../images/diagrams/enclave.png)
 
-Diagram: Trusted and Untrusted aspects of Secret Network code. `compute` enables cosmwasm with encryption to be executed within the trusted component of the enclave.
+Diagram: Trusted and Untrusted aspects of Secret Network code. `wasm` enables go-cosmwasm with encryption to be executed within the trusted component of the enclave.
 
 Nodes join the network through a remote attestation process that is outlined in the section about [new node registration](encryption-specs.md#new-node-registration). In short, the network shares a true random seed accessed through this registration process. This seed is generated inside the Trusted Execution Environment of the bootstrap node, which is identical to other nodes, but is the first node that joins the network. All other keys are derived from this seed in a CSPRNG way. The nodes use asymmetric encryption for agreeing non-interactively on shared symmetric keys with the users, then, symmetric encryption is used for encrypting and decrypting input and output data from users, as well as the internal contract state. For more information on the cryptography used within Secret Network, review our [encryption specs](encryption-specs.md).
