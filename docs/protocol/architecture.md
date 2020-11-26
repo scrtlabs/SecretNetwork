@@ -22,7 +22,7 @@ The following process describes, step by step, how a contract is submitted and a
 
 A Secret Contract’s code is always deployed publicly on-chain, so that users and developers know exactly what code will be executed on data that they submit. This is important: without knowing what that code does, users cannot trust it with their encrypted data. However, the data that is submitted is encrypted, so it cannot be read by a developer, anyone observing the chain, or anyone running a node. If the behavior of the code is also trusted (which is possible to achieve because it is recorded on chain), a user of Secret Contracts obtains strong privacy guarantees.
 
-This encrypted data can only be accessed from within the “trusted execution environment”, or enclave, that the `compute` module requires each validator to run. The computation indicated by the Secret Contract is then performed, within this trusted enclave, over the decrypted data. When the computation is completed, the output is encrypted and recorded on-chain. There are various types of outputs that can be expected. These include:
+This encrypted data can only be accessed from within the “trusted execution environment”, or enclave, that the `wasm` module requires each validator to run. The computation indicated by the Secret Contract is then performed, within this trusted enclave, over the decrypted data. When the computation is completed, the output is encrypted and recorded on-chain. There are various types of outputs that can be expected. These include:
 
 - An updated contract state (i.e., the user’s data should update the state or be stored for future computations)
 - A computation result encrypted for the transaction sender (i.e., a result should be returned privately to the sender)
