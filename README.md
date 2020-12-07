@@ -10,19 +10,18 @@ Secret Network is a blockchain-based, open-source protocol that lets anyone perf
 
 Mainnet is out! Get the latest release at https://github.com/enigmampc/SecretNetwork/releases/latest.
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md) [![Contributor Covenant](https://chat.scrt.network/api/v1/shield.svg)](https://chat.scrt.network/home)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
 
 # Community
 
 - Homepage: https://scrt.network
+- Blog: https://blog.scrt.network
 - Forum: https://forum.scrt.network
 - Wiki: https://learn.scrt.network
-- Main Chat: https://chat.scrt.network/channel/general
-- Blog: https://blog.scrt.network
-- Twitter: https://twitter.com/SecretNetwork
-- Telegram Channel: https://t.me/SCRTnetwork
-- Community Secret Nodes Telegram: https://t.me/secretnodes
 - Discord: https://discord.com/invite/SJK32GY
+- Twitter: https://twitter.com/SecretNetwork
+- Community Telegram Channel: https://t.me/SCRTnetwork
+- Community Secret Nodes Telegram: https://t.me/secretnodes
 
 # Block Explorers
 
@@ -34,8 +33,13 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 # Wallets
 
 - [Ledger Nano S and Ledger Nano X](docs/ledger-nano-s.md)
-- [Kepler](https://wallet.keplr.app)
-- [Math Wallet](https://mathwallet.org/web/enigma)
+- [Keplr](https://wallet.keplr.app)
+- [Math Wallet](https://mathwallet.org/secretnetwork-wallet/)
+- [Citadel.one](https://app.citadel.one)
+
+# Blockchain REST Providers
+
+- [SecretAPI.io by ChainofSecrets.org](https://secretapi.io)
 
 # Docs
 
@@ -51,6 +55,7 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 - [How to migrate a validator to a new machine](docs/validators-and-full-nodes/migrate-a-validator.md)
 - [How to setup SGX on your machine](docs/validators-and-full-nodes/setup-sgx.md)
 - [How to verify the SGX setup on your machine](docs/validators-and-full-nodes/verify-sgx.md)
+- [How to use SecretJS to develop Secret dApps](https://github.com/enigmampc/enigma-blockchain-contracts-guide/blob/master/cosmwasm-js.md)
 
 # Implementation Discussions
 

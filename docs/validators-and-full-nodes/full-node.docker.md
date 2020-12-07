@@ -146,14 +146,14 @@ Note: If you delete or lose either the .secretd or the .sgx_secrets folder your 
 ### 5. Set up environment variables
 
 - MONIKER - your network name
-- RPC_URL - address of a node with an open RPC service (you can use `bootstrap.secrettestnet.io:26657`)
-- CHAINID - chain-id of the network (for testnet this is `holodeck-2`)
-- PERSISTENT_PEERS - List of peers to connect to initially (for this testnet use `64b03220d97e5dc21ec65bf7ee1d839afb6f7193@bootstrap.secrettestnet.io:26656`)
-- REGISTRATION_SERVICE - Address of registration service (this will help the node start automatically without going through all the manual steps in the other guide) - `bootstrap.secrettestnet.io:26667`
+- RPC_URL - address of a node with an open RPC service (you can use `secret-2.node.enigma.co:26657`)
+- CHAINID - chain-id of the network (for mainnet this is `secret-2`)
+- PERSISTENT_PEERS - List of peers to connect to initially (you can use `bee0edb320d50c839349224b9be1575ca4e67948@secret-2.node.enigma.co:26656`)
+- REGISTRATION_SERVICE - Address of registration service (this will help the node start automatically without going through all the manual steps in the other guide) - `register.mainnet.enigma.co:26667`
 
 You can set an environment variable using the `export` syntax
 
-`export RPC_URL=bootstrap.secrettestnet.io:26657`
+`export RPC_URL=register.mainnet.enigma.co:26667`
 
 ### 6. Start your node
 
@@ -178,7 +178,7 @@ echo 'alias secretcli="docker exec -it secret-node_node_1 secretcli"' >> $HOME/.
 echo 'alias secretd="docker exec -it secret-node_node_1 secretd"' >> $HOME/.bashrc
 ```
 
-Where `secret-node_node_1` should be the name of the node container (but it may be different, you can check with `docker ps`)
+Where `secret-node_node_1` should be the name of the node container (may be different on your machine, you can check with `docker ps`)
 
 ### 8. Troubleshooting
 
