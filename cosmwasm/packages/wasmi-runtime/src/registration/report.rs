@@ -201,7 +201,7 @@ impl SgxEnclaveReport {
         let _report_data = take(64)?;
         let mut _it = _report_data.iter();
         for i in report_data.iter_mut() {
-            *i = *_it.next().ok_or_else(|| Error::ReportParseError)?;
+            *i = *_it.next().ok_or(Error::ReportParseError)?;
         }
 
         if pos != bytes.len() {
@@ -657,7 +657,7 @@ impl AttestationReport {
         // Verify API version is supported
         let version = attn_report["version"]
             .as_u64()
-            .ok_or_else(|| Error::ReportParseError)?;
+            .ok_or(Error::ReportParseError)?;
 
         if version != 4 {
             warn!("API version incompatible");

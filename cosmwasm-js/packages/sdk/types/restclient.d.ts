@@ -1,6 +1,6 @@
 import { Log } from "./logs";
 import { Coin, CosmosSdkTx, JsonObject, Model, StdTx } from "./types";
-import EnigmaUtils from "./enigmautils";
+import { SecretUtils } from "./enigmautils";
 export interface CosmosSdkAccount {
   /** Bech32 account address */
   readonly address: string;
@@ -191,7 +191,7 @@ export declare enum BroadcastMode {
 export declare class RestClient {
   private readonly client;
   private readonly broadcastMode;
-  readonly enigmautils: EnigmaUtils;
+  enigmautils: SecretUtils;
   private codeHashCache;
   /**
    * Creates a new client to interact with a Cosmos SDK light client daemon.
@@ -203,6 +203,7 @@ export declare class RestClient {
    *
    * @param apiUrl The URL of a Cosmos SDK light client daemon API (sometimes called REST server or REST API)
    * @param broadcastMode Defines at which point of the transaction processing the postTx method (i.e. transaction broadcasting) returns
+   * @param seed - The seed used to generate sender TX encryption key. If empty will generate random new one
    */
   constructor(apiUrl: string, broadcastMode?: BroadcastMode, seed?: Uint8Array);
   get(path: string): Promise<RestClientResponse>;

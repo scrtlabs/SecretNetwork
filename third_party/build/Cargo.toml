@@ -9,4 +9,4 @@ edition = "2018"
 name = "eng_edl"
 
 [dependencies]
-sgx_edl = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_edl = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }

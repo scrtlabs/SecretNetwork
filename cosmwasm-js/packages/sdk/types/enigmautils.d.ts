@@ -1,4 +1,9 @@
-export default class EnigmaUtils {
+export interface SecretUtils {
+  getPubkey: () => Promise<Uint8Array>;
+  decrypt: (ciphertext: Uint8Array, nonce: Uint8Array) => Promise<Uint8Array>;
+  encrypt: (contractCodeHash: string, msg: object) => Promise<Uint8Array>;
+}
+export default class EnigmaUtils implements SecretUtils {
   private readonly apiUrl;
   readonly seed: Uint8Array;
   private readonly privkey;
@@ -20,4 +25,5 @@ export default class EnigmaUtils {
   private getTxEncryptionKey;
   encrypt(contractCodeHash: string, msg: object): Promise<Uint8Array>;
   decrypt(ciphertext: Uint8Array, nonce: Uint8Array): Promise<Uint8Array>;
+  getPubkey(): Promise<Uint8Array>;
 }
