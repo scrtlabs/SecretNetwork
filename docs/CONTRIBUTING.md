@@ -10,9 +10,13 @@ The following is a set of guidelines for contributing to Secret Network and its 
 
 This open-source project is governed by the [Secret Network Code of Conduct](https://github.com/enigmampc/SecretNetwork/blob/master/CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
 
+### Contribute to code
+
+We have a list of issues tagged for [community contributions](https://github.com/enigmampc/SecretNetwork/labels/help%20wanted). If you are interested to contribute to any of these projects express your interest and join our community so that we can provide you the necessary guidance.
+
 ### Participate in the Community
 
-We have a [forum](https://forum.scrt.network) and a [wiki](https://learn.scrt.network), plus a [RocketChat](https://chat.scrt.network) where members of the community might offer helpful advice if you have ideas or questions.
+We have a [forum](https://forum.scrt.network) and a [wiki](https://learn.scrt.network), plus a [Discord](https://discord.gg/sPfC5Jx) where members of the community might offer helpful advice if you have ideas or questions. There's a development committee focusing on improving developer experience and adoption in Secret Network. You can see the projects the development committee is working on [here](https://github.com/SecretFoundation/dev_committee/projects/1).
 
 ### Report Bugs
 

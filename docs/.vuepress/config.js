@@ -9,10 +9,10 @@ module.exports = {
         nav: [
             { text: 'Home', link: 'https://scrt.network' },
             { text: 'Blog', link: 'https://blog.scrt.network' },
-            { text: 'Chat', link: 'https://chat.scrt.network' },
+            { text: 'Chat', link: 'https://discord.gg/sPfC5Jx' },
             { text: 'Forum', link: 'https://forum.scrt.network' },
             { text: 'Twitter', link: 'https://twitter.com/SecretNetwork' },
-            { text: 'Wiki', link: 'https://learn.scrt.network' }
+            { text: 'Github', link: 'https://github.com/enigmampc/SecretNetwork' }
           ],
         sidebar: [
             {
