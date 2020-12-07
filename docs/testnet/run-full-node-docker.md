@@ -90,7 +90,7 @@ version: "3.4"
 
 services:
   aesm:
-    image: cashmaney/aesm
+    image: enigmampc/aesm
     devices:
       - /dev/isgx
     volumes:

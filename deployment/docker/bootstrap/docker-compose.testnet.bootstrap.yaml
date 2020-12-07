@@ -2,7 +2,7 @@ version: '3'
 
 services:
   aesm:
-    image: cashmaney/aesm
+    image: enigmampc/aesm
     devices:
       - /dev/sgx
     volumes:
