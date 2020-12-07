@@ -44,7 +44,7 @@ These IDEs are known to work very well for developing Secret Contracts:
 
 ## Personal Secret Network for Secret Contract development
 
-The developer blockchain is configured to run inside a docker container. Install [Docker](https://docs.docker.com/install/) for your environment (Mac, Windows, Linux).
+The developer blockchain is configured to run inside a docker container. Install [Docker](https://docs.docker.com/get-docker/) for your environment (Mac, Windows, Linux).
 
 Open a terminal window and change to your project directory.
 Then start SecretNetwork, labelled _secretdev_:

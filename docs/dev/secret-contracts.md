@@ -51,7 +51,7 @@ apt install build-essential
 
 4. Run cargo install cargo-generate
 
-[Cargo generate](https://doc.rust-lang.org/cargo) is the tool you'll use to create a secret contract project.
+[Cargo generate](https://docs.rs/crate/cargo-generate/) is the tool you'll use to create a secret contract project.
 
 ```
 cargo install cargo-generate --features vendored-openssl
