@@ -15,6 +15,7 @@ use log::LevelFilter;
 
 use crate::logger::*;
 
+#[macro_use]
 mod macros;
 
 pub mod exports;

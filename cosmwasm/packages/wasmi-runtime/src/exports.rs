@@ -137,22 +137,10 @@ pub unsafe extern "C" fn ecall_init(
         error!("Tried to access data outside enclave memory!");
         return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
     }
-    if let Err(_e) = validate_const_ptr(env, env_len as usize) {
-        error!("Tried to access data outside enclave memory!");
-        return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
-    }
-    if let Err(_e) = validate_const_ptr(msg, msg_len as usize) {
-        error!("Tried to access data outside enclave memory!");
-        return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
-    }
-    if let Err(_e) = validate_const_ptr(contract, contract_len as usize) {
-        error!("Tried to access data outside enclave memory!");
-        return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
-    }
-    if let Err(_e) = validate_const_ptr(sig_info, sig_info_len as usize) {
-        error!("Tried to access data outside enclave memory!");
-        return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
-    }
+    validate_const_ptr!(env, env_len as usize);
+    validate_const_ptr!(msg, msg_len as usize);
+    validate_const_ptr!(contract, contract_len as usize);
+    validate_const_ptr!(sig_info, sig_info_len as usize);
 
     let contract = std::slice::from_raw_parts(contract, contract_len);
     let env = std::slice::from_raw_parts(env, env_len);

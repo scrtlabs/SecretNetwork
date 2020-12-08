@@ -51,3 +51,23 @@ macro_rules! coalesce {
         wrapper()
     }};
 }
+
+#[macro_export]
+macro_rules! validate_const_ptr {
+    ($ptr:expr, $ptr_len:expr) => {{
+        if let Err(_e) = {
+            if $ptr.is_null() || $ptr_len == 0 {
+                ::log::warn!("Tried to access an empty pointer - ptr.is_null()");
+                Err(::sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED)
+            } else {
+                ::sgx_trts::trts::rsgx_lfence();
+                Ok(())
+            }
+        } {
+            ::log::error!("Tried to access data outside enclave memory!");
+            return $crate::results::result_init_success_to_initresult(Err(
+                ::enclave_ffi_types::EnclaveError::FailedFunctionCall,
+            ));
+        }
+    }};
+}
