@@ -133,10 +133,7 @@ pub unsafe extern "C" fn ecall_init(
         error!("Could not register OOM handler!");
         return InitResult::Failure { err };
     }
-    if let Err(_e) = validate_mut_ptr(used_gas as _, std::mem::size_of::<u64>()) {
-        error!("Tried to access data outside enclave memory!");
-        return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
-    }
+    validate_mut_ptr!(used_gas as _, std::mem::size_of::<u64>());
     validate_const_ptr!(env, env_len as usize);
     validate_const_ptr!(msg, msg_len as usize);
     validate_const_ptr!(contract, contract_len as usize);
