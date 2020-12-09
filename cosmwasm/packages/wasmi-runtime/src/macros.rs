@@ -55,7 +55,7 @@ macro_rules! coalesce {
 #[macro_export]
 macro_rules! validate_const_ptr {
     ($ptr:expr, $ptr_len:expr) => {{
-        if let Err(_e) = validate_const_ptr($ptr, $ptr_len) {
+        if let Err(_e) = $crate::utils::validate_const_ptr($ptr, $ptr_len) {
             ::log::error!("Tried to access data outside enclave memory!");
             return $crate::results::result_init_success_to_initresult(Err(
                 ::enclave_ffi_types::EnclaveError::FailedFunctionCall,
@@ -67,7 +67,7 @@ macro_rules! validate_const_ptr {
 #[macro_export]
 macro_rules! validate_mut_ptr {
     ($ptr:expr, $ptr_len:expr) => {{
-        if let Err(_e) = validate_mut_ptr($ptr, $ptr_len) {
+        if let Err(_e) = $crate::utils::validate_mut_ptr($ptr, $ptr_len) {
             ::log::error!("Tried to access data outside enclave memory!");
             return $crate::results::result_init_success_to_initresult(Err(
                 ::enclave_ffi_types::EnclaveError::FailedFunctionCall,
