@@ -1,6 +1,6 @@
 # DeFi Readiness Network Upgrade (Codename: Ferenginar)
 
-## :warning: WIP - will be finilized by December 17th, 2020 :warning:
+## :warning: WIP - will be finalized before December 17th, 2020 :warning:
 
 ```bash
 sudo systemctl stop secret-node
