@@ -94,7 +94,7 @@ The `src` folder contains the following files:
 
 ##### `contract.rs` 
 
-This file contains 6 functions. These define the available contract operations. 
+This file contains functions which define the available contract operations. 
 
 - `init`
 
@@ -158,13 +158,10 @@ where
 
 - `handle`
 
-- `try_increment`
-
-- `try_reset`
 
 - `query`
 
-- `query_count`
+
 
 ##### `state.rs`
 
