@@ -12,10 +12,7 @@ use crate::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
     result_query_success_to_queryresult,
 };
-use crate::{
-    oom_handler, recursion_depth,
-    utils::{validate_const_ptr, validate_mut_ptr},
-};
+use crate::{oom_handler, recursion_depth, validate_const_ptr, validate_mut_ptr};
 
 lazy_static! {
     static ref ECALL_ALLOCATE_STACK: SgxMutex<Vec<EnclaveBuffer>> = SgxMutex::new(Vec::new());
@@ -36,10 +33,7 @@ pub unsafe extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> Enc
         return EnclaveBuffer::default();
     }
 
-    if let Err(_e) = validate_const_ptr(buffer, length as usize) {
-        error!("Tried to access data outside enclave memory space!");
-        return EnclaveBuffer::default();
-    }
+    validate_const_ptr!(buffer, length as usize, EnclaveBuffer::default());
 
     let slice = std::slice::from_raw_parts(buffer, length);
     let result = panic::catch_unwind(|| {
@@ -133,26 +127,13 @@ pub unsafe extern "C" fn ecall_init(
         error!("Could not register OOM handler!");
         return InitResult::Failure { err };
     }
-    if let Err(_e) = validate_mut_ptr(used_gas as _, std::mem::size_of::<u64>()) {
-        error!("Tried to access data outside enclave memory!");
-        return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
-    }
-    if let Err(_e) = validate_const_ptr(env, env_len as usize) {
-        error!("Tried to access data outside enclave memory!");
-        return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
-    }
-    if let Err(_e) = validate_const_ptr(msg, msg_len as usize) {
-        error!("Tried to access data outside enclave memory!");
-        return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
-    }
-    if let Err(_e) = validate_const_ptr(contract, contract_len as usize) {
-        error!("Tried to access data outside enclave memory!");
-        return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
-    }
-    if let Err(_e) = validate_const_ptr(sig_info, sig_info_len as usize) {
-        error!("Tried to access data outside enclave memory!");
-        return result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
-    }
+
+    let failed_call = || result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
+    validate_mut_ptr!(used_gas as _, std::mem::size_of::<u64>(), failed_call());
+    validate_const_ptr!(env, env_len as usize, failed_call());
+    validate_const_ptr!(msg, msg_len as usize, failed_call());
+    validate_const_ptr!(contract, contract_len as usize, failed_call());
+    validate_const_ptr!(sig_info, sig_info_len as usize, failed_call());
 
     let contract = std::slice::from_raw_parts(contract, contract_len);
     let env = std::slice::from_raw_parts(env, env_len);
@@ -230,26 +211,14 @@ pub unsafe extern "C" fn ecall_handle(
         error!("Could not register OOM handler!");
         return HandleResult::Failure { err };
     }
-    if let Err(_e) = validate_mut_ptr(used_gas as _, std::mem::size_of::<u64>()) {
-        error!("Tried to access data outside enclave memory!");
-        return result_handle_success_to_handleresult(Err(EnclaveError::FailedFunctionCall));
-    }
-    if let Err(_e) = validate_const_ptr(env, env_len as usize) {
-        error!("Tried to access data outside enclave memory!");
-        return result_handle_success_to_handleresult(Err(EnclaveError::FailedFunctionCall));
-    }
-    if let Err(_e) = validate_const_ptr(msg, msg_len as usize) {
-        error!("Tried to access data outside enclave memory!");
-        return result_handle_success_to_handleresult(Err(EnclaveError::FailedFunctionCall));
-    }
-    if let Err(_e) = validate_const_ptr(contract, contract_len as usize) {
-        error!("Tried to access data outside enclave memory!");
-        return result_handle_success_to_handleresult(Err(EnclaveError::FailedFunctionCall));
-    }
-    if let Err(_e) = validate_const_ptr(sig_info, sig_info_len as usize) {
-        error!("Tried to access data outside enclave memory!");
-        return result_handle_success_to_handleresult(Err(EnclaveError::FailedFunctionCall));
-    }
+
+    let failed_call =
+        || result_handle_success_to_handleresult(Err(EnclaveError::FailedFunctionCall));
+    validate_mut_ptr!(used_gas as _, std::mem::size_of::<u64>(), failed_call());
+    validate_const_ptr!(env, env_len as usize, failed_call());
+    validate_const_ptr!(msg, msg_len as usize, failed_call());
+    validate_const_ptr!(contract, contract_len as usize, failed_call());
+    validate_const_ptr!(sig_info, sig_info_len as usize, failed_call());
 
     let contract = std::slice::from_raw_parts(contract, contract_len);
     let env = std::slice::from_raw_parts(env, env_len);
@@ -323,18 +292,11 @@ pub unsafe extern "C" fn ecall_query(
         error!("Could not register OOM handler!");
         return QueryResult::Failure { err };
     }
-    if let Err(_e) = validate_mut_ptr(used_gas as _, std::mem::size_of::<u64>()) {
-        error!("Tried to access data outside enclave memory!");
-        return result_query_success_to_queryresult(Err(EnclaveError::FailedFunctionCall));
-    }
-    if let Err(_e) = validate_const_ptr(msg, msg_len as usize) {
-        error!("Tried to access data outside enclave memory!");
-        return result_query_success_to_queryresult(Err(EnclaveError::FailedFunctionCall));
-    }
-    if let Err(_e) = validate_const_ptr(contract, contract_len as usize) {
-        error!("Tried to access data outside enclave memory!");
-        return result_query_success_to_queryresult(Err(EnclaveError::FailedFunctionCall));
-    }
+
+    let failed_call = || result_query_success_to_queryresult(Err(EnclaveError::FailedFunctionCall));
+    validate_mut_ptr!(used_gas as _, std::mem::size_of::<u64>(), failed_call());
+    validate_const_ptr!(msg, msg_len as usize, failed_call());
+    validate_const_ptr!(contract, contract_len as usize, failed_call());
 
     let contract = std::slice::from_raw_parts(contract, contract_len);
     let msg = std::slice::from_raw_parts(msg, msg_len);
