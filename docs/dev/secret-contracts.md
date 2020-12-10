@@ -98,7 +98,7 @@ This file contains functions which define the available contract operations. The
 
 - `init`
 
-As the name suggests, `init` is called once at instantiation of the secret contract. 
+As the name suggests, `init` is called once at instantiation of the secret contract. The internal state (defined by the `State` struct import in `state.rs`)of the secret contract is initialized from these parameters.
 
 ```rust
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -200,9 +200,18 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 }
 ```
 
-
 ##### `state.rs`
 
+The internal state is defined in this file, by the `State` struct. 
+
+```rust
+pub struct State {
+    pub count: i32,
+    pub owner: CanonicalAddr,
+}
+```
+
+In this example, the state contains an integer `count` and the `owner` of the contract. `owner` is an instance of the [`CanonicalAddr`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/addresses.rs#L56-L82) struct imported from [cosmwasm_std](https://github.com/enigmampc/SecretNetwork/tree/master/cosmwasm/packages/std)
 
 ##### `msg.rs`
 
