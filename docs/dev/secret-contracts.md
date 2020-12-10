@@ -170,7 +170,7 @@ where
 
 - `handle` handles all incoming messages. This function defines the state manipulation operations. 
 
-In this example, the there are two possible operations. `try_increment` and `try_reset`. The `HandleMsg` parameter is imported from `msg.rs` defines the available operations, while the callable functions are defined in `contract.rs`. 
+In this example, there are two possible operations. The `msg` parameter is the `HandleMsg` struct imported from `msg.rs`. This struct defines the available operations, while the callable functions(`try_increment` and `try_reset`) are defined in `contract.rs`. 
 
 ```rust
 pub fn handle<S: Storage, A: Api, Q: Querier>(
