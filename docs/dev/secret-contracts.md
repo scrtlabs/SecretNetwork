@@ -146,11 +146,16 @@ pub struct Env {
   - `BlockInfo` defines the current block height, time, and chain-id. 
   - `MessageInfo` defines the address which instantiated the contract and possibly funds sent to the contract at instantiation. 
   - `ContractInfo` is the address of the contract instance.
-  - `contract_key` is the 
+  - `contract_key` is the code-id used when instantiating the contract
   - `contract_code_hash` is the hex encoded hash of the code. This is used by Secret Network to harden against replaying the contract. It is used to bind the request to a destination contract in a stronger way than just the contract address which can be faked
 
 
-`msg`
+`msg` is the InitMsg struct imported from `msg.rs`. In this case, it defines the initial state of the counter.
+```rust
+pub struct InitMsg {
+    pub count: i32,
+}
+```
 
 The return value of `init`(if there are no errors) is an `<InitResponse>`
 ```rust
