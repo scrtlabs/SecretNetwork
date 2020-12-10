@@ -94,9 +94,36 @@ The `src` folder contains the following files:
 
 ##### `contract.rs` 
 
-`contract.rs` contains 6 functions. 
+This file contains 6 functions. These define the available contract operations. 
 
 - `init`
+
+As the name suggests, init is called at instantiation of the secret contract. 
+
+```rust
+pub fn init<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    msg: InitMsg,
+) -> StdResult<InitResponse> {
+    let state = State {
+        count: msg.count,
+        owner: deps.api.canonical_address(&env.message.sender)?,
+    };
+
+    config(&mut deps.storage).save(&state)?;
+
+    Ok(InitResponse::default())
+}
+```
+
+`init` is called with 3 parameters: `deps`, `env`, and `msg`. 
+
+`deps` and `env` are imported from [cosmwasm_std](https://github.com/enigmampc/SecretNetwork/tree/master/cosmwasm/packages/std)
+
+`deps` holds all external dependencies of the contract.
+
+[`env`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/types.rs) 
 
 - `handle`
 
