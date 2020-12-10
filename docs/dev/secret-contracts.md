@@ -121,7 +121,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
 `deps` and `env` are imported from [cosmwasm_std](https://github.com/enigmampc/SecretNetwork/tree/master/cosmwasm/packages/std)
 
-`deps` holds all external dependencies of the contract.
+[`deps`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/traits.rs) holds all external dependencies of the contract.
 
 [`env`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/types.rs) 
 
