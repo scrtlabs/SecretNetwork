@@ -87,7 +87,7 @@ Cargo.lock	Developing.md	LICENSE		Publishing.md	examples	schema		tests
 Cargo.toml	Importing.md	NOTICE		README.md	rustfmt.toml	src
 ```
 
-The `src` folder contains the source for the contract:
+The `src` folder contains the source for the secret contract:
 
 ##### `contract.rs` 
 
