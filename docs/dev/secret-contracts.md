@@ -168,9 +168,9 @@ where
 }
 ```
 
-- `handle` handles all incoming messages. This function defines the state manipulation operations. 
+- `handle` handles all incoming transactions. These computations occur on-chain. 
 
-In this example, there are two possible operations. The `msg` parameter is the `HandleMsg` struct imported from `msg.rs`. This struct defines the available operations, while the callable functions(`try_increment` and `try_reset`) are defined in `contract.rs`. 
+The `msg` parameter is the `HandleMsg` struct imported from `msg.rs`. This struct defines the available operations, while the callable functions(`try_increment` and `try_reset`) are defined in `contract.rs`. 
 
 ```rust
 pub fn handle<S: Storage, A: Api, Q: Querier>(
@@ -185,9 +185,20 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 ```
 
+- `query` messages are off-chain computations. 
 
-- `query`
+The `msg` parameter is the `QueryMsg` struct imported from `msg.rs`. This struct defines the available operations, while the callable function(`query_count`) is defined in `contract.rs`. 
 
+```rust
+pub fn query<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    msg: QueryMsg,
+) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::GetCount {} => to_binary(&query_count(deps)?),
+    }
+}
+```
 
 
 ##### `state.rs`
