@@ -94,7 +94,7 @@ The `src` folder contains the following files:
 
 ##### `contract.rs` 
 
-This file contains functions which define the available contract operations. 
+This file contains functions which define the available contract operations. The functions which all secret contracts contain will be: `init`, `handle`, and `query`. 
 
 - `init`
 
@@ -119,9 +119,9 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
 `init` is called with 3 parameters: `deps`, `env`, and `msg`. 
 
-`deps` and `env` are imported from [cosmwasm_std](https://github.com/enigmampc/SecretNetwork/tree/master/cosmwasm/packages/std)
+[`deps`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/traits.rs) and [`env`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/types.rs) are imported from [cosmwasm_std](https://github.com/enigmampc/SecretNetwork/tree/master/cosmwasm/packages/std)
 
-[`deps`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/traits.rs) holds all external dependencies of the contract.
+- `deps` holds all external dependencies of the contract.
 
 ```rust
 pub struct Extern<S: Storage, A: Api, Q: Querier> {
@@ -131,7 +131,7 @@ pub struct Extern<S: Storage, A: Api, Q: Querier> {
 }
 ```
 
-[`env`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/types.rs) 
+- `env`
 ```rust
 pub struct Env {
     pub block: BlockInfo,
