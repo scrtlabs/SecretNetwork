@@ -123,7 +123,25 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
 [`deps`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/traits.rs) holds all external dependencies of the contract.
 
+```rust
+pub struct Extern<S: Storage, A: Api, Q: Querier> {
+    pub storage: S,
+    pub api: A,
+    pub querier: Q,
+}
+```
+
 [`env`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/types.rs) 
+```rust
+pub struct Env {
+    pub block: BlockInfo,
+    pub message: MessageInfo,
+    pub contract: ContractInfo,
+    pub contract_key: Option<String>,
+    #[serde(default)]
+    pub contract_code_hash: String,
+}
+```
 
 - `handle`
 
