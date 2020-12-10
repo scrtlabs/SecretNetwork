@@ -19,7 +19,8 @@ use crate::crypto::{Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
 #[cfg(feature = "SGX_MODE_HW")]
 use crate::registration::report::AttestationReport;
 use crate::storage::write_to_untrusted;
-use crate::utils::{attest_from_key, validate_const_ptr, validate_mut_ptr, validate_mut_slice};
+use crate::utils::{attest_from_key, validate_mut_slice};
+use crate::{validate_const_ptr, validate_mut_ptr};
 
 use super::attestation::create_attestation_certificate;
 use super::cert::verify_ra_cert;
@@ -45,18 +46,20 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
     api_key: *const u8,
     api_key_len: u32,
 ) -> sgx_status_t {
-    if let Err(_e) = validate_mut_ptr(public_key.as_mut_ptr(), public_key.len()) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+    validate_mut_ptr!(
+        public_key.as_mut_ptr(),
+        public_key.len(),
+        sgx_status_t::SGX_ERROR_UNEXPECTED,
+    );
 
-    if let Err(_e) = validate_const_ptr(spid, spid_len as usize) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+    validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
     let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
 
-    if let Err(_e) = validate_const_ptr(api_key, api_key_len as usize) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+    validate_const_ptr!(
+        api_key,
+        api_key_len as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED
+    );
     let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
     let mut key_manager = Keychain::new();
@@ -120,13 +123,17 @@ pub unsafe extern "C" fn ecall_init_node(
     encrypted_seed: *const u8,
     encrypted_seed_len: u32,
 ) -> sgx_status_t {
-    if let Err(_e) = validate_const_ptr(master_cert, master_cert_len as usize) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+    validate_const_ptr!(
+        master_cert,
+        master_cert_len as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED,
+    );
 
-    if let Err(_e) = validate_const_ptr(encrypted_seed, encrypted_seed_len as usize) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+    validate_const_ptr!(
+        encrypted_seed,
+        encrypted_seed_len as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED,
+    );
 
     let cert_slice = slice::from_raw_parts(master_cert, master_cert_len as usize);
 
@@ -203,14 +210,14 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
     api_key: *const u8,
     api_key_len: u32,
 ) -> sgx_status_t {
-    if let Err(_e) = validate_const_ptr(spid, spid_len as usize) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+    validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
     let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
 
-    if let Err(_e) = validate_const_ptr(api_key, api_key_len as usize) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+    validate_const_ptr!(
+        api_key,
+        api_key_len as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED
+    );
     let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
     let kp = KEY_MANAGER.get_registration_key().unwrap();
