@@ -98,7 +98,7 @@ This file contains 6 functions. These define the available contract operations.
 
 - `init`
 
-As the name suggests, init is called at instantiation of the secret contract. 
+As the name suggests, `init` is called once at instantiation of the secret contract. 
 
 ```rust
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -140,6 +140,19 @@ pub struct Env {
     pub contract_key: Option<String>,
     #[serde(default)]
     pub contract_code_hash: String,
+}
+```
+
+`msg`
+
+The return value of `init`(if there are no errors) is an `<InitResponse>`
+```rust
+pub struct InitResponse<T = Empty>
+where
+    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+{
+    pub messages: Vec<CosmosMsg<T>>,
+    pub log: Vec<LogAttribute>,
 }
 ```
 
