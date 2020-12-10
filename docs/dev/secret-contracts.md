@@ -157,7 +157,7 @@ pub struct InitMsg {
 }
 ```
 
-The return value of `init`(if there are no errors) is an `InitResponse`
+The return value of `init`(if there are no errors) is an `InitResponse`.
 ```rust
 pub struct InitResponse<T = Empty>
 where
@@ -232,6 +232,13 @@ pub enum HandleMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     GetCount {},
+}
+```
+
+Calls to `handle` and `query` can optionally provide a response. These response messages are defined as structs. In this example, the `query_count` function in `contract.rs` returns the `CountResponse` struct. 
+```rust
+pub struct CountResponse {
+    pub count: i32,
 }
 ```
 
