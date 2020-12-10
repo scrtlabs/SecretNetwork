@@ -58,7 +58,7 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
     validate_const_ptr!(
         api_key,
         api_key_len as usize,
-        sgx_status_t::SGX_ERROR_UNEXPECTED
+        sgx_status_t::SGX_ERROR_UNEXPECTED,
     );
     let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
@@ -216,7 +216,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
     validate_const_ptr!(
         api_key,
         api_key_len as usize,
-        sgx_status_t::SGX_ERROR_UNEXPECTED
+        sgx_status_t::SGX_ERROR_UNEXPECTED,
     );
     let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 

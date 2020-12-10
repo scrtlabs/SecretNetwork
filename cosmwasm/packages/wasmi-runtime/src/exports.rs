@@ -295,8 +295,8 @@ pub unsafe extern "C" fn ecall_query(
 
     let failed_call = || result_query_success_to_queryresult(Err(EnclaveError::FailedFunctionCall));
     validate_mut_ptr!(used_gas as _, std::mem::size_of::<u64>(), failed_call());
-    validate_const_ptr!(msg, msg_len as usize, failed_call(),);
-    validate_const_ptr!(contract, contract_len as usize, failed_call(),);
+    validate_const_ptr!(msg, msg_len as usize, failed_call());
+    validate_const_ptr!(contract, contract_len as usize, failed_call());
 
     let contract = std::slice::from_raw_parts(contract, contract_len);
     let msg = std::slice::from_raw_parts(msg, msg_len);
