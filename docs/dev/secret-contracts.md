@@ -87,15 +87,36 @@ Cargo.lock	Developing.md	LICENSE		Publishing.md	examples	schema		tests
 Cargo.toml	Importing.md	NOTICE		README.md	rustfmt.toml	src
 ```
 
-The `src` folder contains the source for the secret contract:
+
+As an example secret contract, `mysimplecounter`, handles an encrypted internal state keeping track of a number which may be incremented by the owner.
+
+The `src` folder contains the following files:
 
 ##### `contract.rs` 
 
-##### `lib.rs`
+`contract.rs` contains 6 functions. 
+
+- `init`
+
+- `handle`
+
+- `try_increment`
+
+- `try_reset`
+
+- `query`
+
+- `query_count`
+
+##### `state.rs`
+
 
 ##### `msg.rs`
 
-##### `state.rs`
+##### `lib.rs`
+
+
+
 
 #### Compile the Secret Contract
 
