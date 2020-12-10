@@ -216,7 +216,7 @@ In this example, the state contains an integer `count` and the `owner` of the co
 
 ##### `msg.rs`
 
-Contract computations are defined as messages. The [JsonSchema](https://docs.rs/schemars/0.8.0/schemars/trait.JsonSchema.html) of these messages is defined `msg.rs`. 
+Contract computations are defined as messages. The [JsonSchema](https://docs.rs/schemars/0.8.0/schemars/trait.JsonSchema.html) for these messages is defined in `msg.rs`. 
 
 The `InitMsg` struct describes the `msg` parameter passed to the contract `init` function in `contract.rs`. 
 
