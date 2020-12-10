@@ -15,6 +15,7 @@ use crate::results::{
 use crate::{
     oom_handler, recursion_depth,
     utils::{validate_const_ptr, validate_mut_ptr},
+    validate_const_ptr, validate_mut_ptr,
 };
 
 lazy_static! {
