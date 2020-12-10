@@ -88,7 +88,7 @@ Cargo.toml	Importing.md	NOTICE		README.md	rustfmt.toml	src
 ```
 
 
-As an example secret contract, `mysimplecounter`, handles an encrypted internal state keeping track of a number which may be incremented by the owner.
+As an example secret contract, `mysimplecounter`, handles a state keeping track of a number which may be incremented by any address, but only reset by the creator.
 
 The `src` folder contains the following files:
 
