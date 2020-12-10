@@ -131,7 +131,7 @@ pub struct Extern<S: Storage, A: Api, Q: Querier> {
 }
 ```
 
-- `env` contains external state information of the contract at instantiation.
+- `env` contains external state information of the contract.
 ```rust
 pub struct Env {
     pub block: BlockInfo,
@@ -142,7 +142,7 @@ pub struct Env {
     pub contract_code_hash: String,
 }
 ```
-`BlockInfo` defines the block height, time, and chain-id at instantiation. `MessageInfo` 
+`BlockInfo` defines the current block height, time, and chain-id. `MessageInfo` defines the address which instantiated the contract and possibly funds sent to the contract instantiation.
 
 
 `msg`
