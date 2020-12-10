@@ -150,14 +150,14 @@ pub struct Env {
   - `contract_code_hash` is the hex encoded hash of the code. This is used by Secret Network to harden against replaying the contract. It is used to bind the request to a destination contract in a stronger way than just the contract address which can be faked
 
 
-`msg` is the InitMsg struct imported from `msg.rs`. In this case, it defines the initial state of the counter.
+- `msg` is the `InitMsg` struct imported from `msg.rs`. In this case, it defines the initial state of the counter.
 ```rust
 pub struct InitMsg {
     pub count: i32,
 }
 ```
 
-The return value of `init`(if there are no errors) is an `<InitResponse>`
+The return value of `init`(if there are no errors) is an `InitResponse`
 ```rust
 pub struct InitResponse<T = Empty>
 where
@@ -168,7 +168,22 @@ where
 }
 ```
 
-- `handle`
+- `handle` handles all incoming messages. This function defines the state manipulation operations. 
+
+In this example, the there are two possible operations. `try_increment` and `try_reset`. The `HandleMsg` parameter is imported from `msg.rs` defines the available operations, while the callable functions are defined in `contract.rs`. 
+
+```rust
+pub fn handle<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    msg: HandleMsg,
+) -> StdResult<HandleResponse> {
+    match msg {
+        HandleMsg::Increment {} => try_increment(deps, env),
+        HandleMsg::Reset { count } => try_reset(deps, env, count),
+    }
+}
+```
 
 
 - `query`
