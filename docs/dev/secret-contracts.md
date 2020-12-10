@@ -87,6 +87,16 @@ Cargo.lock	Developing.md	LICENSE		Publishing.md	examples	schema		tests
 Cargo.toml	Importing.md	NOTICE		README.md	rustfmt.toml	src
 ```
 
+The `src` folder contains the source for the contract:
+
+##### `contract.rs` 
+
+##### `lib.rs`
+
+##### `msg.rs`
+
+##### `state.rs`
+
 #### Compile the Secret Contract
 
 Use the following command to compile the Secret Contract, which produces the wasm contract file.
