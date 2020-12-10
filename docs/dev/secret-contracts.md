@@ -119,9 +119,9 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
 `init` is called with 3 parameters: `deps`, `env`, and `msg`. 
 
-[`deps`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/traits.rs) and [`env`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/types.rs) are imported from [cosmwasm_std](https://github.com/enigmampc/SecretNetwork/tree/master/cosmwasm/packages/std)
+[`deps`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/traits.rs) and [`env`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/types.rs) are structs `Extern` and `Env` imported from [cosmwasm_std](https://github.com/enigmampc/SecretNetwork/tree/master/cosmwasm/packages/std)
 
-- `deps` holds all external dependencies of the contract.
+- `deps` contains all external dependencies of the contract.
 
 ```rust
 pub struct Extern<S: Storage, A: Api, Q: Querier> {
@@ -131,7 +131,7 @@ pub struct Extern<S: Storage, A: Api, Q: Querier> {
 }
 ```
 
-- `env`
+- `env` contains external state information of the contract at instantiation.
 ```rust
 pub struct Env {
     pub block: BlockInfo,
@@ -142,6 +142,8 @@ pub struct Env {
     pub contract_code_hash: String,
 }
 ```
+`BlockInfo` defines the block height, time, and chain-id at instantiation. `MessageInfo` 
+
 
 `msg`
 
