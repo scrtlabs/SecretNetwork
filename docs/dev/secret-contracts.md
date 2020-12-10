@@ -5,7 +5,7 @@ title : 'Secret Contracts'
 
 Secret Contracts are the first implementation of general purpose privacy preserving computations on public blockchain. While similar to Ethereum smart contracts in design, Secret Contracts work with encrypted data (inputs, encrypted outputs and encrypted state). These privacy guarantees are made possible by a decentralized network of validators, who run Secret Contracts execution inside Trusted Execution Environments (TEEs).
 
-Secret Contracts are Rust based smart contracts that compile to WebAssembly. Secret Contracts, which are based on [CosmWasm](https://www.cosmwasm.com), introduce the _compute_ module that runs inside the TEE to enable secure data processing (inputs, outputs and contract state.
+Secret Contracts are Rust based smart contracts that compile to WebAssembly. Secret Contracts, which are based on [Go-CosmWasm](https://github.com/enigmampc/SecretNetwork/tree/master/go-cosmwasm), introduce the _compute_ module that runs inside the TEE to enable secure data processing (inputs, outputs and contract state.
 
 ![Architecture diagram](https://user-images.githubusercontent.com/15679491/99459758-9a44c580-28fc-11eb-9af2-82479bbb2d23.png)
 
@@ -146,8 +146,7 @@ pub struct Env {
   - `BlockInfo` defines the current block height, time, and chain-id. 
   - `MessageInfo` defines the address which instantiated the contract and possibly funds sent to the contract at instantiation. 
   - `ContractInfo` is the address of the contract instance.
-  - `contract_key` is the CODE_ID at instantiation of the contract.
-    ```bash secretcli tx compute instantiate "$CODE_ID" "$INPUT_MSG" --label "$UNIQUE_LABEL" --from "$MY_KEY"`
+  - `contract_key` is the 
   - `contract_code_hash` is the hex encoded hash of the code. This is used by Secret Network to harden against replaying the contract. It is used to bind the request to a destination contract in a stronger way than just the contract address which can be faked
 
 
