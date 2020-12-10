@@ -142,7 +142,7 @@ pub struct Env {
     pub contract_code_hash: String,
 }
 ```
-`BlockInfo` defines the current block height, time, and chain-id. `MessageInfo` defines the address which instantiated the contract and possibly funds sent to the contract instantiation.
+`BlockInfo` defines the current block height, time, and chain-id. `MessageInfo` defines the address which instantiated the contract and possibly funds sent to the contract at instantiation. `ContractInfo` is the address of the contract instance. 
 
 
 `msg`
