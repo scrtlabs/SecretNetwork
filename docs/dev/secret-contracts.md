@@ -98,7 +98,7 @@ This file contains functions which define the available contract operations. The
 
 - `init`
 
-As the name suggests, `init` is called once at instantiation of the secret contract. The internal state (defined by the `State` struct import in `state.rs`)of the secret contract is initialized from these parameters.
+As the name suggests, `init` is called once at instantiation of the secret contract. The internal state (`State` struct imported from `state.rs`)of the secret contract is initialized from these parameters.
 
 ```rust
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -211,9 +211,31 @@ pub struct State {
 }
 ```
 
-In this example, the state contains an integer `count` and the `owner` of the contract. `owner` is an instance of the [`CanonicalAddr`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/addresses.rs#L56-L82) struct imported from [cosmwasm_std](https://github.com/enigmampc/SecretNetwork/tree/master/cosmwasm/packages/std)
+In this example, the state contains an integer `count` and the `owner` of the contract. `owner` is an instance of the [`CanonicalAddr`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/addresses.rs#L56-L88) struct imported from [cosmwasm_std](https://github.com/enigmampc/SecretNetwork/tree/master/cosmwasm/packages/std)
+
 
 ##### `msg.rs`
+
+Contract computations are defined as messages. The [JsonSchema](https://docs.rs/schemars/0.8.0/schemars/trait.JsonSchema.html) of these messages is defined `msg.rs`. 
+
+The `InitMsg` struct describes the `msg` parameter passed to the contract `init` function in `contract.rs`. 
+
+`HandleMsg` and `QueryMsg` are enums representing possible transaction or query computations. These enums are used to describe the `msg` parameter for `handle` and `query` functions in `contract.rs`. 
+
+```rust
+pub enum HandleMsg {
+    Increment {},
+    Reset { count: i32 },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum QueryMsg {
+    GetCount {},
+}
+```
+
+
 
 ##### `lib.rs`
 
