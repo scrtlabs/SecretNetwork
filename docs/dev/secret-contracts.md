@@ -147,7 +147,7 @@ pub struct Env {
   - `MessageInfo` defines the address which instantiated the contract and possibly funds sent to the contract at instantiation. 
   - `ContractInfo` is the address of the contract instance.
   - `contract_key` is the CODE_ID at instantiation of the contract.
-    `secretcli tx compute instantiate "$CODE_ID" "$INPUT_MSG" --label "$UNIQUE_LABEL" --from "$MY_KEY"`
+    ```bash secretcli tx compute instantiate "$CODE_ID" "$INPUT_MSG" --label "$UNIQUE_LABEL" --from "$MY_KEY"`
   - `contract_code_hash` is the hex encoded hash of the code. This is used by Secret Network to harden against replaying the contract. It is used to bind the request to a destination contract in a stronger way than just the contract address which can be faked
 
 
