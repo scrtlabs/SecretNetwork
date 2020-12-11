@@ -210,8 +210,19 @@ pub struct State {
 
 The state is saved in a [`Storage`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/traits.rs#L42-L72) struct.
 
-In this example, the state contains an integer `count` and the `owner` of the contract. `owner` is an instance of the [`CanonicalAddr`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/addresses.rs#L56-L88) struct. `Storage` and `CanonicalAddr` are imported from [cosmwasm_std](https://github.com/enigmampc/SecretNetwork/tree/master/cosmwasm/packages/std).
+This `Storage` struct is wrapped in a [`Singleton` and `ReadonlySingleton`](https://github.com/enigmampc/SecretNetwork/tree/master/cosmwasm/packages/storage#singleton). To learn more about the different types of storage, read the documentation for [cosmwasm_storage](https://github.com/enigmampc/SecretNetwork/tree/master/cosmwasm/packages/storage). 
 
+```rust
+pub fn config<S: Storage>(storage: &mut S) -> Singleton<S, State> {
+    singleton(storage, CONFIG_KEY)
+}
+
+pub fn config_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, State> {
+    singleton_read(storage, CONFIG_KEY)
+}
+```
+
+In this example, the state contains an integer `count` and the `owner` of the contract. `owner` is an instance of the [`CanonicalAddr`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/addresses.rs#L56-L88) struct. `Storage` and `CanonicalAddr` are imported from [cosmwasm_std](https://github.com/enigmampc/SecretNetwork/tree/master/cosmwasm/packages/std).
 
 ##### `msg.rs`
 
