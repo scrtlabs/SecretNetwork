@@ -96,7 +96,7 @@ The `src` folder contains the following files:
 
 This file contains functions which define the available contract operations. The functions which all secret contracts contain will be: `init`, `handle`, and `query`. 
 
-- `init` is called once at instantiation of the secret contract with 3 parameters: `deps`, `env`, and `msg`. The internal state (`State` struct imported from `state.rs`)of the secret contract is initialized with these parameters.
+`init` is called once at instantiation of the secret contract with 3 parameters: `deps`, `env`, and `msg`. The internal state (`State` struct imported from `state.rs`)of the secret contract is initialized with these parameters.
 
 ```rust
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -117,7 +117,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
 [`deps`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/traits.rs) and [`env`](https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/packages/std/src/types.rs) are structs `Extern` and `Env` imported from [cosmwasm_std](https://github.com/enigmampc/SecretNetwork/tree/master/cosmwasm/packages/std)
 
-- `deps` contains all external dependencies of the contract.
+`deps` contains all external dependencies of the contract.
 
 ```rust
 pub struct Extern<S: Storage, A: Api, Q: Querier> {
@@ -147,7 +147,7 @@ pub struct Env {
    - `contract_code_hash` is the hex encoded hash of the code. This is used by Secret Network to harden against replaying the contract. It is used to bind the request to a destination contract in a stronger way than just the contract address which can be faked
 
 
-- `msg` is the `InitMsg` struct imported from `msg.rs`. In this case, it defines the initial state of the counter.
+`msg` is the `InitMsg` struct imported from `msg.rs`. In this case, it defines the initial state of the counter.
 ```rust
 pub struct InitMsg {
     pub count: i32,
