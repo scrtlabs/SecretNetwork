@@ -250,12 +250,9 @@ pub struct CountResponse {
 }
 ```
 
-
-
 ##### `lib.rs`
 
-
-
+This file is essentially boilerplate that you shouldn't need to modify. It provides the necessary abstraction to interact with the wasmi VM and compile the contract to wasm.
 
 #### Compile the Secret Contract
 
