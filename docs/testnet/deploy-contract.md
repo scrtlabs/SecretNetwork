@@ -1,3 +1,5 @@
+# :warning: This is an old testnet guide and will not work on current mainnet and testnets :warning:
+
 ### General
 
 The general steps we perform to create a Secret Contract are:
