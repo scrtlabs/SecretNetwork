@@ -96,7 +96,7 @@ The `src` folder contains the following files:
 
 This file contains functions which define the available contract operations. The functions which all secret contracts contain will be: `init`, `handle`, and `query`. 
 
-`init` is called once at instantiation of the secret contract with 3 parameters: `deps`, `env`, and `msg`. The internal state (`State` struct imported from `state.rs`)of the secret contract is initialized with these parameters.
+- `init` is called once at instantiation of the secret contract with 3 parameters: `deps`, `env`, and `msg`. The internal state (`State` struct imported from `state.rs`)of the secret contract is initialized with these parameters.
 
 ```rust
 pub fn init<S: Storage, A: Api, Q: Querier>(
