@@ -127,7 +127,7 @@ pub struct Extern<S: Storage, A: Api, Q: Querier> {
 }
 ```
 
-- `env` contains external state information of the contract.
+`env` contains external state information of the contract.
 
 ```rust
 pub struct Env {
