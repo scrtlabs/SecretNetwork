@@ -90,7 +90,7 @@ version: "3.4"
 
 services:
   aesm:
-    image: cashmaney/aesm
+    image: enigmampc/aesm
     devices:
       - /dev/isgx
     volumes:
@@ -166,7 +166,7 @@ After creating the machine a healthy status of the node will have 2 containers a
 ```
 CONTAINER ID        IMAGE                                      COMMAND                  CREATED             STATUS                    PORTS                                  NAMES
 bf9ba8dd0802        enigmampc/secret-network-node:v1.0.0-mainnet   "/bin/bash startup.sh"   13 minutes ago      Up 13 minutes (healthy)   0.0.0.0:26656-26657->26656-26657/tcp   secret-node_node_1
-2405b23aa1bd        cashmaney/aesm                             "/bin/sh -c './aesm_…"   13 minutes ago      Up 13 minutes                                                    secret-node_aesm_1
+2405b23aa1bd        enigmampc/aesm                             "/bin/sh -c './aesm_…"   13 minutes ago      Up 13 minutes                                                    secret-node_aesm_1
 ```
 
 ### 7. Helpful aliases

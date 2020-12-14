@@ -7,7 +7,7 @@ Secret Contracts are the first implementation of general purpose privacy preserv
 
 Secret Contracts are Rust based smart contracts that compile to WebAssembly. Secret Contracts, which are based on [Go-CosmWasm](https://github.com/enigmampc/SecretNetwork/tree/master/go-cosmwasm), introduce the _compute_ module that runs inside the TEE to enable secure data processing (inputs, outputs and contract state.
 
-![Architecture diagram](https://user-images.githubusercontent.com/15679491/99459758-9a44c580-28fc-11eb-9af2-82479bbb2d23.png)
+![architecture](https://user-images.githubusercontent.com/15679491/99459758-9a44c580-28fc-11eb-9af2-82479bbb2d23.png)
 
 Next, we will go through steps to:
 - install Rust
