@@ -360,7 +360,6 @@ secretjs-build:
 # 2. The new version is updated in `cosmwasm-js/packages/sdk/package.json` 
 secretjs-publish-npm: secretjs-build
 	cd cosmwasm-js/packages/sdk && npm publish
-  
+
 aesm-image:
 	docker build -f deployment/dockerfiles/aesm.Dockerfile -t enigmampc/aesm .
- 
