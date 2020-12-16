@@ -28,14 +28,16 @@ This document details how to join the Secret Network `mainnet` as a validator.
 
 #### Install the `secretnetwork`, initialize your node and validate the genesis file:
 
-*NOTE*: Substitute **$YOUR_MONIKER** (below) with your node's nickname or alias.
+_NOTE_: Substitute **$YOUR_MONIKER** (below) with your node's nickname or alias.
 
 ```bash
 cd ~
 
-wget https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/secretnetwork_1.0.0_amd64.deb
+wget https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.4/secretnetwork_1.0.4_amd64.deb
 
-sudo apt install ./secretnetwork_1.0.0_amd64.deb
+echo "f1b3a9b05a8a831cd150d1d86435b7078790eb2d53190b9eaea8574fe91f04ec secretnetwork_1.0.4_amd64.deb" | sha256sum --check
+
+sudo apt install ./secretnetwork_1.0.4_amd64.deb
 
 secretd init "$YOUR_MONIKER" --chain-id secret-2
 
@@ -60,7 +62,6 @@ echo $PUBLIC_KEY
 ```bash
 secretcli config chain-id secret-2
 secretcli config node tcp://secret-2.node.enigma.co:26657
-secretcli config trust-node true
 secretcli config output json
 secretcli config indent true
 ```
@@ -96,7 +97,7 @@ ERROR: unknown address: account secret1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx do
 
 #### Register and configure your node:
 
-*NOTE*: Substitute **$YOUR_KEY_NAME** (below) with the `key-alias` you created earlier.
+_NOTE_: Substitute **$YOUR_KEY_NAME** (below) with the `key-alias` you created earlier.
 
 ```bash
 secretcli tx register auth ./attestation_cert.der --from "$YOUR_KEY_NAME" --gas 250000 --gas-prices 0.25uscrt
@@ -140,7 +141,7 @@ secretcli config node tcp://localhost:26657
 secretcli status
 ```
 
-When the value of `catching_up` is *false*, your node is fully sync'd with the network.
+When the value of `catching_up` is _false_, your node is fully sync'd with the network.
 
 ```bash
   "sync_info": {
@@ -163,6 +164,7 @@ secretd tendermint show-node-id
 ```
 
 And publish yourself as a node with this ID:
+
 ```
 <your-node-id>@<your-public-ip>:26656
 ```
@@ -177,4 +179,3 @@ secretcli config indent true
 secretcli config trust-node true
 secretcli config node tcp://<your-public-ip>:26657
 ```
-
