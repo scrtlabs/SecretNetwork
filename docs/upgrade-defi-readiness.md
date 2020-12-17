@@ -1,4 +1,3 @@
-# :warning: WIP :warning:
 # DeFi Readiness Network Upgrade (Codename: Ferenginar)
 
 ```bash
@@ -9,7 +8,7 @@ sudo cp "$(which secretd)" secretd-v1.0.0
 wget -O secretd-v1.0.4 https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.4/secretd
 
 # check integrity of new version
-echo "91b2db0af37fab5bfc8d2eee4ca9b2c075ca97e0c487a4ed12892df81176bd50 secretd-v1.0.4" | sha256sum --check
+echo "4ba817f2f5dba092359ec26e5aaedec7df41c370469a8879ef24898fbd38c8e7 secretd-v1.0.4" | sha256sum --check
 
 # stop the node
 sudo systemctl stop secret-node
