@@ -207,7 +207,7 @@ jobs:
           mv ./sccache*/sccache "$HOME/sccache"
       - name: Download wab2wasm and wasm2wat
         run: |
-          wget //github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.0.20-ubuntu.tar.gz
+          wget https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.0.20-ubuntu.tar.gz
           tar -xf wabt-1.0.20-ubuntu.tar.gz wabt-1.0.20/bin/wat2wasm wabt-1.0.20/bin/wasm2wat
           mv wabt-1.0.20/bin/wat2wasm /bin
           mv wabt-1.0.20/bin/wasm2wat /bin
