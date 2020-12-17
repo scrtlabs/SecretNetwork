@@ -35,7 +35,7 @@ cd ~
 
 wget https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.4/secretnetwork_1.0.4_amd64.deb
 
-echo "f1b3a9b05a8a831cd150d1d86435b7078790eb2d53190b9eaea8574fe91f04ec secretnetwork_1.0.4_amd64.deb" | sha256sum --check
+echo "696e0685c0eb08ad6a0ef356f5719b4669695c95c7c5728681ff148747a1ff77 secretnetwork_1.0.4_amd64.deb" | sha256sum --check
 
 sudo apt install ./secretnetwork_1.0.4_amd64.deb
 
