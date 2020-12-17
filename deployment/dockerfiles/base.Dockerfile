@@ -13,6 +13,11 @@ RUN curl -O https://dl.google.com/go/go1.15.5.linux-amd64.tar.gz
 RUN tar -C /usr/local -xzf go1.15.5.linux-amd64.tar.gz
 RUN go get -u github.com/jteeuwen/go-bindata/...
 
+RUN wget https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.0.20-ubuntu.tar.gz && \
+    tar -xf wabt-1.0.20-ubuntu.tar.gz wabt-1.0.20/bin/wat2wasm wabt-1.0.20/bin/wasm2wat && \
+    mv wabt-1.0.20/bin/{wat2wasm,wasm2wat} /bin && \
+    chmod +x /bin/{wat2wasm,wasm2wat}
+
 # Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 
