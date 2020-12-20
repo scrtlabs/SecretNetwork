@@ -35,13 +35,13 @@ cd ~
 
 wget https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.4/secretnetwork_1.0.4_amd64.deb
 
-echo "696e0685c0eb08ad6a0ef356f5719b4669695c95c7c5728681ff148747a1ff77 secretnetwork_1.0.4_amd64.deb" | sha256sum --check
+echo "97c1aa2421a203184e541928cc9c409c50afcfac5cbd55993e6a9593399587f9 secretnetwork_1.0.4_amd64.deb" | sha256sum --check
 
 sudo apt install ./secretnetwork_1.0.4_amd64.deb
 
 secretd init "$YOUR_MONIKER" --chain-id secret-2
 
-wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/genesis.json"
+wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.4/genesis.json"
 
 echo "4ca53e34afed034d16464d025291fe16a847c9aca0a259f9237413171b19b4cf .secretd/config/genesis.json" | sha256sum --check
 
