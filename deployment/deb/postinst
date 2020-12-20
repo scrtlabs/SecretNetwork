@@ -17,7 +17,7 @@ After=network.target
 Type=simple
 Environment=SCRT_ENCLAVE_DIR=/usr/lib
 WorkingDirectory=$(eval echo ~"$SUDO_USER")
-ExecStart=$(which secretd) start
+ExecStart=/usr/local/bin/secretd start
 User=$SUDO_USER
 Restart=on-failure
 StartLimitInterval=0

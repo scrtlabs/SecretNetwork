@@ -1,8 +1,7 @@
 #!/bin/bash
 
 file=~/.secretd/config/genesis.json
-if [ ! -e "$file" ]
-then
+if [ ! -e "$file" ]; then
   # init the node
   rm -rf ~/.secretd/*
   rm -rf ~/.secretcli/*
@@ -40,6 +39,9 @@ then
   secretd init-bootstrap
   secretd validate-genesis
 fi
+
+secretcli rest-server --trust-node=true --chain-id enigma-pub-testnet-3 --laddr tcp://0.0.0.0:1336 &
+lcp --proxyUrl http://localhost:1336 --port 1337 --proxyPartial '' &
 
 # sleep infinity
 source /opt/sgxsdk/environment && RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap
