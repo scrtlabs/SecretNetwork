@@ -8,20 +8,20 @@ Want to build a better internet? Solve for privacy.
 
 Secret Network is a blockchain-based, open-source protocol that lets anyone perform computations on encrypted data, bringing privacy to smart contracts and public blockchains. Our mission: improve the adoption and usability of decentralized technologies, for the benefit of all.
 
-Mainnet is out! Get the latest release at https://github.com/enigmampc/SecretNetwork/releases/latest.
+Mainnet is out! Get the latest release at [https://github.com/enigmampc/SecretNetwork/releases/latest](https://github.com/enigmampc/SecretNetwork/releases/latest).
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
 
 # Community
 
-- Homepage: https://scrt.network
-- Blog: https://blog.scrt.network
-- Forum: https://forum.scrt.network
-- Wiki: https://learn.scrt.network
-- Discord: https://discord.com/invite/SJK32GY
-- Twitter: https://twitter.com/SecretNetwork
-- Community Telegram Channel: https://t.me/SCRTnetwork
-- Community Secret Nodes Telegram: https://t.me/secretnodes
+- Homepage: [https://scrt.network](https://scrt.network)
+- Blog: [https://blog.scrt.network](https://blog.scrt.network)
+- Forum: [https://forum.scrt.network](https://forum.scrt.network)
+- Wiki: [https://learn.scrt.network](https://learn.scrt.network)
+- Discord: https[://discord.com/invite/SJK32GY](://discord.com/invite/SJK32GY)
+- Twitter: [https://twitter.com/SecretNetwork](https://twitter.com/SecretNetwork)
+- Community Telegram Channel: [https://t.me/SCRTnetwork](https://t.me/SCRTnetwork)
+- Community Secret Nodes Telegram: [https://t.me/secretnodes](https://t.me/secretnodes)
 
 # Block Explorers
 
