@@ -35,7 +35,7 @@ echo "Public key: $(secretd parse attestation_cert.der 2> /dev/null | cut -c 3- 
 
 secretcli tx register auth attestation_cert.der --node http://bootstrap:26657 -y --from a
 
-sleep 5
+sleep 10
 
 SEED=$(secretcli q register seed "$PUBLIC_KEY" --node http://bootstrap:26657 2> /dev/null | cut -c 3-)
 echo "SEED: $SEED"

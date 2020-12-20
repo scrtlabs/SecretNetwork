@@ -50,7 +50,7 @@ then
   # secretcli tx register auth attestation_cert.der --node "$RPC_URL" -y --from a
   curl -G --data-urlencode "cert=$(cat b64_cert)" http://"$REGISTRATION_SERVICE"/register
 
-  sleep 10
+  sleep 20
 
   SEED=$(secretcli q register seed "$PUBLIC_KEY" --node tcp://"$RPC_URL" 2> /dev/null | cut -c 3-)
   echo "SEED: $SEED"
