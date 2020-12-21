@@ -18,7 +18,7 @@ Mainnet is out! Get the latest release at [https://github.com/enigmampc/SecretNe
 - Blog: [https://blog.scrt.network](https://blog.scrt.network)
 - Forum: [https://forum.scrt.network](https://forum.scrt.network)
 - Wiki: [https://learn.scrt.network](https://learn.scrt.network)
-- Discord: https[://discord.com/invite/SJK32GY](://discord.com/invite/SJK32GY)
+- Discord: [https://discord.com/invite/SJK32GY](https://discord.com/invite/SJK32GY)
 - Twitter: [https://twitter.com/SecretNetwork](https://twitter.com/SecretNetwork)
 - Community Telegram Channel: [https://t.me/SCRTnetwork](https://t.me/SCRTnetwork)
 - Community Secret Nodes Telegram: [https://t.me/secretnodes](https://t.me/secretnodes)
