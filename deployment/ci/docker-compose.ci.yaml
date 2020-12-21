@@ -1,0 +1,79 @@
+version: '3'
+
+services:
+  aesm:
+    image: enigmampc/aesm
+    devices:
+      - /dev/sgx
+    volumes:
+      - /tmp/aesmd:/var/run/aesmd
+    stdin_open: true
+    tty: true
+    environment:
+      - http_proxy
+      - https_proxy
+
+  base:
+    image: rust-go-base-image
+    depends_on:
+      - aesm
+    devices:
+      - /dev/sgx
+    volumes:
+      - /tmp/aesmd:/var/run/aesmd
+      - /tmp/secretd:/root/.secretd
+      - /tmp/secretcli:/root/.secretcli
+    stdin_open: true
+    tty: true
+
+  bootstrap:
+    image: ci-enigma-sgx-bootstrap
+    container_name: bootstrap
+    depends_on:
+      - aesm
+    devices:
+      - /dev/sgx
+    volumes:
+      - /tmp/aesmd:/var/run/aesmd
+      - /tmp/secretd:/root/.secretd
+      - /tmp/secretcli:/root/.secretcli
+    stdin_open: true
+    tty: true
+    environment:
+      - http_proxy
+      - https_proxy
+    expose:
+      - 26656
+      - 26657
+
+  node:
+    image: ci-enigma-sgx-node
+    depends_on:
+      - bootstrap
+    devices:
+      - /dev/sgx
+    volumes:
+      - /tmp/aesmd:/var/run/aesmd
+      - /tmp/secretd:/tmp/.secretd
+      - /tmp/secretcli:/root/.secretcli
+    stdin_open: true
+    tty: true
+    environment:
+      - http_proxy
+      - https_proxy
+
+  enclave-test:
+    image: rust-enclave-test
+    depends_on:
+      - aesm
+    devices:
+      - /dev/sgx
+    volumes:
+      - /tmp/aesmd:/var/run/aesmd
+      - /tmp/secretd:/tmp/.secretd
+      - /tmp/secretcli:/root/.secretcli
+    stdin_open: true
+    tty: true
+    environment:
+      - http_proxy
+      - https_proxy

@@ -1,7 +1,7 @@
 # Azure Image Guide
 
-This file is a copy of the file [here](https://github.com/enigmampc/SecretNetwork/blob/develop/packaging_docker/testnet/azure/secret-node-azure-template/Usage.md) and is mainly here for visibility.
-The files you need to run this guide are [here](https://github.com/enigmampc/SecretNetwork/tree/develop/packaging_docker/testnet/azure/secret-node-azure-template)
+This file is a copy of the file [here](https://github.com/enigmampc/SecretNetwork/blob/master/deployment/azure/secret-node-azure-template/Usage.md) and is mainly here for visibility.
+The files you need to run this guide are [here](https://github.com/enigmampc/SecretNetwork/tree/master/deployment/azure/secret-node-azure-template)
 
 ## Requirements
 
@@ -21,7 +21,7 @@ Now lets go over how to do that, and how to use the image once it's deployed.
 
 ## Installation - Quickstart Template
 
-__Note: This image is preconfigured to work with the incentivized testnet__
+__Note: This image is preconfigured to work with the testnet__
 
 Download this directory.
 
@@ -78,7 +78,7 @@ After creating the machine a healthy status of the node will have 2 containers a
 ```
 CONTAINER ID        IMAGE                                      COMMAND                  CREATED             STATUS                    PORTS                                  NAMES
 bf9ba8dd0802        enigmampc/secret-network-node:pubtestnet   "/bin/bash startup.sh"   13 minutes ago      Up 13 minutes (healthy)   0.0.0.0:26656-26657->26656-26657/tcp   secret-node_node_1
-2405b23aa1bd        cashmaney/aesm                             "/bin/sh -c './aesm_…"   13 minutes ago      Up 13 minutes                                                    secret-node_aesm_1
+2405b23aa1bd        enigmampc/aesm                             "/bin/sh -c './aesm_…"   13 minutes ago      Up 13 minutes                                                    secret-node_aesm_1
 ```
 
 You can see the logs of the node by checking the docker logs of the node container:

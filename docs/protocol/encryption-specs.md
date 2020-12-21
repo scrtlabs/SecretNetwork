@@ -7,6 +7,7 @@
     - [`consensus_seed_exchange_privkey`](#consensus_seed_exchange_privkey)
     - [`consensus_io_exchange_privkey`](#consensus_io_exchange_privkey)
     - [`consensus_state_ikm`](#consensus_state_ikm)
+    - [`consensus_callback_secret`](#consensus_callback_secret)
   - [Bootstrap Process Epilogue](#bootstrap-process-epilogue)
 - [Node Startup](#node-startup)
 - [New Node Registration](#new-node-registration)
@@ -272,7 +273,7 @@ TODO reasoning
 - `encryption_key` is derived using HKDF-SHA256 from:
   - `consensus_state_ikm`
   - `field_name`
-  - `contact_key`
+  - `contract_key`
 - `ad` (Additional Data) is used to prevent leaking information about the same value written to the same key at different times.
 
 ## `contract_key`

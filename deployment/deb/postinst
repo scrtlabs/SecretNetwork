@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# This `DEBIAN/postinst` script is run post-installation
+
+set -e
+
+if [[ -z $"SUDO_USER" ]]
+then
+    export SUDO_USER=root
+fi
+
+cat <<EOF > /etc/systemd/system/secret-node.service
+[Unit]
+Description=Secret node service
+After=network.target
+
+[Service]
+Type=simple
+Environment=SCRT_ENCLAVE_DIR=/usr/lib
+WorkingDirectory=$(eval echo ~"$SUDO_USER")
+ExecStart=/usr/local/bin/secretd start
+User=$SUDO_USER
+Restart=on-failure
+StartLimitInterval=0
+RestartSec=3
+LimitNOFILE=65535
+LimitMEMLOCK=209715200
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+
+mkdir -p "$(eval echo ~"$SUDO_USER")/.sgx_secrets"
+chown -R "$SUDO_USER":"$SUDO_USER" "$(eval echo ~"$SUDO_USER")/.sgx_secrets"

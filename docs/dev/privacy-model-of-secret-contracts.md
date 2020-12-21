@@ -2,11 +2,14 @@
 
 Secret Contracts are based on CosmWasm v0.10, but they have additional privacy properties that can only be found on Secret Network.
 
-If you're a contract developer, you might want to first catch up on [developing Secret Contracts](dev/developing-secret-contracts.md).  
-For an in depth look at the Secret Network encryption specs, visit [here](protocol/encryption-specs.md).
+If you're a contract developer, you might want to first catch up on [developing Secret Contracts](./developing-secret-contracts.md).  
+For an in depth look at the Secret Network encryption specs, visit [here](../protocol/encryption-specs.md#encryption).
 
 Secret Contract developers must always consider the trade-off between privacy, user experience, performance and gas usage.
 
+- [Privacy Model of Secret Contracts](#privacy-model-of-secret-contracts)
+- [Verified Values During Contract Execution](#verified-values-during-contract-execution)
+  - [Tx Parameter Verification](#tx-parameter-verification)
 - [`Init` and `Handle`](#init-and-handle)
   - [Inputs](#inputs)
   - [State operations](#state-operations)
@@ -50,17 +53,19 @@ In that case, we want to know that the `env.message.sender` parameter that is gi
 If the `env.message.sender` parameter can be tampered with - we effectively can't rely on it and cannot implement the admin interface.
 
 ## Tx Parameter Verification
+
 Some parameters are easier to verify, but for others it is less trivial to do so. Exact details about individual parameters are detailed further in this document.
 
 The parameter verification method depends on the contract caller:
- - If the contract is called by a transaction (i.e. someone sends a compute tx) we use the already-signed transaction and verify it's data inside the enclave. More specifically:
-   - Verify signature inside the enclave.
-   - Verify that the parameters sent to the enclave matches with the signed data.
- - If the contract is called by another contract (i.e. we don't have a signed tx to rely on) we create a callback signature, effectively signing the parameters sent to the next contract:
-   - Caller contract creates `callback_signature` based on parameters it sends, passes it on to the next contract.
-   - Receiver contract creates `callback_signature` based on the parameter it got.
-   - Receiver contract verifies that the signature it created matches the signature it got from the caller.
-   - For the specifics, visit the [encryption specs](../protocol/encryption-specs.md#Output).
+
+- If the contract is called by a transaction (i.e. someone sends a compute tx) we use the already-signed transaction and verify it's data inside the enclave. More specifically:
+  - Verify that the signed data and the signature bytes are self consistent.
+  - Verify that the parameters sent to the enclave matches with the signed data.
+- If the contract is called by another contract (i.e. we don't have a signed tx to rely on) we create a callback signature (which can only be created inside the enclave), effectively signing the parameters sent to the next contract:
+  - Caller contract creates `callback_signature` based on parameters it sends, passes it on to the next contract.
+  - Receiver contract creates `callback_signature` based on the parameter it got.
+  - Receiver contract verifies that the signature it created matches the signature it got from the caller.
+  - For the specifics, visit the [encryption specs](../protocol/encryption-specs.md#Output).
 
 # `Init` and `Handle`
 
@@ -855,3 +860,21 @@ Examples:
 - ordering of logs (short,long vs. long,short)
 
 ## Differences in output types - success vs. error
+
+If a contract returns an `StdError`, the output looks like this:
+
+```json
+{
+  "Error": "<encrypted>"
+}
+```
+
+Otherwise the output looks like this:
+
+```json
+{
+  "Ok": "<encrypted>"
+}
+```
+
+Therefore similar to previous examples, an attacker might guess what happned in an execution. E.g. if a contract have only a `send` function, if an error was returned an attacker can know that the `msg.sender` tried to send funds to someone unknown and the `send` didn't went through.

@@ -10,6 +10,4 @@ The next version of Secret Network is expected to offer Secret Contract function
 
 Read more about the completion of [milestone 3 of 3](https://blog.scrt.network/secret-contracts-update-milestone-3-of-3-is-complete)!
 
-The above milestones constitute the R&D work required to enable Secret Contracts. After these steps are completed, Enigma will submit a proposal to the Secret Network blockchain that proposes to upgrade the network to enable Secret Contracts. Validators will have to vote on this submission and approve it prior to implementation.
-
-- [ ] Proposal submitted to Secret Network
+The above milestones constituted the R&D work required to enable Secret Contracts. After these steps were completed, Enigma submitted a [proposal](https://puzzle.report/secret/chains/secret-2/governance/proposals/21) to the Secret Network blockchain which upgraded the network to enable Secret Contracts. Validators voted to approve this [proposal](https://puzzle.report/secret/chains/secret-2/governance/proposals/21) for implementation.

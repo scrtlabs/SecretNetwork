@@ -1,4 +1,4 @@
-Dockerfile
+Dockerfile*
 docker-compose*
 docs
 *.md
@@ -9,6 +9,7 @@ docs
 **/Enclave_u.*
 **/*.lock
 third_party/vendor
+*.bin
 
 cosmwasm-js
 
