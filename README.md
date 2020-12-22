@@ -8,35 +8,54 @@ Want to build a better internet? Solve for privacy.
 
 Secret Network is a blockchain-based, open-source protocol that lets anyone perform computations on encrypted data, bringing privacy to smart contracts and public blockchains. Our mission: improve the adoption and usability of decentralized technologies, for the benefit of all.
 
-Mainnet is out! Get the latest release at https://github.com/enigmampc/SecretNetwork/releases/latest.
+Mainnet is out! Get the latest release at [https://github.com/enigmampc/SecretNetwork/releases/latest](https://github.com/enigmampc/SecretNetwork/releases/latest).
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md) [![Contributor Covenant](https://chat.scrt.network/api/v1/shield.svg)](https://chat.scrt.network/home)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
 
 # Community
 
-- Homepage: https://scrt.network
-- Forum: https://forum.scrt.network
-- Wiki: https://learn.scrt.network
-- Discord: https://discord.com/invite/SJK32GY
-- Blog: https://blog.scrt.network
-- Twitter: https://twitter.com/SecretNetwork
-- Main Chat: https://chat.scrt.network/channel/general
-- Telegram Channel: https://t.me/SCRTnetwork
-- Community Secret Nodes Telegram: https://t.me/secretnodes
+- Homepage: [https://scrt.network](https://scrt.network)
+- Blog: [https://blog.scrt.network](https://blog.scrt.network)
+- Forum: [https://forum.scrt.network](https://forum.scrt.network)
+- Wiki: [https://learn.scrt.network](https://learn.scrt.network)
+- Discord: [https://chat.scrt.network](https://chat.scrt.network)
+- Twitter: [https://twitter.com/SecretNetwork](https://twitter.com/SecretNetwork)
+- Community Telegram Channel: [https://t.me/SCRTnetwork](https://t.me/SCRTnetwork)
+- Community Secret Nodes Telegram: [https://t.me/secretnodes](https://t.me/secretnodes)
 
 # Block Explorers
 
 Secret Network is secured by the SCRT coin (Secret), which is used for fees, staking, and governance. Transactions, validators, governance proposals, and more can be viewed using the following Secret Network block explorers:
 
 - [Cashmaney](https://explorer.cashmaney.com)
-- [SecretScan](https://secretscan.io)
-- [Puzzle](https://puzzle.report/secret/chains/secret-1)
+- [Puzzle](https://puzzle.report)
 
 # Wallets
 
 - [Ledger Nano S and Ledger Nano X](docs/ledger-nano-s.md)
-- [Math Wallet](https://mathwallet.org/web/enigma)
-- [Kepler](https://wallet.keplr.app)
+- [Keplr](https://wallet.keplr.app)
+- [Math Wallet](https://mathwallet.org/secretnetwork-wallet/)
+- [Citadel.one](https://app.citadel.one)
+
+# Blockchain REST Providers
+
+- [SecretAPI.io by ChainofSecrets.org](https://secretapi.io)
+
+# Docs
+
+- [Install the `secretcli` light client (Windows, Mac & Linux)](docs/light-client-mainnet.md)
+- [How to use the `secretcli` light client](docs/validators-and-full-nodes/secretcli.md)
+- [How to participate in on-chain governance](docs/protocol/governance.md)
+- [How to run a full node on mainnet](docs/validators-and-full-nodes/run-full-node-mainnet.md)
+- [How to run an LCD server](docs/lcd-server-example.md)
+- [Ledger Nano S (and X) support](docs/ledger-nano-s.md)
+- [How to join as a mainnet validator](docs/validators-and-full-nodes/join-validator-mainnet.md)
+- [How to backup a validator](docs/validators-and-full-nodes/backup-a-validator.md)
+- [How to backup a everything (Validators, Full Nodes, Wallets)](docs/backups.md)
+- [How to migrate a validator to a new machine](docs/validators-and-full-nodes/migrate-a-validator.md)
+- [How to setup SGX on your machine](docs/validators-and-full-nodes/setup-sgx.md)
+- [How to verify the SGX setup on your machine](docs/validators-and-full-nodes/verify-sgx.md)
+- [How to use SecretJS to develop Secret dApps](https://github.com/enigmampc/enigma-blockchain-contracts-guide/blob/master/cosmwasm-js.md)
 
 # Implementation Discussions
 
@@ -48,30 +67,6 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 - [Input/Output/State Encryption/Decryption protocol](https://forum.scrt.network/t/input-output-state-encryption-decryption-protocol/1325)
 - [Why the Cosmos move doesn’t mean we’re leaving Ethereum](https://forum.scrt.network/t/why-the-cosmos-move-doesnt-mean-were-leaving-ethereum/1301)
 - [(Dev discussion/Issue) WASM implementation](https://forum.scrt.network/t/dev-discussion-issue-wasm-implementation/1303)
-
-# Blockchain REST Providers
-
-- https://api.chainofsecrets.org
-
-# Docs
-
-- [Install the `secretcli` light client (Windows, Mac & Linux)](docs/light-client-mainnet.md)
-- [How to use the `secretcli` light client](docs/validators-and-full-nodes/secretcli.md)
-- [How to participate in on-chain governance](docs/protocol/governance.md)
-- [How to run a full node on mainnet](docs/validators-and-full-nodes/run-full-node-mainnet.md)
-- [How to upgrade your full node from `enigma-1` v0.0.3 to `secret-1` v0.2.0](https://github.com/chainofsecrets/TheRomulusUpgrade/blob/romulus-upgrade/docs/upgrades/romulus-upgrade-instructions.md#upgrade-procedure)
-- [How to upgrade your full node from `secret-1` v0.2.0 to `secret-1` v0.2.1](https://github.com/enigmampc/SecretNetwork/releases/tag/v0.2.1)
-- [How to run an LCD server](docs/lcd-server-example.md)
-- [Ledger Nano S (and X) support](docs/ledger-nano-s.md)
-- [How to join as a mainnet validator](docs/validators-and-full-nodes/join-validator-mainnet.md)
-- [How to backup a validator](docs/validators-and-full-nodes/backup-a-validator.md)
-- [How to migrate a validator to a new machine](docs/validators-and-full-nodes/migrate-a-validator.md)
-- [How to verify software releases](docs/verify-releases.md)
-- [How to setup SGX on your machine](docs/validators-and-full-nodes/setup-sgx.md)
-
-# Archive
-
-- [How to be a mainnet genesis validator](docs/genesis/genesis-validator-mainnet.md)
 
 # License
 

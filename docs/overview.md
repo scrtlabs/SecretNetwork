@@ -16,4 +16,4 @@ The Secret Network was built with the Cosmos SDK using Tendermint for consensus.
 
 To achieve data privacy, the Secret Network relies on a combination of key management and encryption protocols, along with Trusted Execution Environment (TEE) technology.
 
-![contracts](images/diagrams/contracts.png)
+![contracts](./images/diagrams/contracts.png)

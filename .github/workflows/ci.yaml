@@ -54,7 +54,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:
-          go-version: '^1.14' # The Go version to download (if necessary) and use.
+          go-version: "^1.14" # The Go version to download (if necessary) and use.
       - name: Install Intel's SGX SDK
         run: |
           mkdir -p "$HOME/.sgxsdk"
@@ -171,7 +171,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:
-          go-version: '^1.14' # The Go version to download (if necessary) and use.
+          go-version: "^1.14" # The Go version to download (if necessary) and use.
       - name: Install Intel's SGX SDK
         run: |
           mkdir -p "$HOME/.sgxsdk"
@@ -205,23 +205,32 @@ jobs:
           wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
           tar xf ./sccache-*.tar.gz
           mv ./sccache*/sccache "$HOME/sccache"
+      - name: Setup wab2wasm and wasm2wat
+        env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
+        run: |
+          cd "$HOME"
+          wget -q https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.0.20-ubuntu.tar.gz
+          tar -xf wabt-1.0.20-ubuntu.tar.gz wabt-1.0.20/bin/wat2wasm wabt-1.0.20/bin/wasm2wat
+          chmod +x wabt-1.0.20/bin/{wat2wasm,wasm2wat}
+          echo ::add-path::$HOME/wabt-1.0.20/bin
       - name: Create fake api keys
         run: |
           mkdir -p ias_keys/sw_dummy
           echo "not_a_key" > ias_keys/sw_dummy/spid.txt
           echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
-      - name: Install misc.
-        run: |
-          go get -u github.com/jteeuwen/go-bindata/...
-          ./install-wasm-tools.sh
+      - name: Install go-bindata
+        run: go get -u github.com/jteeuwen/go-bindata/...
+      - name: Install xgo
+        run: go get github.com/karalabe/xgo
       - name: Build MacOS CLI
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          make build_macos
+          make build_macos_cli
       - name: Build Windows CLI
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          make build_windows
+          make build_windows_cli
       - name: Build
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"

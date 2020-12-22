@@ -78,7 +78,7 @@ if (($UBUNTUVERSION > 18)); then
    # Install all the additional necessary dependencies (besides the driver and the SDK)
    # for building a rust enclave
    wget -O /tmp/libprotobuf10_3.0.0-9_amd64.deb http://ftp.br.debian.org/debian/pool/main/p/protobuf/libprotobuf10_3.0.0-9_amd64.deb
-   (sleep 3 ; echo y) | sudo gdebi /tmp/libprotobuf10_3.0.0-9_amd64.deb
+   yes | sudo gdebi /tmp/libprotobuf10_3.0.0-9_amd64.deb
 else
    PSW_PACKAGES+=' libprotobuf-dev'
 fi

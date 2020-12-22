@@ -2,9 +2,9 @@
 
 :warning: :warning: :warning:
 
-Please make sure you [backup your validator](/validators-and-full-nodes/backup-a-validator.md) before you migrate it.
+Please make sure you [backup your validator](run-full-node-testnet.md) before you migrate it.
 
-### 1. [Run a new full node](/validators-and-full-nodes/run-full-node-mainnet.md) on a new machine.
+### 1. [Run a new full node](run-full-node-testnet.md) on a new machine.
 
 ### 2. Confirm you have the recovery seed phrase information for the active key running on the old machine
 

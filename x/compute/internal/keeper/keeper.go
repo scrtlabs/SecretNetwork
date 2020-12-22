@@ -342,11 +342,6 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin *
 	events := types.ParseEvents(res.Log, contractAddress)
 	ctx.EventManager().EmitEvents(events)
 
-	err = k.dispatchMessages(ctx, contractAddress, res.Messages)
-	if err != nil {
-		return nil, err
-	}
-
 	// persist instance
 	createdAt := types.NewAbsoluteTxPosition(ctx)
 	instance := types.NewContractInfo(codeID, creator /* admin, */, label, createdAt)
@@ -357,6 +352,11 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin *
 	store.Set(types.GetContractEnclaveKey(contractAddress), key)
 
 	store.Set(types.GetContractLabelPrefix(label), contractAddress)
+
+	err = k.dispatchMessages(ctx, contractAddress, res.Messages)
+	if err != nil {
+		return nil, err
+	}
 
 	// k.appendToContractHistory(ctx, contractAddress, instance.InitialHistory(initMsg))
 	return contractAddress, nil

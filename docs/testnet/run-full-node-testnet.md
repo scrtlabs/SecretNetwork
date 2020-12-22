@@ -8,7 +8,7 @@ This document details how to join the Secret Network `testnet` as a full node. O
 - A public IP address
 - Open ports `TCP 26656 & 26657` _Note: If you're behind a router or firewall then you'll need to port forward on the network device._
 - Reading https://docs.tendermint.com/master/tendermint-core/running-in-production.html
-- RPC address of an already active node. You can use `bootstrap.pub.testnet3.enigma.co:26657`, or any other node that exposes RPC services.
+- RPC address of an already active node. You can use `bootstrap.secrettestnet.io:26657`, or any other node that exposes RPC services.
 
 ### Minimum requirements
 
@@ -29,12 +29,12 @@ Refer to https://ark.intel.com/content/www/us/en/ark.html#@Processors if unsure 
 
 ### 0. Step up SGX on your local machine
 
-See instructions for [setup](../validators-and-full-nodes/setup-sgx.md) and [verification](verify-sgx.md).
+See instructions for [setup](setup-sgx-testnet.md) and [verification](verify-sgx.md).
 
 ### 1. Download the Secret Network package installer for Debian/Ubuntu:
 
 ```bash
-wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.8.1/secretnetwork_0.8.1_amd64.deb
+wget https://github.com/chainofsecrets/SecretNetwork/releases/download/v1.0.0/secretnetwork_1.0.0_amd64.deb
 ```
 
 ([How to verify releases](../verify-releases.md))
@@ -42,7 +42,7 @@ wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.8.1/secretn
 ### 2. Install the package:
 
 ```bash
-sudo dpkg -i secretnetwork_0.8.1_amd64.deb
+sudo dpkg -i secretnetwork_1.0.0_amd64.deb
 ```
 
 ### 3. Initialize your installation of the Secret Network.
@@ -51,19 +51,19 @@ Choose a **moniker** for yourself, and replace `<MONIKER>` with your moniker bel
 This moniker will serve as your public nickname in the network.
 
 ```bash
-secretd init <MONIKER> --chain-id enigma-pub-testnet-4
+secretd init <MONIKER> --chain-id holodeck-2
 ```
 
 ### 4. Download a copy of the Genesis Block file: `genesis.json`
 
 ```bash
-wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v0.8.1/genesis.json"
+wget -O ~/.secretd/config/genesis.json "https://github.com/chainofsecrets/SecretNetwork/releases/download/v1.0.0/holodeck-2-genesis.json"
 ```
 
 ### 5. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
 
 ```bash
-echo "0ccbe047a8dbdc43ee2f3de74f7a26fc36376aec130b8813ac76a1f95e5a6e8f $HOME/.secretd/config/genesis.json" | sha256sum --check
+echo "e45d6aa9825bae70c277509c8346122e265d64cb4211c23def4ae8f6bf3da2f1 $HOME/.secretd/config/genesis.json" | sha256sum --check
 ```
 
 ### 6. Validate that the `genesis.json` is a valid genesis file:
@@ -122,8 +122,8 @@ To run the steps with `secretcli` on another machine, [set up the CLI](install_c
 Configure `secretcli`. Initially you'll be using the bootstrap node, as you'll need to connect to a running node and your own node is not running yet.
 
 ```bash
-secretcli config chain-id enigma-pub-testnet-4
-secretcli config node tcp://bootstrap.pub.testnet3.enigma.co:26657
+secretcli config chain-id holodeck-2
+secretcli config node tcp://bootstrap.secrettestnet.io:26657
 secretcli config output json
 secretcli config indent true
 secretcli config trust-node true
@@ -135,7 +135,7 @@ Set up a key. Make sure you backup the mnemonic and the keyring password.
 secretcli keys add $INSERT_YOUR_KEY_NAME
 ```
 
-This will output your address, a 45 character-string starting with `secret1...`. Copy/paste it to get some test-SCRT from [the faucet](https://faucet.pub.testnet.enigma.co/). Continue when you have confirmed your account has some test-SCRT in it.
+This will output your address, a 45 character-string starting with `secret1...`. Copy/paste it to get some test-SCRT from [the faucet](https://faucet.secrettestnet.io/). Continue when you have confirmed your account has some test-SCRT in it.
 
 ### 12. Register your node on-chain
 
@@ -178,10 +178,10 @@ secretd configure-secret node-master-cert.der "$SEED"
 
 ### 16. Add persistent peers to your configuration file.
 
-You can also use Enigma's node:
+You can also use Chain of Secrets' node:
 
 ```bash
-perl -i -pe 's/persistent_peers = ""/persistent_peers = "115aa0a629f5d70dd1d464bc7e42799e00f4edae\@bootstrap.pub.testnet3.enigma.co:26656"/' ~/.secretd/config/config.toml
+perl -i -pe 's/persistent_peers = ""/persistent_peers = "64b03220d97e5dc21ec65bf7ee1d839afb6f7193\@bootstrap.secrettestnet.io:26656"/' ~/.secretd/config/config.toml
 ```
 
 ### 17. Listen for incoming RPC requests so that light nodes can connect to you:
@@ -244,7 +244,7 @@ If someone wants to add you as a peer, have them add the above address to their 
 And if someone wants to use your node from their `secretcli` then have them run:
 
 ```bash
-secretcli config chain-id enigma-pub-testnet-4
+secretcli config chain-id holodeck-2
 secretcli config output json
 secretcli config indent true
 secretcli config node tcp://<your-public-ip>:26657

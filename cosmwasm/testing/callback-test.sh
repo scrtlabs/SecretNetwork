@@ -2,9 +2,8 @@
 
 set -euvx
 
-function wait_for_tx () {
-    until (./secretcli q tx "$1")
-    do
+function wait_for_tx() {
+    until (./secretcli q tx "$1"); do
         echo "$2"
         sleep 1
     done
@@ -15,6 +14,7 @@ rm -rf ./.sgx_secrets
 mkdir -p ./.sgx_secrets
 
 rm -rf ~/.secret*
+
 ./secretcli config chain-id enigma-testnet
 ./secretcli config output json
 ./secretcli config indent true
@@ -38,24 +38,22 @@ RUST_BACKTRACE=1 ./secretd start --bootstrap &
 
 export secretd_PID=$(echo $!)
 
-until (./secretcli status 2>&1 | jq -e '(.sync_info.latest_block_height | tonumber) > 0' &> /dev/null)
-do
+until (./secretcli status 2>&1 | jq -e '(.sync_info.latest_block_height | tonumber) > 0' &>/dev/null); do
     echo "Waiting for chain to start..."
     sleep 1
 done
 
 ./secretcli rest-server --chain-id enigma-testnet --laddr tcp://0.0.0.0:1337 &
 export LCD_PID=$(echo $!)
-function cleanup()
-{
+function cleanup() {
     kill -KILL "$secretd_PID" "$LCD_PID"
 }
 trap cleanup EXIT ERR
 
 export STORE_TX_HASH=$(
     yes |
-    ./secretcli tx compute store ./x/compute/internal/keeper/testdata/test-contract/contract.wasm --from a --gas 10000000 |
-    jq -r .txhash
+        ./secretcli tx compute store ./x/compute/internal/keeper/testdata/test-contract/contract.wasm --from a --gas 10000000 |
+        jq -r .txhash
 )
 
 wait_for_tx "$STORE_TX_HASH" "Waiting for store to finish on-chain..."
@@ -112,6 +110,11 @@ export EXEC_ERR_TX_HASH=$(
 wait_for_tx "$EXEC_ERR_TX_HASH" "Waiting for exec to finish on-chain..."
 
 ./secretcli q compute tx "$EXEC_ERR_TX_HASH"
+# test output data decryption
+yes |
+    ./secretcli tx compute execute --from a "$CONTRACT_ADDRESS" '{"unicode_data":{}}' -b block |
+    jq -r .txhash |
+    xargs ./secretcli q compute tx
 
 # sleep infinity
 
