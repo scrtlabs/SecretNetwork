@@ -255,10 +255,35 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     const chainId = await this.getChainId();
     const signedTx = await this.signAdapter([instantiateMsg], fee, chainId, memo, accountNumber, sequence);
 
-    const result = await this.postTx(signedTx);
-    const contractAddressAttr = findAttribute(result.logs, "message", "contract_address");
-
     const nonce = Encoding.fromBase64(instantiateMsg.value.init_msg).slice(0, 32);
+    let result;
+    try {
+      result = await this.postTx(signedTx);
+    } catch (err) {
+      try {
+        const errorMessageRgx = /contract failed: encrypted: (.+?): failed to execute message; message index: 0/g;
+
+        const rgxMatches = errorMessageRgx.exec(err.message);
+        if (rgxMatches == null || rgxMatches.length != 2) {
+          throw err;
+        }
+
+        const errorCipherB64 = rgxMatches[1];
+        const errorCipherBz = Encoding.fromBase64(errorCipherB64);
+
+        const errorPlainBz = await this.restClient.enigmautils.decrypt(errorCipherBz, nonce);
+
+        err.message = err.message.replace(errorCipherB64, Encoding.fromUtf8(errorPlainBz));
+      } catch (decryptionError) {
+        throw new Error(
+          `Failed to decrypt the following error message: ${err.message}. Decryption error of the error message: ${decryptionError.message}`,
+        );
+      }
+
+      throw err;
+    }
+
+    const contractAddressAttr = findAttribute(result.logs, "message", "contract_address");
 
     const logs = await this.restClient.decryptLogs(result.logs, nonce);
 
