@@ -5,13 +5,14 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	clienttx "github.com/cosmos/cosmos-sdk/client/tx"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
-
 	"path/filepath"
 
 	"github.com/tendermint/tendermint/crypto"
@@ -22,6 +23,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	sdktx "github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authlegacy "github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -193,6 +195,28 @@ func GetSignerSignature(signer authtypes.AccountI, tx authlegacy.StdTx) (authleg
 	return authlegacy.StdSignature{}, fmt.Errorf("could not find signer signature")
 }
 
+// convertToStdTx converts tx proto binary bytes retrieved from Tendermint into
+// a StdTx. Returns the StdTx, as well as a flag denoting if the function
+// successfully converted or not.
+func convertToStdTx(k Keeper, tx sdktx.Tx) (authlegacy.StdTx, error) {
+	//txI, err := clientCtx.TxConfig.TxDecoder()(txBytes)
+	//if err != nil {
+	//	return authlegacy.StdTx{}, sdkerrors.Wrap(types.ErrInvalid, fmt.Sprintf("Unable to decode tx bytes: %s", err.Error()))
+	//}
+	//
+	//verifiableTx, ok := tx.(authsigning.Tx)
+	//if !ok {
+	//	return authlegacy.StdTx{}, sdkerrors.Wrap(types.ErrInvalid, fmt.Sprintf("%+v is not backwards compatible with %T", tx, authlegacy.StdTx{}))
+	//}
+
+	stdTx, err := clienttx.ConvertTxToStdTx(&k.legacyAmino, tx)
+	if err != nil {
+		return authlegacy.StdTx{}, sdkerrors.Wrap(types.ErrInvalid, fmt.Sprintf("Unable convert to StdTx: %s", err.Error()))
+	}
+
+	return stdTx, nil
+}
+
 func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) (authlegacy.StdSignature, []byte, error) {
 	var defaultSignature = authlegacy.StdSignature{
 		PubKey:    secp256k1.PubKey{},
@@ -202,8 +226,21 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) (authlegac
 	// Warning: This API may be deprecated:
 	// https://github.com/cosmos/cosmos-sdk/commit/c13809062ab16bf193ad3919c77ec03c79b76cc8#diff-a64b9f4b7565560002e3ac4a5eac008bR148
 	tx := authlegacy.StdTx{}
+	newtx := sdktx.Tx{}
 	txBytes := ctx.TxBytes()
-	err := k.legacyAmino.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
+	err := k.cdc.UnmarshalBinaryBare(txBytes, &newtx)
+	tx = authlegacy.StdTx{
+		Msgs: newtx.GetMsgs(),
+		Fee: authlegacy.StdFee{
+			Amount: newtx.AuthInfo.Fee.Amount,
+			Gas:    newtx.AuthInfo.Fee.GasLimit,
+		},
+		Signatures:    newtx.,
+		Memo:          newtx.Body.Memo,
+		TimeoutHeight: newtx.Body.TimeoutHeight,
+	}
+	//tx, err = convertToStdTx(k, &newtx)
+	//err := k.legacyAmino.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
 	if err != nil {
 		return defaultSignature, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
 	}
