@@ -111,7 +111,7 @@ mkdir -p ~/.secretd/.node
 
 secretd configure-secret node-master-cert.der "$SEED"
 
-perl -i -pe 's/^seeds = ".*?"/seeds = "bee0edb320d50c839349224b9be1575ca4e67948\@secret-2.node.enigma.co:26656"/' ~/.secretd/config/config.toml
+perl -i -pe 's/^seeds = ".*?"/seeds = "332c69cb1e5a4a62916be571ff9c4cd09cc71a79\@secret-2.node.enigma.co:26656"/' ~/.secretd/config/config.toml
 perl -i -pe 's;laddr = "tcp://127.0.0.1:26657";laddr = "tcp://0.0.0.0:26657";' ~/.secretd/config/config.toml
 ```
 
