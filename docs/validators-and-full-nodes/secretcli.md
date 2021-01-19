@@ -82,7 +82,7 @@ secretcli keys add <key-alias>
 The output of the above command will contain a _seed phrase_. It is recommended to save the _seed phrase_ in a safe place so that in case you forget the password of the operating system's credentials store, you could eventually regenerate the key from the seed phrase with the following command:
 
 ```bash
-secretcli keys add --recover
+secretcli keys add --recover <key-alias>
 ```
 
 You can also backup your key using `export`, which outputs to _stderr_:
