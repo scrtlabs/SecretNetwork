@@ -231,6 +231,9 @@ func (ctx WASMContext) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) 
 	}
 
 	txSenderPrivKey, _, err := ctx.GetTxSenderKeyPair()
+	if err != nil {
+		return nil, err
+	}
 
 	txEncryptionKey, err := ctx.getTxEncryptionKey(txSenderPrivKey, nonce)
 	if err != nil {
@@ -247,7 +250,7 @@ func (ctx WASMContext) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) 
 
 func (ctx WASMContext) DecryptError(errString string, msgType string, nonce []byte) (cosmwasmTypes.StdError, error) {
 	errorCipherB64 := strings.ReplaceAll(errString, msgType+" contract failed: encrypted: ", "")
-	errorCipherB64 = strings.ReplaceAll(errorCipherB64, ": failed to execute message; message index: 0", "")
+	errorCipherB64 = errorCipherB64[:strings.Index(errorCipherB64, ": failed to execute message;")]
 
 	errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
 	if err != nil {
