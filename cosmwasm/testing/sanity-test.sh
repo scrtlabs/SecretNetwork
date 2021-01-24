@@ -41,16 +41,14 @@ RUST_BACKTRACE=1 ./secretd start --bootstrap &
 
 export SECRETD_PID=$(echo $!)
 
-until (./secretd status 2>&1 | jq -e '(.sync_info.latest_block_height | tonumber) > 0' &> /dev/null)
-do
+until (./secretd status 2>&1 | jq -e '(.sync_info.latest_block_height | tonumber) > 0' &>/dev/null); do
     echo "Waiting for chain to start..."
     sleep 1
 done
 
 ./secretd rest-server --chain-id secret-sanity --laddr tcp://0.0.0.0:1337 &
 export LCD_PID=$(echo $!)
-function cleanup()
-{
+function cleanup() {
     kill -KILL "$SECRETD_PID" "$LCD_PID"
 }
 trap cleanup EXIT ERR

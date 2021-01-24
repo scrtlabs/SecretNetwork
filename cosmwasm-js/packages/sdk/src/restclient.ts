@@ -13,7 +13,7 @@ import {
   MsgInstantiateContract,
   MsgExecuteContract,
 } from "./types";
-import EnigmaUtils from "./enigmautils";
+import EnigmaUtils, {SecretUtils} from "./enigmautils";
 
 export interface CosmosSdkAccount {
   /** Bech32 account address */
@@ -284,7 +284,7 @@ function parseAxiosError(err: AxiosError): never {
 export class RestClient {
   private readonly client: AxiosInstance;
   private readonly broadcastMode: BroadcastMode;
-  public readonly enigmautils: EnigmaUtils;
+  public enigmautils: SecretUtils;
 
   private codeHashCache: Map<any, string>;
 
@@ -298,6 +298,7 @@ export class RestClient {
    *
    * @param apiUrl The URL of a Cosmos SDK light client daemon API (sometimes called REST server or REST API)
    * @param broadcastMode Defines at which point of the transaction processing the postTx method (i.e. transaction broadcasting) returns
+   * @param seed - The seed used to generate sender TX encryption key. If empty will generate random new one
    */
   public constructor(apiUrl: string, broadcastMode = BroadcastMode.Block, seed?: Uint8Array) {
     const headers = {
@@ -603,7 +604,7 @@ export class RestClient {
       }
 
       const inputMsgPubkey = inputMsgEncrypted.slice(32, 64);
-      if (Encoding.toBase64(this.enigmautils.pubkey) === Encoding.toBase64(inputMsgPubkey)) {
+      if (Encoding.toBase64(await this.enigmautils.getPubkey()) === Encoding.toBase64(inputMsgPubkey)) {
         // my pubkey, can decrypt
         const nonce = inputMsgEncrypted.slice(0, 32);
 

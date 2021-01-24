@@ -115,6 +115,10 @@ build_local_cli:
 	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 	mv secretd secretcli
 
+xgo_build_secretcli: go.sum
+	@echo "--> WARNING! This builds from origin/$(CURRENT_BRANCH)!"
+	xgo --go latest --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --branch "$(CURRENT_BRANCH)" github.com/enigmampc/SecretNetwork/cmd/secretcli
+
 build_local_no_rust: build_local_cli bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
 	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
@@ -123,11 +127,7 @@ build-linux: vendor bin-data-$(IAS_BUILD)
 	BUILD_PROFILE=$(BUILD_PROFILE) $(MAKE) -C go-cosmwasm build-rust
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
 #   this pulls out ELF symbols, 80% size reduction!
-	go build -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
-
-xgo_build_secretcli: go.sum
-	@echo "--> WARNING! This builds from origin/$(CURRENT_BRANCH)!"
-	xgo --go latest --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --branch "$(CURRENT_BRANCH)" github.com/enigmampc/SecretNetwork/cmd/secretd
+	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 build_windows_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
@@ -141,7 +141,7 @@ build_linux_cli:
 build_linux_arm64_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
 
-build_all: build-linux build_windows build_macos build_arm_linux
+build_all: build-linux build_windows_cli build_macos_cli build_linux_arm64_cli
 
 deb: build-linux deb-no-compile
 
@@ -161,15 +161,15 @@ deb-no-compile:
 	chmod +x /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/lib*.so
 
 	mkdir -p /tmp/SecretNetwork/deb/DEBIAN
-	cp ./packaging_ubuntu/control /tmp/SecretNetwork/deb/DEBIAN/control
+	cp ./deployment/deb/control /tmp/SecretNetwork/deb/DEBIAN/control
 	printf "Version: " >> /tmp/SecretNetwork/deb/DEBIAN/control
 	printf "$(VERSION)" >> /tmp/SecretNetwork/deb/DEBIAN/control
 	echo "" >> /tmp/SecretNetwork/deb/DEBIAN/control
-	cp ./packaging_ubuntu/postinst /tmp/SecretNetwork/deb/DEBIAN/postinst
+	cp ./deployment/deb/postinst /tmp/SecretNetwork/deb/DEBIAN/postinst
 	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/postinst
-	cp ./packaging_ubuntu/postrm /tmp/SecretNetwork/deb/DEBIAN/postrm
+	cp ./deployment/deb/postrm /tmp/SecretNetwork/deb/DEBIAN/postrm
 	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/postrm
-	cp ./packaging_ubuntu/triggers /tmp/SecretNetwork/deb/DEBIAN/triggers
+	cp ./deployment/deb/triggers /tmp/SecretNetwork/deb/DEBIAN/triggers
 	chmod 755 /tmp/SecretNetwork/deb/DEBIAN/triggers
 	dpkg-deb --build /tmp/SecretNetwork/deb/ .
 	-rm -rf /tmp/SecretNetwork
@@ -196,10 +196,10 @@ clean:
 	-rm -rf /tmp/SecretNetwork
 	-rm -f ./secretcli*
 	-rm -f ./secretd*
-	-find -name librust_cosmwasm_enclave.signed.so -delete
-	-find -name libgo_cosmwasm.so -delete
-	-find -name '*.so' -delete
-	-find -name 'target' -type d -exec rm -rf \;
+#	-find -name librust_cosmwasm_enclave.signed.so -delete
+#	-find -name libgo_cosmwasm.so -delete
+#	-find -name '*.so' -delete
+#	-find -name 'target' -type d -exec rm -rf \;
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*
 	-rm -rf ./third_party/vendor/
@@ -231,20 +231,20 @@ build-mainnet:
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
 docker_base:
-	docker build --build-arg FEATURES=${FEATURES} --build-arg SGX_MODE=${SGX_MODE} -f Dockerfile.base -t rust-go-base-image .
+	docker build --build-arg FEATURES=${FEATURES} --build-arg SGX_MODE=${SGX_MODE} -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
 
 docker_bootstrap: docker_base
-	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t enigmampc/secret-network-bootstrap-${ext}:${DOCKER_TAG} .
+	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/local-node.Dockerfile -t enigmampc/secret-network-bootstrap-${ext}:${DOCKER_TAG} .
 
 docker_node: docker_base
-	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=NODE -t enigmampc/secret-network-node-${ext}:${DOCKER_TAG} .
+	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/local-node.Dockerfile -t enigmampc/secret-network-node-${ext}:${DOCKER_TAG} .
 
 docker_local_azure_hw: docker_base
-	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -t ci-enigma-sgx-node .
-	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -t ci-enigma-sgx-bootstrap .
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/local-node.Dockerfile -t ci-enigma-sgx-node .
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/local-node.Dockerfile -t ci-enigma-sgx-bootstrap .
 
 docker_enclave_test:
-	docker build --build-arg FEATURES="test ${FEATURES}" --build-arg SGX_MODE=${SGX_MODE} -f Dockerfile.enclave-test -t rust-enclave-test .
+	docker build --build-arg FEATURES="test ${FEATURES}" --build-arg SGX_MODE=${SGX_MODE} -f deployment/dockerfiles/enclave-test.Dockerfile -t rust-enclave-test .
 
 # while developing:
 build-enclave: vendor
@@ -347,6 +347,22 @@ bin-data-develop:
 
 bin-data-production:
 	cd ./cmd/secretd && go-bindata -o ias_bin_prod.go -prefix "../../ias_keys/production/" -tags "production,hw" ../../ias_keys/production/...
+
+secret-contract-optimizer:
+	docker build -f deployment/dockerfiles/secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} .
+	docker tag enigmampc/secret-contract-optimizer:${TAG} enigmampc/secret-contract-optimizer:latest
+
+secretjs-build:
+	cd cosmwasm-js/packages/sdk && yarn && yarn build
+
+# Before running this, first make sure:
+# 1. To `npm login` with enigma-dev
+# 2. The new version is updated in `cosmwasm-js/packages/sdk/package.json`
+secretjs-publish-npm: secretjs-build
+	cd cosmwasm-js/packages/sdk && npm publish
+
+aesm-image:
+	docker build -f deployment/dockerfiles/aesm.Dockerfile -t enigmampc/aesm .
 
 
 ###############################################################################

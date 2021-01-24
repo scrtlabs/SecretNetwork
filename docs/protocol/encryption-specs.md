@@ -272,7 +272,7 @@ TODO reasoning
 - `encryption_key` is derived using HKDF-SHA256 from:
   - `consensus_state_ikm`
   - `field_name`
-  - `contact_key`
+  - `contract_key`
 - `ad` (Additional Data) is used to prevent leaking information about the same value written to the same key at different times.
 
 ## `contract_key`
@@ -545,7 +545,7 @@ msg = codeHashAndMsg.slice(64);
 - Notice on a `Contract` message, the `msg` value should be the same `msg` as in our `tx_input`, so we need to prepend the `nonce` and `tx_sender_wallet_pubkey` just like we did on the tx sender above.
 - On a `Contract` message, we also send a `callback_signature`, so we can later on verify the parameters sent to the enclave:
   ```
-  callback_signature = sha256(consensus_callback_secret | calling_contract_addr | encrypted_msg | funds_to_send)
+  callback_signature = sha256(consensus_callback_secret | calling_contract_addr | encrypted_msg)
   ```
   For more on that, [read here](../dev/privacy-model-of-secret-contracts.md#verified-values-during-contract-execution).
 - For the rest of the encrypted outputs we only need to send the ciphertext, as the tx sender can get `consensus_io_exchange_prubkey` from `genesis.json` and `nonce` from the `tx_input` that is attached to the `tx_output`.

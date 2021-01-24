@@ -4,6 +4,7 @@ This document details how to join the Secret Network `mainnet` as a validator.
 
 ### Requirements
 
+- Up to date SGX ([Read this](https://learn.scrt.network/sgx.html), [Setup](setup-sgx.md), [Verify](verify-sgx.md))
 - Ubuntu/Debian host (with ZFS or LVM to be able to add more storage easily)
 - A public IP address
 - Open ports `TCP 26656 & 26657` _Note: If you're behind a router or firewall then you'll need to port forward on the network device._
@@ -11,127 +12,152 @@ This document details how to join the Secret Network `mainnet` as a validator.
 
 #### Minimum requirements
 
+- Up to date SGX ([Read this](https://learn.scrt.network/sgx.html), [Setup](setup-sgx.md), [Verify](verify-sgx.md))
 - 1GB RAM
 - 100GB HDD
 - 1 dedicated core of any Intel Skylake processor (Intel® 6th generation) or better
 
 #### Recommended requirements
 
+- Up to date SGX ([Read this](https://learn.scrt.network/sgx.html), [Setup](setup-sgx.md), [Verify](verify-sgx.md))
 - 2GB RAM
 - 256GB SSD
 - 2 dedicated cores of any Intel Skylake processor (Intel® 6th generation) or better
 
 ### Installation
 
-#### 1. Download the Secret Network package installer for Debian/Ubuntu:
+#### Install the `secretnetwork`, initialize your node and validate the genesis file:
+
+_NOTE_: Substitute **$YOUR_MONIKER** (below) with your node's nickname or alias.
 
 ```bash
-wget https://github.com/enigmampc/SecretNetwork/releases/download/v0.2.1/secretnetwork_0.2.1_amd64.deb
-```
+cd ~
 
-([How to verify releases](../verify-releases.md))
+wget https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.4/secretnetwork_1.0.4_amd64.deb
 
-#### 2. Install the package:
+echo "696e0685c0eb08ad6a0ef356f5719b4669695c95c7c5728681ff148747a1ff77 secretnetwork_1.0.4_amd64.deb" | sha256sum --check
 
-```bash
-sudo dpkg -i secretnetwork_0.2.1_amd64.deb
-```
+sudo apt install ./secretnetwork_1.0.4_amd64.deb
 
-#### 3. Initialize your installation of the Secret Network. Choose a **moniker** for yourself that will be public, and replace `<MONIKER>` with your moniker below
+secretd init "$YOUR_MONIKER" --chain-id secret-2
 
-```bash
-secretd init <MONIKER> --chain-id secret-1
-```
+wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/genesis.json"
 
-#### 4. Download a copy of the Genesis Block file: `genesis.json`
+echo "4ca53e34afed034d16464d025291fe16a847c9aca0a259f9237413171b19b4cf .secretd/config/genesis.json" | sha256sum --check
 
-```bash
-wget -O ~/.secretd/config/genesis.json "https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/secret-1-genesis.json"
-```
-
-#### 5. Validate the checksum for the `genesis.json` file you have just downloaded in the previous step:
-
-```
-echo "e505aef445c7c5c2d007ba9705c0729b6da7e4b2099c4ad309f1c8b5404bce7f $HOME/.secretd/config/genesis.json" | sha256sum --check
-```
-
-#### 6. Validate that the `genesis.json` is a valid genesis file:
-
-```
 secretd validate-genesis
 ```
 
-#### 7. Add persistent peers and seeds to your configuration file.
-
-This might be shared with you by full nodes. You can also use Enigma's node:
-
-```
-perl -i -pe 's/persistent_peers = ""/persistent_peers = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.secretd/config/config.toml
-perl -i -pe 's/seeds = ""/seeds = "201cff36d13c6352acfc4a373b60e83211cd3102\@bootstrap.mainnet.enigma.co:26656"/' ~/.secretd/config/config.toml
-```
-
-#### 8. Listen for incoming RPC requests so that light nodes can connect to you:
+#### Create the enclave attestation certificate and store its public key:
 
 ```bash
-perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.secretd/config/config.toml
+secretd init-enclave
+
+PUBLIC_KEY=$(secretd parse attestation_cert.der 2> /dev/null | cut -c 3-)
+echo $PUBLIC_KEY
 ```
 
-#### 9. Enable `secret-node` as a system service:
+#### Configure `secretcli`:
 
+```bash
+secretcli config chain-id secret-2
+secretcli config node tcp://secret-2.node.enigma.co:26657
+secretcli config output json
+secretcli config indent true
 ```
+
+#### Create your `key-alias`:
+
+If you haven't **already created a key**, use these steps to create a secret address and send some SCRT to it. The key will be used to register your node with the Secret Network.
+
+##### Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):
+
+```bash
+secretcli keys add <key-alias>
+```
+
+**:warning:Note:warning:: Backup the mnemonics!**
+**:warning:Note:warning:: Please make sure you also [backup your validator](backup-a-validator.md)**
+
+**Note**: If you already have a key you can import it with the bip39 mnemonic with `secretcli keys add <key-alias> --recover` or with `secretcli keys export` (exports to `stderr`!!) & `secretcli keys import`.
+
+Then transfer funds to the address you just created.
+
+##### Check that you have the funds:
+
+```bash
+secretcli q account $(secretcli keys show -a <key-alias>)
+```
+
+If you get the following message, it means that you have no tokens yet:
+
+```bash
+ERROR: unknown address: account secret1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx does not exist
+```
+
+#### Register and configure your node:
+
+_NOTE_: Substitute **$YOUR_KEY_NAME** (below) with the `key-alias` you created earlier.
+
+```bash
+secretcli tx register auth ./attestation_cert.der --from "$YOUR_KEY_NAME" --gas 250000 --gas-prices 0.25uscrt
+
+SEED=$(secretcli query register seed "$PUBLIC_KEY" | cut -c 3-)
+echo $SEED
+
+secretcli query register secret-network-params
+
+mkdir -p ~/.secretd/.node
+
+secretd configure-secret node-master-cert.der "$SEED"
+
+perl -i -pe 's/^seeds = ".*?"/seeds = "bee0edb320d50c839349224b9be1575ca4e67948\@secret-2.node.enigma.co:26656"/' ~/.secretd/config/config.toml
+perl -i -pe 's;laddr = "tcp://127.0.0.1:26657";laddr = "tcp://0.0.0.0:26657";' ~/.secretd/config/config.toml
+```
+
+#### Start your node as a service:
+
+```bash
 sudo systemctl enable secret-node
-```
 
-#### 10. Start `secret-node` as a system service:
-
-```
-sudo systemctl start secret-node
-```
-
-#### 11. If everything above worked correctly, the following command will show your node streaming blocks (this is for debugging purposes only, kill this command anytime with Ctrl-C):
-
-```bash
-journalctl -f -u secret-node
-```
-
-```
--- Logs begin at Mon 2020-02-10 16:41:59 UTC. --
-Feb 10 21:18:34 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:34.307] Executed block                               module=state height=2629 validTxs=0 invalidTxs=0
-Feb 10 21:18:34 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:34.317] Committed state                              module=state height=2629 txs=0 appHash=34BC6CF2A11504A43607D8EBB2785ED5B20EAB4221B256CA1D32837EBC4B53C5
-Feb 10 21:18:39 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:39.382] Executed block                               module=state height=2630 validTxs=0 invalidTxs=0
-Feb 10 21:18:39 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:39.392] Committed state                              module=state height=2630 txs=0 appHash=17114C79DFAAB82BB2A2B67B63850864A81A048DBADC94291EB626F584A798EA
-Feb 10 21:18:44 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:44.458] Executed block                               module=state height=2631 validTxs=0 invalidTxs=0
-Feb 10 21:18:44 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:44.468] Committed state                              module=state height=2631 txs=0 appHash=D2472874A63CE166615E5E2FDFB4006ADBAD5B49C57C6B0309F7933CACC24B10
-Feb 10 21:18:49 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:49.532] Executed block                               module=state height=2632 validTxs=0 invalidTxs=0
-Feb 10 21:18:49 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:49.543] Committed state                              module=state height=2632 txs=0 appHash=A14A58E80FB24115DD41E6D787667F2FBBE003895D1B79334A240F52FCBD97F2
-Feb 10 21:18:54 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:54.613] Executed block                               module=state height=2633 validTxs=0 invalidTxs=0
-Feb 10 21:18:54 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:54.623] Committed state                              module=state height=2633 txs=0 appHash=C00112BB0D9E6812CEB4EFF07D2205D86FCF1FD68DFAB37829A64F68B5E3B192
-Feb 10 21:18:59 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:59.685] Executed block                               module=state height=2634 validTxs=0 invalidTxs=0
-Feb 10 21:18:59 ip-172-31-41-58 secretd[8814]: I[2020-02-10|21:18:59.695] Committed state                              module=state height=2634 txs=0 appHash=1F371F3B26B37A2173563CC928833162DDB753D00EC2BCE5EDC088F921AD0D80
-^C
+sudo systemctl start secret-node # (Now your new node is live and catching up)
 ```
 
 You are now a full node. :tada:
 
-#### 12. Add the following configuration settings (some of these avoid having to type some flags all the time):
+#### See your node's logs:
 
 ```bash
-secretcli config chain-id secret-1
+journalctl -u secret-node -f
 ```
+
+You can stop viewing the logs by pressing `ctrl + C` which sends a signal to `journalctl` to exit.
+
+#### Point `secretcli` to your node and query its status:
 
 ```bash
-secretcli config output json
+secretcli config node tcp://localhost:26657
+
+secretcli status
 ```
+
+When the value of `catching_up` is _false_, your node is fully sync'd with the network.
 
 ```bash
-secretcli config indent true
+  "sync_info": {
+    "latest_block_hash": "7BF95EED4EB50073F28CF833119FDB8C7DFE0562F611DF194CF4123A9C1F4640",
+    "latest_app_hash": "7C0C89EC4E903BAC730D9B3BB369D870371C6B7EAD0CCB5080B5F9D3782E3559",
+    "latest_block_height": "668538",
+    "latest_block_time": "2020-10-31T17:50:56.800119764Z",
+    "earliest_block_hash": "E7CAD87A4FDC47DFDE3D4E7C24D80D4C95517E8A6526E2D4BB4D6BC095404113",
+    "earliest_app_hash": "",
+    "earliest_block_height": "1",
+    "earliest_block_time": "2020-09-15T14:02:31Z",
+    "catching_up": false
+  },
 ```
 
-```bash
-secretcli config trust-node true # true if you trust the full-node you are connecting to, false otherwise
-```
-
-#### 13. Get your node ID with:
+#### Get your node ID with:
 
 ```bash
 secretd tendermint show-node-id
@@ -143,25 +169,13 @@ And publish yourself as a node with this ID:
 <your-node-id>@<your-public-ip>:26656
 ```
 
-So if someone wants to add you as a peer, have them add the above address to their `persistent_peers` in their `~/.secretd/config/config.toml`.  
+So if someone wants to add you as a peer, have them add the above address to their `persistent_peers` in their `~/.secretd/config/config.toml`.
 And if someone wants to use you from their `secretcli` then have them run:
 
 ```bash
-secretcli config chain-id secret-1
-```
-
-```bash
+secretcli config chain-id secret-2
 secretcli config output json
-```
-
-```bash
 secretcli config indent true
-```
-
-```bash
-secretcli config trust-node false
-```
-
-```bash
+secretcli config trust-node true
 secretcli config node tcp://<your-public-ip>:26657
 ```

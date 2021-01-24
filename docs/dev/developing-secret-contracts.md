@@ -6,27 +6,32 @@ Check out the [CosmWasm docs](https://docs.cosmwasm.com) as well. They are proba
 
 Don't forget to go over the [differences between SecretWasm and CosmWasm](#differences-from-cosmwasm).
 
-- [Developing Secret Contracts](#Developing-Secret-Contracts)
-  - [IDEs](#IDEs)
-  - [Init](#Init)
-  - [Handle](#Handle)
-  - [Query](#Query)
-  - [Inputs](#Inputs)
-  - [APIs](#APIs)
-  - [State](#State)
-  - [Some libraries/crates considerations](#Some-librariescrates-considerations)
-  - [Randomness](#Randomness)
-    - [Roll your own](#Roll-your-own)
-      - [Poker deck shuffling example](#Poker-deck-shuffling-example)
-    - [Use an external oracle](#Use-an-external-oracle)
-  - [Outputs](#Outputs)
-  - [External query](#External-query)
-  - [Compiling](#Compiling)
-  - [Storing and deploying](#Storing-and-deploying)
-  - [Verifying your contract code on explorers](#Verifying-your-contract-code-on-explorers)
-  - [Testing](#Testing)
-  - [Debugging](#Debugging)
-- [Differences from CosmWasm](#Differences-from-CosmWasm)
+- [Developing Secret Contracts](#developing-secret-contracts)
+  - [IDEs](#ides)
+  - [Personal Secret Network for Secret Contract development](#personal-secret-network-for-secret-contract-development)
+  - [Init](#init)
+  - [Handle](#handle)
+  - [Query](#query)
+  - [Inputs](#inputs)
+  - [APIs](#apis)
+  - [State](#state)
+  - [Some libraries/crates considerations](#some-librariescrates-considerations)
+  - [Randomness](#randomness)
+    - [Roll your own](#roll-your-own)
+      - [Poker deck shuffling example](#poker-deck-shuffling-example)
+    - [Use an external oracle](#use-an-external-oracle)
+  - [Outputs](#outputs)
+  - [External query](#external-query)
+  - [Compiling](#compiling)
+    - [With docker](#with-docker)
+    - [Without docker](#without-docker)
+  - [Storing and deploying](#storing-and-deploying)
+  - [Verifying your contract code on explorers](#verifying-your-contract-code-on-explorers)
+  - [Testing](#testing)
+  - [Debugging](#debugging)
+  - [Building secret apps with SecretJS](#building-secret-apps-with-secretjs)
+    - [Wallet integration](#wallet-integration)
+  - [Differences from CosmWasm](#differences-from-cosmwasm)
 
 ## IDEs
 
@@ -36,6 +41,39 @@ These IDEs are known to work very well for developing Secret Contracts:
 
 - [CLion](https://www.jetbrains.com/clion/)
 - [VSCode](https://code.visualstudio.com/) with the [rust-analyzer](https://rust-analyzer.github.io/) extension
+
+## Personal Secret Network for Secret Contract development
+
+The developer blockchain is configured to run inside a docker container. Install [Docker](https://docs.docker.com/get-docker/) for your environment (Mac, Windows, Linux).
+
+Open a terminal window and change to your project directory.
+Then start SecretNetwork, labelled _secretdev_:
+
+```
+$ docker run -it --rm \
+ -p 26657:26657 -p 26656:26656 -p 1317:1317 \
+ --name secretdev enigmampc/secret-network-bootstrap-sw:latest
+```
+
+**NOTE**: The _secretdev_ docker container can be stopped with Ctrl+C
+
+At this point you're running a local SecretNetwork full-node. Let's connect to the container so we can view and manage the secret keys:
+
+**NOTE**: In a new terminal
+
+```
+docker exec -it secretdev /bin/bash
+```
+
+The local blockchain has a couple of keys setup for you (similar to accounts if you're familiar with Truffle Ganache). The keys are stored in the `test` keyring backend, which makes it easier for local development and testing.
+
+```
+secretcli keys list --keyring-backend test
+```
+
+![](../images/images/secretcli_keys_list.png)
+
+`exit` when you are done.
 
 ## Init
 
@@ -109,7 +147,7 @@ Example Invocation from `SecretJS`:
 3. With that seed, the [deck is shuffled](https://github.com/enigmampc/SecretHoldEm/blob/4f67c469bb4a0f53522c7ad069e54ae5c1effb6b/contract/src/contract.rs#L356-L357).
 4. Each round a [game counter is incremented](https://github.com/enigmampc/SecretHoldEm/blob/4f67c469bb4a0f53522c7ad069e54ae5c1effb6b/contract/src/contract.rs#L602-L614), and along with the players' secrets is used to create a new seed for re-shuffling the deck.
 5. On the frondend side, [SecretJS is used to generate a secure random number](https://github.com/enigmampc/SecretHoldEm/blob/4f67c469bb4a0f53522c7ad069e54ae5c1effb6b/gui/src/App.js#L334-L354) and sends it as a secret when a player joins the table. A random number is not really necessary, and every secret number would work just as well.
-6. As long as at least one player is not colluding with the rest, and by properties of sha256, the seeds for shuffling the deck are known only to the contract and to no one else. If all players are colliding, they might as well play with open hands. :joy:
+6. As long as at least one player is not colluding with the rest, and by properties of sha256, the seeds for shuffling the deck are known only to the contract and to no one else. If all players are colliding, they might as well all play with open hands. :joy:
 
 ### Use an external oracle
 
@@ -134,6 +172,35 @@ This exmaple has a much worse UX than rolling your own randomness, but at least 
 
 ## Compiling
 
+### With docker
+
+```console
+$ docker run --rm -it -v /absolute/path/to/contract/project:/contract enigmampc/secret-contract-optimizer
+```
+
+Where `/absolute/path/to/contract/project` is pointing to the directory that contains your Secret Contract's `Cargo.toml`.
+
+This will output an optimized build file `/absolute/path/to/contract/project/contract.wasm.gz`.
+
+### Without docker
+
+```console
+$ rustup target add wasm32-unknown-unknown
+$ sudo apt install binaryen
+```
+
+```console
+$ RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+$ wasm-opt -Oz ./target/wasm32-unknown-unknown/release/*.wasm -o ./contract.wasm
+$ cat ./contract.wasm | gzip -9 > ./contract.wasm.gz
+```
+
+Breakdown:
+
+1. Build a release mode WASM file, strip symbols
+2. Further optimize with [wasm-opt](https://github.com/WebAssembly/binaryen)
+3. Gzip
+
 ## Storing and deploying
 
 ## Verifying your contract code on explorers
@@ -141,6 +208,20 @@ This exmaple has a much worse UX than rolling your own randomness, but at least 
 ## Testing
 
 ## Debugging
+
+## Building secret apps with SecretJS
+
+A Secret App, or a SApp, is a DApp with computational and data privacy.
+A Secret App is usually comprised of the following components:
+
+- A Secret Contract deployed on the Secret Network
+- A frontend app built with a JavaScript framework (E.g. ReactJS, VueJS, AngularJS, etc.)
+- The frontend app connects to the Secret Network using SecretJS,
+- SecretJS interacts with a REST API exposed by nodes in the Secret Network. The REST API/HTTPS server is commonly referred to as LCD Server (Light Client Daemon :shrug:). Usually by connecting SecretJS with a wallet, the wallet handles the interactions with the LCD server.
+
+### Wallet integration
+
+Still not implemented in wallets. Can implement a local wallet but this will probably won't be needed anymore after 2020.
 
 # Differences from CosmWasm
 

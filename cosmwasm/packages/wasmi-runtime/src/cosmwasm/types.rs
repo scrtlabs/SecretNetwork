@@ -325,10 +325,7 @@ impl QueryResult {
     }
 
     pub fn is_err(&self) -> bool {
-        match self {
-            QueryResult::Err(_) => true,
-            _ => false,
-        }
+        matches!(self, QueryResult::Err(_))
     }
 }
 

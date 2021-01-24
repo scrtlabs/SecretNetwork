@@ -1,6 +1,6 @@
 # How to join the Secret Network as a full node on mainnet
 
-This document details how to join the Secret Network `mainnet` as a validator.
+This document details how to join the Secret Network `testnet` as a validator.
 
 ## Requirements
 
@@ -8,7 +8,7 @@ This document details how to join the Secret Network `mainnet` as a validator.
 - A public IP address
 - Open ports `TCP 26656 & 26657` _Note: If you're behind a router or firewall then you'll need to port forward on the network device._
 - Reading https://docs.tendermint.com/master/tendermint-core/running-in-production.html
-- RPC address of an already active node. You can use `registration.enigma.co:26657`, or any other node that exposes RPC services.
+- RPC address of an already active node. You can use `bootstrap.secrettestnet.io:26657`, or any other node that exposes RPC services.
 - Account with at least 1 SCRT
 
 ### Minimum requirements
