@@ -10,7 +10,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	app2 "github.com/enigmampc/SecretNetwork/app"
-	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -44,7 +43,10 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 
 			sgxSecretsPath += string(os.PathSeparator) + reg.EnclaveRegistrationKey
 
-			resetFlag := viper.GetBool(flagReset)
+			resetFlag, err := cmd.Flags().GetBool(flagReset)
+			if err != nil {
+				return fmt.Errorf("error with reset flag: %s", err)
+			}
 
 			if !resetFlag {
 				if _, err := os.Stat(sgxSecretsPath); os.IsNotExist(err) {

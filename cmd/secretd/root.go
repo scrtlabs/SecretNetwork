@@ -6,6 +6,7 @@ import (
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
+	"github.com/cosmos/cosmos-sdk/x/crisis"
 	scrt "github.com/enigmampc/SecretNetwork/types"
 	"github.com/spf13/viper"
 	"io"
@@ -96,18 +97,18 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 
 	rootCmd.AddCommand(
 		//genutilcli.InitCmd(app.ModuleBasics, app.DefaultNodeHome),
-		updateTmParamsAndInit(app.ModuleBasics, app.DefaultNodeHome),
+		updateTmParamsAndInit(app.ModuleBasics(), app.DefaultNodeHome),
 		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome),
 		genutilcli.MigrateGenesisCmd(),
-		genutilcli.GenTxCmd(app.ModuleBasics, encodingConfig.TxConfig, banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome),
-		genutilcli.ValidateGenesisCmd(app.ModuleBasics, encodingConfig.TxConfig),
+		genutilcli.GenTxCmd(app.ModuleBasics(), encodingConfig.TxConfig, banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome),
+		genutilcli.ValidateGenesisCmd(app.ModuleBasics()),
 		AddGenesisAccountCmd(app.DefaultNodeHome),
 		tmcli.NewCompletionCmd(rootCmd, true),
 		// testnetCmd(app.ModuleBasics, banktypes.GenesisBalancesIterator{}),
 		debug.Cmd(),
 	)
 
-	server.AddCommands(rootCmd, app.DefaultNodeHome, newApp, exportAppStateAndTMValidators)
+	server.AddCommands(rootCmd, app.DefaultNodeHome, newApp, exportAppStateAndTMValidators, addModuleInitFlags)
 
 	// add keybase, auxiliary RPC, query, and tx child commands
 	rootCmd.AddCommand(
@@ -126,6 +127,10 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 	// This is needed for `newApp` and `exportAppStateAndTMValidators`
 	rootCmd.PersistentFlags().BoolVar(&bootstrap, flagIsBootstrap,
 		false, "Start the node as the bootstrap node for the network (only used when starting a new network)")
+}
+
+func addModuleInitFlags(startCmd *cobra.Command) {
+	crisis.AddModuleInitFlags(startCmd)
 }
 
 func queryCommand() *cobra.Command {
@@ -147,7 +152,7 @@ func queryCommand() *cobra.Command {
 		S20GetQueryCmd(),
 	)
 
-	app.ModuleBasics.AddQueryCommands(cmd)
+	app.ModuleBasics().AddQueryCommands(cmd)
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 	cmd.PersistentFlags().String(tmcli.OutputFlag, "text", "Output format (text|json)")
 
@@ -177,7 +182,7 @@ func txCommand() *cobra.Command {
 		S20GetTxCmd(),
 	)
 
-	app.ModuleBasics.AddTxCommands(cmd)
+	app.ModuleBasics().AddTxCommands(cmd)
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 	cmd.PersistentFlags().String(tmcli.OutputFlag, "text", "Output format (text|json)")
 
@@ -219,7 +224,9 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 		cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod)),
 		//app.GetEnabledProposals(),
 		queryGasLimit,
+
 		bootstrap,
+		appOpts,
 		baseapp.SetPruning(pruningOpts),
 		baseapp.SetMinGasPrices(cast.ToString(appOpts.Get(server.FlagMinGasPrices))),
 		baseapp.SetHaltHeight(cast.ToUint64(appOpts.Get(server.FlagHaltHeight))),
@@ -235,7 +242,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 }
 
 func exportAppStateAndTMValidators(
-	logger log.Logger, db dbm.DB, traceStore io.Writer, height int64, forZeroHeight bool, jailWhiteList []string,
+	logger log.Logger, db dbm.DB, traceStore io.Writer, height int64, forZeroHeight bool, jailWhiteList []string, appOpts servertypes.AppOptions,
 ) (servertypes.ExportedApp, error) {
 
 	bootstrap := viper.GetBool("bootstrap")
@@ -245,13 +252,13 @@ func exportAppStateAndTMValidators(
 	encCfg.Marshaler = codec.NewProtoCodec(encCfg.InterfaceRegistry)
 	var wasmApp *app.SecretNetworkApp
 	if height != -1 {
-		wasmApp = app.NewSecretNetworkApp(logger, db, traceStore, false, map[int64]bool{}, "", uint(1), queryGasLimit, bootstrap)
+		wasmApp = app.NewSecretNetworkApp(logger, db, traceStore, false, map[int64]bool{}, "", uint(1), queryGasLimit, bootstrap, appOpts)
 
 		if err := wasmApp.LoadHeight(height); err != nil {
 			return servertypes.ExportedApp{}, err
 		}
 	} else {
-		wasmApp = app.NewSecretNetworkApp(logger, db, traceStore, true, map[int64]bool{}, "", uint(1), queryGasLimit, bootstrap)
+		wasmApp = app.NewSecretNetworkApp(logger, db, traceStore, true, map[int64]bool{}, "", uint(1), queryGasLimit, bootstrap, appOpts)
 	}
 
 	return wasmApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)

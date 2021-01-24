@@ -30,7 +30,10 @@ func (app *SecretNetworkApp) ExportAppStateAndValidators(forZeroHeight bool, jai
 		return servertypes.ExportedApp{}, err
 	}
 
-	validators := staking.WriteValidators(ctx, app.stakingKeeper)
+	validators, err := staking.WriteValidators(ctx, app.stakingKeeper)
+	if err != nil {
+		return servertypes.ExportedApp{}, err
+	}
 
 	return servertypes.ExportedApp{
 		AppState:        appState,
@@ -177,8 +180,7 @@ func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllow
 
 	iter.Close()
 
-	_ = app.stakingKeeper.ApplyAndReturnValidatorSetUpdates(ctx)
-
+	_, _ = app.stakingKeeper.ApplyAndReturnValidatorSetUpdates(ctx)
 	/* Handle slashing state. */
 
 	// reset start height on signing infos

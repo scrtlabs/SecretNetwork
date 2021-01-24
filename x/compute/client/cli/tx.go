@@ -10,15 +10,13 @@ import (
 
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/spf13/cobra"
+	flag "github.com/spf13/pflag"
 )
 
 const (
@@ -63,10 +61,12 @@ func StoreCodeCmd() *cobra.Command {
 		Short: "Upload a wasm binary",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := client.GetClientContextFromCmd(cmd)
-			cliCtx, err := client.ReadTxCommandFlags(cliCtx, cmd.Flags())
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
 
-			msg, err := parseStoreCodeArgs(args, cliCtx)
+			msg, err := parseStoreCodeArgs(args, clientCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -74,7 +74,7 @@ func StoreCodeCmd() *cobra.Command {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(cliCtx, cmd.Flags(), &msg)
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), &msg)
 		},
 	}
 
@@ -87,7 +87,7 @@ func StoreCodeCmd() *cobra.Command {
 	return cmd
 }
 
-func parseStoreCodeArgs(args []string, cliCtx client.Context) (types.MsgStoreCode, error) {
+func parseStoreCodeArgs(args []string, cliCtx client.Context, flags *flag.FlagSet) (types.MsgStoreCode, error) {
 	wasm, err := ioutil.ReadFile(args[0])
 	if err != nil {
 		return types.MsgStoreCode{}, err
@@ -118,12 +118,21 @@ func parseStoreCodeArgs(args []string, cliCtx client.Context) (types.MsgStoreCod
 		}
 	*/
 
+	source, err := flags.GetString(flagSource)
+	if err != nil {
+		return types.MsgStoreCode{}, fmt.Errorf("source: %s", err)
+	}
+	builder, err := flags.GetString(flagBuilder)
+	if err != nil {
+		return types.MsgStoreCode{}, fmt.Errorf("builder: %s", err)
+	}
+
 	// build and sign the transaction, then broadcast to Tendermint
 	msg := types.MsgStoreCode{
 		Sender:       cliCtx.GetFromAddress(),
 		WASMByteCode: wasm,
-		Source:       viper.GetString(flagSource),
-		Builder:      viper.GetString(flagBuilder),
+		Source:       source,
+		Builder:      builder,
 		// InstantiatePermission: perm,
 	}
 	return msg, nil
@@ -136,10 +145,12 @@ func InstantiateContractCmd() *cobra.Command {
 		Short: "Instantiate a wasm contract",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := client.GetClientContextFromCmd(cmd)
-			cliCtx, err := client.ReadTxCommandFlags(cliCtx, cmd.Flags())
+			cliCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
 
-			msg, err := parseInstantiateArgs(args, cliCtx)
+			msg, err := parseInstantiateArgs(args, cliCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -160,20 +171,24 @@ func InstantiateContractCmd() *cobra.Command {
 	return cmd
 }
 
-func parseInstantiateArgs(args []string, cliCtx client.Context) (types.MsgInstantiateContract, error) {
+func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.FlagSet) (types.MsgInstantiateContract, error) {
 	// get the id of the code to instantiate
 	codeID, err := strconv.ParseUint(args[0], 10, 64)
 	if err != nil {
 		return types.MsgInstantiateContract{}, err
 	}
 
-	amounstStr := viper.GetString(flagAmount)
-	amount, err := sdk.ParseCoins(amounstStr)
+	amountStr, err := initFlags.GetString(flagAmount)
+	if err != nil {
+		return types.MsgInstantiateContract{}, fmt.Errorf("amount: %s", err)
+	}
+
+	amount, err := sdk.ParseCoinsNormalized(amountStr)
 	if err != nil {
 		return types.MsgInstantiateContract{}, err
 	}
 
-	label := viper.GetString(flagLabel)
+	label, err := initFlags.GetString(flagLabel)
 	if label == "" {
 		return types.MsgInstantiateContract{}, fmt.Errorf("Label is required on all contracts")
 	}
@@ -182,15 +197,21 @@ func parseInstantiateArgs(args []string, cliCtx client.Context) (types.MsgInstan
 	initMsg := types.SecretMsg{}
 
 	var encryptedMsg []byte
-	if viper.GetBool(flags.FlagGenerateOnly) {
+	genOnly, err := initFlags.GetBool(flags.FlagGenerateOnly)
+	if err != nil && genOnly {
 		// if we're creating an offline transaction we just need the path to the io master key
-		ioKeyPath := viper.GetString(flagIoMasterKey)
-
+		ioKeyPath, err := initFlags.GetString(flagIoMasterKey)
+		if err != nil {
+			return types.MsgInstantiateContract{}, fmt.Errorf("ioKeyPath: %s", err)
+		}
 		if ioKeyPath == "" {
 			return types.MsgInstantiateContract{}, fmt.Errorf("missing flag --%s. To create an offline transaction, you must specify path to the enclave key", flagIoMasterKey)
 		}
 
-		codeHash := viper.GetString(flagCodeHash)
+		codeHash, err := initFlags.GetString(flagCodeHash)
+		if err != nil {
+			return types.MsgInstantiateContract{}, fmt.Errorf("codeHash: %s", err)
+		}
 		if codeHash == "" {
 			return types.MsgInstantiateContract{}, fmt.Errorf("missing flag --%s. To create an offline transaction, you must set the target contract's code hash", flagCodeHash)
 		}
@@ -220,15 +241,6 @@ func parseInstantiateArgs(args []string, cliCtx client.Context) (types.MsgInstan
 		return types.MsgInstantiateContract{}, err
 	}
 
-	/* 	adminStr := viper.GetString(flagAdmin)
-	   	var adminAddr sdk.AccAddress
-	   	if len(adminStr) != 0 {
-	   		adminAddr, err = sdk.AccAddressFromBech32(adminStr)
-	   		if err != nil {
-	   			return types.MsgInstantiateContract{}, sdkerrors.Wrap(err, "admin")
-	   		}
-	   	} */
-
 	// build and sign the transaction, then broadcast to Tendermint
 	msg := types.MsgInstantiateContract{
 		Sender:           cliCtx.GetFromAddress(),
@@ -237,7 +249,6 @@ func parseInstantiateArgs(args []string, cliCtx client.Context) (types.MsgInstan
 		Label:            label,
 		InitFunds:        amount,
 		InitMsg:          encryptedMsg,
-		// Admin:            adminAddr,
 	}
 	return msg, nil
 }
@@ -249,16 +260,18 @@ func ExecuteContractCmd() *cobra.Command {
 		Short: "Execute a command on a wasm contract",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := client.GetClientContextFromCmd(cmd)
-			cliCtx, _ = client.ReadTxCommandFlags(cliCtx, cmd.Flags())
-
+			cliCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
 			var contractAddr []byte
 			var msg []byte
 			var codeHash string
 			var ioKeyPath string
 
-			genOnly := viper.GetBool(flags.FlagGenerateOnly)
-			amountStr := viper.GetString(flagAmount)
+			genOnly, err := cmd.Flags().GetBool(flags.FlagGenerateOnly)
+
+			amountStr, err := cmd.Flags().GetString(flagAmount)
 
 			if len(args) == 1 {
 
@@ -266,7 +279,10 @@ func ExecuteContractCmd() *cobra.Command {
 					return fmt.Errorf("offline transactions must contain contract address")
 				}
 
-				label := viper.GetString(flagLabel)
+				label, err := cmd.Flags().GetString(flagLabel)
+				if err != nil {
+					return fmt.Errorf("error with label: %s", err)
+				}
 				if label == "" {
 					return fmt.Errorf("label or bech32 contract address is required")
 				}
@@ -291,13 +307,19 @@ func ExecuteContractCmd() *cobra.Command {
 			}
 
 			if genOnly {
-				ioKeyPath := viper.GetString(flagIoMasterKey)
 
+				ioKeyPath, err = cmd.Flags().GetString(flagIoMasterKey)
+				if err != nil {
+					return fmt.Errorf("error with ioKeyPath: %s", err)
+				}
 				if ioKeyPath == "" {
 					return fmt.Errorf("missing flag --%s. To create an offline transaction, you must specify path to the enclave key", flagIoMasterKey)
 				}
 
-				codeHash := viper.GetString(flagCodeHash)
+				codeHash, err = cmd.Flags().GetString(flagCodeHash)
+				if err != nil {
+					return fmt.Errorf("error with codeHash: %s", err)
+				}
 				if codeHash == "" {
 					return fmt.Errorf("missing flag --%s. To create an offline transaction, you must set the target contract's code hash", flagCodeHash)
 				}
@@ -321,7 +343,7 @@ func ExecuteWithData(cmd *cobra.Command, contractAddress sdk.AccAddress, msg []b
 
 	execMsg.Msg = msg
 
-	coins, err := sdk.ParseCoins(amount)
+	coins, err := sdk.ParseCoinsNormalized(amount)
 	if err != nil {
 		return err
 	}

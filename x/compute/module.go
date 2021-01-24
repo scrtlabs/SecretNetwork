@@ -2,26 +2,26 @@ package compute
 
 import (
 	"context"
-	"math/rand"
 	"encoding/json"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"math/rand"
 
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 
-	abci "github.com/tendermint/tendermint/abci/types"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	abci "github.com/tendermint/tendermint/abci/types"
 
-	"github.com/enigmampc/SecretNetwork/x/compute/client/cli"
-	"github.com/enigmampc/SecretNetwork/x/compute/client/rest"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	"github.com/enigmampc/SecretNetwork/x/compute/client/cli"
+	"github.com/enigmampc/SecretNetwork/x/compute/client/rest"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 var (
@@ -36,8 +36,8 @@ func (b AppModuleBasic) RegisterLegacyAminoCodec(amino *codec.LegacyAmino) {
 	RegisterCodec(amino)
 }
 
-func (b AppModuleBasic) RegisterGRPCRoutes(clientCtx client.Context, serveMux *runtime.ServeMux) {
-	types.RegisterQueryHandlerClient(context.Background(), serveMux, types.NewQueryClient(clientCtx))
+func (b AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, serveMux *runtime.ServeMux) {
+	_ = types.RegisterQueryHandlerClient(context.Background(), serveMux, types.NewQueryClient(clientCtx))
 }
 
 // Name returns the compute module's name.

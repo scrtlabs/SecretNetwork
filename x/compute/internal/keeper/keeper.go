@@ -16,8 +16,8 @@ import (
 	"path/filepath"
 
 	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/crypto/secp256k1"
-	//"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	//"github.com/tendermint/tendermint/crypto/secp256k1"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
@@ -198,7 +198,7 @@ func GetSignerSignature(signer authtypes.AccountI, tx authlegacy.StdTx) (authleg
 // convertToStdTx converts tx proto binary bytes retrieved from Tendermint into
 // a StdTx. Returns the StdTx, as well as a flag denoting if the function
 // successfully converted or not.
-func convertToStdTx(k Keeper, tx sdktx.Tx) (authlegacy.StdTx, error) {
+func convertToStdTx(k Keeper, tx authsigning.Tx) (authlegacy.StdTx, error) {
 	//txI, err := clientCtx.TxConfig.TxDecoder()(txBytes)
 	//if err != nil {
 	//	return authlegacy.StdTx{}, sdkerrors.Wrap(types.ErrInvalid, fmt.Sprintf("Unable to decode tx bytes: %s", err.Error()))
@@ -219,7 +219,7 @@ func convertToStdTx(k Keeper, tx sdktx.Tx) (authlegacy.StdTx, error) {
 
 func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) (authlegacy.StdSignature, []byte, error) {
 	var defaultSignature = authlegacy.StdSignature{
-		PubKey:    secp256k1.PubKey{},
+		PubKey:    &secp256k1.PubKey{},
 		Signature: []byte{},
 	}
 
@@ -228,14 +228,22 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) (authlegac
 	tx := authlegacy.StdTx{}
 	newtx := sdktx.Tx{}
 	txBytes := ctx.TxBytes()
+
 	err := k.cdc.UnmarshalBinaryBare(txBytes, &newtx)
+
+	var stdSig []authlegacy.StdSignature
+	for i := 0; i < len(newtx.Signatures); i++ {
+		stdSig = append(stdSig, authlegacy.StdSignature{Signature: newtx.Signatures[i]})
+		//sigV2, err := legacytx.StdSignatureToSignatureV2(k.cdc, stdSig)
+	}
+
 	tx = authlegacy.StdTx{
 		Msgs: newtx.GetMsgs(),
 		Fee: authlegacy.StdFee{
 			Amount: newtx.AuthInfo.Fee.Amount,
 			Gas:    newtx.AuthInfo.Fee.GasLimit,
 		},
-		Signatures:    newtx.,
+		Signatures:    stdSig,
 		Memo:          newtx.Body.Memo,
 		TimeoutHeight: newtx.Body.TimeoutHeight,
 	}
@@ -294,7 +302,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin *
 	*/
 	ctx.GasMeter().ConsumeGas(InstanceCost, "Loading CosmWasm module: init")
 	signerSig := authlegacy.StdSignature{
-		PubKey:    secp256k1.PubKey{},
+		PubKey:    &secp256k1.PubKey{},
 		Signature: []byte{},
 	}
 	signBytes := []byte{}
@@ -403,13 +411,13 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin *
 
 // Execute executes the contract instance
 func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, callbackSig []byte) (*sdk.Result, error) {
-	ctx.GasMeter().ConsumeGas(InstanceCost, "Loading CosmWasm module: execute")
+	ctx.GasMeter().ConsumeGas(InstanceCost, "Loading Compute module: execute")
 
 	signerSig := authlegacy.StdSignature{
-		PubKey:    secp256k1.PubKey{},
+		PubKey:    &secp256k1.PubKey{},
 		Signature: []byte{},
 	}
-	signBytes := []byte{}
+	var signBytes []byte
 	var err error
 
 	if callbackSig == nil {

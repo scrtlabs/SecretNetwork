@@ -31,7 +31,7 @@ func AuthenticateNodeCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadTxCommandFlags(clientCtx, cmd.Flags())
+			//clientCtx, err := client.ReadTxCommandFlags(clientCtx, cmd.Flags())
 
 			cert, err := ioutil.ReadFile(args[0])
 			if err != nil {

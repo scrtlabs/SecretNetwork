@@ -9,7 +9,6 @@ import (
 	"github.com/enigmampc/SecretNetwork/x/compute"
 	"github.com/enigmampc/SecretNetwork/x/compute/client/cli"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"math/rand"
 	"strconv"
 	"time"
@@ -64,7 +63,10 @@ func S20TransferHistoryCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			cliCtx := client.GetClientContextFromCmd(cmd)
+			cliCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
@@ -104,9 +106,12 @@ key yet, use the "create-viewing-key" command. Otherwise, you can still see your
 		Args: cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			cliCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
 
-			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
+			contractAddr, err := addressFromBechOrLabel(args[0], clientCtx)
 			if err != nil {
 				return err
 			}
@@ -123,7 +128,7 @@ key yet, use the "create-viewing-key" command. Otherwise, you can still see your
 
 			queryData := balanceMsg(addr, key)
 
-			err = cli.QueryWithData(contractAddr, queryData, cliCtx)
+			err = cli.QueryWithData(contractAddr, queryData, clientCtx)
 			if err != nil {
 				return err
 			}
@@ -163,13 +168,12 @@ func s20SendCmd() *cobra.Command {
 		Args:  cobra.MinimumNArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			cliCtx := client.GetClientContextFromCmd(cmd)
-			cliCtx, err := client.ReadTxCommandFlags(cliCtx, cmd.Flags())
+			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			contractAddrStr, err := addressFromBechOrLabel(args[0], cliCtx)
+			contractAddrStr, err := addressFromBechOrLabel(args[0], clientCtx)
 			if err != nil {
 				return err
 			}
@@ -192,7 +196,7 @@ func s20SendCmd() *cobra.Command {
 
 			msg := sendCoinMsg(toAddr, amount)
 
-			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cliCtx)
+			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", clientCtx)
 		},
 	}
 
@@ -211,8 +215,7 @@ This transaction will be expensive, so you must have about 3,000,000 gas in your
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			cliCtx := client.GetClientContextFromCmd(cmd)
-			cliCtx, err := client.ReadTxCommandFlags(cliCtx, cmd.Flags())
+			cliCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -256,8 +259,7 @@ you're doing`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			cliCtx := client.GetClientContextFromCmd(cmd)
-			cliCtx, err := client.ReadTxCommandFlags(cliCtx, cmd.Flags())
+			cliCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -290,8 +292,7 @@ func s20DepositCmd() *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			cliCtx := client.GetClientContextFromCmd(cmd)
-			cliCtx, err := client.ReadTxCommandFlags(cliCtx, cmd.Flags())
+			cliCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -303,12 +304,18 @@ func s20DepositCmd() *cobra.Command {
 
 			contractAddr, err := sdk.AccAddressFromBech32(contractAddrStr)
 			if err != nil {
-				return errors.New("invalid contract address or label")
+				return fmt.Errorf("invalid contract address or label: %s", err)
 			}
 
 			msg := depositMsg()
 
-			amountStr := viper.GetString(flagAmount)
+			amountStr, err := cmd.Flags().GetString(flagAmount)
+			if err != nil {
+				return fmt.Errorf("invalid amount: %s", err)
+			}
+			if amountStr == "" {
+				return fmt.Errorf("amount must not be empty")
+			}
 
 			return cli.ExecuteWithData(cmd, contractAddr, msg, amountStr, false, "", "", cliCtx)
 		},
@@ -326,8 +333,7 @@ func s20Withdraw() *cobra.Command {
 		Args:  cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			cliCtx := client.GetClientContextFromCmd(cmd)
-			cliCtx, err := client.ReadTxCommandFlags(cliCtx, cmd.Flags())
+			cliCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}

@@ -7,14 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
 	"io/ioutil"
 	"strconv"
-	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
 
-	"github.com/spf13/viper"
-
-	cosmwasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
+	cosmwasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	flag "github.com/spf13/pflag"
 
 	"github.com/spf13/cobra"
@@ -60,8 +58,7 @@ func GetCmdListCode() *cobra.Command {
 		Long:  "List all wasm bytecode on the chain",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -88,8 +85,7 @@ func GetCmdQueryLabel() *cobra.Command {
 		Long:  "Check if a label is in use",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -129,8 +125,7 @@ func GetCmdCodeHashByContract() *cobra.Command {
 		Long:  "Return the code hash of a contract",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -159,8 +154,7 @@ func GetCmdListContractByCode() *cobra.Command {
 		Long:  "List wasm all bytecode on the chain for given code id",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -192,8 +186,7 @@ func GetCmdQueryCode() *cobra.Command {
 		Long:  "Downloads wasm bytecode for given code id",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -238,8 +231,7 @@ func GetCmdGetContractInfo() *cobra.Command {
 		Long:  "Prints out metadata of a contract given its address",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -271,8 +263,7 @@ func CmdDecryptText() *cobra.Command {
 			"is required for data that is unavailable to be decrypted using the 'query compute tx' command",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -316,8 +307,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 		Short: "Query for a transaction by hash in a committed block, decrypt input and outputs if I'm the tx sender",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -469,7 +459,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 				answer.PlaintextError = result.RawLog
 			}
 
-			return clientCtx.PrintOutput(&answer)
+			return clientCtx.PrintObjectLegacy(&answer)
 		},
 	}
 
@@ -485,8 +475,7 @@ func GetCmdQuery() *cobra.Command {
 		Long:  "Calls contract with given address with query data and prints the returned result",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -496,8 +485,8 @@ func GetCmdQuery() *cobra.Command {
 
 			if len(args) == 1 {
 
-				label := viper.GetString(flagLabel)
-				if label == "" {
+				label, err := cmd.Flags().GetString(flagLabel)
+				if err != nil {
 					return fmt.Errorf("label or bech32 contract address is required")
 				}
 

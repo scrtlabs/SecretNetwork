@@ -1,6 +1,7 @@
 PACKAGES=$(shell go list ./... | grep -v '/simulation')
 VERSION ?= $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
+CURRENT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
 BUILD_PROFILE ?= release
@@ -110,13 +111,11 @@ go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"
 	GO111MODULE=on go mod verify
 
-xgo_build_secretcli: go.sum
-	cli
+build_local_cli:
+	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
+	mv secretd secretcli
 
-cli:
-	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretcli
-
-build_local_no_rust: bin-data-$(IAS_BUILD)
+build_local_no_rust: build_local_cli bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
 	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
@@ -126,17 +125,21 @@ build-linux: vendor bin-data-$(IAS_BUILD)
 #   this pulls out ELF symbols, 80% size reduction!
 	go build -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
-build_windows:
-	# CLI only
-	GOOS=windows GOARCH=amd64 $(MAKE) cli
+xgo_build_secretcli: go.sum
+	@echo "--> WARNING! This builds from origin/$(CURRENT_BRANCH)!"
+	xgo --go latest --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --branch "$(CURRENT_BRANCH)" github.com/enigmampc/SecretNetwork/cmd/secretd
 
-build_macos:
-	# CLI only
-	GOOS=darwin GOARCH=amd64 $(MAKE) cli
+build_windows_cli:
+	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
 
-build_arm_linux:
-	# CLI only
-	GOOS=linux GOARCH=arm64 $(MAKE) cli
+build_macos_cli:
+	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/amd64
+
+build_linux_cli:
+	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/amd64
+
+build_linux_arm64_cli:
+	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
 
 build_all: build-linux build_windows build_macos build_arm_linux
 
@@ -208,23 +211,23 @@ clean:
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
 
-# docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t cashmaney/secret-network-node:azuretestnet .
-build-azure:
-	docker build -f Dockerfile.azure -t enigmampc/secret-network-node:azuretestnet .
+build-dev-image: docker_base
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=SW --build-arg FEATURES= -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
+	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-sw-dev:${DOCKER_TAG} .
 
 build-testnet: docker_base
 	@mkdir build 2>&3 || true
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f Dockerfile.testnet -t enigmampc/secret-network-bootstrap:v$(VERSION)-testnet .
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t enigmampc/secret-network-node:v$(VERSION)-testnet .
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f Dockerfile_build_deb -t deb_build .
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-testnet .
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-testnet .
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
 build-mainnet:
 	@mkdir build 2>&3 || true
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg FEATURES=production -f Dockerfile.base -t rust-go-base-image .
-	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f Dockerfile.testnet -t enigmampc/secret-network-bootstrap:v$(VERSION)-mainnet .
-	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f Dockerfile.testnet -t enigmampc/secret-network-node:v$(VERSION)-mainnet .
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f Dockerfile_build_deb -t deb_build .
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg FEATURES=production -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-mainnet .
+	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-mainnet .
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
 docker_base:

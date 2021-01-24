@@ -33,7 +33,7 @@ func HealthCheck() ([]byte, error) {
 	return nil, nil
 }
 
-func InitBootstrap() ([]byte, error) {
+func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	//errmsg := C.Buffer{}
 	//
 	//res, err := C.init_bootstrap(&errmsg)
@@ -237,7 +237,7 @@ func KeyGen() ([]byte, error) {
 }
 
 // KeyGen Seng KeyGen request to enclave
-func CreateAttestationReport() (bool, error) {
+func CreateAttestationReport(spid []byte, apiKey []byte) (bool, error) {
 	//errmsg := C.Buffer{}
 	//_, err := C.create_attestation_report(&errmsg)
 	//if err != nil {
