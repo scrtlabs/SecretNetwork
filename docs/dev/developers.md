@@ -8,6 +8,6 @@ Developers can write Secret Contracts for CosmWasm running inside secure enclave
 
 - [Development Guide](developing-secret-contracts.md)
 
-- [Walkthrough](https://github.com/enigmampc/secret-contracts-guide)
+- [Quickstart](quickstart.md)
 
 - [SecretJS](secret-js.md)
