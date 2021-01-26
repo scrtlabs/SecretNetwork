@@ -7,25 +7,25 @@ To learn more about secret contracts, please visit our [documentation page](http
 <details>
   <summary>Topics covered on this page</summary>
 
-  - [Setup the Local Developer Testnet](#/setup-the-local-developer-testnet)
-  - [Setup Secret Contracts](#/setup-secret-contracts)
-  - [Create Initial Smart Contract](#/create-initial-smart-contract)
-  - [Deploy Smart Contract to local Testnet](#/deploy-smart-contract-to-our-local-testnet)
-  - [Instantiate the Smart Contract](#/instantiate-the-smart-contract)
+  - [Setup the Local Developer Testnet](#setup-the-local-developer-testnet)
+  - [Setup Secret Contracts](#setup-secret-contracts)
+  - [Create Initial Smart Contract](#create-initial-smart-contract)
+  - [Deploy Smart Contract to local Testnet](#deploy-smart-contract-to-our-local-testnet)
+  - [Instantiate the Smart Contract](#instantiate-the-smart-contract)
   - Migrating to Testnet
-    * [Deploy to the Holodeck Testnet](#/deploy-to-the-holodeck-testnet)
-    * [Get SCRT from faucet](#/get-some-scrt-from-the-faucet)
-    * [Store the Secret Contract](#/store-the-secret-contract-on-holodeck)
+    * [Deploy to the Holodeck Testnet](#deploy-to-the-holodeck-testnet)
+    * [Get SCRT from faucet](#get-some-scrt-from-the-faucet)
+    * [Store the Secret Contract](#store-the-secret-contract-on-holodeck)
   - Secret Contracts
-    * [Secret Contracts 101](#/secret-contracts-101)
-    * [Secret Contract code explanation](#/secret-contract-code-explanation)
-    * [Secret Contracts - Advanced](#/secret-contracts---advanced)
-  - [SecretJS](#/secretjs)
-  - [Keplr integration](keplr-integration)
+    * [Secret Contracts 101](#secret-contracts-101)
+    * [Secret Contract code explanation](#secret-contract-code-explanation)
+    * [Secret Contracts - Advanced](#secret-contracts---advanced)
+  - [SecretJS](#secretjs)
+  - [Keplr integration](#keplr-integration)
   - Other resources
-    * [Privacy model of secret contracts](#/privacy-model-of-secret-contracts)
-    * [Tutorials from Secret Network community](#/tutorials-from-secret-network-community)
-    * [CosmWasm resources](#/cosmwasm-resources)
+    * [Privacy model of secret contracts](#privacy-model-of-secret-contracts)
+    * [Tutorials from Secret Network community](#tutorials-from-secret-network-community)
+    * [CosmWasm resources](#cosmwasm-resources)
   
 </details>
 
