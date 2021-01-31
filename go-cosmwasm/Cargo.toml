@@ -29,6 +29,11 @@ maintenance = { status = "actively-developed" }
 default = ["backtraces"]
 backtraces = ["snafu/backtraces"]
 production = ["cosmwasm-sgx-vm/production"]
+# This flag is here as a bit of a lazy hack. It's a flag in `wasmi-runtime`
+# and `cosmwasm_std`, but in our current Makefiles both `go-cosmwasm` and
+# `wasmi-runtime` take their flags from the FEATURES env var, which creates
+# a bit of a collision. It was easier to just add a flag here that doesn't
+# do anything rather than start changing the makefiles.
 debug-print = []
 
 [dependencies]
