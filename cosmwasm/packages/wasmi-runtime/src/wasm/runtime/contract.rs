@@ -555,4 +555,19 @@ impl WasmiApi for ContractInstance {
         self.use_gas(gas_amount as u64)?;
         Ok(None)
     }
+
+    #[cfg(feature = "debug-print")]
+    fn debug_print_index(&self, message_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+        let message_buffer = self.extract_vector(message_ptr_ptr as u32).map_err(|err| {
+            debug!("debug_print() error while trying to read message from wasm memory",);
+            err
+        })?;
+
+        let message =
+            String::from_utf8(message_buffer).unwrap_or_else(|err| hex::encode(err.into_bytes()));
+
+        info!("debug_print: {:?}", message);
+
+        Ok(None)
+    }
 }

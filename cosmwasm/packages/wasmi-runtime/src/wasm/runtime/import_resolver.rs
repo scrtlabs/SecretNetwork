@@ -58,6 +58,11 @@ impl ModuleImportResolver for WasmiImportResolver {
                 Signature::new(&[ValueType::I32][..], Some(ValueType::I32)),
                 HostFunctions::QueryChainIndex.into(),
             ),
+            #[cfg(feature = "debug-print")]
+            "debug_print" => FuncInstance::alloc_host(
+                Signature::new(&[ValueType::I32][..], None),
+                HostFunctions::DebugPrintIndex.into(),
+            ),
             // fn gas(amount: i32);
             "gas" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32][..], None),

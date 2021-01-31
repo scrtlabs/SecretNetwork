@@ -15,6 +15,8 @@ pub enum HostFunctions {
     HumanizeAddressIndex = 4,
     GasIndex = 5,
     QueryChainIndex = 6,
+    #[cfg(feature = "debug-print")]
+    DebugPrintIndex = 254,
     Unknown,
 }
 
@@ -32,6 +34,8 @@ impl From<usize> for HostFunctions {
             }
             x if x == HostFunctions::GasIndex as usize => HostFunctions::GasIndex,
             x if x == HostFunctions::QueryChainIndex as usize => HostFunctions::QueryChainIndex,
+            #[cfg(feature = "debug-print")]
+            x if x == HostFunctions::DebugPrintIndex as usize => HostFunctions::DebugPrintIndex,
             _ => HostFunctions::Unknown,
         }
     }
@@ -134,6 +138,18 @@ impl Externals for ContractInstance {
                     err
                 })?;
                 self.gas_index(gas_amount)
+            }
+            #[cfg(feature = "debug-print")]
+            HostFunctions::DebugPrintIndex => {
+                let message: i32 = args.nth_checked(0).map_err(|err| {
+                    warn!(
+                        "debug_print() error reading argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+
+                self.debug_print_index(message)
             }
             HostFunctions::Unknown => {
                 warn!("unknown function index");
