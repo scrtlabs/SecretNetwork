@@ -60,11 +60,11 @@ import (
 	"github.com/enigmampc/SecretNetwork/x/compute"
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
 	"github.com/spf13/cast"
+	"github.com/spf13/viper"
 
 	//"github.com/enigmampc/SecretNetwork/x/tokenswap"
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
-	"github.com/spf13/viper"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	tmlog "github.com/tendermint/tendermint/libs/log"
@@ -81,10 +81,11 @@ const appName = "secret"
 
 var (
 	// DefaultCLIHome default home directories for the application CLI
-	DefaultCLIHome = os.ExpandEnv("$HOME/.secretcli")
+	homeDir, _     = os.UserHomeDir()
+	DefaultCLIHome = filepath.Join(homeDir, ".secretd")
 
 	// DefaultNodeHome sets the folder where the applcation data and configuration will be stored
-	DefaultNodeHome = os.ExpandEnv("$HOME/.secretd")
+	DefaultNodeHome = filepath.Join(homeDir, ".secretd")
 
 	// ModuleBasics The module BasicManager is in charge of setting up basic,
 	// non-dependant module elements, such as codec registration
@@ -169,11 +170,11 @@ type SecretNetworkApp struct {
 }
 
 func (app *SecretNetworkApp) RegisterTxService(clientCtx client.Context) {
-	panic("implement me")
+	authtx.RegisterTxService(app.BaseApp.GRPCQueryRouter(), clientCtx, app.BaseApp.Simulate, app.interfaceRegistry)
 }
 
 func (app *SecretNetworkApp) RegisterTendermintService(clientCtx client.Context) {
-	panic("implement me")
+	tmservice.RegisterTendermintService(app.BaseApp.GRPCQueryRouter(), clientCtx, app.interfaceRegistry)
 }
 
 // WasmWrapper allows us to use namespacing in the config file
@@ -411,21 +412,21 @@ func NewSecretNetworkApp(
 	//
 	// NOTE: This is not required for apps that don't use the simulator for fuzz testing
 	// transactions.
-	app.sm = module.NewSimulationManager(
-		auth.NewAppModule(appCodec, app.accountKeeper, authsims.RandomGenesisAccounts),
-		bank.NewAppModule(appCodec, app.bankKeeper, app.accountKeeper),
-		capability.NewAppModule(appCodec, *app.capabilityKeeper),
-		gov.NewAppModule(appCodec, app.govKeeper, app.accountKeeper, app.bankKeeper),
-		mint.NewAppModule(appCodec, app.mintKeeper, app.accountKeeper),
-		staking.NewAppModule(appCodec, app.stakingKeeper, app.accountKeeper, app.bankKeeper),
-		distr.NewAppModule(appCodec, app.distrKeeper, app.accountKeeper, app.bankKeeper, app.stakingKeeper),
-		slashing.NewAppModule(appCodec, app.slashingKeeper, app.accountKeeper, app.bankKeeper, app.stakingKeeper),
-		params.NewAppModule(app.paramsKeeper),
-		compute.NewAppModule(app.computeKeeper),
-		evidence.NewAppModule(app.evidenceKeeper),
-	)
+	//app.sm = module.NewSimulationManager(
+	//	auth.NewAppModule(appCodec, app.accountKeeper, authsims.RandomGenesisAccounts),
+	//	bank.NewAppModule(appCodec, app.bankKeeper, app.accountKeeper),
+	//	capability.NewAppModule(appCodec, *app.capabilityKeeper),
+	//	gov.NewAppModule(appCodec, app.govKeeper, app.accountKeeper, app.bankKeeper),
+	//	mint.NewAppModule(appCodec, app.mintKeeper, app.accountKeeper),
+	//	staking.NewAppModule(appCodec, app.stakingKeeper, app.accountKeeper, app.bankKeeper),
+	//	distr.NewAppModule(appCodec, app.distrKeeper, app.accountKeeper, app.bankKeeper, app.stakingKeeper),
+	//	slashing.NewAppModule(appCodec, app.slashingKeeper, app.accountKeeper, app.bankKeeper, app.stakingKeeper),
+	//	params.NewAppModule(app.paramsKeeper),
+	//	//compute.NewAppModule(app.computeKeeper),
+	//	evidence.NewAppModule(app.evidenceKeeper),
+	//)
 
-	app.sm.RegisterStoreDecoders()
+	//app.sm.RegisterStoreDecoders()
 
 	// initialize stores
 	app.MountKVStores(keys)
@@ -457,7 +458,6 @@ func NewSecretNetworkApp(
 		ctx := app.BaseApp.NewUncachedContext(true, tmproto.Header{})
 		app.capabilityKeeper.InitializeAndSeal(ctx)
 	}
-
 	return app
 }
 
@@ -582,6 +582,7 @@ func initParamsKeeper(appCodec codec.BinaryMarshaler, legacyAmino *codec.LegacyA
 	paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable())
 	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(compute.ModuleName)
+	paramsKeeper.Subspace(reg.ModuleName)
 
 	return paramsKeeper
 }

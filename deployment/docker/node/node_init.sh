@@ -20,7 +20,8 @@ then
   rm -rf ~/.secretd/* || true
 
   mkdir -p /root/.secretd/.node
-
+  export SECRET_NETWORK_CHAIN_ID=$CHAINID
+  export SECRET_NETWORK_KEYRING_BACKEND=test
   # secretd init "$(hostname)" --chain-id enigma-testnet || true
 
   secretd init "$MONIKER" --chain-id "$CHAINID"

@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	clienttx "github.com/cosmos/cosmos-sdk/client/tx"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
@@ -230,10 +231,23 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) (authlegac
 	txBytes := ctx.TxBytes()
 
 	err := k.cdc.UnmarshalBinaryBare(txBytes, &newtx)
+	if err != nil {
+		return defaultSignature, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+	}
 
 	var stdSig []authlegacy.StdSignature
 	for i := 0; i < len(newtx.Signatures); i++ {
-		stdSig = append(stdSig, authlegacy.StdSignature{Signature: newtx.Signatures[i]})
+		pubkey := secp256k1.PubKey{}
+		if newtx.AuthInfo.SignerInfos[i].PublicKey != nil {
+			pk, ok := newtx.AuthInfo.SignerInfos[i].PublicKey.GetCachedValue().(cryptotypes.PubKey)
+			if ok {
+				pubkey = secp256k1.PubKey{Key: pk.Bytes()}
+			}
+		} else {
+			pubkey = secp256k1.PubKey{Key: signer.Bytes()}
+		}
+
+		stdSig = append(stdSig, authlegacy.StdSignature{PubKey: &pubkey, Signature: newtx.Signatures[i]})
 		//sigV2, err := legacytx.StdSignatureToSignatureV2(k.cdc, stdSig)
 	}
 
@@ -249,9 +263,9 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) (authlegac
 	}
 	//tx, err = convertToStdTx(k, &newtx)
 	//err := k.legacyAmino.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
-	if err != nil {
-		return defaultSignature, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
-	}
+	//if err != nil {
+	//	return defaultSignature, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+	//}
 
 	// Get sign bytes for the message creator
 	signerAcc, err := ante.GetSignerAcc(ctx, k.accountKeeper, signer) // for MsgInstantiateContract, there is only one signer which is msg.Sender (https://github.com/enigmampc/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L192-L194)

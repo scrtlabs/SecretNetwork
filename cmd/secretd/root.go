@@ -2,17 +2,20 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/cosmos/cosmos-sdk/codec"
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	scrt "github.com/enigmampc/SecretNetwork/types"
+	"github.com/rs/zerolog"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
+	"strings"
 
 	//"github.com/tendermint/tendermint/libs/cli"
 
@@ -21,6 +24,7 @@ import (
 
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
+	tmcfg "github.com/tendermint/tendermint/config"
 	tmcli "github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
@@ -44,9 +48,24 @@ import (
 // thanks @terra-project for this fix
 const flagLegacyHdPath = "legacy-hd-path"
 const flagIsBootstrap = "bootstrap"
-const cfgFileName = "config.toml"
+const cfgFileName = "config-cli.toml"
 
 var bootstrap bool
+
+func bindFlags(cmd *cobra.Command, v *viper.Viper) {
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		// Environment variables can't have dashes in them, so bind them to their equivalent
+		// keys with underscores, e.g. --favorite-color to STING_FAVORITE_COLOR
+		_ = v.BindEnv(f.Name, fmt.Sprintf("%s_%s", "SECRET_NETWORK", strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_"))))
+		_ = v.BindPFlag(f.Name, f)
+
+		// Apply the viper config value to the flag when the flag is not set and viper has a value
+		if !f.Changed && v.IsSet(f.Name) {
+			val := v.Get(f.Name)
+			_ = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
+		}
+	})
+}
 
 // NewRootCmd creates a new root command for simd. It is called once in the
 // main function.
@@ -67,6 +86,15 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 		Use:   "secretd",
 		Short: "The Secret Network App Daemon (server)",
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+
+			if err := server.InterceptConfigsPreRunHandler(cmd); err != nil {
+				return err
+			}
+
+			ctx := server.GetServerContextFromCmd(cmd)
+
+			bindFlags(cmd, ctx.Viper)
+
 			return initConfig(&initClientCtx, cmd)
 		},
 	}
@@ -88,7 +116,9 @@ func Execute(rootCmd *cobra.Command) error {
 	ctx = context.WithValue(ctx, client.ClientContextKey, &client.Context{})
 	ctx = context.WithValue(ctx, server.ServerContextKey, server.NewDefaultContext())
 
-	executor := tmcli.PrepareBaseCmd(rootCmd, "", app.DefaultNodeHome)
+	rootCmd.PersistentFlags().String(flags.FlagLogLevel, zerolog.InfoLevel.String(), "The logging level (trace|debug|info|warn|error|fatal|panic)")
+	rootCmd.PersistentFlags().String(flags.FlagLogFormat, tmcfg.LogFormatPlain, "The logging format (json|plain)")
+	executor := tmcli.PrepareBaseCmd(rootCmd, "SECRET_NETWORK", app.DefaultNodeHome)
 	return executor.ExecuteContext(ctx)
 }
 
@@ -216,15 +246,15 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 		panic(err)
 	}
 
-	bootstrap := viper.GetBool("bootstrap")
+	bootstrap := cast.ToBool(appOpts.Get("bootstrap"))
 	queryGasLimit := viper.GetUint64("query-gas-limit")
+
+	fmt.Printf("bootstrap: %s", cast.ToString(bootstrap))
 
 	return app.NewSecretNetworkApp(logger, db, traceStore, true, skipUpgradeHeights,
 		cast.ToString(appOpts.Get(flags.FlagHome)),
 		cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod)),
-		//app.GetEnabledProposals(),
 		queryGasLimit,
-
 		bootstrap,
 		appOpts,
 		baseapp.SetPruning(pruningOpts),
@@ -311,7 +341,7 @@ func initConfig(ctx *client.Context, cmd *cobra.Command) error {
 
 	config.Seal()
 
-	cfgFilePath := path.Join(app.DefaultCLIHome, "config", cfgFileName)
+	cfgFilePath := filepath.Join(app.DefaultCLIHome, "config", cfgFileName)
 	if _, err := os.Stat(cfgFilePath); err == nil {
 		viper.SetConfigFile(cfgFilePath)
 
@@ -320,25 +350,23 @@ func initConfig(ctx *client.Context, cmd *cobra.Command) error {
 		}
 	}
 
-	// Chain-id
-	if viper.GetString(flags.FlagChainID) != "" && cmd.Flags().Lookup(flags.FlagChainID) != nil {
-		err = cmd.Flags().Set(flags.FlagChainID, viper.GetString(flags.FlagChainID))
+	cfgFlags := []string{flags.FlagChainID, flags.FlagKeyringBackend}
+	for _, flag := range cfgFlags {
+		err = setFlagFromConfig(cmd, flag)
 		if err != nil {
 			return err
 		}
 	}
 
-	// Keyring-backend
-	if viper.GetString(flags.FlagKeyringBackend) != "" && cmd.Flags().Lookup(flags.FlagKeyringBackend) != nil {
-		err = cmd.Flags().Set(flags.FlagKeyringBackend, viper.GetString(flags.FlagKeyringBackend))
+	return client.SetCmdClientContextHandler(*ctx, cmd)
+}
+
+func setFlagFromConfig(cmd *cobra.Command, flag string) error {
+	if viper.GetString(flag) != "" && cmd.Flags().Lookup(flag) != nil {
+		err := cmd.Flags().Set(flag, viper.GetString(flag))
 		if err != nil {
 			return err
 		}
 	}
-
-	if err := client.SetCmdClientContextHandler(*ctx, cmd); err != nil {
-		return err
-	}
-
-	return server.InterceptConfigsPreRunHandler(cmd)
+	return nil
 }

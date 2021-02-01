@@ -16,7 +16,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	regtypes "github.com/enigmampc/SecretNetwork/x/registration"
@@ -77,7 +77,7 @@ func (ctx WASMContext) GetTxSenderKeyPair() (privkey []byte, pubkey []byte, er e
 	if len(ctx.TestKeyPairPath) > 0 {
 		keyPairFilePath = ctx.TestKeyPairPath
 	} else {
-		keyPairFilePath = path.Join(ctx.CLIContext.HomeDir, "id_tx_io.json")
+		keyPairFilePath = filepath.Join(ctx.CLIContext.HomeDir, "id_tx_io.json")
 	}
 
 	if _, err := os.Stat(keyPairFilePath); os.IsNotExist(err) {

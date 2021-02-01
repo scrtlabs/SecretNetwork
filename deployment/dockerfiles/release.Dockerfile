@@ -36,7 +36,6 @@ WORKDIR /root
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /usr/lib/
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretd /usr/bin/secretd
-COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretcli /usr/bin/secretcli
 
 COPY deployment/docker/bootstrap/bootstrap_init.sh .
 COPY deployment/docker/node/node_init.sh .
@@ -44,21 +43,24 @@ COPY deployment/docker/startup.sh .
 COPY deployment/docker/node_key.json .
 
 RUN chmod +x /usr/bin/secretd
-RUN chmod +x /usr/bin/secretcli
 RUN chmod +x bootstrap_init.sh
 RUN chmod +x startup.sh
 RUN chmod +x node_init.sh
 
-# Enable autocomplete
-RUN secretcli completion > /root/secretcli_completion
 RUN secretd completion > /root/secretd_completion
 
 RUN echo 'source /root/secretd_completion' >> ~/.bashrc
-RUN echo 'source /root/secretcli_completion' >> ~/.bashrc
 
 RUN mkdir -p /root/.secretd/.compute/
 RUN mkdir -p /root/.sgx_secrets/
 RUN mkdir -p /root/.secretd/.node/
+
+COPY deployment/docker/bootstrap/config.toml /root/.secretd/config/config-cli.toml
+
+COPY cosmwasm/contracts/erc20/contract.wasm /root/erc20.wasm
+COPY deployment/docker/sanity-test.sh /root/
+
+RUN chmod +x /root/sanity-test.sh
 
 ####### Node parameters
 ARG MONIKER=default
@@ -74,4 +76,4 @@ ENV PERSISTENT_PEERS="${PERSISTENT_PEERS}"
 #ENV LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/:/opt/sgxsdk/lib64/
 
 # Run secretd by default, omit entrypoint to ease using container with secretcli
-ENTRYPOINT ["/bin/bash", "startup.sh"]
+ENTRYPOINT ["/bin/bash", "sanity-test.sh"]

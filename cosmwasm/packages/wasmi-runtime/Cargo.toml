@@ -52,7 +52,7 @@ bech32 = "0.7.2"
 derive_more = "0.99"
 sha2 = "0.8.1"
 ring = { git = "https://github.com/mesalock-linux/ring-sgx", tag = "v0.16.5" }
-secp256k1 = "0.17.2"
+secp256k1 = "0.20.1"
 # for attestation
 chrono = { git = "https://github.com/mesalock-linux/chrono-sgx" }
 num-bigint = { git = "https://github.com/mesalock-linux/num-bigint-sgx" }

@@ -52,6 +52,13 @@ RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${
 # Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork
 
+RUN rustup target add wasm32-unknown-unknown
+
+COPY install-wasm-tools.sh .
+RUN ./install-wasm-tools.sh
+
+# RUN make build-test-contract
+
 # Add source files
 COPY go-cosmwasm go-cosmwasm
 # This is due to some esoteric docker bug with the underlying filesystem, so until I figure out a better way, this should be a workaround
@@ -60,12 +67,11 @@ COPY x x
 RUN true
 COPY types types
 RUN true
-COPY app.go .
+COPY app app
 COPY go.mod .
 COPY go.sum .
 COPY cmd cmd
 COPY Makefile .
-COPY install-wasm-tools.sh .
 
 # COPY /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/libgo_cosmwasm.so go-cosmwasm/api
 
@@ -79,11 +85,8 @@ RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${
 RUN cp /go/src/github.com/enigmampc/SecretNetwork/cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so x/compute/internal/keeper
 RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/x/compute/internal/keeper/.sgx_secrets
 
-RUN rustup target add wasm32-unknown-unknown
-RUN ./install-wasm-tools.sh
-RUN make build-test-contract
-
 COPY deployment/ci/go-tests.sh .
+
 RUN chmod +x go-tests.sh
 
 ENTRYPOINT ["/bin/bash", "go-tests.sh"]
