@@ -192,7 +192,12 @@ export class SigningCosmWasmClient extends CosmWasmClient {
   }
 
   /** Uploads code and returns a receipt, including the code ID */
-  public async upload(wasmCode: Uint8Array, meta: UploadMeta = {}, memo = ""): Promise<UploadResult> {
+  public async upload(
+    wasmCode: Uint8Array,
+    meta: UploadMeta = {},
+    memo = "",
+    fee: StdFee = this.fees.upload,
+  ): Promise<UploadResult> {
     const source = meta.source || "";
     const builder = prepareBuilder(meta.builder);
 
@@ -207,7 +212,6 @@ export class SigningCosmWasmClient extends CosmWasmClient {
         builder: builder,
       },
     };
-    const fee = this.fees.upload;
     const { accountNumber, sequence } = await this.getNonce();
     const chainId = await this.getChainId();
     const signedTx = await this.signAdapter([storeCodeMsg], fee, chainId, memo, accountNumber, sequence);
@@ -231,6 +235,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     label: string,
     memo = "",
     transferAmount?: readonly Coin[],
+    fee: StdFee = this.fees.init,
   ): Promise<InstantiateResult> {
     const contractCodeHash = await this.restClient.getCodeHashByCodeId(codeId);
     const instantiateMsg: MsgInstantiateContract = {
@@ -250,7 +255,6 @@ export class SigningCosmWasmClient extends CosmWasmClient {
         callback_sig: null,
       },
     };
-    const fee = this.fees.init;
     const { accountNumber, sequence } = await this.getNonce();
     const chainId = await this.getChainId();
     const signedTx = await this.signAdapter([instantiateMsg], fee, chainId, memo, accountNumber, sequence);
@@ -300,6 +304,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     handleMsg: object,
     memo = "",
     transferAmount?: readonly Coin[],
+    fee: StdFee = this.fees.exec,
   ): Promise<ExecuteResult> {
     const contractCodeHash = await this.restClient.getCodeHashByContractAddr(contractAddress);
 
@@ -316,7 +321,6 @@ export class SigningCosmWasmClient extends CosmWasmClient {
         callback_sig: null,
       },
     };
-    const fee = this.fees.exec;
     const { accountNumber, sequence } = await this.getNonce();
     const chainId = await this.getChainId();
     const signedTx = await this.signAdapter([executeMsg], fee, chainId, memo, accountNumber, sequence);
@@ -363,6 +367,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     recipientAddress: string,
     transferAmount: readonly Coin[],
     memo = "",
+    fee: StdFee = this.fees.send,
   ): Promise<PostTxResult> {
     const sendMsg: MsgSend = {
       type: "cosmos-sdk/MsgSend",
@@ -374,7 +379,6 @@ export class SigningCosmWasmClient extends CosmWasmClient {
         amount: transferAmount,
       },
     };
-    const fee = this.fees.send;
     const { accountNumber, sequence } = await this.getNonce();
     const chainId = await this.getChainId();
     const signedTx = await this.signAdapter([sendMsg], fee, chainId, memo, accountNumber, sequence);

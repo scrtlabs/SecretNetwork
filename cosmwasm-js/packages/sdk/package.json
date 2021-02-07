@@ -1,6 +1,6 @@
 {
   "name": "secretjs",
-  "version": "0.10.4",
+  "version": "0.10.5",
   "description": "CosmWasm SDK + Encryption for the Secret Network",
   "author": "Ethan Frey <ethanfrey@users.noreply.github.com>",
   "contributors": [
@@ -42,13 +42,13 @@
     "@iov/crypto": "^2.1.0",
     "@iov/encoding": "^2.1.0",
     "@iov/utils": "^2.0.2",
-    "axios": "^0.21.1",
-    "fast-deep-equal": "^3.1.1",
-    "pako": "^1.0.11",
     "@types/node-localstorage": "1.3.0",
+    "axios": "^0.21.1",
     "curve25519-js": "0.0.4",
+    "fast-deep-equal": "^3.1.1",
     "js-crypto-hkdf": "0.7.3",
     "miscreant": "0.3.2",
+    "pako": "^1.0.11",
     "secure-random": "1.1.2"
   },
   "devDependencies": {
