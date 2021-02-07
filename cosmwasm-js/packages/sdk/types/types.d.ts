@@ -90,6 +90,7 @@ export declare function isMsgSend(msg: Msg): msg is MsgSend;
 export declare function isMsgStoreCode(msg: Msg): msg is MsgStoreCode;
 export declare function isMsgInstantiateContract(msg: Msg): msg is MsgInstantiateContract;
 export declare function isMsgExecuteContract(msg: Msg): msg is MsgExecuteContract;
+export declare function extractContractMsg(msg: MsgExecuteContract | MsgInstantiateContract): Uint8Array;
 export interface StdFee {
   readonly amount: ReadonlyArray<Coin>;
   readonly gas: string;
