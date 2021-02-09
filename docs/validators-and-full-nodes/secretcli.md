@@ -23,7 +23,7 @@
       - [Matching a Transaction's Hash](#matching-a-transactions-hash)
     - [Secret Contracts](#secret-contracts)
       - [Uploading a Secret Contract](#uploading-a-secret-contract)
-      - [Deploting a Secret Contract](#deploting-a-secret-contract)
+      - [Deploying a Secret Contract](#deploying-a-secret-contract)
       - [Executing a Secret Contract](#executing-a-secret-contract)
       - [Reading the output of a Secret Contract tx](#reading-the-output-of-a-secret-contract-tx)
       - [Querying a Secret Contract](#querying-a-secret-contract)
@@ -376,7 +376,7 @@ To get the contract's code ID:
 secretcli q tx [hash]
 ```
 
-#### Deploting a Secret Contract
+#### Deploying a Secret Contract
 
 ```bash
 secretcli tx compute instantiate $CODE_ID "$INIT_INPUT_MSG" --from mykey --label "$UNIQUE_LABEL"

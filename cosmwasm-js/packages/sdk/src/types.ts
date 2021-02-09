@@ -120,6 +120,14 @@ export function isMsgExecuteContract(msg: Msg): msg is MsgExecuteContract {
   return (msg as MsgExecuteContract).type === "wasm/MsgExecuteContract";
 }
 
+export function extractContractMsg(msg: MsgExecuteContract | MsgInstantiateContract): Uint8Array {
+  if (msg.type === "wasm/MsgExecuteContract") {
+    return Encoding.fromBase64((msg as MsgExecuteContract).value.msg);
+  } /*  if (msg.type === "wasm/MsgInstantiateContract")  */ else {
+    return Encoding.fromBase64((msg as MsgInstantiateContract).value.init_msg);
+  }
+}
+
 export interface StdFee {
   readonly amount: ReadonlyArray<Coin>;
   readonly gas: string;

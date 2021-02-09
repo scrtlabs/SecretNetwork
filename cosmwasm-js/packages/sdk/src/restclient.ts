@@ -13,7 +13,7 @@ import {
   MsgInstantiateContract,
   MsgExecuteContract,
 } from "./types";
-import EnigmaUtils, {SecretUtils} from "./enigmautils";
+import EnigmaUtils, { SecretUtils } from "./enigmautils";
 
 export interface CosmosSdkAccount {
   /** Bech32 account address */
@@ -558,30 +558,46 @@ export class RestClient {
     return this.get("/register/master-cert");
   }
 
-  public async decryptDataField(dataField: string = "", nonce: Uint8Array): Promise<Uint8Array> {
+  public async decryptDataField(dataField: string = "", nonces: Array<Uint8Array>): Promise<Uint8Array> {
     const wasmOutputDataCipherBz = Encoding.fromHex(dataField);
 
-    // data
-    const data = Encoding.fromBase64(
-      Encoding.fromUtf8(await this.enigmautils.decrypt(wasmOutputDataCipherBz, nonce)),
-    );
+    let error;
+    for (const nonce of nonces) {
+      try {
+        const data = Encoding.fromBase64(
+          Encoding.fromUtf8(await this.enigmautils.decrypt(wasmOutputDataCipherBz, nonce)),
+        );
 
-    return data;
+        return data;
+      } catch (e) {
+        error = e;
+      }
+    }
+
+    throw error;
   }
 
-  public async decryptLogs(logs: readonly Log[], nonce: Uint8Array): Promise<readonly Log[]> {
+  public async decryptLogs(logs: readonly Log[], nonces: Array<Uint8Array>): Promise<readonly Log[]> {
     for (const l of logs) {
       for (const e of l.events) {
         if (e.type === "wasm") {
-          for (const a of e.attributes) {
-            try {
-              a.key = Encoding.fromUtf8(await this.enigmautils.decrypt(Encoding.fromBase64(a.key), nonce));
-            } catch (e) {}
-            try {
-              a.value = Encoding.fromUtf8(
-                await this.enigmautils.decrypt(Encoding.fromBase64(a.value), nonce),
-              );
-            } catch (e) {}
+          for (const nonce of nonces) {
+            let nonceOk = false;
+            for (const a of e.attributes) {
+              try {
+                a.key = Encoding.fromUtf8(await this.enigmautils.decrypt(Encoding.fromBase64(a.key), nonce));
+                nonceOk = true;
+              } catch (e) {}
+              try {
+                a.value = Encoding.fromUtf8(
+                  await this.enigmautils.decrypt(Encoding.fromBase64(a.value), nonce),
+                );
+                nonceOk = true;
+              } catch (e) {}
+            }
+            if (nonceOk) {
+              continue;
+            }
           }
         }
       }
@@ -620,10 +636,10 @@ export class RestClient {
         }
 
         // decrypt output
-        txsResponse.data = await this.decryptDataField(txsResponse.data, nonce);
+        txsResponse.data = await this.decryptDataField(txsResponse.data, [nonce]);
         let logs;
         if (txsResponse.logs) {
-          logs = await this.decryptLogs(txsResponse.logs, nonce);
+          logs = await this.decryptLogs(txsResponse.logs, [nonce]);
           txsResponse = Object.assign({}, txsResponse, { logs: logs });
         }
 
