@@ -57,7 +57,7 @@ RUN mkdir -p /root/.secretd/.node/
 
 COPY deployment/docker/bootstrap/config.toml /root/.secretd/config/config-cli.toml
 
-COPY cosmwasm/contracts/erc20/contract.wasm /root/erc20.wasm
+COPY x/compute/internal/keeper/testdata/erc20.wasm /root/erc20.wasm
 COPY deployment/docker/sanity-test.sh /root/
 
 RUN chmod +x /root/sanity-test.sh
