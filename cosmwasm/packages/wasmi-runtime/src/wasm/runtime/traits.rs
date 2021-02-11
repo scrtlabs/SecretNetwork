@@ -27,4 +27,7 @@ pub trait WasmiApi {
     fn query_chain_index(&mut self, query_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap>;
 
     fn gas_index(&mut self, gas_amount: i32) -> Result<Option<RuntimeValue>, Trap>;
+
+    #[cfg(feature = "debug-print")]
+    fn debug_print_index(&self, message: i32) -> Result<Option<RuntimeValue>, Trap>;
 }

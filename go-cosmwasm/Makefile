@@ -86,7 +86,7 @@ target/headers/enclave-ffi-types.h: build-enclave
 
 .PHONY: build-enclave
 build-enclave:
-	$(MAKE) -C $(Enclave_Path) enclave
+	FEATURES="$(FEATURES)" $(MAKE) -C $(Enclave_Path) enclave
 
 # implement stripping based on os
 ifeq ($(DLL_EXT),so)

@@ -1,10 +1,18 @@
 ## Release notes
 
-## Current Release - v1.0.0
+### Current Release - v1.0.5
 
-- Secret Contracts
+- Added debug prints in `cosmwasm_std`. These can be used by importing
+  `cosmwasm_std::debug_print` which is both a `println!`-like macro, and a
+  function that takes `String` and `&str` objects. By default, this function
+  and macro don't do anything, but if the `debug-print` feature is enabled
+  in `cosmwasm_std`, the calls will trigger a log in `enigmampc/secret-network-sw-dev`.
 
 ## Previous releases
+
+### v1.0.0
+
+- Secret Contracts
 
 ### v0.8.0
 
