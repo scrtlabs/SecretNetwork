@@ -112,7 +112,7 @@ go.sum: go.mod
 	GO111MODULE=on go mod verify
 
 build_cli:
-	go build -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
+	go build -o secretcli -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 xgo_build_secretcli: go.sum
 	@echo "--> WARNING! This builds from origin/$(CURRENT_BRANCH)!"
