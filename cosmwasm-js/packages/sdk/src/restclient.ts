@@ -477,24 +477,6 @@ export class RestClient {
     return await unwrapWasmResponse(response);
   }
 
-  // Returns all contract state.
-  // This is an empty array if no such contract, or contract has no data.
-  public async getAllContractState(address: string): Promise<readonly Model[]> {
-    const path = `/wasm/contract/${address}/state`;
-    const responseData = (await this.get(path)) as WasmResponse<CosmosSdkArray<WasmData>>;
-    return normalizeArray(await unwrapWasmResponse(responseData)).map(parseWasmData);
-  }
-
-  // Returns the data at the key if present (unknown decoded json),
-  // or null if no data at this (contract address, key) pair
-  public async queryContractRaw(address: string, key: Uint8Array): Promise<Uint8Array | null> {
-    const hexKey = Encoding.toHex(key);
-    const path = `/wasm/contract/${address}/raw/${hexKey}?encoding=hex`;
-    const responseData = (await this.get(path)) as WasmResponse<WasmData[]>;
-    const data = await unwrapWasmResponse(responseData);
-    return data.length === 0 ? null : Encoding.fromBase64(data[0].val);
-  }
-
   /**
    * Makes a smart query on the contract and parses the reponse as JSON.
    * Throws error if no such contract exists, the query format is invalid or the response is invalid.
@@ -525,9 +507,7 @@ export class RestClient {
 
         err.message = err.message.replace(errorCipherB64, Encoding.fromUtf8(errorPlainBz));
       } catch (decryptionError) {
-        throw new Error(
-          `Failed to decrypt the following error message: ${err.message}. Decryption error of the error message: ${decryptionError.message}`,
-        );
+        throw new Error(`Failed to decrypt the following error message: ${err.message}.`);
       }
 
       throw err;
