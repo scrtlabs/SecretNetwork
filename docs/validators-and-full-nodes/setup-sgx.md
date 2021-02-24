@@ -5,6 +5,7 @@ If you're running a local machine and not a cloud-based VM -
 1. Go to your BIOS menu
 2. Enable SGX (Software controlled is not enough)
 3. Disable Secure Boot
+4. Disable Hyperthreading (recommended)
 
 # Installation
 
@@ -12,7 +13,7 @@ If you're running a local machine and not a cloud-based VM -
 
 ### Install SGX
 
-Note: `sgx_linux_x64_driver_2.6.0_602374c.bin` is the latest driver as of July 13, 2020. Please check under https://download.01.org/intel-sgx/sgx-linux/ that this is still the case. If not, please send us a PR or notify us.
+Note: `sgx_linux_x64_driver_2.11.0_0373e2e.bin` is the latest driver as of February 24th, 2021. Please check under https://download.01.org/intel-sgx/sgx-linux/ that this is still the case. If not, please send us a PR or notify us.
 
 ```bash
 #! /bin/bash
@@ -36,7 +37,7 @@ echo "#####       Installing Intel SGX driver       #####"
 echo "###############################################\n\n"
 
 # download SGX driver
-wget "https://download.01.org/intel-sgx/sgx-linux/2.10/distro/${OS}/sgx_linux_x64_driver_2.6.0_602374c.bin"
+wget "https://download.01.org/intel-sgx/sgx-linux/2.13/distro/${OS}/sgx_linux_x64_driver_2.11.0_0373e2e.bin"
 
 # Make the driver installer executable
 chmod +x ./sgx_linux_x64_driver_*.bin
