@@ -227,8 +227,8 @@ func ParseCert() *cobra.Command {
 func ConfigureSecret() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "configure-secret [master-cert] [seed]",
-		Short: "After registration is successful, configure the secret node with the credentials file and the encrypted" +
-			"seed that was written on-chain",
+		Short: "After registration is successful, configure the secret node with the credentials file and the encrypted " +
+			   "seed that was written on-chain",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
