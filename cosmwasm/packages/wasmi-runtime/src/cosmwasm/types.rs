@@ -411,7 +411,7 @@ pub struct SigInfo {
     pub callback_sig: Option<Binary>,
 }
 
-// This struct is basically the smae as WasmMsg, but serializes/deserializes differently
+// This struct is basically the same as WasmMsg, but serializes/deserializes differently
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case", tag = "type", content = "value")]
 pub enum SignDocWasmMsg {

@@ -305,10 +305,9 @@ fn verify_signature_params(
 ) -> bool {
     info!("Verifying sender..");
 
-    let msg_sender = if let Ok(msg_sender) = CanonicalAddr::from_human(&env.message.sender) {
-        msg_sender
-    } else {
-        return false;
+    let msg_sender = match CanonicalAddr::from_human(&env.message.sender) {
+        Ok(msg_sender) => msg_sender,
+        _ => return false,
     };
 
     if !verify_sender(&sig_info.signature, &msg_sender) {

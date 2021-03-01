@@ -28,6 +28,7 @@ use std::env;
 mod consts;
 mod cosmwasm;
 mod crypto;
+mod proto;
 mod results;
 mod storage;
 mod utils;
