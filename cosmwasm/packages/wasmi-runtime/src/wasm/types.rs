@@ -1,10 +1,23 @@
-// use crate::cosmwasm::types::CosmosMsg;
-
-use crate::crypto::{AESKey, Ed25519PublicKey, SIVEncryptable};
-use crate::wasm::io::calc_encryption_key;
-use enclave_ffi_types::EnclaveError;
 use log::*;
+
+use enclave_ffi_types::EnclaveError;
+use protobuf::Message;
 use serde::{Deserialize, Serialize};
+
+use crate::cosmwasm::{
+    encoding::Binary,
+    types::{CanonicalAddr, HumanAddr},
+};
+use crate::crypto::{
+    multisig::MultisigThresholdPubKey, secp256k1::Secp256k1PubKey, traits::PubKey, AESKey,
+    CryptoError, Ed25519PublicKey, SIVEncryptable,
+};
+use crate::proto;
+
+use super::io::calc_encryption_key;
+
+use crate::cosmwasm::coins::Coin;
+use crate::cosmwasm::math::Uint128;
 
 pub type IoNonce = [u8; 32];
 
@@ -100,6 +113,351 @@ impl SecretMessage {
         packed_msg.extend_from_slice(&self.user_public_key);
         packed_msg.extend_from_slice(self.msg.as_slice());
         packed_msg
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub enum CosmosPubKey {
+    Secp256k1(Secp256k1PubKey),
+    Multisig(MultisigThresholdPubKey),
+}
+
+impl CosmosPubKey {
+    pub fn from_proto(
+        mode_info: proto::tx::tx::ModeInfo,
+        public_key_bytes: &[u8],
+    ) -> Result<Self, CryptoError> {
+        use proto::crypto::multisig::LegacyAminoPubKey;
+        use proto::crypto::secp256k1::PubKey;
+        use proto::tx::signing::SignMode;
+        use proto::tx::tx::ModeInfo_oneof_sum;
+
+        let public_key = match mode_info.sum {
+            Some(ModeInfo_oneof_sum::single(single)) => {
+                if !matches!(single.mode, SignMode::SIGN_MODE_DIRECT) {
+                    warn!(
+                        "Sign mode for public key {} was not SIGN_MODE_DIRECT: {:?}",
+                        Binary(public_key_bytes.into()),
+                        single.mode
+                    );
+                    return Err(CryptoError::ParsingError);
+                }
+                let pub_key = PubKey::parse_from_bytes(public_key_bytes).map_err(|_err| {
+                    warn!(
+                        "Could not parse secp256k1 public key from these bytes: {}",
+                        Binary(public_key_bytes.into())
+                    );
+                    CryptoError::ParsingError
+                })?;
+                CosmosPubKey::Secp256k1(Secp256k1PubKey::new(pub_key.key))
+            }
+            Some(ModeInfo_oneof_sum::multi(multi)) => {
+                let multisig_key =
+                    LegacyAminoPubKey::parse_from_bytes(public_key_bytes).map_err(|_err| {
+                        warn!(
+                            "Could not parse multisig public key from these bytes: {}",
+                            Binary(public_key_bytes.into())
+                        );
+                        CryptoError::ParsingError
+                    })?;
+                let multisig_key_size = multisig_key.public_keys.len();
+                let sig_mode_count = multi.mode_infos.len();
+                if multisig_key_size != sig_mode_count {
+                    warn!(
+                        "Mismatch found between size of multisig key and amount of signature modes: {} != {}",
+                        multisig_key_size,
+                        sig_mode_count
+                    );
+                    return Err(CryptoError::ParsingError);
+                }
+
+                let mut pubkeys = vec![];
+                for (index, mode_info) in multi.mode_infos.into_iter().enumerate() {
+                    pubkeys.push(CosmosPubKey::from_proto(
+                        mode_info,
+                        &multisig_key.public_keys[index].value,
+                    )?);
+                }
+                CosmosPubKey::Multisig(MultisigThresholdPubKey::new(
+                    multisig_key.threshold,
+                    pubkeys,
+                ))
+            }
+            None => {
+                warn!(
+                    "No signature info found for this public key: {}",
+                    Binary(public_key_bytes.into()),
+                );
+                return Err(CryptoError::ParsingError);
+            }
+        };
+        Ok(public_key)
+    }
+}
+
+impl PubKey for CosmosPubKey {
+    fn get_address(&self) -> CanonicalAddr {
+        match self {
+            CosmosPubKey::Secp256k1(pubkey) => pubkey.get_address(),
+            CosmosPubKey::Multisig(pubkey) => pubkey.get_address(),
+        }
+    }
+
+    fn amino_bytes(&self) -> Vec<u8> {
+        match self {
+            CosmosPubKey::Secp256k1(pubkey) => pubkey.amino_bytes(),
+            CosmosPubKey::Multisig(pubkey) => pubkey.amino_bytes(),
+        }
+    }
+
+    fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError> {
+        match self {
+            CosmosPubKey::Secp256k1(pubkey) => pubkey.verify_bytes(bytes, sig),
+            CosmosPubKey::Multisig(pubkey) => pubkey.verify_bytes(bytes, sig),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SigInfo {
+    pub sign_bytes: Binary,
+    pub signature: Binary,
+    pub callback_sig: Option<Binary>,
+}
+
+#[derive(Debug)]
+pub struct SignDoc {
+    pub body: TxBody,
+    pub auth_info: AuthInfo,
+    pub chain_id: String,
+    pub account_number: u64,
+}
+
+impl SignDoc {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, EnclaveError> {
+        let raw_sign_doc = proto::tx::tx::SignDoc::parse_from_bytes(bytes).map_err(|err| {
+            warn!(
+                "got an error while trying to deserialize sign doc bytes from protobuf: {}: {}",
+                err,
+                Binary(bytes.into()),
+            );
+            EnclaveError::FailedToDeserialize
+        })?;
+
+        let body = TxBody::from_bytes(&raw_sign_doc.body_bytes)?;
+        let auth_info = AuthInfo::from_bytes(&raw_sign_doc.auth_info_bytes)?;
+
+        Ok(Self {
+            body,
+            auth_info,
+            chain_id: raw_sign_doc.chain_id,
+            account_number: raw_sign_doc.account_number,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct TxBody {
+    pub messages: Vec<CosmWasmMsg>,
+    // Leaving this here for discoverability. We can use this, but don't verify it today.
+    memo: (),
+    timeout_height: (),
+}
+
+impl TxBody {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, EnclaveError> {
+        let tx_body = proto::tx::tx::TxBody::parse_from_bytes(bytes).map_err(|err| {
+            warn!(
+                "got an error while trying to deserialize cosmos message body bytes from protobuf: {}: {}",
+                err,
+                Binary(bytes.into()),
+            );
+            EnclaveError::FailedToDeserialize
+        })?;
+
+        let messages = tx_body
+            .messages
+            .into_iter()
+            .map(|any| CosmWasmMsg::from_bytes(&any.value))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(TxBody {
+            messages,
+            memo: (),
+            timeout_height: (),
+        })
+    }
+}
+
+#[derive(Debug)]
+pub enum CosmWasmMsg {
+    Execute {
+        contract: HumanAddr,
+        msg: Vec<u8>,
+        sent_funds: Vec<Coin>,
+        callback_sig: Option<Vec<u8>>,
+    },
+    Instantiate {
+        init_msg: Vec<u8>,
+        init_funds: Vec<Coin>,
+        label: String,
+        callback_sig: Option<Vec<u8>>,
+    },
+    Other,
+}
+
+impl CosmWasmMsg {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, EnclaveError> {
+        Self::try_parse_execute(bytes)
+            .or_else(|_| Self::try_parse_instantiate(bytes))
+            .or_else(|_| {
+                warn!(
+                    "got an error while trying to deserialize cosmwasm message bytes from protobuf: {}",
+                    Binary(bytes.into())
+                );
+                Ok(CosmWasmMsg::Other)
+            })
+    }
+
+    fn try_parse_instantiate(bytes: &[u8]) -> Result<Self, EnclaveError> {
+        use proto::cosmwasm::msg::{
+            MsgInstantiateContract, MsgInstantiateContract_oneof__callback_sig,
+        };
+
+        let raw_msg = MsgInstantiateContract::parse_from_bytes(bytes)
+            .map_err(|_| EnclaveError::FailedToDeserialize)?;
+
+        let init_funds = Self::parse_funds(raw_msg.init_funds)?;
+
+        let callback_sig = raw_msg._callback_sig.map(|cs| match cs {
+            MsgInstantiateContract_oneof__callback_sig::callback_sig(cs) => cs,
+        });
+
+        Ok(CosmWasmMsg::Instantiate {
+            init_msg: raw_msg.init_msg,
+            init_funds,
+            label: raw_msg.label,
+            callback_sig,
+        })
+    }
+
+    fn try_parse_execute(bytes: &[u8]) -> Result<Self, EnclaveError> {
+        use proto::cosmwasm::msg::{MsgExecuteContract, MsgExecuteContract_oneof__callback_sig};
+
+        let raw_msg = MsgExecuteContract::parse_from_bytes(bytes)
+            .map_err(|_| EnclaveError::FailedToDeserialize)?;
+
+        let contract = String::from_utf8(raw_msg.contract).map_err(|err| {
+            warn!(
+                "Contract address to execute was not a valid string: {}",
+                Binary(err.into_bytes()),
+            );
+            EnclaveError::FailedToDeserialize
+        })?;
+        let contract = HumanAddr(contract);
+
+        let sent_funds = Self::parse_funds(raw_msg.sent_funds)?;
+
+        let callback_sig = raw_msg._callback_sig.map(|cs| match cs {
+            MsgExecuteContract_oneof__callback_sig::callback_sig(cs) => cs,
+        });
+
+        Ok(CosmWasmMsg::Execute {
+            contract,
+            msg: raw_msg.msg,
+            sent_funds,
+            callback_sig,
+        })
+    }
+
+    fn parse_funds(
+        raw_init_funds: protobuf::RepeatedField<proto::base::coin::Coin>,
+    ) -> Result<Vec<Coin>, EnclaveError> {
+        let mut init_funds = Vec::with_capacity(raw_init_funds.len());
+        for raw_coin in raw_init_funds {
+            let amount: u128 = raw_coin.amount.parse().map_err(|_err| {
+                warn!(
+                    "instantiate message funds were not a numeric string: {:?}",
+                    raw_coin.amount,
+                );
+                EnclaveError::FailedToDeserialize
+            })?;
+            let coin = Coin {
+                amount: Uint128(amount),
+                denom: raw_coin.denom,
+            };
+            init_funds.push(coin);
+        }
+
+        Ok(init_funds)
+    }
+}
+
+#[derive(Debug)]
+pub struct AuthInfo {
+    pub signer_infos: Vec<SignerInfo>,
+    // Leaving this here for discoverability. We can use this, but don't verify it today.
+    fee: (),
+}
+
+impl AuthInfo {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, EnclaveError> {
+        let raw_auth_info = proto::tx::tx::AuthInfo::parse_from_bytes(&bytes).map_err(|err| {
+            warn!("Could not parse AuthInfo from protobuf bytes: {:?}", err);
+            EnclaveError::FailedToDeserialize
+        })?;
+
+        let mut signer_infos = vec![];
+        for raw_signer_info in raw_auth_info.signer_infos {
+            let signer_info = SignerInfo::from_proto(raw_signer_info)?;
+            signer_infos.push(signer_info);
+        }
+
+        if signer_infos.is_empty() {
+            warn!("No signature information provided for this TX. signer_infos empty");
+            return Err(EnclaveError::FailedToDeserialize);
+        }
+
+        Ok(Self {
+            signer_infos,
+            fee: (),
+        })
+    }
+
+    pub fn sender_public_key(&self) -> &CosmosPubKey {
+        &self.signer_infos[0].public_key
+    }
+}
+
+#[derive(Debug)]
+pub struct SignerInfo {
+    pub public_key: CosmosPubKey,
+    pub sequence: u64,
+}
+
+impl SignerInfo {
+    pub fn from_proto(raw_signer_info: proto::tx::tx::SignerInfo) -> Result<Self, EnclaveError> {
+        if !raw_signer_info.has_public_key() {
+            warn!("One of the provided signers had no public key");
+            return Err(EnclaveError::FailedToDeserialize);
+        }
+        if !raw_signer_info.has_mode_info() {
+            warn!("One of the provided signers had no signing mode info");
+            return Err(EnclaveError::FailedToDeserialize);
+        }
+
+        // unwraps valid after checks above
+        let public_key_bytes = &raw_signer_info.public_key.into_option().unwrap().value;
+        let mode_info = raw_signer_info.mode_info.into_option().unwrap();
+
+        let public_key = CosmosPubKey::from_proto(mode_info, public_key_bytes)
+            .map_err(|_| EnclaveError::FailedToDeserialize)?;
+
+        let signer_info = Self {
+            public_key,
+            sequence: raw_signer_info.sequence,
+        };
+        Ok(signer_info)
     }
 }
 

@@ -2,8 +2,6 @@ package types
 
 import (
 	"encoding/base64"
-	authlegacy "github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
@@ -243,7 +241,7 @@ func (m SecretMsg) Serialize() []byte {
 	return append(m.CodeHash, m.Msg...)
 }
 
-func NewVerificationInfo(signBytes []byte, signature authlegacy.StdSignature, callbackSig []byte) wasmTypes.VerificationInfo {
+func NewVerificationInfo(signBytes []byte, signature []byte, callbackSig []byte) wasmTypes.VerificationInfo {
 	return wasmTypes.VerificationInfo{
 		Bytes:             signBytes,
 		Signature:         signature,

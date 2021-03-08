@@ -5,10 +5,10 @@ use wasmi::ModuleInstance;
 
 use enclave_ffi_types::{Ctx, EnclaveError};
 
-use crate::cosmwasm::types::{CanonicalAddr, Env, SigInfo};
+use crate::cosmwasm::types::{CanonicalAddr, Env};
 use crate::crypto::Ed25519PublicKey;
 use crate::results::{HandleSuccess, InitSuccess, QuerySuccess};
-use crate::wasm::types::{IoNonce, SecretMessage};
+use crate::wasm::types::{IoNonce, SecretMessage, SigInfo};
 
 use super::contract_validation::{
     calc_contract_hash, extract_contract_key, generate_encryption_key, validate_contract_key,

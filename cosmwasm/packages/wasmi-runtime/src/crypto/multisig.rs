@@ -1,55 +1,82 @@
 use log::*;
 
-use crate::cosmwasm::encoding::Binary;
-use crate::cosmwasm::types::{CanonicalAddr, PubKeyKind};
-use crate::crypto::traits::PubKey;
-use crate::crypto::CryptoError;
-
-use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
-const THRESHOLD_PREFIX: [u8; 5] = [34, 193, 247, 226, 8];
-const GENERIC_PREFIX: u8 = 18;
+use crate::cosmwasm::encoding::Binary;
+use crate::cosmwasm::types::CanonicalAddr;
+use crate::wasm::types::CosmosPubKey;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+use super::traits::PubKey;
+use super::CryptoError;
+
+/// https://docs.tendermint.com/v0.32/spec/blockchain/encoding.html#public-key-cryptography
+const MULTISIG_THRESHOLD_PREFIX: [u8; 4] = [0x22, 0xc1, 0xf7, 0xe2];
+/// This is the result of
+/// ```ignore
+/// use prost::encoding::{encode_key, WireType};
+/// let mut buf = vec![];
+/// encode_key(1, WireType::Varint, &mut buf);
+/// println!("{:?}", buf);
+/// ```
+const THRESHOLD_PREFIX: u8 = 0x08;
+/// This is the result of (similar to above)
+/// ```ignore
+/// encode_key(2, WireType::LengthDelimited, &mut buf);
+/// ```
+const PUBKEY_PREFIX: u8 = 0x12;
+
+#[derive(Debug, PartialEq)]
 pub struct MultisigThresholdPubKey {
-    threshold: u8,
-    pubkeys: Vec<PubKeyKind>,
+    threshold: u32,
+    pubkeys: Vec<CosmosPubKey>,
+}
+
+impl MultisigThresholdPubKey {
+    pub fn new(threshold: u32, pubkeys: Vec<CosmosPubKey>) -> Self {
+        Self { threshold, pubkeys }
+    }
 }
 
 impl PubKey for MultisigThresholdPubKey {
     fn get_address(&self) -> CanonicalAddr {
         // Spec: https://docs.tendermint.com/master/spec/core/encoding.html#key-types
         // Multisig is undocumented, but we figured out it's the same as ed25519
-        let address_bytes = &sha2::Sha256::digest(self.bytes().as_slice())[..20];
+        let address_bytes = &sha2::Sha256::digest(self.amino_bytes().as_slice())[..20];
 
         CanonicalAddr(Binary::from(address_bytes))
     }
 
-    fn bytes(&self) -> Vec<u8> {
+    fn amino_bytes(&self) -> Vec<u8> {
         // Encoding for multisig is basically:
-        // threshold_prefix | threshold | generic_prefix | encoded_pubkey_length | ...encoded_pubkey... | generic_prefix | encoded_pubkey_length | ...encoded_pubkey...
-        let mut encoded: Vec<u8> = vec![];
+        // MULTISIG_THRESHOLD_PREFIX | THRESHOLD_PREFIX | threshold | [ PUBKEY_PREFIX | pubkey length | pubkey ] *
+        let mut encoded = vec![];
 
-        encoded.extend_from_slice(&THRESHOLD_PREFIX);
-        encoded.push(self.threshold);
+        encoded.extend_from_slice(&MULTISIG_THRESHOLD_PREFIX);
+
+        encoded.push(THRESHOLD_PREFIX);
+        let mut threshold_bytes = vec![];
+        prost::encoding::encode_varint(self.threshold as u64, &mut threshold_bytes);
+        encoded.extend_from_slice(threshold_bytes.as_slice());
 
         for pubkey in &self.pubkeys {
-            encoded.push(GENERIC_PREFIX);
+            encoded.push(PUBKEY_PREFIX);
+
+            let pubkey_bytes = pubkey.amino_bytes();
 
             // Length may be more than 1 byte and it is protobuf encoded
-            let mut length = Vec::<u8>::new();
-
-            let pubkey_bytes = pubkey.bytes();
-            // This line should never fail since it could only fail if `length` does not have sufficient capacity to encode
-            if prost::encode_length_delimiter(pubkey_bytes.len(), &mut length).is_err() {
-                warn!(
+            let mut length_bytes = vec![];
+            // This line should never fail since it could only fail if `length`
+            // does not have sufficient capacity to encode, but it's a vector
+            // that gets extended
+            if prost::encode_length_delimiter(pubkey_bytes.len(), &mut length_bytes).is_err() {
+                error!(
                     "Could not encode length delimiter: {:?}. This should not happen",
                     pubkey_bytes.len()
                 );
                 return vec![];
             }
-            encoded.extend_from_slice(&length);
+            encoded.extend_from_slice(&length_bytes);
+
             encoded.extend_from_slice(&pubkey_bytes);
         }
 
@@ -80,7 +107,7 @@ impl PubKey for MultisigThresholdPubKey {
             for current_pubkey in &self.pubkeys {
                 trace!("Checking pubkey: {:?}", current_pubkey);
                 // This technically support that one of the multisig signers is a multisig itself
-                let result = current_pubkey.verify_bytes(bytes, &current_sig);
+                let result = current_pubkey.verify_bytes(bytes, current_sig);
 
                 if result.is_ok() {
                     verified_counter += 1;
@@ -99,9 +126,24 @@ impl PubKey for MultisigThresholdPubKey {
     }
 }
 
-type MultisigSignature = Vec<Vec<u8>>;
+fn decode_multisig_signature(raw_blob: &[u8]) -> Result<Vec<Vec<u8>>, CryptoError> {
+    use crate::proto::crypto::multisig::MultiSignature;
+    use protobuf::Message;
 
-fn decode_multisig_signature(raw_blob: &[u8]) -> Result<MultisigSignature, CryptoError> {
+    let ms = MultiSignature::parse_from_bytes(raw_blob).map_err(|err| {
+        warn!(
+            "Failed to decode the signature of a multisig key from protobuf bytes: {:?}",
+            err
+        );
+        CryptoError::ParsingError
+    })?;
+
+    Ok(ms.signatures.into_iter().collect())
+}
+
+// TODO delete this function after verifying multisig works right
+#[allow(unused)]
+fn decode_multisig_signature_old(raw_blob: &[u8]) -> Result<Vec<Vec<u8>>, CryptoError> {
     trace!("decoding blob: {:?}", raw_blob);
     let blob_size = raw_blob.len();
     if blob_size < 8 {
@@ -109,7 +151,7 @@ fn decode_multisig_signature(raw_blob: &[u8]) -> Result<MultisigSignature, Crypt
         return Err(CryptoError::ParsingError);
     }
 
-    let mut signatures: MultisigSignature = vec![];
+    let mut signatures: Vec<Vec<u8>> = vec![];
 
     let mut idx: usize = 7;
     while let Some(curr_blob_window) = raw_blob.get(idx..) {
@@ -161,7 +203,7 @@ fn decode_multisig_signature(raw_blob: &[u8]) -> Result<MultisigSignature, Crypt
 
 #[cfg(feature = "test")]
 pub mod tests_decode_multisig_signature {
-    use crate::crypto::multisig::{decode_multisig_signature, MultisigSignature};
+    use super::decode_multisig_signature;
 
     pub fn test_decode_sig_sanity() {
         let sig: Vec<u8> = vec![

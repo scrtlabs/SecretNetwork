@@ -5,10 +5,9 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
-	clienttx "github.com/cosmos/cosmos-sdk/client/tx"
-	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
@@ -17,17 +16,14 @@ import (
 	"path/filepath"
 
 	"github.com/tendermint/tendermint/crypto"
-	//"github.com/tendermint/tendermint/crypto/secp256k1"
-	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	sdktx "github.com/cosmos/cosmos-sdk/types/tx"
+	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
-	authlegacy "github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	wasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 
@@ -166,123 +162,6 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	return codeID, nil
 }
 
-// GetSignBytes returns the signBytes of the tx for a given signer
-// This is a copy of cosmos-sdk function (cosmos-sdk/x/auth/types/StdTx.GetSignBytes()
-// This is because the original `GetSignBytes` was probably meant to be used before the transaction gets processed, and the
-// sequence that gets returned is an increment of what we need.
-// This is why we use `acc.GetSequence() - 1`
-func GetSignBytes(ctx sdk.Context, acc authtypes.AccountI, tx authlegacy.StdTx) []byte {
-	genesis := ctx.BlockHeight() == 0
-	chainID := ctx.ChainID()
-	var accNum uint64
-	if !genesis {
-		accNum = acc.GetAccountNumber()
-	}
-
-	return authlegacy.StdSignBytes(
-		chainID, accNum, acc.GetSequence()-1, tx.TimeoutHeight, tx.Fee, tx.Msgs, tx.Memo,
-	)
-}
-
-// GetSignerSignature returns the signature of an account on a tx
-func GetSignerSignature(signer authtypes.AccountI, tx authlegacy.StdTx) (authlegacy.StdSignature, error) {
-	// Extract signature of signer from all tx signatures
-	for _, signature := range tx.Signatures {
-		if signature.PubKey.Equals(signer.GetPubKey()) {
-			return signature, nil
-		}
-	}
-
-	return authlegacy.StdSignature{}, fmt.Errorf("could not find signer signature")
-}
-
-// convertToStdTx converts tx proto binary bytes retrieved from Tendermint into
-// a StdTx. Returns the StdTx, as well as a flag denoting if the function
-// successfully converted or not.
-func convertToStdTx(k Keeper, tx authsigning.Tx) (authlegacy.StdTx, error) {
-	//txI, err := clientCtx.TxConfig.TxDecoder()(txBytes)
-	//if err != nil {
-	//	return authlegacy.StdTx{}, sdkerrors.Wrap(types.ErrInvalid, fmt.Sprintf("Unable to decode tx bytes: %s", err.Error()))
-	//}
-	//
-	//verifiableTx, ok := tx.(authsigning.Tx)
-	//if !ok {
-	//	return authlegacy.StdTx{}, sdkerrors.Wrap(types.ErrInvalid, fmt.Sprintf("%+v is not backwards compatible with %T", tx, authlegacy.StdTx{}))
-	//}
-
-	stdTx, err := clienttx.ConvertTxToStdTx(&k.legacyAmino, tx)
-	if err != nil {
-		return authlegacy.StdTx{}, sdkerrors.Wrap(types.ErrInvalid, fmt.Sprintf("Unable convert to StdTx: %s", err.Error()))
-	}
-
-	return stdTx, nil
-}
-
-func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) (authlegacy.StdSignature, []byte, error) {
-	var defaultSignature = authlegacy.StdSignature{
-		PubKey:    &secp256k1.PubKey{},
-		Signature: []byte{},
-	}
-
-	// Warning: This API may be deprecated:
-	// https://github.com/cosmos/cosmos-sdk/commit/c13809062ab16bf193ad3919c77ec03c79b76cc8#diff-a64b9f4b7565560002e3ac4a5eac008bR148
-	tx := authlegacy.StdTx{}
-	newtx := sdktx.Tx{}
-	txBytes := ctx.TxBytes()
-
-	err := k.cdc.UnmarshalBinaryBare(txBytes, &newtx)
-	if err != nil {
-		return defaultSignature, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
-	}
-
-	var stdSig []authlegacy.StdSignature
-	for i := 0; i < len(newtx.Signatures); i++ {
-		pubkey := secp256k1.PubKey{}
-		if newtx.AuthInfo.SignerInfos[i].PublicKey != nil {
-			pk, ok := newtx.AuthInfo.SignerInfos[i].PublicKey.GetCachedValue().(cryptotypes.PubKey)
-			if ok {
-				pubkey = secp256k1.PubKey{Key: pk.Bytes()}
-			}
-		} else {
-			pubkey = secp256k1.PubKey{Key: signer.Bytes()}
-		}
-
-		stdSig = append(stdSig, authlegacy.StdSignature{PubKey: &pubkey, Signature: newtx.Signatures[i]})
-		//sigV2, err := legacytx.StdSignatureToSignatureV2(k.cdc, stdSig)
-	}
-
-	tx = authlegacy.StdTx{
-		Msgs: newtx.GetMsgs(),
-		Fee: authlegacy.StdFee{
-			Amount: newtx.AuthInfo.Fee.Amount,
-			Gas:    newtx.AuthInfo.Fee.GasLimit,
-		},
-		Signatures:    stdSig,
-		Memo:          newtx.Body.Memo,
-		TimeoutHeight: newtx.Body.TimeoutHeight,
-	}
-	//tx, err = convertToStdTx(k, &newtx)
-	//err := k.legacyAmino.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
-	//if err != nil {
-	//	return defaultSignature, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
-	//}
-
-	// Get sign bytes for the message creator
-	signerAcc, err := ante.GetSignerAcc(ctx, k.accountKeeper, signer) // for MsgInstantiateContract, there is only one signer which is msg.Sender (https://github.com/enigmampc/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L192-L194)
-	if err != nil {
-		return defaultSignature, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
-	}
-
-	signerSig, err := GetSignerSignature(signerAcc, tx)
-	if err != nil {
-		return defaultSignature, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", signer, tx.Signatures))
-	}
-
-	signBytes := GetSignBytes(ctx, signerAcc, tx)
-
-	return signerSig, signBytes, nil
-}
-
 func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeInfo, wasmCode []byte) error {
 	wasmCode, err := uncompress(wasmCode)
 	if err != nil {
@@ -306,6 +185,38 @@ func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeIn
 	return nil
 }
 
+func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, []byte, error) {
+	tx := sdktx.Tx{}
+	err := k.cdc.UnmarshalBinaryBare(ctx.TxBytes(), &tx)
+	if err != nil {
+		return nil, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+	}
+
+	// for MsgInstantiateContract, there is only one signer which is msg.Sender
+	// (https://github.com/enigmampc/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L192-L194)
+	signerAcc, err := ante.GetSignerAcc(ctx, k.accountKeeper, signer)
+	if err != nil {
+		return nil, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
+	}
+
+	txConfig := authtx.NewTxConfig(k.cdc.(*codec.ProtoCodec), []sdktxsigning.SignMode{sdktxsigning.SignMode_SIGN_MODE_DIRECT})
+	modeHandler := txConfig.SignModeHandler()
+	signingData := authsigning.SignerData{
+		ChainID:       ctx.ChainID(),
+		AccountNumber: signerAcc.GetAccountNumber(),
+	}
+
+	protobufTx := authtx.WrapTx(&tx).GetTx()
+	signBytes, err := modeHandler.GetSignBytes(sdktxsigning.SignMode_SIGN_MODE_DIRECT, signingData, protobufTx)
+	if err != nil {
+		return nil, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to recreate sign bytes for the tx: %s", err.Error()))
+	}
+
+	// The first signature is the signature of the message sender,
+	// according to the docstring of `tx.AuthInfo.SignerInfos`
+	return tx.Signatures[0], signBytes, nil
+}
+
 // Instantiate creates an instance of a WASM contract
 func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin */ sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) {
 	/*
@@ -315,10 +226,8 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin *
 		func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator , admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) {
 	*/
 	ctx.GasMeter().ConsumeGas(InstanceCost, "Loading CosmWasm module: init")
-	signerSig := authlegacy.StdSignature{
-		PubKey:    &secp256k1.PubKey{},
-		Signature: []byte{},
-	}
+
+	signerSig := []byte{}
 	signBytes := []byte{}
 	var err error
 
@@ -427,11 +336,8 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin *
 func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, callbackSig []byte) (*sdk.Result, error) {
 	ctx.GasMeter().ConsumeGas(InstanceCost, "Loading Compute module: execute")
 
-	signerSig := authlegacy.StdSignature{
-		PubKey:    &secp256k1.PubKey{},
-		Signature: []byte{},
-	}
-	var signBytes []byte
+	signerSig := []byte{}
+	signBytes := []byte{}
 	var err error
 
 	if callbackSig == nil {

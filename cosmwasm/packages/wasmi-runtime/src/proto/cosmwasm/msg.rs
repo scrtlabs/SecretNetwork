@@ -317,7 +317,8 @@ pub struct MsgInstantiateContract {
     pub label: ::std::string::String,
     pub init_msg: ::std::vec::Vec<u8>,
     pub init_funds: ::protobuf::RepeatedField<super::coin::Coin>,
-    pub callback_sig: ::std::vec::Vec<u8>,
+    // message oneof groups
+    pub _callback_sig: ::std::option::Option<MsgInstantiateContract_oneof__callback_sig>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -327,6 +328,11 @@ impl<'a> ::std::default::Default for &'a MsgInstantiateContract {
     fn default() -> &'a MsgInstantiateContract {
         <MsgInstantiateContract as ::protobuf::Message>::default_instance()
     }
+}
+
+#[derive(Clone,PartialEq,Debug)]
+pub enum MsgInstantiateContract_oneof__callback_sig {
+    callback_sig(::std::vec::Vec<u8>),
 }
 
 impl MsgInstantiateContract {
@@ -482,26 +488,49 @@ impl MsgInstantiateContract {
 
 
     pub fn get_callback_sig(&self) -> &[u8] {
-        &self.callback_sig
+        match self._callback_sig {
+            ::std::option::Option::Some(MsgInstantiateContract_oneof__callback_sig::callback_sig(ref v)) => v,
+            _ => &[],
+        }
     }
     pub fn clear_callback_sig(&mut self) {
-        self.callback_sig.clear();
+        self._callback_sig = ::std::option::Option::None;
+    }
+
+    pub fn has_callback_sig(&self) -> bool {
+        match self._callback_sig {
+            ::std::option::Option::Some(MsgInstantiateContract_oneof__callback_sig::callback_sig(..)) => true,
+            _ => false,
+        }
     }
 
     // Param is passed by value, moved
     pub fn set_callback_sig(&mut self, v: ::std::vec::Vec<u8>) {
-        self.callback_sig = v;
+        self._callback_sig = ::std::option::Option::Some(MsgInstantiateContract_oneof__callback_sig::callback_sig(v))
     }
 
     // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
     pub fn mut_callback_sig(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.callback_sig
+        if let ::std::option::Option::Some(MsgInstantiateContract_oneof__callback_sig::callback_sig(_)) = self._callback_sig {
+        } else {
+            self._callback_sig = ::std::option::Option::Some(MsgInstantiateContract_oneof__callback_sig::callback_sig(::std::vec::Vec::new()));
+        }
+        match self._callback_sig {
+            ::std::option::Option::Some(MsgInstantiateContract_oneof__callback_sig::callback_sig(ref mut v)) => v,
+            _ => panic!(),
+        }
     }
 
     // Take field
     pub fn take_callback_sig(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.callback_sig, ::std::vec::Vec::new())
+        if self.has_callback_sig() {
+            match self._callback_sig.take() {
+                ::std::option::Option::Some(MsgInstantiateContract_oneof__callback_sig::callback_sig(v)) => v,
+                _ => panic!(),
+            }
+        } else {
+            ::std::vec::Vec::new()
+        }
     }
 }
 
@@ -542,7 +571,10 @@ impl ::protobuf::Message for MsgInstantiateContract {
                     ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.init_funds)?;
                 },
                 7 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.callback_sig)?;
+                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    self._callback_sig = ::std::option::Option::Some(MsgInstantiateContract_oneof__callback_sig::callback_sig(is.read_bytes()?));
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -575,8 +607,12 @@ impl ::protobuf::Message for MsgInstantiateContract {
             let len = value.compute_size();
             my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
         };
-        if !self.callback_sig.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(7, &self.callback_sig);
+        if let ::std::option::Option::Some(ref v) = self._callback_sig {
+            match v {
+                &MsgInstantiateContract_oneof__callback_sig::callback_sig(ref v) => {
+                    my_size += ::protobuf::rt::bytes_size(7, &v);
+                },
+            };
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -604,8 +640,12 @@ impl ::protobuf::Message for MsgInstantiateContract {
             os.write_raw_varint32(v.get_cached_size())?;
             v.write_to_with_cached_sizes(os)?;
         };
-        if !self.callback_sig.is_empty() {
-            os.write_bytes(7, &self.callback_sig)?;
+        if let ::std::option::Option::Some(ref v) = self._callback_sig {
+            match v {
+                &MsgInstantiateContract_oneof__callback_sig::callback_sig(ref v) => {
+                    os.write_bytes(7, v)?;
+                },
+            };
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -675,10 +715,10 @@ impl ::protobuf::Message for MsgInstantiateContract {
                 |m: &MsgInstantiateContract| { &m.init_funds },
                 |m: &mut MsgInstantiateContract| { &mut m.init_funds },
             ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+            fields.push(::protobuf::reflect::accessor::make_singular_bytes_accessor::<_>(
                 "callback_sig",
-                |m: &MsgInstantiateContract| { &m.callback_sig },
-                |m: &mut MsgInstantiateContract| { &mut m.callback_sig },
+                MsgInstantiateContract::has_callback_sig,
+                MsgInstantiateContract::get_callback_sig,
             ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgInstantiateContract>(
                 "MsgInstantiateContract",
@@ -702,7 +742,7 @@ impl ::protobuf::Clear for MsgInstantiateContract {
         self.label.clear();
         self.init_msg.clear();
         self.init_funds.clear();
-        self.callback_sig.clear();
+        self._callback_sig = ::std::option::Option::None;
         self.unknown_fields.clear();
     }
 }
@@ -727,7 +767,8 @@ pub struct MsgExecuteContract {
     pub msg: ::std::vec::Vec<u8>,
     pub callback_code_hash: ::std::string::String,
     pub sent_funds: ::protobuf::RepeatedField<super::coin::Coin>,
-    pub callback_sig: ::std::vec::Vec<u8>,
+    // message oneof groups
+    pub _callback_sig: ::std::option::Option<MsgExecuteContract_oneof__callback_sig>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -737,6 +778,11 @@ impl<'a> ::std::default::Default for &'a MsgExecuteContract {
     fn default() -> &'a MsgExecuteContract {
         <MsgExecuteContract as ::protobuf::Message>::default_instance()
     }
+}
+
+#[derive(Clone,PartialEq,Debug)]
+pub enum MsgExecuteContract_oneof__callback_sig {
+    callback_sig(::std::vec::Vec<u8>),
 }
 
 impl MsgExecuteContract {
@@ -877,26 +923,49 @@ impl MsgExecuteContract {
 
 
     pub fn get_callback_sig(&self) -> &[u8] {
-        &self.callback_sig
+        match self._callback_sig {
+            ::std::option::Option::Some(MsgExecuteContract_oneof__callback_sig::callback_sig(ref v)) => v,
+            _ => &[],
+        }
     }
     pub fn clear_callback_sig(&mut self) {
-        self.callback_sig.clear();
+        self._callback_sig = ::std::option::Option::None;
+    }
+
+    pub fn has_callback_sig(&self) -> bool {
+        match self._callback_sig {
+            ::std::option::Option::Some(MsgExecuteContract_oneof__callback_sig::callback_sig(..)) => true,
+            _ => false,
+        }
     }
 
     // Param is passed by value, moved
     pub fn set_callback_sig(&mut self, v: ::std::vec::Vec<u8>) {
-        self.callback_sig = v;
+        self._callback_sig = ::std::option::Option::Some(MsgExecuteContract_oneof__callback_sig::callback_sig(v))
     }
 
     // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
     pub fn mut_callback_sig(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.callback_sig
+        if let ::std::option::Option::Some(MsgExecuteContract_oneof__callback_sig::callback_sig(_)) = self._callback_sig {
+        } else {
+            self._callback_sig = ::std::option::Option::Some(MsgExecuteContract_oneof__callback_sig::callback_sig(::std::vec::Vec::new()));
+        }
+        match self._callback_sig {
+            ::std::option::Option::Some(MsgExecuteContract_oneof__callback_sig::callback_sig(ref mut v)) => v,
+            _ => panic!(),
+        }
     }
 
     // Take field
     pub fn take_callback_sig(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.callback_sig, ::std::vec::Vec::new())
+        if self.has_callback_sig() {
+            match self._callback_sig.take() {
+                ::std::option::Option::Some(MsgExecuteContract_oneof__callback_sig::callback_sig(v)) => v,
+                _ => panic!(),
+            }
+        } else {
+            ::std::vec::Vec::new()
+        }
     }
 }
 
@@ -930,7 +999,10 @@ impl ::protobuf::Message for MsgExecuteContract {
                     ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.sent_funds)?;
                 },
                 6 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.callback_sig)?;
+                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    self._callback_sig = ::std::option::Option::Some(MsgExecuteContract_oneof__callback_sig::callback_sig(is.read_bytes()?));
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -960,8 +1032,12 @@ impl ::protobuf::Message for MsgExecuteContract {
             let len = value.compute_size();
             my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
         };
-        if !self.callback_sig.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(6, &self.callback_sig);
+        if let ::std::option::Option::Some(ref v) = self._callback_sig {
+            match v {
+                &MsgExecuteContract_oneof__callback_sig::callback_sig(ref v) => {
+                    my_size += ::protobuf::rt::bytes_size(6, &v);
+                },
+            };
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -986,8 +1062,12 @@ impl ::protobuf::Message for MsgExecuteContract {
             os.write_raw_varint32(v.get_cached_size())?;
             v.write_to_with_cached_sizes(os)?;
         };
-        if !self.callback_sig.is_empty() {
-            os.write_bytes(6, &self.callback_sig)?;
+        if let ::std::option::Option::Some(ref v) = self._callback_sig {
+            match v {
+                &MsgExecuteContract_oneof__callback_sig::callback_sig(ref v) => {
+                    os.write_bytes(6, v)?;
+                },
+            };
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -1052,10 +1132,10 @@ impl ::protobuf::Message for MsgExecuteContract {
                 |m: &MsgExecuteContract| { &m.sent_funds },
                 |m: &mut MsgExecuteContract| { &mut m.sent_funds },
             ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+            fields.push(::protobuf::reflect::accessor::make_singular_bytes_accessor::<_>(
                 "callback_sig",
-                |m: &MsgExecuteContract| { &m.callback_sig },
-                |m: &mut MsgExecuteContract| { &mut m.callback_sig },
+                MsgExecuteContract::has_callback_sig,
+                MsgExecuteContract::get_callback_sig,
             ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgExecuteContract>(
                 "MsgExecuteContract",
@@ -1078,7 +1158,7 @@ impl ::protobuf::Clear for MsgExecuteContract {
         self.msg.clear();
         self.callback_code_hash.clear();
         self.sent_funds.clear();
-        self.callback_sig.clear();
+        self._callback_sig = ::std::option::Option::None;
         self.unknown_fields.clear();
     }
 }
@@ -1102,7 +1182,7 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     .com/cosmos/cosmos-sdk/types.AccAddress\x126\n\x0ewasm_byte_code\x18\x02\
     \x20\x01(\x0cR\x0cwasmByteCodeB\x10\xe2\xde\x1f\x0cWASMByteCode\x12\x16\
     \n\x06source\x18\x03\x20\x01(\tR\x06source\x12\x18\n\x07builder\x18\x04\
-    \x20\x01(\tR\x07builder:\x04\x88\xa0\x1f\0\"\xfc\x02\n\x16MsgInstantiate\
+    \x20\x01(\tR\x07builder:\x04\x88\xa0\x1f\0\"\x92\x03\n\x16MsgInstantiate\
     Contract\x12I\n\x06sender\x18\x01\x20\x01(\x0cR\x06senderB1\xfa\xde\x1f-\
     github.com/cosmos/cosmos-sdk/types.AccAddress\x12,\n\x12callback_code_ha\
     sh\x18\x02\x20\x01(\tR\x10callbackCodeHash\x12#\n\x07code_id\x18\x03\x20\
@@ -1110,17 +1190,18 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \x20\x01(\tR\x05label\x12\x19\n\x08init_msg\x18\x05\x20\x01(\x0cR\x07ini\
     tMsg\x12j\n\ninit_funds\x18\x06\x20\x03(\x0b2\x19.cosmos.base.v1beta1.Co\
     inR\tinitFundsB0\xaa\xdf\x1f(github.com/cosmos/cosmos-sdk/types.Coins\
-    \xc8\xde\x1f\0\x12!\n\x0ccallback_sig\x18\x07\x20\x01(\x0cR\x0bcallbackS\
-    ig:\x04\x88\xa0\x1f\0\"\x83\x03\n\x12MsgExecuteContract\x12I\n\x06sender\
-    \x18\x01\x20\x01(\x0cR\x06senderB1\xfa\xde\x1f-github.com/cosmos/cosmos-\
-    sdk/types.AccAddress\x12M\n\x08contract\x18\x02\x20\x01(\x0cR\x08contrac\
-    tB1\xfa\xde\x1f-github.com/cosmos/cosmos-sdk/types.AccAddress\x12\x10\n\
-    \x03msg\x18\x03\x20\x01(\x0cR\x03msg\x12,\n\x12callback_code_hash\x18\
-    \x04\x20\x01(\tR\x10callbackCodeHash\x12j\n\nsent_funds\x18\x05\x20\x03(\
-    \x0b2\x19.cosmos.base.v1beta1.CoinR\tsentFundsB0\xc8\xde\x1f\0\xaa\xdf\
-    \x1f(github.com/cosmos/cosmos-sdk/types.Coins\x12!\n\x0ccallback_sig\x18\
-    \x06\x20\x01(\x0cR\x0bcallbackSig:\x04\x88\xa0\x1f\0B=Z;github.com/enigm\
-    ampc/SecretNetwork/x/compute/internal/typesb\x06proto3\
+    \xc8\xde\x1f\0\x12&\n\x0ccallback_sig\x18\x07\x20\x01(\x0cH\0R\x0bcallba\
+    ckSig\x88\x01\x01B\x0f\n\r_callback_sig:\x04\x88\xa0\x1f\0\"\x99\x03\n\
+    \x12MsgExecuteContract\x12I\n\x06sender\x18\x01\x20\x01(\x0cR\x06senderB\
+    1\xfa\xde\x1f-github.com/cosmos/cosmos-sdk/types.AccAddress\x12M\n\x08co\
+    ntract\x18\x02\x20\x01(\x0cR\x08contractB1\xfa\xde\x1f-github.com/cosmos\
+    /cosmos-sdk/types.AccAddress\x12\x10\n\x03msg\x18\x03\x20\x01(\x0cR\x03m\
+    sg\x12,\n\x12callback_code_hash\x18\x04\x20\x01(\tR\x10callbackCodeHash\
+    \x12j\n\nsent_funds\x18\x05\x20\x03(\x0b2\x19.cosmos.base.v1beta1.CoinR\
+    \tsentFundsB0\xaa\xdf\x1f(github.com/cosmos/cosmos-sdk/types.Coins\xc8\
+    \xde\x1f\0\x12&\n\x0ccallback_sig\x18\x06\x20\x01(\x0cH\0R\x0bcallbackSi\
+    g\x88\x01\x01B\x0f\n\r_callback_sig:\x04\x88\xa0\x1f\0B=Z;github.com/eni\
+    gmampc/SecretNetwork/x/compute/internal/typesb\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

@@ -2,7 +2,6 @@ package types
 
 import (
 	"encoding/json"
-	authlegacy "github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	"strconv"
 )
 
@@ -61,6 +60,6 @@ func (o OutOfGasError) Error() string {
 
 type VerificationInfo struct {
 	Bytes             []byte                  `json:"sign_bytes"`
-	Signature         authlegacy.StdSignature `json:"signature"`
+	Signature         []byte				  `json:"signature"`
 	CallbackSignature []byte                  `json:"callback_sig"` // Optional
 }

@@ -1,14 +1,14 @@
 use log::*;
 
-use crate::cosmwasm::encoding::Binary;
-use crate::cosmwasm::types::{
-    CanonicalAddr, Coin, CosmosSignature, Env, SigInfo, SignDoc, SignDocWasmMsg,
-};
+use enclave_ffi_types::EnclaveError;
+
+use crate::cosmwasm::types::{CanonicalAddr, Coin, Env};
 use crate::crypto::traits::PubKey;
 use crate::crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
 use crate::wasm::io;
 use crate::wasm::types::SecretMessage;
-use enclave_ffi_types::EnclaveError;
+
+use super::types::{CosmWasmMsg, CosmosPubKey, SigInfo, SignDoc};
 
 pub type ContractKey = [u8; CONTRACT_KEY_LENGTH];
 
@@ -184,32 +184,22 @@ pub fn verify_params(
             String::from_utf8_lossy(sig_info.sign_bytes.as_slice())
         );
 
-        let sign_doc: SignDoc =
-            serde_json::from_slice(sig_info.sign_bytes.as_slice()).map_err(|err| {
-                warn!(
-                    "got an error while trying to deserialize sign doc bytes into json {:?}: {}",
-                    sig_info.sign_bytes.as_slice(),
-                    err
-                );
-                EnclaveError::FailedToDeserialize
-            })?;
-
+        let sign_doc = SignDoc::from_bytes(sig_info.sign_bytes.as_slice())?;
         trace!("sign doc: {:?}", sign_doc);
 
         // This verifies that signatures and sign bytes are self consistent
-        sig_info
-            .signature
-            .get_public_key()
+        let sender_public_key: &CosmosPubKey = &sign_doc.auth_info.signer_infos[0].public_key;
+        sender_public_key
             .verify_bytes(
-                &sig_info.sign_bytes.as_slice(),
-                &sig_info.signature.get_signature().as_slice(),
+                sig_info.sign_bytes.as_slice(),
+                sig_info.signature.as_slice(),
             )
             .map_err(|err| {
                 warn!("Signature verification failed: {:?}", err);
                 EnclaveError::FailedTxVerification
             })?;
 
-        if verify_signature_params(&sign_doc, sig_info, env, msg) {
+        if verify_signature_params(&sign_doc, env, msg) {
             info!("Parameters verified successfully");
             return Ok(());
         }
@@ -243,8 +233,7 @@ fn verify_callback_sig(
     true
 }
 
-fn verify_sender(signature: &CosmosSignature, msg_sender: &CanonicalAddr) -> bool {
-    let sender_pubkey = signature.get_public_key();
+fn verify_sender(sender_pubkey: &CosmosPubKey, msg_sender: &CanonicalAddr) -> bool {
     let address = sender_pubkey.get_address();
 
     if address.eq(&msg_sender) {
@@ -257,22 +246,18 @@ fn verify_sender(signature: &CosmosSignature, msg_sender: &CanonicalAddr) -> boo
 fn get_verified_msg<'a>(
     sign_doc: &'a SignDoc,
     sent_msg: &'a SecretMessage,
-) -> Option<&'a SignDocWasmMsg> {
-    sign_doc.msgs.iter().find(|&m| match m {
-        SignDocWasmMsg::Execute { msg, .. } | SignDocWasmMsg::Instantiate { init_msg: msg, .. } => {
-            let binary_msg_result = Binary::from_base64(msg);
-            if let Ok(binary_msg) = binary_msg_result {
-                return Binary(sent_msg.to_vec()) == binary_msg;
-            }
-
-            false
+) -> Option<&'a CosmWasmMsg> {
+    sign_doc.body.messages.iter().find(|&m| match m {
+        CosmWasmMsg::Execute { msg, .. } | CosmWasmMsg::Instantiate { init_msg: msg, .. } => {
+            &sent_msg.to_vec() == msg
         }
+        CosmWasmMsg::Other => false,
     })
 }
 
-fn verify_contract(msg: &SignDocWasmMsg, env: &Env) -> bool {
+fn verify_contract(msg: &CosmWasmMsg, env: &Env) -> bool {
     // Contract address is relevant only to execute, since during sending an instantiate message the contract address is not yet known
-    if let SignDocWasmMsg::Execute { contract, .. } = msg {
+    if let CosmWasmMsg::Execute { contract, .. } = msg {
         info!("Verifying contract address..");
         if env.contract.address != *contract {
             trace!(
@@ -287,22 +272,18 @@ fn verify_contract(msg: &SignDocWasmMsg, env: &Env) -> bool {
     true
 }
 
-fn verify_funds(msg: &SignDocWasmMsg, env: &Env) -> bool {
+fn verify_funds(msg: &CosmWasmMsg, env: &Env) -> bool {
     match msg {
-        SignDocWasmMsg::Execute { sent_funds, .. }
-        | SignDocWasmMsg::Instantiate {
+        CosmWasmMsg::Execute { sent_funds, .. }
+        | CosmWasmMsg::Instantiate {
             init_funds: sent_funds,
             ..
         } => &env.message.sent_funds == sent_funds,
+        CosmWasmMsg::Other => false,
     }
 }
 
-fn verify_signature_params(
-    sign_doc: &SignDoc,
-    sig_info: &SigInfo,
-    env: &Env,
-    sent_msg: &SecretMessage,
-) -> bool {
+fn verify_signature_params(sign_doc: &SignDoc, env: &Env, sent_msg: &SecretMessage) -> bool {
     info!("Verifying sender..");
 
     let msg_sender = match CanonicalAddr::from_human(&env.message.sender) {
@@ -310,12 +291,12 @@ fn verify_signature_params(
         _ => return false,
     };
 
-    if !verify_sender(&sig_info.signature, &msg_sender) {
+    if !verify_sender(&sign_doc.auth_info.sender_public_key(), &msg_sender) {
         warn!("Sender verification failed!");
         trace!(
             "Message sender {:?} does not match with the message signer {:?}",
             &env.message.sender,
-            &sig_info.signature.get_public_key().get_address()
+            &sign_doc.auth_info.sender_public_key().get_address()
         );
         return false;
     }
@@ -329,7 +310,7 @@ fn verify_signature_params(
         trace!(
             "Message sent to contract {:?} is not equal to any signed messages {:?}",
             sent_msg.to_vec(),
-            sign_doc.msgs
+            sign_doc.body.messages
         );
         return false;
     }

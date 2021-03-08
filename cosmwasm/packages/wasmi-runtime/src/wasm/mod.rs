@@ -7,7 +7,7 @@ mod io;
 mod memory;
 mod query_chain;
 mod runtime;
-mod types;
+pub(crate) mod types;
 
 pub use contract_operations::{handle, init, query};
 

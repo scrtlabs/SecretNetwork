@@ -2617,8 +2617,8 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     mos.crypto.multisig.v1beta1.CompactBitArrayR\x08bitarray\x12:\n\nmode_in\
     fos\x18\x02\x20\x03(\x0b2\x1b.cosmos.tx.v1beta1.ModeInfoR\tmodeInfosB\
     \x05\n\x03sum\"\xb7\x01\n\x03Fee\x12c\n\x06amount\x18\x01\x20\x03(\x0b2\
-    \x19.cosmos.base.v1beta1.CoinR\x06amountB0\xc8\xde\x1f\0\xaa\xdf\x1f(git\
-    hub.com/cosmos/cosmos-sdk/types.Coins\x12\x1b\n\tgas_limit\x18\x02\x20\
+    \x19.cosmos.base.v1beta1.CoinR\x06amountB0\xaa\xdf\x1f(github.com/cosmos\
+    /cosmos-sdk/types.Coins\xc8\xde\x1f\0\x12\x1b\n\tgas_limit\x18\x02\x20\
     \x01(\x04R\x08gasLimit\x12\x14\n\x05payer\x18\x03\x20\x01(\tR\x05payer\
     \x12\x18\n\x07granter\x18\x04\x20\x01(\tR\x07granterB'Z%github.com/cosmo\
     s/cosmos-sdk/types/txb\x06proto3\

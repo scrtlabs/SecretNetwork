@@ -59,7 +59,7 @@ trap cleanup EXIT ERR
 # store wasm code on-chain so we could later instansiate it
 export STORE_TX_HASH=$(
     yes |
-    secretd tx compute store erc20.wasm --from a --gas 10000000 --output $OUTPUT_FORMAT |
+    secretd tx compute store erc20.wasm --from a --gas 1200000 --gas-prices 0.25uscrt --output $OUTPUT_FORMAT |
     jq -r .txhash
 )
 
@@ -75,8 +75,16 @@ secretd q tx "$STORE_TX_HASH" --output $OUTPUT_FORMAT |
 # balances are set to 108 & 53 at init
 export INIT_TX_HASH=$(
     yes |
-        secretd tx compute instantiate 1 "{\"decimals\":10,\"initial_balances\":[{\"address\":\"$(secretd keys show a -a)\",\"amount\":\"108\"},{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\",\"amount\":\"53\"}],\"name\":\"ReuvenPersonalRustCoin\",\"symbol\":\"RPRC\"}" --label RPRCCoin --from a --output $OUTPUT_FORMAT |
-        jq -r .txhash
+    secretd tx compute instantiate 1 '{
+        "decimals":10,
+        "initial_balances":[
+            {"address":"'"$(secretd keys show a -a)"'","amount":"108"},
+            {"address":"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t","amount":"53"}
+        ],
+        "name":"ReuvenPersonalRustCoin",
+        "symbol":"RPRC"
+    }' --label RPRCCoin --gas 1000000 --gas-prices 0.25uscrt --from a --output $OUTPUT_FORMAT |
+    jq -r .txhash
 )
 
 wait_for_tx "$INIT_TX_HASH" "Waiting for instantiate to finish on-chain..."
@@ -85,7 +93,7 @@ secretd q compute tx "$INIT_TX_HASH"
 
 export CONTRACT_ADDRESS=$(
     secretd q tx "$INIT_TX_HASH" |
-        jq -er '.logs[].events[].attributes[] | select(.key == "contract_address") | .value'
+    jq -er '.logs[].events[].attributes[] | select(.key == "contract_address") | .value'
 )
 
 # test balances after init (ocall_query + read_db + canonicalize_address)
