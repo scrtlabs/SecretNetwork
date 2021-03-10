@@ -14,14 +14,14 @@ This document details how to join the Secret Network `mainnet` as a validator.
 
 - Up to date SGX ([Read this](https://learn.scrt.network/sgx.html), [Setup](setup-sgx.md), [Verify](verify-sgx.md))
 - 1GB RAM
-- 100GB HDD
+- 100GB HDD (Premium SSD)
 - 1 dedicated core of any Intel Skylake processor (Intel® 6th generation) or better
 
 #### Recommended requirements
 
 - Up to date SGX ([Read this](https://learn.scrt.network/sgx.html), [Setup](setup-sgx.md), [Verify](verify-sgx.md))
 - 2GB RAM
-- 256GB SSD
+- 256GB SSD (Premium SSD)
 - 2 dedicated cores of any Intel Skylake processor (Intel® 6th generation) or better
 
 ### Installation
