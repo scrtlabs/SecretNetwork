@@ -380,19 +380,6 @@ export class CosmWasmClient {
   }
 
   /**
-   * Returns the data at the key if present (raw contract dependent storage data)
-   * or null if no data at this key.
-   *
-   * Promise is rejected when contract does not exist.
-   */
-  public async queryContractRaw(address: string, key: Uint8Array): Promise<Uint8Array | null> {
-    // just test contract existence
-    const _info = await this.getContract(address);
-
-    return this.restClient.queryContractRaw(address, key);
-  }
-
-  /**
    * Makes a smart query on the contract, returns the parsed JSON document.
    *
    * Promise is rejected when contract does not exist.

@@ -157,13 +157,6 @@ export declare class CosmWasmClient {
    */
   getContract(address: string): Promise<ContractDetails>;
   /**
-   * Returns the data at the key if present (raw contract dependent storage data)
-   * or null if no data at this key.
-   *
-   * Promise is rejected when contract does not exist.
-   */
-  queryContractRaw(address: string, key: Uint8Array): Promise<Uint8Array | null>;
-  /**
    * Makes a smart query on the contract, returns the parsed JSON document.
    *
    * Promise is rejected when contract does not exist.
