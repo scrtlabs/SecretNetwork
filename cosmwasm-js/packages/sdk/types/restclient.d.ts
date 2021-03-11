@@ -1,5 +1,5 @@
 import { Log } from "./logs";
-import { Coin, CosmosSdkTx, JsonObject, Model, StdTx } from "./types";
+import { Coin, CosmosSdkTx, JsonObject, StdTx } from "./types";
 import { SecretUtils } from "./enigmautils";
 export interface CosmosSdkAccount {
   /** Bech32 account address */
@@ -233,8 +233,6 @@ export declare class RestClient {
    * Returns null when contract was not found at this address.
    */
   getContractInfo(address: string): Promise<ContractDetails | null>;
-  getAllContractState(address: string): Promise<readonly Model[]>;
-  queryContractRaw(address: string, key: Uint8Array): Promise<Uint8Array | null>;
   /**
    * Makes a smart query on the contract and parses the reponse as JSON.
    * Throws error if no such contract exists, the query format is invalid or the response is invalid.
