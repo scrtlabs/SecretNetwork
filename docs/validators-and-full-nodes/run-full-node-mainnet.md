@@ -5,7 +5,7 @@ This document details how to join the Secret Network `mainnet` as a validator.
 ### Requirements
 
 - Up to date SGX ([Read this](https://learn.scrt.network/sgx.html), [Setup](setup-sgx.md), [Verify](verify-sgx.md))
-- Ubuntu/Debian host (with ZFS or LVM to be able to add more storage easily)
+- Ubuntu/Debian host (with ZFS or LVM to be able to add more storage easily. Note premium SSD use is more important when adding overhead from ZFS.)
 - A public IP address
 - Open ports `TCP 26656 & 26657` _Note: If you're behind a router or firewall then you'll need to port forward on the network device._
 - Reading https://docs.tendermint.com/master/tendermint-core/running-in-production.html
