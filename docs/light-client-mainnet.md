@@ -17,6 +17,11 @@
    secretcli config trust-node true
    ```
 
+   `secret-2.node.scrt.network` is not a real node though.
+   You currently have two options for getting your own secret node:
+   1. [Rent or use a free-tier node from figment](https://figment.io/datahub/secret-network/).
+   2. [Set up your own node](validators-and-full-nodes/run-full-node-mainnet.md).
+
 4) Check the installation:
 
    ```bash
