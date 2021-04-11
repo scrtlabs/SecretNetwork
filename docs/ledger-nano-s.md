@@ -71,7 +71,7 @@ secretcli keys add <account name> --ledger --account <account number on your Led
 
 **Please backup the mnemonics!**
 
-> Note: Ledger only support a BIP-44 HD path of `44'/118'/{account}'/0/{index}`, while Secret Network wallets will use `44'/529'/{account}'/0/{index}` by default. This means if you wish to export the keys to a different wallet, you must select 118 as the coin type when importing the mnemonics
+> Note: Ledger only supports a BIP-44 HD path of `44'/118'/{account}'/0/{index}`, while Secret Network wallets will use `44'/529'/{account}'/0/{index}` by default. This means if you wish to export the keys to a different wallet, you must select 118 as the coin type when importing the mnemonics
 
 ### Display your account address
 
