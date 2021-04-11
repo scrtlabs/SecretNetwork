@@ -63,6 +63,11 @@ module.exports = {
             title: "SecretJS",
             path: "/dev/secret-js",
           },
+          {
+            title: "Developing your first secret contract",
+            path:
+              "https://github.com/darwinzer0/secret-contract-tutorials/tree/main/tutorial1",
+          },
         ],
       },
       {
