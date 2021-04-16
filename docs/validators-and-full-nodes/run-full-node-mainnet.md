@@ -5,7 +5,7 @@ This document details how to join the Secret Network `mainnet` as a validator.
 ### Requirements
 
 - Up to date SGX ([Read this](https://learn.scrt.network/sgx.html), [Setup](setup-sgx.md), [Verify](verify-sgx.md))
-- Ubuntu/Debian host (with ZFS or LVM to be able to add more storage easily)
+- Ubuntu/Debian host (with ZFS or LVM to be able to add more storage easily. Note premium SSD use is more important when adding overhead from ZFS.)
 - A public IP address
 - Open ports `TCP 26656 & 26657` _Note: If you're behind a router or firewall then you'll need to port forward on the network device._
 - Reading https://docs.tendermint.com/master/tendermint-core/running-in-production.html
@@ -111,7 +111,7 @@ mkdir -p ~/.secretd/.node
 
 secretd configure-secret node-master-cert.der "$SEED"
 
-perl -i -pe 's/^seeds = ".*?"/seeds = "332c69cb1e5a4a62916be571ff9c4cd09cc71a79\@secret-2.node.enigma.co:26656"/' ~/.secretd/config/config.toml
+perl -i -pe 's/^persistent_peers = ".*?"/persistent_peers = "61a3a9c3fdd9e497cf5f40cb251a68300fa2d90e\@secret-2.node.enigma.co:26656"/' ~/.secretd/config/config.toml
 perl -i -pe 's;laddr = "tcp://127.0.0.1:26657";laddr = "tcp://0.0.0.0:26657";' ~/.secretd/config/config.toml
 ```
 

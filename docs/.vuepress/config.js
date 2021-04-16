@@ -63,6 +63,10 @@ module.exports = {
             title: "SecretJS",
             path: "/dev/secret-js",
           },
+          {
+            title: "Tutorials",
+            path: "/dev/tutorials.md",
+          },
         ],
       },
       {
@@ -109,7 +113,7 @@ module.exports = {
                 //path: '/validators-and-full-nodes/active-node-peers'
               },
               {
-                title: "Vulcan Netwrok Upgrade",
+                title: "Vulcan Network Upgrade",
                 path: "/upgrade-secret-1-to-secret-2",
               },
             ],

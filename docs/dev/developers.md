@@ -1,6 +1,6 @@
 # Secret Contract Devs
 
-Developers can write Secret Contracts for CosmWasm running inside secure enclaves with encryption capabilities, enabling computation over private data in contracts running on the live Secret Network. 
+Developers can write Secret Contracts for CosmWasm running inside secure enclaves with encryption capabilities, enabling computation over private data in contracts running on the live Secret Network.
 
 - [Secret Contracts](secret-contracts.md)
 
@@ -11,3 +11,5 @@ Developers can write Secret Contracts for CosmWasm running inside secure enclave
 - [Quickstart](quickstart.md)
 
 - [SecretJS](secret-js.md)
+
+- [Developing your first secret contract](https://github.com/darwinzer0/secret-contract-tutorials/tree/main/tutorial1)
