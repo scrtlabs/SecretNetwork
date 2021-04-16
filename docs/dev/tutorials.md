@@ -23,7 +23,7 @@ To learn more about setting up your development environment, developing a first 
 
 
 ## Tutorial Developing your first Secret Contract
-Refer to this [tutorial](https://github.com/darwinzer0/secret-contract-tutorials/tree/main/tutorial1) from darwinzer0 about his experience on developing a Secret Exploding Message app.
+Refer to this [tutorial](https://github.com/darwinzer0/secret-contract-tutorials/tree/main/tutorial1) from darwinzer0 about developing a Secret Exploding Message app.
 
 A recommended walkthrough, with practical insights on Secret contract functions, messages & storage.
 
