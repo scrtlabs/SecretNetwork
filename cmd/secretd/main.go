@@ -28,6 +28,7 @@ import (
 
 	app "github.com/enigmampc/SecretNetwork"
 	scrt "github.com/enigmampc/SecretNetwork/types"
+	secretd "github.com/enigmampc/SecretNetwork/cmd/secretd/lib"
 	sdk "github.com/enigmampc/cosmos-sdk/types"
 	genutilcli "github.com/enigmampc/cosmos-sdk/x/genutil/client/cli"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -61,12 +62,12 @@ func main() {
 	}
 
 	// CLI commands to initialize the chain
-	rootCmd.AddCommand(InitAttestation(ctx, cdc))
-	rootCmd.AddCommand(ParseCert(ctx, cdc))
-	rootCmd.AddCommand(ConfigureSecret(ctx, cdc))
-	rootCmd.AddCommand(HealthCheck(ctx, cdc))
-	rootCmd.AddCommand(ResetEnclave(ctx, cdc))
-	rootCmd.AddCommand(InitBootstrapCmd(ctx, cdc, app.ModuleBasics))
+	rootCmd.AddCommand(secretd.InitAttestation(ctx, cdc))
+	rootCmd.AddCommand(secretd.ParseCert(ctx, cdc))
+	rootCmd.AddCommand(secretd.ConfigureSecret(ctx, cdc))
+	rootCmd.AddCommand(secretd.HealthCheck(ctx, cdc))
+	rootCmd.AddCommand(secretd.ResetEnclave(ctx, cdc))
+	rootCmd.AddCommand(secretd.InitBootstrapCmd(ctx, cdc, app.ModuleBasics))
 	rootCmd.AddCommand(updateTmParamsAndInit(ctx, cdc, app.ModuleBasics, app.DefaultNodeHome))
 	rootCmd.AddCommand(genutilcli.CollectGenTxsCmd(ctx, cdc, auth.GenesisAccountIterator{}, app.DefaultNodeHome))
 	rootCmd.AddCommand(genutilcli.MigrateGenesisCmd(ctx, cdc))
@@ -77,7 +78,7 @@ func main() {
 		),
 	)
 	rootCmd.AddCommand(genutilcli.ValidateGenesisCmd(ctx, cdc, app.ModuleBasics))
-	rootCmd.AddCommand(AddGenesisAccountCmd(ctx, cdc, app.DefaultNodeHome, app.DefaultCLIHome))
+	rootCmd.AddCommand(secretd.AddGenesisAccountCmd(ctx, cdc, app.DefaultNodeHome, app.DefaultCLIHome))
 	rootCmd.AddCommand(flags.NewCompletionCmd(rootCmd, true))
 
 	server.AddCommands(ctx, cdc, rootCmd, newApp, exportAppStateAndTMValidators)
