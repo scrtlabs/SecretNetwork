@@ -1,0 +1,13 @@
+# THis file is an example config file for Rumor
+
+queryGasLimit = 300000
+
+interBlockCache = true
+
+tendermintEndpoint = "localhost:26667"
+
+syncUntil = 0
+
+dbDir = "data"
+
+genesisPath = "genesis.json"

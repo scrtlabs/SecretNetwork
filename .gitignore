@@ -9,6 +9,7 @@ Enclave_u.o
 /secretd*
 /enigmacli*
 /enigmad*
+rumor
 secretcli*
 incubator-teaclave-sgx-sdk
 libenclave.a
