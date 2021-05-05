@@ -6,7 +6,7 @@ export RUMOR_RPC_LADDR='tcp://0.0.0.0:26659'
 export RUMOR_HOME='.secretd'
 
 echo "Waiting for node to start..."
-sleep 15
+sleep 30
 
 curl http://"$RUMOR_TENDERMINT_ENDPOINT"/genesis | jq -r .result.genesis > /root/.rumor/genesis.json
 

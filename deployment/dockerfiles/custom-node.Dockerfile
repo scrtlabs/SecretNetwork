@@ -42,7 +42,7 @@ COPY ./cmd/rumor/config.toml ./.rumor/config/config.toml
 
 
 COPY deployment/docker/bootstrap/bootstrap_init.sh .
-COPY deployment/docker/node/node_init.sh .
+COPY deployment/docker/rumor/node_init.sh .
 COPY deployment/docker/rumor/rumor_init.sh .
 COPY deployment/docker/startup.sh .
 COPY deployment/docker/node_key.json .
