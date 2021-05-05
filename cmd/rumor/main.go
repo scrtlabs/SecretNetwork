@@ -24,6 +24,7 @@ import (
 
 func main() {
 	conf := getConfig()
+	fmt.Printf("Using config: %v\n", conf)
 
 	logger := tmlog.NewTMLogger(os.Stderr)
 	db := leveldb.NewLevelDB(conf.dbDir)
@@ -36,7 +37,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// TODO add query gas limit
 	secretd := makeApp(logger, db.GetCosmosAdapter(), nil, conf)
 
 	rum := rumor.NewMantle(secretd, db, genesis)
@@ -89,18 +89,18 @@ type config struct {
 }
 
 func getConfig() *config {
-	flagQueryGasLimit := "query-gas-limit"
-	flagInterBlockCache := "inter-block-cache"
-	flagTendermintEndpoint := "tendermint-endpoint"
-	flagSyncUntil := "sync-until"
-	flagDbDir := "db-dir"
-	flagGenesisPath := "genesis-path"
+	flagQueryGasLimit := "query_gas_limit"
+	flagInterBlockCache := "inter_block_cache"
+	flagTendermintEndpoint := "tendermint_endpoint"
+	flagSyncUntil := "sync_until"
+	flagDbDir := "db_dir"
+	flagGenesisPath := "genesis_path"
 
 	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
 		panic(fmt.Errorf("couldn't find home directory\n"))
 	}
-	appDir := ".rumor-go"
+	appDir := ".rumor"
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("toml")
@@ -113,6 +113,9 @@ func getConfig() *config {
 			panic(fmt.Errorf("Fatal error config file: %s \n", err))
 		}
 	}
+
+	viper.SetEnvPrefix("RUMOR")
+	viper.AutomaticEnv()
 
 	viper.SetDefault(flagQueryGasLimit, 3000000)
 	viper.SetDefault(flagInterBlockCache, true)
@@ -127,5 +130,6 @@ func getConfig() *config {
 		tendermintEndpoint: viper.GetString(flagTendermintEndpoint),
 		syncUntil: viper.GetUint64(flagSyncUntil),
 		dbDir: viper.GetString(flagDbDir),
+		genesisPath: viper.GetString(flagGenesisPath),
 	}
 }

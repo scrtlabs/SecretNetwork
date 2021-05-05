@@ -1,4 +1,5 @@
 #!/bin/bash
+set -eu
 
 # init the node
 rm -rf ~/.secret*

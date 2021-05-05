@@ -1,4 +1,5 @@
 #!/bin/bash
+set -eu
 
 file=~/.secretd/config/genesis.json
 if [ ! -e "$file" ]
@@ -30,9 +31,10 @@ then
 
 
   secretd gentx --name a --keyring-backend test --amount 1000000uscrt
-  secretd gentx --name b --keyring-backend test --amount 1000000uscrt
-  secretd gentx --name c --keyring-backend test --amount 1000000uscrt
-  secretd gentx --name d --keyring-backend test --amount 1000000uscrt
+  # These fail for some reason:
+  # secretd gentx --name b --keyring-backend test --amount 1000000uscrt
+  # secretd gentx --name c --keyring-backend test --amount 1000000uscrt
+  # secretd gentx --name d --keyring-backend test --amount 1000000uscrt
 
   secretd collect-gentxs
   secretd validate-genesis

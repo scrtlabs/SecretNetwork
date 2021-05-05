@@ -215,9 +215,15 @@ clean:
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
 
-build-dev-image: docker_base
+build-dev-image:
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=SW --build-arg FEATURES= -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-sw-dev:${DOCKER_TAG} .
+
+build-custom-dev-image:
+	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/custom-node.Dockerfile -t enigmampc/secret-network-sw-dev-custom:${DOCKER_TAG} .
+
+build-custom-dev-image-rumor:
+	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=RUMOR -f deployment/dockerfiles/custom-node.Dockerfile -t enigmampc/secret-network-sw-dev-rumor-custom:${DOCKER_TAG} .
 
 build-testnet: docker_base
 	@mkdir build 2>&3 || true
@@ -242,6 +248,9 @@ docker_bootstrap: docker_base
 
 docker_node: docker_base
 	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/local-node.Dockerfile -t enigmampc/secret-network-node-${ext}:${DOCKER_TAG} .
+
+docker_rumor: docker_base
+	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=RUMOR -f deployment/dockerfiles/local-node.Dockerfile -t enigmampc/secret-network-rumor-${ext}:${DOCKER_TAG} .
 
 docker_local_azure_hw: docker_base
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/local-node.Dockerfile -t ci-enigma-sgx-node .
@@ -344,13 +353,13 @@ build-all-test-contracts: build-test-contract
 bin-data: bin-data-sw bin-data-develop bin-data-production
 
 bin-data-sw:
-	cd ./cmd/secretd/lib && go-bindata -o ias_bin_sw.go -prefix "../../../ias_keys/sw_dummy/" -tags "!hw" ../../../ias_keys/sw_dummy/...
+	cd ./cmd/secretd/lib && go-bindata -pkg secretd -o ias_bin_sw.go -prefix "../../../ias_keys/sw_dummy/" -tags "!hw" ../../../ias_keys/sw_dummy/...
 
 bin-data-develop:
-	cd ./cmd/secretd/lib && go-bindata -o ias_bin_dev.go -prefix "../../../ias_keys/develop/" -tags "develop,hw" ../../../ias_keys/develop/...
+	cd ./cmd/secretd/lib && go-bindata -pkg secretd -o ias_bin_dev.go -prefix "../../../ias_keys/develop/" -tags "develop,hw" ../../../ias_keys/develop/...
 
 bin-data-production:
-	cd ./cmd/secretd/lib && go-bindata -o ias_bin_prod.go -prefix "../../../ias_keys/production/" -tags "production,hw" ../../../ias_keys/production/...
+	cd ./cmd/secretd/lib && go-bindata -pkg secretd -o ias_bin_prod.go -prefix "../../../ias_keys/production/" -tags "production,hw" ../../../ias_keys/production/...
 
 secret-contract-optimizer:
 	docker build -f deployment/dockerfiles/secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} .
