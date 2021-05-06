@@ -59,16 +59,6 @@ func NewMantlemint(
 // Init is port of ReplayBlocks() from tendermint,
 // where it only handles initializing the chain.
 func (mm *MantlemintInstance) Init(genesis *tmtypes.GenesisDoc) error {
-	// TODO: move this bit to mantle-compatibility
-	// some config
-	//config := sdk.GetConfig()
-	//config.SetCoinType(core.CoinType)
-	//config.SetFullFundraiserPath(core.FullFundraiserPath)
-	//config.SetBech32PrefixForAccount(core.Bech32PrefixAccAddr, core.Bech32PrefixAccPub)
-	//config.SetBech32PrefixForValidator(core.Bech32PrefixValAddr, core.Bech32PrefixValPub)
-	//config.SetBech32PrefixForConsensusNode(core.Bech32PrefixConsAddr, core.Bech32PrefixConsPub)
-	//config.Seal()
-
 	// loaded state has LastBlockHeight 0,
 	// meaning chain was never initialized
 	// run genesis

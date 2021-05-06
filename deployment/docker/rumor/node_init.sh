@@ -37,8 +37,9 @@ secretcli tx register auth attestation_cert.der --node http://bootstrap:26657 -y
 
 sleep 5
 
-SEED=$(secretcli q register seed "$PUBLIC_KEY" --node http://bootstrap:26657 2> /dev/null | cut -c 3-)
+SEED="$(secretcli q register seed "$PUBLIC_KEY" --node http://bootstrap:26657 2> /dev/null | cut -c 3-)"
 echo "SEED: $SEED"
+#exit
 
 secretcli q register secret-network-params --node http://bootstrap:26657 2> /dev/null
 

@@ -1,6 +1,8 @@
 package util
 
 const (
+	CoinType = 529
+	FullFundraiserPath = "44'/529'/0'/0/0"
 	// Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
 	Bech32PrefixAccAddr = "secret"
 	// Bech32PrefixAccPub defines the Bech32 prefix of an account's public key

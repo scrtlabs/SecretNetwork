@@ -42,6 +42,10 @@ services:
     environment:
       - http_proxy
       - https_proxy
+    expose:
+      - 26657
+    ports:
+    - 26657:26657
 
   rumor:
     image: enigmampc/secret-network-sw-dev-rumor-custom:latest
@@ -52,6 +56,7 @@ services:
     volumes:
 #      - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/root/.secretd
+      - /tmp/secretrumor:/root/.rumor
 #      - /tmp/secretcli:/root/.secretcli
       - /tmp/sgx_secrets:/root/.sgx_secrets
     stdin_open: true
@@ -59,6 +64,9 @@ services:
     environment:
       - http_proxy
       - https_proxy
+    ports:
+      - 26658:26657
+      - 26659:26659
 
 #  aesm:
 #    image: enigmampc/aesm

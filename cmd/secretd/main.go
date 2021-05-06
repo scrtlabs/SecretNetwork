@@ -46,8 +46,8 @@ func main() {
 	cdc := app.MakeCodec()
 
 	config := sdk.GetConfig()
-	config.SetCoinType(529)
-	config.SetFullFundraiserPath("44'/529'/0'/0/0")
+	config.SetCoinType(scrt.CoinType)
+	config.SetFullFundraiserPath(scrt.FullFundraiserPath)
 	config.SetBech32PrefixForAccount(scrt.Bech32PrefixAccAddr, scrt.Bech32PrefixAccPub)
 	config.SetBech32PrefixForValidator(scrt.Bech32PrefixValAddr, scrt.Bech32PrefixValPub)
 	config.SetBech32PrefixForConsensusNode(scrt.Bech32PrefixConsAddr, scrt.Bech32PrefixConsPub)

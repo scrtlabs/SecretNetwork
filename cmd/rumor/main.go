@@ -20,11 +20,14 @@ import (
 	app "github.com/enigmampc/SecretNetwork"
 	rumor "github.com/enigmampc/SecretNetwork/rumor-go/app"
 	"github.com/enigmampc/SecretNetwork/rumor-go/db/leveldb"
+	scrt "github.com/enigmampc/SecretNetwork/types"
 )
 
 func main() {
 	conf := getConfig()
 	fmt.Printf("Using config: %v\n", conf)
+
+	setSdkConfig()
 
 	logger := tmlog.NewTMLogger(os.Stderr)
 	db := leveldb.NewLevelDB(conf.dbDir)
@@ -132,4 +135,14 @@ func getConfig() *config {
 		dbDir: viper.GetString(flagDbDir),
 		genesisPath: viper.GetString(flagGenesisPath),
 	}
+}
+
+func setSdkConfig() {
+	config := sdk.GetConfig()
+	config.SetCoinType(scrt.CoinType)
+	config.SetFullFundraiserPath(scrt.FullFundraiserPath)
+	config.SetBech32PrefixForAccount(scrt.Bech32PrefixAccAddr, scrt.Bech32PrefixAccPub)
+	config.SetBech32PrefixForValidator(scrt.Bech32PrefixValAddr, scrt.Bech32PrefixValPub)
+	config.SetBech32PrefixForConsensusNode(scrt.Bech32PrefixConsAddr, scrt.Bech32PrefixConsPub)
+	config.Seal()
 }

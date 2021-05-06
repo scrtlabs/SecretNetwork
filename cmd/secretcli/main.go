@@ -153,8 +153,8 @@ func initConfig(cmd *cobra.Command) error {
 	config := sdk.GetConfig()
 
 	if !oldHDPath {
-		config.SetCoinType(529)
-		config.SetFullFundraiserPath("44'/529'/0'/0/0")
+		config.SetCoinType(scrt.CoinType)
+		config.SetFullFundraiserPath(scrt.FullFundraiserPath)
 	}
 
 	config.SetBech32PrefixForAccount(scrt.Bech32PrefixAccAddr, scrt.Bech32PrefixAccPub)
