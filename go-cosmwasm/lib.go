@@ -1,8 +1,11 @@
 package cosmwasm
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+
+	"golang.org/x/sync/semaphore"
 
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
@@ -31,6 +34,8 @@ type GasMeter = api.GasMeter
 // and call it for all cosmwasm code related actions.
 type Wasmer struct {
 	cache api.Cache
+	enclaveSemaphore *semaphore.Weighted
+	semaphoreContext context.Context
 }
 
 // NewWasmer creates an new binding, with the given dataDir where
@@ -43,7 +48,11 @@ func NewWasmer(dataDir string, supportedFeatures string, cacheSize uint64) (*Was
 	if err != nil {
 		return nil, err
 	}
-	return &Wasmer{cache: cache}, nil
+	return &Wasmer{
+		cache: cache,
+		enclaveSemaphore: semaphore.NewWeighted(8),
+		semaphoreContext: context.Background(),
+	}, nil
 }
 
 // Cleanup should be called when no longer using this to free resources on the rust-side
@@ -95,6 +104,12 @@ func (w *Wasmer) Instantiate(
 	gasLimit uint64,
 	sigInfo types.VerificationInfo,
 ) (*types.InitResponse, []byte, uint64, error) {
+	err := w.enclaveSemaphore.Acquire(w.semaphoreContext, 1)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	defer w.enclaveSemaphore.Release(1)
+
 	paramBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, nil, 0, err
@@ -140,6 +155,12 @@ func (w *Wasmer) Execute(
 	gasLimit uint64,
 	sigInfo types.VerificationInfo,
 ) (*types.HandleResponse, uint64, error) {
+	err := w.enclaveSemaphore.Acquire(w.semaphoreContext, 1)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer w.enclaveSemaphore.Release(1)
+
 	paramBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -180,6 +201,12 @@ func (w *Wasmer) Query(
 	gasMeter GasMeter,
 	gasLimit uint64,
 ) ([]byte, uint64, error) {
+	err := w.enclaveSemaphore.Acquire(w.semaphoreContext, 1)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer w.enclaveSemaphore.Release(1)
+
 	data, gasUsed, err := api.Query(w.cache, code, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit)
 	if err != nil {
 		return nil, gasUsed, err
@@ -212,6 +239,12 @@ func (w *Wasmer) Migrate(
 	gasMeter GasMeter,
 	gasLimit uint64,
 ) (*types.MigrateResponse, uint64, error) {
+	err := w.enclaveSemaphore.Acquire(w.semaphoreContext, 1)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer w.enclaveSemaphore.Release(1)
+
 	paramBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
