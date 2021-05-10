@@ -15,10 +15,13 @@ import (
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	cosmosBaseApp "github.com/enigmampc/cosmos-sdk/baseapp"
+	"github.com/enigmampc/cosmos-sdk/codec"
+	cosmosmodule "github.com/enigmampc/cosmos-sdk/types/module"
 
 	"github.com/enigmampc/SecretNetwork/rumor-go/app/mantlemint"
 	"github.com/enigmampc/SecretNetwork/rumor-go/db"
 	"github.com/enigmampc/SecretNetwork/rumor-go/depsresolver"
+	"github.com/enigmampc/SecretNetwork/rumor-go/lcd/server"
 	"github.com/enigmampc/SecretNetwork/rumor-go/subscriber"
 	"github.com/enigmampc/SecretNetwork/rumor-go/types"
 )
@@ -199,6 +202,13 @@ func (mantle *Mantle) Sync(configuration SyncConfiguration) {
 			}
 		}
 	}
+}
+
+func (mantle *Mantle) LCDServer(port int, cdc *codec.Codec, mod *cosmosmodule.BasicManager) {
+	go func() {
+		lcd := server.NewMantleLCDServer()
+		lcd.Server(port, mantle.app, cdc, mod)
+	}()
 }
 
 func (mantle *Mantle) Inject(block *types.Block) (*types.BlockState, error) {

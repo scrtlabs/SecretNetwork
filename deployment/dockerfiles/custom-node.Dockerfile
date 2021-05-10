@@ -38,8 +38,7 @@ COPY ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so /usr/l
 COPY ./secretd /usr/bin/secretd
 COPY ./secretcli /usr/bin/secretcli
 COPY ./rumor /usr/bin/rumor
-COPY ./cmd/rumor/config.toml ./.rumor/config/config.toml
-
+COPY ./cmd/rumor/config.toml ./.rumor/config.toml
 
 COPY deployment/docker/bootstrap/bootstrap_init.sh .
 COPY deployment/docker/rumor/node_init.sh .

@@ -4,14 +4,6 @@ services:
   bootstrap:
     image: enigmampc/secret-network-sw-dev-custom-bootstrap:latest
     container_name: bootstrap
-#    depends_on:
-#      - aesm
-#    devices:
-#      - /dev/sgx
-#    volumes:
-#      - /tmp/aesmd:/var/run/aesmd
-#      - /tmp/secretd:/root/.secretd
-#      - /tmp/secretcli:/root/.secretcli
     volumes:
        - /tmp/secretcli:/root/.secretcli
        - /tmp/secretdbootstrap:/root/.secretd
@@ -29,10 +21,7 @@ services:
     container_name: node
     depends_on:
       - bootstrap
-#    devices:
-#      - /dev/sgx
     volumes:
-#      - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretdbootstrap:/tmp/.secretd
       - /tmp/secretd:/root/.secretd
       - /tmp/secretcli:/root/.secretcli
@@ -42,8 +31,6 @@ services:
     environment:
       - http_proxy
       - https_proxy
-    expose:
-      - 26657
     ports:
     - 26657:26657
 
@@ -51,13 +38,9 @@ services:
     image: enigmampc/secret-network-sw-dev-rumor-custom:latest
     depends_on:
       - bootstrap
-#    devices:
-#      - /dev/sgx
     volumes:
-#      - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/root/.secretd
       - /tmp/secretrumor:/root/.rumor
-#      - /tmp/secretcli:/root/.secretcli
       - /tmp/sgx_secrets:/root/.sgx_secrets
     stdin_open: true
     tty: true
@@ -65,17 +48,4 @@ services:
       - http_proxy
       - https_proxy
     ports:
-      - 26658:26657
-      - 26659:26659
-
-#  aesm:
-#    image: enigmampc/aesm
-#    devices:
-#      - /dev/sgx
-#    volumes:
-#      - /tmp/aesmd:/var/run/aesmd
-#    stdin_open: true
-#    tty: true
-#    environment:
-#      - http_proxy
-#      - https_proxy
+      - 8080:80

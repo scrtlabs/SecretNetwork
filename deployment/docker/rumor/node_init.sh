@@ -27,21 +27,21 @@ sleep 20
 
 #echo "Master key: $MASTER_KEY"
 
-secretd init-enclave
+secretd init-enclave --reset
 
-PUBLIC_KEY=$(secretd parse attestation_cert.der 2> /dev/null | cut -c 3- )
+PUBLIC_KEY=$(secretd parse attestation_cert.der | cut -c 3- )
 
-echo "Public key: $(secretd parse attestation_cert.der 2> /dev/null | cut -c 3- )"
+echo "Public key: $(secretd parse attestation_cert.der | cut -c 3- )"
 
 secretcli tx register auth attestation_cert.der --node http://bootstrap:26657 -y --from a
 
-sleep 5
+sleep 7
 
-SEED="$(secretcli q register seed "$PUBLIC_KEY" --node http://bootstrap:26657 2> /dev/null | cut -c 3-)"
+SEED="$(secretcli q register seed "$PUBLIC_KEY" --node http://bootstrap:26657 | cut -c 3-)"
 echo "SEED: $SEED"
 #exit
 
-secretcli q register secret-network-params --node http://bootstrap:26657 2> /dev/null
+secretcli q register secret-network-params --node http://bootstrap:26657
 
 secretd configure-secret node-master-cert.der "$SEED"
 

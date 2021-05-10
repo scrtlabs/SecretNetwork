@@ -43,6 +43,7 @@ func main() {
 	secretd := makeApp(logger, db.GetCosmosAdapter(), nil, conf)
 
 	rum := rumor.NewMantle(secretd, db, genesis)
+	rum.LCDServer(conf.LcdPort, app.MakeCodec(), &app.ModuleBasics)
 	rum.Sync(rumor.SyncConfiguration {
 		TendermintEndpoint: conf.tendermintEndpoint,
 		SyncUntil:          conf.syncUntil,
@@ -89,6 +90,7 @@ type config struct {
 	syncUntil uint64
 	dbDir string
 	genesisPath string
+	LcdPort int
 }
 
 func getConfig() *config {
@@ -98,6 +100,7 @@ func getConfig() *config {
 	flagSyncUntil := "sync_until"
 	flagDbDir := "db_dir"
 	flagGenesisPath := "genesis_path"
+	flagLcdPort := "lcd_port"
 
 	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -125,7 +128,8 @@ func getConfig() *config {
 	viper.SetDefault(flagTendermintEndpoint, "localhost:26667")
 	viper.SetDefault(flagSyncUntil, 0)
 	viper.SetDefault(flagDbDir, path.Join(userHomeDir, appDir, "data"))
-	viper.SetDefault(flagGenesisPath, path.Join(userHomeDir, appDir, "genesis.json"))
+	viper.SetDefault(flagGenesisPath, path.Join(app.DefaultNodeHome, "config", "genesis.json"))
+	viper.SetDefault(flagLcdPort, 8080)
 
 	return &config {
 		queryGasLimit: viper.GetUint64(flagQueryGasLimit),
@@ -134,6 +138,7 @@ func getConfig() *config {
 		syncUntil: viper.GetUint64(flagSyncUntil),
 		dbDir: viper.GetString(flagDbDir),
 		genesisPath: viper.GetString(flagGenesisPath),
+		LcdPort: viper.GetInt(flagLcdPort),
 	}
 }
 
