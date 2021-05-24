@@ -6,10 +6,10 @@
 
 #### 2. Set your `minimum-gas-price` parameter
 
-We recommend starting with `0.25uscrt` per gas unit:
+We recommend starting with `0.1uscrt` per gas unit:
 
 ```bash
-perl -i -pe 's/^minimum-gas-prices = .+?$/minimum-gas-prices = "0.25uscrt"/' ~/.secretd/config/app.toml
+perl -i -pe 's/^minimum-gas-prices = .+?$/minimum-gas-prices = "0.1uscrt"/' ~/.secretd/config/app.toml
 sudo systemctl restart secret-node
 ```
 
