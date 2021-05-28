@@ -24,9 +24,6 @@ to take a small exit tax, thus maybe 98% of the tokens will be unbonded and sent
 to the original account, and 2% of the tokens are not unbonded, but rather
 transfered to the owners account. (The ownership can also be transfered).
 
-## Using this project
 
-You should check out [Developing](./Developing.md) to explain more on how to run
-tests and develop code. Or go through the
-[online tutorial](https://www.cosmwasm.com/docs/getting-started/intro) to get a
-better feel of how to develop.
+
+
