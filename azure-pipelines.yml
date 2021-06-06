@@ -55,13 +55,7 @@ steps:
     tags: latest
     arguments: --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg SGX_MODE=HW -f deployment/dockerfiles/local-node.Dockerfile
 
-- script: export DOCKER_CLIENT_TIMEOUT=120
-  displayName: 'test1'
-
-- script: export COMPOSE_HTTP_TIMEOUT=120
-  displayName: 'test2'
-
-- script: docker-compose -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
+- script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
   displayName: 'Run system tests'
 
 - script: docker-compose -f deployment/ci/docker-compose.ci.yaml up --exit-code-from node aesm bootstrap node
