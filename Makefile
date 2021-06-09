@@ -215,6 +215,10 @@ build-dev-image: docker_base
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=SW --build-arg FEATURES= -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-sw-dev:${DOCKER_TAG} .
 
+build-custom-dev-image:
+	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/custom-node.Dockerfile -t enigmampc/secret-network-sw-dev-custom-bootstrap:${DOCKER_TAG} .
+	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/custom-node.Dockerfile -t enigmampc/secret-network-sw-dev-custom-node:${DOCKER_TAG} .
+
 build-testnet: docker_base
 	@mkdir build 2>&3 || true
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-testnet .
@@ -357,7 +361,7 @@ secretjs-build:
 
 # Before running this, first make sure:
 # 1. To `npm login` with enigma-dev
-# 2. The new version is updated in `cosmwasm-js/packages/sdk/package.json` 
+# 2. The new version is updated in `cosmwasm-js/packages/sdk/package.json`
 secretjs-publish-npm: secretjs-build
 	cd cosmwasm-js/packages/sdk && npm publish
 

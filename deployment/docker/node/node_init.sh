@@ -28,7 +28,7 @@ then
 
   sed -i 's/persistent_peers = ""/persistent_peers = "'"$PERSISTENT_PEERS"'"/g' ~/.secretd/config/config.toml
   echo "Set persistent_peers: $PERSISTENT_PEERS"
-  
+
   # Open RPC port to all interfaces
   perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.secretd/config/config.toml
 
