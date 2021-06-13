@@ -5,25 +5,16 @@ use lazy_static::lazy_static;
 use log::*;
 use parity_wasm::elements;
 use parity_wasm::elements::Module;
-use wasmi::{ModuleImportResolver, ModuleInstance, ModuleRef};
+use wasmi::{ModuleInstance, ModuleRef};
 
-use enclave_ffi_types::{Ctx, EnclaveError};
+use enclave_ffi_types::EnclaveError;
 
-use crate::cosmwasm::types::{CanonicalAddr, Env, SigInfo};
-use crate::crypto::{Ed25519PublicKey, HASH_SIZE};
-use crate::results::{HandleSuccess, InitSuccess, QuerySuccess};
-use crate::wasm::types::{ContractCode, IoNonce, SecretMessage};
+use crate::crypto::HASH_SIZE;
+use crate::wasm::types::ContractCode;
 
-use super::contract_validation::{
-    calc_contract_hash, extract_contract_key, generate_encryption_key, validate_contract_key,
-    validate_msg, verify_params, ContractKey, CONTRACT_KEY_LENGTH,
-};
 use super::gas::{gas_rules, WasmCosts};
-use super::io::encrypt_output;
 use super::memory::validate_memory;
-use super::runtime::{
-    create_builder, ContractInstance, ContractOperation, Engine, WasmiImportResolver,
-};
+use super::runtime::{create_builder, WasmiImportResolver};
 
 lazy_static! {
     static ref MODULE_CACHE: SgxRwLock<HashMap<[u8; HASH_SIZE], wasmi::Module>> =
