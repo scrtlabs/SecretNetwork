@@ -1,12 +1,33 @@
-// use crate::cosmwasm::types::CosmosMsg;
-
-use crate::crypto::{AESKey, Ed25519PublicKey, SIVEncryptable};
-use crate::wasm::io::calc_encryption_key;
-use enclave_ffi_types::EnclaveError;
 use log::*;
 use serde::{Deserialize, Serialize};
 
+use enclave_ffi_types::EnclaveError;
+
+use crate::crypto::{AESKey, Ed25519PublicKey, SIVEncryptable, HASH_SIZE};
+use crate::wasm::contract_validation::calc_contract_hash;
+use crate::wasm::io::calc_encryption_key;
+
 pub type IoNonce = [u8; 32];
+
+pub struct ContractCode<'code> {
+    code: &'code [u8],
+    hash: [u8; HASH_SIZE],
+}
+
+impl<'code> ContractCode<'code> {
+    pub fn new(code: &'code [u8]) -> Self {
+        let hash = calc_contract_hash(code);
+        Self { code, hash }
+    }
+
+    pub fn code(&self) -> &[u8] {
+        self.code
+    }
+
+    pub fn hash(&self) -> [u8; HASH_SIZE] {
+        self.hash.clone()
+    }
+}
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct SecretMessage {

@@ -18,7 +18,7 @@ sgx_tprotected_fs = { git = "https://github.com/apache/teaclave-sgx-sdk.git", ta
 std = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.3", stage = 5, features = [
     "net",
     "backtrace",
-    "untrusted_fs"
+    "untrusted_fs",
 ] }
 sgx_no_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.3", stage = 5 }
 sgx_rand = { git = "https://github.com/apache/teaclave-sgx-sdk.git", tag = "v1.1.3", stage = 6 }

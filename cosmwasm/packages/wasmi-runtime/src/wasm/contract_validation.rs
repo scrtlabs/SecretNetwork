@@ -1,14 +1,16 @@
 use log::*;
 
+use enclave_ffi_types::EnclaveError;
+
 use crate::cosmwasm::encoding::Binary;
 use crate::cosmwasm::types::{
     CanonicalAddr, CosmosSignature, Env, SigInfo, SignDoc, SignDocWasmMsg,
 };
 use crate::crypto::traits::PubKey;
 use crate::crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
-use crate::wasm::io;
-use crate::wasm::types::SecretMessage;
-use enclave_ffi_types::EnclaveError;
+
+use super::io;
+use super::types::SecretMessage;
 
 pub type ContractKey = [u8; CONTRACT_KEY_LENGTH];
 
@@ -18,12 +20,10 @@ const HEX_ENCODED_HASH_SIZE: usize = HASH_SIZE * 2;
 
 pub fn generate_encryption_key(
     env: &Env,
-    contract: &[u8],
+    contract_hash: [u8; HASH_SIZE],
     contract_address: &[u8],
 ) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
     let consensus_state_ikm = KEY_MANAGER.get_consensus_state_ikm().unwrap();
-
-    let contract_hash = calc_contract_hash(contract);
 
     let (_, sender_address_u5) = bech32::decode(env.message.sender.as_str()).map_err(|err| {
         warn!(
@@ -133,13 +133,11 @@ pub fn validate_contract_key(
     calculated_authentication_id == expected_authentication_id
 }
 
-pub fn validate_msg(msg: &[u8], contract_code: &[u8]) -> Result<Vec<u8>, EnclaveError> {
+pub fn validate_msg(msg: &[u8], contract_hash: [u8; HASH_SIZE]) -> Result<Vec<u8>, EnclaveError> {
     if msg.len() < HEX_ENCODED_HASH_SIZE {
         warn!("Malformed message - expected contract code hash to be prepended to the msg");
         return Err(EnclaveError::ValidationFailure);
     }
-
-    let calc_contract_hash = calc_contract_hash(contract_code);
 
     let mut received_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] = [0u8; HEX_ENCODED_HASH_SIZE];
     received_contract_hash.copy_from_slice(&msg[0..HEX_ENCODED_HASH_SIZE]);
@@ -149,7 +147,7 @@ pub fn validate_msg(msg: &[u8], contract_code: &[u8]) -> Result<Vec<u8>, Enclave
         EnclaveError::ValidationFailure
     })?;
 
-    if decoded_hash != calc_contract_hash {
+    if decoded_hash != contract_hash {
         warn!("Message contains mismatched contract hash");
         return Err(EnclaveError::ValidationFailure);
     }
