@@ -1,7 +1,4 @@
 use log::*;
-use parity_wasm::elements;
-use parity_wasm::elements::Module;
-use wasmi::ModuleInstance;
 
 use enclave_ffi_types::{Ctx, EnclaveError};
 
@@ -12,16 +9,13 @@ use crate::crypto::Ed25519PublicKey;
 use crate::results::{HandleSuccess, InitSuccess, QuerySuccess};
 
 use super::contract_validation::{
-    calc_contract_hash, extract_contract_key, generate_encryption_key, validate_contract_key,
-    validate_msg, verify_params, ContractKey, CONTRACT_KEY_LENGTH,
+    extract_contract_key, generate_encryption_key, validate_contract_key, validate_msg,
+    verify_params, ContractKey, CONTRACT_KEY_LENGTH,
 };
-use super::gas::{gas_rules, WasmCosts};
+use super::gas::WasmCosts;
 use super::io::encrypt_output;
-use super::memory::validate_memory;
 use super::module_cache::create_module_instance;
-use super::runtime::{
-    create_builder, ContractInstance, ContractOperation, Engine, WasmiImportResolver,
-};
+use super::runtime::{ContractInstance, ContractOperation, Engine};
 use super::types::{ContractCode, IoNonce, SecretMessage};
 
 /*
