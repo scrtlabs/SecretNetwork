@@ -111,7 +111,7 @@ export interface PrivateCosmWasmClient {
   readonly restClient: RestClient;
 }
 export declare class CosmWasmClient {
-  protected readonly restClient: RestClient;
+  readonly restClient: RestClient;
   /** Any address the chain considers valid (valid bech32 with proper prefix) */
   protected anyValidAddress: string | undefined;
   private readonly codesCache;
@@ -167,4 +167,5 @@ export declare class CosmWasmClient {
   private txsQuery;
   getCodeHashByCodeId(id: number): Promise<string>;
   getCodeHashByContractAddr(addr: string): Promise<string>;
+  getNonceByTxId(txhash: string): Promise<Array<Uint8Array | null>>;
 }

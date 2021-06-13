@@ -367,13 +367,17 @@ export class RestClient {
   }
 
   // The /txs endpoints
-  public async txById(id: string): Promise<TxsResponse> {
+  public async txById(id: string, tryToDecrypt: boolean = true): Promise<TxsResponse> {
     const responseData = await this.get(`/txs/${id}`);
     if (!(responseData as any).tx) {
       throw new Error("Unexpected response data format");
     }
 
-    return this.decryptTxsResponse(responseData as TxsResponse);
+    if (tryToDecrypt) {
+      return this.decryptTxsResponse(responseData as TxsResponse);
+    } else {
+      return responseData as TxsResponse;
+    }
   }
 
   public async txsQuery(query: string): Promise<SearchTxsResponse> {

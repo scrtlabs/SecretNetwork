@@ -4,7 +4,16 @@ import { Encoding } from "@iov/encoding";
 import { Log, parseLogs } from "./logs";
 import { decodeBech32Pubkey } from "./pubkey";
 import { BroadcastMode, RestClient } from "./restclient";
-import { Coin, CosmosSdkTx, JsonObject, PubKey, StdTx } from "./types";
+import {
+  Coin,
+  CosmosSdkTx,
+  JsonObject,
+  Msg,
+  MsgExecuteContract,
+  MsgInstantiateContract,
+  PubKey,
+  StdTx,
+} from "./types";
 
 export interface GetNonceResult {
   readonly accountNumber: number;
@@ -431,5 +440,27 @@ export class CosmWasmClient {
 
   public getCodeHashByContractAddr(addr: string): Promise<string> {
     return this.restClient.getCodeHashByContractAddr(addr);
+  }
+
+  public async getNonceByTxId(txhash: string): Promise<Array<Uint8Array | null>> {
+    const txResponse = await this.restClient.txById(txhash, false);
+
+    const msgs: Msg[] = txResponse.tx.value.msg;
+    const result: Array<Uint8Array | null> = [];
+
+    for (const msg of msgs) {
+      let nonce: Uint8Array | null;
+      if (msg.type === "wasm/MsgExecuteContract") {
+        nonce = Encoding.fromBase64((msg as MsgExecuteContract).value.msg).slice(0, 32);
+      } else if (msg.type === "wasm/MsgInstantiateContract") {
+        nonce = Encoding.fromBase64((msg as MsgInstantiateContract).value.init_msg).slice(0, 32);
+      } else {
+        nonce = null;
+      }
+
+      result.push(nonce);
+    }
+
+    return result;
   }
 }
