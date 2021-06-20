@@ -13,7 +13,7 @@ import {
   MsgInstantiateContract,
   MsgExecuteContract,
 } from "./types";
-import EnigmaUtils, {SecretUtils} from "./enigmautils";
+import EnigmaUtils, { SecretUtils } from "./enigmautils";
 
 export interface CosmosSdkAccount {
   /** Bech32 account address */
@@ -367,13 +367,17 @@ export class RestClient {
   }
 
   // The /txs endpoints
-  public async txById(id: string): Promise<TxsResponse> {
+  public async txById(id: string, tryToDecrypt: boolean = true): Promise<TxsResponse> {
     const responseData = await this.get(`/txs/${id}`);
     if (!(responseData as any).tx) {
       throw new Error("Unexpected response data format");
     }
 
-    return this.decryptTxsResponse(responseData as TxsResponse);
+    if (tryToDecrypt) {
+      return this.decryptTxsResponse(responseData as TxsResponse);
+    } else {
+      return responseData as TxsResponse;
+    }
   }
 
   public async txsQuery(query: string): Promise<SearchTxsResponse> {
@@ -477,24 +481,6 @@ export class RestClient {
     return await unwrapWasmResponse(response);
   }
 
-  // Returns all contract state.
-  // This is an empty array if no such contract, or contract has no data.
-  public async getAllContractState(address: string): Promise<readonly Model[]> {
-    const path = `/wasm/contract/${address}/state`;
-    const responseData = (await this.get(path)) as WasmResponse<CosmosSdkArray<WasmData>>;
-    return normalizeArray(await unwrapWasmResponse(responseData)).map(parseWasmData);
-  }
-
-  // Returns the data at the key if present (unknown decoded json),
-  // or null if no data at this (contract address, key) pair
-  public async queryContractRaw(address: string, key: Uint8Array): Promise<Uint8Array | null> {
-    const hexKey = Encoding.toHex(key);
-    const path = `/wasm/contract/${address}/raw/${hexKey}?encoding=hex`;
-    const responseData = (await this.get(path)) as WasmResponse<WasmData[]>;
-    const data = await unwrapWasmResponse(responseData);
-    return data.length === 0 ? null : Encoding.fromBase64(data[0].val);
-  }
-
   /**
    * Makes a smart query on the contract and parses the reponse as JSON.
    * Throws error if no such contract exists, the query format is invalid or the response is invalid.
@@ -525,9 +511,7 @@ export class RestClient {
 
         err.message = err.message.replace(errorCipherB64, Encoding.fromUtf8(errorPlainBz));
       } catch (decryptionError) {
-        throw new Error(
-          `Failed to decrypt the following error message: ${err.message}. Decryption error of the error message: ${decryptionError.message}`,
-        );
+        throw new Error(`Failed to decrypt the following error message: ${err.message}.`);
       }
 
       throw err;
@@ -558,30 +542,46 @@ export class RestClient {
     return this.get("/register/master-cert");
   }
 
-  public async decryptDataField(dataField: string = "", nonce: Uint8Array): Promise<Uint8Array> {
+  public async decryptDataField(dataField: string = "", nonces: Array<Uint8Array>): Promise<Uint8Array> {
     const wasmOutputDataCipherBz = Encoding.fromHex(dataField);
 
-    // data
-    const data = Encoding.fromBase64(
-      Encoding.fromUtf8(await this.enigmautils.decrypt(wasmOutputDataCipherBz, nonce)),
-    );
+    let error;
+    for (const nonce of nonces) {
+      try {
+        const data = Encoding.fromBase64(
+          Encoding.fromUtf8(await this.enigmautils.decrypt(wasmOutputDataCipherBz, nonce)),
+        );
 
-    return data;
+        return data;
+      } catch (e) {
+        error = e;
+      }
+    }
+
+    throw error;
   }
 
-  public async decryptLogs(logs: readonly Log[], nonce: Uint8Array): Promise<readonly Log[]> {
+  public async decryptLogs(logs: readonly Log[], nonces: Array<Uint8Array>): Promise<readonly Log[]> {
     for (const l of logs) {
       for (const e of l.events) {
         if (e.type === "wasm") {
-          for (const a of e.attributes) {
-            try {
-              a.key = Encoding.fromUtf8(await this.enigmautils.decrypt(Encoding.fromBase64(a.key), nonce));
-            } catch (e) {}
-            try {
-              a.value = Encoding.fromUtf8(
-                await this.enigmautils.decrypt(Encoding.fromBase64(a.value), nonce),
-              );
-            } catch (e) {}
+          for (const nonce of nonces) {
+            let nonceOk = false;
+            for (const a of e.attributes) {
+              try {
+                a.key = Encoding.fromUtf8(await this.enigmautils.decrypt(Encoding.fromBase64(a.key), nonce));
+                nonceOk = true;
+              } catch (e) {}
+              try {
+                a.value = Encoding.fromUtf8(
+                  await this.enigmautils.decrypt(Encoding.fromBase64(a.value), nonce),
+                );
+                nonceOk = true;
+              } catch (e) {}
+            }
+            if (nonceOk) {
+              continue;
+            }
           }
         }
       }
@@ -620,10 +620,10 @@ export class RestClient {
         }
 
         // decrypt output
-        txsResponse.data = await this.decryptDataField(txsResponse.data, nonce);
+        txsResponse.data = await this.decryptDataField(txsResponse.data, [nonce]);
         let logs;
         if (txsResponse.logs) {
-          logs = await this.decryptLogs(txsResponse.logs, nonce);
+          logs = await this.decryptLogs(txsResponse.logs, [nonce]);
           txsResponse = Object.assign({}, txsResponse, { logs: logs });
         }
 

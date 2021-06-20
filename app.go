@@ -191,7 +191,7 @@ func NewSecretNetworkApp(
 	// The ParamsKeeper handles parameter storage for the application
 	app.paramsKeeper = params.NewKeeper(app.cdc, keys[params.StoreKey], tKeys[params.TStoreKey])
 	authSubspace := app.paramsKeeper.Subspace(auth.DefaultParamspace)
-	bankSupspace := app.paramsKeeper.Subspace(bank.DefaultParamspace)
+	bankSubspace := app.paramsKeeper.Subspace(bank.DefaultParamspace)
 	stakingSubspace := app.paramsKeeper.Subspace(staking.DefaultParamspace)
 	mintSubspace := app.paramsKeeper.Subspace(mint.DefaultParamspace)
 	distrSubspace := app.paramsKeeper.Subspace(distr.DefaultParamspace)
@@ -210,7 +210,7 @@ func NewSecretNetworkApp(
 	// The BankKeeper allows you perform sdk.Coins interactions
 	app.bankKeeper = bank.NewBaseKeeper(
 		app.accountKeeper,
-		bankSupspace,
+		bankSubspace,
 		app.ModuleAccountAddrs(),
 	)
 

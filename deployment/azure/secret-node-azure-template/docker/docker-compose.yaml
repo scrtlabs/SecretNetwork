@@ -11,7 +11,7 @@ services:
     tty: true
 
   node:
-    image: enigmampc/secret-network-node:v1.0.0-mainnet
+    image: enigmampc/secret-network-node:v1.0.4-mainnet
     devices:
       - /dev/sgx
     volumes:

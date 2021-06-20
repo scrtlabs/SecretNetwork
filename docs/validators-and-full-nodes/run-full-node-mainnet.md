@@ -5,7 +5,7 @@ This document details how to join the Secret Network `mainnet` as a validator.
 ### Requirements
 
 - Up to date SGX ([Read this](https://learn.scrt.network/sgx.html), [Setup](setup-sgx.md), [Verify](verify-sgx.md))
-- Ubuntu/Debian host (with ZFS or LVM to be able to add more storage easily)
+- Ubuntu/Debian host (with ZFS or LVM to be able to add more storage easily. Note premium SSD use is more important when adding overhead from ZFS.)
 - A public IP address
 - Open ports `TCP 26656 & 26657` _Note: If you're behind a router or firewall then you'll need to port forward on the network device._
 - Reading https://docs.tendermint.com/master/tendermint-core/running-in-production.html
@@ -14,32 +14,34 @@ This document details how to join the Secret Network `mainnet` as a validator.
 
 - Up to date SGX ([Read this](https://learn.scrt.network/sgx.html), [Setup](setup-sgx.md), [Verify](verify-sgx.md))
 - 1GB RAM
-- 100GB HDD
+- 100GB HDD (Premium SSD)
 - 1 dedicated core of any Intel Skylake processor (Intel® 6th generation) or better
 
 #### Recommended requirements
 
 - Up to date SGX ([Read this](https://learn.scrt.network/sgx.html), [Setup](setup-sgx.md), [Verify](verify-sgx.md))
 - 2GB RAM
-- 256GB SSD
+- 256GB SSD (Premium SSD)
 - 2 dedicated cores of any Intel Skylake processor (Intel® 6th generation) or better
 
 ### Installation
 
 #### Install the `secretnetwork`, initialize your node and validate the genesis file:
 
-*NOTE*: Substitute **$YOUR_MONIKER** (below) with your node's nickname or alias.
+_NOTE_: Substitute **$YOUR_MONIKER** (below) with your node's nickname or alias.
 
 ```bash
 cd ~
 
-wget https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/secretnetwork_1.0.0_amd64.deb
+wget https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.4/secretnetwork_1.0.4_amd64.deb
 
-sudo apt install ./secretnetwork_1.0.0_amd64.deb
+echo "97c1aa2421a203184e541928cc9c409c50afcfac5cbd55993e6a9593399587f9 secretnetwork_1.0.4_amd64.deb" | sha256sum --check
+
+sudo apt install ./secretnetwork_1.0.4_amd64.deb
 
 secretd init "$YOUR_MONIKER" --chain-id secret-2
 
-wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.0/genesis.json"
+wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.4/genesis.json"
 
 echo "4ca53e34afed034d16464d025291fe16a847c9aca0a259f9237413171b19b4cf .secretd/config/genesis.json" | sha256sum --check
 
@@ -59,8 +61,7 @@ echo $PUBLIC_KEY
 
 ```bash
 secretcli config chain-id secret-2
-secretcli config node tcp://secret-2.node.enigma.co:26657
-secretcli config trust-node true
+secretcli config node http://rpc.enigma.co:26657
 secretcli config output json
 secretcli config indent true
 ```
@@ -96,7 +97,7 @@ ERROR: unknown address: account secret1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx do
 
 #### Register and configure your node:
 
-*NOTE*: Substitute **$YOUR_KEY_NAME** (below) with the `key-alias` you created earlier.
+_NOTE_: Substitute **$YOUR_KEY_NAME** (below) with the `key-alias` you created earlier.
 
 ```bash
 secretcli tx register auth ./attestation_cert.der --from "$YOUR_KEY_NAME" --gas 250000 --gas-prices 0.25uscrt
@@ -110,7 +111,7 @@ mkdir -p ~/.secretd/.node
 
 secretd configure-secret node-master-cert.der "$SEED"
 
-perl -i -pe 's/^seeds = ".*?"/seeds = "bee0edb320d50c839349224b9be1575ca4e67948\@secret-2.node.enigma.co:26656"/' ~/.secretd/config/config.toml
+perl -i -pe 's/^persistent_peers = ".*?"/persistent_peers = "f5b7fbfc954ba8d70e1c549f258f52b7967f2d14\@rpc.enigma.co:26656"/' ~/.secretd/config/config.toml
 perl -i -pe 's;laddr = "tcp://127.0.0.1:26657";laddr = "tcp://0.0.0.0:26657";' ~/.secretd/config/config.toml
 ```
 
@@ -140,7 +141,7 @@ secretcli config node tcp://localhost:26657
 secretcli status
 ```
 
-When the value of `catching_up` is *false*, your node is fully sync'd with the network.
+When the value of `catching_up` is _false_, your node is fully sync'd with the network.
 
 ```bash
   "sync_info": {
@@ -163,6 +164,7 @@ secretd tendermint show-node-id
 ```
 
 And publish yourself as a node with this ID:
+
 ```
 <your-node-id>@<your-public-ip>:26656
 ```
@@ -177,4 +179,3 @@ secretcli config indent true
 secretcli config trust-node true
 secretcli config node tcp://<your-public-ip>:26657
 ```
-

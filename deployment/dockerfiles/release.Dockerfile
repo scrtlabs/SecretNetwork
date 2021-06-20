@@ -17,6 +17,11 @@ RUN apt-get update && \
 
 RUN echo "source /etc/profile.d/bash_completion.sh" >> ~/.bashrc
 
+RUN curl -sL https://deb.nodesource.com/setup_15.x | bash - && \
+    apt-get update && \
+    apt-get install -y nodejs npm && \
+    npm i -g local-cors-proxy
+
 ARG SGX_MODE=SW
 ENV SGX_MODE=${SGX_MODE}
 
@@ -50,11 +55,11 @@ RUN chmod +x startup.sh
 RUN chmod +x node_init.sh
 
 # Enable autocomplete
-RUN secretcli completion > /root/secretcli_completion
-RUN secretd completion > /root/secretd_completion
+RUN secretcli completion >/root/secretcli_completion
+RUN secretd completion >/root/secretd_completion
 
-RUN echo 'source /root/secretd_completion' >> ~/.bashrc
-RUN echo 'source /root/secretcli_completion' >> ~/.bashrc
+RUN echo 'source /root/secretd_completion' >>~/.bashrc
+RUN echo 'source /root/secretcli_completion' >>~/.bashrc
 
 RUN mkdir -p /root/.secretd/.compute/
 RUN mkdir -p /root/.sgx_secrets/

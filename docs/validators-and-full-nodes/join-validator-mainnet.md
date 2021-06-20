@@ -6,10 +6,10 @@
 
 #### 2. Set your `minimum-gas-price` parameter
 
-We recommend starting with `0.25uscrt` per gas unit:
+We recommend starting with `0.1uscrt` per gas unit:
 
 ```bash
-perl -i -pe 's/^minimum-gas-prices = .+?$/minimum-gas-prices = "0.25uscrt"/' ~/.secretd/config/app.toml
+perl -i -pe 's/^minimum-gas-prices = .+?$/minimum-gas-prices = "0.1uscrt"/' ~/.secretd/config/app.toml
 sudo systemctl restart secret-node
 ```
 
@@ -119,10 +119,19 @@ In order to stake more tokens beyond those in the initial transaction, run:
 secretcli tx staking delegate $(secretcli keys show <key-alias> --bech=val -a) <amount>uscrt --from <key-alias> --gas-prices 0.25uscrt
 ```
 
-### Renaming your moniker
+### Editing your Validator
 
 ```bash
-secretcli tx staking edit-validator --moniker <new-moniker> --from <key-alias> --gas-prices 0.25uscrt
+secretcli tx staking edit-validator \
+  --moniker "<new-moniker>" \
+  --website "https://scrt.network" \
+  --identity 6A0D65E29A4CBC8E \
+  --details "To infinity and beyond!" \
+  --chain-id <chain_id> \
+  --gas 200000 \
+  --gas-prices="0.25uscrt" \
+  --from <key_name> \
+  --commission-rate "0.10"
 ```
 
 ### Seeing your rewards from being a validator

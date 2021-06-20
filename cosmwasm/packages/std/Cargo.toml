@@ -26,6 +26,11 @@ staking = []
 # backtraces provides much better context at runtime errors (in non-wasm code)
 # at the cost of a bit of code size and performance.
 backtraces = ["snafu/backtraces"]
+# Debug prints enable printing log messages to the logging system of the enclave
+# from inside your contract. This will only work in enclaves compiled in SW mode
+# and loading the contract for execution will fail if this is used a HW mode
+# enclave. This is done in order to provent leaking secrets in production.
+debug-print = []
 
 [dependencies]
 base64 = "0.11.0"

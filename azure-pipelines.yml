@@ -55,16 +55,16 @@ steps:
     tags: latest
     arguments: --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg SGX_MODE=HW -f deployment/dockerfiles/local-node.Dockerfile
 
-- script: docker-compose -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
+- script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
   displayName: 'Run system tests'
 
-- script: docker-compose -f deployment/ci/docker-compose.ci.yaml up --exit-code-from node aesm bootstrap node
+- script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from node aesm bootstrap node
   displayName: 'Run integration tests'
 
-- script: docker-compose -f deployment/ci/docker-compose.ci.yaml up --exit-code-from enclave-test aesm enclave-test
+- script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from enclave-test aesm enclave-test
   displayName: 'Run enclave tests'
 
-- script: docker-compose -f deployment/ci/docker-compose.ci.yaml down
+- script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility down
   condition: always()
   displayName: 'Shutdown'
 

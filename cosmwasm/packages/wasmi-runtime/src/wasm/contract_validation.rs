@@ -4,7 +4,7 @@ use enclave_ffi_types::EnclaveError;
 
 use crate::cosmwasm::encoding::Binary;
 use crate::cosmwasm::types::{
-    CanonicalAddr, CosmosSignature, Env, SigInfo, SignDoc, SignDocWasmMsg,
+    CanonicalAddr, Coin, CosmosSignature, Env, SigInfo, SignDoc, SignDocWasmMsg,
 };
 use crate::crypto::traits::PubKey;
 use crate::crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
@@ -169,6 +169,7 @@ pub fn verify_params(
             &CanonicalAddr::from_human(&env.message.sender)
                 .or(Err(EnclaveError::FailedToSerialize))?,
             msg,
+            &env.message.sent_funds,
         ) {
             info!("Message verified! msg.sender is the calling contract");
             return Ok(());
@@ -221,12 +222,13 @@ fn verify_callback_sig(
     callback_signature: &[u8],
     sender: &CanonicalAddr,
     msg: &SecretMessage,
+    sent_funds: &[Coin],
 ) -> bool {
     if callback_signature.is_empty() {
         return false;
     }
 
-    let callback_sig = io::create_callback_signature(sender, msg);
+    let callback_sig = io::create_callback_signature(sender, msg, sent_funds);
 
     if !callback_signature.eq(callback_sig.as_slice()) {
         trace!(

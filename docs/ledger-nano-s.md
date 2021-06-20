@@ -49,17 +49,29 @@ wget -q -O - https://raw.githubusercontent.com/LedgerHQ/udev-rules/master/add_ud
 
 You will need at least MacOS 10.14 Mojave, which introduced the Security feature of allowing Full Disk Access, which Ledger Live needs in order to enable the `--ledger` flag in `secretcli`. Refer to the MacOS section in the [ledger support page](https://support.ledger.com/hc/en-us/articles/115005165269-Connection-issues-with-Windows-or-Linux).
 
+## Keplr
+
+We recommend using [Keplr Wallet](https://keplr.xyz/) as the interface for using Ledger with the Secret Network. To use, simply install the extension, and select "Import Keplr" when adding a new account
+
+![image](https://user-images.githubusercontent.com/16579705/114312311-ee925100-9afa-11eb-9d89-1a2c78281fc3.png) 
+
+## SecretCLI
+
+For a more advanced user, it is possible to interface with the CLI utility, SecretCLI with a Ledger device. You can get it [here](https://github.com/enigmampc/SecretNetwork/releases/latest)
+
 ### Create an account
 
 > Note: You can use any number you'd like for your account number. Be sure to remember the number you used, so you can recover if needed.
 
 ```bash
-secretcli keys add <account name> --ledger --account <account number on your Ledger>
+secretcli keys add <account name> --ledger --account <account number on your Ledger> --legacy-hd-path
 ```
 
 :warning::warning::warning:
 
 **Please backup the mnemonics!**
+
+> Note: Ledger only supports a BIP-44 HD path of `44'/118'/{account}'/0/{index}`, while Secret Network wallets will use `44'/529'/{account}'/0/{index}` by default. This means if you wish to export the keys to a different wallet, you must select 118 as the coin type when importing the mnemonics
 
 ### Display your account address
 
@@ -72,7 +84,7 @@ secretcli keys show -a <account name>
 _You'll use this when you, say, using a different machine._
 
 ```bash
-secretcli keys add <account name> --ledger --account <account number on your Ledger> --recover
+secretcli keys add <account name> --ledger --account <account number on your Ledger> --recover --legacy-hd-path
 ```
 
 **Note! If you run the above command without the `--ledger` flag, the CLI will prompt you to enter your BIP39 mnemonic, which is your Ledger recovery phrase. YOU DO NOT WANT TO DO THIS. This will essentially save your private key locally.**
@@ -86,7 +98,7 @@ _Note: the commands below assume that you run them on the same machine where you
 ### Send tokens
 
 ```bash
-secretcli tx send <account name or address> <to_address> <amount> --ledger
+secretcli tx send <account name or address> <to_address> <amount> --ledger 
 ```
 
 ### Delegate SCRT to a validator

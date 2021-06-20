@@ -13,6 +13,12 @@ RUN curl -O https://dl.google.com/go/go1.15.5.linux-amd64.tar.gz
 RUN tar -C /usr/local -xzf go1.15.5.linux-amd64.tar.gz
 RUN go get -u github.com/jteeuwen/go-bindata/...
 
+RUN wget -q https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.0.20-ubuntu.tar.gz && \
+    tar -xf wabt-1.0.20-ubuntu.tar.gz wabt-1.0.20/bin/wat2wasm wabt-1.0.20/bin/wasm2wat && \
+    mv wabt-1.0.20/bin/wat2wasm wabt-1.0.20/bin/wasm2wat /bin && \
+    chmod +x /bin/wat2wasm /bin/wasm2wat && \
+    rm -f wabt-1.0.20-ubuntu.tar.gz
+
 # Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 
@@ -65,10 +71,14 @@ COPY go.mod .
 COPY go.sum .
 COPY cmd cmd
 COPY Makefile .
+RUN true
+COPY install-wasm-tools.sh .
 
 # COPY /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/libgo_cosmwasm.so go-cosmwasm/api
 
 RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
+
+RUN rustup target add wasm32-unknown-unknown && make build-test-contract
 
 # workaround because paths seem kind of messed up
 # RUN cp /opt/sgxsdk/lib64/libsgx_urts_sim.so /usr/lib/libsgx_urts_sim.so

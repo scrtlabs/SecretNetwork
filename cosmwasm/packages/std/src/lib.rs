@@ -2,6 +2,7 @@
 
 mod addresses;
 mod coins;
+mod debug_print;
 mod encoding;
 mod entry_points;
 mod errors;
@@ -17,6 +18,7 @@ mod types;
 
 pub use crate::addresses::{CanonicalAddr, HumanAddr};
 pub use crate::coins::{coin, coins, has_coins, Coin};
+pub use crate::debug_print::debug_print;
 pub use crate::encoding::Binary;
 pub use crate::errors::{StdError, StdResult, SystemError, SystemResult};
 pub use crate::init_handle::{
