@@ -23,24 +23,25 @@ echo "Set persistent_peers: $PERSISTENT_PEERS"
 echo "Waiting for bootstrap to start..."
 sleep 20
 
-# MASTER_KEY="$(secretcli q register secret-network-params --node http://bootstrap:26657 2> /dev/null | cut -c 3- )"
+# MASTER_KEY="$(secretcli q register secret-network-params --node http://bootstrap:26657 | cut -c 3- )"
 
 #echo "Master key: $MASTER_KEY"
 
 secretd init-enclave
 
-PUBLIC_KEY=$(secretd parse attestation_cert.der 2> /dev/null | cut -c 3- )
+PUBLIC_KEY=$(secretd parse attestation_cert.der | cut -c 3- )
 
-echo "Public key: $(secretd parse attestation_cert.der 2> /dev/null | cut -c 3- )"
+echo "Public key: $PUBLIC_KEY"
 
-secretcli tx register auth attestation_cert.der --node http://bootstrap:26657 -y --from a
+secretcli tx register auth attestation_cert.der --node http://bootstrap:26657 --gas 250000 -y --from a -b block | jq -r '.txhash'
 
-sleep 10
-
-SEED=$(secretcli q register seed "$PUBLIC_KEY" --node http://bootstrap:26657 2> /dev/null | cut -c 3-)
+SEED=$(secretcli q register seed "$PUBLIC_KEY" --node http://bootstrap:26657 | cut -c 3-)
+if [[ -z "$SEED" ]]; then
+    exit 1
+fi
 echo "SEED: $SEED"
 
-secretcli q register secret-network-params --node http://bootstrap:26657 2> /dev/null
+secretcli q register secret-network-params --node http://bootstrap:26657
 
 secretd configure-secret node-master-cert.der "$SEED"
 
