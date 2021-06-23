@@ -1,8 +1,8 @@
-use std::collections::HashMap;
 use std::sync::SgxRwLock;
 
 use lazy_static::lazy_static;
 use log::*;
+use lru::LruCache;
 use parity_wasm::elements;
 use parity_wasm::elements::Module;
 use wasmi::{ModuleInstance, ModuleRef};
@@ -17,12 +17,16 @@ use super::memory::validate_memory;
 use super::runtime::{create_builder, WasmiImportResolver};
 
 lazy_static! {
-    static ref MODULE_CACHE: SgxRwLock<HashMap<[u8; HASH_SIZE], wasmi::Module>> =
-        SgxRwLock::new(HashMap::new());
+    static ref MODULE_CACHE: SgxRwLock<LruCache<[u8; HASH_SIZE], wasmi::Module>> =
+        SgxRwLock::new(LruCache::new(15));
 }
 
 pub fn create_module_instance(contract_code: ContractCode) -> Result<ModuleRef, EnclaveError> {
     let code_hash = contract_code.hash();
+
+    // Update the LRU cache as quickly as possible so it knows this was recently used
+    MODULE_CACHE.write().unwrap().get(code_hash);
+
     match get_module_instance(&code_hash) {
         Some(Ok(module_ref)) => return Ok(module_ref),
         None => {} // continue
@@ -30,7 +34,7 @@ pub fn create_module_instance(contract_code: ContractCode) -> Result<ModuleRef, 
         // If the stored module failed to process for some reason, remove it.
         // Shouldn't happen because we already compiled it before.
         Some(Err(_)) => {
-            MODULE_CACHE.write().unwrap().remove(&code_hash);
+            MODULE_CACHE.write().unwrap().pop(&code_hash);
         }
     }
 
@@ -42,23 +46,24 @@ pub fn create_module_instance(contract_code: ContractCode) -> Result<ModuleRef, 
         // If the stored module failed to process for some reason, remove it.
         // Shouldn't happen because we already compiled it before.
         Some(Err(_)) => {
-            cache.remove(&code_hash);
+            cache.pop(&code_hash);
         }
     }
 
     let module = compile_module(contract_code.code())?;
     let instance = create_instance(&module)?;
-    cache.insert(code_hash, module);
+    cache.put(code_hash, module);
     Ok(instance)
 }
 
-// This is a separate function for scoping, so that we don't hold the read handle
+// This is a separate function for scoping, so that we don't hold the read/write handle
 // for too long
 fn get_module_instance(code_hash: &[u8; HASH_SIZE]) -> Option<Result<ModuleRef, EnclaveError>> {
+    // Note that this peek doesn't update the LRU cache
     MODULE_CACHE
         .read()
         .unwrap()
-        .get(code_hash)
+        .peek(code_hash)
         .map(create_instance)
 }
 

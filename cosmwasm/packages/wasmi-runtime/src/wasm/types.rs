@@ -25,7 +25,7 @@ impl<'code> ContractCode<'code> {
     }
 
     pub fn hash(&self) -> [u8; HASH_SIZE] {
-        self.hash.clone()
+        self.hash
     }
 }
 
