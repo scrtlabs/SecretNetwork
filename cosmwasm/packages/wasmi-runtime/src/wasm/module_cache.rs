@@ -18,14 +18,19 @@ use super::runtime::{create_builder, WasmiImportResolver};
 
 lazy_static! {
     static ref MODULE_CACHE: SgxRwLock<LruCache<[u8; HASH_SIZE], wasmi::Module>> =
-        SgxRwLock::new(LruCache::new(15));
+        SgxRwLock::new(LruCache::new(0));
+}
+
+pub fn configure_module_cache(cap: usize) {
+    debug!("configuring module cache: {}", cap);
+    MODULE_CACHE.write().unwrap().resize(cap)
 }
 
 pub fn create_module_instance(contract_code: ContractCode) -> Result<ModuleRef, EnclaveError> {
     let code_hash = contract_code.hash();
 
     // Update the LRU cache as quickly as possible so it knows this was recently used
-    MODULE_CACHE.write().unwrap().get(code_hash);
+    MODULE_CACHE.write().unwrap().get(&code_hash);
 
     match get_module_instance(&code_hash) {
         Some(Ok(module_ref)) => return Ok(module_ref),

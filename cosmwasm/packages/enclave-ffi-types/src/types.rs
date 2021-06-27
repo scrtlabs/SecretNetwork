@@ -34,6 +34,15 @@ impl Default for EnclaveBuffer {
     }
 }
 
+/// This type describes parameters of the runtime that the node can configure for itself.
+#[repr(C)]
+pub struct RuntimeConfiguration {
+    /// The amount of wasmi modules cached in an LRU cache inside the enclave.
+    /// This speeds up the execution of recently used modules, but has a significant
+    /// memory overhead.
+    pub module_cache_size: u8,
+}
+
 /// This struct holds a pointer to memory in userspace, that contains the storage
 #[repr(C)]
 pub struct Ctx {

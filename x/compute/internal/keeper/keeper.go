@@ -68,10 +68,24 @@ type Keeper struct {
 
 // NewKeeper creates a new contract Keeper instance
 // If customEncoders is non-nil, we can use this to override some of the message handler, especially custom
-func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.AccountKeeper,
-	bankKeeper *bank.Keeper, govKeeper *gov.Keeper, distKeeper *distr.Keeper, mintKeeper *mint.Keeper, stakingKeeper *staking.Keeper,
-	router sdk.Router, homeDir string, wasmConfig types.WasmConfig, supportedFeatures string, customEncoders *MessageEncoders, customPlugins *QueryPlugins) Keeper {
-	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize)
+func NewKeeper(
+	cdc *codec.Codec,
+	storeKey sdk.StoreKey,
+	accountKeeper auth.AccountKeeper,
+	bankKeeper *bank.Keeper,
+	govKeeper *gov.Keeper,
+	distKeeper *distr.Keeper,
+	mintKeeper *mint.Keeper,
+	stakingKeeper *staking.Keeper,
+	router sdk.Router,
+	homeDir string,
+	wasmConfig types.WasmConfig,
+	enclaveRuntimeConfig wasmTypes.EnclaveRuntimeConfig,
+	supportedFeatures string,
+	customEncoders *MessageEncoders,
+	customPlugins *QueryPlugins,
+) Keeper {
+	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize, enclaveRuntimeConfig)
 	if err != nil {
 		panic(err)
 	}

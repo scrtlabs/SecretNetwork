@@ -52,6 +52,10 @@ enclave {
             uintptr_t encrypted_seed_len
         );
 
+        public sgx_status_t ecall_configure_runtime(
+            RuntimeConfiguration runtime_configuration
+        );
+
         public InitResult ecall_init(
             Ctx context,
             uint64_t gas_limit,

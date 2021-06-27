@@ -93,24 +93,11 @@ func main() {
 		panic(err)
 	}
 
-	// Set default gas limit for WASM queries
-	if viper.IsSet("query-gas-limit") {
-		// already set, not going to overwrite it
-		return
-	}
-
 	appTomlPath := path.Join(ctx.Config.RootDir, "config", "app.toml")
 	if !fileExists(appTomlPath) {
 		// config file does not exist, this means `secretd init` still wasn't called
 		return
 	}
-
-	queryGasLimitTemplate := `
-# query-gas-limit sets the gas limit under which your node will run smart contracts queries.
-# Queries that consume more than this value will be terminated prematurely with an error.
-# This is a good way to protect your node from DoS by heavy queries.
-query-gas-limit = 3000000
-`
 
 	appTomlFile, err := os.OpenFile(appTomlPath, os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
@@ -118,9 +105,31 @@ query-gas-limit = 3000000
 	}
 	defer appTomlFile.Close()
 
-	_, err = appTomlFile.WriteString(queryGasLimitTemplate)
-	if err != nil {
-		panic(fmt.Sprintf("failed writing default query-gas-limit to file '%s'", err))
+	// Set default gas limit for WASM queries
+	if !viper.IsSet("query-gas-limit") {
+		queryGasLimitTemplate := `
+# query-gas-limit sets the gas limit under which your node will run smart contracts queries.
+# Queries that consume more than this value will be terminated prematurely with an error.
+# This is a good way to protect your node from DoS by heavy queries.
+query-gas-limit = 3000000
+`
+		_, err = appTomlFile.WriteString(queryGasLimitTemplate)
+		if err != nil {
+			panic(fmt.Sprintf("failed writing default query-gas-limit to file '%s'", err))
+		}
+	}
+
+	// Set default gas limit for WASM queries
+	if !viper.IsSet("enclave-module-cache-size") {
+		enclaveModuleCacheSizeTemplate := `
+# enclave-module-cache-size determined how many contracts will be cached in the enclave memory. This speeds up
+# contract start-up times.
+enclave-module-cache-size = 15
+`
+		_, err = appTomlFile.WriteString(enclaveModuleCacheSizeTemplate)
+		if err != nil {
+			panic(fmt.Sprintf("failed writing default enclave-module-cache-size to file '%s'", err))
+		}
 	}
 }
 

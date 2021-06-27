@@ -65,3 +65,14 @@ type VerificationInfo struct {
 	Signature         auth.StdSignature `json:"signature"`
 	CallbackSignature []byte            `json:"callback_sig"` // Optional
 }
+
+type EnclaveRuntimeConfig struct {
+	ModuleCacheSize uint8 `mapstructure:"enclave_module_cache_size"`
+}
+
+const defaultModuleCacheSize = uint8(15)
+func DefaultEnclaveRuntimeConfig() EnclaveRuntimeConfig {
+	return EnclaveRuntimeConfig{
+		ModuleCacheSize: defaultModuleCacheSize,
+	}
+}

@@ -28,6 +28,7 @@ import (
 	"github.com/enigmampc/cosmos-sdk/x/staking"
 	"github.com/enigmampc/cosmos-sdk/x/supply"
 
+	goCosmWasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	wasmtypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
@@ -177,6 +178,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 
 	// Load default wasm config
 	wasmConfig := wasmtypes.DefaultWasmConfig()
+	enclaveRuntimeConfig := goCosmWasmTypes.DefaultEnclaveRuntimeConfig()
 
 	govRouter := gov.NewRouter()
 	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler)
@@ -195,7 +197,11 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, supportedFeat
 
 	mintKeeper := mint.NewKeeper(cdc, mintStore, paramsKeeper.Subspace(mint.DefaultParamspace), stakingKeeper, supplyKeeper, auth.FeeCollectorName)
 	mintKeeper.SetMinter(ctx, mint.DefaultInitialMinter())
-	keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &govKeeper, &distKeeper, &mintKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
+	keeper := NewKeeper(
+		cdc, keyContract, accountKeeper, &bk,
+		&govKeeper, &distKeeper, &mintKeeper, &stakingKeeper,
+		router, tempDir, wasmConfig, enclaveRuntimeConfig, supportedFeatures, encoders, queriers,
+	)
 	// add wasm handler so we can loop-back (contracts calling contracts)
 	router.AddRoute(wasmtypes.RouterKey, TestHandler(keeper))
 

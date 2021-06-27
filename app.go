@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	"github.com/enigmampc/SecretNetwork/x/compute"
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
 	"github.com/enigmampc/SecretNetwork/x/tokenswap"
@@ -138,6 +139,12 @@ type SecretNetworkApp struct {
 // This is only used for parsing in the app, x/compute expects WasmConfig
 type WasmWrapper struct {
 	Wasm compute.WasmConfig `mapstructure:"wasm"`
+}
+
+// EnclaveRuntimeConfigWrapper allows us to use namespacing in the config file
+// This is only used for parsing in the app, x/compute expects WasmConfig
+type EnclaveRuntimeConfigWrapper struct {
+	Enclave wasmTypes.EnclaveRuntimeConfig `mapstructure:"enclave"`
 }
 
 // NewSecretNetworkApp is a constructor function for enigmaChainApp
@@ -287,6 +294,14 @@ func NewSecretNetworkApp(
 	}
 	wasmConfig = wasmWrap.Wasm
 
+	enclaveConfig := wasmTypes.DefaultEnclaveRuntimeConfig()
+	enclaveConfigWrap := EnclaveRuntimeConfigWrapper{Enclave: enclaveConfig}
+	err = viper.Unmarshal(&enclaveConfigWrap)
+	if err != nil {
+		panic("error while reading enclave runtime config: " + err.Error())
+	}
+	enclaveConfig = enclaveConfigWrap.Enclave
+
 	govRouter := gov.NewRouter()
 	// register the proposal types
 	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler).
@@ -305,7 +320,7 @@ func NewSecretNetworkApp(
 		app.cdc,
 		keys[compute.StoreKey],
 		app.accountKeeper, &app.bankKeeper, &app.govKeeper, &app.distrKeeper, &app.mintKeeper, &stakingKeeper,
-		computeRouter, computeDir, wasmConfig, supportedFeatures, nil, nil)
+		computeRouter, computeDir, wasmConfig, enclaveConfig, supportedFeatures, nil, nil)
 
 	// register the staking hooks
 	// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks

@@ -1,12 +1,15 @@
 use lazy_static::lazy_static;
 use log::*;
 use std::ffi::c_void;
+use std::panic;
+use std::sync::SgxMutex;
+
+use sgx_types::sgx_status_t;
 
 use enclave_ffi_types::{
     Ctx, EnclaveBuffer, EnclaveError, HandleResult, HealthCheckResult, InitResult, QueryResult,
+    RuntimeConfiguration,
 };
-use std::panic;
-use std::sync::SgxMutex;
 
 use crate::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
@@ -72,6 +75,16 @@ pub unsafe extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> Enc
 
 #[derive(Debug, PartialEq)]
 pub struct BufferRecoveryError;
+
+#[no_mangle]
+pub unsafe extern "C" fn ecall_configure_runtime(config: RuntimeConfiguration) -> sgx_status_t {
+    debug!(
+        "inside ecall_configure_runtime: {}",
+        config.module_cache_size
+    );
+    crate::wasm::module_cache::configure_module_cache(config.module_cache_size as usize);
+    sgx_status_t::SGX_SUCCESS
+}
 
 /// Take a pointer as returned by `ecall_allocate` and recover the Vec<u8> inside of it.
 /// # Safety
