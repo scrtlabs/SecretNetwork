@@ -56,11 +56,26 @@ type MsgServiceRouter interface {
 
 // NewKeeper creates a new contract Keeper instance
 // If customEncoders is non-nil, we can use this to override some of the message handler, especially custom
-func NewKeeper(cdc codec.Codec, legacyAmino codec.LegacyAmino, storeKey sdk.StoreKey, accountKeeper authkeeper.AccountKeeper,
-	bankKeeper bankkeeper.Keeper, govKeeper govkeeper.Keeper, distKeeper distrkeeper.Keeper, mintKeeper mintkeeper.Keeper, stakingKeeper stakingkeeper.Keeper,
+func NewKeeper(
+	cdc codec.Codec,
+	legacyAmino codec.LegacyAmino,
+	storeKey sdk.StoreKey,
+	accountKeeper authkeeper.AccountKeeper,
+	bankKeeper bankkeeper.Keeper,
+	govKeeper govkeeper.Keeper,
+	distKeeper distrkeeper.Keeper,
+	mintKeeper mintkeeper.Keeper,
+	stakingKeeper stakingkeeper.Keeper,
 	//serviceRouter MsgServiceRouter,
-	router sdk.Router, homeDir string, wasmConfig *types.WasmConfig, supportedFeatures string, customEncoders *MessageEncoders, customPlugins *QueryPlugins) Keeper {
-	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize)
+	router sdk.Router,
+	homeDir string,
+	wasmConfig *types.WasmConfig,
+	enclaveRuntimeConfig wasmTypes.EnclaveRuntimeConfig,
+	supportedFeatures string,
+	customEncoders *MessageEncoders,
+	customPlugins *QueryPlugins,
+) Keeper {
+	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize, enclaveRuntimeConfig)
 	if err != nil {
 		panic(err)
 	}

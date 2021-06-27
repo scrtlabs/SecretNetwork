@@ -36,6 +36,7 @@ pub use crate::errors::{
 pub use crate::features::features_from_csv;
 pub use crate::ffi::{FfiError, FfiResult, GasInfo};
 pub use crate::instance::{GasReport, Instance};
+pub use enclave::{configure_enclave, EnclaveRuntimeConfig};
 /*
 pub use crate::modules::FileSystemCache;
 */
