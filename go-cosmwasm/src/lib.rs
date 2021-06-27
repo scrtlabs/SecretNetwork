@@ -361,6 +361,7 @@ pub extern "C" fn instantiate(
     Buffer::from_vec(data)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn do_init(
     cache: &mut CosmCache<DB, GoApi, GoQuerier>,
     code_id: Buffer,
@@ -417,6 +418,7 @@ pub extern "C" fn handle(
     Buffer::from_vec(data)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn do_handle(
     cache: &mut CosmCache<DB, GoApi, GoQuerier>,
     code_id: Buffer,

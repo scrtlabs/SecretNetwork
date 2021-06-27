@@ -1,16 +1,16 @@
-use serde::de::DeserializeOwned;
-use std::fmt;
+// use serde::de::DeserializeOwned;
+// use std::fmt;
 
-use cosmwasm_std::{Env, HandleResult, InitResult, MigrateResult, QueryResult};
+// use cosmwasm_std::{Env, HandleResult, InitResult, MigrateResult, QueryResult};
 
-use crate::errors::{VmError, VmResult};
+use crate::errors::VmResult;
 /*
 use crate::instance::{Func, Instance};
 */
 use crate::instance::Instance;
-use crate::serde::{from_slice, to_vec};
+// use crate::serde::{from_slice, to_vec};
 use crate::traits::{Api, Querier, Storage};
-use schemars::JsonSchema;
+// use schemars::JsonSchema;
 
 /*
 const MAX_LENGTH_INIT: usize = 100_000;

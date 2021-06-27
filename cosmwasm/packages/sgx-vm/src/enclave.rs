@@ -66,6 +66,7 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
     )
 }
 
+#[allow(clippy::mutex_atomic)]
 lazy_static! {
     static ref SGX_ENCLAVE: SgxResult<SgxEnclave> = init_enclave();
     /// This variable indicates if the enclave configuration has already been set
