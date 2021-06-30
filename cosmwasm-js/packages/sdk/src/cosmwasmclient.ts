@@ -155,7 +155,7 @@ export interface PrivateCosmWasmClient {
 }
 
 export class CosmWasmClient {
-  protected readonly restClient: RestClient;
+  public readonly restClient: RestClient;
   /** Any address the chain considers valid (valid bech32 with proper prefix) */
   protected anyValidAddress: string | undefined;
 

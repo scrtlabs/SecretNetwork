@@ -1,10 +1,10 @@
 {
   "name": "secretjs",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "CosmWasm SDK + Encryption for the Secret Network",
   "author": "Ethan Frey <ethanfrey@users.noreply.github.com>",
   "contributors": [
-    "Enigma <info@enigma.co> (https://enigma.co)"
+    "Enigma <info@enigma.co> (https://github.com/enigmampc)"
   ],
   "license": "Apache-2.0",
   "main": "build/index.js",
