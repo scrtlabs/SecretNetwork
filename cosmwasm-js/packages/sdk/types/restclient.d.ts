@@ -192,7 +192,7 @@ export declare class RestClient {
   private readonly client;
   private readonly broadcastMode;
   enigmautils: SecretUtils;
-  private codeHashCache;
+  codeHashCache: Map<string | number, string>;
   /**
    * Creates a new client to interact with a Cosmos SDK light client daemon.
    * This class tries to be a direct mapping onto the API. Some basic decoding and normalizatin is done

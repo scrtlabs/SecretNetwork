@@ -286,7 +286,7 @@ export class RestClient {
   private readonly broadcastMode: BroadcastMode;
   public enigmautils: SecretUtils;
 
-  private codeHashCache: Map<any, string>;
+  public codeHashCache: Map<string | number, string>;
 
   /**
    * Creates a new client to interact with a Cosmos SDK light client daemon.
