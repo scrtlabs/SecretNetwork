@@ -144,18 +144,18 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     }
     this.fees = { ...defaultFees, ...(customFees || {}) };
 
-    // Setup contract->hash cache
-    // This is only needed here and not in CosmWasmClient because we
-    // need code hashes before sending txs
-    this.restClient.listCodeInfo().then(async (codes) => {
-      for (const code of codes) {
-        this.restClient.codeHashCache.set(code.id, code.data_hash);
-        const contracts = await this.restClient.listContractsByCodeId(code.id);
-        for (const contract of contracts) {
-          this.restClient.codeHashCache.set(contract.address, code.data_hash);
-        }
-      }
-    });
+    // // Setup contract->hash cache
+    // // This is only needed here and not in CosmWasmClient because we
+    // // need code hashes before sending txs
+    // this.restClient.listCodeInfo().then(async (codes) => {
+    //   for (const code of codes) {
+    //     this.restClient.codeHashCache.set(code.id, code.data_hash);
+    //     const contracts = await this.restClient.listContractsByCodeId(code.id);
+    //     for (const contract of contracts) {
+    //       this.restClient.codeHashCache.set(contract.address, code.data_hash);
+    //     }
+    //   }
+    // });
   }
 
   public async getNonce(address?: string): Promise<GetNonceResult> {
