@@ -47,20 +47,20 @@ function prepareBuilder(buider: string | undefined): string {
 
 const defaultFees: FeeTable = {
   upload: {
-    amount: singleAmount(25000, "ucosm"),
-    gas: "1000000", // one million
+    amount: singleAmount(250_000, "uscrt"),
+    gas: String(1_000_000),
   },
   init: {
-    amount: singleAmount(12500, "ucosm"),
-    gas: "500000", // 500k
+    amount: singleAmount(125_000, "uscrt"),
+    gas: String(500_000),
   },
   exec: {
-    amount: singleAmount(5000, "ucosm"),
-    gas: "200000", // 200k
+    amount: singleAmount(50_000, "uscrt"),
+    gas: String(200_000),
   },
   send: {
-    amount: singleAmount(2000, "ucosm"),
-    gas: "80000", // 80k
+    amount: singleAmount(20_000, "uscrt"),
+    gas: String(80_000),
   },
 };
 
