@@ -493,7 +493,7 @@ export class RestClient {
     const encoded = Encoding.toHex(Encoding.toUtf8(Encoding.toBase64(encrypted)));
 
     /** Loop through addedParams object entries and convert to query string */
-    let paramString = "";
+    let paramString = '';
     if(addedParams) {
         for (const [key, value] of Object.entries(addedParams)) {
             paramString = `&${key}=${value}`
