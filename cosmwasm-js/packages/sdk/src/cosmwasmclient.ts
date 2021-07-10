@@ -399,7 +399,7 @@ export class CosmWasmClient {
    */
   public async queryContractSmart(address: string, queryMsg: object, addedParams?: object): Promise<JsonObject> {
     try {
-        return await this.restClient.queryContractSmart(address, queryMsg, addedParams);
+      return await this.restClient.queryContractSmart(address, queryMsg, addedParams);
     } catch (error) {
       if (error instanceof Error) {
         if (error.message.startsWith("not found: contract")) {
