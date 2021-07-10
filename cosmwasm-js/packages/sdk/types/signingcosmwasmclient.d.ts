@@ -92,10 +92,12 @@ export declare class SigningCosmWasmClient extends CosmWasmClient {
     memo?: string,
     transferAmount?: readonly Coin[],
     fee?: StdFee,
+    contractCodeHash?: string,
   ): Promise<InstantiateResult>;
   multiExecute(
     inputMsgs: Array<{
       contractAddress: string;
+      contractCodeHash?: string;
       handleMsg: object;
       transferAmount?: readonly Coin[];
     }>,
@@ -108,6 +110,7 @@ export declare class SigningCosmWasmClient extends CosmWasmClient {
     memo?: string,
     transferAmount?: readonly Coin[],
     fee?: StdFee,
+    contractCodeHash?: string,
   ): Promise<ExecuteResult>;
   sendTokens(
     recipientAddress: string,
