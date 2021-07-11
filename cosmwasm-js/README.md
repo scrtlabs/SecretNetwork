@@ -8,12 +8,12 @@ Requires Node 10+. For best results, use yarn. The basic commands are:
 
 ```sh
 # compile the code
-yarn build
+npm run build
 # run unit tests
-yarn test
+npm run test
 
 # format and lint the code
-yarn format && yarn lint
+npm run format && npm run lint
 ```
 
 ### Integration tests
