@@ -253,7 +253,10 @@ export class SigningCosmWasmClient extends CosmWasmClient {
   ): Promise<InstantiateResult> {
     if (!contractCodeHash) {
       contractCodeHash = await this.restClient.getCodeHashByCodeId(codeId);
+    } else {
+      this.restClient.codeHashCache.set(codeId, contractCodeHash);
     }
+
     const instantiateMsg: MsgInstantiateContract = {
       type: "wasm/MsgInstantiateContract",
       value: {
@@ -325,6 +328,8 @@ export class SigningCosmWasmClient extends CosmWasmClient {
       let { contractCodeHash } = inputMsg;
       if (!contractCodeHash) {
         contractCodeHash = await this.restClient.getCodeHashByContractAddr(inputMsg.contractAddress);
+      } else {
+        this.restClient.codeHashCache.set(inputMsg.contractAddress, contractCodeHash);
       }
 
       const msg: MsgExecuteContract = {
@@ -403,6 +408,8 @@ export class SigningCosmWasmClient extends CosmWasmClient {
   ): Promise<ExecuteResult> {
     if (!contractCodeHash) {
       contractCodeHash = await this.restClient.getCodeHashByContractAddr(contractAddress);
+    } else {
+      this.restClient.codeHashCache.set(contractAddress, contractCodeHash);
     }
 
     const executeMsg: MsgExecuteContract = {
