@@ -32,3 +32,4 @@ spid.txt
 ias_bin_dev.go
 ias_bin_prod.go
 ias_bin_sw.go
+node_modules
