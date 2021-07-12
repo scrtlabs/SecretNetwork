@@ -493,14 +493,10 @@ export class RestClient {
     const encoded = Encoding.toHex(Encoding.toUtf8(Encoding.toBase64(encrypted)));
 
     /** Loop through addedParams object entries and convert to query string */
-    let paramString = '';
-    if(addedParams) {
-        for (const [key, value] of Object.entries(addedParams)) {
-            paramString = `&${key}=${value}`
-        }
-    }
+    const paramString = new URLSearchParams(addedParams)
+    
+    const path = `/wasm/contract/${address}/query/${encoded}?encoding=hex&${paramString}`;
 
-    const path = `/wasm/contract/${address}/query/${encoded}?encoding=hex${paramString}`;
     let responseData;
     try {
       responseData = (await this.get(path)) as WasmResponse<SmartQueryResponse>;
