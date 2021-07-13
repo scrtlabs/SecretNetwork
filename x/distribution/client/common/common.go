@@ -5,7 +5,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/distribution/types"
+	"github.com/enigmampc/SecretNetwork/x/distribution/types"
 )
 
 // QueryDelegationRewards queries a delegation rewards between a delegator and a

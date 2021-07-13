@@ -8,9 +8,9 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	v034distr "github.com/cosmos/cosmos-sdk/x/distribution/legacy/v034"
-	"github.com/cosmos/cosmos-sdk/x/distribution/types"
 	v036gov "github.com/cosmos/cosmos-sdk/x/gov/legacy/v036"
+	v034distr "github.com/enigmampc/SecretNetwork/x/distribution/legacy/v034"
+	"github.com/enigmampc/SecretNetwork/x/distribution/types"
 )
 
 // ----------------------------------------------------------------------------

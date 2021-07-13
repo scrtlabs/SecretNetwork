@@ -5,7 +5,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"github.com/cosmos/cosmos-sdk/types"
-	v034distr "github.com/cosmos/cosmos-sdk/x/distribution/legacy/v034"
+	v034distr "github.com/enigmampc/SecretNetwork/x/distribution/legacy/v034"
 
 	"github.com/stretchr/testify/require"
 )

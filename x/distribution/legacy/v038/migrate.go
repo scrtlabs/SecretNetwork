@@ -4,7 +4,7 @@ package v038
 // nolint
 
 import (
-	v036distr "github.com/cosmos/cosmos-sdk/x/distribution/legacy/v036"
+	v036distr "github.com/enigmampc/SecretNetwork/x/distribution/legacy/v036"
 )
 
 // Migrate accepts exported genesis state from v0.36 or v0.37 and migrates it to

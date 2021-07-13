@@ -3,6 +3,7 @@ module github.com/enigmampc/SecretNetwork
 go 1.15
 
 require (
+	github.com/armon/go-metrics v0.3.6 // indirect
 	//github.com/CosmWasm/wasmd v0.11.1 // indirect
 	//github.com/DataDog/zstd v1.4.5 // indirect
 	github.com/cosmos/cosmos-sdk v0.40.1

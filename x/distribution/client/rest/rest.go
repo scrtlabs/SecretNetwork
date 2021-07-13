@@ -9,9 +9,9 @@ import (
 	clientrest "github.com/cosmos/cosmos-sdk/client/rest"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/types/rest"
-	"github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govrest "github.com/cosmos/cosmos-sdk/x/gov/client/rest"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	"github.com/enigmampc/SecretNetwork/x/distribution/types"
 )
 
 func RegisterHandlers(clientCtx client.Context, rtr *mux.Router) {

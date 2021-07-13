@@ -7,8 +7,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/distribution/keeper"
-	"github.com/cosmos/cosmos-sdk/x/distribution/types"
+	"github.com/enigmampc/SecretNetwork/x/distribution/keeper"
+	"github.com/enigmampc/SecretNetwork/x/distribution/types"
 )
 
 // BeginBlocker sets the proposer for determining distribution during endblock

@@ -18,12 +18,12 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
-	"github.com/cosmos/cosmos-sdk/x/distribution/client/cli"
-	"github.com/cosmos/cosmos-sdk/x/distribution/client/rest"
-	"github.com/cosmos/cosmos-sdk/x/distribution/keeper"
-	"github.com/cosmos/cosmos-sdk/x/distribution/simulation"
-	"github.com/cosmos/cosmos-sdk/x/distribution/types"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
+	"github.com/enigmampc/SecretNetwork/x/distribution/client/cli"
+	"github.com/enigmampc/SecretNetwork/x/distribution/client/rest"
+	"github.com/enigmampc/SecretNetwork/x/distribution/keeper"
+	"github.com/enigmampc/SecretNetwork/x/distribution/simulation"
+	"github.com/enigmampc/SecretNetwork/x/distribution/types"
 )
 
 var (

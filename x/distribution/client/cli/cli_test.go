@@ -19,9 +19,9 @@ import (
 	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
 	testnet "github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/distribution/client/cli"
-	distrtestutil "github.com/cosmos/cosmos-sdk/x/distribution/client/testutil"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
+	"github.com/enigmampc/SecretNetwork/x/distribution/client/cli"
+	distrtestutil "github.com/enigmampc/SecretNetwork/x/distribution/client/testutil"
 )
 
 type IntegrationTestSuite struct {

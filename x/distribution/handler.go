@@ -3,9 +3,9 @@ package distribution
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/cosmos/cosmos-sdk/x/distribution/keeper"
-	"github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	"github.com/enigmampc/SecretNetwork/x/distribution/keeper"
+	"github.com/enigmampc/SecretNetwork/x/distribution/types"
 )
 
 func NewHandler(k keeper.Keeper) sdk.Handler {

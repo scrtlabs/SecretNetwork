@@ -16,9 +16,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/capability"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
-	distr "github.com/cosmos/cosmos-sdk/x/distribution"
-	distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
-	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
 	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
@@ -41,6 +38,9 @@ import (
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	"github.com/enigmampc/SecretNetwork/x/compute"
+	distr "github.com/enigmampc/SecretNetwork/x/distribution"
+	distrclient "github.com/enigmampc/SecretNetwork/x/distribution/client"
+	distrtypes "github.com/enigmampc/SecretNetwork/x/distribution/types"
 	"github.com/enigmampc/SecretNetwork/x/registration"
 )
 

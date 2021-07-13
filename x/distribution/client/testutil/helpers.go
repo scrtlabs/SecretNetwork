@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	distrcli "github.com/cosmos/cosmos-sdk/x/distribution/client/cli"
+	distrcli "github.com/enigmampc/SecretNetwork/x/distribution/client/cli"
 )
 
 func MsgWithdrawDelegatorRewardExec(clientCtx client.Context, valAddr fmt.Stringer, extraArgs ...string) ([]byte, error) {
