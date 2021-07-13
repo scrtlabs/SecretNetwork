@@ -81,8 +81,20 @@ func (k Keeper) AllocateTokens(
 	communityTax := k.GetCommunityTax(ctx)
 	voteMultiplier := sdk.OneDec().Sub(proposerMultiplier).Sub(communityTax)
 
-	// allocate tokens proportionally to voting power
-	// TODO consider parallelizing later, ref https://github.com/cosmos/cosmos-sdk/pull/3099#discussion_r246276376
+	foundationTax := k.GetSecretFoundationTax(ctx)
+	foundationTaxAddr := k.GetSecretFoundationAddr(ctx)
+
+	// only apply the secret foundation tax when the tax and address is non-zero
+	var foundationTaxSum sdk.DecCoins
+	if !foundationTax.IsZero() && !foundationTaxAddr.Empty() {
+		voteMultiplier = voteMultiplier.Sub(foundationTax)
+
+		foundationTaxSum = feesCollected.MulDecTruncate(foundationTax)
+		remaining = remaining.Sub(foundationTaxSum)
+	}
+
+	// allocate tokens proportionally to voting power minus any taxes
+	// TODO consider parallelizing later, ref https://github.com/enigmampc/cosmos-sdk/pull/3099#discussion_r246276376
 	for _, vote := range previousVotes {
 		validator := k.stakingKeeper.ValidatorByConsAddr(ctx, vote.Validator.Address)
 
@@ -90,11 +102,26 @@ func (k Keeper) AllocateTokens(
 		// ref https://github.com/cosmos/cosmos-sdk/issues/2525#issuecomment-430838701
 		powerFraction := sdk.NewDec(vote.Validator.Power).QuoTruncate(sdk.NewDec(totalPreviousPower))
 		reward := feesCollected.MulDecTruncate(voteMultiplier).MulDecTruncate(powerFraction)
+		// allocate tokens to the validator
 		k.AllocateTokensToValidator(ctx, validator, reward)
+
+		// update the remaining allocation for the community pool
 		remaining = remaining.Sub(reward)
 	}
 
-	// allocate community funding
+	// Send the foundation tax sum to the foundation tax address. Note, the taxes
+	// collected are decimals and when coverted to integer coins, we must truncate.
+	// The remainder is given back to the community pool.
+	if !foundationTaxSum.IsZero() {
+		foundationTaxSumTrunc, rem := foundationTaxSum.TruncateDecimal()
+		remaining = remaining.Add(rem...)
+
+		if err := k.supplyKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, foundationTaxAddr, foundationTaxSumTrunc); err != nil {
+			panic(err)
+		}
+	}
+
+	// allocate community funding minus the foundation tax
 	feePool.CommunityPool = feePool.CommunityPool.Add(remaining...)
 	k.SetFeePool(ctx, feePool)
 }

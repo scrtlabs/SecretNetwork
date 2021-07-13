@@ -27,10 +27,12 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 // Params defines the set of params for the distribution module.
 type Params struct {
-	CommunityTax        github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,1,opt,name=community_tax,json=communityTax,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"community_tax" yaml:"community_tax"`
-	BaseProposerReward  github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,2,opt,name=base_proposer_reward,json=baseProposerReward,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"base_proposer_reward" yaml:"base_proposer_reward"`
-	BonusProposerReward github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,3,opt,name=bonus_proposer_reward,json=bonusProposerReward,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"bonus_proposer_reward" yaml:"bonus_proposer_reward"`
-	WithdrawAddrEnabled bool                                   `protobuf:"varint,4,opt,name=withdraw_addr_enabled,json=withdrawAddrEnabled,proto3" json:"withdraw_addr_enabled,omitempty" yaml:"withdraw_addr_enabled"`
+	CommunityTax            github_com_cosmos_cosmos_sdk_types.Dec     `protobuf:"bytes,1,opt,name=community_tax,json=communityTax,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"community_tax" yaml:"community_tax"`
+	SecretFoundationTax     github_com_cosmos_cosmos_sdk_types.Dec     `protobuf:"bytes,2,opt,name=secret_foundation_tax,json=secretFoundationTax,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"secret_foundation_tax" yaml:"secret_foundation_tax"`
+	SecretFoundationAddress github_com_cosmos_cosmos_sdk_types.Address `protobuf:"bytes,3,opt,name=secret_foundation_address,json=secretFoundationAddress,proto3,customtype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"secret_foundation_address" yaml:"secret_foundation_address"`
+	BaseProposerReward      github_com_cosmos_cosmos_sdk_types.Dec     `protobuf:"bytes,4,opt,name=base_proposer_reward,json=baseProposerReward,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"base_proposer_reward" yaml:"base_proposer_reward"`
+	BonusProposerReward     github_com_cosmos_cosmos_sdk_types.Dec     `protobuf:"bytes,5,opt,name=bonus_proposer_reward,json=bonusProposerReward,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"bonus_proposer_reward" yaml:"bonus_proposer_reward"`
+	WithdrawAddrEnabled     bool                                       `protobuf:"varint,6,opt,name=withdraw_addr_enabled,json=withdrawAddrEnabled,proto3" json:"withdraw_addr_enabled,omitempty" yaml:"withdraw_addr_enabled"`
 }
 
 func (m *Params) Reset()      { *m = Params{} }
