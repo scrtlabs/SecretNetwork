@@ -14,6 +14,7 @@ import {
   MsgExecuteContract,
 } from "./types";
 import EnigmaUtils, { SecretUtils } from "./enigmautils";
+import { URLSearchParams } from "url";
 
 export interface CosmosSdkAccount {
   /** Bech32 account address */
@@ -492,9 +493,8 @@ export class RestClient {
 
     const encoded = Encoding.toHex(Encoding.toUtf8(Encoding.toBase64(encrypted)));
 
-    /** Loop through addedParams object entries and convert to query string */
-    const paramString = new URLSearchParams(addedParams)
-    
+    const paramString = new URLSearchParams(addedParams as any).toString();
+
     const path = `/wasm/contract/${address}/query/${encoded}?encoding=hex&${paramString}`;
 
     let responseData;
