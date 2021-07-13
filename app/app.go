@@ -62,7 +62,11 @@ import (
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
 
-	//"github.com/enigmampc/SecretNetwork/x/tokenswap"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -71,10 +75,6 @@ import (
 	tmos "github.com/tendermint/tendermint/libs/os"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
-	"io"
-	"net/http"
-	"os"
-	"path/filepath"
 )
 
 const appName = "secret"
@@ -106,7 +106,6 @@ var (
 	//	//supply.AppModuleBasic{},
 	//	upgrade.AppModuleBasic{},
 	//	evidence.AppModuleBasic{},
-	//	//tokenswap.AppModuleBasic{},
 	//)
 
 	// module account permissions
@@ -117,13 +116,11 @@ var (
 		stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
 		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
 		govtypes.ModuleName:            {authtypes.Burner},
-		//tokenswap.ModuleName:      {authtypes.Minter},
 	}
 
 	// Module accounts that are allowed to receive tokens
 	allowedReceivingModAcc = map[string]bool{
 		distrtypes.ModuleName: true,
-		//tokenswap.ModuleName: true,
 	}
 )
 
@@ -158,9 +155,8 @@ type SecretNetworkApp struct {
 	upgradeKeeper    upgradekeeper.Keeper
 	paramsKeeper     paramskeeper.Keeper
 	evidenceKeeper   evidencekeeper.Keeper
-	//tokenSwapKeeper tokenswap.SwapKeeper
-	computeKeeper compute.Keeper
-	regKeeper     reg.Keeper
+	computeKeeper    compute.Keeper
+	regKeeper        reg.Keeper
 
 	// the module manager
 	mm *module.Manager
@@ -286,7 +282,6 @@ func NewSecretNetworkApp(
 	regRouter := bApp.Router()
 
 	computeDir := filepath.Join(homePath, ".compute")
-	//app.tokenSwapKeeper = tokenswap.NewKeeper(app.cdc, keys[tokenswap.StoreKey], tokenswapSubspace, app.supplyKeeper)
 
 	wasmConfig := compute.DefaultWasmConfig()
 	wasmConfig.SmartQueryGasLimit = queryGasLimit
@@ -370,7 +365,6 @@ func NewSecretNetworkApp(
 		compute.NewAppModule(app.computeKeeper),
 		params.NewAppModule(app.paramsKeeper),
 		reg.NewAppModule(app.regKeeper),
-		//tokenswap.NewAppModule(app.tokenSwapKeeper, app.supplyKeeper, app.accountKeeper),
 	)
 	// During begin block slashing happens after distr.BeginBlocker so that
 	// there is nothing left over in the validator fee pool, so as to keep the
@@ -397,7 +391,6 @@ func NewSecretNetworkApp(
 		evidencetypes.ModuleName,
 		compute.ModuleName,
 		reg.ModuleName,
-		//tokenswap.ModuleName,
 	)
 
 	// register all module routes and module queriers
