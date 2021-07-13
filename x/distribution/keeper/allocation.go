@@ -116,7 +116,7 @@ func (k Keeper) AllocateTokens(
 		foundationTaxSumTrunc, rem := foundationTaxSum.TruncateDecimal()
 		remaining = remaining.Add(rem...)
 
-		if err := k.supplyKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, foundationTaxAddr, foundationTaxSumTrunc); err != nil {
+		if err := k.bankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, foundationTaxAddr, foundationTaxSumTrunc); err != nil {
 			panic(err)
 		}
 	}
