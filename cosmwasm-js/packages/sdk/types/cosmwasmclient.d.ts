@@ -162,8 +162,10 @@ export declare class CosmWasmClient {
    * Promise is rejected when contract does not exist.
    * Promise is rejected for invalid query format.
    * Promise is rejected for invalid response format.
+   *
+   * Note: addedParams allows for query string additions such as "&height=1234567"
    */
-  queryContractSmart(address: string, queryMsg: object): Promise<JsonObject>;
+  queryContractSmart(address: string, queryMsg: object, addedParams?: object): Promise<JsonObject>;
   private txsQuery;
   getCodeHashByCodeId(id: number): Promise<string>;
   getCodeHashByContractAddr(addr: string): Promise<string>;
