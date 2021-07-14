@@ -492,9 +492,9 @@ export class RestClient {
 
     const encoded = Encoding.toHex(Encoding.toUtf8(Encoding.toBase64(encrypted)));
 
-    /** Loop through addedParams object entries and convert to query string */
-    const paramString = new URLSearchParams(addedParams)
-    
+    // @ts-ignore
+    const paramString = new URLSearchParams(addedParams).toString();
+
     const path = `/wasm/contract/${address}/query/${encoded}?encoding=hex&${paramString}`;
 
     let responseData;
