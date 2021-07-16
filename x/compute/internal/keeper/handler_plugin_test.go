@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
-	"github.com/cosmos/cosmos-sdk/x/distribution"
 	"github.com/cosmos/cosmos-sdk/x/staking"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/enigmampc/SecretNetwork/x/distribution"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 )
 
 func TestEncoding(t *testing.T) {

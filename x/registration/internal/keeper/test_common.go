@@ -3,6 +3,7 @@ package keeper
 import (
 	"encoding/base64"
 	"encoding/json"
+
 	"github.com/cosmos/cosmos-sdk/simapp/params"
 	"github.com/cosmos/cosmos-sdk/std"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -11,23 +12,24 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/capability"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
-	"github.com/cosmos/cosmos-sdk/x/distribution"
-	distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"
+	"github.com/enigmampc/SecretNetwork/x/distribution"
+	distrclient "github.com/enigmampc/SecretNetwork/x/distribution/client"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
 	//ibc "github.com/cosmos/cosmos-sdk/x/ibc/core"
+	"io/ioutil"
+	"os"
+	"testing"
+
 	"github.com/cosmos/cosmos-sdk/x/mint"
 	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
-	"io/ioutil"
-	"os"
-	"testing"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
