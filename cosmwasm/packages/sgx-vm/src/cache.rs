@@ -173,7 +173,7 @@ fn load_wasm_from_disk<P: Into<PathBuf>>(dir: P, checksum: &Checksum) -> VmResul
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::calls::{call_handle, call_init};
+    use crate::calls::{call_handle_raw, call_init_raw};
     use crate::errors::VmError;
     use crate::features::features_from_csv;
     use crate::testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage};
