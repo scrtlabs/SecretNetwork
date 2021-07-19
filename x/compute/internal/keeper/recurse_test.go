@@ -4,16 +4,17 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
-	"os"
 	"testing"
 
-	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 type Recurse struct {
@@ -43,11 +44,6 @@ type recurseResponse struct {
 var totalWasmQueryCounter int
 
 func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.AccAddress, ctx sdk.Context, keeper Keeper, cleanup func()) {
-	// we do one basic setup before all test cases (which are read-only and don't change state)
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
-	cleanup = func() { os.RemoveAll(tempDir) }
-
 	var realWasmQuerier func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
 	countingQuerier := &QueryPlugins{
 		Wasm: func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error) {
@@ -55,12 +51,13 @@ func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.Acc
 			return realWasmQuerier(ctx, request)
 		},
 	}
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, countingQuerier)
+	encoders := DefaultEncoders()
+	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, countingQuerier)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 	realWasmQuerier = WasmQuerier(&keeper)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, creatorPriv := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
+	creator, creatorPriv := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 
 	// store the code
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
@@ -247,12 +244,12 @@ func TestGasOnExternalQuery(t *testing.T) {
 			if tc.expectPanic {
 				require.Panics(t, func() {
 					// this should run out of gas
-					_, err := NewQuerier(keeper)(ctx, path, req)
+					_, err := NewLegacyQuerier(keeper)(ctx, path, req)
 					t.Logf("%v", err)
 				})
 			} else {
 				// otherwise, make sure we get a good success
-				_, err := NewQuerier(keeper)(ctx, path, req)
+				_, err := NewLegacyQuerier(keeper)(ctx, path, req)
 				require.NoError(t, err)
 			}
 		})

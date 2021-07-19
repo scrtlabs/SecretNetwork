@@ -2,46 +2,53 @@ package keeper
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/stretchr/testify/require"
+
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
+	multisigkeys "github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
+	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
+	"github.com/cosmos/cosmos-sdk/crypto/types/multisig"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/auth/exported"
+	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
+	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
+	authlegacy "github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/crypto/ed25519"
-	"github.com/tendermint/tendermint/crypto/multisig"
-	"github.com/tendermint/tendermint/crypto/sr25519"
+
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
+// Create a multisig address of `n` new accounts and a threshold of `threshold`, then sign `sdkMsg` using
+// `actualSigners` accounts from the `n` new accounts. Serialize the message and add it to the `ctx`.
 func multisigTxCreator(t *testing.T, ctx *sdk.Context, keeper Keeper, n int, threshold int, actualSigners int, sdkMsg sdk.Msg) sdk.AccAddress {
 	privKeys, pubKeys, multisigPubKey := generateMultisigAddr(n, threshold, *ctx, keeper)
 
 	switch msg := sdkMsg.(type) {
-	case types.MsgInstantiateContract:
+	case *types.MsgInstantiateContract:
 		msg.Sender = sdk.AccAddress(multisigPubKey.Address())
-	case types.MsgExecuteContract:
+	case *types.MsgExecuteContract:
 		msg.Sender = sdk.AccAddress(multisigPubKey.Address())
 	}
 
-	tx := authtypes.StdTx{
+	tx := authlegacy.StdTx{
 		Msgs:       []sdk.Msg{sdkMsg},
-		Fee:        authtypes.StdFee{},
-		Signatures: []authtypes.StdSignature{},
+		Fee:        authlegacy.StdFee{},
+		Signatures: []authlegacy.StdSignature{},
 		Memo:       "",
 	}
 
 	multiSignature := generateSignatures(t, *ctx, keeper, privKeys, pubKeys, multisigPubKey.Address().Bytes(), tx, actualSigners)
 
-	stdSig := authtypes.StdSignature{
+	stdSig := authlegacy.StdSignature{
 		PubKey:    multisigPubKey,
 		Signature: multiSignature.Marshal(),
 	}
 
-	tx.Signatures = []authtypes.StdSignature{stdSig}
+	tx.Signatures = []authlegacy.StdSignature{stdSig}
 	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
 	require.NoError(t, err)
 
@@ -55,7 +62,7 @@ func multisigTxCreator(t *testing.T, ctx *sdk.Context, keeper Keeper, n int, thr
 // This is because the original `GetSignBytes` was probably meant to be used before the transaction gets processed, and the
 // sequence that gets returned is an increment of what we need.
 // This is why we use `acc.GetSequence() - 1`
-func getSignBytes(ctx sdk.Context, acc exported.Account, tx auth.StdTx) []byte {
+func getSignBytes(ctx sdk.Context, acc client.Account, tx authlegacy.StdTx) []byte {
 	genesis := ctx.BlockHeight() == 0
 	chainID := ctx.ChainID()
 	var accNum uint64
@@ -63,8 +70,8 @@ func getSignBytes(ctx sdk.Context, acc exported.Account, tx auth.StdTx) []byte {
 		accNum = acc.GetAccountNumber()
 	}
 
-	return authtypes.StdSignBytes(
-		chainID, accNum, acc.GetSequence()-1, tx.Fee, tx.Msgs, tx.Memo,
+	return authlegacy.StdSignBytes(
+		chainID, accNum, acc.GetSequence()-1, 0, tx.Fee, tx.Msgs, tx.Memo,
 	)
 }
 
@@ -73,7 +80,7 @@ func generateSignatures(t *testing.T, ctx sdk.Context, keeper Keeper, privKeys [
 	signBytes := getSignBytes(ctx, multisigAcc, tx)
 	multiSig := multisig.NewMultisig(len(privKeys))
 
-	var signDoc authtypes.StdSignDoc
+	var signDoc legacytx.StdSignDoc
 	keeper.cdc.MustUnmarshalJSON(signBytes, &signDoc)
 	fmt.Printf("Sign Doc is %+v\n", signDoc)
 	fmt.Printf("Sign Bytes is %v\n", signBytes)
@@ -84,7 +91,7 @@ func generateSignatures(t *testing.T, ctx sdk.Context, keeper Keeper, privKeys [
 		fmt.Printf("Signature %d  is %v\n", i, signature)
 		fmt.Printf("Signer is %v\n", pubKeys[i].Bytes())
 
-		err := multiSig.AddSignatureFromPubKey(signature, pubKeys[i], pubKeys)
+		err := multisig.AddSignatureFromPubKey(multiSig, signature, pubKeys[i], pubKeys)
 		require.NoError(t, err)
 	}
 
@@ -93,13 +100,13 @@ func generateSignatures(t *testing.T, ctx sdk.Context, keeper Keeper, privKeys [
 	return multiSig
 }
 
-func generateMultisigAddr(n int, threshold int, ctx sdk.Context, keeper Keeper) ([]crypto.PrivKey, []crypto.PubKey, multisig.PubKeyMultisigThreshold) {
+func generateMultisigAddr(n int, threshold int, ctx sdk.Context, keeper Keeper) ([]crypto.PrivKey, []crypto.PubKey, *multisigkeys.LegacyAminoPubKey) {
 	privkeys := make([]crypto.PrivKey, n)
 	pubkeys := make([]crypto.PubKey, n)
 
 	for i := 0; i < n; i++ {
 		deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-		_, privKey := createFakeFundedAccount(ctx, keeper.accountKeeper, deposit.Add(deposit...))
+		_, privKey := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 		privkeys[i] = privKey
 		pubkeys[i] = privKey.PubKey()
 	}
@@ -109,36 +116,29 @@ func generateMultisigAddr(n int, threshold int, ctx sdk.Context, keeper Keeper) 
 	return privkeys, pubkeys, multisigPubkey
 }
 
-func generateMultisigAddrExisting(threshold int, ctx sdk.Context, keeper Keeper, pubKeys []crypto.PubKey) multisig.PubKeyMultisigThreshold {
-	multisigPubkey, _ := multisig.NewPubKeyMultisigThreshold(threshold, pubKeys).(multisig.PubKeyMultisigThreshold)
+func generateMultisigAddrExisting(threshold int, ctx sdk.Context, keeper Keeper, pubKeys []crypto.PubKey) *multisigkeys.LegacyAminoPubKey {
+	multisigPubkey := multisigkeys.NewLegacyAminoPubKey(threshold, pubKeys)
 
 	// Register to keeper
 	addr := multisigPubkey.Address().Bytes()
-	baseAcct := auth.NewBaseAccountWithAddress(addr)
+	baseAcct := authtypes.NewBaseAccountWithAddress(addr)
 	coins := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	_ = baseAcct.SetCoins(coins)
+	_ = keeper.bankKeeper.SetBalances(ctx, baseAcct.GetAddress(), coins)
 	_ = baseAcct.SetPubKey(multisigPubkey)
-	keeper.accountKeeper.SetAccount(ctx, &baseAcct)
+	keeper.accountKeeper.SetAccount(ctx, baseAcct)
 
 	return multisigPubkey
 }
 
 func prepareInitSignedTxMultipleMsgs(t *testing.T, keeper Keeper, ctx sdk.Context, creators []sdk.AccAddress, privKeys []crypto.PrivKey, initMsgs []sdk.Msg, codeID uint64) sdk.Context {
-	accountNums := make([]uint64, len(creators))
-	accountSeqs := make([]uint64, len(creators))
+	accounts := make([]authtypes.AccountI, len(creators))
 	for i, acc := range creators {
-		account, err := auth.GetSignerAcc(ctx, keeper.accountKeeper, acc)
+		account, err := authante.GetSignerAcc(ctx, keeper.accountKeeper, acc)
 		require.NoError(t, err)
-
-		accountNums[i] = account.GetAccountNumber()
-		accountSeqs[i] = account.GetSequence() - 1
+		accounts[i] = account
 	}
 
-	tx := authtypes.NewTestTx(ctx, initMsgs, privKeys, accountNums, accountSeqs, authtypes.StdFee{
-		Amount: nil,
-		Gas:    0,
-	})
-
+	tx := NewTestTxMultiple(initMsgs, accounts, privKeys)
 	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
 	require.NoError(t, err)
 
@@ -146,8 +146,7 @@ func prepareInitSignedTxMultipleMsgs(t *testing.T, keeper Keeper, ctx sdk.Contex
 }
 
 func TestMultipleSigners(t *testing.T) {
-	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, walletB, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
-	defer os.RemoveAll(tempDir)
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, walletB, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
 
 	initMsg := `{"nop":{}}`
 
@@ -177,7 +176,7 @@ func TestMultipleSigners(t *testing.T) {
 		InitFunds: nil,
 	}
 
-	ctx = prepareInitSignedTxMultipleMsgs(t, keeper, ctx, []sdk.AccAddress{walletA, walletB}, []crypto.PrivKey{privKeyA, privKeyB}, []sdk.Msg{sdkMsgA, sdkMsgB}, codeID)
+	ctx = prepareInitSignedTxMultipleMsgs(t, keeper, ctx, []sdk.AccAddress{walletA, walletB}, []crypto.PrivKey{privKeyA, privKeyB}, []sdk.Msg{&sdkMsgA, &sdkMsgB}, codeID)
 
 	contractAddressA, err := keeper.Instantiate(ctx, codeID, walletA /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
@@ -221,8 +220,7 @@ func TestMultipleSigners(t *testing.T) {
 }
 
 func TestWrongSigner(t *testing.T) {
-	ctx, keeper, tempDir, codeID, _, walletA, _, walletB, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
-	defer os.RemoveAll(tempDir)
+	ctx, keeper, codeID, _, walletA, _, walletB, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
 
 	initMsg := `{"nop":{}}`
 
@@ -239,7 +237,7 @@ func TestWrongSigner(t *testing.T) {
 		InitFunds: nil,
 	}
 
-	ctx = prepareInitSignedTxMultipleMsgs(t, keeper, ctx, []sdk.AccAddress{walletB}, []crypto.PrivKey{privKeyB}, []sdk.Msg{sdkMsgA}, codeID)
+	ctx = prepareInitSignedTxMultipleMsgs(t, keeper, ctx, []sdk.AccAddress{walletB}, []crypto.PrivKey{privKeyB}, []sdk.Msg{&sdkMsgA}, codeID)
 
 	_, err = keeper.Instantiate(ctx, codeID, walletA /* nil,*/, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
@@ -249,8 +247,7 @@ func TestWrongSigner(t *testing.T) {
 }
 
 func TestMultiSig(t *testing.T) {
-	ctx, keeper, tempDir, codeID, codeHash, _, _, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
-	defer os.RemoveAll(tempDir)
+	ctx, keeper, codeID, codeHash, _, _, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 
 	initMsg := `{"nop":{}}`
 
@@ -274,7 +271,7 @@ func TestMultiSig(t *testing.T) {
 				InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 			}
 
-			multisigAddr := multisigTxCreator(t, &ctx, keeper, i+1, j+1, i+1, sdkMsg)
+			multisigAddr := multisigTxCreator(t, &ctx, keeper, i+1, j+1, i+1, &sdkMsg)
 
 			contractAddressA, err := keeper.Instantiate(ctx, codeID, multisigAddr /* nil, */, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 			if err != nil {
@@ -295,14 +292,13 @@ func TestMultiSig(t *testing.T) {
 			)
 
 			// Reset wasm events
-			ctx, keeper, tempDir, codeID, codeHash, _, _, _, _ = setupTest(t, "./testdata/test-contract/contract.wasm")
+			ctx, keeper, codeID, codeHash, _, _, _, _ = setupTest(t, "./testdata/test-contract/contract.wasm")
 		}
 	}
 }
 
 func TestMultiSigThreshold(t *testing.T) {
-	ctx, keeper, tempDir, codeID, codeHash, _, _, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
-	defer os.RemoveAll(tempDir)
+	ctx, keeper, codeID, codeHash, _, _, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 
 	initMsg := `{"nop":{}}`
 
@@ -326,7 +322,7 @@ func TestMultiSigThreshold(t *testing.T) {
 				InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 			}
 
-			multisigAddr := multisigTxCreator(t, &ctx, keeper, i+1, j+1, j+1, sdkMsg)
+			multisigAddr := multisigTxCreator(t, &ctx, keeper, i+1, j+1, j+1, &sdkMsg)
 
 			contractAddressA, err := keeper.Instantiate(ctx, codeID, multisigAddr /* nil,*/, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 			if err != nil {
@@ -347,14 +343,13 @@ func TestMultiSigThreshold(t *testing.T) {
 			)
 
 			// Reset wasm events
-			ctx, keeper, tempDir, codeID, _, _, _, _, _ = setupTest(t, "./testdata/test-contract/contract.wasm")
+			ctx, keeper, codeID, _, _, _, _, _ = setupTest(t, "./testdata/test-contract/contract.wasm")
 		}
 	}
 }
 
 func TestMultiSigThresholdNotMet(t *testing.T) {
-	ctx, keeper, tempDir, codeID, codeHash, _, _, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
-	defer os.RemoveAll(tempDir)
+	ctx, keeper, codeID, codeHash, _, _, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 
 	initMsg := `{"nop":{}}`
 
@@ -375,7 +370,7 @@ func TestMultiSigThresholdNotMet(t *testing.T) {
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 	}
 
-	multisigAddr := multisigTxCreator(t, &ctx, keeper, 3, 2, 1, sdkMsg)
+	multisigAddr := multisigTxCreator(t, &ctx, keeper, 3, 2, 1, &sdkMsg)
 
 	_, err = keeper.Instantiate(ctx, codeID, multisigAddr /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
@@ -385,8 +380,7 @@ func TestMultiSigThresholdNotMet(t *testing.T) {
 }
 
 func TestMultiSigExecute(t *testing.T) {
-	ctx, keeper, tempDir, codeID, codeHash, _, _, walletB, privKeyB := setupTest(t, "./testdata/erc20.wasm")
-	defer os.RemoveAll(tempDir)
+	ctx, keeper, codeID, codeHash, _, _, walletB, privKeyB := setupTest(t, "./testdata/erc20.wasm")
 
 	privKeys, pubKeys, multisigPubKey := generateMultisigAddr(5, 4, ctx, keeper)
 	multisigAddr := sdk.AccAddress(multisigPubKey.Address())
@@ -411,26 +405,26 @@ func TestMultiSigExecute(t *testing.T) {
 		Contract:          contractAddress,
 		Msg:               execMsgBz,
 		SentFunds:         sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
-		CallbackSignature: nil,
+		CallbackSig: nil,
 	}
 
 	sdkMsg.Sender = sdk.AccAddress(multisigPubKey.Address())
 
-	tx := authtypes.StdTx{
-		Msgs:       []sdk.Msg{sdkMsg},
-		Fee:        authtypes.StdFee{},
-		Signatures: []authtypes.StdSignature{},
+	tx := authlegacy.StdTx{
+		Msgs:       []sdk.Msg{&sdkMsg},
+		Fee:        authlegacy.StdFee{},
+		Signatures: []authlegacy.StdSignature{},
 		Memo:       "",
 	}
 
 	multiSignature := generateSignatures(t, ctx, keeper, privKeys, pubKeys, multisigPubKey.Address().Bytes(), tx, 4)
 
-	stdSig := authtypes.StdSignature{
+	stdSig := authlegacy.StdSignature{
 		PubKey:    multisigPubKey,
 		Signature: multiSignature.Marshal(),
 	}
 
-	tx.Signatures = []authtypes.StdSignature{stdSig}
+	tx.Signatures = []authlegacy.StdSignature{stdSig}
 	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
 	require.NoError(t, err)
 
@@ -459,8 +453,7 @@ func TestMultiSigExecute(t *testing.T) {
 }
 
 func TestMultiSigCallbacks(t *testing.T) {
-	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
-	defer os.RemoveAll(tempDir)
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 
 	// init
 	contractAddress, initEvents, error := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests)
@@ -491,10 +484,10 @@ func TestMultiSigCallbacks(t *testing.T) {
 		Contract:          contractAddress,
 		Msg:               execMsgBz,
 		SentFunds:         sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
-		CallbackSignature: nil,
+		CallbackSig: nil,
 	}
 
-	multisigAddr := multisigTxCreator(t, &ctx, keeper, 3, 2, 2, sdkMsg)
+	multisigAddr := multisigTxCreator(t, &ctx, keeper, 3, 2, 2, &sdkMsg)
 
 	execRes, err := keeper.Execute(ctx, contractAddress, multisigAddr, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
@@ -525,8 +518,7 @@ func TestMultiSigCallbacks(t *testing.T) {
 }
 
 func TestMultiSigInMultiSig(t *testing.T) {
-	ctx, keeper, tempDir, codeID, codeHash, _, privKeyA, _, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
-	defer os.RemoveAll(tempDir)
+	ctx, keeper, codeID, codeHash, _, privKeyA, _, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
 
 	privKeys, pubKeys, multisigPubkey := generateMultisigAddr(5, 3, ctx, keeper)
 	multimultisigPubkey := generateMultisigAddrExisting(2, ctx, keeper, []crypto.PubKey{multisigPubkey, privKeyA.PubKey(), privKeyB.PubKey()})
@@ -551,10 +543,10 @@ func TestMultiSigInMultiSig(t *testing.T) {
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 	}
 
-	tx := authtypes.StdTx{
-		Msgs:       []sdk.Msg{sdkMsg},
-		Fee:        authtypes.StdFee{},
-		Signatures: []authtypes.StdSignature{},
+	tx := authlegacy.StdTx{
+		Msgs:       []sdk.Msg{&sdkMsg},
+		Fee:        authlegacy.StdFee{},
+		Signatures: []authlegacy.StdSignature{},
 		Memo:       "",
 	}
 
@@ -562,7 +554,7 @@ func TestMultiSigInMultiSig(t *testing.T) {
 	multimultiSignBytes := getSignBytes(ctx, multimultisigAcc, tx)
 	multimultiSig := multisig.NewMultisig(3)
 
-	var signDoc authtypes.StdSignDoc
+	var signDoc authlegacy.StdSignDoc
 	keeper.cdc.MustUnmarshalJSON(multimultiSignBytes, &signDoc)
 
 	// Sign by multisig
@@ -579,12 +571,12 @@ func TestMultiSigInMultiSig(t *testing.T) {
 
 	fmt.Printf("multimultisig sig: %v\n", multimultiSig.Marshal())
 
-	stdSig := authtypes.StdSignature{
+	stdSig := authlegacy.StdSignature{
 		PubKey:    multimultisigPubkey,
 		Signature: multimultiSig.Marshal(),
 	}
 
-	tx.Signatures = []authtypes.StdSignature{stdSig}
+	tx.Signatures = []authlegacy.StdSignature{stdSig}
 	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
 	require.NoError(t, err)
 
@@ -619,8 +611,7 @@ func TestMultiSigInMultiSig(t *testing.T) {
 }
 
 func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
-	ctx, keeper, tempDir, codeID, codeHash, _, privKeyA, _, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
-	defer os.RemoveAll(tempDir)
+	ctx, keeper, codeID, codeHash, _, privKeyA, _, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
 
 	privKeys, pubKeys, multisigPubkey := generateMultisigAddr(5, 3, ctx, keeper)
 	multimultisigPubkey := generateMultisigAddrExisting(2, ctx, keeper, []crypto.PubKey{privKeyA.PubKey(), privKeyB.PubKey(), multisigPubkey})
@@ -645,10 +636,10 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 	}
 
-	tx := authtypes.StdTx{
-		Msgs:       []sdk.Msg{sdkMsg},
-		Fee:        authtypes.StdFee{},
-		Signatures: []authtypes.StdSignature{},
+	tx := authlegacy.StdTx{
+		Msgs:       []sdk.Msg{&sdkMsg},
+		Fee:        authlegacy.StdFee{},
+		Signatures: []authlegacy.StdSignature{},
 		Memo:       "",
 	}
 
@@ -656,7 +647,7 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 	multimultiSignBytes := getSignBytes(ctx, multimultisigAcc, tx)
 	multimultiSig := multisig.NewMultisig(3)
 
-	var signDoc authtypes.StdSignDoc
+	var signDoc authlegacy.StdSignDoc
 	keeper.cdc.MustUnmarshalJSON(multimultiSignBytes, &signDoc)
 
 	// Sign by multisig
@@ -673,12 +664,12 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 
 	fmt.Printf("multimultisig sig: %v\n", multimultiSig.Marshal())
 
-	stdSig := authtypes.StdSignature{
+	stdSig := authlegacy.StdSignature{
 		PubKey:    multimultisigPubkey,
 		Signature: multimultiSig.Marshal(),
 	}
 
-	tx.Signatures = []authtypes.StdSignature{stdSig}
+	tx.Signatures = []authlegacy.StdSignature{stdSig}
 	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
 	require.NoError(t, err)
 
@@ -713,8 +704,7 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 }
 
 func TestInvalidKeyType(t *testing.T) {
-	ctx, keeper, tempDir, codeID, codeHash, _, _, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
-	defer os.RemoveAll(tempDir)
+	ctx, keeper, codeID, codeHash, _, _, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 
 	edKey := ed25519.GenPrivKey()
 	edPub := edKey.PubKey()
@@ -748,27 +738,10 @@ func TestInvalidKeyType(t *testing.T) {
 
 	_, err = keeper.Instantiate(ctx, codeID, edAddr /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	require.Contains(t, err.Error(), "failed to verify transaction signature")
-
-	ctx, keeper, tempDir, codeID, _, _, _, _, _ = setupTest(t, "./testdata/test-contract/contract.wasm")
-	defer os.RemoveAll(tempDir)
-
-	srKey := sr25519.GenPrivKey()
-	srPub := srKey.PubKey()
-	srAddr := sdk.AccAddress(srPub.Address())
-	baseAcct = auth.NewBaseAccountWithAddress(srAddr)
-	_ = baseAcct.SetCoins(sdk.NewCoins(sdk.NewInt64Coin("denom", 100000)))
-	_ = baseAcct.SetPubKey(srPub)
-	keeper.accountKeeper.SetAccount(ctx, &baseAcct)
-
-	ctx = prepareInitSignedTxMultipleMsgs(t, keeper, ctx, []sdk.AccAddress{srAddr}, []crypto.PrivKey{srKey}, []sdk.Msg{sdkMsg}, codeID)
-
-	_, err = keeper.Instantiate(ctx, codeID, srAddr /* , nil */, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
-	require.Contains(t, err.Error(), "failed to verify transaction signature")
 }
 
 func TestInvalidKeyTypeInMultisig(t *testing.T) {
-	ctx, keeper, tempDir, codeID, codeHash, _, privKeyA, _, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
-	defer os.RemoveAll(tempDir)
+	ctx, keeper, codeID, codeHash, _, privKeyA, _, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
 
 	edKey := ed25519.GenPrivKey()
 	edPub := edKey.PubKey()
@@ -799,10 +772,10 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 	}
 
-	tx := authtypes.StdTx{
-		Msgs:       []sdk.Msg{sdkMsg},
-		Fee:        authtypes.StdFee{},
-		Signatures: []authtypes.StdSignature{},
+	tx := authlegacy.StdTx{
+		Msgs:       []sdk.Msg{&sdkMsg},
+		Fee:        authlegacy.StdFee{},
+		Signatures: []authlegacy.StdSignature{},
 		Memo:       "",
 	}
 
@@ -817,12 +790,12 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 		3,
 	)
 
-	stdSig := authtypes.StdSignature{
+	stdSig := authlegacy.StdSignature{
 		PubKey:    multisigPubkey,
 		Signature: multiSignature.Marshal(),
 	}
 
-	tx.Signatures = []authtypes.StdSignature{stdSig}
+	tx.Signatures = []authlegacy.StdSignature{stdSig}
 	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
 	require.NoError(t, err)
 
@@ -842,8 +815,7 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 }
 
 func TestWrongFundsNoFunds(t *testing.T) {
-	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
-	defer os.RemoveAll(tempDir)
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 
 	initMsg := `{"nop":{}}`
 
@@ -866,8 +838,7 @@ func TestWrongFundsNoFunds(t *testing.T) {
 }
 
 func TestWrongFundsSomeFunds(t *testing.T) {
-	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
-	defer os.RemoveAll(tempDir)
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 
 	initMsg := `{"nop":{}}`
 
@@ -890,8 +861,7 @@ func TestWrongFundsSomeFunds(t *testing.T) {
 }
 
 func TestWrongMessage(t *testing.T) {
-	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
-	defer os.RemoveAll(tempDir)
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 
 	initMsg := `{"nop":{}}`
 
@@ -924,8 +894,7 @@ func TestWrongMessage(t *testing.T) {
 }
 
 func TestWrongContractAddress(t *testing.T) {
-	ctx, keeper, tempDir, codeID, codeHash, walletA, privKeyA, walletB, privKeyB := setupTest(t, "./testdata/erc20.wasm")
-	defer os.RemoveAll(tempDir)
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, walletB, privKeyB := setupTest(t, "./testdata/erc20.wasm")
 
 	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, walletA.String(), walletB.String())
 

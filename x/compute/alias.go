@@ -75,6 +75,7 @@ var (
 	WasmQuerier               = keeper.WasmQuerier
 	MakeTestCodec             = keeper.MakeTestCodec
 	CreateTestInput           = keeper.CreateTestInput
+	CreateFakeFundedAccount   = keeper.CreateFakeFundedAccount
 	TestHandler               = keeper.TestHandler
 	PrepareInitSignedTx       = keeper.PrepareInitSignedTx
 	PrepareExecSignedTx       = keeper.PrepareExecSignedTx

@@ -1,67 +1,81 @@
 package keeper
 
 import (
+	"encoding/binary"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/codec/types"
-	params2 "github.com/cosmos/cosmos-sdk/simapp/params"
-	"github.com/cosmos/cosmos-sdk/std"
-	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/cosmos/cosmos-sdk/x/auth/ante"
-	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
-	authlegacy "github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
-	"github.com/cosmos/cosmos-sdk/x/auth/tx"
-	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	"github.com/cosmos/cosmos-sdk/x/capability"
-	"github.com/cosmos/cosmos-sdk/x/crisis"
-	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
-	distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
-	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
-	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	"github.com/cosmos/cosmos-sdk/x/evidence"
-	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
-	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
-	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
-	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
-	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
-	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
-	"github.com/cosmos/cosmos-sdk/x/slashing"
-	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
-	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/cosmos/cosmos-sdk/x/upgrade"
-	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
-	"github.com/enigmampc/SecretNetwork/x/registration"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	"io/ioutil"
 	"os"
 	"testing"
 	"time"
 
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/cosmos/cosmos-sdk/x/distribution"
-	"github.com/cosmos/cosmos-sdk/x/gov"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	"github.com/cosmos/cosmos-sdk/x/mint"
-
-	//crypto "github.com/tendermint/tendermint/crypto"
-	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/stretchr/testify/require"
+
 	"github.com/tendermint/tendermint/libs/log"
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
+	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
+	"github.com/cosmos/cosmos-sdk/std"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/cosmos/cosmos-sdk/types/module"
+	sdktx "github.com/cosmos/cosmos-sdk/types/tx"
+	sdksigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
+
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/auth/ante"
+	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+
+	"github.com/cosmos/cosmos-sdk/x/capability"
+
+	"github.com/cosmos/cosmos-sdk/x/crisis"
+	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
+
+	"github.com/cosmos/cosmos-sdk/x/distribution"
+	distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
+	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+
+	"github.com/cosmos/cosmos-sdk/x/evidence"
+
+	"github.com/cosmos/cosmos-sdk/x/gov"
+	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+
+	"github.com/cosmos/cosmos-sdk/x/mint"
+	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
+	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
+
 	"github.com/cosmos/cosmos-sdk/x/params"
+	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
+	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
+	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
+	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
+
+	"github.com/cosmos/cosmos-sdk/x/slashing"
+	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
+
 	"github.com/cosmos/cosmos-sdk/x/staking"
+	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
+	"github.com/cosmos/cosmos-sdk/x/upgrade"
+	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 
 	wasmtypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/enigmampc/SecretNetwork/x/registration"
 )
 
 const flagLRUCacheSize = "lru_size"
@@ -90,18 +104,18 @@ var ModuleBasics = module.NewBasicManager(
 func MakeTestCodec() codec.Marshaler {
 	return MakeEncodingConfig().Marshaler
 }
-func MakeEncodingConfig() params2.EncodingConfig {
+func MakeEncodingConfig() simappparams.EncodingConfig {
 	amino := codec.NewLegacyAmino()
 	interfaceRegistry := types.NewInterfaceRegistry()
 	marshaler := codec.NewProtoCodec(interfaceRegistry)
-	txCfg := tx.NewTxConfig(marshaler, tx.DefaultSignModes)
+	txCfg := authtx.NewTxConfig(marshaler, authtx.DefaultSignModes)
 
 	std.RegisterInterfaces(interfaceRegistry)
 	std.RegisterLegacyAminoCodec(amino)
 
 	ModuleBasics.RegisterLegacyAminoCodec(amino)
 	ModuleBasics.RegisterInterfaces(interfaceRegistry)
-	return params2.EncodingConfig{
+	return simappparams.EncodingConfig{
 		InterfaceRegistry: interfaceRegistry,
 		Marshaler:         marshaler,
 		TxConfig:          txCfg,
@@ -341,17 +355,15 @@ func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator s
 	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, creator)
 	require.NoError(t, err)
 
-	tx := NewTestTx(ctx, []sdk.Msg{&wasmtypes.MsgInstantiateContract{
+	initMsg := wasmtypes.MsgInstantiateContract{
 		Sender: creator,
 		// Admin:     nil,
 		CodeID:    codeID,
 		Label:     "demo contract 1",
 		InitMsg:   encMsg,
 		InitFunds: funds,
-	}}, []crypto.PrivKey{privKey}, []uint64{creatorAcc.GetAccountNumber()}, []uint64{creatorAcc.GetSequence() - 1}, 0, authlegacy.StdFee{
-		Amount: nil,
-		Gas:    0,
-	})
+	}
+	tx := NewTestTx(&initMsg, creatorAcc, privKey)
 
 	txBytes, err := keeper.legacyAmino.MarshalBinaryLengthPrefixed(tx)
 	require.NoError(t, err)
@@ -363,15 +375,13 @@ func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sd
 	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
 	require.NoError(t, err)
 
-	tx := NewTestTx(ctx, []sdk.Msg{&wasmtypes.MsgExecuteContract{
+	executeMsg := wasmtypes.MsgExecuteContract{
 		Sender:    sender,
 		Contract:  contract,
 		Msg:       encMsg,
 		SentFunds: funds,
-	}}, []crypto.PrivKey{privKey}, []uint64{creatorAcc.GetAccountNumber()}, []uint64{creatorAcc.GetSequence() - 1}, 0, authlegacy.StdFee{
-		Amount: nil,
-		Gas:    0,
-	})
+	}
+	tx := NewTestTx(&executeMsg, creatorAcc, privKey)
 
 	txBytes, err := keeper.legacyAmino.MarshalBinaryLengthPrefixed(tx)
 	require.NoError(t, err)
@@ -379,19 +389,86 @@ func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sd
 	return ctx.WithTxBytes(txBytes)
 }
 
-func NewTestTx(ctx sdk.Context, msgs []sdk.Msg, privs []crypto.PrivKey, accNums []uint64, seqs []uint64, timeout uint64, fee authlegacy.StdFee) sdk.Tx {
-	sigs := make([]authlegacy.StdSignature, len(privs))
-	for i, priv := range privs {
-		signBytes := authlegacy.StdSignBytes(ctx.ChainID(), accNums[i], seqs[i], timeout, fee, msgs, "")
+func NewTestTx(msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKey) *sdktx.Tx {
+	return NewTestTxMultiple([]sdk.Msg{msg}, []authtypes.AccountI{creatorAcc}, []crypto.PrivKey{privKey})
+}
 
-		sig, err := priv.Sign(signBytes)
+func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKeys []crypto.PrivKey) *sdktx.Tx {
+	if len(msgs) != len(creatorAccs) || len(msgs) != len(privKeys) {
+		panic("length of `msgs` `creatorAccs` and `privKeys` must be the same")
+	}
+
+	// There's no need to pass values to `NewTxConfig` because they get ignored by `NewTxBuilder` anyways,
+	// and we just need the builder, which can not be created any other way, apparently.
+	builder := authtx.NewTxConfig(nil, nil).NewTxBuilder()
+	builder.SetFeeAmount(nil)
+	builder.SetGasLimit(0)
+	builder.SetTimeoutHeight(0)
+
+	var sigs []sdksigning.SignatureV2
+	for i, msg := range msgs {
+		privKey := privKeys[i]
+		creatorAcc := creatorAccs[i]
+
+		signBytes, err := privKey.Sign(msg.GetSignBytes())
 		if err != nil {
 			panic(err)
 		}
-
-		sigs[i] = authlegacy.StdSignature{PubKey: priv.PubKey(), Signature: sig}
+		sig := sdksigning.SignatureV2{
+			PubKey: creatorAcc.GetPubKey(),
+			Data: &sdksigning.SingleSignatureData{
+				SignMode:  sdksigning.SignMode_SIGN_MODE_DIRECT,
+				Signature: signBytes,
+			},
+			Sequence: creatorAcc.GetSequence(),
+		}
+		sigs = append(sigs, sig)
 	}
 
-	tx := authlegacy.NewStdTx(msgs, fee, sigs, "")
-	return tx
+	err := builder.SetSignatures(sigs...)
+	if err != nil {
+		panic(err)
+	}
+
+	err = builder.SetMsgs(msgs...)
+	if err != nil {
+		panic(err)
+	}
+
+	tx, ok := builder.(authtx.ProtoTxProvider)
+	if !ok {
+		panic("failed to unwrap tx builder to protobuf tx")
+	}
+	return tx.GetProtoTx()
+}
+
+func CreateFakeFundedAccount(ctx sdk.Context, am authkeeper.AccountKeeper, bk bankkeeper.Keeper, coins sdk.Coins) (sdk.AccAddress, crypto.PrivKey) {
+	priv, pub, addr := keyPubAddr()
+	baseAcct := authtypes.NewBaseAccountWithAddress(addr)
+	_ = baseAcct.SetPubKey(pub)
+	am.SetAccount(ctx, baseAcct)
+
+	fundAccounts(ctx, am, bk, addr, coins)
+	return addr, priv
+}
+
+func fundAccounts(ctx sdk.Context, am authkeeper.AccountKeeper, bk bankkeeper.Keeper, addr sdk.AccAddress, coins sdk.Coins) {
+	baseAcct := am.GetAccount(ctx, addr)
+	_ = bk.SetBalances(ctx, baseAcct.GetAddress(), coins)
+	am.SetAccount(ctx, baseAcct)
+}
+
+var keyCounter uint64 = 0
+
+// we need to make this deterministic (same every test run), as encoded address size and thus gas cost,
+// depends on the actual bytes (due to ugly CanonicalAddress encoding)
+func keyPubAddr() (crypto.PrivKey, crypto.PubKey, sdk.AccAddress) {
+	keyCounter++
+	seed := make([]byte, 8)
+	binary.BigEndian.PutUint64(seed, keyCounter)
+
+	key := secp256k1.GenPrivKeyFromSecret(seed)
+	pub := key.PubKey()
+	addr := sdk.AccAddress(pub.Address())
+	return key, pub, addr
 }
