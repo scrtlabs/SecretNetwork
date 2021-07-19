@@ -12,10 +12,8 @@ import (
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/cosmos/cosmos-sdk/crypto/types/multisig"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
+	sdksigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
-	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
-	authlegacy "github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
@@ -24,8 +22,10 @@ import (
 
 // Create a multisig address of `n` new accounts and a threshold of `threshold`, then sign `sdkMsg` using
 // `actualSigners` accounts from the `n` new accounts. Serialize the message and add it to the `ctx`.
-func multisigTxCreator(t *testing.T, ctx *sdk.Context, keeper Keeper, n int, threshold int, actualSigners int, sdkMsg sdk.Msg) sdk.AccAddress {
-	privKeys, pubKeys, multisigPubKey := generateMultisigAddr(n, threshold, *ctx, keeper)
+func multisigTxCreator(
+	t *testing.T, ctx *sdk.Context, keeper Keeper, n int, threshold int, actualSigners int, sdkMsg sdk.Msg,
+) sdk.AccAddress {
+	privKeys, pubKeys, multisigPubKey := generateMultisigAddr(*ctx, keeper, n, threshold)
 
 	switch msg := sdkMsg.(type) {
 	case *types.MsgInstantiateContract:
@@ -34,27 +34,29 @@ func multisigTxCreator(t *testing.T, ctx *sdk.Context, keeper Keeper, n int, thr
 		msg.Sender = sdk.AccAddress(multisigPubKey.Address())
 	}
 
-	tx := authlegacy.StdTx{
-		Msgs:       []sdk.Msg{sdkMsg},
-		Fee:        authlegacy.StdFee{},
-		Signatures: []authlegacy.StdSignature{},
-		Memo:       "",
+	builder := authtx.NewTxConfig(nil, nil).NewTxBuilder()
+	builder.SetFeeAmount(nil)
+	builder.SetGasLimit(0)
+	builder.SetTimeoutHeight(0)
+
+	_ = builder.SetMsgs(sdkMsg)
+
+	multisigAcc := keeper.accountKeeper.GetAccount(*ctx, multisigPubKey.Address().Bytes())
+	multiSignature := generateSignatures(t, privKeys, pubKeys, builder, actualSigners)
+	signature := sdksigning.SignatureV2{
+		PubKey: multisigPubKey,
+		Sequence: multisigAcc.GetSequence(),
+		Data: multiSignature,
 	}
-
-	multiSignature := generateSignatures(t, *ctx, keeper, privKeys, pubKeys, multisigPubKey.Address().Bytes(), tx, actualSigners)
-
-	stdSig := authlegacy.StdSignature{
-		PubKey:    multisigPubKey,
-		Signature: multiSignature.Marshal(),
-	}
-
-	tx.Signatures = []authlegacy.StdSignature{stdSig}
-	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	err := builder.SetSignatures(signature)
 	require.NoError(t, err)
 
-	*ctx = ctx.WithTxBytes(txBytes)
+	tx := builder.(authtx.ProtoTxProvider)
+	txbytes, err := tx.GetProtoTx().Marshal()
+	require.NoError(t, err)
+	*ctx = ctx.WithTxBytes(txbytes)
 
-	return sdk.AccAddress(multisigPubKey.Address())
+	return multisigAcc.GetAddress()
 }
 
 // GetSignBytes returns the signBytes of the tx for a given signer
@@ -62,36 +64,31 @@ func multisigTxCreator(t *testing.T, ctx *sdk.Context, keeper Keeper, n int, thr
 // This is because the original `GetSignBytes` was probably meant to be used before the transaction gets processed, and the
 // sequence that gets returned is an increment of what we need.
 // This is why we use `acc.GetSequence() - 1`
-func getSignBytes(ctx sdk.Context, acc client.Account, tx authlegacy.StdTx) []byte {
-	genesis := ctx.BlockHeight() == 0
-	chainID := ctx.ChainID()
-	var accNum uint64
-	if !genesis {
-		accNum = acc.GetAccountNumber()
+func getSignBytes(builder client.TxBuilder) []byte {
+	tx := builder.(authtx.ProtoTxProvider)
+	data, err := tx.GetProtoTx().Body.Marshal()
+	if err != nil {
+		panic(err)
 	}
-
-	return authlegacy.StdSignBytes(
-		chainID, accNum, acc.GetSequence()-1, 0, tx.Fee, tx.Msgs, tx.Memo,
-	)
+	return data
 }
 
-func generateSignatures(t *testing.T, ctx sdk.Context, keeper Keeper, privKeys []crypto.PrivKey, pubKeys []crypto.PubKey, accAddress sdk.AccAddress, tx authtypes.StdTx, actualSigners int) *multisig.Multisignature {
-	multisigAcc := keeper.accountKeeper.GetAccount(ctx, accAddress)
-	signBytes := getSignBytes(ctx, multisigAcc, tx)
+func generateSignatures(
+	t *testing.T,
+	privKeys []crypto.PrivKey, pubKeys []crypto.PubKey,
+	builder client.TxBuilder, actualSigners int,
+) *sdksigning.MultiSignatureData {
+	signBytes := getSignBytes(builder)
 	multiSig := multisig.NewMultisig(len(privKeys))
-
-	var signDoc legacytx.StdSignDoc
-	keeper.cdc.MustUnmarshalJSON(signBytes, &signDoc)
-	fmt.Printf("Sign Doc is %+v\n", signDoc)
-	fmt.Printf("Sign Bytes is %v\n", signBytes)
 
 	for i := 0; i < actualSigners; i++ {
 		signature, _ := privKeys[i].Sign(signBytes)
+		signatureData := sdksigning.SingleSignatureData{
+			SignMode: sdksigning.SignMode_SIGN_MODE_DIRECT,
+			Signature: signature,
+		}
 
-		fmt.Printf("Signature %d  is %v\n", i, signature)
-		fmt.Printf("Signer is %v\n", pubKeys[i].Bytes())
-
-		err := multisig.AddSignatureFromPubKey(multiSig, signature, pubKeys[i], pubKeys)
+		err := multisig.AddSignatureFromPubKey(multiSig, &signatureData, pubKeys[i], pubKeys)
 		require.NoError(t, err)
 	}
 
@@ -100,7 +97,7 @@ func generateSignatures(t *testing.T, ctx sdk.Context, keeper Keeper, privKeys [
 	return multiSig
 }
 
-func generateMultisigAddr(n int, threshold int, ctx sdk.Context, keeper Keeper) ([]crypto.PrivKey, []crypto.PubKey, *multisigkeys.LegacyAminoPubKey) {
+func generateMultisigAddr(ctx sdk.Context, keeper Keeper, n int, threshold int) ([]crypto.PrivKey, []crypto.PubKey, *multisigkeys.LegacyAminoPubKey) {
 	privkeys := make([]crypto.PrivKey, n)
 	pubkeys := make([]crypto.PubKey, n)
 
@@ -111,12 +108,12 @@ func generateMultisigAddr(n int, threshold int, ctx sdk.Context, keeper Keeper) 
 		pubkeys[i] = privKey.PubKey()
 	}
 
-	multisigPubkey := generateMultisigAddrExisting(threshold, ctx, keeper, pubkeys)
+	multisigPubkey := generateMultisigAddrExisting(ctx, keeper, pubkeys, threshold)
 
 	return privkeys, pubkeys, multisigPubkey
 }
 
-func generateMultisigAddrExisting(threshold int, ctx sdk.Context, keeper Keeper, pubKeys []crypto.PubKey) *multisigkeys.LegacyAminoPubKey {
+func generateMultisigAddrExisting(ctx sdk.Context, keeper Keeper, pubKeys []crypto.PubKey, threshold int) *multisigkeys.LegacyAminoPubKey {
 	multisigPubkey := multisigkeys.NewLegacyAminoPubKey(threshold, pubKeys)
 
 	// Register to keeper
@@ -130,7 +127,10 @@ func generateMultisigAddrExisting(threshold int, ctx sdk.Context, keeper Keeper,
 	return multisigPubkey
 }
 
-func prepareInitSignedTxMultipleMsgs(t *testing.T, keeper Keeper, ctx sdk.Context, creators []sdk.AccAddress, privKeys []crypto.PrivKey, initMsgs []sdk.Msg, codeID uint64) sdk.Context {
+func prepareInitSignedTxMultipleMsgs(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	creators []sdk.AccAddress, privKeys []crypto.PrivKey, initMsgs []sdk.Msg, codeID uint64,
+) sdk.Context {
 	accounts := make([]authtypes.AccountI, len(creators))
 	for i, acc := range creators {
 		account, err := authante.GetSignerAcc(ctx, keeper.accountKeeper, acc)
@@ -176,7 +176,10 @@ func TestMultipleSigners(t *testing.T) {
 		InitFunds: nil,
 	}
 
-	ctx = prepareInitSignedTxMultipleMsgs(t, keeper, ctx, []sdk.AccAddress{walletA, walletB}, []crypto.PrivKey{privKeyA, privKeyB}, []sdk.Msg{&sdkMsgA, &sdkMsgB}, codeID)
+	ctx = prepareInitSignedTxMultipleMsgs(
+		t, keeper, ctx,
+		[]sdk.AccAddress{walletA, walletB}, []crypto.PrivKey{privKeyA, privKeyB}, []sdk.Msg{&sdkMsgA, &sdkMsgB}, codeID,
+	)
 
 	contractAddressA, err := keeper.Instantiate(ctx, codeID, walletA /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
@@ -382,10 +385,7 @@ func TestMultiSigThresholdNotMet(t *testing.T) {
 func TestMultiSigExecute(t *testing.T) {
 	ctx, keeper, codeID, codeHash, _, _, walletB, privKeyB := setupTest(t, "./testdata/erc20.wasm")
 
-	privKeys, pubKeys, multisigPubKey := generateMultisigAddr(5, 4, ctx, keeper)
-	multisigAddr := sdk.AccAddress(multisigPubKey.Address())
-
-	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, multisigAddr, walletB.String())
+	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, walletB.String())
 
 	contractAddress, _, error := initHelper(t, keeper, ctx, codeID, walletB, privKeyB, initMsg, true, defaultGasForTests)
 	require.Empty(t, error)
@@ -402,33 +402,13 @@ func TestMultiSigExecute(t *testing.T) {
 	nonce := execMsgBz[0:32]
 
 	sdkMsg := types.MsgExecuteContract{
-		Contract:          contractAddress,
-		Msg:               execMsgBz,
-		SentFunds:         sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
-		CallbackSig: nil,
+		Contract:           contractAddress,
+		Msg:                execMsgBz,
+		SentFunds:          sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
+		CallbackSig: 		nil,
 	}
 
-	sdkMsg.Sender = sdk.AccAddress(multisigPubKey.Address())
-
-	tx := authlegacy.StdTx{
-		Msgs:       []sdk.Msg{&sdkMsg},
-		Fee:        authlegacy.StdFee{},
-		Signatures: []authlegacy.StdSignature{},
-		Memo:       "",
-	}
-
-	multiSignature := generateSignatures(t, ctx, keeper, privKeys, pubKeys, multisigPubKey.Address().Bytes(), tx, 4)
-
-	stdSig := authlegacy.StdSignature{
-		PubKey:    multisigPubKey,
-		Signature: multiSignature.Marshal(),
-	}
-
-	tx.Signatures = []authlegacy.StdSignature{stdSig}
-	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
-	require.NoError(t, err)
-
-	ctx = ctx.WithTxBytes(txBytes)
+	multisigAddr := multisigTxCreator(t, &ctx, keeper, 5, 4, 4, &sdkMsg)
 
 	execRes, err := keeper.Execute(ctx, contractAddress, multisigAddr, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
@@ -520,8 +500,9 @@ func TestMultiSigCallbacks(t *testing.T) {
 func TestMultiSigInMultiSig(t *testing.T) {
 	ctx, keeper, codeID, codeHash, _, privKeyA, _, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
 
-	privKeys, pubKeys, multisigPubkey := generateMultisigAddr(5, 3, ctx, keeper)
-	multimultisigPubkey := generateMultisigAddrExisting(2, ctx, keeper, []crypto.PubKey{multisigPubkey, privKeyA.PubKey(), privKeyB.PubKey()})
+	privKeys, pubKeys, multisigPubkey := generateMultisigAddr(ctx, keeper, 5, 3)
+	multiSigPubKeys := []crypto.PubKey{multisigPubkey, privKeyA.PubKey(), privKeyB.PubKey()}
+	multimultisigPubkey := generateMultisigAddrExisting(ctx, keeper, multiSigPubKeys, 2)
 
 	initMsg := `{"nop":{}}`
 
@@ -543,41 +524,44 @@ func TestMultiSigInMultiSig(t *testing.T) {
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 	}
 
-	tx := authlegacy.StdTx{
-		Msgs:       []sdk.Msg{&sdkMsg},
-		Fee:        authlegacy.StdFee{},
-		Signatures: []authlegacy.StdSignature{},
-		Memo:       "",
-	}
+	builder := authtx.NewTxConfig(nil, nil).NewTxBuilder()
+	builder.SetFeeAmount(nil)
+	builder.SetGasLimit(0)
+	builder.SetTimeoutHeight(0)
 
-	multimultisigAcc := keeper.accountKeeper.GetAccount(ctx, sdk.AccAddress(multimultisigPubkey.Address()))
-	multimultiSignBytes := getSignBytes(ctx, multimultisigAcc, tx)
+	_ = builder.SetMsgs(&sdkMsg)
+	multimultiSignBytes := getSignBytes(builder)
 	multimultiSig := multisig.NewMultisig(3)
 
-	var signDoc authlegacy.StdSignDoc
-	keeper.cdc.MustUnmarshalJSON(multimultiSignBytes, &signDoc)
-
 	// Sign by multisig
-	multiSignature := generateSignatures(t, ctx, keeper, privKeys, pubKeys, multimultisigPubkey.Address().Bytes(), tx, 3)
-	fmt.Printf("multisig sig: %v\n", multiSignature.Marshal())
+	multiSignature := generateSignatures(t, privKeys, pubKeys, builder, 3)
+	fmt.Printf("multisig sig: %v\n", multiSignature)
 
 	// Sign by wallet A
 	walletASignature, _ := privKeyA.Sign(multimultiSignBytes)
+	walletASignatureData := sdksigning.SingleSignatureData{
+		SignMode: sdksigning.SignMode_SIGN_MODE_DIRECT,
+		Signature: walletASignature,
+	}
 
 	fmt.Printf("wallet A sig: %v\n", walletASignature)
 
-	err = multimultiSig.AddSignatureFromPubKey(multiSignature.Marshal(), multisigPubkey, []crypto.PubKey{multisigPubkey, privKeyA.PubKey(), privKeyB.PubKey()})
-	err = multimultiSig.AddSignatureFromPubKey(walletASignature, privKeyA.PubKey(), []crypto.PubKey{multisigPubkey, privKeyA.PubKey(), privKeyB.PubKey()})
+	_ = multisig.AddSignatureFromPubKey(multimultiSig, multiSignature, multisigPubkey, multiSigPubKeys)
+	_ = multisig.AddSignatureFromPubKey(multimultiSig, &walletASignatureData, privKeyA.PubKey(), multiSigPubKeys)
 
-	fmt.Printf("multimultisig sig: %v\n", multimultiSig.Marshal())
+	fmt.Printf("multimultisig sig: %v\n", multimultiSig)
 
-	stdSig := authlegacy.StdSignature{
-		PubKey:    multimultisigPubkey,
-		Signature: multimultiSig.Marshal(),
+	multimultisigAcc := keeper.accountKeeper.GetAccount(ctx, multimultisigPubkey.Address().Bytes())
+	signature := sdksigning.SignatureV2{
+		PubKey: multimultisigPubkey,
+		Sequence: multimultisigAcc.GetSequence(),
+		Data: multimultiSig,
 	}
+	err = builder.SetSignatures(signature)
+	require.NoError(t, err)
 
-	tx.Signatures = []authlegacy.StdSignature{stdSig}
-	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	tx := builder.(authtx.ProtoTxProvider)
+	txBytes, err := tx.GetProtoTx().Marshal()
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
@@ -613,8 +597,9 @@ func TestMultiSigInMultiSig(t *testing.T) {
 func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 	ctx, keeper, codeID, codeHash, _, privKeyA, _, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
 
-	privKeys, pubKeys, multisigPubkey := generateMultisigAddr(5, 3, ctx, keeper)
-	multimultisigPubkey := generateMultisigAddrExisting(2, ctx, keeper, []crypto.PubKey{privKeyA.PubKey(), privKeyB.PubKey(), multisigPubkey})
+	privKeys, pubKeys, multisigPubkey := generateMultisigAddr(ctx, keeper, 5, 3)
+	multiPubKeys := []crypto.PubKey{privKeyA.PubKey(), privKeyB.PubKey(), multisigPubkey}
+	multimultisigPubkey := generateMultisigAddrExisting(ctx, keeper, multiPubKeys, 2)
 
 	initMsg := `{"nop":{}}`
 
@@ -636,41 +621,45 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 	}
 
-	tx := authlegacy.StdTx{
-		Msgs:       []sdk.Msg{&sdkMsg},
-		Fee:        authlegacy.StdFee{},
-		Signatures: []authlegacy.StdSignature{},
-		Memo:       "",
-	}
+	builder := authtx.NewTxConfig(nil, nil).NewTxBuilder()
+	builder.SetFeeAmount(nil)
+	builder.SetGasLimit(0)
+	builder.SetTimeoutHeight(0)
 
-	multimultisigAcc := keeper.accountKeeper.GetAccount(ctx, sdk.AccAddress(multimultisigPubkey.Address()))
-	multimultiSignBytes := getSignBytes(ctx, multimultisigAcc, tx)
+	_ = builder.SetMsgs(&sdkMsg)
+
+	multimultiSignBytes := getSignBytes(builder)
 	multimultiSig := multisig.NewMultisig(3)
 
-	var signDoc authlegacy.StdSignDoc
-	keeper.cdc.MustUnmarshalJSON(multimultiSignBytes, &signDoc)
-
 	// Sign by multisig
-	multiSignature := generateSignatures(t, ctx, keeper, privKeys, pubKeys, multimultisigPubkey.Address().Bytes(), tx, 3)
-	fmt.Printf("multisig sig: %v\n", multiSignature.Marshal())
+	multiSignature := generateSignatures(t, privKeys, pubKeys, builder, 3)
+	fmt.Printf("multisig sig: %v\n", multiSignature)
 
 	// Sign by wallet A
 	walletASignature, _ := privKeyA.Sign(multimultiSignBytes)
+	walletASignatureData := sdksigning.SingleSignatureData{
+		SignMode: sdksigning.SignMode_SIGN_MODE_DIRECT,
+		Signature: walletASignature,
+	}
 
 	fmt.Printf("wallet A sig: %v\n", walletASignature)
 
-	err = multimultiSig.AddSignatureFromPubKey(walletASignature, privKeyA.PubKey(), []crypto.PubKey{privKeyA.PubKey(), privKeyB.PubKey(), multisigPubkey})
-	err = multimultiSig.AddSignatureFromPubKey(multiSignature.Marshal(), multisigPubkey, []crypto.PubKey{privKeyA.PubKey(), privKeyB.PubKey(), multisigPubkey})
+	err = multisig.AddSignatureFromPubKey(multimultiSig, &walletASignatureData, privKeyA.PubKey(), multiPubKeys)
+	err = multisig.AddSignatureFromPubKey(multimultiSig, multiSignature, multisigPubkey, multiPubKeys)
 
-	fmt.Printf("multimultisig sig: %v\n", multimultiSig.Marshal())
+	fmt.Printf("multimultisig sig: %v\n", multimultiSig)
 
-	stdSig := authlegacy.StdSignature{
-		PubKey:    multimultisigPubkey,
-		Signature: multimultiSig.Marshal(),
+	multimultisigAcc := keeper.accountKeeper.GetAccount(ctx, multimultisigPubkey.Address().Bytes())
+	signature := sdksigning.SignatureV2{
+		PubKey: multimultisigPubkey,
+		Sequence: multimultisigAcc.GetSequence(),
+		Data: multimultiSig,
 	}
+	err = builder.SetSignatures(signature)
+	require.NoError(t, err)
 
-	tx.Signatures = []authlegacy.StdSignature{stdSig}
-	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	tx := builder.(authtx.ProtoTxProvider)
+	txBytes, err := tx.GetProtoTx().Marshal()
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
@@ -709,10 +698,10 @@ func TestInvalidKeyType(t *testing.T) {
 	edKey := ed25519.GenPrivKey()
 	edPub := edKey.PubKey()
 	edAddr := sdk.AccAddress(edPub.Address())
-	baseAcct := auth.NewBaseAccountWithAddress(edAddr)
-	_ = baseAcct.SetCoins(sdk.NewCoins(sdk.NewInt64Coin("denom", 100000)))
+	baseAcct := authtypes.NewBaseAccountWithAddress(edAddr)
+	_ = keeper.bankKeeper.SetBalances(ctx, baseAcct.GetAddress(), sdk.NewCoins(sdk.NewInt64Coin("denom", 100000)))
 	_ = baseAcct.SetPubKey(edPub)
-	keeper.accountKeeper.SetAccount(ctx, &baseAcct)
+	keeper.accountKeeper.SetAccount(ctx, baseAcct)
 
 	initMsg := `{"nop":{}}`
 
@@ -734,7 +723,7 @@ func TestInvalidKeyType(t *testing.T) {
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 	}
 
-	ctx = prepareInitSignedTxMultipleMsgs(t, keeper, ctx, []sdk.AccAddress{edAddr}, []crypto.PrivKey{edKey}, []sdk.Msg{sdkMsg}, codeID)
+	ctx = prepareInitSignedTxMultipleMsgs(t, keeper, ctx, []sdk.AccAddress{edAddr}, []crypto.PrivKey{edKey}, []sdk.Msg{&sdkMsg}, codeID)
 
 	_, err = keeper.Instantiate(ctx, codeID, edAddr /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	require.Contains(t, err.Error(), "failed to verify transaction signature")
@@ -746,12 +735,12 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 	edKey := ed25519.GenPrivKey()
 	edPub := edKey.PubKey()
 	edAddr := sdk.AccAddress(edPub.Address())
-	baseAcct := auth.NewBaseAccountWithAddress(edAddr)
-	_ = baseAcct.SetCoins(sdk.NewCoins(sdk.NewInt64Coin("denom", 100000)))
+	baseAcct := authtypes.NewBaseAccountWithAddress(edAddr)
+	_ = keeper.bankKeeper.SetBalances(ctx, baseAcct.GetAddress(), sdk.NewCoins(sdk.NewInt64Coin("denom", 100000)))
 	_ = baseAcct.SetPubKey(edPub)
-	keeper.accountKeeper.SetAccount(ctx, &baseAcct)
+	keeper.accountKeeper.SetAccount(ctx, baseAcct)
 
-	multisigPubkey := generateMultisigAddrExisting(2, ctx, keeper, []crypto.PubKey{edPub, privKeyA.PubKey(), privKeyB.PubKey()})
+	multisigPubkey := generateMultisigAddrExisting(ctx, keeper, []crypto.PubKey{edPub, privKeyA.PubKey(), privKeyB.PubKey()}, 2)
 
 	initMsg := `{"nop":{}}`
 
@@ -764,7 +753,7 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 	require.NoError(t, err)
 
 	sdkMsg := types.MsgInstantiateContract{
-		Sender: sdk.AccAddress(multisigPubkey.Address()),
+		Sender: multisigPubkey.Address().Bytes(),
 		// Admin:     nil,
 		CodeID:    codeID,
 		Label:     "demo contract 1",
@@ -772,33 +761,33 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 	}
 
-	tx := authlegacy.StdTx{
-		Msgs:       []sdk.Msg{&sdkMsg},
-		Fee:        authlegacy.StdFee{},
-		Signatures: []authlegacy.StdSignature{},
-		Memo:       "",
-	}
+	builder := authtx.NewTxConfig(nil, nil).NewTxBuilder()
+	builder.SetFeeAmount(nil)
+	builder.SetGasLimit(0)
+	builder.SetTimeoutHeight(0)
+
+	_ = builder.SetMsgs(&sdkMsg)
 
 	multiSignature := generateSignatures(
 		t,
-		ctx,
-		keeper,
 		[]crypto.PrivKey{privKeyA, privKeyB, edKey},
 		[]crypto.PubKey{privKeyA.PubKey(), privKeyB.PubKey(), edPub},
-		multisigPubkey.Address().Bytes(),
-		tx,
+		builder,
 		3,
 	)
 
-	stdSig := authlegacy.StdSignature{
-		PubKey:    multisigPubkey,
-		Signature: multiSignature.Marshal(),
+	multisigAcc := keeper.accountKeeper.GetAccount(ctx, multisigPubkey.Address().Bytes())
+	signature := sdksigning.SignatureV2{
+		PubKey: multisigPubkey,
+		Sequence: multisigAcc.GetSequence(),
+		Data: multiSignature,
 	}
-
-	tx.Signatures = []authlegacy.StdSignature{stdSig}
-	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	err = builder.SetSignatures(signature)
 	require.NoError(t, err)
 
+	tx := builder.(authtx.ProtoTxProvider)
+	txBytes, err := tx.GetProtoTx().Marshal()
+	require.NoError(t, err)
 	ctx = ctx.WithTxBytes(txBytes)
 
 	_, err = keeper.Instantiate(

@@ -439,6 +439,7 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 	if !ok {
 		panic("failed to unwrap tx builder to protobuf tx")
 	}
+	tx.GetProtoTx()
 	return tx.GetProtoTx()
 }
 
