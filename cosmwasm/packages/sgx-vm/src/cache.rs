@@ -101,6 +101,7 @@ where
     ///
     /// If the given ID is not found or the content does not match the hash (=ID), an error is returned.
     pub fn load_wasm(&self, checksum: &Checksum) -> VmResult<Vec<u8>> {
+        let _lock = self.m.lock().unwrap();
         let code = load_wasm_from_disk(&self.wasm_path, checksum)?;
         // verify hash matches (integrity check)
         if Checksum::generate(&code) != *checksum {
