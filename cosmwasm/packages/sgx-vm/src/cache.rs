@@ -85,6 +85,7 @@ where
     }
 
     pub fn save_wasm(&mut self, wasm: &[u8]) -> VmResult<Checksum> {
+        let _lock = self.m.lock().unwrap();
         check_wasm(wasm, &self.supported_features)?;
         let checksum = save_wasm_to_disk(&self.wasm_path, wasm)?;
         /*
