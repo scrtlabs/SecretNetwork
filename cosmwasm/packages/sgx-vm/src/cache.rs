@@ -120,7 +120,6 @@ where
         gas_limit: u64,
     ) -> VmResult<Instance<S, A, Q>> {
         let _lock = self.m.lock().unwrap();
-
         /*
         // try from the module cache
         let res = self.modules.load_with_backend(checksum, backend());
