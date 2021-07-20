@@ -41,7 +41,7 @@ sgx_rand = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.g
 sgx_trts = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tseal = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tcrypto = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-aes-siv = { version = "0.2.0" }
+aes-siv = { git = "https://github.com/RustCrypto/AEADs", rev = "ff0118562dc56007099e9e19874855c9ecd75f90" }
 enclave-ffi-types = { path = "../enclave-ffi-types" }
 pwasm-utils = { version = "0.12.0", default-features = false }
 parity-wasm = { version = "0.41.0", default-features = false }
@@ -62,11 +62,18 @@ httparse = { version = "1.3", default-features = false }
 itertools = { version = "0.8", default-features = false, features = [] }
 bit-vec = { version = "0.6", default-features = false }
 lazy_static = "1.4"
-x25519-dalek = { version = "0.6", default-features = false, features = ["u64_backend"] }
+# x25519-dalek = { version = "0.6", default-features = false, features = ["u64_backend"] }
 hex = "0.4.2"
 ripemd160 = "0.9.1"
 log = "0.4.8"
 protobuf = "2.22.0"
+
+[dependencies.x25519-dalek]
+version = "1.1.1"
+git = "https://github.com/enigmampc/x25519-dalek"
+rev = "ad1a39a848f621ca412ff8a1faf5ffc137f69954"
+default-features = false
+features = ["u64_backend"]
 
 [patch.crates-io]
 rand_core = { git = "https://github.com/mesalock-linux/rand-sgx", default-features = false, features = ["mesalock_sgx"] }
