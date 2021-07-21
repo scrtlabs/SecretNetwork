@@ -11,6 +11,7 @@ export interface SecretUtils {
   getPubkey: () => Promise<Uint8Array>;
   decrypt: (ciphertext: Uint8Array, nonce: Uint8Array) => Promise<Uint8Array>;
   encrypt: (contractCodeHash: string, msg: object) => Promise<Uint8Array>;
+  getTxEncryptionKey: (nonce: Uint8Array) => Promise<Uint8Array>;
 }
 
 const hkdfSalt: Uint8Array = Uint8Array.from([
@@ -97,10 +98,10 @@ export default class EnigmaUtils implements SecretUtils {
     return this.consensusIoPubKey;
   }
 
-  private async getTxEncryptionKey(txSenderPrivKey: Uint8Array, nonce: Uint8Array): Promise<Uint8Array> {
+  public async getTxEncryptionKey(nonce: Uint8Array): Promise<Uint8Array> {
     const consensusIoPubKey = await this.getConsensusIoPubKey();
 
-    const txEncryptionIkm = x25519(txSenderPrivKey, consensusIoPubKey);
+    const txEncryptionIkm = x25519(this.privkey, consensusIoPubKey);
     const { key: txEncryptionKey } = await hkdf.compute(
       Uint8Array.from([...txEncryptionIkm, ...nonce]),
       "SHA-256",
@@ -116,7 +117,7 @@ export default class EnigmaUtils implements SecretUtils {
       type: "Uint8Array",
     });
 
-    const txEncryptionKey = await this.getTxEncryptionKey(this.privkey, nonce);
+    const txEncryptionKey = await this.getTxEncryptionKey(nonce);
 
     const siv = await miscreant.SIV.importKey(txEncryptionKey, "AES-SIV", cryptoProvider);
 
@@ -133,7 +134,7 @@ export default class EnigmaUtils implements SecretUtils {
       return new Uint8Array();
     }
 
-    const txEncryptionKey = await this.getTxEncryptionKey(this.privkey, nonce);
+    const txEncryptionKey = await this.getTxEncryptionKey(nonce);
 
     const siv = await miscreant.SIV.importKey(txEncryptionKey, "AES-SIV", cryptoProvider);
 
