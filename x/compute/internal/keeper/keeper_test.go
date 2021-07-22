@@ -335,7 +335,7 @@ func TestInstantiate(t *testing.T) {
 	}
 	tx := NewTestTx(&instantiateMsg, creatorAcc, privKey)
 
-	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
@@ -522,7 +522,7 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 	}
 	tx := NewTestTx(&instantiateMsg, creatorAcc, privKey)
 
-	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
@@ -742,7 +742,7 @@ func TestExecuteWithNonExistingAddress(t *testing.T) {
 	}
 	tx := NewTestTx(&executeMsg, creatorAcc, privKey)
 
-	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
@@ -791,7 +791,7 @@ func TestExecuteWithPanic(t *testing.T) {
 	}
 	tx := NewTestTx(&executeMsg, fredAcc, fredPrivKey)
 
-	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
@@ -848,7 +848,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	}
 	tx := NewTestTx(&instantiateMsg, creatorAcc, creatorPrivKey)
 
-	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
@@ -891,7 +891,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	}
 	tx = NewTestTx(&executeMsg, fredAcc, fredPrivKey)
 
-	txBytes, err = keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	txBytes, err = tx.Marshal()
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
@@ -964,7 +964,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	}
 	tx := NewTestTx(&executeMsg, fredAcc, fredPrivKey)
 
-	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)

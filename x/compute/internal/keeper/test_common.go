@@ -31,6 +31,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
@@ -113,8 +114,10 @@ func MakeEncodingConfig() simappparams.EncodingConfig {
 	std.RegisterInterfaces(interfaceRegistry)
 	std.RegisterLegacyAminoCodec(amino)
 
-	ModuleBasics.RegisterLegacyAminoCodec(amino)
 	ModuleBasics.RegisterInterfaces(interfaceRegistry)
+	ModuleBasics.RegisterLegacyAminoCodec(amino)
+	wasmtypes.RegisterInterfaces(interfaceRegistry)
+	wasmtypes.RegisterLegacyAminoCodec(amino)
 	return simappparams.EncodingConfig{
 		InterfaceRegistry: interfaceRegistry,
 		Marshaler:         marshaler,
@@ -174,8 +177,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		Height: 1234567,
 		Time:   time.Date(2020, time.April, 22, 12, 0, 0, 0, time.UTC),
 	}, isCheckTx, log.NewNopLogger())
-	encodingConfig := MakeEncodingConfig
-	paramsKeeper := paramskeeper.NewKeeper(encodingConfig().Marshaler, encodingConfig().Amino, keyParams, tkeyParams)
+	encodingConfig := MakeEncodingConfig()
+	paramsKeeper := paramskeeper.NewKeeper(encodingConfig.Marshaler, encodingConfig.Amino, keyParams, tkeyParams)
 	paramsKeeper.Subspace(authtypes.ModuleName)
 	paramsKeeper.Subspace(banktypes.ModuleName)
 	paramsKeeper.Subspace(stakingtypes.ModuleName)
@@ -195,7 +198,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	}
 	authSubsp, _ := paramsKeeper.GetSubspace(authtypes.ModuleName)
 	authKeeper := authkeeper.NewAccountKeeper(
-		encodingConfig().Marshaler,
+		encodingConfig.Marshaler,
 		keyAcc, // target store
 		authSubsp,
 		authtypes.ProtoBaseAccount, // prototype
@@ -209,7 +212,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 
 	bankSubsp, _ := paramsKeeper.GetSubspace(banktypes.ModuleName)
 	bankKeeper := bankkeeper.NewBaseKeeper(
-		encodingConfig().Marshaler,
+		encodingConfig.Marshaler,
 		keyBank,
 		authKeeper,
 		bankSubsp,
@@ -220,11 +223,11 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	bankKeeper.SetParams(ctx, bankParams)
 
 	stakingSubsp, _ := paramsKeeper.GetSubspace(stakingtypes.ModuleName)
-	stakingKeeper := stakingkeeper.NewKeeper(encodingConfig().Marshaler, keyStaking, authKeeper, bankKeeper, stakingSubsp)
+	stakingKeeper := stakingkeeper.NewKeeper(encodingConfig.Marshaler, keyStaking, authKeeper, bankKeeper, stakingSubsp)
 	stakingKeeper.SetParams(ctx, TestingStakeParams)
 
 	distSubsp, _ := paramsKeeper.GetSubspace(distrtypes.ModuleName)
-	distKeeper := distrkeeper.NewKeeper(encodingConfig().Marshaler, keyDistro, distSubsp, authKeeper, bankKeeper, stakingKeeper, authtypes.FeeCollectorName, nil)
+	distKeeper := distrkeeper.NewKeeper(encodingConfig.Marshaler, keyDistro, distSubsp, authKeeper, bankKeeper, stakingKeeper, authtypes.FeeCollectorName, nil)
 	distKeeper.SetParams(ctx, distrtypes.DefaultParams())
 	stakingKeeper.SetHooks(distKeeper.Hooks())
 
@@ -255,7 +258,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		//AddRoute(wasmtypes.RouterKey, NewWasmProposalHandler(keeper, wasmtypes.EnableAllProposals))
 
 	govKeeper := govkeeper.NewKeeper(
-		encodingConfig().Marshaler, keyGov, paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable()), authKeeper, bankKeeper, stakingKeeper, govRouter,
+		encodingConfig.Marshaler, keyGov, paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable()), authKeeper, bankKeeper, stakingKeeper, govRouter,
 	)
 
 	govKeeper.SetProposalID(ctx, govtypes.DefaultStartingProposalID)
@@ -266,7 +269,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	//bk := bank.Keeper(bankKeeper)
 
 	mintSubsp, _ := paramsKeeper.GetSubspace(minttypes.ModuleName)
-	mintKeeper := mintkeeper.NewKeeper(encodingConfig().Marshaler, mintStore, mintSubsp, stakingKeeper, authKeeper, bankKeeper, authtypes.FeeCollectorName)
+	mintKeeper := mintkeeper.NewKeeper(encodingConfig.Marshaler, mintStore, mintSubsp, stakingKeeper, authKeeper, bankKeeper, authtypes.FeeCollectorName)
 	mintKeeper.SetMinter(ctx, minttypes.DefaultInitialMinter())
 
 	//keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &govKeeper, &distKeeper, &mintKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
@@ -277,8 +280,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	wasmConfig := wasmtypes.DefaultWasmConfig()
 
 	keeper := NewKeeper(
-		encodingConfig().Marshaler,
-		*encodingConfig().Amino,
+		encodingConfig.Marshaler,
+		*encodingConfig.Amino,
 		keyContract,
 		authKeeper,
 		bankKeeper,
@@ -365,7 +368,7 @@ func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator s
 	}
 	tx := NewTestTx(&initMsg, creatorAcc, privKey)
 
-	txBytes, err := keeper.legacyAmino.MarshalBinaryLengthPrefixed(tx)
+	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
 
 	return ctx.WithTxBytes(txBytes)
@@ -383,7 +386,7 @@ func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sd
 	}
 	tx := NewTestTx(&executeMsg, creatorAcc, privKey)
 
-	txBytes, err := keeper.legacyAmino.MarshalBinaryLengthPrefixed(tx)
+	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
 
 	return ctx.WithTxBytes(txBytes)
@@ -400,21 +403,48 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 
 	// There's no need to pass values to `NewTxConfig` because they get ignored by `NewTxBuilder` anyways,
 	// and we just need the builder, which can not be created any other way, apparently.
-	builder := authtx.NewTxConfig(nil, nil).NewTxBuilder()
+	txConfig := authtx.NewTxConfig(nil, []sdksigning.SignMode{sdksigning.SignMode_SIGN_MODE_DIRECT})
+	signModeHandler := txConfig.SignModeHandler()
+	builder := txConfig.NewTxBuilder()
 	builder.SetFeeAmount(nil)
 	builder.SetGasLimit(0)
 	builder.SetTimeoutHeight(0)
 
-	var sigs []sdksigning.SignatureV2
-	for i, msg := range msgs {
-		privKey := privKeys[i]
-		creatorAcc := creatorAccs[i]
+	err := builder.SetMsgs(msgs...)
+	if err != nil {
+		panic(err)
+	}
 
-		signBytes, err := privKey.Sign(msg.GetSignBytes())
+	var sigs []sdksigning.SignatureV2
+	for i, creatorAcc := range creatorAccs {
+		privKey := privKeys[i]
+
+		// This code is based on `cosmos-sdk/client/tx/tx.go::Sign()`
+		sig := sdksigning.SignatureV2{
+			PubKey: creatorAcc.GetPubKey(),
+			Data: &sdksigning.SingleSignatureData{
+				SignMode:  sdksigning.SignMode_SIGN_MODE_DIRECT,
+				Signature: nil,
+			},
+			Sequence: creatorAcc.GetSequence(),
+		}
+		err := builder.SetSignatures(sig)
 		if err != nil {
 			panic(err)
 		}
-		sig := sdksigning.SignatureV2{
+
+		signerData := authsigning.SignerData{
+			ChainID:       "",
+			AccountNumber: creatorAcc.GetAccountNumber(),
+			Sequence:      creatorAcc.GetSequence(),
+		}
+		bytesToSign, err := signModeHandler.GetSignBytes(sdksigning.SignMode_SIGN_MODE_DIRECT, signerData, builder.GetTx())
+
+		signBytes, err := privKey.Sign(bytesToSign)
+		if err != nil {
+			panic(err)
+		}
+		sig = sdksigning.SignatureV2{
 			PubKey: creatorAcc.GetPubKey(),
 			Data: &sdksigning.SingleSignatureData{
 				SignMode:  sdksigning.SignMode_SIGN_MODE_DIRECT,
@@ -425,12 +455,7 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 		sigs = append(sigs, sig)
 	}
 
-	err := builder.SetSignatures(sigs...)
-	if err != nil {
-		panic(err)
-	}
-
-	err = builder.SetMsgs(msgs...)
+	err = builder.SetSignatures(sigs...)
 	if err != nil {
 		panic(err)
 	}
@@ -439,7 +464,6 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 	if !ok {
 		panic("failed to unwrap tx builder to protobuf tx")
 	}
-	tx.GetProtoTx()
 	return tx.GetProtoTx()
 }
 

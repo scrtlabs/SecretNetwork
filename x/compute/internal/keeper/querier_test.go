@@ -315,7 +315,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 		}
 		tx := NewTestTx(&instantiateMsg, creatorAcc, creatorPrivKey)
 
-		txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+		txBytes, err := tx.Marshal()
 		require.NoError(t, err)
 
 		ctx = ctx.WithTxBytes(txBytes)

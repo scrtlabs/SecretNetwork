@@ -139,7 +139,7 @@ func prepareInitSignedTxMultipleMsgs(
 	}
 
 	tx := NewTestTxMultiple(initMsgs, accounts, privKeys)
-	txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
 
 	return ctx.WithTxBytes(txBytes)
