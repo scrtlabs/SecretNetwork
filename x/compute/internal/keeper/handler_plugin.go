@@ -89,12 +89,25 @@ func (e MessageEncoders) Encode(contractAddr sdk.AccAddress, msg wasmTypes.Cosmo
 	return nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Unknown variant of Wasm")
 }
 
+var VoteOptionMap = map[string]string{
+	"Yes": "VOTE_OPTION_YES",
+	"Abstain": "VOTE_OPTION_ABSTAIN",
+	"No": "VOTE_OPTION_NO",
+	"NoWithVeto": "VOTE_OPTION_NO_WITH_VETO",
+}
+
 func EncodeGovMsg(sender sdk.AccAddress, msg *wasmTypes.GovMsg) ([]sdk.Msg, error) {
 	if msg.Vote == nil {
 		return nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Unknown variant of Gov")
 	}
 
-	option, err := govtypes.VoteOptionFromString(msg.Vote.VoteOption)
+	opt, exists := VoteOptionMap[msg.Vote.VoteOption]
+	if !exists {
+		// if it's not found, let the `VoteOptionFromString` below fail
+		opt = msg.Vote.VoteOption
+	}
+
+	option, err := govtypes.VoteOptionFromString(opt)
 	if err != nil {
 		return nil, err
 	}

@@ -137,9 +137,8 @@ func TestGovVote(t *testing.T) {
 	govQBz, err := json.Marshal(&queryReq)
 	require.NoError(t, err)
 
-	tp := TestProposal
 	// check that gov is working
-	proposal, err := govKeeper.SubmitProposal(ctx, tp)
+	proposal, err := govKeeper.SubmitProposal(ctx, TestProposal)
 	require.NoError(t, err)
 	proposalID := proposal.ProposalId
 	gotProposal, ok := govKeeper.GetProposal(ctx, proposalID)
