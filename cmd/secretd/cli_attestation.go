@@ -1,4 +1,4 @@
-// +build secretcli
+// +build !secretcli
 
 package main
 
