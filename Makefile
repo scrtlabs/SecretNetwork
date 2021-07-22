@@ -1,7 +1,7 @@
 PACKAGES=$(shell go list ./... | grep -v '/simulation')
 VERSION ?= $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
-CURRENT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+CURRENT_BRANCH := stargate-fixing-tests
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
 BUILD_PROFILE ?= release
@@ -116,7 +116,7 @@ build_cli:
 
 xgo_build_secretcli: go.sum
 	@echo "--> WARNING! This builds from origin/$(CURRENT_BRANCH)!"
-	xgo --go latest --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --branch "$(CURRENT_BRANCH)" github.com/enigmampc/SecretNetwork/cmd/secretcli
+	xgo --image techknowlogick/xgo:go-1.15.x --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --branch "$(CURRENT_BRANCH)" github.com/enigmampc/SecretNetwork/cmd/secretd
 
 build_local_no_rust: bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
