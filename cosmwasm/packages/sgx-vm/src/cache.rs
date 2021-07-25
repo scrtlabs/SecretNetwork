@@ -28,18 +28,21 @@ struct Stats {
     misses: u32,
 }
 
-pub struct CosmCache<S: Storage + 'static, A: Api + 'static, Q: Querier + 'static> {
+struct CosmCacheImpl {
     wasm_path: PathBuf,
     supported_features: HashSet<String>,
     /*
     modules: FileSystemCache,
     */
     stats: Stats,
+}
+
+pub struct CosmCache<S: Storage + 'static, A: Api + 'static, Q: Querier + 'static> {
+    inner: Mutex<CosmCacheImpl>,
     // Those two don't store data but only fix type information
     type_storage: PhantomData<S>,
     type_api: PhantomData<A>,
     type_querier: PhantomData<Q>,
-    m: Mutex<()>,
 }
 
 impl<S, A, Q> CosmCache<S, A, Q>
@@ -71,23 +74,24 @@ where
             .map_err(|e| VmError::cache_err(format!("Error file system cache: {}", e)))?;
         */
         Ok(CosmCache {
-            wasm_path,
-            supported_features,
-            /*
-            modules,
-            */
-            stats: Stats::default(),
+            inner: Mutex::new(CosmCacheImpl {
+                wasm_path,
+                supported_features,
+                /*
+                modules,
+                */
+                stats: Stats::default(),
+            }),
             type_storage: PhantomData::<S>,
             type_api: PhantomData::<A>,
             type_querier: PhantomData::<Q>,
-            m: Mutex::new(()),
         })
     }
 
     pub fn save_wasm(&mut self, wasm: &[u8]) -> VmResult<Checksum> {
-        let _lock = self.m.lock().unwrap();
-        check_wasm(wasm, &self.supported_features)?;
-        let checksum = save_wasm_to_disk(&self.wasm_path, wasm)?;
+        let inner = self.inner.lock().unwrap();
+        check_wasm(wasm, &inner.supported_features)?;
+        let checksum = save_wasm_to_disk(&inner.wasm_path, wasm)?;
         /*
         let module = compile(wasm)?;
         self.modules.store(&checksum, module)?;
@@ -101,8 +105,8 @@ where
     ///
     /// If the given ID is not found or the content does not match the hash (=ID), an error is returned.
     pub fn load_wasm(&self, checksum: &Checksum) -> VmResult<Vec<u8>> {
-        let _lock = self.m.lock().unwrap();
-        let code = load_wasm_from_disk(&self.wasm_path, checksum)?;
+        let inner = self.inner.lock().unwrap();
+        let code = load_wasm_from_disk(&inner.wasm_path, checksum)?;
         // verify hash matches (integrity check)
         if Checksum::generate(&code) != *checksum {
             Err(VmError::integrity_err())
@@ -119,7 +123,6 @@ where
         deps: Extern<S, A, Q>,
         gas_limit: u64,
     ) -> VmResult<Instance<S, A, Q>> {
-        let _lock = self.m.lock().unwrap();
         /*
         // try from the module cache
         let res = self.modules.load_with_backend(checksum, backend());
@@ -131,7 +134,7 @@ where
 
         // fall back to wasm cache (and re-compiling) - this is for backends that don't support serialization
         let wasm = self.load_wasm(checksum)?;
-        self.stats.misses += 1;
+        self.inner.lock().unwrap().stats.misses += 1;
         Instance::from_code(&wasm, deps, gas_limit)
     }
 }
