@@ -207,9 +207,8 @@ jobs:
           mv ./sccache*/sccache "$HOME/sccache"
       - name: Create fake api keys
         run: |
-          mkdir -p ias_keys/develop
-          echo "not_a_key" > ias_keys/develop/spid.txt
-          echo "not_a_key" > ias_keys/develop/api_key.txt
+          echo "not_a_key" > spid.txt
+          echo "not_a_key" > api_key.txt
       - name: Build testnet
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
