@@ -24,7 +24,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	transfer "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"
+	"github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"
 	ibctransfertypes "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer/types"
 	ibc "github.com/cosmos/cosmos-sdk/x/ibc/core"
 	ibchost "github.com/cosmos/cosmos-sdk/x/ibc/core/24-host"
@@ -40,6 +40,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+
 	"github.com/enigmampc/SecretNetwork/x/compute"
 	"github.com/enigmampc/SecretNetwork/x/registration"
 )

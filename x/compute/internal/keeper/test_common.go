@@ -261,10 +261,6 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		encodingConfig.Marshaler, keyGov, paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable()), authKeeper, bankKeeper, stakingKeeper, govRouter,
 	)
 
-	govKeeper.SetProposalID(ctx, govtypes.DefaultStartingProposalID)
-	govKeeper.SetDepositParams(ctx, govtypes.DefaultDepositParams())
-	govKeeper.SetVotingParams(ctx, govtypes.DefaultVotingParams())
-	govKeeper.SetTallyParams(ctx, govtypes.DefaultTallyParams())
 	// bank := bankKeeper.
 	//bk := bank.Keeper(bankKeeper)
 
@@ -275,6 +271,13 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	//keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &govKeeper, &distKeeper, &mintKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
 	//// add wasm handler so we can loop-back (contracts calling contracts)
 	//router.AddRoute(wasmtypes.RouterKey, TestHandler(keeper))
+
+	govKeeper.SetProposalID(ctx, govtypes.DefaultStartingProposalID)
+	govKeeper.SetDepositParams(ctx, govtypes.DefaultDepositParams())
+	govKeeper.SetVotingParams(ctx, govtypes.DefaultVotingParams())
+	govKeeper.SetTallyParams(ctx, govtypes.DefaultTallyParams())
+	gh := gov.NewHandler(govKeeper)
+	router.AddRoute(sdk.NewRoute(govtypes.RouterKey, gh))
 
 	// Load default wasm config
 	wasmConfig := wasmtypes.DefaultWasmConfig()
