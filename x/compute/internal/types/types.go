@@ -203,11 +203,9 @@ const AttributeKeyContractAddr = "contract_address"
 
 // ParseEvents converts wasm LogAttributes into an sdk.Events (with 0 or 1 elements)
 func ParseEvents(logs []wasmTypes.LogAttribute, contractAddr sdk.AccAddress) sdk.Events {
-	if len(logs) == 0 {
-		return nil
-	}
 	// we always tag with the contract address issuing this event
 	attrs := []sdk.Attribute{sdk.NewAttribute(AttributeKeyContractAddr, contractAddr.String())}
+	// append attributes from wasm to the sdk.Event
 	for _, l := range logs {
 		// and reserve the contract_address key for our use (not contract)
 		if l.Key != AttributeKeyContractAddr {
@@ -215,6 +213,7 @@ func ParseEvents(logs []wasmTypes.LogAttribute, contractAddr sdk.AccAddress) sdk
 			attrs = append(attrs, attr)
 		}
 	}
+	// each wasm invokation always returns one sdk.Event
 	return sdk.Events{sdk.NewEvent(CustomEventType, attrs...)}
 }
 
