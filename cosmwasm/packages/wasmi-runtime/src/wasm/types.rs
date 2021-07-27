@@ -354,8 +354,6 @@ impl CosmWasmMsg {
     }
 
     fn try_parse_execute(bytes: &[u8]) -> Result<Self, EnclaveError> {
-        use crate::cosmwasm::encoding::Binary;
-        use crate::cosmwasm::types::{CanonicalAddr, HumanAddr};
         use proto::cosmwasm::msg::{MsgExecuteContract, MsgExecuteContract_oneof__callback_sig};
 
         let raw_msg = MsgExecuteContract::parse_from_bytes(bytes)
