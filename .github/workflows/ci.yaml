@@ -291,3 +291,4 @@ jobs:
           mkdir -p ./.sgx_secrets
           cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
           ./cosmwasm/testing/callback-test.sh
+
