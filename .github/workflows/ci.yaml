@@ -169,6 +169,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Declare Commit Variables
+        id: vars
+        shell: bash
+        run: |
+          echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
       - uses: actions/setup-go@v2
         with:
           go-version: "^1.14" # The Go version to download (if necessary) and use.
@@ -212,8 +218,12 @@ jobs:
       - name: Build testnet
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          make build-testnet
-
+          VERSION=${{ steps.vars.outputs.sha_short }} make build-testnet
+      - uses: actions/upload-artifact@v2
+        with:
+          name: secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
+          path: secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
+  
   XBuild-CLI:
     runs-on: ubuntu-latest
     steps:
