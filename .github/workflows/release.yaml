@@ -1,0 +1,69 @@
+name: Release
+
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    
+
+  TEST-CD:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Declare Commit Variables
+        id: vars
+        shell: bash
+        run: |
+          echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "^1.14" # The Go version to download (if necessary) and use.
+      - name: Install Intel's SGX SDK
+        run: |
+          mkdir -p "$HOME/.sgxsdk"
+          cd "$HOME/.sgxsdk"
+          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
+          chmod +x "$SDK_BIN"
+          echo yes | ./"$SDK_BIN"
+      - name: Cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache xargo sysroot
+        uses: actions/cache@v1
+        with:
+          path: ~/.xargo
+          key: ${{ runner.os }}-xargo-sysroot
+      - name: Cache build artifacts
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/sccache
+          key: ${{ runner.os }}-sccache
+      - run: rustup component add rust-src clippy
+      - name: Install xargo
+        run: |
+          cargo +stable install xargo
+          xargo --version
+      - name: Download sccache
+        run: |
+          wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
+          tar xf ./sccache-*.tar.gz
+          mv ./sccache*/sccache "$HOME/sccache"
+      - name: Create fake api keys
+        run: |
+          echo "not_a_key" > spid.txt
+          echo "not_a_key" > api_key.txt
+      - name: Build testnet
+        run: |
+          source "$HOME/.sgxsdk/sgxsdk/environment"
+          VERSION=${{ steps.vars.outputs.sha_short }} make build-testnet
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: build/secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
