@@ -378,3 +378,4 @@ proto-lint:
 
 proto-check-breaking:
 	@buf check breaking --against-input '.git#branch=master'
+
