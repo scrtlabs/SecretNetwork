@@ -16,7 +16,7 @@ trigger:
       - 'LICENSE'
 
 pool:
-  name: 'default'
+  name: 'azure scale set'
 
 steps:
 
