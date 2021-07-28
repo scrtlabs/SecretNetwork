@@ -3,7 +3,7 @@ name: Release
 on: push
 
 jobs:
-  BuildDeb:
+  build-deb:
     # if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
@@ -149,7 +149,7 @@ jobs:
           path: secretcli-${{runner.os}}
 
   Release:
-    needs: [build-cli]
+    needs: [build-cli, build-deb]
     # if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
@@ -159,15 +159,15 @@ jobs:
         run: |
           echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
           echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
-      - uses: actions/download-artifact@v2
-        with:
-          name: secretcli
-      - uses: actions/download-artifact@v2
-        with:
-          name: secretd-windows-4.0-amd64.exe
-      - uses: actions/download-artifact@v2
-        with:
-          name: secretd-darwin-10.12-amd64
+#       - uses: actions/download-artifact@v2
+#         with:
+#           name: secretcli
+#       - uses: actions/download-artifact@v2
+#         with:
+#           name: secretd-windows-4.0-amd64.exe
+#       - uses: actions/download-artifact@v2
+#         with:
+#           name: secretd-darwin-10.12-amd64
       - uses: actions/download-artifact@v2
         with:
           name: secretcli-Linux
@@ -183,4 +183,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: build/secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
+          files: |
+            secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
+            secretcli-macOS
+            secretcli-Windows
+            secretcli-Linux
