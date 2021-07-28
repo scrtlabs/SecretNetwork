@@ -57,7 +57,8 @@ jobs:
       - name: Build testnet
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          VERSION=${{ steps.vars.outputs.sha_short }} make build-testnet
+          VERSION=0 make build-testnet
+          cp build/secretnetwork_0_amd64.deb build/secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
       - uses: actions/upload-artifact@v2
         with:
           name: secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
