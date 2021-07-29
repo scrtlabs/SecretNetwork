@@ -221,6 +221,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	bankParams := banktypes.DefaultParams()
 	bankParams = bankParams.SetSendEnabledParam("stake", true)
 	bankKeeper.SetParams(ctx, bankParams)
+	bankKeeper.SetSupply(ctx, banktypes.NewSupply(sdk.NewCoins((sdk.NewInt64Coin("stake", 1)))))
 
 	stakingSubsp, _ := paramsKeeper.GetSubspace(stakingtypes.ModuleName)
 	stakingKeeper := stakingkeeper.NewKeeper(encodingConfig.Marshaler, keyStaking, authKeeper, bankKeeper, stakingSubsp)
