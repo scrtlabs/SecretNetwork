@@ -404,7 +404,7 @@ export class CosmWasmClient {
       return await this.restClient.queryContractSmart(address, queryMsg);
     } catch (error) {
       if (error instanceof Error) {
-        if (error.message.startsWith("not found: contract")) {
+        if (error.message.startsWith("contract: not found")) {
           throw new Error(`No contract found at address "${address}"`);
         } else {
           throw error;

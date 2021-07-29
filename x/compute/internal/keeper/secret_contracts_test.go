@@ -1040,7 +1040,7 @@ func TestInitPanic(t *testing.T) {
 	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"panic":{}}`, false, defaultGasForTests)
 
 	require.NotNil(t, initErr.GenericErr)
-	require.Equal(t, "instantiate contract failed: Execution error: Enclave: the contract panicked", initErr.GenericErr.Msg)
+	require.Contains(t, initErr.GenericErr.Msg, "the contract panicked")
 }
 
 func TestExecPanic(t *testing.T) {
@@ -1052,7 +1052,7 @@ func TestExecPanic(t *testing.T) {
 	_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"panic":{}}`, false, defaultGasForTests, 0)
 
 	require.NotNil(t, execErr.GenericErr)
-	require.Equal(t, "execute contract failed: Execution error: Enclave: the contract panicked", execErr.GenericErr.Msg)
+	require.Contains(t, execErr.GenericErr.Msg, "the contract panicked")
 }
 
 func TestQueryPanic(t *testing.T) {
@@ -1063,7 +1063,7 @@ func TestQueryPanic(t *testing.T) {
 
 	_, queryErr := queryHelper(t, keeper, ctx, addr, `{"panic":{}}`, false, defaultGasForTests)
 	require.NotNil(t, queryErr.GenericErr)
-	require.Equal(t, "query contract failed: Execution error: Enclave: the contract panicked", queryErr.GenericErr.Msg)
+	require.Contains(t, queryErr.GenericErr.Msg, "the contract panicked")
 }
 
 func TestAllocateOnHeapFailBecauseMemoryLimit(t *testing.T) {
@@ -1079,7 +1079,7 @@ func TestAllocateOnHeapFailBecauseMemoryLimit(t *testing.T) {
 	require.Empty(t, data)
 
 	require.NotNil(t, execErr.GenericErr)
-	require.Equal(t, "execute contract failed: Execution error: Enclave: the contract panicked", execErr.GenericErr.Msg)
+	require.Contains(t, execErr.GenericErr.Msg, "the contract panicked")
 }
 
 func TestAllocateOnHeapFailBecauseGasLimit(t *testing.T) {
@@ -1123,7 +1123,7 @@ func TestAllocateOnHeapMoreThanSGXHasFailBecauseMemoryLimit(t *testing.T) {
 	require.Empty(t, data)
 
 	require.NotNil(t, execErr.GenericErr)
-	require.Equal(t, "execute contract failed: Execution error: Enclave: the contract panicked", execErr.GenericErr.Msg)
+	require.Contains(t, execErr.GenericErr.Msg, "the contract panicked")
 }
 
 func TestPassNullPointerToImports(t *testing.T) {
@@ -1146,7 +1146,7 @@ func TestPassNullPointerToImports(t *testing.T) {
 			_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"pass_null_pointer_to_imports_should_throw":{"pass_type":"%s"}}`, passType), false, defaultGasForTests, 0)
 
 			require.NotNil(t, execErr.GenericErr)
-			require.Equal(t, "execute contract failed: Execution error: Enclave: failed to read memory", execErr.GenericErr.Msg)
+			require.Contains(t, execErr.GenericErr.Msg, "failed to read memory")
 		})
 	}
 }
@@ -1172,7 +1172,7 @@ func TestExternalQueryCalleePanic(t *testing.T) {
 	_, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_panic":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, defaultGasForTests, 0)
 
 	require.NotNil(t, err.GenericErr)
-	require.Equal(t, "query contract failed: Execution error: Enclave: the contract panicked", err.GenericErr.Msg)
+	require.Contains(t, err.GenericErr.Msg, "the contract panicked")
 }
 
 func TestExternalQueryCalleeStdError(t *testing.T) {
@@ -1196,7 +1196,7 @@ func TestExternalQueryCalleeDoesntExist(t *testing.T) {
 	_, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"send_external_query_error":{"to":"secret13l72vhjngmg55ykajxdnlalktwglyqjqv9pkq4","code_hash":"bla bla"}}`, true, defaultGasForTests, 0)
 
 	require.NotNil(t, err.GenericErr)
-	require.Equal(t, "not found: contract", err.GenericErr.Msg)
+	require.Contains(t, err.GenericErr.Msg, "not found")
 }
 
 func TestExternalQueryBadSenderABI(t *testing.T) {
@@ -1317,7 +1317,7 @@ func TestWriteToStorageDuringQuery(t *testing.T) {
 
 	_, queryErr := queryHelper(t, keeper, ctx, addr, `{"write_to_storage": {}}`, false, defaultGasForTests)
 	require.NotNil(t, queryErr.GenericErr)
-	require.Equal(t, "query contract failed: Execution error: Enclave: contract tried to write to storage during a query", queryErr.GenericErr.Msg)
+	require.Contains(t, queryErr.GenericErr.Msg, "contract tried to write to storage during a query")
 }
 
 func TestRemoveFromStorageDuringQuery(t *testing.T) {
@@ -1328,7 +1328,7 @@ func TestRemoveFromStorageDuringQuery(t *testing.T) {
 
 	_, queryErr := queryHelper(t, keeper, ctx, addr, `{"remove_from_storage": {}}`, false, defaultGasForTests)
 	require.NotNil(t, queryErr.GenericErr)
-	require.Equal(t, "query contract failed: Execution error: Enclave: contract tried to write to storage during a query", queryErr.GenericErr.Msg)
+	require.Contains(t, queryErr.GenericErr.Msg, "contract tried to write to storage during a query")
 }
 
 func TestDepositToContract(t *testing.T) {
@@ -1402,7 +1402,7 @@ func TestContractTryToSendFundsFromSomeoneElse(t *testing.T) {
 	_, _, execErr = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds":{"from":"%s","to":"%s","denom":"%s","amount":%d}}`, walletA.String(), addr.String(), "denom", 17), false, defaultGasForTests, 0)
 
 	require.NotNil(t, execErr.GenericErr)
-	require.Equal(t, "unauthorized: contract doesn't have permission", execErr.GenericErr.Msg)
+	require.Contains(t, execErr.GenericErr.Msg, "contract doesn't have permission")
 }
 
 func TestContractSendFundsToInitCallback(t *testing.T) {
@@ -1451,7 +1451,7 @@ func TestContractSendFundsToInitCallbackNotEnough(t *testing.T) {
 	require.Empty(t, execEvents)
 
 	require.NotNil(t, execErr.GenericErr)
-	require.Equal(t, "insufficient funds: insufficient account funds; 17denom < 18denom", execErr.GenericErr.Msg)
+	require.Contains(t, execErr.GenericErr.Msg, "insufficient funds")
 
 	contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
 	walletCointsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
@@ -1510,7 +1510,7 @@ func TestContractSendFundsToExecCallbackNotEnough(t *testing.T) {
 	_, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds_to_exec_callback":{"to":"%s","denom":"%s","amount":%d,"code_hash":"%s"}}`, addr2.String(), "denom", 19, codeHash), false, defaultGasForTests, 17)
 
 	require.NotNil(t, execErr.GenericErr)
-	require.Equal(t, "insufficient funds: insufficient account funds; 17denom < 19denom", execErr.GenericErr.Msg)
+	require.Contains(t, execErr.GenericErr.Msg, "insufficient funds")
 
 	contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
 	contract2CoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr2)
@@ -1531,7 +1531,7 @@ func TestSleep(t *testing.T) {
 
 	require.Error(t, execErr)
 	require.Error(t, execErr.GenericErr)
-	require.Equal(t, "execute contract failed: Execution error: Enclave: the contract panicked", execErr.GenericErr.Msg)
+	require.Contains(t, execErr.GenericErr.Msg, "the contract panicked")
 }
 
 func TestGasIsChargedForInitCallbackToInit(t *testing.T) {
@@ -1614,7 +1614,7 @@ func TestWasmTooHighInitialMemoryRuntimeFail(t *testing.T) {
 
 	_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, false, defaultGasForTests)
 	require.NotNil(t, err.GenericErr)
-	require.Equal(t, "instantiate contract failed: Execution error: Enclave: failed to initialize wasm memory", err.GenericErr.Msg)
+	require.Contains(t, err.GenericErr.Msg, "failed to initialize wasm memory")
 }
 
 func TestWasmTooHighInitialMemoryStaticFail(t *testing.T) {
@@ -1629,7 +1629,7 @@ func TestWasmTooHighInitialMemoryStaticFail(t *testing.T) {
 
 	_, err = keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.Error(t, err)
-	require.Equal(t, "create contract failed: Execution error: Error during static Wasm validation: Wasm contract memory's minimum must not exceed 512 pages.", err.Error())
+	require.Contains(t, err.Error(), "Error during static Wasm validation: Wasm contract memory's minimum must not exceed 512 pages")
 }
 
 func TestWasmWithFloatingPoints(t *testing.T) {
@@ -1637,7 +1637,7 @@ func TestWasmWithFloatingPoints(t *testing.T) {
 
 	_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, false, defaultGasForTests)
 	require.NotNil(t, err.GenericErr)
-	require.Equal(t, "instantiate contract failed: Execution error: Enclave: found floating point operation in module code", err.GenericErr.Msg)
+	require.Contains(t, err.GenericErr.Msg, "found floating point operation in module code")
 }
 
 func TestCodeHashInvalid(t *testing.T) {
@@ -1747,7 +1747,7 @@ func TestCodeHashInitCallInit(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"instantiate contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 	t.Run("TooBigCodeHash", func(t *testing.T) {
@@ -1765,7 +1765,7 @@ func TestCodeHashInitCallInit(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"instantiate contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 	t.Run("WrongCodeHash", func(t *testing.T) {
@@ -1774,7 +1774,7 @@ func TestCodeHashInitCallInit(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"instantiate contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 }
@@ -1809,7 +1809,7 @@ func TestCodeHashInitCallExec(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"execute contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 	t.Run("TooBigCodeHash", func(t *testing.T) {
@@ -1827,7 +1827,7 @@ func TestCodeHashInitCallExec(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"execute contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 	t.Run("WrongCodeHash", func(t *testing.T) {
@@ -1836,7 +1836,7 @@ func TestCodeHashInitCallExec(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"execute contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 }
@@ -1867,7 +1867,7 @@ func TestCodeHashInitCallQuery(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"query contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 	t.Run("TooBigCodeHash", func(t *testing.T) {
@@ -1885,7 +1885,7 @@ func TestCodeHashInitCallQuery(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"query contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 	t.Run("WrongCodeHash", func(t *testing.T) {
@@ -1894,7 +1894,7 @@ func TestCodeHashInitCallQuery(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"query contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 }
@@ -1929,7 +1929,7 @@ func TestCodeHashExecCallInit(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"instantiate contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 	t.Run("TooBigCodeHash", func(t *testing.T) {
@@ -1947,7 +1947,7 @@ func TestCodeHashExecCallInit(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"instantiate contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 	t.Run("WrongCodeHash", func(t *testing.T) {
@@ -1956,7 +1956,7 @@ func TestCodeHashExecCallInit(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"instantiate contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 }
@@ -1973,7 +1973,7 @@ func TestLabelCollisionWhenMultipleCallbacksToInitFromSameContract(t *testing.T)
 	_, _, err = execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), false, defaultGasForTests, 0, 1)
 	require.NotEmpty(t, err)
 	require.NotNil(t, err.GenericErr)
-	require.Equal(t, "contract account already exists: 1", err.GenericErr.Msg)
+	require.Contains(t, err.GenericErr.Msg, "contract account already exists")
 }
 
 func TestCodeHashExecCallExec(t *testing.T) {
@@ -2006,7 +2006,7 @@ func TestCodeHashExecCallExec(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"execute contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 	t.Run("TooBigCodeHash", func(t *testing.T) {
@@ -2024,7 +2024,7 @@ func TestCodeHashExecCallExec(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"execute contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 	t.Run("WrongCodeHash", func(t *testing.T) {
@@ -2033,7 +2033,7 @@ func TestCodeHashExecCallExec(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"execute contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 }
@@ -2064,7 +2064,7 @@ func TestCodeHashExecCallQuery(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"query contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 	t.Run("TooBigCodeHash", func(t *testing.T) {
@@ -2082,7 +2082,7 @@ func TestCodeHashExecCallQuery(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"query contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 	t.Run("WrongCodeHash", func(t *testing.T) {
@@ -2091,7 +2091,7 @@ func TestCodeHashExecCallQuery(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"query contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 }
@@ -2114,7 +2114,7 @@ func TestCodeHashQueryCallQuery(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"query contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 	t.Run("TooBigCodeHash", func(t *testing.T) {
@@ -2132,7 +2132,7 @@ func TestCodeHashQueryCallQuery(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"query contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 	t.Run("WrongCodeHash", func(t *testing.T) {
@@ -2141,7 +2141,7 @@ func TestCodeHashQueryCallQuery(t *testing.T) {
 		require.NotEmpty(t, err)
 		require.Contains(t,
 			err.Error(),
-			"query contract failed: Execution error: Enclave: failed to validate transaction",
+			"failed to validate transaction",
 		)
 	})
 }
