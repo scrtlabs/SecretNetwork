@@ -4,7 +4,7 @@ on: push
 
 jobs:
   build-deb:
-    # if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -128,6 +128,7 @@ jobs:
 #           path: secretd-windows-4.0-amd64.exe
 
   build-cli:
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
@@ -152,7 +153,7 @@ jobs:
 
   Release:
     needs: [build-cli, build-deb]
-    # if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
