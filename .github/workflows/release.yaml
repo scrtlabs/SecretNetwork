@@ -58,11 +58,11 @@ jobs:
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           VERSION=0 make build-testnet
-          cp build/secretnetwork_0_amd64.deb build/secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
+          cp build/secretnetwork_0_amd64.deb secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
       - uses: actions/upload-artifact@v2
         with:
           name: secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
-          path: build/secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
+          path: secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
 
 #   BuildCliMacOS:
 #     # if: startsWith(github.ref, 'refs/tags/')
