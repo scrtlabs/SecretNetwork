@@ -9,6 +9,9 @@ jobs:
   build-deb:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
+    env: # Or as an environment variable
+      SPID_TESTNET: ${{ secrets.SPID_TESTNET }}
+      API_KEY_TESTNET: ${{ secrets.API_KEY_TESTNET }}
     steps:
       - uses: actions/checkout@v2
       - name: Declare Commit Variables
@@ -55,8 +58,8 @@ jobs:
           mv ./sccache*/sccache "$HOME/sccache"
       - name: Create fake api keys
         run: |
-          echo "not_a_key" > spid.txt
-          echo "not_a_key" > api_key.txt
+          echo $SPID_TESTNET > spid.txt
+          echo $API_KEY_TESTNET > api_key.txt
       - name: Build testnet
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
