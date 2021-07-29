@@ -34,7 +34,7 @@ func multisigTxCreator(
 		msg.Sender = sdk.AccAddress(multisigPubKey.Address())
 	}
 
-	builder := authtx.NewTxConfig(nil, nil).NewTxBuilder()
+	builder := authtx.NewTxConfig(nil, authtx.DefaultSignModes).NewTxBuilder()
 	builder.SetFeeAmount(nil)
 	builder.SetGasLimit(0)
 	builder.SetTimeoutHeight(0)
@@ -524,7 +524,7 @@ func TestMultiSigInMultiSig(t *testing.T) {
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 	}
 
-	builder := authtx.NewTxConfig(nil, nil).NewTxBuilder()
+	builder := authtx.NewTxConfig(nil, authtx.DefaultSignModes).NewTxBuilder()
 	builder.SetFeeAmount(nil)
 	builder.SetGasLimit(0)
 	builder.SetTimeoutHeight(0)
@@ -621,7 +621,7 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 	}
 
-	builder := authtx.NewTxConfig(nil, nil).NewTxBuilder()
+	builder := authtx.NewTxConfig(nil, authtx.DefaultSignModes).NewTxBuilder()
 	builder.SetFeeAmount(nil)
 	builder.SetGasLimit(0)
 	builder.SetTimeoutHeight(0)
@@ -761,7 +761,7 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 	}
 
-	builder := authtx.NewTxConfig(nil, nil).NewTxBuilder()
+	builder := authtx.NewTxConfig(nil, authtx.DefaultSignModes).NewTxBuilder()
 	builder.SetFeeAmount(nil)
 	builder.SetGasLimit(0)
 	builder.SetTimeoutHeight(0)

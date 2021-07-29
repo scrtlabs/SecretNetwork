@@ -407,7 +407,7 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 
 	// There's no need to pass values to `NewTxConfig` because they get ignored by `NewTxBuilder` anyways,
 	// and we just need the builder, which can not be created any other way, apparently.
-	txConfig := authtx.NewTxConfig(nil, []sdksigning.SignMode{sdksigning.SignMode_SIGN_MODE_DIRECT})
+	txConfig := authtx.NewTxConfig(nil, authtx.DefaultSignModes)
 	signModeHandler := txConfig.SignModeHandler()
 	builder := txConfig.NewTxBuilder()
 	builder.SetFeeAmount(nil)
