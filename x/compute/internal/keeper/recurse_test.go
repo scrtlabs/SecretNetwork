@@ -43,7 +43,7 @@ type recurseResponse struct {
 // number os wasm queries called from a contract
 var totalWasmQueryCounter int
 
-func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.AccAddress, ctx sdk.Context, keeper Keeper, cleanup func()) {
+func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.AccAddress, ctx sdk.Context, keeper Keeper) {
 	var realWasmQuerier func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
 	countingQuerier := &QueryPlugins{
 		Wasm: func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error) {
@@ -78,11 +78,10 @@ func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.Acc
 	contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, creator, creatorPriv, string(initMsgBz), true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	return contractAddr, creator, ctx, keeper, cleanup
+	return contractAddr, creator, ctx, keeper
 }
 
 func TestGasCostOnQuery(t *testing.T) {
-	t.Skip()
 	const (
 		GasNoWork uint64 = InstanceCost + 2_756
 		// Note: about 100 SDK gas (10k wasmer gas) for each round of sha256
@@ -135,8 +134,7 @@ func TestGasCostOnQuery(t *testing.T) {
 		},
 	}
 
-	contractAddr, creator, ctx, keeper, cleanup := initRecurseContract(t)
-	defer cleanup()
+	contractAddr, creator, ctx, keeper := initRecurseContract(t)
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -177,7 +175,6 @@ func TestGasCostOnQuery(t *testing.T) {
 }
 
 func TestGasOnExternalQuery(t *testing.T) {
-	t.Skip()
 	const (
 		GasWork50 uint64 = InstanceCost + 8_464
 	)
@@ -221,12 +218,11 @@ func TestGasOnExternalQuery(t *testing.T) {
 		},
 	}
 
-	contractAddr, _, ctx, keeper, cleanup := initRecurseContract(t)
-	defer cleanup()
+	contractAddr, _, ctx, keeper := initRecurseContract(t)
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			ctx = ctx.WithGasMeter(sdk.NewGasMeter(tc.gasLimit))
+			keeper.queryGasLimit = tc.gasLimit
 
 			recurse := tc.msg
 			recurse.Contract = contractAddr
@@ -259,7 +255,6 @@ func TestGasOnExternalQuery(t *testing.T) {
 }
 
 func TestLimitRecursiveQueryGas(t *testing.T) {
-	t.Skip()
 	// The point of this test from https://github.com/CosmWasm/cosmwasm/issues/456
 	// Basically, if I burn 90% of gas in CPU loop, then query out (to my self)
 	// the sub-query will have all the original gas (minus the 40k instance charge)
@@ -333,8 +328,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 		},
 	}
 
-	contractAddr, _, ctx, keeper, cleanup := initRecurseContract(t)
-	defer cleanup()
+	contractAddr, _, ctx, keeper := initRecurseContract(t)
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
