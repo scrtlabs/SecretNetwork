@@ -16,8 +16,8 @@ import (
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 type ContractEvent []cosmwasm.LogAttribute
@@ -122,13 +122,13 @@ func getDecryptedData(t *testing.T, data []byte, nonce []byte) []byte {
 	return dataPlaintext
 }
 
-var contractErrorRegex = regexp.MustCompile(`contract failed: encrypted: (.+)`)
+var contractErrorRegex = regexp.MustCompile(`encrypted: (.+): (?:instantiate|execute|query) contract failed`)
 
 func extractInnerError(t *testing.T, err error, nonce []byte, isEncrypted bool) cosmwasm.StdError {
 	match := contractErrorRegex.FindAllStringSubmatch(err.Error(), -1)
 
 	if match == nil {
-		require.True(t, !isEncrypted, "Error message should be plaintext")
+		require.True(t, !isEncrypted, fmt.Sprintf("Error message should be plaintext but was: %v", err))
 		return cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: err.Error()}}
 	}
 

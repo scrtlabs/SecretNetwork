@@ -449,7 +449,7 @@ describe("CosmWasmClient", () => {
       const client = new CosmWasmClient(wasmd.endpoint);
       await client.queryContractSmart(contract.address, { broken: {} }).then(
         () => fail("must not succeed"),
-        (error) => expect(error).toMatch(/query contract failed: parsing hackatom::contract::QueryMsg/i),
+        (error) => expect(error).toMatch(/parsing hackatom::contract::QueryMsg: query contract failed/i),
       );
     });
 
