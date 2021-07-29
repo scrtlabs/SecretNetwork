@@ -137,9 +137,8 @@ func TestGovVote(t *testing.T) {
 	govQBz, err := json.Marshal(&queryReq)
 	require.NoError(t, err)
 
-	tp := TestProposal
 	// check that gov is working
-	proposal, err := govKeeper.SubmitProposal(ctx, tp)
+	proposal, err := govKeeper.SubmitProposal(ctx, TestProposal)
 	require.NoError(t, err)
 	proposalID := proposal.ProposalId
 	gotProposal, ok := govKeeper.GetProposal(ctx, proposalID)
@@ -148,7 +147,7 @@ func TestGovVote(t *testing.T) {
 
 	_, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, defaultGasForTests, 0)
 	require.NotEmpty(t, err)
-	require.Equal(t, "encrypted: inactive proposal: 1", err.Error())
+	require.Equal(t, "encrypted: 1: inactive proposal", err.Error())
 
 	votingStarted, err := govKeeper.AddDeposit(ctx, proposalID, creator, deposit)
 	require.NoError(t, err)
@@ -159,6 +158,6 @@ func TestGovVote(t *testing.T) {
 
 	votes := govKeeper.GetAllVotes(ctx)
 	require.Equal(t, uint64(0x1), votes[0].ProposalId)
-	require.Equal(t, govAddr, votes[0].Voter)
+	require.Equal(t, govAddr.String(), votes[0].Voter)
 	require.Equal(t, govtypes.OptionYes, votes[0].Option)
 }

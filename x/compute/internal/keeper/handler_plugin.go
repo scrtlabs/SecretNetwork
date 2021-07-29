@@ -89,12 +89,25 @@ func (e MessageEncoders) Encode(contractAddr sdk.AccAddress, msg wasmTypes.Cosmo
 	return nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Unknown variant of Wasm")
 }
 
+var VoteOptionMap = map[string]string{
+	"Yes": "VOTE_OPTION_YES",
+	"Abstain": "VOTE_OPTION_ABSTAIN",
+	"No": "VOTE_OPTION_NO",
+	"NoWithVeto": "VOTE_OPTION_NO_WITH_VETO",
+}
+
 func EncodeGovMsg(sender sdk.AccAddress, msg *wasmTypes.GovMsg) ([]sdk.Msg, error) {
 	if msg.Vote == nil {
 		return nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Unknown variant of Gov")
 	}
 
-	option, err := govtypes.VoteOptionFromString(msg.Vote.VoteOption)
+	opt, exists := VoteOptionMap[msg.Vote.VoteOption]
+	if !exists {
+		// if it's not found, let the `VoteOptionFromString` below fail
+		opt = msg.Vote.VoteOption
+	}
+
+	option, err := govtypes.VoteOptionFromString(opt)
 	if err != nil {
 		return nil, err
 	}
@@ -110,6 +123,16 @@ func EncodeBankMsg(sender sdk.AccAddress, msg *wasmTypes.BankMsg) ([]sdk.Msg, er
 	if len(msg.Send.Amount) == 0 {
 		return nil, nil
 	}
+	// validate that the addresses are valid
+	_, stderr := sdk.AccAddressFromBech32(msg.Send.FromAddress)
+	if stderr != nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Send.FromAddress)
+	}
+	_, stderr = sdk.AccAddressFromBech32(msg.Send.ToAddress)
+	if stderr != nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Send.ToAddress)
+	}
+
 	toSend, err := convertWasmCoinsToSdkCoins(msg.Send.Amount)
 	if err != nil {
 		return nil, err
@@ -127,8 +150,14 @@ func NoCustomMsg(sender sdk.AccAddress, msg json.RawMessage) ([]sdk.Msg, error) 
 }
 
 func EncodeStakingMsg(sender sdk.AccAddress, msg *wasmTypes.StakingMsg) ([]sdk.Msg, error) {
+	var err error
 	switch {
 	case msg.Delegate != nil:
+		// Check that the address belongs to a validator.
+		_, err = sdk.ValAddressFromBech32(msg.Delegate.Validator)
+		if err != nil {
+			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Delegate.Validator)
+		}
 		coin, err := convertWasmCoinToSdkCoin(msg.Delegate.Amount)
 		if err != nil {
 			return nil, err
@@ -140,6 +169,15 @@ func EncodeStakingMsg(sender sdk.AccAddress, msg *wasmTypes.StakingMsg) ([]sdk.M
 		}
 		return []sdk.Msg{&sdkMsg}, nil
 	case msg.Redelegate != nil:
+		// Check that the addresses belong to validators.
+		_, err = sdk.ValAddressFromBech32(msg.Redelegate.SrcValidator)
+		if err != nil {
+			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Redelegate.SrcValidator)
+		}
+		_, err = sdk.ValAddressFromBech32(msg.Redelegate.DstValidator)
+		if err != nil {
+			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Redelegate.DstValidator)
+		}
 		coin, err := convertWasmCoinToSdkCoin(msg.Redelegate.Amount)
 		if err != nil {
 			return nil, err
@@ -152,6 +190,11 @@ func EncodeStakingMsg(sender sdk.AccAddress, msg *wasmTypes.StakingMsg) ([]sdk.M
 		}
 		return []sdk.Msg{&sdkMsg}, nil
 	case msg.Undelegate != nil:
+		// Check that the address belongs to a validator.
+		_, err = sdk.ValAddressFromBech32(msg.Undelegate.Validator)
+		if err != nil {
+			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Undelegate.Validator)
+		}
 		coin, err := convertWasmCoinToSdkCoin(msg.Undelegate.Amount)
 		if err != nil {
 			return nil, err
@@ -166,7 +209,17 @@ func EncodeStakingMsg(sender sdk.AccAddress, msg *wasmTypes.StakingMsg) ([]sdk.M
 		senderAddr := sender.String()
 		rcpt := senderAddr
 		if len(msg.Withdraw.Recipient) != 0 {
+			// Check that the address belongs to a real account.
+			_, err = sdk.AccAddressFromBech32(msg.Withdraw.Recipient)
+			if err != nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Withdraw.Recipient)
+			}
 			rcpt = msg.Withdraw.Recipient
+		}
+		// Check that the address belongs to a validator.
+		_, err = sdk.ValAddressFromBech32(msg.Withdraw.Validator)
+		if err != nil {
+			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Withdraw.Validator)
 		}
 		setMsg := distrtypes.MsgSetWithdrawAddress{
 			DelegatorAddress: senderAddr,

@@ -221,6 +221,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	bankParams := banktypes.DefaultParams()
 	bankParams = bankParams.SetSendEnabledParam("stake", true)
 	bankKeeper.SetParams(ctx, bankParams)
+	bankKeeper.SetSupply(ctx, banktypes.NewSupply(sdk.NewCoins((sdk.NewInt64Coin("stake", 1)))))
 
 	stakingSubsp, _ := paramsKeeper.GetSubspace(stakingtypes.ModuleName)
 	stakingKeeper := stakingkeeper.NewKeeper(encodingConfig.Marshaler, keyStaking, authKeeper, bankKeeper, stakingSubsp)
@@ -261,10 +262,6 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		encodingConfig.Marshaler, keyGov, paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable()), authKeeper, bankKeeper, stakingKeeper, govRouter,
 	)
 
-	govKeeper.SetProposalID(ctx, govtypes.DefaultStartingProposalID)
-	govKeeper.SetDepositParams(ctx, govtypes.DefaultDepositParams())
-	govKeeper.SetVotingParams(ctx, govtypes.DefaultVotingParams())
-	govKeeper.SetTallyParams(ctx, govtypes.DefaultTallyParams())
 	// bank := bankKeeper.
 	//bk := bank.Keeper(bankKeeper)
 
@@ -275,6 +272,13 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	//keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &govKeeper, &distKeeper, &mintKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
 	//// add wasm handler so we can loop-back (contracts calling contracts)
 	//router.AddRoute(wasmtypes.RouterKey, TestHandler(keeper))
+
+	govKeeper.SetProposalID(ctx, govtypes.DefaultStartingProposalID)
+	govKeeper.SetDepositParams(ctx, govtypes.DefaultDepositParams())
+	govKeeper.SetVotingParams(ctx, govtypes.DefaultVotingParams())
+	govKeeper.SetTallyParams(ctx, govtypes.DefaultTallyParams())
+	gh := gov.NewHandler(govKeeper)
+	router.AddRoute(sdk.NewRoute(govtypes.RouterKey, gh))
 
 	// Load default wasm config
 	wasmConfig := wasmtypes.DefaultWasmConfig()
@@ -403,7 +407,7 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 
 	// There's no need to pass values to `NewTxConfig` because they get ignored by `NewTxBuilder` anyways,
 	// and we just need the builder, which can not be created any other way, apparently.
-	txConfig := authtx.NewTxConfig(nil, []sdksigning.SignMode{sdksigning.SignMode_SIGN_MODE_DIRECT})
+	txConfig := authtx.NewTxConfig(nil, authtx.DefaultSignModes)
 	signModeHandler := txConfig.SignModeHandler()
 	builder := txConfig.NewTxBuilder()
 	builder.SetFeeAmount(nil)
