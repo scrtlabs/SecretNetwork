@@ -2,11 +2,10 @@ package keeper
 
 import (
 	"encoding/json"
-
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	distrtypes "github.com/enigmampc/SecretNetwork/x/distribution/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -250,11 +249,10 @@ func (h MessageHandler) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Addre
 			return sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "contract doesn't have permission")
 		}
 	}
-
 	// find the handler and execute it
-	handler := h.router.Route(ctx, msg.Route())
+	handler := h.router.Route(ctx, msg.String())
 	if handler == nil {
-		return sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, msg.Route())
+		return sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, msg.String())
 	}
 	res, err := handler(ctx, msg)
 	if err != nil {

@@ -100,8 +100,8 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 		Args: cobra.MaximumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx := client.GetClientContextFromCmd(cmd)
-			depCdc := clientCtx.JSONMarshaler
-			cdc := depCdc.(codec.Marshaler)
+			depCdc := clientCtx.Codec
+			cdc := depCdc.(codec.Codec)
 
 			serverCtx := server.GetServerContextFromCmd(cmd)
 			config := serverCtx.Config
@@ -228,7 +228,7 @@ func ConfigureSecret() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "configure-secret [master-cert] [seed]",
 		Short: "After registration is successful, configure the secret node with the credentials file and the encrypted " +
-			   "seed that was written on-chain",
+			"seed that was written on-chain",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 

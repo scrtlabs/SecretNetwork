@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/cosmos/cosmos-sdk/x/distribution"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
-	"github.com/enigmampc/SecretNetwork/x/distribution"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 

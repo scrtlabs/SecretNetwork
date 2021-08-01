@@ -32,6 +32,7 @@ const (
 	QueryContractKey              = keeper.QueryContractKey
 	QueryContractAddress          = keeper.QueryContractAddress
 	QueryMethodContractStateSmart = keeper.QueryMethodContractStateSmart
+	DefaultConfigTemplate         = types.DefaultConfigTemplate
 	/*
 		QueryMethodContractStateAll   = keeper.QueryMethodContractStateAll
 		QueryMethodContractStateRaw   = keeper.QueryMethodContractStateRaw
@@ -57,6 +58,7 @@ var (
 	DefaultWasmConfig         = types.DefaultWasmConfig
 	IsEncryptedError          = types.IsEncryptedErrorCode
 	ErrContainsQueryError     = types.ErrContainsQueryError
+	GetConfig                 = types.GetConfig
 	InitGenesis               = keeper.InitGenesis
 	ExportGenesis             = keeper.ExportGenesis
 	NewMessageHandler         = keeper.NewMessageHandler

@@ -2,9 +2,11 @@ package types
 
 import (
 	"encoding/base64"
+	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	"github.com/spf13/cast"
 )
 
 const defaultLRUCacheSize = uint64(0)
@@ -224,8 +226,8 @@ type WasmConfig struct {
 }
 
 // DefaultWasmConfig returns the default settings for WasmConfig
-func DefaultWasmConfig() WasmConfig {
-	return WasmConfig{
+func DefaultWasmConfig() *WasmConfig {
+	return &WasmConfig{
 		SmartQueryGasLimit: defaultQueryGasLimit,
 		CacheSize:          defaultLRUCacheSize,
 	}
@@ -247,3 +249,23 @@ func NewVerificationInfo(signBytes []byte, signature []byte, callbackSig []byte)
 		CallbackSignature: callbackSig,
 	}
 }
+
+// GetConfig load config values from the app options
+func GetConfig(appOpts servertypes.AppOptions) *WasmConfig {
+	return &WasmConfig{
+		SmartQueryGasLimit: cast.ToUint64(appOpts.Get("wasm.contract-query-gas-limit")),
+		CacheSize:          cast.ToUint64(appOpts.Get("wasm.contract-memory-cache-size")),
+	}
+}
+
+// DefaultConfigTemplate default config template for wasm module
+const DefaultConfigTemplate = `
+[wasm]
+# The maximum gas amount can be spent for contract query.
+# The contract query will invoke contract execution vm,
+# so we need to restrict the max usage to prevent DoS attack
+contract-query-gas-limit = "{{ .WASMConfig.SmartQueryGasLimit }}"
+
+# The WASM VM memory cache size in MiB not bytes
+contract-memory-cache-size = "{{ .WASMConfig.defaultLRUCacheSize }}"
+`
