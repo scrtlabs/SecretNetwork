@@ -344,12 +344,12 @@ type reflectCustomMsg struct {
 
 // toReflectRawMsg encodes an sdk msg using any type with json encoding.
 // Then wraps it as an opaque message
-func toReflectRawMsg(cdc codec.Marshaler, msg sdk.Msg) (wasmTypes.CosmosMsg, error) {
+func toReflectRawMsg(cdc codec.BinaryCodec, msg sdk.Msg) (wasmTypes.CosmosMsg, error) {
 	any, err := codectypes.NewAnyWithValue(msg)
 	if err != nil {
 		return wasmTypes.CosmosMsg{}, err
 	}
-	rawBz, err := cdc.MarshalJSON(any)
+	rawBz, err := cdc.Marshal(any)
 	if err != nil {
 		return wasmTypes.CosmosMsg{}, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
 	}
@@ -363,7 +363,7 @@ func toReflectRawMsg(cdc codec.Marshaler, msg sdk.Msg) (wasmTypes.CosmosMsg, err
 }
 
 // reflectEncoders needs to be registered in test setup to handle custom message callbacks
-func reflectEncoders(cdc codec.Marshaler) *MessageEncoders {
+func reflectEncoders(cdc codec.Codec) *MessageEncoders {
 	return &MessageEncoders{
 		Custom: fromReflectRawMsg(cdc),
 	}
@@ -371,7 +371,7 @@ func reflectEncoders(cdc codec.Marshaler) *MessageEncoders {
 
 // fromReflectRawMsg decodes msg.Data to an sdk.Msg using proto Any and json encoding.
 // this needs to be registered on the Encoders
-func fromReflectRawMsg(cdc codec.Marshaler) CustomEncoder {
+func fromReflectRawMsg(cdc codec.Codec) CustomEncoder {
 	return func(_sender sdk.AccAddress, msg json.RawMessage) ([]sdk.Msg, error) {
 		var custom reflectCustomMsg
 		err := json.Unmarshal(msg, &custom)
@@ -380,7 +380,7 @@ func fromReflectRawMsg(cdc codec.Marshaler) CustomEncoder {
 		}
 		if custom.Raw != nil {
 			var any codectypes.Any
-			if err := cdc.UnmarshalJSON(custom.Raw, &any); err != nil {
+			if err := cdc.Unmarshal(custom.Raw, &any); err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrJSONUnmarshal, err.Error())
 			}
 			var msg sdk.Msg

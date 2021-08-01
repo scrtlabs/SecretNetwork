@@ -3,6 +3,7 @@ package keeper
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/client"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -49,8 +50,8 @@ import (
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 
+	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
-
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
@@ -189,8 +190,9 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 
 	// this is also used to initialize module accounts (so nil is meaningful here)
 	maccPerms := map[string][]string{
+		faucetAccountName:              {authtypes.Burner, authtypes.Minter},
 		authtypes.FeeCollectorName:     nil,
-		distrtypes.ModuleName:          nil,
+		distrtypes.ModuleName:          {authtypes.Burner, authtypes.Minter},
 		minttypes.ModuleName:           {authtypes.Minter},
 		stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
 		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
@@ -221,11 +223,23 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	bankParams := banktypes.DefaultParams()
 	bankParams = bankParams.SetSendEnabledParam("stake", true)
 	bankKeeper.SetParams(ctx, bankParams)
-	bankKeeper.SetSupply(ctx, banktypes.NewSupply(sdk.NewCoins((sdk.NewInt64Coin("stake", 1)))))
 
 	stakingSubsp, _ := paramsKeeper.GetSubspace(stakingtypes.ModuleName)
 	stakingKeeper := stakingkeeper.NewKeeper(encodingConfig.Marshaler, keyStaking, authKeeper, bankKeeper, stakingSubsp)
 	stakingKeeper.SetParams(ctx, TestingStakeParams)
+
+	//mintSubsp, _ := paramsKeeper.GetSubspace(minttypes.ModuleName)
+
+	//mintKeeper := mintkeeper.NewKeeper(encodingConfig.Marshaler,
+	//	keyBank,
+	//	mintSubsp,
+	//	stakingKeeper,
+	//	authKeeper,
+	//	bankKeeper,
+	//	authtypes.FeeCollectorName,
+	//	)
+	//
+	//bankkeeper.SetSupply(ctx, banktypes.NewSupply(sdk.NewCoins((sdk.NewInt64Coin("stake", 1)))))
 
 	distSubsp, _ := paramsKeeper.GetSubspace(distrtypes.ModuleName)
 	distKeeper := distrkeeper.NewKeeper(encodingConfig.Marshaler, keyDistro, distSubsp, authKeeper, bankKeeper, stakingKeeper, authtypes.FeeCollectorName, nil)
@@ -238,7 +252,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	// set some funds ot pay out validatores, based on code from:
 	// https://github.com/cosmos/cosmos-sdk/blob/fea231556aee4d549d7551a6190389c4328194eb/x/distribution/keeper/keeper_test.go#L50-L57
 	distrAcc := distKeeper.GetDistributionAccount(ctx)
-	err = bankKeeper.SetBalances(ctx, distrAcc.GetAddress(), sdk.NewCoins(
+	err = bankKeeper.MintCoins(ctx, distrtypes.ModuleName, sdk.NewCoins(
 		sdk.NewCoin("stake", sdk.NewInt(2000000)),
 	))
 	require.NoError(t, err)
@@ -283,6 +297,19 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	// Load default wasm config
 	wasmConfig := wasmtypes.DefaultWasmConfig()
 
+	// todo: new grpc routing
+	//serviceRouter := baseapp.NewMsgServiceRouter()
+
+	//serviceRouter.SetInterfaceRegistry(encodingConfig.InterfaceRegistry)
+	//bankMsgServer := bankkeeper.NewMsgServerImpl(bankKeeper)
+	//stakingMsgServer := stakingkeeper.NewMsgServerImpl(stakingKeeper)
+	//distrMsgServer := distrkeeper.NewMsgServerImpl(distKeeper)
+	//wasmMsgServer := NewMsgServerImpl(keeper)
+
+	//banktypes.RegisterMsgServer(serviceRouter, bankMsgServer)
+	//stakingtypes.RegisterMsgServer(serviceRouter, stakingMsgServer)
+	//distrtypes.RegisterMsgServer(serviceRouter, distrMsgServer)
+
 	keeper := NewKeeper(
 		encodingConfig.Marshaler,
 		*encodingConfig.Amino,
@@ -293,6 +320,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		distKeeper,
 		mintKeeper,
 		stakingKeeper,
+		// serviceRouter,
 		router,
 		tempDir,
 		wasmConfig,
@@ -464,7 +492,7 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 		panic(err)
 	}
 
-	tx, ok := builder.(authtx.ProtoTxProvider)
+	tx, ok := builder.(protoTxProvider)
 	if !ok {
 		panic("failed to unwrap tx builder to protobuf tx")
 	}
@@ -481,9 +509,16 @@ func CreateFakeFundedAccount(ctx sdk.Context, am authkeeper.AccountKeeper, bk ba
 	return addr, priv
 }
 
+const faucetAccountName = "faucet"
+
 func fundAccounts(ctx sdk.Context, am authkeeper.AccountKeeper, bk bankkeeper.Keeper, addr sdk.AccAddress, coins sdk.Coins) {
 	baseAcct := am.GetAccount(ctx, addr)
-	_ = bk.SetBalances(ctx, baseAcct.GetAddress(), coins)
+	if err := bk.MintCoins(ctx, faucetAccountName, coins); err != nil {
+		panic(err)
+	}
+
+	_ = bk.SendCoinsFromModuleToAccount(ctx, faucetAccountName, addr, coins)
+
 	am.SetAccount(ctx, baseAcct)
 }
 
@@ -500,4 +535,17 @@ func keyPubAddr() (crypto.PrivKey, crypto.PubKey, sdk.AccAddress) {
 	pub := key.PubKey()
 	addr := sdk.AccAddress(pub.Address())
 	return key, pub, addr
+}
+
+type protoTxProvider interface {
+	GetProtoTx() *tx.Tx
+}
+
+func txBuilderToProtoTx(txBuilder client.TxBuilder) (*tx.Tx, error) { // nolint
+	protoProvider, ok := txBuilder.(protoTxProvider)
+	if !ok {
+		return nil, sdkerrors.Wrapf(sdkerrors.ErrInvalidType, "expected proto tx builder, got %T", txBuilder)
+	}
+
+	return protoProvider.GetProtoTx(), nil
 }

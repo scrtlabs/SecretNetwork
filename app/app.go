@@ -1,7 +1,7 @@
 package app
 
 import (
-	bam "github.com/cosmos/cosmos-sdk/baseapp"
+	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
@@ -133,7 +133,7 @@ var _ simapp.App = (*SecretNetworkApp)(nil)
 
 // SecretNetworkApp extended ABCI application
 type SecretNetworkApp struct {
-	*bam.BaseApp
+	*baseapp.BaseApp
 	legacyAmino       *codec.LegacyAmino
 	appCodec          codec.Codec
 	interfaceRegistry types.InterfaceRegistry
@@ -197,7 +197,7 @@ func NewSecretNetworkApp(
 	bootstrap bool,
 	appOpts servertypes.AppOptions,
 	computeConfig *compute.WasmConfig,
-	baseAppOptions ...func(*bam.BaseApp),
+	baseAppOptions ...func(*baseapp.BaseApp),
 ) *SecretNetworkApp {
 
 	encodingConfig := MakeEncodingConfig()
@@ -205,7 +205,7 @@ func NewSecretNetworkApp(
 	interfaceRegistry := encodingConfig.InterfaceRegistry
 
 	// BaseApp handles interactions with Tendermint through the ABCI protocol
-	bApp := bam.NewBaseApp(appName, logger, db, encodingConfig.TxConfig.TxDecoder(), baseAppOptions...)
+	bApp := baseapp.NewBaseApp(appName, logger, db, encodingConfig.TxConfig.TxDecoder(), baseAppOptions...)
 	bApp.SetCommitMultiStoreTracer(traceStore)
 	bApp.SetVersion(version.Version)
 	bApp.SetInterfaceRegistry(interfaceRegistry)
@@ -238,7 +238,7 @@ func NewSecretNetworkApp(
 	app.paramsKeeper = initParamsKeeper(appCodec, legacyAmino, keys[paramstypes.StoreKey], tKeys[paramstypes.TStoreKey])
 
 	// set the BaseApp's parameter store
-	app.BaseApp.SetParamStore(app.paramsKeeper.Subspace(bam.Paramspace).WithKeyTable(paramskeeper.ConsensusParamsKeyTable()))
+	app.BaseApp.SetParamStore(app.paramsKeeper.Subspace(baseapp.Paramspace).WithKeyTable(paramskeeper.ConsensusParamsKeyTable()))
 
 	// add capability keeper and ScopeToModule for ibc module
 	app.capabilityKeeper = capabilitykeeper.NewKeeper(appCodec, keys[capabilitytypes.StoreKey], memKeys[capabilitytypes.MemStoreKey])
@@ -332,6 +332,8 @@ func NewSecretNetworkApp(
 		govRouter,
 	)
 
+	serviceRouter := baseapp.NewMsgServiceRouter()
+
 	app.computeKeeper = compute.NewKeeper(
 		appCodec,
 		*legacyAmino,
@@ -343,6 +345,7 @@ func NewSecretNetworkApp(
 		app.distrKeeper,
 		app.mintKeeper,
 		app.stakingKeeper,
+		serviceRouter,
 		computeRouter,
 		computeDir,
 		computeConfig,

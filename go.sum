@@ -264,6 +264,8 @@ github.com/enigmampc/btcutil v1.0.3-0.20200723161021-e2fb6adb2a25 h1:2vLKys4RBU4
 github.com/enigmampc/btcutil v1.0.3-0.20200723161021-e2fb6adb2a25/go.mod h1:hTr8+TLQmkUkgcuh3mcr5fjrT9c64ZzsBCdCEC6UppY=
 github.com/enigmampc/cosmos-sdk v0.0.0-20210801154842-cc218f2182fb h1:uJaOzPRDdH0zasvIkw2enOmlSMO5dLFpwUkBogq6d5o=
 github.com/enigmampc/cosmos-sdk v0.0.0-20210801154842-cc218f2182fb/go.mod h1:ctcrTEAhei9s8O3KSNvL0dxe+fVQGp07QyRb/7H9JYE=
+github.com/enigmampc/cosmos-sdk v0.0.0-20210801171644-dc0a78417f77 h1:OMpfCSu/VRS1VIF+W4WtkD3iuPGLsxtZ4hRIpfH7784=
+github.com/enigmampc/cosmos-sdk v0.0.0-20210801171644-dc0a78417f77/go.mod h1:ctcrTEAhei9s8O3KSNvL0dxe+fVQGp07QyRb/7H9JYE=
 github.com/enigmampc/cosmos-sdk v0.43.0-rc2.0.20210801125027-6a89c6afcd14 h1:FZB7KkF7keubJkCcg3lqdpSKhYIiGPmE6Q+krOg5QT8=
 github.com/enigmampc/cosmos-sdk v0.43.0-rc2.0.20210801125027-6a89c6afcd14/go.mod h1:ctcrTEAhei9s8O3KSNvL0dxe+fVQGp07QyRb/7H9JYE=
 github.com/envoyproxy/go-control-plane v0.6.9/go.mod h1:SBwIajubJHhxtWwsL9s8ss4safvEdbitLhGGK48rN6g=

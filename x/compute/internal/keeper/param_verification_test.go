@@ -44,14 +44,14 @@ func multisigTxCreator(
 	multisigAcc := keeper.accountKeeper.GetAccount(*ctx, multisigPubKey.Address().Bytes())
 	multiSignature := generateSignatures(t, privKeys, pubKeys, builder, actualSigners)
 	signature := sdksigning.SignatureV2{
-		PubKey: multisigPubKey,
+		PubKey:   multisigPubKey,
 		Sequence: multisigAcc.GetSequence(),
-		Data: multiSignature,
+		Data:     multiSignature,
 	}
 	err := builder.SetSignatures(signature)
 	require.NoError(t, err)
 
-	tx := builder.(authtx.ProtoTxProvider)
+	tx := builder.(protoTxProvider)
 	txbytes, err := tx.GetProtoTx().Marshal()
 	require.NoError(t, err)
 	*ctx = ctx.WithTxBytes(txbytes)
@@ -65,7 +65,7 @@ func multisigTxCreator(
 // sequence that gets returned is an increment of what we need.
 // This is why we use `acc.GetSequence() - 1`
 func getSignBytes(builder client.TxBuilder) []byte {
-	tx := builder.(authtx.ProtoTxProvider)
+	tx := builder.(protoTxProvider)
 	data, err := tx.GetProtoTx().Body.Marshal()
 	if err != nil {
 		panic(err)
@@ -84,7 +84,7 @@ func generateSignatures(
 	for i := 0; i < actualSigners; i++ {
 		signature, _ := privKeys[i].Sign(signBytes)
 		signatureData := sdksigning.SingleSignatureData{
-			SignMode: sdksigning.SignMode_SIGN_MODE_DIRECT,
+			SignMode:  sdksigning.SignMode_SIGN_MODE_DIRECT,
 			Signature: signature,
 		}
 
@@ -120,9 +120,14 @@ func generateMultisigAddrExisting(ctx sdk.Context, keeper Keeper, pubKeys []cryp
 	addr := multisigPubkey.Address().Bytes()
 	baseAcct := authtypes.NewBaseAccountWithAddress(addr)
 	coins := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	_ = keeper.bankKeeper.SetBalances(ctx, baseAcct.GetAddress(), coins)
 	_ = baseAcct.SetPubKey(multisigPubkey)
 	keeper.accountKeeper.SetAccount(ctx, baseAcct)
+
+	if err := keeper.bankKeeper.MintCoins(ctx, faucetAccountName, coins); err != nil {
+		panic(err)
+	}
+
+	_ = keeper.bankKeeper.SendCoinsFromModuleToAccount(ctx, faucetAccountName, addr, coins)
 
 	return multisigPubkey
 }
@@ -402,10 +407,10 @@ func TestMultiSigExecute(t *testing.T) {
 	nonce := execMsgBz[0:32]
 
 	sdkMsg := types.MsgExecuteContract{
-		Contract:           contractAddress,
-		Msg:                execMsgBz,
-		SentFunds:          sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
-		CallbackSig: 		nil,
+		Contract:    contractAddress,
+		Msg:         execMsgBz,
+		SentFunds:   sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
+		CallbackSig: nil,
 	}
 
 	multisigAddr := multisigTxCreator(t, &ctx, keeper, 5, 4, 4, &sdkMsg)
@@ -461,9 +466,9 @@ func TestMultiSigCallbacks(t *testing.T) {
 	nonce := execMsgBz[0:32]
 
 	sdkMsg := types.MsgExecuteContract{
-		Contract:          contractAddress,
-		Msg:               execMsgBz,
-		SentFunds:         sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
+		Contract:    contractAddress,
+		Msg:         execMsgBz,
+		SentFunds:   sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 		CallbackSig: nil,
 	}
 
@@ -540,7 +545,7 @@ func TestMultiSigInMultiSig(t *testing.T) {
 	// Sign by wallet A
 	walletASignature, _ := privKeyA.Sign(multimultiSignBytes)
 	walletASignatureData := sdksigning.SingleSignatureData{
-		SignMode: sdksigning.SignMode_SIGN_MODE_DIRECT,
+		SignMode:  sdksigning.SignMode_SIGN_MODE_DIRECT,
 		Signature: walletASignature,
 	}
 
@@ -553,14 +558,14 @@ func TestMultiSigInMultiSig(t *testing.T) {
 
 	multimultisigAcc := keeper.accountKeeper.GetAccount(ctx, multimultisigPubkey.Address().Bytes())
 	signature := sdksigning.SignatureV2{
-		PubKey: multimultisigPubkey,
+		PubKey:   multimultisigPubkey,
 		Sequence: multimultisigAcc.GetSequence(),
-		Data: multimultiSig,
+		Data:     multimultiSig,
 	}
 	err = builder.SetSignatures(signature)
 	require.NoError(t, err)
 
-	tx := builder.(authtx.ProtoTxProvider)
+	tx := builder.(protoTxProvider)
 	txBytes, err := tx.GetProtoTx().Marshal()
 	require.NoError(t, err)
 
@@ -638,7 +643,7 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 	// Sign by wallet A
 	walletASignature, _ := privKeyA.Sign(multimultiSignBytes)
 	walletASignatureData := sdksigning.SingleSignatureData{
-		SignMode: sdksigning.SignMode_SIGN_MODE_DIRECT,
+		SignMode:  sdksigning.SignMode_SIGN_MODE_DIRECT,
 		Signature: walletASignature,
 	}
 
@@ -651,14 +656,14 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 
 	multimultisigAcc := keeper.accountKeeper.GetAccount(ctx, multimultisigPubkey.Address().Bytes())
 	signature := sdksigning.SignatureV2{
-		PubKey: multimultisigPubkey,
+		PubKey:   multimultisigPubkey,
 		Sequence: multimultisigAcc.GetSequence(),
-		Data: multimultiSig,
+		Data:     multimultiSig,
 	}
 	err = builder.SetSignatures(signature)
 	require.NoError(t, err)
 
-	tx := builder.(authtx.ProtoTxProvider)
+	tx := builder.(protoTxProvider)
 	txBytes, err := tx.GetProtoTx().Marshal()
 	require.NoError(t, err)
 
@@ -699,8 +704,15 @@ func TestInvalidKeyType(t *testing.T) {
 	edPub := edKey.PubKey()
 	edAddr := sdk.AccAddress(edPub.Address())
 	baseAcct := authtypes.NewBaseAccountWithAddress(edAddr)
-	_ = keeper.bankKeeper.SetBalances(ctx, baseAcct.GetAddress(), sdk.NewCoins(sdk.NewInt64Coin("denom", 100000)))
+	coins := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	_ = baseAcct.SetPubKey(edPub)
+
+	if err := keeper.bankKeeper.MintCoins(ctx, faucetAccountName, sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))); err != nil {
+		panic(err)
+	}
+
+	_ = keeper.bankKeeper.SendCoinsFromModuleToAccount(ctx, faucetAccountName, edAddr, coins)
+
 	keeper.accountKeeper.SetAccount(ctx, baseAcct)
 
 	initMsg := `{"nop":{}}`
@@ -736,8 +748,15 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 	edPub := edKey.PubKey()
 	edAddr := sdk.AccAddress(edPub.Address())
 	baseAcct := authtypes.NewBaseAccountWithAddress(edAddr)
-	_ = keeper.bankKeeper.SetBalances(ctx, baseAcct.GetAddress(), sdk.NewCoins(sdk.NewInt64Coin("denom", 100000)))
+	coins := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	_ = baseAcct.SetPubKey(edPub)
+
+	if err := keeper.bankKeeper.MintCoins(ctx, faucetAccountName, coins); err != nil {
+		panic(err)
+	}
+
+	_ = keeper.bankKeeper.SendCoinsFromModuleToAccount(ctx, faucetAccountName, edAddr, coins)
+
 	keeper.accountKeeper.SetAccount(ctx, baseAcct)
 
 	multisigPubkey := generateMultisigAddrExisting(ctx, keeper, []crypto.PubKey{edPub, privKeyA.PubKey(), privKeyB.PubKey()}, 2)
@@ -778,14 +797,14 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 
 	multisigAcc := keeper.accountKeeper.GetAccount(ctx, multisigPubkey.Address().Bytes())
 	signature := sdksigning.SignatureV2{
-		PubKey: multisigPubkey,
+		PubKey:   multisigPubkey,
 		Sequence: multisigAcc.GetSequence(),
-		Data: multiSignature,
+		Data:     multiSignature,
 	}
 	err = builder.SetSignatures(signature)
 	require.NoError(t, err)
 
-	tx := builder.(authtx.ProtoTxProvider)
+	tx := builder.(protoTxProvider)
 	txBytes, err := tx.GetProtoTx().Marshal()
 	require.NoError(t, err)
 	ctx = ctx.WithTxBytes(txBytes)

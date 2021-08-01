@@ -40,7 +40,7 @@ func TestMintQuerier(t *testing.T) {
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("stake", 5_000_000_000))
 	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 
-	delTokens := sdk.TokensFromConsensusPower(1000)
+	delTokens := sdk.TokensFromConsensusPower(1000, sdk.NewInt(1))
 	msg2 := stakingtypes.NewMsgDelegate(creator, valAddr,
 		sdk.NewCoin(sdk.DefaultBondDenom, delTokens))
 

@@ -163,6 +163,7 @@ type initInfo struct {
 	accKeeper     authkeeper.AccountKeeper
 	stakingKeeper stakingkeeper.Keeper
 	distKeeper    distributionkeeper.Keeper
+	bankKeeper    bankkeeper.Keeper
 	wasmKeeper    Keeper
 
 	cleanup func()
@@ -225,6 +226,7 @@ func initializeStaking(t *testing.T) initInfo {
 		stakingKeeper: stakingKeeper,
 		wasmKeeper:    keeper,
 		distKeeper:    keepers.DistKeeper,
+		bankKeeper:    keeper.bankKeeper,
 		cleanup:       func() {},
 	}
 }
@@ -359,7 +361,7 @@ func TestReinvest(t *testing.T) {
 	ctx, valAddr, contractAddr := initInfo.ctx, initInfo.valAddr, initInfo.contractAddr
 	keeper, stakingKeeper, accKeeper := initInfo.wasmKeeper, initInfo.stakingKeeper, initInfo.accKeeper
 	distKeeper := initInfo.distKeeper
-
+	bankKeeper := initInfo.bankKeeper
 	// initial checks of bonding state
 	val, found := stakingKeeper.GetValidator(ctx, valAddr)
 	require.True(t, found)
@@ -387,7 +389,7 @@ func TestReinvest(t *testing.T) {
 	// update height a bit to solidify the delegation
 	ctx = nextBlock(ctx, stakingKeeper)
 	// we get 1/6, our share should be 40k minus 10% commission = 36k
-	setValidatorRewards(ctx, stakingKeeper, distKeeper, valAddr, "240000")
+	setValidatorRewards(ctx, bankKeeper, stakingKeeper, distKeeper, valAddr, sdk.NewInt64Coin("stake", 240000))
 
 	// this should withdraw our outstanding 40k of rewards and reinvest them in the same delegation
 	reinvest := StakingHandleMsg{
@@ -470,15 +472,22 @@ func nextBlock(ctx sdk.Context, stakingKeeper stakingkeeper.Keeper) sdk.Context 
 	return ctx
 }
 
-func setValidatorRewards(ctx sdk.Context, stakingKeeper stakingkeeper.Keeper, distKeeper distributionkeeper.Keeper, valAddr sdk.ValAddress, reward string) {
+func setValidatorRewards(ctx sdk.Context, bankKeeper bankkeeper.Keeper, stakingKeeper stakingkeeper.Keeper, distKeeper distributionkeeper.Keeper, valAddr sdk.ValAddress, rewards ...sdk.Coin) {
 	// allocate some rewards
-	vali := stakingKeeper.Validator(ctx, valAddr)
-	amount, err := sdk.NewDecFromStr(reward)
+	validator := stakingKeeper.Validator(ctx, valAddr)
+	payout := sdk.NewDecCoinsFromCoins(rewards...)
+	distKeeper.AllocateTokensToValidator(ctx, validator, payout)
+
+	// allocate rewards to validator by minting tokens to distr module balance
+	err := bankKeeper.MintCoins(ctx, faucetAccountName, rewards)
 	if err != nil {
 		panic(err)
 	}
-	payout := sdk.DecCoins{{Denom: "stake", Amount: amount}}
-	distKeeper.AllocateTokensToValidator(ctx, vali, payout)
+
+	err = bankKeeper.SendCoinsFromModuleToModule(ctx, faucetAccountName, distributiontypes.ModuleName, rewards)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func assertBalance(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.AccAddress, addr sdk.AccAddress, expected string) {

@@ -35,7 +35,7 @@ func initAppConfig() (string, interface{}) {
 
 	secretAppConfig := SecretAppConfig{
 		Config:     *srvCfg,
-		WASMConfig: compute.DefaultWasmConfig(),
+		WASMConfig: *compute.DefaultWasmConfig(),
 	}
 
 	secretAppTemplate := serverconfig.DefaultConfigTemplate + compute.DefaultConfigTemplate

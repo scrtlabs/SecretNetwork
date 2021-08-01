@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	"path/filepath"
 
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
@@ -64,14 +65,21 @@ type Keeper struct {
 	messenger    MessageHandler
 	// queryGasLimit is the max wasm gas that can be spent on executing a query with a contract
 	queryGasLimit uint64
+	serviceRouter MsgServiceRouter
 	// authZPolicy   AuthorizationPolicy
 	//paramSpace    subspace.Subspace
+}
+
+// MsgServiceRouter expected MsgServiceRouter interface
+type MsgServiceRouter interface {
+	Handler(msg sdk.Msg) baseapp.MsgServiceHandler
 }
 
 // NewKeeper creates a new contract Keeper instance
 // If customEncoders is non-nil, we can use this to override some of the message handler, especially custom
 func NewKeeper(cdc codec.BinaryCodec, legacyAmino codec.LegacyAmino, storeKey sdk.StoreKey, accountKeeper authkeeper.AccountKeeper,
 	bankKeeper bankkeeper.Keeper, govKeeper govkeeper.Keeper, distKeeper distrkeeper.Keeper, mintKeeper mintkeeper.Keeper, stakingKeeper stakingkeeper.Keeper,
+	//serviceRouter MsgServiceRouter,
 	router sdk.Router, homeDir string, wasmConfig *types.WasmConfig, supportedFeatures string, customEncoders *MessageEncoders, customPlugins *QueryPlugins) Keeper {
 	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize)
 	if err != nil {
@@ -94,6 +102,7 @@ func NewKeeper(cdc codec.BinaryCodec, legacyAmino codec.LegacyAmino, storeKey sd
 		bankKeeper:    bankKeeper,
 		messenger:     NewMessageHandler(router, customEncoders),
 		queryGasLimit: wasmConfig.SmartQueryGasLimit,
+		//serviceRouter: serviceRouter,
 		// authZPolicy:   DefaultAuthorizationPolicy{},
 		//paramSpace:    paramSpace,
 	}
@@ -715,7 +724,12 @@ func (k Keeper) GetByteCode(ctx sdk.Context, codeID uint64) ([]byte, error) {
 
 func (k Keeper) dispatchMessages(ctx sdk.Context, contractAddr sdk.AccAddress, msgs []wasmTypes.CosmosMsg) error {
 	for _, msg := range msgs {
-		if err := k.messenger.Dispatch(ctx, contractAddr, msg); err != nil {
+
+		//var events sdk.Events
+		//var data []byte
+		var err error
+
+		if _, _, err = k.Dispatch(ctx, contractAddr, msg); err != nil {
 			return err
 		}
 	}
