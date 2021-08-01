@@ -238,7 +238,7 @@ func NewSecretNetworkApp(
 	app.paramsKeeper = initParamsKeeper(appCodec, legacyAmino, keys[paramstypes.StoreKey], tKeys[paramstypes.TStoreKey])
 
 	// set the BaseApp's parameter store
-	bApp.SetParamStore(app.paramsKeeper.Subspace(bam.Paramspace).WithKeyTable(paramskeeper.ConsensusParamsKeyTable()))
+	app.BaseApp.SetParamStore(app.paramsKeeper.Subspace(bam.Paramspace).WithKeyTable(paramskeeper.ConsensusParamsKeyTable()))
 
 	// add capability keeper and ScopeToModule for ibc module
 	app.capabilityKeeper = capabilitykeeper.NewKeeper(appCodec, keys[capabilitytypes.StoreKey], memKeys[capabilitytypes.MemStoreKey])
@@ -284,8 +284,8 @@ func NewSecretNetworkApp(
 	app.evidenceKeeper = *evidenceKeeper
 
 	// Just re-use the full router - do we want to limit this more?
-	computeRouter := bApp.Router()
-	regRouter := bApp.Router()
+	computeRouter := app.Router()
+	regRouter := app.Router()
 
 	computeDir := filepath.Join(homePath, ".compute")
 
@@ -307,25 +307,6 @@ func NewSecretNetworkApp(
 	// Replace with bootstrap flag when we figure out how to test properly and everything works
 	app.regKeeper = reg.NewKeeper(appCodec, keys[reg.StoreKey], regRouter, reg.EnclaveApi{}, homePath, app.bootstrap)
 
-	app.computeKeeper = compute.NewKeeper(
-		appCodec,
-		*legacyAmino,
-		keys[compute.StoreKey],
-		//app.getSubspace(compute.ModuleName),
-		app.accountKeeper,
-		app.bankKeeper,
-		app.govKeeper,
-		app.distrKeeper,
-		app.mintKeeper,
-		app.stakingKeeper,
-		computeRouter,
-		computeDir,
-		computeConfig,
-		supportedFeatures,
-		nil,
-		nil,
-	)
-
 	// Register the staking hooks
 	// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks
 	app.stakingKeeper = *stakingKeeper.SetHooks(
@@ -344,11 +325,30 @@ func NewSecretNetworkApp(
 	app.govKeeper = govkeeper.NewKeeper(
 		appCodec,
 		keys[govtypes.StoreKey],
-		app.getSubspace(govtypes.ModuleName),
+		app.getSubspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable()),
 		app.accountKeeper,
 		app.bankKeeper,
 		&stakingKeeper,
 		govRouter,
+	)
+
+	app.computeKeeper = compute.NewKeeper(
+		appCodec,
+		*legacyAmino,
+		keys[compute.StoreKey],
+		//app.getSubspace(compute.ModuleName),
+		app.accountKeeper,
+		app.bankKeeper,
+		app.govKeeper,
+		app.distrKeeper,
+		app.mintKeeper,
+		app.stakingKeeper,
+		computeRouter,
+		computeDir,
+		computeConfig,
+		supportedFeatures,
+		nil,
+		nil,
 	)
 
 	// NOTE: we may consider parsing `appOpts` inside module constructors. For the moment

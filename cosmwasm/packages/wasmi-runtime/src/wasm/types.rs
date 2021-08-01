@@ -98,7 +98,8 @@ impl SecretMessage {
 
         debug!(
             "SecretMessage::from_slice nonce = {:?} pubkey = {:?}",
-            nonce, user_pubkey
+            nonce,
+            hex::encode(user_pubkey)
         );
 
         Ok(SecretMessage {
@@ -289,6 +290,11 @@ impl TxBody {
     }
 }
 
+// We do not collect the senders listed in the protobuf messages into this type
+// because they're duplicates of the message sender that we derive from the
+// cosmos-sdk level message signer/sender. If the message was signed by
+// account A, but included account B in the cosmwasm message, then we ignore
+// that lie and tell the contract that the message was sent by account A anyway.
 #[derive(Debug)]
 pub enum CosmWasmMsg {
     Execute {
@@ -327,6 +333,12 @@ impl CosmWasmMsg {
         let raw_msg = MsgInstantiateContract::parse_from_bytes(bytes)
             .map_err(|_| EnclaveError::FailedToDeserialize)?;
 
+        trace!(
+            "try_parse_instantiate sender: len={} val={:?}",
+            raw_msg.sender.len(),
+            raw_msg.sender
+        );
+
         let init_funds = Self::parse_funds(raw_msg.init_funds)?;
 
         let callback_sig = raw_msg._callback_sig.map(|cs| match cs {
@@ -347,14 +359,26 @@ impl CosmWasmMsg {
         let raw_msg = MsgExecuteContract::parse_from_bytes(bytes)
             .map_err(|_| EnclaveError::FailedToDeserialize)?;
 
-        let contract = String::from_utf8(raw_msg.contract).map_err(|err| {
-            warn!(
-                "Contract address to execute was not a valid string: {}",
-                Binary(err.into_bytes()),
-            );
-            EnclaveError::FailedToDeserialize
-        })?;
-        let contract = HumanAddr(contract);
+        trace!(
+            "try_parse_execute sender: len={} val={:?}",
+            raw_msg.sender.len(),
+            raw_msg.sender
+        );
+        trace!(
+            "try_parse_execute contract: len={} val={:?}",
+            raw_msg.contract.len(),
+            raw_msg.contract
+        );
+
+        // humanize address
+        let contract = HumanAddr::from_canonical(&CanonicalAddr(Binary(raw_msg.contract)))
+            .map_err(|err| {
+                warn!(
+                    "Contract address to execute was not a valid string: {}",
+                    err,
+                );
+                EnclaveError::FailedToDeserialize
+            })?;
 
         let sent_funds = Self::parse_funds(raw_msg.sent_funds)?;
 

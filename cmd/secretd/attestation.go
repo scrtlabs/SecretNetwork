@@ -1,3 +1,5 @@
+// +build !secretcli
+
 package main
 
 import (

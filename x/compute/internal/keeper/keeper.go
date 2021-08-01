@@ -318,7 +318,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin *
 	instance := types.NewContractInfo(codeID, creator /* admin, */, label, createdAt)
 	store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshal(&instance))
 
-	fmt.Printf("Storing key: %s for account %s\n", key, contractAddress)
+	fmt.Printf("Storing key: %v for account %s\n", key, contractAddress)
 
 	store.Set(types.GetContractEnclaveKey(contractAddress), key)
 

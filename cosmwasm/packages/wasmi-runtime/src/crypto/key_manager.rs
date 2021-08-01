@@ -164,7 +164,7 @@ impl Keychain {
         let consensus_seed_exchange_keypair = KeyPair::from(consensus_seed_exchange_keypair_bytes);
         trace!(
             "consensus_seed_exchange_keypair: {:?}",
-            consensus_seed_exchange_keypair.get_pubkey()
+            hex::encode(consensus_seed_exchange_keypair.get_pubkey())
         );
         self.set_consensus_seed_exchange_keypair(consensus_seed_exchange_keypair);
 
@@ -177,7 +177,7 @@ impl Keychain {
         let consensus_io_exchange_keypair = KeyPair::from(consensus_io_exchange_keypair_bytes);
         trace!(
             "consensus_io_exchange_keypair: {:?}",
-            consensus_io_exchange_keypair.get_pubkey()
+            hex::encode(consensus_io_exchange_keypair.get_pubkey())
         );
         self.set_consensus_io_exchange_keypair(consensus_io_exchange_keypair);
 
@@ -188,7 +188,10 @@ impl Keychain {
             .unwrap()
             .derive_key_from_this(&CONSENSUS_STATE_IKM_DERIVE_ORDER.to_be_bytes());
 
-        trace!("consensus_state_ikm: {:?}", consensus_state_ikm.get());
+        trace!(
+            "consensus_state_ikm: {:?}",
+            hex::encode(consensus_state_ikm.get())
+        );
         self.set_consensus_state_ikm(consensus_state_ikm);
 
         let consensus_callback_secret = self
@@ -196,7 +199,10 @@ impl Keychain {
             .unwrap()
             .derive_key_from_this(&CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER.to_be_bytes());
 
-        trace!("consensus_state_ikm: {:?}", consensus_state_ikm.get());
+        trace!(
+            "consensus_state_ikm: {:?}",
+            hex::encode(consensus_state_ikm.get())
+        );
         self.set_consensus_callback_secret(consensus_callback_secret);
 
         Ok(())

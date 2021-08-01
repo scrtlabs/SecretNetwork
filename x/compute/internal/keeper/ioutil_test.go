@@ -9,8 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"github.com/stretchr/testify/require"
+
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 func TestUncompress(t *testing.T) {
