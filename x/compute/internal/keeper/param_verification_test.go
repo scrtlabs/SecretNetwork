@@ -146,6 +146,7 @@ func prepareInitSignedTxMultipleMsgs(
 }
 
 func TestMultipleSigners(t *testing.T) {
+	//
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, walletB, privKeyB := setupTest(t, "./testdata/test-contract/contract.wasm")
 
 	initMsg := `{"nop":{}}`
