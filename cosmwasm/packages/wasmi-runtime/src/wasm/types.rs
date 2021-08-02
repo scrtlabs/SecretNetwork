@@ -219,6 +219,7 @@ impl PubKey for CosmosPubKey {
     }
 }
 
+// This is called `VerificationInfo` on the Go side
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SigInfo {
     pub sign_bytes: Binary,
@@ -298,12 +299,14 @@ impl TxBody {
 #[derive(Debug)]
 pub enum CosmWasmMsg {
     Execute {
+        sender: CanonicalAddr,
         contract: HumanAddr,
         msg: Vec<u8>,
         sent_funds: Vec<Coin>,
         callback_sig: Option<Vec<u8>>,
     },
     Instantiate {
+        sender: CanonicalAddr,
         init_msg: Vec<u8>,
         init_funds: Vec<Coin>,
         label: String,
@@ -346,6 +349,7 @@ impl CosmWasmMsg {
         });
 
         Ok(CosmWasmMsg::Instantiate {
+            sender: CanonicalAddr(Binary(raw_msg.sender)),
             init_msg: raw_msg.init_msg,
             init_funds,
             label: raw_msg.label,
@@ -387,6 +391,7 @@ impl CosmWasmMsg {
         });
 
         Ok(CosmWasmMsg::Execute {
+            sender: CanonicalAddr(Binary(raw_msg.sender)),
             contract,
             msg: raw_msg.msg,
             sent_funds,
@@ -414,6 +419,15 @@ impl CosmWasmMsg {
         }
 
         Ok(init_funds)
+    }
+
+    pub fn sender(&self) -> Option<&CanonicalAddr> {
+        match self {
+            CosmWasmMsg::Execute { sender, .. } | CosmWasmMsg::Instantiate { sender, .. } => {
+                Some(sender)
+            }
+            CosmWasmMsg::Other => None,
+        }
     }
 }
 
@@ -448,8 +462,11 @@ impl AuthInfo {
         })
     }
 
-    pub fn sender_public_key(&self) -> &CosmosPubKey {
-        &self.signer_infos[0].public_key
+    pub fn sender_public_key(&self, sender: &CanonicalAddr) -> Option<&CosmosPubKey> {
+        self.signer_infos
+            .iter()
+            .find(|signer_info| &signer_info.public_key.get_address() == sender)
+            .map(|si| &si.public_key)
     }
 }
 

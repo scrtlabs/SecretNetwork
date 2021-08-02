@@ -17,7 +17,7 @@ all:
 	wat2wasm /tmp/static-too-high-initial-memory.wat -o ./static-too-high-initial-memory.wasm
 
 setup:
-    apt-get install wabt
+	apt-get install wabt
 
 clean:
 	cargo clean

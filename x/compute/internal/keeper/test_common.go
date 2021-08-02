@@ -447,11 +447,9 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 		panic(err)
 	}
 
+	// This code is based on `cosmos-sdk/client/tx/tx.go::Sign()`
 	var sigs []sdksigning.SignatureV2
-	for i, creatorAcc := range creatorAccs {
-		privKey := privKeys[i]
-
-		// This code is based on `cosmos-sdk/client/tx/tx.go::Sign()`
+	for _, creatorAcc := range creatorAccs {
 		sig := sdksigning.SignatureV2{
 			PubKey: creatorAcc.GetPubKey(),
 			Data: &sdksigning.SingleSignatureData{
@@ -460,11 +458,16 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 			},
 			Sequence: creatorAcc.GetSequence(),
 		}
-		err := builder.SetSignatures(sig)
-		if err != nil {
-			panic(err)
-		}
+		sigs = append(sigs, sig)
+	}
+	err = builder.SetSignatures(sigs...)
+	if err != nil {
+		panic(err)
+	}
 
+	sigs = []sdksigning.SignatureV2{}
+	for i, creatorAcc := range creatorAccs {
+		privKey := privKeys[i]
 		signerData := authsigning.SignerData{
 			ChainID:       "",
 			AccountNumber: creatorAcc.GetAccountNumber(),
@@ -476,7 +479,7 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 		if err != nil {
 			panic(err)
 		}
-		sig = sdksigning.SignatureV2{
+		sig := sdksigning.SignatureV2{
 			PubKey: creatorAcc.GetPubKey(),
 			Data: &sdksigning.SingleSignatureData{
 				SignMode:  sdksigning.SignMode_SIGN_MODE_DIRECT,

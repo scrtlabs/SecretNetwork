@@ -957,7 +957,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	require.NoError(t, err)
 
 	executeMsg := types.MsgExecuteContract{
-		Sender:    creator,
+		Sender:    fred,
 		Contract:  addr,
 		Msg:       msgBz,
 		SentFunds: nil,

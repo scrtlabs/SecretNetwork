@@ -5,9 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	"path/filepath"
-
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -16,6 +13,7 @@ import (
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
+	"path/filepath"
 
 	"github.com/tendermint/tendermint/crypto"
 
@@ -222,9 +220,23 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, [
 		return nil, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to recreate sign bytes for the tx: %s", err.Error()))
 	}
 
+	pkIndex := -1
+	pubKeys := protobufTx.GetPubKeys()
+	_signers := [][]byte{} // This is just used for the error message below
+	for index, pubKey := range pubKeys {
+		thisSigner := pubKey.Address().Bytes()
+		_signers = append(_signers, thisSigner)
+		if bytes.Equal(thisSigner, signer.Bytes()) {
+			pkIndex = index
+		}
+	}
+	if pkIndex == -1 {
+		return nil, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", signer, _signers))
+	}
+
 	// The first signature is the signature of the message sender,
 	// according to the docstring of `tx.AuthInfo.SignerInfos`
-	return tx.Signatures[0], signBytes, nil
+	return tx.Signatures[pkIndex], signBytes, nil
 }
 
 // Instantiate creates an instance of a WASM contract
