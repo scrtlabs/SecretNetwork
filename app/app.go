@@ -345,7 +345,7 @@ func NewSecretNetworkApp(
 		app.distrKeeper,
 		app.mintKeeper,
 		app.stakingKeeper,
-		serviceRouter,
+		//serviceRouter,
 		computeRouter,
 		computeDir,
 		computeConfig,
