@@ -22,8 +22,8 @@ const (
 	MaxBuildTagSize               = types.MaxBuildTagSize
 	CustomEventType               = types.CustomEventType
 	AttributeKeyContractAddr      = types.AttributeKeyContractAddr
-	GasMultiplier                 = keeper.GasMultiplier
-	MaxGas                        = keeper.MaxGas
+	GasMultiplier                 = types.GasMultiplier
+	MaxGas                        = types.MaxGas
 	QueryListContractByCode       = keeper.QueryListContractByCode
 	QueryGetContract              = keeper.QueryGetContract
 	QueryGetContractState         = keeper.QueryGetContractState

@@ -3,11 +3,12 @@ package keeper
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 var (
-	CostHumanize  = 5 * GasMultiplier
-	CostCanonical = 4 * GasMultiplier
+	CostHumanize  = 5 * types.GasMultiplier
+	CostCanonical = 4 * types.GasMultiplier
 )
 
 func humanAddress(canon []byte) (string, uint64, error) {

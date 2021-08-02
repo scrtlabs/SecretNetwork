@@ -151,7 +151,7 @@ func extractInnerError(t *testing.T, err error, nonce []byte, isEncrypted bool) 
 	return innerErr
 }
 
-const defaultGasForTests uint64 = 200_000
+const defaultGasForTests uint64 = 100_000
 
 // wrap the defualt gas meter with a counter of wasm calls
 // in order to verify that every wasm call consumes gas

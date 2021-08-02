@@ -32,26 +32,6 @@ import (
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
-// GasMultiplier is how many cosmwasm gas points = 1 sdk gas point
-// SDK reference costs can be found here: https://github.com/cosmos/cosmos-sdk/blob/02c6c9fafd58da88550ab4d7d494724a477c8a68/store/types/gas.go#L153-L164
-// A write at ~3000 gas and ~200us = 10 gas per us (microsecond) cpu/io
-// Rough timing have 88k gas at 90us, which is equal to 1k sdk gas... (one read)
-//
-// Please not that all gas prices returned to the wasmer engine should have this multiplied
-const GasMultiplier uint64 = 100
-
-// MaxGas for a contract is 10 billion wasmer gas (enforced in rust to prevent overflow)
-// The limit for v0.9.3 is defined here: https://github.com/CosmWasm/cosmwasm/blob/v0.9.3/packages/vm/src/backends/singlepass.rs#L15-L23
-// (this will be increased in future releases)
-const MaxGas = 10_000_000_000
-
-// InstanceCost is how much SDK gas we charge each time we load a WASM instance.
-// Creating a new instance is costly, and this helps put a recursion limit to contracts calling contracts.
-const InstanceCost uint64 = 40_000
-
-// CompileCost is how much SDK gas we charge *per byte* for compiling WASM code.
-const CompileCost uint64 = 2
-
 // Keeper will have a reference to Wasmer with it's own data directory.
 type Keeper struct {
 	storeKey      sdk.StoreKey
@@ -150,7 +130,7 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	if err != nil {
 		return 0, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
 	}
-	ctx.GasMeter().ConsumeGas(CompileCost*uint64(len(wasmCode)), "Compiling WASM Bytecode")
+	ctx.GasMeter().ConsumeGas(types.CompileCost*uint64(len(wasmCode)), "Compiling WASM Bytecode")
 
 	codeHash, err := k.wasmer.Create(wasmCode)
 	if err != nil {
@@ -253,7 +233,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin *
 
 		func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator , admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) {
 	*/
-	ctx.GasMeter().ConsumeGas(InstanceCost, "Loading CosmWasm module: init")
+	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: init")
 
 	signerSig := []byte{}
 	signBytes := []byte{}
@@ -362,7 +342,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin *
 
 // Execute executes the contract instance
 func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, callbackSig []byte) (*sdk.Result, error) {
-	ctx.GasMeter().ConsumeGas(InstanceCost, "Loading Compute module: execute")
+	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading Compute module: execute")
 
 	signerSig := []byte{}
 	signBytes := []byte{}
@@ -554,7 +534,7 @@ func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []b
 	if useDefaultGasLimit {
 		ctx = ctx.WithGasMeter(sdk.NewGasMeter(k.queryGasLimit))
 	}
-	ctx.GasMeter().ConsumeGas(InstanceCost, "Loading CosmWasm module: query")
+	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: query")
 
 	codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddr)
 	if err != nil {
@@ -756,15 +736,15 @@ func (k Keeper) dispatchMessages(ctx sdk.Context, contractAddr sdk.AccAddress, m
 
 func gasForContract(ctx sdk.Context) uint64 {
 	meter := ctx.GasMeter()
-	remaining := (meter.Limit() - meter.GasConsumed()) * GasMultiplier
-	if remaining > MaxGas {
-		return MaxGas
+	remaining := (meter.Limit() - meter.GasConsumed()) * types.GasMultiplier
+	if remaining > types.MaxGas {
+		return types.MaxGas
 	}
 	return remaining
 }
 
 func consumeGas(ctx sdk.Context, gas uint64) {
-	consumed := (gas / GasMultiplier) + 1
+	consumed := (gas / types.GasMultiplier) + 1
 	ctx.GasMeter().ConsumeGas(consumed, "wasm contract")
 	// throw OutOfGas error if we ran out (got exactly to zero due to better limit enforcing)
 	if ctx.GasMeter().IsOutOfGas() {
@@ -858,7 +838,7 @@ type MultipiedGasMeter struct {
 var _ wasm.GasMeter = MultipiedGasMeter{}
 
 func (m MultipiedGasMeter) GasConsumed() sdk.Gas {
-	return m.originalMeter.GasConsumed() * GasMultiplier
+	return m.originalMeter.GasConsumed() * types.GasMultiplier
 }
 
 func gasMeter(ctx sdk.Context) MultipiedGasMeter {

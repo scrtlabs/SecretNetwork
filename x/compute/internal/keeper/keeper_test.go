@@ -346,7 +346,7 @@ func TestInstantiate(t *testing.T) {
 	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", contractAddr.String())
 
 	gasAfter := ctx.GasMeter().GasConsumed()
-	require.Greater(t, gasAfter-gasBefore, uint64(20000))
+	require.Greater(t, gasAfter-gasBefore, uint64(10000))
 	require.Less(t, gasAfter-gasBefore, uint64(90000))
 
 	// ensure it is stored properly
@@ -631,7 +631,7 @@ func TestExecute(t *testing.T) {
 
 	// make sure gas is properly deducted from ctx
 	gasAfter := ctx.GasMeter().GasConsumed()
-	require.Greater(t, gasAfter-gasBefore, uint64(25000))
+	require.Greater(t, gasAfter-gasBefore, uint64(10000))
 	require.Less(t, gasAfter-gasBefore, uint64(90000))
 
 	// ensure bob now exists and got both payments released

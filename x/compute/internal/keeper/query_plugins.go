@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/json"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -29,7 +30,7 @@ var _ wasmTypes.Querier = QueryHandler{}
 
 func (q QueryHandler) Query(request wasmTypes.QueryRequest, gasLimit uint64) ([]byte, error) {
 	// set a limit for a subctx
-	sdkGas := gasLimit / GasMultiplier
+	sdkGas := gasLimit / types.GasMultiplier
 	subctx := q.Ctx.WithGasMeter(sdk.NewGasMeter(sdkGas))
 
 	// make sure we charge the higher level context even on panic
