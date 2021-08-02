@@ -12,11 +12,12 @@ then
 
   # export SECRET_NETWORK_CHAIN_ID=secretdev-1
   # export SECRET_NETWORK_KEYRING_BACKEND=test
-  secretd init banana # --chain-id secretdev-1
+  secretd init banana --chain-id secretdev-1
 
   cp ~/node_key.json ~/.secretd/config/node_key.json
   cp ~/config/app.toml ~/.secretd/config/app.toml
   perl -i -pe 's/"stake"/ "uscrt"/g' ~/.secretd/config/genesis.json
+
   secretd keys add a
   secretd keys add b
   secretd keys add c
