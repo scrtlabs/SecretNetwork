@@ -364,7 +364,7 @@ fn verify_message_params(
     }
     let msg = msg.unwrap();
 
-    if msg.sender() != Some(signer_addr) {
+    if msg.sender() != Some(&signer_addr) {
         warn!(
             "message signer did not match cosmwasm message sender: {:?} {:?}",
             signer_addr, msg
