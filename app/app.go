@@ -332,7 +332,7 @@ func NewSecretNetworkApp(
 		govRouter,
 	)
 
-	serviceRouter := baseapp.NewMsgServiceRouter()
+	// serviceRouter := baseapp.NewMsgServiceRouter()
 
 	app.computeKeeper = compute.NewKeeper(
 		appCodec,

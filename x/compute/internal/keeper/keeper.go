@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+
+	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -197,14 +199,14 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, [
 	tx := sdktx.Tx{}
 	err := k.cdc.Unmarshal(ctx.TxBytes(), &tx)
 	if err != nil {
-		return nil, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+		return nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
 	}
 
 	// for MsgInstantiateContract, there is only one signer which is msg.Sender
 	// (https://github.com/enigmampc/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L192-L194)
 	signerAcc, err := ante.GetSignerAcc(ctx, k.accountKeeper, signer)
 	if err != nil {
-		return nil, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
+		return nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
 	}
 
 	txConfig := authtx.NewTxConfig(k.cdc.(*codec.ProtoCodec), []sdktxsigning.SignMode{sdktxsigning.SignMode_SIGN_MODE_DIRECT})
@@ -217,12 +219,16 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, [
 	protobufTx := authtx.WrapTx(&tx).GetTx()
 	signBytes, err := modeHandler.GetSignBytes(sdktxsigning.SignMode_SIGN_MODE_DIRECT, signingData, protobufTx)
 	if err != nil {
-		return nil, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to recreate sign bytes for the tx: %s", err.Error()))
+		return nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to recreate sign bytes for the tx: %s", err.Error()))
 	}
 
 	pkIndex := -1
-	pubKeys := protobufTx.GetPubKeys()
-	_signers := [][]byte{} // This is just used for the error message below
+	pubKeys, err := protobufTx.GetPubKeys()
+	if err != nil {
+		return nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to get public keys for instantiate: %s", err.Error()))
+	}
+
+	var _signers [][]byte // This is just used for the error message below
 	for index, pubKey := range pubKeys {
 		thisSigner := pubKey.Address().Bytes()
 		_signers = append(_signers, thisSigner)
@@ -231,7 +237,7 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, [
 		}
 	}
 	if pkIndex == -1 {
-		return nil, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", signer, _signers))
+		return nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", signer, _signers))
 	}
 
 	// The first signature is the signature of the message sender,
