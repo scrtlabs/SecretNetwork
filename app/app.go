@@ -91,27 +91,6 @@ var (
 	// DefaultNodeHome sets the folder where the applcation data and configuration will be stored
 	DefaultNodeHome = filepath.Join(homeDir, ".secretd")
 
-	// ModuleBasics The module BasicManager is in charge of setting up basic,
-	// non-dependant module elements, such as codec registration
-	// and genesis verification.
-	//ModuleBasics = module.NewBasicManager(
-	//	genutil.AppModuleBasic{},
-	//	auth.AppModuleBasic{},
-	//	bank.AppModuleBasic{},
-	//	staking.AppModuleBasic{},
-	//	mint.AppModuleBasic{},
-	//	distr.AppModuleBasic{},
-	//	gov.NewAppModuleBasic(paramsclient.ProposalHandler, distrclient.ProposalHandler, upgradeclient.ProposalHandler),
-	//	params.AppModuleBasic{},
-	//	compute.AppModuleBasic{},
-	//	reg.AppModuleBasic{},
-	//	crisis.AppModuleBasic{},
-	//	slashing.AppModuleBasic{},
-	//	//supply.AppModuleBasic{},
-	//	upgrade.AppModuleBasic{},
-	//	evidence.AppModuleBasic{},
-	//)
-
 	// module account permissions
 	maccPerms = map[string][]string{
 		authtypes.FeeCollectorName:     nil,
@@ -325,7 +304,7 @@ func NewSecretNetworkApp(
 	app.govKeeper = govkeeper.NewKeeper(
 		appCodec,
 		keys[govtypes.StoreKey],
-		app.getSubspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable()),
+		app.getSubspace(govtypes.ModuleName),
 		app.accountKeeper,
 		app.bankKeeper,
 		&stakingKeeper,

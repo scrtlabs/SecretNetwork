@@ -221,8 +221,8 @@ func ParseEvents(logs []wasmTypes.LogAttribute, contractAddr sdk.AccAddress) sdk
 
 // WasmConfig is the extra config required for wasm
 type WasmConfig struct {
-	SmartQueryGasLimit uint64 `mapstructure:"query_gas_limit"`
-	CacheSize          uint64 `mapstructure:"lru_size"`
+	SmartQueryGasLimit uint64
+	CacheSize          uint64
 }
 
 // DefaultWasmConfig returns the default settings for WasmConfig

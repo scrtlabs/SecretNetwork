@@ -8,6 +8,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 	"path/filepath"
@@ -123,14 +124,18 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 		}
 	}
 
+	var res *sdk.Result
+	var err error
 	// find the handler and execute it
-	h := k.router.Route(ctx, msg.String())
-	if h == nil {
-		return sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, msg.String())
-	}
-	res, err := h(ctx, msg)
-	if err != nil {
-		return err
+	if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
+		h := k.router.Route(ctx, legacyMsg.Route())
+		if h == nil {
+			return sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, legacyMsg.Route())
+		}
+		res, err = h(ctx, msg)
+		if err != nil {
+			return err
+		}
 	}
 
 	events := make(sdk.Events, len(res.Events))

@@ -32,6 +32,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
+	clientconfig "github.com/cosmos/cosmos-sdk/client/config"
 	"github.com/cosmos/cosmos-sdk/client/debug"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
@@ -48,7 +49,7 @@ import (
 // thanks @terra-project for this fix
 const flagLegacyHdPath = "legacy-hd-path"
 const flagIsBootstrap = "bootstrap"
-const cfgFileName = "config-cli.toml"
+const cfgFileName = "config.toml"
 
 var bootstrap bool
 
@@ -72,6 +73,15 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) {
 func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 	encodingConfig := app.MakeEncodingConfig()
 
+	config := sdk.GetConfig()
+	config.SetCoinType(scrt.CoinType)
+	config.SetPurpose(scrt.CoinPurpose)
+	config.SetBech32PrefixForAccount(scrt.Bech32PrefixAccAddr, scrt.Bech32PrefixAccPub)
+	config.SetBech32PrefixForValidator(scrt.Bech32PrefixValAddr, scrt.Bech32PrefixValPub)
+	config.SetBech32PrefixForConsensusNode(scrt.Bech32PrefixConsAddr, scrt.Bech32PrefixConsPub)
+	config.SetAddressVerifier(scrt.AddressVerifier)
+	config.Seal()
+
 	initClientCtx := client.Context{}.
 		WithCodec(encodingConfig.Marshaler).
 		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
@@ -87,17 +97,28 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 		Use:   "secretd",
 		Short: "The Secret Network App Daemon (server)",
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-			secretAppTemplate, secretAppConfig := initAppConfig()
+			cmd.SetOut(cmd.OutOrStdout())
+			cmd.SetErr(cmd.ErrOrStderr())
 
-			if err := server.InterceptConfigsPreRunHandler(cmd, secretAppTemplate, secretAppConfig); err != nil {
+			initClientCtx = client.ReadHomeFlag(initClientCtx, cmd)
+			initClientCtx, err := clientconfig.ReadFromClientConfig(initClientCtx)
+
+			if err != nil {
 				return err
 			}
 
-			ctx := server.GetServerContextFromCmd(cmd)
+			if err := client.SetCmdClientContextHandler(initClientCtx, cmd); err != nil {
+				return err
+			}
 
-			bindFlags(cmd, ctx.Viper)
+			secretAppTemplate, secretAppConfig := initAppConfig()
 
-			return initConfig(&initClientCtx, cmd)
+			//ctx := server.GetServerContextFromCmd(cmd)
+
+			//bindFlags(cmd, ctx.Viper)
+
+			return server.InterceptConfigsPreRunHandler(cmd, secretAppTemplate, secretAppConfig)
+			//return initConfig(&initClientCtx, cmd)
 		},
 	}
 
@@ -129,8 +150,8 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 	// authclient.Codec = encodingConfig.Marshaler
 
 	rootCmd.AddCommand(
-		//genutilcli.InitCmd(app.ModuleBasics, app.DefaultNodeHome),
-		updateTmParamsAndInit(app.ModuleBasics(), app.DefaultNodeHome),
+		genutilcli.InitCmd(app.ModuleBasics(), app.DefaultNodeHome),
+		//updateTmParamsAndInit(app.ModuleBasics(), app.DefaultNodeHome),
 		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome),
 		genutilcli.MigrateGenesisCmd(),
 		genutilcli.GenTxCmd(app.ModuleBasics(), encodingConfig.TxConfig, banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome),
@@ -155,7 +176,11 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 		HealthCheck(),
 		ResetEnclave(),
 		keys.Commands(app.DefaultNodeHome),
+		clientconfig.Cmd(),
 	)
+
+	// add rosetta commands
+	rootCmd.AddCommand(server.RosettaCommand(encodingConfig.InterfaceRegistry, encodingConfig.Marshaler))
 
 	// This is needed for `newApp` and `exportAppStateAndTMValidators`
 	rootCmd.PersistentFlags().BoolVar(&bootstrap, flagIsBootstrap,
@@ -326,21 +351,18 @@ func updateTmParamsAndInit(mbm module.BasicManager, defaultNodeHome string) *cob
 func initConfig(ctx *client.Context, cmd *cobra.Command) error {
 	cmd.PersistentFlags().Bool(flagLegacyHdPath, false, "Flag to specify the command uses old HD path - use this for ledger compatibility")
 
-	config := sdk.GetConfig()
-	config.SetBech32PrefixForAccount(scrt.Bech32PrefixAccAddr, scrt.Bech32PrefixAccPub)
-	config.SetBech32PrefixForValidator(scrt.Bech32PrefixValAddr, scrt.Bech32PrefixValPub)
-	config.SetBech32PrefixForConsensusNode(scrt.Bech32PrefixConsAddr, scrt.Bech32PrefixConsPub)
+	_, err := cmd.PersistentFlags().GetBool(flagLegacyHdPath)
 
-	oldHDPath, err := cmd.PersistentFlags().GetBool(flagLegacyHdPath)
 	if err != nil {
 		return err
 	}
-	if !oldHDPath {
-		config.SetCoinType(529)
-		config.SetFullFundraiserPath("44'/529'/0'/0/0")
-	}
-
-	config.Seal()
+	//if !oldHDPath {
+	//	config.SetPurpose(44)
+	//	config.SetCoinType(529)
+	//	//config.SetFullFundraiserPath("44'/529'/0'/0/0")
+	//}
+	//
+	//config.Seal()
 
 	cfgFilePath := filepath.Join(app.DefaultCLIHome, "config", cfgFileName)
 	if _, err := os.Stat(cfgFilePath); err == nil {
