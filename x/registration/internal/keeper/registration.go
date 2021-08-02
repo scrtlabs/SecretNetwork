@@ -1,8 +1,6 @@
 package keeper
 
 import (
-	"encoding/hex"
-	"fmt"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
@@ -86,8 +84,8 @@ func (k Keeper) SetRegistrationInfo(ctx sdk.Context, certificate types.Registrat
 		return
 	}
 
-	fmt.Println("pubkey", hex.EncodeToString(publicKey))
-	fmt.Println("EncryptedSeed", hex.EncodeToString(certificate.EncryptedSeed))
+	//fmt.Println("pubkey", hex.EncodeToString(publicKey))
+	//fmt.Println("EncryptedSeed", hex.EncodeToString(certificate.EncryptedSeed))
 	store.Set(types.RegistrationKeyPrefix(publicKey), k.cdc.MustMarshal(&certificate))
 }
 

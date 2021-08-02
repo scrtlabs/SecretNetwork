@@ -23,6 +23,7 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 		var (
 			rsp interface{}
 			err error
+			bz  []byte
 		)
 		switch path[0] {
 		case QueryEncryptedSeed:
@@ -30,24 +31,29 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
 			}
-			rsp, err = queryEncryptedSeed(ctx, pubKey, keeper)
+			bz, err = queryEncryptedSeed(ctx, pubKey, keeper)
+			if err != nil {
+				return nil, err
+			}
+			return bz, nil
 		case QueryMasterCertificate:
 			rsp, err = queryMasterKey(ctx, keeper)
+
+			if err != nil {
+				return nil, err
+			}
+
+			if rsp == nil || reflect.ValueOf(rsp).IsNil() {
+				return nil, nil
+			}
+			// why indent?
+			bz, err = json.Marshal(rsp)
+			if err != nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
+			}
+			return bz, nil
 		default:
 			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "unknown data query endpoint")
 		}
-		if err != nil {
-			return nil, err
-		}
-		if rsp == nil || reflect.ValueOf(rsp).IsNil() {
-			return nil, nil
-		}
-		// why indent?
-		bz, err := json.Marshal(rsp)
-
-		if err != nil {
-			return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
-		}
-		return bz, nil
 	}
 }

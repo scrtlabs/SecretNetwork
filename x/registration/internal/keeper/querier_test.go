@@ -90,7 +90,7 @@ func TestNewQuerier(t *testing.T) {
 			require.True(t, spec.expErr.Is(err), err)
 
 			if spec.result != "" {
-				require.Equal(t, string(binResult), spec.result)
+				require.Equal(t, spec.result, string(binResult))
 			}
 		})
 	}
