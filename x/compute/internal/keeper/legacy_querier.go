@@ -105,8 +105,8 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 			return nil, nil
 		}
 
-		bz, err = keeper.legacyAmino.MarshalJSON(rsp)
-		//bz, err := json.MarshalIndent(rsp, "", "  ")
+		//bz, err = keeper.legacyAmino.MarshalJSON(rsp)
+		bz, err = json.MarshalIndent(rsp, "", "  ")
 		if err != nil {
 			return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
 		}
