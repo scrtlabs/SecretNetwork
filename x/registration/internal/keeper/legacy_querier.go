@@ -42,7 +42,9 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 		if rsp == nil || reflect.ValueOf(rsp).IsNil() {
 			return nil, nil
 		}
-		bz, err := json.MarshalIndent(rsp, "", "  ")
+		// why indent?
+		bz, err := json.Marshal(rsp)
+
 		if err != nil {
 			return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
 		}

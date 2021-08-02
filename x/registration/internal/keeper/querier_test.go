@@ -61,7 +61,7 @@ func TestNewQuerier(t *testing.T) {
 		"query malformed node id": {
 			[]string{QueryEncryptedSeed, nodeIdInvalid},
 			abci.RequestQuery{Data: []byte("")},
-			types.ErrInvalidType,
+			sdkErrors.ErrInvalidAddress,
 			"",
 		},
 		"query invalid node id": {

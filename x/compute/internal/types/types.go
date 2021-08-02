@@ -267,5 +267,5 @@ const DefaultConfigTemplate = `
 contract-query-gas-limit = "{{ .WASMConfig.SmartQueryGasLimit }}"
 
 # The WASM VM memory cache size in MiB not bytes
-contract-memory-cache-size = "{{ .WASMConfig.defaultLRUCacheSize }}"
+contract-memory-cache-size = "{{ .WASMConfig.CacheSize }}"
 `

@@ -54,7 +54,7 @@ func (k Keeper) isMasterCertificateDefined(ctx sdk.Context, certType string) boo
 func (k Keeper) getRegistrationInfo(ctx sdk.Context, publicKey types.NodeID) *types.RegistrationNodeInfo {
 	store := ctx.KVStore(k.storeKey)
 	var nodeInfo types.RegistrationNodeInfo
-	fmt.Println("pubkey", hex.EncodeToString(publicKey))
+	//fmt.Println("pubkey", hex.EncodeToString(publicKey))
 	certBz := store.Get(types.RegistrationKeyPrefix(publicKey))
 
 	if certBz == nil {

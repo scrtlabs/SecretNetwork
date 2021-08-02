@@ -2,6 +2,8 @@ PACKAGES=$(shell go list ./... | grep -v '/simulation')
 VERSION ?= $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
 CURRENT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+DOCKER := $(shell which docker)
+
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
 BUILD_PROFILE ?= release
@@ -368,14 +370,36 @@ aesm-image:
 ###                                Protobuf                                 ###
 ###############################################################################
 
-proto-all: proto-gen proto-lint proto-check-breaking
+## proto-all: proto-gen proto-lint proto-check-breaking
+
+# proto-gen:
+#	@./scripts/protocgen.sh
+
+# proto-lint:
+#	@buf check lint --error-format=json
+
+# proto-check-breaking:
+#	@buf check breaking --against-input '.git#branch=master'
+proto-all: proto-format proto-lint proto-gen
 
 proto-gen:
-	@./scripts/protocgen.sh
+	@echo "Generating Protobuf files"
+	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen sh ./scripts/protocgen.sh
+
+proto-format:
+	@echo "Formatting Protobuf files"
+	$(DOCKER) run --rm -v $(CURDIR):/workspace \
+	--workdir /workspace tendermintdev/docker-build-proto \
+	find ./ -not -path "./third_party/*" -name *.proto -exec clang-format -i {} \;
+
+proto-swagger-gen:
+	@./scripts/protoc-swagger-gen.sh
 
 proto-lint:
-	@buf check lint --error-format=json
+	@$(DOCKER_BUF) lint --error-format=json
 
+## TODO - change branch release/v0.5.x to master after columbus-5 merged
 proto-check-breaking:
-	@buf check breaking --against-input '.git#branch=master'
+	@$(DOCKER_BUF) breaking --against-input $(HTTPS_GIT)#branch=release/v0.43-stargate
 
+.PHONY: proto-all proto-gen proto-swagger-gen proto-format proto-lint proto-check-breaking
