@@ -122,6 +122,22 @@
           "Params": "FeegrantParams"
         }
       }
+    },
+    {
+      "url": "./tmp-swagger-gen/secret/registration/v1beta1/query.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "RegistrationParams"
+        }
+      }
+    },
+    {
+      "url": "./tmp-swagger-gen/secret/compute/v1beta1/query.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "ComputeParams"
+        }
+      }
     }
   ]
 }
