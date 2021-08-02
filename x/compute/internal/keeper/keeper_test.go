@@ -26,7 +26,7 @@ const SupportedFeatures = "staking"
 
 var wasmCtx = wasmUtils.WASMContext{
 	TestKeyPairPath:  "/tmp/id_tx_io.json",
-	TestMasterIOCert: reg.MasterCertificate { Bytes: nil },
+	TestMasterIOCert: reg.MasterCertificate{Bytes: nil},
 }
 
 func init() {
@@ -644,7 +644,7 @@ func TestExecute(t *testing.T) {
 	contractAcct = accKeeper.GetAccount(ctx, addr)
 	require.NotNil(t, contractAcct)
 	coins = keeper.bankKeeper.GetAllBalances(ctx, contractAcct.GetAddress())
-	assert.Equal(t, sdk.Coins(nil), coins)
+	assert.Equal(t, sdk.Coins{}, coins)
 
 	t.Logf("Duration: %v (%d gas)\n", diff, gasAfter-gasBefore)
 }

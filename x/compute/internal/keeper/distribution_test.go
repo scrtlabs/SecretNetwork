@@ -38,10 +38,12 @@ func TestDistributionRewards(t *testing.T) {
 	assert.True(t, found)
 	assert.Equal(t, v.GetDelegatorShares(), sdk.NewDec(100))
 
-	deposit := sdk.NewCoins(sdk.NewInt64Coin("stake", 5_000_000_000))
+	depositCoin := sdk.NewInt64Coin(sdk.DefaultBondDenom, 5_000_000_000)
+	deposit := sdk.NewCoins(depositCoin)
 	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
+	require.Equal(t, keeper.bankKeeper.GetBalance(ctx, creator, sdk.DefaultBondDenom), depositCoin)
 
-	delTokens := sdk.TokensFromConsensusPower(1000, sdk.NewInt(1))
+	delTokens := sdk.TokensFromConsensusPower(1000, sdk.DefaultPowerReduction)
 	msg2 := stakingtypes.NewMsgDelegate(creator, valAddr,
 		sdk.NewCoin(sdk.DefaultBondDenom, delTokens))
 
@@ -88,7 +90,6 @@ func TestDistributionRewards(t *testing.T) {
 	require.Empty(t, err)
 	// returns the rewards
 	require.Equal(t, uint64(0), binary.BigEndian.Uint64(res))
-
 	ctx = nextBlock(ctx, stakingKeeper)
 
 	// test what happens if there are some rewards

@@ -132,7 +132,7 @@ var TestingStakeParams = stakingtypes.Params{
 	MaxValidators:     10,
 	MaxEntries:        10,
 	HistoricalEntries: 10,
-	BondDenom:         "stake",
+	BondDenom:         sdk.DefaultBondDenom,
 }
 
 type TestKeepers struct {
@@ -192,7 +192,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	maccPerms := map[string][]string{
 		faucetAccountName:              {authtypes.Burner, authtypes.Minter},
 		authtypes.FeeCollectorName:     nil,
-		distrtypes.ModuleName:          {authtypes.Burner, authtypes.Minter},
+		distrtypes.ModuleName:          nil,
 		minttypes.ModuleName:           {authtypes.Minter},
 		stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
 		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
@@ -220,9 +220,9 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		bankSubsp,
 		blockedAddrs,
 	)
-	bankParams := banktypes.DefaultParams()
-	bankParams = bankParams.SetSendEnabledParam("stake", true)
-	bankKeeper.SetParams(ctx, bankParams)
+
+	//bankParams = bankParams.SetSendEnabledParam(sdk.DefaultBondDenom, true)
+	bankKeeper.SetParams(ctx, banktypes.DefaultParams())
 
 	stakingSubsp, _ := paramsKeeper.GetSubspace(stakingtypes.ModuleName)
 	stakingKeeper := stakingkeeper.NewKeeper(encodingConfig.Marshaler, keyStaking, authKeeper, bankKeeper, stakingSubsp)
@@ -242,21 +242,45 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	//bankkeeper.SetSupply(ctx, banktypes.NewSupply(sdk.NewCoins((sdk.NewInt64Coin("stake", 1)))))
 
 	distSubsp, _ := paramsKeeper.GetSubspace(distrtypes.ModuleName)
-	distKeeper := distrkeeper.NewKeeper(encodingConfig.Marshaler, keyDistro, distSubsp, authKeeper, bankKeeper, stakingKeeper, authtypes.FeeCollectorName, nil)
-	distKeeper.SetParams(ctx, distrtypes.DefaultParams())
-	stakingKeeper.SetHooks(distKeeper.Hooks())
+	distKeeper := distrkeeper.NewKeeper(
+		encodingConfig.Marshaler,
+		keyDistro,
+		distSubsp,
+		authKeeper,
+		bankKeeper,
+		stakingKeeper,
+		authtypes.FeeCollectorName,
+		nil,
+	)
 
 	// set genesis items required for distribution
+	distKeeper.SetParams(ctx, distrtypes.DefaultParams())
 	distKeeper.SetFeePool(ctx, distrtypes.InitialFeePool())
+	stakingKeeper.SetHooks(stakingtypes.NewMultiStakingHooks(distKeeper.Hooks()))
 
 	// set some funds ot pay out validatores, based on code from:
 	// https://github.com/cosmos/cosmos-sdk/blob/fea231556aee4d549d7551a6190389c4328194eb/x/distribution/keeper/keeper_test.go#L50-L57
-	distrAcc := distKeeper.GetDistributionAccount(ctx)
-	err = bankKeeper.MintCoins(ctx, distrtypes.ModuleName, sdk.NewCoins(
-		sdk.NewCoin("stake", sdk.NewInt(2000000)),
-	))
+	// distrAcc := distKeeper.GetDistributionAccount(ctx)
+	distrAcc := authtypes.NewEmptyModuleAccount(distrtypes.ModuleName)
+
+	totalSupply := sdk.NewCoins(sdk.NewCoin(sdk.DefaultBondDenom, sdk.NewInt(2000000)))
+	err = bankKeeper.MintCoins(ctx, faucetAccountName, totalSupply)
 	require.NoError(t, err)
+
+	//err = bankKeeper.SendCoinsFromModuleToAccount(ctx, faucetAccountName, distrAcc.GetAddress(), totalSupply)
+	//require.NoError(t, err)
+
+	notBondedPool := authtypes.NewEmptyModuleAccount(stakingtypes.NotBondedPoolName, authtypes.Burner, authtypes.Staking)
+	bondPool := authtypes.NewEmptyModuleAccount(stakingtypes.BondedPoolName, authtypes.Burner, authtypes.Staking)
+	feeCollectorAcc := authtypes.NewEmptyModuleAccount(authtypes.FeeCollectorName)
+
 	authKeeper.SetModuleAccount(ctx, distrAcc)
+	authKeeper.SetModuleAccount(ctx, bondPool)
+	authKeeper.SetModuleAccount(ctx, notBondedPool)
+	authKeeper.SetModuleAccount(ctx, feeCollectorAcc)
+
+	err = bankKeeper.SendCoinsFromModuleToModule(ctx, faucetAccountName, stakingtypes.NotBondedPoolName, totalSupply)
+	require.NoError(t, err)
 
 	router := baseapp.NewRouter()
 	bh := bank.NewHandler(bankKeeper)

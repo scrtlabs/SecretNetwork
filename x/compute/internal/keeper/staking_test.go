@@ -174,7 +174,7 @@ func initializeStaking(t *testing.T) initInfo {
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, stakingKeeper, keeper := keepers.AccountKeeper, keepers.StakingKeeper, keepers.WasmKeeper
 
-	valAddr := addValidator(ctx, stakingKeeper, accKeeper, keeper.bankKeeper, sdk.NewInt64Coin("stake", 1000000))
+	valAddr := addValidator(ctx, stakingKeeper, accKeeper, keeper.bankKeeper, sdk.NewInt64Coin(sdk.DefaultBondDenom, 1000000))
 	ctx = nextBlock(ctx, stakingKeeper)
 
 	// set some baseline - this seems to be needed
@@ -188,7 +188,7 @@ func initializeStaking(t *testing.T) initInfo {
 	assert.Equal(t, v.GetDelegatorShares(), sdk.NewDec(1000000))
 	assert.Equal(t, v.Status, stakingtypes.Bonded)
 
-	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000), sdk.NewInt64Coin("stake", 500000))
+	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000), sdk.NewInt64Coin(sdk.DefaultBondDenom, 500000))
 	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 
 	// upload staking derivates code
@@ -369,8 +369,8 @@ func TestReinvest(t *testing.T) {
 	assert.Equal(t, val.Tokens, sdk.NewInt(1000000), "%s", val.Tokens)
 
 	// full is 2x funds, 1x goes to the contract, other stays on his wallet
-	full := sdk.NewCoins(sdk.NewInt64Coin("stake", 400000))
-	funds := sdk.NewCoins(sdk.NewInt64Coin("stake", 200000))
+	full := sdk.NewCoins(sdk.NewInt64Coin(sdk.DefaultBondDenom, 400000))
+	funds := sdk.NewCoins(sdk.NewInt64Coin(sdk.DefaultBondDenom, 200000))
 	bob, privBob := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, full)
 
 	// we will stake 200k to a validator with 1M self-bond
@@ -389,7 +389,7 @@ func TestReinvest(t *testing.T) {
 	// update height a bit to solidify the delegation
 	ctx = nextBlock(ctx, stakingKeeper)
 	// we get 1/6, our share should be 40k minus 10% commission = 36k
-	setValidatorRewards(ctx, bankKeeper, stakingKeeper, distKeeper, valAddr, sdk.NewInt64Coin("stake", 240000))
+	setValidatorRewards(ctx, bankKeeper, stakingKeeper, distKeeper, valAddr, sdk.NewInt64Coin(sdk.DefaultBondDenom, 240000))
 
 	// this should withdraw our outstanding 40k of rewards and reinvest them in the same delegation
 	reinvest := StakingHandleMsg{
@@ -535,5 +535,5 @@ func assertSupply(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	err = json.Unmarshal([]byte(res), &invest)
 	require.NoError(t, err)
 	assert.Equal(t, expectedIssued, invest.TokenSupply)
-	assert.Equal(t, expectedBonded, invest.StakedTokens)
+	assert.Equal(t, expectedBonded.Amount, invest.StakedTokens.Amount)
 }

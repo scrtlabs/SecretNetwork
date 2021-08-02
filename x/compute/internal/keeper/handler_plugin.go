@@ -288,10 +288,13 @@ func (k Keeper) Dispatch(ctx sdk.Context, contractAddr sdk.AccAddress, msg wasmT
 		return nil, nil, err
 	}
 	for _, sdkMsg := range sdkMsgs {
-		sdkEvents, msgData, err := k.handleSdkMessage(ctx, contractAddr, sdkMsg)
-		return sdkEvents, msgData, err
+		_, _, err := k.handleSdkMessage(ctx, contractAddr, sdkMsg)
+		if err != nil {
+			return nil, nil, err
+		}
+		//return sdkEvents, msgData, err
 	}
-	return nil, nil, err
+	return nil, nil, nil
 }
 
 func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg sdk.Msg) (sdk.Events, []byte, error) {

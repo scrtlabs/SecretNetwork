@@ -22,7 +22,7 @@ func TestContractInfoValidateBasic(t *testing.T) {
 			expError:   true,
 		},
 		"creator not an address": {
-			srcMutator: func(c *ContractInfo) { c.Creator = make([]byte, 19) },
+			srcMutator: func(c *ContractInfo) { c.Creator = make([]byte, 1000) },
 			expError:   true,
 		},
 		/*
@@ -76,7 +76,7 @@ func TestCodeInfoValidateBasic(t *testing.T) {
 			expError:   true,
 		},
 		"creator not an address": {
-			srcMutator: func(c *CodeInfo) { c.Creator = make([]byte, 19) },
+			srcMutator: func(c *CodeInfo) { c.Creator = make([]byte, 1000) },
 			expError:   true,
 		},
 		"source empty": {

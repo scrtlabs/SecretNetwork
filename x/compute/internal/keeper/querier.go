@@ -299,7 +299,7 @@ func queryContractHistory(ctx sdk.Context, bech string, keeper Keeper) ([]byte, 
 func queryContractAddress(ctx sdk.Context, label string, keeper Keeper) (sdk.AccAddress, error) {
 	res := keeper.GetContractAddress(ctx, label)
 	if res == nil {
-		return nil, nil
+		return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownAddress, label)
 	}
 
 	return res, nil
