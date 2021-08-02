@@ -79,6 +79,9 @@ import (
 	tmos "github.com/tendermint/tendermint/libs/os"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
+
+	// unnamed import of statik for swagger UI support
+	_ "github.com/enigmampc/SecretNetwork/client/docs/statik"
 )
 
 const appName = "secret"
