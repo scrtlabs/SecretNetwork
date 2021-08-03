@@ -133,11 +133,11 @@ var hkdfSalt = []byte{
 }
 
 func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
-	var masterIoKey regtypes.MasterCertificate
+	var masterIoKey regtypes.Key
 	if ctx.TestMasterIOCert.Bytes != nil { // TODO check length?
-		masterIoKey.Bytes = ctx.TestMasterIOCert.Bytes
+		masterIoKey.Key = ctx.TestMasterIOCert.Bytes
 	} else {
-		res, _, err := ctx.CLIContext.Query("/SecretNetwork.x.registration.v1beta1.Query/MasterKey")
+		res, _, err := ctx.CLIContext.Query("/secret.registration.v1beta1.Query/TxKey")
 		if err != nil {
 			return nil, err
 		}
@@ -148,7 +148,7 @@ func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
 		}
 	}
 
-	ioPubkey, err := ra.VerifyRaCert(masterIoKey.Bytes)
+	ioPubkey, err := ra.VerifyRaCert(masterIoKey.Key)
 	if err != nil {
 		return nil, err
 	}
