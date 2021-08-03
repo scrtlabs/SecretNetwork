@@ -213,7 +213,7 @@ export declare class RestClient {
   blocks(height: number): Promise<BlockResponse>;
   nodeInfo(): Promise<NodeInfoResponse>;
   txById(id: string, tryToDecrypt?: boolean): Promise<TxsResponse>;
-  txsQuery(query: string): Promise<SearchTxsResponse>;
+  txsQuery(query: string, tryToDecrypt?: boolean): Promise<SearchTxsResponse>;
   /** returns the amino-encoding of the transaction performed by the server */
   encodeTx(tx: CosmosSdkTx): Promise<Uint8Array>;
   /**

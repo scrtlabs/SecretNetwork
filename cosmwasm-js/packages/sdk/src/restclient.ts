@@ -411,7 +411,7 @@ export class RestClient {
     }
   }
 
-  public async txsQuery(query: string): Promise<SearchTxsResponse> {
+  public async txsQuery(query: string, tryToDecrypt: boolean = true): Promise<SearchTxsResponse> {
     const responseData = await this.get(`/txs?${query}`);
     if (!(responseData as any).txs) {
       throw new Error("Unexpected response data format");
@@ -419,8 +419,10 @@ export class RestClient {
 
     const resp = responseData as SearchTxsResponse;
 
-    for (let i = 0; i < resp.txs.length; i++) {
-      resp.txs[i] = await this.decryptTxsResponse(resp.txs[i]);
+    if (tryToDecrypt) {
+      for (let i = 0; i < resp.txs.length; i++) {
+        resp.txs[i] = await this.decryptTxsResponse(resp.txs[i]);
+      }
     }
 
     return resp;
@@ -627,8 +629,8 @@ export class RestClient {
   }
 
   public async decryptTxsResponse(txsResponse: TxsResponse): Promise<TxsResponse> {
-    if (txsResponse.tx.value.msg.length === 1) {
-      const msg: Msg = txsResponse.tx.value.msg[0];
+    for (let i = 0; i < txsResponse.tx.value.msg.length; i++) {
+      const msg: Msg = txsResponse.tx.value.msg[i];
 
       let inputMsgEncrypted: Uint8Array;
       if (msg.type === "wasm/MsgExecuteContract") {
@@ -650,9 +652,9 @@ export class RestClient {
         );
 
         if (msg.type === "wasm/MsgExecuteContract") {
-          (txsResponse.tx.value.msg[0] as MsgExecuteContract).value.msg = inputMsg;
+          (txsResponse.tx.value.msg[i] as MsgExecuteContract).value.msg = inputMsg;
         } else if (msg.type === "wasm/MsgInstantiateContract") {
-          (txsResponse.tx.value.msg[0] as MsgInstantiateContract).value.init_msg = inputMsg;
+          (txsResponse.tx.value.msg[i] as MsgInstantiateContract).value.init_msg = inputMsg;
         }
 
         // decrypt output
@@ -664,7 +666,10 @@ export class RestClient {
         }
 
         // decrypt error
-        const errorMessageRgx = /contract failed: encrypted: (.+?): failed to execute message; message index: 0/g;
+        const errorMessageRgx = new RegExp(
+          `contract failed: encrypted: (.+?): failed to execute message; message index: ${i}`,
+          "g",
+        );
 
         const rgxMatches = errorMessageRgx.exec(txsResponse.raw_log);
         if (Array.isArray(rgxMatches) && rgxMatches.length === 2) {
