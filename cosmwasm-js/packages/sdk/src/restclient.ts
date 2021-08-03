@@ -535,7 +535,7 @@ export class RestClient {
       responseData = (await this.get(path)) as WasmResponse<SmartQueryResponse>;
     } catch (err) {
       try {
-        const errorMessageRgx = /contract failed: encrypted: (.+?) \(HTTP 500\)/g;
+        const errorMessageRgx = /encrypted: (.+?): (?:instantiate|execute|query) contract failed \(HTTP 500\)/g;
 
         const rgxMatches = errorMessageRgx.exec(err.message);
         if (rgxMatches == null || rgxMatches.length != 2) {
@@ -667,7 +667,7 @@ export class RestClient {
 
         // decrypt error
         const errorMessageRgx = new RegExp(
-          `contract failed: encrypted: (.+?): failed to execute message; message index: ${i}`,
+          `encrypted: (.+?): (?:instantiate|execute|query) contract failed: failed to execute message; message index: ${i}`,
           "g",
         );
 

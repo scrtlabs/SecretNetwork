@@ -38,7 +38,7 @@ func ExportGenesis(ctx sdk.Context, keeper Keeper) *types.GenesisState {
 	return &genState
 }
 
-func GetGenesisStateFromAppState(cdc codec.JSONMarshaler, appState map[string]json.RawMessage) types.GenesisState {
+func GetGenesisStateFromAppState(cdc codec.Codec, appState map[string]json.RawMessage) types.GenesisState {
 	var genesisState types.GenesisState
 
 	if appState[types.ModuleName] != nil {

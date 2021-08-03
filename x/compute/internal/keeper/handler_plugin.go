@@ -2,11 +2,11 @@ package keeper
 
 import (
 	"encoding/json"
-
+	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	distrtypes "github.com/enigmampc/SecretNetwork/x/distribution/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -90,12 +90,25 @@ func (e MessageEncoders) Encode(contractAddr sdk.AccAddress, msg wasmTypes.Cosmo
 	return nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Unknown variant of Wasm")
 }
 
+var VoteOptionMap = map[string]string{
+	"Yes":        "VOTE_OPTION_YES",
+	"Abstain":    "VOTE_OPTION_ABSTAIN",
+	"No":         "VOTE_OPTION_NO",
+	"NoWithVeto": "VOTE_OPTION_NO_WITH_VETO",
+}
+
 func EncodeGovMsg(sender sdk.AccAddress, msg *wasmTypes.GovMsg) ([]sdk.Msg, error) {
 	if msg.Vote == nil {
 		return nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Unknown variant of Gov")
 	}
 
-	option, err := govtypes.VoteOptionFromString(msg.Vote.VoteOption)
+	opt, exists := VoteOptionMap[msg.Vote.VoteOption]
+	if !exists {
+		// if it's not found, let the `VoteOptionFromString` below fail
+		opt = msg.Vote.VoteOption
+	}
+
+	option, err := govtypes.VoteOptionFromString(opt)
 	if err != nil {
 		return nil, err
 	}
@@ -111,6 +124,16 @@ func EncodeBankMsg(sender sdk.AccAddress, msg *wasmTypes.BankMsg) ([]sdk.Msg, er
 	if len(msg.Send.Amount) == 0 {
 		return nil, nil
 	}
+	// validate that the addresses are valid
+	_, stderr := sdk.AccAddressFromBech32(msg.Send.FromAddress)
+	if stderr != nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Send.FromAddress)
+	}
+	_, stderr = sdk.AccAddressFromBech32(msg.Send.ToAddress)
+	if stderr != nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Send.ToAddress)
+	}
+
 	toSend, err := convertWasmCoinsToSdkCoins(msg.Send.Amount)
 	if err != nil {
 		return nil, err
@@ -128,19 +151,36 @@ func NoCustomMsg(sender sdk.AccAddress, msg json.RawMessage) ([]sdk.Msg, error) 
 }
 
 func EncodeStakingMsg(sender sdk.AccAddress, msg *wasmTypes.StakingMsg) ([]sdk.Msg, error) {
+	var err error
 	switch {
 	case msg.Delegate != nil:
+		// Check that the address belongs to a validator.
+		validator, err := sdk.ValAddressFromBech32(msg.Delegate.Validator)
+		if err != nil {
+			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Delegate.Validator)
+		}
 		coin, err := convertWasmCoinToSdkCoin(msg.Delegate.Amount)
 		if err != nil {
 			return nil, err
 		}
-		sdkMsg := stakingtypes.MsgDelegate{
-			DelegatorAddress: sender.String(),
-			ValidatorAddress: msg.Delegate.Validator,
-			Amount:           coin,
-		}
-		return []sdk.Msg{&sdkMsg}, nil
+		//sdkMsg := stakingtypes.MsgDelegate{
+		//	DelegatorAddress: sender.String(),
+		//	ValidatorAddress: msg.Delegate.Validator,
+		//	Amount:           coin,
+		//}
+		sdkMsg := stakingtypes.NewMsgDelegate(sender, validator, coin)
+		return []sdk.Msg{sdkMsg}, nil
+
 	case msg.Redelegate != nil:
+		// Check that the addresses belong to validators.
+		_, err = sdk.ValAddressFromBech32(msg.Redelegate.SrcValidator)
+		if err != nil {
+			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Redelegate.SrcValidator)
+		}
+		_, err = sdk.ValAddressFromBech32(msg.Redelegate.DstValidator)
+		if err != nil {
+			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Redelegate.DstValidator)
+		}
 		coin, err := convertWasmCoinToSdkCoin(msg.Redelegate.Amount)
 		if err != nil {
 			return nil, err
@@ -153,6 +193,11 @@ func EncodeStakingMsg(sender sdk.AccAddress, msg *wasmTypes.StakingMsg) ([]sdk.M
 		}
 		return []sdk.Msg{&sdkMsg}, nil
 	case msg.Undelegate != nil:
+		// Check that the address belongs to a validator.
+		_, err = sdk.ValAddressFromBech32(msg.Undelegate.Validator)
+		if err != nil {
+			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Undelegate.Validator)
+		}
 		coin, err := convertWasmCoinToSdkCoin(msg.Undelegate.Amount)
 		if err != nil {
 			return nil, err
@@ -167,7 +212,17 @@ func EncodeStakingMsg(sender sdk.AccAddress, msg *wasmTypes.StakingMsg) ([]sdk.M
 		senderAddr := sender.String()
 		rcpt := senderAddr
 		if len(msg.Withdraw.Recipient) != 0 {
+			// Check that the address belongs to a real account.
+			_, err = sdk.AccAddressFromBech32(msg.Withdraw.Recipient)
+			if err != nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Withdraw.Recipient)
+			}
 			rcpt = msg.Withdraw.Recipient
+		}
+		// Check that the address belongs to a validator.
+		_, err = sdk.ValAddressFromBech32(msg.Withdraw.Validator)
+		if err != nil {
+			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Withdraw.Validator)
 		}
 		setMsg := distrtypes.MsgSetWithdrawAddress{
 			DelegatorAddress: senderAddr,
@@ -226,50 +281,84 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *wasmTypes.WasmMsg) ([]sdk.Msg, er
 	}
 }
 
-func (h MessageHandler) Dispatch(ctx sdk.Context, contractAddr sdk.AccAddress, msg wasmTypes.CosmosMsg) error {
-	sdkMsgs, err := h.encoders.Encode(contractAddr, msg)
+func (k Keeper) Dispatch(ctx sdk.Context, contractAddr sdk.AccAddress, msg wasmTypes.CosmosMsg) (events sdk.Events, data []byte, err error) {
+
+	sdkMsgs, err := k.messenger.encoders.Encode(contractAddr, msg)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	for _, sdkMsg := range sdkMsgs {
-		if err := h.handleSdkMessage(ctx, contractAddr, sdkMsg); err != nil {
-			return err
+		_, _, err := k.handleSdkMessage(ctx, contractAddr, sdkMsg)
+		if err != nil {
+			return nil, nil, err
 		}
+		//return sdkEvents, msgData, err
 	}
-	return nil
+	return nil, nil, nil
 }
 
-func (h MessageHandler) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg sdk.Msg) error {
+func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg sdk.Msg) (sdk.Events, []byte, error) {
 	if err := msg.ValidateBasic(); err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	// make sure this account can send it
 	for _, acct := range msg.GetSigners() {
 		if !acct.Equals(contractAddr) {
-			return sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "contract doesn't have permission")
+			return nil, nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "contract doesn't have permission")
 		}
 	}
 
-	// find the handler and execute it
-	handler := h.router.Route(ctx, msg.Route())
-	if handler == nil {
-		return sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, msg.Route())
-	}
-	res, err := handler(ctx, msg)
-	if err != nil {
-		return err
+	var res *sdk.Result
+	var err error
+	if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
+		msgRoute := legacyMsg.Route()
+		handler := k.messenger.router.Route(ctx, msgRoute)
+		if handler == nil {
+			return nil, nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized message route: %s", msgRoute)
+		}
+
+		res, err = handler(ctx, msg)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		return nil, nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized legacy message route: %s", sdk.MsgTypeURL(msg))
+
+		// todo: grpc routing
+		//handler := k.serviceRouter.Handler(msg)
+		//if handler == nil {
+		//	return nil, nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, sdk.MsgTypeURL(msg))
+		//}
+		//res, err := handler(ctx, msg)
+		//if err != nil {
+		//	return nil, nil, err
+		//}
 	}
 
+	// todo: remove this when adding submessages
 	events := make(sdk.Events, len(res.Events))
 	for i := range res.Events {
 		events[i] = sdk.Event(res.Events[i])
 	}
-
+	//
 	// redispatch all events, (type sdk.EventTypeMessage will be filtered out in the handler)
 	ctx.EventManager().EmitEvents(events)
 
-	return nil
+	// todo: add this when adding submessages
+	//data = make([]byte, len(res.Data))
+	//copy(data, res.Data)
+	//
+	//// convert Tendermint.Events to sdk.Event
+	//sdkEvents := make(sdk.Events, len(res.Events))
+	//for i := range res.Events {
+	//	sdkEvents[i] = sdk.Event(res.Events[i])
+	//}
+
+	// append message action attribute
+	//events = append(events, sdkEvents...)
+
+	return nil, nil, nil
 }
 
 func convertWasmCoinsToSdkCoins(coins []wasmTypes.Coin) (sdk.Coins, error) {

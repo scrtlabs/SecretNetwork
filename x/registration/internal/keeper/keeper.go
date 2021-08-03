@@ -8,22 +8,22 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
-	"github.com/prometheus/common/log"
 	"path/filepath"
 )
 
 // Keeper will have a reference to Wasmer with it's own data directory.
 type Keeper struct {
 	storeKey sdk.StoreKey
-	cdc      codec.Marshaler
+	cdc      codec.BinaryCodec
 	enclave  EnclaveInterface
 	router   sdk.Router
 }
 
 // NewKeeper creates a new contract Keeper instance
-func NewKeeper(cdc codec.Marshaler, storeKey sdk.StoreKey, router sdk.Router, enclave EnclaveInterface, homeDir string, bootstrap bool) Keeper {
+func NewKeeper(cdc codec.BinaryCodec, storeKey sdk.StoreKey, router sdk.Router, enclave EnclaveInterface, homeDir string, bootstrap bool) Keeper {
 
 	if !bootstrap {
 		InitializeNode(homeDir, enclave)
@@ -92,18 +92,14 @@ func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byt
 		if err != nil {
 			return nil, sdkerrors.Wrap(types.ErrAuthenticateFailed, err.Error())
 		}
-		log.Debug("After isNodeAuthenticated")
 		if isAuth {
 			return k.getRegistrationInfo(ctx, publicKey).EncryptedSeed, nil
 		}
-		log.Debug("After getRegistrationInfo")
 		encSeed, err = k.enclave.GetEncryptedSeed(certificate)
-		log.Debug("After GetEncryptedSeed")
 		if err != nil {
 			// return 0, sdkerrors.Wrap(err, "cosmwasm create")
 			return nil, sdkerrors.Wrap(types.ErrAuthenticateFailed, err.Error())
 		}
-		log.Debug("Registration done")
 	}
 
 	regInfo := types.RegistrationNodeInfo{
@@ -128,14 +124,18 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 		}
 	}
 
+	var res *sdk.Result
+	var err error
 	// find the handler and execute it
-	h := k.router.Route(ctx, msg.Route())
-	if h == nil {
-		return sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, msg.Route())
-	}
-	res, err := h(ctx, msg)
-	if err != nil {
-		return err
+	if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
+		h := k.router.Route(ctx, legacyMsg.Route())
+		if h == nil {
+			return sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, legacyMsg.Route())
+		}
+		res, err = h(ctx, msg)
+		if err != nil {
+			return err
+		}
 	}
 
 	events := make(sdk.Events, len(res.Events))

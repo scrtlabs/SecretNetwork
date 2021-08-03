@@ -14,9 +14,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
 	"github.com/cosmos/cosmos-sdk/x/gov"
-	"github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"
-	"github.com/enigmampc/SecretNetwork/x/distribution"
-	distrclient "github.com/enigmampc/SecretNetwork/x/distribution/client"
+	//"github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"
+	"github.com/cosmos/cosmos-sdk/x/distribution"
+	distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
+	"github.com/cosmos/ibc-go/modules/apps/transfer"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
 	//ibc "github.com/cosmos/cosmos-sdk/x/ibc/core"
@@ -78,7 +79,7 @@ var ModuleBasics = module.NewBasicManager(
 	transfer.AppModuleBasic{},
 )
 
-func MakeTestCodec() codec.Marshaler {
+func MakeTestCodec() codec.Codec {
 	return MakeEncodingConfig().Marshaler
 }
 func MakeEncodingConfig() params.EncodingConfig {

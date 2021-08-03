@@ -85,11 +85,13 @@ pub fn encrypt_and_query_chain(
         }
         // error response from contract, or critical error in called VM
         Ok(Err(StdError::GenericErr { msg })) => {
-            if !msg.contains("query contract failed: encrypted: ") {
+            let error_prefix = "encrypted: ";
+            let error_suffix = ": query contract failed";
+            if !(msg.starts_with(error_prefix) && msg.ends_with(error_suffix)) {
                 Ok(Err(StdError::GenericErr { msg }))
             } else {
-                let msg_b64_encrypted = msg.replace("query contract failed: encrypted: ", "");
-                match base64::decode(&msg_b64_encrypted) {
+                let msg = &msg[error_prefix.len()..(msg.len() - error_suffix.len())];
+                match base64::decode(msg) {
                     Err(err) => {
                         debug!(
                             "encrypt_and_query_chain() got an StdError as an answer {:?}, tried to decode \

@@ -1,7 +1,7 @@
 package app
 
 import (
-	bam "github.com/cosmos/cosmos-sdk/baseapp"
+	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
@@ -13,11 +13,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/simapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	//"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
+	//authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -30,9 +32,15 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	crisiskeeper "github.com/cosmos/cosmos-sdk/x/crisis/keeper"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
+	distr "github.com/cosmos/cosmos-sdk/x/distribution"
+	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
 	evidencekeeper "github.com/cosmos/cosmos-sdk/x/evidence/keeper"
 	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
+	"github.com/cosmos/cosmos-sdk/x/feegrant"
+	feegrantkeeper "github.com/cosmos/cosmos-sdk/x/feegrant/keeper"
+	feegrantmodule "github.com/cosmos/cosmos-sdk/x/feegrant/module"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
@@ -55,12 +63,8 @@ import (
 	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	"github.com/enigmampc/SecretNetwork/x/compute"
-	distr "github.com/enigmampc/SecretNetwork/x/distribution"
-	distrkeeper "github.com/enigmampc/SecretNetwork/x/distribution/keeper"
-	distrtypes "github.com/enigmampc/SecretNetwork/x/distribution/types"
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
 	"github.com/spf13/cast"
-	"github.com/spf13/viper"
 
 	"io"
 	"net/http"
@@ -75,6 +79,9 @@ import (
 	tmos "github.com/tendermint/tendermint/libs/os"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
+
+	// unnamed import of statik for swagger UI support
+	_ "github.com/enigmampc/SecretNetwork/client/docs/statik"
 )
 
 const appName = "secret"
@@ -86,27 +93,6 @@ var (
 
 	// DefaultNodeHome sets the folder where the applcation data and configuration will be stored
 	DefaultNodeHome = filepath.Join(homeDir, ".secretd")
-
-	// ModuleBasics The module BasicManager is in charge of setting up basic,
-	// non-dependant module elements, such as codec registration
-	// and genesis verification.
-	//ModuleBasics = module.NewBasicManager(
-	//	genutil.AppModuleBasic{},
-	//	auth.AppModuleBasic{},
-	//	bank.AppModuleBasic{},
-	//	staking.AppModuleBasic{},
-	//	mint.AppModuleBasic{},
-	//	distr.AppModuleBasic{},
-	//	gov.NewAppModuleBasic(paramsclient.ProposalHandler, distrclient.ProposalHandler, upgradeclient.ProposalHandler),
-	//	params.AppModuleBasic{},
-	//	compute.AppModuleBasic{},
-	//	reg.AppModuleBasic{},
-	//	crisis.AppModuleBasic{},
-	//	slashing.AppModuleBasic{},
-	//	//supply.AppModuleBasic{},
-	//	upgrade.AppModuleBasic{},
-	//	evidence.AppModuleBasic{},
-	//)
 
 	// module account permissions
 	maccPerms = map[string][]string{
@@ -129,9 +115,9 @@ var _ simapp.App = (*SecretNetworkApp)(nil)
 
 // SecretNetworkApp extended ABCI application
 type SecretNetworkApp struct {
-	*bam.BaseApp
+	*baseapp.BaseApp
 	legacyAmino       *codec.LegacyAmino
-	appCodec          codec.Marshaler
+	appCodec          codec.Codec
 	interfaceRegistry types.InterfaceRegistry
 
 	invCheckPeriod uint
@@ -155,6 +141,7 @@ type SecretNetworkApp struct {
 	upgradeKeeper    upgradekeeper.Keeper
 	paramsKeeper     paramskeeper.Keeper
 	evidenceKeeper   evidencekeeper.Keeper
+	feeGrantKeeper   feegrantkeeper.Keeper
 	computeKeeper    compute.Keeper
 	regKeeper        reg.Keeper
 
@@ -188,11 +175,11 @@ func NewSecretNetworkApp(
 	skipUpgradeHeights map[int64]bool,
 	homePath string,
 	invCheckPeriod uint,
-	queryGasLimit uint64,
 	//enabledProposals []compute.ProposalType,
 	bootstrap bool,
 	appOpts servertypes.AppOptions,
-	baseAppOptions ...func(*bam.BaseApp),
+	computeConfig *compute.WasmConfig,
+	baseAppOptions ...func(*baseapp.BaseApp),
 ) *SecretNetworkApp {
 
 	encodingConfig := MakeEncodingConfig()
@@ -200,9 +187,9 @@ func NewSecretNetworkApp(
 	interfaceRegistry := encodingConfig.InterfaceRegistry
 
 	// BaseApp handles interactions with Tendermint through the ABCI protocol
-	bApp := bam.NewBaseApp(appName, logger, db, encodingConfig.TxConfig.TxDecoder(), baseAppOptions...)
+	bApp := baseapp.NewBaseApp(appName, logger, db, encodingConfig.TxConfig.TxDecoder(), baseAppOptions...)
 	bApp.SetCommitMultiStoreTracer(traceStore)
-	bApp.SetAppVersion(version.Version)
+	bApp.SetVersion(version.Version)
 	bApp.SetInterfaceRegistry(interfaceRegistry)
 	//bApp.GRPCQueryRouter().RegisterSimulateService(bApp.Simulate, interfaceRegistry)
 
@@ -211,7 +198,7 @@ func NewSecretNetworkApp(
 		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
 		govtypes.StoreKey, paramstypes.StoreKey, upgradetypes.StoreKey,
 		evidencetypes.StoreKey, capabilitytypes.StoreKey, compute.StoreKey,
-		reg.StoreKey,
+		reg.StoreKey, feegrant.StoreKey,
 	)
 
 	tKeys := sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
@@ -233,7 +220,7 @@ func NewSecretNetworkApp(
 	app.paramsKeeper = initParamsKeeper(appCodec, legacyAmino, keys[paramstypes.StoreKey], tKeys[paramstypes.TStoreKey])
 
 	// set the BaseApp's parameter store
-	bApp.SetParamStore(app.paramsKeeper.Subspace(bam.Paramspace).WithKeyTable(paramskeeper.ConsensusParamsKeyTable()))
+	app.BaseApp.SetParamStore(app.paramsKeeper.Subspace(baseapp.Paramspace).WithKeyTable(paramskeeper.ConsensusParamsKeyTable()))
 
 	// add capability keeper and ScopeToModule for ibc module
 	app.capabilityKeeper = capabilitykeeper.NewKeeper(appCodec, keys[capabilitytypes.StoreKey], memKeys[capabilitytypes.MemStoreKey])
@@ -262,7 +249,8 @@ func NewSecretNetworkApp(
 	app.crisisKeeper = crisiskeeper.NewKeeper(
 		app.getSubspace(crisistypes.ModuleName), invCheckPeriod, app.bankKeeper, authtypes.FeeCollectorName,
 	)
-	app.upgradeKeeper = upgradekeeper.NewKeeper(skipUpgradeHeights, keys[upgradetypes.StoreKey], appCodec, homePath)
+	app.feeGrantKeeper = feegrantkeeper.NewKeeper(appCodec, keys[feegrant.StoreKey], app.accountKeeper)
+	app.upgradeKeeper = upgradekeeper.NewKeeper(skipUpgradeHeights, keys[upgradetypes.StoreKey], appCodec, homePath, app.BaseApp)
 
 	// Register the proposal types
 	govRouter := govtypes.NewRouter()
@@ -278,19 +266,21 @@ func NewSecretNetworkApp(
 	app.evidenceKeeper = *evidenceKeeper
 
 	// Just re-use the full router - do we want to limit this more?
-	computeRouter := bApp.Router()
-	regRouter := bApp.Router()
+	computeRouter := app.Router()
+	regRouter := app.Router()
 
 	computeDir := filepath.Join(homePath, ".compute")
 
-	wasmConfig := compute.DefaultWasmConfig()
-	wasmConfig.SmartQueryGasLimit = queryGasLimit
-	wasmWrap := WasmWrapper{Wasm: wasmConfig}
-	err := viper.Unmarshal(&wasmWrap)
-	if err != nil {
-		panic("error while reading wasm config: " + err.Error())
-	}
-	wasmConfig = wasmWrap.Wasm
+	//computeConfig
+	//
+	//wasmConfig := compute.DefaultWasmConfig()
+	//wasmConfig.SmartQueryGasLimit = queryGasLimit
+	//wasmWrap := WasmWrapper{Wasm: wasmConfig}
+	//err := viper.Unmarshal(&wasmWrap)
+	//if err != nil {
+	//	panic("error while reading wasm config: " + err.Error())
+	//}
+	//wasmConfig = wasmWrap.Wasm
 
 	// The last arguments can contain custom message handlers, and custom query handlers,
 	// if we want to allow any custom callbacks
@@ -298,25 +288,6 @@ func NewSecretNetworkApp(
 
 	// Replace with bootstrap flag when we figure out how to test properly and everything works
 	app.regKeeper = reg.NewKeeper(appCodec, keys[reg.StoreKey], regRouter, reg.EnclaveApi{}, homePath, app.bootstrap)
-
-	app.computeKeeper = compute.NewKeeper(
-		appCodec,
-		*legacyAmino,
-		keys[compute.StoreKey],
-		//app.getSubspace(compute.ModuleName),
-		app.accountKeeper,
-		app.bankKeeper,
-		app.govKeeper,
-		app.distrKeeper,
-		app.mintKeeper,
-		app.stakingKeeper,
-		computeRouter,
-		computeDir,
-		wasmConfig,
-		supportedFeatures,
-		nil,
-		nil,
-	)
 
 	// Register the staking hooks
 	// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks
@@ -343,6 +314,28 @@ func NewSecretNetworkApp(
 		govRouter,
 	)
 
+	// serviceRouter := baseapp.NewMsgServiceRouter()
+
+	app.computeKeeper = compute.NewKeeper(
+		appCodec,
+		*legacyAmino,
+		keys[compute.StoreKey],
+		//app.getSubspace(compute.ModuleName),
+		app.accountKeeper,
+		app.bankKeeper,
+		app.govKeeper,
+		app.distrKeeper,
+		app.mintKeeper,
+		app.stakingKeeper,
+		//serviceRouter,
+		computeRouter,
+		computeDir,
+		computeConfig,
+		supportedFeatures,
+		nil,
+		nil,
+	)
+
 	// NOTE: we may consider parsing `appOpts` inside module constructors. For the moment
 	// we prefer to be more strict in what arguments the modules expect.
 	var skipGenesisInvariants = cast.ToBool(appOpts.Get(crisis.FlagSkipGenesisInvariants))
@@ -355,6 +348,7 @@ func NewSecretNetworkApp(
 		bank.NewAppModule(appCodec, app.bankKeeper, app.accountKeeper),
 		capability.NewAppModule(appCodec, *app.capabilityKeeper),
 		crisis.NewAppModule(&app.crisisKeeper, skipGenesisInvariants),
+		feegrantmodule.NewAppModule(appCodec, app.accountKeeper, app.bankKeeper, app.feeGrantKeeper, app.interfaceRegistry),
 		gov.NewAppModule(app.appCodec, app.govKeeper, app.accountKeeper, app.bankKeeper),
 		mint.NewAppModule(appCodec, app.mintKeeper, app.accountKeeper),
 		slashing.NewAppModule(appCodec, app.slashingKeeper, app.accountKeeper, app.bankKeeper, app.stakingKeeper),
@@ -370,9 +364,21 @@ func NewSecretNetworkApp(
 	// there is nothing left over in the validator fee pool, so as to keep the
 	// CanWithdrawInvariant invariant.
 
-	app.mm.SetOrderBeginBlockers(upgradetypes.ModuleName, minttypes.ModuleName, distrtypes.ModuleName,
-		slashingtypes.ModuleName, evidencetypes.ModuleName, stakingtypes.ModuleName)
-	app.mm.SetOrderEndBlockers(crisistypes.ModuleName, govtypes.ModuleName, stakingtypes.ModuleName)
+	app.mm.SetOrderBeginBlockers(
+		upgradetypes.ModuleName,
+		minttypes.ModuleName,
+		distrtypes.ModuleName,
+		slashingtypes.ModuleName,
+		evidencetypes.ModuleName,
+		stakingtypes.ModuleName,
+	)
+
+	app.mm.SetOrderEndBlockers(
+		crisistypes.ModuleName,
+		govtypes.ModuleName,
+		feegrant.ModuleName,
+		stakingtypes.ModuleName,
+	)
 
 	// NOTE: The genutils module must occur after staking so that pools are
 	// properly initialized with tokens from genesis accounts.
@@ -391,12 +397,13 @@ func NewSecretNetworkApp(
 		evidencetypes.ModuleName,
 		compute.ModuleName,
 		reg.ModuleName,
+		feegrant.ModuleName,
 	)
 
 	// register all module routes and module queriers
 	app.mm.RegisterInvariants(&app.crisisKeeper)
 	app.mm.RegisterRoutes(app.Router(), app.QueryRouter(), encodingConfig.Amino)
-	app.mm.RegisterServices(module.NewConfigurator(app.MsgServiceRouter(), app.GRPCQueryRouter()))
+	app.mm.RegisterServices(module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter()))
 
 	// add test gRPC service for testing gRPC queries in isolation
 	// testdata.RegisterTestServiceServer(app.GRPCQueryRouter(), testdata.QueryImpl{}) // TODO: this is testdata !!!
@@ -429,12 +436,22 @@ func NewSecretNetworkApp(
 	// The initChainer handles translating the genesis.json file into initial state for the network
 	app.SetInitChainer(app.InitChainer)
 	app.SetBeginBlocker(app.BeginBlocker)
-	app.SetAnteHandler( // The AnteHandler handles signature verification and transaction pre-processing
-		ante.NewAnteHandler(
-			app.accountKeeper, app.bankKeeper, ante.DefaultSigVerificationGasConsumer,
-			encodingConfig.TxConfig.SignModeHandler(),
-		),
-	)
+
+	anteOptions := ante.HandlerOptions{
+		AccountKeeper:   app.accountKeeper,
+		BankKeeper:      app.bankKeeper,
+		FeegrantKeeper:  app.feeGrantKeeper,
+		SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
+		SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
+	}
+
+	anteHandler, err := ante.NewAnteHandler(anteOptions)
+	if err != nil {
+		panic(err)
+	}
+
+	// The AnteHandler handles signature verification and transaction pre-processing
+	app.SetAnteHandler(anteHandler)
 	app.SetEndBlocker(app.EndBlocker)
 
 	if loadLatest {
@@ -563,7 +580,7 @@ func (app *SecretNetworkApp) LegacyAmino() *codec.LegacyAmino {
 }
 
 // initParamsKeeper init params keeper and its subspaces
-func initParamsKeeper(appCodec codec.BinaryMarshaler, legacyAmino *codec.LegacyAmino, key, tkey sdk.StoreKey) paramskeeper.Keeper {
+func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey sdk.StoreKey) paramskeeper.Keeper {
 	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
 
 	paramsKeeper.Subspace(authtypes.ModuleName)

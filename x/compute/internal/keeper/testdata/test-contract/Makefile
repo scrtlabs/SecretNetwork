@@ -16,6 +16,9 @@ all:
 	wasm2wat ./contract.wasm | perl -pe 's/\(memory \(;0;\) 17\)/(memory (;0;) 513)/' > /tmp/static-too-high-initial-memory.wat
 	wat2wasm /tmp/static-too-high-initial-memory.wat -o ./static-too-high-initial-memory.wasm
 
+setup:
+	apt-get install wabt
+
 clean:
 	cargo clean
 	-rm -f ./contract.wasm

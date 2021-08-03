@@ -3,24 +3,24 @@ package compute
 import (
 	"context"
 	"encoding/json"
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"math/rand"
 
 	"github.com/gorilla/mux"
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 
-	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
-
-	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
+	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
+
 	"github.com/enigmampc/SecretNetwork/x/compute/client/cli"
 	"github.com/enigmampc/SecretNetwork/x/compute/client/rest"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
@@ -47,14 +47,14 @@ func (AppModuleBasic) Name() string {
 
 // DefaultGenesis returns default genesis state as raw bytes for the compute
 // module.
-func (AppModuleBasic) DefaultGenesis(cdc codec.JSONMarshaler) json.RawMessage {
+func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 	return cdc.MustMarshalJSON(&GenesisState{
 		// Params: DefaultParams(),
 	})
 }
 
 // ValidateGenesis performs genesis state validation for the compute module.
-func (AppModuleBasic) ValidateGenesis(marshaler codec.JSONMarshaler, config client.TxEncodingConfig, message json.RawMessage) error {
+func (AppModuleBasic) ValidateGenesis(marshaler codec.JSONCodec, config client.TxEncodingConfig, message json.RawMessage) error {
 	var data GenesisState
 	err := marshaler.UnmarshalJSON(message, &data)
 	if err != nil {
@@ -99,6 +99,9 @@ func NewAppModule(keeper Keeper) AppModule {
 	}
 }
 
+// ConsensusVersion implements AppModule/ConsensusVersion.
+func (AppModule) ConsensusVersion() uint64 { return 1 }
+
 func (am AppModule) RegisterServices(configurator module.Configurator) {
 	types.RegisterQueryServer(configurator.QueryServer(), NewQuerier(am.keeper))
 }
@@ -122,7 +125,7 @@ func (AppModule) QuerierRoute() string {
 
 // InitGenesis performs genesis initialization for the compute module. It returns
 // no validator updates.
-func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONMarshaler, data json.RawMessage) []abci.ValidatorUpdate {
+func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) []abci.ValidatorUpdate {
 	var genesisState GenesisState
 	cdc.MustUnmarshalJSON(data, &genesisState)
 	if err := InitGenesis(ctx, am.keeper, genesisState); err != nil {
@@ -133,7 +136,7 @@ func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONMarshaler, data j
 
 // ExportGenesis returns the exported genesis state as raw bytes for the compute
 // module.
-func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONMarshaler) json.RawMessage {
+func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
 	gs := ExportGenesis(ctx, am.keeper)
 	return cdc.MustMarshalJSON(gs)
 }

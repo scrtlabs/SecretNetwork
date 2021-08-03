@@ -91,7 +91,7 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
     public_key.copy_from_slice(&key_manager.seed_exchange_key().unwrap().get_pubkey());
     trace!(
         "ecall_init_bootstrap consensus_seed_exchange_keypair public key: {:?}",
-        &public_key.to_vec()
+        hex::encode(public_key)
     );
 
     sgx_status_t::SGX_SUCCESS

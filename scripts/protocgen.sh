@@ -2,68 +2,39 @@
 
 set -eo pipefail
 
-### Compute Module ###
+protoc_gen_gocosmos() {
+  if ! grep "github.com/gogo/protobuf => github.com/regen-network/protobuf" go.mod &>/dev/null ; then
+    echo -e "\tPlease run this command from somewhere inside the cosmos-sdk folder."
+    return 1
+  fi
 
-project_dir=x/compute/internal/types/
-cosmos_sdk_dir=$(go list -f "{{ .Dir }}" -m github.com/cosmos/cosmos-sdk)
-# Generate Go types from protobuf
-protoc \
-  -I=. \
-  -I="$cosmos_sdk_dir/third_party/proto" \
-  -I="$cosmos_sdk_dir/proto" \
-  --gocosmos_out=Mgoogle/protobuf/any.proto=github.com/cosmos/cosmos-sdk/codec/types,plugins=interfacetype+grpc,paths=source_relative:. \
-  $(find "${project_dir}" -maxdepth 1 -name '*.proto')
+  go get github.com/regen-network/cosmos-proto/protoc-gen-gocosmos@latest 2>/dev/null
+}
 
-# Generate gRPC gateway (*.pb.gw.go in respective modules) files
-protoc \
-  -I=. \
-  -I="$cosmos_sdk_dir/third_party/proto" \
-  -I="$cosmos_sdk_dir/proto" \
-  --grpc-gateway_out .\
-  --grpc-gateway_opt logtostderr=true \
-  --grpc-gateway_opt paths=source_relative \
-  $(find "${project_dir}" -maxdepth 1 -name '*.proto')
+protoc_gen_gocosmos
 
-### Registration Module ###
+proto_dirs=$(find ./proto -path -prune -o -name '*.proto' -print0 | xargs -0 -n1 dirname | sort | uniq)
+for dir in $proto_dirs; do
+  buf protoc \
+  -I "proto" \
+  -I "third_party/proto" \
+  --gocosmos_out=plugins=interfacetype+grpc,\
+Mgoogle/protobuf/any.proto=github.com/cosmos/cosmos-sdk/codec/types:. \
+  --grpc-gateway_out=logtostderr=true:. \
+  $(find "${dir}" -maxdepth 1 -name '*.proto')
 
-project_dir=x/registration/internal/types/
-cosmos_sdk_dir=$(go list -f "{{ .Dir }}" -m github.com/cosmos/cosmos-sdk)
-# Generate Go types from protobuf
-protoc \
-  -I=. \
-  -I="$cosmos_sdk_dir/third_party/proto" \
-  -I="$cosmos_sdk_dir/proto" \
-  --gocosmos_out=Mgoogle/protobuf/any.proto=github.com/cosmos/cosmos-sdk/codec/types,plugins=interfacetype+grpc,paths=source_relative:. \
-  $(find "${project_dir}" -maxdepth 1 -name '*.proto')
+done
 
-# Generate gRPC gateway (*.pb.gw.go in respective modules) files
-protoc \
-  -I=. \
-  -I="$cosmos_sdk_dir/third_party/proto" \
-  -I="$cosmos_sdk_dir/proto" \
-  --grpc-gateway_out .\
-  --grpc-gateway_opt logtostderr=true \
-  --grpc-gateway_opt paths=source_relative \
-  $(find "${project_dir}" -maxdepth 1 -name '*.proto')
+# command to generate docs using protoc-gen-doc
+buf protoc \
+-I "proto" \
+-I "third_party/proto" \
+--doc_out=./docs/proto \
+--doc_opt=./docs/proto/protodoc-markdown.tmpl,proto-docs.md \
+$(find "$(pwd)/proto" -maxdepth 5 -name '*.proto') \
+$(find "$(pwd)/third_party/proto/cosmos" -maxdepth 4 -name '*.proto') \
+$(find "$(pwd)/third_party/proto/ibc" -maxdepth 4 -name '*.proto')
 
-### Registration Module - Remote Attestation Types ###
-
-project_dir=x/registration/remote_attestation/
-cosmos_sdk_dir=$(go list -f "{{ .Dir }}" -m github.com/cosmos/cosmos-sdk)
-# Generate Go types from protobuf
-protoc \
-  -I=. \
-  -I="$cosmos_sdk_dir/third_party/proto" \
-  -I="$cosmos_sdk_dir/proto" \
-  --gocosmos_out=Mgoogle/protobuf/any.proto=github.com/cosmos/cosmos-sdk/codec/types,plugins=interfacetype+grpc,paths=source_relative:. \
-  $(find "${project_dir}" -maxdepth 1 -name '*.proto')
-
-# Generate gRPC gateway (*.pb.gw.go in respective modules) files
-protoc \
-  -I=. \
-  -I="$cosmos_sdk_dir/third_party/proto" \
-  -I="$cosmos_sdk_dir/proto" \
-  --grpc-gateway_out .\
-  --grpc-gateway_opt logtostderr=true \
-  --grpc-gateway_opt paths=source_relative \
-  $(find "${project_dir}" -maxdepth 1 -name '*.proto')
+# move proto files to the right places
+cp -r github.com/enigmampc/SecretNetwork/* ./
+rm -rf github.com
