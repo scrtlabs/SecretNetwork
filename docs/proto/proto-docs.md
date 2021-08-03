@@ -854,6 +854,14 @@
   
     - [Query](#secret.registration.v1beta1.Query)
   
+- [secret/registration/v1beta1/remote_attestation/types.proto](#secret/registration/v1beta1/remote_attestation/types.proto)
+    - [EndorsedAttestationReport](#secret.registration.remote_attestation.v1beta1.EndorsedAttestationReport)
+    - [PlatformInfoBlob](#secret.registration.remote_attestation.v1beta1.PlatformInfoBlob)
+    - [QuoteReport](#secret.registration.remote_attestation.v1beta1.QuoteReport)
+    - [QuoteReportBody](#secret.registration.remote_attestation.v1beta1.QuoteReportBody)
+    - [QuoteReportData](#secret.registration.remote_attestation.v1beta1.QuoteReportData)
+    - [SGXEC256Signature](#secret.registration.remote_attestation.v1beta1.SGXEC256Signature)
+  
 - [Scalar Value Types](#scalar-value-types)
 
 
@@ -12322,6 +12330,133 @@ Query provides defines the gRPC querier service
 | `TxKey` | [.google.protobuf.Empty](#google.protobuf.Empty) | [Key](#secret.registration.v1beta1.Key) | Returns the key used for transactions | GET|/registration/v1beta1/tx-key|
 | `RegistrationKey` | [.google.protobuf.Empty](#google.protobuf.Empty) | [Key](#secret.registration.v1beta1.Key) | Returns the key used for registration | GET|/registration/v1beta1/registration-key|
 | `EncryptedSeed` | [QueryEncryptedSeedRequest](#secret.registration.v1beta1.QueryEncryptedSeedRequest) | [QueryEncryptedSeedResponse](#secret.registration.v1beta1.QueryEncryptedSeedResponse) | Returns the encrypted seed for a registered node by public key | GET|/registration/v1beta1/encrypted-seed/{pub_key}|
+
+ <!-- end services -->
+
+
+
+<a name="secret/registration/v1beta1/remote_attestation/types.proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## secret/registration/v1beta1/remote_attestation/types.proto
+
+
+
+<a name="secret.registration.remote_attestation.v1beta1.EndorsedAttestationReport"></a>
+
+### EndorsedAttestationReport
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `report` | [bytes](#bytes) |  |  |
+| `signature` | [bytes](#bytes) |  |  |
+| `signing_cert` | [bytes](#bytes) |  |  |
+
+
+
+
+
+
+<a name="secret.registration.remote_attestation.v1beta1.PlatformInfoBlob"></a>
+
+### PlatformInfoBlob
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `sgx_epid_group_flags` | [uint32](#uint32) |  |  |
+| `sgx_tcb_evaluation_flags` | [uint32](#uint32) |  |  |
+| `pse_evaluation_flags` | [uint32](#uint32) |  |  |
+| `latest_equivalent_tcb_psvn` | [string](#string) |  |  |
+| `latest_pse_isvsvn` | [string](#string) |  |  |
+| `latest_psda_svn` | [string](#string) |  |  |
+| `xeid` | [uint32](#uint32) |  |  |
+| `gid` | [uint32](#uint32) |  |  |
+| `sgx_ec256_signature_t` | [SGXEC256Signature](#secret.registration.remote_attestation.v1beta1.SGXEC256Signature) |  |  |
+
+
+
+
+
+
+<a name="secret.registration.remote_attestation.v1beta1.QuoteReport"></a>
+
+### QuoteReport
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `id` | [string](#string) |  |  |
+| `timestamp` | [string](#string) |  |  |
+| `version` | [uint64](#uint64) |  |  |
+| `isv_enclave_quote_status` | [string](#string) |  |  |
+| `platform_info_blob` | [string](#string) |  |  |
+| `isv_enclave_quote_body` | [string](#string) |  |  |
+| `advisory_ids` | [string](#string) | repeated |  |
+
+
+
+
+
+
+<a name="secret.registration.remote_attestation.v1beta1.QuoteReportBody"></a>
+
+### QuoteReportBody
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `mr_enclave` | [string](#string) |  |  |
+| `mr_signer` | [string](#string) |  |  |
+| `report_data` | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="secret.registration.remote_attestation.v1beta1.QuoteReportData"></a>
+
+### QuoteReportData
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `version` | [uint64](#uint64) |  |  |
+| `sign_type` | [uint64](#uint64) |  |  |
+| `report_body` | [QuoteReportBody](#secret.registration.remote_attestation.v1beta1.QuoteReportBody) |  |  |
+
+
+
+
+
+
+<a name="secret.registration.remote_attestation.v1beta1.SGXEC256Signature"></a>
+
+### SGXEC256Signature
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `gx` | [string](#string) |  |  |
+| `gy` | [string](#string) |  |  |
+
+
+
+
+
+ <!-- end messages -->
+
+ <!-- end enums -->
+
+ <!-- end HasExtensions -->
 
  <!-- end services -->
 
