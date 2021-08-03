@@ -23875,6 +23875,7 @@ paths:
         - Query
   '/registration/v1beta1/encrypted-seed/{pub_key}':
     get:
+      summary: Returns the encrypted seed for a registered node by public key
       operationId: EncryptedSeed
       responses:
         '200':
@@ -23915,38 +23916,56 @@ paths:
           format: byte
       tags:
         - Query
-  /registration/v1beta1/master-key:
+  /registration/v1beta1/registration-key:
     get:
-      operationId: MasterKey
+      summary: Returns the key used for registration
+      operationId: RegistrationKey
       responses:
         '200':
           description: A successful response.
           schema:
             type: object
             properties:
-              registration:
+              key:
+                type: string
+                format: byte
+        default:
+          description: An unexpected error response
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: integer
+                format: int32
+              message:
+                type: string
+              details:
                 type: array
                 items:
                   type: object
                   properties:
-                    certificate:
+                    type_url:
+                      type: string
+                    value:
                       type: string
                       format: byte
-                    encrypted_seed:
-                      type: string
-                      format: byte
-              node_exch_master_certificate:
-                type: object
-                properties:
-                  bytes:
-                    type: string
-                    format: byte
-              io_master_certificate:
-                type: object
-                properties:
-                  bytes:
-                    type: string
-                    format: byte
+      tags:
+        - Query
+  /registration/v1beta1/tx-key:
+    get:
+      summary: Returns the key used for transactions
+      operationId: TxKey
+      responses:
+        '200':
+          description: A successful response.
+          schema:
+            type: object
+            properties:
+              key:
+                type: string
+                format: byte
         default:
           description: An unexpected error response
           schema:
@@ -41840,50 +41859,15 @@ definitions:
     description: >-
       QueryAllowancesResponse is the response type for the Query/Allowances RPC
       method.
-  SecretNetwork.x.registration.v1beta1.GenesisState:
+  secret.registration.v1beta1.Key:
     type: object
     properties:
-      registration:
-        type: array
-        items:
-          type: object
-          properties:
-            certificate:
-              type: string
-              format: byte
-            encrypted_seed:
-              type: string
-              format: byte
-      node_exch_master_certificate:
-        type: object
-        properties:
-          bytes:
-            type: string
-            format: byte
-      io_master_certificate:
-        type: object
-        properties:
-          bytes:
-            type: string
-            format: byte
-  SecretNetwork.x.registration.v1beta1.MasterCertificate:
-    type: object
-    properties:
-      bytes:
+      key:
         type: string
         format: byte
-  SecretNetwork.x.registration.v1beta1.QueryEncryptedSeedResponse:
+  secret.registration.v1beta1.QueryEncryptedSeedResponse:
     type: object
     properties:
-      encrypted_seed:
-        type: string
-        format: byte
-  SecretNetwork.x.registration.v1beta1.RegistrationNodeInfo:
-    type: object
-    properties:
-      certificate:
-        type: string
-        format: byte
       encrypted_seed:
         type: string
         format: byte

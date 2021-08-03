@@ -18,7 +18,7 @@ func NewQuerier(keeper Keeper) GrpcQuerier {
 	return GrpcQuerier{keeper: keeper}
 }
 
-func (q GrpcQuerier) MasterKey(c context.Context, _ *empty.Empty) (*types.GenesisState, error) {
+func (q GrpcQuerier) TxKey(c context.Context, _ *empty.Empty) (*types.Key, error) {
 	rsp, err := queryMasterKey(sdk.UnwrapSDKContext(c), q.keeper)
 	switch {
 	case err != nil:
@@ -26,7 +26,22 @@ func (q GrpcQuerier) MasterKey(c context.Context, _ *empty.Empty) (*types.Genesi
 	case rsp == nil:
 		return nil, types.ErrNotFound
 	}
-	return rsp, nil
+	return &types.Key{
+		Key: rsp.IoMasterCertificate.Bytes,
+	}, nil
+}
+
+func (q GrpcQuerier) RegistrationKey(c context.Context, _ *empty.Empty) (*types.Key, error) {
+	rsp, err := queryMasterKey(sdk.UnwrapSDKContext(c), q.keeper)
+	switch {
+	case err != nil:
+		return nil, err
+	case rsp == nil:
+		return nil, types.ErrNotFound
+	}
+	return &types.Key{
+		Key: rsp.NodeExchMasterCertificate.Bytes,
+	}, nil
 }
 
 func (q GrpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedSeedRequest) (*types.QueryEncryptedSeedResponse, error) {

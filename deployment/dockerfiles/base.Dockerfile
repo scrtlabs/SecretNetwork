@@ -33,7 +33,7 @@ COPY cosmwasm cosmwasm/
 
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 
-COPY Makefile Makefile
+COPY deployment/docker/MakefileCopy Makefile
 
 # RUN make clean
 RUN make vendor
