@@ -332,12 +332,43 @@ export class RestClient {
 
   // The /auth endpoints
   public async authAccounts(address: string): Promise<AuthAccountsResponse> {
-    const path = `/auth/accounts/${address}`;
-    const responseData = await this.get(path);
-    if ((responseData as any).result.type !== "cosmos-sdk/Account") {
-      throw new Error("Unexpected response data format");
-    }
-    return responseData as AuthAccountsResponse;
+    const [authResp, bankResp]: [
+      {
+        height: string;
+        result: {
+          type: string;
+          value: {
+            address: string;
+            public_key: {
+              type: string;
+              value: string;
+            };
+            account_number: string;
+            sequence: string;
+          };
+        };
+      },
+      { height: string; result: Coin[] },
+    ] = (await Promise.all([
+      this.get(`/auth/accounts/${address}`),
+      this.get(`/bank/balances/${address}`),
+    ])) as any;
+
+    const result = {
+      height: bankResp.height,
+      result: {
+        type: "cosmos-sdk/Account",
+        value: {
+          address: authResp.result.value.address,
+          coins: bankResp.result,
+          public_key: JSON.stringify(authResp.result.value.public_key),
+          account_number: Number(authResp.result.value.account_number),
+          sequence: Number(authResp.result.value.sequence),
+        },
+      },
+    };
+
+    return result as AuthAccountsResponse;
   }
 
   // The /blocks endpoints
