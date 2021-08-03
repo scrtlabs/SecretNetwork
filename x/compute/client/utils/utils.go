@@ -137,7 +137,7 @@ func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
 	if ctx.TestMasterIOCert.Bytes != nil { // TODO check length?
 		masterIoKey.Key = ctx.TestMasterIOCert.Bytes
 	} else {
-		res, _, err := ctx.CLIContext.Query("/SecretNetwork.x.registration.v1beta1.Query/TxKey")
+		res, _, err := ctx.CLIContext.Query("/secret.registration.v1beta1.Query/TxKey")
 		if err != nil {
 			return nil, err
 		}
