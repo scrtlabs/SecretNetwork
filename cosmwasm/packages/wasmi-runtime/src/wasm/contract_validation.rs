@@ -2,7 +2,7 @@ use log::*;
 
 use enclave_ffi_types::EnclaveError;
 
-use crate::cosmwasm::types::{CanonicalAddr, Coin, Env};
+use crate::cosmwasm::types::{CanonicalAddr, Coin, Env, HumanAddr};
 use crate::crypto::traits::PubKey;
 use crate::crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
 use crate::wasm::io;
@@ -133,6 +133,7 @@ pub fn validate_contract_key(
     calculated_authentication_id == expected_authentication_id
 }
 
+/// Validate that the message sent to the enclave (after decryption) was actually addressed to this contract.
 pub fn validate_msg(msg: &[u8], contract_code: &[u8]) -> Result<Vec<u8>, EnclaveError> {
     if msg.len() < HEX_ENCODED_HASH_SIZE {
         warn!("Malformed message - expected contract code hash to be prepended to the msg");
@@ -157,6 +158,7 @@ pub fn validate_msg(msg: &[u8], contract_code: &[u8]) -> Result<Vec<u8>, Enclave
     Ok(msg[HEX_ENCODED_HASH_SIZE..].to_vec())
 }
 
+/// Verify all the parameters sent to the enclave match up, and were signed by the right account.
 pub fn verify_params(
     sig_info: &SigInfo,
     env: &Env,
@@ -166,18 +168,12 @@ pub fn verify_params(
 
     // If there's no callback signature - it's not a callback and there has to be a tx signer + signature
     if let Some(callback_sig) = &sig_info.callback_sig {
-        if verify_callback_sig(
+        return verify_callback_sig(
             callback_sig.as_slice(),
-            &CanonicalAddr::from_human(&env.message.sender)
-                .or(Err(EnclaveError::FailedToSerialize))?,
+            &env.message.sender,
             msg,
             &env.message.sent_funds,
-        ) {
-            info!("Message verified! msg.sender is the calling contract");
-            return Ok(());
-        }
-
-        warn!("Callback signature verification failed");
+        );
     } else {
         trace!(
             "Sign bytes are: {:?}",
@@ -188,7 +184,29 @@ pub fn verify_params(
         trace!("sign doc: {:?}", sign_doc);
 
         // This verifies that signatures and sign bytes are self consistent
-        let sender_public_key: &CosmosPubKey = &sign_doc.auth_info.signer_infos[0].public_key;
+        let sender = CanonicalAddr::from_human(&env.message.sender).map_err(|err| {
+            warn!(
+                "failed to canonicalize message sender: {} {}",
+                env.message.sender, err
+            );
+            EnclaveError::FailedTxVerification
+        })?;
+        trace!("sender canonical address is: {:?}", sender.0.0);
+
+        let sender_public_key = sign_doc
+            .auth_info
+            .sender_public_key(&sender)
+            .ok_or_else(|| {
+                warn!("Couldn't find message sender in auth_info.signer_infos");
+                EnclaveError::FailedTxVerification
+            })?;
+        trace!(
+            "sender public key is: {:?}",
+            sender_public_key.get_address().0
+        );
+        trace!("sender signature is: {:?}", sig_info.signature);
+        trace!("sign bytes are: {:?}", sig_info.sign_bytes);
+
         sender_public_key
             .verify_bytes(
                 sig_info.sign_bytes.as_slice(),
@@ -199,7 +217,7 @@ pub fn verify_params(
                 EnclaveError::FailedTxVerification
             })?;
 
-        if verify_signature_params(&sign_doc, env, msg) {
+        if verify_message_params(&sign_doc, env, sender_public_key, msg) {
             info!("Parameters verified successfully");
             return Ok(());
         }
@@ -210,7 +228,30 @@ pub fn verify_params(
     Err(EnclaveError::FailedTxVerification)
 }
 
+/// Verify that the callback sig is appropriate.
+///
+///This is used when contracts send callbacks to each other.
 fn verify_callback_sig(
+    callback_signature: &[u8],
+    sender: &HumanAddr,
+    msg: &SecretMessage,
+    sent_funds: &[Coin],
+) -> Result<(), EnclaveError> {
+    if verify_callback_sig_impl(
+        callback_signature,
+        &CanonicalAddr::from_human(sender).or(Err(EnclaveError::FailedToSerialize))?,
+        msg,
+        sent_funds,
+    ) {
+        info!("Message verified! msg.sender is the calling contract");
+        return Ok(());
+    }
+
+    warn!("Callback signature verification failed");
+    Err(EnclaveError::FailedTxVerification)
+}
+
+fn verify_callback_sig_impl(
     callback_signature: &[u8],
     sender: &CanonicalAddr,
     msg: &SecretMessage,
@@ -222,7 +263,7 @@ fn verify_callback_sig(
 
     let callback_sig = io::create_callback_signature(sender, msg, sent_funds);
 
-    if !callback_signature.eq(callback_sig.as_slice()) {
+    if callback_signature != callback_sig {
         trace!(
             "Contract signature does not match with the one sent: {:?}",
             callback_signature
@@ -233,45 +274,45 @@ fn verify_callback_sig(
     true
 }
 
-fn verify_sender(sender_pubkey: &CosmosPubKey, msg_sender: &CanonicalAddr) -> bool {
-    let address = sender_pubkey.get_address();
-
-    if address.eq(&msg_sender) {
-        return true;
-    }
-
-    false
-}
-
-fn get_verified_msg<'a>(
-    sign_doc: &'a SignDoc,
-    sent_msg: &'a SecretMessage,
-) -> Option<&'a CosmWasmMsg> {
+/// Get the cosmwasm message that contains the encrypted message
+fn get_verified_msg<'sd>(
+    sign_doc: &'sd SignDoc,
+    msg_sender: &CanonicalAddr,
+    sent_msg: &SecretMessage,
+) -> Option<&'sd CosmWasmMsg> {
     sign_doc.body.messages.iter().find(|&m| match m {
-        CosmWasmMsg::Execute { msg, .. } | CosmWasmMsg::Instantiate { init_msg: msg, .. } => {
-            &sent_msg.to_vec() == msg
-        }
+        CosmWasmMsg::Execute { msg, sender, .. }
+        | CosmWasmMsg::Instantiate {
+            init_msg: msg,
+            sender,
+            ..
+        } => msg_sender == sender && &sent_msg.to_vec() == msg,
         CosmWasmMsg::Other => false,
     })
 }
 
+/// Check that the contract listed in the cosmwasm message matches the one in env
 fn verify_contract(msg: &CosmWasmMsg, env: &Env) -> bool {
     // Contract address is relevant only to execute, since during sending an instantiate message the contract address is not yet known
-    if let CosmWasmMsg::Execute { contract, .. } = msg {
-        info!("Verifying contract address..");
-        if env.contract.address != *contract {
-            trace!(
-                "Contract address sent to enclave {:?} is not the same as the signed one {:?}",
-                env.contract.address,
-                *contract
-            );
-            return false;
+    match msg {
+        CosmWasmMsg::Execute { contract, .. } => {
+            info!("Verifying contract address..");
+            let is_verified = env.contract.address == *contract;
+            if !is_verified {
+                trace!(
+                    "Contract address sent to enclave {:?} is not the same as the signed one {:?}",
+                    env.contract.address,
+                    *contract
+                );
+            }
+            is_verified
         }
+        CosmWasmMsg::Instantiate { .. } => true,
+        CosmWasmMsg::Other => false,
     }
-
-    true
 }
 
+/// Check that the funds listed in the cosmwasm message matches the ones in env
 fn verify_funds(msg: &CosmWasmMsg, env: &Env) -> bool {
     match msg {
         CosmWasmMsg::Execute { sent_funds, .. }
@@ -283,7 +324,12 @@ fn verify_funds(msg: &CosmWasmMsg, env: &Env) -> bool {
     }
 }
 
-fn verify_signature_params(sign_doc: &SignDoc, env: &Env, sent_msg: &SecretMessage) -> bool {
+fn verify_message_params(
+    sign_doc: &SignDoc,
+    env: &Env,
+    signer_public_key: &CosmosPubKey,
+    sent_msg: &SecretMessage,
+) -> bool {
     info!("Verifying sender..");
 
     let msg_sender = match CanonicalAddr::from_human(&env.message.sender) {
@@ -291,12 +337,13 @@ fn verify_signature_params(sign_doc: &SignDoc, env: &Env, sent_msg: &SecretMessa
         _ => return false,
     };
 
-    if !verify_sender(&sign_doc.auth_info.sender_public_key(), &msg_sender) {
+    let signer_addr = signer_public_key.get_address();
+    if signer_addr != msg_sender {
         warn!("Sender verification failed!");
         trace!(
             "Message sender {:?} does not match with the message signer {:?}",
-            &env.message.sender,
-            &sign_doc.auth_info.sender_public_key().get_address()
+            msg_sender,
+            signer_addr
         );
         return false;
     }
@@ -304,17 +351,26 @@ fn verify_signature_params(sign_doc: &SignDoc, env: &Env, sent_msg: &SecretMessa
     info!("Verifying message..");
     // If msg is not found (is None) then it means message verification failed,
     // since it didn't find a matching signed message
-    let msg = get_verified_msg(sign_doc, sent_msg);
+    let msg = get_verified_msg(sign_doc, &msg_sender, sent_msg);
     if msg.is_none() {
         warn!("Message verification failed!");
         trace!(
-            "Message sent to contract {:?} is not equal to any signed messages {:?}",
+            "Message sent to contract {:?} by {:?} does not match any signed messages {:?}",
             sent_msg.to_vec(),
+            msg_sender,
             sign_doc.body.messages
         );
         return false;
     }
     let msg = msg.unwrap();
+
+    if msg.sender() != Some(&signer_addr) {
+        warn!(
+            "message signer did not match cosmwasm message sender: {:?} {:?}",
+            signer_addr, msg
+        );
+        return false;
+    }
 
     if !verify_contract(msg, env) {
         warn!("Contract address verification failed!");

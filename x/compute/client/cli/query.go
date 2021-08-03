@@ -7,7 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+
 	"io/ioutil"
 	"strconv"
 
@@ -312,7 +313,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 				return err
 			}
 
-			result, err := authclient.QueryTx(clientCtx, args[0])
+			result, err := authtx.QueryTx(clientCtx, args[0])
 			if err != nil {
 				return err
 			}
@@ -331,7 +332,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 			}
 			txInput := txInputs[0]
 
-			if txInput.Type() == "execute" {
+			if txInput.String() == "execute" {
 				execTx, ok := txInput.(*types.MsgExecuteContract)
 				if !ok {
 					return fmt.Errorf("error parsing tx as type 'execute': %v", txInput)
@@ -339,7 +340,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 
 				encryptedInput = execTx.Msg
 				dataOutputHexB64 = result.Data
-			} else if txInput.Type() == "instantiate" {
+			} else if txInput.String() == "instantiate" {
 				initTx, ok := txInput.(*types.MsgInstantiateContract)
 				if !ok {
 					return fmt.Errorf("error parsing tx as type 'instantiate': %v", txInput)
@@ -347,9 +348,9 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 
 				encryptedInput = initTx.InitMsg
 			} else {
-				return fmt.Errorf("tx %s is not of type 'execute' or 'instantiate'. Got type '%s'", args[0], txInput.Type())
+				return fmt.Errorf("tx %s is not of type 'execute' or 'instantiate'. Got type '%s'", args[0], txInput.String())
 			}
-			answer.Type = txInput.Type()
+			answer.Type = txInput.String()
 
 			// decrypt input
 			if len(encryptedInput) < 64 {

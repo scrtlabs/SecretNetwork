@@ -83,6 +83,13 @@ type VoteMsg struct {
 	VoteOption string `json:"vote_option"`
 }
 
+var (
+	Yes = "Yes"
+	Abstain = "Abstain"
+	No = "No"
+	NoWithVeto = "NoWithVeto"
+)
+
 // SendMsg contains instructions for a Cosmos-SDK/SendMsg
 // It has a fixed interface here and should be converted into the proper SDK format before dispatching
 type SendMsg struct {

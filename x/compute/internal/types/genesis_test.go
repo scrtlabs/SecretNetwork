@@ -75,19 +75,19 @@ func TestCodeValidateBasic(t *testing.T) {
 		},
 		"codeBytes empty": {
 			srcMutator: func(c *Code) {
-				c.CodesBytes = []byte{}
+				c.CodeBytes = []byte{}
 			},
 			expError: true,
 		},
 		"codeBytes nil": {
 			srcMutator: func(c *Code) {
-				c.CodesBytes = nil
+				c.CodeBytes = nil
 			},
 			expError: true,
 		},
 		"codeBytes greater limit": {
 			srcMutator: func(c *Code) {
-				c.CodesBytes = bytes.Repeat([]byte{0x1}, MaxWasmSize+1)
+				c.CodeBytes = bytes.Repeat([]byte{0x1}, MaxWasmSize+1)
 			},
 			expError: true,
 		},

@@ -247,7 +247,8 @@ func (ctx WASMContext) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) 
 }
 
 func (ctx WASMContext) DecryptError(errString string, msgType string, nonce []byte) (json.RawMessage, error) {
-	errorCipherB64 := strings.ReplaceAll(errString, msgType+" contract failed: encrypted: ", "")
+	errorCipherB64 := strings.ReplaceAll(errString, "encrypted: ", "")
+	errorCipherB64 = strings.ReplaceAll(errString, ": "+msgType+" contract failed", "")
 	errorCipherB64 = strings.ReplaceAll(errorCipherB64, ": failed to execute message; message index: 0", "")
 
 	errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
