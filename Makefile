@@ -380,7 +380,7 @@ statik:
 
 
 update-swagger-docs: statik
-	statik -src=client/docs/swagger-ui -dest=client/docs -f -m
+	statik -src=client/docs/static/swagger -dest=client/docs -f -m
 	@if [ -n "$(git status --porcelain)" ]; then \
         echo "\033[91mSwagger docs are out of sync!!!\033[0m";\
         exit 1;\
