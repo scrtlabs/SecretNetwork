@@ -837,21 +837,22 @@
     - [Query](#SecretNetwork.x.compute.v1beta1.Query)
   
 - [secret/registration/v1beta1/types.proto](#secret/registration/v1beta1/types.proto)
-    - [RegistrationNodeInfo](#SecretNetwork.x.registration.v1beta1.RegistrationNodeInfo)
-    - [SeedConfig](#SecretNetwork.x.registration.v1beta1.SeedConfig)
+    - [RegistrationNodeInfo](#secret.registration.v1beta1.RegistrationNodeInfo)
+    - [SeedConfig](#secret.registration.v1beta1.SeedConfig)
   
 - [secret/registration/v1beta1/msg.proto](#secret/registration/v1beta1/msg.proto)
-    - [MasterCertificate](#SecretNetwork.x.registration.v1beta1.MasterCertificate)
-    - [RaAuthenticate](#SecretNetwork.x.registration.v1beta1.RaAuthenticate)
+    - [Key](#secret.registration.v1beta1.Key)
+    - [MasterCertificate](#secret.registration.v1beta1.MasterCertificate)
+    - [RaAuthenticate](#secret.registration.v1beta1.RaAuthenticate)
   
 - [secret/registration/v1beta1/genesis.proto](#secret/registration/v1beta1/genesis.proto)
-    - [GenesisState](#SecretNetwork.x.registration.v1beta1.GenesisState)
+    - [GenesisState](#secret.registration.v1beta1.GenesisState)
   
 - [secret/registration/v1beta1/query.proto](#secret/registration/v1beta1/query.proto)
-    - [QueryEncryptedSeedRequest](#SecretNetwork.x.registration.v1beta1.QueryEncryptedSeedRequest)
-    - [QueryEncryptedSeedResponse](#SecretNetwork.x.registration.v1beta1.QueryEncryptedSeedResponse)
+    - [QueryEncryptedSeedRequest](#secret.registration.v1beta1.QueryEncryptedSeedRequest)
+    - [QueryEncryptedSeedResponse](#secret.registration.v1beta1.QueryEncryptedSeedResponse)
   
-    - [Query](#SecretNetwork.x.registration.v1beta1.Query)
+    - [Query](#secret.registration.v1beta1.Query)
   
 - [Scalar Value Types](#scalar-value-types)
 
@@ -12132,7 +12133,7 @@ Query provides defines the gRPC querier service
 
 
 
-<a name="SecretNetwork.x.registration.v1beta1.RegistrationNodeInfo"></a>
+<a name="secret.registration.v1beta1.RegistrationNodeInfo"></a>
 
 ### RegistrationNodeInfo
 
@@ -12148,7 +12149,7 @@ Query provides defines the gRPC querier service
 
 
 
-<a name="SecretNetwork.x.registration.v1beta1.SeedConfig"></a>
+<a name="secret.registration.v1beta1.SeedConfig"></a>
 
 ### SeedConfig
 
@@ -12180,7 +12181,22 @@ Query provides defines the gRPC querier service
 
 
 
-<a name="SecretNetwork.x.registration.v1beta1.MasterCertificate"></a>
+<a name="secret.registration.v1beta1.Key"></a>
+
+### Key
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `key` | [bytes](#bytes) |  |  |
+
+
+
+
+
+
+<a name="secret.registration.v1beta1.MasterCertificate"></a>
 
 ### MasterCertificate
 
@@ -12195,7 +12211,7 @@ Query provides defines the gRPC querier service
 
 
 
-<a name="SecretNetwork.x.registration.v1beta1.RaAuthenticate"></a>
+<a name="secret.registration.v1beta1.RaAuthenticate"></a>
 
 ### RaAuthenticate
 
@@ -12227,7 +12243,7 @@ Query provides defines the gRPC querier service
 
 
 
-<a name="SecretNetwork.x.registration.v1beta1.GenesisState"></a>
+<a name="secret.registration.v1beta1.GenesisState"></a>
 
 ### GenesisState
 
@@ -12235,9 +12251,9 @@ Query provides defines the gRPC querier service
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `registration` | [RegistrationNodeInfo](#SecretNetwork.x.registration.v1beta1.RegistrationNodeInfo) | repeated |  |
-| `node_exch_master_certificate` | [MasterCertificate](#SecretNetwork.x.registration.v1beta1.MasterCertificate) |  |  |
-| `io_master_certificate` | [MasterCertificate](#SecretNetwork.x.registration.v1beta1.MasterCertificate) |  |  |
+| `registration` | [RegistrationNodeInfo](#secret.registration.v1beta1.RegistrationNodeInfo) | repeated |  |
+| `node_exch_master_certificate` | [MasterCertificate](#secret.registration.v1beta1.MasterCertificate) |  |  |
+| `io_master_certificate` | [MasterCertificate](#secret.registration.v1beta1.MasterCertificate) |  |  |
 
 
 
@@ -12260,7 +12276,7 @@ Query provides defines the gRPC querier service
 
 
 
-<a name="SecretNetwork.x.registration.v1beta1.QueryEncryptedSeedRequest"></a>
+<a name="secret.registration.v1beta1.QueryEncryptedSeedRequest"></a>
 
 ### QueryEncryptedSeedRequest
 
@@ -12275,7 +12291,7 @@ Query provides defines the gRPC querier service
 
 
 
-<a name="SecretNetwork.x.registration.v1beta1.QueryEncryptedSeedResponse"></a>
+<a name="secret.registration.v1beta1.QueryEncryptedSeedResponse"></a>
 
 ### QueryEncryptedSeedResponse
 
@@ -12296,15 +12312,16 @@ Query provides defines the gRPC querier service
  <!-- end HasExtensions -->
 
 
-<a name="SecretNetwork.x.registration.v1beta1.Query"></a>
+<a name="secret.registration.v1beta1.Query"></a>
 
 ### Query
 Query provides defines the gRPC querier service
 
 | Method Name | Request Type | Response Type | Description | HTTP Verb | Endpoint |
 | ----------- | ------------ | ------------- | ------------| ------- | -------- |
-| `MasterKey` | [.google.protobuf.Empty](#google.protobuf.Empty) | [GenesisState](#SecretNetwork.x.registration.v1beta1.GenesisState) |  | GET|/registration/v1beta1/master-key|
-| `EncryptedSeed` | [QueryEncryptedSeedRequest](#SecretNetwork.x.registration.v1beta1.QueryEncryptedSeedRequest) | [QueryEncryptedSeedResponse](#SecretNetwork.x.registration.v1beta1.QueryEncryptedSeedResponse) |  | GET|/registration/v1beta1/encrypted-seed/{pub_key}|
+| `TxKey` | [.google.protobuf.Empty](#google.protobuf.Empty) | [Key](#secret.registration.v1beta1.Key) | Returns the key used for transactions | GET|/registration/v1beta1/tx-key|
+| `RegistrationKey` | [.google.protobuf.Empty](#google.protobuf.Empty) | [Key](#secret.registration.v1beta1.Key) | Returns the key used for registration | GET|/registration/v1beta1/registration-key|
+| `EncryptedSeed` | [QueryEncryptedSeedRequest](#secret.registration.v1beta1.QueryEncryptedSeedRequest) | [QueryEncryptedSeedResponse](#secret.registration.v1beta1.QueryEncryptedSeedResponse) | Returns the encrypted seed for a registered node by public key | GET|/registration/v1beta1/encrypted-seed/{pub_key}|
 
  <!-- end services -->
 

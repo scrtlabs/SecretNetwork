@@ -24,15 +24,15 @@ rm -rf ~/.secret*
 #trust-node=true
 #keyring-backend="test"' > ~/.secretcli/config/config.toml
 
-export SECRET_NETWORK_CHAIN_ID=secretdev-1
-export SECRET_NETWORK_KEYRING_BACKEND=test
+#export SECRET_NETWORK_CHAIN_ID=secretdev-1
+#export SECRET_NETWORK_KEYRING_BACKEND=test
 
 secretd init banana --chain-id secretdev-1
 perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json
 echo "cost member exercise evoke isolate gift cattle move bundle assume spell face balance lesson resemble orange bench surge now unhappy potato dress number acid" |
     secretd keys add a --recover
 secretd add-genesis-account "$(secretd keys show -a a)" 1000000000000uscrt
-secretd gentx a 1000000uscrt
+secretd gentx a 1000000uscrt --chain-id secretdev-1
 secretd collect-gentxs
 secretd validate-genesis
 
@@ -49,7 +49,7 @@ until (secretd status 2>&1 | jq -e '(.SyncInfo.latest_block_height | tonumber) >
     sleep 1
 done
 
-secretd rest-server --laddr tcp://0.0.0.0:1337 &
+# secretd rest-server --laddr tcp://0.0.0.0:1337 &
 export LCD_PID=$(echo $!)
 function cleanup() {
     kill -KILL "$SECRETD_PID" "$LCD_PID"
