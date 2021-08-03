@@ -2,10 +2,8 @@
 
 set -euvx
 
-OUTPUT_FORMAT='json'
-
 function wait_for_tx () {
-    until (secretd q tx "$1" --output $OUTPUT_FORMAT)
+    until (./secretd q tx "$1" --output json)
     do
         echo "$2"
         sleep 1
@@ -13,21 +11,15 @@ function wait_for_tx () {
 }
 
 # init the node
-rm -rf ./.sgx_secrets
-mkdir -p ./.sgx_secrets
+rm -rf ./.sgx_secrets ~/.sgx_secrets *.der ~/*.der
+mkdir -p ./.sgx_secrets ~/.sgx_secrets
 
-rm -rf ~/.secret*
-#mkdir -p ~/.secretcli/config
-#echo 'chain-id="secret-sanity"
-#output="json"
-#indent=true
-#trust-node=true
-#keyring-backend="test"' > ~/.secretcli/config/config.toml
+rm -rf ~/.secretd
 
 #export SECRET_NETWORK_CHAIN_ID=secretdev-1
 #export SECRET_NETWORK_KEYRING_BACKEND=test
 
-secretd init banana --chain-id secretdev-1
+./secretd init banana --chain-id secretdev-1
 perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json
 echo "cost member exercise evoke isolate gift cattle move bundle assume spell face balance lesson resemble orange bench surge now unhappy potato dress number acid" |
     secretd keys add a --recover
@@ -36,15 +28,23 @@ secretd gentx a 1000000uscrt --chain-id secretdev-1
 secretd collect-gentxs
 secretd validate-genesis
 
-secretd init-bootstrap # ./node-master-cert.der ./io-master-cert.der
+(
+    export SCRT_ENCLAVE_DIR="$(pwd)"
+    cd ~
+    "$SCRT_ENCLAVE_DIR/secretd" init-bootstrap
+    "$SCRT_ENCLAVE_DIR/secretd" validate-genesis
 
-secretd validate-genesis
+    RUST_BACKTRACE=1 "$SCRT_ENCLAVE_DIR/secretd" start --bootstrap &
+)
 
-RUST_BACKTRACE=1 secretd start --bootstrap &
 
 export SECRETD_PID=$(echo $!)
 
-until (secretd status 2>&1 | jq -e '(.SyncInfo.latest_block_height | tonumber) > 0' &>/dev/null); do
+
+sleep infinity
+
+
+until (./secretd status 2>&1 | jq -e '(.SyncInfo.latest_block_height | tonumber) > 0' &>/dev/null); do
     echo "Waiting for chain to start..."
     sleep 1
 done
@@ -59,14 +59,14 @@ trap cleanup EXIT ERR
 # store wasm code on-chain so we could later instansiate it
 export STORE_TX_HASH=$(
     yes |
-    secretd tx compute store erc20.wasm --from a --gas 10000000 --output $OUTPUT_FORMAT |
+    ./secretd tx compute store erc20.wasm --from a --gas 10000000 --gas-prices 0.25uscrt --output json |
     jq -r .txhash
 )
 
 wait_for_tx "$STORE_TX_HASH" "Waiting for store to finish on-chain..."
 
 # test storing of wasm code (this doesn't touch sgx yet)
-secretd q tx "$STORE_TX_HASH" --output $OUTPUT_FORMAT |
+./secretd q tx "$STORE_TX_HASH" --output json |
     jq -e '.logs[].events[].attributes[] | select(.key == "code_id" and .value == "1")'
 
 # init the contract (ocall_init + write_db + canonicalize_address)
@@ -75,38 +75,38 @@ secretd q tx "$STORE_TX_HASH" --output $OUTPUT_FORMAT |
 # balances are set to 108 & 53 at init
 export INIT_TX_HASH=$(
     yes |
-        secretd tx compute instantiate 1 "{\"decimals\":10,\"initial_balances\":[{\"address\":\"$(secretd keys show a -a)\",\"amount\":\"108\"},{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\",\"amount\":\"53\"}],\"name\":\"ReuvenPersonalRustCoin\",\"symbol\":\"RPRC\"}" --label RPRCCoin --from a --output $OUTPUT_FORMAT |
+        ./secretd tx compute instantiate 1 "{\"decimals\":10,\"initial_balances\":[{\"address\":\"$(./secretd keys show a -a)\",\"amount\":\"108\"},{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\",\"amount\":\"53\"}],\"name\":\"ReuvenPersonalRustCoin\",\"symbol\":\"RPRC\"}" --label RPRCCoin --from a --output json |
         jq -r .txhash
 )
 
 wait_for_tx "$INIT_TX_HASH" "Waiting for instantiate to finish on-chain..."
 
-secretd q compute tx "$INIT_TX_HASH"
+./secretd q compute tx "$INIT_TX_HASH"
 
 export CONTRACT_ADDRESS=$(
-    secretd q tx "$INIT_TX_HASH" |
+    ./secretd q tx "$INIT_TX_HASH" |
         jq -er '.logs[].events[].attributes[] | select(.key == "contract_address") | .value'
 )
 
 # test balances after init (ocall_query + read_db + canonicalize_address)
-secretd q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"$(secretd keys show a -a)\"}}" |
+./secretd q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"$(./secretd keys show a -a)\"}}" |
     jq -e '.balance == "108"'
-secretd q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\"}}" |
+./secretd q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\"}}" |
     jq -e '.balance == "53"'
 
 # transfer 10 balance (ocall_handle + read_db + write_db + humanize_address + canonicalize_address)
 yes |
-    secretd tx compute execute --from a "$CONTRACT_ADDRESS" '{"transfer":{"amount":"10","recipient":"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t"}}' -b block |
+    ./secretd tx compute execute --from a "$CONTRACT_ADDRESS" '{"transfer":{"amount":"10","recipient":"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t"}}' -b block |
     jq -r .txhash |
-    xargs secretd q compute tx
+    xargs ./secretd q compute tx
 
 # test balances after transfer (ocall_query + read_db)
-secretd q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"$(secretd keys show a -a)\"}}" |
+./secretd q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"$(./secretd keys show a -a)\"}}" |
     jq -e '.balance == "98"'
-secretd q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\"}}" |
+./secretd q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\"}}" |
     jq -e '.balance == "63"'
 
-(secretd q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1zzzzzzzzzzzzzzzzzz\"}}" || true) 2>&1 | grep -c 'canonicalize_address errored: invalid checksum'
+(./secretd q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1zzzzzzzzzzzzzzzzzz\"}}" || true) 2>&1 | grep -c 'canonicalize_address errored: invalid checksum'
 
 # sleep infinity
 
