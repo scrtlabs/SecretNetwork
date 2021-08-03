@@ -336,7 +336,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 				txInput2, ok := txInputs[0].(*types.MsgInstantiateContract)
 				if !ok {
 					txInput3, ok := txInputs[0].(*types.MsgStoreCode)
-					if !ok {
+					if ok {
 						txInput3.WASMByteCode = nil
 						return clientCtx.PrintProto(txInput3)
 					} else {
