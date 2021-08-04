@@ -52,10 +52,10 @@ RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${
 # Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork
 
-#RUN rustup target add wasm32-unknown-unknown
-#
-#COPY install-wasm-tools.sh .
-#RUN ./install-wasm-tools.sh
+RUN rustup target add wasm32-unknown-unknown
+
+COPY install-wasm-tools.sh .
+RUN ./install-wasm-tools.sh
 
 # RUN make build-test-contract
 
@@ -87,9 +87,8 @@ RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${
 RUN cp /go/src/github.com/enigmampc/SecretNetwork/cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so x/compute/internal/keeper
 RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/x/compute/internal/keeper/.sgx_secrets
 
-#COPY deployment/ci/go-tests.sh .
-#
-#RUN chmod +x go-tests.sh
+COPY deployment/ci/go-tests.sh .
 
-# ENTRYPOINT ["/bin/bash", "go-tests.sh"]
-ENTRYPOINT ["/bin/bash"]
+RUN chmod +x go-tests.sh
+
+ENTRYPOINT ["/bin/bash", "go-tests.sh"]

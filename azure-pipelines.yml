@@ -37,7 +37,7 @@ steps:
     repository: rust-go-base-image
     tags: latest
     buildContext: .
-    arguments: --build-arg SGX_MODE=HW -f deployment/dockerfiles/base.Dockerfile
+    arguments: --build-arg SGX_MODE=HW -f deployment/dockerfiles/go-tests.Dockerfile
 - task: Docker@2
   displayName: 'Build node'
   inputs:
