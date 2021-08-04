@@ -57,7 +57,7 @@ RUN rustup target add wasm32-unknown-unknown
 COPY install-wasm-tools.sh .
 RUN ./install-wasm-tools.sh
 
-# RUN make build-test-contract
+RUN make build-test-contract
 
 # Add source files
 COPY go-cosmwasm go-cosmwasm
