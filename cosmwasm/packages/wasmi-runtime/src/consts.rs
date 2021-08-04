@@ -52,7 +52,7 @@ lazy_static! {
         .unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
         + "new_node_seed_exchange_keypair.sealed";
     pub static ref ATTESTATION_CERT_PATH: String =
-        env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECERT_PATH.to_string());
+        env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string());
 }
 
 pub const CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 1;
