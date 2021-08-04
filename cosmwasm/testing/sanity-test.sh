@@ -58,9 +58,8 @@ trap cleanup EXIT ERR
 
 # store wasm code on-chain so we could later instansiate it
 export STORE_TX_HASH=$(
-    yes |
-    ./secretd tx compute store erc20.wasm --from a --gas 10000000 --gas-prices 0.25uscrt --output json |
-    jq -r .txhash
+    ./secretd tx compute store erc20.wasm --from a --gas 10000000 --gas-prices 0.25uscrt --output json -y |
+        jq -r .txhash
 )
 
 wait_for_tx "$STORE_TX_HASH" "Waiting for store to finish on-chain..."
@@ -74,8 +73,7 @@ wait_for_tx "$STORE_TX_HASH" "Waiting for store to finish on-chain..."
 # secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t is just a random address
 # balances are set to 108 & 53 at init
 export INIT_TX_HASH=$(
-    yes |
-        ./secretd tx compute instantiate 1 "{\"decimals\":10,\"initial_balances\":[{\"address\":\"$(./secretd keys show a -a)\",\"amount\":\"108\"},{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\",\"amount\":\"53\"}],\"name\":\"ReuvenPersonalRustCoin\",\"symbol\":\"RPRC\"}" --label RPRCCoin --from a --output json |
+    ./secretd tx compute instantiate 1 "{\"decimals\":10,\"initial_balances\":[{\"address\":\"$(./secretd keys show a -a)\",\"amount\":\"108\"},{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\",\"amount\":\"53\"}],\"name\":\"ReuvenPersonalRustCoin\",\"symbol\":\"RPRC\"}" --label RPRCCoin --from a --output json -y --gas-prices 0.25uscrt |
         jq -r .txhash
 )
 
