@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
+	"time"
 )
 
 /*
@@ -116,11 +117,6 @@ func verifyCert(payload []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	//cert, err := base64.StdEncoding.DecodeString(string(signedReport.SigningCert))
-	//if err != nil {
-	//	return nil, err
-	//}
-
 	certServer, err := x509.ParseCertificate(signedReport.SigningCert)
 	if err != nil {
 		return nil, err
@@ -135,6 +131,10 @@ func verifyCert(payload []byte) ([]byte, error) {
 
 	opts := x509.VerifyOptions{
 		Roots: roots,
+		// note: there's no way to not validate the time, and we don't want to write this code
+		// ourselves. We also can't just ignore the error message, since that means that the rest of
+		// the validation didn't happen (time is validated early on)
+		CurrentTime: time.Date(2023, 11, 04, 00, 00, 00, 00, time.UTC),
 	}
 
 	if _, err := certServer.Verify(opts); err != nil {
