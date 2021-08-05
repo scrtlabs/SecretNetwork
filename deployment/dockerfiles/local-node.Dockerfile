@@ -2,7 +2,7 @@
 FROM rust-go-base-image AS build-env-rust-go
 
 # Final image
-FROM cashmaney/enigma-sgx-base
+FROM enigmampc/enigma-sgx-base
 
 # wasmi-sgx-test script requirements
 RUN apt-get update && \
