@@ -379,41 +379,6 @@ describe("CosmWasmClient", () => {
         contract = { initMsg: initMsg, address: contractAddress };
       }
     });
-
-    it("can query existing key", async () => {
-      pendingWithoutWasmd();
-      assert(contract);
-
-      const client = new CosmWasmClient(wasmd.endpoint);
-      const raw = await client.queryContractRaw(contract.address, configKey);
-      assert(raw, "must get result");
-      expect(JSON.parse(fromUtf8(raw))).toEqual({
-        verifier: toBase64(Bech32.decode(contract.initMsg.verifier).data),
-        beneficiary: toBase64(Bech32.decode(contract.initMsg.beneficiary).data),
-        funder: toBase64(Bech32.decode(faucet.address).data),
-      });
-    });
-
-    it("can query non-existent key", async () => {
-      pendingWithoutWasmd();
-      assert(contract);
-
-      const client = new CosmWasmClient(wasmd.endpoint);
-      const raw = await client.queryContractRaw(contract.address, otherKey);
-      expect(raw).toBeNull();
-    });
-
-    it("errors for non-existent contract", async () => {
-      pendingWithoutWasmd();
-      assert(contract);
-
-      const nonExistentAddress = makeRandomAddress();
-      const client = new CosmWasmClient(wasmd.endpoint);
-      await client.queryContractRaw(nonExistentAddress, configKey).then(
-        () => fail("must not succeed"),
-        (error) => expect(error).toMatch(`No contract found at address "${nonExistentAddress}"`),
-      );
-    });
   });
 
   describe("queryContractSmart", () => {

@@ -15,7 +15,6 @@ then
   secretd init banana --chain-id secretdev-1
 
   cp ~/node_key.json ~/.secretd/config/node_key.json
-  cp ~/config/app.toml ~/.secretd/config/app.toml
   perl -i -pe 's/"stake"/ "uscrt"/g' ~/.secretd/config/genesis.json
 
   secretd keys add a
@@ -40,6 +39,8 @@ then
   secretd init-bootstrap
   secretd validate-genesis
 fi
+
+lcp --proxyUrl http://localhost:1317 --port 1337 --proxyPartial '' &
 
 # sleep infinity
 source /opt/sgxsdk/environment && RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap

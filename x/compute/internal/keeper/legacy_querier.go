@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strconv"
 
@@ -55,10 +56,10 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 			}
 			rsp, err = queryContractListByCode(ctx, codeID, keeper)
 		case QueryGetContractState:
-			if len(path) < 3 {
-				return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "unknown data query endpoint")
+			if len(path) < 2 {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, fmt.Sprintf("%s too few arguments (wanted at least 2): %v", QueryGetContractState, path))
 			}
-			return queryContractState(ctx, path[1], path[2], req.Data, keeper)
+			return queryContractState(ctx, path[1], "unused" /* path[2] */, req.Data, keeper)
 		case QueryGetCode:
 			codeID, err := strconv.ParseUint(path[1], 10, 64)
 			if err != nil {
@@ -91,7 +92,7 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 			}
 			bz, err = queryContractHash(ctx, addr, keeper)
 		default:
-			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "unknown data query endpoint")
+			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, fmt.Sprintf("unknown data query endpoint %v", path[0]))
 		}
 		if err != nil {
 			return nil, err

@@ -1,5 +1,5 @@
 import { Log } from "./logs";
-import { Coin, CosmosSdkTx, JsonObject, Model, StdTx } from "./types";
+import { Coin, CosmosSdkTx, JsonObject, StdTx } from "./types";
 import { SecretUtils } from "./enigmautils";
 export interface CosmosSdkAccount {
   /** Bech32 account address */
@@ -192,7 +192,7 @@ export declare class RestClient {
   private readonly client;
   private readonly broadcastMode;
   enigmautils: SecretUtils;
-  private codeHashCache;
+  codeHashCache: Map<string | number, string>;
   /**
    * Creates a new client to interact with a Cosmos SDK light client daemon.
    * This class tries to be a direct mapping onto the API. Some basic decoding and normalizatin is done
@@ -212,8 +212,8 @@ export declare class RestClient {
   blocksLatest(): Promise<BlockResponse>;
   blocks(height: number): Promise<BlockResponse>;
   nodeInfo(): Promise<NodeInfoResponse>;
-  txById(id: string): Promise<TxsResponse>;
-  txsQuery(query: string): Promise<SearchTxsResponse>;
+  txById(id: string, tryToDecrypt?: boolean): Promise<TxsResponse>;
+  txsQuery(query: string, tryToDecrypt?: boolean): Promise<SearchTxsResponse>;
   /** returns the amino-encoding of the transaction performed by the server */
   encodeTx(tx: CosmosSdkTx): Promise<Uint8Array>;
   /**
@@ -233,19 +233,17 @@ export declare class RestClient {
    * Returns null when contract was not found at this address.
    */
   getContractInfo(address: string): Promise<ContractDetails | null>;
-  getAllContractState(address: string): Promise<readonly Model[]>;
-  queryContractRaw(address: string, key: Uint8Array): Promise<Uint8Array | null>;
   /**
    * Makes a smart query on the contract and parses the reponse as JSON.
    * Throws error if no such contract exists, the query format is invalid or the response is invalid.
    */
-  queryContractSmart(address: string, query: object): Promise<JsonObject>;
+  queryContractSmart(address: string, query: object, addedParams?: object): Promise<JsonObject>;
   /**
    * Get the consensus keypair for IO encryption
    */
   getMasterCerts(address: string, query: object): Promise<any>;
-  decryptDataField(dataField: string | undefined, nonce: Uint8Array): Promise<Uint8Array>;
-  decryptLogs(logs: readonly Log[], nonce: Uint8Array): Promise<readonly Log[]>;
+  decryptDataField(dataField: string | undefined, nonces: Array<Uint8Array>): Promise<Uint8Array>;
+  decryptLogs(logs: readonly Log[], nonces: Array<Uint8Array>): Promise<readonly Log[]>;
   decryptTxsResponse(txsResponse: TxsResponse): Promise<TxsResponse>;
 }
 export {};

@@ -111,7 +111,7 @@ export interface PrivateCosmWasmClient {
   readonly restClient: RestClient;
 }
 export declare class CosmWasmClient {
-  protected readonly restClient: RestClient;
+  readonly restClient: RestClient;
   /** Any address the chain considers valid (valid bech32 with proper prefix) */
   protected anyValidAddress: string | undefined;
   private readonly codesCache;
@@ -157,21 +157,17 @@ export declare class CosmWasmClient {
    */
   getContract(address: string): Promise<ContractDetails>;
   /**
-   * Returns the data at the key if present (raw contract dependent storage data)
-   * or null if no data at this key.
-   *
-   * Promise is rejected when contract does not exist.
-   */
-  queryContractRaw(address: string, key: Uint8Array): Promise<Uint8Array | null>;
-  /**
    * Makes a smart query on the contract, returns the parsed JSON document.
    *
    * Promise is rejected when contract does not exist.
    * Promise is rejected for invalid query format.
    * Promise is rejected for invalid response format.
+   *
+   * Note: addedParams allows for query string additions such as "&height=1234567"
    */
-  queryContractSmart(address: string, queryMsg: object): Promise<JsonObject>;
+  queryContractSmart(address: string, queryMsg: object, addedParams?: object): Promise<JsonObject>;
   private txsQuery;
   getCodeHashByCodeId(id: number): Promise<string>;
   getCodeHashByContractAddr(addr: string): Promise<string>;
+  getNonceByTxId(txhash: string): Promise<Array<Uint8Array | null>>;
 }
