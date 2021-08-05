@@ -99,6 +99,7 @@ jobs:
       - name: Install misc.
         run: |
           go get -u github.com/jteeuwen/go-bindata/...
+          chmod +x ./scripts/install-wasm-tools.sh
           ./scripts/install-wasm-tools.sh
       - name: Build
         run: |
