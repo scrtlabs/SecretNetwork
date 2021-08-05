@@ -14,9 +14,9 @@ rm -rf ~/.secretd
 mkdir -p /root/.secretd/.node
 secretd config keyring-backend test
 secretd config node tcp://bootstrap:26657
-secretd config chain-id enigma-testnet
+secretd config chain-id secretdev-1
 
-secretd init "$(hostname)" --chain-id enigma-testnet || true
+secretd init "$(hostname)" --chain-id secretdev-1 || true
 
 PERSISTENT_PEERS="115aa0a629f5d70dd1d464bc7e42799e00f4edae@bootstrap:26656"
 
@@ -26,9 +26,7 @@ echo "Set persistent_peers: $PERSISTENT_PEERS"
 echo "Waiting for bootstrap to start..."
 sleep 20
 
-# MASTER_KEY="$(secretcli q register secret-network-params --node http://bootstrap:26657 2> /dev/null | cut -c 3- )"
-
-#echo "Master key: $MASTER_KEY"
+cp /tmp/.secretd/keyring-test /root/.secretd/ -r
 
 secretd init-enclave
 
