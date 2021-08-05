@@ -57,8 +57,6 @@ RUN rustup target add wasm32-unknown-unknown
 COPY install-wasm-tools.sh .
 RUN ./install-wasm-tools.sh
 
-RUN make build-test-contract
-
 # Add source files
 COPY go-cosmwasm go-cosmwasm
 # This is due to some esoteric docker bug with the underlying filesystem, so until I figure out a better way, this should be a workaround
@@ -78,6 +76,8 @@ COPY client client
 
 RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
 RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_cli
+
+RUN make build-test-contract
 
 # workaround because paths seem kind of messed up
 # RUN cp /opt/sgxsdk/lib64/libsgx_urts_sim.so /usr/lib/libsgx_urts_sim.so
