@@ -17,6 +17,11 @@ RUN apt-get update && \
 
 RUN echo "source /etc/profile.d/bash_completion.sh" >> ~/.bashrc
 
+RUN curl -sL https://deb.nodesource.com/setup_15.x | bash - && \
+    apt-get update && \
+    apt-get install -y nodejs npm && \
+    npm i -g local-cors-proxy
+
 ARG SGX_MODE=SW
 ENV SGX_MODE=${SGX_MODE}
 
@@ -55,9 +60,6 @@ RUN mkdir -p /root/.secretd/.compute/
 RUN mkdir -p /root/.sgx_secrets/
 RUN mkdir -p /root/.secretd/.node/
 RUN mkdir -p /root/config/
-
-COPY deployment/docker/bootstrap/config.toml /root/.secretd/config/config-cli.toml
-COPY deployment/docker/config/local/app.toml /root/config/app.toml
 
 COPY x/compute/internal/keeper/testdata/erc20.wasm /root/erc20.wasm
 COPY deployment/docker/sanity-test.sh /root/

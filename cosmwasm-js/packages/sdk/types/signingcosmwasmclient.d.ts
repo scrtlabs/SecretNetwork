@@ -84,19 +84,38 @@ export declare class SigningCosmWasmClient extends CosmWasmClient {
     sequence: number,
   ): Promise<StdTx>;
   /** Uploads code and returns a receipt, including the code ID */
-  upload(wasmCode: Uint8Array, meta?: UploadMeta, memo?: string): Promise<UploadResult>;
+  upload(wasmCode: Uint8Array, meta?: UploadMeta, memo?: string, fee?: StdFee): Promise<UploadResult>;
   instantiate(
     codeId: number,
     initMsg: object,
     label: string,
     memo?: string,
     transferAmount?: readonly Coin[],
+    fee?: StdFee,
+    contractCodeHash?: string,
   ): Promise<InstantiateResult>;
+  multiExecute(
+    inputMsgs: Array<{
+      contractAddress: string;
+      contractCodeHash?: string;
+      handleMsg: object;
+      transferAmount?: readonly Coin[];
+    }>,
+    memo?: string,
+    totalFee?: StdFee,
+  ): Promise<ExecuteResult>;
   execute(
     contractAddress: string,
     handleMsg: object,
     memo?: string,
     transferAmount?: readonly Coin[],
+    fee?: StdFee,
+    contractCodeHash?: string,
   ): Promise<ExecuteResult>;
-  sendTokens(recipientAddress: string, transferAmount: readonly Coin[], memo?: string): Promise<PostTxResult>;
+  sendTokens(
+    recipientAddress: string,
+    transferAmount: readonly Coin[],
+    memo?: string,
+    fee?: StdFee,
+  ): Promise<PostTxResult>;
 }

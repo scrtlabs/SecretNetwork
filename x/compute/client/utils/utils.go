@@ -9,15 +9,16 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/client"
-	"google.golang.org/grpc/encoding"
-	"google.golang.org/grpc/encoding/proto"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
+	"regexp"
+
+	"github.com/cosmos/cosmos-sdk/client"
+	"google.golang.org/grpc/encoding"
+	"google.golang.org/grpc/encoding/proto"
 
 	regtypes "github.com/enigmampc/SecretNetwork/x/registration"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
@@ -246,10 +247,14 @@ func (ctx WASMContext) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) 
 	return cipher.Open(nil, ciphertext, []byte{})
 }
 
+var re = regexp.MustCompile("encrypted: (.+?):")
+
 func (ctx WASMContext) DecryptError(errString string, msgType string, nonce []byte) (json.RawMessage, error) {
-	errorCipherB64 := strings.ReplaceAll(errString, "encrypted: ", "")
-	errorCipherB64 = strings.ReplaceAll(errString, ": "+msgType+" contract failed", "")
-	errorCipherB64 = strings.ReplaceAll(errorCipherB64, ": failed to execute message; message index: 0", "")
+	regexMatch := re.FindStringSubmatch(errString)
+	if len(regexMatch) != 2 {
+		return nil, fmt.Errorf("Got an error finding base64 of the error: regexMatch '%v' should have a length of 2", regexMatch)
+	}
+	errorCipherB64 := regexMatch[1]
 
 	errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
 	if err != nil {

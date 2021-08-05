@@ -2,6 +2,7 @@ export interface SecretUtils {
   getPubkey: () => Promise<Uint8Array>;
   decrypt: (ciphertext: Uint8Array, nonce: Uint8Array) => Promise<Uint8Array>;
   encrypt: (contractCodeHash: string, msg: object) => Promise<Uint8Array>;
+  getTxEncryptionKey: (nonce: Uint8Array) => Promise<Uint8Array>;
 }
 export default class EnigmaUtils implements SecretUtils {
   private readonly apiUrl;
@@ -22,7 +23,7 @@ export default class EnigmaUtils implements SecretUtils {
     pubkey: Uint8Array;
   };
   private getConsensusIoPubKey;
-  private getTxEncryptionKey;
+  getTxEncryptionKey(nonce: Uint8Array): Promise<Uint8Array>;
   encrypt(contractCodeHash: string, msg: object): Promise<Uint8Array>;
   decrypt(ciphertext: Uint8Array, nonce: Uint8Array): Promise<Uint8Array>;
   getPubkey(): Promise<Uint8Array>;

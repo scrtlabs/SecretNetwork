@@ -45,6 +45,8 @@ function prehash(bytes: Uint8Array, type: PrehashType): Uint8Array {
 /**
  * The Cosmoshub derivation path in the form `m/44'/118'/0'/0/a`
  * with 0-based account index `a`.
+ * The Secret Network derivation path in the form `m/44'/529'/0'/0/a`
+ * with 0-based account index `a`.
  */
 export function makeSecretNetworkPath(a: number): readonly Slip10RawIndex[] {
   return [

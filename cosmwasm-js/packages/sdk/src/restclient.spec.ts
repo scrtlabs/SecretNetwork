@@ -1334,42 +1334,6 @@ describe("RestClient", () => {
         }
       });
 
-      it("can get all state", async () => {
-        pendingWithoutWasmd();
-
-        // get contract state
-        const state = await client.getAllContractState(contractAddress!);
-        expect(state.length).toEqual(1);
-        const data = state[0];
-        expect(data.key).toEqual(expectedKey);
-        const value = JSON.parse(fromAscii(data.val));
-        expect(value.verifier).toBeDefined();
-        expect(value.beneficiary).toBeDefined();
-
-        // bad address is empty array
-        const noContractState = await client.getAllContractState(noContract);
-        expect(noContractState).toEqual([]);
-      });
-
-      it("can query by key", async () => {
-        pendingWithoutWasmd();
-
-        // query by one key
-        const raw = await client.queryContractRaw(contractAddress!, expectedKey);
-        assert(raw, "must get result");
-        const model = JSON.parse(fromAscii(raw));
-        expect(model.verifier).toBeDefined();
-        expect(model.beneficiary).toBeDefined();
-
-        // missing key is null
-        const missing = await client.queryContractRaw(contractAddress!, fromHex("cafe0dad"));
-        expect(missing).toBeNull();
-
-        // bad address is null
-        const noContractModel = await client.queryContractRaw(noContract, expectedKey);
-        expect(noContractModel).toBeNull();
-      });
-
       it("can make smart queries", async () => {
         pendingWithoutWasmd();
 

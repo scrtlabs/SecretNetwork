@@ -7,6 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"github.com/gogo/protobuf/proto"
+
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 
 	"io/ioutil"
@@ -384,14 +387,17 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 
 			// decrypt data
 			if answer.Type == "execute" {
-				dataOutputB64, err := hex.DecodeString(dataOutputHexB64)
+				dataOutputAsProtobuf, err := hex.DecodeString(dataOutputHexB64)
 				if err != nil {
 					return fmt.Errorf("error while trying to decode the encrypted output data from hex string: %w", err)
 				}
 
-				dataOutputCipherBz, err := base64.StdEncoding.DecodeString(string(dataOutputB64))
+				var txData sdk.MsgData
+				proto.Unmarshal(dataOutputAsProtobuf, &txData)
+
+				dataOutputCipherBz, err := base64.StdEncoding.DecodeString(string(txData.Data))
 				if err != nil {
-					return fmt.Errorf("error while trying to decode the encrypted output data from base64: %w", err)
+					return fmt.Errorf("error while trying to decode the encrypted output data from base64 '%v': %w", string(txData.Data), err)
 				}
 
 				dataPlaintextB64Bz, err := wasmCtx.Decrypt(dataOutputCipherBz, nonce)
@@ -403,7 +409,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 
 				dataPlaintext, err := base64.StdEncoding.DecodeString(dataPlaintextB64)
 				if err != nil {
-					return fmt.Errorf("error while trying to decode the decrypted output data from base64: %w", err)
+					return fmt.Errorf("error while trying to decode the decrypted output data from base64 '%v': %w", dataPlaintextB64, err)
 				}
 
 				answer.OutputDataAsString = string(dataPlaintext)
@@ -472,7 +478,7 @@ func GetCmdQuery() *cobra.Command {
 	decoder := newArgDecoder(asciiDecodeString)
 
 	cmd := &cobra.Command{
-		Use:   "query [bech32_address] [query]", // TODO add --from wallet
+		Use:   "query [bech32_address_or_label] [query]", // TODO add --from wallet
 		Short: "Calls contract with given address with query data and prints the returned result",
 		Long:  "Calls contract with given address with query data and prints the returned result",
 		Args:  cobra.ExactArgs(2),
@@ -486,7 +492,6 @@ func GetCmdQuery() *cobra.Command {
 			var contractAddr string
 
 			if len(args) == 1 {
-
 				label, err := cmd.Flags().GetString(flagLabel)
 				if err != nil {
 					return fmt.Errorf("label or bech32 contract address is required")

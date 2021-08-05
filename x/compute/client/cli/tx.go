@@ -4,9 +4,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/client/tx"
 	"io/ioutil"
 	"strconv"
+
+	"github.com/cosmos/cosmos-sdk/client/tx"
 
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
 
@@ -334,6 +335,7 @@ func ExecuteContractCmd() *cobra.Command {
 		"io-master-cert.der file, which you can get using the command `secretcli q register secret-network-params` ")
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract along with command")
 	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
+	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }
 
