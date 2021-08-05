@@ -54,8 +54,10 @@ RUN echo 'source /root/secretd_completion' >> ~/.bashrc
 RUN mkdir -p /root/.secretd/.compute/
 RUN mkdir -p /root/.sgx_secrets/
 RUN mkdir -p /root/.secretd/.node/
+RUN mkdir -p /root/config/
 
 COPY deployment/docker/bootstrap/config.toml /root/.secretd/config/config-cli.toml
+COPY deployment/docker/config/local/app.toml /root/config/app.toml
 
 COPY x/compute/internal/keeper/testdata/erc20.wasm /root/erc20.wasm
 COPY deployment/docker/sanity-test.sh /root/
@@ -76,4 +78,4 @@ ENV PERSISTENT_PEERS="${PERSISTENT_PEERS}"
 #ENV LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/:/opt/sgxsdk/lib64/
 
 # Run secretd by default, omit entrypoint to ease using container with secretcli
-ENTRYPOINT ["/bin/bash", "sanity-test.sh"]
+ENTRYPOINT ["/bin/bash", "startup.sh"]

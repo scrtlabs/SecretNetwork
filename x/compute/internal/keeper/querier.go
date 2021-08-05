@@ -10,16 +10,16 @@ import (
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
-type grpcQuerier struct {
+type GrpcQuerier struct {
 	keeper Keeper
 }
 
 // todo: this needs proper tests and doc
-func NewQuerier(keeper Keeper) grpcQuerier {
-	return grpcQuerier{keeper: keeper}
+func NewQuerier(keeper Keeper) GrpcQuerier {
+	return GrpcQuerier{keeper: keeper}
 }
 
-func (q grpcQuerier) ContractInfo(c context.Context, req *types.QueryContractInfoRequest) (*types.QueryContractInfoResponse, error) {
+func (q GrpcQuerier) ContractInfo(c context.Context, req *types.QueryContractInfoRequest) (*types.QueryContractInfoResponse, error) {
 	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
 		return nil, err
 	}
@@ -37,7 +37,7 @@ func (q grpcQuerier) ContractInfo(c context.Context, req *types.QueryContractInf
 }
 
 /*
-func (q grpcQuerier) ContractHistory(c context.Context, req *types.QueryContractHistoryRequest) (*types.QueryContractHistoryResponse, error) {
+func (q GrpcQuerier) ContractHistory(c context.Context, req *types.QueryContractHistoryRequest) (*types.QueryContractHistoryResponse, error) {
 	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (q grpcQuerier) ContractHistory(c context.Context, req *types.QueryContract
 }
 */
 
-func (q grpcQuerier) ContractsByCode(c context.Context, req *types.QueryContractsByCodeRequest) (*types.QueryContractsByCodeResponse, error) {
+func (q GrpcQuerier) ContractsByCode(c context.Context, req *types.QueryContractsByCodeRequest) (*types.QueryContractsByCodeResponse, error) {
 	if req.CodeId == 0 {
 		return nil, sdkerrors.Wrap(types.ErrInvalid, "code id")
 	}
@@ -71,7 +71,7 @@ func (q grpcQuerier) ContractsByCode(c context.Context, req *types.QueryContract
 }
 
 /*
-func (q grpcQuerier) AllContractState(c context.Context, req *types.QueryAllContractStateRequest) (*types.QueryAllContractStateResponse, error) {
+func (q GrpcQuerier) AllContractState(c context.Context, req *types.QueryAllContractStateRequest) (*types.QueryAllContractStateResponse, error) {
 	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (q grpcQuerier) AllContractState(c context.Context, req *types.QueryAllCont
 	return &types.QueryAllContractStateResponse{Models: resultData}, nil
 }
 
-func (q grpcQuerier) RawContractState(c context.Context, req *types.QueryRawContractStateRequest) (*types.QueryRawContractStateResponse, error) {
+func (q GrpcQuerier) RawContractState(c context.Context, req *types.QueryRawContractStateRequest) (*types.QueryRawContractStateResponse, error) {
 	ctx := sdk.UnwrapSDKContext(c)
 
 	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
@@ -104,7 +104,7 @@ func (q grpcQuerier) RawContractState(c context.Context, req *types.QueryRawCont
 }
 */
 
-func (q grpcQuerier) SmartContractState(c context.Context, req *types.QuerySmartContractStateRequest) (*types.QuerySmartContractStateResponse, error) {
+func (q GrpcQuerier) SmartContractState(c context.Context, req *types.QuerySmartContractStateRequest) (*types.QuerySmartContractStateResponse, error) {
 	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func (q grpcQuerier) SmartContractState(c context.Context, req *types.QuerySmart
 
 }
 
-func (q grpcQuerier) Code(c context.Context, req *types.QueryCodeRequest) (*types.QueryCodeResponse, error) {
+func (q GrpcQuerier) Code(c context.Context, req *types.QueryCodeRequest) (*types.QueryCodeResponse, error) {
 	if req.CodeId == 0 {
 		return nil, sdkerrors.Wrap(types.ErrInvalid, "code id")
 	}
@@ -137,7 +137,7 @@ func (q grpcQuerier) Code(c context.Context, req *types.QueryCodeRequest) (*type
 	}, nil
 }
 
-func (q grpcQuerier) Codes(c context.Context, _ *empty.Empty) (*types.QueryCodesResponse, error) {
+func (q GrpcQuerier) Codes(c context.Context, _ *empty.Empty) (*types.QueryCodesResponse, error) {
 	rsp, err := queryCodeList(sdk.UnwrapSDKContext(c), q.keeper)
 	switch {
 	case err != nil:
@@ -148,7 +148,7 @@ func (q grpcQuerier) Codes(c context.Context, _ *empty.Empty) (*types.QueryCodes
 	return &types.QueryCodesResponse{CodeInfos: rsp}, nil
 }
 
-func (q grpcQuerier) AddressByLabel(c context.Context, req *types.QueryContractAddressByLabelRequest) (*types.QueryContractAddressByLabelResponse, error) {
+func (q GrpcQuerier) AddressByLabel(c context.Context, req *types.QueryContractAddressByLabelRequest) (*types.QueryContractAddressByLabelResponse, error) {
 	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
 	rsp, err := queryContractAddress(ctx, req.Label, q.keeper)
 	switch {
@@ -161,7 +161,7 @@ func (q grpcQuerier) AddressByLabel(c context.Context, req *types.QueryContractA
 
 }
 
-func (q grpcQuerier) ContractKey(c context.Context, req *types.QueryContractKeyRequest) (*types.QueryContractKeyResponse, error) {
+func (q GrpcQuerier) ContractKey(c context.Context, req *types.QueryContractKeyRequest) (*types.QueryContractKeyResponse, error) {
 	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func (q grpcQuerier) ContractKey(c context.Context, req *types.QueryContractKeyR
 
 }
 
-func (q grpcQuerier) ContractHash(c context.Context, req *types.QueryContractHashRequest) (*types.QueryContractHashResponse, error) {
+func (q GrpcQuerier) ContractHash(c context.Context, req *types.QueryContractHashRequest) (*types.QueryContractHashResponse, error) {
 	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
 		return nil, err
 	}
@@ -299,7 +299,7 @@ func queryContractHistory(ctx sdk.Context, bech string, keeper Keeper) ([]byte, 
 func queryContractAddress(ctx sdk.Context, label string, keeper Keeper) (sdk.AccAddress, error) {
 	res := keeper.GetContractAddress(ctx, label)
 	if res == nil {
-		return nil, nil
+		return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownAddress, label)
 	}
 
 	return res, nil

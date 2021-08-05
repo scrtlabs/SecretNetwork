@@ -66,7 +66,7 @@ pub fn init(
     })?;
     let contract_key =
         generate_encryption_key(&parsed_env, contract, &(canonical_contract_address.0).0)?;
-    trace!("Init: Contract Key: {:?}", contract_key.to_vec().as_slice());
+    trace!("Init: Contract Key: {:?}", hex::encode(contract_key));
 
     let parsed_sig_info: SigInfo = serde_json::from_slice(sig_info).map_err(|err| {
         warn!(
@@ -208,10 +208,7 @@ pub fn handle(
 
     trace!("Successfully authenticated the contract!");
 
-    trace!(
-        "Handle: Contract Key: {:?}",
-        contract_key.to_vec().as_slice()
-    );
+    trace!("Handle: Contract Key: {:?}", hex::encode(contract_key));
 
     let mut engine = start_engine(
         context,
@@ -281,10 +278,7 @@ pub fn query(
     let mut contract_key = [0; CONTRACT_KEY_LENGTH];
     contract_key.copy_from_slice(key);
 
-    trace!(
-        "Query: Contract Key: {:?}",
-        contract_key.to_vec().as_slice()
-    );
+    trace!("Query: Contract Key: {:?}", hex::encode(contract_key));
 
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;

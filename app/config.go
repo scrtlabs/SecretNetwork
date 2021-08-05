@@ -18,13 +18,22 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
 	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
+	feegrantmodule "github.com/cosmos/cosmos-sdk/x/feegrant/module"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	transfer "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"
-	ibctransfertypes "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer/types"
-	ibc "github.com/cosmos/cosmos-sdk/x/ibc/core"
-	ibchost "github.com/cosmos/cosmos-sdk/x/ibc/core/24-host"
+	transfer "github.com/cosmos/ibc-go/modules/apps/transfer"
+	ibctransfertypes "github.com/cosmos/ibc-go/modules/apps/transfer/types"
+	ibc "github.com/cosmos/ibc-go/modules/core"
+	ibchost "github.com/cosmos/ibc-go/modules/core/24-host"
+
+	//transfer "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"
+	//ibctransfertypes "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer/types"
+	//ibc "github.com/cosmos/cosmos-sdk/x/ibc/core"
+	//ibchost "github.com/cosmos/cosmos-sdk/x/ibc/core/24-host"
+	distr "github.com/cosmos/cosmos-sdk/x/distribution"
+	distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/cosmos/cosmos-sdk/x/mint"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	"github.com/cosmos/cosmos-sdk/x/params"
@@ -38,9 +47,6 @@ import (
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	"github.com/enigmampc/SecretNetwork/x/compute"
-	distr "github.com/enigmampc/SecretNetwork/x/distribution"
-	distrclient "github.com/enigmampc/SecretNetwork/x/distribution/client"
-	distrtypes "github.com/enigmampc/SecretNetwork/x/distribution/types"
 	"github.com/enigmampc/SecretNetwork/x/registration"
 )
 
@@ -74,6 +80,7 @@ var (
 			evidence.AppModuleBasic{},
 			transfer.AppModuleBasic{},
 			vesting.AppModuleBasic{},
+			feegrantmodule.AppModuleBasic{},
 		},
 			// our stuff
 			customModuleBasics()...,
@@ -104,7 +111,7 @@ func ModuleBasics() module.BasicManager {
 // This is provided for compatibility between protobuf and amino implementations.
 type EncodingConfig struct {
 	InterfaceRegistry types.InterfaceRegistry
-	Marshaler         codec.Marshaler
+	Marshaler         codec.Codec
 	TxConfig          client.TxConfig
 	Amino             *codec.LegacyAmino
 }

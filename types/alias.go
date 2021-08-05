@@ -12,4 +12,11 @@ const (
 	Bech32PrefixValPub   = util.Bech32PrefixValPub
 	Bech32PrefixConsAddr = util.Bech32PrefixConsAddr
 	Bech32PrefixConsPub  = util.Bech32PrefixConsPub
+	CoinType             = util.CoinType
+	CoinPurpose          = util.CoinPurpose
+)
+
+// functions aliases
+var (
+	AddressVerifier = util.AddressVerifier
 )

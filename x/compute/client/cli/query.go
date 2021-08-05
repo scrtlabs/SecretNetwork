@@ -7,7 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+
 	"io/ioutil"
 	"strconv"
 
@@ -312,7 +313,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 				return err
 			}
 
-			result, err := authclient.QueryTx(clientCtx, args[0])
+			result, err := authtx.QueryTx(clientCtx, args[0])
 			if err != nil {
 				return err
 			}
@@ -326,30 +327,31 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 			var dataOutputHexB64 string
 
 			txInputs := result.GetTx().GetMsgs()
+
 			if len(txInputs) != 1 {
 				return fmt.Errorf("can only decrypt txs with 1 input. Got %d", len(txInputs))
 			}
-			txInput := txInputs[0]
-
-			if txInput.Type() == "execute" {
-				execTx, ok := txInput.(*types.MsgExecuteContract)
+			txInput, ok := txInputs[0].(*types.MsgExecuteContract)
+			if !ok {
+				txInput2, ok := txInputs[0].(*types.MsgInstantiateContract)
 				if !ok {
-					return fmt.Errorf("error parsing tx as type 'execute': %v", txInput)
+					txInput3, ok := txInputs[0].(*types.MsgStoreCode)
+					if ok {
+						txInput3.WASMByteCode = nil
+						return clientCtx.PrintProto(txInput3)
+					} else {
+						return fmt.Errorf("TX is not a compute transaction")
+					}
+				} else {
+					encryptedInput = txInput2.InitMsg
+					dataOutputHexB64 = result.Data
+					answer.Type = "instantiate"
 				}
-
-				encryptedInput = execTx.Msg
-				dataOutputHexB64 = result.Data
-			} else if txInput.Type() == "instantiate" {
-				initTx, ok := txInput.(*types.MsgInstantiateContract)
-				if !ok {
-					return fmt.Errorf("error parsing tx as type 'instantiate': %v", txInput)
-				}
-
-				encryptedInput = initTx.InitMsg
 			} else {
-				return fmt.Errorf("tx %s is not of type 'execute' or 'instantiate'. Got type '%s'", args[0], txInput.Type())
+				encryptedInput = txInput.Msg
+				dataOutputHexB64 = result.Data
+				answer.Type = "execute"
 			}
-			answer.Type = txInput.Type()
 
 			// decrypt input
 			if len(encryptedInput) < 64 {

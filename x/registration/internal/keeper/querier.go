@@ -9,16 +9,16 @@ import (
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 )
 
-type grpcQuerier struct {
+type GrpcQuerier struct {
 	keeper Keeper
 }
 
 // todo: this needs proper tests and doc
-func NewQuerier(keeper Keeper) grpcQuerier {
-	return grpcQuerier{keeper: keeper}
+func NewQuerier(keeper Keeper) GrpcQuerier {
+	return GrpcQuerier{keeper: keeper}
 }
 
-func (q grpcQuerier) MasterKey(c context.Context, _ *empty.Empty) (*types.MasterCertificate, error) {
+func (q GrpcQuerier) TxKey(c context.Context, _ *empty.Empty) (*types.Key, error) {
 	rsp, err := queryMasterKey(sdk.UnwrapSDKContext(c), q.keeper)
 	switch {
 	case err != nil:
@@ -26,10 +26,25 @@ func (q grpcQuerier) MasterKey(c context.Context, _ *empty.Empty) (*types.Master
 	case rsp == nil:
 		return nil, types.ErrNotFound
 	}
-	return rsp, nil
+	return &types.Key{
+		Key: rsp.IoMasterCertificate.Bytes,
+	}, nil
 }
 
-func (q grpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedSeedRequest) (*types.QueryEncryptedSeedResponse, error) {
+func (q GrpcQuerier) RegistrationKey(c context.Context, _ *empty.Empty) (*types.Key, error) {
+	rsp, err := queryMasterKey(sdk.UnwrapSDKContext(c), q.keeper)
+	switch {
+	case err != nil:
+		return nil, err
+	case rsp == nil:
+		return nil, types.ErrNotFound
+	}
+	return &types.Key{
+		Key: rsp.NodeExchMasterCertificate.Bytes,
+	}, nil
+}
+
+func (q GrpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedSeedRequest) (*types.QueryEncryptedSeedResponse, error) {
 	if req.PubKey == nil {
 		return nil, sdkerrors.Wrap(types.ErrInvalid, "public key")
 	}
@@ -43,25 +58,25 @@ func (q grpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedS
 	return &types.QueryEncryptedSeedResponse{EncryptedSeed: rsp}, nil
 }
 
-func queryMasterKey(ctx sdk.Context, keeper Keeper) (*types.MasterCertificate, error) {
+func queryMasterKey(ctx sdk.Context, keeper Keeper) (*types.GenesisState, error) {
 	ioKey := keeper.GetMasterCertificate(ctx, types.MasterIoKeyId)
-	//nodeKey := keeper.GetMasterCertificate(ctx, types.MasterNodeKeyId)
-	if ioKey == nil { //|| nodeKey == nil {
+	nodeKey := keeper.GetMasterCertificate(ctx, types.MasterNodeKeyId)
+	if ioKey == nil || nodeKey == nil {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownAddress, "Chain has not been initialized yet")
 	}
 
-	//resp := types.GenesisState{
-	//	Registration:              nil,
-	//	NodeExchMasterCertificate: nodeKey,
-	//	IoMasterCertificate:       ioKey,
-	//}
+	resp := &types.GenesisState{
+		Registration:              nil,
+		NodeExchMasterCertificate: nodeKey,
+		IoMasterCertificate:       ioKey,
+	}
 
-	//asBytes, err := json.Marshal(ioKey)
+	//asBytes, err := keeper.cdc.Marshal(ioKey)
 	//if err != nil {
 	//	return nil, err
 	//}
 
-	return ioKey, nil
+	return resp, nil
 }
 
 func queryEncryptedSeed(ctx sdk.Context, pubkeyBytes []byte, keeper Keeper) ([]byte, error) {

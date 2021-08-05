@@ -9,6 +9,7 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	scrt "github.com/enigmampc/SecretNetwork/types"
+	"github.com/enigmampc/SecretNetwork/x/compute"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -31,6 +32,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
+	clientconfig "github.com/cosmos/cosmos-sdk/client/config"
 	"github.com/cosmos/cosmos-sdk/client/debug"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
@@ -39,7 +41,6 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
@@ -48,7 +49,7 @@ import (
 // thanks @terra-project for this fix
 const flagLegacyHdPath = "legacy-hd-path"
 const flagIsBootstrap = "bootstrap"
-const cfgFileName = "config-cli.toml"
+const cfgFileName = "config.toml"
 
 var bootstrap bool
 
@@ -72,30 +73,52 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) {
 func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 	encodingConfig := app.MakeEncodingConfig()
 
+	config := sdk.GetConfig()
+	config.SetCoinType(scrt.CoinType)
+	config.SetPurpose(scrt.CoinPurpose)
+	config.SetBech32PrefixForAccount(scrt.Bech32PrefixAccAddr, scrt.Bech32PrefixAccPub)
+	config.SetBech32PrefixForValidator(scrt.Bech32PrefixValAddr, scrt.Bech32PrefixValPub)
+	config.SetBech32PrefixForConsensusNode(scrt.Bech32PrefixConsAddr, scrt.Bech32PrefixConsPub)
+	config.SetAddressVerifier(scrt.AddressVerifier)
+	config.Seal()
+
 	initClientCtx := client.Context{}.
-		WithJSONMarshaler(encodingConfig.Marshaler).
+		WithCodec(encodingConfig.Marshaler).
 		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
 		WithTxConfig(encodingConfig.TxConfig).
 		WithLegacyAmino(encodingConfig.Amino).
 		WithInput(os.Stdin).
 		WithAccountRetriever(types.AccountRetriever{}).
-		WithBroadcastMode(flags.BroadcastBlock).
-		WithHomeDir(app.DefaultNodeHome)
+		//WithBroadcastMode(flags.BroadcastBlock).
+		WithHomeDir(app.DefaultNodeHome).
+		WithViper("SECRET")
 
 	rootCmd := &cobra.Command{
 		Use:   "secretd",
 		Short: "The Secret Network App Daemon (server)",
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+			cmd.SetOut(cmd.OutOrStdout())
+			cmd.SetErr(cmd.ErrOrStderr())
 
-			if err := server.InterceptConfigsPreRunHandler(cmd); err != nil {
+			initClientCtx = client.ReadHomeFlag(initClientCtx, cmd)
+			initClientCtx, err := clientconfig.ReadFromClientConfig(initClientCtx)
+
+			if err != nil {
 				return err
 			}
 
-			ctx := server.GetServerContextFromCmd(cmd)
+			if err := client.SetCmdClientContextHandler(initClientCtx, cmd); err != nil {
+				return err
+			}
 
-			bindFlags(cmd, ctx.Viper)
+			secretAppTemplate, secretAppConfig := initAppConfig()
 
-			return initConfig(&initClientCtx, cmd)
+			//ctx := server.GetServerContextFromCmd(cmd)
+
+			//bindFlags(cmd, ctx.Viper)
+
+			return server.InterceptConfigsPreRunHandler(cmd, secretAppTemplate, secretAppConfig)
+			//return initConfig(&initClientCtx, cmd)
 		},
 	}
 
@@ -123,11 +146,12 @@ func Execute(rootCmd *cobra.Command) error {
 }
 
 func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
-	authclient.Codec = encodingConfig.Marshaler
+	// TODO check gaia before make release candidate
+	// authclient.Codec = encodingConfig.Marshaler
 
 	rootCmd.AddCommand(
-		//genutilcli.InitCmd(app.ModuleBasics, app.DefaultNodeHome),
-		updateTmParamsAndInit(app.ModuleBasics(), app.DefaultNodeHome),
+		genutilcli.InitCmd(app.ModuleBasics(), app.DefaultNodeHome),
+		//updateTmParamsAndInit(app.ModuleBasics(), app.DefaultNodeHome),
 		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome),
 		genutilcli.MigrateGenesisCmd(),
 		genutilcli.GenTxCmd(app.ModuleBasics(), encodingConfig.TxConfig, banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome),
@@ -152,7 +176,11 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 		HealthCheck(),
 		ResetEnclave(),
 		keys.Commands(app.DefaultNodeHome),
+		clientconfig.Cmd(),
 	)
+
+	// add rosetta commands
+	rootCmd.AddCommand(server.RosettaCommand(encodingConfig.InterfaceRegistry, encodingConfig.Marshaler))
 
 	// This is needed for `newApp` and `exportAppStateAndTMValidators`
 	rootCmd.PersistentFlags().BoolVar(&bootstrap, flagIsBootstrap,
@@ -247,16 +275,15 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 	}
 
 	bootstrap := cast.ToBool(appOpts.Get("bootstrap"))
-	queryGasLimit := viper.GetUint64("query-gas-limit")
 
 	fmt.Printf("bootstrap: %s", cast.ToString(bootstrap))
 
 	return app.NewSecretNetworkApp(logger, db, traceStore, true, skipUpgradeHeights,
 		cast.ToString(appOpts.Get(flags.FlagHome)),
 		cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod)),
-		queryGasLimit,
 		bootstrap,
 		appOpts,
+		compute.GetConfig(appOpts),
 		baseapp.SetPruning(pruningOpts),
 		baseapp.SetMinGasPrices(cast.ToString(appOpts.Get(server.FlagMinGasPrices))),
 		baseapp.SetHaltHeight(cast.ToUint64(appOpts.Get(server.FlagHaltHeight))),
@@ -276,19 +303,18 @@ func exportAppStateAndTMValidators(
 ) (servertypes.ExportedApp, error) {
 
 	bootstrap := viper.GetBool("bootstrap")
-	queryGasLimit := viper.GetUint64("query-gas-limit")
 
 	encCfg := app.MakeEncodingConfig()
 	encCfg.Marshaler = codec.NewProtoCodec(encCfg.InterfaceRegistry)
 	var wasmApp *app.SecretNetworkApp
 	if height != -1 {
-		wasmApp = app.NewSecretNetworkApp(logger, db, traceStore, false, map[int64]bool{}, "", uint(1), queryGasLimit, bootstrap, appOpts)
+		wasmApp = app.NewSecretNetworkApp(logger, db, traceStore, false, map[int64]bool{}, "", uint(1), bootstrap, appOpts, compute.DefaultWasmConfig())
 
 		if err := wasmApp.LoadHeight(height); err != nil {
 			return servertypes.ExportedApp{}, err
 		}
 	} else {
-		wasmApp = app.NewSecretNetworkApp(logger, db, traceStore, true, map[int64]bool{}, "", uint(1), queryGasLimit, bootstrap, appOpts)
+		wasmApp = app.NewSecretNetworkApp(logger, db, traceStore, true, map[int64]bool{}, "", uint(1), bootstrap, appOpts, compute.DefaultWasmConfig())
 	}
 
 	return wasmApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
@@ -325,21 +351,18 @@ func updateTmParamsAndInit(mbm module.BasicManager, defaultNodeHome string) *cob
 func initConfig(ctx *client.Context, cmd *cobra.Command) error {
 	cmd.PersistentFlags().Bool(flagLegacyHdPath, false, "Flag to specify the command uses old HD path - use this for ledger compatibility")
 
-	config := sdk.GetConfig()
-	config.SetBech32PrefixForAccount(scrt.Bech32PrefixAccAddr, scrt.Bech32PrefixAccPub)
-	config.SetBech32PrefixForValidator(scrt.Bech32PrefixValAddr, scrt.Bech32PrefixValPub)
-	config.SetBech32PrefixForConsensusNode(scrt.Bech32PrefixConsAddr, scrt.Bech32PrefixConsPub)
+	_, err := cmd.PersistentFlags().GetBool(flagLegacyHdPath)
 
-	oldHDPath, err := cmd.PersistentFlags().GetBool(flagLegacyHdPath)
 	if err != nil {
 		return err
 	}
-	if !oldHDPath {
-		config.SetCoinType(529)
-		config.SetFullFundraiserPath("44'/529'/0'/0/0")
-	}
-
-	config.Seal()
+	//if !oldHDPath {
+	//	config.SetPurpose(44)
+	//	config.SetCoinType(529)
+	//	//config.SetFullFundraiserPath("44'/529'/0'/0/0")
+	//}
+	//
+	//config.Seal()
 
 	cfgFilePath := filepath.Join(app.DefaultCLIHome, "config", cfgFileName)
 	if _, err := os.Stat(cfgFilePath); err == nil {

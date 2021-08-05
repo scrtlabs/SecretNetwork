@@ -8,20 +8,22 @@ set -euv
 
 # init the node
 # rm -rf ~/.secret*
-#secretcli config chain-id enigma-testnet
-#secretcli config output json
-#secretcli config indent true
-#secretcli config trust-node true
-#secretcli config keyring-backend test
+
 # rm -rf ~/.secretd
 file=/root/.secretd/config/attestation_cert.der
 if [ ! -e "$file" ]
 then
   rm -rf ~/.secretd/* || true
 
+  # secretcli config chain-id enigma-testnet
+#  secretcli config output json
+#  secretcli config indent true
+#  secretcli config trust-node true
+#  secretcli config keyring-backend test
+
   mkdir -p /root/.secretd/.node
-  export SECRET_NETWORK_CHAIN_ID=$CHAINID
-  export SECRET_NETWORK_KEYRING_BACKEND=test
+#  export SECRET_NETWORK_CHAIN_ID=$CHAINID
+#  export SECRET_NETWORK_KEYRING_BACKEND=test
   # secretd init "$(hostname)" --chain-id enigma-testnet || true
 
   secretd init "$MONIKER" --chain-id "$CHAINID"

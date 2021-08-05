@@ -98,7 +98,8 @@ impl SecretMessage {
 
         debug!(
             "SecretMessage::from_slice nonce = {:?} pubkey = {:?}",
-            nonce, user_pubkey
+            nonce,
+            hex::encode(user_pubkey)
         );
 
         Ok(SecretMessage {
@@ -218,6 +219,7 @@ impl PubKey for CosmosPubKey {
     }
 }
 
+// This is called `VerificationInfo` on the Go side
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SigInfo {
     pub sign_bytes: Binary,
@@ -289,15 +291,22 @@ impl TxBody {
     }
 }
 
+// We do not collect the senders listed in the protobuf messages into this type
+// because they're duplicates of the message sender that we derive from the
+// cosmos-sdk level message signer/sender. If the message was signed by
+// account A, but included account B in the cosmwasm message, then we ignore
+// that lie and tell the contract that the message was sent by account A anyway.
 #[derive(Debug)]
 pub enum CosmWasmMsg {
     Execute {
+        sender: CanonicalAddr,
         contract: HumanAddr,
         msg: Vec<u8>,
         sent_funds: Vec<Coin>,
         callback_sig: Option<Vec<u8>>,
     },
     Instantiate {
+        sender: CanonicalAddr,
         init_msg: Vec<u8>,
         init_funds: Vec<Coin>,
         label: String,
@@ -327,6 +336,12 @@ impl CosmWasmMsg {
         let raw_msg = MsgInstantiateContract::parse_from_bytes(bytes)
             .map_err(|_| EnclaveError::FailedToDeserialize)?;
 
+        trace!(
+            "try_parse_instantiate sender: len={} val={:?}",
+            raw_msg.sender.len(),
+            raw_msg.sender
+        );
+
         let init_funds = Self::parse_funds(raw_msg.init_funds)?;
 
         let callback_sig = raw_msg._callback_sig.map(|cs| match cs {
@@ -334,6 +349,7 @@ impl CosmWasmMsg {
         });
 
         Ok(CosmWasmMsg::Instantiate {
+            sender: CanonicalAddr(Binary(raw_msg.sender)),
             init_msg: raw_msg.init_msg,
             init_funds,
             label: raw_msg.label,
@@ -347,14 +363,26 @@ impl CosmWasmMsg {
         let raw_msg = MsgExecuteContract::parse_from_bytes(bytes)
             .map_err(|_| EnclaveError::FailedToDeserialize)?;
 
-        let contract = String::from_utf8(raw_msg.contract).map_err(|err| {
-            warn!(
-                "Contract address to execute was not a valid string: {}",
-                Binary(err.into_bytes()),
-            );
-            EnclaveError::FailedToDeserialize
-        })?;
-        let contract = HumanAddr(contract);
+        trace!(
+            "try_parse_execute sender: len={} val={:?}",
+            raw_msg.sender.len(),
+            raw_msg.sender
+        );
+        trace!(
+            "try_parse_execute contract: len={} val={:?}",
+            raw_msg.contract.len(),
+            raw_msg.contract
+        );
+
+        // humanize address
+        let contract = HumanAddr::from_canonical(&CanonicalAddr(Binary(raw_msg.contract)))
+            .map_err(|err| {
+                warn!(
+                    "Contract address to execute was not a valid string: {}",
+                    err,
+                );
+                EnclaveError::FailedToDeserialize
+            })?;
 
         let sent_funds = Self::parse_funds(raw_msg.sent_funds)?;
 
@@ -363,6 +391,7 @@ impl CosmWasmMsg {
         });
 
         Ok(CosmWasmMsg::Execute {
+            sender: CanonicalAddr(Binary(raw_msg.sender)),
             contract,
             msg: raw_msg.msg,
             sent_funds,
@@ -390,6 +419,15 @@ impl CosmWasmMsg {
         }
 
         Ok(init_funds)
+    }
+
+    pub fn sender(&self) -> Option<&CanonicalAddr> {
+        match self {
+            CosmWasmMsg::Execute { sender, .. } | CosmWasmMsg::Instantiate { sender, .. } => {
+                Some(sender)
+            }
+            CosmWasmMsg::Other => None,
+        }
     }
 }
 
@@ -424,8 +462,11 @@ impl AuthInfo {
         })
     }
 
-    pub fn sender_public_key(&self) -> &CosmosPubKey {
-        &self.signer_infos[0].public_key
+    pub fn sender_public_key(&self, sender: &CanonicalAddr) -> Option<&CosmosPubKey> {
+        self.signer_infos
+            .iter()
+            .find(|signer_info| &signer_info.public_key.get_address() == sender)
+            .map(|si| &si.public_key)
     }
 }
 

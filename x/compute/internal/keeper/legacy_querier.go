@@ -39,6 +39,7 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 		var (
 			rsp interface{}
 			err error
+			bz  []byte
 		)
 		switch path[0] {
 		case QueryGetContract:
@@ -75,29 +76,37 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 				rsp, err = queryContractHistory(ctx, contractAddr, keeper)
 		*/
 		case QueryContractAddress:
-			rsp, err = queryContractAddress(ctx, path[1], keeper)
+			bz, err = queryContractAddress(ctx, path[1], keeper)
+			// return rsp, nil
 		case QueryContractKey:
 			addr, err := sdk.AccAddressFromBech32(path[1])
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
 			}
-			rsp, err = queryContractKey(ctx, addr, keeper)
+			bz, err = queryContractKey(ctx, addr, keeper)
 		case QueryContractHash:
 			addr, err := sdk.AccAddressFromBech32(path[1])
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
 			}
-			rsp, err = queryContractHash(ctx, addr, keeper)
+			bz, err = queryContractHash(ctx, addr, keeper)
 		default:
 			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "unknown data query endpoint")
 		}
 		if err != nil {
 			return nil, err
 		}
+
+		if bz != nil {
+			return bz, nil
+		}
+
 		if rsp == nil || reflect.ValueOf(rsp).IsNil() {
 			return nil, nil
 		}
-		bz, err := json.MarshalIndent(rsp, "", "  ")
+
+		//bz, err = keeper.legacyAmino.MarshalJSON(rsp)
+		bz, err = json.MarshalIndent(rsp, "", "  ")
 		if err != nil {
 			return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
 		}
