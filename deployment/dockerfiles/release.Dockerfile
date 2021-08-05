@@ -61,9 +61,6 @@ RUN mkdir -p /root/.sgx_secrets/
 RUN mkdir -p /root/.secretd/.node/
 RUN mkdir -p /root/config/
 
-COPY deployment/docker/bootstrap/config.toml /root/.secretd/config/config-cli.toml
-COPY deployment/docker/config/local/app.toml /root/config/app.toml
-
 COPY x/compute/internal/keeper/testdata/erc20.wasm /root/erc20.wasm
 COPY deployment/docker/sanity-test.sh /root/
 
