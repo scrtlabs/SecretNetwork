@@ -130,7 +130,6 @@ impl CosmosPubKey {
     ) -> Result<Self, CryptoError> {
         use proto::crypto::multisig::LegacyAminoPubKey;
         use proto::crypto::secp256k1::PubKey;
-        use proto::tx::signing::SignMode;
         use proto::tx::tx::ModeInfo_oneof_sum;
 
         let public_key = match mode_info.sum {
