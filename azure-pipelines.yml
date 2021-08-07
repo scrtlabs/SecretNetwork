@@ -13,6 +13,9 @@ trigger:
 pool:
   name: 'azure scale set'
 
+workspace:
+  clean: all # what to clean up before the job runs
+
 steps:
 
 - script: echo $(spid) > spid.txt; echo $(api-key-dev) > api_key.txt
