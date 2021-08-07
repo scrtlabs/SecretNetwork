@@ -1,4 +1,4 @@
-FROM enigmampc/enigma-sgx-base
+FROM cashmaney/enigma-sgx-base
 
 # wasmi-sgx-test script requirements
 RUN apt-get update && \
