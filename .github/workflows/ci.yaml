@@ -92,6 +92,8 @@ jobs:
         run: |
           mkdir -p ias_keys/sw_dummy
           mkdir -p ias_keys/develop
+          echo "not_a_key" > spid.txt
+          echo "not_a_key" > api_key.txt
           echo "not_a_key" > ias_keys/sw_dummy/spid.txt
           echo "not_a_key" > ias_keys/develop/spid.txt
           echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
@@ -294,6 +296,9 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: contract.wasm
+      - uses: actions/download-artifact@v2
+        with:
+          name: secretd
       - name: Setup Files
         run: |
           cp libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
