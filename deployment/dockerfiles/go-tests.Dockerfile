@@ -54,7 +54,7 @@ WORKDIR /go/src/github.com/enigmampc/SecretNetwork
 
 RUN rustup target add wasm32-unknown-unknown
 
-COPY install-wasm-tools.sh .
+COPY scripts/install-wasm-tools.sh .
 RUN ./install-wasm-tools.sh
 
 # Add source files
