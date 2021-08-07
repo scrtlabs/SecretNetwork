@@ -1,8 +1,3 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 trigger:
   branches:
     include:
@@ -28,32 +23,36 @@ steps:
       command: build
       repository: rust-enclave-test
       tags: latest
-      buildContext: .
-      arguments: --build-arg SGX_MODE=HW -f deployment/dockerfiles/enclave-test.Dockerfile
+      # buildContext: .
+      arguments: --build-arg SGX_MODE=HW
+      Dockerfile: deployment/dockerfiles/enclave-test.Dockerfile
 - task: Docker@2
   displayName: 'Build base image'
   inputs:
     command: build
     repository: rust-go-base-image
     tags: latest
-    buildContext: .
-    arguments: --build-arg SGX_MODE=HW -f deployment/dockerfiles/go-tests.Dockerfile
+    # buildContext: .
+    arguments: --build-arg SGX_MODE=HW
+    Dockerfile: deployment/dockerfiles/go-tests.Dockerfile
 - task: Docker@2
   displayName: 'Build node'
   inputs:
     command: build
     repository: ci-enigma-sgx-node
     tags: latest
-    buildContext: .
-    arguments: --build-arg SECRET_NODE_TYPE=NODE --build-arg SGX_MODE=HW -f deployment/dockerfiles/local-node.Dockerfile
+    # buildContext: .
+    arguments: --build-arg SECRET_NODE_TYPE=NODE --build-arg SGX_MODE=HW
+    Dockerfile: deployment/dockerfiles/local-node.Dockerfile
 - task: Docker@2
   displayName: 'Build bootstrap'
   inputs:
     command: build
-    buildContext: .
+    # buildContext: .
     repository: ci-enigma-sgx-bootstrap
     tags: latest
-    arguments: --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg SGX_MODE=HW -f deployment/dockerfiles/local-node.Dockerfile
+    arguments: --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg SGX_MODE=HW
+    Dockerfile: deployment/dockerfiles/local-node.Dockerfile
 
 - script: docker-compose -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
   displayName: 'Run system tests'

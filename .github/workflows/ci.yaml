@@ -133,6 +133,14 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: "^1.15" # The Go version to download (if necessary) and use.
+      - name: Install Intel's SGX SDK
+        run: |
+          mkdir -p "$HOME/.sgxsdk"
+          cd "$HOME/.sgxsdk"
+          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
+          chmod +x "$SDK_BIN"
+          echo yes | ./"$SDK_BIN"
       - uses: actions/download-artifact@v2
         with:
           name: libgo_cosmwasm
@@ -155,7 +163,7 @@ jobs:
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
-          cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+          cp librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
           mkdir -p ./x/compute/internal/keeper/.sgx_secrets
           go test -v ./x/compute/client/...
           go test -p 1 -timeout 20m -v ./x/compute/internal/...
