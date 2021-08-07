@@ -5,6 +5,7 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	"github.com/spf13/cast"
 )
@@ -238,14 +239,26 @@ type SecretMsg struct {
 	Msg      []byte
 }
 
+func NewSecretMsg(codeHash []byte, msg []byte) SecretMsg {
+	return SecretMsg{
+		CodeHash: codeHash,
+		Msg: msg,
+	}
+}
+
 func (m SecretMsg) Serialize() []byte {
 	return append(m.CodeHash, m.Msg...)
 }
 
-func NewVerificationInfo(signBytes []byte, signature []byte, callbackSig []byte) wasmTypes.VerificationInfo {
+func NewVerificationInfo(
+	signBytes []byte, signMode sdktxsigning.SignMode, modeInfo []byte, publicKey []byte, signature []byte, callbackSig []byte,
+) wasmTypes.VerificationInfo {
 	return wasmTypes.VerificationInfo{
 		Bytes:             signBytes,
+		SignMode:          signMode.String(),
+		ModeInfo:          modeInfo,
 		Signature:         signature,
+		PublicKey:         publicKey,
 		CallbackSignature: callbackSig,
 	}
 }
