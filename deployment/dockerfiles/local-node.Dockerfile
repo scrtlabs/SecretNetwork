@@ -41,9 +41,13 @@ FROM build-release
 COPY x/compute/internal/keeper/testdata/erc20.wasm erc20.wasm
 
 COPY deployment/ci/wasmi-sgx-test.sh .
+RUN true
 COPY deployment/ci/bootstrap_init.sh .
+RUN true
 COPY deployment/ci/node_init.sh .
+RUN true
 COPY deployment/ci/startup.sh .
+RUN true
 COPY deployment/ci/node_key.json .
 
 RUN chmod +x /usr/bin/secretd
