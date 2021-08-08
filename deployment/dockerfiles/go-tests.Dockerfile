@@ -2,81 +2,13 @@
 # > docker build -t enigma .
 # > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli enigma secretd init
 # > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli enigma secretd start
-FROM baiduxlab/sgx-rust:2004-1.1.3 AS build-env-rust-go
-
-ENV PATH="/root/.cargo/bin:$PATH"
-ENV GOROOT=/usr/local/go
-ENV GOPATH=/go/
-ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
-
-RUN curl -O https://dl.google.com/go/go1.15.5.linux-amd64.tar.gz
-RUN tar -C /usr/local -xzf go1.15.5.linux-amd64.tar.gz
-RUN go get -u github.com/jteeuwen/go-bindata/...
-
-# Set working directory for the build
-WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
-
-ARG BUILD_VERSION="v0.0.0"
-ARG SGX_MODE=SW
-ARG FEATURES
-
-ENV VERSION=${BUILD_VERSION}
-ENV SGX_MODE=${SGX_MODE}
-ENV FEATURES=${FEATURES}
-ENV MITIGATION_CVE_2020_0551=LOAD
-
-COPY third_party/build third_party/build
-
-# Add source files
-COPY go-cosmwasm go-cosmwasm/
-COPY cosmwasm cosmwasm/
-
-WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
-
-COPY deployment/docker/MakefileCopy Makefile
-
-# RUN make clean
-RUN make vendor
-
-WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
-
-COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/
-COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/
-COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/
-COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/
-COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/
-COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/
-
-RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build-rust
-
-# Set working directory for the build
-WORKDIR /go/src/github.com/enigmampc/SecretNetwork
+FROM build-env-rust-go
 
 RUN rustup target add wasm32-unknown-unknown
 
 COPY scripts/install-wasm-tools.sh .
 RUN chmod +x install-wasm-tools.sh
 RUN ./install-wasm-tools.sh
-
-# Add source files
-COPY go-cosmwasm go-cosmwasm
-# This is due to some esoteric docker bug with the underlying filesystem, so until I figure out a better way, this should be a workaround
-RUN true
-COPY x x
-RUN true
-COPY types types
-RUN true
-COPY app app
-COPY go.mod .
-COPY go.sum .
-COPY cmd cmd
-COPY Makefile .
-RUN true
-COPY client client
-# COPY /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/libgo_cosmwasm.so go-cosmwasm/api
-
-RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
-RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_cli
 
 RUN make build-test-contract
 
