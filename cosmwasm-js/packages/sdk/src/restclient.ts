@@ -362,8 +362,8 @@ export class RestClient {
           address: authResp.result.value.address,
           coins: bankResp.result,
           public_key: JSON.stringify(authResp.result.value.public_key),
-          account_number: Number(authResp.result.value.account_number),
-          sequence: Number(authResp.result.value.sequence),
+          account_number: Number(authResp.result.value.account_number || 0),
+          sequence: Number(authResp.result.value.sequence || 0),
         },
       },
     };
