@@ -63,4 +63,4 @@ pub const CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER: u32 = 4;
 pub const LOG_LEVEL_ENV_VAR: &str = "LOG_LEVEL";
 pub const SCRT_SGX_STORAGE_ENV_VAR: &str = "SCRT_SGX_STORAGE";
 
-const DEFAULT_SGX_SECRET_PATH: &str = "./.sgx_secrets/";
+const DEFAULT_SGX_SECRET_PATH: &str = "./";
