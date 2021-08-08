@@ -1,6 +1,5 @@
 use log::*;
 
-use serde::Deserialize;
 use sha2::Digest;
 
 use crate::cosmwasm::encoding::Binary;
@@ -26,7 +25,7 @@ const THRESHOLD_PREFIX: u8 = 0x08;
 /// ```
 const PUBKEY_PREFIX: u8 = 0x12;
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MultisigThresholdPubKey {
     threshold: u32,
     public_keys: Vec<CosmosPubKey>,

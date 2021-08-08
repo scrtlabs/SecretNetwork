@@ -278,7 +278,7 @@ pub fn query(
 
     trace!("Query: Contract Key: {:?}", hex::encode(contract_key));
 
-    trace!("Init input before decryption: {:?}", base64::encode(&msg));
+    trace!("Query input before decryption: {:?}", base64::encode(&msg));
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
     trace!(

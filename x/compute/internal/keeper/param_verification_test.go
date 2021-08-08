@@ -21,7 +21,7 @@ import (
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
-func getSignBytes2(
+func getSignBytes(
 	t *testing.T, signModeHandler authsigning.SignModeHandler, builder client.TxBuilder, multisigAccount Account, signer Account,
 ) []byte {
 	sig := sdksigning.SignatureV2{
@@ -45,14 +45,14 @@ func getSignBytes2(
 	return bytesToSign
 }
 
-func generateSignatures2(
+func generateSignatures(
 	t *testing.T, signModeHandler authsigning.SignModeHandler,
 	builder client.TxBuilder, multisigAccount Account, signers []Account, actualSigners int,
 ) *sdksigning.MultiSignatureData {
 	multiSig := multisig.NewMultisig(len(signers))
 
 	for i := 0; i < len(signers); i++ {
-		signBytes := getSignBytes2(t, signModeHandler, builder, multisigAccount, signers[i])
+		signBytes := getSignBytes(t, signModeHandler, builder, multisigAccount, signers[i])
 		var signature []byte
 		if i < actualSigners {
 			signature, _ = signers[i].private.Sign(signBytes)
@@ -71,7 +71,7 @@ func generateSignatures2(
 	return multiSig
 }
 
-func multisigTxCreator2(
+func multisigTxCreator(
 	t *testing.T, ctx *sdk.Context, keeper Keeper, n int, threshold int, actualSigners int, sdkMsg sdk.Msg,
 ) (authsigning.SignModeHandler, []Account, Account) {
 	signers, multisigAccount := generateMultisigAccount(*ctx, keeper, n, threshold)
@@ -98,7 +98,7 @@ func multisigTxCreatorForExisting(
 
 	_ = builder.SetMsgs(sdkMsg)
 
-	multiSignature := generateSignatures2(t, signmodeHandler, builder, multisigAccount, signers, actualSigners)
+	multiSignature := generateSignatures(t, signmodeHandler, builder, multisigAccount, signers, actualSigners)
 	signature := sdksigning.SignatureV2{
 		PubKey:   multisigAccount.public,
 		Sequence: multisigAccount.acct.GetSequence(),
@@ -329,7 +329,7 @@ func TestMultiSig(t *testing.T) {
 				InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 			}
 
-			_, _, multisigAddr := multisigTxCreator2(t, &ctx, keeper, i+1, j+1, i+1, &sdkMsg)
+			_, _, multisigAddr := multisigTxCreator(t, &ctx, keeper, i+1, j+1, i+1, &sdkMsg)
 
 			contractAddressA, err := keeper.Instantiate(ctx, codeID, multisigAddr.address /* nil, */, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 			if err != nil {
@@ -380,7 +380,7 @@ func TestMultiSigThreshold(t *testing.T) {
 				InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 			}
 
-			_, _, multisigAddr := multisigTxCreator2(t, &ctx, keeper, i+1, j+1, j+1, &sdkMsg)
+			_, _, multisigAddr := multisigTxCreator(t, &ctx, keeper, i+1, j+1, j+1, &sdkMsg)
 
 			contractAddressA, err := keeper.Instantiate(ctx, codeID, multisigAddr.address /* nil,*/, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 			if err != nil {
@@ -428,7 +428,7 @@ func TestMultiSigThresholdNotMet(t *testing.T) {
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 	}
 
-	_, _, multisigAddr := multisigTxCreator2(t, &ctx, keeper, 3, 2, 1, &sdkMsg)
+	_, _, multisigAddr := multisigTxCreator(t, &ctx, keeper, 3, 2, 1, &sdkMsg)
 
 	_, err = keeper.Instantiate(ctx, codeID, multisigAddr.address /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
@@ -528,7 +528,7 @@ func TestMultiSigCallbacks(t *testing.T) {
 		CallbackSig: nil,
 	}
 
-	_, _, multisigAddr := multisigTxCreator2(t, &ctx, keeper, 3, 2, 2, &sdkMsg)
+	_, _, multisigAddr := multisigTxCreator(t, &ctx, keeper, 3, 2, 2, &sdkMsg)
 
 	execRes, err := keeper.Execute(ctx, contractAddress, multisigAddr.address, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
@@ -593,11 +593,11 @@ func TestMultiSigInMultiSig(t *testing.T) {
 	builder.SetTimeoutHeight(0)
 
 	_ = builder.SetMsgs(&sdkMsg)
-	multimultiSignBytes := getSignBytes2(t, signModeHandler, builder, multimultisigAccount, multisigAccount)
+	multimultiSignBytes := getSignBytes(t, signModeHandler, builder, multimultisigAccount, multisigAccount)
 	multimultiSig := multisig.NewMultisig(3)
 
 	// Sign by multisig
-	multiSignature := generateSignatures2(t, signModeHandler, builder, multisigAccount, accounts, 3)
+	multiSignature := generateSignatures(t, signModeHandler, builder, multisigAccount, accounts, 3)
 	fmt.Printf("multisig sig: %v\n", multiSignature)
 
 	// Sign by wallet A
@@ -697,11 +697,11 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 	builder.SetTimeoutHeight(0)
 
 	_ = builder.SetMsgs(&sdkMsg)
-	multimultiSignBytes := getSignBytes2(t, signModeHandler, builder, multimultisigAccount, multisigAccount)
+	multimultiSignBytes := getSignBytes(t, signModeHandler, builder, multimultisigAccount, multisigAccount)
 	multimultiSig := multisig.NewMultisig(3)
 
 	// Sign by multisig
-	multiSignature := generateSignatures2(t, signModeHandler, builder, multisigAccount, accounts, 3)
+	multiSignature := generateSignatures(t, signModeHandler, builder, multisigAccount, accounts, 3)
 	fmt.Printf("multisig sig: %v\n", multiSignature)
 
 	// Sign by wallet A
@@ -869,7 +869,7 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 
 	_ = builder.SetMsgs(&sdkMsg)
 
-	multiSignature := generateSignatures2(t, signModeHanler, builder, multisigPubkey, accounts, 3)
+	multiSignature := generateSignatures(t, signModeHanler, builder, multisigPubkey, accounts, 3)
 
 	multisigAcc := keeper.accountKeeper.GetAccount(ctx, multisigPubkey.address.Bytes())
 	signature := sdksigning.SignatureV2{

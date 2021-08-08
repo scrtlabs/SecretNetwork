@@ -1,5 +1,4 @@
 use log::*;
-use serde::Deserialize;
 
 use crate::cosmwasm::encoding::Binary;
 use crate::cosmwasm::types::CanonicalAddr;
@@ -11,7 +10,7 @@ use sha2::{Digest as Sha2Digest, Sha256};
 
 const SECP256K1_PREFIX: [u8; 4] = [235, 90, 233, 135];
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Secp256k1PubKey(Vec<u8>);
 
 impl Secp256k1PubKey {

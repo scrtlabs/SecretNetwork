@@ -116,8 +116,7 @@ impl SecretMessage {
     }
 }
 
-#[derive(PartialEq, Clone, Debug, Deserialize)]
-#[serde(untagged)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum CosmosPubKey {
     Secp256k1(Secp256k1PubKey),
     Multisig(MultisigThresholdPubKey),
@@ -216,7 +215,7 @@ impl PubKey for CosmosPubKey {
 #[allow(non_camel_case_types)]
 #[derive(Deserialize)]
 #[serde(remote = "proto::tx::signing::SignMode")]
-pub enum SignMode {
+pub enum SignModeDef {
     SIGN_MODE_UNSPECIFIED = 0,
     SIGN_MODE_DIRECT = 1,
     SIGN_MODE_TEXTUAL = 2,
@@ -227,7 +226,7 @@ pub enum SignMode {
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 pub struct SigInfo {
     pub sign_bytes: Binary,
-    #[serde(with = "SignMode")]
+    #[serde(with = "SignModeDef")]
     pub sign_mode: proto::tx::signing::SignMode,
     pub mode_info: Binary,
     pub public_key: Binary,
