@@ -87,7 +87,7 @@ secretd q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1
     jq -e '.balance == "53"'
 
 # transfer 10 balance (ocall_handle + read_db + write_db + humanize_address + canonicalize_address)
-secretd tx compute execute "$CONTRACT_ADDRESS" '{"transfer":{"amount":"10","recipient":"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t"}}' --gas-prices 0.25uscrt --from a -b block -y |
+secretd tx compute execute "$CONTRACT_ADDRESS" '{"transfer":{"amount":"10","recipient":"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t"}}' --gas-prices 0.25uscrt --from a -b block -y --output json |
     jq -r .txhash |
     xargs secretd q compute tx
 
