@@ -3,40 +3,14 @@ FROM tests-base-image AS build-env-rust-go
 
 # Final image
 FROM build-release
+
+ARG SGX_MODE=SW
+ENV SGX_MODE=${SGX_MODE}
 #
-## wasmi-sgx-test script requirements
-#RUN apt-get update && \
-#    apt-get install -y --no-install-recommends \
-#    #### Base utilities ####
-#    jq \
-#    wget \
-#    curl \
-#    bash-completion && \
-#    rm -rf /var/lib/apt/lists/*
-#
-#
-#RUN echo "source /etc/profile.d/bash_completion.sh" >> ~/.bashrc
-#
-#ARG SGX_MODE=SW
-#ENV SGX_MODE=${SGX_MODE}
-#
-#ARG SECRET_NODE_TYPE=BOOTSTRAP
-#ENV SECRET_NODE_TYPE=${SECRET_NODE_TYPE}
-#
-#ENV SCRT_ENCLAVE_DIR=/usr/lib/
-#
-## workaround because paths seem kind of messed up
-#RUN cp /opt/sgxsdk/lib64/libsgx_urts_sim.so /usr/lib/libsgx_urts_sim.so
-#RUN cp /opt/sgxsdk/lib64/libsgx_uae_service_sim.so /usr/lib/libsgx_uae_service_sim.so
-#
-## Install ca-certificates
-#WORKDIR /root
-#
-## Copy over binaries from the build-env
-#COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /usr/lib/
-#COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/
-#COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretd /usr/bin/secretd
-#COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretcli /usr/bin/secretcli
+ARG SECRET_NODE_TYPE=BOOTSTRAP
+ENV SECRET_NODE_TYPE=${SECRET_NODE_TYPE}
+
+ENV SCRT_ENCLAVE_DIR=/usr/lib/
 
 COPY x/compute/internal/keeper/testdata/erc20.wasm erc20.wasm
 RUN true
