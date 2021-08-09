@@ -217,7 +217,7 @@ export class CosmWasmClient {
    */
   public async getNonce(address: string): Promise<GetNonceResult> {
     const account = await this.getAccount(address);
-    if (!account) {
+    if (!account || !account.address) {
       throw new Error(
         "Account does not exist on chain. Send some tokens there before trying to query nonces.",
       );
@@ -238,7 +238,7 @@ export class CosmWasmClient {
       return {
         address: value.address,
         balance: value.coins,
-        pubkey: value.public_key ? decodeBech32Pubkey(value.public_key) : undefined,
+        pubkey: JSON.parse(value.public_key) as PubKey,
         accountNumber: value.account_number,
         sequence: value.sequence,
       };

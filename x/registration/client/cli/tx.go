@@ -2,6 +2,7 @@ package cli
 
 import (
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 	"github.com/spf13/cobra"
@@ -30,8 +31,11 @@ func AuthenticateNodeCmd() *cobra.Command {
 		Short: "Upload a certificate to authenticate the node",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			//clientCtx, err := client.ReadTxCommandFlags(clientCtx, cmd.Flags())
+			//clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
 
 			cert, err := ioutil.ReadFile(args[0])
 			if err != nil {
@@ -52,6 +56,7 @@ func AuthenticateNodeCmd() *cobra.Command {
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), &msg)
 		},
 	}
+	flags.AddTxFlagsToCmd(cmd)
 
 	return cmd
 }

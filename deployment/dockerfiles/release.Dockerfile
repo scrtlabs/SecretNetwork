@@ -2,7 +2,7 @@
 FROM rust-go-base-image AS build-env-rust-go
 
 # Final image
-FROM enigmampc/enigma-sgx-base:2004-1.1.3
+FROM enigmampc/enigma-sgx-base:2004-1.1.3 as build-release
 
 # wasmi-sgx-test script requirements
 RUN apt-get update && \
@@ -61,10 +61,7 @@ RUN mkdir -p /root/.sgx_secrets/
 RUN mkdir -p /root/.secretd/.node/
 RUN mkdir -p /root/config/
 
-COPY x/compute/internal/keeper/testdata/erc20.wasm /root/erc20.wasm
-COPY deployment/docker/sanity-test.sh /root/
 
-RUN chmod +x /root/sanity-test.sh
 
 ####### Node parameters
 ARG MONIKER=default
