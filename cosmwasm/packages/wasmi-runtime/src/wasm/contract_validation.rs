@@ -6,7 +6,7 @@ use crate::cosmwasm::types::{CanonicalAddr, Coin, Env, HumanAddr};
 use crate::crypto::traits::PubKey;
 use crate::crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
 use crate::wasm::io;
-use crate::wasm::types::SecretMessage;
+use crate::wasm::types::{SecretMessage, StdSignDoc};
 
 use super::types::{CosmWasmMsg, CosmosPubKey, SigInfo, SignDoc};
 
@@ -164,7 +164,7 @@ pub fn verify_params(
     env: &Env,
     msg: &SecretMessage,
 ) -> Result<(), EnclaveError> {
-    info!("Verifying message signatures..");
+    info!("Verifying message signatures for: {:?}", sig_info);
 
     // If there's no callback signature - it's not a callback and there has to be a tx signer + signature
     if let Some(callback_sig) = &sig_info.callback_sig {
@@ -180,26 +180,8 @@ pub fn verify_params(
             String::from_utf8_lossy(sig_info.sign_bytes.as_slice())
         );
 
-        let sign_doc = SignDoc::from_bytes(sig_info.sign_bytes.as_slice())?;
-        trace!("sign doc: {:?}", sign_doc);
+        let (sender_public_key, messages) = get_signer_and_messages(sig_info, env)?;
 
-        // This verifies that signatures and sign bytes are self consistent
-        let sender = CanonicalAddr::from_human(&env.message.sender).map_err(|err| {
-            warn!(
-                "failed to canonicalize message sender: {} {}",
-                env.message.sender, err
-            );
-            EnclaveError::FailedTxVerification
-        })?;
-        trace!("sender canonical address is: {:?}", sender.0.0);
-
-        let sender_public_key = sign_doc
-            .auth_info
-            .sender_public_key(&sender)
-            .ok_or_else(|| {
-                warn!("Couldn't find message sender in auth_info.signer_infos");
-                EnclaveError::FailedTxVerification
-            })?;
         trace!(
             "sender public key is: {:?}",
             sender_public_key.get_address().0
@@ -217,7 +199,7 @@ pub fn verify_params(
                 EnclaveError::FailedTxVerification
             })?;
 
-        if verify_message_params(&sign_doc, env, sender_public_key, msg) {
+        if verify_message_params(&messages, env, &sender_public_key, msg) {
             info!("Parameters verified successfully");
             return Ok(());
         }
@@ -226,6 +208,69 @@ pub fn verify_params(
     }
 
     Err(EnclaveError::FailedTxVerification)
+}
+
+fn get_signer_and_messages(
+    sign_info: &SigInfo,
+    env: &Env,
+) -> Result<(CosmosPubKey, Vec<CosmWasmMsg>), EnclaveError> {
+    use crate::proto::tx::signing::SignMode::*;
+    match sign_info.sign_mode {
+        SIGN_MODE_DIRECT => {
+            let sign_doc = SignDoc::from_bytes(sign_info.sign_bytes.as_slice())?;
+            trace!("sign doc: {:?}", sign_doc);
+
+            let sender = CanonicalAddr::from_human(&env.message.sender).map_err(|err| {
+                warn!(
+                    "failed to canonicalize message sender: {} {}",
+                    env.message.sender, err
+                );
+                EnclaveError::FailedTxVerification
+            })?;
+            trace!("sender canonical address is: {:?}", sender.0.0);
+
+            // This verifies that signatures and sign bytes are self consistent
+            let sender_public_key =
+                sign_doc
+                    .auth_info
+                    .sender_public_key(&sender)
+                    .ok_or_else(|| {
+                        warn!("Couldn't find message sender in auth_info.signer_infos");
+                        EnclaveError::FailedTxVerification
+                    })?;
+
+            Ok((sender_public_key.clone(), sign_doc.body.messages))
+        }
+        SIGN_MODE_LEGACY_AMINO_JSON => {
+            use protobuf::Message;
+            let mode_info =
+                crate::proto::tx::tx::ModeInfo::parse_from_bytes(sign_info.mode_info.as_slice())
+                    .map_err(|err| {
+                        warn!("failure to parse mode info: {:?}", err);
+                        EnclaveError::FailedTxVerification
+                    })?;
+            let public_key =
+                CosmosPubKey::from_proto(mode_info, &sign_info.public_key.0).map_err(|err| {
+                    warn!("failure to parse pubkey: {:?}", err);
+                    EnclaveError::FailedTxVerification
+                })?;
+            let sign_doc: StdSignDoc = serde_json::from_slice(sign_info.sign_bytes.as_slice())
+                .map_err(|err| {
+                    warn!("failure to parse StdSignDoc: {:?}", err);
+                    EnclaveError::FailedTxVerification
+                })?;
+            let messages: Result<Vec<CosmWasmMsg>, _> = sign_doc
+                .msgs
+                .iter()
+                .map(|x| x.clone().into_cosmwasm_msg())
+                .collect();
+            Ok((public_key, messages?))
+        }
+        _ => {
+            warn!("unsupported signature mode: {:?}", sign_info.sign_mode);
+            Err(EnclaveError::FailedTxVerification)
+        }
+    }
 }
 
 /// Verify that the callback sig is appropriate.
@@ -276,11 +321,11 @@ fn verify_callback_sig_impl(
 
 /// Get the cosmwasm message that contains the encrypted message
 fn get_verified_msg<'sd>(
-    sign_doc: &'sd SignDoc,
+    messages: &'sd [CosmWasmMsg],
     msg_sender: &CanonicalAddr,
     sent_msg: &SecretMessage,
 ) -> Option<&'sd CosmWasmMsg> {
-    sign_doc.body.messages.iter().find(|&m| match m {
+    messages.iter().find(|&m| match m {
         CosmWasmMsg::Execute { msg, sender, .. }
         | CosmWasmMsg::Instantiate {
             init_msg: msg,
@@ -325,7 +370,7 @@ fn verify_funds(msg: &CosmWasmMsg, env: &Env) -> bool {
 }
 
 fn verify_message_params(
-    sign_doc: &SignDoc,
+    messages: &[CosmWasmMsg],
     env: &Env,
     signer_public_key: &CosmosPubKey,
     sent_msg: &SecretMessage,
@@ -351,14 +396,14 @@ fn verify_message_params(
     info!("Verifying message..");
     // If msg is not found (is None) then it means message verification failed,
     // since it didn't find a matching signed message
-    let msg = get_verified_msg(sign_doc, &msg_sender, sent_msg);
+    let msg = get_verified_msg(messages, &msg_sender, sent_msg);
     if msg.is_none() {
         warn!("Message verification failed!");
         trace!(
             "Message sent to contract {:?} by {:?} does not match any signed messages {:?}",
             sent_msg.to_vec(),
             msg_sender,
-            sign_doc.body.messages
+            messages
         );
         return false;
     }
