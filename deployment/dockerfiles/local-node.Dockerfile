@@ -1,16 +1,16 @@
-# Base image
-FROM tests-base-image AS build-env-rust-go
-
 # Final image
 FROM build-release
 
 ARG SGX_MODE=SW
 ENV SGX_MODE=${SGX_MODE}
 #
-ARG SECRET_NODE_TYPE=BOOTSTRAP
-ENV SECRET_NODE_TYPE=${SECRET_NODE_TYPE}
+ARG SECRET_LOCAL_NODE_TYPE
+ENV SECRET_LOCAL_NODE_TYPE=${SECRET_LOCAL_NODE_TYPE}
 
 ENV SCRT_ENCLAVE_DIR=/usr/lib/
+
+COPY deployment/docker/sanity-test.sh /root/
+RUN chmod +x /root/sanity-test.sh
 
 COPY x/compute/internal/keeper/testdata/erc20.wasm erc20.wasm
 RUN true

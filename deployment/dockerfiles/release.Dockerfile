@@ -61,10 +61,7 @@ RUN mkdir -p /root/.sgx_secrets/
 RUN mkdir -p /root/.secretd/.node/
 RUN mkdir -p /root/config/
 
-COPY x/compute/internal/keeper/testdata/erc20.wasm /root/erc20.wasm
-COPY deployment/docker/sanity-test.sh /root/
 
-RUN chmod +x /root/sanity-test.sh
 
 ####### Node parameters
 ARG MONIKER=default
