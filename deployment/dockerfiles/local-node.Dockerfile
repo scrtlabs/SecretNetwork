@@ -39,7 +39,7 @@ FROM build-release
 #COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretcli /usr/bin/secretcli
 
 COPY x/compute/internal/keeper/testdata/erc20.wasm erc20.wasm
-
+RUN true
 COPY deployment/ci/wasmi-sgx-test.sh .
 RUN true
 COPY deployment/ci/bootstrap_init.sh .
