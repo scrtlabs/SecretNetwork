@@ -14,7 +14,7 @@ services:
       - https_proxy
 
   base:
-    image: rust-go-base-image
+    image: tests-base-image
     depends_on:
       - aesm
     devices:
@@ -36,7 +36,7 @@ services:
     volumes:
       - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/root/.secretd
-      - /tmp/secretcli:/root/.secretcli
+      # - /tmp/secretcli:/root/.secretcli
     stdin_open: true
     tty: true
     environment:
@@ -55,7 +55,7 @@ services:
     volumes:
       - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/tmp/.secretd
-      - /tmp/secretcli:/root/.secretcli
+      # - /tmp/secretcli:/root/.secretcli
     stdin_open: true
     tty: true
     environment:
