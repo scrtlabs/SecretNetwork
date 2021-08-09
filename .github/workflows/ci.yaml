@@ -239,7 +239,7 @@ jobs:
           cd cosmwasm/packages/wasmi-runtime/
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
-  
+
   XBuild-CLI:
     runs-on: ubuntu-latest
     steps:
@@ -333,6 +333,7 @@ jobs:
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
+          export PATH="$(pwd):$PATH"
           mkdir -p ./.sgx_secrets
           ./cosmwasm/testing/sanity-test.sh
       - name: Old bash+js sanity callbacks tests
@@ -341,4 +342,3 @@ jobs:
           export SGX_MODE=SW
           mkdir -p ./.sgx_secrets
           ./cosmwasm/testing/callback-test.sh
-

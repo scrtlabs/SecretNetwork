@@ -5,8 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
-
-	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -175,21 +174,21 @@ func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeIn
 	return nil
 }
 
-func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, []byte, error) {
+func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, sdktxsigning.SignMode, []byte, []byte, []byte, error) {
 	tx := sdktx.Tx{}
 	err := k.cdc.Unmarshal(ctx.TxBytes(), &tx)
 	if err != nil {
-		return nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
 	}
 
 	// for MsgInstantiateContract, there is only one signer which is msg.Sender
 	// (https://github.com/enigmampc/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L192-L194)
 	signerAcc, err := ante.GetSignerAcc(ctx, k.accountKeeper, signer)
 	if err != nil {
-		return nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
+		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
 	}
 
-	txConfig := authtx.NewTxConfig(k.cdc.(*codec.ProtoCodec), []sdktxsigning.SignMode{sdktxsigning.SignMode_SIGN_MODE_DIRECT})
+	txConfig := authtx.NewTxConfig(k.cdc.(*codec.ProtoCodec), authtx.DefaultSignModes)
 	modeHandler := txConfig.SignModeHandler()
 	signingData := authsigning.SignerData{
 		ChainID:       ctx.ChainID(),
@@ -197,17 +196,13 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, [
 	}
 
 	protobufTx := authtx.WrapTx(&tx).GetTx()
-	signBytes, err := modeHandler.GetSignBytes(sdktxsigning.SignMode_SIGN_MODE_DIRECT, signingData, protobufTx)
+
+	pubKeys, err := protobufTx.GetPubKeys()
 	if err != nil {
-		return nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to recreate sign bytes for the tx: %s", err.Error()))
+		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to get public keys for instantiate: %s", err.Error()))
 	}
 
 	pkIndex := -1
-	pubKeys, err := protobufTx.GetPubKeys()
-	if err != nil {
-		return nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to get public keys for instantiate: %s", err.Error()))
-	}
-
 	var _signers [][]byte // This is just used for the error message below
 	for index, pubKey := range pubKeys {
 		thisSigner := pubKey.Address().Bytes()
@@ -217,12 +212,34 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, [
 		}
 	}
 	if pkIndex == -1 {
-		return nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", signer, _signers))
+		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", signer, _signers))
 	}
 
-	// The first signature is the signature of the message sender,
-	// according to the docstring of `tx.AuthInfo.SignerInfos`
-	return tx.Signatures[pkIndex], signBytes, nil
+	signatures, err := protobufTx.GetSignaturesV2()
+	var signMode sdktxsigning.SignMode
+	switch signData := signatures[pkIndex].Data.(type) {
+	case *sdktxsigning.SingleSignatureData:
+		signMode = signData.SignMode
+	case *sdktxsigning.MultiSignatureData:
+		signMode = sdktxsigning.SignMode_SIGN_MODE_LEGACY_AMINO_JSON
+	}
+	signBytes, err := modeHandler.GetSignBytes(signMode, signingData, protobufTx)
+	if err != nil {
+		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to recreate sign bytes for the tx: %s", err.Error()))
+	}
+
+	modeInfoBytes, err := sdktxsigning.SignatureDataToProto(signatures[pkIndex].Data).Marshal()
+	if err != nil {
+		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, "couldn't marshal mode info")
+	}
+
+	var pkBytes []byte
+	pubKey := pubKeys[pkIndex]
+	pkBytes, err = k.cdc.Marshal(pubKey.(codec.ProtoMarshaler))
+	if err != nil {
+		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, "couldn't marshal public key")
+	}
+	return signBytes, signMode, modeInfoBytes, pkBytes, tx.Signatures[pkIndex], nil
 }
 
 // Instantiate creates an instance of a WASM contract
@@ -235,19 +252,22 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin *
 	*/
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: init")
 
-	signerSig := []byte{}
 	signBytes := []byte{}
+	signMode := sdktxsigning.SignMode_SIGN_MODE_UNSPECIFIED
+	modeInfoBytes := []byte{}
+	pkBytes := []byte{}
+	signerSig := []byte{}
 	var err error
 
 	// If no callback signature - we should send the actual msg sender sign bytes and signature
 	if callbackSig == nil {
-		signerSig, signBytes, err = k.GetSignerInfo(ctx, creator)
+		signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err = k.GetSignerInfo(ctx, creator)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	verificationInfo := types.NewVerificationInfo(signBytes, signerSig, callbackSig)
+	verificationInfo := types.NewVerificationInfo(signBytes, signMode, modeInfoBytes, pkBytes, signerSig, callbackSig)
 
 	// create contract address
 
@@ -344,18 +364,22 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin *
 func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, callbackSig []byte) (*sdk.Result, error) {
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading Compute module: execute")
 
-	signerSig := []byte{}
 	signBytes := []byte{}
+	signMode := sdktxsigning.SignMode_SIGN_MODE_UNSPECIFIED
+	modeInfoBytes := []byte{}
+	pkBytes := []byte{}
+	signerSig := []byte{}
 	var err error
 
+	// If no callback signature - we should send the actual msg sender sign bytes and signature
 	if callbackSig == nil {
-		signerSig, signBytes, err = k.GetSignerInfo(ctx, caller)
+		signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err = k.GetSignerInfo(ctx, caller)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	verificationInfo := types.NewVerificationInfo(signBytes, signerSig, callbackSig)
+	verificationInfo := types.NewVerificationInfo(signBytes, signMode, modeInfoBytes, pkBytes, signerSig, callbackSig)
 
 	codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {

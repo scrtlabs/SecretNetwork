@@ -10,9 +10,9 @@ import (
 
 // RegisterCodec registers the account types and interface
 func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
-	cdc.RegisterConcrete(MsgStoreCode{}, "wasm/MsgStoreCode", nil)
-	cdc.RegisterConcrete(MsgInstantiateContract{}, "wasm/MsgInstantiateContract", nil)
-	cdc.RegisterConcrete(MsgExecuteContract{}, "wasm/MsgExecuteContract", nil)
+	cdc.RegisterConcrete(&MsgStoreCode{}, "wasm/MsgStoreCode", nil)
+	cdc.RegisterConcrete(&MsgInstantiateContract{}, "wasm/MsgInstantiateContract", nil)
+	cdc.RegisterConcrete(&MsgExecuteContract{}, "wasm/MsgExecuteContract", nil)
 	/*
 		cdc.RegisterConcrete(MsgMigrateContract{}, "wasm/MsgMigrateContract", nil)
 		cdc.RegisterConcrete(MsgUpdateAdmin{}, "wasm/MsgUpdateAdmin", nil)
