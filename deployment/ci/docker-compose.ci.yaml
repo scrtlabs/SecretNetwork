@@ -14,7 +14,7 @@ services:
       - https_proxy
 
   base:
-    image: rust-go-base-image
+    image: tests-base-image
     depends_on:
       - aesm
     devices:
