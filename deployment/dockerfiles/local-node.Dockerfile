@@ -51,7 +51,7 @@ RUN true
 COPY deployment/ci/node_key.json .
 
 RUN chmod +x /usr/bin/secretd
-RUN chmod +x /usr/bin/secretcli
+# RUN chmod +x /usr/bin/secretcli
 RUN chmod +x wasmi-sgx-test.sh
 RUN chmod +x bootstrap_init.sh
 RUN chmod +x startup.sh
