@@ -18,6 +18,9 @@ rm -rf ~/.secretd
 
 #export SECRET_NETWORK_CHAIN_ID=secretdev-1
 #export SECRET_NETWORK_KEYRING_BACKEND=test
+secretd config keyring-backend test
+secretd config chain-id secretdev-1
+secretd config output json
 
 secretd init banana --chain-id secretdev-1
 perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json

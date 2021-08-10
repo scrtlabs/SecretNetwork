@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use log::*;
 
 use enclave_ffi_types::EnclaveError;
@@ -33,7 +34,7 @@ impl SecretMessage {
             .encryption_key()
             .encrypt_siv(self.msg.as_slice(), None)
             .map_err(|err| {
-                error!("got an error while trying to encrypt the msg: {}", err);
+                error!("got an error while trying to encrypt the msg: {:?}", err);
                 EnclaveError::EncryptionError
             })?;
 
@@ -45,7 +46,7 @@ impl SecretMessage {
 
         // pass
         let msg = key.decrypt_siv(self.msg.as_slice(), None).map_err(|err| {
-            error!("got an error while trying to decrypt the msg: {}", err);
+            error!("got an error while trying to decrypt the msg: {:?}", err);
             EnclaveError::DecryptionError
         })?;
 
