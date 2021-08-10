@@ -25,6 +25,9 @@ import (
 	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
+	authzmodule "github.com/cosmos/cosmos-sdk/x/authz/module"
+
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -131,6 +134,7 @@ type SecretNetworkApp struct {
 
 	// keepers
 	accountKeeper    authkeeper.AccountKeeper
+	authzKeeper      authzkeeper.Keeper
 	bankKeeper       bankkeeper.Keeper
 	capabilityKeeper *capabilitykeeper.Keeper
 	stakingKeeper    stakingkeeper.Keeper
@@ -199,7 +203,7 @@ func NewSecretNetworkApp(
 		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
 		govtypes.StoreKey, paramstypes.StoreKey, upgradetypes.StoreKey,
 		evidencetypes.StoreKey, capabilitytypes.StoreKey, compute.StoreKey,
-		reg.StoreKey, feegrant.StoreKey,
+		reg.StoreKey, feegrant.StoreKey, authzkeeper.StoreKey,
 	)
 
 	tKeys := sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
@@ -259,6 +263,8 @@ func NewSecretNetworkApp(
 	)
 	app.feeGrantKeeper = feegrantkeeper.NewKeeper(appCodec, keys[feegrant.StoreKey], app.accountKeeper)
 	app.upgradeKeeper = upgradekeeper.NewKeeper(skipUpgradeHeights, keys[upgradetypes.StoreKey], appCodec, homePath, app.BaseApp)
+
+	app.authzKeeper = authzkeeper.NewKeeper(keys[authzkeeper.StoreKey], appCodec, bApp.MsgServiceRouter())
 
 	// Register the proposal types
 	govRouter := govtypes.NewRouter()
@@ -366,6 +372,7 @@ func NewSecretNetworkApp(
 		evidence.NewAppModule(app.evidenceKeeper),
 		compute.NewAppModule(app.computeKeeper),
 		params.NewAppModule(app.paramsKeeper),
+		authzmodule.NewAppModule(appCodec, app.authzKeeper, app.accountKeeper, app.bankKeeper, app.interfaceRegistry),
 		reg.NewAppModule(app.regKeeper),
 	)
 	// During begin block slashing happens after distr.BeginBlocker so that
@@ -401,12 +408,15 @@ func NewSecretNetworkApp(
 		banktypes.ModuleName,
 		slashingtypes.ModuleName,
 		govtypes.ModuleName,
+		//custom modules
+		compute.ModuleName,
+		reg.ModuleName,
+
+		authz.ModuleName,
 		minttypes.ModuleName,
 		crisistypes.ModuleName,
 		genutiltypes.ModuleName,
 		evidencetypes.ModuleName,
-		compute.ModuleName,
-		reg.ModuleName,
 		feegrant.ModuleName,
 	)
 
