@@ -336,6 +336,7 @@ jobs:
           export SGX_MODE=SW
           export PATH="$(pwd):$PATH"
           mkdir -p ./.sgx_secrets
+          make build-erc20-contract
           ./cosmwasm/testing/sanity-test.sh
       - name: Old bash+js sanity callbacks tests
         run: |
