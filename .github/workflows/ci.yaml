@@ -336,6 +336,8 @@ jobs:
           export SGX_MODE=SW
           export PATH="$(pwd):$PATH"
           mkdir -p ./.sgx_secrets
+          chmod +x ./scripts/install-wasm-tools.sh
+          ./scripts/install-wasm-tools.sh
           rustup target add wasm32-unknown-unknown
           make build-erc20-contract
           ./cosmwasm/testing/sanity-test.sh
@@ -344,6 +346,8 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
           mkdir -p ./.sgx_secrets
-          rustup target add wasm32-unknown-unknown
+          chmod +x ./scripts/install-wasm-tools.sh
+          ./scripts/install-wasm-tools.sh
+          chmod +x ./scripts/install-wasm-tools.sh
           make build-test-contract
           ./cosmwasm/testing/callback-test.sh
