@@ -10,44 +10,44 @@ function wait_for_tx () {
     done
 }
 
-# init the node
-rm -rf ./.sgx_secrets ~/.sgx_secrets *.der ~/*.der
-mkdir -p ./.sgx_secrets ~/.sgx_secrets
-
-rm -rf ~/.secretd
-
-#export SECRET_NETWORK_CHAIN_ID=secretdev-1
-#export SECRET_NETWORK_KEYRING_BACKEND=test
-
-secretd init banana --chain-id secretdev-1
-perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json
-echo "cost member exercise evoke isolate gift cattle move bundle assume spell face balance lesson resemble orange bench surge now unhappy potato dress number acid" |
-    secretd keys add a --recover --keyring-backend test
-secretd add-genesis-account "$(secretd keys show -a --keyring-backend test a)" 1000000000000uscrt
-secretd gentx a 1000000uscrt --chain-id secretdev-1 --keyring-backend test
-secretd collect-gentxs
-secretd validate-genesis
-
-secretd init-bootstrap node-master-cert.der io-master-cert.der
-secretd validate-genesis
-
-RUST_BACKTRACE=1 secretd start --bootstrap &
-
-
-export SECRETD_PID=$(echo $!)
-
-
-until (secretd status 2>&1 | jq -e '(.SyncInfo.latest_block_height | tonumber) > 0' &>/dev/null); do
-    echo "Waiting for chain to start..."
-    sleep 1
-done
-
-# secretd rest-server --laddr tcp://0.0.0.0:1337 &
-export LCD_PID=$(echo $!)
-function cleanup() {
-    kill -KILL "$SECRETD_PID" "$LCD_PID"
-}
-trap cleanup EXIT ERR
+## init the node
+#rm -rf ./.sgx_secrets ~/.sgx_secrets *.der ~/*.der
+#mkdir -p ./.sgx_secrets ~/.sgx_secrets
+#
+#rm -rf ~/.secretd
+#
+##export SECRET_NETWORK_CHAIN_ID=secretdev-1
+##export SECRET_NETWORK_KEYRING_BACKEND=test
+#
+#secretd init banana --chain-id secretdev-1
+#perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json
+#echo "cost member exercise evoke isolate gift cattle move bundle assume spell face balance lesson resemble orange bench surge now unhappy potato dress number acid" |
+#    secretd keys add a --recover --keyring-backend test
+#secretd add-genesis-account "$(secretd keys show -a --keyring-backend test a)" 1000000000000uscrt
+#secretd gentx a 1000000uscrt --chain-id secretdev-1 --keyring-backend test
+#secretd collect-gentxs
+#secretd validate-genesis
+#
+#secretd init-bootstrap node-master-cert.der io-master-cert.der
+#secretd validate-genesis
+#
+#RUST_BACKTRACE=1 secretd start --bootstrap &
+#
+#
+#export SECRETD_PID=$(echo $!)
+#
+#
+#until (secretd status 2>&1 | jq -e '(.SyncInfo.latest_block_height | tonumber) > 0' &>/dev/null); do
+#    echo "Waiting for chain to start..."
+#    sleep 1
+#done
+#
+## secretd rest-server --laddr tcp://0.0.0.0:1337 &
+#export LCD_PID=$(echo $!)
+#function cleanup() {
+#    kill -KILL "$SECRETD_PID" "$LCD_PID"
+#}
+#trap cleanup EXIT ERR
 
 # store wasm code on-chain so we could later instansiate it
 export STORE_TX_HASH=$(

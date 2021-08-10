@@ -193,6 +193,7 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, s
 	signingData := authsigning.SignerData{
 		ChainID:       ctx.ChainID(),
 		AccountNumber: signerAcc.GetAccountNumber(),
+		Sequence:      signerAcc.GetSequence(),
 	}
 
 	protobufTx := authtx.WrapTx(&tx).GetTx()
