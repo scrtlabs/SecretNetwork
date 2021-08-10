@@ -343,4 +343,5 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
           mkdir -p ./.sgx_secrets
+          make build-test-contract
           ./cosmwasm/testing/callback-test.sh

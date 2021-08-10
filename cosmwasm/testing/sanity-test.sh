@@ -45,10 +45,8 @@ until (secretd status 2>&1 | jq -e '(.SyncInfo.latest_block_height | tonumber) >
     sleep 1
 done
 
-# secretd rest-server --laddr tcp://0.0.0.0:1337 &
-export LCD_PID=$(echo $!)
 function cleanup() {
-    kill -KILL "$SECRETD_PID" "$LCD_PID"
+    kill -KILL "$SECRETD_PID"
 }
 trap cleanup EXIT ERR
 
