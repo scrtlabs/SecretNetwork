@@ -336,6 +336,7 @@ jobs:
           export SGX_MODE=SW
           export PATH="$(pwd):$PATH"
           mkdir -p ./.sgx_secrets
+          rustup target add wasm32-unknown-unknown
           make build-erc20-contract
           ./cosmwasm/testing/sanity-test.sh
       - name: Old bash+js sanity callbacks tests
@@ -343,5 +344,6 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
           mkdir -p ./.sgx_secrets
+          rustup target add wasm32-unknown-unknown
           make build-test-contract
           ./cosmwasm/testing/callback-test.sh
