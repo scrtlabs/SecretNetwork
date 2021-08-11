@@ -96,18 +96,21 @@ jobs:
           echo "not_a_key" > ias_keys/develop/spid.txt
           echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
           echo "not_a_key" > ias_keys/develop/api_key.txt
-      - name: Install misc.
+      - name: Install Requirements
         run: |
+          rustup target add wasm32-unknown-unknown
           go get -u github.com/jteeuwen/go-bindata/...
           chmod +x ./scripts/install-wasm-tools.sh
           ./scripts/install-wasm-tools.sh
-      - name: Build
+      - name: Build Executable
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           make vendor
           SGX_MODE=SW BUILD_PROFILE="minimal" RUSTC_WRAPPER="$HOME/sccache" make build-linux
-          rustup target add wasm32-unknown-unknown
+      - name: Build Contracts
+        run: |
           make build-test-contract
+          cp x/compute/internal/keeper/testdata/erc20.wasm .
       - uses: actions/upload-artifact@v2
         with:
           name: erc20.wasm
