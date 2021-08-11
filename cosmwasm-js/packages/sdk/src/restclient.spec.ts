@@ -143,11 +143,9 @@ async function executeContract(
     type: "wasm/MsgExecuteContract",
     value: {
       sender: faucet.address,
-      callback_code_hash: "",
       contract: contractAddress,
       msg: { release: {} },
       sent_funds: [],
-      callback_sig: null,
     },
   };
   const fee: StdFee = {

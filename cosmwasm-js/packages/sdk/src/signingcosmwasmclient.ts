@@ -337,12 +337,12 @@ export class SigningCosmWasmClient extends CosmWasmClient {
         value: {
           sender: this.senderAddress,
           contract: inputMsg.contractAddress,
-          callback_code_hash: "",
+          //callback_code_hash: "",
           msg: Encoding.toBase64(
             await this.restClient.enigmautils.encrypt(contractCodeHash, inputMsg.handleMsg),
           ),
           sent_funds: inputMsg.transferAmount ?? [],
-          callback_sig: null,
+          //callback_sig: null,
         },
       };
 
@@ -417,13 +417,13 @@ export class SigningCosmWasmClient extends CosmWasmClient {
       value: {
         sender: this.senderAddress,
         contract: contractAddress,
-        callback_code_hash: "",
         msg: Encoding.toBase64(await this.restClient.enigmautils.encrypt(contractCodeHash, handleMsg)),
         sent_funds: transferAmount ?? [],
-        callback_sig: null,
       },
     };
     const { accountNumber, sequence } = await this.getNonce();
+    console.log(`sequence: ${sequence}`)
+    console.log(`accountNumber: ${accountNumber}`)
     const chainId = await this.getChainId();
     const signedTx = await this.signAdapter([executeMsg], fee, chainId, memo, accountNumber, sequence);
 

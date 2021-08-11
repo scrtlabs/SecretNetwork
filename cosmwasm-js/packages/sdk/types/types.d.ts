@@ -77,12 +77,9 @@ export interface MsgExecuteContract extends MsgTemplate {
     readonly sender: string;
     /** Bech32 account address */
     readonly contract: string;
-    /** callback_code_hash should always be an empty string when coming from the user */
-    readonly callback_code_hash: string;
     /** Handle message as JavaScript object */
     msg: any;
     readonly sent_funds: ReadonlyArray<Coin>;
-    readonly callback_sig: any;
   };
 }
 export declare type Msg = MsgSend | MsgStoreCode | MsgInstantiateContract | MsgExecuteContract | MsgTemplate;

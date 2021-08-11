@@ -18,6 +18,9 @@ rm -rf ~/.secretd
 
 #export SECRET_NETWORK_CHAIN_ID=secretdev-1
 #export SECRET_NETWORK_KEYRING_BACKEND=test
+secretd config keyring-backend test
+secretd config chain-id secretdev-1
+secretd config output json
 
 secretd init banana --chain-id secretdev-1
 perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json
@@ -42,10 +45,8 @@ until (secretd status 2>&1 | jq -e '(.SyncInfo.latest_block_height | tonumber) >
     sleep 1
 done
 
-# secretd rest-server --laddr tcp://0.0.0.0:1337 &
-export LCD_PID=$(echo $!)
 function cleanup() {
-    kill -KILL "$SECRETD_PID" "$LCD_PID"
+    kill -KILL "$SECRETD_PID"
 }
 trap cleanup EXIT ERR
 

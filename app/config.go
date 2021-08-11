@@ -11,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
+	authz "github.com/cosmos/cosmos-sdk/x/authz/module"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/capability"
@@ -53,6 +54,7 @@ import (
 var (
 	mbasics = module.NewBasicManager(
 		append([]module.AppModuleBasic{
+			authz.AppModuleBasic{},
 			// accounts, fees.
 			auth.AppModuleBasic{},
 			// genesis utilities
