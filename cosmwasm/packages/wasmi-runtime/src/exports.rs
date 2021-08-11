@@ -70,6 +70,11 @@ pub unsafe extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> Enc
 #[derive(Debug, PartialEq)]
 pub struct BufferRecoveryError;
 
+/// This function sets up any components of the contract runtime
+/// that should be set up once when the node starts.
+///
+/// # Safety
+/// Always use protection
 #[no_mangle]
 pub unsafe extern "C" fn ecall_configure_runtime(config: RuntimeConfiguration) -> sgx_status_t {
     debug!(
