@@ -13,7 +13,7 @@ process.on("unhandledRejection", (error) => {
 
 (async () => {
   const seed = cosmwasmjs.EnigmaUtils.GenerateNewSeed();
-  const client = new cosmwasmjs.CosmWasmClient("http://localhost:1337", seed);
+  const client = new cosmwasmjs.CosmWasmClient("http://localhost:1317", seed);
   const contract = (await client.getContracts(1))[0].address;
 
   const resQuery = await client.queryContractSmart(contract, {
