@@ -110,6 +110,10 @@ jobs:
           make build-test-contract
       - uses: actions/upload-artifact@v2
         with:
+          name: erc20.wasm
+          path: erc20.wasm
+      - uses: actions/upload-artifact@v2
+        with:
           name: secretd
           path: secretd
       - uses: actions/upload-artifact@v2
@@ -324,6 +328,9 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: secretd
+      - uses: actions/download-artifact@v2
+        with:
+          name: erc20.wasm
       - name: Setup Files
         run: |
           cp libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
@@ -336,18 +343,10 @@ jobs:
           export SGX_MODE=SW
           export PATH="$(pwd):$PATH"
           mkdir -p ./.sgx_secrets
-          chmod +x ./scripts/install-wasm-tools.sh
-          ./scripts/install-wasm-tools.sh
-          rustup target add wasm32-unknown-unknown
-          make build-erc20-contract
           ./cosmwasm/testing/sanity-test.sh
       - name: Old bash+js sanity callbacks tests
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
           mkdir -p ./.sgx_secrets
-          chmod +x ./scripts/install-wasm-tools.sh
-          ./scripts/install-wasm-tools.sh
-          chmod +x ./scripts/install-wasm-tools.sh
-          make build-test-contract
           ./cosmwasm/testing/callback-test.sh
