@@ -13,6 +13,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/simapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	"github.com/cosmos/cosmos-sdk/x/authz"
+
 	//"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -23,6 +25,9 @@ import (
 	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
+	authzmodule "github.com/cosmos/cosmos-sdk/x/authz/module"
+
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -77,7 +82,6 @@ import (
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 	tmos "github.com/tendermint/tendermint/libs/os"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
 	// unnamed import of statik for swagger UI support
@@ -130,6 +134,7 @@ type SecretNetworkApp struct {
 
 	// keepers
 	accountKeeper    authkeeper.AccountKeeper
+	authzKeeper      authzkeeper.Keeper
 	bankKeeper       bankkeeper.Keeper
 	capabilityKeeper *capabilitykeeper.Keeper
 	stakingKeeper    stakingkeeper.Keeper
@@ -198,7 +203,7 @@ func NewSecretNetworkApp(
 		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
 		govtypes.StoreKey, paramstypes.StoreKey, upgradetypes.StoreKey,
 		evidencetypes.StoreKey, capabilitytypes.StoreKey, compute.StoreKey,
-		reg.StoreKey, feegrant.StoreKey,
+		reg.StoreKey, feegrant.StoreKey, authzkeeper.StoreKey,
 	)
 
 	tKeys := sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
@@ -224,6 +229,13 @@ func NewSecretNetworkApp(
 
 	// add capability keeper and ScopeToModule for ibc module
 	app.capabilityKeeper = capabilitykeeper.NewKeeper(appCodec, keys[capabilitytypes.StoreKey], memKeys[capabilitytypes.MemStoreKey])
+
+	//	scopedIBCKeeper := app.CapabilityKeeper.ScopeToModule(ibchost.ModuleName)
+	//	scopedTransferKeeper := app.CapabilityKeeper.ScopeToModule(ibctransfertypes.ModuleName)
+
+	// Applications that wish to enforce statically created ScopedKeepers should call `Seal` after creating
+	// their scoped modules in `NewApp` with `ScopeToModule`
+	app.capabilityKeeper.Seal()
 
 	// add keepers
 	app.accountKeeper = authkeeper.NewAccountKeeper(
@@ -251,6 +263,8 @@ func NewSecretNetworkApp(
 	)
 	app.feeGrantKeeper = feegrantkeeper.NewKeeper(appCodec, keys[feegrant.StoreKey], app.accountKeeper)
 	app.upgradeKeeper = upgradekeeper.NewKeeper(skipUpgradeHeights, keys[upgradetypes.StoreKey], appCodec, homePath, app.BaseApp)
+
+	app.authzKeeper = authzkeeper.NewKeeper(keys[authzkeeper.StoreKey], appCodec, bApp.MsgServiceRouter())
 
 	// Register the proposal types
 	govRouter := govtypes.NewRouter()
@@ -358,6 +372,7 @@ func NewSecretNetworkApp(
 		evidence.NewAppModule(app.evidenceKeeper),
 		compute.NewAppModule(app.computeKeeper),
 		params.NewAppModule(app.paramsKeeper),
+		authzmodule.NewAppModule(appCodec, app.authzKeeper, app.accountKeeper, app.bankKeeper, app.interfaceRegistry),
 		reg.NewAppModule(app.regKeeper),
 	)
 	// During begin block slashing happens after distr.BeginBlocker so that
@@ -366,6 +381,7 @@ func NewSecretNetworkApp(
 
 	app.mm.SetOrderBeginBlockers(
 		upgradetypes.ModuleName,
+		capabilitytypes.ModuleName,
 		minttypes.ModuleName,
 		distrtypes.ModuleName,
 		slashingtypes.ModuleName,
@@ -376,6 +392,7 @@ func NewSecretNetworkApp(
 	app.mm.SetOrderEndBlockers(
 		crisistypes.ModuleName,
 		govtypes.ModuleName,
+		authz.ModuleName,
 		feegrant.ModuleName,
 		stakingtypes.ModuleName,
 	)
@@ -391,12 +408,15 @@ func NewSecretNetworkApp(
 		banktypes.ModuleName,
 		slashingtypes.ModuleName,
 		govtypes.ModuleName,
+		//custom modules
+		compute.ModuleName,
+		reg.ModuleName,
+
+		authz.ModuleName,
 		minttypes.ModuleName,
 		crisistypes.ModuleName,
 		genutiltypes.ModuleName,
 		evidencetypes.ModuleName,
-		compute.ModuleName,
-		reg.ModuleName,
 		feegrant.ModuleName,
 	)
 
@@ -459,14 +479,6 @@ func NewSecretNetworkApp(
 		if err != nil {
 			tmos.Exit(err.Error())
 		}
-
-		// Initialize and seal the capability keeper so all persistent capabilities
-		// are loaded in-memory and prevent any further modules from creating scoped
-		// sub-keepers.
-		// This must be done during creation of baseapp rather than in InitChain so
-		// that in-memory capabilities get regenerated on app restart
-		ctx := app.BaseApp.NewUncachedContext(true, tmproto.Header{})
-		app.capabilityKeeper.InitializeAndSeal(ctx)
 	}
 	return app
 }
