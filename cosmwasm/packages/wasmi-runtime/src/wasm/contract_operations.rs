@@ -15,9 +15,7 @@ use super::contract_validation::{
 use super::gas::WasmCosts;
 use super::io::encrypt_output;
 use super::module_cache::create_module_instance;
-use super::runtime::{
-    create_builder, ContractInstance, ContractOperation, Engine, WasmiImportResolver,
-};
+use super::runtime::{ContractInstance, ContractOperation, Engine};
 use super::types::{ContractCode, IoNonce, SecretMessage, SigInfo};
 
 /*

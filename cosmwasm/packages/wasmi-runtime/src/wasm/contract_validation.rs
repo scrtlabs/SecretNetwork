@@ -2,7 +2,6 @@ use log::*;
 
 use enclave_ffi_types::EnclaveError;
 
-use crate::cosmwasm::encoding::Binary;
 use crate::cosmwasm::types::{CanonicalAddr, Coin, Env, HumanAddr};
 use crate::crypto::traits::PubKey;
 use crate::crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
