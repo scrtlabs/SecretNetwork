@@ -70,12 +70,11 @@ func NewKeeper(
 	router sdk.Router,
 	homeDir string,
 	wasmConfig *types.WasmConfig,
-	enclaveRuntimeConfig wasmTypes.EnclaveRuntimeConfig,
 	supportedFeatures string,
 	customEncoders *MessageEncoders,
 	customPlugins *QueryPlugins,
 ) Keeper {
-	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize, enclaveRuntimeConfig)
+	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize, wasmConfig.EnclaveCacheSize)
 	if err != nil {
 		panic(err)
 	}

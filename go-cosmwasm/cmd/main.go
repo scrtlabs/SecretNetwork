@@ -6,7 +6,6 @@ import (
 	"os"
 
 	wasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
-	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 )
 
 // This is just a demo to ensure we can compile a static go binary
@@ -20,7 +19,7 @@ func main() {
 	fmt.Println("Loaded!")
 
 	os.MkdirAll("tmp", 0755)
-	wasmer, err := wasm.NewWasmer("tmp", "staking", 0, wasmTypes.DefaultEnclaveRuntimeConfig())
+	wasmer, err := wasm.NewWasmer("tmp", "staking", 0, 15)
 	if err != nil {
 		panic(err)
 	}

@@ -11,6 +11,7 @@ import (
 )
 
 const defaultLRUCacheSize = uint64(0)
+const defaultEnclaveLRUCacheSize = uint8(15)
 const defaultQueryGasLimit = uint64(3000000)
 
 // base64 of a 64 byte key
@@ -224,6 +225,7 @@ func ParseEvents(logs []wasmTypes.LogAttribute, contractAddr sdk.AccAddress) sdk
 type WasmConfig struct {
 	SmartQueryGasLimit uint64
 	CacheSize          uint64
+	EnclaveCacheSize   uint8
 }
 
 // DefaultWasmConfig returns the default settings for WasmConfig
@@ -231,6 +233,7 @@ func DefaultWasmConfig() *WasmConfig {
 	return &WasmConfig{
 		SmartQueryGasLimit: defaultQueryGasLimit,
 		CacheSize:          defaultLRUCacheSize,
+		EnclaveCacheSize:   defaultEnclaveLRUCacheSize,
 	}
 }
 
@@ -268,6 +271,7 @@ func GetConfig(appOpts servertypes.AppOptions) *WasmConfig {
 	return &WasmConfig{
 		SmartQueryGasLimit: cast.ToUint64(appOpts.Get("wasm.contract-query-gas-limit")),
 		CacheSize:          cast.ToUint64(appOpts.Get("wasm.contract-memory-cache-size")),
+		EnclaveCacheSize:   cast.ToUint8(appOpts.Get("wasm.contract-memory-enclave-cache-size")),
 	}
 }
 

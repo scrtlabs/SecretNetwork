@@ -76,7 +76,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 
-	goCosmWasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	wasmtypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"github.com/enigmampc/SecretNetwork/x/registration"
 )
@@ -321,7 +320,6 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 
 	// Load default wasm config
 	wasmConfig := wasmtypes.DefaultWasmConfig()
-	enclaveRuntimeConfig := goCosmWasmTypes.DefaultEnclaveRuntimeConfig()
 
 	// todo: new grpc routing
 	//serviceRouter := baseapp.NewMsgServiceRouter()
@@ -350,7 +348,6 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		router,
 		tempDir,
 		wasmConfig,
-		enclaveRuntimeConfig,
 		supportedFeatures,
 		encoders,
 		queriers,
