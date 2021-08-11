@@ -34,7 +34,7 @@ secretd validate-genesis
 secretd init-bootstrap node-master-cert.der io-master-cert.der
 secretd validate-genesis
 
-RUST_BACKTRACE=1 secretd start --bootstrap &
+RUST_BACKTRACE=1 secretd start --bootstrap --log_level error &
 
 
 export SECRETD_PID=$(echo $!)
