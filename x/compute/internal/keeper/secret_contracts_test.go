@@ -107,6 +107,52 @@ func getDecryptedWasmEvents(t *testing.T, ctx sdk.Context, nonce []byte) []Contr
 	return res
 }
 
+// tryDecryptWasmEvents gets all "wasm" events and try to decrypt what it can.
+// Returns all "wasm" events, including from contract callbacks.
+// The difference between this and getDecryptedWasmEvents is that it is aware of plaintext logs.
+func tryDecryptWasmEvents(ctx sdk.Context, nonce []byte) []ContractEvent {
+	events := ctx.EventManager().Events()
+	var res []ContractEvent
+	for _, e := range events {
+		if e.Type == "wasm" {
+			newEvent := []cosmwasm.LogAttribute{}
+			for _, oldLog := range e.Attributes {
+				newLog := cosmwasm.LogAttribute{
+					Key:   string(oldLog.Key),
+					Value: string(oldLog.Value),
+				}
+				newEvent = append(newEvent, newLog)
+
+				if newLog.Key != "contract_address" {
+					// key
+					keyCipherBz, err := base64.StdEncoding.DecodeString(newLog.Key)
+					if err != nil {
+						continue
+					}
+					keyPlainBz, err := wasmCtx.Decrypt(keyCipherBz, nonce)
+					if err != nil {
+						continue
+					}
+					newEvent[len(newEvent)-1].Key = string(keyPlainBz)
+
+					// value
+					valueCipherBz, err := base64.StdEncoding.DecodeString(newLog.Value)
+					if err != nil {
+						continue
+					}
+					valuePlainBz, err := wasmCtx.Decrypt(valueCipherBz, nonce)
+					if err != nil {
+						continue
+					}
+					newEvent[len(newEvent)-1].Value = string(valuePlainBz)
+				}
+			}
+			res = append(res, newEvent)
+		}
+	}
+	return res
+}
+
 // getDecryptedData decrytes the output of the first function to be called
 // Only returns the data, logs and messages from the first function call
 func getDecryptedData(t *testing.T, data []byte, nonce []byte) []byte {
@@ -192,11 +238,19 @@ func (wasmGasMeter *WasmCounterGasMeter) GetWasmCounter() uint64 {
 
 var _ sdk.GasMeter = (*WasmCounterGasMeter)(nil) // check interface
 
-func queryHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.AccAddress, input string, isErrorEncrypted bool, gas uint64) (string, cosmwasm.StdError) {
+func queryHelper(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	contractAddr sdk.AccAddress, input string,
+	isErrorEncrypted bool, gas uint64,
+) (string, cosmwasm.StdError) {
 	return queryHelperImpl(t, keeper, ctx, contractAddr, input, isErrorEncrypted, gas, -1)
 }
 
-func queryHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.AccAddress, input string, isErrorEncrypted bool, gas uint64, wasmCallCount int64) (string, cosmwasm.StdError) {
+func queryHelperImpl(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	contractAddr sdk.AccAddress, input string,
+	isErrorEncrypted bool, gas uint64, wasmCallCount int64,
+) (string, cosmwasm.StdError) {
 	hashStr := hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr))
 
 	msg := types.SecretMsg{
@@ -241,11 +295,19 @@ func queryHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr 
 	return string(resultBz), cosmwasm.StdError{}
 }
 
-func execHelper(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string, isErrorEncrypted bool, gas uint64, coin int64) ([]byte, []ContractEvent, cosmwasm.StdError) {
+func execHelper(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
+	isErrorEncrypted bool, gas uint64, coin int64,
+) ([]byte, []ContractEvent, cosmwasm.StdError) {
 	return execHelperImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, gas, coin, -1)
 }
 
-func execHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string, isErrorEncrypted bool, gas uint64, coin int64, wasmCallCount int64) ([]byte, []ContractEvent, cosmwasm.StdError) {
+func execHelperImpl(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
+	isErrorEncrypted bool, gas uint64, coin int64, wasmCallCount int64,
+) ([]byte, []ContractEvent, cosmwasm.StdError) {
 	hashStr := hex.EncodeToString(keeper.GetContractHash(ctx, contractAddress))
 
 	msg := types.SecretMsg{
@@ -283,7 +345,7 @@ func execHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddres
 	}
 
 	// wasmEvents comes from all the callbacks as well
-	wasmEvents := getDecryptedWasmEvents(t, ctx, nonce)
+	wasmEvents := tryDecryptWasmEvents(ctx, nonce)
 
 	// TODO check if we can extract the messages from ctx
 
@@ -293,11 +355,19 @@ func execHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddres
 	return data, wasmEvents, cosmwasm.StdError{}
 }
 
-func initHelper(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, creator sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string, isErrorEncrypted bool, gas uint64) (sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
+func initHelper(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	codeID uint64, creator sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string,
+	isErrorEncrypted bool, gas uint64,
+) (sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
 	return initHelperImpl(t, keeper, ctx, codeID, creator, creatorPrivKey, initMsg, isErrorEncrypted, gas, -1, 0)
 }
 
-func initHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64, creator sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string, isErrorEncrypted bool, gas uint64, wasmCallCount int64, coin int64) (sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
+func initHelperImpl(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	codeID uint64, creator sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string,
+	isErrorEncrypted bool, gas uint64, wasmCallCount int64, coin int64,
+) (sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
 	hashStr := hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)
 
 	msg := types.SecretMsg{
@@ -336,7 +406,7 @@ func initHelperImpl(t *testing.T, keeper Keeper, ctx sdk.Context, codeID uint64,
 	}
 
 	// wasmEvents comes from all the callbacks as well
-	wasmEvents := getDecryptedWasmEvents(t, ctx, nonce)
+	wasmEvents := tryDecryptWasmEvents(ctx, nonce)
 
 	// TODO check if we can extract the messages from ctx
 
@@ -2147,4 +2217,26 @@ func TestCodeHashQueryCallQuery(t *testing.T) {
 			"failed to validate transaction",
 		)
 	})
+}
+
+func TestEncryptedAndPlaintextLogs(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/plaintext_logs.wasm")
+
+	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{}`, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, events, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, "{}", true, defaultGasForTests, 0, 1)
+
+	require.Empty(t, err)
+	require.Equal(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: addr.String()},
+				{Key: "encrypted log", Value: "encrypted value"},
+				{Key: "ZW5jb2RlZCBsb2cK", Value: "ZW5jb2RlZCB2YWx1ZQo="},
+				{Key: "plaintext log", Value: "plaintext value"},
+			},
+		},
+		events,
+	)
 }
