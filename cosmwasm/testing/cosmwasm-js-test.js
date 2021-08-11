@@ -29,7 +29,7 @@ process.on("unhandledRejection", (error) => {
     "secret"
   );
   const signingClient = new cosmwasmjs.SigningCosmWasmClient(
-    "http://localhost:1337",
+    "http://localhost:1317",
     address,
     (signBytes) => pen.sign(signBytes),
     seed,
