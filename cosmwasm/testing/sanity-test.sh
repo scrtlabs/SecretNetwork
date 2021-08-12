@@ -60,7 +60,7 @@ wait_for_tx "$STORE_TX_HASH" "Waiting for store to finish on-chain..."
 
 # test storing of wasm code (this doesn't touch sgx yet)
 secretd q tx "$STORE_TX_HASH" --output json |
-    jq -e '.logs[].events[].attributes[] | select(.key == "code_id" and .value == "2")'
+    jq -e '.logs[].events[].attributes[] | select(.key == "code_id" and .value == "1")'
 
 # init the contract (ocall_init + write_db + canonicalize_address)
 # a is a tendermint address (will be used in transfer: https://github.com/CosmWasm/cosmwasm-examples/blob/f5ea00a85247abae8f8cbcba301f94ef21c66087/erc20/src/contract.rs#L110)
