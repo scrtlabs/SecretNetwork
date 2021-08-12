@@ -100,7 +100,7 @@ secretd q compute tx "$EXEC_ERR_TX_HASH"
 
 # exec (generate error inside WASM)
 export EXEC_ERR_TX_HASH=$(
-    ./secretcli tx compute execute --from a $CONTRACT_ADDRESS '{"allocate_on_heap":{"bytes":1073741824}}' -y --gas-prices 0.25uscrt --output json |
+    secretd tx compute execute --from a $CONTRACT_ADDRESS '{"allocate_on_heap":{"bytes":1073741824}}' -y --gas-prices 0.25uscrt --output json |
         jq -r .txhash
 )
 
