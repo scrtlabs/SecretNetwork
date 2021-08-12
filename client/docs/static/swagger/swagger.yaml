@@ -5186,13 +5186,13 @@ paths:
                     type: string
         '404':
           description: Not Found
-  /reg/consensus-io-exch-pubkey:
+  /reg/tx-key:
     get:
       tags:
         - Reg
-      summary: Get chain public key
-      description: Get chain public key
-      operationId: consensus-io-exch-pubkey
+      summary: Get public transaction key
+      description: Gets the network's public key, which is used to derive an encryption key for each transaction
+      operationId: TxKey
       responses:
         '200':
           description: OK
@@ -5206,10 +5206,30 @@ paths:
                 result:
                   type: object
                   properties:
-                    ioExchPubkey:
+                    TxKey:
                       type: string
-        '404':
-          description: Not Found
+  /reg/registration-key:
+    get:
+      tags:
+        - Reg
+      summary: Get Network Registration Key
+      description: Gets the network's registration key, which is used to derive a key for a new node during the registration process
+      operationId: RegistrationKey
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            properties:
+              type: object
+              properties:
+                height:
+                  type: string
+                result:
+                  type: object
+                  properties:
+                    RegistrationKey:
+                      type: string
   /cosmos/auth/v1beta1/accounts:
     get:
       summary: Accounts returns all the existing accounts

@@ -16,8 +16,8 @@ mkdir -p ./.sgx_secrets ~/.sgx_secrets
 
 rm -rf ~/.secretd
 
-#export SECRET_NETWORK_CHAIN_ID=secretdev-1
-#export SECRET_NETWORK_KEYRING_BACKEND=test
+export SECRET_NETWORK_CHAIN_ID=secretdev-1
+export SECRET_NETWORK_KEYRING_BACKEND=test
 secretd config keyring-backend test
 secretd config chain-id secretdev-1
 secretd config output json
@@ -60,14 +60,14 @@ wait_for_tx "$STORE_TX_HASH" "Waiting for store to finish on-chain..."
 
 # test storing of wasm code (this doesn't touch sgx yet)
 secretd q tx "$STORE_TX_HASH" --output json |
-    jq -e '.logs[].events[].attributes[] | select(.key == "code_id" and .value == "1")'
+    jq -e '.logs[].events[].attributes[] | select(.key == "code_id" and .value == "2")'
 
 # init the contract (ocall_init + write_db + canonicalize_address)
 # a is a tendermint address (will be used in transfer: https://github.com/CosmWasm/cosmwasm-examples/blob/f5ea00a85247abae8f8cbcba301f94ef21c66087/erc20/src/contract.rs#L110)
 # secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t is just a random address
 # balances are set to 108 & 53 at init
 export INIT_TX_HASH=$(
-    secretd tx compute instantiate 1 "{\"decimals\":10,\"initial_balances\":[{\"address\":\"$(secretd keys show a -a)\",\"amount\":\"108\"},{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\",\"amount\":\"53\"}],\"name\":\"ReuvenPersonalRustCoin\",\"symbol\":\"RPRC\"}" --label RPRCCoin --from a --output json -y --gas-prices 0.25uscrt |
+    secretd tx compute instantiate 1 "{\"decimals\":10,\"initial_balances\":[{\"address\":\"$(secretd keys show a -a)\",\"amount\":\"108\"},{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\",\"amount\":\"53\"}],\"name\":\"ReuvenPersonalRustCoin\",\"symbol\":\"RPRC\"}" --label RPRCCoin2 --from a --output json -y --gas-prices 0.25uscrt |
         jq -r .txhash
 )
 

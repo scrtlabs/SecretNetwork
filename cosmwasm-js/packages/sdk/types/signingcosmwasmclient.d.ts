@@ -46,7 +46,7 @@ export interface ExecuteResult {
   readonly logs: readonly Log[];
   /** Transaction hash (might be used as transaction ID). Guaranteed to be non-empty upper-case hex */
   readonly transactionHash: string;
-  readonly data: any;
+  readonly data: string;
 }
 export declare class SigningCosmWasmClient extends CosmWasmClient {
   readonly senderAddress: string;

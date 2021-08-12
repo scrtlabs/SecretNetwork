@@ -1,19 +1,22 @@
 import { Encoding, isNonNullObject } from "@iov/encoding";
 import axios, { AxiosError, AxiosInstance } from "axios";
-import { Log, Attribute } from "./logs";
+
+import EnigmaUtils, { SecretUtils } from "./enigmautils";
+import { Attribute, Log } from "./logs";
+import { decodeTxData, MsgData } from "./ProtoEncoding";
 import {
   Coin,
-  Msg,
   CosmosSdkTx,
   JsonObject,
   Model,
+  Msg,
+  MsgExecuteContract,
+  MsgInstantiateContract,
   parseWasmData,
   StdTx,
   WasmData,
-  MsgInstantiateContract,
-  MsgExecuteContract,
 } from "./types";
-import EnigmaUtils, { SecretUtils } from "./enigmautils";
+import {sleep} from "@iov/utils";
 
 export interface CosmosSdkAccount {
   /** Bech32 account address */
@@ -139,8 +142,8 @@ export interface TxsResponse {
   /** Falsy when transaction execution succeeded. Contains error code on error. */
   readonly code?: number;
   raw_log: string;
-  data: any;
-  readonly logs?: Log[];
+  data: string;
+  logs?: Log[];
   readonly tx: CosmosSdkTx;
   /** The gas limit as set by the user */
   readonly gas_wanted?: string;
@@ -398,7 +401,7 @@ export class RestClient {
   }
 
   // The /txs endpoints
-  public async txById(id: string, tryToDecrypt: boolean = true): Promise<TxsResponse> {
+  public async txById(id: string, tryToDecrypt = true): Promise<TxsResponse> {
     const responseData = await this.get(`/txs/${id}`);
     if (!(responseData as any).tx) {
       throw new Error("Unexpected response data format");
@@ -411,7 +414,7 @@ export class RestClient {
     }
   }
 
-  public async txsQuery(query: string, tryToDecrypt: boolean = true): Promise<SearchTxsResponse> {
+  public async txsQuery(query: string, tryToDecrypt = true): Promise<SearchTxsResponse> {
     const responseData = await this.get(`/txs?${query}`);
     if (!(responseData as any).txs) {
       throw new Error("Unexpected response data format");
@@ -536,9 +539,8 @@ export class RestClient {
     } catch (err) {
       try {
         const errorMessageRgx = /encrypted: (.+?): (?:instantiate|execute|query) contract failed \(HTTP 500\)/g;
-
         const rgxMatches = errorMessageRgx.exec(err.message);
-        if (rgxMatches == null || rgxMatches.length != 2) {
+        if (rgxMatches == null || rgxMatches?.length != 2) {
           throw err;
         }
 
@@ -580,7 +582,7 @@ export class RestClient {
     return this.get("/register/master-cert");
   }
 
-  public async decryptDataField(dataField: string = "", nonces: Array<Uint8Array>): Promise<Uint8Array> {
+  public async decryptDataField(dataField = "", nonces: Array<Uint8Array>): Promise<Uint8Array> {
     const wasmOutputDataCipherBz = Encoding.fromHex(dataField);
 
     let error;
@@ -629,7 +631,21 @@ export class RestClient {
   }
 
   public async decryptTxsResponse(txsResponse: TxsResponse): Promise<TxsResponse> {
-    for (let i = 0; i < txsResponse.tx.value.msg.length; i++) {
+
+    let dataFields = undefined;
+    let data = Uint8Array.from([]);
+    if (txsResponse.data) {
+      // @ts-ignore
+      dataFields = decodeTxData(Encoding.fromHex(txsResponse.data));
+    }
+
+    let logs: Log[] | undefined = txsResponse.logs;
+
+    if (logs) {
+      logs[0].msg_index = 0;
+    }
+
+    for (let i = 0; i < txsResponse.tx.value.msg?.length; i++) {
       const msg: Msg = txsResponse.tx.value.msg[i];
 
       let inputMsgEncrypted: Uint8Array;
@@ -657,22 +673,29 @@ export class RestClient {
           (txsResponse.tx.value.msg[i] as MsgInstantiateContract).value.init_msg = inputMsg;
         }
 
-        // decrypt output
-        txsResponse.data = await this.decryptDataField(txsResponse.data, [nonce]);
-        let logs;
-        if (txsResponse.logs) {
-          logs = await this.decryptLogs(txsResponse.logs, [nonce]);
-          txsResponse = Object.assign({}, txsResponse, { logs: logs });
+        // stupid workaround because only 1st message data is returned
+        if (dataFields && i == 0) {
+          data = await this.decryptDataField(dataFields[0].data, [nonce]);
         }
 
+        // decrypt output
+
+        if (txsResponse.logs && logs) {
+          if (!txsResponse.logs[i]?.log) {
+            logs[i].log = '';
+          }
+          logs[i] = (await this.decryptLogs([txsResponse.logs[i]], [nonce]))[0];
+        }
+        // failed to execute message; message index: 0: encrypted: (.+?): (?:instantiate|execute|query) contract failed
         // decrypt error
         const errorMessageRgx = new RegExp(
-          `encrypted: (.+?): (?:instantiate|execute|query) contract failed: failed to execute message; message index: ${i}`,
+          `failed to execute message; message index: ${i}: encrypted: (.+?): (?:instantiate|execute|query) contract failed`,
           "g",
         );
 
         const rgxMatches = errorMessageRgx.exec(txsResponse.raw_log);
-        if (Array.isArray(rgxMatches) && rgxMatches.length === 2) {
+
+        if (Array.isArray(rgxMatches) && rgxMatches?.length === 2) {
           const errorCipherB64 = rgxMatches[1];
           const errorCipherBz = Encoding.fromBase64(errorCipherB64);
 
@@ -680,8 +703,13 @@ export class RestClient {
 
           txsResponse.raw_log = txsResponse.raw_log.replace(errorCipherB64, Encoding.fromUtf8(errorPlainBz));
         }
+
       }
     }
+
+    txsResponse = Object.assign({}, txsResponse, { logs: logs });
+    txsResponse.data = Encoding.toHex(data);
+
     return txsResponse;
   }
 }

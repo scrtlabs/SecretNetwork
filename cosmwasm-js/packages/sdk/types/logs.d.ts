@@ -7,9 +7,9 @@ export interface Event {
   readonly attributes: readonly Attribute[];
 }
 export interface Log {
-  readonly msg_index: number;
-  readonly log: string;
-  readonly events: readonly Event[];
+  msg_index: number;
+  log: string;
+  events: readonly Event[];
 }
 export declare function parseAttribute(input: unknown): Attribute;
 export declare function parseEvent(input: unknown): Event;

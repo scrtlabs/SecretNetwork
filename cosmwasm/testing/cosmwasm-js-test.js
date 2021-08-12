@@ -4,12 +4,17 @@ const cosmwasmjs = require(path.resolve(
   __dirname,
   "../../cosmwasm-js/packages/sdk/build/"
 ));
+const {MsgData} = require("../../cosmwasm-js/packages/sdk/build/ProtoEncoding");
 const assert = require("assert").strict;
 
 process.on("unhandledRejection", (error) => {
   console.error(error.message);
   process.exit(1);
 });
+
+async function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 (async () => {
   const seed = cosmwasmjs.EnigmaUtils.GenerateNewSeed();
@@ -60,10 +65,13 @@ process.on("unhandledRejection", (error) => {
     },
   });
 
+  await sleep(5000);
+
   const tx = await client.restClient.txById(execTx.transactionHash);
+
   assert.deepEqual(execTx.logs, tx.logs);
   assert.deepEqual(execTx.data, tx.data);
-  assert.deepEqual(tx.data, Uint8Array.from([]));
+  assert.deepEqual(tx.data, '');
   assert.deepEqual(tx.logs[0].events[1].attributes, [
     {
       key: "contract_address",
@@ -109,6 +117,8 @@ process.on("unhandledRejection", (error) => {
 
     const txId = /Error when posting tx (.+?)\./.exec(err.message)[1];
 
+    console.log(`Searching for TX ID: ${txId}`)
+    await sleep(5000);
     const tx = await client.restClient.txById(txId);
     assert(
       tx.raw_log.includes(

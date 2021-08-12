@@ -1,6 +1,6 @@
+import { SecretUtils } from "./enigmautils";
 import { Log } from "./logs";
 import { Coin, CosmosSdkTx, JsonObject, StdTx } from "./types";
-import { SecretUtils } from "./enigmautils";
 export interface CosmosSdkAccount {
   /** Bech32 account address */
   readonly address: string;
@@ -104,8 +104,8 @@ export interface TxsResponse {
   /** Falsy when transaction execution succeeded. Contains error code on error. */
   readonly code?: number;
   raw_log: string;
-  data: any;
-  readonly logs?: Log[];
+  data: string;
+  logs?: Log[];
   readonly tx: CosmosSdkTx;
   /** The gas limit as set by the user */
   readonly gas_wanted?: string;
