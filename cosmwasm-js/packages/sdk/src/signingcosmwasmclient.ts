@@ -485,6 +485,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     return {
       logs,
       transactionHash: result.transactionHash,
+      // @ts-ignore
       data,
     };
   }
