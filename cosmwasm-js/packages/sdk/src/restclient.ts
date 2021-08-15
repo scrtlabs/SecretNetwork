@@ -674,8 +674,8 @@ export class RestClient {
         }
 
         // stupid workaround because only 1st message data is returned
-        if (dataFields && i == 0) {
-          data = await this.decryptDataField(dataFields[0].data, [nonce]);
+        if (dataFields && i == 0 && dataFields[0].data) {
+          data = await this.decryptDataField(Encoding.toHex(Encoding.fromBase64(dataFields[0].data)), [nonce]);
         }
 
         // decrypt output
@@ -708,7 +708,8 @@ export class RestClient {
     }
 
     txsResponse = Object.assign({}, txsResponse, { logs: logs });
-    txsResponse.data = Encoding.toHex(data);
+    // @ts-ignore
+    txsResponse.data = data;
 
     return txsResponse;
   }

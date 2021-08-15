@@ -71,7 +71,7 @@ async function sleep(ms) {
 
   assert.deepEqual(execTx.logs, tx.logs);
   assert.deepEqual(execTx.data, tx.data);
-  assert.deepEqual(tx.data, '');
+  assert.deepEqual(tx.data, Uint8Array.from([]));
   assert.deepEqual(tx.logs[0].events[1].attributes, [
     {
       key: "contract_address",

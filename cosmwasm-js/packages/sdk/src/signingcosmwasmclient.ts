@@ -464,13 +464,14 @@ export class SigningCosmWasmClient extends CosmWasmClient {
 
     let data = "";
     if (dataFields[0].data) {
-      const decryptedData = await this.restClient.decryptDataField(dataFields[0].data, [encryptionNonce]);
+      const decryptedData = await this.restClient.decryptDataField(Encoding.toHex(Encoding.fromBase64(dataFields[0].data)), [encryptionNonce]);
       // dataFields[0].data = JSON.parse(decryptedData.toString());
-      data = Encoding.toHex(decryptedData);
+      // @ts-ignore
+      data = decryptedData;
     }
 
-    const logs = await this.restClient.decryptLogs(result.logs, [encryptionNonce]);
 
+    const logs = await this.restClient.decryptLogs(result.logs, [encryptionNonce]);
     return {
       logs,
       transactionHash: result.transactionHash,
