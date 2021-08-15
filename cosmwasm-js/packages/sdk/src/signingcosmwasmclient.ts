@@ -1,13 +1,13 @@
-import { Sha256 } from "@iov/crypto";
-import { Encoding } from "@iov/encoding";
+import {Sha256} from "@iov/crypto";
+import {Encoding} from "@iov/encoding";
 import pako from "pako";
 
-import { isValidBuilder } from "./builder";
-import { Account, CosmWasmClient, GetNonceResult, PostTxResult } from "./cosmwasmclient";
-import { makeSignBytes } from "./encoding";
-import { SecretUtils } from "./enigmautils";
-import { findAttribute, Log } from "./logs";
-import { BroadcastMode } from "./restclient";
+import {isValidBuilder} from "./builder";
+import {Account, CosmWasmClient, GetNonceResult, PostTxResult} from "./cosmwasmclient";
+import {makeSignBytes} from "./encoding";
+import {SecretUtils} from "./enigmautils";
+import {findAttribute, Log} from "./logs";
+import {BroadcastMode} from "./restclient";
 import {
   Coin,
   Msg,
@@ -19,7 +19,7 @@ import {
   StdSignature,
   StdTx,
 } from "./types";
-import { OfflineSigner } from "./wallet";
+import {OfflineSigner} from "./wallet";
 import {decodeTxData, MsgData} from "./ProtoEncoding";
 
 export interface SigningCallback {
@@ -389,13 +389,23 @@ export class SigningCosmWasmClient extends CosmWasmClient {
 
     const nonces = msgs.map((msg) => Encoding.fromBase64(msg.value.msg).slice(0, 32));
 
-    const data = await this.restClient.decryptDataField(result.data, nonces);
+    //const data = await this.restClient.decryptDataField(result.data, nonces);
+    const dataFields: MsgData[] = decodeTxData(Encoding.fromHex(result.data));
+
+    let data = Uint8Array.from([]);
+    if (dataFields[0].data) {
+      // dataFields[0].data = JSON.parse(decryptedData.toString());
+      // @ts-ignore
+      data = await this.restClient.decryptDataField(Encoding.toHex(Encoding.fromBase64(dataFields[0].data)), nonces);
+    }
+
     const logs = await this.restClient.decryptLogs(result.logs, nonces);
 
     return {
       logs: logs,
       transactionHash: result.transactionHash,
-      data: Encoding.toHex(data),
+      // @ts-ignore
+      data: data,
     };
   }
 
@@ -462,7 +472,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
 
     const dataFields: MsgData[] = decodeTxData(Encoding.fromHex(result.data));
 
-    let data = "";
+    let data = Uint8Array.from([]);
     if (dataFields[0].data) {
       const decryptedData = await this.restClient.decryptDataField(Encoding.toHex(Encoding.fromBase64(dataFields[0].data)), [encryptionNonce]);
       // dataFields[0].data = JSON.parse(decryptedData.toString());
