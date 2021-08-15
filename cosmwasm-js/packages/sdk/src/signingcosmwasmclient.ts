@@ -1,13 +1,13 @@
-import { Sha256 } from "@iov/crypto";
-import { Encoding } from "@iov/encoding";
+import {Sha256} from "@iov/crypto";
+import {Encoding} from "@iov/encoding";
 import pako from "pako";
 
-import { isValidBuilder } from "./builder";
-import { Account, CosmWasmClient, GetNonceResult, PostTxResult } from "./cosmwasmclient";
-import { makeSignBytes } from "./encoding";
-import { SecretUtils } from "./enigmautils";
-import { findAttribute, Log } from "./logs";
-import { BroadcastMode } from "./restclient";
+import {isValidBuilder} from "./builder";
+import {Account, CosmWasmClient, GetNonceResult, PostTxResult} from "./cosmwasmclient";
+import {makeSignBytes} from "./encoding";
+import {SecretUtils} from "./enigmautils";
+import {findAttribute, Log} from "./logs";
+import {BroadcastMode} from "./restclient";
 import {
   Coin,
   Msg,
@@ -19,7 +19,8 @@ import {
   StdSignature,
   StdTx,
 } from "./types";
-import { OfflineSigner } from "./wallet";
+import {OfflineSigner} from "./wallet";
+import {decodeTxData, MsgData} from "./ProtoEncoding";
 
 export interface SigningCallback {
   (signBytes: Uint8Array): Promise<StdSignature>;
@@ -100,7 +101,7 @@ export interface ExecuteResult {
   readonly logs: readonly Log[];
   /** Transaction hash (might be used as transaction ID). Guaranteed to be non-empty upper-case hex */
   readonly transactionHash: string;
-  readonly data: any;
+  readonly data: string;
 }
 
 export class SigningCosmWasmClient extends CosmWasmClient {
@@ -279,7 +280,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
       result = await this.postTx(signedTx);
     } catch (err) {
       try {
-        const errorMessageRgx = /contract failed: encrypted: (.+?): failed to execute message; message index: 0/g;
+        const errorMessageRgx = /failed to execute message; message index: 0: encrypted: (.+?): (?:instantiate|execute|query) contract failed/g;
 
         const rgxMatches = errorMessageRgx.exec(err.message);
         if (rgxMatches == null || rgxMatches.length != 2) {
@@ -362,8 +363,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
       result = await this.postTx(signedTx);
     } catch (err) {
       try {
-        const errorMessageRgx = /contract failed: encrypted: (.+?): failed to execute message; message index: (\d+)/g;
-
+        const errorMessageRgx = /failed to execute message; message index: (\d+): encrypted: (.+?): (?:instantiate|execute|query) contract failed/g;
         const rgxMatches = errorMessageRgx.exec(err.message);
         if (rgxMatches == null || rgxMatches.length != 3) {
           throw err;
@@ -388,12 +388,23 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     }
 
     const nonces = msgs.map((msg) => Encoding.fromBase64(msg.value.msg).slice(0, 32));
-    const data = await this.restClient.decryptDataField(result.data, nonces);
+
+    //const data = await this.restClient.decryptDataField(result.data, nonces);
+    const dataFields: MsgData[] = decodeTxData(Encoding.fromHex(result.data));
+
+    let data = Uint8Array.from([]);
+    if (dataFields[0].data) {
+      // dataFields[0].data = JSON.parse(decryptedData.toString());
+      // @ts-ignore
+      data = await this.restClient.decryptDataField(Encoding.toHex(Encoding.fromBase64(dataFields[0].data)), nonces);
+    }
+
     const logs = await this.restClient.decryptLogs(result.logs, nonces);
 
     return {
       logs: logs,
       transactionHash: result.transactionHash,
+      // @ts-ignore
       data: data,
     };
   }
@@ -422,18 +433,19 @@ export class SigningCosmWasmClient extends CosmWasmClient {
       },
     };
     const { accountNumber, sequence } = await this.getNonce();
-    console.log(`sequence: ${sequence}`)
-    console.log(`accountNumber: ${accountNumber}`)
+
     const chainId = await this.getChainId();
     const signedTx = await this.signAdapter([executeMsg], fee, chainId, memo, accountNumber, sequence);
 
-    const nonce = Encoding.fromBase64(executeMsg.value.msg).slice(0, 32);
+    const encryptionNonce = Encoding.fromBase64(executeMsg.value.msg).slice(0, 32);
+
     let result;
     try {
       result = await this.postTx(signedTx);
     } catch (err) {
       try {
-        const errorMessageRgx = /encrypted: (.+?): (?:instantiate|execute|query) contract failed: failed to execute message; message index: 0/g;
+        const errorMessageRgx = /failed to execute message; message index: 0: encrypted: (.+?): (?:instantiate|execute|query) contract failed/g;
+        // console.log(`Got error message: ${err.message}`);
 
         const rgxMatches = errorMessageRgx.exec(err.message);
         if (rgxMatches == null || rgxMatches.length != 2) {
@@ -441,9 +453,12 @@ export class SigningCosmWasmClient extends CosmWasmClient {
         }
 
         const errorCipherB64 = rgxMatches[1];
+
+        // console.log(`Got error message: ${errorCipherB64}`);
+
         const errorCipherBz = Encoding.fromBase64(errorCipherB64);
 
-        const errorPlainBz = await this.restClient.enigmautils.decrypt(errorCipherBz, nonce);
+        const errorPlainBz = await this.restClient.enigmautils.decrypt(errorCipherBz, encryptionNonce);
 
         err.message = err.message.replace(errorCipherB64, Encoding.fromUtf8(errorPlainBz));
       } catch (decryptionError) {
@@ -455,13 +470,23 @@ export class SigningCosmWasmClient extends CosmWasmClient {
       throw err;
     }
 
-    const data = await this.restClient.decryptDataField(result.data, [nonce]);
-    const logs = await this.restClient.decryptLogs(result.logs, [nonce]);
+    const dataFields: MsgData[] = decodeTxData(Encoding.fromHex(result.data));
 
+    let data = Uint8Array.from([]);
+    if (dataFields[0].data) {
+      const decryptedData = await this.restClient.decryptDataField(Encoding.toHex(Encoding.fromBase64(dataFields[0].data)), [encryptionNonce]);
+      // dataFields[0].data = JSON.parse(decryptedData.toString());
+      // @ts-ignore
+      data = decryptedData;
+    }
+
+
+    const logs = await this.restClient.decryptLogs(result.logs, [encryptionNonce]);
     return {
-      logs: logs,
+      logs,
       transactionHash: result.transactionHash,
-      data: data,
+      // @ts-ignore
+      data,
     };
   }
 

@@ -4,6 +4,7 @@ const cosmwasmjs = require(path.resolve(
   __dirname,
   "../../cosmwasm-js/packages/sdk/build/"
 ));
+const {MsgData} = require("../../cosmwasm-js/packages/sdk/build/ProtoEncoding");
 const assert = require("assert").strict;
 
 process.on("unhandledRejection", (error) => {
@@ -11,9 +12,13 @@ process.on("unhandledRejection", (error) => {
   process.exit(1);
 });
 
+async function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 (async () => {
   const seed = cosmwasmjs.EnigmaUtils.GenerateNewSeed();
-  const client = new cosmwasmjs.CosmWasmClient("http://localhost:1337", seed);
+  const client = new cosmwasmjs.CosmWasmClient("http://localhost:1317", seed);
   const contract = (await client.getContracts(1))[0].address;
 
   const resQuery = await client.queryContractSmart(contract, {
@@ -29,7 +34,7 @@ process.on("unhandledRejection", (error) => {
     "secret"
   );
   const signingClient = new cosmwasmjs.SigningCosmWasmClient(
-    "http://localhost:1337",
+    "http://localhost:1317",
     address,
     (signBytes) => pen.sign(signBytes),
     seed,
@@ -60,7 +65,10 @@ process.on("unhandledRejection", (error) => {
     },
   });
 
+  await sleep(5000);
+
   const tx = await client.restClient.txById(execTx.transactionHash);
+
   assert.deepEqual(execTx.logs, tx.logs);
   assert.deepEqual(execTx.data, tx.data);
   assert.deepEqual(tx.data, Uint8Array.from([]));
@@ -109,6 +117,8 @@ process.on("unhandledRejection", (error) => {
 
     const txId = /Error when posting tx (.+?)\./.exec(err.message)[1];
 
+    console.log(`Searching for TX ID: ${txId}`)
+    await sleep(5000);
     const tx = await client.restClient.txById(txId);
     assert(
       tx.raw_log.includes(

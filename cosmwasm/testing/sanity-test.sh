@@ -16,8 +16,8 @@ mkdir -p ./.sgx_secrets ~/.sgx_secrets
 
 rm -rf ~/.secretd
 
-#export SECRET_NETWORK_CHAIN_ID=secretdev-1
-#export SECRET_NETWORK_KEYRING_BACKEND=test
+export SECRET_NETWORK_CHAIN_ID=secretdev-1
+export SECRET_NETWORK_KEYRING_BACKEND=test
 secretd config keyring-backend test
 secretd config chain-id secretdev-1
 secretd config output json
@@ -34,7 +34,7 @@ secretd validate-genesis
 secretd init-bootstrap node-master-cert.der io-master-cert.der
 secretd validate-genesis
 
-RUST_BACKTRACE=1 secretd start --bootstrap &
+RUST_BACKTRACE=1 secretd start --bootstrap --log_level error &
 
 
 export SECRETD_PID=$(echo $!)
@@ -67,7 +67,7 @@ secretd q tx "$STORE_TX_HASH" --output json |
 # secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t is just a random address
 # balances are set to 108 & 53 at init
 export INIT_TX_HASH=$(
-    secretd tx compute instantiate 1 "{\"decimals\":10,\"initial_balances\":[{\"address\":\"$(secretd keys show a -a)\",\"amount\":\"108\"},{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\",\"amount\":\"53\"}],\"name\":\"ReuvenPersonalRustCoin\",\"symbol\":\"RPRC\"}" --label RPRCCoin --from a --output json -y --gas-prices 0.25uscrt |
+    secretd tx compute instantiate 1 "{\"decimals\":10,\"initial_balances\":[{\"address\":\"$(secretd keys show a -a)\",\"amount\":\"108\"},{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\",\"amount\":\"53\"}],\"name\":\"ReuvenPersonalRustCoin\",\"symbol\":\"RPRC\"}" --label RPRCCoin2 --from a --output json -y --gas-prices 0.25uscrt |
         jq -r .txhash
 )
 

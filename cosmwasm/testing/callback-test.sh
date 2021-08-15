@@ -34,7 +34,7 @@ secretd validate-genesis
 secretd init-bootstrap node-master-cert.der io-master-cert.der
 secretd validate-genesis
 
-RUST_BACKTRACE=1 secretd start --bootstrap &
+RUST_BACKTRACE=1 secretd start --bootstrap --log_level error &
 
 
 export SECRETD_PID=$(echo $!)
@@ -100,7 +100,7 @@ secretd q compute tx "$EXEC_ERR_TX_HASH"
 
 # exec (generate error inside WASM)
 export EXEC_ERR_TX_HASH=$(
-    ./secretcli tx compute execute --from a $CONTRACT_ADDRESS '{"allocate_on_heap":{"bytes":1073741824}}' -y --gas-prices 0.25uscrt --output json |
+    secretd tx compute execute --from a $CONTRACT_ADDRESS '{"allocate_on_heap":{"bytes":1073741824}}' -y --gas-prices 0.25uscrt --output json |
         jq -r .txhash
 )
 

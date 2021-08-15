@@ -12,9 +12,9 @@ export interface Event {
 }
 
 export interface Log {
-  readonly msg_index: number;
-  readonly log: string;
-  readonly events: readonly Event[];
+  msg_index: number;
+  log: string;
+  events: readonly Event[];
 }
 
 export function parseAttribute(input: unknown): Attribute {

@@ -19,8 +19,8 @@ import (
 
 func registerQueryRoutes(cliCtx client.Context, r *mux.Router) {
 	r.HandleFunc("/reg/code", listCodesHandlerFn(cliCtx)).Methods("GET")
-	r.HandleFunc("/reg/consensus-io-exch-pubkey", ioPubkeyHandlerFn(cliCtx)).Methods("GET")
-	r.HandleFunc("/reg/consensus-seed-exch-pubkey", seedPubkeyHandlerFn(cliCtx)).Methods("GET")
+	r.HandleFunc("/reg/tx-key", ioPubkeyHandlerFn(cliCtx)).Methods("GET")
+	r.HandleFunc("/reg/registration-key", seedPubkeyHandlerFn(cliCtx)).Methods("GET")
 }
 
 func listCodesHandlerFn(cliCtx client.Context) http.HandlerFunc {
@@ -70,7 +70,7 @@ func ioPubkeyHandlerFn(cliCtx client.Context) http.HandlerFunc {
 			return
 		}
 
-		res = []byte(fmt.Sprintf(`{"ioExchPubkey":"%s"}`, base64.StdEncoding.EncodeToString(ioExchPubkey)))
+		res = []byte(fmt.Sprintf(`{"TxKey":"%s"}`, base64.StdEncoding.EncodeToString(ioExchPubkey)))
 
 		rest.PostProcessResponse(w, cliCtx, json.RawMessage(res))
 	}
@@ -105,7 +105,7 @@ func seedPubkeyHandlerFn(cliCtx client.Context) http.HandlerFunc {
 			return
 		}
 
-		res = []byte(fmt.Sprintf(`{"nodeExchPubkey":"%s"}`, base64.StdEncoding.EncodeToString(nodeExchPubkey)))
+		res = []byte(fmt.Sprintf(`{"RegistrationKey":"%s"}`, base64.StdEncoding.EncodeToString(nodeExchPubkey)))
 
 		rest.PostProcessResponse(w, cliCtx, nodeExchPubkey)
 	}
