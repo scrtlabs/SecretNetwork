@@ -1,0 +1,67 @@
+# CHANGELOG
+
+Version 1.2.0-beta1 has been released - Supernova upgrade testnet v1!
+
+## Highlights
+
+* Upgraded to Cosmos SDK 0.43. Full changelog can be found [here](https://github.com/cosmos/cosmos-sdk/blob/v0.43.0/CHANGELOG.md)
+
+* Gas prices are lower - as a result of performance upgrades and optimizations, gas amounts required will be much lower. We will be monitoring these metrics during the testnet period, so the numbers may not be final
+GRPC for cosmos-sdk modules in addition to legacy REST API. (link to swagger)
+Some CLI commands have been changed
+
+* New modules:
+
+    * [Fee Grant](https://docs.cosmos.network/master/modules/feegrant/) - allows an address to give an allowance to another address
+    * [Upgrade](https://docs.cosmos.network/master/modules/upgrade/) - Allows triggering of network-wide software upgrades, which significantly reduces the amount of coordination effort hard-forks require
+    
+## API and endpoints
+
+### Registration module
+
+* The endpoint `/reg/consensus-io-exch-pubkey` has been changed to `/reg/tx-key` and now returns `{"TxKey": bytes }`
+* The endpoint `/reg/consensus-seed-exch-pubkey ` has been changed to `/reg/registration-key` and now returns `{"RegistrationKey": bytes }`
+
+## GRPC and REST endpoints
+
+GRPC endpoints have been added for cosmos-sdk modules in addition to legacy REST APIs, which remain mostly unchanged.
+
+GRPC endpoints for the registration and compute modules will be added in a future testnet release
+
+## SecretCLI and Secretd
+
+Unlike other cosmos chains, we chose to maintain the differentiating CLI and Node runner executable differences.
+SecretCLI still contains the interface for all user-facing commands and trying to run node-running commands using SecretCLI will fail.
+Secretd now contains both node-running and user-facing commands.
+
+As a result of cosmos-sdk upgrade, some CLI commands will have different syntax
+
+Secretd nodes now run the REST API (previously named LCD REST server) by default on port 1317. You can change this behavior by
+modifying /home/.secretd/config/app.toml and looking for the `api` configuration options
+
+## SecretJS
+
+Version 0.17.0-beta1 has been released!
+SecretJS has been upgraded to support the Supernova upgrade.
+All APIs remain unchanged, although the versions are NOT backwards compatible.
+
+For compatiblity with 1.2.0+, use SecretJS 0.17.x.
+For compatiblity with 1.0.x (legacy), use SecretJS 0.16.x
+
+## CosmWasm
+
+Secret-CosmWasm remains in a version that is compatabile with the v0.10 of vanilla CosmWasm, although the code has been 
+updated to be compatible with the Supernova upgrade. To compile contracts that will work with this version of the testnet
+use `cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.2.0-beta1" }`
+
+A new feature has been added - plaintext logs. To send an unencrypted log (contract output), use `plaintext_log` instead of `log`.
+This allows contracts to emit public events, and attach websockets to listen to specific events.
+
+## Known Issues
+
+* SecretCLI still uses /home/.secretd to store configuration and keys
+* Signatures other than secp256k1 are unsupported for CosmWasm transactions.
+* snip20 CLI commands not working
+* IBC commands not yet working
+* Fee grant messages not supported by CosmWasm
+* SecretCLI incompatible on M1 Mac
