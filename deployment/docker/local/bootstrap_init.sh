@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eu
+set -euo pipefail
 
 file=~/.secretd/config/genesis.json
 if [ ! -e "$file" ]
@@ -10,8 +10,8 @@ then
   rm -rf ~/.sgx_secrets/*
   secretcli config chain-id enigma-pub-testnet-3
   secretcli config output json
-  secretcli config indent true
-  secretcli config trust-node true
+#  secretcli config indent true
+#  secretcli config trust-node true
   secretcli config keyring-backend test
 
   secretd init banana --chain-id enigma-pub-testnet-3
@@ -25,12 +25,12 @@ then
   secretcli keys add d
 
   secretd add-genesis-account "$(secretcli keys show -a a)" 1000000000000000000uscrt
-  secretd add-genesis-account "$(secretcli keys show -a b)" 1000000000000000000uscrt
-  secretd add-genesis-account "$(secretcli keys show -a c)" 1000000000000000000uscrt
-  secretd add-genesis-account "$(secretcli keys show -a d)" 1000000000000000000uscrt
+#  secretd add-genesis-account "$(secretcli keys show -a b)" 1000000000000000000uscrt
+#  secretd add-genesis-account "$(secretcli keys show -a c)" 1000000000000000000uscrt
+#  secretd add-genesis-account "$(secretcli keys show -a d)" 1000000000000000000uscrt
 
 
-  secretd gentx --name a --keyring-backend test --amount 1000000uscrt
+  secretd gentx a 1000000uscrt --keyring-backend test --chain-id enigma-pub-testnet-3
   # These fail for some reason:
   # secretd gentx --name b --keyring-backend test --amount 1000000uscrt
   # secretd gentx --name c --keyring-backend test --amount 1000000uscrt

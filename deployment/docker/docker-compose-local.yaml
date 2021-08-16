@@ -5,8 +5,9 @@ services:
     image: enigmampc/secret-network-sw-dev-custom-bootstrap:latest
     container_name: bootstrap
     volumes:
-      - /tmp/secretcli:/root/.secretcli
-      - /tmp/secretdbootstrap:/root/.secretd
+#      - /tmp/secretcli:/root/.secretcli
+      - /tmp/secretd-bootstrap:/root/.secretd
+#      - /tmp/secretdbootstrap:/root/.secretd
     stdin_open: true
     tty: true
     environment:
@@ -15,21 +16,24 @@ services:
     expose:
       - 26656
       - 26657
-
-  node:
-    image: enigmampc/secret-network-sw-dev-custom-node:latest
-    container_name: node
-    depends_on:
-      - bootstrap
-    volumes:
-      - /tmp/secretdbootstrap:/tmp/.secretd
-      - /tmp/secretd:/root/.secretd
-      - /tmp/secretcli:/root/.secretcli
-      - /tmp/sgx_secrets:/root/.sgx_secrets
-    stdin_open: true
-    tty: true
-    environment:
-      - http_proxy
-      - https_proxy
     ports:
       - 26657:26657
+
+#  node:
+#    image: enigmampc/secret-network-sw-dev-custom-node:latest
+#    container_name: node
+#    depends_on:
+#      - bootstrap
+#    volumes:
+#      - /tmp/secretd-bootstrap:/tmp/.secretd
+##      - /tmp/secretdbootstrap:/tmp/.secretd
+#      - /tmp/secretd-node:/root/.secretd
+#      - /tmp/secretcli:/root/.secretcli
+##      - /tmp/sgx_secrets:/root/.sgx_secrets
+#    stdin_open: true
+#    tty: true
+#    environment:
+#      - http_proxy
+#      - https_proxy
+#    ports:
+#      - 26657:26657
