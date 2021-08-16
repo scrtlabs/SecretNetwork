@@ -78,7 +78,7 @@ func ReleaseCache(cache Cache) {
 	//C.release_cache(cache.ptr)
 }
 
-func InitEnclaveRuntime(enclaveRuntimeConfig types.EnclaveRuntimeConfig) error {
+func InitEnclaveRuntime(ModuleCacheSize uint8) error {
 	return nil
 }
 
