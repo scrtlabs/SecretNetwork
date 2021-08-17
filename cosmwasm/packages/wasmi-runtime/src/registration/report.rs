@@ -740,7 +740,7 @@ pub mod tests {
         cert
     }
 
-    fn tls_ra_cert_der_out_of_date() -> Vec<u8> {
+    fn _test_aes_encrypttls_ra_cert_der_out_of_date() -> Vec<u8> {
         let mut cert = vec![];
         let mut f = File::open(
             "../wasmi-runtime/src/registration/fixtures/attestation_cert_sw_config_needed.der",
@@ -751,7 +751,7 @@ pub mod tests {
         cert
     }
 
-    fn ias_root_ca_cert_der() -> Vec<u8> {
+    fn _ias_root_ca_cert_der() -> Vec<u8> {
         let mut cert = vec![];
         let mut f =
             File::open("../wasmi-runtime/src/registration/fixtures/ias_root_ca_cert.der").unwrap();
@@ -867,10 +867,7 @@ pub mod tests {
         assert!(report.is_ok());
 
         let report = report.unwrap();
-        assert_eq!(
-            report.sgx_quote_status,
-            SgxQuoteStatus::ConfigurationAndSwHardeningNeeded
-        );
+        assert_eq!(report.sgx_quote_status, SgxQuoteStatus::GroupOutOfDate);
     }
 
     pub fn test_attestation_report_from_cert_api_version_not_compatible() {

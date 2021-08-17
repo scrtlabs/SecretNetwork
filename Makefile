@@ -305,6 +305,9 @@ go-tests-hw: build-test-contract
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
 	SGX_MODE=HW go test -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
+# When running this more than once, after the first time you'll want to remove the contents of the `ffi-types`
+# rule in the Makefile in `wasmi-runtime`. This is to speed up the compilation time of tests and speed up the
+# test debugging process in general.
 .PHONY: enclave-tests
 enclave-tests:
 	$(MAKE) -C cosmwasm/packages/enclave-test run
