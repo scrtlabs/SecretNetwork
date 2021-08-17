@@ -9,7 +9,7 @@ Version 1.2.0-beta1 has been released - Supernova upgrade testnet v1!
 * Upgraded to Cosmos SDK 0.43. Full changelog can be found [here](https://github.com/cosmos/cosmos-sdk/blob/v0.43.0/CHANGELOG.md)
 
 * Gas prices are lower - as a result of performance upgrades and optimizations, gas amounts required will be much lower. We will be monitoring these metrics during the testnet period, so the numbers may not be final
-GRPC for cosmos-sdk modules in addition to legacy REST API. See API [here](http://bootstrap.supernova.enigma.co/swagger/)
+* GRPC for cosmos-sdk modules in addition to legacy REST API. See API [here](http://bootstrap.supernova.enigma.co/swagger/)
 
 * New modules:
 
@@ -38,7 +38,7 @@ Secretd now contains both node-running and user-facing commands.
 As a result of cosmos-sdk upgrade, some CLI commands will have different syntax
 
 Secretd nodes now run the REST API (previously named LCD REST server) by default on port 1317. You can change this behavior by
-modifying /home/.secretd/config/app.toml and looking for the `api` configuration options
+modifying /home/\<account\>/.secretd/config/app.toml and looking for the `api` configuration options
 
 ## SecretJS
 
