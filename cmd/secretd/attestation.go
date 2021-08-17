@@ -13,6 +13,9 @@ import (
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	app2 "github.com/enigmampc/SecretNetwork/app"
 	"io/ioutil"
+	"log"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 
@@ -25,6 +28,12 @@ import (
 )
 
 const flagReset = "reset"
+const flagRegistrationService = "registration-node"
+const flagBootstrapNode = "node"
+
+type RegistrationResponse struct {
+	RegistrationKey []byte
+}
 
 func InitAttestation() *cobra.Command {
 
@@ -234,7 +243,6 @@ func ConfigureSecret() *cobra.Command {
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			// parse coins trying to be sent
 			cert, err := ioutil.ReadFile(args[0])
 			if err != nil {
 				return err
@@ -345,6 +353,180 @@ func ResetEnclave() *cobra.Command {
 			return nil
 		},
 	}
+
+	return cmd
+}
+
+// *** EXPERIMENTAL ***
+func AutoRegisterNode() *cobra.Command {
+
+	cmd := &cobra.Command{
+		Use:   "auto-register",
+		Short: "Perform remote attestation of the enclave",
+		Long: `Do everything
+
+`,
+		Args: cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			sgxSecretsPath := os.Getenv("SCRT_SGX_STORAGE")
+			if sgxSecretsPath == "" {
+				sgxSecretsPath = os.ExpandEnv("$HOME/.sgx_secrets")
+			}
+
+			sgxSecretsPath += string(os.PathSeparator) + reg.EnclaveRegistrationKey
+
+			resetFlag, err := cmd.Flags().GetBool(flagReset)
+			if err != nil {
+				return fmt.Errorf("error with reset flag: %s", err)
+			}
+
+			if !resetFlag {
+				if _, err := os.Stat(sgxSecretsPath); os.IsNotExist(err) {
+					fmt.Println("Creating new enclave registration key")
+					_, err := api.KeyGen()
+					if err != nil {
+						return fmt.Errorf("failed to initialize enclave: %w", err)
+					}
+				} else {
+					fmt.Println("Enclave key already exists. If you wish to overwrite and reset the node, use the --reset flag")
+				}
+			} else {
+				fmt.Println("Reset enclave flag set, generating new enclave registration key. You must now re-register the node")
+				_, err := api.KeyGen()
+				if err != nil {
+					return fmt.Errorf("failed to initialize enclave: %w", err)
+				}
+			}
+
+			spidFile, err := Asset("spid.txt")
+			if err != nil {
+				return fmt.Errorf("failed to initialize enclave: %w", err)
+			}
+
+			apiKeyFile, err := Asset("api_key.txt")
+			if err != nil {
+				return fmt.Errorf("failed to initialize enclave: %w", err)
+			}
+
+			_, err = api.CreateAttestationReport(spidFile, apiKeyFile)
+			if err != nil {
+				return fmt.Errorf("failed to create attestation report: %w", err)
+			}
+
+			// read the attestation certificate that we just created
+			cert, err := ioutil.ReadFile("./attestation_cert.der")
+			if err != nil {
+				return err
+			}
+
+			// verify certificate
+			_, err = ra.VerifyRaCert(cert)
+			if err != nil {
+				return err
+			}
+
+			// register the node
+			regUrl, err := cmd.Flags().GetString(flagRegistrationService)
+			if err != nil {
+				return err
+			}
+
+			// call registration service to register us
+			data := url.Values{
+				"cert": {base64.StdEncoding.EncodeToString(cert)},
+			}
+			resp, err := http.PostForm(fmt.Sprintf(`%s/register`, regUrl), data)
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			//Convert the body to type string and extract the seed
+			seed := string(body)
+			log.Printf(fmt.Sprintf(`seed: %s`, seed))
+			if len(seed) != reg.EncryptedKeyLength || !reg.IsHexString(seed) {
+				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 96 without 0x prefix)")
+			}
+
+			// get network registration public key
+			bootstrapNode, err := cmd.Flags().GetString(flagBootstrapNode)
+			if err != nil {
+				return err
+			}
+
+			resp, err = http.Get(fmt.Sprintf(`%s/reg/registration-key`, bootstrapNode))
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			body, err = ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			regResponse := RegistrationResponse{}
+			//Convert the body to type string
+			err = json.Unmarshal(body, &regResponse)
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			regPublicKey := regResponse.RegistrationKey
+
+			// We expect seed to be 48 bytes of encrypted data (aka 96 hex chars) [32 bytes + 12 IV]
+
+			cfg := reg.SeedConfig{
+				EncryptedKey: seed,
+				MasterCert:   base64.StdEncoding.EncodeToString(regPublicKey),
+			}
+
+			cfgBytes, err := json.Marshal(&cfg)
+			if err != nil {
+				return err
+			}
+
+			seedCfgFile := filepath.Join(app2.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
+			seedCfgDir := filepath.Join(app2.DefaultNodeHome, reg.SecretNodeCfgFolder)
+
+			// create seed directory if it doesn't exist
+			_, err = os.Stat(seedCfgDir)
+			if os.IsNotExist(err) {
+				err = os.MkdirAll(seedCfgDir, 0666)
+				if err != nil {
+					return fmt.Errorf("failed to create directory '%s': %w", seedCfgDir, err)
+				}
+			}
+
+			// write seed to file - if file doesn't exist, write it. If it does, delete the existing one and create this
+			_, err = os.Stat(seedCfgFile)
+			if os.IsNotExist(err) {
+				err = ioutil.WriteFile(seedCfgFile, cfgBytes, 0644)
+				if err != nil {
+					return err
+				}
+			} else {
+				err = os.Remove(seedCfgFile)
+				if err != nil {
+					return fmt.Errorf("failed to modify file '%s': %w", seedCfgFile, err)
+				}
+
+				err = ioutil.WriteFile(seedCfgFile, cfgBytes, 0644)
+				if err != nil {
+					return fmt.Errorf("failed to create file '%s': %w", seedCfgFile, err)
+				}
+			}
+
+			return nil
+		},
+	}
+	cmd.Flags().Bool(flagReset, false, "Optional flag to regenerate the enclave registration key")
+	cmd.Flags().String(flagRegistrationService, "http://register.mainnet.enigma.co:36667", "Endpoint for registration service")
+	cmd.Flags().String(flagBootstrapNode, "http://bootstrap.supernova.enigma.co", "REST API endpoint of a current node or light client service")
 
 	return cmd
 }

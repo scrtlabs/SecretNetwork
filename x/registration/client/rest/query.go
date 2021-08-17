@@ -107,7 +107,7 @@ func seedPubkeyHandlerFn(cliCtx client.Context) http.HandlerFunc {
 
 		res = []byte(fmt.Sprintf(`{"RegistrationKey":"%s"}`, base64.StdEncoding.EncodeToString(nodeExchPubkey)))
 
-		rest.PostProcessResponse(w, cliCtx, nodeExchPubkey)
+		rest.PostProcessResponse(w, cliCtx, json.RawMessage(res))
 	}
 }
 

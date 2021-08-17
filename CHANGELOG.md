@@ -1,5 +1,7 @@
 # CHANGELOG
 
+# 1.2.0-beta1
+
 Version 1.2.0-beta1 has been released - Supernova upgrade testnet v1!
 
 ## Highlights
@@ -65,3 +67,4 @@ This allows contracts to emit public events, and attach websockets to listen to 
 * IBC commands not yet working
 * Fee grant messages not supported by CosmWasm
 * SecretCLI incompatible on M1 Mac
+* /reg/registration-key returns malformed data

@@ -33,8 +33,8 @@ rm -rf ~/.sgx_secrets/*
 
 You're probably familiar with SGX by now:
 
-- [Setup SGX](validators-and-full-nodes/setup-sgx.md)
-- [Verify SGX](validators-and-full-nodes/verify-sgx.md)
+- [Setup SGX](../validators-and-full-nodes/setup-sgx.md)
+- [Verify SGX](../validators-and-full-nodes/verify-sgx.md)
 
 ## 1. Prepare your `secret-1` validator to halt after block #1,246,400
 
@@ -145,7 +145,7 @@ To make sure your validator is unjailed, look for it in here:
 secretcli q staking validators | jq -r '.[] | select(.status == 2) | .description.moniker'
 ```
 
-([Ref for testnet instructions](testnet/run-full-node-testnet.md))
+([Ref for testnet instructions](../testnet/run-full-node-testnet.md))
 
 # In case of an upgrade failure
 
