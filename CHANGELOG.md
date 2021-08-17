@@ -9,14 +9,13 @@ Version 1.2.0-beta1 has been released - Supernova upgrade testnet v1!
 * Upgraded to Cosmos SDK 0.43. Full changelog can be found [here](https://github.com/cosmos/cosmos-sdk/blob/v0.43.0/CHANGELOG.md)
 
 * Gas prices are lower - as a result of performance upgrades and optimizations, gas amounts required will be much lower. We will be monitoring these metrics during the testnet period, so the numbers may not be final
-GRPC for cosmos-sdk modules in addition to legacy REST API. (link to swagger)
-Some CLI commands have been changed
+GRPC for cosmos-sdk modules in addition to legacy REST API. See API [here](http://bootstrap.supernova.enigma.co/swagger/)
 
 * New modules:
 
     * [Fee Grant](https://docs.cosmos.network/master/modules/feegrant/) - allows an address to give an allowance to another address
     * [Upgrade](https://docs.cosmos.network/master/modules/upgrade/) - Allows triggering of network-wide software upgrades, which significantly reduces the amount of coordination effort hard-forks require
-    
+
 ## API and endpoints
 
 ### Registration module
