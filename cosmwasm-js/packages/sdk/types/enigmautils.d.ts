@@ -16,7 +16,9 @@ export default class EnigmaUtils implements SecretUtils {
     pubkey: Uint8Array;
   };
   static GenerateNewSeed(): Uint8Array;
-  static GenerateNewKeyPairFromSeed(seed: Uint8Array): {
+  static GenerateNewKeyPairFromSeed(
+    seed: Uint8Array,
+  ): {
     privkey: Uint8Array;
     pubkey: Uint8Array;
   };

@@ -485,8 +485,18 @@ export class RestClient {
    * Makes a smart query on the contract and parses the reponse as JSON.
    * Throws error if no such contract exists, the query format is invalid or the response is invalid.
    */
-  public async queryContractSmart(address: string, query: object, addedParams?: object): Promise<JsonObject> {
-    const contractCodeHash = await this.getCodeHashByContractAddr(address);
+  public async queryContractSmart(
+    contractAddress: string,
+    query: object,
+    addedParams?: object,
+    contractCodeHash?: string,
+  ): Promise<JsonObject> {
+    if (!contractCodeHash) {
+      contractCodeHash = await this.getCodeHashByContractAddr(contractAddress);
+    } else {
+      this.codeHashCache.set(contractAddress, contractCodeHash);
+    }
+
     const encrypted = await this.enigmautils.encrypt(contractCodeHash, query);
     const nonce = encrypted.slice(0, 32);
 
@@ -495,7 +505,7 @@ export class RestClient {
     // @ts-ignore
     const paramString = new URLSearchParams(addedParams).toString();
 
-    const path = `/wasm/contract/${address}/query/${encoded}?encoding=hex&${paramString}`;
+    const path = `/wasm/contract/${contractAddress}/query/${encoded}?encoding=hex&${paramString}`;
 
     let responseData;
     try {

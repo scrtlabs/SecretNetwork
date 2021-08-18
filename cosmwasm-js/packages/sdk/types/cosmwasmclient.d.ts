@@ -165,7 +165,12 @@ export declare class CosmWasmClient {
    *
    * Note: addedParams allows for query string additions such as "&height=1234567"
    */
-  queryContractSmart(address: string, queryMsg: object, addedParams?: object): Promise<JsonObject>;
+  queryContractSmart(
+    contractAddress: string,
+    queryMsg: object,
+    addedParams?: object,
+    contractCodeHash?: string,
+  ): Promise<JsonObject>;
   private txsQuery;
   getCodeHashByCodeId(id: number): Promise<string>;
   getCodeHashByContractAddr(addr: string): Promise<string>;
