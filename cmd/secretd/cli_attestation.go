@@ -108,3 +108,20 @@ func ResetEnclave() *cobra.Command {
 
 	return cmd
 }
+
+func AutoRegisterNode() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "auto-register",
+		Short: "Perform remote attestation of the enclave",
+		Long: `Automatically handles all registration processes. ***EXPERIMENTAL***
+Please report any issues with this command
+`,
+		Args: cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			println("This is a secretd only function, yo")
+			return nil
+		},
+	}
+
+	return cmd
+}

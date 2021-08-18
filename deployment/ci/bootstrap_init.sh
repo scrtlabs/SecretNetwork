@@ -1,7 +1,7 @@
 #!/bin/bash
 
 rm -rf ~/.secretd/*
-rm -rf ~/.sgx_secrets/*
+rm -rf /opt/secret/.sgx_secrets/*
 
 secretd config chain-id secretdev-1
 secretd config keyring-backend test

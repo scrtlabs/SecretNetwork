@@ -62,12 +62,20 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			sgxSecretsPath := os.Getenv("SCRT_SGX_STORAGE")
-			if sgxSecretsPath == "" {
-				sgxSecretsPath = os.ExpandEnv("$HOME/.sgx_secrets")
+			sgxSecretsDir := os.Getenv("SCRT_SGX_STORAGE")
+			if sgxSecretsDir == "" {
+				sgxSecretsDir = os.ExpandEnv("/opt/secret/.sgx_secrets")
 			}
 
-			sgxSecretsPath += string(os.PathSeparator) + reg.EnclaveRegistrationKey
+			// create sgx secrets dir if it doesn't exist
+			if _, err := os.Stat(sgxSecretsDir); !os.IsNotExist(err) {
+				err := os.MkdirAll(sgxSecretsDir, 0777)
+				if err != nil {
+					return err
+				}
+			}
+
+			sgxSecretsPath := sgxSecretsDir + string(os.PathSeparator) + reg.EnclaveRegistrationKey
 
 			resetFlag, err := cmd.Flags().GetBool(flagReset)
 			if err != nil {
@@ -348,7 +356,7 @@ func ResetEnclave() *cobra.Command {
 			// remove sgx_secrets
 			sgxSecretsDir := os.Getenv("SCRT_SGX_STORAGE")
 			if sgxSecretsDir == "" {
-				sgxSecretsDir = os.ExpandEnv("$HOME/.sgx_secrets")
+				sgxSecretsDir = os.ExpandEnv("/opt/secret/.sgx_secrets")
 			}
 			if _, err := os.Stat(sgxSecretsDir); !os.IsNotExist(err) {
 				fmt.Printf("Removing %s\n", sgxSecretsDir)
@@ -386,7 +394,7 @@ Please report any issues with this command
 
 			sgxSecretsFolder := os.Getenv("SCRT_SGX_STORAGE")
 			if sgxSecretsFolder == "" {
-				sgxSecretsFolder = os.ExpandEnv("$HOME/.sgx_secrets")
+				sgxSecretsFolder = os.ExpandEnv("/opt/secret/.sgx_secrets")
 			}
 
 			sgxEnclaveKeyPath := filepath.Join(sgxSecretsFolder, reg.EnclaveRegistrationKey)
