@@ -175,6 +175,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 		ConfigureSecret(),
 		HealthCheck(),
 		ResetEnclave(),
+		AutoRegisterNode(),
 		keys.Commands(app.DefaultNodeHome),
 		clientconfig.Cmd(),
 	)

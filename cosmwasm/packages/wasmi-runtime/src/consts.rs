@@ -22,6 +22,9 @@ pub const ATTESTATION_CERTIFICATE_SAVE_PATH: &str = "attestation_cert.der";
 pub const SEED_EXCH_CERTIFICATE_SAVE_PATH: &str = "node-master-cert.der";
 pub const IO_CERTIFICATE_SAVE_PATH: &str = "io-master-cert.der";
 
+pub const NODE_EXCHANGE_KEY_FILE: &str = "new_node_seed_exchange_keypair.sealed";
+pub const NODE_ENCRYPTED_SEED_KEY_FILE: &str = "consensus_seed.sealed";
+
 //todo: set this to the real value
 #[cfg(feature = "production")]
 pub const MRSIGNER: [u8; 32] = [
@@ -47,12 +50,13 @@ pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRSIGNER;
 lazy_static! {
     pub static ref CONSENSUS_SEED_SEALING_PATH: String = env::var(SCRT_SGX_STORAGE_ENV_VAR)
         .unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
-        + "consensus_seed.sealed";
+        + NODE_ENCRYPTED_SEED_KEY_FILE;
     pub static ref REGISTRATION_KEY_SEALING_PATH: String = env::var(SCRT_SGX_STORAGE_ENV_VAR)
         .unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
-        + "new_node_seed_exchange_keypair.sealed";
-    pub static ref ATTESTATION_CERT_PATH: String =
-        env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string());
+        + NODE_EXCHANGE_KEY_FILE;
+    pub static ref ATTESTATION_CERT_PATH: String = env::var(SCRT_SGX_STORAGE_ENV_VAR)
+        .unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
+        + ATTESTATION_CERTIFICATE_SAVE_PATH;
 }
 
 pub const CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 1;
@@ -63,4 +67,4 @@ pub const CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER: u32 = 4;
 pub const LOG_LEVEL_ENV_VAR: &str = "LOG_LEVEL";
 pub const SCRT_SGX_STORAGE_ENV_VAR: &str = "SCRT_SGX_STORAGE";
 
-const DEFAULT_SGX_SECRET_PATH: &str = "./";
+const DEFAULT_SGX_SECRET_PATH: &str = "./sgx_secrets/";

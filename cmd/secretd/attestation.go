@@ -10,19 +10,20 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/server"
+	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	app2 "github.com/enigmampc/SecretNetwork/app"
+	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
+	reg "github.com/enigmampc/SecretNetwork/x/registration"
+	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
-
-	"github.com/cosmos/cosmos-sdk/x/genutil"
-	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
-	reg "github.com/enigmampc/SecretNetwork/x/registration"
-	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -31,8 +32,22 @@ const flagReset = "reset"
 const flagRegistrationService = "registration-node"
 const flagBootstrapNode = "node"
 
+type WrappedSeedResponse struct {
+	Height string       `json:"height"`
+	Result SeedResponse `json:"result"`
+}
+
+type WrappedRegistrationResponse struct {
+	Height string               `json:"height"`
+	Result RegistrationResponse `json:"result"`
+}
+
 type RegistrationResponse struct {
-	RegistrationKey []byte
+	RegistrationKey []byte `json:"RegistrationKey"`
+}
+
+type SeedResponse struct {
+	Seed string `json:"Seed"`
 }
 
 func InitAttestation() *cobra.Command {
@@ -341,7 +356,7 @@ func ResetEnclave() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				err := os.MkdirAll(sgxSecretsDir, 644)
+				err := os.MkdirAll(sgxSecretsDir, 0777)
 				if err != nil {
 					return err
 				}
@@ -357,7 +372,7 @@ func ResetEnclave() *cobra.Command {
 	return cmd
 }
 
-// *** EXPERIMENTAL ***
+// AutoRegisterNode *** EXPERIMENTAL ***
 func AutoRegisterNode() *cobra.Command {
 
 	cmd := &cobra.Command{
@@ -369,12 +384,13 @@ func AutoRegisterNode() *cobra.Command {
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			sgxSecretsPath := os.Getenv("SCRT_SGX_STORAGE")
-			if sgxSecretsPath == "" {
-				sgxSecretsPath = os.ExpandEnv("$HOME/.sgx_secrets")
+			sgxSecretsFolder := os.Getenv("SCRT_SGX_STORAGE")
+			if sgxSecretsFolder == "" {
+				sgxSecretsFolder = os.ExpandEnv("$HOME/.sgx_secrets")
 			}
 
-			sgxSecretsPath += string(os.PathSeparator) + reg.EnclaveRegistrationKey
+			sgxEnclaveKeyPath := filepath.Join(sgxSecretsFolder, reg.EnclaveRegistrationKey)
+			sgxAttestationCert := filepath.Join(sgxSecretsFolder, reg.AttestationCertPath)
 
 			resetFlag, err := cmd.Flags().GetBool(flagReset)
 			if err != nil {
@@ -382,7 +398,7 @@ func AutoRegisterNode() *cobra.Command {
 			}
 
 			if !resetFlag {
-				if _, err := os.Stat(sgxSecretsPath); os.IsNotExist(err) {
+				if _, err := os.Stat(sgxEnclaveKeyPath); os.IsNotExist(err) {
 					fmt.Println("Creating new enclave registration key")
 					_, err := api.KeyGen()
 					if err != nil {
@@ -390,6 +406,7 @@ func AutoRegisterNode() *cobra.Command {
 					}
 				} else {
 					fmt.Println("Enclave key already exists. If you wish to overwrite and reset the node, use the --reset flag")
+					return nil
 				}
 			} else {
 				fmt.Println("Reset enclave flag set, generating new enclave registration key. You must now re-register the node")
@@ -415,13 +432,16 @@ func AutoRegisterNode() *cobra.Command {
 			}
 
 			// read the attestation certificate that we just created
-			cert, err := ioutil.ReadFile("./attestation_cert.der")
+			cert, err := ioutil.ReadFile(sgxAttestationCert)
 			if err != nil {
+				_ = os.Remove(sgxAttestationCert)
 				return err
 			}
 
+			_ = os.Remove(sgxAttestationCert)
+
 			// verify certificate
-			_, err = ra.VerifyRaCert(cert)
+			pubKey, err := ra.VerifyRaCert(cert)
 			if err != nil {
 				return err
 			}
@@ -433,10 +453,10 @@ func AutoRegisterNode() *cobra.Command {
 			}
 
 			// call registration service to register us
-			data := url.Values{
-				"cert": {base64.StdEncoding.EncodeToString(cert)},
-			}
-			resp, err := http.PostForm(fmt.Sprintf(`%s/register`, regUrl), data)
+			//data := url.Values{
+			//	"cert": {base64.StdEncoding.EncodeToString(cert)},
+			//}
+			resp, err := http.Get(fmt.Sprintf(`%s/register?cert=%s`, regUrl, url.QueryEscape(base64.StdEncoding.EncodeToString(cert))))
 			if err != nil {
 				log.Fatalln(err)
 			}
@@ -447,18 +467,48 @@ func AutoRegisterNode() *cobra.Command {
 			}
 
 			//Convert the body to type string and extract the seed
-			seed := string(body)
+			txHash := string(body)
+			txHash = txHash[1 : len(txHash)-1]
+			txHash = removeQuotes(txHash)
+			if len(txHash) != 64 || !reg.IsHexString(txHash) {
+				return fmt.Errorf(fmt.Sprintf("Registration TX was not successful - %s", txHash))
+			}
+
+			bootstrapNode, err := cmd.Flags().GetString(flagBootstrapNode)
+			if err != nil {
+				return err
+			}
+			log.Printf("Waiting for on-chain Register...")
+			time.Sleep(10 * time.Second)
+
+			log.Printf("Getting encrypted seed")
+			log.Printf(fmt.Sprintf(`requesting: %s/reg/seed/%s`, bootstrapNode, hex.EncodeToString(pubKey)))
+			// get encrypted seed for our node
+			resp, err = http.Get(fmt.Sprintf(`%s/reg/seed/%s`, bootstrapNode, hex.EncodeToString(pubKey)))
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			body, err = ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			seedResponse := WrappedSeedResponse{}
+			//Convert the body to type string
+			err = json.Unmarshal(body, &seedResponse)
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			seed := seedResponse.Result.Seed
 			log.Printf(fmt.Sprintf(`seed: %s`, seed))
+
 			if len(seed) != reg.EncryptedKeyLength || !reg.IsHexString(seed) {
 				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 96 without 0x prefix)")
 			}
 
 			// get network registration public key
-			bootstrapNode, err := cmd.Flags().GetString(flagBootstrapNode)
-			if err != nil {
-				return err
-			}
-
 			resp, err = http.Get(fmt.Sprintf(`%s/reg/registration-key`, bootstrapNode))
 			if err != nil {
 				log.Fatalln(err)
@@ -469,14 +519,14 @@ func AutoRegisterNode() *cobra.Command {
 				log.Fatalln(err)
 			}
 
-			regResponse := RegistrationResponse{}
+			regResponse := WrappedRegistrationResponse{}
 			//Convert the body to type string
 			err = json.Unmarshal(body, &regResponse)
 			if err != nil {
 				log.Fatalln(err)
 			}
 
-			regPublicKey := regResponse.RegistrationKey
+			regPublicKey := regResponse.Result.RegistrationKey
 
 			// We expect seed to be 48 bytes of encrypted data (aka 96 hex chars) [32 bytes + 12 IV]
 
@@ -496,7 +546,7 @@ func AutoRegisterNode() *cobra.Command {
 			// create seed directory if it doesn't exist
 			_, err = os.Stat(seedCfgDir)
 			if os.IsNotExist(err) {
-				err = os.MkdirAll(seedCfgDir, 0666)
+				err = os.MkdirAll(seedCfgDir, 0777)
 				if err != nil {
 					return fmt.Errorf("failed to create directory '%s': %w", seedCfgDir, err)
 				}
@@ -521,12 +571,17 @@ func AutoRegisterNode() *cobra.Command {
 				}
 			}
 
+			fmt.Println("Done registering! Ready to start...")
 			return nil
 		},
 	}
 	cmd.Flags().Bool(flagReset, false, "Optional flag to regenerate the enclave registration key")
 	cmd.Flags().String(flagRegistrationService, "http://register.mainnet.enigma.co:36667", "Endpoint for registration service")
-	cmd.Flags().String(flagBootstrapNode, "http://bootstrap.supernova.enigma.co", "REST API endpoint of a current node or light client service")
+	cmd.Flags().String(flagBootstrapNode, "http://node1.supernova.enigma.co:1317", "REST API endpoint of a current node or light client service")
 
 	return cmd
+}
+
+func removeQuotes(s string) string {
+	return strings.Trim(s, "\"")
 }
