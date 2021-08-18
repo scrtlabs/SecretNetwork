@@ -57,7 +57,7 @@ RUN secretd completion > /root/secretd_completion
 RUN echo 'source /root/secretd_completion' >> ~/.bashrc
 
 RUN mkdir -p /root/.secretd/.compute/
-RUN mkdir -p /root/.sgx_secrets/
+RUN mkdir -p /opt/secret/.sgx_secrets/
 RUN mkdir -p /root/.secretd/.node/
 RUN mkdir -p /root/config/
 

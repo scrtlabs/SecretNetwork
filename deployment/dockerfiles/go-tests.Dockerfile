@@ -5,7 +5,7 @@
 FROM rust-go-base-image
 
 RUN cp /go/src/github.com/enigmampc/SecretNetwork/cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so x/compute/internal/keeper
-RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/x/compute/internal/keeper/.sgx_secrets
+RUN mkdir -p /opt/secret/.sgx_secrets
 
 RUN rustup target add wasm32-unknown-unknown
 
