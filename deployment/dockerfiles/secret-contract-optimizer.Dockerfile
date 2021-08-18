@@ -1,4 +1,4 @@
-FROM rust:1.46
+FROM rust:1.54
 
 RUN rustup target add wasm32-unknown-unknown
 RUN apt update && apt install -y binaryen && rm -rf /var/lib/apt/lists/*
