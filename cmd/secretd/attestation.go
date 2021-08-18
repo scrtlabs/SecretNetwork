@@ -378,8 +378,8 @@ func AutoRegisterNode() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "auto-register",
 		Short: "Perform remote attestation of the enclave",
-		Long: `Do everything
-
+		Long: `Automatically handles all registration processes. ***EXPERIMENTAL***
+Please report any issues with this command
 `,
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {

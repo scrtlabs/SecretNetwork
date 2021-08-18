@@ -16,6 +16,8 @@ Version 1.2.0-beta1 has been released - Supernova upgrade testnet v1!
     * [Fee Grant](https://docs.cosmos.network/master/modules/feegrant/) - allows an address to give an allowance to another address
     * [Upgrade](https://docs.cosmos.network/master/modules/upgrade/) - Allows triggering of network-wide software upgrades, which significantly reduces the amount of coordination effort hard-forks require
 
+* Auto Registration - The new node registering process is now automated via a new command `secretd auto-register`
+
 ## API and endpoints
 
 ### Registration module
