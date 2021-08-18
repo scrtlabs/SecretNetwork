@@ -23,6 +23,7 @@ pub mod tests {
         count_failures!(failures, {
             report::tests::test_sgx_quote_parse_from();
             report::tests::test_attestation_report_from_cert();
+            report::tests::test_attestation_report_from_cert_invalid();
             report::tests::test_attestation_report_from_cert_api_version_not_compatible();
             cert::tests::test_certificate_valid();
             cert::tests::test_certificate_invalid_configuration_needed();

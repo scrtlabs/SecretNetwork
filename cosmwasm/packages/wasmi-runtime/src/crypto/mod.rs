@@ -38,11 +38,11 @@ pub mod tests {
             // kdf::tests::test_derive_key();
             // storage::tests::test_open();
             // storage::tests::test_seal();
-            //multisig::tests_decode_multisig_signature::test_decode_sig_sanity();  // todo: enable again after it's fixed
-            //multisig::tests_decode_multisig_signature::test_decode_long_leb128(); // todo: enable again after it's fixed
+            multisig::tests_decode_multisig_signature::test_decode_sig_sanity();
+            multisig::tests_decode_multisig_signature::test_decode_long_leb128();
             multisig::tests_decode_multisig_signature::test_decode_wrong_long_leb128();
             multisig::tests_decode_multisig_signature::test_decode_malformed_sig_only_prefix();
-            //multisig::tests_decode_multisig_signature::test_decode_sig_length_zero(); // todo: enable again after it's fixed
+            multisig::tests_decode_multisig_signature::test_decode_sig_length_zero();
             multisig::tests_decode_multisig_signature::test_decode_malformed_sig_wrong_length();
         });
 

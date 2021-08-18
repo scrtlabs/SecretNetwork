@@ -227,48 +227,53 @@ pub mod tests_decode_multisig_signature {
     use super::decode_multisig_signature;
 
     pub fn test_decode_sig_sanity() {
-        let sig: Vec<u8> = vec![
-            0, 0, 0, 0, 0, 0, 0, 0x12, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0x12, 4, 1, 2, 3, 4,
-        ];
+        let expected = vec![vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10], vec![1, 2, 3, 4]];
+        // let mut ms = MultiSignature::new();
+        // ms.set_signatures(expected.into());
+        // let sig = ms.write_to_bytes();
+        // eprintln!("{:?}", sig);
+
+        let sig = vec![10, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 4, 1, 2, 3, 4];
 
         let result = decode_multisig_signature(sig.as_slice()).unwrap();
         assert_eq!(
-            result,
-            vec![vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10], vec![1, 2, 3, 4]],
+            result, expected,
             "Signature is: {:?} and result is: {:?}",
-            sig,
-            result
+            sig, result
         )
     }
 
     pub fn test_decode_long_leb128() {
-        let sig: Vec<u8> = vec![
-            0, 0, 0, 0, 0, 0, 0, 0x12, 200, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        let expected = vec![vec![
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ]];
+        // let mut ms = MultiSignature::new();
+        // ms.set_signatures(expected.into());
+        // let sig = ms.write_to_bytes();
+        // eprintln!("{:?}", sig);
+
+        let sig = vec![
+            10, 200, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0,
         ];
 
         let result = decode_multisig_signature(sig.as_slice()).unwrap();
         assert_eq!(
-            result,
-            vec![vec![
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0,
-            ]],
+            result, expected,
             "Signature is: {:?} and result is: {:?}",
-            sig,
-            result
+            sig, result
         )
     }
 
@@ -299,10 +304,15 @@ pub mod tests_decode_multisig_signature {
     }
 
     pub fn test_decode_sig_length_zero() {
-        let sig: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 0x12, 0];
+        let expected: Vec<Vec<u8>> = vec![vec![]];
+        // let mut ms = MultiSignature::new();
+        // ms.set_signatures(expected.clone().into());
+        // let sig = ms.write_to_bytes();
+        // eprintln!("{:?}", sig);
+
+        let sig = vec![10, 0];
 
         let result = decode_multisig_signature(sig.as_slice()).unwrap();
-        let expected: Vec<Vec<u8>> = vec![vec![]];
         assert_eq!(
             result, expected,
             "Signature is: {:?} and result is: {:?}",

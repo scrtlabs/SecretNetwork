@@ -604,7 +604,7 @@ impl SignerInfo {
 pub mod tests {
 
     use super::*;
-    use crate::crypto::{AESKey, SIVEncryptable, Seed, KEY_MANAGER};
+    // use crate::crypto::{AESKey, SIVEncryptable, Seed, KEY_MANAGER};
 
     // todo: fix test vectors to actually work
     pub fn test_new_from_slice() {

@@ -65,7 +65,7 @@ pub mod tests {
     use super::{aes_siv_decrypt, aes_siv_encrypt};
 
     // todo: fix test vectors to actually work
-    fn test_aes_encrypt() {
+    pub fn _test_aes_encrypt() {
         let key = b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
         let aad: Vec<&[u8]> = vec![
             b"00112233445566778899aabbccddeeffdeaddadadeaddadaffeeddccbbaa99887766554433221100",
@@ -81,7 +81,7 @@ pub mod tests {
     }
 
     // todo: fix test vectors to actually work
-    fn test_aes_decrypt() {
+    pub fn _test_aes_decrypt() {
         let key = b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
         let aad: Vec<&[u8]> = vec![
             b"00112233445566778899aabbccddeeffdeaddadadeaddadaffeeddccbbaa99887766554433221100",
@@ -97,7 +97,7 @@ pub mod tests {
     }
 
     // todo: fix test vectors to actually work
-    fn test_aes_encrypt_empty_aad() {
+    pub fn _test_aes_encrypt_empty_aad() {
         let key = b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
         let aad: Vec<&[u8]> = vec![];
         let plaintext = b"7468697320697320736f6d6520706c61696e7465787420746f20656e6372797074207573696e67205349562d414553";
