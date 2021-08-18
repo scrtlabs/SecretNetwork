@@ -5,14 +5,16 @@ if [ ! -e "$file" ]
 then
   # init the node
   rm -rf ~/.secretd/*
-  rm -rf ~/.sgx_secrets/*
+  rm -rf /opt/secret/.sgx_secrets/*
 
+  mkdir -p ./.sgx_secrets
   secretd config chain-id supernova-1
   secretd config keyring-backend test
 
   # export SECRET_NETWORK_CHAIN_ID=secretdev-1
   # export SECRET_NETWORK_KEYRING_BACKEND=test
   secretd init banana --chain-id supernova-1
+
 
   cp ~/node_key.json ~/.secretd/config/node_key.json
   perl -i -pe 's/"stake"/ "uscrt"/g' ~/.secretd/config/genesis.json

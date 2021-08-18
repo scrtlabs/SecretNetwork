@@ -19,7 +19,7 @@ services:
       - /tmp/aesmd:/var/run/aesmd
       - /tmp/.secretd:/tmp/.secretd
       - /tmp/.secretcli:/root/.secretcli
-      - /tmp/.sgx_secrets:/root/.sgx_secrets
+      - /tmp/.sgx_secrets:/opt/secret/.sgx_secrets
     environment:
       - SGX_MODE=HW
     ports:
