@@ -33,8 +33,8 @@ RUN cp /opt/sgxsdk/lib64/libsgx_uae_service_sim.so /usr/lib/libsgx_uae_service_s
 WORKDIR /root
 
 # Copy over binaries from the local directory
-COPY ./go-cosmwasm/api/libgo_cosmwasm.so /usr/lib/
-COPY ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so /usr/lib/
+COPY ./go-cosmwasm/api/libgo_cosmwasm.so.x /usr/lib/libgo_cosmwasm.so
+COPY ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so.x /usr/lib/librust_cosmwasm_enclave.signed.so
 COPY ./secretd /usr/bin/secretd
 COPY ./secretcli /usr/bin/secretcli
 

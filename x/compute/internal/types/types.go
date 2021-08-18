@@ -11,7 +11,7 @@ import (
 )
 
 const defaultLRUCacheSize = uint64(0)
-const defaultEnclaveLRUCacheSize = uint8(15)
+const defaultEnclaveLRUCacheSize = uint8(5) // can safely go up to 15
 const defaultQueryGasLimit = uint64(3000000)
 
 // base64 of a 64 byte key
@@ -286,6 +286,6 @@ contract-query-gas-limit = "{{ .WASMConfig.SmartQueryGasLimit }}"
 # The WASM VM memory cache size in MiB not bytes
 contract-memory-cache-size = "{{ .WASMConfig.CacheSize }}"
 
-# The WASM VM memory cache size in number of cached modules
+# The WASM VM memory cache size in number of cached modules. Can safely go up to 15, but not recommended for validators
 contract-memory-enclave-cache-size = "{{ .WASMConfig.EnclaveCacheSize }}"
 `
