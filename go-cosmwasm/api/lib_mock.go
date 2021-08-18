@@ -78,6 +78,10 @@ func ReleaseCache(cache Cache) {
 	//C.release_cache(cache.ptr)
 }
 
+func InitEnclaveRuntime(ModuleCacheSize uint8) error {
+	return nil
+}
+
 func Create(cache Cache, wasm []byte) ([]byte, error) {
 	//code := sendSlice(wasm)
 	//defer freeAfterSend(code)

@@ -5,6 +5,7 @@ mod errors;
 mod gas;
 mod io;
 mod memory;
+pub(crate) mod module_cache;
 mod query_chain;
 mod runtime;
 pub(crate) mod types;

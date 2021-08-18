@@ -64,8 +64,8 @@ impl From<hkdf::Okm<'_, My<usize>>> for My<Vec<u8>> {
 
 #[cfg(feature = "test")]
 pub mod tests {
-    use crate::crypto::CryptoError;
-    use crate::crypto::{Kdf, KeyPair, Seed};
+    // use crate::crypto::CryptoError;
+    // use crate::crypto::{Kdf, KeyPair, Seed};
 
     // commented since this is all outdated
     // // todo: fix test vectors to actually work

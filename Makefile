@@ -216,6 +216,15 @@ build-dev-image:
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=SW --build-arg FEATURES= -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-sw-dev:${DOCKER_TAG} .
 
+build-custom-dev-image:
+    # .dockerignore excludes .so files so we rename these so that the dockerfile can find them
+	cd go-cosmwasm/api && cp libgo_cosmwasm.so libgo_cosmwasm.so.x
+	cd cosmwasm/packages/wasmi-runtime && cp librust_cosmwasm_enclave.signed.so librust_cosmwasm_enclave.signed.so.x
+	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/custom-node.Dockerfile -t enigmampc/secret-network-sw-dev-custom-bootstrap:${DOCKER_TAG} .
+	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/custom-node.Dockerfile -t enigmampc/secret-network-sw-dev-custom-node:${DOCKER_TAG} .
+    # delete the copies created above
+	rm go-cosmwasm/api/libgo_cosmwasm.so.x cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so.x
+
 build-testnet: docker_base
 	@mkdir build 2>&3 || true
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-testnet .
@@ -305,6 +314,9 @@ go-tests-hw: build-test-contract
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
 	SGX_MODE=HW go test -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
+# When running this more than once, after the first time you'll want to remove the contents of the `ffi-types`
+# rule in the Makefile in `wasmi-runtime`. This is to speed up the compilation time of tests and speed up the
+# test debugging process in general.
 .PHONY: enclave-tests
 enclave-tests:
 	$(MAKE) -C cosmwasm/packages/enclave-test run

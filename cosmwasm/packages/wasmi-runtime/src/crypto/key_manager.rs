@@ -214,18 +214,18 @@ impl Keychain {
 pub mod tests {
 
     use super::{
-        Keychain, CONSENSUS_SEED_SEALING_PATH, KEY_MANAGER, REGISTRATION_KEY_SEALING_PATH,
+        Keychain, CONSENSUS_SEED_SEALING_PATH, /*KEY_MANAGER,*/ REGISTRATION_KEY_SEALING_PATH,
     };
-    use crate::crypto::CryptoError;
-    use crate::crypto::{KeyPair, Seed};
+    // use crate::crypto::CryptoError;
+    // use crate::crypto::{KeyPair, Seed};
 
     // todo: fix test vectors to actually work
-    fn test_initial_keychain_state() {
+    fn _test_initial_keychain_state() {
         // clear previous data (if any)
-        std::sgxfs::remove(&*CONSENSUS_SEED_SEALING_PATH);
-        std::sgxfs::remove(&*REGISTRATION_KEY_SEALING_PATH);
+        let _ = std::sgxfs::remove(&*CONSENSUS_SEED_SEALING_PATH);
+        let _ = std::sgxfs::remove(&*REGISTRATION_KEY_SEALING_PATH);
 
-        let keys = Keychain::new();
+        let _keys = Keychain::new();
 
         // todo: replace with actual checks
         // assert_eq!(keys.get_registration_key(), Err(CryptoError));

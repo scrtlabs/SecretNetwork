@@ -261,6 +261,34 @@ pub extern "C" fn release_cache(cache: *mut cache_t) {
     }
 }
 
+#[repr(C)]
+pub struct EnclaveRuntimeConfig {
+    pub module_cache_size: u8,
+}
+
+impl EnclaveRuntimeConfig {
+    fn to_sgx_vm(&self) -> cosmwasm_sgx_vm::EnclaveRuntimeConfig {
+        cosmwasm_sgx_vm::EnclaveRuntimeConfig {
+            module_cache_size: self.module_cache_size,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn configure_enclave_runtime(
+    config: EnclaveRuntimeConfig,
+    err: Option<&mut Buffer>,
+) {
+    let r = cosmwasm_sgx_vm::configure_enclave(config.to_sgx_vm())
+        .map_err(|err| Error::enclave_err(err.to_string()));
+
+    if let Err(e) = r {
+        set_error(e, err);
+    } else {
+        clear_error();
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buffer>) -> Buffer {
     let r = match to_cache(cache) {
@@ -333,6 +361,7 @@ pub extern "C" fn instantiate(
     Buffer::from_vec(data)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn do_init(
     cache: &mut CosmCache<DB, GoApi, GoQuerier>,
     code_id: Buffer,
@@ -389,6 +418,7 @@ pub extern "C" fn handle(
     Buffer::from_vec(data)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn do_handle(
     cache: &mut CosmCache<DB, GoApi, GoQuerier>,
     code_id: Buffer,

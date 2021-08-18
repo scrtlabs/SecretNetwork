@@ -10,6 +10,7 @@ extern crate sgx_tstd as std;
 #[cfg(target_env = "sgx")]
 extern crate sgx_types;
 
+#[allow(unused_imports)]
 use ctor::*;
 use log::LevelFilter;
 
@@ -36,6 +37,7 @@ mod wasm;
 
 mod tests;
 
+#[allow(unused)]
 static LOGGER: SimpleLogger = SimpleLogger;
 
 #[cfg(all(feature = "production", feature = "SGX_MODE_HW"))]
@@ -158,6 +160,7 @@ pub mod logging_tests {
     }
 
     fn test_log_default_greater_than_max() {
+        eprintln!("The following should fail:");
         let result = panic::catch_unwind(|| {
             set_log_level_or_default(LevelFilter::Trace, LevelFilter::Error);
         });

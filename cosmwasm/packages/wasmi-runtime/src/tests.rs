@@ -32,8 +32,6 @@ mod test {
         let mut failures = 0;
 
         count_failures!(failures, {
-            // This line is commented out because it was creating a file without removing it, which was annoying.
-            // crate::registration::tests::run_tests();
             crate::crypto::tests::run_tests();
             crate::wasm::tests::run_tests();
             crate::registration::tests::run_tests();

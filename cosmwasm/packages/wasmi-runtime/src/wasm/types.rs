@@ -11,7 +11,7 @@ use crate::cosmwasm::{
 };
 use crate::crypto::{
     multisig::MultisigThresholdPubKey, secp256k1::Secp256k1PubKey, traits::PubKey, AESKey,
-    CryptoError, Ed25519PublicKey, SIVEncryptable,
+    CryptoError, Ed25519PublicKey, SIVEncryptable, HASH_SIZE,
 };
 use crate::proto;
 
@@ -19,7 +19,29 @@ use super::io::calc_encryption_key;
 use crate::cosmwasm::coins::Coin;
 use crate::cosmwasm::math::Uint128;
 
+use crate::wasm::contract_validation::calc_contract_hash;
+
 pub type IoNonce = [u8; 32];
+
+pub struct ContractCode<'code> {
+    code: &'code [u8],
+    hash: [u8; HASH_SIZE],
+}
+
+impl<'code> ContractCode<'code> {
+    pub fn new(code: &'code [u8]) -> Self {
+        let hash = calc_contract_hash(code);
+        Self { code, hash }
+    }
+
+    pub fn code(&self) -> &[u8] {
+        self.code
+    }
+
+    pub fn hash(&self) -> [u8; HASH_SIZE] {
+        self.hash
+    }
+}
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct SecretMessage {
@@ -604,7 +626,7 @@ impl SignerInfo {
 pub mod tests {
 
     use super::*;
-    use crate::crypto::{AESKey, SIVEncryptable, Seed, KEY_MANAGER};
+    // use crate::crypto::{AESKey, SIVEncryptable, Seed, KEY_MANAGER};
 
     // todo: fix test vectors to actually work
     pub fn test_new_from_slice() {
