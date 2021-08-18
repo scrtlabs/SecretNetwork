@@ -1,10 +1,9 @@
-use std::{
-    env,
-    path::{Path, PathBuf},
-};
+use std::{env, path::Path, sync::Mutex};
 
+use enclave_ffi_types::RuntimeConfiguration;
 use sgx_types::{
-    sgx_attributes_t, sgx_launch_token_t, sgx_misc_attribute_t, sgx_status_t, SgxResult,
+    sgx_attributes_t, sgx_enclave_id_t, sgx_launch_token_t, sgx_misc_attribute_t, sgx_status_t,
+    SgxResult,
 };
 use sgx_urts::SgxEnclave;
 
@@ -34,42 +33,29 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
     // Create a directory, returns `io::Result<()>`
     let enclave_directory = env::var("SCRT_ENCLAVE_DIR").unwrap_or_else(|_| '.'.to_string());
 
-    let path = Path::new(&enclave_directory);
-
-    let mut enclave_file_path: PathBuf = path.join(ENCLAVE_FILE);
-
-    trace!(
-        "Looking for the enclave file in {:?}",
-        enclave_file_path.to_str()
-    );
-
-    if !enclave_file_path.exists() {
-        enclave_file_path = Path::new("/lib").join(ENCLAVE_FILE);
-
-        trace!(
-            "Looking for the enclave file in {:?}",
-            enclave_file_path.to_str()
-        );
-        if !enclave_file_path.exists() {
-            enclave_file_path = Path::new("/usr/lib").join(ENCLAVE_FILE);
-
-            trace!(
-                "Looking for the enclave file in {:?}",
-                enclave_file_path.to_str()
-            );
-            if !enclave_file_path.exists() {
-                enclave_file_path = Path::new("/usr/local/lib").join(ENCLAVE_FILE);
-            }
+    let mut enclave_file_path = None;
+    let dirs = [
+        enclave_directory.as_str(),
+        "/lib",
+        "/usr/lib",
+        "/usr/local/lib",
+    ];
+    for dir in dirs.iter() {
+        let candidate = Path::new(dir).join(ENCLAVE_FILE);
+        trace!("Looking for the enclave file in {:?}", candidate.to_str());
+        if candidate.exists() {
+            enclave_file_path = Some(candidate);
+            break;
         }
     }
 
-    if !enclave_file_path.exists() {
+    let enclave_file_path = enclave_file_path.ok_or_else(|| {
         warn!(
-            "Cannot find the enclave file. Try pointing the SCRT_ENCLAVE_DIR envirinment variable to the directory that has {:?}",
+            "Cannot find the enclave file. Try pointing the SCRT_ENCLAVE_DIR environment variable to the directory that has {:?}",
             ENCLAVE_FILE
         );
-        return Err(sgx_status_t::SGX_ERROR_INVALID_ENCLAVE);
-    }
+        sgx_status_t::SGX_ERROR_INVALID_ENCLAVE
+    })?;
 
     SgxEnclave::create(
         enclave_file_path,
@@ -80,8 +66,11 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
     )
 }
 
+#[allow(clippy::mutex_atomic)]
 lazy_static! {
     static ref SGX_ENCLAVE: SgxResult<SgxEnclave> = init_enclave();
+    /// This variable indicates if the enclave configuration has already been set
+    static ref SGX_ENCLAVE_CONFIGURED: Mutex<bool> = Mutex::new(false);
 }
 
 /// Use this method when trying to get access to the enclave.
@@ -89,4 +78,50 @@ lazy_static! {
 /// must have been initialized if you even reached that point in the code.
 pub fn get_enclave() -> SgxResult<&'static SgxEnclave> {
     SGX_ENCLAVE.as_ref().map_err(|status| *status)
+}
+
+extern "C" {
+    pub fn ecall_configure_runtime(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        config: RuntimeConfiguration,
+    ) -> sgx_status_t;
+}
+
+pub struct EnclaveRuntimeConfig {
+    pub module_cache_size: u8,
+}
+
+impl EnclaveRuntimeConfig {
+    fn to_ffi_type(&self) -> RuntimeConfiguration {
+        RuntimeConfiguration {
+            module_cache_size: self.module_cache_size,
+        }
+    }
+}
+
+pub fn configure_enclave(config: EnclaveRuntimeConfig) -> SgxResult<()> {
+    let mut configured = SGX_ENCLAVE_CONFIGURED.lock().unwrap();
+    if *configured {
+        return Ok(());
+    }
+    *configured = true;
+    drop(configured);
+
+    let enclave = get_enclave()?;
+
+    let mut retval = sgx_status_t::SGX_SUCCESS;
+
+    let status =
+        unsafe { ecall_configure_runtime(enclave.geteid(), &mut retval, config.to_ffi_type()) };
+
+    if status != sgx_status_t::SGX_SUCCESS {
+        return Err(status);
+    }
+
+    if retval != sgx_status_t::SGX_SUCCESS {
+        return Err(retval);
+    }
+
+    Ok(())
 }

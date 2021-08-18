@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euvo pipefail
+
 rm -rf ~/.secretd/*
 rm -rf ~/.sgx_secrets/*
 

@@ -53,6 +53,10 @@ typedef struct Buffer {
   uintptr_t cap;
 } Buffer;
 
+typedef struct EnclaveRuntimeConfig {
+  uint8_t module_cache_size;
+} EnclaveRuntimeConfig;
+
 typedef struct cache_t {
 
 } cache_t;
@@ -124,6 +128,8 @@ typedef struct GoQuerier {
 } GoQuerier;
 
 Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
+
+void configure_enclave_runtime(EnclaveRuntimeConfig config, Buffer *err);
 
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
