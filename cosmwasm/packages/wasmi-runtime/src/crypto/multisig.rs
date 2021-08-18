@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use log::*;
 
 use sha2::Digest;

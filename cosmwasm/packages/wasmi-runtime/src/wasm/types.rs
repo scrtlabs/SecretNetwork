@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use log::*;
 
 use enclave_ffi_types::EnclaveError;
