@@ -86,11 +86,12 @@ Make sure the directory `~/.sgx_secrets` exists:
 mkdir -p ~/.sgx_secrets
 ```
 
-Make sure SGX is running or this step might fail.
+Set the following environment variables -
 
+(the sgx storage variable must be set this way - this is a known issue and will be fixed)
 ```bash
 export SCRT_ENCLAVE_DIR=/usr/lib
-export SCRT_SGX_STORAGE=./sgx_secrets
+export SCRT_SGX_STORAGE=./
 ```
 
 ```bash
@@ -109,9 +110,10 @@ mkdir -p ~/.sgx_secrets
 
 Make sure SGX is running or this step might fail.
 
+(the sgx storage variable must be set this way - this is a known issue and will be fixed)
 ```bash
 export SCRT_ENCLAVE_DIR=/usr/lib
-export SCRT_SGX_STORAGE=./sgx_secrets
+export SCRT_SGX_STORAGE=./
 ```
 
 ```bash
