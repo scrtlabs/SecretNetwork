@@ -27,7 +27,7 @@ export STORE_TX_HASH=$(
 wait_for_tx "$STORE_TX_HASH" "Waiting for store to finish on-chain..."
 
 # test storing of wasm code (this doesn't touch sgx yet)
-secretd q tx "$STORE_TX_HASH" |
+secretd q tx "$STORE_TX_HASH" --output json |
     jq -e '.logs[].events[].attributes[] | select(.key == "code_id" and .value == "1")'
 
 # init the contract (ocall_init + write_db + canonicalize_address)

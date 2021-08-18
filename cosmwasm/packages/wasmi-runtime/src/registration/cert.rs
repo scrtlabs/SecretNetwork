@@ -418,6 +418,7 @@ pub mod tests {
     use std::io::Read;
     use std::untrusted::fs::File;
 
+    #[cfg(feature = "SGX_MODE_HW")]
     fn tls_ra_cert_der_out_of_date() -> Vec<u8> {
         let mut cert = vec![];
         let mut f = File::open(
