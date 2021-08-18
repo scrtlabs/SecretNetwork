@@ -176,8 +176,6 @@ secretd configure-secret node-master-cert.der "$SEED"
 
 ### 16. Add persistent peers to your configuration file.
 
-You can also use Chain of Secrets' node:
-
 ```bash
 perl -i -pe 's/persistent_peers = ""/persistent_peers = "115aa0a629f5d70dd1d464bc7e42799e00f4edae\@bootstrap.supernova.enigma.co:26656"/' ~/.secretd/config/config.toml
 ```
