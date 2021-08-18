@@ -97,7 +97,7 @@ export SCRT_SGX_STORAGE=./sgx_secrets
 secretd auto-register
 ```
 
-**If this step was successful, you can skip straight to [step 16](### 16. Add persistent peers to your configuration file)**
+**If this step was successful, you can skip straight to [step 16](#16-add-persistent-peers-to-your-configuration-file)**
 
 ### 8b. Initialize secret enclave - Manual Registration (legacy)
 
