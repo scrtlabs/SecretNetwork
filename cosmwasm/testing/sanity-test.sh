@@ -11,8 +11,8 @@ function wait_for_tx () {
 }
 
 # init the node
-rm -rf ./.sgx_secrets ~/.sgx_secrets *.der ~/*.der
-mkdir -p ./.sgx_secrets ~/.sgx_secrets
+rm -rf /opt/secret/.sgx_secrets *.der ~/*.der
+mkdir -p /opt/secret/.sgx_secrets
 
 rm -rf ~/.secretd
 
