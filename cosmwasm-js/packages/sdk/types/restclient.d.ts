@@ -237,7 +237,12 @@ export declare class RestClient {
    * Makes a smart query on the contract and parses the reponse as JSON.
    * Throws error if no such contract exists, the query format is invalid or the response is invalid.
    */
-  queryContractSmart(address: string, query: object, addedParams?: object): Promise<JsonObject>;
+  queryContractSmart(
+    contractAddress: string,
+    query: object,
+    addedParams?: object,
+    contractCodeHash?: string,
+  ): Promise<JsonObject>;
   /**
    * Get the consensus keypair for IO encryption
    */
