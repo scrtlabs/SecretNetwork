@@ -2,7 +2,7 @@
 
 ### How to become a validator on Secret Network
 
-#### 1. [Run a new full node](run-full-node-testnet.md) on a new machine.
+#### 1. [Run a new full node](../node%20runners/run-full-node-testnet.md) on a new machine.
 
 #### 2. Set your `minimum-gas-price` parameter
 
@@ -52,7 +52,7 @@ If you get the following message, it means that you have no tokens yet:
 ERROR: unknown address: account secret1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx does not exist
 ```
 
-#### 6. Join the network as a new validator: replace `<MONIKER>` with the moniker you configured in step 3 of [creating a full-node](run-full-node-testnet.md), and adjust the amount you want to stake
+#### 6. Join the network as a new validator: replace `<MONIKER>` with the moniker you configured in step 3 of [creating a full-node](../node%20runners/run-full-node-testnet.md), and adjust the amount you want to stake
 
 (remember 1 SCRT = 1,000,000 uSCRT, and so the command below stakes 100k SCRT).
 
@@ -106,7 +106,7 @@ Penalties for double-signing:
 
 ### Protecting your validator agains DDoS attacks
 
-See [Sentry Nodes](../validators-and-full-nodes/sentry-nodes.md).
+See [Sentry Nodes](../../../validators-and-full-nodes/sentry-nodes.md).
 
 ### Staking more tokens
 

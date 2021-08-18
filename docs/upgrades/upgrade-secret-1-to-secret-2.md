@@ -145,7 +145,7 @@ To make sure your validator is unjailed, look for it in here:
 secretcli q staking validators | jq -r '.[] | select(.status == 2) | .description.moniker'
 ```
 
-([Ref for testnet instructions](../testnet/run-full-node-testnet.md))
+([Ref for testnet instructions](../testnet/supernova-1/node%20runners/run-full-node-testnet.md))
 
 # In case of an upgrade failure
 

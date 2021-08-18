@@ -37,12 +37,12 @@ See instructions for [setup](setup-sgx-testnet.md) and [verification](verify-sgx
 wget https://github.com/enigmampc/SecretNetwork/releases/download/v1.2.0-beta1/secretnetwork_1.2.0-beta1-2-gbe1ca55e_amd64.deb
 ```
 
-([How to verify releases](../verify-releases.md))
+([How to verify releases](../../../verify-releases.md))
 
 ### 2. Install the package:
 
 ```bash
-sudo dpkg -i secretnetwork_ace619b_amd64.deb
+sudo dpkg -i secretnetwork_1.2.0-beta1-2-gbe1ca55e_amd64.deb
 ```
 
 ### 3. Initialize your installation of the Secret Network.
@@ -117,7 +117,7 @@ echo $PUBLIC_KEY
 
 The steps using `secretcli` can be run on any machine, they don't need to be on the full node itself. We'll refer to the machine where you are using `secretcli` as the "CLI machine" below.
 
-To run the steps with `secretcli` on another machine, [set up the CLI](install_cli.md) there.
+To run the steps with `secretcli` on another machine, [set up the CLI](../contract%20developers/install_cli.md) there.
 
 Configure `secretcli`. Initially you'll be using the bootstrap node, as you'll need to connect to a running node and your own node is not running yet.
 
