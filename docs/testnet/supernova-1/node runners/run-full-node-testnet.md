@@ -78,7 +78,7 @@ secretd validate-genesis
 cd ~
 ```
 
-### 8. Initialize secret enclave
+### 8a. Initialize secret enclave - Automatic Registration (EXPERIMENTAL)
 
 Make sure the directory `~/.sgx_secrets` exists:
 
@@ -86,10 +86,32 @@ Make sure the directory `~/.sgx_secrets` exists:
 mkdir -p ~/.sgx_secrets
 ```
 
-Make sure SGX is enabled and running or this step might fail.
+Make sure SGX is running or this step might fail.
 
 ```bash
 export SCRT_ENCLAVE_DIR=/usr/lib
+export SCRT_SGX_STORAGE=./sgx_secrets
+```
+
+```bash
+secretd auto-register
+```
+
+**If this step was successful, you can skip straight to [step 16](### 16. Add persistent peers to your configuration file)**
+
+### 8b. Initialize secret enclave - Manual Registration (legacy)
+
+Make sure the directory `~/.sgx_secrets` exists:
+
+```bash
+mkdir -p ~/.sgx_secrets
+```
+
+Make sure SGX is running or this step might fail.
+
+```bash
+export SCRT_ENCLAVE_DIR=/usr/lib
+export SCRT_SGX_STORAGE=./sgx_secrets
 ```
 
 ```bash
