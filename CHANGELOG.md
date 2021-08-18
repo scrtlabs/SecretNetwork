@@ -51,12 +51,11 @@ For compatiblity with 1.0.x (legacy), use SecretJS 0.16.x
 
 ## CosmWasm
 
-Secret-CosmWasm remains in a version that is compatabile with the v0.10 of vanilla CosmWasm, although the code has been 
-updated to be compatible with the Supernova upgrade. To compile contracts that will work with this version of the testnet
-use `cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.2.0-beta1" }`
+Secret-CosmWasm remains in a version that is compatabile with the v0.10 of vanilla CosmWasm, and previous versions compatible with secret-2 will still work with this upgrade. 
 
 A new feature has been added - plaintext logs. To send an unencrypted log (contract output), use `plaintext_log` instead of `log`.
-This allows contracts to emit public events, and attach websockets to listen to specific events.
+This allows contracts to emit public events, and attach websockets to listen to specific events. To take advantage of this feature, compile contracts with
+`cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.2.0-beta1" }`
 
 ## Known Issues
 
