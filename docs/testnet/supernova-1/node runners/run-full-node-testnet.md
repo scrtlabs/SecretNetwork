@@ -78,7 +78,7 @@ secretd validate-genesis
 cd ~
 ```
 
-### 8. Initialize secret enclave
+### 8a. Initialize secret enclave - Automatic Registration (EXPERIMENTAL)
 
 Make sure the directory `~/.sgx_secrets` exists:
 
@@ -86,10 +86,34 @@ Make sure the directory `~/.sgx_secrets` exists:
 mkdir -p ~/.sgx_secrets
 ```
 
-Make sure SGX is enabled and running or this step might fail.
+Set the following environment variables -
 
+(the sgx storage variable must be set this way - this is a known issue and will be fixed)
 ```bash
 export SCRT_ENCLAVE_DIR=/usr/lib
+export SCRT_SGX_STORAGE=./
+```
+
+```bash
+secretd auto-register
+```
+
+**If this step was successful, you can skip straight to [step 16](#16-add-persistent-peers-to-your-configuration-file)**
+
+### 8b. Initialize secret enclave - Manual Registration (legacy)
+
+Make sure the directory `~/.sgx_secrets` exists:
+
+```bash
+mkdir -p ~/.sgx_secrets
+```
+
+Make sure SGX is running or this step might fail.
+
+(the sgx storage variable must be set this way - this is a known issue and will be fixed)
+```bash
+export SCRT_ENCLAVE_DIR=/usr/lib
+export SCRT_SGX_STORAGE=./
 ```
 
 ```bash
@@ -175,8 +199,6 @@ secretd configure-secret node-master-cert.der "$SEED"
 ```
 
 ### 16. Add persistent peers to your configuration file.
-
-You can also use Chain of Secrets' node:
 
 ```bash
 perl -i -pe 's/persistent_peers = ""/persistent_peers = "115aa0a629f5d70dd1d464bc7e42799e00f4edae\@bootstrap.supernova.enigma.co:26656"/' ~/.secretd/config/config.toml
