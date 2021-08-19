@@ -7,7 +7,12 @@ RUN apt-get update && \
     python3-pip && \
     rm -rf /var/lib/apt/lists/*
 
-COPY enigma_package/secretcli /usr/bin/
+ARG SECRET_PACKAGE_URL
+
+# COPY enigma_package/secretcli /usr/bin/
+ADD ${SECRET_PACKAGE_URL} /usr/lib/secretcli
+
+#RUN dpkg -i secretpackage.deb
 # COPY enigma_package/libgo_cosmwasm.so /usr/lib/
 
 COPY requirements.txt .

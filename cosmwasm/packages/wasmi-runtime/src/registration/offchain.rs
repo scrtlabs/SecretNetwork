@@ -12,8 +12,8 @@ use std::slice;
 use enclave_ffi_types::NodeAuthResult;
 
 use crate::consts::{
-    ATTESTATION_CERTIFICATE_SAVE_PATH, ATTESTATION_CERT_PATH, ENCRYPTED_SEED_SIZE,
-    IO_CERTIFICATE_SAVE_PATH, SEED_EXCH_CERTIFICATE_SAVE_PATH,
+    ATTESTATION_CERT_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH,
+    SEED_EXCH_CERTIFICATE_SAVE_PATH,
 };
 use crate::crypto::{Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
 #[cfg(feature = "SGX_MODE_HW")]
@@ -238,11 +238,8 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         Ok(res) => res,
     };
 
-    let path_prefix = ATTESTATION_CERT_PATH.to_owned();
-    if let Err(status) = write_to_untrusted(
-        cert.as_slice(),
-        &(path_prefix + ATTESTATION_CERTIFICATE_SAVE_PATH),
-    ) {
+    //let path_prefix = ATTESTATION_CERT_PATH.to_owned();
+    if let Err(status) = write_to_untrusted(cert.as_slice(), &ATTESTATION_CERT_PATH) {
         return status;
     }
 

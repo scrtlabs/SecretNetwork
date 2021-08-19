@@ -36,7 +36,7 @@ secretd q tx "$STORE_TX_HASH" --output json |
 # balances are set to 108 & 53 at init
 INIT_TX_HASH=$(
     yes |
-        secretd tx compute instantiate 1 "{\"decimals\":10,\"initial_balances\":[{\"address\":\"$(secretd keys show a -a)\",\"amount\":\"108\"},{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\",\"amount\":\"53\"}],\"name\":\"ReuvenPersonalRustCoin\",\"symbol\":\"RPRC\"}" --label RPRCCoin --output json --from a |
+        secretd tx compute instantiate 1 "{\"decimals\":10,\"initial_balances\":[{\"address\":\"$(secretd keys show a -a)\",\"amount\":\"108\"},{\"address\":\"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t\",\"amount\":\"53\"}],\"name\":\"ReuvenPersonalRustCoin\",\"symbol\":\"RPRC\"}" --label RPRCCoin --output json --gas-prices 0.25uscrt --from a |
         jq -r .txhash
 )
 
@@ -56,7 +56,7 @@ secretd q compute query "$CONTRACT_ADDRESS" "{\"balance\":{\"address\":\"secret1
 # transfer 10 balance (ocall_handle + read_db + write_db + humanize_address + canonicalize_address)
 TRANSFER_TX_HASH=$(
     yes |
-        secretd tx compute execute --from a "$CONTRACT_ADDRESS" '{"transfer":{"amount":"10","recipient":"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t"}}' --output json 2> /dev/null |
+        secretd tx compute execute --from a "$CONTRACT_ADDRESS" '{"transfer":{"amount":"10","recipient":"secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t"}}' --gas-prices 0.25uscrt --output json 2> /dev/null |
         jq -r .txhash
 )
 

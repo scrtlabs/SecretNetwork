@@ -196,7 +196,7 @@ jobs:
           export SGX_MODE=SW
           cp librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
           mkdir -p ias_keys/develop
-          mkdir -p ./x/compute/internal/keeper/.sgx_secrets
+          mkdir -p /opt/secret/.sgx_secrets/
           echo "not_a_key" > ias_keys/develop/spid.txt
           echo "not_a_key" > ias_keys/develop/api_key.txt
           go test -v ./x/compute/client/...
@@ -345,12 +345,12 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
           export PATH="$(pwd):$PATH"
-          mkdir -p ./.sgx_secrets
+          mkdir -p /opt/secret/.sgx_secrets/
           ./cosmwasm/testing/sanity-test.sh
       - name: Old bash+js sanity callbacks tests
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
           export PATH="$(pwd):$PATH"
-          mkdir -p ./.sgx_secrets
+          mkdir -p /opt/secret/.sgx_secrets/
           ./cosmwasm/testing/callback-test.sh

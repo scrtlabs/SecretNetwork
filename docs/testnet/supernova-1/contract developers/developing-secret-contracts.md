@@ -71,7 +71,7 @@ The local blockchain has a couple of keys setup for you (similar to accounts if 
 secretcli keys list --keyring-backend test
 ```
 
-![](../images/images/secretcli_keys_list.png)
+![](../../../images/images/secretcli_keys_list.png)
 
 `exit` when you are done.
 
