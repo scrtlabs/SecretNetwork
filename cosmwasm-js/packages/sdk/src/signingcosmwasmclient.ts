@@ -257,6 +257,10 @@ export class SigningCosmWasmClient extends CosmWasmClient {
       this.restClient.codeHashCache.set(codeId, contractCodeHash);
     }
 
+    if (!memo) {
+      memo = "";
+    }
+
     const instantiateMsg: MsgInstantiateContract = {
       type: "wasm/MsgInstantiateContract",
       value: {
@@ -323,6 +327,10 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     memo: string = "",
     totalFee?: StdFee,
   ): Promise<ExecuteResult> {
+    if (!memo) {
+      memo = "";
+    }
+
     const msgs: Array<MsgExecuteContract> = [];
     for (const inputMsg of inputMsgs) {
       let { contractCodeHash } = inputMsg;
@@ -412,6 +420,10 @@ export class SigningCosmWasmClient extends CosmWasmClient {
       this.restClient.codeHashCache.set(contractAddress, contractCodeHash);
     }
 
+    if (!memo) {
+      memo = "";
+    }
+
     const executeMsg: MsgExecuteContract = {
       type: "wasm/MsgExecuteContract",
       value: {
@@ -481,6 +493,11 @@ export class SigningCosmWasmClient extends CosmWasmClient {
         amount: transferAmount,
       },
     };
+
+    if (!memo) {
+      memo = "";
+    }
+
     const { accountNumber, sequence } = await this.getNonce();
     const chainId = await this.getChainId();
     const signedTx = await this.signAdapter([sendMsg], fee, chainId, memo, accountNumber, sequence);
