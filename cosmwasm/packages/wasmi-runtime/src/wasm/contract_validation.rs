@@ -170,38 +170,38 @@ pub fn verify_params(
             msg,
             &env.message.sent_funds,
         );
-    } else {
-        trace!(
-            "Sign bytes are: {:?}",
-            String::from_utf8_lossy(sig_info.sign_bytes.as_slice())
-        );
-
-        let (sender_public_key, messages) = get_signer_and_messages(sig_info, env)?;
-
-        trace!(
-            "sender public key is: {:?}",
-            sender_public_key.get_address().0
-        );
-        trace!("sender signature is: {:?}", sig_info.signature);
-        trace!("sign bytes are: {:?}", sig_info.sign_bytes);
-
-        sender_public_key
-            .verify_bytes(
-                sig_info.sign_bytes.as_slice(),
-                sig_info.signature.as_slice(),
-            )
-            .map_err(|err| {
-                warn!("Signature verification failed: {:?}", err);
-                EnclaveError::FailedTxVerification
-            })?;
-
-        if verify_message_params(&messages, env, &sender_public_key, msg) {
-            info!("Parameters verified successfully");
-            return Ok(());
-        }
-
-        warn!("Parameter verification failed");
     }
+
+    trace!(
+        "Sign bytes are: {:?}",
+        String::from_utf8_lossy(sig_info.sign_bytes.as_slice())
+    );
+
+    let (sender_public_key, messages) = get_signer_and_messages(sig_info, env)?;
+
+    trace!(
+        "sender public key is: {:?}",
+        sender_public_key.get_address().0
+    );
+    trace!("sender signature is: {:?}", sig_info.signature);
+    trace!("sign bytes are: {:?}", sig_info.sign_bytes);
+
+    sender_public_key
+        .verify_bytes(
+            sig_info.sign_bytes.as_slice(),
+            sig_info.signature.as_slice(),
+        )
+        .map_err(|err| {
+            warn!("Signature verification failed: {:?}", err);
+            EnclaveError::FailedTxVerification
+        })?;
+
+    if verify_message_params(&messages, env, &sender_public_key, msg) {
+        info!("Parameters verified successfully");
+        return Ok(());
+    }
+
+    warn!("Parameter verification failed");
 
     Err(EnclaveError::FailedTxVerification)
 }
