@@ -62,7 +62,7 @@ need for the next step.
 
 #### Check your certificate is valid
 
-`PUBLIC_KEY=$(secretd parse attestation_cert.der 2> /dev/null | cut -c 3- )`
+`PUBLIC_KEY=$(secretd parse /opt/secret/.sgx_secrets/attestation_cert.der  2> /dev/null | cut -c 3- )`
 `echo $PUBLIC_KEY`
 
 Should return your 64 character registration key if it was successful.
