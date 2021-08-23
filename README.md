@@ -27,7 +27,6 @@ Mainnet is out! Get the latest release at [https://github.com/enigmampc/SecretNe
 
 Secret Network is secured by the SCRT coin (Secret), which is used for fees, staking, and governance. Transactions, validators, governance proposals, and more can be viewed using the following Secret Network block explorers:
 
-- [Cashmaney](https://explorer.cashmaney.com)
 - [secretnodes](https://secretnodes.com)
 
 # Wallets
