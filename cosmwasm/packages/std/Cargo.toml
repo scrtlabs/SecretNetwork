@@ -1,19 +1,18 @@
 [package]
 name = "cosmwasm-std"
-version = "0.10.0"
+version = "0.16.0"
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2018"
 description = "Standard library for Wasm based smart contracts on Cosmos blockchains"
-repository = "https://github.com/CosmWasm/cosmwasm/tree/master/packages/std"
+repository = "https://github.com/CosmWasm/cosmwasm/tree/main/packages/std"
 license = "Apache-2.0"
 readme = "README.md"
 
-[badges]
-circle-ci = { repository = "CosmWasm/cosmwasm", branch = "master" }
-maintenance = { status = "actively-developed" }
+[package.metadata.docs.rs]
+features = ["stargate", "staking"]
 
 [features]
-default = []
+default = ["staking", "stargate"]
 # iterator allows us to iterate over all DB items in a given range
 # optional as some merkle stores (like tries) don't support this
 # given Ethereum 1.0, 2.0, Substrate, and other major projects use Tries
@@ -25,14 +24,30 @@ iterator = []
 staking = []
 # backtraces provides much better context at runtime errors (in non-wasm code)
 # at the cost of a bit of code size and performance.
-backtraces = ["snafu/backtraces"]
+# This feature requires Rust nightly because it depends on the unstable backtrace feature.
+backtraces = []
+# stargate enables stargate-dependent messages and queries, like raw protobuf messages
+# as well as ibc-related functionality
+stargate = []
 
 [dependencies]
-base64 = "0.11.0"
-serde-json-wasm = { version = "0.2.1" }
-schemars = "0.7"
-serde = { version = "1.0.117", default-features = false, features = ["derive", "alloc"] }
-snafu = { version = "0.6.6" }
+base64 = "0.13.0"
+serde-json-wasm = { version = "0.3.1" }
+schemars = "0.8.1"
+cosmwasm-derive = { path = "../derive", version = "0.16.0" }
+uint = "0.9.0"
+serde = { version = "1.0.117", default-features = false, features = [
+    "derive",
+    "alloc"
+] }
+thiserror = "1.0"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+cosmwasm-crypto = { path = "../crypto", version = "0.16.0" }
 
 [dev-dependencies]
 cosmwasm-schema = { path = "../schema" }
+# The chrono dependency is only used in an example, which Rust compiles for us. If this causes trouble, remove it.
+chrono = "0.4"
+hex = "0.4"
+hex-literal = "0.3.1"

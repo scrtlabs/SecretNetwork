@@ -1,17 +1,17 @@
+use cosmwasm_std::Storage;
 #[cfg(feature = "iterator")]
-use cosmwasm_std::{Order, KV};
-use cosmwasm_std::{ReadonlyStorage, Storage};
+use cosmwasm_std::{Order, Pair};
 
-pub(crate) fn get_with_prefix<S: ReadonlyStorage>(
-    storage: &S,
+pub(crate) fn get_with_prefix(
+    storage: &dyn Storage,
     namespace: &[u8],
     key: &[u8],
 ) -> Option<Vec<u8>> {
     storage.get(&concat(namespace, key))
 }
 
-pub(crate) fn set_with_prefix<S: Storage>(
-    storage: &mut S,
+pub(crate) fn set_with_prefix(
+    storage: &mut dyn Storage,
     namespace: &[u8],
     key: &[u8],
     value: &[u8],
@@ -19,7 +19,7 @@ pub(crate) fn set_with_prefix<S: Storage>(
     storage.set(&concat(namespace, key), value);
 }
 
-pub(crate) fn remove_with_prefix<S: Storage>(storage: &mut S, namespace: &[u8], key: &[u8]) {
+pub(crate) fn remove_with_prefix(storage: &mut dyn Storage, namespace: &[u8], key: &[u8]) {
     storage.remove(&concat(namespace, key));
 }
 
@@ -31,13 +31,13 @@ fn concat(namespace: &[u8], key: &[u8]) -> Vec<u8> {
 }
 
 #[cfg(feature = "iterator")]
-pub(crate) fn range_with_prefix<'a, S: ReadonlyStorage>(
-    storage: &'a S,
+pub(crate) fn range_with_prefix<'a>(
+    storage: &'a dyn Storage,
     namespace: &[u8],
     start: Option<&[u8]>,
     end: Option<&[u8]>,
     order: Order,
-) -> Box<dyn Iterator<Item = KV> + 'a> {
+) -> Box<dyn Iterator<Item = Pair> + 'a> {
     // prepare start, end with prefix
     let start = match start {
         Some(s) => concat(namespace, s),
@@ -83,7 +83,7 @@ fn namespace_upper_bound(input: &[u8]) -> Vec<u8> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use crate::length_prefixed::to_length_prefixed;
     use cosmwasm_std::testing::MockStorage;
@@ -105,7 +105,7 @@ mod test {
 
     #[test]
     #[cfg(feature = "iterator")]
-    fn test_range() {
+    fn range_works() {
         let mut storage = MockStorage::new();
         let prefix = to_length_prefixed(b"foo");
         let other_prefix = to_length_prefixed(b"food");
@@ -138,7 +138,7 @@ mod test {
 
     #[test]
     #[cfg(feature = "iterator")]
-    fn test_range_with_prefix_wrapover() {
+    fn range_with_prefix_wrapover() {
         let mut storage = MockStorage::new();
         // if we don't properly wrap over there will be issues here (note 255+1 is used to calculate end)
         let prefix = to_length_prefixed(b"f\xff\xff");
@@ -153,7 +153,7 @@ mod test {
 
         // ensure we get proper result from prefixed_range iterator
         let iter = range_with_prefix(&storage, &prefix, None, None, Order::Descending);
-        let elements: Vec<KV> = iter.collect();
+        let elements: Vec<Pair> = iter.collect();
         assert_eq!(
             elements,
             vec![
@@ -165,7 +165,7 @@ mod test {
 
     #[test]
     #[cfg(feature = "iterator")]
-    fn test_range_with_start_end_set() {
+    fn range_with_start_end_set() {
         let mut storage = MockStorage::new();
         // if we don't properly wrap over there will be issues here (note 255+1 is used to calculate end)
         let prefix = to_length_prefixed(b"f\xff\xff");
@@ -179,14 +179,14 @@ mod test {
         set_with_prefix(&mut storage, &other_prefix, b"moon", b"buggy");
 
         // make sure start and end are applied properly
-        let res: Vec<KV> =
+        let res: Vec<Pair> =
             range_with_prefix(&storage, &prefix, Some(b"b"), Some(b"c"), Order::Ascending)
                 .collect();
         assert_eq!(res.len(), 1);
         assert_eq!(res[0], (b"bar".to_vec(), b"none".to_vec()));
 
         // make sure start and end are applied properly
-        let res: Vec<KV> = range_with_prefix(
+        let res: Vec<Pair> = range_with_prefix(
             &storage,
             &prefix,
             Some(b"bas"),
@@ -196,7 +196,7 @@ mod test {
         .collect();
         assert_eq!(res.len(), 0);
 
-        let res: Vec<KV> =
+        let res: Vec<Pair> =
             range_with_prefix(&storage, &prefix, Some(b"ant"), None, Order::Ascending).collect();
         assert_eq!(res.len(), 2);
         assert_eq!(res[0], (b"bar".to_vec(), b"none".to_vec()));
@@ -205,7 +205,7 @@ mod test {
 
     #[test]
     #[cfg(feature = "iterator")]
-    fn test_namespace_upper_bound() {
+    fn namespace_upper_bound_works() {
         assert_eq!(namespace_upper_bound(b"bob"), b"boc".to_vec());
         assert_eq!(namespace_upper_bound(b"fo\xfe"), b"fo\xff".to_vec());
         assert_eq!(namespace_upper_bound(b"fo\xff"), b"fp\x00".to_vec());

@@ -17,11 +17,10 @@
 //!      });
 //! 4. Anywhere you see query(&deps, ...) you must replace it with query(&mut deps, ...)
 
-use cosmwasm_std::{coins, BankMsg, HumanAddr, InitResult, MigrateResponse, Order, StdError};
-use cosmwasm_vm::testing::{init, migrate, mock_env, mock_instance, MOCK_CONTRACT_ADDR};
-use cosmwasm_vm::StorageIterator;
+use cosmwasm_std::{coins, BankMsg, ContractResult, Order, Response, SubMsg};
+use cosmwasm_vm::testing::{instantiate, migrate, mock_env, mock_info, mock_instance};
 
-use burner::msg::{InitMsg, MigrateMsg};
+use burner::msg::{InstantiateMsg, MigrateMsg};
 use cosmwasm_vm::Storage;
 
 // This line will test the output of cargo wasm
@@ -30,19 +29,18 @@ static WASM: &[u8] = include_bytes!("../target/wasm32-unknown-unknown/release/bu
 // static WASM: &[u8] = include_bytes!("../contract.wasm");
 
 #[test]
-fn init_fails() {
+fn instantiate_fails() {
     let mut deps = mock_instance(WASM, &[]);
 
-    let msg = InitMsg {};
-    let env = mock_env("creator", &coins(1000, "earth"));
+    let msg = InstantiateMsg {};
+    let info = mock_info("creator", &coins(1000, "earth"));
     // we can just call .unwrap() to assert this was a success
-    let res: InitResult = init(&mut deps, env, msg);
-    match res.unwrap_err() {
-        StdError::GenericErr { msg, .. } => {
-            assert_eq!(msg, "You can only use this contract for migrations")
-        }
-        _ => panic!("expected migrate error message"),
-    }
+    let res: ContractResult<Response> = instantiate(&mut deps, mock_env(), info, msg);
+    let msg = res.unwrap_err();
+    assert_eq!(
+        msg,
+        "Generic error: You can only use this contract for migrations"
+    );
 }
 
 #[test]
@@ -54,47 +52,34 @@ fn migrate_cleans_up_data() {
         storage.set(b"foo", b"bar").0.unwrap();
         storage.set(b"key2", b"data2").0.unwrap();
         storage.set(b"key3", b"cool stuff").0.unwrap();
-        let cnt = storage
-            .range(None, None, Order::Ascending)
-            .0
-            .unwrap()
-            .elements()
-            .unwrap()
-            .len();
+        let iter_id = storage.scan(None, None, Order::Ascending).0.unwrap();
+        let cnt = storage.all(iter_id).0.unwrap().len();
         assert_eq!(3, cnt);
         Ok(())
     })
     .unwrap();
 
     // change the verifier via migrate
-    let payout = HumanAddr::from("someone else");
+    let payout = String::from("someone else");
     let msg = MigrateMsg {
         payout: payout.clone(),
     };
-    let env = mock_env("creator", &[]);
-    let res: MigrateResponse = migrate(&mut deps, env, msg).unwrap();
+    let res: Response = migrate(&mut deps, mock_env(), msg).unwrap();
     // check payout
     assert_eq!(1, res.messages.len());
     let msg = res.messages.get(0).expect("no message");
     assert_eq!(
         msg,
-        &BankMsg::Send {
-            from_address: HumanAddr::from(MOCK_CONTRACT_ADDR),
+        &SubMsg::new(BankMsg::Send {
             to_address: payout,
             amount: coins(123456, "gold"),
-        }
-        .into(),
+        }),
     );
 
     // check there is no data in storage
     deps.with_storage(|storage| {
-        let cnt = storage
-            .range(None, None, Order::Ascending)
-            .0
-            .unwrap()
-            .elements()
-            .unwrap()
-            .len();
+        let iter_id = storage.scan(None, None, Order::Ascending).0.unwrap();
+        let cnt = storage.all(iter_id).0.unwrap().len();
         assert_eq!(0, cnt);
         Ok(())
     })

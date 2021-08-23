@@ -6,8 +6,7 @@
 
 # Build results
 target/
-contracts/**/contract.wasm
-contracts/**/hash.txt
+artifacts/
 
 # IDEs
 .vscode/
@@ -16,3 +15,6 @@ contracts/**/hash.txt
 
 # Auto-gen
 .cargo-ok
+
+# Log files (e.g. memory profiling)
+*.log

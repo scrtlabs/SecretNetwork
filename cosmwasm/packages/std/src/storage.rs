@@ -1,12 +1,13 @@
 use std::collections::BTreeMap;
+use std::fmt;
 #[cfg(feature = "iterator")]
 use std::iter;
 #[cfg(feature = "iterator")]
 use std::ops::{Bound, RangeBounds};
 
 #[cfg(feature = "iterator")]
-use crate::iterator::{Order, KV};
-use crate::traits::{ReadonlyStorage, Storage};
+use crate::iterator::{Order, Pair};
+use crate::traits::Storage;
 
 #[derive(Default)]
 pub struct MemoryStorage {
@@ -19,9 +20,21 @@ impl MemoryStorage {
     }
 }
 
-impl ReadonlyStorage for MemoryStorage {
+impl Storage for MemoryStorage {
     fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         self.data.get(key).cloned()
+    }
+
+    fn set(&mut self, key: &[u8], value: &[u8]) {
+        if value.is_empty() {
+            panic!("TL;DR: Value must not be empty in Storage::set but in most cases you can use Storage::remove instead. Long story: Getting empty values from storage is not well supported at the moment. Some of our internal interfaces cannot differentiate between a non-existent key and an empty value. Right now, you cannot rely on the behaviour of empty values. To protect you from trouble later on, we stop here. Sorry for the inconvenience! We highly welcome you to contribute to CosmWasm, making this more solid one way or the other.");
+        }
+
+        self.data.insert(key.to_vec(), value.to_vec());
+    }
+
+    fn remove(&mut self, key: &[u8]) {
+        self.data.remove(key);
     }
 
     #[cfg(feature = "iterator")]
@@ -32,7 +45,7 @@ impl ReadonlyStorage for MemoryStorage {
         start: Option<&[u8]>,
         end: Option<&[u8]>,
         order: Order,
-    ) -> Box<dyn Iterator<Item = KV> + 'a> {
+    ) -> Box<dyn Iterator<Item = Pair> + 'a> {
         let bounds = range_bounds(start, end);
 
         // BTreeMap.range panics if range is start > end.
@@ -52,6 +65,28 @@ impl ReadonlyStorage for MemoryStorage {
     }
 }
 
+/// This debug implementation is made for inspecting storages in unit testing.
+/// It is made for human readability only and the output can change at any time.
+impl fmt::Debug for MemoryStorage {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "MemoryStorage ({} entries)", self.data.len())?;
+        f.write_str(" {\n")?;
+        for (key, value) in &self.data {
+            f.write_str("  0x")?;
+            for byte in key {
+                write!(f, "{:02x}", byte)?;
+            }
+            f.write_str(": 0x")?;
+            for byte in value {
+                write!(f, "{:02x}", byte)?;
+            }
+            f.write_str("\n")?;
+        }
+        f.write_str("}")?;
+        Ok(())
+    }
+}
+
 #[cfg(feature = "iterator")]
 fn range_bounds(start: Option<&[u8]>, end: Option<&[u8]>) -> impl RangeBounds<Vec<u8>> {
     (
@@ -66,23 +101,13 @@ fn range_bounds(start: Option<&[u8]>, end: Option<&[u8]>) -> impl RangeBounds<Ve
 type BTreeMapPairRef<'a, T = Vec<u8>> = (&'a Vec<u8>, &'a T);
 
 #[cfg(feature = "iterator")]
-fn clone_item<T: Clone>(item_ref: BTreeMapPairRef<T>) -> KV<T> {
+fn clone_item<T: Clone>(item_ref: BTreeMapPairRef<T>) -> Pair<T> {
     let (key, value) = item_ref;
     (key.clone(), value.clone())
 }
 
-impl Storage for MemoryStorage {
-    fn set(&mut self, key: &[u8], value: &[u8]) {
-        self.data.insert(key.to_vec(), value.to_vec());
-    }
-
-    fn remove(&mut self, key: &[u8]) {
-        self.data.remove(key);
-    }
-}
-
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
 
     #[test]
@@ -92,6 +117,15 @@ mod test {
         store.set(b"foo", b"bar");
         assert_eq!(store.get(b"foo"), Some(b"bar".to_vec()));
         assert_eq!(store.get(b"food"), None);
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Getting empty values from storage is not well supported at the moment."
+    )]
+    fn set_panics_for_empty() {
+        let mut store = MemoryStorage::new();
+        store.set(b"foo", b"");
     }
 
     #[test]
@@ -126,7 +160,7 @@ mod test {
         // unbounded
         {
             let iter = store.range(None, None, Order::Ascending);
-            let elements: Vec<KV> = iter.collect();
+            let elements: Vec<Pair> = iter.collect();
             assert_eq!(
                 elements,
                 vec![
@@ -140,7 +174,7 @@ mod test {
         // unbounded (descending)
         {
             let iter = store.range(None, None, Order::Descending);
-            let elements: Vec<KV> = iter.collect();
+            let elements: Vec<Pair> = iter.collect();
             assert_eq!(
                 elements,
                 vec![
@@ -154,14 +188,14 @@ mod test {
         // bounded
         {
             let iter = store.range(Some(b"f"), Some(b"n"), Order::Ascending);
-            let elements: Vec<KV> = iter.collect();
+            let elements: Vec<Pair> = iter.collect();
             assert_eq!(elements, vec![(b"foo".to_vec(), b"bar".to_vec())]);
         }
 
         // bounded (descending)
         {
             let iter = store.range(Some(b"air"), Some(b"loop"), Order::Descending);
-            let elements: Vec<KV> = iter.collect();
+            let elements: Vec<Pair> = iter.collect();
             assert_eq!(
                 elements,
                 vec![
@@ -174,35 +208,35 @@ mod test {
         // bounded empty [a, a)
         {
             let iter = store.range(Some(b"foo"), Some(b"foo"), Order::Ascending);
-            let elements: Vec<KV> = iter.collect();
+            let elements: Vec<Pair> = iter.collect();
             assert_eq!(elements, vec![]);
         }
 
         // bounded empty [a, a) (descending)
         {
             let iter = store.range(Some(b"foo"), Some(b"foo"), Order::Descending);
-            let elements: Vec<KV> = iter.collect();
+            let elements: Vec<Pair> = iter.collect();
             assert_eq!(elements, vec![]);
         }
 
         // bounded empty [a, b) with b < a
         {
             let iter = store.range(Some(b"z"), Some(b"a"), Order::Ascending);
-            let elements: Vec<KV> = iter.collect();
+            let elements: Vec<Pair> = iter.collect();
             assert_eq!(elements, vec![]);
         }
 
         // bounded empty [a, b) with b < a (descending)
         {
             let iter = store.range(Some(b"z"), Some(b"a"), Order::Descending);
-            let elements: Vec<KV> = iter.collect();
+            let elements: Vec<Pair> = iter.collect();
             assert_eq!(elements, vec![]);
         }
 
         // right unbounded
         {
             let iter = store.range(Some(b"f"), None, Order::Ascending);
-            let elements: Vec<KV> = iter.collect();
+            let elements: Vec<Pair> = iter.collect();
             assert_eq!(
                 elements,
                 vec![
@@ -215,7 +249,7 @@ mod test {
         // right unbounded (descending)
         {
             let iter = store.range(Some(b"f"), None, Order::Descending);
-            let elements: Vec<KV> = iter.collect();
+            let elements: Vec<Pair> = iter.collect();
             assert_eq!(
                 elements,
                 vec![
@@ -228,14 +262,14 @@ mod test {
         // left unbounded
         {
             let iter = store.range(None, Some(b"f"), Order::Ascending);
-            let elements: Vec<KV> = iter.collect();
+            let elements: Vec<Pair> = iter.collect();
             assert_eq!(elements, vec![(b"ant".to_vec(), b"hill".to_vec()),]);
         }
 
         // left unbounded (descending)
         {
             let iter = store.range(None, Some(b"no"), Order::Descending);
-            let elements: Vec<KV> = iter.collect();
+            let elements: Vec<Pair> = iter.collect();
             assert_eq!(
                 elements,
                 vec![
@@ -244,5 +278,55 @@ mod test {
                 ]
             );
         }
+    }
+
+    #[test]
+    fn memory_storage_implements_debug() {
+        let store = MemoryStorage::new();
+        assert_eq!(
+            format!("{:?}", store),
+            "MemoryStorage (0 entries) {\n\
+            }"
+        );
+
+        // With one element
+        let mut store = MemoryStorage::new();
+        store.set(&[0x00, 0xAB, 0xDD], &[0xFF, 0xD5]);
+        assert_eq!(
+            format!("{:?}", store),
+            "MemoryStorage (1 entries) {\n\
+            \x20\x200x00abdd: 0xffd5\n\
+            }"
+        );
+
+        // Sorted by key
+        let mut store = MemoryStorage::new();
+        store.set(&[0x00, 0xAB, 0xDD], &[0xFF, 0xD5]);
+        store.set(&[0x00, 0xAB, 0xEE], &[0xFF, 0xD5]);
+        store.set(&[0x00, 0xAB, 0xCC], &[0xFF, 0xD5]);
+        assert_eq!(
+            format!("{:?}", store),
+            "MemoryStorage (3 entries) {\n\
+            \x20\x200x00abcc: 0xffd5\n\
+            \x20\x200x00abdd: 0xffd5\n\
+            \x20\x200x00abee: 0xffd5\n\
+            }"
+        );
+
+        // Different lengths
+        let mut store = MemoryStorage::new();
+        store.set(&[0xAA], &[0x11]);
+        store.set(&[0xAA, 0xBB], &[0x11, 0x22]);
+        store.set(&[0xAA, 0xBB, 0xCC], &[0x11, 0x22, 0x33]);
+        store.set(&[0xAA, 0xBB, 0xCC, 0xDD], &[0x11, 0x22, 0x33, 0x44]);
+        assert_eq!(
+            format!("{:?}", store),
+            "MemoryStorage (4 entries) {\n\
+            \x20\x200xaa: 0x11\n\
+            \x20\x200xaabb: 0x1122\n\
+            \x20\x200xaabbcc: 0x112233\n\
+            \x20\x200xaabbccdd: 0x11223344\n\
+            }"
+        );
     }
 }

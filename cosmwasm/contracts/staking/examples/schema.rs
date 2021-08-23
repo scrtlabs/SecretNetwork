@@ -4,10 +4,10 @@ use std::fs::create_dir_all;
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
 use staking::msg::{
-    BalanceResponse, ClaimsResponse, HandleMsg, InitMsg, InvestmentResponse, QueryMsg,
+    BalanceResponse, ClaimsResponse, ExecuteMsg, InstantiateMsg, InvestmentResponse, QueryMsg,
     TokenInfoResponse,
 };
-use staking::state::{InvestmentInfo, Supply};
+use staking::state::{InvestmentInfo, Supply, TokenInfo};
 
 fn main() {
     let mut out_dir = current_dir().unwrap();
@@ -15,13 +15,17 @@ fn main() {
     create_dir_all(&out_dir).unwrap();
     remove_schemas(&out_dir).unwrap();
 
-    export_schema(&schema_for!(InitMsg), &out_dir);
-    export_schema(&schema_for!(HandleMsg), &out_dir);
+    // messages
+    export_schema(&schema_for!(InstantiateMsg), &out_dir);
+    export_schema(&schema_for!(ExecuteMsg), &out_dir);
     export_schema(&schema_for!(QueryMsg), &out_dir);
     export_schema(&schema_for!(BalanceResponse), &out_dir);
     export_schema(&schema_for!(ClaimsResponse), &out_dir);
     export_schema(&schema_for!(InvestmentResponse), &out_dir);
     export_schema(&schema_for!(TokenInfoResponse), &out_dir);
+
+    // state
     export_schema(&schema_for!(InvestmentInfo), &out_dir);
+    export_schema(&schema_for!(TokenInfo), &out_dir);
     export_schema(&schema_for!(Supply), &out_dir);
 }

@@ -1,9 +1,9 @@
 use serde::{de::DeserializeOwned, ser::Serialize};
 use std::marker::PhantomData;
 
-use cosmwasm_std::{to_vec, ReadonlyStorage, StdResult, Storage};
+use cosmwasm_std::{to_vec, StdError, StdResult, Storage};
 #[cfg(feature = "iterator")]
-use cosmwasm_std::{Order, KV};
+use cosmwasm_std::{Order, Pair};
 
 use crate::length_prefixed::{to_length_prefixed, to_length_prefixed_nested};
 #[cfg(feature = "iterator")]
@@ -13,49 +13,48 @@ use crate::namespace_helpers::{get_with_prefix, remove_with_prefix, set_with_pre
 use crate::type_helpers::deserialize_kv;
 use crate::type_helpers::{may_deserialize, must_deserialize};
 
-pub fn bucket<'a, S: Storage, T>(namespace: &[u8], storage: &'a mut S) -> Bucket<'a, S, T>
+/// An alias of Bucket::new for less verbose usage
+pub fn bucket<'a, T>(storage: &'a mut dyn Storage, namespace: &[u8]) -> Bucket<'a, T>
 where
     T: Serialize + DeserializeOwned,
 {
-    Bucket::new(namespace, storage)
+    Bucket::new(storage, namespace)
 }
 
-pub fn bucket_read<'a, S: ReadonlyStorage, T>(
-    namespace: &[u8],
-    storage: &'a S,
-) -> ReadonlyBucket<'a, S, T>
+/// An alias of ReadonlyBucket::new for less verbose usage
+pub fn bucket_read<'a, T>(storage: &'a dyn Storage, namespace: &[u8]) -> ReadonlyBucket<'a, T>
 where
     T: Serialize + DeserializeOwned,
 {
-    ReadonlyBucket::new(namespace, storage)
+    ReadonlyBucket::new(storage, namespace)
 }
 
-pub struct Bucket<'a, S: Storage, T>
+pub struct Bucket<'a, T>
 where
     T: Serialize + DeserializeOwned,
 {
-    storage: &'a mut S,
-    // see https://doc.rust-lang.org/std/marker/struct.PhantomData.html#unused-type-parameters for why this is needed
-    data: PhantomData<&'a T>,
+    storage: &'a mut dyn Storage,
     prefix: Vec<u8>,
+    // see https://doc.rust-lang.org/std/marker/struct.PhantomData.html#unused-type-parameters for why this is needed
+    data: PhantomData<T>,
 }
 
-impl<'a, S: Storage, T> Bucket<'a, S, T>
+impl<'a, T> Bucket<'a, T>
 where
     T: Serialize + DeserializeOwned,
 {
-    pub fn new(namespace: &[u8], storage: &'a mut S) -> Self {
+    pub fn new(storage: &'a mut dyn Storage, namespace: &[u8]) -> Self {
         Bucket {
-            prefix: to_length_prefixed(namespace),
             storage,
+            prefix: to_length_prefixed(namespace),
             data: PhantomData,
         }
     }
 
-    pub fn multilevel(namespaces: &[&[u8]], storage: &'a mut S) -> Self {
+    pub fn multilevel(storage: &'a mut dyn Storage, namespaces: &[&[u8]]) -> Self {
         Bucket {
-            prefix: to_length_prefixed_nested(namespaces),
             storage,
+            prefix: to_length_prefixed_nested(namespaces),
             data: PhantomData,
         }
     }
@@ -89,21 +88,20 @@ where
         start: Option<&[u8]>,
         end: Option<&[u8]>,
         order: Order,
-    ) -> Box<dyn Iterator<Item = StdResult<KV<T>>> + 'b> {
+    ) -> Box<dyn Iterator<Item = StdResult<Pair<T>>> + 'b> {
         let mapped = range_with_prefix(self.storage, &self.prefix, start, end, order)
             .map(deserialize_kv::<T>);
         Box::new(mapped)
     }
 
-    /// update will load the data, perform the specified action, and store the result
+    /// Loads the data, perform the specified action, and store the result
     /// in the database. This is shorthand for some common sequences, which may be useful.
-    /// Note that this only updates *pre-existing* values. If you want to modify possibly
-    /// non-existent values, please use `may_update`
     ///
-    /// This is the least stable of the APIs, and definitely needs some usage
-    pub fn update<A>(&mut self, key: &[u8], action: A) -> StdResult<T>
+    /// If the data exists, `action(Some(value))` is called. Otherwise `action(None)` is called.
+    pub fn update<A, E>(&mut self, key: &[u8], action: A) -> Result<T, E>
     where
-        A: FnOnce(Option<T>) -> StdResult<T>,
+        A: FnOnce(Option<T>) -> Result<T, E>,
+        E: From<StdError>,
     {
         let input = self.may_load(key)?;
         let output = action(input)?;
@@ -112,32 +110,32 @@ where
     }
 }
 
-pub struct ReadonlyBucket<'a, S: ReadonlyStorage, T>
+pub struct ReadonlyBucket<'a, T>
 where
     T: Serialize + DeserializeOwned,
 {
-    storage: &'a S,
-    // see https://doc.rust-lang.org/std/marker/struct.PhantomData.html#unused-type-parameters for why this is needed
-    data: PhantomData<&'a T>,
+    storage: &'a dyn Storage,
     prefix: Vec<u8>,
+    // see https://doc.rust-lang.org/std/marker/struct.PhantomData.html#unused-type-parameters for why this is needed
+    data: PhantomData<T>,
 }
 
-impl<'a, S: ReadonlyStorage, T> ReadonlyBucket<'a, S, T>
+impl<'a, T> ReadonlyBucket<'a, T>
 where
     T: Serialize + DeserializeOwned,
 {
-    pub fn new(namespace: &[u8], storage: &'a S) -> Self {
+    pub fn new(storage: &'a dyn Storage, namespace: &[u8]) -> Self {
         ReadonlyBucket {
-            prefix: to_length_prefixed(namespace),
             storage,
+            prefix: to_length_prefixed(namespace),
             data: PhantomData,
         }
     }
 
-    pub fn multilevel(namespaces: &[&[u8]], storage: &'a S) -> Self {
+    pub fn multilevel(storage: &'a dyn Storage, namespaces: &[&[u8]]) -> Self {
         ReadonlyBucket {
-            prefix: to_length_prefixed_nested(namespaces),
             storage,
+            prefix: to_length_prefixed_nested(namespaces),
             data: PhantomData,
         }
     }
@@ -161,7 +159,7 @@ where
         start: Option<&[u8]>,
         end: Option<&[u8]>,
         order: Order,
-    ) -> Box<dyn Iterator<Item = StdResult<KV<T>>> + 'b> {
+    ) -> Box<dyn Iterator<Item = StdResult<Pair<T>>> + 'b> {
         let mapped = range_with_prefix(self.storage, &self.prefix, start, end, order)
             .map(deserialize_kv::<T>);
         Box::new(mapped)
@@ -169,7 +167,7 @@ where
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use cosmwasm_std::testing::MockStorage;
     use cosmwasm_std::StdError;
@@ -184,7 +182,7 @@ mod test {
     #[test]
     fn store_and_load() {
         let mut store = MockStorage::new();
-        let mut bucket = bucket::<_, Data>(b"data", &mut store);
+        let mut bucket = bucket::<Data>(&mut store, b"data");
 
         // save data
         let data = Data {
@@ -201,7 +199,7 @@ mod test {
     #[test]
     fn remove_works() {
         let mut store = MockStorage::new();
-        let mut bucket = bucket::<_, Data>(b"data", &mut store);
+        let mut bucket = bucket::<Data>(&mut store, b"data");
 
         // save data
         let data = Data {
@@ -223,7 +221,7 @@ mod test {
     #[test]
     fn readonly_works() {
         let mut store = MockStorage::new();
-        let mut bucket = bucket::<_, Data>(b"data", &mut store);
+        let mut bucket = bucket::<Data>(&mut store, b"data");
 
         // save data
         let data = Data {
@@ -232,7 +230,7 @@ mod test {
         };
         bucket.save(b"maria", &data).unwrap();
 
-        let reader = bucket_read::<_, Data>(b"data", &mut store);
+        let reader = bucket_read::<Data>(&store, b"data");
 
         // check empty data handling
         assert!(reader.load(b"john").is_err());
@@ -246,7 +244,7 @@ mod test {
     #[test]
     fn buckets_isolated() {
         let mut store = MockStorage::new();
-        let mut bucket1 = bucket::<_, Data>(b"data", &mut store);
+        let mut bucket1 = bucket::<Data>(&mut store, b"data");
 
         // save data
         let data = Data {
@@ -255,7 +253,7 @@ mod test {
         };
         bucket1.save(b"maria", &data).unwrap();
 
-        let mut bucket2 = bucket::<_, Data>(b"dat", &mut store);
+        let mut bucket2 = bucket::<Data>(&mut store, b"dat");
 
         // save data (dat, amaria) vs (data, maria)
         let data2 = Data {
@@ -265,14 +263,14 @@ mod test {
         bucket2.save(b"amaria", &data2).unwrap();
 
         // load one
-        let reader = bucket_read::<_, Data>(b"data", &store);
+        let reader = bucket_read::<Data>(&store, b"data");
         let loaded = reader.load(b"maria").unwrap();
         assert_eq!(data, loaded);
         // no cross load
         assert_eq!(None, reader.may_load(b"amaria").unwrap());
 
         // load the other
-        let reader2 = bucket_read::<_, Data>(b"dat", &store);
+        let reader2 = bucket_read::<Data>(&store, b"dat");
         let loaded2 = reader2.load(b"amaria").unwrap();
         assert_eq!(data2, loaded2);
         // no cross load
@@ -282,7 +280,7 @@ mod test {
     #[test]
     fn update_success() {
         let mut store = MockStorage::new();
-        let mut bucket = bucket::<_, Data>(b"data", &mut store);
+        let mut bucket = bucket::<Data>(&mut store, b"data");
 
         // initial data
         let init = Data {
@@ -293,7 +291,7 @@ mod test {
 
         // it's my birthday
         let birthday = |mayd: Option<Data>| -> StdResult<Data> {
-            let mut d = mayd.ok_or(StdError::not_found("Data"))?;
+            let mut d = mayd.ok_or_else(|| StdError::not_found("Data"))?;
             d.age += 1;
             Ok(d)
         };
@@ -312,7 +310,7 @@ mod test {
     #[test]
     fn update_can_change_variable_from_outer_scope() {
         let mut store = MockStorage::new();
-        let mut bucket = bucket::<_, Data>(b"data", &mut store);
+        let mut bucket = bucket::<Data>(&mut store, b"data");
         let init = Data {
             name: "Maria".to_string(),
             age: 42,
@@ -322,8 +320,8 @@ mod test {
         // show we can capture data from the closure
         let mut old_age = 0i32;
         bucket
-            .update(b"maria", |mayd: Option<Data>| {
-                let mut d = mayd.ok_or(StdError::not_found("Data"))?;
+            .update(b"maria", |mayd: Option<Data>| -> StdResult<_> {
+                let mut d = mayd.ok_or_else(|| StdError::not_found("Data"))?;
                 old_age = d.age;
                 d.age += 1;
                 Ok(d)
@@ -335,7 +333,7 @@ mod test {
     #[test]
     fn update_fails_on_error() {
         let mut store = MockStorage::new();
-        let mut bucket = bucket::<_, Data>(b"data", &mut store);
+        let mut bucket = bucket::<Data>(&mut store, b"data");
 
         // initial data
         let init = Data {
@@ -356,9 +354,55 @@ mod test {
     }
 
     #[test]
+    fn update_supports_custom_error_types() {
+        #[derive(Debug)]
+        enum MyError {
+            Std,
+            NotFound,
+        }
+
+        impl From<StdError> for MyError {
+            fn from(_original: StdError) -> MyError {
+                MyError::Std
+            }
+        }
+
+        let mut store = MockStorage::new();
+        let mut bucket = bucket::<Data>(&mut store, b"data");
+
+        // initial data
+        let init = Data {
+            name: "Maria".to_string(),
+            age: 42,
+        };
+        bucket.save(b"maria", &init).unwrap();
+
+        // it's my birthday
+        let res = bucket.update(b"bob", |data| {
+            if let Some(mut data) = data {
+                if data.age < 0 {
+                    // Uses Into to convert StdError to MyError
+                    return Err(StdError::generic_err("Current age is negative").into());
+                }
+                if data.age > 10 {
+                    to_vec(&data)?; // Uses From to convert StdError to MyError
+                }
+                data.age += 1;
+                Ok(data)
+            } else {
+                Err(MyError::NotFound)
+            }
+        });
+        match res.unwrap_err() {
+            MyError::NotFound { .. } => {}
+            err => panic!("Unexpected error: {:?}", err),
+        }
+    }
+
+    #[test]
     fn update_handles_on_no_data() {
         let mut store = MockStorage::new();
-        let mut bucket = bucket::<_, Data>(b"data", &mut store);
+        let mut bucket = bucket::<Data>(&mut store, b"data");
 
         let init_value = Data {
             name: "Maria".to_string(),
@@ -383,7 +427,7 @@ mod test {
     #[cfg(feature = "iterator")]
     fn range_over_data() {
         let mut store = MockStorage::new();
-        let mut bucket = bucket::<_, Data>(b"data", &mut store);
+        let mut bucket = bucket::<Data>(&mut store, b"data");
 
         let jose = Data {
             name: "Jose".to_string(),
@@ -397,7 +441,7 @@ mod test {
         bucket.save(b"maria", &maria).unwrap();
         bucket.save(b"jose", &jose).unwrap();
 
-        let res_data: StdResult<Vec<KV<Data>>> =
+        let res_data: StdResult<Vec<Pair<Data>>> =
             bucket.range(None, None, Order::Ascending).collect();
         let data = res_data.unwrap();
         assert_eq!(data.len(), 2);
@@ -405,8 +449,8 @@ mod test {
         assert_eq!(data[1], (b"maria".to_vec(), maria.clone()));
 
         // also works for readonly
-        let read_bucket = bucket_read::<_, Data>(b"data", &store);
-        let res_data: StdResult<Vec<KV<Data>>> =
+        let read_bucket = bucket_read::<Data>(&store, b"data");
+        let res_data: StdResult<Vec<Pair<Data>>> =
             read_bucket.range(None, None, Order::Ascending).collect();
         let data = res_data.unwrap();
         assert_eq!(data.len(), 2);

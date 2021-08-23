@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{Binary, HumanAddr};
+use crate::Binary;
 
 /// SystemError is used for errors inside the VM and is API friendly (i.e. serializable).
 ///
@@ -16,11 +16,22 @@ use crate::{Binary, HumanAddr};
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum SystemError {
-    InvalidRequest { error: String, request: Binary },
-    InvalidResponse { error: String, response: Binary },
-    NoSuchContract { addr: HumanAddr },
+    InvalidRequest {
+        error: String,
+        request: Binary,
+    },
+    InvalidResponse {
+        error: String,
+        response: Binary,
+    },
+    NoSuchContract {
+        /// The address that was attempted to query
+        addr: String,
+    },
     Unknown {},
-    UnsupportedRequest { kind: String },
+    UnsupportedRequest {
+        kind: String,
+    },
     ExceededRecursionLimit {},
 }
 
@@ -33,15 +44,17 @@ impl std::fmt::Display for SystemError {
                 f,
                 "Cannot parse request: {} in: {}",
                 error,
-                String::from_utf8_lossy(request.as_slice())
+                String::from_utf8_lossy(&request)
             ),
             SystemError::InvalidResponse { error, response } => write!(
                 f,
                 "Cannot parse response: {} in: {}",
                 error,
-                String::from_utf8_lossy(response.as_slice())
+                String::from_utf8_lossy(&response)
             ),
-            SystemError::NoSuchContract { addr } => write!(f, "No such contract: {}", addr),
+            SystemError::NoSuchContract { addr } => {
+                write!(f, "No such contract: {}", addr)
+            }
             SystemError::Unknown {} => write!(f, "Unknown system error"),
             SystemError::UnsupportedRequest { kind } => {
                 write!(f, "Unsupported query type: {}", kind)
@@ -50,5 +63,3 @@ impl std::fmt::Display for SystemError {
         }
     }
 }
-
-pub type SystemResult<T> = Result<T, SystemError>;

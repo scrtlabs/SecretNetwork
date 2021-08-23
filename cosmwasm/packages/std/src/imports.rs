@@ -1,22 +1,30 @@
 use std::vec::Vec;
 
-use crate::addresses::{CanonicalAddr, HumanAddr};
-use crate::encoding::Binary;
-use crate::errors::{StdError, StdResult};
-#[cfg(feature = "iterator")]
-use crate::iterator::{Order, KV};
+use crate::addresses::{Addr, CanonicalAddr};
+use crate::binary::Binary;
+use crate::errors::{RecoverPubkeyError, StdError, StdResult, SystemError, VerificationError};
+use crate::import_helpers::{from_high_half, from_low_half};
 use crate::memory::{alloc, build_region, consume_region, Region};
+use crate::results::SystemResult;
+#[cfg(feature = "iterator")]
+use crate::sections::decode_sections2;
+use crate::sections::encode_sections;
 use crate::serde::from_slice;
-use crate::traits::{Api, Querier, QuerierResult, ReadonlyStorage, Storage};
+use crate::traits::{Api, Querier, QuerierResult, Storage};
+#[cfg(feature = "iterator")]
+use crate::{
+    iterator::{Order, Pair},
+    memory::get_optional_region_address,
+};
 
 /// An upper bound for typical canonical address lengths (e.g. 20 in Cosmos SDK/Ethereum or 32 in Nano/Substrate)
-const CANONICAL_ADDRESS_BUFFER_LENGTH: usize = 32;
+const CANONICAL_ADDRESS_BUFFER_LENGTH: usize = 64;
 /// An upper bound for typical human readable address formats (e.g. 42 for Ethereum hex addresses or 90 for bech32)
 const HUMAN_ADDRESS_BUFFER_LENGTH: usize = 90;
 
 // This interface will compile into required Wasm imports.
 // A complete documentation those functions is available in the VM that provides them:
-// https://github.com/confio/cosmwasm/blob/0.7/lib/vm/src/instance.rs#L43
+// https://github.com/CosmWasm/cosmwasm/blob/v0.14.1/packages/vm/src/instance.rs#L84-L201
 extern "C" {
     fn db_read(key: u32) -> u32;
     fn db_write(key: u32, value: u32);
@@ -28,8 +36,20 @@ extern "C" {
     #[cfg(feature = "iterator")]
     fn db_next(iterator_id: u32) -> u32;
 
-    fn canonicalize_address(source: u32, destination: u32) -> u32;
-    fn humanize_address(source: u32, destination: u32) -> u32;
+    fn addr_validate(source_ptr: u32) -> u32;
+    fn addr_canonicalize(source_ptr: u32, destination_ptr: u32) -> u32;
+    fn addr_humanize(source_ptr: u32, destination_ptr: u32) -> u32;
+
+    fn secp256k1_verify(message_hash_ptr: u32, signature_ptr: u32, public_key_ptr: u32) -> u32;
+    fn secp256k1_recover_pubkey(
+        message_hash_ptr: u32,
+        signature_ptr: u32,
+        recovery_param: u32,
+    ) -> u64;
+    fn ed25519_verify(message_ptr: u32, signature_ptr: u32, public_key_ptr: u32) -> u32;
+    fn ed25519_batch_verify(messages_ptr: u32, signatures_ptr: u32, public_keys_ptr: u32) -> u32;
+
+    fn debug(source_ptr: u32);
 
     /// Executes a query on the chain (import). Not to be confused with the
     /// query export, which queries the state of the contract.
@@ -46,7 +66,7 @@ impl ExternalStorage {
     }
 }
 
-impl ReadonlyStorage for ExternalStorage {
+impl Storage for ExternalStorage {
     fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         let key = build_region(key);
         let key_ptr = &*key as *const Region as u32;
@@ -62,35 +82,11 @@ impl ReadonlyStorage for ExternalStorage {
         Some(data)
     }
 
-    #[cfg(feature = "iterator")]
-    fn range(
-        &self,
-        start: Option<&[u8]>,
-        end: Option<&[u8]>,
-        order: Order,
-    ) -> Box<dyn Iterator<Item = KV>> {
-        // start and end (Regions) must remain in scope as long as the start_ptr / end_ptr do
-        // thus they are not inside a block
-        let start = start.map(|s| build_region(s));
-        let start_ptr = match start {
-            Some(reg) => &*reg as *const Region as u32,
-            None => 0,
-        };
-        let end = end.map(|e| build_region(e));
-        let end_ptr = match end {
-            Some(reg) => &*reg as *const Region as u32,
-            None => 0,
-        };
-        let order = order as i32;
-
-        let iterator_id = unsafe { db_scan(start_ptr, end_ptr, order) };
-        let iter = ExternalIterator { iterator_id };
-        Box::new(iter)
-    }
-}
-
-impl Storage for ExternalStorage {
     fn set(&mut self, key: &[u8], value: &[u8]) {
+        if value.is_empty() {
+            panic!("TL;DR: Value must not be empty in Storage::set but in most cases you can use Storage::remove instead. Long story: Getting empty values from storage is not well supported at the moment. Some of our internal interfaces cannot differentiate between a non-existent key and an empty value. Right now, you cannot rely on the behaviour of empty values. To protect you from trouble later on, we stop here. Sorry for the inconvenience! We highly welcome you to contribute to CosmWasm, making this more solid one way or the other.");
+        }
+
         // keep the boxes in scope, so we free it at the end (don't cast to pointers same line as build_region)
         let key = build_region(key);
         let key_ptr = &*key as *const Region as u32;
@@ -105,6 +101,24 @@ impl Storage for ExternalStorage {
         let key_ptr = &*key as *const Region as u32;
         unsafe { db_remove(key_ptr) };
     }
+
+    #[cfg(feature = "iterator")]
+    fn range(
+        &self,
+        start: Option<&[u8]>,
+        end: Option<&[u8]>,
+        order: Order,
+    ) -> Box<dyn Iterator<Item = Pair>> {
+        // There is lots of gotchas on turning options into regions for FFI, thus this design
+        // See: https://github.com/CosmWasm/cosmwasm/pull/509
+        let start_region = start.map(build_region);
+        let end_region = end.map(build_region);
+        let start_region_addr = get_optional_region_address(&start_region.as_ref());
+        let end_region_addr = get_optional_region_address(&end_region.as_ref());
+        let iterator_id = unsafe { db_scan(start_region_addr, end_region_addr, order as i32) };
+        let iter = ExternalIterator { iterator_id };
+        Box::new(iter)
+    }
 }
 
 #[cfg(feature = "iterator")]
@@ -116,28 +130,18 @@ struct ExternalIterator {
 
 #[cfg(feature = "iterator")]
 impl Iterator for ExternalIterator {
-    type Item = KV;
+    type Item = Pair;
 
     fn next(&mut self) -> Option<Self::Item> {
         let next_result = unsafe { db_next(self.iterator_id) };
         let kv_region_ptr = next_result as *mut Region;
-        let mut kv = unsafe { consume_region(kv_region_ptr) };
-
-        // The KV region uses the format value || key || keylen, where keylen is a fixed size big endian u32 value
-        let keylen = u32::from_be_bytes([
-            kv[kv.len() - 4],
-            kv[kv.len() - 3],
-            kv[kv.len() - 2],
-            kv[kv.len() - 1],
-        ]) as usize;
-        if keylen == 0 {
-            return None;
+        let kv = unsafe { consume_region(kv_region_ptr) };
+        let (key, value) = decode_sections2(kv);
+        if key.len() == 0 {
+            None
+        } else {
+            Some((key, value))
         }
-
-        kv.truncate(kv.len() - 4);
-        let key = kv.split_off(kv.len() - keylen);
-        let value = kv;
-        Some((key, value))
     }
 }
 
@@ -152,16 +156,32 @@ impl ExternalApi {
 }
 
 impl Api for ExternalApi {
-    fn canonical_address(&self, human: &HumanAddr) -> StdResult<CanonicalAddr> {
-        let send = build_region(human.as_str().as_bytes());
-        let send_ptr = &*send as *const Region as u32;
-        let canon = alloc(CANONICAL_ADDRESS_BUFFER_LENGTH);
+    fn addr_validate(&self, human: &str) -> StdResult<Addr> {
+        let source = build_region(human.as_bytes());
+        let source_ptr = &*source as *const Region as u32;
 
-        let result = unsafe { canonicalize_address(send_ptr, canon as u32) };
+        let result = unsafe { addr_validate(source_ptr) };
         if result != 0 {
             let error = unsafe { consume_string_region_written_by_vm(result as *mut Region) };
             return Err(StdError::generic_err(format!(
-                "canonicalize_address errored: {}",
+                "addr_validate errored: {}",
+                error
+            )));
+        }
+
+        Ok(Addr::unchecked(human))
+    }
+
+    fn addr_canonicalize(&self, human: &str) -> StdResult<CanonicalAddr> {
+        let send = build_region(human.as_bytes());
+        let send_ptr = &*send as *const Region as u32;
+        let canon = alloc(CANONICAL_ADDRESS_BUFFER_LENGTH);
+
+        let result = unsafe { addr_canonicalize(send_ptr, canon as u32) };
+        if result != 0 {
+            let error = unsafe { consume_string_region_written_by_vm(result as *mut Region) };
+            return Err(StdError::generic_err(format!(
+                "addr_canonicalize errored: {}",
                 error
             )));
         }
@@ -170,22 +190,141 @@ impl Api for ExternalApi {
         Ok(CanonicalAddr(Binary(out)))
     }
 
-    fn human_address(&self, canonical: &CanonicalAddr) -> StdResult<HumanAddr> {
-        let send = build_region(canonical.as_slice());
+    fn addr_humanize(&self, canonical: &CanonicalAddr) -> StdResult<Addr> {
+        let send = build_region(&canonical);
         let send_ptr = &*send as *const Region as u32;
         let human = alloc(HUMAN_ADDRESS_BUFFER_LENGTH);
 
-        let result = unsafe { humanize_address(send_ptr, human as u32) };
+        let result = unsafe { addr_humanize(send_ptr, human as u32) };
         if result != 0 {
             let error = unsafe { consume_string_region_written_by_vm(result as *mut Region) };
             return Err(StdError::generic_err(format!(
-                "humanize_address errored: {}",
+                "addr_humanize errored: {}",
                 error
             )));
         }
 
         let address = unsafe { consume_string_region_written_by_vm(human) };
-        Ok(address.into())
+        Ok(Addr::unchecked(address))
+    }
+
+    fn secp256k1_verify(
+        &self,
+        message_hash: &[u8],
+        signature: &[u8],
+        public_key: &[u8],
+    ) -> Result<bool, VerificationError> {
+        let hash_send = build_region(message_hash);
+        let hash_send_ptr = &*hash_send as *const Region as u32;
+        let sig_send = build_region(signature);
+        let sig_send_ptr = &*sig_send as *const Region as u32;
+        let pubkey_send = build_region(public_key);
+        let pubkey_send_ptr = &*pubkey_send as *const Region as u32;
+
+        let result = unsafe { secp256k1_verify(hash_send_ptr, sig_send_ptr, pubkey_send_ptr) };
+        match result {
+            0 => Ok(true),
+            1 => Ok(false),
+            2 => panic!("MessageTooLong must not happen. This is a bug in the VM."),
+            3 => Err(VerificationError::InvalidHashFormat),
+            4 => Err(VerificationError::InvalidSignatureFormat),
+            5 => Err(VerificationError::InvalidPubkeyFormat),
+            10 => Err(VerificationError::GenericErr),
+            error_code => Err(VerificationError::unknown_err(error_code)),
+        }
+    }
+
+    fn secp256k1_recover_pubkey(
+        &self,
+        message_hash: &[u8],
+        signature: &[u8],
+        recover_param: u8,
+    ) -> Result<Vec<u8>, RecoverPubkeyError> {
+        let hash_send = build_region(message_hash);
+        let hash_send_ptr = &*hash_send as *const Region as u32;
+        let sig_send = build_region(signature);
+        let sig_send_ptr = &*sig_send as *const Region as u32;
+
+        let result =
+            unsafe { secp256k1_recover_pubkey(hash_send_ptr, sig_send_ptr, recover_param.into()) };
+        let error_code = from_high_half(result);
+        let pubkey_ptr = from_low_half(result);
+        match error_code {
+            0 => {
+                let pubkey = unsafe { consume_region(pubkey_ptr as *mut Region) };
+                Ok(pubkey)
+            }
+            2 => panic!("MessageTooLong must not happen. This is a bug in the VM."),
+            3 => Err(RecoverPubkeyError::InvalidHashFormat),
+            4 => Err(RecoverPubkeyError::InvalidSignatureFormat),
+            6 => Err(RecoverPubkeyError::InvalidRecoveryParam),
+            error_code => Err(RecoverPubkeyError::unknown_err(error_code)),
+        }
+    }
+
+    fn ed25519_verify(
+        &self,
+        message: &[u8],
+        signature: &[u8],
+        public_key: &[u8],
+    ) -> Result<bool, VerificationError> {
+        let msg_send = build_region(message);
+        let msg_send_ptr = &*msg_send as *const Region as u32;
+        let sig_send = build_region(signature);
+        let sig_send_ptr = &*sig_send as *const Region as u32;
+        let pubkey_send = build_region(public_key);
+        let pubkey_send_ptr = &*pubkey_send as *const Region as u32;
+
+        let result = unsafe { ed25519_verify(msg_send_ptr, sig_send_ptr, pubkey_send_ptr) };
+        match result {
+            0 => Ok(true),
+            1 => Ok(false),
+            2 => panic!("Error code 2 unused since CosmWasm 0.15. This is a bug in the VM."),
+            3 => panic!("InvalidHashFormat must not happen. This is a bug in the VM."),
+            4 => Err(VerificationError::InvalidSignatureFormat),
+            5 => Err(VerificationError::InvalidPubkeyFormat),
+            10 => Err(VerificationError::GenericErr),
+            error_code => Err(VerificationError::unknown_err(error_code)),
+        }
+    }
+
+    fn ed25519_batch_verify(
+        &self,
+        messages: &[&[u8]],
+        signatures: &[&[u8]],
+        public_keys: &[&[u8]],
+    ) -> Result<bool, VerificationError> {
+        let msgs_encoded = encode_sections(messages);
+        let msgs_send = build_region(&msgs_encoded);
+        let msgs_send_ptr = &*msgs_send as *const Region as u32;
+
+        let sigs_encoded = encode_sections(signatures);
+        let sig_sends = build_region(&sigs_encoded);
+        let sigs_send_ptr = &*sig_sends as *const Region as u32;
+
+        let pubkeys_encoded = encode_sections(public_keys);
+        let pubkeys_send = build_region(&pubkeys_encoded);
+        let pubkeys_send_ptr = &*pubkeys_send as *const Region as u32;
+
+        let result =
+            unsafe { ed25519_batch_verify(msgs_send_ptr, sigs_send_ptr, pubkeys_send_ptr) };
+        match result {
+            0 => Ok(true),
+            1 => Ok(false),
+            2 => panic!("Error code 2 unused since CosmWasm 0.15. This is a bug in the VM."),
+            3 => panic!("InvalidHashFormat must not happen. This is a bug in the VM."),
+            4 => Err(VerificationError::InvalidSignatureFormat),
+            5 => Err(VerificationError::InvalidPubkeyFormat),
+            10 => Err(VerificationError::GenericErr),
+            error_code => Err(VerificationError::unknown_err(error_code)),
+        }
+    }
+
+    fn debug(&self, message: &str) {
+        // keep the boxes in scope, so we free it at the end (don't cast to pointers same line as build_region)
+        let region = build_region(message.as_bytes());
+        let region_ptr = region.as_ref() as *const Region as u32;
+        unsafe { debug(region_ptr) };
     }
 }
 
@@ -212,8 +351,13 @@ impl Querier for ExternalQuerier {
         let request_ptr = &*req as *const Region as u32;
 
         let response_ptr = unsafe { query_chain(request_ptr) };
-
         let response = unsafe { consume_region(response_ptr as *mut Region) };
-        from_slice(&response).unwrap_or_else(|err| Ok(Err(err)))
+
+        from_slice(&response).unwrap_or_else(|parsing_err| {
+            SystemResult::Err(SystemError::InvalidResponse {
+                error: parsing_err.to_string(),
+                response: response.into(),
+            })
+        })
     }
 }

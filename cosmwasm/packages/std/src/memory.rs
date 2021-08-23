@@ -84,8 +84,20 @@ pub fn build_region(data: &[u8]) -> Box<Region> {
 
 fn build_region_from_components(offset: u32, capacity: u32, length: u32) -> Box<Region> {
     Box::new(Region {
-        offset: offset,
-        capacity: capacity,
-        length: length,
+        offset,
+        capacity,
+        length,
     })
+}
+
+/// Returns the address of the optional Region as an offset in linear memory,
+/// or zero if not present
+#[cfg(feature = "iterator")]
+pub fn get_optional_region_address(region: &Option<&Box<Region>>) -> u32 {
+    /// Returns the address of the Region as an offset in linear memory
+    fn get_region_address(region: &Box<Region>) -> u32 {
+        region.as_ref() as *const Region as u32
+    }
+
+    region.map(get_region_address).unwrap_or(0)
 }

@@ -1,211 +1,270 @@
 use cosmwasm_std::{
-    log, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr, InitResponse,
-    Querier, StdError, StdResult, Storage,
+    entry_point, to_binary, to_vec, Binary, ContractResult, CosmosMsg, Deps, DepsMut, Env,
+    MessageInfo, QueryRequest, QueryResponse, Reply, Response, StdError, StdResult, SubMsg,
+    SystemResult,
 };
 
+use crate::errors::ReflectError;
 use crate::msg::{
-    CustomMsg, CustomQuery, CustomResponse, HandleMsg, InitMsg, OwnerResponse, QueryMsg,
+    CapitalizedResponse, ChainResponse, CustomMsg, ExecuteMsg, InstantiateMsg, OwnerResponse,
+    QueryMsg, RawResponse, SpecialQuery, SpecialResponse,
 };
-use crate::state::{config, config_read, State};
+use crate::state::{config, config_read, replies, replies_read, State};
 
-pub fn init<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    _msg: InitMsg,
-) -> StdResult<InitResponse<CustomMsg>> {
-    let state = State {
-        owner: deps.api.canonical_address(&env.message.sender)?,
-    };
-
-    config(&mut deps.storage).save(&state)?;
-
-    Ok(InitResponse::default())
+pub fn instantiate(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    _msg: InstantiateMsg,
+) -> StdResult<Response<CustomMsg>> {
+    let state = State { owner: info.sender };
+    config(deps.storage).save(&state)?;
+    Ok(Response::default())
 }
 
-pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn execute(
+    deps: DepsMut,
     env: Env,
-    msg: HandleMsg,
-) -> StdResult<HandleResponse<CustomMsg>> {
+    info: MessageInfo,
+    msg: ExecuteMsg,
+) -> Result<Response<CustomMsg>, ReflectError> {
     match msg {
-        HandleMsg::ReflectMsg { msgs } => try_reflect(deps, env, msgs),
-        HandleMsg::ChangeOwner { owner } => try_change_owner(deps, env, owner),
+        ExecuteMsg::ReflectMsg { msgs } => try_reflect(deps, env, info, msgs),
+        ExecuteMsg::ReflectSubMsg { msgs } => try_reflect_subcall(deps, env, info, msgs),
+        ExecuteMsg::ChangeOwner { owner } => try_change_owner(deps, env, info, owner),
     }
 }
 
-pub fn try_reflect<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
+pub fn try_reflect(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
     msgs: Vec<CosmosMsg<CustomMsg>>,
-) -> StdResult<HandleResponse<CustomMsg>> {
-    let state = config(&mut deps.storage).load()?;
-    if deps.api.canonical_address(&env.message.sender)? != state.owner {
-        return Err(StdError::unauthorized());
+) -> Result<Response<CustomMsg>, ReflectError> {
+    let state = config(deps.storage).load()?;
+
+    if info.sender != state.owner {
+        return Err(ReflectError::NotCurrentOwner {
+            expected: state.owner.into(),
+            actual: info.sender.into(),
+        });
     }
+
     if msgs.is_empty() {
-        return Err(StdError::generic_err("Must reflect at least one message"));
+        return Err(ReflectError::MessagesEmpty);
     }
-    let res = HandleResponse {
-        messages: msgs,
-        log: vec![log("action", "reflect")],
-        data: None,
-    };
-    Ok(res)
+
+    Ok(Response::new()
+        .add_attribute("action", "reflect")
+        .add_messages(msgs))
 }
 
-pub fn try_change_owner<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    owner: HumanAddr,
-) -> StdResult<HandleResponse<CustomMsg>> {
+pub fn try_reflect_subcall(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    msgs: Vec<SubMsg<CustomMsg>>,
+) -> Result<Response<CustomMsg>, ReflectError> {
+    let state = config(deps.storage).load()?;
+    if info.sender != state.owner {
+        return Err(ReflectError::NotCurrentOwner {
+            expected: state.owner.into(),
+            actual: info.sender.into(),
+        });
+    }
+
+    if msgs.is_empty() {
+        return Err(ReflectError::MessagesEmpty);
+    }
+
+    Ok(Response::new()
+        .add_attribute("action", "reflect_subcall")
+        .add_submessages(msgs))
+}
+
+pub fn try_change_owner(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    new_owner: String,
+) -> Result<Response<CustomMsg>, ReflectError> {
     let api = deps.api;
-    config(&mut deps.storage).update(|mut state| {
-        if api.canonical_address(&env.message.sender)? != state.owner {
-            return Err(StdError::unauthorized());
+    config(deps.storage).update(|mut state| {
+        if info.sender != state.owner {
+            return Err(ReflectError::NotCurrentOwner {
+                expected: state.owner.into(),
+                actual: info.sender.into(),
+            });
         }
-        state.owner = api.canonical_address(&owner)?;
+        state.owner = api.addr_validate(&new_owner)?;
         Ok(state)
     })?;
-    Ok(HandleResponse {
-        log: vec![log("action", "change_owner"), log("owner", owner)],
-        ..HandleResponse::default()
-    })
+    Ok(Response::new()
+        .add_attribute("action", "change_owner")
+        .add_attribute("owner", new_owner))
 }
 
-pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    msg: QueryMsg,
-) -> StdResult<Binary> {
+/// This just stores the result for future query
+#[entry_point]
+pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ReflectError> {
+    let key = msg.id.to_be_bytes();
+    replies(deps.storage).save(&key, &msg)?;
+    Ok(Response::default())
+}
+
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<QueryResponse> {
     match msg {
         QueryMsg::Owner {} => to_binary(&query_owner(deps)?),
-        QueryMsg::ReflectCustom { text } => to_binary(&query_reflect(deps, text)?),
+        QueryMsg::Capitalized { text } => to_binary(&query_capitalized(deps, text)?),
+        QueryMsg::Chain { request } => to_binary(&query_chain(deps, &request)?),
+        QueryMsg::Raw { contract, key } => to_binary(&query_raw(deps, contract, key)?),
+        QueryMsg::SubMsgResult { id } => to_binary(&query_subcall(deps, id)?),
     }
 }
 
-fn query_owner<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<OwnerResponse> {
-    let state = config_read(&deps.storage).load()?;
+fn query_owner(deps: Deps) -> StdResult<OwnerResponse> {
+    let state = config_read(deps.storage).load()?;
     let resp = OwnerResponse {
-        owner: deps.api.human_address(&state.owner)?,
+        owner: state.owner.into(),
     };
     Ok(resp)
 }
 
-fn query_reflect<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    text: String,
-) -> StdResult<CustomResponse> {
-    let req = CustomQuery::Capital { text }.into();
-    deps.querier.custom_query(&req)
+fn query_subcall(deps: Deps, id: u64) -> StdResult<Reply> {
+    let key = id.to_be_bytes();
+    replies_read(deps.storage).load(&key)
+}
+
+fn query_capitalized(deps: Deps, text: String) -> StdResult<CapitalizedResponse> {
+    let req = SpecialQuery::Capitalized { text }.into();
+    let response: SpecialResponse = deps.querier.custom_query(&req)?;
+    Ok(CapitalizedResponse { text: response.msg })
+}
+
+fn query_chain(deps: Deps, request: &QueryRequest<SpecialQuery>) -> StdResult<ChainResponse> {
+    let raw = to_vec(request).map_err(|serialize_err| {
+        StdError::generic_err(format!("Serializing QueryRequest: {}", serialize_err))
+    })?;
+    match deps.querier.raw_query(&raw) {
+        SystemResult::Err(system_err) => Err(StdError::generic_err(format!(
+            "Querier system error: {}",
+            system_err
+        ))),
+        SystemResult::Ok(ContractResult::Err(contract_err)) => Err(StdError::generic_err(format!(
+            "Querier contract error: {}",
+            contract_err
+        ))),
+        SystemResult::Ok(ContractResult::Ok(value)) => Ok(ChainResponse { data: value }),
+    }
+}
+
+fn query_raw(deps: Deps, contract: String, key: Binary) -> StdResult<RawResponse> {
+    let response: Option<Vec<u8>> = deps.querier.query_wasm_raw(contract, key)?;
+    Ok(RawResponse {
+        data: response.unwrap_or_default().into(),
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::testing::mock_dependencies_with_custom_querier;
-    use cosmwasm_std::testing::{mock_env, MOCK_CONTRACT_ADDR};
-    use cosmwasm_std::{coin, coins, BankMsg, Binary, StakingMsg, StdError};
+    use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
+    use cosmwasm_std::{
+        coin, coins, from_binary, AllBalanceResponse, BankMsg, BankQuery, Binary, ContractResult,
+        Event, StakingMsg, StdError, SubMsgExecutionResponse,
+    };
 
     #[test]
-    fn proper_initialization() {
-        let mut deps = mock_dependencies_with_custom_querier(20, &[]);
+    fn proper_instantialization() {
+        let mut deps = mock_dependencies_with_custom_querier(&[]);
 
-        let msg = InitMsg {};
-        let env = mock_env("creator", &coins(1000, "earth"));
+        let msg = InstantiateMsg {};
+        let info = mock_info("creator", &coins(1000, "earth"));
 
         // we can just call .unwrap() to assert this was a success
-        let res = init(&mut deps, env, msg).unwrap();
+        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(0, res.messages.len());
 
         // it worked, let's query the state
-        let value = query_owner(&deps).unwrap();
+        let value = query_owner(deps.as_ref()).unwrap();
         assert_eq!("creator", value.owner.as_str());
     }
 
     #[test]
     fn reflect() {
-        let mut deps = mock_dependencies_with_custom_querier(20, &[]);
+        let mut deps = mock_dependencies_with_custom_querier(&[]);
 
-        let msg = InitMsg {};
-        let env = mock_env("creator", &coins(2, "token"));
-        let _res = init(&mut deps, env, msg).unwrap();
+        let msg = InstantiateMsg {};
+        let info = mock_info("creator", &coins(2, "token"));
+        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         let payload = vec![BankMsg::Send {
-            from_address: HumanAddr::from(MOCK_CONTRACT_ADDR),
-            to_address: HumanAddr::from("friend"),
+            to_address: String::from("friend"),
             amount: coins(1, "token"),
         }
         .into()];
 
-        let msg = HandleMsg::ReflectMsg {
+        let msg = ExecuteMsg::ReflectMsg {
             msgs: payload.clone(),
         };
-        let env = mock_env("creator", &[]);
-        let res = handle(&mut deps, env, msg).unwrap();
+        let info = mock_info("creator", &[]);
+        let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+        let payload: Vec<_> = payload.into_iter().map(SubMsg::new).collect();
         assert_eq!(payload, res.messages);
     }
 
     #[test]
     fn reflect_requires_owner() {
-        let mut deps = mock_dependencies_with_custom_querier(20, &[]);
+        let mut deps = mock_dependencies_with_custom_querier(&[]);
 
-        let msg = InitMsg {};
-        let env = mock_env("creator", &coins(2, "token"));
-        let _res = init(&mut deps, env, msg).unwrap();
+        let msg = InstantiateMsg {};
+        let info = mock_info("creator", &coins(2, "token"));
+        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         // signer is not owner
         let payload = vec![BankMsg::Send {
-            from_address: HumanAddr::from(MOCK_CONTRACT_ADDR),
-            to_address: HumanAddr::from("friend"),
+            to_address: String::from("friend"),
             amount: coins(1, "token"),
         }
         .into()];
-        let msg = HandleMsg::ReflectMsg {
-            msgs: payload.clone(),
-        };
+        let msg = ExecuteMsg::ReflectMsg { msgs: payload };
 
-        let env = mock_env("random", &[]);
-        let res = handle(&mut deps, env, msg);
-        match res {
-            Err(StdError::Unauthorized { .. }) => {}
-            _ => panic!("Must return unauthorized error"),
+        let info = mock_info("random", &[]);
+        let res = execute(deps.as_mut(), mock_env(), info, msg);
+        match res.unwrap_err() {
+            ReflectError::NotCurrentOwner { .. } => {}
+            err => panic!("Unexpected error: {:?}", err),
         }
     }
 
     #[test]
     fn reflect_reject_empty_msgs() {
-        let mut deps = mock_dependencies_with_custom_querier(20, &[]);
+        let mut deps = mock_dependencies_with_custom_querier(&[]);
 
-        let msg = InitMsg {};
-        let env = mock_env("creator", &coins(2, "token"));
-        let _res = init(&mut deps, env, msg).unwrap();
+        let msg = InstantiateMsg {};
+        let info = mock_info("creator", &coins(2, "token"));
+        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-        let env = mock_env("creator", &[]);
+        let info = mock_info("creator", &[]);
         let payload = vec![];
 
-        let msg = HandleMsg::ReflectMsg {
-            msgs: payload.clone(),
-        };
-        let res = handle(&mut deps, env, msg);
-        match res {
-            Err(StdError::GenericErr { msg, .. }) => {
-                assert_eq!(msg, "Must reflect at least one message")
-            }
-            _ => panic!("Must return contract error"),
-        }
+        let msg = ExecuteMsg::ReflectMsg { msgs: payload };
+        let err = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
+        assert_eq!(err, ReflectError::MessagesEmpty);
     }
 
     #[test]
     fn reflect_multiple_messages() {
-        let mut deps = mock_dependencies_with_custom_querier(20, &[]);
+        let mut deps = mock_dependencies_with_custom_querier(&[]);
 
-        let msg = InitMsg {};
-        let env = mock_env("creator", &coins(2, "token"));
-        let _res = init(&mut deps, env, msg).unwrap();
+        let msg = InstantiateMsg {};
+        let info = mock_info("creator", &coins(2, "token"));
+        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         let payload = vec![
             BankMsg::Send {
-                from_address: HumanAddr::from(MOCK_CONTRACT_ADDR),
-                to_address: HumanAddr::from("friend"),
+                to_address: String::from("friend"),
                 amount: coins(1, "token"),
             }
             .into(),
@@ -213,68 +272,185 @@ mod tests {
             CustomMsg::Raw(Binary(b"{\"foo\":123}".to_vec())).into(),
             CustomMsg::Debug("Hi, Dad!".to_string()).into(),
             StakingMsg::Delegate {
-                validator: HumanAddr::from("validator"),
+                validator: String::from("validator"),
                 amount: coin(100, "ustake"),
             }
             .into(),
         ];
 
-        let msg = HandleMsg::ReflectMsg {
+        let msg = ExecuteMsg::ReflectMsg {
             msgs: payload.clone(),
         };
-        let env = mock_env("creator", &[]);
-        let res = handle(&mut deps, env, msg).unwrap();
+        let info = mock_info("creator", &[]);
+        let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+        let payload: Vec<_> = payload.into_iter().map(SubMsg::new).collect();
         assert_eq!(payload, res.messages);
     }
 
     #[test]
-    fn transfer() {
-        let mut deps = mock_dependencies_with_custom_querier(20, &[]);
+    fn change_owner_works() {
+        let mut deps = mock_dependencies_with_custom_querier(&[]);
 
-        let msg = InitMsg {};
-        let env = mock_env("creator", &coins(2, "token"));
-        let _res = init(&mut deps, env, msg).unwrap();
+        let msg = InstantiateMsg {};
+        let info = mock_info("creator", &coins(2, "token"));
+        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-        let env = mock_env("creator", &[]);
-        let new_owner = HumanAddr::from("friend");
-        let msg = HandleMsg::ChangeOwner {
-            owner: new_owner.clone(),
-        };
-        let res = handle(&mut deps, env, msg).unwrap();
+        let info = mock_info("creator", &[]);
+        let new_owner = String::from("friend");
+        let msg = ExecuteMsg::ChangeOwner { owner: new_owner };
+        let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         // should change state
         assert_eq!(0, res.messages.len());
-        let value = query_owner(&deps).unwrap();
+        let value = query_owner(deps.as_ref()).unwrap();
         assert_eq!("friend", value.owner.as_str());
     }
 
     #[test]
-    fn transfer_requires_owner() {
-        let mut deps = mock_dependencies_with_custom_querier(20, &[]);
+    fn change_owner_requires_current_owner_as_sender() {
+        let mut deps = mock_dependencies_with_custom_querier(&[]);
 
-        let msg = InitMsg {};
-        let env = mock_env("creator", &coins(2, "token"));
-        let _res = init(&mut deps, env, msg).unwrap();
+        let msg = InstantiateMsg {};
+        let creator = String::from("creator");
+        let info = mock_info(&creator, &coins(2, "token"));
+        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-        let env = mock_env("random", &[]);
-        let new_owner = HumanAddr::from("friend");
-        let msg = HandleMsg::ChangeOwner {
-            owner: new_owner.clone(),
+        let random = String::from("random");
+        let info = mock_info(&random, &[]);
+        let new_owner = String::from("friend");
+        let msg = ExecuteMsg::ChangeOwner { owner: new_owner };
+
+        let err = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
+        assert_eq!(
+            err,
+            ReflectError::NotCurrentOwner {
+                expected: creator,
+                actual: random
+            }
+        );
+    }
+
+    #[test]
+    fn change_owner_errors_for_invalid_new_address() {
+        let mut deps = mock_dependencies_with_custom_querier(&[]);
+        let creator = String::from("creator");
+
+        let msg = InstantiateMsg {};
+        let info = mock_info(&creator, &coins(2, "token"));
+        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+        let info = mock_info(&creator, &[]);
+        let msg = ExecuteMsg::ChangeOwner {
+            owner: String::from("x"),
         };
-
-        let res = handle(&mut deps, env, msg);
-        match res {
-            Err(StdError::Unauthorized { .. }) => {}
-            _ => panic!("Must return unauthorized error"),
+        let err = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
+        match err {
+            ReflectError::Std(StdError::GenericErr { msg, .. }) => {
+                assert!(msg.contains("human address too short"))
+            }
+            e => panic!("Unexpected error: {:?}", e),
         }
     }
 
     #[test]
-    fn dispatch_custom_query() {
-        let deps = mock_dependencies_with_custom_querier(20, &[]);
+    fn capitalized_query_works() {
+        let deps = mock_dependencies_with_custom_querier(&[]);
 
-        // we don't even initialize, just trigger a query
-        let value = query_reflect(&deps, "demo one".to_string()).unwrap();
-        assert_eq!(value.msg, "DEMO ONE");
+        let msg = QueryMsg::Capitalized {
+            text: "demo one".to_string(),
+        };
+        let response = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let value: CapitalizedResponse = from_binary(&response).unwrap();
+        assert_eq!(value.text, "DEMO ONE");
+    }
+
+    #[test]
+    fn chain_query_works() {
+        let deps = mock_dependencies_with_custom_querier(&coins(123, "ucosm"));
+
+        // with bank query
+        let msg = QueryMsg::Chain {
+            request: BankQuery::AllBalances {
+                address: MOCK_CONTRACT_ADDR.to_string(),
+            }
+            .into(),
+        };
+        let response = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let outer: ChainResponse = from_binary(&response).unwrap();
+        let inner: AllBalanceResponse = from_binary(&outer.data).unwrap();
+        assert_eq!(inner.amount, coins(123, "ucosm"));
+
+        // with custom query
+        let msg = QueryMsg::Chain {
+            request: SpecialQuery::Ping {}.into(),
+        };
+        let response = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let outer: ChainResponse = from_binary(&response).unwrap();
+        let inner: SpecialResponse = from_binary(&outer.data).unwrap();
+        assert_eq!(inner.msg, "pong");
+    }
+
+    #[test]
+    fn reflect_subcall() {
+        let mut deps = mock_dependencies_with_custom_querier(&[]);
+
+        let msg = InstantiateMsg {};
+        let info = mock_info("creator", &coins(2, "token"));
+        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+        let id = 123u64;
+        let payload = SubMsg::reply_always(
+            BankMsg::Send {
+                to_address: String::from("friend"),
+                amount: coins(1, "token"),
+            },
+            id,
+        );
+
+        let msg = ExecuteMsg::ReflectSubMsg {
+            msgs: vec![payload.clone()],
+        };
+        let info = mock_info("creator", &[]);
+        let mut res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+        assert_eq!(1, res.messages.len());
+        let msg = res.messages.pop().expect("must have a message");
+        assert_eq!(payload, msg);
+    }
+
+    // this mocks out what happens after reflect_subcall
+    #[test]
+    fn reply_and_query() {
+        let mut deps = mock_dependencies_with_custom_querier(&[]);
+
+        let msg = InstantiateMsg {};
+        let info = mock_info("creator", &coins(2, "token"));
+        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+        let id = 123u64;
+        let data = Binary::from(b"foobar");
+        let events = vec![Event::new("message").add_attribute("signer", "caller-addr")];
+        let result = ContractResult::Ok(SubMsgExecutionResponse {
+            events: events.clone(),
+            data: Some(data.clone()),
+        });
+        let subcall = Reply { id, result };
+        let res = reply(deps.as_mut(), mock_env(), subcall).unwrap();
+        assert_eq!(0, res.messages.len());
+
+        // query for a non-existant id
+        let qres = query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::SubMsgResult { id: 65432 },
+        );
+        assert!(qres.is_err());
+
+        // query for the real id
+        let raw = query(deps.as_ref(), mock_env(), QueryMsg::SubMsgResult { id }).unwrap();
+        let qres: Reply = from_binary(&raw).unwrap();
+        assert_eq!(qres.id, id);
+        let result = qres.result.unwrap();
+        assert_eq!(result.data, Some(data));
+        assert_eq!(result.events, events);
     }
 }

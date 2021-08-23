@@ -6,37 +6,40 @@
 /// The second module should export three functions with the following signatures:
 /// ```
 /// # use cosmwasm_std::{
-/// #     Storage, Api, Querier, Extern, Env, StdResult, Binary,
-/// #     InitResult, HandleResult, QueryResult,
+/// #     Storage, Api, Querier, DepsMut, Deps, Env, StdError, MessageInfo,
+/// #     Response, QueryResponse,
 /// # };
 /// #
-/// # type InitMsg = ();
-/// pub fn init<S: Storage, A: Api, Q: Querier>(
-///     deps: &mut Extern<S, A, Q>,
+/// # type InstantiateMsg = ();
+/// pub fn instantiate(
+///     deps: DepsMut,
 ///     env: Env,
-///     msg: InitMsg,
-/// ) -> InitResult {
+///     info: MessageInfo,
+///     msg: InstantiateMsg,
+/// ) -> Result<Response, StdError> {
 /// #   Ok(Default::default())
 /// }
 ///
-/// # type HandleMsg = ();
-/// pub fn handle<S: Storage, A: Api, Q: Querier>(
-///     deps: &mut Extern<S, A, Q>,
+/// # type ExecuteMsg = ();
+/// pub fn execute(
+///     deps: DepsMut,
 ///     env: Env,
-///     msg: HandleMsg,
-/// ) -> HandleResult {
+///     info: MessageInfo,
+///     msg: ExecuteMsg,
+/// ) -> Result<Response, StdError> {
 /// #   Ok(Default::default())
 /// }
 ///
 /// # type QueryMsg = ();
-/// pub fn query<S: Storage, A: Api, Q: Querier>(
-///     deps: &Extern<S, A, Q>,
+/// pub fn query(
+///     deps: Deps,
+///     env: Env,
 ///     msg: QueryMsg,
-/// ) -> QueryResult {
-/// #   Ok(Binary(Vec::new()))
+/// ) -> Result<QueryResponse, StdError> {
+/// #   Ok(Default::default())
 /// }
 /// ```
-/// Where `InitMsg`, `HandleMsg`, and `QueryMsg` are types that implement `DeserializeOwned + JsonSchema`
+/// where `InstantiateMsg`, `ExecuteMsg`, and `QueryMsg` are types that implement `DeserializeOwned + JsonSchema`.
 ///
 /// # Example
 ///
@@ -50,11 +53,7 @@ macro_rules! create_entry_points {
     (@migration; $contract:ident, true) => {
         #[no_mangle]
         extern "C" fn migrate(env_ptr: u32, msg_ptr: u32) -> u32 {
-            do_migrate(
-                &$contract::migrate::<ExternalStorage, ExternalApi, ExternalQuerier>,
-                env_ptr,
-                msg_ptr,
-            )
+            do_migrate(&$contract::migrate, env_ptr, msg_ptr)
         }
     };
 
@@ -63,40 +62,26 @@ macro_rules! create_entry_points {
     (@inner; $contract:ident, migration = $migration:tt) => {
         mod wasm {
             use super::$contract;
-            use cosmwasm_std::{
-                do_handle, do_init, do_migrate, do_query, ExternalApi, ExternalQuerier,
-                ExternalStorage,
-            };
+            use cosmwasm_std::{do_execute, do_instantiate, do_migrate, do_query};
 
             #[no_mangle]
-            extern "C" fn init(env_ptr: u32, msg_ptr: u32) -> u32 {
-                do_init(
-                    &$contract::init::<ExternalStorage, ExternalApi, ExternalQuerier>,
-                    env_ptr,
-                    msg_ptr,
-                )
+            extern "C" fn instantiate(env_ptr: u32, info_ptr: u32, msg_ptr: u32) -> u32 {
+                do_instantiate(&$contract::instantiate, env_ptr, info_ptr, msg_ptr)
             }
 
             #[no_mangle]
-            extern "C" fn handle(env_ptr: u32, msg_ptr: u32) -> u32 {
-                do_handle(
-                    &$contract::handle::<ExternalStorage, ExternalApi, ExternalQuerier>,
-                    env_ptr,
-                    msg_ptr,
-                )
+            extern "C" fn execute(env_ptr: u32, info_ptr: u32, msg_ptr: u32) -> u32 {
+                do_execute(&$contract::execute, env_ptr, info_ptr, msg_ptr)
             }
 
             #[no_mangle]
-            extern "C" fn query(msg_ptr: u32) -> u32 {
-                do_query(
-                    &$contract::query::<ExternalStorage, ExternalApi, ExternalQuerier>,
-                    msg_ptr,
-                )
+            extern "C" fn query(env_ptr: u32, msg_ptr: u32) -> u32 {
+                do_query(&$contract::query, env_ptr, msg_ptr)
             }
 
             $crate::create_entry_points!(@migration; $contract, $migration);
 
-            // Other C externs like cosmwasm_vm_version_3, allocate, deallocate are available
+            // Other C externs like interface_version_7, allocate, deallocate are available
             // automatically because we `use cosmwasm_std`.
         }
     };
@@ -109,18 +94,18 @@ macro_rules! create_entry_points {
 /// This macro is very similar to the `create_entry_points` macro, except it also requires the `migrate` method:
 /// ```
 /// # use cosmwasm_std::{
-/// #     Storage, Api, Querier, Extern, Env, StdResult, Binary, MigrateResult,
+/// #     Storage, Api, Querier, DepsMut, Env, StdError, Response, MessageInfo,
 /// # };
 /// # type MigrateMsg = ();
-/// pub fn migrate<S: Storage, A: Api, Q: Querier>(
-///     deps: &mut Extern<S, A, Q>,
+/// pub fn migrate(
+///     deps: DepsMut,
 ///     _env: Env,
 ///     msg: MigrateMsg,
-/// ) -> MigrateResult {
+/// ) -> Result<Response, StdError> {
 /// #   Ok(Default::default())
 /// }
 /// ```
-/// Where `MigrateMsg` is a type that implements `DeserializeOwned + JsonSchema`
+/// where `MigrateMsg` is a type that implements `DeserializeOwned + JsonSchema`.
 ///
 /// # Example
 ///

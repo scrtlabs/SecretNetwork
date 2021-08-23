@@ -1,5 +1,6 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 use crate::math::Uint128;
 
@@ -10,21 +11,66 @@ pub struct Coin {
 }
 
 impl Coin {
-    pub fn new(amount: u128, denom: &str) -> Self {
+    pub fn new(amount: u128, denom: impl Into<String>) -> Self {
         Coin {
-            amount: Uint128(amount),
-            denom: denom.to_string(),
+            amount: Uint128::new(amount),
+            denom: denom.into(),
         }
     }
 }
 
-// coins is a shortcut constructor for a set of one denomination of coins
-pub fn coins(amount: u128, denom: &str) -> Vec<Coin> {
+impl fmt::Display for Coin {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // We use the formatting without a space between amount and denom,
+        // which is common in the Cosmos SDK ecosystem:
+        // https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/types/coin.go#L643-L645
+        // For communication to end users, Coin needs to transformed anways (e.g. convert integer uatom to decimal ATOM).
+        write!(f, "{}{}", self.amount, self.denom)
+    }
+}
+
+/// A shortcut constructor for a set of one denomination of coins
+///
+/// # Examples
+///
+/// ```
+/// # use cosmwasm_std::{coins, BankMsg, CosmosMsg, Response, SubMsg};
+/// # use cosmwasm_std::testing::{mock_env, mock_info};
+/// # let env = mock_env();
+/// # let info = mock_info("sender", &[]);
+/// let tip = coins(123, "ucosm");
+///
+/// let mut response: Response = Default::default();
+/// response.messages = vec![SubMsg::new(BankMsg::Send {
+///   to_address: info.sender.into(),
+///   amount: tip,
+/// })];
+/// ```
+pub fn coins(amount: u128, denom: impl Into<String>) -> Vec<Coin> {
     vec![coin(amount, denom)]
 }
 
-// coin is a shorthand constructor for Coin
-pub fn coin(amount: u128, denom: &str) -> Coin {
+/// A shorthand constructor for Coin
+///
+/// # Examples
+///
+/// ```
+/// # use cosmwasm_std::{coin, BankMsg, CosmosMsg, Response, SubMsg};
+/// # use cosmwasm_std::testing::{mock_env, mock_info};
+/// # let env = mock_env();
+/// # let info = mock_info("sender", &[]);
+/// let tip = vec![
+///     coin(123, "ucosm"),
+///     coin(24, "ustake"),
+/// ];
+///
+/// let mut response: Response = Default::default();
+/// response.messages = vec![SubMsg::new(BankMsg::Send {
+///     to_address: info.sender.into(),
+///     amount: tip,
+/// })];
+/// ```
+pub fn coin(amount: u128, denom: impl Into<String>) -> Coin {
     Coin::new(amount, denom)
 }
 
@@ -38,8 +84,80 @@ pub fn has_coins(coins: &[Coin], required: &Coin) -> bool {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
+
+    #[test]
+    fn coin_implements_display() {
+        let a = Coin {
+            amount: Uint128::new(123),
+            denom: "ucosm".to_string(),
+        };
+
+        let embedded = format!("Amount: {}", a);
+        assert_eq!(embedded, "Amount: 123ucosm");
+        assert_eq!(a.to_string(), "123ucosm");
+    }
+
+    #[test]
+    fn coin_works() {
+        let a = coin(123, "ucosm");
+        assert_eq!(
+            a,
+            Coin {
+                amount: Uint128::new(123),
+                denom: "ucosm".to_string()
+            }
+        );
+
+        let zero = coin(0, "ucosm");
+        assert_eq!(
+            zero,
+            Coin {
+                amount: Uint128::new(0),
+                denom: "ucosm".to_string()
+            }
+        );
+
+        let string_denom = coin(42, String::from("ucosm"));
+        assert_eq!(
+            string_denom,
+            Coin {
+                amount: Uint128::new(42),
+                denom: "ucosm".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn coins_works() {
+        let a = coins(123, "ucosm");
+        assert_eq!(
+            a,
+            vec![Coin {
+                amount: Uint128::new(123),
+                denom: "ucosm".to_string()
+            }]
+        );
+
+        let zero = coins(0, "ucosm");
+        assert_eq!(
+            zero,
+            vec![Coin {
+                amount: Uint128::new(0),
+                denom: "ucosm".to_string()
+            }]
+        );
+
+        let string_denom = coins(42, String::from("ucosm"));
+        assert_eq!(
+            string_denom,
+            vec![Coin {
+                amount: Uint128::new(42),
+                denom: "ucosm".to_string()
+            }]
+        );
+    }
 
     #[test]
     fn has_coins_matches() {

@@ -4,7 +4,1080 @@ This guide explains what is needed to upgrade contracts when migrating over
 major releases of `cosmwasm`. Note that you can also view the
 [complete CHANGELOG](./CHANGELOG.md) to understand the differences.
 
+## 0.15 -> 0.16
+
+- Update CosmWasm dependencies in Cargo.toml (skip the ones you don't use):
+
+  ```
+  [dependencies]
+  cosmwasm-std = "0.16.0"
+  cosmwasm-storage = "0.16.0"
+  # ...
+
+  [dev-dependencies]
+  cosmwasm-schema = "0.16.0"
+  cosmwasm-vm = "0.16.0"
+  # ...
+  ```
+
+- The `attr` function now accepts arguments that implement `Into<String>` rather
+  than `ToString`. This means that "stringly" types like `&str` are still
+  accepted, but others (like numbers or booleans) have to be explicitly
+  converted to strings; you can use the `to_string` method (from the
+  `std::string::ToString` trait) for that.
+
+  ```diff
+    let steal_funds = true;
+  - attr("steal_funds", steal_funds),
+  + attr("steal_funds", steal_funds.to_string()),
+  ```
+
+  It also means that `&&str` is no longer accepted.
+
+- The `iterator` feature in `cosmwasm-std`, `cosmwasm-vm` and `cosmwasm-storage`
+  is now enabled by default. If you want to use it, you don't have to explicitly
+  enable it anymore.
+
+  If you don't want to use it, you **have to** disable default features when
+  depending on `cosmwasm-std`. Example:
+
+  ```diff
+  - cosmwasm-std = { version = "0.15.0" }
+  + cosmwasm-std = { version = "0.16.0", default-features = false }
+  ```
+
+- The `Event::attr` setter has been renamed to `Event::add_attribute` - this is
+  for consistency with other types, like `Response`.
+
+  ```diff
+  - let event = Event::new("ibc").attr("channel", "connect");
+  + let event = Event::new("ibc").add_attribute("channel", "connect");
+  ```
+
+- `Response` can no longer be built using a struct literal. Please use
+  `Response::new` as well as relevant
+  [builder-style setters](https://github.com/CosmWasm/cosmwasm/blob/402e3281ff5bc1cd7b4b3e36c2bb9914f07eaaf6/packages/std/src/results/response.rs#L103-L167)
+  to set the data.
+
+  This is a step toward better API stability.
+
+  ```diff
+    #[entry_point]
+    pub fn migrate(deps: DepsMut, env: Env, msg: MigrateMsg) -> StdResult<Response> {
+        // ...
+
+        let send = BankMsg::Send {
+            to_address: msg.payout.clone(),
+            amount: balance,
+        };
+        let data_msg = format!("burnt {} keys", count).into_bytes();
+
+  -     Ok(Response {
+  -         messages: vec![SubMsg::new(send)],
+  -         attributes: vec![attr("action", "burn"), attr("payout", msg.payout)],
+  -         events: vec![],
+  -         data: Some(data_msg.into()),
+  -     })
+  +     Ok(Response::new()
+  +         .add_message(send)
+  +         .add_attribute("action", "burn")
+  +         .add_attribute("payout", msg.payout)
+  +         .set_data(data_msg))
+    }
+  ```
+
+  ```diff
+  - Ok(Response {
+  -     data: Some((old_size as u32).to_be_bytes().into()),
+  -     ..Response::default()
+  - })
+  + Ok(Response::new().set_data((old_size as u32).to_be_bytes()))
+  ```
+
+  ```diff
+  - let res = Response {
+  -     messages: msgs,
+  -     attributes: vec![attr("action", "reflect_subcall")],
+  -     events: vec![],
+  -     data: None,
+  - };
+  - Ok(res)
+  + Ok(Response::new()
+  +     .add_attribute("action", "reflect_subcall")
+  +     .add_submessages(msgs))
+  ```
+
+- For IBC-enabled contracts only: constructing `IbcReceiveResponse` and
+  `IbcBasicResponse` follows the same principles now as `Response` above.
+
+  ```diff
+    pub fn ibc_packet_receive(
+        deps: DepsMut,
+        env: Env,
+        msg: IbcPacketReceiveMsg,
+    ) -> StdResult<IbcReceiveResponse> {
+        // ...
+
+  -     Ok(IbcReceiveResponse {
+  -         acknowledgement,
+  -         messages: vec![],
+  -         attributes: vec![],
+  -         events: vec![Event::new("ibc").attr("packet", "receive")],
+  -     })
+  +     Ok(IbcReceiveResponse::new()
+  +         .set_ack(acknowledgement)
+  +         .add_event(Event::new("ibc").add_attribute("packet", "receive")))
+    }
+  ```
+
+- For IBC-enabled contracts only: IBC entry points have different signatures.
+  Instead of accepting bare packets, channels and acknowledgements, all of those
+  are wrapped in a `Msg` type specific to the given entry point. Channels,
+  packets and acknowledgements have to be unpacked from those.
+
+  ```diff
+    #[entry_point]
+  - pub fn ibc_channel_open(_deps: DepsMut, _env: Env, channel: IbcChannel) -> StdResult<()> {
+  + pub fn ibc_channel_open(_deps: DepsMut, _env: Env, msg: IbcChannelOpenMsg) -> StdResult<()> {
+  +     let channel = msg.channel();
+
+        // do things
+    }
+  ```
+
+  ```diff
+    #[entry_point]
+    pub fn ibc_channel_connect(
+        deps: DepsMut,
+        env: Env,
+  -     channel: IbcChannel,
+  +     msg: IbcChannelConnectMsg,
+    ) -> StdResult<IbcBasicResponse> {
+  +     let channel = msg.channel();
+
+        // do things
+    }
+  ```
+
+  ```diff
+    #[entry_point]
+    pub fn ibc_channel_close(
+        deps: DepsMut,
+        env: Env,
+  -     channel: IbcChannel,
+  +     msg: IbcChannelCloseMsg,
+    ) -> StdResult<IbcBasicResponse> {
+  +     let channel = msg.channel();
+
+        // do things
+    }
+  ```
+
+  ```diff
+    #[entry_point]
+    pub fn ibc_packet_receive(
+        deps: DepsMut,
+        env: Env,
+  -     packet: IbcPacket,
+  +     msg: IbcPacketReceiveMsg,
+    ) -> StdResult<IbcReceiveResponse> {
+  +     let packet = msg.packet;
+
+        // do things
+    }
+  ```
+
+  ```diff
+    #[entry_point]
+    pub fn ibc_packet_receive(
+        deps: DepsMut,
+        env: Env,
+  -     ack: IbcAcknowledgementWithPacket,
+  +     msg: IbcPacketReceiveMsg,
+    ) -> StdResult<IbcBasicResponse> {
+        // They are the same struct just a different name
+        let ack = msg;
+
+        // do things
+    }
+  ```
+
+  ```diff
+    #[entry_point]
+    pub fn ibc_packet_timeout(
+        deps: DepsMut,
+        env: Env,
+  -     packet: IbcPacket,
+  +     msg: IbcPacketTimeoutMsg,
+    ) -> StdResult<IbcBasicResponse> {
+  +     let packet = msg.packet;
+
+        // do things
+    }
+  ```
+
+## 0.14 -> 0.15
+
+- Update CosmWasm dependencies in Cargo.toml (skip the ones you don't use):
+
+  ```
+  [dependencies]
+  cosmwasm-std = "0.15.0"
+  cosmwasm-storage = "0.15.0"
+  # ...
+
+  [dev-dependencies]
+  cosmwasm-schema = "0.15.0"
+  cosmwasm-vm = "0.15.0"
+  # ...
+  ```
+
+- Combine `messages` and `submessages` on the `Response` object. The new format
+  uses `messages: Vec<SubMsg<T>>`, so copy `submessages` content, and wrap old
+  messages using `SubMsg::new`. Here is how to change messages:
+
+  ```rust
+  let send = BankMsg::Send { to_address, amount };
+
+  // before
+  let res = Response {
+    messages: vec![send.into()],
+    ..Response::default()
+  }
+
+  // after
+  let res = Response {
+    messages: vec![SubMsg::new(send)],
+    ..Response::default()
+  }
+
+  // alternate approach
+  let mut res = Response::new();
+  res.add_message(send);
+  ```
+
+  And here is how to change submessages:
+
+  ```rust
+  // before
+  let sub_msg = SubMsg {
+    id: INIT_CALLBACK_ID,
+    msg: msg.into(),
+    gas_limit: None,
+    reply_on: ReplyOn::Success,
+  };
+  let res = Response {
+    submessages: vec![sub_msg],
+    ..Response::default()
+  };
+
+  // after
+  let msg = SubMsg::reply_on_success(msg, INIT_CALLBACK_ID);
+  let res = Response {
+    messages: vec![msg],
+    ..Response::default()
+  };
+
+  // alternate approach
+  let msg = SubMsg::reply_on_success(msg, INIT_CALLBACK_ID);
+  let mut res = Response::new();
+  res.add_submessage(msg);
+  ```
+
+  Note that this means you can mix "messages" and "submessages" in any execution
+  order. You are no more restricted to doing "submessages" first.
+
+- Rename the `send` field to `funds` whenever constructing a `WasmMsg::Execute`
+  or `WasmMsg::Instantiate` value.
+
+  ```diff
+    let exec = WasmMsg::Execute {
+        contract_addr: coin.address.into(),
+        msg: to_binary(&msg)?,
+  -     send: vec![],
+  +     funds: vec![],
+    };
+  ```
+
+- `Uint128` field can no longer be constructed using a struct literal. Call
+  `Uint128::new` (or `Uint128::zero`) instead.
+
+  ```diff
+  - const TOKENS_PER_WEIGHT: Uint128 = Uint128(1_000);
+  - const MIN_BOND: Uint128 = Uint128(5_000);
+  + const TOKENS_PER_WEIGHT: Uint128 = Uint128::new(1_000);
+  + const MIN_BOND: Uint128 = Uint128::new(5_000);
+  ```
+
+  ```diff
+  - assert_eq!(escrow_balance, Uint128(0));
+  + assert_eq!(escrow_balance, Uint128::zero());
+  ```
+
+- If constructing a `Response` using struct literal syntax, add the `events`
+  field.
+
+  ```diff
+    Ok(Response {
+        messages: vec![],
+        attributes,
+  +     events: vec![],
+        data: None,
+    })
+  ```
+
+- For IBC-enabled contracts only: You need to adapt to the new
+  `IbcAcknowledgementWithPacket` structure and use the embedded `data` field:
+
+  ```rust
+  // before
+  pub fn ibc_packet_ack(
+    deps: DepsMut,
+    env: Env,
+    ack: IbcAcknowledgement,
+  ) -> StdResult<Response> {
+    let res: AcknowledgementMsg = from_slice(&ack.acknowledgement)?;
+    // ...
+  }
+
+  // after
+  pub fn ibc_packet_ack(
+    deps: DepsMut,
+    env: Env,
+    ack: IbcAcknowledgementWithPacket,
+  ) -> StdResult<Response> {
+    let res: AcknowledgementMsg = from_slice(&ack.acknowledgement.data)?;
+    // ...
+  }
+  ```
+
+  You also need to update the constructors in test code. Below we show how to do
+  so both for JSON data as well as any custom binary format:
+
+  ```rust
+  // before (JSON)
+  let ack = IbcAcknowledgement {
+    acknowledgement: to_binary(&AcknowledgementMsg::Ok(())).unwrap()
+    original_packet: packet,
+  };
+
+  // after (JSON)
+  let ack = IbcAcknowledgementWithPacket {
+      acknowledgement: IbcAcknowledgement::encode_json(&AcknowledgementMsg::Ok(())).unwrap(),
+      original_packet: packet,
+  };
+
+  // before (Custom binary data)
+  let acknowledgement = vec![12, 56, 78];
+  let ack = IbcAcknowledgement {
+    acknowledgement: Binary(acknowledgement),
+    original_packet: packet,
+  };
+
+  // after (Custom binary data)
+  let acknowledgement = vec![12, 56, 78];
+  let ack = IbcAcknowledgement {
+    acknowledgement: IbcAcknowledgement::new(acknowledgement),
+    original_packet: packet,
+  };
+  ```
+
+## 0.13 -> 0.14
+
+- The minimum Rust supported version for 0.14 is 1.51.0. Verify your Rust
+  version is >= 1.51.0 with: `rustc --version`
+
+- Update CosmWasm and schemars dependencies in Cargo.toml (skip the ones you
+  don't use):
+
+  ```
+  [dependencies]
+  cosmwasm-std = "0.14.0"
+  cosmwasm-storage = "0.14.0"
+  schemars = "0.8.1"
+  # ...
+
+  [dev-dependencies]
+  cosmwasm-schema = "0.14.0"
+  cosmwasm-vm = "0.14.0"
+  # ...
+  ```
+
+- Rename the `init` entry point to `instantiate`. Also, rename `InitMsg` to
+  `InstantiateMsg`.
+
+- Rename the `handle` entry point to `execute`. Also, rename `HandleMsg` to
+  `ExecuteMsg`.
+
+- Rename `InitResponse`, `HandleResponse` and `MigrateResponse` to `Response`.
+  The old names are still supported (with a deprecation warning), and will be
+  removed in the next version. Also, you'll need to add the `submessages` field
+  to `Response`.
+
+- Remove `from_address` from `BankMsg::Send`, which is now automatically filled
+  with the contract address:
+
+  ```rust
+  // before
+  ctx.add_message(BankMsg::Send {
+      from_address: env.contract.address,
+      to_address: to_addr,
+      amount: balance,
+  });
+
+  // after
+  ctx.add_message(BankMsg::Send {
+      to_address: to_addr,
+      amount: balance,
+  });
+  ```
+
+- Use the new entry point system. From `lib.rs` remove
+
+  ```rust
+  #[cfg(target_arch = "wasm32")]
+  cosmwasm_std::create_entry_points!(contract);
+
+  // or
+
+  #[cfg(target_arch = "wasm32")]
+  cosmwasm_std::create_entry_points_with_migration!(contract);
+  ```
+
+  Then add the macro attribute `#[entry_point]` to your `contract.rs` as
+  follows:
+
+  ```rust
+  use cosmwasm_std::{entry_point, … };
+
+  // …
+
+  #[entry_point]
+  pub fn init(
+      _deps: DepsMut,
+      _env: Env,
+      _info: MessageInfo,
+      _msg: InitMsg,
+  ) -> StdResult<Response> {
+      // …
+  }
+
+  #[entry_point]
+  pub fn execute(
+      _deps: DepsMut,
+      _env: Env,
+      _info: MessageInfo,
+      _msg: ExecuteMsg,
+  ) -> StdResult<Response> {
+      // …
+  }
+
+  // only if you have migrate
+  #[entry_point]
+  pub fn migrate(
+      deps: DepsMut,
+      env: Env,
+      _info: MessageInfo,
+      msg: MigrateMsg,
+  ) -> StdResult<Response> {
+      // …
+  }
+
+  #[entry_point]
+  pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<QueryResponse> {
+      // …
+  }
+  ```
+
+- Since `Response` contains a `data` field, converting `Context` into `Response`
+  always succeeds.
+
+  ```rust
+  // before
+  pub fn init(deps: DepsMut, env: Env, info: MessageInfo, msg: InitMsg) -> Result<InitResponse, HackError> {
+      // …
+      let mut ctx = Context::new();
+      ctx.add_attribute("Let the", "hacking begin");
+      Ok(ctx.try_into()?)
+  }
+
+  // after
+  pub fn init(deps: DepsMut, env: Env, info: MessageInfo, msg: InitMsg) -> Result<Response, HackError> {
+      // …
+      let mut ctx = Context::new();
+      ctx.add_attribute("Let the", "hacking begin");
+      Ok(ctx.into())
+  }
+  ```
+
+- Remove the `info: MessageInfo` field from the `migrate` entry point:
+
+  ```rust
+  // Before
+  pub fn migrate(
+      deps: DepsMut,
+      env: Env,
+      _info: MessageInfo,
+      msg: MigrateMsg,
+  ) -> StdResult<MigrateResponse> {
+    // ...
+  }
+
+  // After
+  pub fn migrate(deps: DepsMut, env: Env, msg: MigrateMsg) -> StdResult<Response> {
+    // ...
+  }
+  ```
+
+  `MessageInfo::funds` was always empty since [MsgMigrateContract] does not have
+  a funds field. `MessageInfo::sender` should not be needed for authentication
+  because the chain checks permissions before calling `migrate`. If the sender's
+  address is needed for anything else, this should be expressed as part of the
+  migrate message.
+
+  [msgmigratecontract]:
+    https://github.com/CosmWasm/wasmd/blob/v0.15.0/x/wasm/internal/types/tx.proto#L86-L96
+
+- Add mutating helper methods to `Response` that can be used instead of creating
+  a `Context` that is later converted to a response:
+
+  ```rust
+  // before
+  pub fn handle_impl(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+      // ...
+
+      // release counter_offer to creator
+      let mut ctx = Context::new();
+      ctx.add_message(BankMsg::Send {
+          to_address: state.creator,
+          amount: state.counter_offer,
+      });
+
+      // release collateral to sender
+      ctx.add_message(BankMsg::Send {
+          to_address: state.owner,
+          amount: state.collateral,
+      });
+
+      // ..
+
+      ctx.add_attribute("action", "execute");
+      Ok(ctx.into())
+  }
+
+
+  // after
+  pub fn execute_impl(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+      // ...
+
+      // release counter_offer to creator
+      let mut resp = Response::new();
+      resp.add_message(BankMsg::Send {
+          to_address: state.creator,
+          amount: state.counter_offer,
+      });
+
+      // release collateral to sender
+      resp.add_message(BankMsg::Send {
+          to_address: state.owner,
+          amount: state.collateral,
+      });
+
+      // ..
+
+      resp.add_attribute("action", "execute");
+      Ok(resp)
+  }
+  ```
+
+- Use type `Pair` instead of `KV`
+
+  ```rust
+  // before
+  use cosmwasm_std::KV;
+
+  // after
+  use cosmwasm_std::Pair;
+  ```
+
+- If necessary, add a wildcard arm to the `match` of now non-exhaustive message
+  types `BankMsg`, `BankQuery`, `WasmMsg` and `WasmQuery`.
+
+- `HumanAddr` has been deprecated in favour of simply `String`. It never added
+  any significant safety bonus over `String` and was just a marker type. The new
+  type `Addr` was created to hold validated addresses. Those can be created via
+  `Addr::unchecked`, `Api::addr_validate`, `Api::addr_humanize` and JSON
+  deserialization. In order to maintain type safety, deserialization into `Addr`
+  must only be done from trusted sources like a contract's state or a query
+  response. User inputs must be deserialized into `String`. This new `Addr` type
+  makes it easy to use human readable addresses in state:
+
+  With pre-validated `Addr` from `MessageInfo`:
+
+  ```rust
+  // before
+  pub struct State {
+      pub owner: CanonicalAddr,
+  }
+
+  let state = State {
+      owner: deps.api.canonical_address(&info.sender /* of type HumanAddr */)?,
+  };
+
+
+  // after
+  pub struct State {
+      pub owner: Addr,
+  }
+  let state = State {
+      owner: info.sender.clone() /* of type Addr */,
+  };
+  ```
+
+  With user input in `msg`:
+
+  ```rust
+  // before
+  pub struct State {
+      pub verifier: CanonicalAddr,
+      pub beneficiary: CanonicalAddr,
+      pub funder: CanonicalAddr,
+  }
+
+  deps.storage.set(
+      CONFIG_KEY,
+      &to_vec(&State {
+          verifier: deps.api.canonical_address(&msg.verifier /* of type HumanAddr */)?,
+          beneficiary: deps.api.canonical_address(&msg.beneficiary /* of type HumanAddr */)?,
+          funder: deps.api.canonical_address(&info.sender /* of type HumanAddr */)?,
+      })?,
+  );
+
+  // after
+  pub struct State {
+      pub verifier: Addr,
+      pub beneficiary: Addr,
+      pub funder: Addr,
+  }
+
+  deps.storage.set(
+      CONFIG_KEY,
+      &to_vec(&State {
+          verifier: deps.api.addr_validate(&msg.verifier /* of type String */)?,
+          beneficiary: deps.api.addr_validate(&msg.beneficiary /* of type String */)?,
+          funder: info.sender /* of type Addr */,
+      })?,
+  );
+  ```
+
+  The existing `CanonicalAddr` remains unchanged and can be used in cases in
+  which a compact binary representation is desired. For JSON state this does not
+  save much data (e.g. the bech32 address
+  cosmos1pfq05em6sfkls66ut4m2257p7qwlk448h8mysz takes 45 bytes as direct ASCII
+  and 28 bytes when its canonical representation is base64 encoded). For fixed
+  length database keys `CanonicalAddr` remains handy though.
+
+- Replace `StakingMsg::Withdraw` with `DistributionMsg::SetWithdrawAddress` and
+  `DistributionMsg::WithdrawDelegatorReward`. `StakingMsg::Withdraw` was a
+  shorthand for the two distribution messages. However, it was unintuitive
+  because it did not set the address for one withdraw only but for all following
+  withdrawls. Since withdrawls are [triggered by different
+  events][distribution docs] such as validators changing their commission rate,
+  an address that was set for a one-time withdrawl would be used for future
+  withdrawls not considered by the contract author.
+
+  If the contract never set a withdraw address other than the contract itself
+  (`env.contract.address`), you can simply replace `StakingMsg::Withdraw` with
+  `DistributionMsg::WithdrawDelegatorReward`. It is then never changed from the
+  default. Otherwise you need to carefully track what the current withdraw
+  address is. A one-time change can be implemented by emitted 3 messages:
+
+  1. `SetWithdrawAddress { address: recipient }` to temporarily change the
+     recipient
+  2. `WithdrawDelegatorReward { validator }` to do a manual withdrawl from the
+     given validator
+  3. `SetWithdrawAddress { address: env.contract.address.into() }` to change it
+     back for all future withdrawls
+
+  [distribution docs]: https://docs.cosmos.network/v0.42/modules/distribution/
+
+- The block time in `env.block.time` is now a `Timestamp` which stores
+  nanosecond precision. `env.block.time_nanos` was removed. If you need the
+  compnents as before, use
+  ```rust
+  let seconds = env.block.time.nanos() / 1_000_000_000;
+  let nsecs = env.block.time.nanos() % 1_000_000_000;
+  ```
+
+## 0.12 -> 0.13
+
+- The minimum Rust supported version for 0.13 is 1.47.0. Verify your Rust
+  version is >= 1.47.0 with: `rustc --version`
+
+- Update CosmWasm dependencies in Cargo.toml (skip the ones you don't use):
+
+  ```
+  [dependencies]
+  cosmwasm-std = "0.13.0"
+  cosmwasm-storage = "0.13.0"
+  # ...
+
+  [dev-dependencies]
+  cosmwasm-schema = "0.13.0"
+  cosmwasm-vm = "0.13.0"
+  # ...
+  ```
+
+## 0.11 -> 0.12
+
+- Update CosmWasm dependencies in Cargo.toml (skip the ones you don't use):
+
+  ```
+  [dependencies]
+  cosmwasm-std = "0.12.0"
+  cosmwasm-storage = "0.12.0"
+  # ...
+
+  [dev-dependencies]
+  cosmwasm-schema = "0.12.0"
+  cosmwasm-vm = "0.12.0"
+  # ...
+  ```
+
+- In your contract's `.cargo/config` remove `--features backtraces`, which is
+  now available in Rust nightly only:
+
+  ```diff
+  @@ -1,6 +1,6 @@
+   [alias]
+   wasm = "build --release --target wasm32-unknown-unknown"
+   wasm-debug = "build --target wasm32-unknown-unknown"
+  -unit-test = "test --lib --features backtraces"
+  +unit-test = "test --lib"
+   integration-test = "test --test integration"
+   schema = "run --example schema"
+  ```
+
+  In order to use backtraces for debugging, run
+  `RUST_BACKTRACE=1 cargo +nightly unit-test --features backtraces`.
+
+- Rename the type `Extern` to `Deps`, and radically simplify the
+  `init`/`handle`/`migrate`/`query` entrypoints. Rather than
+  `&mut Extern<S, A, Q>`, use `DepsMut`. And instead of `&Extern<S, A, Q>`, use
+  `Deps`. If you ever pass eg. `foo<A: Api>(api: A)` around, you must now use
+  dynamic trait pointers: `foo(api: &dyn Api)`. Here is the quick search-replace
+  guide on how to fix `contract.rs`:
+
+  _In production (non-test) code:_
+
+  - `<S: Storage, A: Api, Q: Querier>` => ``
+  - `&mut Extern<S, A, Q>` => `DepsMut`
+  - `&Extern<S, A, Q>` => `Deps`
+  - `&mut deps.storage` => `deps.storage` where passing into `state.rs` helpers
+  - `&deps.storage` => `deps.storage` where passing into `state.rs` helpers
+
+  On the top, remove `use cosmwasm_std::{Api, Extern, Querier, Storage}`. Add
+  `use cosmwasm_std::{Deps, DepsMut}`.
+
+  _In test code only:_
+
+  - `&mut deps,` => `deps.as_mut(),`
+  - `&deps,` => `deps.as_ref(),`
+
+  You may have to add `use cosmwasm_std::{Storage}` if the compile complains
+  about the trait
+
+  _If you use cosmwasm-storage, in `state.rs`:_
+
+  - `<S: Storage>` => ``
+  - `<S: ReadonlyStorage>` => ``
+  - `<S,` => `<`
+  - `&mut S` => `&mut dyn Storage`
+  - `&S` => `&dyn Storage`
+
+- If you have any references to `ReadonlyStorage` left after the above, please
+  replace them with `Storage`
+
+## 0.10 -> 0.11
+
+- Update CosmWasm dependencies in Cargo.toml (skip the ones you don't use):
+
+  ```
+  [dependencies]
+  cosmwasm-std = "0.11.0"
+  cosmwasm-storage = "0.11.0"
+  # ...
+
+  [dev-dependencies]
+  cosmwasm-schema = "0.11.0"
+  cosmwasm-vm = "0.11.0"
+  # ...
+  ```
+
+- Contracts now support any custom error type `E: ToString + From<StdError>`.
+  Previously this has been `StdError`, which you can still use. However, you can
+  now create a much more structured error experience for your unit tests that
+  handels exactly the error cases of your contract. In order to get a convenient
+  implementation for `ToString` and `From<StdError>`, we use the crate
+  [thiserror](https://crates.io/crates/thiserror), which needs to be added to
+  the contracts dependencies in `Cargo.toml`. To create the custom error, create
+  an error module `src/errors.rs` as follows:
+
+  ```rust
+  use cosmwasm_std::{CanonicalAddr, StdError};
+  use thiserror::Error;
+
+  // thiserror implements Display and ToString if you
+  // set the `#[error("…")]` attribute for all cases
+  #[derive(Error, Debug)]
+  pub enum MyCustomError {
+      #[error("{0}")]
+      // let thiserror implement From<StdError> for you
+      Std(#[from] StdError),
+      // this is whatever we want
+      #[error("Permission denied: the sender is not the current owner")]
+      NotCurrentOwner {
+          expected: CanonicalAddr,
+          actual: CanonicalAddr,
+      },
+      #[error("Messages empty. Must reflect at least one message")]
+      MessagesEmpty,
+  }
+  ```
+
+  Then add `mod errors;` to `src/lib.rs` and `use crate::errors::MyCustomError;`
+  to `src/contract.rs`. Now adapt the return types as follows:
+
+  - `fn init`: `Result<InitResponse, MyCustomError>`,
+  - `fn migrate` (if you have it): `Result<MigrateResponse, MyCustomError>`,
+  - `fn handle`: `Result<HandleResponse, MyCustomError>`,
+  - `fn query`: `Result<Binary, MyCustomError>`.
+
+  If one of your funtions does not use the custom error, you can continue to use
+  `StdError` as before. I.e. you can have `handle` returning
+  `Result<HandleResponse, MyCustomError>` and `query` returning
+  `StdResult<Binary>`.
+
+  You can have a top-hevel `init`/`migrate`/`handle`/`query` that returns a
+  custom error but some of its implementations only return errors from the
+  standard library (`StdResult<HandleResponse>` aka.
+  `Result<HandleResponse, StdError>`). Then use `Ok(std_result?)` to convert
+  between the result types. E.g.
+
+  ```rust
+  pub fn handle<S: Storage, A: Api, Q: Querier>(
+      deps: &mut Extern<S, A, Q>,
+      env: Env,
+      msg: HandleMsg,
+  ) -> Result<HandleResponse, StakingError> {
+      match msg {
+          // conversion to Result<HandleResponse, StakingError>
+          HandleMsg::Bond {} => Ok(bond(deps, env)?),
+          // this already returns Result<HandleResponse, StakingError>
+          HandleMsg::_BondAllTokens {} => _bond_all_tokens(deps, env),
+      }
+  }
+  ```
+
+  or
+
+  ```rust
+  pub fn init<S: Storage, A: Api, Q: Querier>(
+      deps: &mut Extern<S, A, Q>,
+      env: Env,
+      msg: InitMsg,
+  ) -> Result<InitResponse, HackError> {
+      // …
+
+      let mut ctx = Context::new();
+      ctx.add_attribute("Let the", "hacking begin");
+      Ok(ctx.try_into()?)
+  }
+  ```
+
+  Once you got familiar with the concept, you can create different error types
+  for each of the contract's functions.
+
+  You can also try a different error library than
+  [thiserror](https://crates.io/crates/thiserror). The
+  [staking development contract](https://github.com/CosmWasm/cosmwasm/tree/main/contracts/staking)
+  shows how this would look like using [snafu](https://crates.io/crates/snafu).
+
+- Change order of arguments such that `storage` is always first followed by
+  namespace in `Bucket::new`, `Bucket::multilevel`, `ReadonlyBucket::new`,
+  `ReadonlyBucket::multilevel`, `PrefixedStorage::new`,
+  `PrefixedStorage::multilevel`, `ReadonlyPrefixedStorage::new`,
+  `ReadonlyPrefixedStorage::multilevel`, `bucket`, `bucket_read`, `prefixed` and
+  `prefixed_read`.
+
+  ```rust
+  // before
+  let mut bucket = bucket::<_, Data>(b"data", &mut store);
+
+  // after
+  let mut bucket = bucket::<_, Data>(&mut store, b"data");
+  ```
+
+- Rename `InitResponse::log`, `MigrateResponse::log` and `HandleResponse::log`
+  to `InitResponse::attributes`, `MigrateResponse::attributes` and
+  `HandleResponse::attributes`. Replace calls to `log` with `attr`:
+
+  ```rust
+  // before
+  Ok(HandleResponse {
+    log: vec![log("action", "change_owner"), log("owner", owner)],
+    ..HandleResponse::default()
+  })
+
+  // after
+  Ok(HandleResponse {
+    attributes: vec![attr("action", "change_owner"), attr("owner", owner)],
+    ..HandleResponse::default()
+  })
+  ```
+
+- Rename `Context::add_log` to `Context::add_attribute`:
+
+  ```rust
+  // before
+  let mut ctx = Context::new();
+  ctx.add_log("action", "release");
+  ctx.add_log("destination", &to_addr);
+
+  // after
+  let mut ctx = Context::new();
+  ctx.add_attribute("action", "release");
+  ctx.add_attribute("destination", &to_addr);
+  ```
+
+- Add result type to `Bucket::update` and `Singleton::update`:
+
+  ```rust
+  // before
+  bucket.update(b"maria", |mayd: Option<Data>| {
+    let mut d = mayd.ok_or(StdError::not_found("Data"))?;
+    old_age = d.age;
+    d.age += 1;
+    Ok(d)
+  })
+
+  // after
+  bucket.update(b"maria", |mayd: Option<Data>| -> StdResult<_> {
+    let mut d = mayd.ok_or(StdError::not_found("Data"))?;
+    old_age = d.age;
+    d.age += 1;
+    Ok(d)
+  })
+  ```
+
+- Remove all `canonical_length` arguments from mock APIs in tests:
+
+  ```rust
+  // before
+  let mut deps = mock_dependencies(20, &[]);
+  let mut deps = mock_dependencies(20, &coins(123456, "gold"));
+  let deps = mock_dependencies_with_balances(20, &[(&rich_addr, &rich_balance)]);
+  let api = MockApi::new(20);
+
+  // after
+  let mut deps = mock_dependencies(&[]);
+  let mut deps = mock_dependencies(&coins(123456, "gold"));
+  let deps = mock_dependencies_with_balances(&[(&rich_addr, &rich_balance)]);
+  let api = MockApi::default();
+  ```
+
+- Add `MessageInfo` as separate arg after `Env` for `init`, `handle`, `migrate`.
+  Add `Env` arg to `query`. Use `info.sender` instead of `env.message.sender`
+  and `info.sent_funds` rather than `env.message.sent_funds`. Just changing the
+  function signatures of the 3-4 export functions should be enough, then the
+  compiler will warn you anywhere you use `env.message`
+
+  ```rust
+  // before
+  pub fn init<S: Storage, A: Api, Q: Querier>(
+      deps: &mut Extern<S, A, Q>,
+      env: Env,
+      msg: InitMsg,
+  ) {
+      deps.storage.set(
+          CONFIG_KEY,
+          &to_vec(&State {
+              verifier: deps.api.canonical_address(&msg.verifier)?,
+              beneficiary: deps.api.canonical_address(&msg.beneficiary)?,
+              funder: deps.api.canonical_address(&env.message.sender)?,
+          })?,
+      );
+  }
+
+  // after
+  pub fn init<S: Storage, A: Api, Q: Querier>(
+      deps: &mut Extern<S, A, Q>,
+      _env: Env,
+      info: MessageInfo,
+      msg: InitMsg,
+  ) {
+      deps.storage.set(
+          CONFIG_KEY,
+          &to_vec(&State {
+              verifier: deps.api.canonical_address(&msg.verifier)?,
+              beneficiary: deps.api.canonical_address(&msg.beneficiary)?,
+              funder: deps.api.canonical_address(&info.sender)?,
+          })?,
+      );
+  }
+  ```
+
+- Test code now has `mock_info` which takes the same args `mock_env` used to.
+  You can just pass `mock_env()` directly into the function calls unless you
+  need to change height/time.
+- One more object to pass in for both unit and integration tests. To do this
+  quickly, I just highlight all copies of `env` and replace them with `info`
+  (using Ctrl+D in VSCode or Alt+J in IntelliJ). Then I select all `deps, info`
+  sections and replace that with `deps, mock_env(), info`. This fixes up all
+  `init` and `handle` calls, then just add an extra `mock_env()` to the query
+  calls.
+
+  ```rust
+  // before: unit test
+  let env = mock_env(creator.as_str(), &[]);
+  let res = init(&mut deps, env, msg).unwrap();
+
+  let query_response = query(&deps, QueryMsg::Verifier {}).unwrap();
+
+  // after: unit test
+  let info = mock_info(creator.as_str(), &[]);
+  let res = init(&mut deps, mock_env(), info, msg).unwrap();
+
+  let query_response = query(&deps, mock_env(), QueryMsg::Verifier {}).unwrap();
+
+  // before: integration test
+  let env = mock_env("creator", &coins(1000, "earth"));
+  let res: InitResponse = init(&mut deps, env, msg).unwrap();
+
+  let query_response = query(&mut deps, QueryMsg::Verifier {}).unwrap();
+
+  // after: integration test
+  let info = mock_info("creator", &coins(1000, "earth"));
+  let res: InitResponse = init(&mut deps, mock_env(), info, msg).unwrap();
+
+  let query_response = query(&mut deps, mock_env(), QueryMsg::Verifier {}).unwrap();
+  ```
+
 ## 0.9 -> 0.10
+
+- Update CosmWasm dependencies in Cargo.toml (skip the ones you don't use):
+
+  ```
+  [dependencies]
+  cosmwasm-std = "0.10.0"
+  cosmwasm-storage = "0.10.0"
+  # ...
+
+  [dev-dependencies]
+  cosmwasm-schema = "0.10.0"
+  cosmwasm-vm = "0.10.0"
+  # ...
+  ```
 
 Integration tests:
 
@@ -42,12 +1115,19 @@ Contracts:
 
 ## 0.8 -> 0.9
 
-`dependencies`/`dev-dependencies` in `Cargo.toml`:
+- Update CosmWasm dependencies in Cargo.toml (skip the ones you don't use):
 
-- Replace `cosmwasm-schema = "0.8"` with `cosmwasm-schema = "0.9"`
-- Replace `cosmwasm-std = "0.8"` with `cosmwasm-std = "0.9"`
-- Replace `cosmwasm-storage = "0.8"` with `cosmwasm-storage = "0.9"`
-- Replace `cosmwasm-vm = "0.8"` with `cosmwasm-vm = "0.9"`
+  ```
+  [dependencies]
+  cosmwasm-std = "0.9.0"
+  cosmwasm-storage = "0.9.0"
+  # ...
+
+  [dev-dependencies]
+  cosmwasm-schema = "0.9.0"
+  cosmwasm-vm = "0.9.0"
+  # ...
+  ```
 
 `lib.rs`:
 
@@ -122,7 +1202,7 @@ This has been re-written, but is generic boilerplate and should be (almost) the
 same in all contracts:
 
 - copy the new version from
-  [`contracts/queue`](https://github.com/CosmWasm/cosmwasm/blob/master/contracts/queue/src/lib.rs)
+  [`contracts/queue`](https://github.com/CosmWasm/cosmwasm/blob/main/contracts/queue/src/lib.rs)
 - Add `pub mod XYZ` directives for any modules you use besides `contract`
 
 Contract Code:
@@ -235,7 +1315,7 @@ All helper functions have been moved into a new `cosmwasm-schema` package.
 - Remove `serde_json` `[dev-dependency]` if there, as cosmwasm-schema will
   handle JSON output internally.
 - Update `examples/schema.rs` to look
-  [more like queue](https://github.com/CosmWasm/cosmwasm/blob/master/contracts/queue/examples/schema.rs),
+  [more like queue](https://github.com/CosmWasm/cosmwasm/blob/main/contracts/queue/examples/schema.rs),
   but replacing all the imports and type names with those you currently have.
 - Regenerate schemas with `cargo schema`
 

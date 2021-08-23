@@ -5,7 +5,7 @@
 use serde::{de::DeserializeOwned, Serialize};
 use std::any::type_name;
 
-use crate::encoding::Binary;
+use crate::binary::Binary;
 use crate::errors::{StdError, StdResult};
 
 pub fn from_slice<T: DeserializeOwned>(value: &[u8]) -> StdResult<T> {
@@ -31,7 +31,7 @@ where
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use serde::Deserialize;
 
@@ -87,6 +87,18 @@ mod test {
                 karma: -17
             }
         );
+    }
+
+    #[test]
+    fn from_slice_or_binary() {
+        let msg = SomeMsg::Refund {};
+        let serialized: Binary = to_binary(&msg).unwrap();
+
+        let parse_binary: SomeMsg = from_binary(&serialized).unwrap();
+        assert_eq!(parse_binary, msg);
+
+        let parse_slice: SomeMsg = from_slice(&serialized).unwrap();
+        assert_eq!(parse_slice, msg);
     }
 
     #[test]
