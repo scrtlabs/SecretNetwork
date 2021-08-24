@@ -208,8 +208,7 @@ pub fn mock_env() -> Env {
         },
         contract: ContractInfo {
             address: Addr::unchecked(MOCK_CONTRACT_ADDR),
-            contract_key: Some("".to_string()),
-            contract_code_hash: "".to_string(),
+            code_hash: "".to_string(),
         },
     }
 }
