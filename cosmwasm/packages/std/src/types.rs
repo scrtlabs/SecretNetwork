@@ -90,7 +90,6 @@ pub struct MessageInfo {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ContractInfo {
     pub address: Addr,
-    pub contract_key: Option<String>,
     #[serde(default)]
-    pub contract_code_hash: String,
+    pub code_hash: String,
 }
