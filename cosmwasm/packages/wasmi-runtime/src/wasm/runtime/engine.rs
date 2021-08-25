@@ -37,10 +37,10 @@ impl Engine {
     pub fn init(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, EnclaveError> {
         info!("Invoking init() in wasm");
 
-        let mut func_name = "init";
-        if self.contract_instance.cosmwasm_api_version == CosmWasmApiVersion::V016 {
-            func_name = "instantiate"
-        }
+        let func_name = match self.contract_instance.cosmwasm_api_version {
+            CosmWasmApiVersion::V010 => "init",
+            CosmWasmApiVersion::V016 => "instantiate",
+        };
 
         match self
             .module
@@ -108,10 +108,10 @@ impl Engine {
         //     }
         // }?;
 
-        let mut func_name = "handle";
-        if self.contract_instance.cosmwasm_api_version == CosmWasmApiVersion::V016 {
-            func_name = "execute"
-        }
+        let func_name = match self.contract_instance.cosmwasm_api_version {
+            CosmWasmApiVersion::V010 => "handle",
+            CosmWasmApiVersion::V016 => "execute",
+        };
 
         match self
             .module
