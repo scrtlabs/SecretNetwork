@@ -28,6 +28,14 @@ mod protobuf {
                 &["proto/cosmos/crypto/secp256k1/keys.proto"],
             ),
             (
+                "src/proto/crypto/secp256r1",
+                &["proto/cosmos/crypto/secp256r1/keys.proto"],
+            ),
+            (
+                "src/proto/crypto/ed25519",
+                &["proto/cosmos/crypto/ed25519/keys.proto"],
+            ),
+            (
                 "src/proto/tx",
                 &[
                     "proto/cosmos/tx/v1beta1/tx.proto",
