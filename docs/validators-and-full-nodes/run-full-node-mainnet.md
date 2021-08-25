@@ -53,7 +53,7 @@ secretd validate-genesis
 ```bash
 secretd init-enclave
 
-PUBLIC_KEY=$(secretd parse attestation_cert.der 2> /dev/null | cut -c 3-)
+PUBLIC_KEY=$(secretd parse /opt/secret/.sgx_secrets/attestation_cert.der  2> /dev/null | cut -c 3-)
 echo $PUBLIC_KEY
 ```
 

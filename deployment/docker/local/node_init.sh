@@ -39,13 +39,13 @@ cp /tmp/.secretd/keyring-test /root/.secretd/ -r
 
 secretd init-enclave --reset
 
-PUBLIC_KEY=$(secretd parse attestation_cert.der | cut -c 3- )
+PUBLIC_KEY=$(secretd parse /opt/secret/.sgx_secrets/attestation_cert.der | cut -c 3- )
 
 echo "Public key: $PUBLIC_KEY"
 
-secretd parse attestation_cert.der
-cat attestation_cert.der
-tx_hash="$(secretcli tx register auth attestation_cert.der -y --from a --gas-prices 0.25uscrt | jq -r '.txhash')"
+secretd parse /opt/secret/.sgx_secrets/attestation_cert.der
+cat /opt/secret/.sgx_secrets/attestation_cert.der
+tx_hash="$(secretcli tx register auth /opt/secret/.sgx_secrets/attestation_cert.der -y --from a --gas-prices 0.25uscrt | jq -r '.txhash')"
 
 #secretcli q tx "$tx_hash"
 sleep 15

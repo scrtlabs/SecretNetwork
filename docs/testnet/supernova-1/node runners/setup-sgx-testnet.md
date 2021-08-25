@@ -27,9 +27,12 @@ if (($UBUNTUVERSION < 16)); then
 elif (($UBUNTUVERSION < 18)); then
 	DISTRO='xenial'
 	OS='ubuntu16.04-server'
-else
+else (($UBUNTUVERSION < 20)); then
 	DISTRO='bionic'
 	OS='ubuntu18.04-server'
+else
+	DISTRO='focal'
+	OS='ubuntu20.04-server'  
 fi
 
 echo "\n\n###############################################"
@@ -37,7 +40,7 @@ echo "#####       Installing Intel SGX driver       #####"
 echo "###############################################\n\n"
 
 # download SGX driver
-wget "https://download.01.org/intel-sgx/sgx-linux/2.10/distro/${OS}/sgx_linux_x64_driver_2.6.0_602374c.bin"
+wget "https://download.01.org/intel-sgx/sgx-linux/2.14/distro/${OS}/sgx_linux_x64_driver_2.11.0_2d2b795.bin"
 
 # Make the driver installer executable
 chmod +x ./sgx_linux_x64_driver_*.bin
@@ -113,8 +116,12 @@ if (($UBUNTUVERSION < 16)); then
 	exit 1
 elif (($UBUNTUVERSION < 18)); then
 	DISTRO='xenial'
-else
+else (($UBUNTUVERSION < 20)); then
 	DISTRO='bionic'
+	OS='ubuntu18.04-server'
+else
+	DISTRO='focal'
+	OS='ubuntu20.04-server'  
 fi
 
 echo "\n\n#######################################"

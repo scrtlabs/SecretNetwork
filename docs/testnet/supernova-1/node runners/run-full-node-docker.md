@@ -32,7 +32,7 @@ Refer to https://ark.intel.com/content/www/us/en/ark.html#@Processors if unsure 
 
 ### 0. Step up SGX on your local machine
 
-See instructions [here](../validators-and-full-nodes/setup-sgx.md)
+See instructions [here](../../../validators-and-full-nodes/setup-sgx.md)
 
 ### 1. Make sure you have the SGX device installed
 
@@ -99,7 +99,7 @@ services:
     tty: true
 
   node:
-    image: enigmampc/secret-network-node:v1.0.0-mainnet
+    image: enigmampc/secret-network-node:v1.2.0-beta1-2-gbe1ca55e-testnet
     devices:
       - /dev/isgx
     volumes:
@@ -129,7 +129,6 @@ NOTE: If you want to persist the node beyond a reboot, change the paths
 
 ```
       - /tmp/.secretd:/root/.secretd
-      - /tmp/.secretcli:/root/.secretcli
       - /tmp/.sgx_secrets:/root/.sgx_secrets
 ```
 
@@ -137,7 +136,6 @@ To something persistent (e.g. in your home directory) like:
 
 ```
       - /home/bob/.secretd:/root/.secretd
-      - /home/bob/.secretcli:/root/.secretcli
       - /home/bob/.sgx_secrets:/root/.sgx_secrets
 ```
 
@@ -146,14 +144,14 @@ Note: If you delete or lose either the .secretd or the .sgx_secrets folder your 
 ### 5. Set up environment variables
 
 - MONIKER - your network name
-- RPC_URL - address of a node with an open RPC service (you can use `bootstrap.secrettestnet.io:26657`)
-- CHAINID - chain-id of the network (for testnet this is `holodeck-2`)
-- PERSISTENT_PEERS - List of peers to connect to initially (for this testnet use `64b03220d97e5dc21ec65bf7ee1d839afb6f7193@bootstrap.secrettestnet.io:26656`)
-- REGISTRATION_SERVICE - Address of registration service (this will help the node start automatically without going through all the manual steps in the other guide) - `bootstrap.secrettestnet.io:26667`
+- RPC_URL - address of a node with an open RPC service (you can use `bootstrap.supernova.enigma.co:26657`)
+- CHAINID - chain-id of the network (for testnet this is `supernova-1`)
+- PERSISTENT_PEERS - List of peers to connect to initially (for this testnet use `115aa0a629f5d70dd1d464bc7e42799e00f4edae@bootstrap.supernova.enigma.co:26656`)
+- REGISTRATION_SERVICE - Address of registration service (this will help the node start automatically without going through all the manual steps in the other guide) - `register.mainnet.enigma.co:36667`
 
 You can set an environment variable using the `export` syntax
 
-`export RPC_URL=bootstrap.secrettestnet.io:26657`
+`export RPC_URL=bootstrap.supernova.enigma.co:26657`
 
 ### 6. Start your node
 
@@ -165,7 +163,7 @@ After creating the machine a healthy status of the node will have 2 containers a
 
 ```
 CONTAINER ID        IMAGE                                      COMMAND                  CREATED             STATUS                    PORTS                                  NAMES
-bf9ba8dd0802        enigmampc/secret-network-node:v1.0.0-mainnet   "/bin/bash startup.sh"   13 minutes ago      Up 13 minutes (healthy)   0.0.0.0:26656-26657->26656-26657/tcp   secret-node_node_1
+bf9ba8dd0802        enigmampc/secret-network-node:v1.2.0   "/bin/bash startup.sh"   13 minutes ago      Up 13 minutes (healthy)   0.0.0.0:26656-26657->26656-26657/tcp   secret-node_node_1
 2405b23aa1bd        cashmaney/aesm                             "/bin/sh -c './aesm_…"   13 minutes ago      Up 13 minutes                                                    secret-node_aesm_1
 ```
 

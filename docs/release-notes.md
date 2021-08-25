@@ -1,10 +1,19 @@
 ## Release notes
 
-## Current Release - v1.0.0
+## Previous releases
+
+## v1.0.4
+
+- Fixed bug in compute module to allow contracts to initialize other contracts
+
+## v1.0.1-v1.0.3
+
+- Renamed `secret20` commands to `snip20` 
+- Fixed various CLI bugs
+
+## v1.0.0
 
 - Secret Contracts
-
-## Previous releases
 
 ### v0.8.0
 

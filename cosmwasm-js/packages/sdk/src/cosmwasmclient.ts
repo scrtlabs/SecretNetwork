@@ -394,16 +394,26 @@ export class CosmWasmClient {
    * Promise is rejected when contract does not exist.
    * Promise is rejected for invalid query format.
    * Promise is rejected for invalid response format.
-   * 
+   *
    * Note: addedParams allows for query string additions such as "&height=1234567"
    */
-  public async queryContractSmart(address: string, queryMsg: object, addedParams?: object): Promise<JsonObject> {
+  public async queryContractSmart(
+    contractAddress: string,
+    queryMsg: object,
+    addedParams?: object,
+    contractCodeHash?: string,
+  ): Promise<JsonObject> {
     try {
-      return await this.restClient.queryContractSmart(address, queryMsg, addedParams);
+      return await this.restClient.queryContractSmart(
+        contractAddress,
+        queryMsg,
+        addedParams,
+        contractCodeHash,
+      );
     } catch (error) {
       if (error instanceof Error) {
-        if (error.message.startsWith("contract: not found")) {
-          throw new Error(`No contract found at address "${address}"`);
+        if (error.message.startsWith("not found: contract")) {
+          throw new Error(`No contract found at address "${contractAddress}"`);
         } else {
           throw error;
         }

@@ -30,11 +30,11 @@ cp /tmp/.secretd/keyring-test /root/.secretd/ -r
 
 secretd init-enclave
 
-PUBLIC_KEY=$(secretd parse attestation_cert.der 2> /dev/null | cut -c 3- )
+PUBLIC_KEY=$(secretd parse /opt/secret/.sgx_secrets/attestation_cert.der 2> /dev/null | cut -c 3- )
 
-echo "Public key: $(secretd parse attestation_cert.der 2> /dev/null | cut -c 3- )"
+echo "Public key: $(secretd parse /opt/secret/.sgx_secrets/attestation_cert.der 2> /dev/null | cut -c 3- )"
 
-secretd tx register auth attestation_cert.der -y --from a --gas-prices 0.25uscrt
+secretd tx register auth /opt/secret/.sgx_secrets/attestation_cert.der -y --from a --gas-prices 0.25uscrt
 
 sleep 10
 

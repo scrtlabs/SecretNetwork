@@ -7,7 +7,7 @@ These instructions are specifically for re-registering your node, which can be r
 ```bash
 secretd init-enclave --reset
 
-PUBLIC_KEY=$(secretd parse attestation_cert.der 2> /dev/null | cut -c 3-)
+PUBLIC_KEY=$(secretd parse /opt/secret/.sgx_secrets/attestation_cert.der  2> /dev/null | cut -c 3-)
 echo $PUBLIC_KEY
 
 secretcli config node tcp://secret-2.node.enigma.co:26657

@@ -141,6 +141,7 @@ impl Keychain {
     }
 
     pub fn set_consensus_seed(&mut self, consensus_seed: Seed) -> Result<(), EnclaveError> {
+        debug!("Sealing consensus seed in {}", *CONSENSUS_SEED_SEALING_PATH);
         if let Err(e) = consensus_seed.seal(&CONSENSUS_SEED_SEALING_PATH) {
             error!("Error sealing consensus_seed");
             return Err(e);
