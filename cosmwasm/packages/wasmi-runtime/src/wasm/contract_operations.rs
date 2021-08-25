@@ -371,7 +371,7 @@ fn env_to_bytes(engine: &Engine, env_v010: &mut EnvV010) -> Vec<u8> {
 
             serde_json::to_vec(&env_v016).map_err(|err| {
                 warn!(
-                    "got an error while trying to serialize env_v010 (cosmwasm v0.16) into bytes {:?}: {}",
+                    "got an error while trying to serialize env_v016 (cosmwasm v0.16) into bytes {:?}: {}",
                     env_v016, err
                 );
                 EnclaveError::FailedToSerialize
