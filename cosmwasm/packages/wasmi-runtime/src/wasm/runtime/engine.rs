@@ -7,8 +7,8 @@ use crate::wasm::errors::{wasmi_error_to_enclave_error, WasmEngineError};
 use enclave_ffi_types::EnclaveError;
 
 pub struct Engine {
-    contract_instance: ContractInstance,
-    module: ModuleRef,
+    pub contract_instance: ContractInstance,
+    pub module: ModuleRef,
 }
 
 impl Engine {

@@ -12,11 +12,19 @@ use crate::wasm::errors::WasmEngineError;
 use crate::wasm::runtime::traits::WasmiApi;
 use crate::wasm::{gas::WasmCosts, query_chain::encrypt_and_query_chain, types::IoNonce};
 
+/// CosmwasmApiVersion is used to decide how to handle contract inputs and outputs
+pub enum CosmWasmApiVersion {
+    /// CosmWasm v0.10 API
+    V010,
+    /// CosmWasm v0.10 API
+    V016,
+}
+
+/// Right now ContractOperation is used to detect queris and prevent state changes
 pub enum ContractOperation {
     Init,
     Handle,
     Query,
-    // Migrate. // not implemented
 }
 
 #[allow(unused)]
@@ -51,6 +59,7 @@ pub struct ContractInstance {
     operation: ContractOperation,
     pub user_nonce: IoNonce,
     pub user_public_key: Ed25519PublicKey,
+    pub cosmwasm_api_version: CosmWasmApiVersion,
 }
 
 impl ContractInstance {
@@ -72,6 +81,13 @@ impl ContractInstance {
             .cloned()
             .expect("'memory' export should be of memory type");
 
+        let mut cosmwasm_api_version;
+        if (&*module).export_by_name("cosmwasm_vm_version_3").is_some() {
+            cosmwasm_api_version = CosmWasmApiVersion::V010;
+        } else if (&*module).export_by_name("interface_version_7").is_some() {
+            cosmwasm_api_version = CosmWasmApiVersion::V016;
+        }
+
         Self {
             context,
             memory,
@@ -84,6 +100,7 @@ impl ContractInstance {
             operation,
             user_nonce,
             user_public_key,
+            cosmwasm_api_version,
         }
     }
 
