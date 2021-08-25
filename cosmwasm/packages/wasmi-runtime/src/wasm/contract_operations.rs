@@ -4,6 +4,7 @@ use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::coalesce;
 use crate::cosmwasm::encoding::Binary;
+use crate::cosmwasm::timestamp::Timestamp;
 use crate::cosmwasm::types::*;
 use crate::crypto::Ed25519PublicKey;
 use crate::results::{HandleSuccess, InitSuccess, QuerySuccess};
@@ -348,6 +349,12 @@ fn env_to_bytes(engine: &Engine, env_v010: &mut EnvV010) -> Vec<u8> {
             // contract_key is irrelevant inside the contract
             env_v010.contract_key = None;
 
+            // in v0.10 the timestamp passed from Go was unix time in seconds
+            // v0.16 time is unix time in nanoseconds, so now Go passes here unix time in nanoseconds
+            // but v0.10 contracts still expect time to be in unix seconds,
+            // so we need to convert it from nanoseconds to seconds
+            env_v010.block.time = Timestamp::from_nanos(env_v010.block.time).seconds();
+
             serde_json::to_vec(env_v010).map_err(|err| {
                 warn!(
                     "got an error while trying to serialize env_v010 (cosmwasm v0.10) into bytes {:?}: {}",
@@ -360,7 +367,7 @@ fn env_to_bytes(engine: &Engine, env_v010: &mut EnvV010) -> Vec<u8> {
             let env_v016 = EnvV016 {
                 block: BlockInfoV016 {
                     height: env_v010.block.height,
-                    time: Timestamp::from_seconds(env_v010.block.time),
+                    time: Timestamp::from_nanos(env_v010.block.time),
                     chain_id: env_v010.block.chain_id,
                 },
                 contract: ContractInfoV016 {

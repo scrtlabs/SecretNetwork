@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/base64"
+
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -169,13 +170,14 @@ func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contract
 	if ctx.BlockHeight() < 0 {
 		panic("Block height must never be negative")
 	}
-	if ctx.BlockTime().Unix() < 0 {
-		panic("Block (unix) time must never be negative ")
+	nano := ctx.BlockTime().UnixNano()
+	if nano < 1 {
+		panic("Block (unix) time must never be empty or negative ")
 	}
 	env := wasmTypes.Env{
 		Block: wasmTypes.BlockInfo{
 			Height:  uint64(ctx.BlockHeight()),
-			Time:    uint64(ctx.BlockTime().Unix()),
+			Time:    uint64(nano),
 			ChainID: ctx.ChainID(),
 		},
 		Message: wasmTypes.MessageInfo{
@@ -245,7 +247,7 @@ type SecretMsg struct {
 func NewSecretMsg(codeHash []byte, msg []byte) SecretMsg {
 	return SecretMsg{
 		CodeHash: codeHash,
-		Msg: msg,
+		Msg:      msg,
 	}
 }
 
