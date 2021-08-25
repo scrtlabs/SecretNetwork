@@ -2,7 +2,10 @@ use log::*;
 use wasmi::{ModuleRef, RuntimeValue};
 
 use super::contract::ContractInstance;
-use crate::wasm::errors::{wasmi_error_to_enclave_error, WasmEngineError};
+use crate::wasm::{
+    errors::{wasmi_error_to_enclave_error, WasmEngineError},
+    runtime::CosmWasmApiVersion,
+};
 
 use enclave_ffi_types::EnclaveError;
 
@@ -34,10 +37,15 @@ impl Engine {
     pub fn init(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, EnclaveError> {
         info!("Invoking init() in wasm");
 
+        let mut func_name = "init";
+        if self.contract_instance.cosmwasm_api_version == CosmWasmApiVersion::V016 {
+            func_name = "instantiate"
+        }
+
         match self
             .module
             .invoke_export(
-                "init",
+                func_name,
                 &[
                     RuntimeValue::I32(env_ptr as i32),
                     RuntimeValue::I32(msg_ptr as i32),
@@ -100,10 +108,15 @@ impl Engine {
         //     }
         // }?;
 
+        let mut func_name = "handle";
+        if self.contract_instance.cosmwasm_api_version == CosmWasmApiVersion::V016 {
+            func_name = "execute"
+        }
+
         match self
             .module
             .invoke_export(
-                "handle",
+                func_name,
                 &[
                     RuntimeValue::I32(env_ptr as i32),
                     RuntimeValue::I32(msg_ptr as i32),
