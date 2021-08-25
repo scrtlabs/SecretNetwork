@@ -144,66 +144,50 @@ pub enum CosmosPubKey {
     Multisig(MultisigThresholdPubKey),
 }
 
-impl CosmosPubKey {
-    pub fn from_proto(
-        mode_info: proto::tx::tx::ModeInfo,
-        public_key_bytes: &[u8],
-    ) -> Result<Self, CryptoError> {
-        use proto::crypto::multisig::LegacyAminoPubKey;
-        use proto::crypto::secp256k1::PubKey;
-        use proto::tx::tx::ModeInfo_oneof_sum;
+/// `"/"` + `LegacyAminoPubKey::descriptor_static().full_name()`
+const TYPE_URL_MULTISIG_LEGACY_AMINO_PUBKEY: &str = "/cosmos.crypto.multisig.LegacyAminoPubKey";
+/// `"/"` + `PubKey::descriptor_static().full_name()`
+const TYPE_URL_SECP256K1_PUBKEY: &str = "/cosmos.crypto.secp256k1.PubKey";
 
-        let public_key = match mode_info.sum {
-            Some(ModeInfo_oneof_sum::single(_single)) => {
-                let pub_key = PubKey::parse_from_bytes(public_key_bytes).map_err(|_err| {
+impl CosmosPubKey {
+    pub fn from_proto(public_key: &protobuf::well_known_types::Any) -> Result<Self, CryptoError> {
+        let public_key = match public_key.type_url.as_str() {
+            TYPE_URL_SECP256K1_PUBKEY => {
+                use proto::crypto::secp256k1::PubKey;
+                let pub_key = PubKey::parse_from_bytes(&public_key.value).map_err(|_err| {
                     warn!(
                         "Could not parse secp256k1 public key from these bytes: {}",
-                        Binary(public_key_bytes.into())
+                        Binary(public_key.value.clone())
                     );
                     CryptoError::ParsingError
                 })?;
                 CosmosPubKey::Secp256k1(Secp256k1PubKey::new(pub_key.key))
             }
-            Some(ModeInfo_oneof_sum::multi(multi)) => {
+            TYPE_URL_MULTISIG_LEGACY_AMINO_PUBKEY => {
+                use proto::crypto::multisig::LegacyAminoPubKey;
                 let multisig_key =
-                    LegacyAminoPubKey::parse_from_bytes(public_key_bytes).map_err(|_err| {
+                    LegacyAminoPubKey::parse_from_bytes(&public_key.value).map_err(|_err| {
                         warn!(
                             "Could not parse multisig public key from these bytes: {}",
-                            Binary(public_key_bytes.into())
+                            Binary(public_key.value.clone())
                         );
                         CryptoError::ParsingError
                     })?;
-                let multisig_key_size = multisig_key.public_keys.len();
-                let sig_mode_count = multi.mode_infos.len();
-                if multisig_key_size != sig_mode_count {
-                    warn!(
-                        "Mismatch found between size of multisig key and amount of signature modes: {} != {}",
-                        multisig_key_size,
-                        sig_mode_count
-                    );
-                    return Err(CryptoError::ParsingError);
-                }
-
                 let mut pubkeys = vec![];
-                for (index, mode_info) in multi.mode_infos.into_iter().enumerate() {
-                    pubkeys.push(CosmosPubKey::from_proto(
-                        mode_info,
-                        &multisig_key.public_keys[index].value,
-                    )?);
+                for public_key in &multisig_key.public_keys {
+                    pubkeys.push(CosmosPubKey::from_proto(public_key)?);
                 }
                 CosmosPubKey::Multisig(MultisigThresholdPubKey::new(
                     multisig_key.threshold,
                     pubkeys,
                 ))
             }
-            None => {
-                warn!(
-                    "No signature info found for this public key: {}",
-                    Binary(public_key_bytes.into()),
-                );
+            _ => {
+                warn!("found public key of unsupported type: {:?}", public_key);
                 return Err(CryptoError::ParsingError);
             }
         };
+
         Ok(public_key)
     }
 }
@@ -601,16 +585,11 @@ impl SignerInfo {
             warn!("One of the provided signers had no public key");
             return Err(EnclaveError::FailedToDeserialize);
         }
-        if !raw_signer_info.has_mode_info() {
-            warn!("One of the provided signers had no signing mode info");
-            return Err(EnclaveError::FailedToDeserialize);
-        }
 
         // unwraps valid after checks above
-        let public_key_bytes = &raw_signer_info.public_key.into_option().unwrap().value;
-        let mode_info = raw_signer_info.mode_info.into_option().unwrap();
+        let any_public_key = raw_signer_info.public_key.get_ref();
 
-        let public_key = CosmosPubKey::from_proto(mode_info, public_key_bytes)
+        let public_key = CosmosPubKey::from_proto(any_public_key)
             .map_err(|_| EnclaveError::FailedToDeserialize)?;
 
         let signer_info = Self {

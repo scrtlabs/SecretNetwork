@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	codedctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -250,7 +251,11 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, s
 
 	var pkBytes []byte
 	pubKey := pubKeys[pkIndex]
-	pkBytes, err = k.cdc.Marshal(pubKey.(codec.ProtoMarshaler))
+	anyPubKey, err := codedctypes.NewAnyWithValue(pubKey)
+	if err != nil {
+		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, "couldn't turn public key into Any")
+	}
+	pkBytes, err = k.cdc.Marshal(anyPubKey)
 	if err != nil {
 		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, "couldn't marshal public key")
 	}
