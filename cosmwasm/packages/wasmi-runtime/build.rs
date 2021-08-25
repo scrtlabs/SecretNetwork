@@ -36,7 +36,7 @@ mod protobuf {
             ),
             (
                 "src/proto/cosmwasm",
-                &["../../../x/compute/internal/types/msg.proto"],
+                &["../../../proto/secret/compute/v1beta1/msg.proto"],
             ),
         ];
 
@@ -45,7 +45,7 @@ mod protobuf {
             std::fs::create_dir_all(*out_dir).expect(&dir_err_msg);
 
             protoc_rust::Codegen::new()
-                .include("../../../x/compute/internal/types") // cosmwasm
+                .include("../../../proto/secret/compute/v1beta1") // cosmwasm
                 .include("proto") // cosmos and gogoproto
                 .include(&library_dir) // google types
                 .out_dir(*out_dir)

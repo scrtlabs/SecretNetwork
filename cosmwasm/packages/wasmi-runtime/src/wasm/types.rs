@@ -432,9 +432,7 @@ impl CosmWasmMsg {
     }
 
     fn try_parse_instantiate(bytes: &[u8]) -> Result<Self, EnclaveError> {
-        use proto::cosmwasm::msg::{
-            MsgInstantiateContract, MsgInstantiateContract_oneof__callback_sig,
-        };
+        use proto::cosmwasm::msg::MsgInstantiateContract;
 
         let raw_msg = MsgInstantiateContract::parse_from_bytes(bytes)
             .map_err(|_| EnclaveError::FailedToDeserialize)?;
@@ -447,9 +445,7 @@ impl CosmWasmMsg {
 
         let init_funds = Self::parse_funds(raw_msg.init_funds)?;
 
-        let callback_sig = raw_msg._callback_sig.map(|cs| match cs {
-            MsgInstantiateContract_oneof__callback_sig::callback_sig(cs) => cs,
-        });
+        let callback_sig = Some(raw_msg.callback_sig);
 
         Ok(CosmWasmMsg::Instantiate {
             sender: CanonicalAddr(Binary(raw_msg.sender)),
@@ -461,7 +457,7 @@ impl CosmWasmMsg {
     }
 
     fn try_parse_execute(bytes: &[u8]) -> Result<Self, EnclaveError> {
-        use proto::cosmwasm::msg::{MsgExecuteContract, MsgExecuteContract_oneof__callback_sig};
+        use proto::cosmwasm::msg::MsgExecuteContract;
 
         let raw_msg = MsgExecuteContract::parse_from_bytes(bytes)
             .map_err(|_| EnclaveError::FailedToDeserialize)?;
@@ -489,9 +485,7 @@ impl CosmWasmMsg {
 
         let sent_funds = Self::parse_funds(raw_msg.sent_funds)?;
 
-        let callback_sig = raw_msg._callback_sig.map(|cs| match cs {
-            MsgExecuteContract_oneof__callback_sig::callback_sig(cs) => cs,
-        });
+        let callback_sig = Some(raw_msg.callback_sig);
 
         Ok(CosmWasmMsg::Execute {
             sender: CanonicalAddr(Binary(raw_msg.sender)),
