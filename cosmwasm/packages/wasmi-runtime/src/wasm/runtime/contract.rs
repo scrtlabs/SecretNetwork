@@ -261,7 +261,7 @@ impl WasmiApi for ContractInstance {
     /// 1. "key" to read from Tendermint (buffer of bytes)
     /// key is a pointer to a region "struct" of "pointer" and "length"
     /// A Region looks like { ptr: u32, len: u32 }
-    fn read_db_index(&mut self, state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+    fn db_read(&mut self, state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
         let state_key_name = self
             .extract_vector(state_key_ptr_ptr as u32)
             .map_err(|err| {
@@ -281,6 +281,8 @@ impl WasmiApi for ContractInstance {
         self.use_gas_externally(gas_used)?;
 
         let value = match value {
+            // return 0 if key doesn't exist
+            // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L75
             None => return Ok(Some(RuntimeValue::I32(0))),
             Some(value) => value,
         };
@@ -300,6 +302,7 @@ impl WasmiApi for ContractInstance {
         })?;
 
         // Return pointer to the allocated buffer with the value written to it
+        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L80
         Ok(Some(RuntimeValue::I32(ptr_to_region_in_wasm_vm as i32)))
     }
 
@@ -307,7 +310,7 @@ impl WasmiApi for ContractInstance {
     /// 1. "key" to delete from Tendermint (buffer of bytes)
     /// key is a pointer to a region "struct" of "pointer" and "length"
     /// A Region looks like { ptr: u32, len: u32 }
-    fn remove_db_index(&mut self, state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+    fn db_remove(&mut self, state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
         if self.operation.is_query() {
             return Err(WasmEngineError::UnauthorizedWrite.into());
         }
@@ -328,6 +331,8 @@ impl WasmiApi for ContractInstance {
         let gas_used = remove_encrypted_key(&state_key_name, &self.context, &self.contract_key)?;
         self.use_gas_externally(gas_used)?;
 
+        // return value from here is never read
+        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L102
         Ok(None)
     }
 
@@ -336,7 +341,7 @@ impl WasmiApi for ContractInstance {
     /// 2. "value" to write to Tendermint (buffer of bytes)
     /// Both of them are pointers to a region "struct" of "pointer" and "length"
     /// Lets say Region looks like { ptr: u32, len: u32 }
-    fn write_db_index(
+    fn db_write(
         &mut self,
         state_key_ptr_ptr: i32,
         value_ptr_ptr: i32,
@@ -373,6 +378,8 @@ impl WasmiApi for ContractInstance {
                 })?;
         self.use_gas_externally(used_gas)?;
 
+        // return value from here is never read
+        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L95
         Ok(None)
     }
 
@@ -381,7 +388,7 @@ impl WasmiApi for ContractInstance {
     /// 2. "canonical" a buffer to write the result into (buffer of bytes)
     /// Both of them are pointers to a region "struct" of "pointer" and "length"
     /// A Region looks like { ptr: u32, len: u32 }
-    fn canonicalize_address_index(
+    fn canonicalize_address(
         &mut self,
         human_ptr_ptr: i32,
         canonical_ptr_ptr: i32,
@@ -414,6 +421,10 @@ impl WasmiApi for ContractInstance {
             Ok(x) => x,
         };
 
+        // Assaf: This trim() + is_empty() check is redundant, but it's part
+        // of an undocumented API between the chain and contracts that was
+        // introduces in secret-2. Therfore to remove this check will break
+        // this (stupid) API.
         human_addr_str = human_addr_str.trim();
         if human_addr_str.is_empty() {
             return Ok(Some(RuntimeValue::I32(
@@ -458,6 +469,8 @@ impl WasmiApi for ContractInstance {
             WasmEngineError::Base32Error
         })?;
 
+        // write the result to the output buffer
+        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L189
         self.write_to_allocated_memory(&canonical, canonical_ptr_ptr as u32)
             .map_err(|err| {
                 debug!(
@@ -468,6 +481,7 @@ impl WasmiApi for ContractInstance {
             })?;
 
         // return 0 == ok
+        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L181
         Ok(Some(RuntimeValue::I32(0)))
     }
 
@@ -476,7 +490,7 @@ impl WasmiApi for ContractInstance {
     /// 2. "human" a buffer to write the result (humanized string) into (buffer of bytes)
     /// Both of them are pointers to a region "struct" of "pointer" and "length"
     /// A Region looks like { ptr: u32, len: u32 }
-    fn humanize_address_index(
+    fn humanize_address(
         &mut self,
         canonical_ptr_ptr: i32,
         human_ptr_ptr: i32,
@@ -511,6 +525,8 @@ impl WasmiApi for ContractInstance {
 
         let human_bytes = human_addr_str.into_bytes();
 
+        // write the result to the output buffer
+        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L207
         self.write_to_allocated_memory(&human_bytes, human_ptr_ptr as u32)
             .map_err(|err| {
                 debug!(
@@ -521,11 +537,12 @@ impl WasmiApi for ContractInstance {
             })?;
 
         // return 0 == ok
+        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L199
         Ok(Some(RuntimeValue::I32(0)))
     }
 
     // stub, for now
-    fn query_chain_index(&mut self, query_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+    fn query_chain(&mut self, query_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
         let query_buffer = self.extract_vector(query_ptr_ptr as u32).map_err(|err| {
             debug!("query_chain() error while trying to read canonical address from wasm memory",);
             err
@@ -556,6 +573,8 @@ impl WasmiApi for ContractInstance {
 
         self.use_gas_externally(gas_used)?;
 
+        // write the result to an output buffer
+        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L353
         let ptr_to_region_in_wasm_vm = self.write_to_memory(&answer).map_err(|err| {
             debug!(
                 "query_chain() error while trying to allocate and write the answer {:?} to the WASM VM",
@@ -564,12 +583,120 @@ impl WasmiApi for ContractInstance {
             err
         })?;
 
-        // Return pointer to the allocated buffer with the value written to it
+        // Return pointer to the allocated buffer with the result written to it
         Ok(Some(RuntimeValue::I32(ptr_to_region_in_wasm_vm as i32)))
     }
 
-    fn gas_index(&mut self, gas_amount: i32) -> Result<Option<RuntimeValue>, Trap> {
+    fn gas(&mut self, gas_amount: i32) -> Result<Option<RuntimeValue>, Trap> {
         self.use_gas(gas_amount as u64)?;
         Ok(None)
+    }
+
+    fn addr_validate(&mut self, human_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+        let human = self.extract_vector(human_ptr_ptr as u32).map_err(|err| {
+            debug!("addr_validate() error while trying to read human address from wasm memory");
+            err
+        })?;
+
+        trace!(
+            "addr_validate() was called from WASM code with {:?}",
+            String::from_utf8_lossy(&human)
+        );
+
+        // Turn Vec<u8> to str
+        let human_addr_str = match std::str::from_utf8(&human) {
+            Err(err) => {
+                debug!(
+                    "addr_validate() error while trying to parse human address from bytes to string: {:?}",
+                    err
+                );
+                return Ok(Some(RuntimeValue::I32(
+                    self.write_to_memory(b"input is not valid UTF-8")? as i32,
+                )));
+            }
+            Ok(x) => x,
+        };
+
+        let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
+            Err(err) => {
+                debug!(
+                    "addr_validate() error while trying to decode human address {:?} as bech32: {:?}",
+                    human_addr_str, err
+                );
+                return Ok(Some(RuntimeValue::I32(
+                    self.write_to_memory(err.to_string().as_bytes())? as i32,
+                )));
+            }
+            Ok(x) => x,
+        };
+
+        // return 0 == ok
+        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L164
+        Ok(Some(RuntimeValue::I32(0)))
+    }
+
+    fn secp256k1_verify(
+        &mut self,
+        message_hash_ptr_ptr: i32,
+        signature_ptr_ptr: i32,
+        public_key_ptr_ptr: i32,
+    ) -> Result<Option<RuntimeValue>, Trap> {
+        todo!()
+    }
+
+    fn secp256k1_recover_pubkey(
+        &mut self,
+        message_hash_ptr_ptr: i32,
+        signature_ptr_ptr: i32,
+        recovery_param_ptr: i32,
+    ) -> Result<Option<RuntimeValue>, Trap> {
+        todo!()
+    }
+
+    fn ed25519_verify(
+        &mut self,
+        message_ptr_ptr: i32,
+        signature_ptr_ptr: i32,
+        public_key_ptr_ptr: i32,
+    ) -> Result<Option<RuntimeValue>, Trap> {
+        todo!()
+    }
+
+    fn ed25519_batch_verify(
+        &mut self,
+        messages_ptr_ptr: i32,
+        signatures_ptr_ptr: i32,
+        public_keys_ptr_ptr: i32,
+    ) -> Result<Option<RuntimeValue>, Trap> {
+        todo!()
+    }
+
+    fn debug(&mut self, message_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+        let message_bytes = self.extract_vector(human_ptr_ptr as u32).map_err(|err| {
+            debug!("debug() error while trying to read message from wasm memory");
+            err
+        })?;
+
+        trace!(
+            "debug() was called from WASM code with {:?}",
+            String::from_utf8_lossy(&message_bytes)
+        );
+
+        // Turn Vec<u8> to str
+        let mut message_str = match std::str::from_utf8(&message_bytes) {
+            Err(err) => {
+                debug!(
+                    "debug() error while trying to parse message from bytes to string: {:?}",
+                    err
+                );
+                return Ok(Some(RuntimeValue::I32(
+                    self.write_to_memory(b"input is not valid UTF-8")? as i32,
+                )));
+            }
+            Ok(x) => x,
+        };
+
+        debug!("debug(): {:?}", message_str);
+        return Ok(None);
     }
 }
