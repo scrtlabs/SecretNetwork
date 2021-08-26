@@ -1,7 +1,7 @@
 //! This file has some helpers for integration tests.
 //! They should be imported via full path to ensure there is no confusion
 //! use cosmwasm_vm::testing::X
-use cosmwasm_std::{Coin, HumanAddr};
+use cosmwasm_v010_std::{Coin, HumanAddr};
 use std::collections::HashSet;
 
 use crate::compatability::check_wasm;

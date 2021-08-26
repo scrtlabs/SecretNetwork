@@ -1,11 +1,12 @@
 #[cfg(not(target_arch = "wasm32"))]
 use cosmwasm_crypto::CryptoError;
+use serde::Serialize;
 #[cfg(feature = "backtraces")]
 use std::backtrace::Backtrace;
 use std::fmt::Debug;
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Serialize)]
 pub enum RecoverPubkeyError {
     #[error("Invalid hash format")]
     InvalidHashFormat,

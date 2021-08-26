@@ -155,7 +155,7 @@ where
                 // Creates an iterator that will go from start to end.
                 // If start_ptr == 0, the start is unbounded.
                 // If end_ptr == 0, the end is unbounded.
-                // Order is defined in cosmwasm_std::Order and may be 1 (ascending) or 2 (descending). All other values result in an error.
+                // Order is defined in cosmwasm_v010_std::Order and may be 1 (ascending) or 2 (descending). All other values result in an error.
                 // Ownership of both start and end pointer is not transferred to the host.
                 // Returns an iterator ID.
                 "db_scan" => Func::new(move |ctx: &mut Ctx, start_ptr: u32, end_ptr: u32, order: i32| -> VmResult<u32> {
@@ -256,7 +256,9 @@ where
         let limit = self.inner.gas_limit();
         let remaining = self.inner.gas_left();
         let used_internally = self.inner.gas_used();
-        let used_externally = limit.saturating_sub(remaining).saturating_sub(used_internally);
+        let used_externally = limit
+            .saturating_sub(remaining)
+            .saturating_sub(used_internally);
         GasReport {
             limit,
             remaining,
@@ -361,7 +363,7 @@ mod test {
     };
     use crate::traits::Storage;
     use crate::{call_init, FfiError};
-    use cosmwasm_std::{
+    use cosmwasm_v010_std::{
         coin, coins, from_binary, AllBalanceResponse, BalanceResponse, BankQuery, Empty, HumanAddr,
         QueryRequest,
     };
@@ -825,7 +827,7 @@ mod test {
 #[cfg(test)]
 #[cfg(feature = "default-singlepass")]
 mod singlepass_test {
-    use cosmwasm_std::{coins, Empty};
+    use cosmwasm_v010_std::{coins, Empty};
 
     use crate::calls::{call_handle, call_init, call_query};
     use crate::testing::{mock_env, mock_instance, mock_instance_with_gas_limit};

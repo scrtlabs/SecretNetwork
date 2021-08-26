@@ -1,7 +1,7 @@
 // use serde::de::DeserializeOwned;
 // use std::fmt;
 
-// use cosmwasm_std::{Env, HandleResult, InitResult, MigrateResult, QueryResult};
+// use cosmwasm_v010_std::{Env, HandleResult, InitResult, MigrateResult, QueryResult};
 
 // use crate::errors::{VmError, VmResult};
 use crate::errors::VmResult;

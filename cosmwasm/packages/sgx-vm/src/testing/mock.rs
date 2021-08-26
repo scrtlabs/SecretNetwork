@@ -1,4 +1,4 @@
-use cosmwasm_std::{
+use cosmwasm_v010_std::{
     Binary, BlockInfo, CanonicalAddr, Coin, ContractInfo, Env, HumanAddr, MessageInfo,
 };
 
@@ -158,7 +158,7 @@ pub fn mock_env<U: Into<HumanAddr>>(sender: U, sent: &[Coin]) -> Env {
 mod test {
     use super::*;
     use crate::FfiError;
-    use cosmwasm_std::coins;
+    use cosmwasm_v010_std::coins;
 
     #[test]
     fn mock_env_arguments() {

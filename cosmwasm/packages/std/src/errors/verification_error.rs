@@ -1,3 +1,4 @@
+use serde::Serialize;
 #[cfg(feature = "backtraces")]
 use std::backtrace::Backtrace;
 use std::fmt::Debug;
@@ -6,7 +7,7 @@ use thiserror::Error;
 #[cfg(not(target_arch = "wasm32"))]
 use cosmwasm_crypto::CryptoError;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Serialize)]
 pub enum VerificationError {
     #[error("Batch error")]
     BatchErr,

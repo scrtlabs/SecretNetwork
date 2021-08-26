@@ -7,7 +7,7 @@ use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt;
 
-use cosmwasm_std::{
+use cosmwasm_v010_std::{
     to_vec, Env, HandleResult, InitResult, MigrateResult, QueryResponse, StdResult,
 };
 

@@ -401,7 +401,7 @@ mod test {
     use crate::testing::MockIterator;
     use crate::testing::{MockQuerier, MockStorage};
     use crate::traits::Storage;
-    use cosmwasm_std::{
+    use cosmwasm_v010_std::{
         coins, from_binary, to_vec, AllBalanceResponse, BankQuery, Empty, HumanAddr, QueryRequest,
     };
     use wasmer_runtime_core::{imports, typed_func::Func};

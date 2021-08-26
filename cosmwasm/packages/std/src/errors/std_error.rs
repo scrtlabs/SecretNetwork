@@ -1,3 +1,4 @@
+use serde::Serialize;
 #[cfg(feature = "backtraces")]
 use std::backtrace::Backtrace;
 use std::fmt;
@@ -20,7 +21,7 @@ use crate::errors::{RecoverPubkeyError, VerificationError};
 /// Checklist for adding a new error:
 /// - Add enum case
 /// - Add creator function in std_error_helpers.rs
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Serialize)]
 pub enum StdError {
     #[error("Verification error: {source}")]
     VerificationErr {
@@ -423,7 +424,7 @@ impl From<DivideByZeroError> for StdError {
 /// result/error type in cosmwasm-std.
 pub type StdResult<T> = core::result::Result<T, StdError>;
 
-#[derive(Error, Debug, PartialEq, Eq)]
+#[derive(Error, Debug, PartialEq, Eq, Serialize)]
 pub enum OverflowOperation {
     Add,
     Sub,
@@ -437,7 +438,7 @@ impl fmt::Display for OverflowOperation {
     }
 }
 
-#[derive(Error, Debug, PartialEq, Eq)]
+#[derive(Error, Debug, PartialEq, Eq, Serialize)]
 #[error("Cannot {operation} with {operand1} and {operand2}")]
 pub struct OverflowError {
     pub operation: OverflowOperation,
@@ -455,7 +456,7 @@ impl OverflowError {
     }
 }
 
-#[derive(Error, Debug, PartialEq, Eq)]
+#[derive(Error, Debug, PartialEq, Eq, Serialize)]
 #[error("Cannot devide {operand} by zero")]
 pub struct DivideByZeroError {
     pub operand: String,
