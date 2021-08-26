@@ -91,19 +91,12 @@ pub fn check_wasm(wasm_code: &[u8], supported_features: &HashSet<String>) -> VmR
     let is_v016 = check_v016_exports_result.is_ok() && check_v016_imports_result.is_ok();
 
     if !is_v010 && !is_v016 {
-        let mut errors: Vec<VmError> = vec![];
-        if check_v010_exports_result.is_err() {
-            errors.push(check_v010_exports_result.unwrap_err());
-        }
-        if check_v010_imports_result.is_err() {
-            errors.push(check_v010_imports_result.unwrap_err());
-        }
-        if check_v016_exports_result.is_err() {
-            errors.push(check_v016_exports_result.unwrap_err());
-        }
-        if check_v016_imports_result.is_err() {
-            errors.push(check_v016_imports_result.unwrap_err());
-        }
+        let errors = vec![
+            check_v010_exports_result,
+            check_v010_imports_result,
+            check_v016_exports_result,
+            check_v016_imports_result,
+        ];
 
         return Err(VmError::static_validation_err(format!("Contact is not CosmWasm v0.10 or v0.16. To support v0.10 please fix the former two errors, to supports v0.16 please fix the latter two errors: ${:?}", errors)));
     }
