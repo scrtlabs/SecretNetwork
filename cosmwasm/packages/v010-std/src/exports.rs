@@ -1,7 +1,7 @@
 //! exports exposes the public wasm API
 //!
 //! cosmwasm_vm_version_3, allocate and deallocate turn into Wasm exports
-//! as soon as cosmwasm_std is `use`d in the contract, even privately.
+//! as soon as cosmwasm_v010_std is `use`d in the contract, even privately.
 //!
 //! do_init and do_wrapper should be wrapped with a extern "C" entry point
 //! including the contract-specific init/handle function pointer.

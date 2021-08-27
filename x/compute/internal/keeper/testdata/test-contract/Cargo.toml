@@ -28,12 +28,12 @@ overflow-checks = true
 
 [features]
 default = ["backtraces"]
-backtraces = ["cosmwasm-std/backtraces"]
+backtraces = ["cosmwasm-v010-std/backtraces"]
 with_floats = []
 
 [dependencies]
-cosmwasm-std = { path = "../../../../../../cosmwasm/packages/std" }
-cosmwasm-storage = { path = "../../../../../../cosmwasm/packages/storage" }
+cosmwasm-v010-std = { path = "../../../../../../cosmwasm/packages/v010-std" }
+cosmwasm-v010-storage = { path = "../../../../../../cosmwasm/packages/v010-storage" }
 schemars = "0.7"
 serde = { version = "1.0.114", default-features = false, features = [
   "derive",

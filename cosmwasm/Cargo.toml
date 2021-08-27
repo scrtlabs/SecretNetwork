@@ -2,6 +2,7 @@
 members = ["packages/*"]
 exclude = [
     "contracts",
+    "v010-contracts",
     "packages/wasmi-runtime",
     "packages/enclave-test",
     "packages/vm"

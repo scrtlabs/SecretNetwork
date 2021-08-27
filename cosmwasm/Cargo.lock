@@ -300,6 +300,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmwasm-v010-storage"
+version = "0.10.0"
+dependencies = [
+ "cosmwasm-v010-std",
+ "serde",
+ "snafu",
+]
+
+[[package]]
 name = "cpufeatures"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
