@@ -593,6 +593,8 @@ impl WasmiApi for ContractInstance {
     }
 
     fn addr_validate(&mut self, human_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+        self.use_gas_externally(self.gas_costs.external_addr_validate as u64)?;
+
         let human = self.extract_vector(human_ptr_ptr as u32).map_err(|err| {
             debug!("addr_validate() error while trying to read human address from wasm memory");
             err
@@ -641,6 +643,8 @@ impl WasmiApi for ContractInstance {
         signature_ptr_ptr: i32,
         public_key_ptr_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
+        self.use_gas_externally(self.gas_costs.external_secp256k1_verify as u64)?;
+
         todo!()
     }
 
@@ -650,6 +654,8 @@ impl WasmiApi for ContractInstance {
         signature_ptr_ptr: i32,
         recovery_param_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
+        self.use_gas_externally(self.gas_costs.external_secp256k1_recover_pubkey as u64)?;
+
         todo!()
     }
 
@@ -659,6 +665,8 @@ impl WasmiApi for ContractInstance {
         signature_ptr_ptr: i32,
         public_key_ptr_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
+        self.use_gas_externally(self.gas_costs.external_ed25519_verify as u64)?;
+
         todo!()
     }
 
@@ -668,7 +676,15 @@ impl WasmiApi for ContractInstance {
         signatures_ptr_ptr: i32,
         public_keys_ptr_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        todo!()
+        todo!();
+
+        let signatures_count = todo!();
+
+        self.use_gas_externally(
+            signatures_count * self.gas_costs.external_ed25519_batch_verify_per_one as u64,
+        )?;
+
+        todo!();
     }
 
     fn debug(&mut self, message_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
