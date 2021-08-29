@@ -367,8 +367,10 @@ fn start_engine(
 fn env_to_env_msg_info_bytes(engine: &Engine, env_v010: &mut EnvV010) -> (Vec<u8>, Vec<u8>) {
     match engine.contract_instance.cosmwasm_api_version {
         CosmWasmApiVersion::V010 => {
-            // contract_key is irrelevant inside the contract
-            env_v010.contract_key = None;
+            // Assaf: contract_key is irrelevant inside the contract,
+            // but existing v0.10 contracts might expect it to be populated (:facepalm:),
+            // therefore we are going to leave it populated (:shrug:).
+            // env_v010.contract_key = None;
 
             // in v0.10 the timestamp passed from Go was unix time in seconds
             // v0.16 time is unix time in nanoseconds, so now Go passes here unix time in nanoseconds
