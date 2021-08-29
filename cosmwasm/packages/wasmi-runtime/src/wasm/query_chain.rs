@@ -5,10 +5,9 @@ use crate::wasm::types::{IoNonce, SecretMessage};
 use crate::{exports, imports};
 
 use crate::cosmwasm::{
-    encoding::Binary,
+    binary::Binary,
+    errors::{StdError, StdResult, SystemError, SystemResult},
     query::{QueryRequest, WasmQuery},
-    std_error::{StdError, StdResult},
-    system_error::{SystemError, SystemResult},
 };
 
 use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError};

@@ -4,7 +4,7 @@
 ///
 use super::types::{IoNonce, SecretMessage};
 
-use crate::cosmwasm::encoding::Binary;
+use crate::cosmwasm::binary::Binary;
 use crate::cosmwasm::types::{CanonicalAddr, Coin, CosmosMsg, WasmMsg, WasmOutput};
 use crate::crypto::{AESKey, Ed25519PublicKey, Kdf, SIVEncryptable, KEY_MANAGER};
 use enclave_ffi_types::EnclaveError;

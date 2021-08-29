@@ -5,7 +5,7 @@ use protobuf::Message;
 use serde::{Deserialize, Serialize};
 
 use crate::cosmwasm::{
-    encoding::Binary,
+    binary::Binary,
     types::{CanonicalAddr, HumanAddr},
 };
 use crate::crypto::{

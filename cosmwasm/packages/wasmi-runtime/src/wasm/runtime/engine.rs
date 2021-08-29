@@ -45,14 +45,14 @@ impl Engine {
         let (func_name, args) = match self.contract_instance.cosmwasm_api_version {
             CosmWasmApiVersion::V010 => (
                 "init",
-                &[
+                vec![
                     RuntimeValue::I32(env_ptr as i32),
                     RuntimeValue::I32(msg_ptr as i32),
                 ],
             ),
             CosmWasmApiVersion::V016 => (
                 "instantiate",
-                &[
+                vec![
                     RuntimeValue::I32(env_ptr as i32),
                     RuntimeValue::I32(msg_info_ptr as i32),
                     RuntimeValue::I32(msg_ptr as i32),
@@ -62,7 +62,7 @@ impl Engine {
 
         match self
             .module
-            .invoke_export(func_name, args, &mut self.contract_instance)
+            .invoke_export(func_name, &args, &mut self.contract_instance)
             .map_err(wasmi_error_to_enclave_error)?
         {
             Some(RuntimeValue::I32(offset)) => Ok(offset as u32),
@@ -127,14 +127,14 @@ impl Engine {
         let (func_name, args) = match self.contract_instance.cosmwasm_api_version {
             CosmWasmApiVersion::V010 => (
                 "handle",
-                &[
+                vec![
                     RuntimeValue::I32(env_ptr as i32),
                     RuntimeValue::I32(msg_ptr as i32),
                 ],
             ),
             CosmWasmApiVersion::V016 => (
                 "execute",
-                &[
+                vec![
                     RuntimeValue::I32(env_ptr as i32),
                     RuntimeValue::I32(msg_info_ptr as i32),
                     RuntimeValue::I32(msg_ptr as i32),
@@ -144,7 +144,7 @@ impl Engine {
 
         match self
             .module
-            .invoke_export(func_name, args, &mut self.contract_instance)
+            .invoke_export(func_name, &args, &mut self.contract_instance)
             .map_err(wasmi_error_to_enclave_error)?
         {
             Some(RuntimeValue::I32(offset)) => Ok(offset as u32),
@@ -160,12 +160,12 @@ impl Engine {
 
         let args = match self.contract_instance.cosmwasm_api_version {
             CosmWasmApiVersion::V010 => {
-                &[
+                vec![
                     RuntimeValue::I32(msg_ptr as i32),
                     /* no env in v0.10 */
                 ]
             }
-            CosmWasmApiVersion::V016 => &[
+            CosmWasmApiVersion::V016 => vec![
                 RuntimeValue::I32(env_ptr as i32),
                 RuntimeValue::I32(msg_ptr as i32),
             ],
@@ -173,7 +173,7 @@ impl Engine {
 
         match self
             .module
-            .invoke_export("query", args, &mut self.contract_instance)
+            .invoke_export("query", &args, &mut self.contract_instance)
             .map_err(wasmi_error_to_enclave_error)?
         {
             Some(RuntimeValue::I32(offset)) => Ok(offset as u32),

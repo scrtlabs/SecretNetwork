@@ -4,7 +4,7 @@ use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::coalesce;
 use crate::cosmwasm::addresses::Addr;
-use crate::cosmwasm::encoding::Binary;
+use crate::cosmwasm::binary::Binary;
 use crate::cosmwasm::timestamp::Timestamp;
 use crate::cosmwasm::types::*;
 use crate::crypto::Ed25519PublicKey;
@@ -107,7 +107,7 @@ pub fn init(
     )?;
 
     let (contract_env_bytes, contract_msg_info_bytes) =
-        env_to_env_msg_info_bytes(&engine, &env_v010);
+        env_to_env_msg_info_bytes(&engine, &mut env_v010)?;
 
     let env_ptr = engine.write_to_memory(&contract_env_bytes)?;
     let msg_info_ptr = engine.write_to_memory(&contract_msg_info_bytes)?;
@@ -220,7 +220,7 @@ pub fn handle(
     )?;
 
     let (contract_env_bytes, contract_msg_info_bytes) =
-        env_to_env_msg_info_bytes(&engine, &env_v010);
+        env_to_env_msg_info_bytes(&engine, &mut env_v010)?;
 
     let env_ptr = engine.write_to_memory(&contract_env_bytes)?;
     let msg_info_ptr = engine.write_to_memory(&contract_msg_info_bytes)?;
@@ -307,7 +307,7 @@ pub fn query(
     )?;
 
     let (contract_env_bytes, _ /* no msg_info in query */) =
-        env_to_env_msg_info_bytes(&engine, &env_v010);
+        env_to_env_msg_info_bytes(&engine, &mut env_v010)?;
 
     let env_ptr = engine.write_to_memory(&contract_env_bytes)?;
     let msg_ptr = engine.write_to_memory(&validated_msg)?;
@@ -364,7 +364,10 @@ fn start_engine(
     Ok(Engine::new(contract_instance, module))
 }
 
-fn env_to_env_msg_info_bytes(engine: &Engine, env_v010: &mut EnvV010) -> (Vec<u8>, Vec<u8>) {
+fn env_to_env_msg_info_bytes(
+    engine: &Engine,
+    env_v010: &mut EnvV010,
+) -> Result<(Vec<u8>, Vec<u8>), EnclaveError> {
     match engine.contract_instance.cosmwasm_api_version {
         CosmWasmApiVersion::V010 => {
             // Assaf: contract_key is irrelevant inside the contract,
@@ -388,7 +391,7 @@ fn env_to_env_msg_info_bytes(engine: &Engine, env_v010: &mut EnvV010) -> (Vec<u8
 
             let msg_info_v010_bytes: Vec<u8> = vec![]; // in v0.10 msg_info is inside env
 
-            (env_v010_bytes, msg_info_v010_bytes)
+            Ok((env_v010_bytes, msg_info_v010_bytes))
         }
         CosmWasmApiVersion::V016 => {
             let env_v016 = EnvV016 {
@@ -424,7 +427,7 @@ fn env_to_env_msg_info_bytes(engine: &Engine, env_v010: &mut EnvV010) -> (Vec<u8
                 EnclaveError::FailedToSerialize
             })?;
 
-            (env_v016_bytes, msg_info_v016_bytes)
+            Ok((env_v016_bytes, msg_info_v016_bytes))
         }
     }
 }

@@ -157,8 +157,8 @@ pub fn validate_msg(msg: &[u8], contract_hash: [u8; HASH_SIZE]) -> Result<Vec<u8
 /// Verify all the parameters sent to the enclave match up, and were signed by the right account.
 pub fn verify_params(
     sig_info: &SigInfo,
-    _env: &EnvV010,
-    _msg: &SecretMessage,
+    env: &EnvV010,
+    msg: &SecretMessage,
 ) -> Result<(), EnclaveError> {
     info!("Verifying message signatures for: {:?}", sig_info);
 

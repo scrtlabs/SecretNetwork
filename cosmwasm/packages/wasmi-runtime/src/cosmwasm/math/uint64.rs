@@ -1,11 +1,10 @@
-use schemars::JsonSchema;
 use serde::{de, ser, Deserialize, Deserializer, Serialize};
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{self};
 use std::iter::Sum;
 use std::ops;
 
-use crate::errors::{DivideByZeroError, OverflowError, OverflowOperation, StdError};
+use crate::cosmwasm::errors::{DivideByZeroError, OverflowError, OverflowOperation, StdError};
 
 /// A thin wrapper around u64 that is using strings for JSON encoding/decoding,
 /// such that the full u64 range can be used for clients that convert JSON numbers to floats,
@@ -23,8 +22,8 @@ use crate::errors::{DivideByZeroError, OverflowError, OverflowOperation, StdErro
 /// let b = Uint64::from(70u32);
 /// assert_eq!(b.u64(), 70);
 /// ```
-#[derive(Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
-pub struct Uint64(#[schemars(with = "String")] u64);
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Uint64(pub u64);
 
 impl Uint64 {
     /// Creates a Uint64(value).
@@ -289,7 +288,7 @@ impl<'a> Sum<&'a Uint64> for Uint64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{from_slice, to_vec};
+    use crate::cosmwasm::serde::{from_slice, to_vec};
 
     #[test]
     fn uint64_convert_into() {

@@ -1,4 +1,3 @@
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -22,9 +21,7 @@ use super::math::Uint64;
 /// assert_eq!(ts.seconds(), 3);
 /// assert_eq!(ts.subsec_nanos(), 202);
 /// ```
-#[derive(
-    Serialize, Deserialize, Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, JsonSchema,
-)]
+#[derive(Serialize, Deserialize, Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Timestamp(Uint64);
 
 impl Timestamp {

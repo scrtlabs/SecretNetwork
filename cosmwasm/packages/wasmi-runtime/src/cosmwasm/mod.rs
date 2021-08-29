@@ -1,10 +1,9 @@
 pub mod addresses;
+pub mod binary;
 pub mod coins;
-pub mod encoding;
-pub mod math;
+pub mod errors;
 pub mod math;
 pub mod query;
-pub mod std_error;
-pub mod system_error;
+pub mod serde;
 pub mod timestamp;
 pub mod types;

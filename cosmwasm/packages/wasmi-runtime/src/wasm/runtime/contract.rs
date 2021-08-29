@@ -676,8 +676,6 @@ impl WasmiApi for ContractInstance {
         signatures_ptr_ptr: i32,
         public_keys_ptr_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        todo!();
-
         let signatures_count = todo!();
 
         self.use_gas_externally(
@@ -688,7 +686,7 @@ impl WasmiApi for ContractInstance {
     }
 
     fn debug(&mut self, message_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
-        let message_bytes = self.extract_vector(human_ptr_ptr as u32).map_err(|err| {
+        let message_bytes = self.extract_vector(message_ptr_ptr as u32).map_err(|err| {
             debug!("debug() error while trying to read message from wasm memory");
             err
         })?;

@@ -1,11 +1,10 @@
-use schemars::JsonSchema;
 use serde::{de, ser, Deserialize, Deserializer, Serialize};
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{self};
 use std::iter::Sum;
 use std::ops;
 
-use crate::errors::{DivideByZeroError, OverflowError, OverflowOperation, StdError};
+use crate::cosmwasm::errors::{DivideByZeroError, OverflowError, OverflowOperation, StdError};
 
 /// A thin wrapper around u128 that is using strings for JSON encoding/decoding,
 /// such that the full u128 range can be used for clients that convert JSON numbers to floats,
@@ -26,8 +25,8 @@ use crate::errors::{DivideByZeroError, OverflowError, OverflowOperation, StdErro
 /// let c = Uint128::from(70u32);
 /// assert_eq!(c.u128(), 70);
 /// ```
-#[derive(Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
-pub struct Uint128(#[schemars(with = "String")] u128);
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Uint128(pub u128);
 
 impl Uint128 {
     /// Creates a Uint128(value).
@@ -338,7 +337,7 @@ use uints::U256;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{from_slice, to_vec};
+    use crate::cosmwasm::serde::{from_slice, to_vec};
 
     #[test]
     fn uint128_convert_into() {

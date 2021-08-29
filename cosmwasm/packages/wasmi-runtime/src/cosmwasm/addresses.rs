@@ -1,11 +1,10 @@
 #![allow(deprecated)]
 
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::ops::Deref;
 
-use super::encoding::Binary;
+use crate::cosmwasm::binary::Binary;
 
 /// A human readable address.
 ///
@@ -23,8 +22,8 @@ use super::encoding::Binary;
 /// This type is immutable. If you really need to mutate it (Really? Are you sure?), create
 /// a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String`
 /// instance.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, JsonSchema)]
-pub struct Addr(String);
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Addr(pub String);
 
 impl Addr {
     /// Creates a new `Addr` instance from the given input without checking the validity
@@ -138,7 +137,7 @@ impl From<&Addr> for HumanAddr {
     since = "0.14.0",
     note = "HumanAddr is not much more than an alias to String and it does not provide significant safety advantages. With CosmWasm 0.14, we now use String when there was HumanAddr before. There is also the new Addr, which holds a validated immutable human readable address."
 )]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct HumanAddr(pub String);
 
 impl HumanAddr {
@@ -227,7 +226,7 @@ impl PartialEq<HumanAddr> for &str {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CanonicalAddr(pub Binary);
 
 impl From<&[u8]> for CanonicalAddr {

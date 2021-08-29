@@ -16,10 +16,11 @@ use enclave_ffi_types::EnclaveError;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use super::binary::Binary;
 pub use super::coins::Coin;
-use super::encoding::Binary;
 
 use super::addresses::Addr;
+use super::timestamp::Timestamp;
 use crate::consts::BECH32_PREFIX_ACC_ADDR;
 use crate::crypto::multisig::MultisigThresholdPubKey;
 use crate::crypto::secp256k1::Secp256k1PubKey;
