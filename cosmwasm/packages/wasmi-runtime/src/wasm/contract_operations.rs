@@ -3,6 +3,7 @@ use log::*;
 use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::coalesce;
+use crate::cosmwasm::addresses::Addr;
 use crate::cosmwasm::encoding::Binary;
 use crate::cosmwasm::timestamp::Timestamp;
 use crate::cosmwasm::types::*;
@@ -48,7 +49,7 @@ pub fn init(
 
     let mut env_v010: EnvV010 = serde_json::from_slice(env).map_err(|err| {
         warn!(
-            "got an error while trying to deserialize env input bytes into json {:?}: {}",
+            "init got an error while trying to deserialize env input bytes into json {:?}: {}",
             String::from_utf8_lossy(&env),
             err
         );
@@ -60,7 +61,7 @@ pub fn init(
 
     let canonical_contract_address = CanonicalAddr::from_human(&env_v010.contract.address).map_err(|err| {
         warn!(
-            "got an error while trying to deserialize env_v010.contract.address from bech32 string to bytes {:?}: {}",
+            "init got an error while trying to deserialize env_v010.contract.address from bech32 string to bytes {:?}: {}",
             env_v010.contract.address, err
         );
         EnclaveError::FailedToDeserialize
@@ -74,7 +75,7 @@ pub fn init(
 
     let parsed_sig_info: SigInfo = serde_json::from_slice(sig_info).map_err(|err| {
         warn!(
-            "got an error while trying to deserialize env input bytes into json {:?}: {}",
+            "init got an error while trying to deserialize env input bytes into json {:?}: {}",
             String::from_utf8_lossy(&sig_info),
             err
         );
@@ -105,15 +106,17 @@ pub fn init(
         secret_msg.user_public_key,
     )?;
 
-    let contract_env_bytes: Vec<u8> = env_to_bytes(&engine, &env_v010);
+    let (contract_env_bytes, contract_msg_info_bytes) =
+        env_to_env_msg_info_bytes(&engine, &env_v010);
 
-    let wasm_env_ptr = engine.write_to_memory(&contract_env_bytes)?;
-    let wasm_msg_ptr = engine.write_to_memory(&validated_msg)?;
+    let env_ptr = engine.write_to_memory(&contract_env_bytes)?;
+    let msg_info_ptr = engine.write_to_memory(&contract_msg_info_bytes)?;
+    let msg_ptr = engine.write_to_memory(&validated_msg)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
     let output = coalesce!(EnclaveError, {
-        let vec_ptr = engine.init(wasm_env_ptr, wasm_msg_ptr)?;
+        let vec_ptr = engine.init(env_ptr, msg_info_ptr, msg_ptr)?;
         let output = engine.extract_vector(vec_ptr)?;
         // TODO: copy cosmwasm's structures to enclave
         // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
@@ -154,7 +157,7 @@ pub fn handle(
 
     let mut env_v010: EnvV010 = serde_json::from_slice(env).map_err(|err| {
         warn!(
-            "got an error while trying to deserialize env input bytes into json {:?}: {}",
+            "handle got an error while trying to deserialize env input bytes into json {:?}: {}",
             env, err
         );
         EnclaveError::FailedToDeserialize
@@ -165,7 +168,7 @@ pub fn handle(
 
     let parsed_sig_info: SigInfo = serde_json::from_slice(sig_info).map_err(|err| {
         warn!(
-            "got an error while trying to deserialize env input bytes into json {:?}: {}",
+            "handle got an error while trying to deserialize env input bytes into json {:?}: {}",
             String::from_utf8_lossy(&sig_info),
             err
         );
@@ -192,7 +195,7 @@ pub fn handle(
 
     let canonical_contract_address = CanonicalAddr::from_human(&env_v010.contract.address).map_err(|err| {
         warn!(
-            "got an error while trying to deserialize env_v010.contract.address from bech32 string to bytes {:?}: {}",
+            "handle got an error while trying to deserialize env_v010.contract.address from bech32 string to bytes {:?}: {}",
             env_v010.contract.address, err
         );
         EnclaveError::FailedToDeserialize
@@ -216,15 +219,17 @@ pub fn handle(
         secret_msg.user_public_key,
     )?;
 
-    let contract_env_bytes: Vec<u8> = env_to_bytes(&engine, &env_v010);
+    let (contract_env_bytes, contract_msg_info_bytes) =
+        env_to_env_msg_info_bytes(&engine, &env_v010);
 
     let env_ptr = engine.write_to_memory(&contract_env_bytes)?;
+    let msg_info_ptr = engine.write_to_memory(&contract_msg_info_bytes)?;
     let msg_ptr = engine.write_to_memory(&validated_msg)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
     let output = coalesce!(EnclaveError, {
-        let vec_ptr = engine.handle(env_ptr, msg_ptr)?;
+        let vec_ptr = engine.handle(env_ptr, msg_info_ptr, msg_ptr)?;
 
         let output = engine.extract_vector(vec_ptr)?;
 
@@ -254,9 +259,21 @@ pub fn query(
     gas_limit: u64,
     used_gas: &mut u64,
     contract: &[u8],
+    env: &[u8],
     msg: &[u8],
 ) -> Result<QuerySuccess, EnclaveError> {
     let contract_code = ContractCode::new(contract);
+
+    let mut env_v010: EnvV010 = serde_json::from_slice(env).map_err(|err| {
+        warn!(
+            "query got an error while trying to deserialize env input bytes into json {:?}: {}",
+            env, err
+        );
+        EnclaveError::FailedToDeserialize
+    })?;
+    env_v010.contract_code_hash = hex::encode(contract_code.hash());
+
+    trace!("query env_v010: {:?}", env_v010);
 
     if msg.len() < CONTRACT_KEY_LENGTH {
         warn!("Input query is shorter than the minimum expected. Msg is malformed");
@@ -289,12 +306,16 @@ pub fn query(
         secret_msg.user_public_key,
     )?;
 
+    let (contract_env_bytes, _ /* no msg_info in query */) =
+        env_to_env_msg_info_bytes(&engine, &env_v010);
+
+    let env_ptr = engine.write_to_memory(&contract_env_bytes)?;
     let msg_ptr = engine.write_to_memory(&validated_msg)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
     let output = coalesce!(EnclaveError, {
-        let vec_ptr = engine.query(msg_ptr)?;
+        let vec_ptr = engine.query(env_ptr, msg_ptr)?;
 
         let output = engine.extract_vector(vec_ptr)?;
 
@@ -343,7 +364,7 @@ fn start_engine(
     Ok(Engine::new(contract_instance, module))
 }
 
-fn env_to_bytes(engine: &Engine, env_v010: &mut EnvV010) -> Vec<u8> {
+fn env_to_env_msg_info_bytes(engine: &Engine, env_v010: &mut EnvV010) -> (Vec<u8>, Vec<u8>) {
     match engine.contract_instance.cosmwasm_api_version {
         CosmWasmApiVersion::V010 => {
             // contract_key is irrelevant inside the contract
@@ -355,13 +376,17 @@ fn env_to_bytes(engine: &Engine, env_v010: &mut EnvV010) -> Vec<u8> {
             // so we need to convert it from nanoseconds to seconds
             env_v010.block.time = Timestamp::from_nanos(env_v010.block.time).seconds();
 
-            serde_json::to_vec(env_v010).map_err(|err| {
+            let env_v010_bytes = serde_json::to_vec(env_v010).map_err(|err| {
                 warn!(
                     "got an error while trying to serialize env_v010 (cosmwasm v0.10) into bytes {:?}: {}",
                     env_v010, err
                 );
                 EnclaveError::FailedToSerialize
-            })?
+            })?;
+
+            let msg_info_v010_bytes: Vec<u8> = vec![]; // in v0.10 msg_info is inside env
+
+            (env_v010_bytes, msg_info_v010_bytes)
         }
         CosmWasmApiVersion::V016 => {
             let env_v016 = EnvV016 {
@@ -376,13 +401,28 @@ fn env_to_bytes(engine: &Engine, env_v010: &mut EnvV010) -> Vec<u8> {
                 },
             };
 
-            serde_json::to_vec(&env_v016).map_err(|err| {
+            let env_v016_bytes =  serde_json::to_vec(&env_v016).map_err(|err| {
                 warn!(
                     "got an error while trying to serialize env_v016 (cosmwasm v0.16) into bytes {:?}: {}",
                     env_v016, err
                 );
                 EnclaveError::FailedToSerialize
-            })?
+            })?;
+
+            let msg_info_v016 = MessageInfoV016 {
+                sender: Addr(env_v010.message.sender.0),
+                funds: env_v010.message.sent_funds,
+            };
+
+            let msg_info_v016_bytes =  serde_json::to_vec(&msg_info_v016).map_err(|err| {
+                warn!(
+                    "got an error while trying to serialize msg_info_v016 (cosmwasm v0.16) into bytes {:?}: {}",
+                    msg_info_v016, err
+                );
+                EnclaveError::FailedToSerialize
+            })?;
+
+            (env_v016_bytes, msg_info_v016_bytes)
         }
     }
 }

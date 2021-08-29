@@ -342,12 +342,8 @@ where
         Ok(init_result.into_output())
     }
 
-    pub fn call_migrate(&mut self, _env: &[u8], _msg: &[u8]) -> VmResult<Vec<u8>> {
-        Ok(Vec::new())
-    }
-
-    pub fn call_query(&mut self, msg: &[u8]) -> VmResult<Vec<u8>> {
-        let init_result = self.inner.query(msg)?;
+    pub fn call_query(&mut self, env: &[u8], msg: &[u8]) -> VmResult<Vec<u8>> {
+        let init_result = self.inner.query(env, msg)?;
         Ok(init_result.into_output())
     }
 }

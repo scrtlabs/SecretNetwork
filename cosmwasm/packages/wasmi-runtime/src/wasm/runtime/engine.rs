@@ -34,24 +34,35 @@ impl Engine {
         self.contract_instance.extract_vector(vec_ptr_ptr)
     }
 
-    pub fn init(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, EnclaveError> {
+    pub fn init(
+        &mut self,
+        env_ptr: u32,
+        msg_info_ptr: u32,
+        msg_ptr: u32,
+    ) -> Result<u32, EnclaveError> {
         info!("Invoking init() in wasm");
 
-        let func_name = match self.contract_instance.cosmwasm_api_version {
-            CosmWasmApiVersion::V010 => "init",
-            CosmWasmApiVersion::V016 => "instantiate",
-        };
-
-        match self
-            .module
-            .invoke_export(
-                func_name,
+        let (func_name, args) = match self.contract_instance.cosmwasm_api_version {
+            CosmWasmApiVersion::V010 => (
+                "init",
                 &[
                     RuntimeValue::I32(env_ptr as i32),
                     RuntimeValue::I32(msg_ptr as i32),
                 ],
-                &mut self.contract_instance,
-            )
+            ),
+            CosmWasmApiVersion::V016 => (
+                "instantiate",
+                &[
+                    RuntimeValue::I32(env_ptr as i32),
+                    RuntimeValue::I32(msg_info_ptr as i32),
+                    RuntimeValue::I32(msg_ptr as i32),
+                ],
+            ),
+        };
+
+        match self
+            .module
+            .invoke_export(func_name, args, &mut self.contract_instance)
             .map_err(wasmi_error_to_enclave_error)?
         {
             Some(RuntimeValue::I32(offset)) => Ok(offset as u32),
@@ -79,7 +90,12 @@ impl Engine {
         //result
     }
 
-    pub fn handle(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, EnclaveError> {
+    pub fn handle(
+        &mut self,
+        env_ptr: u32,
+        msg_info_ptr: u32,
+        msg_ptr: u32,
+    ) -> Result<u32, EnclaveError> {
         info!("Invoking handle() in wasm");
 
         // Itzik: leaving this here as an example in case we will want to do something like this in the future
@@ -108,21 +124,27 @@ impl Engine {
         //     }
         // }?;
 
-        let func_name = match self.contract_instance.cosmwasm_api_version {
-            CosmWasmApiVersion::V010 => "handle",
-            CosmWasmApiVersion::V016 => "execute",
-        };
-
-        match self
-            .module
-            .invoke_export(
-                func_name,
+        let (func_name, args) = match self.contract_instance.cosmwasm_api_version {
+            CosmWasmApiVersion::V010 => (
+                "handle",
                 &[
                     RuntimeValue::I32(env_ptr as i32),
                     RuntimeValue::I32(msg_ptr as i32),
                 ],
-                &mut self.contract_instance,
-            )
+            ),
+            CosmWasmApiVersion::V016 => (
+                "execute",
+                &[
+                    RuntimeValue::I32(env_ptr as i32),
+                    RuntimeValue::I32(msg_info_ptr as i32),
+                    RuntimeValue::I32(msg_ptr as i32),
+                ],
+            ),
+        };
+
+        match self
+            .module
+            .invoke_export(func_name, args, &mut self.contract_instance)
             .map_err(wasmi_error_to_enclave_error)?
         {
             Some(RuntimeValue::I32(offset)) => Ok(offset as u32),
@@ -133,16 +155,25 @@ impl Engine {
         }
     }
 
-    pub fn query(&mut self, msg_ptr: u32) -> Result<u32, EnclaveError> {
+    pub fn query(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, EnclaveError> {
         info!("Invoking query() in wasm");
+
+        let args = match self.contract_instance.cosmwasm_api_version {
+            CosmWasmApiVersion::V010 => {
+                &[
+                    RuntimeValue::I32(msg_ptr as i32),
+                    /* no env in v0.10 */
+                ]
+            }
+            CosmWasmApiVersion::V016 => &[
+                RuntimeValue::I32(env_ptr as i32),
+                RuntimeValue::I32(msg_ptr as i32),
+            ],
+        };
 
         match self
             .module
-            .invoke_export(
-                "query",
-                &[RuntimeValue::I32(msg_ptr as i32)],
-                &mut self.contract_instance,
-            )
+            .invoke_export("query", args, &mut self.contract_instance)
             .map_err(wasmi_error_to_enclave_error)?
         {
             Some(RuntimeValue::I32(offset)) => Ok(offset as u32),

@@ -88,7 +88,7 @@ func ReleaseCache(cache Cache) {
 func InitEnclaveRuntime(ModuleCacheSize uint8) error {
 	errmsg := C.Buffer{}
 
-	config := C.EnclaveRuntimeConfig {
+	config := C.EnclaveRuntimeConfig{
 		module_cache_size: u8(ModuleCacheSize),
 	}
 	_, err := C.configure_enclave_runtime(config, &errmsg)
@@ -203,7 +203,7 @@ func Handle(
 	return receiveVector(res), uint64(gasUsed), nil
 }
 
-func Migrate(
+func Query(
 	cache Cache,
 	code_id []byte,
 	params []byte,
@@ -232,41 +232,7 @@ func Migrate(
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
-	res, err := C.migrate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
-	}
-	return receiveVector(res), uint64(gasUsed), nil
-}
-
-func Query(
-	cache Cache,
-	code_id []byte,
-	msg []byte,
-	gasMeter *GasMeter,
-	store KVStore,
-	api *GoAPI,
-	querier *Querier,
-	gasLimit uint64,
-) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
-	defer freeAfterSend(id)
-	m := sendSlice(msg)
-	defer freeAfterSend(m)
-
-	// set up a new stack frame to handle iterators
-	counter := startContract()
-	defer endContract(counter)
-
-	dbState := buildDBState(store, counter)
-	db := buildDB(&dbState, gasMeter)
-	a := buildAPI(api)
-	q := buildQuerier(querier)
-	var gasUsed u64
-	errmsg := C.Buffer{}
-
-	res, err := C.query(cache.ptr, id, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
+	res, err := C.query(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)

@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"path/filepath"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
@@ -14,7 +16,6 @@ import (
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
-	"path/filepath"
 
 	"github.com/tendermint/tendermint/crypto"
 
@@ -589,8 +590,17 @@ func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []b
 	store := ctx.KVStore(k.storeKey)
 	// 0x01 | codeID (uint64) -> ContractInfo
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddr))
+	fmt.Printf("Contract Query: Got contract Key for contract %s: %s\n", contractAddr, base64.StdEncoding.EncodeToString(contractKey))
+	params := types.NewEnv(
+		ctx,
+		sdk.AccAddress{}, /* empty because it's unused in queries */
+		[]sdk.Coin{},     /* empty because it's unused in queries */
+		contractAddr,
+		contractKey,
+	)
+	fmt.Printf("Contract Query: key from params %s \n", params.Key)
 
-	queryResult, gasUsed, qErr := k.wasmer.Query(codeInfo.CodeHash, append(contractKey[:], req[:]...), prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx))
+	queryResult, gasUsed, qErr := k.wasmer.Query(codeInfo.CodeHash, params, append(contractKey[:], req[:]...), prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx))
 	consumeGas(ctx, gasUsed)
 
 	if qErr != nil {
