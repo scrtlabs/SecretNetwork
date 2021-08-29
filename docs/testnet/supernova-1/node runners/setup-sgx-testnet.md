@@ -27,7 +27,7 @@ if (($UBUNTUVERSION < 16)); then
 elif (($UBUNTUVERSION < 18)); then
 	DISTRO='xenial'
 	OS='ubuntu16.04-server'
-else (($UBUNTUVERSION < 20)); then
+elif (($UBUNTUVERSION < 20)); then
 	DISTRO='bionic'
 	OS='ubuntu18.04-server'
 else
@@ -116,7 +116,7 @@ if (($UBUNTUVERSION < 16)); then
 	exit 1
 elif (($UBUNTUVERSION < 18)); then
 	DISTRO='xenial'
-else (($UBUNTUVERSION < 20)); then
+elif (($UBUNTUVERSION < 20)); then
 	DISTRO='bionic'
 	OS='ubuntu18.04-server'
 else
