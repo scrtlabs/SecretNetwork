@@ -144,51 +144,55 @@ pub enum CosmosPubKey {
     Multisig(MultisigThresholdPubKey),
 }
 
-/// `"/"` + `LegacyAminoPubKey::descriptor_static().full_name()`
+/// `"/"` + `proto::crypto::multisig::LegacyAminoPubKey::descriptor_static().full_name()`
 const TYPE_URL_MULTISIG_LEGACY_AMINO_PUBKEY: &str = "/cosmos.crypto.multisig.LegacyAminoPubKey";
-/// `"/"` + `PubKey::descriptor_static().full_name()`
+/// `"/"` + `proto::crypto::secp256k1::PubKey::descriptor_static().full_name()`
 const TYPE_URL_SECP256K1_PUBKEY: &str = "/cosmos.crypto.secp256k1.PubKey";
 
 impl CosmosPubKey {
     pub fn from_proto(public_key: &protobuf::well_known_types::Any) -> Result<Self, CryptoError> {
-        let public_key = match public_key.type_url.as_str() {
-            TYPE_URL_SECP256K1_PUBKEY => {
-                use proto::crypto::secp256k1::PubKey;
-                let pub_key = PubKey::parse_from_bytes(&public_key.value).map_err(|_err| {
-                    warn!(
-                        "Could not parse secp256k1 public key from these bytes: {}",
-                        Binary(public_key.value.clone())
-                    );
-                    CryptoError::ParsingError
-                })?;
-                CosmosPubKey::Secp256k1(Secp256k1PubKey::new(pub_key.key))
-            }
-            TYPE_URL_MULTISIG_LEGACY_AMINO_PUBKEY => {
-                use proto::crypto::multisig::LegacyAminoPubKey;
-                let multisig_key =
-                    LegacyAminoPubKey::parse_from_bytes(&public_key.value).map_err(|_err| {
-                        warn!(
-                            "Could not parse multisig public key from these bytes: {}",
-                            Binary(public_key.value.clone())
-                        );
-                        CryptoError::ParsingError
-                    })?;
-                let mut pubkeys = vec![];
-                for public_key in &multisig_key.public_keys {
-                    pubkeys.push(CosmosPubKey::from_proto(public_key)?);
-                }
-                CosmosPubKey::Multisig(MultisigThresholdPubKey::new(
-                    multisig_key.threshold,
-                    pubkeys,
-                ))
-            }
+        let public_key_parser = match public_key.type_url.as_str() {
+            TYPE_URL_SECP256K1_PUBKEY => Self::secp256k1_from_proto,
+            TYPE_URL_MULTISIG_LEGACY_AMINO_PUBKEY => Self::multisig_legacy_amino_from_proto,
             _ => {
                 warn!("found public key of unsupported type: {:?}", public_key);
                 return Err(CryptoError::ParsingError);
             }
         };
 
-        Ok(public_key)
+        public_key_parser(&public_key.value)
+    }
+
+    fn secp256k1_from_proto(public_key_bytes: &[u8]) -> Result<Self, CryptoError> {
+        use proto::crypto::secp256k1::PubKey;
+        let pub_key = PubKey::parse_from_bytes(public_key_bytes).map_err(|_err| {
+            warn!(
+                "Could not parse secp256k1 public key from these bytes: {}",
+                Binary(public_key_bytes.to_vec())
+            );
+            CryptoError::ParsingError
+        })?;
+        Ok(CosmosPubKey::Secp256k1(Secp256k1PubKey::new(pub_key.key)))
+    }
+
+    fn multisig_legacy_amino_from_proto(public_key_bytes: &[u8]) -> Result<Self, CryptoError> {
+        use proto::crypto::multisig::LegacyAminoPubKey;
+        let multisig_key =
+            LegacyAminoPubKey::parse_from_bytes(public_key_bytes).map_err(|_err| {
+                warn!(
+                    "Could not parse multisig public key from these bytes: {}",
+                    Binary(public_key_bytes.to_vec())
+                );
+                CryptoError::ParsingError
+            })?;
+        let mut pubkeys = vec![];
+        for public_key in &multisig_key.public_keys {
+            pubkeys.push(CosmosPubKey::from_proto(public_key)?);
+        }
+        Ok(CosmosPubKey::Multisig(MultisigThresholdPubKey::new(
+            multisig_key.threshold,
+            pubkeys,
+        )))
     }
 }
 
