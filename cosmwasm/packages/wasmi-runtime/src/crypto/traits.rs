@@ -1,6 +1,6 @@
 use enclave_ffi_types::EnclaveError;
 
-use crate::cosmwasm::types::CanonicalAddr;
+use crate::cosmwasm_v010_types::types::CanonicalAddr;
 use crate::crypto::CryptoError;
 
 pub const HMAC_SIGNATURE_SIZE: usize = 32;

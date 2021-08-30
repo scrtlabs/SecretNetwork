@@ -3,10 +3,12 @@ use log::*;
 use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::coalesce;
-use crate::cosmwasm::addresses::Addr;
-use crate::cosmwasm::binary::Binary;
-use crate::cosmwasm::timestamp::Timestamp;
-use crate::cosmwasm::types::*;
+use crate::cosmwasm_v010_types;
+use crate::cosmwasm_v010_types::encoding::Binary;
+use crate::cosmwasm_v010_types::types::CanonicalAddr;
+use crate::cosmwasm_v016_types;
+use crate::cosmwasm_v016_types::addresses::Addr;
+use crate::cosmwasm_v016_types::timestamp::Timestamp;
 use crate::crypto::Ed25519PublicKey;
 use crate::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::wasm::runtime::CosmWasmApiVersion;
@@ -47,14 +49,15 @@ pub fn init(
 ) -> Result<InitSuccess, EnclaveError> {
     let contract_code = ContractCode::new(contract);
 
-    let mut env_v010: EnvV010 = serde_json::from_slice(env).map_err(|err| {
-        warn!(
-            "init got an error while trying to deserialize env input bytes into json {:?}: {}",
-            String::from_utf8_lossy(&env),
-            err
-        );
-        EnclaveError::FailedToDeserialize
-    })?;
+    let mut env_v010: cosmwasm_v010_types::types::Env =
+        serde_json::from_slice(env).map_err(|err| {
+            warn!(
+                "init got an error while trying to deserialize env input bytes into json {:?}: {}",
+                String::from_utf8_lossy(&env),
+                err
+            );
+            EnclaveError::FailedToDeserialize
+        })?;
     env_v010.contract_code_hash = hex::encode(contract_code.hash());
 
     trace!("init env_v010: {:?}", env_v010);
@@ -155,13 +158,14 @@ pub fn handle(
 ) -> Result<HandleSuccess, EnclaveError> {
     let contract_code = ContractCode::new(contract);
 
-    let mut env_v010: EnvV010 = serde_json::from_slice(env).map_err(|err| {
-        warn!(
+    let mut env_v010: cosmwasm_v010_types::types::Env =
+        serde_json::from_slice(env).map_err(|err| {
+            warn!(
             "handle got an error while trying to deserialize env input bytes into json {:?}: {}",
             env, err
         );
-        EnclaveError::FailedToDeserialize
-    })?;
+            EnclaveError::FailedToDeserialize
+        })?;
     env_v010.contract_code_hash = hex::encode(contract_code.hash());
 
     trace!("handle env_v010: {:?}", env_v010);
@@ -264,13 +268,14 @@ pub fn query(
 ) -> Result<QuerySuccess, EnclaveError> {
     let contract_code = ContractCode::new(contract);
 
-    let mut env_v010: EnvV010 = serde_json::from_slice(env).map_err(|err| {
-        warn!(
-            "query got an error while trying to deserialize env input bytes into json {:?}: {}",
-            env, err
-        );
-        EnclaveError::FailedToDeserialize
-    })?;
+    let mut env_v010: cosmwasm_v010_types::types::Env =
+        serde_json::from_slice(env).map_err(|err| {
+            warn!(
+                "query got an error while trying to deserialize env input bytes into json {:?}: {}",
+                env, err
+            );
+            EnclaveError::FailedToDeserialize
+        })?;
     env_v010.contract_code_hash = hex::encode(contract_code.hash());
 
     trace!("query env_v010: {:?}", env_v010);
@@ -366,7 +371,7 @@ fn start_engine(
 
 fn env_to_env_msg_info_bytes(
     engine: &Engine,
-    env_v010: &mut EnvV010,
+    env_v010: &mut cosmwasm_v010_types::types::Env,
 ) -> Result<(Vec<u8>, Vec<u8>), EnclaveError> {
     match engine.contract_instance.cosmwasm_api_version {
         CosmWasmApiVersion::V010 => {
@@ -394,15 +399,15 @@ fn env_to_env_msg_info_bytes(
             Ok((env_v010_bytes, msg_info_v010_bytes))
         }
         CosmWasmApiVersion::V016 => {
-            let env_v016 = EnvV016 {
-                block: BlockInfoV016 {
+            let env_v016 = cosmwasm_v016_types::types::Env {
+                block: cosmwasm_v016_types::types::BlockInfo {
                     height: env_v010.block.height,
                     time: Timestamp::from_nanos(env_v010.block.time),
-                    chain_id: env_v010.block.chain_id,
+                    chain_id: env_v010.block.chain_id.clone(),
                 },
-                contract: ContractInfoV016 {
-                    address: Addr(env_v010.contract.address.0),
-                    code_hash: env_v010.contract_code_hash,
+                contract: cosmwasm_v016_types::types::ContractInfo {
+                    address: Addr(env_v010.contract.address.0.clone()),
+                    code_hash: env_v010.contract_code_hash.clone(),
                 },
             };
 
@@ -414,9 +419,19 @@ fn env_to_env_msg_info_bytes(
                 EnclaveError::FailedToSerialize
             })?;
 
-            let msg_info_v016 = MessageInfoV016 {
-                sender: Addr(env_v010.message.sender.0),
-                funds: env_v010.message.sent_funds,
+            let msg_info_v016 = cosmwasm_v016_types::types::MessageInfo {
+                sender: Addr(env_v010.message.sender.0.clone()),
+                funds: env_v010
+                    .message
+                    .sent_funds
+                    .iter()
+                    .map(|coin| {
+                        cosmwasm_v016_types::coins::Coin::new(
+                            coin.amount.u128(),
+                            coin.denom.clone(),
+                        )
+                    })
+                    .collect::<Vec<cosmwasm_v016_types::coins::Coin>>(),
             };
 
             let msg_info_v016_bytes =  serde_json::to_vec(&msg_info_v016).map_err(|err| {

@@ -81,10 +81,12 @@ impl ContractInstance {
             .cloned()
             .expect("'memory' export should be of memory type");
 
-        let mut cosmwasm_api_version;
+        let cosmwasm_api_version;
         if (&*module).export_by_name("cosmwasm_vm_version_3").is_some() {
             cosmwasm_api_version = CosmWasmApiVersion::V010;
-        } else if (&*module).export_by_name("interface_version_7").is_some() {
+        } else
+        /* if (&*module).export_by_name("interface_version_7").is_some() */
+        {
             cosmwasm_api_version = CosmWasmApiVersion::V016;
         }
 
@@ -619,7 +621,7 @@ impl WasmiApi for ContractInstance {
             Ok(x) => x,
         };
 
-        let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
+        let (_, _) = match bech32::decode(&human_addr_str) {
             Err(err) => {
                 debug!(
                     "addr_validate() error while trying to decode human address {:?} as bech32: {:?}",
@@ -643,9 +645,10 @@ impl WasmiApi for ContractInstance {
         signature_ptr_ptr: i32,
         public_key_ptr_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        self.use_gas_externally(self.gas_costs.external_secp256k1_verify as u64)?;
+        // self.use_gas_externally(self.gas_costs.external_secp256k1_verify as u64)?;
 
-        todo!()
+        // todo!()
+        Ok(None)
     }
 
     fn secp256k1_recover_pubkey(
@@ -654,9 +657,10 @@ impl WasmiApi for ContractInstance {
         signature_ptr_ptr: i32,
         recovery_param_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        self.use_gas_externally(self.gas_costs.external_secp256k1_recover_pubkey as u64)?;
+        // self.use_gas_externally(self.gas_costs.external_secp256k1_recover_pubkey as u64)?;
 
-        todo!()
+        // todo!()
+        Ok(None)
     }
 
     fn ed25519_verify(
@@ -665,9 +669,10 @@ impl WasmiApi for ContractInstance {
         signature_ptr_ptr: i32,
         public_key_ptr_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        self.use_gas_externally(self.gas_costs.external_ed25519_verify as u64)?;
+        // self.use_gas_externally(self.gas_costs.external_ed25519_verify as u64)?;
 
-        todo!()
+        // todo!()
+        Ok(None)
     }
 
     fn ed25519_batch_verify(
@@ -676,13 +681,14 @@ impl WasmiApi for ContractInstance {
         signatures_ptr_ptr: i32,
         public_keys_ptr_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        let signatures_count = todo!();
+        // let signatures_count = todo!();
 
-        self.use_gas_externally(
-            signatures_count * self.gas_costs.external_ed25519_batch_verify_per_one as u64,
-        )?;
+        // self.use_gas_externally(
+        //     signatures_count * self.gas_costs.external_ed25519_batch_verify_per_one as u64,
+        // )?;
 
-        todo!();
+        // todo!();
+        Ok(None)
     }
 
     fn debug(&mut self, message_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
@@ -697,7 +703,7 @@ impl WasmiApi for ContractInstance {
         );
 
         // Turn Vec<u8> to str
-        let mut message_str = match std::str::from_utf8(&message_bytes) {
+        let message_str = match std::str::from_utf8(&message_bytes) {
             Err(err) => {
                 debug!(
                     "debug() error while trying to parse message from bytes to string: {:?}",

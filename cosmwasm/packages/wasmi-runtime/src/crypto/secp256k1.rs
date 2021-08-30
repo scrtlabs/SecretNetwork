@@ -1,7 +1,7 @@
 use log::*;
 
-use crate::cosmwasm::binary::Binary;
-use crate::cosmwasm::types::CanonicalAddr;
+use crate::cosmwasm_v010_types::encoding::Binary;
+use crate::cosmwasm_v010_types::types::CanonicalAddr;
 use crate::crypto::traits::PubKey;
 use crate::crypto::CryptoError;
 use ripemd160::{Digest, Ripemd160};

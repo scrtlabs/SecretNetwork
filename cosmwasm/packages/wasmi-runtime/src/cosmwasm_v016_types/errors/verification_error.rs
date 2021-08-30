@@ -4,7 +4,7 @@ use std::fmt::Debug;
 use thiserror::Error;
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::crypto::CryptoError;
+use crate::cosmwasm_v016_types::errors::CryptoError;
 
 #[derive(Error, Debug)]
 pub enum VerificationError {

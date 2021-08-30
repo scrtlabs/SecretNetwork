@@ -2,8 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::binary::Binary;
 use super::coins::Coin;
+use super::encoding::Binary;
 use super::math::Decimal;
 use super::types::HumanAddr;
 

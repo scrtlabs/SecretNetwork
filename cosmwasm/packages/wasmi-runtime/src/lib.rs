@@ -1,4 +1,5 @@
 #![feature(try_reserve)]
+#![feature(min_const_generics)]
 // similar trick to get the IDE to use sgx_tstd even when it doesn't know we're targeting SGX
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
@@ -27,7 +28,8 @@ pub mod registration;
 use std::env;
 
 mod consts;
-mod cosmwasm;
+mod cosmwasm_v010_types;
+mod cosmwasm_v016_types;
 mod crypto;
 mod proto;
 mod results;

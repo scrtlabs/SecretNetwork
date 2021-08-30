@@ -2,7 +2,7 @@ use log::*;
 
 use enclave_ffi_types::EnclaveError;
 
-use crate::cosmwasm::types::{CanonicalAddr, Coin, EnvV010, HumanAddr};
+use crate::cosmwasm_v010_types::types::{CanonicalAddr, Coin, Env, HumanAddr};
 use crate::crypto::traits::PubKey;
 use crate::crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
 use crate::wasm::io;
@@ -17,7 +17,7 @@ pub const CONTRACT_KEY_LENGTH: usize = HASH_SIZE + HASH_SIZE;
 const HEX_ENCODED_HASH_SIZE: usize = HASH_SIZE * 2;
 
 pub fn generate_encryption_key(
-    env: &EnvV010,
+    env: &Env,
     contract_hash: [u8; HASH_SIZE],
     contract_address: &[u8],
 ) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
@@ -49,7 +49,7 @@ pub fn generate_encryption_key(
     Ok(encryption_key)
 }
 
-pub fn extract_contract_key(env: &EnvV010) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
+pub fn extract_contract_key(env: &Env) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
     if env.contract_key.is_none() {
         warn!("Contract execute with empty contract key");
         return Err(EnclaveError::FailedContractAuthentication);
@@ -157,7 +157,7 @@ pub fn validate_msg(msg: &[u8], contract_hash: [u8; HASH_SIZE]) -> Result<Vec<u8
 /// Verify all the parameters sent to the enclave match up, and were signed by the right account.
 pub fn verify_params(
     sig_info: &SigInfo,
-    env: &EnvV010,
+    env: &Env,
     msg: &SecretMessage,
 ) -> Result<(), EnclaveError> {
     info!("Verifying message signatures for: {:?}", sig_info);
@@ -208,7 +208,7 @@ pub fn verify_params(
 
 fn get_signer_and_messages(
     sign_info: &SigInfo,
-    env: &EnvV010,
+    env: &Env,
 ) -> Result<(CosmosPubKey, Vec<CosmWasmMsg>), EnclaveError> {
     use crate::proto::tx::signing::SignMode::*;
     match sign_info.sign_mode {
@@ -333,7 +333,7 @@ fn get_verified_msg<'sd>(
 }
 
 /// Check that the contract listed in the cosmwasm message matches the one in env
-fn verify_contract(msg: &CosmWasmMsg, env: &EnvV010) -> bool {
+fn verify_contract(msg: &CosmWasmMsg, env: &Env) -> bool {
     // Contract address is relevant only to execute, since during sending an instantiate message the contract address is not yet known
     match msg {
         CosmWasmMsg::Execute { contract, .. } => {
@@ -354,7 +354,7 @@ fn verify_contract(msg: &CosmWasmMsg, env: &EnvV010) -> bool {
 }
 
 /// Check that the funds listed in the cosmwasm message matches the ones in env
-fn verify_funds(msg: &CosmWasmMsg, env: &EnvV010) -> bool {
+fn verify_funds(msg: &CosmWasmMsg, env: &Env) -> bool {
     match msg {
         CosmWasmMsg::Execute { sent_funds, .. }
         | CosmWasmMsg::Instantiate {
@@ -367,7 +367,7 @@ fn verify_funds(msg: &CosmWasmMsg, env: &EnvV010) -> bool {
 
 fn verify_message_params(
     messages: &[CosmWasmMsg],
-    env: &EnvV010,
+    env: &Env,
     signer_public_key: &CosmosPubKey,
     sent_msg: &SecretMessage,
 ) -> bool {

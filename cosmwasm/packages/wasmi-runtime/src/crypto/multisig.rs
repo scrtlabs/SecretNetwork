@@ -2,8 +2,8 @@ use log::*;
 
 use sha2::Digest;
 
-use crate::cosmwasm::binary::Binary;
-use crate::cosmwasm::types::CanonicalAddr;
+use crate::cosmwasm_v010_types::encoding::Binary;
+use crate::cosmwasm_v010_types::types::CanonicalAddr;
 use crate::wasm::types::CosmosPubKey;
 
 use super::traits::PubKey;

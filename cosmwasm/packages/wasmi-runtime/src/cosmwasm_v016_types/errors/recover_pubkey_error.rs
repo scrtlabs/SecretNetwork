@@ -1,5 +1,5 @@
 #[cfg(not(target_arch = "wasm32"))]
-use crate::crypto::CryptoError;
+use crate::cosmwasm_v016_types::errors::CryptoError;
 #[cfg(feature = "backtraces")]
 use std::backtrace::Backtrace;
 use std::fmt::Debug;

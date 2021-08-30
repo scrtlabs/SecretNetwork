@@ -4,8 +4,8 @@ use enclave_ffi_types::EnclaveError;
 use protobuf::Message;
 use serde::{Deserialize, Serialize};
 
-use crate::cosmwasm::{
-    binary::Binary,
+use crate::cosmwasm_v010_types::{
+    encoding::Binary,
     types::{CanonicalAddr, HumanAddr},
 };
 use crate::crypto::{
@@ -15,8 +15,8 @@ use crate::crypto::{
 use crate::proto;
 
 use super::io::calc_encryption_key;
-use crate::cosmwasm::coins::Coin;
-use crate::cosmwasm::math::Uint128;
+use crate::cosmwasm_v010_types::coins::Coin;
+use crate::cosmwasm_v010_types::math::Uint128;
 
 use crate::wasm::contract_validation::calc_contract_hash;
 

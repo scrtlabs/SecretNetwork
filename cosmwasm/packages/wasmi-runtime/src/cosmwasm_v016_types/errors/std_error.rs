@@ -1,10 +1,9 @@
-//! must keep this file in sync with cosmwasm/packages/std/src/errors/std_error.rs
 #[cfg(feature = "backtraces")]
 use std::backtrace::Backtrace;
 use std::fmt;
 use thiserror::Error;
 
-use crate::cosmwasm::errors::{RecoverPubkeyError, VerificationError};
+use crate::cosmwasm_v016_types::errors::{RecoverPubkeyError, VerificationError};
 
 /// Structured error type for init, execute and query.
 ///
@@ -68,8 +67,6 @@ pub enum StdError {
         #[cfg(feature = "backtraces")]
         backtrace: Backtrace,
     },
-    #[error("Null pointer")]
-    NullPointer {},
     #[error("Error parsing into type {target_type}: {msg}")]
     ParseErr {
         /// the target type that was attempted
