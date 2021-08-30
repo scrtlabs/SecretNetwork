@@ -205,6 +205,14 @@ pub fn handle(
     trace!("successfully authenticated the contract!");
     trace!("handle contract key: {:?}", hex::encode(contract_key));
 
+    let canonical_contract_address = CanonicalAddr::from_human(&env_v010.contract.address).map_err(|err| {
+        warn!(
+            "handle got an error while trying to deserialize env_v010.contract.address from bech32 string to bytes {:?}: {}",
+            env_v010.contract.address, err
+        );
+        EnclaveError::FailedToDeserialize
+    })?;
+
     let mut engine = start_engine(
         context,
         gas_limit,
@@ -318,7 +326,7 @@ pub fn query(
             output,
             secret_msg.nonce,
             secret_msg.user_public_key,
-            &CanonicalAddr(Binary(Vec::new())), // Not used for queries
+            &CanonicalAddr(Binary(Vec::new())), // Not used for queries (no logs)
         )?;
         Ok(output)
     })
