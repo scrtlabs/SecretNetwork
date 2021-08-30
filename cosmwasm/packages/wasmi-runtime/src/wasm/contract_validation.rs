@@ -102,9 +102,17 @@ pub fn calc_contract_hash(contract_bytes: &[u8]) -> [u8; HASH_SIZE] {
 
 pub fn validate_contract_key(
     contract_key: &[u8; CONTRACT_KEY_LENGTH],
-    contract_address: &[u8],
+    contract_address: &HumanAddr,
     contract_code: &[u8],
-) -> bool {
+) -> Result<bool, EnclaveError> {
+    let contract_address = &(CanonicalAddr::from_human(contract_address).map_err(|err| {
+        warn!(
+            "got an error while trying to deserialize env_v010.contract.address from bech32 string to bytes {:?}: {}",
+            contract_address, err
+        );
+        EnclaveError::FailedToDeserialize
+    })?.0).0;
+
     // parse contract key -> < signer_id || authentication_code >
     let mut signer_id: [u8; HASH_SIZE] = [0u8; HASH_SIZE];
     signer_id.copy_from_slice(&contract_key[0..HASH_SIZE]);
@@ -128,7 +136,7 @@ pub fn validate_contract_key(
     let calculated_authentication_id =
         generate_contract_id(&enclave_key, &signer_id, &contract_hash, contract_address);
 
-    calculated_authentication_id == expected_authentication_id
+    Ok(calculated_authentication_id == expected_authentication_id)
 }
 
 /// Validate that the message sent to the enclave (after decryption) was actually addressed to this contract.

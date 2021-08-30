@@ -605,7 +605,7 @@ func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []b
 	)
 	fmt.Printf("Contract Query: key from params %s \n", params.Key)
 
-	queryResult, gasUsed, qErr := k.wasmer.Query(codeInfo.CodeHash, params, append(contractKey[:], req[:]...), prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx))
+	queryResult, gasUsed, qErr := k.wasmer.Query(codeInfo.CodeHash, params, req, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx))
 	consumeGas(ctx, gasUsed)
 
 	if qErr != nil {
