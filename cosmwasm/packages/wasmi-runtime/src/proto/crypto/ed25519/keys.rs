@@ -17,7 +17,7 @@
 #![allow(trivial_casts)]
 #![allow(unused_imports)]
 #![allow(unused_results)]
-//! Generated file from `cosmos/crypto/secp256k1/keys.proto`
+//! Generated file from `cosmos/crypto/ed25519/keys.proto`
 
 /// Generated files are compatible only with the same version
 /// of protobuf runtime.
@@ -342,11 +342,12 @@ impl ::protobuf::reflect::ProtobufValue for PrivKey {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\"cosmos/crypto/secp256k1/keys.proto\x12\x17cosmos.crypto.secp256k1\
-    \x1a\x14gogoproto/gogo.proto\"\x20\n\x06PubKey\x12\x10\n\x03key\x18\x01\
-    \x20\x01(\x0cR\x03key:\x04\x98\xa0\x1f\0\"\x1b\n\x07PrivKey\x12\x10\n\
-    \x03key\x18\x01\x20\x01(\x0cR\x03keyB4Z2github.com/cosmos/cosmos-sdk/cry\
-    pto/keys/secp256k1b\x06proto3\
+    \n\x20cosmos/crypto/ed25519/keys.proto\x12\x15cosmos.crypto.ed25519\x1a\
+    \x14gogoproto/gogo.proto\">\n\x06PubKey\x12.\n\x03key\x18\x01\x20\x01(\
+    \x0cR\x03keyB\x1c\xfa\xde\x1f\x18crypto/ed25519.PublicKey:\x04\x98\xa0\
+    \x1f\0\":\n\x07PrivKey\x12/\n\x03key\x18\x01\x20\x01(\x0cR\x03keyB\x1d\
+    \xfa\xde\x1f\x19crypto/ed25519.PrivateKeyB2Z0github.com/cosmos/cosmos-sd\
+    k/crypto/keys/ed25519b\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

@@ -24,7 +24,8 @@ dependencies = [
 [[package]]
 name = "aes-siv"
 version = "0.6.2"
-source = "git+https://github.com/RustCrypto/AEADs?rev=ff0118562dc56007099e9e19874855c9ecd75f90#ff0118562dc56007099e9e19874855c9ecd75f90"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5daaf431d0ff4b0a7b53e995b2d9c0762d9dc0b9f063b4cd65493f2263e096af"
 dependencies = [
  "aead",
  "aes",
@@ -231,8 +232,9 @@ dependencies = [
 
 [[package]]
 name = "curve25519-dalek"
-version = "3.1.0"
-source = "git+https://github.com/enigmampc/curve25519-dalek?rev=983782db0bdde4900a23070d5d32df41da5d9516#983782db0bdde4900a23070d5d32df41da5d9516"
+version = "3.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b9fdf9972b2bd6af2d913799d9ebc165ea4d2e65878e329d9c6b372c4491b61"
 dependencies = [
  "byteorder",
  "digest 0.9.0",
@@ -1353,7 +1355,8 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 [[package]]
 name = "x25519-dalek"
 version = "1.1.1"
-source = "git+https://github.com/enigmampc/x25519-dalek?rev=ad1a39a848f621ca412ff8a1faf5ffc137f69954#ad1a39a848f621ca412ff8a1faf5ffc137f69954"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a0c105152107e3b96f6a00a65e86ce82d9b125230e1c4302940eca58ff71f4f"
 dependencies = [
  "curve25519-dalek",
  "rand_core 0.5.1",

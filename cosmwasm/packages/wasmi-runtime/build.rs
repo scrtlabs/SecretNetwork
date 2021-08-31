@@ -28,6 +28,14 @@ mod protobuf {
                 &["proto/cosmos/crypto/secp256k1/keys.proto"],
             ),
             (
+                "src/proto/crypto/secp256r1",
+                &["proto/cosmos/crypto/secp256r1/keys.proto"],
+            ),
+            (
+                "src/proto/crypto/ed25519",
+                &["proto/cosmos/crypto/ed25519/keys.proto"],
+            ),
+            (
                 "src/proto/tx",
                 &[
                     "proto/cosmos/tx/v1beta1/tx.proto",
@@ -36,7 +44,7 @@ mod protobuf {
             ),
             (
                 "src/proto/cosmwasm",
-                &["../../../x/compute/internal/types/msg.proto"],
+                &["../../../proto/secret/compute/v1beta1/msg.proto"],
             ),
         ];
 
@@ -45,7 +53,7 @@ mod protobuf {
             std::fs::create_dir_all(*out_dir).expect(&dir_err_msg);
 
             protoc_rust::Codegen::new()
-                .include("../../../x/compute/internal/types") // cosmwasm
+                .include("../../../proto/secret/compute/v1beta1") // cosmwasm
                 .include("proto") // cosmos and gogoproto
                 .include(&library_dir) // google types
                 .out_dir(*out_dir)
