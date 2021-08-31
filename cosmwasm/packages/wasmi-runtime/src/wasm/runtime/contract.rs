@@ -23,7 +23,7 @@ mod api_marker {
 pub enum CosmWasmApiVersion {
     /// CosmWasm v0.10 API
     V010,
-    /// CosmWasm v0.10 API
+    /// CosmWasm v0.16 API
     V016,
 }
 
