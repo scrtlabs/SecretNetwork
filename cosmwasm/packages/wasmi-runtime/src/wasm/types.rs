@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use log::*;
 
 use enclave_ffi_types::EnclaveError;
@@ -145,67 +144,55 @@ pub enum CosmosPubKey {
     Multisig(MultisigThresholdPubKey),
 }
 
+/// `"/"` + `proto::crypto::multisig::LegacyAminoPubKey::descriptor_static().full_name()`
+const TYPE_URL_MULTISIG_LEGACY_AMINO_PUBKEY: &str = "/cosmos.crypto.multisig.LegacyAminoPubKey";
+/// `"/"` + `proto::crypto::secp256k1::PubKey::descriptor_static().full_name()`
+const TYPE_URL_SECP256K1_PUBKEY: &str = "/cosmos.crypto.secp256k1.PubKey";
+
 impl CosmosPubKey {
-    pub fn from_proto(
-        mode_info: proto::tx::tx::ModeInfo,
-        public_key_bytes: &[u8],
-    ) -> Result<Self, CryptoError> {
-        use proto::crypto::multisig::LegacyAminoPubKey;
-        use proto::crypto::secp256k1::PubKey;
-        use proto::tx::tx::ModeInfo_oneof_sum;
-
-        let public_key = match mode_info.sum {
-            Some(ModeInfo_oneof_sum::single(_single)) => {
-                let pub_key = PubKey::parse_from_bytes(public_key_bytes).map_err(|_err| {
-                    warn!(
-                        "Could not parse secp256k1 public key from these bytes: {}",
-                        Binary(public_key_bytes.into())
-                    );
-                    CryptoError::ParsingError
-                })?;
-                CosmosPubKey::Secp256k1(Secp256k1PubKey::new(pub_key.key))
-            }
-            Some(ModeInfo_oneof_sum::multi(multi)) => {
-                let multisig_key =
-                    LegacyAminoPubKey::parse_from_bytes(public_key_bytes).map_err(|_err| {
-                        warn!(
-                            "Could not parse multisig public key from these bytes: {}",
-                            Binary(public_key_bytes.into())
-                        );
-                        CryptoError::ParsingError
-                    })?;
-                let multisig_key_size = multisig_key.public_keys.len();
-                let sig_mode_count = multi.mode_infos.len();
-                if multisig_key_size != sig_mode_count {
-                    warn!(
-                        "Mismatch found between size of multisig key and amount of signature modes: {} != {}",
-                        multisig_key_size,
-                        sig_mode_count
-                    );
-                    return Err(CryptoError::ParsingError);
-                }
-
-                let mut pubkeys = vec![];
-                for (index, mode_info) in multi.mode_infos.into_iter().enumerate() {
-                    pubkeys.push(CosmosPubKey::from_proto(
-                        mode_info,
-                        &multisig_key.public_keys[index].value,
-                    )?);
-                }
-                CosmosPubKey::Multisig(MultisigThresholdPubKey::new(
-                    multisig_key.threshold,
-                    pubkeys,
-                ))
-            }
-            None => {
-                warn!(
-                    "No signature info found for this public key: {}",
-                    Binary(public_key_bytes.into()),
-                );
+    pub fn from_proto(public_key: &protobuf::well_known_types::Any) -> Result<Self, CryptoError> {
+        let public_key_parser = match public_key.type_url.as_str() {
+            TYPE_URL_SECP256K1_PUBKEY => Self::secp256k1_from_proto,
+            TYPE_URL_MULTISIG_LEGACY_AMINO_PUBKEY => Self::multisig_legacy_amino_from_proto,
+            _ => {
+                warn!("found public key of unsupported type: {:?}", public_key);
                 return Err(CryptoError::ParsingError);
             }
         };
-        Ok(public_key)
+
+        public_key_parser(&public_key.value)
+    }
+
+    fn secp256k1_from_proto(public_key_bytes: &[u8]) -> Result<Self, CryptoError> {
+        use proto::crypto::secp256k1::PubKey;
+        let pub_key = PubKey::parse_from_bytes(public_key_bytes).map_err(|_err| {
+            warn!(
+                "Could not parse secp256k1 public key from these bytes: {}",
+                Binary(public_key_bytes.to_vec())
+            );
+            CryptoError::ParsingError
+        })?;
+        Ok(CosmosPubKey::Secp256k1(Secp256k1PubKey::new(pub_key.key)))
+    }
+
+    fn multisig_legacy_amino_from_proto(public_key_bytes: &[u8]) -> Result<Self, CryptoError> {
+        use proto::crypto::multisig::LegacyAminoPubKey;
+        let multisig_key =
+            LegacyAminoPubKey::parse_from_bytes(public_key_bytes).map_err(|_err| {
+                warn!(
+                    "Could not parse multisig public key from these bytes: {}",
+                    Binary(public_key_bytes.to_vec())
+                );
+                CryptoError::ParsingError
+            })?;
+        let mut pubkeys = vec![];
+        for public_key in &multisig_key.public_keys {
+            pubkeys.push(CosmosPubKey::from_proto(public_key)?);
+        }
+        Ok(CosmosPubKey::Multisig(MultisigThresholdPubKey::new(
+            multisig_key.threshold,
+            pubkeys,
+        )))
     }
 }
 
@@ -449,9 +436,7 @@ impl CosmWasmMsg {
     }
 
     fn try_parse_instantiate(bytes: &[u8]) -> Result<Self, EnclaveError> {
-        use proto::cosmwasm::msg::{
-            MsgInstantiateContract, MsgInstantiateContract_oneof__callback_sig,
-        };
+        use proto::cosmwasm::msg::MsgInstantiateContract;
 
         let raw_msg = MsgInstantiateContract::parse_from_bytes(bytes)
             .map_err(|_| EnclaveError::FailedToDeserialize)?;
@@ -464,9 +449,7 @@ impl CosmWasmMsg {
 
         let init_funds = Self::parse_funds(raw_msg.init_funds)?;
 
-        let callback_sig = raw_msg._callback_sig.map(|cs| match cs {
-            MsgInstantiateContract_oneof__callback_sig::callback_sig(cs) => cs,
-        });
+        let callback_sig = Some(raw_msg.callback_sig);
 
         Ok(CosmWasmMsg::Instantiate {
             sender: CanonicalAddr(Binary(raw_msg.sender)),
@@ -478,7 +461,7 @@ impl CosmWasmMsg {
     }
 
     fn try_parse_execute(bytes: &[u8]) -> Result<Self, EnclaveError> {
-        use proto::cosmwasm::msg::{MsgExecuteContract, MsgExecuteContract_oneof__callback_sig};
+        use proto::cosmwasm::msg::MsgExecuteContract;
 
         let raw_msg = MsgExecuteContract::parse_from_bytes(bytes)
             .map_err(|_| EnclaveError::FailedToDeserialize)?;
@@ -506,9 +489,7 @@ impl CosmWasmMsg {
 
         let sent_funds = Self::parse_funds(raw_msg.sent_funds)?;
 
-        let callback_sig = raw_msg._callback_sig.map(|cs| match cs {
-            MsgExecuteContract_oneof__callback_sig::callback_sig(cs) => cs,
-        });
+        let callback_sig = Some(raw_msg.callback_sig);
 
         Ok(CosmWasmMsg::Execute {
             sender: CanonicalAddr(Binary(raw_msg.sender)),
@@ -602,16 +583,11 @@ impl SignerInfo {
             warn!("One of the provided signers had no public key");
             return Err(EnclaveError::FailedToDeserialize);
         }
-        if !raw_signer_info.has_mode_info() {
-            warn!("One of the provided signers had no signing mode info");
-            return Err(EnclaveError::FailedToDeserialize);
-        }
 
         // unwraps valid after checks above
-        let public_key_bytes = &raw_signer_info.public_key.into_option().unwrap().value;
-        let mode_info = raw_signer_info.mode_info.into_option().unwrap();
+        let any_public_key = raw_signer_info.public_key.get_ref();
 
-        let public_key = CosmosPubKey::from_proto(mode_info, public_key_bytes)
+        let public_key = CosmosPubKey::from_proto(any_public_key)
             .map_err(|_| EnclaveError::FailedToDeserialize)?;
 
         let signer_info = Self {

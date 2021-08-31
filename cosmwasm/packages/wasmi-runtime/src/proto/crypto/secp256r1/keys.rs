@@ -17,7 +17,7 @@
 #![allow(trivial_casts)]
 #![allow(unused_imports)]
 #![allow(unused_results)]
-//! Generated file from `cosmos/crypto/secp256k1/keys.proto`
+//! Generated file from `cosmos/crypto/secp256r1/keys.proto`
 
 /// Generated files are compatible only with the same version
 /// of protobuf runtime.
@@ -185,7 +185,7 @@ impl ::protobuf::reflect::ProtobufValue for PubKey {
 #[derive(PartialEq,Clone,Default)]
 pub struct PrivKey {
     // message fields
-    pub key: ::std::vec::Vec<u8>,
+    pub secret: ::std::vec::Vec<u8>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -202,30 +202,30 @@ impl PrivKey {
         ::std::default::Default::default()
     }
 
-    // bytes key = 1;
+    // bytes secret = 1;
 
 
-    pub fn get_key(&self) -> &[u8] {
-        &self.key
+    pub fn get_secret(&self) -> &[u8] {
+        &self.secret
     }
-    pub fn clear_key(&mut self) {
-        self.key.clear();
+    pub fn clear_secret(&mut self) {
+        self.secret.clear();
     }
 
     // Param is passed by value, moved
-    pub fn set_key(&mut self, v: ::std::vec::Vec<u8>) {
-        self.key = v;
+    pub fn set_secret(&mut self, v: ::std::vec::Vec<u8>) {
+        self.secret = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_key(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.key
+    pub fn mut_secret(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.secret
     }
 
     // Take field
-    pub fn take_key(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.key, ::std::vec::Vec::new())
+    pub fn take_secret(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.secret, ::std::vec::Vec::new())
     }
 }
 
@@ -239,7 +239,7 @@ impl ::protobuf::Message for PrivKey {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.key)?;
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.secret)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -253,8 +253,8 @@ impl ::protobuf::Message for PrivKey {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if !self.key.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.key);
+        if !self.secret.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.secret);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -262,8 +262,8 @@ impl ::protobuf::Message for PrivKey {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        if !self.key.is_empty() {
-            os.write_bytes(1, &self.key)?;
+        if !self.secret.is_empty() {
+            os.write_bytes(1, &self.secret)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -304,9 +304,9 @@ impl ::protobuf::Message for PrivKey {
         descriptor.get(|| {
             let mut fields = ::std::vec::Vec::new();
             fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                "key",
-                |m: &PrivKey| { &m.key },
-                |m: &mut PrivKey| { &mut m.key },
+                "secret",
+                |m: &PrivKey| { &m.secret },
+                |m: &mut PrivKey| { &mut m.secret },
             ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<PrivKey>(
                 "PrivKey",
@@ -324,7 +324,7 @@ impl ::protobuf::Message for PrivKey {
 
 impl ::protobuf::Clear for PrivKey {
     fn clear(&mut self) {
-        self.key.clear();
+        self.secret.clear();
         self.unknown_fields.clear();
     }
 }
@@ -342,11 +342,12 @@ impl ::protobuf::reflect::ProtobufValue for PrivKey {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\"cosmos/crypto/secp256k1/keys.proto\x12\x17cosmos.crypto.secp256k1\
-    \x1a\x14gogoproto/gogo.proto\"\x20\n\x06PubKey\x12\x10\n\x03key\x18\x01\
-    \x20\x01(\x0cR\x03key:\x04\x98\xa0\x1f\0\"\x1b\n\x07PrivKey\x12\x10\n\
-    \x03key\x18\x01\x20\x01(\x0cR\x03keyB4Z2github.com/cosmos/cosmos-sdk/cry\
-    pto/keys/secp256k1b\x06proto3\
+    \n\"cosmos/crypto/secp256r1/keys.proto\x12\x17cosmos.crypto.secp256r1\
+    \x1a\x14gogoproto/gogo.proto\"'\n\x06PubKey\x12\x1d\n\x03key\x18\x01\x20\
+    \x01(\x0cR\x03keyB\x0b\xda\xde\x1f\x07ecdsaPK\".\n\x07PrivKey\x12#\n\x06\
+    secret\x18\x01\x20\x01(\x0cR\x06secretB\x0b\xda\xde\x1f\x07ecdsaSKB@Z2gi\
+    thub.com/cosmos/cosmos-sdk/crypto/keys/secp256r1\xd8\xe1\x1e\0\xc8\xe1\
+    \x1e\0\xc8\xe3\x1e\x01b\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

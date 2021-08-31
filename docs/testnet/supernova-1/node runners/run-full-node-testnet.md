@@ -34,7 +34,7 @@ See instructions for [setup](setup-sgx-testnet.md) and [verification](verify-sgx
 ### 1. Download the Secret Network package installer for Debian/Ubuntu:
 
 ```bash
-wget https://github.com/enigmampc/SecretNetwork/releases/download/v1.2.0-beta1/secretnetwork_1.2.0-beta1-2-gbe1ca55e_amd64.deb
+wget https://github.com/enigmampc/SecretNetwork/releases/download/v1.2.0-beta1/secretnetwork_1.2.0-beta1-8-gbe1ca55e_amd64.deb
 ```
 
 ([How to verify releases](../../../verify-releases.md))
@@ -42,7 +42,7 @@ wget https://github.com/enigmampc/SecretNetwork/releases/download/v1.2.0-beta1/s
 ### 2. Install the package:
 
 ```bash
-sudo dpkg -i secretnetwork_1.2.0-beta1-2-gbe1ca55e_amd64.deb
+sudo dpkg -i secretnetwork_1.2.0-beta1-8-gbe1ca55e_amd64.deb
 ```
 
 ### 3. Initialize your installation of the Secret Network.
