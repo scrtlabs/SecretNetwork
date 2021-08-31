@@ -2,7 +2,7 @@ use bech32::{FromBase32, ToBase32};
 use log::*;
 use wasmi::{Error as InterpreterError, MemoryInstance, MemoryRef, ModuleRef, RuntimeValue, Trap};
 
-use enclave_ffi_types::Ctx;
+use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::consts::BECH32_PREFIX_ACC_ADDR;
 use crate::crypto::Ed25519PublicKey;
@@ -11,6 +11,11 @@ use crate::wasm::db::{read_encrypted_key, remove_encrypted_key, write_encrypted_
 use crate::wasm::errors::WasmEngineError;
 use crate::wasm::runtime::traits::WasmiApi;
 use crate::wasm::{gas::WasmCosts, query_chain::encrypt_and_query_chain, types::IoNonce};
+
+mod api_marker {
+    pub const V0_10: &str = "cosmwasm_vm_version_3";
+    pub const V0_16: &str = "interface_version_7";
+}
 
 /// CosmwasmApiVersion is used to decide how to handle contract inputs and outputs
 pub enum CosmWasmApiVersion {
@@ -73,8 +78,8 @@ impl ContractInstance {
         operation: ContractOperation,
         user_nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
-    ) -> Self {
-        let memory = (&*module)
+    ) -> Result<Self, EnclaveError> {
+        let memory = module
             .export_by_name("memory")
             .expect("Module expected to have 'memory' export")
             .as_memory()
@@ -82,15 +87,15 @@ impl ContractInstance {
             .expect("'memory' export should be of memory type");
 
         let cosmwasm_api_version;
-        if (&*module).export_by_name("cosmwasm_vm_version_3").is_some() {
-            cosmwasm_api_version = CosmWasmApiVersion::V010;
-        } else
-        /* if (&*module).export_by_name("interface_version_7").is_some() */
-        {
-            cosmwasm_api_version = CosmWasmApiVersion::V016;
-        }
+        if module.export_by_name(api_marker::V0_10).is_some() {
+            cosmwasm_api_version = CosmWasmApiVersion::V010
+        } else if module.export_by_name(api_marker::V0_16).is_some() {
+            cosmwasm_api_version = CosmWasmApiVersion::V016
+        } else {
+            return Err(EnclaveError::InvalidWasm);
+        };
 
-        Self {
+        Ok(Self {
             context,
             memory,
             gas_limit,
@@ -103,7 +108,7 @@ impl ContractInstance {
             user_nonce,
             user_public_key,
             cosmwasm_api_version,
-        }
+        })
     }
 
     fn get_memory(&self) -> &MemoryInstance {

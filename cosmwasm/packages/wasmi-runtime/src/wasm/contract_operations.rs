@@ -362,7 +362,7 @@ fn start_engine(
         operation,
         nonce,
         user_public_key,
-    );
+    )?;
 
     Ok(Engine::new(contract_instance, module))
 }
