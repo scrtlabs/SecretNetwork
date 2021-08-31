@@ -12,8 +12,8 @@ use crate::wasm::errors::WasmEngineError;
 use crate::wasm::runtime::traits::WasmiApi;
 use crate::wasm::{gas::WasmCosts, query_chain::encrypt_and_query_chain, types::IoNonce};
 
-// These are based on this compatibility chart:
-// https://github.com/CosmWasm/cosmwasm/blob/ac250281af8718768a7785d30e26f2d8d030bbff/packages/vm/README.md#compatibility
+/// api_marker is based on this compatibility chart:
+/// https://github.com/CosmWasm/cosmwasm/blob/ac250281af8718768a7785d30e26f2d8d030bbff/packages/vm/README.md#compatibility
 mod api_marker {
     pub const V0_10: &str = "cosmwasm_vm_version_3";
     pub const V0_16: &str = "interface_version_7";
