@@ -107,7 +107,7 @@ ffi-types:
 	mkdir -p target/headers/
 	cd ../enclave-ffi-types && \
 	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo build --features "build_headers" --target x86_64-unknown-linux-sgx -Z unstable-options --profile $(BUILD_PROFILE) && \
-	cp $(Rust_Target_Path)/../../../target/headers/enclave-ffi-types.h $(Rust_Target_Path)/../target/headers/
+	cp $(Rust_Target_Path)/../../enclave-ff-types/target/headers/enclave-ffi-types.h $(Rust_Target_Path)/../target/headers/
 
 .PHONY: build-protobuf
 build-protobuf:
