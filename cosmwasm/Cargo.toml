@@ -5,5 +5,6 @@ exclude = [
     "v010-contracts",
     "packages/wasmi-runtime",
     "packages/enclave-test",
-    "packages/vm"
+    "packages/enclave-ffi-types",
+    "packages/vm",
 ]
