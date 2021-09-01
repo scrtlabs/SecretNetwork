@@ -31,6 +31,10 @@ jobs:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
       - run: rustup component add rust-src clippy
+      - run: |
+          TOOLCHAIN=$(cat ./cosmwasm/packages/wasmi-runtime/rust-toolchain)
+          rustup toolchain install $TOOLCHAIN
+          rustup component add --toolchain $TOOLCHAIN rust-src
       - name: Install xargo
         run: |
           cargo +stable install xargo
@@ -79,6 +83,10 @@ jobs:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
       - run: rustup component add rust-src clippy
+      - run: |
+          TOOLCHAIN=$(cat ./cosmwasm/packages/wasmi-runtime/rust-toolchain)
+          rustup toolchain install $TOOLCHAIN
+          rustup component add --toolchain $TOOLCHAIN rust-src
       - name: Install xargo
         run: |
           cargo +stable install xargo
@@ -230,6 +238,10 @@ jobs:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
       - run: rustup component add rust-src clippy
+      - run: |
+          TOOLCHAIN=$(cat ./cosmwasm/packages/wasmi-runtime/rust-toolchain)
+          rustup toolchain install $TOOLCHAIN
+          rustup component add --toolchain $TOOLCHAIN rust-src
       - name: Install xargo
         run: |
           cargo +stable install xargo
@@ -278,6 +290,10 @@ jobs:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
       - run: rustup component add rust-src clippy
+      - run: |
+          TOOLCHAIN=$(cat ./cosmwasm/packages/wasmi-runtime/rust-toolchain)
+          rustup toolchain install $TOOLCHAIN
+          rustup component add --toolchain $TOOLCHAIN rust-src
       - name: Install xargo
         run: |
           cargo +stable install xargo
