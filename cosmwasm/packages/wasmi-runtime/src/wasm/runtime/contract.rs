@@ -628,6 +628,12 @@ impl WasmiApi for ContractInstance {
             Ok(x) => x,
         };
 
+        if human_addr_str.is_empty() {
+            return Ok(Some(RuntimeValue::I32(
+                self.write_to_memory(b"input is empty")? as i32,
+            )));
+        }
+
         let (_, _) = match bech32::decode(&human_addr_str) {
             Err(err) => {
                 debug!(
