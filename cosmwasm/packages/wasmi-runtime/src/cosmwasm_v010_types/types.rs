@@ -14,7 +14,6 @@ use log::*;
 use bech32::{FromBase32, ToBase32};
 use enclave_ffi_types::EnclaveError;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 pub use super::coins::Coin;
 use super::encoding::Binary;
@@ -132,23 +131,6 @@ pub struct ContractInfo {
     pub address: HumanAddr,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(untagged)]
-pub enum WasmOutput {
-    ErrObject {
-        #[serde(rename = "Err")]
-        err: Value,
-    },
-    OkString {
-        #[serde(rename = "Ok")]
-        ok: String,
-    },
-    OkObject {
-        #[serde(rename = "Ok")]
-        ok: ContractResult,
-    },
-}
-
 // This should be in correlation with cosmwasm-std/init_handle's InitResponse and HandleResponse
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ContractResult {
@@ -258,6 +240,8 @@ pub enum WasmMsg {
         /// msg is the json-encoded HandleMsg struct (as raw Binary)
         msg: Binary,
         send: Vec<Coin>,
+        /// callback_sig is used only inside the enclave to validate messages
+        /// that are originating from other contracts
         callback_sig: Option<Vec<u8>>,
     },
     /// this instantiates a new contracts from previously uploaded wasm code
@@ -272,6 +256,8 @@ pub enum WasmMsg {
         /// Human-readable label for the contract
         #[serde(default)]
         label: String,
+        /// callback_sig is used only inside the enclave to validate messages
+        /// that are originating from other contracts
         callback_sig: Option<Vec<u8>>,
     },
 }

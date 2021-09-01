@@ -4,14 +4,38 @@
 ///
 use super::types::{IoNonce, SecretMessage};
 
+use crate::cosmwasm_v010_types;
 use crate::cosmwasm_v010_types::encoding::Binary;
-use crate::cosmwasm_v010_types::types::{CanonicalAddr, Coin, CosmosMsg, WasmMsg, WasmOutput};
+use crate::cosmwasm_v010_types::types::{CanonicalAddr, Coin};
+use crate::cosmwasm_v016_types;
 use crate::crypto::{AESKey, Ed25519PublicKey, Kdf, SIVEncryptable, KEY_MANAGER};
 use enclave_ffi_types::EnclaveError;
 use log::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
+use serde_json::Value;
 use sha2::Digest;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(untagged)]
+pub enum WasmOutput {
+    ErrObject {
+        #[serde(rename = "Err")]
+        err: Value,
+    },
+    OkString {
+        #[serde(rename = "Ok")]
+        ok: String,
+    },
+    OkObjectV010 {
+        #[serde(rename = "Ok")]
+        ok: cosmwasm_v010_types::types::ContractResult,
+    },
+    OkObjectV016 {
+        #[serde(rename = "Ok")]
+        ok: cosmwasm_v016_types::results::Response,
+    },
+}
 
 pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) -> AESKey {
     let enclave_io_key = KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap();
@@ -98,13 +122,14 @@ pub fn encrypt_output(
         }
 
         // Encrypt all Wasm messages (keeps Bank, Staking, etc.. as is)
-        WasmOutput::OkObject { ok } => {
+        WasmOutput::OkObjectV010 { ok } => {
             for msg in &mut ok.messages {
-                if let CosmosMsg::Wasm(wasm_msg) = msg {
-                    encrypt_wasm_msg(wasm_msg, nonce, user_public_key, contract_addr)?;
+                if let cosmwasm_v010_types::types::CosmosMsg::Wasm(wasm_msg) = msg {
+                    encrypt_v010_wasm_msg(&mut wasm_msg, nonce, user_public_key, contract_addr)?;
                 }
             }
 
+            // v0.10: The logs that will be emitted as part of a "wasm" event.
             for log in ok.log.iter_mut().filter(|log| log.encrypted) {
                 log.key = encrypt_preserialized_string(&key, &log.key)?;
                 log.value = encrypt_preserialized_string(&key, &log.value)?;
@@ -112,6 +137,33 @@ pub fn encrypt_output(
 
             if let Some(data) = &mut ok.data {
                 *data = Binary::from_base64(&encrypt_serializable(&key, data)?)?;
+            }
+        }
+        WasmOutput::OkObjectV016 { ok } => {
+            for sub_msg in &mut ok.messages {
+                if let cosmwasm_v016_types::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
+                    encrypt_v016_wasm_msg(&mut wasm_msg, nonce, user_public_key, contract_addr)?;
+                }
+            }
+
+            // v0.16: The attributes that will be emitted as part of a "wasm" event.
+            for attr in ok.attributes.iter_mut().filter(|attr| attr.encrypted) {
+                attr.key = encrypt_preserialized_string(&key, &attr.key)?;
+                attr.value = encrypt_preserialized_string(&key, &attr.value)?;
+            }
+
+            // v0.16: Extra, custom events separate from the main wasm one. These will have "wasm-"" prepended to the type.
+            for event in ok.events.iter_mut() {
+                for attr in event.attributes.iter_mut().filter(|attr| attr.encrypted) {
+                    attr.key = encrypt_preserialized_string(&key, &attr.key)?;
+                    attr.value = encrypt_preserialized_string(&key, &attr.value)?;
+                }
+            }
+
+            if let Some(data) = &mut ok.data {
+                *data = cosmwasm_v016_types::binary::Binary::from_base64(&encrypt_serializable(
+                    &key, data,
+                )?)?;
             }
         }
     };
@@ -129,21 +181,21 @@ pub fn encrypt_output(
     Ok(encrypted_output)
 }
 
-fn encrypt_wasm_msg(
-    wasm_msg: &mut WasmMsg,
+fn encrypt_v010_wasm_msg(
+    wasm_msg: &mut cosmwasm_v010_types::types::WasmMsg,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
     contract_addr: &CanonicalAddr,
 ) -> Result<(), EnclaveError> {
     match wasm_msg {
-        WasmMsg::Execute {
+        cosmwasm_v010_types::types::WasmMsg::Execute {
             msg,
             callback_code_hash,
             callback_sig,
             send,
             ..
         }
-        | WasmMsg::Instantiate {
+        | cosmwasm_v010_types::types::WasmMsg::Instantiate {
             msg,
             callback_code_hash,
             callback_sig,
@@ -163,6 +215,56 @@ fn encrypt_wasm_msg(
             *msg = Binary::from(msg_to_pass.to_vec().as_slice());
 
             *callback_sig = Some(create_callback_signature(contract_addr, &msg_to_pass, send));
+        }
+    }
+
+    Ok(())
+}
+
+fn encrypt_v016_wasm_msg(
+    wasm_msg: &mut cosmwasm_v016_types::results::WasmMsg,
+    nonce: IoNonce,
+    user_public_key: Ed25519PublicKey,
+    contract_addr: &CanonicalAddr,
+) -> Result<(), EnclaveError> {
+    match wasm_msg {
+        cosmwasm_v016_types::results::WasmMsg::Execute {
+            msg,
+            code_hash,
+            callback_sig,
+            funds,
+            ..
+        }
+        | cosmwasm_v016_types::results::WasmMsg::Instantiate {
+            msg,
+            code_hash,
+            callback_sig,
+            funds,
+            ..
+        } => {
+            let mut hash_appended_msg = code_hash.as_bytes().to_vec();
+            hash_appended_msg.extend_from_slice(msg.as_slice());
+
+            let mut msg_to_pass = SecretMessage::from_base64(
+                cosmwasm_v016_types::binary::Binary(hash_appended_msg).to_base64(),
+                nonce,
+                user_public_key,
+            )?;
+
+            msg_to_pass.encrypt_in_place()?;
+            *msg = cosmwasm_v016_types::binary::Binary::from(msg_to_pass.to_vec().as_slice());
+
+            *callback_sig = Some(create_callback_signature(
+                contract_addr,
+                &msg_to_pass,
+                &funds
+                    .iter()
+                    .map(|coin| cosmwasm_v010_types::types::Coin {
+                        denom: coin.denom.clone(),
+                        amount: cosmwasm_v010_types::math::Uint128(coin.amount.u128()),
+                    })
+                    .collect::<Vec<cosmwasm_v010_types::types::Coin>>()[..],
+            ));
         }
     }
 

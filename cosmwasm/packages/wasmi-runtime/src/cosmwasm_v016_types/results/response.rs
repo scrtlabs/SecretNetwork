@@ -1,8 +1,7 @@
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use crate::Binary;
+use crate::cosmwasm_v016_types::binary::Binary;
 
 use super::{Attribute, CosmosMsg, Empty, Event, SubMsg};
 
@@ -60,11 +59,11 @@ use super::{Attribute, CosmosMsg, Empty, Event, SubMsg};
 ///     Ok(response)
 /// }
 /// ```
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub struct Response<T = Empty>
 where
-    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+    T: Clone + fmt::Debug + PartialEq,
 {
     /// Optional list of messages to pass. These will be executed in order.
     /// If the ReplyOn variant matches the result (Always, Success on Ok, Error on Err),
@@ -91,7 +90,7 @@ where
 
 impl<T> Default for Response<T>
 where
-    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+    T: Clone + fmt::Debug + PartialEq,
 {
     fn default() -> Self {
         Response {
@@ -105,7 +104,7 @@ where
 
 impl<T> Response<T>
 where
-    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+    T: Clone + fmt::Debug + PartialEq,
 {
     pub fn new() -> Self {
         Self::default()
@@ -212,51 +211,5 @@ where
     pub fn set_data(mut self, data: impl Into<Binary>) -> Self {
         self.data = Some(data.into());
         self
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::super::BankMsg;
-    use super::*;
-    use crate::results::submessages::{ReplyOn, UNUSED_MSG_ID};
-    use crate::{coins, from_slice, to_vec};
-
-    #[test]
-    fn can_serialize_and_deserialize_init_response() {
-        let original = Response {
-            messages: vec![
-                SubMsg {
-                    id: 12,
-                    msg: BankMsg::Send {
-                        to_address: String::from("checker"),
-                        amount: coins(888, "moon"),
-                    }
-                    .into(),
-                    gas_limit: Some(12345u64),
-                    reply_on: ReplyOn::Always,
-                },
-                SubMsg {
-                    id: UNUSED_MSG_ID,
-                    msg: BankMsg::Send {
-                        to_address: String::from("you"),
-                        amount: coins(1015, "earth"),
-                    }
-                    .into(),
-                    gas_limit: None,
-                    reply_on: ReplyOn::Never,
-                },
-            ],
-            attributes: vec![Attribute {
-                key: "action".to_string(),
-                value: "release".to_string(),
-                encrypted: true,
-            }],
-            events: vec![],
-            data: Some(Binary::from([0xAA, 0xBB])),
-        };
-        let serialized = to_vec(&original).expect("encode contract result");
-        let deserialized: Response = from_slice(&serialized).expect("decode contract result");
-        assert_eq!(deserialized, original);
     }
 }

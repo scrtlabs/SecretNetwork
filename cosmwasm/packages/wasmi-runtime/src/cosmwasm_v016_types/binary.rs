@@ -1,6 +1,8 @@
 use std::fmt;
 use std::ops::Deref;
 
+use enclave_ffi_types::EnclaveError;
+use log::warn;
 use serde::{de, ser, Deserialize, Deserializer, Serialize};
 
 use crate::cosmwasm_v016_types::errors::{StdError, StdResult};
@@ -15,8 +17,11 @@ pub struct Binary(pub Vec<u8>);
 impl Binary {
     /// take an (untrusted) string and decode it into bytes.
     /// fails if it is not valid base64
-    pub fn from_base64(encoded: &str) -> StdResult<Self> {
-        let binary = base64::decode(&encoded).map_err(StdError::invalid_base64)?;
+    pub fn from_base64(encoded: &str) -> Result<Self, EnclaveError> {
+        let binary = base64::decode(encoded).map_err(|err| {
+            warn!("Failed to decode base64 string: {:?}", err.to_string());
+            EnclaveError::FailedToDeserialize
+        })?;
         Ok(Binary(binary))
     }
 

@@ -1,23 +1,20 @@
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use crate::binary::Binary;
-use crate::coins::Coin;
-use crate::errors::StdResult;
+use crate::cosmwasm_v016_types::binary::Binary;
+use crate::cosmwasm_v016_types::coins::Coin;
 #[cfg(feature = "stargate")]
 use crate::ibc::IbcMsg;
-use crate::serde::to_binary;
 
 use super::Empty;
 
 #[non_exhaustive]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 // See https://github.com/serde-rs/serde/issues/1296 why we cannot add De-Serialize trait bounds to T
 pub enum CosmosMsg<T = Empty>
 where
-    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+    T: Clone + fmt::Debug + PartialEq,
 {
     Bank(BankMsg),
     // by default we use RawMsg, but a contract can override that
@@ -45,7 +42,7 @@ where
 ///
 /// See https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/cosmos/bank/v1beta1/tx.proto
 #[non_exhaustive]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum BankMsg {
     /// Sends native tokens from the contract to the given address.
@@ -67,7 +64,7 @@ pub enum BankMsg {
 /// See https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/cosmos/staking/v1beta1/tx.proto
 #[cfg(feature = "staking")]
 #[non_exhaustive]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum StakingMsg {
     /// This is translated to a [MsgDelegate](https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/cosmos/staking/v1beta1/tx.proto#L81-L90).
@@ -90,7 +87,7 @@ pub enum StakingMsg {
 /// See https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/proto/cosmos/distribution/v1beta1/tx.proto
 #[cfg(feature = "staking")]
 #[non_exhaustive]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum DistributionMsg {
     /// This is translated to a [MsgSetWithdrawAddress](https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/proto/cosmos/distribution/v1beta1/tx.proto#L29-L37).
@@ -111,7 +108,7 @@ pub enum DistributionMsg {
 ///
 /// See https://github.com/CosmWasm/wasmd/blob/v0.14.0/x/wasm/internal/types/tx.proto
 #[non_exhaustive]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum WasmMsg {
     /// Dispatches a call to another contract at a known address (with known ABI).
@@ -127,6 +124,9 @@ pub enum WasmMsg {
         /// msg is the json-encoded ExecuteMsg struct (as raw Binary)
         msg: Binary,
         funds: Vec<Coin>,
+        /// callback_sig is used only inside the enclave to validate messages
+        /// that are originating from other contracts
+        callback_sig: Option<Vec<u8>>,
     },
     /// Instantiates a new contracts from previously uploaded Wasm code.
     ///
@@ -142,11 +142,14 @@ pub enum WasmMsg {
         funds: Vec<Coin>,
         /// A human-readbale label for the contract
         label: String,
+        /// callback_sig is used only inside the enclave to validate messages
+        /// that are originating from other contracts
+        callback_sig: Option<Vec<u8>>,
     },
 }
 
 #[cfg(feature = "stargate")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum GovMsg {
     /// This maps directly to [MsgVote](https://github.com/cosmos/cosmos-sdk/blob/v0.42.5/proto/cosmos/gov/v1beta1/tx.proto#L46-L56) in the Cosmos SDK with voter set to the contract address.
@@ -154,7 +157,7 @@ pub enum GovMsg {
 }
 
 #[cfg(feature = "stargate")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum VoteOption {
     Yes,
@@ -163,44 +166,9 @@ pub enum VoteOption {
     NoWithVeto,
 }
 
-/// Shortcut helper as the construction of WasmMsg::Instantiate can be quite verbose in contract code.
-///
-pub fn wasm_instantiate(
-    code_id: u64,
-    code_hash: impl Into<String>,
-    msg: &impl Serialize,
-    funds: Vec<Coin>,
-    label: String,
-) -> StdResult<WasmMsg> {
-    let payload = to_binary(msg)?;
-    Ok(WasmMsg::Instantiate {
-        code_id,
-        code_hash: code_hash.into(),
-        msg: payload,
-        funds,
-        label,
-    })
-}
-
-/// Shortcut helper as the construction of WasmMsg::Instantiate can be quite verbose in contract code
-pub fn wasm_execute(
-    contract_addr: impl Into<String>,
-    code_hash: impl Into<String>,
-    msg: &impl Serialize,
-    funds: Vec<Coin>,
-) -> StdResult<WasmMsg> {
-    let payload = to_binary(msg)?;
-    Ok(WasmMsg::Execute {
-        contract_addr: contract_addr.into(),
-        code_hash: code_hash.into(),
-        msg: payload,
-        funds,
-    })
-}
-
 impl<T> From<BankMsg> for CosmosMsg<T>
 where
-    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+    T: Clone + fmt::Debug + PartialEq,
 {
     fn from(msg: BankMsg) -> Self {
         CosmosMsg::Bank(msg)
@@ -210,7 +178,7 @@ where
 #[cfg(feature = "staking")]
 impl<T> From<StakingMsg> for CosmosMsg<T>
 where
-    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+    T: Clone + fmt::Debug + PartialEq,
 {
     fn from(msg: StakingMsg) -> Self {
         CosmosMsg::Staking(msg)
@@ -220,7 +188,7 @@ where
 #[cfg(feature = "staking")]
 impl<T> From<DistributionMsg> for CosmosMsg<T>
 where
-    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+    T: Clone + fmt::Debug + PartialEq,
 {
     fn from(msg: DistributionMsg) -> Self {
         CosmosMsg::Distribution(msg)
@@ -229,7 +197,7 @@ where
 
 impl<T> From<WasmMsg> for CosmosMsg<T>
 where
-    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+    T: Clone + fmt::Debug + PartialEq,
 {
     fn from(msg: WasmMsg) -> Self {
         CosmosMsg::Wasm(msg)
@@ -239,7 +207,7 @@ where
 #[cfg(feature = "stargate")]
 impl<T> From<IbcMsg> for CosmosMsg<T>
 where
-    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+    T: Clone + fmt::Debug + PartialEq,
 {
     fn from(msg: IbcMsg) -> Self {
         CosmosMsg::Ibc(msg)
@@ -249,27 +217,9 @@ where
 #[cfg(feature = "stargate")]
 impl<T> From<GovMsg> for CosmosMsg<T>
 where
-    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+    T: Clone + fmt::Debug + PartialEq,
 {
     fn from(msg: GovMsg) -> Self {
         CosmosMsg::Gov(msg)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::coins;
-
-    #[test]
-    fn from_bank_msg_works() {
-        let to_address = String::from("you");
-        let amount = coins(1015, "earth");
-        let bank = BankMsg::Send { to_address, amount };
-        let msg: CosmosMsg = bank.clone().into();
-        match msg {
-            CosmosMsg::Bank(msg) => assert_eq!(bank, msg),
-            _ => panic!("must encode in Bank variant"),
-        }
     }
 }
