@@ -69,13 +69,13 @@ impl ModuleImportResolver for WasmiImportResolver {
             // v0.16
             "addr_canonicalize" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
-                HostFunctions::CanonicalizeAddressIndex.into(),
+                HostFunctions::AddrCanonicalizeIndex.into(),
             ),
             // fn addr_humanize(source: u32, destination: u32) -> u32;
             // v0.16
             "addr_humanize" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
-                HostFunctions::HumanizeAddressIndex.into(),
+                HostFunctions::AddrHumanizeIndex.into(),
             ),
             // fn addr_validate(source_ptr: u32) -> u32;
             // v0.16

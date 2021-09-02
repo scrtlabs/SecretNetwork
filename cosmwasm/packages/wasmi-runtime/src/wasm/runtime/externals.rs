@@ -16,11 +16,13 @@ pub enum HostFunctions {
     GasIndex = 5,
     QueryChainIndex = 6,
     AddrValidateIndex = 7,
-    Secp256k1Verify = 8,
-    Secp256k1RecoverPubkey = 9,
-    Ed25519Verify = 10,
-    Ed25519BatchVerify = 11,
-    Debug = 12,
+    AddrCanonicalizeIndex = 8,
+    AddrHumanizeIndex = 9,
+    Secp256k1Verify = 10,
+    Secp256k1RecoverPubkey = 11,
+    Ed25519Verify = 12,
+    Ed25519BatchVerify = 13,
+    Debug = 14,
     Unknown,
 }
 
@@ -39,6 +41,10 @@ impl From<usize> for HostFunctions {
             x if x == HostFunctions::GasIndex as usize => HostFunctions::GasIndex,
             x if x == HostFunctions::QueryChainIndex as usize => HostFunctions::QueryChainIndex,
             x if x == HostFunctions::AddrValidateIndex as usize => HostFunctions::AddrValidateIndex,
+            x if x == HostFunctions::AddrCanonicalizeIndex as usize => {
+                HostFunctions::AddrCanonicalizeIndex
+            }
+            x if x == HostFunctions::AddrHumanizeIndex as usize => HostFunctions::AddrHumanizeIndex,
             x if x == HostFunctions::Secp256k1Verify as usize => HostFunctions::Secp256k1Verify,
             x if x == HostFunctions::Secp256k1RecoverPubkey as usize => {
                 HostFunctions::Secp256k1RecoverPubkey
@@ -168,6 +174,42 @@ impl Externals for ContractInstance {
                 })?;
 
                 self.addr_validate(human)
+            }
+            HostFunctions::AddrCanonicalizeIndex => {
+                let human: i32 = args.nth_checked(0).map_err(|err| {
+                    warn!(
+                        "addr_canonicalize() error reading 1st argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+                let canonical: i32 = args.nth_checked(1).map_err(|err| {
+                    warn!(
+                        "addr_canonicalize() error reading 2nd argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+
+                self.addr_canonicalize(human, canonical)
+            }
+            HostFunctions::AddrHumanizeIndex => {
+                let canonical: i32 = args.nth_checked(0).map_err(|err| {
+                    warn!(
+                        "addr_humanize() error reading 1st argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+                let human: i32 = args.nth_checked(1).map_err(|err| {
+                    warn!(
+                        "addr_humanize() error reading 2nd argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+
+                self.addr_humanize(canonical, human)
             }
             HostFunctions::Secp256k1Verify => {
                 let message_hash = args.nth_checked(0).map_err(|err| {

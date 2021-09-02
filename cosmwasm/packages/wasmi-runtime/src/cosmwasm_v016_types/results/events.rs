@@ -22,52 +22,6 @@ pub struct Event {
     pub attributes: Vec<Attribute>,
 }
 
-impl Event {
-    /// Create a new event with the given type and an empty list of attributes.
-    pub fn new(ty: impl Into<String>) -> Self {
-        Event {
-            ty: ty.into(),
-            attributes: Vec::with_capacity(10),
-        }
-    }
-
-    /// Add an attribute to the event.
-    pub fn add_attribute(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
-        self.attributes.push(Attribute {
-            key: key.into(),
-            value: value.into(),
-            encrypted: true,
-        });
-        self
-    }
-
-    /// Add a plaintext attribute to the event.
-    pub fn add_attribute_plaintext(
-        mut self,
-        key: impl Into<String>,
-        value: impl Into<String>,
-    ) -> Self {
-        self.attributes.push(Attribute {
-            key: key.into(),
-            value: value.into(),
-            encrypted: false,
-        });
-        self
-    }
-
-    /// Bulk add attributes to the event.
-    ///
-    /// Anything that can be turned into an iterator and yields something
-    /// that can be converted into an `Attribute` is accepted.
-    pub fn add_attributes<A: Into<Attribute>>(
-        mut self,
-        attrs: impl IntoIterator<Item = A>,
-    ) -> Self {
-        self.attributes.extend(attrs.into_iter().map(A::into));
-        self
-    }
-}
-
 /// Return true
 ///
 /// Only used for serde annotations
@@ -169,16 +123,4 @@ impl PartialEq<&Attribute> for Attribute {
     fn eq(&self, rhs: &&Attribute) -> bool {
         self == *rhs
     }
-}
-
-/// Creates a new Attribute. `Attribute::new` is an alias for this.
-#[inline]
-pub fn attr(key: impl Into<String>, value: impl Into<String>) -> Attribute {
-    Attribute::new(key, value)
-}
-
-/// Creates a new Attribute. `Attribute::new` is an alias for this.
-#[inline]
-pub fn attr_plaintext(key: impl Into<String>, value: impl Into<String>) -> Attribute {
-    Attribute::new_plaintext(key, value)
 }
