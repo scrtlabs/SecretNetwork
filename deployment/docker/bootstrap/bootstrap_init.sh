@@ -7,13 +7,19 @@ then
   rm -rf ~/.secretd/*
   rm -rf /opt/secret/.sgx_secrets/*
 
+  if [ -z "${CHAINID}" ]; then
+    chain_id="$CHAINID"
+  else
+    chain_id="supernova-1"
+  fi
+
   mkdir -p ./.sgx_secrets
-  secretd config chain-id supernova-1
+  secretd config chain-id "$chain_id"
   secretd config keyring-backend test
 
   # export SECRET_NETWORK_CHAIN_ID=secretdev-1
   # export SECRET_NETWORK_KEYRING_BACKEND=test
-  secretd init banana --chain-id supernova-1
+  secretd init banana --chain-id "$chain_id"
 
 
   cp ~/node_key.json ~/.secretd/config/node_key.json
@@ -30,7 +36,7 @@ then
 #  secretd add-genesis-account "$(secretd keys show -a d)" 1000000000000000000uscrt
 
 
-  secretd gentx a 1000000uscrt --chain-id supernova-1
+  secretd gentx a 1000000uscrt --chain-id "$chain_id"
 #  secretd gentx b 1000000uscrt --keyring-backend test
 #  secretd gentx c 1000000uscrt --keyring-backend test
 #  secretd gentx d 1000000uscrt --keyring-backend test
