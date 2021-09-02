@@ -305,12 +305,15 @@ export class SigningCosmWasmClient extends CosmWasmClient {
       throw err;
     }
 
-    const contractAddressAttr = findAttribute(result.logs, "message", "contract_address");
+    let contractAddress = "";
+    if (this.restClient.broadcastMode == BroadcastMode.Block) {
+      contractAddress = findAttribute(result.logs, "message", "contract_address")?.value;
+    }
 
     const logs = await this.restClient.decryptLogs(result.logs, [nonce]);
 
     return {
-      contractAddress: contractAddressAttr.value,
+      contractAddress,
       logs: logs,
       transactionHash: result.transactionHash,
       data: result.data, // data is the address of the new contract, so nothing to decrypt

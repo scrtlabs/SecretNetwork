@@ -283,7 +283,7 @@ function parseAxiosError(err: AxiosError): never {
 
 export class RestClient {
   private readonly client: AxiosInstance;
-  private readonly broadcastMode: BroadcastMode;
+  public readonly broadcastMode: BroadcastMode;
   public enigmautils: SecretUtils;
 
   public codeHashCache: Map<string | number, string>;
