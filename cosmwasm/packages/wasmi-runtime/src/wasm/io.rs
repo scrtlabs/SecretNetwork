@@ -125,7 +125,7 @@ pub fn encrypt_output(
         WasmOutput::OkObjectV010 { ok } => {
             for msg in &mut ok.messages {
                 if let cosmwasm_v010_types::types::CosmosMsg::Wasm(wasm_msg) = msg {
-                    encrypt_v010_wasm_msg(&mut wasm_msg, nonce, user_public_key, contract_addr)?;
+                    encrypt_v010_wasm_msg(wasm_msg, nonce, user_public_key, contract_addr)?;
                 }
             }
 
@@ -142,7 +142,7 @@ pub fn encrypt_output(
         WasmOutput::OkObjectV016 { ok } => {
             for sub_msg in &mut ok.messages {
                 if let cosmwasm_v016_types::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
-                    encrypt_v016_wasm_msg(&mut wasm_msg, nonce, user_public_key, contract_addr)?;
+                    encrypt_v016_wasm_msg(wasm_msg, nonce, user_public_key, contract_addr)?;
                 }
             }
 
