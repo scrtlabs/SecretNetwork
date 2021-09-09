@@ -629,13 +629,16 @@ export class RestClient {
         );
 
         if (msg.type === "wasm/MsgExecuteContract") {
+          // decrypt input
           (txsResponse.tx.value.msg[0] as MsgExecuteContract).value.msg = inputMsg;
+          // decrypt output
+          txsResponse.data = await this.decryptDataField(txsResponse.data, [nonce]);
         } else if (msg.type === "wasm/MsgInstantiateContract") {
+          // decrypt input
           (txsResponse.tx.value.msg[0] as MsgInstantiateContract).value.init_msg = inputMsg;
         }
 
-        // decrypt output
-        txsResponse.data = await this.decryptDataField(txsResponse.data, [nonce]);
+        // decrypt output logs
         let logs;
         if (txsResponse.logs) {
           logs = await this.decryptLogs(txsResponse.logs, [nonce]);
