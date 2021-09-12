@@ -7,4 +7,5 @@ exclude = [
     "packages/enclave-test",
     "packages/enclave-ffi-types",
     "packages/vm",
+    "packages/sgx-vm",
 ]
