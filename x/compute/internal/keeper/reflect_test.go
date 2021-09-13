@@ -20,6 +20,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	v010wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
@@ -36,7 +37,7 @@ type ownerPayload struct {
 }
 
 type reflectPayload struct {
-	Msgs []wasmTypes.CosmosMsg `json:"msgs"`
+	Msgs []v010wasmTypes.CosmosMsg `json:"msgs"`
 }
 
 // MaskQueryMsg is used to encode query messages
@@ -122,9 +123,9 @@ func TestMaskReflectContractSend(t *testing.T) {
 
 	contractCodeHash := hex.EncodeToString(keeper.GetContractHash(ctx, escrowAddr))
 	// approveMsg := []byte(contractCodeHash + `{"release":{}}`)
-	msgs := []wasmTypes.CosmosMsg{{
-		Wasm: &wasmTypes.WasmMsg{
-			Execute: &wasmTypes.ExecuteMsg{
+	msgs := []v010wasmTypes.CosmosMsg{{
+		Wasm: &v010wasmTypes.WasmMsg{
+			Execute: &v010wasmTypes.ExecuteMsg{
 				ContractAddr:     escrowAddr.String(),
 				CallbackCodeHash: contractCodeHash,
 				Msg:              []byte(`{"release":{}}`),
@@ -204,9 +205,9 @@ func TestMaskReflectCustomMsg(t *testing.T) {
 	checkAccount(t, ctx, accKeeper, keeper.bankKeeper, fred, nil)
 
 	// bob can send contract's tokens to fred (using SendMsg)
-	msgs := []wasmTypes.CosmosMsg{{
-		Bank: &wasmTypes.BankMsg{
-			Send: &wasmTypes.SendMsg{
+	msgs := []v010wasmTypes.CosmosMsg{{
+		Bank: &v010wasmTypes.BankMsg{
+			Send: &v010wasmTypes.SendMsg{
 				FromAddress: contractAddr.String(),
 				ToAddress:   fred.String(),
 				Amount: []wasmTypes.Coin{{
@@ -245,7 +246,7 @@ func TestMaskReflectCustomMsg(t *testing.T) {
 	require.NoError(t, err)
 	reflectOpaque := MaskHandleMsg{
 		Reflect: &reflectPayload{
-			Msgs: []wasmTypes.CosmosMsg{opaque},
+			Msgs: []v010wasmTypes.CosmosMsg{opaque},
 		},
 	}
 	reflectOpaqueBz, err := json.Marshal(reflectOpaque)
@@ -344,19 +345,19 @@ type reflectCustomMsg struct {
 
 // toReflectRawMsg encodes an sdk msg using any type with json encoding.
 // Then wraps it as an opaque message
-func toReflectRawMsg(cdc codec.BinaryCodec, msg sdk.Msg) (wasmTypes.CosmosMsg, error) {
+func toReflectRawMsg(cdc codec.BinaryCodec, msg sdk.Msg) (v010wasmTypes.CosmosMsg, error) {
 	any, err := codectypes.NewAnyWithValue(msg)
 	if err != nil {
-		return wasmTypes.CosmosMsg{}, err
+		return v010wasmTypes.CosmosMsg{}, err
 	}
 	rawBz, err := cdc.Marshal(any)
 	if err != nil {
-		return wasmTypes.CosmosMsg{}, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
+		return v010wasmTypes.CosmosMsg{}, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
 	}
 	customMsg, err := json.Marshal(reflectCustomMsg{
 		Raw: rawBz,
 	})
-	res := wasmTypes.CosmosMsg{
+	res := v010wasmTypes.CosmosMsg{
 		Custom: customMsg,
 	}
 	return res, nil

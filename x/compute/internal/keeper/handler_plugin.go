@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/json"
+
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
@@ -10,7 +11,10 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	v010wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
+
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
@@ -27,11 +31,11 @@ func NewMessageHandler(router sdk.Router, customEncoders *MessageEncoders) Messa
 	}
 }
 
-type BankEncoder func(sender sdk.AccAddress, msg *wasmTypes.BankMsg) ([]sdk.Msg, error)
+type BankEncoder func(sender sdk.AccAddress, msg *v010wasmTypes.BankMsg) ([]sdk.Msg, error)
 type CustomEncoder func(sender sdk.AccAddress, msg json.RawMessage) ([]sdk.Msg, error)
-type StakingEncoder func(sender sdk.AccAddress, msg *wasmTypes.StakingMsg) ([]sdk.Msg, error)
-type WasmEncoder func(sender sdk.AccAddress, msg *wasmTypes.WasmMsg) ([]sdk.Msg, error)
-type GovEncoder func(sender sdk.AccAddress, msg *wasmTypes.GovMsg) ([]sdk.Msg, error)
+type StakingEncoder func(sender sdk.AccAddress, msg *v010wasmTypes.StakingMsg) ([]sdk.Msg, error)
+type WasmEncoder func(sender sdk.AccAddress, msg *v010wasmTypes.WasmMsg) ([]sdk.Msg, error)
+type GovEncoder func(sender sdk.AccAddress, msg *v010wasmTypes.GovMsg) ([]sdk.Msg, error)
 
 type MessageEncoders struct {
 	Bank    BankEncoder
@@ -73,7 +77,7 @@ func (e MessageEncoders) Merge(o *MessageEncoders) MessageEncoders {
 	return e
 }
 
-func (e MessageEncoders) Encode(contractAddr sdk.AccAddress, msg wasmTypes.CosmosMsg) ([]sdk.Msg, error) {
+func (e MessageEncoders) Encode(contractAddr sdk.AccAddress, msg v010wasmTypes.CosmosMsg) ([]sdk.Msg, error) {
 	switch {
 	case msg.Bank != nil:
 		return e.Bank(contractAddr, msg.Bank)
@@ -97,7 +101,7 @@ var VoteOptionMap = map[string]string{
 	"NoWithVeto": "VOTE_OPTION_NO_WITH_VETO",
 }
 
-func EncodeGovMsg(sender sdk.AccAddress, msg *wasmTypes.GovMsg) ([]sdk.Msg, error) {
+func EncodeGovMsg(sender sdk.AccAddress, msg *v010wasmTypes.GovMsg) ([]sdk.Msg, error) {
 	if msg.Vote == nil {
 		return nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Unknown variant of Gov")
 	}
@@ -117,7 +121,7 @@ func EncodeGovMsg(sender sdk.AccAddress, msg *wasmTypes.GovMsg) ([]sdk.Msg, erro
 	return []sdk.Msg{sdkMsg}, nil
 }
 
-func EncodeBankMsg(sender sdk.AccAddress, msg *wasmTypes.BankMsg) ([]sdk.Msg, error) {
+func EncodeBankMsg(sender sdk.AccAddress, msg *v010wasmTypes.BankMsg) ([]sdk.Msg, error) {
 	if msg.Send == nil {
 		return nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Unknown variant of Bank")
 	}
@@ -150,7 +154,7 @@ func NoCustomMsg(sender sdk.AccAddress, msg json.RawMessage) ([]sdk.Msg, error) 
 	return nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Custom variant not supported")
 }
 
-func EncodeStakingMsg(sender sdk.AccAddress, msg *wasmTypes.StakingMsg) ([]sdk.Msg, error) {
+func EncodeStakingMsg(sender sdk.AccAddress, msg *v010wasmTypes.StakingMsg) ([]sdk.Msg, error) {
 	var err error
 	switch {
 	case msg.Delegate != nil:
@@ -238,7 +242,7 @@ func EncodeStakingMsg(sender sdk.AccAddress, msg *wasmTypes.StakingMsg) ([]sdk.M
 	}
 }
 
-func EncodeWasmMsg(sender sdk.AccAddress, msg *wasmTypes.WasmMsg) ([]sdk.Msg, error) {
+func EncodeWasmMsg(sender sdk.AccAddress, msg *v010wasmTypes.WasmMsg) ([]sdk.Msg, error) {
 	switch {
 	case msg.Execute != nil:
 		contractAddr, err := sdk.AccAddressFromBech32(msg.Execute.ContractAddr)
@@ -281,7 +285,7 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *wasmTypes.WasmMsg) ([]sdk.Msg, er
 	}
 }
 
-func (k Keeper) Dispatch(ctx sdk.Context, contractAddr sdk.AccAddress, msg wasmTypes.CosmosMsg) (events sdk.Events, data []byte, err error) {
+func (k Keeper) Dispatch(ctx sdk.Context, contractAddr sdk.AccAddress, msg v010wasmTypes.CosmosMsg) (events sdk.Events, data []byte, err error) {
 
 	sdkMsgs, err := k.messenger.encoders.Encode(contractAddr, msg)
 	if err != nil {

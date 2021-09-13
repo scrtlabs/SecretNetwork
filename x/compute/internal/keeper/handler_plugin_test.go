@@ -13,6 +13,8 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	v010wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
+
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
@@ -29,7 +31,7 @@ func TestEncoding(t *testing.T) {
 
 	cases := map[string]struct {
 		sender sdk.AccAddress
-		input  wasmTypes.CosmosMsg
+		input  v010wasmTypes.CosmosMsg
 		// set if valid
 		output []sdk.Msg
 		// set if invalid
@@ -37,9 +39,9 @@ func TestEncoding(t *testing.T) {
 	}{
 		"simple send": {
 			sender: addr1,
-			input: wasmTypes.CosmosMsg{
-				Bank: &wasmTypes.BankMsg{
-					Send: &wasmTypes.SendMsg{
+			input: v010wasmTypes.CosmosMsg{
+				Bank: &v010wasmTypes.BankMsg{
+					Send: &v010wasmTypes.SendMsg{
 						FromAddress: addr1.String(),
 						ToAddress:   addr2.String(),
 						Amount: []wasmTypes.Coin{
@@ -68,9 +70,9 @@ func TestEncoding(t *testing.T) {
 		},
 		"invalid send amount": {
 			sender: addr1,
-			input: wasmTypes.CosmosMsg{
-				Bank: &wasmTypes.BankMsg{
-					Send: &wasmTypes.SendMsg{
+			input: v010wasmTypes.CosmosMsg{
+				Bank: &v010wasmTypes.BankMsg{
+					Send: &v010wasmTypes.SendMsg{
 						FromAddress: addr1.String(),
 						ToAddress:   addr2.String(),
 						Amount: []wasmTypes.Coin{
@@ -86,9 +88,9 @@ func TestEncoding(t *testing.T) {
 		},
 		"invalid address": {
 			sender: addr1,
-			input: wasmTypes.CosmosMsg{
-				Bank: &wasmTypes.BankMsg{
-					Send: &wasmTypes.SendMsg{
+			input: v010wasmTypes.CosmosMsg{
+				Bank: &v010wasmTypes.BankMsg{
+					Send: &v010wasmTypes.SendMsg{
 						FromAddress: addr1.String(),
 						ToAddress:   invalidAddr,
 						Amount: []wasmTypes.Coin{
@@ -104,9 +106,9 @@ func TestEncoding(t *testing.T) {
 		},
 		"wasm execute": {
 			sender: addr1,
-			input: wasmTypes.CosmosMsg{
-				Wasm: &wasmTypes.WasmMsg{
-					Execute: &wasmTypes.ExecuteMsg{
+			input: v010wasmTypes.CosmosMsg{
+				Wasm: &v010wasmTypes.WasmMsg{
+					Execute: &v010wasmTypes.ExecuteMsg{
 						ContractAddr:     addr2.String(),
 						Msg:              jsonMsg,
 						CallbackCodeHash: "",
@@ -128,9 +130,9 @@ func TestEncoding(t *testing.T) {
 		},
 		"wasm instantiate": {
 			sender: addr1,
-			input: wasmTypes.CosmosMsg{
-				Wasm: &wasmTypes.WasmMsg{
-					Instantiate: &wasmTypes.InstantiateMsg{
+			input: v010wasmTypes.CosmosMsg{
+				Wasm: &v010wasmTypes.WasmMsg{
+					Instantiate: &v010wasmTypes.InstantiateMsg{
 						CodeID:           7,
 						CallbackCodeHash: "",
 						Msg:              jsonMsg,
@@ -152,9 +154,9 @@ func TestEncoding(t *testing.T) {
 		},
 		"staking delegate": {
 			sender: addr1,
-			input: wasmTypes.CosmosMsg{
-				Staking: &wasmTypes.StakingMsg{
-					Delegate: &wasmTypes.DelegateMsg{
+			input: v010wasmTypes.CosmosMsg{
+				Staking: &v010wasmTypes.StakingMsg{
+					Delegate: &v010wasmTypes.DelegateMsg{
 						Validator: valAddr.String(),
 						Amount:    wasmTypes.NewCoin(777, "stake"),
 					},
@@ -170,9 +172,9 @@ func TestEncoding(t *testing.T) {
 		},
 		"staking delegate to non-validator": {
 			sender: addr1,
-			input: wasmTypes.CosmosMsg{
-				Staking: &wasmTypes.StakingMsg{
-					Delegate: &wasmTypes.DelegateMsg{
+			input: v010wasmTypes.CosmosMsg{
+				Staking: &v010wasmTypes.StakingMsg{
+					Delegate: &v010wasmTypes.DelegateMsg{
 						Validator: addr2.String(),
 						Amount:    wasmTypes.NewCoin(777, "stake"),
 					},
@@ -182,9 +184,9 @@ func TestEncoding(t *testing.T) {
 		},
 		"staking undelegate": {
 			sender: addr1,
-			input: wasmTypes.CosmosMsg{
-				Staking: &wasmTypes.StakingMsg{
-					Undelegate: &wasmTypes.UndelegateMsg{
+			input: v010wasmTypes.CosmosMsg{
+				Staking: &v010wasmTypes.StakingMsg{
+					Undelegate: &v010wasmTypes.UndelegateMsg{
 						Validator: valAddr.String(),
 						Amount:    wasmTypes.NewCoin(555, "stake"),
 					},
@@ -200,9 +202,9 @@ func TestEncoding(t *testing.T) {
 		},
 		"staking redelegate": {
 			sender: addr1,
-			input: wasmTypes.CosmosMsg{
-				Staking: &wasmTypes.StakingMsg{
-					Redelegate: &wasmTypes.RedelegateMsg{
+			input: v010wasmTypes.CosmosMsg{
+				Staking: &v010wasmTypes.StakingMsg{
+					Redelegate: &v010wasmTypes.RedelegateMsg{
 						SrcValidator: valAddr.String(),
 						DstValidator: valAddr2.String(),
 						Amount:       wasmTypes.NewCoin(222, "stake"),
@@ -220,9 +222,9 @@ func TestEncoding(t *testing.T) {
 		},
 		"staking withdraw (implicit recipient)": {
 			sender: addr1,
-			input: wasmTypes.CosmosMsg{
-				Staking: &wasmTypes.StakingMsg{
-					Withdraw: &wasmTypes.WithdrawMsg{
+			input: v010wasmTypes.CosmosMsg{
+				Staking: &v010wasmTypes.StakingMsg{
+					Withdraw: &v010wasmTypes.WithdrawMsg{
 						Validator: valAddr2.String(),
 					},
 				},
@@ -240,9 +242,9 @@ func TestEncoding(t *testing.T) {
 		},
 		"staking withdraw (explicit recipient)": {
 			sender: addr1,
-			input: wasmTypes.CosmosMsg{
-				Staking: &wasmTypes.StakingMsg{
-					Withdraw: &wasmTypes.WithdrawMsg{
+			input: v010wasmTypes.CosmosMsg{
+				Staking: &v010wasmTypes.StakingMsg{
+					Withdraw: &v010wasmTypes.WithdrawMsg{
 						Validator: valAddr2.String(),
 						Recipient: addr2.String(),
 					},

@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"path/filepath"
+	"strconv"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	codedctypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -28,7 +29,9 @@ import (
 	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	wasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
-	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+
+	v010wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
+	v016wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v016"
 
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
@@ -264,13 +267,7 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, s
 }
 
 // Instantiate creates an instance of a WASM contract
-func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin */ sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) {
-	/*
-		return k.instantiate(ctx, codeID, creator admin,, initMsg, label, deposit, callbackSig)
-		}
-
-		func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator , admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) {
-	*/
+func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) {
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: init")
 
 	signBytes := []byte{}
@@ -322,12 +319,10 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin *
 	}
 
 	// get contact info
-
 	bz := store.Get(types.GetCodeKey(codeID))
 	if bz == nil {
 		return nil, sdkerrors.Wrap(types.ErrNotFound, "code")
 	}
-
 	var codeInfo types.CodeInfo
 	k.cdc.MustUnmarshal(bz, &codeInfo)
 
@@ -335,8 +330,8 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin *
 	// 	return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "can not instantiate")
 	// }
 
-	// prepare params for contract instantiate call
-	params := types.NewEnv(ctx, creator, deposit, contractAddress, nil)
+	// prepare env for contract instantiate call
+	env := types.NewEnv(ctx, creator, deposit, contractAddress, nil)
 
 	// create prefixed data store
 	// 0x03 | contractAddress (sdk.AccAddress)
@@ -351,34 +346,75 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator /* , admin *
 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
-	res, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, params, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo)
+	response, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo)
 	consumeGas(ctx, gasUsed)
 	if err != nil {
 		return contractAddress, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
 	}
 
-	// emit all events from this contract itself
-	events := types.ParseEvents(res.Log, contractAddress)
-	ctx.EventManager().EmitEvents(events)
+	switch res := response.(type) {
+	case v010wasmTypes.InitResponse:
+		// emit all events from this contract itself
+		events := types.ParseEvents(res.Log, contractAddress)
+		ctx.EventManager().EmitEvents(events)
 
-	// persist instance
-	createdAt := types.NewAbsoluteTxPosition(ctx)
-	instance := types.NewContractInfo(codeID, creator /* admin, */, label, createdAt)
-	store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshal(&instance))
+		// persist instance
+		createdAt := types.NewAbsoluteTxPosition(ctx)
+		instance := types.NewContractInfo(codeID, creator, label, createdAt)
+		store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshal(&instance))
 
-	// fmt.Printf("Storing key: %v for account %s\n", key, contractAddress)
+		// fmt.Printf("Storing key: %v for account %s\n", key, contractAddress)
 
-	store.Set(types.GetContractEnclaveKey(contractAddress), key)
+		store.Set(types.GetContractEnclaveKey(contractAddress), key)
 
-	store.Set(types.GetContractLabelPrefix(label), contractAddress)
+		store.Set(types.GetContractLabelPrefix(label), contractAddress)
 
-	err = k.dispatchMessages(ctx, contractAddress, res.Messages)
-	if err != nil {
-		return nil, err
+		err = k.dispatchMessages(ctx, contractAddress, res.Messages)
+		if err != nil {
+			return nil, err
+		}
+
+		return contractAddress, nil
+	case v016wasmTypes.Response:
+		// persist instance first
+		createdAt := types.NewAbsoluteTxPosition(ctx)
+		contractInfo := types.NewContractInfo(codeID, creator, label, createdAt)
+
+		// check for IBC flag
+		report, err := k.wasmVM.AnalyzeCode(codeInfo.CodeHash)
+		if err != nil {
+			return contractAddress, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
+		}
+		if report.HasIBCEntryPoints {
+			// register IBC port
+			ibcPort, err := k.ensureIbcPort(ctx, contractAddress)
+			if err != nil {
+				return nil, nil, err
+			}
+			contractInfo.IBCPortID = ibcPort
+		}
+
+		// store contract before dispatch so that contract could be called back
+		historyEntry := contractInfo.InitialHistory(initMsg)
+		k.addToContractCodeSecondaryIndex(ctx, contractAddress, historyEntry)
+		k.appendToContractHistory(ctx, contractAddress, historyEntry)
+		k.storeContractInfo(ctx, contractAddress, &contractInfo)
+
+		ctx.EventManager().EmitEvent(sdk.NewEvent(
+			types.EventTypeInstantiate,
+			sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+			sdk.NewAttribute(types.AttributeKeyCodeID, strconv.FormatUint(codeID, 10)),
+		))
+
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Data, res.Events)
+		if err != nil {
+			return nil, nil, sdkerrors.Wrap(err, "dispatch")
+		}
+
+		return contractAddress, data, nil
+	default:
+		return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("cannot detect response type: %v", res))
 	}
-
-	// k.appendToContractHistory(ctx, contractAddress, instance.InitialHistory(initMsg))
-	return contractAddress, nil
 }
 
 // Execute executes the contract instance
@@ -433,146 +469,34 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	gas := gasForContract(ctx)
-	res, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, params, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo)
+	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, params, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo)
 	consumeGas(ctx, gasUsed)
 
 	if execErr != nil {
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
 
-	//var res wasmTypes.CosmosResponse
-	//err = json.Unmarshal(res, &res)
-	//if err != nil {
-	//	return sdk.Result{}, err
-	//}
+	switch res := response.(type) {
+	case v010wasmTypes.HandleResponse:
+		// emit all events from this contract itself
+		events := types.ParseEvents(res.Log, contractAddress)
+		ctx.EventManager().EmitEvents(events)
 
-	// emit all events from this contract itself
-	events := types.ParseEvents(res.Log, contractAddress)
-	ctx.EventManager().EmitEvents(events)
+		err = k.dispatchMessages(ctx, contractAddress, res.Messages)
+		if err != nil {
+			return nil, err
+		}
 
-	// TODO: capture events here as well
-	err = k.dispatchMessages(ctx, contractAddress, res.Messages)
-	if err != nil {
-		return nil, err
+		return &sdk.Result{
+			Data: res.Data,
+		}, nil
+	case v016wasmTypes.Response:
+		// TODO
+		return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("cannot detect response type: %v", res))
+	default:
+		return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("cannot detect response type: %v", res))
 	}
-
-	return &sdk.Result{
-		Data: res.Data,
-	}, nil
 }
-
-/*
-// We don't use this function currently. It's here for upstream compatibility
-// Migrate allows to upgrade a contract to a new code with data migration.
-func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, newCodeID uint64, msg []byte) (*sdk.Result, error) {
-	return k.migrate(ctx, contractAddress, caller, newCodeID, msg, k.authZPolicy)
-}
-
-func (k Keeper) migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, newCodeID uint64, msg []byte, authZ AuthorizationPolicy) (*sdk.Result, error) {
-	ctx.GasMeter().ConsumeGas(InstanceCost, "Loading CosmWasm module: migrate")
-	_ = authtypes.StdSignature{
-		PubKey:    secp256k1.PubKeySecp256k1{},
-		Signature: []byte{},
-	}
-	_ = []byte{}
-
-	tx := authtypes.StdTx{}
-	txBytes := ctx.TxBytes()
-	err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
-	if err != nil {
-		return &sdk.Result{}, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
-	}
-
-	contractInfo := k.GetContractInfo(ctx, contractAddress)
-	if contractInfo == nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "unknown contract")
-	}
-	if !authZ.CanModifyContract(contractInfo.Admin, caller) {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "can not migrate")
-	}
-
-	newCodeInfo := k.GetCodeInfo(ctx, newCodeID)
-	if newCodeInfo == nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "unknown code")
-	}
-
-	store := ctx.KVStore(k.storeKey)
-	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
-
-	var noDeposit sdk.Coins
-	params := types.NewEnv(ctx, caller, noDeposit, contractAddress, contractKey)
-
-	// prepare querier
-	querier := QueryHandler{
-		Ctx:     ctx,
-		Plugins: k.queryPlugins,
-	}
-
-	prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
-	gas := gasForContract(ctx)
-	res, gasUsed, err := k.wasmer.Migrate(newCodeInfo.CodeHash, params, msg, &prefixStore, cosmwasmAPI, &querier, gasMeter(ctx), gas)
-	consumeGas(ctx, gasUsed)
-	if err != nil {
-		return nil, sdkerrors.Wrap(types.ErrMigrationFailed, err.Error())
-	}
-
-	// emit all events from this contract itself
-	events := types.ParseEvents(res.Log, contractAddress)
-	ctx.EventManager().EmitEvents(events)
-
-	historyEntry := contractInfo.AddMigration(ctx, newCodeID, msg)
-	k.appendToContractHistory(ctx, contractAddress, historyEntry)
-	k.setContractInfo(ctx, contractAddress, contractInfo)
-
-	if err := k.dispatchMessages(ctx, contractAddress, res.Messages); err != nil {
-		return nil, sdkerrors.Wrap(err, "dispatch")
-	}
-
-	return &sdk.Result{
-		Data: res.Data,
-	}, nil
-}
-
-// UpdateContractAdmin sets the admin value on the ContractInfo. It must be a valid address (use ClearContractAdmin to remove it)
-func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, newAdmin sdk.AccAddress) error {
-	return k.setContractAdmin(ctx, contractAddress, caller, newAdmin, k.authZPolicy)
-}
-
-// ClearContractAdmin sets the admin value on the ContractInfo to nil, to disable further migrations/ updates.
-func (k Keeper) ClearContractAdmin(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress) error {
-	return k.setContractAdmin(ctx, contractAddress, caller, nil, k.authZPolicy)
-}
-
-func (k Keeper) setContractAdmin(ctx sdk.Context, contractAddress, caller, newAdmin sdk.AccAddress, authZ AuthorizationPolicy) error {
-	contractInfo := k.GetContractInfo(ctx, contractAddress)
-	if contractInfo == nil {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "unknown contract")
-	}
-	if !authZ.CanModifyContract(contractInfo.Admin, caller) {
-		return sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "can not modify contract")
-	}
-	contractInfo.Admin = newAdmin
-	k.setContractInfo(ctx, contractAddress, contractInfo)
-	return nil
-}
-
-func (k Keeper) appendToContractHistory(ctx sdk.Context, contractAddr sdk.AccAddress, newEntries ...types.ContractCodeHistoryEntry) {
-	entries := append(k.GetContractHistory(ctx, contractAddr), newEntries...)
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.ContractHistoryStorePrefix)
-	prefixStore.Set(contractAddr, k.cdc.MustMarshal(&entries))
-}
-
-func (k Keeper) GetContractHistory(ctx sdk.Context, contractAddr sdk.AccAddress) []types.ContractCodeHistoryEntry {
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.ContractHistoryStorePrefix)
-	var entries []types.ContractCodeHistoryEntry
-	bz := prefixStore.Get(contractAddr)
-	if bz != nil {
-		k.cdc.MustUnmarshal(bz, &entries)
-	}
-	return entries
-}
-*/
 
 // QuerySmart queries the smart contract itself.
 func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, useDefaultGasLimit bool) ([]byte, error) {
@@ -774,7 +698,7 @@ func (k Keeper) GetByteCode(ctx sdk.Context, codeID uint64) ([]byte, error) {
 	return k.wasmer.GetCode(codeInfo.CodeHash)
 }
 
-func (k Keeper) dispatchMessages(ctx sdk.Context, contractAddr sdk.AccAddress, msgs []wasmTypes.CosmosMsg) error {
+func (k Keeper) dispatchMessages(ctx sdk.Context, contractAddr sdk.AccAddress, msgs []v010wasmTypes.CosmosMsg) error {
 	for _, msg := range msgs {
 
 		//var events sdk.Events
@@ -871,8 +795,6 @@ func (k Keeper) importContract(ctx sdk.Context, contractAddr sdk.AccAddress, c *
 		return sdkerrors.Wrapf(types.ErrDuplicate, "contract: %s", contractAddr)
 	}
 
-	// historyEntry := c.ResetFromGenesis(ctx)
-	// k.appendToContractHistory(ctx, contractAddr, historyEntry)
 	k.setContractInfo(ctx, contractAddr, c)
 	return k.importContractState(ctx, contractAddr, state)
 }

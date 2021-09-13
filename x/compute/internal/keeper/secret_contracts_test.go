@@ -5,10 +5,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	stypes "github.com/cosmos/cosmos-sdk/store/types"
 	"io/ioutil"
 	"regexp"
 	"testing"
+
+	stypes "github.com/cosmos/cosmos-sdk/store/types"
 
 	"github.com/stretchr/testify/require"
 
@@ -18,10 +19,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	v010cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
-type ContractEvent []cosmwasm.LogAttribute
+type ContractEvent []v010cosmwasm.LogAttribute
 
 // if codeID isn't 0, it will try to use that. Otherwise will take the contractAddress
 func testEncrypt(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, codeId uint64, msg []byte) ([]byte, error) {
@@ -76,9 +78,9 @@ func getDecryptedWasmEvents(t *testing.T, ctx sdk.Context, nonce []byte) []Contr
 	var res []ContractEvent
 	for _, e := range events {
 		if e.Type == "wasm" {
-			newEvent := []cosmwasm.LogAttribute{}
+			newEvent := []v010cosmwasm.LogAttribute{}
 			for _, oldLog := range e.Attributes {
-				newLog := cosmwasm.LogAttribute{
+				newLog := v010cosmwasm.LogAttribute{
 					Key:   string(oldLog.Key),
 					Value: string(oldLog.Value),
 				}
@@ -115,9 +117,9 @@ func tryDecryptWasmEvents(ctx sdk.Context, nonce []byte) []ContractEvent {
 	var res []ContractEvent
 	for _, e := range events {
 		if e.Type == "wasm" {
-			newEvent := []cosmwasm.LogAttribute{}
+			newEvent := []v010cosmwasm.LogAttribute{}
 			for _, oldLog := range e.Attributes {
-				newLog := cosmwasm.LogAttribute{
+				newLog := v010cosmwasm.LogAttribute{
 					Key:   string(oldLog.Key),
 					Value: string(oldLog.Value),
 				}
@@ -955,7 +957,7 @@ func TestExecCallbackToInit(t *testing.T) {
 		execEvents[0],
 	)
 	require.Equal(t,
-		cosmwasm.LogAttribute{Key: "init", Value: "🌈"},
+		v010cosmwasm.LogAttribute{Key: "init", Value: "🌈"},
 		execEvents[1][1],
 	)
 	require.Equal(t, "contract_address", execEvents[1][0].Key)
@@ -986,7 +988,7 @@ func TestInitCallbackToInit(t *testing.T) {
 		initEvents[0],
 	)
 	require.Equal(t,
-		cosmwasm.LogAttribute{Key: "init", Value: "🌈"},
+		v010cosmwasm.LogAttribute{Key: "init", Value: "🌈"},
 		initEvents[1][1],
 	)
 	require.Equal(t, "contract_address", initEvents[1][0].Key)

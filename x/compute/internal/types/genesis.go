@@ -13,11 +13,6 @@ func (s Sequence) ValidateBasic() error {
 }
 
 func (s GenesisState) ValidateBasic() error {
-	/*
-		if err := s.Params.ValidateBasic(); err != nil {
-			return sdkerrors.Wrap(err, "params")
-		}
-	*/
 	for i := range s.Codes {
 		if err := s.Codes[i].ValidateBasic(); err != nil {
 			return sdkerrors.Wrapf(err, "code: %d", i)

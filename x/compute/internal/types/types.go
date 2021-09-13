@@ -8,6 +8,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	wasmTypesV010 "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
 	"github.com/spf13/cast"
 )
 
@@ -38,16 +39,12 @@ func (c CodeInfo) ValidateBasic() error {
 	if err := validateBuilder(c.Builder); err != nil {
 		return sdkerrors.Wrap(err, "builder")
 	}
-	/*
-		if err := c.InstantiateConfig.ValidateBasic(); err != nil {
-			return sdkerrors.Wrap(err, "instantiate config")
-		}
-	*/
+
 	return nil
 }
 
 // NewCodeInfo fills a new Contract struct
-func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, source string, builder string /* , instantiatePermission AccessConfig */) CodeInfo {
+func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, source string, builder string) CodeInfo {
 	return CodeInfo{
 		CodeHash: codeHash,
 		Creator:  creator,
@@ -57,32 +54,11 @@ func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, source string, builder
 	}
 }
 
-/*
-type ContractCodeHistoryOperationType string
-
-const (
-	InitContractCodeHistoryType    ContractCodeHistoryOperationType = "Init"
-	MigrateContractCodeHistoryType ContractCodeHistoryOperationType = "Migrate"
-	GenesisContractCodeHistoryType ContractCodeHistoryOperationType = "Genesis"
-)
-
-var AllCodeHistoryTypes = []ContractCodeHistoryOperationType{InitContractCodeHistoryType, MigrateContractCodeHistoryType}
-
-// ContractCodeHistoryEntry stores code updates to a contract.
-type ContractCodeHistoryEntry struct {
-	Operation ContractCodeHistoryOperationType `json:"operation"`
-	CodeID    uint64                           `json:"code_id"`
-	Updated   *AbsoluteTxPosition              `json:"updated,omitempty"`
-	Msg       json.RawMessage                  `json:"msg,omitempty"`
-}
-*/
-
 // NewContractInfo creates a new instance of a given WASM contract info
-func NewContractInfo(codeID uint64, creator /* , admin */ sdk.AccAddress, label string, createdAt *AbsoluteTxPosition) ContractInfo {
+func NewContractInfo(codeID uint64, creator sdk.AccAddress, label string, createdAt *AbsoluteTxPosition) ContractInfo {
 	return ContractInfo{
 		CodeID:  codeID,
 		Creator: creator,
-		// Admin:   admin,
 		Label:   label,
 		Created: createdAt,
 	}
@@ -94,13 +70,6 @@ func (c *ContractInfo) ValidateBasic() error {
 	if err := sdk.VerifyAddressFormat(c.Creator); err != nil {
 		return sdkerrors.Wrap(err, "creator")
 	}
-	/*
-		if c.Admin != nil {
-			if err := sdk.VerifyAddressFormat(c.Admin); err != nil {
-				return sdkerrors.Wrap(err, "admin")
-			}
-		}
-	*/
 	if err := validateLabel(c.Label); err != nil {
 		return sdkerrors.Wrap(err, "label")
 	}
@@ -108,26 +77,6 @@ func (c *ContractInfo) ValidateBasic() error {
 }
 
 /*
-func (c ContractInfo) InitialHistory(initMsg []byte) ContractCodeHistoryEntry {
-	return ContractCodeHistoryEntry{
-		Operation: InitContractCodeHistoryType,
-		CodeID:    c.CodeID,
-		Updated:   c.Created,
-		Msg:       initMsg,
-	}
-}
-
-func (c *ContractInfo) AddMigration(ctx sdk.Context, codeID uint64, msg []byte) ContractCodeHistoryEntry {
-	h := ContractCodeHistoryEntry{
-		Operation: MigrateContractCodeHistoryType,
-		CodeID:    codeID,
-		Updated:   NewAbsoluteTxPosition(ctx),
-		Msg:       msg,
-	}
-	c.CodeID = codeID
-	return h
-}
-
 // ResetFromGenesis resets contracts timestamp and history.
 func (c *ContractInfo) ResetFromGenesis(ctx sdk.Context) ContractCodeHistoryEntry {
 	c.Created = NewAbsoluteTxPosition(ctx)
@@ -208,7 +157,7 @@ const CustomEventType = "wasm"
 const AttributeKeyContractAddr = "contract_address"
 
 // ParseEvents converts wasm LogAttributes into an sdk.Events (with 0 or 1 elements)
-func ParseEvents(logs []wasmTypes.LogAttribute, contractAddr sdk.AccAddress) sdk.Events {
+func ParseEvents(logs []wasmTypesV010.LogAttribute, contractAddr sdk.AccAddress) sdk.Events {
 	// we always tag with the contract address issuing this event
 	attrs := []sdk.Attribute{sdk.NewAttribute(AttributeKeyContractAddr, contractAddr.String())}
 	// append attributes from wasm to the sdk.Event

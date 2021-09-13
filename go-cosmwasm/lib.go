@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
-	"github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	v010types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
+	v016types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v016"
 )
 
 // CodeID represents an ID for a given wasm code blob, must be generated from this library
@@ -99,7 +101,7 @@ func (w *Wasmer) Instantiate(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	sigInfo types.VerificationInfo,
-) (*types.InitResponse, []byte, uint64, error) {
+) (interface{}, []byte, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, nil, 0, err
@@ -116,16 +118,32 @@ func (w *Wasmer) Instantiate(
 	}
 
 	key := data[0:64]
-	var resp types.InitResult
-	err = json.Unmarshal(data[64:], &resp)
-	if err != nil {
-		return nil, nil, gasUsed, err
+	data = data[64:]
+
+	var respV010 v010types.InitResult
+	jsonErrV010 := json.Unmarshal(data, &respV010)
+
+	if jsonErrV010 == nil {
+		// v0.10 response
+		if respV010.Err != nil {
+			return nil, nil, gasUsed, fmt.Errorf("%v", respV010.Err)
+		}
+		return respV010.Ok, key, gasUsed, nil
 	}
 
-	if resp.Err != nil {
-		return nil, nil, gasUsed, fmt.Errorf("%v", resp.Err)
+	var respV016 v016types.ContractResult
+	jsonErrV016 := json.Unmarshal(data, &respV016)
+
+	if jsonErrV016 == nil {
+		// v0.16 response
+		if respV016.Err != "" {
+			return nil, nil, gasUsed, fmt.Errorf(respV016.Err)
+		}
+		return respV016.Ok, key, gasUsed, nil
 	}
-	return resp.Ok, key, gasUsed, nil
+
+	// unidentified response 🤷
+	return nil, nil, gasUsed, fmt.Errorf("cannot detect response type, v0.10: %v or v0.16: %v", jsonErrV010, jsonErrV016)
 }
 
 // Execute calls a given contract. Since the only difference between contracts with the same CodeID is the
@@ -144,7 +162,7 @@ func (w *Wasmer) Execute(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	sigInfo types.VerificationInfo,
-) (*types.HandleResponse, uint64, error) {
+) (interface{}, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -159,18 +177,30 @@ func (w *Wasmer) Execute(
 		return nil, gasUsed, err
 	}
 
-	var resp types.HandleResult
-	err = json.Unmarshal(data, &resp)
+	var respV010 v010types.HandleResult
+	jsonErrV010 := json.Unmarshal(data, &respV010)
 
-	if err != nil {
-		return nil, gasUsed, err
+	if jsonErrV010 == nil {
+		// v0.10 response
+		if respV010.Err != nil {
+			return nil, gasUsed, fmt.Errorf("%v", respV010.Err)
+		}
+		return respV010.Ok, gasUsed, nil
 	}
 
-	if resp.Err != nil {
-		return nil, gasUsed, fmt.Errorf("%v", resp.Err)
+	var respV016 v016types.ContractResult
+	jsonErrV016 := json.Unmarshal(data, &respV016)
+
+	if jsonErrV016 == nil {
+		// v0.16 response
+		if respV016.Err != "" {
+			return nil, gasUsed, fmt.Errorf(respV016.Err)
+		}
+		return respV016.Ok, gasUsed, nil
 	}
 
-	return resp.Ok, gasUsed, nil
+	// unidentified response 🤷
+	return nil, gasUsed, fmt.Errorf("cannot detect response type, v0.10: %v or v0.16: %v", jsonErrV010, jsonErrV016)
 }
 
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be
@@ -197,42 +227,6 @@ func (w *Wasmer) Query(
 	}
 
 	var resp types.QueryResponse
-	err = json.Unmarshal(data, &resp)
-	if err != nil {
-		return nil, gasUsed, err
-	}
-	if resp.Err != nil {
-		return nil, gasUsed, fmt.Errorf("%v", resp.Err)
-	}
-	return resp.Ok, gasUsed, nil
-}
-
-// Migrate will migrate an existing contract to a new code binary.
-// This takes storage of the data from the original contract and the CodeID of the new contract that should
-// replace it. This allows it to run a migration step if needed, or return an error if unable to migrate
-// the given data.
-//
-// MigrateMsg has some data on how to perform the migration.
-func (w *Wasmer) Migrate(
-	code CodeID,
-	env types.Env,
-	migrateMsg []byte,
-	store KVStore,
-	goapi GoAPI,
-	querier Querier,
-	gasMeter GasMeter,
-	gasLimit uint64,
-) (*types.MigrateResponse, uint64, error) {
-	paramBin, err := json.Marshal(env)
-	if err != nil {
-		return nil, 0, err
-	}
-	data, gasUsed, err := api.Migrate(w.cache, code, paramBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit)
-	if err != nil {
-		return nil, gasUsed, err
-	}
-
-	var resp types.MigrateResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
 		return nil, gasUsed, err

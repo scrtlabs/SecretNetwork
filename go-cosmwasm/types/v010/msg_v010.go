@@ -1,7 +1,9 @@
-package types
+package v010types
 
 import (
 	"encoding/json"
+
+	types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 )
 
 //------- Results / Msgs -------------
@@ -9,7 +11,7 @@ import (
 // HandleResult is the raw response from the handle call
 type HandleResult struct {
 	Ok  *HandleResponse `json:"Ok,omitempty"`
-	Err *StdError       `json:"Err,omitempty"`
+	Err *types.StdError `json:"Err,omitempty"`
 }
 
 // HandleResponse defines the return value on a successful handle
@@ -24,30 +26,14 @@ type HandleResponse struct {
 
 // InitResult is the raw response from the handle call
 type InitResult struct {
-	Ok  *InitResponse `json:"Ok,omitempty"`
-	Err *StdError     `json:"Err,omitempty"`
+	Ok  *InitResponse   `json:"Ok,omitempty"`
+	Err *types.StdError `json:"Err,omitempty"`
 }
 
 // InitResponse defines the return value on a successful handle
 type InitResponse struct {
 	// Messages comes directly from the contract and is it's request for action
 	Messages []CosmosMsg `json:"messages"`
-	// log message to return over abci interface
-	Log []LogAttribute `json:"log"`
-}
-
-// MigrateResult is the raw response from the handle call
-type MigrateResult struct {
-	Ok  *MigrateResponse `json:"Ok,omitempty"`
-	Err *StdError        `json:"Err,omitempty"`
-}
-
-// MigrateResponse defines the return value on a successful handle
-type MigrateResponse struct {
-	// Messages comes directly from the contract and is it's request for action
-	Messages []CosmosMsg `json:"messages"`
-	// base64-encoded bytes to return as ABCI.Data field
-	Data []byte `json:"data"`
 	// log message to return over abci interface
 	Log []LogAttribute `json:"log"`
 }
@@ -84,18 +70,18 @@ type VoteMsg struct {
 }
 
 var (
-	Yes = "Yes"
-	Abstain = "Abstain"
-	No = "No"
+	Yes        = "Yes"
+	Abstain    = "Abstain"
+	No         = "No"
 	NoWithVeto = "NoWithVeto"
 )
 
 // SendMsg contains instructions for a Cosmos-SDK/SendMsg
 // It has a fixed interface here and should be converted into the proper SDK format before dispatching
 type SendMsg struct {
-	FromAddress string `json:"from_address"`
-	ToAddress   string `json:"to_address"`
-	Amount      Coins  `json:"amount"`
+	FromAddress string      `json:"from_address"`
+	ToAddress   string      `json:"to_address"`
+	Amount      types.Coins `json:"amount"`
 }
 
 type StakingMsg struct {
@@ -106,19 +92,19 @@ type StakingMsg struct {
 }
 
 type DelegateMsg struct {
-	Validator string `json:"validator"`
-	Amount    Coin   `json:"amount"`
+	Validator string     `json:"validator"`
+	Amount    types.Coin `json:"amount"`
 }
 
 type UndelegateMsg struct {
-	Validator string `json:"validator"`
-	Amount    Coin   `json:"amount"`
+	Validator string     `json:"validator"`
+	Amount    types.Coin `json:"amount"`
 }
 
 type RedelegateMsg struct {
-	SrcValidator string `json:"src_validator"`
-	DstValidator string `json:"dst_validator"`
-	Amount       Coin   `json:"amount"`
+	SrcValidator string     `json:"src_validator"`
+	DstValidator string     `json:"dst_validator"`
+	Amount       types.Coin `json:"amount"`
 }
 
 type WithdrawMsg struct {
@@ -150,8 +136,8 @@ type ExecuteMsg struct {
 	// as `userMsg` when calling `Handle` on the above-defined contract
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Send              Coins  `json:"send"`
-	CallbackSignature []byte `json:"callback_sig"` // Optional
+	Send              types.Coins `json:"send"`
+	CallbackSignature []byte      `json:"callback_sig"` // Optional
 }
 
 type InstantiateMsg struct {
@@ -166,6 +152,6 @@ type InstantiateMsg struct {
 	/// Label is a mandatory human-readbale label for the contract
 	Label string `json:"label"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Send              Coins  `json:"send"`
-	CallbackSignature []byte `json:"callback_sig"` // Optional
+	Send              types.Coins `json:"send"`
+	CallbackSignature []byte      `json:"callback_sig"` // Optional
 }
