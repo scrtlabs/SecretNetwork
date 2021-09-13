@@ -31,7 +31,7 @@ overflow-checks = true
 default = []
 
 [dependencies]
-cosmwasm-v010-std = { path = "../../packages/v010-std" }
-cosmwasm-v010-storage = { path = "../../packages/v010-storage" }
+cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
+cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
 schemars = "0.7"
 serde = { version = "1", default-features = false, features = ["derive"] }

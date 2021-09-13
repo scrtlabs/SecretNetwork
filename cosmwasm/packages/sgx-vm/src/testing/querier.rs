@@ -1,7 +1,7 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use cosmwasm_v010_std::testing::{MockQuerier as StdMockQuerier, MockQuerierCustomHandlerResult};
-use cosmwasm_v010_std::{
+use cosmwasm_std::testing::{MockQuerier as StdMockQuerier, MockQuerierCustomHandlerResult};
+use cosmwasm_std::{
     to_binary, to_vec, Binary, Coin, Empty, HumanAddr, Querier as _, QueryRequest, StdResult,
     SystemError, SystemResult,
 };
@@ -40,8 +40,8 @@ impl<C: DeserializeOwned> MockQuerier<C> {
     pub fn update_staking(
         &mut self,
         denom: &str,
-        validators: &[cosmwasm_v010_std::Validator],
-        delegations: &[cosmwasm_v010_std::FullDelegation],
+        validators: &[cosmwasm_std::Validator],
+        delegations: &[cosmwasm_std::FullDelegation],
     ) {
         self.querier.update_staking(denom, validators, delegations);
     }
@@ -107,9 +107,7 @@ impl MockQuerier {
 #[cfg(test)]
 mod test {
     use super::*;
-    use cosmwasm_v010_std::{
-        coin, from_binary, AllBalanceResponse, BalanceResponse, BankQuery, Empty,
-    };
+    use cosmwasm_std::{coin, from_binary, AllBalanceResponse, BalanceResponse, BankQuery, Empty};
 
     const DEFAULT_QUERY_GAS_LIMIT: u64 = 300_000;
 

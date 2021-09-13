@@ -1,4 +1,4 @@
-use cosmwasm_v010_std::{
+use cosmwasm_std::{
     Api, Binary, CosmosMsg, Env, Extern, GovMsg, GovQuery, HandleResponse, InitResponse,
     InitResult, ProposalsResponse, Querier, StdResult, Storage, VoteOption,
 };

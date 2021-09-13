@@ -181,7 +181,7 @@ mod test {
     use crate::errors::VmError;
     use crate::features::features_from_csv;
     use crate::testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage};
-    use cosmwasm_v010_std::{coins, Empty};
+    use cosmwasm_std::{coins, Empty};
     use std::fs::OpenOptions;
     use std::io::Write;
     use tempfile::TempDir;

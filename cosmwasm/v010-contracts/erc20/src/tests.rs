@@ -1,8 +1,8 @@
-use cosmwasm_v010_std::testing::{mock_dependencies, mock_env};
-use cosmwasm_v010_std::{
+use cosmwasm_std::testing::{mock_dependencies, mock_env};
+use cosmwasm_std::{
     from_slice, log, Api, Env, HumanAddr, ReadonlyStorage, StdError, Storage, Uint128,
 };
-use cosmwasm_v010_storageReadonlyPrefixedStorage;
+use cosmwasm_storageReadonlyPrefixedStorage;
 
 use crate::contract::{
     bytes_to_u128, handle, init, query, read_u128, Constants, KEY_CONSTANTS, KEY_TOTAL_SUPPLY,

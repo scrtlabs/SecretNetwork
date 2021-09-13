@@ -2,7 +2,7 @@ use std::env::current_dir;
 use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
-use cosmwasm_v010_std::BalanceResponse;
+use cosmwasm_std::BalanceResponse;
 
 use hackatom::contract::{HandleMsg, InitMsg, MigrateMsg, QueryMsg, State, VerifierResponse};
 

@@ -17,7 +17,7 @@
 //!      });
 //! 4. Anywhere you see query(&deps, ...) you must replace it with query(&mut deps, ...)
 
-use cosmwasm_v010_std::{
+use cosmwasm_std::{
     coin, coins, from_binary, BankMsg, Binary, Coin, HandleResponse, HandleResult, HumanAddr,
     InitResponse, StakingMsg, StdError,
 };

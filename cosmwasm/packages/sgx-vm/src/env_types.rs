@@ -1,4 +1,4 @@
-use cosmwasm_v010_std::{Coin, HumanAddr};
+use cosmwasm_std::{Coin, HumanAddr};
 use serde::{Deserialize, Serialize};
 
 /// EnvV010 is Env that's used by cosmwasm v0.10 contracts

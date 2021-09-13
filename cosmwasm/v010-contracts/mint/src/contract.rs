@@ -1,4 +1,4 @@
-use cosmwasm_v010_std::{
+use cosmwasm_std::{
     Api, Binary, BondedRatioResponse, Env, Extern, HandleResponse, InflationResponse, InitResponse,
     MintQuery, Querier, StdResult, Storage,
 };

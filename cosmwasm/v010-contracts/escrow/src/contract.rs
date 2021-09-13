@@ -1,4 +1,4 @@
-use cosmwasm_v010_std::{
+use cosmwasm_std::{
     generic_err, log, unauthorized, Api, BankMsg, Binary, CanonicalAddr, Coin, CosmosMsg, Env,
     Extern, HandleResponse, HandleResult, InitResponse, InitResult, MigrateResponse, Querier,
     StdResult, Storage,
@@ -129,8 +129,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_v010_std::testing::{mock_dependencies, mock_env};
-    use cosmwasm_v010_std::{coins, Api, HumanAddr, StdError};
+    use cosmwasm_std::testing::{mock_dependencies, mock_env};
+    use cosmwasm_std::{coins, Api, HumanAddr, StdError};
 
     fn init_msg_expire_by_height(height: u64) -> InitMsg {
         InitMsg {

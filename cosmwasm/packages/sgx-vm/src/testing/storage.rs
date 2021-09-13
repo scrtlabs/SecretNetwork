@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use std::ops::{Bound, RangeBounds};
 
 #[cfg(feature = "iterator")]
-use cosmwasm_v010_std::{Order, KV};
+use cosmwasm_std::{Order, KV};
 
 #[cfg(feature = "iterator")]
 use crate::traits::StorageIterator;

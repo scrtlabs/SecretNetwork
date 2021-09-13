@@ -1,4 +1,4 @@
-use cosmwasm_v010_std::{
+use cosmwasm_std::{
     log, Api, BankMsg, Binary, Env, Extern, HandleResponse, InitResponse, MigrateResponse, Order,
     Querier, StdError, StdResult, Storage,
 };
@@ -70,8 +70,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_v010_std::testing::{mock_dependencies, mock_env, MOCK_CONTRACT_ADDR};
-    use cosmwasm_v010_std::{coins, HumanAddr, ReadonlyStorage, StdError};
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, MOCK_CONTRACT_ADDR};
+    use cosmwasm_std::{coins, HumanAddr, ReadonlyStorage, StdError};
 
     #[test]
     fn init_fails() {

@@ -13,7 +13,7 @@
       }
     },
     {
-      "description": "This returns cosmwasm_v010_std::AllBalanceResponse to demo use of the querier",
+      "description": "This returns cosmwasm_std::AllBalanceResponse to demo use of the querier",
       "type": "object",
       "required": ["other_balance"],
       "properties": {

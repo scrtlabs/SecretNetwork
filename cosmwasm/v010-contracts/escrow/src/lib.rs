@@ -5,7 +5,7 @@ pub mod state;
 #[cfg(target_arch = "wasm32")]
 mod wasm {
     use super::contract;
-    use cosmwasm_v010_std::{
+    use cosmwasm_std::{
         do_handle, do_init, do_migrate, do_query, ExternalApi, ExternalQuerier, ExternalStorage,
     };
 
@@ -45,5 +45,5 @@ mod wasm {
     }
 
     // Other C externs like cosmwasm_vm_version_1, allocate, deallocate are available
-    // automatically because we `use cosmwasm_v010_std`.
+    // automatically because we `use cosmwasm_std`.
 }

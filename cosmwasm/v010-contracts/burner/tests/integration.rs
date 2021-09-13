@@ -17,7 +17,7 @@
 //!      });
 //! 4. Anywhere you see query(&deps, ...) you must replace it with query(&mut deps, ...)
 
-use cosmwasm_v010_std::{coins, BankMsg, HumanAddr, InitResult, MigrateResponse, Order, StdError};
+use cosmwasm_std::{coins, BankMsg, HumanAddr, InitResult, MigrateResponse, Order, StdError};
 use cosmwasm_vm::testing::{init, migrate, mock_env, mock_instance, MOCK_CONTRACT_ADDR};
 use cosmwasm_vm::StorageIterator;
 

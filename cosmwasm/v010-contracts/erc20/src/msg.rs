@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_v010_std::{HumanAddr, Uint128};
+use cosmwasm_std::{HumanAddr, Uint128};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct InitialBalance {

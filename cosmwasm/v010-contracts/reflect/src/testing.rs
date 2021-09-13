@@ -1,9 +1,9 @@
 use crate::msg::{CustomQuery, CustomResponse};
 
-use cosmwasm_v010_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
-use cosmwasm_v010_std::{to_binary, Binary, Coin, Extern, HumanAddr, StdResult};
+use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
+use cosmwasm_std::{to_binary, Binary, Coin, Extern, HumanAddr, StdResult};
 
-/// A drop-in replacement for cosmwasm_v010_std::testing::mock_dependencies
+/// A drop-in replacement for cosmwasm_std::testing::mock_dependencies
 /// this uses our CustomQuerier.
 pub fn mock_dependencies_with_custom_querier(
     canonical_length: usize,
@@ -31,7 +31,7 @@ pub fn custom_query_execute(query: &CustomQuery) -> StdResult<Binary> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use cosmwasm_v010_std::{from_binary, Querier, QueryRequest};
+    use cosmwasm_std::{from_binary, Querier, QueryRequest};
 
     #[test]
     fn custom_query_execute_ping() {

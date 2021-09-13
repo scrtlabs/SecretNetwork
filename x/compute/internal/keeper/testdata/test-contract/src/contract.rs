@@ -1,6 +1,6 @@
-use cosmwasm_v010_storage::PrefixedStorage;
+use cosmwasm_storage::PrefixedStorage;
 
-use cosmwasm_v010_std::{
+use cosmwasm_std::{
     log, to_binary, Api, BankMsg, Binary, Coin, CosmosMsg, Env, Extern, HandleResponse,
     HandleResult, HumanAddr, InitResponse, InitResult, Querier, QueryRequest, QueryResult,
     ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg, WasmQuery,

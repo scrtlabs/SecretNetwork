@@ -1,4 +1,4 @@
-use cosmwasm_v010_std::{
+use cosmwasm_std::{
     coin, log, to_binary, Api, BankMsg, Binary, Decimal, Env, Extern, HandleResponse, HumanAddr,
     InitResponse, Querier, StakingMsg, StdError, StdResult, Storage, Uint128, WasmMsg,
 };
@@ -444,8 +444,8 @@ pub fn query_investment<S: Storage, A: Api, Q: Querier>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_v010_std::testing::{mock_dependencies, mock_env, MockQuerier, MOCK_CONTRACT_ADDR};
-    use cosmwasm_v010_std::{coins, Coin, CosmosMsg, Decimal, FullDelegation, Validator};
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, MockQuerier, MOCK_CONTRACT_ADDR};
+    use cosmwasm_std::{coins, Coin, CosmosMsg, Decimal, FullDelegation, Validator};
     use std::str::FromStr;
 
     fn sample_validator<U: Into<HumanAddr>>(addr: U) -> Validator {

@@ -31,13 +31,13 @@ overflow-checks = true
 default = ["cranelift"]
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
-backtraces = ["cosmwasm-v010-std/backtraces", "cosmwasm-vm/backtraces"]
+backtraces = ["cosmwasm-std/backtraces", "cosmwasm-vm/backtraces"]
 cranelift = ["cosmwasm-vm/default-cranelift"]
 singlepass = ["cosmwasm-vm/default-singlepass"]
 
 [dependencies]
-cosmwasm-v010-std = { path = "../../packages/v010-std", features = ["staking"] }
-cosmwasm-v010-storage = { path = "../../packages/v010-storage" }
+cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print", features = ["staking"] }
+cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
 schemars = "0.7"
 serde = { version = "^1.0.117", default-features = false, features = [
   "derive"

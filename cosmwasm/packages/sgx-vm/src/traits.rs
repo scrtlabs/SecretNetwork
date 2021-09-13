@@ -1,6 +1,6 @@
-use cosmwasm_v010_std::{Binary, CanonicalAddr, HumanAddr, StdResult, SystemResult};
+use cosmwasm_std::{Binary, CanonicalAddr, HumanAddr, StdResult, SystemResult};
 #[cfg(feature = "iterator")]
-use cosmwasm_v010_std::{Order, KV};
+use cosmwasm_std::{Order, KV};
 
 #[cfg(feature = "iterator")]
 use crate::ffi::FfiError;

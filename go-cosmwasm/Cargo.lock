@@ -209,7 +209,7 @@ name = "cosmwasm-sgx-vm"
 version = "0.10.0"
 dependencies = [
  "base64 0.12.3",
- "cosmwasm-v010-std",
+ "cosmwasm-std 0.10.0",
  "enclave-ffi-types",
  "hex",
  "lazy_static",
@@ -227,6 +227,18 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-std"
+version = "0.10.0"
+source = "git+https://github.com/enigmampc/SecretNetwork?tag=v1.0.4-debug-print#004c6bca6f2b7f31a6594abe4f44f2e41b1456b3"
+dependencies = [
+ "base64 0.11.0",
+ "schemars 0.7.6",
+ "serde",
+ "serde-json-wasm 0.2.1",
+ "snafu",
+]
+
+[[package]]
+name = "cosmwasm-std"
 version = "0.16.0"
 dependencies = [
  "base64 0.13.0",
@@ -237,17 +249,6 @@ dependencies = [
  "serde-json-wasm 0.3.1",
  "thiserror",
  "uint",
-]
-
-[[package]]
-name = "cosmwasm-v010-std"
-version = "0.10.0"
-dependencies = [
- "base64 0.11.0",
- "schemars 0.7.6",
- "serde",
- "serde-json-wasm 0.2.1",
- "snafu",
 ]
 
 [[package]]
@@ -480,7 +481,7 @@ version = "0.10.0"
 dependencies = [
  "cbindgen 0.14.3",
  "cosmwasm-sgx-vm",
- "cosmwasm-std",
+ "cosmwasm-std 0.16.0",
  "ctor",
  "errno",
  "log",

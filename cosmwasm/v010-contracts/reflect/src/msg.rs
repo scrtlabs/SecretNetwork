@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_v010_std::{Binary, CosmosMsg, HumanAddr, QueryRequest};
+use cosmwasm_std::{Binary, CosmosMsg, HumanAddr, QueryRequest};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {}

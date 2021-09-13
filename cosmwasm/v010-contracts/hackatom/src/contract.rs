@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::convert::TryInto;
 
-use cosmwasm_v010_std::{
+use cosmwasm_std::{
     from_slice, to_binary, to_vec, AllBalanceResponse, Api, BankMsg, Binary, CanonicalAddr,
     Context, Env, Extern, HandleResponse, HumanAddr, InitResponse, MigrateResponse, Querier,
     QueryRequest, QueryResponse, StdError, StdResult, Storage, WasmQuery,
@@ -62,7 +62,7 @@ pub enum QueryMsg {
     /// returns a human-readable representation of the verifier
     /// use to ensure query path works in integration tests
     Verifier {},
-    /// This returns cosmwasm_v010_std::AllBalanceResponse to demo use of the querier
+    /// This returns cosmwasm_std::AllBalanceResponse to demo use of the querier
     OtherBalance { address: HumanAddr },
     /// Recurse will execute a query into itself up to depth-times and return
     /// Each step of the recursion may perform some extra work to test gas metering
@@ -367,11 +367,11 @@ fn query_recurse<S: Storage, A: Api, Q: Querier>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_v010_std::testing::{
+    use cosmwasm_std::testing::{
         mock_dependencies, mock_dependencies_with_balances, mock_env, MOCK_CONTRACT_ADDR,
     };
     // import trait ReadonlyStorage to get access to read
-    use cosmwasm_v010_std::{coins, log, ReadonlyStorage, StdError};
+    use cosmwasm_std::{coins, log, ReadonlyStorage, StdError};
 
     #[test]
     fn proper_initialization() {

@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_v010_std::{
+use cosmwasm_std::{
     from_slice, to_binary, to_vec, Api, Binary, Env, Extern, HandleResponse, InitResponse, Order,
     Querier, QueryResponse, StdResult, Storage,
 };
@@ -170,8 +170,8 @@ fn query_reducer<S: Storage, A: Api, Q: Querier>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_v010_std::coins;
-    use cosmwasm_v010_std::testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage};
+    use cosmwasm_std::coins;
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage};
 
     fn create_contract() -> (Extern<MockStorage, MockApi, MockQuerier>, Env) {
         let mut deps = mock_dependencies(20, &coins(1000, "earth"));

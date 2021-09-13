@@ -3,11 +3,11 @@ use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 
 use crate::msg::{AllowanceResponse, BalanceResponse, HandleMsg, InitMsg, QueryMsg};
-use cosmwasm_v010_std::{
+use cosmwasm_std::{
     log, to_binary, to_vec, Api, Binary, CanonicalAddr, Env, Extern, HandleResponse, HumanAddr,
     InitResponse, Querier, ReadonlyStorage, StdError, StdResult, Storage, Uint128,
 };
-use cosmwasm_v010_storage::{PrefixedStorage, ReadonlyPrefixedStorage};
+use cosmwasm_storage::{PrefixedStorage, ReadonlyPrefixedStorage};
 
 #[derive(Serialize, Debug, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct Constants {

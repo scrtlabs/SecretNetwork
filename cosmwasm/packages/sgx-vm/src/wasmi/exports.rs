@@ -3,7 +3,7 @@ use std::ffi::c_void;
 
 use crate::context::{with_querier_from_context, with_storage_from_context};
 use crate::{Querier, Storage, VmError, VmResult};
-use cosmwasm_v010_std::{Binary, StdResult, SystemResult};
+use cosmwasm_std::{Binary, StdResult, SystemResult};
 
 /// Copy a buffer from the enclave memory space, and return an opaque pointer to it.
 #[no_mangle]

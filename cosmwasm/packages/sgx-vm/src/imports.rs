@@ -4,8 +4,8 @@
 use std::convert::TryInto;
 
 #[cfg(feature = "iterator")]
-use cosmwasm_v010_std::Order;
-use cosmwasm_v010_std::{Binary, CanonicalAddr, HumanAddr};
+use cosmwasm_std::Order;
+use cosmwasm_std::{Binary, CanonicalAddr, HumanAddr};
 use wasmer_runtime_core::vm::Ctx;
 
 use crate::backends::get_gas_left;
@@ -207,7 +207,7 @@ pub fn do_next<S: Storage, Q: Querier>(ctx: &mut Ctx, iterator_id: u32) -> VmRes
 #[cfg(test)]
 mod test {
     use super::*;
-    use cosmwasm_v010_std::{
+    use cosmwasm_std::{
         coins, from_binary, AllBalanceResponse, BankQuery, Empty, HumanAddr, QueryRequest,
         SystemError, WasmQuery,
     };
@@ -778,7 +778,7 @@ mod test {
         let request: QueryRequest<Empty> = QueryRequest::Bank(BankQuery::AllBalances {
             address: HumanAddr::from(INIT_ADDR),
         });
-        let request_data = cosmwasm_v010_std::to_vec(&request).unwrap();
+        let request_data = cosmwasm_std::to_vec(&request).unwrap();
         let request_ptr = write_data(&mut instance, &request_data);
 
         let ctx = instance.context_mut();
@@ -787,8 +787,8 @@ mod test {
         let response_ptr = do_query_chain::<MS, MQ>(ctx, request_ptr).unwrap();
         let response = force_read(ctx, response_ptr);
 
-        let query_result: cosmwasm_v010_std::QuerierResult =
-            cosmwasm_v010_std::from_slice(&response).unwrap();
+        let query_result: cosmwasm_std::QuerierResult =
+            cosmwasm_std::from_slice(&response).unwrap();
         let query_result_inner = query_result.unwrap();
         let query_result_inner_inner = query_result_inner.unwrap();
         let parsed_again: AllBalanceResponse = from_binary(&query_result_inner_inner).unwrap();
@@ -808,8 +808,8 @@ mod test {
         let response_ptr = do_query_chain::<MS, MQ>(ctx, request_ptr).unwrap();
         let response = force_read(ctx, response_ptr);
 
-        let query_result: cosmwasm_v010_std::QuerierResult =
-            cosmwasm_v010_std::from_slice(&response).unwrap();
+        let query_result: cosmwasm_std::QuerierResult =
+            cosmwasm_std::from_slice(&response).unwrap();
         match query_result {
             Ok(_) => panic!("This must not succeed"),
             Err(SystemError::InvalidRequest { request: err, .. }) => {
@@ -827,7 +827,7 @@ mod test {
             contract_addr: HumanAddr::from("non-existent"),
             msg: Binary::from(b"{}" as &[u8]),
         });
-        let request_data = cosmwasm_v010_std::to_vec(&request).unwrap();
+        let request_data = cosmwasm_std::to_vec(&request).unwrap();
         let request_ptr = write_data(&mut instance, &request_data);
 
         let ctx = instance.context_mut();
@@ -836,8 +836,8 @@ mod test {
         let response_ptr = do_query_chain::<MS, MQ>(ctx, request_ptr).unwrap();
         let response = force_read(ctx, response_ptr);
 
-        let query_result: cosmwasm_v010_std::QuerierResult =
-            cosmwasm_v010_std::from_slice(&response).unwrap();
+        let query_result: cosmwasm_std::QuerierResult =
+            cosmwasm_std::from_slice(&response).unwrap();
         match query_result {
             Ok(_) => panic!("This must not succeed"),
             Err(SystemError::NoSuchContract { addr }) => {

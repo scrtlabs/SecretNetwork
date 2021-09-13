@@ -1,5 +1,5 @@
-use cosmwasm_v010_std::{CanonicalAddr, Env, Storage};
-use cosmwasm_v010_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
+use cosmwasm_std::{CanonicalAddr, Env, Storage};
+use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

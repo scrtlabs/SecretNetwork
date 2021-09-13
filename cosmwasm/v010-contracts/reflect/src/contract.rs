@@ -1,4 +1,4 @@
-use cosmwasm_v010_std::{
+use cosmwasm_std::{
     log, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr, InitResponse,
     Querier, StdError, StdResult, Storage,
 };
@@ -102,8 +102,8 @@ fn query_reflect<S: Storage, A: Api, Q: Querier>(
 mod tests {
     use super::*;
     use crate::testing::mock_dependencies_with_custom_querier;
-    use cosmwasm_v010_std::testing::{mock_env, MOCK_CONTRACT_ADDR};
-    use cosmwasm_v010_std::{coin, coins, BankMsg, Binary, StakingMsg, StdError};
+    use cosmwasm_std::testing::{mock_env, MOCK_CONTRACT_ADDR};
+    use cosmwasm_std::{coin, coins, BankMsg, Binary, StakingMsg, StdError};
 
     #[test]
     fn proper_initialization() {

@@ -17,7 +17,7 @@
 //!      });
 //! 4. Anywhere you see query(&deps, ...) you must replace it with query(&mut deps, ...)
 
-use cosmwasm_v010_std::{from_binary, from_slice, Env, HandleResponse, HumanAddr, InitResponse};
+use cosmwasm_std::{from_binary, from_slice, Env, HandleResponse, HumanAddr, InitResponse};
 use cosmwasm_vm::{
     testing::{handle, init, mock_env, mock_instance, query, MockApi, MockQuerier, MockStorage},
     Instance,

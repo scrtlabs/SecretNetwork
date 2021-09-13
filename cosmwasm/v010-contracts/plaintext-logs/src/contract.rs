@@ -1,4 +1,4 @@
-use cosmwasm_v010_std::{
+use cosmwasm_std::{
     log, plaintext_log, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError,
     StdResult, Storage,
 };

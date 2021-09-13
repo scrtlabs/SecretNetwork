@@ -17,8 +17,8 @@
 //!      });
 //! 4. Anywhere you see query(&deps, ...) you must replace it with query(&mut deps, ...)
 
-use cosmwasm_v010_std::{from_slice, log, Env, HandleResponse, HumanAddr, InitResponse, Uint128};
-use cosmwasm_v010_storage::{to_length_prefixed, to_length_prefixed_nested};
+use cosmwasm_std::{from_slice, log, Env, HandleResponse, HumanAddr, InitResponse, Uint128};
+use cosmwasm_storage::{to_length_prefixed, to_length_prefixed_nested};
 use cosmwasm_vm::testing::{handle, init, mock_env, mock_instance, query};
 use cosmwasm_vm::{Api, Storage};
 

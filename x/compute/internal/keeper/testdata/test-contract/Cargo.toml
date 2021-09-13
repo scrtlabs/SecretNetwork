@@ -28,12 +28,12 @@ overflow-checks = true
 
 [features]
 default = ["backtraces"]
-backtraces = ["cosmwasm-v010-std/backtraces"]
+backtraces = ["cosmwasm-std/backtraces"]
 with_floats = []
 
 [dependencies]
-cosmwasm-v010-std = { path = "../../../../../../cosmwasm/packages/v010-std" }
-cosmwasm-v010-storage = { path = "../../../../../../cosmwasm/packages/v010-storage" }
+cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
+cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
 schemars = "0.7"
 serde = { version = "1.0.114", default-features = false, features = [
   "derive",
