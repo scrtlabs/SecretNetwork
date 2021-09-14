@@ -151,8 +151,6 @@ To make sure your validator is unjailed, look for it in here:
 secretcli q staking validators | jq -r '.[] | select(.status == 2) | .description.moniker'
 ```
 
-([Ref for testnet instructions](testnet/run-full-node-testnet.md))
-
 # In case of an upgrade failure
 
 If after a few hours the Enigma team announces on the chat that the upgrade failed, we will relaunch `secret-2`.
