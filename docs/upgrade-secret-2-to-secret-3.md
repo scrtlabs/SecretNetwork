@@ -75,6 +75,7 @@ tar -xf quicksync.tar.xz
 ## 4. Migrate your validator's signing key
 
 Copy your `~/.secretd/config/priv_validator_key.json` from the old machine (`secret-2`) to the new SGX machine (`secret-3`) at the same location.
+e.g. `cp ~/.secretd.backup/config/priv_validator_key.json ~/.secretd/config/priv_validator_key.json`
 
 ## 5. Migrate your node's encrypted seed
 
