@@ -18,6 +18,7 @@
 
 :warning: If you do install `secret-3` on your `secret-2` machine, run:
 
+- `sudo systemctl stop secret-node`
 - `mv ~/.secretd ~/.secretd.backup`
 - `secretd unsafe-reset-all`
 - You'll be able to skip node regiatration steps later on
