@@ -794,47 +794,48 @@
     - [Misbehaviour](#ibc.lightclients.tendermint.v1.Misbehaviour)
   
 - [secret/compute/v1beta1/types.proto](#secret/compute/v1beta1/types.proto)
-    - [AbsoluteTxPosition](#SecretNetwork.x.compute.v1beta1.AbsoluteTxPosition)
-    - [AccessTypeParam](#SecretNetwork.x.compute.v1beta1.AccessTypeParam)
-    - [CodeInfo](#SecretNetwork.x.compute.v1beta1.CodeInfo)
-    - [ContractInfo](#SecretNetwork.x.compute.v1beta1.ContractInfo)
-    - [Model](#SecretNetwork.x.compute.v1beta1.Model)
+    - [AbsoluteTxPosition](#secret.compute.v1beta1.AbsoluteTxPosition)
+    - [AccessTypeParam](#secret.compute.v1beta1.AccessTypeParam)
+    - [CodeInfo](#secret.compute.v1beta1.CodeInfo)
+    - [ContractCustomInfo](#secret.compute.v1beta1.ContractCustomInfo)
+    - [ContractInfo](#secret.compute.v1beta1.ContractInfo)
+    - [Model](#secret.compute.v1beta1.Model)
   
-    - [AccessType](#SecretNetwork.x.compute.v1beta1.AccessType)
+    - [AccessType](#secret.compute.v1beta1.AccessType)
   
 - [secret/compute/v1beta1/genesis.proto](#secret/compute/v1beta1/genesis.proto)
-    - [Code](#SecretNetwork.x.compute.v1beta1.Code)
-    - [Contract](#SecretNetwork.x.compute.v1beta1.Contract)
-    - [GenesisState](#SecretNetwork.x.compute.v1beta1.GenesisState)
-    - [Sequence](#SecretNetwork.x.compute.v1beta1.Sequence)
+    - [Code](#secret.compute.v1beta1.Code)
+    - [Contract](#secret.compute.v1beta1.Contract)
+    - [GenesisState](#secret.compute.v1beta1.GenesisState)
+    - [Sequence](#secret.compute.v1beta1.Sequence)
   
 - [secret/compute/v1beta1/msg.proto](#secret/compute/v1beta1/msg.proto)
-    - [MsgExecuteContract](#SecretNetwork.x.compute.v1beta1.MsgExecuteContract)
-    - [MsgInstantiateContract](#SecretNetwork.x.compute.v1beta1.MsgInstantiateContract)
-    - [MsgStoreCode](#SecretNetwork.x.compute.v1beta1.MsgStoreCode)
+    - [MsgExecuteContract](#secret.compute.v1beta1.MsgExecuteContract)
+    - [MsgInstantiateContract](#secret.compute.v1beta1.MsgInstantiateContract)
+    - [MsgStoreCode](#secret.compute.v1beta1.MsgStoreCode)
   
 - [secret/compute/v1beta1/query.proto](#secret/compute/v1beta1/query.proto)
-    - [CodeInfoResponse](#SecretNetwork.x.compute.v1beta1.CodeInfoResponse)
-    - [ContractInfoWithAddress](#SecretNetwork.x.compute.v1beta1.ContractInfoWithAddress)
-    - [DecryptedAnswer](#SecretNetwork.x.compute.v1beta1.DecryptedAnswer)
-    - [QueryCodeRequest](#SecretNetwork.x.compute.v1beta1.QueryCodeRequest)
-    - [QueryCodeResponse](#SecretNetwork.x.compute.v1beta1.QueryCodeResponse)
-    - [QueryCodesResponse](#SecretNetwork.x.compute.v1beta1.QueryCodesResponse)
-    - [QueryContractAddressByLabelRequest](#SecretNetwork.x.compute.v1beta1.QueryContractAddressByLabelRequest)
-    - [QueryContractAddressByLabelResponse](#SecretNetwork.x.compute.v1beta1.QueryContractAddressByLabelResponse)
-    - [QueryContractHashRequest](#SecretNetwork.x.compute.v1beta1.QueryContractHashRequest)
-    - [QueryContractHashResponse](#SecretNetwork.x.compute.v1beta1.QueryContractHashResponse)
-    - [QueryContractHistoryRequest](#SecretNetwork.x.compute.v1beta1.QueryContractHistoryRequest)
-    - [QueryContractInfoRequest](#SecretNetwork.x.compute.v1beta1.QueryContractInfoRequest)
-    - [QueryContractInfoResponse](#SecretNetwork.x.compute.v1beta1.QueryContractInfoResponse)
-    - [QueryContractKeyRequest](#SecretNetwork.x.compute.v1beta1.QueryContractKeyRequest)
-    - [QueryContractKeyResponse](#SecretNetwork.x.compute.v1beta1.QueryContractKeyResponse)
-    - [QueryContractsByCodeRequest](#SecretNetwork.x.compute.v1beta1.QueryContractsByCodeRequest)
-    - [QueryContractsByCodeResponse](#SecretNetwork.x.compute.v1beta1.QueryContractsByCodeResponse)
-    - [QuerySmartContractStateRequest](#SecretNetwork.x.compute.v1beta1.QuerySmartContractStateRequest)
-    - [QuerySmartContractStateResponse](#SecretNetwork.x.compute.v1beta1.QuerySmartContractStateResponse)
+    - [CodeInfoResponse](#secret.compute.v1beta1.CodeInfoResponse)
+    - [ContractInfoWithAddress](#secret.compute.v1beta1.ContractInfoWithAddress)
+    - [DecryptedAnswer](#secret.compute.v1beta1.DecryptedAnswer)
+    - [QueryCodeRequest](#secret.compute.v1beta1.QueryCodeRequest)
+    - [QueryCodeResponse](#secret.compute.v1beta1.QueryCodeResponse)
+    - [QueryCodesResponse](#secret.compute.v1beta1.QueryCodesResponse)
+    - [QueryContractAddressByLabelRequest](#secret.compute.v1beta1.QueryContractAddressByLabelRequest)
+    - [QueryContractAddressByLabelResponse](#secret.compute.v1beta1.QueryContractAddressByLabelResponse)
+    - [QueryContractHashRequest](#secret.compute.v1beta1.QueryContractHashRequest)
+    - [QueryContractHashResponse](#secret.compute.v1beta1.QueryContractHashResponse)
+    - [QueryContractHistoryRequest](#secret.compute.v1beta1.QueryContractHistoryRequest)
+    - [QueryContractInfoRequest](#secret.compute.v1beta1.QueryContractInfoRequest)
+    - [QueryContractInfoResponse](#secret.compute.v1beta1.QueryContractInfoResponse)
+    - [QueryContractKeyRequest](#secret.compute.v1beta1.QueryContractKeyRequest)
+    - [QueryContractKeyResponse](#secret.compute.v1beta1.QueryContractKeyResponse)
+    - [QueryContractsByCodeRequest](#secret.compute.v1beta1.QueryContractsByCodeRequest)
+    - [QueryContractsByCodeResponse](#secret.compute.v1beta1.QueryContractsByCodeResponse)
+    - [QuerySmartContractStateRequest](#secret.compute.v1beta1.QuerySmartContractStateRequest)
+    - [QuerySmartContractStateResponse](#secret.compute.v1beta1.QuerySmartContractStateResponse)
   
-    - [Query](#SecretNetwork.x.compute.v1beta1.Query)
+    - [Query](#secret.compute.v1beta1.Query)
   
 - [secret/registration/v1beta1/types.proto](#secret/registration/v1beta1/types.proto)
     - [RegistrationNodeInfo](#secret.registration.v1beta1.RegistrationNodeInfo)
@@ -11535,7 +11536,7 @@ that implements Misbehaviour interface expected by ICS-02
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.AbsoluteTxPosition"></a>
+<a name="secret.compute.v1beta1.AbsoluteTxPosition"></a>
 
 ### AbsoluteTxPosition
 AbsoluteTxPosition can be used to sort contracts
@@ -11551,7 +11552,7 @@ AbsoluteTxPosition can be used to sort contracts
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.AccessTypeParam"></a>
+<a name="secret.compute.v1beta1.AccessTypeParam"></a>
 
 ### AccessTypeParam
 
@@ -11559,14 +11560,14 @@ AbsoluteTxPosition can be used to sort contracts
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `value` | [AccessType](#SecretNetwork.x.compute.v1beta1.AccessType) |  |  |
+| `value` | [AccessType](#secret.compute.v1beta1.AccessType) |  |  |
 
 
 
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.CodeInfo"></a>
+<a name="secret.compute.v1beta1.CodeInfo"></a>
 
 ### CodeInfo
 CodeInfo is data for the uploaded contract WASM code
@@ -11584,7 +11585,23 @@ CodeInfo is data for the uploaded contract WASM code
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.ContractInfo"></a>
+<a name="secret.compute.v1beta1.ContractCustomInfo"></a>
+
+### ContractCustomInfo
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `enclave_key` | [bytes](#bytes) |  |  |
+| `label` | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="secret.compute.v1beta1.ContractInfo"></a>
 
 ### ContractInfo
 ContractInfo stores a WASM contract instance
@@ -11595,7 +11612,7 @@ ContractInfo stores a WASM contract instance
 | `code_id` | [uint64](#uint64) |  |  |
 | `creator` | [bytes](#bytes) |  |  |
 | `label` | [string](#string) |  | bytes admin = 3 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"]; |
-| `created` | [AbsoluteTxPosition](#SecretNetwork.x.compute.v1beta1.AbsoluteTxPosition) |  | never show this in query results, just use for sorting (Note: when using json tag "-" amino refused to serialize it...)
+| `created` | [AbsoluteTxPosition](#secret.compute.v1beta1.AbsoluteTxPosition) |  | never show this in query results, just use for sorting (Note: when using json tag "-" amino refused to serialize it...)
 
 bytes init_msg = 5 [(gogoproto.casttype) = "encoding/json.RawMessage"];
 
@@ -11606,7 +11623,7 @@ bytes init_msg = 5 [(gogoproto.casttype) = "encoding/json.RawMessage"];
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.Model"></a>
+<a name="secret.compute.v1beta1.Model"></a>
 
 ### Model
 Model is a struct that holds a KV pair
@@ -11624,7 +11641,7 @@ Model is a struct that holds a KV pair
  <!-- end messages -->
 
 
-<a name="SecretNetwork.x.compute.v1beta1.AccessType"></a>
+<a name="secret.compute.v1beta1.AccessType"></a>
 
 ### AccessType
 
@@ -11652,7 +11669,7 @@ Model is a struct that holds a KV pair
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.Code"></a>
+<a name="secret.compute.v1beta1.Code"></a>
 
 ### Code
 Code struct encompasses CodeInfo and CodeBytes
@@ -11661,7 +11678,7 @@ Code struct encompasses CodeInfo and CodeBytes
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | `code_id` | [uint64](#uint64) |  |  |
-| `code_info` | [CodeInfo](#SecretNetwork.x.compute.v1beta1.CodeInfo) |  |  |
+| `code_info` | [CodeInfo](#secret.compute.v1beta1.CodeInfo) |  |  |
 | `code_bytes` | [bytes](#bytes) |  |  |
 
 
@@ -11669,7 +11686,7 @@ Code struct encompasses CodeInfo and CodeBytes
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.Contract"></a>
+<a name="secret.compute.v1beta1.Contract"></a>
 
 ### Contract
 Contract struct encompasses ContractAddress, ContractInfo, and ContractState
@@ -11678,15 +11695,16 @@ Contract struct encompasses ContractAddress, ContractInfo, and ContractState
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | `contract_address` | [bytes](#bytes) |  |  |
-| `contract_info` | [ContractInfo](#SecretNetwork.x.compute.v1beta1.ContractInfo) |  |  |
-| `contract_state` | [Model](#SecretNetwork.x.compute.v1beta1.Model) | repeated |  |
+| `contract_info` | [ContractInfo](#secret.compute.v1beta1.ContractInfo) |  |  |
+| `contract_state` | [Model](#secret.compute.v1beta1.Model) | repeated |  |
+| `contract_custom_info` | [ContractCustomInfo](#secret.compute.v1beta1.ContractCustomInfo) |  |  |
 
 
 
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.GenesisState"></a>
+<a name="secret.compute.v1beta1.GenesisState"></a>
 
 ### GenesisState
 GenesisState - genesis state of x/wasm
@@ -11694,16 +11712,16 @@ GenesisState - genesis state of x/wasm
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `codes` | [Code](#SecretNetwork.x.compute.v1beta1.Code) | repeated | Params params = 1 [(gogoproto.nullable) = false]; |
-| `contracts` | [Contract](#SecretNetwork.x.compute.v1beta1.Contract) | repeated |  |
-| `sequences` | [Sequence](#SecretNetwork.x.compute.v1beta1.Sequence) | repeated |  |
+| `codes` | [Code](#secret.compute.v1beta1.Code) | repeated | Params params = 1 [(gogoproto.nullable) = false]; |
+| `contracts` | [Contract](#secret.compute.v1beta1.Contract) | repeated |  |
+| `sequences` | [Sequence](#secret.compute.v1beta1.Sequence) | repeated |  |
 
 
 
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.Sequence"></a>
+<a name="secret.compute.v1beta1.Sequence"></a>
 
 ### Sequence
 Sequence id and value of a counter
@@ -11735,7 +11753,7 @@ Sequence id and value of a counter
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.MsgExecuteContract"></a>
+<a name="secret.compute.v1beta1.MsgExecuteContract"></a>
 
 ### MsgExecuteContract
 
@@ -11755,7 +11773,7 @@ Sequence id and value of a counter
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.MsgInstantiateContract"></a>
+<a name="secret.compute.v1beta1.MsgInstantiateContract"></a>
 
 ### MsgInstantiateContract
 
@@ -11776,7 +11794,7 @@ Sequence id and value of a counter
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.MsgStoreCode"></a>
+<a name="secret.compute.v1beta1.MsgStoreCode"></a>
 
 ### MsgStoreCode
 
@@ -11812,7 +11830,7 @@ InstantiatePermission to apply on contract creation, optional AccessConfig Insta
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.CodeInfoResponse"></a>
+<a name="secret.compute.v1beta1.CodeInfoResponse"></a>
 
 ### CodeInfoResponse
 
@@ -11831,7 +11849,7 @@ InstantiatePermission to apply on contract creation, optional AccessConfig Insta
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.ContractInfoWithAddress"></a>
+<a name="secret.compute.v1beta1.ContractInfoWithAddress"></a>
 
 ### ContractInfoWithAddress
 ContractInfoWithAddress adds the address (key) to the ContractInfo representation
@@ -11840,14 +11858,14 @@ ContractInfoWithAddress adds the address (key) to the ContractInfo representatio
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | `address` | [bytes](#bytes) |  |  |
-| `ContractInfo` | [ContractInfo](#SecretNetwork.x.compute.v1beta1.ContractInfo) |  |  |
+| `ContractInfo` | [ContractInfo](#secret.compute.v1beta1.ContractInfo) |  |  |
 
 
 
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.DecryptedAnswer"></a>
+<a name="secret.compute.v1beta1.DecryptedAnswer"></a>
 
 ### DecryptedAnswer
 DecryptedAnswer is a struct that represents a decrypted tx-query
@@ -11868,7 +11886,7 @@ DecryptedAnswer is a struct that represents a decrypted tx-query
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.QueryCodeRequest"></a>
+<a name="secret.compute.v1beta1.QueryCodeRequest"></a>
 
 ### QueryCodeRequest
 
@@ -11883,7 +11901,7 @@ DecryptedAnswer is a struct that represents a decrypted tx-query
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.QueryCodeResponse"></a>
+<a name="secret.compute.v1beta1.QueryCodeResponse"></a>
 
 ### QueryCodeResponse
 
@@ -11891,7 +11909,7 @@ DecryptedAnswer is a struct that represents a decrypted tx-query
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `code_info` | [CodeInfoResponse](#SecretNetwork.x.compute.v1beta1.CodeInfoResponse) |  |  |
+| `code_info` | [CodeInfoResponse](#secret.compute.v1beta1.CodeInfoResponse) |  |  |
 | `data` | [bytes](#bytes) |  |  |
 
 
@@ -11899,7 +11917,7 @@ DecryptedAnswer is a struct that represents a decrypted tx-query
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.QueryCodesResponse"></a>
+<a name="secret.compute.v1beta1.QueryCodesResponse"></a>
 
 ### QueryCodesResponse
 
@@ -11907,14 +11925,14 @@ DecryptedAnswer is a struct that represents a decrypted tx-query
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `code_infos` | [CodeInfoResponse](#SecretNetwork.x.compute.v1beta1.CodeInfoResponse) | repeated |  |
+| `code_infos` | [CodeInfoResponse](#secret.compute.v1beta1.CodeInfoResponse) | repeated |  |
 
 
 
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.QueryContractAddressByLabelRequest"></a>
+<a name="secret.compute.v1beta1.QueryContractAddressByLabelRequest"></a>
 
 ### QueryContractAddressByLabelRequest
 
@@ -11929,7 +11947,7 @@ DecryptedAnswer is a struct that represents a decrypted tx-query
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.QueryContractAddressByLabelResponse"></a>
+<a name="secret.compute.v1beta1.QueryContractAddressByLabelResponse"></a>
 
 ### QueryContractAddressByLabelResponse
 
@@ -11944,7 +11962,7 @@ DecryptedAnswer is a struct that represents a decrypted tx-query
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.QueryContractHashRequest"></a>
+<a name="secret.compute.v1beta1.QueryContractHashRequest"></a>
 
 ### QueryContractHashRequest
 
@@ -11959,7 +11977,7 @@ DecryptedAnswer is a struct that represents a decrypted tx-query
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.QueryContractHashResponse"></a>
+<a name="secret.compute.v1beta1.QueryContractHashResponse"></a>
 
 ### QueryContractHashResponse
 
@@ -11974,7 +11992,7 @@ DecryptedAnswer is a struct that represents a decrypted tx-query
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.QueryContractHistoryRequest"></a>
+<a name="secret.compute.v1beta1.QueryContractHistoryRequest"></a>
 
 ### QueryContractHistoryRequest
 
@@ -11989,7 +12007,7 @@ DecryptedAnswer is a struct that represents a decrypted tx-query
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.QueryContractInfoRequest"></a>
+<a name="secret.compute.v1beta1.QueryContractInfoRequest"></a>
 
 ### QueryContractInfoRequest
 QueryContractInfoRequest is the request type for the Query/ContractInfo RPC method
@@ -12004,7 +12022,7 @@ QueryContractInfoRequest is the request type for the Query/ContractInfo RPC meth
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.QueryContractInfoResponse"></a>
+<a name="secret.compute.v1beta1.QueryContractInfoResponse"></a>
 
 ### QueryContractInfoResponse
 QueryContractInfoResponse is the response type for the Query/ContractInfo RPC method
@@ -12013,14 +12031,14 @@ QueryContractInfoResponse is the response type for the Query/ContractInfo RPC me
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | `address` | [bytes](#bytes) |  | address is the address of the contract |
-| `ContractInfo` | [ContractInfo](#SecretNetwork.x.compute.v1beta1.ContractInfo) |  |  |
+| `ContractInfo` | [ContractInfo](#secret.compute.v1beta1.ContractInfo) |  |  |
 
 
 
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.QueryContractKeyRequest"></a>
+<a name="secret.compute.v1beta1.QueryContractKeyRequest"></a>
 
 ### QueryContractKeyRequest
 
@@ -12035,7 +12053,7 @@ QueryContractInfoResponse is the response type for the Query/ContractInfo RPC me
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.QueryContractKeyResponse"></a>
+<a name="secret.compute.v1beta1.QueryContractKeyResponse"></a>
 
 ### QueryContractKeyResponse
 
@@ -12050,7 +12068,7 @@ QueryContractInfoResponse is the response type for the Query/ContractInfo RPC me
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.QueryContractsByCodeRequest"></a>
+<a name="secret.compute.v1beta1.QueryContractsByCodeRequest"></a>
 
 ### QueryContractsByCodeRequest
 
@@ -12065,7 +12083,7 @@ QueryContractInfoResponse is the response type for the Query/ContractInfo RPC me
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.QueryContractsByCodeResponse"></a>
+<a name="secret.compute.v1beta1.QueryContractsByCodeResponse"></a>
 
 ### QueryContractsByCodeResponse
 
@@ -12073,14 +12091,14 @@ QueryContractInfoResponse is the response type for the Query/ContractInfo RPC me
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `contract_infos` | [ContractInfoWithAddress](#SecretNetwork.x.compute.v1beta1.ContractInfoWithAddress) | repeated |  |
+| `contract_infos` | [ContractInfoWithAddress](#secret.compute.v1beta1.ContractInfoWithAddress) | repeated |  |
 
 
 
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.QuerySmartContractStateRequest"></a>
+<a name="secret.compute.v1beta1.QuerySmartContractStateRequest"></a>
 
 ### QuerySmartContractStateRequest
 
@@ -12096,7 +12114,7 @@ QueryContractInfoResponse is the response type for the Query/ContractInfo RPC me
 
 
 
-<a name="SecretNetwork.x.compute.v1beta1.QuerySmartContractStateResponse"></a>
+<a name="secret.compute.v1beta1.QuerySmartContractStateResponse"></a>
 
 ### QuerySmartContractStateResponse
 
@@ -12117,18 +12135,18 @@ QueryContractInfoResponse is the response type for the Query/ContractInfo RPC me
  <!-- end HasExtensions -->
 
 
-<a name="SecretNetwork.x.compute.v1beta1.Query"></a>
+<a name="secret.compute.v1beta1.Query"></a>
 
 ### Query
 Query provides defines the gRPC querier service
 
 | Method Name | Request Type | Response Type | Description | HTTP Verb | Endpoint |
 | ----------- | ------------ | ------------- | ------------| ------- | -------- |
-| `ContractInfo` | [QueryContractInfoRequest](#SecretNetwork.x.compute.v1beta1.QueryContractInfoRequest) | [QueryContractInfoResponse](#SecretNetwork.x.compute.v1beta1.QueryContractInfoResponse) |  | GET|/compute/v1beta1/contract/{address}|
-| `ContractsByCode` | [QueryContractsByCodeRequest](#SecretNetwork.x.compute.v1beta1.QueryContractsByCodeRequest) | [QueryContractsByCodeResponse](#SecretNetwork.x.compute.v1beta1.QueryContractsByCodeResponse) | rpc ContractHistory (QueryContractHistoryRequest) returns (QueryContractHistoryResponse) { option (google.api.http).get = "/compute/v1beta1/contract/{address}/history"; } | GET|/compute/v1beta1/code/{code_id}/contracts|
-| `SmartContractState` | [QuerySmartContractStateRequest](#SecretNetwork.x.compute.v1beta1.QuerySmartContractStateRequest) | [QuerySmartContractStateResponse](#SecretNetwork.x.compute.v1beta1.QuerySmartContractStateResponse) | rpc AllContractState (QueryAllContractStateRequest) returns (QueryAllContractStateResponse) { option (google.api.http).get = "/compute/v1beta1/contract/{address}/state"; } rpc RawContractState (QueryRawContractStateRequest) returns (QueryRawContractStateResponse) { option (google.api.http).get = "/compute/v1beta1/contract/{address}/raw/{query_data}"; } | GET|/compute/v1beta1/contract/{address}/smart/{query_data}|
-| `Code` | [QueryCodeRequest](#SecretNetwork.x.compute.v1beta1.QueryCodeRequest) | [QueryCodeResponse](#SecretNetwork.x.compute.v1beta1.QueryCodeResponse) |  | GET|/compute/v1beta1/code/{code_id}|
-| `Codes` | [.google.protobuf.Empty](#google.protobuf.Empty) | [QueryCodesResponse](#SecretNetwork.x.compute.v1beta1.QueryCodesResponse) |  | GET|/compute/v1beta1/code|
+| `ContractInfo` | [QueryContractInfoRequest](#secret.compute.v1beta1.QueryContractInfoRequest) | [QueryContractInfoResponse](#secret.compute.v1beta1.QueryContractInfoResponse) | Query contract | GET|/compute/v1beta1/contract/{address}|
+| `ContractsByCode` | [QueryContractsByCodeRequest](#secret.compute.v1beta1.QueryContractsByCodeRequest) | [QueryContractsByCodeResponse](#secret.compute.v1beta1.QueryContractsByCodeResponse) | Query contract | GET|/compute/v1beta1/code/{code_id}/contracts|
+| `SmartContractState` | [QuerySmartContractStateRequest](#secret.compute.v1beta1.QuerySmartContractStateRequest) | [QuerySmartContractStateResponse](#secret.compute.v1beta1.QuerySmartContractStateResponse) | Query contract | GET|/compute/v1beta1/contract/{address}/smart/{query_data}|
+| `Code` | [QueryCodeRequest](#secret.compute.v1beta1.QueryCodeRequest) | [QueryCodeResponse](#secret.compute.v1beta1.QueryCodeResponse) | Query a specific contract code | GET|/compute/v1beta1/code/{code_id}|
+| `Codes` | [.google.protobuf.Empty](#google.protobuf.Empty) | [QueryCodesResponse](#secret.compute.v1beta1.QueryCodesResponse) | Query all contract codes on-chain | GET|/compute/v1beta1/code|
 
  <!-- end services -->
 
