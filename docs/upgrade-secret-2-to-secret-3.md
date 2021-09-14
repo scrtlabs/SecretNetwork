@@ -8,9 +8,11 @@
   - [2. Install the new binaries on your SGX machine](#2-install-the-new-binaries-on-your-sgx-machine)
   - [3. Import the quicksync data](#3-import-the-quicksync-data)
   - [4. Migrate your validator's signing key](#4-migrate-your-validators-signing-key)
-  - [5. Migrate your validator's wallet](#5-migrate-your-validators-wallet)
-  - [6. Set up your SGX machine and become a `secret-3` validator](#6-set-up-your-sgx-machine-and-become-a-secret-3-validator)
+  - [5. Migrate your node's encrypted seed](#5-migrate-your-nodes-encrypted-seed)
+  - [6. Migrate your validator's wallet](#6-migrate-your-validators-wallet)
+  - [7. Set up your SGX machine and become a `secret-3` validator](#7-set-up-your-sgx-machine-and-become-a-secret-3-validator)
 - [In case of an upgrade failure](#in-case-of-an-upgrade-failure)
+  - [Appendix: Registration on a new Secret-3 node](#appendix-registration-on-a-new-secret-3-node)
 
 # Validators
 
@@ -46,7 +48,7 @@ sudo apt install -y ./secretnetwork_1.0.5_amd64.deb
 
 sudo chmod +x /usr/local/bin/secretd
 
-secretd init "$MONIKER" --chain-id secret-3
+secretd init <MONIKER> --chain-id secret-3
 ```
 
 ## 3. Import the quicksync data
@@ -78,15 +80,16 @@ Export the self-delegator wallet from the old machine (`secret-2`) and import to
 On the old machine (`secret-2`) use `secretcli keys export "$YOUR_KEY_NAME"`.  
 On the new SGX machine (`secret-3`) use `secretcli keys import "$YOUR_KEY_NAME" "$FROM_FILE_NAME"`
 
-
 :warning: If you do install `secret-3` on your `secret-2` machine, run:
 
 - `sudo systemctl stop secret-node`
 - `mv ~/.secretd ~/.secretd.backup`
-- `secretd unsafe-reset-all`
+- `secretd init <MONIKER>`
+- `mkdir -p ~/.secretd/.node`
+- `cp ~/.secretd.backup/.node/seed.json ~/.secretd/.node/seed.json`
 - You'll be able to skip node regiatration steps later on
 
-:warning: You can remove previous `secretnetwork` installations and start fresh using using:
+:warning: You can remove previous `secretnetwork` installations and start fresh using:
 
 ```bash
 cd ~
@@ -95,7 +98,6 @@ secretd unsafe-reset-all
 sudo apt purge -y secretnetwork
 rm -rf ~/.secretd/*
 ```
-
 
 Notes:
 
@@ -107,7 +109,7 @@ Notes:
 ```bash
 cd ~
 
-secretd init $MONIKER --chain-id secret-3
+secretd init <MONIKER> --chain-id secret-3
 
 wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.5/genesis.json"
 
@@ -166,10 +168,11 @@ If after a few hours the Enigma team announces on the chat that the upgrade fail
 2. Wait for 67% of voting power to come back online.
 
 ## Appendix: Registration on a new Secret-3 node
+
 ```
 cd ~
 
-secretd init $MONIKER --chain-id secret-3
+secretd init <MONIKER> --chain-id secret-3
 
 wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.5/genesis.json"
 
