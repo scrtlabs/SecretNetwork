@@ -140,6 +140,7 @@ watch 'secretcli status | jq ".sync_info.catching_up == false"'
 Once your node is done catching up, you can unjail your validator:
 
 ```bash
+secretcli config chain-id secret-3
 secretcli tx slashing unjail --from "$YOUR_KEY_NAME" --gas-prices 0.25uscrt
 ```
 
