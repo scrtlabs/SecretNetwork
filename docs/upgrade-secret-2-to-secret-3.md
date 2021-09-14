@@ -4,7 +4,7 @@
 
 - [Network Upgrade Instructions from `secret-2` to `secret-3`](#network-upgrade-instructions-from-secret-2-to-secret-3)
 - [Validators](#validators)
-  - [1. Prepare your `secret-2` validator to halt at 2021-09-14 21:00:00 UTC.](#1-prepare-your-secret-2-validator-to-halt-at-2021-09-14-210000-utc)
+  - [1. Prepare your `secret-2` validator to halt at 2021-09-14 18:00:00 UTC.](#1-prepare-your-secret-2-validator-to-halt-at-2021-09-14-180000-utc)
   - [2. Install the new binaries on your SGX machine](#2-install-the-new-binaries-on-your-sgx-machine)
   - [3. Import the quicksync data](#3-import-the-quicksync-data)
   - [4. Migrate your validator's signing key](#4-migrate-your-validators-signing-key)
@@ -23,12 +23,12 @@ You're probably familiar with SGX by now:
 - [Setup SGX](validators-and-full-nodes/setup-sgx.md)
 - [Verify SGX](validators-and-full-nodes/verify-sgx.md)
 
-## 1. Prepare your `secret-2` validator to halt at 2021-09-14 21:00:00 UTC.
+## 1. Prepare your `secret-2` validator to halt at 2021-09-14 18:00:00 UTC.
 
 On the old machine (`secret-2`):
 
 ```bash
-perl -i -pe 's/^halt-time =.*/halt-time = 1631653200/' ~/.secretd/config/app.toml
+perl -i -pe 's/^halt-time =.*/halt-time = 1631642400/' ~/.secretd/config/app.toml
 
 sudo systemctl restart secret-node
 ```
@@ -167,7 +167,7 @@ If after a few hours the Enigma team announces on the chat that the upgrade fail
 
 ## Appendix: Registration on a new Secret-3 node
 
-```
+```bash
 cd ~
 
 secretd init <MONIKER> --chain-id secret-3
