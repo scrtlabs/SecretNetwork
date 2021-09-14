@@ -94,6 +94,14 @@ type ContractCodeHistoryEntry struct {
 */
 
 // ContractInfo stores a WASM contract instance
+type ContractCustomInfo struct {
+	EnclaveKey []byte `json:"enclave_key"`
+	//Address sdk.AccAddress    `json:"address"`
+	// Admin   sdk.AccAddress `json:"admin,omitempty"`
+	Label string `json:"label"`
+}
+
+// ContractInfo stores a WASM contract instance
 type ContractInfo struct {
 	CodeID  uint64         `json:"code_id"`
 	Creator sdk.AccAddress `json:"creator"`

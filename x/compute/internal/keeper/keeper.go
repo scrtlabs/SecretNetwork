@@ -671,14 +671,33 @@ func (k Keeper) setContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress,
 	store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshalBinaryBare(contract))
 }
 
-func (k Keeper) IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, types.ContractInfo) bool) {
+func (k Keeper) setContractCustomInfo(ctx sdk.Context, contractAddress sdk.AccAddress, contract *types.ContractCustomInfo) {
+	store := ctx.KVStore(k.storeKey)
+	store.Set(types.GetContractEnclaveKey(contractAddress), contract.EnclaveKey)
+	fmt.Printf("Setting enclave key: %x: %x\n", types.GetContractEnclaveKey(contractAddress), contract.EnclaveKey)
+	store.Set(types.GetContractLabelPrefix(contract.Label), contractAddress)
+	fmt.Printf("Setting label: %x: %x\n", types.GetContractLabelPrefix(contract.Label), contractAddress)
+}
+
+func (k Keeper) IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, types.ContractInfo, types.ContractCustomInfo) bool) {
+
 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.ContractKeyPrefix)
 	iter := prefixStore.Iterator(nil, nil)
 	for ; iter.Valid(); iter.Next() {
 		var contract types.ContractInfo
 		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &contract)
+
+		enclaveId := ctx.KVStore(k.storeKey).Get(types.GetContractEnclaveKey(iter.Key()))
+		fmt.Printf("Setting enclave key: %x: %x\n", types.GetContractEnclaveKey(iter.Key()), enclaveId)
+		fmt.Printf("Setting label: %x: %x\n", types.GetContractLabelPrefix(contract.Label), contractAddress)
+
+		contractCustomInfo := types.ContractCustomInfo{
+			EnclaveKey: enclaveId,
+			Label:      contract.Label,
+		}
+
 		// cb returns true to stop early
-		if cb(iter.Key(), contract) {
+		if cb(iter.Key(), contract, contractCustomInfo) {
 			break
 		}
 	}
@@ -697,10 +716,36 @@ func (k Keeper) importContractState(ctx sdk.Context, contractAddress sdk.AccAddr
 		if model.Value == nil {
 			model.Value = []byte{}
 		}
+
 		if prefixStore.Has(model.Key) {
 			return sdkerrors.Wrapf(types.ErrDuplicate, "duplicate key: %x", model.Key)
 		}
 		prefixStore.Set(model.Key, model.Value)
+
+	}
+	return nil
+}
+
+func (k Keeper) fixContractState(ctx sdk.Context, contractAddress sdk.AccAddress, models []types.Model) error {
+	prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
+	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
+	for _, model := range models {
+		if model.Value == nil {
+			model.Value = []byte{}
+		}
+
+		if !prefixStore.Has(model.Key) {
+			prefixStore.Set(model.Key, model.Value)
+			continue
+		}
+
+		existingValue := prefixStore.Get(model.Key)
+		if bytes.Equal(existingValue, model.Value) {
+			continue
+		} else {
+			prefixStore.Set(model.Key, model.Value)
+		}
+
 	}
 	return nil
 }
@@ -829,7 +874,7 @@ func (k Keeper) importAutoIncrementID(ctx sdk.Context, lastIDKey []byte, val uin
 	return nil
 }
 
-func (k Keeper) importContract(ctx sdk.Context, contractAddr sdk.AccAddress, c *types.ContractInfo, state []types.Model) error {
+func (k Keeper) importContract(ctx sdk.Context, contractAddr sdk.AccAddress, customInfo *types.ContractCustomInfo, c *types.ContractInfo, state []types.Model) error {
 	if !k.containsCodeInfo(ctx, c.CodeID) {
 		return errors.Wrapf(types.ErrNotFound, "code id: %d", c.CodeID)
 	}
@@ -839,6 +884,7 @@ func (k Keeper) importContract(ctx sdk.Context, contractAddr sdk.AccAddress, c *
 
 	// historyEntry := c.ResetFromGenesis(ctx)
 	// k.appendToContractHistory(ctx, contractAddr, historyEntry)
+	k.setContractCustomInfo(ctx, contractAddr, customInfo)
 	k.setContractInfo(ctx, contractAddr, c)
 	return k.importContractState(ctx, contractAddr, state)
 }

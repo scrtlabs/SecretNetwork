@@ -105,7 +105,7 @@ func queryContractListByCode(ctx sdk.Context, codeIDstr string, keeper Keeper) (
 	}
 
 	var contracts []ContractInfoWithAddress
-	keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, info types.ContractInfo) bool {
+	keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, info types.ContractInfo, _ types.ContractCustomInfo) bool {
 		if info.CodeID == codeID {
 			// and add the address
 			infoWithAddress := ContractInfoWithAddress{

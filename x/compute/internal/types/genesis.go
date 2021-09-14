@@ -71,9 +71,10 @@ func (c Code) ValidateBasic() error {
 
 // Contract struct encompasses ContractAddress, ContractInfo, and ContractState
 type Contract struct {
-	ContractAddress sdk.AccAddress `json:"contract_address"`
-	ContractInfo    ContractInfo   `json:"contract_info"`
-	ContractState   []Model        `json:"contract_state"`
+	ContractAddress    sdk.AccAddress     `json:"contract_address"`
+	ContractInfo       ContractInfo       `json:"contract_info"`
+	ContractState      []Model            `json:"contract_state"`
+	ContractCustomInfo ContractCustomInfo `json:"contract_custom_info"`
 }
 
 func (c Contract) ValidateBasic() error {
@@ -92,6 +93,7 @@ func (c Contract) ValidateBasic() error {
 			return sdkerrors.Wrapf(err, "contract state %d", i)
 		}
 	}
+
 	return nil
 }
 
