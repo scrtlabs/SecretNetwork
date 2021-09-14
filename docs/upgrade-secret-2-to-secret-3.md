@@ -108,7 +108,7 @@ echo "1c5682a609369c37e2ca10708fe28d78011c2006045a448cdb4e833ef160bf3f .secretd/
 
 mkdir -p ~/.secretd/.node
 
-cp ~/.secretd-backup/.node/seed.json ~/.secretd/.node/seed.json  # or wherever you stored the file
+cp ~/.secretd.backup/.node/seed.json ~/.secretd/.node/seed.json  # or wherever you stored the file
 
 perl -i -pe 's/pruning = "syncable"/pruning = "everything"/' ~/.secretd/config/app.toml
 
