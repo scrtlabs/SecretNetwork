@@ -172,6 +172,8 @@ rm -rf ~/.secretd/*
 ```bash
 cd ~
 
+rm ~/.secretd/config/genesis.json
+
 secretd init <MONIKER> --chain-id secret-3
 
 wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.5/genesis.json"
