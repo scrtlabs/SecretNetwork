@@ -61,6 +61,8 @@ echo "6b0259f3669ab81d41424c1db5cea5440b00eb3426cac3f9246d0223bbf9f74c secretnet
 
 sudo apt install -y ./secretnetwork_1.0.5_amd64.deb
 
+sudo chmod +x /usr/local/bin/secretd
+
 secretd init "$MONIKER" --chain-id secret-3
 ```
 
