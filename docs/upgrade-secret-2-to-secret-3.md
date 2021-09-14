@@ -173,7 +173,7 @@ secretd init $MONIKER --chain-id secret-3
 
 wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.5/genesis.json"
 
-echo "TODO .secretd/config/genesis.json" | sha256sum --check
+echo "1c5682a609369c37e2ca10708fe28d78011c2006045a448cdb4e833ef160bf3f .secretd/config/genesis.json" | sha256sum --check
 
 secretd init-enclave # Can be skipped if you're installing secret-3 on your secret-2 machine
 
