@@ -33,6 +33,15 @@ perl -i -pe 's/^halt-time =.*/halt-time = 1631642400/' ~/.secretd/config/app.tom
 sudo systemctl restart secret-node
 ```
 
+:warning: If you do install `secret-3` on your `secret-2` machine, run:
+
+- `sudo systemctl stop secret-node`
+- `mv ~/.secretd ~/.secretd.backup`
+- `secretd init <MONIKER>`
+- `mkdir -p ~/.secretd/.node`
+- `cp ~/.secretd.backup/.node/seed.json ~/.secretd/.node/seed.json`
+- You'll be able to skip node regiatration steps later on
+
 ## 2. Install the new binaries on your SGX machine
 
 On the new SGX machine (`secret-3`):
@@ -79,25 +88,6 @@ Export the self-delegator wallet from the old machine (`secret-2`) and import to
 
 On the old machine (`secret-2`) use `secretcli keys export "$YOUR_KEY_NAME"`.  
 On the new SGX machine (`secret-3`) use `secretcli keys import "$YOUR_KEY_NAME" "$FROM_FILE_NAME"`
-
-:warning: If you do install `secret-3` on your `secret-2` machine, run:
-
-- `sudo systemctl stop secret-node`
-- `mv ~/.secretd ~/.secretd.backup`
-- `secretd init <MONIKER>`
-- `mkdir -p ~/.secretd/.node`
-- `cp ~/.secretd.backup/.node/seed.json ~/.secretd/.node/seed.json`
-- You'll be able to skip node regiatration steps later on
-
-:warning: You can remove previous `secretnetwork` installations and start fresh using:
-
-```bash
-cd ~
-sudo systemctl stop secret-node
-secretd unsafe-reset-all
-sudo apt purge -y secretnetwork
-rm -rf ~/.secretd/*
-```
 
 Notes:
 
@@ -165,6 +155,17 @@ If after a few hours the Enigma team announces on the chat that the upgrade fail
    ```
 
 2. Wait for 67% of voting power to come back online.
+
+# Removing an installation
+You can remove previous `secretnetwork` installations and start fresh using:
+
+```bash
+cd ~
+sudo systemctl stop secret-node
+secretd unsafe-reset-all
+sudo apt purge -y secretnetwork
+rm -rf ~/.secretd/*
+```
 
 ## Appendix: Registration on a new Secret-3 node
 
