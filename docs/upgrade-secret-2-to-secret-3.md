@@ -72,9 +72,9 @@ secretd init "$MONIKER" --chain-id secret-3
 ```bash
 cd ~
 
-wget "https://TODO/quicksync.tar.xz"
+wget "https://engfilestorage.blob.core.windows.net/quicksync-secret-3/quicksync.tar.xz"
 
-echo "TODO quicksync.tar.xz" | sha256sum --check
+echo "66fe25ae54a8c3957999300c5955ee74452c7826e0a5e0eabc2234058e5d601d quicksync.tar.xz" | sha256sum --check
 
 tar -xf quicksync.tar.xz
 ```
