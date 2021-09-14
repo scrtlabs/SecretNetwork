@@ -29,12 +29,8 @@
 cd ~
 sudo systemctl stop secret-node
 secretd unsafe-reset-all
-secretd reset-enclave
-secretd init-enclave --reset
 sudo apt purge -y secretnetwork
-rm -rf ~/.secretcli/*
 rm -rf ~/.secretd/*
-rm -rf ~/.sgx_secrets/*
 ```
 
 You're probably familiar with SGX by now:
