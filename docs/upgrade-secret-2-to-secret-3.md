@@ -113,7 +113,7 @@ cp ~/.secretd.backup/.node/seed.json ~/.secretd/.node/seed.json  # or wherever y
 
 perl -i -pe 's/pruning =.*/pruning = "everything"/' ~/.secretd/config/app.toml
 
-perl -i -pe 's/persistent_peers =.*/persistent_peers = "e768e605f9a3a8eb7c36c36a6dbf9bd707ac0bd0\@bootstrap.secretnodes.org:26656,27db2f21cfcbfa40705d5c516858f51d5af07e03\@20.51.225.193:26656"/' ~/.secretd/config/config.toml
+perl -i -pe 's/persistent_peers =.*/persistent_peers = "b8e2408b7f4cb556b71350ea4c6930b8db1e2599\@anode1.trivium.xiphiar.com:26656,e768e605f9a3a8eb7c36c36a6dbf9bd707ac0bd0\@bootstrap.secretnodes.org:26656,27db2f21cfcbfa40705d5c516858f51d5af07e03\@20.51.225.193:26656"/' ~/.secretd/config/config.toml
 
 sudo systemctl enable secret-node
 
