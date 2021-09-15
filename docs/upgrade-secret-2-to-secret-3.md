@@ -111,7 +111,7 @@ mkdir -p ~/.secretd/.node
 
 cp ~/.secretd.backup/.node/seed.json ~/.secretd/.node/seed.json  # or wherever you stored the file
 
-perl -i -pe 's/pruning = "syncable"/pruning = "everything"/' ~/.secretd/config/app.toml
+perl -i -pe 's/pruning =.*/pruning = "everything"/' ~/.secretd/config/app.toml
 
 perl -i -pe 's/persistent_peers =.*/persistent_peers = "27db2f21cfcbfa40705d5c516858f51d5af07e03\@20.51.225.193:26656"/' ~/.secretd/config/config.toml
 
