@@ -12,6 +12,7 @@
   - [6. Migrate your validator's wallet](#6-migrate-your-validators-wallet)
   - [7. Set up your SGX machine and become a `secret-3` validator](#7-set-up-your-sgx-machine-and-become-a-secret-3-validator)
 - [In case of an upgrade failure](#in-case-of-an-upgrade-failure)
+- [Removing an installation](#removing-an-installation)
   - [Appendix: Registration on a new Secret-3 node](#appendix-registration-on-a-new-secret-3-node)
 
 # Validators
@@ -69,7 +70,7 @@ wget "https://engfilestorage.blob.core.windows.net/quicksync-secret-3/quicksync.
 
 echo "66fe25ae54a8c3957999300c5955ee74452c7826e0a5e0eabc2234058e5d601d quicksync.tar.xz" | sha256sum --check
 
-tar -xf quicksync.tar.xz
+pv quicksync.tar.xz | tar -xJf -
 ```
 
 ## 4. Migrate your validator's signing key
@@ -158,6 +159,7 @@ If after a few hours the Enigma team announces on the chat that the upgrade fail
 2. Wait for 67% of voting power to come back online.
 
 # Removing an installation
+
 You can remove previous `secretnetwork` installations and start fresh using:
 
 ```bash
