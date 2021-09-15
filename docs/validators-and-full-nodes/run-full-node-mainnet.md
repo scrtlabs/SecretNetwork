@@ -2,6 +2,23 @@
 
 This document details how to join the Secret Network `mainnet` as a validator.
 
+- [Run a Full Node](#run-a-full-node)
+    - [Requirements](#requirements)
+      - [Minimum requirements](#minimum-requirements)
+      - [Recommended requirements](#recommended-requirements)
+    - [Installation](#installation)
+      - [Install the `secretnetwork`, initialize your node and validate the genesis file:](#install-the-secretnetwork-initialize-your-node-and-validate-the-genesis-file)
+      - [Create the enclave attestation certificate and store its public key:](#create-the-enclave-attestation-certificate-and-store-its-public-key)
+      - [Configure `secretcli`:](#configure-secretcli)
+      - [Create your `key-alias`:](#create-your-key-alias)
+        - [Generate a new key pair for yourself (change `<key-alias>` with any word of your choice, this is just for your internal/personal reference):](#generate-a-new-key-pair-for-yourself-change-key-alias-with-any-word-of-your-choice-this-is-just-for-your-internalpersonal-reference)
+        - [Check that you have the funds:](#check-that-you-have-the-funds)
+      - [Register and configure your node:](#register-and-configure-your-node)
+      - [Start your node as a service:](#start-your-node-as-a-service)
+      - [See your node's logs:](#see-your-nodes-logs)
+      - [Point `secretcli` to your node and query its status:](#point-secretcli-to-your-node-and-query-its-status)
+      - [Get your node ID with:](#get-your-node-id-with)
+
 ### Requirements
 
 - Up to date SGX ([Read this](https://learn.scrt.network/sgx.html), [Setup](setup-sgx.md), [Verify](verify-sgx.md))
@@ -13,14 +30,14 @@ This document details how to join the Secret Network `mainnet` as a validator.
 #### Minimum requirements
 
 - Up to date SGX ([Read this](https://learn.scrt.network/sgx.html), [Setup](setup-sgx.md), [Verify](verify-sgx.md))
-- 1GB RAM
+- 4GB RAM
 - 100GB HDD (Premium SSD)
 - 1 dedicated core of any Intel Skylake processor (Intel® 6th generation) or better
 
 #### Recommended requirements
 
 - Up to date SGX ([Read this](https://learn.scrt.network/sgx.html), [Setup](setup-sgx.md), [Verify](verify-sgx.md))
-- 2GB RAM
+- 16GB RAM
 - 256GB SSD (Premium SSD)
 - 2 dedicated cores of any Intel Skylake processor (Intel® 6th generation) or better
 
@@ -33,19 +50,25 @@ _NOTE_: Substitute **$YOUR_MONIKER** (below) with your node's nickname or alias.
 ```bash
 cd ~
 
-wget https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.4/secretnetwork_1.0.4_amd64.deb
+wget "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.5/secretnetwork_1.0.5_amd64.deb"
 
-echo "97c1aa2421a203184e541928cc9c409c50afcfac5cbd55993e6a9593399587f9 secretnetwork_1.0.4_amd64.deb" | sha256sum --check
+echo "6b0259f3669ab81d41424c1db5cea5440b00eb3426cac3f9246d0223bbf9f74c secretnetwork_1.0.5_amd64.deb" | sha256sum --check
 
-sudo apt install ./secretnetwork_1.0.4_amd64.deb
+sudo apt install -y ./secretnetwork_1.0.5_amd64.deb
 
-secretd init "$YOUR_MONIKER" --chain-id secret-2
+sudo chmod +x /usr/local/bin/secretd
 
-wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.4/genesis.json"
+secretd init <MONIKER> --chain-id secret-3
 
-echo "4ca53e34afed034d16464d025291fe16a847c9aca0a259f9237413171b19b4cf .secretd/config/genesis.json" | sha256sum --check
+wget -O ~/.secretd/config/genesis.json "https://github.com/enigmampc/SecretNetwork/releases/download/v1.0.5/genesis.json"
 
-secretd validate-genesis
+echo "1c5682a609369c37e2ca10708fe28d78011c2006045a448cdb4e833ef160bf3f .secretd/config/genesis.json" | sha256sum --check
+
+wget "https://engfilestorage.blob.core.windows.net/quicksync-secret-3/quicksync.tar.xz"
+
+echo "66fe25ae54a8c3957999300c5955ee74452c7826e0a5e0eabc2234058e5d601d quicksync.tar.xz" | sha256sum --check
+
+pv quicksync.tar.xz | tar -xJf -
 ```
 
 #### Create the enclave attestation certificate and store its public key:
@@ -60,10 +83,11 @@ echo $PUBLIC_KEY
 #### Configure `secretcli`:
 
 ```bash
-secretcli config chain-id secret-2
-secretcli config node http://rpc.enigma.co:26657
+secretcli config chain-id secret-3
+secretcli config node http://20.51.225.193:26657
 secretcli config output json
 secretcli config indent true
+secretcli config trust-node true
 ```
 
 #### Create your `key-alias`:
@@ -111,7 +135,10 @@ mkdir -p ~/.secretd/.node
 
 secretd configure-secret node-master-cert.der "$SEED"
 
-perl -i -pe 's/^persistent_peers = ".*?"/persistent_peers = "f5b7fbfc954ba8d70e1c549f258f52b7967f2d14\@rpc.enigma.co:26656"/' ~/.secretd/config/config.toml
+perl -i -pe 's/pruning =.*/pruning = "everything"/' ~/.secretd/config/app.toml
+
+perl -i -pe 's/persistent_peers =.*/persistent_peers = "3612fb4f7b146f45e8f09a8b8c36ebc041934049\@185.56.139.85:26656,b8e2408b7f4cb556b71350ea4c6930b8db1e2599\@anode1.trivium.xiphiar.com:26656,e768e605f9a3a8eb7c36c36a6dbf9bd707ac0bd0\@bootstrap.secretnodes.org:26656,27db2f21cfcbfa40705d5c516858f51d5af07e03\@20.51.225.193:26656"/' ~/.secretd/config/config.toml
+
 perl -i -pe 's;laddr = "tcp://127.0.0.1:26657";laddr = "tcp://0.0.0.0:26657";' ~/.secretd/config/config.toml
 ```
 
@@ -173,7 +200,7 @@ So if someone wants to add you as a peer, have them add the above address to the
 And if someone wants to use you from their `secretcli` then have them run:
 
 ```bash
-secretcli config chain-id secret-2
+secretcli config chain-id secret-3
 secretcli config output json
 secretcli config indent true
 secretcli config trust-node true
