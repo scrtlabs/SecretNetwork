@@ -378,6 +378,12 @@ secretjs-build:
 secretjs-publish-npm: secretjs-build
 	cd cosmwasm-js/packages/sdk && npm publish
 
+# Before running this, first make sure:
+# 1. To `npm login` with enigma-dev
+# 2. The new version is updated in `cosmwasm-js/packages/sdk/package.json`
+secretjs-publish-beta-npm: secretjs-build
+	cd cosmwasm-js/packages/sdk && npm publish --tag beta
+
 aesm-image:
 	docker build -f deployment/dockerfiles/aesm.Dockerfile -t enigmampc/aesm .
 

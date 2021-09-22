@@ -190,7 +190,7 @@ export declare enum BroadcastMode {
 }
 export declare class RestClient {
   private readonly client;
-  private readonly broadcastMode;
+  readonly broadcastMode: BroadcastMode;
   enigmautils: SecretUtils;
   codeHashCache: Map<string | number, string>;
   /**
