@@ -632,7 +632,10 @@ export class RestClient {
           // decrypt input
           (txsResponse.tx.value.msg[i] as MsgExecuteContract).value.msg = inputMsg;
           // decrypt output
-          txsResponse.data = await this.decryptDataField(txsResponse.data, [nonce]);
+          // stupid workaround because only 1st message data is returned
+          if (i == 0 && txsResponse.data) {
+            txsResponse.data = await this.decryptDataField(txsResponse.data, [nonce]);
+          }
         } else if (msg.type === "wasm/MsgInstantiateContract") {
           // decrypt input
           (txsResponse.tx.value.msg[i] as MsgInstantiateContract).value.init_msg = inputMsg;
