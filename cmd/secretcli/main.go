@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	scrt "github.com/enigmampc/SecretNetwork/types"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
 	"os"
 	"path"
+
+	scrt "github.com/enigmampc/SecretNetwork/types"
+	sdk "github.com/enigmampc/cosmos-sdk/types"
 
 	"github.com/enigmampc/cosmos-sdk/client"
 	"github.com/enigmampc/cosmos-sdk/client/flags"
@@ -108,6 +109,7 @@ func txCmd(cdc *amino.Codec) *cobra.Command {
 		bankcmd.SendTxCmd(cdc),
 		flags.LineBreak,
 		authcmd.GetSignCommand(cdc),
+		authcmd.GetSignDocCommand(cdc),
 		authcmd.GetMultiSignCommand(cdc),
 		flags.LineBreak,
 		authcmd.GetBroadcastCommand(cdc),
