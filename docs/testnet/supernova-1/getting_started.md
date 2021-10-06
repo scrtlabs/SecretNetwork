@@ -10,7 +10,7 @@ Faucet: https://faucet.supernova.enigma.co
 chain-id: supernova-1
 
 Bootstrap nodes:
-* 115aa0a629f5d70dd1d464bc7e42799e00f4edae@bootstrap.supernova.enigma.co:26656
+* ab6394e953e0b570bb1deeb5a8b387aa0dc6188a@bootstrap.supernova.enigma.co:26656
 * ab6394e953e0b570bb1deeb5a8b387aa0dc6188a@node1.supernova.enigma.co:26656
 * f3cbc914ec36e3b6a8274d8af349d4633a18d77e@node2.supernova.enigma.co:26656
 
