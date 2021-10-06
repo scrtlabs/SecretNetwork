@@ -113,7 +113,7 @@ go.sum: go.mod
 
 xgo_build_secretcli: go.sum
 	@echo "--> WARNING! This builds from origin/$(CURRENT_BRANCH)!"
-	xgo --go 1.13.8 --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --branch "$(CURRENT_BRANCH)" github.com/enigmampc/SecretNetwork/cmd/secretcli
+	xgo --go latest --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --branch "$(CURRENT_BRANCH)" github.com/enigmampc/SecretNetwork/cmd/secretcli
 
 # Install go1.13.8 with:
 # $ go install golang.org/dl/go1.13.8@latest
