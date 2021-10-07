@@ -57,7 +57,7 @@ checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 [[package]]
 name = "base64"
 version = "0.13.0"
-source = "git+https://github.com/mesalock-linux/rust-base64-sgx?rev=sgx_1.1.3#dc7389e10817b078f289386b3b6a852ab6c4c021"
+source = "git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021#dc7389e10817b078f289386b3b6a852ab6c4c021"
 dependencies = [
  "sgx_tstd 1.1.3 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.3)",
 ]
@@ -134,9 +134,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.70"
+version = "1.0.71"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d26a6ce4b6a484fa3edb70f7efa6fc430fd2b87285fe8b84304fd0936faa0dc0"
+checksum = "79c2681d6594606957bbb8631c4b90a7fcaaa72cdb714743a437b156d6a7eedd"
 
 [[package]]
 name = "cfg-if"
@@ -531,7 +531,7 @@ dependencies = [
 [[package]]
 name = "prost"
 version = "0.6.1"
-source = "git+https://github.com/mesalock-linux/prost-sgx?rev=sgx_1.1.3#cd3103a6d45cf7a43b6c1c5e4223428097d1c547"
+source = "git+https://github.com/mesalock-linux/prost-sgx?rev=cd3103a6d45cf7a43b6c1c5e4223428097d1c547#cd3103a6d45cf7a43b6c1c5e4223428097d1c547"
 dependencies = [
  "bytes",
  "prost-derive",
@@ -540,7 +540,7 @@ dependencies = [
 [[package]]
 name = "prost-derive"
 version = "0.6.1"
-source = "git+https://github.com/mesalock-linux/prost-sgx?rev=sgx_1.1.3#cd3103a6d45cf7a43b6c1c5e4223428097d1c547"
+source = "git+https://github.com/mesalock-linux/prost-sgx?rev=cd3103a6d45cf7a43b6c1c5e4223428097d1c547#cd3103a6d45cf7a43b6c1c5e4223428097d1c547"
 dependencies = [
  "anyhow",
  "itertools",
@@ -599,7 +599,7 @@ dependencies = [
 [[package]]
 name = "rust-base58"
 version = "0.0.4"
-source = "git+https://github.com/mesalock-linux/rust-base58-sgx?rev=sgx_1.1.3#13fb3e0a543690e6e19332f37ba85fd74c56cb2f"
+source = "git+https://github.com/mesalock-linux/rust-base58-sgx?rev=13fb3e0a543690e6e19332f37ba85fd74c56cb2f#13fb3e0a543690e6e19332f37ba85fd74c56cb2f"
 dependencies = [
  "num",
  "sgx_tstd 1.1.3 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.3)",
@@ -617,7 +617,7 @@ dependencies = [
 [[package]]
 name = "rustls"
 version = "0.19.0"
-source = "git+https://github.com/mesalock-linux/rustls?rev=sgx_1.1.3#95b5e79dc24b02f3ce424437eb9698509d0baf58"
+source = "git+https://github.com/mesalock-linux/rustls?rev=95b5e79dc24b02f3ce424437eb9698509d0baf58#95b5e79dc24b02f3ce424437eb9698509d0baf58"
 dependencies = [
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx)",
  "ring",
@@ -644,18 +644,18 @@ dependencies = [
 
 [[package]]
 name = "secp256k1"
-version = "0.20.3"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97d03ceae636d0fed5bae6a7f4f664354c5f4fcedf6eef053fef17e49f837d0a"
+checksum = "c6179428c22c73ac0fbb7b5579a56353ce78ba29759b3b8575183336ea74cdfb"
 dependencies = [
  "secp256k1-sys",
 ]
 
 [[package]]
 name = "secp256k1-sys"
-version = "0.4.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "827cb7cce42533829c792fc51b82fbf18b125b45a702ef2c8be77fce65463a7b"
+checksum = "11553d210db090930f4432bea123b31f70bbf693ace14504ea2a35e796c28dd2"
 dependencies = [
  "cc",
 ]
@@ -1012,7 +1012,7 @@ name = "wasmi-runtime"
 version = "0.1.0"
 dependencies = [
  "aes-siv",
- "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=sgx_1.1.3)",
+ "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
  "bech32",
  "bit-vec",
  "chrono",
@@ -1073,7 +1073,7 @@ dependencies = [
 [[package]]
 name = "webpki-roots"
 version = "0.21.0"
-source = "git+https://github.com/mesalock-linux/webpki-roots?rev=sgx_1.1.3#6ff3be547ac13ccd46ae55605ad6506ce30688ef"
+source = "git+https://github.com/mesalock-linux/webpki-roots?rev=6ff3be547ac13ccd46ae55605ad6506ce30688ef#6ff3be547ac13ccd46ae55605ad6506ce30688ef"
 dependencies = [
  "sgx_tstd 1.1.3 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.3)",
  "webpki",
@@ -1093,7 +1093,7 @@ dependencies = [
 [[package]]
 name = "yasna"
 version = "0.3.1"
-source = "git+https://github.com/mesalock-linux/yasna.rs-sgx?rev=sgx_1.1.3#a1f50714cd3eb29608ecf7888cacedc173edfdb2"
+source = "git+https://github.com/mesalock-linux/yasna.rs-sgx?rev=a1f50714cd3eb29608ecf7888cacedc173edfdb2#a1f50714cd3eb29608ecf7888cacedc173edfdb2"
 dependencies = [
  "bit-vec",
  "chrono",
@@ -1104,17 +1104,15 @@ dependencies = [
 [[package]]
 name = "zeroize"
 version = "1.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4756f7db3f7b5574938c3eb1c117038b8e07f95ee6718c0efad4ac21508f1efd"
+source = "git+https://github.com/enigmampc/zeroize?rev=b8488228e3fdacbfdb3ea8a6117919871637d111#b8488228e3fdacbfdb3ea8a6117919871637d111"
 dependencies = [
  "zeroize_derive",
 ]
 
 [[package]]
 name = "zeroize_derive"
-version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdff2024a851a322b08f179173ae2ba620445aef1e838f0c196820eade4ae0c7"
+version = "1.0.1"
+source = "git+https://github.com/enigmampc/zeroize?tag=zeroize_derive/v1.0.1#c64dca0efef76cb858605581d261d3223b237231"
 dependencies = [
  "proc-macro2",
  "quote",

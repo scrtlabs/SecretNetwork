@@ -7,7 +7,6 @@ docs
 **/*.so
 **/Enclave_t.*
 **/Enclave_u.*
-**/*.lock
 third_party/vendor
 *.bin
 
