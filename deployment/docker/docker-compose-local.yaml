@@ -8,6 +8,7 @@ services:
 #      - /tmp/secretcli:/root/.secretcli
       - /tmp/secretd-bootstrap:/root/.secretd
 #      - /tmp/secretdbootstrap:/root/.secretd
+      - /tmp/sgx_secrets:/opt/secret/.sgx_secrets
     stdin_open: true
     tty: true
     environment:
@@ -16,8 +17,13 @@ services:
     expose:
       - 26656
       - 26657
+      - 1317
+      - 1337
     ports:
       - 26657:26657
+      - 26656:26656
+      - 1317:1317
+      - 1337:1337
 
 #  node:
 #    image: enigmampc/secret-network-sw-dev-custom-node:latest
