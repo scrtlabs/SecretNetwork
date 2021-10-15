@@ -595,7 +595,15 @@ func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []b
 	// 0x01 | codeID (uint64) -> ContractInfo
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddr))
 
-	queryResult, gasUsed, qErr := k.wasmer.Query(codeInfo.CodeHash, append(contractKey[:], req[:]...), prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx))
+	params := types.NewEnv(
+		ctx,
+		sdk.AccAddress{}, /* empty because it's unused in queries */
+		[]sdk.Coin{},     /* empty because it's unused in queries */
+		contractAddr,
+		contractKey,
+	)
+
+	queryResult, gasUsed, qErr := k.wasmer.Query(codeInfo.CodeHash, params, req, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx))
 	consumeGas(ctx, gasUsed)
 
 	if qErr != nil {

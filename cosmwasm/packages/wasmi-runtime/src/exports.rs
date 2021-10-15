@@ -290,6 +290,8 @@ pub unsafe extern "C" fn ecall_query(
     used_gas: *mut u64,
     contract: *const u8,
     contract_len: usize,
+    env: *const u8,
+    env_len: usize,
     msg: *const u8,
     msg_len: usize,
 ) -> QueryResult {
@@ -313,14 +315,17 @@ pub unsafe extern "C" fn ecall_query(
 
     let failed_call = || result_query_success_to_queryresult(Err(EnclaveError::FailedFunctionCall));
     validate_mut_ptr!(used_gas as _, std::mem::size_of::<u64>(), failed_call());
+    validate_const_ptr!(env, env_len as usize, failed_call());
     validate_const_ptr!(msg, msg_len as usize, failed_call());
     validate_const_ptr!(contract, contract_len as usize, failed_call());
 
     let contract = std::slice::from_raw_parts(contract, contract_len);
+    let env = std::slice::from_raw_parts(env, env_len);
     let msg = std::slice::from_raw_parts(msg, msg_len);
     let result = panic::catch_unwind(|| {
         let mut local_used_gas = *used_gas;
-        let result = crate::wasm::query(context, gas_limit, &mut local_used_gas, contract, msg);
+        let result =
+            crate::wasm::query(context, gas_limit, &mut local_used_gas, contract, env, msg);
         *used_gas = local_used_gas;
         result_query_success_to_queryresult(result)
     });

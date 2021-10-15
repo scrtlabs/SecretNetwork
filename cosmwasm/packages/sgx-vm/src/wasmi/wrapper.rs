@@ -202,9 +202,10 @@ where
         }
     }
 
-    pub fn query(&mut self, msg: &[u8]) -> VmResult<QuerySuccess> {
+    pub fn query(&mut self, env: &[u8], msg: &[u8]) -> VmResult<QuerySuccess> {
         trace!(
-            "query() called with msg: {:?} enclave_id: {:?}",
+            "query() called with env: {:?} msg: {:?} enclave_id: {:?}",
+            String::from_utf8_lossy(env),
             String::from_utf8_lossy(msg),
             self.enclave.geteid()
         );
@@ -221,6 +222,8 @@ where
                 &mut used_gas,
                 self.bytecode.as_ptr(),
                 self.bytecode.len(),
+                env.as_ptr(),
+                env.len(),
                 msg.as_ptr(),
                 msg.len(),
             )

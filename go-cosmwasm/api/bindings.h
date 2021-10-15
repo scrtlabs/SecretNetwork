@@ -188,6 +188,7 @@ Buffer migrate(cache_t *cache,
 
 Buffer query(cache_t *cache,
              Buffer code_id,
+             Buffer params,
              Buffer msg,
              DB db,
              GoApi api,

@@ -10,7 +10,7 @@ use crate::results::{HandleSuccess, InitSuccess, QuerySuccess};
 
 use super::contract_validation::{
     extract_contract_key, generate_encryption_key, validate_contract_key, validate_msg,
-    verify_params, ContractKey, CONTRACT_KEY_LENGTH,
+    verify_params, ContractKey,
 };
 use super::gas::WasmCosts;
 use super::io::encrypt_output;
@@ -163,6 +163,21 @@ pub fn handle(
     })?;
     parsed_env.contract_code_hash = hex::encode(contract_code.hash());
 
+    let canonical_contract_address = CanonicalAddr::from_human(&parsed_env.contract.address).map_err(|err| {
+        warn!(
+            "got an error while trying to deserialize parsed_env.contract.address from bech32 string to bytes {:?}: {}",
+            parsed_env.contract.address, err
+        );
+        EnclaveError::FailedToDeserialize
+    })?;
+
+    let contract_key = extract_contract_key(&parsed_env)?;
+
+    if !validate_contract_key(&contract_key, &canonical_contract_address, &contract_code) {
+        warn!("got an error while trying to deserialize output bytes");
+        return Err(EnclaveError::FailedContractAuthentication);
+    }
+
     trace!("handle parsed_env: {:?}", parsed_env);
 
     let parsed_sig_info: SigInfo = serde_json::from_slice(sig_info).map_err(|err| {
@@ -180,8 +195,6 @@ pub fn handle(
     // Verify env parameters against the signed tx
     verify_params(&parsed_sig_info, &parsed_env, &secret_msg)?;
 
-    let contract_key = extract_contract_key(&parsed_env)?;
-
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
 
@@ -191,19 +204,6 @@ pub fn handle(
         "Handle input afer decryption: {:?}",
         String::from_utf8_lossy(&validated_msg)
     );
-
-    let canonical_contract_address = CanonicalAddr::from_human(&parsed_env.contract.address).map_err(|err| {
-        warn!(
-            "got an error while trying to deserialize parsed_env.contract.address from bech32 string to bytes {:?}: {}",
-            parsed_env.contract.address, err
-        );
-        EnclaveError::FailedToDeserialize
-    })?;
-
-    if !validate_contract_key(&contract_key, &(canonical_contract_address.0).0, contract) {
-        warn!("got an error while trying to deserialize output bytes");
-        return Err(EnclaveError::FailedContractAuthentication);
-    }
 
     trace!("Successfully authenticated the contract!");
 
@@ -263,27 +263,45 @@ pub fn query(
     gas_limit: u64,
     used_gas: &mut u64,
     contract: &[u8],
+    env: &[u8],
     msg: &[u8],
 ) -> Result<QuerySuccess, EnclaveError> {
     let contract_code = ContractCode::new(contract);
 
-    if msg.len() < CONTRACT_KEY_LENGTH {
-        warn!("Input query is shorter than the minimum expected. Msg is malformed");
-        return Err(EnclaveError::FailedFunctionCall);
+    let mut parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
+        warn!(
+            "query got an error while trying to deserialize env input bytes into json {:?}: {}",
+            env, err
+        );
+        EnclaveError::FailedToDeserialize
+    })?;
+    parsed_env.contract_code_hash = hex::encode(contract_code.hash());
+
+    trace!("query env_v010: {:?}", parsed_env);
+
+    let canonical_contract_address = CanonicalAddr::from_human(&parsed_env.contract.address).map_err(|err| {
+        warn!(
+            "got an error while trying to deserialize parsed_env.contract.address from bech32 string to bytes {:?}: {}",
+            parsed_env.contract.address, err
+        );
+        EnclaveError::FailedToDeserialize
+    })?;
+
+    let contract_key = extract_contract_key(&parsed_env)?;
+
+    if !validate_contract_key(&contract_key, &canonical_contract_address, &contract_code) {
+        warn!("query got an error while trying to validate contract key");
+        return Err(EnclaveError::FailedContractAuthentication);
     }
 
-    let (key, msg) = msg.split_at(CONTRACT_KEY_LENGTH);
+    trace!("successfully authenticated the contract!");
+    trace!("query contract key: {:?}", hex::encode(contract_key));
 
-    let mut contract_key = [0; CONTRACT_KEY_LENGTH];
-    contract_key.copy_from_slice(key);
-
-    trace!("Query: Contract Key: {:?}", hex::encode(contract_key));
-
-    trace!("Query input before decryption: {:?}", base64::encode(&msg));
+    trace!("query input before decryption: {:?}", base64::encode(&msg));
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
     trace!(
-        "Query input afer decryption: {:?}",
+        "query input afer decryption: {:?}",
         String::from_utf8_lossy(&decrypted_msg)
     );
     let validated_msg = validate_msg(&decrypted_msg, contract_code.hash())?;
@@ -311,7 +329,7 @@ pub fn query(
             output,
             secret_msg.nonce,
             secret_msg.user_public_key,
-            &CanonicalAddr(Binary(Vec::new())), // Not used for queries
+            &CanonicalAddr(Binary(Vec::new())), // Not used for queries (can't init a new contract from a query)
         )?;
         Ok(output)
     })
