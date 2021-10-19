@@ -42,12 +42,12 @@ impl SealedKey for KeyPair {
 
 fn seal(data: &[u8; 32], filepath: &str) -> Result<(), EnclaveError> {
     let mut file = SgxFile::create(filepath).map_err(|_err| {
-        error!("error creating file: {:?}", _err);
+        error!("error creating file {}: {:?}", filepath, _err);
         EnclaveError::FailedSeal
     })?;
 
     file.write_all(data).map_err(|_err| {
-        error!("error writing to path: {:?}", _err);
+        error!("error writing to path {}: {:?}", filepath, _err);
         EnclaveError::FailedSeal
     })
 }

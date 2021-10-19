@@ -122,14 +122,12 @@ xgo_build_secretcli: go.sum
 	xgo --image techknowlogick/xgo:go-1.15.x --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --branch "$(CURRENT_BRANCH)" github.com/enigmampc/SecretNetwork/cmd/secretd
 
 build_local_no_rust: bin-data-$(IAS_BUILD)
-	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
+	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
 	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
-build-linux: vendor bin-data-$(IAS_BUILD)
+build-linux: _build-linux build_local_no_rust build_cli
+_build-linux: vendor
 	BUILD_PROFILE=$(BUILD_PROFILE) $(MAKE) -C go-cosmwasm build-rust
-	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
-#   this pulls out ELF symbols, 80% size reduction!
-	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 build_windows_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
@@ -154,8 +152,8 @@ deb-no-compile:
 	rm -rf /tmp/SecretNetwork
 
 	mkdir -p /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)
-	mv -f ./secretcli /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretcli
-	mv -f ./secretd /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretd
+	cp -f ./secretcli /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretcli
+	cp -f ./secretd /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretd
 	chmod +x /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretd /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretcli
 
 	mkdir -p /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)
