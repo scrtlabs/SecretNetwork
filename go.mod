@@ -9,7 +9,7 @@ require (
 	//github.com/CosmWasm/wasmd v0.11.1 // indirect
 	//github.com/DataDog/zstd v1.4.5 // indirect
 	github.com/cosmos/cosmos-sdk v0.44.1
-//	github.com/enigmampc/cosmos-sdk v0.9.1-scrt
+	//	github.com/enigmampc/cosmos-sdk v0.9.1-scrt
 	github.com/cosmos/ibc-go v1.0.0-rc3
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
 	//github.com/dgraph-io/badger/v2 v2.2007.2 // indirect
@@ -50,6 +50,6 @@ replace google.golang.org/grpc => google.golang.org/grpc v1.33.2
 
 // replace github.com/cosmos/cosmos-sdk v0.43.0-rc2 => github.com/enigmampc/cosmos-sdk secret-0.43
 
-replace github.com/cosmos/cosmos-sdk v0.44.1 => github.com/enigmampc/cosmos-sdk v0.44.2-0.20211007151409-4dc09ab65829
+replace github.com/cosmos/cosmos-sdk v0.44.1 => github.com/enigmampc/cosmos-sdk v0.44.2-0.20211020095204-07c3166e50d4
 
 //replace github.com/cosmos/cosmos-sdk v0.43.0-rc2 => github.com/enigmampc/cosmos-sdk v0.0.0-cc218f2182fb
