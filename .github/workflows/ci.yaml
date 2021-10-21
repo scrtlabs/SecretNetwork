@@ -297,6 +297,7 @@ jobs:
       - name: Build MacOS CLI
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
+          make bin-data
           make build_macos_cli
       - name: Build Windows CLI
         run: |
