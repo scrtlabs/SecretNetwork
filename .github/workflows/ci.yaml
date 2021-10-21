@@ -292,12 +292,13 @@ jobs:
           mkdir -p ias_keys/sw_dummy
           echo "not_a_key" > ias_keys/sw_dummy/spid.txt
           echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
+          go get -u github.com/jteeuwen/go-bindata/...
+          make bin-data
       - name: Install xgo
         run: go get github.com/karalabe/xgo
       - name: Build MacOS CLI
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          make bin-data
           make build_macos_cli
       - name: Build Windows CLI
         run: |
