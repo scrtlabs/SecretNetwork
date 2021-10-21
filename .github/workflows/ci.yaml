@@ -292,6 +292,9 @@ jobs:
           mkdir -p ias_keys/sw_dummy
           echo "not_a_key" > ias_keys/sw_dummy/spid.txt
           echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
+          mkdir -p ias_keys/develop
+          echo "not_a_key" > ias_keys/develop/spid.txt
+          echo "not_a_key" > ias_keys/develop/api_key.txt
           go get -u github.com/jteeuwen/go-bindata/...
           make bin-data
       - name: Install xgo
