@@ -397,7 +397,7 @@ aesm-image:
 # ref: https://github.com/golang/go/issues/30515
 statik:
 	@echo "Installing statik..."
-	@(cd /tmp && go get github.com/rakyll/statik@v0.1.6)
+	@(cd /tmp && GO111MODULE=on go get github.com/rakyll/statik@v0.1.6)
 
 
 update-swagger-docs: statik
