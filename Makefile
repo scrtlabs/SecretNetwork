@@ -3,6 +3,7 @@ VERSION ?= $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
 CURRENT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 DOCKER := $(shell which docker)
+DOCKER_BUF := $(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace bufbuild/buf
 
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
@@ -121,14 +122,12 @@ xgo_build_secretcli: go.sum
 	xgo --image techknowlogick/xgo:go-1.15.x --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --branch "$(CURRENT_BRANCH)" github.com/enigmampc/SecretNetwork/cmd/secretd
 
 build_local_no_rust: bin-data-$(IAS_BUILD)
-	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
+	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
 	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
-build-linux: vendor bin-data-$(IAS_BUILD)
+build-linux: _build-linux build_local_no_rust build_cli
+_build-linux: vendor
 	BUILD_PROFILE=$(BUILD_PROFILE) $(MAKE) -C go-cosmwasm build-rust
-	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
-#   this pulls out ELF symbols, 80% size reduction!
-	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 build_windows_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
@@ -153,8 +152,8 @@ deb-no-compile:
 	rm -rf /tmp/SecretNetwork
 
 	mkdir -p /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)
-	mv -f ./secretcli /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretcli
-	mv -f ./secretd /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretd
+	cp -f ./secretcli /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretcli
+	cp -f ./secretd /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretd
 	chmod +x /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretd /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretcli
 
 	mkdir -p /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)
@@ -304,7 +303,7 @@ go-tests: build-test-contract
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	rm -rf ./x/compute/internal/keeper/.sgx_secrets
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	SGX_MODE=SW go test -timeout 1200s -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -timeout 1200s -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 go-tests-hw: build-test-contract
 	# empty BUILD_PROFILE means debug mode which compiles faster
@@ -426,12 +425,16 @@ update-swagger-docs: statik
 
 # proto-check-breaking:
 #	@buf check breaking --against-input '.git#branch=master'
+
+protoVer=v0.2
+
 proto-all: proto-format proto-lint proto-gen
 
 proto-gen:
 	@echo "Generating Protobuf files"
-	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen sh ./scripts/protocgen.sh
+	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
 
+# This one doesn't work and i can't find the right docker repo
 proto-format:
 	@echo "Formatting Protobuf files"
 	$(DOCKER) run --rm -v $(CURDIR):/workspace \
@@ -439,7 +442,7 @@ proto-format:
 	find ./ -not -path "./third_party/*" -name *.proto -exec clang-format -i {} \;
 
 proto-swagger-gen:
-	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen sh ./scripts/protoc-swagger-gen.sh
+	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) ./scripts/protoc-swagger-gen.sh
 
 proto-lint:
 	@$(DOCKER_BUF) lint --error-format=json

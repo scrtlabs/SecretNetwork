@@ -138,13 +138,14 @@ pub fn call_migrate_raw<S: Storage + 'static, A: Api + 'static, Q: Querier + 'st
 /// The result is length limited to prevent abuse but otherwise unchecked.
 pub fn call_query_raw<S: Storage + 'static, A: Api + 'static, Q: Querier + 'static>(
     instance: &mut Instance<S, A, Q>,
+    env: &[u8],
     msg: &[u8],
 ) -> VmResult<Vec<u8>> {
     instance.set_storage_readonly(true);
     /*
     call_raw(instance, "query", &[msg], MAX_LENGTH_QUERY)
     */
-    instance.call_query(msg)
+    instance.call_query(env, msg)
 }
 
 #[cfg(not(feature = "default-enclave"))]

@@ -6,7 +6,7 @@ use crate::cosmwasm::types::{CanonicalAddr, Coin, Env, HumanAddr};
 use crate::crypto::traits::PubKey;
 use crate::crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
 use crate::wasm::io;
-use crate::wasm::types::{SecretMessage, StdSignDoc};
+use crate::wasm::types::{ContractCode, SecretMessage, StdSignDoc};
 
 use super::types::{CosmWasmMsg, CosmosPubKey, SigInfo, SignDoc};
 
@@ -102,8 +102,8 @@ pub fn calc_contract_hash(contract_bytes: &[u8]) -> [u8; HASH_SIZE] {
 
 pub fn validate_contract_key(
     contract_key: &[u8; CONTRACT_KEY_LENGTH],
-    contract_address: &[u8],
-    contract_code: &[u8],
+    contract_address: &CanonicalAddr,
+    contract_code: &ContractCode,
 ) -> bool {
     // parse contract key -> < signer_id || authentication_code >
     let mut signer_id: [u8; HASH_SIZE] = [0u8; HASH_SIZE];
@@ -111,9 +111,6 @@ pub fn validate_contract_key(
 
     let mut expected_authentication_id: [u8; HASH_SIZE] = [0u8; HASH_SIZE];
     expected_authentication_id.copy_from_slice(&contract_key[HASH_SIZE..]);
-
-    // calculate contract hash
-    let contract_hash = calc_contract_hash(contract_code);
 
     // get the enclave key
     let enclave_key = KEY_MANAGER
@@ -125,8 +122,12 @@ pub fn validate_contract_key(
         .unwrap();
 
     // calculate the authentication_id
-    let calculated_authentication_id =
-        generate_contract_id(&enclave_key, &signer_id, &contract_hash, contract_address);
+    let calculated_authentication_id = generate_contract_id(
+        &enclave_key,
+        &signer_id,
+        &contract_code.hash(),
+        contract_address.as_slice(),
+    );
 
     calculated_authentication_id == expected_authentication_id
 }

@@ -44,7 +44,9 @@ then
   secretd collect-gentxs
   secretd validate-genesis
 
+#  secretd init-enclave
   secretd init-bootstrap
+#  cp new_node_seed_exchange_keypair.sealed .sgx_secrets
   secretd validate-genesis
 fi
 

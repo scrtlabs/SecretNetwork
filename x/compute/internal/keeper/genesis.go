@@ -25,7 +25,7 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) error 
 
 	var maxContractID int
 	for i, contract := range data.Contracts {
-		err := keeper.importContract(ctx, contract.ContractAddress, &contract.ContractInfo, contract.ContractState)
+		err := keeper.importContract(ctx, contract.ContractAddress, contract.ContractCustomInfo, &contract.ContractInfo, contract.ContractState)
 		if err != nil {
 			return sdkerrors.Wrapf(err, "contract number %d", i)
 		}
@@ -70,7 +70,7 @@ func ExportGenesis(ctx sdk.Context, keeper Keeper) *types.GenesisState {
 		return false
 	})
 
-	keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, contract types.ContractInfo) bool {
+	keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, contract types.ContractInfo, contractCustomInfo types.ContractCustomInfo) bool {
 		contractStateIterator := keeper.GetContractState(ctx, addr)
 		var state []types.Model
 		for ; contractStateIterator.Valid(); contractStateIterator.Next() {
@@ -80,13 +80,15 @@ func ExportGenesis(ctx sdk.Context, keeper Keeper) *types.GenesisState {
 			}
 			state = append(state, m)
 		}
+
 		// redact contract info
 		contract.Created = nil
 
 		genState.Contracts = append(genState.Contracts, types.Contract{
-			ContractAddress: addr,
-			ContractInfo:    contract,
-			ContractState:   state,
+			ContractAddress:    addr,
+			ContractInfo:       contract,
+			ContractState:      state,
+			ContractCustomInfo: &contractCustomInfo,
 		})
 
 		return false

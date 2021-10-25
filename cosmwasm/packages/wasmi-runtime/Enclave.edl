@@ -90,6 +90,8 @@ enclave {
             [out] uint64_t* used_gas,
             [in, count=contract_len] const uint8_t* contract,
             uintptr_t contract_len,
+            [in, count=env_len] const uint8_t* env,
+            uintptr_t env_len,
             [in, count=msg_len] const uint8_t* msg,
             uintptr_t msg_len
         );
