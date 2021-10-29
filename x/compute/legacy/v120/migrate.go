@@ -1,8 +1,8 @@
 package v120
 
 import (
-	v106compute "github.com/enigmampc/SecretNetwork/x/compute/internal/legacy/v106"
 	v120compute "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	v106compute "github.com/enigmampc/SecretNetwork/x/compute/legacy/v106"
 )
 
 // Migrate accepts exported v1.0.6 x/compute genesis state and
