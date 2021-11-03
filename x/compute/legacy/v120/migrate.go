@@ -34,16 +34,21 @@ func Migrate(computeGenState v106compute.GenesisState) *v120compute.GenesisState
 			}
 		}
 
+		var created *v120compute.AbsoluteTxPosition
+		if contract.ContractInfo.Created != nil {
+			created = &v120compute.AbsoluteTxPosition{
+				BlockHeight: contract.ContractInfo.Created.BlockHeight,
+				TxIndex:     contract.ContractInfo.Created.TxIndex,
+			}
+		}
+
 		contracts[i] = v120compute.Contract{
 			ContractAddress: contract.ContractAddress,
 			ContractInfo: v120compute.ContractInfo{
 				CodeID:  contract.ContractInfo.CodeID,
 				Creator: contract.ContractInfo.Creator,
 				Label:   contract.ContractInfo.Label,
-				Created: &v120compute.AbsoluteTxPosition{
-					BlockHeight: contract.ContractInfo.Created.BlockHeight,
-					TxIndex:     contract.ContractInfo.Created.TxIndex,
-				},
+				Created: created,
 			},
 			ContractState: state,
 			ContractCustomInfo: &v120compute.ContractCustomInfo{

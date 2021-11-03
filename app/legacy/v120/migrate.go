@@ -15,6 +15,7 @@ import (
 	v040bank "github.com/cosmos/cosmos-sdk/x/bank/legacy/v040"
 	v039crisis "github.com/cosmos/cosmos-sdk/x/crisis/legacy/v039"
 	v040crisis "github.com/cosmos/cosmos-sdk/x/crisis/legacy/v040"
+	v036distribution "github.com/cosmos/cosmos-sdk/x/distribution/legacy/v036"
 	v038distr "github.com/cosmos/cosmos-sdk/x/distribution/legacy/v038"
 	v040distr "github.com/cosmos/cosmos-sdk/x/distribution/legacy/v040"
 	v038evidence "github.com/cosmos/cosmos-sdk/x/evidence/legacy/v038"
@@ -27,10 +28,12 @@ import (
 	v043gov "github.com/cosmos/cosmos-sdk/x/gov/legacy/v043"
 	v039mint "github.com/cosmos/cosmos-sdk/x/mint/legacy/v039"
 	v040mint "github.com/cosmos/cosmos-sdk/x/mint/legacy/v040"
+	v036params "github.com/cosmos/cosmos-sdk/x/params/legacy/v036"
 	v039slashing "github.com/cosmos/cosmos-sdk/x/slashing/legacy/v039"
 	v040slashing "github.com/cosmos/cosmos-sdk/x/slashing/legacy/v040"
 	v038staking "github.com/cosmos/cosmos-sdk/x/staking/legacy/v038"
 	v040staking "github.com/cosmos/cosmos-sdk/x/staking/legacy/v040"
+	v038upgrade "github.com/cosmos/cosmos-sdk/x/upgrade/legacy/v038"
 
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	v106compute "github.com/enigmampc/SecretNetwork/x/compute/legacy/v106"
@@ -121,7 +124,11 @@ func v039authMigrate(oldAuthGenState v038auth.GenesisState, legacyCdc *codec.Leg
 func Migrate(appState types.AppMap, clientCtx client.Context) types.AppMap {
 	v106Codec := codec.NewLegacyAmino()
 	v038auth.RegisterLegacyAminoCodec(v106Codec)
-	//v039auth.RegisterLegacyAminoCodec(v106Codec)
+	v036gov.RegisterLegacyAminoCodec(v106Codec)
+	v036params.RegisterLegacyAminoCodec(v106Codec)
+	v036distribution.RegisterLegacyAminoCodec(v106Codec)
+	v038upgrade.RegisterLegacyAminoCodec(v106Codec)
+
 	v120Codec := clientCtx.Codec
 
 	if appState[v038bank.ModuleName] != nil {
