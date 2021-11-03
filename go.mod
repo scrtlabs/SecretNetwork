@@ -8,9 +8,9 @@ require (
 	github.com/coinbase/rosetta-sdk-go v0.6.10 // indirect
 	//github.com/CosmWasm/wasmd v0.11.1 // indirect
 	//github.com/DataDog/zstd v1.4.5 // indirect
-	github.com/cosmos/cosmos-sdk v0.44.1
+	github.com/cosmos/cosmos-sdk v0.44.3
 	//	github.com/enigmampc/cosmos-sdk v0.9.1-scrt
-	github.com/cosmos/ibc-go v1.0.0-rc3
+	github.com/cosmos/ibc-go v1.2.2
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
 	//github.com/dgraph-io/badger/v2 v2.2007.2 // indirect
 	//github.com/dgraph-io/ristretto v0.0.3 // indirect
@@ -34,7 +34,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
 	github.com/stretchr/testify v1.7.0
-	github.com/tendermint/tendermint v0.34.13
+	github.com/tendermint/tendermint v0.34.14
 	github.com/tendermint/tm-db v0.6.4
 	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
 	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c
@@ -50,6 +50,6 @@ replace google.golang.org/grpc => google.golang.org/grpc v1.33.2
 
 // replace github.com/cosmos/cosmos-sdk v0.43.0-rc2 => github.com/enigmampc/cosmos-sdk secret-0.43
 
-replace github.com/cosmos/cosmos-sdk v0.44.1 => github.com/enigmampc/cosmos-sdk v0.44.2-0.20211020095204-07c3166e50d4
+replace github.com/cosmos/cosmos-sdk v0.44.1 => github.com/enigmampc/cosmos-sdk v0.44.4-0.20211103164841-b7ae40d816ad
 
 //replace github.com/cosmos/cosmos-sdk v0.43.0-rc2 => github.com/enigmampc/cosmos-sdk v0.0.0-cc218f2182fb
