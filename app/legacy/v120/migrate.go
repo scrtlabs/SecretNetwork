@@ -34,10 +34,13 @@ import (
 	v038staking "github.com/cosmos/cosmos-sdk/x/staking/legacy/v038"
 	v040staking "github.com/cosmos/cosmos-sdk/x/staking/legacy/v040"
 	v038upgrade "github.com/cosmos/cosmos-sdk/x/upgrade/legacy/v038"
+	v106registration "github.com/enigmampc/SecretNetwork/x/registration/legacy/v106"
+	v120registration "github.com/enigmampc/SecretNetwork/x/registration/legacy/v120"
 
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	v106compute "github.com/enigmampc/SecretNetwork/x/compute/legacy/v106"
 	v120compute "github.com/enigmampc/SecretNetwork/x/compute/legacy/v120"
+	v106tokenswap "github.com/enigmampc/SecretNetwork/x/tokenswap/legacy/v106"
 )
 
 func migrateGenutil(oldGenState v039genutil.GenesisState) *types.GenesisState {
@@ -310,6 +313,24 @@ func Migrate(appState types.AppMap, clientCtx client.Context) types.AppMap {
 		// Migrate relative source genesis application state and marshal it into
 		// the respective key.
 		appState[v120compute.ModuleName] = v120Codec.MustMarshalJSON(v120compute.Migrate(computeGenState))
+	}
+
+	if appState[v106registration.ModuleName] != nil {
+		// unmarshal relative source genesis application state
+		var registerGenState v106registration.GenesisState
+		v106Codec.MustUnmarshalJSON(appState[v106registration.ModuleName], &registerGenState)
+
+		// delete deprecated x/staking genesis state
+		delete(appState, v106registration.ModuleName)
+
+		// Migrate relative source genesis application state and marshal it into
+		// the respective key.
+		appState[v120registration.ModuleName] = v120Codec.MustMarshalJSON(v120registration.Migrate(registerGenState))
+	}
+
+	if appState[v106tokenswap.ModuleName] != nil {
+		// Token Swap module is discontinued
+		delete(appState, v106tokenswap.ModuleName)
 	}
 
 	return appState
