@@ -447,9 +447,9 @@ func NewSecretNetworkApp(
 	app.mm.SetOrderInitGenesis(
 		capabilitytypes.ModuleName,
 		authtypes.ModuleName,
+		banktypes.ModuleName,
 		distrtypes.ModuleName,
 		stakingtypes.ModuleName,
-		banktypes.ModuleName,
 		slashingtypes.ModuleName,
 		govtypes.ModuleName,
 		//custom modules
@@ -459,11 +459,11 @@ func NewSecretNetworkApp(
 		authz.ModuleName,
 		minttypes.ModuleName,
 		crisistypes.ModuleName,
-		genutiltypes.ModuleName,
 		ibchost.ModuleName,
+		genutiltypes.ModuleName,
 		evidencetypes.ModuleName,
-		feegrant.ModuleName,
 		ibctransfertypes.ModuleName,
+		feegrant.ModuleName,
 	)
 
 	// register all module routes and module queriers
