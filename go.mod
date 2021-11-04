@@ -10,7 +10,7 @@ require (
 	//github.com/DataDog/zstd v1.4.5 // indirect
 	github.com/cosmos/cosmos-sdk v0.44.3
 	//	github.com/enigmampc/cosmos-sdk v0.9.1-scrt
-	github.com/cosmos/ibc-go v1.2.2
+	github.com/cosmos/ibc-go v1.1.2
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
 	//github.com/dgraph-io/badger/v2 v2.2007.2 // indirect
 	//github.com/dgraph-io/ristretto v0.0.3 // indirect
