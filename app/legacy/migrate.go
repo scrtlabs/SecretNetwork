@@ -61,15 +61,6 @@ $ terrad migrate /path/to/genesis.json --chain-id=cosmoshub-4 --genesis-time=201
 				return errors.Wrapf(err, "failed to read genesis document from file %s", importGenesis)
 			}
 
-			// TODO needed?
-			// increase block consensus params
-			genDoc.ConsensusParams.Block.MaxBytes = int64(5_000_000)
-			genDoc.ConsensusParams.Block.MaxGas = int64(1_000_000_000)
-
-			// TODO needed?
-			// decrease evidence max bytes
-			genDoc.ConsensusParams.Evidence.MaxBytes = int64(50000)
-
 			var initialState types.AppMap
 			if err := json.Unmarshal(genDoc.AppState, &initialState); err != nil {
 				return errors.Wrap(err, "failed to JSON unmarshal initial genesis state")
@@ -81,46 +72,6 @@ $ terrad migrate /path/to/genesis.json --chain-id=cosmoshub-4 --genesis-time=201
 			var bankGenesis banktypes.GenesisState
 
 			clientCtx.Codec.MustUnmarshalJSON(newGenState[banktypes.ModuleName], &bankGenesis)
-
-			//var oracleGenesis oracletypes.GenesisState
-			//clientCtx.Codec.MustUnmarshalJSON(newGenState[oracletypes.ModuleName], &oracleGenesis)
-
-			// Register whitelist denom list
-			//denomMetadata := make([]banktypes.Metadata, len(oracleGenesis.Params.Whitelist)+1)
-			//denomMetadata[0] = banktypes.Metadata{
-			//	Description: "The native staking token of the Terra Columbus.",
-			//	DenomUnits: []*banktypes.DenomUnit{
-			//		{Denom: "uluna", Exponent: uint32(0), Aliases: []string{"microluna"}},
-			//		{Denom: "mluna", Exponent: uint32(3), Aliases: []string{"milliluna"}},
-			//		{Denom: "luna", Exponent: uint32(6), Aliases: []string{}},
-			//	},
-			//	Base:    "uluna",
-			//	Display: "luna",
-			//	Name:    "LUNA",
-			//	Symbol:  "LUNA",
-			//}
-			//
-			//for i, w := range oracleGenesis.Params.Whitelist {
-			//	base := w.Name
-			//	display := base[1:]
-			//	denomMetadata[i+1] = banktypes.Metadata{
-			//		Description: "The native stable token of the Terra Columbus.",
-			//		DenomUnits: []*banktypes.DenomUnit{
-			//			{Denom: "u" + display, Exponent: uint32(0), Aliases: []string{"micro" + display}},
-			//			{Denom: "m" + display, Exponent: uint32(3), Aliases: []string{"milli" + display}},
-			//			{Denom: display, Exponent: uint32(6), Aliases: []string{}},
-			//		},
-			//		Base:    base,
-			//		Display: display,
-			//		Name:    fmt.Sprintf("%s TERRA", strings.ToUpper(display)),
-			//		Symbol:  fmt.Sprintf("%sT", strings.ToUpper(display[:len(display)-1])),
-			//	}
-			//}
-
-			//bankGenesis.DenomMetadata = denomMetadata
-			//newGenState[banktypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&bankGenesis)
-
-			// TODO jail everyone?
 
 			var stakingGenesis staking.GenesisState
 
@@ -169,12 +120,6 @@ $ terrad migrate /path/to/genesis.json --chain-id=cosmoshub-4 --genesis-time=201
 
 			genDoc.InitialHeight = int64(initialHeight)
 
-			//replacementKeys, _ := cmd.Flags().GetString(flagReplacementKeys)
-			//
-			//if replacementKeys != "" {
-			//	genDoc = loadKeydataFromFile(clientCtx, replacementKeys, genDoc)
-			//}
-
 			bz, err := tmjson.Marshal(genDoc)
 			if err != nil {
 				return errors.Wrap(err, "failed to marshal genesis doc")
@@ -192,7 +137,6 @@ $ terrad migrate /path/to/genesis.json --chain-id=cosmoshub-4 --genesis-time=201
 
 	cmd.Flags().String(flagGenesisTime, "", "override genesis_time with this flag")
 	cmd.Flags().Int(flagInitialHeight, 0, "Set the starting height for the chain")
-	//cmd.Flags().String(flagReplacementKeys, "", "Provide a JSON file to replace the consensus keys of validators")
 	cmd.Flags().String(flags.FlagChainID, "", "override chain_id with this flag")
 
 	return cmd

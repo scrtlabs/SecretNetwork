@@ -6,8 +6,8 @@ import (
 	v120ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 )
 
-// Migrate accepts exported v1.0.6 x/compute genesis state and
-// migrates it to v1.2.0 x/compute genesis state. The migration includes:
+// Migrate accepts exported v1.0.6 x/registration genesis state and
+// migrates it to v1.2.0 x/registration genesis state. The migration includes:
 //
 // - Re-encode in v1.2.0 GenesisState.
 func Migrate(regGenState v106registration.GenesisState) *v120registration.GenesisState {
