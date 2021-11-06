@@ -350,6 +350,8 @@ github.com/enigmampc/cosmos-sdk v0.44.2-0.20211007151409-4dc09ab65829 h1:u86Oxac
 github.com/enigmampc/cosmos-sdk v0.44.2-0.20211007151409-4dc09ab65829/go.mod h1:fwQJdw+aECatpTvQTo1tSfHEsxACdZYU80QCZUPnHr4=
 github.com/enigmampc/cosmos-sdk v0.44.2-0.20211020095204-07c3166e50d4 h1:SrXIRhGRI5RjxAN9BIwIfwtHtP3RKdqiClryvtQoTdI=
 github.com/enigmampc/cosmos-sdk v0.44.2-0.20211020095204-07c3166e50d4/go.mod h1:fwQJdw+aECatpTvQTo1tSfHEsxACdZYU80QCZUPnHr4=
+github.com/enigmampc/cosmos-sdk v0.44.4-0.20211103164841-b7ae40d816ad h1:p429HCW148pPi+ExlOVq+XtH8NEU+O49EYFWxAhjDLo=
+github.com/enigmampc/cosmos-sdk v0.44.4-0.20211103164841-b7ae40d816ad/go.mod h1:bA3+VenaR/l/vDiYzaiwbWvRPWHMBX2jG0ygiFtiBp0=
 github.com/envoyproxy/go-control-plane v0.6.9/go.mod h1:SBwIajubJHhxtWwsL9s8ss4safvEdbitLhGGK48rN6g=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
