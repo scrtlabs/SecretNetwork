@@ -47,7 +47,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
     let result = panic::catch_unwind(|| -> Result<Vec<u8>, NodeAuthResult> {
         // verify certificate, and return the public key in the extra data of the report
-        let pk = verify_ra_cert(cert_slice)?;
+        let pk = verify_ra_cert(cert_slice, None)?;
 
         // just make sure the length isn't wrong for some reason (certificate may be malformed)
         if pk.len() != PUBLIC_KEY_SIZE {
