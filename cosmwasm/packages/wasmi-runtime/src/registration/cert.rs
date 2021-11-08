@@ -3,6 +3,7 @@
 use bit_vec::BitVec;
 use chrono::Utc as TzUtc;
 use chrono::{Duration, TimeZone};
+use crate::consts::SigningMethod;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use log::*;
@@ -24,7 +25,7 @@ use super::attestation::get_mr_enclave;
 use crate::consts::CERTEXPIRYDAYS;
 
 #[cfg(feature = "SGX_MODE_HW")]
-use crate::consts::{SigningMethod, MRSIGNER, SIGNING_METHOD};
+use crate::consts::{MRSIGNER, SIGNING_METHOD};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use super::report::{AttestationReport, SgxQuoteStatus};
