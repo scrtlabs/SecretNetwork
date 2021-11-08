@@ -41,7 +41,7 @@ func MigrateGenesisCmd() *cobra.Command {
 		Long: `Migrate the source genesis into the target version and print to STDOUT.
 
 Example:
-$ terrad migrate /path/to/genesis.json --chain-id=cosmoshub-4 --genesis-time=2019-04-22T17:00:00Z --initial-height=5000
+$ secretd migrate /path/to/genesis.json --chain-id=secret-4 --genesis-time=2019-04-22T17:00:00Z --initial-height=5000
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -60,6 +60,13 @@ $ terrad migrate /path/to/genesis.json --chain-id=cosmoshub-4 --genesis-time=201
 			if err != nil {
 				return errors.Wrapf(err, "failed to read genesis document from file %s", importGenesis)
 			}
+
+			// increase block consensus params
+			genDoc.ConsensusParams.Block.MaxBytes = int64(10_000_000)
+			genDoc.ConsensusParams.Block.MaxGas = int64(10_000_000)
+
+			// decrease evidence max bytes
+			genDoc.ConsensusParams.Evidence.MaxBytes = int64(50000)
 
 			var initialState types.AppMap
 			if err := json.Unmarshal(genDoc.AppState, &initialState); err != nil {

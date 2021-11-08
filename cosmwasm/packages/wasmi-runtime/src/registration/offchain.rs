@@ -11,10 +11,7 @@ use std::slice;
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_ffi_types::NodeAuthResult;
 
-use crate::consts::{
-    ATTESTATION_CERT_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH,
-    SEED_EXCH_CERTIFICATE_SAVE_PATH,
-};
+use crate::consts::{ATTESTATION_CERT_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH, SEED_EXCH_CERTIFICATE_SAVE_PATH, SigningMethod};
 use crate::crypto::{Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
 #[cfg(feature = "SGX_MODE_HW")]
 use crate::registration::report::AttestationReport;
@@ -154,7 +151,8 @@ pub unsafe extern "C" fn ecall_init_node(
     let mut target_public_key: [u8; PUBLIC_KEY_SIZE] = [0u8; PUBLIC_KEY_SIZE];
 
     // validate certificate w/ attestation report
-    let pk = match verify_ra_cert(cert_slice) {
+    // testing only
+    let pk = match verify_ra_cert(cert_slice, Some(SigningMethod::MRSIGNER)) {
         Err(e) => {
             error!("Error in validating certificate: {:?}", e);
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
@@ -296,7 +294,7 @@ fn print_local_report_info(cert: &[u8]) {
                 println!("Platform status is GROUP_OUT_OF_DATE. This means that one of the system components is missing a security update");
             }
             _ => {
-                println!("Platform status is {}", status);
+                println!("Platform status is {:?}", status);
             }
         },
         _ => println!("Platform Okay!"),
