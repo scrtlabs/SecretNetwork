@@ -701,9 +701,9 @@ func (k Keeper) setContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress,
 func (k Keeper) setContractCustomInfo(ctx sdk.Context, contractAddress sdk.AccAddress, contract *types.ContractCustomInfo) {
 	store := ctx.KVStore(k.storeKey)
 	store.Set(types.GetContractEnclaveKey(contractAddress), contract.EnclaveKey)
-	println(fmt.Sprintf("Setting enclave key: %x: %x\n", types.GetContractEnclaveKey(contractAddress), contract.EnclaveKey))
+	//println(fmt.Sprintf("Setting enclave key: %x: %x\n", types.GetContractEnclaveKey(contractAddress), contract.EnclaveKey))
 	store.Set(types.GetContractLabelPrefix(contract.Label), contractAddress)
-	println(fmt.Sprintf("Setting label: %x: %x\n", types.GetContractLabelPrefix(contract.Label), contractAddress))
+	//println(fmt.Sprintf("Setting label: %x: %x\n", types.GetContractLabelPrefix(contract.Label), contractAddress))
 }
 
 func (k Keeper) IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, types.ContractInfo, types.ContractCustomInfo) bool) {
@@ -715,8 +715,8 @@ func (k Keeper) IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, typ
 		k.cdc.MustUnmarshal(iter.Value(), &contract)
 
 		enclaveId := ctx.KVStore(k.storeKey).Get(types.GetContractEnclaveKey(iter.Key()))
-		println(fmt.Sprintf("Setting enclave key: %x: %x\n", types.GetContractEnclaveKey(iter.Key()), enclaveId))
-		println(fmt.Sprintf("Setting label: %x: %x\n", types.GetContractLabelPrefix(contract.Label), contract.Label))
+		//println(fmt.Sprintf("Setting enclave key: %x: %x\n", types.GetContractEnclaveKey(iter.Key()), enclaveId))
+		//println(fmt.Sprintf("Setting label: %x: %x\n", types.GetContractLabelPrefix(contract.Label), contract.Label))
 
 		contractCustomInfo := types.ContractCustomInfo{
 			EnclaveKey: enclaveId,
