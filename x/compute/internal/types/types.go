@@ -11,8 +11,8 @@ import (
 )
 
 const defaultLRUCacheSize = uint64(0)
-const defaultEnclaveLRUCacheSize = uint8(5) // can safely go up to 15
-const defaultQueryGasLimit = uint64(3000000)
+const defaultEnclaveLRUCacheSize = uint8(0) // can safely go up to 15
+const defaultQueryGasLimit = uint64(10_000_000)
 
 // base64 of a 64 byte key
 type ContractKey string
@@ -245,7 +245,7 @@ type SecretMsg struct {
 func NewSecretMsg(codeHash []byte, msg []byte) SecretMsg {
 	return SecretMsg{
 		CodeHash: codeHash,
-		Msg: msg,
+		Msg:      msg,
 	}
 }
 
