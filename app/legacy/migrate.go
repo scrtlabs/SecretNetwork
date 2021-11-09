@@ -3,6 +3,7 @@ package legacy
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/x/authz"
 	"io/ioutil"
 	"time"
 
@@ -88,6 +89,7 @@ $ secretd migrate /path/to/genesis.json --chain-id=secret-4 --genesis-time=2019-
 			ibcCoreGenesis := ibccoretypes.DefaultGenesisState()
 			capGenesis := captypes.DefaultGenesis()
 			evGenesis := evtypes.DefaultGenesisState()
+			authzGenesis := authz.DefaultGenesisState()
 
 			ibcTransferGenesis.Params.ReceiveEnabled = false
 			ibcTransferGenesis.Params.SendEnabled = false
@@ -100,6 +102,7 @@ $ secretd migrate /path/to/genesis.json --chain-id=secret-4 --genesis-time=2019-
 			newGenState[captypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(capGenesis)
 			newGenState[evtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(evGenesis)
 			newGenState[staking.ModuleName] = clientCtx.Codec.MustMarshalJSON(&stakingGenesis)
+			newGenState[authz.ModuleName] = clientCtx.Codec.MustMarshalJSON(authzGenesis)
 
 			genDoc.AppState, err = json.Marshal(newGenState)
 			if err != nil {
