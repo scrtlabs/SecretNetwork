@@ -16,7 +16,7 @@ Do you want to ask a question? Are you looking for support? The Secret Network F
 
 * [Ask questions in the RocketChat](https://chat.scrt.network)
 * [Look through recent posts on the forum](https://forum.scrt.network)
-* [Check issues that have already been filed](https://github.com/issues?utf8=✓&q=is%3Aissue+user%3Aenigmampc)
+* [Check issues that have already been filed](https://github.com/issues?utf8=✓&q=is%3Aissue+user%3Ascrtlabs)
 
 ### Description
 
