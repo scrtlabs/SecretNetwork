@@ -279,7 +279,7 @@ Before deploying your contract make sure it's configured to point to an existing
 without providing an account password each time.
 
 ```bash
-secretcli config node http://bootstrap.secrettestnet.io:26657
+secretcli config node https://chainofsecrets.secrettestnet.io:26667
 
 secretcli config chain-id holodeck-2
 
@@ -300,7 +300,9 @@ secretcli keys add <your account alias>
 
 This will output your address, a 45 character-string starting with `secret1...`. Copy/paste it to get some testnet SCRT from 
 [the faucet](https://faucet.secrettestnet.io/). 
-Continue when you have confirmed your account has some SCRT in it.
+Continue when you have confirmed your account has some SCRT in it by running `secretcli query account <address>` (pasting the same 45 character string as the address). 
+
+If the address is not found, most likely the faucet did not transfer any funds to your address, in which case you can ask for some testnet secret in the [#secret-testnet](http://chat.scrt.network/) discord channel.
 
 #### Store the Secret Contract on Holodeck
 
