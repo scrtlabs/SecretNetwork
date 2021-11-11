@@ -101,7 +101,7 @@ export interface ExecuteResult {
   readonly logs: readonly Log[];
   /** Transaction hash (might be used as transaction ID). Guaranteed to be non-empty upper-case hex */
   readonly transactionHash: string;
-  readonly data: string;
+  readonly data: any;
 }
 
 export class SigningCosmWasmClient extends CosmWasmClient {
@@ -412,7 +412,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     //
     // const logs = await this.restClient.decryptLogs(result.logs, nonces);
 
-    let data = "";
+    let data = Uint8Array.from([]);
     if (this.restClient.broadcastMode == BroadcastMode.Block) {
 
       const dataFields: MsgData[] = decodeTxData(Encoding.fromHex(result.data));
@@ -499,7 +499,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
 
       throw err;
     }
-    let data = "";
+    let data = Uint8Array.from([]);
     if (this.restClient.broadcastMode == BroadcastMode.Block) {
 
       const dataFields: MsgData[] = decodeTxData(Encoding.fromHex(result.data));
