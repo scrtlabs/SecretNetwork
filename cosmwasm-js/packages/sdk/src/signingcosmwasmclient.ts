@@ -311,7 +311,7 @@ export class SigningCosmWasmClient extends CosmWasmClient {
       contractAddress = findAttribute(result.logs, "message", "contract_address")?.value;
     }
 
-    const logs = await this.restClient.decryptLogs(result.logs, [nonce]);
+    const logs = this.restClient.broadcastMode == BroadcastMode.Block ? await this.restClient.decryptLogs(result.logs, [nonce]) : [];
 
     return {
       contractAddress,
@@ -400,17 +400,32 @@ export class SigningCosmWasmClient extends CosmWasmClient {
 
     const nonces = msgs.map((msg) => Encoding.fromBase64(msg.value.msg).slice(0, 32));
 
-    //const data = await this.restClient.decryptDataField(result.data, nonces);
-    const dataFields: MsgData[] = decodeTxData(Encoding.fromHex(result.data));
+    // //const data = await this.restClient.decryptDataField(result.data, nonces);
+    // const dataFields: MsgData[] = decodeTxData(Encoding.fromHex(result.data));
+    //
+    // let data = Uint8Array.from([]);
+    // if (dataFields[0].data) {
+    //   // dataFields[0].data = JSON.parse(decryptedData.toString());
+    //   // @ts-ignore
+    //   data = await this.restClient.decryptDataField(Encoding.toHex(Encoding.fromBase64(dataFields[0].data)), nonces);
+    // }
+    //
+    // const logs = await this.restClient.decryptLogs(result.logs, nonces);
 
-    let data = Uint8Array.from([]);
-    if (dataFields[0].data) {
-      // dataFields[0].data = JSON.parse(decryptedData.toString());
-      // @ts-ignore
-      data = await this.restClient.decryptDataField(Encoding.toHex(Encoding.fromBase64(dataFields[0].data)), nonces);
+    let data = "";
+    if (this.restClient.broadcastMode == BroadcastMode.Block) {
+
+      const dataFields: MsgData[] = decodeTxData(Encoding.fromHex(result.data));
+
+      if (dataFields[0].data) {
+        // decryptedData =
+        // dataFields[0].data = JSON.parse(decryptedData.toString());
+        // @ts-ignore
+        data = await this.restClient.decryptDataField(Encoding.toHex(Encoding.fromBase64(dataFields[0].data)), nonces);
+      }
     }
 
-    const logs = await this.restClient.decryptLogs(result.logs, nonces);
+    const logs = this.restClient.broadcastMode == BroadcastMode.Block ? await this.restClient.decryptLogs(result.logs, nonces) : [];
 
     return {
       logs: logs,
@@ -484,19 +499,21 @@ export class SigningCosmWasmClient extends CosmWasmClient {
 
       throw err;
     }
+    let data = "";
+    if (this.restClient.broadcastMode == BroadcastMode.Block) {
 
-    const dataFields: MsgData[] = decodeTxData(Encoding.fromHex(result.data));
+      const dataFields: MsgData[] = decodeTxData(Encoding.fromHex(result.data));
 
-    let data = Uint8Array.from([]);
-    if (dataFields[0].data) {
-      const decryptedData = await this.restClient.decryptDataField(Encoding.toHex(Encoding.fromBase64(dataFields[0].data)), [encryptionNonce]);
-      // dataFields[0].data = JSON.parse(decryptedData.toString());
-      // @ts-ignore
-      data = decryptedData;
+      if (dataFields[0].data) {
+        // decryptedData =
+        // dataFields[0].data = JSON.parse(decryptedData.toString());
+        // @ts-ignore
+        data = await this.restClient.decryptDataField(Encoding.toHex(Encoding.fromBase64(dataFields[0].data)), [encryptionNonce]);
+      }
     }
 
+    const logs = this.restClient.broadcastMode == BroadcastMode.Block ? await this.restClient.decryptLogs(result.logs, [encryptionNonce]) : [];
 
-    const logs = await this.restClient.decryptLogs(result.logs, [encryptionNonce]);
     return {
       logs,
       transactionHash: result.transactionHash,
