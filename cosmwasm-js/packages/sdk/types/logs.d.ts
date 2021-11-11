@@ -1,15 +1,15 @@
 export interface Attribute {
-  key: string;
-  value: string;
+    key: string;
+    value: string;
 }
 export interface Event {
-  readonly type: string;
-  readonly attributes: readonly Attribute[];
+    readonly type: string;
+    readonly attributes: readonly Attribute[];
 }
 export interface Log {
-  msg_index: number;
-  log: string;
-  events: readonly Event[];
+    msg_index: number;
+    log: string;
+    events: readonly Event[];
 }
 export declare function parseAttribute(input: unknown): Attribute;
 export declare function parseEvent(input: unknown): Event;
@@ -21,8 +21,4 @@ export declare function parseLogs(input: unknown): readonly Log[];
  *
  * Throws if the attribute was not found.
  */
-export declare function findAttribute(
-  logs: readonly Log[],
-  eventType: "message" | "transfer",
-  attrKey: string,
-): Attribute;
+export declare function findAttribute(logs: readonly Log[], eventType: "message" | "transfer", attrKey: string): Attribute;

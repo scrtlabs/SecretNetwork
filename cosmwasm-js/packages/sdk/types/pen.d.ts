@@ -12,8 +12,8 @@ export declare type PrehashType = "sha256" | "sha512" | null;
  * obfuscation of sensitive data.
  */
 export interface Pen {
-  readonly pubkey: Uint8Array;
-  readonly sign: (signBytes: Uint8Array, prehashType?: PrehashType) => Promise<StdSignature>;
+    readonly pubkey: Uint8Array;
+    readonly sign: (signBytes: Uint8Array, prehashType?: PrehashType) => Promise<StdSignature>;
 }
 /**
  * The Cosmoshub derivation path in the form `m/44'/118'/0'/0/a`
@@ -23,12 +23,12 @@ export interface Pen {
  */
 export declare function makeSecretNetworkPath(a: number): readonly Slip10RawIndex[];
 export declare class Secp256k1Pen implements Pen {
-  static fromMnemonic(mnemonic: string, hdPath?: readonly Slip10RawIndex[]): Promise<Secp256k1Pen>;
-  readonly pubkey: Uint8Array;
-  private readonly privkey;
-  private constructor();
-  /**
-   * Creates and returns a signature
-   */
-  sign(signBytes: Uint8Array, prehashType?: PrehashType): Promise<StdSignature>;
+    static fromMnemonic(mnemonic: string, hdPath?: readonly Slip10RawIndex[]): Promise<Secp256k1Pen>;
+    readonly pubkey: Uint8Array;
+    private readonly privkey;
+    private constructor();
+    /**
+     * Creates and returns a signature
+     */
+    sign(signBytes: Uint8Array, prehashType?: PrehashType): Promise<StdSignature>;
 }
