@@ -238,7 +238,7 @@ export class CosmWasmClient {
       return {
         address: value.address,
         balance: value.coins,
-        pubkey: JSON.parse(value.public_key) as PubKey,
+        pubkey: !!value?.public_key ? JSON.parse(value.public_key) as PubKey : undefined,
         accountNumber: value.account_number,
         sequence: value.sequence,
       };
