@@ -1,19 +1,20 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/enigmampc/SecretNetwork/x/compute"
 	"github.com/enigmampc/SecretNetwork/x/compute/client/cli"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"math/rand"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const MessageBlockSize = 256
@@ -31,7 +32,9 @@ func S20GetQueryCmd() *cobra.Command {
 
 	s20QueryCmd.AddCommand(
 		S20BalanceCmd(),
-		S20TransferHistoryCmd())
+		S20TransferHistoryCmd(),
+		S20TransactionHistoryCmd(),
+	)
 
 	return s20QueryCmd
 }
@@ -53,17 +56,18 @@ func S20GetTxCmd() *cobra.Command {
 		s20DepositCmd(),
 		s20Redeem(),
 		s20SetViewingKey(),
-		s20BurnCmd())
+		s20BurnCmd(),
+	)
 
 	return s20TxCmd
 }
 
 func S20TransferHistoryCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "history [contract address] [account] [viewing_key] [optional: page, default: 0] [optional: page_size, default: 10]",
-		Short: "View your transaction history",
-		Long:  `Print out transactions you have been a part of - either as a sender or recipient`,
-		Args:  cobra.MinimumNArgs(3),
+		Use:   "transfers [contract address] [account] [viewing_key] [optional: page, default: 0] [optional: page_size, default: 10]",
+		Short: "View your transfer history",
+		Long:  `Print out transfer you have been a part of - either as a sender or recipient`,
+		Args:  cobra.RangeArgs(3, 5),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			cliCtx, err := client.GetClientQueryContext(cmd)
@@ -86,7 +90,7 @@ func S20TransferHistoryCmd() *cobra.Command {
 			var page uint64 = 0
 			var pageSize uint64 = 10
 
-			if len(args) == 4 {
+			if len(args) >= 4 {
 				page, err = strconv.ParseUint(args[3], 10, 32)
 				if err != nil {
 					return err
@@ -94,13 +98,76 @@ func S20TransferHistoryCmd() *cobra.Command {
 			}
 
 			if len(args) == 5 {
-				pageSize, err = strconv.ParseUint(args[3], 10, 32)
+				pageSize, err = strconv.ParseUint(args[4], 10, 32)
 				if err != nil {
 					return err
 				}
 			}
 
-			queryData := queryTransferHistoryMsg(addr, key, uint32(page), uint32(pageSize))
+			queryData, err := queryTransferHistoryMsg(addr, key, uint32(page), uint32(pageSize))
+			if err != nil {
+				return err
+			}
+
+			err = cli.QueryWithData(contractAddr, queryData, cliCtx)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func S20TransactionHistoryCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "txs [contract address] [account] [viewing_key] [optional: page, default: 0] [optional: page_size, default: 10]",
+		Short: "View your full transaction history",
+		Long: `Print out transactions you have been a part of - either as a sender or recipient.
+Unlike the transfers query, this query shows all kinds of transactions with the contract.`,
+		Args: cobra.RangeArgs(3, 5),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			cliCtx, err := client.GetClientQueryContext(cmd)
+
+			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
+			if err != nil {
+				return err
+			}
+
+			addr, err := sdk.AccAddressFromBech32(args[1])
+			if err != nil {
+				return err
+			}
+
+			key := args[2]
+			if key == "" {
+				return errors.New("viewing key must not be empty")
+			}
+
+			var page uint64 = 0
+			var pageSize uint64 = 10
+
+			if len(args) >= 4 {
+				page, err = strconv.ParseUint(args[3], 10, 32)
+				if err != nil {
+					return err
+				}
+			}
+
+			if len(args) == 5 {
+				pageSize, err = strconv.ParseUint(args[4], 10, 32)
+				if err != nil {
+					return err
+				}
+			}
+
+			queryData, err := queryTransactionHistoryMsg(addr, key, uint32(page), uint32(pageSize))
+			if err != nil {
+				return err
+			}
 
 			err = cli.QueryWithData(contractAddr, queryData, cliCtx)
 			if err != nil {
@@ -140,7 +207,10 @@ key yet, use the "create-viewing-key" command. Otherwise, you can still see your
 				return errors.New("viewing key must not be empty")
 			}
 
-			queryData := queryBalanceMsg(addr, key)
+			queryData, err := queryBalanceMsg(addr, key)
+			if err != nil {
+				return err
+			}
 
 			err = cli.QueryWithData(contractAddr, queryData, cliCtx)
 			if err != nil {
@@ -154,20 +224,17 @@ key yet, use the "create-viewing-key" command. Otherwise, you can still see your
 	return cmd
 }
 
-func addressFromBechOrLabel(addressOrLabel string, cliCtx client.Context) (string, error) {
-	var contractAddr string
-
-	_, err := sdk.AccAddressFromBech32(addressOrLabel)
+func addressFromBechOrLabel(addressOrLabel string, cliCtx client.Context) (sdk.AccAddress, error) {
+	contractAddr, err := sdk.AccAddressFromBech32(addressOrLabel)
 	if err != nil {
 		route := fmt.Sprintf("custom/%s/%s/%s", compute.QuerierRoute, compute.QueryContractAddress, addressOrLabel)
 		res, _, err := cliCtx.Query(route)
 		if err != nil {
-			return "", errors.New("requires either contract address or valid label")
+			return sdk.AccAddress{}, errors.New("requires either contract address or valid label")
 		}
 
-		contractAddr = sdk.AccAddress(res).String()
-	} else {
-		contractAddr = addressOrLabel
+		// We assume that the query above returns a valid address
+		contractAddr = res
 	}
 	return contractAddr, nil
 }
@@ -176,21 +243,16 @@ func s20TransferCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "transfer [contract address or label] [to account] [amount]",
 		Short: "Transfer tokens to another address",
-		Long:  `transfer tokens to another address`,
+		Long:  `Transfer tokens to another address`,
 		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			////inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
 
-			contractAddrStr, err := addressFromBechOrLabel(args[0], cliCtx)
+			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
 				return err
-			}
-
-			contractAddr, err := sdk.AccAddressFromBech32(contractAddrStr)
-			if err != nil {
-				return errors.New("invalid contract address or label")
 			}
 
 			toAddr, err := sdk.AccAddressFromBech32(args[1])
@@ -204,11 +266,16 @@ func s20TransferCmd() *cobra.Command {
 				return errors.New("invalid amount format")
 			}
 
-			msg := handleTransferMsg(toAddr, amount)
+			msg, err := handleTransferMsg(toAddr, amount)
+			if err != nil {
+				return err
+			}
 
 			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cliCtx)
 		},
 	}
+
+	flags.AddTxFlagsToCmd(cmd)
 
 	return cmd
 }
@@ -216,7 +283,7 @@ func s20TransferCmd() *cobra.Command {
 func s20CreatingViewingKey() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create-viewing-key [contract address or label]",
-		Short: "*EXPERIMENTAL* Create a new viewing key. To view the resulting key, use 'secretcli q compute tx <TX_HASH>'",
+		Short: "Create a new viewing key. To view the resulting key, use 'secretcli q compute tx <TX_HASH>'",
 		Long: `This allows a user to generate a key that enables off-chain queries. 
 This way you can perform balance and transaction history queries without waiting for a transaction on-chain.`,
 		Args: cobra.ExactArgs(1),
@@ -225,30 +292,28 @@ This way you can perform balance and transaction history queries without waiting
 			//inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
 
-			contractAddrStr, err := addressFromBechOrLabel(args[0], cliCtx)
+			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
 				return err
 			}
 
-			contractAddr, err := sdk.AccAddressFromBech32(contractAddrStr)
-			if err != nil {
-				return errors.New("invalid contract address or label")
-			}
-
-			var src = rand.New(rand.NewSource(time.Now().UnixNano()))
-
 			byteArr := make([]byte, 32) // can be simplified to n/2 if n is always even
-			if _, err := src.Read(byteArr); err != nil {
+			if _, err := rand.Read(byteArr); err != nil {
 				panic(err)
 			}
 
 			randomData := hex.EncodeToString(byteArr)[:64]
 
-			msg := handleCreateViewingKeyMsg(randomData)
+			msg, err := handleCreateViewingKeyMsg(randomData)
+			if err != nil {
+				return err
+			}
 
 			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cliCtx)
 		},
 	}
+
+	flags.AddTxFlagsToCmd(cmd)
 
 	return cmd
 }
@@ -256,9 +321,9 @@ This way you can perform balance and transaction history queries without waiting
 func s20SetViewingKey() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set-viewing-key [contract address or label] [viewing-key]",
-		Short: "*EXPERIMENTAL* Sets the viewing key for your account",
-		Long: `This command is useful if you want to manage multiple secret tokens with the same viewing key. *WARNING*:
-This should only be used to duplicate keys created with the create-viewing-key command, or if you really really know what
+		Short: "Sets the viewing key for your account",
+		Long: `This command is useful if you want to manage multiple secret tokens with the same viewing key.
+*WARNING*: This should only be used to duplicate keys created with the create-viewing-key command, or if you really really know what
 you're doing`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -266,21 +331,21 @@ you're doing`,
 			//inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
 
-			contractAddrStr, err := addressFromBechOrLabel(args[0], cliCtx)
+			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
 				return err
 			}
 
-			contractAddr, err := sdk.AccAddressFromBech32(contractAddrStr)
+			msg, err := handleSetViewingKeyMsg(args[1])
 			if err != nil {
-				return errors.New("invalid contract address or label")
+				return err
 			}
-
-			msg := handleSetViewingKeyMsg(args[1])
 
 			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cliCtx)
 		},
 	}
+
+	flags.AddTxFlagsToCmd(cmd)
 
 	return cmd
 }
@@ -288,7 +353,7 @@ you're doing`,
 func s20DepositCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "deposit [contract address or label]",
-		Short: "*EXPERIMENTAL* convert your SCRT into a secret token",
+		Short: "Convert your SCRT into a secret token",
 		Long:  `Convert your SCRT into a secret token. This command will only work if the token supports native currency conversion`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -296,32 +361,33 @@ func s20DepositCmd() *cobra.Command {
 			//inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
 
-			contractAddrStr, err := addressFromBechOrLabel(args[0], cliCtx)
+			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
 				return err
 			}
 
-			contractAddr, err := sdk.AccAddressFromBech32(contractAddrStr)
+			msg, err := handleDepositMsg()
 			if err != nil {
-				return errors.New("invalid contract address or label")
+				return err
 			}
-
-			msg := handleDepositMsg()
 
 			amountStr := viper.GetString(flagAmount)
 
 			return cli.ExecuteWithData(cmd, contractAddr, msg, amountStr, false, "", "", cliCtx)
 		},
 	}
-	cmd.Flags().String(flagAmount, "", "")
+
+	flags.AddTxFlagsToCmd(cmd)
+	cmd.Flags().String(flagAmount, "", "The amount of currency to deposit in the contract, e.g. 1000000uscrt")
+	cmd.MarkFlagRequired(flagAmount)
+
 	return cmd
 }
 
 func s20Redeem() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "redeem [contract address or label] [amount]",
-		Short: "*EXPERIMENTAL* convert your secret token back to SCRT",
+		Short: "Convert your secret token back to SCRT",
 		Long:  `Convert your secret token back to SCRT. This command will only work if the token supports native currency conversion`,
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -329,23 +395,27 @@ func s20Redeem() *cobra.Command {
 			//inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
 
-			contractAddrStr, err := addressFromBechOrLabel(args[0], cliCtx)
+			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
 				return err
 			}
 
-			contractAddr, err := sdk.AccAddressFromBech32(contractAddrStr)
+			amount := args[1]
+			_, err = strconv.ParseUint(amount, 10, 64)
 			if err != nil {
-				return errors.New("invalid contract address or label")
+				return errors.New("invalid amount format")
 			}
 
-			amount := args[1]
-
-			msg := handleRedeemMsg(amount)
+			msg, err := handleRedeemMsg(amount)
+			if err != nil {
+				return err
+			}
 
 			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cliCtx)
 		},
 	}
+
+	flags.AddTxFlagsToCmd(cmd)
 
 	return cmd
 }
@@ -353,23 +423,18 @@ func s20Redeem() *cobra.Command {
 func s20SendCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "send [contract_address or label] [to_account] [amount] [optional: callback_message]",
-		Short: "*EXPERIMENTAL* send tokens to another address. Optionally add a callback message",
+		Short: "Send tokens to another address. Optionally add a callback message",
 		Long: `Send tokens to another address (contract or not). If 'to_account' is a contract, you can optionally add a callback message to this contract.
 If no callback provided, this is identical to 'transfer'.`,
-		Args: cobra.MinimumNArgs(3),
+		Args: cobra.RangeArgs(3, 4),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			//inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
 
-			contractAddrStr, err := addressFromBechOrLabel(args[0], cliCtx)
+			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
 				return err
-			}
-
-			contractAddr, err := sdk.AccAddressFromBech32(contractAddrStr)
-			if err != nil {
-				return errors.New("invalid contract address or label")
 			}
 
 			toAddr, err := sdk.AccAddressFromBech32(args[1])
@@ -383,17 +448,20 @@ If no callback provided, this is identical to 'transfer'.`,
 				return errors.New("invalid amount format")
 			}
 
-			var msg []byte
+			var callback string
 			if len(args) > 3 {
-				callback := args[3]
-				msg = handleSendWithCallbackMsg(toAddr, amount, callback)
-			} else {
-				msg = handleSendMsg(toAddr, amount)
+				callback = args[3]
+			}
+			msg, err := handleSendMsg(toAddr, amount, callback)
+			if err != nil {
+				return err
 			}
 
 			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cliCtx)
 		},
 	}
+
+	flags.AddTxFlagsToCmd(cmd)
 
 	return cmd
 }
@@ -401,23 +469,18 @@ If no callback provided, this is identical to 'transfer'.`,
 func s20BurnCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "burn [contract_address or label] [amount]",
-		Short: "*EXPERIMENTAL* burn tokens forever",
+		Short: "Burn tokens forever",
 		Long: `Burn tokens. The tokens will be removed from your account and will be lost forever.
 WARNING! This action is irreversible and permanent! use at your own risk`,
-		Args: cobra.MinimumNArgs(3),
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			//inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
 
-			contractAddrStr, err := addressFromBechOrLabel(args[0], cliCtx)
+			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
 				return err
-			}
-
-			contractAddr, err := sdk.AccAddressFromBech32(contractAddrStr)
-			if err != nil {
-				return errors.New("invalid contract address or label")
 			}
 
 			amount := args[1]
@@ -426,13 +489,106 @@ WARNING! This action is irreversible and permanent! use at your own risk`,
 				return errors.New("invalid amount format")
 			}
 
-			msg := handleBurnMsg(contractAddr, amount)
+			msg, err := handleBurnMsg(amount)
+			if err != nil {
+				return err
+			}
 
 			return cli.ExecuteWithData(cmd, contractAddr, msg, "", false, "", "", cliCtx)
 		},
 	}
 
+	flags.AddTxFlagsToCmd(cmd)
+
 	return cmd
+}
+
+type TransferHistoryMsg struct {
+	TransferHistory TransferHistoryMsgInner `json:"transfer_history"`
+}
+
+type TransferHistoryMsgInner struct {
+	Address  sdk.AccAddress `json:"address"`
+	Key      string         `json:"key"`
+	Page     uint32         `json:"page"`
+	PageSize uint32         `json:"page_size"`
+}
+
+type TransactionHistoryMsg struct {
+	TransactionHistory TransactionHistoryMsgInner `json:"transaction_history"`
+}
+
+type TransactionHistoryMsgInner struct {
+	Address  sdk.AccAddress `json:"address"`
+	Key      string         `json:"key"`
+	Page     uint32         `json:"page"`
+	PageSize uint32         `json:"page_size"`
+}
+
+type BalanceMsg struct {
+	Balance BalanceMsgInner `json:"balance"`
+}
+
+type BalanceMsgInner struct {
+	Address sdk.AccAddress `json:"address"`
+	Key     string         `json:"key"`
+}
+
+type TransferMsg struct {
+	Transfer TransferMsgInner `json:"transfer"`
+}
+
+type TransferMsgInner struct {
+	Recipient sdk.AccAddress `json:"recipient"`
+	Amount    string         `json:"amount"`
+}
+
+type CreateViewingKeyMsg struct {
+	CreateViewingKey CreateViewingKeyMsgInner `json:"create_viewing_key"`
+}
+
+type CreateViewingKeyMsgInner struct {
+	Entropy string `json:"entropy"`
+}
+
+type SetViewingKeyMsg struct {
+	SetViewingKey SetViewingKeyMsgInner `json:"set_viewing_key"`
+}
+
+type SetViewingKeyMsgInner struct {
+	Key string `json:"key"`
+}
+
+type DepositMsg struct {
+	Deposit DepositMsgInner `json:"deposit"`
+}
+
+type DepositMsgInner struct{}
+
+type RedeemMsg struct {
+	Redeem RedeemMsgInner `json:"redeem"`
+}
+
+type RedeemMsgInner struct {
+	Amount string `json:"amount"`
+}
+
+type SendMsg struct {
+	Send SendMsgInner `json:"send"`
+}
+
+type SendMsgInner struct {
+	Recipient sdk.AccAddress `json:"recipient"`
+	Amount    string         `json:"amount"`
+	Msg       string         `json:"msg,omitempty"`
+}
+
+type BurnMsg struct {
+	Burn BurnMsgInner `json:"burn"`
+}
+
+type BurnMsgInner struct {
+	Amount string `json:"amount"`
 }
 
 func spacePad(blockSize int, message string) string {
@@ -445,51 +601,148 @@ func spacePad(blockSize int, message string) string {
 	return message + strings.Repeat(" ", missing)
 }
 
-func queryTransferHistoryMsg(fromAddress sdk.AccAddress, viewingKey string, page uint32, pageSize uint32) []byte {
-	return []byte(spacePad(MessageBlockSize,
-		fmt.Sprintf("{\"transfer_history\": {\"address\": \"%s\", \"key\": \"%s\", \"page\": %d, \"page_size\": %d}}",
-			fromAddress.String(),
-			viewingKey,
-			page,
-			pageSize)))
+func queryTransferHistoryMsg(fromAddress sdk.AccAddress, viewingKey string, page uint32, pageSize uint32) ([]byte, error) {
+	msg := TransferHistoryMsg{
+		TransferHistory: TransferHistoryMsgInner{
+			Address:  fromAddress,
+			Key:      viewingKey,
+			Page:     page,
+			PageSize: pageSize,
+		},
+	}
+	jsonMsg, err := json.Marshal(&msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(spacePad(MessageBlockSize, string(jsonMsg))), nil
 }
 
-func queryBalanceMsg(fromAddress sdk.AccAddress, viewingKey string) []byte {
-	return []byte(spacePad(MessageBlockSize, fmt.Sprintf("{\"balance\": {\"address\": \"%s\", \"key\": \"%s\"}}", fromAddress.String(), viewingKey)))
+func queryTransactionHistoryMsg(fromAddress sdk.AccAddress, viewingKey string, page uint32, pageSize uint32) ([]byte, error) {
+	msg := TransactionHistoryMsg{
+		TransactionHistory: TransactionHistoryMsgInner{
+			Address:  fromAddress,
+			Key:      viewingKey,
+			Page:     page,
+			PageSize: pageSize,
+		},
+	}
+	jsonMsg, err := json.Marshal(&msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(spacePad(MessageBlockSize, string(jsonMsg))), nil
 }
 
-func handleTransferMsg(toAddress sdk.AccAddress, amount string) []byte {
-	return []byte(spacePad(MessageBlockSize, fmt.Sprintf("{\"transfer\": {\"recipient\": \"%s\", \"amount\": \"%s\"}}", toAddress.String(), amount)))
+func queryBalanceMsg(fromAddress sdk.AccAddress, viewingKey string) ([]byte, error) {
+	msg := BalanceMsg{
+		Balance: BalanceMsgInner{
+			Address: fromAddress,
+			Key:     viewingKey,
+		},
+	}
+	jsonMsg, err := json.Marshal(&msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(spacePad(MessageBlockSize, string(jsonMsg))), nil
 }
 
-func handleDepositMsg() []byte {
-	return []byte(spacePad(MessageBlockSize, fmt.Sprintf("{\"deposit\": {}}")))
+func handleTransferMsg(toAddress sdk.AccAddress, amount string) ([]byte, error) {
+	msg := TransferMsg{
+		Transfer: TransferMsgInner{
+			Recipient: toAddress,
+			Amount:    amount,
+		},
+	}
+	jsonMsg, err := json.Marshal(&msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(spacePad(MessageBlockSize, string(jsonMsg))), nil
 }
 
-func handleRedeemMsg(amount string) []byte {
-	return []byte(spacePad(MessageBlockSize, fmt.Sprintf("{\"redeem\": {\"amount\": \"%s\"}}", amount)))
+func handleCreateViewingKeyMsg(entropy string) ([]byte, error) {
+	msg := CreateViewingKeyMsg{
+		CreateViewingKey: CreateViewingKeyMsgInner{
+			Entropy: entropy,
+		},
+	}
+	jsonMsg, err := json.Marshal(&msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(spacePad(MessageBlockSize, string(jsonMsg))), nil
 }
 
-func handleCreateViewingKeyMsg(data string) []byte {
-	return []byte(spacePad(MessageBlockSize, fmt.Sprintf("{\"create_viewing_key\": {\"entropy\": \"%s\"}}", data)))
+func handleSetViewingKeyMsg(key string) ([]byte, error) {
+	msg := SetViewingKeyMsg{
+		SetViewingKey: SetViewingKeyMsgInner{
+			Key: key,
+		},
+	}
+	jsonMsg, err := json.Marshal(&msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(spacePad(MessageBlockSize, string(jsonMsg))), nil
 }
 
-func handleSetViewingKeyMsg(data string) []byte {
-	return []byte(spacePad(MessageBlockSize, fmt.Sprintf("{\"set_viewing_key\": {\"key\": \"%s\"}}", data)))
+func handleDepositMsg() ([]byte, error) {
+	msg := DepositMsg{Deposit: DepositMsgInner{}}
+	jsonMsg, err := json.Marshal(&msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(spacePad(MessageBlockSize, string(jsonMsg))), nil
 }
 
-func handleSendWithCallbackMsg(toAddress sdk.AccAddress, amount string, message string) []byte {
-	return []byte(spacePad(MessageBlockSize,
-		fmt.Sprintf("{\"send\": {\"recipient\": \"%s\", \"amount\": \"%s\", \"msg\": \"%s\"}}",
-			toAddress.String(),
-			amount,
-			message)))
+func handleRedeemMsg(amount string) ([]byte, error) {
+	msg := RedeemMsg{
+		Redeem: RedeemMsgInner{
+			Amount: amount,
+		},
+	}
+	jsonMsg, err := json.Marshal(&msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(spacePad(MessageBlockSize, string(jsonMsg))), nil
 }
 
-func handleSendMsg(toAddress sdk.AccAddress, amount string) []byte {
-	return []byte(spacePad(MessageBlockSize, fmt.Sprintf("{\"send\": {\"recipient\": \"%s\", \"amount\": \"%s\"}}", toAddress.String(), amount)))
+func handleSendMsg(toAddress sdk.AccAddress, amount string, message string) ([]byte, error) {
+	msg := SendMsg{
+		Send: SendMsgInner{
+			Recipient: toAddress,
+			Amount:    amount,
+			Msg:       message,
+		},
+	}
+	jsonMsg, err := json.Marshal(&msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(spacePad(MessageBlockSize, string(jsonMsg))), nil
 }
 
-func handleBurnMsg(toAddress sdk.AccAddress, amount string) []byte {
-	return []byte(spacePad(MessageBlockSize, fmt.Sprintf("{\"burn\": {\"amount\": \"%s\"}}", amount)))
+func handleBurnMsg(amount string) ([]byte, error) {
+	msg := BurnMsg{
+		Burn: BurnMsgInner{
+			Amount: amount,
+		},
+	}
+	jsonMsg, err := json.Marshal(&msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(spacePad(MessageBlockSize, string(jsonMsg))), nil
 }
