@@ -379,7 +379,7 @@ func s20DepositCmd() *cobra.Command {
 
 	flags.AddTxFlagsToCmd(cmd)
 	cmd.Flags().String(flagAmount, "", "The amount of currency to deposit in the contract, e.g. 1000000uscrt")
-	cmd.MarkFlagRequired(flagAmount)
+	_ = cmd.MarkFlagRequired(flagAmount)
 
 	return cmd
 }
