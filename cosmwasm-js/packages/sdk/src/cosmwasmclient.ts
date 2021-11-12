@@ -231,14 +231,14 @@ export class CosmWasmClient {
   public async getAccount(address: string): Promise<Account | undefined> {
     const account = await this.restClient.authAccounts(address);
     const value = account.result.value;
-    if (value.address === "") {
+    if (value.address === undefined || value.address === "") {
       return undefined;
     } else {
       this.anyValidAddress = value.address;
       return {
         address: value.address,
         balance: value.coins,
-        pubkey: JSON.parse(value.public_key) as PubKey,
+        pubkey: !!value?.public_key ? JSON.parse(value.public_key) as PubKey : undefined,
         accountNumber: value.account_number,
         sequence: value.sequence,
       };
