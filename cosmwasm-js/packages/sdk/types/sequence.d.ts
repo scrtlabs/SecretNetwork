@@ -10,4 +10,10 @@ import { CosmosSdkTx } from "./types";
  *
  * @returns the sequence if a match was found and undefined otherwise
  */
-export declare function findSequenceForSignedTx(tx: CosmosSdkTx, chainId: string, accountNumber: number, upperBound: number, min?: number): Promise<number | undefined>;
+export declare function findSequenceForSignedTx(
+  tx: CosmosSdkTx,
+  chainId: string,
+  accountNumber: number,
+  upperBound: number,
+  min?: number,
+): Promise<number | undefined>;
