@@ -1,8 +1,7 @@
 #!/bin/bash
 
 file=~/.secretd/config/genesis.json
-if [ ! -e "$file" ]
-then
+if [ ! -e "$file" ]; then
   # init the node
   rm -rf ~/.secretd/*
   rm -rf /opt/secret/.sgx_secrets/*
@@ -48,6 +47,9 @@ then
   secretd init-bootstrap
 #  cp new_node_seed_exchange_keypair.sealed .sgx_secrets
   secretd validate-genesis
+
+  perl -i -pe 's/max_subscription_clients.+/max_subscription_clients = 100/' ~/.secretd/config/config.toml
+  perl -i -pe 's/max_subscriptions_per_client.+/max_subscriptions_per_client = 50/' ~/.secretd/config/config.toml
 fi
 
 lcp --proxyUrl http://localhost:1317 --port 1337 --proxyPartial '' &

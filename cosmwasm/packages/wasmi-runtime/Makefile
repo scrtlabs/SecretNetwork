@@ -94,7 +94,12 @@ RustEnclave_Link_Flags := -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfi
 
 Rust_Crate_Source := $(shell find -type f | grep -vP '(\.so|\.o|\.a)$$' | grep -vP '^\./target' | grep -v Enclave_t)
 Rust_Target_Path := $(CURDIR)/xargo
-Rust_Flags := "-Z force-unstable-if-unmarked -C target-cpu=skylake"
+
+ifeq ($(SGX_MODE), SW)
+	Rust_Flags := "-Z force-unstable-if-unmarked -C target-feature=+aes,+ssse3"
+else
+	Rust_Flags := "-Z force-unstable-if-unmarked -C target-cpu=skylake"
+endif
 
 .PHONY: all
 all: enclave

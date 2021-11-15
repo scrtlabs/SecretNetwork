@@ -130,6 +130,51 @@ Example Invocation from `SecretJS`:
 
 ## State
 
+## Debug printing
+
+Under normal circumstances, contracts can not be debugged while running 
+on-chain, inside the enclave.
+In most cases where you need to track down the source of an issue, this is fine:
+- If some function is behaving oddly, a unit test can be written to isolate and
+  fix the issue.
+- If you have a `Result::Err` being thrown somewhere, it usually has a clear and
+  distinct error message which can be tracked to its source.
+- If your contract returns a result but it's wrong for some reason, and you
+  can't figure out why, you can add logs to the response that show the values
+  of some variables.
+
+But, there is one error case that just halts the contract, reverts the state,
+and returns no feedback for the cause of the failure: **PANICS**
+
+Starting from version 1.1.0 of SecretNetwork, we provide another useful tool to
+the contract developing toolkit: debug prints.
+
+`cosmwasm_std::debug_print` is both a function that takes a `String` or `&str`,
+as well as a macro that works just like `println` in normal rust. By default,
+using it does nothing at all, and it's compiled away. To activate the debug
+printing feature, contracts must enable the `debug-print` feature in
+`cosmwasm_std`. This can be done by adding this line under the `[features]`
+section in `Cargo.toml`:
+```
+debug-print = ["cosmwasm_std/debug-print"]
+```
+and then compiling the contract with `--features debug-print`.
+
+Once compiled with this flag, and executed on the local dev image (using
+`enigmampc/secret-network-sw-dev`), the messages passed to `debug_print` will
+be shown as logs in the dev image's logging output.
+
+Now you can print information from within the contract to the console running
+the dev image, and these logs will be visible there even if the contract
+crashes. This is generally more convenient than the three techniques described
+above. You can also safely leave the calls to `debug_print` in your source code,
+and they will only have an effect when used during development!
+
+Naturally, we don't want node runners to see private debug information in
+production, so the interfaces used by this API are only available in the
+local dev image. Trying to store a module that was compiled with this flag to
+testnet or mainnet will fail on validation.
+
 ## Some libraries/crates considerations
 
 - `bincode2` instead of `bincode` for serializing data.

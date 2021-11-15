@@ -38,4 +38,4 @@ chmod +x ./secretcli
 ./secretcli keys add <name>
 ```
 
-See more details on how to use the CLI [here](https://github.com/enigmampc/SecretNetwork/blob/master/docs/secretcli.md)
+See more details on how to use the CLI [here](https://build.scrt.network/validators-and-full-nodes/secretcli.html#secret-cli)

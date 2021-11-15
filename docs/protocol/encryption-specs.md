@@ -7,6 +7,7 @@
     - [`consensus_seed_exchange_privkey`](#consensus_seed_exchange_privkey)
     - [`consensus_io_exchange_privkey`](#consensus_io_exchange_privkey)
     - [`consensus_state_ikm`](#consensus_state_ikm)
+    - [`consensus_callback_secret`](#consensus_callback_secret)
   - [Bootstrap Process Epilogue](#bootstrap-process-epilogue)
 - [Node Startup](#node-startup)
 - [New Node Registration](#new-node-registration)
@@ -68,10 +69,10 @@ TODO reasoning
 - The HKDF-SHA256 [salt](https://tools.ietf.org/html/rfc5869#section-3.1) is chosen to be Bitcoin's halving block hash.
 
 ```js
-hkfd_salt = 0x000000000000000000024bead8df69990852c202db0e0097c1a12ea637d7e96d;
+hkdf_salt = 0x000000000000000000024bead8df69990852c202db0e0097c1a12ea637d7e96d;
 ```
 
-- Using HKDF-SHA256, `hkfd_salt` and `consensus_seed`, derive the following keys:
+- Using HKDF-SHA256, `hkdf_salt` and `consensus_seed`, derive the following keys:
 
 ### `consensus_seed_exchange_privkey`
 
@@ -80,7 +81,7 @@ hkfd_salt = 0x000000000000000000024bead8df69990852c202db0e0097c1a12ea637d7e96d;
 
 ```js
 consensus_seed_exchange_privkey = hkdf({
-  salt: hkfd_salt,
+  salt: hkdf_salt,
   ikm: consensus_seed.append(uint8(1)),
 }); // 256 bits
 
@@ -91,12 +92,12 @@ consensus_seed_exchange_pubkey = calculate_curve25519_pubkey(
 
 ### `consensus_io_exchange_privkey`
 
-- `consensus_io_exchange_privkey`: A curve25519 curve private key. Will be used to derive encryption keys in order to decrypt transaction inputs and encrypt transaction outputs.
+- `consensus_io_exchange_privkey`: A curve25519 private key. Will be used to derive encryption keys in order to decrypt transaction inputs and encrypt transaction outputs.
 - From `consensus_io_exchange_privkey` calculate `consensus_io_exchange_pubkey`.
 
 ```js
 consensus_io_exchange_privkey = hkdf({
-  salt: hkfd_salt,
+  salt: hkdf_salt,
   ikm: consensus_seed.append(uint8(2)),
 }); // 256 bits
 
@@ -111,7 +112,7 @@ consensus_io_exchange_pubkey = calculate_curve25519_pubkey(
 
 ```js
 consensus_state_ikm = hkdf({
-  salt: hkfd_salt,
+  salt: hkdf_salt,
   ikm: consensus_seed.append(uint8(3)),
 }); // 256 bits
 ```
@@ -122,7 +123,7 @@ consensus_state_ikm = hkdf({
 
 ```js
 consensus_state_ikm = hkdf({
-  salt: hkfd_salt,
+  salt: hkdf_salt,
   ikm: consensus_seed.append(uint8(4)),
 }); // 256 bits
 ```
@@ -151,7 +152,7 @@ TODO reasoning
 
 - Verify the remote attestation proof of the bootstrap node from `genesis.json`.
 - Create a remote attestation proof that the node's Enclave is genuine.
-- Generate inside the node's Enclave a true random curve25519 curve private key: `registration_privkey`.
+- Generate inside the node's Enclave a true random curve25519 private key: `registration_privkey`.
 - From `registration_privkey` calculate `registration_pubkey`.
 - Send an `secretcli tx register auth` transaction with the following inputs:
   - The remote attestation proof that the node's Enclave is genuine.
@@ -186,7 +187,7 @@ seed_exchange_ikm = ecdh({
 }); // 256 bits
 
 seed_exchange_key = hkdf({
-  salt: hkfd_salt,
+  salt: hkdf_salt,
   ikm: concat(seed_exchange_ikm, nonce),
 }); // 256 bits
 ```
@@ -229,7 +230,7 @@ seed_exchange_ikm = ecdh({
 }); // 256 bits
 
 seed_exchange_key = hkdf({
-  salt: hkfd_salt,
+  salt: hkdf_salt,
   ikm: concat(seed_exchange_ikm, nonce),
 }); // 256 bits
 ```
@@ -287,7 +288,7 @@ TODO reasoning
 signer_id = sha256(concat(msg_sender, block_height));
 
 authentication_key = hkdf({
-  salt: hkfd_salt,
+  salt: hkdf_salt,
   info: "contract_key",
   ikm: concat(consensus_state_ikm, signer_id),
 });
@@ -308,7 +309,7 @@ signer_id = contract_key.slice(0, 32);
 expected_contract_key = contract_key.slice(32, 64);
 
 authentication_key = hkdf({
-  salt: hkfd_salt,
+  salt: hkdf_salt,
   info: "contract_key",
   ikm: concat(consensus_state_ikm, signer_id),
 });
@@ -325,7 +326,7 @@ assert(calculated_contract_key == expected_contract_key);
 
 ```js
 encryption_key = hkdf({
-  salt: hkfd_salt,
+  salt: hkdf_salt,
   ikm: concat(consensus_state_ikm, field_name, contract_key),
 });
 
@@ -367,7 +368,7 @@ internal_write_db(encrypted_field_name, new_state);
 
 ```js
 encryption_key = hkdf({
-  salt: hkfd_salt,
+  salt: hkdf_salt,
   ikm: concat(consensus_state_ikm, field_name, contract_key),
 });
 
@@ -401,7 +402,7 @@ Very similar to `read_db`.
 
 ```js
 encryption_key = hkdf({
-  salt: hkfd_salt,
+  salt: hkdf_salt,
   ikm: concat(consensus_state_ikm, field_name, contract_key),
 });
 
@@ -437,7 +438,7 @@ tx_encryption_ikm = ecdh({
 nonce = true_random({ bytes: 32 });
 
 tx_encryption_key = hkdf({
-  salt: hkfd_salt,
+  salt: hkdf_salt,
   ikm: concat(tx_encryption_ikm, nonce),
 }); // 256 bits
 
@@ -467,7 +468,7 @@ tx_encryption_ikm = ecdh({
 }); // 256 bits
 
 tx_encryption_key = hkdf({
-  salt: hkfd_salt,
+  salt: hkdf_salt,
   ikm: concat(tx_encryption_ikm, nonce),
 }); // 256 bits
 
@@ -545,10 +546,10 @@ msg = codeHashAndMsg.slice(64);
 - Notice on a `Contract` message, the `msg` value should be the same `msg` as in our `tx_input`, so we need to prepend the `nonce` and `tx_sender_wallet_pubkey` just like we did on the tx sender above.
 - On a `Contract` message, we also send a `callback_signature`, so we can later on verify the parameters sent to the enclave:
   ```
-  callback_signature = sha256(consensus_callback_secret | calling_contract_addr | encrypted_msg)
+  callback_signature = sha256(consensus_callback_secret | calling_contract_addr | encrypted_msg | funds_to_send)
   ```
   For more on that, [read here](../dev/privacy-model-of-secret-contracts.md#verified-values-during-contract-execution).
-- For the rest of the encrypted outputs we only need to send the ciphertext, as the tx sender can get `consensus_io_exchange_prubkey` from `genesis.json` and `nonce` from the `tx_input` that is attached to the `tx_output`.
+- For the rest of the encrypted outputs we only need to send the ciphertext, as the tx sender can get `consensus_io_exchange_pubkey` from `genesis.json` and `nonce` from the `tx_input` that is attached to the `tx_output`.
 - An example output with an error:
   ```js
   {
@@ -667,7 +668,7 @@ No encryption padding, so a value of e.g. "yes" or "no" can be deanonymized by i
 
 If an attacker can create a contract with the same `contract_key` as another contract, the state of the original contract can potentially be deanonymized.
 
-For example, An original contract with a permissioned getter, such that only whitelisted addresses can query the getter. In the malicious contract the attacker can set themselves as the owner and ask the malicious contract to decrypt the state of the original contract via that permissioned getter.
+For example, an original contract with a permissioned getter, such that only whitelisted addresses can query the getter. In the malicious contract the attacker can set themselves as the owner and ask the malicious contract to decrypt the state of the original contract via that permissioned getter.
 
 ## Tx Replay attacks
 

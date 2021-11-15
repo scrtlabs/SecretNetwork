@@ -25,6 +25,11 @@ services:
       - /tmp/secretcli:/root/.secretcli
     stdin_open: true
     tty: true
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "4g"
 
   bootstrap:
     image: ci-enigma-sgx-bootstrap

@@ -217,6 +217,7 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 			return types.MsgInstantiateContract{}, fmt.Errorf("missing flag --%s. To create an offline transaction, you must set the target contract's code hash", flagCodeHash)
 		}
 		initMsg.CodeHash = []byte(codeHash)
+		initMsg.Msg = []byte(args[1])
 
 		encryptedMsg, err = wasmCtx.OfflineEncrypt(initMsg.Serialize(), ioKeyPath)
 	} else {
