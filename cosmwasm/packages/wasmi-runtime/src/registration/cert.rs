@@ -3,6 +3,7 @@
 use bit_vec::BitVec;
 use chrono::Utc as TzUtc;
 use chrono::{Duration, TimeZone};
+use crate::consts::SigningMethod;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use log::*;
@@ -24,7 +25,7 @@ use super::attestation::get_mr_enclave;
 use crate::consts::CERTEXPIRYDAYS;
 
 #[cfg(feature = "SGX_MODE_HW")]
-use crate::consts::{SigningMethod, MRSIGNER, SIGNING_METHOD};
+use crate::consts::{MRSIGNER, SIGNING_METHOD};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use super::report::{AttestationReport, SgxQuoteStatus};
@@ -274,7 +275,7 @@ pub fn get_ias_auth_config() -> (Vec<u8>, rustls::RootCertStore) {
 }
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
-pub fn verify_ra_cert(cert_der: &[u8]) -> Result<Vec<u8>, NodeAuthResult> {
+pub fn verify_ra_cert(cert_der: &[u8], override_verify: Option<SigningMethod>) -> Result<Vec<u8>, NodeAuthResult> {
     let payload = get_netscape_comment(cert_der).map_err(|_err| NodeAuthResult::InvalidCert)?;
 
     let pk = base64::decode(&payload).map_err(|_err| NodeAuthResult::InvalidCert)?;
@@ -292,7 +293,7 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> Result<Vec<u8>, NodeAuthResult> {
 /// 5. Verify enclave signature (mr enclave/signer)
 ///
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn verify_ra_cert(cert_der: &[u8]) -> Result<Vec<u8>, NodeAuthResult> {
+pub fn verify_ra_cert(cert_der: &[u8], override_verify: Option<SigningMethod>) -> Result<Vec<u8>, NodeAuthResult> {
     // Before we reach here, Webpki already verifed the cert is properly signed
 
     let report = AttestationReport::from_cert(cert_der).map_err(|_| NodeAuthResult::InvalidCert)?;
@@ -301,8 +302,13 @@ pub fn verify_ra_cert(cert_der: &[u8]) -> Result<Vec<u8>, NodeAuthResult> {
 
     verify_quote_status(&report.sgx_quote_status, &report.advisroy_ids)?;
 
+    let signing_method: SigningMethod = match override_verify {
+        Some(method) => method,
+        None => SIGNING_METHOD,
+    };
+
     // verify certificate
-    match SIGNING_METHOD {
+    match signing_method {
         SigningMethod::MRENCLAVE => {
             let this_mr_enclave = match get_mr_enclave() {
                 Ok(r) => r,
@@ -418,6 +424,7 @@ pub mod tests {
     use std::io::Read;
     use std::untrusted::fs::File;
 
+    #[cfg(feature = "SGX_MODE_HW")]
     fn tls_ra_cert_der_out_of_date() -> Vec<u8> {
         let mut cert = vec![];
         let mut f = File::open(
@@ -470,7 +477,7 @@ pub mod tests {
         assert!(report.is_ok());
 
         let result =
-            verify_ra_cert(&tls_ra_cert).expect_err("Certificate should not pass validation");
+            verify_ra_cert(&tls_ra_cert, None).expect_err("Certificate should not pass validation");
 
         assert_eq!(result, NodeAuthResult::SwHardeningAndConfigurationNeeded)
     }
@@ -485,13 +492,13 @@ pub mod tests {
         assert!(report.is_ok());
 
         let result =
-            verify_ra_cert(&tls_ra_cert).expect_err("Certificate should not pass validation");
+            verify_ra_cert(&tls_ra_cert, None).expect_err("Certificate should not pass validation");
 
         assert_eq!(result, NodeAuthResult::GroupOutOfDate)
     }
 
     pub fn test_certificate_valid() {
         let tls_ra_cert = tls_ra_cert_der_valid();
-        let result = verify_ra_cert(&tls_ra_cert).unwrap();
+        let result = verify_ra_cert(&tls_ra_cert, None).unwrap();
     }
 }

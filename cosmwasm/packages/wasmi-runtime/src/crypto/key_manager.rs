@@ -141,6 +141,7 @@ impl Keychain {
     }
 
     pub fn set_consensus_seed(&mut self, consensus_seed: Seed) -> Result<(), EnclaveError> {
+        debug!("Sealing consensus seed in {}", *CONSENSUS_SEED_SEALING_PATH);
         if let Err(e) = consensus_seed.seal(&CONSENSUS_SEED_SEALING_PATH) {
             error!("Error sealing consensus_seed");
             return Err(e);
@@ -164,7 +165,7 @@ impl Keychain {
         let consensus_seed_exchange_keypair = KeyPair::from(consensus_seed_exchange_keypair_bytes);
         trace!(
             "consensus_seed_exchange_keypair: {:?}",
-            consensus_seed_exchange_keypair.get_pubkey()
+            hex::encode(consensus_seed_exchange_keypair.get_pubkey())
         );
         self.set_consensus_seed_exchange_keypair(consensus_seed_exchange_keypair);
 
@@ -177,7 +178,7 @@ impl Keychain {
         let consensus_io_exchange_keypair = KeyPair::from(consensus_io_exchange_keypair_bytes);
         trace!(
             "consensus_io_exchange_keypair: {:?}",
-            consensus_io_exchange_keypair.get_pubkey()
+            hex::encode(consensus_io_exchange_keypair.get_pubkey())
         );
         self.set_consensus_io_exchange_keypair(consensus_io_exchange_keypair);
 
@@ -188,7 +189,10 @@ impl Keychain {
             .unwrap()
             .derive_key_from_this(&CONSENSUS_STATE_IKM_DERIVE_ORDER.to_be_bytes());
 
-        trace!("consensus_state_ikm: {:?}", consensus_state_ikm.get());
+        trace!(
+            "consensus_state_ikm: {:?}",
+            hex::encode(consensus_state_ikm.get())
+        );
         self.set_consensus_state_ikm(consensus_state_ikm);
 
         let consensus_callback_secret = self
@@ -196,7 +200,10 @@ impl Keychain {
             .unwrap()
             .derive_key_from_this(&CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER.to_be_bytes());
 
-        trace!("consensus_state_ikm: {:?}", consensus_state_ikm.get());
+        trace!(
+            "consensus_state_ikm: {:?}",
+            hex::encode(consensus_state_ikm.get())
+        );
         self.set_consensus_callback_secret(consensus_callback_secret);
 
         Ok(())
@@ -207,18 +214,18 @@ impl Keychain {
 pub mod tests {
 
     use super::{
-        Keychain, CONSENSUS_SEED_SEALING_PATH, KEY_MANAGER, REGISTRATION_KEY_SEALING_PATH,
+        Keychain, CONSENSUS_SEED_SEALING_PATH, /*KEY_MANAGER,*/ REGISTRATION_KEY_SEALING_PATH,
     };
-    use crate::crypto::CryptoError;
-    use crate::crypto::{KeyPair, Seed};
+    // use crate::crypto::CryptoError;
+    // use crate::crypto::{KeyPair, Seed};
 
     // todo: fix test vectors to actually work
-    fn test_initial_keychain_state() {
+    fn _test_initial_keychain_state() {
         // clear previous data (if any)
-        std::sgxfs::remove(&*CONSENSUS_SEED_SEALING_PATH);
-        std::sgxfs::remove(&*REGISTRATION_KEY_SEALING_PATH);
+        let _ = std::sgxfs::remove(&*CONSENSUS_SEED_SEALING_PATH);
+        let _ = std::sgxfs::remove(&*REGISTRATION_KEY_SEALING_PATH);
 
-        let keys = Keychain::new();
+        let _keys = Keychain::new();
 
         // todo: replace with actual checks
         // assert_eq!(keys.get_registration_key(), Err(CryptoError));

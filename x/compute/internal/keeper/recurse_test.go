@@ -4,16 +4,17 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
-	"os"
 	"testing"
 
-	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	sdk "github.com/enigmampc/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 type Recurse struct {
@@ -42,12 +43,7 @@ type recurseResponse struct {
 // number os wasm queries called from a contract
 var totalWasmQueryCounter int
 
-func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.AccAddress, ctx sdk.Context, keeper Keeper, cleanup func()) {
-	// we do one basic setup before all test cases (which are read-only and don't change state)
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
-	cleanup = func() { os.RemoveAll(tempDir) }
-
+func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.AccAddress, ctx sdk.Context, keeper Keeper) {
 	var realWasmQuerier func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
 	countingQuerier := &QueryPlugins{
 		Wasm: func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error) {
@@ -55,12 +51,13 @@ func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.Acc
 			return realWasmQuerier(ctx, request)
 		},
 	}
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, countingQuerier)
+	encoders := DefaultEncoders()
+	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, countingQuerier)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 	realWasmQuerier = WasmQuerier(&keeper)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, creatorPriv := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
+	creator, creatorPriv := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 
 	// store the code
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
@@ -81,14 +78,14 @@ func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.Acc
 	contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, creator, creatorPriv, string(initMsgBz), true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	return contractAddr, creator, ctx, keeper, cleanup
+	return contractAddr, creator, ctx, keeper
 }
 
 func TestGasCostOnQuery(t *testing.T) {
 	const (
-		GasNoWork uint64 = InstanceCost + 2_756
+		GasNoWork uint64 = types.InstanceCost + 2_756
 		// Note: about 100 SDK gas (10k wasmer gas) for each round of sha256
-		GasWork50 uint64 = InstanceCost + 8_464 // this is a little shy of 50k gas - to keep an eye on the limit
+		GasWork50 uint64 = types.InstanceCost + 8_464 // this is a little shy of 50k gas - to keep an eye on the limit
 
 		GasReturnUnhashed uint64 = 647
 		GasReturnHashed   uint64 = 597
@@ -137,8 +134,7 @@ func TestGasCostOnQuery(t *testing.T) {
 		},
 	}
 
-	contractAddr, creator, ctx, keeper, cleanup := initRecurseContract(t)
-	defer cleanup()
+	contractAddr, creator, ctx, keeper := initRecurseContract(t)
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -180,7 +176,8 @@ func TestGasCostOnQuery(t *testing.T) {
 
 func TestGasOnExternalQuery(t *testing.T) {
 	const (
-		GasWork50 uint64 = InstanceCost + 8_464
+		// todo: tune gas numbers
+		GasWork50 uint64 = types.InstanceCost + 846
 	)
 
 	cases := map[string]struct {
@@ -222,12 +219,11 @@ func TestGasOnExternalQuery(t *testing.T) {
 		},
 	}
 
-	contractAddr, _, ctx, keeper, cleanup := initRecurseContract(t)
-	defer cleanup()
+	contractAddr, _, ctx, keeper := initRecurseContract(t)
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			ctx = ctx.WithGasMeter(sdk.NewGasMeter(tc.gasLimit))
+			keeper.queryGasLimit = tc.gasLimit
 
 			recurse := tc.msg
 			recurse.Contract = contractAddr
@@ -247,12 +243,12 @@ func TestGasOnExternalQuery(t *testing.T) {
 			if tc.expectPanic {
 				require.Panics(t, func() {
 					// this should run out of gas
-					_, err := NewQuerier(keeper)(ctx, path, req)
+					_, err := NewLegacyQuerier(keeper)(ctx, path, req)
 					t.Logf("%v", err)
 				})
 			} else {
 				// otherwise, make sure we get a good success
-				_, err := NewQuerier(keeper)(ctx, path, req)
+				_, err := NewLegacyQuerier(keeper)(ctx, path, req)
 				require.NoError(t, err)
 			}
 		})
@@ -269,7 +265,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 
 	const (
 		// Note: about 100 SDK gas (10k wasmer gas) for each round of sha256
-		GasWork2k uint64 = InstanceCost + 233_379 // we have 6x gas used in cpu than in the instance
+		GasWork2k uint64 = types.InstanceCost + 233_379 // we have 6x gas used in cpu than in the instance
 		// This is overhead for calling into a sub-contract
 		GasReturnHashed uint64 = 603
 	)
@@ -314,7 +310,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			expectedGas:               GasWork2k + 9*(GasWork2k+GasReturnHashed),
 			expectOutOfGas:            false,
 			expectOOM:                 false,
-			expectRecursionLimit:       true,
+			expectRecursionLimit:      true,
 		},
 		// this is where we expect an error...
 		// it has enough gas to run 4 times and die on the 5th (4th time dispatching to sub-contract)
@@ -329,12 +325,11 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			expectQueriesFromContract: 4,
 			expectOutOfGas:            false,
 			expectOOM:                 false,
-			expectRecursionLimit:       true,
+			expectRecursionLimit:      true,
 		},
 	}
 
-	contractAddr, _, ctx, keeper, cleanup := initRecurseContract(t)
-	defer cleanup()
+	contractAddr, _, ctx, keeper := initRecurseContract(t)
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {

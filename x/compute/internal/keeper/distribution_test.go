@@ -3,13 +3,15 @@ package keeper
 import (
 	"encoding/binary"
 	"encoding/json"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	"github.com/enigmampc/cosmos-sdk/x/staking"
+	"io/ioutil"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"os"
-	"testing"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/staking"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
 type DistInitMsg struct{}
@@ -25,25 +27,24 @@ type Delegator struct {
 // TestDistributionRewards tests querying staking rewards from inside a contract - first testing no rewards, then advancing
 // 1 block and checking the rewards again
 func TestDistributionRewards(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
+	encoders := DefaultEncoders()
+	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, stakingKeeper, keeper, distKeeper := keepers.AccountKeeper, keepers.StakingKeeper, keepers.WasmKeeper, keepers.DistKeeper
 
-	valAddr := addValidator(ctx, stakingKeeper, accKeeper, sdk.NewInt64Coin("stake", 100))
+	valAddr := addValidator(ctx, stakingKeeper, accKeeper, keeper.bankKeeper, sdk.NewInt64Coin("stake", 100))
 	ctx = nextBlock(ctx, stakingKeeper)
 
 	v, found := stakingKeeper.GetValidator(ctx, valAddr)
 	assert.True(t, found)
 	assert.Equal(t, v.GetDelegatorShares(), sdk.NewDec(100))
 
-	deposit := sdk.NewCoins(sdk.NewInt64Coin("stake", 5_000_000_000))
-	creator, creatorPrivKey := createFakeFundedAccount(ctx, accKeeper, deposit)
+	depositCoin := sdk.NewInt64Coin(sdk.DefaultBondDenom, 5_000_000_000)
+	deposit := sdk.NewCoins(depositCoin)
+	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
+	require.Equal(t, keeper.bankKeeper.GetBalance(ctx, creator, sdk.DefaultBondDenom), depositCoin)
 
-	delTokens := sdk.TokensFromConsensusPower(1000)
-	msg2 := staking.NewMsgDelegate(creator, valAddr,
+	delTokens := sdk.TokensFromConsensusPower(1000, sdk.DefaultPowerReduction)
+	msg2 := stakingtypes.NewMsgDelegate(creator, valAddr,
 		sdk.NewCoin(sdk.DefaultBondDenom, delTokens))
 
 	require.Equal(t, uint64(2), distKeeper.GetValidatorHistoricalReferenceCount(ctx))
@@ -89,7 +90,6 @@ func TestDistributionRewards(t *testing.T) {
 	require.Empty(t, err)
 	// returns the rewards
 	require.Equal(t, uint64(0), binary.BigEndian.Uint64(res))
-
 	ctx = nextBlock(ctx, stakingKeeper)
 
 	// test what happens if there are some rewards

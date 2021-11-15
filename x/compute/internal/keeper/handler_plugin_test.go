@@ -4,24 +4,25 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
-	"github.com/enigmampc/cosmos-sdk/x/distribution"
-	"github.com/enigmampc/cosmos-sdk/x/staking"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	"github.com/enigmampc/cosmos-sdk/x/bank"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 func TestEncoding(t *testing.T) {
 	_, _, addr1 := keyPubAddr()
 	_, _, addr2 := keyPubAddr()
 	invalidAddr := "xrnd1d02kd90n38qvr3qb9qof83fn2d2"
-	valAddr := make(sdk.ValAddress, sdk.AddrLen)
+	valAddr := make(sdk.ValAddress, 20)
 	valAddr[0] = 12
-	valAddr2 := make(sdk.ValAddress, sdk.AddrLen)
+	valAddr2 := make(sdk.ValAddress, 20)
 	valAddr2[1] = 123
 
 	jsonMsg := json.RawMessage(`{"foo": 123}`)
@@ -55,9 +56,9 @@ func TestEncoding(t *testing.T) {
 				},
 			},
 			output: []sdk.Msg{
-				bank.MsgSend{
-					FromAddress: addr1,
-					ToAddress:   addr2,
+				&banktypes.MsgSend{
+					FromAddress: addr1.String(),
+					ToAddress:   addr2.String(),
 					Amount: sdk.Coins{
 						sdk.NewInt64Coin("uatom", 12345),
 						sdk.NewInt64Coin("usdt", 54321),
@@ -116,7 +117,7 @@ func TestEncoding(t *testing.T) {
 				},
 			},
 			output: []sdk.Msg{
-				types.MsgExecuteContract{
+				&types.MsgExecuteContract{
 					Sender:           addr1,
 					Contract:         addr2,
 					CallbackCodeHash: "",
@@ -140,7 +141,7 @@ func TestEncoding(t *testing.T) {
 				},
 			},
 			output: []sdk.Msg{
-				types.MsgInstantiateContract{
+				&types.MsgInstantiateContract{
 					Sender:    addr1,
 					CodeID:    7,
 					Label:     "",
@@ -160,9 +161,9 @@ func TestEncoding(t *testing.T) {
 				},
 			},
 			output: []sdk.Msg{
-				staking.MsgDelegate{
-					DelegatorAddress: addr1,
-					ValidatorAddress: valAddr,
+				&stakingtypes.MsgDelegate{
+					DelegatorAddress: addr1.String(),
+					ValidatorAddress: valAddr.String(),
 					Amount:           sdk.NewInt64Coin("stake", 777),
 				},
 			},
@@ -190,9 +191,9 @@ func TestEncoding(t *testing.T) {
 				},
 			},
 			output: []sdk.Msg{
-				staking.MsgUndelegate{
-					DelegatorAddress: addr1,
-					ValidatorAddress: valAddr,
+				&stakingtypes.MsgUndelegate{
+					DelegatorAddress: addr1.String(),
+					ValidatorAddress: valAddr.String(),
 					Amount:           sdk.NewInt64Coin("stake", 555),
 				},
 			},
@@ -209,10 +210,10 @@ func TestEncoding(t *testing.T) {
 				},
 			},
 			output: []sdk.Msg{
-				staking.MsgBeginRedelegate{
-					DelegatorAddress:    addr1,
-					ValidatorSrcAddress: valAddr,
-					ValidatorDstAddress: valAddr2,
+				&stakingtypes.MsgBeginRedelegate{
+					DelegatorAddress:    addr1.String(),
+					ValidatorSrcAddress: valAddr.String(),
+					ValidatorDstAddress: valAddr2.String(),
 					Amount:              sdk.NewInt64Coin("stake", 222),
 				},
 			},
@@ -227,13 +228,13 @@ func TestEncoding(t *testing.T) {
 				},
 			},
 			output: []sdk.Msg{
-				distribution.MsgSetWithdrawAddress{
-					DelegatorAddress: addr1,
-					WithdrawAddress:  addr1,
+				&distributiontypes.MsgSetWithdrawAddress{
+					DelegatorAddress: addr1.String(),
+					WithdrawAddress:  addr1.String(),
 				},
-				distribution.MsgWithdrawDelegatorReward{
-					DelegatorAddress: addr1,
-					ValidatorAddress: valAddr2,
+				&distributiontypes.MsgWithdrawDelegatorReward{
+					DelegatorAddress: addr1.String(),
+					ValidatorAddress: valAddr2.String(),
 				},
 			},
 		},
@@ -248,13 +249,13 @@ func TestEncoding(t *testing.T) {
 				},
 			},
 			output: []sdk.Msg{
-				distribution.MsgSetWithdrawAddress{
-					DelegatorAddress: addr1,
-					WithdrawAddress:  addr2,
+				&distributiontypes.MsgSetWithdrawAddress{
+					DelegatorAddress: addr1.String(),
+					WithdrawAddress:  addr2.String(),
 				},
-				distribution.MsgWithdrawDelegatorReward{
-					DelegatorAddress: addr1,
-					ValidatorAddress: valAddr2,
+				&distributiontypes.MsgWithdrawDelegatorReward{
+					DelegatorAddress: addr1.String(),
+					ValidatorAddress: valAddr2.String(),
 				},
 			},
 		},

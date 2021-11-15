@@ -52,6 +52,10 @@ enclave {
             uintptr_t encrypted_seed_len
         );
 
+        public sgx_status_t ecall_configure_runtime(
+            RuntimeConfiguration runtime_configuration
+        );
+
         public InitResult ecall_init(
             Ctx context,
             uint64_t gas_limit,
@@ -86,6 +90,8 @@ enclave {
             [out] uint64_t* used_gas,
             [in, count=contract_len] const uint8_t* contract,
             uintptr_t contract_len,
+            [in, count=env_len] const uint8_t* env,
+            uintptr_t env_len,
             [in, count=msg_len] const uint8_t* msg,
             uintptr_t msg_len
         );

@@ -33,7 +33,7 @@ func HealthCheck() ([]byte, error) {
 	return nil, nil
 }
 
-func InitBootstrap() ([]byte, error) {
+func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	//errmsg := C.Buffer{}
 	//
 	//res, err := C.init_bootstrap(&errmsg)
@@ -76,6 +76,10 @@ func InitCache(dataDir string, supportedFeatures string, cacheSize uint64) (Cach
 
 func ReleaseCache(cache Cache) {
 	//C.release_cache(cache.ptr)
+}
+
+func InitEnclaveRuntime(ModuleCacheSize uint8) error {
+	return nil
 }
 
 func Create(cache Cache, wasm []byte) ([]byte, error) {
@@ -200,6 +204,7 @@ func Migrate(
 func Query(
 	cache Cache,
 	code_id []byte,
+	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
 	store KVStore,
@@ -237,7 +242,7 @@ func KeyGen() ([]byte, error) {
 }
 
 // KeyGen Seng KeyGen request to enclave
-func CreateAttestationReport() (bool, error) {
+func CreateAttestationReport(spid []byte, apiKey []byte) (bool, error) {
 	//errmsg := C.Buffer{}
 	//_, err := C.create_attestation_report(&errmsg)
 	//if err != nil {

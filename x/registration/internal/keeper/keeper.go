@@ -5,25 +5,25 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
-	"github.com/enigmampc/cosmos-sdk/codec"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
-	"github.com/prometheus/common/log"
 	"path/filepath"
 )
 
 // Keeper will have a reference to Wasmer with it's own data directory.
 type Keeper struct {
 	storeKey sdk.StoreKey
-	cdc      *codec.Codec
+	cdc      codec.BinaryCodec
 	enclave  EnclaveInterface
 	router   sdk.Router
 }
 
 // NewKeeper creates a new contract Keeper instance
-func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, router sdk.Router, enclave EnclaveInterface, homeDir string, bootstrap bool) Keeper {
+func NewKeeper(cdc codec.BinaryCodec, storeKey sdk.StoreKey, router sdk.Router, enclave EnclaveInterface, homeDir string, bootstrap bool) Keeper {
 
 	if !bootstrap {
 		InitializeNode(homeDir, enclave)
@@ -92,18 +92,14 @@ func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byt
 		if err != nil {
 			return nil, sdkerrors.Wrap(types.ErrAuthenticateFailed, err.Error())
 		}
-		log.Debug("After isNodeAuthenticated")
 		if isAuth {
 			return k.getRegistrationInfo(ctx, publicKey).EncryptedSeed, nil
 		}
-		log.Debug("After getRegistrationInfo")
 		encSeed, err = k.enclave.GetEncryptedSeed(certificate)
-		log.Debug("After GetEncryptedSeed")
 		if err != nil {
 			// return 0, sdkerrors.Wrap(err, "cosmwasm create")
 			return nil, sdkerrors.Wrap(types.ErrAuthenticateFailed, err.Error())
 		}
-		log.Debug("Registration done")
 	}
 
 	regInfo := types.RegistrationNodeInfo{
@@ -128,17 +124,27 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 		}
 	}
 
+	var res *sdk.Result
+	var err error
 	// find the handler and execute it
-	h := k.router.Route(ctx, msg.Route())
-	if h == nil {
-		return sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, msg.Route())
+	if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
+		h := k.router.Route(ctx, legacyMsg.Route())
+		if h == nil {
+			return sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, legacyMsg.Route())
+		}
+		res, err = h(ctx, msg)
+		if err != nil {
+			return err
+		}
 	}
-	res, err := h(ctx, msg)
-	if err != nil {
-		return err
+
+	events := make(sdk.Events, len(res.Events))
+	for i := range res.Events {
+		events[i] = sdk.Event(res.Events[i])
 	}
+
 	// redispatch all events, (type sdk.EventTypeMessage will be filtered out in the handler)
-	ctx.EventManager().EmitEvents(res.Events)
+	ctx.EventManager().EmitEvents(events)
 
 	return nil
 }

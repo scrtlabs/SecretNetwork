@@ -37,70 +37,23 @@ DD+gT9sSpssq0ascmvH49MOgjt1yoysLtdCtJW/9FZpoOypaHx0R+mJTLwPXVMrv
 DaVzWh5aiEx+idkSGMnX
 -----END CERTIFICATE-----`
 
-type QuoteReport struct {
-	ID                    string   `json:"id"`
-	Timestamp             string   `json:"timestamp"`
-	Version               int      `json:"version"`
-	IsvEnclaveQuoteStatus string   `json:"isvEnclaveQuoteStatus"`
-	PlatformInfoBlob      string   `json:"platformInfoBlob"`
-	IsvEnclaveQuoteBody   string   `json:"isvEnclaveQuoteBody"`
-	AdvisoryIDs           []string `json:"advisoryIDs"`
-}
-
 type Certificate []byte
-
-//TODO: add more origin field if needed
-type QuoteReportData struct {
-	version    int
-	signType   int
-	reportBody QuoteReportBody
-}
-
-//TODO: add more origin filed if needed
-type QuoteReportBody struct {
-	mrEnclave  string
-	mrSigner   string
-	reportData string
-}
-
-type EndorsedAttestationReport struct {
-	Report      []byte `json:"report"`
-	Signature   []byte `json:"signature"`
-	SigningCert []byte `json:"signing_cert"`
-}
-
-type PlatformInfoBlob struct {
-	SgxEpidGroupFlags       uint8             `json:"sgx_epid_group_flags"`
-	SgxTcbEvaluationFlags   uint32            `json:"sgx_tcb_evaluation_flags"`
-	PseEvaluationFlags      uint32            `json:"pse_evaluation_flags"`
-	LatestEquivalentTcbPsvn string            `json:"latest_equivalent_tcb_psvn"`
-	LatestPseIsvsvn         string            `json:"latest_pse_isvsvn"`
-	LatestPsdaSvn           string            `json:"latest_psda_svn"`
-	Xeid                    uint32            `json:"xeid"`
-	Gid                     uint32            `json:"gid"`
-	SgxEc256SignatureT      SGXEC256Signature `json:"sgx_ec256_signature_t"`
-}
-
-type SGXEC256Signature struct {
-	Gx string `json:"gx"`
-	Gy string `json:"gy"`
-}
 
 // directly read from []byte
 func parseReport(quoteBytes []byte, quoteHex string) *QuoteReportData {
-	qrData := &QuoteReportData{reportBody: QuoteReportBody{}}
-	qrData.version = int(quoteBytes[0])
-	qrData.signType = int(quoteBytes[2])
-	qrData.reportBody.mrEnclave = quoteHex[224:288]
-	qrData.reportBody.mrSigner = quoteHex[352:416]
-	qrData.reportBody.reportData = quoteHex[736:864]
+	qrData := &QuoteReportData{ReportBody: &QuoteReportBody{}}
+	qrData.Version = uint64(quoteBytes[0])
+	qrData.SignType = uint64(quoteBytes[2])
+	qrData.ReportBody.MrEnclave = quoteHex[224:288]
+	qrData.ReportBody.MrSigner = quoteHex[352:416]
+	qrData.ReportBody.ReportData = quoteHex[736:864]
 	return qrData
 }
 
 // directly read from []byte
 func parsePlatform(piBlobByte []byte) *PlatformInfoBlob {
-	piBlob := &PlatformInfoBlob{SgxEc256SignatureT: SGXEC256Signature{}}
-	piBlob.SgxEpidGroupFlags = uint8(piBlobByte[0])
+	piBlob := &PlatformInfoBlob{SgxEc256SignatureT: &SGXEC256Signature{}}
+	piBlob.SgxEpidGroupFlags = uint32(piBlobByte[0])
 	piBlob.SgxTcbEvaluationFlags = computeDec(piBlobByte[1:3])
 	piBlob.PseEvaluationFlags = computeDec(piBlobByte[3:5])
 	piBlob.LatestEquivalentTcbPsvn = bytesToString(piBlobByte[5:23])

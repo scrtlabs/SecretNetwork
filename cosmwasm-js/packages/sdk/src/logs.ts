@@ -12,9 +12,9 @@ export interface Event {
 }
 
 export interface Log {
-  readonly msg_index: number;
-  readonly log: string;
-  readonly events: readonly Event[];
+  msg_index: number;
+  log: string;
+  events: readonly Event[];
 }
 
 export function parseAttribute(input: unknown): Attribute {
@@ -47,12 +47,10 @@ export function parseEvent(input: unknown): Event {
 export function parseLog(input: unknown): Log {
   if (!isNonNullObject(input)) throw new Error("Log must be a non-null object");
   const { msg_index, log, events } = input as any;
-  if (typeof msg_index !== "number") throw new Error("Log's msg_index must be a number");
-  if (typeof log !== "string") throw new Error("Log's log must be a string");
   if (!Array.isArray(events)) throw new Error("Log's events must be an array");
   return {
-    msg_index: msg_index,
-    log: log,
+    msg_index: 0,
+    log: "",
     events: events.map(parseEvent),
   };
 }

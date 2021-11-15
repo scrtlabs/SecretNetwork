@@ -11,15 +11,13 @@ use std::slice;
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_ffi_types::NodeAuthResult;
 
-use crate::consts::{
-    ATTESTATION_CERTIFICATE_SAVE_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH,
-    SEED_EXCH_CERTIFICATE_SAVE_PATH,
-};
+use crate::consts::{ATTESTATION_CERT_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH, SEED_EXCH_CERTIFICATE_SAVE_PATH, SigningMethod};
 use crate::crypto::{Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
 #[cfg(feature = "SGX_MODE_HW")]
 use crate::registration::report::AttestationReport;
 use crate::storage::write_to_untrusted;
-use crate::utils::{attest_from_key, validate_const_ptr, validate_mut_ptr, validate_mut_slice};
+use crate::utils::{attest_from_key, validate_mut_slice};
+use crate::{validate_const_ptr, validate_mut_ptr};
 
 use super::attestation::create_attestation_certificate;
 use super::cert::verify_ra_cert;
@@ -45,18 +43,20 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
     api_key: *const u8,
     api_key_len: u32,
 ) -> sgx_status_t {
-    if let Err(_e) = validate_mut_ptr(public_key.as_mut_ptr(), public_key.len()) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+    validate_mut_ptr!(
+        public_key.as_mut_ptr(),
+        public_key.len(),
+        sgx_status_t::SGX_ERROR_UNEXPECTED,
+    );
 
-    if let Err(_e) = validate_const_ptr(spid, spid_len as usize) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+    validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
     let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
 
-    if let Err(_e) = validate_const_ptr(api_key, api_key_len as usize) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+    validate_const_ptr!(
+        api_key,
+        api_key_len as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED,
+    );
     let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
     let mut key_manager = Keychain::new();
@@ -91,7 +91,7 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
     public_key.copy_from_slice(&key_manager.seed_exchange_key().unwrap().get_pubkey());
     trace!(
         "ecall_init_bootstrap consensus_seed_exchange_keypair public key: {:?}",
-        &public_key.to_vec()
+        hex::encode(public_key)
     );
 
     sgx_status_t::SGX_SUCCESS
@@ -120,13 +120,17 @@ pub unsafe extern "C" fn ecall_init_node(
     encrypted_seed: *const u8,
     encrypted_seed_len: u32,
 ) -> sgx_status_t {
-    if let Err(_e) = validate_const_ptr(master_cert, master_cert_len as usize) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+    validate_const_ptr!(
+        master_cert,
+        master_cert_len as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED,
+    );
 
-    if let Err(_e) = validate_const_ptr(encrypted_seed, encrypted_seed_len as usize) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+    validate_const_ptr!(
+        encrypted_seed,
+        encrypted_seed_len as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED,
+    );
 
     let cert_slice = slice::from_raw_parts(master_cert, master_cert_len as usize);
 
@@ -147,7 +151,8 @@ pub unsafe extern "C" fn ecall_init_node(
     let mut target_public_key: [u8; PUBLIC_KEY_SIZE] = [0u8; PUBLIC_KEY_SIZE];
 
     // validate certificate w/ attestation report
-    let pk = match verify_ra_cert(cert_slice) {
+    // testing only
+    let pk = match verify_ra_cert(cert_slice, Some(SigningMethod::MRSIGNER)) {
         Err(e) => {
             error!("Error in validating certificate: {:?}", e);
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
@@ -203,14 +208,14 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
     api_key: *const u8,
     api_key_len: u32,
 ) -> sgx_status_t {
-    if let Err(_e) = validate_const_ptr(spid, spid_len as usize) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+    validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
     let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
 
-    if let Err(_e) = validate_const_ptr(api_key, api_key_len as usize) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+    validate_const_ptr!(
+        api_key,
+        api_key_len as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED,
+    );
     let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
     let kp = KEY_MANAGER.get_registration_key().unwrap();
@@ -231,7 +236,8 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         Ok(res) => res,
     };
 
-    if let Err(status) = write_to_untrusted(cert.as_slice(), ATTESTATION_CERTIFICATE_SAVE_PATH) {
+    //let path_prefix = ATTESTATION_CERT_PATH.to_owned();
+    if let Err(status) = write_to_untrusted(cert.as_slice(), &ATTESTATION_CERT_PATH) {
         return status;
     }
 
@@ -288,7 +294,7 @@ fn print_local_report_info(cert: &[u8]) {
                 println!("Platform status is GROUP_OUT_OF_DATE. This means that one of the system components is missing a security update");
             }
             _ => {
-                println!("Platform status is {}", status);
+                println!("Platform status is {:?}", status);
             }
         },
         _ => println!("Platform Okay!"),

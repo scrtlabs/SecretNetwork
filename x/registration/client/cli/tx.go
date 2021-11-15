@@ -1,27 +1,16 @@
 package cli
 
 import (
-	"bufio"
-	//"fmt"
-	"io/ioutil"
-	//"strconv"
-
-	"github.com/spf13/cobra"
-	//"github.com/spf13/viper"
-
-	"github.com/enigmampc/cosmos-sdk/client"
-	"github.com/enigmampc/cosmos-sdk/client/context"
-	"github.com/enigmampc/cosmos-sdk/client/flags"
-	"github.com/enigmampc/cosmos-sdk/codec"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	"github.com/enigmampc/cosmos-sdk/x/auth"
-	"github.com/enigmampc/cosmos-sdk/x/auth/client/utils"
-
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
+	"github.com/spf13/cobra"
+	"io/ioutil"
 )
 
 // GetTxCmd returns the transaction commands for this module
-func GetTxCmd(cdc *codec.Codec) *cobra.Command {
+func GetTxCmd() *cobra.Command {
 	txCmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      "Registration transaction subcommands",
@@ -29,24 +18,25 @@ func GetTxCmd(cdc *codec.Codec) *cobra.Command {
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
 	}
-	txCmd.AddCommand(flags.PostCommands(
-		AuthenticateNodeCmd(cdc),
-	)...)
+	txCmd.AddCommand(
+		AuthenticateNodeCmd(),
+	)
 	return txCmd
 }
 
 // AuthenticateNodeCmd will upload code to be reused.
-func AuthenticateNodeCmd(cdc *codec.Codec) *cobra.Command {
+func AuthenticateNodeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "auth [cert file]",
 		Short: "Upload a certificate to authenticate the node",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			inBuf := bufio.NewReader(cmd.InOrStdin())
-			txBldr := auth.NewTxBuilderFromCLI(inBuf).WithTxEncoder(utils.GetTxEncoder(cdc))
-			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
+			//clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
 
-			// parse coins trying to be sent
 			cert, err := ioutil.ReadFile(args[0])
 			if err != nil {
 				return err
@@ -54,7 +44,7 @@ func AuthenticateNodeCmd(cdc *codec.Codec) *cobra.Command {
 
 			// build and sign the transaction, then broadcast to Tendermint
 			msg := types.RaAuthenticate{
-				Sender:      cliCtx.GetFromAddress(),
+				Sender:      clientCtx.GetFromAddress(),
 				Certificate: cert,
 			}
 			err = msg.ValidateBasic()
@@ -63,9 +53,10 @@ func AuthenticateNodeCmd(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), &msg)
 		},
 	}
+	flags.AddTxFlagsToCmd(cmd)
 
 	return cmd
 }

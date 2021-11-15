@@ -1,5 +1,7 @@
 package util
 
+import "fmt"
+
 const (
 	// Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
 	Bech32PrefixAccAddr = "secret"
@@ -13,4 +15,17 @@ const (
 	Bech32PrefixConsAddr = "secretvalcons"
 	// Bech32PrefixConsPub defines the Bech32 prefix of a consensus node public key
 	Bech32PrefixConsPub = "secretvalconspub"
+	CoinType            = 529
+	CoinPurpose         = 44
+)
+
+var (
+	// AddressVerifier secret address verifier
+	AddressVerifier = func(bz []byte) error {
+		if n := len(bz); n != 20 {
+			return fmt.Errorf("incorrect address length %d", n)
+		}
+
+		return nil
+	}
 )

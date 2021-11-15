@@ -4,7 +4,7 @@ package client
 import (
 	"github.com/enigmampc/SecretNetwork/x/compute/client/cli"
 	"github.com/enigmampc/SecretNetwork/x/compute/client/rest"
-	govclient "github.com/enigmampc/cosmos-sdk/x/gov/client"
+	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
 )
 
 // ProposalHandlers define the wasm cli proposal types and rest handler.

@@ -13,14 +13,16 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
-	"strings"
+	"path/filepath"
+	"regexp"
 
-	cosmwasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	"github.com/cosmos/cosmos-sdk/client"
+	"google.golang.org/grpc/encoding"
+	"google.golang.org/grpc/encoding/proto"
+
 	regtypes "github.com/enigmampc/SecretNetwork/x/registration"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 
-	"github.com/enigmampc/cosmos-sdk/client/context"
 	"github.com/miscreant/miscreant.go"
 	"golang.org/x/crypto/curve25519"
 	"golang.org/x/crypto/hkdf"
@@ -58,9 +60,9 @@ func GzipIt(input []byte) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// WASMContext wraps github.com/enigmampc/cosmos-sdk/client/context.CLIContext
+// WASMContext wraps github.com/cosmos/cosmos-sdk/client/client.Context
 type WASMContext struct {
-	CLIContext       context.CLIContext
+	CLIContext       client.Context
 	TestKeyPairPath  string
 	TestMasterIOCert regtypes.MasterCertificate
 }
@@ -76,7 +78,7 @@ func (ctx WASMContext) GetTxSenderKeyPair() (privkey []byte, pubkey []byte, er e
 	if len(ctx.TestKeyPairPath) > 0 {
 		keyPairFilePath = ctx.TestKeyPairPath
 	} else {
-		keyPairFilePath = path.Join(ctx.CLIContext.HomeDir, "id_tx_io.json")
+		keyPairFilePath = filepath.Join(ctx.CLIContext.HomeDir, "id_tx_io.json")
 	}
 
 	if _, err := os.Stat(keyPairFilePath); os.IsNotExist(err) {
@@ -132,22 +134,22 @@ var hkdfSalt = []byte{
 }
 
 func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
-	var certs regtypes.GenesisState
-	if ctx.TestMasterIOCert != nil { // TODO check length?
-		certs.IoMasterCertificate = ctx.TestMasterIOCert
+	var masterIoKey regtypes.Key
+	if ctx.TestMasterIOCert.Bytes != nil { // TODO check length?
+		masterIoKey.Key = ctx.TestMasterIOCert.Bytes
 	} else {
-		res, _, err := ctx.CLIContext.Query("custom/register/master-cert")
+		res, _, err := ctx.CLIContext.Query("/secret.registration.v1beta1.Query/TxKey")
 		if err != nil {
 			return nil, err
 		}
 
-		err = json.Unmarshal(res, &certs)
+		err = encoding.GetCodec(proto.Name).Unmarshal(res, &masterIoKey)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	ioPubkey, err := ra.VerifyRaCert(certs.IoMasterCertificate)
+	ioPubkey, err := ra.VerifyRaCert(masterIoKey.Key)
 	if err != nil {
 		return nil, err
 	}
@@ -245,27 +247,26 @@ func (ctx WASMContext) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) 
 	return cipher.Open(nil, ciphertext, []byte{})
 }
 
-func (ctx WASMContext) DecryptError(errString string, msgType string, nonce []byte) (cosmwasmTypes.StdError, error) {
-	errorCipherB64 := strings.ReplaceAll(errString, msgType+" contract failed: encrypted: ", "")
-	errorCipherB64 = strings.ReplaceAll(errorCipherB64, ": failed to execute message; message index: 0", "")
+var re = regexp.MustCompile("encrypted: (.+?):")
+
+func (ctx WASMContext) DecryptError(errString string, msgType string, nonce []byte) (json.RawMessage, error) {
+	regexMatch := re.FindStringSubmatch(errString)
+	if len(regexMatch) != 2 {
+		return nil, fmt.Errorf("Got an error finding base64 of the error: regexMatch '%v' should have a length of 2", regexMatch)
+	}
+	errorCipherB64 := regexMatch[1]
 
 	errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
 	if err != nil {
-		return cosmwasmTypes.StdError{}, fmt.Errorf("Got an error decoding base64 of the error: %w", err)
+		return nil, fmt.Errorf("Got an error decoding base64 of the error: %w", err)
 	}
 
 	errorPlainBz, err := ctx.Decrypt(errorCipherBz, nonce)
 	if err != nil {
-		return cosmwasmTypes.StdError{}, fmt.Errorf("Got an error decrypting the error: %w", err)
+		return nil, fmt.Errorf("Got an error decrypting the error: %w", err)
 	}
 
-	var stdErr cosmwasmTypes.StdError
-	err = json.Unmarshal(errorPlainBz, &stdErr)
-	if err != nil {
-		return cosmwasmTypes.StdError{}, fmt.Errorf("Error while trying to parse the error as json: '%s': %w", string(errorPlainBz), err)
-	}
-
-	return stdErr, nil
+	return errorPlainBz, nil
 }
 
 func encryptData(aesEncryptionKey []byte, txSenderPubKey []byte, plaintext []byte, nonce []byte) ([]byte, error) {

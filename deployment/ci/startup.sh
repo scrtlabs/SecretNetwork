@@ -1,4 +1,4 @@
-if [ "$SECRET_NODE_TYPE" == "BOOTSTRAP" ]
+if [ "$SECRET_LOCAL_NODE_TYPE" == "BOOTSTRAP" ]
 then
     ./bootstrap_init.sh
 else

@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	sdk "github.com/enigmampc/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,7 +22,7 @@ func TestContractInfoValidateBasic(t *testing.T) {
 			expError:   true,
 		},
 		"creator not an address": {
-			srcMutator: func(c *ContractInfo) { c.Creator = make([]byte, sdk.AddrLen-1) },
+			srcMutator: func(c *ContractInfo) { c.Creator = make([]byte, 1000) },
 			expError:   true,
 		},
 		/*
@@ -77,7 +76,7 @@ func TestCodeInfoValidateBasic(t *testing.T) {
 			expError:   true,
 		},
 		"creator not an address": {
-			srcMutator: func(c *CodeInfo) { c.Creator = make([]byte, sdk.AddrLen-1) },
+			srcMutator: func(c *CodeInfo) { c.Creator = make([]byte, 1000) },
 			expError:   true,
 		},
 		"source empty": {

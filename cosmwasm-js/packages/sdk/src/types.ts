@@ -52,9 +52,9 @@ export interface MsgStoreCode extends MsgTemplate {
     /** Base64 encoded Wasm */
     readonly wasm_byte_code: string;
     /** A valid URI reference to the contract's source code. Can be empty. */
-    readonly source: string;
+    source?: string;
     /** A docker tag. Can be empty. */
-    readonly builder: string;
+    builder?: string;
   };
 }
 
@@ -72,12 +72,9 @@ export interface MsgInstantiateContract extends MsgTemplate {
     readonly code_id: string;
     /** Human-readable label for this contract */
     readonly label: string;
-    /** callback_code_hash should always be an empty string when coming from the user */
-    readonly callback_code_hash: string;
     /** Init message as JavaScript object */
     init_msg: any;
     readonly init_funds: ReadonlyArray<Coin>;
-    readonly callback_sig: any;
   };
 }
 
@@ -93,12 +90,12 @@ export interface MsgExecuteContract extends MsgTemplate {
     readonly sender: string;
     /** Bech32 account address */
     readonly contract: string;
-    /** callback_code_hash should always be an empty string when coming from the user */
-    readonly callback_code_hash: string;
+    // /** callback_code_hash should always be an empty string when coming from the user */
+    // readonly callback_code_hash: string;
     /** Handle message as JavaScript object */
     msg: any;
     readonly sent_funds: ReadonlyArray<Coin>;
-    readonly callback_sig: any;
+    // readonly callback_sig: any;
   };
 }
 

@@ -256,7 +256,9 @@ where
         let limit = self.inner.gas_limit();
         let remaining = self.inner.gas_left();
         let used_internally = self.inner.gas_used();
-        let used_externally = limit.saturating_sub(remaining).saturating_sub(used_internally);
+        let used_externally = limit
+            .saturating_sub(remaining)
+            .saturating_sub(used_internally);
         GasReport {
             limit,
             remaining,
@@ -344,8 +346,8 @@ where
         Ok(Vec::new())
     }
 
-    pub fn call_query(&mut self, msg: &[u8]) -> VmResult<Vec<u8>> {
-        let init_result = self.inner.query(msg)?;
+    pub fn call_query(&mut self, env: &[u8], msg: &[u8]) -> VmResult<Vec<u8>> {
+        let init_result = self.inner.query(env, msg)?;
         Ok(init_result.into_output())
     }
 }

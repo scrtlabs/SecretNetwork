@@ -10,11 +10,11 @@ import (
 	"testing"
 
 	wasmtypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
-	"github.com/enigmampc/cosmos-sdk/client/context"
-	"github.com/enigmampc/cosmos-sdk/codec"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	authvesting "github.com/enigmampc/cosmos-sdk/x/auth/vesting"
-	"github.com/enigmampc/cosmos-sdk/x/gov"
+	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	authvesting "github.com/cosmos/cosmos-sdk/x/auth/vesting"
+	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 )

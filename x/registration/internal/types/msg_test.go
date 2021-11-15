@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	sdk "github.com/enigmampc/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 func TestMsgRaAuthenticateRoute(t *testing.T) {
@@ -29,7 +29,6 @@ func TestMsgSendValidation(t *testing.T) {
 
 	_ = os.Setenv("SGX_MODE", "SW")
 
-	addressTooShort := sdk.AccAddress([]byte("from"))
 	addr0 := sdk.AccAddress([]byte("qwlnmxj7prpx8rysxm2u"))
 
 	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
@@ -49,10 +48,7 @@ func TestMsgSendValidation(t *testing.T) {
 		addr0,
 		cert,
 	}},
-		{false, RaAuthenticate{
-			addressTooShort,
-			cert,
-		}}, // invalid address send
+		// invalid address send
 		{false, RaAuthenticate{
 			addr0,
 			invalidCert,

@@ -4,44 +4,50 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	"github.com/enigmampc/cosmos-sdk/types/module"
-	"github.com/enigmampc/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
+	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/module"
+	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
+	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+
 	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/crypto/ed25519"
-	"github.com/tendermint/tendermint/libs/kv"
+
+	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	computekeeper "github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
+	computetypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 type testData struct {
 	module     module.AppModule
 	ctx        sdk.Context
-	acctKeeper auth.AccountKeeper
+	acctKeeper authkeeper.AccountKeeper
+	bankKeeper bankkeeper.Keeper
 	keeper     Keeper
 }
 
-// returns a cleanup function, which must be defered on
-func setupTest(t *testing.T) (testData, func()) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
+func (data *testData) GetCoins(address sdk.AccAddress) sdk.Coins {
+	return data.bankKeeper.GetAllBalances(data.ctx, address)
+}
 
-	ctx, keepers := CreateTestInput(t, false, tempDir, "staking", nil, nil)
+// returns a cleanup function, which must be defered on
+func setupTest(t *testing.T) testData {
+	encoders := DefaultEncoders()
+	ctx, keepers := CreateTestInput(t, false, "staking", &encoders, nil)
 	acctKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 	data := testData{
 		module:     NewAppModule(keeper),
 		ctx:        ctx,
 		acctKeeper: acctKeeper,
+		bankKeeper: keepers.BankKeeper,
 		keeper:     keeper,
 	}
-	cleanup := func() { os.RemoveAll(tempDir) }
-	return data, cleanup
+	return data
 }
 
 func keyPubAddr() (crypto.PrivKey, crypto.PubKey, sdk.AccAddress) {
@@ -66,38 +72,38 @@ var (
 	oldContract       = mustLoad("./testdata/escrow_0.7.wasm")
 )
 
-func TestHandleCreate(t *testing.T) {
+	func TestHandleCreate(t *testing.T) {
 	cases := map[string]struct {
 		msg     sdk.Msg
 		isValid bool
 	}{
 		"empty": {
-			msg:     MsgStoreCode{},
+			msg:     &MsgStoreCode{},
 			isValid: false,
 		},
 		"invalid wasm": {
-			msg: MsgStoreCode{
+			msg: &MsgStoreCode{
 				Sender:       addr1,
 				WASMByteCode: []byte("foobar"),
 			},
 			isValid: false,
 		},
 		"valid wasm": {
-			msg: MsgStoreCode{
+			msg: &MsgStoreCode{
 				Sender:       addr1,
 				WASMByteCode: testContract,
 			},
 			isValid: true,
 		},
 		"other valid wasm": {
-			msg: MsgStoreCode{
+			msg: &MsgStoreCode{
 				Sender:       addr1,
 				WASMByteCode: maskContract,
 			},
 			isValid: true,
 		},
 		"old wasm (0.7)": {
-			msg: MsgStoreCode{
+			msg: &MsgStoreCode{
 				Sender:       addr1,
 				WASMByteCode: oldContract,
 			},
@@ -108,11 +114,10 @@ func TestHandleCreate(t *testing.T) {
 	for name, tc := range cases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			data, cleanup := setupTest(t)
-			defer cleanup()
+			data := setupTest(t)
 
-			h := data.module.NewHandler()
-			q := data.module.NewQuerierHandler()
+			h := TestHandler(data.keeper)
+			q := computekeeper.NewLegacyQuerier(data.keeper)
 
 			res, err := h(data.ctx, tc.msg)
 			if !tc.isValid {
@@ -139,20 +144,19 @@ type state struct {
 }
 
 func TestHandleInstantiate(t *testing.T) {
-	data, cleanup := setupTest(t)
-	defer cleanup()
+	data := setupTest(t)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, _ := createFakeFundedAccount(data.ctx, data.acctKeeper, deposit)
+	creator, _ := CreateFakeFundedAccount(data.ctx, data.acctKeeper, data.bankKeeper, deposit)
 
-	h := data.module.NewHandler()
-	q := data.module.NewQuerierHandler()
+	h := TestHandler(data.keeper)
+	q := computekeeper.NewLegacyQuerier(data.keeper)
 
 	msg := MsgStoreCode{
 		Sender:       creator,
 		WASMByteCode: testContract,
 	}
-	res, err := h(data.ctx, msg)
+	res, err := h(data.ctx, &msg)
 	require.NoError(t, err)
 	require.Equal(t, res.Data, []byte("1"))
 
@@ -173,7 +177,7 @@ func TestHandleInstantiate(t *testing.T) {
 		InitMsg:   initMsgBz,
 		InitFunds: nil,
 	}
-	res, err = h(data.ctx, initCmd)
+	res, err = h(data.ctx, &initCmd)
 	require.NoError(t, err)
 	contractAddr := sdk.AccAddress(res.Data)
 	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", contractAddr.String())
@@ -197,22 +201,21 @@ func TestHandleInstantiate(t *testing.T) {
 }
 
 func TestHandleExecute(t *testing.T) {
-	data, cleanup := setupTest(t)
-	defer cleanup()
+	data := setupTest(t)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator, _ := createFakeFundedAccount(data.ctx, data.acctKeeper, deposit.Add(deposit...))
-	fred, _ := createFakeFundedAccount(data.ctx, data.acctKeeper, topUp)
+	creator, _ := CreateFakeFundedAccount(data.ctx, data.acctKeeper, data.bankKeeper, deposit.Add(deposit...))
+	fred, _ := CreateFakeFundedAccount(data.ctx, data.acctKeeper, data.bankKeeper, topUp)
 
-	h := data.module.NewHandler()
-	q := data.module.NewQuerierHandler()
+	h := TestHandler(data.keeper)
+	q := computekeeper.NewLegacyQuerier(data.keeper)
 
 	msg := MsgStoreCode{
 		Sender:       creator,
 		WASMByteCode: testContract,
 	}
-	res, err := h(data.ctx, msg)
+	res, err := h(data.ctx, &msg)
 	require.NoError(t, err)
 	require.Equal(t, res.Data, []byte("1"))
 
@@ -230,7 +233,7 @@ func TestHandleExecute(t *testing.T) {
 		InitMsg:   initMsgBz,
 		InitFunds: deposit,
 	}
-	res, err = h(data.ctx, initCmd)
+	res, err = h(data.ctx, &initCmd)
 	require.NoError(t, err)
 	contractAddr := sdk.AccAddress(res.Data)
 	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", contractAddr.String())
@@ -250,12 +253,12 @@ func TestHandleExecute(t *testing.T) {
 	creatorAcct := data.acctKeeper.GetAccount(data.ctx, creator)
 	require.NotNil(t, creatorAcct)
 	// we started at 2*deposit, should have spent one above
-	assert.Equal(t, deposit, creatorAcct.GetCoins())
+	assert.Equal(t, deposit, data.GetCoins(creatorAcct.GetAddress()))
 
 	// ensure contract has updated balance
 	contractAcct := data.acctKeeper.GetAccount(data.ctx, contractAddr)
 	require.NotNil(t, contractAcct)
-	assert.Equal(t, deposit, contractAcct.GetCoins())
+	assert.Equal(t, deposit, data.GetCoins(contractAddr))
 
 	execCmd := MsgExecuteContract{
 		Sender:    fred,
@@ -263,7 +266,7 @@ func TestHandleExecute(t *testing.T) {
 		Msg:       []byte(`{"release":{}}`),
 		SentFunds: topUp,
 	}
-	res, err = h(data.ctx, execCmd)
+	res, err = h(data.ctx, &execCmd)
 	require.NoError(t, err)
 	// this should be standard x/compute init event, plus 2 bank send event, plus a special event from the contract
 	require.Equal(t, 4, len(res.Events), prettyEvents(res.Events))
@@ -287,13 +290,13 @@ func TestHandleExecute(t *testing.T) {
 	// ensure bob now exists and got both payments released
 	bobAcct = data.acctKeeper.GetAccount(data.ctx, bob)
 	require.NotNil(t, bobAcct)
-	balance := bobAcct.GetCoins()
+	balance := data.GetCoins(bobAcct.GetAddress())
 	assert.Equal(t, deposit.Add(topUp...), balance)
 
 	// ensure contract has updated balance
 	contractAcct = data.acctKeeper.GetAccount(data.ctx, contractAddr)
 	require.NotNil(t, contractAcct)
-	assert.Equal(t, sdk.Coins(nil), contractAcct.GetCoins())
+	assert.Equal(t, sdk.Coins(nil), data.GetCoins(contractAcct.GetAddress()))
 
 	// ensure all contract state is as after init
 	assertCodeList(t, q, data.ctx, 1)
@@ -309,21 +312,20 @@ func TestHandleExecute(t *testing.T) {
 }
 
 func TestHandleExecuteEscrow(t *testing.T) {
-	data, cleanup := setupTest(t)
-	defer cleanup()
+	data := setupTest(t)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator, _ := createFakeFundedAccount(data.ctx, data.acctKeeper, deposit.Add(deposit...))
-	fred, _ := createFakeFundedAccount(data.ctx, data.acctKeeper, topUp)
+	creator, _ := CreateFakeFundedAccount(data.ctx, data.acctKeeper, data.bankKeeper, deposit.Add(deposit...))
+	fred, _ := CreateFakeFundedAccount(data.ctx, data.acctKeeper, data.bankKeeper, topUp)
 
-	h := data.module.NewHandler()
+	h := TestHandler(data.keeper)
 
 	msg := MsgStoreCode{
 		Sender:       creator,
 		WASMByteCode: testContract,
 	}
-	res, err := h(data.ctx, msg)
+	res, err := h(data.ctx, &msg)
 	require.NoError(t, err)
 	require.Equal(t, res.Data, []byte("1"))
 
@@ -341,7 +343,7 @@ func TestHandleExecuteEscrow(t *testing.T) {
 		InitMsg:   initMsgBz,
 		InitFunds: deposit,
 	}
-	res, err = h(data.ctx, initCmd)
+	res, err = h(data.ctx, &initCmd)
 	require.NoError(t, err)
 	contractAddr := sdk.AccAddress(res.Data)
 	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", contractAddr.String())
@@ -358,19 +360,19 @@ func TestHandleExecuteEscrow(t *testing.T) {
 		Msg:       handleMsgBz,
 		SentFunds: topUp,
 	}
-	res, err = h(data.ctx, execCmd)
+	res, err = h(data.ctx, &execCmd)
 	require.NoError(t, err)
 
 	// ensure bob now exists and got both payments released
 	bobAcct := data.acctKeeper.GetAccount(data.ctx, bob)
 	require.NotNil(t, bobAcct)
-	balance := bobAcct.GetCoins()
+	balance := data.GetCoins(bobAcct.GetAddress())
 	assert.Equal(t, deposit.Add(topUp...), balance)
 
 	// ensure contract has updated balance
 	contractAcct := data.acctKeeper.GetAccount(data.ctx, contractAddr)
 	require.NotNil(t, contractAcct)
-	assert.Equal(t, sdk.Coins(nil), contractAcct.GetCoins())
+	assert.Equal(t, sdk.Coins(nil), data.GetCoins(contractAcct.GetAddress()))
 }
 
 type prettyEvent struct {
@@ -393,7 +395,7 @@ func prettyEvents(evts sdk.Events) string {
 	return string(bz)
 }
 
-func prettyAttrs(attrs []kv.Pair) []sdk.Attribute {
+func prettyAttrs(attrs []abci.EventAttribute) []sdk.Attribute {
 	pretty := make([]sdk.Attribute, len(attrs))
 	for i, a := range attrs {
 		pretty[i] = prettyAttr(a)
@@ -401,11 +403,11 @@ func prettyAttrs(attrs []kv.Pair) []sdk.Attribute {
 	return pretty
 }
 
-func prettyAttr(attr kv.Pair) sdk.Attribute {
+func prettyAttr(attr abci.EventAttribute) sdk.Attribute {
 	return sdk.NewAttribute(string(attr.Key), string(attr.Value))
 }
 
-func assertAttribute(t *testing.T, key string, value string, attr kv.Pair) {
+func assertAttribute(t *testing.T, key string, value string, attr abci.EventAttribute) {
 	assert.Equal(t, key, string(attr.Key), prettyAttr(attr))
 	assert.Equal(t, value, string(attr.Value), prettyAttr(attr))
 }
@@ -436,12 +438,12 @@ func assertCodeBytes(t *testing.T, q sdk.Querier, ctx sdk.Context, codeID uint64
 		return
 	}
 
-	var res GetCodeResponse
+	var res computetypes.QueryCodeResponse
 	err := json.Unmarshal(bz, &res)
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedBytes, res.Data)
-	assert.Equal(t, codeID, res.ID)
+	assert.Equal(t, codeID, res.CodeID)
 }
 
 func assertContractList(t *testing.T, q sdk.Querier, ctx sdk.Context, codeID uint64, addrs []string) {
@@ -492,13 +494,4 @@ func assertContractInfo(t *testing.T, q sdk.Querier, ctx sdk.Context, addr sdk.A
 
 	assert.Equal(t, codeID, res.CodeID)
 	assert.Equal(t, creator, res.Creator)
-}
-
-func createFakeFundedAccount(ctx sdk.Context, am auth.AccountKeeper, coins sdk.Coins) (sdk.AccAddress, crypto.PrivKey) {
-	priv, _, addr := keyPubAddr()
-	baseAcct := auth.NewBaseAccountWithAddress(addr)
-	_ = baseAcct.SetCoins(coins)
-	am.SetAccount(ctx, &baseAcct)
-
-	return addr, priv
 }

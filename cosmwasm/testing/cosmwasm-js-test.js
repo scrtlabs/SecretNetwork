@@ -4,6 +4,7 @@ const cosmwasmjs = require(path.resolve(
   __dirname,
   "../../cosmwasm-js/packages/sdk/build/"
 ));
+const {MsgData} = require("../../cosmwasm-js/packages/sdk/build/ProtoEncoding");
 const assert = require("assert").strict;
 
 process.on("unhandledRejection", (error) => {
@@ -11,14 +12,21 @@ process.on("unhandledRejection", (error) => {
   process.exit(1);
 });
 
+async function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 (async () => {
   const seed = cosmwasmjs.EnigmaUtils.GenerateNewSeed();
-  const client = new cosmwasmjs.CosmWasmClient("http://localhost:1337", seed);
+  const client = new cosmwasmjs.CosmWasmClient("http://localhost:1317", seed);
+  console.log("1")
   const contract = (await client.getContracts(1))[0].address;
 
+  console.log("2")
   const resQuery = await client.queryContractSmart(contract, {
     balance: { address: "secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t" },
   });
+  console.log("3")
   const initBalance = +resQuery.balance;
 
   const pen = await cosmwasmjs.Secp256k1Pen.fromMnemonic(
@@ -29,7 +37,7 @@ process.on("unhandledRejection", (error) => {
     "secret"
   );
   const signingClient = new cosmwasmjs.SigningCosmWasmClient(
-    "http://localhost:1337",
+    "http://localhost:1317",
     address,
     (signBytes) => pen.sign(signBytes),
     seed,
@@ -53,14 +61,18 @@ process.on("unhandledRejection", (error) => {
     }
   );
 
+  console.log("4")
   const execTx = await signingClient.execute(contract, {
     transfer: {
       amount: "10",
       recipient: "secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t",
     },
   });
+  console.log("5")
+  await sleep(5000);
 
   const tx = await client.restClient.txById(execTx.transactionHash);
+
   assert.deepEqual(execTx.logs, tx.logs);
   assert.deepEqual(execTx.data, tx.data);
   assert.deepEqual(tx.data, Uint8Array.from([]));
@@ -83,16 +95,19 @@ process.on("unhandledRejection", (error) => {
     },
   ]);
 
+  console.log("6")
   const qRes = await client.queryContractSmart(contract, {
     balance: { address: "secret1f395p0gg67mmfd5zcqvpnp9cxnu0hg6rjep44t" },
   });
 
   assert.equal(+qRes.balance, initBalance + 10);
 
+  console.log("7")
   const qRes2 = await client.queryContractSmart(contract, {
     balance: { address: "secret18rxhudxdx6wen48rtnrf4jv5frf47qa9ws2ju3" },
   });
 
+  console.log("8")
   try {
     await signingClient.execute(contract, {
       transfer: {
@@ -109,6 +124,8 @@ process.on("unhandledRejection", (error) => {
 
     const txId = /Error when posting tx (.+?)\./.exec(err.message)[1];
 
+    console.log(`Searching for TX ID: ${txId}`)
+    await sleep(5000);
     const tx = await client.restClient.txById(txId);
     assert(
       tx.raw_log.includes(
@@ -117,6 +134,7 @@ process.on("unhandledRejection", (error) => {
     );
   }
 
+  console.log("8")
   try {
     await client.queryContractSmart(contract, {
       balance: { address: "blabla" },
@@ -128,5 +146,6 @@ process.on("unhandledRejection", (error) => {
     );
   }
 
+  console.log("9")
   console.log("ok 👌");
 })();

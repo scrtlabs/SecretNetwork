@@ -25,7 +25,7 @@ default = ["SGX_MODE_SW"]
 SGX_MODE_SW = []
 SGX_MODE_HW = []
 production = ["SGX_MODE_HW", "log/max_level_warn", "log/release_max_level_warn"]
-debug-print = []
+build-protobuf = ["protoc-rust", "dirs"]
 test = []
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
@@ -72,6 +72,8 @@ x25519-dalek = { version = "=1.2.0", default-features = false, features = [
 hex = "0.4.2"
 ripemd160 = "0.9.1"
 log = "0.4.8"
+lru = { version = "0.6", default-features = false }
+protobuf = "2.22.0"
 
 [patch.crates-io]
 rand_core = { git = "https://github.com/mesalock-linux/rand-sgx", default-features = false, features = [
@@ -118,3 +120,7 @@ features = ["dangerous_configuration", "mesalock_sgx"]
 
 [dev-dependencies]
 sgx_edl = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+
+[build-dependencies]
+protoc-rust = { version = "=2.25", optional = true }
+dirs = { version = "3.0", optional = true }

@@ -1,6 +1,6 @@
 const miscreant = require("miscreant");
-import { sharedKey as x25519, generateKeyPair } from "curve25519-js";
 import { Encoding } from "@iov/encoding";
+import { generateKeyPair, sharedKey as x25519 } from "curve25519-js";
 const secureRandom = require("secure-random");
 import axios from "axios";
 const hkdf = require("js-crypto-hkdf");
@@ -88,13 +88,13 @@ export default class EnigmaUtils implements SecretUtils {
 
     const {
       data: {
-        result: { ioExchPubkey },
+        result: { TxKey },
       },
-    } = await axios.get(this.apiUrl + "/reg/consensus-io-exch-pubkey", {
+    } = await axios.get(this.apiUrl + "/reg/tx-key", {
       headers: { "Content-Type": "application/json" },
     });
 
-    this.consensusIoPubKey = Encoding.fromBase64(ioExchPubkey);
+    this.consensusIoPubKey = Encoding.fromBase64(TxKey);
     return this.consensusIoPubKey;
   }
 
@@ -130,11 +130,13 @@ export default class EnigmaUtils implements SecretUtils {
   }
 
   public async decrypt(ciphertext: Uint8Array, nonce: Uint8Array): Promise<Uint8Array> {
-    if (ciphertext.length === 0) {
+    if (!ciphertext?.length) {
       return new Uint8Array();
     }
 
     const txEncryptionKey = await this.getTxEncryptionKey(nonce);
+
+    //console.log(`decrypt tx encryption key: ${Encoding.toHex(txEncryptionKey)}`);
 
     const siv = await miscreant.SIV.importKey(txEncryptionKey, "AES-SIV", cryptoProvider);
 

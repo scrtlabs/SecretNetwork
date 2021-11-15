@@ -4,9 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	sdk "github.com/enigmampc/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestBuilderRegexp(t *testing.T) {
@@ -37,8 +36,8 @@ func TestBuilderRegexp(t *testing.T) {
 }
 
 func TestStoreCodeValidation(t *testing.T) {
-	badAddress, err := sdk.AccAddressFromHex("012345")
-	require.NoError(t, err)
+	badAddress := sdk.AccAddress(make([]byte, 2000))
+	//require.NoError(t, err)
 	// proper address size
 	goodAddress := sdk.AccAddress(make([]byte, 20))
 
@@ -131,8 +130,8 @@ func TestStoreCodeValidation(t *testing.T) {
 }
 
 func TestInstantiateContractValidation(t *testing.T) {
-	badAddress, err := sdk.AccAddressFromHex("012345")
-	require.NoError(t, err)
+	badAddress := sdk.AccAddress(make([]byte, 2000))
+
 	// proper address size
 	goodAddress := sdk.AccAddress(make([]byte, 20))
 
@@ -239,8 +238,8 @@ func TestInstantiateContractValidation(t *testing.T) {
 }
 
 func TestExecuteContractValidation(t *testing.T) {
-	badAddress, err := sdk.AccAddressFromHex("012345")
-	require.NoError(t, err)
+	badAddress := sdk.AccAddress(make([]byte, 2000))
+	//require.NoError(t, err)
 	// proper address size
 	goodAddress := sdk.AccAddress(make([]byte, 20))
 

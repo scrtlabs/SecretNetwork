@@ -13,14 +13,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/enigmampc/cosmos-sdk/client"
-	"github.com/enigmampc/cosmos-sdk/client/context"
-	"github.com/enigmampc/cosmos-sdk/client/flags"
-	"github.com/enigmampc/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 )
 
-func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
+func GetQueryCmd() *cobra.Command {
 	queryCmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      "Querying commands for the compute module",
@@ -28,22 +26,25 @@ func GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
 	}
-	queryCmd.AddCommand(flags.GetCommands(
-		GetCmdEncryptedSeed(cdc),
-		GetCmdMasterParams(cdc),
-	)...)
+	queryCmd.AddCommand(
+		GetCmdEncryptedSeed(),
+		GetCmdMasterParams(),
+	)
 	return queryCmd
 }
 
 // GetCmdListCode lists all wasm code uploaded
-func GetCmdEncryptedSeed(cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
+func GetCmdEncryptedSeed() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "seed [node-id]",
 		Short: "Get encrypted seed for a node",
 		Long:  "Get encrypted seed for a node",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
 
 			nodeId := args[0]
 			if len(nodeId) != types.PublicKeyLength {
@@ -51,7 +52,7 @@ func GetCmdEncryptedSeed(cdc *codec.Codec) *cobra.Command {
 			}
 
 			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryEncryptedSeed, nodeId)
-			res, _, err := cliCtx.Query(route)
+			res, _, err := clientCtx.Query(route)
 			if err != nil {
 				return err
 			}
@@ -59,20 +60,25 @@ func GetCmdEncryptedSeed(cdc *codec.Codec) *cobra.Command {
 			return nil
 		},
 	}
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
 }
 
 // GetCmdListCode lists all wasm code uploaded
-func GetCmdMasterParams(cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
+func GetCmdMasterParams() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "secret-network-params",
 		Short: "Get parameters for the secret network",
 		Long:  "Get parameters for the secret network - writes the parameters to [master-cert.der] by default",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
 
 			route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, keeper.QueryMasterCertificate)
-			res, _, err := cliCtx.Query(route)
+			res, _, err := clientCtx.Query(route)
 			if err != nil {
 				return err
 			}
@@ -84,12 +90,12 @@ func GetCmdMasterParams(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			err = ioutil.WriteFile(types.IoExchMasterCertPath, certs.IoMasterCertificate, 0644)
+			err = ioutil.WriteFile(types.IoExchMasterCertPath, certs.IoMasterCertificate.Bytes, 0644)
 			if err != nil {
 				return err
 			}
 
-			err = ioutil.WriteFile(types.NodeExchMasterCertPath, certs.NodeExchMasterCertificate, 0644)
+			err = ioutil.WriteFile(types.NodeExchMasterCertPath, certs.NodeExchMasterCertificate.Bytes, 0644)
 			if err != nil {
 				return err
 			}
@@ -97,6 +103,8 @@ func GetCmdMasterParams(cdc *codec.Codec) *cobra.Command {
 			return nil
 		},
 	}
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
 }
 
 type argumentDecoder struct {

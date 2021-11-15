@@ -217,7 +217,7 @@ export class CosmWasmClient {
    */
   public async getNonce(address: string): Promise<GetNonceResult> {
     const account = await this.getAccount(address);
-    if (!account) {
+    if (!account || !account.address) {
       throw new Error(
         "Account does not exist on chain. Send some tokens there before trying to query nonces.",
       );
@@ -231,14 +231,14 @@ export class CosmWasmClient {
   public async getAccount(address: string): Promise<Account | undefined> {
     const account = await this.restClient.authAccounts(address);
     const value = account.result.value;
-    if (value.address === "") {
+    if (value.address === undefined || value.address === "") {
       return undefined;
     } else {
       this.anyValidAddress = value.address;
       return {
         address: value.address,
         balance: value.coins,
-        pubkey: value.public_key ? decodeBech32Pubkey(value.public_key) : undefined,
+        pubkey: !!value?.public_key ? (JSON.parse(value.public_key) as PubKey) : undefined,
         accountNumber: value.account_number,
         sequence: value.sequence,
       };
@@ -404,7 +404,12 @@ export class CosmWasmClient {
     contractCodeHash?: string,
   ): Promise<JsonObject> {
     try {
-      return await this.restClient.queryContractSmart(contractAddress, queryMsg, addedParams,contractCodeHash);
+      return await this.restClient.queryContractSmart(
+        contractAddress,
+        queryMsg,
+        addedParams,
+        contractCodeHash,
+      );
     } catch (error) {
       if (error instanceof Error) {
         if (error.message.startsWith("not found: contract")) {

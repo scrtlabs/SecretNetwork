@@ -5,33 +5,29 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"testing"
 
-	"github.com/enigmampc/cosmos-sdk/x/auth"
-	authtypes "github.com/enigmampc/cosmos-sdk/x/auth/types"
-	"github.com/tendermint/tendermint/crypto"
-
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	sdkErrors "github.com/enigmampc/cosmos-sdk/types/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	abci "github.com/tendermint/tendermint/abci/types"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
+	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
+
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 func TestQueryContractLabel(t *testing.T) {
-
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
+	encoders := DefaultEncoders()
+	ctx, keepers := CreateTestInput(t, false,SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator, privCreator := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
-	anyAddr, _ := createFakeFundedAccount(ctx, accKeeper, topUp)
+	creator, privCreator := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
+	anyAddr, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
@@ -65,7 +61,7 @@ func TestQueryContractLabel(t *testing.T) {
 	require.NoError(t, err)
 
 	// this gets us full error, not redacted sdk.Error
-	q := NewQuerier(keeper)
+	q := NewLegacyQuerier(keeper)
 	specs := map[string]struct {
 		srcPath []string
 		srcReq  abci.RequestQuery
@@ -91,6 +87,7 @@ func TestQueryContractLabel(t *testing.T) {
 
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
+			//binResult, err := q(ctx, spec.srcPath, spec.srcReq)
 			binResult, err := q(ctx, spec.srcPath, spec.srcReq)
 			// require.True(t, spec.expErr.Is(err), "unexpected error")
 			require.True(t, spec.expErr.Is(err), err)
@@ -119,16 +116,14 @@ func TestQueryContractLabel(t *testing.T) {
 func TestQueryContractState(t *testing.T) {
 	t.SkipNow() // cannot interact directly with state
 
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
+	encoders := DefaultEncoders()
+	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator, _ := createFakeFundedAccount(ctx, accKeeper, deposit.Add(deposit...))
-	anyAddr, _ := createFakeFundedAccount(ctx, accKeeper, topUp)
+	creator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
+	anyAddr, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
@@ -164,7 +159,7 @@ func TestQueryContractState(t *testing.T) {
 	keeper.importContractState(ctx, addr, contractModel)
 
 	// this gets us full error, not redacted sdk.Error
-	q := NewQuerier(keeper)
+	q := NewLegacyQuerier(keeper)
 	specs := map[string]struct {
 		srcPath []string
 		srcReq  abci.RequestQuery
@@ -257,16 +252,14 @@ func TestQueryContractState(t *testing.T) {
 }
 
 func TestListContractByCodeOrdering(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
+	encoders := DefaultEncoders()
+	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 1000000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 500))
-	creator, creatorPrivKey := createFakeFundedAccount(ctx, accKeeper, deposit)
-	anyAddr, _ := createFakeFundedAccount(ctx, accKeeper, topUp)
+	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
+	anyAddr, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
@@ -309,22 +302,20 @@ func TestListContractByCodeOrdering(t *testing.T) {
 			ctx = setBlock(ctx, h)
 			h++
 		}
-		creatorAcc, err := auth.GetSignerAcc(ctx, accKeeper, creator)
+		creatorAcc, err := authante.GetSignerAcc(ctx, accKeeper, creator)
 		require.NoError(t, err)
 
-		tx := authtypes.NewTestTx(ctx, []sdk.Msg{types.MsgInstantiateContract{
+		instantiateMsg := types.MsgInstantiateContract{
 			Sender: creator,
 			// Admin:     nil,
 			CodeID:    codeID,
 			Label:     fmt.Sprintf("contract %d", i),
 			InitMsg:   initMsgBz,
 			InitFunds: topUp,
-		}}, []crypto.PrivKey{creatorPrivKey}, []uint64{creatorAcc.GetAccountNumber()}, []uint64{creatorAcc.GetSequence() - 1}, authtypes.StdFee{
-			Amount: nil,
-			Gas:    0,
-		})
+		}
+		tx := NewTestTx(&instantiateMsg, creatorAcc, creatorPrivKey)
 
-		txBytes, err := keeper.cdc.MarshalBinaryLengthPrefixed(tx)
+		txBytes, err := tx.Marshal()
 		require.NoError(t, err)
 
 		ctx = ctx.WithTxBytes(txBytes)
@@ -334,13 +325,13 @@ func TestListContractByCodeOrdering(t *testing.T) {
 	}
 
 	// query and check the results are properly sorted
-	q := NewQuerier(keeper)
+	q := NewLegacyQuerier(keeper)
 	query := []string{QueryListContractByCode, fmt.Sprintf("%d", codeID)}
 	data := abci.RequestQuery{}
 	res, err := q(ctx, query, data)
 	require.NoError(t, err)
 
-	var contracts []ContractInfoWithAddress
+	var contracts []types.ContractInfoWithAddress
 	err = json.Unmarshal(res, &contracts)
 	require.NoError(t, err)
 

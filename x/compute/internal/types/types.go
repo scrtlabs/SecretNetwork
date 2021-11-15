@@ -3,42 +3,26 @@ package types
 import (
 	"encoding/base64"
 
-	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
-	"github.com/enigmampc/cosmos-sdk/x/auth"
-	tmBytes "github.com/tendermint/tendermint/libs/bytes"
-
+	servertypes "github.com/cosmos/cosmos-sdk/server/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
+	"github.com/spf13/cast"
 )
 
 const defaultLRUCacheSize = uint64(0)
-const defaultQueryGasLimit = uint64(3000000)
+const defaultEnclaveLRUCacheSize = uint8(0) // can safely go up to 15
+const defaultQueryGasLimit = uint64(10_000_000)
 
 // base64 of a 64 byte key
 type ContractKey string
-
-// Model is a struct that holds a KV pair
-type Model struct {
-	// hex-encode key to read it better (this is often ascii)
-	Key tmBytes.HexBytes `json:"key"`
-	// base64-encode raw value
-	Value []byte `json:"val"`
-}
 
 func (m Model) ValidateBasic() error {
 	if len(m.Key) == 0 {
 		return sdkerrors.Wrap(ErrEmpty, "key")
 	}
 	return nil
-}
-
-// CodeInfo is data for the uploaded contract WASM code
-type CodeInfo struct {
-	CodeHash []byte         `json:"code_hash"`
-	Creator  sdk.AccAddress `json:"creator"`
-	Source   string         `json:"source"`
-	Builder  string         `json:"builder"`
-	// InstantiateConfig AccessConfig   `json:"instantiate_config"`
 }
 
 func (c CodeInfo) ValidateBasic() error {
@@ -92,25 +76,6 @@ type ContractCodeHistoryEntry struct {
 	Msg       json.RawMessage                  `json:"msg,omitempty"`
 }
 */
-
-// ContractInfo stores a WASM contract instance
-type ContractCustomInfo struct {
-	EnclaveKey []byte `json:"enclave_key"`
-	//Address sdk.AccAddress    `json:"address"`
-	// Admin   sdk.AccAddress `json:"admin,omitempty"`
-	Label string `json:"label"`
-}
-
-// ContractInfo stores a WASM contract instance
-type ContractInfo struct {
-	CodeID  uint64         `json:"code_id"`
-	Creator sdk.AccAddress `json:"creator"`
-	// Admin   sdk.AccAddress `json:"admin,omitempty"`
-	Label string `json:"label"`
-	// never show this in query results, just use for sorting
-	// (Note: when using json tag "-" amino refused to serialize it...)
-	Created *AbsoluteTxPosition `json:"created,omitempty"`
-}
 
 // NewContractInfo creates a new instance of a given WASM contract info
 func NewContractInfo(codeID uint64, creator /* , admin */ sdk.AccAddress, label string, createdAt *AbsoluteTxPosition) ContractInfo {
@@ -173,14 +138,6 @@ func (c *ContractInfo) ResetFromGenesis(ctx sdk.Context) ContractCodeHistoryEntr
 	}
 }
 */
-
-// AbsoluteTxPosition can be used to sort contracts
-type AbsoluteTxPosition struct {
-	// BlockHeight is the block the contract was created at
-	BlockHeight int64
-	// TxIndex is a monotonic counter within the block (actual transaction index, or gas consumed)
-	TxIndex uint64
-}
 
 // LessThan can be used to sort
 func (a *AbsoluteTxPosition) LessThan(b *AbsoluteTxPosition) bool {
@@ -251,11 +208,9 @@ const AttributeKeyContractAddr = "contract_address"
 
 // ParseEvents converts wasm LogAttributes into an sdk.Events (with 0 or 1 elements)
 func ParseEvents(logs []wasmTypes.LogAttribute, contractAddr sdk.AccAddress) sdk.Events {
-	if len(logs) == 0 {
-		return nil
-	}
 	// we always tag with the contract address issuing this event
 	attrs := []sdk.Attribute{sdk.NewAttribute(AttributeKeyContractAddr, contractAddr.String())}
+	// append attributes from wasm to the sdk.Event
 	for _, l := range logs {
 		// and reserve the contract_address key for our use (not contract)
 		if l.Key != AttributeKeyContractAddr {
@@ -263,20 +218,23 @@ func ParseEvents(logs []wasmTypes.LogAttribute, contractAddr sdk.AccAddress) sdk
 			attrs = append(attrs, attr)
 		}
 	}
+	// each wasm invokation always returns one sdk.Event
 	return sdk.Events{sdk.NewEvent(CustomEventType, attrs...)}
 }
 
 // WasmConfig is the extra config required for wasm
 type WasmConfig struct {
-	SmartQueryGasLimit uint64 `mapstructure:"query_gas_limit"`
-	CacheSize          uint64 `mapstructure:"lru_size"`
+	SmartQueryGasLimit uint64
+	CacheSize          uint64
+	EnclaveCacheSize   uint8
 }
 
 // DefaultWasmConfig returns the default settings for WasmConfig
-func DefaultWasmConfig() WasmConfig {
-	return WasmConfig{
+func DefaultWasmConfig() *WasmConfig {
+	return &WasmConfig{
 		SmartQueryGasLimit: defaultQueryGasLimit,
 		CacheSize:          defaultLRUCacheSize,
+		EnclaveCacheSize:   defaultEnclaveLRUCacheSize,
 	}
 }
 
@@ -285,14 +243,50 @@ type SecretMsg struct {
 	Msg      []byte
 }
 
+func NewSecretMsg(codeHash []byte, msg []byte) SecretMsg {
+	return SecretMsg{
+		CodeHash: codeHash,
+		Msg:      msg,
+	}
+}
+
 func (m SecretMsg) Serialize() []byte {
 	return append(m.CodeHash, m.Msg...)
 }
 
-func NewVerificationInfo(signBytes []byte, signature auth.StdSignature, callbackSig []byte) wasmTypes.VerificationInfo {
+func NewVerificationInfo(
+	signBytes []byte, signMode sdktxsigning.SignMode, modeInfo []byte, publicKey []byte, signature []byte, callbackSig []byte,
+) wasmTypes.VerificationInfo {
 	return wasmTypes.VerificationInfo{
 		Bytes:             signBytes,
+		SignMode:          signMode.String(),
+		ModeInfo:          modeInfo,
 		Signature:         signature,
+		PublicKey:         publicKey,
 		CallbackSignature: callbackSig,
 	}
 }
+
+// GetConfig load config values from the app options
+func GetConfig(appOpts servertypes.AppOptions) *WasmConfig {
+	return &WasmConfig{
+		SmartQueryGasLimit: cast.ToUint64(appOpts.Get("wasm.contract-query-gas-limit")),
+		CacheSize:          cast.ToUint64(appOpts.Get("wasm.contract-memory-cache-size")),
+		EnclaveCacheSize:   cast.ToUint8(appOpts.Get("wasm.contract-memory-enclave-cache-size")),
+	}
+}
+
+// DefaultConfigTemplate default config template for wasm module
+const DefaultConfigTemplate = `
+[wasm]
+# The maximum gas amount can be spent for contract query.
+# The contract query will invoke contract execution vm,
+# so we need to restrict the max usage to prevent DoS attack
+contract-query-gas-limit = "{{ .WASMConfig.SmartQueryGasLimit }}"
+
+# The WASM VM memory cache size in MiB not bytes
+contract-memory-cache-size = "{{ .WASMConfig.CacheSize }}"
+
+# The WASM VM memory cache size in number of cached modules. Can safely go up to 15, but not recommended for validators
+contract-memory-enclave-cache-size = "{{ .WASMConfig.EnclaveCacheSize }}"
+`

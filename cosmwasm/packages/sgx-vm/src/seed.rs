@@ -1,7 +1,7 @@
 use enclave_ffi_types::HealthCheckResult;
 use sgx_types::*;
 
-use log::{debug, info};
+use log::info;
 
 use crate::enclave::get_enclave;
 

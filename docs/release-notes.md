@@ -1,6 +1,6 @@
 ## Release notes
 
-### Current Release - v1.0.5
+### v1.0.5
 
 - Added debug prints in `cosmwasm_std`. These can be used by importing
   `cosmwasm_std::debug_print` which is both a `println!`-like macro, and a
@@ -8,7 +8,16 @@
   and macro don't do anything, but if the `debug-print` feature is enabled
   in `cosmwasm_std`, the calls will trigger a log in `enigmampc/secret-network-sw-dev`.
 
-## Previous releases
+- Fixed bug in compute module to allow contracts to initialize other contracts
+
+## v1.0.1-v1.0.3
+
+- Renamed `secret20` commands to `snip20`
+- Fixed various CLI bugs
+
+## v1.0.0
+
+- Secret Contracts
 
 ### v1.0.0
 
@@ -16,7 +25,7 @@
 
 ### v0.8.0
 
-Release candidate running 99% of the code which is in the v1.0.0 mainnet release. The primary goal of this version was for node runners and validators 
+Release candidate running 99% of the code which is in the v1.0.0 mainnet release. The primary goal of this version was for node runners and validators
 to be able to test their setups on a configuration which will mirror the mainnet release.
 
 #### Contracts
@@ -58,7 +67,7 @@ This release includes full Secret Contract functionality, stability, network con
 
 - Running `init-enclave` twice will reset registraion parameters and cause you to have to wipe and re-register the node
 - `--label` doesn't work for `secretcli q compute query`
-- A contract trying to call staking queries may function incorrectly 
+- A contract trying to call staking queries may function incorrectly
 
 #### CLI
 
@@ -96,7 +105,6 @@ This release includes full Secret Contract functionality, stability, network con
 
 - Changed the Wasm message types to include a new field: `callback_code_hash`. This field must include the code hash of
   any contracts you wish to send a message to, from another contract
-  
 - Added the field `contract_code_hash` to `env` passed into `handle`, `init` and `query` methods
 
 - Added Staking for Secret Contracts! You can now perform staking operations directly from Secret Contracts

@@ -248,9 +248,9 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) ([]byte, error) {
 		//fmt.Println("sgx quote mr_signer = ", qrData.reportBody.mrSigner)
 		//fmt.Println("Anticipated public key = ", pubHex)
 
-		if qrData.reportBody.reportData != pubHex {
+		if qrData.ReportBody.ReportData != pubHex {
 			// err := errors.New("Failed to authenticate certificate public key")
-			reportPubKey, err := hex.DecodeString(qrData.reportBody.reportData)
+			reportPubKey, err := hex.DecodeString(qrData.ReportBody.ReportData)
 			if err != nil {
 				return nil, err
 			}

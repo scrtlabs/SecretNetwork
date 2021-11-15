@@ -3,7 +3,7 @@
 
 set -e
 
-if [[ -z $"SUDO_USER" ]]
+if [[ -z "$SUDO_USER" ]]
 then
     export SUDO_USER=root
 fi
@@ -31,5 +31,7 @@ EOF
 
 systemctl daemon-reload
 
+mkdir -p "/opt/secret/.sgx_secrets"
+chown -R "$SUDO_USER":"$SUDO_USER" "/opt/secret/.sgx_secrets"
+mkdir -p "/opt/secret/.secretd/.node"
 mkdir -p "$(eval echo ~"$SUDO_USER")/.sgx_secrets"
-chown -R "$SUDO_USER":"$SUDO_USER" "$(eval echo ~"$SUDO_USER")/.sgx_secrets"

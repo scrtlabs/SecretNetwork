@@ -39,7 +39,7 @@ singlepass = ["cosmwasm-vm/default-singlepass"]
 cosmwasm-std = { path = "../../packages/std", features = ["staking"] }
 cosmwasm-storage = { path = "../../packages/storage" }
 schemars = "0.7"
-serde = { version = "=1.0.103", default-features = false, features = [
+serde = { version = "^1.0.117", default-features = false, features = [
   "derive"
 ] }
 

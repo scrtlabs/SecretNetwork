@@ -41,10 +41,15 @@ impl SealedKey for KeyPair {
 }
 
 fn seal(data: &[u8; 32], filepath: &str) -> Result<(), EnclaveError> {
-    let mut file = SgxFile::create(filepath).map_err(|_err| EnclaveError::FailedUnseal)?;
+    let mut file = SgxFile::create(filepath).map_err(|_err| {
+        error!("error creating file {}: {:?}", filepath, _err);
+        EnclaveError::FailedSeal
+    })?;
 
-    file.write_all(data)
-        .map_err(|_err| EnclaveError::FailedUnseal)
+    file.write_all(data).map_err(|_err| {
+        error!("error writing to path {}: {:?}", filepath, _err);
+        EnclaveError::FailedSeal
+    })
 }
 
 fn open(filepath: &str) -> Result<Ed25519PrivateKey, EnclaveError> {
@@ -68,17 +73,17 @@ fn open(filepath: &str) -> Result<Ed25519PrivateKey, EnclaveError> {
 #[cfg(feature = "test")]
 pub mod tests {
 
-    use super::{open, seal};
-    use log::*;
+    // use super::{open, seal};
+    // use log::*;
 
-    // todo: fix test vectors to actually work
-    pub fn test_seal() {
-        let key = b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-
-        if let Err(e) = seal(key, "file") {
-            error!("Failed to seal data: {:?}", e)
-        };
-    }
+    // // todo: fix test vectors to actually work
+    // pub fn test_seal() {
+    //     let key = b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    //
+    //     if let Err(e) = seal(key, "file") {
+    //         error!("Failed to seal data: {:?}", e)
+    //     };
+    // }
 
     // // todo: fix test vectors to actually work
     // pub fn test_open() {

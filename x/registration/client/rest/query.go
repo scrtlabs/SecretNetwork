@@ -5,44 +5,53 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"net/http"
-
-	// sdk "github.com/enigmampc/cosmos-sdk/types"
-	"github.com/enigmampc/cosmos-sdk/types/rest"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/types/rest"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	"net/http"
 
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/keeper"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 
-	"github.com/enigmampc/cosmos-sdk/client/context"
 	"github.com/gorilla/mux"
 )
 
-func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
-	r.HandleFunc("/reg/code", listCodesHandlerFn(cliCtx)).Methods("GET")
-	r.HandleFunc("/reg/consensus-io-exch-pubkey", ioPubkeyHandlerFn(cliCtx)).Methods("GET")
-	r.HandleFunc("/reg/consensus-seed-exch-pubkey", seedPubkeyHandlerFn(cliCtx)).Methods("GET")
+func registerQueryRoutes(cliCtx client.Context, r *mux.Router) {
+	r.HandleFunc("/reg/seed/{pubkey}", seedCheckHandlerFn(cliCtx)).Methods("GET")
+	r.HandleFunc("/reg/tx-key", txPubkeyHandlerFn(cliCtx)).Methods("GET")
+	r.HandleFunc("/reg/registration-key", seedCertificateHandlerFn(cliCtx)).Methods("GET")
 }
 
-func listCodesHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+func seedCheckHandlerFn(cliCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
 		if !ok {
 			return
 		}
 
-		route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, keeper.QueryEncryptedSeed)
-		res, height, err := cliCtx.Query(route)
+		pubkey := mux.Vars(r)["pubkey"]
+
+		if len(pubkey) != 64 {
+			rest.WriteErrorResponse(w, http.StatusBadRequest, "Malformed public key")
+			return
+		}
+
+		route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryEncryptedSeed, pubkey)
+		seed, height, err := cliCtx.Query(route)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		cliCtx = cliCtx.WithHeight(height)
+
+		// todo: add this to types
+		res := []byte(fmt.Sprintf(`{"Seed":"%s"}`, hex.EncodeToString(seed)))
+
 		rest.PostProcessResponse(w, cliCtx, json.RawMessage(res))
 	}
 }
 
-func ioPubkeyHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+func txPubkeyHandlerFn(cliCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
 		if !ok {
@@ -65,19 +74,20 @@ func ioPubkeyHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		ioExchPubkey, err := ra.VerifyRaCert(certs.IoMasterCertificate)
+		ioExchPubkey, err := ra.VerifyRaCert(certs.IoMasterCertificate.Bytes)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		res = []byte(fmt.Sprintf(`{"ioExchPubkey":"%s"}`, base64.StdEncoding.EncodeToString(ioExchPubkey)))
+		// todo: add this to types
+		res = []byte(fmt.Sprintf(`{"TxKey":"%s"}`, base64.StdEncoding.EncodeToString(ioExchPubkey)))
 
 		rest.PostProcessResponse(w, cliCtx, json.RawMessage(res))
 	}
 }
 
-func seedPubkeyHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+func seedCertificateHandlerFn(cliCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
 		if !ok {
@@ -100,15 +110,16 @@ func seedPubkeyHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		nodeExchPubkey, err := ra.VerifyRaCert(certs.NodeExchMasterCertificate)
+		_, err = ra.VerifyRaCert(certs.NodeExchMasterCertificate.Bytes)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		res = []byte(fmt.Sprintf(`{"nodeExchPubkey":"%s"}`, base64.StdEncoding.EncodeToString(nodeExchPubkey)))
+		// todo: add this to types
+		res = []byte(fmt.Sprintf(`{"RegistrationKey":"%s"}`, base64.StdEncoding.EncodeToString(certs.NodeExchMasterCertificate.Bytes)))
 
-		rest.PostProcessResponse(w, cliCtx, nodeExchPubkey)
+		rest.PostProcessResponse(w, cliCtx, json.RawMessage(res))
 	}
 }
 

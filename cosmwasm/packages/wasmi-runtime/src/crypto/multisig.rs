@@ -1,55 +1,85 @@
 use log::*;
 
-use crate::cosmwasm::encoding::Binary;
-use crate::cosmwasm::types::{CanonicalAddr, PubKeyKind};
-use crate::crypto::traits::PubKey;
-use crate::crypto::CryptoError;
-
-use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
-const THRESHOLD_PREFIX: [u8; 5] = [34, 193, 247, 226, 8];
-const GENERIC_PREFIX: u8 = 18;
+use crate::cosmwasm::encoding::Binary;
+use crate::cosmwasm::types::CanonicalAddr;
+use crate::wasm::types::CosmosPubKey;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+use super::traits::PubKey;
+use super::CryptoError;
+
+/// https://docs.tendermint.com/v0.32/spec/blockchain/encoding.html#public-key-cryptography
+const MULTISIG_THRESHOLD_PREFIX: [u8; 4] = [0x22, 0xc1, 0xf7, 0xe2];
+/// This is the result of
+/// ```ignore
+/// use prost::encoding::{encode_key, WireType};
+/// let mut buf = vec![];
+/// encode_key(1, WireType::Varint, &mut buf);
+/// println!("{:?}", buf);
+/// ```
+const THRESHOLD_PREFIX: u8 = 0x08;
+/// This is the result of (similar to above)
+/// ```ignore
+/// encode_key(2, WireType::LengthDelimited, &mut buf);
+/// ```
+const PUBKEY_PREFIX: u8 = 0x12;
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct MultisigThresholdPubKey {
-    threshold: u8,
-    pubkeys: Vec<PubKeyKind>,
+    threshold: u32,
+    public_keys: Vec<CosmosPubKey>,
+}
+
+impl MultisigThresholdPubKey {
+    pub fn new(threshold: u32, public_keys: Vec<CosmosPubKey>) -> Self {
+        Self {
+            threshold,
+            public_keys,
+        }
+    }
 }
 
 impl PubKey for MultisigThresholdPubKey {
     fn get_address(&self) -> CanonicalAddr {
         // Spec: https://docs.tendermint.com/master/spec/core/encoding.html#key-types
         // Multisig is undocumented, but we figured out it's the same as ed25519
-        let address_bytes = &sha2::Sha256::digest(self.bytes().as_slice())[..20];
+        let address_bytes = &sha2::Sha256::digest(self.amino_bytes().as_slice())[..20];
 
         CanonicalAddr(Binary::from(address_bytes))
     }
 
-    fn bytes(&self) -> Vec<u8> {
+    fn amino_bytes(&self) -> Vec<u8> {
         // Encoding for multisig is basically:
-        // threshold_prefix | threshold | generic_prefix | encoded_pubkey_length | ...encoded_pubkey... | generic_prefix | encoded_pubkey_length | ...encoded_pubkey...
-        let mut encoded: Vec<u8> = vec![];
+        // MULTISIG_THRESHOLD_PREFIX | THRESHOLD_PREFIX | threshold | [ PUBKEY_PREFIX | pubkey length | pubkey ] *
+        let mut encoded = vec![];
 
-        encoded.extend_from_slice(&THRESHOLD_PREFIX);
-        encoded.push(self.threshold);
+        encoded.extend_from_slice(&MULTISIG_THRESHOLD_PREFIX);
 
-        for pubkey in &self.pubkeys {
-            encoded.push(GENERIC_PREFIX);
+        encoded.push(THRESHOLD_PREFIX);
+        let mut threshold_bytes = vec![];
+        prost::encoding::encode_varint(self.threshold as u64, &mut threshold_bytes);
+        encoded.extend_from_slice(threshold_bytes.as_slice());
+
+        for pubkey in &self.public_keys {
+            encoded.push(PUBKEY_PREFIX);
+
+            let pubkey_bytes = pubkey.amino_bytes();
 
             // Length may be more than 1 byte and it is protobuf encoded
-            let mut length = Vec::<u8>::new();
-
-            let pubkey_bytes = pubkey.bytes();
-            // This line should never fail since it could only fail if `length` does not have sufficient capacity to encode
-            if prost::encode_length_delimiter(pubkey_bytes.len(), &mut length).is_err() {
-                warn!(
+            let mut length_bytes = vec![];
+            // This line should never fail since it could only fail if `length`
+            // does not have sufficient capacity to encode, but it's a vector
+            // that gets extended
+            if prost::encode_length_delimiter(pubkey_bytes.len(), &mut length_bytes).is_err() {
+                error!(
                     "Could not encode length delimiter: {:?}. This should not happen",
                     pubkey_bytes.len()
                 );
                 return vec![];
             }
-            encoded.extend_from_slice(&length);
+            encoded.extend_from_slice(&length_bytes);
+
             encoded.extend_from_slice(&pubkey_bytes);
         }
 
@@ -62,35 +92,52 @@ impl PubKey for MultisigThresholdPubKey {
         trace!("Sign bytes are: {:?}", bytes);
         let signatures = decode_multisig_signature(sig)?;
 
-        if signatures.len() < (self.threshold as usize) || signatures.len() > self.pubkeys.len() {
+        if signatures.len() < self.threshold as usize {
             warn!(
-                "Wrong number of signatures! min expected: {:?}, max expected: {:?}, provided: {:?}",
-                self.threshold,
-                self.pubkeys.len(),
-                signatures.len()
+                "insufficient signatures in multisig signature. found: {}, expected at least: {}",
+                signatures.len(),
+                self.public_keys.len()
             );
             return Err(CryptoError::VerificationError);
         }
 
         let mut verified_counter = 0;
 
+        let mut signers: Vec<&CosmosPubKey> = self.public_keys.iter().collect();
         for current_sig in &signatures {
             trace!("Checking sig: {:?}", current_sig);
-            // TODO: can we somehow easily skip already verified signatures?
-            for current_pubkey in &self.pubkeys {
-                trace!("Checking pubkey: {:?}", current_pubkey);
+            if current_sig.is_empty() {
+                trace!("skipping a signature because it was empty");
+                continue;
+            }
+
+            let mut signer_pos = None;
+            for (i, current_signer) in signers.iter().enumerate() {
+                trace!("Checking pubkey: {:?}", current_signer);
                 // This technically support that one of the multisig signers is a multisig itself
-                let result = current_pubkey.verify_bytes(bytes, &current_sig);
+                let result = current_signer.verify_bytes(bytes, current_sig);
 
                 if result.is_ok() {
+                    signer_pos = Some(i);
                     verified_counter += 1;
                     break;
                 }
             }
+
+            // remove the signer that created this signature from the list to prevent a signer from signing multiple times
+            if let Some(i) = signer_pos {
+                signers.remove(i);
+            } else {
+                warn!(
+                    "signature was not generated by any of the signers: {:?}",
+                    current_sig
+                );
+                return Err(CryptoError::VerificationError);
+            }
         }
 
-        if verified_counter < signatures.len() {
-            warn!("Failed to verify some or all signatures");
+        if verified_counter < self.threshold {
+            warn!("Not enough valid signatures have been provided");
             Err(CryptoError::VerificationError)
         } else {
             debug!("Miltusig verified successfully");
@@ -99,9 +146,24 @@ impl PubKey for MultisigThresholdPubKey {
     }
 }
 
-type MultisigSignature = Vec<Vec<u8>>;
+fn decode_multisig_signature(raw_blob: &[u8]) -> Result<Vec<Vec<u8>>, CryptoError> {
+    use crate::proto::crypto::multisig::MultiSignature;
+    use protobuf::Message;
 
-fn decode_multisig_signature(raw_blob: &[u8]) -> Result<MultisigSignature, CryptoError> {
+    let ms = MultiSignature::parse_from_bytes(raw_blob).map_err(|err| {
+        warn!(
+            "Failed to decode the signature of a multisig key from protobuf bytes: {:?}",
+            err
+        );
+        CryptoError::ParsingError
+    })?;
+
+    Ok(ms.signatures.into_vec())
+}
+
+// TODO delete this function after verifying multisig works right
+#[allow(unused)]
+fn decode_multisig_signature_old(raw_blob: &[u8]) -> Result<Vec<Vec<u8>>, CryptoError> {
     trace!("decoding blob: {:?}", raw_blob);
     let blob_size = raw_blob.len();
     if blob_size < 8 {
@@ -109,7 +171,7 @@ fn decode_multisig_signature(raw_blob: &[u8]) -> Result<MultisigSignature, Crypt
         return Err(CryptoError::ParsingError);
     }
 
-    let mut signatures: MultisigSignature = vec![];
+    let mut signatures: Vec<Vec<u8>> = vec![];
 
     let mut idx: usize = 7;
     while let Some(curr_blob_window) = raw_blob.get(idx..) {
@@ -161,51 +223,56 @@ fn decode_multisig_signature(raw_blob: &[u8]) -> Result<MultisigSignature, Crypt
 
 #[cfg(feature = "test")]
 pub mod tests_decode_multisig_signature {
-    use crate::crypto::multisig::{decode_multisig_signature, MultisigSignature};
+    use super::decode_multisig_signature;
 
     pub fn test_decode_sig_sanity() {
-        let sig: Vec<u8> = vec![
-            0, 0, 0, 0, 0, 0, 0, 0x12, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0x12, 4, 1, 2, 3, 4,
-        ];
+        let expected = vec![vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10], vec![1, 2, 3, 4]];
+        // let mut ms = MultiSignature::new();
+        // ms.set_signatures(expected.into());
+        // let sig = ms.write_to_bytes();
+        // eprintln!("{:?}", sig);
+
+        let sig = vec![10, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 4, 1, 2, 3, 4];
 
         let result = decode_multisig_signature(sig.as_slice()).unwrap();
         assert_eq!(
-            result,
-            vec![vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10], vec![1, 2, 3, 4]],
+            result, expected,
             "Signature is: {:?} and result is: {:?}",
-            sig,
-            result
+            sig, result
         )
     }
 
     pub fn test_decode_long_leb128() {
-        let sig: Vec<u8> = vec![
-            0, 0, 0, 0, 0, 0, 0, 0x12, 200, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        let expected = vec![vec![
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ]];
+        // let mut ms = MultiSignature::new();
+        // ms.set_signatures(expected.into());
+        // let sig = ms.write_to_bytes();
+        // eprintln!("{:?}", sig);
+
+        let sig = vec![
+            10, 200, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0,
         ];
 
         let result = decode_multisig_signature(sig.as_slice()).unwrap();
         assert_eq!(
-            result,
-            vec![vec![
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0,
-            ]],
+            result, expected,
             "Signature is: {:?} and result is: {:?}",
-            sig,
-            result
+            sig, result
         )
     }
 
@@ -236,10 +303,15 @@ pub mod tests_decode_multisig_signature {
     }
 
     pub fn test_decode_sig_length_zero() {
-        let sig: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 0x12, 0];
+        let expected: Vec<Vec<u8>> = vec![vec![]];
+        // let mut ms = MultiSignature::new();
+        // ms.set_signatures(expected.clone().into());
+        // let sig = ms.write_to_bytes();
+        // eprintln!("{:?}", sig);
+
+        let sig = vec![10, 0];
 
         let result = decode_multisig_signature(sig.as_slice()).unwrap();
-        let expected: Vec<Vec<u8>> = vec![vec![]];
         assert_eq!(
             result, expected,
             "Signature is: {:?} and result is: {:?}",

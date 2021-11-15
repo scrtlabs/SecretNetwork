@@ -3,7 +3,7 @@ package types
 import (
 	"strings"
 
-	sdkErrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
 // Codes for wasm contract errors
@@ -54,6 +54,9 @@ var (
 
 	// ErrCreateFailed error for wasm code that has already been uploaded or failed
 	ErrCreateFailed = sdkErrors.Register(DefaultCodespace, 15, "create contract failed")
+
+	// ErrSigFailed error for wasm code that has already been uploaded or failed
+	ErrSigFailed = sdkErrors.Register(DefaultCodespace, 16, "parse signature failed")
 )
 
 func IsEncryptedErrorCode(code uint32) bool {

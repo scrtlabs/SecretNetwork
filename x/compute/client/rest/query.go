@@ -5,19 +5,19 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/client"
 	"net/http"
 	"strconv"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	"github.com/enigmampc/cosmos-sdk/types/rest"
 
-	"github.com/enigmampc/cosmos-sdk/client/context"
 	"github.com/gorilla/mux"
 )
 
-func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
+func registerQueryRoutes(cliCtx client.Context, r *mux.Router) {
 	r.HandleFunc("/wasm/code", listCodesHandlerFn(cliCtx)).Methods("GET")
 	r.HandleFunc("/wasm/code/{codeID}", queryCodeHandlerFn(cliCtx)).Methods("GET")
 	r.HandleFunc("/wasm/code/{codeID}/contracts", listContractsByCodeHandlerFn(cliCtx)).Methods("GET")
@@ -32,7 +32,7 @@ func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
 	// r.HandleFunc("/wasm/contract/{contractAddr}/history", queryContractHistoryFn(cliCtx)).Methods("GET")
 }
 
-func listCodesHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+func listCodesHandlerFn(cliCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
 		if !ok {
@@ -50,7 +50,7 @@ func listCodesHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 	}
 }
 
-func queryCodeHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+func queryCodeHandlerFn(cliCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		codeID, err := strconv.ParseUint(mux.Vars(r)["codeID"], 10, 64)
 		if err != nil {
@@ -79,7 +79,7 @@ func queryCodeHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 	}
 }
 
-func listContractsByCodeHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+func listContractsByCodeHandlerFn(cliCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		codeID, err := strconv.ParseUint(mux.Vars(r)["codeID"], 10, 64)
 		if err != nil {
@@ -103,7 +103,7 @@ func listContractsByCodeHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 	}
 }
 
-func queryContractHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+func queryContractHandlerFn(cliCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		addr, err := sdk.AccAddressFromBech32(mux.Vars(r)["contractAddr"])
 		if err != nil {
@@ -203,7 +203,7 @@ type smartResponse struct {
 	Smart []byte `json:"smart"`
 }
 
-func queryContractStateHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+func queryContractStateHandlerFn(cliCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		decoder := newArgDecoder(hex.DecodeString)
 		addr, err := sdk.AccAddressFromBech32(mux.Vars(r)["contractAddr"])
@@ -243,7 +243,7 @@ func queryContractStateHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 	}
 }
 
-func queryCodeHashHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+func queryCodeHashHandlerFn(cliCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		codeID, err := strconv.ParseUint(mux.Vars(r)["codeID"], 10, 64)
 		if err != nil {
@@ -267,7 +267,7 @@ func queryCodeHashHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		var codeResp keeper.GetCodeResponse
+		var codeResp types.QueryCodeResponse
 
 		err = json.Unmarshal(res, &codeResp)
 		if err != nil {
@@ -280,7 +280,7 @@ func queryCodeHashHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 	}
 }
 
-func queryContractHashHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+func queryContractHashHandlerFn(cliCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		contractAddr, err := sdk.AccAddressFromBech32(mux.Vars(r)["contractAddr"])
 		if err != nil {

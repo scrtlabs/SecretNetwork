@@ -298,6 +298,7 @@ pub fn set_storage_readonly<S: Storage, Q: Querier>(ctx: &mut Ctx, new_value: bo
 /// Add the iterator to the context's data. A new ID is assigned and returned.
 /// IDs are guaranteed to be in the range [0, 2**31-1], i.e. fit in the non-negative part if type i32.
 #[cfg(feature = "iterator")]
+#[allow(unused)]
 #[must_use = "without the returned iterator ID, the iterator cannot be accessed"]
 pub fn add_iterator<'a, S: Storage, Q: Querier>(
     ctx: &mut Ctx,
@@ -373,6 +374,7 @@ where
 }
 
 #[cfg(feature = "iterator")]
+#[allow(unused)]
 pub(crate) fn with_iterator_from_context<'a, 'b, S, Q: 'b, F, T>(
     ctx: &'a mut Ctx,
     iterator_id: u32,

@@ -13,7 +13,7 @@ process.on("unhandledRejection", (error) => {
 
 (async () => {
   const seed = cosmwasmjs.EnigmaUtils.GenerateNewSeed();
-  const client = new cosmwasmjs.CosmWasmClient("http://localhost:1337", seed);
+  const client = new cosmwasmjs.CosmWasmClient("http://localhost:1317", seed);
   const contractAddr = (await client.getContracts(1))[0].address;
   const contractCodeHash = await client.getCodeHashByContractAddr(contractAddr);
   const pen = await cosmwasmjs.Secp256k1Pen.fromMnemonic(
@@ -24,7 +24,7 @@ process.on("unhandledRejection", (error) => {
     "secret"
   );
   const signingClient = new cosmwasmjs.SigningCosmWasmClient(
-    "http://localhost:1337",
+    "http://localhost:1317",
     address,
     (signBytes) => pen.sign(signBytes),
     seed,

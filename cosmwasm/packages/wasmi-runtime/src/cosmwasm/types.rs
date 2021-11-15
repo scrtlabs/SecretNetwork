@@ -9,16 +9,21 @@
 /// For some reason patching the dependencies didn't work, so we are forced to maintain this copy, for now :(
 use std::fmt;
 
-use serde::{Deserialize, Serialize};
+use log::*;
 
+use bech32::{FromBase32, ToBase32};
+use enclave_ffi_types::EnclaveError;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+pub use super::coins::Coin;
 use super::encoding::Binary;
+
 use crate::consts::BECH32_PREFIX_ACC_ADDR;
 use crate::crypto::multisig::MultisigThresholdPubKey;
 use crate::crypto::secp256k1::Secp256k1PubKey;
 use crate::crypto::traits::PubKey;
 use crate::crypto::CryptoError;
-use bech32::{FromBase32, ToBase32};
-use serde_json::Value;
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct HumanAddr(pub String);
@@ -125,12 +130,6 @@ pub struct MessageInfo {
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct ContractInfo {
     pub address: HumanAddr,
-}
-
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
-pub struct Coin {
-    pub denom: String,
-    pub amount: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -302,10 +301,24 @@ impl<T: Clone + fmt::Debug + PartialEq> From<WasmMsg> for CosmosMsg<T> {
     }
 }
 
+/// Return true
+///
+/// Only used for serde annotations
+fn bool_true() -> bool {
+    true
+}
+
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct LogAttribute {
     pub key: String,
     pub value: String,
+    /// nonstandard late addition, thus optional and only used in deserialization.
+    /// The contracts may return this in newer versions that support distinguishing
+    /// encrypted and plaintext logs. We naturally default to encrypted logs, and
+    /// don't serialize the field later so it doesn't leak up to the Go layers.
+    #[serde(default = "bool_true")]
+    #[serde(skip_serializing)]
+    pub encrypted: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -329,106 +342,20 @@ impl QueryResult {
     }
 }
 
-// coin is a shortcut constructor for a set of one denomination of coins
-pub fn coin(amount: &str, denom: &str) -> Vec<Coin> {
-    vec![Coin {
-        amount: amount.to_string(),
-        denom: denom.to_string(),
-    }]
-}
-
-// log is shorthand to produce log messages
-pub fn log(key: &str, value: &str) -> LogAttribute {
+/// A shorthand to produce a log attribute
+pub fn log<K: ToString, V: ToString>(key: K, value: V) -> LogAttribute {
     LogAttribute {
         key: key.to_string(),
         value: value.to_string(),
+        encrypted: true,
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CosmosSignature {
-    // pub_key is an enum, because it can't be a boxed trait object (or something similar)
-    // because it has to be Sized
-    pub_key: PubKeyKind,
-    signature: Binary,
-}
-
-impl CosmosSignature {
-    pub fn get_public_key(&self) -> PubKeyKind {
-        self.pub_key.clone()
+/// A shorthand to produce a plaintext log attribute
+pub fn plaintext_log<K: ToString, V: ToString>(key: K, value: V) -> LogAttribute {
+    LogAttribute {
+        key: key.to_string(),
+        value: value.to_string(),
+        encrypted: false,
     }
-
-    pub fn get_signature(&self) -> Binary {
-        self.signature.clone()
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(untagged)]
-pub enum PubKeyKind {
-    Secp256k1(Secp256k1PubKey),
-    Multisig(MultisigThresholdPubKey),
-}
-
-impl PubKey for PubKeyKind {
-    fn get_address(&self) -> CanonicalAddr {
-        match self {
-            PubKeyKind::Secp256k1(pubkey) => pubkey.get_address(),
-            PubKeyKind::Multisig(pubkey) => pubkey.get_address(),
-        }
-    }
-
-    fn bytes(&self) -> Vec<u8> {
-        match self {
-            PubKeyKind::Secp256k1(pubkey) => pubkey.bytes(),
-            PubKeyKind::Multisig(pubkey) => pubkey.bytes(),
-        }
-    }
-
-    fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError> {
-        match self {
-            PubKeyKind::Secp256k1(pubkey) => pubkey.verify_bytes(bytes, sig),
-            PubKeyKind::Multisig(pubkey) => pubkey.verify_bytes(bytes, sig),
-        }
-    }
-}
-
-// Should be in sync with https://github.com/cosmos/cosmos-sdk/blob/v0.38.3/x/auth/types/stdtx.go#L216
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
-pub struct SignDoc {
-    pub account_number: String,
-    pub chain_id: String,
-    pub fee: Value,
-    pub memo: String,
-    pub msgs: Vec<SignDocWasmMsg>,
-    pub sequence: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SigInfo {
-    pub sign_bytes: Binary,
-    pub signature: CosmosSignature,
-    pub callback_sig: Option<Binary>,
-}
-
-// This struct is basically the smae as WasmMsg, but serializes/deserializes differently
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case", tag = "type", content = "value")]
-pub enum SignDocWasmMsg {
-    #[serde(alias = "wasm/MsgExecuteContract")]
-    Execute {
-        contract: HumanAddr,
-        /// msg is the json-encoded HandleMsg struct (as raw Binary)
-        msg: String,
-        sent_funds: Vec<Coin>,
-        callback_sig: Option<Vec<u8>>,
-    },
-    #[serde(alias = "wasm/MsgInstantiateContract")]
-    Instantiate {
-        code_id: String,
-        init_msg: String,
-        init_funds: Vec<Coin>,
-        label: Option<String>,
-        callback_sig: Option<Vec<u8>>,
-    },
 }

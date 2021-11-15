@@ -1,20 +1,20 @@
 package keeper
 
 import (
-	"fmt"
-
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 var (
-	CostHumanize  = 5 * GasMultiplier
-	CostCanonical = 4 * GasMultiplier
+	CostHumanize  = 5 * types.GasMultiplier
+	CostCanonical = 4 * types.GasMultiplier
 )
 
 func humanAddress(canon []byte) (string, uint64, error) {
-	if len(canon) != sdk.AddrLen {
-		return "", CostHumanize, fmt.Errorf("Expected %d byte address", sdk.AddrLen)
+	err := sdk.VerifyAddressFormat(canon)
+	if err != nil {
+		return "", CostHumanize, nil
 	}
 	return sdk.AccAddress(canon).String(), CostHumanize, nil
 }

@@ -38,11 +38,16 @@ type Wasmer struct {
 // cacheSize sets the size of an optional in-memory LRU cache for prepared VMs.
 // They allow popular contracts to be executed very rapidly (no loading overhead),
 // but require ~32-64MB each in memory usage.
-func NewWasmer(dataDir string, supportedFeatures string, cacheSize uint64) (*Wasmer, error) {
+func NewWasmer(dataDir string, supportedFeatures string, cacheSize uint64, ModuleCacheSize uint8) (*Wasmer, error) {
 	cache, err := api.InitCache(dataDir, supportedFeatures, cacheSize)
 	if err != nil {
 		return nil, err
 	}
+	err = api.InitEnclaveRuntime(ModuleCacheSize)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Wasmer{cache: cache}, nil
 }
 
@@ -173,6 +178,7 @@ func (w *Wasmer) Execute(
 // The meaning of path and data can be determined by the code. Path is the suffix of the abci.QueryRequest.Path
 func (w *Wasmer) Query(
 	code CodeID,
+	env types.Env,
 	queryMsg []byte,
 	store KVStore,
 	goapi GoAPI,
@@ -180,7 +186,11 @@ func (w *Wasmer) Query(
 	gasMeter GasMeter,
 	gasLimit uint64,
 ) ([]byte, uint64, error) {
-	data, gasUsed, err := api.Query(w.cache, code, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit)
+	paramBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, gasUsed, err := api.Query(w.cache, code, paramBin, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit)
 	if err != nil {
 		return nil, gasUsed, err
 	}

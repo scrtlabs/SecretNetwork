@@ -3,10 +3,11 @@ package registration
 import (
 	"encoding/hex"
 	"fmt"
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	abci "github.com/tendermint/tendermint/abci/types"
 )
 
 const (
@@ -22,8 +23,6 @@ func NewHandler(k Keeper) sdk.Handler {
 
 		switch msg := msg.(type) {
 
-		case MsgRaAuthenticate:
-			return handleRaAuthenticate(ctx, k, &msg)
 		case *MsgRaAuthenticate:
 			return handleRaAuthenticate(ctx, k, msg)
 
@@ -36,9 +35,9 @@ func NewHandler(k Keeper) sdk.Handler {
 
 // filterMessageEvents returns the same events with all of type == EventTypeMessage removed.
 // this is so only our top-level message event comes through
-func filterMessageEvents(manager *sdk.EventManager) sdk.Events {
-	events := manager.Events()
-	res := make([]sdk.Event, 0, len(events)+1)
+func filteredMessageEvents(manager *sdk.EventManager) []abci.Event {
+	events := manager.ABCIEvents()
+	res := make([]abci.Event, 0, len(events)+1)
 	for _, e := range events {
 		if e.Type != sdk.EventTypeMessage {
 			res = append(res, e)
@@ -63,17 +62,18 @@ func handleRaAuthenticate(ctx sdk.Context, k Keeper, msg *types.RaAuthenticate) 
 		return nil, err
 	}
 
-	events := filterMessageEvents(ctx.EventManager())
-	ourEvent := sdk.NewEvent(
-		sdk.EventTypeMessage,
-		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-		sdk.NewAttribute(AttributeSigner, msg.Sender.String()),
-		sdk.NewAttribute(AttributeEncryptedSeed, fmt.Sprintf("0x%02x", encSeed)),
-		sdk.NewAttribute(AttributeNodeID, fmt.Sprintf("0x%s", hex.EncodeToString(pubkey))),
-	)
+	ctx.EventManager().EmitEvents(sdk.Events{
+		sdk.NewEvent(
+			sdk.EventTypeMessage,
+			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
+			sdk.NewAttribute(AttributeSigner, msg.Sender.String()),
+			sdk.NewAttribute(AttributeEncryptedSeed, fmt.Sprintf("0x%02x", encSeed)),
+			sdk.NewAttribute(AttributeNodeID, fmt.Sprintf("0x%s", hex.EncodeToString(pubkey))),
+		),
+	})
 
 	return &sdk.Result{
 		Data:   []byte(fmt.Sprintf("S: %02x", encSeed)),
-		Events: append(events, ourEvent),
+		Events: ctx.EventManager().ABCIEvents(),
 	}, nil
 }

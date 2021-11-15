@@ -10,7 +10,7 @@ use crate::consts::ENCRYPTED_SEED_SIZE;
 use crate::crypto::PUBLIC_KEY_SIZE;
 use crate::{
     oom_handler::{self, get_then_clear_oom_happened},
-    utils::{validate_const_ptr, validate_mut_ptr},
+    validate_const_ptr, validate_mut_ptr,
 };
 
 use super::cert::verify_ra_cert;
@@ -41,17 +41,13 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
         return NodeAuthResult::MemorySafetyAllocationError;
     }
 
-    if let Err(_e) = validate_mut_ptr(seed.as_mut_ptr(), seed.len()) {
-        return NodeAuthResult::InvalidInput;
-    }
-    if let Err(_e) = validate_const_ptr(cert, cert_len as usize) {
-        return NodeAuthResult::InvalidInput;
-    }
+    validate_mut_ptr!(seed.as_mut_ptr(), seed.len(), NodeAuthResult::InvalidInput);
+    validate_const_ptr!(cert, cert_len as usize, NodeAuthResult::InvalidInput);
     let cert_slice = std::slice::from_raw_parts(cert, cert_len as usize);
 
     let result = panic::catch_unwind(|| -> Result<Vec<u8>, NodeAuthResult> {
         // verify certificate, and return the public key in the extra data of the report
-        let pk = verify_ra_cert(cert_slice)?;
+        let pk = verify_ra_cert(cert_slice, None)?;
 
         // just make sure the length isn't wrong for some reason (certificate may be malformed)
         if pk.len() != PUBLIC_KEY_SIZE {

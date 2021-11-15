@@ -22,8 +22,8 @@ const (
 	MaxBuildTagSize               = types.MaxBuildTagSize
 	CustomEventType               = types.CustomEventType
 	AttributeKeyContractAddr      = types.AttributeKeyContractAddr
-	GasMultiplier                 = keeper.GasMultiplier
-	MaxGas                        = keeper.MaxGas
+	GasMultiplier                 = types.GasMultiplier
+	MaxGas                        = types.MaxGas
 	QueryListContractByCode       = keeper.QueryListContractByCode
 	QueryGetContract              = keeper.QueryGetContract
 	QueryGetContractState         = keeper.QueryGetContractState
@@ -32,6 +32,7 @@ const (
 	QueryContractKey              = keeper.QueryContractKey
 	QueryContractAddress          = keeper.QueryContractAddress
 	QueryMethodContractStateSmart = keeper.QueryMethodContractStateSmart
+	DefaultConfigTemplate         = types.DefaultConfigTemplate
 	/*
 		QueryMethodContractStateAll   = keeper.QueryMethodContractStateAll
 		QueryMethodContractStateRaw   = keeper.QueryMethodContractStateRaw
@@ -42,7 +43,8 @@ var (
 	// functions aliases
 	// ConvertToProposals        = types.ConvertToProposals
 	// DefaultParams             = types.DefaultParams
-	RegisterCodec             = types.RegisterCodec
+	RegisterCodec             = types.RegisterLegacyAminoCodec
+	RegisterInterfaces        = types.RegisterInterfaces
 	ValidateGenesis           = types.ValidateGenesis
 	GetCodeKey                = types.GetCodeKey
 	GetContractAddressKey     = types.GetContractAddressKey
@@ -56,6 +58,7 @@ var (
 	DefaultWasmConfig         = types.DefaultWasmConfig
 	IsEncryptedError          = types.IsEncryptedErrorCode
 	ErrContainsQueryError     = types.ErrContainsQueryError
+	GetConfig                 = types.GetConfig
 	InitGenesis               = keeper.InitGenesis
 	ExportGenesis             = keeper.ExportGenesis
 	NewMessageHandler         = keeper.NewMessageHandler
@@ -66,6 +69,7 @@ var (
 	EncodeWasmMsg             = keeper.EncodeWasmMsg
 	NewKeeper                 = keeper.NewKeeper
 	NewQuerier                = keeper.NewQuerier
+	NewLegacyQuerier          = keeper.NewLegacyQuerier
 	DefaultQueryPlugins       = keeper.DefaultQueryPlugins
 	BankQuerier               = keeper.BankQuerier
 	NoCustomQuerier           = keeper.NoCustomQuerier
@@ -73,6 +77,7 @@ var (
 	WasmQuerier               = keeper.WasmQuerier
 	MakeTestCodec             = keeper.MakeTestCodec
 	CreateTestInput           = keeper.CreateTestInput
+	CreateFakeFundedAccount   = keeper.CreateFakeFundedAccount
 	TestHandler               = keeper.TestHandler
 	PrepareInitSignedTx       = keeper.PrepareInitSignedTx
 	PrepareExecSignedTx       = keeper.PrepareExecSignedTx
@@ -111,6 +116,7 @@ type (
 	ContractInfo            = types.ContractInfo
 	CreatedAt               = types.AbsoluteTxPosition
 	WasmConfig              = types.WasmConfig
+	CodeInfoResponse        = types.CodeInfoResponse
 	MessageHandler          = keeper.MessageHandler
 	BankEncoder             = keeper.BankEncoder
 	CustomEncoder           = keeper.CustomEncoder
@@ -119,9 +125,7 @@ type (
 	GovEncoder              = keeper.GovEncoder
 	MessageEncoders         = keeper.MessageEncoders
 	Keeper                  = keeper.Keeper
-	ContractInfoWithAddress = keeper.ContractInfoWithAddress
-	GetCodeResponse         = keeper.GetCodeResponse
-	ListCodeResponse        = keeper.ListCodeResponse
+	ContractInfoWithAddress = types.ContractInfoWithAddress
 	QueryHandler            = keeper.QueryHandler
 	CustomQuerier           = keeper.CustomQuerier
 	QueryPlugins            = keeper.QueryPlugins

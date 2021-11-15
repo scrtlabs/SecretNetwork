@@ -48,7 +48,7 @@ Before the genesis of a new chain, there must be a bootstrap node to generate ne
 
 - Create a remote attestation proof that the node's Enclave is genuine.
 - Generate inside the Enclave a true random 256 bits seed: `consensus_seed`.
-- Seal `consensus_seed` with MRSIGNER to a local file: `$HOME/.sgx_secrets/consensus_seed.sealed`.
+- Seal `consensus_seed` with MRSIGNER to a local file: `/opt/secret/.sgx_secrets/consensus_seed.sealed`.
 
 ```js
 // 256 bits
@@ -57,7 +57,7 @@ consensus_seed = true_random({ bytes: 32 });
 seal({
   key: "MRSIGNER",
   data: consensus_seed,
-  to_file: "$HOME/.sgx_secrets/consensus_seed.sealed",
+  to_file: "/opt/secret/.sgx_secrets/consensus_seed.sealed",
 });
 ```
 
@@ -132,7 +132,7 @@ consensus_state_ikm = hkdf({
 
 TODO reasoning
 
-- Seal `consensus_seed` to disk at `$HOME/.sgx_secrets/consensus_seed.sealed`.
+- Seal `consensus_seed` to disk at `/opt/secret/.sgx_secrets/consensus_seed.sealed`.
 - Publish to `genesis.json`:
   - The remote attestation proof that the Enclave is genuine.
   - `consensus_seed_exchange_pubkey`
@@ -140,7 +140,7 @@ TODO reasoning
 
 # Node Startup
 
-When a full node resumes its participation in the network, it reads `consensus_seed` from `$HOME/.sgx_secrets/consensus_seed.sealed` and again does [key derivation](#Key-Derivation) as outlined above.
+When a full node resumes its participation in the network, it reads `consensus_seed` from `/opt/secret/.sgx_secrets/consensus_seed.sealed` and again does [key derivation](#Key-Derivation) as outlined above.
 
 # New Node Registration
 
@@ -241,7 +241,7 @@ TODO reasoning
 
 - `encrypted_consensus_seed` is encrypted with AES-128-SIV, `seed_exchange_key` as the encryption key and the public key of the registering node as the `ad` as the decryption additional data.
 - The new node now has all of these^ parameters inside its Enclave, so it's able to decrypt `consensus_seed` from `encrypted_consensus_seed`.
-- Seal `consensus_seed` to disk at `$HOME/.sgx_secrets/consensus_seed.sealed`.
+- Seal `consensus_seed` to disk at `/opt/secret/.sgx_secrets/consensus_seed.sealed`.
 
 ```js
 consensus_seed = aes_128_siv_decrypt({
@@ -253,7 +253,7 @@ consensus_seed = aes_128_siv_decrypt({
 seal({
   key: "MRSIGNER",
   data: consensus_seed,
-  to_file: "$HOME/.sgx_secrets/consensus_seed.sealed",
+  to_file: "/opt/secret/.sgx_secrets/consensus_seed.sealed",
 });
 ```
 

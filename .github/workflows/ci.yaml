@@ -50,7 +50,7 @@ jobs:
           RUSTC_WRAPPER="$HOME/sccache" make enclave-tests
           make clean-enclave
 
-  Go-Tests:
+  Build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -100,17 +100,96 @@ jobs:
           echo "not_a_key" > ias_keys/develop/spid.txt
           echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
           echo "not_a_key" > ias_keys/develop/api_key.txt
-      - name: Install misc.
+      - name: Install Requirements
         run: |
+          rustup target add wasm32-unknown-unknown
           go get -u github.com/jteeuwen/go-bindata/...
-          ./install-wasm-tools.sh
-      - name: Build
+          chmod +x ./scripts/install-wasm-tools.sh
+          ./scripts/install-wasm-tools.sh
+      - name: Build Executable
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           make vendor
           SGX_MODE=SW BUILD_PROFILE="minimal" RUSTC_WRAPPER="$HOME/sccache" make build-linux
-          rustup target add wasm32-unknown-unknown
+      - name: Build Contracts
+        run: |
           make build-test-contract
+          cp x/compute/internal/keeper/testdata/erc20.wasm .
+      - uses: actions/upload-artifact@v2
+        with:
+          name: erc20.wasm
+          path: erc20.wasm
+      - uses: actions/upload-artifact@v2
+        with:
+          name: secretd
+          path: secretd
+      - uses: actions/upload-artifact@v2
+        with:
+          name: contract.wasm
+          path: ./x/compute/internal/keeper/testdata/test-contract/contract.wasm
+      - uses: actions/upload-artifact@v2
+        with:
+          name: enclave
+          path: ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
+      - uses: actions/upload-artifact@v2
+        with:
+          name: libgo_cosmwasm
+          path: ./go-cosmwasm/api/libgo_cosmwasm.so
+      - uses: actions/upload-artifact@v2
+        with:
+          name: contract_with_floats.wasm
+          path: ./x/compute/internal/keeper/testdata/test-contract/contract_with_floats.wasm
+      - uses: actions/upload-artifact@v2
+        with:
+          name: too-high-initial-memory.wasm
+          path: ./x/compute/internal/keeper/testdata/test-contract/too-high-initial-memory.wasm
+      - uses: actions/upload-artifact@v2
+        with:
+          name: static-too-high-initial-memory.wasm
+          path: ./x/compute/internal/keeper/testdata/test-contract/static-too-high-initial-memory.wasm
+
+  Go-Tests:
+    runs-on: ubuntu-latest
+    needs: Build
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "^1.15" # The Go version to download (if necessary) and use.
+      - name: Install Intel's SGX SDK
+        run: |
+          mkdir -p "$HOME/.sgxsdk"
+          cd "$HOME/.sgxsdk"
+          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
+          chmod +x "$SDK_BIN"
+          echo yes | ./"$SDK_BIN"
+      - uses: actions/download-artifact@v2
+        with:
+          name: libgo_cosmwasm
+      - uses: actions/download-artifact@v2
+        with:
+          name: enclave
+      - uses: actions/download-artifact@v2
+        with:
+          name: contract.wasm
+      - uses: actions/download-artifact@v2
+        with:
+          name: contract_with_floats.wasm
+      - uses: actions/download-artifact@v2
+        with:
+          name: too-high-initial-memory.wasm
+      - uses: actions/download-artifact@v2
+        with:
+          name: static-too-high-initial-memory.wasm
+      - name: Setup Files
+        run: |
+          cp libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
+          cp librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
+          cp contract.wasm ./x/compute/internal/keeper/testdata/test-contract/contract.wasm
+          cp too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/test-contract/too-high-initial-memory.wasm
+          cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/test-contract/contract_with_floats.wasm
+          cp static-too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/test-contract/static-too-high-initial-memory.wasm
       - name: Test x/registration
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -119,8 +198,11 @@ jobs:
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
-          cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
-          mkdir -p ./x/compute/internal/keeper/.sgx_secrets
+          cp librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+          mkdir -p ias_keys/develop
+          mkdir -p /opt/secret/.sgx_secrets/
+          echo "not_a_key" > ias_keys/develop/spid.txt
+          echo "not_a_key" > ias_keys/develop/api_key.txt
           go test -v ./x/compute/client/...
           go test -p 1 -timeout 20m -v ./x/compute/internal/...
 
@@ -171,13 +253,13 @@ jobs:
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
 
-  Integration-Tests:
+  XBuild-CLI:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:
-          go-version: "^1.14" # The Go version to download (if necessary) and use.
+          go-version: "^1.15" # The Go version to download (if necessary) and use.
       - name: Install Intel's SGX SDK
         run: |
           mkdir -p "$HOME/.sgxsdk"
@@ -227,8 +309,6 @@ jobs:
           mkdir -p ias_keys/sw_dummy
           echo "not_a_key" > ias_keys/sw_dummy/spid.txt
           echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
-      - name: Install go-bindata
-        run: go get -u github.com/jteeuwen/go-bindata/...
       - name: Install xgo
         run: go get github.com/karalabe/xgo
       - name: Build MacOS CLI
@@ -239,24 +319,55 @@ jobs:
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           make build_windows_cli
-      - name: Build
+
+  Integration-Tests:
+    runs-on: ubuntu-latest
+    needs: Build
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "^1.15" # The Go version to download (if necessary) and use.
+      - name: Install Intel's SGX SDK
         run: |
-          source "$HOME/.sgxsdk/sgxsdk/environment"
-          make vendor
-          SGX_MODE=SW BUILD_PROFILE="minimal" RUSTC_WRAPPER="$HOME/sccache" make build-linux
-          rustup target add wasm32-unknown-unknown
-          make build-test-contract
+          mkdir -p "$HOME/.sgxsdk"
+          cd "$HOME/.sgxsdk"
+          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
+          chmod +x "$SDK_BIN"
+          echo yes | ./"$SDK_BIN"
+      - uses: actions/download-artifact@v2
+        with:
+          name: libgo_cosmwasm
+      - uses: actions/download-artifact@v2
+        with:
+          name: enclave
+      - uses: actions/download-artifact@v2
+        with:
+          name: contract.wasm
+      - uses: actions/download-artifact@v2
+        with:
+          name: secretd
+      - uses: actions/download-artifact@v2
+        with:
+          name: erc20.wasm
+      - name: Setup Files
+        run: |
+          cp libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
+          cp librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
+          cp contract.wasm ./x/compute/internal/keeper/testdata/test-contract/contract.wasm
+          chmod +x ./secretd
       - name: Old bash+js sanity tests
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
-          mkdir -p ./.sgx_secrets
-          cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+          export PATH="$(pwd):$PATH"
+          mkdir -p /opt/secret/.sgx_secrets/
           ./cosmwasm/testing/sanity-test.sh
       - name: Old bash+js sanity callbacks tests
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
-          mkdir -p ./.sgx_secrets
-          cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+          export PATH="$(pwd):$PATH"
+          mkdir -p /opt/secret/.sgx_secrets/
           ./cosmwasm/testing/callback-test.sh

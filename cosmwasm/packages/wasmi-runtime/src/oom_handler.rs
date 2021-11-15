@@ -91,6 +91,19 @@ fn enable_backtraces() {
 #[cfg(feature = "production")]
 fn enable_backtraces() {}
 
+fn oom_handler(layout: std::alloc::Layout) {
+    OOM_HAPPENED.store(true, Ordering::SeqCst);
+
+    {
+        SAFETY_BUFFER.lock().unwrap().clear();
+    }
+
+    panic!(
+        "SGX: Memory allocation of {} bytes failed. Trying to recover...\n",
+        layout.size()
+    );
+}
+
 pub fn register_oom_handler() -> Result<(), EnclaveError> {
     enable_backtraces();
 
@@ -100,18 +113,7 @@ pub fn register_oom_handler() -> Result<(), EnclaveError> {
 
     get_then_clear_oom_happened();
 
-    std::alloc::set_alloc_error_hook(|layout| {
-        OOM_HAPPENED.store(true, Ordering::SeqCst);
-
-        {
-            SAFETY_BUFFER.lock().unwrap().clear();
-        }
-
-        panic!(
-            "SGX: Memory allocation of {} bytes failed. Trying to recover...\n",
-            layout.size()
-        );
-    });
+    std::alloc::set_alloc_error_hook(oom_handler);
 
     Ok(())
 }
@@ -121,5 +123,8 @@ pub fn get_then_clear_oom_happened() -> bool {
 }
 
 pub fn restore_safety_buffer() -> Result<(), EnclaveError> {
-    SAFETY_BUFFER.lock().unwrap().restore()
+    std::alloc::take_alloc_error_hook();
+    let restored = SAFETY_BUFFER.lock().unwrap().restore();
+    std::alloc::set_alloc_error_hook(oom_handler);
+    restored
 }

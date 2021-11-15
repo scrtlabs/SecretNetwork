@@ -1,7 +1,7 @@
 package types
 
 import (
-	sdkErrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
 // Codes for wasm contract errors
@@ -22,4 +22,8 @@ var (
 	ErrInvalidType = sdkErrors.Register(DefaultCodespace, 5, "Type error")
 
 	ErrCertificateInvalid = sdkErrors.Register(DefaultCodespace, 6, "Certificate invalid or does not exist")
+
+	ErrNotFound = sdkErrors.Register(DefaultCodespace, 7, "not found")
+
+	ErrInvalid = sdkErrors.Register(DefaultCodespace, 8, "invalid")
 )

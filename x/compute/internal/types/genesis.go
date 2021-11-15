@@ -1,28 +1,15 @@
 package types
 
 import (
-	sdk "github.com/enigmampc/cosmos-sdk/types"
-	sdkerrors "github.com/enigmampc/cosmos-sdk/types/errors"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
-
-type Sequence struct {
-	IDKey []byte `json:"id_key"`
-	Value uint64 `json:"value"`
-}
 
 func (s Sequence) ValidateBasic() error {
 	if len(s.IDKey) == 0 {
 		return sdkerrors.Wrap(ErrEmpty, "id key")
 	}
 	return nil
-}
-
-// GenesisState is the struct representation of the export genesis
-type GenesisState struct {
-	// Params    Params     `json:"params"`
-	Codes     []Code     `json:"codes,omitempty"`
-	Contracts []Contract `json:"contracts,omitempty"`
-	Sequences []Sequence `json:"sequences,omitempty"`
 }
 
 func (s GenesisState) ValidateBasic() error {
@@ -49,13 +36,6 @@ func (s GenesisState) ValidateBasic() error {
 	return nil
 }
 
-// Code struct encompasses CodeInfo and CodeBytes
-type Code struct {
-	CodeID     uint64   `json:"code_id"`
-	CodeInfo   CodeInfo `json:"code_info"`
-	CodesBytes []byte   `json:"code_bytes"`
-}
-
 func (c Code) ValidateBasic() error {
 	if c.CodeID == 0 {
 		return sdkerrors.Wrap(ErrEmpty, "code id")
@@ -63,18 +43,10 @@ func (c Code) ValidateBasic() error {
 	if err := c.CodeInfo.ValidateBasic(); err != nil {
 		return sdkerrors.Wrap(err, "code info")
 	}
-	if err := validateWasmCode(c.CodesBytes); err != nil {
+	if err := validateWasmCode(c.CodeBytes); err != nil {
 		return sdkerrors.Wrap(err, "code bytes")
 	}
 	return nil
-}
-
-// Contract struct encompasses ContractAddress, ContractInfo, and ContractState
-type Contract struct {
-	ContractAddress    sdk.AccAddress     `json:"contract_address"`
-	ContractInfo       ContractInfo       `json:"contract_info"`
-	ContractState      []Model            `json:"contract_state"`
-	ContractCustomInfo ContractCustomInfo `json:"contract_custom_info"`
 }
 
 func (c Contract) ValidateBasic() error {
