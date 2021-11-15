@@ -72,17 +72,12 @@ Where `proposal.json` is:
   "description": "Update max validators with line breaks \n and `code formatting`",
   "changes": [
     {
-      "subspace": "Staking",
+      "subspace": "staking",
       "key": "MaxValidators",
       "value": 105
     }
   ],
-  "deposit": [
-    {
-      "denom": "uscrt",
-      "amount": "10000000"
-    }
-  ]
+  "deposit": "10000000uscrt"
 }
 ```
 
@@ -97,14 +92,14 @@ You can see another `param-change` example here: [enigma-1-proposal-3.json](http
 | `auth`         | `TxSizeCostPerByte`       | string (uint64)  | `"10"`                                                                                                    |
 | `auth`         | `SigVerifyCostED25519`    | string (uint64)  | `"590"`                                                                                                   |
 | `auth`         | `SigVerifyCostSecp256k1`  | string (uint64)  | `"1000"`                                                                                                  |
-| `bank`         | `sendenabled`             | bool             | `true`                                                                                                    |
+| `bank`         | `sendenabled`             | bool             | `"true"`                                                                                                  |
 | `crisis`       | `ConstantFee`             | object (coin)    | `{"denom": "uscrt", "amount": "1000"}`                                                                    |
 | `distribution` | `communitytax`            | string (dec)     | `"0.020000000000000000"`                                                                                  |
 | `distribution` | `secretfoundationtax`     | string (dec)     | `"0.030000000000000000"`                                                                                  |
 | `distribution` | `secretfoundationaddress` | string           | `"secret164z7wwzv84h4hwn6rvjjkns6j4ht43jv8u9k0c"`                                                         |
 | `distribution` | `baseproposerreward`      | string (dec)     | `"0.010000000000000000"`                                                                                  |
 | `distribution` | `bonusproposerreward`     | string (dec)     | `"0.040000000000000000"`                                                                                  |
-| `distribution` | `withdrawaddrenabled`     | bool             | `true`                                                                                                    |
+| `distribution` | `withdrawaddrenabled`     | bool             | `"true"`                                                                                                  |
 | `evidence`     | `MaxEvidenceAge`          | string (time ns) | `"120000000000"`                                                                                          |
 | `gov`          | `depositparams`           | object           | `{"min_deposit": [{"denom": "uscrt", "amount": "10000000"}], "max_deposit_period": "172800000000000"}`    |
 | `gov`          | `votingparams`            | object           | `{"voting_period": "172800000000000"}`                                                                    |
@@ -125,6 +120,8 @@ You can see another `param-change` example here: [enigma-1-proposal-3.json](http
 | `staking`      | `KeyMaxEntries`           | uint16           | `7`                                                                                                       |
 | `staking`      | `HistoricalEntries`       | uint16           | `3`                                                                                                       |
 | `staking`      | `BondDenom`               | string           | `"uscrt"`                                                                                                 |
+| `transfer`     | `SendEnabled`             | bool             | `"true"`                                                                                                  |
+| `transfer`     | `ReceiveEnabled`          | bool             | `"true"`                                                                                                  |
 
 Please note:
 
@@ -162,12 +159,7 @@ Where `proposal.json` is:
       "amount": "10000000"
     }
   ],
-  "deposit": [
-    {
-      "denom": "uscrt",
-      "amount": "10000000"
-    }
-  ]
+  "deposit": "10000000uscrt"
 }
 ```
 
