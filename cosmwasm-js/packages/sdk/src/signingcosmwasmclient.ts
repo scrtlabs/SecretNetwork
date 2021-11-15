@@ -1,13 +1,13 @@
-import {Sha256} from "@iov/crypto";
-import {Encoding} from "@iov/encoding";
+import { Sha256 } from "@iov/crypto";
+import { Encoding } from "@iov/encoding";
 import pako from "pako";
 
-import {isValidBuilder} from "./builder";
-import {Account, CosmWasmClient, GetNonceResult, PostTxResult} from "./cosmwasmclient";
-import {makeSignBytes} from "./encoding";
-import {SecretUtils} from "./enigmautils";
-import {findAttribute, Log} from "./logs";
-import {BroadcastMode} from "./restclient";
+import { isValidBuilder } from "./builder";
+import { Account, CosmWasmClient, GetNonceResult, PostTxResult } from "./cosmwasmclient";
+import { makeSignBytes } from "./encoding";
+import { SecretUtils } from "./enigmautils";
+import { Attribute, findAttribute, Log } from "./logs";
+import { BroadcastMode } from "./restclient";
 import {
   Coin,
   Msg,
@@ -19,8 +19,8 @@ import {
   StdSignature,
   StdTx,
 } from "./types";
-import {OfflineSigner} from "./wallet";
-import {decodeTxData, MsgData} from "./ProtoEncoding";
+import { OfflineSigner } from "./wallet";
+import { decodeTxData, MsgData } from "./ProtoEncoding";
 
 export interface SigningCallback {
   (signBytes: Uint8Array): Promise<StdSignature>;
@@ -37,9 +37,9 @@ function singleAmount(amount: number, denom: string): readonly Coin[] {
   return [{ amount: amount.toString(), denom: denom }];
 }
 
-function prepareBuilder(buider: string | undefined): string {
+function prepareBuilder(buider: string | undefined): string | undefined {
   if (buider === undefined) {
-    return ""; // normalization needed by backend
+    return undefined; // normalization needed by backend
   } else {
     if (!isValidBuilder(buider)) throw new Error("The builder (Docker Hub image with tag) is not valid");
     return buider;
@@ -212,7 +212,14 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     memo = "",
     fee: StdFee = this.fees.upload,
   ): Promise<UploadResult> {
-    const source = meta.source || "";
+    if (!memo) {
+      memo = "";
+    }
+    if (!meta) {
+      meta = {};
+    }
+
+    const source = meta.source || undefined;
     const builder = prepareBuilder(meta.builder);
 
     const compressed = pako.gzip(wasmCode, { level: 9 });
@@ -222,22 +229,35 @@ export class SigningCosmWasmClient extends CosmWasmClient {
         sender: this.senderAddress,
         // eslint-disable-next-line @typescript-eslint/camelcase
         wasm_byte_code: Encoding.toBase64(compressed),
-        source: source,
-        builder: builder,
       },
     };
+
+    if (source && source.length > 0) {
+      storeCodeMsg.value.source = source;
+    }
+    if (builder && builder.length > 0) {
+      storeCodeMsg.value.builder = builder;
+    }
+
     const { accountNumber, sequence } = await this.getNonce();
     const chainId = await this.getChainId();
     const signedTx = await this.signAdapter([storeCodeMsg], fee, chainId, memo, accountNumber, sequence);
 
     const result = await this.postTx(signedTx);
-    const codeIdAttr = findAttribute(result.logs, "message", "code_id");
+    let codeIdAttr;
+    if (this.restClient.broadcastMode == BroadcastMode.Block) {
+      codeIdAttr = findAttribute(result.logs, "message", "code_id");
+    }
+
     return {
       originalSize: wasmCode.length,
       originalChecksum: Encoding.toHex(new Sha256(wasmCode).digest()),
       compressedSize: compressed.length,
       compressedChecksum: Encoding.toHex(new Sha256(compressed).digest()),
-      codeId: Number.parseInt(codeIdAttr.value, 10),
+      codeId:
+        this.restClient.broadcastMode == BroadcastMode.Block
+          ? Number.parseInt((codeIdAttr as Attribute).value, 10)
+          : -1,
       logs: result.logs,
       transactionHash: result.transactionHash,
     };
@@ -266,12 +286,10 @@ export class SigningCosmWasmClient extends CosmWasmClient {
       type: "wasm/MsgInstantiateContract",
       value: {
         sender: this.senderAddress,
-        code_id: codeId.toString(),
+        code_id: String(codeId),
         label: label,
-        callback_code_hash: "",
         init_msg: Encoding.toBase64(await this.restClient.enigmautils.encrypt(contractCodeHash, initMsg)),
         init_funds: transferAmount ?? [],
-        callback_sig: null,
       },
     };
     const { accountNumber, sequence } = await this.getNonce();
@@ -311,7 +329,10 @@ export class SigningCosmWasmClient extends CosmWasmClient {
       contractAddress = findAttribute(result.logs, "message", "contract_address")?.value;
     }
 
-    const logs = this.restClient.broadcastMode == BroadcastMode.Block ? await this.restClient.decryptLogs(result.logs, [nonce]) : [];
+    const logs =
+      this.restClient.broadcastMode == BroadcastMode.Block
+        ? await this.restClient.decryptLogs(result.logs, [nonce])
+        : [];
 
     return {
       contractAddress,
@@ -414,18 +435,23 @@ export class SigningCosmWasmClient extends CosmWasmClient {
 
     let data = Uint8Array.from([]);
     if (this.restClient.broadcastMode == BroadcastMode.Block) {
-
       const dataFields: MsgData[] = decodeTxData(Encoding.fromHex(result.data));
 
       if (dataFields[0].data) {
         // decryptedData =
         // dataFields[0].data = JSON.parse(decryptedData.toString());
         // @ts-ignore
-        data = await this.restClient.decryptDataField(Encoding.toHex(Encoding.fromBase64(dataFields[0].data)), nonces);
+        data = await this.restClient.decryptDataField(
+          Encoding.toHex(Encoding.fromBase64(dataFields[0].data)),
+          nonces,
+        );
       }
     }
 
-    const logs = this.restClient.broadcastMode == BroadcastMode.Block ? await this.restClient.decryptLogs(result.logs, nonces) : [];
+    const logs =
+      this.restClient.broadcastMode == BroadcastMode.Block
+        ? await this.restClient.decryptLogs(result.logs, nonces)
+        : [];
 
     return {
       logs: logs,
@@ -501,18 +527,23 @@ export class SigningCosmWasmClient extends CosmWasmClient {
     }
     let data = Uint8Array.from([]);
     if (this.restClient.broadcastMode == BroadcastMode.Block) {
-
       const dataFields: MsgData[] = decodeTxData(Encoding.fromHex(result.data));
 
       if (dataFields[0].data) {
         // decryptedData =
         // dataFields[0].data = JSON.parse(decryptedData.toString());
         // @ts-ignore
-        data = await this.restClient.decryptDataField(Encoding.toHex(Encoding.fromBase64(dataFields[0].data)), [encryptionNonce]);
+        data = await this.restClient.decryptDataField(
+          Encoding.toHex(Encoding.fromBase64(dataFields[0].data)),
+          [encryptionNonce],
+        );
       }
     }
 
-    const logs = this.restClient.broadcastMode == BroadcastMode.Block ? await this.restClient.decryptLogs(result.logs, [encryptionNonce]) : [];
+    const logs =
+      this.restClient.broadcastMode == BroadcastMode.Block
+        ? await this.restClient.decryptLogs(result.logs, [encryptionNonce])
+        : [];
 
     return {
       logs,
