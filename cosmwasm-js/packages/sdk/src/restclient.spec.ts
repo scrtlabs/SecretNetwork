@@ -107,13 +107,11 @@ async function instantiateContract(
       sender: faucet.address,
       code_id: codeId.toString(),
       label: "my escrow",
-      callback_code_hash: "",
       init_msg: {
         verifier: faucet.address,
         beneficiary: beneficiaryAddress,
       },
       init_funds: transferAmount || [],
-      callback_sig: null,
     },
   };
   const fee: StdFee = {
@@ -671,31 +669,25 @@ describe("RestClient", () => {
       expect(hash.value).toEqual({
         code_id: deployedErc20.codeId.toString(),
         init_funds: [],
-        callback_code_hash: "",
         init_msg: jasmine.objectContaining({
           symbol: "HASH",
         }),
         label: "HASH",
         sender: faucet.address,
-        callback_sig: null,
       });
       expect(isa.value).toEqual({
         code_id: deployedErc20.codeId.toString(),
         init_funds: [],
-        callback_code_hash: "",
         init_msg: jasmine.objectContaining({ symbol: "ISA" }),
         label: "ISA",
         sender: faucet.address,
-        callback_sig: null,
       });
       expect(jade.value).toEqual({
         code_id: deployedErc20.codeId.toString(),
         init_funds: [],
-        callback_code_hash: "",
         init_msg: jasmine.objectContaining({ symbol: "JADE" }),
         label: "JADE",
         sender: faucet.address,
-        callback_sig: null,
       });
     });
 
@@ -733,31 +725,25 @@ describe("RestClient", () => {
         expect(hash.value).toEqual({
           code_id: deployedErc20.codeId.toString(),
           init_funds: [],
-          callback_code_hash: "",
           init_msg: jasmine.objectContaining({
             symbol: "HASH",
           }),
           label: "HASH",
           sender: faucet.address,
-          callback_sig: null,
         });
         expect(isa.value).toEqual({
           code_id: deployedErc20.codeId.toString(),
           init_funds: [],
-          callback_code_hash: "",
           init_msg: jasmine.objectContaining({ symbol: "ISA" }),
           label: "ISA",
           sender: faucet.address,
-          callback_sig: null,
         });
         expect(jade.value).toEqual({
           code_id: deployedErc20.codeId.toString(),
           init_funds: [],
-          callback_code_hash: "",
           init_msg: jasmine.objectContaining({ symbol: "JADE" }),
           label: "JADE",
           sender: faucet.address,
-          callback_sig: null,
         });
       }
     });
