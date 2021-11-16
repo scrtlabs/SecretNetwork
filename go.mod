@@ -1,4 +1,4 @@
-module github.com/scrtlabs/SecretNetwork
+module github.com/enigmampc/SecretNetwork
 
 go 1.15
 
