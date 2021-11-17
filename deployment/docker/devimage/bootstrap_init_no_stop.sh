@@ -25,6 +25,7 @@ then
 
   cp ~/node_key.json ~/.secretd/config/node_key.json
   perl -i -pe 's/"stake"/ "uscrt"/g' ~/.secretd/config/genesis.json
+  perl -i -pe 's/"172800000000000"/"90000000000"/g' ~/.secretd/config/genesis.json # voting period 2 days -> 90 seconds
 
   secretd keys add a
   secretd keys add b
