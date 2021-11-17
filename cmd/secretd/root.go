@@ -3,6 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -13,10 +18,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
 
 	//"github.com/tendermint/tendermint/libs/cli"
 
@@ -232,6 +233,7 @@ func txCommand() *cobra.Command {
 	}
 
 	cmd.AddCommand(
+		authcmd.GetSignDocCommand(),
 		authcmd.GetSignCommand(),
 		authcmd.GetSignBatchCommand(),
 		authcmd.GetMultiSignCommand(),
