@@ -40,6 +40,6 @@ replace google.golang.org/grpc => google.golang.org/grpc v1.33.2
 
 // replace github.com/cosmos/cosmos-sdk v0.43.0-rc2 => github.com/enigmampc/cosmos-sdk secret-0.43
 
-replace github.com/cosmos/cosmos-sdk v0.44.3 => github.com/scrtlabs/cosmos-sdk v0.44.4-0.20211109063638-1c9dee24faa8
+replace github.com/cosmos/cosmos-sdk v0.44.3 => github.com/scrtlabs/cosmos-sdk v0.44.4-0.20211117100413-27366ad17d3a
 
 //replace github.com/cosmos/cosmos-sdk v0.43.0-rc2 => github.com/enigmampc/cosmos-sdk v0.0.0-cc218f2182fb

@@ -2,8 +2,9 @@ package keeper
 
 import (
 	"context"
-	"github.com/golang/protobuf/ptypes/empty"
 	"sort"
+
+	"github.com/golang/protobuf/ptypes/empty"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"

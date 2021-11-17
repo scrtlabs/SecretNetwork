@@ -1,7 +1,7 @@
-FROM rust:1.46
+FROM rust:1.56-slim-bullseye
 
 RUN rustup target add wasm32-unknown-unknown
-RUN apt update && apt install -y binaryen && rm -rf /var/lib/apt/lists/*
+RUN apt update && apt install -y binaryen clang && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /contract
 

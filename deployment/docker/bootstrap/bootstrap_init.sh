@@ -1,8 +1,7 @@
 #!/bin/bash
 
 file=~/.secretd/config/genesis.json
-if [ ! -e "$file" ]
-then
+if [ ! -e "$file" ]; then
   # init the node
   rm -rf ~/.secretd/*
   rm -rf /opt/secret/.sgx_secrets/*
@@ -23,7 +22,8 @@ then
 
 
   cp ~/node_key.json ~/.secretd/config/node_key.json
-  perl -i -pe 's/"stake"/ "uscrt"/g' ~/.secretd/config/genesis.json
+  perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json
+  perl -i -pe 's/"172800000000000"/"90000000000"/g' ~/.secretd/config/genesis.json # voting period 2 days -> 90 seconds
 
   secretd keys add a
   secretd keys add b
@@ -48,6 +48,9 @@ then
   secretd init-bootstrap
 #  cp new_node_seed_exchange_keypair.sealed .sgx_secrets
   secretd validate-genesis
+
+  perl -i -pe 's/max_subscription_clients.+/max_subscription_clients = 100/' ~/.secretd/config/config.toml
+  perl -i -pe 's/max_subscriptions_per_client.+/max_subscriptions_per_client = 50/' ~/.secretd/config/config.toml
 fi
 
 lcp --proxyUrl http://localhost:1317 --port 1337 --proxyPartial '' &

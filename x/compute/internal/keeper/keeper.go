@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"path/filepath"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	codedctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
@@ -15,7 +17,6 @@ import (
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
-	"path/filepath"
 
 	"github.com/tendermint/tendermint/crypto"
 
@@ -743,10 +744,36 @@ func (k Keeper) importContractState(ctx sdk.Context, contractAddress sdk.AccAddr
 		if model.Value == nil {
 			model.Value = []byte{}
 		}
+
 		if prefixStore.Has(model.Key) {
 			return sdkerrors.Wrapf(types.ErrDuplicate, "duplicate key: %x", model.Key)
 		}
 		prefixStore.Set(model.Key, model.Value)
+
+	}
+	return nil
+}
+
+func (k Keeper) fixContractState(ctx sdk.Context, contractAddress sdk.AccAddress, models []types.Model) error {
+	prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
+	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
+	for _, model := range models {
+		if model.Value == nil {
+			model.Value = []byte{}
+		}
+
+		if !prefixStore.Has(model.Key) {
+			prefixStore.Set(model.Key, model.Value)
+			continue
+		}
+
+		existingValue := prefixStore.Get(model.Key)
+		if bytes.Equal(existingValue, model.Value) {
+			continue
+		} else {
+			prefixStore.Set(model.Key, model.Value)
+		}
+
 	}
 	return nil
 }

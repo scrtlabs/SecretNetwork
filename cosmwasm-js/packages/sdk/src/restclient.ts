@@ -663,7 +663,7 @@ export class RestClient {
       } else if (msg.type === "wasm/MsgInstantiateContract") {
         inputMsgEncrypted = Encoding.fromBase64((msg as MsgInstantiateContract).value.init_msg);
       } else {
-        return txsResponse;
+        continue;
       }
 
       const inputMsgPubkey = inputMsgEncrypted.slice(32, 64);

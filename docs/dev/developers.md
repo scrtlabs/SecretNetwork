@@ -1,8 +1,6 @@
 # Secret Contract Devs
 
-Developers can write Secret Contracts for CosmWasm running inside secure enclaves with encryption capabilities, enabling computation over private data in contracts running on the live Secret Network. 
-
-Currently, we have a [contract development guide for developers](../archive/contract-dev-guide.md) that demonstrates how to get the Secret Network up and running on a local deployment using Docker, as well as how to write simple contracts in Rust using CosmWasm.
+Developers can write Secret Contracts for CosmWasm running inside secure enclaves with encryption capabilities, enabling computation over private data in contracts running on the live Secret Network.
 
 - [Secret Contracts](secret-contracts.md)
 
@@ -13,3 +11,5 @@ Currently, we have a [contract development guide for developers](../archive/cont
 - [Quickstart](quickstart.md)
 
 - [SecretJS](secret-js.md)
+
+- [Developing your first secret contract](https://github.com/darwinzer0/secret-contract-tutorials/tree/main/tutorial1)

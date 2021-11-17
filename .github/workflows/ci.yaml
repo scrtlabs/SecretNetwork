@@ -33,6 +33,8 @@ jobs:
       - run: rustup component add rust-src clippy
       - name: Install xargo
         run: |
+          cargo --version
+          rustc --version  
           cargo +stable install xargo
           xargo --version
       - name: Download sccache
@@ -81,6 +83,8 @@ jobs:
       - run: rustup component add rust-src clippy
       - name: Install xargo
         run: |
+          cargo --version
+          rustc --version  
           cargo +stable install xargo
           xargo --version
       - name: Download sccache
@@ -232,6 +236,8 @@ jobs:
       - run: rustup component add rust-src clippy
       - name: Install xargo
         run: |
+          cargo --version
+          rustc --version  
           cargo +stable install xargo
           xargo --version
       - name: Download sccache
@@ -280,6 +286,8 @@ jobs:
       - run: rustup component add rust-src clippy
       - name: Install xargo
         run: |
+          cargo --version
+          rustc --version  
           cargo +stable install xargo
           xargo --version
       - name: Download sccache
@@ -287,6 +295,15 @@ jobs:
           wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
           tar xf ./sccache-*.tar.gz
           mv ./sccache*/sccache "$HOME/sccache"
+      - name: Setup wab2wasm and wasm2wat
+        env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
+        run: |
+          cd "$HOME"
+          wget -q https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.0.20-ubuntu.tar.gz
+          tar -xf wabt-1.0.20-ubuntu.tar.gz wabt-1.0.20/bin/wat2wasm wabt-1.0.20/bin/wasm2wat
+          chmod +x wabt-1.0.20/bin/{wat2wasm,wasm2wat}
+          echo ::add-path::$HOME/wabt-1.0.20/bin
       - name: Create fake api keys
         run: |
           mkdir -p ias_keys/sw_dummy

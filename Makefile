@@ -90,7 +90,7 @@ build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=SecretNetwork \
 	-X github.com/cosmos/cosmos-sdk/version.AppName=secretd \
 	-X github.com/enigmampc/SecretNetwork/cmd/secretcli/version.ClientName=secretcli \
-	-X github.com/cosmos/cosmos-sdk/version.Version=1.2.0 \
+	-X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
 	-X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
 	-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags)"
 
@@ -119,7 +119,7 @@ build_cli:
 
 xgo_build_secretcli: go.sum
 	@echo "--> WARNING! This builds from origin/$(CURRENT_BRANCH)!"
-	xgo --image techknowlogick/xgo:go-1.15.x --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --branch "$(CURRENT_BRANCH)" github.com/enigmampc/SecretNetwork/cmd/secretd
+	xgo --image techknowlogick/xgo:go-1.15.15 --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --branch "$(CURRENT_BRANCH)" github.com/enigmampc/SecretNetwork/cmd/secretd
 
 build_local_no_rust: bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
@@ -131,15 +131,19 @@ _build-linux: vendor
 
 build_windows_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
+	mv secretd-windows-4.0-amd64.exe secretcli-windows-4.0-amd64.exe
 
 build_macos_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/amd64
+	mv secretd-darwin-10.6-amd64 secretcli-macos-amd64
 
 build_linux_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/amd64
+	mv secretd-linux-amd64 secretcli-linux-amd64
 
 build_linux_arm64_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
+	mv secretd-linux-arm64 secretcli-linux-arm64
 
 build_all: build-linux build_windows_cli build_macos_cli build_linux_arm64_cli
 
@@ -370,7 +374,7 @@ secret-contract-optimizer:
 	docker tag enigmampc/secret-contract-optimizer:${TAG} enigmampc/secret-contract-optimizer:latest
 
 secretjs-build:
-	cd cosmwasm-js/packages/sdk && yarn && yarn build
+	cd cosmwasm-js/packages/sdk && npm i && npm run build
 
 # Before running this, first make sure:
 # 1. To `npm login` with enigma-dev
