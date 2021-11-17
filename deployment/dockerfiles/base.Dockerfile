@@ -9,8 +9,8 @@ ENV GOROOT=/usr/local/go
 ENV GOPATH=/go/
 ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 
-RUN curl -O https://dl.google.com/go/go1.13.8.linux-amd64.tar.gz
-RUN tar -C /usr/local -xzf go1.13.8.linux-amd64.tar.gz
+RUN curl -O https://dl.google.com/go/go1.15.15.linux-amd64.tar.gz
+RUN tar -C /usr/local -xzf go1.15.15.linux-amd64.tar.gz
 RUN go get -u github.com/jteeuwen/go-bindata/...
 
 RUN wget -q https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.0.20-ubuntu.tar.gz && \
