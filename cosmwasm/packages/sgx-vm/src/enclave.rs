@@ -1,6 +1,9 @@
-use std::{env, path::Path, sync::Mutex};
+use enclave_ffi_types::{EnclaveBuffer, RuntimeConfiguration};
+use std::env;
+use std::ops::Deref;
+use std::path::Path;
+use std::time::Duration;
 
-use enclave_ffi_types::RuntimeConfiguration;
 use sgx_types::{
     sgx_attributes_t, sgx_enclave_id_t, sgx_launch_token_t, sgx_misc_attribute_t, sgx_status_t,
     SgxResult,
@@ -9,6 +12,9 @@ use sgx_urts::SgxEnclave;
 
 use lazy_static::lazy_static;
 use log::*;
+use parking_lot::{Mutex, ReentrantMutex, ReentrantMutexGuard};
+
+use crate::wasmi::imports;
 
 static ENCLAVE_FILE: &str = "librust_cosmwasm_enclave.signed.so";
 
@@ -17,6 +23,34 @@ const ENCLAVE_DEBUG: i32 = 0;
 
 #[cfg(not(feature = "production"))]
 const ENCLAVE_DEBUG: i32 = 1;
+
+struct EnclaveMutex {
+    enclave: ReentrantMutex<SgxEnclave>,
+}
+
+impl EnclaveMutex {
+    fn new() -> SgxResult<EnclaveMutex> {
+        let enclave = ReentrantMutex::new(init_enclave()?);
+        Ok(Self { enclave })
+    }
+
+    fn get_enclave(&'static self, timeout: Duration) -> Option<EnclaveGuard> {
+        let guard = self.enclave.try_lock_for(timeout);
+        guard.map(|guard| EnclaveGuard { guard })
+    }
+}
+
+pub struct EnclaveGuard {
+    guard: ReentrantMutexGuard<'static, SgxEnclave>,
+}
+
+impl Deref for EnclaveGuard {
+    type Target = SgxEnclave;
+
+    fn deref(&self) -> &Self::Target {
+        self.guard.deref()
+    }
+}
 
 fn init_enclave() -> SgxResult<SgxEnclave> {
     let mut launch_token: sgx_launch_token_t = [0; 1024];
@@ -68,7 +102,8 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
 
 #[allow(clippy::mutex_atomic)]
 lazy_static! {
-    static ref SGX_ENCLAVE: SgxResult<SgxEnclave> = init_enclave();
+    static ref SGX_ENCLAVE_MUTEX: SgxResult<EnclaveMutex> = EnclaveMutex::new();
+
     /// This variable indicates if the enclave configuration has already been set
     static ref SGX_ENCLAVE_CONFIGURED: Mutex<bool> = Mutex::new(false);
 }
@@ -76,8 +111,10 @@ lazy_static! {
 /// Use this method when trying to get access to the enclave.
 /// You can unwrap the result when you are certain that the enclave
 /// must have been initialized if you even reached that point in the code.
-pub fn get_enclave() -> SgxResult<&'static SgxEnclave> {
-    SGX_ENCLAVE.as_ref().map_err(|status| *status)
+pub fn get_enclave() -> SgxResult<Option<EnclaveGuard>> {
+    let mutex = SGX_ENCLAVE_MUTEX.as_ref().map_err(|status| *status)?;
+    let maybe_guard = mutex.get_enclave(Duration::from_secs(2));
+    Ok(maybe_guard)
 }
 
 extern "C" {
@@ -101,14 +138,15 @@ impl EnclaveRuntimeConfig {
 }
 
 pub fn configure_enclave(config: EnclaveRuntimeConfig) -> SgxResult<()> {
-    let mut configured = SGX_ENCLAVE_CONFIGURED.lock().unwrap();
+    let mut configured = SGX_ENCLAVE_CONFIGURED.lock();
     if *configured {
         return Ok(());
     }
     *configured = true;
     drop(configured);
 
-    let enclave = get_enclave()?;
+    let enclave = get_enclave()?
+        .expect("This function should only be called once when the node is initializing");
 
     let mut retval = sgx_status_t::SGX_SUCCESS;
 
@@ -124,4 +162,31 @@ pub fn configure_enclave(config: EnclaveRuntimeConfig) -> SgxResult<()> {
     }
 
     Ok(())
+}
+
+/// This is a safe wrapper for allocating buffers inside the enclave.
+///
+/// It must be called after the enclave has been initialized, and can not be called
+/// while another thread is using the enclave, or it will panic.
+pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> SgxResult<EnclaveBuffer> {
+    let ptr = buffer.as_ptr();
+    let len = buffer.len();
+    let mut enclave_buffer = EnclaveBuffer::default();
+
+    let enclave_id = crate::enclave::get_enclave()
+        .expect("If we got here, surely the enclave has been loaded")
+        .expect("If we got here, surely we are the thread that holds the enclave")
+        .geteid();
+
+    trace!(
+        target: module_path!(),
+        "allocate_enclave_buffer() called with len: {:?} enclave_id: {:?}",
+        len,
+        enclave_id,
+    );
+
+    match unsafe { imports::ecall_allocate(enclave_id, &mut enclave_buffer, ptr, len) } {
+        sgx_status_t::SGX_SUCCESS => Ok(enclave_buffer),
+        failure_status => Err(failure_status),
+    }
 }

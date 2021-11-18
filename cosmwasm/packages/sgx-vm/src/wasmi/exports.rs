@@ -2,6 +2,7 @@ use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError, UserS
 use std::ffi::c_void;
 
 use crate::context::{with_querier_from_context, with_storage_from_context};
+use crate::enclave::allocate_enclave_buffer;
 use crate::{Querier, Storage, VmError, VmResult};
 use cosmwasm_std::{Binary, StdResult, SystemResult};
 
@@ -48,9 +49,7 @@ pub extern "C" fn ocall_read_db(
                 Ok((value, gas_cost)) => {
                     unsafe { *gas_used = gas_cost };
                     value
-                        .map(|val| {
-                            super::allocate_enclave_buffer(&val).map_err(|_| OcallReturn::Failure)
-                        })
+                        .map(|val| allocate_enclave_buffer(&val).map_err(|_| OcallReturn::Failure))
                         .unwrap_or_else(|| Ok(EnclaveBuffer::default()))
                 }
                 Err(err) => {
@@ -98,9 +97,7 @@ pub extern "C" fn ocall_query_chain(
                     // see CosmWasm's implementation https://github.com/enigmampc/SecretNetwork/blob/508e99c990dd656eb61f456584dab054487ba178/cosmwasm/packages/sgx-vm/src/imports.rs#L124
 
                     crate::serde::to_vec(&system_result)
-                        .map(|val| {
-                            super::allocate_enclave_buffer(&val).map_err(|_| OcallReturn::Failure)
-                        })
+                        .map(|val| allocate_enclave_buffer(&val).map_err(|_| OcallReturn::Failure))
                         .unwrap_or_else(|_| Ok(EnclaveBuffer::default()))
                 }
                 Err(err) => {

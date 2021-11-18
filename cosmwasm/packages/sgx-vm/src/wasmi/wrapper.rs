@@ -7,10 +7,9 @@ use std::mem::MaybeUninit;
 use crate::errors::{EnclaveError, VmResult};
 use crate::{Querier, Storage};
 
-use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
+use enclave_ffi_types::{Ctx, HandleResult, InitResult, QueryResult};
 
-use sgx_types::{sgx_status_t, SgxResult};
-use sgx_urts::SgxEnclave;
+use sgx_types::sgx_status_t;
 
 use log::*;
 
@@ -20,29 +19,7 @@ use super::results::{
     handle_result_to_vm_result, init_result_to_vm_result, query_result_to_vm_result, HandleSuccess,
     InitSuccess, QuerySuccess,
 };
-
-/// This is a safe wrapper for allocating buffers inside the enclave.
-pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> SgxResult<EnclaveBuffer> {
-    let ptr = buffer.as_ptr();
-    let len = buffer.len();
-    let mut enclave_buffer = EnclaveBuffer::default();
-
-    let enclave_id = crate::enclave::get_enclave()
-        .expect("If we got here, surely the enclave has been loaded")
-        .geteid();
-
-    trace!(
-        target: module_path!(),
-        "allocate_enclave_buffer() called with len: {:?} enclave_id: {:?}",
-        len,
-        enclave_id,
-    );
-
-    match unsafe { imports::ecall_allocate(enclave_id, &mut enclave_buffer, ptr, len) } {
-        sgx_status_t::SGX_SUCCESS => Ok(enclave_buffer),
-        failure_status => Err(failure_status),
-    }
-}
+use crate::enclave::EnclaveGuard;
 
 pub struct Module<S, Q>
 where
@@ -52,7 +29,7 @@ where
     bytecode: Vec<u8>,
     gas_limit: u64,
     used_gas: u64,
-    enclave: &'static SgxEnclave,
+    enclave: EnclaveGuard,
     ctx: Ctx,
     finalizer: fn(*mut c_void),
 
@@ -69,7 +46,7 @@ where
     pub fn new(
         bytecode: Vec<u8>,
         gas_limit: u64,
-        enclave: &'static SgxEnclave,
+        enclave: EnclaveGuard,
         (data, finalizer): (*mut c_void, fn(*mut c_void)),
     ) -> Self {
         // TODO add validation of this bytecode?
