@@ -78,12 +78,6 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
-      - name: Declare Commit Variables
-        id: vars
-        shell: bash
-        run: |
-          echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
       - uses: actions/setup-go@v2
         with:
           go-version: "^1.15" # The Go version to download (if necessary) and use.
@@ -122,12 +116,6 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v2
-      - name: Declare Commit Variables
-        id: vars
-        shell: bash
-        run: |
-          echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
       - name: Build CLI
         shell: bash
         run: |
@@ -139,11 +127,14 @@ jobs:
           path: secretcli-${{runner.os}}
 
   Release:
-    needs: [build-cli, build-deb]
+    needs: [build-cli, build-deb-testnet, build-deb-mainnet]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
       - name: Declare Commit Variables
         id: vars
         shell: bash
@@ -161,11 +152,15 @@ jobs:
           name: secretcli-Windows
       - uses: actions/download-artifact@v2
         with:
-          name: secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
+      - uses: actions/download-artifact@v2
+        with:
+          name: secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
+            secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
             secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
             secretcli-macOS
             secretcli-Windows
