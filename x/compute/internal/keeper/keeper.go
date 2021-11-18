@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	"path/filepath"
