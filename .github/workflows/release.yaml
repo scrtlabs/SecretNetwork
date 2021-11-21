@@ -174,7 +174,7 @@ jobs:
         with:
           files: |
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
-            secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
+            secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
             secretcli-macOS
             secretcli-Windows
             secretcli-Linux
