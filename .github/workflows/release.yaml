@@ -1,10 +1,13 @@
 name: Release
 
-on: [push]
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+" # Push events to matching v*, i.e. v1.0, v20.15.10
 
 jobs:
-  build-deb:
-    if: startsWith(github.ref, 'refs/tags/')
+  build-deb-testnet:
     runs-on: ubuntu-latest
     env: # Or as an environment variable
       SPID_TESTNET: ${{ secrets.SPID_TESTNET }}
@@ -53,7 +56,7 @@ jobs:
           wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
           tar xf ./sccache-*.tar.gz
           mv ./sccache*/sccache "$HOME/sccache"
-      - name: Create fake api keys
+      - name: Create api keys
         run: |
           echo $SPID_TESTNET > spid.txt
           echo $API_KEY_TESTNET > api_key.txt
@@ -61,89 +64,72 @@ jobs:
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           VERSION=0 make build-testnet
-          cp build/secretnetwork_0_amd64.deb secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
+          cp build/secretnetwork_0_amd64.deb secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
       - uses: actions/upload-artifact@v2
         with:
-          name: secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
-          path: secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
+          name: secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
+          path: secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
 
-#   BuildCliMacOS:
-#     # if: startsWith(github.ref, 'refs/tags/')
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: actions/checkout@v2
-#       - name: Declare Commit Variables
-#         id: vars
-#         shell: bash
-#         run: |
-#           echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-#           echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
-#       - name: Install xgo
-#         run: go get github.com/karalabe/xgo
-#       - name: Build MacOS CLI
-#         run: |
-#           make build_macos_cli
-#       - uses: actions/upload-artifact@v2
-#         with:
-#           name: secretd-darwin-10.12-amd64
-#           path: secretd-darwin-10.12-amd64
-
-#   BuildCliWindows:
-#     # if: startsWith(github.ref, 'refs/tags/')
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: actions/checkout@v2
-#       - name: Declare Commit Variables
-#         id: vars
-#         shell: bash
-#         run: |
-#           echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-#           echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
-#       - name: Install xgo
-#         run: go get github.com/karalabe/xgo
-#       - name: Build Windows CLI
-#         run: |
-#           make build_windows_cli
-#       - uses: actions/upload-artifact@v2
-#         with:
-#           name: secretd-windows-4.0-amd64.exe
-#           path: secretd-windows-4.0-amd64.exe
-
-#   BuildCliLinux:
-#     # if: startsWith(github.ref, 'refs/tags/')
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: actions/checkout@v2
-#       - name: Declare Commit Variables
-#         id: vars
-#         shell: bash
-#         run: |
-#           echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-#           echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
-#       - name: Install xgo
-#         run: go get github.com/karalabe/xgo
-#       - name: Build Windows CLI
-#         run: |
-#           make build_windows_cli
-#       - uses: actions/upload-artifact@v2
-#         with:
-#           name: secretd-windows-4.0-amd64.exe
-#           path: secretd-windows-4.0-amd64.exe
+  build-deb-mainnet:
+    runs-on: ubuntu-latest
+    env: # Or as an environment variable
+      SPID_TESTNET: ${{ secrets.SPID_MAINNET }}
+      API_KEY_TESTNET: ${{ secrets.API_KEY_MAINNET }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "^1.17" # The Go version to download (if necessary) and use.
+      - name: Install Dependencies
+        run: |
+          go get -u github.com/jteeuwen/go-bindata/...
+          mkdir -p "$HOME/.sgxsdk"
+          cd "$HOME/.sgxsdk"
+          SDK_BIN=sgx_linux_x64_sdk_2.15.101.1.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.15.1/distro/ubuntu20.04-server/"$SDK_BIN"
+          chmod +x "$SDK_BIN"
+          echo yes | ./"$SDK_BIN"
+      - name: Create directory structure
+        run: |
+          mkdir -p go-cosmwasm/target/release/
+          mkdir -p ias_keys/develop/
+      - name: Create api keys
+        run: |
+          echo $SPID_MAINNET > spid.txt
+          echo $API_KEY_MAINNET > api_key.txt
+          echo $SPID_MAINNET > ias_keys/develop/spid.txt
+          echo $API_KEY_MAINNET > ias_keys/develop/api_key.txt
+      - name: Download latest enclave
+        run: |
+          wget -O go-cosmwasm/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/filestorage/librust_cosmwasm_enclave.signed.so
+          wget -O go-cosmwasm/target/release/libgo_cosmwasm.so https://engfilestorage.blob.core.windows.net/filestorage/libgo_cosmwasm.so
+      - name: Build mainnet secretd
+        run: |
+          source "$HOME/.sgxsdk/sgxsdk/environment"
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.sgxsdk/sgxsdk/lib64/
+          make build_local_no_rust
+      - name: Build mainnet secretcli
+        run: |
+          make build_cli
+      - name: Build testnet
+        run: |
+          VERSION=0 make deb-no-compile
+          cp secretnetwork_0_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
+      - uses: actions/upload-artifact@v2
+        with:
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
+          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
 
   build-cli:
-    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v2
-      - name: Declare Commit Variables
-        id: vars
-        shell: bash
-        run: |
-          echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
       - name: Build CLI
         shell: bash
         run: |
@@ -155,11 +141,13 @@ jobs:
           path: secretcli-${{runner.os}}
 
   Release:
-    needs: [build-cli, build-deb]
-    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build-cli, build-deb-testnet, build-deb-mainnet]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
       - name: Declare Commit Variables
         id: vars
         shell: bash
@@ -177,12 +165,16 @@ jobs:
           name: secretcli-Windows
       - uses: actions/download-artifact@v2
         with:
-          name: secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
+      - uses: actions/download-artifact@v2
+        with:
+          name: secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            secretnetwork_${{ steps.vars.outputs.sha_short }}_amd64.deb
+            secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
+            secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
             secretcli-macOS
             secretcli-Windows
             secretcli-Linux
