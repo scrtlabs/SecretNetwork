@@ -113,7 +113,7 @@ lazy_static! {
 /// must have been initialized if you even reached that point in the code.
 pub fn get_enclave() -> SgxResult<Option<EnclaveGuard>> {
     let mutex = SGX_ENCLAVE_MUTEX.as_ref().map_err(|status| *status)?;
-    let maybe_guard = mutex.get_enclave(Duration::from_secs(2));
+    let maybe_guard = mutex.get_enclave(Duration::from_secs(6));
     Ok(maybe_guard)
 }
 
