@@ -82,7 +82,10 @@ jobs:
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
       - uses: actions/setup-go@v2
         with:
-          go-version: "^1.15" # The Go version to download (if necessary) and use.
+          go-version: "^1.17" # The Go version to download (if necessary) and use.
+      - name: Install Dependencies
+        run: |
+          go get -u github.com/jteeuwen/go-bindata/...
       - name: Create directory structure
         run: |
           mkdir -p go-cosmwasm/target/release/
