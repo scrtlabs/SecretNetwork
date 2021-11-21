@@ -109,13 +109,13 @@ jobs:
       - name: Build mainnet secretd
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.sgxsdk/sgxsdk/lib64/
           make build_local_no_rust
       - name: Build mainnet secretcli
         run: |
           make build_cli
       - name: Build testnet
         run: |
-          source "$HOME/.sgxsdk/sgxsdk/environment"
           VERSION=0 make deb-no-compile
           cp build/secretnetwork_0_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
       - uses: actions/upload-artifact@v2
