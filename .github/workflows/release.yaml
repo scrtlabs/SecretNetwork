@@ -108,7 +108,7 @@ jobs:
           wget -O go-cosmwasm/target/release/libgo_cosmwasm.so https://engfilestorage.blob.core.windows.net/filestorage/libgo_cosmwasm.so
       - name: Build mainnet secretd
         run: |
-          make build_local_no_rust
+          source /opt/sgxsdk/environment && make build_local_no_rust
       - name: Build mainnet secretcli
         run: |
           make build_cli
