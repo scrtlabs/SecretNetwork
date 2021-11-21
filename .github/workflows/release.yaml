@@ -88,7 +88,7 @@ jobs:
           go get -u github.com/jteeuwen/go-bindata/...
       - name: Create directory structure
         run: |
-          mkdir -p go-cosmwasm/target/release/
+          mkdir -p go-cosmwasm/api/
           mkdir -p ias_keys/develop/
       - name: Create api keys
         run: |
@@ -99,7 +99,7 @@ jobs:
       - name: Download latest enclave
         run: |
           wget -O go-cosmwasm/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/filestorage/librust_cosmwasm_enclave.signed.so
-          wget -O go-cosmwasm/target/release/libgo_cosmwasm.so https://engfilestorage.blob.core.windows.net/filestorage/libgo_cosmwasm.so
+          wget -O go-cosmwasm/api/libgo_cosmwasm.so https://engfilestorage.blob.core.windows.net/filestorage/libgo_cosmwasm.so
       - name: Build mainnet secretd
         run: |
           make build_local_no_rust
