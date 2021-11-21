@@ -92,8 +92,8 @@ jobs:
           echo $API_KEY_MAINNET > api_key.txt
       - name: Download latest enclave
         run: |
-          wget -o go-cosmwasm/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/filestorage/librust_cosmwasm_enclave.signed.so
-          wget -o go-cosmwasm/target/release/libgo_cosmwasm.so https://engfilestorage.blob.core.windows.net/filestorage/libgo_cosmwasm.so
+          wget -O go-cosmwasm/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/filestorage/librust_cosmwasm_enclave.signed.so
+          wget -O go-cosmwasm/target/release/libgo_cosmwasm.so https://engfilestorage.blob.core.windows.net/filestorage/libgo_cosmwasm.so
       - name: Build mainnet secretd
         run: |
           build_local_no_rust
