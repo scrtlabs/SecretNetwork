@@ -111,6 +111,7 @@ lazy_static! {
 /// Use this method when trying to get access to the enclave.
 /// You can unwrap the result when you are certain that the enclave
 /// must have been initialized if you even reached that point in the code.
+/// If `Ok(None)` is returned, that means that the enclave is currently busy.
 pub fn get_enclave() -> SgxResult<Option<EnclaveGuard>> {
     let mutex = SGX_ENCLAVE_MUTEX.as_ref().map_err(|status| *status)?;
     let maybe_guard = mutex.get_enclave(Duration::from_secs(6));
@@ -173,7 +174,7 @@ pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> SgxResult<EnclaveBuffer>
     let len = buffer.len();
     let mut enclave_buffer = EnclaveBuffer::default();
 
-    let enclave_id = crate::enclave::get_enclave()
+    let enclave_id = get_enclave()
         .expect("If we got here, surely the enclave has been loaded")
         .expect("If we got here, surely we are the thread that holds the enclave")
         .geteid();
