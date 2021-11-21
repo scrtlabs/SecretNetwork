@@ -89,10 +89,13 @@ jobs:
       - name: Create directory structure
         run: |
           mkdir -p go-cosmwasm/target/release/
+          mkdir -p ias_keys/develop/
       - name: Create api keys
         run: |
           echo $SPID_MAINNET > spid.txt
           echo $API_KEY_MAINNET > api_key.txt
+          echo $SPID_MAINNET > ias_keys/develop/spid.txt
+          echo $API_KEY_MAINNET > ias_keys/develop/api_key.txt
       - name: Download latest enclave
         run: |
           wget -O go-cosmwasm/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/filestorage/librust_cosmwasm_enclave.signed.so
