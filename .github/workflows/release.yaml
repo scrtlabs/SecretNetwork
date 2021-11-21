@@ -86,9 +86,15 @@ jobs:
       - name: Install Dependencies
         run: |
           go get -u github.com/jteeuwen/go-bindata/...
+          mkdir -p "$HOME/.sgxsdk"
+          cd "$HOME/.sgxsdk"
+          SDK_BIN=sgx_linux_x64_sdk_2.15.101.1.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.15.1/distro/ubuntu20.04-server/"$SDK_BIN"
+          chmod +x "$SDK_BIN"
+          echo yes | ./"$SDK_BIN"
       - name: Create directory structure
         run: |
-          mkdir -p go-cosmwasm/api/
+          mkdir -p go-cosmwasm/target/release/
           mkdir -p ias_keys/develop/
       - name: Create api keys
         run: |
@@ -99,7 +105,7 @@ jobs:
       - name: Download latest enclave
         run: |
           wget -O go-cosmwasm/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/filestorage/librust_cosmwasm_enclave.signed.so
-          wget -O go-cosmwasm/api/libgo_cosmwasm.so https://engfilestorage.blob.core.windows.net/filestorage/libgo_cosmwasm.so
+          wget -O go-cosmwasm/target/release/libgo_cosmwasm.so https://engfilestorage.blob.core.windows.net/filestorage/libgo_cosmwasm.so
       - name: Build mainnet secretd
         run: |
           make build_local_no_rust
