@@ -8,7 +8,7 @@ extern "C" {
 }
 
 pub fn run_tests() -> SgxResult<u32> {
-    let enclave = get_enclave()?;
+    let enclave = get_enclave()?.ok_or(sgx_status_t::SGX_ERROR_OUT_OF_TCS)?;
     let mut failed_tests = 0;
     let status = unsafe { ecall_run_tests(enclave.geteid(), &mut failed_tests) };
     match status {

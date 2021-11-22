@@ -127,7 +127,7 @@ pub extern "C" fn ocall_get_update_info(
 }
 
 pub fn create_attestation_report_u(spid: &[u8], api_key: &[u8]) -> SgxResult<()> {
-    let enclave = get_enclave()?;
+    let enclave = get_enclave()?.ok_or(sgx_status_t::SGX_ERROR_OUT_OF_TCS)?;
 
     let eid = enclave.geteid();
     let mut retval = sgx_status_t::SGX_SUCCESS;
@@ -156,7 +156,7 @@ pub fn create_attestation_report_u(spid: &[u8], api_key: &[u8]) -> SgxResult<()>
 pub fn untrusted_get_encrypted_seed(
     cert: &[u8],
 ) -> SgxResult<Result<[u8; ENCRYPTED_SEED_SIZE], NodeAuthResult>> {
-    let enclave = get_enclave()?;
+    let enclave = get_enclave()?.ok_or(sgx_status_t::SGX_ERROR_OUT_OF_TCS)?;
     let eid = enclave.geteid();
     let mut retval = NodeAuthResult::Success;
     let mut seed = [0u8; ENCRYPTED_SEED_SIZE];
