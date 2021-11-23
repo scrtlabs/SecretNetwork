@@ -594,17 +594,18 @@ impl AttestationReport {
         // Before we reach here, Webpki already verifed the cert is properly signed.
 
         let payload = get_netscape_comment(cert).map_err(|_err| {
-            println!("get_netscape_comment");
-            Error::ReportParseError })?;
+            error!("Failed to get netscape comment");
+            Error::ReportParseError
+        })?;
 
         // Convert to endorsed report
         let report: EndorsedAttestationReport = serde_json::from_slice(&payload)?;
 
         // Verify report's signature - aka intel's signing cert
-        let signing_cert = webpki::EndEntityCert::from(&report.signing_cert)
-            .map_err(|_err| {
-                println!("webpki::EndEntityCert::from");
-                Error::ReportParseError })?;
+        let signing_cert = webpki::EndEntityCert::from(&report.signing_cert).map_err(|_err| {
+            error!("Failed to validate signature");
+            Error::ReportParseError
+        })?;
 
         let (ias_cert, root_store) = get_ias_auth_config();
 
@@ -644,7 +645,6 @@ impl AttestationReport {
         ) {
             Ok(_) => info!("Signature verified successfully"),
             Err(e) => {
-                println!("probably not here");
                 warn!("Signature verification error {:?}", e);
                 return Err(Error::ReportParseError);
             }
@@ -697,12 +697,15 @@ impl AttestationReport {
             SgxQuote::parse_from(quote_raw.as_slice())?
         };
 
-        // Get advisories
-        let advisories: Vec<String> = serde_json::from_value(attn_report["advisoryIDs"].clone())
-            .map_err(|_| {
+        let advisories: Vec<String> = if let Some(raw) = attn_report.get("advisoryIDs") {
+            let parsed = serde_json::from_value(raw.clone()).map_err(|_| {
                 warn!("Failed to decode advisories");
                 Error::ReportParseError
             })?;
+            parsed
+        } else {
+            vec![]
+        };
 
         // We don't actually validate the public key, since we use ephemeral certificates,
         // and all we really care about that the report is valid and the key that is saved in the
@@ -730,7 +733,7 @@ pub mod tests {
         let mut f = File::open(
             "../wasmi-runtime/src/registration/fixtures/attestation_cert_hw_invalid_test.der",
         )
-            .unwrap();
+        .unwrap();
         f.read_to_end(&mut cert).unwrap();
 
         cert
