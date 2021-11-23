@@ -698,11 +698,10 @@ impl AttestationReport {
         };
 
         let advisories: Vec<String> = if let Some(raw) = attn_report.get("advisoryIDs") {
-            let parsed = serde_json::from_value(raw.clone()).map_err(|_| {
+            serde_json::from_value(raw.clone()).map_err(|_| {
                 warn!("Failed to decode advisories");
                 Error::ReportParseError
-            })?;
-            parsed
+            })?
         } else {
             vec![]
         };
