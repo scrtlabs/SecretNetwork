@@ -131,11 +131,11 @@ _build-linux: vendor
 
 build_windows_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
-	mv secretd-windows-4.0-amd64.exe secretcli-windows-4.0-amd64.exe
+	mv secretd-windows-* secretcli-windows-amd64.exe
 
 build_macos_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/amd64
-	mv secretd-darwin-10.6-amd64 secretcli-macos-amd64
+	mv secretd-darwin-* secretcli-macos-amd64
 
 build_linux_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/amd64

@@ -1,5 +1,5 @@
 mod exports;
-mod imports;
+pub(crate) mod imports;
 mod results;
 mod utils;
 mod wrapper;

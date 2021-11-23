@@ -11,7 +11,7 @@ trigger:
       - "LICENSE"
 
 pool:
-  name: "azure scale set"
+  name: "sgx scale set"
 
 workspace:
   clean: all # what to clean up before the job runs

@@ -1,14 +1,30 @@
 # CHANGELOG
 
-# 1.2.0-beta1
+# 1.2.2
 
-Version 1.2.0-beta1 has been released - Supernova upgrade testnet v1!
+## Secretd
+
+* Fixed issue where queries would try to access the Enclave in parallel from multiple threads,
+  causing `SGX_ERROR_OUT_OF_TCS` to be returned to users when a node was under sufficient load.
+  Queries now access the enclave one-at-a-time again.
+
+# 1.2.1
+
+This is a minor non-breaking version release. 
+
+## SecretCLI
+
+- Migrate the `secretcli tx sign-doc` command from v1. See [this](https://github.com/enigmampc/snip20-reference-impl/pull/22) for more info.
+
+# 1.2.0
+
+Version 1.2.0 has been released - the Supernova upgrade!
 
 ## Highlights
 
-* Upgraded to Cosmos SDK 0.43. Full changelog can be found [here](https://github.com/cosmos/cosmos-sdk/blob/v0.43.0/CHANGELOG.md)
+* Upgraded to Cosmos SDK 0.44.3. Full changelog can be found [here](https://github.com/cosmos/cosmos-sdk/blob/v0.44.3/CHANGELOG.md)
 
-* Gas prices are lower - as a result of performance upgrades and optimizations, gas amounts required will be much lower. We will be monitoring these metrics during the testnet period, so the numbers may not be final
+* Gas prices are lower - as a result of performance upgrades and optimizations, gas amounts required will be much lower.
 * GRPC for cosmos-sdk modules in addition to legacy REST API. See API [here](http://bootstrap.supernova.enigma.co/swagger/)
 
 * New modules:
@@ -44,7 +60,7 @@ modifying /home/\<account\>/.secretd/config/app.toml and looking for the `api` c
 
 ## SecretJS
 
-Version 0.17.0-beta1 has been released!
+Version 0.17.3 has been released!
 SecretJS has been upgraded to support the Supernova upgrade.
 All APIs remain unchanged, although the versions are NOT backwards compatible.
 
@@ -57,7 +73,7 @@ Secret-CosmWasm remains in a version that is compatabile with the v0.10 of vanil
 
 A new feature has been added - plaintext logs. To send an unencrypted log (contract output), use `plaintext_log` instead of `log`.
 This allows contracts to emit public events, and attach websockets to listen to specific events. To take advantage of this feature, compile contracts with
-`cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.2.0-beta1" }`
+`cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.2.0" }`
 
 ## Known Issues
 
