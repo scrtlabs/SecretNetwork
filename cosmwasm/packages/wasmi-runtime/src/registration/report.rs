@@ -593,14 +593,18 @@ impl AttestationReport {
     pub fn from_cert(cert: &[u8]) -> Result<Self, Error> {
         // Before we reach here, Webpki already verifed the cert is properly signed.
 
-        let payload = get_netscape_comment(cert).map_err(|_err| Error::ReportParseError)?;
+        let payload = get_netscape_comment(cert).map_err(|_err| {
+            println!("get_netscape_comment");
+            Error::ReportParseError })?;
 
         // Convert to endorsed report
         let report: EndorsedAttestationReport = serde_json::from_slice(&payload)?;
 
         // Verify report's signature - aka intel's signing cert
         let signing_cert = webpki::EndEntityCert::from(&report.signing_cert)
-            .map_err(|_| Error::ReportParseError)?;
+            .map_err(|_err| {
+                println!("webpki::EndEntityCert::from");
+                Error::ReportParseError })?;
 
         let (ias_cert, root_store) = get_ias_auth_config();
 
@@ -640,6 +644,7 @@ impl AttestationReport {
         ) {
             Ok(_) => info!("Signature verified successfully"),
             Err(e) => {
+                println!("probably not here");
                 warn!("Signature verification error {:?}", e);
                 return Err(Error::ReportParseError);
             }
@@ -719,6 +724,17 @@ pub mod tests {
     use std::untrusted::fs::File;
 
     use super::*;
+
+    fn tls_ra_cert_der_test() -> Vec<u8> {
+        let mut cert = vec![];
+        let mut f = File::open(
+            "../wasmi-runtime/src/registration/fixtures/attestation_cert_hw_invalid_test.der",
+        )
+            .unwrap();
+        f.read_to_end(&mut cert).unwrap();
+
+        cert
+    }
 
     fn tls_ra_cert_der_v3() -> Vec<u8> {
         let mut cert = vec![];
@@ -874,5 +890,16 @@ pub mod tests {
         let tls_ra_cert = tls_ra_cert_der_v3();
         let report = AttestationReport::from_cert(&tls_ra_cert);
         assert!(report.is_err());
+    }
+
+    pub fn test_attestation_report_test() {
+        let tls_ra_cert = tls_ra_cert_der_test();
+        let report = AttestationReport::from_cert(&tls_ra_cert);
+
+        if report.is_err() {
+            println!("err: {:?}", report)
+        }
+
+        assert!(report.is_ok());
     }
 }
