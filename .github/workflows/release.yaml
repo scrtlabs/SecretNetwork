@@ -73,8 +73,8 @@ jobs:
   build-deb-mainnet:
     runs-on: ubuntu-latest
     env: # Or as an environment variable
-      SPID_TESTNET: ${{ secrets.SPID_MAINNET }}
-      API_KEY_TESTNET: ${{ secrets.API_KEY_MAINNET }}
+      SPID_MAINNET: ${{ secrets.SPID_MAINNET }}
+      API_KEY_MAINNET: ${{ secrets.API_KEY_MAINNET }}
     steps:
       - uses: actions/checkout@v2
       - name: Get the version
