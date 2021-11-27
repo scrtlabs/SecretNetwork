@@ -548,7 +548,8 @@ export class RestClient {
       responseData = (await this.get(path)) as WasmResponse<SmartQueryResponse>;
     } catch (err) {
       try {
-        const errorMessageRgx = /encrypted: (.+?): (?:instantiate|execute|query) contract failed \(HTTP 500\)/g;
+        const errorMessageRgx =
+          /encrypted: (.+?): (?:instantiate|execute|query) contract failed \(HTTP 500\)/g;
         const rgxMatches = errorMessageRgx.exec(err.message);
         if (rgxMatches == null || rgxMatches?.length != 2) {
           throw err;

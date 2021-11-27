@@ -374,7 +374,7 @@ secret-contract-optimizer:
 	docker tag enigmampc/secret-contract-optimizer:${TAG} enigmampc/secret-contract-optimizer:latest
 
 secretjs-build:
-	cd cosmwasm-js/packages/sdk && npm i && npm run build
+	cd cosmwasm-js/packages/sdk && yarn && yarn build
 
 # Before running this, first make sure:
 # 1. To `npm login` with enigma-dev
