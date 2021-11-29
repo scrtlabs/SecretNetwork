@@ -12,6 +12,7 @@ use crate::wasm::errors::WasmEngineError;
 use crate::wasm::runtime::traits::WasmiApi;
 use crate::wasm::{gas::WasmCosts, query_chain::encrypt_and_query_chain, types::IoNonce};
 
+#[derive(Clone, Copy, Debug)]
 pub enum ContractOperation {
     Init,
     Handle,

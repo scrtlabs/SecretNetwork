@@ -351,7 +351,7 @@ fn start_engine(
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
 ) -> Result<Engine, EnclaveError> {
-    let module = create_module_instance(contract_code)?;
+    let module = create_module_instance(contract_code, operation)?;
 
     // Set the gas costs for wasm op-codes (there is an inline stack_height limit in WasmCosts)
     let wasm_costs = WasmCosts::default();
