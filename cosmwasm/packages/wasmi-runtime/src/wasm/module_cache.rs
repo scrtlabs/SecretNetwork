@@ -112,12 +112,11 @@ fn compile_module(
 
     info!("Created Wasmi module from parity. Now checking for floating points...");
 
-    if let ContractOperation::Query = operation {
-        // Skip the floating point check in queries.
-        // We know that the contract must be valid at this point,
-        // otherwise the storage keys will be invalid, and this
-        // operation is extremely expensive (21-27ms in testing)
-    } else {
+    // Skip the floating point check in queries and handles.
+    // We know that the contract must be valid at this point,
+    // otherwise the contrat storage keys will be invalid, and this
+    // operation is extremely expensive (21-27ms in testing)
+    if let ContractOperation::Init = operation {
         module
             .deny_floating_point()
             .map_err(|_err| EnclaveError::WasmModuleWithFP)?;
