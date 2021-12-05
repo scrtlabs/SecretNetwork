@@ -3,6 +3,8 @@ package cosmwasm
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"time"
 
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
@@ -145,27 +147,36 @@ func (w *Wasmer) Execute(
 	gasLimit uint64,
 	sigInfo types.VerificationInfo,
 ) (*types.HandleResponse, uint64, error) {
+	start := time.Now()
 	paramBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
 	}
+	elapsed := time.Since(start)
+	log.Printf("marshal took %s", elapsed)
+	start = time.Now()
 	sigInfoBin, err := json.Marshal(sigInfo)
 	if err != nil {
 		return nil, 0, err
 	}
-
+	elapsed = time.Since(start)
+	log.Printf("marshal took %s", elapsed)
+	start = time.Now()
 	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin)
 	if err != nil {
 		return nil, gasUsed, err
 	}
-
+	elapsed = time.Since(start)
+	log.Printf("handle took %s", elapsed)
+	start = time.Now()
 	var resp types.HandleResult
 	err = json.Unmarshal(data, &resp)
 
 	if err != nil {
 		return nil, gasUsed, err
 	}
-
+	elapsed = time.Since(start)
+	log.Printf("unmarshal took %s", elapsed)
 	if resp.Err != nil {
 		return nil, gasUsed, fmt.Errorf("%v", resp.Err)
 	}

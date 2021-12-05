@@ -17,6 +17,7 @@ use super::io::encrypt_output;
 use super::module_cache::create_module_instance;
 use super::runtime::{ContractInstance, ContractOperation, Engine};
 use super::types::{ContractCode, IoNonce, SecretMessage, SigInfo};
+use std::time::{Duration, Instant};
 
 /*
 Each contract is compiled with these functions already implemented in wasm:
@@ -152,6 +153,7 @@ pub fn handle(
     msg: &[u8],
     sig_info: &[u8],
 ) -> Result<HandleSuccess, EnclaveError> {
+    let mut start = Instant::now();
     let contract_code = ContractCode::new(contract);
 
     let mut parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
@@ -170,16 +172,22 @@ pub fn handle(
         );
         EnclaveError::FailedToDeserialize
     })?;
+    let mut duration = start.elapsed();
+    println!("Time elapsed in ContractCode::new is: {:?}", duration);
 
+    start = Instant::now();
     let contract_key = extract_contract_key(&parsed_env)?;
 
     if !validate_contract_key(&contract_key, &canonical_contract_address, &contract_code) {
         warn!("got an error while trying to deserialize output bytes");
         return Err(EnclaveError::FailedContractAuthentication);
     }
+    duration = start.elapsed();
+    println!("Time elapsed in validate_contract_key() is: {:?}", duration);
 
     trace!("handle parsed_env: {:?}", parsed_env);
 
+    start = Instant::now();
     let parsed_sig_info: SigInfo = serde_json::from_slice(sig_info).map_err(|err| {
         warn!(
             "got an error while trying to deserialize env input bytes into json {:?}: {}",
@@ -191,14 +199,22 @@ pub fn handle(
 
     trace!("Handle input before decryption: {:?}", base64::encode(&msg));
     let secret_msg = SecretMessage::from_slice(msg)?;
+    duration = start.elapsed();
+    println!("Time elapsed in parsed_sig_info() is: {:?}", duration);
 
+    start = Instant::now();
     // Verify env parameters against the signed tx
     verify_params(&parsed_sig_info, &parsed_env, &secret_msg)?;
+    duration = start.elapsed();
+    println!("Time elapsed in verify_params() is: {:?}", duration);
 
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
 
+    start = Instant::now();
     let validated_msg = validate_msg(&decrypted_msg, contract_code.hash())?;
+    duration = start.elapsed();
+    println!("Time elapsed in validate_msg() is: {:?}", duration);
 
     trace!(
         "Handle input afer decryption: {:?}",
@@ -208,7 +224,7 @@ pub fn handle(
     trace!("Successfully authenticated the contract!");
 
     trace!("Handle: Contract Key: {:?}", hex::encode(contract_key));
-
+    start = Instant::now();
     let mut engine = start_engine(
         context,
         gas_limit,
@@ -218,7 +234,10 @@ pub fn handle(
         secret_msg.nonce,
         secret_msg.user_public_key,
     )?;
+    duration = start.elapsed();
+    println!("Time elapsed in start_engine() is: {:?}", duration);
 
+    start = Instant::now();
     let new_env = serde_json::to_vec(&parsed_env).map_err(|err| {
         warn!(
             "got an error while trying to serialize parsed_env into bytes {:?}: {}",
@@ -226,6 +245,8 @@ pub fn handle(
         );
         EnclaveError::FailedToSerialize
     })?;
+    duration = start.elapsed();
+    println!("Time elapsed in new_env() is: {:?}", duration);
 
     let env_ptr = engine.write_to_memory(&new_env)?;
     let msg_ptr = engine.write_to_memory(&validated_msg)?;
@@ -233,7 +254,10 @@ pub fn handle(
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
     let output = coalesce!(EnclaveError, {
+        start = Instant::now();
         let vec_ptr = engine.handle(env_ptr, msg_ptr)?;
+        duration = start.elapsed();
+        println!("Time elapsed in start_engine() is: {:?}", duration);
 
         let output = engine.extract_vector(vec_ptr)?;
 

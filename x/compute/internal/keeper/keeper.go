@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"log"
 	"path/filepath"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	codedctypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -428,15 +430,16 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		Ctx:     ctx,
 		Plugins: k.queryPlugins,
 	}
-
+	start := time.Now()
 	gas := gasForContract(ctx)
 	res, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, params, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo)
 	consumeGas(ctx, gasUsed)
-
+	elapsed := time.Since(start)
+	log.Printf("Execute took %s - code ID %d", elapsed)
 	if execErr != nil {
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
-
+	start = time.Now()
 	//var res wasmTypes.CosmosResponse
 	//err = json.Unmarshal(res, &res)
 	//if err != nil {
@@ -452,7 +455,8 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	if err != nil {
 		return nil, err
 	}
-
+	elapsed = time.Since(start)
+	log.Printf("Rest took %s", elapsed)
 	return &sdk.Result{
 		Data: res.Data,
 	}, nil

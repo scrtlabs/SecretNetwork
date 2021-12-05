@@ -8,7 +8,9 @@ import "C"
 
 import (
 	"fmt"
+	"log"
 	"syscall"
+	"time"
 
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 )
@@ -88,7 +90,7 @@ func ReleaseCache(cache Cache) {
 func InitEnclaveRuntime(ModuleCacheSize uint8) error {
 	errmsg := C.Buffer{}
 
-	config := C.EnclaveRuntimeConfig {
+	config := C.EnclaveRuntimeConfig{
 		module_cache_size: u8(ModuleCacheSize),
 	}
 	_, err := C.configure_enclave_runtime(config, &errmsg)
@@ -181,25 +183,51 @@ func Handle(
 	defer freeAfterSend(p)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
-
+	start := time.Now()
 	// set up a new stack frame to handle iterators
 	counter := startContract()
 	defer endContract(counter)
+	elapsed := time.Since(start)
+	log.Printf("startContract took %s", elapsed)
 
+	start = time.Now()
 	dbState := buildDBState(store, counter)
+	elapsed = time.Since(start)
+	log.Printf("buildDBState took %s", elapsed)
+
+	start = time.Now()
 	db := buildDB(&dbState, gasMeter)
+	elapsed = time.Since(start)
+	log.Printf("buildDB took %s", elapsed)
+
+	start = time.Now()
 	s := sendSlice(sigInfo)
 	defer freeAfterSend(s)
+	elapsed = time.Since(start)
+	log.Printf("sendSlice took %s", elapsed)
+
+	start = time.Now()
 	a := buildAPI(api)
+	elapsed = time.Since(start)
+	log.Printf("buildAPI took %s", elapsed)
+
+	start = time.Now()
 	q := buildQuerier(querier)
+	elapsed = time.Since(start)
+	log.Printf("buildQuerier took %s", elapsed)
+
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
+	start = time.Now()
 	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
+	elapsed = time.Since(start)
+	log.Printf("handle took %s", elapsed)
+
 	return receiveVector(res), uint64(gasUsed), nil
 }
 
