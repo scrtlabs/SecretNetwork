@@ -19,7 +19,8 @@ services:
     depends_on:
       - aesm
     devices:
-      - /dev/sgx
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
     volumes:
       - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/root/.secretd
@@ -38,7 +39,8 @@ services:
     depends_on:
       - aesm
     devices:
-      - /dev/sgx
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
     volumes:
       - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/root/.secretd
@@ -57,7 +59,8 @@ services:
     depends_on:
       - bootstrap
     devices:
-      - /dev/sgx
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
     volumes:
       - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/tmp/.secretd
@@ -73,7 +76,8 @@ services:
     depends_on:
       - aesm
     devices:
-      - /dev/sgx
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
     volumes:
       - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/tmp/.secretd
