@@ -642,10 +642,9 @@ export class RestClient {
   }
 
   public async decryptTxsResponse(txsResponse: TxsResponse): Promise<TxsResponse> {
-    let dataFields = undefined;
+    let dataFields;
     let data = Uint8Array.from([]);
     if (txsResponse.data) {
-      // @ts-ignore
       dataFields = decodeTxData(Encoding.fromHex(txsResponse.data));
     }
 
