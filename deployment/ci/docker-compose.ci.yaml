@@ -20,9 +20,8 @@ services:
       - aesm
     devices:
       - /dev/sgx/enclave
-      - /dev/sgx/provision
     volumes:
-      - /tmp/aesmd:/var/run/aesmd
+      - /var/run/aesmd:/var/run/aesmd
       - /tmp/secretd:/root/.secretd
       - /tmp/secretcli:/root/.secretcli
     stdin_open: true
@@ -40,9 +39,8 @@ services:
       - aesm
     devices:
       - /dev/sgx/enclave
-      - /dev/sgx/provision
     volumes:
-      - /tmp/aesmd:/var/run/aesmd
+      - /var/run/aesmd:/var/run/aesmd
       - /tmp/secretd:/root/.secretd
       # - /tmp/secretcli:/root/.secretcli
     stdin_open: true
@@ -60,9 +58,8 @@ services:
       - bootstrap
     devices:
       - /dev/sgx/enclave
-      - /dev/sgx/provision
     volumes:
-      - /tmp/aesmd:/var/run/aesmd
+      - /var/run/aesmd:/var/run/aesmd
       - /tmp/secretd:/tmp/.secretd
       # - /tmp/secretcli:/root/.secretcli
     stdin_open: true
@@ -77,9 +74,8 @@ services:
       - aesm
     devices:
       - /dev/sgx/enclave
-      - /dev/sgx/provision
     volumes:
-      - /tmp/aesmd:/var/run/aesmd
+      - /var/run/aesmd:/var/run/aesmd
       - /tmp/secretd:/tmp/.secretd
       - /tmp/secretcli:/root/.secretcli
     stdin_open: true
