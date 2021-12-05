@@ -3,11 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -18,6 +13,11 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	tmcmds "github.com/tendermint/tendermint/cmd/tendermint/commands"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
 
 	//"github.com/tendermint/tendermint/libs/cli"
 
@@ -164,6 +164,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 		AddGenesisAccountCmd(app.DefaultNodeHome),
 		tmcli.NewCompletionCmd(rootCmd, true),
 		// testnetCmd(app.ModuleBasics, banktypes.GenesisBalancesIterator{}),
+		tmcmds.RollbackStateCmd,
 		debug.Cmd(),
 	)
 
