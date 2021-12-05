@@ -4,7 +4,8 @@ services:
   aesm:
     image: enigmampc/aesm
     devices:
-      - /dev/sgx
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
     volumes:
       - /tmp/aesmd:/var/run/aesmd
     stdin_open: true
