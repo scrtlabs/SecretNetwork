@@ -15,8 +15,6 @@ pub enum EnclaveError {
         status: sgx_types::sgx_status_t,
         backtrace: Backtrace,
     },
-    #[snafu(display("Too many queries, please try again"))]
-    EnclaveBusy {},
 }
 
 impl EnclaveError {

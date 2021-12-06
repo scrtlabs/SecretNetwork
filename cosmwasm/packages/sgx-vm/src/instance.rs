@@ -87,9 +87,7 @@ where
         let module = compile(code)?;
         Instance::from_module(&module, deps, gas_limit)
         */
-        let enclave = get_enclave()
-            .map_err(EnclaveError::sdk_err)?
-            .ok_or(EnclaveError::EnclaveBusy {})?;
+        let enclave = get_enclave().map_err(EnclaveError::sdk_err)?;
         let module = Module::<S, Q>::new(
             code.to_vec(),
             gas_limit,
