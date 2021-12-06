@@ -216,7 +216,7 @@ clean:
 	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
 
 build-dev-image:
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=SW --build-arg FEATURES= -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=SW --build-arg FEATURES="${FEATURES},debug-print" -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/release.Dockerfile -t build-release .
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/dev-image.Dockerfile -t enigmampc/secret-network-sw-dev:${DOCKER_TAG} .
 
@@ -374,7 +374,7 @@ secret-contract-optimizer:
 	docker tag enigmampc/secret-contract-optimizer:${TAG} enigmampc/secret-contract-optimizer:latest
 
 secretjs-build:
-	cd cosmwasm-js/packages/sdk && npm i && npm run build
+	cd cosmwasm-js/packages/sdk && yarn && yarn build
 
 # Before running this, first make sure:
 # 1. To `npm login` with enigma-dev

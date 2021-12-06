@@ -532,6 +532,7 @@ func GetCmdQuery() *cobra.Command {
 	}
 	decoder.RegisterFlags(cmd.PersistentFlags(), "query argument")
 	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
+	flags.AddQueryFlagsToCmd(cmd)
 	return cmd
 }
 

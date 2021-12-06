@@ -1,6 +1,6 @@
 {
   "name": "secretjs",
-  "version": "0.17.3",
+  "version": "0.17.5",
   "description": "CosmWasm SDK + Encryption for the Secret Network",
   "author": "Ethan Frey <ethanfrey@users.noreply.github.com>",
   "contributors": [
@@ -30,7 +30,7 @@
     "lint-fix": "eslint --max-warnings 0 \"**/*.{js,ts}\" --fix",
     "move-types": "shx rm -rf ./types/* && shx mv build/types/* ./types && rm -rf ./types/testdata && shx rm -f ./types/*.spec.d.ts",
     "format-types": "prettier --write --loglevel warn \"./types/**/*.d.ts\"",
-    "build": "shx rm -rf ./build && tsc && npm run move-types && npm run format-types",
+    "build": "shx rm -rf ./build && tsc && npm run move-types && npm run format-types && cp ./src/ProtoDefs.js ./build",
     "build-or-skip": "[ -n \"$SKIP_BUILD\" ] || npm run build",
     "test-node": "node jasmine-testrunner.js",
     "test-firefox": "npm run pack-web && karma start --single-run --browsers Firefox",
