@@ -108,17 +108,13 @@ lazy_static! {
     static ref SGX_ENCLAVE_CONFIGURED: Mutex<bool> = Mutex::new(false);
 }
 
-/// This const determines how many seconds we wait when trying to get access to the enclave
-/// before giving up.
-const ENCLAVE_LOCK_TIMEOUT: u64 = 6;
-
 /// Use this method when trying to get access to the enclave.
 /// You can unwrap the result when you are certain that the enclave
 /// must have been initialized if you even reached that point in the code.
 /// If `Ok(None)` is returned, that means that the enclave is currently busy.
 pub fn get_enclave() -> SgxResult<Option<EnclaveGuard>> {
     let mutex = SGX_ENCLAVE_MUTEX.as_ref().map_err(|status| *status)?;
-    let maybe_guard = mutex.get_enclave(Duration::from_secs(ENCLAVE_LOCK_TIMEOUT));
+    let maybe_guard = mutex.get_enclave(Duration::from_secs(6));
     Ok(maybe_guard)
 }
 
