@@ -240,7 +240,7 @@ pub fn handle(
     start = Instant::now();
     let new_env = serde_json::to_vec(&parsed_env).map_err(|err| {
         warn!(
-            "got an error while trying to serialize parsed_env into bytes {:?}: {}",
+            "got an error while trying to serialsize parsed_env into bytes {:?}: {}",
             parsed_env, err
         );
         EnclaveError::FailedToSerialize
@@ -257,7 +257,7 @@ pub fn handle(
         start = Instant::now();
         let vec_ptr = engine.handle(env_ptr, msg_ptr)?;
         duration = start.elapsed();
-        println!("Time elapsed in start_engine() is: {:?}", duration);
+        println!("Time elapsed in engine.handle() is: {:?}", duration);
 
         let output = engine.extract_vector(vec_ptr)?;
 
@@ -375,11 +375,21 @@ fn start_engine(
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
 ) -> Result<Engine, EnclaveError> {
+    let mut start = Instant::now();
     let module = create_module_instance(contract_code)?;
-
+    let mut duration = start.elapsed();
+    println!(
+        "Time elapsed in create_module_instance() is: {:?}",
+        duration
+    );
     // Set the gas costs for wasm op-codes (there is an inline stack_height limit in WasmCosts)
-    let wasm_costs = WasmCosts::default();
 
+    let mut start = Instant::now();
+    let wasm_costs = WasmCosts::default();
+    let mut duration = start.elapsed();
+    println!("Time elapsed in wasm_costs() is: {:?}", duration);
+
+    let mut start = Instant::now();
     let contract_instance = ContractInstance::new(
         context,
         module.clone(),
@@ -390,6 +400,13 @@ fn start_engine(
         nonce,
         user_public_key,
     );
+    let mut duration = start.elapsed();
+    println!("Time elapsed in wasm_costs() is: {:?}", duration);
 
-    Ok(Engine::new(contract_instance, module))
+    let mut start = Instant::now();
+    let engine = Engine::new(contract_instance, module);
+    let mut duration = start.elapsed();
+    println!("Time elapsed in Engine::new() is: {:?}", duration);
+
+    Ok(engine)
 }
