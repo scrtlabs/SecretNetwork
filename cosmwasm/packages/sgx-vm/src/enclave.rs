@@ -1,4 +1,5 @@
-use std::{env, path::Path, sync::Mutex};
+use std::time::Duration;
+use std::{env, path::Path};
 
 use enclave_ffi_types::RuntimeConfiguration;
 use sgx_types::{
@@ -9,6 +10,7 @@ use sgx_urts::SgxEnclave;
 
 use lazy_static::lazy_static;
 use log::*;
+use parking_lot::{Condvar, Mutex};
 
 static ENCLAVE_FILE: &str = "librust_cosmwasm_enclave.signed.so";
 
@@ -101,7 +103,7 @@ impl EnclaveRuntimeConfig {
 }
 
 pub fn configure_enclave(config: EnclaveRuntimeConfig) -> SgxResult<()> {
-    let mut configured = SGX_ENCLAVE_CONFIGURED.lock().unwrap();
+    let mut configured = SGX_ENCLAVE_CONFIGURED.lock();
     if *configured {
         return Ok(());
     }
@@ -124,4 +126,70 @@ pub fn configure_enclave(config: EnclaveRuntimeConfig) -> SgxResult<()> {
     }
 
     Ok(())
+}
+
+/// This const determines how many seconds we wait when trying to get access to the enclave
+/// before giving up.
+const ENCLAVE_LOCK_TIMEOUT: u64 = 6;
+const TCS_NUM: u8 = 16;
+lazy_static! {
+    static ref QUERY_DOORBELL: Doorbell = Doorbell::new(TCS_NUM);
+}
+
+struct Doorbell {
+    condvar: Condvar,
+    count: Mutex<u8>,
+}
+
+impl Doorbell {
+    fn new(count: u8) -> Self {
+        Self {
+            condvar: Condvar::new(),
+            count: Mutex::new(count),
+        }
+    }
+
+    fn wait_for(&'static self, duration: Duration, recursive: bool) -> Option<EnclaveQueryToken> {
+        if !recursive {
+            let mut count = self.count.lock();
+            if *count >= TCS_NUM {
+                // try to wait for other tasks to complete
+                let wait = self.condvar.wait_for(&mut count, duration);
+                if wait.timed_out() {
+                    return None;
+                }
+            }
+            *count += 1;
+        }
+        Some(EnclaveQueryToken::new(self, recursive))
+    }
+}
+
+pub struct EnclaveQueryToken {
+    doorbell: &'static Doorbell,
+    recursive: bool,
+}
+
+impl EnclaveQueryToken {
+    fn new(doorbell: &'static Doorbell, recursive: bool) -> Self {
+        Self {
+            doorbell,
+            recursive,
+        }
+    }
+}
+
+impl Drop for EnclaveQueryToken {
+    fn drop(&mut self) {
+        if self.recursive {
+            let mut count = self.doorbell.count.lock();
+            *count += 1;
+            drop(count);
+            self.doorbell.condvar.notify_one();
+        }
+    }
+}
+
+pub fn get_query_token(recursive: bool) -> Option<EnclaveQueryToken> {
+    QUERY_DOORBELL.wait_for(Duration::from_secs(ENCLAVE_LOCK_TIMEOUT), recursive)
 }

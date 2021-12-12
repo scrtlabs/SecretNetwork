@@ -4,8 +4,9 @@ use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 
+use crate::enclave::get_query_token;
 use crate::errors::{EnclaveError, VmResult};
-use crate::{Querier, Storage};
+use crate::{Querier, Storage, VmError};
 
 use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
 
@@ -13,6 +14,7 @@ use sgx_types::{sgx_status_t, SgxResult};
 use sgx_urts::SgxEnclave;
 
 use log::*;
+use serde::Deserialize;
 
 use super::exports::FullContext;
 use super::imports;
@@ -210,6 +212,13 @@ where
             self.enclave.geteid()
         );
 
+        let query_token = get_query_token(is_query_recursive(env)?);
+        if query_token.is_none() {
+            return Err(VmError::generic_err(
+                "The enclave is too busy and can not respond to this query",
+            ));
+        }
+
         let mut query_result = MaybeUninit::<QueryResult>::uninit();
         let mut used_gas = 0_u64;
 
@@ -258,5 +267,26 @@ where
     fn drop(&mut self) {
         let context_data = unsafe { (*(self.ctx.data as *mut FullContext)).context_data };
         (self.finalizer)(context_data);
+    }
+}
+
+/// This type is used to extract the `recursive` field which is passed down as `true`
+/// when running in a recursive query. We do not include the other fields of the Env here
+/// to reduce the need to keep this type in sync with the canonical `Env` type.
+#[derive(Debug, Deserialize)]
+struct Env {
+    #[serde(default)]
+    recursive: bool,
+}
+
+/// This function parses the `env` parameter using the type above, and extracts the
+/// `recursive` field from it.
+fn is_query_recursive(env: &[u8]) -> VmResult<bool> {
+    match serde_json::from_slice::<Env>(env) {
+        Ok(env) => Ok(env.recursive),
+        Err(_err) => Err(VmError::generic_err(format!(
+            "could not parse the env parameter: {:?}",
+            String::from_utf8_lossy(env)
+        ))),
     }
 }

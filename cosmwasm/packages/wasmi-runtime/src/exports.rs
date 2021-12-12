@@ -387,13 +387,17 @@ pub mod tests {
         }
     }
 
+    fn ecall_stack_length() -> usize {
+        ECALL_ALLOCATE_STACK.lock().unwrap().len()
+    }
+
     fn test_recover_enclave_buffer_valid() {
         let message = b"some example text";
-        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0);
+        assert_eq!(ecall_stack_length(), 0);
         let enclave_buffer = unsafe { ecall_allocate(message.as_ptr(), message.len()) };
-        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 1);
+        assert_eq!(ecall_stack_length(), 1);
         let recovered = unsafe { recover_buffer(enclave_buffer) };
-        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0);
+        assert_eq!(ecall_stack_length(), 0);
         assert_eq!(recovered.unwrap().unwrap(), message);
     }
 
@@ -401,9 +405,9 @@ pub mod tests {
         let enclave_buffer = EnclaveBuffer {
             ptr: 0x12345678_usize as _,
         };
-        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0);
+        assert_eq!(ecall_stack_length(), 0);
         let recovered = unsafe { recover_buffer(enclave_buffer) };
-        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0);
+        assert_eq!(ecall_stack_length(), 0);
         assert_eq!(recovered.unwrap_err(), BufferRecoveryError);
     }
 
@@ -412,9 +416,9 @@ pub mod tests {
         let enclave_buffer = EnclaveBuffer {
             ptr: message.as_ptr() as _,
         };
-        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0);
+        assert_eq!(ecall_stack_length(), 0);
         let recovered = unsafe { recover_buffer(enclave_buffer) };
-        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0);
+        assert_eq!(ecall_stack_length(), 0);
         assert_eq!(recovered.unwrap_err(), BufferRecoveryError);
     }
 
@@ -422,9 +426,9 @@ pub mod tests {
         let enclave_buffer = EnclaveBuffer {
             ptr: std::ptr::null_mut(),
         };
-        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0);
+        assert_eq!(ecall_stack_length(), 0);
         let recovered = unsafe { recover_buffer(enclave_buffer) };
-        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0);
+        assert_eq!(ecall_stack_length(), 0);
         assert_eq!(recovered.unwrap(), None);
     }
 
@@ -439,7 +443,7 @@ pub mod tests {
             .iter()
             .enumerate()
             .map(|(index, message)| {
-                assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), index);
+                assert_eq!(ecall_stack_length(), index);
                 unsafe { ecall_allocate(message.as_ptr(), message.len()) }
             })
             .collect();
@@ -451,11 +455,11 @@ pub mod tests {
             .enumerate()
             .rev()
         {
-            assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), index + 1);
+            assert_eq!(ecall_stack_length(), index + 1);
             let recovered = unsafe { recover_buffer(enclave_buffer) };
             assert_eq!(recovered.unwrap().unwrap(), message.as_bytes())
         }
-        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0)
+        assert_eq!(ecall_stack_length(), 0)
     }
 
     // This test is very similar to the test above, except it tries to give incorrect
@@ -471,7 +475,7 @@ pub mod tests {
             .iter()
             .enumerate()
             .map(|(index, message)| {
-                assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), index);
+                assert_eq!(ecall_stack_length(), index);
                 unsafe { ecall_allocate(message.as_ptr(), message.len()) }
             })
             .collect();
@@ -480,9 +484,9 @@ pub mod tests {
         let enclave_buffer = EnclaveBuffer {
             ptr: message.as_ptr() as _,
         };
-        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), recursion_depth);
+        assert_eq!(ecall_stack_length(), recursion_depth);
         let recovered = unsafe { recover_buffer(enclave_buffer) };
-        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), recursion_depth);
+        assert_eq!(ecall_stack_length(), recursion_depth);
         assert_eq!(recovered.unwrap_err(), BufferRecoveryError);
 
         // simulate clearing the stack recursively
@@ -492,11 +496,11 @@ pub mod tests {
             .enumerate()
             .rev()
         {
-            assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), index + 1);
+            assert_eq!(ecall_stack_length(), index + 1);
             let recovered = unsafe { recover_buffer(enclave_buffer) };
             assert_eq!(recovered.unwrap().unwrap(), message.as_bytes())
         }
-        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0)
+        assert_eq!(ecall_stack_length(), 0)
     }
 
     // These tests are vry similar to the recursion tests,
@@ -514,7 +518,7 @@ pub mod tests {
             .iter()
             .enumerate()
             .map(|(index, message)| {
-                assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), index);
+                assert_eq!(ecall_stack_length(), index);
                 unsafe { ecall_allocate(message.as_ptr(), message.len()) }
             })
             .collect();
@@ -528,11 +532,11 @@ pub mod tests {
             .enumerate()
             .rev()
         {
-            assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), index + 1);
+            assert_eq!(ecall_stack_length(), index + 1);
             let recovered = unsafe { recover_buffer(enclave_buffer) };
             assert_eq!(recovered.unwrap().unwrap(), message.as_bytes())
         }
-        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0)
+        assert_eq!(ecall_stack_length(), 0)
     }
 
     fn test_recover_enclave_buffer_multiple_out_of_order_invalid() {
@@ -546,7 +550,7 @@ pub mod tests {
             .iter()
             .enumerate()
             .map(|(index, message)| {
-                assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), index);
+                assert_eq!(ecall_stack_length(), index);
                 unsafe { ecall_allocate(message.as_ptr(), message.len()) }
             })
             .collect();
@@ -555,9 +559,9 @@ pub mod tests {
         let enclave_buffer = EnclaveBuffer {
             ptr: message.as_ptr() as _,
         };
-        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), recursion_depth);
+        assert_eq!(ecall_stack_length(), recursion_depth);
         let recovered = unsafe { recover_buffer(enclave_buffer) };
-        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), recursion_depth);
+        assert_eq!(ecall_stack_length(), recursion_depth);
         assert_eq!(recovered.unwrap_err(), BufferRecoveryError);
 
         // simulate clearing the stack recursively
@@ -569,10 +573,10 @@ pub mod tests {
             .enumerate()
             .rev()
         {
-            assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), index + 1);
+            assert_eq!(ecall_stack_length(), index + 1);
             let recovered = unsafe { recover_buffer(enclave_buffer) };
             assert_eq!(recovered.unwrap().unwrap(), message.as_bytes())
         }
-        assert_eq!(ECALL_ALLOCATE_STACK.lock().unwrap().len(), 0)
+        assert_eq!(ecall_stack_length(), 0)
     }
 }
