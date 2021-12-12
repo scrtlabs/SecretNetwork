@@ -308,7 +308,7 @@ go-tests: build-test-contract
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	rm -rf ./x/compute/internal/keeper/.sgx_secrets
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -timeout 1200s -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -failfast -timeout 1200s -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 go-tests-hw: build-test-contract
 	# empty BUILD_PROFILE means debug mode which compiles faster
@@ -316,7 +316,7 @@ go-tests-hw: build-test-contract
 	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	rm -rf ./x/compute/internal/keeper/.sgx_secrets
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	SGX_MODE=HW go test -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	GOMAXPROCS=8 SGX_MODE=HW go test -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 # When running this more than once, after the first time you'll want to remove the contents of the `ffi-types`
 # rule in the Makefile in `wasmi-runtime`. This is to speed up the compilation time of tests and speed up the

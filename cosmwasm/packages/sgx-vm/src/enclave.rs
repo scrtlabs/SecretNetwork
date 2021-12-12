@@ -130,7 +130,7 @@ pub fn configure_enclave(config: EnclaveRuntimeConfig) -> SgxResult<()> {
 
 /// This const determines how many seconds we wait when trying to get access to the enclave
 /// before giving up.
-const ENCLAVE_LOCK_TIMEOUT: u64 = 6;
+const ENCLAVE_LOCK_TIMEOUT: u64 = 6 * 5;
 const TCS_NUM: u8 = 16;
 lazy_static! {
     static ref QUERY_DOORBELL: Doorbell = Doorbell::new(TCS_NUM);
@@ -138,6 +138,7 @@ lazy_static! {
 
 struct Doorbell {
     condvar: Condvar,
+    /// Amount of tasks allowed to use the enclave at the same time.
     count: Mutex<u8>,
 }
 
@@ -150,16 +151,23 @@ impl Doorbell {
     }
 
     fn wait_for(&'static self, duration: Duration, recursive: bool) -> Option<EnclaveQueryToken> {
+        // eprintln!("Query Token creation. recursive: {}", recursive);
         if !recursive {
             let mut count = self.count.lock();
-            if *count >= TCS_NUM {
+            // eprintln!(
+            //     "The current count of tasks is {}/{}, attempting to increase.",
+            //     TCS_NUM - *count,
+            //     TCS_NUM
+            // );
+            if *count == 0 {
                 // try to wait for other tasks to complete
                 let wait = self.condvar.wait_for(&mut count, duration);
-                if wait.timed_out() {
+                // double check that the count is nonzero, so there's an available slot in the enclave.
+                if wait.timed_out() || *count == 0 {
                     return None;
                 }
             }
-            *count += 1;
+            *count -= 1;
         }
         Some(EnclaveQueryToken::new(self, recursive))
     }
@@ -181,8 +189,14 @@ impl EnclaveQueryToken {
 
 impl Drop for EnclaveQueryToken {
     fn drop(&mut self) {
-        if self.recursive {
+        // eprintln!("Query Token destruction. recursive: {}", self.recursive);
+        if !self.recursive {
             let mut count = self.doorbell.count.lock();
+            // eprintln!(
+            //     "The current count of tasks is {}/{}, attempting to decrease.",
+            //     TCS_NUM - *count,
+            //     TCS_NUM
+            // );
             *count += 1;
             drop(count);
             self.doorbell.condvar.notify_one();
