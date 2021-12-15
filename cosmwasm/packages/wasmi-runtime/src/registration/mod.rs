@@ -25,6 +25,7 @@ pub mod tests {
             report::tests::test_attestation_report_from_cert();
             report::tests::test_attestation_report_from_cert_invalid();
             report::tests::test_attestation_report_from_cert_api_version_not_compatible();
+            report::tests::test_attestation_report_test();
             cert::tests::test_certificate_valid();
             cert::tests::test_certificate_invalid_configuration_needed();
         });
