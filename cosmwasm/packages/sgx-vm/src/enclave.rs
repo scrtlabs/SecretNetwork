@@ -131,7 +131,7 @@ pub fn configure_enclave(config: EnclaveRuntimeConfig) -> SgxResult<()> {
 /// This const determines how many seconds we wait when trying to get access to the enclave
 /// before giving up.
 const ENCLAVE_LOCK_TIMEOUT: u64 = 6 * 5;
-const TCS_NUM: u8 = 8;
+const TCS_NUM: u8 = 12;
 lazy_static! {
     static ref QUERY_DOORBELL: Doorbell = Doorbell::new(TCS_NUM);
 }
