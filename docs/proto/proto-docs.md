@@ -12106,7 +12106,7 @@ QueryContractInfoResponse is the response type for the Query/ContractInfo RPC me
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `address` | [bytes](#bytes) |  | address is the address of the contract |
+| `address` | [bytes](#bytes) |  | address is the address of the contract string address = 1; |
 | `query_data` | [bytes](#bytes) |  |  |
 
 
@@ -12144,7 +12144,7 @@ Query provides defines the gRPC querier service
 | ----------- | ------------ | ------------- | ------------| ------- | -------- |
 | `ContractInfo` | [QueryContractInfoRequest](#secret.compute.v1beta1.QueryContractInfoRequest) | [QueryContractInfoResponse](#secret.compute.v1beta1.QueryContractInfoResponse) | Query contract | GET|/compute/v1beta1/contract/{address}|
 | `ContractsByCode` | [QueryContractsByCodeRequest](#secret.compute.v1beta1.QueryContractsByCodeRequest) | [QueryContractsByCodeResponse](#secret.compute.v1beta1.QueryContractsByCodeResponse) | Query contract | GET|/compute/v1beta1/code/{code_id}/contracts|
-| `SmartContractState` | [QuerySmartContractStateRequest](#secret.compute.v1beta1.QuerySmartContractStateRequest) | [QuerySmartContractStateResponse](#secret.compute.v1beta1.QuerySmartContractStateResponse) | Query contract | GET|/compute/v1beta1/contract/{address}/smart/{query_data}|
+| `SmartContractState` | [QuerySmartContractStateRequest](#secret.compute.v1beta1.QuerySmartContractStateRequest) | [QuerySmartContractStateResponse](#secret.compute.v1beta1.QuerySmartContractStateResponse) | Query contract | GET|/compute/v1beta1/contract/{address}/smart|
 | `Code` | [QueryCodeRequest](#secret.compute.v1beta1.QueryCodeRequest) | [QueryCodeResponse](#secret.compute.v1beta1.QueryCodeResponse) | Query a specific contract code | GET|/compute/v1beta1/code/{code_id}|
 | `Codes` | [.google.protobuf.Empty](#google.protobuf.Empty) | [QueryCodesResponse](#secret.compute.v1beta1.QueryCodesResponse) | Query all contract codes on-chain | GET|/compute/v1beta1/code|
 
