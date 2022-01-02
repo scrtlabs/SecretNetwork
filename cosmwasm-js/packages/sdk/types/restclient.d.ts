@@ -207,6 +207,7 @@ export declare class RestClient {
    */
   constructor(apiUrl: string, broadcastMode?: BroadcastMode, seed?: Uint8Array);
   get(path: string): Promise<RestClientResponse>;
+  get_raw(path: string): Promise<RestClientResponse>;
   post(path: string, params: any): Promise<RestClientResponse>;
   authAccounts(address: string): Promise<AuthAccountsResponse>;
   blocksLatest(): Promise<BlockResponse>;
