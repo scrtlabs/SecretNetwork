@@ -160,6 +160,7 @@ impl Doorbell {
             //     TCS_NUM
             // );
             if *count == 0 {
+                // eprintln!("Waiting for other tasks to complete");
                 // try to wait for other tasks to complete
                 let wait = self.condvar.wait_for(&mut count, duration);
                 // double check that the count is nonzero, so there's an available slot in the enclave.
@@ -167,6 +168,7 @@ impl Doorbell {
                     return None;
                 }
             }
+            // eprintln!("Increasing available tasks");
             *count -= 1;
         }
         Some(EnclaveQueryToken::new(self, recursive))

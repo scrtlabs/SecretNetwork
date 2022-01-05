@@ -34,12 +34,9 @@ require (
 	google.golang.org/protobuf v1.27.1
 )
 
-replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-
-replace google.golang.org/grpc => google.golang.org/grpc v1.33.2
-
-// replace github.com/cosmos/cosmos-sdk v0.43.0-rc2 => github.com/enigmampc/cosmos-sdk secret-0.43
-
-replace github.com/cosmos/cosmos-sdk v0.44.3 => github.com/scrtlabs/cosmos-sdk v0.44.4-0.20211117100413-27366ad17d3a
-
-//replace github.com/cosmos/cosmos-sdk v0.43.0-rc2 => github.com/enigmampc/cosmos-sdk v0.0.0-cc218f2182fb
+replace (
+	github.com/cosmos/cosmos-sdk v0.44.3 => github.com/scrtlabs/cosmos-sdk v0.44.4-0.20211117100413-27366ad17d3a
+	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
+	github.com/tendermint/tendermint => github.com/terra-money/tendermint v0.34.14-public.2
+	google.golang.org/grpc => google.golang.org/grpc v1.33.2
+)

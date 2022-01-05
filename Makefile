@@ -262,7 +262,7 @@ docker_enclave_test:
 
 # while developing:
 build-enclave: vendor
-	$(MAKE) -C cosmwasm/packages/wasmi-runtime
+	$(MAKE) -C cosmwasm/packages/wasmi-runtime enclave
 
 # while developing:
 check-enclave:
