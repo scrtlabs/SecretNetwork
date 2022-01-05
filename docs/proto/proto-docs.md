@@ -825,7 +825,6 @@
     - [QueryContractAddressByLabelResponse](#secret.compute.v1beta1.QueryContractAddressByLabelResponse)
     - [QueryContractHashRequest](#secret.compute.v1beta1.QueryContractHashRequest)
     - [QueryContractHashResponse](#secret.compute.v1beta1.QueryContractHashResponse)
-    - [QueryContractHistoryRequest](#secret.compute.v1beta1.QueryContractHistoryRequest)
     - [QueryContractInfoRequest](#secret.compute.v1beta1.QueryContractInfoRequest)
     - [QueryContractInfoResponse](#secret.compute.v1beta1.QueryContractInfoResponse)
     - [QueryContractKeyRequest](#secret.compute.v1beta1.QueryContractKeyRequest)
@@ -11970,7 +11969,7 @@ DecryptedAnswer is a struct that represents a decrypted tx-query
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `address` | [bytes](#bytes) |  | address is the address of the contract |
+| `address` | [string](#string) |  | address is the address of the contract |
 
 
 
@@ -11992,21 +11991,6 @@ DecryptedAnswer is a struct that represents a decrypted tx-query
 
 
 
-<a name="secret.compute.v1beta1.QueryContractHistoryRequest"></a>
-
-### QueryContractHistoryRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `address` | [bytes](#bytes) |  | address is the address of the contract to query |
-
-
-
-
-
-
 <a name="secret.compute.v1beta1.QueryContractInfoRequest"></a>
 
 ### QueryContractInfoRequest
@@ -12015,7 +11999,7 @@ QueryContractInfoRequest is the request type for the Query/ContractInfo RPC meth
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `address` | [bytes](#bytes) |  | address is the address of the contract to query |
+| `address` | [string](#string) |  | address is the address of the contract to query |
 
 
 
@@ -12046,7 +12030,7 @@ QueryContractInfoResponse is the response type for the Query/ContractInfo RPC me
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `address` | [bytes](#bytes) |  | address is the address of the contract |
+| `address` | [string](#string) |  | address is the address of the contract |
 
 
 
@@ -12106,7 +12090,7 @@ QueryContractInfoResponse is the response type for the Query/ContractInfo RPC me
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `address` | [bytes](#bytes) |  | address is the address of the contract string address = 1; |
+| `address` | [string](#string) |  | address is the address of the contract |
 | `query_data` | [bytes](#bytes) |  |  |
 
 

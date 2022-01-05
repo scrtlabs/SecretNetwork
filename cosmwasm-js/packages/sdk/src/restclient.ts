@@ -548,11 +548,14 @@ export class RestClient {
     const encoded = Encoding.toBase64(encrypted).replace(/\+/g, "-").replace(/\//g, "_");
 
     // @ts-ignore
-    const paramString = new URLSearchParams(addedParams).toString();
+    const params = new URLSearchParams(addedParams);
+    params.append('query_data', encoded);
+    const paramString = params.toString();
 
-    const encodedContractAddress = Encoding.toBase64(Bech32.decode(contractAddress).data);
+    // Check to make sure that the address is a valid bech32 address
+    const _ = Bech32.decode(contractAddress);
 
-    const path = `/compute/v1beta1/contract/${encodedContractAddress}/smart?query_data=${encoded}&${paramString}`;
+    const path = `/compute/v1beta1/contract/${contractAddress}/smart?${paramString}`;
 
     let responseData;
     try {
