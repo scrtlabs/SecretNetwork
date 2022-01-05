@@ -1,36 +1,37 @@
-use std::sync::SgxMutex;
-
-use lazy_static::lazy_static;
+use std::cell::Cell;
 
 use enclave_ffi_types::EnclaveError;
 
 const RECURSION_LIMIT: u8 = 5;
 
-lazy_static! {
+thread_local! {
     /// This counter tracks the recursion depth of queries,
     /// and effectively the amount of loaded instances of WASMI.
     ///
     /// It is incremented before each computation begins and is decremented after each computation ends.
-    static ref RECURSION_DEPTH: SgxMutex<u8> = SgxMutex::new(0);
+    static RECURSION_DEPTH: Cell<u8> = Cell::new(0);
 }
 
 fn increment() -> Result<(), EnclaveError> {
-    let mut depth = RECURSION_DEPTH.lock().unwrap();
-    if *depth == RECURSION_LIMIT {
-        return Err(EnclaveError::ExceededRecursionLimit);
-    }
-    *depth = depth.saturating_add(1);
-    Ok(())
+    RECURSION_DEPTH.with(|depth| {
+        let d = depth.get();
+        if d == RECURSION_LIMIT {
+            return Err(EnclaveError::ExceededRecursionLimit);
+        }
+        depth.set(d.saturating_add(1));
+        Ok(())
+    })
 }
 
 fn decrement() {
-    let mut depth = RECURSION_DEPTH.lock().unwrap();
-    *depth = depth.saturating_sub(1);
+    RECURSION_DEPTH.with(|depth| {
+        depth.set(depth.get().saturating_sub(1));
+    })
 }
 
 /// Returns whether or not this is the last possible level of recursion
 pub fn limit_reached() -> bool {
-    *RECURSION_DEPTH.lock().unwrap() == RECURSION_LIMIT
+    RECURSION_DEPTH.with(|depth| depth.get()) == RECURSION_LIMIT
 }
 
 pub struct RecursionGuard {
