@@ -42,19 +42,20 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 
 # Docs
 
-- [Install the `secretcli` light client (Windows, Mac & Linux)](docs/light-client-mainnet.md)
-- [How to use the `secretcli` light client](docs/validators-and-full-nodes/secretcli.md)
-- [How to participate in on-chain governance](docs/protocol/governance.md)
-- [How to run a full node on mainnet](docs/validators-and-full-nodes/run-full-node-mainnet.md)
-- [How to run an LCD server](docs/lcd-server-example.md)
-- [Ledger Nano S (and X) support](docs/ledger-nano-s.md)
-- [How to join as a mainnet validator](docs/validators-and-full-nodes/join-validator-mainnet.md)
-- [How to backup a validator](docs/validators-and-full-nodes/backup-a-validator.md)
-- [How to backup a everything (Validators, Full Nodes, Wallets)](docs/backups.md)
-- [How to migrate a validator to a new machine](docs/validators-and-full-nodes/migrate-a-validator.md)
-- [How to setup SGX on your machine](docs/validators-and-full-nodes/setup-sgx.md)
-- [How to verify the SGX setup on your machine](docs/validators-and-full-nodes/verify-sgx.md)
-- [How to use SecretJS to develop Secret dApps](https://github.com/scrtlabs/enigma-blockchain-contracts-guide/blob/master/cosmwasm-js.md)
+- [Install the `secretcli` light client (Windows, Mac & Linux)](https://docs.scrt.network/cli/install-cli.html)
+- [How to use the `secretcli` light client](https://docs.scrt.network/cli/secretcli.html#secret-cli)
+- [How to participate in on-chain governance](https://docs.scrt.network/guides/governance.html)
+- [How to run a full node on mainnet](https://docs.scrt.network/node-guides/run-full-node-mainnet.html)
+- [How to run an LCD server](https://build.scrt.network/lcd-server-example.html)
+- [Ledger Nano S (and X) support](https://docs.scrt.network/guides/ledger-nano.html)
+- [How to join as a mainnet validator](https://docs.scrt.network/node-guides/join-validator-mainnet.html)
+- [How to backup a validator](https://docs.scrt.network/backup/backup-a-validator.html)
+- [How to backup a full node](https://docs.scrt.network/backup/backup-a-full-node.html)
+- [How to backup wallets](https://docs.scrt.network/backup/wallets.html)
+- [How to migrate a validator to a new machine](https://docs.scrt.network/node-guides/migrate-a-validator.html)
+- [How to setup SGX on your machine](https://docs.scrt.network/node-guides/setup-sgx.html)
+- [How to verify the SGX setup on your machine](https://docs.scrt.network/node-guides/verify-sgx.html)
+- [How to use SecretJS to develop Secret dApps](https://docs.scrt.network/dev/secret-js.html#building-secret-apps-with-secretjs)
 
 # Implementation Discussions
 
