@@ -5,7 +5,7 @@
   <StackMaxSize>0x800000</StackMaxSize>
   <HeapMaxSize>0x80000000</HeapMaxSize>
   <TCSNum>8</TCSNum>
-  <TCSPolicy>0</TCSPolicy>
+  <TCSPolicy>1</TCSPolicy>
   <DisableDebug>0</DisableDebug>
   <MiscSelect>0</MiscSelect>
   <MiscMask>0xFFFFFFFF</MiscMask>
