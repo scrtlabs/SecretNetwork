@@ -31,7 +31,7 @@ overflow-checks = true
 default = []
 
 [dependencies]
-cosmwasm-std = { path = "../../packages/std" }
+cosmwasm-std = { path = "../../packages/std", package = "secret-cosmwasm-std" }
 cosmwasm-storage = { path = "../../packages/storage" }
 schemars = "0.7"
 serde = { version = "1", default-features = false, features = [

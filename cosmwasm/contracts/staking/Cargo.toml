@@ -33,7 +33,7 @@ cranelift = ["cosmwasm-vm/default-cranelift"]
 singlepass = ["cosmwasm-vm/default-singlepass"]
 
 [dependencies]
-cosmwasm-std = { path = "../../packages/std", features = ["staking"] }
+cosmwasm-std = { path = "../../packages/std", package = "secret-cosmwasm-std", features = ["staking"] }
 cosmwasm-storage = { path = "../../packages/storage" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
