@@ -32,7 +32,7 @@ default = []
 
 [dependencies]
 cosmwasm-std = { path = "../../packages/std", package = "secret-cosmwasm-std" }
-cosmwasm-storage = { path = "../../packages/storage" }
+cosmwasm-storage = { path = "../../packages/storage", package = "secret-cosmwasm-storage" }
 schemars = "0.7"
 serde = { version = "1", default-features = false, features = [
   "derive"
