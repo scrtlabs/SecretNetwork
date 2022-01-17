@@ -49,7 +49,7 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 - [How to run an LCD server](https://build.scrt.network/lcd-server-example.html)
 - [Ledger Nano S (and X) support](https://docs.scrt.network/guides/ledger-nano.html)
 - [How to join as a mainnet validator](https://docs.scrt.network/node-guides/join-validator-mainnet.html)
-- [How to backup a validator](https://docs.scrt.network/backup/backup-a-validator.html)
+- [How to backup a validator](https://docs.scrt.network/node-guides/backup-a-validator.html)
 - [How to backup a full node](https://docs.scrt.network/backup/backup-a-full-node.html)
 - [How to backup wallets](https://docs.scrt.network/backup/wallets.html)
 - [How to migrate a validator to a new machine](https://docs.scrt.network/node-guides/migrate-a-validator.html)
