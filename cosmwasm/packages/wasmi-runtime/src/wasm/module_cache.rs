@@ -14,7 +14,7 @@ use crate::wasm::types::ContractCode;
 
 use super::gas::{gas_rules, WasmCosts};
 use super::memory::validate_memory;
-use super::runtime::{create_builder, WasmiImportResolver};
+use super::runtime::{create_builder, ContractOperation, WasmiImportResolver};
 
 lazy_static! {
     static ref MODULE_CACHE: SgxRwLock<LruCache<[u8; HASH_SIZE], wasmi::Module>> =
@@ -26,7 +26,10 @@ pub fn configure_module_cache(cap: usize) {
     MODULE_CACHE.write().unwrap().resize(cap)
 }
 
-pub fn create_module_instance(contract_code: ContractCode) -> Result<ModuleRef, EnclaveError> {
+pub fn create_module_instance(
+    contract_code: ContractCode,
+    operation: ContractOperation,
+) -> Result<ModuleRef, EnclaveError> {
     let code_hash = contract_code.hash();
 
     // Update the LRU cache as quickly as possible so it knows this was recently used
@@ -55,7 +58,7 @@ pub fn create_module_instance(contract_code: ContractCode) -> Result<ModuleRef, 
         }
     }
 
-    let module = compile_module(contract_code.code())?;
+    let module = compile_module(contract_code.code(), operation)?;
     let instance = create_instance(&module)?;
     cache.put(code_hash, module);
     Ok(instance)
@@ -75,7 +78,10 @@ fn get_module_instance(code_hash: &[u8; HASH_SIZE]) -> Option<Result<ModuleRef, 
 // The compilation steps in this section are very expensive, and generate a
 // static object that can be reused without leaking memories between contracts.
 // This is why we separate the compilation step and cache its result in memory.
-fn compile_module(code: &[u8]) -> Result<wasmi::Module, EnclaveError> {
+fn compile_module(
+    code: &[u8],
+    operation: ContractOperation,
+) -> Result<wasmi::Module, EnclaveError> {
     info!("Deserializing Wasm contract");
 
     // Create a parity-wasm module first, so we can inject gas metering to it
@@ -106,9 +112,15 @@ fn compile_module(code: &[u8]) -> Result<wasmi::Module, EnclaveError> {
 
     info!("Created Wasmi module from parity. Now checking for floating points...");
 
-    module
-        .deny_floating_point()
-        .map_err(|_err| EnclaveError::WasmModuleWithFP)?;
+    // Skip the floating point check in queries and handles.
+    // We know that the contract must be valid at this point,
+    // otherwise the contrat storage keys will be invalid, and this
+    // operation is extremely expensive (21-27ms in testing)
+    if let ContractOperation::Init = operation {
+        module
+            .deny_floating_point()
+            .map_err(|_err| EnclaveError::WasmModuleWithFP)?;
+    }
 
     Ok(module)
 }
