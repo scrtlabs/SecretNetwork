@@ -155,6 +155,8 @@ func Instantiate(
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
+	// This is done in order to ensure that goroutines don't
+	// swap threads between recursive calls to the enclave.
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
@@ -198,6 +200,8 @@ func Handle(
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
+	// This is done in order to ensure that goroutines don't
+	// swap threads between recursive calls to the enclave.
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
@@ -238,6 +242,8 @@ func Migrate(
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
+	// This is done in order to ensure that goroutines don't
+	// swap threads between recursive calls to the enclave.
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
@@ -278,6 +284,8 @@ func Query(
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
+	// This is done in order to ensure that goroutines don't
+	// swap threads between recursive calls to the enclave.
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 

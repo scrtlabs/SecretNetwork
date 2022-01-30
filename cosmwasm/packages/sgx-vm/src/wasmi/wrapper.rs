@@ -4,14 +4,13 @@ use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 
-use crate::enclave::get_query_token;
+use crate::enclave::QUERY_DOORBELL;
 use crate::errors::{EnclaveError, VmResult};
 use crate::{Querier, Storage, VmError};
 
 use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
 
 use sgx_types::{sgx_status_t, SgxResult};
-use sgx_urts::SgxEnclave;
 
 use log::*;
 use serde::Deserialize;
@@ -29,7 +28,14 @@ pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> SgxResult<EnclaveBuffer>
     let len = buffer.len();
     let mut enclave_buffer = EnclaveBuffer::default();
 
-    let enclave_id = crate::enclave::get_enclave()
+    // Bind the token to a local variable to ensure its
+    // destructor runs in the end of the function
+    let enclave_access_token = QUERY_DOORBELL
+        // This is always called from an ocall contxt
+        .get_access(true)
+        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+
+    let enclave_id = enclave_access_token
         .expect("If we got here, surely the enclave has been loaded")
         .geteid();
 
@@ -54,7 +60,6 @@ where
     bytecode: Vec<u8>,
     gas_limit: u64,
     used_gas: u64,
-    enclave: &'static SgxEnclave,
     ctx: Ctx,
     finalizer: fn(*mut c_void),
 
@@ -71,7 +76,6 @@ where
     pub fn new(
         bytecode: Vec<u8>,
         gas_limit: u64,
-        enclave: &'static SgxEnclave,
         (data, finalizer): (*mut c_void, fn(*mut c_void)),
     ) -> Self {
         // TODO add validation of this bytecode?
@@ -83,7 +87,6 @@ where
             bytecode,
             gas_limit,
             used_gas: 0,
-            enclave,
             ctx,
             finalizer,
             type_storage: Default::default(),
@@ -112,21 +115,32 @@ where
         self.used_gas
     }
 
+    // This is here to avoid putting it in the module's scope
+    fn busy_enclave_err() -> VmError {
+        VmError::generic_err("The enclave is too busy and can not respond to this query")
+    }
+
     pub fn init(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<InitSuccess> {
         trace!(
-            "init() called with env: {:?} msg: {:?} enclave_id: {:?} gas_left: {}",
+            "init() called with env: {:?} msg: {:?} gas_left: {}",
             String::from_utf8_lossy(env),
             String::from_utf8_lossy(msg),
-            self.enclave.geteid(),
             self.gas_left()
         );
 
         let mut init_result = MaybeUninit::<InitResult>::uninit();
         let mut used_gas = 0_u64;
 
+        // Bind the token to a local variable to ensure its
+        // destructor runs in the end of the function
+        let enclave_access_token = QUERY_DOORBELL
+            .get_access(false) // This can never be recursive
+            .ok_or_else(Self::busy_enclave_err)?;
+        let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
+
         let status = unsafe {
             imports::ecall_init(
-                self.enclave.geteid(),
+                enclave.geteid(),
                 init_result.as_mut_ptr(),
                 self.ctx.unsafe_clone(),
                 self.gas_left(),
@@ -160,19 +174,25 @@ where
 
     pub fn handle(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<HandleSuccess> {
         trace!(
-            "handle() called with env: {:?} msg: {:?} enclave_id: {:?} gas_left: {}",
+            "handle() called with env: {:?} msg: {:?} gas_left: {}",
             String::from_utf8_lossy(env),
             String::from_utf8_lossy(msg),
-            self.enclave.geteid(),
             self.gas_left()
         );
 
         let mut handle_result = MaybeUninit::<HandleResult>::uninit();
         let mut used_gas = 0_u64;
 
+        // Bind the token to a local variable to ensure its
+        // destructor runs in the end of the function
+        let enclave_access_token = QUERY_DOORBELL
+            .get_access(false) // This can never be recursive
+            .ok_or_else(Self::busy_enclave_err)?;
+        let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
+
         let status = unsafe {
             imports::ecall_handle(
-                self.enclave.geteid(),
+                enclave.geteid(),
                 handle_result.as_mut_ptr(),
                 self.ctx.unsafe_clone(),
                 self.gas_left(),
@@ -206,25 +226,24 @@ where
 
     pub fn query(&mut self, env: &[u8], msg: &[u8]) -> VmResult<QuerySuccess> {
         trace!(
-            "query() called with env: {:?} msg: {:?} enclave_id: {:?}",
+            "query() called with env: {:?} msg: {:?}",
             String::from_utf8_lossy(env),
             String::from_utf8_lossy(msg),
-            self.enclave.geteid()
         );
-
-        let query_token = get_query_token(is_query_recursive(env)?);
-        if query_token.is_none() {
-            return Err(VmError::generic_err(
-                "The enclave is too busy and can not respond to this query",
-            ));
-        }
 
         let mut query_result = MaybeUninit::<QueryResult>::uninit();
         let mut used_gas = 0_u64;
 
+        // Bind the token to a local variable to ensure its
+        // destructor runs in the end of the function
+        let enclave_access_token = QUERY_DOORBELL
+            .get_access(is_query_recursive(env)?)
+            .ok_or_else(Self::busy_enclave_err)?;
+        let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
+
         let status = unsafe {
             imports::ecall_query(
-                self.enclave.geteid(),
+                enclave.geteid(),
                 query_result.as_mut_ptr(),
                 self.ctx.unsafe_clone(),
                 self.gas_left(),

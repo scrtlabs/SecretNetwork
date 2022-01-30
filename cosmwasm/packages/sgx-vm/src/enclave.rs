@@ -1,10 +1,9 @@
+use std::ops::Deref;
 use std::time::Duration;
 use std::{env, path::Path};
 
-use enclave_ffi_types::RuntimeConfiguration;
 use sgx_types::{
-    sgx_attributes_t, sgx_enclave_id_t, sgx_launch_token_t, sgx_misc_attribute_t, sgx_status_t,
-    SgxResult,
+    sgx_attributes_t, sgx_launch_token_t, sgx_misc_attribute_t, sgx_status_t, SgxResult,
 };
 use sgx_urts::SgxEnclave;
 
@@ -68,89 +67,39 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
     )
 }
 
-#[allow(clippy::mutex_atomic)]
-lazy_static! {
-    static ref SGX_ENCLAVE: SgxResult<SgxEnclave> = init_enclave();
-    /// This variable indicates if the enclave configuration has already been set
-    static ref SGX_ENCLAVE_CONFIGURED: Mutex<bool> = Mutex::new(false);
-}
-
-/// Use this method when trying to get access to the enclave.
-/// You can unwrap the result when you are certain that the enclave
-/// must have been initialized if you even reached that point in the code.
-pub fn get_enclave() -> SgxResult<&'static SgxEnclave> {
-    SGX_ENCLAVE.as_ref().map_err(|status| *status)
-}
-
-extern "C" {
-    pub fn ecall_configure_runtime(
-        eid: sgx_enclave_id_t,
-        retval: *mut sgx_status_t,
-        config: RuntimeConfiguration,
-    ) -> sgx_status_t;
-}
-
-pub struct EnclaveRuntimeConfig {
-    pub module_cache_size: u8,
-}
-
-impl EnclaveRuntimeConfig {
-    fn to_ffi_type(&self) -> RuntimeConfiguration {
-        RuntimeConfiguration {
-            module_cache_size: self.module_cache_size,
-        }
-    }
-}
-
-pub fn configure_enclave(config: EnclaveRuntimeConfig) -> SgxResult<()> {
-    let mut configured = SGX_ENCLAVE_CONFIGURED.lock();
-    if *configured {
-        return Ok(());
-    }
-    *configured = true;
-    drop(configured);
-
-    let enclave = get_enclave()?;
-
-    let mut retval = sgx_status_t::SGX_SUCCESS;
-
-    let status =
-        unsafe { ecall_configure_runtime(enclave.geteid(), &mut retval, config.to_ffi_type()) };
-
-    if status != sgx_status_t::SGX_SUCCESS {
-        return Err(status);
-    }
-
-    if retval != sgx_status_t::SGX_SUCCESS {
-        return Err(retval);
-    }
-
-    Ok(())
-}
-
 /// This const determines how many seconds we wait when trying to get access to the enclave
 /// before giving up.
 const ENCLAVE_LOCK_TIMEOUT: u64 = 6 * 5;
 const TCS_NUM: u8 = 8;
 lazy_static! {
-    static ref QUERY_DOORBELL: Doorbell = Doorbell::new(TCS_NUM);
+    pub static ref QUERY_DOORBELL: EnclaveDoorbell = EnclaveDoorbell::new(TCS_NUM);
 }
 
-struct Doorbell {
+/// This struct manages the access to the enclave.
+///
+/// It effectively works as a custom, non-generic Semaphore. We need to make sure that the enclave
+/// is not entered more than TCS_NUM times at once, except that entering it recursively from the
+/// same thread is always permitted.
+/// `EnclaveDoorbell` and `EnclaveAccessToken` help control this behavior.
+/// To ensure that goroutines don't change threads between recursive accesses to the enclave,
+/// we use `runtime.LockOSThread()` and `runtime.UnlockOSThread()` before leaving Go-land.
+pub struct EnclaveDoorbell {
+    enclave: SgxResult<SgxEnclave>,
     condvar: Condvar,
     /// Amount of tasks allowed to use the enclave at the same time.
     count: Mutex<u8>,
 }
 
-impl Doorbell {
+impl EnclaveDoorbell {
     fn new(count: u8) -> Self {
         Self {
+            enclave: init_enclave(),
             condvar: Condvar::new(),
             count: Mutex::new(count),
         }
     }
 
-    fn wait_for(&'static self, duration: Duration, recursive: bool) -> Option<EnclaveQueryToken> {
+    fn wait_for(&'static self, duration: Duration, recursive: bool) -> Option<EnclaveAccessToken> {
         // eprintln!("Query Token creation. recursive: {}", recursive);
         if !recursive {
             let mut count = self.count.lock();
@@ -171,25 +120,41 @@ impl Doorbell {
             // eprintln!("Increasing available tasks");
             *count -= 1;
         }
-        Some(EnclaveQueryToken::new(self, recursive))
+        Some(EnclaveAccessToken::new(self, recursive))
+    }
+
+    pub fn get_access(&'static self, recursive: bool) -> Option<EnclaveAccessToken> {
+        self.wait_for(Duration::from_secs(ENCLAVE_LOCK_TIMEOUT), recursive)
     }
 }
 
-pub struct EnclaveQueryToken {
-    doorbell: &'static Doorbell,
+// NEVER add Clone or Copy
+pub struct EnclaveAccessToken {
+    doorbell: &'static EnclaveDoorbell,
+    enclave: SgxResult<&'static SgxEnclave>,
     recursive: bool,
 }
 
-impl EnclaveQueryToken {
-    fn new(doorbell: &'static Doorbell, recursive: bool) -> Self {
+impl EnclaveAccessToken {
+    fn new(doorbell: &'static EnclaveDoorbell, recursive: bool) -> Self {
+        let enclave = doorbell.enclave.as_ref().map_err(|status| *status);
         Self {
             doorbell,
+            enclave,
             recursive,
         }
     }
 }
 
-impl Drop for EnclaveQueryToken {
+impl Deref for EnclaveAccessToken {
+    type Target = SgxResult<&'static SgxEnclave>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.enclave
+    }
+}
+
+impl Drop for EnclaveAccessToken {
     fn drop(&mut self) {
         // eprintln!("Query Token destruction. recursive: {}", self.recursive);
         if !self.recursive {
@@ -204,8 +169,4 @@ impl Drop for EnclaveQueryToken {
             self.doorbell.condvar.notify_one();
         }
     }
-}
-
-pub fn get_query_token(recursive: bool) -> Option<EnclaveQueryToken> {
-    QUERY_DOORBELL.wait_for(Duration::from_secs(ENCLAVE_LOCK_TIMEOUT), recursive)
 }

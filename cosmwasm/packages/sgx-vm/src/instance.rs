@@ -25,7 +25,7 @@ use crate::context::{
 /*
 use crate::conversion::to_u32;
 */
-use crate::errors::{EnclaveError, VmResult};
+use crate::errors::VmResult;
 /*
 use crate::features::required_features_from_wasmer_instance;
 use crate::imports::{
@@ -37,7 +37,6 @@ use crate::memory::{get_memory_info, read_region, write_region};
 */
 use crate::traits::{Api, Extern, Querier, Storage};
 
-use crate::enclave::get_enclave;
 use crate::wasmi::Module;
 
 /*
@@ -87,13 +86,8 @@ where
         let module = compile(code)?;
         Instance::from_module(&module, deps, gas_limit)
         */
-        let enclave = get_enclave().map_err(EnclaveError::sdk_err)?;
-        let module = Module::<S, Q>::new(
-            code.to_vec(),
-            gas_limit,
-            enclave,
-            setup_context::<S, Q>(gas_limit),
-        );
+        let module =
+            Module::<S, Q>::new(code.to_vec(), gas_limit, setup_context::<S, Q>(gas_limit));
         Ok(Instance::from_wasmer(module, deps, gas_limit))
     }
 
