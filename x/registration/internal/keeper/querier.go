@@ -2,11 +2,10 @@ package keeper
 
 import (
 	"context"
-	"github.com/golang/protobuf/ptypes/empty"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
+	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 )
 
 type GrpcQuerier struct {
@@ -18,7 +17,7 @@ func NewQuerier(keeper Keeper) GrpcQuerier {
 	return GrpcQuerier{keeper: keeper}
 }
 
-func (q GrpcQuerier) TxKey(c context.Context, _ *empty.Empty) (*types.Key, error) {
+func (q GrpcQuerier) TxKey(c context.Context, req *types.QueryKeyRequest) (*types.Key, error) {
 	rsp, err := queryMasterKey(sdk.UnwrapSDKContext(c), q.keeper)
 	switch {
 	case err != nil:
@@ -26,12 +25,24 @@ func (q GrpcQuerier) TxKey(c context.Context, _ *empty.Empty) (*types.Key, error
 	case rsp == nil:
 		return nil, types.ErrNotFound
 	}
+
+	var keyBytes []byte
+
+	if req.GetKey() {
+		keyBytes, err = ra.VerifyRaCert(rsp.IoMasterCertificate.Bytes)
+		if err != nil {
+			return nil, types.ErrCertificateInvalid
+		}
+	} else {
+		keyBytes = rsp.IoMasterCertificate.Bytes
+	}
+
 	return &types.Key{
-		Key: rsp.IoMasterCertificate.Bytes,
+		Key: keyBytes,
 	}, nil
 }
 
-func (q GrpcQuerier) RegistrationKey(c context.Context, _ *empty.Empty) (*types.Key, error) {
+func (q GrpcQuerier) RegistrationKey(c context.Context, req *types.QueryKeyRequest) (*types.Key, error) {
 	rsp, err := queryMasterKey(sdk.UnwrapSDKContext(c), q.keeper)
 	switch {
 	case err != nil:
@@ -39,8 +50,20 @@ func (q GrpcQuerier) RegistrationKey(c context.Context, _ *empty.Empty) (*types.
 	case rsp == nil:
 		return nil, types.ErrNotFound
 	}
+
+	var keyBytes []byte
+
+	if req.GetKey() {
+		keyBytes, err = ra.VerifyRaCert(rsp.IoMasterCertificate.Bytes)
+		if err != nil {
+			return nil, types.ErrCertificateInvalid
+		}
+	} else {
+		keyBytes = rsp.IoMasterCertificate.Bytes
+	}
+
 	return &types.Key{
-		Key: rsp.NodeExchMasterCertificate.Bytes,
+		Key: keyBytes,
 	}, nil
 }
 

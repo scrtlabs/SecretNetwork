@@ -35,7 +35,8 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-// QueryContractInfoRequest is the request type for the Query/ContractInfo RPC method
+// QueryContractInfoRequest is the request type for the Query/ContractInfo RPC
+// method
 type QueryContractInfoRequest struct {
 	// address is the address of the contract to query
 	Address github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=address,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"address,omitempty"`
@@ -74,7 +75,8 @@ func (m *QueryContractInfoRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_QueryContractInfoRequest proto.InternalMessageInfo
 
-// QueryContractInfoResponse is the response type for the Query/ContractInfo RPC method
+// QueryContractInfoResponse is the response type for the Query/ContractInfo RPC
+// method
 type QueryContractInfoResponse struct {
 	// address is the address of the contract
 	Address       github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=address,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"address,omitempty"`
@@ -189,7 +191,8 @@ func (m *QueryContractsByCodeRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_QueryContractsByCodeRequest proto.InternalMessageInfo
 
-// ContractInfoWithAddress adds the address (key) to the ContractInfo representation
+// ContractInfoWithAddress adds the address (key) to the ContractInfo
+// representation
 type ContractInfoWithAddress struct {
 	Address       github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=address,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"address,omitempty"`
 	*ContractInfo `protobuf:"bytes,2,opt,name=ContractInfo,proto3,embedded=ContractInfo" json:""`

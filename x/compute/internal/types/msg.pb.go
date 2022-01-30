@@ -29,7 +29,8 @@ type MsgStoreCode struct {
 	Sender github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=sender,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"sender,omitempty"`
 	// WASMByteCode can be raw or gzip compressed
 	WASMByteCode []byte `protobuf:"bytes,2,opt,name=wasm_byte_code,json=wasmByteCode,proto3" json:"wasm_byte_code,omitempty"`
-	// Source is a valid absolute HTTPS URI to the contract's source code, optional
+	// Source is a valid absolute HTTPS URI to the contract's source code,
+	// optional
 	Source string `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
 	// Builder is a valid docker image name with tag, optional
 	Builder string `protobuf:"bytes,4,opt,name=builder,proto3" json:"builder,omitempty"`
@@ -71,7 +72,8 @@ var xxx_messageInfo_MsgStoreCode proto.InternalMessageInfo
 type MsgInstantiateContract struct {
 	Sender github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=sender,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"sender,omitempty"`
 	// Admin is an optional address that can execute migrations
-	//  bytes admin = 2 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
+	//  bytes admin = 2 [(gogoproto.casttype) =
+	//  "github.com/cosmos/cosmos-sdk/types.AccAddress"];
 	CallbackCodeHash string                                   `protobuf:"bytes,2,opt,name=callback_code_hash,json=callbackCodeHash,proto3" json:"callback_code_hash,omitempty"`
 	CodeID           uint64                                   `protobuf:"varint,3,opt,name=code_id,json=codeId,proto3" json:"code_id,omitempty"`
 	Label            string                                   `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`

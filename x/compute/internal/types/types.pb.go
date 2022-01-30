@@ -173,7 +173,8 @@ var xxx_messageInfo_ContractCustomInfo proto.InternalMessageInfo
 type ContractInfo struct {
 	CodeID  uint64                                        `protobuf:"varint,1,opt,name=code_id,json=codeId,proto3" json:"code_id,omitempty"`
 	Creator github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,2,opt,name=creator,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"creator,omitempty"`
-	//    bytes admin = 3 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
+	//    bytes admin = 3 [(gogoproto.casttype) =
+	//    "github.com/cosmos/cosmos-sdk/types.AccAddress"];
 	Label string `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
 	// never show this in query results, just use for sorting
 	// (Note: when using json tag "-" amino refused to serialize it...)
@@ -217,7 +218,8 @@ var xxx_messageInfo_ContractInfo proto.InternalMessageInfo
 type AbsoluteTxPosition struct {
 	// BlockHeight is the block the contract was created at
 	BlockHeight int64 `protobuf:"varint,1,opt,name=block_height,json=blockHeight,proto3" json:"block_height,omitempty"`
-	// TxIndex is a monotonic counter within the block (actual transaction index, or gas consumed)
+	// TxIndex is a monotonic counter within the block (actual transaction index,
+	// or gas consumed)
 	TxIndex uint64 `protobuf:"varint,2,opt,name=tx_index,json=txIndex,proto3" json:"tx_index,omitempty"`
 }
 

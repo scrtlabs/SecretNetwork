@@ -1,5 +1,12 @@
 # CHANGELOG
 
+# Unreleased
+
+### API
+
+* Added flag to TxKey and RegistrationKey GRPC requests to allow automatic parsing of public key using the "public_key" query argument
+
+
 # 1.2.2
 
 ## Secretd
