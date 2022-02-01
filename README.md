@@ -17,7 +17,7 @@ Mainnet is out! Get the latest release at [https://github.com/scrtlabs/SecretNet
 - Homepage: [https://scrt.network](https://scrt.network)
 - Blog: [https://blog.scrt.network](https://blog.scrt.network)
 - Forum: [https://forum.scrt.network](https://forum.scrt.network)
-- Wiki: [https://learn.scrt.network](https://learn.scrt.network)
+- Docs: [https://docs.scrt.network](https://docs.scrt.network)
 - Discord: [https://chat.scrt.network](https://chat.scrt.network)
 - Twitter: [https://twitter.com/SecretNetwork](https://twitter.com/SecretNetwork)
 - Community Telegram Channel: [https://t.me/SCRTnetwork](https://t.me/SCRTnetwork)
@@ -28,6 +28,7 @@ Mainnet is out! Get the latest release at [https://github.com/scrtlabs/SecretNet
 Secret Network is secured by the SCRT coin (Secret), which is used for fees, staking, and governance. Transactions, validators, governance proposals, and more can be viewed using the following Secret Network block explorers:
 
 - [secretnodes](https://secretnodes.com)
+- [mintscan](https://mintscan.io/secret)
 
 # Wallets
 
@@ -35,14 +36,6 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 - [Keplr](https://wallet.keplr.app)
 - [Math Wallet](https://mathwallet.org/secretnetwork-wallet/)
 - [Citadel.one](https://app.citadel.one)
-
-# Blockchain REST Providers
-
-- [SecretAPI.io by ChainofSecrets.org](https://secretapi.io)
-
-# Docs
-
-- https://docs.scrt.network
 
 # Implementation Discussions
 
