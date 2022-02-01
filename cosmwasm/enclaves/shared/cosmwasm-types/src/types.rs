@@ -20,10 +20,6 @@ pub use super::coins::Coin;
 use super::encoding::Binary;
 
 use crate::consts::BECH32_PREFIX_ACC_ADDR;
-use crate::crypto::multisig::MultisigThresholdPubKey;
-use crate::crypto::secp256k1::Secp256k1PubKey;
-use crate::crypto::traits::PubKey;
-use crate::crypto::CryptoError;
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct HumanAddr(pub String);

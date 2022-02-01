@@ -1,4 +1,5 @@
 pub mod coins;
+pub mod consts;
 pub mod encoding;
 pub mod math;
 pub mod query;
