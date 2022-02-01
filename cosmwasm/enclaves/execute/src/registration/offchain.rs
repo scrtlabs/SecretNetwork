@@ -5,18 +5,23 @@
 use log::*;
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_types::{sgx_platform_info_t, sgx_update_info_bit_t};
-use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
+use sgx_types::{sgx_quote_sign_type_t, sgx_status_t, SgxResult};
 use std::slice;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_ffi_types::NodeAuthResult;
 
-use crate::consts::{ATTESTATION_CERT_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH, SEED_EXCH_CERTIFICATE_SAVE_PATH, SigningMethod};
+use enclave_crypto::KeyPair;
+
+use crate::consts::{
+    SigningMethod, ATTESTATION_CERT_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH,
+    SEED_EXCH_CERTIFICATE_SAVE_PATH,
+};
 use crate::crypto::{Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
 #[cfg(feature = "SGX_MODE_HW")]
 use crate::registration::report::AttestationReport;
 use crate::storage::write_to_untrusted;
-use crate::utils::{attest_from_key, validate_mut_slice};
+use crate::utils::validate_mut_slice;
 use crate::{validate_const_ptr, validate_mut_ptr};
 
 use super::attestation::create_attestation_certificate;
@@ -268,6 +273,32 @@ pub unsafe extern "C" fn ecall_key_gen(
     public_key.clone_from_slice(&pubkey);
     trace!("ecall_key_gen key pk: {:?}", public_key.to_vec());
     sgx_status_t::SGX_SUCCESS
+}
+
+pub fn attest_from_key(
+    kp: &KeyPair,
+    save_path: &str,
+    spid: &[u8],
+    api_key: &[u8],
+) -> SgxResult<()> {
+    let (_, cert) = match create_attestation_certificate(
+        &kp,
+        sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+        spid,
+        api_key,
+    ) {
+        Err(e) => {
+            error!("Error in create_attestation_certificate: {:?}", e);
+            return Err(e);
+        }
+        Ok(res) => res,
+    };
+
+    if let Err(status) = write_to_untrusted(cert.as_slice(), save_path) {
+        return Err(status);
+    }
+
+    Ok(())
 }
 
 #[cfg(not(feature = "SGX_MODE_HW"))]

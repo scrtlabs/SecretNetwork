@@ -948,7 +948,7 @@ dependencies = [
 
 [[package]]
 name = "secret-enclave"
-version = "0.1.0"
+version = "1.2.4"
 dependencies = [
  "aes-siv",
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
@@ -959,6 +959,8 @@ dependencies = [
  "derive_more",
  "dirs",
  "enclave-ffi-types",
+ "enclave_contract_engine",
+ "enclave_utils",
  "hex",
  "httparse",
  "itertools",

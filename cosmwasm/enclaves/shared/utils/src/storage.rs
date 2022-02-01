@@ -1,4 +1,4 @@
-use crate::utils::UnwrapOrSgxErrorUnexpected;
+use crate::results::UnwrapOrSgxErrorUnexpected;
 
 use sgx_types::*;
 use std::io::Write;

@@ -1,7 +1,7 @@
 [package]
 name = "secret-enclave"
-version = "0.1.0"
-authors = ["Reuven Podmazo <reuven@enigma.co>"]
+version = "1.2.4"
+authors = ["SCRT Labs <info@scrtlabs.com>"]
 edition = "2018"
 description = "An enclave running wasmi, to be used by cosmwasm-sgx-vm"
 
@@ -35,6 +35,10 @@ sgx_tseal = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://g
 sgx_tcrypto = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 aes-siv = "=0.6.2"
 enclave-ffi-types = { path = "../ffi-types" }
+
+enclave_contract_engine = { path = "../shared/contract-engine", features = ["query-only"] }
+enclave_utils = { path = "../shared/utils" }
+
 pwasm-utils = { version = "0.12.0", default-features = false }
 parity-wasm = { version = "0.41.0", default-features = false }
 serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
