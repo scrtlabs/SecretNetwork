@@ -1,0 +1,3 @@
+[workspace]
+members = ["ffi-types", "execute", "query", "shared/*"]
+exclude = ["test"]
