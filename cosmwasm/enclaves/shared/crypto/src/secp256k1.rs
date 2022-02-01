@@ -1,17 +1,14 @@
 use log::*;
 
-use crate::cosmwasm::encoding::Binary;
-use crate::cosmwasm::types::CanonicalAddr;
-use crate::crypto::traits::PubKey;
-use crate::crypto::CryptoError;
-use ripemd160::{Digest, Ripemd160};
+use crate::traits::VerifyingKey;
+use crate::CryptoError;
 use secp256k1::Secp256k1;
 use sha2::{Digest as Sha2Digest, Sha256};
 
-const SECP256K1_PREFIX: [u8; 4] = [235, 90, 233, 135];
+pub const SECP256K1_PREFIX: [u8; 4] = [235, 90, 233, 135];
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Secp256k1PubKey(Vec<u8>);
+pub struct Secp256k1PubKey(pub Vec<u8>);
 
 impl Secp256k1PubKey {
     pub fn new(bytes: Vec<u8>) -> Self {
@@ -19,43 +16,7 @@ impl Secp256k1PubKey {
     }
 }
 
-impl PubKey for Secp256k1PubKey {
-    fn get_address(&self) -> CanonicalAddr {
-        // This reference describes how this should be derived:
-        // https://github.com/tendermint/spec/blob/743a65861396e36022b2704e4383198b42c9cfbe/spec/blockchain/encoding.md#secp256k1
-        // https://docs.tendermint.com/v0.32/spec/blockchain/encoding.html#secp256k1
-        // This was updated in a later version of tendermint:
-        // https://github.com/tendermint/spec/blob/32b811a1fb6e8b40bae270339e31a8bc5e8dea31/spec/core/encoding.md#secp256k1
-        // https://docs.tendermint.com/v0.33/spec/core/encoding.html#secp256k1
-        // but Cosmos kept the old algorithm
-        let mut hasher = Ripemd160::new();
-        hasher.update(Sha256::digest(&self.0));
-        CanonicalAddr(Binary(hasher.finalize().to_vec()))
-    }
-
-    fn amino_bytes(&self) -> Vec<u8> {
-        // Amino encoding here is basically: prefix | leb128 encoded length | ..bytes..
-        let mut encoded = Vec::new();
-        encoded.extend_from_slice(&SECP256K1_PREFIX);
-
-        // Length may be more than 1 byte and it is protobuf encoded
-        let mut length = Vec::new();
-
-        // This line can't fail since it could only fail if `length` does not have sufficient capacity to encode
-        if prost::encode_length_delimiter(self.0.len(), &mut length).is_err() {
-            warn!(
-                "Could not encode length delimiter: {:?}. This should not happen",
-                self.0.len()
-            );
-            return vec![];
-        }
-
-        encoded.extend_from_slice(&length);
-        encoded.extend_from_slice(&self.0);
-
-        encoded
-    }
-
+impl VerifyingKey for Secp256k1PubKey {
     fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError> {
         // Signing ref: https://docs.cosmos.network/master/spec/_ics/ics-030-signed-messages.html#preliminary
         let sign_bytes_hash = Sha256::digest(bytes);

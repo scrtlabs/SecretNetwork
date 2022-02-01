@@ -1,7 +1,7 @@
 use crate::consts::*;
-use crate::crypto::traits::*;
-use crate::crypto::CryptoError;
-use crate::crypto::{AESKey, KeyPair, Seed};
+use crate::traits::{Kdf, SealedKey};
+use crate::CryptoError;
+use crate::{AESKey, KeyPair, Seed};
 use enclave_ffi_types::EnclaveError;
 use lazy_static::lazy_static;
 use log::*;

@@ -1,6 +1,6 @@
-use crate::crypto::ed25519::Ed25519PrivateKey;
-use crate::crypto::traits::SealedKey;
-use crate::crypto::{AESKey, KeyPair, Seed, SECRET_KEY_SIZE};
+use crate::ed25519::Ed25519PrivateKey;
+use crate::traits::SealedKey;
+use crate::{AESKey, KeyPair, Seed, SECRET_KEY_SIZE};
 use enclave_ffi_types::EnclaveError;
 use log::*;
 use std::io::{Read, Write};

@@ -14,9 +14,9 @@
 /// would expect it to be. 256/512 bit for Aes128/256 respectively.
 ///
 /// The result of encrypted data will be the size of the data + 16 bytes, same as in GCM mode
-use crate::crypto::keys::{AESKey, SymmetricKey};
-use crate::crypto::traits::SIVEncryptable;
-use crate::crypto::CryptoError;
+use crate::keys::{AESKey, SymmetricKey};
+use crate::traits::SIVEncryptable;
+use crate::CryptoError;
 use aes_siv::aead::generic_array::GenericArray;
 use aes_siv::siv::Aes128Siv;
 use log::*;

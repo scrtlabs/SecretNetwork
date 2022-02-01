@@ -1,5 +1,5 @@
-use crate::crypto::traits::Kdf;
-use crate::crypto::{AESKey, Seed, SECRET_KEY_SIZE};
+use crate::traits::Kdf;
+use crate::{AESKey, Seed, SECRET_KEY_SIZE};
 
 use ring::hkdf;
 

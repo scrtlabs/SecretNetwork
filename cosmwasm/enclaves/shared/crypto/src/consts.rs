@@ -8,8 +8,6 @@ use lazy_static::lazy_static;
 
 pub const CERTEXPIRYDAYS: i64 = 3652i64;
 
-pub const BECH32_PREFIX_ACC_ADDR: &str = "secret";
-
 #[allow(dead_code)]
 #[derive(PartialEq, Eq)]
 pub enum SigningMethod {
@@ -29,7 +27,8 @@ pub const NODE_ENCRYPTED_SEED_KEY_FILE: &str = "consensus_seed.sealed";
 //todo: set this to the real value
 #[cfg(feature = "production")]
 pub const MRSIGNER: [u8; 32] = [
-    132, 92, 243, 72, 20, 244, 85, 149, 199, 32, 248, 31, 116, 121, 77, 120, 89, 49, 72, 79, 68, 5, 214, 229, 3, 110, 248, 135, 19, 255, 63, 166,
+    132, 92, 243, 72, 20, 244, 85, 149, 199, 32, 248, 31, 116, 121, 77, 120, 89, 49, 72, 79, 68, 5,
+    214, 229, 3, 110, 248, 135, 19, 255, 63, 166,
 ];
 
 #[cfg(not(feature = "production"))]
