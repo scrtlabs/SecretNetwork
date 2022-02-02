@@ -19,6 +19,7 @@ lazy_static! {
     pub static ref KEY_MANAGER: Keychain = Keychain::new();
 }
 
+#[allow(clippy::new_without_default)]
 impl Keychain {
     pub fn new() -> Self {
         let consensus_seed = match Seed::unseal(&CONSENSUS_SEED_SEALING_PATH) {

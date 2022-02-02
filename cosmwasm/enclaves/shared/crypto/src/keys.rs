@@ -42,11 +42,7 @@ impl AESKey {
     }
 
     pub fn get(&self) -> &[u8; SYMMETRIC_KEY_SIZE] {
-        &self.key.key.r as &[u8; 32]
-    }
-
-    pub fn as_mut(&mut self) -> &mut [u8; 32] {
-        &mut self.key.key.r as &mut [u8; 32]
+        &self.key.key.r as &[u8; SYMMETRIC_KEY_SIZE]
     }
 
     pub fn new_from_slice(privkey: &[u8; SYMMETRIC_KEY_SIZE]) -> Self {
@@ -55,6 +51,12 @@ impl AESKey {
         key.as_mut().copy_from_slice(privkey);
 
         key
+    }
+}
+
+impl AsMut<[u8; SYMMETRIC_KEY_SIZE]> for AESKey {
+    fn as_mut(&mut self) -> &mut [u8; SYMMETRIC_KEY_SIZE] {
+        &mut self.key.key.r as &mut [u8; SYMMETRIC_KEY_SIZE]
     }
 }
 
@@ -90,15 +92,17 @@ impl Seed {
         &self.key.key.r as &[u8; SEED_KEY_SIZE]
     }
 
-    pub fn as_mut(&mut self) -> &mut [u8; SEED_KEY_SIZE] {
-        &mut self.key.key.r as &mut [u8; SEED_KEY_SIZE]
-    }
-
     pub fn new() -> Result<Self, CryptoError> {
         let mut seed = Seed::default();
 
         rand_slice(seed.as_mut())?;
         Ok(seed)
+    }
+}
+
+impl AsMut<[u8; SEED_KEY_SIZE]> for Seed {
+    fn as_mut(&mut self) -> &mut [u8; SEED_KEY_SIZE] {
+        &mut self.key.key.r as &mut [u8; SEED_KEY_SIZE]
     }
 }
 
