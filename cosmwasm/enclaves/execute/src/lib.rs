@@ -2,6 +2,8 @@
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
 
+extern crate sgx_types;
+
 #[allow(unused_imports)]
 use ctor::*;
 use log::LevelFilter;

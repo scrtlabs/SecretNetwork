@@ -15,10 +15,9 @@ debug-print = []
 sgx_tstd = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
   "backtrace"
 ] }
-
-[dependencies]
 sgx_types = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
+[dependencies]
 enclave-ffi-types = { path = "../../ffi-types" }
 
 cosmos_proto = { path = "../cosmos-proto" }
