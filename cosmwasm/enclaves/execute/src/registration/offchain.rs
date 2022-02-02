@@ -11,18 +11,17 @@ use std::slice;
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_ffi_types::NodeAuthResult;
 
-use enclave_crypto::KeyPair;
-
-use crate::consts::{
+use enclave_crypto::consts::{
     SigningMethod, ATTESTATION_CERT_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH,
     SEED_EXCH_CERTIFICATE_SAVE_PATH,
 };
-use crate::crypto::{Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
+use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
+use enclave_utils::pointers::validate_mut_slice;
+use enclave_utils::storage::write_to_untrusted;
+use enclave_utils::{validate_const_ptr, validate_mut_ptr};
+
 #[cfg(feature = "SGX_MODE_HW")]
 use crate::registration::report::AttestationReport;
-use crate::storage::write_to_untrusted;
-use crate::utils::validate_mut_slice;
-use crate::{validate_const_ptr, validate_mut_ptr};
 
 use super::attestation::create_attestation_certificate;
 use super::cert::verify_ra_cert;

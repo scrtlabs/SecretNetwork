@@ -1,5 +1,7 @@
 use log::{Metadata, Record};
 
+pub const LOG_LEVEL_ENV_VAR: &str = "LOG_LEVEL";
+
 pub struct SimpleLogger;
 
 impl log::Log for SimpleLogger {

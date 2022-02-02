@@ -6,17 +6,21 @@
 //! Types that contain information about attestation report.
 //! The implementation is based on Attestation Service API version 4.
 //! https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf
-use lazy_static::lazy_static;
-use log::*;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde_json::Value;
+
 use std::array::TryFromSliceError;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+
+use log::*;
+
+use lazy_static::lazy_static;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_json::Value;
 use uuid::Uuid;
 
-use super::cert::{get_ias_auth_config, get_netscape_comment};
 use enclave_ffi_types::NodeAuthResult;
+
+use super::cert::{get_ias_auth_config, get_netscape_comment};
 
 #[derive(Debug)]
 pub enum Error {

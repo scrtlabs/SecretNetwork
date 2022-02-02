@@ -6,9 +6,9 @@ use std::panic;
 
 use enclave_ffi_types::NodeAuthResult;
 
-use crate::consts::ENCRYPTED_SEED_SIZE;
-use crate::crypto::PUBLIC_KEY_SIZE;
-use crate::{
+use enclave_crypto::consts::ENCRYPTED_SEED_SIZE;
+use enclave_crypto::PUBLIC_KEY_SIZE;
+use enclave_utils::{
     oom_handler::{self, get_then_clear_oom_happened},
     validate_const_ptr, validate_mut_ptr,
 };

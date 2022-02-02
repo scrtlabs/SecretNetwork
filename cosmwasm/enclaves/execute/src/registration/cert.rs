@@ -1,36 +1,40 @@
 #![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
 
-use bit_vec::BitVec;
-use chrono::Utc as TzUtc;
-use chrono::{Duration, TimeZone};
-use crate::consts::SigningMethod;
+use std::io::BufReader;
+use std::str;
+use std::time::{SystemTime, UNIX_EPOCH};
+use std::untrusted::time::SystemTimeEx;
 
-#[cfg(feature = "SGX_MODE_HW")]
-use log::*;
-use num_bigint::BigUint;
 use sgx_tcrypto::SgxEccHandle;
 use sgx_types::{
     sgx_ec256_private_t, sgx_ec256_public_t, sgx_platform_info_t, sgx_status_t,
     sgx_update_info_bit_t, SgxResult,
 };
-use std::io::BufReader;
-use std::str;
-use std::time::{SystemTime, UNIX_EPOCH};
-use std::untrusted::time::SystemTimeEx;
+
+#[cfg(feature = "SGX_MODE_HW")]
+use log::*;
+
+use bit_vec::BitVec;
+use chrono::Utc as TzUtc;
+use chrono::{Duration, TimeZone};
+use num_bigint::BigUint;
+
 use yasna::models::ObjectIdentifier;
+
+use enclave_ffi_types::NodeAuthResult;
+
+use enclave_crypto::consts::{SigningMethod, CERTEXPIRYDAYS};
+
+#[cfg(feature = "SGX_MODE_HW")]
+use enclave_crypto::consts::{MRSIGNER, SIGNING_METHOD};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use super::attestation::get_mr_enclave;
 
-use crate::consts::CERTEXPIRYDAYS;
-
-#[cfg(feature = "SGX_MODE_HW")]
-use crate::consts::{MRSIGNER, SIGNING_METHOD};
+use crate::registration::report::AdvisoryIDs;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use super::report::{AttestationReport, SgxQuoteStatus};
-use crate::registration::report::AdvisoryIDs;
-use enclave_ffi_types::NodeAuthResult;
 
 extern "C" {
     pub fn ocall_get_update_info(
@@ -275,7 +279,10 @@ pub fn get_ias_auth_config() -> (Vec<u8>, rustls::RootCertStore) {
 }
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
-pub fn verify_ra_cert(cert_der: &[u8], override_verify: Option<SigningMethod>) -> Result<Vec<u8>, NodeAuthResult> {
+pub fn verify_ra_cert(
+    cert_der: &[u8],
+    override_verify: Option<SigningMethod>,
+) -> Result<Vec<u8>, NodeAuthResult> {
     let payload = get_netscape_comment(cert_der).map_err(|_err| NodeAuthResult::InvalidCert)?;
 
     let pk = base64::decode(&payload).map_err(|_err| NodeAuthResult::InvalidCert)?;
@@ -293,7 +300,10 @@ pub fn verify_ra_cert(cert_der: &[u8], override_verify: Option<SigningMethod>) -
 /// 5. Verify enclave signature (mr enclave/signer)
 ///
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn verify_ra_cert(cert_der: &[u8], override_verify: Option<SigningMethod>) -> Result<Vec<u8>, NodeAuthResult> {
+pub fn verify_ra_cert(
+    cert_der: &[u8],
+    override_verify: Option<SigningMethod>,
+) -> Result<Vec<u8>, NodeAuthResult> {
     // Before we reach here, Webpki already verifed the cert is properly signed
 
     let report = AttestationReport::from_cert(cert_der).map_err(|_| NodeAuthResult::InvalidCert)?;

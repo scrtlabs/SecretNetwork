@@ -1,13 +1,16 @@
-#![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
+// #![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
+
+use log::*;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use itertools::Itertools;
-use log::*;
+
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_rand::{os, Rng};
-use sgx_tcrypto::{rsgx_sha256_slice, SgxEccHandle};
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_tse::{rsgx_create_report, rsgx_verify_report};
+
+use sgx_tcrypto::{rsgx_sha256_slice, SgxEccHandle};
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
 use sgx_types::{sgx_create_report, SgxResult};
@@ -21,25 +24,27 @@ use sgx_types::{
 use sgx_types::{sgx_epid_group_id_t, sgx_quote_nonce_t};
 
 use std::io::Read;
+use std::str;
+use std::string::String;
+use std::vec::Vec;
+
 #[cfg(feature = "SGX_MODE_HW")]
 use std::io::Write;
 #[cfg(feature = "SGX_MODE_HW")]
 use std::net::TcpStream;
 #[cfg(feature = "SGX_MODE_HW")]
 use std::ptr;
-use std::str;
-use std::string::String;
 #[cfg(feature = "SGX_MODE_HW")]
 use std::sync::Arc;
-use std::vec::Vec;
 
-use crate::crypto::KeyPair;
+use enclave_crypto::KeyPair;
+
 #[cfg(feature = "SGX_MODE_HW")]
-use crate::imports::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote};
-use crate::registration::report::EndorsedAttestationReport;
+use super::ocalls::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote};
 
 use super::hex;
-use crate::consts::{SigningMethod, SIGNING_METHOD};
+use super::report::EndorsedAttestationReport;
+use enclave_crypto::consts::{SigningMethod, SIGNING_METHOD};
 
 pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
 

@@ -8,8 +8,10 @@ mod hex;
 mod offchain;
 mod onchain;
 mod report;
-
 mod seed_exchange;
+
+#[cfg(feature = "SGX_MODE_HW")]
+mod ocalls;
 
 #[cfg(feature = "test")]
 pub mod tests {

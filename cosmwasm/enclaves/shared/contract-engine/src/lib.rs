@@ -6,7 +6,7 @@ mod contract_operations;
 mod contract_validation;
 mod db;
 mod errors;
-mod external;
+pub mod external;
 mod gas;
 mod io;
 mod memory;

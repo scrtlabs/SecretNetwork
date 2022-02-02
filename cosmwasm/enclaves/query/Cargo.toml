@@ -77,18 +77,18 @@ rev = "84d2764594d80425373bf4949a58fa3df3d624c3"
 default-features = false
 features = ["core"]
 
-[dependencies.base58]
-git = "https://github.com/mesalock-linux/rust-base58-sgx"
-package = "rust-base58"
-rev = "13fb3e0a543690e6e19332f37ba85fd74c56cb2f"
+#[dependencies.base58]
+#git = "https://github.com/mesalock-linux/rust-base58-sgx"
+#package = "rust-base58"
+#rev = "13fb3e0a543690e6e19332f37ba85fd74c56cb2f"
 
-[dependencies.webpki]
-git = "https://github.com/mesalock-linux/webpki"
-branch = "mesalock_sgx"
+#[dependencies.webpki]
+#git = "https://github.com/mesalock-linux/webpki"
+#branch = "mesalock_sgx"
 
-[dependencies.webpki-roots]
-git = "https://github.com/mesalock-linux/webpki-roots"
-rev = "6ff3be547ac13ccd46ae55605ad6506ce30688ef"
+#[dependencies.webpki-roots]
+#git = "https://github.com/mesalock-linux/webpki-roots"
+#rev = "6ff3be547ac13ccd46ae55605ad6506ce30688ef"
 
 [dependencies.yasna]
 git = "https://github.com/mesalock-linux/yasna.rs-sgx"
