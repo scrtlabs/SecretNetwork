@@ -1,7 +1,8 @@
 use log::*;
+
 use wasmi::{Externals, RuntimeArgs, RuntimeValue, Trap};
 
-use crate::wasm::errors::WasmEngineError;
+use crate::errors::WasmEngineError;
 
 use super::contract::ContractInstance;
 use super::traits::WasmiApi;

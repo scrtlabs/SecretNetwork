@@ -1,8 +1,9 @@
-use lazy_static::lazy_static;
-use log::*;
 use std::ffi::c_void;
 use std::panic;
 use std::sync::SgxMutex;
+
+use lazy_static::lazy_static;
+use log::*;
 
 use sgx_types::sgx_status_t;
 
@@ -11,11 +12,12 @@ use enclave_ffi_types::{
     RuntimeConfiguration,
 };
 
-use crate::results::{
+use enclave_utils::{oom_handler, recursion_depth, validate_const_ptr, validate_mut_ptr};
+
+use crate::external::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
     result_query_success_to_queryresult,
 };
-use crate::{oom_handler, recursion_depth, validate_const_ptr, validate_mut_ptr};
 
 lazy_static! {
     static ref ECALL_ALLOCATE_STACK: SgxMutex<Vec<EnclaveBuffer>> = SgxMutex::new(Vec::new());
@@ -81,7 +83,7 @@ pub unsafe extern "C" fn ecall_configure_runtime(config: RuntimeConfiguration) -
         "inside ecall_configure_runtime: {}",
         config.module_cache_size
     );
-    crate::wasm::module_cache::configure_module_cache(config.module_cache_size as usize);
+    crate::module_cache::configure_module_cache(config.module_cache_size as usize);
     sgx_status_t::SGX_SUCCESS
 }
 
@@ -159,7 +161,7 @@ pub unsafe extern "C" fn ecall_init(
     let sig_info = std::slice::from_raw_parts(sig_info, sig_info_len);
     let result = panic::catch_unwind(|| {
         let mut local_used_gas = *used_gas;
-        let result = crate::wasm::init(
+        let result = crate::contract_operations::init(
             context,
             gas_limit,
             &mut local_used_gas,
@@ -244,7 +246,7 @@ pub unsafe extern "C" fn ecall_handle(
     let sig_info = std::slice::from_raw_parts(sig_info, sig_info_len);
     let result = panic::catch_unwind(|| {
         let mut local_used_gas = *used_gas;
-        let result = crate::wasm::handle(
+        let result = crate::contract_operations::handle(
             context,
             gas_limit,
             &mut local_used_gas,
@@ -324,8 +326,14 @@ pub unsafe extern "C" fn ecall_query(
     let msg = std::slice::from_raw_parts(msg, msg_len);
     let result = panic::catch_unwind(|| {
         let mut local_used_gas = *used_gas;
-        let result =
-            crate::wasm::query(context, gas_limit, &mut local_used_gas, contract, env, msg);
+        let result = crate::contract_operations::query(
+            context,
+            gas_limit,
+            &mut local_used_gas,
+            contract,
+            env,
+            msg,
+        );
         *used_gas = local_used_gas;
         result_query_success_to_queryresult(result)
     });

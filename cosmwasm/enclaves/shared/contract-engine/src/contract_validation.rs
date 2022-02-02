@@ -2,13 +2,16 @@ use log::*;
 
 use enclave_ffi_types::EnclaveError;
 
-use crate::cosmwasm::types::{CanonicalAddr, Coin, Env, HumanAddr};
-use crate::crypto::traits::PubKey;
-use crate::crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
-use crate::wasm::io;
-use crate::wasm::types::{ContractCode, SecretMessage, StdSignDoc};
+use enclave_cosmos_types::traits::CosmosAminoPubkey;
+use enclave_cosmos_types::types::{
+    ContractCode, CosmWasmMsg, CosmosPubKey, SigInfo, SignDoc, StdSignDoc,
+};
+use enclave_cosmwasm_types::types::{CanonicalAddr, Coin, Env, HumanAddr};
+use enclave_crypto::traits::VerifyingKey;
+use enclave_crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
 
-use super::types::{CosmWasmMsg, CosmosPubKey, SigInfo, SignDoc};
+use crate::io::create_callback_signature;
+use crate::types::SecretMessage;
 
 pub type ContractKey = [u8; CONTRACT_KEY_LENGTH];
 
@@ -94,10 +97,6 @@ pub fn generate_contract_id(
     input_data.extend_from_slice(code_hash);
     input_data.extend_from_slice(contract_address);
     authentication_key.sign_sha_256(&input_data)
-}
-
-pub fn calc_contract_hash(contract_bytes: &[u8]) -> [u8; HASH_SIZE] {
-    sha_256(&contract_bytes)
 }
 
 pub fn validate_contract_key(
@@ -211,7 +210,7 @@ fn get_signer_and_messages(
     sign_info: &SigInfo,
     env: &Env,
 ) -> Result<(CosmosPubKey, Vec<CosmWasmMsg>), EnclaveError> {
-    use crate::proto::tx::signing::SignMode::*;
+    use cosmos_proto::tx::signing::SignMode::*;
     match sign_info.sign_mode {
         SIGN_MODE_DIRECT => {
             let sign_doc = SignDoc::from_bytes(sign_info.sign_bytes.as_slice())?;
@@ -303,7 +302,7 @@ fn verify_callback_sig_impl(
         return false;
     }
 
-    let callback_sig = io::create_callback_signature(sender, msg, sent_funds);
+    let callback_sig = create_callback_signature(sender, msg, sent_funds);
 
     if callback_signature != callback_sig {
         trace!(

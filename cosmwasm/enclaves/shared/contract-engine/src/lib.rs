@@ -13,6 +13,7 @@ mod memory;
 pub(crate) mod module_cache;
 mod query_chain;
 pub(crate) mod types;
+mod wasm;
 
 pub use contract_operations::{handle, init, query};
 

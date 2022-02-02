@@ -1,19 +1,22 @@
-use super::errors::WasmEngineError;
-use crate::crypto::Ed25519PublicKey;
-use crate::recursion_depth;
-use crate::wasm::types::{IoNonce, SecretMessage};
-use crate::{exports, imports};
+use log::*;
 
-use crate::cosmwasm::{
+use sgx_types::sgx_status_t;
+
+use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError};
+
+use enclave_crypto::Ed25519PublicKey;
+use enclave_utils::recursion_depth;
+
+use super::errors::WasmEngineError;
+use crate::external::{ecalls, ocalls};
+use crate::types::{IoNonce, SecretMessage};
+
+use enclave_cosmwasm_types::{
     encoding::Binary,
     query::{QueryRequest, WasmQuery},
     std_error::{StdError, StdResult},
     system_error::{SystemError, SystemResult},
 };
-
-use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError};
-use log::*;
-use sgx_types::sgx_status_t;
 
 pub fn encrypt_and_query_chain(
     query: &[u8],
@@ -149,7 +152,7 @@ fn query_chain(
     let mut vm_err = UntrustedVmError::default();
     let mut gas_used = 0_u64;
     let value = unsafe {
-        let status = imports::ocall_query_chain(
+        let status = ocalls::ocall_query_chain(
             &mut ocall_return,
             context.unsafe_clone(),
             &mut vm_err,
@@ -176,7 +179,7 @@ fn query_chain(
         match ocall_return {
             OcallReturn::Success => {
                 let enclave_buffer = enclave_buffer.assume_init();
-                match exports::recover_buffer(enclave_buffer) {
+                match ecalls::recover_buffer(enclave_buffer) {
                     Ok(buff) => buff.unwrap_or_default(),
                     Err(err) => return (Err(err.into()), gas_used),
                 }

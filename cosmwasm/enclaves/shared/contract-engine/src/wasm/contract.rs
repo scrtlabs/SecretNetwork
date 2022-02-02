@@ -1,16 +1,20 @@
 use bech32::{FromBase32, ToBase32};
 use log::*;
+
 use wasmi::{Error as InterpreterError, MemoryInstance, MemoryRef, ModuleRef, RuntimeValue, Trap};
 
 use enclave_ffi_types::Ctx;
 
-use crate::consts::BECH32_PREFIX_ACC_ADDR;
-use crate::crypto::Ed25519PublicKey;
-use crate::wasm::contract_validation::ContractKey;
-use crate::wasm::db::{read_encrypted_key, remove_encrypted_key, write_encrypted_key};
-use crate::wasm::errors::WasmEngineError;
-use crate::wasm::runtime::traits::WasmiApi;
-use crate::wasm::{gas::WasmCosts, query_chain::encrypt_and_query_chain, types::IoNonce};
+use enclave_cosmwasm_types::consts::BECH32_PREFIX_ACC_ADDR;
+use enclave_crypto::Ed25519PublicKey;
+
+use crate::contract_validation::ContractKey;
+use crate::db::{read_encrypted_key, remove_encrypted_key, write_encrypted_key};
+use crate::errors::WasmEngineError;
+use crate::gas::WasmCosts;
+use crate::query_chain::encrypt_and_query_chain;
+use crate::types::IoNonce;
+use crate::wasm::traits::WasmiApi;
 
 #[derive(Clone, Copy, Debug)]
 pub enum ContractOperation {

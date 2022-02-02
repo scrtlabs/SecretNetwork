@@ -2,11 +2,13 @@ use log::*;
 
 use enclave_ffi_types::{Ctx, EnclaveError};
 
-use crate::coalesce;
-use crate::cosmwasm::encoding::Binary;
-use crate::cosmwasm::types::{CanonicalAddr, Env};
-use crate::crypto::Ed25519PublicKey;
-use crate::results::{HandleSuccess, InitSuccess, QuerySuccess};
+use enclave_cosmos_types::types::{ContractCode, SigInfo};
+use enclave_cosmwasm_types::encoding::Binary;
+use enclave_cosmwasm_types::types::{CanonicalAddr, Env};
+use enclave_crypto::Ed25519PublicKey;
+use enclave_utils::coalesce;
+
+use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
 
 use super::contract_validation::{
     extract_contract_key, generate_encryption_key, validate_contract_key, validate_msg,
@@ -15,8 +17,8 @@ use super::contract_validation::{
 use super::gas::WasmCosts;
 use super::io::encrypt_output;
 use super::module_cache::create_module_instance;
-use super::runtime::{ContractInstance, ContractOperation, Engine};
-use super::types::{ContractCode, IoNonce, SecretMessage, SigInfo};
+use super::types::{IoNonce, SecretMessage};
+use super::wasm::{ContractInstance, ContractOperation, Engine};
 
 /*
 Each contract is compiled with these functions already implemented in wasm:

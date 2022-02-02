@@ -1,9 +1,11 @@
 use derive_more::Display;
-use enclave_ffi_types::{EnclaveError, UntrustedVmError};
 use log::*;
+
 use wasmi::{Error as InterpreterError, HostError, TrapKind};
 
-use crate::exports::BufferRecoveryError;
+use enclave_ffi_types::{EnclaveError, UntrustedVmError};
+
+use crate::external::ecalls::BufferRecoveryError;
 
 #[derive(Debug, Display)]
 #[non_exhaustive]

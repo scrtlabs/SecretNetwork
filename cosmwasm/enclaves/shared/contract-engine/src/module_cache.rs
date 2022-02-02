@@ -3,18 +3,19 @@ use std::sync::SgxRwLock;
 use lazy_static::lazy_static;
 use log::*;
 use lru::LruCache;
+
 use parity_wasm::elements;
 use parity_wasm::elements::Module;
 use wasmi::{ModuleInstance, ModuleRef};
 
 use enclave_ffi_types::EnclaveError;
 
-use crate::crypto::HASH_SIZE;
-use crate::wasm::types::ContractCode;
+use enclave_cosmos_types::types::ContractCode;
+use enclave_crypto::HASH_SIZE;
 
 use super::gas::{gas_rules, WasmCosts};
 use super::memory::validate_memory;
-use super::runtime::{create_builder, ContractOperation, WasmiImportResolver};
+use super::wasm::{create_builder, ContractOperation, WasmiImportResolver};
 
 lazy_static! {
     static ref MODULE_CACHE: SgxRwLock<LruCache<[u8; HASH_SIZE], wasmi::Module>> =

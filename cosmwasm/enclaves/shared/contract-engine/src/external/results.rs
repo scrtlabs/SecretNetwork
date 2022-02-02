@@ -5,7 +5,6 @@ use enclave_ffi_types::{
 };
 
 use crate::external::ocalls::ocall_allocate;
-use crate::imports::ocall_allocate;
 
 /// This struct is returned from module initialization.
 pub struct InitSuccess {

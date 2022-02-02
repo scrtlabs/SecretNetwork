@@ -2,16 +2,18 @@
 /// the consensus_io_exchange_keypair and a user-generated key to create a symmetric key
 /// that is unique to the user and the enclave
 ///
-use super::types::{IoNonce, SecretMessage};
-
-use crate::cosmwasm::encoding::Binary;
-use crate::cosmwasm::types::{CanonicalAddr, Coin, CosmosMsg, WasmMsg, WasmOutput};
-use crate::crypto::{AESKey, Ed25519PublicKey, Kdf, SIVEncryptable, KEY_MANAGER};
-use enclave_ffi_types::EnclaveError;
 use log::*;
 use serde::Serialize;
 use serde_json::json;
 use sha2::Digest;
+
+use enclave_ffi_types::EnclaveError;
+
+use enclave_cosmwasm_types::encoding::Binary;
+use enclave_cosmwasm_types::types::{CanonicalAddr, Coin, CosmosMsg, WasmMsg, WasmOutput};
+use enclave_crypto::{AESKey, Ed25519PublicKey, Kdf, SIVEncryptable, KEY_MANAGER};
+
+use super::types::{IoNonce, SecretMessage};
 
 pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) -> AESKey {
     let enclave_io_key = KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap();

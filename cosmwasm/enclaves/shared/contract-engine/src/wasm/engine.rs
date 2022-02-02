@@ -1,10 +1,11 @@
 use log::*;
+
 use wasmi::{ModuleRef, RuntimeValue};
 
-use super::contract::ContractInstance;
-use crate::wasm::errors::{wasmi_error_to_enclave_error, WasmEngineError};
-
 use enclave_ffi_types::EnclaveError;
+
+use super::contract::ContractInstance;
+use crate::errors::{wasmi_error_to_enclave_error, WasmEngineError};
 
 pub struct Engine {
     contract_instance: ContractInstance,
