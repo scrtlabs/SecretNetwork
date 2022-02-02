@@ -6,9 +6,6 @@ use serde::{de, ser, Deserialize, Deserializer, Serialize};
 
 use enclave_ffi_types::EnclaveError;
 use log::*;
-use sgx_types::*;
-
-// use crate::errors::{Base64Err, Result};
 
 /// Binary is a wrapper around Vec<u8> to add base64 de/serialization
 /// with serde. It also adds some helper methods to help encode inline.

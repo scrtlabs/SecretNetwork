@@ -1,8 +1,10 @@
+use sgx_types::sgx_status_t;
+
 use enclave_ffi_types::{
     EnclaveError, HandleResult, InitResult, QueryResult, UntrustedVmError, UserSpaceBuffer,
 };
-use sgx_types::sgx_status_t;
 
+use crate::external::ocalls::ocall_allocate;
 use crate::imports::ocall_allocate;
 
 /// This struct is returned from module initialization.

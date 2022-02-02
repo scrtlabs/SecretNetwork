@@ -2,12 +2,12 @@ use enclave_crypto::secp256k1::{Secp256k1PubKey, SECP256K1_PREFIX};
 use log::warn;
 
 use super::traits::CosmosAminoPubkey;
-use crate::types::CosmosAddress;
+use enclave_cosmwasm_types::types::CanonicalAddr;
 use enclave_crypto::hash::ripemd::ripemd160;
 use enclave_crypto::hash::sha::sha_256;
 
 impl CosmosAminoPubkey for Secp256k1PubKey {
-    fn get_address(&self) -> CosmosAddress {
+    fn get_address(&self) -> CanonicalAddr {
         // This reference describes how this should be derived:
         // https://github.com/tendermint/spec/blob/743a65861396e36022b2704e4383198b42c9cfbe/spec/blockchain/encoding.md#secp256k1
         // https://docs.tendermint.com/v0.32/spec/blockchain/encoding.html#secp256k1
@@ -19,7 +19,7 @@ impl CosmosAminoPubkey for Secp256k1PubKey {
         let hash1 = sha_256(&self.0);
         let hash2 = ripemd160(&hash1);
 
-        CosmosAddress(hash2.to_vec())
+        CanonicalAddr::from_vec(hash2.to_vec())
     }
 
     fn amino_bytes(&self) -> Vec<u8> {

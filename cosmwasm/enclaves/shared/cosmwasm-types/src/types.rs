@@ -81,6 +81,10 @@ impl CanonicalAddr {
 
         Ok(CanonicalAddr(Binary(canonical)))
     }
+
+    pub fn from_vec(vec: Vec<u8>) -> Self {
+        Self(Binary(vec))
+    }
 }
 
 impl fmt::Display for CanonicalAddr {

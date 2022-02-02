@@ -2,12 +2,17 @@ use log::*;
 
 use sha2::Digest;
 
-use crate::cosmwasm::encoding::Binary;
-use crate::cosmwasm::types::CanonicalAddr;
-use crate::wasm::types::CosmosPubKey;
+use crate::types::CosmosPubKey;
 
-use super::traits::PubKey;
-use super::CryptoError;
+use enclave_crypto::traits::VerifyingKey;
+
+use cosmos_proto::crypto::multisig::multisig::MultiSignature;
+
+use super::traits::CosmosAminoPubkey;
+
+use enclave_cosmwasm_types::types::CanonicalAddr;
+use enclave_crypto::CryptoError;
+use protobuf::Message;
 
 /// https://docs.tendermint.com/v0.32/spec/blockchain/encoding.html#public-key-cryptography
 const MULTISIG_THRESHOLD_PREFIX: [u8; 4] = [0x22, 0xc1, 0xf7, 0xe2];
@@ -40,13 +45,13 @@ impl MultisigThresholdPubKey {
     }
 }
 
-impl PubKey for MultisigThresholdPubKey {
+impl CosmosAminoPubkey for MultisigThresholdPubKey {
     fn get_address(&self) -> CanonicalAddr {
         // Spec: https://docs.tendermint.com/master/spec/core/encoding.html#key-types
         // Multisig is undocumented, but we figured out it's the same as ed25519
         let address_bytes = &sha2::Sha256::digest(self.amino_bytes().as_slice())[..20];
 
-        CanonicalAddr(Binary::from(address_bytes))
+        CanonicalAddr::from_vec(address_bytes.to_vec())
     }
 
     fn amino_bytes(&self) -> Vec<u8> {
@@ -86,7 +91,9 @@ impl PubKey for MultisigThresholdPubKey {
         trace!("pubkey bytes are: {:?}", encoded);
         encoded
     }
+}
 
+impl VerifyingKey for MultisigThresholdPubKey {
     fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError> {
         debug!("verifying multisig");
         trace!("Sign bytes are: {:?}", bytes);
@@ -147,9 +154,6 @@ impl PubKey for MultisigThresholdPubKey {
 }
 
 fn decode_multisig_signature(raw_blob: &[u8]) -> Result<Vec<Vec<u8>>, CryptoError> {
-    use crate::proto::crypto::multisig::MultiSignature;
-    use protobuf::Message;
-
     let ms = MultiSignature::parse_from_bytes(raw_blob).map_err(|err| {
         warn!(
             "Failed to decode the signature of a multisig key from protobuf bytes: {:?}",

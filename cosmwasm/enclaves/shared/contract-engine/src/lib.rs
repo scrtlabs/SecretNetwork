@@ -1,13 +1,17 @@
+// Trick to get the IDE to use sgx_tstd even when it doesn't know we're targeting SGX
+#[cfg(not(target_env = "sgx"))]
+extern crate sgx_tstd as std;
+
 mod contract_operations;
 mod contract_validation;
 mod db;
 mod errors;
+mod external;
 mod gas;
 mod io;
 mod memory;
 pub(crate) mod module_cache;
 mod query_chain;
-mod runtime;
 pub(crate) mod types;
 
 pub use contract_operations::{handle, init, query};

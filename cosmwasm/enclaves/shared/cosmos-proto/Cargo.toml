@@ -13,4 +13,3 @@ protobuf = { version = "2.25.2"}
 [build-dependencies]
 protoc-rust = { version = "=2.25", optional = true }
 dirs = { version = "3.0", optional = true }
-glob = "0.3.0"

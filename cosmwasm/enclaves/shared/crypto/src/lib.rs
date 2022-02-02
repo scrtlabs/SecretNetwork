@@ -1,14 +1,8 @@
-// similar trick to get the IDE to use sgx_tstd even when it doesn't know we're targeting SGX
+// Trick to get the IDE to use sgx_tstd even when it doesn't know we're targeting SGX
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
-// This annotation is here to trick the IDE into ignoring the extern crate, and instead pull in sgx_types from our
-// Cargo.toml. By importing sgx_types using `extern crate` but without letting it resolve in Cargo.toml when compiling
-// to SGX, we make the compiler pull it in from the target root, which contains the sgx_types listed in Xargo.toml.
-// This in turn silences errors about using the same types from two versions of the same crate.
-// (go ahead, try to remove this block and change the Cargo.toml import to a normal one)
-#[cfg(target_env = "sgx")]
-extern crate sgx_types;
 
+pub mod consts;
 mod errors;
 pub(crate) mod kdf;
 pub mod key_manager;
@@ -18,13 +12,13 @@ pub mod traits;
 
 // mod aes_gcm;
 mod aes_siv;
-pub mod hash;
+mod ed25519;
 mod hmac;
+pub mod secp256k1;
+
 mod rng;
 
-mod consts;
-mod ed25519;
-pub mod secp256k1;
+pub mod hash;
 
 pub use errors::CryptoError;
 pub use key_manager::Keychain;

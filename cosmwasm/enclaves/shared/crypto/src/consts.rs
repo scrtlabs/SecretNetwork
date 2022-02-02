@@ -1,5 +1,3 @@
-#![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
-
 use std::env;
 use std::path;
 

@@ -4,23 +4,26 @@ use enclave_ffi_types::EnclaveError;
 use protobuf::Message;
 use serde::{Deserialize, Serialize};
 
-use crate::cosmwasm::{
+use crate::multisig::MultisigThresholdPubKey;
+
+use enclave_crypto::{
+    hash::sha::HASH_SIZE, secp256k1::Secp256k1PubKey, sha_256, traits::VerifyingKey, CryptoError,
+};
+
+use cosmos_proto as proto;
+
+use enclave_cosmwasm_types::{
+    coins::Coin,
     encoding::Binary,
+    math::Uint128,
     types::{CanonicalAddr, HumanAddr},
 };
-use crate::crypto::{
-    multisig::MultisigThresholdPubKey, secp256k1::Secp256k1PubKey, traits::PubKey, AESKey,
-    CryptoError, Ed25519PublicKey, SIVEncryptable, HASH_SIZE,
-};
-use crate::proto;
 
-use super::io::calc_encryption_key;
-use crate::cosmwasm::coins::Coin;
-use crate::cosmwasm::math::Uint128;
+use crate::traits::CosmosAminoPubkey;
 
-use crate::wasm::contract_validation::calc_contract_hash;
-
-pub type IoNonce = [u8; 32];
+pub fn calc_contract_hash(contract_bytes: &[u8]) -> [u8; HASH_SIZE] {
+    sha_256(&contract_bytes)
+}
 
 pub struct ContractCode<'code> {
     code: &'code [u8],
@@ -39,102 +42,6 @@ impl<'code> ContractCode<'code> {
 
     pub fn hash(&self) -> [u8; HASH_SIZE] {
         self.hash
-    }
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-pub struct SecretMessage {
-    pub nonce: IoNonce,
-    pub user_public_key: Ed25519PublicKey,
-    pub msg: Vec<u8>,
-}
-
-impl SecretMessage {
-    pub fn encrypt_in_place(&mut self) -> Result<(), EnclaveError> {
-        self.msg = self
-            .encryption_key()
-            .encrypt_siv(self.msg.as_slice(), None)
-            .map_err(|err| {
-                error!("got an error while trying to encrypt the msg: {:?}", err);
-                EnclaveError::EncryptionError
-            })?;
-
-        Ok(())
-    }
-
-    pub fn decrypt(&self) -> Result<Vec<u8>, EnclaveError> {
-        let key = self.encryption_key();
-
-        // pass
-        let msg = key.decrypt_siv(self.msg.as_slice(), None).map_err(|err| {
-            error!("got an error while trying to decrypt the msg: {:?}", err);
-            EnclaveError::DecryptionError
-        })?;
-
-        Ok(msg)
-    }
-
-    pub fn encryption_key(&self) -> AESKey {
-        calc_encryption_key(&self.nonce, &self.user_public_key)
-    }
-
-    pub fn from_base64(
-        msg_b64: String,
-        nonce: IoNonce,
-        user_public_key: Ed25519PublicKey,
-    ) -> Result<Self, EnclaveError> {
-        let msg = base64::decode(&msg_b64.to_owned().into_bytes()).map_err(|err| {
-            error!(
-                "got an error while trying to decode msg to next contract as base64 {:?}: {:?}",
-                msg_b64, err
-            );
-            EnclaveError::FailedToDeserialize
-        })?;
-
-        Ok(SecretMessage {
-            msg,
-            nonce,
-            user_public_key,
-        })
-    }
-
-    pub fn from_slice(msg: &[u8]) -> Result<Self, EnclaveError> {
-        // 32 bytes of nonce
-        // 32 bytes of 25519 compressed public key
-        // 16+ bytes of encrypted data
-
-        if msg.len() < 82 {
-            error!(
-                "Encrypted message length {:?} is too short. Cannot parse",
-                msg.len()
-            );
-            return Err(EnclaveError::DecryptionError);
-        };
-
-        let mut nonce = [0u8; 32];
-        nonce.copy_from_slice(&msg[0..32]);
-
-        let mut user_pubkey = [0u8; 32];
-        user_pubkey.copy_from_slice(&msg[32..64]);
-
-        debug!(
-            "SecretMessage::from_slice nonce = {:?} pubkey = {:?}",
-            nonce,
-            hex::encode(user_pubkey)
-        );
-
-        Ok(SecretMessage {
-            nonce,
-            user_public_key: user_pubkey,
-            msg: msg[64..].to_vec(),
-        })
-    }
-
-    pub fn to_vec(&self) -> Vec<u8> {
-        let mut packed_msg: Vec<u8> = self.nonce.to_vec();
-        packed_msg.extend_from_slice(&self.user_public_key);
-        packed_msg.extend_from_slice(self.msg.as_slice());
-        packed_msg
     }
 }
 
@@ -196,7 +103,7 @@ impl CosmosPubKey {
     }
 }
 
-impl PubKey for CosmosPubKey {
+impl CosmosAminoPubkey for CosmosPubKey {
     fn get_address(&self) -> CanonicalAddr {
         match self {
             CosmosPubKey::Secp256k1(pubkey) => pubkey.get_address(),
@@ -210,7 +117,9 @@ impl PubKey for CosmosPubKey {
             CosmosPubKey::Multisig(pubkey) => pubkey.amino_bytes(),
         }
     }
+}
 
+impl VerifyingKey for CosmosPubKey {
     fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError> {
         match self {
             CosmosPubKey::Secp256k1(pubkey) => pubkey.verify_bytes(bytes, sig),
@@ -342,7 +251,7 @@ pub enum StdCosmWasmMsg {
 }
 
 impl StdCosmWasmMsg {
-    pub(crate) fn into_cosmwasm_msg(self) -> Result<CosmWasmMsg, EnclaveError> {
+    pub fn into_cosmwasm_msg(self) -> Result<CosmWasmMsg, EnclaveError> {
         match self {
             Self::Execute {
                 sender,
