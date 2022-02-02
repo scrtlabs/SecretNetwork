@@ -6,7 +6,7 @@ edition = "2018"
 description = "An enclave running wasmi, to be used by cosmwasm-sgx-vm"
 
 [lib]
-name = "wasmi_runtime_enclave"
+name = "secret_enclave"
 crate-type = ["staticlib"]
 
 [features]

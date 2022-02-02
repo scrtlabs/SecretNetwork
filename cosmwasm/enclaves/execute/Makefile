@@ -109,14 +109,11 @@ enclave: ffi-types librust_cosmwasm_enclave.signed.so
 
 .PHONY: ffi-types
 ffi-types:
-	mkdir -p target/headers/
-	cd ../enclave-ffi-types && \
-	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo build --features "build_headers" --target x86_64-unknown-linux-sgx -Z unstable-options --profile $(BUILD_PROFILE) && \
-	cp $(Rust_Target_Path)/../../../target/headers/enclave-ffi-types.h $(Rust_Target_Path)/../target/headers/
+	cd ../ffi-types && cargo check --features "build_headers"
 
 .PHONY: build-protobuf
 build-protobuf:
-	RUST_BACKTRACE=1 RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo check --features='build-protobuf' --target x86_64-unknown-linux-sgx
+	cd ../shared/cosmos-proto && cargo check --features='build-protobuf'
 
 librust_cosmwasm_enclave.signed.so: librust_cosmwasm_enclave.so $(ENCLAVE_CONFIG)
 	sgx_sign sign -key Enclave_private.pem -enclave $< -out $@ -config $(ENCLAVE_CONFIG)
@@ -126,7 +123,7 @@ librust_cosmwasm_enclave.so: $(CUSTOM_LIBRARY_PATH)/libenclave.a Enclave_t.o
 
 $(CUSTOM_LIBRARY_PATH)/libenclave.a: $(CUSTOM_LIBRARY_PATH) $(Rust_Crate_Source)
 	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo build --features "$(FEATURES)" --target x86_64-unknown-linux-sgx -Z unstable-options --profile $(BUILD_PROFILE) --locked
-	cp target/x86_64-unknown-linux-sgx/$(BUILD_PROFILE)/libwasmi_runtime_enclave.a $(CUSTOM_LIBRARY_PATH)/libenclave.a
+	cp ../target/x86_64-unknown-linux-sgx/$(BUILD_PROFILE)/libsecret_enclave.a $(CUSTOM_LIBRARY_PATH)/libenclave.a
 
 $(CUSTOM_LIBRARY_PATH):
 	mkdir $(CUSTOM_LIBRARY_PATH)
@@ -145,4 +142,4 @@ clippy:
 
 clean:
 	rm -rf $(CUSTOM_LIBRARY_PATH) $(Enclave_EDL_Products) *.o *.so
-	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo clean
+	xargo clean

@@ -4,14 +4,18 @@ extern crate sgx_tstd as std;
 
 extern crate sgx_types;
 
+use std::env;
+
 #[allow(unused_imports)]
 use ctor::*;
 use log::LevelFilter;
 
+// Force linking to all the ecalls/ocalls in this package
+pub use enclave_contract_engine;
+
 use enclave_utils::logger::{SimpleLogger, LOG_LEVEL_ENV_VAR};
 
 pub mod registration;
-use std::env;
 
 mod tests;
 
