@@ -36,6 +36,7 @@ enclave-tests = []
 production = []
 # This flag enales storing contracts that require the debug-print function
 debug-print = []
+query-enclave = []
 
 [dependencies]
 # Uses the path when built locally; uses the given version from crates.io when published

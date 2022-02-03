@@ -1,9 +1,12 @@
 enclave {
-    from "sgx_tstd.edl" import *;
+    from "sgx_tstd.edl" import
+        u_thread_set_event_ocall,
+        u_thread_wait_event_ocall,
+        u_thread_set_multiple_events_ocall,
+        u_thread_setwait_events_ocall;
     from "sgx_stdio.edl" import *;
     from "sgx_fs.edl" import *;
     from "sgx_net.edl" import *;
-    from "sgx_time.edl" import *;
     include "sgx_quote.h"
     from "sgx_backtrace.edl" import *;
     from "sgx_tstdc.edl" import *;
@@ -15,44 +18,16 @@ enclave {
     include "enclave-ffi-types.h"
 
     trusted {
-        EnclaveBuffer ecall_allocate(
+        EnclaveBuffer ecall_allocate_qe(
             [in, count=length] const uint8_t* buffer,
             uintptr_t length
         );
 
-        public sgx_status_t ecall_configure_runtime(
+        public sgx_status_t ecall_configure_runtime_qe(
             RuntimeConfiguration runtime_configuration
         );
 
-        public InitResult ecall_init(
-            Ctx context,
-            uint64_t gas_limit,
-            [out] uint64_t* used_gas,
-            [in, count=contract_len] const uint8_t* contract,
-            uintptr_t contract_len,
-            [in, count=env_len] const uint8_t* env,
-            uintptr_t env_len,
-            [in, count=msg_len] const uint8_t* msg,
-            uintptr_t msg_len,
-            [in, count=sig_info_len] const uint8_t* sig_info,
-            uintptr_t sig_info_len
-        );
-
-        public HandleResult ecall_handle(
-            Ctx context,
-            uint64_t gas_limit,
-            [out] uint64_t* used_gas,
-            [in, count=contract_len] const uint8_t* contract,
-            uintptr_t contract_len,
-            [in, count=env_len] const uint8_t* env,
-            uintptr_t env_len,
-            [in, count=msg_len] const uint8_t* msg,
-            uintptr_t msg_len,
-            [in, count=sig_info_len] const uint8_t* sig_info,
-            uintptr_t sig_info_len
-        );
-
-        public QueryResult ecall_query(
+        public QueryResult ecall_query_qe(
             Ctx context,
             uint64_t gas_limit,
             [out] uint64_t* used_gas,
@@ -63,28 +38,24 @@ enclave {
             [in, count=msg_len] const uint8_t* msg,
             uintptr_t msg_len
         );
-
-        public HealthCheckResult ecall_health_check();
-
-        public uint32_t ecall_run_tests();
     };
 
     untrusted {
-        UserSpaceBuffer ocall_allocate(
+        UserSpaceBuffer ocall_allocate_qe(
             [in, count=length] const uint8_t* buffer,
             uintptr_t length
         );
 
-        OcallReturn ocall_read_db(
+        OcallReturn ocall_read_db_qe(
             Ctx context,
             [out] UntrustedVmError* vm_error,
             [out] uint64_t* gas_used,
             [out] EnclaveBuffer* value,
             [in, count=key_len] const uint8_t* key,
             uintptr_t key_len
-        ) allow (ecall_allocate);
+        ) allow (ecall_allocate_qe);
 
-        OcallReturn ocall_query_chain(
+        OcallReturn ocall_query_chain_qe(
             Ctx context,
             [out] UntrustedVmError* vm_error,
             [out] uint64_t* gas_used,
@@ -92,24 +63,6 @@ enclave {
             [out] EnclaveBuffer* value,
             [in, count=query_len] const uint8_t* query,
             uintptr_t query_len
-        ) allow (ecall_allocate, ecall_query);
-
-        OcallReturn ocall_remove_db(
-            Ctx context,
-            [out] UntrustedVmError* vm_error,
-            [out] uint64_t* gas_used,
-            [in, count=key_len] const uint8_t* key,
-            uintptr_t key_len
-        );
-
-        OcallReturn ocall_write_db(
-            Ctx context,
-            [out] UntrustedVmError* vm_error,
-            [out] uint64_t* gas_used,
-            [in, count=key_len] const uint8_t* key,
-            uintptr_t key_len,
-            [in, count=value_len] const uint8_t* value,
-            uintptr_t value_len
-        );
+        ) allow (ecall_allocate_qe, ecall_query_qe);
     };
 };

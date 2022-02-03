@@ -9,7 +9,9 @@ use enclave_cosmwasm_types::consts::BECH32_PREFIX_ACC_ADDR;
 use enclave_crypto::Ed25519PublicKey;
 
 use crate::contract_validation::ContractKey;
-use crate::db::{read_encrypted_key, remove_encrypted_key, write_encrypted_key};
+use crate::db::read_encrypted_key;
+#[cfg(not(feature = "query-only"))]
+use crate::db::{remove_encrypted_key, write_encrypted_key};
 use crate::errors::WasmEngineError;
 use crate::gas::WasmCosts;
 use crate::query_chain::encrypt_and_query_chain;
@@ -53,6 +55,7 @@ pub struct ContractInstance {
     pub gas_costs: WasmCosts,
     pub contract_key: ContractKey,
     pub module: ModuleRef,
+    #[cfg_attr(feature = "query-only", allow(unused))]
     operation: ContractOperation,
     pub user_nonce: IoNonce,
     pub user_public_key: Ed25519PublicKey,
@@ -295,6 +298,16 @@ impl WasmiApi for ContractInstance {
     /// 1. "key" to delete from Tendermint (buffer of bytes)
     /// key is a pointer to a region "struct" of "pointer" and "length"
     /// A Region looks like { ptr: u32, len: u32 }
+    #[cfg(feature = "query-only")]
+    fn remove_db_index(&mut self, _state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+        return Err(WasmEngineError::UnauthorizedWrite.into());
+    }
+
+    /// Args:
+    /// 1. "key" to delete from Tendermint (buffer of bytes)
+    /// key is a pointer to a region "struct" of "pointer" and "length"
+    /// A Region looks like { ptr: u32, len: u32 }
+    #[cfg(not(feature = "query-only"))]
     fn remove_db_index(&mut self, state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
         if self.operation.is_query() {
             return Err(WasmEngineError::UnauthorizedWrite.into());
@@ -324,6 +337,21 @@ impl WasmiApi for ContractInstance {
     /// 2. "value" to write to Tendermint (buffer of bytes)
     /// Both of them are pointers to a region "struct" of "pointer" and "length"
     /// Lets say Region looks like { ptr: u32, len: u32 }
+    #[cfg(feature = "query-only")]
+    fn write_db_index(
+        &mut self,
+        _state_key_ptr_ptr: i32,
+        _value_ptr_ptr: i32,
+    ) -> Result<Option<RuntimeValue>, Trap> {
+        return Err(WasmEngineError::UnauthorizedWrite.into());
+    }
+
+    /// Args:
+    /// 1. "key" to write to Tendermint (buffer of bytes)
+    /// 2. "value" to write to Tendermint (buffer of bytes)
+    /// Both of them are pointers to a region "struct" of "pointer" and "length"
+    /// Lets say Region looks like { ptr: u32, len: u32 }
+    #[cfg(not(feature = "query-only"))]
     fn write_db_index(
         &mut self,
         state_key_ptr_ptr: i32,

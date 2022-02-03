@@ -21,6 +21,15 @@ extern "C" {
     ) -> sgx_status_t;
 }
 
+#[cfg(feature = "query-enclave")]
+extern "C" {
+    pub fn ecall_configure_runtime_qe(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        config: RuntimeConfiguration,
+    ) -> sgx_status_t;
+}
+
 pub struct EnclaveRuntimeConfig {
     pub module_cache_size: u8,
 }
@@ -59,6 +68,21 @@ pub fn configure_enclave(config: EnclaveRuntimeConfig) -> SgxResult<()> {
 
     if retval != sgx_status_t::SGX_SUCCESS {
         return Err(retval);
+    }
+
+    #[cfg(feature = "query-enclave")]
+    {
+        let status = unsafe {
+            ecall_configure_runtime_qe(enclave.geteid(), &mut retval, config.to_ffi_type())
+        };
+
+        if status != sgx_status_t::SGX_SUCCESS {
+            return Err(status);
+        }
+
+        if retval != sgx_status_t::SGX_SUCCESS {
+            return Err(retval);
+        }
     }
 
     Ok(())

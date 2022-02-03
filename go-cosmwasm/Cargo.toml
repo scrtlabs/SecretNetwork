@@ -31,6 +31,7 @@ backtraces = ["snafu/backtraces"]
 production = ["cosmwasm-sgx-vm/production"]
 # This flag enales storing contracts that require the debug-print function
 debug-print = ["cosmwasm-sgx-vm/debug-print"]
+query-enclave = ["cosmwasm-sgx-vm/query-enclave"]
 
 [dependencies]
 cosmwasm-std = { path = "../cosmwasm/packages/std", features = ["iterator"] }

@@ -33,7 +33,7 @@ sgx_tcrypto = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https:/
 
 enclave-ffi-types = { path = "../ffi-types" }
 
-enclave_contract_engine = { path = "../shared/contract-engine", features = ["query-only"] }
+enclave_contract_engine = { path = "../shared/contract-engine" }
 enclave_crypto = { path = "../shared/crypto" }
 enclave_utils = { path = "../shared/utils" }
 

@@ -23,6 +23,18 @@ lazy_static! {
     static ref ECALL_ALLOCATE_STACK: SgxMutex<Vec<EnclaveBuffer>> = SgxMutex::new(Vec::new());
 }
 
+#[cfg(not(feature = "query-only"))]
+#[no_mangle]
+pub unsafe extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
+    ecall_allocate_impl(buffer, length)
+}
+
+#[cfg(feature = "query-only")]
+#[no_mangle]
+pub unsafe extern "C" fn ecall_allocate_qe(buffer: *const u8, length: usize) -> EnclaveBuffer {
+    ecall_allocate_impl(buffer, length)
+}
+
 /// Allocate a buffer in the enclave and return a pointer to it. This is useful for ocalls that
 /// want to return a response of unknown length to the enclave. Instead of pre-allocating it on the
 /// ecall side, the ocall can call this ecall and return the EnclaveBuffer to the ecall that called
@@ -31,8 +43,7 @@ lazy_static! {
 /// host -> ecall_x -> ocall_x -> ecall_allocate
 /// # Safety
 /// Always use protection
-#[no_mangle]
-pub unsafe extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
+unsafe fn ecall_allocate_impl(buffer: *const u8, length: usize) -> EnclaveBuffer {
     if let Err(_err) = oom_handler::register_oom_handler() {
         error!("Could not register OOM handler!");
         return EnclaveBuffer::default();
@@ -72,13 +83,25 @@ pub unsafe extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> Enc
 #[derive(Debug, PartialEq)]
 pub struct BufferRecoveryError;
 
+#[cfg(not(feature = "query-only"))]
+#[no_mangle]
+pub unsafe extern "C" fn ecall_configure_runtime(config: RuntimeConfiguration) -> sgx_status_t {
+    ecall_configure_runtime_impl(config)
+}
+
+#[cfg(feature = "query-only")]
+#[no_mangle]
+pub unsafe extern "C" fn ecall_configure_runtime_qe(config: RuntimeConfiguration) -> sgx_status_t {
+    ecall_configure_runtime_impl(config)
+}
+
 /// This function sets up any components of the contract runtime
 /// that should be set up once when the node starts.
 ///
 /// # Safety
 /// Always use protection
 #[no_mangle]
-pub unsafe extern "C" fn ecall_configure_runtime(config: RuntimeConfiguration) -> sgx_status_t {
+fn ecall_configure_runtime_impl(config: RuntimeConfiguration) -> sgx_status_t {
     debug!(
         "inside ecall_configure_runtime: {}",
         config.module_cache_size
@@ -283,10 +306,61 @@ pub unsafe extern "C" fn ecall_handle(
     }
 }
 
-/// # Safety
-/// Always use protection
+#[cfg(not(feature = "query-only"))]
 #[no_mangle]
 pub unsafe extern "C" fn ecall_query(
+    context: Ctx,
+    gas_limit: u64,
+    used_gas: *mut u64,
+    contract: *const u8,
+    contract_len: usize,
+    env: *const u8,
+    env_len: usize,
+    msg: *const u8,
+    msg_len: usize,
+) -> QueryResult {
+    ecall_query_impl(
+        context,
+        gas_limit,
+        used_gas,
+        contract,
+        contract_len,
+        env,
+        env_len,
+        msg,
+        msg_len,
+    )
+}
+
+#[cfg(feature = "query-only")]
+#[no_mangle]
+pub unsafe extern "C" fn ecall_query_qe(
+    context: Ctx,
+    gas_limit: u64,
+    used_gas: *mut u64,
+    contract: *const u8,
+    contract_len: usize,
+    env: *const u8,
+    env_len: usize,
+    msg: *const u8,
+    msg_len: usize,
+) -> QueryResult {
+    ecall_query_impl(
+        context,
+        gas_limit,
+        used_gas,
+        contract,
+        contract_len,
+        env,
+        env_len,
+        msg,
+        msg_len,
+    )
+}
+
+/// # Safety
+/// Always use protection
+unsafe fn ecall_query_impl(
     context: Ctx,
     gas_limit: u64,
     used_gas: *mut u64,

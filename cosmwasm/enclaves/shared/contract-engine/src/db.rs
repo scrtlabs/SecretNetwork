@@ -11,6 +11,7 @@ use crate::external::{ecalls, ocalls};
 use super::contract_validation::ContractKey;
 use super::errors::WasmEngineError;
 
+#[cfg(not(feature = "query-only"))]
 pub fn write_encrypted_key(
     key: &[u8],
     value: &[u8],
@@ -73,6 +74,7 @@ pub fn read_encrypted_key(
     }
 }
 
+#[cfg(not(feature = "query-only"))]
 pub fn remove_encrypted_key(
     key: &[u8],
     context: &Ctx,
@@ -144,6 +146,7 @@ fn read_db(context: &Ctx, key: &[u8]) -> Result<(Option<Vec<u8>>, u64), WasmEngi
 }
 
 /// Safe wrapper around reads from the contract storage
+#[cfg(not(feature = "query-only"))]
 fn remove_db(context: &Ctx, key: &[u8]) -> Result<u64, WasmEngineError> {
     let mut ocall_return = OcallReturn::Success;
     let mut vm_err = UntrustedVmError::default();
@@ -170,6 +173,7 @@ fn remove_db(context: &Ctx, key: &[u8]) -> Result<u64, WasmEngineError> {
 }
 
 /// Safe wrapper around writes to the contract storage
+#[cfg(not(feature = "query-only"))]
 fn write_db(context: &Ctx, key: &[u8], value: &[u8]) -> Result<u64, WasmEngineError> {
     let mut ocall_return = OcallReturn::Success;
     let mut vm_err = UntrustedVmError::default();
@@ -197,6 +201,7 @@ fn write_db(context: &Ctx, key: &[u8], value: &[u8]) -> Result<u64, WasmEngineEr
     }
 }
 
+#[cfg(not(feature = "query-only"))]
 fn derive_ad_for_field(
     field_name: &[u8],
     context: &Ctx,
@@ -213,6 +218,7 @@ fn derive_ad_for_field(
     Ok((ad, gas_used))
 }
 
+#[cfg(not(feature = "query-only"))]
 fn encrypt_key(
     field_name: &[u8],
     value: &[u8],

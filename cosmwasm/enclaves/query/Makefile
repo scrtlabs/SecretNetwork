@@ -105,7 +105,7 @@ endif
 all: enclave
 
 .PHONY: enclave
-enclave: enclave-ffi-types.h librust_cosmwasm_enclave.signed.so
+enclave: enclave-ffi-types.h librust_cosmwasm_query_enclave.signed.so
 
 FFI_TYPES_SOURCES := $(shell find "../ffi-types" -type f)
 ../target/headers/enclave-ffi-types.h: $(FFI_TYPES_SOURCES)
@@ -118,10 +118,10 @@ enclave-ffi-types.h: ../target/headers/enclave-ffi-types.h
 build-protobuf:
 	cd ../shared/cosmos-proto && cargo check --features='build-protobuf'
 
-librust_cosmwasm_enclave.signed.so: librust_cosmwasm_enclave.so $(ENCLAVE_CONFIG)
+librust_cosmwasm_query_enclave.signed.so: librust_cosmwasm_query_enclave.so $(ENCLAVE_CONFIG)
 	sgx_sign sign -key Enclave_private.pem -enclave $< -out $@ -config $(ENCLAVE_CONFIG)
 
-librust_cosmwasm_enclave.so: $(CUSTOM_LIBRARY_PATH)/libenclave.a Enclave_t.o
+librust_cosmwasm_query_enclave.so: $(CUSTOM_LIBRARY_PATH)/libenclave.a Enclave_t.o
 	$(CXX) Enclave_t.o -o $@ $(RustEnclave_Link_Flags)
 
 $(CUSTOM_LIBRARY_PATH)/libenclave.a: $(CUSTOM_LIBRARY_PATH) $(Rust_Crate_Source)

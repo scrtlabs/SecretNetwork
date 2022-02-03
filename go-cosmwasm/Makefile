@@ -50,7 +50,10 @@ App_Include_Paths := -I./ -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
 Enclave_Path := ../cosmwasm/enclaves/execute
-Enclave_EDL_Products := Enclave_u.c Enclave_u.h
+Enclave_EDL_Products := lib/enclave/Enclave_u.c lib/enclave/Enclave_u.h
+
+Query_Enclave_Path := ../cosmwasm/enclaves/query
+Query_Enclave_EDL_Products := lib/query-enclave/Enclave_u.c lib/query-enclave/Enclave_u.h
 
 .PHONY: all
 all: build test
@@ -59,36 +62,59 @@ all: build test
 build: build-rust build-go
 
 .PHONY: build-rust
-build-rust: librust_cosmwasm_enclave.signed.so lib/libEnclave_u.a
+build-rust: build-enclave build-query-enclave
 	cargo build -Z unstable-options --profile $(BUILD_PROFILE) --features "$(FEATURES_U)"
 	cp target/$(BUILD_PROFILE)/libgo_cosmwasm.$(DLL_EXT) api
 	@ #this pulls out ELF symbols, 80% size reduction!
 
 .PHONY: build-enclave
-build-enclave:
+build-enclave: librust_cosmwasm_enclave.signed.so lib/libEnclave_u.a
+
+.PHONY: build-query-enclave
+build-query-enclave: librust_cosmwasm_query_enclave.signed.so lib/libQueryEnclave_u.a
+
+librust_cosmwasm_enclave.signed.so: inner-build-enclave
+	cp $(Enclave_Path)/$@ ./
+
+librust_cosmwasm_query_enclave.signed.so: inner-build-query-enclave
+	cp $(Query_Enclave_Path)/$@ ./
+
+.PHONY: inner-build-enclave
+inner-build-enclave:
 	FEATURES="$(FEATURES)" $(MAKE) -C $(Enclave_Path) enclave
 
-librust_cosmwasm_enclave.signed.so: build-enclave
-	cp "$(Enclave_Path)/librust_cosmwasm_enclave.signed.so" ./
+.PHONY: inner-build-query-enclave
+inner-build-query-enclave:
+	FEATURES="$(FEATURES)" $(MAKE) -C $(Query_Enclave_Path) enclave
 
 # This file will be picked up by the crate's build script and linked into the library.
 lib/libEnclave_u.a: $(Enclave_EDL_Products)
-	$(CC) $(App_C_Flags) -c Enclave_u.c -o Enclave_u.o
-	mkdir -p lib
-	$(AR) rcsD $@ Enclave_u.o
+	$(CC) $(App_C_Flags) -c lib/enclave/Enclave_u.c -o lib/enclave/Enclave_u.o
+	$(AR) rcsD $@ lib/enclave/Enclave_u.o
+
+# This file will be picked up by the crate's build script and linked into the library.
+lib/libQueryEnclave_u.a: $(Query_Enclave_EDL_Products)
+	$(CC) $(App_C_Flags) -c lib/query-enclave/Enclave_u.c -o lib/query-enclave/Enclave_u.o
+	$(AR) rcsD $@ lib/query-enclave/Enclave_u.o
+
+# We make sure that the enclave is built before we compile the edl,
+# because the EDL depends on a header file that is generated in that process.
+$(Enclave_EDL_Products): $(Enclave_Path)/Enclave.edl enclave-ffi-types.h
+	mkdir -p "lib/enclave"
+	sgx_edger8r --untrusted $< --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir ./lib/enclave
+
+# We make sure that the enclave is built before we compile the edl,
+# because the EDL depends on a header file that is generated in that process.
+$(Query_Enclave_EDL_Products): $(Query_Enclave_Path)/Enclave.edl enclave-ffi-types.h
+	mkdir -p "lib/query-enclave"
+	sgx_edger8r --untrusted $< --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir ./lib/query-enclave
 
 # This file gets generated whenever we build this crate, because enclave-ffi-types is our dependency
 # but when running the build for the first time, there's an interdependency between the .edl which requires this
 # header, and the crate which needs the objects generated from the .edl file to correctly compile.
 # So here we do the minimum required work to generate this file correctly, and copy it to the right location
-enclave-ffi-types.h: $(Enclave_Path)/enclave-ffi-types.h
-	mkdir -p $(dir $@)
-	cp $(Enclave_Path)/$@ $@
-
-# We make sure that the enclave is built before we compile the edl,
-# because the EDL depends on a header file that is generated in that process.
-$(Enclave_EDL_Products): $(Enclave_Path)/Enclave.edl enclave-ffi-types.h
-	sgx_edger8r --untrusted $< --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir ./
+enclave-ffi-types.h: ../cosmwasm/enclaves/target/headers/enclave-ffi-types.h
+	cp $< $@
 
 # implement stripping based on os
 .PHONY: strip
@@ -100,21 +126,16 @@ else
 strip:
 endif
 
-# C files are not allowed when using cgo
-.PHONY: _clear_c_files
-_clear_c_files:
-	rm -f *.c
-
 .PHONY: build-go
-build-go: _clear_c_files
+build-go:
 	go build ./...
 
 .PHONY: test
-test: _clear_c_files
+test:
 	RUST_BACKTRACE=1 go test -v ./api ./types .
 
 .PHONY: test-safety
-test-safety: _clear_c_files
+test-safety:
 	GODEBUG=cgocheck=2 go test -race -v -count 1 ./api
 
 # we should build all the docker images locally ONCE and publish them
@@ -162,9 +183,10 @@ test-alpine:
 
 .PHONY: clean
 clean:
-	rm -rf lib $(Enclave_EDL_Products) *.o *.so *.h
+	rm -rf lib $(Enclave_EDL_Products) $(Query_Enclave_EDL_Products) *.o *.so *.h
 	cargo clean
 
 .PHONY: clean-all
 clean-all: clean
 	$(MAKE) -C $(Enclave_Path) clean
+	$(MAKE) -C $(Query_Enclave_Path) clean
