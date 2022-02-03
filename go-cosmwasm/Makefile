@@ -74,7 +74,6 @@ librust_cosmwasm_enclave.signed.so: build-enclave
 # This file will be picked up by the crate's build script and linked into the library.
 lib/libEnclave_u.a: $(Enclave_EDL_Products)
 	$(CC) $(App_C_Flags) -c Enclave_u.c -o Enclave_u.o
-	rm Enclave_u.c  # C files are not allowed when using cgo
 	mkdir -p lib
 	$(AR) rcsD $@ Enclave_u.o
 
@@ -82,13 +81,13 @@ lib/libEnclave_u.a: $(Enclave_EDL_Products)
 # but when running the build for the first time, there's an interdependency between the .edl which requires this
 # header, and the crate which needs the objects generated from the .edl file to correctly compile.
 # So here we do the minimum required work to generate this file correctly, and copy it to the right location
-enclave-ffi-types.h: build-enclave
+enclave-ffi-types.h: $(Enclave_Path)/enclave-ffi-types.h
 	mkdir -p $(dir $@)
 	cp $(Enclave_Path)/$@ $@
 
 # We make sure that the enclave is built before we compile the edl,
 # because the EDL depends on a header file that is generated in that process.
-$(Enclave_EDL_Products): $(Enclave_Path)/Enclave.edl enclave-ffi-types.h build-enclave
+$(Enclave_EDL_Products): $(Enclave_Path)/Enclave.edl enclave-ffi-types.h
 	sgx_edger8r --untrusted $< --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir ./
 
 # implement stripping based on os
@@ -101,16 +100,21 @@ else
 strip:
 endif
 
+# C files are not allowed when using cgo
+.PHONY: _clear_c_files
+_clear_c_files:
+	rm -f *.c
+
 .PHONY: build-go
-build-go:
+build-go: _clear_c_files
 	go build ./...
 
 .PHONY: test
-test:
+test: _clear_c_files
 	RUST_BACKTRACE=1 go test -v ./api ./types .
 
 .PHONY: test-safety
-test-safety:
+test-safety: _clear_c_files
 	GODEBUG=cgocheck=2 go test -race -v -count 1 ./api
 
 # we should build all the docker images locally ONCE and publish them

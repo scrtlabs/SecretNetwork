@@ -930,47 +930,37 @@ dependencies = [
 
 [[package]]
 name = "secret-query-enclave"
-version = "0.1.0"
+version = "1.2.4"
 dependencies = [
- "aes-siv",
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
- "bech32",
  "bit-vec",
  "chrono",
  "ctor",
  "derive_more",
- "dirs",
  "enclave-ffi-types",
+ "enclave_contract_engine",
+ "enclave_crypto",
+ "enclave_utils",
  "hex",
  "httparse",
  "itertools",
  "lazy_static",
  "log",
- "lru",
  "num-bigint",
  "parity-wasm",
- "prost",
- "protobuf",
- "protoc-rust",
  "pwasm-utils",
- "ring",
- "ripemd160",
  "rustls",
- "secp256k1",
  "serde 1.0.118",
  "serde_json 1.0.60",
  "sgx_edl",
  "sgx_rand",
  "sgx_tcrypto",
- "sgx_trts 1.1.3 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=a37ffb9449ba6d5b6e4a9d586bbab864ae732269)",
  "sgx_tse",
- "sgx_tseal",
  "sgx_tstd 1.1.3 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=a37ffb9449ba6d5b6e4a9d586bbab864ae732269)",
  "sgx_types 1.1.3 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=a37ffb9449ba6d5b6e4a9d586bbab864ae732269)",
- "sha2",
  "uuid",
- "wasmi",
- "x25519-dalek",
+ "webpki",
+ "webpki-roots",
  "yasna",
 ]
 
@@ -1171,17 +1161,6 @@ name = "sgx_tse"
 version = "1.1.3"
 source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=a37ffb9449ba6d5b6e4a9d586bbab864ae732269#a37ffb9449ba6d5b6e4a9d586bbab864ae732269"
 dependencies = [
- "sgx_types 1.1.3 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=a37ffb9449ba6d5b6e4a9d586bbab864ae732269)",
-]
-
-[[package]]
-name = "sgx_tseal"
-version = "1.1.3"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=a37ffb9449ba6d5b6e4a9d586bbab864ae732269#a37ffb9449ba6d5b6e4a9d586bbab864ae732269"
-dependencies = [
- "sgx_tcrypto",
- "sgx_trts 1.1.3 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=a37ffb9449ba6d5b6e4a9d586bbab864ae732269)",
- "sgx_tse",
  "sgx_types 1.1.3 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=a37ffb9449ba6d5b6e4a9d586bbab864ae732269)",
 ]
 
