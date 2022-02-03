@@ -1,5 +1,3 @@
-.PHONY: all build build-rust build-go test docker-image docker-image-centos7 docker-image-cross
-
 BUILD_PROFILE ?= release
 
 TOP_DIR := ../third_party/build
@@ -51,28 +49,32 @@ App_SRC_Files := $(shell find ../cosmwasm/packages/sgx-vm/ -type f -name '*.rs')
 App_Include_Paths := -I./ -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
-Enclave_Path := ../cosmwasm/packages/wasmi-runtime
+Enclave_Path := ../cosmwasm/enclaves/execute
 Enclave_EDL_Products := Enclave_u.c Enclave_u.h
 
+.PHONY: all
 all: build test
 
+.PHONY: build
 build: build-rust build-go
 
+.PHONY: build-rust
 build-rust: librust_cosmwasm_enclave.signed.so lib/libEnclave_u.a
 	cargo build -Z unstable-options --profile $(BUILD_PROFILE) --features "$(FEATURES_U)"
 	cp target/$(BUILD_PROFILE)/libgo_cosmwasm.$(DLL_EXT) api
 	@ #this pulls out ELF symbols, 80% size reduction!
 
-librust_cosmwasm_enclave.signed.so: build-enclave
-	cp ../cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./
+.PHONY: build-enclave
+build-enclave:
+	FEATURES="$(FEATURES)" $(MAKE) -C $(Enclave_Path) enclave
 
-# This file will be picked up by the crates build script and linked into the library.
-# We make sure that the enclave is built before we compile the edl,
-# because the EDL depends on a header file that is generated in that process.
-lib/libEnclave_u.a: $(Enclave_Path)/Enclave.edl target/headers/enclave-ffi-types.h build-enclave
-	sgx_edger8r --untrusted $< --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir ./
+librust_cosmwasm_enclave.signed.so: build-enclave
+	cp "$(Enclave_Path)/librust_cosmwasm_enclave.signed.so" ./
+
+# This file will be picked up by the crate's build script and linked into the library.
+lib/libEnclave_u.a: $(Enclave_EDL_Products)
 	$(CC) $(App_C_Flags) -c Enclave_u.c -o Enclave_u.o
-	rm Enclave_u.c
+	rm Enclave_u.c  # C files are not allowed when using cgo
 	mkdir -p lib
 	$(AR) rcsD $@ Enclave_u.o
 
@@ -80,15 +82,17 @@ lib/libEnclave_u.a: $(Enclave_Path)/Enclave.edl target/headers/enclave-ffi-types
 # but when running the build for the first time, there's an interdependency between the .edl which requires this
 # header, and the crate which needs the objects generated from the .edl file to correctly compile.
 # So here we do the minimum required work to generate this file correctly, and copy it to the right location
-target/headers/enclave-ffi-types.h: build-enclave
+enclave-ffi-types.h: build-enclave
 	mkdir -p $(dir $@)
 	cp $(Enclave_Path)/$@ $@
 
-.PHONY: build-enclave
-build-enclave:
-	FEATURES="$(FEATURES)" $(MAKE) -C $(Enclave_Path) enclave
+# We make sure that the enclave is built before we compile the edl,
+# because the EDL depends on a header file that is generated in that process.
+$(Enclave_EDL_Products): $(Enclave_Path)/Enclave.edl enclave-ffi-types.h build-enclave
+	sgx_edger8r --untrusted $< --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir ./
 
 # implement stripping based on os
+.PHONY: strip
 ifeq ($(DLL_EXT),so)
 strip:
 	strip api/libgo_cosmwasm.so
@@ -97,39 +101,49 @@ else
 strip:
 endif
 
+.PHONY: build-go
 build-go:
 	go build ./...
 
+.PHONY: test
 test:
 	RUST_BACKTRACE=1 go test -v ./api ./types .
 
+.PHONY: test-safety
 test-safety:
 	GODEBUG=cgocheck=2 go test -race -v -count 1 ./api
 
 # we should build all the docker images locally ONCE and publish them
+.PHONY: docker-image-centos7
 docker-image-centos7:
 	docker build . -t cosmwasm/go-ext-builder:$(DOCKER_TAG)-centos7 -f ./Dockerfile.centos7
 
+.PHONY: docker-image-cross
 docker-image-cross:
 	docker build . -t cosmwasm/go-ext-builder:$(DOCKER_TAG)-cross -f ./Dockerfile.cross
 
+.PHONY: docker-image-alpine
 docker-image-alpine:
 	docker build . -t cosmwasm/go-ext-builder:$(DOCKER_TAG)-alpine -f ./Dockerfile.alpine
 
+.PHONY: docker-images
 docker-images: docker-image-centos7 docker-image-cross docker-image-alpine
 
+.PHONY: docker-publish
 docker-publish: docker-images
 	docker push cosmwasm/go-ext-builder:$(DOCKER_TAG)-cross
 	docker push cosmwasm/go-ext-builder:$(DOCKER_TAG)-centos7
 	docker push cosmwasm/go-ext-builder:$(DOCKER_TAG)-alpine
 
 # and use them to compile release builds
+.PHONY: release
 release:
 	rm -rf target/release
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(DOCKER_TAG)-cross
 	rm -rf target/release
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(DOCKER_TAG)-centos7
 
+.PHONY: test-alpine
 test-alpine:
 	# build the muslc *.a file
 	rm -rf target/release/examples
@@ -144,7 +158,7 @@ test-alpine:
 
 .PHONY: clean
 clean:
-	rm -rf lib $(Enclave_EDL_Products) *.o *.so
+	rm -rf lib $(Enclave_EDL_Products) *.o *.so *.h
 	cargo clean
 
 .PHONY: clean-all

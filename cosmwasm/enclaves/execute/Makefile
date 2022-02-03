@@ -110,6 +110,7 @@ enclave: ffi-types librust_cosmwasm_enclave.signed.so
 .PHONY: ffi-types
 ffi-types:
 	cd ../ffi-types && cargo check --features "build_headers"
+	cp ../target/headers/enclave-ffi-types.h ./
 
 .PHONY: build-protobuf
 build-protobuf:
@@ -141,5 +142,5 @@ clippy:
 	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo clippy --features "$(FEATURES)" --target x86_64-unknown-linux-sgx -- -D warnings
 
 clean:
-	rm -rf $(CUSTOM_LIBRARY_PATH) $(Enclave_EDL_Products) *.o *.so
+	rm -rf $(CUSTOM_LIBRARY_PATH) $(Enclave_EDL_Products) *.o *.so *.h
 	xargo clean
