@@ -5,7 +5,7 @@ SGX_COMMON_CFLAGS += -fstack-protector
 App_Include_Paths := -I./ -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
-Enclave_Path := ../wasmi-runtime
+Enclave_Path := ../execute
 
 .PHONY: check
 check:

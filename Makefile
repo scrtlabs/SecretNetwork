@@ -326,7 +326,7 @@ go-tests-hw: build-test-contract
 # test debugging process in general.
 .PHONY: enclave-tests
 enclave-tests:
-	$(MAKE) -C cosmwasm/packages/enclave-test run
+	$(MAKE) -C cosmwasm/enclaves/test run
 
 build-all-test-contracts: build-test-contract
 	# echo "" | sudo add-apt-repository ppa:hnakamur/binaryen

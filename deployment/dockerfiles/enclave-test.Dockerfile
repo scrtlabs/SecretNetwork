@@ -16,8 +16,8 @@ WORKDIR /enclave-test/
 COPY third_party/build third_party/build
 COPY cosmwasm/ cosmwasm/
 COPY Makefile Makefile
-COPY api_key.txt /enclave-test/cosmwasm/packages/wasmi-runtime/
-COPY spid.txt /enclave-test/cosmwasm/packages/wasmi-runtime/
+COPY api_key.txt /enclave-test/cosmwasm/enclaves/execute/
+COPY spid.txt /enclave-test/enclaves/execute/
 
 RUN make vendor
 
