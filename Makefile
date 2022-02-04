@@ -129,8 +129,8 @@ build-linux: _build-linux build_local_no_rust build_cli
 _build-linux: vendor
 	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES=$(FEATURES) FEATURES_U=$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
 
-build-linux-with-query: _build-linux build_local_no_rust build_cli
-_build-linux: vendor
+build-linux-with-query: _build-linux-with-query build_local_no_rust build_cli
+_build-linux-with-query: vendor
 	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES=$(FEATURES) FEATURES_U=query-enclave,$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
 
 build_windows_cli:
