@@ -1,5 +1,6 @@
 // #![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
 
+#[cfg(feature = "SGX_MODE_HW")]
 use log::*;
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -10,61 +11,56 @@ use sgx_rand::{os, Rng};
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_tse::{rsgx_create_report, rsgx_verify_report};
 
-use sgx_tcrypto::{rsgx_sha256_slice, SgxEccHandle};
+#[cfg(feature = "SGX_MODE_HW")]
+use sgx_tcrypto::rsgx_sha256_slice;
+use sgx_tcrypto::SgxEccHandle;
 
-#[cfg(not(feature = "SGX_MODE_HW"))]
-use sgx_types::{sgx_create_report, SgxResult};
+#[cfg(feature = "SGX_MODE_HW")]
+use sgx_types::{c_int, sgx_spid_t};
 
+use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
+
+#[cfg(feature = "SGX_MODE_HW")]
 use sgx_types::{
-    c_int, sgx_quote_sign_type_t, sgx_report_data_t, sgx_report_t, sgx_spid_t, sgx_status_t,
-    sgx_target_info_t,
+    sgx_epid_group_id_t, sgx_quote_nonce_t, sgx_report_data_t, sgx_report_t, sgx_target_info_t,
+};
+
+use std::vec::Vec;
+#[cfg(feature = "SGX_MODE_HW")]
+use std::{
+    io::{Read, Write},
+    net::TcpStream,
+    ptr, str,
+    string::String,
+    sync::Arc,
 };
 
 #[cfg(feature = "SGX_MODE_HW")]
-use sgx_types::{sgx_epid_group_id_t, sgx_quote_nonce_t};
-
-use std::io::Read;
-use std::str;
-use std::string::String;
-use std::vec::Vec;
-
-#[cfg(feature = "SGX_MODE_HW")]
-use std::io::Write;
-#[cfg(feature = "SGX_MODE_HW")]
-use std::net::TcpStream;
-#[cfg(feature = "SGX_MODE_HW")]
-use std::ptr;
-#[cfg(feature = "SGX_MODE_HW")]
-use std::sync::Arc;
-
+use enclave_crypto::consts::{SigningMethod, SIGNING_METHOD};
 use enclave_crypto::KeyPair;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use super::ocalls::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote};
 
-use super::hex;
-use super::report::EndorsedAttestationReport;
-use enclave_crypto::consts::{SigningMethod, SIGNING_METHOD};
+#[cfg(feature = "SGX_MODE_HW")]
+use super::{hex, report::EndorsedAttestationReport};
 
+#[cfg(feature = "SGX_MODE_HW")]
 pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
 
-#[cfg(feature = "production")]
+#[cfg(feature = "SGX_MODE_HW")]
 pub const SIGRL_SUFFIX: &str = "/sgx/attestation/v4/sigrl/";
-#[cfg(feature = "production")]
+#[cfg(feature = "SGX_MODE_HW")]
 pub const REPORT_SUFFIX: &str = "/sgx/attestation/v4/report";
 
-#[cfg(not(feature = "production"))]
-pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v4/sigrl/";
-#[cfg(not(feature = "production"))]
-pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
-
-// extra_data size that will store the public key of the attesting node
+/// extra_data size that will store the public key of the attesting node
+#[cfg(feature = "SGX_MODE_HW")]
 const REPORT_DATA_SIZE: usize = 32;
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
 pub fn create_attestation_certificate(
     kp: &KeyPair,
-    sign_type: sgx_quote_sign_type_t,
+    _sign_type: sgx_quote_sign_type_t,
     _spid: &[u8],
     _api_key: &[u8],
 ) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
@@ -85,41 +81,41 @@ pub fn create_attestation_certificate(
     Ok((key_der, cert_der))
 }
 
-#[cfg(not(feature = "SGX_MODE_HW"))]
-pub fn create_report_with_data(
-    target_info: &sgx_target_info_t,
-    out_report: &mut sgx_report_t,
-    extra_data: &[u8],
-) -> sgx_status_t {
-    let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
-    // secret data to be attached with the report.
-    // if extra_data.len() > REPORT_DATA_SIZE {
-    //     return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
-    // }
-    // report_data.d[..extra_data.len()].copy_from_slice(extra_data);
-    let mut report = sgx_report_t::default();
-    let ret = unsafe {
-        sgx_create_report(
-            target_info as *const sgx_target_info_t,
-            &report_data as *const sgx_report_data_t,
-            &mut report as *mut sgx_report_t,
-        )
-    };
-    let result = match ret {
-        sgx_status_t::SGX_SUCCESS => Ok(report),
-        _ => Err(ret),
-    };
-    match result {
-        Ok(r) => {
-            *out_report = r;
-            sgx_status_t::SGX_SUCCESS
-        }
-        Err(err) => {
-            // println!("[-] Enclave: error creating report");
-            err
-        }
-    }
-}
+// #[cfg(not(feature = "SGX_MODE_HW"))]
+// pub fn create_report_with_data(
+//     target_info: &sgx_target_info_t,
+//     out_report: &mut sgx_report_t,
+//     // extra_data: &[u8],
+// ) -> sgx_status_t {
+//     let report_data: sgx_report_data_t = sgx_report_data_t::default();
+//     // secret data to be attached with the report.
+//     // if extra_data.len() > REPORT_DATA_SIZE {
+//     //     return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+//     // }
+//     // report_data.d[..extra_data.len()].copy_from_slice(extra_data);
+//     let mut report = sgx_report_t::default();
+//     let ret = unsafe {
+//         sgx_create_report(
+//             target_info as *const sgx_target_info_t,
+//             &report_data as *const sgx_report_data_t,
+//             &mut report as *mut sgx_report_t,
+//         )
+//     };
+//     let result = match ret {
+//         sgx_status_t::SGX_SUCCESS => Ok(report),
+//         _ => Err(ret),
+//     };
+//     match result {
+//         Ok(r) => {
+//             *out_report = r;
+//             sgx_status_t::SGX_SUCCESS
+//         }
+//         Err(err) => {
+//             // println!("[-] Enclave: error creating report");
+//             err
+//         }
+//     }
+// }
 
 // todo: add public/private key handling pub_k: &sgx_ec256_public_t,
 #[cfg(feature = "SGX_MODE_HW")]
