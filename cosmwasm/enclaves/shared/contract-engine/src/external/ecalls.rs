@@ -23,12 +23,16 @@ lazy_static! {
     static ref ECALL_ALLOCATE_STACK: SgxMutex<Vec<EnclaveBuffer>> = SgxMutex::new(Vec::new());
 }
 
+/// # Safety
+/// Always use protection
 #[cfg(not(feature = "query-only"))]
 #[no_mangle]
 pub unsafe extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
     ecall_allocate_impl(buffer, length)
 }
 
+/// # Safety
+/// Always use protection
 #[cfg(feature = "query-only")]
 #[no_mangle]
 pub unsafe extern "C" fn ecall_allocate_qe(buffer: *const u8, length: usize) -> EnclaveBuffer {
@@ -83,12 +87,16 @@ unsafe fn ecall_allocate_impl(buffer: *const u8, length: usize) -> EnclaveBuffer
 #[derive(Debug, PartialEq)]
 pub struct BufferRecoveryError;
 
+/// # Safety
+/// Always use protection
 #[cfg(not(feature = "query-only"))]
 #[no_mangle]
 pub unsafe extern "C" fn ecall_configure_runtime(config: RuntimeConfiguration) -> sgx_status_t {
     ecall_configure_runtime_impl(config)
 }
 
+/// # Safety
+/// Always use protection
 #[cfg(feature = "query-only")]
 #[no_mangle]
 pub unsafe extern "C" fn ecall_configure_runtime_qe(config: RuntimeConfiguration) -> sgx_status_t {
@@ -306,6 +314,8 @@ pub unsafe extern "C" fn ecall_handle(
     }
 }
 
+/// # Safety
+/// Always use protection
 #[cfg(not(feature = "query-only"))]
 #[no_mangle]
 pub unsafe extern "C" fn ecall_query(
@@ -332,6 +342,8 @@ pub unsafe extern "C" fn ecall_query(
     )
 }
 
+/// # Safety
+/// Always use protection
 #[cfg(feature = "query-only")]
 #[no_mangle]
 pub unsafe extern "C" fn ecall_query_qe(
@@ -360,6 +372,7 @@ pub unsafe extern "C" fn ecall_query_qe(
 
 /// # Safety
 /// Always use protection
+#[allow(clippy::too_many_arguments)]
 unsafe fn ecall_query_impl(
     context: Ctx,
     gas_limit: u64,
