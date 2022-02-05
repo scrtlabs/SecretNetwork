@@ -72,13 +72,16 @@ fn set_log_level_or_default(default: LevelFilter, max_level: LevelFilter) {
 
 #[cfg(feature = "test")]
 pub mod logging_tests {
-    use crate::{count_failures, set_log_level_or_default};
-    use ctor::*;
-    use lazy_static::lazy_static;
-    use log::*;
-    use log::{Metadata, Record};
     use std::sync::SgxMutex;
     use std::{env, panic};
+
+    use log::*;
+    // use log::{Metadata, Record};
+
+    use ctor::*;
+    use lazy_static::lazy_static;
+
+    use crate::{count_failures, set_log_level_or_default};
 
     lazy_static! {
         static ref LOG_BUF: SgxMutex<Vec<String>> = SgxMutex::new(Vec::new());

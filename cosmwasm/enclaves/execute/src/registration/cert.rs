@@ -426,13 +426,16 @@ pub fn verify_quote_status(
 
 #[cfg(feature = "test")]
 pub mod tests {
-    use crate::crypto::KeyPair;
-
-    use super::verify_ra_cert;
-    use crate::registration::report::AttestationReport;
-    use enclave_ffi_types::NodeAuthResult;
     use std::io::Read;
     use std::untrusted::fs::File;
+
+    use enclave_ffi_types::NodeAuthResult;
+
+    use enclave_crypto::KeyPair;
+
+    use crate::registration::report::AttestationReport;
+
+    use super::verify_ra_cert;
 
     #[cfg(feature = "SGX_MODE_HW")]
     fn tls_ra_cert_der_out_of_date() -> Vec<u8> {

@@ -15,7 +15,6 @@ SGX_MODE_SW = []
 SGX_MODE_HW = []
 production = ["SGX_MODE_HW", "log/max_level_warn", "log/release_max_level_warn"]
 debug-print = []
-test = []
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
 # We always compile to the "sgx" target, so this will always be false.

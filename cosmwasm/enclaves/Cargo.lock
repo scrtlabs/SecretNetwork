@@ -903,6 +903,7 @@ dependencies = [
  "derive_more",
  "enclave-ffi-types",
  "enclave_contract_engine",
+ "enclave_cosmos_types",
  "enclave_crypto",
  "enclave_utils",
  "hex",

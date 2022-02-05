@@ -15,7 +15,7 @@ SGX_MODE_SW = []
 SGX_MODE_HW = []
 production = ["SGX_MODE_HW", "log/max_level_warn", "log/release_max_level_warn"]
 debug-print = []
-test = []
+test = ["enclave_contract_engine/test", "enclave_cosmos_types/test"]
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
 # We always compile to the "sgx" target, so this will always be false.
@@ -36,6 +36,7 @@ enclave-ffi-types = { path = "../ffi-types" }
 enclave_contract_engine = { path = "../shared/contract-engine" }
 enclave_crypto = { path = "../shared/crypto" }
 enclave_utils = { path = "../shared/utils" }
+enclave_cosmos_types = { path = "../shared/cosmos-types", optional = true }
 
 serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
   "derive"

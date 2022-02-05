@@ -303,4 +303,33 @@ pub mod tests {
     //     );
     //     assert_eq!(KEY_MANAGER.get_consensus_state_ikm().unwrap(), seed);
     // }
+
+    // use crate::crypto::{AESKey, SIVEncryptable, Seed, KEY_MANAGER};
+    // // This is commented out because it's trying to modify KEY_MANAGER which is immutable.
+    // // todo: fix test vectors to actually work
+    // pub fn test_msg_decrypt() {
+    //     let seed = Seed::new().unwrap();
+    //
+    //     KEY_MANAGER
+    //         .set_consensus_seed(seed)
+    //         .expect("Failed to set seed");
+    //
+    //     let nonce = [0u8; 32];
+    //     let user_public_key = [0u8; 32];
+    //
+    //     let msg = "{\"ok\": \"{\"balance\": \"108\"}\"}";
+    //     let key = calc_encryption_key(&nonce, &user_public_key);
+    //
+    //     let encrypted_msg = key.encrypt_siv(msg.as_bytes(), &[&[]]);
+    //
+    //     let secret_msg = SecretMessage {
+    //         nonce,
+    //         user_public_key,
+    //         msg: encrypted_msg,
+    //     };
+    //
+    //     let decrypted_msg = secret_msg.decrypt()?;
+    //
+    //     assert_eq!(decrypted_msg, msg)
+    // }
 }

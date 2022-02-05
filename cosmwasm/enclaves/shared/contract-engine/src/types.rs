@@ -103,3 +103,30 @@ impl SecretMessage {
         packed_msg
     }
 }
+
+#[cfg(feature = "test")]
+pub mod tests {
+    use super::*;
+    // use crate::crypto::{AESKey, SIVEncryptable, Seed, KEY_MANAGER};
+
+    // todo: fix test vectors to actually work
+    pub fn test_new_from_slice() {
+        let nonce = [0u8; 32];
+        let user_public_key = [0u8; 32];
+        let msg = "{\"ok\": \"{\"balance\": \"108\"}\"}";
+
+        let mut slice = nonce.to_vec();
+        slice.extend_from_slice(&user_public_key);
+        slice.extend_from_slice(msg.as_bytes());
+
+        let secret_msg = SecretMessage {
+            nonce,
+            user_public_key,
+            msg: msg.as_bytes().to_vec(),
+        };
+
+        let msg_from_slice = SecretMessage::from_slice(&slice).unwrap();
+
+        assert_eq!(secret_msg, msg_from_slice);
+    }
+}

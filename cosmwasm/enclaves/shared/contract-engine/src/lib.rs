@@ -21,8 +21,25 @@ pub use contract_operations::{handle, init, query};
 
 #[cfg(feature = "test")]
 pub mod tests {
-    use super::*;
-    use crate::count_failures;
+    use crate::types;
+
+    /// Catch failures like the standard test runner, and print similar information per test.
+    /// Tests can only fail by panicking, not by returning a `Result` type.
+    #[macro_export]
+    macro_rules! count_failures {
+        ( $counter: ident, { $($test: expr;)* } ) => {
+            $(
+                print!("test {} ... ", std::stringify!($test));
+                match std::panic::catch_unwind(|| $test) {
+                    Ok(_) => println!("ok"),
+                    Err(_) => {
+                        $counter += 1;
+                        println!("FAILED");
+                    }
+                }
+            )*
+        }
+    }
 
     pub fn run_tests() {
         println!();
@@ -30,7 +47,6 @@ pub mod tests {
 
         count_failures!(failures, {
             types::tests::test_new_from_slice();
-            // types::tests::test_msg_decrypt();
         });
 
         if failures != 0 {

@@ -32,8 +32,8 @@ mod test {
         let mut failures = 0;
 
         count_failures!(failures, {
-            crate::crypto::tests::run_tests();
-            crate::wasm::tests::run_tests();
+            enclave_contract_engine::tests::run_tests();
+            enclave_cosmos_types::tests::run_tests();
             crate::registration::tests::run_tests();
             crate::logging_tests::run_tests();
 
