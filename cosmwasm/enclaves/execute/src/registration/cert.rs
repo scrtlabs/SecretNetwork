@@ -440,10 +440,9 @@ pub mod tests {
     #[cfg(feature = "SGX_MODE_HW")]
     fn tls_ra_cert_der_out_of_date() -> Vec<u8> {
         let mut cert = vec![];
-        let mut f = File::open(
-            "../wasmi-runtime/src/registration/fixtures/attestation_cert_out_of_date.der",
-        )
-        .unwrap();
+        let mut f =
+            File::open("../execute/src/registration/fixtures/attestation_cert_out_of_date.der")
+                .unwrap();
         f.read_to_end(&mut cert).unwrap();
 
         cert
@@ -452,7 +451,7 @@ pub mod tests {
     fn tls_ra_cert_der_sw_config_needed() -> Vec<u8> {
         let mut cert = vec![];
         let mut f = File::open(
-            "../wasmi-runtime/src/registration/fixtures/attestation_cert_sw_config_needed.der",
+            "../execute/src/registration/fixtures/attestation_cert_sw_config_needed.der",
         )
         .unwrap();
         f.read_to_end(&mut cert).unwrap();
@@ -463,8 +462,8 @@ pub mod tests {
     #[cfg(feature = "SGX_MODE_HW")]
     fn tls_ra_cert_der_valid() -> Vec<u8> {
         let mut cert = vec![];
-        let mut f = File::open("../wasmi-runtime/src/registration/fixtures/attestation_cert_hw_v2")
-            .unwrap();
+        let mut f =
+            File::open("../execute/src/registration/fixtures/attestation_cert_hw_v2").unwrap();
         f.read_to_end(&mut cert).unwrap();
 
         cert
@@ -473,8 +472,7 @@ pub mod tests {
     #[cfg(not(feature = "SGX_MODE_HW"))]
     fn tls_ra_cert_der_valid() -> Vec<u8> {
         let mut cert = vec![];
-        let mut f =
-            File::open("../wasmi-runtime/src/registration/fixtures/attestation_cert_sw").unwrap();
+        let mut f = File::open("../execute/src/registration/fixtures/attestation_cert_sw").unwrap();
         f.read_to_end(&mut cert).unwrap();
 
         cert
