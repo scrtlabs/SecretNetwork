@@ -218,13 +218,8 @@ where
             .ok_or_else(Self::busy_enclave_err)?;
         let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
 
-        #[cfg(not(feature = "query-enclave"))]
-        let ecall_query = imports::ecall_query;
-        #[cfg(feature = "query-enclave")]
-        let ecall_query = imports::ecall_query;
-
         let status = unsafe {
-            ecall_query(
+            imports::ecall_query(
                 // TODO use the _qe variant
                 enclave.geteid(),
                 query_result.as_mut_ptr(),
