@@ -4,7 +4,9 @@ use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 
-use crate::enclave::QUERY_DOORBELL;
+use crate::enclave::ENCLAVE_DOORBELL;
+#[cfg(feature = "query-enclave")]
+use crate::enclave::QUERY_ENCLAVE_DOORBELL;
 use crate::errors::{EnclaveError, VmResult};
 use crate::{Querier, Storage, VmError};
 
@@ -103,7 +105,7 @@ where
 
         // Bind the token to a local variable to ensure its
         // destructor runs in the end of the function
-        let enclave_access_token = QUERY_DOORBELL
+        let enclave_access_token = ENCLAVE_DOORBELL
             .get_access(false) // This can never be recursive
             .ok_or_else(Self::busy_enclave_err)?;
         let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
@@ -155,7 +157,7 @@ where
 
         // Bind the token to a local variable to ensure its
         // destructor runs in the end of the function
-        let enclave_access_token = QUERY_DOORBELL
+        let enclave_access_token = ENCLAVE_DOORBELL
             .get_access(false) // This can never be recursive
             .ok_or_else(Self::busy_enclave_err)?;
         let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
@@ -204,9 +206,14 @@ where
         let mut query_result = MaybeUninit::<QueryResult>::uninit();
         let mut used_gas = 0_u64;
 
+        #[cfg(not(feature = "query-enclave"))]
+        let doorbell = &ENCLAVE_DOORBELL;
+        #[cfg(feature = "query-enclave")]
+        let doorbell = &QUERY_ENCLAVE_DOORBELL;
+
         // Bind the token to a local variable to ensure its
         // destructor runs in the end of the function
-        let enclave_access_token = QUERY_DOORBELL
+        let enclave_access_token = doorbell
             .get_access(is_query_recursive(env)?)
             .ok_or_else(Self::busy_enclave_err)?;
         let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;

@@ -11,15 +11,13 @@ use lazy_static::lazy_static;
 use log::*;
 use parking_lot::{Condvar, Mutex};
 
-static ENCLAVE_FILE: &str = "librust_cosmwasm_enclave.signed.so";
-
 #[cfg(feature = "production")]
 const ENCLAVE_DEBUG: i32 = 0;
 
 #[cfg(not(feature = "production"))]
 const ENCLAVE_DEBUG: i32 = 1;
 
-fn init_enclave() -> SgxResult<SgxEnclave> {
+fn init_enclave(enclave_file: &str) -> SgxResult<SgxEnclave> {
     let mut launch_token: sgx_launch_token_t = [0; 1024];
     let mut launch_token_updated: i32 = 0;
     // call sgx_create_enclave to initialize an enclave instance
@@ -42,7 +40,7 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
         "/usr/local/lib",
     ];
     for dir in dirs.iter() {
-        let candidate = Path::new(dir).join(ENCLAVE_FILE);
+        let candidate = Path::new(dir).join(enclave_file);
         trace!("Looking for the enclave file in {:?}", candidate.to_str());
         if candidate.exists() {
             enclave_file_path = Some(candidate);
@@ -53,7 +51,7 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
     let enclave_file_path = enclave_file_path.ok_or_else(|| {
         warn!(
             "Cannot find the enclave file. Try pointing the SCRT_ENCLAVE_DIR environment variable to the directory that has {:?}",
-            ENCLAVE_FILE
+            enclave_file
         );
         sgx_status_t::SGX_ERROR_INVALID_ENCLAVE
     })?;
@@ -67,12 +65,20 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
     )
 }
 
+static ENCLAVE_FILE: &str = "librust_cosmwasm_enclave.signed.so";
+#[cfg(feature = "query-enclave")]
+static QUERY_ENCLAVE_FILE: &str = "librust_cosmwasm_query_enclave.signed.so";
 /// This const determines how many seconds we wait when trying to get access to the enclave
 /// before giving up.
 const ENCLAVE_LOCK_TIMEOUT: u64 = 6 * 5;
 const TCS_NUM: u8 = 8;
 lazy_static! {
-    pub static ref QUERY_DOORBELL: EnclaveDoorbell = EnclaveDoorbell::new(TCS_NUM);
+    pub static ref ENCLAVE_DOORBELL: EnclaveDoorbell = EnclaveDoorbell::new(ENCLAVE_FILE, TCS_NUM);
+}
+#[cfg(feature = "query-enclave")]
+lazy_static! {
+    pub static ref QUERY_ENCLAVE_DOORBELL: EnclaveDoorbell =
+        EnclaveDoorbell::new(QUERY_ENCLAVE_FILE, TCS_NUM);
 }
 
 /// This struct manages the access to the enclave.
@@ -91,9 +97,9 @@ pub struct EnclaveDoorbell {
 }
 
 impl EnclaveDoorbell {
-    fn new(count: u8) -> Self {
+    fn new(enclave_file: &str, count: u8) -> Self {
         Self {
-            enclave: init_enclave(),
+            enclave: init_enclave(enclave_file),
             condvar: Condvar::new(),
             count: Mutex::new(count),
         }

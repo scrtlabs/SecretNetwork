@@ -5,7 +5,7 @@ use sgx_types::{sgx_enclave_id_t, sgx_status_t, SgxResult};
 
 use enclave_ffi_types::RuntimeConfiguration;
 
-use crate::enclave::QUERY_DOORBELL;
+use crate::enclave::ENCLAVE_DOORBELL;
 
 #[allow(clippy::mutex_atomic)]
 lazy_static! {
@@ -52,7 +52,7 @@ pub fn configure_enclave(config: EnclaveRuntimeConfig) -> SgxResult<()> {
 
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
-    let enclave_access_token = QUERY_DOORBELL
+    let enclave_access_token = ENCLAVE_DOORBELL
         .get_access(false) // This can never be recursive
         .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
     let enclave = (*enclave_access_token)?;
@@ -72,6 +72,15 @@ pub fn configure_enclave(config: EnclaveRuntimeConfig) -> SgxResult<()> {
 
     #[cfg(feature = "query-enclave")]
     {
+        use crate::enclave::QUERY_ENCLAVE_DOORBELL;
+
+        // Bind the token to a local variable to ensure its
+        // destructor runs in the end of the function
+        let enclave_access_token = QUERY_ENCLAVE_DOORBELL
+            .get_access(false) // This can never be recursive
+            .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+        let enclave = (*enclave_access_token)?;
+
         let status = unsafe {
             ecall_configure_runtime_qe(enclave.geteid(), &mut retval, config.to_ffi_type())
         };

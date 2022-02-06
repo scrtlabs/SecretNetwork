@@ -9,7 +9,7 @@ use sgx_types::{sgx_status_t, SgxResult};
 
 use enclave_ffi_types::{NodeAuthResult, ENCRYPTED_SEED_SIZE};
 
-use crate::enclave::QUERY_DOORBELL;
+use crate::enclave::ENCLAVE_DOORBELL;
 
 extern "C" {
     pub fn ecall_get_attestation_report(
@@ -129,7 +129,7 @@ pub extern "C" fn ocall_get_update_info(
 pub fn create_attestation_report_u(spid: &[u8], api_key: &[u8]) -> SgxResult<()> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
-    let enclave_access_token = QUERY_DOORBELL
+    let enclave_access_token = ENCLAVE_DOORBELL
         .get_access(false) // This can never be recursive
         .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
     let enclave = (*enclave_access_token)?;
@@ -163,7 +163,7 @@ pub fn untrusted_get_encrypted_seed(
 ) -> SgxResult<Result<[u8; ENCRYPTED_SEED_SIZE], NodeAuthResult>> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
-    let enclave_access_token = QUERY_DOORBELL
+    let enclave_access_token = ENCLAVE_DOORBELL
         .get_access(false) // This can never be recursive
         .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
     let enclave = (*enclave_access_token)?;

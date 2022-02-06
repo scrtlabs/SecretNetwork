@@ -6,7 +6,7 @@ use sgx_types::{sgx_enclave_id_t, sgx_status_t, SgxResult};
 
 use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
 
-use crate::enclave::QUERY_DOORBELL;
+use crate::enclave::ENCLAVE_DOORBELL;
 
 extern "C" {
     /// Copy a buffer into the enclave memory space, and receive an opaque pointer to it.
@@ -121,7 +121,7 @@ pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> SgxResult<EnclaveBuffer>
 
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
-    let enclave_access_token = QUERY_DOORBELL
+    let enclave_access_token = ENCLAVE_DOORBELL
         // This is always called from an ocall contxt
         .get_access(true)
         .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
@@ -146,13 +146,15 @@ pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> SgxResult<EnclaveBuffer>
 /// This is a safe wrapper for allocating buffers inside the query enclave.
 #[cfg(feature = "query-enclave")]
 pub(super) fn allocate_enclave_buffer_qe(buffer: &[u8]) -> SgxResult<EnclaveBuffer> {
+    use crate::enclave::QUERY_ENCLAVE_DOORBELL;
+
     let ptr = buffer.as_ptr();
     let len = buffer.len();
     let mut enclave_buffer = EnclaveBuffer::default();
 
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
-    let enclave_access_token = QUERY_DOORBELL
+    let enclave_access_token = QUERY_ENCLAVE_DOORBELL
         // This is always called from an ocall contxt
         .get_access(true)
         .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
