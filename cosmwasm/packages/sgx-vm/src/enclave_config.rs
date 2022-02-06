@@ -21,7 +21,7 @@ extern "C" {
     ) -> sgx_status_t;
 }
 
-#[cfg(feature = "query-enclave")]
+#[cfg(feature = "query-node")]
 extern "C" {
     pub fn ecall_configure_runtime_qe(
         eid: sgx_enclave_id_t,
@@ -70,7 +70,7 @@ pub fn configure_enclave(config: EnclaveRuntimeConfig) -> SgxResult<()> {
         return Err(retval);
     }
 
-    #[cfg(feature = "query-enclave")]
+    #[cfg(feature = "query-node")]
     {
         use crate::enclave::QUERY_ENCLAVE_DOORBELL;
 

@@ -14,7 +14,7 @@ pub extern "C" fn ocall_allocate(buffer: *const u8, length: usize) -> UserSpaceB
     ocall_allocate_impl(buffer, length)
 }
 
-#[cfg(feature = "query-enclave")]
+#[cfg(feature = "query-node")]
 #[no_mangle]
 pub extern "C" fn ocall_allocate_qe(buffer: *const u8, length: usize) -> UserSpaceBuffer {
     ocall_allocate_impl(buffer, length)
@@ -60,7 +60,7 @@ pub extern "C" fn ocall_read_db(
     )
 }
 
-#[cfg(feature = "query-enclave")]
+#[cfg(feature = "query-node")]
 #[no_mangle]
 pub extern "C" fn ocall_read_db_qe(
     context: Ctx,
@@ -146,7 +146,7 @@ pub extern "C" fn ocall_query_chain(
     )
 }
 
-#[cfg(feature = "query-enclave")]
+#[cfg(feature = "query-node")]
 #[no_mangle]
 pub extern "C" fn ocall_query_chain_qe(
     context: Ctx,

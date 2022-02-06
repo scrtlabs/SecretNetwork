@@ -52,7 +52,7 @@ extern "C" {
     ) -> sgx_status_t;
 }
 
-#[cfg(not(feature = "query-enclave"))]
+#[cfg(not(feature = "query-node"))]
 extern "C" {
     /// Trigger a query method in a wasm contract
     pub fn ecall_query(
@@ -70,7 +70,7 @@ extern "C" {
     ) -> sgx_status_t;
 }
 
-#[cfg(feature = "query-enclave")]
+#[cfg(feature = "query-node")]
 extern "C" {
     /// Copy a buffer into the enclave memory space, and receive an opaque pointer to it.
     pub fn ecall_allocate_qe(
@@ -97,7 +97,7 @@ extern "C" {
 }
 
 /// Alias for ecall_query_qe
-#[cfg(feature = "query-enclave")]
+#[cfg(feature = "query-node")]
 #[allow(non_upper_case_globals)]
 pub const ecall_query: unsafe extern "C" fn(
     eid: sgx_enclave_id_t,
@@ -144,7 +144,7 @@ pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> SgxResult<EnclaveBuffer>
 }
 
 /// This is a safe wrapper for allocating buffers inside the query enclave.
-#[cfg(feature = "query-enclave")]
+#[cfg(feature = "query-node")]
 pub(super) fn allocate_enclave_buffer_qe(buffer: &[u8]) -> SgxResult<EnclaveBuffer> {
     use crate::enclave::QUERY_ENCLAVE_DOORBELL;
 

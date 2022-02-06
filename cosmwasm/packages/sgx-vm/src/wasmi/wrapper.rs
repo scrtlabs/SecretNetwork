@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 
 use crate::enclave::ENCLAVE_DOORBELL;
-#[cfg(feature = "query-enclave")]
+#[cfg(feature = "query-node")]
 use crate::enclave::QUERY_ENCLAVE_DOORBELL;
 use crate::errors::{EnclaveError, VmResult};
 use crate::{Querier, Storage, VmError};
@@ -206,9 +206,9 @@ where
         let mut query_result = MaybeUninit::<QueryResult>::uninit();
         let mut used_gas = 0_u64;
 
-        #[cfg(not(feature = "query-enclave"))]
+        #[cfg(not(feature = "query-node"))]
         let doorbell = &ENCLAVE_DOORBELL;
-        #[cfg(feature = "query-enclave")]
+        #[cfg(feature = "query-node")]
         let doorbell = &QUERY_ENCLAVE_DOORBELL;
 
         // Bind the token to a local variable to ensure its

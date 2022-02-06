@@ -131,7 +131,7 @@ _build-linux: vendor
 
 build-linux-with-query: _build-linux-with-query build_local_no_rust build_cli
 _build-linux-with-query: vendor
-	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES=$(FEATURES) FEATURES_U=query-enclave,$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
+	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES=$(FEATURES) FEATURES_U=query-node,$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
 
 build_windows_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
@@ -250,7 +250,7 @@ build-mainnet:
 docker_base:
 	docker build \
 		--build-arg FEATURES=${FEATURES} \
-		--build-arg FEATURES_U=query-enclave,${FEATURES_U} \
+		--build-arg FEATURES_U=query-node,${FEATURES_U} \
 		--build-arg SGX_MODE=${SGX_MODE} \
 		-f deployment/dockerfiles/base.Dockerfile \
 		-t rust-go-base-image \
