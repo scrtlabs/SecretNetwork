@@ -73,7 +73,7 @@ func TestGovQueryProposals(t *testing.T) {
 	govQBz, err := json.Marshal(&queryReq)
 	require.NoError(t, err)
 
-	res, _, err := execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, defaultGasForTests, 0)
+	res, _, _, err := execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, defaultGasForTests, 0)
 	require.Empty(t, err)
 
 	require.Equal(t, uint64(0), binary.BigEndian.Uint64(res))
@@ -91,7 +91,7 @@ func TestGovQueryProposals(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, votingStarted)
 
-	res, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, defaultGasForTests, 0)
+	res, _, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, defaultGasForTests, 0)
 	require.Empty(t, err)
 	require.Equal(t, uint64(1), binary.BigEndian.Uint64(res))
 }
@@ -145,7 +145,7 @@ func TestGovVote(t *testing.T) {
 	require.True(t, ok)
 	require.True(t, ProposalEqual(proposal, gotProposal))
 
-	_, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, defaultGasForTests, 0)
+	_, _, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, defaultGasForTests, 0)
 	require.NotEmpty(t, err)
 	require.Equal(t, "encrypted: 1: inactive proposal", err.Error())
 
@@ -153,7 +153,7 @@ func TestGovVote(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, votingStarted)
 
-	_, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, defaultGasForTests, 0)
+	_, _, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, defaultGasForTests, 0)
 	require.Empty(t, err)
 
 	votes := govKeeper.GetAllVotes(ctx)

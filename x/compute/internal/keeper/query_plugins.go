@@ -49,7 +49,8 @@ func (q QueryHandler) Query(request wasmTypes.QueryRequest, gasLimit uint64) ([]
 		return q.Plugins.Staking(subctx, request.Staking)
 	}
 	if request.Wasm != nil {
-		return q.Plugins.Wasm(subctx, request.Wasm)
+		result, err := q.Plugins.Wasm(subctx, request.Wasm)
+		return result, err
 	}
 	if request.Dist != nil {
 		return q.Plugins.Dist(q.Ctx, request.Dist)
@@ -494,7 +495,13 @@ func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuer
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.Smart.ContractAddr)
 			}
-			return wasm.QuerySmart(ctx, addr, request.Smart.Msg, true)
+
+			// to help soft-forking.
+			if ctx.BlockHeight() > 0 {
+				return wasm.QuerySmart(ctx, addr, request.Smart.Msg, false)
+			} else {
+				return wasm.QuerySmart(ctx, addr, request.Smart.Msg, true)
+			}
 		}
 		if request.Raw != nil {
 			addr, err := sdk.AccAddressFromBech32(request.Raw.ContractAddr)
