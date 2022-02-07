@@ -49,8 +49,7 @@ func (q QueryHandler) Query(request wasmTypes.QueryRequest, gasLimit uint64) ([]
 		return q.Plugins.Staking(subctx, request.Staking)
 	}
 	if request.Wasm != nil {
-		result, err := q.Plugins.Wasm(subctx, request.Wasm)
-		return result, err
+		return q.Plugins.Wasm(subctx, request.Wasm)
 	}
 	if request.Dist != nil {
 		return q.Plugins.Dist(q.Ctx, request.Dist)
