@@ -2115,6 +2115,33 @@ func TestCodeHashExecCallExec(t *testing.T) {
 	})
 }
 
+// todo: enable after the upgrade to sdk 0.45x
+//func TestGasUsageForStoreKey(t *testing.T) {
+//	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+//
+//	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests)
+//	require.Empty(t, err)
+//
+//	t.Run("StoreDifferentKeySizes", func(t *testing.T) {
+//		_, _, gasUsedLong, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"store_really_long_key":{}}`, true, defaultGasForTests, 0)
+//		require.Empty(t, err)
+//
+//		_, _, gasUsedShort, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"store_really_short_key":{}}`, true, defaultGasForTests, 0)
+//		require.Empty(t, err)
+//
+//		_, _, gasUsedLongValue, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"store_really_long_value":{}}`, true, defaultGasForTests, 0)
+//		require.Empty(t, err)
+//
+//		require.Greater(t, gasUsedLong, gasUsedShort)
+//		println("Gas used value-key", gasUsedLongValue, gasUsedLong)
+//
+//		require.Equal(t, gasUsedLongValue, gasUsedLong)
+//
+//		println("Gas used long-short", gasUsedLong, gasUsedShort)
+//
+//	})
+//}
+
 func TestQueryGasPrice(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 

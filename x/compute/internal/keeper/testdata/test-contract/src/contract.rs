@@ -207,6 +207,7 @@ pub enum HandleMsg {
     },
     StoreReallyLongKey {},
     StoreReallyShortKey {},
+    StoreReallyLongValue {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -655,12 +656,17 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::StoreReallyLongKey {} => {
             let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
             store.set(REALLY_LONG, b"hello");
-            HandleResponse::default()
+            Ok(HandleResponse::default())
         }
         HandleMsg::StoreReallyShortKey {} => {
             let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
             store.set(b"a", b"hello");
-            HandleResponse::default()
+            Ok(HandleResponse::default())
+        }
+        HandleMsg::StoreReallyLongValue {} => {
+            let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
+            store.set(b"hello", REALLY_LONG);
+            Ok(HandleResponse::default())
         }
     }
 }
