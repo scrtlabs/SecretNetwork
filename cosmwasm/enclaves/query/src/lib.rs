@@ -5,30 +5,41 @@ extern crate sgx_tstd as std;
 extern crate sgx_types;
 
 use std::env;
+use std::sync::SgxMutex;
+use std::untrusted::fs::File;
 
 #[allow(unused_imports)]
 use ctor::*;
+use lazy_static::lazy_static;
 use log::LevelFilter;
 
 // Force linking to all the ecalls/ocalls in this package
 pub use enclave_contract_engine;
 
-use enclave_utils::logger::{SimpleLogger, LOG_LEVEL_ENV_VAR};
+use enclave_utils::logger::{FileLogger, LOG_LEVEL_ENV_VAR};
 
-#[allow(unused)]
-static LOGGER: SimpleLogger = SimpleLogger;
+lazy_static! {
+    static ref LOG_FILE: SgxMutex<File> = SgxMutex::new(
+        File::with_options()
+            .create(true)
+            .truncate(true)
+            .open("/opt/secret/query-enclave.log")
+            .expect("failed to open log file")
+    );
+    static ref LOGGER: FileLogger = FileLogger::new(&LOG_FILE);
+}
 
 #[cfg(all(feature = "production", feature = "SGX_MODE_HW"))]
 #[ctor]
 fn init_logger() {
-    log::set_logger(&LOGGER).unwrap(); // It's ok to panic at this stage. This shouldn't happen though
+    log::set_logger(&*LOGGER).unwrap(); // It's ok to panic at this stage. This shouldn't happen though
     set_log_level_or_default(LevelFilter::Error, LevelFilter::Warn);
 }
 
 #[cfg(all(not(feature = "production"), not(feature = "test")))]
 #[ctor]
 fn init_logger() {
-    log::set_logger(&LOGGER).unwrap(); // It's ok to panic at this stage. This shouldn't happen though
+    log::set_logger(&*LOGGER).unwrap(); // It's ok to panic at this stage. This shouldn't happen though
     set_log_level_or_default(LevelFilter::Trace, LevelFilter::Trace);
 }
 
