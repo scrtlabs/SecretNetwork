@@ -31,49 +31,47 @@ pub fn create_module_instance(
     contract_code: ContractCode,
     operation: ContractOperation,
 ) -> Result<ModuleRef, EnclaveError> {
-    let code_hash = contract_code.hash();
+    let cache = MODULE_CACHE.read().unwrap();
 
-    // Update the LRU cache as quickly as possible so it knows this was recently used
-    MODULE_CACHE.write().unwrap().get(&code_hash);
-
-    match get_module_instance(&code_hash) {
-        Some(Ok(module_ref)) => return Ok(module_ref),
-        None => {} // continue
-
-        // If the stored module failed to process for some reason, remove it.
-        // Shouldn't happen because we already compiled it before.
-        Some(Err(_)) => {
-            MODULE_CACHE.write().unwrap().pop(&code_hash);
-        }
+    // If the cache is disabled, don't try to use it and just compile the module.
+    if cache.cap() == 0 {
+        drop(cache);
+        let module = compile_module(contract_code.code(), operation)?;
+        let instance = create_instance(&module)?;
+        return Ok(instance);
     }
 
+    // Try to fetch a cached instance
+    let mut instance = None;
+    let instance_result = cache.peek(&contract_code.hash()).map(create_instance);
+    // If the stored module failed to create an instance for some reason, we try to create it again.
+    // It shouldn't happen because we already compiled it before.
+    if let Some(Ok(cached_instance)) = instance_result {
+        instance = Some(cached_instance)
+    }
+
+    drop(cache); // Release read lock
+
+    // If we couldn't find the instance in the cache, create it
+    let mut module = None;
+    if instance.is_none() {
+        let new_module = compile_module(contract_code.code(), operation)?;
+        let new_instance = create_instance(&new_module)?;
+        module = Some(new_module);
+        instance = Some(new_instance);
+    }
+    let instance = instance.unwrap(); // We definitely have a value here now
+
+    // If we created a new module in the previous step, insert it to the LRU cache
     let mut cache = MODULE_CACHE.write().unwrap();
-    match cache.get(&code_hash).map(create_instance) {
-        Some(Ok(module_ref)) => return Ok(module_ref),
-        None => {} // continue
-
-        // If the stored module failed to process for some reason, remove it.
-        // Shouldn't happen because we already compiled it before.
-        Some(Err(_)) => {
-            cache.pop(&code_hash);
-        }
+    if let Some(module) = module {
+        cache.put(contract_code.hash(), module);
+    } else {
+        // Touch the cache to update the LRU value
+        cache.get(&contract_code.hash());
     }
 
-    let module = compile_module(contract_code.code(), operation)?;
-    let instance = create_instance(&module)?;
-    cache.put(code_hash, module);
     Ok(instance)
-}
-
-// This is a separate function for scoping, so that we don't hold the read/write handle
-// for too long
-fn get_module_instance(code_hash: &[u8; HASH_SIZE]) -> Option<Result<ModuleRef, EnclaveError>> {
-    // Note that this peek doesn't update the LRU cache
-    MODULE_CACHE
-        .read()
-        .unwrap()
-        .peek(code_hash)
-        .map(create_instance)
 }
 
 // The compilation steps in this section are very expensive, and generate a
