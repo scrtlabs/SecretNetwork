@@ -300,7 +300,7 @@ impl WasmiApi for ContractInstance {
     /// A Region looks like { ptr: u32, len: u32 }
     #[cfg(feature = "query-only")]
     fn remove_db_index(&mut self, _state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
-        return Err(WasmEngineError::UnauthorizedWrite.into());
+        Err(WasmEngineError::UnauthorizedWrite.into())
     }
 
     /// Args:
@@ -343,7 +343,7 @@ impl WasmiApi for ContractInstance {
         _state_key_ptr_ptr: i32,
         _value_ptr_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        return Err(WasmEngineError::UnauthorizedWrite.into());
+        Err(WasmEngineError::UnauthorizedWrite.into())
     }
 
     /// Args:
