@@ -19,17 +19,41 @@ RUN wget -q https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.
     chmod +x /bin/wat2wasm /bin/wasm2wat && \
     rm -f wabt-1.0.20-ubuntu.tar.gz
 
+### Install rocksdb
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    libgflags-dev \
+    libsnappy-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    liblz4-dev \
+    libzstd-dev
+
+RUN git clone https://github.com/facebook/rocksdb.git
+
+WORKDIR rocksdb
+
+RUN git checkout v6.24.2
+RUN export CXXFLAGS='-Wno-error=deprecated-copy -Wno-error=pessimizing-move -Wno-error=class-memaccess'
+RUN make shared_lib -j 24
+RUN make install-shared INSTALL_PATH=/usr
+# rm -rf /tmp/rocksdb
 # Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 
 ARG BUILD_VERSION="v0.0.0"
 ARG SGX_MODE=SW
 ARG FEATURES
+ARG WITH_ROCKSDB
 
+ENV WITH_ROCKSDB=${WITH_ROCKSDB}
 ENV VERSION=${BUILD_VERSION}
 ENV SGX_MODE=${SGX_MODE}
 ENV FEATURES=${FEATURES}
 ENV MITIGATION_CVE_2020_0551=LOAD
+
+
 
 COPY third_party/build third_party/build
 

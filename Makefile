@@ -76,6 +76,9 @@ endif
 
 build_tags += $(IAS_BUILD)
 
+ifeq ($(WITH_ROCKSDB),yes)
+  build_tags += gcc
+endif
 ifeq ($(WITH_CLEVELDB),yes)
   build_tags += gcc
 endif
@@ -87,6 +90,15 @@ whitespace += $(whitespace)
 comma := ,
 build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 
+ifeq ($(WITH_CLEVELDB),yes)
+  ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=cleveldb
+endif
+ifeq ($(WITH_ROCKSDB),yes)
+  CGO_ENABLED=1
+  build_tags += rocksdb
+  ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=rocksdb
+endif
+
 ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=SecretNetwork \
 	-X github.com/cosmos/cosmos-sdk/version.AppName=secretd \
 	-X github.com/enigmampc/SecretNetwork/cmd/secretcli/version.ClientName=secretcli \
@@ -94,9 +106,8 @@ ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=SecretNetwork \
 	-X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
 	-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags)"
 
-ifeq ($(WITH_CLEVELDB),yes)
-  ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=cleveldb
-endif
+
+
 ldflags += -s -w
 ldflags += $(LDFLAGS)
 ldflags := $(strip $(ldflags))
@@ -233,7 +244,7 @@ build-testnet: docker_base
 	@mkdir build 2>&3 || true
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-testnet .
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-testnet .
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
+	docker build --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
 build-mainnet:
@@ -245,7 +256,7 @@ build-mainnet:
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
 docker_base:
-	docker build --build-arg FEATURES=${FEATURES} --build-arg SGX_MODE=${SGX_MODE} -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
+	docker build --build-arg WITH_ROCKSDB=${WITH_ROCKSDB} --build-arg FEATURES=${FEATURES} --build-arg SGX_MODE=${SGX_MODE} -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
 
 docker_bootstrap: docker_base
 	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/local-node.Dockerfile -t enigmampc/secret-network-bootstrap-${ext}:${DOCKER_TAG} .

@@ -23,7 +23,7 @@ require (
 	github.com/tendermint/tm-db v0.6.6
 	golang.org/x/crypto v0.0.0-20210915214749-c084706c2272
 	google.golang.org/genproto v0.0.0-20210917145530-b395a37504d4
-	google.golang.org/grpc v1.42.0
+	google.golang.org/grpc v1.43.0
 	google.golang.org/protobuf v1.27.1
 )
 
@@ -39,7 +39,7 @@ require (
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/coinbase/rosetta-sdk-go v0.6.10 // indirect
+	github.com/coinbase/rosetta-sdk-go v0.7.0 // indirect
 	github.com/confio/ics23/go v0.6.6 // indirect
 	github.com/cosmos/btcutil v1.0.4 // indirect
 	github.com/cosmos/go-bip39 v1.0.0 // indirect
@@ -121,8 +121,8 @@ require (
 )
 
 replace (
-	github.com/cosmos/cosmos-sdk v0.44.5 => github.com/scrtlabs/cosmos-sdk v0.44.6-0.20220110200351-5ce6e2f46056
+	github.com/cosmos/cosmos-sdk v0.44.5 => github.com/scrtlabs/cosmos-sdk v0.44.7-0.20220208193714-214a72279fd0
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/tecbot/gorocksdb => github.com/cosmos/gorocksdb v1.1.1
+	github.com/tecbot/gorocksdb => github.com/cosmos/gorocksdb v1.2.0
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
 )
