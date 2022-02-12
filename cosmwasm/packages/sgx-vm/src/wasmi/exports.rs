@@ -170,6 +170,7 @@ pub extern "C" fn ocall_query_chain_qe(
 }
 
 /// Read a key from the contracts key-value store.
+#[allow(clippy::too_many_arguments)]
 fn ocall_query_chain_concrete(
     alloc_impl: fn(&[u8]) -> SgxResult<EnclaveBuffer>,
     context: Ctx,

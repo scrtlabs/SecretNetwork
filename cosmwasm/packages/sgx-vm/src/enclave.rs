@@ -81,7 +81,7 @@ lazy_static! {
 #[cfg(feature = "query-node")]
 lazy_static! {
     pub static ref QUERY_ENCLAVE_DOORBELL: EnclaveDoorbell =
-        EnclaveDoorbell::new(QUERY_ENCLAVE_FILE, TCS_NUM);
+        EnclaveDoorbell::new(QUERY_ENCLAVE_FILE, std::cmp::min(TCS_NUM, num_cpus::get()));
 }
 
 /// This struct manages the access to the enclave.
@@ -101,6 +101,7 @@ pub struct EnclaveDoorbell {
 
 impl EnclaveDoorbell {
     fn new(enclave_file: &str, count: u8) -> Self {
+        debug!("Setting up enclave doorbell for up to {} threads", count);
         Self {
             enclave: init_enclave(enclave_file),
             condvar: Condvar::new(),
