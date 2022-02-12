@@ -31,22 +31,28 @@ pub fn create_module_instance(
     contract_code: ContractCode,
     operation: ContractOperation,
 ) -> Result<ModuleRef, EnclaveError> {
+    debug!("fetching module from cache");
     let cache = MODULE_CACHE.read().unwrap();
 
     // If the cache is disabled, don't try to use it and just compile the module.
     if cache.cap() == 0 {
+        debug!("cache is disabled, building module");
         drop(cache);
         let module = compile_module(contract_code.code(), operation)?;
         let instance = create_instance(&module)?;
+        debug!("returning built instance");
         return Ok(instance);
     }
+    debug!("cache is enabled");
 
     // Try to fetch a cached instance
     let mut instance = None;
+    debug!("peeking in cache");
     let instance_result = cache.peek(&contract_code.hash()).map(create_instance);
     // If the stored module failed to create an instance for some reason, we try to create it again.
     // It shouldn't happen because we already compiled it before.
     if let Some(Ok(cached_instance)) = instance_result {
+        debug!("found instance in cache!");
         instance = Some(cached_instance)
     }
 
@@ -55,6 +61,7 @@ pub fn create_module_instance(
     // If we couldn't find the instance in the cache, create it
     let mut module = None;
     if instance.is_none() {
+        debug!("instance not found in cache. building a new one");
         let new_module = compile_module(contract_code.code(), operation)?;
         let new_instance = create_instance(&new_module)?;
         module = Some(new_module);
@@ -63,14 +70,18 @@ pub fn create_module_instance(
     let instance = instance.unwrap(); // We definitely have a value here now
 
     // If we created a new module in the previous step, insert it to the LRU cache
+    debug!("updating cache");
     let mut cache = MODULE_CACHE.write().unwrap();
     if let Some(module) = module {
+        debug!("storing module in cache");
         cache.put(contract_code.hash(), module);
     } else {
         // Touch the cache to update the LRU value
+        debug!("updating LRU without storing anything");
         cache.get(&contract_code.hash());
     }
 
+    debug!("returning built instance");
     Ok(instance)
 }
 
