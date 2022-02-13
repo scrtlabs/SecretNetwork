@@ -495,13 +495,14 @@ func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuer
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.Smart.ContractAddr)
 			}
 
-			// to help soft-forking.
-			if ctx.ChainID() == "secret-4" && ctx.BlockHeight() > 2_350_000 {
-				return wasm.QuerySmart(ctx, addr, request.Smart.Msg, false)
-			} else if ctx.ChainID() == "pulsar-2" && ctx.BlockHeight() > 1_400_000 {
-				return wasm.QuerySmart(ctx, addr, request.Smart.Msg, false)
-			} else {
+			// to help soft-forking - will return the previous response if the block height is under 2,350,000; otherwise
+			// return the correct one
+			if ctx.ChainID() == "secret-4" && ctx.BlockHeight() < 2_350_000 {
 				return wasm.QuerySmart(ctx, addr, request.Smart.Msg, true)
+			} else if ctx.ChainID() == "pulsar-2" && ctx.BlockHeight() < 1_400_000 {
+				return wasm.QuerySmart(ctx, addr, request.Smart.Msg, true)
+			} else {
+				return wasm.QuerySmart(ctx, addr, request.Smart.Msg, false)
 			}
 		}
 		if request.Raw != nil {
