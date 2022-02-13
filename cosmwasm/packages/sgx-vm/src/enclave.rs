@@ -101,7 +101,7 @@ pub struct EnclaveDoorbell {
 
 impl EnclaveDoorbell {
     fn new(enclave_file: &str, count: u8) -> Self {
-        debug!("Setting up enclave doorbell for up to {} threads", count);
+        info!("Setting up enclave doorbell for up to {} threads", count);
         Self {
             enclave: init_enclave(enclave_file),
             condvar: Condvar::new(),
