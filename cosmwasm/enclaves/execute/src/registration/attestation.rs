@@ -48,10 +48,15 @@ use super::{hex, report::EndorsedAttestationReport};
 #[cfg(feature = "SGX_MODE_HW")]
 pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
 
-#[cfg(feature = "SGX_MODE_HW")]
+#[cfg(feature = "production")]
 pub const SIGRL_SUFFIX: &str = "/sgx/attestation/v4/sigrl/";
-#[cfg(feature = "SGX_MODE_HW")]
+#[cfg(feature = "production")]
 pub const REPORT_SUFFIX: &str = "/sgx/attestation/v4/report";
+
+#[cfg(not(feature = "production"))]
+pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v4/sigrl/";
+#[cfg(not(feature = "production"))]
+pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 
 /// extra_data size that will store the public key of the attesting node
 #[cfg(feature = "SGX_MODE_HW")]
