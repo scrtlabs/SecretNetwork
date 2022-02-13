@@ -217,6 +217,7 @@ clean:
 	-rm -rf ./x/compute/internal/keeper/*.der
 	-rm -rf ./cmd/secretd/ias_bin*
 	$(MAKE) -C go-cosmwasm clean-all
+	$(MAKE) -C cosmwasm/enclaves/test clean
 
 build-dev-image:
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=SW --build-arg FEATURES="${FEATURES},debug-print" -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .

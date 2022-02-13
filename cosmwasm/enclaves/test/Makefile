@@ -55,7 +55,7 @@ clean-all: clean clean-enclave
 
 .PHONY: clean
 clean:
-	rm -rf lib Enclave_u.h Enclave_u.o Enclave_u.c
+	rm -rf lib Enclave_u.h Enclave_u.o Enclave_u.c enclave-ffi-types.h
 	rm -f librust_cosmwasm_enclave.signed.so
 	cargo clean
 
