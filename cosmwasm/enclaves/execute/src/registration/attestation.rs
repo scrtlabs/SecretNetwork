@@ -53,9 +53,9 @@ pub const SIGRL_SUFFIX: &str = "/sgx/attestation/v4/sigrl/";
 #[cfg(feature = "production")]
 pub const REPORT_SUFFIX: &str = "/sgx/attestation/v4/report";
 
-#[cfg(not(feature = "production"))]
+#[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
 pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v4/sigrl/";
-#[cfg(not(feature = "production"))]
+#[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
 pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 
 /// extra_data size that will store the public key of the attesting node
