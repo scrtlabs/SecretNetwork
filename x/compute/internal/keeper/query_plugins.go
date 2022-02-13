@@ -496,7 +496,9 @@ func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuer
 			}
 
 			// to help soft-forking.
-			if ctx.BlockHeight() > 0 {
+			if ctx.ChainID() == "secret-4" && ctx.BlockHeight() > 2_350_000 {
+				return wasm.QuerySmart(ctx, addr, request.Smart.Msg, false)
+			} else if ctx.ChainID() == "pulsar-2" && ctx.BlockHeight() > 1_400_000 {
 				return wasm.QuerySmart(ctx, addr, request.Smart.Msg, false)
 			} else {
 				return wasm.QuerySmart(ctx, addr, request.Smart.Msg, true)
