@@ -31,6 +31,11 @@ pub mod tests {
             cert::tests::test_certificate_invalid_configuration_needed();
         });
 
+        #[cfg(feature = "SGX_MODE_HW")]
+        count_failures!(failures, {
+            cert::tests::test_certificate_invalid_group_out_of_date();
+        });
+
         if failures != 0 {
             panic!("{}: {} tests failed", file!(), failures);
         }

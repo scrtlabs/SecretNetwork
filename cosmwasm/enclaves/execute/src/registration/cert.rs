@@ -431,8 +431,6 @@ pub mod tests {
 
     use enclave_ffi_types::NodeAuthResult;
 
-    use enclave_crypto::KeyPair;
-
     use crate::registration::report::AttestationReport;
 
     use super::verify_ra_cert;
@@ -510,6 +508,6 @@ pub mod tests {
 
     pub fn test_certificate_valid() {
         let tls_ra_cert = tls_ra_cert_der_valid();
-        let result = verify_ra_cert(&tls_ra_cert, None).unwrap();
+        let _ = verify_ra_cert(&tls_ra_cert, None).unwrap();
     }
 }

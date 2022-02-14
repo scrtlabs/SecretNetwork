@@ -7,7 +7,7 @@ use lazy_static::lazy_static;
 pub const CERTEXPIRYDAYS: i64 = 3652i64;
 
 #[allow(dead_code)]
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum SigningMethod {
     MRSIGNER,
     MRENCLAVE,
