@@ -31,7 +31,8 @@ enclave_utils = { path = "../shared/utils" }
 
 log = "0.4.8"
 ctor = "0.1.13"
-lazy_static = "1.4"
 
 [dev-dependencies]
 sgx_edl = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+
+lazy_static = "1.4"
