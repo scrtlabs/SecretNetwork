@@ -435,16 +435,16 @@ pub mod tests {
 
     use super::verify_ra_cert;
 
-    #[cfg(feature = "SGX_MODE_HW")]
-    fn tls_ra_cert_der_out_of_date() -> Vec<u8> {
-        let mut cert = vec![];
-        let mut f =
-            File::open("../execute/src/registration/fixtures/attestation_cert_out_of_date.der")
-                .unwrap();
-        f.read_to_end(&mut cert).unwrap();
-
-        cert
-    }
+    // #[cfg(feature = "SGX_MODE_HW")]
+    // fn tls_ra_cert_der_out_of_date() -> Vec<u8> {
+    //     let mut cert = vec![];
+    //     let mut f =
+    //         File::open("../execute/src/registration/fixtures/attestation_cert_out_of_date.der")
+    //             .unwrap();
+    //     f.read_to_end(&mut cert).unwrap();
+    //
+    //     cert
+    // }
 
     fn tls_ra_cert_der_sw_config_needed() -> Vec<u8> {
         let mut cert = vec![];
@@ -491,20 +491,20 @@ pub mod tests {
         assert_eq!(result, NodeAuthResult::SwHardeningAndConfigurationNeeded)
     }
 
-    #[cfg(not(feature = "SGX_MODE_HW"))]
-    pub fn test_certificate_invalid_group_out_of_date() {}
-
-    #[cfg(feature = "SGX_MODE_HW")]
-    pub fn test_certificate_invalid_group_out_of_date() {
-        let tls_ra_cert = tls_ra_cert_der_out_of_date();
-        let report = AttestationReport::from_cert(&tls_ra_cert);
-        assert!(report.is_ok());
-
-        let result =
-            verify_ra_cert(&tls_ra_cert, None).expect_err("Certificate should not pass validation");
-
-        assert_eq!(result, NodeAuthResult::GroupOutOfDate)
-    }
+    // #[cfg(not(feature = "SGX_MODE_HW"))]
+    // pub fn test_certificate_invalid_group_out_of_date() {}
+    //
+    // #[cfg(feature = "SGX_MODE_HW")]
+    // pub fn test_certificate_invalid_group_out_of_date() {
+    //     let tls_ra_cert = tls_ra_cert_der_out_of_date();
+    //     let report = AttestationReport::from_cert(&tls_ra_cert);
+    //     assert!(report.is_ok());
+    //
+    //     let result =
+    //         verify_ra_cert(&tls_ra_cert, None).expect_err("Certificate should not pass validation");
+    //
+    //     assert_eq!(result, NodeAuthResult::GroupOutOfDate)
+    // }
 
     pub fn test_certificate_valid() {
         let tls_ra_cert = tls_ra_cert_der_valid();
