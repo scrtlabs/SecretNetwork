@@ -80,8 +80,10 @@ lazy_static! {
 }
 #[cfg(feature = "query-node")]
 lazy_static! {
-    pub static ref QUERY_ENCLAVE_DOORBELL: EnclaveDoorbell =
-        EnclaveDoorbell::new(QUERY_ENCLAVE_FILE, std::cmp::min(TCS_NUM, num_cpus::get()));
+    pub static ref QUERY_ENCLAVE_DOORBELL: EnclaveDoorbell = EnclaveDoorbell::new(
+        QUERY_ENCLAVE_FILE,
+        std::cmp::min(TCS_NUM, num_cpus::get() as u8)
+    );
 }
 
 /// This struct manages the access to the enclave.
