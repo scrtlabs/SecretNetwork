@@ -478,21 +478,24 @@ func NewSecretNetworkApp(
 	//
 	// NOTE: This is not required for apps that don't use the simulator for fuzz testing
 	// transactions.
-	//app.sm = module.NewSimulationManager(
-	//	auth.NewAppModule(appCodec, app.accountKeeper, authsims.RandomGenesisAccounts),
-	//	bank.NewAppModule(appCodec, app.bankKeeper, app.accountKeeper),
-	//	capability.NewAppModule(appCodec, *app.capabilityKeeper),
-	//	gov.NewAppModule(appCodec, app.govKeeper, app.accountKeeper, app.bankKeeper),
-	//	mint.NewAppModule(appCodec, app.mintKeeper, app.accountKeeper),
-	//	staking.NewAppModule(appCodec, app.stakingKeeper, app.accountKeeper, app.bankKeeper),
-	//	distr.NewAppModule(appCodec, app.distrKeeper, app.accountKeeper, app.bankKeeper, app.stakingKeeper),
-	//	slashing.NewAppModule(appCodec, app.slashingKeeper, app.accountKeeper, app.bankKeeper, app.stakingKeeper),
-	//	params.NewAppModule(app.paramsKeeper),
-	//	//compute.NewAppModule(app.computeKeeper),
-	//	evidence.NewAppModule(app.evidenceKeeper),
-	//)
+	app.sm = module.NewSimulationManager(
+		auth.NewAppModule(appCodec, app.accountKeeper, authsims.RandomGenesisAccounts),
+		authzmodule.NewAppModule(appCodec, app.authzKeeper, app.accountKeeper, app.bankKeeper, app.interfaceRegistry),
 
-	//app.sm.RegisterStoreDecoders()
+		bank.NewAppModule(appCodec, app.bankKeeper, app.accountKeeper),
+		capability.NewAppModule(appCodec, *app.capabilityKeeper),
+		feegrantmodule.NewAppModule(appCodec, app.accountKeeper, app.bankKeeper, app.feeGrantKeeper, app.interfaceRegistry),
+		gov.NewAppModule(appCodec, app.govKeeper, app.accountKeeper, app.bankKeeper),
+		mint.NewAppModule(appCodec, app.mintKeeper, app.accountKeeper),
+		staking.NewAppModule(appCodec, app.stakingKeeper, app.accountKeeper, app.bankKeeper),
+		distr.NewAppModule(appCodec, app.distrKeeper, app.accountKeeper, app.bankKeeper, app.stakingKeeper),
+		slashing.NewAppModule(appCodec, app.slashingKeeper, app.accountKeeper, app.bankKeeper, app.stakingKeeper),
+		params.NewAppModule(app.paramsKeeper),
+		//compute.NewAppModule(app.computeKeeper),
+		evidence.NewAppModule(app.evidenceKeeper),
+	)
+
+	app.sm.RegisterStoreDecoders()
 
 	// initialize stores
 	app.MountKVStores(keys)
