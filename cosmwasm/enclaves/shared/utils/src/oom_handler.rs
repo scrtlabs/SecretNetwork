@@ -85,9 +85,17 @@ thread_local! {
     static OOM_HAPPENED: AtomicBool = AtomicBool::new(false);
 }
 
-#[cfg(not(feature = "production"))]
+#[cfg(all(not(feature = "production"), not(feature = "query-only")))]
 fn enable_backtraces() {
     let _ = backtrace::enable_backtrace("librust_cosmwasm_enclave.signed.so", PrintFormat::Full);
+}
+
+#[cfg(all(not(feature = "production"), feature = "query-only"))]
+fn enable_backtraces() {
+    let _ = backtrace::enable_backtrace(
+        "librust_cosmwasm_query_enclave.signed.so",
+        PrintFormat::Full,
+    );
 }
 
 #[cfg(feature = "production")]

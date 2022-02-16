@@ -27,7 +27,7 @@ sgx_types = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://g
 
 [dependencies]
 enclave_contract_engine = { path = "../shared/contract-engine", features = ["query-only"] }
-enclave_utils = { path = "../shared/utils" }
+enclave_utils = { path = "../shared/utils", features = ["query-only"] }
 
 log = "0.4.8"
 ctor = "0.1.13"

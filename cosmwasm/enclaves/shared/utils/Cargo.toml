@@ -6,6 +6,7 @@ edition = "2018"
 
 [features]
 production = []
+query-only = []
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
 # We always compile to the "sgx" target, so this will always be false.

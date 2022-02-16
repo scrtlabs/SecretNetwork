@@ -22,7 +22,7 @@ mod tests;
 #[allow(unused)]
 static LOGGER: SimpleLogger = SimpleLogger;
 
-#[cfg(all(feature = "production", feature = "SGX_MODE_HW"))]
+#[cfg(feature = "production")]
 #[ctor]
 fn init_logger() {
     log::set_logger(&LOGGER).unwrap(); // It's ok to panic at this stage. This shouldn't happen though
