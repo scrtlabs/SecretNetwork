@@ -1,7 +1,10 @@
 # cosmwasm-storage
 
-[![cosmwasm-storage on crates.io](https://img.shields.io/crates/v/cosmwasm-storage.svg)](https://crates.io/crates/cosmwasm-storage)
-[![CircleCI](https://circleci.com/gh/CosmWasm/cosmwasm/tree/master.svg?style=shield)](https://circleci.com/gh/CosmWasm/cosmwasm/tree/master)
+[comment]: <> ([![cosmwasm-storage on crates.io]&#40;https://img.shields.io/crates/v/cosmwasm-storage.svg&#41;]&#40;https://crates.io/crates/cosmwasm-storage&#41;)
+[comment]: <> ([![CircleCI]&#40;https://circleci.com/gh/CosmWasm/cosmwasm/tree/master.svg?style=shield&#41;]&#40;https://circleci.com/gh/CosmWasm/cosmwasm/tree/master&#41;)
+
+NOTE: This is a fork of the original cosmwasm-storage repository adapted for use in [SecretNetwork](https://scrt.network)'s
+Secret Contracts.
 
 CosmWasm library with useful helpers for Storage patterns. You can use `Storage`
 implementations in `cosmwasm-std`, or rely on these to remove some common

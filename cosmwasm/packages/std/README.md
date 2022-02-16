@@ -1,6 +1,9 @@
-# cosmwasm
+# cosmwasm-std
 
-[![cosmwasm-std on crates.io](https://img.shields.io/crates/v/cosmwasm-std.svg)](https://crates.io/crates/cosmwasm-std)
+[comment]: <> ([![cosmwasm-std on crates.io]&#40;https://img.shields.io/crates/v/cosmwasm-std.svg&#41;]&#40;https://crates.io/crates/cosmwasm-std&#41;)
+
+NOTE: This is a fork of the original cosmwasm-std repository adapted for use in [SecretNetwork](https://scrt.network)'s
+Secret Contracts.
 
 The standard library for building CosmWasm smart contracts. Code in this package
 is compiled into the smart contract.

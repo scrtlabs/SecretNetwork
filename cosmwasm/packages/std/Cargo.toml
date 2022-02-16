@@ -1,15 +1,15 @@
 [package]
-name = "cosmwasm-std"
+name = "secret-cosmwasm-std"
 version = "0.10.0"
-authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
+authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>", "SCRT Labs <info@scrtlabs.com>"]
 edition = "2018"
 description = "Standard library for Wasm based smart contracts on Cosmos blockchains"
-repository = "https://github.com/CosmWasm/cosmwasm/tree/master/packages/std"
+repository = "https://github.com/scrtlabs/SecretNetwork/tree/master/cosmwasm/packages/std"
 license = "Apache-2.0"
 readme = "README.md"
 
 [badges]
-circle-ci = { repository = "CosmWasm/cosmwasm", branch = "master" }
+#circle-ci = { repository = "CosmWasm/cosmwasm", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [features]

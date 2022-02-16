@@ -33,7 +33,7 @@ production = ["cosmwasm-sgx-vm/production"]
 debug-print = ["cosmwasm-sgx-vm/debug-print"]
 
 [dependencies]
-cosmwasm-std = { path = "../cosmwasm/packages/std", features = ["iterator"] }
+cosmwasm-std = { path = "../cosmwasm/packages/std", package = "secret-cosmwasm-std", features = ["iterator"] }
 cosmwasm-sgx-vm = { path = "../cosmwasm/packages/sgx-vm", features = [
     "iterator"
 ] }

@@ -17,7 +17,7 @@ Mainnet is out! Get the latest release at [https://github.com/scrtlabs/SecretNet
 - Homepage: [https://scrt.network](https://scrt.network)
 - Blog: [https://blog.scrt.network](https://blog.scrt.network)
 - Forum: [https://forum.scrt.network](https://forum.scrt.network)
-- Wiki: [https://learn.scrt.network](https://learn.scrt.network)
+- Docs: [https://docs.scrt.network](https://docs.scrt.network)
 - Discord: [https://chat.scrt.network](https://chat.scrt.network)
 - Twitter: [https://twitter.com/SecretNetwork](https://twitter.com/SecretNetwork)
 - Community Telegram Channel: [https://t.me/SCRTnetwork](https://t.me/SCRTnetwork)
@@ -28,6 +28,7 @@ Mainnet is out! Get the latest release at [https://github.com/scrtlabs/SecretNet
 Secret Network is secured by the SCRT coin (Secret), which is used for fees, staking, and governance. Transactions, validators, governance proposals, and more can be viewed using the following Secret Network block explorers:
 
 - [secretnodes](https://secretnodes.com)
+- [Mintscan](https://mintscan.io/secret)
 
 # Wallets
 
@@ -35,26 +36,6 @@ Secret Network is secured by the SCRT coin (Secret), which is used for fees, sta
 - [Keplr](https://wallet.keplr.app)
 - [Math Wallet](https://mathwallet.org/secretnetwork-wallet/)
 - [Citadel.one](https://app.citadel.one)
-
-# Blockchain REST Providers
-
-- [SecretAPI.io by ChainofSecrets.org](https://secretapi.io)
-
-# Docs
-
-- [Install the `secretcli` light client (Windows, Mac & Linux)](docs/light-client-mainnet.md)
-- [How to use the `secretcli` light client](docs/validators-and-full-nodes/secretcli.md)
-- [How to participate in on-chain governance](docs/protocol/governance.md)
-- [How to run a full node on mainnet](docs/validators-and-full-nodes/run-full-node-mainnet.md)
-- [How to run an LCD server](docs/lcd-server-example.md)
-- [Ledger Nano S (and X) support](docs/ledger-nano-s.md)
-- [How to join as a mainnet validator](docs/validators-and-full-nodes/join-validator-mainnet.md)
-- [How to backup a validator](docs/validators-and-full-nodes/backup-a-validator.md)
-- [How to backup a everything (Validators, Full Nodes, Wallets)](docs/backups.md)
-- [How to migrate a validator to a new machine](docs/validators-and-full-nodes/migrate-a-validator.md)
-- [How to setup SGX on your machine](docs/validators-and-full-nodes/setup-sgx.md)
-- [How to verify the SGX setup on your machine](docs/validators-and-full-nodes/verify-sgx.md)
-- [How to use SecretJS to develop Secret dApps](https://github.com/scrtlabs/enigma-blockchain-contracts-guide/blob/master/cosmwasm-js.md)
 
 # Implementation Discussions
 
