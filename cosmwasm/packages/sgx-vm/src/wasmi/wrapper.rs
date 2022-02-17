@@ -4,13 +4,15 @@ use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 
-use crate::enclave::QUERY_DOORBELL;
+use crate::enclave::ENCLAVE_DOORBELL;
+#[cfg(feature = "query-node")]
+use crate::enclave::QUERY_ENCLAVE_DOORBELL;
 use crate::errors::{EnclaveError, VmResult};
 use crate::{Querier, Storage, VmError};
 
-use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
+use enclave_ffi_types::{Ctx, HandleResult, InitResult, QueryResult};
 
-use sgx_types::{sgx_status_t, SgxResult};
+use sgx_types::sgx_status_t;
 
 use log::*;
 use serde::Deserialize;
@@ -21,36 +23,6 @@ use super::results::{
     handle_result_to_vm_result, init_result_to_vm_result, query_result_to_vm_result, HandleSuccess,
     InitSuccess, QuerySuccess,
 };
-
-/// This is a safe wrapper for allocating buffers inside the enclave.
-pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> SgxResult<EnclaveBuffer> {
-    let ptr = buffer.as_ptr();
-    let len = buffer.len();
-    let mut enclave_buffer = EnclaveBuffer::default();
-
-    // Bind the token to a local variable to ensure its
-    // destructor runs in the end of the function
-    let enclave_access_token = QUERY_DOORBELL
-        // This is always called from an ocall contxt
-        .get_access(true)
-        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
-
-    let enclave_id = enclave_access_token
-        .expect("If we got here, surely the enclave has been loaded")
-        .geteid();
-
-    trace!(
-        target: module_path!(),
-        "allocate_enclave_buffer() called with len: {:?} enclave_id: {:?}",
-        len,
-        enclave_id,
-    );
-
-    match unsafe { imports::ecall_allocate(enclave_id, &mut enclave_buffer, ptr, len) } {
-        sgx_status_t::SGX_SUCCESS => Ok(enclave_buffer),
-        failure_status => Err(failure_status),
-    }
-}
 
 pub struct Module<S, Q>
 where
@@ -133,7 +105,7 @@ where
 
         // Bind the token to a local variable to ensure its
         // destructor runs in the end of the function
-        let enclave_access_token = QUERY_DOORBELL
+        let enclave_access_token = ENCLAVE_DOORBELL
             .get_access(false) // This can never be recursive
             .ok_or_else(Self::busy_enclave_err)?;
         let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
@@ -185,7 +157,7 @@ where
 
         // Bind the token to a local variable to ensure its
         // destructor runs in the end of the function
-        let enclave_access_token = QUERY_DOORBELL
+        let enclave_access_token = ENCLAVE_DOORBELL
             .get_access(false) // This can never be recursive
             .ok_or_else(Self::busy_enclave_err)?;
         let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
@@ -234,15 +206,21 @@ where
         let mut query_result = MaybeUninit::<QueryResult>::uninit();
         let mut used_gas = 0_u64;
 
+        #[cfg(not(feature = "query-node"))]
+        let doorbell = &ENCLAVE_DOORBELL;
+        #[cfg(feature = "query-node")]
+        let doorbell = &QUERY_ENCLAVE_DOORBELL;
+
         // Bind the token to a local variable to ensure its
         // destructor runs in the end of the function
-        let enclave_access_token = QUERY_DOORBELL
+        let enclave_access_token = doorbell
             .get_access(is_query_recursive(env)?)
             .ok_or_else(Self::busy_enclave_err)?;
         let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
 
         let status = unsafe {
             imports::ecall_query(
+                // TODO use the _qe variant
                 enclave.geteid(),
                 query_result.as_mut_ptr(),
                 self.ctx.unsafe_clone(),

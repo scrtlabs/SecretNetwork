@@ -5,7 +5,7 @@ use sgx_types::{sgx_enclave_id_t, sgx_status_t, SgxResult};
 
 use enclave_ffi_types::RuntimeConfiguration;
 
-use crate::enclave::QUERY_DOORBELL;
+use crate::enclave::ENCLAVE_DOORBELL;
 
 #[allow(clippy::mutex_atomic)]
 lazy_static! {
@@ -15,6 +15,15 @@ lazy_static! {
 
 extern "C" {
     pub fn ecall_configure_runtime(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        config: RuntimeConfiguration,
+    ) -> sgx_status_t;
+}
+
+#[cfg(feature = "query-node")]
+extern "C" {
+    pub fn ecall_configure_runtime_qe(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
         config: RuntimeConfiguration,
@@ -43,7 +52,7 @@ pub fn configure_enclave(config: EnclaveRuntimeConfig) -> SgxResult<()> {
 
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
-    let enclave_access_token = QUERY_DOORBELL
+    let enclave_access_token = ENCLAVE_DOORBELL
         .get_access(false) // This can never be recursive
         .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
     let enclave = (*enclave_access_token)?;
@@ -59,6 +68,30 @@ pub fn configure_enclave(config: EnclaveRuntimeConfig) -> SgxResult<()> {
 
     if retval != sgx_status_t::SGX_SUCCESS {
         return Err(retval);
+    }
+
+    #[cfg(feature = "query-node")]
+    {
+        use crate::enclave::QUERY_ENCLAVE_DOORBELL;
+
+        // Bind the token to a local variable to ensure its
+        // destructor runs in the end of the function
+        let enclave_access_token = QUERY_ENCLAVE_DOORBELL
+            .get_access(false) // This can never be recursive
+            .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+        let enclave = (*enclave_access_token)?;
+
+        let status = unsafe {
+            ecall_configure_runtime_qe(enclave.geteid(), &mut retval, config.to_ffi_type())
+        };
+
+        if status != sgx_status_t::SGX_SUCCESS {
+            return Err(status);
+        }
+
+        if retval != sgx_status_t::SGX_SUCCESS {
+            return Err(retval);
+        }
     }
 
     Ok(())

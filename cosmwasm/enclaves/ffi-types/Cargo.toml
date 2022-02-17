@@ -1,0 +1,16 @@
+[package]
+name = "enclave-ffi-types"
+version = "0.1.0"
+authors = ["Reuven Podmazo <reuven@enigma.co>"]
+edition = "2018"
+
+[features]
+default = []
+build_headers = ["cbindgen", "thiserror"]
+
+[dependencies]
+derive_more = "0.99"
+
+[build-dependencies]
+cbindgen = { version = "0.13", optional = true}
+thiserror = { version = "1", optional = true}
