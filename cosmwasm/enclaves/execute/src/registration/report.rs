@@ -733,10 +733,9 @@ pub mod tests {
 
     fn tls_ra_cert_der_test() -> Vec<u8> {
         let mut cert = vec![];
-        let mut f = File::open(
-            "../wasmi-runtime/src/registration/fixtures/attestation_cert_hw_invalid_test.der",
-        )
-        .unwrap();
+        let mut f =
+            File::open("../execute/src/registration/fixtures/attestation_cert_hw_invalid_test.der")
+                .unwrap();
         f.read_to_end(&mut cert).unwrap();
 
         cert
