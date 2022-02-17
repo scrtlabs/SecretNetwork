@@ -96,7 +96,6 @@ name = "cosmwasm-sgx-vm"
 version = "0.10.0"
 dependencies = [
  "base64 0.12.3",
- "cosmwasm-std",
  "enclave-ffi-types",
  "hex",
  "lazy_static",
@@ -106,22 +105,12 @@ dependencies = [
  "parity-wasm",
  "parking_lot",
  "schemars",
+ "secret-cosmwasm-std",
  "serde",
  "serde_json",
  "sgx_types",
  "sgx_urts",
  "sha2",
- "snafu",
-]
-
-[[package]]
-name = "cosmwasm-std"
-version = "0.10.0"
-dependencies = [
- "base64 0.11.0",
- "schemars",
- "serde",
- "serde-json-wasm",
  "snafu",
 ]
 
@@ -434,6 +423,17 @@ name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
+
+[[package]]
+name = "secret-cosmwasm-std"
+version = "0.10.0"
+dependencies = [
+ "base64 0.11.0",
+ "schemars",
+ "serde",
+ "serde-json-wasm",
+ "snafu",
+]
 
 [[package]]
 name = "serde"

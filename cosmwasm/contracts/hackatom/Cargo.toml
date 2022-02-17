@@ -28,12 +28,12 @@ cranelift = ["cosmwasm-vm/default-cranelift"]
 singlepass = ["cosmwasm-vm/default-singlepass"]
 
 [dependencies]
-cosmwasm-std = { path = "../../packages/std" }
+cosmwasm-std = { path = "../../packages/std", package = "secret-cosmwasm-std" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 sha2 = "0.9.1"
 
 [dev-dependencies]
 cosmwasm-schema = { path = "../../packages/schema" }
-cosmwasm-storage = { path = "../../packages/storage" }
+cosmwasm-storage = { path = "../../packages/storage", package = "secret-cosmwasm-storage" }
 cosmwasm-vm = { path = "../../packages/sgx-vm", package = "cosmwasm-sgx-vm", default-features = false }

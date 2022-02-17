@@ -125,6 +125,7 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 			return server.InterceptConfigsPreRunHandler(cmd, secretAppTemplate, secretAppConfig)
 			//return initConfig(&initClientCtx, cmd)
 		},
+		SilenceUsage: true,
 	}
 
 	initRootCmd(rootCmd, encodingConfig)
@@ -205,6 +206,7 @@ func queryCommand() *cobra.Command {
 		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
+		SilenceUsage:               true,
 	}
 
 	cmd.AddCommand(
