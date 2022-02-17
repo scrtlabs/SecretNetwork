@@ -1,0 +1,8 @@
+[package]
+name = "enclave-test"
+version = "0.1.0"
+authors = ["Reuven Podmazo <reuven@enigma.co>"]
+edition = "2018"
+
+[dependencies]
+cosmwasm-sgx-vm = { path = "../../packages/sgx-vm", features = ["iterator", "enclave-tests"] }

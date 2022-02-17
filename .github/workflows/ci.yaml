@@ -249,7 +249,7 @@ jobs:
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           make vendor
-          cd cosmwasm/packages/wasmi-runtime/
+          cd cosmwasm/enclaves/execute/
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
 

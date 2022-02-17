@@ -187,6 +187,7 @@ func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contract
 			Address: contractAddr.String(),
 		},
 		Key: wasmTypes.ContractKey(base64.StdEncoding.EncodeToString(contractKey)),
+		Recursive: false,
 	}
 	return env
 }
