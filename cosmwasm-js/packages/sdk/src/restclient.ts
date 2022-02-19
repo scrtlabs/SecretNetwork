@@ -1,4 +1,4 @@
-import { Encoding, isNonNullObject } from "@iov/encoding";
+import { Bech32, Encoding, isNonNullObject } from "@iov/encoding";
 import axios, { AxiosError, AxiosInstance } from "axios";
 
 import EnigmaUtils, { SecretUtils } from "./enigmautils";
@@ -17,6 +17,7 @@ import {
   WasmData,
 } from "./types";
 import { sleep } from "@iov/utils";
+import {decodeBech32Pubkey} from "./pubkey";
 
 export interface CosmosSdkAccount {
   /** Bech32 account address */
@@ -212,7 +213,7 @@ export interface ContractDetails extends ContractInfo {
 
 interface SmartQueryResponse {
   // base64 encoded response
-  readonly smart: string;
+  readonly data: string;
 }
 
 type RestClientResponse =
@@ -318,6 +319,14 @@ export class RestClient {
 
   public async get(path: string): Promise<RestClientResponse> {
     const { data } = await this.client.get(path).catch(parseAxiosError);
+    if (data === null) {
+      throw new Error("Received null response from server");
+    }
+    return data;
+  }
+
+  async get_raw(path: string): Promise<RestClientResponse> {
+    const { data } = await this.client.get(path);
     if (data === null) {
       throw new Error("Received null response from server");
     }
@@ -536,25 +545,29 @@ export class RestClient {
     const encrypted = await this.enigmautils.encrypt(contractCodeHash, query);
     const nonce = encrypted.slice(0, 32);
 
-    const encoded = Encoding.toHex(Encoding.toUtf8(Encoding.toBase64(encrypted)));
+    const encoded = Encoding.toBase64(encrypted).replace(/\+/g, "-").replace(/\//g, "_");
 
     // @ts-ignore
-    const paramString = new URLSearchParams(addedParams).toString();
+    const params = new URLSearchParams(addedParams);
+    params.append('query_data', encoded);
+    const paramString = params.toString();
 
-    const path = `/wasm/contract/${contractAddress}/query/${encoded}?encoding=hex&${paramString}`;
+    // Check to make sure that the address is a valid bech32 address
+    const _ = Bech32.decode(contractAddress);
+
+    const path = `/compute/v1beta1/contract/${contractAddress}/smart?${paramString}`;
 
     let responseData;
     try {
-      responseData = (await this.get(path)) as WasmResponse<SmartQueryResponse>;
+      responseData = (await this.get(path)) as SmartQueryResponse;
     } catch (err) {
-      try {
-        const errorMessageRgx =
-          /encrypted: (.+?): (?:instantiate|execute|query) contract failed \(HTTP 500\)/g;
-        const rgxMatches = errorMessageRgx.exec(err.message);
-        if (rgxMatches == null || rgxMatches?.length != 2) {
-          throw err;
-        }
+      const errorMessageRgx = /encrypted: (.+?): (?:instantiate|execute|query) contract failed/g;
+      const rgxMatches = errorMessageRgx.exec(err.message);
+      if (rgxMatches == null || rgxMatches?.length != 2) {
+        throw err;
+      }
 
+      try {
         const errorCipherB64 = rgxMatches[1];
         const errorCipherBz = Encoding.fromBase64(errorCipherB64);
 
@@ -568,18 +581,12 @@ export class RestClient {
       throw err;
     }
 
-    if (isWasmError(responseData)) {
-      throw new Error(
-        JSON.stringify(await this.enigmautils.decrypt(Encoding.fromBase64(responseData.error), nonce)),
-      );
-    }
-
     // By convention, smart queries must return a valid JSON document (see https://github.com/CosmWasm/cosmwasm/issues/144)
     return JSON.parse(
       Encoding.fromUtf8(
         Encoding.fromBase64(
           Encoding.fromUtf8(
-            await this.enigmautils.decrypt(Encoding.fromBase64(responseData.result.smart), nonce),
+            await this.enigmautils.decrypt(Encoding.fromBase64(responseData.data), nonce),
           ),
         ),
       ),

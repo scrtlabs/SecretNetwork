@@ -45,12 +45,14 @@ WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 ARG BUILD_VERSION="v0.0.0"
 ARG SGX_MODE=SW
 ARG FEATURES
+ARG FEATURES_U
 ARG WITH_ROCKSDB
 
 ENV WITH_ROCKSDB=${WITH_ROCKSDB}
 ENV VERSION=${BUILD_VERSION}
 ENV SGX_MODE=${SGX_MODE}
 ENV FEATURES=${FEATURES}
+ENV FEATURES_U=${FEATURES_U}
 ENV MITIGATION_CVE_2020_0551=LOAD
 
 
@@ -77,7 +79,8 @@ COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/
 COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/
 COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/
 
-RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build-rust
+RUN . /opt/sgxsdk/environment && env \
+    && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} FEATURES_U=${FEATURES_U} SGX_MODE=${SGX_MODE} make build-rust
 
 # Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork

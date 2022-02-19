@@ -1,0 +1,49 @@
+[package]
+name = "enclave_contract_engine"
+version = "1.2.4"
+authors = ["Cashmaney <itzik@enigma.co>"]
+edition = "2018"
+
+[features]
+query-only = []
+debug-print = []
+test = []
+
+# This annotation is here to trick the IDE into showing us type information about this crate.
+# We always compile to the "sgx" target, so this will always be false.
+# when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
+[target.'cfg(not(target_env = "sgx"))'.dependencies]
+sgx_tstd = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
+  "backtrace"
+] }
+sgx_types = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+
+[dependencies]
+enclave-ffi-types = { path = "../../ffi-types" }
+
+cosmos_proto = { path = "../cosmos-proto" }
+enclave_crypto = { path = "../crypto" }
+enclave_cosmos_types = { path = "../cosmos-types" }
+enclave_cosmwasm_types = { path = "../cosmwasm-types" }
+enclave_utils = { path = "../utils" }
+
+serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = ["derive"] }
+serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
+base64 = { rev = "dc7389e10817b078f289386b3b6a852ab6c4c021", git = "https://github.com/mesalock-linux/rust-base64-sgx" }
+
+protobuf = { version = "2.25.2"}
+lazy_static = "1.4"
+log = "0.4.14"
+derive_more = "0.99"
+sha2 = "0.8.1"
+bech32 = "0.7.2"
+pwasm-utils = { version = "0.12.0", default-features = false }
+parity-wasm = { version = "0.41.0", default-features = false }
+lru = { version = "0.6", default-features = false }
+hex = "0.4.2"
+
+[dependencies.wasmi]
+git = "https://github.com/paritytech/wasmi"
+rev = "84d2764594d80425373bf4949a58fa3df3d624c3"
+default-features = false
+features = ["core"]

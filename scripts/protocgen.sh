@@ -26,14 +26,14 @@ Mgoogle/protobuf/any.proto=github.com/cosmos/cosmos-sdk/codec/types:. \
 done
 
 # command to generate docs using protoc-gen-doc
-buf protoc \
--I "proto" \
--I "third_party/proto" \
---doc_out=./docs/proto \
---doc_opt=./docs/proto/protodoc-markdown.tmpl,proto-docs.md \
-$(find "$(pwd)/proto" -maxdepth 5 -name '*.proto') \
-$(find "$(pwd)/third_party/proto/cosmos" -maxdepth 4 -name '*.proto') \
-$(find "$(pwd)/third_party/proto/ibc" -maxdepth 4 -name '*.proto')
+#buf protoc \
+#-I "proto" \
+#-I "third_party/proto" \
+#--doc_out=./docs/proto \
+#--doc_opt=./docs/proto/protodoc-markdown.tmpl,proto-docs.md \
+#$(find "$(pwd)/proto" -maxdepth 5 -name '*.proto') \
+#$(find "$(pwd)/third_party/proto/cosmos" -maxdepth 4 -name '*.proto') \
+#$(find "$(pwd)/third_party/proto/ibc" -maxdepth 4 -name '*.proto')
 
 # move proto files to the right places
 cp -r github.com/enigmampc/SecretNetwork/* ./

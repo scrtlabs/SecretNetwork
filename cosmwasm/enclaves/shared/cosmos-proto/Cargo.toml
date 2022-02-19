@@ -1,0 +1,15 @@
+[package]
+name = "cosmos_proto"
+version = "1.2.4"
+authors = ["bob"]
+edition = "2018"
+
+[features]
+build-protobuf = ["protoc-rust", "dirs"]
+
+[dependencies]
+protobuf = { version = "2.25.2"}
+
+[build-dependencies]
+protoc-rust = { version = "=2.25", optional = true }
+dirs = { version = "3.0", optional = true }

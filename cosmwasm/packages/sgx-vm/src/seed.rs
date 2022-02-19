@@ -3,7 +3,7 @@ use sgx_types::*;
 
 use log::info;
 
-use crate::enclave::get_enclave;
+use crate::enclave::ENCLAVE_DOORBELL;
 
 extern "C" {
     pub fn ecall_init_node(
@@ -40,7 +40,14 @@ extern "C" {
 
 pub fn untrusted_health_check() -> SgxResult<HealthCheckResult> {
     //info!("Initializing enclave..");
-    let enclave = get_enclave()?.ok_or(sgx_status_t::SGX_ERROR_OUT_OF_TCS)?;
+
+    // Bind the token to a local variable to ensure its
+    // destructor runs in the end of the function
+    let enclave_access_token = ENCLAVE_DOORBELL
+        .get_access(false) // This can never be recursive
+        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+    let enclave = (*enclave_access_token)?;
+
     //debug!("Initialized enclave successfully!");
 
     let eid = enclave.geteid();
@@ -57,7 +64,14 @@ pub fn untrusted_health_check() -> SgxResult<HealthCheckResult> {
 
 pub fn untrusted_init_node(master_cert: &[u8], encrypted_seed: &[u8]) -> SgxResult<()> {
     info!("Initializing enclave..");
-    let enclave = get_enclave()?.ok_or(sgx_status_t::SGX_ERROR_OUT_OF_TCS)?;
+
+    // Bind the token to a local variable to ensure its
+    // destructor runs in the end of the function
+    let enclave_access_token = ENCLAVE_DOORBELL
+        .get_access(false) // This can never be recursive
+        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+    let enclave = (*enclave_access_token)?;
+
     info!("Initialized enclave successfully!");
 
     let eid = enclave.geteid();
@@ -87,7 +101,14 @@ pub fn untrusted_init_node(master_cert: &[u8], encrypted_seed: &[u8]) -> SgxResu
 
 pub fn untrusted_key_gen() -> SgxResult<[u8; 32]> {
     info!("Initializing enclave..");
-    let enclave = get_enclave()?.ok_or(sgx_status_t::SGX_ERROR_OUT_OF_TCS)?;
+
+    // Bind the token to a local variable to ensure its
+    // destructor runs in the end of the function
+    let enclave_access_token = ENCLAVE_DOORBELL
+        .get_access(false) // This can never be recursive
+        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+    let enclave = (*enclave_access_token)?;
+
     info!("Initialized enclave successfully!");
 
     let eid = enclave.geteid();
@@ -109,7 +130,14 @@ pub fn untrusted_key_gen() -> SgxResult<[u8; 32]> {
 
 pub fn untrusted_init_bootstrap(spid: &[u8], api_key: &[u8]) -> SgxResult<[u8; 32]> {
     info!("Hello from just before initializing - untrusted_init_bootstrap");
-    let enclave = get_enclave()?.ok_or(sgx_status_t::SGX_ERROR_OUT_OF_TCS)?;
+
+    // Bind the token to a local variable to ensure its
+    // destructor runs in the end of the function
+    let enclave_access_token = ENCLAVE_DOORBELL
+        .get_access(false) // This can never be recursive
+        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+    let enclave = (*enclave_access_token)?;
+
     info!("Hello from just after initializing - untrusted_init_bootstrap");
 
     let eid = enclave.geteid();
