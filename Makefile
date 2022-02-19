@@ -90,6 +90,13 @@ whitespace += $(whitespace)
 comma := ,
 build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 
+ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=SecretNetwork \
+	-X github.com/cosmos/cosmos-sdk/version.AppName=secretd \
+	-X github.com/enigmampc/SecretNetwork/cmd/secretcli/version.ClientName=secretcli \
+	-X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
+	-X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
+	-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags)"
+
 ifeq ($(WITH_CLEVELDB),yes)
   ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=cleveldb
 endif
@@ -97,14 +104,8 @@ ifeq ($(WITH_ROCKSDB),yes)
   CGO_ENABLED=1
   build_tags += rocksdb
   ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=rocksdb
+  ldflags += -extldflags "-lz"
 endif
-
-ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=SecretNetwork \
-	-X github.com/cosmos/cosmos-sdk/version.AppName=secretd \
-	-X github.com/enigmampc/SecretNetwork/cmd/secretcli/version.ClientName=secretcli \
-	-X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
-	-X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
-	-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags)"
 
 
 

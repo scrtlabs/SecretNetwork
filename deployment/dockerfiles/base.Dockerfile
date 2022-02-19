@@ -36,8 +36,8 @@ WORKDIR rocksdb
 
 RUN git checkout v6.24.2
 RUN export CXXFLAGS='-Wno-error=deprecated-copy -Wno-error=pessimizing-move -Wno-error=class-memaccess'
-RUN make shared_lib -j 24
-RUN make install-shared INSTALL_PATH=/usr
+RUN make static-lib -j 24
+RUN make install-static INSTALL_PATH=/usr
 # rm -rf /tmp/rocksdb
 # Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
