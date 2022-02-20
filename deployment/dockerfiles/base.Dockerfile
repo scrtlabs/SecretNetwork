@@ -9,8 +9,8 @@ ENV GOROOT=/usr/local/go
 ENV GOPATH=/go/
 ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 
-RUN curl -O https://dl.google.com/go/go1.15.15.linux-amd64.tar.gz
-RUN tar -C /usr/local -xzf go1.15.15.linux-amd64.tar.gz
+ADD https://go.dev/dl/go1.17.7.linux-amd64.tar.gz go1.17.7.linux-amd64.tar.gz
+RUN tar -C /usr/local -xzf go1.17.7.linux-amd64.tar.gz
 RUN go get -u github.com/jteeuwen/go-bindata/...
 
 RUN wget -q https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.0.20-ubuntu.tar.gz && \
@@ -21,22 +21,23 @@ RUN wget -q https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.
 
 ### Install rocksdb
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    libgflags-dev \
-    libsnappy-dev \
-    zlib1g-dev \
-    libbz2-dev \
-    liblz4-dev \
-    libzstd-dev
+RUN apt-get update &&  \
+    apt-get install -y \
+    # apt-get install -y --no-install-recommends \
+#    libgflags-dev \
+#    libsnappy-dev \
+    zlib1g-dev
+#    libbz2-dev \
+#    liblz4-dev \
+#    libzstd-dev
 
 RUN git clone https://github.com/facebook/rocksdb.git
 
 WORKDIR rocksdb
 
 RUN git checkout v6.24.2
-RUN export CXXFLAGS='-Wno-error=deprecated-copy -Wno-error=pessimizing-move -Wno-error=class-memaccess'
-RUN make static-lib -j 24
+RUN export CXXFLAGS='-Wno-error=deprecated-copy -Wno-error=pessimizing-move -Wno-error=class-memaccess -lstdc++ -lm -lz -lbz2 -lzstd -llz4'
+RUN DEBUG_LEVEL=0 make static_lib -j 24
 RUN make install-static INSTALL_PATH=/usr
 # rm -rf /tmp/rocksdb
 # Set working directory for the build
@@ -108,9 +109,9 @@ COPY Makefile .
 RUN true
 COPY client client
 # COPY /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/libgo_cosmwasm.so go-cosmwasm/api
-
-RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
-RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_cli
+RUN export CGO_LDFLAGS="-L/usr/local/lib -lrocksdb -lstdc++ -lm -lz -lbz2 -lzstd -llz4"
+RUN . /opt/sgxsdk/environment && env && CGO_LDFLAGS="-L/usr/local/lib -lrocksdb -lstdc++ -lm -lz" MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
+RUN . /opt/sgxsdk/environment && env && CGO_LDFLAGS="-L/usr/local/lib -lrocksdb -lstdc++ -lm -lz" MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_cli
 
 RUN rustup target add wasm32-unknown-unknown && make build-test-contract
 

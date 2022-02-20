@@ -104,7 +104,7 @@ ifeq ($(WITH_ROCKSDB),yes)
   CGO_ENABLED=1
   build_tags += rocksdb
   ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=rocksdb
-  ldflags += -extldflags "-lz"
+  ldflags += -extldflags "-lrocksdb -lz"
 endif
 
 
@@ -263,8 +263,9 @@ build-mainnet:
 docker_base:
 	docker build \
 		--build-arg WITH_ROCKSDB=${WITH_ROCKSDB} \
+		--build-arg BUILD_VERSION=${VERSION} \
 		--build-arg FEATURES=${FEATURES} \
-		--build-arg FEATURES_U=query-node,${FEATURES_U} \
+		--build-arg FEATURES_U=${FEATURES_U} \
 		--build-arg SGX_MODE=${SGX_MODE} \
 		-f deployment/dockerfiles/base.Dockerfile \
 		-t rust-go-base-image \
