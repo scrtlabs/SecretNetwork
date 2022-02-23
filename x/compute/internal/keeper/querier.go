@@ -2,8 +2,9 @@ package keeper
 
 import (
 	"context"
-	"github.com/golang/protobuf/ptypes/empty"
 	"sort"
+
+	"github.com/golang/protobuf/ptypes/empty"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -20,10 +21,11 @@ func NewQuerier(keeper Keeper) GrpcQuerier {
 }
 
 func (q GrpcQuerier) ContractInfo(c context.Context, req *types.QueryContractInfoRequest) (*types.QueryContractInfoResponse, error) {
-	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
+	address, err := sdk.AccAddressFromBech32(req.Address)
+	if err != nil {
 		return nil, err
 	}
-	rsp, err := queryContractInfo(sdk.UnwrapSDKContext(c), req.Address, q.keeper)
+	rsp, err := queryContractInfo(sdk.UnwrapSDKContext(c), address, q.keeper)
 	switch {
 	case err != nil:
 		return nil, err
@@ -105,11 +107,12 @@ func (q GrpcQuerier) RawContractState(c context.Context, req *types.QueryRawCont
 */
 
 func (q GrpcQuerier) SmartContractState(c context.Context, req *types.QuerySmartContractStateRequest) (*types.QuerySmartContractStateResponse, error) {
-	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
+	address, err := sdk.AccAddressFromBech32(req.Address)
+	if err != nil {
 		return nil, err
 	}
 	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
-	rsp, err := q.keeper.QuerySmart(ctx, req.Address, req.QueryData, false)
+	rsp, err := q.keeper.QuerySmart(ctx, address, req.QueryData, false)
 	switch {
 	case err != nil:
 		return nil, err
@@ -162,11 +165,12 @@ func (q GrpcQuerier) AddressByLabel(c context.Context, req *types.QueryContractA
 }
 
 func (q GrpcQuerier) ContractKey(c context.Context, req *types.QueryContractKeyRequest) (*types.QueryContractKeyResponse, error) {
-	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
+	address, err := sdk.AccAddressFromBech32(req.Address)
+	if err != nil {
 		return nil, err
 	}
 	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
-	rsp, err := queryContractKey(ctx, req.Address, q.keeper)
+	rsp, err := queryContractKey(ctx, address, q.keeper)
 	switch {
 	case err != nil:
 		return nil, err
@@ -178,11 +182,12 @@ func (q GrpcQuerier) ContractKey(c context.Context, req *types.QueryContractKeyR
 }
 
 func (q GrpcQuerier) ContractHash(c context.Context, req *types.QueryContractHashRequest) (*types.QueryContractHashResponse, error) {
-	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
+	address, err := sdk.AccAddressFromBech32(req.Address)
+	if err != nil {
 		return nil, err
 	}
 	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
-	rsp, err := queryContractHash(ctx, req.Address, q.keeper)
+	rsp, err := queryContractHash(ctx, address, q.keeper)
 	switch {
 	case err != nil:
 		return nil, err
@@ -208,7 +213,7 @@ func queryContractInfo(ctx sdk.Context, addr sdk.AccAddress, keeper Keeper) (*ty
 
 func queryContractListByCode(ctx sdk.Context, codeID uint64, keeper Keeper) ([]types.ContractInfoWithAddress, error) {
 	var contracts []types.ContractInfoWithAddress
-	keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, info types.ContractInfo) bool {
+	keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, info types.ContractInfo, _ types.ContractCustomInfo) bool {
 		if info.CodeID == codeID {
 			// and add the address
 			infoWithAddress := types.ContractInfoWithAddress{

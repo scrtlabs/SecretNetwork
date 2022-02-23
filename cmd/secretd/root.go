@@ -3,6 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -13,10 +18,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
 
 	//"github.com/tendermint/tendermint/libs/cli"
 
@@ -44,6 +45,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
+	secretlegacy "github.com/enigmampc/SecretNetwork/app/legacy"
 )
 
 // thanks @terra-project for this fix
@@ -100,8 +102,11 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 			cmd.SetOut(cmd.OutOrStdout())
 			cmd.SetErr(cmd.ErrOrStderr())
 
-			initClientCtx = client.ReadHomeFlag(initClientCtx, cmd)
-			initClientCtx, err := clientconfig.ReadFromClientConfig(initClientCtx)
+			initClientCtx, err := client.ReadPersistentCommandFlags(initClientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+			initClientCtx, err = clientconfig.ReadFromClientConfig(initClientCtx)
 
 			if err != nil {
 				return err
@@ -120,6 +125,7 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 			return server.InterceptConfigsPreRunHandler(cmd, secretAppTemplate, secretAppConfig)
 			//return initConfig(&initClientCtx, cmd)
 		},
+		SilenceUsage: true,
 	}
 
 	initRootCmd(rootCmd, encodingConfig)
@@ -153,7 +159,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 		genutilcli.InitCmd(app.ModuleBasics(), app.DefaultNodeHome),
 		//updateTmParamsAndInit(app.ModuleBasics(), app.DefaultNodeHome),
 		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome),
-		genutilcli.MigrateGenesisCmd(),
+		secretlegacy.MigrateGenesisCmd(),
 		genutilcli.GenTxCmd(app.ModuleBasics(), encodingConfig.TxConfig, banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome),
 		genutilcli.ValidateGenesisCmd(app.ModuleBasics()),
 		AddGenesisAccountCmd(app.DefaultNodeHome),
@@ -200,6 +206,7 @@ func queryCommand() *cobra.Command {
 		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
+		SilenceUsage:               true,
 	}
 
 	cmd.AddCommand(
@@ -228,6 +235,7 @@ func txCommand() *cobra.Command {
 	}
 
 	cmd.AddCommand(
+		authcmd.GetSignDocCommand(),
 		authcmd.GetSignCommand(),
 		authcmd.GetSignBatchCommand(),
 		authcmd.GetMultiSignCommand(),

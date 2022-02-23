@@ -474,6 +474,32 @@ pub extern "C" fn query(
     Buffer::from_vec(data)
 }
 
+#[no_mangle]
+pub extern "C" fn query(
+    cache: *mut cache_t,
+    code_id: Buffer,
+    params: Buffer,
+    msg: Buffer,
+    db: DB,
+    api: GoApi,
+    querier: GoQuerier,
+    gas_limit: u64,
+    gas_used: Option<&mut u64>,
+    err: Option<&mut Buffer>,
+) -> Buffer {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || {
+            do_query(
+                c, code_id, params, msg, db, api, querier, gas_limit, gas_used,
+            )
+        }))
+        .unwrap_or_else(|_| Err(Error::panic())),
+        None => Err(Error::empty_arg(CACHE_ARG)),
+    };
+    let data = handle_c_error(r, err);
+    Buffer::from_vec(data)
+}
+
 fn do_query(
     cache: &mut CosmCache<DB, GoApi, GoQuerier>,
     code_id: Buffer,

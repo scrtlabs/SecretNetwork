@@ -3,7 +3,7 @@
 
 set -e
 
-if [[ -z $"SUDO_USER" ]]
+if [[ -z "$SUDO_USER" ]]
 then
     export SUDO_USER=root
 fi
@@ -17,7 +17,7 @@ After=network.target
 Type=simple
 Environment=SCRT_ENCLAVE_DIR=/usr/lib
 WorkingDirectory=$(eval echo ~"$SUDO_USER")
-ExecStart=$(which secretd) start
+ExecStart=/usr/local/bin/secretd start
 User=$SUDO_USER
 Restart=on-failure
 StartLimitInterval=0
@@ -32,6 +32,6 @@ EOF
 systemctl daemon-reload
 
 mkdir -p "/opt/secret/.sgx_secrets"
-chown -R "$(eval echo ~"$SUDO_USER")":"$(eval echo ~"$SUDO_USER")" "/opt/secret/.sgx_secrets"
+chown -R "$SUDO_USER":"$SUDO_USER" "/opt/secret/.sgx_secrets"
 mkdir -p "/opt/secret/.secretd/.node"
 mkdir -p "$(eval echo ~"$SUDO_USER")/.sgx_secrets"

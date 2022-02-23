@@ -1,11 +1,3 @@
 [workspace]
 members = ["packages/*"]
-exclude = [
-    "contracts",
-    "v010-contracts",
-    "packages/wasmi-runtime",
-    "packages/enclave-test",
-    "packages/enclave-ffi-types",
-    "packages/vm",
-    "packages/sgx-vm",
-]
+exclude = ["packages/enclave-test", "enclaves"]

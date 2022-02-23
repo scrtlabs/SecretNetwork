@@ -8,10 +8,13 @@ boilterplate.
 
 ## Contents
 
-- [PrefixedStorage](#prefixed-storage)
-- [TypedStorage](#typed-storage)
-- [Bucket](#bucket)
-- [Singleton](#singleton)
+- [cosmwasm-storage](#cosmwasm-storage)
+  - [Contents](#contents)
+    - [Prefixed Storage](#prefixed-storage)
+    - [Typed Storage](#typed-storage)
+    - [Bucket](#bucket)
+    - [Singleton](#singleton)
+  - [License](#license)
 
 ### Prefixed Storage
 

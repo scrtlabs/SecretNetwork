@@ -1,3 +1,4 @@
+//go:build !secretcli
 // +build !secretcli
 
 package api
@@ -8,6 +9,7 @@ import "C"
 
 import (
 	"fmt"
+	"runtime"
 	"syscall"
 
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
@@ -152,8 +154,12 @@ func Instantiate(
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
-
 	errmsg := C.Buffer{}
+
+	// This is done in order to ensure that goroutines don't
+	// swap threads between recursive calls to the enclave.
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 
 	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -195,6 +201,11 @@ func Handle(
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
+	// This is done in order to ensure that goroutines don't
+	// swap threads between recursive calls to the enclave.
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
 	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
@@ -231,6 +242,11 @@ func Query(
 	q := buildQuerier(querier)
 	var gasUsed u64
 	errmsg := C.Buffer{}
+
+	// This is done in order to ensure that goroutines don't
+	// swap threads between recursive calls to the enclave.
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 
 	res, err := C.query(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {

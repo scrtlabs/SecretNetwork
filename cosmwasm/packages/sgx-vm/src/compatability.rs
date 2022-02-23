@@ -19,6 +19,8 @@ const SUPPORTED_IMPORTS_V010: &[&str] = &[
     "env.db_scan",
     #[cfg(feature = "iterator")]
     "env.db_next",
+    #[cfg(feature = "debug-print")]
+    "env.debug_print",
 ];
 
 /// Lists all v0.16 imports we provide upon instantiating the instance in Instance::from_module()

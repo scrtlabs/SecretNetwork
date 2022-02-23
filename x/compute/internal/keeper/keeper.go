@@ -2,11 +2,13 @@ package keeper
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"time"
+
+	"github.com/cosmos/cosmos-sdk/telemetry"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	codedctypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -268,6 +270,8 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, s
 
 // Instantiate creates an instance of a WASM contract
 func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) {
+	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "instantiate")
+
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: init")
 
 	signBytes := []byte{}
@@ -419,6 +423,8 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 
 // Execute executes the contract instance
 func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, callbackSig []byte) (*sdk.Result, error) {
+	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "execute")
+
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading Compute module: execute")
 
 	signBytes := []byte{}
@@ -458,9 +464,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
-	fmt.Printf("Contract Execute: Got contract Key for contract %s: %s\n", contractAddress, base64.StdEncoding.EncodeToString(contractKey))
 	params := types.NewEnv(ctx, caller, coins, contractAddress, contractKey)
-	fmt.Printf("Contract Execute: key from params %s \n", params.Key)
 
 	// prepare querier
 	querier := QueryHandler{
@@ -500,6 +504,17 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 // QuerySmart queries the smart contract itself.
 func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, useDefaultGasLimit bool) ([]byte, error) {
+	return k.querySmartImpl(ctx, contractAddr, req, useDefaultGasLimit, false)
+}
+
+// QuerySmartRecursive queries the smart contract itself. This should only be called when running inside another query recursively.
+func (k Keeper) querySmartRecursive(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, useDefaultGasLimit bool) ([]byte, error) {
+	return k.querySmartImpl(ctx, contractAddr, req, useDefaultGasLimit, true)
+}
+
+func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, useDefaultGasLimit bool, recursive bool) ([]byte, error) {
+	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "query")
+
 	if useDefaultGasLimit {
 		ctx = ctx.WithGasMeter(sdk.NewGasMeter(k.queryGasLimit))
 	}
@@ -519,7 +534,6 @@ func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []b
 	store := ctx.KVStore(k.storeKey)
 	// 0x01 | codeID (uint64) -> ContractInfo
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddr))
-	fmt.Printf("Contract Query: Got contract Key for contract %s: %s\n", contractAddr, base64.StdEncoding.EncodeToString(contractKey))
 	params := types.NewEnv(
 		ctx,
 		sdk.AccAddress{}, /* empty because it's unused in queries */
@@ -527,7 +541,7 @@ func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []b
 		contractAddr,
 		contractKey,
 	)
-	fmt.Printf("Contract Query: key from params %s \n", params.Key)
+	params.Recursive = recursive
 
 	queryResult, gasUsed, qErr := k.wasmer.Query(codeInfo.CodeHash, params, req, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx))
 	consumeGas(ctx, gasUsed)
@@ -624,14 +638,33 @@ func (k Keeper) setContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress,
 	store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshal(contract))
 }
 
-func (k Keeper) IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, types.ContractInfo) bool) {
+func (k Keeper) setContractCustomInfo(ctx sdk.Context, contractAddress sdk.AccAddress, contract *types.ContractCustomInfo) {
+	store := ctx.KVStore(k.storeKey)
+	store.Set(types.GetContractEnclaveKey(contractAddress), contract.EnclaveKey)
+	//println(fmt.Sprintf("Setting enclave key: %x: %x\n", types.GetContractEnclaveKey(contractAddress), contract.EnclaveKey))
+	store.Set(types.GetContractLabelPrefix(contract.Label), contractAddress)
+	//println(fmt.Sprintf("Setting label: %x: %x\n", types.GetContractLabelPrefix(contract.Label), contractAddress))
+}
+
+func (k Keeper) IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, types.ContractInfo, types.ContractCustomInfo) bool) {
+
 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.ContractKeyPrefix)
 	iter := prefixStore.Iterator(nil, nil)
 	for ; iter.Valid(); iter.Next() {
 		var contract types.ContractInfo
 		k.cdc.MustUnmarshal(iter.Value(), &contract)
+
+		enclaveId := ctx.KVStore(k.storeKey).Get(types.GetContractEnclaveKey(iter.Key()))
+		//println(fmt.Sprintf("Setting enclave key: %x: %x\n", types.GetContractEnclaveKey(iter.Key()), enclaveId))
+		//println(fmt.Sprintf("Setting label: %x: %x\n", types.GetContractLabelPrefix(contract.Label), contract.Label))
+
+		contractCustomInfo := types.ContractCustomInfo{
+			EnclaveKey: enclaveId,
+			Label:      contract.Label,
+		}
+
 		// cb returns true to stop early
-		if cb(iter.Key(), contract) {
+		if cb(iter.Key(), contract, contractCustomInfo) {
 			break
 		}
 	}
@@ -650,10 +683,36 @@ func (k Keeper) importContractState(ctx sdk.Context, contractAddress sdk.AccAddr
 		if model.Value == nil {
 			model.Value = []byte{}
 		}
+
 		if prefixStore.Has(model.Key) {
 			return sdkerrors.Wrapf(types.ErrDuplicate, "duplicate key: %x", model.Key)
 		}
 		prefixStore.Set(model.Key, model.Value)
+
+	}
+	return nil
+}
+
+func (k Keeper) fixContractState(ctx sdk.Context, contractAddress sdk.AccAddress, models []types.Model) error {
+	prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
+	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
+	for _, model := range models {
+		if model.Value == nil {
+			model.Value = []byte{}
+		}
+
+		if !prefixStore.Has(model.Key) {
+			prefixStore.Set(model.Key, model.Value)
+			continue
+		}
+
+		existingValue := prefixStore.Get(model.Key)
+		if bytes.Equal(existingValue, model.Value) {
+			continue
+		} else {
+			prefixStore.Set(model.Key, model.Value)
+		}
+
 	}
 	return nil
 }
@@ -787,7 +846,7 @@ func (k Keeper) importAutoIncrementID(ctx sdk.Context, lastIDKey []byte, val uin
 	return nil
 }
 
-func (k Keeper) importContract(ctx sdk.Context, contractAddr sdk.AccAddress, c *types.ContractInfo, state []types.Model) error {
+func (k Keeper) importContract(ctx sdk.Context, contractAddr sdk.AccAddress, customInfo *types.ContractCustomInfo, c *types.ContractInfo, state []types.Model) error {
 	if !k.containsCodeInfo(ctx, c.CodeID) {
 		return sdkerrors.Wrapf(types.ErrNotFound, "code id: %d", c.CodeID)
 	}
@@ -795,6 +854,9 @@ func (k Keeper) importContract(ctx sdk.Context, contractAddr sdk.AccAddress, c *
 		return sdkerrors.Wrapf(types.ErrDuplicate, "contract: %s", contractAddr)
 	}
 
+	// historyEntry := c.ResetFromGenesis(ctx)
+	// k.appendToContractHistory(ctx, contractAddr, historyEntry)
+	k.setContractCustomInfo(ctx, contractAddr, customInfo)
 	k.setContractInfo(ctx, contractAddr, c)
 	return k.importContractState(ctx, contractAddr, state)
 }

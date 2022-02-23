@@ -38,7 +38,7 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 // QueryContractInfoRequest is the request type for the Query/ContractInfo RPC method
 type QueryContractInfoRequest struct {
 	// address is the address of the contract to query
-	Address github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=address,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"address,omitempty"`
+	Address string `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
 }
 
 func (m *QueryContractInfoRequest) Reset()         { *m = QueryContractInfoRequest{} }
@@ -114,44 +114,6 @@ func (m *QueryContractInfoResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_QueryContractInfoResponse proto.InternalMessageInfo
 
-type QueryContractHistoryRequest struct {
-	// address is the address of the contract to query
-	Address github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=address,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"address,omitempty"`
-}
-
-func (m *QueryContractHistoryRequest) Reset()         { *m = QueryContractHistoryRequest{} }
-func (m *QueryContractHistoryRequest) String() string { return proto.CompactTextString(m) }
-func (*QueryContractHistoryRequest) ProtoMessage()    {}
-func (*QueryContractHistoryRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7735281c5fa969d4, []int{2}
-}
-func (m *QueryContractHistoryRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *QueryContractHistoryRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_QueryContractHistoryRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *QueryContractHistoryRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_QueryContractHistoryRequest.Merge(m, src)
-}
-func (m *QueryContractHistoryRequest) XXX_Size() int {
-	return m.Size()
-}
-func (m *QueryContractHistoryRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_QueryContractHistoryRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_QueryContractHistoryRequest proto.InternalMessageInfo
-
 type QueryContractsByCodeRequest struct {
 	CodeId uint64 `protobuf:"varint,1,opt,name=code_id,json=codeId,proto3" json:"code_id,omitempty"`
 }
@@ -160,7 +122,7 @@ func (m *QueryContractsByCodeRequest) Reset()         { *m = QueryContractsByCod
 func (m *QueryContractsByCodeRequest) String() string { return proto.CompactTextString(m) }
 func (*QueryContractsByCodeRequest) ProtoMessage()    {}
 func (*QueryContractsByCodeRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7735281c5fa969d4, []int{3}
+	return fileDescriptor_7735281c5fa969d4, []int{2}
 }
 func (m *QueryContractsByCodeRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -199,7 +161,7 @@ func (m *ContractInfoWithAddress) Reset()         { *m = ContractInfoWithAddress
 func (m *ContractInfoWithAddress) String() string { return proto.CompactTextString(m) }
 func (*ContractInfoWithAddress) ProtoMessage()    {}
 func (*ContractInfoWithAddress) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7735281c5fa969d4, []int{4}
+	return fileDescriptor_7735281c5fa969d4, []int{3}
 }
 func (m *ContractInfoWithAddress) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -236,7 +198,7 @@ func (m *QueryContractsByCodeResponse) Reset()         { *m = QueryContractsByCo
 func (m *QueryContractsByCodeResponse) String() string { return proto.CompactTextString(m) }
 func (*QueryContractsByCodeResponse) ProtoMessage()    {}
 func (*QueryContractsByCodeResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7735281c5fa969d4, []int{5}
+	return fileDescriptor_7735281c5fa969d4, []int{4}
 }
 func (m *QueryContractsByCodeResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -267,15 +229,15 @@ var xxx_messageInfo_QueryContractsByCodeResponse proto.InternalMessageInfo
 
 type QuerySmartContractStateRequest struct {
 	// address is the address of the contract
-	Address   github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=address,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"address,omitempty"`
-	QueryData []byte                                        `protobuf:"bytes,2,opt,name=query_data,json=queryData,proto3" json:"query_data,omitempty"`
+	Address   string `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	QueryData []byte `protobuf:"bytes,2,opt,name=query_data,json=queryData,proto3" json:"query_data,omitempty"`
 }
 
 func (m *QuerySmartContractStateRequest) Reset()         { *m = QuerySmartContractStateRequest{} }
 func (m *QuerySmartContractStateRequest) String() string { return proto.CompactTextString(m) }
 func (*QuerySmartContractStateRequest) ProtoMessage()    {}
 func (*QuerySmartContractStateRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7735281c5fa969d4, []int{6}
+	return fileDescriptor_7735281c5fa969d4, []int{5}
 }
 func (m *QuerySmartContractStateRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -312,7 +274,7 @@ func (m *QueryContractAddressByLabelRequest) Reset()         { *m = QueryContrac
 func (m *QueryContractAddressByLabelRequest) String() string { return proto.CompactTextString(m) }
 func (*QueryContractAddressByLabelRequest) ProtoMessage()    {}
 func (*QueryContractAddressByLabelRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7735281c5fa969d4, []int{7}
+	return fileDescriptor_7735281c5fa969d4, []int{6}
 }
 func (m *QueryContractAddressByLabelRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -343,14 +305,14 @@ var xxx_messageInfo_QueryContractAddressByLabelRequest proto.InternalMessageInfo
 
 type QueryContractKeyRequest struct {
 	// address is the address of the contract
-	Address github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=address,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"address,omitempty"`
+	Address string `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
 }
 
 func (m *QueryContractKeyRequest) Reset()         { *m = QueryContractKeyRequest{} }
 func (m *QueryContractKeyRequest) String() string { return proto.CompactTextString(m) }
 func (*QueryContractKeyRequest) ProtoMessage()    {}
 func (*QueryContractKeyRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7735281c5fa969d4, []int{8}
+	return fileDescriptor_7735281c5fa969d4, []int{7}
 }
 func (m *QueryContractKeyRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -381,14 +343,14 @@ var xxx_messageInfo_QueryContractKeyRequest proto.InternalMessageInfo
 
 type QueryContractHashRequest struct {
 	// address is the address of the contract
-	Address github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=address,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"address,omitempty"`
+	Address string `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
 }
 
 func (m *QueryContractHashRequest) Reset()         { *m = QueryContractHashRequest{} }
 func (m *QueryContractHashRequest) String() string { return proto.CompactTextString(m) }
 func (*QueryContractHashRequest) ProtoMessage()    {}
 func (*QueryContractHashRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7735281c5fa969d4, []int{9}
+	return fileDescriptor_7735281c5fa969d4, []int{8}
 }
 func (m *QueryContractHashRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -418,14 +380,14 @@ func (m *QueryContractHashRequest) XXX_DiscardUnknown() {
 var xxx_messageInfo_QueryContractHashRequest proto.InternalMessageInfo
 
 type QuerySmartContractStateResponse struct {
-	Data encoding_json.RawMessage `protobuf:"bytes,1,opt,name=data,proto3,casttype=encoding/json.RawMessage" json:"data,omitempty"`
+	Data []byte `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (m *QuerySmartContractStateResponse) Reset()         { *m = QuerySmartContractStateResponse{} }
 func (m *QuerySmartContractStateResponse) String() string { return proto.CompactTextString(m) }
 func (*QuerySmartContractStateResponse) ProtoMessage()    {}
 func (*QuerySmartContractStateResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7735281c5fa969d4, []int{10}
+	return fileDescriptor_7735281c5fa969d4, []int{9}
 }
 func (m *QuerySmartContractStateResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -462,7 +424,7 @@ func (m *QueryCodeRequest) Reset()         { *m = QueryCodeRequest{} }
 func (m *QueryCodeRequest) String() string { return proto.CompactTextString(m) }
 func (*QueryCodeRequest) ProtoMessage()    {}
 func (*QueryCodeRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7735281c5fa969d4, []int{11}
+	return fileDescriptor_7735281c5fa969d4, []int{10}
 }
 func (m *QueryCodeRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -503,7 +465,7 @@ func (m *CodeInfoResponse) Reset()         { *m = CodeInfoResponse{} }
 func (m *CodeInfoResponse) String() string { return proto.CompactTextString(m) }
 func (*CodeInfoResponse) ProtoMessage()    {}
 func (*CodeInfoResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7735281c5fa969d4, []int{12}
+	return fileDescriptor_7735281c5fa969d4, []int{11}
 }
 func (m *CodeInfoResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -541,7 +503,7 @@ func (m *QueryCodeResponse) Reset()         { *m = QueryCodeResponse{} }
 func (m *QueryCodeResponse) String() string { return proto.CompactTextString(m) }
 func (*QueryCodeResponse) ProtoMessage()    {}
 func (*QueryCodeResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7735281c5fa969d4, []int{13}
+	return fileDescriptor_7735281c5fa969d4, []int{12}
 }
 func (m *QueryCodeResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -578,7 +540,7 @@ func (m *QueryCodesResponse) Reset()         { *m = QueryCodesResponse{} }
 func (m *QueryCodesResponse) String() string { return proto.CompactTextString(m) }
 func (*QueryCodesResponse) ProtoMessage()    {}
 func (*QueryCodesResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7735281c5fa969d4, []int{14}
+	return fileDescriptor_7735281c5fa969d4, []int{13}
 }
 func (m *QueryCodesResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -616,7 +578,7 @@ func (m *QueryContractAddressByLabelResponse) Reset()         { *m = QueryContra
 func (m *QueryContractAddressByLabelResponse) String() string { return proto.CompactTextString(m) }
 func (*QueryContractAddressByLabelResponse) ProtoMessage()    {}
 func (*QueryContractAddressByLabelResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7735281c5fa969d4, []int{15}
+	return fileDescriptor_7735281c5fa969d4, []int{14}
 }
 func (m *QueryContractAddressByLabelResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -654,7 +616,7 @@ func (m *QueryContractKeyResponse) Reset()         { *m = QueryContractKeyRespon
 func (m *QueryContractKeyResponse) String() string { return proto.CompactTextString(m) }
 func (*QueryContractKeyResponse) ProtoMessage()    {}
 func (*QueryContractKeyResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7735281c5fa969d4, []int{16}
+	return fileDescriptor_7735281c5fa969d4, []int{15}
 }
 func (m *QueryContractKeyResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -691,7 +653,7 @@ func (m *QueryContractHashResponse) Reset()         { *m = QueryContractHashResp
 func (m *QueryContractHashResponse) String() string { return proto.CompactTextString(m) }
 func (*QueryContractHashResponse) ProtoMessage()    {}
 func (*QueryContractHashResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7735281c5fa969d4, []int{17}
+	return fileDescriptor_7735281c5fa969d4, []int{16}
 }
 func (m *QueryContractHashResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -735,7 +697,7 @@ func (m *DecryptedAnswer) Reset()         { *m = DecryptedAnswer{} }
 func (m *DecryptedAnswer) String() string { return proto.CompactTextString(m) }
 func (*DecryptedAnswer) ProtoMessage()    {}
 func (*DecryptedAnswer) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7735281c5fa969d4, []int{18}
+	return fileDescriptor_7735281c5fa969d4, []int{17}
 }
 func (m *DecryptedAnswer) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -765,25 +727,24 @@ func (m *DecryptedAnswer) XXX_DiscardUnknown() {
 var xxx_messageInfo_DecryptedAnswer proto.InternalMessageInfo
 
 func init() {
-	proto.RegisterType((*QueryContractInfoRequest)(nil), "SecretNetwork.x.compute.v1beta1.QueryContractInfoRequest")
-	proto.RegisterType((*QueryContractInfoResponse)(nil), "SecretNetwork.x.compute.v1beta1.QueryContractInfoResponse")
-	proto.RegisterType((*QueryContractHistoryRequest)(nil), "SecretNetwork.x.compute.v1beta1.QueryContractHistoryRequest")
-	proto.RegisterType((*QueryContractsByCodeRequest)(nil), "SecretNetwork.x.compute.v1beta1.QueryContractsByCodeRequest")
-	proto.RegisterType((*ContractInfoWithAddress)(nil), "SecretNetwork.x.compute.v1beta1.ContractInfoWithAddress")
-	proto.RegisterType((*QueryContractsByCodeResponse)(nil), "SecretNetwork.x.compute.v1beta1.QueryContractsByCodeResponse")
-	proto.RegisterType((*QuerySmartContractStateRequest)(nil), "SecretNetwork.x.compute.v1beta1.QuerySmartContractStateRequest")
-	proto.RegisterType((*QueryContractAddressByLabelRequest)(nil), "SecretNetwork.x.compute.v1beta1.QueryContractAddressByLabelRequest")
-	proto.RegisterType((*QueryContractKeyRequest)(nil), "SecretNetwork.x.compute.v1beta1.QueryContractKeyRequest")
-	proto.RegisterType((*QueryContractHashRequest)(nil), "SecretNetwork.x.compute.v1beta1.QueryContractHashRequest")
-	proto.RegisterType((*QuerySmartContractStateResponse)(nil), "SecretNetwork.x.compute.v1beta1.QuerySmartContractStateResponse")
-	proto.RegisterType((*QueryCodeRequest)(nil), "SecretNetwork.x.compute.v1beta1.QueryCodeRequest")
-	proto.RegisterType((*CodeInfoResponse)(nil), "SecretNetwork.x.compute.v1beta1.CodeInfoResponse")
-	proto.RegisterType((*QueryCodeResponse)(nil), "SecretNetwork.x.compute.v1beta1.QueryCodeResponse")
-	proto.RegisterType((*QueryCodesResponse)(nil), "SecretNetwork.x.compute.v1beta1.QueryCodesResponse")
-	proto.RegisterType((*QueryContractAddressByLabelResponse)(nil), "SecretNetwork.x.compute.v1beta1.QueryContractAddressByLabelResponse")
-	proto.RegisterType((*QueryContractKeyResponse)(nil), "SecretNetwork.x.compute.v1beta1.QueryContractKeyResponse")
-	proto.RegisterType((*QueryContractHashResponse)(nil), "SecretNetwork.x.compute.v1beta1.QueryContractHashResponse")
-	proto.RegisterType((*DecryptedAnswer)(nil), "SecretNetwork.x.compute.v1beta1.DecryptedAnswer")
+	proto.RegisterType((*QueryContractInfoRequest)(nil), "secret.compute.v1beta1.QueryContractInfoRequest")
+	proto.RegisterType((*QueryContractInfoResponse)(nil), "secret.compute.v1beta1.QueryContractInfoResponse")
+	proto.RegisterType((*QueryContractsByCodeRequest)(nil), "secret.compute.v1beta1.QueryContractsByCodeRequest")
+	proto.RegisterType((*ContractInfoWithAddress)(nil), "secret.compute.v1beta1.ContractInfoWithAddress")
+	proto.RegisterType((*QueryContractsByCodeResponse)(nil), "secret.compute.v1beta1.QueryContractsByCodeResponse")
+	proto.RegisterType((*QuerySmartContractStateRequest)(nil), "secret.compute.v1beta1.QuerySmartContractStateRequest")
+	proto.RegisterType((*QueryContractAddressByLabelRequest)(nil), "secret.compute.v1beta1.QueryContractAddressByLabelRequest")
+	proto.RegisterType((*QueryContractKeyRequest)(nil), "secret.compute.v1beta1.QueryContractKeyRequest")
+	proto.RegisterType((*QueryContractHashRequest)(nil), "secret.compute.v1beta1.QueryContractHashRequest")
+	proto.RegisterType((*QuerySmartContractStateResponse)(nil), "secret.compute.v1beta1.QuerySmartContractStateResponse")
+	proto.RegisterType((*QueryCodeRequest)(nil), "secret.compute.v1beta1.QueryCodeRequest")
+	proto.RegisterType((*CodeInfoResponse)(nil), "secret.compute.v1beta1.CodeInfoResponse")
+	proto.RegisterType((*QueryCodeResponse)(nil), "secret.compute.v1beta1.QueryCodeResponse")
+	proto.RegisterType((*QueryCodesResponse)(nil), "secret.compute.v1beta1.QueryCodesResponse")
+	proto.RegisterType((*QueryContractAddressByLabelResponse)(nil), "secret.compute.v1beta1.QueryContractAddressByLabelResponse")
+	proto.RegisterType((*QueryContractKeyResponse)(nil), "secret.compute.v1beta1.QueryContractKeyResponse")
+	proto.RegisterType((*QueryContractHashResponse)(nil), "secret.compute.v1beta1.QueryContractHashResponse")
+	proto.RegisterType((*DecryptedAnswer)(nil), "secret.compute.v1beta1.DecryptedAnswer")
 }
 
 func init() {
@@ -791,81 +752,79 @@ func init() {
 }
 
 var fileDescriptor_7735281c5fa969d4 = []byte{
-	// 1184 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xd4, 0x57, 0x4f, 0x6f, 0x1b, 0x45,
-	0x14, 0xf7, 0x26, 0x8e, 0x13, 0x4f, 0x42, 0x13, 0x46, 0x6d, 0x63, 0xdc, 0xd4, 0x5b, 0x36, 0xaa,
-	0x9a, 0x2a, 0xca, 0x2e, 0x4e, 0x51, 0x15, 0xc2, 0x9f, 0x12, 0x37, 0x91, 0x52, 0x1a, 0x90, 0x70,
-	0x54, 0x40, 0x20, 0x64, 0x8d, 0x77, 0x27, 0x9b, 0x6d, 0xec, 0x9d, 0xed, 0xcc, 0x6c, 0x13, 0x2b,
-	0xca, 0x05, 0x89, 0x13, 0x1c, 0x90, 0x2a, 0x71, 0xe6, 0xc8, 0x99, 0x6f, 0x80, 0x10, 0x52, 0x2e,
-	0x48, 0x91, 0x38, 0xc0, 0xc9, 0x82, 0x84, 0x43, 0x95, 0x8f, 0x90, 0x13, 0x9a, 0xd9, 0x59, 0x67,
-	0xed, 0x26, 0xc4, 0x31, 0xe4, 0xc0, 0xc9, 0xf3, 0x3c, 0xef, 0xbd, 0xdf, 0xef, 0xfd, 0x99, 0x37,
-	0xb3, 0xc0, 0x60, 0xd8, 0xa6, 0x98, 0x5b, 0x36, 0xa9, 0x07, 0x21, 0xc7, 0xd6, 0xd3, 0x62, 0x15,
-	0x73, 0x54, 0xb4, 0x9e, 0x84, 0x98, 0x36, 0xcc, 0x80, 0x12, 0x4e, 0xa0, 0xbe, 0x2a, 0x75, 0x3e,
-	0xc0, 0x7c, 0x93, 0xd0, 0x0d, 0x73, 0xcb, 0x54, 0xca, 0xa6, 0x52, 0xce, 0x5f, 0x76, 0x89, 0x4b,
-	0xa4, 0xae, 0x25, 0x56, 0x91, 0x59, 0xfe, 0x34, 0xd7, 0xbc, 0x11, 0x60, 0xa6, 0x74, 0xae, 0xb9,
-	0x84, 0xb8, 0x35, 0x6c, 0x49, 0xa9, 0x1a, 0xae, 0x59, 0xb8, 0x1e, 0x70, 0x85, 0x9b, 0x9f, 0x50,
-	0x9b, 0x28, 0xf0, 0x2c, 0xe4, 0xfb, 0x84, 0x23, 0xee, 0x11, 0x3f, 0x36, 0x9d, 0xb4, 0x09, 0xab,
-	0x13, 0x66, 0x55, 0x11, 0xc3, 0x16, 0xaa, 0xda, 0x5e, 0x0b, 0x40, 0x08, 0x91, 0x92, 0xe1, 0x82,
-	0xdc, 0x87, 0x22, 0x92, 0xfb, 0xc4, 0xe7, 0x14, 0xd9, 0xfc, 0x81, 0xbf, 0x46, 0xca, 0xf8, 0x49,
-	0x88, 0x19, 0x87, 0x0f, 0xc1, 0x20, 0x72, 0x1c, 0x8a, 0x19, 0xcb, 0x69, 0x37, 0xb4, 0xa9, 0x91,
-	0x52, 0xf1, 0xa8, 0xa9, 0xcf, 0xb8, 0x1e, 0x5f, 0x0f, 0xab, 0x22, 0x44, 0x4b, 0x01, 0x44, 0x3f,
-	0x33, 0xcc, 0xd9, 0x50, 0xd4, 0x17, 0x6c, 0x7b, 0x21, 0x32, 0x2c, 0xc7, 0x1e, 0x8c, 0x9f, 0x35,
-	0xf0, 0xca, 0x09, 0x48, 0x2c, 0x20, 0x3e, 0xc3, 0xff, 0x29, 0x14, 0xfc, 0x0c, 0x8c, 0x24, 0x41,
-	0x72, 0x7d, 0x37, 0xb4, 0xa9, 0xe1, 0xd9, 0x19, 0xf3, 0x8c, 0x2a, 0x99, 0x49, 0xa3, 0xd2, 0xd0,
-	0x5e, 0x53, 0xd7, 0x0e, 0x9b, 0x7a, 0xaa, 0xdc, 0xe6, 0xcc, 0x78, 0x0c, 0xae, 0xb5, 0x85, 0xb1,
-	0xec, 0x31, 0x4e, 0x68, 0xe3, 0x42, 0x72, 0x76, 0xb7, 0x03, 0x8b, 0x95, 0x1a, 0xf7, 0x89, 0x83,
-	0x63, 0xac, 0x71, 0x30, 0x68, 0x13, 0x07, 0x57, 0x3c, 0x47, 0x62, 0xa5, 0xcb, 0x19, 0x21, 0x3e,
-	0x70, 0x8c, 0x9f, 0x34, 0x30, 0x9e, 0x24, 0xfd, 0xb1, 0xc7, 0xd7, 0x95, 0xf3, 0xff, 0x51, 0xa6,
-	0xbf, 0xd4, 0xc0, 0xc4, 0xc9, 0xe1, 0xab, 0xa6, 0xc1, 0xe0, 0x92, 0xad, 0xb6, 0x2a, 0x9e, 0xbf,
-	0x46, 0x44, 0x44, 0xfd, 0x53, 0xc3, 0xb3, 0x73, 0xe7, 0xc2, 0x4f, 0x24, 0xa7, 0x94, 0xde, 0x15,
-	0x34, 0x5e, 0xb2, 0x13, 0xdb, 0xcc, 0xf8, 0x5a, 0x03, 0x05, 0xc9, 0x63, 0xb5, 0x8e, 0x28, 0x8f,
-	0x4d, 0x57, 0x39, 0xe2, 0xf8, 0x22, 0xaa, 0x0e, 0xaf, 0x03, 0x20, 0x87, 0x4b, 0xc5, 0x41, 0x1c,
-	0xc9, 0x94, 0x8e, 0x94, 0xb3, 0xf2, 0x9f, 0x45, 0xc4, 0x91, 0x31, 0x0f, 0x8c, 0xb6, 0xac, 0xc4,
-	0xdc, 0x1b, 0x2b, 0xa8, 0x8a, 0x6b, 0x31, 0xa3, 0xcb, 0x60, 0xa0, 0x26, 0x64, 0xc9, 0x27, 0x5b,
-	0x8e, 0x04, 0x63, 0x0d, 0x8c, 0xb7, 0xd9, 0x3e, 0xc4, 0x17, 0xd3, 0xb8, 0x9d, 0x53, 0x65, 0x19,
-	0xb1, 0xf5, 0x0b, 0x01, 0x5a, 0x05, 0xfa, 0xa9, 0xa5, 0x51, 0x5d, 0xf2, 0x1a, 0x48, 0xcb, 0x44,
-	0x46, 0x60, 0x13, 0x47, 0x4d, 0x3d, 0x87, 0x7d, 0x9b, 0x38, 0x9e, 0xef, 0x5a, 0x8f, 0x19, 0xf1,
-	0xcd, 0x32, 0xda, 0x7c, 0x1f, 0x33, 0x86, 0x5c, 0x5c, 0x96, 0x9a, 0xc6, 0x34, 0x18, 0x53, 0xec,
-	0xbb, 0x38, 0x6b, 0xcf, 0xfa, 0xc0, 0x98, 0x50, 0x6c, 0x1b, 0x67, 0xb7, 0x3b, 0xb4, 0x4b, 0x63,
-	0xfb, 0x4d, 0x3d, 0x23, 0xd5, 0x16, 0x0f, 0x9b, 0x7a, 0x9f, 0xe7, 0xc4, 0xf6, 0x22, 0x1d, 0x36,
-	0xc5, 0x88, 0x13, 0x1a, 0x95, 0xba, 0xa7, 0x74, 0x28, 0x0f, 0xf0, 0x11, 0xc8, 0x8a, 0x08, 0x2a,
-	0xeb, 0x88, 0xad, 0xe7, 0xfa, 0xa5, 0xbb, 0xb9, 0xa3, 0xa6, 0xfe, 0x7a, 0xc2, 0x1d, 0xc7, 0xbe,
-	0x83, 0x69, 0xdd, 0xf3, 0x79, 0x72, 0x59, 0xf3, 0xaa, 0xcc, 0xaa, 0x36, 0x38, 0x66, 0xe6, 0x32,
-	0xde, 0x2a, 0x89, 0x45, 0x79, 0x48, 0xb8, 0x12, 0x95, 0x83, 0x57, 0x41, 0x86, 0x91, 0x90, 0xda,
-	0x38, 0x97, 0x96, 0xdd, 0xa4, 0x24, 0x98, 0x03, 0x83, 0xd5, 0xd0, 0xab, 0x39, 0x98, 0xe6, 0x06,
-	0xe4, 0x46, 0x2c, 0x1a, 0x5f, 0x69, 0xe0, 0xe5, 0x44, 0x0e, 0x55, 0x5a, 0x3e, 0x01, 0xd9, 0x28,
-	0x2d, 0x62, 0x56, 0x68, 0x72, 0x56, 0x14, 0xbb, 0x38, 0xab, 0xed, 0xc9, 0x4d, 0xcc, 0x8b, 0x21,
-	0x5b, 0xed, 0xc1, 0x09, 0x55, 0xe4, 0x28, 0x85, 0x43, 0x87, 0x4d, 0x5d, 0xca, 0xaa, 0xa0, 0x35,
-	0x00, 0x5b, 0x64, 0x58, 0x8b, 0xcd, 0x47, 0x00, 0xb4, 0xd8, 0xc4, 0xa3, 0xa3, 0x07, 0x3a, 0xd1,
-	0xcc, 0xc8, 0xc6, 0x54, 0x98, 0x41, 0xc1, 0xe4, 0x3f, 0x1e, 0xd0, 0x0b, 0xb8, 0xf2, 0x8c, 0xb5,
-	0x8e, 0x03, 0x27, 0x0f, 0xb6, 0x02, 0x7a, 0x0f, 0xf4, 0x6f, 0xe0, 0x86, 0x02, 0xe9, 0xbd, 0x1d,
-	0x84, 0x13, 0x83, 0x76, 0x5c, 0xe2, 0xd1, 0xc1, 0x56, 0x40, 0x8f, 0x54, 0x79, 0x65, 0xf7, 0xfd,
-	0x5b, 0x38, 0x59, 0x5b, 0xe1, 0xde, 0xf8, 0xa5, 0x0f, 0x8c, 0x2e, 0x62, 0x9b, 0x36, 0x02, 0x8e,
-	0x9d, 0x05, 0x9f, 0x6d, 0x62, 0x0a, 0x21, 0x48, 0x8b, 0x64, 0xa8, 0xe9, 0x26, 0xd7, 0x62, 0xe4,
-	0x79, 0x7e, 0x10, 0x72, 0xd9, 0x04, 0xd9, 0x72, 0x24, 0x40, 0x1d, 0x0c, 0x93, 0x90, 0x07, 0x21,
-	0x8f, 0xc6, 0x69, 0xbf, 0xdc, 0x03, 0xd1, 0x5f, 0x62, 0x9e, 0xc2, 0x22, 0xb8, 0x92, 0x50, 0xa8,
-	0x20, 0x56, 0x61, 0x9c, 0x7a, 0xbe, 0xab, 0x7a, 0x1d, 0x1e, 0xab, 0x2e, 0xb0, 0x55, 0xb9, 0x03,
-	0x57, 0x5a, 0x3e, 0x6b, 0xc4, 0x65, 0xb9, 0x01, 0xd9, 0x3a, 0x37, 0xcd, 0xa8, 0x52, 0xa6, 0x78,
-	0x6f, 0x99, 0xf2, 0x89, 0x15, 0xf7, 0x4c, 0x64, 0xb6, 0xf4, 0x14, 0xfb, 0x5c, 0xb5, 0x8b, 0x22,
-	0xb0, 0x42, 0x5c, 0x06, 0xef, 0x81, 0x11, 0xe5, 0x0d, 0x53, 0x4a, 0x68, 0x2e, 0xd3, 0xc5, 0xa0,
-	0x52, 0xf8, 0x4b, 0xc2, 0x00, 0xde, 0x02, 0xa3, 0x41, 0x0d, 0x79, 0x3e, 0xc7, 0x5b, 0xb1, 0x8f,
-	0x41, 0xc9, 0xfd, 0x52, 0xeb, 0x6f, 0xa9, 0x38, 0x9f, 0x7e, 0xfe, 0x9d, 0x9e, 0x9a, 0x7d, 0x9e,
-	0x01, 0x03, 0xb2, 0x88, 0xf0, 0x07, 0xad, 0xfd, 0xfe, 0x86, 0x6f, 0x9c, 0xd9, 0xfe, 0xa7, 0x3d,
-	0x16, 0xf3, 0xf3, 0xbd, 0x98, 0x46, 0x8d, 0x63, 0x4c, 0x7f, 0xf1, 0xeb, 0x5f, 0xcf, 0xfa, 0x6e,
-	0xc2, 0xc9, 0x17, 0x9e, 0xc2, 0xf1, 0x4d, 0x6c, 0x6d, 0xab, 0x4e, 0xdf, 0x81, 0x3f, 0x6a, 0x60,
-	0xb4, 0xe3, 0x45, 0x00, 0xdf, 0x3a, 0x1f, 0x78, 0xfb, 0x3b, 0x2a, 0xff, 0x76, 0x8f, 0xd6, 0x8a,
-	0x7d, 0x51, 0xb2, 0x9f, 0x86, 0xb7, 0x4f, 0x60, 0xef, 0x60, 0x6b, 0x5b, 0xdd, 0x04, 0x3b, 0xad,
-	0x60, 0x18, 0xfc, 0x4d, 0x03, 0xf0, 0xc5, 0x2b, 0x0b, 0xde, 0xeb, 0x8e, 0xc8, 0xa9, 0xef, 0x90,
-	0xfc, 0xbb, 0xbd, 0x3b, 0x50, 0xc1, 0xbc, 0x23, 0x83, 0x99, 0x83, 0x77, 0xbb, 0x28, 0x85, 0xc5,
-	0x84, 0x1f, 0x6b, 0xfb, 0xf8, 0xb5, 0xb2, 0x03, 0xbf, 0xd5, 0x40, 0x5a, 0x96, 0xa4, 0xd8, 0x6d,
-	0x52, 0x8f, 0xeb, 0x30, 0x7b, 0x1e, 0x13, 0xc5, 0xf7, 0x96, 0xe4, 0xfb, 0x2a, 0xd4, 0xcf, 0x48,
-	0x3e, 0x64, 0x60, 0x40, 0x8e, 0x7f, 0x78, 0xd5, 0x8c, 0xbe, 0x9a, 0xcc, 0xf8, 0x93, 0xca, 0x5c,
-	0x12, 0x9f, 0x54, 0xf9, 0x3b, 0xdd, 0xa3, 0xb7, 0xee, 0x10, 0xe3, 0xba, 0x84, 0x1f, 0x87, 0x57,
-	0x4e, 0x84, 0x2f, 0x7d, 0xbe, 0xfb, 0x67, 0x21, 0xf5, 0xfd, 0x7e, 0x41, 0xdb, 0xdd, 0x2f, 0x68,
-	0x7b, 0xfb, 0x05, 0xed, 0x8f, 0xfd, 0x82, 0xf6, 0xcd, 0x41, 0x21, 0xb5, 0x77, 0x50, 0x48, 0xfd,
-	0x7e, 0x50, 0x48, 0x7d, 0xfa, 0x66, 0x62, 0x38, 0x62, 0xdf, 0x73, 0xeb, 0xa8, 0x1e, 0xd8, 0x56,
-	0x1b, 0x13, 0x6b, 0xab, 0xe5, 0x5c, 0x1c, 0x66, 0xea, 0xa3, 0x5a, 0x74, 0x13, 0x54, 0x33, 0x32,
-	0x84, 0x3b, 0x7f, 0x07, 0x00, 0x00, 0xff, 0xff, 0x1e, 0x14, 0x28, 0xba, 0xa4, 0x0e, 0x00, 0x00,
+	// 1152 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xcc, 0x56, 0x41, 0x6f, 0x1b, 0x45,
+	0x14, 0xf6, 0x26, 0x8e, 0x13, 0x4f, 0x42, 0x13, 0x46, 0x6d, 0x62, 0xdc, 0xd4, 0x5b, 0x36, 0x54,
+	0x4d, 0x88, 0xba, 0x8b, 0x93, 0x50, 0x50, 0x39, 0xa0, 0xb8, 0x89, 0xd4, 0xd2, 0x14, 0xc4, 0x46,
+	0x15, 0x02, 0x81, 0xac, 0xf1, 0xee, 0x64, 0xb3, 0x8d, 0xbd, 0xb3, 0x9d, 0x19, 0x37, 0xb1, 0x4a,
+	0x2f, 0x15, 0x27, 0x4e, 0x48, 0xfd, 0x03, 0x3d, 0x72, 0xe3, 0x8a, 0x10, 0x3f, 0x20, 0x17, 0xa4,
+	0x48, 0x5c, 0x38, 0x59, 0x90, 0x70, 0x40, 0xf9, 0x09, 0x39, 0xa1, 0x99, 0x9d, 0xdd, 0xae, 0xdd,
+	0xb8, 0x76, 0x8a, 0x90, 0x7a, 0xf2, 0x3e, 0xcf, 0x7b, 0xef, 0xfb, 0xe6, 0x7b, 0xef, 0xcd, 0x0c,
+	0x30, 0x18, 0x76, 0x28, 0xe6, 0x96, 0x43, 0x1a, 0x61, 0x93, 0x63, 0xeb, 0x61, 0xb9, 0x86, 0x39,
+	0x2a, 0x5b, 0x0f, 0x9a, 0x98, 0xb6, 0xcc, 0x90, 0x12, 0x4e, 0xe0, 0x74, 0xe4, 0x63, 0x2a, 0x1f,
+	0x53, 0xf9, 0x14, 0xcf, 0x7b, 0xc4, 0x23, 0xd2, 0xc5, 0x12, 0x5f, 0x91, 0x77, 0xb1, 0x57, 0x46,
+	0xde, 0x0a, 0x31, 0x53, 0x3e, 0x17, 0x3d, 0x42, 0xbc, 0x3a, 0xb6, 0xa4, 0x55, 0x6b, 0x6e, 0x59,
+	0xb8, 0x11, 0x72, 0x05, 0x57, 0x9c, 0x55, 0x8b, 0x28, 0xf4, 0x2d, 0x14, 0x04, 0x84, 0x23, 0xee,
+	0x93, 0x20, 0x0e, 0x9d, 0x73, 0x08, 0x6b, 0x10, 0x66, 0xd5, 0x10, 0xc3, 0x16, 0xaa, 0x39, 0x7e,
+	0x02, 0x20, 0x8c, 0xc8, 0xc9, 0x58, 0x01, 0x85, 0xcf, 0xc5, 0x06, 0x6e, 0x92, 0x80, 0x53, 0xe4,
+	0xf0, 0xdb, 0xc1, 0x16, 0xb1, 0xf1, 0x83, 0x26, 0x66, 0x1c, 0x16, 0xc0, 0x28, 0x72, 0x5d, 0x8a,
+	0x19, 0x2b, 0x68, 0x97, 0xb5, 0xf9, 0xbc, 0x1d, 0x9b, 0xc6, 0xaf, 0x1a, 0x78, 0xeb, 0x94, 0x30,
+	0x16, 0x92, 0x80, 0x61, 0x78, 0xa7, 0x33, 0x6e, 0xa2, 0x52, 0x3e, 0x69, 0xeb, 0xd7, 0x3c, 0x9f,
+	0x6f, 0x37, 0x6b, 0x42, 0x1a, 0x4b, 0x11, 0x8b, 0x7e, 0xae, 0x31, 0x77, 0x47, 0x6d, 0x79, 0xd5,
+	0x71, 0x56, 0xa3, 0xc0, 0x04, 0x0a, 0xda, 0x60, 0x22, 0x0d, 0x52, 0x18, 0xba, 0xac, 0xcd, 0x8f,
+	0x2f, 0xbd, 0x63, 0x9e, 0xae, 0xb4, 0x99, 0xf6, 0xad, 0x8c, 0x1d, 0xb4, 0x75, 0xed, 0xb8, 0xad,
+	0x67, 0xec, 0x8e, 0x1c, 0xc6, 0x75, 0x70, 0xb1, 0x83, 0x3d, 0xab, 0xb4, 0x6e, 0x12, 0x17, 0xc7,
+	0xfb, 0x9e, 0x01, 0xa3, 0x0e, 0x71, 0x71, 0xd5, 0x77, 0x25, 0xff, 0xac, 0x9d, 0x13, 0xe6, 0x6d,
+	0xd7, 0xf8, 0x45, 0x03, 0x33, 0xe9, 0x44, 0x5f, 0xf8, 0x7c, 0x5b, 0x11, 0x7e, 0xfd, 0x37, 0xfd,
+	0x2d, 0x98, 0x3d, 0x7d, 0xd3, 0xaa, 0x6a, 0x5f, 0x83, 0x73, 0x8e, 0x5a, 0xaa, 0xfa, 0xc1, 0x16,
+	0x11, 0xfb, 0x18, 0x9e, 0x1f, 0x5f, 0xb2, 0x06, 0x41, 0x4d, 0x29, 0x51, 0xc9, 0xee, 0x0b, 0xf0,
+	0x37, 0x9c, 0xd4, 0x32, 0x33, 0xbe, 0x04, 0x25, 0x89, 0xbe, 0xd9, 0x40, 0x94, 0xc7, 0x91, 0x9b,
+	0x1c, 0x71, 0xdc, 0xb7, 0xdb, 0xe0, 0x25, 0x00, 0xe4, 0x90, 0x55, 0x5d, 0xc4, 0x91, 0xd4, 0x62,
+	0xc2, 0xce, 0xcb, 0x7f, 0xd6, 0x10, 0x47, 0xc6, 0x0d, 0x60, 0x74, 0x6c, 0x2c, 0xe6, 0xd1, 0xda,
+	0x40, 0x35, 0x5c, 0x8f, 0xd3, 0x9f, 0x07, 0x23, 0x75, 0x61, 0xab, 0xe4, 0x91, 0x61, 0x2c, 0x83,
+	0x99, 0x8e, 0xd8, 0x3b, 0xb8, 0xd5, 0xbf, 0xfb, 0xbb, 0x67, 0xe6, 0x16, 0x62, 0xdb, 0xfd, 0xa3,
+	0xde, 0x07, 0x7a, 0x4f, 0x05, 0x54, 0x09, 0x20, 0xc8, 0xca, 0x2d, 0xca, 0x06, 0xb2, 0xe5, 0xb7,
+	0xb1, 0x08, 0xa6, 0x14, 0xd8, 0x00, 0x0d, 0xfa, 0x74, 0x08, 0x4c, 0x09, 0xc7, 0x8e, 0x71, 0x5c,
+	0xe8, 0xf2, 0xae, 0x4c, 0x1d, 0xb6, 0xf5, 0x9c, 0x74, 0x5b, 0x3b, 0x6e, 0xeb, 0x43, 0xbe, 0x1b,
+	0xc7, 0x8b, 0x26, 0x76, 0x28, 0x46, 0x9c, 0xd0, 0x48, 0xe6, 0x57, 0x6a, 0x62, 0x95, 0x01, 0xde,
+	0x03, 0x79, 0xb1, 0x83, 0xea, 0x36, 0x62, 0xdb, 0x85, 0x61, 0x99, 0xee, 0xc3, 0x93, 0xb6, 0xbe,
+	0x92, 0x4a, 0xc7, 0x71, 0xe0, 0x62, 0xda, 0xf0, 0x03, 0x9e, 0xfe, 0xac, 0xfb, 0x35, 0x66, 0xd5,
+	0x5a, 0x1c, 0x33, 0xf3, 0x16, 0xde, 0xab, 0x88, 0x0f, 0x7b, 0x4c, 0xa4, 0x12, 0x42, 0xc3, 0x69,
+	0x90, 0x63, 0xa4, 0x49, 0x1d, 0x5c, 0xc8, 0x4a, 0x81, 0x95, 0x25, 0x94, 0xaf, 0x35, 0xfd, 0xba,
+	0x8b, 0x69, 0x61, 0x24, 0x52, 0x5e, 0x99, 0xc6, 0x13, 0x0d, 0xbc, 0x99, 0xd2, 0x50, 0xc9, 0xf2,
+	0x19, 0xc8, 0x47, 0xb2, 0x88, 0x01, 0xd3, 0xe4, 0x80, 0xcd, 0xf7, 0x6e, 0xf5, 0x4e, 0x4d, 0x53,
+	0x43, 0x36, 0xe6, 0xa8, 0x35, 0x38, 0xab, 0xaa, 0x17, 0x29, 0x37, 0x76, 0xdc, 0xd6, 0xa5, 0xad,
+	0xea, 0xe8, 0x00, 0x98, 0x70, 0x60, 0x09, 0x89, 0xbb, 0x00, 0x24, 0x24, 0xe2, 0x81, 0x1b, 0x9c,
+	0x45, 0x34, 0x69, 0xf9, 0x98, 0x01, 0x33, 0x28, 0x98, 0x7b, 0xe9, 0x28, 0xfc, 0x0f, 0x07, 0xb4,
+	0xb1, 0xd5, 0x35, 0x0d, 0x72, 0x84, 0x14, 0xd0, 0x27, 0x60, 0x78, 0x07, 0xb7, 0x14, 0xc8, 0xab,
+	0x17, 0x5f, 0x24, 0x31, 0x68, 0xd7, 0x95, 0x13, 0x4d, 0x9d, 0x02, 0xba, 0xa7, 0x8a, 0x29, 0x7b,
+	0xed, 0xbf, 0xc2, 0xc9, 0x92, 0x8a, 0xf4, 0xc6, 0x6f, 0x43, 0x60, 0x72, 0x0d, 0x3b, 0xb4, 0x15,
+	0x72, 0xec, 0xae, 0x06, 0x6c, 0x17, 0x53, 0x31, 0xa4, 0x42, 0x0c, 0x35, 0xde, 0xf2, 0x5b, 0x1c,
+	0x2e, 0x7e, 0x10, 0x36, 0xb9, 0xac, 0x7d, 0xde, 0x8e, 0x0c, 0xa8, 0x83, 0x71, 0xd2, 0xe4, 0x61,
+	0x93, 0x47, 0x07, 0xd7, 0xb0, 0x5c, 0x03, 0xd1, 0x5f, 0xe2, 0xe4, 0x82, 0x65, 0x70, 0x21, 0xe5,
+	0x50, 0x45, 0xac, 0xca, 0x38, 0xf5, 0x03, 0x4f, 0x75, 0x36, 0x7c, 0xee, 0xba, 0xca, 0x36, 0xe5,
+	0x0a, 0xdc, 0x48, 0x72, 0xd6, 0x89, 0xc7, 0x0a, 0x23, 0xb2, 0x63, 0xae, 0x98, 0x51, 0xa5, 0x4c,
+	0x71, 0xd5, 0x9b, 0xf2, 0x76, 0x8f, 0x7b, 0x26, 0x0a, 0x5b, 0x7f, 0x88, 0x03, 0xae, 0xda, 0x45,
+	0x11, 0xd8, 0x20, 0x1e, 0x83, 0x1f, 0x83, 0x09, 0x95, 0x0d, 0x53, 0x4a, 0x68, 0x21, 0x27, 0x95,
+	0x9b, 0x3d, 0x69, 0xeb, 0x05, 0x1c, 0x38, 0xc4, 0xf5, 0x03, 0xcf, 0xba, 0xcf, 0x48, 0x60, 0xda,
+	0x68, 0xf7, 0x2e, 0x66, 0x0c, 0x79, 0xd8, 0x56, 0xf8, 0xeb, 0x22, 0x00, 0x5e, 0x05, 0x93, 0x61,
+	0x1d, 0xf9, 0x01, 0xc7, 0x7b, 0x71, 0x8e, 0x51, 0xc9, 0xfd, 0x5c, 0xf2, 0xb7, 0x74, 0xbc, 0x91,
+	0xfd, 0xe7, 0x99, 0x9e, 0x59, 0xfa, 0x3e, 0x07, 0x46, 0x64, 0x11, 0xe1, 0x33, 0xad, 0xf3, 0x8a,
+	0x83, 0xef, 0xf5, 0xea, 0xfa, 0x5e, 0xcf, 0x93, 0x62, 0xf9, 0x0c, 0x11, 0x51, 0x9b, 0x18, 0x8b,
+	0x4f, 0x7e, 0xff, 0xfb, 0xe9, 0xd0, 0x15, 0x38, 0xf7, 0xc2, 0x9b, 0x2b, 0xbe, 0xad, 0xac, 0x47,
+	0xaa, 0xaf, 0x1f, 0xc3, 0x9f, 0x34, 0x30, 0xd9, 0x75, 0x59, 0xc2, 0xe5, 0x81, 0x30, 0x3b, 0xdf,
+	0x13, 0xc5, 0x95, 0xb3, 0x05, 0x29, 0xae, 0x65, 0xc9, 0x75, 0x11, 0x2e, 0x9c, 0xc2, 0xd5, 0xc5,
+	0xd6, 0x23, 0x75, 0xa6, 0x3f, 0x4e, 0xa8, 0x33, 0xf8, 0xb3, 0x06, 0xe0, 0x8b, 0xd7, 0x0b, 0xbc,
+	0xfe, 0x52, 0xfc, 0x9e, 0x37, 0x72, 0xf1, 0x83, 0x33, 0xc7, 0x0d, 0x40, 0xbd, 0x5b, 0x66, 0x8b,
+	0x89, 0x3c, 0xf0, 0x3b, 0x0d, 0x64, 0xa5, 0xc2, 0xf3, 0x7d, 0xc4, 0x7a, 0x2e, 0xeb, 0xc2, 0x00,
+	0x9e, 0x8a, 0xd0, 0x55, 0x49, 0xe8, 0x6d, 0xa8, 0xf7, 0xd1, 0x12, 0xde, 0x07, 0x23, 0xf2, 0x80,
+	0x86, 0xd3, 0x66, 0xf4, 0xb6, 0x36, 0xe3, 0x87, 0xb7, 0xb9, 0x2e, 0x1e, 0xde, 0xc5, 0x77, 0xfb,
+	0x82, 0x26, 0x87, 0xbb, 0x71, 0x49, 0xa2, 0xce, 0xc0, 0x0b, 0xa7, 0xa2, 0x56, 0xbe, 0xd9, 0xff,
+	0xab, 0x94, 0xf9, 0xf1, 0xb0, 0xa4, 0xed, 0x1f, 0x96, 0xb4, 0x83, 0xc3, 0x92, 0xf6, 0xe7, 0x61,
+	0x49, 0xfb, 0xe1, 0xa8, 0x94, 0x39, 0x38, 0x2a, 0x65, 0xfe, 0x38, 0x2a, 0x65, 0xbe, 0xfa, 0x28,
+	0x75, 0x7c, 0xe1, 0xc0, 0xf7, 0x1a, 0xa8, 0x11, 0x3a, 0xd6, 0xa6, 0x24, 0xf0, 0x29, 0xe6, 0xbb,
+	0x84, 0xee, 0x58, 0x7b, 0x49, 0x72, 0x31, 0x6e, 0x34, 0x40, 0xf5, 0xe8, 0xac, 0xae, 0xe5, 0x24,
+	0xf3, 0xe5, 0x7f, 0x03, 0x00, 0x00, 0xff, 0xff, 0x58, 0x75, 0x9d, 0xd3, 0xb8, 0x0c, 0x00, 0x00,
 }
 
 func (this *QueryContractInfoRequest) Equal(that interface{}) bool {
@@ -887,7 +846,7 @@ func (this *QueryContractInfoRequest) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if !bytes.Equal(this.Address, that1.Address) {
+	if this.Address != that1.Address {
 		return false
 	}
 	return true
@@ -915,30 +874,6 @@ func (this *QueryContractInfoResponse) Equal(that interface{}) bool {
 		return false
 	}
 	if !this.ContractInfo.Equal(that1.ContractInfo) {
-		return false
-	}
-	return true
-}
-func (this *QueryContractHistoryRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*QueryContractHistoryRequest)
-	if !ok {
-		that2, ok := that.(QueryContractHistoryRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !bytes.Equal(this.Address, that1.Address) {
 		return false
 	}
 	return true
@@ -1042,7 +977,7 @@ func (this *QuerySmartContractStateRequest) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if !bytes.Equal(this.Address, that1.Address) {
+	if this.Address != that1.Address {
 		return false
 	}
 	if !bytes.Equal(this.QueryData, that1.QueryData) {
@@ -1093,7 +1028,7 @@ func (this *QueryContractKeyRequest) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if !bytes.Equal(this.Address, that1.Address) {
+	if this.Address != that1.Address {
 		return false
 	}
 	return true
@@ -1117,7 +1052,7 @@ func (this *QueryContractHashRequest) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if !bytes.Equal(this.Address, that1.Address) {
+	if this.Address != that1.Address {
 		return false
 	}
 	return true
@@ -1347,21 +1282,15 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type QueryClient interface {
+	// Query contract
 	ContractInfo(ctx context.Context, in *QueryContractInfoRequest, opts ...grpc.CallOption) (*QueryContractInfoResponse, error)
-	//
-	// rpc ContractHistory (QueryContractHistoryRequest) returns (QueryContractHistoryResponse) {
-	// option (google.api.http).get = "/compute/v1beta1/contract/{address}/history";
-	// }
+	// Query contract
 	ContractsByCode(ctx context.Context, in *QueryContractsByCodeRequest, opts ...grpc.CallOption) (*QueryContractsByCodeResponse, error)
-	//
-	// rpc AllContractState (QueryAllContractStateRequest) returns (QueryAllContractStateResponse) {
-	// option (google.api.http).get = "/compute/v1beta1/contract/{address}/state";
-	// }
-	// rpc RawContractState (QueryRawContractStateRequest) returns (QueryRawContractStateResponse) {
-	// option (google.api.http).get = "/compute/v1beta1/contract/{address}/raw/{query_data}";
-	// }
+	// Query contract
 	SmartContractState(ctx context.Context, in *QuerySmartContractStateRequest, opts ...grpc.CallOption) (*QuerySmartContractStateResponse, error)
+	// Query a specific contract code
 	Code(ctx context.Context, in *QueryCodeRequest, opts ...grpc.CallOption) (*QueryCodeResponse, error)
+	// Query all contract codes on-chain
 	Codes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*QueryCodesResponse, error)
 }
 
@@ -1375,7 +1304,7 @@ func NewQueryClient(cc grpc1.ClientConn) QueryClient {
 
 func (c *queryClient) ContractInfo(ctx context.Context, in *QueryContractInfoRequest, opts ...grpc.CallOption) (*QueryContractInfoResponse, error) {
 	out := new(QueryContractInfoResponse)
-	err := c.cc.Invoke(ctx, "/SecretNetwork.x.compute.v1beta1.Query/ContractInfo", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/secret.compute.v1beta1.Query/ContractInfo", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1384,7 +1313,7 @@ func (c *queryClient) ContractInfo(ctx context.Context, in *QueryContractInfoReq
 
 func (c *queryClient) ContractsByCode(ctx context.Context, in *QueryContractsByCodeRequest, opts ...grpc.CallOption) (*QueryContractsByCodeResponse, error) {
 	out := new(QueryContractsByCodeResponse)
-	err := c.cc.Invoke(ctx, "/SecretNetwork.x.compute.v1beta1.Query/ContractsByCode", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/secret.compute.v1beta1.Query/ContractsByCode", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1393,7 +1322,7 @@ func (c *queryClient) ContractsByCode(ctx context.Context, in *QueryContractsByC
 
 func (c *queryClient) SmartContractState(ctx context.Context, in *QuerySmartContractStateRequest, opts ...grpc.CallOption) (*QuerySmartContractStateResponse, error) {
 	out := new(QuerySmartContractStateResponse)
-	err := c.cc.Invoke(ctx, "/SecretNetwork.x.compute.v1beta1.Query/SmartContractState", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/secret.compute.v1beta1.Query/SmartContractState", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1402,7 +1331,7 @@ func (c *queryClient) SmartContractState(ctx context.Context, in *QuerySmartCont
 
 func (c *queryClient) Code(ctx context.Context, in *QueryCodeRequest, opts ...grpc.CallOption) (*QueryCodeResponse, error) {
 	out := new(QueryCodeResponse)
-	err := c.cc.Invoke(ctx, "/SecretNetwork.x.compute.v1beta1.Query/Code", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/secret.compute.v1beta1.Query/Code", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1411,7 +1340,7 @@ func (c *queryClient) Code(ctx context.Context, in *QueryCodeRequest, opts ...gr
 
 func (c *queryClient) Codes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*QueryCodesResponse, error) {
 	out := new(QueryCodesResponse)
-	err := c.cc.Invoke(ctx, "/SecretNetwork.x.compute.v1beta1.Query/Codes", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/secret.compute.v1beta1.Query/Codes", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1420,21 +1349,15 @@ func (c *queryClient) Codes(ctx context.Context, in *emptypb.Empty, opts ...grpc
 
 // QueryServer is the server API for Query service.
 type QueryServer interface {
+	// Query contract
 	ContractInfo(context.Context, *QueryContractInfoRequest) (*QueryContractInfoResponse, error)
-	//
-	// rpc ContractHistory (QueryContractHistoryRequest) returns (QueryContractHistoryResponse) {
-	// option (google.api.http).get = "/compute/v1beta1/contract/{address}/history";
-	// }
+	// Query contract
 	ContractsByCode(context.Context, *QueryContractsByCodeRequest) (*QueryContractsByCodeResponse, error)
-	//
-	// rpc AllContractState (QueryAllContractStateRequest) returns (QueryAllContractStateResponse) {
-	// option (google.api.http).get = "/compute/v1beta1/contract/{address}/state";
-	// }
-	// rpc RawContractState (QueryRawContractStateRequest) returns (QueryRawContractStateResponse) {
-	// option (google.api.http).get = "/compute/v1beta1/contract/{address}/raw/{query_data}";
-	// }
+	// Query contract
 	SmartContractState(context.Context, *QuerySmartContractStateRequest) (*QuerySmartContractStateResponse, error)
+	// Query a specific contract code
 	Code(context.Context, *QueryCodeRequest) (*QueryCodeResponse, error)
+	// Query all contract codes on-chain
 	Codes(context.Context, *emptypb.Empty) (*QueryCodesResponse, error)
 }
 
@@ -1472,7 +1395,7 @@ func _Query_ContractInfo_Handler(srv interface{}, ctx context.Context, dec func(
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/SecretNetwork.x.compute.v1beta1.Query/ContractInfo",
+		FullMethod: "/secret.compute.v1beta1.Query/ContractInfo",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(QueryServer).ContractInfo(ctx, req.(*QueryContractInfoRequest))
@@ -1490,7 +1413,7 @@ func _Query_ContractsByCode_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/SecretNetwork.x.compute.v1beta1.Query/ContractsByCode",
+		FullMethod: "/secret.compute.v1beta1.Query/ContractsByCode",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(QueryServer).ContractsByCode(ctx, req.(*QueryContractsByCodeRequest))
@@ -1508,7 +1431,7 @@ func _Query_SmartContractState_Handler(srv interface{}, ctx context.Context, dec
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/SecretNetwork.x.compute.v1beta1.Query/SmartContractState",
+		FullMethod: "/secret.compute.v1beta1.Query/SmartContractState",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(QueryServer).SmartContractState(ctx, req.(*QuerySmartContractStateRequest))
@@ -1526,7 +1449,7 @@ func _Query_Code_Handler(srv interface{}, ctx context.Context, dec func(interfac
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/SecretNetwork.x.compute.v1beta1.Query/Code",
+		FullMethod: "/secret.compute.v1beta1.Query/Code",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(QueryServer).Code(ctx, req.(*QueryCodeRequest))
@@ -1544,7 +1467,7 @@ func _Query_Codes_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/SecretNetwork.x.compute.v1beta1.Query/Codes",
+		FullMethod: "/secret.compute.v1beta1.Query/Codes",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(QueryServer).Codes(ctx, req.(*emptypb.Empty))
@@ -1553,7 +1476,7 @@ func _Query_Codes_Handler(srv interface{}, ctx context.Context, dec func(interfa
 }
 
 var _Query_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "SecretNetwork.x.compute.v1beta1.Query",
+	ServiceName: "secret.compute.v1beta1.Query",
 	HandlerType: (*QueryServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -1643,36 +1566,6 @@ func (m *QueryContractInfoResponse) MarshalToSizedBuffer(dAtA []byte) (int, erro
 		i--
 		dAtA[i] = 0x12
 	}
-	if len(m.Address) > 0 {
-		i -= len(m.Address)
-		copy(dAtA[i:], m.Address)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.Address)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *QueryContractHistoryRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *QueryContractHistoryRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *QueryContractHistoryRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
 	if len(m.Address) > 0 {
 		i -= len(m.Address)
 		copy(dAtA[i:], m.Address)
@@ -2320,19 +2213,6 @@ func (m *QueryContractInfoResponse) Size() (n int) {
 	return n
 }
 
-func (m *QueryContractHistoryRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Address)
-	if l > 0 {
-		n += 1 + l + sovQuery(uint64(l))
-	}
-	return n
-}
-
 func (m *QueryContractsByCodeRequest) Size() (n int) {
 	if m == nil {
 		return 0
@@ -2635,7 +2515,7 @@ func (m *QueryContractInfoRequest) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Address", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowQuery
@@ -2645,25 +2525,23 @@ func (m *QueryContractInfoRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthQuery
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthQuery
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Address = append(m.Address[:0], dAtA[iNdEx:postIndex]...)
-			if m.Address == nil {
-				m.Address = []byte{}
-			}
+			m.Address = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -2783,90 +2661,6 @@ func (m *QueryContractInfoResponse) Unmarshal(dAtA []byte) error {
 			}
 			if err := m.ContractInfo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipQuery(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthQuery
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *QueryContractHistoryRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowQuery
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: QueryContractHistoryRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: QueryContractHistoryRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Address", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowQuery
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthQuery
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthQuery
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Address = append(m.Address[:0], dAtA[iNdEx:postIndex]...)
-			if m.Address == nil {
-				m.Address = []byte{}
 			}
 			iNdEx = postIndex
 		default:
@@ -3196,7 +2990,7 @@ func (m *QuerySmartContractStateRequest) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Address", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowQuery
@@ -3206,25 +3000,23 @@ func (m *QuerySmartContractStateRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthQuery
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthQuery
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Address = append(m.Address[:0], dAtA[iNdEx:postIndex]...)
-			if m.Address == nil {
-				m.Address = []byte{}
-			}
+			m.Address = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -3396,7 +3188,7 @@ func (m *QueryContractKeyRequest) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Address", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowQuery
@@ -3406,25 +3198,23 @@ func (m *QueryContractKeyRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthQuery
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthQuery
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Address = append(m.Address[:0], dAtA[iNdEx:postIndex]...)
-			if m.Address == nil {
-				m.Address = []byte{}
-			}
+			m.Address = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -3480,7 +3270,7 @@ func (m *QueryContractHashRequest) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Address", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowQuery
@@ -3490,25 +3280,23 @@ func (m *QueryContractHashRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthQuery
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthQuery
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Address = append(m.Address[:0], dAtA[iNdEx:postIndex]...)
-			if m.Address == nil {
-				m.Address = []byte{}
-			}
+			m.Address = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

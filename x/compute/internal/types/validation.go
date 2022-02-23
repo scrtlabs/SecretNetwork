@@ -11,7 +11,7 @@ const (
 	MaxWasmSize = 2 * 1024 * 1024 // 2MB
 
 	// MaxLabelSize is the longest label that can be used when Instantiating a contract
-	MaxLabelSize = 128
+	MaxLabelSize = 512
 
 	// BuildTagRegexp is a docker image regexp.
 	// We only support max 128 characters, with at least one organization name (subset of all legal names).

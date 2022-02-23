@@ -34,10 +34,15 @@ iterator = ["cosmwasm-std/iterator"]
 staking = ["cosmwasm-std/staking"]
 enclave-tests = []
 production = []
+# This flag enales storing contracts that require the debug-print function
+debug-print = []
+# This feature compiles a query optimized node with a second enclave used exclusively for queries.
+# Putting this functionality in a separate enclave allows improving query performace without hard forks.
+query-node = []
 
 [dependencies]
 # Uses the path when built locally; uses the given version from crates.io when published
-cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
+cosmwasm-std = { package = "secret-cosmwasm-std", version = "0.10" }
 serde_json = "1.0"
 # wasmer-runtime-core = "=0.17.0"
 # wasmer-middleware-common = "=0.17.0"
@@ -53,15 +58,18 @@ sha2 = "0.9.1"
 hex = "0.4"
 memmap = "0.7"
 parity-wasm = "0.41"
+
 # requirements specific to Secret Network
 lazy_static = "1.4"
-enclave-ffi-types = { path = "../enclave-ffi-types", features = [
+enclave-ffi-types = { path = "../../enclaves/ffi-types", features = [
     "build_headers"
 ] }
 sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269" }
 sgx_urts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269" }
 log = "0.4.8"
 base64 = "0.12.0"
+parking_lot = "0.11"
+num_cpus = "1.13.1"
 
 [dev-dependencies]
 tempfile = "3.1.0"

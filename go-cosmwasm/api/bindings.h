@@ -186,6 +186,17 @@ Buffer query(cache_t *cache,
              uint64_t *gas_used,
              Buffer *err);
 
+Buffer query(cache_t *cache,
+             Buffer code_id,
+             Buffer params,
+             Buffer msg,
+             DB db,
+             GoApi api,
+             GoQuerier querier,
+             uint64_t gas_limit,
+             uint64_t *gas_used,
+             Buffer *err);
+
 /**
  * frees a cache reference
  *

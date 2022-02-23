@@ -33,11 +33,12 @@ cranelift = ["cosmwasm-vm/cranelift"]
 backtraces = ["cosmwasm-std/backtraces", "cosmwasm-vm/backtraces"]
 
 [dependencies]
-cosmwasm-std = { path = "../../packages/std", default-features = false, features = ["staking", "stargate"] }
-cosmwasm-storage = { path = "../../packages/storage", default-features = false }
+cosmwasm-std = { path = "../../packages/std", package = "secret-cosmwasm-std", features = ["staking"] }
+cosmwasm-storage = { path = "../../packages/storage", package = "secret-cosmwasm-storage" }
 schemars = "0.8.1"
-serde = { version = "=1.0.103", default-features = false, features = ["derive"] }
-thiserror = "1.0"
+serde = { version = "^1.0.117", default-features = false, features = [
+  "derive"
+] }
 
 [dev-dependencies]
 cosmwasm-vm = { path = "../../packages/vm", default-features = false, features = ["stargate"] }

@@ -60,6 +60,7 @@ func (c Contract) ValidateBasic() error {
 			return sdkerrors.Wrapf(err, "contract state %d", i)
 		}
 	}
+
 	return nil
 }
 

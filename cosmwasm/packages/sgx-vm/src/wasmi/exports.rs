@@ -1,13 +1,27 @@
-use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError, UserSpaceBuffer};
 use std::ffi::c_void;
+
+use sgx_types::SgxResult;
+
+use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError, UserSpaceBuffer};
+
+use cosmwasm_std::{Binary, StdResult, SystemResult};
 
 use crate::context::{with_querier_from_context, with_storage_from_context};
 use crate::{Querier, Storage, VmError, VmResult};
-use cosmwasm_std::{Binary, StdResult, SystemResult};
 
-/// Copy a buffer from the enclave memory space, and return an opaque pointer to it.
 #[no_mangle]
 pub extern "C" fn ocall_allocate(buffer: *const u8, length: usize) -> UserSpaceBuffer {
+    ocall_allocate_impl(buffer, length)
+}
+
+#[cfg(feature = "query-node")]
+#[no_mangle]
+pub extern "C" fn ocall_allocate_qe(buffer: *const u8, length: usize) -> UserSpaceBuffer {
+    ocall_allocate_impl(buffer, length)
+}
+
+/// Copy a buffer from the enclave memory space, and return an opaque pointer to it.
+fn ocall_allocate_impl(buffer: *const u8, length: usize) -> UserSpaceBuffer {
     let slice = unsafe { std::slice::from_raw_parts(buffer, length) };
     let vector_copy = slice.to_vec();
     let boxed_vector = Box::new(vector_copy);
@@ -26,9 +40,50 @@ pub unsafe fn recover_buffer(ptr: UserSpaceBuffer) -> Option<Vec<u8>> {
     Some(*boxed_vector)
 }
 
-/// Read a key from the contracts key-value store.
 #[no_mangle]
 pub extern "C" fn ocall_read_db(
+    context: Ctx,
+    vm_error: *mut UntrustedVmError,
+    gas_used: *mut u64,
+    value: *mut EnclaveBuffer,
+    key: *const u8,
+    key_len: usize,
+) -> OcallReturn {
+    ocall_read_db_concrete(
+        super::allocate_enclave_buffer,
+        context,
+        vm_error,
+        gas_used,
+        value,
+        key,
+        key_len,
+    )
+}
+
+#[cfg(feature = "query-node")]
+#[no_mangle]
+pub extern "C" fn ocall_read_db_qe(
+    context: Ctx,
+    vm_error: *mut UntrustedVmError,
+    gas_used: *mut u64,
+    value: *mut EnclaveBuffer,
+    key: *const u8,
+    key_len: usize,
+) -> OcallReturn {
+    ocall_read_db_concrete(
+        super::allocate_enclave_buffer_qe,
+        context,
+        vm_error,
+        gas_used,
+        value,
+        key,
+        key_len,
+    )
+}
+
+/// Read a key from the contracts key-value store.
+fn ocall_read_db_concrete(
+    alloc_impl: fn(&[u8]) -> SgxResult<EnclaveBuffer>,
     context: Ctx,
     vm_error: *mut UntrustedVmError,
     gas_used: *mut u64,
@@ -48,9 +103,7 @@ pub extern "C" fn ocall_read_db(
                 Ok((value, gas_cost)) => {
                     unsafe { *gas_used = gas_cost };
                     value
-                        .map(|val| {
-                            super::allocate_enclave_buffer(&val).map_err(|_| OcallReturn::Failure)
-                        })
+                        .map(|val| alloc_impl(&val).map_err(|_| OcallReturn::Failure))
                         .unwrap_or_else(|| Ok(EnclaveBuffer::default()))
                 }
                 Err(err) => {
@@ -71,9 +124,55 @@ pub extern "C" fn ocall_read_db(
         .unwrap_or(OcallReturn::Panic)
 }
 
-/// Read a key from the contracts key-value store.
 #[no_mangle]
 pub extern "C" fn ocall_query_chain(
+    context: Ctx,
+    vm_error: *mut UntrustedVmError,
+    gas_used: *mut u64,
+    gas_limit: u64,
+    value: *mut EnclaveBuffer,
+    query: *const u8,
+    query_len: usize,
+) -> OcallReturn {
+    ocall_query_chain_concrete(
+        super::allocate_enclave_buffer,
+        context,
+        vm_error,
+        gas_used,
+        gas_limit,
+        value,
+        query,
+        query_len,
+    )
+}
+
+#[cfg(feature = "query-node")]
+#[no_mangle]
+pub extern "C" fn ocall_query_chain_qe(
+    context: Ctx,
+    vm_error: *mut UntrustedVmError,
+    gas_used: *mut u64,
+    gas_limit: u64,
+    value: *mut EnclaveBuffer,
+    query: *const u8,
+    query_len: usize,
+) -> OcallReturn {
+    ocall_query_chain_concrete(
+        super::allocate_enclave_buffer_qe,
+        context,
+        vm_error,
+        gas_used,
+        gas_limit,
+        value,
+        query,
+        query_len,
+    )
+}
+
+/// Read a key from the contracts key-value store.
+#[allow(clippy::too_many_arguments)]
+fn ocall_query_chain_concrete(
+    alloc_impl: fn(&[u8]) -> SgxResult<EnclaveBuffer>,
     context: Ctx,
     vm_error: *mut UntrustedVmError,
     gas_used: *mut u64,
@@ -98,9 +197,7 @@ pub extern "C" fn ocall_query_chain(
                     // see CosmWasm's implementation https://github.com/enigmampc/SecretNetwork/blob/508e99c990dd656eb61f456584dab054487ba178/cosmwasm/packages/sgx-vm/src/imports.rs#L124
 
                     crate::serde::to_vec(&system_result)
-                        .map(|val| {
-                            super::allocate_enclave_buffer(&val).map_err(|_| OcallReturn::Failure)
-                        })
+                        .map(|val| alloc_impl(&val).map_err(|_| OcallReturn::Failure))
                         .unwrap_or_else(|_| Ok(EnclaveBuffer::default()))
                 }
                 Err(err) => {

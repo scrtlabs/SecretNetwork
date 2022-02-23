@@ -29,9 +29,14 @@ maintenance = { status = "actively-developed" }
 default = ["backtraces"]
 backtraces = ["snafu/backtraces"]
 production = ["cosmwasm-sgx-vm/production"]
+# This flag enales storing contracts that require the debug-print function
+debug-print = ["cosmwasm-sgx-vm/debug-print"]
+# This feature compiles a query optimized node with a second enclave used exclusively for queries.
+# Putting this functionality in a separate enclave allows improving query performace without hard forks.
+query-node = ["cosmwasm-sgx-vm/query-node"]
 
 [dependencies]
-cosmwasm-std = { path = "../cosmwasm/packages/std", features = ["iterator"] }
+cosmwasm-std = { path = "../cosmwasm/packages/std", package = "secret-cosmwasm-std", features = ["iterator"] }
 cosmwasm-sgx-vm = { path = "../cosmwasm/packages/sgx-vm", features = [
     "iterator"
 ] }

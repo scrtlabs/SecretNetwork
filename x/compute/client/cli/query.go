@@ -392,27 +392,31 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 					return fmt.Errorf("error while trying to decode the encrypted output data from hex string: %w", err)
 				}
 
-				var txData sdk.MsgData
-				proto.Unmarshal(dataOutputAsProtobuf, &txData)
-
-				dataOutputCipherBz, err := base64.StdEncoding.DecodeString(string(txData.Data))
+				var txData sdk.TxMsgData
+				err = proto.Unmarshal(dataOutputAsProtobuf, &txData)
 				if err != nil {
-					return fmt.Errorf("error while trying to decode the encrypted output data from base64 '%v': %w", string(txData.Data), err)
+					return fmt.Errorf("error while trying to parse data as protobuf: %w: %v", err, dataOutputHexB64)
 				}
 
-				dataPlaintextB64Bz, err := wasmCtx.Decrypt(dataOutputCipherBz, nonce)
-				if err != nil {
-					return fmt.Errorf("error while trying to decrypt the output data: %w", err)
-				}
-				dataPlaintextB64 := string(dataPlaintextB64Bz)
-				answer.OutputData = dataPlaintextB64
-
-				dataPlaintext, err := base64.StdEncoding.DecodeString(dataPlaintextB64)
-				if err != nil {
-					return fmt.Errorf("error while trying to decode the decrypted output data from base64 '%v': %w", dataPlaintextB64, err)
+				if len(txData.Data) > 1 {
+					println("WARN: more than one response in tx data. only deciphering the first.")
 				}
 
-				answer.OutputDataAsString = string(dataPlaintext)
+				if len(txData.Data) > 0 {
+					dataPlaintextB64Bz, err := wasmCtx.Decrypt(txData.Data[0].Data, nonce)
+					if err != nil {
+						return fmt.Errorf("error while trying to decrypt the output data: %w", err)
+					}
+					dataPlaintextB64 := string(dataPlaintextB64Bz)
+					answer.OutputData = dataPlaintextB64
+
+					dataPlaintext, err := base64.StdEncoding.DecodeString(dataPlaintextB64)
+					if err != nil {
+						return fmt.Errorf("error while trying to decode the decrypted output data from base64 '%v': %w", dataPlaintextB64, err)
+					}
+
+					answer.OutputDataAsString = string(dataPlaintext)
+				}
 			}
 
 			// decrypt logs
@@ -518,27 +522,28 @@ func GetCmdQuery() *cobra.Command {
 				return errors.New("query data must be json")
 			}
 
-			return QueryWithData(contractAddr, queryData, clientCtx)
+			addr, err := sdk.AccAddressFromBech32(contractAddr)
+			if err != nil {
+				return err
+			}
+
+			return QueryWithData(addr, queryData, clientCtx)
 		},
 	}
 	decoder.RegisterFlags(cmd.PersistentFlags(), "query argument")
 	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
+	flags.AddQueryFlagsToCmd(cmd)
 	return cmd
 }
 
-func QueryWithData(contractAddress string, queryData []byte, cliCtx client.Context) error {
-	addr, err := sdk.AccAddressFromBech32(contractAddress)
-	if err != nil {
-		return err
-	}
-
-	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryGetContractState, addr.String())
+func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, cliCtx client.Context) error {
+	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryGetContractState, contractAddress.String())
 
 	wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
 
-	codeHash, err := GetCodeHashByContractAddr(cliCtx, addr)
+	codeHash, err := GetCodeHashByContractAddr(cliCtx, contractAddress)
 	if err != nil {
-		return fmt.Errorf("contract not found: %s", addr)
+		return fmt.Errorf("contract not found: %s", contractAddress)
 	}
 
 	msg := types.SecretMsg{

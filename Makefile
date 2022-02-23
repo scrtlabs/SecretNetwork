@@ -3,6 +3,7 @@ VERSION ?= $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
 CURRENT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 DOCKER := $(shell which docker)
+DOCKER_BUF := $(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace bufbuild/buf
 
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
@@ -118,29 +119,35 @@ build_cli:
 
 xgo_build_secretcli: go.sum
 	@echo "--> WARNING! This builds from origin/$(CURRENT_BRANCH)!"
-	xgo --image techknowlogick/xgo:go-1.15.x --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --branch "$(CURRENT_BRANCH)" github.com/enigmampc/SecretNetwork/cmd/secretd
+	xgo --image techknowlogick/xgo:go-1.15.15 --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --branch "$(CURRENT_BRANCH)" github.com/enigmampc/SecretNetwork/cmd/secretd
 
 build_local_no_rust: bin-data-$(IAS_BUILD)
-	cp go-cosmwasm/target/release/libgo_cosmwasm.so go-cosmwasm/api
+	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
 	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
-build-linux: vendor bin-data-$(IAS_BUILD)
-	BUILD_PROFILE=$(BUILD_PROFILE) $(MAKE) -C go-cosmwasm build-rust
-	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
-#   this pulls out ELF symbols, 80% size reduction!
-	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
+build-linux: _build-linux build_local_no_rust build_cli
+_build-linux: vendor
+	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES=$(FEATURES) FEATURES_U=$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
+
+build-linux-with-query: _build-linux-with-query build_local_no_rust build_cli
+_build-linux-with-query: vendor
+	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES=$(FEATURES) FEATURES_U=query-node,$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
 
 build_windows_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
+	mv secretd-windows-* secretcli-windows-amd64.exe
 
 build_macos_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/amd64
+	mv secretd-darwin-* secretcli-macos-amd64
 
 build_linux_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/amd64
+	mv secretd-linux-amd64 secretcli-linux-amd64
 
 build_linux_arm64_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
+	mv secretd-linux-arm64 secretcli-linux-arm64
 
 build_all: build-linux build_windows_cli build_macos_cli build_linux_arm64_cli
 
@@ -153,12 +160,12 @@ deb-no-compile:
 	rm -rf /tmp/SecretNetwork
 
 	mkdir -p /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)
-	mv -f ./secretcli /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretcli
-	mv -f ./secretd /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretd
+	cp -f ./secretcli /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretcli
+	cp -f ./secretd /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretd
 	chmod +x /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretd /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretcli
 
 	mkdir -p /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)
-	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/
+	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_query_enclave.signed.so /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/
 	chmod +x /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/lib*.so
 
 	mkdir -p /tmp/SecretNetwork/deb/DEBIAN
@@ -210,20 +217,21 @@ clean:
 	-rm -rf ./x/compute/internal/keeper/*.der
 	-rm -rf ./cmd/secretd/ias_bin*
 	$(MAKE) -C go-cosmwasm clean-all
-	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
+	$(MAKE) -C cosmwasm/enclaves/test clean
 
 build-dev-image:
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=SW --build-arg FEATURES= -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
-	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-sw-dev:${DOCKER_TAG} .
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=SW --build-arg FEATURES="${FEATURES},debug-print" -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
+	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/release.Dockerfile -t build-release .
+	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/dev-image.Dockerfile -t enigmampc/secret-network-sw-dev:${DOCKER_TAG} .
 
 build-custom-dev-image:
     # .dockerignore excludes .so files so we rename these so that the dockerfile can find them
 	cd go-cosmwasm/api && cp libgo_cosmwasm.so libgo_cosmwasm.so.x
-	cd cosmwasm/packages/wasmi-runtime && cp librust_cosmwasm_enclave.signed.so librust_cosmwasm_enclave.signed.so.x
+	cd cosmwasm/enclaves/execute && cp librust_cosmwasm_enclave.signed.so librust_cosmwasm_enclave.signed.so.x
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/custom-node.Dockerfile -t enigmampc/secret-network-sw-dev-custom-bootstrap:${DOCKER_TAG} .
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/custom-node.Dockerfile -t enigmampc/secret-network-sw-dev-custom-node:${DOCKER_TAG} .
     # delete the copies created above
-	rm go-cosmwasm/api/libgo_cosmwasm.so.x cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so.x
+	rm go-cosmwasm/api/libgo_cosmwasm.so.x cosmwasm/enclaves/execute/librust_cosmwasm_enclave.signed.so.x
 
 build-testnet: docker_base
 	@mkdir build 2>&3 || true
@@ -241,7 +249,13 @@ build-mainnet:
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
 docker_base:
-	docker build --build-arg FEATURES=${FEATURES} --build-arg SGX_MODE=${SGX_MODE} -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
+	docker build \
+		--build-arg FEATURES=${FEATURES} \
+		--build-arg FEATURES_U=query-node,${FEATURES_U} \
+		--build-arg SGX_MODE=${SGX_MODE} \
+		-f deployment/dockerfiles/base.Dockerfile \
+		-t rust-go-base-image \
+		.
 
 docker_bootstrap: docker_base
 	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/local-node.Dockerfile -t enigmampc/secret-network-bootstrap-${ext}:${DOCKER_TAG} .
@@ -258,33 +272,33 @@ docker_enclave_test:
 
 # while developing:
 build-enclave: vendor
-	$(MAKE) -C cosmwasm/packages/wasmi-runtime
+	$(MAKE) -C cosmwasm/enclaves/execute enclave
 
 # while developing:
 check-enclave:
-	$(MAKE) -C cosmwasm/packages/wasmi-runtime check
+	$(MAKE) -C cosmwasm/enclaves/execute check
 
 # while developing:
 clippy-enclave:
-	$(MAKE) -C cosmwasm/packages/wasmi-runtime clippy
+	$(MAKE) -C cosmwasm/enclaves/execute clippy
 
 # while developing:
 clean-enclave:
-	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
+	$(MAKE) -C cosmwasm/enclaves/execute clean
 
 sanity-test:
 	SGX_MODE=SW $(MAKE) build-linux
-	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+	cp ./cosmwasm/enclaves/execute/librust_cosmwasm_enclave.signed.so .
 	SGX_MODE=SW ./cosmwasm/testing/sanity-test.sh
 
 sanity-test-hw:
 	$(MAKE) build-linux
-	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+	cp ./cosmwasm/enclaves/execute/librust_cosmwasm_enclave.signed.so .
 	./cosmwasm/testing/sanity-test.sh
 
 callback-sanity-test:
 	SGX_MODE=SW $(MAKE) build-linux
-	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+	cp ./cosmwasm/enclaves/execute/librust_cosmwasm_enclave.signed.so .
 	SGX_MODE=SW ./cosmwasm/testing/callback-test.sh
 
 build-test-contract:
@@ -296,30 +310,30 @@ build-test-contract:
 prep-go-tests: build-test-contract
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	SGX_MODE=SW $(MAKE) build-linux
-	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	cp ./cosmwasm/enclaves/execute/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 
 go-tests: build-test-contract
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	SGX_MODE=SW $(MAKE) build-linux
-	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	cp ./cosmwasm/enclaves/execute/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	rm -rf ./x/compute/internal/keeper/.sgx_secrets
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	SGX_MODE=SW go test -timeout 1200s -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -failfast -timeout 1200s -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 go-tests-hw: build-test-contract
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	SGX_MODE=HW $(MAKE) build-linux
-	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	cp ./cosmwasm/enclaves/execute/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	rm -rf ./x/compute/internal/keeper/.sgx_secrets
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	SGX_MODE=HW go test -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	GOMAXPROCS=8 SGX_MODE=HW go test -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 # When running this more than once, after the first time you'll want to remove the contents of the `ffi-types`
-# rule in the Makefile in `wasmi-runtime`. This is to speed up the compilation time of tests and speed up the
+# rule in the Makefile in `enclaves/execute`. This is to speed up the compilation time of tests and speed up the
 # test debugging process in general.
 .PHONY: enclave-tests
 enclave-tests:
-	$(MAKE) -C cosmwasm/packages/enclave-test run
+	$(MAKE) -C cosmwasm/enclaves/test run
 
 build-all-test-contracts: build-test-contract
 	# echo "" | sudo add-apt-repository ppa:hnakamur/binaryen
@@ -398,7 +412,7 @@ aesm-image:
 # ref: https://github.com/golang/go/issues/30515
 statik:
 	@echo "Installing statik..."
-	@(cd /tmp && go get github.com/rakyll/statik@v0.1.6)
+	@(cd /tmp && GO111MODULE=on go get github.com/rakyll/statik@v0.1.6)
 
 
 update-swagger-docs: statik
@@ -426,12 +440,16 @@ update-swagger-docs: statik
 
 # proto-check-breaking:
 #	@buf check breaking --against-input '.git#branch=master'
+
+protoVer=v0.2
+
 proto-all: proto-format proto-lint proto-gen
 
 proto-gen:
 	@echo "Generating Protobuf files"
-	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen sh ./scripts/protocgen.sh
+	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
 
+# This one doesn't work and i can't find the right docker repo
 proto-format:
 	@echo "Formatting Protobuf files"
 	$(DOCKER) run --rm -v $(CURDIR):/workspace \
@@ -439,7 +457,7 @@ proto-format:
 	find ./ -not -path "./third_party/*" -name *.proto -exec clang-format -i {} \;
 
 proto-swagger-gen:
-	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen sh ./scripts/protoc-swagger-gen.sh
+	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) ./scripts/protoc-swagger-gen.sh
 
 proto-lint:
 	@$(DOCKER_BUF) lint --error-format=json

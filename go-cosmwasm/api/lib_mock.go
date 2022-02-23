@@ -204,6 +204,7 @@ func Migrate(
 func Query(
 	cache Cache,
 	code_id []byte,
+	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
 	store KVStore,

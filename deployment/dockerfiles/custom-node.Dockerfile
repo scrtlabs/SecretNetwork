@@ -34,7 +34,7 @@ WORKDIR /root
 
 # Copy over binaries from the local directory
 COPY ./go-cosmwasm/api/libgo_cosmwasm.so.x /usr/lib/libgo_cosmwasm.so
-COPY ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so.x /usr/lib/librust_cosmwasm_enclave.signed.so
+COPY ./cosmwasm/enclaves/execute/librust_cosmwasm_enclave.signed.so.x /usr/lib/librust_cosmwasm_enclave.signed.so
 COPY ./secretd /usr/bin/secretd
 COPY ./secretcli /usr/bin/secretcli
 
