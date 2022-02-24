@@ -98,6 +98,7 @@ require (
 	github.com/prometheus/common v0.30.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0 // indirect
+	github.com/regen-network/cosmos-proto v0.3.1 // indirect
 	github.com/rs/cors v1.8.0 // indirect
 	github.com/sasha-s/go-deadlock v0.2.1-0.20190427202633-1595213edefa // indirect
 	github.com/spf13/afero v1.6.0 // indirect
@@ -125,6 +126,7 @@ replace (
 	github.com/cosmos/cosmos-sdk v0.44.5 => ../../GolandProjects/cosmos-sdk-scrt
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/tecbot/gorocksdb => github.com/cosmos/gorocksdb v1.2.0
+	github.com/tendermint/tendermint => github.com/terra-money/tendermint v0.34.14-public.2
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
-    github.com/tendermint/tendermint => github.com/terra-money/tendermint v0.34.14-public.2
+
 )

@@ -104,7 +104,7 @@ ifeq ($(WITH_ROCKSDB),yes)
   CGO_ENABLED=1
   build_tags += rocksdb
   ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=rocksdb
-  ldflags += -extldflags "-lrocksdb -lz"
+  ldflags += -extldflags "-lrocksdb -lz -lm -lstdc++"
 endif
 
 
