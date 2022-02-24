@@ -21,11 +21,10 @@ func NewQuerier(keeper Keeper) GrpcQuerier {
 }
 
 func (q GrpcQuerier) ContractInfo(c context.Context, req *types.QueryContractInfoRequest) (*types.QueryContractInfoResponse, error) {
-	address, err := sdk.AccAddressFromBech32(req.Address)
-	if err != nil {
+	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
 		return nil, err
 	}
-	rsp, err := queryContractInfo(sdk.UnwrapSDKContext(c), address, q.keeper)
+	rsp, err := queryContractInfo(sdk.UnwrapSDKContext(c), req.Address, q.keeper)
 	switch {
 	case err != nil:
 		return nil, err
@@ -107,12 +106,11 @@ func (q GrpcQuerier) RawContractState(c context.Context, req *types.QueryRawCont
 */
 
 func (q GrpcQuerier) SmartContractState(c context.Context, req *types.QuerySmartContractStateRequest) (*types.QuerySmartContractStateResponse, error) {
-	address, err := sdk.AccAddressFromBech32(req.Address)
-	if err != nil {
+	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
 		return nil, err
 	}
 	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
-	rsp, err := q.keeper.QuerySmart(ctx, address, req.QueryData, false)
+	rsp, err := q.keeper.QuerySmart(ctx, req.Address, req.QueryData, false)
 	switch {
 	case err != nil:
 		return nil, err
@@ -165,12 +163,11 @@ func (q GrpcQuerier) AddressByLabel(c context.Context, req *types.QueryContractA
 }
 
 func (q GrpcQuerier) ContractKey(c context.Context, req *types.QueryContractKeyRequest) (*types.QueryContractKeyResponse, error) {
-	address, err := sdk.AccAddressFromBech32(req.Address)
-	if err != nil {
+	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
 		return nil, err
 	}
 	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
-	rsp, err := queryContractKey(ctx, address, q.keeper)
+	rsp, err := queryContractKey(ctx, req.Address, q.keeper)
 	switch {
 	case err != nil:
 		return nil, err
@@ -182,12 +179,11 @@ func (q GrpcQuerier) ContractKey(c context.Context, req *types.QueryContractKeyR
 }
 
 func (q GrpcQuerier) ContractHash(c context.Context, req *types.QueryContractHashRequest) (*types.QueryContractHashResponse, error) {
-	address, err := sdk.AccAddressFromBech32(req.Address)
-	if err != nil {
+	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
 		return nil, err
 	}
 	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
-	rsp, err := queryContractHash(ctx, address, q.keeper)
+	rsp, err := queryContractHash(ctx, req.Address, q.keeper)
 	switch {
 	case err != nil:
 		return nil, err
