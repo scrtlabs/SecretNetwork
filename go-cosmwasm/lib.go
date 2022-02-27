@@ -236,39 +236,3 @@ func (w *Wasmer) Query(
 	return resp.Ok, gasUsed, nil
 }
 
-// Migrate will migrate an existing contract to a new code binary.
-// This takes storage of the data from the original contract and the CodeID of the new contract that should
-// replace it. This allows it to run a migration step if needed, or return an error if unable to migrate
-// the given data.
-//
-// MigrateMsg has some data on how to perform the migration.
-func (w *Wasmer) Migrate(
-	code CodeID,
-	env types.Env,
-	migrateMsg []byte,
-	store KVStore,
-	goapi GoAPI,
-	querier Querier,
-	gasMeter GasMeter,
-	gasLimit uint64,
-) (*types.MigrateResponse, uint64, error) {
-	paramBin, err := json.Marshal(env)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	data, gasUsed, err := api.Query(w.cache, code, paramBin, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit)
-	if err != nil {
-		return nil, gasUsed, err
-	}
-
-	var resp types.QueryResponse
-	err = json.Unmarshal(data, &resp)
-	if err != nil {
-		return nil, gasUsed, err
-	}
-	if resp.Err != nil {
-		return nil, gasUsed, fmt.Errorf("%v", resp.Err)
-	}
-	return resp.Ok, gasUsed, nil
-}
