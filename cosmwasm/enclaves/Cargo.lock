@@ -1497,7 +1497,7 @@ dependencies = [
 [[package]]
 name = "zeroize"
 version = "1.3.0"
-source = "git+https://github.com/enigmampc/zeroize?rev=b8488228e3fdacbfdb3ea8a6117919871637d111#b8488228e3fdacbfdb3ea8a6117919871637d111"
+source = "git+https://github.com/scrtlabs/zeroize?rev=b8488228e3fdacbfdb3ea8a6117919871637d111#b8488228e3fdacbfdb3ea8a6117919871637d111"
 dependencies = [
  "zeroize_derive",
 ]
