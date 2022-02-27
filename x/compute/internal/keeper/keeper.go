@@ -546,6 +546,8 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddr sdk.AccAddress, req
 	queryResult, gasUsed, qErr := k.wasmer.Query(codeInfo.CodeHash, params, req, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx))
 	consumeGas(ctx, gasUsed)
 
+	telemetry.SetGauge(float32(gasUsed), "compute", "keeper", "query", contractAddr.String(), "gasUsed")
+
 	if qErr != nil {
 		return nil, sdkerrors.Wrap(types.ErrQueryFailed, qErr.Error())
 	}

@@ -76,6 +76,9 @@ endif
 
 build_tags += $(IAS_BUILD)
 
+ifeq ($(WITH_ROCKSDB),yes)
+  build_tags += gcc
+endif
 ifeq ($(WITH_CLEVELDB),yes)
   build_tags += gcc
 endif
@@ -97,6 +100,15 @@ ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=SecretNetwork \
 ifeq ($(WITH_CLEVELDB),yes)
   ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=cleveldb
 endif
+ifeq ($(WITH_ROCKSDB),yes)
+  CGO_ENABLED=1
+  build_tags += rocksdb
+  ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=rocksdb
+  ldflags += -extldflags "-lrocksdb -lz -lm -lstdc++"
+endif
+
+
+
 ldflags += -s -w
 ldflags += $(LDFLAGS)
 ldflags := $(strip $(ldflags))
@@ -237,7 +249,7 @@ build-testnet: docker_base
 	@mkdir build 2>&3 || true
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-testnet .
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-testnet .
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
+	docker build --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
 build-mainnet:
@@ -250,8 +262,10 @@ build-mainnet:
 
 docker_base:
 	docker build \
+		--build-arg WITH_ROCKSDB=${WITH_ROCKSDB} \
+		--build-arg BUILD_VERSION=${VERSION} \
 		--build-arg FEATURES=${FEATURES} \
-		--build-arg FEATURES_U=query-node,${FEATURES_U} \
+		--build-arg FEATURES_U=${FEATURES_U} \
 		--build-arg SGX_MODE=${SGX_MODE} \
 		-f deployment/dockerfiles/base.Dockerfile \
 		-t rust-go-base-image \
