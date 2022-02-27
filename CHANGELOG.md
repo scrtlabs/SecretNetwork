@@ -1,5 +1,36 @@
 # CHANGELOG
 
+# 1.2.5
+
+## Highlights
+
+Architecture now split into query nodes and validator nodes. Query nodes contain optimizations that may not be entirely safe for validators and greatly improve querying performance.
+In addition, contracts are now served by two different enclaves: Query enclaves and execute enclaves. This will allow upgrading query enclave and improving performance without consensus-breaking changes. 
+Lastly, rocksdb support is enabled. We are releasing binaries for each supported Database. Rocksdb is recommended for performance, but requires a resync of any nodes currently running goleveldb. 
+
+## Secretd
+
+* Added Rocksdb support (currently Ubuntu 20.04 only)
+* Added new query node setup
+
+## SecretCLI 
+
+* Changed default behaviour to not print help on errors. Use -h if you miss it:)
+* Added support for Ledger using Secret Network coin type (529). Creating keys using `secretcli keys add x --ledger` will use this by default. To create keys compatible with the Cosmos ledger app continue to use `--legacy-hd-path` (thanks [@SecretSaturn](https://github.com/SecretSaturn))
+
+## References
+
+* [#879](https://github.com/scrtlabs/SecretNetwork/pull/879) Enclave multithreading + dedicated query enclave
+* [#881](https://github.com/scrtlabs/SecretNetwork/pull/881) Added telemetry measurements to compute module #881
+* [#882](https://github.com/scrtlabs/SecretNetwork/pull/882) Shutting up usage help by default in CLI #882
+* [#884](https://github.com/scrtlabs/SecretNetwork/pull/884) Bumping cosmos sdk version to v0.44.6 and added rocksdb support 
+
+# 1.2.3 
+
+## SecretCLI
+
+* Fixed creating permits with Secretcli
+
 # 1.2.2
 
 ## Secretd
