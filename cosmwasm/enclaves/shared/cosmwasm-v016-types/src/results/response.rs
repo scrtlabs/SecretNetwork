@@ -5,7 +5,7 @@ use crate::binary::Binary;
 
 use super::{Attribute, Empty, Event, SubMsg};
 
-/// A response of a contract entry point, such as `instantiate`, `execute` or `migrate`.
+/// A response of a contract entry point, such as `instantiate` or `execute`.
 ///
 /// This type can be constructed directly at the end of the call. Alternatively a
 /// mutable response instance can be created early in the contract's logic and

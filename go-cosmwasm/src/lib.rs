@@ -20,8 +20,7 @@ use crate::error::{clear_error, handle_c_error, set_error, Error};
 
 use cosmwasm_sgx_vm::untrusted_init_bootstrap;
 use cosmwasm_sgx_vm::{
-    call_handle_raw, call_init_raw, call_migrate_raw, call_query_raw, features_from_csv, Checksum,
-    CosmCache, Extern,
+    call_handle_raw, call_init_raw, call_query_raw, features_from_csv, Checksum, CosmCache, Extern,
 };
 use cosmwasm_sgx_vm::{
     create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_health_check,
@@ -446,32 +445,6 @@ fn do_handle(
     *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)
-}
-
-#[no_mangle]
-pub extern "C" fn query(
-    cache: *mut cache_t,
-    code_id: Buffer,
-    params: Buffer,
-    msg: Buffer,
-    db: DB,
-    api: GoApi,
-    querier: GoQuerier,
-    gas_limit: u64,
-    gas_used: Option<&mut u64>,
-    err: Option<&mut Buffer>,
-) -> Buffer {
-    let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_query(
-                c, code_id, params, msg, db, api, querier, gas_limit, gas_used,
-            )
-        }))
-        .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::empty_arg(CACHE_ARG)),
-    };
-    let data = handle_c_error(r, err);
-    Buffer::from_vec(data)
 }
 
 #[no_mangle]

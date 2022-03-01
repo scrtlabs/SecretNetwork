@@ -164,7 +164,7 @@ pub unsafe extern "C" fn ecall_init(
     let _recursion_guard = match recursion_depth::guard() {
         Ok(rg) => rg,
         Err(err) => {
-            // https://github.com/enigmampc/SecretNetwork/pull/517#discussion_r481924571
+            // https://github.com/scrtlabs/SecretNetwork/pull/517#discussion_r481924571
             // I believe that this error condition is currently unreachable.
             // I think we can safely remove it completely right now, and have
             // recursion_depth::increment() simply increment the counter with no further checks,
@@ -248,7 +248,7 @@ pub unsafe extern "C" fn ecall_handle(
     let _recursion_guard = match recursion_depth::guard() {
         Ok(rg) => rg,
         Err(err) => {
-            // https://github.com/enigmampc/SecretNetwork/pull/517#discussion_r481924571
+            // https://github.com/scrtlabs/SecretNetwork/pull/517#discussion_r481924571
             // I believe that this error condition is currently unreachable.
             // I think we can safely remove it completely right now, and have
             // recursion_depth::increment() simply increment the counter with no further checks,
@@ -387,7 +387,7 @@ unsafe fn ecall_query_impl(
     let _recursion_guard = match recursion_depth::guard() {
         Ok(rg) => rg,
         Err(err) => {
-            // https://github.com/enigmampc/SecretNetwork/pull/517#discussion_r481924571
+            // https://github.com/scrtlabs/SecretNetwork/pull/517#discussion_r481924571
             // I believe that this error condition is currently unreachable.
             // I think we can safely remove it completely right now, and have
             // recursion_depth::increment() simply increment the counter with no further checks,

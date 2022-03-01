@@ -298,7 +298,7 @@ impl WasmiApi for ContractInstance {
 
         let value = match value {
             // return 0 if key doesn't exist
-            // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L75
+            // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L75
             None => return Ok(Some(RuntimeValue::I32(0))),
             Some(value) => value,
         };
@@ -318,7 +318,7 @@ impl WasmiApi for ContractInstance {
         })?;
 
         // Return pointer to the allocated buffer with the value written to it
-        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L80
+        // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L80
         Ok(Some(RuntimeValue::I32(ptr_to_region_in_wasm_vm as i32)))
     }
 
@@ -364,7 +364,7 @@ impl WasmiApi for ContractInstance {
         self.use_gas_externally(gas_used)?;
 
         // return value from here is never read
-        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L102
+        // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L102
         Ok(None)
     }
 
@@ -430,7 +430,7 @@ impl WasmiApi for ContractInstance {
         self.use_gas_externally(used_gas)?;
 
         // return value from here is never read
-        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L95
+        // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L95
         Ok(None)
     }
 
@@ -518,7 +518,7 @@ impl WasmiApi for ContractInstance {
         })?;
 
         // write the result to the output buffer
-        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L189
+        // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L189
         self.write_to_allocated_memory(&canonical, canonical_ptr as u32)
             .map_err(|err| {
                 debug!(
@@ -529,7 +529,7 @@ impl WasmiApi for ContractInstance {
             })?;
 
         // return 0 == ok
-        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L181
+        // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L181
         Ok(Some(RuntimeValue::I32(0)))
     }
 
@@ -569,7 +569,7 @@ impl WasmiApi for ContractInstance {
         let human_bytes = human_addr_str.into_bytes();
 
         // write the result to the output buffer
-        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L207
+        // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L207
         self.write_to_allocated_memory(&human_bytes, human_ptr as u32)
             .map_err(|err| {
                 debug!(
@@ -580,7 +580,7 @@ impl WasmiApi for ContractInstance {
             })?;
 
         // return 0 == ok
-        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L199
+        // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L199
         Ok(Some(RuntimeValue::I32(0)))
     }
 
@@ -618,7 +618,7 @@ impl WasmiApi for ContractInstance {
         self.use_gas_externally(gas_used)?;
 
         // write the result to an output buffer
-        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L353
+        // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L353
         let ptr_to_region_in_wasm_vm = self.write_to_memory(&answer).map_err(|err| {
             debug!(
                 "query_chain() error while trying to allocate and write the answer {:?} to the WASM VM",
@@ -687,7 +687,7 @@ impl WasmiApi for ContractInstance {
         };
 
         // return 0 == ok
-        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L164
+        // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L164
         Ok(Some(RuntimeValue::I32(0)))
     }
 
@@ -768,7 +768,7 @@ impl WasmiApi for ContractInstance {
         })?;
 
         // write the result to the output buffer
-        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L189
+        // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L189
         self.write_to_allocated_memory(&canonical, canonical_ptr as u32)
             .map_err(|err| {
                 debug!(
@@ -779,7 +779,7 @@ impl WasmiApi for ContractInstance {
             })?;
 
         // return 0 == ok
-        // https://github.com/enigmampc/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L181
+        // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L181
         Ok(Some(RuntimeValue::I32(0)))
     }
 
