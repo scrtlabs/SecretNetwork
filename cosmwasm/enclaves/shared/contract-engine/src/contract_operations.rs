@@ -408,7 +408,7 @@ fn env_to_env_msg_info_bytes(
 
             Ok((env_v010_bytes, msg_info_v010_bytes))
         }
-        CosmWasmApiVersion::V016 => {
+        CosmWasmApiVersion::V1 => {
             let env_v016 = cosmwasm_v016_types::types::Env {
                 block: cosmwasm_v016_types::types::BlockInfo {
                     height: env_v010.block.height,

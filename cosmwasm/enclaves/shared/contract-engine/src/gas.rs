@@ -60,10 +60,10 @@ impl Default for WasmCosts {
             external_humanize_address: 8192,
             external_canonicalize_address: 8192,
             external_addr_validate: 8192,
-            external_secp256k1_verify: 24576,
-            external_secp256k1_recover_pubkey: 24576,
-            external_ed25519_verify: 24576,
-            external_ed25519_batch_verify_per_one: 20000,
+            external_secp256k1_verify: 98304,
+            external_secp256k1_recover_pubkey: 98304,
+            external_ed25519_verify: 73728,
+            external_ed25519_batch_verify_per_one: 70000,
         }
     }
 }

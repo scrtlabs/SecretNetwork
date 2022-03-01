@@ -48,7 +48,7 @@ impl Engine {
                     RuntimeValue::I32(msg_ptr as i32),
                 ],
             ),
-            CosmWasmApiVersion::V016 => (
+            CosmWasmApiVersion::V1 => (
                 "instantiate",
                 vec![
                     RuntimeValue::I32(env_ptr as i32),
@@ -130,7 +130,7 @@ impl Engine {
                     RuntimeValue::I32(msg_ptr as i32),
                 ],
             ),
-            CosmWasmApiVersion::V016 => (
+            CosmWasmApiVersion::V1 => (
                 "execute",
                 vec![
                     RuntimeValue::I32(env_ptr as i32),
@@ -163,7 +163,7 @@ impl Engine {
                     /* no env in v0.10 */
                 ]
             }
-            CosmWasmApiVersion::V016 => vec![
+            CosmWasmApiVersion::V1 => vec![
                 RuntimeValue::I32(env_ptr as i32),
                 RuntimeValue::I32(msg_ptr as i32),
             ],
