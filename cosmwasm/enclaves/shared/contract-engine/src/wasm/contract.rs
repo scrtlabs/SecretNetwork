@@ -796,6 +796,9 @@ impl WasmiApi for ContractInstance {
         self.humanize_address(canonical_ptr, human_ptr)
     }
 
+    // This was added in v1 (v0.14?) but we're also backporting it to v0.10
+    // to support easy migration from a crate to this API for existing v0.10
+    // contracts.
     fn secp256k1_verify(
         &mut self,
         message_hash_ptr: i32,
