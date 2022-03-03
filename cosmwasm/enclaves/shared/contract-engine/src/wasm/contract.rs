@@ -857,10 +857,9 @@ impl WasmiApi for ContractInstance {
         signature_ptr: i32,
         public_key_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        // self.use_gas_externally(self.gas_costs.external_ed25519_verify as u64)?;
+        self.use_gas_externally(self.gas_costs.external_ed25519_verify as u64)?;
 
-        // todo!()
-        Ok(None)
+        todo!();
     }
 
     fn ed25519_batch_verify(
@@ -869,13 +868,14 @@ impl WasmiApi for ContractInstance {
         signatures_ptr: i32,
         public_keys_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        // let signatures_count = todo!();
+        let signatures_count = todo!();
 
-        // self.use_gas_externally(
-        //     signatures_count * self.gas_costs.external_ed25519_batch_verify_per_one as u64,
-        // )?;
+        self.use_gas_externally(
+            (self.gas_costs.external_ed25519_verify
+                - self.gas_costs.external_ed25519_batch_verify_per_one) as u64 /* base cost in case signatures_count == 0 */
+                + signatures_count * self.gas_costs.external_ed25519_batch_verify_per_one as u64,
+        )?;
 
-        // todo!();
-        Ok(None)
+        todo!();
     }
 }
