@@ -30,6 +30,14 @@ pub struct WasmCosts {
     pub external_humanize_address: u32,
     /// Cost invoking canonicalize_address from WASM
     pub external_canonicalize_address: u32,
+    /// Cost invoking secp256k1_verify from WASM
+    pub external_secp256k1_verify: u32,
+    /// Cost invoking secp256k1_recover_pubkey from WASM
+    pub external_secp256k1_recover_pubkey: u32,
+    /// Cost invoking ed25519_verify from WASM
+    pub external_ed25519_verify: u32,
+    /// Cost invoking ed25519_batch_verify from WASM
+    pub external_ed25519_batch_verify_per_one: u32,
 }
 
 impl Default for WasmCosts {
@@ -49,6 +57,10 @@ impl Default for WasmCosts {
             opcodes_div: 8,
             external_humanize_address: 8192,
             external_canonicalize_address: 8192,
+            external_secp256k1_verify: 98304,
+            external_secp256k1_recover_pubkey: 98304,
+            external_ed25519_verify: 73728,
+            external_ed25519_batch_verify_per_one: 70000,
         }
     }
 }

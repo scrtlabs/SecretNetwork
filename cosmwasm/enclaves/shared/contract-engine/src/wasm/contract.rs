@@ -252,7 +252,7 @@ impl WasmiApi for ContractInstance {
     /// 1. "key" to read from Tendermint (buffer of bytes)
     /// key is a pointer to a region "struct" of "pointer" and "length"
     /// A Region looks like { ptr: u32, len: u32 }
-    fn read_db_index(&mut self, state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+    fn read_db(&mut self, state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
         let state_key_name = self
             .extract_vector(state_key_ptr_ptr as u32)
             .map_err(|err| {
@@ -299,7 +299,7 @@ impl WasmiApi for ContractInstance {
     /// key is a pointer to a region "struct" of "pointer" and "length"
     /// A Region looks like { ptr: u32, len: u32 }
     #[cfg(feature = "query-only")]
-    fn remove_db_index(&mut self, _state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+    fn remove_db(&mut self, _state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
         Err(WasmEngineError::UnauthorizedWrite.into())
     }
 
@@ -338,7 +338,7 @@ impl WasmiApi for ContractInstance {
     /// Both of them are pointers to a region "struct" of "pointer" and "length"
     /// Lets say Region looks like { ptr: u32, len: u32 }
     #[cfg(feature = "query-only")]
-    fn write_db_index(
+    fn write_db(
         &mut self,
         _state_key_ptr_ptr: i32,
         _value_ptr_ptr: i32,
@@ -397,7 +397,7 @@ impl WasmiApi for ContractInstance {
     /// 2. "canonical" a buffer to write the result into (buffer of bytes)
     /// Both of them are pointers to a region "struct" of "pointer" and "length"
     /// A Region looks like { ptr: u32, len: u32 }
-    fn canonicalize_address_index(
+    fn canonicalize_address(
         &mut self,
         human_ptr_ptr: i32,
         canonical_ptr_ptr: i32,
@@ -492,7 +492,7 @@ impl WasmiApi for ContractInstance {
     /// 2. "human" a buffer to write the result (humanized string) into (buffer of bytes)
     /// Both of them are pointers to a region "struct" of "pointer" and "length"
     /// A Region looks like { ptr: u32, len: u32 }
-    fn humanize_address_index(
+    fn humanize_address(
         &mut self,
         canonical_ptr_ptr: i32,
         human_ptr_ptr: i32,
@@ -541,7 +541,7 @@ impl WasmiApi for ContractInstance {
     }
 
     // stub, for now
-    fn query_chain_index(&mut self, query_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+    fn query_chain(&mut self, query_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
         let query_buffer = self.extract_vector(query_ptr_ptr as u32).map_err(|err| {
             debug!("query_chain() error while trying to read canonical address from wasm memory",);
             err
@@ -584,7 +584,7 @@ impl WasmiApi for ContractInstance {
         Ok(Some(RuntimeValue::I32(ptr_to_region_in_wasm_vm as i32)))
     }
 
-    fn gas_index(&mut self, gas_amount: i32) -> Result<Option<RuntimeValue>, Trap> {
+    fn gas(&mut self, gas_amount: i32) -> Result<Option<RuntimeValue>, Trap> {
         self.use_gas(gas_amount as u64)?;
         Ok(None)
     }
@@ -601,6 +601,278 @@ impl WasmiApi for ContractInstance {
 
         info!("debug_print: {:?}", message);
 
+        Ok(None)
+    }
+
+    // This was added in v1 (v0.14?) but we're also backporting it to v0.10
+    // to support easy migration from a crate to this API for existing v0.10
+    // contracts.
+    fn secp256k1_verify(
+        &mut self,
+        message_hash_ptr: i32,
+        signature_ptr: i32,
+        public_key_ptr: i32,
+    ) -> Result<Option<RuntimeValue>, Trap> {
+        self.use_gas_externally(self.gas_costs.external_secp256k1_verify as u64)?;
+
+        let message_hash_data = self
+            .extract_vector(message_hash_ptr as u32)
+            .map_err(|err| {
+                debug!(
+                    "secp256k1_verify() error while trying to read message_hash from wasm memory"
+                );
+                err
+            })?;
+        let signature_data = self.extract_vector(signature_ptr as u32).map_err(|err| {
+            debug!("secp256k1_verify() error while trying to read signature from wasm memory");
+            err
+        })?;
+        let public_key = self.extract_vector(public_key_ptr as u32).map_err(|err| {
+            debug!("secp256k1_verify() error while trying to read public_key from wasm memory");
+            err
+        })?;
+
+        trace!(
+            "secp256k1_verify() was called from WASM code with message_hash {:x?} (len {:?} should be 32)",
+            &message_hash_data,
+            message_hash_data.len()
+        );
+        trace!(
+            "secp256k1_verify() was called from WASM code with signature {:x?} (len {:?} should be 64)",
+            &signature_data,
+            signature_data.len()
+        );
+        trace!(
+            "secp256k1_verify() was called from WASM code with public_key {:x?} (len {:?} should be 33 or 65)",
+            &public_key,
+            public_key.len()
+        );
+
+        // check message_hash input
+        if message_hash_data.len() != 32 {
+            // return 3 == InvalidHashFormat
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L93
+            Ok(Some(RuntimeValue::I32(3)))
+        }
+
+        // check signature input
+        if !signature_data.len() != 64 {
+            // return 4 == InvalidSignatureFormat
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
+            Ok(Some(RuntimeValue::I32(4)))
+        }
+
+        // check pubkey input
+        if !match public_key.first() {
+            // compressed
+            Some(0x02) | Some(0x03) => data.len() == 33,
+            // uncompressed
+            Some(0x04) => data.len() == 65,
+            // hybrid
+            // see https://docs.rs/secp256k1-abc-sys/0.1.2/secp256k1_abc_sys/fn.secp256k1_ec_pubkey_parse.html
+            Some(0x06) | Some(0x07) => data.len() == 65,
+            _ => false,
+        } {
+            // return 5 == InvalidPubkeyFormat
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L95
+            Ok(Some(RuntimeValue::I32(5)))
+        }
+
+        let secp256k1_msg = match secp256k1::Message::from_slice(&message_hash_data) {
+            Err(err) => {
+                debug!("secp256k1_verify() failed to create a secp256k1 message from message_hash: {:?}", err);
+
+                // return 10 == GenericErr
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
+                return Ok(Some(RuntimeValue::I32(10)));
+            }
+            Ok(x) => x,
+        };
+
+        let secp256k1_sig = match secp256k1::Signature::from_compact(&signature_data) {
+            Err(err) => {
+                debug!("secp256k1_verify() malformed signature: {:?}", err);
+
+                // return 10 == GenericErr
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
+                return Ok(Some(RuntimeValue::I32(10)));
+            }
+            Ok(x) => x,
+        };
+
+        let secp256k1_pk = match secp256k1::PublicKey::from_slice(public_key.as_slice()) {
+            Err(err) => {
+                debug!("secp256k1_verify() malformed pubkey: {:?}", err);
+
+                // return 10 == GenericErr
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
+                return Ok(Some(RuntimeValue::I32(10)));
+            }
+            Ok(x) => x,
+        };
+
+        match secp256k1::Secp256k1::verification_only().verify(
+            &secp256k1_msg,
+            &secp256k1_sig,
+            &secp256k1_pk,
+        ) {
+            Err(err) => {
+                debug!("secp256k1_verify() failed to verify signatures: {:?}", err);
+
+                // return 1 == failed, invalid signature
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L220
+                return Ok(Some(RuntimeValue::I32(1)));
+            }
+            Ok(()) => {
+                // return 0 == success, valid signature
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L220
+                return Ok(Some(RuntimeValue::I32(0)));
+            }
+        }
+    }
+
+    fn secp256k1_recover_pubkey(
+        &mut self,
+        message_hash_ptr: i32,
+        signature_ptr: i32,
+        recovery_param: i32,
+    ) -> Result<Option<RuntimeValue>, Trap> {
+        self.use_gas_externally(self.gas_costs.external_secp256k1_recover_pubkey as u64)?;
+
+        let message_hash_data = self
+            .extract_vector(message_hash_ptr as u32)
+            .map_err(|err| {
+                debug!(
+                    "secp256k1_recover_pubkey() error while trying to read message_hash from wasm memory"
+                );
+                err
+            })?;
+        let signature_data = self.extract_vector(signature_ptr as u32).map_err(|err| {
+            debug!(
+                "secp256k1_recover_pubkey() error while trying to read signature from wasm memory"
+            );
+            err
+        })?;
+
+        trace!(
+                "secp256k1_recover_pubkey() was called from WASM code with message_hash {:x?} (len {:?} should be 32)",
+                &message_hash_data,
+                message_hash_data.len()
+            );
+        trace!(
+                "secp256k1_recover_pubkey() was called from WASM code with signature {:x?} (len {:?} should be 64)",
+                &signature_data,
+                signature_data.len()
+            );
+        trace!(
+            "secp256k1_recover_pubkey() was called from WASM code with recovery_param {:?}",
+            recovery_param,
+        );
+
+        // check message_hash input
+        if message_hash_data.len() != 32 {
+            // return 3 == InvalidHashFormat
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L93
+            Ok(Some(RuntimeValue::I32(3)))
+        }
+
+        // check signature input
+        if !signature_data.len() != 64 {
+            // return 4 == InvalidSignatureFormat
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
+            Ok(Some(RuntimeValue::I32(4)))
+        }
+
+        let secp256k1_msg = match secp256k1::Message::from_slice(&message_hash_data) {
+            Err(err) => {
+                debug!("secp256k1_recover_pubkey() failed to create a secp256k1 message from message_hash: {:?}", err);
+
+                // return 10 == GenericErr
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
+                return Ok(Some(RuntimeValue::I32(10)));
+            }
+            Ok(x) => x,
+        };
+
+        let recovery_id = match secp256k1::recovery::RecoveryId::from_i32(recovery_param) {
+            Err(err) => {
+                debug!("secp256k1_recover_pubkey() failed to create a secp256k1 recovery_id from recovery_param: {:?}", err);
+
+                // return 10 == GenericErr
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
+                return Ok(Some(RuntimeValue::I32(10)));
+            }
+            Ok(x) => x,
+        };
+        let secp256k1_sig = match secp256k1::recovery::RecoverableSignature::from_compact(
+            &signature_data,
+            recovery_id,
+        ) {
+            Err(err) => {
+                debug!(
+                    "secp256k1_recover_pubkey() malformed recoverable signature: {:?}",
+                    err
+                );
+
+                // return 10 == GenericErr
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
+                return Ok(Some(RuntimeValue::I32(10)));
+            }
+            Ok(x) => x,
+        };
+
+        match secp256k1::Secp256k1::recover(&secp256k1_msg, &secp256k1_sig, &secp256k1_pk) {
+            Err(err) => {
+                debug!(
+                    "secp256k1_recover_pubkey() failed to recover pubkey: {:?}",
+                    err
+                );
+
+                // return 10 == GenericErr
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
+                return Ok(Some(RuntimeValue::I32(10)));
+            }
+            Ok(pubkey) => {
+                let answer = pubkey.serialize();
+                let ptr_to_region_in_wasm_vm = self.write_to_memory(&answer).map_err(|err| {
+                    debug!(
+                        "secp256k1_recover_pubkey() error while trying to allocate and write the answer {:?} to the WASM VM",
+                        answer,
+                    );
+                    err
+                })?;
+
+                // Return pointer to the allocated buffer with the value written to it
+                Ok(Some(RuntimeValue::I32(ptr_to_region_in_wasm_vm as i32)))
+            }
+        }
+    }
+
+    fn ed25519_verify(
+        &mut self,
+        message_ptr: i32,
+        signature_ptr: i32,
+        public_key_ptr: i32,
+    ) -> Result<Option<RuntimeValue>, Trap> {
+        // self.use_gas_externally(self.gas_costs.external_ed25519_verify as u64)?;
+
+        // todo!()
+        Ok(None)
+    }
+
+    fn ed25519_batch_verify(
+        &mut self,
+        messages_ptr: i32,
+        signatures_ptr: i32,
+        public_keys_ptr: i32,
+    ) -> Result<Option<RuntimeValue>, Trap> {
+        // let signatures_count = todo!();
+
+        // self.use_gas_externally(
+        //     signatures_count * self.gas_costs.external_ed25519_batch_verify_per_one as u64,
+        // )?;
+
+        // todo!();
         Ok(None)
     }
 }

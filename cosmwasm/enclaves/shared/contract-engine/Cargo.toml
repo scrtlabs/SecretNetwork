@@ -41,6 +41,7 @@ pwasm-utils = { version = "0.12.0", default-features = false }
 parity-wasm = { version = "0.41.0", default-features = false }
 lru = { version = "0.6", default-features = false }
 hex = "0.4.2"
+secp256k1 = "0.20.3"
 
 [dependencies.wasmi]
 git = "https://github.com/paritytech/wasmi"
