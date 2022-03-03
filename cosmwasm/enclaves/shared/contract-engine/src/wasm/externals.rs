@@ -39,14 +39,16 @@ impl From<usize> for HostFunctions {
             }
             x if x == HostFunctions::GasIndex as usize => HostFunctions::GasIndex,
             x if x == HostFunctions::QueryChainIndex as usize => HostFunctions::QueryChainIndex,
-            x if x == HostFunctions::Secp256k1Verify as usize => {
+            x if x == HostFunctions::Secp256k1VerifyIndex as usize => {
                 HostFunctions::Secp256k1VerifyIndex
             }
-            x if x == HostFunctions::Secp256k1RecoverPubkey as usize => {
+            x if x == HostFunctions::Secp256k1RecoverPubkeyIndex as usize => {
                 HostFunctions::Secp256k1RecoverPubkeyIndex
             }
-            x if x == HostFunctions::Ed25519Verify as usize => HostFunctions::Ed25519VerifyIndex,
-            x if x == HostFunctions::Ed25519BatchVerify as usize => {
+            x if x == HostFunctions::Ed25519VerifyIndex as usize => {
+                HostFunctions::Ed25519VerifyIndex
+            }
+            x if x == HostFunctions::Ed25519BatchVerifyIndex as usize => {
                 HostFunctions::Ed25519BatchVerifyIndex
             }
             #[cfg(feature = "debug-print")]

@@ -308,7 +308,7 @@ impl WasmiApi for ContractInstance {
     /// key is a pointer to a region "struct" of "pointer" and "length"
     /// A Region looks like { ptr: u32, len: u32 }
     #[cfg(not(feature = "query-only"))]
-    fn remove_db_index(&mut self, state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+    fn remove_db(&mut self, state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
         if self.operation.is_query() {
             return Err(WasmEngineError::UnauthorizedWrite.into());
         }
@@ -352,7 +352,7 @@ impl WasmiApi for ContractInstance {
     /// Both of them are pointers to a region "struct" of "pointer" and "length"
     /// Lets say Region looks like { ptr: u32, len: u32 }
     #[cfg(not(feature = "query-only"))]
-    fn write_db_index(
+    fn write_db(
         &mut self,
         state_key_ptr_ptr: i32,
         value_ptr_ptr: i32,
@@ -652,30 +652,30 @@ impl WasmiApi for ContractInstance {
         if message_hash_data.len() != 32 {
             // return 3 == InvalidHashFormat
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L93
-            Ok(Some(RuntimeValue::I32(3)))
+            return Ok(Some(RuntimeValue::I32(3)));
         }
 
         // check signature input
         if !signature_data.len() != 64 {
             // return 4 == InvalidSignatureFormat
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
-            Ok(Some(RuntimeValue::I32(4)))
+            return Ok(Some(RuntimeValue::I32(4)));
         }
 
         // check pubkey input
         if !match public_key.first() {
             // compressed
-            Some(0x02) | Some(0x03) => data.len() == 33,
+            Some(0x02) | Some(0x03) => public_key.len() == 33,
             // uncompressed
-            Some(0x04) => data.len() == 65,
+            Some(0x04) => public_key.len() == 65,
             // hybrid
             // see https://docs.rs/secp256k1-abc-sys/0.1.2/secp256k1_abc_sys/fn.secp256k1_ec_pubkey_parse.html
-            Some(0x06) | Some(0x07) => data.len() == 65,
+            Some(0x06) | Some(0x07) => public_key.len() == 65,
             _ => false,
         } {
             // return 5 == InvalidPubkeyFormat
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L95
-            Ok(Some(RuntimeValue::I32(5)))
+            return Ok(Some(RuntimeValue::I32(5)));
         }
 
         let secp256k1_msg = match secp256k1::Message::from_slice(&message_hash_data) {
@@ -689,7 +689,7 @@ impl WasmiApi for ContractInstance {
             Ok(x) => x,
         };
 
-        let secp256k1_sig = match secp256k1::Signature::from_compact(&signature_data) {
+        let secp256k1_sig = match secp256k1::ecdsa::Signature::from_compact(&signature_data) {
             Err(err) => {
                 debug!("secp256k1_verify() malformed signature: {:?}", err);
 
@@ -711,7 +711,7 @@ impl WasmiApi for ContractInstance {
             Ok(x) => x,
         };
 
-        match secp256k1::Secp256k1::verification_only().verify(
+        match secp256k1::Secp256k1::verification_only().verify_ecdsa(
             &secp256k1_msg,
             &secp256k1_sig,
             &secp256k1_pk,
@@ -773,14 +773,14 @@ impl WasmiApi for ContractInstance {
         if message_hash_data.len() != 32 {
             // return 3 == InvalidHashFormat
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L93
-            Ok(Some(RuntimeValue::I32(3)))
+            return Ok(Some(RuntimeValue::I32(3)));
         }
 
         // check signature input
         if !signature_data.len() != 64 {
             // return 4 == InvalidSignatureFormat
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
-            Ok(Some(RuntimeValue::I32(4)))
+            return Ok(Some(RuntimeValue::I32(4)));
         }
 
         let secp256k1_msg = match secp256k1::Message::from_slice(&message_hash_data) {
@@ -794,7 +794,7 @@ impl WasmiApi for ContractInstance {
             Ok(x) => x,
         };
 
-        let recovery_id = match secp256k1::recovery::RecoveryId::from_i32(recovery_param) {
+        let recovery_id = match secp256k1::ecdsa::RecoveryId::from_i32(recovery_param) {
             Err(err) => {
                 debug!("secp256k1_recover_pubkey() failed to create a secp256k1 recovery_id from recovery_param: {:?}", err);
 
@@ -804,7 +804,8 @@ impl WasmiApi for ContractInstance {
             }
             Ok(x) => x,
         };
-        let secp256k1_sig = match secp256k1::recovery::RecoverableSignature::from_compact(
+
+        let secp256k1_sig = match secp256k1::ecdsa::RecoverableSignature::from_compact(
             &signature_data,
             recovery_id,
         ) {
@@ -821,7 +822,9 @@ impl WasmiApi for ContractInstance {
             Ok(x) => x,
         };
 
-        match secp256k1::Secp256k1::recover(&secp256k1_msg, &secp256k1_sig, &secp256k1_pk) {
+        match secp256k1::Secp256k1::verification_only()
+            .recover_ecdsa(&secp256k1_msg, &secp256k1_sig)
+        {
             Err(err) => {
                 debug!(
                     "secp256k1_recover_pubkey() failed to recover pubkey: {:?}",
@@ -837,7 +840,7 @@ impl WasmiApi for ContractInstance {
                 let ptr_to_region_in_wasm_vm = self.write_to_memory(&answer).map_err(|err| {
                     debug!(
                         "secp256k1_recover_pubkey() error while trying to allocate and write the answer {:?} to the WASM VM",
-                        answer,
+                        &answer,
                     );
                     err
                 })?;
