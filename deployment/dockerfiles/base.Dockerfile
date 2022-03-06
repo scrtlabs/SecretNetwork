@@ -9,6 +9,7 @@ ENV GOROOT=/usr/local/go
 ENV GOPATH=/go/
 ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 
+RUN true
 ADD https://go.dev/dl/go1.17.7.linux-amd64.tar.gz go1.17.7.linux-amd64.tar.gz
 RUN tar -C /usr/local -xzf go1.17.7.linux-amd64.tar.gz
 RUN go get -u github.com/jteeuwen/go-bindata/...
