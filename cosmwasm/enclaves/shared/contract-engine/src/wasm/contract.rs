@@ -1,5 +1,3 @@
-use std::convert::TryInto;
-
 use bech32::{FromBase32, ToBase32};
 use log::*;
 
