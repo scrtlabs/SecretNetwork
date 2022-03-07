@@ -1,5 +1,6 @@
 use bech32::{FromBase32, ToBase32};
 use log::*;
+use std::convert::TryFrom;
 
 use wasmi::{Error as InterpreterError, MemoryInstance, MemoryRef, ModuleRef, RuntimeValue, Trap};
 
@@ -890,20 +891,31 @@ impl WasmiApi for ContractInstance {
             public_key_data.len()
         );
 
-        let signature: ed25519_zebra::Signature =
-            match ed25519_zebra::Signature::try_from(&signature_data) {
-                Ok(x) => x,
-                Err(err) => {
-                    // return 4 == InvalidSignatureFormat
-                    // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
-                    return Ok(Some(RuntimeValue::I32(4)));
-                }
-            };
+        let signature: ed25519_zebra::Signature = match ed25519_zebra::Signature::try_from(
+            signature_data.as_slice(),
+        ) {
+            Ok(x) => x,
+            Err(err) => {
+                debug!(
+                    "ed25519_verify() failed to create a ed25519 signature from signature: {:?}",
+                    err
+                );
+
+                // return 4 == InvalidSignatureFormat
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
+                return Ok(Some(RuntimeValue::I32(4)));
+            }
+        };
 
         let public_key: ed25519_zebra::VerificationKey =
-            match ed25519_zebra::VerificationKey::try_from(&public_key_data) {
+            match ed25519_zebra::VerificationKey::try_from(public_key_data.as_slice()) {
                 Ok(x) => x,
                 Err(err) => {
+                    debug!(
+                        "ed25519_verify() failed to create a ed25519 VerificationKey from public_key: {:?}",
+                        err
+                    );
+
                     // return 5 == InvalidPubkeyFormat
                     // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L95
                     return Ok(Some(RuntimeValue::I32(5)));
@@ -932,7 +944,7 @@ impl WasmiApi for ContractInstance {
         signatures_ptr: i32,
         public_keys_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        let signatures_count = todo!();
+        let signatures_count: u64 = todo!();
 
         self.use_gas_externally(
             (self.gas_costs.external_ed25519_verify
