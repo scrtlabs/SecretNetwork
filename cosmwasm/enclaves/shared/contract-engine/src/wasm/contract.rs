@@ -1,3 +1,5 @@
+use std::convert::TryInto;
+
 use bech32::{FromBase32, ToBase32};
 use log::*;
 
@@ -859,7 +861,71 @@ impl WasmiApi for ContractInstance {
     ) -> Result<Option<RuntimeValue>, Trap> {
         self.use_gas_externally(self.gas_costs.external_ed25519_verify as u64)?;
 
-        todo!();
+        let message_data = self.extract_vector(message_ptr as u32).map_err(|err| {
+            debug!("ed25519_verify() error while trying to read message from wasm memory");
+            err
+        })?;
+
+        let signature_data = self.extract_vector(signature_ptr as u32).map_err(|err| {
+            debug!("ed25519_verify() error while trying to read signature from wasm memory");
+            err
+        })?;
+
+        let public_key_data = self.extract_vector(public_key_ptr as u32).map_err(|err| {
+            debug!("ed25519_verify() error while trying to read public_key from wasm memory");
+            err
+        })?;
+
+        trace!(
+            "ed25519_verify() was called from WASM code with message {:x?} (len {:?})",
+            &message_data,
+            message_data.len()
+        );
+        trace!(
+            "ed25519_verify() was called from WASM code with signature {:x?} (len {:?} should be 64)",
+            &signature_data,
+            signature_data.len()
+        );
+        trace!(
+            "ed25519_verify() was called from WASM code with public_key {:x?} (len {:?} should be 32)",
+            &public_key_data,
+            public_key_data.len()
+        );
+
+        let signature: ed25519_zebra::Signature =
+            match ed25519_zebra::Signature::try_from(&signature_data) {
+                Ok(x) => x,
+                Err(err) => {
+                    // return 4 == InvalidSignatureFormat
+                    // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
+                    return Ok(Some(RuntimeValue::I32(4)));
+                }
+            };
+
+        let public_key: ed25519_zebra::VerificationKey =
+            match ed25519_zebra::VerificationKey::try_from(&public_key_data) {
+                Ok(x) => x,
+                Err(err) => {
+                    // return 5 == InvalidPubkeyFormat
+                    // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L95
+                    return Ok(Some(RuntimeValue::I32(5)));
+                }
+            };
+
+        match public_key.verify(&signature, &message_data) {
+            Err(err) => {
+                debug!("ed25519_verify() failed to verify signatures: {:?}", err);
+
+                // return 1 == failed, invalid signature
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L281
+                return Ok(Some(RuntimeValue::I32(1)));
+            }
+            Ok(()) => {
+                // return 0 == success, valid signature
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L281
+                return Ok(Some(RuntimeValue::I32(0)));
+            }
+        }
     }
 
     fn ed25519_batch_verify(
