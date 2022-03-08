@@ -100,6 +100,59 @@ impl ContractInstance {
         &*self.memory
     }
 
+    /// extract_vector_of_vectors extracts a vector of vectors from the wasm memory space
+    pub fn extract_vector_of_vectors(
+        &self,
+        vec_ptr_ptr: u32,
+    ) -> Result<Vec<Vec<u8>>, WasmEngineError> {
+        self.extract_vector_of_vectors_inner(vec_ptr_ptr)
+            .map_err(|err| {
+                debug!(
+                    "error while trying to read the buffer at {:?} : {:?}",
+                    vec_ptr_ptr, err
+                );
+                WasmEngineError::MemoryReadError
+            })
+    }
+
+    fn extract_vector_of_vectors_inner(
+        &self,
+        vec_ptr_ptr: u32,
+    ) -> Result<Vec<Vec<u8>>, InterpreterError> {
+        let main_ptr: u32 = self.get_memory().get_value(vec_ptr_ptr)?;
+
+        if main_ptr == 0 {
+            return Err(InterpreterError::Memory(String::from(
+                "Main vector: trying to read from null pointer in WASM memory",
+            )));
+        }
+
+        let main_len: u32 = self.get_memory().get_value(vec_ptr_ptr + 8)?;
+
+        let main_vector = self.get_memory().get(main_ptr, main_len as usize)?;
+
+        if main_vector.len() % 4 != 0 {
+            return Err(InterpreterError::Memory(String::from(
+                format!("Main vector: size in bytes should be diveded by 4 because each pointer is 4 bytes. Got size {:?}", main_vector.len()),
+            )));
+        }
+
+        let mut result: Vec<Vec<u8>> = vec![];
+
+        let mut i = 0;
+        while i < main_vector.len() {
+            result.push(self.extract_vector(u32::from_be_bytes([
+                main_vector[i],
+                main_vector[i + 1],
+                main_vector[i + 2],
+                main_vector[i + 3],
+            ]))?);
+            i += 4;
+        }
+
+        Ok(result)
+    }
+
     /// extract_vector extracts a vector from the wasm memory space
     pub fn extract_vector(&self, vec_ptr_ptr: u32) -> Result<Vec<u8>, WasmEngineError> {
         self.extract_vector_inner(vec_ptr_ptr).map_err(|err| {
@@ -657,7 +710,7 @@ impl WasmiApi for ContractInstance {
         }
 
         // check signature input
-        if !signature_data.len() != 64 {
+        if signature_data.len() != 64 {
             // return 4 == InvalidSignatureFormat
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
             return Ok(Some(RuntimeValue::I32(4)));
@@ -718,7 +771,7 @@ impl WasmiApi for ContractInstance {
             &secp256k1_pk,
         ) {
             Err(err) => {
-                debug!("secp256k1_verify() failed to verify signatures: {:?}", err);
+                debug!("secp256k1_verify() failed to verify signature: {:?}", err);
 
                 // return 1 == failed, invalid signature
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L220
@@ -778,7 +831,7 @@ impl WasmiApi for ContractInstance {
         }
 
         // check signature input
-        if !signature_data.len() != 64 {
+        if signature_data.len() != 64 {
             // return 4 == InvalidSignatureFormat
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
             return Ok(Some(RuntimeValue::I32(4)));
@@ -891,21 +944,20 @@ impl WasmiApi for ContractInstance {
             public_key_data.len()
         );
 
-        let signature: ed25519_zebra::Signature = match ed25519_zebra::Signature::try_from(
-            signature_data.as_slice(),
-        ) {
-            Ok(x) => x,
-            Err(err) => {
-                debug!(
+        let signature: ed25519_zebra::Signature =
+            match ed25519_zebra::Signature::try_from(signature_data.as_slice()) {
+                Ok(x) => x,
+                Err(err) => {
+                    debug!(
                     "ed25519_verify() failed to create a ed25519 signature from signature: {:?}",
                     err
                 );
 
-                // return 4 == InvalidSignatureFormat
-                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
-                return Ok(Some(RuntimeValue::I32(4)));
-            }
-        };
+                    // return 4 == InvalidSignatureFormat
+                    // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
+                    return Ok(Some(RuntimeValue::I32(4)));
+                }
+            };
 
         let public_key: ed25519_zebra::VerificationKey =
             match ed25519_zebra::VerificationKey::try_from(public_key_data.as_slice()) {
@@ -924,7 +976,7 @@ impl WasmiApi for ContractInstance {
 
         match public_key.verify(&signature, &message_data) {
             Err(err) => {
-                debug!("ed25519_verify() failed to verify signatures: {:?}", err);
+                debug!("ed25519_verify() failed to verify signature: {:?}", err);
 
                 // return 1 == failed, invalid signature
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L281
@@ -944,13 +996,129 @@ impl WasmiApi for ContractInstance {
         signatures_ptr: i32,
         public_keys_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        let signatures_count: u64 = todo!();
+        let messages_data = self
+            .extract_vector_of_vectors(messages_ptr as u32)
+            .map_err(|err| {
+                debug!(
+                    "ed25519_batch_verify() error while trying to read messages from wasm memory"
+                );
+                err
+            })?;
+
+        let signatures_data = self
+            .extract_vector_of_vectors(signatures_ptr as u32)
+            .map_err(|err| {
+                debug!(
+                    "ed25519_batch_verify() error while trying to read signatures from wasm memory"
+                );
+                err
+            })?;
+
+        let pubkeys_data = self
+            .extract_vector_of_vectors(public_keys_ptr as u32)
+            .map_err(|err| {
+                debug!(
+                    "ed25519_batch_verify() error while trying to read public_keys from wasm memory"
+                );
+                err
+            })?;
+
+        let (messages, signatures, pubkeys) = if messages_data.len() == signatures_data.len()
+            && messages_data.len() == pubkeys_data.len()
+        {
+            // All is well, convert to Vec<&[u8]>
+            (
+                messages_data
+                    .iter()
+                    .map(|m| m.as_slice())
+                    .collect::<Vec<&[u8]>>(),
+                signatures_data
+                    .iter()
+                    .map(|s| s.as_slice())
+                    .collect::<Vec<&[u8]>>(),
+                pubkeys_data
+                    .iter()
+                    .map(|p| p.as_slice())
+                    .collect::<Vec<&[u8]>>(),
+            )
+        } else if messages_data.len() == 1 && signatures_data.len() == pubkeys_data.len() {
+            // Multisig, replicate message
+            (
+                vec![messages_data[0].as_slice()].repeat(signatures_data.len()),
+                signatures_data
+                    .iter()
+                    .map(|s| s.as_slice())
+                    .collect::<Vec<&[u8]>>(),
+                pubkeys_data
+                    .iter()
+                    .map(|p| p.as_slice())
+                    .collect::<Vec<&[u8]>>(),
+            )
+        } else if pubkeys_data.len() == 1 && messages_data.len() == signatures_data.len() {
+            // Replicate pubkey
+            (
+                messages_data
+                    .iter()
+                    .map(|m| m.as_slice())
+                    .collect::<Vec<&[u8]>>(),
+                signatures_data
+                    .iter()
+                    .map(|s| s.as_slice())
+                    .collect::<Vec<&[u8]>>(),
+                vec![pubkeys_data[0].as_slice()].repeat(signatures_data.len()),
+            )
+        } else {
+            debug!(
+                "ed25519_batch_verify() mismatched number of messages ({}) / signatures ({}) / public keys ({})", messages_data.len(),signatures_data.len(),pubkeys_data.len()
+            );
+
+            // return 5 == BatchErr
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L97
+            return Ok(Some(RuntimeValue::I32(7)));
+        };
 
         self.use_gas_externally(
             (self.gas_costs.external_ed25519_verify
-                - self.gas_costs.external_ed25519_batch_verify_per_one) as u64 /* base cost in case signatures_count == 0 */
-                + signatures_count * self.gas_costs.external_ed25519_batch_verify_per_one as u64,
+                - self.gas_costs.external_ed25519_batch_verify_per_one) as u64 /* base cost in case signatures.len() == 0 */
+                + (signatures.len() as u64) * self.gas_costs.external_ed25519_batch_verify_per_one as u64,
         )?;
+
+        let mut batch = ed25519_zebra::batch::Verifier::new();
+        for i in 0..signatures.len() {
+            // check pubkey input
+            if pubkeys[i].len() != 32 {
+                // return 5 == InvalidPubkeyFormat
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L95
+                return Ok(Some(RuntimeValue::I32(5)));
+            }
+
+            // check signature input
+            if signatures[i].len() != 64 {
+                // return 4 == InvalidSignatureFormat
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
+                return Ok(Some(RuntimeValue::I32(4)));
+            }
+
+            batch.queue((pubkeys[i], signatures[i], messages[i]));
+        }
+
+        match batch.verify(&mut OsRng) {
+            Err(err) => {
+                debug!(
+                    "ed25519_batch_verify() failed to verify signatures: {:?}",
+                    err
+                );
+
+                // return 1 == failed, invalid signature
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L329
+                return Ok(Some(RuntimeValue::I32(1)));
+            }
+            Ok(()) => {
+                // return 0 == success, valid signature
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L329
+                return Ok(Some(RuntimeValue::I32(0)));
+            }
+        }
 
         todo!();
     }
