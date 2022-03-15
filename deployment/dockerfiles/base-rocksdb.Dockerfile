@@ -19,6 +19,9 @@ RUN wget -q https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.
     chmod +x /bin/wat2wasm /bin/wasm2wat && \
     rm -f wabt-1.0.20-ubuntu.tar.gz
 
+### Install rocksdb
+
+
 # rm -rf /tmp/rocksdb
 # Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
@@ -27,7 +30,6 @@ ARG BUILD_VERSION="v0.0.0"
 ARG SGX_MODE=SW
 ARG FEATURES
 ARG FEATURES_U
-ARG DB_BACKEND
 
 ENV VERSION=${BUILD_VERSION}
 ENV SGX_MODE=${SGX_MODE}
@@ -81,8 +83,8 @@ COPY Makefile .
 RUN true
 COPY client client
 
-RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
-RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_cli
+RUN . /opt/sgxsdk/environment && env && CGO_LDFLAGS="-L/usr/local/lib -lrocksdb" MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
+RUN . /opt/sgxsdk/environment && env && CGO_LDFLAGS="-L/usr/local/lib -lrocksdb" MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_cli
 
 RUN rustup target add wasm32-unknown-unknown && make build-test-contract
 

@@ -44,7 +44,6 @@ COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosm
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_query_enclave.signed.so /usr/lib/
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretd /usr/bin/secretd
-# COPY --from=build-env-rust-go /usr/local/lib/librocksdb.so.6.24 /usr/lib/
 
 COPY deployment/docker/bootstrap/bootstrap_init.sh .
 COPY deployment/docker/node/node_init.sh .
