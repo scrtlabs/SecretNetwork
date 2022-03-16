@@ -156,7 +156,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 	// authclient.Codec = encodingConfig.Marshaler
 
 	rootCmd.AddCommand(
-		genutilcli.InitCmd(app.ModuleBasics(), app.DefaultNodeHome),
+		InitCmd(app.ModuleBasics(), app.DefaultNodeHome),
 		//updateTmParamsAndInit(app.ModuleBasics(), app.DefaultNodeHome),
 		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome),
 		secretlegacy.MigrateGenesisCmd(),
@@ -283,6 +283,12 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 		panic(err)
 	}
 
+	iavlCacheSize := int(cast.ToUint64(appOpts.Get("iavl-cache-size")))
+	if iavlCacheSize == 0 {
+		// 128MB IAVL cache
+		iavlCacheSize = 781_250
+	}
+
 	bootstrap := cast.ToBool(appOpts.Get("bootstrap"))
 
 	fmt.Printf("bootstrap: %s", cast.ToString(bootstrap))
@@ -304,6 +310,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 		baseapp.SetSnapshotStore(snapshotStore),
 		baseapp.SetSnapshotInterval(cast.ToUint64(appOpts.Get(server.FlagStateSyncSnapshotInterval))),
 		baseapp.SetSnapshotKeepRecent(cast.ToUint32(appOpts.Get(server.FlagStateSyncSnapshotKeepRecent))),
+		baseapp.SetIAVLCacheSize(int(cast.ToUint64(appOpts.Get(server.FlagIAVLCacheSize)))),
 	)
 }
 
