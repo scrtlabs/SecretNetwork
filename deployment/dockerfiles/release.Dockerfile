@@ -12,6 +12,8 @@ RUN apt-get update && \
     openssl \
     curl \
     wget \
+    libsnappy-dev \
+    libgflags-dev \
     bash-completion && \
     rm -rf /var/lib/apt/lists/*
 
