@@ -145,6 +145,14 @@ type TestKeepers struct {
 	MintKeeper    mintkeeper.Keeper
 }
 
+var TestConfig = TestConfigType{
+	ChainID: "test-secret-X",
+}
+
+type TestConfigType struct {
+	ChainID string
+}
+
 // encoders can be nil to accept the defaults, or set it to override some of the message handlers (like default)
 func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, encoders *MessageEncoders, queriers *QueryPlugins) (sdk.Context, TestKeepers) {
 	tempDir, err := ioutil.TempDir("", "wasm")
@@ -175,8 +183,9 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	require.NoError(t, ms.LoadLatestVersion())
 
 	ctx := sdk.NewContext(ms, tmproto.Header{
-		Height: 1234567,
-		Time:   time.Date(2020, time.April, 22, 12, 0, 0, 0, time.UTC),
+		Height:  1234567,
+		Time:    time.Date(2020, time.April, 22, 12, 0, 0, 0, time.UTC),
+		ChainID: TestConfig.ChainID,
 	}, isCheckTx, log.NewNopLogger())
 	encodingConfig := MakeEncodingConfig()
 	paramsKeeper := paramskeeper.NewKeeper(encodingConfig.Marshaler, encodingConfig.Amino, keyParams, tkeyParams)
@@ -294,7 +303,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		AddRoute(govtypes.RouterKey, govtypes.ProposalHandler).
 		AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(paramsKeeper)).
 		AddRoute(distrtypes.RouterKey, distribution.NewCommunityPoolSpendProposalHandler(distKeeper))
-		//AddRoute(wasmtypes.RouterKey, NewWasmProposalHandler(keeper, wasmtypes.EnableAllProposals))
+	//AddRoute(wasmtypes.RouterKey, NewWasmProposalHandler(keeper, wasmtypes.EnableAllProposals))
 
 	govKeeper := govkeeper.NewKeeper(
 		encodingConfig.Marshaler, keyGov, paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable()), authKeeper, bankKeeper, stakingKeeper, govRouter,
@@ -493,7 +502,7 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 	for i, creatorAcc := range creatorAccs {
 		privKey := privKeys[i]
 		signerData := authsigning.SignerData{
-			ChainID:       "",
+			ChainID:       TestConfig.ChainID,
 			AccountNumber: creatorAcc.GetAccountNumber(),
 			Sequence:      creatorAcc.GetSequence(),
 		}
