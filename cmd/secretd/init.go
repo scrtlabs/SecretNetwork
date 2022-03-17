@@ -85,14 +85,17 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 				chainID = fmt.Sprintf("test-chain-%v", tmrand.Str(6))
 			}
 
-			seeds := []string{
-				"6fb7169f7630da9468bf7cc0bcbbed1eb9ed0d7b@scrt-seed-01.scrtlabs.com:26656", // SCRT Labs 1
-				"ab6394e953e0b570bb1deeb5a8b387aa0dc6188a@scrt-seed-02.scrtlabs.com:26656", // SCRT Labs 2
-				"9cdaa5856e0245ecd73bd464308fb990fbc53b57@scrt-seed-03.scrtlabs.com:26656", // SCRT Labs 3
+			// only for mainnet
+			if chainID == "secret-4" {
+				seeds := []string{
+					"6fb7169f7630da9468bf7cc0bcbbed1eb9ed0d7b@scrt-seed-01.scrtlabs.com:26656", // SCRT Labs 1
+					"ab6394e953e0b570bb1deeb5a8b387aa0dc6188a@scrt-seed-02.scrtlabs.com:26656", // SCRT Labs 2
+					"9cdaa5856e0245ecd73bd464308fb990fbc53b57@scrt-seed-03.scrtlabs.com:26656", // SCRT Labs 3
+				}
+				//Override default settings in config.toml
+				config.P2P.Seeds = strings.Join(seeds[:], ",")
 			}
 
-			//Override default settings in config.toml
-			config.P2P.Seeds = strings.Join(seeds[:], ",")
 			config.P2P.MaxNumInboundPeers = 320
 			config.P2P.MaxNumOutboundPeers = 40
 			config.Mempool.Size = 10000

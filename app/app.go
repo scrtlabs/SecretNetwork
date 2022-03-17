@@ -429,6 +429,7 @@ func NewSecretNetworkApp(
 		stakingtypes.ModuleName,
 		ibchost.ModuleName,
 		ibctransfertypes.ModuleName,
+		feegrant.ModuleName,
 		authtypes.ModuleName,
 		banktypes.ModuleName,
 		govtypes.ModuleName,
