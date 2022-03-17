@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/cosmos/cosmos-sdk v0.45.1
-	github.com/cosmos/ibc-go v1.1.5
+	github.com/cosmos/ibc-go/v3 v3.0.0
 	github.com/gogo/protobuf v1.3.3
 	github.com/golang/protobuf v1.5.2
 	github.com/google/gofuzz v1.1.1-0.20200604201612-c04b05f3adfa
@@ -27,6 +27,8 @@ require (
 	google.golang.org/protobuf v1.27.1
 )
 
+require github.com/go-playground/validator/v10 v10.4.1 // indirect
+
 require (
 	filippo.io/edwards25519 v1.0.0-beta.2 // indirect
 	github.com/99designs/keyring v1.1.6 // indirect
@@ -40,7 +42,7 @@ require (
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/coinbase/rosetta-sdk-go v0.7.0 // indirect
-	github.com/confio/ics23/go v0.6.6 // indirect
+	github.com/confio/ics23/go v0.7.0 // indirect
 	github.com/cosmos/btcutil v1.0.4 // indirect
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/iavl v0.17.3 // indirect

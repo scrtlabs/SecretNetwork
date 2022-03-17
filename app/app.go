@@ -14,16 +14,16 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/authz"
-	"github.com/cosmos/ibc-go/modules/apps/transfer"
+	"github.com/cosmos/ibc-go/v3/modules/apps/transfer"
 
-	ibctransferkeeper "github.com/cosmos/ibc-go/modules/apps/transfer/keeper"
-	ibctransfertypes "github.com/cosmos/ibc-go/modules/apps/transfer/types"
-	ibc "github.com/cosmos/ibc-go/modules/core"
-	ibcclient "github.com/cosmos/ibc-go/modules/core/02-client"
-	ibcclienttypes "github.com/cosmos/ibc-go/modules/core/02-client/types"
-	porttypes "github.com/cosmos/ibc-go/modules/core/05-port/types"
-	ibchost "github.com/cosmos/ibc-go/modules/core/24-host"
-	ibckeeper "github.com/cosmos/ibc-go/modules/core/keeper"
+	ibctransferkeeper "github.com/cosmos/ibc-go/v3/modules/apps/transfer/keeper"
+	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
+	ibc "github.com/cosmos/ibc-go/v3/modules/core"
+	ibcclient "github.com/cosmos/ibc-go/v3/modules/core/02-client"
+	ibcclienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
+	porttypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"
+	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
+	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
 
 	//"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/version"
@@ -296,17 +296,27 @@ func NewSecretNetworkApp(
 		appCodec, keys[ibchost.StoreKey], app.getSubspace(ibchost.ModuleName), app.stakingKeeper, app.upgradeKeeper, scopedIBCKeeper,
 	)
 
+	cfg := module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
+	app.upgradeKeeper.SetUpgradeHandler("my-plan", func(ctx sdk.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
+
+		// ...
+		// do upgrade logic
+		// ...
+
+		// returns a VersionMap with the updated module ConsensusVersions
+		return app.mm.RunMigrations(ctx, cfg, fromVM)
+	})
+
 	// Create Transfer Keepers
 	app.transferKeeper = ibctransferkeeper.NewKeeper(
 		appCodec, keys[ibctransfertypes.StoreKey], app.getSubspace(ibctransfertypes.ModuleName),
-		app.ibcKeeper.ChannelKeeper, &app.ibcKeeper.PortKeeper,
+		app.ibcKeeper.ChannelKeeper, app.ibcKeeper.ChannelKeeper, &app.ibcKeeper.PortKeeper,
 		app.accountKeeper, app.bankKeeper, scopedTransferKeeper,
 	)
-	transferModule := transfer.NewAppModule(app.transferKeeper)
 
 	// Create static IBC router, add ibc-tranfer module route, then set and seal it
 	ibcRouter := porttypes.NewRouter()
-	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferModule)
+	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transfer.NewIBCModule(app.transferKeeper))
 	// Setting Router will finalize all routes by sealing router
 	// No more routes can be added
 	app.ibcKeeper.SetRouter(ibcRouter)
@@ -349,13 +359,6 @@ func NewSecretNetworkApp(
 	// Replace with bootstrap flag when we figure out how to test properly and everything works
 	app.regKeeper = reg.NewKeeper(appCodec, keys[reg.StoreKey], regRouter, reg.EnclaveApi{}, homePath, app.bootstrap)
 
-	/*
-		// The gov proposal types can be individually enabled
-		if len(enabledProposals) != 0 {
-			govRouter.AddRoute(compute.RouterKey, compute.NewWasmProposalHandler(app.computeKeeper, enabledProposals))
-		}
-	*/
-
 	app.govKeeper = govkeeper.NewKeeper(
 		appCodec,
 		keys[govtypes.StoreKey],
@@ -372,7 +375,6 @@ func NewSecretNetworkApp(
 		appCodec,
 		*legacyAmino,
 		keys[compute.StoreKey],
-		//app.getSubspace(compute.ModuleName),
 		app.accountKeeper,
 		app.bankKeeper,
 		app.govKeeper,
@@ -413,7 +415,7 @@ func NewSecretNetworkApp(
 		authzmodule.NewAppModule(appCodec, app.authzKeeper, app.accountKeeper, app.bankKeeper, app.interfaceRegistry),
 		reg.NewAppModule(app.regKeeper),
 		ibc.NewAppModule(app.ibcKeeper),
-		transferModule,
+		transfer.NewAppModule(app.transferKeeper),
 	)
 	// During begin block slashing happens after distr.BeginBlocker so that
 	// there is nothing left over in the validator fee pool, so as to keep the
