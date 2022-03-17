@@ -428,6 +428,18 @@ func NewSecretNetworkApp(
 		evidencetypes.ModuleName,
 		stakingtypes.ModuleName,
 		ibchost.ModuleName,
+		ibctransfertypes.ModuleName,
+		feegrant.ModuleName,
+		authtypes.ModuleName,
+		banktypes.ModuleName,
+		govtypes.ModuleName,
+		crisistypes.ModuleName,
+		genutiltypes.ModuleName,
+		authz.ModuleName,
+		paramstypes.ModuleName,
+		// custom modules
+		compute.ModuleName,
+		reg.ModuleName,
 	)
 
 	// NOTE: Capability module must occur first so that it can initialize any capabilities
@@ -439,6 +451,21 @@ func NewSecretNetworkApp(
 		authz.ModuleName,
 		feegrant.ModuleName,
 		stakingtypes.ModuleName,
+		capabilitytypes.ModuleName,
+		authtypes.ModuleName,
+		banktypes.ModuleName,
+		distrtypes.ModuleName,
+		slashingtypes.ModuleName,
+		minttypes.ModuleName,
+		genutiltypes.ModuleName,
+		evidencetypes.ModuleName,
+		paramstypes.ModuleName,
+		upgradetypes.ModuleName,
+		ibchost.ModuleName,
+		ibctransfertypes.ModuleName,
+
+		compute.ModuleName,
+		reg.ModuleName,
 	)
 
 	// NOTE: The genutils module must occur after staking so that pools are
@@ -452,6 +479,8 @@ func NewSecretNetworkApp(
 		stakingtypes.ModuleName,
 		slashingtypes.ModuleName,
 		govtypes.ModuleName,
+		paramstypes.ModuleName,
+		upgradetypes.ModuleName,
 		//custom modules
 		compute.ModuleName,
 		reg.ModuleName,
