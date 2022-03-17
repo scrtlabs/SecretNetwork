@@ -1,0 +1,68 @@
+enclave {
+    from "sgx_tstd.edl" import
+        u_thread_set_event_ocall,
+        u_thread_wait_event_ocall,
+        u_thread_set_multiple_events_ocall,
+        u_thread_setwait_events_ocall;
+    from "sgx_stdio.edl" import *;
+    from "sgx_fs.edl" import *;
+    from "sgx_net.edl" import *;
+    include "sgx_quote.h"
+    from "sgx_backtrace.edl" import *;
+    from "sgx_tstdc.edl" import *;
+    from "sgx_tprotected_fs.edl" import *;
+
+    from "sgx_env.edl" import u_getenv_ocall, u_setenv_ocall;
+
+    // This header is generated during the build of enclave-ffi-types
+    include "enclave-ffi-types.h"
+
+    trusted {
+        EnclaveBuffer ecall_allocate_qe(
+            [in, count=length] const uint8_t* buffer,
+            uintptr_t length
+        );
+
+        public sgx_status_t ecall_configure_runtime_qe(
+            RuntimeConfiguration runtime_configuration
+        );
+
+        public QueryResult ecall_query_qe(
+            Ctx context,
+            uint64_t gas_limit,
+            [out] uint64_t* used_gas,
+            [in, count=contract_len] const uint8_t* contract,
+            uintptr_t contract_len,
+            [in, count=env_len] const uint8_t* env,
+            uintptr_t env_len,
+            [in, count=msg_len] const uint8_t* msg,
+            uintptr_t msg_len
+        );
+    };
+
+    untrusted {
+        UserSpaceBuffer ocall_allocate_qe(
+            [in, count=length] const uint8_t* buffer,
+            uintptr_t length
+        );
+
+        OcallReturn ocall_read_db_qe(
+            Ctx context,
+            [out] UntrustedVmError* vm_error,
+            [out] uint64_t* gas_used,
+            [out] EnclaveBuffer* value,
+            [in, count=key_len] const uint8_t* key,
+            uintptr_t key_len
+        ) allow (ecall_allocate_qe);
+
+        OcallReturn ocall_query_chain_qe(
+            Ctx context,
+            [out] UntrustedVmError* vm_error,
+            [out] uint64_t* gas_used,
+            uint64_t gas_limit,
+            [out] EnclaveBuffer* value,
+            [in, count=query_len] const uint8_t* query,
+            uintptr_t query_len
+        ) allow (ecall_allocate_qe, ecall_query_qe);
+    };
+};

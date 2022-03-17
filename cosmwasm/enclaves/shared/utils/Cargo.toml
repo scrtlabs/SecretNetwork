@@ -1,0 +1,26 @@
+[package]
+name = "enclave_utils"
+version = "1.2.4"
+authors = ["Cashmaney <itzik@enigma.co>"]
+edition = "2018"
+
+[features]
+production = []
+query-only = []
+
+# This annotation is here to trick the IDE into showing us type information about this crate.
+# We always compile to the "sgx" target, so this will always be false.
+# when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
+[target.'cfg(not(target_env = "sgx"))'.dependencies]
+sgx_tstd = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
+  "backtrace"
+] }
+sgx_types = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+
+[dependencies]
+sgx_trts = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+
+enclave-ffi-types = { path = "../../ffi-types" }
+
+log = "0.4.14"
+lazy_static = "1.4"

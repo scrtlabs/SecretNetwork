@@ -11,6 +11,8 @@ BUILD_PROFILE ?= release
 DEB_BIN_DIR ?= /usr/local/bin
 DEB_LIB_DIR ?= /usr/lib
 
+DB_BACKEND ?= goleveldb
+
 SGX_MODE ?= HW
 BRANCH ?= develop
 DEBUG ?= 0
@@ -24,19 +26,17 @@ else
 $(error SGX_MODE must be either HW or SW)
 endif
 
-SGX_MODE ?= HW
-BRANCH ?= develop
-DEBUG ?= 0
-DOCKER_TAG ?= latest
+ifeq ($(DB_BACKEND), rocksdb)
+	DB_BACKEND = rocksdb
+else ifeq ($(DB_BACKEND), cleveldb)
+	DB_BACKEND = cleveldb
+else ifeq ($(DB_BACKEND), goleveldb)
+	DB_BACKEND = goleveldb
+else
+$(error DB_BACKEND must be one of: rocksdb/cleveldb/goleveldb)
+endif
+
 CUR_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-
-ifeq ($(SGX_MODE), HW)
-	ext := hw
-else ifeq ($(SGX_MODE), SW)
-	ext := sw
-else
-$(error SGX_MODE must be either HW or SW)
-endif
 
 build_tags = netgo
 ifeq ($(LEDGER_ENABLED),true)
@@ -76,7 +76,10 @@ endif
 
 build_tags += $(IAS_BUILD)
 
-ifeq ($(WITH_CLEVELDB),yes)
+ifeq ($(DB_BACKEND),rocksdb)
+  build_tags += gcc
+endif
+ifeq ($(DB_BACKEND),cleveldb)
   build_tags += gcc
 endif
 build_tags += $(BUILD_TAGS)
@@ -94,9 +97,18 @@ ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=SecretNetwork \
 	-X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
 	-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags)"
 
-ifeq ($(WITH_CLEVELDB),yes)
+ifeq ($(DB_BACKEND),cleveldb)
   ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=cleveldb
 endif
+ifeq ($(DB_BACKEND),rocksdb)
+  CGO_ENABLED=1
+  build_tags += rocksdb
+  ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=rocksdb
+  ldflags += -extldflags "-lrocksdb -llz4"
+endif
+
+
+
 ldflags += -s -w
 ldflags += $(LDFLAGS)
 ldflags := $(strip $(ldflags))
@@ -127,7 +139,11 @@ build_local_no_rust: bin-data-$(IAS_BUILD)
 
 build-linux: _build-linux build_local_no_rust build_cli
 _build-linux: vendor
-	BUILD_PROFILE=$(BUILD_PROFILE) $(MAKE) -C go-cosmwasm build-rust
+	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES=$(FEATURES) FEATURES_U=$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
+
+build-linux-with-query: _build-linux-with-query build_local_no_rust build_cli
+_build-linux-with-query: vendor
+	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES=$(FEATURES) FEATURES_U=query-node,$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
 
 build_windows_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
@@ -161,7 +177,7 @@ deb-no-compile:
 	chmod +x /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretd /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretcli
 
 	mkdir -p /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)
-	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/
+	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_query_enclave.signed.so /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/
 	chmod +x /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/lib*.so
 
 	mkdir -p /tmp/SecretNetwork/deb/DEBIAN
@@ -213,7 +229,10 @@ clean:
 	-rm -rf ./x/compute/internal/keeper/*.der
 	-rm -rf ./cmd/secretd/ias_bin*
 	$(MAKE) -C go-cosmwasm clean-all
-	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
+	$(MAKE) -C cosmwasm/enclaves/test clean
+
+build-rocksdb-image:
+	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/db-compile.Dockerfile -t enigmampc/rocksdb:${VERSION} .
 
 build-dev-image:
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=SW --build-arg FEATURES="${FEATURES},debug-print" -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
@@ -223,29 +242,55 @@ build-dev-image:
 build-custom-dev-image:
     # .dockerignore excludes .so files so we rename these so that the dockerfile can find them
 	cd go-cosmwasm/api && cp libgo_cosmwasm.so libgo_cosmwasm.so.x
-	cd cosmwasm/packages/wasmi-runtime && cp librust_cosmwasm_enclave.signed.so librust_cosmwasm_enclave.signed.so.x
+	cd cosmwasm/enclaves/execute && cp librust_cosmwasm_enclave.signed.so librust_cosmwasm_enclave.signed.so.x
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/custom-node.Dockerfile -t enigmampc/secret-network-sw-dev-custom-bootstrap:${DOCKER_TAG} .
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/custom-node.Dockerfile -t enigmampc/secret-network-sw-dev-custom-node:${DOCKER_TAG} .
     # delete the copies created above
-	rm go-cosmwasm/api/libgo_cosmwasm.so.x cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so.x
+	rm go-cosmwasm/api/libgo_cosmwasm.so.x cosmwasm/enclaves/execute/librust_cosmwasm_enclave.signed.so.x
 
 build-testnet: docker_base
 	@mkdir build 2>&3 || true
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-testnet .
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-testnet .
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
+	docker build --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
-build-mainnet:
+build-mainnet: docker_base
 	@mkdir build 2>&3 || true
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg FEATURES=production -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-mainnet .
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-mainnet .
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
+docker_base_rocksdb:
+	docker build \
+			--build-arg BUILD_VERSION=${VERSION} \
+			--build-arg FEATURES=${FEATURES} \
+			--build-arg FEATURES_U=${FEATURES_U} \
+			--build-arg SGX_MODE=${SGX_MODE} \
+			-f deployment/dockerfiles/base-rocksdb.Dockerfile \
+			-t rust-go-base-image \
+			.
+
+docker_base_goleveldb:
+	docker build \
+			--build-arg BUILD_VERSION=${VERSION} \
+			--build-arg FEATURES=${FEATURES} \
+			--build-arg FEATURES_U=${FEATURES_U} \
+			--build-arg SGX_MODE=${SGX_MODE} \
+			-f deployment/dockerfiles/base.Dockerfile \
+			-t rust-go-base-image \
+			.
+
 docker_base:
-	docker build --build-arg FEATURES=${FEATURES} --build-arg SGX_MODE=${SGX_MODE} -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
+
+ifeq ($(DB_BACKEND),rocksdb)
+docker_base: docker_base_rocksdb
+else
+docker_base: docker_base_goleveldb
+endif
+
+
 
 docker_bootstrap: docker_base
 	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/local-node.Dockerfile -t enigmampc/secret-network-bootstrap-${ext}:${DOCKER_TAG} .
@@ -262,33 +307,33 @@ docker_enclave_test:
 
 # while developing:
 build-enclave: vendor
-	$(MAKE) -C cosmwasm/packages/wasmi-runtime
+	$(MAKE) -C cosmwasm/enclaves/execute enclave
 
 # while developing:
 check-enclave:
-	$(MAKE) -C cosmwasm/packages/wasmi-runtime check
+	$(MAKE) -C cosmwasm/enclaves/execute check
 
 # while developing:
 clippy-enclave:
-	$(MAKE) -C cosmwasm/packages/wasmi-runtime clippy
+	$(MAKE) -C cosmwasm/enclaves/execute clippy
 
 # while developing:
 clean-enclave:
-	$(MAKE) -C cosmwasm/packages/wasmi-runtime clean
+	$(MAKE) -C cosmwasm/enclaves/execute clean
 
 sanity-test:
 	SGX_MODE=SW $(MAKE) build-linux
-	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+	cp ./cosmwasm/enclaves/execute/librust_cosmwasm_enclave.signed.so .
 	SGX_MODE=SW ./cosmwasm/testing/sanity-test.sh
 
 sanity-test-hw:
 	$(MAKE) build-linux
-	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+	cp ./cosmwasm/enclaves/execute/librust_cosmwasm_enclave.signed.so .
 	./cosmwasm/testing/sanity-test.sh
 
 callback-sanity-test:
 	SGX_MODE=SW $(MAKE) build-linux
-	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so .
+	cp ./cosmwasm/enclaves/execute/librust_cosmwasm_enclave.signed.so .
 	SGX_MODE=SW ./cosmwasm/testing/callback-test.sh
 
 build-test-contract:
@@ -300,30 +345,30 @@ build-test-contract:
 prep-go-tests: build-test-contract
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	SGX_MODE=SW $(MAKE) build-linux
-	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	cp ./cosmwasm/enclaves/execute/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 
 go-tests: build-test-contract
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	SGX_MODE=SW $(MAKE) build-linux
-	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	cp ./cosmwasm/enclaves/execute/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	rm -rf ./x/compute/internal/keeper/.sgx_secrets
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -timeout 1200s -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -failfast -timeout 1200s -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 go-tests-hw: build-test-contract
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	SGX_MODE=HW $(MAKE) build-linux
-	cp ./cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	cp ./cosmwasm/enclaves/execute/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	rm -rf ./x/compute/internal/keeper/.sgx_secrets
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	SGX_MODE=HW go test -p 1 -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	GOMAXPROCS=8 SGX_MODE=HW go test -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 # When running this more than once, after the first time you'll want to remove the contents of the `ffi-types`
-# rule in the Makefile in `wasmi-runtime`. This is to speed up the compilation time of tests and speed up the
+# rule in the Makefile in `enclaves/execute`. This is to speed up the compilation time of tests and speed up the
 # test debugging process in general.
 .PHONY: enclave-tests
 enclave-tests:
-	$(MAKE) -C cosmwasm/packages/enclave-test run
+	$(MAKE) -C cosmwasm/enclaves/test run
 
 build-all-test-contracts: build-test-contract
 	# echo "" | sudo add-apt-repository ppa:hnakamur/binaryen

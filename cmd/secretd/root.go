@@ -125,6 +125,7 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 			return server.InterceptConfigsPreRunHandler(cmd, secretAppTemplate, secretAppConfig)
 			//return initConfig(&initClientCtx, cmd)
 		},
+		SilenceUsage: true,
 	}
 
 	initRootCmd(rootCmd, encodingConfig)
@@ -155,7 +156,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 	// authclient.Codec = encodingConfig.Marshaler
 
 	rootCmd.AddCommand(
-		genutilcli.InitCmd(app.ModuleBasics(), app.DefaultNodeHome),
+		InitCmd(app.ModuleBasics(), app.DefaultNodeHome),
 		//updateTmParamsAndInit(app.ModuleBasics(), app.DefaultNodeHome),
 		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome),
 		secretlegacy.MigrateGenesisCmd(),
@@ -205,6 +206,7 @@ func queryCommand() *cobra.Command {
 		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
+		SilenceUsage:               true,
 	}
 
 	cmd.AddCommand(
