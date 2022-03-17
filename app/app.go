@@ -479,6 +479,8 @@ func NewSecretNetworkApp(
 		stakingtypes.ModuleName,
 		slashingtypes.ModuleName,
 		govtypes.ModuleName,
+		paramstypes.ModuleName,
+		upgradetypes.ModuleName,
 		//custom modules
 		compute.ModuleName,
 		reg.ModuleName,
