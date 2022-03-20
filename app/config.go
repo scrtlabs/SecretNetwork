@@ -23,6 +23,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	ica "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts"
 	transfer "github.com/cosmos/ibc-go/v3/modules/apps/transfer"
 	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/v3/modules/core"
@@ -83,6 +84,7 @@ var (
 			transfer.AppModuleBasic{},
 			vesting.AppModuleBasic{},
 			feegrantmodule.AppModuleBasic{},
+			ica.AppModuleBasic{},
 		},
 			// our stuff
 			customModuleBasics()...,

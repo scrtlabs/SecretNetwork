@@ -7,13 +7,13 @@ require (
 	github.com/cosmos/ibc-go/v3 v3.0.0
 	github.com/gogo/protobuf v1.3.3
 	github.com/golang/protobuf v1.5.2
-	github.com/google/gofuzz v1.1.1-0.20200604201612-c04b05f3adfa
+	github.com/google/gofuzz v1.2.0
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/miscreant/miscreant.go v0.0.0-20200214223636-26d376326b75
 	github.com/pkg/errors v0.9.1
 	github.com/rakyll/statik v0.1.7
-	github.com/rs/zerolog v1.23.0
+	github.com/rs/zerolog v1.26.0
 	github.com/spf13/cast v1.4.1
 	github.com/spf13/cobra v1.3.0
 	github.com/spf13/pflag v1.0.5
@@ -27,7 +27,12 @@ require (
 	google.golang.org/protobuf v1.27.1
 )
 
-require github.com/go-playground/validator/v10 v10.4.1 // indirect
+require (
+	github.com/dgraph-io/badger/v2 v2.2007.3 // indirect
+	github.com/go-playground/validator/v10 v10.4.1 // indirect
+	github.com/stretchr/objx v0.3.0 // indirect
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
+)
 
 require (
 	filippo.io/edwards25519 v1.0.0-beta.2 // indirect
@@ -51,7 +56,6 @@ require (
 	github.com/danieljoos/wincred v1.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
-	github.com/dgraph-io/badger/v2 v2.2007.2 // indirect
 	github.com/dgraph-io/ristretto v0.0.3 // indirect
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
@@ -100,7 +104,7 @@ require (
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0 // indirect
-	github.com/regen-network/cosmos-proto v0.3.1 // indirect
+	github.com/regen-network/cosmos-proto v0.3.1
 	github.com/rs/cors v1.8.2 // indirect
 	github.com/sasha-s/go-deadlock v0.2.1-0.20190427202633-1595213edefa // indirect
 	github.com/spf13/afero v1.6.0 // indirect
