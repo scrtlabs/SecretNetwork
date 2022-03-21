@@ -20,9 +20,8 @@ var (
 // NewMsgRegisterAccount creates a new MsgRegisterAccount instance
 func NewMsgRegisterAccount(owner, connectionID, counterpartyConnectionID string) *MsgRegisterAccount {
 	return &MsgRegisterAccount{
-		Owner:                    owner,
-		ConnectionId:             connectionID,
-		CounterpartyConnectionId: counterpartyConnectionID,
+		Owner:        owner,
+		ConnectionId: connectionID,
 	}
 }
 
@@ -53,10 +52,9 @@ func NewMsgSubmitTx(owner sdk.AccAddress, sdkMsg sdk.Msg, connectionID, counterp
 	}
 
 	return &MsgSubmitTx{
-		Owner:                    owner,
-		ConnectionId:             connectionID,
-		CounterpartyConnectionId: counterpartyConnectionID,
-		Msg:                      any,
+		Owner:        owner,
+		ConnectionId: connectionID,
+		Msg:          any,
 	}, nil
 }
 
@@ -108,10 +106,6 @@ func (msg MsgSubmitTx) ValidateBasic() error {
 
 	if msg.ConnectionId == "" {
 		return fmt.Errorf("can't execute an empty ConnectionId")
-	}
-
-	if msg.CounterpartyConnectionId == "" {
-		return fmt.Errorf("can't execute an empty CounterpartyConnectionId")
 	}
 
 	return nil

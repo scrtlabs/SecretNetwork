@@ -1,7 +1,7 @@
 package app
 
 import (
-	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
@@ -33,21 +33,19 @@ import (
 	icaauth "github.com/enigmampc/SecretNetwork/x/mauth"
 	icaauthtypes "github.com/enigmampc/SecretNetwork/x/mauth/types"
 
-	icacontrollerkeeper "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/keeper"
-	icahostkeeper "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/keeper"
-	icaauthkeeper "github.com/enigmampc/SecretNetwork/x/mauth/keeper"
-	//"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
-	//authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	authzmodule "github.com/cosmos/cosmos-sdk/x/authz/module"
+	icacontrollerkeeper "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/keeper"
+	icahostkeeper "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/keeper"
+	icaauthkeeper "github.com/enigmampc/SecretNetwork/x/mauth/keeper"
 
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
@@ -258,19 +256,9 @@ func NewSecretNetworkApp(
 	bApp.SetInterfaceRegistry(interfaceRegistry)
 	//bApp.GRPCQueryRouter().RegisterSimulateService(bApp.Simulate, interfaceRegistry)
 
-	keys := sdk.NewKVStoreKeys(
-		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey,
-		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
-		govtypes.StoreKey, paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey,
-		evidencetypes.StoreKey, ibctransfertypes.StoreKey, capabilitytypes.StoreKey, compute.StoreKey,
-		reg.StoreKey, feegrant.StoreKey, authzkeeper.StoreKey,
-		icacontrollertypes.StoreKey,
-		icahosttypes.StoreKey,
-		icaauthtypes.StoreKey,
-	)
-
-	tKeys := sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
-	memKeys := sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
+	keys := kvStoreKeys()
+	tKeys := transientStoreKeys()
+	memKeys := memStoreKeys()
 
 	// Initialize our application with the store keys it requires
 	app := &SecretNetworkApp{
@@ -366,21 +354,6 @@ func NewSecretNetworkApp(
 	icaControllerIBCModule := icacontroller.NewIBCModule(app.ICAControllerKeeper, icaAuthIBCModule)
 	icaHostIBCModule := icahost.NewIBCModule(app.ICAHostKeeper)
 
-	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
-	app.mm.RegisterServices(app.configurator)
-
-	app.setupUpgradeHandlers(&icaModule)
-
-	//app.upgradeKeeper.SetUpgradeHandler("my-plan", func(ctx sdk.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
-	//
-	//	// ...
-	//	// do upgrade logic
-	//	// ...
-	//
-	//	// returns a VersionMap with the updated module ConsensusVersions
-	//	return app.mm.RunMigrations(ctx, cfg, fromVM)
-	//})
-
 	// Create Transfer Keepers
 	app.transferKeeper = ibctransferkeeper.NewKeeper(
 		appCodec, keys[ibctransfertypes.StoreKey], app.getSubspace(ibctransfertypes.ModuleName),
@@ -418,23 +391,6 @@ func NewSecretNetworkApp(
 	computeRouter := app.Router()
 	regRouter := app.Router()
 
-	computeDir := filepath.Join(homePath, ".compute")
-
-	//computeConfig
-	//
-	//wasmConfig := compute.DefaultWasmConfig()
-	//wasmConfig.SmartQueryGasLimit = queryGasLimit
-	//wasmWrap := WasmWrapper{Wasm: wasmConfig}
-	//err := viper.Unmarshal(&wasmWrap)
-	//if err != nil {
-	//	panic("error while reading wasm config: " + err.Error())
-	//}
-	//wasmConfig = wasmWrap.Wasm
-
-	// The last arguments can contain custom message handlers, and custom query handlers,
-	// if we want to allow any custom callbacks
-	supportedFeatures := "staking"
-
 	// Replace with bootstrap flag when we figure out how to test properly and everything works
 	app.regKeeper = reg.NewKeeper(appCodec, keys[reg.StoreKey], regRouter, reg.EnclaveApi{}, homePath, app.bootstrap)
 
@@ -448,7 +404,11 @@ func NewSecretNetworkApp(
 		govRouter,
 	)
 
-	// serviceRouter := baseapp.NewMsgServiceRouter()
+	computeDir := filepath.Join(homePath, ".compute")
+
+	// The last arguments can contain custom message handlers, and custom query handlers,
+	// if we want to allow any custom callbacks
+	supportedFeatures := "staking"
 
 	app.computeKeeper = compute.NewKeeper(
 		appCodec,
@@ -460,7 +420,6 @@ func NewSecretNetworkApp(
 		app.distrKeeper,
 		app.mintKeeper,
 		app.stakingKeeper,
-		//serviceRouter,
 		computeRouter,
 		computeDir,
 		computeConfig,
@@ -520,6 +479,8 @@ func NewSecretNetworkApp(
 		genutiltypes.ModuleName,
 		authz.ModuleName,
 		paramstypes.ModuleName,
+		icatypes.ModuleName,
+		icaauthtypes.ModuleName,
 		// custom modules
 		compute.ModuleName,
 		reg.ModuleName,
@@ -546,7 +507,8 @@ func NewSecretNetworkApp(
 		upgradetypes.ModuleName,
 		ibchost.ModuleName,
 		ibctransfertypes.ModuleName,
-
+		icatypes.ModuleName,
+		icaauthtypes.ModuleName,
 		compute.ModuleName,
 		reg.ModuleName,
 	)
@@ -569,6 +531,7 @@ func NewSecretNetworkApp(
 		reg.ModuleName,
 
 		icatypes.ModuleName,
+		icaauthtypes.ModuleName,
 
 		authz.ModuleName,
 		minttypes.ModuleName,
@@ -583,7 +546,11 @@ func NewSecretNetworkApp(
 	// register all module routes and module queriers
 	app.mm.RegisterInvariants(&app.crisisKeeper)
 	app.mm.RegisterRoutes(app.Router(), app.QueryRouter(), encodingConfig.Amino)
-	app.mm.RegisterServices(module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter()))
+
+	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
+	app.mm.RegisterServices(app.configurator)
+
+	app.setupUpgradeHandlers(&icaModule)
 
 	// add test gRPC service for testing gRPC queries in isolation
 	// testdata.RegisterTestServiceServer(app.GRPCQueryRouter(), testdata.QueryImpl{}) // TODO: this is testdata !!!
@@ -774,6 +741,9 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(slashingtypes.ModuleName)
 	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 	paramsKeeper.Subspace(ibchost.ModuleName)
+	paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
+	paramsKeeper.Subspace(icahosttypes.SubModuleName)
+
 	paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable())
 	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(compute.ModuleName)
