@@ -1,6 +1,19 @@
 # CHANGELOG
 
-# 1.2.5
+# Unreleased
+
+* Bug fix when calculating gas prices caused by queries. This is will increase gas prices for contracts that use external queries, and will more accurately reflect resources used
+* Updated to Cosmos SDK v0.45.x
+* Fix registration failure for Intel Xeon 23xx-series processors (icelake still unsupported)
+* Floating point checks no longer ran on execute (only on init)
+
+# 1.2.6
+
+## Highlights
+
+This version only a bug fix in the 1.2.5 release
+
+# 1.2.5 - deprecated
 
 ## Highlights
 
