@@ -1,5 +1,8 @@
 use bech32::{FromBase32, ToBase32};
 use log::*;
+use rand_chacha::ChaChaRng;
+use rand_core::SeedableRng;
+
 use std::convert::TryFrom;
 
 use wasmi::{Error as InterpreterError, MemoryInstance, MemoryRef, ModuleRef, RuntimeValue, Trap};
@@ -7,7 +10,7 @@ use wasmi::{Error as InterpreterError, MemoryInstance, MemoryRef, ModuleRef, Run
 use enclave_ffi_types::Ctx;
 
 use enclave_cosmwasm_types::consts::BECH32_PREFIX_ACC_ADDR;
-use enclave_crypto::Ed25519PublicKey;
+use enclave_crypto::{sha_256, Ed25519PublicKey};
 
 use crate::contract_validation::ContractKey;
 use crate::db::read_encrypted_key;
@@ -1085,24 +1088,68 @@ impl WasmiApi for ContractInstance {
 
         let mut batch = ed25519_zebra::batch::Verifier::new();
         for i in 0..signatures.len() {
-            // check pubkey input
-            if pubkeys[i].len() != 32 {
-                // return 5 == InvalidPubkeyFormat
-                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L95
-                return Ok(Some(RuntimeValue::I32(5)));
-            }
+            let signature: ed25519_zebra::Signature = match ed25519_zebra::Signature::try_from(
+                signatures[i],
+            ) {
+                Ok(x) => x,
+                Err(err) => {
+                    debug!(
+                    "ed25519_batch_verify() failed to create a ed25519 signature from signatures[{}]: {:?}",
+                    i, err
+                );
 
-            // check signature input
-            if signatures[i].len() != 64 {
-                // return 4 == InvalidSignatureFormat
-                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
-                return Ok(Some(RuntimeValue::I32(4)));
-            }
+                    // return 4 == InvalidSignatureFormat
+                    // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
+                    return Ok(Some(RuntimeValue::I32(4)));
+                }
+            };
 
-            batch.queue((pubkeys[i], signatures[i], messages[i]));
+            let pubkey: ed25519_zebra::VerificationKeyBytes =
+                match ed25519_zebra::VerificationKeyBytes::try_from(pubkeys[i]) {
+                    Ok(x) => x,
+                    Err(err) => {
+                        debug!(
+                        "ed25519_batch_verify() failed to create a ed25519 VerificationKey from public_keys[{}]: {:?}",
+                        i, err
+                    );
+
+                        // return 5 == InvalidPubkeyFormat
+                        // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L95
+                        return Ok(Some(RuntimeValue::I32(5)));
+                    }
+                };
+
+            batch.queue((pubkey, signature, messages[i]));
         }
 
-        match batch.verify(&mut OsRng) {
+        // Assaf:
+        // To verify a batch of ed25519 signatures we need to provide an RNG.
+        // In theory this doesn't have to be deterministic because the same signatures
+        // should produce the same output (true/false) regardless of the RNG being used.
+        // In practice I'm too afraid to do something non-deterministic in concensus code
+        // So I've decided to use a PRNG instead.
+        // For entropy I'm using the entire ed25519 batch verify input data + the gas consumed
+        // up until now in this WASM call. This will be deterministic, but also kinda-random in
+        // different situations. Note that gas should incode every WASM opcode up until now and
+        // every WASM memory allocation.
+        // Secret data from the enclave can also be used here but I'm sure that that's necessary.
+        // Also note that in the vanilla CosmWasm v1 implementation their just using RNG from the OS,
+        // meaning that different values are used in differents nodes in consensus code, but the output
+        // should be the same (See https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/ed25519.rs#L108).
+        let mut rng_entropy: Vec<u8> = vec![];
+        rng_entropy.append(&mut messages_data.into_iter().flatten().collect());
+        rng_entropy.append(&mut signatures_data.into_iter().flatten().collect());
+        rng_entropy.append(&mut pubkeys_data.into_iter().flatten().collect());
+        rng_entropy.append(
+            &mut (self.gas_used.saturating_add(self.gas_used_externally))
+                .to_be_bytes()
+                .to_vec(),
+        );
+
+        let rng_seed: [u8; 32] = sha_256(&rng_entropy);
+        let mut rng = ChaChaRng::from_seed(rng_seed);
+
+        match batch.verify(&mut rng) {
             Err(err) => {
                 debug!(
                     "ed25519_batch_verify() failed to verify signatures: {:?}",
@@ -1119,7 +1166,5 @@ impl WasmiApi for ContractInstance {
                 return Ok(Some(RuntimeValue::I32(0)));
             }
         }
-
-        todo!();
     }
 }
