@@ -414,9 +414,11 @@ bin-data-develop:
 bin-data-production:
 	cd ./cmd/secretd && go-bindata -o ias_bin_prod.go -prefix "../../ias_keys/production/" -tags "production,hw" ../../ias_keys/production/...
 
+# Before running this you might need to do:
+# 1. sudo docker login -u ABC -p XYZ
+# 2. sudo docker buildx create --use
 secret-contract-optimizer:
-	docker build -f deployment/dockerfiles/secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} .
-	docker tag enigmampc/secret-contract-optimizer:${TAG} enigmampc/secret-contract-optimizer:latest
+	sudo docker buildx build --platform=linux/amd64,linux/arm64/v8 -f deployment/dockerfiles/secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} --push .
 
 secretjs-build:
 	cd cosmwasm-js/packages/sdk && yarn && yarn build
