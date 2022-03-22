@@ -6,6 +6,8 @@
 * Updated to Cosmos SDK v0.45.x
 * Fix registration failure for Intel Xeon 23xx-series processors (icelake still unsupported)
 * Floating point checks no longer ran on execute (only on init)
+* Upgraded IBC-go to v3
+* Added support for ICS27 - default host messages include voting, delegate/undelegate and voting 
 
 # 1.2.6
 
