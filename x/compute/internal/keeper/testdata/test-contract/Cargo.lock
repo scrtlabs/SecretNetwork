@@ -42,25 +42,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 
 [[package]]
-name = "cosmwasm-std"
-version = "0.10.0"
-dependencies = [
- "base64",
- "schemars",
- "serde",
- "serde-json-wasm",
- "snafu",
-]
-
-[[package]]
-name = "cosmwasm-storage"
-version = "0.10.0"
-dependencies = [
- "cosmwasm-std",
- "serde",
-]
-
-[[package]]
 name = "doc-comment"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -153,6 +134,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "secret-cosmwasm-std"
+version = "0.10.0"
+dependencies = [
+ "base64",
+ "schemars",
+ "serde",
+ "serde-json-wasm",
+ "snafu",
+]
+
+[[package]]
+name = "secret-cosmwasm-storage"
+version = "0.10.0"
+dependencies = [
+ "secret-cosmwasm-std",
+ "serde",
+]
+
+[[package]]
 name = "serde"
 version = "1.0.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -240,9 +240,9 @@ dependencies = [
 name = "test-contract"
 version = "0.0.1"
 dependencies = [
- "cosmwasm-std",
- "cosmwasm-storage",
  "schemars",
+ "secret-cosmwasm-std",
+ "secret-cosmwasm-storage",
  "serde",
  "serde-json-wasm",
 ]
