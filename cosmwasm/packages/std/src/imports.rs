@@ -5,7 +5,7 @@ use crate::encoding::Binary;
 use crate::errors::{RecoverPubkeyError, StdError, StdResult, VerificationError};
 #[cfg(feature = "iterator")]
 use crate::iterator::{Order, KV};
-use crate::memory::{alloc, build_region, consume_region, Region};
+use crate::memory::{alloc, build_region, consume_region, encode_sections, Region};
 use crate::serde::from_slice;
 use crate::traits::{Api, Querier, QuerierResult, ReadonlyStorage, Storage};
 
@@ -369,3 +369,4 @@ impl Querier for ExternalQuerier {
         from_slice(&response).unwrap_or_else(|err| Ok(Err(err)))
     }
 }
+

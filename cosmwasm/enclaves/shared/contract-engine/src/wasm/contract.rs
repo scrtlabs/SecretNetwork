@@ -103,25 +103,22 @@ impl ContractInstance {
         &*self.memory
     }
 
-    /// extract_vector_of_vectors extracts a vector of vectors from the wasm memory space
-    pub fn extract_vector_of_vectors(
-        &self,
-        vec_ptr_ptr: u32,
-    ) -> Result<Vec<Vec<u8>>, WasmEngineError> {
-        self.extract_vector_of_vectors_inner(vec_ptr_ptr)
-            .map_err(|err| {
-                debug!(
-                    "error while trying to read the buffer at {:?} : {:?}",
-                    vec_ptr_ptr, err
-                );
-                WasmEngineError::MemoryReadError
-            })
+    /// decode_sections extracts a vector of vectors from the wasm memory space
+    ///
+    /// Each encoded section is suffixed by a section length, encoded as big endian uint32.
+    ///
+    /// See also: `encode_section`.
+    pub fn decode_sections(&self, vec_ptr_ptr: u32) -> Result<Vec<Vec<u8>>, WasmEngineError> {
+        self.decode_sections_inner(vec_ptr_ptr).map_err(|err| {
+            debug!(
+                "error while trying to read the buffer at {:?} : {:?}",
+                vec_ptr_ptr, err
+            );
+            WasmEngineError::MemoryReadError
+        })
     }
 
-    fn extract_vector_of_vectors_inner(
-        &self,
-        vec_ptr_ptr: u32,
-    ) -> Result<Vec<Vec<u8>>, InterpreterError> {
+    fn decode_sections_inner(&self, vec_ptr_ptr: u32) -> Result<Vec<Vec<u8>>, InterpreterError> {
         let main_ptr: u32 = self.get_memory().get_value(vec_ptr_ptr)?;
 
         if main_ptr == 0 {
@@ -130,28 +127,23 @@ impl ContractInstance {
             )));
         }
 
-        let main_len: u32 = self.get_memory().get_value(vec_ptr_ptr + 8)?;
+        let mut remaining_len: u32 = self.get_memory().get_value(vec_ptr_ptr + 8)?;
 
         let main_vector = self.get_memory().get(main_ptr, main_len as usize)?;
 
-        if main_vector.len() % 4 != 0 {
-            return Err(InterpreterError::Memory(String::from(
-                format!("Main vector: size in bytes should be diveded by 4 because each pointer is 4 bytes. Got size {:?}", main_vector.len()),
-            )));
-        }
-
         let mut result: Vec<Vec<u8>> = vec![];
 
-        let mut i = 0;
-        while i < main_vector.len() {
-            result.push(self.extract_vector(u32::from_be_bytes([
-                main_vector[i],
-                main_vector[i + 1],
-                main_vector[i + 2],
-                main_vector[i + 3],
-            ]))?);
-            i += 4;
+        while remaining_len >= 4 {
+            let tail_len = u32::from_be_bytes([
+                data[remaining_len - 4],
+                data[remaining_len - 3],
+                data[remaining_len - 2],
+                data[remaining_len - 1],
+            ]) as usize;
+            result.push(&data[remaining_len - 4 - tail_len..remaining_len - 4]);
+            remaining_len -= 4 + tail_len;
         }
+        result.reverse();
 
         Ok(result)
     }
@@ -1001,26 +993,18 @@ impl WasmiApi for ContractInstance {
         signatures_ptr: i32,
         public_keys_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        let messages_data = self
-            .extract_vector_of_vectors(messages_ptr as u32)
-            .map_err(|err| {
-                debug!(
-                    "ed25519_batch_verify() error while trying to read messages from wasm memory"
-                );
-                err
-            })?;
+        let messages_data = self.decode_sections(messages_ptr as u32).map_err(|err| {
+            debug!("ed25519_batch_verify() error while trying to read messages from wasm memory");
+            err
+        })?;
 
-        let signatures_data = self
-            .extract_vector_of_vectors(signatures_ptr as u32)
-            .map_err(|err| {
-                debug!(
-                    "ed25519_batch_verify() error while trying to read signatures from wasm memory"
-                );
-                err
-            })?;
+        let signatures_data = self.decode_sections(signatures_ptr as u32).map_err(|err| {
+            debug!("ed25519_batch_verify() error while trying to read signatures from wasm memory");
+            err
+        })?;
 
         let pubkeys_data = self
-            .extract_vector_of_vectors(public_keys_ptr as u32)
+            .decode_sections(public_keys_ptr as u32)
             .map_err(|err| {
                 debug!(
                     "ed25519_batch_verify() error while trying to read public_keys from wasm memory"
