@@ -114,38 +114,38 @@ impl Api for MockApi {
 
     fn secp256k1_verify(
         &self,
-        message_hash: &[u8],
-        signature: &[u8],
-        public_key: &[u8],
+        _message_hash: &[u8],
+        _signature: &[u8],
+        _public_key: &[u8],
     ) -> Result<bool, VerificationError> {
-        todo!();
+        Ok(true)
     }
 
     fn secp256k1_recover_pubkey(
         &self,
-        message_hash: &[u8],
-        signature: &[u8],
-        recovery_param: u8,
+        _message_hash: &[u8],
+        _signature: &[u8],
+        _recovery_param: u8,
     ) -> Result<Vec<u8>, RecoverPubkeyError> {
-        todo!();
+        Ok(vec![])
     }
 
     fn ed25519_verify(
         &self,
-        message: &[u8],
-        signature: &[u8],
-        public_key: &[u8],
+        _message: &[u8],
+        _signature: &[u8],
+        _public_key: &[u8],
     ) -> Result<bool, VerificationError> {
-        todo!();
+        Ok(true)
     }
 
     fn ed25519_batch_verify(
         &self,
-        messages: &[&[u8]],
-        signatures: &[&[u8]],
-        public_keys: &[&[u8]],
+        _messages: &[&[u8]],
+        _signatures: &[&[u8]],
+        _public_keys: &[&[u8]],
     ) -> Result<bool, VerificationError> {
-        todo!();
+        Ok(true)
     }
 }
 

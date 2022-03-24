@@ -5,10 +5,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	stypes "github.com/cosmos/cosmos-sdk/store/types"
 	"io/ioutil"
 	"regexp"
 	"testing"
+
+	stypes "github.com/cosmos/cosmos-sdk/store/types"
 
 	"github.com/stretchr/testify/require"
 
@@ -2240,3 +2241,22 @@ func TestEncryptedAndPlaintextLogs(t *testing.T) {
 		events,
 	)
 }
+
+func TestSecp256k1VerifyCorrect(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	_, events, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify_correct":{}}`, true, defaultGasForTests, 0)
+
+	require.Empty(t, err)
+	require.Equal(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "result", Value: "true"},
+			},
+		},
+		events,
+	)}
