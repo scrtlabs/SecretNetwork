@@ -2242,13 +2242,13 @@ func TestEncryptedAndPlaintextLogs(t *testing.T) {
 	)
 }
 
-func TestSecp256k1VerifyCorrect(t *testing.T) {
+func TestSecp256k1VerifyCorrectCompactPubkey(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 
 	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	_, events, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify_correct":{}}`, true, defaultGasForTests, 0)
+	_, events, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify_correct_compact_pubkey":{}}`, true, defaultGasForTests, 0)
 
 	require.Empty(t, err)
 	require.Equal(t,
@@ -2259,4 +2259,65 @@ func TestSecp256k1VerifyCorrect(t *testing.T) {
 			},
 		},
 		events,
-	)}
+	)
+}
+
+func TestSecp256k1VerifyCorrectLongPubkey(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	_, events, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify_correct_long_pubkey":{}}`, true, defaultGasForTests, 0)
+
+	require.Empty(t, err)
+	require.Equal(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "result", Value: "true"},
+			},
+		},
+		events,
+	)
+}
+
+func TestSecp256k1VerifyWrongCompactPubkey(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	_, events, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify_wrong_compact_pubkey":{}}`, true, defaultGasForTests, 0)
+
+	require.Empty(t, err)
+	require.Equal(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "result", Value: "false"},
+			},
+		},
+		events,
+	)
+}
+
+func TestSecp256k1VerifyWrongLongPubkey(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	_, events, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify_wrong_long_pubkey":{}}`, true, defaultGasForTests, 0)
+
+	require.Empty(t, err)
+	require.Equal(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "result", Value: "false"},
+			},
+		},
+		events,
+	)
+}
