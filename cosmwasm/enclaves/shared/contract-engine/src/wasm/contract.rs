@@ -830,14 +830,14 @@ impl WasmiApi for ContractInstance {
         if message_hash_data.len() != 32 {
             // return 3 == InvalidHashFormat
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L93
-            return Ok(Some(RuntimeValue::I32(3)));
+            return Ok(Some(RuntimeValue::I64(to_high_half(3) as i64)));
         }
 
         // check signature input
         if signature_data.len() != 64 {
             // return 4 == InvalidSignatureFormat
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
-            return Ok(Some(RuntimeValue::I32(4)));
+            return Ok(Some(RuntimeValue::I64(to_high_half(4) as i64)));
         }
 
         let secp256k1_msg = match secp256k1::Message::from_slice(&message_hash_data) {
@@ -846,7 +846,7 @@ impl WasmiApi for ContractInstance {
 
                 // return 10 == GenericErr
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
-                return Ok(Some(RuntimeValue::I32(10)));
+                return Ok(Some(RuntimeValue::I64(to_high_half(10) as i64)));
             }
             Ok(x) => x,
         };
@@ -857,7 +857,7 @@ impl WasmiApi for ContractInstance {
 
                 // return 10 == GenericErr
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
-                return Ok(Some(RuntimeValue::I32(10)));
+                return Ok(Some(RuntimeValue::I64(to_high_half(10) as i64)));
             }
             Ok(x) => x,
         };
@@ -874,7 +874,7 @@ impl WasmiApi for ContractInstance {
 
                 // return 10 == GenericErr
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
-                return Ok(Some(RuntimeValue::I32(10)));
+                return Ok(Some(RuntimeValue::I64(to_high_half(10) as i64)));
             }
             Ok(x) => x,
         };
@@ -890,7 +890,7 @@ impl WasmiApi for ContractInstance {
 
                 // return 10 == GenericErr
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
-                return Ok(Some(RuntimeValue::I32(10)));
+                return Ok(Some(RuntimeValue::I64(to_high_half(10) as i64)));
             }
             Ok(pubkey) => {
                 let answer = pubkey.serialize();
@@ -903,7 +903,9 @@ impl WasmiApi for ContractInstance {
                 })?;
 
                 // Return pointer to the allocated buffer with the value written to it
-                Ok(Some(RuntimeValue::I32(ptr_to_region_in_wasm_vm as i32)))
+                Ok(Some(RuntimeValue::I64(
+                    to_low_half(ptr_to_region_in_wasm_vm) as i64,
+                )))
             }
         }
     }
@@ -1167,4 +1169,24 @@ impl WasmiApi for ContractInstance {
             }
         }
     }
+}
+
+/// Returns the data shifted by 32 bits towards the most significant bit.
+///
+/// This is independent of endianness. But to get the idea, it would be
+/// `data || 0x00000000` in big endian representation.
+#[inline]
+fn to_high_half(data: u32) -> u64 {
+    // See https://stackoverflow.com/a/58956419/2013738 to understand
+    // why this is endianness agnostic.
+    (data as u64) << 32
+}
+
+/// Returns the data copied to the 4 least significant bytes.
+///
+/// This is independent of endianness. But to get the idea, it would be
+/// `0x00000000 || data` in big endian representation.
+#[inline]
+fn to_low_half(data: u32) -> u64 {
+    data.into()
 }

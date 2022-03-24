@@ -3,7 +3,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use crate::addresses::{CanonicalAddr, HumanAddr};
 use crate::coins::Coin;
 use crate::encoding::Binary;
-use crate::errors::{StdError, StdResult, SystemResult};
+use crate::errors::{RecoverPubkeyError, StdError, StdResult, SystemResult, VerificationError};
 #[cfg(feature = "iterator")]
 use crate::iterator::{Order, KV};
 use crate::query::{AllBalanceResponse, BalanceResponse, BankQuery, QueryRequest};
@@ -83,6 +83,34 @@ pub trait Storage: ReadonlyStorage {
 pub trait Api: Copy + Clone + Send {
     fn canonical_address(&self, human: &HumanAddr) -> StdResult<CanonicalAddr>;
     fn human_address(&self, canonical: &CanonicalAddr) -> StdResult<HumanAddr>;
+
+    fn secp256k1_verify(
+        &self,
+        message_hash: &[u8],
+        signature: &[u8],
+        public_key: &[u8],
+    ) -> Result<bool, VerificationError>;
+
+    fn secp256k1_recover_pubkey(
+        &self,
+        message_hash: &[u8],
+        signature: &[u8],
+        recovery_param: u8,
+    ) -> Result<Vec<u8>, RecoverPubkeyError>;
+
+    fn ed25519_verify(
+        &self,
+        message: &[u8],
+        signature: &[u8],
+        public_key: &[u8],
+    ) -> Result<bool, VerificationError>;
+
+    fn ed25519_batch_verify(
+        &self,
+        messages: &[&[u8]],
+        signatures: &[&[u8]],
+        public_keys: &[&[u8]],
+    ) -> Result<bool, VerificationError>;
 }
 
 /// A short-hand alias for the two-level query result (1. accessing the contract, 2. executing query in the contract)
