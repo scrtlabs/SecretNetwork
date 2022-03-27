@@ -201,12 +201,11 @@ pub enum HandleMsg {
         code_hash: String,
         msg: String,
     },
-    Secp256k1VerifyCorrectCompactPubkey {},
-    Secp256k1VerifyCorrectLongPubkey {},
-    Secp256k1VerifyWrongCompactPubkey {},
-    Secp256k1VerifyWrongLongPubkey {},
-    Secp256k1VerifyWrongSignatureSize {},
-    Secp256k1VerifyWrongPubkeySize {},
+    Secp256k1Verify {
+        pubkey: Binary,
+        sig: Binary,
+        msg_hash: Binary,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -652,14 +651,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 data: None,
             })
         }
-        HandleMsg::Secp256k1VerifyCorrectCompactPubkey {} => {
-            // https://paulmillr.com/noble/
-            let pubkey =
-                Binary::from_base64("A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//").unwrap();
-            let sig = Binary::from_base64("/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==").unwrap();
-            let msg_hash =
-                Binary::from_base64("ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao=").unwrap();
-
+        HandleMsg::Secp256k1Verify {
+            pubkey,
+            sig,
+            msg_hash,
+        } => {
             match deps
                 .api
                 .secp256k1_verify(msg_hash.as_slice(), sig.as_slice(), pubkey.as_slice())
@@ -672,76 +668,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
             }
         }
-        HandleMsg::Secp256k1VerifyCorrectLongPubkey {} => {
-            // https://paulmillr.com/noble/
-            let pubkey =
-                Binary::from_base64("BEZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo///ne03QpL+5WFHztzVceB3WD4QY/Ipl0UkHr/R8kDpVk=").unwrap();
-            let sig = Binary::from_base64("/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==").unwrap();
-            let msg_hash =
-                Binary::from_base64("ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao=").unwrap();
-
-            match deps
-                .api
-                .secp256k1_verify(msg_hash.as_slice(), sig.as_slice(), pubkey.as_slice())
-            {
-                Ok(result) => Ok(HandleResponse {
-                    messages: vec![],
-                    log: vec![log("result", format!("{}", result))],
-                    data: None,
-                }),
-                Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
-            }
-        }
-        HandleMsg::Secp256k1VerifyWrongCompactPubkey {} => {
-            // https://paulmillr.com/noble/
-            let pubkey =
-                Binary::from_base64("A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//").unwrap();
-            let sig = Binary::from_base64("/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==").unwrap();
-            let msg_hash =
-                Binary::from_base64("ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzas=").unwrap();
-
-            match deps
-                .api
-                .secp256k1_verify(msg_hash.as_slice(), sig.as_slice(), pubkey.as_slice())
-            {
-                Ok(result) => Ok(HandleResponse {
-                    messages: vec![],
-                    log: vec![log("result", format!("{}", result))],
-                    data: None,
-                }),
-                Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
-            }
-        }
-        HandleMsg::Secp256k1VerifyWrongLongPubkey {} => {
-            // https://paulmillr.com/noble/
-            let pubkey =
-             Binary::from_base64("BEZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo///ne03QpL+5WFHztzVceB3WD4QY/Ipl0UkHr/R8kDpVk=").unwrap();
-            let sig = Binary::from_base64("/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==").unwrap();
-            let msg_hash =
-                Binary::from_base64("ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzas=").unwrap();
-
-            match deps
-                .api
-                .secp256k1_verify(msg_hash.as_slice(), sig.as_slice(), pubkey.as_slice())
-            {
-                Ok(result) => Ok(HandleResponse {
-                    messages: vec![],
-                    log: vec![log("result", format!("{}", result))],
-                    data: None,
-                }),
-                Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
-            }
-        }
-        HandleMsg::Secp256k1VerifyWrongSignatureSize {} => Ok(HandleResponse {
-            messages: vec![],
-            log: vec![log("TODO", "TODO")],
-            data: None,
-        }),
-        HandleMsg::Secp256k1VerifyWrongPubkeySize {} => Ok(HandleResponse {
-            messages: vec![],
-            log: vec![log("TODO", "TODO")],
-            data: None,
-        }),
     }
 }
 
