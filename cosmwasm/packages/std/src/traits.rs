@@ -3,7 +3,9 @@ use serde::{de::DeserializeOwned, Serialize};
 use crate::addresses::{CanonicalAddr, HumanAddr};
 use crate::coins::Coin;
 use crate::encoding::Binary;
-use crate::errors::{RecoverPubkeyError, StdError, StdResult, SystemResult, VerificationError};
+use crate::errors::{
+    RecoverPubkeyError, SigningError, StdError, StdResult, SystemResult, VerificationError,
+};
 #[cfg(feature = "iterator")]
 use crate::iterator::{Order, KV};
 use crate::query::{AllBalanceResponse, BalanceResponse, BankQuery, QueryRequest};
@@ -84,16 +86,16 @@ pub trait Api: Copy + Clone + Send {
     /// Takes a human readable address and returns a canonical binary representation of it.
     /// This can be used when a compact fixed length representation is needed.
     fn canonical_address(&self, human: &HumanAddr) -> StdResult<CanonicalAddr>;
-    
+
     /// Takes a canonical address and returns a human readble address.
     /// This is the inverse of [`canonical_address`].
     ///
     /// [`canonical_address`]: Api::canonical_address
     fn human_address(&self, canonical: &CanonicalAddr) -> StdResult<HumanAddr>;
 
-    /// ECDSA secp256k1 implementation.
+    /// ECDSA secp256k1 signature verification.
     ///
-    /// This function verifies message hashes (typically, hashed unsing SHA-256) against a signature,
+    /// This function verifies message hashes (hashed unsing SHA-256) against a signature,
     /// with the public key of the signer, using the secp256k1 elliptic curve digital signature
     /// parametrization / algorithm.
     ///
@@ -125,7 +127,7 @@ pub trait Api: Copy + Clone + Send {
         recovery_param: u8,
     ) -> Result<Vec<u8>, RecoverPubkeyError>;
 
-    /// EdDSA ed25519 implementation.
+    /// EdDSA ed25519 signature verification.
     ///
     /// This function verifies messages against a signature, with the public key of the signer,
     /// using the ed25519 elliptic curve digital signature parametrization / algorithm.
@@ -178,6 +180,23 @@ pub trait Api: Copy + Clone + Send {
         signatures: &[&[u8]],
         public_keys: &[&[u8]],
     ) -> Result<bool, VerificationError>;
+
+    /// ECDSA secp256k1 signing.
+    ///
+    /// This function signs a message with a private key using the secp256k1 elliptic curve digital signature parametrization / algorithm.
+    ///
+    /// - message: Arbitrary message.
+    /// - private key: Raw secp256k1 private key (32 bytes)
+
+    fn secp256k1_sign(&self, message: &[u8], private_key: &[u8]) -> Result<Vec<u8>, SigningError>;
+
+    /// EdDSA Ed25519 signing.
+    ///
+    /// This function signs a message with a private key using the ed25519 elliptic curve digital signature parametrization / algorithm.
+    ///
+    /// - message: Arbitrary message.
+    /// - private key: Raw ED25519 private key (32 bytes)
+    fn ed25519_sign(&self, message: &[u8], private_key: &[u8]) -> Result<Vec<u8>, SigningError>;
 }
 
 /// A short-hand alias for the two-level query result (1. accessing the contract, 2. executing query in the contract)

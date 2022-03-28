@@ -948,7 +948,7 @@ impl WasmiApi for ContractInstance {
                 Ok(x) => x,
                 Err(err) => {
                     debug!(
-                    "ed25519_verify() failed to create a ed25519 signature from signature: {:?}",
+                    "ed25519_verify() failed to create an ed25519 signature from signature: {:?}",
                     err
                 );
 
@@ -963,7 +963,7 @@ impl WasmiApi for ContractInstance {
                 Ok(x) => x,
                 Err(err) => {
                     debug!(
-                        "ed25519_verify() failed to create a ed25519 VerificationKey from public_key: {:?}",
+                        "ed25519_verify() failed to create an ed25519 VerificationKey from public_key: {:?}",
                         err
                     );
 
@@ -1082,7 +1082,7 @@ impl WasmiApi for ContractInstance {
                 Ok(x) => x,
                 Err(err) => {
                     debug!(
-                    "ed25519_batch_verify() failed to create a ed25519 signature from signatures[{}]: {:?}",
+                    "ed25519_batch_verify() failed to create an ed25519 signature from signatures[{}]: {:?}",
                     i, err
                 );
 
@@ -1097,7 +1097,7 @@ impl WasmiApi for ContractInstance {
                     Ok(x) => x,
                     Err(err) => {
                         debug!(
-                        "ed25519_batch_verify() failed to create a ed25519 VerificationKey from public_keys[{}]: {:?}",
+                        "ed25519_batch_verify() failed to create an ed25519 VerificationKey from public_keys[{}]: {:?}",
                         i, err
                     );
 
@@ -1154,6 +1154,142 @@ impl WasmiApi for ContractInstance {
                 return Ok(Some(RuntimeValue::I32(0)));
             }
         }
+    }
+
+    fn secp256k1_sign(
+        &mut self,
+        message_ptr: i32,
+        private_key_ptr: i32,
+    ) -> Result<Option<RuntimeValue>, Trap> {
+        self.use_gas_externally(self.gas_costs.external_secp256k1_sign as u64)?;
+
+        let message_data = self.extract_vector(message_ptr as u32).map_err(|err| {
+            debug!("secp256k1_sign() error while trying to read message from wasm memory");
+            err
+        })?;
+        let private_key_data = self.extract_vector(private_key_ptr as u32).map_err(|err| {
+            debug!("secp256k1_sign() error while trying to read private_key from wasm memory");
+            err
+        })?;
+
+        trace!(
+            "secp256k1_sign() was called from WASM code with message {:x?} (len {:?} should be 32)",
+            &message_data,
+            message_data.len()
+        );
+        trace!(
+            "secp256k1_sign() was called from WASM code with private_key {:x?} (len {:?} should be 64)",
+            &signature_data,
+            signature_data.len()
+        );
+
+        // check private_key input
+        if private_key_data.len() != 32 {
+            // return 1000 == InvalidPrivateKeyFormat
+            // Assaf: 1000 to not collide with CosmWasm someday
+            // See https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L91
+            return Ok(Some(RuntimeValue::I64(to_high_half(1000) as i64)));
+        }
+
+        let secp = secp256k1::Secp256k1::new();
+
+        let message_hash: [u8; 32] = sha_256(message_data.as_slice());
+        let secp256k1_msg = match secp256k1::Message::from_slice(&message_hash) {
+            Err(err) => {
+                debug!(
+                    "secp256k1_sign() failed to create a secp256k1 message from message: {:?}",
+                    err
+                );
+
+                // return 10 == GenericErr
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
+                return Ok(Some(RuntimeValue::I64(to_high_half(10) as i64)));
+            }
+            Ok(x) => x,
+        };
+
+        let sig = secp
+            .sign_ecdsa(&secp256k1_msg, private_key_data.as_slice())
+            .serialize_compact();
+
+        let ptr_to_region_in_wasm_vm = self.write_to_memory(&sig).map_err(|err| {
+            debug!(
+                "secp256k1_sign() error while trying to allocate and write the answer {:?} to the WASM VM",
+                &answer,
+            );
+            err
+        })?;
+
+        // Return pointer to the allocated buffer with the value written to it
+        Ok(Some(RuntimeValue::I64(
+            to_low_half(ptr_to_region_in_wasm_vm) as i64,
+        )))
+    }
+
+    fn ed25519_sign(
+        &mut self,
+        message_ptr: i32,
+        private_key_ptr: i32,
+    ) -> Result<Option<RuntimeValue>, Trap> {
+        self.use_gas_externally(self.gas_costs.external_ed25519_sign as u64)?;
+
+        let message_data = self.extract_vector(message_ptr as u32).map_err(|err| {
+            debug!("ed25519_sign() error while trying to read message from wasm memory");
+            err
+        })?;
+        let private_key_data = self.extract_vector(private_key_ptr as u32).map_err(|err| {
+            debug!("ed25519_sign() error while trying to read private_key from wasm memory");
+            err
+        })?;
+
+        trace!(
+            "ed25519_sign() was called from WASM code with message {:x?} (len {:?} should be 32)",
+            &message_data,
+            message_data.len()
+        );
+        trace!(
+            "ed25519_sign() was called from WASM code with private_key {:x?} (len {:?} should be 64)",
+            &signature_data,
+            signature_data.len()
+        );
+
+        // check private_key input
+        if private_key_data.len() != 32 {
+            // return 1000 == InvalidPrivateKeyFormat
+            // Assaf: 1000 to not collide with CosmWasm someday
+            // See https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L91
+            return Ok(Some(RuntimeValue::I64(to_high_half(1000) as i64)));
+        }
+
+        let ed25519_signing_key =
+            match ed25519_zebra::SigningKey::try_from(private_key_data.as_slice()) {
+                Ok(x) => x,
+                Err(err) => {
+                    debug!(
+                    "ed25519_sign() failed to create an ed25519 signing key from private_key: {:?}",
+                    err
+                );
+
+                    // return 10 == GenericErr
+                    // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
+                    return Ok(Some(RuntimeValue::I64(to_high_half(10) as i64)));
+                }
+            };
+
+        let sig: [u8; 64] = ed25519_signing_key.sign(message_data.as_slice()).into();
+
+        let ptr_to_region_in_wasm_vm = self.write_to_memory(&sig).map_err(|err| {
+            debug!(
+                "ed25519_sign() error while trying to allocate and write the answer {:?} to the WASM VM",
+                &answer,
+            );
+            err
+        })?;
+
+        // Return pointer to the allocated buffer with the value written to it
+        Ok(Some(RuntimeValue::I64(
+            to_low_half(ptr_to_region_in_wasm_vm) as i64,
+        )))
     }
 }
 

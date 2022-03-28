@@ -58,4 +58,16 @@ pub trait WasmiApi {
         signatures_ptr: i32,
         public_keys_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap>;
+
+    fn secp256k1_sign(
+        &mut self,
+        message_ptr: i32,
+        private_key_ptr: i32,
+    ) -> Result<Option<RuntimeValue>, Trap>;
+
+    fn ed25519_sign(
+        &mut self,
+        message_ptr: i32,
+        private_key_ptr: i32,
+    ) -> Result<Option<RuntimeValue>, Trap>;
 }

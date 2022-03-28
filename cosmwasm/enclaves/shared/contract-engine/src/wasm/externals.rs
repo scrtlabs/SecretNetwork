@@ -20,6 +20,8 @@ pub enum HostFunctions {
     Secp256k1RecoverPubkeyIndex = 11,
     Ed25519VerifyIndex = 12,
     Ed25519BatchVerifyIndex = 13,
+    Secp256k1SignIndex = 14,
+    Ed25519SignIndex = 15,
     #[cfg(feature = "debug-print")]
     DebugPrintIndex = 254,
     Unknown,
@@ -271,6 +273,42 @@ impl Externals for ContractInstance {
             HostFunctions::Unknown => {
                 warn!("unknown function index");
                 Err(WasmEngineError::NonExistentImportFunction.into())
+            }
+            HostFunctions::Secp256k1SignIndex => {
+                let message = args.nth_checked(0).map_err(|err| {
+                    warn!(
+                        "secp256k1_sign() error reading 1st argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+                let private_key = args.nth_checked(1).map_err(|err| {
+                    warn!(
+                        "secp256k1_sign() error reading 2nd argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+
+                self.secp256k1_sign(message, private_key)
+            }
+            HostFunctions::Ed25519SignIndex => {
+                let message = args.nth_checked(0).map_err(|err| {
+                    warn!(
+                        "ed25519_sign() error reading 1st argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+                let private_key = args.nth_checked(1).map_err(|err| {
+                    warn!(
+                        "ed25519_sign() error reading 2nd argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+
+                self.ed25519_sign(message, private_key)
             }
         }
     }

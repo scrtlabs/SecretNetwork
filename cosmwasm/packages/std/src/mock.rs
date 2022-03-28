@@ -5,7 +5,8 @@ use crate::addresses::{CanonicalAddr, HumanAddr};
 use crate::coins::Coin;
 use crate::encoding::Binary;
 use crate::errors::{
-    RecoverPubkeyError, StdError, StdResult, SystemError, SystemResult, VerificationError,
+    RecoverPubkeyError, SigningError, StdError, StdResult, SystemError, SystemResult,
+    VerificationError,
 };
 use crate::query::{
     AllBalanceResponse, AllDelegationsResponse, BalanceResponse, BankQuery, BondedDenomResponse,
@@ -146,6 +147,18 @@ impl Api for MockApi {
         _public_keys: &[&[u8]],
     ) -> Result<bool, VerificationError> {
         Ok(true)
+    }
+
+    fn secp256k1_sign(
+        &self,
+        _message: &[u8],
+        _private_key: &[u8],
+    ) -> Result<Vec<u8>, SigningError> {
+        Ok(vec![])
+    }
+
+    fn ed25519_sign(&self, _message: &[u8], _private_key: &[u8]) -> Result<Vec<u8>, SigningError> {
+        Ok(vec![])
     }
 }
 

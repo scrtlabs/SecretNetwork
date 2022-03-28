@@ -100,6 +100,16 @@ impl ModuleImportResolver for WasmiImportResolver {
                 ),
                 HostFunctions::Ed25519BatchVerifyIndex.into(),
             ),
+            // fn secp256k1_sign(message_ptr: u32, private_key_ptr: u32) -> u32;
+            "secp256k1_sign" => FuncInstance::alloc_host(
+                Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
+                HostFunctions::Secp256k1SignIndex.into(),
+            ),
+            // fn ed25519_sign(message_ptr: u32, private_key_ptr: u32) -> u32;
+            "ed25519_sign" => FuncInstance::alloc_host(
+                Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
+                HostFunctions::Ed25519SignIndex.into(),
+            ),
             _ => {
                 return Err(InterpreterError::Function(format!(
                     "WASM VM doesn't export function with name {}",

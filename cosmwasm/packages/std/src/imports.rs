@@ -2,7 +2,7 @@ use std::vec::Vec;
 
 use crate::addresses::{CanonicalAddr, HumanAddr};
 use crate::encoding::Binary;
-use crate::errors::{RecoverPubkeyError, StdError, StdResult, VerificationError};
+use crate::errors::{RecoverPubkeyError, SigningError, StdError, StdResult, VerificationError};
 #[cfg(feature = "iterator")]
 use crate::iterator::{Order, KV};
 use crate::memory::{alloc, build_region, consume_region, encode_sections, Region};
@@ -58,6 +58,10 @@ extern "C" {
     /// Returns 0 on verification success, 1 on verification failure, and values
     /// greater than 1 in case of error.
     fn ed25519_batch_verify(messages_ptr: u32, signatures_ptr: u32, public_keys_ptr: u32) -> u32;
+
+    fn secp256k1_sign(messages_ptr: u32, private_key_ptr: u32) -> u64;
+
+    fn ed25519_sign(messages_ptr: u32, private_key_ptr: u32) -> u64;
 }
 
 /// A stateless convenience wrapper around database imports provided by the VM.
@@ -239,7 +243,6 @@ impl Api for ExternalApi {
         match result {
             0 => Ok(true),
             1 => Ok(false),
-            2 => panic!("MessageTooLong must not happen. This is a bug in the VM."),
             3 => Err(VerificationError::InvalidHashFormat),
             4 => Err(VerificationError::InvalidSignatureFormat),
             5 => Err(VerificationError::InvalidPubkeyFormat),
@@ -279,7 +282,6 @@ impl Api for ExternalApi {
                 let pubkey = unsafe { consume_region(pubkey_ptr as *mut Region) };
                 Ok(pubkey)
             }
-            2 => panic!("MessageTooLong must not happen. This is a bug in the VM."),
             3 => Err(RecoverPubkeyError::InvalidHashFormat),
             4 => Err(RecoverPubkeyError::InvalidSignatureFormat),
             6 => Err(RecoverPubkeyError::InvalidRecoveryParam),
@@ -314,8 +316,6 @@ impl Api for ExternalApi {
         match result {
             0 => Ok(true),
             1 => Ok(false),
-            2 => panic!("Error code 2 unused since CosmWasm 0.15. This is a bug in the VM."),
-            3 => panic!("InvalidHashFormat must not happen. This is a bug in the VM."),
             4 => Err(VerificationError::InvalidSignatureFormat),
             5 => Err(VerificationError::InvalidPubkeyFormat),
             10 => Err(VerificationError::GenericErr),
@@ -376,12 +376,48 @@ impl Api for ExternalApi {
         match result {
             0 => Ok(true),
             1 => Ok(false),
-            2 => panic!("Error code 2 unused since CosmWasm 0.15. This is a bug in the VM."),
-            3 => panic!("InvalidHashFormat must not happen. This is a bug in the VM."),
             4 => Err(VerificationError::InvalidSignatureFormat),
             5 => Err(VerificationError::InvalidPubkeyFormat),
             10 => Err(VerificationError::GenericErr),
             error_code => Err(VerificationError::unknown_err(error_code)),
+        }
+    }
+
+    fn secp256k1_sign(&self, message: &[u8], private_key: &[u8]) -> Result<Vec<u8>, SigningError> {
+        let msg_send = build_region(message);
+        let msg_send_ptr = &*msg_send as *const Region as u32;
+        let pk_send = build_region(private_key);
+        let pk_send_ptr = &*pk_send as *const Region as u32;
+
+        let result = unsafe { secp256k1_sign(msg_send_ptr, pk_send_ptr) };
+        let error_code = from_high_half(result);
+        let signature_ptr = from_low_half(result);
+        match error_code {
+            0 => {
+                let signature = unsafe { consume_region(signature_ptr as *mut Region) };
+                Ok(signature)
+            }
+            1000 => Err(SigningError::InvalidPrivateKeyFormat),
+            error_code => Err(SigningError::unknown_err(error_code)),
+        }
+    }
+
+    fn ed25519_sign(&self, message: &[u8], private_key: &[u8]) -> Result<Vec<u8>, SigningError> {
+        let msg_send = build_region(message);
+        let msg_send_ptr = &*msg_send as *const Region as u32;
+        let pk_send = build_region(private_key);
+        let pk_send_ptr = &*pk_send as *const Region as u32;
+
+        let result = unsafe { ed25519_sign(msg_send_ptr, pk_send_ptr) };
+        let error_code = from_high_half(result);
+        let signature_ptr = from_low_half(result);
+        match error_code {
+            0 => {
+                let signature = unsafe { consume_region(signature_ptr as *mut Region) };
+                Ok(signature)
+            }
+            1000 => Err(SigningError::InvalidPrivateKeyFormat),
+            error_code => Err(SigningError::unknown_err(error_code)),
         }
     }
 }
@@ -430,4 +466,3 @@ impl Querier for ExternalQuerier {
         from_slice(&response).unwrap_or_else(|err| Ok(Err(err)))
     }
 }
-
