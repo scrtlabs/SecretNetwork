@@ -226,6 +226,12 @@ pub enum HandleMsg {
         msgs: Vec<Binary>,
         iterations: u8,
     },
+    Secp256k1RecoverPubkey {
+        msg_hash: Binary,
+        sig: Binary,
+        recovery_param: u8,
+        iterations: u8,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -813,6 +819,36 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                     Ok(result) => Ok(HandleResponse {
                         messages: vec![],
                         log: vec![log("result", format!("{}", result))],
+                        data: None,
+                    }),
+                    Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
+                };
+            }
+
+            return res;
+        }
+        HandleMsg::Secp256k1RecoverPubkey {
+            msg_hash,
+            sig,
+            recovery_param,
+            iterations,
+        } => {
+            let mut res: HandleResult = Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            // loop for benchmarking
+            for _ in 0..iterations {
+                res = match deps.api.secp256k1_recover_pubkey(
+                    msg_hash.as_slice(),
+                    sig.as_slice(),
+                    recovery_param,
+                ) {
+                    Ok(result) => Ok(HandleResponse {
+                        messages: vec![],
+                        log: vec![log("result", format!("{}", Binary(result).to_base64()))],
                         data: None,
                     }),
                     Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
