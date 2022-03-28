@@ -596,7 +596,7 @@ func TestExecute(t *testing.T) {
 	// unauthorized - trialCtx so we don't change state
 	trialCtx := ctx.WithMultiStore(ctx.MultiStore().CacheWrap().(sdk.MultiStore))
 
-	_, _, trialExecErr := execHelper(t, keeper, trialCtx, addr, creator, creatorPrivKey, `{"release":{}}`, true, defaultGasForTests, 0)
+	_, _, _, trialExecErr := execHelper(t, keeper, trialCtx, addr, creator, creatorPrivKey, `{"release":{}}`, true, defaultGasForTests, 0)
 	require.Error(t, trialExecErr)
 	require.Error(t, trialExecErr.Unauthorized)
 	require.Contains(t, trialExecErr.Error(), "unauthorized")
@@ -607,7 +607,7 @@ func TestExecute(t *testing.T) {
 	gasBefore = ctx.GasMeter().GasConsumed()
 
 	require.NoError(t, err)
-	//res, _, err := execHelper(t, keeper, trialCtx, addr, creator, `{"release":{}}`, true, defaultGasForTests)
+	//res, _, _, err := execHelper(t, keeper, trialCtx, addr, creator, `{"release":{}}`, true, defaultGasForTests)
 
 	initMsgBz = []byte(`{"release":{}}`)
 
@@ -703,7 +703,7 @@ func TestExecuteWithDeposit(t *testing.T) {
 			}
 
 			// when
-			_, _, err = execHelperImpl(t, keeper, ctx, contractAddr, bob, bobPriv, `{"release":{}}`, false, defaultGasForTests, deposit, wasmCalls)
+			_, _, _, err = execHelperImpl(t, keeper, ctx, contractAddr, bob, bobPriv, `{"release":{}}`, false, defaultGasForTests, deposit, wasmCalls)
 
 			// then
 			if spec.expError {

@@ -494,7 +494,7 @@ func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuer
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.Smart.ContractAddr)
 			}
-			return wasm.querySmartRecursive(ctx, addr, request.Smart.Msg, true)
+			return wasm.querySmartRecursive(ctx, addr, request.Smart.Msg, false)
 		}
 		if request.Raw != nil {
 			addr, err := sdk.AccAddressFromBech32(request.Raw.ContractAddr)
