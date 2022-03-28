@@ -5,6 +5,7 @@ use cosmwasm_std::{
     HandleResult, HumanAddr, InitResponse, InitResult, Querier, QueryRequest, QueryResult,
     ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg, WasmQuery,
 };
+use secp256k1::Secp256k1;
 
 /////////////////////////////// Messages ///////////////////////////////
 
@@ -205,6 +206,19 @@ pub enum HandleMsg {
         pubkey: Binary,
         sig: Binary,
         msg_hash: Binary,
+        iterations: u8,
+    },
+    Secp256k1VerifyFromCrate {
+        pubkey: Binary,
+        sig: Binary,
+        msg_hash: Binary,
+        iterations: u8,
+    },
+    Ed25519Verify {
+        pubkey: Binary,
+        sig: Binary,
+        msg: Binary,
+        iterations: u8,
     },
 }
 
@@ -655,18 +669,108 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             pubkey,
             sig,
             msg_hash,
+            iterations,
         } => {
-            match deps
-                .api
-                .secp256k1_verify(msg_hash.as_slice(), sig.as_slice(), pubkey.as_slice())
-            {
-                Ok(result) => Ok(HandleResponse {
-                    messages: vec![],
-                    log: vec![log("result", format!("{}", result))],
-                    data: None,
-                }),
-                Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
+            let mut res: HandleResult = Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            for _ in 0..iterations {
+                res = match deps.api.secp256k1_verify(
+                    msg_hash.as_slice(),
+                    sig.as_slice(),
+                    pubkey.as_slice(),
+                ) {
+                    Ok(result) => Ok(HandleResponse {
+                        messages: vec![],
+                        log: vec![log("result", format!("{}", result))],
+                        data: None,
+                    }),
+                    Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
+                };
             }
+
+            return res;
+        }
+        HandleMsg::Secp256k1VerifyFromCrate {
+            pubkey,
+            sig,
+            msg_hash,
+            iterations,
+        } => {
+            let mut res: HandleResult = Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            for _ in 0..iterations {
+                let secp256k1_verifier = Secp256k1::verification_only();
+
+                let secp256k1_signature =
+                    secp256k1::Signature::from_compact(&sig.0).map_err(|err| {
+                        StdError::generic_err(format!("Malformed signature: {:?}", err))
+                    })?;
+                let secp256k1_pubkey = secp256k1::PublicKey::from_slice(pubkey.0.as_slice())
+                    .map_err(|err| StdError::generic_err(format!("Malformed pubkey: {:?}", err)))?;
+                let secp256k1_msg =
+                    secp256k1::Message::from_slice(&msg_hash.as_slice()).map_err(|err| {
+                        StdError::generic_err(format!(
+                            "Failed to create a secp256k1 message from signed_bytes: {:?}",
+                            err
+                        ))
+                    })?;
+
+                res = match secp256k1_verifier.verify(
+                    &secp256k1_msg,
+                    &secp256k1_signature,
+                    &secp256k1_pubkey,
+                ) {
+                    Ok(()) => Ok(HandleResponse {
+                        messages: vec![],
+                        log: vec![log("result", "true")],
+                        data: None,
+                    }),
+                    Err(_err) => Ok(HandleResponse {
+                        messages: vec![],
+                        log: vec![log("result", "false")],
+                        data: None,
+                    }),
+                };
+            }
+
+            return res;
+        }
+        HandleMsg::Ed25519Verify {
+            pubkey,
+            sig,
+            msg,
+            iterations,
+        } => {
+            let mut res: HandleResult = Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            for _ in 0..iterations {
+                res =
+                    match deps
+                        .api
+                        .ed25519_verify(msg.as_slice(), sig.as_slice(), pubkey.as_slice())
+                    {
+                        Ok(result) => Ok(HandleResponse {
+                            messages: vec![],
+                            log: vec![log("result", format!("{}", result))],
+                            data: None,
+                        }),
+                        Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
+                    };
+            }
+
+            return res;
         }
     }
 }
