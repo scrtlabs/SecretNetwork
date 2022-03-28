@@ -86,14 +86,14 @@ func TestDistributionRewards(t *testing.T) {
 	require.NoError(t, err)
 
 	// test what happens if there are no rewards yet
-	res, _, err := execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, defaultGasForTests, 0)
+	res, _, _, err := execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, defaultGasForTests, 0)
 	require.Empty(t, err)
 	// returns the rewards
 	require.Equal(t, uint64(0), binary.BigEndian.Uint64(res))
 	ctx = nextBlock(ctx, stakingKeeper)
 
 	// test what happens if there are some rewards
-	res, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, defaultGasForTests, 0)
+	res, _, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, defaultGasForTests, 0)
 	require.Empty(t, err)
 	// returns the rewards
 	require.Equal(t, uint64(0x59), binary.BigEndian.Uint64(res))
