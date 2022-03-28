@@ -102,12 +102,12 @@ impl ModuleImportResolver for WasmiImportResolver {
             ),
             // fn secp256k1_sign(message_ptr: u32, private_key_ptr: u32) -> u32;
             "secp256k1_sign" => FuncInstance::alloc_host(
-                Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
+                Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I64)),
                 HostFunctions::Secp256k1SignIndex.into(),
             ),
             // fn ed25519_sign(message_ptr: u32, private_key_ptr: u32) -> u32;
             "ed25519_sign" => FuncInstance::alloc_host(
-                Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
+                Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I64)),
                 HostFunctions::Ed25519SignIndex.into(),
             ),
             _ => {

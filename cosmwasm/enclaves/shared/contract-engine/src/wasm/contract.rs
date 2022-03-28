@@ -1179,8 +1179,8 @@ impl WasmiApi for ContractInstance {
         );
         trace!(
             "secp256k1_sign() was called from WASM code with private_key {:x?} (len {:?} should be 64)",
-            &signature_data,
-            signature_data.len()
+            &private_key_data,
+            private_key_data.len()
         );
 
         // check private_key input
@@ -1208,14 +1208,30 @@ impl WasmiApi for ContractInstance {
             Ok(x) => x,
         };
 
+        let secp256k1_secret_key = match secp256k1::SecretKey::from_slice(
+            private_key_data.as_slice(),
+        ) {
+            Err(err) => {
+                debug!(
+                        "secp256k1_sign() failed to create a secp256k1 secret key from private key: {:?}",
+                        err
+                    );
+
+                // return 10 == GenericErr
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
+                return Ok(Some(RuntimeValue::I64(to_high_half(10) as i64)));
+            }
+            Ok(x) => x,
+        };
+
         let sig = secp
-            .sign_ecdsa(&secp256k1_msg, private_key_data.as_slice())
+            .sign_ecdsa(&secp256k1_msg, &secp256k1_secret_key)
             .serialize_compact();
 
         let ptr_to_region_in_wasm_vm = self.write_to_memory(&sig).map_err(|err| {
             debug!(
-                "secp256k1_sign() error while trying to allocate and write the answer {:?} to the WASM VM",
-                &answer,
+                "secp256k1_sign() error while trying to allocate and write the sig {:?} to the WASM VM",
+                &sig,
             );
             err
         })?;
@@ -1249,8 +1265,8 @@ impl WasmiApi for ContractInstance {
         );
         trace!(
             "ed25519_sign() was called from WASM code with private_key {:x?} (len {:?} should be 64)",
-            &signature_data,
-            signature_data.len()
+            &private_key_data,
+            private_key_data.len()
         );
 
         // check private_key input
@@ -1280,8 +1296,8 @@ impl WasmiApi for ContractInstance {
 
         let ptr_to_region_in_wasm_vm = self.write_to_memory(&sig).map_err(|err| {
             debug!(
-                "ed25519_sign() error while trying to allocate and write the answer {:?} to the WASM VM",
-                &answer,
+                "ed25519_sign() error while trying to allocate and write the sig {:?} to the WASM VM",
+                &sig,
             );
             err
         })?;

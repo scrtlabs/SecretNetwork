@@ -206,6 +206,9 @@ pub enum HandleMsg {
         code_hash: String,
         msg: String,
     },
+    StoreReallyLongKey {},
+    StoreReallyShortKey {},
+    StoreReallyLongValue {},
     Secp256k1Verify {
         pubkey: Binary,
         sig: Binary,
@@ -236,9 +239,16 @@ pub enum HandleMsg {
         recovery_param: u8,
         iterations: u8,
     },
-    StoreReallyLongKey {},
-    StoreReallyShortKey {},
-    StoreReallyLongValue {},
+    Secp256k1Sign {
+        msg: Binary,
+        privkey: Binary,
+        iterations: u8,
+    },
+    Ed25519Sign {
+        msg: Binary,
+        privkey: Binary,
+        iterations: u8,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -684,6 +694,21 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 data: None,
             })
         }
+        HandleMsg::StoreReallyLongKey {} => {
+            let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
+            store.set(REALLY_LONG, b"hello");
+            Ok(HandleResponse::default())
+        }
+        HandleMsg::StoreReallyShortKey {} => {
+            let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
+            store.set(b"a", b"hello");
+            Ok(HandleResponse::default())
+        }
+        HandleMsg::StoreReallyLongValue {} => {
+            let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
+            store.set(b"hello", REALLY_LONG);
+            Ok(HandleResponse::default())
+        }
         HandleMsg::Secp256k1Verify {
             pubkey,
             sig,
@@ -864,20 +889,55 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
             return res;
         }
-        HandleMsg::StoreReallyLongKey {} => {
-            let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
-            store.set(REALLY_LONG, b"hello");
-            Ok(HandleResponse::default())
+        HandleMsg::Secp256k1Sign {
+            msg,
+            privkey,
+            iterations,
+        } => {
+            let mut res: HandleResult = Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            // loop for benchmarking
+            for _ in 0..iterations {
+                res = match deps.api.secp256k1_sign(msg.as_slice(), privkey.as_slice()) {
+                    Ok(result) => Ok(HandleResponse {
+                        messages: vec![],
+                        log: vec![log("result", format!("{}", Binary(result).to_base64()))],
+                        data: None,
+                    }),
+                    Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
+                };
+            }
+
+            return res;
         }
-        HandleMsg::StoreReallyShortKey {} => {
-            let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
-            store.set(b"a", b"hello");
-            Ok(HandleResponse::default())
-        }
-        HandleMsg::StoreReallyLongValue {} => {
-            let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
-            store.set(b"hello", REALLY_LONG);
-            Ok(HandleResponse::default())
+        HandleMsg::Ed25519Sign {
+            msg,
+            privkey,
+            iterations,
+        } => {
+            let mut res: HandleResult = Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            // loop for benchmarking
+            for _ in 0..iterations {
+                res = match deps.api.ed25519_sign(msg.as_slice(), privkey.as_slice()) {
+                    Ok(result) => Ok(HandleResponse {
+                        messages: vec![],
+                        log: vec![log("result", format!("{}", Binary(result).to_base64()))],
+                        data: None,
+                    }),
+                    Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
+                };
+            }
+
+            return res;
         }
     }
 }
