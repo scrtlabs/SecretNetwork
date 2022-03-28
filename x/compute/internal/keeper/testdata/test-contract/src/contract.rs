@@ -220,6 +220,12 @@ pub enum HandleMsg {
         msg: Binary,
         iterations: u8,
     },
+    Ed25519BatchVerify {
+        pubkeys: Vec<Binary>,
+        sigs: Vec<Binary>,
+        msgs: Vec<Binary>,
+        iterations: u8,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -677,6 +683,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 data: None,
             });
 
+            // loop for benchmarking
             for _ in 0..iterations {
                 res = match deps.api.secp256k1_verify(
                     msg_hash.as_slice(),
@@ -706,6 +713,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 data: None,
             });
 
+            // loop for benchmarking
             for _ in 0..iterations {
                 let secp256k1_verifier = Secp256k1::verification_only();
 
@@ -755,6 +763,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 data: None,
             });
 
+            // loop for benchmarking
             for _ in 0..iterations {
                 res =
                     match deps
@@ -768,6 +777,46 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                         }),
                         Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
                     };
+            }
+
+            return res;
+        }
+        HandleMsg::Ed25519BatchVerify {
+            pubkeys,
+            sigs,
+            msgs,
+            iterations,
+        } => {
+            let mut res: HandleResult = Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            // loop for benchmarking
+            for _ in 0..iterations {
+                res = match deps.api.ed25519_batch_verify(
+                    msgs.iter()
+                        .map(|m| m.as_slice())
+                        .collect::<Vec<&[u8]>>()
+                        .as_slice(),
+                    sigs.iter()
+                        .map(|s| s.as_slice())
+                        .collect::<Vec<&[u8]>>()
+                        .as_slice(),
+                    pubkeys
+                        .iter()
+                        .map(|p| p.as_slice())
+                        .collect::<Vec<&[u8]>>()
+                        .as_slice(),
+                ) {
+                    Ok(result) => Ok(HandleResponse {
+                        messages: vec![],
+                        log: vec![log("result", format!("{}", result))],
+                        data: None,
+                    }),
+                    Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
+                };
             }
 
             return res;

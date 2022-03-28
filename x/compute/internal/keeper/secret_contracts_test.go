@@ -2524,3 +2524,24 @@ func TestEd25519VerifyIncorrectPubkey(t *testing.T) {
 		events,
 	)
 }
+
+func TestEd25519BatchVerifyCorrect(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+
+	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	// https://paulmillr.com/noble/
+	_, events, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, defaultGasForTests, 0)
+
+	require.Empty(t, err)
+	require.Equal(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "result", Value: "true"},
+			},
+		},
+		events,
+	)
+}

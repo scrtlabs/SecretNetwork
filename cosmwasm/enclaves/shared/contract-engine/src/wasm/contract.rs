@@ -119,20 +119,20 @@ impl ContractInstance {
     }
 
     fn decode_sections_inner(&self, vec_ptr_ptr: u32) -> Result<Vec<Vec<u8>>, InterpreterError> {
-        let main_ptr: u32 = self.get_memory().get_value(vec_ptr_ptr)?;
+        let data_ptr: u32 = self.get_memory().get_value(vec_ptr_ptr)?;
 
-        if main_ptr == 0 {
+        if data_ptr == 0 {
             return Err(InterpreterError::Memory(String::from(
                 "Main vector: trying to read from null pointer in WASM memory",
             )));
         }
 
-        let mut remaining_len: u32 = self.get_memory().get_value(vec_ptr_ptr + 8)?;
+        let data_len: u32 = self.get_memory().get_value(vec_ptr_ptr + 8)?;
+        let data = self.get_memory().get(data_ptr, data_len as usize)?;
 
-        let main_vector = self.get_memory().get(main_ptr, main_len as usize)?;
+        let mut remaining_len = data_len as usize;
 
         let mut result: Vec<Vec<u8>> = vec![];
-
         while remaining_len >= 4 {
             let tail_len = u32::from_be_bytes([
                 data[remaining_len - 4],
@@ -140,7 +140,9 @@ impl ContractInstance {
                 data[remaining_len - 2],
                 data[remaining_len - 1],
             ]) as usize;
-            result.push(&data[remaining_len - 4 - tail_len..remaining_len - 4]);
+            let mut new_element = vec![0; tail_len];
+            new_element.copy_from_slice(&data[remaining_len - 4 - tail_len..remaining_len - 4]);
+            result.push(new_element);
             remaining_len -= 4 + tail_len;
         }
         result.reverse();
