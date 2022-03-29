@@ -169,10 +169,8 @@ pub trait Api: Copy + Clone + Send {
     /// Any other variants of input vectors result in an error.
     ///
     /// Notes:
-    ///  - The "one-message, with zero signatures and zero public keys" case, is considered the empty
-    /// case.
-    ///  - The "one-public key, with zero messages and zero signatures" case, is considered the empty
-    /// case.
+    ///  - The "one-message, with zero signatures and zero public keys" case, is considered the empty case.
+    ///  - The "one-public key, with zero messages and zero signatures" case, is considered the empty case.
     ///  - The empty case (no messages, no signatures and no public keys) returns true.
     fn ed25519_batch_verify(
         &self,
