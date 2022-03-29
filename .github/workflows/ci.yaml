@@ -325,7 +325,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build docker testnet
-        run: DOCKER_TAG=for-secretjs-tests make build-dev-image
+        run: |
+          echo not_a_key | tee {api_key,spid}.txt
+          DOCKER_TAG=for-secretjs-tests make build-dev-image
       - name: Checkout secret.js
         run: git clone --depth 1 https://github.com/scrtlabs/secret.js
       - name: Generate js code from protobuf
