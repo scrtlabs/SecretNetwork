@@ -337,7 +337,8 @@ jobs:
           # Link to the already checked-out SecretNetwork instead of git cloning it
           perl -i -pe 's/rm -rf/#rm -rf/' ./scripts/generate_protobuf.sh 
           perl -i -pe 's/git clone/#git clone/;' ./scripts/generate_protobuf.sh
-          ln -s .. SecretNetwork
+          ln -s .. ./scripts/SecretNetwork
+          apt install -y protobuf-compiler
           ./scripts/generate_protobuf.sh
       - name: Run secret.js tests
         run: |
