@@ -334,10 +334,10 @@ jobs:
         run: |
           cd secret.js
           yarn
-          # Link to the already checked-out SecretNetwork instead of git cloning it
+          # Point to the already checked-out SecretNetwork instead of git cloning it
           perl -i -pe 's/rm -rf/#rm -rf/' ./scripts/generate_protobuf.sh 
           perl -i -pe 's/git clone/#git clone/;' ./scripts/generate_protobuf.sh
-          ln -s .. ./scripts/SecretNetwork
+          perl -i -pe 's;SCRIPT_PATH\}/SecretNetwork;SCRIPT_PATH}/../..;' ./scripts/generate_protobuf.sh
           sudo apt-get install -y protobuf-compiler
           ./scripts/generate_protobuf.sh
       - name: Run secret.js tests
