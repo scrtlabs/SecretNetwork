@@ -320,7 +320,7 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           make build_windows_cli
 
-  Secret.js-Tests:
+  Secretjs-Tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
