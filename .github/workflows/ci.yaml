@@ -330,7 +330,7 @@ jobs:
       - name: Checkout secret.js
         run: git clone --depth 1 https://github.com/scrtlabs/secret.js
       - name: Generate js code from protobuf
-      - run: |
+        run: |
           cd secret.js
           yarn
           # Link to the already checked-out SecretNetwork instead of git cloning it
