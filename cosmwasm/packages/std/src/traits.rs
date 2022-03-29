@@ -187,7 +187,6 @@ pub trait Api: Copy + Clone + Send {
     ///
     /// - message: Arbitrary message.
     /// - private key: Raw secp256k1 private key (32 bytes)
-
     fn secp256k1_sign(&self, message: &[u8], private_key: &[u8]) -> Result<Vec<u8>, SigningError>;
 
     /// EdDSA Ed25519 signing.
