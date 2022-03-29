@@ -329,7 +329,6 @@ jobs:
         run: DOCKER_TAG=for-secretjs-tests make build-dev-image
       - name: Checkout secret.js
         run: git clone --depth 1 https://github.com/scrtlabs/secret.js
-          cd secret.js
       - name: Generate js code from protobuf
       - run: |
           cd secret.js
