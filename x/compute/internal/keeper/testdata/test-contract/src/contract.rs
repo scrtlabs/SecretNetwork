@@ -213,41 +213,41 @@ pub enum HandleMsg {
         pubkey: Binary,
         sig: Binary,
         msg_hash: Binary,
-        iterations: u8,
+        iterations: u32,
     },
     Secp256k1VerifyFromCrate {
         pubkey: Binary,
         sig: Binary,
         msg_hash: Binary,
-        iterations: u8,
+        iterations: u32,
     },
     Ed25519Verify {
         pubkey: Binary,
         sig: Binary,
         msg: Binary,
-        iterations: u8,
+        iterations: u32,
     },
     Ed25519BatchVerify {
         pubkeys: Vec<Binary>,
         sigs: Vec<Binary>,
         msgs: Vec<Binary>,
-        iterations: u8,
+        iterations: u32,
     },
     Secp256k1RecoverPubkey {
         msg_hash: Binary,
         sig: Binary,
         recovery_param: u8,
-        iterations: u8,
+        iterations: u32,
     },
     Secp256k1Sign {
         msg: Binary,
         privkey: Binary,
-        iterations: u8,
+        iterations: u32,
     },
     Ed25519Sign {
         msg: Binary,
         privkey: Binary,
-        iterations: u8,
+        iterations: u32,
     },
 }
 
@@ -1532,6 +1532,7 @@ fn send_external_query_infinite_loop<S: Storage, A: Api, Q: Querier>(
 fn write_to_storage_in_query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<Binary> {
+    #[allow(clippy::cast_ref_to_mut)]
     let deps = unsafe { &mut *(deps as *const _ as *mut Extern<S, A, Q>) };
     deps.storage.set(b"abcd", b"dcba");
 
@@ -1541,6 +1542,7 @@ fn write_to_storage_in_query<S: Storage, A: Api, Q: Querier>(
 fn remove_from_storage_in_query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<Binary> {
+    #[allow(clippy::cast_ref_to_mut)]
     let deps = unsafe { &mut *(deps as *const _ as *mut Extern<S, A, Q>) };
     deps.storage.remove(b"abcd");
 
