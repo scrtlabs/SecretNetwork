@@ -704,7 +704,7 @@ impl WasmiApi for ContractInstance {
         if message_hash_data.len() != 32 {
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L93
             return Ok(Some(RuntimeValue::I32(
-                WasmApiCryptoError::InvalidHashFormat.into(),
+                WasmApiCryptoError::InvalidHashFormat as i32,
             )));
         }
 
@@ -712,7 +712,7 @@ impl WasmiApi for ContractInstance {
         if signature_data.len() != 64 {
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
             return Ok(Some(RuntimeValue::I32(
-                WasmApiCryptoError::InvalidSignatureFormat.into(),
+                WasmApiCryptoError::InvalidSignatureFormat as i32,
             )));
         }
 
@@ -729,7 +729,7 @@ impl WasmiApi for ContractInstance {
         } {
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L95
             return Ok(Some(RuntimeValue::I32(
-                WasmApiCryptoError::InvalidPubkeyFormat.into(),
+                WasmApiCryptoError::InvalidPubkeyFormat as i32,
             )));
         }
 
@@ -739,7 +739,7 @@ impl WasmiApi for ContractInstance {
 
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
                 return Ok(Some(RuntimeValue::I32(
-                    WasmApiCryptoError::GenericErr.into(),
+                    WasmApiCryptoError::GenericErr as i32,
                 )));
             }
             Ok(x) => x,
@@ -751,7 +751,7 @@ impl WasmiApi for ContractInstance {
 
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
                 return Ok(Some(RuntimeValue::I32(
-                    WasmApiCryptoError::GenericErr.into(),
+                    WasmApiCryptoError::GenericErr as i32,
                 )));
             }
             Ok(x) => x,
@@ -763,7 +763,7 @@ impl WasmiApi for ContractInstance {
 
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
                 return Ok(Some(RuntimeValue::I32(
-                    WasmApiCryptoError::GenericErr.into(),
+                    WasmApiCryptoError::GenericErr as i32,
                 )));
             }
             Ok(x) => x,
@@ -831,7 +831,7 @@ impl WasmiApi for ContractInstance {
         if message_hash_data.len() != 32 {
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L93
             return Ok(Some(RuntimeValue::I64(to_high_half(
-                WasmApiCryptoError::InvalidHashFormat.into(),
+                WasmApiCryptoError::InvalidHashFormat as u32,
             ) as i64)));
         }
 
@@ -839,7 +839,7 @@ impl WasmiApi for ContractInstance {
         if signature_data.len() != 64 {
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
             return Ok(Some(RuntimeValue::I64(to_high_half(
-                WasmApiCryptoError::InvalidSignatureFormat.into(),
+                WasmApiCryptoError::InvalidSignatureFormat as u32,
             ) as i64)));
         }
 
@@ -849,7 +849,7 @@ impl WasmiApi for ContractInstance {
 
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
                 return Ok(Some(RuntimeValue::I64(
-                    to_high_half(WasmApiCryptoError::GenericErr.into()) as i64,
+                    to_high_half(WasmApiCryptoError::GenericErr as u32) as i64,
                 )));
             }
             Ok(x) => x,
@@ -861,7 +861,7 @@ impl WasmiApi for ContractInstance {
 
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
                 return Ok(Some(RuntimeValue::I64(
-                    to_high_half(WasmApiCryptoError::GenericErr.into()) as i64,
+                    to_high_half(WasmApiCryptoError::GenericErr as u32) as i64,
                 )));
             }
             Ok(x) => x,
@@ -879,7 +879,7 @@ impl WasmiApi for ContractInstance {
 
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
                 return Ok(Some(RuntimeValue::I64(
-                    to_high_half(WasmApiCryptoError::GenericErr.into()) as i64,
+                    to_high_half(WasmApiCryptoError::GenericErr as u32) as i64,
                 )));
             }
             Ok(x) => x,
@@ -896,7 +896,7 @@ impl WasmiApi for ContractInstance {
 
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
                 return Ok(Some(RuntimeValue::I64(
-                    to_high_half(WasmApiCryptoError::GenericErr.into()) as i64,
+                    to_high_half(WasmApiCryptoError::GenericErr as u32) as i64,
                 )));
             }
             Ok(pubkey) => {
@@ -967,7 +967,7 @@ impl WasmiApi for ContractInstance {
 
                     // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
                     return Ok(Some(RuntimeValue::I32(
-                        WasmApiCryptoError::InvalidSignatureFormat.into(),
+                        WasmApiCryptoError::InvalidSignatureFormat as i32,
                     )));
                 }
             };
@@ -983,7 +983,7 @@ impl WasmiApi for ContractInstance {
 
                     // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L95
                     return Ok(Some(RuntimeValue::I32(
-                        WasmApiCryptoError::InvalidPubkeyFormat.into(),
+                        WasmApiCryptoError::InvalidPubkeyFormat as i32,
                     )));
                 }
             };
@@ -1082,7 +1082,7 @@ impl WasmiApi for ContractInstance {
             );
 
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L97
-            return Ok(Some(RuntimeValue::I32(WasmApiCryptoError::BatchErr.into())));
+            return Ok(Some(RuntimeValue::I32(WasmApiCryptoError::BatchErr as i32)));
         };
 
         self.use_gas_externally(
@@ -1105,7 +1105,7 @@ impl WasmiApi for ContractInstance {
 
                     // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
                     return Ok(Some(RuntimeValue::I32(
-                        WasmApiCryptoError::InvalidSignatureFormat.into(),
+                        WasmApiCryptoError::InvalidSignatureFormat as i32,
                     )));
                 }
             };
@@ -1121,7 +1121,7 @@ impl WasmiApi for ContractInstance {
 
                         // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L95
                         return Ok(Some(RuntimeValue::I32(
-                            WasmApiCryptoError::InvalidPubkeyFormat.into(),
+                            WasmApiCryptoError::InvalidPubkeyFormat as i32,
                         )));
                     }
                 };
@@ -1209,7 +1209,7 @@ impl WasmiApi for ContractInstance {
         // check private_key input
         if private_key_data.len() != 32 {
             return Ok(Some(RuntimeValue::I64(to_high_half(
-                WasmApiCryptoError::InvalidPrivateKeyFormat.into(),
+                WasmApiCryptoError::InvalidPrivateKeyFormat as u32,
             ) as i64)));
         }
 
@@ -1224,7 +1224,7 @@ impl WasmiApi for ContractInstance {
                 );
 
                 return Ok(Some(RuntimeValue::I64(
-                    to_high_half(WasmApiCryptoError::GenericErr.into()) as i64,
+                    to_high_half(WasmApiCryptoError::GenericErr as u32) as i64,
                 )));
             }
             Ok(x) => x,
@@ -1240,7 +1240,7 @@ impl WasmiApi for ContractInstance {
                 );
 
                 return Ok(Some(RuntimeValue::I64(to_high_half(
-                    WasmApiCryptoError::InvalidPrivateKeyFormat.into(),
+                    WasmApiCryptoError::InvalidPrivateKeyFormat as u32,
                 ) as i64)));
             }
             Ok(x) => x,
@@ -1294,7 +1294,7 @@ impl WasmiApi for ContractInstance {
         // check private_key input
         if private_key_data.len() != 32 {
             return Ok(Some(RuntimeValue::I64(to_high_half(
-                WasmApiCryptoError::InvalidPrivateKeyFormat.into(),
+                WasmApiCryptoError::InvalidPrivateKeyFormat as u32,
             ) as i64)));
         }
 
@@ -1308,7 +1308,7 @@ impl WasmiApi for ContractInstance {
                 );
 
                     return Ok(Some(RuntimeValue::I64(to_high_half(
-                        WasmApiCryptoError::InvalidPrivateKeyFormat.into(),
+                        WasmApiCryptoError::InvalidPrivateKeyFormat as u32,
                     ) as i64)));
                 }
             };
