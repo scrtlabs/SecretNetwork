@@ -2756,6 +2756,7 @@ func TestEd25519Sign(t *testing.T) {
 }
 
 func TestBenchmarkEd25519BatchVerifyAPI(t *testing.T) {
+	t.SkipNow()
 	// Assaf: I wrote the benchmark like this because the init functions take testing.T
 	// and not testing.B and I just wanted to quickly get a feel for the performance improvments
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
