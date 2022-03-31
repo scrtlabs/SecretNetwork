@@ -1,6 +1,8 @@
 use bech32::{FromBase32, ToBase32};
-use ed25519_dalek::{Signer, Verifier};
 use log::*;
+use rand_chacha::ChaChaRng;
+use rand_core::SeedableRng;
+
 use std::convert::TryFrom;
 
 use wasmi::{Error as InterpreterError, MemoryInstance, MemoryRef, ModuleRef, RuntimeValue, Trap};
@@ -941,8 +943,8 @@ impl WasmiApi for ContractInstance {
             public_key_data.len()
         );
 
-        let signature: ed25519::Signature =
-            match ed25519::Signature::try_from(signature_data.as_slice()) {
+        let signature: ed25519_zebra::Signature =
+            match ed25519_zebra::Signature::try_from(signature_data.as_slice()) {
                 Ok(x) => x,
                 Err(err) => {
                     debug!(
@@ -956,14 +958,14 @@ impl WasmiApi for ContractInstance {
                 }
             };
 
-        let public_key: ed25519_dalek::PublicKey =
-            match ed25519_dalek::PublicKey::from_bytes(public_key_data.as_slice()) {
+        let public_key: ed25519_zebra::VerificationKey =
+            match ed25519_zebra::VerificationKey::try_from(public_key_data.as_slice()) {
                 Ok(x) => x,
                 Err(err) => {
                     debug!(
-                    "ed25519_verify() failed to create an ed25519 PublicKey from public_key: {:?}",
-                    err
-                );
+                        "ed25519_verify() failed to create an ed25519 VerificationKey from public_key: {:?}",
+                        err
+                    );
 
                     // return 5 == InvalidPubkeyFormat
                     // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L95
@@ -971,7 +973,7 @@ impl WasmiApi for ContractInstance {
                 }
             };
 
-        match public_key.verify(message_data.as_slice(), &signature) {
+        match public_key.verify(&signature, &message_data) {
             Err(err) => {
                 debug!("ed25519_verify() failed to verify signature: {:?}", err);
 
@@ -1012,87 +1014,53 @@ impl WasmiApi for ContractInstance {
                 err
             })?;
 
-        let mut signatures: Vec<ed25519::Signature> = vec![];
-        for signature_as_vec in signatures_data {
-            let ed25519_signature: ed25519::Signature = match ed25519::Signature::try_from(
-                signature_as_vec.as_slice(),
-            ) {
-                Ok(x) => x,
-                Err(err) => {
-                    debug!(
-                            "ed25519_batch_verify() failed to create an ed25519 signature from signature: {:?}",
-                            err
-                        );
-
-                    // return 4 == InvalidSignatureFormat
-                    // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
-                    return Ok(Some(RuntimeValue::I32(4)));
-                }
-            };
-            signatures.push(ed25519_signature);
-        }
-
-        let mut pubkeys: Vec<ed25519_dalek::PublicKey> = vec![];
-        for pubkey_as_vec in pubkeys_data {
-            let ed25519_pubkey = match ed25519_dalek::PublicKey::from_bytes(
-                pubkey_as_vec.as_slice(),
-            ) {
-                Ok(x) => x,
-                Err(err) => {
-                    debug!(
-                        "ed25519_batch_verify() failed to create an ed25519 PublicKey from public_key: {:?}",
-                        err
-                    );
-
-                    // return 5 == InvalidPubkeyFormat
-                    // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L95
-                    return Ok(Some(RuntimeValue::I32(5)));
-                }
-            };
-            pubkeys.push(ed25519_pubkey);
-        }
-
-        let messages_len = messages_data.len();
-        let signatures_len = signatures.len();
-        let pubkeys_len = pubkeys.len();
-
-        let (ed25519_messages, ed25519_signatures, ed25519_pubkeys) = if messages_len
-            == signatures_len
-            && messages_len == pubkeys_len
+        let (messages, signatures, pubkeys) = if messages_data.len() == signatures_data.len()
+            && messages_data.len() == pubkeys_data.len()
         {
-            // All is well
+            // All is well, convert to Vec<&[u8]>
             (
                 messages_data
                     .iter()
                     .map(|m| m.as_slice())
                     .collect::<Vec<&[u8]>>(),
-                signatures,
-                pubkeys,
+                signatures_data
+                    .iter()
+                    .map(|s| s.as_slice())
+                    .collect::<Vec<&[u8]>>(),
+                pubkeys_data
+                    .iter()
+                    .map(|p| p.as_slice())
+                    .collect::<Vec<&[u8]>>(),
             )
-        } else if messages_len == 1 && signatures_len == pubkeys_len {
+        } else if messages_data.len() == 1 && signatures_data.len() == pubkeys_data.len() {
             // Multisig, replicate message
             (
-                vec![messages_data[0].as_slice()].repeat(signatures_len),
-                signatures,
-                pubkeys,
+                vec![messages_data[0].as_slice()].repeat(signatures_data.len()),
+                signatures_data
+                    .iter()
+                    .map(|s| s.as_slice())
+                    .collect::<Vec<&[u8]>>(),
+                pubkeys_data
+                    .iter()
+                    .map(|p| p.as_slice())
+                    .collect::<Vec<&[u8]>>(),
             )
-        } else if pubkeys_len == 1 && messages_len == signatures_len {
-            // Multi message, replicate pubkey
+        } else if pubkeys_data.len() == 1 && messages_data.len() == signatures_data.len() {
+            // Replicate pubkey
             (
                 messages_data
                     .iter()
                     .map(|m| m.as_slice())
                     .collect::<Vec<&[u8]>>(),
-                signatures,
-                vec![pubkeys[0]]
-                    .repeat(signatures_len)
+                signatures_data
                     .iter()
-                    .map(|p| *p)
-                    .collect::<Vec<ed25519_dalek::PublicKey>>(),
+                    .map(|s| s.as_slice())
+                    .collect::<Vec<&[u8]>>(),
+                vec![pubkeys_data[0].as_slice()].repeat(signatures_data.len()),
             )
         } else {
             debug!(
-                "ed25519_batch_verify() mismatched number of messages ({}) / signatures ({}) / public keys ({})", messages_len, signatures_len, pubkeys_len
+                "ed25519_batch_verify() mismatched number of messages ({}) / signatures ({}) / public keys ({})", messages_data.len(),signatures_data.len(),pubkeys_data.len()
             );
 
             // return 5 == BatchErr
@@ -1101,16 +1069,75 @@ impl WasmiApi for ContractInstance {
         };
 
         self.use_gas_externally(
-            self.gas_costs.external_ed25519_batch_verify_base as u64
-                + (ed25519_signatures.len() as u64)
-                    * self.gas_costs.external_ed25519_batch_verify_each as u64,
+            (self.gas_costs.external_ed25519_verify
+                - self.gas_costs.external_ed25519_batch_verify_per_one) as u64 /* base cost in case signatures.len() == 0 */
+                + (signatures.len() as u64) * self.gas_costs.external_ed25519_batch_verify_per_one as u64,
         )?;
 
-        match ed25519_dalek::verify_batch(
-            &ed25519_messages[..],
-            &ed25519_signatures[..],
-            &ed25519_pubkeys[..],
-        ) {
+        let mut batch = ed25519_zebra::batch::Verifier::new();
+        for i in 0..signatures.len() {
+            let signature: ed25519_zebra::Signature = match ed25519_zebra::Signature::try_from(
+                signatures[i],
+            ) {
+                Ok(x) => x,
+                Err(err) => {
+                    debug!(
+                    "ed25519_batch_verify() failed to create an ed25519 signature from signatures[{}]: {:?}",
+                    i, err
+                );
+
+                    // return 4 == InvalidSignatureFormat
+                    // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
+                    return Ok(Some(RuntimeValue::I32(4)));
+                }
+            };
+
+            let pubkey: ed25519_zebra::VerificationKeyBytes =
+                match ed25519_zebra::VerificationKeyBytes::try_from(pubkeys[i]) {
+                    Ok(x) => x,
+                    Err(err) => {
+                        debug!(
+                        "ed25519_batch_verify() failed to create an ed25519 VerificationKey from public_keys[{}]: {:?}",
+                        i, err
+                    );
+
+                        // return 5 == InvalidPubkeyFormat
+                        // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L95
+                        return Ok(Some(RuntimeValue::I32(5)));
+                    }
+                };
+
+            batch.queue((pubkey, signature, messages[i]));
+        }
+
+        // Assaf:
+        // To verify a batch of ed25519 signatures we need to provide an RNG.
+        // In theory this doesn't have to be deterministic because the same signatures
+        // should produce the same output (true/false) regardless of the RNG being used.
+        // In practice I'm too afraid to do something non-deterministic in concensus code
+        // So I've decided to use a PRNG instead.
+        // For entropy I'm using the entire ed25519 batch verify input data + the gas consumed
+        // up until now in this WASM call. This will be deterministic, but also kinda-random in
+        // different situations. Note that gas should incode every WASM opcode up until now and
+        // every WASM memory allocation.
+        // Secret data from the enclave can also be used here but I'm sure that that's necessary.
+        // Also note that in the vanilla CosmWasm v1 implementation their just using RNG from the OS,
+        // meaning that different values are used in differents nodes in consensus code, but the output
+        // should be the same (See https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/ed25519.rs#L108).
+        let mut rng_entropy: Vec<u8> = vec![];
+        rng_entropy.append(&mut messages_data.into_iter().flatten().collect());
+        rng_entropy.append(&mut signatures_data.into_iter().flatten().collect());
+        rng_entropy.append(&mut pubkeys_data.into_iter().flatten().collect());
+        rng_entropy.append(
+            &mut (self.gas_used.saturating_add(self.gas_used_externally))
+                .to_be_bytes()
+                .to_vec(),
+        );
+
+        let rng_seed: [u8; 32] = sha_256(&rng_entropy);
+        let mut rng = ChaChaRng::from_seed(rng_seed);
+
+        match batch.verify(&mut rng) {
             Err(err) => {
                 debug!(
                     "ed25519_batch_verify() failed to verify signatures: {:?}",
@@ -1250,8 +1277,8 @@ impl WasmiApi for ContractInstance {
             return Ok(Some(RuntimeValue::I64(to_high_half(1000) as i64)));
         }
 
-        let ed25519_privkey =
-            match ed25519_dalek::SecretKey::from_bytes(private_key_data.as_slice()) {
+        let ed25519_signing_key =
+            match ed25519_zebra::SigningKey::try_from(private_key_data.as_slice()) {
                 Ok(x) => x,
                 Err(err) => {
                     debug!(
@@ -1264,27 +1291,8 @@ impl WasmiApi for ContractInstance {
                     return Ok(Some(RuntimeValue::I64(to_high_half(10) as i64)));
                 }
             };
-        let ed25519_pubkey_bytes = ed25519_dalek::PublicKey::from(&ed25519_privkey).to_bytes();
 
-        let mut keypair_bytes: Vec<u8> = vec![];
-        keypair_bytes.extend(private_key_data);
-        keypair_bytes.extend(&ed25519_pubkey_bytes);
-
-        let ed25519_keypair = match ed25519_dalek::Keypair::from_bytes(keypair_bytes.as_slice()) {
-            Ok(x) => x,
-            Err(err) => {
-                debug!(
-                    "ed25519_sign() failed to create an ed25519 keypair from private_key: {:?}",
-                    err
-                );
-
-                // return 10 == GenericErr
-                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
-                return Ok(Some(RuntimeValue::I64(to_high_half(10) as i64)));
-            }
-        };
-
-        let sig: [u8; 64] = ed25519_keypair.sign(message_data.as_slice()).into();
+        let sig: [u8; 64] = ed25519_signing_key.sign(message_data.as_slice()).into();
 
         let ptr_to_region_in_wasm_vm = self.write_to_memory(&sig).map_err(|err| {
             debug!(
