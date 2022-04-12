@@ -1,6 +1,10 @@
 package app
 
 import (
+	"fmt"
+
+	store "github.com/cosmos/cosmos-sdk/store/types"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
@@ -318,6 +322,7 @@ func NewSecretNetworkApp(
 	)
 	app.feeGrantKeeper = feegrantkeeper.NewKeeper(appCodec, keys[feegrant.StoreKey], app.accountKeeper)
 	app.upgradeKeeper = upgradekeeper.NewKeeper(skipUpgradeHeights, keys[upgradetypes.StoreKey], appCodec, homePath, app.BaseApp)
+	app.setupUpgradeStoreLoaders()
 
 	app.authzKeeper = authzkeeper.NewKeeper(keys[authzkeeper.StoreKey], appCodec, bApp.MsgServiceRouter())
 
@@ -632,6 +637,9 @@ func (app *SecretNetworkApp) InitChainer(ctx sdk.Context, req abci.RequestInitCh
 	if err := tmjson.Unmarshal(req.AppStateBytes, &genesisState); err != nil {
 		panic(err)
 	}
+
+	app.upgradeKeeper.SetModuleVersionMap(ctx, app.mm.GetVersionMap())
+
 	return app.mm.InitGenesis(ctx, app.appCodec, genesisState)
 }
 
@@ -722,6 +730,23 @@ func (app *SecretNetworkApp) setupUpgradeHandlers(icamodule *ica.AppModule) {
 	app.upgradeKeeper.SetUpgradeHandler(
 		v1_3.UpgradeName, v1_3.CreateUpgradeHandler(
 			app.mm, icamodule, app.configurator))
+}
+
+func (app *SecretNetworkApp) setupUpgradeStoreLoaders() {
+	upgradeInfo, err := app.upgradeKeeper.ReadUpgradeInfoFromDisk()
+	if err != nil {
+		panic(fmt.Sprintf("Failed to read upgrade info from disk %s", err))
+	}
+
+	if upgradeInfo.Name == v1_3.UpgradeName && !app.upgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
+		// @Frey do we do this for Cosmwasm?
+		storeUpgrades := store.StoreUpgrades{
+			Added: []string{icahosttypes.StoreKey},
+		}
+
+		// configure store loader that checks if version == upgradeHeight and applies store upgrades
+		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
+	}
 }
 
 // LegacyAmino returns the application's sealed codec.

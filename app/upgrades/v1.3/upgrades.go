@@ -1,6 +1,8 @@
 package v1_3
 
 import (
+	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
@@ -16,6 +18,12 @@ func CreateUpgradeHandler(mm *module.Manager, icamodule *icamodule.AppModule, co
 ) upgradetypes.UpgradeHandler {
 	return func(ctx sdk.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
 
+		// Assaf: Set version map for all modules because for some
+		// reason it's not already set in upgradekeepr.
+		for moduleName := range mm.Modules {
+			vm[moduleName] = mm.Modules[moduleName].ConsensusVersion()
+		}
+
 		vm[icatypes.ModuleName] = icamodule.ConsensusVersion()
 
 		// create ICS27 Controller submodule params
@@ -27,23 +35,40 @@ func CreateUpgradeHandler(mm *module.Manager, icamodule *icamodule.AppModule, co
 		hostParams := icahosttypes.Params{
 			HostEnabled: true,
 			AllowMessages: []string{
+				"/cosmos.authz.v1beta1.MsgExec",
+				"/cosmos.authz.v1beta1.MsgGrant",
+				"/cosmos.authz.v1beta1.MsgRevoke",
 				"/cosmos.bank.v1beta1.MsgSend",
+				"/cosmos.bank.v1beta1.MsgMultiSend",
+				"/cosmos.distribution.v1beta1.MsgSetWithdrawAddress",
+				"/cosmos.distribution.v1beta1.MsgWithdrawValidatorCommission",
+				"/cosmos.distribution.v1beta1.MsgFundCommunityPool",
+				"/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward",
+				"/cosmos.feegrant.v1beta1.MsgGrantAllowance",
+				"/cosmos.feegrant.v1beta1.MsgRevokeAllowance",
+				"/cosmos.gov.v1beta1.MsgVoteWeighted",
+				"/cosmos.gov.v1beta1.MsgSubmitProposal",
+				"/cosmos.gov.v1beta1.MsgDeposit",
+				"/cosmos.gov.v1beta1.MsgVote",
+				"/cosmos.staking.v1beta1.MsgEditValidator",
 				"/cosmos.staking.v1beta1.MsgDelegate",
 				"/cosmos.staking.v1beta1.MsgUndelegate",
-				"/cosmos.gov.v1beta1.Vote"},
+				"/cosmos.staking.v1beta1.MsgBeginRedelegate",
+				"/cosmos.staking.v1beta1.MsgCreateValidator",
+				"/cosmos.vesting.v1beta1.MsgCreateVestingAccount",
+				"/ibc.applications.transfer.v1.MsgTransfer",
+			},
 		}
+
+		ctx.Logger().Info("Starting to init interchainaccount module...")
 
 		// initialize ICS27 module
 		icamodule.InitModule(ctx, controllerParams, hostParams)
 
-		// otherwise we run this, which will run wasm.InitGenesis(wasm.DefaultGenesis())
-		// and then override it after
-		newVM, err := mm.RunMigrations(ctx, configurator, vm)
-		if err != nil {
-			return newVM, err
-		}
+		ctx.Logger().Info("Starting to run module migrations...")
 
-		// override here
-		return newVM, err
+		fmt.Printf("Assaf: %v\n", vm)
+
+		return mm.RunMigrations(ctx, configurator, vm)
 	}
 }
