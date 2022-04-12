@@ -50,12 +50,9 @@ func CreateUpgradeHandler(mm *module.Manager, icamodule *icamodule.AppModule, co
 				"/cosmos.gov.v1beta1.MsgSubmitProposal",
 				"/cosmos.gov.v1beta1.MsgDeposit",
 				"/cosmos.gov.v1beta1.MsgVote",
-				"/cosmos.staking.v1beta1.MsgEditValidator",
 				"/cosmos.staking.v1beta1.MsgDelegate",
 				"/cosmos.staking.v1beta1.MsgUndelegate",
 				"/cosmos.staking.v1beta1.MsgBeginRedelegate",
-				"/cosmos.staking.v1beta1.MsgCreateValidator",
-				"/cosmos.vesting.v1beta1.MsgCreateVestingAccount",
 				"/ibc.applications.transfer.v1.MsgTransfer",
 			},
 		}
