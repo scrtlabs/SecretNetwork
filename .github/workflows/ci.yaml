@@ -310,15 +310,11 @@ jobs:
           echo "not_a_key" > ias_keys/sw_dummy/spid.txt
           echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
       - name: Install xgo
-        run: go get github.com/karalabe/xgo
+        run: go install github.com/karalabe/xgo
       - name: Build MacOS CLI
-        run: |
-          source "$HOME/.sgxsdk/sgxsdk/environment"
-          make build_macos_cli
+        run: make build_macos_cli
       - name: Build Windows CLI
-        run: |
-          source "$HOME/.sgxsdk/sgxsdk/environment"
-          make build_windows_cli
+        run: make build_windows_cli
 
   Integration-Tests:
     runs-on: ubuntu-latest
