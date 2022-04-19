@@ -66,7 +66,7 @@ jobs:
       - name: Create api keys
         run: |
           echo $SPID_TESTNET > spid.txt
-          echo $API_KEY_TESTNET > api_key.
+          echo $API_KEY_TESTNET > api_key.txt
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
