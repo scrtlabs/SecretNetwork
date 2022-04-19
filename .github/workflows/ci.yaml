@@ -319,7 +319,7 @@ jobs:
       - name: Build Windows CLI
         run: make build_windows_cli
 
-  Secretjs-Tests:
+  Integration-Tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -333,10 +333,12 @@ jobs:
         run: |
           cd secret.js
           yarn
-          # Point to the already checked-out SecretNetwork instead of git cloning it
+          # Use the already checked-out SecretNetwork instead of git cloning it
           perl -i -pe 's/rm -rf/#rm -rf/' ./scripts/generate_protobuf.sh 
           perl -i -pe 's/git clone/#git clone/;' ./scripts/generate_protobuf.sh
-          perl -i -pe 's;SCRIPT_PATH\}/SecretNetwork;SCRIPT_PATH}/../..;' ./scripts/generate_protobuf.sh
+          mkdir -p ./scripts/SecretNetwork
+          cp -a ../proto ./scripts/SecretNetwork
+          cp -a ../third_party ./scripts/SecretNetwork
           sudo apt-get install -y protobuf-compiler
           ./scripts/generate_protobuf.sh
       - name: Run secret.js tests
