@@ -345,5 +345,5 @@ jobs:
         run: |
           cd secret.js
           # Use the docker images that we built just a few steps above
-          perl -i -pe 's/secret-network-sw-dev:.+?"/secret-network-sw-dev:v0.0.0"/' ./test/test.ts
+          perl -i -pe 's/secret-network-sw-dev:.+?"/secret-network-sw-dev:v0.0.0"/' ./test/*
           yarn test
