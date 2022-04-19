@@ -14,7 +14,7 @@ For a bug that is non-sensitive and/or operational in nature rather than a criti
 
 If it is not triaged in a couple of days, feel free to tag `@reuvenpo`, `@toml01`, `@assafmo` or `@Cashmaney`.
 
-## Critical bug or security issue 💥
+## Critical bug or security issue
 
 If you're here because you're trying to figure out how to notify us of a security issue, go to [Discord](https://chat.scrt.network) or Telegram, and alert the core engineers:
 
