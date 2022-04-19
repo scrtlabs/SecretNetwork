@@ -1,6 +1,11 @@
 package app
 
 import (
+	"fmt"
+
+	store "github.com/cosmos/cosmos-sdk/store/types"
+	v1_3 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.3"
+
 	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
@@ -31,6 +36,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
+
 	//authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -172,6 +178,32 @@ type SecretNetworkApp struct {
 
 	// simulation manager
 	sm *module.SimulationManager
+
+	configurator module.Configurator
+}
+
+func (app *SecretNetworkApp) GetBaseApp() *baseapp.BaseApp {
+	return app.BaseApp
+}
+
+func (app *SecretNetworkApp) GetStakingKeeper() stakingkeeper.Keeper {
+	return app.stakingKeeper
+}
+
+func (app *SecretNetworkApp) GetIBCKeeper() *ibckeeper.Keeper {
+	return app.ibcKeeper
+}
+
+func (app *SecretNetworkApp) GetScopedIBCKeeper() capabilitykeeper.ScopedKeeper {
+	return app.ScopedIBCKeeper
+}
+
+func (app *SecretNetworkApp) GetTxConfig() client.TxConfig {
+	return app.GetTxConfig()
+}
+
+func (app *SecretNetworkApp) AppCodec() codec.Codec {
+	return app.appCodec
 }
 
 func (app *SecretNetworkApp) RegisterTxService(clientCtx client.Context) {
@@ -280,6 +312,7 @@ func NewSecretNetworkApp(
 	)
 	app.feeGrantKeeper = feegrantkeeper.NewKeeper(appCodec, keys[feegrant.StoreKey], app.accountKeeper)
 	app.upgradeKeeper = upgradekeeper.NewKeeper(skipUpgradeHeights, keys[upgradetypes.StoreKey], appCodec, homePath, app.BaseApp)
+	app.setupUpgradeStoreLoaders()
 
 	app.authzKeeper = authzkeeper.NewKeeper(keys[authzkeeper.StoreKey], appCodec, bApp.MsgServiceRouter())
 
@@ -366,20 +399,16 @@ func NewSecretNetworkApp(
 		govRouter,
 	)
 
-	// serviceRouter := baseapp.NewMsgServiceRouter()
-
 	app.computeKeeper = compute.NewKeeper(
 		appCodec,
 		*legacyAmino,
 		keys[compute.StoreKey],
-		//app.getSubspace(compute.ModuleName),
 		app.accountKeeper,
 		app.bankKeeper,
 		app.govKeeper,
 		app.distrKeeper,
 		app.mintKeeper,
 		app.stakingKeeper,
-		//serviceRouter,
 		computeRouter,
 		computeDir,
 		computeConfig,
@@ -469,7 +498,11 @@ func NewSecretNetworkApp(
 	// register all module routes and module queriers
 	app.mm.RegisterInvariants(&app.crisisKeeper)
 	app.mm.RegisterRoutes(app.Router(), app.QueryRouter(), encodingConfig.Amino)
-	app.mm.RegisterServices(module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter()))
+
+	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
+	app.mm.RegisterServices(app.configurator)
+
+	app.setupUpgradeHandlers()
 
 	// add test gRPC service for testing gRPC queries in isolation
 	// testdata.RegisterTestServiceServer(app.GRPCQueryRouter(), testdata.QueryImpl{}) // TODO: this is testdata !!!
@@ -551,6 +584,9 @@ func (app *SecretNetworkApp) InitChainer(ctx sdk.Context, req abci.RequestInitCh
 	if err := tmjson.Unmarshal(req.AppStateBytes, &genesisState); err != nil {
 		panic(err)
 	}
+
+	app.upgradeKeeper.SetModuleVersionMap(ctx, app.mm.GetVersionMap())
+
 	return app.mm.InitGenesis(ctx, app.appCodec, genesisState)
 }
 
@@ -584,8 +620,6 @@ func GetMaccPerms() map[string][]string {
 }
 
 // getSubspace returns a param subspace for a given module name.
-//
-// NOTE: This is solely to be used for testing purposes.
 func (app *SecretNetworkApp) getSubspace(moduleName string) paramstypes.Subspace {
 	subspace, _ := app.paramsKeeper.GetSubspace(moduleName)
 	return subspace
@@ -637,6 +671,30 @@ func (app *SecretNetworkApp) BlockedAddrs() map[string]bool {
 	return blockedAddrs
 }
 
+func (app *SecretNetworkApp) setupUpgradeHandlers() {
+	// this configures a no-op upgrade handler for the v4 upgrade,
+	// which improves the lockup module's store management.
+	app.upgradeKeeper.SetUpgradeHandler(
+		v1_3.UpgradeName, v1_3.CreateUpgradeHandler(
+			app.mm, app.configurator))
+}
+
+func (app *SecretNetworkApp) setupUpgradeStoreLoaders() {
+	upgradeInfo, err := app.upgradeKeeper.ReadUpgradeInfoFromDisk()
+	if err != nil {
+		panic(fmt.Sprintf("Failed to read upgrade info from disk %s", err))
+	}
+
+	if upgradeInfo.Name == v1_3.UpgradeName && !app.upgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
+		storeUpgrades := store.StoreUpgrades{
+			Added: []string{},
+		}
+
+		// configure store loader that checks if version == upgradeHeight and applies store upgrades
+		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
+	}
+}
+
 // LegacyAmino returns the application's sealed codec.
 func (app *SecretNetworkApp) LegacyAmino() *codec.LegacyAmino {
 	return app.legacyAmino
@@ -654,6 +712,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(slashingtypes.ModuleName)
 	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 	paramsKeeper.Subspace(ibchost.ModuleName)
+
 	paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable())
 	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(compute.ModuleName)

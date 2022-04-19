@@ -5,9 +5,16 @@ on:
     # Sequence of patterns matched against refs/tags
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+" # Push events to matching v*, i.e. v1.0, v20.15.10
+      - "v[0-9]+.[0-9]+.[0-9]+-alpha.[0-9]+" # Push events to matching alpha releases
+      - "v[0-9]+.[0-9]+.[0-9]+-beta.[0-9]+" # Push events to matching beta releases
 
 jobs:
   build-deb-testnet:
+    strategy:
+      fail-fast: false
+      matrix:
+        db_backend: [rocksdb, goleveldb]
+        node_type: [validator, query]
     runs-on: ubuntu-latest
     env: # Or as an environment variable
       SPID_TESTNET: ${{ secrets.SPID_TESTNET }}
@@ -60,15 +67,18 @@ jobs:
         run: |
           echo $SPID_TESTNET > spid.txt
           echo $API_KEY_TESTNET > api_key.txt
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
       - name: Build testnet
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          VERSION=0 make build-testnet
-          cp build/secretnetwork_0_amd64.deb secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
+          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES_U=$(echo ${{ matrix.node_type }} | awk '/query/{printf "query-node,"} /validator/{printf ""}') make build-testnet
+          cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.node_type }}_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v2
         with:
-          name: secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
-          path: secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.node_type }}_${{ matrix.db_backend }}_amd64.deb
+          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.node_type }}_${{ matrix.db_backend }}_amd64.deb
 
   build-deb-mainnet:
     runs-on: ubuntu-latest

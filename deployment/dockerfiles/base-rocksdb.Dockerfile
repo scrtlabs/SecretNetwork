@@ -11,7 +11,7 @@ ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 
 ADD https://go.dev/dl/go1.17.7.linux-amd64.tar.gz go1.17.7.linux-amd64.tar.gz
 RUN tar -C /usr/local -xzf go1.17.7.linux-amd64.tar.gz
-RUN go get -u github.com/jteeuwen/go-bindata/...
+RUN go install github.com/jteeuwen/go-bindata/go-bindata@latest && go-bindata -version
 
 RUN wget -q https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.0.20-ubuntu.tar.gz && \
     tar -xf wabt-1.0.20-ubuntu.tar.gz wabt-1.0.20/bin/wat2wasm wabt-1.0.20/bin/wasm2wat && \
