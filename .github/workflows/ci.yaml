@@ -103,7 +103,7 @@ jobs:
       - name: Install Requirements
         run: |
           rustup target add wasm32-unknown-unknown
-          go install github.com/jteeuwen/go-bindata/...
+          go install github.com/jteeuwen/go-bindata/go-bindata@latest
           chmod +x ./scripts/install-wasm-tools.sh
           ./scripts/install-wasm-tools.sh
       - name: Build Executable
@@ -310,7 +310,7 @@ jobs:
           echo "not_a_key" > ias_keys/sw_dummy/spid.txt
           echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
       - name: Install xgo
-        run: go install github.com/karalabe/xgo
+        run: go install github.com/karalabe/xgo@latest
       - name: Build MacOS CLI
         run: make build_macos_cli
       - name: Build Windows CLI
