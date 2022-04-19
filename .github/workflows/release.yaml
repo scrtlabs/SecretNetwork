@@ -85,7 +85,8 @@ jobs:
           go-version: "^1.17" # The Go version to download (if necessary) and use.
       - name: Install Dependencies
         run: |
-          go get -u github.com/jteeuwen/go-bindata/...
+          go install github.com/jteeuwen/go-bindata/go-bindata@latest
+          go-bindata -version # check installation
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
           SDK_BIN=sgx_linux_x64_sdk_2.15.101.1.bin
