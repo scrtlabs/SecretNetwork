@@ -779,12 +779,12 @@ impl WasmiApi for ContractInstance {
 
                 // return 1 == failed, invalid signature
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L220
-                Ok(Some(RuntimeValue::I32(1)));
+                Ok(Some(RuntimeValue::I32(1)))
             }
             Ok(()) => {
                 // return 0 == success, valid signature
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L220
-                Ok(Some(RuntimeValue::I32(0)));
+                Ok(Some(RuntimeValue::I32(0)))
             }
         }
     }
@@ -897,7 +897,7 @@ impl WasmiApi for ContractInstance {
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
                 Ok(Some(RuntimeValue::I64(
                     to_high_half(WasmApiCryptoError::GenericErr as u32) as i64,
-                )));
+                )))
             }
             Ok(pubkey) => {
                 let answer = pubkey.serialize();
@@ -994,12 +994,12 @@ impl WasmiApi for ContractInstance {
 
                 // return 1 == failed, invalid signature
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L281
-                Ok(Some(RuntimeValue::I32(1)));
+                Ok(Some(RuntimeValue::I32(1)))
             }
             Ok(()) => {
                 // return 0 == success, valid signature
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L281
-                Ok(Some(RuntimeValue::I32(0)));
+                Ok(Some(RuntimeValue::I32(0)))
             }
         }
     }
@@ -1169,12 +1169,12 @@ impl WasmiApi for ContractInstance {
 
                 // return 1 == failed, invalid signature
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L329
-                Ok(Some(RuntimeValue::I32(1)));
+                Ok(Some(RuntimeValue::I32(1)))
             }
             Ok(()) => {
                 // return 0 == success, valid signature
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L329
-                Ok(Some(RuntimeValue::I32(0)));
+                Ok(Some(RuntimeValue::I32(0)))
             }
         }
     }
