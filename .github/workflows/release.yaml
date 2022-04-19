@@ -69,7 +69,7 @@ jobs:
           echo $API_KEY_TESTNET > api_key.txt
       - name: Get the version
         id: get_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
       - name: Build testnet
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
