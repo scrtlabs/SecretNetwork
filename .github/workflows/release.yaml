@@ -10,6 +10,11 @@ on:
 
 jobs:
   build-deb-testnet:
+    strategy:
+      fail-fast: false
+      matrix:
+        db_backend: [rocksdb, goleveldb]
+        features_u: ["", "query-node,"] # validator node = "", query node = "query-node,"
     runs-on: ubuntu-latest
     env: # Or as an environment variable
       SPID_TESTNET: ${{ secrets.SPID_TESTNET }}
@@ -65,7 +70,7 @@ jobs:
       - name: Build testnet
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          VERSION=0 make build-testnet
+          VERSION=0 DB_BACKEND=${{ matrix.db_backend }} FEATURES_U=${{ matrix.features_u }} make build-testnet
           cp build/secretnetwork_0_amd64.deb secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
       - uses: actions/upload-artifact@v2
         with:
