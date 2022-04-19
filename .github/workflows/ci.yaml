@@ -103,7 +103,7 @@ jobs:
       - name: Install Requirements
         run: |
           rustup target add wasm32-unknown-unknown
-          go get -u github.com/jteeuwen/go-bindata/...
+          go install github.com/jteeuwen/go-bindata/...
           chmod +x ./scripts/install-wasm-tools.sh
           ./scripts/install-wasm-tools.sh
       - name: Build Executable
