@@ -313,7 +313,7 @@ jobs:
       - name: Install xgo
         run: |
           go install github.com/karalabe/xgo@latest
-          xgo # check installation
+          xgo || true # check installation
       - name: Build MacOS CLI
         run: make build_macos_cli
       - name: Build Windows CLI
