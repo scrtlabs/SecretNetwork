@@ -1,8 +1,6 @@
 package v1_3
 
 import (
-	"fmt"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
@@ -28,7 +26,7 @@ func CreateUpgradeHandler(mm *module.Manager, icamodule *icamodule.AppModule, co
 
 		// create ICS27 Controller submodule params
 		controllerParams := icacontrollertypes.Params{
-			ControllerEnabled: true,
+			ControllerEnabled: false,
 		}
 
 		// create ICS27 Host submodule params
@@ -63,8 +61,6 @@ func CreateUpgradeHandler(mm *module.Manager, icamodule *icamodule.AppModule, co
 		icamodule.InitModule(ctx, controllerParams, hostParams)
 
 		ctx.Logger().Info("Starting to run module migrations...")
-
-		fmt.Printf("Assaf: %v\n", vm)
 
 		return mm.RunMigrations(ctx, configurator, vm)
 	}
