@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         db_backend: [rocksdb, goleveldb]
-        features_u: ["", "query-node,"] # validator node = "", query node = "query-node,"
+        node_type: [validator, query]
     runs-on: ubuntu-latest
     env: # Or as an environment variable
       SPID_TESTNET: ${{ secrets.SPID_TESTNET }}
@@ -66,18 +66,26 @@ jobs:
       - name: Create api keys
         run: |
           echo $SPID_TESTNET > spid.txt
-          echo $API_KEY_TESTNET > api_key.txt
+          echo $API_KEY_TESTNET > api_key.
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
       - name: Build testnet
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          VERSION=0 DB_BACKEND=${{ matrix.db_backend }} FEATURES_U=${{ matrix.features_u }} make build-testnet
-          cp build/secretnetwork_0_amd64.deb secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
+          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES_U=$(echo ${{ matrix.node_type }} | awk '/query/{printf "query-node,"} /validator/{printf ""}') make build-testnet
+          cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.node_type }}_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v2
         with:
-          name: secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
-          path: secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.node_type }}_${{ matrix.db_backend }}_amd64.deb
+          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.node_type }}_${{ matrix.db_backend }}_amd64.deb
 
   build-deb-mainnet:
+    strategy:
+      fail-fast: false
+      matrix:
+        db_backend: [rocksdb, goleveldb]
+        features_u: ["", "query-node,"] # validator node = "", query node = "query-node,"
     runs-on: ubuntu-latest
     env: # Or as an environment variable
       SPID_MAINNET: ${{ secrets.SPID_MAINNET }}
