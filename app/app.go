@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"path"
 
 	store "github.com/cosmos/cosmos-sdk/store/types"
 
@@ -621,6 +622,10 @@ func NewSecretNetworkApp(
 	}
 	app.ScopedIBCKeeper = scopedIBCKeeper
 	app.ScopedTransferKeeper = scopedTransferKeeper
+
+	app.SnapshotManager().RegisterExtensions(
+		compute.NewWasmSnapshotter(path.Join(computeDir, "wasm", "wasm")),
+	)
 
 	return app
 }
