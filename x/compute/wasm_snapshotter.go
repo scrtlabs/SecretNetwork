@@ -3,6 +3,7 @@ package compute
 import (
 	"io"
 	"io/ioutil"
+	"os"
 	"path"
 	"regexp"
 	"sort"
@@ -110,6 +111,9 @@ func (ws *WasmSnapshotter) Restore(
 		return snapshot.SnapshotItem{}, types.ErrUnknownFormat
 	}
 
+	// Create .compute directory if it doesn't exist already
+	os.MkdirAll(ws.wasmDirectory, os.ModePerm)
+
 	for {
 		item := &snapshot.SnapshotItem{}
 		err := protoReader.ReadMsg(item)
@@ -124,6 +128,7 @@ func (ws *WasmSnapshotter) Restore(
 			return snapshot.SnapshotItem{}, sdkerrors.Wrap(err, "invalid protobuf message")
 		}
 
+		// snapshotItem is 64 bytes of the file name, then the actual WASM bytes
 		if len(payload.Payload) < 64 {
 			return snapshot.SnapshotItem{}, sdkerrors.Wrapf(err, "wasm snapshot must be at least 64 bytes, got %v bytes", len(payload.Payload))
 		}
@@ -133,7 +138,7 @@ func (ws *WasmSnapshotter) Restore(
 
 		wasmFilePath := path.Join(ws.wasmDirectory, wasmFileName)
 
-		err = ioutil.WriteFile(wasmFilePath, wasmBytes, 0664 /* -rw-r--r-- */)
+		err = ioutil.WriteFile(wasmFilePath, wasmBytes, 0664 /* -rw-rw-r-- */)
 		if err != nil {
 			return snapshot.SnapshotItem{}, sdkerrors.Wrapf(err, "failed to write wasm file '%v' to disk", wasmFilePath)
 		}
