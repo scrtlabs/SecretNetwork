@@ -327,22 +327,9 @@ jobs:
         run: |
           echo not_a_key | tee {api_key,spid}.txt
           DOCKER_TAG=v0.0.0 make build-dev-image
-      - name: Checkout secret.js
-        run: git clone --depth 1 https://github.com/scrtlabs/secret.js
-      - name: Generate js code from protobuf
-        run: |
-          cd secret.js
-          yarn
-          # Use the already checked-out SecretNetwork instead of git cloning it
-          perl -i -pe 's/rm -rf/#rm -rf/' ./scripts/generate_protobuf.sh 
-          perl -i -pe 's/git clone/#git clone/;' ./scripts/generate_protobuf.sh
-          mkdir -p ./scripts/SecretNetwork
-          cp -a ../proto ./scripts/SecretNetwork
-          cp -a ../third_party ./scripts/SecretNetwork
-          sudo apt-get install -y protobuf-compiler
-          ./scripts/generate_protobuf.sh
       - name: Run secret.js tests
         run: |
+          git clone --depth 1 https://github.com/scrtlabs/secret.js
           cd secret.js
           # Use the docker images that we built just a few steps above
           perl -i -pe 's/secret-network-sw-dev:.+?"/secret-network-sw-dev:v0.0.0"/' ./test/*
