@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/cosmos/cosmos-sdk/snapshots/types"
 	snapshot "github.com/cosmos/cosmos-sdk/snapshots/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	protoio "github.com/gogo/protobuf/io"
@@ -108,7 +107,7 @@ func (ws *WasmSnapshotter) Restore(
 	height uint64, format uint32, protoReader protoio.Reader,
 ) (snapshot.SnapshotItem, error) {
 	if format != 1 {
-		return snapshot.SnapshotItem{}, types.ErrUnknownFormat
+		return snapshot.SnapshotItem{}, snapshot.ErrUnknownFormat
 	}
 
 	// Create .compute directory if it doesn't exist already
