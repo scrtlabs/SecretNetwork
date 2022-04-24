@@ -112,11 +112,14 @@ func (ws *WasmSnapshotter) Restore(
 	}
 
 	// Create .compute directory if it doesn't exist already
-	os.MkdirAll(ws.wasmDirectory, os.ModePerm)
+	err := os.MkdirAll(ws.wasmDirectory, os.ModePerm)
+	if err != nil {
+		return snapshot.SnapshotItem{}, sdkerrors.Wrapf(err, "failed to create directory '%s'", ws.wasmDirectory)
+	}
 
 	for {
 		item := &snapshot.SnapshotItem{}
-		err := protoReader.ReadMsg(item)
+		err = protoReader.ReadMsg(item)
 		if err == io.EOF {
 			break
 		} else if err != nil {
