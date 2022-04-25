@@ -4,7 +4,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -88,7 +88,7 @@ func (ws *WasmSnapshotter) Snapshot(height uint64, protoWriter protoio.Writer) e
 			continue
 		}
 
-		wasmFilePath := path.Join(ws.wasmDirectory, wasmFile.Name())
+		wasmFilePath := filepath.Join(ws.wasmDirectory, wasmFile.Name())
 		wasmBytes, err := ioutil.ReadFile(wasmFilePath)
 		if err != nil {
 			return err
@@ -138,7 +138,7 @@ func (ws *WasmSnapshotter) Restore(
 		wasmFileName := string(payload.Payload[0:64])
 		wasmBytes := payload.Payload[64:]
 
-		wasmFilePath := path.Join(ws.wasmDirectory, wasmFileName)
+		wasmFilePath := filepath.Join(ws.wasmDirectory, wasmFileName)
 
 		err = ioutil.WriteFile(wasmFilePath, wasmBytes, 0664 /* -rw-rw-r-- */)
 		if err != nil {
