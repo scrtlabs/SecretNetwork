@@ -152,6 +152,10 @@ build_windows_cli:
 build_macos_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/amd64
 	mv secretd-darwin-* secretcli-macos-amd64
+	
+build_macos_arm64_cli:
+	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/arm64
+	mv secretd-darwin-* secretcli-macos-arm64
 
 build_linux_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/amd64
@@ -160,6 +164,8 @@ build_linux_cli:
 build_linux_arm64_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
 	mv secretd-linux-arm64 secretcli-linux-arm64
+	
+
 
 build_all: build-linux build_windows_cli build_macos_cli build_linux_arm64_cli
 
