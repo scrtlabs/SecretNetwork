@@ -322,52 +322,29 @@ jobs:
 
   Integration-Tests:
     runs-on: ubuntu-latest
-    needs: Build
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
-        with:
-          go-version: "^1.15" # The Go version to download (if necessary) and use.
-      - name: Install Intel's SGX SDK
+      - name: Build docker testnet
         run: |
-          mkdir -p "$HOME/.sgxsdk"
-          cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
-          chmod +x "$SDK_BIN"
-          echo yes | ./"$SDK_BIN"
-      - uses: actions/download-artifact@v2
-        with:
-          name: libgo_cosmwasm
-      - uses: actions/download-artifact@v2
-        with:
-          name: enclave
-      - uses: actions/download-artifact@v2
-        with:
-          name: contract.wasm
-      - uses: actions/download-artifact@v2
-        with:
-          name: secretd
-      - uses: actions/download-artifact@v2
-        with:
-          name: erc20.wasm
-      - name: Setup Files
+          echo not_a_key | tee {api_key,spid}.txt
+          DOCKER_TAG=v0.0.0 make build-dev-image
+      - name: Checkout secret.js
+        run: git clone --depth 1 https://github.com/scrtlabs/secret.js
+      - name: Generate js code from protobuf
         run: |
-          cp libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
-          cp librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
-          cp contract.wasm ./x/compute/internal/keeper/testdata/test-contract/contract.wasm
-          chmod +x ./secretd
-      - name: Old bash+js sanity tests
+          cd secret.js
+          yarn
+          # Use the already checked-out SecretNetwork instead of git cloning it
+          perl -i -pe 's/rm -rf/#rm -rf/' ./scripts/generate_protobuf.sh 
+          perl -i -pe 's/git clone/#git clone/;' ./scripts/generate_protobuf.sh
+          mkdir -p ./scripts/SecretNetwork
+          cp -a ../proto ./scripts/SecretNetwork
+          cp -a ../third_party ./scripts/SecretNetwork
+          sudo apt-get install -y protobuf-compiler
+          ./scripts/generate_protobuf.sh
+      - name: Run secret.js tests
         run: |
-          source "$HOME/.sgxsdk/sgxsdk/environment"
-          export SGX_MODE=SW
-          export PATH="$(pwd):$PATH"
-          mkdir -p /opt/secret/.sgx_secrets/
-          ./cosmwasm/testing/sanity-test.sh
-      - name: Old bash+js sanity callbacks tests
-        run: |
-          source "$HOME/.sgxsdk/sgxsdk/environment"
-          export SGX_MODE=SW
-          export PATH="$(pwd):$PATH"
-          mkdir -p /opt/secret/.sgx_secrets/
-          ./cosmwasm/testing/callback-test.sh
+          cd secret.js
+          # Use the docker images that we built just a few steps above
+          perl -i -pe 's/secret-network-sw-dev:.+?"/secret-network-sw-dev:v0.0.0"/' ./test/*
+          yarn test

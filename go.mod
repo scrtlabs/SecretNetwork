@@ -20,12 +20,14 @@ require (
 	github.com/spf13/viper v1.10.1
 	github.com/stretchr/testify v1.7.1
 	github.com/tendermint/tendermint v0.34.19
-	github.com/tendermint/tm-db v0.6.6
+	github.com/tendermint/tm-db v0.6.7
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	google.golang.org/genproto v0.0.0-20211223182754-3ac035c7e7cb
 	google.golang.org/grpc v1.45.0
 	google.golang.org/protobuf v1.27.1
 )
+
+require github.com/cosmos/gorocksdb v1.2.0 // indirect
 
 require (
 	filippo.io/edwards25519 v1.0.0-beta.2 // indirect
@@ -104,7 +106,6 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20200815110645-5c35d600f0ca // indirect
-	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c // indirect
 	github.com/tendermint/btcd v0.1.1 // indirect
 	github.com/tendermint/crypto v0.0.0-20191022145703-50d29ede1e15 // indirect
 	github.com/tendermint/go-amino v0.16.0 // indirect
@@ -124,8 +125,7 @@ replace (
 	// github.com/cosmos/cosmos-sdk v0.44.5 => github.com/scrtlabs/cosmos-sdk v0.44.7-0.20220208193714-214a72279fd0
 	github.com/cosmos/cosmos-sdk v0.45.1 => github.com/scrtlabs/cosmos-sdk v0.45.4-0.20220426113726-11b62851d9d2
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/tecbot/gorocksdb => github.com/cosmos/gorocksdb v1.2.0
-	// github.com/tendermint/tendermint => github.com/terra-money/tendermint v0.34.14-public.2
+	// enforce grpc version
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
 
 )
