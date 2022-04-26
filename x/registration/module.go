@@ -3,13 +3,14 @@ package registration
 import (
 	"context"
 	"encoding/json"
+	"math/rand"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/keeper"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-	"math/rand"
 
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"

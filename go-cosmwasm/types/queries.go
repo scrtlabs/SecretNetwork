@@ -219,7 +219,7 @@ type WasmQuery struct {
 	Raw   *RawQuery   `json:"raw,omitempty"`
 }
 
-// SmartQuery respone is raw bytes ([]byte)
+// SmartQuery response is raw bytes ([]byte)
 type SmartQuery struct {
 	ContractAddr string `json:"contract_addr"`
 	Msg          []byte `json:"msg"`
@@ -243,8 +243,10 @@ type MintQuery struct {
 	BondedRatio *MintingBondedRatioQuery `json:"bonded_ratio,omitempty"`
 }
 
-type MintingBondedRatioQuery struct{}
-type MintingInflationQuery struct{}
+type (
+	MintingBondedRatioQuery struct{}
+	MintingInflationQuery   struct{}
+)
 
 type MintingInflationResponse struct {
 	InflationRate string `json:"inflation_rate"`
@@ -312,7 +314,7 @@ func (d ProposalsResponse) MarshalJSON() ([]byte, error) {
 	if len(d.Proposals) == 0 {
 		return []byte("{\"proposals\": []}"), nil
 	}
-	var raw = d.Proposals
+	raw := d.Proposals
 	asBytes, err := json.Marshal(raw)
 	if err != nil {
 		return nil, err

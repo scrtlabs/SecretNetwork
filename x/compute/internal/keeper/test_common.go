@@ -3,11 +3,12 @@ package keeper
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/client"
 	"io/ioutil"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/cosmos/cosmos-sdk/client"
 
 	"github.com/stretchr/testify/require"
 
@@ -80,8 +81,10 @@ import (
 	"github.com/enigmampc/SecretNetwork/x/registration"
 )
 
-const flagLRUCacheSize = "lru_size"
-const flagQueryGasLimit = "query_gas_limit"
+const (
+	flagLRUCacheSize  = "lru_size"
+	flagQueryGasLimit = "query_gas_limit"
+)
 
 var ModuleBasics = module.NewBasicManager(
 	auth.AppModuleBasic{},
@@ -96,16 +99,17 @@ var ModuleBasics = module.NewBasicManager(
 	params.AppModuleBasic{},
 	crisis.AppModuleBasic{},
 	slashing.AppModuleBasic{},
-	//ibc.AppModuleBasic{},
+	// ibc.AppModuleBasic{},
 	upgrade.AppModuleBasic{},
 	evidence.AppModuleBasic{},
-	//transfer.AppModuleBasic{},
+	// transfer.AppModuleBasic{},
 	registration.AppModuleBasic{},
 )
 
 func MakeTestCodec() codec.Codec {
 	return MakeEncodingConfig().Marshaler
 }
+
 func MakeEncodingConfig() simappparams.EncodingConfig {
 	amino := codec.NewLegacyAmino()
 	interfaceRegistry := types.NewInterfaceRegistry()
@@ -230,14 +234,14 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		blockedAddrs,
 	)
 
-	//bankParams = bankParams.SetSendEnabledParam(sdk.DefaultBondDenom, true)
+	// bankParams = bankParams.SetSendEnabledParam(sdk.DefaultBondDenom, true)
 	bankKeeper.SetParams(ctx, banktypes.DefaultParams())
 
 	stakingSubsp, _ := paramsKeeper.GetSubspace(stakingtypes.ModuleName)
 	stakingKeeper := stakingkeeper.NewKeeper(encodingConfig.Marshaler, keyStaking, authKeeper, bankKeeper, stakingSubsp)
 	stakingKeeper.SetParams(ctx, TestingStakeParams)
 
-	//mintSubsp, _ := paramsKeeper.GetSubspace(minttypes.ModuleName)
+	// mintSubsp, _ := paramsKeeper.GetSubspace(minttypes.ModuleName)
 
 	//mintKeeper := mintkeeper.NewKeeper(encodingConfig.Marshaler,
 	//	keyBank,
@@ -276,8 +280,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	err = bankKeeper.MintCoins(ctx, faucetAccountName, totalSupply)
 	require.NoError(t, err)
 
-	//err = bankKeeper.SendCoinsFromModuleToAccount(ctx, faucetAccountName, distrAcc.GetAddress(), totalSupply)
-	//require.NoError(t, err)
+	// err = bankKeeper.SendCoinsFromModuleToAccount(ctx, faucetAccountName, distrAcc.GetAddress(), totalSupply)
+	// require.NoError(t, err)
 
 	notBondedPool := authtypes.NewEmptyModuleAccount(stakingtypes.NotBondedPoolName, authtypes.Burner, authtypes.Staking)
 	bondPool := authtypes.NewEmptyModuleAccount(stakingtypes.BondedPoolName, authtypes.Burner, authtypes.Staking)
@@ -303,14 +307,14 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		AddRoute(govtypes.RouterKey, govtypes.ProposalHandler).
 		AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(paramsKeeper)).
 		AddRoute(distrtypes.RouterKey, distribution.NewCommunityPoolSpendProposalHandler(distKeeper))
-	//AddRoute(wasmtypes.RouterKey, NewWasmProposalHandler(keeper, wasmtypes.EnableAllProposals))
+	// AddRoute(wasmtypes.RouterKey, NewWasmProposalHandler(keeper, wasmtypes.EnableAllProposals))
 
 	govKeeper := govkeeper.NewKeeper(
 		encodingConfig.Marshaler, keyGov, paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable()), authKeeper, bankKeeper, stakingKeeper, govRouter,
 	)
 
 	// bank := bankKeeper.
-	//bk := bank.Keeper(bankKeeper)
+	// bk := bank.Keeper(bankKeeper)
 
 	mintSubsp, _ := paramsKeeper.GetSubspace(minttypes.ModuleName)
 	mintKeeper := mintkeeper.NewKeeper(encodingConfig.Marshaler, mintStore, mintSubsp, stakingKeeper, authKeeper, bankKeeper, authtypes.FeeCollectorName)
@@ -331,17 +335,17 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	wasmConfig := wasmtypes.DefaultWasmConfig()
 
 	// todo: new grpc routing
-	//serviceRouter := baseapp.NewMsgServiceRouter()
+	// serviceRouter := baseapp.NewMsgServiceRouter()
 
-	//serviceRouter.SetInterfaceRegistry(encodingConfig.InterfaceRegistry)
-	//bankMsgServer := bankkeeper.NewMsgServerImpl(bankKeeper)
-	//stakingMsgServer := stakingkeeper.NewMsgServerImpl(stakingKeeper)
-	//distrMsgServer := distrkeeper.NewMsgServerImpl(distKeeper)
-	//wasmMsgServer := NewMsgServerImpl(keeper)
+	// serviceRouter.SetInterfaceRegistry(encodingConfig.InterfaceRegistry)
+	// bankMsgServer := bankkeeper.NewMsgServerImpl(bankKeeper)
+	// stakingMsgServer := stakingkeeper.NewMsgServerImpl(stakingKeeper)
+	// distrMsgServer := distrkeeper.NewMsgServerImpl(distKeeper)
+	// wasmMsgServer := NewMsgServerImpl(keeper)
 
-	//banktypes.RegisterMsgServer(serviceRouter, bankMsgServer)
-	//stakingtypes.RegisterMsgServer(serviceRouter, stakingMsgServer)
-	//distrtypes.RegisterMsgServer(serviceRouter, distrMsgServer)
+	// banktypes.RegisterMsgServer(serviceRouter, bankMsgServer)
+	// stakingtypes.RegisterMsgServer(serviceRouter, stakingMsgServer)
+	// distrtypes.RegisterMsgServer(serviceRouter, distrMsgServer)
 
 	keeper := NewKeeper(
 		encodingConfig.Marshaler,
@@ -361,7 +365,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		encoders,
 		queriers,
 	)
-	//keeper.setParams(ctx, wasmtypes.DefaultParams())
+	// keeper.setParams(ctx, wasmtypes.DefaultParams())
 	// add wasm handler so we can loop-back (contracts calling contracts)
 	router.AddRoute(sdk.NewRoute(wasmtypes.RouterKey, TestHandler(keeper)))
 

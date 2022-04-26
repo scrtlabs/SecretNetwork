@@ -1,3 +1,4 @@
+//go:build !secretcli
 // +build !secretcli
 
 package main
@@ -7,15 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/server"
-	"github.com/cosmos/cosmos-sdk/x/genutil"
-	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	app2 "github.com/enigmampc/SecretNetwork/app"
-	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
-	reg "github.com/enigmampc/SecretNetwork/x/registration"
-	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -25,12 +17,24 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/server"
+	"github.com/cosmos/cosmos-sdk/x/genutil"
+	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
+	app2 "github.com/enigmampc/SecretNetwork/app"
+	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
+	reg "github.com/enigmampc/SecretNetwork/x/registration"
+	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+
 	"github.com/spf13/cobra"
 )
 
-const flagReset = "reset"
-const flagRegistrationService = "registration-node"
-const flagBootstrapNode = "node"
+const (
+	flagReset               = "reset"
+	flagRegistrationService = "registration-node"
+	flagBootstrapNode       = "node"
+)
 
 type WrappedSeedResponse struct {
 	Height string       `json:"height"`
@@ -51,7 +55,6 @@ type SeedResponse struct {
 }
 
 func InitAttestation() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "init-enclave [output-file]",
 		Short: "Perform remote attestation of the enclave",
@@ -61,7 +64,6 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 `,
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			sgxSecretsDir := os.Getenv("SCRT_SGX_STORAGE")
 			if sgxSecretsDir == "" {
 				sgxSecretsDir = os.ExpandEnv("/opt/secret/.sgx_secrets")
@@ -69,7 +71,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 
 			// create sgx secrets dir if it doesn't exist
 			if _, err := os.Stat(sgxSecretsDir); !os.IsNotExist(err) {
-				err := os.MkdirAll(sgxSecretsDir, 0777)
+				err := os.MkdirAll(sgxSecretsDir, 0o777)
 				if err != nil {
 					return err
 				}
@@ -123,7 +125,6 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 }
 
 func InitBootstrapCmd() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "init-bootstrap [node-exchange-file] [io-exchange-file]",
 		Short: "Perform bootstrap initialization",
@@ -238,7 +239,6 @@ func ParseCert() *cobra.Command {
 			"register the node, during node initialization",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			// parse coins trying to be sent
 			cert, err := ioutil.ReadFile(args[0])
 			if err != nil {
@@ -265,7 +265,6 @@ func ConfigureSecret() *cobra.Command {
 			"seed that was written on-chain",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			cert, err := ioutil.ReadFile(args[0])
 			if err != nil {
 				return err
@@ -290,14 +289,14 @@ func ConfigureSecret() *cobra.Command {
 			path := filepath.Join(app2.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
 			// fmt.Println("File Created Successfully", path)
 			if os.IsNotExist(err) {
-				var file, err = os.Create(path)
+				file, err := os.Create(path)
 				if err != nil {
 					return fmt.Errorf("failed to open config file '%s': %w", path, err)
 				}
 				_ = file.Close()
 			}
 
-			err = ioutil.WriteFile(path, cfgBytes, 0644)
+			err = ioutil.WriteFile(path, cfgBytes, 0o644)
 			if err != nil {
 				return err
 			}
@@ -316,7 +315,6 @@ func HealthCheck() *cobra.Command {
 		Long:  "Help diagnose issues by performing a basic sanity test that SGX is working properly",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			res, err := api.HealthCheck()
 			if err != nil {
 				return fmt.Errorf("failed to start enclave. Enclave returned: %s", err)
@@ -338,7 +336,6 @@ func ResetEnclave() *cobra.Command {
 			"You will have to go through registration again to be able to start the node",
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			// remove .secretd/.node/seed.json
 			path := filepath.Join(app2.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
 			if _, err := os.Stat(path); !os.IsNotExist(err) {
@@ -364,7 +361,7 @@ func ResetEnclave() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				err := os.MkdirAll(sgxSecretsDir, 0777)
+				err := os.MkdirAll(sgxSecretsDir, 0o777)
 				if err != nil {
 					return err
 				}
@@ -382,7 +379,6 @@ func ResetEnclave() *cobra.Command {
 
 // AutoRegisterNode *** EXPERIMENTAL ***
 func AutoRegisterNode() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "auto-register",
 		Short: "Perform remote attestation of the enclave",
@@ -391,7 +387,6 @@ Please report any issues with this command
 `,
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			sgxSecretsFolder := os.Getenv("SCRT_SGX_STORAGE")
 			if sgxSecretsFolder == "" {
 				sgxSecretsFolder = os.ExpandEnv("/opt/secret/.sgx_secrets")
@@ -474,7 +469,7 @@ Please report any issues with this command
 				log.Fatalln(err)
 			}
 
-			//Convert the body to type string and extract the seed
+			// Convert the body to type string and extract the seed
 			txHash := string(body)
 			txHash = txHash[1 : len(txHash)-1]
 			txHash = removeQuotes(txHash)
@@ -503,7 +498,7 @@ Please report any issues with this command
 			}
 
 			seedResponse := WrappedSeedResponse{}
-			//Convert the body to type string
+			// Convert the body to type string
 			err = json.Unmarshal(body, &seedResponse)
 			if err != nil {
 				log.Fatalln(err)
@@ -528,7 +523,7 @@ Please report any issues with this command
 			}
 
 			regResponse := WrappedRegistrationResponse{}
-			//Convert the body to type string
+			// Convert the body to type string
 			err = json.Unmarshal(body, &regResponse)
 			if err != nil {
 				log.Fatalln(err)
@@ -554,7 +549,7 @@ Please report any issues with this command
 			// create seed directory if it doesn't exist
 			_, err = os.Stat(seedCfgDir)
 			if os.IsNotExist(err) {
-				err = os.MkdirAll(seedCfgDir, 0777)
+				err = os.MkdirAll(seedCfgDir, 0o777)
 				if err != nil {
 					return fmt.Errorf("failed to create directory '%s': %w", seedCfgDir, err)
 				}
@@ -563,7 +558,7 @@ Please report any issues with this command
 			// write seed to file - if file doesn't exist, write it. If it does, delete the existing one and create this
 			_, err = os.Stat(seedCfgFile)
 			if os.IsNotExist(err) {
-				err = ioutil.WriteFile(seedCfgFile, cfgBytes, 0644)
+				err = ioutil.WriteFile(seedCfgFile, cfgBytes, 0o644)
 				if err != nil {
 					return err
 				}
@@ -573,7 +568,7 @@ Please report any issues with this command
 					return fmt.Errorf("failed to modify file '%s': %w", seedCfgFile, err)
 				}
 
-				err = ioutil.WriteFile(seedCfgFile, cfgBytes, 0644)
+				err = ioutil.WriteFile(seedCfgFile, cfgBytes, 0o644)
 				if err != nil {
 					return fmt.Errorf("failed to create file '%s': %w", seedCfgFile, err)
 				}

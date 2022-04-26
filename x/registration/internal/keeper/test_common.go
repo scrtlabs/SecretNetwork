@@ -3,6 +3,9 @@ package keeper
 import (
 	"encoding/base64"
 	"encoding/json"
+	"io/ioutil"
+	"os"
+	"testing"
 
 	"github.com/cosmos/cosmos-sdk/simapp/params"
 	"github.com/cosmos/cosmos-sdk/std"
@@ -14,16 +17,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
 	"github.com/cosmos/cosmos-sdk/x/gov"
+
 	//"github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"
 	"github.com/cosmos/cosmos-sdk/x/distribution"
 	distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
 	"github.com/cosmos/ibc-go/modules/apps/transfer"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
-	//ibc "github.com/cosmos/cosmos-sdk/x/ibc/core"
-	"io/ioutil"
-	"os"
-	"testing"
+	// ibc "github.com/cosmos/cosmos-sdk/x/ibc/core"
 
 	"github.com/cosmos/cosmos-sdk/x/mint"
 	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
@@ -45,7 +46,6 @@ import (
 )
 
 func CreateTestSeedConfig(t *testing.T) []byte {
-
 	seed := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
@@ -73,7 +73,7 @@ var ModuleBasics = module.NewBasicManager(
 	),
 	crisis.AppModuleBasic{},
 	slashing.AppModuleBasic{},
-	//ibc.AppModuleBasic{},
+	// ibc.AppModuleBasic{},
 	upgrade.AppModuleBasic{},
 	evidence.AppModuleBasic{},
 	transfer.AppModuleBasic{},
@@ -82,6 +82,7 @@ var ModuleBasics = module.NewBasicManager(
 func MakeTestCodec() codec.Codec {
 	return MakeEncodingConfig().Marshaler
 }
+
 func MakeEncodingConfig() params.EncodingConfig {
 	amino := codec.NewLegacyAmino()
 	interfaceRegistry := types.NewInterfaceRegistry()
@@ -102,7 +103,6 @@ func MakeEncodingConfig() params.EncodingConfig {
 }
 
 func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, bootstrap bool) (sdk.Context, Keeper) {
-
 	err := os.Setenv("SGX_MODE", "SW")
 	require.Nil(t, err)
 

@@ -2,16 +2,16 @@ package compute
 
 import (
 	"encoding/json"
-	compute "github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
 	"testing"
+
+	compute "github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
 
 	"github.com/stretchr/testify/require"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-type contractState struct {
-}
+type contractState struct{}
 
 func TestInitGenesis(t *testing.T) {
 	data := setupTest(t)
@@ -95,7 +95,7 @@ func TestInitGenesis(t *testing.T) {
 		InitFunds: deposit,
 	}
 
-	//compute.PrepareInitSignedTx()
+	// compute.PrepareInitSignedTx()
 	data.ctx = compute.PrepareInitSignedTx(t, data.keeper, data.ctx, creator, privCreator, initMsgBz, 1, deposit)
 
 	res, err = h(data.ctx, &initCmd)

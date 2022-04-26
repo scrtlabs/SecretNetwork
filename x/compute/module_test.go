@@ -72,7 +72,7 @@ var (
 	oldContract       = mustLoad("./testdata/escrow_0.7.wasm")
 )
 
-	func TestHandleCreate(t *testing.T) {
+func TestHandleCreate(t *testing.T) {
 	cases := map[string]struct {
 		msg     sdk.Msg
 		isValid bool
@@ -459,7 +459,7 @@ func assertContractList(t *testing.T, q sdk.Querier, ctx sdk.Context, codeID uin
 	err := json.Unmarshal(bz, &res)
 	require.NoError(t, err)
 
-	var hasAddrs = make([]string, len(res))
+	hasAddrs := make([]string, len(res))
 	for i, r := range res {
 		hasAddrs[i] = r.Address.String()
 	}

@@ -3,9 +3,10 @@ package legacy
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/x/authz"
 	"io/ioutil"
 	"time"
+
+	"github.com/cosmos/cosmos-sdk/x/authz"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"

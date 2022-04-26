@@ -7,13 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"strconv"
 
 	"github.com/gogo/protobuf/proto"
 
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-
-	"io/ioutil"
-	"strconv"
 
 	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
 	cosmwasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
@@ -219,7 +218,7 @@ func GetCmdQueryCode() *cobra.Command {
 			}
 
 			fmt.Printf("Downloading wasm code to %s\n", args[1])
-			return ioutil.WriteFile(args[1], code.Data, 0644)
+			return ioutil.WriteFile(args[1], code.Data, 0o644)
 		},
 	}
 
@@ -558,7 +557,6 @@ func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, cliCtx clie
 	nonce := queryData[:32]
 
 	res, _, err := cliCtx.QueryWithData(route, queryData)
-
 	if err != nil {
 		if types.ErrContainsQueryError(err) {
 			errorPlainBz, err := wasmCtx.DecryptError(err.Error(), "query", nonce)

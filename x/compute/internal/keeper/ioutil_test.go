@@ -77,7 +77,6 @@ func TestUncompress(t *testing.T) {
 			require.Equal(t, spec.expResult, r)
 		})
 	}
-
 }
 
 func asGzip(src string) []byte {
