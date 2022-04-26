@@ -135,6 +135,7 @@ jobs:
         run: |
           make build_cli
           cp "secretcli" "secretcli-$RUNNER_OS"
+          make build_linux_arm64_cli
       - uses: actions/upload-artifact@v2
         with:
           name: secretcli-${{runner.os}}
