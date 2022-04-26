@@ -123,7 +123,7 @@ require (
 
 replace (
 	// github.com/cosmos/cosmos-sdk v0.44.5 => github.com/scrtlabs/cosmos-sdk v0.44.7-0.20220208193714-214a72279fd0
-	github.com/cosmos/cosmos-sdk v0.45.1 => github.com/scrtlabs/cosmos-sdk v0.45.4-0.20220426113726-11b62851d9d2
+	github.com/cosmos/cosmos-sdk v0.45.1 => github.com/scrtlabs/cosmos-sdk v0.45.4-scrt
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// enforce grpc version
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
