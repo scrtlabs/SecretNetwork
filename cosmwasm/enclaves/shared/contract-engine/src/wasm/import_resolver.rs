@@ -68,6 +68,48 @@ impl ModuleImportResolver for WasmiImportResolver {
                 Signature::new(&[ValueType::I32][..], None),
                 HostFunctions::GasIndex.into(),
             ),
+            // fn secp256k1_verify(message_hash_ptr: u32, signature_ptr: u32, public_key_ptr: u32) -> u32;
+            "secp256k1_verify" => FuncInstance::alloc_host(
+                Signature::new(
+                    &[ValueType::I32, ValueType::I32, ValueType::I32][..],
+                    Some(ValueType::I32),
+                ),
+                HostFunctions::Secp256k1VerifyIndex.into(),
+            ),
+            // fn secp256k1_recover_pubkey(message_hash_ptr: u32, signature_ptr: u32, recovery_param: u32) -> u64;
+            "secp256k1_recover_pubkey" => FuncInstance::alloc_host(
+                Signature::new(
+                    &[ValueType::I32, ValueType::I32, ValueType::I32][..],
+                    Some(ValueType::I64),
+                ),
+                HostFunctions::Secp256k1RecoverPubkeyIndex.into(),
+            ),
+            // fn ed25519_verify(message_ptr: u32, signature_ptr: u32, public_key_ptr: u32) -> u32;
+            "ed25519_verify" => FuncInstance::alloc_host(
+                Signature::new(
+                    &[ValueType::I32, ValueType::I32, ValueType::I32][..],
+                    Some(ValueType::I32),
+                ),
+                HostFunctions::Ed25519VerifyIndex.into(),
+            ),
+            // fn ed25519_batch_verify(messages_ptr: u32, signatures_ptr: u32, public_keys_ptr: u32) -> u32;
+            "ed25519_batch_verify" => FuncInstance::alloc_host(
+                Signature::new(
+                    &[ValueType::I32, ValueType::I32, ValueType::I32][..],
+                    Some(ValueType::I32),
+                ),
+                HostFunctions::Ed25519BatchVerifyIndex.into(),
+            ),
+            // fn secp256k1_sign(message_ptr: u32, private_key_ptr: u32) -> u32;
+            "secp256k1_sign" => FuncInstance::alloc_host(
+                Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I64)),
+                HostFunctions::Secp256k1SignIndex.into(),
+            ),
+            // fn ed25519_sign(message_ptr: u32, private_key_ptr: u32) -> u32;
+            "ed25519_sign" => FuncInstance::alloc_host(
+                Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I64)),
+                HostFunctions::Ed25519SignIndex.into(),
+            ),
             _ => {
                 return Err(InterpreterError::Function(format!(
                     "WASM VM doesn't export function with name {}",

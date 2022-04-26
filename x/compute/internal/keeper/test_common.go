@@ -3,11 +3,12 @@ package keeper
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/client"
 	"io/ioutil"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/cosmos/cosmos-sdk/client"
 
 	"github.com/stretchr/testify/require"
 

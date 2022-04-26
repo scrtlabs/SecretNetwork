@@ -4,7 +4,10 @@ use std::collections::HashMap;
 use crate::addresses::{CanonicalAddr, HumanAddr};
 use crate::coins::Coin;
 use crate::encoding::Binary;
-use crate::errors::{StdError, StdResult, SystemError, SystemResult};
+use crate::errors::{
+    RecoverPubkeyError, SigningError, StdError, StdResult, SystemError, SystemResult,
+    VerificationError,
+};
 use crate::query::{
     AllBalanceResponse, AllDelegationsResponse, BalanceResponse, BankQuery, BondedDenomResponse,
     DelegationResponse, DistQuery, FullDelegation, GovQuery, MintQuery, QueryRequest, StakingQuery,
@@ -108,6 +111,54 @@ impl Api for MockApi {
         // decode UTF-8 bytes into string
         let human = String::from_utf8(trimmed).map_err(StdError::invalid_utf8)?;
         Ok(HumanAddr(human))
+    }
+
+    fn secp256k1_verify(
+        &self,
+        _message_hash: &[u8],
+        _signature: &[u8],
+        _public_key: &[u8],
+    ) -> Result<bool, VerificationError> {
+        Ok(true)
+    }
+
+    fn secp256k1_recover_pubkey(
+        &self,
+        _message_hash: &[u8],
+        _signature: &[u8],
+        _recovery_param: u8,
+    ) -> Result<Vec<u8>, RecoverPubkeyError> {
+        Ok(vec![])
+    }
+
+    fn ed25519_verify(
+        &self,
+        _message: &[u8],
+        _signature: &[u8],
+        _public_key: &[u8],
+    ) -> Result<bool, VerificationError> {
+        Ok(true)
+    }
+
+    fn ed25519_batch_verify(
+        &self,
+        _messages: &[&[u8]],
+        _signatures: &[&[u8]],
+        _public_keys: &[&[u8]],
+    ) -> Result<bool, VerificationError> {
+        Ok(true)
+    }
+
+    fn secp256k1_sign(
+        &self,
+        _message: &[u8],
+        _private_key: &[u8],
+    ) -> Result<Vec<u8>, SigningError> {
+        Ok(vec![])
+    }
+
+    fn ed25519_sign(&self, _message: &[u8], _private_key: &[u8]) -> Result<Vec<u8>, SigningError> {
+        Ok(vec![])
     }
 }
 
