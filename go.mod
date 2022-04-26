@@ -123,7 +123,7 @@ require (
 
 replace (
 	// github.com/cosmos/cosmos-sdk v0.44.5 => github.com/scrtlabs/cosmos-sdk v0.44.7-0.20220208193714-214a72279fd0
-	github.com/cosmos/cosmos-sdk v0.45.1 => github.com/scrtlabs/cosmos-sdk v0.45.2-0.20220316122555-5ddbe626dab2
+	github.com/cosmos/cosmos-sdk v0.45.1 => github.com/scrtlabs/cosmos-sdk v0.45.4-0.20220426113726-11b62851d9d2
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/tecbot/gorocksdb => github.com/cosmos/gorocksdb v1.2.0
 	// github.com/tendermint/tendermint => github.com/terra-money/tendermint v0.34.14-public.2
