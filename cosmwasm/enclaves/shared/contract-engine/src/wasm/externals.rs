@@ -53,6 +53,12 @@ impl From<usize> for HostFunctions {
             x if x == HostFunctions::Ed25519BatchVerifyIndex as usize => {
                 HostFunctions::Ed25519BatchVerifyIndex
             }
+            x if x == HostFunctions::Secp256k1SignIndex as usize => {
+                HostFunctions::Secp256k1SignIndex
+            }
+            x if x == HostFunctions::Ed25519SignIndex as usize => {
+                HostFunctions::Ed25519SignIndex
+            }
             #[cfg(feature = "debug-print")]
             x if x == HostFunctions::DebugPrintIndex as usize => HostFunctions::DebugPrintIndex,
             _ => HostFunctions::Unknown,

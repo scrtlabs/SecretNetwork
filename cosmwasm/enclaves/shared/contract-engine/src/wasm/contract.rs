@@ -10,7 +10,7 @@ use wasmi::{Error as InterpreterError, MemoryInstance, MemoryRef, ModuleRef, Run
 use enclave_ffi_types::Ctx;
 
 use enclave_cosmwasm_types::consts::BECH32_PREFIX_ACC_ADDR;
-use enclave_crypto::{sha_256, Ed25519PublicKey};
+use enclave_crypto::{sha_256, Ed25519PublicKey, WasmApiCryptoError};
 
 use crate::contract_validation::ContractKey;
 use crate::db::read_encrypted_key;
@@ -323,6 +323,7 @@ impl WasmiApi for ContractInstance {
         self.use_gas_externally(gas_used)?;
 
         let value = match value {
+            // Return 0 (null ponter) if value is empty
             None => return Ok(Some(RuntimeValue::I32(0))),
             Some(value) => value,
         };
@@ -701,16 +702,18 @@ impl WasmiApi for ContractInstance {
 
         // check message_hash input
         if message_hash_data.len() != 32 {
-            // return 3 == InvalidHashFormat
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L93
-            return Ok(Some(RuntimeValue::I32(3)));
+            return Ok(Some(RuntimeValue::I32(
+                WasmApiCryptoError::InvalidHashFormat as i32,
+            )));
         }
 
         // check signature input
         if signature_data.len() != 64 {
-            // return 4 == InvalidSignatureFormat
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
-            return Ok(Some(RuntimeValue::I32(4)));
+            return Ok(Some(RuntimeValue::I32(
+                WasmApiCryptoError::InvalidSignatureFormat as i32,
+            )));
         }
 
         // check pubkey input
@@ -724,18 +727,20 @@ impl WasmiApi for ContractInstance {
             Some(0x06) | Some(0x07) => public_key.len() == 65,
             _ => false,
         } {
-            // return 5 == InvalidPubkeyFormat
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L95
-            return Ok(Some(RuntimeValue::I32(5)));
+            return Ok(Some(RuntimeValue::I32(
+                WasmApiCryptoError::InvalidPubkeyFormat as i32,
+            )));
         }
 
         let secp256k1_msg = match secp256k1::Message::from_slice(&message_hash_data) {
             Err(err) => {
                 debug!("secp256k1_verify() failed to create a secp256k1 message from message_hash: {:?}", err);
 
-                // return 10 == GenericErr
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
-                return Ok(Some(RuntimeValue::I32(10)));
+                return Ok(Some(RuntimeValue::I32(
+                    WasmApiCryptoError::GenericErr as i32,
+                )));
             }
             Ok(x) => x,
         };
@@ -744,9 +749,10 @@ impl WasmiApi for ContractInstance {
             Err(err) => {
                 debug!("secp256k1_verify() malformed signature: {:?}", err);
 
-                // return 10 == GenericErr
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
-                return Ok(Some(RuntimeValue::I32(10)));
+                return Ok(Some(RuntimeValue::I32(
+                    WasmApiCryptoError::GenericErr as i32,
+                )));
             }
             Ok(x) => x,
         };
@@ -755,9 +761,10 @@ impl WasmiApi for ContractInstance {
             Err(err) => {
                 debug!("secp256k1_verify() malformed pubkey: {:?}", err);
 
-                // return 10 == GenericErr
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
-                return Ok(Some(RuntimeValue::I32(10)));
+                return Ok(Some(RuntimeValue::I32(
+                    WasmApiCryptoError::GenericErr as i32,
+                )));
             }
             Ok(x) => x,
         };
@@ -772,12 +779,12 @@ impl WasmiApi for ContractInstance {
 
                 // return 1 == failed, invalid signature
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L220
-                return Ok(Some(RuntimeValue::I32(1)));
+                Ok(Some(RuntimeValue::I32(1)))
             }
             Ok(()) => {
                 // return 0 == success, valid signature
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L220
-                return Ok(Some(RuntimeValue::I32(0)));
+                Ok(Some(RuntimeValue::I32(0)))
             }
         }
     }
@@ -822,25 +829,28 @@ impl WasmiApi for ContractInstance {
 
         // check message_hash input
         if message_hash_data.len() != 32 {
-            // return 3 == InvalidHashFormat
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L93
-            return Ok(Some(RuntimeValue::I64(to_high_half(3) as i64)));
+            return Ok(Some(RuntimeValue::I64(to_high_half(
+                WasmApiCryptoError::InvalidHashFormat as u32,
+            ) as i64)));
         }
 
         // check signature input
         if signature_data.len() != 64 {
-            // return 4 == InvalidSignatureFormat
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
-            return Ok(Some(RuntimeValue::I64(to_high_half(4) as i64)));
+            return Ok(Some(RuntimeValue::I64(to_high_half(
+                WasmApiCryptoError::InvalidSignatureFormat as u32,
+            ) as i64)));
         }
 
         let secp256k1_msg = match secp256k1::Message::from_slice(&message_hash_data) {
             Err(err) => {
                 debug!("secp256k1_recover_pubkey() failed to create a secp256k1 message from message_hash: {:?}", err);
 
-                // return 10 == GenericErr
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
-                return Ok(Some(RuntimeValue::I64(to_high_half(10) as i64)));
+                return Ok(Some(RuntimeValue::I64(
+                    to_high_half(WasmApiCryptoError::GenericErr as u32) as i64,
+                )));
             }
             Ok(x) => x,
         };
@@ -849,9 +859,10 @@ impl WasmiApi for ContractInstance {
             Err(err) => {
                 debug!("secp256k1_recover_pubkey() failed to create a secp256k1 recovery_id from recovery_param: {:?}", err);
 
-                // return 10 == GenericErr
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
-                return Ok(Some(RuntimeValue::I64(to_high_half(10) as i64)));
+                return Ok(Some(RuntimeValue::I64(
+                    to_high_half(WasmApiCryptoError::GenericErr as u32) as i64,
+                )));
             }
             Ok(x) => x,
         };
@@ -866,9 +877,10 @@ impl WasmiApi for ContractInstance {
                     err
                 );
 
-                // return 10 == GenericErr
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
-                return Ok(Some(RuntimeValue::I64(to_high_half(10) as i64)));
+                return Ok(Some(RuntimeValue::I64(
+                    to_high_half(WasmApiCryptoError::GenericErr as u32) as i64,
+                )));
             }
             Ok(x) => x,
         };
@@ -882,9 +894,10 @@ impl WasmiApi for ContractInstance {
                     err
                 );
 
-                // return 10 == GenericErr
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
-                return Ok(Some(RuntimeValue::I64(to_high_half(10) as i64)));
+                Ok(Some(RuntimeValue::I64(
+                    to_high_half(WasmApiCryptoError::GenericErr as u32) as i64,
+                )))
             }
             Ok(pubkey) => {
                 let answer = pubkey.serialize();
@@ -952,9 +965,10 @@ impl WasmiApi for ContractInstance {
                     err
                 );
 
-                    // return 4 == InvalidSignatureFormat
                     // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
-                    return Ok(Some(RuntimeValue::I32(4)));
+                    return Ok(Some(RuntimeValue::I32(
+                        WasmApiCryptoError::InvalidSignatureFormat as i32,
+                    )));
                 }
             };
 
@@ -967,9 +981,10 @@ impl WasmiApi for ContractInstance {
                         err
                     );
 
-                    // return 5 == InvalidPubkeyFormat
                     // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L95
-                    return Ok(Some(RuntimeValue::I32(5)));
+                    return Ok(Some(RuntimeValue::I32(
+                        WasmApiCryptoError::InvalidPubkeyFormat as i32,
+                    )));
                 }
             };
 
@@ -979,12 +994,12 @@ impl WasmiApi for ContractInstance {
 
                 // return 1 == failed, invalid signature
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L281
-                return Ok(Some(RuntimeValue::I32(1)));
+                Ok(Some(RuntimeValue::I32(1)))
             }
             Ok(()) => {
                 // return 0 == success, valid signature
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L281
-                return Ok(Some(RuntimeValue::I32(0)));
+                Ok(Some(RuntimeValue::I32(0)))
             }
         }
     }
@@ -1060,18 +1075,20 @@ impl WasmiApi for ContractInstance {
             )
         } else {
             debug!(
-                "ed25519_batch_verify() mismatched number of messages ({}) / signatures ({}) / public keys ({})", messages_data.len(),signatures_data.len(),pubkeys_data.len()
+                "ed25519_batch_verify() mismatched number of messages ({}) / signatures ({}) / public keys ({})",
+                messages_data.len(),
+                signatures_data.len(),
+                pubkeys_data.len(),
             );
 
-            // return 5 == BatchErr
             // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L97
-            return Ok(Some(RuntimeValue::I32(7)));
+            return Ok(Some(RuntimeValue::I32(WasmApiCryptoError::BatchErr as i32)));
         };
 
         self.use_gas_externally(
-            (self.gas_costs.external_ed25519_verify
-                - self.gas_costs.external_ed25519_batch_verify_per_one) as u64 /* base cost in case signatures.len() == 0 */
-                + (signatures.len() as u64) * self.gas_costs.external_ed25519_batch_verify_per_one as u64,
+            self.gas_costs.external_ed25519_batch_verify_base as u64
+                + (signatures.len() as u64)
+                    * self.gas_costs.external_ed25519_batch_verify_each as u64,
         )?;
 
         let mut batch = ed25519_zebra::batch::Verifier::new();
@@ -1086,9 +1103,10 @@ impl WasmiApi for ContractInstance {
                     i, err
                 );
 
-                    // return 4 == InvalidSignatureFormat
                     // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
-                    return Ok(Some(RuntimeValue::I32(4)));
+                    return Ok(Some(RuntimeValue::I32(
+                        WasmApiCryptoError::InvalidSignatureFormat as i32,
+                    )));
                 }
             };
 
@@ -1101,9 +1119,10 @@ impl WasmiApi for ContractInstance {
                         i, err
                     );
 
-                        // return 5 == InvalidPubkeyFormat
                         // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L95
-                        return Ok(Some(RuntimeValue::I32(5)));
+                        return Ok(Some(RuntimeValue::I32(
+                            WasmApiCryptoError::InvalidPubkeyFormat as i32,
+                        )));
                     }
                 };
 
@@ -1111,19 +1130,23 @@ impl WasmiApi for ContractInstance {
         }
 
         // Assaf:
-        // To verify a batch of ed25519 signatures we need to provide an RNG.
+        // To verify a batch of ed25519 signatures we need to provide an RNG source.
         // In theory this doesn't have to be deterministic because the same signatures
         // should produce the same output (true/false) regardless of the RNG being used.
         // In practice I'm too afraid to do something non-deterministic in concensus code
         // So I've decided to use a PRNG instead.
         // For entropy I'm using the entire ed25519 batch verify input data + the gas consumed
         // up until now in this WASM call. This will be deterministic, but also kinda-random in
-        // different situations. Note that gas should incode every WASM opcode up until now and
-        // every WASM memory allocation.
-        // Secret data from the enclave can also be used here but I'm sure that that's necessary.
-        // Also note that in the vanilla CosmWasm v1 implementation their just using RNG from the OS,
-        // meaning that different values are used in differents nodes in consensus code, but the output
-        // should be the same (See https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/ed25519.rs#L108).
+        // different situations. Note that the gas includes every WASM opcode and
+        // every WASM memory allocation up until now.
+        // Secret data from the enclave can also be used here but I'm not sure if that's necessary.
+        // A few more notes:
+        // 1. The vanilla CosmWasm v1 implementation is using RNG from the OS,
+        // meaning that different values are used in differents nodes for the same operation inside
+        // consensus code, but the output should be the same (https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/ed25519.rs#L108)
+        // 2. In Zcash (zebra) this is also used with RNG from the OS, however Zcash is a PoW chain
+        // and therefore there's no risk of consensus breaking (https://github.com/ZcashFoundation/zebra/blob/00aa5d96a30539a609bfdd17146b223c4e6cf424/tower-batch/tests/ed25519.rs#L72-L83).
+        // 3. In dalek-ed25519 they warn agains using deterministic RNG, as an attacker can derive a falsy signature from the right signature. For me this is an acceptable risk compared to breaking consensus (https://docs.rs/ed25519-dalek/1.0.1/ed25519_dalek/fn.verify_batch.html#on-deterministic-nonces and https://github.com/dalek-cryptography/ed25519-dalek/pull/147).
         let mut rng_entropy: Vec<u8> = vec![];
         rng_entropy.append(&mut messages_data.into_iter().flatten().collect());
         rng_entropy.append(&mut signatures_data.into_iter().flatten().collect());
@@ -1146,12 +1169,12 @@ impl WasmiApi for ContractInstance {
 
                 // return 1 == failed, invalid signature
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L329
-                return Ok(Some(RuntimeValue::I32(1)));
+                Ok(Some(RuntimeValue::I32(1)))
             }
             Ok(()) => {
                 // return 0 == success, valid signature
                 // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L329
-                return Ok(Some(RuntimeValue::I32(0)));
+                Ok(Some(RuntimeValue::I32(0)))
             }
         }
     }
@@ -1185,10 +1208,9 @@ impl WasmiApi for ContractInstance {
 
         // check private_key input
         if private_key_data.len() != 32 {
-            // return 1000 == InvalidPrivateKeyFormat
-            // Assaf: 1000 to not collide with CosmWasm someday
-            // See https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L91
-            return Ok(Some(RuntimeValue::I64(to_high_half(1000) as i64)));
+            return Ok(Some(RuntimeValue::I64(to_high_half(
+                WasmApiCryptoError::InvalidPrivateKeyFormat as u32,
+            ) as i64)));
         }
 
         let secp = secp256k1::Secp256k1::new();
@@ -1201,31 +1223,31 @@ impl WasmiApi for ContractInstance {
                     err
                 );
 
-                // return 10 == GenericErr
-                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
-                return Ok(Some(RuntimeValue::I64(to_high_half(10) as i64)));
+                return Ok(Some(RuntimeValue::I64(
+                    to_high_half(WasmApiCryptoError::GenericErr as u32) as i64,
+                )));
             }
             Ok(x) => x,
         };
 
-        let secp256k1_secret_key = match secp256k1::SecretKey::from_slice(
+        let secp256k1_signing_key = match secp256k1::SecretKey::from_slice(
             private_key_data.as_slice(),
         ) {
             Err(err) => {
                 debug!(
-                        "secp256k1_sign() failed to create a secp256k1 secret key from private key: {:?}",
-                        err
-                    );
+                    "secp256k1_sign() failed to create a secp256k1 secret key from private key: {:?}",
+                    err
+                );
 
-                // return 10 == GenericErr
-                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
-                return Ok(Some(RuntimeValue::I64(to_high_half(10) as i64)));
+                return Ok(Some(RuntimeValue::I64(to_high_half(
+                    WasmApiCryptoError::InvalidPrivateKeyFormat as u32,
+                ) as i64)));
             }
             Ok(x) => x,
         };
 
         let sig = secp
-            .sign_ecdsa(&secp256k1_msg, &secp256k1_secret_key)
+            .sign_ecdsa(&secp256k1_msg, &secp256k1_signing_key)
             .serialize_compact();
 
         let ptr_to_region_in_wasm_vm = self.write_to_memory(&sig).map_err(|err| {
@@ -1271,10 +1293,9 @@ impl WasmiApi for ContractInstance {
 
         // check private_key input
         if private_key_data.len() != 32 {
-            // return 1000 == InvalidPrivateKeyFormat
-            // Assaf: 1000 to not collide with CosmWasm someday
-            // See https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L91
-            return Ok(Some(RuntimeValue::I64(to_high_half(1000) as i64)));
+            return Ok(Some(RuntimeValue::I64(to_high_half(
+                WasmApiCryptoError::InvalidPrivateKeyFormat as u32,
+            ) as i64)));
         }
 
         let ed25519_signing_key =
@@ -1286,9 +1307,9 @@ impl WasmiApi for ContractInstance {
                     err
                 );
 
-                    // return 10 == GenericErr
-                    // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
-                    return Ok(Some(RuntimeValue::I64(to_high_half(10) as i64)));
+                    return Ok(Some(RuntimeValue::I64(to_high_half(
+                        WasmApiCryptoError::InvalidPrivateKeyFormat as u32,
+                    ) as i64)));
                 }
             };
 

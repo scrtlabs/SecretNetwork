@@ -1,7 +1,11 @@
 package app
 
 import (
-	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
+	"fmt"
+
+	store "github.com/cosmos/cosmos-sdk/store/types"
+
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
@@ -14,29 +18,38 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/authz"
-	"github.com/cosmos/ibc-go/modules/apps/transfer"
+	ica "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts"
+	icacontroller "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller"
+	icacontrollertypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/types"
+	icahost "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host"
+	icahosttypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/types"
+	icatypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/types"
+	"github.com/cosmos/ibc-go/v3/modules/apps/transfer"
+	ibctransferkeeper "github.com/cosmos/ibc-go/v3/modules/apps/transfer/keeper"
+	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
+	ibc "github.com/cosmos/ibc-go/v3/modules/core"
+	ibcclient "github.com/cosmos/ibc-go/v3/modules/core/02-client"
+	ibcclienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
+	porttypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"
+	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
+	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
+	v1_3 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.3"
+	icaauth "github.com/enigmampc/SecretNetwork/x/mauth"
+	icaauthtypes "github.com/enigmampc/SecretNetwork/x/mauth/types"
 
-	ibctransferkeeper "github.com/cosmos/ibc-go/modules/apps/transfer/keeper"
-	ibctransfertypes "github.com/cosmos/ibc-go/modules/apps/transfer/types"
-	ibc "github.com/cosmos/ibc-go/modules/core"
-	ibcclient "github.com/cosmos/ibc-go/modules/core/02-client"
-	ibcclienttypes "github.com/cosmos/ibc-go/modules/core/02-client/types"
-	porttypes "github.com/cosmos/ibc-go/modules/core/05-port/types"
-	ibchost "github.com/cosmos/ibc-go/modules/core/24-host"
-	ibckeeper "github.com/cosmos/ibc-go/modules/core/keeper"
-
-	//"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
-	//authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	authzmodule "github.com/cosmos/cosmos-sdk/x/authz/module"
+	icacontrollerkeeper "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/keeper"
+	icahostkeeper "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/keeper"
+	icaauthkeeper "github.com/enigmampc/SecretNetwork/x/mauth/keeper"
 
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
@@ -117,6 +130,7 @@ var (
 		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
 		govtypes.ModuleName:            {authtypes.Burner},
 		ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
+		icatypes.ModuleName:            nil,
 	}
 
 	// Module accounts that are allowed to receive tokens
@@ -167,11 +181,42 @@ type SecretNetworkApp struct {
 	ScopedIBCKeeper      capabilitykeeper.ScopedKeeper
 	ScopedTransferKeeper capabilitykeeper.ScopedKeeper
 
+	//
+	ICAControllerKeeper icacontrollerkeeper.Keeper
+	ICAHostKeeper       icahostkeeper.Keeper
+	ICAAuthKeeper       icaauthkeeper.Keeper
+
 	// the module manager
 	mm *module.Manager
 
 	// simulation manager
 	sm *module.SimulationManager
+
+	configurator module.Configurator
+}
+
+func (app *SecretNetworkApp) GetBaseApp() *baseapp.BaseApp {
+	return app.BaseApp
+}
+
+func (app *SecretNetworkApp) GetStakingKeeper() stakingkeeper.Keeper {
+	return app.stakingKeeper
+}
+
+func (app *SecretNetworkApp) GetIBCKeeper() *ibckeeper.Keeper {
+	return app.ibcKeeper
+}
+
+func (app *SecretNetworkApp) GetScopedIBCKeeper() capabilitykeeper.ScopedKeeper {
+	return app.ScopedIBCKeeper
+}
+
+func (app *SecretNetworkApp) GetTxConfig() client.TxConfig {
+	return app.GetTxConfig()
+}
+
+func (app *SecretNetworkApp) AppCodec() codec.Codec {
+	return app.appCodec
 }
 
 func (app *SecretNetworkApp) RegisterTxService(clientCtx client.Context) {
@@ -220,7 +265,7 @@ func NewSecretNetworkApp(
 		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
 		govtypes.StoreKey, paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey,
 		evidencetypes.StoreKey, ibctransfertypes.StoreKey, capabilitytypes.StoreKey, compute.StoreKey,
-		reg.StoreKey, feegrant.StoreKey, authzkeeper.StoreKey,
+		reg.StoreKey, feegrant.StoreKey, authzkeeper.StoreKey, icahosttypes.StoreKey,
 	)
 
 	tKeys := sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
@@ -249,6 +294,10 @@ func NewSecretNetworkApp(
 
 	scopedIBCKeeper := app.capabilityKeeper.ScopeToModule(ibchost.ModuleName)
 	scopedTransferKeeper := app.capabilityKeeper.ScopeToModule(ibctransfertypes.ModuleName)
+
+	scopedICAControllerKeeper := app.capabilityKeeper.ScopeToModule(icacontrollertypes.SubModuleName)
+	scopedICAHostKeeper := app.capabilityKeeper.ScopeToModule(icahosttypes.SubModuleName)
+	scopedICAAuthKeeper := app.capabilityKeeper.ScopeToModule(icaauthtypes.ModuleName)
 
 	// Applications that wish to enforce statically created ScopedKeepers should call `Seal` after creating
 	// their scoped modules in `NewApp` with `ScopeToModule`
@@ -280,6 +329,7 @@ func NewSecretNetworkApp(
 	)
 	app.feeGrantKeeper = feegrantkeeper.NewKeeper(appCodec, keys[feegrant.StoreKey], app.accountKeeper)
 	app.upgradeKeeper = upgradekeeper.NewKeeper(skipUpgradeHeights, keys[upgradetypes.StoreKey], appCodec, homePath, app.BaseApp)
+	app.setupUpgradeStoreLoaders()
 
 	app.authzKeeper = authzkeeper.NewKeeper(keys[authzkeeper.StoreKey], appCodec, bApp.MsgServiceRouter())
 
@@ -296,17 +346,41 @@ func NewSecretNetworkApp(
 		appCodec, keys[ibchost.StoreKey], app.getSubspace(ibchost.ModuleName), app.stakingKeeper, app.upgradeKeeper, scopedIBCKeeper,
 	)
 
+	app.ICAControllerKeeper = icacontrollerkeeper.NewKeeper(
+		appCodec, keys[icacontrollertypes.StoreKey], app.getSubspace(icacontrollertypes.SubModuleName),
+		app.ibcKeeper.ChannelKeeper, app.ibcKeeper.ChannelKeeper, &app.ibcKeeper.PortKeeper,
+		scopedICAControllerKeeper, app.MsgServiceRouter(),
+	)
+	app.ICAHostKeeper = icahostkeeper.NewKeeper(
+		appCodec, keys[icahosttypes.StoreKey], app.getSubspace(icahosttypes.SubModuleName),
+		app.ibcKeeper.ChannelKeeper, &app.ibcKeeper.PortKeeper,
+		app.accountKeeper, scopedICAHostKeeper, app.MsgServiceRouter(),
+	)
+
+	icaModule := ica.NewAppModule(&app.ICAControllerKeeper, &app.ICAHostKeeper)
+
+	app.ICAAuthKeeper = icaauthkeeper.NewKeeper(appCodec, keys[icaauthtypes.StoreKey], app.ICAControllerKeeper, scopedICAAuthKeeper)
+	icaAuthModule := icaauth.NewAppModule(appCodec, app.ICAAuthKeeper)
+	icaAuthIBCModule := icaauth.NewIBCModule(app.ICAAuthKeeper)
+
+	icaControllerIBCModule := icacontroller.NewIBCModule(app.ICAControllerKeeper, icaAuthIBCModule)
+	icaHostIBCModule := icahost.NewIBCModule(app.ICAHostKeeper)
+
 	// Create Transfer Keepers
 	app.transferKeeper = ibctransferkeeper.NewKeeper(
 		appCodec, keys[ibctransfertypes.StoreKey], app.getSubspace(ibctransfertypes.ModuleName),
-		app.ibcKeeper.ChannelKeeper, &app.ibcKeeper.PortKeeper,
+		app.ibcKeeper.ChannelKeeper, app.ibcKeeper.ChannelKeeper, &app.ibcKeeper.PortKeeper,
 		app.accountKeeper, app.bankKeeper, scopedTransferKeeper,
 	)
-	transferModule := transfer.NewAppModule(app.transferKeeper)
 
 	// Create static IBC router, add ibc-tranfer module route, then set and seal it
 	ibcRouter := porttypes.NewRouter()
-	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferModule)
+	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transfer.NewIBCModule(app.transferKeeper))
+	ibcRouter.
+		AddRoute(icacontrollertypes.SubModuleName, icaControllerIBCModule).
+		AddRoute(icahosttypes.SubModuleName, icaHostIBCModule).
+		AddRoute(icaauthtypes.ModuleName, icaControllerIBCModule)
+
 	// Setting Router will finalize all routes by sealing router
 	// No more routes can be added
 	app.ibcKeeper.SetRouter(ibcRouter)
@@ -329,32 +403,8 @@ func NewSecretNetworkApp(
 	computeRouter := app.Router()
 	regRouter := app.Router()
 
-	computeDir := filepath.Join(homePath, ".compute")
-
-	//computeConfig
-	//
-	//wasmConfig := compute.DefaultWasmConfig()
-	//wasmConfig.SmartQueryGasLimit = queryGasLimit
-	//wasmWrap := WasmWrapper{Wasm: wasmConfig}
-	//err := viper.Unmarshal(&wasmWrap)
-	//if err != nil {
-	//	panic("error while reading wasm config: " + err.Error())
-	//}
-	//wasmConfig = wasmWrap.Wasm
-
-	// The last arguments can contain custom message handlers, and custom query handlers,
-	// if we want to allow any custom callbacks
-	supportedFeatures := "staking"
-
 	// Replace with bootstrap flag when we figure out how to test properly and everything works
 	app.regKeeper = reg.NewKeeper(appCodec, keys[reg.StoreKey], regRouter, reg.EnclaveApi{}, homePath, app.bootstrap)
-
-	/*
-		// The gov proposal types can be individually enabled
-		if len(enabledProposals) != 0 {
-			govRouter.AddRoute(compute.RouterKey, compute.NewWasmProposalHandler(app.computeKeeper, enabledProposals))
-		}
-	*/
 
 	app.govKeeper = govkeeper.NewKeeper(
 		appCodec,
@@ -366,20 +416,22 @@ func NewSecretNetworkApp(
 		govRouter,
 	)
 
-	// serviceRouter := baseapp.NewMsgServiceRouter()
+	computeDir := filepath.Join(homePath, ".compute")
+
+	// The last arguments can contain custom message handlers, and custom query handlers,
+	// if we want to allow any custom callbacks
+	supportedFeatures := "staking"
 
 	app.computeKeeper = compute.NewKeeper(
 		appCodec,
 		*legacyAmino,
 		keys[compute.StoreKey],
-		//app.getSubspace(compute.ModuleName),
 		app.accountKeeper,
 		app.bankKeeper,
 		app.govKeeper,
 		app.distrKeeper,
 		app.mintKeeper,
 		app.stakingKeeper,
-		//serviceRouter,
 		computeRouter,
 		computeDir,
 		computeConfig,
@@ -413,7 +465,9 @@ func NewSecretNetworkApp(
 		authzmodule.NewAppModule(appCodec, app.authzKeeper, app.accountKeeper, app.bankKeeper, app.interfaceRegistry),
 		reg.NewAppModule(app.regKeeper),
 		ibc.NewAppModule(app.ibcKeeper),
-		transferModule,
+		transfer.NewAppModule(app.transferKeeper),
+		icaModule,
+		icaAuthModule,
 	)
 	// During begin block slashing happens after distr.BeginBlocker so that
 	// there is nothing left over in the validator fee pool, so as to keep the
@@ -437,6 +491,8 @@ func NewSecretNetworkApp(
 		genutiltypes.ModuleName,
 		authz.ModuleName,
 		paramstypes.ModuleName,
+		icatypes.ModuleName,
+		icaauthtypes.ModuleName,
 		// custom modules
 		compute.ModuleName,
 		reg.ModuleName,
@@ -463,7 +519,8 @@ func NewSecretNetworkApp(
 		upgradetypes.ModuleName,
 		ibchost.ModuleName,
 		ibctransfertypes.ModuleName,
-
+		icatypes.ModuleName,
+		icaauthtypes.ModuleName,
 		compute.ModuleName,
 		reg.ModuleName,
 	)
@@ -485,6 +542,9 @@ func NewSecretNetworkApp(
 		compute.ModuleName,
 		reg.ModuleName,
 
+		icatypes.ModuleName,
+		icaauthtypes.ModuleName,
+
 		authz.ModuleName,
 		minttypes.ModuleName,
 		crisistypes.ModuleName,
@@ -498,7 +558,11 @@ func NewSecretNetworkApp(
 	// register all module routes and module queriers
 	app.mm.RegisterInvariants(&app.crisisKeeper)
 	app.mm.RegisterRoutes(app.Router(), app.QueryRouter(), encodingConfig.Amino)
-	app.mm.RegisterServices(module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter()))
+
+	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
+	app.mm.RegisterServices(app.configurator)
+
+	app.setupUpgradeHandlers(&icaModule)
 
 	// add test gRPC service for testing gRPC queries in isolation
 	// testdata.RegisterTestServiceServer(app.GRPCQueryRouter(), testdata.QueryImpl{}) // TODO: this is testdata !!!
@@ -558,6 +622,10 @@ func NewSecretNetworkApp(
 	app.ScopedIBCKeeper = scopedIBCKeeper
 	app.ScopedTransferKeeper = scopedTransferKeeper
 
+	app.SnapshotManager().RegisterExtensions(
+		compute.NewWasmSnapshotter(filepath.Join(computeDir, "wasm", "wasm")),
+	)
+
 	return app
 }
 
@@ -580,6 +648,9 @@ func (app *SecretNetworkApp) InitChainer(ctx sdk.Context, req abci.RequestInitCh
 	if err := tmjson.Unmarshal(req.AppStateBytes, &genesisState); err != nil {
 		panic(err)
 	}
+
+	app.upgradeKeeper.SetModuleVersionMap(ctx, app.mm.GetVersionMap())
+
 	return app.mm.InitGenesis(ctx, app.appCodec, genesisState)
 }
 
@@ -613,8 +684,6 @@ func GetMaccPerms() map[string][]string {
 }
 
 // getSubspace returns a param subspace for a given module name.
-//
-// NOTE: This is solely to be used for testing purposes.
 func (app *SecretNetworkApp) getSubspace(moduleName string) paramstypes.Subspace {
 	subspace, _ := app.paramsKeeper.GetSubspace(moduleName)
 	return subspace
@@ -666,6 +735,31 @@ func (app *SecretNetworkApp) BlockedAddrs() map[string]bool {
 	return blockedAddrs
 }
 
+func (app *SecretNetworkApp) setupUpgradeHandlers(icamodule *ica.AppModule) {
+	// this configures a no-op upgrade handler for the v4 upgrade,
+	// which improves the lockup module's store management.
+	app.upgradeKeeper.SetUpgradeHandler(
+		v1_3.UpgradeName, v1_3.CreateUpgradeHandler(
+			app.mm, icamodule, app.configurator))
+}
+
+func (app *SecretNetworkApp) setupUpgradeStoreLoaders() {
+	upgradeInfo, err := app.upgradeKeeper.ReadUpgradeInfoFromDisk()
+	if err != nil {
+		panic(fmt.Sprintf("Failed to read upgrade info from disk %s", err))
+	}
+
+	if upgradeInfo.Name == v1_3.UpgradeName && !app.upgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
+		// @Frey do we do this for Cosmwasm?
+		storeUpgrades := store.StoreUpgrades{
+			Added: []string{icahosttypes.StoreKey},
+		}
+
+		// configure store loader that checks if version == upgradeHeight and applies store upgrades
+		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
+	}
+}
+
 // LegacyAmino returns the application's sealed codec.
 func (app *SecretNetworkApp) LegacyAmino() *codec.LegacyAmino {
 	return app.legacyAmino
@@ -683,6 +777,9 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(slashingtypes.ModuleName)
 	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 	paramsKeeper.Subspace(ibchost.ModuleName)
+	paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
+	paramsKeeper.Subspace(icahosttypes.SubModuleName)
+
 	paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable())
 	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(compute.ModuleName)

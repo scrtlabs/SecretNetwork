@@ -11,7 +11,7 @@ ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 
 ADD https://go.dev/dl/go1.17.7.linux-amd64.tar.gz go1.17.7.linux-amd64.tar.gz
 RUN tar -C /usr/local -xzf go1.17.7.linux-amd64.tar.gz
-RUN go get -u github.com/jteeuwen/go-bindata/...
+RUN go install github.com/jteeuwen/go-bindata/go-bindata@latest && go-bindata -version
 
 RUN wget -q https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.0.20-ubuntu.tar.gz && \
     tar -xf wabt-1.0.20-ubuntu.tar.gz wabt-1.0.20/bin/wat2wasm wabt-1.0.20/bin/wasm2wat && \
@@ -86,7 +86,7 @@ COPY client client
 RUN . /opt/sgxsdk/environment && env && CGO_LDFLAGS="-L/usr/local/lib -lrocksdb" MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
 RUN . /opt/sgxsdk/environment && env && CGO_LDFLAGS="-L/usr/local/lib -lrocksdb" MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_cli
 
-RUN rustup target add wasm32-unknown-unknown && make build-test-contract
+RUN rustup target add wasm32-unknown-unknown && apt update -y && apt install clang -y && make build-test-contract
 
 # workaround because paths seem kind of messed up
 # RUN cp /opt/sgxsdk/lib64/libsgx_urts_sim.so /usr/lib/libsgx_urts_sim.so
