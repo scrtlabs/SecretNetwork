@@ -622,9 +622,14 @@ func NewSecretNetworkApp(
 	app.ScopedIBCKeeper = scopedIBCKeeper
 	app.ScopedTransferKeeper = scopedTransferKeeper
 
-	app.SnapshotManager().RegisterExtensions(
-		compute.NewWasmSnapshotter(filepath.Join(computeDir, "wasm", "wasm")),
-	)
+	if manager := app.SnapshotManager(); manager != nil {
+		err := manager.RegisterExtensions(
+			compute.NewWasmSnapshotter(app.CommitMultiStore(), &app.computeKeeper),
+		)
+		if err != nil {
+			panic(fmt.Errorf("failed to register snapshot extension: %s", err))
+		}
+	}
 
 	return app
 }
