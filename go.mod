@@ -30,6 +30,7 @@ require (
 require github.com/cosmos/gorocksdb v1.2.0 // indirect
 
 require (
+	github.com/crazy-max/xgo v0.14.0 // indirect
 	github.com/dgraph-io/badger/v2 v2.2007.3 // indirect
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/stretchr/objx v0.3.0 // indirect
