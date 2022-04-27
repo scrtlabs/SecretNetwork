@@ -1,17 +1,17 @@
-package compute
+package keeper
 
 import (
+	"encoding/hex"
 	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"regexp"
-	"sort"
-	"strings"
 
-	snapshot "github.com/cosmos/cosmos-sdk/snapshots/types"
+	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	protoio "github.com/gogo/protobuf/io"
+	"github.com/tendermint/tendermint/libs/log"
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 )
 
 /*
@@ -48,13 +48,17 @@ type ExtensionSnapshotter interface {
 }
 */
 
+var _ snapshottypes.ExtensionSnapshotter = (*WasmSnapshotter)(nil)
+
 type WasmSnapshotter struct {
-	wasmDirectory string
+	cms    storetypes.MultiStore
+	keeper *Keeper
 }
 
-func NewWasmSnapshotter(wasmDirectory string) *WasmSnapshotter {
+func NewWasmSnapshotter(cms storetypes.MultiStore, keeper *Keeper) *WasmSnapshotter {
 	return &WasmSnapshotter{
-		wasmDirectory,
+		cms:    cms,
+		keeper: keeper,
 	}
 }
 
@@ -70,81 +74,70 @@ func (ws *WasmSnapshotter) SupportedFormats() []uint32 {
 	return []uint32{1}
 }
 
-var wasmFileNameRegex = regexp.MustCompile(`^[a-f0-9]{64}$`)
-
 func (ws *WasmSnapshotter) Snapshot(height uint64, protoWriter protoio.Writer) error {
-	wasmFiles, err := ioutil.ReadDir(ws.wasmDirectory)
-	if err != nil {
-		return err
-	}
+	var rerr error
+	ctx := sdk.NewContext(ws.cms, tmproto.Header{}, false, log.NewNopLogger())
 
-	// In case snapshotting needs to be deterministic
-	sort.SliceStable(wasmFiles, func(i, j int) bool {
-		return strings.Compare(wasmFiles[i].Name(), wasmFiles[j].Name()) < 0
+	seen := make(map[string]bool)
+
+	ws.keeper.IterateCodeInfos(ctx, func(id uint64, info types.CodeInfo) bool {
+		// Many code ids may point to the same code hash... only sync it once
+		hexHash := hex.EncodeToString(info.CodeHash)
+		// if seen, just skip this one and move to the next
+		if seen[hexHash] {
+			return false
+		}
+		seen[hexHash] = true
+
+		// load code and abort on error
+		wasmBytes, err := ws.keeper.GetByteCode(ctx, id)
+		if err != nil {
+			rerr = err
+			return true
+		}
+
+		err = snapshottypes.WriteExtensionItem(protoWriter, wasmBytes)
+		if err != nil {
+			rerr = err
+			return true
+		}
+
+		return false
 	})
 
-	for _, wasmFile := range wasmFiles {
-		if !wasmFileNameRegex.MatchString(wasmFile.Name()) {
-			continue
-		}
-
-		wasmFilePath := filepath.Join(ws.wasmDirectory, wasmFile.Name())
-		wasmBytes, err := ioutil.ReadFile(wasmFilePath)
-		if err != nil {
-			return err
-		}
-
-		// snapshotItem is 64 bytes of the file name, then the actual WASM bytes
-		snapshotItem := append([]byte(wasmFile.Name()), wasmBytes...)
-
-		snapshot.WriteExtensionItem(protoWriter, snapshotItem)
-	}
-
-	return nil
+	return rerr
 }
 
 func (ws *WasmSnapshotter) Restore(
 	height uint64, format uint32, protoReader protoio.Reader,
-) (snapshot.SnapshotItem, error) {
+) (snapshottypes.SnapshotItem, error) {
 	if format != 1 {
-		return snapshot.SnapshotItem{}, snapshot.ErrUnknownFormat
-	}
-
-	// Create .compute directory if it doesn't exist already
-	err := os.MkdirAll(ws.wasmDirectory, os.ModePerm)
-	if err != nil {
-		return snapshot.SnapshotItem{}, sdkerrors.Wrapf(err, "failed to create directory '%s'", ws.wasmDirectory)
+		return snapshottypes.SnapshotItem{}, snapshottypes.ErrUnknownFormat
 	}
 
 	for {
-		item := &snapshot.SnapshotItem{}
-		err = protoReader.ReadMsg(item)
+		item := snapshottypes.SnapshotItem{}
+		err := protoReader.ReadMsg(&item)
 		if err == io.EOF {
-			break
+			return snapshottypes.SnapshotItem{}, nil
 		} else if err != nil {
-			return snapshot.SnapshotItem{}, sdkerrors.Wrap(err, "invalid protobuf message")
+			return snapshottypes.SnapshotItem{}, sdkerrors.Wrap(err, "invalid protobuf message")
 		}
 
+		// if it is not another ExtensionPayload message, then it is not for us.
+		// we should return it an let the manager handle this one
 		payload := item.GetExtensionPayload()
 		if payload == nil {
-			return snapshot.SnapshotItem{}, sdkerrors.Wrap(err, "invalid protobuf message")
+			return item, nil
 		}
 
-		// snapshotItem is 64 bytes of the file name, then the actual WASM bytes
-		if len(payload.Payload) < 64 {
-			return snapshot.SnapshotItem{}, sdkerrors.Wrapf(err, "wasm snapshot must be at least 64 bytes, got %v bytes", len(payload.Payload))
-		}
+		wasmCode := payload.Payload
 
-		wasmFileName := string(payload.Payload[0:64])
-		wasmBytes := payload.Payload[64:]
-
-		wasmFilePath := filepath.Join(ws.wasmDirectory, wasmFileName)
-
-		err = ioutil.WriteFile(wasmFilePath, wasmBytes, 0664 /* -rw-rw-r-- */)
+		// Store the WASM bytes using the existing API
+		// FIXME: check which codeIDs the checksum matches??
+		_, err = ws.keeper.wasmer.Create(wasmCode)
 		if err != nil {
-			return snapshot.SnapshotItem{}, sdkerrors.Wrapf(err, "failed to write wasm file '%v' to disk", wasmFilePath)
+			return snapshottypes.SnapshotItem{}, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
 		}
 	}
-
-	return snapshot.SnapshotItem{}, nil
 }

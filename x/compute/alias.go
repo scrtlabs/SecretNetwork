@@ -81,6 +81,7 @@ var (
 	TestHandler               = keeper.TestHandler
 	PrepareInitSignedTx       = keeper.PrepareInitSignedTx
 	PrepareExecSignedTx       = keeper.PrepareExecSignedTx
+	NewWasmSnapshotter        = keeper.NewWasmSnapshotter
 
 	// variable aliases
 	ModuleCdc            = types.ModuleCdc
