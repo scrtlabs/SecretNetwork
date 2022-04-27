@@ -133,7 +133,7 @@ jobs:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
 
-  build-cli:
+  native-build-cli:
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
@@ -150,8 +150,22 @@ jobs:
           name: secretcli-${{runner.os}}
           path: secretcli-${{runner.os}}
 
+  x-build-cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build CLI
+        shell: bash
+        run: |
+          make build_macos_arm64_cli
+          cp "secretcli" "secretcli-MacOS-arm64"
+      - uses: actions/upload-artifact@v2
+        with:
+          name: secretcli-MacOS-arm64
+          path: secretcli-MacOS-arm64
+
   Release:
-    needs: [build-cli, build-deb-testnet, build-deb-mainnet]
+    needs: [native-build-cli, build-deb-testnet, build-deb-mainnet, x-build-cli]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -175,6 +189,9 @@ jobs:
           name: secretcli-Windows
       - uses: actions/download-artifact@v2
         with:
+          name: secretcli-MacOS-arm64
+      - uses: actions/download-artifact@v2
+        with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
       - uses: actions/download-artifact@v2
         with:
@@ -188,3 +205,4 @@ jobs:
             secretcli-macOS
             secretcli-Windows
             secretcli-Linux
+            secretcli-MacOS-arm64
