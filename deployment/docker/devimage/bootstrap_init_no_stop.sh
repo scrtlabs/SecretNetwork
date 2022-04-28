@@ -27,6 +27,8 @@ then
   perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json
   perl -i -pe 's/"172800s"/"90s"/g' ~/.secretd/config/genesis.json # voting period 2 days -> 90 seconds
 
+  perl -i -pe 's/enable-unsafe-cors = false/enable-unsafe-cors = true/g' ~/.secretd/config/app.toml # enable cors
+
   a_mnemonic="grant rice replace explain federal release fix clever romance raise often wild taxi quarter soccer fiber love must tape steak together observe swap guitar"
   b_mnemonic="jelly shadow frog dirt dragon use armed praise universe win jungle close inmate rain oil canvas beauty pioneer chef soccer icon dizzy thunder meadow"
   c_mnemonic="chair love bleak wonder skirt permit say assist aunt credit roast size obtain minute throw sand usual age smart exact enough room shadow charge"

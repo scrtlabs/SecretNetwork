@@ -20,7 +20,7 @@ jobs:
       SPID_TESTNET: ${{ secrets.SPID_TESTNET }}
       API_KEY_TESTNET: ${{ secrets.API_KEY_TESTNET }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Declare Commit Variables
         id: vars
         shell: bash
@@ -29,7 +29,7 @@ jobs:
           echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
       - uses: actions/setup-go@v2
         with:
-          go-version: "^1.14" # The Go version to download (if necessary) and use.
+          go-version: "^1.17" # The Go version to download (if necessary) and use.
       - name: Install Intel's SGX SDK
         run: |
           mkdir -p "$HOME/.sgxsdk"
@@ -86,7 +86,7 @@ jobs:
       SPID_MAINNET: ${{ secrets.SPID_MAINNET }}
       API_KEY_MAINNET: ${{ secrets.API_KEY_MAINNET }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
@@ -139,7 +139,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Build CLI
         shell: bash
         run: |
@@ -153,7 +153,7 @@ jobs:
   x-build-cli:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-go@v2
         with:
           go-version: "^1.17" # The Go version to download (if necessary) and use.
@@ -171,11 +171,37 @@ jobs:
           name: secretcli-MacOS-arm64
           path: secretcli-MacOS-arm64
 
+  publish-localsecret:
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: scrtlabs/localsecret
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+      - name: Log in to the Container registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build dev docker image
+        shell: bash
+        run: |
+          make build_localsecret
+      - name: Push docker image
+        shell: Bash
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}
+      
+
   Release:
     needs: [native-build-cli, build-deb-testnet, build-deb-mainnet, x-build-cli]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
