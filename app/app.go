@@ -592,10 +592,6 @@ func NewSecretNetworkApp(
 	app.MountTransientStores(tKeys)
 	app.MountMemoryStores(memKeys)
 
-	// The initChainer handles translating the genesis.json file into initial state for the network
-	app.SetInitChainer(app.InitChainer)
-	app.SetBeginBlocker(app.BeginBlocker)
-
 	anteOptions := ante.HandlerOptions{
 		AccountKeeper:   app.accountKeeper,
 		BankKeeper:      app.bankKeeper,
@@ -611,16 +607,10 @@ func NewSecretNetworkApp(
 
 	// The AnteHandler handles signature verification and transaction pre-processing
 	app.SetAnteHandler(anteHandler)
+	// The initChainer handles translating the genesis.json file into initial state for the network
+	app.SetInitChainer(app.InitChainer)
+	app.SetBeginBlocker(app.BeginBlocker)
 	app.SetEndBlocker(app.EndBlocker)
-
-	if loadLatest {
-		err := app.LoadLatestVersion()
-		if err != nil {
-			tmos.Exit(err.Error())
-		}
-	}
-	app.ScopedIBCKeeper = scopedIBCKeeper
-	app.ScopedTransferKeeper = scopedTransferKeeper
 
 	if manager := app.SnapshotManager(); manager != nil {
 		err := manager.RegisterExtensions(
@@ -628,6 +618,17 @@ func NewSecretNetworkApp(
 		)
 		if err != nil {
 			panic(fmt.Errorf("failed to register snapshot extension: %s", err))
+		}
+	}
+
+	app.ScopedIBCKeeper = scopedIBCKeeper
+	app.ScopedTransferKeeper = scopedTransferKeeper
+
+	// This seals the app
+	if loadLatest {
+		err := app.LoadLatestVersion()
+		if err != nil {
+			tmos.Exit(err.Error())
 		}
 	}
 
