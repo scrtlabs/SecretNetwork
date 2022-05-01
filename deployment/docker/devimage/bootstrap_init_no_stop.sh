@@ -59,8 +59,6 @@ then
   secretd validate-genesis
 fi
 
-lcp --proxyUrl http://localhost:1317 --port 1337 --proxyPartial '' &
-
 # sleep infinity
 source /opt/sgxsdk/environment && RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap &
 
