@@ -63,23 +63,35 @@ func NewWasmSnapshotter(cms storetypes.MultiStore, keeper *Keeper) *WasmSnapshot
 }
 
 func (ws *WasmSnapshotter) SnapshotName() string {
-	return "WASM Files Snapshot"
+	return types.ModuleName
 }
 
 func (ws *WasmSnapshotter) SnapshotFormat() uint32 {
+	// Format 1 is just the wasm byte code for each item payload. No protobuf envelope, no metadata.
 	return 1
 }
 
 func (ws *WasmSnapshotter) SupportedFormats() []uint32 {
+	// If we support older formats, add them here and handle them in Restore
 	return []uint32{1}
 }
 
 func (ws *WasmSnapshotter) Snapshot(height uint64, protoWriter protoio.Writer) error {
-	var rerr error
-	ctx := sdk.NewContext(ws.cms, tmproto.Header{}, false, log.NewNopLogger())
+	// TODO: This seems more correct (historical info), but kills my tests
+	// Since codeIDs and wasm are immutible, it is never wrong to return new wasm data than the
+	// user requests
+	// ------
+	// cacheMS, err := ws.cms.CacheMultiStoreWithVersion(int64(height))
+	// if err != nil {
+	// 	return err
+	// }
+	cacheMS := ws.cms.CacheMultiStore()
+
+	ctx := sdk.NewContext(cacheMS, tmproto.Header{}, false, log.NewNopLogger())
 
 	seen := make(map[string]bool)
 
+	var rerr error
 	ws.keeper.IterateCodeInfos(ctx, func(id uint64, info types.CodeInfo) bool {
 		// Many code ids may point to the same code hash... only sync it once
 		hexHash := hex.EncodeToString(info.CodeHash)
