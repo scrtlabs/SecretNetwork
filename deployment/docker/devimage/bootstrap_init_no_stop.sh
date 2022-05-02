@@ -64,6 +64,11 @@ perl -i -pe 's;address = "tcp://0.0.0.0:1317";address = "tcp://0.0.0.0:1316";' .
 perl -i -pe 's/enable-unsafe-cors = false/enable-unsafe-cors = true/' .secretd/config/app.toml
 lcp --proxyUrl http://localhost:1316 --port 1317 --proxyPartial '' &
 
-source /opt/sgxsdk/environment && RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap &
+# Setup faucet
+gunicorn --bind 0.0.0.0:5000 svc &
 
-gunicorn --bind 0.0.0.0:5000 svc
+# Setup secretcli
+cp $(which secretd) $(dirname $(which secretd))/secretcli
+
+source /opt/sgxsdk/environment && RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap
+
