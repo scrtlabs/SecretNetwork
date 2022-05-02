@@ -60,7 +60,7 @@ then
 fi
 
 # Setup CORS for LCD & gRPC-web
-perl -i -pe 's/address = "tcp://0.0.0.0:1317"/address = "tcp://0.0.0.0:1316"/' .secretd/config/app.toml
+perl -i -pe 's;address = "tcp://0.0.0.0:1317";address = "tcp://0.0.0.0:1316";' .secretd/config/app.toml
 perl -i -pe 's/enable-unsafe-cors = false/enable-unsafe-cors = true/' .secretd/config/app.toml
 lcp --proxyUrl http://localhost:1316 --port 1317 --proxyPartial '' &
 
