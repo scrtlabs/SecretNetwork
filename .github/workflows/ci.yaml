@@ -213,7 +213,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        build_tag: [v1.2.2, v1.2.6]
+        build_tag: [v1.2.2, v1.2.6, ""] # empty string = actions/checkout@v3 with current commit
         db_backend: [rocksdb, goleveldb]
         exclude:
           - build_tag: v1.2.2
@@ -276,6 +276,7 @@ jobs:
           go-bindata -version # check installation
           chmod +x ./scripts/install-wasm-tools.sh
           ./scripts/install-wasm-tools.sh
+          apt-get install -y libsnappy-dev zlib1g-dev libbz2-dev # rocksdb
       - name: Build Executable
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
