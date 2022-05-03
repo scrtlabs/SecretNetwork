@@ -268,7 +268,13 @@ pub unsafe extern "C" fn ecall_key_gen(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     };
 
-    let pubkey = key_manager.get_registration_key().unwrap().get_pubkey();
+    let pubkey = key_manager
+        .get_registration_key()
+        .map_err(|e| {
+                error!("Failed to unlock node key. Please make sure the file is accessible or reinitialize the node - {:?}", r.len());
+                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            })?
+        .get_pubkey();
     public_key.clone_from_slice(&pubkey);
     trace!("ecall_key_gen key pk: {:?}", public_key.to_vec());
     sgx_status_t::SGX_SUCCESS
