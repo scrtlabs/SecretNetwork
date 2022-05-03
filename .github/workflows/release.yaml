@@ -114,8 +114,10 @@ jobs:
           echo $API_KEY_MAINNET > ias_keys/develop/api_key.txt
       - name: Download latest enclave
         run: |
-          wget -O go-cosmwasm/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/filestorage/librust_cosmwasm_enclave.signed.so
-          wget -O go-cosmwasm/target/release/libgo_cosmwasm.so https://engfilestorage.blob.core.windows.net/filestorage/libgo_cosmwasm.so
+          version="${steps.get_version.outputs.VERSION/./}"
+          echo $version
+          wget -O go-cosmwasm/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/$version/librust_cosmwasm_enclave.signed.so
+          wget -O go-cosmwasm/target/release/libgo_cosmwasm.so https://engfilestorage.blob.core.windows.net/$version/libgo_cosmwasm.so
       - name: Build mainnet secretd
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
