@@ -6,7 +6,7 @@
 - Updated cosmos-sdk from v0.44.5 to v0.45.4
   - Add the `secretd rollback` command
   - Add the `~/.secretd/.compute` directory to state sync
-  - Full changelog: [`cosmos-sdk/v0.44.5...v0.45.4`](https://github.com/cosmos/cosmos-sdk/compare/v0.44.5...
+  - Full changelog: [`cosmos-sdk/v0.44.5...v0.45.4`](https://github.com/cosmos/cosmos-sdk/compare/v0.44.5...v0.45.4)
 - Updated tendermint from v0.34.16 to v0.34.19
 - Fix registration failure for Intel Xeon 23xx-series processors (icelake still unsupported)
 - Floating point checks no longer ran on execute (only on init)
