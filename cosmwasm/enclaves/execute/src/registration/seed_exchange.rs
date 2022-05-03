@@ -47,9 +47,9 @@ pub fn decrypt_seed(
     // create shared encryption key using ECDH
     let shared_enc_key = key_manager
         .get_registration_key()
-        .map_err(|e| {
-            error!("Failed to unlock node key. Please make sure the file is accessible or reinitialize the node - {:?}", r.len());
-            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        .map_err(|_e| {
+            error!("Failed to unlock node key. Please make sure the file is accessible or reinitialize the node");
+            sgx_status_t::SGX_ERROR_UNEXPECTED
         })?
         .diffie_hellman(&master_pk);
 
