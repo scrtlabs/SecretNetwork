@@ -18,6 +18,9 @@ func CreateUpgradeHandler(mm *module.Manager, icamodule *icamodule.AppModule, co
 
 		// Assaf: Set version map for all modules because for some
 		// reason it's not already set in upgradekeepr.
+		// We upgrade from cosmos-sdk v0.44.5 to v0.45.4 and ibc-go v1.1.5 to v3.0.0
+		// There were no ConsensusVersion changes between these versions
+		// so we should be safe to use the curent ConsensusVersion() for each moudle
 		for moduleName := range mm.Modules {
 			vm[moduleName] = mm.Modules[moduleName].ConsensusVersion()
 		}
