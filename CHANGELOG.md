@@ -1,13 +1,26 @@
 # CHANGELOG
 
-# Unreleased
+# 1.3.0
 
-* Bug fix when calculating gas prices caused by queries. This is will increase gas prices for contracts that use external queries, and will more accurately reflect resources used
-* Updated to Cosmos SDK v0.45.4
-* Fix registration failure for Intel Xeon 23xx-series processors (icelake still unsupported)
-* Floating point checks no longer ran on execute (only on init)
-* Upgraded IBC-go to v3
-* Added support for ICS27 - default host messages include voting, delegate/undelegate and voting
+- Bug fix when calculating gas prices caused by queries. This is will increase gas prices for contracts that use external queries, and will more accurately reflect resources used
+- Updated cosmos-sdk from v0.44.5 to v0.45.4
+  - Add the `secretd rollback` command
+  - Add the `~/.secretd/.compute` directory to state sync
+  - Full changelog: [`cosmos-sdk/v0.44.5...v0.45.4`](https://github.com/cosmos/cosmos-sdk/compare/v0.44.5...v0.45.4)
+- Updated tendermint from v0.34.16 to v0.34.19
+- Fix registration failure for Intel Xeon 23xx-series processors (icelake still unsupported)
+- Floating point checks no longer ran on execute (only on init)
+- Upgraded ibc-go from v1.1.5 to v3
+  - Added support for ICS27 - default host messages include voting, delegate/undelegate and voting
+  - Full changelog: [`ibc-go/v1.1.5...v1.3.0`](https://github.com/cosmos/ibc-go/compare/v1.1.5...v1.3.0)
+- Backport API from CosmWasm v1:
+  - `ed25519_verify()`
+  - `ed25519_batch_verify()`
+  - `secp256k1_verify()`
+  - `secp256k1_recover_pubkey()`
+- Add new secret CosmWasm API:
+  - `ed25519_sign()`
+  - `secp256k1_sign()`
 
 # 1.2.6
 
@@ -20,43 +33,43 @@ This version only a bug fix in the 1.2.5 release
 ## Highlights
 
 Architecture now split into query nodes and validator nodes. Query nodes contain optimizations that may not be entirely safe for validators and greatly improve querying performance.
-In addition, contracts are now served by two different enclaves: Query enclaves and execute enclaves. This will allow upgrading query enclave and improving performance without consensus-breaking changes. 
-Lastly, rocksdb support is enabled. We are releasing binaries for each supported Database. Rocksdb is recommended for performance, but requires a resync of any nodes currently running goleveldb. 
+In addition, contracts are now served by two different enclaves: Query enclaves and execute enclaves. This will allow upgrading query enclave and improving performance without consensus-breaking changes.
+Lastly, rocksdb support is enabled. We are releasing binaries for each supported Database. Rocksdb is recommended for performance, but requires a resync of any nodes currently running goleveldb.
 
 ## Secretd
 
-* Added Rocksdb support (currently Ubuntu 20.04 only)
-* Added new query node setup
-
-## SecretCLI 
-
-* Changed default behaviour to not print help on errors. Use -h if you miss it:)
-* Added support for Ledger using Secret Network coin type (529). Creating keys using `secretcli keys add x --ledger` will use this by default. To create keys compatible with the Cosmos ledger app continue to use `--legacy-hd-path` (thanks [@SecretSaturn](https://github.com/SecretSaturn))
-
-## References
-
-* [#879](https://github.com/scrtlabs/SecretNetwork/pull/879) Enclave multithreading + dedicated query enclave
-* [#881](https://github.com/scrtlabs/SecretNetwork/pull/881) Added telemetry measurements to compute module #881
-* [#882](https://github.com/scrtlabs/SecretNetwork/pull/882) Shutting up usage help by default in CLI #882
-* [#884](https://github.com/scrtlabs/SecretNetwork/pull/884) Bumping cosmos sdk version to v0.44.6 and added rocksdb support 
-
-# 1.2.3 
+- Added Rocksdb support (currently Ubuntu 20.04 only)
+- Added new query node setup
 
 ## SecretCLI
 
-* Fixed creating permits with Secretcli
+- Changed default behaviour to not print help on errors. Use -h if you miss it:)
+- Added support for Ledger using Secret Network coin type (529). Creating keys using `secretcli keys add x --ledger` will use this by default. To create keys compatible with the Cosmos ledger app continue to use `--legacy-hd-path` (thanks [@SecretSaturn](https://github.com/SecretSaturn))
+
+## References
+
+- [#879](https://github.com/scrtlabs/SecretNetwork/pull/879) Enclave multithreading + dedicated query enclave
+- [#881](https://github.com/scrtlabs/SecretNetwork/pull/881) Added telemetry measurements to compute module #881
+- [#882](https://github.com/scrtlabs/SecretNetwork/pull/882) Shutting up usage help by default in CLI #882
+- [#884](https://github.com/scrtlabs/SecretNetwork/pull/884) Bumping cosmos sdk version to v0.44.6 and added rocksdb support
+
+# 1.2.3
+
+## SecretCLI
+
+- Fixed creating permits with Secretcli
 
 # 1.2.2
 
 ## Secretd
 
-* Fixed issue where queries would try to access the Enclave in parallel from multiple threads,
+- Fixed issue where queries would try to access the Enclave in parallel from multiple threads,
   causing `SGX_ERROR_OUT_OF_TCS` to be returned to users when a node was under sufficient load.
   Queries now access the enclave one-at-a-time again.
 
 # 1.2.1
 
-This is a minor non-breaking version release. 
+This is a minor non-breaking version release.
 
 ## SecretCLI
 
@@ -68,24 +81,24 @@ Version 1.2.0 has been released - the Supernova upgrade!
 
 ## Highlights
 
-* Upgraded to Cosmos SDK 0.44.3. Full changelog can be found [here](https://github.com/cosmos/cosmos-sdk/blob/v0.44.3/CHANGELOG.md)
+- Upgraded to Cosmos SDK 0.44.3. Full changelog can be found [here](https://github.com/cosmos/cosmos-sdk/blob/v0.44.3/CHANGELOG.md)
 
-* Gas prices are lower - as a result of performance upgrades and optimizations, gas amounts required will be much lower.
-* GRPC for cosmos-sdk modules in addition to legacy REST API. See API [here](http://bootstrap.supernova.enigma.co/swagger/)
+- Gas prices are lower - as a result of performance upgrades and optimizations, gas amounts required will be much lower.
+- GRPC for cosmos-sdk modules in addition to legacy REST API. See API [here](http://bootstrap.supernova.enigma.co/swagger/)
 
-* New modules:
+- New modules:
 
-    * [Fee Grant](https://docs.cosmos.network/master/modules/feegrant/) - allows an address to give an allowance to another address
-    * [Upgrade](https://docs.cosmos.network/master/modules/upgrade/) - Allows triggering of network-wide software upgrades, which significantly reduces the amount of coordination effort hard-forks require
+  - [Fee Grant](https://docs.cosmos.network/master/modules/feegrant/) - allows an address to give an allowance to another address
+  - [Upgrade](https://docs.cosmos.network/master/modules/upgrade/) - Allows triggering of network-wide software upgrades, which significantly reduces the amount of coordination effort hard-forks require
 
-* Auto Registration - The new node registering process is now automated via a new command `secretd auto-register`
+- Auto Registration - The new node registering process is now automated via a new command `secretd auto-register`
 
 ## API and endpoints
 
 ### Registration module
 
-* The endpoint `/reg/consensus-io-exch-pubkey` has been changed to `/reg/tx-key` and now returns `{"TxKey": bytes }`
-* The endpoint `/reg/consensus-seed-exch-pubkey ` has been changed to `/reg/registration-key` and now returns `{"RegistrationKey": bytes }`
+- The endpoint `/reg/consensus-io-exch-pubkey` has been changed to `/reg/tx-key` and now returns `{"TxKey": bytes }`
+- The endpoint `/reg/consensus-seed-exch-pubkey ` has been changed to `/reg/registration-key` and now returns `{"RegistrationKey": bytes }`
 
 ## GRPC and REST endpoints
 
@@ -115,7 +128,7 @@ For compatiblity with 1.0.x (legacy), use SecretJS 0.16.x
 
 ## CosmWasm
 
-Secret-CosmWasm remains in a version that is compatabile with the v0.10 of vanilla CosmWasm, and previous versions compatible with secret-2 will still work with this upgrade. 
+Secret-CosmWasm remains in a version that is compatabile with the v0.10 of vanilla CosmWasm, and previous versions compatible with secret-2 will still work with this upgrade.
 
 A new feature has been added - plaintext logs. To send an unencrypted log (contract output), use `plaintext_log` instead of `log`.
 This allows contracts to emit public events, and attach websockets to listen to specific events. To take advantage of this feature, compile contracts with
@@ -123,12 +136,12 @@ This allows contracts to emit public events, and attach websockets to listen to 
 
 ## Known Issues
 
-* SecretCLI still uses /home/.secretd to store configuration and keys
-* Signatures other than secp256k1 are unsupported for CosmWasm transactions.
-* snip20 CLI commands not working
-* IBC commands not yet working
-* Fee grant messages not supported by CosmWasm
-* SecretCLI incompatible on M1 Mac
-* /reg/registration-key returns malformed data
-* To register a new node the environment variable SCRT_SGX_STORAGE should be set to "./" or the registration process might fail
-* SecretCLI/Secretd default gas prices are set to 0 while nodes default to 0.25uscrt
+- SecretCLI still uses /home/.secretd to store configuration and keys
+- Signatures other than secp256k1 are unsupported for CosmWasm transactions.
+- snip20 CLI commands not working
+- IBC commands not yet working
+- Fee grant messages not supported by CosmWasm
+- SecretCLI incompatible on M1 Mac
+- /reg/registration-key returns malformed data
+- To register a new node the environment variable SCRT_SGX_STORAGE should be set to "./" or the registration process might fail
+- SecretCLI/Secretd default gas prices are set to 0 while nodes default to 0.25uscrt
