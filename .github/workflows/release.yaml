@@ -95,7 +95,7 @@ jobs:
           go-version: "^1.17" # The Go version to download (if necessary) and use.
       - name: Install Dependencies
         run: |
-          go get -u github.com/jteeuwen/go-bindata/...
+          go install -u github.com/jteeuwen/go-bindata/...
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
           SDK_BIN=sgx_linux_x64_sdk_2.15.101.1.bin
@@ -114,7 +114,7 @@ jobs:
           echo $API_KEY_MAINNET > ias_keys/develop/api_key.txt
       - name: Download latest enclave
         run: |
-          version="${steps.get_version.outputs.VERSION/./}"
+          version=echo ${{ steps.get_version.outputs.VERSION }} | sed -e 's/\.//g' | head -c 3
           echo $version
           wget -O go-cosmwasm/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/$version/librust_cosmwasm_enclave.signed.so
           wget -O go-cosmwasm/target/release/libgo_cosmwasm.so https://engfilestorage.blob.core.windows.net/$version/libgo_cosmwasm.so
@@ -192,7 +192,7 @@ jobs:
       - name: Build dev docker image
         shell: bash
         run: |
-          make build_localsecret
+          make build-localsecret
       - name: Push docker image
         shell: Bash
         run: |
