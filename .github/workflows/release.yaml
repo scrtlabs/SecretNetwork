@@ -189,6 +189,11 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create temp files
+        shell: bash
+        run: |
+          echo "random data" > api_key.txt
+          echo "lol this is ignored" > spid.txt
       - name: Build dev docker image
         shell: bash
         run: |
