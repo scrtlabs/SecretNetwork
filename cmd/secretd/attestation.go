@@ -1,3 +1,4 @@
+//go:build !secretcli
 // +build !secretcli
 
 package main
@@ -7,15 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/server"
-	"github.com/cosmos/cosmos-sdk/x/genutil"
-	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	app2 "github.com/enigmampc/SecretNetwork/app"
-	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
-	reg "github.com/enigmampc/SecretNetwork/x/registration"
-	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -24,6 +16,16 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/server"
+	"github.com/cosmos/cosmos-sdk/x/genutil"
+	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
+	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
+	reg "github.com/enigmampc/SecretNetwork/x/registration"
+	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 
 	"github.com/spf13/cobra"
 )
@@ -287,17 +289,21 @@ func ConfigureSecret() *cobra.Command {
 				return err
 			}
 
-			path := filepath.Join(app2.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
-			// fmt.Println("File Created Successfully", path)
-			if os.IsNotExist(err) {
-				var file, err = os.Create(path)
-				if err != nil {
-					return fmt.Errorf("failed to open config file '%s': %w", path, err)
-				}
-				_ = file.Close()
+			homeDir, err := cmd.Flags().GetString(flags.FlagHome)
+			if err != nil {
+				return err
 			}
 
-			err = ioutil.WriteFile(path, cfgBytes, 0644)
+			// Create .secretd/.node directory if it doesn't exist
+			nodeDir := filepath.Join(homeDir, reg.SecretNodeCfgFolder)
+			err = os.MkdirAll(nodeDir, os.ModePerm)
+			if err != nil {
+				return err
+			}
+
+			seedFilePath := filepath.Join(nodeDir, reg.SecretNodeSeedConfig)
+
+			err = ioutil.WriteFile(seedFilePath, cfgBytes, 0664)
 			if err != nil {
 				return err
 			}
@@ -339,8 +345,13 @@ func ResetEnclave() *cobra.Command {
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			// remove .secretd/.node/seed.json
-			path := filepath.Join(app2.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
+			homeDir, err := cmd.Flags().GetString(flags.FlagHome)
+			if err != nil {
+				return err
+			}
+
+			// Remove .secretd/.node/seed.json
+			path := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
 			if _, err := os.Stat(path); !os.IsNotExist(err) {
 				fmt.Printf("Removing %s\n", path)
 				err = os.Remove(path)
@@ -548,8 +559,13 @@ Please report any issues with this command
 				return err
 			}
 
-			seedCfgFile := filepath.Join(app2.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
-			seedCfgDir := filepath.Join(app2.DefaultNodeHome, reg.SecretNodeCfgFolder)
+			homeDir, err := cmd.Flags().GetString(flags.FlagHome)
+			if err != nil {
+				return err
+			}
+
+			seedCfgFile := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
+			seedCfgDir := filepath.Join(homeDir, reg.SecretNodeCfgFolder)
 
 			// create seed directory if it doesn't exist
 			_, err = os.Stat(seedCfgDir)

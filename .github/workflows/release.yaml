@@ -5,15 +5,22 @@ on:
     # Sequence of patterns matched against refs/tags
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+" # Push events to matching v*, i.e. v1.0, v20.15.10
+      - "v[0-9]+.[0-9]+.[0-9]+-alpha.[0-9]+" # Push events to matching alpha releases
+      - "v[0-9]+.[0-9]+.[0-9]+-beta.[0-9]+" # Push events to matching beta releases
 
 jobs:
   build-deb-testnet:
+    strategy:
+      fail-fast: false
+      matrix:
+        db_backend: [rocksdb, goleveldb]
+        node_type: [validator, query]
     runs-on: ubuntu-latest
     env: # Or as an environment variable
       SPID_TESTNET: ${{ secrets.SPID_TESTNET }}
       API_KEY_TESTNET: ${{ secrets.API_KEY_TESTNET }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Declare Commit Variables
         id: vars
         shell: bash
@@ -22,7 +29,7 @@ jobs:
           echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
       - uses: actions/setup-go@v2
         with:
-          go-version: "^1.14" # The Go version to download (if necessary) and use.
+          go-version: "^1.17" # The Go version to download (if necessary) and use.
       - name: Install Intel's SGX SDK
         run: |
           mkdir -p "$HOME/.sgxsdk"
@@ -60,15 +67,18 @@ jobs:
         run: |
           echo $SPID_TESTNET > spid.txt
           echo $API_KEY_TESTNET > api_key.txt
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
       - name: Build testnet
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          VERSION=0 make build-testnet
-          cp build/secretnetwork_0_amd64.deb secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
+          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES_U=$(echo ${{ matrix.node_type }} | awk '/query/{printf "query-node,"} /validator/{printf ""}') make build-testnet
+          cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.node_type }}_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v2
         with:
-          name: secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
-          path: secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.node_type }}_${{ matrix.db_backend }}_amd64.deb
+          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.node_type }}_${{ matrix.db_backend }}_amd64.deb
 
   build-deb-mainnet:
     runs-on: ubuntu-latest
@@ -76,7 +86,7 @@ jobs:
       SPID_MAINNET: ${{ secrets.SPID_MAINNET }}
       API_KEY_MAINNET: ${{ secrets.API_KEY_MAINNET }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
@@ -123,13 +133,13 @@ jobs:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
 
-  build-cli:
+  native-build-cli:
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Build CLI
         shell: bash
         run: |
@@ -140,11 +150,58 @@ jobs:
           name: secretcli-${{runner.os}}
           path: secretcli-${{runner.os}}
 
-  Release:
-    needs: [build-cli, build-deb-testnet, build-deb-mainnet]
+  x-build-cli:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "^1.17" # The Go version to download (if necessary) and use.
+      - name: Install xgo
+        run: |
+          go install github.com/crazy-max/xgo
+          xgo || true # check installation
+      - name: Build CLI
+        shell: bash
+        run: |
+          make build_macos_arm64_cli
+          cp "secretcli-macos-arm64" "secretcli-MacOS-arm64"
+      - uses: actions/upload-artifact@v2
+        with:
+          name: secretcli-MacOS-arm64
+          path: secretcli-MacOS-arm64
+
+  publish-localsecret:
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: scrtlabs/localsecret
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+      - name: Log in to the Container registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build dev docker image
+        shell: bash
+        run: |
+          make build_localsecret
+      - name: Push docker image
+        shell: Bash
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}
+      
+
+  Release:
+    needs: [native-build-cli, build-deb-testnet, build-deb-mainnet, x-build-cli]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
@@ -165,6 +222,9 @@ jobs:
           name: secretcli-Windows
       - uses: actions/download-artifact@v2
         with:
+          name: secretcli-MacOS-arm64
+      - uses: actions/download-artifact@v2
+        with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
       - uses: actions/download-artifact@v2
         with:
@@ -178,3 +238,4 @@ jobs:
             secretcli-macOS
             secretcli-Windows
             secretcli-Linux
+            secretcli-MacOS-arm64

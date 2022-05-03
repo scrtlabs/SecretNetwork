@@ -2,10 +2,10 @@ use std::vec::Vec;
 
 use crate::addresses::{CanonicalAddr, HumanAddr};
 use crate::encoding::Binary;
-use crate::errors::{StdError, StdResult};
+use crate::errors::{RecoverPubkeyError, SigningError, StdError, StdResult, VerificationError};
 #[cfg(feature = "iterator")]
 use crate::iterator::{Order, KV};
-use crate::memory::{alloc, build_region, consume_region, Region};
+use crate::memory::{alloc, build_region, consume_region, encode_sections, Region};
 use crate::serde::from_slice;
 use crate::traits::{Api, Querier, QuerierResult, ReadonlyStorage, Storage};
 
@@ -34,6 +34,34 @@ extern "C" {
     /// Executes a query on the chain (import). Not to be confused with the
     /// query export, which queries the state of the contract.
     fn query_chain(request: u32) -> u32;
+
+    /// Verifies message hashes against a signature with a public key, using the
+    /// secp256k1 ECDSA parametrization.
+    /// Returns 0 on verification success, 1 on verification failure, and values
+    /// greater than 1 in case of error.
+    fn secp256k1_verify(message_hash_ptr: u32, signature_ptr: u32, public_key_ptr: u32) -> u32;
+
+    fn secp256k1_recover_pubkey(
+        message_hash_ptr: u32,
+        signature_ptr: u32,
+        recovery_param: u32,
+    ) -> u64;
+
+    /// Verifies a message against a signature with a public key, using the
+    /// ed25519 EdDSA scheme.
+    /// Returns 0 on verification success, 1 on verification failure, and values
+    /// greater than 1 in case of error.
+    fn ed25519_verify(message_ptr: u32, signature_ptr: u32, public_key_ptr: u32) -> u32;
+
+    /// Verifies a batch of messages against a batch of signatures and public keys, using the
+    /// ed25519 EdDSA scheme.
+    /// Returns 0 on verification success, 1 on verification failure, and values
+    /// greater than 1 in case of error.
+    fn ed25519_batch_verify(messages_ptr: u32, signatures_ptr: u32, public_keys_ptr: u32) -> u32;
+
+    fn secp256k1_sign(messages_ptr: u32, private_key_ptr: u32) -> u64;
+
+    fn ed25519_sign(messages_ptr: u32, private_key_ptr: u32) -> u64;
 }
 
 /// A stateless convenience wrapper around database imports provided by the VM.
@@ -187,6 +215,227 @@ impl Api for ExternalApi {
         let address = unsafe { consume_string_region_written_by_vm(human) };
         Ok(address.into())
     }
+
+    /// ECDSA secp256k1 implementation.
+    ///
+    /// This function verifies message hashes (typically, hashed unsing SHA-256) against a signature,
+    /// with the public key of the signer, using the secp256k1 elliptic curve digital signature
+    /// parametrization / algorithm.
+    ///
+    /// The signature and public key are in "Cosmos" format:
+    /// - signature:  Serialized "compact" signature (64 bytes).
+    /// - public key: [Serialized according to SEC 2](https://www.oreilly.com/library/view/programming-bitcoin/9781492031482/ch04.html)
+    /// (33 or 65 bytes).
+    fn secp256k1_verify(
+        &self,
+        message_hash: &[u8],
+        signature: &[u8],
+        public_key: &[u8],
+    ) -> Result<bool, VerificationError> {
+        let hash_send = build_region(message_hash);
+        let hash_send_ptr = &*hash_send as *const Region as u32;
+        let sig_send = build_region(signature);
+        let sig_send_ptr = &*sig_send as *const Region as u32;
+        let pubkey_send = build_region(public_key);
+        let pubkey_send_ptr = &*pubkey_send as *const Region as u32;
+
+        let result = unsafe { secp256k1_verify(hash_send_ptr, sig_send_ptr, pubkey_send_ptr) };
+        match result {
+            0 => Ok(true),
+            1 => Ok(false),
+            3 => Err(VerificationError::InvalidHashFormat),
+            4 => Err(VerificationError::InvalidSignatureFormat),
+            5 => Err(VerificationError::InvalidPubkeyFormat),
+            10 => Err(VerificationError::GenericErr),
+            error_code => Err(VerificationError::unknown_err(error_code)),
+        }
+    }
+
+    /// Recovers a public key from a message hash and a signature.
+    ///
+    /// This is required when working with Ethereum where public keys
+    /// are not stored on chain directly.
+    ///
+    /// `recovery_param` must be 0 or 1. The values 2 and 3 are unsupported by this implementation,
+    /// which is the same restriction as Ethereum has (https://github.com/ethereum/go-ethereum/blob/v1.9.25/internal/ethapi/api.go#L466-L469).
+    /// All other values are invalid.
+    ///
+    /// Returns the recovered pubkey in compressed form, which can be used
+    /// in secp256k1_verify directly.
+    fn secp256k1_recover_pubkey(
+        &self,
+        message_hash: &[u8],
+        signature: &[u8],
+        recover_param: u8,
+    ) -> Result<Vec<u8>, RecoverPubkeyError> {
+        let hash_send = build_region(message_hash);
+        let hash_send_ptr = &*hash_send as *const Region as u32;
+        let sig_send = build_region(signature);
+        let sig_send_ptr = &*sig_send as *const Region as u32;
+
+        let result =
+            unsafe { secp256k1_recover_pubkey(hash_send_ptr, sig_send_ptr, recover_param.into()) };
+        let error_code = from_high_half(result);
+        let pubkey_ptr = from_low_half(result);
+        match error_code {
+            0 => {
+                let pubkey = unsafe { consume_region(pubkey_ptr as *mut Region) };
+                Ok(pubkey)
+            }
+            3 => Err(RecoverPubkeyError::InvalidHashFormat),
+            4 => Err(RecoverPubkeyError::InvalidSignatureFormat),
+            6 => Err(RecoverPubkeyError::InvalidRecoveryParam),
+            error_code => Err(RecoverPubkeyError::unknown_err(error_code)),
+        }
+    }
+
+    /// EdDSA ed25519 implementation.
+    ///
+    /// This function verifies messages against a signature, with the public key of the signer,
+    /// using the ed25519 elliptic curve digital signature parametrization / algorithm.
+    ///
+    /// The maximum currently supported message length is 4096 bytes.
+    /// The signature and public key are in [Tendermint](https://docs.tendermint.com/v0.32/spec/blockchain/encoding.html#public-key-cryptography)
+    /// format:
+    /// - signature: raw ED25519 signature (64 bytes).
+    /// - public key: raw ED25519 public key (32 bytes).
+    fn ed25519_verify(
+        &self,
+        message: &[u8],
+        signature: &[u8],
+        public_key: &[u8],
+    ) -> Result<bool, VerificationError> {
+        let msg_send = build_region(message);
+        let msg_send_ptr = &*msg_send as *const Region as u32;
+        let sig_send = build_region(signature);
+        let sig_send_ptr = &*sig_send as *const Region as u32;
+        let pubkey_send = build_region(public_key);
+        let pubkey_send_ptr = &*pubkey_send as *const Region as u32;
+
+        let result = unsafe { ed25519_verify(msg_send_ptr, sig_send_ptr, pubkey_send_ptr) };
+        match result {
+            0 => Ok(true),
+            1 => Ok(false),
+            4 => Err(VerificationError::InvalidSignatureFormat),
+            5 => Err(VerificationError::InvalidPubkeyFormat),
+            10 => Err(VerificationError::GenericErr),
+            error_code => Err(VerificationError::unknown_err(error_code)),
+        }
+    }
+
+    /// Performs batch Ed25519 signature verification.
+    ///
+    /// Batch verification asks whether all signatures in some set are valid, rather than asking whether
+    /// each of them is valid. This allows sharing computations among all signature verifications,
+    /// performing less work overall, at the cost of higher latency (the entire batch must complete),
+    /// complexity of caller code (which must assemble a batch of signatures across work-items),
+    /// and loss of the ability to easily pinpoint failing signatures.
+    ///
+    /// This batch verification implementation is adaptive, in the sense that it detects multiple
+    /// signatures created with the same verification key, and automatically coalesces terms
+    /// in the final verification equation.
+    ///
+    /// In the limiting case where all signatures in the batch are made with the same verification key,
+    /// coalesced batch verification runs twice as fast as ordinary batch verification.
+    ///
+    /// Three Variants are suppported in the input for convenience:
+    ///  - Equal number of messages, signatures, and public keys: Standard, generic functionality.
+    ///  - One message, and an equal number of signatures and public keys: Multiple digital signature
+    /// (multisig) verification of a single message.
+    ///  - One public key, and an equal number of messages and signatures: Verification of multiple
+    /// messages, all signed with the same private key.
+    ///
+    /// Any other variants of input vectors result in an error.
+    ///
+    /// Notes:
+    ///  - The "one-message, with zero signatures and zero public keys" case, is considered the empty
+    /// case.
+    ///  - The "one-public key, with zero messages and zero signatures" case, is considered the empty
+    /// case.
+    ///  - The empty case (no messages, no signatures and no public keys) returns true.
+    fn ed25519_batch_verify(
+        &self,
+        messages: &[&[u8]],
+        signatures: &[&[u8]],
+        public_keys: &[&[u8]],
+    ) -> Result<bool, VerificationError> {
+        let msgs_encoded = encode_sections(messages);
+        let msgs_send = build_region(&msgs_encoded);
+        let msgs_send_ptr = &*msgs_send as *const Region as u32;
+
+        let sigs_encoded = encode_sections(signatures);
+        let sig_sends = build_region(&sigs_encoded);
+        let sigs_send_ptr = &*sig_sends as *const Region as u32;
+
+        let pubkeys_encoded = encode_sections(public_keys);
+        let pubkeys_send = build_region(&pubkeys_encoded);
+        let pubkeys_send_ptr = &*pubkeys_send as *const Region as u32;
+
+        let result =
+            unsafe { ed25519_batch_verify(msgs_send_ptr, sigs_send_ptr, pubkeys_send_ptr) };
+        match result {
+            0 => Ok(true),
+            1 => Ok(false),
+            4 => Err(VerificationError::InvalidSignatureFormat),
+            5 => Err(VerificationError::InvalidPubkeyFormat),
+            10 => Err(VerificationError::GenericErr),
+            error_code => Err(VerificationError::unknown_err(error_code)),
+        }
+    }
+
+    fn secp256k1_sign(&self, message: &[u8], private_key: &[u8]) -> Result<Vec<u8>, SigningError> {
+        let msg_send = build_region(message);
+        let msg_send_ptr = &*msg_send as *const Region as u32;
+        let pk_send = build_region(private_key);
+        let pk_send_ptr = &*pk_send as *const Region as u32;
+
+        let result = unsafe { secp256k1_sign(msg_send_ptr, pk_send_ptr) };
+        let error_code = from_high_half(result);
+        let signature_ptr = from_low_half(result);
+        match error_code {
+            0 => {
+                let signature = unsafe { consume_region(signature_ptr as *mut Region) };
+                Ok(signature)
+            }
+            1000 => Err(SigningError::InvalidPrivateKeyFormat),
+            error_code => Err(SigningError::unknown_err(error_code)),
+        }
+    }
+
+    fn ed25519_sign(&self, message: &[u8], private_key: &[u8]) -> Result<Vec<u8>, SigningError> {
+        let msg_send = build_region(message);
+        let msg_send_ptr = &*msg_send as *const Region as u32;
+        let pk_send = build_region(private_key);
+        let pk_send_ptr = &*pk_send as *const Region as u32;
+
+        let result = unsafe { ed25519_sign(msg_send_ptr, pk_send_ptr) };
+        let error_code = from_high_half(result);
+        let signature_ptr = from_low_half(result);
+        match error_code {
+            0 => {
+                let signature = unsafe { consume_region(signature_ptr as *mut Region) };
+                Ok(signature)
+            }
+            1000 => Err(SigningError::InvalidPrivateKeyFormat),
+            error_code => Err(SigningError::unknown_err(error_code)),
+        }
+    }
+}
+
+use std::convert::TryInto;
+
+/// Returns the four most significant bytes
+#[allow(dead_code)] // only used in Wasm builds
+#[inline]
+pub fn from_high_half(data: u64) -> u32 {
+    (data >> 32).try_into().unwrap()
+}
+
+/// Returns the four least significant bytes
+#[allow(dead_code)] // only used in Wasm builds
+#[inline]
+pub fn from_low_half(data: u64) -> u32 {
+    (data & 0xFFFFFFFF).try_into().unwrap()
 }
 
 /// Takes a pointer to a Region and reads the data into a String.

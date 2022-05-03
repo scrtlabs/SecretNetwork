@@ -5,7 +5,6 @@ mod gas_meter;
 mod iterator;
 mod memory;
 mod querier;
-mod tests;
 
 pub use api::GoApi;
 pub use db::{db_t, DB};

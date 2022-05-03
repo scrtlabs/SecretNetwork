@@ -3,7 +3,9 @@ use serde::{de::DeserializeOwned, Serialize};
 use crate::addresses::{CanonicalAddr, HumanAddr};
 use crate::coins::Coin;
 use crate::encoding::Binary;
-use crate::errors::{StdError, StdResult, SystemResult};
+use crate::errors::{
+    RecoverPubkeyError, SigningError, StdError, StdResult, SystemResult, VerificationError,
+};
 #[cfg(feature = "iterator")]
 use crate::iterator::{Order, KV};
 use crate::query::{AllBalanceResponse, BalanceResponse, BankQuery, QueryRequest};
@@ -81,8 +83,117 @@ pub trait Storage: ReadonlyStorage {
 /// We can use feature flags to opt-in to non-essential methods
 /// for backwards compatibility in systems that don't have them all.
 pub trait Api: Copy + Clone + Send {
+    /// Takes a human readable address and returns a canonical binary representation of it.
+    /// This can be used when a compact fixed length representation is needed.
     fn canonical_address(&self, human: &HumanAddr) -> StdResult<CanonicalAddr>;
+
+    /// Takes a canonical address and returns a human readble address.
+    /// This is the inverse of [`canonical_address`].
+    ///
+    /// [`canonical_address`]: Api::canonical_address
     fn human_address(&self, canonical: &CanonicalAddr) -> StdResult<HumanAddr>;
+
+    /// ECDSA secp256k1 signature verification.
+    ///
+    /// This function verifies message hashes (hashed unsing SHA-256) against a signature,
+    /// with the public key of the signer, using the secp256k1 elliptic curve digital signature
+    /// parametrization / algorithm.
+    ///
+    /// The signature and public key are in "Cosmos" format:
+    /// - signature:  Serialized "compact" signature (64 bytes).
+    /// - public key: [Serialized according to SEC 2](https://www.oreilly.com/library/view/programming-bitcoin/9781492031482/ch04.html)
+    fn secp256k1_verify(
+        &self,
+        message_hash: &[u8],
+        signature: &[u8],
+        public_key: &[u8],
+    ) -> Result<bool, VerificationError>;
+
+    /// Recovers a public key from a message hash and a signature.
+    ///
+    /// This is required when working with Ethereum where public keys
+    /// are not stored on chain directly.
+    ///
+    /// `recovery_param` must be 0 or 1. The values 2 and 3 are unsupported by this implementation,
+    /// which is the same restriction as Ethereum has (https://github.com/ethereum/go-ethereum/blob/v1.9.25/internal/ethapi/api.go#L466-L469).
+    /// All other values are invalid.
+    ///
+    /// Returns the recovered pubkey in compressed form, which can be used
+    /// in secp256k1_verify directly.
+    fn secp256k1_recover_pubkey(
+        &self,
+        message_hash: &[u8],
+        signature: &[u8],
+        recovery_param: u8,
+    ) -> Result<Vec<u8>, RecoverPubkeyError>;
+
+    /// EdDSA ed25519 signature verification.
+    ///
+    /// This function verifies messages against a signature, with the public key of the signer,
+    /// using the ed25519 elliptic curve digital signature parametrization / algorithm.
+    ///
+    /// The maximum currently supported message length is 4096 bytes.
+    /// The signature and public key are in [Tendermint](https://docs.tendermint.com/v0.32/spec/blockchain/encoding.html#public-key-cryptography)
+    /// format:
+    /// - signature: raw ED25519 signature (64 bytes).
+    /// - public key: raw ED25519 public key (32 bytes).
+    fn ed25519_verify(
+        &self,
+        message: &[u8],
+        signature: &[u8],
+        public_key: &[u8],
+    ) -> Result<bool, VerificationError>;
+
+    /// Performs batch Ed25519 signature verification.
+    ///
+    /// Batch verification asks whether all signatures in some set are valid, rather than asking whether
+    /// each of them is valid. This allows sharing computations among all signature verifications,
+    /// performing less work overall, at the cost of higher latency (the entire batch must complete),
+    /// complexity of caller code (which must assemble a batch of signatures across work-items),
+    /// and loss of the ability to easily pinpoint failing signatures.
+    ///
+    /// This batch verification implementation is adaptive, in the sense that it detects multiple
+    /// signatures created with the same verification key, and automatically coalesces terms
+    /// in the final verification equation.
+    ///
+    /// In the limiting case where all signatures in the batch are made with the same verification key,
+    /// coalesced batch verification runs twice as fast as ordinary batch verification.
+    ///
+    /// Three Variants are suppported in the input for convenience:
+    ///  - Equal number of messages, signatures, and public keys: Standard, generic functionality.
+    ///  - One message, and an equal number of signatures and public keys: Multiple digital signature
+    /// (multisig) verification of a single message.
+    ///  - One public key, and an equal number of messages and signatures: Verification of multiple
+    /// messages, all signed with the same private key.
+    ///
+    /// Any other variants of input vectors result in an error.
+    ///
+    /// Notes:
+    ///  - The "one-message, with zero signatures and zero public keys" case, is considered the empty case.
+    ///  - The "one-public key, with zero messages and zero signatures" case, is considered the empty case.
+    ///  - The empty case (no messages, no signatures and no public keys) returns true.
+    fn ed25519_batch_verify(
+        &self,
+        messages: &[&[u8]],
+        signatures: &[&[u8]],
+        public_keys: &[&[u8]],
+    ) -> Result<bool, VerificationError>;
+
+    /// ECDSA secp256k1 signing.
+    ///
+    /// This function signs a message with a private key using the secp256k1 elliptic curve digital signature parametrization / algorithm.
+    ///
+    /// - message: Arbitrary message.
+    /// - private key: Raw secp256k1 private key (32 bytes)
+    fn secp256k1_sign(&self, message: &[u8], private_key: &[u8]) -> Result<Vec<u8>, SigningError>;
+
+    /// EdDSA Ed25519 signing.
+    ///
+    /// This function signs a message with a private key using the ed25519 elliptic curve digital signature parametrization / algorithm.
+    ///
+    /// - message: Arbitrary message.
+    /// - private key: Raw ED25519 private key (32 bytes)
+    fn ed25519_sign(&self, message: &[u8], private_key: &[u8]) -> Result<Vec<u8>, SigningError>;
 }
 
 /// A short-hand alias for the two-level query result (1. accessing the contract, 2. executing query in the contract)

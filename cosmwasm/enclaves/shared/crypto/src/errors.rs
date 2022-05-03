@@ -27,3 +27,14 @@ pub enum CryptoError {
     /// An error related to signature verification
     VerificationError,
 }
+
+#[derive(Debug, Display)]
+pub enum WasmApiCryptoError {
+    InvalidHashFormat = 3,
+    InvalidSignatureFormat = 4,
+    InvalidPubkeyFormat = 5,
+    InvalidRecoveryParam = 6,
+    BatchErr = 7,
+    GenericErr = 10,
+    InvalidPrivateKeyFormat = 1000, // Assaf: 1000 to not collide with CosmWasm someday
+}
