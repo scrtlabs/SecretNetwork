@@ -31,7 +31,7 @@ const flagPulsar = "pulsar"
 const flagCustomRegistrationService = "registration-service"
 
 const flagLegacyRegistrationNode = "registration-node"
-const flagLegacyBootstrapNode = "bootstrap-node"
+const flagLegacyBootstrapNode = "node"
 
 const mainnetRegistrationService = "https://mainnet-register.scrtlabs.com/api/registernode"
 const pulsarRegistrationService = "https://testnet-register.scrtlabs.com/api/registernode"
