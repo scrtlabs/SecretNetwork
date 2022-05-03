@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         db_backend: [rocksdb, goleveldb]
-        node_type: [validator, query]
+        node_type: [query]
     runs-on: ubuntu-latest
     env: # Or as an environment variable
       SPID_TESTNET: ${{ secrets.SPID_TESTNET }}
@@ -77,11 +77,16 @@ jobs:
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.node_type }}_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v2
         with:
-          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.node_type }}_${{ matrix.db_backend }}_amd64.deb
-          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.node_type }}_${{ matrix.db_backend }}_amd64.deb
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
+          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
 
   build-deb-mainnet:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        db_backend: [ rocksdb, goleveldb ]
+        node_type: [ query ]
     env: # Or as an environment variable
       SPID_MAINNET: ${{ secrets.SPID_MAINNET }}
       API_KEY_MAINNET: ${{ secrets.API_KEY_MAINNET }}
@@ -114,15 +119,17 @@ jobs:
           echo $API_KEY_MAINNET > ias_keys/develop/api_key.txt
       - name: Download latest enclave
         run: |
-          version=echo ${{ steps.get_version.outputs.VERSION }} | sed -e 's/\.//g' | head -c 3
+          version=`echo ${{ steps.get_version.outputs.VERSION }} | sed -e 's/\.//g' | head -c 3`
           echo $version
           wget -O go-cosmwasm/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/$version/librust_cosmwasm_enclave.signed.so
+          wget -O go-cosmwasm/librust_cosmwasm_query_enclave.signed.so https://engfilestorage.blob.core.windows.net/$version/librust_cosmwasm_query_enclave.signed.so
           wget -O go-cosmwasm/target/release/libgo_cosmwasm.so https://engfilestorage.blob.core.windows.net/$version/libgo_cosmwasm.so
       - name: Build mainnet secretd
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.sgxsdk/sgxsdk/lib64/
-          make build_local_no_rust
+          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES_U=$(echo ${{ matrix.node_type }} | awk '/query/{printf "query-node,"} /validator/{printf ""}') make build_local_no_rust
+
       - name: Build mainnet secretcli
         run: |
           make build_cli
@@ -132,8 +139,8 @@ jobs:
           cp secretnetwork_0_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
       - uses: actions/upload-artifact@v2
         with:
-          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
-          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_{{ matrix.db_backend }}_amd64.deb
+          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_{{ matrix.db_backend }}_amd64.deb
 
   native-build-cli:
     runs-on: ${{matrix.os}}
@@ -199,10 +206,7 @@ jobs:
         run: |
           make build-localsecret
       - name: Push docker image
-        shell: Bash
-        run: |
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}
-      
+        run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}
 
   Release:
     needs: [native-build-cli, build-deb-testnet, build-deb-mainnet, x-build-cli]
@@ -232,16 +236,27 @@ jobs:
           name: secretcli-MacOS-arm64
       - uses: actions/download-artifact@v2
         with:
-          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_rocksdb_amd64.deb
+      - uses: actions/download-artifact@v2
+        with:
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64.deb
       - uses: actions/download-artifact@v2
         with:
           name: secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
+      - uses: actions/download-artifact@v2
+        with:
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64.deb
+      - uses: actions/download-artifact@v2
+        with:
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_rocksdb_amd64.deb
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
-            secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
+            secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_rocksdb_amd64.deb
+            secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
+            secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_goleveldb_amd64.deb
+            secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_rocksdb_amd64.deb
             secretcli-macOS
             secretcli-Windows
             secretcli-Linux
