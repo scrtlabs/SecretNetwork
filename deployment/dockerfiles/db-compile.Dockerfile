@@ -9,8 +9,9 @@ RUN apt-get update &&  \
     zlib1g-dev \
     cmake \
     libbz2-dev \
-    liblz4-dev
-#    libzstd-dev
+    liblz4-dev \
+    libzstd-dev
+#### Install rocksdb deps
 
 RUN git clone https://github.com/facebook/rocksdb.git
 

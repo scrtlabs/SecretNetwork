@@ -85,7 +85,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        db_backend: [ goleveldb ]
+        db_backend: [ goleveldb, rocksdb ]
         node_type: [ query ]
     env: # Or as an environment variable
       SPID_MAINNET: ${{ secrets.SPID_MAINNET }}
@@ -98,49 +98,18 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: "^1.17" # The Go version to download (if necessary) and use.
-      - name: Install Dependencies
-        run: |
-          go install github.com/jteeuwen/go-bindata/go-bindata@latest && go-bindata -version
-          mkdir -p "$HOME/.sgxsdk"
-          cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.15.101.1.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.15.1/distro/ubuntu20.04-server/"$SDK_BIN"
-          chmod +x "$SDK_BIN"
-          echo yes | ./"$SDK_BIN"
-      - name: Create directory structure
-        run: |
-          mkdir -p go-cosmwasm/target/release/
-          mkdir -p ias_keys/develop/
       - name: Create api keys
         run: |
           echo $SPID_MAINNET > spid.txt
           echo $API_KEY_MAINNET > api_key.txt
-          echo $SPID_MAINNET > ias_keys/develop/spid.txt
-          echo $API_KEY_MAINNET > ias_keys/develop/api_key.txt
-      - name: Download latest enclave
+      - name: Build
         run: |
-          version=`echo ${{ steps.get_version.outputs.VERSION }} | sed -e 's/\.//g' | head -c 3`
-          echo $version
-          wget -O go-cosmwasm/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/$version/librust_cosmwasm_enclave.signed.so
-          wget -O go-cosmwasm/librust_cosmwasm_query_enclave.signed.so https://engfilestorage.blob.core.windows.net/$version/librust_cosmwasm_query_enclave.signed.so
-          wget -O go-cosmwasm/target/release/libgo_cosmwasm.so https://engfilestorage.blob.core.windows.net/$version/libgo_cosmwasm.so
-      - name: Build mainnet secretd
-        run: |
-          source "$HOME/.sgxsdk/sgxsdk/environment"
-          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.sgxsdk/sgxsdk/lib64/
-          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES_U=$(echo ${{ matrix.node_type }} | awk '/query/{printf "query-node,"} /validator/{printf ""}') make build_local_no_rust
-
-      - name: Build mainnet secretcli
-        run: |
-          make build_cli
-      - name: Build testnet
-        run: |
-          VERSION=0 make deb-no-compile
-          cp secretnetwork_0_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_amd64.deb
+          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} make build-mainnet-upgrade
+          cp secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v2
         with:
-          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_{{ matrix.db_backend }}_amd64.deb
-          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_{{ matrix.db_backend }}_amd64.deb
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
+          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
 
   native-build-cli:
     runs-on: ${{matrix.os}}
@@ -237,6 +206,9 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
+      - uses: actions/download-artifact@v2
+        with:
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_rocksdb_amd64.deb
       - uses: actions/download-artifact@v2
         with:
           name: secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb

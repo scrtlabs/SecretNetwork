@@ -29,29 +29,7 @@ RUN apt-get update &&  \
     liblz4-dev \
     libzstd-dev
 #
-#RUN git clone https://github.com/facebook/rocksdb.git
-#
-#WORKDIR rocksdb
-#
-#ARG ROCKSDB_BUILD_VERSION="v6.24.2"
-#
-#RUN git checkout ${BUILD_VERSION}
-#
-#RUN mkdir -p build && cd build && cmake \
-#		-DWITH_SNAPPY=0 \
-#		-DWITH_LZ4=0 \
-#		-DWITH_ZLIB=0 \
-#		-DWITH_ZSTD=0 \
-#		-DWITH_GFLAGS=0 \
-#		-DROCKSDB_BUILD_SHARED=0 \
-#		-DWITH_TOOLS=0 \
-#		-DWITH_BENCHMARK_TOOLS=0 \
-#		-DWITH_CORE_TOOLS=0 \
-#		-DWITH_JEMALLOC=0 \
-#		-DCMAKE_BUILD_TYPE=Release \
-#		.. && make -j 24
-#
-#RUN make install-static INSTALL_PATH=/usr
+
 
 # rm -rf /tmp/rocksdb
 # Set working directory for the build
@@ -61,7 +39,7 @@ ARG BUILD_VERSION="v0.0.0"
 ARG SGX_MODE=SW
 ARG FEATURES
 ARG FEATURES_U
-ARG DB_BACKEND
+ARG DB_BACKEND=goleveldb
 ARG CGO_LDFLAGS
 
 ENV VERSION=${BUILD_VERSION}
@@ -119,19 +97,7 @@ RUN ln -s /usr/lib/x86_64-linux-gnu/liblz4.so /usr/local/lib/liblz4.so  && ln -s
 RUN . /opt/sgxsdk/environment && env && CGO_LDFLAGS=${CGO_LDFLAGS} DB_BACKEND=${DB_BACKEND} MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
 RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_cli
 
-RUN rustup target add wasm32-unknown-unknown && apt update -y && apt install clang -y && make build-test-contract
-
-# workaround because paths seem kind of messed up
-# RUN cp /opt/sgxsdk/lib64/libsgx_urts_sim.so /usr/lib/libsgx_urts_sim.so
-# RUN cp /opt/sgxsdk/lib64/libsgx_uae_service_sim.so /usr/lib/libsgx_uae_service_sim.so
-# RUN cp /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /usr/lib/libgo_cosmwasm.so
-# RUN cp /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/librust_cosmwasm_enclave.signed.so
-# RUN cp /go/src/github.com/enigmampc/SecretNetwork/cosmwasm/packages/wasmi-runtime/librust_cosmwasm_enclave.signed.so x/compute/internal/keeper
-# RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/x/compute/internal/keeper/.sgx_secrets
-
-#COPY deployment/ci/go-tests.sh .
-#
-#RUN chmod +x go-tests.sh
+# RUN rustup target add wasm32-unknown-unknown && apt update -y && apt install clang -y && make build-test-contract
 
 # ENTRYPOINT ["/bin/bash", "go-tests.sh"]
 ENTRYPOINT ["/bin/bash"]

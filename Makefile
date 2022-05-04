@@ -258,6 +258,12 @@ build-testnet: docker_base
 	docker build --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
+build-mainnet-upgrade: docker_base
+	@mkdir build 2>&3 || true
+	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/mainnet-upgrade-release.Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-mainnet .
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
+	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
+
 build-mainnet: docker_base
 	@mkdir build 2>&3 || true
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-mainnet .
@@ -277,7 +283,17 @@ docker_base_rocksdb:
 
 docker_base_goleveldb: docker_base
 
-docker_base:
+docker_base_rust:
+	docker build \
+				--build-arg BUILD_VERSION=${VERSION} \
+				--build-arg FEATURES=${FEATURES} \
+				--build-arg FEATURES_U=${FEATURES_U} \
+				--build-arg SGX_MODE=${SGX_MODE} \
+				-f deployment/dockerfiles/base-rust.Dockerfile \
+				-t rust-base-image \
+				.
+
+docker_base_go:
 	docker build \
 				--build-arg DB_BACKEND=${DB_BACKEND} \
 				--build-arg BUILD_VERSION=${VERSION} \
@@ -285,9 +301,11 @@ docker_base:
 				--build-arg FEATURES_U=${FEATURES_U} \
 				--build-arg SGX_MODE=${SGX_MODE} \
 				--build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
-				-f deployment/dockerfiles/base.Dockerfile \
+				-f deployment/dockerfiles/base-go.Dockerfile \
 				-t rust-go-base-image \
 				.
+
+docker_base: docker_base_rust docker_base_go
 
 #ifeq ($(DB_BACKEND),rocksdb)
 #docker_base: docker_base_rocksdb
