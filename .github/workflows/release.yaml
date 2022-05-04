@@ -105,7 +105,7 @@ jobs:
       - name: Build
         run: |
           VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} make build-mainnet-upgrade
-          cp secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
+          cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v2
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
