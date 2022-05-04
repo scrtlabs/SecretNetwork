@@ -101,6 +101,7 @@ jobs:
       - name: Install Dependencies
         run: |
           go install github.com/jteeuwen/go-bindata/go-bindata@latest && go-bindata -version
+          mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
           SDK_BIN=sgx_linux_x64_sdk_2.15.101.1.bin
           wget https://download.01.org/intel-sgx/sgx-linux/2.15.1/distro/ubuntu20.04-server/"$SDK_BIN"
