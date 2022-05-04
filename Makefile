@@ -28,10 +28,13 @@ endif
 
 ifeq ($(DB_BACKEND), rocksdb)
 	DB_BACKEND = rocksdb
+	DOCKER_CGO_LDFLAGS = "-L/usr/lib/x86_64-linux-gnu/ -lrocksdb -lstdc++ -llz4 -lm -lz -lbz2 -lsnappy"
+	DOCKER_CGO_FLAGS = "-I/opt/rocksdb/include"
 else ifeq ($(DB_BACKEND), cleveldb)
 	DB_BACKEND = cleveldb
 else ifeq ($(DB_BACKEND), goleveldb)
 	DB_BACKEND = goleveldb
+	DOCKER_CGO_LDFLAGS = ""
 else
 $(error DB_BACKEND must be one of: rocksdb/cleveldb/goleveldb)
 endif
@@ -272,23 +275,25 @@ docker_base_rocksdb:
 			-t rust-go-base-image \
 			.
 
-docker_base_goleveldb:
-	docker build \
-			--build-arg BUILD_VERSION=${VERSION} \
-			--build-arg FEATURES=${FEATURES} \
-			--build-arg FEATURES_U=${FEATURES_U} \
-			--build-arg SGX_MODE=${SGX_MODE} \
-			-f deployment/dockerfiles/base.Dockerfile \
-			-t rust-go-base-image \
-			.
+docker_base_goleveldb: docker_base
 
 docker_base:
+	docker build \
+				--build-arg DB_BACKEND=${DB_BACKEND} \
+				--build-arg BUILD_VERSION=${VERSION} \
+				--build-arg FEATURES=${FEATURES} \
+				--build-arg FEATURES_U=${FEATURES_U} \
+				--build-arg SGX_MODE=${SGX_MODE} \
+				--build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
+				-f deployment/dockerfiles/base.Dockerfile \
+				-t rust-go-base-image \
+				.
 
-ifeq ($(DB_BACKEND),rocksdb)
-docker_base: docker_base_rocksdb
-else
-docker_base: docker_base_goleveldb
-endif
+#ifeq ($(DB_BACKEND),rocksdb)
+#docker_base: docker_base_rocksdb
+#else
+#docker_base: docker_base_goleveldb
+#endif
 
 
 

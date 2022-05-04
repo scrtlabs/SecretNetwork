@@ -74,7 +74,7 @@ jobs:
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES_U=$(echo ${{ matrix.node_type }} | awk '/query/{printf "query-node,"} /validator/{printf ""}') make build-testnet
-          cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.node_type }}_${{ matrix.db_backend }}_amd64.deb
+          cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v2
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
@@ -85,7 +85,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        db_backend: [ rocksdb, goleveldb ]
+        db_backend: [ goleveldb ]
         node_type: [ query ]
     env: # Or as an environment variable
       SPID_MAINNET: ${{ secrets.SPID_MAINNET }}
@@ -100,8 +100,7 @@ jobs:
           go-version: "^1.17" # The Go version to download (if necessary) and use.
       - name: Install Dependencies
         run: |
-          go install github.com/jteeuwen/go-bindata/...
-          mkdir -p "$HOME/.sgxsdk"
+          go install github.com/jteeuwen/go-bindata/go-bindata@latest && go-bindata -version
           cd "$HOME/.sgxsdk"
           SDK_BIN=sgx_linux_x64_sdk_2.15.101.1.bin
           wget https://download.01.org/intel-sgx/sgx-linux/2.15.1/distro/ubuntu20.04-server/"$SDK_BIN"
@@ -204,7 +203,7 @@ jobs:
       - name: Build dev docker image
         shell: bash
         run: |
-          make build-localsecret
+          DOCKER_TAG=${{ steps.get_version.outputs.VERSION }} make build-localsecret
       - name: Push docker image
         run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}
 
@@ -236,10 +235,7 @@ jobs:
           name: secretcli-MacOS-arm64
       - uses: actions/download-artifact@v2
         with:
-          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_rocksdb_amd64.deb
-      - uses: actions/download-artifact@v2
-        with:
-          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64.deb
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
       - uses: actions/download-artifact@v2
         with:
           name: secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_amd64.deb
@@ -253,7 +249,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_rocksdb_amd64.deb
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
             secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_goleveldb_amd64.deb
             secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_rocksdb_amd64.deb

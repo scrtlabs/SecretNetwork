@@ -2,7 +2,7 @@
 # > docker build -t enigma .
 # > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli enigma secretd init
 # > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli enigma secretd start
-FROM baiduxlab/sgx-rust:2004-1.1.3 AS build-env-rust-go
+FROM enigmampc/rocksdb:v6.24.2 AS build-env-rust-go
 
 ENV PATH="/root/.cargo/bin:$PATH"
 ENV GOROOT=/usr/local/go
@@ -19,6 +19,40 @@ RUN wget -q https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.
     chmod +x /bin/wat2wasm /bin/wasm2wat && \
     rm -f wabt-1.0.20-ubuntu.tar.gz
 
+
+#### Install rocksdb deps
+
+RUN apt-get update &&  \
+    apt-get install -y --no-install-recommends \
+    zlib1g-dev \
+    libbz2-dev \
+    liblz4-dev \
+    libzstd-dev
+#
+#RUN git clone https://github.com/facebook/rocksdb.git
+#
+#WORKDIR rocksdb
+#
+#ARG ROCKSDB_BUILD_VERSION="v6.24.2"
+#
+#RUN git checkout ${BUILD_VERSION}
+#
+#RUN mkdir -p build && cd build && cmake \
+#		-DWITH_SNAPPY=0 \
+#		-DWITH_LZ4=0 \
+#		-DWITH_ZLIB=0 \
+#		-DWITH_ZSTD=0 \
+#		-DWITH_GFLAGS=0 \
+#		-DROCKSDB_BUILD_SHARED=0 \
+#		-DWITH_TOOLS=0 \
+#		-DWITH_BENCHMARK_TOOLS=0 \
+#		-DWITH_CORE_TOOLS=0 \
+#		-DWITH_JEMALLOC=0 \
+#		-DCMAKE_BUILD_TYPE=Release \
+#		.. && make -j 24
+#
+#RUN make install-static INSTALL_PATH=/usr
+
 # rm -rf /tmp/rocksdb
 # Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
@@ -28,6 +62,7 @@ ARG SGX_MODE=SW
 ARG FEATURES
 ARG FEATURES_U
 ARG DB_BACKEND
+ARG CGO_LDFLAGS
 
 ENV VERSION=${BUILD_VERSION}
 ENV SGX_MODE=${SGX_MODE}
@@ -63,8 +98,6 @@ RUN . /opt/sgxsdk/environment && env \
 # Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork
 
-COPY --from=enigmampc/rocksdb:v6.24.2 /usr/local/lib/librocksdb.a /usr/local/lib/librocksdb.a
-
 # Add source files
 COPY go-cosmwasm go-cosmwasm
 # This is due to some esoteric docker bug with the underlying filesystem, so until I figure out a better way, this should be a workaround
@@ -81,7 +114,9 @@ COPY Makefile .
 RUN true
 COPY client client
 
-RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
+RUN ln -s /usr/lib/x86_64-linux-gnu/liblz4.so /usr/local/lib/liblz4.so  && ln -s /usr/lib/x86_64-linux-gnu/libzstd.so /usr/local/lib/libzstd.so
+
+RUN . /opt/sgxsdk/environment && env && CGO_LDFLAGS=${CGO_LDFLAGS} DB_BACKEND=${DB_BACKEND} MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
 RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_cli
 
 RUN rustup target add wasm32-unknown-unknown && apt update -y && apt install clang -y && make build-test-contract
