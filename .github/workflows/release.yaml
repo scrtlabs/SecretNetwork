@@ -137,7 +137,7 @@ jobs:
           go-version: "^1.17" # The Go version to download (if necessary) and use.
       - name: Install xgo
         run: |
-          go install github.com/crazy-max/xgo
+          go install github.com/crazy-max/xgo@latest
           xgo || true # check installation
       - name: Build CLI
         shell: bash
