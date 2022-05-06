@@ -221,8 +221,8 @@ jobs:
           files: |
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_rocksdb_amd64.deb
-            secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_goleveldb_amd64.deb
-            secretnetwork_${{ steps.vars.outputs.sha_short }}_testnet_rocksdb_amd64.deb
+            secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64.deb
+            secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_rocksdb_amd64.deb
             secretcli-macOS
             secretcli-Windows
             secretcli-Linux
