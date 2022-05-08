@@ -39,7 +39,7 @@ pub const MRSIGNER: [u8; 32] = [
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
 
 #[cfg(all(not(feature = "production"), not(feature = "test")))]
-pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
+pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRSIGNER;
 
 #[cfg(all(not(feature = "production"), feature = "test"))]
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRSIGNER;
