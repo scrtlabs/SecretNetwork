@@ -15,14 +15,12 @@ use sgx_tse::{rsgx_create_report, rsgx_verify_report};
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tcrypto::SgxEccHandle;
 
-#[cfg(feature = "SGX_MODE_HW")]
-use sgx_types::{c_int, sgx_spid_t};
-
-use sgx_types::{sgx_quote_sign_type_t, sgx_status_t, SgxResult};
+use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_types::{
-    sgx_epid_group_id_t, sgx_quote_nonce_t, sgx_report_data_t, sgx_report_t, sgx_target_info_t,
+    c_int, sgx_epid_group_id_t, sgx_quote_nonce_t, sgx_report_data_t, sgx_report_t, sgx_spid_t,
+    sgx_target_info_t, SgxResult,
 };
 
 use std::vec::Vec;
