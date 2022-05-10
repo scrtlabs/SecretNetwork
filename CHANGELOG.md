@@ -22,6 +22,10 @@
   - `ed25519_sign()`
   - `secp256k1_sign()`
 
+- Registeration service has been reworked. Registering a new node automatically now no longer requires a node to function properly. It also includes built-in support for the pulsar-2 testnet with the --pulsar flag.
+
+- Secretcli now automatically appends either port 80 or port 443 when not providing any port using `secretcli config` if the node address starts with `http://` or `https://`
+
 # 1.2.6
 
 ## Highlights
