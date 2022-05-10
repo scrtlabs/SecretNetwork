@@ -15,14 +15,12 @@ use sgx_tse::{rsgx_create_report, rsgx_verify_report};
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tcrypto::SgxEccHandle;
 
-#[cfg(feature = "SGX_MODE_HW")]
-use sgx_types::{c_int, sgx_spid_t};
-
 use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_types::{
-    sgx_epid_group_id_t, sgx_quote_nonce_t, sgx_report_data_t, sgx_report_t, sgx_target_info_t,
+    c_int, sgx_epid_group_id_t, sgx_quote_nonce_t, sgx_report_data_t, sgx_report_t, sgx_spid_t,
+    sgx_target_info_t, SgxResult,
 };
 
 use std::vec::Vec;
@@ -432,33 +430,44 @@ pub fn create_attestation_report(
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-fn parse_response_attn_report(resp: &[u8]) -> (String, Vec<u8>, Vec<u8>) {
+fn parse_response_attn_report(resp: &[u8]) -> SgxResult<(String, Vec<u8>, Vec<u8>)> {
     trace!("parse_response_attn_report");
     let mut headers = [httparse::EMPTY_HEADER; 16];
     let mut respp = httparse::Response::new(&mut headers);
     let result = respp.parse(resp);
     trace!("parse result {:?}", result);
 
-    let msg: &'static str;
-
     match respp.code {
-        Some(200) => msg = "OK Operation Successful",
-        Some(401) => msg = "Unauthorized Failed to authenticate or authorize request.",
-        Some(404) => msg = "Not Found GID does not refer to a valid EPID group ID.",
-        Some(500) => msg = "Internal error occurred",
+        Some(200) => info!("Response okay"),
+        Some(401) => {
+            error!("Unauthorized Failed to authenticate or authorize request.");
+            return Err(sgx_status_t::SGX_ERROR_INVALID_ENCLAVE);
+        }
+        Some(404) => {
+            error!("Not Found GID does not refer to a valid EPID group ID.");
+            return Err(sgx_status_t::SGX_ERROR_INVALID_ENCLAVE);
+        }
+        Some(500) => {
+            error!("Internal error occurred in IAS server");
+            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        }
         Some(503) => {
-            msg = "Service is currently not able to process the request (due to
+            error!(
+                "Service is currently not able to process the request (due to
             a temporary overloading or maintenance). This is a
             temporary state – the same request can be repeated after
             some time. "
+            );
+            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
         }
         _ => {
-            warn!("DBG:{}", respp.code.unwrap());
-            msg = "Unknown error occured"
+            warn!(
+                "response from IAS server :{} - unknown error or response code",
+                respp.code.unwrap()
+            );
         }
     }
 
-    info!("{}", msg);
     let mut len_num: u32 = 0;
 
     let mut sig = String::new();
@@ -487,6 +496,11 @@ fn parse_response_attn_report(resp: &[u8]) -> (String, Vec<u8>, Vec<u8>) {
     cert = hex::percent_decode(cert);
 
     let v: Vec<&str> = cert.split("-----").collect();
+
+    if v.len() < 3 {
+        error!("Error decoding response from IAS server");
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+    }
     let sig_cert = v[2].to_string();
 
     if len_num != 0 {
@@ -499,7 +513,7 @@ fn parse_response_attn_report(resp: &[u8]) -> (String, Vec<u8>, Vec<u8>) {
     let sig_bytes = base64::decode(&sig).unwrap();
     let sig_cert_bytes = base64::decode(&sig_cert).unwrap();
     // len_num == 0
-    (attn_report, sig_bytes, sig_cert_bytes)
+    Ok((attn_report, sig_bytes, sig_cert_bytes))
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -609,7 +623,7 @@ pub fn get_report_from_intel(
     fd: c_int,
     quote: Vec<u8>,
     api_key_file: &[u8],
-) -> (String, Vec<u8>, Vec<u8>) {
+) -> SgxResult<(String, Vec<u8>, Vec<u8>)> {
     trace!("get_report_from_intel fd = {:?}", fd);
     let config = make_ias_client_config();
     let encoded_quote = base64::encode(&quote[..]);
@@ -640,9 +654,10 @@ pub fn get_report_from_intel(
 
     trace!("resp_string = {}", resp_string);
 
-    let (attn_report, sig, cert) = parse_response_attn_report(&plaintext);
-
-    (attn_report, sig, cert)
+    // let (attn_report, sig, cert) = ?;
+    //
+    // Ok((attn_report, sig, cert))
+    parse_response_attn_report(&plaintext)
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
