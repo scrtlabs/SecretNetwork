@@ -30,8 +30,6 @@ ARG BUILD_VERSION="v0.0.0"
 ENV VERSION=${BUILD_VERSION}
 
 ENV SGX_MODE=HW
-ENV SECRET_NODE_TYPE=NODE
-
 ENV SCRT_ENCLAVE_DIR=/usr/lib/
 
 
@@ -43,7 +41,7 @@ WORKDIR /root
 
 RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
     && wget -O /usr/lib/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librust_cosmwasm_enclave.signed.so \
-    &&  wget -O /usr/lib/librust_cosmwasm_query_enclave.signed.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librust_cosmwasm_query_enclave.so
+    &&  wget -O /usr/lib/librust_cosmwasm_query_enclave.signed.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librust_cosmwasm_query_enclave.signed.so
 
 # Copy over binaries from the build-env
 
@@ -52,10 +50,7 @@ COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosm
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretd /usr/bin/secretd
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretcli /usr/bin/secretcli
 
-COPY deployment/docker/bootstrap/bootstrap_init.sh .
-COPY deployment/docker/node/node_init.sh .
-COPY deployment/docker/startup.sh .
-COPY deployment/docker/node_key.json .
+COPY deployment/docker/node/mainnet_node.sh .
 
 RUN chmod +x /usr/bin/secretd
 RUN chmod +x mainnet_node.sh
