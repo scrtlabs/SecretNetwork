@@ -24,6 +24,8 @@ RUN curl -sL https://deb.nodesource.com/setup_15.x | bash - && \
     apt-get install -y nodejs npm && \
     npm i -g local-cors-proxy
 
+RUN wget -O /root/genesis.json https://github.com/scrtlabs/SecretNetwork/releases/download/v1.2.0/genesis.json
+
 ARG BUILD_VERSION="v0.0.0"
 ENV VERSION=${BUILD_VERSION}
 
@@ -32,11 +34,11 @@ ENV SECRET_NODE_TYPE=NODE
 
 ENV SCRT_ENCLAVE_DIR=/usr/lib/
 
+
 # workaround because paths seem kind of messed up
 RUN cp /opt/sgxsdk/lib64/libsgx_urts_sim.so /usr/lib/libsgx_urts_sim.so
 RUN cp /opt/sgxsdk/lib64/libsgx_uae_service_sim.so /usr/lib/libsgx_uae_service_sim.so
 
-# Install ca-certificates
 WORKDIR /root
 
 RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` && wget -O /usr/lib/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librust_cosmwasm_enclave.signed.so
@@ -53,9 +55,7 @@ COPY deployment/docker/startup.sh .
 COPY deployment/docker/node_key.json .
 
 RUN chmod +x /usr/bin/secretd
-RUN chmod +x bootstrap_init.sh
-RUN chmod +x startup.sh
-RUN chmod +x node_init.sh
+RUN chmod +x mainnet_node.sh
 
 RUN secretd completion > /root/secretd_completion
 
@@ -70,16 +70,16 @@ RUN mkdir -p /root/config/
 
 ####### Node parameters
 ARG MONIKER=default
-ARG CHAINID=secret-testnet-1
-ARG GENESISPATH=https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/secret-testnet-genesis.json
-ARG PERSISTENT_PEERS=201cff36d13c6352acfc4a373b60e83211cd3102@bootstrap.southuk.azure.com:26656
+ARG CHAINID=secret-4
+ARG REGISTRATION_SERVICE=https://mainnet-register.scrtlabs.com/api/registernode
+ARG STATE_SYNC=https://peer.node.scrtlabs.com:26657
 
-ENV GENESISPATH="${GENESISPATH}"
 ENV CHAINID="${CHAINID}"
 ENV MONIKER="${MONIKER}"
-ENV PERSISTENT_PEERS="${PERSISTENT_PEERS}"
+ENV REGISTRATION_SERVICE="${REGISTRATION_SERVICE}"
+ENV STATE_SYNC="${STATE_SYNC}"
 
 #ENV LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/:/opt/sgxsdk/lib64/
 
 # Run secretd by default, omit entrypoint to ease using container with secretcli
-ENTRYPOINT ["/bin/bash", "startup.sh"]
+ENTRYPOINT ["/bin/bash", "mainnet_node.sh"]
