@@ -24,24 +24,31 @@ then
 
 
   cp ~/node_key.json ~/.secretd/config/node_key.json
-  perl -i -pe 's/"stake"/ "uscrt"/g' ~/.secretd/config/genesis.json
-  perl -i -pe 's/"172800000000000"/"90000000000"/g' ~/.secretd/config/genesis.json # voting period 2 days -> 90 seconds
+  perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json
+  perl -i -pe 's/"172800s"/"90s"/g' ~/.secretd/config/genesis.json # voting period 2 days -> 90 seconds
 
-  secretd keys add a
-  secretd keys add b
-  secretd keys add c
-  secretd keys add d
+  perl -i -pe 's/enable-unsafe-cors = false/enable-unsafe-cors = true/g' ~/.secretd/config/app.toml # enable cors
+
+  a_mnemonic="grant rice replace explain federal release fix clever romance raise often wild taxi quarter soccer fiber love must tape steak together observe swap guitar"
+  b_mnemonic="jelly shadow frog dirt dragon use armed praise universe win jungle close inmate rain oil canvas beauty pioneer chef soccer icon dizzy thunder meadow"
+  c_mnemonic="chair love bleak wonder skirt permit say assist aunt credit roast size obtain minute throw sand usual age smart exact enough room shadow charge"
+  d_mnemonic="word twist toast cloth movie predict advance crumble escape whale sail such angry muffin balcony keen move employ cook valve hurt glimpse breeze brick"
+  
+  echo $a_mnemonic | secretd keys add a --recover
+  echo $b_mnemonic | secretd keys add b --recover
+  echo $c_mnemonic | secretd keys add c --recover
+  echo $d_mnemonic | secretd keys add d --recover
 
   secretd add-genesis-account "$(secretd keys show -a a)" 1000000000000000000uscrt
   secretd add-genesis-account "$(secretd keys show -a b)" 1000000000000000000uscrt
-#  secretd add-genesis-account "$(secretd keys show -a c)" 1000000000000000000uscrt
-#  secretd add-genesis-account "$(secretd keys show -a d)" 1000000000000000000uscrt
+  secretd add-genesis-account "$(secretd keys show -a c)" 1000000000000000000uscrt
+  secretd add-genesis-account "$(secretd keys show -a d)" 1000000000000000000uscrt
 
 
   secretd gentx a 1000000uscrt --chain-id "$chain_id"
   secretd gentx b 1000000uscrt --chain-id "$chain_id"
-#  secretd gentx c 1000000uscrt --keyring-backend test
-#  secretd gentx d 1000000uscrt --keyring-backend test
+  secretd gentx c 1000000uscrt --chain-id "$chain_id"
+  secretd gentx d 1000000uscrt --chain-id "$chain_id"
 
   secretd collect-gentxs
   secretd validate-genesis
@@ -52,9 +59,16 @@ then
   secretd validate-genesis
 fi
 
-lcp --proxyUrl http://localhost:1317 --port 1337 --proxyPartial '' &
+# Setup CORS for LCD & gRPC-web
+perl -i -pe 's;address = "tcp://0.0.0.0:1317";address = "tcp://0.0.0.0:1316";' .secretd/config/app.toml
+perl -i -pe 's/enable-unsafe-cors = false/enable-unsafe-cors = true/' .secretd/config/app.toml
+lcp --proxyUrl http://localhost:1316 --port 1317 --proxyPartial '' &
 
-# sleep infinity
-source /opt/sgxsdk/environment && RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap &
+# Setup faucet
+gunicorn --bind 0.0.0.0:5000 svc &
 
-gunicorn --bind 0.0.0.0:5000 svc
+# Setup secretcli
+cp $(which secretd) $(dirname $(which secretd))/secretcli
+
+source /opt/sgxsdk/environment && RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap
+

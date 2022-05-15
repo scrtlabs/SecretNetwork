@@ -22,7 +22,7 @@ mod rng;
 
 pub mod hash;
 
-pub use errors::CryptoError;
+pub use errors::{CryptoError, WasmApiCryptoError};
 pub use key_manager::Keychain;
 pub use key_manager::KEY_MANAGER;
 pub use keys::{AESKey, Seed, SymmetricKey, SEED_KEY_SIZE};

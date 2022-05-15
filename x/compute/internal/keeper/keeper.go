@@ -518,6 +518,7 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddr sdk.AccAddress, req
 	if useDefaultGasLimit {
 		ctx = ctx.WithGasMeter(sdk.NewGasMeter(k.queryGasLimit))
 	}
+
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: query")
 
 	codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddr)
@@ -787,7 +788,7 @@ func consumeGas(ctx sdk.Context, gas uint64) {
 	ctx.GasMeter().ConsumeGas(consumed, "wasm contract")
 	// throw OutOfGas error if we ran out (got exactly to zero due to better limit enforcing)
 	if ctx.GasMeter().IsOutOfGas() {
-		panic(sdk.ErrorOutOfGas{"Wasmer function execution"})
+		panic(sdk.ErrorOutOfGas{Descriptor: "Wasmer function execution"})
 	}
 }
 

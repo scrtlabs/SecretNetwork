@@ -11,6 +11,8 @@ BUILD_PROFILE ?= release
 DEB_BIN_DIR ?= /usr/local/bin
 DEB_LIB_DIR ?= /usr/lib
 
+DB_BACKEND ?= goleveldb
+
 SGX_MODE ?= HW
 BRANCH ?= develop
 DEBUG ?= 0
@@ -24,19 +26,20 @@ else
 $(error SGX_MODE must be either HW or SW)
 endif
 
-SGX_MODE ?= HW
-BRANCH ?= develop
-DEBUG ?= 0
-DOCKER_TAG ?= latest
+ifeq ($(DB_BACKEND), rocksdb)
+	DB_BACKEND = rocksdb
+	DOCKER_CGO_LDFLAGS = "-L/usr/lib/x86_64-linux-gnu/ -lrocksdb -lstdc++ -llz4 -lm -lz -lbz2 -lsnappy"
+	DOCKER_CGO_FLAGS = "-I/opt/rocksdb/include"
+else ifeq ($(DB_BACKEND), cleveldb)
+	DB_BACKEND = cleveldb
+else ifeq ($(DB_BACKEND), goleveldb)
+	DB_BACKEND = goleveldb
+	DOCKER_CGO_LDFLAGS = ""
+else
+$(error DB_BACKEND must be one of: rocksdb/cleveldb/goleveldb)
+endif
+
 CUR_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-
-ifeq ($(SGX_MODE), HW)
-	ext := hw
-else ifeq ($(SGX_MODE), SW)
-	ext := sw
-else
-$(error SGX_MODE must be either HW or SW)
-endif
 
 build_tags = netgo
 ifeq ($(LEDGER_ENABLED),true)
@@ -76,10 +79,10 @@ endif
 
 build_tags += $(IAS_BUILD)
 
-ifeq ($(WITH_ROCKSDB),yes)
+ifeq ($(DB_BACKEND),rocksdb)
   build_tags += gcc
 endif
-ifeq ($(WITH_CLEVELDB),yes)
+ifeq ($(DB_BACKEND),cleveldb)
   build_tags += gcc
 endif
 build_tags += $(BUILD_TAGS)
@@ -97,14 +100,14 @@ ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=SecretNetwork \
 	-X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
 	-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags)"
 
-ifeq ($(WITH_CLEVELDB),yes)
+ifeq ($(DB_BACKEND),cleveldb)
   ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=cleveldb
 endif
-ifeq ($(WITH_ROCKSDB),yes)
+ifeq ($(DB_BACKEND),rocksdb)
   CGO_ENABLED=1
   build_tags += rocksdb
   ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=rocksdb
-  ldflags += -extldflags "-lrocksdb -lz -lm -lstdc++"
+  ldflags += -extldflags "-lrocksdb -llz4"
 endif
 
 
@@ -131,8 +134,7 @@ build_cli:
 
 xgo_build_secretcli: go.sum
 	@echo "--> WARNING! This builds from origin/$(CURRENT_BRANCH)!"
-	xgo --image techknowlogick/xgo:go-1.15.15 --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --branch "$(CURRENT_BRANCH)" github.com/enigmampc/SecretNetwork/cmd/secretd
-
+	xgo --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --branch $(CURRENT_BRANCH) github.com/enigmampc/SecretNetwork/cmd/secretd
 build_local_no_rust: bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
 	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
@@ -152,6 +154,10 @@ build_windows_cli:
 build_macos_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/amd64
 	mv secretd-darwin-* secretcli-macos-amd64
+
+build_macos_arm64_cli:
+	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/arm64
+	mv secretd-darwin-* secretcli-macos-arm64
 
 build_linux_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/amd64
@@ -216,10 +222,7 @@ clean:
 	-rm -rf /tmp/SecretNetwork
 	-rm -f ./secretcli*
 	-rm -f ./secretd*
-#	-find -name librust_cosmwasm_enclave.signed.so -delete
-#	-find -name libgo_cosmwasm.so -delete
-#	-find -name '*.so' -delete
-#	-find -name 'target' -type d -exec rm -rf \;
+	-find -name '*.so' -delete
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*
 	-rm -rf ./third_party/vendor/
@@ -231,10 +234,13 @@ clean:
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/enclaves/test clean
 
-build-dev-image:
+build-rocksdb-image:
+	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/db-compile.Dockerfile -t enigmampc/rocksdb:${VERSION} .
+
+build-localsecret:
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=SW --build-arg FEATURES="${FEATURES},debug-print" -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/release.Dockerfile -t build-release .
-	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/dev-image.Dockerfile -t enigmampc/secret-network-sw-dev:${DOCKER_TAG} .
+	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/dev-image.Dockerfile -t ghcr.io/scrtlabs/localsecret:${DOCKER_TAG} .
 
 build-custom-dev-image:
     # .dockerignore excludes .so files so we rename these so that the dockerfile can find them
@@ -252,24 +258,62 @@ build-testnet: docker_base
 	docker build --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
-build-mainnet:
+build-mainnet-upgrade: docker_base
 	@mkdir build 2>&3 || true
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg FEATURES=production -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
+	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/mainnet-upgrade-release.Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-mainnet .
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
+	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
+
+build-mainnet: docker_base
+	@mkdir build 2>&3 || true
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-mainnet .
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-mainnet .
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
-docker_base:
+docker_base_rocksdb:
 	docker build \
-		--build-arg WITH_ROCKSDB=${WITH_ROCKSDB} \
-		--build-arg BUILD_VERSION=${VERSION} \
-		--build-arg FEATURES=${FEATURES} \
-		--build-arg FEATURES_U=${FEATURES_U} \
-		--build-arg SGX_MODE=${SGX_MODE} \
-		-f deployment/dockerfiles/base.Dockerfile \
-		-t rust-go-base-image \
-		.
+			--build-arg BUILD_VERSION=${VERSION} \
+			--build-arg FEATURES=${FEATURES} \
+			--build-arg FEATURES_U=${FEATURES_U} \
+			--build-arg SGX_MODE=${SGX_MODE} \
+			-f deployment/dockerfiles/base-rocksdb.Dockerfile \
+			-t rust-go-base-image \
+			.
+
+docker_base_goleveldb: docker_base
+
+docker_base_rust:
+	docker build \
+				--build-arg BUILD_VERSION=${VERSION} \
+				--build-arg FEATURES=${FEATURES} \
+				--build-arg FEATURES_U=${FEATURES_U} \
+				--build-arg SGX_MODE=${SGX_MODE} \
+				-f deployment/dockerfiles/base-rust.Dockerfile \
+				-t rust-base-image \
+				.
+
+docker_base_go:
+	docker build \
+				--build-arg DB_BACKEND=${DB_BACKEND} \
+				--build-arg BUILD_VERSION=${VERSION} \
+				--build-arg FEATURES=${FEATURES} \
+				--build-arg FEATURES_U=${FEATURES_U} \
+				--build-arg SGX_MODE=${SGX_MODE} \
+				--build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
+				-f deployment/dockerfiles/base-go.Dockerfile \
+				-t rust-go-base-image \
+				.
+
+docker_base: docker_base_rust docker_base_go
+
+#ifeq ($(DB_BACKEND),rocksdb)
+#docker_base: docker_base_rocksdb
+#else
+#docker_base: docker_base_goleveldb
+#endif
+
+
 
 docker_bootstrap: docker_base
 	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/local-node.Dockerfile -t enigmampc/secret-network-bootstrap-${ext}:${DOCKER_TAG} .
@@ -393,9 +437,11 @@ bin-data-develop:
 bin-data-production:
 	cd ./cmd/secretd && go-bindata -o ias_bin_prod.go -prefix "../../ias_keys/production/" -tags "production,hw" ../../ias_keys/production/...
 
+# Before running this you might need to do:
+# 1. sudo docker login -u ABC -p XYZ
+# 2. sudo docker buildx create --use
 secret-contract-optimizer:
-	docker build -f deployment/dockerfiles/secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} .
-	docker tag enigmampc/secret-contract-optimizer:${TAG} enigmampc/secret-contract-optimizer:latest
+	sudo docker buildx build --platform=linux/amd64,linux/arm64/v8 -f deployment/dockerfiles/secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} --push .
 
 secretjs-build:
 	cd cosmwasm-js/packages/sdk && yarn && yarn build
@@ -426,7 +472,7 @@ aesm-image:
 # ref: https://github.com/golang/go/issues/30515
 statik:
 	@echo "Installing statik..."
-	@(cd /tmp && GO111MODULE=on go get github.com/rakyll/statik@v0.1.6)
+	@go install github.com/rakyll/statik@v0.1.6
 
 
 update-swagger-docs: statik
@@ -455,9 +501,9 @@ update-swagger-docs: statik
 # proto-check-breaking:
 #	@buf check breaking --against-input '.git#branch=master'
 
-protoVer=v0.2
+protoVer=v0.7
 
-proto-all: proto-format proto-lint proto-gen
+proto-all: proto-format proto-lint proto-gen proto-swagger-gen
 
 proto-gen:
 	@echo "Generating Protobuf files"
@@ -471,7 +517,7 @@ proto-format:
 	find ./ -not -path "./third_party/*" -name *.proto -exec clang-format -i {} \;
 
 proto-swagger-gen:
-	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) ./scripts/protoc-swagger-gen.sh
+	@./scripts/protoc-swagger-gen.sh
 
 proto-lint:
 	@$(DOCKER_BUF) lint --error-format=json

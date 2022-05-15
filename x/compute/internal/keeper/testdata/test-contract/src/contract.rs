@@ -5,6 +5,7 @@ use cosmwasm_std::{
     HandleResult, HumanAddr, InitResponse, InitResult, Querier, QueryRequest, QueryResult,
     ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg, WasmQuery,
 };
+use secp256k1::Secp256k1;
 
 /////////////////////////////// Messages ///////////////////////////////
 
@@ -13,6 +14,10 @@ use mem::MaybeUninit;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::{mem, thread};
+
+//// consts
+
+const REALLY_LONG: &[u8] = b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -200,6 +205,49 @@ pub enum HandleMsg {
         addr: HumanAddr,
         code_hash: String,
         msg: String,
+    },
+    StoreReallyLongKey {},
+    StoreReallyShortKey {},
+    StoreReallyLongValue {},
+    Secp256k1Verify {
+        pubkey: Binary,
+        sig: Binary,
+        msg_hash: Binary,
+        iterations: u32,
+    },
+    Secp256k1VerifyFromCrate {
+        pubkey: Binary,
+        sig: Binary,
+        msg_hash: Binary,
+        iterations: u32,
+    },
+    Ed25519Verify {
+        pubkey: Binary,
+        sig: Binary,
+        msg: Binary,
+        iterations: u32,
+    },
+    Ed25519BatchVerify {
+        pubkeys: Vec<Binary>,
+        sigs: Vec<Binary>,
+        msgs: Vec<Binary>,
+        iterations: u32,
+    },
+    Secp256k1RecoverPubkey {
+        msg_hash: Binary,
+        sig: Binary,
+        recovery_param: u8,
+        iterations: u32,
+    },
+    Secp256k1Sign {
+        msg: Binary,
+        privkey: Binary,
+        iterations: u32,
+    },
+    Ed25519Sign {
+        msg: Binary,
+        privkey: Binary,
+        iterations: u32,
     },
 }
 
@@ -645,6 +693,251 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 log: vec![log("c", format!("{}", answer))],
                 data: None,
             })
+        }
+        HandleMsg::StoreReallyLongKey {} => {
+            let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
+            store.set(REALLY_LONG, b"hello");
+            Ok(HandleResponse::default())
+        }
+        HandleMsg::StoreReallyShortKey {} => {
+            let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
+            store.set(b"a", b"hello");
+            Ok(HandleResponse::default())
+        }
+        HandleMsg::StoreReallyLongValue {} => {
+            let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
+            store.set(b"hello", REALLY_LONG);
+            Ok(HandleResponse::default())
+        }
+        HandleMsg::Secp256k1Verify {
+            pubkey,
+            sig,
+            msg_hash,
+            iterations,
+        } => {
+            let mut res: HandleResult = Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            // loop for benchmarking
+            for _ in 0..iterations {
+                res = match deps.api.secp256k1_verify(
+                    msg_hash.as_slice(),
+                    sig.as_slice(),
+                    pubkey.as_slice(),
+                ) {
+                    Ok(result) => Ok(HandleResponse {
+                        messages: vec![],
+                        log: vec![log("result", format!("{}", result))],
+                        data: None,
+                    }),
+                    Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
+                };
+            }
+
+            return res;
+        }
+        HandleMsg::Secp256k1VerifyFromCrate {
+            pubkey,
+            sig,
+            msg_hash,
+            iterations,
+        } => {
+            let mut res: HandleResult = Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            // loop for benchmarking
+            for _ in 0..iterations {
+                let secp256k1_verifier = Secp256k1::verification_only();
+
+                let secp256k1_signature =
+                    secp256k1::Signature::from_compact(&sig.0).map_err(|err| {
+                        StdError::generic_err(format!("Malformed signature: {:?}", err))
+                    })?;
+                let secp256k1_pubkey = secp256k1::PublicKey::from_slice(pubkey.0.as_slice())
+                    .map_err(|err| StdError::generic_err(format!("Malformed pubkey: {:?}", err)))?;
+                let secp256k1_msg =
+                    secp256k1::Message::from_slice(&msg_hash.as_slice()).map_err(|err| {
+                        StdError::generic_err(format!(
+                            "Failed to create a secp256k1 message from signed_bytes: {:?}",
+                            err
+                        ))
+                    })?;
+
+                res = match secp256k1_verifier.verify(
+                    &secp256k1_msg,
+                    &secp256k1_signature,
+                    &secp256k1_pubkey,
+                ) {
+                    Ok(()) => Ok(HandleResponse {
+                        messages: vec![],
+                        log: vec![log("result", "true")],
+                        data: None,
+                    }),
+                    Err(_err) => Ok(HandleResponse {
+                        messages: vec![],
+                        log: vec![log("result", "false")],
+                        data: None,
+                    }),
+                };
+            }
+
+            return res;
+        }
+        HandleMsg::Ed25519Verify {
+            pubkey,
+            sig,
+            msg,
+            iterations,
+        } => {
+            let mut res: HandleResult = Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            // loop for benchmarking
+            for _ in 0..iterations {
+                res =
+                    match deps
+                        .api
+                        .ed25519_verify(msg.as_slice(), sig.as_slice(), pubkey.as_slice())
+                    {
+                        Ok(result) => Ok(HandleResponse {
+                            messages: vec![],
+                            log: vec![log("result", format!("{}", result))],
+                            data: None,
+                        }),
+                        Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
+                    };
+            }
+
+            return res;
+        }
+        HandleMsg::Ed25519BatchVerify {
+            pubkeys,
+            sigs,
+            msgs,
+            iterations,
+        } => {
+            let mut res: HandleResult = Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            // loop for benchmarking
+            for _ in 0..iterations {
+                res = match deps.api.ed25519_batch_verify(
+                    msgs.iter()
+                        .map(|m| m.as_slice())
+                        .collect::<Vec<&[u8]>>()
+                        .as_slice(),
+                    sigs.iter()
+                        .map(|s| s.as_slice())
+                        .collect::<Vec<&[u8]>>()
+                        .as_slice(),
+                    pubkeys
+                        .iter()
+                        .map(|p| p.as_slice())
+                        .collect::<Vec<&[u8]>>()
+                        .as_slice(),
+                ) {
+                    Ok(result) => Ok(HandleResponse {
+                        messages: vec![],
+                        log: vec![log("result", format!("{}", result))],
+                        data: None,
+                    }),
+                    Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
+                };
+            }
+
+            return res;
+        }
+        HandleMsg::Secp256k1RecoverPubkey {
+            msg_hash,
+            sig,
+            recovery_param,
+            iterations,
+        } => {
+            let mut res: HandleResult = Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            // loop for benchmarking
+            for _ in 0..iterations {
+                res = match deps.api.secp256k1_recover_pubkey(
+                    msg_hash.as_slice(),
+                    sig.as_slice(),
+                    recovery_param,
+                ) {
+                    Ok(result) => Ok(HandleResponse {
+                        messages: vec![],
+                        log: vec![log("result", format!("{}", Binary(result).to_base64()))],
+                        data: None,
+                    }),
+                    Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
+                };
+            }
+
+            return res;
+        }
+        HandleMsg::Secp256k1Sign {
+            msg,
+            privkey,
+            iterations,
+        } => {
+            let mut res: HandleResult = Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            // loop for benchmarking
+            for _ in 0..iterations {
+                res = match deps.api.secp256k1_sign(msg.as_slice(), privkey.as_slice()) {
+                    Ok(result) => Ok(HandleResponse {
+                        messages: vec![],
+                        log: vec![log("result", format!("{}", Binary(result).to_base64()))],
+                        data: None,
+                    }),
+                    Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
+                };
+            }
+
+            return res;
+        }
+        HandleMsg::Ed25519Sign {
+            msg,
+            privkey,
+            iterations,
+        } => {
+            let mut res: HandleResult = Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            // loop for benchmarking
+            for _ in 0..iterations {
+                res = match deps.api.ed25519_sign(msg.as_slice(), privkey.as_slice()) {
+                    Ok(result) => Ok(HandleResponse {
+                        messages: vec![],
+                        log: vec![log("result", format!("{}", Binary(result).to_base64()))],
+                        data: None,
+                    }),
+                    Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
+                };
+            }
+
+            return res;
         }
     }
 }
@@ -1239,6 +1532,7 @@ fn send_external_query_infinite_loop<S: Storage, A: Api, Q: Querier>(
 fn write_to_storage_in_query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<Binary> {
+    #[allow(clippy::cast_ref_to_mut)]
     let deps = unsafe { &mut *(deps as *const _ as *mut Extern<S, A, Q>) };
     deps.storage.set(b"abcd", b"dcba");
 
@@ -1248,6 +1542,7 @@ fn write_to_storage_in_query<S: Storage, A: Api, Q: Querier>(
 fn remove_from_storage_in_query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<Binary> {
+    #[allow(clippy::cast_ref_to_mut)]
     let deps = unsafe { &mut *(deps as *const _ as *mut Extern<S, A, Q>) };
     deps.storage.remove(b"abcd");
 

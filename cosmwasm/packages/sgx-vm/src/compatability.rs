@@ -15,6 +15,13 @@ const SUPPORTED_IMPORTS_V010: &[&str] = &[
     "env.canonicalize_address",
     "env.humanize_address",
     "env.query_chain",
+    "env.secp256k1_verify",
+    "env.secp256k1_recover_pubkey",
+    "env.secp256k1_sign",
+    "env.ed25519_verify",
+    "env.ed25519_batch_verify",
+    "env.ed25519_sign",
+
     #[cfg(feature = "iterator")]
     "env.db_scan",
     #[cfg(feature = "iterator")]

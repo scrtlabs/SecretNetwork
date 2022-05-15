@@ -192,6 +192,54 @@ impl Api for MockApi {
     fn debug(&self, message: &str) {
         println!("{}", message);
     }
+
+    fn secp256k1_verify(
+        &self,
+        _message_hash: &[u8],
+        _signature: &[u8],
+        _public_key: &[u8],
+    ) -> Result<bool, VerificationError> {
+        Ok(true)
+    }
+
+    fn secp256k1_recover_pubkey(
+        &self,
+        _message_hash: &[u8],
+        _signature: &[u8],
+        _recovery_param: u8,
+    ) -> Result<Vec<u8>, RecoverPubkeyError> {
+        Ok(vec![])
+    }
+
+    fn ed25519_verify(
+        &self,
+        _message: &[u8],
+        _signature: &[u8],
+        _public_key: &[u8],
+    ) -> Result<bool, VerificationError> {
+        Ok(true)
+    }
+
+    fn ed25519_batch_verify(
+        &self,
+        _messages: &[&[u8]],
+        _signatures: &[&[u8]],
+        _public_keys: &[&[u8]],
+    ) -> Result<bool, VerificationError> {
+        Ok(true)
+    }
+
+    fn secp256k1_sign(
+        &self,
+        _message: &[u8],
+        _private_key: &[u8],
+    ) -> Result<Vec<u8>, SigningError> {
+        Ok(vec![])
+    }
+
+    fn ed25519_sign(&self, _message: &[u8], _private_key: &[u8]) -> Result<Vec<u8>, SigningError> {
+        Ok(vec![])
+    }
 }
 
 /// Returns a default enviroment with height, time, chain_id, and contract address

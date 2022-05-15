@@ -19,11 +19,13 @@ pub enum HostFunctions {
     AddrValidateIndex = 7,
     AddrCanonicalizeIndex = 8,
     AddrHumanizeIndex = 9,
-    Secp256k1Verify = 10,
-    Secp256k1RecoverPubkey = 11,
-    Ed25519Verify = 12,
-    Ed25519BatchVerify = 13,
-    Debug = 14,
+    Secp256k1VerifyIndex = 10,
+    Secp256k1RecoverPubkeyIndex = 11,
+    Ed25519VerifyIndex = 12,
+    Ed25519BatchVerifyIndex = 13,
+    Secp256k1SignIndex = 14,
+    Ed25519SignIndex = 15,
+    DebugIndex = 16,
     #[cfg(feature = "debug-print")]
     DebugPrintIndex = 254,
     Unknown,
@@ -48,15 +50,23 @@ impl From<usize> for HostFunctions {
                 HostFunctions::AddrCanonicalizeIndex
             }
             x if x == HostFunctions::AddrHumanizeIndex as usize => HostFunctions::AddrHumanizeIndex,
-            x if x == HostFunctions::Secp256k1Verify as usize => HostFunctions::Secp256k1Verify,
-            x if x == HostFunctions::Secp256k1RecoverPubkey as usize => {
-                HostFunctions::Secp256k1RecoverPubkey
+            x if x == HostFunctions::DebugIndex as usize => HostFunctions::DebugIndex,
+            x if x == HostFunctions::Secp256k1VerifyIndex as usize => {
+                HostFunctions::Secp256k1VerifyIndex
             }
-            x if x == HostFunctions::Ed25519Verify as usize => HostFunctions::Ed25519Verify,
-            x if x == HostFunctions::Ed25519BatchVerify as usize => {
-                HostFunctions::Ed25519BatchVerify
+            x if x == HostFunctions::Secp256k1RecoverPubkeyIndex as usize => {
+                HostFunctions::Secp256k1RecoverPubkeyIndex
             }
-            x if x == HostFunctions::Debug as usize => HostFunctions::Debug,
+            x if x == HostFunctions::Ed25519VerifyIndex as usize => {
+                HostFunctions::Ed25519VerifyIndex
+            }
+            x if x == HostFunctions::Ed25519BatchVerifyIndex as usize => {
+                HostFunctions::Ed25519BatchVerifyIndex
+            }
+            x if x == HostFunctions::Secp256k1SignIndex as usize => {
+                HostFunctions::Secp256k1SignIndex
+            }
+            x if x == HostFunctions::Ed25519SignIndex as usize => HostFunctions::Ed25519SignIndex,
             #[cfg(feature = "debug-print")]
             x if x == HostFunctions::DebugPrintIndex as usize => HostFunctions::DebugPrintIndex,
             _ => HostFunctions::Unknown,
@@ -93,7 +103,7 @@ impl Externals for ContractInstance {
                     );
                     err
                 })?;
-                self.db_remove(key)
+                self.read_db(key)
             }
             HostFunctions::DbWriteIndex => {
                 let key: i32 = args.nth_checked(0).map_err(|err| {
@@ -111,7 +121,7 @@ impl Externals for ContractInstance {
                     err
                 })?;
 
-                self.db_write(key, value)
+                self.write_db(key, value)
             }
             HostFunctions::CanonicalizeAddressIndex => {
                 let human: i32 = args.nth_checked(0).map_err(|err| {
@@ -231,6 +241,22 @@ impl Externals for ContractInstance {
                     );
                     err
                 })?;
+            }
+            HostFunctions::Secp256k1VerifyIndex => {
+                let message_hash = args.nth_checked(0).map_err(|err| {
+                    warn!(
+                        "secp256k1_verify() error reading 1st argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+                let signature = args.nth_checked(1).map_err(|err| {
+                    warn!(
+                        "secp256k1_verify() error reading 2nd argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
                 let public_key = args.nth_checked(2).map_err(|err| {
                     warn!(
                         "secp256k1_verify() error reading 3rd argument, stopping wasm: {:?}",
@@ -241,7 +267,7 @@ impl Externals for ContractInstance {
 
                 self.secp256k1_verify(message_hash, signature, public_key)
             }
-            HostFunctions::Secp256k1RecoverPubkey => {
+            HostFunctions::Secp256k1RecoverPubkeyIndex => {
                 let message_hash = args.nth_checked(0).map_err(|err| {
                     warn!(
                         "secp256k1_recover_pubkey() error reading 1st argument, stopping wasm: {:?}",
@@ -266,7 +292,7 @@ impl Externals for ContractInstance {
 
                 self.secp256k1_recover_pubkey(message_hash, signature, recovery_param)
             }
-            HostFunctions::Ed25519Verify => {
+            HostFunctions::Ed25519VerifyIndex => {
                 let message = args.nth_checked(0).map_err(|err| {
                     warn!(
                         "ed25519_verify() error reading 1st argument, stopping wasm: {:?}",
@@ -291,7 +317,7 @@ impl Externals for ContractInstance {
 
                 self.ed25519_verify(message, signature, public_key)
             }
-            HostFunctions::Ed25519BatchVerify => {
+            HostFunctions::Ed25519BatchVerifyIndex => {
                 let messages = args.nth_checked(0).map_err(|err| {
                     warn!(
                         "ed25519_verify() error reading 1st argument, stopping wasm: {:?}",
@@ -316,7 +342,7 @@ impl Externals for ContractInstance {
 
                 self.ed25519_batch_verify(messages, signatures, public_keys)
             }
-            HostFunctions::Debug => {
+            HostFunctions::DebugIndex => {
                 let message: i32 = args.nth_checked(0).map_err(|err| {
                     warn!("debug() error reading argument, stopping wasm: {:?}", err);
                     err
@@ -339,6 +365,42 @@ impl Externals for ContractInstance {
             HostFunctions::Unknown => {
                 warn!("unknown function index");
                 Err(WasmEngineError::NonExistentImportFunction.into())
+            }
+            HostFunctions::Secp256k1SignIndex => {
+                let message = args.nth_checked(0).map_err(|err| {
+                    warn!(
+                        "secp256k1_sign() error reading 1st argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+                let private_key = args.nth_checked(1).map_err(|err| {
+                    warn!(
+                        "secp256k1_sign() error reading 2nd argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+
+                self.secp256k1_sign(message, private_key)
+            }
+            HostFunctions::Ed25519SignIndex => {
+                let message = args.nth_checked(0).map_err(|err| {
+                    warn!(
+                        "ed25519_sign() error reading 1st argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+                let private_key = args.nth_checked(1).map_err(|err| {
+                    warn!(
+                        "ed25519_sign() error reading 2nd argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+
+                self.ed25519_sign(message, private_key)
             }
         }
     }

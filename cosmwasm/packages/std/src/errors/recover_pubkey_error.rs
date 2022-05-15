@@ -1,34 +1,27 @@
-#[cfg(not(target_arch = "wasm32"))]
-use cosmwasm_crypto::CryptoError;
-use serde::Serialize;
-#[cfg(feature = "backtraces")]
-use std::backtrace::Backtrace;
-use std::fmt::Debug;
-use thiserror::Error;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use snafu::Snafu;
 
-#[derive(Error, Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Snafu, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum RecoverPubkeyError {
-    #[error("Invalid hash format")]
+    #[snafu(display("Invalid hash format"))]
     InvalidHashFormat,
-    #[error("Invalid signature format")]
+    #[snafu(display("Invalid signature format"))]
     InvalidSignatureFormat,
-    #[error("Invalid recovery parameter. Supported values: 0 and 1.")]
+    #[snafu(display("Invalid recovery parameter. Supported values: 0 and 1."))]
     InvalidRecoveryParam,
-    #[error("Unknown error: {error_code}")]
+    #[snafu(display("Unknown error: {}", error_code))]
     UnknownErr {
         error_code: u32,
-        #[cfg(feature = "backtraces")]
-        backtrace: Backtrace,
+        #[serde(skip)]
+        backtrace: Option<snafu::Backtrace>,
     },
 }
 
 impl RecoverPubkeyError {
     pub fn unknown_err(error_code: u32) -> Self {
-        RecoverPubkeyError::UnknownErr {
-            error_code,
-            #[cfg(feature = "backtraces")]
-            backtrace: Backtrace::capture(),
-        }
+        UnknownErr { error_code }.build()
     }
 }
 
@@ -55,22 +48,6 @@ impl PartialEq<RecoverPubkeyError> for RecoverPubkeyError {
                     false
                 }
             }
-        }
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-impl From<CryptoError> for RecoverPubkeyError {
-    fn from(original: CryptoError) -> Self {
-        match original {
-            CryptoError::InvalidHashFormat { .. } => RecoverPubkeyError::InvalidHashFormat,
-            CryptoError::InvalidPubkeyFormat { .. } => panic!("Conversion not supported"),
-            CryptoError::InvalidSignatureFormat { .. } => {
-                RecoverPubkeyError::InvalidSignatureFormat
-            }
-            CryptoError::GenericErr { .. } => RecoverPubkeyError::unknown_err(original.code()),
-            CryptoError::InvalidRecoveryParam { .. } => RecoverPubkeyError::InvalidRecoveryParam,
-            CryptoError::BatchErr { .. } => panic!("Conversion not supported"),
         }
     }
 }

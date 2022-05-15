@@ -1,54 +1,40 @@
+//go:build !secretcli
 // +build !secretcli
 
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	app2 "github.com/enigmampc/SecretNetwork/app"
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	"github.com/spf13/cobra"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
-	"time"
-
-	"github.com/spf13/cobra"
 )
 
 const flagReset = "reset"
-const flagRegistrationService = "registration-node"
-const flagBootstrapNode = "node"
+const flagPulsar = "pulsar"
+const flagCustomRegistrationService = "registration-service"
 
-type WrappedSeedResponse struct {
-	Height string       `json:"height"`
-	Result SeedResponse `json:"result"`
-}
+const flagLegacyRegistrationNode = "registration-node"
+const flagLegacyBootstrapNode = "node"
 
-type WrappedRegistrationResponse struct {
-	Height string               `json:"height"`
-	Result RegistrationResponse `json:"result"`
-}
-
-type RegistrationResponse struct {
-	RegistrationKey []byte `json:"RegistrationKey"`
-}
-
-type SeedResponse struct {
-	Seed string `json:"Seed"`
-}
+const mainnetRegistrationService = "https://mainnet-register.scrtlabs.com/api/registernode"
+const pulsarRegistrationService = "https://testnet-register.scrtlabs.com/api/registernode"
 
 func InitAttestation() *cobra.Command {
 
@@ -287,17 +273,21 @@ func ConfigureSecret() *cobra.Command {
 				return err
 			}
 
-			path := filepath.Join(app2.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
-			// fmt.Println("File Created Successfully", path)
-			if os.IsNotExist(err) {
-				var file, err = os.Create(path)
-				if err != nil {
-					return fmt.Errorf("failed to open config file '%s': %w", path, err)
-				}
-				_ = file.Close()
+			homeDir, err := cmd.Flags().GetString(flags.FlagHome)
+			if err != nil {
+				return err
 			}
 
-			err = ioutil.WriteFile(path, cfgBytes, 0644)
+			// Create .secretd/.node directory if it doesn't exist
+			nodeDir := filepath.Join(homeDir, reg.SecretNodeCfgFolder)
+			err = os.MkdirAll(nodeDir, os.ModePerm)
+			if err != nil {
+				return err
+			}
+
+			seedFilePath := filepath.Join(nodeDir, reg.SecretNodeSeedConfig)
+
+			err = ioutil.WriteFile(seedFilePath, cfgBytes, 0664)
 			if err != nil {
 				return err
 			}
@@ -339,8 +329,13 @@ func ResetEnclave() *cobra.Command {
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			// remove .secretd/.node/seed.json
-			path := filepath.Join(app2.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
+			homeDir, err := cmd.Flags().GetString(flags.FlagHome)
+			if err != nil {
+				return err
+			}
+
+			// Remove .secretd/.node/seed.json
+			path := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
 			if _, err := os.Stat(path); !os.IsNotExist(err) {
 				fmt.Printf("Removing %s\n", path)
 				err = os.Remove(path)
@@ -378,6 +373,22 @@ func ResetEnclave() *cobra.Command {
 	}
 
 	return cmd
+}
+
+type OkayResponse struct {
+	Status          string `json:"status"`
+	Details         KeyVal `json:"details"`
+	RegistrationKey string `json:"registration_key"`
+}
+
+type KeyVal struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type ErrorResponse struct {
+	Status  string `json:"status"`
+	Details string `json:"details"`
 }
 
 // AutoRegisterNode *** EXPERIMENTAL ***
@@ -449,98 +460,80 @@ Please report any issues with this command
 			_ = os.Remove(sgxAttestationCert)
 
 			// verify certificate
-			pubKey, err := ra.VerifyRaCert(cert)
+			_, err = ra.VerifyRaCert(cert)
 			if err != nil {
 				return err
+			}
+
+			regUrl := mainnetRegistrationService
+
+			pulsarFlag, err := cmd.Flags().GetBool(flagPulsar)
+			if err != nil {
+				return fmt.Errorf("error with testnet flag: %s", err)
 			}
 
 			// register the node
-			regUrl, err := cmd.Flags().GetString(flagRegistrationService)
+			customRegUrl, err := cmd.Flags().GetString(flagCustomRegistrationService)
 			if err != nil {
 				return err
 			}
 
-			// call registration service to register us
-			//data := url.Values{
-			//	"cert": {base64.StdEncoding.EncodeToString(cert)},
-			//}
-			resp, err := http.Get(fmt.Sprintf(`%s/register?cert=%s`, regUrl, url.QueryEscape(base64.StdEncoding.EncodeToString(cert))))
-			if err != nil {
-				log.Fatalln(err)
+			if pulsarFlag {
+				regUrl = pulsarRegistrationService
+				log.Println("Registering node on Pulsar testnet")
+			} else if customRegUrl != "" {
+				regUrl = customRegUrl
+				log.Println("Registering node with custom registration service")
+			} else {
+				log.Println("Registering node on mainnet")
 			}
+
+			// call registration service to register us
+			data := []byte(fmt.Sprintf(`{
+				"certificate": "%s"
+			}`, base64.StdEncoding.EncodeToString(cert)))
+
+			resp, err := http.Post(fmt.Sprintf(`%s`, regUrl), "application/json", bytes.NewBuffer(data))
+			defer resp.Body.Close()
 
 			body, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
 				log.Fatalln(err)
 			}
 
-			//Convert the body to type string and extract the seed
-			txHash := string(body)
-			txHash = txHash[1 : len(txHash)-1]
-			txHash = removeQuotes(txHash)
-			if len(txHash) != 64 || !reg.IsHexString(txHash) {
-				return fmt.Errorf(fmt.Sprintf("Registration TX was not successful - %s", txHash))
+			if resp.StatusCode != http.StatusOK {
+				errDetails := ErrorResponse{}
+				err := json.Unmarshal(body, &errDetails)
+				if err != nil {
+					return fmt.Errorf(fmt.Sprintf("Registration TX was not successful - %s", err))
+				}
+				return fmt.Errorf(fmt.Sprintf("Registration TX was not successful - %s", errDetails.Details))
 			}
 
-			bootstrapNode, err := cmd.Flags().GetString(flagBootstrapNode)
+			details := OkayResponse{}
+			err = json.Unmarshal(body, &details)
 			if err != nil {
-				return err
-			}
-			log.Printf("Waiting for on-chain Register...")
-			time.Sleep(10 * time.Second)
-
-			log.Printf("Getting encrypted seed")
-			log.Printf(fmt.Sprintf(`requesting: %s/reg/seed/%s`, bootstrapNode, hex.EncodeToString(pubKey)))
-			// get encrypted seed for our node
-			resp, err = http.Get(fmt.Sprintf(`%s/reg/seed/%s`, bootstrapNode, hex.EncodeToString(pubKey)))
-			if err != nil {
-				log.Fatalln(err)
+				return fmt.Errorf(fmt.Sprintf("Error getting seed from registration service - %s", err))
 			}
 
-			body, err = ioutil.ReadAll(resp.Body)
-			if err != nil {
-				log.Fatalln(err)
-			}
-
-			seedResponse := WrappedSeedResponse{}
-			//Convert the body to type string
-			err = json.Unmarshal(body, &seedResponse)
-			if err != nil {
-				log.Fatalln(err)
-			}
-
-			seed := seedResponse.Result.Seed
+			seed := details.Details.Value
 			log.Printf(fmt.Sprintf(`seed: %s`, seed))
+
+			if len(seed) > 2 {
+				seed = seed[2:]
+			}
 
 			if len(seed) != reg.EncryptedKeyLength || !reg.IsHexString(seed) {
 				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 96 without 0x prefix)")
 			}
 
-			// get network registration public key
-			resp, err = http.Get(fmt.Sprintf(`%s/reg/registration-key`, bootstrapNode))
-			if err != nil {
-				log.Fatalln(err)
-			}
-
-			body, err = ioutil.ReadAll(resp.Body)
-			if err != nil {
-				log.Fatalln(err)
-			}
-
-			regResponse := WrappedRegistrationResponse{}
-			//Convert the body to type string
-			err = json.Unmarshal(body, &regResponse)
-			if err != nil {
-				log.Fatalln(err)
-			}
-
-			regPublicKey := regResponse.Result.RegistrationKey
+			regPublicKey := details.RegistrationKey
 
 			// We expect seed to be 48 bytes of encrypted data (aka 96 hex chars) [32 bytes + 12 IV]
 
 			cfg := reg.SeedConfig{
 				EncryptedKey: seed,
-				MasterCert:   base64.StdEncoding.EncodeToString(regPublicKey),
+				MasterCert:   regPublicKey,
 			}
 
 			cfgBytes, err := json.Marshal(&cfg)
@@ -548,8 +541,13 @@ Please report any issues with this command
 				return err
 			}
 
-			seedCfgFile := filepath.Join(app2.DefaultNodeHome, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
-			seedCfgDir := filepath.Join(app2.DefaultNodeHome, reg.SecretNodeCfgFolder)
+			homeDir, err := cmd.Flags().GetString(flags.FlagHome)
+			if err != nil {
+				return err
+			}
+
+			seedCfgFile := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
+			seedCfgDir := filepath.Join(homeDir, reg.SecretNodeCfgFolder)
 
 			// create seed directory if it doesn't exist
 			_, err = os.Stat(seedCfgDir)
@@ -584,12 +582,11 @@ Please report any issues with this command
 		},
 	}
 	cmd.Flags().Bool(flagReset, false, "Optional flag to regenerate the enclave registration key")
-	cmd.Flags().String(flagRegistrationService, "http://register.mainnet.enigma.co:36667", "Endpoint for registration service")
-	cmd.Flags().String(flagBootstrapNode, "http://node1.supernova.enigma.co:1317", "REST API endpoint of a current node or light client service")
+	cmd.Flags().Bool(flagPulsar, false, "Set --pulsar flag if registering with the Pulsar testnet")
+	cmd.Flags().String(flagCustomRegistrationService, "", "Use this flag if you wish to specify a custom registration service")
+
+	cmd.Flags().String(flagLegacyBootstrapNode, "", "DEPRECATED: This flag is no longer required or in use")
+	cmd.Flags().String(flagLegacyRegistrationNode, "", "DEPRECATED: This flag is no longer required or in use")
 
 	return cmd
-}
-
-func removeQuotes(s string) string {
-	return strings.Trim(s, "\"")
 }

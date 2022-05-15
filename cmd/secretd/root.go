@@ -156,7 +156,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 	// authclient.Codec = encodingConfig.Marshaler
 
 	rootCmd.AddCommand(
-		genutilcli.InitCmd(app.ModuleBasics(), app.DefaultNodeHome),
+		InitCmd(app.ModuleBasics(), app.DefaultNodeHome),
 		//updateTmParamsAndInit(app.ModuleBasics(), app.DefaultNodeHome),
 		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome),
 		secretlegacy.MigrateGenesisCmd(),
@@ -285,7 +285,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 
 	bootstrap := cast.ToBool(appOpts.Get("bootstrap"))
 
-	fmt.Printf("bootstrap: %s", cast.ToString(bootstrap))
+	// fmt.Printf("bootstrap: %s", cast.ToString(bootstrap))
 
 	return app.NewSecretNetworkApp(logger, db, traceStore, true, skipUpgradeHeights,
 		cast.ToString(appOpts.Get(flags.FlagHome)),

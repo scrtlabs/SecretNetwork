@@ -837,9 +837,7 @@ checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "secret-cosmwasm-std"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ef24a4c7c02a2667b5c1c8a297879eca908428ac17068dcec2e61a4cba189ad"
+version = "0.10.1"
 dependencies = [
  "base64 0.11.0",
  "schemars 0.7.6",

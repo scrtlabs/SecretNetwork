@@ -101,3 +101,49 @@ pub fn get_optional_region_address(region: &Option<&Box<Region>>) -> u32 {
 
     region.map(get_region_address).unwrap_or(0)
 }
+
+/// Encodes multiple sections of data into one vector.
+///
+/// Each section is suffixed by a section length encoded as big endian uint32.
+/// Using suffixes instead of prefixes allows reading sections in reverse order,
+/// such that the first element does not need to be re-allocated if the contract's
+/// data structure supports truncation (such as a Rust vector).
+///
+/// The resulting data looks like this:
+///
+/// ```ignore
+/// section1 || section1_len || section2 || section2_len || section3 || section3_len || …
+/// ```
+#[allow(dead_code)] // used in Wasm and tests only
+pub fn encode_sections(sections: &[&[u8]]) -> Vec<u8> {
+    let mut out_len: usize = sections.iter().map(|section| section.len()).sum();
+    out_len += 4 * sections.len();
+    let mut out_data = Vec::with_capacity(out_len);
+    for &section in sections {
+        let section_len = force_to_u32(section.len()).to_be_bytes();
+        out_data.extend(section);
+        out_data.extend_from_slice(&section_len);
+    }
+    // debug_assert_eq!(out_data.len(), out_len);
+    // debug_assert_eq!(out_data.capacity(), out_len);
+    out_data
+}
+
+/// Converts an input of type usize to u32.
+///
+/// On 32 bit platforms such as wasm32 this is just a safe cast.
+/// On other platforms the conversion panics for values larger than
+/// `u32::MAX`.
+#[inline]
+pub fn force_to_u32(input: usize) -> u32 {
+    #[cfg(target_pointer_width = "32")]
+    {
+        // usize = u32 on this architecture
+        input as u32
+    }
+    #[cfg(not(target_pointer_width = "32"))]
+    {
+        use std::convert::TryInto;
+        input.try_into().expect("Input exceeds u32 range")
+    }
+}

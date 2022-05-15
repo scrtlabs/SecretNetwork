@@ -39,7 +39,13 @@ pub struct WasmCosts {
     /// Cost invoking ed25519_verify from WASM
     pub external_ed25519_verify: u32,
     /// Cost invoking ed25519_batch_verify from WASM
-    pub external_ed25519_batch_verify_per_one: u32,
+    pub external_ed25519_batch_verify_base: u32,
+    /// Cost invoking ed25519_batch_verify from WASM
+    pub external_ed25519_batch_verify_each: u32,
+    /// Cost invoking secp256k1_sign from WASM
+    pub external_secp256k1_sign: u32,
+    /// Cost invoking ed25519_sign from WASM
+    pub external_ed25519_sign: u32,
 }
 
 impl Default for WasmCosts {
@@ -54,7 +60,7 @@ impl Default for WasmCosts {
             initial_mem: 8192,
             grow_mem: 8192,
             memcpy: 1,
-            max_stack_height: 64 * 1024, // Assaf: I don't think this goes anywhere
+            max_stack_height: 64 * 1024, // Assaf: I don't think that this goes anywhere
             opcodes_mul: 3,
             opcodes_div: 8,
             external_humanize_address: 8192,
@@ -63,7 +69,10 @@ impl Default for WasmCosts {
             external_secp256k1_verify: 98304,
             external_secp256k1_recover_pubkey: 98304,
             external_ed25519_verify: 73728,
-            external_ed25519_batch_verify_per_one: 70000,
+            external_ed25519_batch_verify_base: 5000,
+            external_ed25519_batch_verify_each: 70000,
+            external_secp256k1_sign: 100000,
+            external_ed25519_sign: 75000,
         }
     }
 }
