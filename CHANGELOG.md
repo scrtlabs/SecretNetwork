@@ -1,5 +1,9 @@
 # CHANGELOG
 
+# 1.3.1
+
+- Updated `/swagger` endpoint in the LCD REST server
+
 # 1.3.0
 
 - Bug fix when calculating gas prices caused by queries. This is will increase gas prices for contracts that use external queries, and will more accurately reflect resources used
@@ -19,8 +23,13 @@
   - `secp256k1_verify()`
   - `secp256k1_recover_pubkey()`
 - Add new secret CosmWasm API:
+
   - `ed25519_sign()`
   - `secp256k1_sign()`
+
+- Registeration service has been reworked. Registering a new node automatically now no longer requires a node to function properly. It also includes built-in support for the pulsar-2 testnet with the --pulsar flag.
+
+- Secretcli now automatically appends either port 80 or port 443 when not providing any port using `secretcli config` if the node address starts with `http://` or `https://`
 
 # 1.2.6
 

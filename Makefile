@@ -472,7 +472,7 @@ aesm-image:
 # ref: https://github.com/golang/go/issues/30515
 statik:
 	@echo "Installing statik..."
-	@(cd /tmp && GO111MODULE=on go get github.com/rakyll/statik@v0.1.6)
+	@go install github.com/rakyll/statik@v0.1.6
 
 
 update-swagger-docs: statik
@@ -501,9 +501,9 @@ update-swagger-docs: statik
 # proto-check-breaking:
 #	@buf check breaking --against-input '.git#branch=master'
 
-protoVer=v0.2
+protoVer=v0.7
 
-proto-all: proto-format proto-lint proto-gen
+proto-all: proto-format proto-lint proto-gen proto-swagger-gen
 
 proto-gen:
 	@echo "Generating Protobuf files"
@@ -517,7 +517,7 @@ proto-format:
 	find ./ -not -path "./third_party/*" -name *.proto -exec clang-format -i {} \;
 
 proto-swagger-gen:
-	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) ./scripts/protoc-swagger-gen.sh
+	@./scripts/protoc-swagger-gen.sh
 
 proto-lint:
 	@$(DOCKER_BUF) lint --error-format=json
