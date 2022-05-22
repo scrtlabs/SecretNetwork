@@ -474,7 +474,6 @@ statik:
 	@echo "Installing statik..."
 	@go install github.com/rakyll/statik@v0.1.6
 
-
 update-swagger-docs: statik
 	statik -src=client/docs/static/swagger/ -dest=client/docs -f -m
 	@if [ -n "$(git status --porcelain)" ]; then \

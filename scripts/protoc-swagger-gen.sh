@@ -27,7 +27,11 @@ done
 # combine swagger files
 # uses nodejs package `swagger-combine`.
 # all the individual swagger files need to be configured in `config.json` for merging
-npx swagger-combine ./client/docs/config.json -o ./client/docs/static/swagger/swagger.yaml -f yaml --continueOnConflictingPaths true --includeDefinitions true
+npx swagger-combine ./client/docs/config.json \
+  -o ./client/docs/static/swagger/swagger.yaml \
+  -f yaml \
+  --continueOnConflictingPaths \
+  --includeDefinitions
 
 # clean swagger files
 rm -rf ./tmp-swagger-gen
