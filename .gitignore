@@ -35,3 +35,4 @@ ias_bin_sw.go
 node_modules
 /secretjs
 /secret.js
+tmp-swagger-gen
