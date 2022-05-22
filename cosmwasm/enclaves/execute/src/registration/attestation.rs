@@ -421,7 +421,7 @@ pub fn create_attestation_report(
     }
 
     let (attn_report, signature, signing_cert) =
-        get_report_from_intel(ias_sock, quote_vec, api_key_file);
+        get_report_from_intel(ias_sock, quote_vec, api_key_file)?;
     Ok(EndorsedAttestationReport {
         report: attn_report.into_bytes(),
         signature,
