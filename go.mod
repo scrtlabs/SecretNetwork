@@ -31,9 +31,7 @@ require github.com/cosmos/gorocksdb v1.2.0 // indirect
 
 require (
 	github.com/dgraph-io/badger/v2 v2.2007.3 // indirect
-	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
-	github.com/golang/glog v1.0.0 // indirect
 	github.com/stretchr/objx v0.3.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
@@ -131,7 +129,7 @@ require (
 
 replace (
 	// github.com/cosmos/cosmos-sdk v0.44.5 => github.com/scrtlabs/cosmos-sdk v0.44.7-0.20220208193714-214a72279fd0
-	github.com/cosmos/cosmos-sdk v0.45.1 => github.com/scrtlabs/cosmos-sdk v0.45.4-scrt.0.20220506123023-e9198e81a691
+	github.com/cosmos/cosmos-sdk v0.45.1 => github.com/scrtlabs/cosmos-sdk v0.45.4-scrt.0.20220524151842-19338330a997
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// enforce grpc version
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
