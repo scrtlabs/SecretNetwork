@@ -1,8 +1,8 @@
-swagger: "2.0"
+swagger: '2.0'
 info:
   title: Secret Network - gRPC Gateway docs
   description: A REST interface for queries and transactions
-  version: 1.3.1-beta.10
+  version: v1.3.1-beta.11
 paths:
   /cosmos/auth/v1beta1/accounts:
     get:
@@ -849,7 +849,7 @@ paths:
   /cosmos/auth/v1beta1/params:
     get:
       summary: Params queries all parameters.
-      operationId: tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonParams
+      operationId: ./tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonParams
       responses:
         '200':
           description: A successful response.
@@ -3025,7 +3025,7 @@ paths:
   /cosmos/bank/v1beta1/params:
     get:
       summary: Params queries the parameters of x/bank module.
-      operationId: tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonParams
+      operationId: ./tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonParams
       responses:
         '200':
           description: A successful response.
@@ -6585,7 +6585,7 @@ paths:
     get:
       summary: DelegatorValidators queries the validators of a delegator.
       operationId: >-
-        tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonDelegatorValidators
+        ./tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonDelegatorValidators
       responses:
         '200':
           description: A successful response.
@@ -6723,7 +6723,7 @@ paths:
   /cosmos/distribution/v1beta1/params:
     get:
       summary: Params queries params of the distribution module.
-      operationId: tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonParams
+      operationId: ./tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonParams
       responses:
         '200':
           description: A successful response.
@@ -8584,7 +8584,7 @@ paths:
   /cosmos/gov/v1beta1/params/{params_type}:
     get:
       summary: Params queries all parameters of the gov module.
-      operationId: tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonParams
+      operationId: ./tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonParams
       responses:
         '200':
           description: A successful response.
@@ -11401,7 +11401,7 @@ paths:
   /cosmos/mint/v1beta1/params:
     get:
       summary: Params returns the total set of minting parameters.
-      operationId: tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonParams
+      operationId: ./tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonParams
       responses:
         '200':
           description: A successful response.
@@ -11463,7 +11463,7 @@ paths:
       summary: |-
         Params queries a specific parameter of a module, given its subspace and
         key.
-      operationId: tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonParams
+      operationId: ./tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonParams
       responses:
         '200':
           description: A successful response.
@@ -11521,7 +11521,7 @@ paths:
   /cosmos/slashing/v1beta1/params:
     get:
       summary: Params queries the parameters of slashing module
-      operationId: tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonParams
+      operationId: ./tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonParams
       responses:
         '200':
           description: A successful response.
@@ -12944,7 +12944,7 @@ paths:
         DelegatorValidators queries all validators info for given delegator
         address.
       operationId: >-
-        tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonDelegatorValidators
+        ./tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonDelegatorValidators
       responses:
         '200':
           description: A successful response.
@@ -14673,7 +14673,7 @@ paths:
   /cosmos/staking/v1beta1/params:
     get:
       summary: Parameters queries the staking parameters.
-      operationId: tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonParams
+      operationId: ./tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonParams
       responses:
         '200':
           description: A successful response.
@@ -25253,7 +25253,7 @@ paths:
 
         (https://github.com/cosmos/ibc-go/blob/2c880a22e9f9cc75f62b527ca94aa75ce1106001/proto/ibc/core/client/v1/query.proto#L54)
       operationId: >-
-        tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonUpgradedConsensusState
+        ./tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonUpgradedConsensusState
       responses:
         '200':
           description: A successful response.
@@ -25473,7 +25473,7 @@ paths:
     get:
       summary: Params queries all parameters of the ICA controller submodule.
       operationId: >-
-        tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonParams
+        ./tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonParams
       responses:
         '200':
           description: A successful response.
@@ -25520,7 +25520,7 @@ paths:
     get:
       summary: Params queries all parameters of the ICA host submodule.
       operationId: >-
-        tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonParams
+        ./tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonParams
       responses:
         '200':
           description: A successful response.
@@ -25817,7 +25817,7 @@ paths:
   /ibc/apps/transfer/v1/params:
     get:
       summary: Params queries all parameters of the ibc-transfer module.
-      operationId: tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonParams
+      operationId: ./tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonParams
       responses:
         '200':
           description: A successful response.
@@ -32850,7 +32850,7 @@ paths:
     get:
       summary: UpgradedConsensusState queries an Upgraded IBC consensus state.
       operationId: >-
-        tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonUpgradedConsensusState
+        ./tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonUpgradedConsensusState
       responses:
         '200':
           description: A successful response.
@@ -36419,7 +36419,7 @@ paths:
       description: Information about the connected node
       summary: The properties of the connected node
       tags:
-        - Gaia REST
+        - Secret REST
       produces:
         - application/json
       responses:
