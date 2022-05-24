@@ -67,15 +67,6 @@ RUN mkdir -p /root/config/
 
 
 ####### Node parameters
-ARG MONIKER=default
-ARG CHAINID=secret-4
-ARG REGISTRATION_SERVICE=https://mainnet-register.scrtlabs.com/api/registernode
-ARG STATE_SYNC=https://peer.node.scrtlabs.com:26657
-
-ENV CHAINID="${CHAINID}"
-ENV MONIKER="${MONIKER}"
-ENV REGISTRATION_SERVICE="${REGISTRATION_SERVICE}"
-ENV STATE_SYNC="${STATE_SYNC}"
 
 #ENV LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/:/opt/sgxsdk/lib64/
 

@@ -90,6 +90,8 @@ jobs:
     env: # Or as an environment variable
       SPID_MAINNET: ${{ secrets.SPID_MAINNET }}
       API_KEY_MAINNET: ${{ secrets.API_KEY_MAINNET }}
+      REGISTRY: ghcr.io
+      IMAGE_NAME: scrtlabs/secret-network-node
     steps:
       - uses: actions/checkout@v3
       - name: Get the version
@@ -110,6 +112,14 @@ jobs:
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
+      - name: Log in to the Container registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push docker image
+        run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}
 
   native-build-cli:
     runs-on: ${{matrix.os}}

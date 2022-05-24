@@ -1,53 +1,65 @@
 #!/usr/bin/env bash
 set -euv
 
-# REGISTRATION_SERVICE=
-# export RPC_URL="bootstrap:26657"
-# export CHAINID="secretdev-1"
-# export PERSISTENT_PEERS="115aa0a629f5d70dd1d464bc7e42799e00f4edae@bootstrap:26656"
+export SCRT_SGX_STORAGE=/opt/secret/.sgx_secrets
+export SCRT_ENCLAVE_DIR=/usr/lib
 
-# init the node
-# rm -rf ~/.secret*
+FORCE_REGISTER=${FORCE_REGISTER:-}
+FORCE_SYNC=${FORCE_SYNC:-}
 
-# rm -rf ~/.secretd
-file=/root/.secretd/config/attestation_cert.der
-if [ ! -e "$file" ]
+CHAINID="${CHAINID:-secret-4}"
+MONIKER="${MONIKER:-default}"
+REGISTRATION_SERVICE="${REGISTRATION_SERVICE:-https://mainnet-register.scrtlabs.com/api/registernode}"
+STATE_SYNC1="${STATE_SYNC1:-http://peer.node.scrtlabs.com:26657}"
+STATE_SYNC2="${STATE_SYNC2:-${STATE_SYNC1:-http://peer.node.scrtlabs.com:26657}}"
+
+file=/opt/secret/.sgx_secrets/consensus_seed.sealed
+if [ ! -z "$FORCE_REGISTER" ] || [ ! -e "$file" ];
 then
-  rm -rf ~/.secretd/* || true
+  secretd auto-register --reset --registration-service $REGISTRATION_SERVICE
+fi
+
+file=/root/.secretd/data/blockstore.db/MANIFEST-000000
+if [ ! -z "$FORCE_SYNC" ] || [ ! -e "$file" ];
+then
+
+  echo "Resetting or initializing node"
+
+  rm -rf /root/.secretd/* || true
 
   mkdir -p /root/.secretd/.node
-  # secretd config keyring-backend test
-  secretd config node tcp://"$RPC_URL"
   secretd config chain-id "$CHAINID"
 
   secretd init "$MONIKER" --chain-id "$CHAINID"
 
-  echo "Initializing chain: $CHAINID with node moniker: $(hostname)"
+  echo "Initialized chain: $CHAINID with node moniker: $MONIKER"
+
+  cp /root/genesis.json /root/.secretd/config/genesis.json
 
   # Open RPC port to all interfaces
-  perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.secretd/config/config.toml
+  perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' /root/.secretd/config/config.toml
 
-  secretd auto-register --reset --registration-service $REGISTRATION_SERVICE
+  if [ ! -z "$STATE_SYNC1" ] && [ ! -z "$STATE_SYNC2" ];
+  then
 
-  TRUST_HEIGHT=`curl -s http://20.104.20.173:26657/commit | jq .result.signed_header.header.height | tr -d '"'`
-  TRUST_HASH=`curl -s http://20.104.20.173:26657/commit | jq .result.signed_header.commit.block_id.hash`
+    echo "Syncing with state sync"
 
-  # enable state sync (this is the only line in the config that uses enable = false. This could change and break everything
-  perl -i -pe 's/enable = false/enable = true/' ~/.secretd/config/config.toml
+    LATEST_HEIGHT=$(curl -s $STATE_SYNC1/block | jq -r .result.block.header.height); \
+    BLOCK_HEIGHT=$((LATEST_HEIGHT - 2000)); \
+    TRUST_HASH=$(curl -s "$STATE_SYNC1/block?height=$BLOCK_HEIGHT" | jq -r .result.block_id.hash)
 
-  # replace state sync rpc server with our custom one
-  perl -i -pe 's/rpc_servers =/rpc_servers = "'$STATE_SYNC','$STATE_SYNC'"/' ~/.secretd/config/config.toml
-  # replace trust height with fetched one
-  perl -i -pe 's/trust_height =/trust_height = '$TRUST_HEIGHT'/' ~/.secretd/config/config.toml
-  # replace trust hash with fetched one
-  perl -i -pe 's/trust_hash =/trust_hash = '$TRUST_HASH'/' ~/.secretd/config/config.toml
+    echo "State sync node: $STATE_SYNC1,$STATE_SYNC2"
+    echo "Trust hash: $TRUST_HASH; Block height: $BLOCK_HEIGHT"
 
+    # enable state sync (this is the only line in the config that uses enable = false. This could change and break everything
+    perl -i -pe 's/enable = false/enable = true/' ~/.secretd/config/config.toml
 
-  mv /root/genesis.json /root/.secretd/config/genesis.json
-
-  secretd validate-genesis
-
-  perl -i -pe 's/ / /' ~/.secretd/config/config.toml
-
+    sed -i.bak -E "s|^(enable[[:space:]]+=[[:space:]]+).*$|\1true| ; \
+    s|^(rpc_servers[[:space:]]+=[[:space:]]+).*$|\1\"$STATE_SYNC1,$STATE_SYNC2\"| ; \
+    s|^(trust_height[[:space:]]+=[[:space:]]+).*$|\1$BLOCK_HEIGHT| ; \
+    s|^(trust_hash[[:space:]]+=[[:space:]]+).*$|\1\"$TRUST_HASH\"|" $HOME/.secretd/config/config.toml
+  else
+    echo "Syncing with block sync"
+  fi
 fi
 secretd start

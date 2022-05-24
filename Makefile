@@ -263,7 +263,7 @@ build-mainnet-upgrade: docker_base
 	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/mainnet-upgrade-release.Dockerfile -t upgrade-release:latest .
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb-mainnet.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
-	docker tag upgrade-release:latest ghcr.io/scrtlabs/secret-network-node-mainnet:$(VERSION)
+	docker tag upgrade-release:latest ghcr.io/scrtlabs/secret-network-node:$(VERSION)
 
 build-mainnet: docker_base
 	@mkdir build 2>&3 || true
