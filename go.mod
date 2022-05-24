@@ -3,7 +3,7 @@ module github.com/enigmampc/SecretNetwork
 go 1.17
 
 require (
-	github.com/cosmos/cosmos-sdk v0.45.1
+	github.com/cosmos/cosmos-sdk v0.45.4
 	github.com/cosmos/ibc-go/v3 v3.0.0
 	github.com/gogo/protobuf v1.3.3
 	github.com/golang/protobuf v1.5.2
@@ -128,8 +128,7 @@ require (
 )
 
 replace (
-	// github.com/cosmos/cosmos-sdk v0.44.5 => github.com/scrtlabs/cosmos-sdk v0.44.7-0.20220208193714-214a72279fd0
-	github.com/cosmos/cosmos-sdk v0.45.1 => github.com/scrtlabs/cosmos-sdk v0.45.4-scrt.0.20220524151842-19338330a997
+	github.com/cosmos/cosmos-sdk v0.45.4 => github.com/scrtlabs/cosmos-sdk v0.45.4-scrt.0.20220524151842-19338330a997
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// enforce grpc version
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
