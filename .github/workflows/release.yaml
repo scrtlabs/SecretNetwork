@@ -14,7 +14,6 @@ jobs:
       fail-fast: false
       matrix:
         db_backend: [rocksdb, goleveldb]
-        node_type: [query]
     runs-on: ubuntu-latest
     env: # Or as an environment variable
       SPID_TESTNET: ${{ secrets.SPID_TESTNET }}
@@ -86,7 +85,6 @@ jobs:
       fail-fast: false
       matrix:
         db_backend: [goleveldb, rocksdb]
-        node_type: [query]
     env: # Or as an environment variable
       SPID_MAINNET: ${{ secrets.SPID_MAINNET }}
       API_KEY_MAINNET: ${{ secrets.API_KEY_MAINNET }}
