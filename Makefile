@@ -238,7 +238,7 @@ build-rocksdb-image:
 	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/db-compile.Dockerfile -t enigmampc/rocksdb:${VERSION} .
 
 build-localsecret:
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=SW --build-arg FEATURES="${FEATURES},debug-print" -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=SW --build-arg FEATURES_U="${FEATURES_U}" --build-arg FEATURES="${FEATURES},debug-print" -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/release.Dockerfile -t build-release .
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/dev-image.Dockerfile -t ghcr.io/scrtlabs/localsecret:${DOCKER_TAG} .
 
@@ -260,10 +260,10 @@ build-testnet: docker_base
 
 build-mainnet-upgrade: docker_base
 	@mkdir build 2>&3 || true
-	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/mainnet-upgrade-release.Dockerfile -t upgrade-release:latest .
+	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/mainnet-upgrade-release.Dockerfile -t build-release .
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb-mainnet.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
-	docker tag upgrade-release:latest ghcr.io/scrtlabs/secret-network-node:$(VERSION)
+	docker tag build-release ghcr.io/scrtlabs/secret-network-node:$(VERSION)
 
 build-mainnet: docker_base
 	@mkdir build 2>&3 || true
@@ -473,7 +473,7 @@ aesm-image:
 # ref: https://github.com/golang/go/issues/30515
 statik:
 	@echo "Installing statik..."
-	@(cd /tmp && GO111MODULE=on go get github.com/rakyll/statik@v0.1.6)
+	@go install github.com/rakyll/statik@v0.1.6
 
 
 update-swagger-docs: statik
@@ -502,9 +502,9 @@ update-swagger-docs: statik
 # proto-check-breaking:
 #	@buf check breaking --against-input '.git#branch=master'
 
-protoVer=v0.2
+protoVer=v0.7
 
-proto-all: proto-format proto-lint proto-gen
+proto-all: proto-format proto-lint proto-gen proto-swagger-gen
 
 proto-gen:
 	@echo "Generating Protobuf files"
@@ -518,7 +518,7 @@ proto-format:
 	find ./ -not -path "./third_party/*" -name *.proto -exec clang-format -i {} \;
 
 proto-swagger-gen:
-	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) ./scripts/protoc-swagger-gen.sh
+	@./scripts/protoc-swagger-gen.sh
 
 proto-lint:
 	@$(DOCKER_BUF) lint --error-format=json

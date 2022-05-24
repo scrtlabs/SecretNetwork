@@ -22,16 +22,18 @@ require (
 	github.com/tendermint/tendermint v0.34.19
 	github.com/tendermint/tm-db v0.6.7
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
-	google.golang.org/genproto v0.0.0-20211223182754-3ac035c7e7cb
-	google.golang.org/grpc v1.45.0
-	google.golang.org/protobuf v1.27.1
+	google.golang.org/genproto v0.0.0-20220505152158-f39f71e6c8f3
+	google.golang.org/grpc v1.46.0
+	google.golang.org/protobuf v1.28.0
 )
 
 require github.com/cosmos/gorocksdb v1.2.0 // indirect
 
 require (
 	github.com/dgraph-io/badger/v2 v2.2007.3 // indirect
+	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
+	github.com/golang/glog v1.0.0 // indirect
 	github.com/stretchr/objx v0.3.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )

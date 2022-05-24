@@ -7,7 +7,7 @@
   },
   "apis": [
     {
-      "url": "./client/docs/swagger_legacy.yaml",
+      "url": "./client/docs/static/swagger/swagger.yaml",
       "dereference": {
         "circular": "ignore"
       }

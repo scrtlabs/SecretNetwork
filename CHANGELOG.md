@@ -1,5 +1,9 @@
 # CHANGELOG
 
+# 1.3.1
+
+- Updated `/swagger` endpoint in the LCD REST server
+
 # 1.3.0
 
 - Bug fix when calculating gas prices caused by queries. This is will increase gas prices for contracts that use external queries, and will more accurately reflect resources used
@@ -19,6 +23,7 @@
   - `secp256k1_verify()`
   - `secp256k1_recover_pubkey()`
 - Add new secret CosmWasm API:
+
   - `ed25519_sign()`
   - `secp256k1_sign()`
 
