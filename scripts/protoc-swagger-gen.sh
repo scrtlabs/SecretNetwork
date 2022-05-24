@@ -24,14 +24,15 @@ for dir in $proto_dirs; do
   fi
 done
 
+find tmp-swagger-gen -name '*.swagger.json' |
+  sort |
+  awk '{print "{\"url\":\""$1"\",\"operationIds\":{\"rename\":{\"Params\":\""$1"Params\",\"DelegatorValidators\":\""$1"DelegatorValidators\",\"UpgradedConsensusState\":\""$1"UpgradedConsensusState\"}}}"}' |
+  jq -s '{swagger:"2.0","info":{"title":"Secret Network - gRPC Gateway docs","description":"A REST interface for queries and transactions","version":"'"$(git describe --tags $(git rev-list --tags --max-count=1))"'"},apis:.} | .apis += [{"url":"./client/docs/swagger_legacy.yaml","dereference":{"circular":"ignore"}}]' > ./client/docs/config.json
+
 # combine swagger files
 # uses nodejs package `swagger-combine`.
 # all the individual swagger files need to be configured in `config.json` for merging
-npx swagger-combine ./client/docs/config.json \
-  -o ./client/docs/static/swagger/swagger.yaml \
-  -f yaml \
-  --continueOnConflictingPaths \
-  --includeDefinitions
+npx swagger-combine ./client/docs/config.json -o ./client/docs/static/swagger/swagger.yaml -f yaml --continueOnConflictingPaths --includeDefinitions
 
 # clean swagger files
 rm -rf ./tmp-swagger-gen
