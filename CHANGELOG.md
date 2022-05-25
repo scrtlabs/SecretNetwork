@@ -2,11 +2,11 @@
 
 # 1.3.1
 
-- Use all available core to serve queries.
+- Use all available cores to serve queries.
 - Mainnet docker image (TODO link to more details).
 - Include `snappy` in rocksdb binary.
-- Mempool optimizations (Thanks @ValarDragon!). See more details [here](https://github.com/scrtlabs/cosmos-sdk/pull/141#issuecomment-1136767411).
-- Updated `${LCD_URL}/swagger/` for v1.3.
+- Mempool optimizations (Thanks @ValarDragon !). For more info go [here](https://github.com/scrtlabs/cosmos-sdk/pull/141#issuecomment-1136767411).
+- Updated `${LCD_URL}/swagger/` endpoint for v1.3.
 
 # 1.3.0
 
