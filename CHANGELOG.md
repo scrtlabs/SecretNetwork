@@ -3,9 +3,9 @@
 # 1.3.1
 
 - Use all available cores to serve queries.
-- Fix missing `libsnappy1v5` dependency for rocksdb binary.
 - Mainnet docker image (usage docs to follow).
 - Mempool optimizations (Thanks [@ValarDragon](https://github.com/ValarDragon)!). For more info go [here](https://github.com/scrtlabs/cosmos-sdk/pull/141#issuecomment-1136767411).
+- Fix missing `libsnappy1v5` dependency for rocksdb bindeb deb package.
 - Updated `${LCD_URL}/swagger/` for v1.3 and add `${LCD_URL}/openapi/`.
 
 # 1.3.0
