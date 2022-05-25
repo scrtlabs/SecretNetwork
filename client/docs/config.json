@@ -3,7 +3,7 @@
   "info": {
     "title": "Secret Network - gRPC Gateway docs",
     "description": "A REST interface for queries and transactions",
-    "version": "v1.3.1-beta.14"
+    "version": "v1.3.1"
   },
   "apis": [
     {
