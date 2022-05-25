@@ -476,7 +476,7 @@ statik:
 	@go install github.com/rakyll/statik@v0.1.6
 
 update-swagger-openapi-docs: statik proto-swagger-openapi-gen
-	statik -src=client/docs/static/swagger/ -dest=client/docs -f -m
+	statik -src=client/docs/static/ -dest=client/docs -f -m
 	@if [ -n "$(git status --porcelain)" ]; then \
         echo "\033[91mSwagger docs are out of sync!!!\033[0m";\
         exit 1;\

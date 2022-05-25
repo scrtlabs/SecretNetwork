@@ -724,10 +724,10 @@ func RegisterSwaggerAPI(_ client.Context, rtr *mux.Router) {
 		panic(err)
 	}
 
-	staticServer := http.FileServer(statikFS)
-	rtr.PathPrefix("/static/").Handler(http.StripPrefix("/static/", staticServer))
-	rtr.PathPrefix("/swagger/").Handler(http.StripPrefix("/swagger/", staticServer))
-	// rtr.PathPrefix("/swagger/").Handler(staticServer)
+	statikServer := http.FileServer(statikFS)
+	rtr.PathPrefix("/static/").Handler(http.StripPrefix("/static/", statikServer))
+	rtr.PathPrefix("/swagger/").Handler(statikServer)
+	rtr.PathPrefix("/openapi/").Handler(statikServer)
 }
 
 // BlockedAddrs returns all the app's module account addresses that are not
