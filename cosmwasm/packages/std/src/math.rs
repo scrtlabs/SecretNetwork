@@ -128,6 +128,14 @@ impl ops::Add for Decimal {
     }
 }
 
+impl ops::Sub for Decimal {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        Decimal(self.0 - other.0)
+    }
+}
+
 /// Serializes as a decimal string
 impl Serialize for Decimal {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

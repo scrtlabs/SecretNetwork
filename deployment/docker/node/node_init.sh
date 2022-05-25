@@ -15,12 +15,6 @@ if [ ! -e "$file" ]
 then
   rm -rf ~/.secretd/* || true
 
-  # secretcli config chain-id enigma-testnet
-#  secretcli config output json
-#  secretcli config indent true
-#  secretcli config trust-node true
-
-
   mkdir -p /root/.secretd/.node
   # secretd config keyring-backend test
   secretd config node tcp://"$RPC_URL"
