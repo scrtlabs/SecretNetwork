@@ -2,7 +2,11 @@
 
 # 1.3.1
 
-- Updated `/swagger` endpoint in the LCD REST server
+- Use all available core to serve queries.
+- Mainnet docker image (TODO link to more details).
+- Include `snappy` in rocksdb binary.
+- Mempool optimizations (Thanks @ValarDragon!). See more details [here](https://github.com/scrtlabs/cosmos-sdk/pull/141#issuecomment-1136767411).
+- Updated `${LCD_URL}/swagger/` for v1.3.
 
 # 1.3.0
 
