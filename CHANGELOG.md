@@ -2,7 +2,10 @@
 
 # 1.3.1
 
-- Updated `/swagger` endpoint in the LCD REST server
+- Use all available cores to serve queries.
+- Mainnet docker image (TODO link to more details).
+- Mempool optimizations (Thanks [@ValarDragon](https://github.com/ValarDragon)!). For more info go [here](https://github.com/scrtlabs/cosmos-sdk/pull/141#issuecomment-1136767411).
+- Updated `${LCD_URL}/swagger/` for v1.3 and add `${LCD_URL}/openapi/`.
 
 # 1.3.0
 

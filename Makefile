@@ -260,7 +260,7 @@ build-testnet: docker_base
 
 build-mainnet-upgrade: docker_base
 	@mkdir build 2>&3 || true
-	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/mainnet-upgrade-release.Dockerfile -t build-release .
+	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/mainnet-upgrade-release.Dockerfile -t build-release:latest .
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb-mainnet.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 	docker tag build-release ghcr.io/scrtlabs/secret-network-node:$(VERSION)
@@ -475,9 +475,8 @@ statik:
 	@echo "Installing statik..."
 	@go install github.com/rakyll/statik@v0.1.6
 
-
-update-swagger-docs: statik
-	statik -src=client/docs/static/swagger/ -dest=client/docs -f -m
+update-swagger-openapi-docs: statik proto-swagger-openapi-gen
+	statik -src=client/docs/static/ -dest=client/docs -f -m
 	@if [ -n "$(git status --porcelain)" ]; then \
         echo "\033[91mSwagger docs are out of sync!!!\033[0m";\
         exit 1;\
@@ -485,7 +484,7 @@ update-swagger-docs: statik
         echo "\033[92mSwagger docs are in sync\033[0m";\
     fi
 
-.PHONY: update-swagger-docs statik
+.PHONY: update-swagger-openapi-docs statik
 
 ###############################################################################
 ###                                Protobuf                                 ###
@@ -504,27 +503,16 @@ update-swagger-docs: statik
 
 protoVer=v0.7
 
-proto-all: proto-format proto-lint proto-gen proto-swagger-gen
+proto-all: proto-format proto-lint proto-gen proto-swagger-openapi-gen
 
 proto-gen:
 	@echo "Generating Protobuf files"
 	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
 
-# This one doesn't work and i can't find the right docker repo
-proto-format:
-	@echo "Formatting Protobuf files"
-	$(DOCKER) run --rm -v $(CURDIR):/workspace \
-	--workdir /workspace tendermintdev/docker-build-proto \
-	find ./ -not -path "./third_party/*" -name *.proto -exec clang-format -i {} \;
-
-proto-swagger-gen:
-	@./scripts/protoc-swagger-gen.sh
+proto-swagger-openapi-gen:
+	@./scripts/protoc-swagger-openapi-gen.sh
 
 proto-lint:
 	@$(DOCKER_BUF) lint --error-format=json
 
-## TODO - change branch release/v0.5.x to master after columbus-5 merged
-proto-check-breaking:
-	@$(DOCKER_BUF) breaking --against-input $(HTTPS_GIT)#branch=release/v0.43-stargate
-
-.PHONY: proto-all proto-gen proto-swagger-gen proto-format proto-lint proto-check-breaking
+.PHONY: proto-all proto-gen proto-swagger-openapi-gen proto-format proto-lint proto-check-breaking

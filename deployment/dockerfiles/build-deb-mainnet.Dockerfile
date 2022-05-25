@@ -1,4 +1,4 @@
-FROM upgrade-release:latest AS build-env-rust-go
+FROM build-release:latest AS build-env-rust-go
 # Final image
 FROM enigmampc/enigma-sgx-base:2004-1.1.3
 
