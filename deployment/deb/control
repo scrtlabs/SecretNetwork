@@ -1,9 +1,11 @@
 Package: secretnetwork
 Priority: optional
 Architecture: amd64
-Homepage: https://github.com/enigmampc/SecretNetwork
-Maintainer: https://github.com/enigmampc
+Homepage: https://github.com/scrtlabs/SecretNetwork
+Maintainer: https://github.com/scrtlabs
 Provides: secretnetwork
 Conflicts: secretnetwork
 Replaces: secretnetwork
-Description: The Secret Network
+Depends: libsnappy1v5
+Description: More Privacy. Limitless Possibilities.
+ Secret Network is the first blockchain with customizable privacy. You get to choose what you share, with whom, and how. This protects users, and empowers developers to build a better Web3. Visit

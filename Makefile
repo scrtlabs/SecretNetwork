@@ -200,24 +200,6 @@ deb-no-compile:
 	dpkg-deb --build /tmp/SecretNetwork/deb/ .
 	-rm -rf /tmp/SecretNetwork
 
-rename_for_release:
-	-rename "s/windows-4.0-amd64/v${VERSION}-win64/" *.exe
-	-rename "s/darwin-10.6-amd64/v${VERSION}-osx64/" *darwin*
-
-sign_for_release: rename_for_release
-	sha256sum enigma-blockchain*.deb > SHA256SUMS
-	-sha256sum secretd-* secretcli-* >> SHA256SUMS
-	gpg -u 91831DE812C6415123AFAA7B420BF1CB005FBCE6 --digest-algo sha256 --clearsign --yes SHA256SUMS
-	rm -f SHA256SUMS
-
-release: sign_for_release
-	rm -rf ./release/
-	mkdir -p ./release/
-	cp enigma-blockchain_*.deb ./release/
-	cp secretcli-* ./release/
-	cp secretd-* ./release/
-	cp SHA256SUMS.asc ./release/
-
 clean:
 	-rm -rf /tmp/SecretNetwork
 	-rm -f ./secretcli*
@@ -443,21 +425,6 @@ bin-data-production:
 # 2. sudo docker buildx create --use
 secret-contract-optimizer:
 	sudo docker buildx build --platform=linux/amd64,linux/arm64/v8 -f deployment/dockerfiles/secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} --push .
-
-secretjs-build:
-	cd cosmwasm-js/packages/sdk && yarn && yarn build
-
-# Before running this, first make sure:
-# 1. To `npm login` with enigma-dev
-# 2. The new version is updated in `cosmwasm-js/packages/sdk/package.json`
-secretjs-publish-npm: secretjs-build
-	cd cosmwasm-js/packages/sdk && npm publish
-
-# Before running this, first make sure:
-# 1. To `npm login` with enigma-dev
-# 2. The new version is updated in `cosmwasm-js/packages/sdk/package.json`
-secretjs-publish-beta-npm: secretjs-build
-	cd cosmwasm-js/packages/sdk && npm publish --tag beta
 
 aesm-image:
 	docker build -f deployment/dockerfiles/aesm.Dockerfile -t enigmampc/aesm .
