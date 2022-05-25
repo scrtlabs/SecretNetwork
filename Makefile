@@ -474,7 +474,7 @@ statik:
 	@echo "Installing statik..."
 	@go install github.com/rakyll/statik@v0.1.6
 
-update-swagger-docs: statik proto-swagger-gen
+update-swagger-openapi-docs: statik proto-swagger-openapi-gen
 	statik -src=client/docs/static/swagger/ -dest=client/docs -f -m
 	@if [ -n "$(git status --porcelain)" ]; then \
         echo "\033[91mSwagger docs are out of sync!!!\033[0m";\
@@ -483,7 +483,7 @@ update-swagger-docs: statik proto-swagger-gen
         echo "\033[92mSwagger docs are in sync\033[0m";\
     fi
 
-.PHONY: update-swagger-docs statik
+.PHONY: update-swagger-openapi-docs statik
 
 ###############################################################################
 ###                                Protobuf                                 ###
@@ -502,16 +502,16 @@ update-swagger-docs: statik proto-swagger-gen
 
 protoVer=v0.7
 
-proto-all: proto-format proto-lint proto-gen proto-swagger-gen
+proto-all: proto-format proto-lint proto-gen proto-swagger-openapi-gen
 
 proto-gen:
 	@echo "Generating Protobuf files"
 	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
 
-proto-swagger-gen:
-	@./scripts/protoc-swagger-gen.sh
+proto-swagger-openapi-gen:
+	@./scripts/protoc-swagger-openapi-gen.sh
 
 proto-lint:
 	@$(DOCKER_BUF) lint --error-format=json
 
-.PHONY: proto-all proto-gen proto-swagger-gen proto-format proto-lint proto-check-breaking
+.PHONY: proto-all proto-gen proto-swagger-openapi-gen proto-format proto-lint proto-check-breaking
