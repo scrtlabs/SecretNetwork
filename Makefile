@@ -475,8 +475,7 @@ statik:
 	@echo "Installing statik..."
 	@go install github.com/rakyll/statik@v0.1.6
 
-
-update-swagger-docs: statik
+update-swagger-openapi-docs: statik proto-swagger-openapi-gen
 	statik -src=client/docs/static/swagger/ -dest=client/docs -f -m
 	@if [ -n "$(git status --porcelain)" ]; then \
         echo "\033[91mSwagger docs are out of sync!!!\033[0m";\
@@ -485,7 +484,7 @@ update-swagger-docs: statik
         echo "\033[92mSwagger docs are in sync\033[0m";\
     fi
 
-.PHONY: update-swagger-docs statik
+.PHONY: update-swagger-openapi-docs statik
 
 ###############################################################################
 ###                                Protobuf                                 ###
@@ -504,27 +503,16 @@ update-swagger-docs: statik
 
 protoVer=v0.7
 
-proto-all: proto-format proto-lint proto-gen proto-swagger-gen
+proto-all: proto-format proto-lint proto-gen proto-swagger-openapi-gen
 
 proto-gen:
 	@echo "Generating Protobuf files"
 	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
 
-# This one doesn't work and i can't find the right docker repo
-proto-format:
-	@echo "Formatting Protobuf files"
-	$(DOCKER) run --rm -v $(CURDIR):/workspace \
-	--workdir /workspace tendermintdev/docker-build-proto \
-	find ./ -not -path "./third_party/*" -name *.proto -exec clang-format -i {} \;
-
-proto-swagger-gen:
-	@./scripts/protoc-swagger-gen.sh
+proto-swagger-openapi-gen:
+	@./scripts/protoc-swagger-openapi-gen.sh
 
 proto-lint:
 	@$(DOCKER_BUF) lint --error-format=json
 
-## TODO - change branch release/v0.5.x to master after columbus-5 merged
-proto-check-breaking:
-	@$(DOCKER_BUF) breaking --against-input $(HTTPS_GIT)#branch=release/v0.43-stargate
-
-.PHONY: proto-all proto-gen proto-swagger-gen proto-format proto-lint proto-check-breaking
+.PHONY: proto-all proto-gen proto-swagger-openapi-gen proto-format proto-lint proto-check-breaking
