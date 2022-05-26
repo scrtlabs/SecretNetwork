@@ -1,4 +1,4 @@
-FROM rust-go-base-image:latest AS build-env-rust-go
+FROM build-release:latest AS build-env-rust-go
 # Final image
 FROM enigmampc/enigma-sgx-base:2004-1.1.3
 
@@ -25,11 +25,11 @@ RUN mkdir -p ./go-cosmwasm/api/
 COPY Makefile .
 
 # Copy over binaries from the build-env
-COPY --from=build-release /usr/lib/libgo_cosmwasm.so ./go-cosmwasm/api/
-COPY --from=build-release /usr/lib/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/
-COPY --from=build-release /usr/lib/librust_cosmwasm_query_enclave.signed.so ./go-cosmwasm/
-COPY --from=build-release /usr/bin/secretd secretd
-COPY --from=build-release /usr/bin/secretcli secretcli
+COPY --from=build-env-rust-go /usr/lib/libgo_cosmwasm.so ./go-cosmwasm/api/
+COPY --from=build-env-rust-go /usr/lib/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/
+COPY --from=build-env-rust-go /usr/lib/librust_cosmwasm_query_enclave.signed.so ./go-cosmwasm/
+COPY --from=build-env-rust-go /usr/bin/secretd secretd
+COPY --from=build-env-rust-go /usr/bin/secretcli secretcli
 
 COPY ./deployment/deb ./deployment/deb
 COPY ./deployment/docker/builder/build_deb.sh .

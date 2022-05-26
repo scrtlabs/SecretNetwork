@@ -2,7 +2,11 @@
 
 # 1.3.1
 
-- Updated `/swagger` endpoint in the LCD REST server
+- Use all available cores to serve queries.
+- Mainnet docker image with automatic node registration & state sync ([docs](https://docs.scrt.network/node-guides/full-node-docker.html)).
+- Mempool optimizations (Thanks @ValarDragon!). For more info see [this](https://github.com/scrtlabs/cosmos-sdk/pull/141#issuecomment-1136767411).
+- Fix missing `libsnappy1v5` dependency for rocksdb deb package.
+- Updated `${LCD_URL}/swagger/` for v1.3 and added `${LCD_URL}/openapi/`.
 
 # 1.3.0
 
