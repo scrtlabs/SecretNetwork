@@ -200,24 +200,6 @@ deb-no-compile:
 	dpkg-deb --build /tmp/SecretNetwork/deb/ .
 	-rm -rf /tmp/SecretNetwork
 
-rename_for_release:
-	-rename "s/windows-4.0-amd64/v${VERSION}-win64/" *.exe
-	-rename "s/darwin-10.6-amd64/v${VERSION}-osx64/" *darwin*
-
-sign_for_release: rename_for_release
-	sha256sum enigma-blockchain*.deb > SHA256SUMS
-	-sha256sum secretd-* secretcli-* >> SHA256SUMS
-	gpg -u 91831DE812C6415123AFAA7B420BF1CB005FBCE6 --digest-algo sha256 --clearsign --yes SHA256SUMS
-	rm -f SHA256SUMS
-
-release: sign_for_release
-	rm -rf ./release/
-	mkdir -p ./release/
-	cp enigma-blockchain_*.deb ./release/
-	cp secretcli-* ./release/
-	cp secretd-* ./release/
-	cp SHA256SUMS.asc ./release/
-
 clean:
 	-rm -rf /tmp/SecretNetwork
 	-rm -f ./secretcli*
@@ -238,7 +220,7 @@ build-rocksdb-image:
 	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/db-compile.Dockerfile -t enigmampc/rocksdb:${VERSION} .
 
 build-localsecret:
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=SW --build-arg FEATURES="${FEATURES},debug-print" -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=SW --build-arg FEATURES_U="${FEATURES_U}" --build-arg FEATURES="${FEATURES},debug-print" -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/release.Dockerfile -t build-release .
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/dev-image.Dockerfile -t ghcr.io/scrtlabs/localsecret:${DOCKER_TAG} .
 
@@ -260,9 +242,10 @@ build-testnet: docker_base
 
 build-mainnet-upgrade: docker_base
 	@mkdir build 2>&3 || true
-	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/mainnet-upgrade-release.Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-mainnet .
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
+	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/mainnet-upgrade-release.Dockerfile -t build-release:latest .
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb-mainnet.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
+	docker tag build-release ghcr.io/scrtlabs/secret-network-node:$(VERSION)
 
 build-mainnet: docker_base
 	@mkdir build 2>&3 || true
@@ -443,21 +426,6 @@ bin-data-production:
 secret-contract-optimizer:
 	sudo docker buildx build --platform=linux/amd64,linux/arm64/v8 -f deployment/dockerfiles/secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} --push .
 
-secretjs-build:
-	cd cosmwasm-js/packages/sdk && yarn && yarn build
-
-# Before running this, first make sure:
-# 1. To `npm login` with enigma-dev
-# 2. The new version is updated in `cosmwasm-js/packages/sdk/package.json`
-secretjs-publish-npm: secretjs-build
-	cd cosmwasm-js/packages/sdk && npm publish
-
-# Before running this, first make sure:
-# 1. To `npm login` with enigma-dev
-# 2. The new version is updated in `cosmwasm-js/packages/sdk/package.json`
-secretjs-publish-beta-npm: secretjs-build
-	cd cosmwasm-js/packages/sdk && npm publish --tag beta
-
 aesm-image:
 	docker build -f deployment/dockerfiles/aesm.Dockerfile -t enigmampc/aesm .
 
@@ -474,9 +442,8 @@ statik:
 	@echo "Installing statik..."
 	@go install github.com/rakyll/statik@v0.1.6
 
-
-update-swagger-docs: statik
-	statik -src=client/docs/static/swagger/ -dest=client/docs -f -m
+update-swagger-openapi-docs: statik proto-swagger-openapi-gen
+	statik -src=client/docs/static/ -dest=client/docs -f -m
 	@if [ -n "$(git status --porcelain)" ]; then \
         echo "\033[91mSwagger docs are out of sync!!!\033[0m";\
         exit 1;\
@@ -484,7 +451,7 @@ update-swagger-docs: statik
         echo "\033[92mSwagger docs are in sync\033[0m";\
     fi
 
-.PHONY: update-swagger-docs statik
+.PHONY: update-swagger-openapi-docs statik
 
 ###############################################################################
 ###                                Protobuf                                 ###
@@ -503,27 +470,16 @@ update-swagger-docs: statik
 
 protoVer=v0.7
 
-proto-all: proto-format proto-lint proto-gen proto-swagger-gen
+proto-all: proto-format proto-lint proto-gen proto-swagger-openapi-gen
 
 proto-gen:
 	@echo "Generating Protobuf files"
 	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
 
-# This one doesn't work and i can't find the right docker repo
-proto-format:
-	@echo "Formatting Protobuf files"
-	$(DOCKER) run --rm -v $(CURDIR):/workspace \
-	--workdir /workspace tendermintdev/docker-build-proto \
-	find ./ -not -path "./third_party/*" -name *.proto -exec clang-format -i {} \;
-
-proto-swagger-gen:
-	@./scripts/protoc-swagger-gen.sh
+proto-swagger-openapi-gen:
+	@./scripts/protoc-swagger-openapi-gen.sh
 
 proto-lint:
 	@$(DOCKER_BUF) lint --error-format=json
 
-## TODO - change branch release/v0.5.x to master after columbus-5 merged
-proto-check-breaking:
-	@$(DOCKER_BUF) breaking --against-input $(HTTPS_GIT)#branch=release/v0.43-stargate
-
-.PHONY: proto-all proto-gen proto-swagger-gen proto-format proto-lint proto-check-breaking
+.PHONY: proto-all proto-gen proto-swagger-openapi-gen proto-format proto-lint proto-check-breaking

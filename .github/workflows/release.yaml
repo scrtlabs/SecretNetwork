@@ -14,7 +14,6 @@ jobs:
       fail-fast: false
       matrix:
         db_backend: [rocksdb, goleveldb]
-        node_type: [query]
     runs-on: ubuntu-latest
     env: # Or as an environment variable
       SPID_TESTNET: ${{ secrets.SPID_TESTNET }}
@@ -73,7 +72,7 @@ jobs:
       - name: Build testnet
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES_U=$(echo ${{ matrix.node_type }} | awk '/query/{printf "query-node,"} /validator/{printf ""}') make build-testnet
+          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES_U=query-node, make build-testnet
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v2
         with:
@@ -85,11 +84,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        db_backend: [ goleveldb, rocksdb ]
-        node_type: [ query ]
+        db_backend: [goleveldb, rocksdb]
     env: # Or as an environment variable
       SPID_MAINNET: ${{ secrets.SPID_MAINNET }}
       API_KEY_MAINNET: ${{ secrets.API_KEY_MAINNET }}
+      REGISTRY: ghcr.io
+      IMAGE_NAME: scrtlabs/secret-network-node
     steps:
       - uses: actions/checkout@v3
       - name: Get the version
@@ -104,12 +104,22 @@ jobs:
           echo $API_KEY_MAINNET > api_key.txt
       - name: Build
         run: |
-          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES=production make build-mainnet-upgrade
+          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES=production FEATURES_U=query-node, make build-mainnet-upgrade
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v2
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
+      - name: Log in to the Container registry
+        if: ${{ matrix.db_backend == 'goleveldb' }}
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push docker image
+        if: ${{ matrix.db_backend == 'goleveldb' }}
+        run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}
 
   native-build-cli:
     runs-on: ${{matrix.os}}
@@ -186,11 +196,10 @@ jobs:
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
       - name: Declare Commit Variables
-        id: vars
+        id: is_pre_release
         shell: bash
         run: |
-          echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+          echo "::set-output name=IS_PRE_RELEASE::$(echo "${{ steps.get_version.outputs.VERSION }}" | awk 'BEGIN{prerelease="false"} /beta|alpha/{prerelease="true"} END{print prerelease}')"
       - uses: actions/download-artifact@v2
         with:
           name: secretcli-Linux
@@ -218,6 +227,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
+          prerelease: ${{ steps.is_pre_release.outputs.IS_PRE_RELEASE }}
           files: |
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_rocksdb_amd64.deb
