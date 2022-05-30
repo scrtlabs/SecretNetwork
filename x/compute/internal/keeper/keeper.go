@@ -74,7 +74,7 @@ func NewKeeper(
 	distKeeper distrkeeper.Keeper,
 	mintKeeper mintkeeper.Keeper,
 	stakingKeeper stakingkeeper.Keeper,
-	//serviceRouter MsgServiceRouter,
+//serviceRouter MsgServiceRouter,
 	router sdk.Router,
 	homeDir string,
 	wasmConfig *types.WasmConfig,
@@ -398,12 +398,6 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 			}
 			contractInfo.IBCPortID = ibcPort
 		}
-
-		// store contract before dispatch so that contract could be called back
-		historyEntry := contractInfo.InitialHistory(initMsg)
-		k.addToContractCodeSecondaryIndex(ctx, contractAddress, historyEntry)
-		k.appendToContractHistory(ctx, contractAddress, historyEntry)
-		k.storeContractInfo(ctx, contractAddress, &contractInfo)
 
 		ctx.EventManager().EmitEvent(sdk.NewEvent(
 			types.EventTypeInstantiate,
