@@ -45,6 +45,12 @@ pub struct CosmCache<S: Storage + 'static, A: Api + 'static, Q: Querier + 'stati
     type_querier: PhantomData<Q>,
 }
 
+#[derive(PartialEq, Debug)]
+pub struct AnalysisReport {
+    pub has_ibc_entry_points: bool,
+    pub required_features: HashSet<String>,
+}
+
 impl<S, A, Q> CosmCache<S, A, Q>
 where
     S: Storage + 'static,
@@ -113,6 +119,39 @@ where
         } else {
             Ok(code)
         }
+    }
+
+    pub fn deserialize_wasm(wasm_code: &[u8]) -> VmResult<Module> {
+        deserialize_buffer(wasm_code).map_err(|err| {
+            VmError::static_validation_err(format!(
+                "Wasm bytecode could not be deserialized. Deserialization error: \"{}\"",
+                err
+            ))
+        })
+    }
+
+    /// Returns true if and only if all IBC entry points ([`REQUIRED_IBC_EXPORTS`])
+    /// exist as exported functions. This does not guarantee the entry points
+    /// are functional and for simplicity does not even check their signatures.
+    pub fn has_ibc_entry_points(module: &impl ExportInfo) -> bool {
+        let available_exports = module.exported_function_names(None);
+        REQUIRED_IBC_EXPORTS
+            .iter()
+            .all(|required| available_exports.contains(*required))
+    }
+
+    /// Performs static anlyzation on this Wasm without compiling or instantiating it.
+    ///
+    /// Once the contract was stored via [`save_wasm`], this can be called at any point in time.
+    /// It does not depend on any caching of the contract.
+    pub fn analyze(&self, checksum: &Checksum) -> VmResult<AnalysisReport> {
+        // Here we could use a streaming deserializer to slightly improve performance. However, this way it is DRYer.
+        let wasm = self.load_wasm(checksum)?;
+        let module = deserialize_wasm(&wasm)?;
+        Ok(AnalysisReport {
+            has_ibc_entry_points: has_ibc_entry_points(&module),
+            required_features: required_features_from_module(&module),
+        })
     }
 
     /// Returns an Instance tied to a previously saved Wasm.

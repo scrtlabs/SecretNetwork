@@ -258,6 +258,25 @@ func Query(
 	return receiveVector(res), uint64(gasUsed), nil
 }
 
+func AnalyzeCode(
+	cache Cache,
+	codeHash []byte,
+) (*v1types.AnalysisReport, error) {
+	cs := sendSlice(codeHash)
+	defer runtime.KeepAlive(codeHash)
+	errMsg := C.Buffer{}
+	report, err := C.analyze_code(cache.ptr, cs, &errMsg)
+
+	if err != nil {
+		return nil, errorWithMessage(err, errMsg)
+	}
+	res := v1types.AnalysisReport{
+		HasIBCEntryPoints: bool(report.has_ibc_entry_points),
+		RequiredFeatures:  string(receiveVector(report.required_features)),
+	}
+	return &res, nil
+}
+
 // KeyGen Send KeyGen request to enclave
 func KeyGen() ([]byte, error) {
 	errmsg := C.Buffer{}
@@ -306,19 +325,4 @@ func errorWithMessage(err error, b C.Buffer) error {
 		return err
 	}
 	return fmt.Errorf("%s", string(msg))
-}
-
-func AnalyzeCode(cache Cache, checksum []byte) (*v1types.AnalysisReport, error) {
-	cs := makeView(checksum)
-	defer runtime.KeepAlive(checksum)
-	errmsg := newUnmanagedVector(nil)
-	report, err := C.analyze_code(cache.ptr, cs, &errmsg)
-	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
-	}
-	res := types.AnalysisReport{
-		HasIBCEntryPoints: bool(report.has_ibc_entry_points),
-		RequiredFeatures:  string(copyAndDestroyUnmanagedVector(report.required_features)),
-	}
-	return &res, nil
 }
