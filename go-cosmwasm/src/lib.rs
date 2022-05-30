@@ -499,6 +499,46 @@ fn do_query(
     Ok(res?)
 }
 
+/// The result type of the FFI function analyze_code.
+///
+/// Please note that the unmanaged vector in `required_features`
+/// has to be destroyed exactly once. When calling `analyze_code`
+/// from Go this is done via `C.destroy_unmanaged_vector`.
+#[repr(C)]
+#[derive(Copy, Clone, Default, Debug, PartialEq)]
+pub struct AnalysisReport {
+    pub has_ibc_entry_points: bool,
+    /// An UTF-8 encoded comma separated list of reqired features.
+    /// This is never None/nil.
+    pub required_features: Buffer,
+}
+
+#[no_mangle]
+pub extern "C" fn analyze_code(
+    cache: *mut cache_t,
+    checksum: ByteSliceView,
+    error_msg: Option<&mut Buffer>,
+) -> AnalysisReport {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_analyze_code(c, checksum)))
+            .unwrap_or_else(|_| Err(Error::panic())),
+        None => Err(Error::unset_arg(CACHE_ARG)),
+    };
+    handle_c_error_default(r, error_msg)
+}
+
+fn do_analyze_code(
+    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+    checksum: ByteSliceView,
+) -> Result<AnalysisReport, Error> {
+    let checksum: Checksum = checksum
+        .read()
+        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
+        .try_into()?;
+    let report = cache.analyze(&checksum)?;
+    Ok(report.into())
+}
+
 #[no_mangle]
 pub extern "C" fn key_gen(err: Option<&mut Buffer>) -> Buffer {
     match untrusted_key_gen() {

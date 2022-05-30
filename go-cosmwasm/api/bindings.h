@@ -53,6 +53,22 @@ typedef struct Buffer {
   uintptr_t cap;
 } Buffer;
 
+/**
+ * The result type of the FFI function analyze_code.
+ *
+ * Please note that the unmanaged vector in `required_features`
+ * has to be destroyed exactly once. When calling `analyze_code`
+ * from Go this is done via `C.destroy_unmanaged_vector`.
+ */
+typedef struct AnalysisReport {
+  bool has_ibc_entry_points;
+  /**
+   * An UTF-8 encoded comma separated list of reqired features.
+   * This is never None/nil.
+   */
+  Buffer required_features;
+} AnalysisReport;
+
 typedef struct EnclaveRuntimeConfig {
   uint8_t module_cache_size;
 } EnclaveRuntimeConfig;
@@ -185,6 +201,10 @@ Buffer query(cache_t *cache,
              uint64_t gas_limit,
              uint64_t *gas_used,
              Buffer *err);
+
+AnalysisReport analyze_code(cache_t *cache,
+                            ByteSliceView checksum,
+                            Buffer *error_msg);
 
 /**
  * frees a cache reference

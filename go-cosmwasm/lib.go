@@ -236,41 +236,12 @@ func (w *Wasmer) Query(
 	return resp.Ok, gasUsed, nil
 }
 
-// AnalyzeCode will statically analyze the code.
+// AnalyzeCode returns a report of static analysis of the wasm contract (uncompiled).
+// This contract must have been stored in the cache previously (via Create).
+// Only info currently returned is if it exposes all ibc entry points, but this may grow later
 // Currently just reports if it exposes all IBC entry points.
 func (w *Wasmer) AnalyzeCode(
 	codeHash []byte,
 ) (*v1types.AnalysisReport, error) {
-	data, gasUsed, err := api.AnalyzeCode(codeHash)
-	if err != nil {
-		return nil, nil, gasUsed, err
-	}
-
-	key := data[0:64]
-	data = data[64:]
-
-	var respV010 v010types.InitResult
-	jsonErrV010 := json.Unmarshal(data, &respV010)
-
-	if jsonErrV010 == nil {
-		// v0.10 response
-		if respV010.Err != nil {
-			return nil, nil, gasUsed, fmt.Errorf("%v", respV010.Err)
-		}
-		return respV010.Ok, key, gasUsed, nil
-	}
-
-	var respV1 v1types.ContractResult
-	jsonErrV1 := json.Unmarshal(data, &respV1)
-
-	if jsonErrV1 == nil {
-		// v1 response
-		if respV1.Err != "" {
-			return nil, nil, gasUsed, fmt.Errorf(respV1.Err)
-		}
-		return respV1.Ok, key, gasUsed, nil
-	}
-
-	// unidentified response 🤷
-	return nil, nil, gasUsed, fmt.Errorf("cannot detect response type, v0.10: %v or v0.16: %v", jsonErrV010, jsonErrV1)
+	return api.AnalyzeCode(w.cache, codeHash)
 }
