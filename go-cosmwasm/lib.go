@@ -7,7 +7,7 @@ import (
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
 	types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	v010types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
-	v016types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v016"
+	v1types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
 )
 
 // CodeID represents an ID for a given wasm code blob, must be generated from this library
@@ -92,7 +92,7 @@ func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 // Under the hood, we may recompile the wasm, use a cached native compile, or even use a cached instance
 // for performance.
 func (w *Wasmer) Instantiate(
-	code CodeID,
+	codeId CodeID,
 	env types.Env,
 	initMsg []byte,
 	store KVStore,
@@ -112,7 +112,7 @@ func (w *Wasmer) Instantiate(
 		return nil, nil, 0, err
 	}
 
-	data, gasUsed, err := api.Instantiate(w.cache, code, paramBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin)
+	data, gasUsed, err := api.Instantiate(w.cache, codeId, paramBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin)
 	if err != nil {
 		return nil, nil, gasUsed, err
 	}
@@ -131,19 +131,19 @@ func (w *Wasmer) Instantiate(
 		return respV010.Ok, key, gasUsed, nil
 	}
 
-	var respV016 v016types.ContractResult
-	jsonErrV016 := json.Unmarshal(data, &respV016)
+	var respV1 v1types.ContractResult
+	jsonErrV1 := json.Unmarshal(data, &respV1)
 
-	if jsonErrV016 == nil {
-		// v0.16 response
-		if respV016.Err != "" {
-			return nil, nil, gasUsed, fmt.Errorf(respV016.Err)
+	if jsonErrV1 == nil {
+		// v1 response
+		if respV1.Err != "" {
+			return nil, nil, gasUsed, fmt.Errorf(respV1.Err)
 		}
-		return respV016.Ok, key, gasUsed, nil
+		return respV1.Ok, key, gasUsed, nil
 	}
 
 	// unidentified response 🤷
-	return nil, nil, gasUsed, fmt.Errorf("cannot detect response type, v0.10: %v or v0.16: %v", jsonErrV010, jsonErrV016)
+	return nil, nil, gasUsed, fmt.Errorf("cannot detect response type, v0.10: %v or v0.16: %v", jsonErrV010, jsonErrV1)
 }
 
 // Execute calls a given contract. Since the only difference between contracts with the same CodeID is the
@@ -188,19 +188,19 @@ func (w *Wasmer) Execute(
 		return respV010.Ok, gasUsed, nil
 	}
 
-	var respV016 v016types.ContractResult
-	jsonErrV016 := json.Unmarshal(data, &respV016)
+	var respV1 v1types.ContractResult
+	jsonErrV1 := json.Unmarshal(data, &respV1)
 
-	if jsonErrV016 == nil {
-		// v0.16 response
-		if respV016.Err != "" {
-			return nil, gasUsed, fmt.Errorf(respV016.Err)
+	if jsonErrV1 == nil {
+		// v1 response
+		if respV1.Err != "" {
+			return nil, gasUsed, fmt.Errorf(respV1.Err)
 		}
-		return respV016.Ok, gasUsed, nil
+		return respV1.Ok, gasUsed, nil
 	}
 
 	// unidentified response 🤷
-	return nil, gasUsed, fmt.Errorf("cannot detect response type, v0.10: %v or v0.16: %v", jsonErrV010, jsonErrV016)
+	return nil, gasUsed, fmt.Errorf("cannot detect response type, v0.10: %v or v1: %v", jsonErrV010, jsonErrV1)
 }
 
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be
@@ -236,3 +236,41 @@ func (w *Wasmer) Query(
 	return resp.Ok, gasUsed, nil
 }
 
+// AnalyzeCode will statically analyze the code.
+// Currently just reports if it exposes all IBC entry points.
+func (w *Wasmer) AnalyzeCode(
+	codeHash []byte,
+) (*v1types.AnalysisReport, error) {
+	data, gasUsed, err := api.AnalyzeCode(codeHash)
+	if err != nil {
+		return nil, nil, gasUsed, err
+	}
+
+	key := data[0:64]
+	data = data[64:]
+
+	var respV010 v010types.InitResult
+	jsonErrV010 := json.Unmarshal(data, &respV010)
+
+	if jsonErrV010 == nil {
+		// v0.10 response
+		if respV010.Err != nil {
+			return nil, nil, gasUsed, fmt.Errorf("%v", respV010.Err)
+		}
+		return respV010.Ok, key, gasUsed, nil
+	}
+
+	var respV1 v1types.ContractResult
+	jsonErrV1 := json.Unmarshal(data, &respV1)
+
+	if jsonErrV1 == nil {
+		// v1 response
+		if respV1.Err != "" {
+			return nil, nil, gasUsed, fmt.Errorf(respV1.Err)
+		}
+		return respV1.Ok, key, gasUsed, nil
+	}
+
+	// unidentified response 🤷
+	return nil, nil, gasUsed, fmt.Errorf("cannot detect response type, v0.10: %v or v0.16: %v", jsonErrV010, jsonErrV1)
+}

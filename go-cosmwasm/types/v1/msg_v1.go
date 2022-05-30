@@ -1,4 +1,4 @@
-package v016types
+package v1types
 
 import (
 	"encoding/json"

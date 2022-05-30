@@ -32,7 +32,7 @@ const SUPPORTED_IMPORTS_V010: &[&str] = &[
 
 /// Lists all v0.16 imports we provide upon instantiating the instance in Instance::from_module()
 /// This should be updated when new imports are added
-const SUPPORTED_IMPORTS_V016: &[&str] = &[
+const SUPPORTED_IMPORTS_V1: &[&str] = &[
     "env.db_read",
     "env.db_write",
     "env.db_remove",
@@ -66,7 +66,7 @@ const REQUIRED_EXPORTS_V010: &[&str] = &[
 /// Lists all entry points we expect to be present when calling a v0.16 contract.
 /// Basically, anything that is used in calls.rs
 /// This is unlikely to change much, must be frozen at 1.0 to avoid breaking existing contracts
-const REQUIRED_EXPORTS_V016: &[&str] = &[
+const REQUIRED_EXPORTS_V1: &[&str] = &[
     "interface_version_7",
     // IO
     "allocate",
@@ -95,15 +95,15 @@ pub fn check_wasm(wasm_code: &[u8], supported_features: &HashSet<String>) -> VmR
     let check_v010_imports_result = check_wasm_imports(&module, SUPPORTED_IMPORTS_V010);
     let is_v010 = check_v010_exports_result.is_ok() && check_v010_imports_result.is_ok();
 
-    let check_v016_exports_result = check_wasm_exports(&module, REQUIRED_EXPORTS_V016);
-    let check_v016_imports_result = check_wasm_imports(&module, SUPPORTED_IMPORTS_V016);
-    let is_v016 = check_v016_exports_result.is_ok() && check_v016_imports_result.is_ok();
+    let check_v1_exports_result = check_wasm_exports(&module, REQUIRED_EXPORTS_V1);
+    let check_v016_imports_result = check_wasm_imports(&module, SUPPORTED_IMPORTS_V1);
+    let is_v1 = check_v1_exports_result.is_ok() && check_v016_imports_result.is_ok();
 
-    if !is_v010 && !is_v016 {
+    if !is_v010 && !is_v1 {
         let errors = vec![
             check_v010_exports_result,
             check_v010_imports_result,
-            check_v016_exports_result,
+            check_v1_exports_result,
             check_v016_imports_result,
         ];
 

@@ -33,7 +33,7 @@ import (
 	wasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
 
 	v010wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
-	v016wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v016"
+	v1wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
 
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
@@ -269,7 +269,7 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, s
 }
 
 // Instantiate creates an instance of a WASM contract
-func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, error) {
+func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, []byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "instantiate")
 
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: init")
@@ -285,7 +285,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	if callbackSig == nil {
 		signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err = k.GetSignerInfo(ctx, creator)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
@@ -297,23 +297,23 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	existingAddress := store.Get(types.GetContractLabelPrefix(label))
 
 	if existingAddress != nil {
-		return nil, sdkerrors.Wrap(types.ErrAccountExists, label)
+		return nil, nil, sdkerrors.Wrap(types.ErrAccountExists, label)
 	}
 
 	contractAddress := k.generateContractAddress(ctx, codeID)
 	existingAcct := k.accountKeeper.GetAccount(ctx, contractAddress)
 	if existingAcct != nil {
-		return nil, sdkerrors.Wrap(types.ErrAccountExists, existingAcct.GetAddress().String())
+		return nil, nil, sdkerrors.Wrap(types.ErrAccountExists, existingAcct.GetAddress().String())
 	}
 
 	// deposit initial contract funds
 	if !deposit.IsZero() {
 		if k.bankKeeper.BlockedAddr(creator) {
-			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "blocked address can not be used")
+			return nil, nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "blocked address can not be used")
 		}
 		sdkerr := k.bankKeeper.SendCoins(ctx, creator, contractAddress, deposit)
 		if sdkerr != nil {
-			return nil, sdkerr
+			return nil, nil, sdkerr
 		}
 	} else {
 		// create an empty account (so we don't have issues later)
@@ -325,7 +325,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	// get contact info
 	bz := store.Get(types.GetCodeKey(codeID))
 	if bz == nil {
-		return nil, sdkerrors.Wrap(types.ErrNotFound, "code")
+		return nil, nil, sdkerrors.Wrap(types.ErrNotFound, "code")
 	}
 	var codeInfo types.CodeInfo
 	k.cdc.MustUnmarshal(bz, &codeInfo)
@@ -353,7 +353,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	response, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo)
 	consumeGas(ctx, gasUsed)
 	if err != nil {
-		return contractAddress, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
+		return contractAddress, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
 	}
 
 	switch res := response.(type) {
@@ -375,17 +375,17 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 
 		err = k.dispatchMessages(ctx, contractAddress, res.Messages)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		return contractAddress, nil
-	case v016wasmTypes.Response:
+		return contractAddress, nil, nil
+	case v1wasmTypes.Response:
 		// persist instance first
 		createdAt := types.NewAbsoluteTxPosition(ctx)
 		contractInfo := types.NewContractInfo(codeID, creator, label, createdAt)
 
 		// check for IBC flag
-		report, err := k.wasmVM.AnalyzeCode(codeInfo.CodeHash)
+		report, err := k.wasmer.AnalyzeCode(codeInfo.CodeHash)
 		if err != nil {
 			return contractAddress, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
 		}
@@ -494,7 +494,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		return &sdk.Result{
 			Data: res.Data,
 		}, nil
-	case v016wasmTypes.Response:
+	case v1wasmTypes.Response:
 		// TODO
 		return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("cannot detect response type: %v", res))
 	default:

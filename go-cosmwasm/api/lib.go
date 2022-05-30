@@ -12,6 +12,8 @@ import (
 	"runtime"
 	"syscall"
 
+	v1types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
+
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 )
 
@@ -304,4 +306,19 @@ func errorWithMessage(err error, b C.Buffer) error {
 		return err
 	}
 	return fmt.Errorf("%s", string(msg))
+}
+
+func AnalyzeCode(cache Cache, checksum []byte) (*v1types.AnalysisReport, error) {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	errmsg := newUnmanagedVector(nil)
+	report, err := C.analyze_code(cache.ptr, cs, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	res := types.AnalysisReport{
+		HasIBCEntryPoints: bool(report.has_ibc_entry_points),
+		RequiredFeatures:  string(copyAndDestroyUnmanagedVector(report.required_features)),
+	}
+	return &res, nil
 }

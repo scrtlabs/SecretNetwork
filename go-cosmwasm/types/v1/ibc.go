@@ -1,4 +1,4 @@
-package v016types
+package v1types
 
 type IBCEndpoint struct {
 	PortID    string `json:"port_id"`
