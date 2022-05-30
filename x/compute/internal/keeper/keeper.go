@@ -40,15 +40,16 @@ import (
 
 // Keeper will have a reference to Wasmer with it's own data directory.
 type Keeper struct {
-	storeKey      sdk.StoreKey
-	cdc           codec.BinaryCodec
-	legacyAmino   codec.LegacyAmino
-	accountKeeper authkeeper.AccountKeeper
-	bankKeeper    bankkeeper.Keeper
-
-	wasmer       wasm.Wasmer
-	queryPlugins QueryPlugins
-	messenger    MessageHandler
+	storeKey         sdk.StoreKey
+	cdc              codec.BinaryCodec
+	legacyAmino      codec.LegacyAmino
+	accountKeeper    authkeeper.AccountKeeper
+	bankKeeper       bankkeeper.Keeper
+	portKeeper       types.PortKeeper
+	capabilityKeeper types.CapabilityKeeper
+	wasmer           wasm.Wasmer
+	queryPlugins     QueryPlugins
+	messenger        MessageHandler
 	// queryGasLimit is the max wasm gas that can be spent on executing a query with a contract
 	queryGasLimit uint64
 	serviceRouter MsgServiceRouter
