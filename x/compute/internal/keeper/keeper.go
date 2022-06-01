@@ -40,15 +40,16 @@ import (
 
 // Keeper will have a reference to Wasmer with it's own data directory.
 type Keeper struct {
-	storeKey      sdk.StoreKey
-	cdc           codec.BinaryCodec
-	legacyAmino   codec.LegacyAmino
-	accountKeeper authkeeper.AccountKeeper
-	bankKeeper    bankkeeper.Keeper
-
-	wasmer       wasm.Wasmer
-	queryPlugins QueryPlugins
-	messenger    MessageHandler
+	storeKey         sdk.StoreKey
+	cdc              codec.BinaryCodec
+	legacyAmino      codec.LegacyAmino
+	accountKeeper    authkeeper.AccountKeeper
+	bankKeeper       bankkeeper.Keeper
+	portKeeper       types.PortKeeper
+	capabilityKeeper types.CapabilityKeeper
+	wasmer           wasm.Wasmer
+	queryPlugins     QueryPlugins
+	messenger        MessageHandler
 	// queryGasLimit is the max wasm gas that can be spent on executing a query with a contract
 	queryGasLimit uint64
 	serviceRouter MsgServiceRouter
@@ -73,7 +74,7 @@ func NewKeeper(
 	distKeeper distrkeeper.Keeper,
 	mintKeeper mintkeeper.Keeper,
 	stakingKeeper stakingkeeper.Keeper,
-	//serviceRouter MsgServiceRouter,
+//serviceRouter MsgServiceRouter,
 	router sdk.Router,
 	homeDir string,
 	wasmConfig *types.WasmConfig,
@@ -397,12 +398,6 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 			}
 			contractInfo.IBCPortID = ibcPort
 		}
-
-		// store contract before dispatch so that contract could be called back
-		historyEntry := contractInfo.InitialHistory(initMsg)
-		k.addToContractCodeSecondaryIndex(ctx, contractAddress, historyEntry)
-		k.appendToContractHistory(ctx, contractAddress, historyEntry)
-		k.storeContractInfo(ctx, contractAddress, &contractInfo)
 
 		ctx.EventManager().EmitEvent(sdk.NewEvent(
 			types.EventTypeInstantiate,
