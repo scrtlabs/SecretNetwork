@@ -102,20 +102,6 @@ pub fn call_handle_raw<S: Storage + 'static, A: Api + 'static, Q: Querier + 'sta
     instance.call_handle(env, msg, sig_info)
 }
 
-/// Calls Wasm export "reply" and returns raw data from the contract.
-/// The result is length limited to prevent abuse but otherwise unchecked.
-pub fn call_reply_raw<S: Storage + 'static, A: Api + 'static, Q: Querier + 'static>(
-    instance: &mut Instance<S, A, Q>,
-    env: &[u8],
-    msg: &[u8],
-) -> VmResult<Vec<u8>> {
-    instance.set_storage_readonly(false);
-    /*
-    call_raw(instance, "query", &[msg], MAX_LENGTH_QUERY)
-    */
-    instance.call_reply(env, msg)
-}
-
 /// Calls Wasm export "query" and returns raw data from the contract.
 /// The result is length limited to prevent abuse but otherwise unchecked.
 pub fn call_query_raw<S: Storage + 'static, A: Api + 'static, Q: Querier + 'static>(

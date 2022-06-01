@@ -4,6 +4,7 @@ import (
 	"fmt"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	v010wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
 	v1wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
@@ -19,7 +20,7 @@ type Messenger interface {
 
 // Replyer is a subset of keeper that can handle replies to submessages
 type Replyer interface {
-	reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply) ([]byte, error)
+	reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error)
 }
 
 // MessageDispatcher coordinates message sending and submessage reply/ state commits
@@ -244,7 +245,7 @@ func redactError(err error) error {
 
 // DispatchSubmessages builds a sandbox to execute these messages and returns the execution result to the contract
 // that dispatched them, both on success as well as failure
-func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []v1wasmTypes.SubMsg) ([]byte, error) {
+func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []v1wasmTypes.SubMsg, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error) {
 	var rsp []byte
 	for _, msg := range msgs {
 		// Check replyOn validity
@@ -327,7 +328,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 
 		// we can ignore any result returned as there is nothing to do with the data
 		// and the events are already in the ctx.EventManager()
-		rspData, err := d.keeper.reply(ctx, contractAddr, reply)
+		rspData, err := d.keeper.reply(ctx, contractAddr, reply, ogSigInfo)
 		switch {
 		case err != nil:
 			return nil, sdkerrors.Wrap(err, "reply")

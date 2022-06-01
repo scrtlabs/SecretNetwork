@@ -182,6 +182,7 @@ func Handle(
 	querier *Querier,
 	gasLimit uint64,
 	sigInfo []byte,
+	handleType types.HandleType,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
@@ -208,7 +209,7 @@ func Handle(
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s)
+	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, handleType)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -275,43 +276,6 @@ func AnalyzeCode(
 		RequiredFeatures:  string(receiveVector(report.required_features)),
 	}
 	return &res, nil
-}
-
-func Reply(
-	cache Cache,
-	checksum []byte,
-	env []byte,
-	reply []byte,
-	gasMeter *GasMeter,
-	store KVStore,
-	api *GoAPI,
-	querier *Querier,
-	gasLimit uint64,
-) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	r := sendSlice(reply)
-	defer freeAfterSend(r)
-
-	// set up a new stack frame to handle iterators
-	counter := startContract()
-	defer endContract(counter)
-
-	dbState := buildDBState(store, counter)
-	db := buildDB(&dbState, gasMeter)
-	a := buildAPI(api)
-	q := buildQuerier(querier)
-	var gasUsed u64
-	errmsg := C.Buffer{}
-
-	res, err := C.reply(cache.ptr, cs, e, r, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
-	}
-	return receiveVector(res), uint64(gasUsed), nil
 }
 
 // KeyGen Send KeyGen request to enclave

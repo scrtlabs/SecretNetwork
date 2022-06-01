@@ -169,7 +169,8 @@ Buffer handle(cache_t *cache,
               uint64_t gas_limit,
               uint64_t *gas_used,
               Buffer *err,
-              Buffer sig_info);
+              Buffer sig_info,
+              uint8_t handle_type);
 
 Buffer init_bootstrap(Buffer spid, Buffer api_key, Buffer *err);
 
@@ -205,16 +206,6 @@ Buffer query(cache_t *cache,
 AnalysisReport analyze_code(cache_t *cache,
                             ByteSliceView checksum,
                             Buffer *error_msg);
-Buffer reply(cache_t *cache,
-             Buffer checksum,
-             Buffer env,
-             Buffer msg,
-             Db db,
-             GoApi api,
-             GoQuerier querier,
-             uint64_t gas_limit,
-             uint64_t *gas_used,
-             Buffer *error_msg);
 
 /**
  * frees a cache reference

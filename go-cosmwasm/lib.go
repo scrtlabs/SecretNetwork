@@ -162,6 +162,7 @@ func (w *Wasmer) Execute(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	sigInfo types.VerificationInfo,
+	handleType types.HandleType,
 ) (interface{}, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
@@ -172,7 +173,7 @@ func (w *Wasmer) Execute(
 		return nil, 0, err
 	}
 
-	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin)
+	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin, handleType)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -243,42 +244,4 @@ func (w *Wasmer) AnalyzeCode(
 	codeHash []byte,
 ) (*v1types.AnalysisReport, error) {
 	return api.AnalyzeCode(w.cache, codeHash)
-}
-
-// Reply allows the native Go wasm modules to make a priviledged call to return the result
-// of executing a SubMsg.
-//
-// These work much like Sudo (same scenario) but focuses on one specific case (and one message type)
-func (w *Wasmer) Reply(
-	codeHash []byte,
-	env types.Env,
-	reply v1types.Reply,
-	store KVStore,
-	goapi GoAPI,
-	querier Querier,
-	gasMeter GasMeter,
-	gasLimit uint64,
-) (*v1types.Response, uint64, error) {
-	envBin, err := json.Marshal(env)
-	if err != nil {
-		return nil, 0, err
-	}
-	replyBin, err := json.Marshal(reply)
-	if err != nil {
-		return nil, 0, err
-	}
-	data, gasUsed, err := api.Reply(w.cache, codeHash, envBin, replyBin, &gasMeter, store, &goapi, &querier, gasLimit)
-	if err != nil {
-		return nil, gasUsed, err
-	}
-
-	var resp v1types.ContractResult
-	err = json.Unmarshal(data, &resp)
-	if err != nil {
-		return nil, gasUsed, err
-	}
-	if resp.Err != "" {
-		return nil, gasUsed, fmt.Errorf("%s", resp.Err)
-	}
-	return resp.Ok, gasUsed, nil
 }

@@ -340,11 +340,6 @@ where
         let result = self.inner.query(env, msg)?;
         Ok(result.into_output())
     }
-
-    pub fn call_reply(&mut self, env: &[u8], msg: &[u8]) -> VmResult<Vec<u8>> {
-        let result = self.inner.reply(env, msg)?;
-        Ok(result.into_output())
-    }
 }
 
 #[cfg(test)]
