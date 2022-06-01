@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	v010msgtypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
 )
 
 //------- Results / Msgs -------------
@@ -27,42 +28,36 @@ type Response struct {
 	// base64-encoded bytes to return as ABCI.Data field
 	Data []byte `json:"data"`
 	// attributes for a log event to return over abci interface
-	Attributes []EventAttribute `json:"attributes"`
+	Attributes []v010msgtypes.LogAttribute `json:"attributes"`
 	// custom events (separate from the main one that contains the attributes
 	// above)
 	Events []Event `json:"events"`
 }
 
-// EventAttributes must encode empty array as []
-type EventAttributes []EventAttribute
+// LogAttributes must encode empty array as []
+type LogAttributes []v010msgtypes.LogAttribute
 
 // MarshalJSON ensures that we get [] for empty arrays
-func (a EventAttributes) MarshalJSON() ([]byte, error) {
+func (a LogAttributes) MarshalJSON() ([]byte, error) {
 	if len(a) == 0 {
 		return []byte("[]"), nil
 	}
-	var raw []EventAttribute = a
+	var raw []v010msgtypes.LogAttribute = a
 	return json.Marshal(raw)
 }
 
 // UnmarshalJSON ensures that we get [] for empty arrays
-func (a *EventAttributes) UnmarshalJSON(data []byte) error {
+func (a *LogAttributes) UnmarshalJSON(data []byte) error {
 	// make sure we deserialize [] back to null
 	if string(data) == "[]" || string(data) == "null" {
 		return nil
 	}
-	var raw []EventAttribute
+	var raw []v010msgtypes.LogAttribute
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
 	}
 	*a = raw
 	return nil
-}
-
-// EventAttribute
-type EventAttribute struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
 }
 
 // CosmosMsg is an rust enum and only (exactly) one of the fields should be set
@@ -108,50 +103,50 @@ type GovMsg struct {
 	Vote *VoteMsg `json:"vote,omitempty"`
 }
 
-type voteOption int
+type VoteOption int
 
 type VoteMsg struct {
 	ProposalId uint64     `json:"proposal_id"`
-	Vote       voteOption `json:"vote"`
+	Vote       VoteOption `json:"vote"`
 }
 
 const (
-	Yes voteOption = iota
+	Yes VoteOption = iota
 	No
 	Abstain
 	NoWithVeto
 )
 
-var fromVoteOption = map[voteOption]string{
+var fromVoteOption = map[VoteOption]string{
 	Yes:        "yes",
 	No:         "no",
 	Abstain:    "abstain",
 	NoWithVeto: "no_with_veto",
 }
 
-var toVoteOption = map[string]voteOption{
+var ToVoteOption = map[string]VoteOption{
 	"yes":          Yes,
 	"no":           No,
 	"abstain":      Abstain,
 	"no_with_veto": NoWithVeto,
 }
 
-func (v voteOption) String() string {
+func (v VoteOption) String() string {
 	return fromVoteOption[v]
 }
 
-func (v voteOption) MarshalJSON() ([]byte, error) {
+func (v VoteOption) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.String())
 }
 
-func (s *voteOption) UnmarshalJSON(b []byte) error {
+func (s *VoteOption) UnmarshalJSON(b []byte) error {
 	var j string
 	err := json.Unmarshal(b, &j)
 	if err != nil {
 		return err
 	}
 
-	voteOption, ok := toVoteOption[j]
+	voteOption, ok := ToVoteOption[j]
 	if !ok {
 		return fmt.Errorf("invalid vote option '%v'", j)
 	}
@@ -177,25 +172,10 @@ type CloseChannelMsg struct {
 }
 
 type StakingMsg struct {
-	Delegate   *DelegateMsg   `json:"delegate,omitempty"`
-	Undelegate *UndelegateMsg `json:"undelegate,omitempty"`
-	Redelegate *RedelegateMsg `json:"redelegate,omitempty"`
-}
-
-type DelegateMsg struct {
-	Validator string     `json:"validator"`
-	Amount    types.Coin `json:"amount"`
-}
-
-type UndelegateMsg struct {
-	Validator string     `json:"validator"`
-	Amount    types.Coin `json:"amount"`
-}
-
-type RedelegateMsg struct {
-	SrcValidator string     `json:"src_validator"`
-	DstValidator string     `json:"dst_validator"`
-	Amount       types.Coin `json:"amount"`
+	Delegate   *v010msgtypes.DelegateMsg   `json:"delegate,omitempty"`
+	Undelegate *v010msgtypes.UndelegateMsg `json:"undelegate,omitempty"`
+	Redelegate *v010msgtypes.RedelegateMsg `json:"redelegate,omitempty"`
+	Withdraw   *v010msgtypes.WithdrawMsg   `json:"withdraw,omitempty"`
 }
 
 type DistributionMsg struct {
@@ -225,44 +205,6 @@ type StargateMsg struct {
 }
 
 type WasmMsg struct {
-	Execute     *ExecuteMsg     `json:"execute,omitempty"`
-	Instantiate *InstantiateMsg `json:"instantiate,omitempty"`
-}
-
-// ExecuteMsg is used to call another defined contract on this chain.
-// The calling contract requires the callee to be defined beforehand,
-// and the address should have been defined in initialization.
-// And we assume the developer tested the ABIs and coded them together.
-//
-// Since a contract is immutable once it is deployed, we don't need to transform this.
-// If it was properly coded and worked once, it will continue to work throughout upgrades.
-type ExecuteMsg struct {
-	// ContractAddr is the sdk.AccAddress of the contract, which uniquely defines
-	// the contract ID and instance ID. The sdk module should maintain a reverse lookup table.
-	ContractAddr string `json:"contract_addr"`
-	// Custom addition to support binding a message to specific code to harden against offline & replay attacks
-	// This is only needed when creating a callback message
-	CallbackCodeHash string `json:"callback_code_hash"`
-	// Msg is assumed to be a json-encoded message, which will be passed directly
-	// as `userMsg` when calling `Handle` on the above-defined contract
-	Msg []byte `json:"msg"`
-	// Send is an optional amount of coins this contract sends to the called contract
-	Funds types.Coins `json:"funds"`
-}
-
-// InstantiateMsg will create a new contract instance from a previously uploaded CodeID.
-// This allows one contract to spawn "sub-contracts".
-type InstantiateMsg struct {
-	// CodeID is the reference to the wasm byte code as used by the Cosmos-SDK
-	CodeID uint64 `json:"code_id"`
-	// Custom addition to support binding a message to specific code to harden against offline & replay attacks
-	// This is only needed when creating a callback message
-	CallbackCodeHash string `json:"callback_code_hash"`
-	// Msg is assumed to be a json-encoded message, which will be passed directly
-	// as `userMsg` when calling `Init` on a new contract with the above-defined CodeID
-	Msg []byte `json:"msg"`
-	// Send is an optional amount of coins this contract sends to the called contract
-	Funds types.Coins `json:"funds"`
-	// Label is optional metadata to be stored with a contract instance.
-	Label string `json:"label"`
+	Execute     *v010msgtypes.ExecuteMsg     `json:"execute,omitempty"`
+	Instantiate *v010msgtypes.InstantiateMsg `json:"instantiate,omitempty"`
 }

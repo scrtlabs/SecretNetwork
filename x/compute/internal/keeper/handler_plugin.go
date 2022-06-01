@@ -2,6 +2,16 @@ package keeper
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
+	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
+	ibcclienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
+	channelkeeper "github.com/cosmos/ibc-go/v3/modules/core/04-channel/keeper"
+	channeltypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
+	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
+	v1wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
 
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -18,40 +28,147 @@ import (
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
+// MessageHandlerChain defines a chain of handlers that are called one by one until it can be handled.
+type MessageHandlerChain struct {
+	handlers []Messenger
+}
+
 type MessageHandler struct {
 	router   sdk.Router
 	encoders MessageEncoders
 }
 
-func NewMessageHandler(router sdk.Router, customEncoders *MessageEncoders) MessageHandler {
-	encoders := DefaultEncoders().Merge(customEncoders)
+func NewSDKMessageHandler(router sdk.Router, encoders MessageEncoders) MessageHandler {
 	return MessageHandler{
 		router:   router,
 		encoders: encoders,
 	}
 }
 
-type BankEncoder func(sender sdk.AccAddress, msg *v010wasmTypes.BankMsg) ([]sdk.Msg, error)
-type CustomEncoder func(sender sdk.AccAddress, msg json.RawMessage) ([]sdk.Msg, error)
-type StakingEncoder func(sender sdk.AccAddress, msg *v010wasmTypes.StakingMsg) ([]sdk.Msg, error)
-type WasmEncoder func(sender sdk.AccAddress, msg *v010wasmTypes.WasmMsg) ([]sdk.Msg, error)
-type GovEncoder func(sender sdk.AccAddress, msg *v010wasmTypes.GovMsg) ([]sdk.Msg, error)
-
-type MessageEncoders struct {
-	Bank    BankEncoder
-	Custom  CustomEncoder
-	Staking StakingEncoder
-	Wasm    WasmEncoder
-	Gov     GovEncoder
+// IBCRawPacketHandler handels IBC.SendPacket messages which are published to an IBC channel.
+type IBCRawPacketHandler struct {
+	channelKeeper    channelkeeper.Keeper
+	capabilityKeeper capabilitykeeper.ScopedKeeper
 }
 
-func DefaultEncoders() MessageEncoders {
+func NewIBCRawPacketHandler(chk channelkeeper.Keeper, cak capabilitykeeper.ScopedKeeper) IBCRawPacketHandler {
+	return IBCRawPacketHandler{channelKeeper: chk, capabilityKeeper: cak}
+}
+
+func NewMessageHandlerChain(first Messenger, others ...Messenger) *MessageHandlerChain {
+	r := &MessageHandlerChain{handlers: append([]Messenger{first}, others...)}
+	for i := range r.handlers {
+		if r.handlers[i] == nil {
+			panic(fmt.Sprintf("handler must not be nil at position : %d", i))
+		}
+	}
+	return r
+}
+
+func NewMessageHandler(
+	router sdk.Router,
+	customEncoders *MessageEncoders,
+	channelKeeper channelkeeper.Keeper,
+	capabilityKeeper capabilitykeeper.ScopedKeeper,
+	portSource types.ICS20TransferPortSource,
+	unpacker codectypes.AnyUnpacker) Messenger {
+	encoders := DefaultEncoders(portSource, unpacker).Merge(customEncoders)
+	return NewMessageHandlerChain(
+		NewSDKMessageHandler(router, encoders),
+		NewIBCRawPacketHandler(channelKeeper, capabilityKeeper),
+	)
+}
+
+// DispatchMsg dispatch message and calls chained handlers one after another in
+// order to find the right one to process given message. If a handler cannot
+// process given message (returns ErrUnknownMsg), its result is ignored and the
+// next handler is executed.
+func (m MessageHandlerChain) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg) ([]sdk.Event, [][]byte, error) {
+	for _, h := range m.handlers {
+		events, data, err := h.DispatchMsg(ctx, contractAddr, contractIBCPortID, msg)
+		switch {
+		case err == nil:
+			return events, data, nil
+		case errors.Is(err, types.ErrUnknownMsg):
+			continue
+		default:
+			return events, data, err
+		}
+	}
+	return nil, nil, sdkerrors.Wrap(types.ErrUnknownMsg, "no handler found")
+}
+
+// DispatchMsg publishes a raw IBC packet onto the channel.
+func (h IBCRawPacketHandler) DispatchMsg(ctx sdk.Context, _ sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg) (events []sdk.Event, data [][]byte, err error) {
+	if msg.IBC == nil || msg.IBC.SendPacket == nil {
+		return nil, nil, types.ErrUnknownMsg
+	}
+	if contractIBCPortID == "" {
+		return nil, nil, sdkerrors.Wrapf(types.ErrUnsupportedForContract, "ibc not supported")
+	}
+	contractIBCChannelID := msg.IBC.SendPacket.ChannelID
+	if contractIBCChannelID == "" {
+		return nil, nil, sdkerrors.Wrapf(types.ErrEmpty, "ibc channel")
+	}
+
+	sequence, found := h.channelKeeper.GetNextSequenceSend(ctx, contractIBCPortID, contractIBCChannelID)
+	if !found {
+		return nil, nil, sdkerrors.Wrapf(channeltypes.ErrSequenceSendNotFound,
+			"source port: %s, source channel: %s", contractIBCPortID, contractIBCChannelID,
+		)
+	}
+
+	channelInfo, ok := h.channelKeeper.GetChannel(ctx, contractIBCPortID, contractIBCChannelID)
+	if !ok {
+		return nil, nil, sdkerrors.Wrap(channeltypes.ErrInvalidChannel, "not found")
+	}
+	channelCap, ok := h.capabilityKeeper.GetCapability(ctx, host.ChannelCapabilityPath(contractIBCPortID, contractIBCChannelID))
+	if !ok {
+		return nil, nil, sdkerrors.Wrap(channeltypes.ErrChannelCapabilityNotFound, "module does not own channel capability")
+	}
+	packet := channeltypes.NewPacket(
+		msg.IBC.SendPacket.Data,
+		sequence,
+		contractIBCPortID,
+		contractIBCChannelID,
+		channelInfo.Counterparty.PortId,
+		channelInfo.Counterparty.ChannelId,
+		convertWasmIBCTimeoutHeightToCosmosHeight(msg.IBC.SendPacket.Timeout.Block),
+		msg.IBC.SendPacket.Timeout.Timestamp,
+	)
+	return nil, nil, h.channelKeeper.SendPacket(ctx, channelCap, packet)
+}
+
+type BankEncoder func(sender sdk.AccAddress, msg *v1wasmTypes.BankMsg) ([]sdk.Msg, error)
+type CustomEncoder func(sender sdk.AccAddress, msg json.RawMessage) ([]sdk.Msg, error)
+type DistributionEncoder func(sender sdk.AccAddress, msg *v1wasmTypes.DistributionMsg) ([]sdk.Msg, error)
+type GovEncoder func(sender sdk.AccAddress, msg *v1wasmTypes.GovMsg) ([]sdk.Msg, error)
+type IBCEncoder func(ctx sdk.Context, sender sdk.AccAddress, contractIBCPortID string, msg *v1wasmTypes.IBCMsg) ([]sdk.Msg, error)
+type StakingEncoder func(sender sdk.AccAddress, msg *v1wasmTypes.StakingMsg) ([]sdk.Msg, error)
+type StargateEncoder func(sender sdk.AccAddress, msg *v1wasmTypes.StargateMsg) ([]sdk.Msg, error)
+type WasmEncoder func(sender sdk.AccAddress, msg *v1wasmTypes.WasmMsg) ([]sdk.Msg, error)
+
+type MessageEncoders struct {
+	Bank         BankEncoder
+	Custom       CustomEncoder
+	Distribution DistributionEncoder
+	Gov          GovEncoder
+	IBC          IBCEncoder
+	Staking      StakingEncoder
+	Stargate     StargateEncoder
+	Wasm         WasmEncoder
+}
+
+func DefaultEncoders(portSource types.ICS20TransferPortSource, unpacker codectypes.AnyUnpacker) MessageEncoders {
 	return MessageEncoders{
-		Bank:    EncodeBankMsg,
-		Custom:  NoCustomMsg,
-		Staking: EncodeStakingMsg,
-		Wasm:    EncodeWasmMsg,
-		Gov:     EncodeGovMsg,
+		Bank:         EncodeBankMsg,
+		Custom:       NoCustomMsg,
+		Distribution: EncodeDistributionMsg,
+		Gov:          EncodeGovMsg,
+		IBC:          EncodeIBCMsg(portSource),
+		Staking:      EncodeStakingMsg,
+		Stargate:     EncodeStargateMsg(unpacker),
+		Wasm:         EncodeWasmMsg,
 	}
 }
 
@@ -77,39 +194,86 @@ func (e MessageEncoders) Merge(o *MessageEncoders) MessageEncoders {
 	return e
 }
 
-func (e MessageEncoders) Encode(contractAddr sdk.AccAddress, msg v010wasmTypes.CosmosMsg) ([]sdk.Msg, error) {
+func isValidV010Msg(msg v010wasmTypes.CosmosMsg) bool {
+	count := 0
+	if msg.Bank != nil {
+		if msg.Bank.Send != nil {
+			count++
+		}
+	}
+	if msg.Custom != nil {
+		count++
+	}
+	if msg.Staking != nil {
+		if msg.Staking.Delegate != nil {
+			count++
+		}
+		if msg.Staking.Undelegate != nil {
+			count++
+		}
+		if msg.Staking.Redelegate != nil {
+			count++
+		}
+		if msg.Staking.Withdraw != nil {
+			count++
+		}
+	}
+	if msg.Wasm != nil {
+		if msg.Wasm.Execute != nil {
+			count++
+		}
+		if msg.Wasm.Instantiate != nil {
+			count++
+		}
+	}
+	if msg.Gov != nil {
+		if msg.Gov.Vote != nil {
+			count++
+		}
+	}
+
+	return count == 1
+}
+
+func (e MessageEncoders) Encode(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg) ([]sdk.Msg, error) {
 	switch {
 	case msg.Bank != nil:
 		return e.Bank(contractAddr, msg.Bank)
 	case msg.Custom != nil:
 		return e.Custom(contractAddr, msg.Custom)
-	case msg.Staking != nil:
-		return e.Staking(contractAddr, msg.Staking)
-	case msg.Wasm != nil:
-		return e.Wasm(contractAddr, msg.Wasm)
+	case msg.Distribution != nil:
+		return e.Distribution(contractAddr, msg.Distribution)
 	case msg.Gov != nil:
 		return e.Gov(contractAddr, msg.Gov)
+	case msg.IBC != nil:
+		return e.IBC(ctx, contractAddr, contractIBCPortID, msg.IBC)
+	case msg.Staking != nil:
+		return e.Staking(contractAddr, msg.Staking)
+	case msg.Stargate != nil:
+		return e.Stargate(contractAddr, msg.Stargate)
+	case msg.Wasm != nil:
+		return e.Wasm(contractAddr, msg.Wasm)
 	}
 
 	return nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Unknown variant of Wasm")
 }
 
-var VoteOptionMap = map[string]string{
-	"Yes":        "VOTE_OPTION_YES",
-	"Abstain":    "VOTE_OPTION_ABSTAIN",
-	"No":         "VOTE_OPTION_NO",
-	"NoWithVeto": "VOTE_OPTION_NO_WITH_VETO",
+var VoteOptionMap = map[v1wasmTypes.VoteOption]string{
+	v1wasmTypes.Yes:        "VOTE_OPTION_YES",
+	v1wasmTypes.Abstain:    "VOTE_OPTION_ABSTAIN",
+	v1wasmTypes.No:         "VOTE_OPTION_NO",
+	v1wasmTypes.NoWithVeto: "VOTE_OPTION_NO_WITH_VETO",
 }
 
-func EncodeGovMsg(sender sdk.AccAddress, msg *v010wasmTypes.GovMsg) ([]sdk.Msg, error) {
+func EncodeGovMsg(sender sdk.AccAddress, msg *v1wasmTypes.GovMsg) ([]sdk.Msg, error) {
 	if msg.Vote == nil {
 		return nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Unknown variant of Gov")
 	}
 
-	opt, exists := VoteOptionMap[msg.Vote.VoteOption]
+	opt, exists := VoteOptionMap[msg.Vote.Vote]
 	if !exists {
 		// if it's not found, let the `VoteOptionFromString` below fail
-		opt = msg.Vote.VoteOption
+		opt = ""
 	}
 
 	option, err := govtypes.VoteOptionFromString(opt)
@@ -117,11 +281,41 @@ func EncodeGovMsg(sender sdk.AccAddress, msg *v010wasmTypes.GovMsg) ([]sdk.Msg, 
 		return nil, err
 	}
 
-	sdkMsg := govtypes.NewMsgVote(sender, msg.Vote.Proposal, option)
+	sdkMsg := govtypes.NewMsgVote(sender, msg.Vote.ProposalId, option)
 	return []sdk.Msg{sdkMsg}, nil
 }
 
-func EncodeBankMsg(sender sdk.AccAddress, msg *v010wasmTypes.BankMsg) ([]sdk.Msg, error) {
+func EncodeIBCMsg(portSource types.ICS20TransferPortSource) func(ctx sdk.Context, sender sdk.AccAddress, contractIBCPortID string, msg *v1wasmTypes.IBCMsg) ([]sdk.Msg, error) {
+	return func(ctx sdk.Context, sender sdk.AccAddress, contractIBCPortID string, msg *v1wasmTypes.IBCMsg) ([]sdk.Msg, error) {
+		switch {
+		case msg.CloseChannel != nil:
+			return []sdk.Msg{&channeltypes.MsgChannelCloseInit{
+				PortId:    PortIDForContract(sender),
+				ChannelId: msg.CloseChannel.ChannelID,
+				Signer:    sender.String(),
+			}}, nil
+		case msg.Transfer != nil:
+			amount, err := convertWasmCoinToSdkCoin(msg.Transfer.Amount)
+			if err != nil {
+				return nil, sdkerrors.Wrap(err, "amount")
+			}
+			msg := &ibctransfertypes.MsgTransfer{
+				SourcePort:       portSource.GetPort(ctx),
+				SourceChannel:    msg.Transfer.ChannelID,
+				Token:            amount,
+				Sender:           sender.String(),
+				Receiver:         msg.Transfer.ToAddress,
+				TimeoutHeight:    convertWasmIBCTimeoutHeightToCosmosHeight(msg.Transfer.Timeout.Block),
+				TimeoutTimestamp: msg.Transfer.Timeout.Timestamp,
+			}
+			return []sdk.Msg{msg}, nil
+		default:
+			return nil, sdkerrors.Wrap(types.ErrUnknownMsg, "Unknown variant of IBC")
+		}
+	}
+}
+
+func EncodeBankMsg(sender sdk.AccAddress, msg *v1wasmTypes.BankMsg) ([]sdk.Msg, error) {
 	if msg.Send == nil {
 		return nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Unknown variant of Bank")
 	}
@@ -129,11 +323,7 @@ func EncodeBankMsg(sender sdk.AccAddress, msg *v010wasmTypes.BankMsg) ([]sdk.Msg
 		return nil, nil
 	}
 	// validate that the addresses are valid
-	_, stderr := sdk.AccAddressFromBech32(msg.Send.FromAddress)
-	if stderr != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Send.FromAddress)
-	}
-	_, stderr = sdk.AccAddressFromBech32(msg.Send.ToAddress)
+	_, stderr := sdk.AccAddressFromBech32(msg.Send.ToAddress)
 	if stderr != nil {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Send.ToAddress)
 	}
@@ -143,7 +333,7 @@ func EncodeBankMsg(sender sdk.AccAddress, msg *v010wasmTypes.BankMsg) ([]sdk.Msg
 		return nil, err
 	}
 	sdkMsg := banktypes.MsgSend{
-		FromAddress: msg.Send.FromAddress,
+		FromAddress: sender.String(),
 		ToAddress:   msg.Send.ToAddress,
 		Amount:      toSend,
 	}
@@ -154,7 +344,26 @@ func NoCustomMsg(sender sdk.AccAddress, msg json.RawMessage) ([]sdk.Msg, error) 
 	return nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Custom variant not supported")
 }
 
-func EncodeStakingMsg(sender sdk.AccAddress, msg *v010wasmTypes.StakingMsg) ([]sdk.Msg, error) {
+func EncodeDistributionMsg(sender sdk.AccAddress, msg *v1wasmTypes.DistributionMsg) ([]sdk.Msg, error) {
+	switch {
+	case msg.SetWithdrawAddress != nil:
+		setMsg := distrtypes.MsgSetWithdrawAddress{
+			DelegatorAddress: sender.String(),
+			WithdrawAddress:  msg.SetWithdrawAddress.Address,
+		}
+		return []sdk.Msg{&setMsg}, nil
+	case msg.WithdrawDelegatorReward != nil:
+		withdrawMsg := distrtypes.MsgWithdrawDelegatorReward{
+			DelegatorAddress: sender.String(),
+			ValidatorAddress: msg.WithdrawDelegatorReward.Validator,
+		}
+		return []sdk.Msg{&withdrawMsg}, nil
+	default:
+		return nil, sdkerrors.Wrap(types.ErrUnknownMsg, "unknown variant of Distribution")
+	}
+}
+
+func EncodeStakingMsg(sender sdk.AccAddress, msg *v1wasmTypes.StakingMsg) ([]sdk.Msg, error) {
 	var err error
 	switch {
 	case msg.Delegate != nil:
@@ -242,7 +451,24 @@ func EncodeStakingMsg(sender sdk.AccAddress, msg *v010wasmTypes.StakingMsg) ([]s
 	}
 }
 
-func EncodeWasmMsg(sender sdk.AccAddress, msg *v010wasmTypes.WasmMsg) ([]sdk.Msg, error) {
+func EncodeStargateMsg(unpacker codectypes.AnyUnpacker) StargateEncoder {
+	return func(sender sdk.AccAddress, msg *v1wasmTypes.StargateMsg) ([]sdk.Msg, error) {
+		any := codectypes.Any{
+			TypeUrl: msg.TypeURL,
+			Value:   msg.Value,
+		}
+		var sdkMsg sdk.Msg
+		if err := unpacker.UnpackAny(&any, &sdkMsg); err != nil {
+			return nil, sdkerrors.Wrap(types.ErrInvalidMsg, fmt.Sprintf("Cannot unpack proto message with type URL: %s", msg.TypeURL))
+		}
+		if err := codectypes.UnpackInterfaces(sdkMsg, unpacker); err != nil {
+			return nil, sdkerrors.Wrap(types.ErrInvalidMsg, fmt.Sprintf("UnpackInterfaces inside msg: %s", err))
+		}
+		return []sdk.Msg{sdkMsg}, nil
+	}
+}
+
+func EncodeWasmMsg(sender sdk.AccAddress, msg *v1wasmTypes.WasmMsg) ([]sdk.Msg, error) {
 	switch {
 	case msg.Execute != nil:
 		contractAddr, err := sdk.AccAddressFromBech32(msg.Execute.ContractAddr)
@@ -285,14 +511,13 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *v010wasmTypes.WasmMsg) ([]sdk.Msg
 	}
 }
 
-func (k Keeper) Dispatch(ctx sdk.Context, contractAddr sdk.AccAddress, msg v010wasmTypes.CosmosMsg) (events sdk.Events, data []byte, err error) {
-
-	sdkMsgs, err := k.messenger.encoders.Encode(contractAddr, msg)
+func (h MessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg) ([]sdk.Event, [][]byte, error) {
+	sdkMsgs, err := h.encoders.Encode(ctx, contractAddr, contractIBCPortID, msg)
 	if err != nil {
 		return nil, nil, err
 	}
 	for _, sdkMsg := range sdkMsgs {
-		_, _, err := k.handleSdkMessage(ctx, contractAddr, sdkMsg)
+		_, _, err := h.handleSdkMessage(ctx, contractAddr, sdkMsg)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -301,7 +526,7 @@ func (k Keeper) Dispatch(ctx sdk.Context, contractAddr sdk.AccAddress, msg v010w
 	return nil, nil, nil
 }
 
-func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg sdk.Msg) (sdk.Events, []byte, error) {
+func (h MessageHandler) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg sdk.Msg) (sdk.Events, []byte, error) {
 	if err := msg.ValidateBasic(); err != nil {
 		return nil, nil, err
 	}
@@ -317,7 +542,7 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 	var err error
 	if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
 		msgRoute := legacyMsg.Route()
-		handler := k.messenger.router.Route(ctx, msgRoute)
+		handler := h.router.Route(ctx, msgRoute)
 		if handler == nil {
 			return nil, nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized message route: %s", msgRoute)
 		}
@@ -363,6 +588,14 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 	//events = append(events, sdkEvents...)
 
 	return nil, nil, nil
+}
+
+// convertWasmIBCTimeoutHeightToCosmosHeight converts a wasm type ibc timeout height to ibc module type height
+func convertWasmIBCTimeoutHeightToCosmosHeight(ibcTimeoutBlock *v1wasmTypes.IBCTimeoutBlock) ibcclienttypes.Height {
+	if ibcTimeoutBlock == nil {
+		return ibcclienttypes.NewHeight(0, 0)
+	}
+	return ibcclienttypes.NewHeight(ibcTimeoutBlock.Revision, ibcTimeoutBlock.Height)
 }
 
 func convertWasmCoinsToSdkCoins(coins []wasmTypes.Coin) (sdk.Coins, error) {

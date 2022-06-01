@@ -205,6 +205,16 @@ Buffer query(cache_t *cache,
 AnalysisReport analyze_code(cache_t *cache,
                             ByteSliceView checksum,
                             Buffer *error_msg);
+Buffer reply(cache_t *cache,
+             Buffer checksum,
+             Buffer env,
+             Buffer msg,
+             Db db,
+             GoApi api,
+             GoQuerier querier,
+             uint64_t gas_limit,
+             uint64_t *gas_used,
+             Buffer *error_msg);
 
 /**
  * frees a cache reference

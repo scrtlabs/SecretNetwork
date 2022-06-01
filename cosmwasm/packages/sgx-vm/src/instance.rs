@@ -327,18 +327,23 @@ where
     }
 
     pub fn call_init(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<Vec<u8>> {
-        let init_result = self.inner.init(env, msg, sig_info)?;
-        Ok(init_result.into_output())
+        let result = self.inner.init(env, msg, sig_info)?;
+        Ok(result.into_output())
     }
 
     pub fn call_handle(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<Vec<u8>> {
-        let init_result = self.inner.handle(env, msg, sig_info)?;
-        Ok(init_result.into_output())
+        let result = self.inner.handle(env, msg, sig_info)?;
+        Ok(result.into_output())
     }
 
     pub fn call_query(&mut self, env: &[u8], msg: &[u8]) -> VmResult<Vec<u8>> {
-        let init_result = self.inner.query(env, msg)?;
-        Ok(init_result.into_output())
+        let result = self.inner.query(env, msg)?;
+        Ok(result.into_output())
+    }
+
+    pub fn call_reply(&mut self, env: &[u8], msg: &[u8]) -> VmResult<Vec<u8>> {
+        let result = self.inner.reply(env, msg)?;
+        Ok(result.into_output())
     }
 }
 

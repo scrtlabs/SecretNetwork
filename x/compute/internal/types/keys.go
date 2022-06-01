@@ -23,12 +23,6 @@ const (
 	RouterKey = ModuleName
 )
 
-const ( // event attributes
-	AttributeKeyContract = "contract_address"
-	AttributeKeyCodeID   = "code_id"
-	AttributeKeySigner   = "signer"
-)
-
 // nolint
 var (
 	CodeKeyPrefix       = []byte{0x01}

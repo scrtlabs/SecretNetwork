@@ -23,7 +23,7 @@ use cosmwasm_sgx_vm::{
 };
 use cosmwasm_sgx_vm::{
     create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_health_check,
-    untrusted_init_node, untrusted_key_gen,
+    untrusted_init_node, untrusted_key_gen, VmResult
 };
 
 use ctor::ctor;
@@ -551,4 +551,57 @@ pub extern "C" fn key_gen(err: Option<&mut Buffer>) -> Buffer {
             Buffer::from_vec(r.to_vec())
         }
     }
+}
+
+#[no_mangle]
+pub extern "C" fn reply(
+    cache: *mut cache_t,
+    checksum: Buffer,
+    env: Buffer,
+    msg: Buffer,
+    db: Db,
+    api: GoApi,
+    querier: GoQuerier,
+    gas_limit: u64,
+    gas_used: Option<&mut u64>,
+    err: Option<&mut Buffer>,
+) -> Buffer {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || {
+            do_reply(
+                c, checksum, env, msg, db, api, querier, gas_limit, gas_used,
+            )
+        }))
+        .unwrap_or_else(|_| Err(Error::panic())),
+        None => Err(Error::empty_arg(CACHE_ARG)),
+    };
+    let data = handle_c_error(r, err);
+    Buffer::from_vec(data)
+}
+
+fn do_reply(
+    cache: &mut CosmCache<DB, GoApi, GoQuerier>,
+    code_id: Buffer,
+    params: Buffer,
+    msg: Buffer,
+    db: DB,
+    api: GoApi,
+    querier: GoQuerier,
+    gas_limit: u64,
+    gas_used: Option<&mut u64>,
+) -> Result<Vec<u8>, Error> {
+    let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
+    let code_id: Checksum = unsafe { code_id.read() }
+        .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
+        .try_into()?;
+    let params = unsafe { params.read() }.ok_or_else(|| Error::empty_arg(PARAMS_ARG))?;
+    let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
+
+    let deps = to_extern(db, api, querier);
+    let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
+    // We only check this result after reporting gas usage and returning the instance into the cache.
+    let res = call_reply_raw(&mut instance, params, msg);
+    *gas_used = instance.create_gas_report().used_internally;
+    instance.recycle();
+    Ok(res?)
 }
