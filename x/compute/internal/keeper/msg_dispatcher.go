@@ -262,11 +262,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 
 		// check how much gas left locally, optionally wrap the gas meter
 		gasRemaining := ctx.GasMeter().Limit() - ctx.GasMeter().GasConsumed()
-
-		limitGas := msg.GasLimit != nil
-		if limitGas && *msg.GasLimit < gasRemaining {
-			return nil, sdkerrors.Wrap(types.ErrGasLimit, fmt.Sprintf("gas limit for submessage (%d) exceeds the remaining (%d) amount for the whole message", *msg.GasLimit, gasRemaining))
-		}
+		limitGas := msg.GasLimit != nil && (*msg.GasLimit < gasRemaining)
 
 		var err error
 		var events []sdk.Event
