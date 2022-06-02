@@ -244,6 +244,7 @@ pub unsafe extern "C" fn ecall_handle(
     msg_len: usize,
     sig_info: *const u8,
     sig_info_len: usize,
+    handle_type: u8,
 ) -> HandleResult {
     let _recursion_guard = match recursion_depth::guard() {
         Ok(rg) => rg,
@@ -285,6 +286,7 @@ pub unsafe extern "C" fn ecall_handle(
             env,
             msg,
             sig_info,
+            handle_type,
         );
         *used_gas = local_used_gas;
         result_handle_success_to_handleresult(result)

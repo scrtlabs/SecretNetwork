@@ -94,12 +94,13 @@ pub fn call_handle_raw<S: Storage + 'static, A: Api + 'static, Q: Querier + 'sta
     env: &[u8],
     msg: &[u8],
     sig_info: &[u8],
+    handle_type: u8
 ) -> VmResult<Vec<u8>> {
     instance.set_storage_readonly(false);
     /*
     call_raw(instance, "handle", &[env, msg], MAX_LENGTH_HANDLE)
     */
-    instance.call_handle(env, msg, sig_info)
+    instance.call_handle(env, msg, sig_info, handle_type)
 }
 
 /// Calls Wasm export "query" and returns raw data from the contract.

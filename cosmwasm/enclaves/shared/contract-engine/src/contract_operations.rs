@@ -156,6 +156,7 @@ pub fn handle(
     env: &[u8],
     msg: &[u8],
     sig_info: &[u8],
+    handle_type: u8
 ) -> Result<HandleSuccess, EnclaveError> {
     let contract_code = ContractCode::new(contract);
 

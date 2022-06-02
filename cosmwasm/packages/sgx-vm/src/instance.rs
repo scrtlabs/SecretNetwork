@@ -331,8 +331,8 @@ where
         Ok(result.into_output())
     }
 
-    pub fn call_handle(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<Vec<u8>> {
-        let result = self.inner.handle(env, msg, sig_info)?;
+    pub fn call_handle(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8], handle_type: u8) -> VmResult<Vec<u8>> {
+        let result = self.inner.handle(env, msg, sig_info, handle_type)?;
         Ok(result.into_output())
     }
 

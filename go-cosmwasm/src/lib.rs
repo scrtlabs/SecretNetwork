@@ -402,11 +402,12 @@ pub extern "C" fn handle(
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
     sig_info: Buffer,
+    handle_type: u8,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
             do_handle(
-                c, code_id, params, msg, db, api, querier, gas_limit, gas_used, sig_info,
+                c, code_id, params, msg, db, api, querier, gas_limit, gas_used, sig_info, handle_type
             )
         }))
         .unwrap_or_else(|_| Err(Error::panic())),
@@ -428,6 +429,7 @@ fn do_handle(
     gas_limit: u64,
     gas_used: Option<&mut u64>,
     sig_info: Buffer,
+    handle_type: u8
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
     let code_id: Checksum = unsafe { code_id.read() }
@@ -440,7 +442,7 @@ fn do_handle(
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
-    let res = call_handle_raw(&mut instance, params, msg, sig_info);
+    let res = call_handle_raw(&mut instance, params, msg, sig_info, handle_type);
     *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)

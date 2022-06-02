@@ -144,7 +144,7 @@ where
         }
     }
 
-    pub fn handle(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<HandleSuccess> {
+    pub fn handle(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8], handle_type: u8) -> VmResult<HandleSuccess> {
         trace!(
             "handle() called with env: {:?} msg: {:?} gas_left: {}",
             String::from_utf8_lossy(env),
@@ -177,6 +177,7 @@ where
                 msg.len(),
                 sig_info.as_ptr(),
                 sig_info.len(),
+                handle_type
             )
         };
 
