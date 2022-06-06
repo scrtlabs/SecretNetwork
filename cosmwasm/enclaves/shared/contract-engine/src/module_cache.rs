@@ -92,20 +92,20 @@ fn compile_module(
     code: &[u8],
     operation: ContractOperation,
 ) -> Result<wasmi::Module, EnclaveError> {
-    info!("Deserializing Wasm contract");
+    debug!("Deserializing Wasm contract");
 
     // Create a parity-wasm module first, so we can inject gas metering to it
     // (you need a parity-wasm module to use the pwasm-utils crate)
     let mut p_modlue: Module =
         elements::deserialize_buffer(code).map_err(|_| EnclaveError::InvalidWasm)?;
 
-    info!("Deserialized Wasm contract");
+    debug!("Deserialized Wasm contract");
 
-    info!("Validating WASM memory demands");
+    debug!("Validating WASM memory demands");
 
     validate_memory(&mut p_modlue)?;
 
-    info!("Validated WASM memory demands");
+    debug!("Validated WASM memory demands");
 
     // Set the gas costs for wasm op-codes (there is an inline stack_height limit in WasmCosts)
     let wasm_costs = WasmCosts::default();
@@ -114,13 +114,13 @@ fn compile_module(
     let contract_module = pwasm_utils::inject_gas_counter(p_modlue, &gas_rules(&wasm_costs))
         .map_err(|_| EnclaveError::FailedGasMeteringInjection)?;
 
-    info!("Trying to create Wasmi module from parity...");
+    debug!("Trying to create Wasmi module from parity...");
 
     // Create a wasmi module from the parity module
     let module = wasmi::Module::from_parity_wasm_module(contract_module)
         .map_err(|_err| EnclaveError::InvalidWasm)?;
 
-    info!("Created Wasmi module from parity. Now checking for floating points...");
+    debug!("Created Wasmi module from parity. Now checking for floating points...");
 
     // Skip the floating point check in queries and handles.
     // We know that the contract must be valid at this point,

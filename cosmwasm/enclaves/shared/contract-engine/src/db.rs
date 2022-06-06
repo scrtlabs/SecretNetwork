@@ -22,7 +22,7 @@ pub fn write_encrypted_key(
 
     let scrambled_field_name = field_name_digest(key, contract_key);
 
-    info!(
+    debug!(
         "Writing to scrambled field name: {:?}",
         scrambled_field_name
     );
