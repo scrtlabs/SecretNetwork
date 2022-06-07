@@ -534,7 +534,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	verificationInfo := types.NewVerificationInfo(signBytes, signMode, modeInfoBytes, pkBytes, signerSig, callbackSig)
 
-	codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
+	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -572,21 +572,33 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	switch res := response.(type) {
 	case v010wasmTypes.HandleResponse:
-		// emit all events from this contract itself
-		events := types.ParseEvents(res.Log, contractAddress)
-		ctx.EventManager().EmitEvents(events)
-
-		err = k.dispatchMessages(ctx, contractAddress, res.Messages)
+		subMessages, err := V010MsgsToV1SubMsgs(res.Messages)
 		if err != nil {
-			return nil, err
+			return nil, sdkerrors.Wrap(err, "couldn't convert v010 messages to v1 messages")
+		}
+
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, subMessages, res.Log, res.Data, msg, verificationInfo)
+		if err != nil {
+			return nil, sdkerrors.Wrap(err, "dispatch")
 		}
 
 		return &sdk.Result{
-			Data: res.Data,
+			Data: data,
 		}, nil
 	case v1wasmTypes.Response:
-		// TODO
-		return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("cannot detect response type: %v", res))
+		ctx.EventManager().EmitEvent(sdk.NewEvent(
+			types.EventTypeExecute,
+			sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+		))
+
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Data, msg, verificationInfo)
+		if err != nil {
+			return nil, sdkerrors.Wrap(err, "dispatch")
+		}
+
+		return &sdk.Result{
+			Data: data,
+		}, nil
 	default:
 		return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("cannot detect response type: %v", res))
 	}
@@ -858,10 +870,10 @@ func (k *Keeper) handleContractResponse(
 	msgs []v1wasmTypes.SubMsg,
 	logs []v010wasmTypes.LogAttribute,
 	data []byte,
-// original TX in order to extract the first 64bytes of signing info
+	// original TX in order to extract the first 64bytes of signing info
 	ogTx []byte,
-// sigInfo of the initial message that triggered the original contract call
-// This is used mainly in replies in order to decrypt their data.
+	// sigInfo of the initial message that triggered the original contract call
+	// This is used mainly in replies in order to decrypt their data.
 	ogSigInfo wasmTypes.VerificationInfo,
 ) ([]byte, error) {
 	events := types.ContractLogsToSdkEvents(logs, contractAddr)
