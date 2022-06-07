@@ -141,6 +141,12 @@ pub enum SignModeDef {
     SIGN_MODE_LEGACY_AMINO_JSON = 127,
 }
 
+#[derive(Deserialize, Clone, Debug, PartialEq)]
+pub enum HandleType {
+    HANDLE_TYPE_EXECUTE = 0,
+    HANDLE_TYPE_REPLY = 1,
+}
+
 // This is called `VerificationInfo` on the Go side
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 pub struct SigInfo {

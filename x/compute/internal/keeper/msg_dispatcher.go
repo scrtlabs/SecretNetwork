@@ -20,7 +20,7 @@ type Messenger interface {
 
 // Replyer is a subset of keeper that can handle replies to submessages
 type Replyer interface {
-	reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error)
+	reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error)
 }
 
 // MessageDispatcher coordinates message sending and submessage reply/ state commits
@@ -226,6 +226,11 @@ func ToSystemError(err error) *SystemError {
 	}
 }
 
+// Reply is encrypted on when it is a contract reply and it is OK since error is always reducted to be a string.
+func isReplyEncrypted(msg v1wasmTypes.CosmosMsg, reply v1wasmTypes.Reply) bool {
+	return (msg.Wasm != nil) && (reply.Result.Ok != nil)
+}
+
 // Issue #759 - we don't return error string for worries of non-determinism
 func redactError(err error) error {
 	// Do not redact system errors
@@ -245,7 +250,7 @@ func redactError(err error) error {
 
 // DispatchSubmessages builds a sandbox to execute these messages and returns the execution result to the contract
 // that dispatched them, both on success as well as failure
-func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []v1wasmTypes.SubMsg, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error) {
+func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []v1wasmTypes.SubMsg, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error) {
 	var rsp []byte
 	for _, msg := range msgs {
 		// Check replyOn validity
@@ -303,6 +308,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 				responseData = data[0]
 			}
 			result = v1wasmTypes.SubMsgResult{
+				// Copy first 64 bytes of the OG message in order to preserve the pubkey.
 				Ok: &v1wasmTypes.SubMsgResponse{
 					Events: sdkEventsToWasmVMEvents(filteredEvents),
 					Data:   responseData,
@@ -324,7 +330,17 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 
 		// we can ignore any result returned as there is nothing to do with the data
 		// and the events are already in the ctx.EventManager()
-		rspData, err := d.keeper.reply(ctx, contractAddr, reply, ogSigInfo)
+
+		// In order to specify that the reply isn't signed by the enclave we use "SIGN_MODE_UNSPECIFIED"
+		// The SGX will notice that the value is SIGN_MODE_UNSPECIFIED and will treat the message as plaintext.
+		replySigInfo := wasmTypes.VerificationInfo{
+			SignMode: "SIGN_MODE_UNSPECIFIED",
+		}
+		if isReplyEncrypted(msg.Msg, reply) {
+			replySigInfo = ogSigInfo
+		}
+
+		rspData, err := d.keeper.reply(ctx, contractAddr, reply, ogTx, replySigInfo)
 		switch {
 		case err != nil:
 			return nil, sdkerrors.Wrap(err, "reply")
