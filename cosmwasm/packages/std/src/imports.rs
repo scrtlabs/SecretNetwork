@@ -1,11 +1,17 @@
 use std::vec::Vec;
 
-use crate::addresses::{CanonicalAddr, HumanAddr};
-use crate::encoding::Binary;
-use crate::errors::{RecoverPubkeyError, SigningError, StdError, StdResult, VerificationError};
+use crate::addresses::{Addr, CanonicalAddr};
+use crate::binary::Binary;
+use crate::errors::{
+    RecoverPubkeyError, SigningError, StdError, StdResult, SystemError, VerificationError,
+};
 #[cfg(feature = "iterator")]
-use crate::iterator::{Order, KV, Pair};
-use crate::memory::{alloc, build_region, consume_region, encode_sections, Region, get_optional_region_address};
+use crate::iterator::{Order, Pair};
+use crate::memory::{
+    alloc, build_region, consume_region, encode_sections, get_optional_region_address, Region,
+};
+use crate::results::SystemResult;
+use crate::sections::decode_sections2;
 use crate::serde::from_slice;
 use crate::traits::{Api, Querier, QuerierResult, Storage};
 
@@ -217,118 +223,6 @@ impl Api for ExternalApi {
 
         let address = unsafe { consume_string_region_written_by_vm(human) };
         Ok(Addr::unchecked(address))
-    }
-
-    fn secp256k1_verify(
-        &self,
-        message_hash: &[u8],
-        signature: &[u8],
-        public_key: &[u8],
-    ) -> Result<bool, VerificationError> {
-        let hash_send = build_region(message_hash);
-        let hash_send_ptr = &*hash_send as *const Region as u32;
-        let sig_send = build_region(signature);
-        let sig_send_ptr = &*sig_send as *const Region as u32;
-        let pubkey_send = build_region(public_key);
-        let pubkey_send_ptr = &*pubkey_send as *const Region as u32;
-
-        let result = unsafe { secp256k1_verify(hash_send_ptr, sig_send_ptr, pubkey_send_ptr) };
-        match result {
-            0 => Ok(true),
-            1 => Ok(false),
-            2 => panic!("MessageTooLong must not happen. This is a bug in the VM."),
-            3 => Err(VerificationError::InvalidHashFormat),
-            4 => Err(VerificationError::InvalidSignatureFormat),
-            5 => Err(VerificationError::InvalidPubkeyFormat),
-            10 => Err(VerificationError::GenericErr),
-            error_code => Err(VerificationError::unknown_err(error_code)),
-        }
-    }
-
-    fn secp256k1_recover_pubkey(
-        &self,
-        message_hash: &[u8],
-        signature: &[u8],
-        recover_param: u8,
-    ) -> Result<Vec<u8>, RecoverPubkeyError> {
-        let hash_send = build_region(message_hash);
-        let hash_send_ptr = &*hash_send as *const Region as u32;
-        let sig_send = build_region(signature);
-        let sig_send_ptr = &*sig_send as *const Region as u32;
-
-        let result =
-            unsafe { secp256k1_recover_pubkey(hash_send_ptr, sig_send_ptr, recover_param.into()) };
-        let error_code = from_high_half(result);
-        let pubkey_ptr = from_low_half(result);
-        match error_code {
-            0 => {
-                let pubkey = unsafe { consume_region(pubkey_ptr as *mut Region) };
-                Ok(pubkey)
-            }
-            2 => panic!("MessageTooLong must not happen. This is a bug in the VM."),
-            3 => Err(RecoverPubkeyError::InvalidHashFormat),
-            4 => Err(RecoverPubkeyError::InvalidSignatureFormat),
-            6 => Err(RecoverPubkeyError::InvalidRecoveryParam),
-            error_code => Err(RecoverPubkeyError::unknown_err(error_code)),
-        }
-    }
-
-    fn ed25519_verify(
-        &self,
-        message: &[u8],
-        signature: &[u8],
-        public_key: &[u8],
-    ) -> Result<bool, VerificationError> {
-        let msg_send = build_region(message);
-        let msg_send_ptr = &*msg_send as *const Region as u32;
-        let sig_send = build_region(signature);
-        let sig_send_ptr = &*sig_send as *const Region as u32;
-        let pubkey_send = build_region(public_key);
-        let pubkey_send_ptr = &*pubkey_send as *const Region as u32;
-
-        let result = unsafe { ed25519_verify(msg_send_ptr, sig_send_ptr, pubkey_send_ptr) };
-        match result {
-            0 => Ok(true),
-            1 => Ok(false),
-            2 => panic!("Error code 2 unused since CosmWasm 0.15. This is a bug in the VM."),
-            3 => panic!("InvalidHashFormat must not happen. This is a bug in the VM."),
-            4 => Err(VerificationError::InvalidSignatureFormat),
-            5 => Err(VerificationError::InvalidPubkeyFormat),
-            10 => Err(VerificationError::GenericErr),
-            error_code => Err(VerificationError::unknown_err(error_code)),
-        }
-    }
-
-    fn ed25519_batch_verify(
-        &self,
-        messages: &[&[u8]],
-        signatures: &[&[u8]],
-        public_keys: &[&[u8]],
-    ) -> Result<bool, VerificationError> {
-        let msgs_encoded = encode_sections(messages);
-        let msgs_send = build_region(&msgs_encoded);
-        let msgs_send_ptr = &*msgs_send as *const Region as u32;
-
-        let sigs_encoded = encode_sections(signatures);
-        let sig_sends = build_region(&sigs_encoded);
-        let sigs_send_ptr = &*sig_sends as *const Region as u32;
-
-        let pubkeys_encoded = encode_sections(public_keys);
-        let pubkeys_send = build_region(&pubkeys_encoded);
-        let pubkeys_send_ptr = &*pubkeys_send as *const Region as u32;
-
-        let result =
-            unsafe { ed25519_batch_verify(msgs_send_ptr, sigs_send_ptr, pubkeys_send_ptr) };
-        match result {
-            0 => Ok(true),
-            1 => Ok(false),
-            2 => panic!("Error code 2 unused since CosmWasm 0.15. This is a bug in the VM."),
-            3 => panic!("InvalidHashFormat must not happen. This is a bug in the VM."),
-            4 => Err(VerificationError::InvalidSignatureFormat),
-            5 => Err(VerificationError::InvalidPubkeyFormat),
-            10 => Err(VerificationError::GenericErr),
-            error_code => Err(VerificationError::unknown_err(error_code)),
-        }
     }
 
     fn debug(&self, message: &str) {

@@ -1,12 +1,10 @@
 use serde::{de::DeserializeOwned, Serialize};
 use std::ops::Deref;
 
-use crate::addresses::{Addr, CanonicalAddr};
+use crate::addresses::{Addr, CanonicalAddr, HumanAddr};
 use crate::binary::Binary;
 use crate::coins::Coin;
-use crate::errors::{
-    RecoverPubkeyError, SigningError, StdError, StdResult, VerificationError,
-};
+use crate::errors::{RecoverPubkeyError, SigningError, StdError, StdResult, VerificationError};
 #[cfg(feature = "iterator")]
 use crate::iterator::{Order, Pair};
 use crate::query::{

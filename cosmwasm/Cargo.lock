@@ -1077,6 +1077,7 @@ dependencies = [
  "schemars 0.8.8",
  "serde",
  "serde-json-wasm 0.3.2",
+ "snafu",
  "thiserror",
  "uint",
 ]

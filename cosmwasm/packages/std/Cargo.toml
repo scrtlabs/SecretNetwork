@@ -53,6 +53,7 @@ serde = { version = "1.0.117", default-features = false, features = [
     "alloc"
 ] }
 thiserror = "1.0"
+snafu = { version = "0.6.6" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 cosmwasm-crypto = { path = "../crypto", version = "0.16.0" }

@@ -69,13 +69,13 @@ typedef struct AnalysisReport {
   Buffer required_features;
 } AnalysisReport;
 
-typedef struct EnclaveRuntimeConfig {
-  uint8_t module_cache_size;
-} EnclaveRuntimeConfig;
-
 typedef struct cache_t {
 
 } cache_t;
+
+typedef struct EnclaveRuntimeConfig {
+  uint8_t module_cache_size;
+} EnclaveRuntimeConfig;
 
 /**
  * An opaque type. `*gas_meter_t` represents a pointer to Go memory holding the gas meter.
@@ -145,6 +145,8 @@ typedef struct GoQuerier {
 
 Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
+AnalysisReport analyze_code(cache_t *cache, ByteSliceView checksum, Buffer *error_msg);
+
 void configure_enclave_runtime(EnclaveRuntimeConfig config, Buffer *err);
 
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
@@ -202,10 +204,6 @@ Buffer query(cache_t *cache,
              uint64_t gas_limit,
              uint64_t *gas_used,
              Buffer *err);
-
-AnalysisReport analyze_code(cache_t *cache,
-                            ByteSliceView checksum,
-                            Buffer *error_msg);
 
 /**
  * frees a cache reference
