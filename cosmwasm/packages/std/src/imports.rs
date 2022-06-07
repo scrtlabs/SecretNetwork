@@ -4,15 +4,10 @@ use crate::addresses::{CanonicalAddr, HumanAddr};
 use crate::encoding::Binary;
 use crate::errors::{RecoverPubkeyError, SigningError, StdError, StdResult, VerificationError};
 #[cfg(feature = "iterator")]
-use crate::iterator::{Order, KV};
-use crate::memory::{alloc, build_region, consume_region, encode_sections, Region};
+use crate::iterator::{Order, KV, Pair};
+use crate::memory::{alloc, build_region, consume_region, encode_sections, Region, get_optional_region_address};
 use crate::serde::from_slice;
 use crate::traits::{Api, Querier, QuerierResult, Storage};
-#[cfg(feature = "iterator")]
-use crate::{
-    iterator::{Order, Pair},
-    memory::get_optional_region_address,
-};
 
 /// An upper bound for typical canonical address lengths (e.g. 20 in Cosmos SDK/Ethereum or 32 in Nano/Substrate)
 const CANONICAL_ADDRESS_BUFFER_LENGTH: usize = 64;
@@ -36,15 +31,6 @@ extern "C" {
     fn addr_validate(source_ptr: u32) -> u32;
     fn addr_canonicalize(source_ptr: u32, destination_ptr: u32) -> u32;
     fn addr_humanize(source_ptr: u32, destination_ptr: u32) -> u32;
-
-    fn secp256k1_verify(message_hash_ptr: u32, signature_ptr: u32, public_key_ptr: u32) -> u32;
-    fn secp256k1_recover_pubkey(
-        message_hash_ptr: u32,
-        signature_ptr: u32,
-        recovery_param: u32,
-    ) -> u64;
-    fn ed25519_verify(message_ptr: u32, signature_ptr: u32, public_key_ptr: u32) -> u32;
-    fn ed25519_batch_verify(messages_ptr: u32, signatures_ptr: u32, public_keys_ptr: u32) -> u32;
 
     fn debug(source_ptr: u32);
 

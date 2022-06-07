@@ -4,9 +4,8 @@ use std::ops::Deref;
 use crate::addresses::{Addr, CanonicalAddr};
 use crate::binary::Binary;
 use crate::coins::Coin;
-use crate::encoding::Binary;
 use crate::errors::{
-    RecoverPubkeyError, SigningError, StdError, StdResult, SystemResult, VerificationError,
+    RecoverPubkeyError, SigningError, StdError, StdResult, VerificationError,
 };
 #[cfg(feature = "iterator")]
 use crate::iterator::{Order, Pair};
