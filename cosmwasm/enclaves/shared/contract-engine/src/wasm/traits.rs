@@ -91,38 +91,6 @@ pub trait WasmiApi {
     fn debug_print_index(&self, message: i32) -> Result<Option<RuntimeValue>, Trap>;
 
     /// CosmWasm v0.10 + v1
-    fn secp256k1_verify(
-        &mut self,
-        message_hash_ptr: i32,
-        signature_ptr: i32,
-        public_key_ptr: i32,
-    ) -> Result<Option<RuntimeValue>, Trap>;
-
-    /// CosmWasm v0.10 + v1
-    fn secp256k1_recover_pubkey(
-        &mut self,
-        message_hash_ptr: i32,
-        signature_ptr: i32,
-        recovery_param: i32,
-    ) -> Result<Option<RuntimeValue>, Trap>;
-
-    /// CosmWasm v0.10 + v1
-    fn ed25519_verify(
-        &mut self,
-        message_ptr: i32,
-        signature_ptr: i32,
-        public_key_ptr: i32,
-    ) -> Result<Option<RuntimeValue>, Trap>;
-
-    /// CosmWasm v0.10 + v1
-    fn ed25519_batch_verify(
-        &mut self,
-        messages_ptr: i32,
-        signatures_ptr: i32,
-        public_keys_ptr: i32,
-    ) -> Result<Option<RuntimeValue>, Trap>;
-
-    /// CosmWasm v0.10 + v1
     fn secp256k1_sign(
         &mut self,
         message_ptr: i32,

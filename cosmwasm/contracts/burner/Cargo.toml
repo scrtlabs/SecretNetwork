@@ -31,7 +31,7 @@ cranelift = ["cosmwasm-vm/cranelift"]
 backtraces = ["cosmwasm-std/backtraces", "cosmwasm-vm/backtraces"]
 
 [dependencies]
-cosmwasm-std = { path = "../../packages/std", package = "secret-cosmwasm-std", features = ["iterator"] }
+cosmwasm-std = { package = "secret-cosmwasm-std", version = "0.10.1", features = ["iterator"] }
 schemars = "0.8.1"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 

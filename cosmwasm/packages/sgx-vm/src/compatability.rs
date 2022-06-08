@@ -75,6 +75,15 @@ const REQUIRED_EXPORTS_V1: &[&str] = &[
     "instantiate",
 ];
 
+pub const REQUIRED_IBC_EXPORTS: &[&str] = &[
+    "ibc_channel_open",
+    "ibc_channel_connect",
+    "ibc_channel_close",
+    "ibc_packet_receive",
+    "ibc_packet_ack",
+    "ibc_packet_timeout",
+];
+
 const MEMORY_LIMIT: u32 = 512; // in pages
 
 /// Checks if the data is valid wasm and compatibility with the CosmWasm API (imports and exports)
@@ -149,7 +158,7 @@ fn check_wasm_memories(module: &Module) -> VmResult<()> {
     Ok(())
 }
 
-fn check_wasm_exports(module: &Module, required_exports: &[&str]) -> VmResult<()> {
+pub fn check_wasm_exports(module: &Module, required_exports: &[&str]) -> VmResult<()> {
     let available_exports: Vec<String> = module.export_section().map_or(vec![], |export_section| {
         export_section
             .entries()

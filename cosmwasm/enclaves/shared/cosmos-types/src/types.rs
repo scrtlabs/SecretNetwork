@@ -141,10 +141,30 @@ pub enum SignModeDef {
     SIGN_MODE_LEGACY_AMINO_JSON = 127,
 }
 
+#[allow(non_camel_case_types)]
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 pub enum HandleType {
     HANDLE_TYPE_EXECUTE = 0,
     HANDLE_TYPE_REPLY = 1,
+
+}
+
+impl TryFrom<u8> for HandleType {
+    type Error = EnclaveError;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match t {
+            0 => Ok(HandleType::HANDLE_TYPE_EXECUTE),
+            1 => Ok(HandleType::HANDLE_TYPE_REPLY),
+            _ => {
+                error!(
+                "Handle function received wrong handle type: {}",
+                value
+            );
+                Err(EnclaveError::FailedToDeserialize);
+            }
+        }
+    }
 }
 
 // This is called `VerificationInfo` on the Go side

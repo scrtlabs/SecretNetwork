@@ -83,47 +83,12 @@ impl ModuleImportResolver for WasmiImportResolver {
                 Signature::new(&[ValueType::I32][..], Some(ValueType::I32)),
                 HostFunctions::AddrValidateIndex.into(),
             ),
-            // fn secp256k1_verify(message_hash_ptr: u32, signature_ptr: u32, public_key_ptr: u32) -> u32;
-            // v0.16
-            "secp256k1_verify" => FuncInstance::alloc_host(
-                Signature::new(
-                    &[ValueType::I32, ValueType::I32, ValueType::I32][..],
-                    Some(ValueType::I32),
-                ),
-                HostFunctions::Secp256k1Verify.into(),
-            ),
-            // fn secp256k1_recover_pubkey(message_hash_ptr: u32, signature_ptr: u32, recovery_param: u32) -> u64;
-            // v0.16
-            "secp256k1_recover_pubkey" => FuncInstance::alloc_host(
-                Signature::new(
-                    &[ValueType::I32, ValueType::I32, ValueType::I32][..],
-                    Some(ValueType::I64),
-                ),
-                HostFunctions::Secp256k1RecoverPubkey.into(),
-            ),
-            // fn ed25519_verify(message_ptr: u32, signature_ptr: u32, public_key_ptr: u32) -> u32;
-            // v0.16
-            "ed25519_verify" => FuncInstance::alloc_host(
-                Signature::new(
-                    &[ValueType::I32, ValueType::I32, ValueType::I32][..],
-                    Some(ValueType::I32),
-                ),
-                HostFunctions::Ed25519Verify.into(),
-            ),
-            // fn ed25519_batch_verify(messages_ptr: u32, signatures_ptr: u32, public_keys_ptr: u32) -> u32;
-            // v0.16
-            "ed25519_batch_verify" => FuncInstance::alloc_host(
-                Signature::new(
-                    &[ValueType::I32, ValueType::I32, ValueType::I32][..],
-                    Some(ValueType::I32),
-                ),
-                HostFunctions::Ed25519BatchVerify.into(),
-            ),
             // fn debug(source_ptr: u32);
             // v0.16
+            #[cfg(feature = "debug-print")]
             "debug" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32][..], None),
-                HostFunctions::Debug.into(),
+                HostFunctions::DebugPrintIndex.into(),
             ),
             #[cfg(feature = "debug-print")]
             "debug_print" => FuncInstance::alloc_host(

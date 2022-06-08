@@ -5,18 +5,20 @@ use enclave_crypto::{AESKey, Ed25519PublicKey, SIVEncryptable};
 use enclave_ffi_types::EnclaveError;
 
 use super::io::calc_encryption_key;
+use enclave_cosmwasm_v016_types::results::Event;
+use enclave_cosmwasm_types::encoding::Binary;
 
 pub type IoNonce = [u8; 32];
 
 /// The information we get back from a successful sub message execution,
 /// with full Cosmos SDK events.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SubMsgResponse {
     pub events: Vec<Event>,
     pub data: Option<Binary>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum SubMsgResult {
     Ok(SubMsgResponse),
@@ -28,7 +30,7 @@ pub enum SubMsgResult {
 
 /// The result object returned to `reply`. We always get the ID from the submessage
 /// back and then must handle success and error cases ourselves.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Reply {
     /// The ID that the contract set when emitting the `SubMsg`.
     /// Use this to identify which submessage triggered the `reply`.
