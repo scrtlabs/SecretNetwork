@@ -51,7 +51,13 @@ func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.Acc
 			return realWasmQuerier(ctx, request)
 		},
 	}
-	encoders := DefaultEncoders()
+
+	encodingConfig := MakeEncodingConfig()
+	var transferPortSource types.ICS20TransferPortSource
+	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
+		return "myTransferPort"
+	}}
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, countingQuerier)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 	realWasmQuerier = WasmQuerier(&keeper)

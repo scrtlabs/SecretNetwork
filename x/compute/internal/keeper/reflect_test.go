@@ -85,7 +85,7 @@ func TestMaskReflectContractSend(t *testing.T) {
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, privCreator, initMsgBz, maskID, maskStart)
 
-	maskAddr, err := keeper.Instantiate(ctx, maskID, creator /* nil,*/, initMsgBz, "mask contract 2", maskStart, nil)
+	maskAddr, _, err := keeper.Instantiate(ctx, maskID, creator /* nil,*/, initMsgBz, "mask contract 2", maskStart, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, maskAddr)
 
@@ -105,7 +105,7 @@ func TestMaskReflectContractSend(t *testing.T) {
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, privCreator, initMsgBz, escrowID, escrowStart)
 
-	escrowAddr, err := keeper.Instantiate(ctx, escrowID, creator /* nil,*/, initMsgBz, "escrow contract 2", escrowStart, nil)
+	escrowAddr, _, err := keeper.Instantiate(ctx, escrowID, creator /* nil,*/, initMsgBz, "escrow contract 2", escrowStart, nil)
 
 	require.NoError(t, err)
 	require.NotEmpty(t, escrowAddr)
@@ -181,7 +181,7 @@ func TestMaskReflectCustomMsg(t *testing.T) {
 	require.NoError(t, err)
 	contractStart := sdk.NewCoins(sdk.NewInt64Coin("denom", 40000))
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, privCreator, initMsgBz, codeID, contractStart)
-	contractAddr, err := keeper.Instantiate(ctx, codeID, creator /* nil,*/, initMsgBz, "mask contract 1", contractStart, nil)
+	contractAddr, _, err := keeper.Instantiate(ctx, codeID, creator /* nil,*/, initMsgBz, "mask contract 1", contractStart, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, contractAddr)
 
@@ -284,7 +284,7 @@ func TestMaskReflectCustomQuery(t *testing.T) {
 	require.NoError(t, err)
 	contractStart := sdk.NewCoins(sdk.NewInt64Coin("denom", 40000))
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, privCreator, initMsgBz, codeID, contractStart)
-	contractAddr, err := keeper.Instantiate(ctx, codeID, creator /* nil,*/, initMsgBz, "mask contract 1", contractStart, nil)
+	contractAddr, _, err := keeper.Instantiate(ctx, codeID, creator /* nil,*/, initMsgBz, "mask contract 1", contractStart, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, contractAddr)
 

@@ -63,7 +63,7 @@ typedef struct Buffer {
 typedef struct AnalysisReport {
   bool has_ibc_entry_points;
   /**
-   * An UTF-8 encoded comma separated list of reqired features.
+   * An UTF-8 encoded comma separated list of required features.
    * This is never None/nil.
    */
   Buffer required_features;
@@ -145,7 +145,7 @@ typedef struct GoQuerier {
 
 Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
-AnalysisReport analyze_code(cache_t *cache, ByteSliceView checksum, Buffer *error_msg);
+AnalysisReport analyze_code(cache_t *cache, Buffer checksum, Buffer *error_msg);
 
 void configure_enclave_runtime(EnclaveRuntimeConfig config, Buffer *err);
 

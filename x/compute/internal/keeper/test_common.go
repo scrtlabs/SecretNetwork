@@ -14,7 +14,6 @@ import (
 	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
-	"github.com/enigmampc/SecretNetwork/x/compute"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -222,12 +221,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	paramsKeeper.Subspace(distrtypes.ModuleName)
 	paramsKeeper.Subspace(slashingtypes.ModuleName)
 	paramsKeeper.Subspace(crisistypes.ModuleName)
-
-	subspace := func(m string) paramstypes.Subspace {
-		r, ok := paramsKeeper.GetSubspace(m)
-		require.True(t, ok)
-		return r
-	}
+	paramsKeeper.Subspace(ibchost.ModuleName)
 
 	// this is also used to initialize module accounts (so nil is meaningful here)
 	maccPerms := map[string][]string{
@@ -366,7 +360,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey,
 		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
 		govtypes.StoreKey, paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey,
-		evidencetypes.StoreKey, ibctransfertypes.StoreKey, capabilitytypes.StoreKey, compute.StoreKey,
+		evidencetypes.StoreKey, ibctransfertypes.StoreKey, capabilitytypes.StoreKey,
 		feegrant.StoreKey, authzkeeper.StoreKey, icahosttypes.StoreKey,
 	)
 
@@ -387,10 +381,11 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	)
 
 	scopedIBCKeeper := capabilityKeeper.ScopeToModule(ibchost.ModuleName)
-	scopedWasmKeeper := capabilityKeeper.ScopeToModule(compute.ModuleName)
+	scopedWasmKeeper := capabilityKeeper.ScopeToModule("compute")
 
+	ibchostSubSp, _ := paramsKeeper.GetSubspace(ibchost.ModuleName)
 	ibcKeeper := ibckeeper.NewKeeper(
-		encodingConfig.Marshaler, keys[ibchost.StoreKey], subspace(ibchost.ModuleName), stakingKeeper, upgradeKeeper, scopedIBCKeeper,
+		encodingConfig.Marshaler, keys[ibchost.StoreKey], ibchostSubSp, stakingKeeper, upgradeKeeper, scopedIBCKeeper,
 	)
 
 	// todo: new grpc routing

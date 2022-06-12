@@ -54,7 +54,6 @@ var (
 	NewContractInfo           = types.NewContractInfo
 	NewEnv                    = types.NewEnv
 	NewWasmCoins              = types.NewWasmCoins
-	ParseEvents               = types.ParseEvents
 	DefaultWasmConfig         = types.DefaultWasmConfig
 	IsEncryptedError          = types.IsEncryptedErrorCode
 	ErrContainsQueryError     = types.ErrContainsQueryError

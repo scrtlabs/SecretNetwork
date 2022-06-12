@@ -516,7 +516,7 @@ func TestInstantiateWithPermissions(t *testing.T) {
 			contractID, err := keeper.Create(ctx, myAddr, wasmCode, "https://github.com/CosmWasm/wasmd/blob/master/x/wasm/testdata/escrow.wasm", "")
 			require.NoError(t, err)
 
-			_, err = keeper.Instantiate(ctx, contractID, spec.srcActor, nil, initMsgBz, "demo contract 1", nil)
+			_,_, err = keeper.Instantiate(ctx, contractID, spec.srcActor, nil, initMsgBz, "demo contract 1", nil)
 			assert.True(t, spec.expError.Is(err), "got %+v", err)
 		})
 	}
