@@ -103,7 +103,7 @@ impl Externals for ContractInstance {
                     );
                     err
                 })?;
-                self.read_db(key)
+                self.remove_db(key)
             }
             HostFunctions::DbWriteIndex => {
                 let key: i32 = args.nth_checked(0).map_err(|err| {

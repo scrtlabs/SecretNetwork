@@ -1480,10 +1480,10 @@ func TestContractTryToSendFundsFromSomeoneElse(t *testing.T) {
 	require.Empty(t, execErr)
 
 	contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
-	walletCointsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+	walletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
 	require.Equal(t, "17denom", contractCoinsBefore.String())
-	require.Equal(t, "199983denom", walletCointsBefore.String())
+	require.Equal(t, "199983denom", walletCoinsBefore.String())
 
 	_, _, _, execErr = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds":{"from":"%s","to":"%s","denom":"%s","amount":%d}}`, walletA.String(), addr.String(), "denom", 17), false, defaultGasForTests, 0)
 

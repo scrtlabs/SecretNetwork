@@ -272,7 +272,7 @@ func TestEncoding(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			var ctx sdk.Context
 			encoder := DefaultEncoders(tc.transferPortSource, encodingConfig.Marshaler)
-			v1input, _ := V010MsgToV1SubMsg(tc.input)
+			v1input, _ := V010MsgToV1SubMsg(addr1.String(), tc.input)
 			res, err := encoder.Encode(ctx, tc.sender, tc.srcContractIBCPort, v1input.Msg)
 			if tc.isError {
 				require.Error(t, err)

@@ -295,7 +295,7 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, s
 	return signBytes, signMode, modeInfoBytes, pkBytes, tx.Signatures[pkIndex], nil
 }
 
-func V010MsgToV1SubMsg(msg v010wasmTypes.CosmosMsg) (v1wasmTypes.SubMsg, error) {
+func V010MsgToV1SubMsg(contractAddress string, msg v010wasmTypes.CosmosMsg) (v1wasmTypes.SubMsg, error) {
 	if !isValidV010Msg(msg) {
 		return v1wasmTypes.SubMsg{}, fmt.Errorf("exactly one message type is supported: %+v", msg)
 	}
@@ -307,6 +307,9 @@ func V010MsgToV1SubMsg(msg v010wasmTypes.CosmosMsg) (v1wasmTypes.SubMsg, error) 
 	}
 
 	if msg.Bank != nil {
+		if msg.Bank.Send.FromAddress != contractAddress {
+			return v1wasmTypes.SubMsg{}, fmt.Errorf("contract doesn't have permission to send funds from another account (using BankMsg)")
+		}
 		subMsg.Msg = v1wasmTypes.CosmosMsg{
 			Bank: &v1wasmTypes.BankMsg{
 				Send: &v1wasmTypes.SendMsg{ToAddress: msg.Bank.Send.ToAddress, Amount: msg.Bank.Send.Amount},
@@ -342,10 +345,10 @@ func V010MsgToV1SubMsg(msg v010wasmTypes.CosmosMsg) (v1wasmTypes.SubMsg, error) 
 	return subMsg, nil
 }
 
-func V010MsgsToV1SubMsgs(msgs []v010wasmTypes.CosmosMsg) ([]v1wasmTypes.SubMsg, error) {
+func V010MsgsToV1SubMsgs(contractAddr string, msgs []v010wasmTypes.CosmosMsg) ([]v1wasmTypes.SubMsg, error) {
 	subMsgs := []v1wasmTypes.SubMsg{}
 	for _, msg := range msgs {
-		v1SubMsg, err := V010MsgToV1SubMsg(msg)
+		v1SubMsg, err := V010MsgToV1SubMsg(contractAddr, msg)
 		if err != nil {
 			return nil, err
 		}
@@ -457,7 +460,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 		store.Set(types.GetContractEnclaveKey(contractAddress), key)
 		store.Set(types.GetContractLabelPrefix(label), contractAddress)
 
-		subMessages, err := V010MsgsToV1SubMsgs(res.Messages)
+		subMessages, err := V010MsgsToV1SubMsgs(contractAddress.String(), res.Messages)
 		if err != nil {
 			return nil, nil, sdkerrors.Wrap(err, "couldn't convert v010 messages to v1 messages")
 		}
@@ -571,7 +574,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	switch res := response.(type) {
 	case *v010wasmTypes.HandleResponse:
-		subMessages, err := V010MsgsToV1SubMsgs(res.Messages)
+		subMessages, err := V010MsgsToV1SubMsgs(contractAddress.String(), res.Messages)
 		if err != nil {
 			return nil, sdkerrors.Wrap(err, "couldn't convert v010 messages to v1 messages")
 		}

@@ -94,42 +94,6 @@ func (d MessageDispatcher) dispatchMsgWithGasLimit(ctx sdk.Context, contractAddr
 	return events, data, err
 }
 
-// SystemError captures all errors returned from the Rust code as SystemError.
-// Exactly one of the fields should be set.
-type SystemError struct {
-	InvalidRequest     *InvalidRequest     `json:"invalid_request,omitempty"`
-	InvalidResponse    *InvalidResponse    `json:"invalid_response,omitempty"`
-	NoSuchContract     *NoSuchContract     `json:"no_such_contract,omitempty"`
-	Unknown            *Unknown            `json:"unknown,omitempty"`
-	UnsupportedRequest *UnsupportedRequest `json:"unsupported_request,omitempty"`
-}
-
-var (
-	_ error = SystemError{}
-	_ error = InvalidRequest{}
-	_ error = InvalidResponse{}
-	_ error = NoSuchContract{}
-	_ error = Unknown{}
-	_ error = UnsupportedRequest{}
-)
-
-func (a SystemError) Error() string {
-	switch {
-	case a.InvalidRequest != nil:
-		return a.InvalidRequest.Error()
-	case a.InvalidResponse != nil:
-		return a.InvalidResponse.Error()
-	case a.NoSuchContract != nil:
-		return a.NoSuchContract.Error()
-	case a.Unknown != nil:
-		return a.Unknown.Error()
-	case a.UnsupportedRequest != nil:
-		return a.UnsupportedRequest.Error()
-	default:
-		panic("unknown error variant")
-	}
-}
-
 type InvalidRequest struct {
 	Err     string `json:"error"`
 	Request []byte `json:"request"`
@@ -183,49 +147,6 @@ func isNil(i interface{}) bool {
 	return false
 }
 
-// ToSystemError will try to convert the given error to an SystemError.
-// This is important to returning any Go error back to Rust.
-//
-// If it is already StdError, return self.
-// If it is an error, which could be a sub-field of StdError, embed it.
-// If it is anything else, **return nil**
-//
-// This may return nil on an unknown error, whereas ToStdError will always create
-// a valid error type.
-func ToSystemError(err error) *SystemError {
-	if isNil(err) {
-		return nil
-	}
-	switch t := err.(type) {
-	case SystemError:
-		return &t
-	case *SystemError:
-		return t
-	case InvalidRequest:
-		return &SystemError{InvalidRequest: &t}
-	case *InvalidRequest:
-		return &SystemError{InvalidRequest: t}
-	case InvalidResponse:
-		return &SystemError{InvalidResponse: &t}
-	case *InvalidResponse:
-		return &SystemError{InvalidResponse: t}
-	case NoSuchContract:
-		return &SystemError{NoSuchContract: &t}
-	case *NoSuchContract:
-		return &SystemError{NoSuchContract: t}
-	case Unknown:
-		return &SystemError{Unknown: &t}
-	case *Unknown:
-		return &SystemError{Unknown: t}
-	case UnsupportedRequest:
-		return &SystemError{UnsupportedRequest: &t}
-	case *UnsupportedRequest:
-		return &SystemError{UnsupportedRequest: t}
-	default:
-		return nil
-	}
-}
-
 // Reply is encrypted on when it is a contract reply and it is OK since error is always reducted to be a string.
 func isReplyEncrypted(msg v1wasmTypes.CosmosMsg, reply v1wasmTypes.Reply) bool {
 	return (msg.Wasm != nil) && (reply.Result.Ok != nil)
@@ -235,7 +156,7 @@ func isReplyEncrypted(msg v1wasmTypes.CosmosMsg, reply v1wasmTypes.Reply) bool {
 func redactError(err error) error {
 	// Do not redact system errors
 	// SystemErrors must be created in x/wasm and we can ensure determinism
-	if ToSystemError(err) != nil {
+	if wasmTypes.ToSystemError(err) != nil {
 		return err
 	}
 
