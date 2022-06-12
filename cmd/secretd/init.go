@@ -82,7 +82,7 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 
 			chainID, _ := cmd.Flags().GetString(flags.FlagChainID)
 			if chainID == "" {
-				chainID = fmt.Sprintf("test-chain-%v", tmrand.Str(6))
+				chainID = fmt.Sprintf("test-chain-%s", tmrand.Str(6))
 			}
 
 			// only for mainnet
@@ -129,7 +129,7 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 			overwrite, _ := cmd.Flags().GetBool(FlagOverwrite)
 
 			if !overwrite && tmos.FileExists(genFile) {
-				return fmt.Errorf("genesis.json file already exists: %v", genFile)
+				return fmt.Errorf("genesis.json file already exists: %s", genFile)
 			}
 
 			appState, err := json.MarshalIndent(mbm.DefaultGenesis(cdc), "", " ")

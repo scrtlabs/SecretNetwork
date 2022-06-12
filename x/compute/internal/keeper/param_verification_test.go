@@ -66,7 +66,7 @@ func generateSignatures(
 		require.NoError(t, err)
 	}
 
-	fmt.Printf("Multisig is %v\n", multiSig)
+	fmt.Printf("Multisig is %+v\n", multiSig)
 
 	return multiSig
 }
@@ -606,7 +606,7 @@ func TestMultiSigInMultiSig(t *testing.T) {
 
 	// Sign by multisig
 	multiSignature := generateSignatures(t, signModeHandler, builder, multisigAccount, accounts, 3)
-	fmt.Printf("multisig sig: %v\n", multiSignature)
+	fmt.Printf("multisig sig: %+v\n", multiSignature)
 
 	// Sign by wallet A
 	walletASignature, _ := privKeyA.Sign(multimultiSignBytes)
@@ -625,7 +625,7 @@ func TestMultiSigInMultiSig(t *testing.T) {
 	_ = multisig.AddSignatureFromPubKey(multimultiSig, &walletASignatureData, privKeyA.PubKey(), multiSigPubKeys)
 	_ = multisig.AddSignatureFromPubKey(multimultiSig, &walletBSignatureData, privKeyB.PubKey(), multiSigPubKeys)
 
-	fmt.Printf("multimultisig sig: %v\n", multimultiSig)
+	fmt.Printf("multimultisig sig: %+v\n", multimultiSig)
 
 	multimultisigAcc := keeper.accountKeeper.GetAccount(ctx, multimultisigAccount.address.Bytes())
 	signature := sdksigning.SignatureV2{
@@ -711,7 +711,7 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 
 	// Sign by multisig
 	multiSignature := generateSignatures(t, signModeHandler, builder, multisigAccount, accounts, 3)
-	fmt.Printf("multisig sig: %v\n", multiSignature)
+	fmt.Printf("multisig sig: %+v\n", multiSignature)
 
 	// Sign by wallet A
 	walletASignature, _ := privKeyA.Sign(multimultiSignBytes)
@@ -730,7 +730,7 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 	err = multisig.AddSignatureFromPubKey(multimultiSig, multiSignature, multisigAccount.public, multiSigPubKeys)
 	err = multisig.AddSignatureFromPubKey(multimultiSig, &walletASignatureData, privKeyA.PubKey(), multiSigPubKeys)
 
-	fmt.Printf("multimultisig sig: %v\n", multimultiSig)
+	fmt.Printf("multimultisig sig: %+v\n", multimultiSig)
 
 	multimultisigAcc := keeper.accountKeeper.GetAccount(ctx, multimultisigAccount.address.Bytes())
 	signature := sdksigning.SignatureV2{

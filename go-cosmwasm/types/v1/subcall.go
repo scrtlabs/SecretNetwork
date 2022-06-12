@@ -45,7 +45,7 @@ func (s *replyOn) UnmarshalJSON(b []byte) error {
 
 	voteOption, ok := toReplyOn[j]
 	if !ok {
-		return fmt.Errorf("invalid reply_on value '%v'", j)
+		return fmt.Errorf("invalid reply_on value '%s'", j)
 	}
 	*s = voteOption
 	return nil

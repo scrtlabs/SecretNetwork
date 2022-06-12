@@ -686,7 +686,7 @@ func TestExecute(t *testing.T) {
 	coins = keeper.bankKeeper.GetAllBalances(ctx, contractAcct.GetAddress())
 	assert.Equal(t, sdk.Coins{}, coins)
 
-	t.Logf("Duration: %v (%d gas)\n", diff, gasAfter-gasBefore)
+	t.Logf("Duration: %+v (%d gas)\n", diff, gasAfter-gasBefore)
 }
 
 func TestExecuteWithDeposit(t *testing.T) {
@@ -932,7 +932,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 		r := recover()
 		require.NotNil(t, r)
 		_, ok := r.(sdk.ErrorOutOfGas)
-		require.True(t, ok, "%v", r)
+		require.True(t, ok, "%+v", r)
 	}()
 
 	fredAcc, err := authante.GetSignerAcc(ctx, accKeeper, fred)
@@ -999,7 +999,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 		r := recover()
 		require.NotNil(t, r)
 		_, ok := r.(sdk.ErrorOutOfGas)
-		require.True(t, ok, "%v", r)
+		require.True(t, ok, "%+v", r)
 	}()
 
 	codeHash := keeper.GetContractHash(ctx, addr)

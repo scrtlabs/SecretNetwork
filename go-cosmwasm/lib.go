@@ -126,7 +126,7 @@ func (w *Wasmer) Instantiate(
 	if jsonErrV010 == nil {
 		// v0.10 response
 		if respV010.Err != nil {
-			return nil, nil, gasUsed, fmt.Errorf("%v", respV010.Err)
+			return nil, nil, gasUsed, fmt.Errorf("%+v", respV010.Err)
 		}
 		return respV010.Ok, key, gasUsed, nil
 	}
@@ -184,7 +184,7 @@ func (w *Wasmer) Execute(
 	if jsonErrV010 == nil {
 		// v0.10 response
 		if respV010.Err != nil {
-			return nil, gasUsed, fmt.Errorf("%v", respV010.Err)
+			return nil, gasUsed, fmt.Errorf("%+v", respV010.Err)
 		}
 		return respV010.Ok, gasUsed, nil
 	}
@@ -232,7 +232,7 @@ func (w *Wasmer) Query(
 		return nil, gasUsed, err
 	}
 	if resp.Err != nil {
-		return nil, gasUsed, fmt.Errorf("%v", resp.Err)
+		return nil, gasUsed, fmt.Errorf("%+v", resp.Err)
 	}
 	return resp.Ok, gasUsed, nil
 }

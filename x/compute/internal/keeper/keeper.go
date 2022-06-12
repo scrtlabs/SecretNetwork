@@ -5,13 +5,14 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
+	"strconv"
+	"time"
+
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
 	channelkeeper "github.com/cosmos/ibc-go/v3/modules/core/04-channel/keeper"
 	portkeeper "github.com/cosmos/ibc-go/v3/modules/core/05-port/keeper"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	"path/filepath"
-	"strconv"
-	"time"
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
 
@@ -296,7 +297,7 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, s
 
 func V010MsgToV1SubMsg(msg v010wasmTypes.CosmosMsg) (v1wasmTypes.SubMsg, error) {
 	if !isValidV010Msg(msg) {
-		return v1wasmTypes.SubMsg{}, fmt.Errorf("exactly one message type is supported: %v", msg)
+		return v1wasmTypes.SubMsg{}, fmt.Errorf("exactly one message type is supported: %+v", msg)
 	}
 
 	subMsg := v1wasmTypes.SubMsg{
@@ -505,7 +506,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 
 		return contractAddress, data, nil
 	default:
-		return nil, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("cannot detect response type: %v", res))
+		return nil, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("cannot detect response type: %+v", res))
 	}
 }
 
@@ -598,7 +599,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 			Data: data,
 		}, nil
 	default:
-		return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("cannot detect response type: %v", res))
+		return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("cannot detect response type: %+v", res))
 	}
 }
 
@@ -1075,7 +1076,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 
 		return data, nil
 	default:
-		return nil, sdkerrors.Wrap(types.ErrReplyFailed, fmt.Sprintf("cannot detect response type: %v", res))
+		return nil, sdkerrors.Wrap(types.ErrReplyFailed, fmt.Sprintf("cannot detect response type: %+v", res))
 	}
 
 }

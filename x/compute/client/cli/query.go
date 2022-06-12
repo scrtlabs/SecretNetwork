@@ -395,7 +395,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 				var txData sdk.TxMsgData
 				err = proto.Unmarshal(dataOutputAsProtobuf, &txData)
 				if err != nil {
-					return fmt.Errorf("error while trying to parse data as protobuf: %w: %v", err, dataOutputHexB64)
+					return fmt.Errorf("error while trying to parse data as protobuf: %w: %s", err, dataOutputHexB64)
 				}
 
 				if len(txData.Data) > 1 {
@@ -412,7 +412,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 
 					dataPlaintext, err := base64.StdEncoding.DecodeString(dataPlaintextB64)
 					if err != nil {
-						return fmt.Errorf("error while trying to decode the decrypted output data from base64 '%v': %w", dataPlaintextB64, err)
+						return fmt.Errorf("error while trying to decode the decrypted output data from base64 '%s': %w", dataPlaintextB64, err)
 					}
 
 					answer.OutputDataAsString = string(dataPlaintext)
@@ -570,7 +570,7 @@ func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, cliCtx clie
 			if err != nil {
 				return fmt.Errorf("Error while trying to parse the error as json: '%s': %w", string(errorPlainBz), err)
 			}
-			return fmt.Errorf("query result: %v", stdErr.Error())
+			return fmt.Errorf("query result: %s", stdErr.Error())
 		}
 		// Itzik: Commenting this as it might have been a placeholder for encrypting
 		//else if strings.Contains(err.Error(), "EnclaveErr") {

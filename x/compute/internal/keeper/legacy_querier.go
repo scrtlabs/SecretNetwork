@@ -92,7 +92,7 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 			}
 			bz, err = queryContractHash(ctx, addr, keeper)
 		default:
-			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, fmt.Sprintf("unknown data query endpoint %v", path[0]))
+			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, fmt.Sprintf("unknown data query endpoint %s", path[0]))
 		}
 		if err != nil {
 			return nil, err

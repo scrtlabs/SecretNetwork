@@ -267,7 +267,7 @@ func queryCodeHashHandlerFn(cliCtx client.Context) http.HandlerFunc {
 
 		err = json.Unmarshal(res, &codeResp)
 		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("cannot parse as CodeResponse: %v", err))
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("cannot parse as CodeResponse: %w", err))
 			return
 		}
 

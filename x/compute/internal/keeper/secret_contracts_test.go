@@ -239,7 +239,7 @@ func (wasmGasMeter *WasmCounterGasMeter) IsOutOfGas() bool {
 	return wasmGasMeter.gasMeter.IsOutOfGas()
 }
 func (wasmGasMeter *WasmCounterGasMeter) String() string {
-	return fmt.Sprintf("WasmCounterGasMeter: %v %v", wasmGasMeter.wasmCounter, wasmGasMeter.gasMeter)
+	return fmt.Sprintf("WasmCounterGasMeter: %+v %+v", wasmGasMeter.wasmCounter, wasmGasMeter.gasMeter)
 }
 func (wasmGasMeter *WasmCounterGasMeter) GetWasmCounter() uint64 {
 	return wasmGasMeter.wasmCounter
@@ -1179,7 +1179,7 @@ func TestAllocateOnHeapFailBecauseGasLimit(t *testing.T) {
 		r := recover()
 		require.NotNil(t, r)
 		_, ok := r.(sdk.ErrorOutOfGas)
-		require.True(t, ok, "%v", r)
+		require.True(t, ok, "%+v", r)
 	}()
 
 	_, _, _, _ = execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"allocate_on_heap":{"bytes":1073741824}}`, false, defaultGasForTests, 0)
