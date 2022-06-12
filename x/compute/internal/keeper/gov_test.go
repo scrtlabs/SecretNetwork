@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
-	wasmTypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"io/ioutil"
 	"testing"
+
+	wasmTypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 
 	"github.com/stretchr/testify/require"
 
@@ -157,7 +158,7 @@ func TestGovVote(t *testing.T) {
 
 	_, _, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, defaultGasForTests, 0)
 	require.NotEmpty(t, err)
-	require.Equal(t, "encrypted: 1: inactive proposal", err.Error())
+	require.Equal(t, "encrypted: dispatch: submessages: 1: inactive proposal", err.Error())
 
 	votingStarted, err := govKeeper.AddDeposit(ctx, proposalID, creator, deposit)
 	require.NoError(t, err)
