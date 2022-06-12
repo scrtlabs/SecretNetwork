@@ -28,6 +28,10 @@ then
   rm -rf /root/.secretd/* || true
 
   mkdir -p /root/.secretd/.node
+
+  # state sync needs this but doesn't create it automatically for some reason
+  mkdir -p /root/.secretd/data/snapshots
+
   secretd config chain-id "$CHAINID"
 
   secretd init "$MONIKER" --chain-id "$CHAINID"
