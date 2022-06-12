@@ -4,16 +4,16 @@ use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::wasm::CosmWasmApiVersion;
+use cosmos_proto::tx::signing::SignMode;
 use cosmwasm_v010_types::encoding::Binary;
 use cosmwasm_v010_types::types::CanonicalAddr;
 use cosmwasm_v016_types::addresses::Addr;
 use cosmwasm_v016_types::timestamp::Timestamp;
-use enclave_cosmos_types::types::{ContractCode, SigInfo, HandleType};
+use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
 use enclave_cosmwasm_types as cosmwasm_v010_types;
 use enclave_cosmwasm_v016_types as cosmwasm_v016_types;
 use enclave_crypto::Ed25519PublicKey;
 use enclave_utils::coalesce;
-use cosmos_proto::tx::signing::SignMode;
 
 use super::contract_validation::{
     extract_contract_key, generate_encryption_key, validate_contract_key, validate_msg,
@@ -22,7 +22,7 @@ use super::contract_validation::{
 use super::gas::WasmCosts;
 use super::io::encrypt_output;
 use super::module_cache::create_module_instance;
-use super::types::{IoNonce, SecretMessage, Reply, SubMsgResult, SubMsgResponse};
+use super::types::{IoNonce, Reply, SecretMessage, SubMsgResponse, SubMsgResult};
 use super::wasm::{ContractInstance, ContractOperation, Engine};
 
 /*
@@ -159,10 +159,13 @@ pub fn parse_message(
 
     return match handle_type {
         HandleType::HANDLE_TYPE_EXECUTE => {
-            trace!("handle input before decryption: {:?}", base64::encode(&message));
+            trace!(
+                "handle input before decryption: {:?}",
+                base64::encode(&message)
+            );
             let decrypted_msg = orig_secret_msg.decrypt()?;
             Ok((orig_secret_msg, decrypted_msg))
-        },
+        }
         HandleType::HANDLE_TYPE_REPLY => {
             if sig_info.sign_mode == SignMode::SIGN_MODE_UNSPECIFIED {
                 trace!("reply input is not encrypted");
@@ -172,15 +175,19 @@ pub fn parse_message(
             }
 
             // Here we are sure the reply is OK because only OK is encrypted
-            trace!("reply input before decryption: {:?}", base64::encode(&message));
-            let parsed_encrypted_reply: Reply = serde_json::from_slice(&orig_secret_msg.msg).map_err(|err| {
-                warn!(
+            trace!(
+                "reply input before decryption: {:?}",
+                base64::encode(&message)
+            );
+            let parsed_encrypted_reply: Reply = serde_json::from_slice(&orig_secret_msg.msg)
+                .map_err(|err| {
+                    warn!(
             "reply got an error while trying to deserialize msg input bytes into json {:?}: {}",
             String::from_utf8_lossy(&orig_secret_msg.msg),
             err
             );
-                EnclaveError::FailedToDeserialize
-            })?;
+                    EnclaveError::FailedToDeserialize
+                })?;
             match parsed_encrypted_reply.result {
                 SubMsgResult::Ok(response) => {
                     let data = response.data.unwrap();
@@ -189,7 +196,7 @@ pub fn parse_message(
                     let tmp_secret_msg = SecretMessage {
                         nonce: orig_secret_msg.nonce,
                         user_public_key: orig_secret_msg.user_public_key,
-                        msg: data.as_slice().to_vec()
+                        msg: data.as_slice().to_vec(),
                     };
 
                     let tmp_decrypted_msg = tmp_secret_msg.decrypt()?;
@@ -201,32 +208,33 @@ pub fn parse_message(
                     });
                     let decrypted_reply = Reply {
                         id: parsed_encrypted_reply.id,
-                        result
+                        result,
                     };
 
-                    let decrypted_reply_as_vec = serde_json::to_vec(&decrypted_reply).map_err(|err| {
-                        warn!(
+                    let decrypted_reply_as_vec =
+                        serde_json::to_vec(&decrypted_reply).map_err(|err| {
+                            warn!(
                                 "got an error while trying to serialize reply into bytes {:?}: {}",
                                 decrypted_reply, err
                             );
-                        EnclaveError::FailedToSerialize
-                    })?;
+                            EnclaveError::FailedToSerialize
+                        })?;
 
                     let secret_msg = SecretMessage {
                         nonce: tmp_secret_msg.nonce,
                         user_public_key: tmp_secret_msg.user_public_key,
-                        msg: decrypted_reply_as_vec.clone()
+                        msg: decrypted_reply_as_vec.clone(),
                     };
 
                     Ok((secret_msg, decrypted_reply_as_vec))
-                },
+                }
                 SubMsgResult::Err(_) => {
                     warn!("got an error while trying to deserialize reply, error should not be encrypted");
                     Err(EnclaveError::FailedToDeserialize)
                 }
             }
-        },
-    }
+        }
+    };
 }
 
 pub fn handle(
@@ -237,7 +245,7 @@ pub fn handle(
     env: &[u8],
     msg: &[u8],
     sig_info: &[u8],
-    handle_type: u8
+    handle_type: u8,
 ) -> Result<HandleSuccess, EnclaveError> {
     let contract_code = ContractCode::new(contract);
 
@@ -281,7 +289,7 @@ pub fn handle(
 
     // The flow of handle is now used for multiple messages (such ash Handle, Reply)
     // When the message is handle, we expect it always to be encrypted while in Reply for example it might be plaintext
-    let parsed_handle_type : HandleType = handle_type.try_into();
+    let parsed_handle_type = HandleType::try_from(handle_type)?;
 
     let (secret_msg, decrypted_msg) = parse_message(msg, &parsed_sig_info, &parsed_handle_type)?;
 

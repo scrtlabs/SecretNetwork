@@ -146,22 +146,16 @@ pub enum SignModeDef {
 pub enum HandleType {
     HANDLE_TYPE_EXECUTE = 0,
     HANDLE_TYPE_REPLY = 1,
-
 }
 
-impl TryFrom<u8> for HandleType {
-    type Error = EnclaveError;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match t {
+impl HandleType {
+    pub fn try_from(value: u8) -> Result<Self, EnclaveError> {
+        match value {
             0 => Ok(HandleType::HANDLE_TYPE_EXECUTE),
             1 => Ok(HandleType::HANDLE_TYPE_REPLY),
             _ => {
-                error!(
-                "Handle function received wrong handle type: {}",
-                value
-            );
-                Err(EnclaveError::FailedToDeserialize);
+                error!("unrecognized handle type: {}", value);
+                Err(EnclaveError::FailedToDeserialize)
             }
         }
     }
