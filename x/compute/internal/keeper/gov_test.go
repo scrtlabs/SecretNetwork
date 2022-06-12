@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	wasmTypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"io/ioutil"
 	"testing"
 
-	"github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/stretchr/testify/require"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	"github.com/cosmos/cosmos-sdk/x/gov/types"
 )
 
 var (
@@ -37,7 +37,12 @@ func ProposalEqual(proposalA types.Proposal, proposalB types.Proposal) bool {
 // TestGovQueryProposals tests reading how many proposals are active - first testing 0 proposals, then adding
 // an active proposal and checking that there is 1 active
 func TestGovQueryProposals(t *testing.T) {
-	encoders := DefaultEncoders()
+	encodingConfig := MakeEncodingConfig()
+	var transferPortSource wasmTypes.ICS20TransferPortSource
+	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
+		return "myTransferPort"
+	}}
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, _, keeper, govKeeper := keepers.AccountKeeper, keepers.StakingKeeper, keepers.WasmKeeper, keepers.GovKeeper
 
@@ -65,7 +70,7 @@ func TestGovQueryProposals(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initBz, govId, nil)
-	govAddr, err := keeper.Instantiate(ctx, govId, creator, initBz, "gidi gov", nil, nil)
+	govAddr, _, err := keeper.Instantiate(ctx, govId, creator, initBz, "gidi gov", nil, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, govAddr)
 
@@ -99,7 +104,12 @@ func TestGovQueryProposals(t *testing.T) {
 // TestGovQueryProposals tests reading how many proposals are active - first testing 0 proposals, then adding
 // an active proposal and checking that there is 1 active
 func TestGovVote(t *testing.T) {
-	encoders := DefaultEncoders()
+	encodingConfig := MakeEncodingConfig()
+	var transferPortSource wasmTypes.ICS20TransferPortSource
+	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
+		return "myTransferPort"
+	}}
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, _, keeper, govKeeper := keepers.AccountKeeper, keepers.StakingKeeper, keepers.WasmKeeper, keepers.GovKeeper
 
@@ -129,7 +139,7 @@ func TestGovVote(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initBz, govId, deposit2)
-	govAddr, err := keeper.Instantiate(ctx, govId, creator, initBz, "gidi gov", deposit2, nil)
+	govAddr, _, err := keeper.Instantiate(ctx, govId, creator, initBz, "gidi gov", deposit2, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, govAddr)
 
@@ -159,5 +169,5 @@ func TestGovVote(t *testing.T) {
 	votes := govKeeper.GetAllVotes(ctx)
 	require.Equal(t, uint64(0x1), votes[0].ProposalId)
 	require.Equal(t, govAddr.String(), votes[0].Voter)
-	require.Equal(t, govtypes.OptionYes, votes[0].Option)
+	require.Equal(t, types.OptionYes, votes[0].Option)
 }

@@ -63,19 +63,19 @@ typedef struct Buffer {
 typedef struct AnalysisReport {
   bool has_ibc_entry_points;
   /**
-   * An UTF-8 encoded comma separated list of reqired features.
+   * An UTF-8 encoded comma separated list of required features.
    * This is never None/nil.
    */
   Buffer required_features;
 } AnalysisReport;
 
-typedef struct EnclaveRuntimeConfig {
-  uint8_t module_cache_size;
-} EnclaveRuntimeConfig;
-
 typedef struct cache_t {
 
 } cache_t;
+
+typedef struct EnclaveRuntimeConfig {
+  uint8_t module_cache_size;
+} EnclaveRuntimeConfig;
 
 /**
  * An opaque type. `*gas_meter_t` represents a pointer to Go memory holding the gas meter.
@@ -145,6 +145,8 @@ typedef struct GoQuerier {
 
 Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
+AnalysisReport analyze_code(cache_t *cache, Buffer checksum, Buffer *error_msg);
+
 void configure_enclave_runtime(EnclaveRuntimeConfig config, Buffer *err);
 
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
@@ -169,7 +171,8 @@ Buffer handle(cache_t *cache,
               uint64_t gas_limit,
               uint64_t *gas_used,
               Buffer *err,
-              Buffer sig_info);
+              Buffer sig_info,
+              uint8_t handle_type);
 
 Buffer init_bootstrap(Buffer spid, Buffer api_key, Buffer *err);
 
@@ -201,10 +204,6 @@ Buffer query(cache_t *cache,
              uint64_t gas_limit,
              uint64_t *gas_used,
              Buffer *err);
-
-AnalysisReport analyze_code(cache_t *cache,
-                            ByteSliceView checksum,
-                            Buffer *error_msg);
 
 /**
  * frees a cache reference

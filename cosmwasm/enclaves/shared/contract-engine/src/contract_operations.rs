@@ -8,11 +8,12 @@ use cosmwasm_v010_types::encoding::Binary;
 use cosmwasm_v010_types::types::CanonicalAddr;
 use cosmwasm_v016_types::addresses::Addr;
 use cosmwasm_v016_types::timestamp::Timestamp;
-use enclave_cosmos_types::types::{ContractCode, SigInfo};
+use enclave_cosmos_types::types::{ContractCode, SigInfo, HandleType};
 use enclave_cosmwasm_types as cosmwasm_v010_types;
 use enclave_cosmwasm_v016_types as cosmwasm_v016_types;
 use enclave_crypto::Ed25519PublicKey;
 use enclave_utils::coalesce;
+use cosmos_proto::tx::signing::SignMode;
 
 use super::contract_validation::{
     extract_contract_key, generate_encryption_key, validate_contract_key, validate_msg,
@@ -21,7 +22,7 @@ use super::contract_validation::{
 use super::gas::WasmCosts;
 use super::io::encrypt_output;
 use super::module_cache::create_module_instance;
-use super::types::{IoNonce, SecretMessage};
+use super::types::{IoNonce, SecretMessage, Reply, SubMsgResult, SubMsgResponse};
 use super::wasm::{ContractInstance, ContractOperation, Engine};
 
 /*
@@ -148,6 +149,86 @@ pub fn init(
     })
 }
 
+// Parse the message that was passed to handle (Based on the assumption that it might be a reply or IBC as well)
+pub fn parse_message(
+    message: &[u8],
+    sig_info: &SigInfo,
+    handle_type: &HandleType,
+) -> Result<(SecretMessage, Vec<u8>), EnclaveError> {
+    let orig_secret_msg = SecretMessage::from_slice(message)?;
+
+    return match handle_type {
+        HandleType::HANDLE_TYPE_EXECUTE => {
+            trace!("handle input before decryption: {:?}", base64::encode(&message));
+            let decrypted_msg = orig_secret_msg.decrypt()?;
+            Ok((orig_secret_msg, decrypted_msg))
+        },
+        HandleType::HANDLE_TYPE_REPLY => {
+            if sig_info.sign_mode == SignMode::SIGN_MODE_UNSPECIFIED {
+                trace!("reply input is not encrypted");
+                let decrypted_msg = orig_secret_msg.msg.clone();
+
+                return Ok((orig_secret_msg, decrypted_msg));
+            }
+
+            // Here we are sure the reply is OK because only OK is encrypted
+            trace!("reply input before decryption: {:?}", base64::encode(&message));
+            let parsed_encrypted_reply: Reply = serde_json::from_slice(&orig_secret_msg.msg).map_err(|err| {
+                warn!(
+            "reply got an error while trying to deserialize msg input bytes into json {:?}: {}",
+            String::from_utf8_lossy(&orig_secret_msg.msg),
+            err
+            );
+                EnclaveError::FailedToDeserialize
+            })?;
+            match parsed_encrypted_reply.result {
+                SubMsgResult::Ok(response) => {
+                    let data = response.data.unwrap();
+
+                    // First decrypt the message and then create new decrypted reply
+                    let tmp_secret_msg = SecretMessage {
+                        nonce: orig_secret_msg.nonce,
+                        user_public_key: orig_secret_msg.user_public_key,
+                        msg: data.as_slice().to_vec()
+                    };
+
+                    let tmp_decrypted_msg = tmp_secret_msg.decrypt()?;
+
+                    // Now we need to create synthetic SecretMessage to fit the API in "handle"
+                    let result = SubMsgResult::Ok(SubMsgResponse {
+                        events: response.events,
+                        data: Some(Binary(tmp_decrypted_msg)),
+                    });
+                    let decrypted_reply = Reply {
+                        id: parsed_encrypted_reply.id,
+                        result
+                    };
+
+                    let decrypted_reply_as_vec = serde_json::to_vec(&decrypted_reply).map_err(|err| {
+                        warn!(
+                                "got an error while trying to serialize reply into bytes {:?}: {}",
+                                decrypted_reply, err
+                            );
+                        EnclaveError::FailedToSerialize
+                    })?;
+
+                    let secret_msg = SecretMessage {
+                        nonce: tmp_secret_msg.nonce,
+                        user_public_key: tmp_secret_msg.user_public_key,
+                        msg: decrypted_reply_as_vec.clone()
+                    };
+
+                    Ok((secret_msg, decrypted_reply_as_vec))
+                },
+                SubMsgResult::Err(_) => {
+                    warn!("got an error while trying to deserialize reply, error should not be encrypted");
+                    Err(EnclaveError::FailedToDeserialize)
+                }
+            }
+        },
+    }
+}
+
 pub fn handle(
     context: Ctx,
     gas_limit: u64,
@@ -156,6 +237,7 @@ pub fn handle(
     env: &[u8],
     msg: &[u8],
     sig_info: &[u8],
+    handle_type: u8
 ) -> Result<HandleSuccess, EnclaveError> {
     let contract_code = ContractCode::new(contract);
 
@@ -197,14 +279,14 @@ pub fn handle(
         EnclaveError::FailedToDeserialize
     })?;
 
-    trace!("handle input before decryption: {:?}", base64::encode(&msg));
-    let secret_msg = SecretMessage::from_slice(msg)?;
+    // The flow of handle is now used for multiple messages (such ash Handle, Reply)
+    // When the message is handle, we expect it always to be encrypted while in Reply for example it might be plaintext
+    let parsed_handle_type : HandleType = handle_type.try_into();
+
+    let (secret_msg, decrypted_msg) = parse_message(msg, &parsed_sig_info, &parsed_handle_type)?;
 
     // Verify env parameters against the signed tx
     verify_params(&parsed_sig_info, &env_v010, &secret_msg)?;
-
-    let secret_msg = SecretMessage::from_slice(msg)?;
-    let decrypted_msg = secret_msg.decrypt()?;
 
     let validated_msg = validate_msg(&decrypted_msg, contract_code.hash())?;
 
@@ -217,6 +299,9 @@ pub fn handle(
 
     trace!("Handle: Contract Key: {:?}", hex::encode(contract_key));
 
+    // Although the operation here is not always handle it is irrelevant in this case
+    // because it only helps to decide whether to check floating points or not
+    // In this case we want to do the same as in Handle both for Reply and for others so we can always pass "Handle".
     let mut engine = start_engine(
         context,
         gas_limit,
@@ -237,7 +322,7 @@ pub fn handle(
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
     let output = coalesce!(EnclaveError, {
-        let vec_ptr = engine.handle(env_ptr, msg_info_ptr, msg_ptr)?;
+        let vec_ptr = engine.handle(env_ptr, msg_info_ptr, msg_ptr, parsed_handle_type)?;
 
         let output = engine.extract_vector(vec_ptr)?;
 

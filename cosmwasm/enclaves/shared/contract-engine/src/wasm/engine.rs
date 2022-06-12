@@ -6,6 +6,7 @@ use enclave_ffi_types::EnclaveError;
 
 use super::contract::{ContractInstance, CosmWasmApiVersion};
 use crate::errors::{wasmi_error_to_enclave_error, WasmEngineError};
+use enclave_cosmos_types::types::HandleType;
 
 pub struct Engine {
     pub contract_instance: ContractInstance,
@@ -93,6 +94,7 @@ impl Engine {
         env_ptr: u32,
         msg_info_ptr: u32,
         msg_ptr: u32,
+        handle_type: HandleType
     ) -> Result<u32, EnclaveError> {
         info!("Invoking handle() in wasm");
 
@@ -130,14 +132,25 @@ impl Engine {
                     RuntimeValue::I32(msg_ptr as i32),
                 ],
             ),
-            CosmWasmApiVersion::V1 => (
-                "execute",
-                vec![
-                    RuntimeValue::I32(env_ptr as i32),
-                    RuntimeValue::I32(msg_info_ptr as i32),
-                    RuntimeValue::I32(msg_ptr as i32),
-                ],
-            ),
+            CosmWasmApiVersion::V1 => {
+                match handle_type {
+                    HandleType::HANDLE_TYPE_EXECUTE => (
+                        "execute",
+                        vec![
+                            RuntimeValue::I32(env_ptr as i32),
+                            RuntimeValue::I32(msg_info_ptr as i32),
+                            RuntimeValue::I32(msg_ptr as i32),
+                        ],
+                    ),
+                    HandleType::HANDLE_TYPE_REPLY => (
+                        "reply",
+                        vec![
+                            RuntimeValue::I32(env_ptr as i32),
+                            RuntimeValue::I32(msg_ptr as i32),
+                        ],
+                    ),
+                }
+            },
         };
 
         match self
@@ -147,7 +160,7 @@ impl Engine {
         {
             Some(RuntimeValue::I32(offset)) => Ok(offset as u32),
             other => {
-                warn!("handle method returned value which wasn't u32: {:?}", other);
+                warn!("{} method returned value which wasn't u32: {:?}",func_name, other);
                 Err(EnclaveError::FailedFunctionCall)
             }
         }

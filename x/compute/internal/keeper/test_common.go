@@ -3,6 +3,17 @@ package keeper
 import (
 	"encoding/binary"
 	"fmt"
+	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
+	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
+	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
+	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
+	"github.com/cosmos/cosmos-sdk/x/feegrant"
+	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
+	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	icahosttypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/types"
+	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
+	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
+	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -83,6 +94,19 @@ import (
 
 const flagLRUCacheSize = "lru_size"
 const flagQueryGasLimit = "query_gas_limit"
+
+var _ wasmtypes.ICS20TransferPortSource = &MockIBCTransferKeeper{}
+
+type MockIBCTransferKeeper struct {
+	GetPortFn func(ctx sdk.Context) string
+}
+
+func (m MockIBCTransferKeeper) GetPort(ctx sdk.Context) string {
+	if m.GetPortFn == nil {
+		panic("not expected to be called")
+	}
+	return m.GetPortFn(ctx)
+}
 
 var ModuleBasics = module.NewBasicManager(
 	auth.AppModuleBasic{},
@@ -197,6 +221,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	paramsKeeper.Subspace(distrtypes.ModuleName)
 	paramsKeeper.Subspace(slashingtypes.ModuleName)
 	paramsKeeper.Subspace(crisistypes.ModuleName)
+	paramsKeeper.Subspace(ibchost.ModuleName)
 
 	// this is also used to initialize module accounts (so nil is meaningful here)
 	maccPerms := map[string][]string{
@@ -331,6 +356,38 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	// Load default wasm config
 	wasmConfig := wasmtypes.DefaultWasmConfig()
 
+	keys := sdk.NewKVStoreKeys(
+		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey,
+		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
+		govtypes.StoreKey, paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey,
+		evidencetypes.StoreKey, ibctransfertypes.StoreKey, capabilitytypes.StoreKey,
+		feegrant.StoreKey, authzkeeper.StoreKey, icahosttypes.StoreKey,
+	)
+
+	memKeys := sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
+
+	upgradeKeeper := upgradekeeper.NewKeeper(
+		map[int64]bool{},
+		keys[upgradetypes.StoreKey],
+		encodingConfig.Marshaler,
+		tempDir,
+		nil,
+	)
+
+	capabilityKeeper := capabilitykeeper.NewKeeper(
+		encodingConfig.Marshaler,
+		keys[capabilitytypes.StoreKey],
+		memKeys[capabilitytypes.MemStoreKey],
+	)
+
+	scopedIBCKeeper := capabilityKeeper.ScopeToModule(ibchost.ModuleName)
+	scopedWasmKeeper := capabilityKeeper.ScopeToModule("compute")
+
+	ibchostSubSp, _ := paramsKeeper.GetSubspace(ibchost.ModuleName)
+	ibcKeeper := ibckeeper.NewKeeper(
+		encodingConfig.Marshaler, keys[ibchost.StoreKey], ibchostSubSp, stakingKeeper, upgradeKeeper, scopedIBCKeeper,
+	)
+
 	// todo: new grpc routing
 	//serviceRouter := baseapp.NewMsgServiceRouter()
 
@@ -355,6 +412,10 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		mintKeeper,
 		stakingKeeper,
 		// serviceRouter,
+		scopedWasmKeeper,
+		ibcKeeper.PortKeeper,
+		MockIBCTransferKeeper{},
+		ibcKeeper.ChannelKeeper,
 		router,
 		tempDir,
 		wasmConfig,
@@ -399,7 +460,7 @@ func TestHandler(k Keeper) sdk.Handler {
 }
 
 func handleInstantiate(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgInstantiateContract) (*sdk.Result, error) {
-	contractAddr, err := k.Instantiate(ctx, msg.CodeID, msg.Sender /* msg.Admin, */, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
+	contractAddr, _, err := k.Instantiate(ctx, msg.CodeID, msg.Sender /* msg.Admin, */, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
 	if err != nil {
 		return nil, err
 	}

@@ -162,6 +162,7 @@ func (w *Wasmer) Execute(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	sigInfo types.VerificationInfo,
+	handleType types.HandleType,
 ) (interface{}, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
@@ -172,7 +173,7 @@ func (w *Wasmer) Execute(
 		return nil, 0, err
 	}
 
-	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin)
+	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin, handleType)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -239,7 +240,6 @@ func (w *Wasmer) Query(
 // AnalyzeCode returns a report of static analysis of the wasm contract (uncompiled).
 // This contract must have been stored in the cache previously (via Create).
 // Only info currently returned is if it exposes all ibc entry points, but this may grow later
-// Currently just reports if it exposes all IBC entry points.
 func (w *Wasmer) AnalyzeCode(
 	codeHash []byte,
 ) (*v1types.AnalysisReport, error) {

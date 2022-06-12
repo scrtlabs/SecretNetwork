@@ -2,7 +2,6 @@ package types
 
 import (
 	"encoding/base64"
-
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -136,7 +135,7 @@ func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contract
 		Contract: wasmTypes.ContractInfo{
 			Address: contractAddr.String(),
 		},
-		Key: wasmTypes.ContractKey(base64.StdEncoding.EncodeToString(contractKey)),
+		Key:       wasmTypes.ContractKey(base64.StdEncoding.EncodeToString(contractKey)),
 		Recursive: false,
 	}
 	return env
@@ -154,11 +153,8 @@ func NewWasmCoins(cosmosCoins sdk.Coins) (wasmCoins []wasmTypes.Coin) {
 	return wasmCoins
 }
 
-const CustomEventType = "wasm"
-const AttributeKeyContractAddr = "contract_address"
-
 // ParseEvents converts wasm LogAttributes into an sdk.Events (with 0 or 1 elements)
-func ParseEvents(logs []wasmTypesV010.LogAttribute, contractAddr sdk.AccAddress) sdk.Events {
+func ContractLogsToSdkEvents(logs []wasmTypesV010.LogAttribute, contractAddr sdk.AccAddress) sdk.Events {
 	// we always tag with the contract address issuing this event
 	attrs := []sdk.Attribute{sdk.NewAttribute(AttributeKeyContractAddr, contractAddr.String())}
 	// append attributes from wasm to the sdk.Event

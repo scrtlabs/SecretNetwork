@@ -15,7 +15,7 @@ use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
 
-use crate::error::{clear_error, handle_c_error, set_error, Error};
+use crate::error::{clear_error, handle_c_error, handle_c_error_default, set_error, Error};
 
 use cosmwasm_sgx_vm::untrusted_init_bootstrap;
 use cosmwasm_sgx_vm::{
@@ -23,7 +23,7 @@ use cosmwasm_sgx_vm::{
 };
 use cosmwasm_sgx_vm::{
     create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_health_check,
-    untrusted_init_node, untrusted_key_gen,
+    untrusted_init_node, untrusted_key_gen
 };
 
 use ctor::ctor;
@@ -402,11 +402,12 @@ pub extern "C" fn handle(
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
     sig_info: Buffer,
+    handle_type: u8,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
             do_handle(
-                c, code_id, params, msg, db, api, querier, gas_limit, gas_used, sig_info,
+                c, code_id, params, msg, db, api, querier, gas_limit, gas_used, sig_info, handle_type
             )
         }))
         .unwrap_or_else(|_| Err(Error::panic())),
@@ -428,6 +429,7 @@ fn do_handle(
     gas_limit: u64,
     gas_used: Option<&mut u64>,
     sig_info: Buffer,
+    handle_type: u8
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
     let code_id: Checksum = unsafe { code_id.read() }
@@ -440,7 +442,7 @@ fn do_handle(
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
-    let res = call_handle_raw(&mut instance, params, msg, sig_info);
+    let res = call_handle_raw(&mut instance, params, msg, sig_info, handle_type);
     *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)
@@ -505,10 +507,10 @@ fn do_query(
 /// has to be destroyed exactly once. When calling `analyze_code`
 /// from Go this is done via `C.destroy_unmanaged_vector`.
 #[repr(C)]
-#[derive(Copy, Clone, Default, Debug, PartialEq)]
+#[derive(Clone, Default, Debug, PartialEq)]
 pub struct AnalysisReport {
     pub has_ibc_entry_points: bool,
-    /// An UTF-8 encoded comma separated list of reqired features.
+    /// An UTF-8 encoded comma separated list of required features.
     /// This is never None/nil.
     pub required_features: Buffer,
 }
@@ -516,27 +518,41 @@ pub struct AnalysisReport {
 #[no_mangle]
 pub extern "C" fn analyze_code(
     cache: *mut cache_t,
-    checksum: ByteSliceView,
+    checksum: Buffer,
     error_msg: Option<&mut Buffer>,
 ) -> AnalysisReport {
     let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_analyze_code(c, checksum)))
+        Some(c) => catch_unwind(AssertUnwindSafe(move || {
+            do_analyze_code(c, checksum)
+        }))
             .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::unset_arg(CACHE_ARG)),
+        None => Err(Error::empty_arg(CACHE_ARG)),
     };
+
     handle_c_error_default(r, error_msg)
 }
 
 fn do_analyze_code(
-    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    checksum: ByteSliceView,
+    cache: &mut CosmCache<DB, GoApi, GoQuerier>,
+    checksum: Buffer,
 ) -> Result<AnalysisReport, Error> {
-    let checksum: Checksum = checksum
-        .read()
-        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
+    let checksum: Checksum = unsafe { checksum.read() }
+        .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
         .try_into()?;
     let report = cache.analyze(&checksum)?;
-    Ok(report.into())
+    let mut features_vec : Vec<u8> = vec!();
+    for feature in &report.required_features {
+        if features_vec.len() > 0 {
+            features_vec.append(&mut (",".as_bytes().to_vec()))
+        }
+
+        features_vec.append(&mut feature.as_bytes().to_vec())
+    }
+
+    Ok(AnalysisReport{
+        has_ibc_entry_points: report.has_ibc_entry_points,
+        required_features: Buffer::from_vec(features_vec),
+    })
 }
 
 #[no_mangle]

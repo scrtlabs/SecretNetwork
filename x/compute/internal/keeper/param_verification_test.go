@@ -241,7 +241,7 @@ func TestMultipleSigners(t *testing.T) {
 		[]sdk.AccAddress{walletA, walletB}, []crypto.PrivKey{privKeyA, privKeyB}, []sdk.Msg{&sdkMsgA, &sdkMsgB}, codeID,
 	)
 
-	contractAddressA, err := keeper.Instantiate(ctx, codeID, walletA /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	contractAddressA, _, err := keeper.Instantiate(ctx, codeID, walletA /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
 		err = extractInnerError(t, err, nonce, true)
 	}
@@ -259,7 +259,7 @@ func TestMultipleSigners(t *testing.T) {
 		wasmEvents,
 	)
 
-	contractAddressB, err := keeper.Instantiate(ctx, codeID, walletB /* nil,*/, initMsgBz, "demo contract 2", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	contractAddressB, _, err := keeper.Instantiate(ctx, codeID, walletB /* nil,*/, initMsgBz, "demo contract 2", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
 		err = extractInnerError(t, err, nonce, false)
 	}
@@ -303,7 +303,7 @@ func TestWrongSigner(t *testing.T) {
 
 	ctx = prepareInitSignedTxMultipleMsgs(t, keeper, ctx, []sdk.AccAddress{walletB}, []crypto.PrivKey{privKeyB}, []sdk.Msg{&sdkMsgA}, codeID)
 
-	_, err = keeper.Instantiate(ctx, codeID, walletA /* nil,*/, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	_, _, err = keeper.Instantiate(ctx, codeID, walletA /* nil,*/, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
 		err = extractInnerError(t, err, nonce, false)
 	}
@@ -334,7 +334,7 @@ func TestMultiSig(t *testing.T) {
 
 			_, _, multisigAddr := multisigTxCreator(t, &ctx, keeper, i+1, j+1, i+1, &sdkMsg)
 
-			contractAddressA, err := keeper.Instantiate(ctx, codeID, multisigAddr.address /* nil, */, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+			contractAddressA, _, err := keeper.Instantiate(ctx, codeID, multisigAddr.address /* nil, */, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 			if err != nil {
 				err = extractInnerError(t, err, nonce, true)
 			}
@@ -386,7 +386,7 @@ func TestMultiSigThreshold(t *testing.T) {
 
 			_, _, multisigAddr := multisigTxCreator(t, &ctx, keeper, i+1, j+1, j+1, &sdkMsg)
 
-			contractAddressA, err := keeper.Instantiate(ctx, codeID, multisigAddr.address /* nil,*/, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+			contractAddressA, _, err := keeper.Instantiate(ctx, codeID, multisigAddr.address /* nil,*/, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 			if err != nil {
 				err = extractInnerError(t, err, nonce, true)
 			}
@@ -435,7 +435,7 @@ func TestMultiSigThresholdNotMet(t *testing.T) {
 
 	_, _, multisigAddr := multisigTxCreator(t, &ctx, keeper, 3, 2, 1, &sdkMsg)
 
-	_, err = keeper.Instantiate(ctx, codeID, multisigAddr.address /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	_, _, err = keeper.Instantiate(ctx, codeID, multisigAddr.address /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
 		err = extractInnerError(t, err, nonce, false)
 	}
@@ -642,7 +642,7 @@ func TestMultiSigInMultiSig(t *testing.T) {
 
 	ctx = ctx.WithTxBytes(txBytes)
 
-	contractAddressA, err := keeper.Instantiate(
+	contractAddressA, _, err := keeper.Instantiate(
 		ctx,
 		codeID,
 		multimultisigAccount.address,
@@ -747,7 +747,7 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 
 	ctx = ctx.WithTxBytes(txBytes)
 
-	contractAddressA, err := keeper.Instantiate(
+	contractAddressA, _, err := keeper.Instantiate(
 		ctx,
 		codeID,
 		multimultisigAccount.address,
@@ -816,7 +816,7 @@ func TestInvalidKeyType(t *testing.T) {
 
 	ctx = prepareInitSignedTxMultipleMsgs(t, keeper, ctx, []sdk.AccAddress{edAddr}, []crypto.PrivKey{edKey}, []sdk.Msg{&sdkMsg}, codeID)
 
-	_, err = keeper.Instantiate(ctx, codeID, edAddr /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	_, _, err = keeper.Instantiate(ctx, codeID, edAddr /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	require.Contains(t, err.Error(), "failed to verify transaction signature")
 }
 
@@ -896,7 +896,7 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 	require.NoError(t, err)
 	ctx = ctx.WithTxBytes(txBytes)
 
-	_, err = keeper.Instantiate(
+	_, _, err = keeper.Instantiate(
 		ctx,
 		codeID,
 		sdk.AccAddress(multisigPubkey.address),
@@ -927,7 +927,7 @@ func TestWrongFundsNoFunds(t *testing.T) {
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privKeyA, initMsgBz, codeID, nil)
 
-	_, err = keeper.Instantiate(ctx, codeID, walletA /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
+	_, _, err = keeper.Instantiate(ctx, codeID, walletA /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
 	if err != nil {
 		err = extractInnerError(t, err, nonce, false)
 	}
@@ -952,7 +952,7 @@ func TestWrongFundsSomeFunds(t *testing.T) {
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privKeyA, initMsgBz, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)))
 
-	_, err = keeper.Instantiate(ctx, codeID, walletA /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
+	_, _, err = keeper.Instantiate(ctx, codeID, walletA /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
 	if err != nil {
 		err = extractInnerError(t, err, nonce, false)
 	}
@@ -987,7 +987,7 @@ func TestWrongMessage(t *testing.T) {
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privKeyA, initMsgBz, codeID, nil)
 
-	_, err = keeper.Instantiate(ctx, codeID, walletA /* nil, */, notTheRealMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
+	_, _, err = keeper.Instantiate(ctx, codeID, walletA /* nil, */, notTheRealMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
 	if err != nil {
 		err = extractInnerError(t, err, nonce, false)
 	}

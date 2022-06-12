@@ -30,8 +30,10 @@ func TestEncoding(t *testing.T) {
 	jsonMsg := json.RawMessage(`{"foo": 123}`)
 
 	cases := map[string]struct {
-		sender sdk.AccAddress
-		input  v010wasmTypes.CosmosMsg
+		sender             sdk.AccAddress
+		input              v010wasmTypes.CosmosMsg
+		srcContractIBCPort string
+		transferPortSource types.ICS20TransferPortSource
 		// set if valid
 		output []sdk.Msg
 		// set if invalid
@@ -263,11 +265,15 @@ func TestEncoding(t *testing.T) {
 		},
 	}
 
-	encoder := DefaultEncoders()
+	encodingConfig := MakeEncodingConfig()
+
 	for name, tc := range cases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			res, err := encoder.Encode(tc.sender, tc.input)
+			var ctx sdk.Context
+			encoder := DefaultEncoders(tc.transferPortSource, encodingConfig.Marshaler)
+			v1input, _ := V010MsgToV1SubMsg(tc.input)
+			res, err := encoder.Encode(ctx, tc.sender, tc.srcContractIBCPort, v1input.Msg)
 			if tc.isError {
 				require.Error(t, err)
 			} else {

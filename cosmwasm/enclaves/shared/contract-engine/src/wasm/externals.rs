@@ -93,7 +93,7 @@ impl Externals for ContractInstance {
                     warn!("read_db() error reading argument, stopping wasm: {:?}", err);
                     err
                 })?;
-                self.db_read(key)
+                self.read_db(key)
             }
             HostFunctions::DbRemoveIndex => {
                 let key: i32 = args.nth_checked(0).map_err(|err| {
@@ -225,22 +225,6 @@ impl Externals for ContractInstance {
                 })?;
 
                 self.addr_humanize(canonical, human)
-            }
-            HostFunctions::Secp256k1Verify => {
-                let message_hash = args.nth_checked(0).map_err(|err| {
-                    warn!(
-                        "secp256k1_verify() error reading 1st argument, stopping wasm: {:?}",
-                        err
-                    );
-                    err
-                })?;
-                let signature = args.nth_checked(1).map_err(|err| {
-                    warn!(
-                        "secp256k1_verify() error reading 2nd argument, stopping wasm: {:?}",
-                        err
-                    );
-                    err
-                })?;
             }
             HostFunctions::Secp256k1VerifyIndex => {
                 let message_hash = args.nth_checked(0).map_err(|err| {

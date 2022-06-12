@@ -51,6 +51,18 @@ func (s *replyOn) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+type SubMsgResponse struct {
+	Events Events `json:"events"`
+	Data   []byte `json:"data,omitempty"`
+}
+
+// SubMsgResult is the raw response we return from wasmd after executing a SubMsg.
+// This mirrors Rust's SubMsgResult.
+type SubMsgResult struct {
+	Ok  *SubMsgResponse `json:"ok,omitempty"`
+	Err string          `json:"error,omitempty"`
+}
+
 // SubMsg wraps a CosmosMsg with some metadata for handling replies (ID) and optionally
 // limiting the gas usage (GasLimit)
 type SubMsg struct {
@@ -61,8 +73,8 @@ type SubMsg struct {
 }
 
 type Reply struct {
-	ID     uint64        `json:"id"`
-	Result SubcallResult `json:"result"`
+	ID     uint64       `json:"id"`
+	Result SubMsgResult `json:"result"`
 }
 
 // SubcallResult is the raw response we return from the sdk -> reply after executing a SubMsg.
@@ -104,6 +116,6 @@ func (e *Events) UnmarshalJSON(data []byte) error {
 }
 
 type Event struct {
-	Type       string          `json:"type"`
-	Attributes EventAttributes `json:"attributes"`
+	Type       string        `json:"type"`
+	Attributes LogAttributes `json:"attributes"`
 }
