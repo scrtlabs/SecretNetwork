@@ -443,7 +443,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	}
 
 	switch res := response.(type) {
-	case v010wasmTypes.InitResponse:
+	case *v010wasmTypes.InitResponse:
 		// emit all events from this contract itself
 
 		// persist instance
@@ -467,7 +467,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 		}
 
 		return contractAddress, data, nil
-	case v1wasmTypes.Response:
+	case *v1wasmTypes.Response:
 		// persist instance first
 		createdAt := types.NewAbsoluteTxPosition(ctx)
 		contractInfo := types.NewContractInfo(codeID, creator, label, createdAt)
@@ -569,7 +569,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	switch res := response.(type) {
-	case v010wasmTypes.HandleResponse:
+	case *v010wasmTypes.HandleResponse:
 		subMessages, err := V010MsgsToV1SubMsgs(res.Messages)
 		if err != nil {
 			return nil, sdkerrors.Wrap(err, "couldn't convert v010 messages to v1 messages")
@@ -583,7 +583,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		return &sdk.Result{
 			Data: data,
 		}, nil
-	case v1wasmTypes.Response:
+	case *v1wasmTypes.Response:
 		ctx.EventManager().EmitEvent(sdk.NewEvent(
 			types.EventTypeExecute,
 			sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
@@ -1055,9 +1055,9 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, marshaledReply, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, ogSigInfo, wasmTypes.HandleTypeReply)
 
 	switch res := response.(type) {
-	case v010wasmTypes.HandleResponse:
-		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("response of reply should always be cosmwasm v1 response: %v", res))
-	case v1wasmTypes.Response:
+	case *v010wasmTypes.HandleResponse:
+		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("response of reply should always be a CosmWasm v1 response type: %+v", res))
+	case *v1wasmTypes.Response:
 		consumeGas(ctx, gasUsed)
 		if execErr != nil {
 			return nil, sdkerrors.Wrap(types.ErrReplyFailed, execErr.Error())
