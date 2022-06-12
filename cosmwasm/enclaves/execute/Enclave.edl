@@ -81,7 +81,8 @@ enclave {
             [in, count=msg_len] const uint8_t* msg,
             uintptr_t msg_len,
             [in, count=sig_info_len] const uint8_t* sig_info,
-            uintptr_t sig_info_len
+            uintptr_t sig_info_len,
+            uint8_t handle_type
         );
 
         public QueryResult ecall_query(
