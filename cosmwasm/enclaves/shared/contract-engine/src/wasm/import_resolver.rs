@@ -84,13 +84,11 @@ impl ModuleImportResolver for WasmiImportResolver {
                 HostFunctions::AddrValidateIndex.into(),
             ),
             // fn debug(source_ptr: u32);
-            // v0.16
-            #[cfg(feature = "debug-print")]
+            // v1
             "debug" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32][..], None),
                 HostFunctions::DebugPrintIndex.into(),
             ),
-            #[cfg(feature = "debug-print")]
             "debug_print" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32][..], None),
                 HostFunctions::DebugPrintIndex.into(),

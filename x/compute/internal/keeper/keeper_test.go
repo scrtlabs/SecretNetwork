@@ -1450,3 +1450,8 @@ type InitMsg struct {
 	Verifier    sdk.AccAddress `json:"verifier"`
 	Beneficiary sdk.AccAddress `json:"beneficiary"`
 }
+
+type InstantiateMsg struct {
+	Counter uint64 `json:"counter"`
+	Expires uint64 `json:"expires"`
+}

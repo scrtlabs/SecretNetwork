@@ -26,7 +26,6 @@ pub enum HostFunctions {
     Secp256k1SignIndex = 14,
     Ed25519SignIndex = 15,
     DebugIndex = 16,
-    #[cfg(feature = "debug-print")]
     DebugPrintIndex = 254,
     Unknown,
 }
@@ -67,7 +66,6 @@ impl From<usize> for HostFunctions {
                 HostFunctions::Secp256k1SignIndex
             }
             x if x == HostFunctions::Ed25519SignIndex as usize => HostFunctions::Ed25519SignIndex,
-            #[cfg(feature = "debug-print")]
             x if x == HostFunctions::DebugPrintIndex as usize => HostFunctions::DebugPrintIndex,
             _ => HostFunctions::Unknown,
         }
@@ -332,9 +330,8 @@ impl Externals for ContractInstance {
                     err
                 })?;
 
-                self.debug(message)
+                self.debug_print_index(message)
             }
-            #[cfg(feature = "debug-print")]
             HostFunctions::DebugPrintIndex => {
                 let message: i32 = args.nth_checked(0).map_err(|err| {
                     warn!(

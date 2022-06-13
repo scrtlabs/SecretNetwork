@@ -81,13 +81,9 @@ pub trait WasmiApi {
         public_keys_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap>;
 
-    /// CosmWasm v1
-    fn debug(&mut self, message_ptr: i32) -> Result<Option<RuntimeValue>, Trap>;
-
     /// internal
     fn gas(&mut self, gas_amount: i32) -> Result<Option<RuntimeValue>, Trap>;
 
-    #[cfg(feature = "debug-print")]
     fn debug_print_index(&self, message: i32) -> Result<Option<RuntimeValue>, Trap>;
 
     /// CosmWasm v0.10 + v1

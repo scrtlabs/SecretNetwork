@@ -2,13 +2,12 @@
 /// the consensus_io_exchange_keypair and a user-generated key to create a symmetric key
 /// that is unique to the user and the enclave
 ///
-
 use super::types::{IoNonce, SecretMessage};
-use enclave_ffi_types::EnclaveError;
 use enclave_cosmwasm_types as cosmwasm_v010_types;
 use enclave_cosmwasm_types::encoding::Binary;
 use enclave_cosmwasm_types::types::{CanonicalAddr, Coin};
 use enclave_cosmwasm_v016_types as cosmwasm_v016_types;
+use enclave_ffi_types::EnclaveError;
 
 use enclave_crypto::{AESKey, Ed25519PublicKey, Kdf, SIVEncryptable, KEY_MANAGER};
 
@@ -29,12 +28,16 @@ enum WasmOutput {
         #[serde(rename = "Ok")]
         ok: String,
     },
+    OkStringV1 {
+        #[serde(rename = "ok")]
+        ok: String,
+    },
     OkObjectV010 {
         #[serde(rename = "Ok")]
         ok: cosmwasm_v010_types::types::ContractResult,
     },
     OkObjectV016 {
-        #[serde(rename = "Ok")]
+        #[serde(rename = "ok")]
         ok: cosmwasm_v016_types::results::Response,
     },
 }
@@ -119,7 +122,7 @@ pub fn encrypt_output(
             *err = json!({"generic_err":{"msg":encrypted_err}});
         }
 
-        WasmOutput::OkString { ok } => {
+        WasmOutput::OkString { ok } | WasmOutput::OkStringV1 { ok } => {
             *ok = encrypt_serializable(&key, ok)?;
         }
 

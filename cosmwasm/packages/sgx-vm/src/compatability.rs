@@ -63,11 +63,11 @@ const REQUIRED_EXPORTS_V010: &[&str] = &[
     "deallocate",
 ];
 
-/// Lists all entry points we expect to be present when calling a v0.16 contract.
+/// Lists all entry points we expect to be present when calling a v1 contract.
 /// Basically, anything that is used in calls.rs
 /// This is unlikely to change much, must be frozen at 1.0 to avoid breaking existing contracts
 const REQUIRED_EXPORTS_V1: &[&str] = &[
-    "interface_version_7",
+    "interface_version_8",
     // IO
     "allocate",
     "deallocate",
@@ -116,7 +116,7 @@ pub fn check_wasm(wasm_code: &[u8], supported_features: &HashSet<String>) -> VmR
             check_v016_imports_result,
         ];
 
-        return Err(VmError::static_validation_err(format!("Contact is not CosmWasm v0.10 or v0.16. To support v0.10 please fix the former two errors, to supports v0.16 please fix the latter two errors: ${:?}", errors)));
+        return Err(VmError::static_validation_err(format!("Contract is not CosmWasm v0.10 or v1. To support v0.10 please fix the former two errors, to supports v1 please fix the latter two errors: ${:?}", errors)));
     }
 
     Ok(())
@@ -185,7 +185,6 @@ fn check_wasm_imports(module: &Module, supported_imports: &[&str]) -> VmResult<(
     let required_imports: Vec<ImportEntry> = module
         .import_section()
         .map_or(vec![], |import_section| import_section.entries().to_vec());
-
     for required_import in required_imports {
         let full_name = format!("{}.{}", required_import.module(), required_import.field());
         if !supported_imports.contains(&full_name.as_str()) {
@@ -203,6 +202,7 @@ fn check_wasm_imports(module: &Module, supported_imports: &[&str]) -> VmResult<(
             ))),
         };
     }
+
     Ok(())
 }
 

@@ -178,26 +178,26 @@ func (w *Wasmer) Execute(
 		return nil, gasUsed, err
 	}
 
-	var respV010 v010types.HandleResult
-	jsonErrV010 := json.Unmarshal(data, &respV010)
-
-	if jsonErrV010 == nil {
-		// v0.10 response
-		if respV010.Err != nil {
-			return nil, gasUsed, fmt.Errorf("%+v", respV010.Err)
-		}
-		return respV010.Ok, gasUsed, nil
-	}
-
 	var respV1 v1types.ContractResult
 	jsonErrV1 := json.Unmarshal(data, &respV1)
 
-	if jsonErrV1 == nil {
+	if (jsonErrV1 == nil) && (respV1.Err != "" || respV1.Ok != nil) {
 		// v1 response
 		if respV1.Err != "" {
 			return nil, gasUsed, fmt.Errorf(respV1.Err)
 		}
 		return respV1.Ok, gasUsed, nil
+	}
+
+	var respV010 v010types.HandleResult
+	jsonErrV010 := json.Unmarshal(data, &respV010)
+
+	if (jsonErrV010 == nil) && (respV010.Err != nil || respV010.Ok != nil) {
+		// v0.10 response
+		if respV010.Err != nil {
+			return nil, gasUsed, fmt.Errorf("%+v", respV010.Err)
+		}
+		return respV010.Ok, gasUsed, nil
 	}
 
 	// unidentified response 🤷

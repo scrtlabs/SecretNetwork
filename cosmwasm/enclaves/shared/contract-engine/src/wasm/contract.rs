@@ -861,36 +861,6 @@ impl WasmiApi for ContractInstance {
         self.humanize_address(canonical_ptr, human_ptr)
     }
 
-    /// Debug prints from the contract while in testnet
-    fn debug(&mut self, message_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
-        let message_bytes = self.extract_vector(message_ptr as u32).map_err(|err| {
-            debug!("debug() error while trying to read message from wasm memory");
-            err
-        })?;
-
-        trace!(
-            "debug() was called from WASM code with {:?}",
-            String::from_utf8_lossy(&message_bytes)
-        );
-
-        // Turn Vec<u8> to str
-        let message_str = match std::str::from_utf8(&message_bytes) {
-            Err(err) => {
-                debug!(
-                    "debug() error while trying to parse message from bytes to string: {:?}",
-                    err
-                );
-                return Ok(Some(RuntimeValue::I32(
-                    self.write_to_memory(b"input is not valid UTF-8")? as i32,
-                )));
-            }
-            Ok(x) => x,
-        };
-
-        debug!("debug(): {:?}", message_str);
-        return Ok(None);
-    }
-    #[cfg(feature = "debug-print")]
     fn debug_print_index(&self, message_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
         let message_buffer = self.extract_vector(message_ptr_ptr as u32).map_err(|err| {
             debug!("debug_print() error while trying to read message from wasm memory",);
@@ -900,6 +870,7 @@ impl WasmiApi for ContractInstance {
         let message =
             String::from_utf8(message_buffer).unwrap_or_else(|err| hex::encode(err.into_bytes()));
 
+        #[cfg(feature = "debug-print")]
         info!("debug_print: {:?}", message);
 
         Ok(None)

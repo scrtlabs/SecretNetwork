@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -2781,4 +2782,73 @@ func TestBenchmarkEd25519BatchVerifyAPI(t *testing.T) {
 
 	elapsed := time.Since(start)
 	fmt.Printf("TestBenchmarkEd25519BatchVerifyAPI took %s\n", elapsed)
+}
+
+type GetResponse struct {
+	Count uint32 `json:"count"`
+}
+type v1QueryResponse struct {
+	Get GetResponse `json:"get"`
+}
+
+func TestV1EndpointsSanity(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract.wasm")
+
+	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":10, "expires":100}`, true, defaultGasForTests)
+
+	data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"increment":{"addition": 13}}`, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(23), binary.BigEndian.Uint32(data))
+
+	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, math.MaxUint64)
+	require.Empty(t, qErr)
+
+	// assert result is 32 byte sha256 hash (if hashed), or contractAddr if not
+	var resp v1QueryResponse
+	e := json.Unmarshal([]byte(queryRes), &resp)
+	require.NoError(t, e)
+	require.Equal(t, uint32(23), resp.Get.Count)
+}
+
+func TestV1QueryWorksWithEnv(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract.wasm")
+
+	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":10, "expires":0}`, true, defaultGasForTests)
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 10)
+
+	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, math.MaxUint64)
+	require.Empty(t, qErr)
+
+	// assert result is 32 byte sha256 hash (if hashed), or contractAddr if not
+	var resp v1QueryResponse
+	e := json.Unmarshal([]byte(queryRes), &resp)
+	require.NoError(t, e)
+	require.Equal(t, uint32(0), resp.Get.Count)
+}
+
+func TestV1ReplySanity(t *testing.T) {
+	t.SkipNow()
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract.wasm")
+
+	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":10, "expires":100}`, true, defaultGasForTests)
+
+	data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"increment":{"addition": 13}}`, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(23), binary.BigEndian.Uint32(data))
+
+	data, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"transfer_money":{"amount": 10213}}`, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(23), binary.BigEndian.Uint32(data))
+
+	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, math.MaxUint64)
+	require.Empty(t, qErr)
+
+	// assert result is 32 byte sha256 hash (if hashed), or contractAddr if not
+	var resp v1QueryResponse
+	e := json.Unmarshal([]byte(queryRes), &resp)
+	require.NoError(t, e)
+	require.Equal(t, uint32(23), resp.Get.Count)
 }
