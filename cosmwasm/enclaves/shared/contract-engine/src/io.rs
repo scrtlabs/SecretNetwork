@@ -24,6 +24,10 @@ enum WasmOutput {
         #[serde(rename = "Err")]
         err: Value,
     },
+    ErrString {
+        #[serde(rename = "error")]
+        err: String,
+    },
     OkString {
         #[serde(rename = "Ok")]
         ok: String,
@@ -120,6 +124,13 @@ pub fn encrypt_output(
 
             // Putting the error inside a 'generic_err' envelope, so we can encrypt the error itself
             *err = json!({"generic_err":{"msg":encrypted_err}});
+        }
+
+        WasmOutput::ErrString { err } => {
+            let encrypted_err = encrypt_preserialized_string(&key, err)?;
+
+            // Adding encrypted string to indicate that the error is encrypted
+            *err = format!("encrypted: {}", encrypted_err);
         }
 
         WasmOutput::OkString { ok } | WasmOutput::OkStringV1 { ok } => {

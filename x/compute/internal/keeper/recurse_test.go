@@ -81,7 +81,7 @@ func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.Acc
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, creator, creatorPriv, string(initMsgBz), true, defaultGasForTests)
+	contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, creator, creatorPriv, string(initMsgBz), true, false, defaultGasForTests)
 	require.Empty(t, initErr)
 
 	return contractAddr, creator, ctx, keeper
@@ -157,7 +157,7 @@ func TestGasCostOnQuery(t *testing.T) {
 
 			msg := buildQuery(t, recurse, hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr)))
 
-			data, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, tc.gasLimit)
+			data, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, false, tc.gasLimit)
 			require.Empty(t, qErr)
 
 			// check the gas is what we expected
@@ -354,7 +354,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			// if we expect out of gas, make sure this panics
 			if tc.expectOutOfGas {
 				require.Panics(t, func() {
-					_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, tc.gasLimit)
+					_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, false, tc.gasLimit)
 					t.Logf("Got error not panic: %#v", qErr)
 				})
 				assert.Equal(t, tc.expectQueriesFromContract, totalWasmQueryCounter)
@@ -363,7 +363,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 
 			// if we expect out of memory
 			if tc.expectOOM {
-				_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, tc.gasLimit)
+				_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, false, tc.gasLimit)
 				require.NotEmpty(t, qErr)
 				require.NotNil(t, qErr.GenericErr)
 				require.Contains(t, qErr.GenericErr.Msg, "Execution error: Enclave: enclave ran out of heap memory")
@@ -371,7 +371,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			}
 
 			if tc.expectRecursionLimit {
-				_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, tc.gasLimit)
+				_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, false, tc.gasLimit)
 				require.NotEmpty(t, qErr)
 				require.NotNil(t, qErr.GenericErr)
 				require.Contains(t, qErr.GenericErr.Msg, "Querier system error: Query recursion limit exceeded")
@@ -379,7 +379,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			}
 
 			// otherwise, we expect a successful call
-			_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, tc.gasLimit)
+			_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, false, tc.gasLimit)
 			require.Empty(t, qErr)
 			// assert.Equal(t, tc.expectedGas, ctx.GasMeter().GasConsumed())
 

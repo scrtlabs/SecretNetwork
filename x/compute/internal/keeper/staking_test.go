@@ -3,10 +3,11 @@ package keeper
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/codec/types"
-	wasmTypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"io/ioutil"
 	"testing"
+
+	"github.com/cosmos/cosmos-sdk/codec/types"
+	wasmTypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -150,7 +151,7 @@ func TestInitializeStaking(t *testing.T) {
 	badBz, err := json.Marshal(&badInitMsg)
 	require.NoError(t, err)
 
-	_, _, initErr := initHelper(t, keeper, ctx, stakingID, creator, creatorPrivKey, string(badBz), true, defaultGasForTests)
+	_, _, initErr := initHelper(t, keeper, ctx, stakingID, creator, creatorPrivKey, string(badBz), true, false, defaultGasForTests)
 	require.Error(t, initErr)
 	require.Error(t, initErr.GenericErr)
 	require.Equal(t, fmt.Sprintf("%s is not in the current validator set", sdk.ValAddress(bob).String()), initErr.GenericErr.Msg)
@@ -510,7 +511,7 @@ func assertBalance(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Ac
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
 
-	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
+	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, false, defaultGasForTests)
 	require.Empty(t, qErr)
 	var balance BalanceResponse
 	err = json.Unmarshal([]byte(res), &balance)
@@ -527,7 +528,7 @@ func assertClaims(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
 
-	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
+	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, false, defaultGasForTests)
 	require.Empty(t, qErr)
 	var claims ClaimsResponse
 	err = json.Unmarshal([]byte(res), &claims)
@@ -539,7 +540,7 @@ func assertSupply(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	query := StakingQueryMsg{Investment: &struct{}{}}
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
-	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
+	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, false, defaultGasForTests)
 	require.Empty(t, qErr)
 
 	var invest InvestmentResponse

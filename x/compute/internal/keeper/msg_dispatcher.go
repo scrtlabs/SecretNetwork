@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
@@ -9,7 +10,6 @@ import (
 	v1wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	abci "github.com/tendermint/tendermint/abci/types"
-	"reflect"
 )
 
 // Messenger is an extension point for custom wasmd message handling
@@ -134,19 +134,6 @@ func (e UnsupportedRequest) Error() string {
 	return fmt.Sprintf("unsupported request: %s", e.Kind)
 }
 
-// check if an interface is nil (even if it has type info)
-func isNil(i interface{}) bool {
-	if i == nil {
-		return true
-	}
-	if reflect.TypeOf(i).Kind() == reflect.Ptr {
-		// IsNil panics if you try it on a struct (not a pointer)
-		return reflect.ValueOf(i).IsNil()
-	}
-	// if we aren't a pointer, can't be nil, can we?
-	return false
-}
-
 // Reply is encrypted on when it is a contract reply and it is OK since error is always reducted to be a string.
 func isReplyEncrypted(msg v1wasmTypes.CosmosMsg, reply v1wasmTypes.Reply) bool {
 	return (msg.Wasm != nil) && (reply.Result.Ok != nil)
@@ -255,7 +242,11 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 		// In order to specify that the reply isn't signed by the enclave we use "SIGN_MODE_UNSPECIFIED"
 		// The SGX will notice that the value is SIGN_MODE_UNSPECIFIED and will treat the message as plaintext.
 		replySigInfo := wasmTypes.VerificationInfo{
-			SignMode: "SIGN_MODE_UNSPECIFIED",
+			Bytes:     []byte{},
+			ModeInfo:  []byte{},
+			PublicKey: []byte{},
+			Signature: []byte{},
+			SignMode:  "SIGN_MODE_UNSPECIFIED",
 		}
 		if isReplyEncrypted(msg.Msg, reply) {
 			replySigInfo = ogSigInfo
@@ -264,7 +255,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 		rspData, err := d.keeper.reply(ctx, contractAddr, reply, ogTx, replySigInfo)
 		switch {
 		case err != nil:
-			return nil, sdkerrors.Wrap(err, "reply")
+			return nil, err
 		case rspData != nil:
 			rsp = rspData
 		}

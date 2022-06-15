@@ -83,6 +83,21 @@ func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 	return api.GetCode(w.cache, code)
 }
 
+// This struct helps us to distinguish between v010 contract response and v1 contract response
+type V010orV1ContractResponse struct {
+	V1Ok    *v1types.Response         `json:"ok,omitempty"`
+	V1Err   string                    `json:"error,omitempty"`
+	V010Ok  *v010types.HandleResponse `json:"Ok,omitempty"`
+	V010Err *types.StdError           `json:"Err,omitempty"`
+}
+
+type V010orV1ContractInitResponse struct {
+	V1Ok    *v1types.Response       `json:"ok,omitempty"`
+	V1Err   string                  `json:"error,omitempty"`
+	V010Ok  *v010types.InitResponse `json:"Ok,omitempty"`
+	V010Err *types.StdError         `json:"Err,omitempty"`
+}
+
 // Instantiate will create a new contract based on the given codeID.
 // We can set the initMsg (contract "genesis") here, and it then receives
 // an account and address and can be invoked (Execute) many times.
@@ -120,30 +135,31 @@ func (w *Wasmer) Instantiate(
 	key := data[0:64]
 	data = data[64:]
 
-	var respV010 v010types.InitResult
-	jsonErrV010 := json.Unmarshal(data, &respV010)
+	var respV010orV1 V010orV1ContractInitResponse
+	err = json.Unmarshal(data, &respV010orV1)
 
-	if jsonErrV010 == nil {
-		// v0.10 response
-		if respV010.Err != nil {
-			return nil, nil, gasUsed, fmt.Errorf("%+v", respV010.Err)
-		}
-		return respV010.Ok, key, gasUsed, nil
+	if err != nil {
+		// unidentified response 🤷
+		return nil, nil, gasUsed, fmt.Errorf("handle: cannot parse response from json: %w", err)
 	}
 
-	var respV1 v1types.ContractResult
-	jsonErrV1 := json.Unmarshal(data, &respV1)
-
-	if jsonErrV1 == nil {
-		// v1 response
-		if respV1.Err != "" {
-			return nil, nil, gasUsed, fmt.Errorf(respV1.Err)
-		}
-		return respV1.Ok, key, gasUsed, nil
+	if respV010orV1.V1Err != "" {
+		return nil, nil, gasUsed, fmt.Errorf(respV010orV1.V1Err)
 	}
 
-	// unidentified response 🤷
-	return nil, nil, gasUsed, fmt.Errorf("cannot detect response type, v0.10: %v or v0.16: %v", jsonErrV010, jsonErrV1)
+	if respV010orV1.V1Ok != nil {
+		return respV010orV1.V1Ok, key, gasUsed, nil
+	}
+
+	if respV010orV1.V010Err != nil {
+		return nil, nil, gasUsed, fmt.Errorf("%+v", respV010orV1.V010Err)
+	}
+
+	if respV010orV1.V010Ok != nil {
+		return respV010orV1.V010Ok, key, gasUsed, nil
+	}
+
+	return nil, nil, gasUsed, fmt.Errorf("handle: cannot detect response type (v0.10 or v1): %w", err)
 }
 
 // Execute calls a given contract. Since the only difference between contracts with the same CodeID is the
@@ -178,30 +194,31 @@ func (w *Wasmer) Execute(
 		return nil, gasUsed, err
 	}
 
-	var respV1 v1types.ContractResult
-	jsonErrV1 := json.Unmarshal(data, &respV1)
+	var respV010orV1 V010orV1ContractResponse
+	err = json.Unmarshal(data, &respV010orV1)
 
-	if (jsonErrV1 == nil) && (respV1.Err != "" || respV1.Ok != nil) {
-		// v1 response
-		if respV1.Err != "" {
-			return nil, gasUsed, fmt.Errorf(respV1.Err)
-		}
-		return respV1.Ok, gasUsed, nil
+	if err != nil {
+		// unidentified response 🤷
+		return nil, gasUsed, fmt.Errorf("handle: cannot parse response from json: %w", err)
 	}
 
-	var respV010 v010types.HandleResult
-	jsonErrV010 := json.Unmarshal(data, &respV010)
-
-	if (jsonErrV010 == nil) && (respV010.Err != nil || respV010.Ok != nil) {
-		// v0.10 response
-		if respV010.Err != nil {
-			return nil, gasUsed, fmt.Errorf("%+v", respV010.Err)
-		}
-		return respV010.Ok, gasUsed, nil
+	if respV010orV1.V1Err != "" {
+		return nil, gasUsed, fmt.Errorf(respV010orV1.V1Err)
 	}
 
-	// unidentified response 🤷
-	return nil, gasUsed, fmt.Errorf("cannot detect response type, v0.10: %v or v1: %v", jsonErrV010, jsonErrV1)
+	if respV010orV1.V1Ok != nil {
+		return respV010orV1.V1Ok, gasUsed, nil
+	}
+
+	if respV010orV1.V010Err != nil {
+		return nil, gasUsed, fmt.Errorf("%+v", respV010orV1.V010Err)
+	}
+
+	if respV010orV1.V010Ok != nil {
+		return respV010orV1.V010Ok, gasUsed, nil
+	}
+
+	return nil, gasUsed, fmt.Errorf("handle: cannot detect response type (v0.10 or v1): %w", err)
 }
 
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be

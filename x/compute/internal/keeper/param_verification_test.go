@@ -243,7 +243,7 @@ func TestMultipleSigners(t *testing.T) {
 
 	contractAddressA, _, err := keeper.Instantiate(ctx, codeID, walletA /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
-		err = extractInnerError(t, err, nonce, true)
+		err = extractInnerError(t, err, nonce, true, false)
 	}
 	require.NoError(t, err)
 
@@ -261,7 +261,7 @@ func TestMultipleSigners(t *testing.T) {
 
 	contractAddressB, _, err := keeper.Instantiate(ctx, codeID, walletB /* nil,*/, initMsgBz, "demo contract 2", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
-		err = extractInnerError(t, err, nonce, false)
+		err = extractInnerError(t, err, nonce, false, false)
 	}
 	require.NoError(t, err)
 
@@ -305,7 +305,7 @@ func TestWrongSigner(t *testing.T) {
 
 	_, _, err = keeper.Instantiate(ctx, codeID, walletA /* nil,*/, initMsgBz, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
-		err = extractInnerError(t, err, nonce, false)
+		err = extractInnerError(t, err, nonce, false, false)
 	}
 	require.Contains(t, err.Error(), "is not found in the tx signer set")
 }
@@ -336,7 +336,7 @@ func TestMultiSig(t *testing.T) {
 
 			contractAddressA, _, err := keeper.Instantiate(ctx, codeID, multisigAddr.address /* nil, */, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 			if err != nil {
-				err = extractInnerError(t, err, nonce, true)
+				err = extractInnerError(t, err, nonce, true, false)
 			}
 			require.NoError(t, err)
 
@@ -388,7 +388,7 @@ func TestMultiSigThreshold(t *testing.T) {
 
 			contractAddressA, _, err := keeper.Instantiate(ctx, codeID, multisigAddr.address /* nil,*/, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 			if err != nil {
-				err = extractInnerError(t, err, nonce, true)
+				err = extractInnerError(t, err, nonce, true, false)
 			}
 			require.NoError(t, err)
 
@@ -437,7 +437,7 @@ func TestMultiSigThresholdNotMet(t *testing.T) {
 
 	_, _, err = keeper.Instantiate(ctx, codeID, multisigAddr.address /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
-		err = extractInnerError(t, err, nonce, false)
+		err = extractInnerError(t, err, nonce, false, false)
 	}
 	require.Contains(t, err.Error(), "failed to verify transaction signature")
 }
@@ -453,7 +453,7 @@ func TestMultiSigExecute(t *testing.T) {
 		multisigAccount.address, walletB.String(),
 	)
 
-	contractAddress, _, error := initHelper(t, keeper, ctx, codeID, walletB, privKeyB, initMsg, true, defaultGasForTests)
+	contractAddress, _, error := initHelper(t, keeper, ctx, codeID, walletB, privKeyB, initMsg, true, false, defaultGasForTests)
 	require.Empty(t, error)
 
 	execMsg := fmt.Sprintf(`{"transfer":{"amount":"10","recipient":"%s"}}`, walletB.String())
@@ -479,7 +479,7 @@ func TestMultiSigExecute(t *testing.T) {
 
 	execRes, err := keeper.Execute(ctx, contractAddress, multisigAccount.address, execMsgBz, funds, nil)
 	if err != nil {
-		err = extractInnerError(t, err, nonce, true)
+		err = extractInnerError(t, err, nonce, true, false)
 	}
 	require.NoError(t, err)
 
@@ -504,7 +504,7 @@ func TestMultiSigCallbacks(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 
 	// init
-	contractAddress, initEvents, error := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests)
+	contractAddress, initEvents, error := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 	require.Empty(t, error)
 
 	require.Equal(t,
@@ -539,7 +539,7 @@ func TestMultiSigCallbacks(t *testing.T) {
 
 	execRes, err := keeper.Execute(ctx, contractAddress, multisigAddr.address, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
-		err = extractInnerError(t, err, nonce, true)
+		err = extractInnerError(t, err, nonce, true, false)
 	}
 	data := getDecryptedData(t, execRes.Data, nonce)
 	execEvents := getDecryptedWasmEvents(t, ctx, nonce)
@@ -653,7 +653,7 @@ func TestMultiSigInMultiSig(t *testing.T) {
 		nil,
 	)
 	if err != nil {
-		err = extractInnerError(t, err, nonce, true)
+		err = extractInnerError(t, err, nonce, true, false)
 	}
 	require.NoError(t, err)
 
@@ -758,7 +758,7 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 		nil,
 	)
 	if err != nil {
-		err = extractInnerError(t, err, nonce, true)
+		err = extractInnerError(t, err, nonce, true, false)
 	}
 	require.NoError(t, err)
 
@@ -929,7 +929,7 @@ func TestWrongFundsNoFunds(t *testing.T) {
 
 	_, _, err = keeper.Instantiate(ctx, codeID, walletA /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
 	if err != nil {
-		err = extractInnerError(t, err, nonce, false)
+		err = extractInnerError(t, err, nonce, false, false)
 	}
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to verify transaction signature")
@@ -954,7 +954,7 @@ func TestWrongFundsSomeFunds(t *testing.T) {
 
 	_, _, err = keeper.Instantiate(ctx, codeID, walletA /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
 	if err != nil {
-		err = extractInnerError(t, err, nonce, false)
+		err = extractInnerError(t, err, nonce, false, false)
 	}
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to verify transaction signature")
@@ -989,7 +989,7 @@ func TestWrongMessage(t *testing.T) {
 
 	_, _, err = keeper.Instantiate(ctx, codeID, walletA /* nil, */, notTheRealMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
 	if err != nil {
-		err = extractInnerError(t, err, nonce, false)
+		err = extractInnerError(t, err, nonce, false, false)
 	}
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to verify transaction signature")
@@ -1001,9 +1001,9 @@ func TestWrongContractAddress(t *testing.T) {
 
 	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, walletA.String(), walletB.String())
 
-	contractAddress, _, stderr := initHelper(t, keeper, ctx, codeID, walletB, privKeyB, initMsg, true, defaultGasForTests)
+	contractAddress, _, stderr := initHelper(t, keeper, ctx, codeID, walletB, privKeyB, initMsg, true, false, defaultGasForTests)
 	require.Empty(t, stderr)
-	differentContractAddress, _, stderr := initHelper(t, keeper, ctx, codeID, walletB, privKeyB, initMsg, true, defaultGasForTests)
+	differentContractAddress, _, stderr := initHelper(t, keeper, ctx, codeID, walletB, privKeyB, initMsg, true, false, defaultGasForTests)
 	require.Empty(t, stderr)
 
 	require.NotEqual(t, contractAddress, differentContractAddress)
@@ -1023,7 +1023,7 @@ func TestWrongContractAddress(t *testing.T) {
 
 	_, err = keeper.Execute(ctx, differentContractAddress, walletA, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
-		err = extractInnerError(t, err, nonce, false)
+		err = extractInnerError(t, err, nonce, false, false)
 	}
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to verify transaction signature")

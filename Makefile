@@ -347,6 +347,8 @@ build-test-contract:
 	# sudo apt update
 	# sudo apt install -y binaryen
 	$(MAKE) -C ./x/compute/internal/keeper/testdata/test-contract
+	$(MAKE) -C ./x/compute/internal/keeper/testdata/v1-sanity-contract
+
 
 prep-go-tests: build-test-contract
 	# empty BUILD_PROFILE means debug mode which compiles faster

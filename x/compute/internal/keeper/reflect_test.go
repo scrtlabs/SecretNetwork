@@ -295,7 +295,7 @@ func TestMaskReflectCustomQuery(t *testing.T) {
 	ownerQueryBz, err := json.Marshal(ownerQuery)
 	require.NoError(t, err)
 
-	ownerRes, qErr := queryHelper(t, keeper, ctx, contractAddr, string(ownerQueryBz), true, defaultGasForTests)
+	ownerRes, qErr := queryHelper(t, keeper, ctx, contractAddr, string(ownerQueryBz), true, false, defaultGasForTests)
 	require.Empty(t, qErr)
 	var res OwnerResponse
 	err = json.Unmarshal([]byte(ownerRes), &res)
@@ -311,7 +311,7 @@ func TestMaskReflectCustomQuery(t *testing.T) {
 	customQueryBz, err := json.Marshal(customQuery)
 	require.NoError(t, err)
 
-	custom, qErr := queryHelper(t, keeper, ctx, contractAddr, string(customQueryBz), true, defaultGasForTests)
+	custom, qErr := queryHelper(t, keeper, ctx, contractAddr, string(customQueryBz), true, false, defaultGasForTests)
 	require.Empty(t, qErr)
 
 	var resp customQueryResponse

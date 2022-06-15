@@ -149,12 +149,39 @@ pub fn init(
     })
 }
 
+pub struct TaggedBool {
+    b: bool,
+}
+
+impl From<bool> for TaggedBool {
+    fn from(b: bool) -> Self {
+        TaggedBool { b }
+    }
+}
+
+impl Into<bool> for TaggedBool {
+    fn into(self) -> bool {
+        self.b
+    }
+}
+
+type ShouldValidateSigInfo = TaggedBool;
+type WasMessageEncrypted = TaggedBool;
+
 // Parse the message that was passed to handle (Based on the assumption that it might be a reply or IBC as well)
 pub fn parse_message(
     message: &[u8],
     sig_info: &SigInfo,
     handle_type: &HandleType,
-) -> Result<(SecretMessage, Vec<u8>), EnclaveError> {
+) -> Result<
+    (
+        ShouldValidateSigInfo,
+        WasMessageEncrypted,
+        SecretMessage,
+        Vec<u8>,
+    ),
+    EnclaveError,
+> {
     let orig_secret_msg = SecretMessage::from_slice(message)?;
 
     return match handle_type {
@@ -164,14 +191,25 @@ pub fn parse_message(
                 base64::encode(&message)
             );
             let decrypted_msg = orig_secret_msg.decrypt()?;
-            Ok((orig_secret_msg, decrypted_msg))
+            Ok((
+                ShouldValidateSigInfo::from(true),
+                WasMessageEncrypted::from(true),
+                orig_secret_msg,
+                decrypted_msg,
+            ))
         }
+
         HandleType::HANDLE_TYPE_REPLY => {
             if sig_info.sign_mode == SignMode::SIGN_MODE_UNSPECIFIED {
                 trace!("reply input is not encrypted");
                 let decrypted_msg = orig_secret_msg.msg.clone();
 
-                return Ok((orig_secret_msg, decrypted_msg));
+                return Ok((
+                    ShouldValidateSigInfo::from(false),
+                    WasMessageEncrypted::from(false),
+                    orig_secret_msg,
+                    decrypted_msg,
+                ));
             }
 
             // Here we are sure the reply is OK because only OK is encrypted
@@ -226,7 +264,12 @@ pub fn parse_message(
                         msg: decrypted_reply_as_vec.clone(),
                     };
 
-                    Ok((secret_msg, decrypted_reply_as_vec))
+                    Ok((
+                        ShouldValidateSigInfo::from(true),
+                        WasMessageEncrypted::from(true),
+                        secret_msg,
+                        decrypted_reply_as_vec,
+                    ))
                 }
                 SubMsgResult::Err(_) => {
                     warn!("got an error while trying to deserialize reply, error should not be encrypted");
@@ -276,11 +319,9 @@ pub fn handle(
         return Err(EnclaveError::FailedContractAuthentication);
     }
 
-    trace!("handle env_v010: {:?}", env_v010);
-
     let parsed_sig_info: SigInfo = serde_json::from_slice(sig_info).map_err(|err| {
         warn!(
-            "handle got an error while trying to deserialize env input bytes into json {:?}: {}",
+            "handle got an error while trying to deserialize sig info input bytes into json {:?}: {}",
             String::from_utf8_lossy(&sig_info),
             err
         );
@@ -291,12 +332,22 @@ pub fn handle(
     // When the message is handle, we expect it always to be encrypted while in Reply for example it might be plaintext
     let parsed_handle_type = HandleType::try_from(handle_type)?;
 
-    let (secret_msg, decrypted_msg) = parse_message(msg, &parsed_sig_info, &parsed_handle_type)?;
+    let (should_validate_sig_info, was_msg_encrypted, secret_msg, decrypted_msg) =
+        parse_message(msg, &parsed_sig_info, &parsed_handle_type)?;
 
-    // Verify env parameters against the signed tx
-    verify_params(&parsed_sig_info, &env_v010, &secret_msg)?;
+    /// There is no signature to verify when the input isn't signed.
+    /// Receiving unsigned messages is only possible in Handle. (Init tx are always signed)
+    /// All of these functions go through handle but the data isn't signed:
+    ///  reply (that is not WASM reply)
+    if should_validate_sig_info.into() {
+        // Verify env parameters against the signed tx
+        verify_params(&parsed_sig_info, &env_v010, &secret_msg)?;
+    }
 
-    let validated_msg = validate_msg(&decrypted_msg, contract_code.hash())?;
+    let mut validated_msg = decrypted_msg.clone();
+    if was_msg_encrypted.into() {
+        validated_msg = validate_msg(&decrypted_msg, contract_code.hash())?;
+    }
 
     trace!(
         "handle input afer decryption: {:?}",

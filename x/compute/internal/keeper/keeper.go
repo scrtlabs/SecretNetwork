@@ -70,7 +70,6 @@ type Keeper struct {
 	wasmer           wasm.Wasmer
 	queryPlugins     QueryPlugins
 	messenger        Messenger
-	responseHandler  ResponseHandler
 	// queryGasLimit is the max wasm gas that can be spent on executing a query with a contract
 	queryGasLimit uint64
 	serviceRouter MsgServiceRouter
@@ -133,7 +132,7 @@ func NewKeeper(
 		queryGasLimit:    wasmConfig.SmartQueryGasLimit,
 	}
 	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, &keeper).Merge(customPlugins)
-	keeper.responseHandler = NewContractResponseHandler(NewMessageDispatcher(keeper.messenger, keeper))
+
 	return keeper
 }
 
@@ -556,7 +555,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
-	params := types.NewEnv(ctx, caller, coins, contractAddress, contractKey)
+	env := types.NewEnv(ctx, caller, coins, contractAddress, contractKey)
 
 	// prepare querier
 	querier := QueryHandler{
@@ -565,7 +564,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	gas := gasForContract(ctx)
-	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, params, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, wasmTypes.HandleTypeExecute)
+	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, wasmTypes.HandleTypeExecute)
 	consumeGas(ctx, gasUsed)
 
 	if execErr != nil {
@@ -576,7 +575,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	case *v010wasmTypes.HandleResponse:
 		subMessages, err := V010MsgsToV1SubMsgs(contractAddress.String(), res.Messages)
 		if err != nil {
-			return nil, sdkerrors.Wrap(err, "couldn't convert v010 messages to v1 messages")
+			return nil, sdkerrors.Wrap(err, "couldn't convert v0.10 messages to v1 messages")
 		}
 
 		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, subMessages, res.Log, res.Data, msg, verificationInfo)
@@ -881,7 +880,8 @@ func (k *Keeper) handleContractResponse(
 	events := types.ContractLogsToSdkEvents(logs, contractAddr)
 	ctx.EventManager().EmitEvents(events)
 
-	return k.responseHandler.Handle(ctx, contractAddr, ibcPort, msgs, data, ogTx, ogSigInfo)
+	responseHandler := NewContractResponseHandler(NewMessageDispatcher(k.messenger, k))
+	return responseHandler.Handle(ctx, contractAddr, ibcPort, msgs, data, ogTx, ogSigInfo)
 }
 
 func gasForContract(ctx sdk.Context) uint64 {
@@ -1018,7 +1018,7 @@ func (h ContractResponseHandler) Handle(ctx sdk.Context, contractAddr sdk.AccAdd
 	result := origRspData
 	switch rsp, err := h.md.DispatchSubmessages(ctx, contractAddr, ibcPort, messages, ogTx, ogSigInfo); {
 	case err != nil:
-		return nil, sdkerrors.Wrap(err, "submessages")
+		return nil, err
 	case rsp != nil:
 		result = rsp
 	}
@@ -1027,7 +1027,6 @@ func (h ContractResponseHandler) Handle(ctx sdk.Context, contractAddr sdk.AccAdd
 
 // reply is only called from keeper internal functions (dispatchSubmessages) after processing the submessage
 func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error) {
-
 	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
@@ -1057,15 +1056,15 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	}
 
 	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, marshaledReply, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, ogSigInfo, wasmTypes.HandleTypeReply)
+	if execErr != nil {
+		return nil, sdkerrors.Wrap(types.ErrReplyFailed, execErr.Error())
+	}
 
 	switch res := response.(type) {
 	case *v010wasmTypes.HandleResponse:
-		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("response of reply should always be a CosmWasm v1 response type: %+v", res))
+		return nil, sdkerrors.Wrap(types.ErrReplyFailed, fmt.Sprintf("response of reply should always be a CosmWasm v1 response type: %+v", res))
 	case *v1wasmTypes.Response:
 		consumeGas(ctx, gasUsed)
-		if execErr != nil {
-			return nil, sdkerrors.Wrap(types.ErrReplyFailed, execErr.Error())
-		}
 
 		ctx.EventManager().EmitEvent(sdk.NewEvent(
 			types.EventTypeReply,
@@ -1074,7 +1073,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 
 		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Data, ogTx, ogSigInfo)
 		if err != nil {
-			return nil, sdkerrors.Wrap(err, "dispatch")
+			return nil, sdkerrors.Wrap(types.ErrReplyFailed, err.Error())
 		}
 
 		return data, nil

@@ -12,6 +12,7 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     Increment { addition: u64 },
     TransferMoney { amount: u64 },
+    RecursiveReply {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
