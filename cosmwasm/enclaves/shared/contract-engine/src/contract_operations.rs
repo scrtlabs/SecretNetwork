@@ -1,6 +1,7 @@
 use log::*;
 
 use enclave_ffi_types::{Ctx, EnclaveError};
+use serde_json::to_string;
 
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::wasm::CosmWasmApiVersion;
@@ -94,7 +95,8 @@ pub fn init(
 
     let decrypted_msg = secret_msg.decrypt()?;
 
-    let validated_msg = validate_msg(&decrypted_msg, contract_code.hash())?;
+    let (validated_msg, reply_to_contract_hash) =
+        validate_msg(&decrypted_msg, contract_code.hash())?;
 
     trace!(
         "init input after decryption: {:?}",
@@ -131,6 +133,8 @@ pub fn init(
             secret_msg.nonce,
             secret_msg.user_public_key,
             &canonical_contract_address,
+            &env_v010.contract_code_hash,
+            reply_to_contract_hash,
         )?;
 
         Ok(output)
@@ -345,8 +349,11 @@ pub fn handle(
     }
 
     let mut validated_msg = decrypted_msg.clone();
+    let mut reply_to_contract_hash: Option<Vec<u8>> = None;
     if was_msg_encrypted.into() {
-        validated_msg = validate_msg(&decrypted_msg, contract_code.hash())?;
+        let x = validate_msg(&decrypted_msg, contract_code.hash())?;
+        validated_msg = x.0;
+        reply_to_contract_hash = x.1;
     }
 
     trace!(
@@ -394,6 +401,8 @@ pub fn handle(
             secret_msg.nonce,
             secret_msg.user_public_key,
             &canonical_contract_address,
+            &env_v010.contract_code_hash,
+            reply_to_contract_hash,
         )?;
         Ok(output)
     })
@@ -453,7 +462,7 @@ pub fn query(
         "query input afer decryption: {:?}",
         String::from_utf8_lossy(&decrypted_msg)
     );
-    let validated_msg = validate_msg(&decrypted_msg, contract_code.hash())?;
+    let validated_msg = validate_msg(&decrypted_msg, contract_code.hash())?.0;
 
     let mut engine = start_engine(
         context,
@@ -483,6 +492,8 @@ pub fn query(
             secret_msg.nonce,
             secret_msg.user_public_key,
             &CanonicalAddr(Binary(Vec::new())), // Not used for queries (can't init a new contract from a query)
+            &"".to_string(), // Not used for queries (can't call a sub-message from a query),
+            None, // // Not used for queries (Query response is not replied to the caller),
         )?;
         Ok(output)
     })

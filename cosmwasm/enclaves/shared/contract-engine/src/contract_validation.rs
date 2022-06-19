@@ -132,7 +132,10 @@ pub fn validate_contract_key(
 }
 
 /// Validate that the message sent to the enclave (after decryption) was actually addressed to this contract.
-pub fn validate_msg(msg: &[u8], contract_hash: [u8; HASH_SIZE]) -> Result<Vec<u8>, EnclaveError> {
+pub fn validate_msg(
+    msg: &[u8],
+    contract_hash: [u8; HASH_SIZE],
+) -> Result<(Vec<u8>, Option<Vec<u8>>), EnclaveError> {
     if msg.len() < HEX_ENCODED_HASH_SIZE {
         warn!("Malformed message - expected contract code hash to be prepended to the msg");
         return Err(EnclaveError::ValidationFailure);
@@ -151,7 +154,21 @@ pub fn validate_msg(msg: &[u8], contract_hash: [u8; HASH_SIZE]) -> Result<Vec<u8
         return Err(EnclaveError::ValidationFailure);
     }
 
-    Ok(msg[HEX_ENCODED_HASH_SIZE..].to_vec())
+    let validated_msg = msg[HEX_ENCODED_HASH_SIZE..].to_vec();
+    let optional_json_value: serde_json::Result<serde_json::Value> =
+        serde_json::from_slice(&validated_msg);
+    return Ok(match optional_json_value {
+        Ok(_) => (validated_msg, None),
+        Err(_) => {
+            let mut reply_to_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] =
+                [0u8; HEX_ENCODED_HASH_SIZE];
+            reply_to_contract_hash.copy_from_slice(&validated_msg[0..HEX_ENCODED_HASH_SIZE]);
+            (
+                validated_msg[HEX_ENCODED_HASH_SIZE..].to_vec(),
+                Some(reply_to_contract_hash.to_vec()),
+            )
+        }
+    });
 }
 
 /// Verify all the parameters sent to the enclave match up, and were signed by the right account.
