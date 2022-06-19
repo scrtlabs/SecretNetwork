@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
@@ -83,9 +84,9 @@ func NewMessageHandler(
 // order to find the right one to process given message. If a handler cannot
 // process given message (returns ErrUnknownMsg), its result is ignored and the
 // next handler is executed.
-func (m MessageHandlerChain) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg) ([]sdk.Event, [][]byte, error) {
+func (m MessageHandlerChain) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg, ogMessageVersion wasmTypes.CosmosMsgVersion) ([]sdk.Event, [][]byte, error) {
 	for _, h := range m.handlers {
-		events, data, err := h.DispatchMsg(ctx, contractAddr, contractIBCPortID, msg)
+		events, data, err := h.DispatchMsg(ctx, contractAddr, contractIBCPortID, msg, ogMessageVersion)
 		switch {
 		case err == nil:
 			return events, data, nil
@@ -99,7 +100,7 @@ func (m MessageHandlerChain) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAd
 }
 
 // DispatchMsg publishes a raw IBC packet onto the channel.
-func (h IBCRawPacketHandler) DispatchMsg(ctx sdk.Context, _ sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg) (events []sdk.Event, data [][]byte, err error) {
+func (h IBCRawPacketHandler) DispatchMsg(ctx sdk.Context, _ sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg, ogMessageVersion wasmTypes.CosmosMsgVersion) (events []sdk.Event, data [][]byte, err error) {
 	if msg.IBC == nil || msg.IBC.SendPacket == nil {
 		return nil, nil, types.ErrUnknownMsg
 	}
@@ -511,19 +512,40 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *v1wasmTypes.WasmMsg) ([]sdk.Msg, 
 	}
 }
 
-func (h MessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg) ([]sdk.Event, [][]byte, error) {
+func (h MessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg, ogMessageVersion wasmTypes.CosmosMsgVersion) ([]sdk.Event, [][]byte, error) {
 	sdkMsgs, err := h.encoders.Encode(ctx, contractAddr, contractIBCPortID, msg)
 	if err != nil {
 		return nil, nil, err
 	}
-	for _, sdkMsg := range sdkMsgs {
-		_, _, err := h.handleSdkMessage(ctx, contractAddr, sdkMsg)
-		if err != nil {
-			return nil, nil, err
+
+	switch ogMessageVersion {
+	case wasmTypes.CosmosMsgVersionV010:
+		for _, sdkMsg := range sdkMsgs {
+			_, _, err := h.handleSdkMessage(ctx, contractAddr, sdkMsg)
+			if err != nil {
+				return nil, nil, err
+			}
+			//return sdkEvents, msgData, err
 		}
-		//return sdkEvents, msgData, err
+		return nil, nil, nil
+	case wasmTypes.CosmosMsgVersionV1:
+		var (
+			events []sdk.Event
+			data   [][]byte
+		)
+		for _, sdkMsg := range sdkMsgs {
+			sdkEvents, sdkData, err := h.handleSdkMessage(ctx, contractAddr, sdkMsg)
+			if err != nil {
+				return nil, nil, err
+			}
+			// append data
+			data = append(data, sdkData)
+			events = append(events, sdkEvents...)
+		}
+		return events, data, nil
 	}
-	return nil, nil, nil
+
+	return nil, nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Unknown variant of CosmosMsgVersion")
 }
 
 func (h MessageHandler) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg sdk.Msg) (sdk.Events, []byte, error) {
@@ -565,29 +587,20 @@ func (h MessageHandler) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Addre
 		//}
 	}
 
-	// todo: remove this when adding submessages
-	events := make(sdk.Events, len(res.Events))
+	var events []sdk.Event
+	data := make([]byte, len(res.Data))
+	copy(data, res.Data)
+	//
+	// convert Tendermint.Events to sdk.Event
+	sdkEvents := make(sdk.Events, len(res.Events))
 	for i := range res.Events {
-		events[i] = sdk.Event(res.Events[i])
+		sdkEvents[i] = sdk.Event(res.Events[i])
 	}
-	//
-	// redispatch all events, (type sdk.EventTypeMessage will be filtered out in the handler)
-	ctx.EventManager().EmitEvents(events)
-
-	// todo: add this when adding submessages
-	//data = make([]byte, len(res.Data))
-	//copy(data, res.Data)
-	//
-	//// convert Tendermint.Events to sdk.Event
-	//sdkEvents := make(sdk.Events, len(res.Events))
-	//for i := range res.Events {
-	//	sdkEvents[i] = sdk.Event(res.Events[i])
-	//}
 
 	// append message action attribute
-	//events = append(events, sdkEvents...)
+	events = append(events, sdkEvents...)
 
-	return nil, nil, nil
+	return events, data, nil
 }
 
 // convertWasmIBCTimeoutHeightToCosmosHeight converts a wasm type ibc timeout height to ibc module type height

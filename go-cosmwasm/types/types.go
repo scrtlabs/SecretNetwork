@@ -73,3 +73,10 @@ const (
 	HandleTypeExecute HandleType = iota
 	HandleTypeReply
 )
+
+type CosmosMsgVersion int
+
+const (
+	CosmosMsgVersionV010 CosmosMsgVersion = iota
+	CosmosMsgVersionV1
+)
