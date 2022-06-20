@@ -95,7 +95,7 @@ pub fn init(
 
     let decrypted_msg = secret_msg.decrypt()?;
 
-    let (validated_msg, reply_to_contract_hash) =
+    let (validated_msg, reply_recipient_contract_hash) =
         validate_msg(&decrypted_msg, contract_code.hash())?;
 
     trace!(
@@ -134,7 +134,7 @@ pub fn init(
             secret_msg.user_public_key,
             &canonical_contract_address,
             &env_v010.contract_code_hash,
-            reply_to_contract_hash,
+            reply_recipient_contract_hash,
         )?;
 
         Ok(output)
@@ -183,6 +183,7 @@ pub fn parse_message(
         WasMessageEncrypted,
         SecretMessage,
         Vec<u8>,
+        Option<u64>,
     ),
     EnclaveError,
 > {
@@ -234,7 +235,7 @@ pub fn parse_message(
                 SubMsgResult::Ok(response) => {
                     let data = response.data.unwrap();
 
-                    // First decrypt the message and then create new decrypted reply
+                    // First decrypt the message
                     let tmp_secret_msg = SecretMessage {
                         nonce: orig_secret_msg.nonce,
                         user_public_key: orig_secret_msg.user_public_key,
@@ -248,6 +249,8 @@ pub fn parse_message(
                         events: response.events,
                         data: Some(Binary(tmp_decrypted_msg)),
                     });
+
+                    let id : u64 = u64::from_be_bytes(&tmp_decrypted_msg_id.msg);
                     let decrypted_reply = Reply {
                         id: parsed_encrypted_reply.id,
                         result,
@@ -336,7 +339,7 @@ pub fn handle(
     // When the message is handle, we expect it always to be encrypted while in Reply for example it might be plaintext
     let parsed_handle_type = HandleType::try_from(handle_type)?;
 
-    let (should_validate_sig_info, was_msg_encrypted, secret_msg, decrypted_msg) =
+    let (should_validate_sig_info, was_msg_encrypted, secret_msg, decrypted_msg, msg_id) =
         parse_message(msg, &parsed_sig_info, &parsed_handle_type)?;
 
     /// There is no signature to verify when the input isn't signed.
@@ -349,11 +352,11 @@ pub fn handle(
     }
 
     let mut validated_msg = decrypted_msg.clone();
-    let mut reply_to_contract_hash: Option<Vec<u8>> = None;
+    let mut reply_params: Option<(Vec<u8>, u64)> = None;
     if was_msg_encrypted.into() {
         let x = validate_msg(&decrypted_msg, contract_code.hash())?;
         validated_msg = x.0;
-        reply_to_contract_hash = x.1;
+        reply_params = x.1; 
     }
 
     trace!(
@@ -402,7 +405,7 @@ pub fn handle(
             secret_msg.user_public_key,
             &canonical_contract_address,
             &env_v010.contract_code_hash,
-            reply_to_contract_hash,
+            reply_params,
         )?;
         Ok(output)
     })

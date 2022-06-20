@@ -1,3 +1,6 @@
+use std::intrinsics::size_of;
+
+use enclave_cosmwasm_v016_types::results::REPLY_ENCRYPTION_MAGIC_BYTES;
 use log::*;
 
 use enclave_ffi_types::EnclaveError;
@@ -135,7 +138,7 @@ pub fn validate_contract_key(
 pub fn validate_msg(
     msg: &[u8],
     contract_hash: [u8; HASH_SIZE],
-) -> Result<(Vec<u8>, Option<Vec<u8>>), EnclaveError> {
+) -> Result<(Vec<u8>, Option<(Vec<u8>, u64)>), EnclaveError> {
     if msg.len() < HEX_ENCODED_HASH_SIZE {
         warn!("Malformed message - expected contract code hash to be prepended to the msg");
         return Err(EnclaveError::ValidationFailure);
@@ -155,20 +158,23 @@ pub fn validate_msg(
     }
 
     let validated_msg = msg[HEX_ENCODED_HASH_SIZE..].to_vec();
-    let optional_json_value: serde_json::Result<serde_json::Value> =
-        serde_json::from_slice(&validated_msg);
-    return Ok(match optional_json_value {
-        Ok(_) => (validated_msg, None),
-        Err(_) => {
-            let mut reply_to_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] =
-                [0u8; HEX_ENCODED_HASH_SIZE];
-            reply_to_contract_hash.copy_from_slice(&validated_msg[0..HEX_ENCODED_HASH_SIZE]);
-            (
-                validated_msg[HEX_ENCODED_HASH_SIZE..].to_vec(),
-                Some(reply_to_contract_hash.to_vec()),
-            )
-        }
-    });
+    if validated_msg[0..(REPLY_ENCRYPTION_MAGIC_BYTES.len())] == REPLY_ENCRYPTION_MAGIC_BYTES {
+        validated_msg = validated_msg[REPLY_ENCRYPTION_MAGIC_BYTES.len()..].to_vec();
+
+        let mut sub_msg_id: u64 = u64::from_be_bytes(validated_msg[0..size_of::u64()]);
+        validated_msg = validated_msg[size_of::u64()..].to_vec();
+
+        let mut reply_recipient_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] =
+            [0u8; HEX_ENCODED_HASH_SIZE];
+        reply_recipient_contract_hash.copy_from_slice(&validated_msg[0..HEX_ENCODED_HASH_SIZE]);
+        Ok((
+            validated_msg[HEX_ENCODED_HASH_SIZE..].to_vec(),
+            Some((reply_recipient_contract_hash.to_vec(), sub_msg_id)),
+        ))
+
+    }
+
+    Ok((validated_msg, None))
 }
 
 /// Verify all the parameters sent to the enclave match up, and were signed by the right account.

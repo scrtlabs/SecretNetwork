@@ -57,6 +57,8 @@ pub enum BankMsg {
     Burn { amount: Vec<Coin> },
 }
 
+pub const REPLY_ENCRYPTION_MAGIC_BYTES: &[u8] = b"REPLY01";
+
 /// The message types of the staking module.
 ///
 /// See https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/cosmos/staking/v1beta1/tx.proto

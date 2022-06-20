@@ -3,6 +3,8 @@
 /// that is unique to the user and the enclave
 ///
 use super::types::{IoNonce, SecretMessage};
+use cosmwasm_v1_types::results::Reply;
+use enclave_cosmos_types::types::SigInfo;
 use enclave_cosmwasm_types as cosmwasm_v010_types;
 use enclave_cosmwasm_types::encoding::Binary;
 use enclave_cosmwasm_types::types::{CanonicalAddr, Coin};
@@ -18,6 +20,10 @@ use serde_json::json;
 use serde_json::Value;
 use sha2::Digest;
 
+/// The internal_reply_enclave_sig is being passed with the reply (Only if the reply is wasm reply)
+/// This is used by the receiver of the reply to:
+/// a. Verify the sender (Cotnract address)
+/// b. Authenticate the reply.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 enum WasmOutput {
@@ -40,10 +46,12 @@ enum WasmOutput {
     OkObjectV010 {
         #[serde(rename = "Ok")]
         ok: cosmwasm_v010_types::types::ContractResult,
+        internal_reply_enclave_sig: Option<Binary>,
     },
     OkObjectV1 {
         #[serde(rename = "ok")]
         ok: cosmwasm_v1_types::results::Response,
+        internal_reply_enclave_sig: Option<Binary>,
     },
 }
 
@@ -62,7 +70,7 @@ pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) 
 fn encrypt_serializable<T>(
     key: &AESKey,
     val: &T,
-    reply_to_contract_hash: &Option<Vec<u8>>,
+    reply_params: &Option<(Vec<u8>, u64)>,
 ) -> Result<String, EnclaveError>
 where
     T: ?Sized + Serialize,
@@ -74,7 +82,7 @@ where
 
     let trimmed = serialized.trim_start_matches('"').trim_end_matches('"');
 
-    encrypt_preserialized_string(key, trimmed, reply_to_contract_hash)
+    encrypt_preserialized_string(key, trimmed, reply_params)
 }
 
 // use this to encrypt a String that has already been serialized.  When that is the case, if
@@ -83,12 +91,12 @@ where
 fn encrypt_preserialized_string(
     key: &AESKey,
     val: &str,
-    reply_to_contract_hash: &Option<Vec<u8>>,
+    reply_params: &Option<(Vec<u8>, u64)>,
 ) -> Result<String, EnclaveError> {
-    let serialized = match reply_to_contract_hash {
-        Some(reply_to_contract_hash) => {
+    let serialized = match reply_params {
+        Some((reply_recipient_contract_hash, _)) => {
             let mut ser = vec![];
-            ser.extend_from_slice(&reply_to_contract_hash);
+            ser.extend_from_slice(&reply_recipient_contract_hash);
             ser.extend_from_slice(val.as_bytes());
             ser
         }
@@ -117,12 +125,12 @@ pub fn encrypt_output(
     user_public_key: Ed25519PublicKey,
     contract_addr: &CanonicalAddr,
     contract_hash: &String,
-    reply_to_contract_hash: Option<Vec<u8>>,
+    reply_params: Option<(Vec<u8>, u64)>,
 ) -> Result<Vec<u8>, EnclaveError> {
     // When encrypting an output we might encrypt an output that is a reply to a caller contract (Via "Reply" endpoint).
-    // Therefore if reply_to_contract_hash is not "None" we append it to any encrypted data besided submessages that are irrelevant for replies.
+    // Therefore if reply_recipient_contract_hash is not "None" we append it to any encrypted data besided submessages that are irrelevant for replies.
     // More info in: https://github.com/CosmWasm/cosmwasm/blob/v1.0.0/packages/std/src/results/submessages.rs#L192-L198
-    let key = calc_encryption_key(&nonce, &user_public_key);
+    let encryption_key = calc_encryption_key(&nonce, &user_public_key);
     trace!(
         "Output before encryption: {:?}",
         String::from_utf8_lossy(&output)
@@ -136,25 +144,28 @@ pub fn encrypt_output(
 
     match &mut output {
         WasmOutput::ErrObjectV010 { err } => {
-            let encrypted_err = encrypt_serializable(&key, err, &reply_to_contract_hash)?;
+            let encrypted_err = encrypt_serializable(&encryption_key, err, &reply_params)?;
 
             // Putting the error inside a 'generic_err' envelope, so we can encrypt the error itself
             *err = json!({"generic_err":{"msg":encrypted_err}});
         }
 
         WasmOutput::ErrStringV1 { err } => {
-            let encrypted_err = encrypt_preserialized_string(&key, err, &reply_to_contract_hash)?;
+            let encrypted_err = encrypt_preserialized_string(&encryption_key, err, &reply_params)?;
 
             // Adding encrypted string to indicate that the error is encrypted
             *err = format!("encrypted: {}", encrypted_err);
         }
 
         WasmOutput::QueryOkString { ok } | WasmOutput::QueryOkStringV1 { ok } => {
-            *ok = encrypt_serializable(&key, ok, &reply_to_contract_hash)?;
+            *ok = encrypt_serializable(&encryption_key, ok, &reply_params)?;
         }
 
         // Encrypt all Wasm messages (keeps Bank, Staking, etc.. as is)
-        WasmOutput::OkObjectV010 { ok } => {
+        WasmOutput::OkObjectV010 {
+            ok,
+            internal_reply_enclave_sig,
+        } => {
             for msg in &mut ok.messages {
                 if let cosmwasm_v010_types::types::CosmosMsg::Wasm(wasm_msg) = msg {
                     encrypt_v010_wasm_msg(wasm_msg, nonce, user_public_key, contract_addr)?;
@@ -163,25 +174,57 @@ pub fn encrypt_output(
 
             // v0.10: The logs that will be emitted as part of a "wasm" event.
             for log in ok.log.iter_mut().filter(|log| log.encrypted) {
-                log.key = encrypt_preserialized_string(&key, &log.key, &reply_to_contract_hash)?;
+                log.key = encrypt_preserialized_string(&encryption_key, &log.key, &reply_params)?;
                 log.value =
-                    encrypt_preserialized_string(&key, &log.value, &reply_to_contract_hash)?;
+                    encrypt_preserialized_string(&encryption_key, &log.value, &reply_params)?;
             }
 
             if let Some(data) = &mut ok.data {
                 *data = Binary::from_base64(&encrypt_serializable(
-                    &key,
+                    &encryption_key,
                     data,
-                    &reply_to_contract_hash,
+                    &reply_params,
                 )?)?;
             }
+
+            *internal_reply_enclave_sig = match reply_params {
+                Some(r) => {
+                    let reply = Reply {
+                        id: 0,
+                        result: cosmwasm_v1_types::results::ContractResult::Ok(
+                            cosmwasm_v1_types::results::SubMsgExecutionResponse {
+                                events: ok.log,
+                                data: ok.data,
+                            },
+                        ),
+                    };
+                    let tmp_secret_msg = SecretMessage {
+                        nonce,
+                        user_public_key,
+                        msg: serde_json::to_vec(&reply),
+                    };
+                    Some(create_callback_signature(
+                        contract_addr,
+                        &tmp_secret_msg,
+                        &[Coin],
+                    ))
+                }
+                None => None, // Not a reply, we don't need enclave sig
+            }
         }
-        WasmOutput::OkObjectV1 { ok } => {
+        WasmOutput::OkObjectV1 {
+            ok,
+            internal_reply_enclave_sig,
+        } => {
             for sub_msg in &mut ok.messages {
                 if let cosmwasm_v1_types::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
-                    encrypt_v016_wasm_msg(
+                    // The ID can be extracted from the encrypted wasm msg
+                    // We don't encrypt it here to remain with the same type (u64)
+                    sub_msg.id = 0;
+                    encrypt_v1_wasm_msg(
                         wasm_msg,
                         &sub_msg.reply_on,
+                        sub_msg.id,
                         nonce,
                         user_public_key,
                         contract_addr,
@@ -192,27 +235,52 @@ pub fn encrypt_output(
 
             // v1: The attributes that will be emitted as part of a "wasm" event.
             for attr in ok.attributes.iter_mut().filter(|attr| attr.encrypted) {
-                attr.key = encrypt_preserialized_string(&key, &attr.key, &reply_to_contract_hash)?;
+                attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &reply_params)?;
                 attr.value =
-                    encrypt_preserialized_string(&key, &attr.value, &reply_to_contract_hash)?;
+                    encrypt_preserialized_string(&encryption_key, &attr.value, &reply_params)?;
             }
 
             // v1: Extra, custom events separate from the main wasm one. These will have "wasm-"" prepended to the type.
             for event in ok.events.iter_mut() {
                 for attr in event.attributes.iter_mut().filter(|attr| attr.encrypted) {
                     attr.key =
-                        encrypt_preserialized_string(&key, &attr.key, &reply_to_contract_hash)?;
+                        encrypt_preserialized_string(&encryption_key, &attr.key, &reply_params)?;
                     attr.value =
-                        encrypt_preserialized_string(&key, &attr.value, &reply_to_contract_hash)?;
+                        encrypt_preserialized_string(&encryption_key, &attr.value, &reply_params)?;
                 }
             }
 
             if let Some(data) = &mut ok.data {
                 *data = cosmwasm_v1_types::binary::Binary::from_base64(&encrypt_serializable(
-                    &key,
+                    &encryption_key,
                     data,
-                    &reply_to_contract_hash,
+                    &reply_params,
                 )?)?;
+            }
+
+            *internal_reply_enclave_sig = match reply_params {
+                Some(r) => {
+                    let reply = Reply {
+                        id: 0,
+                        result: cosmwasm_v1_types::results::ContractResult::Ok(
+                            cosmwasm_v1_types::results::SubMsgExecutionResponse {
+                                events: ok.attributes,
+                                data: ok.data,
+                            },
+                        ),
+                    };
+                    let tmp_secret_msg = SecretMessage {
+                        nonce,
+                        user_public_key,
+                        msg: serde_json::to_vec(&reply),
+                    };
+                    Some(create_callback_signature(
+                        contract_addr,
+                        &tmp_secret_msg,
+                        &[Coin],
+                    ))
+                }
+                None => None, // Not a reply, we don't need enclave sig
             }
         }
     };
@@ -270,13 +338,14 @@ fn encrypt_v010_wasm_msg(
     Ok(())
 }
 
-fn encrypt_v016_wasm_msg(
+fn encrypt_v1_wasm_msg(
     wasm_msg: &mut cosmwasm_v1_types::results::WasmMsg,
     reply_on: &ReplyOn,
+    msg_id: u64, // In every submessage there is a field called "id", currently used only by "reply".
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
     contract_addr: &CanonicalAddr,
-    reply_recipient_hash: &String,
+    reply_recipient_contract_hash: &String,
 ) -> Result<(), EnclaveError> {
     match wasm_msg {
         cosmwasm_v1_types::results::WasmMsg::Execute {
@@ -301,7 +370,10 @@ fn encrypt_v016_wasm_msg(
             // it will treat the next 64 bytes as a recipient code-hash and prepend this code-hash to its output.
             let mut hash_appended_msg = code_hash.as_bytes().to_vec();
             if *reply_on != ReplyOn::Never {
-                hash_appended_msg.extend_from_slice(reply_recipient_hash.as_bytes());
+                hash_appended_msg
+                    .extend_from_slice(cosmwasm_v1_types::results::REPLY_ENCRYPTION_MAGIC_BYTES);
+                hash_appended_msg.extend_from_slice(&msg_id.to_be_bytes());
+                hash_appended_msg.extend_from_slice(reply_recipient_contract_hash.as_bytes());
             }
             hash_appended_msg.extend_from_slice(msg.as_slice());
 

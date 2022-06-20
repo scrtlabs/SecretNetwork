@@ -135,7 +135,7 @@ func (e UnsupportedRequest) Error() string {
 	return fmt.Sprintf("unsupported request: %s", e.Kind)
 }
 
-// Reply is encrypted on when it is a contract reply and it is OK since error is always reducted to be a string.
+// Reply is encrypted only when it is a contract reply and it is OK since error is always reducted to be a string.
 func isReplyEncrypted(msg v1wasmTypes.CosmosMsg, reply v1wasmTypes.Reply) bool {
 	return (msg.Wasm != nil) && (reply.Result.Ok != nil)
 }
