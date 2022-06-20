@@ -1,3 +1,6 @@
+#![feature(alloc_error_hook)]
+#![feature(backtrace)]
+
 use core::sync::atomic::{AtomicBool, Ordering};
 use enclave_ffi_types::EnclaveError;
 use lazy_static::lazy_static;
@@ -5,7 +8,7 @@ use lazy_static::lazy_static;
 #[cfg(not(feature = "production"))]
 use std::backtrace::{self, PrintFormat};
 
-use std::sync::SgxMutex;
+use std::sync::Mutex;
 /// SafetyBuffer is meant to occupy space on the heap, so when a memory
 /// allocation fails we will free this buffer to allow safe panic unwinding
 /// This is needed because while unwinding from panic some destructors try
@@ -78,7 +81,7 @@ lazy_static! {
     /// 2 MiB is the minimum allowed buffer. If we don't succeed to allocate 2 MiB, we throw a panic,
     /// if we do succeed to allocate 2 MiB but less than 4 MiB than we move on and will try to allocate
     /// the rest on the next entry to the enclave.
-    static ref SAFETY_BUFFER: SgxMutex<SafetyBuffer> = SgxMutex::new(SafetyBuffer::new(4 * 1024, 2 * 1024));
+    static ref SAFETY_BUFFER: Mutex<SafetyBuffer> = Mutex::new(SafetyBuffer::new(4 * 1024, 2 * 1024));
 }
 
 thread_local! {

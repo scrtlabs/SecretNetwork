@@ -1,5 +1,5 @@
 use enclave_ffi_types::HealthCheckResult;
-use sgx_types::*;
+// use sgx_types::*;
 
 use log::info;
 

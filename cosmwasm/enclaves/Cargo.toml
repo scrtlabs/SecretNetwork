@@ -13,8 +13,9 @@ incremental = false
 codegen-units = 16
 rpath = false
 
-[patch.crates-io]
-rand_core = { git = "https://github.com/mesalock-linux/rand-sgx", default-features = false, features = [
-  "mesalock_sgx"
-] }
-zeroize = { rev = "b8488228e3fdacbfdb3ea8a6117919871637d111", git = "https://github.com/enigmampc/zeroize" }
+#
+#[patch.crates-io]
+#rand_core = { git = "https://github.com/mesalock-linux/rand-sgx", default-features = false, features = [
+#  "mesalock_sgx"
+#] }
+#zeroize = { rev = "b8488228e3fdacbfdb3ea8a6117919871637d111", git = "https://github.com/enigmampc/zeroize" }
