@@ -36,3 +36,4 @@ aes-siv = "=0.6.2"
 x25519-dalek = { version = "=1.2.0", default-features = false, features = [
   "u64_backend"
 ] }
+rand = "0.7.3"

@@ -9,7 +9,7 @@ GRAMINE_LOG_LEVEL = error
 
 USE_MUSL ?= 0
 
-BIN_NAME = pruntime
+BIN_NAME = secret-query-enclave
 
 ifeq ($(USE_MUSL),1)
 BIN_FILE = ../target/x86_64-unknown-linux-musl/release/${BIN_NAME}
@@ -24,7 +24,7 @@ CARGO_ARGS += -vv
 endif
 
 PREFIX ?= ../bin
-PRUNTIME_SEAL_DIR ?= data
+SEAL_DIR ?= data
 
 .PHONY: all
 all: ${BIN_NAME} ${BIN_NAME}.manifest
@@ -45,7 +45,7 @@ ${BIN_NAME}.manifest: ${BIN_NAME}.manifest.template
 		-Dinstall_dir=$(INSTALL_DIR) \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Dra_client_spid=${IAS_SPID} \
-		-Dseal_dir=${PRUNTIME_SEAL_DIR} \
+		-Dseal_dir=${SEAL_DIR} \
 		$< $@
 
 ${BIN_NAME}.manifest.sgx: ${BIN_NAME}.manifest ${BIN_FILE}
@@ -86,8 +86,8 @@ run: all
 ifeq ($(SGX),1)
 	rm -rf data
 	mkdir -p data
-	gramine-sgx pruntime
+	gramine-sgx secret-query-enclave
 else
 	mkdir -p data
-	gramine-direct pruntime
+	gramine-direct secret-query-enclave
 endif

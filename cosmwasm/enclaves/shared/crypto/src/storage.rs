@@ -3,8 +3,8 @@ use crate::traits::SealedKey;
 use crate::{AESKey, KeyPair, Seed, SECRET_KEY_SIZE};
 use enclave_ffi_types::EnclaveError;
 use log::*;
+use std::fs::File;
 use std::io::{Read, Write};
-use std::sgxfs::SgxFile;
 
 impl SealedKey for AESKey {
     fn seal(&self, filepath: &str) -> Result<(), EnclaveError> {
@@ -41,7 +41,7 @@ impl SealedKey for KeyPair {
 }
 
 fn seal(data: &[u8; 32], filepath: &str) -> Result<(), EnclaveError> {
-    let mut file = SgxFile::create(filepath).map_err(|_err| {
+    let mut file = File::create(filepath).map_err(|_err| {
         error!("error creating file {}: {:?}", filepath, _err);
         EnclaveError::FailedSeal
     })?;
@@ -53,7 +53,7 @@ fn seal(data: &[u8; 32], filepath: &str) -> Result<(), EnclaveError> {
 }
 
 fn open(filepath: &str) -> Result<Ed25519PrivateKey, EnclaveError> {
-    let mut file = SgxFile::open(filepath).map_err(|_err| EnclaveError::FailedUnseal)?;
+    let mut file = File::open(filepath).map_err(|_err| EnclaveError::FailedUnseal)?;
 
     let mut buf = Ed25519PrivateKey::default();
     let n = file

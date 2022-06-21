@@ -426,8 +426,8 @@ pub fn verify_quote_status(
 
 #[cfg(feature = "test")]
 pub mod tests {
+    use std::fs::File;
     use std::io::Read;
-    use std::untrusted::fs::File;
 
     use enclave_ffi_types::NodeAuthResult;
 

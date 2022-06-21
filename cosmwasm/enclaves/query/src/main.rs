@@ -3,7 +3,6 @@
 // extern crate sgx_tstd as std;
 
 //extern crate sgx_types;
-
 use std::env;
 
 #[allow(unused_imports)]
@@ -64,4 +63,8 @@ fn set_log_level_or_default(default: LevelFilter, max_level: LevelFilter) {
     }
 
     log::set_max_level(log_level);
+}
+
+fn main() {
+    println!("Hello from query enclave");
 }

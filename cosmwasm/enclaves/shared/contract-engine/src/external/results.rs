@@ -1,4 +1,5 @@
-use sgx_types::sgx_status_t;
+//use sgx_types::sgx_status_t;
+use enclave_utils::sgx_status_t;
 
 use enclave_ffi_types::{
     EnclaveError, HandleResult, InitResult, QueryResult, UntrustedVmError, UserSpaceBuffer,

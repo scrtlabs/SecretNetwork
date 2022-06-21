@@ -31,7 +31,7 @@ serde_json = "1.0.81"
 #  "derive"
 # ] }
 # serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
-#base64 = "0.13.0"
+base64 = "0.13.0"
 #base64 = { rev = "dc7389e10817b078f289386b3b6a852ab6c4c021", git = "https://github.com/mesalock-linux/rust-base64-sgx" }
 protobuf = { version = "2.25.2" }
 lazy_static = "1.4"
@@ -47,6 +47,7 @@ secp256k1 = { version = "0.21.3", features = ["recovery"] }
 ed25519-zebra = { version = "=2.2.0", default-features = false }
 rand_core = "0.5.0"
 rand_chacha = { version = "0.2.1", default-features = false }
+
 
 [dependencies.wasmi]
 git = "https://github.com/paritytech/wasmi"

@@ -4,7 +4,7 @@ use super::traits::{AlignedMemory, ExportECKey, EC_256_PRIVATE_KEY_SIZE};
 use crate::errors::CryptoError;
 
 use crate::ed25519::Ed25519PrivateKey;
-use sgx_types::sgx_align_ec256_private_t;
+// use sgx_types::sgx_align_ec256_private_t;
 
 pub const SEED_KEY_SIZE: usize = 32;
 
@@ -14,8 +14,8 @@ pub const SYMMETRIC_KEY_SIZE: usize = 256 / 8;
 //pub const SEED_SIZE: usize = 32;
 /// The size of secret keys
 
-type AlignedKey = sgx_align_ec256_private_t;
-type AlignedSeed = sgx_align_ec256_private_t;
+type AlignedKey = SgxAlignEc256PrivateT;
+type AlignedSeed = SgxAlignEc256PrivateT;
 
 /// symmetric key we use for encryption.
 pub type SymmetricKey = [u8; SYMMETRIC_KEY_SIZE];
@@ -28,6 +28,21 @@ pub type DhKey = SymmetricKey;
 
 // #[derive(Debug, Clone, Copy)]
 // pub struct AESKey(SymmetricKey);
+pub type uint8_t = u8;
+pub const SGX_ECP256_KEY_SIZE: usize = 32;
+
+#[repr(C)]
+#[derive(Copy, Clone, Default)]
+pub struct sgx_ec256_private_t {
+    pub r: [uint8_t; SGX_ECP256_KEY_SIZE],
+}
+
+#[repr(C, align(64))]
+#[derive(Copy, Clone, Default)]
+pub struct SgxAlignEc256PrivateT {
+    _pad: [uint8_t; 8],
+    pub key: sgx_ec256_private_t,
+}
 
 #[repr(C, align(64))]
 #[derive(Clone, Copy, Default)]

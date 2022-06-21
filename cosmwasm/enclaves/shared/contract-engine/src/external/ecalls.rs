@@ -1,18 +1,20 @@
 use std::ffi::c_void;
 use std::panic;
-use std::sync::SgxMutex;
+use std::sync::Mutex;
 
 use lazy_static::lazy_static;
 use log::*;
 
-use sgx_types::sgx_status_t;
+// use sgx_types::sgx_status_t;
+use enclave_utils::sgx_status_t;
 
 use enclave_ffi_types::{
     Ctx, EnclaveBuffer, EnclaveError, HandleResult, HealthCheckResult, InitResult, QueryResult,
     RuntimeConfiguration,
 };
 
-use enclave_utils::{oom_handler, recursion_depth, validate_const_ptr, validate_mut_ptr};
+//, validate_const_ptr, validate_mut_ptr
+use enclave_utils::{oom_handler, recursion_depth};
 
 use crate::external::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
@@ -20,7 +22,7 @@ use crate::external::results::{
 };
 
 lazy_static! {
-    static ref ECALL_ALLOCATE_STACK: SgxMutex<Vec<EnclaveBuffer>> = SgxMutex::new(Vec::new());
+    static ref ECALL_ALLOCATE_STACK: Mutex<Vec<EnclaveBuffer>> = Mutex::new(Vec::new());
 }
 
 /// # Safety
@@ -53,7 +55,7 @@ unsafe fn ecall_allocate_impl(buffer: *const u8, length: usize) -> EnclaveBuffer
         return EnclaveBuffer::default();
     }
 
-    validate_const_ptr!(buffer, length as usize, EnclaveBuffer::default());
+    // validate_const_ptr!(buffer, length as usize, EnclaveBuffer::default());
 
     let slice = std::slice::from_raw_parts(buffer, length);
     let result = panic::catch_unwind(|| {
@@ -180,11 +182,11 @@ pub unsafe extern "C" fn ecall_init(
     }
 
     let failed_call = || result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
-    validate_mut_ptr!(used_gas as _, std::mem::size_of::<u64>(), failed_call());
-    validate_const_ptr!(env, env_len as usize, failed_call());
-    validate_const_ptr!(msg, msg_len as usize, failed_call());
-    validate_const_ptr!(contract, contract_len as usize, failed_call());
-    validate_const_ptr!(sig_info, sig_info_len as usize, failed_call());
+    // validate_mut_ptr!(used_gas as _, std::mem::size_of::<u64>(), failed_call());
+    // validate_const_ptr!(env, env_len as usize, failed_call());
+    // validate_const_ptr!(msg, msg_len as usize, failed_call());
+    // validate_const_ptr!(contract, contract_len as usize, failed_call());
+    // validate_const_ptr!(sig_info, sig_info_len as usize, failed_call());
 
     let contract = std::slice::from_raw_parts(contract, contract_len);
     let env = std::slice::from_raw_parts(env, env_len);
@@ -265,11 +267,11 @@ pub unsafe extern "C" fn ecall_handle(
 
     let failed_call =
         || result_handle_success_to_handleresult(Err(EnclaveError::FailedFunctionCall));
-    validate_mut_ptr!(used_gas as _, std::mem::size_of::<u64>(), failed_call());
-    validate_const_ptr!(env, env_len as usize, failed_call());
-    validate_const_ptr!(msg, msg_len as usize, failed_call());
-    validate_const_ptr!(contract, contract_len as usize, failed_call());
-    validate_const_ptr!(sig_info, sig_info_len as usize, failed_call());
+    // validate_mut_ptr!(used_gas as _, std::mem::size_of::<u64>(), failed_call());
+    // validate_const_ptr!(env, env_len as usize, failed_call());
+    // validate_const_ptr!(msg, msg_len as usize, failed_call());
+    // validate_const_ptr!(contract, contract_len as usize, failed_call());
+    // validate_const_ptr!(sig_info, sig_info_len as usize, failed_call());
 
     let contract = std::slice::from_raw_parts(contract, contract_len);
     let env = std::slice::from_raw_parts(env, env_len);
@@ -403,10 +405,10 @@ unsafe fn ecall_query_impl(
     }
 
     let failed_call = || result_query_success_to_queryresult(Err(EnclaveError::FailedFunctionCall));
-    validate_mut_ptr!(used_gas as _, std::mem::size_of::<u64>(), failed_call());
-    validate_const_ptr!(env, env_len as usize, failed_call());
-    validate_const_ptr!(msg, msg_len as usize, failed_call());
-    validate_const_ptr!(contract, contract_len as usize, failed_call());
+    // validate_mut_ptr!(used_gas as _, std::mem::size_of::<u64>(), failed_call());
+    // validate_const_ptr!(env, env_len as usize, failed_call());
+    // validate_const_ptr!(msg, msg_len as usize, failed_call());
+    // validate_const_ptr!(contract, contract_len as usize, failed_call());
 
     let contract = std::slice::from_raw_parts(contract, contract_len);
     let env = std::slice::from_raw_parts(env, env_len);

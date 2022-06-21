@@ -1,12 +1,9 @@
-#![feature(alloc_error_hook)]
-#![feature(backtrace)]
-
 use core::sync::atomic::{AtomicBool, Ordering};
 use enclave_ffi_types::EnclaveError;
 use lazy_static::lazy_static;
 
-#[cfg(not(feature = "production"))]
-use std::backtrace::{self, PrintFormat};
+// #[cfg(not(feature = "production"))]
+// use std::backtrace::{self, PrintFormat};
 
 use std::sync::Mutex;
 /// SafetyBuffer is meant to occupy space on the heap, so when a memory
@@ -88,20 +85,20 @@ thread_local! {
     static OOM_HAPPENED: AtomicBool = AtomicBool::new(false);
 }
 
-#[cfg(all(not(feature = "production"), not(feature = "query-only")))]
-fn enable_backtraces() {
-    let _ = backtrace::enable_backtrace("librust_cosmwasm_enclave.signed.so", PrintFormat::Full);
-}
+// #[cfg(all(not(feature = "production"), not(feature = "query-only")))]
+// fn enable_backtraces() {
+//     let _ = backtrace::enable_backtrace("librust_cosmwasm_enclave.signed.so", PrintFormat::Full);
+// }
+//
+// #[cfg(all(not(feature = "production"), feature = "query-only"))]
+// fn enable_backtraces() {
+//     let _ = backtrace::enable_backtrace(
+//         "librust_cosmwasm_query_enclave.signed.so",
+//         PrintFormat::Full,
+//     );
+// }
 
-#[cfg(all(not(feature = "production"), feature = "query-only"))]
-fn enable_backtraces() {
-    let _ = backtrace::enable_backtrace(
-        "librust_cosmwasm_query_enclave.signed.so",
-        PrintFormat::Full,
-    );
-}
-
-#[cfg(feature = "production")]
+// #[cfg(feature = "production")]
 fn enable_backtraces() {}
 
 fn oom_handler(layout: std::alloc::Layout) {

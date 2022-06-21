@@ -1,10 +1,11 @@
 use super::keys::DhKey;
 
 use super::traits::{AlignedMemory, ExportECKey, EC_256_PRIVATE_KEY_SIZE};
-use sgx_types::sgx_align_ec256_private_t;
+//use sgx_types::sgx_align_ec256_private_t;
 
 // use x25519_dalek;
 
+use crate::keys::SgxAlignEc256PrivateT;
 use crate::CryptoError;
 
 use super::rng::rand_slice;
@@ -12,7 +13,7 @@ use super::rng::rand_slice;
 pub const SECRET_KEY_SIZE: usize = 32;
 pub const PUBLIC_KEY_SIZE: usize = 32;
 
-type AlignedEc256PrivateKey = sgx_align_ec256_private_t;
+type AlignedEc256PrivateKey = SgxAlignEc256PrivateT;
 
 pub type Ed25519PublicKey = [u8; 32];
 

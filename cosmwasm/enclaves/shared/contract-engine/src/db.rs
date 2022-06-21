@@ -1,6 +1,7 @@
 use log::*;
 
-use sgx_types::sgx_status_t;
+//use sgx_types::sgx_status_t;
+use enclave_utils::sgx_status_t;
 
 use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError};
 
@@ -53,7 +54,7 @@ pub fn read_encrypted_key(
 ) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
     let scrambled_field_name = field_name_digest(key, contract_key);
 
-    info!(
+    trace!(
         "Reading from scrambled field name: {:?}",
         scrambled_field_name
     );

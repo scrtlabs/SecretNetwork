@@ -1,4 +1,4 @@
-use std::sync::SgxRwLock;
+use std::sync::RwLock;
 
 use lazy_static::lazy_static;
 use log::*;
@@ -18,8 +18,8 @@ use super::memory::validate_memory;
 use super::wasm::{create_builder, ContractOperation, WasmiImportResolver};
 
 lazy_static! {
-    static ref MODULE_CACHE: SgxRwLock<LruCache<[u8; HASH_SIZE], wasmi::Module>> =
-        SgxRwLock::new(LruCache::new(0));
+    static ref MODULE_CACHE: RwLock<LruCache<[u8; HASH_SIZE], wasmi::Module>> =
+        RwLock::new(LruCache::new(0));
 }
 
 pub fn configure_module_cache(cap: usize) {
