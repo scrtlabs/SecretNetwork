@@ -1,8 +1,9 @@
+use lazy_static::lazy_static;
 use log::*;
-
-use wasmi::{ModuleRef, RuntimeValue};
+use wasmi::{ModuleRef, RuntimeValue, StackRecycler};
 
 use enclave_ffi_types::EnclaveError;
+use std::time::Instant;
 
 use super::contract::ContractInstance;
 use crate::errors::{wasmi_error_to_enclave_error, WasmEngineError};
@@ -11,6 +12,11 @@ pub struct Engine {
     contract_instance: ContractInstance,
     module: ModuleRef,
 }
+//         let mut value_stack = StackRecycler::default();
+//
+// lazy_static! {
+//     static ref STACK_RECYCLER: StackRecycler = StackRecycler::default();
+// }
 
 impl Engine {
     pub fn new(contract_instance: ContractInstance, module: ModuleRef) -> Self {
@@ -73,7 +79,7 @@ impl Engine {
     }
 
     pub fn handle(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, EnclaveError> {
-        info!("Invoking handle() in wasm");
+        //info!("Invoking handle() in wasm");
 
         // Itzik: leaving this here as an example in case we will want to do something like this in the future
 
@@ -100,16 +106,24 @@ impl Engine {
         //         Err(EnclaveError::InternalError)
         //     }
         // }?;
+        let mut start = Instant::now();
+        let mut stack_recycler: StackRecycler = StackRecycler::default();
+        let mut duration = start.elapsed();
+        println!(
+            "Time elapsed in StackRecycler::default() is: {:?}",
+            duration
+        );
 
         match self
             .module
-            .invoke_export(
+            .invoke_export_with_stack(
                 "handle",
                 &[
                     RuntimeValue::I32(env_ptr as i32),
                     RuntimeValue::I32(msg_ptr as i32),
                 ],
                 &mut self.contract_instance,
+                &mut stack_recycler,
             )
             .map_err(wasmi_error_to_enclave_error)?
         {

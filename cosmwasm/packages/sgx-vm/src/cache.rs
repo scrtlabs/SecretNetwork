@@ -4,6 +4,7 @@ use std::io::{Read, Write};
 use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 /*
 use crate::backends::{backend, compile};
@@ -106,8 +107,12 @@ where
     /// If the given ID is not found or the content does not match the hash (=ID), an error is returned.
     pub fn load_wasm(&self, checksum: &Checksum) -> VmResult<Vec<u8>> {
         let inner = self.inner.lock().unwrap();
+        let start = Instant::now();
         let code = load_wasm_from_disk(&inner.wasm_path, checksum)?;
         // verify hash matches (integrity check)
+        let duration = start.elapsed();
+        println!("Time elapsed in load_wasm_from_disk() is: {:?}", duration);
+
         if Checksum::generate(&code) != *checksum {
             Err(VmError::integrity_err())
         } else {
