@@ -269,6 +269,10 @@ func queryHelperImpl(
 	// this is to reset the event manager, so we won't get
 	// events from past calls
 	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
+	if gas == 0 {
+		gasMeter = &WasmCounterGasMeter{0, sdk.NewInfiniteGasMeter()}
+	}
+
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
@@ -276,7 +280,7 @@ func queryHelperImpl(
 		log.NewNopLogger(),
 	).WithGasMeter(gasMeter)
 
-	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz, false)
+	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz)
 
 	if wasmCallCount < 0 {
 		// default, just check that at least 1 call happend
@@ -912,7 +916,7 @@ func TestQueryNotEncryptedInputError(t *testing.T) {
 	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	_, err := keeper.QuerySmart(ctx, contractAddress, []byte(`{"owner":{}}`), false)
+	_, err := keeper.QuerySmart(ctx, contractAddress, []byte(`{"owner":{}}`))
 	require.Error(t, err)
 
 	require.Contains(t, err.Error(), "failed to decrypt data")
@@ -2770,4 +2774,42 @@ func TestBenchmarkEd25519BatchVerifyAPI(t *testing.T) {
 
 	elapsed := time.Since(start)
 	fmt.Printf("TestBenchmarkEd25519BatchVerifyAPI took %s\n", elapsed)
+}
+
+func TestBenchmarkQueryWithoutGasInjection(t *testing.T) {
+	t.SkipNow()
+	// Assaf: I wrote the benchmark like this because the init functions take testing.T
+	// and not testing.B and I just wanted to quickly get a feel for the perf improvments
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+
+	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests)
+
+	iterations := 10
+
+	start := time.Now()
+	qRes, qErr := queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"secp256k1_verify_from_crate":{"iterations":%d,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, iterations), true, 0)
+	require.Empty(t, qErr)
+	require.JSONEq(t, `true`, qRes)
+	elapsed := time.Since(start)
+
+	fmt.Printf("TestBenchmarkQueryWithoutGasInjection did %d iterations in %s\n", iterations, elapsed)
+}
+
+func TestBenchmarkQueryWithGasInjection(t *testing.T) {
+	t.SkipNow()
+	// Assaf: I wrote the benchmark like this because the init functions take testing.T
+	// and not testing.B and I just wanted to quickly get a feel for the perf improvments
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+
+	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests)
+
+	iterations := 10
+
+	start := time.Now()
+	qRes, qErr := queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"secp256k1_verify_from_crate":{"iterations":%d,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, iterations), true, defaultGasForTests*defaultGasForTests)
+	require.Empty(t, qErr)
+	require.JSONEq(t, `true`, qRes)
+	elapsed := time.Since(start)
+
+	fmt.Printf("TestBenchmarkQueryWithGasInjection did %d iterations in %s\n", iterations, elapsed)
 }

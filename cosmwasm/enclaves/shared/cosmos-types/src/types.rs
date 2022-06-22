@@ -43,6 +43,23 @@ impl<'code> ContractCode<'code> {
     pub fn hash(&self) -> [u8; HASH_SIZE] {
         self.hash
     }
+
+    /// if gas_limit == 0
+    /// compilation won't inject gas counter
+    /// therefore different cache items with and without gas limit
+    pub fn cache_key(&self, gas_limit: u64) -> [u8; HASH_SIZE + 1] {
+        let mut tmp_vec = vec![];
+        tmp_vec.extend_from_slice(&self.hash());
+        if gas_limit == 0 {
+            tmp_vec.extend_from_slice(&vec![0].as_slice());
+        } else {
+            tmp_vec.extend_from_slice(&vec![1].as_slice());
+        }
+
+        let mut res: [u8; HASH_SIZE + 1] = [0; HASH_SIZE + 1];
+        res.copy_from_slice(tmp_vec.as_slice());
+        res
+    }
 }
 
 #[derive(PartialEq, Clone, Debug)]

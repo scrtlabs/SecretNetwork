@@ -18,7 +18,7 @@ use super::memory::validate_memory;
 use super::wasm::{create_builder, ContractOperation, WasmiImportResolver};
 
 lazy_static! {
-    static ref MODULE_CACHE: SgxRwLock<LruCache<[u8; HASH_SIZE], wasmi::Module>> =
+    static ref MODULE_CACHE: SgxRwLock<LruCache<[u8; HASH_SIZE + 1], wasmi::Module>> =
         SgxRwLock::new(LruCache::new(0));
 }
 
@@ -30,6 +30,7 @@ pub fn configure_module_cache(cap: usize) {
 pub fn create_module_instance(
     contract_code: ContractCode,
     operation: ContractOperation,
+    gas_limit: u64,
 ) -> Result<ModuleRef, EnclaveError> {
     debug!("fetching module from cache");
     let cache = MODULE_CACHE.read().unwrap();
@@ -38,7 +39,7 @@ pub fn create_module_instance(
     if cache.cap() == 0 {
         debug!("cache is disabled, building module");
         drop(cache);
-        let module = compile_module(contract_code.code(), operation)?;
+        let module = compile_module(contract_code.code(), operation, gas_limit)?;
         let instance = create_instance(&module)?;
         debug!("returning built instance");
         return Ok(instance);
@@ -48,7 +49,9 @@ pub fn create_module_instance(
     // Try to fetch a cached instance
     let mut instance = None;
     debug!("peeking in cache");
-    let instance_result = cache.peek(&contract_code.hash()).map(create_instance);
+    let instance_result = cache
+        .peek(&contract_code.cache_key(gas_limit))
+        .map(create_instance);
     // If the stored module failed to create an instance for some reason, we try to create it again.
     // It shouldn't happen because we already compiled it before.
     if let Some(Ok(cached_instance)) = instance_result {
@@ -62,7 +65,7 @@ pub fn create_module_instance(
     let mut module = None;
     if instance.is_none() {
         debug!("instance not found in cache. building a new one");
-        let new_module = compile_module(contract_code.code(), operation)?;
+        let new_module = compile_module(contract_code.code(), operation, gas_limit)?;
         let new_instance = create_instance(&new_module)?;
         module = Some(new_module);
         instance = Some(new_instance);
@@ -74,11 +77,11 @@ pub fn create_module_instance(
     let mut cache = MODULE_CACHE.write().unwrap();
     if let Some(module) = module {
         debug!("storing module in cache");
-        cache.put(contract_code.hash(), module);
+        cache.put(contract_code.cache_key(gas_limit), module);
     } else {
         // Touch the cache to update the LRU value
         debug!("updating LRU without storing anything");
-        cache.get(&contract_code.hash());
+        cache.get(&contract_code.cache_key(gas_limit));
     }
 
     debug!("returning built instance");
@@ -91,42 +94,52 @@ pub fn create_module_instance(
 fn compile_module(
     code: &[u8],
     operation: ContractOperation,
+    gas_limit: u64,
 ) -> Result<wasmi::Module, EnclaveError> {
-    info!("Deserializing Wasm contract");
+    info!("Deserializing Wasm contract...");
 
-    // Create a parity-wasm module first, so we can inject gas metering to it
-    // (you need a parity-wasm module to use the pwasm-utils crate)
-    let mut p_modlue: Module =
-        elements::deserialize_buffer(code).map_err(|_| EnclaveError::InvalidWasm)?;
+    let module: wasmi::Module;
 
-    info!("Deserialized Wasm contract");
+    if gas_limit == 0 {
+        // We assume that the request came with infinite gas (i.e. query from user and not from contract)
+        // otherwise cosmos-sdk would have terminated the request way bofre entering here
 
-    info!("Validating WASM memory demands");
+        info!("Creating Wasmi module without gas counter...");
 
-    validate_memory(&mut p_modlue)?;
+        module = wasmi::Module::from_buffer(code).map_err(|_err| EnclaveError::InvalidWasm)?;
+    } else {
+        // Create a parity-wasm module first, so we can inject gas metering to it
+        // (you need a parity-wasm module to use the pwasm-utils crate)
+        let mut p_modlue: Module =
+            elements::deserialize_buffer(code).map_err(|_| EnclaveError::InvalidWasm)?;
 
-    info!("Validated WASM memory demands");
+        info!("Validating WASM memory demands...");
 
-    // Set the gas costs for wasm op-codes (there is an inline stack_height limit in WasmCosts)
-    let wasm_costs = WasmCosts::default();
+        validate_memory(&mut p_modlue)?;
 
-    // Inject gas metering to pwasm module
-    let contract_module = pwasm_utils::inject_gas_counter(p_modlue, &gas_rules(&wasm_costs))
-        .map_err(|_| EnclaveError::FailedGasMeteringInjection)?;
+        info!("Injecting gas counter...");
 
-    info!("Trying to create Wasmi module from parity...");
+        // Set the gas costs for wasm op-codes (there is an inline stack_height limit in WasmCosts)
+        let wasm_costs = WasmCosts::default();
 
-    // Create a wasmi module from the parity module
-    let module = wasmi::Module::from_parity_wasm_module(contract_module)
-        .map_err(|_err| EnclaveError::InvalidWasm)?;
+        // Inject gas metering to pwasm module
+        let contract_module = pwasm_utils::inject_gas_counter(p_modlue, &gas_rules(&wasm_costs))
+            .map_err(|_| EnclaveError::FailedGasMeteringInjection)?;
 
-    info!("Created Wasmi module from parity. Now checking for floating points...");
+        info!("Creating Wasmi module from parity module...");
+
+        // Create a wasmi module from the parity module
+        module = wasmi::Module::from_parity_wasm_module(contract_module)
+            .map_err(|_err| EnclaveError::InvalidWasm)?;
+    }
 
     // Skip the floating point check in queries and handles.
     // We know that the contract must be valid at this point,
     // otherwise the contrat storage keys will be invalid, and this
     // operation is extremely expensive (21-27ms in testing)
     if let ContractOperation::Init = operation {
+        info!("Checking for floating points...");
+
         module
             .deny_floating_point()
             .map_err(|_err| EnclaveError::WasmModuleWithFP)?;

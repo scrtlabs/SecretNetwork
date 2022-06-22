@@ -1,3 +1,4 @@
+//go:build !secretcli
 // +build !secretcli
 
 package api
@@ -89,7 +90,7 @@ func ReleaseCache(cache Cache) {
 func InitEnclaveRuntime(ModuleCacheSize uint8) error {
 	errmsg := C.Buffer{}
 
-	config := C.EnclaveRuntimeConfig {
+	config := C.EnclaveRuntimeConfig{
 		module_cache_size: u8(ModuleCacheSize),
 	}
 	_, err := C.configure_enclave_runtime(config, &errmsg)

@@ -288,6 +288,11 @@ impl ContractInstance {
     }
 
     fn is_gas_depleted(&self) -> bool {
+        if self.gas_limit == 0 {
+            // assuming gas_limit == 0 means infinite gas (query from user not from contract)
+            return false;
+        }
+
         self.gas_limit < self.gas_used.saturating_add(self.gas_used_externally)
     }
 

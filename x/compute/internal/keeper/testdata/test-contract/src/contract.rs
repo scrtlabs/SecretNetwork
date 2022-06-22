@@ -282,6 +282,12 @@ pub enum QueryMsg {
         code_hash: String,
         msg: String,
     },
+    Secp256k1VerifyFromCrate {
+        pubkey: Binary,
+        sig: Binary,
+        msg_hash: Binary,
+        iterations: u32,
+    },
 }
 
 /////////////////////////////// Init ///////////////////////////////
@@ -1498,6 +1504,44 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
                     StdError::generic_err(format!("Got an error from query: {:?}", err))
                 })?;
             return Ok(to_binary(&answer)?);
+        }
+        QueryMsg::Secp256k1VerifyFromCrate {
+            pubkey,
+            sig,
+            msg_hash,
+            iterations,
+        } => {
+            let mut res: bool = false;
+
+            // loop for benchmarking
+            for _ in 0..iterations {
+                let secp256k1_verifier = Secp256k1::verification_only();
+
+                let secp256k1_signature =
+                    secp256k1::Signature::from_compact(&sig.0).map_err(|err| {
+                        StdError::generic_err(format!("Malformed signature: {:?}", err))
+                    })?;
+                let secp256k1_pubkey = secp256k1::PublicKey::from_slice(pubkey.0.as_slice())
+                    .map_err(|err| StdError::generic_err(format!("Malformed pubkey: {:?}", err)))?;
+                let secp256k1_msg =
+                    secp256k1::Message::from_slice(&msg_hash.as_slice()).map_err(|err| {
+                        StdError::generic_err(format!(
+                            "Failed to create a secp256k1 message from signed_bytes: {:?}",
+                            err
+                        ))
+                    })?;
+
+                res = match secp256k1_verifier.verify(
+                    &secp256k1_msg,
+                    &secp256k1_signature,
+                    &secp256k1_pubkey,
+                ) {
+                    Ok(()) => true,
+                    Err(_err) => false,
+                };
+            }
+
+            return to_binary(&res);
         }
     }
 }

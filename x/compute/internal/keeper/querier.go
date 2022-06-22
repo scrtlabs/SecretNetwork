@@ -109,8 +109,8 @@ func (q GrpcQuerier) SmartContractState(c context.Context, req *types.QuerySmart
 	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
 		return nil, err
 	}
-	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
-	rsp, err := q.keeper.QuerySmart(ctx, req.Address, req.QueryData, false)
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewInfiniteGasMeter())
+	rsp, err := q.keeper.QuerySmart(ctx, req.Address, req.QueryData)
 	switch {
 	case err != nil:
 		return nil, err

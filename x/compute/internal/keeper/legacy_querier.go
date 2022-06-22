@@ -143,9 +143,9 @@ func queryContractState(ctx sdk.Context, bech, queryMethod string, data []byte, 
 	*/
 
 	// we enforce a subjective gas limit on all queries to avoid infinite loops
-	ctx = ctx.WithGasMeter(sdk.NewGasMeter(keeper.queryGasLimit))
+	ctx = ctx.WithGasMeter(sdk.NewInfiniteGasMeter())
 	// this returns raw bytes (must be base64-encoded)
-	return keeper.QuerySmart(ctx, contractAddr, data, false)
+	return keeper.QuerySmart(ctx, contractAddr, data)
 
 	/*
 			default:

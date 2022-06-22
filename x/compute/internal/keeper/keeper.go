@@ -579,21 +579,19 @@ func (k Keeper) GetContractHistory(ctx sdk.Context, contractAddr sdk.AccAddress)
 */
 
 // QuerySmart queries the smart contract itself.
-func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, useDefaultGasLimit bool) ([]byte, error) {
-	return k.querySmartImpl(ctx, contractAddr, req, useDefaultGasLimit, false)
+func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte) ([]byte, error) {
+	return k.querySmartImpl(ctx, contractAddr, req, false)
 }
 
 // QuerySmartRecursive queries the smart contract itself. This should only be called when running inside another query recursively.
 func (k Keeper) querySmartRecursive(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, useDefaultGasLimit bool) ([]byte, error) {
-	return k.querySmartImpl(ctx, contractAddr, req, useDefaultGasLimit, true)
+	return k.querySmartImpl(ctx, contractAddr, req, true)
 }
 
-func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, useDefaultGasLimit bool, recursive bool) ([]byte, error) {
+func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, recursive bool) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "query")
 
-	if useDefaultGasLimit {
-		ctx = ctx.WithGasMeter(sdk.NewGasMeter(k.queryGasLimit))
-	}
+	ctx.Logger().Info("querySmartImpl gas=%d/%d", ctx.GasMeter().GasConsumed(), ctx.GasMeter().Limit())
 
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: query")
 
@@ -853,6 +851,11 @@ func (k Keeper) dispatchMessages(ctx sdk.Context, contractAddr sdk.AccAddress, m
 
 func gasForContract(ctx sdk.Context) uint64 {
 	meter := ctx.GasMeter()
+
+	if meter.Limit() == 0 {
+		return 0
+	}
+
 	remaining := (meter.Limit() - meter.GasConsumed()) * types.GasMultiplier
 	if remaining > types.MaxGas {
 		return types.MaxGas
