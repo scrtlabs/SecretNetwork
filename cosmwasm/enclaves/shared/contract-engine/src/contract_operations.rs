@@ -7,12 +7,14 @@ use crate::wasm::CosmWasmApiVersion;
 use cosmos_proto::tx::signing::SignMode;
 use cosmwasm_v010_types::types::CanonicalAddr;
 use cosmwasm_v016_types::addresses::Addr;
+use cosmwasm_v016_types::results::{DecryptedReply, Event, Reply, SubMsgResponse, SubMsgResult};
 use cosmwasm_v016_types::timestamp::Timestamp;
 use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
 use enclave_cosmwasm_types as cosmwasm_v010_types;
 use enclave_cosmwasm_types::encoding::Binary;
 use enclave_cosmwasm_v016_types as cosmwasm_v016_types;
-use enclave_crypto::Ed25519PublicKey;
+
+use enclave_crypto::{Ed25519PublicKey, HASH_SIZE};
 use enclave_utils::coalesce;
 
 use super::contract_validation::{
@@ -22,8 +24,10 @@ use super::contract_validation::{
 use super::gas::WasmCosts;
 use super::io::encrypt_output;
 use super::module_cache::create_module_instance;
-use super::types::{IoNonce, Reply, SecretMessage, SubMsgResponse, SubMsgResult};
+use super::types::{IoNonce, SecretMessage};
 use super::wasm::{ContractInstance, ContractOperation, Engine};
+
+const HEX_ENCODED_HASH_SIZE: usize = HASH_SIZE * 2;
 
 /*
 Each contract is compiled with these functions already implemented in wasm:
@@ -171,6 +175,43 @@ impl Into<bool> for TaggedBool {
 type ShouldValidateSigInfo = TaggedBool;
 type WasMessageEncrypted = TaggedBool;
 
+pub fn reduct_custom_events(reply: &mut Reply) {
+    reply.result = match &reply.result {
+        SubMsgResult::Ok(r) => {
+            let mut events: Vec<Event> = Default::default();
+            let filtered_types = vec![
+                "execute".to_string(),
+                "instantiate".to_string(),
+                "wasm".to_string(),
+            ];
+            let filtered_attributes = vec!["contract_address".to_string(), "code_id".to_string()];
+            for ev in r.events.iter() {
+                if filtered_types.contains(&ev.ty) {
+                    let mut had_match = false;
+                    for attr in &ev.attributes {
+                        if filtered_attributes.contains(&attr.key) {
+                            had_match = true;
+                            break;
+                        }
+                    }
+
+                    if had_match {
+                        continue;
+                    }
+                }
+
+                events.push(ev.clone());
+            }
+
+            SubMsgResult::Ok(SubMsgResponse {
+                events,
+                data: r.data.clone(),
+            })
+        }
+        SubMsgResult::Err(_) => reply.result.clone(),
+    };
+}
+
 // Parse the message that was passed to handle (Based on the assumption that it might be a reply or IBC as well)
 pub fn parse_message(
     message: &[u8],
@@ -206,12 +247,53 @@ pub fn parse_message(
             if sig_info.sign_mode == SignMode::SIGN_MODE_UNSPECIFIED {
                 trace!("reply input is not encrypted");
                 let decrypted_msg = orig_secret_msg.msg.clone();
+                let mut reply: Reply = serde_json::from_slice(&decrypted_msg)
+                    .map_err(|err| {
+                        warn!(
+                "reply got an error while trying to deserialize decrypted reply bytes into json {:?}: {}",
+                String::from_utf8_lossy(&decrypted_msg),
+                err
+            );
+                        EnclaveError::FailedToDeserialize
+                    })?;
+
+                let mut msg_id: [u8; 8] = [0; 8];
+                msg_id.copy_from_slice(&reply.id.as_slice()[0..8]);
+                let decrypted_reply = DecryptedReply {
+                    id: u64::from_be_bytes(msg_id),
+                    result: reply.result.clone(),
+                };
+
+                reduct_custom_events(&mut reply);
+                let serialized_encrypted_reply : Vec<u8> = serde_json::to_vec(&reply).map_err(|err| {
+                    warn!(
+                        "got an error while trying to serialize encrypted reply into bytes {:?}: {}",
+                        reply, err
+                    );
+                    EnclaveError::FailedToSerialize
+                })?;
+
+                let reply_secret_msg = SecretMessage {
+                    nonce: orig_secret_msg.nonce,
+                    user_public_key: orig_secret_msg.user_public_key,
+                    msg: serialized_encrypted_reply,
+                };
+
+                trace!("LIORRRR id2 {}", decrypted_reply.id);
+
+                let serialized_reply: Vec<u8> = serde_json::to_vec(&decrypted_reply).map_err(|err| {
+                    warn!(
+                        "got an error while trying to serialize decrypted reply into bytes {:?}: {}",
+                        decrypted_reply, err
+                    );
+                    EnclaveError::FailedToSerialize
+                })?;
 
                 return Ok((
                     ShouldValidateSigInfo::from(false),
                     WasMessageEncrypted::from(false),
-                    orig_secret_msg,
-                    decrypted_msg,
+                    reply_secret_msg,
+                    serialized_reply,
                 ));
             }
 
@@ -220,7 +302,9 @@ pub fn parse_message(
                 "reply input before decryption: {:?}",
                 base64::encode(&message)
             );
-            let parsed_encrypted_reply: Reply = serde_json::from_slice(&orig_secret_msg.msg)
+            let mut parsed_encrypted_reply: Reply = serde_json::from_slice(
+                &orig_secret_msg.msg.as_slice()[HEX_ENCODED_HASH_SIZE..].to_vec(),
+            )
                 .map_err(|err| {
                     warn!(
             "reply got an error while trying to deserialize msg input bytes into json {:?}: {}",
@@ -229,29 +313,59 @@ pub fn parse_message(
             );
                     EnclaveError::FailedToDeserialize
                 })?;
-            match parsed_encrypted_reply.result {
+
+            trace!("LIORRRRR reply is {:?}", parsed_encrypted_reply);
+            match parsed_encrypted_reply.result.clone() {
                 SubMsgResult::Ok(response) => {
                     let data = response.data.unwrap();
 
                     // First decrypt the message
-                    let tmp_secret_msg = SecretMessage {
+                    let tmp_secret_msg_data = SecretMessage {
                         nonce: orig_secret_msg.nonce,
                         user_public_key: orig_secret_msg.user_public_key,
                         msg: data.as_slice().to_vec(),
                     };
 
-                    let tmp_decrypted_msg = tmp_secret_msg.decrypt()?;
+                    //let tmp_decrypted_msg_data = tmp_secret_msg_data.decrypt()?;
+                    let tmp_decrypted_msg_data = tmp_secret_msg_data.msg;
+
+                    let tmp_secret_msg_id = SecretMessage {
+                        nonce: orig_secret_msg.nonce,
+                        user_public_key: orig_secret_msg.user_public_key,
+                        msg: parsed_encrypted_reply.id.as_slice().to_vec(),
+                    };
+
+                    let tmp_decrypted_msg_id = tmp_secret_msg_id.decrypt()?;
+
+                    trace!(
+                        "LIORRRRR msg {:?} part {:?}",
+                        orig_secret_msg.msg,
+                        orig_secret_msg.msg.as_slice()[0..HEX_ENCODED_HASH_SIZE].to_vec()
+                    );
+
+                    let tmp_secret_msg_contract_hash = SecretMessage {
+                        nonce: orig_secret_msg.nonce,
+                        user_public_key: orig_secret_msg.user_public_key,
+                        msg: orig_secret_msg.msg.as_slice()[0..HEX_ENCODED_HASH_SIZE].to_vec(),
+                    };
+
+                    let mut tmp_decrypted_msg_contract_hash =
+                        tmp_secret_msg_contract_hash.decrypt()?;
 
                     // Now we need to create synthetic SecretMessage to fit the API in "handle"
                     let result = SubMsgResult::Ok(SubMsgResponse {
                         events: response.events,
-                        data: Some(Binary(tmp_decrypted_msg)),
+                        data: Some(Binary(tmp_decrypted_msg_data)),
                     });
 
-                    let decrypted_reply = Reply {
-                        id: parsed_encrypted_reply.id,
+                    let mut msg_id: [u8; 8] = [0; 8];
+                    msg_id.copy_from_slice(&tmp_decrypted_msg_id[0..8]);
+                    let decrypted_reply = DecryptedReply {
+                        id: u64::from_be_bytes(msg_id),
                         result,
                     };
+
+                    trace!("LIORRRR id1 {}", decrypted_reply.id);
 
                     let decrypted_reply_as_vec =
                         serde_json::to_vec(&decrypted_reply).map_err(|err| {
@@ -262,16 +376,27 @@ pub fn parse_message(
                             EnclaveError::FailedToSerialize
                         })?;
 
-                    let secret_msg = SecretMessage {
-                        nonce: tmp_secret_msg.nonce,
-                        user_public_key: tmp_secret_msg.user_public_key,
-                        msg: decrypted_reply_as_vec.clone(),
+                    reduct_custom_events(&mut parsed_encrypted_reply);
+                    let serialized_encrypted_reply : Vec<u8> = serde_json::to_vec(&parsed_encrypted_reply).map_err(|err| {
+                    warn!(
+                        "got an error while trying to serialize encrypted reply into bytes {:?}: {}",
+                        parsed_encrypted_reply, err
+                    );
+                    EnclaveError::FailedToSerialize
+                })?;
+
+                    tmp_decrypted_msg_contract_hash.extend(serialized_encrypted_reply);
+
+                    let reply_secret_msg = SecretMessage {
+                        nonce: orig_secret_msg.nonce,
+                        user_public_key: orig_secret_msg.user_public_key,
+                        msg: tmp_decrypted_msg_contract_hash,
                     };
 
                     Ok((
                         ShouldValidateSigInfo::from(true),
                         WasMessageEncrypted::from(true),
-                        secret_msg,
+                        reply_secret_msg,
                         decrypted_reply_as_vec,
                     ))
                 }
@@ -493,7 +618,7 @@ pub fn query(
             secret_msg.user_public_key,
             &CanonicalAddr(Binary(Vec::new())), // Not used for queries (can't init a new contract from a query)
             &"".to_string(), // Not used for queries (can't call a sub-message from a query),
-            None, // // Not used for queries (Query response is not replied to the caller),
+            None, // Not used for queries (Query response is not replied to the caller),
         )?;
         Ok(output)
     })

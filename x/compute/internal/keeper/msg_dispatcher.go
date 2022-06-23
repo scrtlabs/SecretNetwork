@@ -1,6 +1,8 @@
 package keeper
 
 import (
+	"encoding/binary"
+	"encoding/json"
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -21,7 +23,7 @@ type Messenger interface {
 
 // Replyer is a subset of keeper that can handle replies to submessages
 type Replyer interface {
-	reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error)
+	reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo, replyToContractHash []byte) ([]byte, error)
 }
 
 // MessageDispatcher coordinates message sending and submessage reply/ state commits
@@ -216,6 +218,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			if len(data) > 0 {
 				responseData = data[0]
 			}
+
 			result = v1wasmTypes.SubMsgResult{
 				// Copy first 64 bytes of the OG message in order to preserve the pubkey.
 				Ok: &v1wasmTypes.SubMsgResponse{
@@ -231,9 +234,11 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			}
 		}
 
+		msg_id := make([]byte, 8)
+		binary.BigEndian.PutUint64(msg_id, msg.ID)
 		// now handle the reply, we use the parent context, and abort on error
 		reply := v1wasmTypes.Reply{
-			ID:     msg.ID,
+			ID:     msg_id,
 			Result: result,
 		}
 
@@ -249,11 +254,31 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			Signature: []byte{},
 			SignMode:  "SIGN_MODE_UNSPECIFIED",
 		}
+
+		var replyToContractHash []byte
 		if isReplyEncrypted(msg.Msg, reply) {
+			// If encrypting error should change here
+			var dataWithInternalReplyInfo v1wasmTypes.DataWithInternalReplyInfo
+
+			err = json.Unmarshal(reply.Result.Ok.Data, &dataWithInternalReplyInfo)
+			if err != nil {
+				return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json : %w", err)
+			}
+
+			if len(dataWithInternalReplyInfo.InternalMsgId) == 0 || len(dataWithInternalReplyInfo.InternaReplyEnclaveSig) == 0 {
+				return nil, fmt.Errorf("when sending a reply both InternaReplyEnclaveSig and InternalMsgId are expected to be initialized")
+			}
+
 			replySigInfo = ogSigInfo
+			replyToContractHash = dataWithInternalReplyInfo.Data[0:64] // First 64 bytes of the data is the contract hash
+
+			reply.ID = dataWithInternalReplyInfo.InternalMsgId
+			reply.Result.Ok.Data = dataWithInternalReplyInfo.Data[64:]
+			replySigInfo.CallbackSignature = dataWithInternalReplyInfo.InternaReplyEnclaveSig
+
 		}
 
-		rspData, err := d.keeper.reply(ctx, contractAddr, reply, ogTx, replySigInfo)
+		rspData, err := d.keeper.reply(ctx, contractAddr, reply, ogTx, replySigInfo, replyToContractHash)
 		switch {
 		case err != nil:
 			return nil, err

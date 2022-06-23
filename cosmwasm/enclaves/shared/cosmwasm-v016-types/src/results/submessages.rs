@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use crate::results::ContractResult;
 use enclave_cosmwasm_types::encoding::Binary;
 
 use super::{CosmosMsg, Empty, Event};
@@ -41,24 +40,38 @@ where
     pub reply_on: ReplyOn,
 }
 
+/// The information we get back from a successful sub message execution,
+/// with full Cosmos SDK events.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SubMsgResponse {
+    pub events: Vec<Event>,
+    pub data: Option<Binary>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum SubMsgResult {
+    Ok(SubMsgResponse),
+    /// An error type that every custom error created by contract developers can be converted to.
+    /// This could potentially have more structure, but String is the easiest.
+    #[serde(rename = "error")]
+    Err(String),
+}
 /// The result object returned to `reply`. We always get the ID from the submessage
 /// back and then must handle success and error cases ourselves.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Reply {
     /// The ID that the contract set when emitting the `SubMsg`.
     /// Use this to identify which submessage triggered the `reply`.
-    pub id: u64,
-    pub result: ContractResult<SubMsgExecutionResponse>,
+    pub id: Binary,
+    pub result: SubMsgResult,
 }
-
-/// The result object returned to `reply`. We always get the ID from the submessage
-/// back and then must handle success and error cases ourselves.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct InternalReply {
+pub struct DecryptedReply {
     /// The ID that the contract set when emitting the `SubMsg`.
     /// Use this to identify which submessage triggered the `reply`.
-    pub id: Binary,
-    pub result: ContractResult<SubMsgExecutionResponse>,
+    pub id: u64,
+    pub result: SubMsgResult,
 }
 
 /// The information we get back from a successful sub-call, with full sdk events

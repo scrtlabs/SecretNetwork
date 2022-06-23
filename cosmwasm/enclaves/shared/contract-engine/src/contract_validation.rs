@@ -148,6 +148,12 @@ pub fn validate_msg(
 
     let decoded_hash: Vec<u8> = hex::decode(&received_contract_hash[..]).map_err(|_| {
         warn!("Got message with malformed contract hash");
+        trace!(
+            "LIORRRR msg {:?} \n parsed {:?} \n wanted {:?} \n",
+            msg,
+            received_contract_hash,
+            contract_hash
+        );
         EnclaveError::ValidationFailure
     })?;
 

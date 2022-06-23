@@ -34,6 +34,13 @@ type Response struct {
 	Events []Event `json:"events"`
 }
 
+// Used to serialize both the data and the internal reply information in order to keep the api without changes
+type DataWithInternalReplyInfo struct {
+	InternaReplyEnclaveSig []byte `json:"internal_reply_enclave_sig"`
+	InternalMsgId          []byte `json:"internal_msg_id"`
+	Data                   []byte `json:"data"`
+}
+
 // LogAttributes must encode empty array as []
 type LogAttributes []v010msgtypes.LogAttribute
 

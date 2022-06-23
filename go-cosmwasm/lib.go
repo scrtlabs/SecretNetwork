@@ -147,11 +147,19 @@ func (w *Wasmer) Instantiate(
 		return nil, nil, gasUsed, fmt.Errorf("handle: cannot parse response from json: %w", err)
 	}
 
+	isOutputAddressedToReply := (len(respV010orV1.InternaReplyEnclaveSig) > 0 && len(respV010orV1.InternalMsgId) > 0)
+
 	if respV010orV1.V1Err != "" {
 		return nil, nil, gasUsed, fmt.Errorf(respV010orV1.V1Err)
 	}
 
 	if respV010orV1.V1Ok != nil {
+		if isOutputAddressedToReply {
+			respV010orV1.V1Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
+			if err != nil {
+				return nil, nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary : %w", err)
+			}
+		}
 		return respV010orV1.V1Ok, key, gasUsed, nil
 	}
 
@@ -160,10 +168,26 @@ func (w *Wasmer) Instantiate(
 	}
 
 	if respV010orV1.V010Ok != nil {
+		if isOutputAddressedToReply {
+			respV010orV1.V1Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
+			if err != nil {
+				return nil, nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary : %w", err)
+			}
+		}
 		return respV010orV1.V010Ok, key, gasUsed, nil
 	}
 
 	return nil, nil, gasUsed, fmt.Errorf("handle: cannot detect response type (v0.10 or v1): %w", err)
+}
+
+func AppendReplyInternalDataToData(data []byte, internaReplyEnclaveSig []byte, internalMsgId []byte) ([]byte, error) {
+	dataWithInternalReply := v1types.DataWithInternalReplyInfo{
+		InternaReplyEnclaveSig: internaReplyEnclaveSig,
+		InternalMsgId:          internalMsgId,
+		Data:                   data,
+	}
+
+	return json.Marshal(dataWithInternalReply)
 }
 
 // Execute calls a given contract. Since the only difference between contracts with the same CodeID is the
@@ -200,16 +224,25 @@ func (w *Wasmer) Execute(
 
 	var respV010orV1 V010orV1ContractResponse
 	err = json.Unmarshal(data, &respV010orV1)
+
 	if err != nil {
 		// unidentified response 🤷
 		return nil, gasUsed, fmt.Errorf("handle: cannot parse response from json: %w", err)
 	}
+
+	isOutputAddressedToReply := (len(respV010orV1.InternaReplyEnclaveSig) > 0 && len(respV010orV1.InternalMsgId) > 0)
 
 	if respV010orV1.V1Err != "" {
 		return nil, gasUsed, fmt.Errorf(respV010orV1.V1Err)
 	}
 
 	if respV010orV1.V1Ok != nil {
+		if isOutputAddressedToReply {
+			respV010orV1.V1Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
+			if err != nil {
+				return nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary : %w", err)
+			}
+		}
 		return respV010orV1.V1Ok, gasUsed, nil
 	}
 
@@ -218,6 +251,12 @@ func (w *Wasmer) Execute(
 	}
 
 	if respV010orV1.V010Ok != nil {
+		if isOutputAddressedToReply {
+			respV010orV1.V010Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V010Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
+			if err != nil {
+				return nil, gasUsed, fmt.Errorf("cannot serialize v010 DataWithInternalReplyInfo into binary : %w", err)
+			}
+		}
 		return respV010orV1.V010Ok, gasUsed, nil
 	}
 

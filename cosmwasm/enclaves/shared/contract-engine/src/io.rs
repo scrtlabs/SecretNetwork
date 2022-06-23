@@ -7,11 +7,7 @@ use enclave_cosmwasm_types as cosmwasm_v010_types;
 use enclave_cosmwasm_types::encoding::Binary;
 use enclave_cosmwasm_types::types::{CanonicalAddr, Coin};
 use enclave_cosmwasm_v016_types as cosmwasm_v1_types;
-use enclave_cosmwasm_v016_types::results::ContractResult;
-use enclave_cosmwasm_v016_types::results::Event;
-use enclave_cosmwasm_v016_types::results::InternalReply;
-use enclave_cosmwasm_v016_types::results::ReplyOn;
-use enclave_cosmwasm_v016_types::results::SubMsgExecutionResponse;
+use enclave_cosmwasm_v016_types::results::{Event, Reply, ReplyOn, SubMsgResponse, SubMsgResult};
 
 use enclave_ffi_types::EnclaveError;
 
@@ -107,15 +103,13 @@ fn encrypt_preserialized_string(
         }
         None => val.as_bytes().to_vec(),
     };
-    let encrypted_data = key
-        .encrypt_siv(serialized.as_slice(), None)
-        .map_err(|err| {
-            debug!(
-                "got an error while trying to encrypt output error {:?}: {}",
-                err, err
-            );
-            EnclaveError::EncryptionError
-        })?;
+    let encrypted_data = key.encrypt_siv(serialized.as_slice(), None).map_err(|err| {
+        debug!(
+            "got an error while trying to encrypt output error {:?}: {}",
+            err, err
+        );
+        EnclaveError::EncryptionError
+    })?;
 
     Ok(b64_encode(encrypted_data.as_slice()))
 }
@@ -180,9 +174,9 @@ pub fn encrypt_output(
 
             // v0.10: The logs that will be emitted as part of a "wasm" event.
             for log in ok.log.iter_mut().filter(|log| log.encrypted) {
-                log.key = encrypt_preserialized_string(&encryption_key, &log.key, &reply_params)?;
+                log.key = encrypt_preserialized_string(&encryption_key, &log.key, &None)?;
                 log.value =
-                    encrypt_preserialized_string(&encryption_key, &log.value, &reply_params)?;
+                    encrypt_preserialized_string(&encryption_key, &log.value, &None)?;
             }
 
             if let Some(data) = &mut ok.data {
@@ -198,7 +192,7 @@ pub fn encrypt_output(
                     let encrypted_id = Binary::from_base64(&encrypt_serializable(
                         &encryption_key,
                         &r.1,
-                        &reply_params,
+                        &None,
                     )?)?;
 
                     Some(encrypted_id)
@@ -210,9 +204,9 @@ pub fn encrypt_output(
 
             *internal_reply_enclave_sig = match reply_params {
                 Some(_) => {
-                    let reply = InternalReply {
+                    let reply = Reply {
                         id: msg_id.unwrap(),
-                        result: ContractResult::Ok(SubMsgExecutionResponse {
+                        result: SubMsgResult::Ok(SubMsgResponse {
                             events: vec![Event {
                                 ty: "".to_string(),
                                 attributes: ok.log.clone(),
@@ -233,6 +227,7 @@ pub fn encrypt_output(
                         user_public_key,
                         msg: reply_as_vec,
                     };
+
                     Some(Binary::from(
                         create_callback_signature(contract_addr, &tmp_secret_msg, &[]).as_slice(),
                     ))
@@ -264,18 +259,18 @@ pub fn encrypt_output(
 
             // v1: The attributes that will be emitted as part of a "wasm" event.
             for attr in ok.attributes.iter_mut().filter(|attr| attr.encrypted) {
-                attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &reply_params)?;
+                attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &None)?;
                 attr.value =
-                    encrypt_preserialized_string(&encryption_key, &attr.value, &reply_params)?;
+                    encrypt_preserialized_string(&encryption_key, &attr.value, &None)?;
             }
 
             // v1: Extra, custom events separate from the main wasm one. These will have "wasm-"" prepended to the type.
             for event in ok.events.iter_mut() {
                 for attr in event.attributes.iter_mut().filter(|attr| attr.encrypted) {
                     attr.key =
-                        encrypt_preserialized_string(&encryption_key, &attr.key, &reply_params)?;
+                        encrypt_preserialized_string(&encryption_key, &attr.key, &None)?;
                     attr.value =
-                        encrypt_preserialized_string(&encryption_key, &attr.value, &reply_params)?;
+                        encrypt_preserialized_string(&encryption_key, &attr.value, &None)?;
                 }
             }
 
@@ -292,7 +287,7 @@ pub fn encrypt_output(
                     let encrypted_id = Binary::from_base64(&encrypt_serializable(
                         &encryption_key,
                         &r.1,
-                        &reply_params,
+                        &None,
                     )?)?;
 
                     Some(encrypted_id)
@@ -304,14 +299,12 @@ pub fn encrypt_output(
 
             *internal_reply_enclave_sig = match reply_params {
                 Some(_) => {
-                    let reply = InternalReply {
+                    let reply = Reply {
                         id: msg_id.unwrap(),
-                        result: cosmwasm_v1_types::results::ContractResult::Ok(
-                            cosmwasm_v1_types::results::SubMsgExecutionResponse {
-                                events: ok.events.clone(),
-                                data: ok.data.clone(),
-                            },
-                        ),
+                        result: SubMsgResult::Ok(SubMsgResponse {
+                            events: ok.events.clone(),
+                            data: ok.data.clone(),
+                        }),
                     };
                     let reply_as_vec = serde_json::to_vec(&reply).map_err(|err| {
                         warn!(
@@ -325,6 +318,7 @@ pub fn encrypt_output(
                         user_public_key,
                         msg: reply_as_vec,
                     };
+
                     Some(Binary::from(
                         create_callback_signature(contract_addr, &tmp_secret_msg, &[]).as_slice(),
                     ))
