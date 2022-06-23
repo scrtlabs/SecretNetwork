@@ -482,6 +482,7 @@ dependencies = [
  "bech32",
  "derive_more",
  "enclave-ffi-types",
+ "enclave_cosmwasm_types",
  "log",
  "serde 1.0.118",
  "serde_json 1.0.60",

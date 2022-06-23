@@ -1,17 +1,16 @@
 use log::*;
 
 use enclave_ffi_types::{Ctx, EnclaveError};
-use serde_json::to_string;
 
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::wasm::CosmWasmApiVersion;
 use cosmos_proto::tx::signing::SignMode;
-use cosmwasm_v010_types::encoding::Binary;
 use cosmwasm_v010_types::types::CanonicalAddr;
 use cosmwasm_v016_types::addresses::Addr;
 use cosmwasm_v016_types::timestamp::Timestamp;
 use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
 use enclave_cosmwasm_types as cosmwasm_v010_types;
+use enclave_cosmwasm_types::encoding::Binary;
 use enclave_cosmwasm_v016_types as cosmwasm_v016_types;
 use enclave_crypto::Ed25519PublicKey;
 use enclave_utils::coalesce;
@@ -183,7 +182,6 @@ pub fn parse_message(
         WasMessageEncrypted,
         SecretMessage,
         Vec<u8>,
-        Option<u64>,
     ),
     EnclaveError,
 > {
@@ -250,7 +248,6 @@ pub fn parse_message(
                         data: Some(Binary(tmp_decrypted_msg)),
                     });
 
-                    let id : u64 = u64::from_be_bytes(&tmp_decrypted_msg_id.msg);
                     let decrypted_reply = Reply {
                         id: parsed_encrypted_reply.id,
                         result,
@@ -339,13 +336,13 @@ pub fn handle(
     // When the message is handle, we expect it always to be encrypted while in Reply for example it might be plaintext
     let parsed_handle_type = HandleType::try_from(handle_type)?;
 
-    let (should_validate_sig_info, was_msg_encrypted, secret_msg, decrypted_msg, msg_id) =
+    let (should_validate_sig_info, was_msg_encrypted, secret_msg, decrypted_msg) =
         parse_message(msg, &parsed_sig_info, &parsed_handle_type)?;
 
-    /// There is no signature to verify when the input isn't signed.
-    /// Receiving unsigned messages is only possible in Handle. (Init tx are always signed)
-    /// All of these functions go through handle but the data isn't signed:
-    ///  reply (that is not WASM reply)
+    // There is no signature to verify when the input isn't signed.
+    // Receiving unsigned messages is only possible in Handle. (Init tx are always signed)
+    // All of these functions go through handle but the data isn't signed:
+    //  Reply (that is not WASM reply)
     if should_validate_sig_info.into() {
         // Verify env parameters against the signed tx
         verify_params(&parsed_sig_info, &env_v010, &secret_msg)?;
@@ -356,7 +353,7 @@ pub fn handle(
     if was_msg_encrypted.into() {
         let x = validate_msg(&decrypted_msg, contract_code.hash())?;
         validated_msg = x.0;
-        reply_params = x.1; 
+        reply_params = x.1;
     }
 
     trace!(

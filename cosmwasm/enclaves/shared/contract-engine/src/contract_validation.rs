@@ -1,5 +1,3 @@
-use std::intrinsics::size_of;
-
 use enclave_cosmwasm_v016_types::results::REPLY_ENCRYPTION_MAGIC_BYTES;
 use log::*;
 
@@ -21,6 +19,7 @@ pub type ContractKey = [u8; CONTRACT_KEY_LENGTH];
 pub const CONTRACT_KEY_LENGTH: usize = HASH_SIZE + HASH_SIZE;
 
 const HEX_ENCODED_HASH_SIZE: usize = HASH_SIZE * 2;
+const SIZE_OF_U64: usize = 8;
 
 pub fn generate_encryption_key(
     env: &Env,
@@ -157,21 +156,21 @@ pub fn validate_msg(
         return Err(EnclaveError::ValidationFailure);
     }
 
-    let validated_msg = msg[HEX_ENCODED_HASH_SIZE..].to_vec();
-    if validated_msg[0..(REPLY_ENCRYPTION_MAGIC_BYTES.len())] == REPLY_ENCRYPTION_MAGIC_BYTES {
+    let mut validated_msg = msg[HEX_ENCODED_HASH_SIZE..].to_vec();
+    if validated_msg[0..(REPLY_ENCRYPTION_MAGIC_BYTES.len())] == *REPLY_ENCRYPTION_MAGIC_BYTES {
         validated_msg = validated_msg[REPLY_ENCRYPTION_MAGIC_BYTES.len()..].to_vec();
 
-        let mut sub_msg_id: u64 = u64::from_be_bytes(validated_msg[0..size_of::u64()]);
-        validated_msg = validated_msg[size_of::u64()..].to_vec();
+        let sub_msg_deserialized: [u8; SIZE_OF_U64] = [0u8; SIZE_OF_U64];
+        let sub_msg_id: u64 = u64::from_be_bytes(sub_msg_deserialized);
+        validated_msg = validated_msg[SIZE_OF_U64..].to_vec();
 
         let mut reply_recipient_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] =
             [0u8; HEX_ENCODED_HASH_SIZE];
         reply_recipient_contract_hash.copy_from_slice(&validated_msg[0..HEX_ENCODED_HASH_SIZE]);
-        Ok((
+        return Ok((
             validated_msg[HEX_ENCODED_HASH_SIZE..].to_vec(),
             Some((reply_recipient_contract_hash.to_vec(), sub_msg_id)),
-        ))
-
+        ));
     }
 
     Ok((validated_msg, None))

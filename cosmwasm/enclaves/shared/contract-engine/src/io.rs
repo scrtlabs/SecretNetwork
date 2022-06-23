@@ -3,13 +3,16 @@
 /// that is unique to the user and the enclave
 ///
 use super::types::{IoNonce, SecretMessage};
-use cosmwasm_v1_types::results::Reply;
-use enclave_cosmos_types::types::SigInfo;
 use enclave_cosmwasm_types as cosmwasm_v010_types;
 use enclave_cosmwasm_types::encoding::Binary;
 use enclave_cosmwasm_types::types::{CanonicalAddr, Coin};
 use enclave_cosmwasm_v016_types as cosmwasm_v1_types;
+use enclave_cosmwasm_v016_types::results::ContractResult;
+use enclave_cosmwasm_v016_types::results::Event;
+use enclave_cosmwasm_v016_types::results::InternalReply;
 use enclave_cosmwasm_v016_types::results::ReplyOn;
+use enclave_cosmwasm_v016_types::results::SubMsgExecutionResponse;
+
 use enclave_ffi_types::EnclaveError;
 
 use enclave_crypto::{AESKey, Ed25519PublicKey, Kdf, SIVEncryptable, KEY_MANAGER};
@@ -47,11 +50,13 @@ enum WasmOutput {
         #[serde(rename = "Ok")]
         ok: cosmwasm_v010_types::types::ContractResult,
         internal_reply_enclave_sig: Option<Binary>,
+        internal_msg_id: Option<Binary>,
     },
     OkObjectV1 {
         #[serde(rename = "ok")]
         ok: cosmwasm_v1_types::results::Response,
         internal_reply_enclave_sig: Option<Binary>,
+        internal_msg_id: Option<Binary>,
     },
 }
 
@@ -165,6 +170,7 @@ pub fn encrypt_output(
         WasmOutput::OkObjectV010 {
             ok,
             internal_reply_enclave_sig,
+            internal_msg_id,
         } => {
             for msg in &mut ok.messages {
                 if let cosmwasm_v010_types::types::CosmosMsg::Wasm(wasm_msg) = msg {
@@ -187,26 +193,48 @@ pub fn encrypt_output(
                 )?)?;
             }
 
+            let msg_id = match reply_params {
+                Some(ref r) => {
+                    let encrypted_id = Binary::from_base64(&encrypt_serializable(
+                        &encryption_key,
+                        &r.1,
+                        &reply_params,
+                    )?)?;
+
+                    Some(encrypted_id)
+                }
+                None => None,
+            };
+
+            *internal_msg_id = msg_id.clone();
+
             *internal_reply_enclave_sig = match reply_params {
-                Some(r) => {
-                    let reply = Reply {
-                        id: 0,
-                        result: cosmwasm_v1_types::results::ContractResult::Ok(
-                            cosmwasm_v1_types::results::SubMsgExecutionResponse {
-                                events: ok.log,
-                                data: ok.data,
-                            },
-                        ),
+                Some(_) => {
+                    let reply = InternalReply {
+                        id: msg_id.unwrap(),
+                        result: ContractResult::Ok(SubMsgExecutionResponse {
+                            events: vec![Event {
+                                ty: "".to_string(),
+                                attributes: ok.log.clone(),
+                            }],
+                            data: ok.data.clone(),
+                        }),
                     };
+
+                    let reply_as_vec = serde_json::to_vec(&reply).map_err(|err| {
+                        warn!(
+                            "got an error while trying to serialize reply into bytes for internal_reply_enclave_sig  {:?}: {}",
+                            reply, err
+                        );
+                        EnclaveError::FailedToSerialize
+                    })?;
                     let tmp_secret_msg = SecretMessage {
                         nonce,
                         user_public_key,
-                        msg: serde_json::to_vec(&reply),
+                        msg: reply_as_vec,
                     };
-                    Some(create_callback_signature(
-                        contract_addr,
-                        &tmp_secret_msg,
-                        &[Coin],
+                    Some(Binary::from(
+                        create_callback_signature(contract_addr, &tmp_secret_msg, &[]).as_slice(),
                     ))
                 }
                 None => None, // Not a reply, we don't need enclave sig
@@ -215,6 +243,7 @@ pub fn encrypt_output(
         WasmOutput::OkObjectV1 {
             ok,
             internal_reply_enclave_sig,
+            internal_msg_id,
         } => {
             for sub_msg in &mut ok.messages {
                 if let cosmwasm_v1_types::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
@@ -251,33 +280,53 @@ pub fn encrypt_output(
             }
 
             if let Some(data) = &mut ok.data {
-                *data = cosmwasm_v1_types::binary::Binary::from_base64(&encrypt_serializable(
+                *data = Binary::from_base64(&encrypt_serializable(
                     &encryption_key,
                     data,
                     &reply_params,
                 )?)?;
             }
 
+            let msg_id = match reply_params {
+                Some(ref r) => {
+                    let encrypted_id = Binary::from_base64(&encrypt_serializable(
+                        &encryption_key,
+                        &r.1,
+                        &reply_params,
+                    )?)?;
+
+                    Some(encrypted_id)
+                }
+                None => None,
+            };
+
+            *internal_msg_id = msg_id.clone();
+
             *internal_reply_enclave_sig = match reply_params {
-                Some(r) => {
-                    let reply = Reply {
-                        id: 0,
+                Some(_) => {
+                    let reply = InternalReply {
+                        id: msg_id.unwrap(),
                         result: cosmwasm_v1_types::results::ContractResult::Ok(
                             cosmwasm_v1_types::results::SubMsgExecutionResponse {
-                                events: ok.attributes,
-                                data: ok.data,
+                                events: ok.events.clone(),
+                                data: ok.data.clone(),
                             },
                         ),
                     };
+                    let reply_as_vec = serde_json::to_vec(&reply).map_err(|err| {
+                        warn!(
+                            "got an error while trying to serialize reply into bytes for internal_reply_enclave_sig  {:?}: {}",
+                            reply, err
+                        );
+                        EnclaveError::FailedToSerialize
+                    })?;
                     let tmp_secret_msg = SecretMessage {
                         nonce,
                         user_public_key,
-                        msg: serde_json::to_vec(&reply),
+                        msg: reply_as_vec,
                     };
-                    Some(create_callback_signature(
-                        contract_addr,
-                        &tmp_secret_msg,
-                        &[Coin],
+                    Some(Binary::from(
+                        create_callback_signature(contract_addr, &tmp_secret_msg, &[]).as_slice(),
                     ))
                 }
                 None => None, // Not a reply, we don't need enclave sig
@@ -378,13 +427,13 @@ fn encrypt_v1_wasm_msg(
             hash_appended_msg.extend_from_slice(msg.as_slice());
 
             let mut msg_to_pass = SecretMessage::from_base64(
-                cosmwasm_v1_types::binary::Binary(hash_appended_msg).to_base64(),
+                Binary(hash_appended_msg).to_base64(),
                 nonce,
                 user_public_key,
             )?;
 
             msg_to_pass.encrypt_in_place()?;
-            *msg = cosmwasm_v1_types::binary::Binary::from(msg_to_pass.to_vec().as_slice());
+            *msg = Binary::from(msg_to_pass.to_vec().as_slice());
 
             *callback_sig = Some(create_callback_signature(
                 contract_addr,

@@ -867,11 +867,11 @@ impl WasmiApi for ContractInstance {
             err
         })?;
 
-        let message =
+        let _message =
             String::from_utf8(message_buffer).unwrap_or_else(|err| hex::encode(err.into_bytes()));
 
         #[cfg(feature = "debug-print")]
-        info!("debug_print: {:?}", message);
+        info!("debug_print: {:?}", _message);
 
         Ok(None)
     }

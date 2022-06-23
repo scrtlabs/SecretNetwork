@@ -5,8 +5,8 @@ use enclave_crypto::{AESKey, Ed25519PublicKey, SIVEncryptable};
 use enclave_ffi_types::EnclaveError;
 
 use super::io::calc_encryption_key;
-use enclave_cosmwasm_v016_types::results::Event;
 use enclave_cosmwasm_types::encoding::Binary;
+use enclave_cosmwasm_v016_types::results::Event;
 
 pub type IoNonce = [u8; 32];
 

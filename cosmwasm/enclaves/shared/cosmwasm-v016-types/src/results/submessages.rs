@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use crate::binary::Binary;
 use crate::results::ContractResult;
+use enclave_cosmwasm_types::encoding::Binary;
 
 use super::{CosmosMsg, Empty, Event};
 
@@ -48,6 +48,16 @@ pub struct Reply {
     /// The ID that the contract set when emitting the `SubMsg`.
     /// Use this to identify which submessage triggered the `reply`.
     pub id: u64,
+    pub result: ContractResult<SubMsgExecutionResponse>,
+}
+
+/// The result object returned to `reply`. We always get the ID from the submessage
+/// back and then must handle success and error cases ourselves.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct InternalReply {
+    /// The ID that the contract set when emitting the `SubMsg`.
+    /// Use this to identify which submessage triggered the `reply`.
+    pub id: Binary,
     pub result: ContractResult<SubMsgExecutionResponse>,
 }
 

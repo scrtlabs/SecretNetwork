@@ -85,17 +85,21 @@ func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 
 // This struct helps us to distinguish between v010 contract response and v1 contract response
 type V010orV1ContractResponse struct {
-	V1Ok    *v1types.Response         `json:"ok,omitempty"`
-	V1Err   string                    `json:"error,omitempty"`
-	V010Ok  *v010types.HandleResponse `json:"Ok,omitempty"`
-	V010Err *types.StdError           `json:"Err,omitempty"`
+	V1Ok                   *v1types.Response         `json:"ok,omitempty"`
+	V1Err                  string                    `json:"error,omitempty"`
+	V010Ok                 *v010types.HandleResponse `json:"Ok,omitempty"`
+	V010Err                *types.StdError           `json:"Err,omitempty"`
+	InternaReplyEnclaveSig []byte                    `json:"internal_reply_enclave_sig"`
+	InternalMsgId          []byte                    `json:"internal_msg_id"`
 }
 
 type V010orV1ContractInitResponse struct {
-	V1Ok    *v1types.Response       `json:"ok,omitempty"`
-	V1Err   string                  `json:"error,omitempty"`
-	V010Ok  *v010types.InitResponse `json:"Ok,omitempty"`
-	V010Err *types.StdError         `json:"Err,omitempty"`
+	V1Ok                   *v1types.Response       `json:"ok,omitempty"`
+	V1Err                  string                  `json:"error,omitempty"`
+	V010Ok                 *v010types.InitResponse `json:"Ok,omitempty"`
+	V010Err                *types.StdError         `json:"Err,omitempty"`
+	InternaReplyEnclaveSig []byte                  `json:"internal_reply_enclave_sig"`
+	InternalMsgId          []byte                  `json:"internal_msg_id"`
 }
 
 // Instantiate will create a new contract based on the given codeID.
@@ -196,7 +200,6 @@ func (w *Wasmer) Execute(
 
 	var respV010orV1 V010orV1ContractResponse
 	err = json.Unmarshal(data, &respV010orV1)
-
 	if err != nil {
 		// unidentified response 🤷
 		return nil, gasUsed, fmt.Errorf("handle: cannot parse response from json: %w", err)
