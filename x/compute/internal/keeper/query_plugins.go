@@ -2,8 +2,9 @@ package keeper
 
 import (
 	"encoding/json"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"strings"
+
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
@@ -494,7 +495,7 @@ func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuer
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.Smart.ContractAddr)
 			}
-			return wasm.querySmartRecursive(ctx, addr, request.Smart.Msg, false)
+			return wasm.querySmartRecursive(ctx, addr, request.Smart.Msg)
 		}
 		if request.Raw != nil {
 			addr, err := sdk.AccAddressFromBech32(request.Raw.ContractAddr)

@@ -584,14 +584,12 @@ func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []b
 }
 
 // QuerySmartRecursive queries the smart contract itself. This should only be called when running inside another query recursively.
-func (k Keeper) querySmartRecursive(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, useDefaultGasLimit bool) ([]byte, error) {
+func (k Keeper) querySmartRecursive(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte) ([]byte, error) {
 	return k.querySmartImpl(ctx, contractAddr, req, true)
 }
 
 func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, recursive bool) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "query")
-
-	ctx.Logger().Info("querySmartImpl gas=%d/%d", ctx.GasMeter().GasConsumed(), ctx.GasMeter().Limit())
 
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: query")
 
