@@ -103,13 +103,15 @@ fn encrypt_preserialized_string(
         }
         None => val.as_bytes().to_vec(),
     };
-    let encrypted_data = key.encrypt_siv(serialized.as_slice(), None).map_err(|err| {
-        debug!(
-            "got an error while trying to encrypt output error {:?}: {}",
-            err, err
-        );
-        EnclaveError::EncryptionError
-    })?;
+    let encrypted_data = key
+        .encrypt_siv(serialized.as_slice(), None)
+        .map_err(|err| {
+            debug!(
+                "got an error while trying to encrypt output error {:?}: {}",
+                err, err
+            );
+            EnclaveError::EncryptionError
+        })?;
 
     Ok(b64_encode(encrypted_data.as_slice()))
 }
@@ -174,9 +176,9 @@ pub fn encrypt_output(
 
             // v0.10: The logs that will be emitted as part of a "wasm" event.
             for log in ok.log.iter_mut().filter(|log| log.encrypted) {
-                log.key = encrypt_preserialized_string(&encryption_key, &log.key, &None)?;
+                log.key = encrypt_preserialized_string(&encryption_key, &log.key, &reply_params)?;
                 log.value =
-                    encrypt_preserialized_string(&encryption_key, &log.value, &None)?;
+                    encrypt_preserialized_string(&encryption_key, &log.value, &reply_params)?;
             }
 
             if let Some(data) = &mut ok.data {
@@ -192,7 +194,7 @@ pub fn encrypt_output(
                     let encrypted_id = Binary::from_base64(&encrypt_serializable(
                         &encryption_key,
                         &r.1,
-                        &None,
+                        &reply_params,
                     )?)?;
 
                     Some(encrypted_id)
@@ -259,18 +261,18 @@ pub fn encrypt_output(
 
             // v1: The attributes that will be emitted as part of a "wasm" event.
             for attr in ok.attributes.iter_mut().filter(|attr| attr.encrypted) {
-                attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &None)?;
+                attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &reply_params)?;
                 attr.value =
-                    encrypt_preserialized_string(&encryption_key, &attr.value, &None)?;
+                    encrypt_preserialized_string(&encryption_key, &attr.value, &reply_params)?;
             }
 
             // v1: Extra, custom events separate from the main wasm one. These will have "wasm-"" prepended to the type.
             for event in ok.events.iter_mut() {
                 for attr in event.attributes.iter_mut().filter(|attr| attr.encrypted) {
                     attr.key =
-                        encrypt_preserialized_string(&encryption_key, &attr.key, &None)?;
+                        encrypt_preserialized_string(&encryption_key, &attr.key, &reply_params)?;
                     attr.value =
-                        encrypt_preserialized_string(&encryption_key, &attr.value, &None)?;
+                        encrypt_preserialized_string(&encryption_key, &attr.value, &reply_params)?;
                 }
             }
 
@@ -287,7 +289,7 @@ pub fn encrypt_output(
                     let encrypted_id = Binary::from_base64(&encrypt_serializable(
                         &encryption_key,
                         &r.1,
-                        &None,
+                        &reply_params,
                     )?)?;
 
                     Some(encrypted_id)

@@ -273,7 +273,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			replyToContractHash = dataWithInternalReplyInfo.Data[0:64] // First 64 bytes of the data is the contract hash
 
 			reply.ID = dataWithInternalReplyInfo.InternalMsgId
-			reply.Result.Ok.Data = dataWithInternalReplyInfo.Data[64:]
+			reply.Result.Ok.Data = dataWithInternalReplyInfo.Data
 			replySigInfo.CallbackSignature = dataWithInternalReplyInfo.InternaReplyEnclaveSig
 
 		}

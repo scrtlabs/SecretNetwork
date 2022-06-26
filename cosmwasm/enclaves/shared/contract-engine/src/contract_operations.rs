@@ -305,29 +305,32 @@ pub fn parse_message(
             let mut parsed_encrypted_reply: Reply = serde_json::from_slice(
                 &orig_secret_msg.msg.as_slice()[HEX_ENCODED_HASH_SIZE..].to_vec(),
             )
-                .map_err(|err| {
-                    warn!(
+            .map_err(|err| {
+                warn!(
             "reply got an error while trying to deserialize msg input bytes into json {:?}: {}",
             String::from_utf8_lossy(&orig_secret_msg.msg),
             err
             );
-                    EnclaveError::FailedToDeserialize
-                })?;
+                EnclaveError::FailedToDeserialize
+            })?;
 
             trace!("LIORRRRR reply is {:?}", parsed_encrypted_reply);
             match parsed_encrypted_reply.result.clone() {
                 SubMsgResult::Ok(response) => {
-                    let data = response.data.unwrap();
+                    let decrypted_msg_data = match response.data {
+                        Some(data) => {
+                            let tmp_secret_msg_data = SecretMessage {
+                                nonce: orig_secret_msg.nonce,
+                                user_public_key: orig_secret_msg.user_public_key,
+                                msg: data.as_slice().to_vec(),
+                            };
 
-                    // First decrypt the message
-                    let tmp_secret_msg_data = SecretMessage {
-                        nonce: orig_secret_msg.nonce,
-                        user_public_key: orig_secret_msg.user_public_key,
-                        msg: data.as_slice().to_vec(),
+                            Some(Binary(tmp_secret_msg_data.decrypt()?))
+                        }
+                        None => None,
                     };
 
-                    //let tmp_decrypted_msg_data = tmp_secret_msg_data.decrypt()?;
-                    let tmp_decrypted_msg_data = tmp_secret_msg_data.msg;
+                    trace!("LIORR HEREEE");
 
                     let tmp_secret_msg_id = SecretMessage {
                         nonce: orig_secret_msg.nonce,
@@ -352,10 +355,11 @@ pub fn parse_message(
                     let mut tmp_decrypted_msg_contract_hash =
                         tmp_secret_msg_contract_hash.decrypt()?;
 
+                    trace!("LIORRR I WISH TO BE HERE");
                     // Now we need to create synthetic SecretMessage to fit the API in "handle"
                     let result = SubMsgResult::Ok(SubMsgResponse {
                         events: response.events,
-                        data: Some(Binary(tmp_decrypted_msg_data)),
+                        data: decrypted_msg_data,
                     });
 
                     let mut msg_id: [u8; 8] = [0; 8];
@@ -618,7 +622,7 @@ pub fn query(
             secret_msg.user_public_key,
             &CanonicalAddr(Binary(Vec::new())), // Not used for queries (can't init a new contract from a query)
             &"".to_string(), // Not used for queries (can't call a sub-message from a query),
-            None, // Not used for queries (Query response is not replied to the caller),
+            None,            // Not used for queries (Query response is not replied to the caller),
         )?;
         Ok(output)
     })
