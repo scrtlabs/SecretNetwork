@@ -99,7 +99,7 @@ pub fn init(
     let decrypted_msg = secret_msg.decrypt()?;
 
     let (validated_msg, reply_recipient_contract_hash) =
-        validate_msg(&decrypted_msg, contract_code.hash())?;
+        validate_msg(&decrypted_msg, contract_code.hash(), None)?;
 
     trace!(
         "init input after decryption: {:?}",
@@ -223,6 +223,7 @@ pub fn parse_message(
         WasMessageEncrypted,
         SecretMessage,
         Vec<u8>,
+        Option<Vec<u8>>,
     ),
     EnclaveError,
 > {
@@ -240,6 +241,7 @@ pub fn parse_message(
                 WasMessageEncrypted::from(true),
                 orig_secret_msg,
                 decrypted_msg,
+                None,
             ))
         }
 
@@ -257,8 +259,18 @@ pub fn parse_message(
                         EnclaveError::FailedToDeserialize
                     })?;
 
+                if reply.id.len() > 8 {
+                    warn!("got an error while trying to deserialize reply, reply id should not exceed 64 bits");
+                    return Err(EnclaveError::FailedToDeserialize);
+                }
+
                 let mut msg_id: [u8; 8] = [0; 8];
-                msg_id.copy_from_slice(&reply.id.as_slice()[0..8]);
+                let start_index = 8 - reply.id.len();
+
+                for i in 0..reply.id.len() {
+                    msg_id[start_index + i] = reply.id.as_slice()[i];
+                }
+
                 let decrypted_reply = DecryptedReply {
                     id: u64::from_be_bytes(msg_id),
                     result: reply.result.clone(),
@@ -294,6 +306,7 @@ pub fn parse_message(
                     WasMessageEncrypted::from(false),
                     reply_secret_msg,
                     serialized_reply,
+                    None,
                 ));
             }
 
@@ -303,7 +316,7 @@ pub fn parse_message(
                 base64::encode(&message)
             );
             let mut parsed_encrypted_reply: Reply = serde_json::from_slice(
-                &orig_secret_msg.msg.as_slice()[HEX_ENCODED_HASH_SIZE..].to_vec(),
+                &orig_secret_msg.msg.as_slice().to_vec(),
             )
             .map_err(|err| {
                 warn!(
@@ -325,12 +338,12 @@ pub fn parse_message(
                                 msg: data.as_slice().to_vec(),
                             };
 
-                            Some(Binary(tmp_secret_msg_data.decrypt()?))
+                            Some(Binary(
+                                tmp_secret_msg_data.decrypt()?[HEX_ENCODED_HASH_SIZE..].to_vec(),
+                            ))
                         }
                         None => None,
                     };
-
-                    trace!("LIORR HEREEE");
 
                     let tmp_secret_msg_id = SecretMessage {
                         nonce: orig_secret_msg.nonce,
@@ -340,30 +353,24 @@ pub fn parse_message(
 
                     let tmp_decrypted_msg_id = tmp_secret_msg_id.decrypt()?;
 
-                    trace!(
-                        "LIORRRRR msg {:?} part {:?}",
-                        orig_secret_msg.msg,
-                        orig_secret_msg.msg.as_slice()[0..HEX_ENCODED_HASH_SIZE].to_vec()
-                    );
-
-                    let tmp_secret_msg_contract_hash = SecretMessage {
-                        nonce: orig_secret_msg.nonce,
-                        user_public_key: orig_secret_msg.user_public_key,
-                        msg: orig_secret_msg.msg.as_slice()[0..HEX_ENCODED_HASH_SIZE].to_vec(),
-                    };
-
-                    let mut tmp_decrypted_msg_contract_hash =
-                        tmp_secret_msg_contract_hash.decrypt()?;
-
-                    trace!("LIORRR I WISH TO BE HERE");
                     // Now we need to create synthetic SecretMessage to fit the API in "handle"
                     let result = SubMsgResult::Ok(SubMsgResponse {
                         events: response.events,
                         data: decrypted_msg_data,
                     });
 
+                    if tmp_decrypted_msg_id.len() > 8 + HEX_ENCODED_HASH_SIZE {
+                        warn!("got an error while trying to deserialize reply, reply id should not exceed 64 bits");
+                        return Err(EnclaveError::FailedToDeserialize);
+                    }
+
                     let mut msg_id: [u8; 8] = [0; 8];
-                    msg_id.copy_from_slice(&tmp_decrypted_msg_id[0..8]);
+                    let start_index = 8 - (tmp_decrypted_msg_id.len() - HEX_ENCODED_HASH_SIZE);
+
+                    for i in 0..(tmp_decrypted_msg_id.len() - HEX_ENCODED_HASH_SIZE) {
+                        msg_id[start_index + i] = tmp_decrypted_msg_id[i];
+                    }
+
                     let decrypted_reply = DecryptedReply {
                         id: u64::from_be_bytes(msg_id),
                         result,
@@ -389,12 +396,10 @@ pub fn parse_message(
                     EnclaveError::FailedToSerialize
                 })?;
 
-                    tmp_decrypted_msg_contract_hash.extend(serialized_encrypted_reply);
-
                     let reply_secret_msg = SecretMessage {
                         nonce: orig_secret_msg.nonce,
                         user_public_key: orig_secret_msg.user_public_key,
-                        msg: tmp_decrypted_msg_contract_hash,
+                        msg: serialized_encrypted_reply,
                     };
 
                     Ok((
@@ -402,6 +407,7 @@ pub fn parse_message(
                         WasMessageEncrypted::from(true),
                         reply_secret_msg,
                         decrypted_reply_as_vec,
+                        Some(tmp_decrypted_msg_id[..HEX_ENCODED_HASH_SIZE].to_vec()),
                     ))
                 }
                 SubMsgResult::Err(_) => {
@@ -465,8 +471,13 @@ pub fn handle(
     // When the message is handle, we expect it always to be encrypted while in Reply for example it might be plaintext
     let parsed_handle_type = HandleType::try_from(handle_type)?;
 
-    let (should_validate_sig_info, was_msg_encrypted, secret_msg, decrypted_msg) =
-        parse_message(msg, &parsed_sig_info, &parsed_handle_type)?;
+    let (
+        should_validate_sig_info,
+        was_msg_encrypted,
+        secret_msg,
+        decrypted_msg,
+        contract_hash_for_validation,
+    ) = parse_message(msg, &parsed_sig_info, &parsed_handle_type)?;
 
     // There is no signature to verify when the input isn't signed.
     // Receiving unsigned messages is only possible in Handle. (Init tx are always signed)
@@ -480,7 +491,11 @@ pub fn handle(
     let mut validated_msg = decrypted_msg.clone();
     let mut reply_params: Option<(Vec<u8>, u64)> = None;
     if was_msg_encrypted.into() {
-        let x = validate_msg(&decrypted_msg, contract_code.hash())?;
+        let x = validate_msg(
+            &decrypted_msg,
+            contract_code.hash(),
+            contract_hash_for_validation,
+        )?;
         validated_msg = x.0;
         reply_params = x.1;
     }
@@ -591,7 +606,7 @@ pub fn query(
         "query input afer decryption: {:?}",
         String::from_utf8_lossy(&decrypted_msg)
     );
-    let validated_msg = validate_msg(&decrypted_msg, contract_code.hash())?.0;
+    let validated_msg = validate_msg(&decrypted_msg, contract_code.hash(), None)?.0;
 
     let mut engine = start_engine(
         context,

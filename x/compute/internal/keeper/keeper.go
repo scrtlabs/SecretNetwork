@@ -1059,7 +1059,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
 	marshaledReply, error := json.Marshal(reply)
-	marshaledReply = append(replyToContractHash, marshaledReply...)
+	//marshaledReply = append(replyToContractHash, marshaledReply...)
 	marshaledReply = append(ogTx[0:64], marshaledReply...)
 
 	if error != nil {
