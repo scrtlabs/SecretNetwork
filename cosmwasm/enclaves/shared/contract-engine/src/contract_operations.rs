@@ -259,20 +259,27 @@ pub fn parse_message(
                         EnclaveError::FailedToDeserialize
                     })?;
 
-                if reply.id.len() > 8 {
-                    warn!("got an error while trying to deserialize reply, reply id should not exceed 64 bits");
-                    return Err(EnclaveError::FailedToDeserialize);
-                }
+                trace!("LIORRRR NEW {:?}", reply);
 
-                let mut msg_id: [u8; 8] = [0; 8];
-                let start_index = 8 - reply.id.len();
+                let msg_id = String::from_utf8(reply.id.as_slice().to_vec()).map_err(|err| {
+                    warn!(
+                        "Failed to parse message id as string {:?}: {}",
+                        reply.id.as_slice().to_vec(),
+                        err
+                    );
+                    EnclaveError::FailedToDeserialize
+                })?;
 
-                for i in 0..reply.id.len() {
-                    msg_id[start_index + i] = reply.id.as_slice()[i];
-                }
+                let msg_id_as_num = match msg_id.parse::<u64>() {
+                    Ok(m) => m,
+                    Err(err) => {
+                        warn!("Failed to parse message id as number {}: {}", msg_id, err);
+                        return Err(EnclaveError::FailedToDeserialize);
+                    }
+                };
 
                 let decrypted_reply = DecryptedReply {
-                    id: u64::from_be_bytes(msg_id),
+                    id: msg_id_as_num,
                     result: reply.result.clone(),
                 };
 
@@ -359,20 +366,33 @@ pub fn parse_message(
                         data: decrypted_msg_data,
                     });
 
-                    if tmp_decrypted_msg_id.len() > 8 + HEX_ENCODED_HASH_SIZE {
-                        warn!("got an error while trying to deserialize reply, reply id should not exceed 64 bits");
-                        return Err(EnclaveError::FailedToDeserialize);
-                    }
+                    trace!(
+                        "LIORRR LEN {} {:?}",
+                        tmp_decrypted_msg_id.len(),
+                        tmp_decrypted_msg_id
+                    );
 
-                    let mut msg_id: [u8; 8] = [0; 8];
-                    let start_index = 8 - (tmp_decrypted_msg_id.len() - HEX_ENCODED_HASH_SIZE);
+                    let msg_id =
+                        String::from_utf8(tmp_decrypted_msg_id[HEX_ENCODED_HASH_SIZE..].to_vec())
+                            .map_err(|err| {
+                            warn!(
+                                "Failed to parse message id as string {:?}: {}",
+                                tmp_decrypted_msg_id[HEX_ENCODED_HASH_SIZE..].to_vec(),
+                                err
+                            );
+                            EnclaveError::FailedToDeserialize
+                        })?;
 
-                    for i in 0..(tmp_decrypted_msg_id.len() - HEX_ENCODED_HASH_SIZE) {
-                        msg_id[start_index + i] = tmp_decrypted_msg_id[i];
-                    }
+                    let msg_id_as_num = match msg_id.parse::<u64>() {
+                        Ok(m) => m,
+                        Err(err) => {
+                            warn!("Failed to parse message id as number {}: {}", msg_id, err);
+                            return Err(EnclaveError::FailedToDeserialize);
+                        }
+                    };
 
                     let decrypted_reply = DecryptedReply {
-                        id: u64::from_be_bytes(msg_id),
+                        id: msg_id_as_num,
                         result,
                     };
 

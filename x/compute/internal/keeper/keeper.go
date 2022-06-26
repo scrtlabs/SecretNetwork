@@ -1042,7 +1042,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 		return nil, err
 	}
 
-	// always consider this pinned
+		// always consider this pinned
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading Compute module: reply")
 
 	store := ctx.KVStore(k.storeKey)

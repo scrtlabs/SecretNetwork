@@ -191,9 +191,9 @@ pub fn encrypt_output(
 
             let msg_id = match reply_params {
                 Some(ref r) => {
-                    let encrypted_id = Binary::from_base64(&encrypt_serializable(
+                    let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
                         &encryption_key,
-                        &r.1,
+                        &r.1.to_string(),
                         &reply_params,
                     )?)?;
 
@@ -244,9 +244,6 @@ pub fn encrypt_output(
         } => {
             for sub_msg in &mut ok.messages {
                 if let cosmwasm_v1_types::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
-                    // The ID can be extracted from the encrypted wasm msg
-                    // We don't encrypt it here to remain with the same type (u64)
-                    sub_msg.id = 0;
                     encrypt_v1_wasm_msg(
                         wasm_msg,
                         &sub_msg.reply_on,
@@ -256,6 +253,10 @@ pub fn encrypt_output(
                         contract_addr,
                         contract_hash,
                     )?;
+
+                    // The ID can be extracted from the encrypted wasm msg
+                    // We don't encrypt it here to remain with the same type (u64)
+                    sub_msg.id = 0;
                 }
             }
 
@@ -286,11 +287,13 @@ pub fn encrypt_output(
 
             let msg_id = match reply_params {
                 Some(ref r) => {
-                    let encrypted_id = Binary::from_base64(&encrypt_serializable(
+                    trace!("LIORRR v1 id io {}", r.1);
+                    let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
                         &encryption_key,
-                        &r.1,
+                        &r.1.to_string(),
                         &reply_params,
                     )?)?;
+                    trace!("LIORRRRR enc {:}", encrypted_id);
 
                     Some(encrypted_id)
                 }
@@ -418,6 +421,7 @@ fn encrypt_v1_wasm_msg(
                 hash_appended_msg
                     .extend_from_slice(cosmwasm_v1_types::results::REPLY_ENCRYPTION_MAGIC_BYTES);
                 hash_appended_msg.extend_from_slice(&msg_id.to_be_bytes());
+                trace!("LIORRR pre pre {}", msg_id);
                 hash_appended_msg.extend_from_slice(reply_recipient_contract_hash.as_bytes());
             }
             hash_appended_msg.extend_from_slice(msg.as_slice());

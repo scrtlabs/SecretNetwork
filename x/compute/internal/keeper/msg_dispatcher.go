@@ -1,7 +1,6 @@
 package keeper
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 
@@ -234,13 +233,16 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			}
 		}
 
-		msg_id := make([]byte, 8)
-		binary.BigEndian.PutUint64(msg_id, msg.ID)
+		fmt.Printf("LIORRRR ID %d\n", msg.ID)
+
+		msg_id := []byte(fmt.Sprint(msg.ID))
 		// now handle the reply, we use the parent context, and abort on error
 		reply := v1wasmTypes.Reply{
 			ID:     msg_id,
 			Result: result,
 		}
+
+		fmt.Printf("LIORRRR ID2 %+v\n", reply)
 
 		// we can ignore any result returned as there is nothing to do with the data
 		// and the events are already in the ctx.EventManager()
@@ -271,7 +273,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 
 			replySigInfo = ogSigInfo
 			replyToContractHash = dataWithInternalReplyInfo.Data[0:64] // First 64 bytes of the data is the contract hash
-
+			fmt.Printf("LIORRRRDDD %d, %x", len(dataWithInternalReplyInfo.InternalMsgId), dataWithInternalReplyInfo.InternalMsgId)
 			reply.ID = dataWithInternalReplyInfo.InternalMsgId
 			reply.Result.Ok.Data = dataWithInternalReplyInfo.Data
 			replySigInfo.CallbackSignature = dataWithInternalReplyInfo.InternaReplyEnclaveSig

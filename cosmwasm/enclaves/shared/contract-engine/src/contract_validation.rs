@@ -171,8 +171,16 @@ pub fn validate_msg(
     if validated_msg[0..(REPLY_ENCRYPTION_MAGIC_BYTES.len())] == *REPLY_ENCRYPTION_MAGIC_BYTES {
         validated_msg = validated_msg[REPLY_ENCRYPTION_MAGIC_BYTES.len()..].to_vec();
 
-        let sub_msg_deserialized: [u8; SIZE_OF_U64] = [0u8; SIZE_OF_U64];
+        let mut sub_msg_deserialized: [u8; SIZE_OF_U64] = [0u8; SIZE_OF_U64];
+        sub_msg_deserialized.copy_from_slice(&validated_msg[..SIZE_OF_U64]);
+
         let sub_msg_id: u64 = u64::from_be_bytes(sub_msg_deserialized);
+        trace!(
+            "LIORRRR id validation {:?} {} {:?}",
+            sub_msg_deserialized,
+            sub_msg_id,
+            validated_msg
+        );
         validated_msg = validated_msg[SIZE_OF_U64..].to_vec();
 
         let mut reply_recipient_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] =
