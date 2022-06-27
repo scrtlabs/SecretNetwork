@@ -2850,6 +2850,16 @@ func TestV1ReplySanity(t *testing.T) {
 	require.Empty(t, err)
 	require.Equal(t, uint32(25), binary.BigEndian.Uint32(data))
 
+	data, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"recursive_reply_fail":{}}`, true, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(10), binary.BigEndian.Uint32(data))
+
+	// data, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"init_new_contract":{}}`, true, true, math.MaxUint64, 0)
+
+	// require.Empty(t, err)
+	// require.Equal(t, uint32(150), binary.BigEndian.Uint32(data))
+
 	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
 	require.Empty(t, qErr)
 
@@ -2857,5 +2867,5 @@ func TestV1ReplySanity(t *testing.T) {
 	var resp v1QueryResponse
 	e := json.Unmarshal([]byte(queryRes), &resp)
 	require.NoError(t, e)
-	require.Equal(t, uint32(23), resp.Get.Count)
+	require.Equal(t, uint32(10), resp.Get.Count)
 }

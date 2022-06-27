@@ -2,6 +2,7 @@ package compute
 
 import (
 	"fmt"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -111,8 +112,9 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *MsgExecuteContract) (*sdk.Res
 		msg.SentFunds,
 		msg.CallbackSig,
 	)
+
 	if err != nil {
-		return nil, err
+		return res, err
 	}
 
 	events := filteredMessageEvents(ctx.EventManager())

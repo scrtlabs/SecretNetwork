@@ -568,7 +568,16 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	consumeGas(ctx, gasUsed)
 
 	if execErr != nil {
-		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
+		var result sdk.Result
+		switch res := response.(type) {
+		case v1wasmTypes.DataWithInternalReplyInfo:
+			result.Data, err = json.Marshal(res)
+			if err != nil {
+				return nil, sdkerrors.Wrap(err, "couldn't marshal internal reply info")
+			}
+		}
+
+		return &result, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
 
 	switch res := response.(type) {
@@ -1042,7 +1051,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 		return nil, err
 	}
 
-		// always consider this pinned
+	// always consider this pinned
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading Compute module: reply")
 
 	store := ctx.KVStore(k.storeKey)

@@ -145,7 +145,7 @@ pub fn validate_msg(
     }
 
     let mut received_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] = [0u8; HEX_ENCODED_HASH_SIZE];
-    let mut validated_msg: Vec<u8> = vec![];
+    let mut validated_msg: Vec<u8>;
     match contract_hash_for_validation {
         Some(c) => {
             received_contract_hash.copy_from_slice(&c.as_slice()[0..HEX_ENCODED_HASH_SIZE]);
@@ -175,12 +175,6 @@ pub fn validate_msg(
         sub_msg_deserialized.copy_from_slice(&validated_msg[..SIZE_OF_U64]);
 
         let sub_msg_id: u64 = u64::from_be_bytes(sub_msg_deserialized);
-        trace!(
-            "LIORRRR id validation {:?} {} {:?}",
-            sub_msg_deserialized,
-            sub_msg_id,
-            validated_msg
-        );
         validated_msg = validated_msg[SIZE_OF_U64..].to_vec();
 
         let mut reply_recipient_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] =
@@ -350,6 +344,7 @@ fn verify_callback_sig_impl(
             "Contract signature does not match with the one sent: {:?}",
             callback_signature
         );
+        trace!("LIORRRR expected sig {:?}", msg.msg);
         return false;
     }
 

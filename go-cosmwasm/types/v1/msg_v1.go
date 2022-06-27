@@ -38,7 +38,7 @@ type Response struct {
 type DataWithInternalReplyInfo struct {
 	InternaReplyEnclaveSig []byte `json:"internal_reply_enclave_sig"`
 	InternalMsgId          []byte `json:"internal_msg_id"`
-	Data                   []byte `json:"data"`
+	Data                   []byte `json:"data,omitempty"`
 }
 
 // LogAttributes must encode empty array as []

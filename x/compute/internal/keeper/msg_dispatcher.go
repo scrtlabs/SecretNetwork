@@ -3,6 +3,7 @@ package keeper
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -136,13 +137,22 @@ func (e UnsupportedRequest) Error() string {
 	return fmt.Sprintf("unsupported request: %s", e.Kind)
 }
 
-// Reply is encrypted only when it is a contract reply and it is OK since error is always reducted to be a string.
+// Reply is encrypted only when it is a contract reply
 func isReplyEncrypted(msg v1wasmTypes.CosmosMsg, reply v1wasmTypes.Reply) bool {
-	return (msg.Wasm != nil) && (reply.Result.Ok != nil)
+	return (msg.Wasm != nil)
 }
 
 // Issue #759 - we don't return error string for worries of non-determinism
 func redactError(err error) error {
+	// Do not redact encrypted wasm contract errors
+	if strings.HasPrefix(err.Error(), "encrypted:") {
+		// remove encrypted sign
+		e := strings.ReplaceAll(err.Error(), "encrypted: ", "")
+		e = strings.ReplaceAll(e, ": execute contract failed", "")
+		e = strings.ReplaceAll(e, ": instantiate contract failed", "")
+		return fmt.Errorf("%s", e)
+	}
+
 	// Do not redact system errors
 	// SystemErrors must be created in x/wasm and we can ensure determinism
 	if wasmTypes.ToSystemError(err) != nil {
@@ -233,16 +243,12 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			}
 		}
 
-		fmt.Printf("LIORRRR ID %d\n", msg.ID)
-
 		msg_id := []byte(fmt.Sprint(msg.ID))
 		// now handle the reply, we use the parent context, and abort on error
 		reply := v1wasmTypes.Reply{
 			ID:     msg_id,
 			Result: result,
 		}
-
-		fmt.Printf("LIORRRR ID2 %+v\n", reply)
 
 		// we can ignore any result returned as there is nothing to do with the data
 		// and the events are already in the ctx.EventManager()
@@ -259,12 +265,21 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 
 		var replyToContractHash []byte
 		if isReplyEncrypted(msg.Msg, reply) {
-			// If encrypting error should change here
 			var dataWithInternalReplyInfo v1wasmTypes.DataWithInternalReplyInfo
 
-			err = json.Unmarshal(reply.Result.Ok.Data, &dataWithInternalReplyInfo)
-			if err != nil {
-				return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json : %w", err)
+			if reply.Result.Ok != nil {
+
+				err = json.Unmarshal(reply.Result.Ok.Data, &dataWithInternalReplyInfo)
+				if err != nil {
+					return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json : %w", err)
+				}
+
+				reply.Result.Ok.Data = dataWithInternalReplyInfo.Data
+			} else {
+				err = json.Unmarshal(data[0], &dataWithInternalReplyInfo)
+				if err != nil {
+					return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json : %w", err)
+				}
 			}
 
 			if len(dataWithInternalReplyInfo.InternalMsgId) == 0 || len(dataWithInternalReplyInfo.InternaReplyEnclaveSig) == 0 {
@@ -273,9 +288,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 
 			replySigInfo = ogSigInfo
 			replyToContractHash = dataWithInternalReplyInfo.Data[0:64] // First 64 bytes of the data is the contract hash
-			fmt.Printf("LIORRRRDDD %d, %x", len(dataWithInternalReplyInfo.InternalMsgId), dataWithInternalReplyInfo.InternalMsgId)
 			reply.ID = dataWithInternalReplyInfo.InternalMsgId
-			reply.Result.Ok.Data = dataWithInternalReplyInfo.Data
 			replySigInfo.CallbackSignature = dataWithInternalReplyInfo.InternaReplyEnclaveSig
 
 		}

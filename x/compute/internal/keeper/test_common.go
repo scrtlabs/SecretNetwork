@@ -3,6 +3,11 @@ package keeper
 import (
 	"encoding/binary"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"testing"
+	"time"
+
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
@@ -14,10 +19,6 @@ import (
 	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
-	"io/ioutil"
-	"os"
-	"testing"
-	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
 
@@ -474,7 +475,7 @@ func handleInstantiate(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgInstantiateC
 func handleExecute(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgExecuteContract) (*sdk.Result, error) {
 	res, err := k.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig)
 	if err != nil {
-		return nil, err
+		return res, err
 	}
 
 	res.Events = ctx.EventManager().Events().ToABCIEvents()

@@ -3,6 +3,7 @@ package cosmwasm
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
 	types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
@@ -233,7 +234,11 @@ func (w *Wasmer) Execute(
 	isOutputAddressedToReply := (len(respV010orV1.InternaReplyEnclaveSig) > 0 && len(respV010orV1.InternalMsgId) > 0)
 
 	if respV010orV1.V1Err != "" {
-		return nil, gasUsed, fmt.Errorf(respV010orV1.V1Err)
+		return v1types.DataWithInternalReplyInfo{
+			InternalMsgId:          respV010orV1.InternalMsgId,
+			InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
+			Data: []byte(strings.ReplaceAll(respV010orV1.V1Err, "encrypted: ", "")), 
+		}, gasUsed, fmt.Errorf("%+v", respV010orV1.V1Err)
 	}
 
 	if respV010orV1.V1Ok != nil {
@@ -247,7 +252,11 @@ func (w *Wasmer) Execute(
 	}
 
 	if respV010orV1.V010Err != nil {
-		return nil, gasUsed, fmt.Errorf("%+v", respV010orV1.V010Err)
+		return v1types.DataWithInternalReplyInfo{
+			InternalMsgId:          respV010orV1.InternalMsgId,
+			InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
+			Data: []byte(respV010orV1.V010Err.GenericErr.Msg),
+		}, gasUsed, fmt.Errorf("%+v", respV010orV1.V010Err)
 	}
 
 	if respV010orV1.V010Ok != nil {

@@ -525,7 +525,8 @@ func (h MessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress
 	for _, sdkMsg := range sdkMsgs {
 		sdkEvents, sdkData, err := h.handleSdkMessage(ctx, contractAddr, sdkMsg)
 		if err != nil {
-			return nil, nil, err
+			data = append(data, sdkData)
+			return nil, data, err
 		}
 		// append data
 		data = append(data, sdkData)
@@ -560,7 +561,14 @@ func (h MessageHandler) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Addre
 
 		res, err = handler(ctx, msg)
 		if err != nil {
-			return nil, nil, err
+			var errData []byte
+			errData = nil
+			if res != nil {
+				errData = make([]byte, len(res.Data))
+				copy(errData, res.Data)
+			}
+
+			return nil, errData, err
 		}
 	} else {
 		return nil, nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized legacy message route: %s", sdk.MsgTypeURL(msg))

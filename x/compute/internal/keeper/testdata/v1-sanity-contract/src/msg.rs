@@ -13,6 +13,8 @@ pub enum ExecuteMsg {
     Increment { addition: u64 },
     TransferMoney { amount: u64 },
     RecursiveReply {},
+    RecursiveReplyFail {},
+    InitNewContract {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
