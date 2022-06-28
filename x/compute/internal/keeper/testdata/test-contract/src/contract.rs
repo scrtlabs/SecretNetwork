@@ -1,7 +1,7 @@
-use cosmwasm_storage::PrefixedStorage;
+use cosmwasm_storage::{PrefixedStorage, ReadonlySingleton, Singleton};
 
 use cosmwasm_std::{
-    log, to_binary, Api, BankMsg, Binary, Coin, CosmosMsg, Env, Extern, HandleResponse,
+    coins, log, to_binary, Api, BankMsg, Binary, Coin, CosmosMsg, Env, Extern, HandleResponse,
     HandleResult, HumanAddr, InitResponse, InitResult, Querier, QueryRequest, QueryResult,
     ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg, WasmQuery,
 };
@@ -69,6 +69,9 @@ pub enum InitMsg {
         addr: HumanAddr,
         code_hash: String,
         msg: String,
+    },
+    InitFromV1 {
+        counter: u64,
     },
 }
 
@@ -249,6 +252,9 @@ pub enum HandleMsg {
         privkey: Binary,
         iterations: u32,
     },
+    IncrementFromV1 {
+        addition: u64,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -282,6 +288,13 @@ pub enum QueryMsg {
         code_hash: String,
         msg: String,
     },
+    GetCountFromV1 {},
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum QueryRes {
+    GetCountFromV1 { count: u64 },
 }
 
 /////////////////////////////// Init ///////////////////////////////
@@ -388,7 +401,25 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 log: vec![log("c", format!("{}", answer))],
             })
         }
+        InitMsg::InitFromV1 { counter } => {
+            count(&mut deps.storage).save(&counter)?;
+
+            Ok(InitResponse {
+                messages: vec![],
+                log: vec![],
+            })
+        }
     }
+}
+
+pub const COUNT_KEY: &[u8] = b"count";
+
+pub fn count<S: Storage>(storage: &mut S) -> Singleton<S, u64> {
+    Singleton::new(storage, COUNT_KEY)
+}
+
+pub fn count_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, u64> {
+    ReadonlySingleton::new(storage, COUNT_KEY)
 }
 
 fn map_string_to_error(error_type: String) -> StdError {
@@ -938,6 +969,19 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             }
 
             return res;
+        }
+        HandleMsg::IncrementFromV1 { addition } => {
+            if addition == 0 {
+                return Err(StdError::generic_err("got wrong counter"));
+            }
+
+            let new_count = count(&mut deps.storage).load()? + addition;
+            count(&mut deps.storage).save(&new_count)?;
+
+            let mut resp = HandleResponse::default();
+            resp.data = Some((new_count as u32).to_be_bytes().into());
+
+            Ok(resp)
         }
     }
 }
@@ -1498,6 +1542,11 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
                     StdError::generic_err(format!("Got an error from query: {:?}", err))
                 })?;
             return Ok(to_binary(&answer)?);
+        }
+        QueryMsg::GetCountFromV1 {} => {
+            let count = count_read(&deps.storage).load()?;
+
+            Ok(to_binary(&QueryRes::GetCountFromV1 { count })?)
         }
     }
 }
