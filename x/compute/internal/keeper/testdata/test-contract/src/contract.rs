@@ -1,7 +1,7 @@
 use cosmwasm_storage::{PrefixedStorage, ReadonlySingleton, Singleton};
 
 use cosmwasm_std::{
-    coins, log, to_binary, Api, BankMsg, Binary, Coin, CosmosMsg, Env, Extern, HandleResponse,
+    log, to_binary, Api, BankMsg, Binary, Coin, CosmosMsg, Env, Extern, HandleResponse,
     HandleResult, HumanAddr, InitResponse, InitResult, Querier, QueryRequest, QueryResult,
     ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg, WasmQuery,
 };
