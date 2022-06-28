@@ -1,7 +1,7 @@
 use cosmwasm_std::{
-    attr, coins, entry_point, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env,
-    MessageInfo, QueryRequest, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, SubMsgResult,
-    WasmMsg, WasmQuery,
+    coins, entry_point, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    QueryRequest, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, SubMsgResult, WasmMsg,
+    WasmQuery,
 };
 
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, QueryRes};
@@ -29,13 +29,40 @@ pub fn instantiate(
         InstantiateMsg::Callback {
             contract_addr,
             code_hash,
-        } => todo!(),
+        } => Ok(Response::new()
+            .add_message(CosmosMsg::Wasm(WasmMsg::Execute {
+                code_hash,
+                contract_addr: contract_addr.clone(),
+                msg: Binary::from(r#"{"c":{"x":0,"y":13}}"#.as_bytes().to_vec()),
+                funds: vec![],
+            }))
+            .add_attribute("init with a callback", "🦄")),
         InstantiateMsg::CallbackContractError {
             contract_addr,
             code_hash,
-        } => todo!(),
-        InstantiateMsg::ContractError { error_type } => todo!(),
-        InstantiateMsg::NoLogs {} => todo!(),
+        } => Ok(Response::new()
+            .add_message(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: contract_addr.clone(),
+                code_hash,
+                msg: Binary::from(r#"{"contract_error":{"error_type":"generic_err"}}"#.as_bytes()),
+                funds: vec![],
+            }))
+            .add_attribute("init with a callback with contract error", "🤷‍♀️")),
+        InstantiateMsg::ContractError { error_type } => {
+            let as_str: &str = &error_type[..];
+            Err(match as_str {
+                "generic_err" => StdError::generic_err("la la 🤯"),
+                "invalid_base64" => StdError::invalid_base64("ra ra 🤯"),
+                "invalid_utf8" => StdError::invalid_utf8("ka ka 🤯"),
+                "not_found" => StdError::not_found("za za 🤯"),
+                "parse_err" => StdError::parse_err("na na 🤯", "pa pa 🤯"),
+                "serialize_err" => StdError::serialize_err("ba ba 🤯", "ga ga 🤯"),
+                // "unauthorized" => StdError::unauthorized(), // dosn't exist in v1
+                // "underflow" => StdError::underflow("minuend 🤯", "subtrahend 🤯"), // dosn't exist in v1
+                _ => StdError::generic_err("catch-all 🤯"),
+            })
+        }
+        InstantiateMsg::NoLogs {} => Ok(Response::new()),
         InstantiateMsg::CallbackToInit { code_id, code_hash } => todo!(),
         InstantiateMsg::CallbackBadParams {
             contract_addr,
