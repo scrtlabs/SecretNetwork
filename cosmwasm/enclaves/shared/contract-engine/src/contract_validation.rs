@@ -313,6 +313,11 @@ fn verify_callback_sig(
     msg: &SecretMessage,
     sent_funds: &[Coin],
 ) -> Result<(), EnclaveError> {
+    trace!(
+        "LIORRRR on verification {:?} canon {:?}",
+        sender,
+        CanonicalAddr::from_human(sender).or(Err(EnclaveError::FailedToSerialize))?
+    );
     if verify_callback_sig_impl(
         callback_signature,
         &CanonicalAddr::from_human(sender).or(Err(EnclaveError::FailedToSerialize))?,
@@ -344,7 +349,7 @@ fn verify_callback_sig_impl(
             "Contract signature does not match with the one sent: {:?}",
             callback_signature
         );
-        trace!("LIORRRR expected sig {:?}", msg.msg);
+        trace!("ASSAFF Address on ver {:?}", sender);
         return false;
     }
 

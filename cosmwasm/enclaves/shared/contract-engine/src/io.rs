@@ -131,6 +131,7 @@ pub fn encrypt_output(
     contract_addr: &CanonicalAddr,
     contract_hash: &String,
     reply_params: Option<(Vec<u8>, u64)>,
+    sender_addr: &CanonicalAddr,
 ) -> Result<Vec<u8>, EnclaveError> {
     // When encrypting an output we might encrypt an output that is a reply to a caller contract (Via "Reply" endpoint).
     // Therefore if reply_recipient_contract_hash is not "None" we append it to any encrypted data besided submessages that are irrelevant for replies.
@@ -193,7 +194,7 @@ pub fn encrypt_output(
                     };
 
                     Some(Binary::from(
-                        create_callback_signature(contract_addr, &tmp_secret_msg, &[]).as_slice(),
+                        create_callback_signature(sender_addr, &tmp_secret_msg, &[]).as_slice(),
                     ))
                 }
                 None => None, // Not a reply, we don't need enclave sig
@@ -245,7 +246,7 @@ pub fn encrypt_output(
                     };
 
                     Some(Binary::from(
-                        create_callback_signature(contract_addr, &tmp_secret_msg, &[]).as_slice(),
+                        create_callback_signature(sender_addr, &tmp_secret_msg, &[]).as_slice(),
                     ))
                 }
                 None => None, // Not a reply, we don't need enclave sig
@@ -325,7 +326,7 @@ pub fn encrypt_output(
                     };
 
                     Some(Binary::from(
-                        create_callback_signature(contract_addr, &tmp_secret_msg, &[]).as_slice(),
+                        create_callback_signature(sender_addr, &tmp_secret_msg, &[]).as_slice(),
                     ))
                 }
                 None => None, // Not a reply, we don't need enclave sig
@@ -413,11 +414,13 @@ pub fn encrypt_output(
                     let tmp_secret_msg = SecretMessage {
                         nonce,
                         user_public_key,
-                        msg: reply_as_vec,
+                        msg: reply_as_vec.clone(),
                     };
 
+                    trace!("ASSAFF Address on sign {:?}", sender_addr);
+
                     Some(Binary::from(
-                        create_callback_signature(contract_addr, &tmp_secret_msg, &[]).as_slice(),
+                        create_callback_signature(sender_addr, &tmp_secret_msg, &[]).as_slice(),
                     ))
                 }
                 None => None, // Not a reply, we don't need enclave sig

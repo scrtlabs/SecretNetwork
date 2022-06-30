@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
 	types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	v010types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
@@ -121,6 +122,7 @@ func (w *Wasmer) Instantiate(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	sigInfo types.VerificationInfo,
+	contractAddress sdk.AccAddress,
 ) (interface{}, []byte, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
@@ -155,12 +157,16 @@ func (w *Wasmer) Instantiate(
 	}
 
 	if respV010orV1.V1Ok != nil {
+
 		if isOutputAddressedToReply {
 			respV010orV1.V1Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
 			if err != nil {
 				return nil, nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary : %w", err)
 			}
+		} else {
+			respV010orV1.V1Ok.Data = nil
 		}
+
 		return respV010orV1.V1Ok, key, gasUsed, nil
 	}
 
@@ -170,11 +176,14 @@ func (w *Wasmer) Instantiate(
 
 	if respV010orV1.V010Ok != nil {
 		if isOutputAddressedToReply {
-			respV010orV1.V1Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
+			respV010orV1.V010Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
 			if err != nil {
 				return nil, nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary : %w", err)
 			}
+		} else {
+			respV010orV1.V010Ok.Data = nil
 		}
+
 		return respV010orV1.V010Ok, key, gasUsed, nil
 	}
 
@@ -237,7 +246,7 @@ func (w *Wasmer) Execute(
 		return v1types.DataWithInternalReplyInfo{
 			InternalMsgId:          respV010orV1.InternalMsgId,
 			InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
-			Data: []byte(strings.ReplaceAll(respV010orV1.V1Err, "encrypted: ", "")), 
+			Data:                   []byte(strings.ReplaceAll(respV010orV1.V1Err, "encrypted: ", "")),
 		}, gasUsed, fmt.Errorf("%+v", respV010orV1.V1Err)
 	}
 
@@ -255,7 +264,7 @@ func (w *Wasmer) Execute(
 		return v1types.DataWithInternalReplyInfo{
 			InternalMsgId:          respV010orV1.InternalMsgId,
 			InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
-			Data: []byte(respV010orV1.V010Err.GenericErr.Msg),
+			Data:                   []byte(respV010orV1.V010Err.GenericErr.Msg),
 		}, gasUsed, fmt.Errorf("%+v", respV010orV1.V010Err)
 	}
 

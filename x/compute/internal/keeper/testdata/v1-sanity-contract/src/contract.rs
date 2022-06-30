@@ -19,7 +19,7 @@ pub fn instantiate(
     expiration(deps.storage).save(&expires)?;
 
     let mut resp = Response::default();
-    resp.data = Some(env.contract.address.as_bytes().into());
+    resp.data = Some(env.contract.address.as_str().as_bytes().into());
     Ok(resp)
 }
 
@@ -107,7 +107,6 @@ pub fn init_new_contract(env: Env, _deps: DepsMut) -> StdResult<Response> {
     resp.messages.push(SubMsg {
         id: 1404,
         msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
-            admin: None,
             code_hash: env.contract.code_hash,
             msg: Binary::from("{\"counter\":150, \"expires\":100}".as_bytes().to_vec()),
             funds: vec![],
@@ -179,8 +178,10 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
         (1404, SubMsgResult::Ok(s)) => match s.data {
             Some(x) => {
                 let response = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-                    code_hash: env.contract.code_hash,
-                    contract_addr: x.to_string(),
+                    callback_code_hash: env.contract.code_hash,
+                    contract_addr: String::from_utf8(
+                        Binary::from_base64(String::from_utf8(x.to_vec())?.as_str())?.to_vec(),
+                    )?,
                     msg: to_binary(&QueryMsg::Get {})?,
                 }))?;
 

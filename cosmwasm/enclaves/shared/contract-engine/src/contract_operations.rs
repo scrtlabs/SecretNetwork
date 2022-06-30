@@ -75,6 +75,15 @@ pub fn init(
         );
         EnclaveError::FailedToDeserialize
     })?;
+
+    let canonical_sender_address = CanonicalAddr::from_human(&env_v010.message.sender).map_err(|err| {
+        warn!(
+            "init got an error while trying to deserialize env_v010.message.sender from bech32 string to bytes {:?}: {}",
+            env_v010.message.sender, err
+        );
+        EnclaveError::FailedToDeserialize
+    })?;
+
     let contract_key = generate_encryption_key(
         &env_v010,
         contract_code.hash(),
@@ -98,8 +107,7 @@ pub fn init(
 
     let decrypted_msg = secret_msg.decrypt()?;
 
-    let (validated_msg, reply_recipient_contract_hash) =
-        validate_msg(&decrypted_msg, contract_code.hash(), None)?;
+    let (validated_msg, reply_params) = validate_msg(&decrypted_msg, contract_code.hash(), None)?;
 
     trace!(
         "init input after decryption: {:?}",
@@ -137,7 +145,8 @@ pub fn init(
             secret_msg.user_public_key,
             &canonical_contract_address,
             &env_v010.contract_code_hash,
-            reply_recipient_contract_hash,
+            reply_params,
+            &canonical_sender_address,
         )?;
 
         Ok(output)
@@ -545,6 +554,14 @@ pub fn handle(
         EnclaveError::FailedToDeserialize
     })?;
 
+    let canonical_sender_address = CanonicalAddr::from_human(&env_v010.message.sender).map_err(|err| {
+        warn!(
+            "init got an error while trying to deserialize env_v010.message.sender from bech32 string to bytes {:?}: {}",
+            env_v010.message.sender, err
+        );
+        EnclaveError::FailedToDeserialize
+    })?;
+
     let contract_key = extract_contract_key(&env_v010)?;
 
     if !validate_contract_key(&contract_key, &canonical_contract_address, &contract_code) {
@@ -634,6 +651,11 @@ pub fn handle(
             "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",
             secret_msg.nonce, secret_msg.user_public_key
         );
+        trace!(
+            "LIORRR on sign addr {:?} canon {:?}",
+            env_v010.contract.address,
+            canonical_contract_address
+        );
         let output = encrypt_output(
             output,
             secret_msg.nonce,
@@ -641,6 +663,7 @@ pub fn handle(
             &canonical_contract_address,
             &env_v010.contract_code_hash,
             reply_params,
+            &canonical_sender_address
         )?;
         Ok(output)
     })
@@ -732,6 +755,7 @@ pub fn query(
             &CanonicalAddr(Binary(Vec::new())), // Not used for queries (can't init a new contract from a query)
             &"".to_string(), // Not used for queries (can't call a sub-message from a query),
             None,            // Not used for queries (Query response is not replied to the caller),
+            &CanonicalAddr(Binary(Vec::new())), // Not used for queries (used only for replies)
         )?;
         Ok(output)
     })
