@@ -75,9 +75,7 @@ func PackTxMsgAny(sdkMsg sdk.Msg) (*codectypes.Any, error) {
 
 // UnpackInterfaces implements codectypes.UnpackInterfacesMessage
 func (msg MsgSubmitTx) UnpackInterfaces(unpacker codectypes.AnyUnpacker) error {
-	var (
-		sdkMsg sdk.Msg
-	)
+	var sdkMsg sdk.Msg
 
 	return unpacker.UnpackAny(msg.Msg, &sdkMsg)
 }
@@ -99,7 +97,6 @@ func (msg MsgSubmitTx) GetSigners() []sdk.AccAddress {
 
 // ValidateBasic implements sdk.Msg
 func (msg MsgSubmitTx) ValidateBasic() error {
-
 	if len(msg.Msg.GetValue()) == 0 {
 		return fmt.Errorf("can't execute an empty msg")
 	}

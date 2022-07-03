@@ -50,8 +50,11 @@ import (
 
 // thanks @terra-project for this fix
 const flagLegacyHdPath = "legacy-hd-path"
-const flagIsBootstrap = "bootstrap"
-const cfgFileName = "config.toml"
+
+const (
+	flagIsBootstrap = "bootstrap"
+	cfgFileName     = "config.toml"
+)
 
 var bootstrap bool
 
@@ -91,7 +94,7 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 		WithLegacyAmino(encodingConfig.Amino).
 		WithInput(os.Stdin).
 		WithAccountRetriever(types.AccountRetriever{}).
-		//WithBroadcastMode(flags.BroadcastBlock).
+		// WithBroadcastMode(flags.BroadcastBlock).
 		WithHomeDir(app.DefaultNodeHome).
 		WithViper("SECRET")
 
@@ -118,12 +121,12 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 
 			secretAppTemplate, secretAppConfig := initAppConfig()
 
-			//ctx := server.GetServerContextFromCmd(cmd)
+			// ctx := server.GetServerContextFromCmd(cmd)
 
-			//bindFlags(cmd, ctx.Viper)
+			// bindFlags(cmd, ctx.Viper)
 
 			return server.InterceptConfigsPreRunHandler(cmd, secretAppTemplate, secretAppConfig)
-			//return initConfig(&initClientCtx, cmd)
+			// return initConfig(&initClientCtx, cmd)
 		},
 		SilenceUsage: true,
 	}
@@ -157,7 +160,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 
 	rootCmd.AddCommand(
 		InitCmd(app.ModuleBasics(), app.DefaultNodeHome),
-		//updateTmParamsAndInit(app.ModuleBasics(), app.DefaultNodeHome),
+		// updateTmParamsAndInit(app.ModuleBasics(), app.DefaultNodeHome),
 		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome),
 		secretlegacy.MigrateGenesisCmd(),
 		genutilcli.GenTxCmd(app.ModuleBasics(), encodingConfig.TxConfig, banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome),
@@ -245,7 +248,7 @@ func txCommand() *cobra.Command {
 		authcmd.GetEncodeCommand(),
 		authcmd.GetDecodeCommand(),
 		flags.LineBreak,
-		//vestingcli.GetTxCmd(),
+		// vestingcli.GetTxCmd(),
 		S20GetTxCmd(),
 	)
 
@@ -310,7 +313,6 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 func exportAppStateAndTMValidators(
 	logger log.Logger, db dbm.DB, traceStore io.Writer, height int64, forZeroHeight bool, jailWhiteList []string, appOpts servertypes.AppOptions,
 ) (servertypes.ExportedApp, error) {
-
 	bootstrap := viper.GetBool("bootstrap")
 
 	encCfg := app.MakeEncodingConfig()
@@ -361,7 +363,6 @@ func initConfig(ctx *client.Context, cmd *cobra.Command) error {
 	cmd.PersistentFlags().Bool(flagLegacyHdPath, false, "Flag to specify the command uses old HD path - use this for ledger compatibility")
 
 	_, err := cmd.PersistentFlags().GetBool(flagLegacyHdPath)
-
 	if err != nil {
 		return err
 	}
