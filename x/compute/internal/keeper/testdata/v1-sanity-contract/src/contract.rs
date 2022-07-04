@@ -3,7 +3,7 @@ use mem::MaybeUninit;
 use std::{mem, thread};
 
 use cosmwasm_std::{
-    attr, coins, entry_point, to_binary, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env,
+    attr, coins, entry_point, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env,
     MessageInfo, QueryRequest, Reply, ReplyOn, Response, StdError, StdResult, Storage, SubMsg,
     SubMsgResult, WasmMsg, WasmQuery,
 };
@@ -247,7 +247,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         }
         ExecuteMsg::SendFunds {
             amount,
-            from,
+            from: _,
             to,
             denom,
         } => Ok(Response::new().add_message(CosmosMsg::Bank(BankMsg::Send {
@@ -716,7 +716,9 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
             Some(x) => {
                 let response = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                     code_hash: env.contract.code_hash,
-                    contract_addr: x.to_string(),
+                    contract_addr: String::from_utf8(
+                        Binary::from_base64(String::from_utf8(x.to_vec())?.as_str())?.to_vec(),
+                    )?,
                     msg: to_binary(&QueryMsg::Get {})?,
                 }))?;
 
@@ -1114,7 +1116,6 @@ fn pass_null_pointer_to_imports_should_throw(deps: DepsMut, pass_type: String) -
                 .addr_validate(unsafe { MaybeUninit::zeroed().assume_init() });
         }
         "validate_address_output" => { /* TODO */ }
-        _ => {}
         _ => {}
     };
 

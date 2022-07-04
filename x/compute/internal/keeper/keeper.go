@@ -439,7 +439,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
-	response, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo)
+	response, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, contractAddress)
 	consumeGas(ctx, gasUsed)
 	if err != nil {
 		return contractAddress, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
@@ -464,7 +464,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 			return nil, nil, sdkerrors.Wrap(err, "couldn't convert v010 messages to v1 messages")
 		}
 
-		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, subMessages, res.Log, []v1wasmTypes.Event{}, []byte{}, initMsg, verificationInfo, wasmTypes.CosmosMsgVersionV010)
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, subMessages, res.Log, []v1wasmTypes.Event{}, res.Data, initMsg, verificationInfo, wasmTypes.CosmosMsgVersionV010)
 		if err != nil {
 			return nil, nil, sdkerrors.Wrap(err, "dispatch")
 		}
