@@ -254,6 +254,36 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Get {},
+
+    // These were ported from the v0.10 test-contract:
+    ContractError {
+        error_type: String,
+    },
+    Panic {},
+    ReceiveExternalQuery {
+        num: u8,
+    },
+    SendExternalQueryInfiniteLoop {
+        to: String,
+        code_hash: String,
+    },
+    WriteToStorage {},
+    RemoveFromStorage {},
+    SendExternalQueryDepthCounter {
+        to: String,
+        depth: u8,
+        code_hash: String,
+    },
+    SendExternalQueryRecursionLimit {
+        to: String,
+        depth: u8,
+        code_hash: String,
+    },
+    CallToQuery {
+        addr: String,
+        code_hash: String,
+        msg: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
