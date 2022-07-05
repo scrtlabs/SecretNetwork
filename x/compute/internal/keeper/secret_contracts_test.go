@@ -28,9 +28,23 @@ import (
 
 type ContractEvent []v010cosmwasm.LogAttribute
 
+type TestContract struct {
+	CosmWasmVersion string
+	WasmFilePath    string
+}
+
+var testContracts = []TestContract{
+	{
+		CosmWasmVersion: "v0.10",
+		WasmFilePath:    "./testdata/test-contract/contract.wasm",
+	}, {
+		CosmWasmVersion: "v1",
+		WasmFilePath:    "./testdata/v1-sanity-contract/contract.wasm",
+	},
+}
+
 // if codeID isn't 0, it will try to use that. Otherwise will take the contractAddress
 func testEncrypt(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, codeId uint64, msg []byte) ([]byte, error) {
-
 	var hash []byte
 	if codeId != 0 {
 		hash = keeper.GetCodeInfo(ctx, codeId).CodeHash
@@ -224,27 +238,34 @@ func (wasmGasMeter *WasmCounterGasMeter) RefundGas(amount stypes.Gas, descriptor
 func (wasmGasMeter *WasmCounterGasMeter) GasConsumed() sdk.Gas {
 	return wasmGasMeter.gasMeter.GasConsumed()
 }
+
 func (wasmGasMeter *WasmCounterGasMeter) GasConsumedToLimit() sdk.Gas {
 	return wasmGasMeter.gasMeter.GasConsumedToLimit()
 }
+
 func (wasmGasMeter *WasmCounterGasMeter) Limit() sdk.Gas {
 	return wasmGasMeter.gasMeter.Limit()
 }
+
 func (wasmGasMeter *WasmCounterGasMeter) ConsumeGas(amount sdk.Gas, descriptor string) {
 	if (descriptor == "wasm contract" || descriptor == "contract sub-query") && amount > 0 {
 		wasmGasMeter.wasmCounter++
 	}
 	wasmGasMeter.gasMeter.ConsumeGas(amount, descriptor)
 }
+
 func (wasmGasMeter *WasmCounterGasMeter) IsPastLimit() bool {
 	return wasmGasMeter.gasMeter.IsPastLimit()
 }
+
 func (wasmGasMeter *WasmCounterGasMeter) IsOutOfGas() bool {
 	return wasmGasMeter.gasMeter.IsOutOfGas()
 }
+
 func (wasmGasMeter *WasmCounterGasMeter) String() string {
 	return fmt.Sprintf("WasmCounterGasMeter: %+v %+v", wasmGasMeter.wasmCounter, wasmGasMeter.gasMeter)
 }
+
 func (wasmGasMeter *WasmCounterGasMeter) GetWasmCounter() uint64 {
 	return wasmGasMeter.wasmCounter
 }
@@ -431,42 +452,46 @@ func initHelperImpl(
 }
 
 func TestCallbackSanity(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, testContract := range testContracts {
+		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath)
 
-	// init
-	contractAddress, initEvents, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, err)
+			// init
+			contractAddress, initEvents, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, err)
 
-	require.Equal(t,
-		[]ContractEvent{
-			{
-				{Key: "contract_address", Value: contractAddress.String()},
-				{Key: "init", Value: "🌈"},
-			},
-		},
-		initEvents,
-	)
+			require.Equal(t,
+				[]ContractEvent{
+					{
+						{Key: "contract_address", Value: contractAddress.String()},
+						{Key: "init", Value: "🌈"},
+					},
+				},
+				initEvents,
+			)
 
-	data, execEvents, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"a":{"contract_addr":"%s","code_hash":"%s","x":2,"y":3}}`, contractAddress.String(), codeHash), true, false, defaultGasForTests, 0)
-	require.Empty(t, err)
-	require.Equal(t,
-		[]ContractEvent{
-			{
-				{Key: "contract_address", Value: contractAddress.String()},
-				{Key: "banana", Value: "🍌"},
-			},
-			{
-				{Key: "contract_address", Value: contractAddress.String()},
-				{Key: "kiwi", Value: "🥝"},
-			},
-			{
-				{Key: "contract_address", Value: contractAddress.String()},
-				{Key: "watermelon", Value: "🍉"},
-			},
-		},
-		execEvents,
-	)
-	require.Equal(t, []byte{2, 3}, data)
+			data, execEvents, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"a":{"contract_addr":"%s","code_hash":"%s","x":2,"y":3}}`, contractAddress.String(), codeHash), true, false, defaultGasForTests, 0)
+			require.Empty(t, err)
+			require.Equal(t,
+				[]ContractEvent{
+					{
+						{Key: "contract_address", Value: contractAddress.String()},
+						{Key: "banana", Value: "🍌"},
+					},
+					{
+						{Key: "contract_address", Value: contractAddress.String()},
+						{Key: "kiwi", Value: "🥝"},
+					},
+					{
+						{Key: "contract_address", Value: contractAddress.String()},
+						{Key: "watermelon", Value: "🍉"},
+					},
+				},
+				execEvents,
+			)
+			require.Equal(t, []byte{2, 3}, data)
+		})
+	}
 }
 
 func TestSanity(t *testing.T) {
@@ -477,7 +502,7 @@ func TestSanity(t *testing.T) {
 
 	contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, initMsg, true, false, defaultGasForTests)
 	require.Empty(t, err)
-	//require.Empty(t, initEvents)
+	// require.Empty(t, initEvents)
 
 	// check state after init
 	qRes, qErr := queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletA.String()), true, false, defaultGasForTests)
@@ -517,120 +542,148 @@ func TestSanity(t *testing.T) {
 }
 
 func TestInitLogs(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
-	require.Equal(t, 1, len(initEvents))
-	require.Equal(t,
-		[]ContractEvent{
-			{
-				{Key: "contract_address", Value: contractAddress.String()},
-				{Key: "init", Value: "🌈"},
-			},
-		},
-		initEvents,
-	)
+			contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
+			require.Equal(t, 1, len(initEvents))
+			require.Equal(t,
+				[]ContractEvent{
+					{
+						{Key: "contract_address", Value: contractAddress.String()},
+						{Key: "init", Value: "🌈"},
+					},
+				},
+				initEvents,
+			)
+		})
+	}
 }
 
 func TestEmptyLogKeyValue(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	_, execEvents, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"empty_log_key_value":{}}`, true, false, defaultGasForTests, 0)
+			_, execEvents, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"empty_log_key_value":{}}`, true, false, defaultGasForTests, 0)
 
-	require.Empty(t, execErr)
-	require.Equal(t,
-		[]ContractEvent{
-			{
-				{Key: "contract_address", Value: contractAddress.String()},
-				{Key: "my value is empty", Value: ""},
-				{Key: "", Value: "my key is empty"},
-			},
-		},
-		execEvents,
-	)
+			require.Empty(t, execErr)
+			require.Equal(t,
+				[]ContractEvent{
+					{
+						{Key: "contract_address", Value: contractAddress.String()},
+						{Key: "my value is empty", Value: ""},
+						{Key: "", Value: "my key is empty"},
+					},
+				},
+				execEvents,
+			)
+		})
+	}
 }
 
 func TestEmptyData(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"empty_data":{}}`, true, false, defaultGasForTests, 0)
+			data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"empty_data":{}}`, true, false, defaultGasForTests, 0)
 
-	require.Empty(t, err)
-	require.Empty(t, data)
+			require.Empty(t, err)
+			require.Empty(t, data)
+		})
+	}
 }
 
 func TestNoData(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"no_data":{}}`, true, false, defaultGasForTests, 0)
+			data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"no_data":{}}`, true, false, defaultGasForTests, 0)
 
-	require.Empty(t, err)
-	require.Empty(t, data)
+			require.Empty(t, err)
+			require.Empty(t, data)
+		})
+	}
 }
 
 func TestExecuteIllegalInputError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	_, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `bad input`, true, false, defaultGasForTests, 0)
+			_, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `bad input`, true, false, defaultGasForTests, 0)
 
-	require.NotNil(t, execErr.ParseErr)
+			require.NotNil(t, execErr.ParseErr)
+		})
+	}
 }
 
 func TestInitIllegalInputError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `bad input`, true, false, defaultGasForTests)
+			_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `bad input`, true, false, defaultGasForTests)
 
-	require.NotNil(t, initErr.ParseErr)
+			require.NotNil(t, initErr.ParseErr)
+		})
+	}
 }
 
 func TestCallbackFromInitAndCallbackEvents(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	// init first contract so we'd have someone to callback
-	firstContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			// init first contract so we'd have someone to callback
+			firstContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	require.Equal(t,
-		[]ContractEvent{
-			{
-				{Key: "contract_address", Value: firstContractAddress.String()},
-				{Key: "init", Value: "🌈"},
-			},
-		},
-		initEvents,
-	)
+			require.Equal(t,
+				[]ContractEvent{
+					{
+						{Key: "contract_address", Value: firstContractAddress.String()},
+						{Key: "init", Value: "🌈"},
+					},
+				},
+				initEvents,
+			)
 
-	// init second contract and callback to the first contract
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback":{"contract_addr":"%s", "code_hash": "%s"}}`, firstContractAddress.String(), codeHash), true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			// init second contract and callback to the first contract
+			contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback":{"contract_addr":"%s", "code_hash": "%s"}}`, firstContractAddress.String(), codeHash), true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	require.Equal(t,
-		[]ContractEvent{
-			{
-				{Key: "contract_address", Value: contractAddress.String()},
-				{Key: "init with a callback", Value: "🦄"},
-			},
-			{
-				{Key: "contract_address", Value: firstContractAddress.String()},
-				{Key: "watermelon", Value: "🍉"},
-			},
-		},
-		initEvents,
-	)
+			require.Equal(t,
+				[]ContractEvent{
+					{
+						{Key: "contract_address", Value: contractAddress.String()},
+						{Key: "init with a callback", Value: "🦄"},
+					},
+					{
+						{Key: "contract_address", Value: firstContractAddress.String()},
+						{Key: "watermelon", Value: "🍉"},
+					},
+				},
+				initEvents,
+			)
+		})
+	}
 }
 
 func TestQueryInputParamError(t *testing.T) {
@@ -641,7 +694,7 @@ func TestQueryInputParamError(t *testing.T) {
 
 	contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, initMsg, true, false, defaultGasForTests)
 	require.Empty(t, err)
-	//require.Empty(t, initEvents)
+	// require.Empty(t, initEvents)
 
 	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"address":"blabla"}}`, true, false, defaultGasForTests)
 
@@ -650,210 +703,234 @@ func TestQueryInputParamError(t *testing.T) {
 }
 
 func TestUnicodeData(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"unicode_data":{}}`, true, false, defaultGasForTests, 0)
+			data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"unicode_data":{}}`, true, false, defaultGasForTests, 0)
 
-	require.Empty(t, err)
-	require.Equal(t, "🍆🥑🍄", string(data))
+			require.Empty(t, err)
+			require.Equal(t, "🍆🥑🍄", string(data))
+		})
+	}
 }
 
 func TestInitContractError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	t.Run("generic_err", func(t *testing.T) {
-		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"generic_err"}}`, true, false, defaultGasForTests)
+			t.Run("generic_err", func(t *testing.T) {
+				_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"generic_err"}}`, true, false, defaultGasForTests)
 
-		require.NotNil(t, err.GenericErr)
-		require.Equal(t, "la la 🤯", err.GenericErr.Msg)
-	})
-	t.Run("invalid_base64", func(t *testing.T) {
-		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"invalid_base64"}}`, true, false, defaultGasForTests)
+				require.NotNil(t, err.GenericErr)
+				require.Equal(t, "la la 🤯", err.GenericErr.Msg)
+			})
+			t.Run("invalid_base64", func(t *testing.T) {
+				_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"invalid_base64"}}`, true, false, defaultGasForTests)
 
-		require.NotNil(t, err.InvalidBase64)
-		require.Equal(t, "ra ra 🤯", err.InvalidBase64.Msg)
-	})
-	t.Run("invalid_utf8", func(t *testing.T) {
-		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"invalid_utf8"}}`, true, false, defaultGasForTests)
+				require.NotNil(t, err.InvalidBase64)
+				require.Equal(t, "ra ra 🤯", err.InvalidBase64.Msg)
+			})
+			t.Run("invalid_utf8", func(t *testing.T) {
+				_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"invalid_utf8"}}`, true, false, defaultGasForTests)
 
-		require.NotNil(t, err.InvalidUtf8)
-		require.Equal(t, "ka ka 🤯", err.InvalidUtf8.Msg)
-	})
-	t.Run("not_found", func(t *testing.T) {
-		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"not_found"}}`, true, false, defaultGasForTests)
+				require.NotNil(t, err.InvalidUtf8)
+				require.Equal(t, "ka ka 🤯", err.InvalidUtf8.Msg)
+			})
+			t.Run("not_found", func(t *testing.T) {
+				_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"not_found"}}`, true, false, defaultGasForTests)
 
-		require.NotNil(t, err.NotFound)
-		require.Equal(t, "za za 🤯", err.NotFound.Kind)
-	})
-	t.Run("parse_err", func(t *testing.T) {
-		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"parse_err"}}`, true, false, defaultGasForTests)
+				require.NotNil(t, err.NotFound)
+				require.Equal(t, "za za 🤯", err.NotFound.Kind)
+			})
+			t.Run("parse_err", func(t *testing.T) {
+				_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"parse_err"}}`, true, false, defaultGasForTests)
 
-		require.NotNil(t, err.ParseErr)
-		require.Equal(t, "na na 🤯", err.ParseErr.Target)
-		require.Equal(t, "pa pa 🤯", err.ParseErr.Msg)
-	})
-	t.Run("serialize_err", func(t *testing.T) {
-		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"serialize_err"}}`, true, false, defaultGasForTests)
+				require.NotNil(t, err.ParseErr)
+				require.Equal(t, "na na 🤯", err.ParseErr.Target)
+				require.Equal(t, "pa pa 🤯", err.ParseErr.Msg)
+			})
+			t.Run("serialize_err", func(t *testing.T) {
+				_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"serialize_err"}}`, true, false, defaultGasForTests)
 
-		require.NotNil(t, err.SerializeErr)
-		require.Equal(t, "ba ba 🤯", err.SerializeErr.Source)
-		require.Equal(t, "ga ga 🤯", err.SerializeErr.Msg)
-	})
-	t.Run("unauthorized", func(t *testing.T) {
-		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"unauthorized"}}`, true, false, defaultGasForTests)
+				require.NotNil(t, err.SerializeErr)
+				require.Equal(t, "ba ba 🤯", err.SerializeErr.Source)
+				require.Equal(t, "ga ga 🤯", err.SerializeErr.Msg)
+			})
+			t.Run("unauthorized", func(t *testing.T) {
+				_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"unauthorized"}}`, true, false, defaultGasForTests)
 
-		require.NotNil(t, err.Unauthorized)
-	})
-	t.Run("underflow", func(t *testing.T) {
-		_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"underflow"}}`, true, false, defaultGasForTests)
+				require.NotNil(t, err.Unauthorized)
+			})
+			t.Run("underflow", func(t *testing.T) {
+				_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"underflow"}}`, true, false, defaultGasForTests)
 
-		require.NotNil(t, err.Underflow)
-		require.Equal(t, "minuend 🤯", err.Underflow.Minuend)
-		require.Equal(t, "subtrahend 🤯", err.Underflow.Subtrahend)
-	})
+				require.NotNil(t, err.Underflow)
+				require.Equal(t, "minuend 🤯", err.Underflow.Minuend)
+				require.Equal(t, "subtrahend 🤯", err.Underflow.Subtrahend)
+			})
+		})
+	}
 }
 
 func TestExecContractError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	t.Run("generic_err", func(t *testing.T) {
-		_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"generic_err"}}`, true, false, defaultGasForTests, 0)
+			t.Run("generic_err", func(t *testing.T) {
+				_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"generic_err"}}`, true, false, defaultGasForTests, 0)
 
-		require.NotNil(t, err.GenericErr)
-		require.Equal(t, "la la 🤯", err.GenericErr.Msg)
-	})
-	t.Run("invalid_base64", func(t *testing.T) {
-		_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"invalid_base64"}}`, true, false, defaultGasForTests, 0)
+				require.NotNil(t, err.GenericErr)
+				require.Equal(t, "la la 🤯", err.GenericErr.Msg)
+			})
+			t.Run("invalid_base64", func(t *testing.T) {
+				_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"invalid_base64"}}`, true, false, defaultGasForTests, 0)
 
-		require.NotNil(t, err.InvalidBase64)
-		require.Equal(t, "ra ra 🤯", err.InvalidBase64.Msg)
-	})
-	t.Run("invalid_utf8", func(t *testing.T) {
-		_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"invalid_utf8"}}`, true, false, defaultGasForTests, 0)
+				require.NotNil(t, err.InvalidBase64)
+				require.Equal(t, "ra ra 🤯", err.InvalidBase64.Msg)
+			})
+			t.Run("invalid_utf8", func(t *testing.T) {
+				_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"invalid_utf8"}}`, true, false, defaultGasForTests, 0)
 
-		require.NotNil(t, err.InvalidUtf8)
-		require.Equal(t, "ka ka 🤯", err.InvalidUtf8.Msg)
-	})
-	t.Run("not_found", func(t *testing.T) {
-		_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"not_found"}}`, true, false, defaultGasForTests, 0)
+				require.NotNil(t, err.InvalidUtf8)
+				require.Equal(t, "ka ka 🤯", err.InvalidUtf8.Msg)
+			})
+			t.Run("not_found", func(t *testing.T) {
+				_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"not_found"}}`, true, false, defaultGasForTests, 0)
 
-		require.NotNil(t, err.NotFound)
-		require.Equal(t, "za za 🤯", err.NotFound.Kind)
-	})
-	t.Run("parse_err", func(t *testing.T) {
-		_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"parse_err"}}`, true, false, defaultGasForTests, 0)
+				require.NotNil(t, err.NotFound)
+				require.Equal(t, "za za 🤯", err.NotFound.Kind)
+			})
+			t.Run("parse_err", func(t *testing.T) {
+				_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"parse_err"}}`, true, false, defaultGasForTests, 0)
 
-		require.NotNil(t, err.ParseErr)
-		require.Equal(t, "na na 🤯", err.ParseErr.Target)
-		require.Equal(t, "pa pa 🤯", err.ParseErr.Msg)
-	})
-	t.Run("serialize_err", func(t *testing.T) {
-		_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"serialize_err"}}`, true, false, defaultGasForTests, 0)
+				require.NotNil(t, err.ParseErr)
+				require.Equal(t, "na na 🤯", err.ParseErr.Target)
+				require.Equal(t, "pa pa 🤯", err.ParseErr.Msg)
+			})
+			t.Run("serialize_err", func(t *testing.T) {
+				_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"serialize_err"}}`, true, false, defaultGasForTests, 0)
 
-		require.NotNil(t, err.SerializeErr)
-		require.Equal(t, "ba ba 🤯", err.SerializeErr.Source)
-		require.Equal(t, "ga ga 🤯", err.SerializeErr.Msg)
-	})
-	t.Run("unauthorized", func(t *testing.T) {
-		_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"unauthorized"}}`, true, false, defaultGasForTests, 0)
+				require.NotNil(t, err.SerializeErr)
+				require.Equal(t, "ba ba 🤯", err.SerializeErr.Source)
+				require.Equal(t, "ga ga 🤯", err.SerializeErr.Msg)
+			})
+			t.Run("unauthorized", func(t *testing.T) {
+				_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"unauthorized"}}`, true, false, defaultGasForTests, 0)
 
-		require.NotNil(t, err.Unauthorized)
-	})
-	t.Run("underflow", func(t *testing.T) {
-		_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"underflow"}}`, true, false, defaultGasForTests, 0)
+				require.NotNil(t, err.Unauthorized)
+			})
+			t.Run("underflow", func(t *testing.T) {
+				_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"underflow"}}`, true, false, defaultGasForTests, 0)
 
-		require.NotNil(t, err.Underflow)
-		require.Equal(t, "minuend 🤯", err.Underflow.Minuend)
-		require.Equal(t, "subtrahend 🤯", err.Underflow.Subtrahend)
-	})
+				require.NotNil(t, err.Underflow)
+				require.Equal(t, "minuend 🤯", err.Underflow.Minuend)
+				require.Equal(t, "subtrahend 🤯", err.Underflow.Subtrahend)
+			})
+		})
+	}
 }
 
 func TestQueryContractError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	t.Run("generic_err", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"generic_err"}}`, true, false, defaultGasForTests)
+			t.Run("generic_err", func(t *testing.T) {
+				_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"generic_err"}}`, true, false, defaultGasForTests)
 
-		require.NotNil(t, err.GenericErr)
-		require.Equal(t, "la la 🤯", err.GenericErr.Msg)
-	})
-	t.Run("invalid_base64", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"invalid_base64"}}`, true, false, defaultGasForTests)
+				require.NotNil(t, err.GenericErr)
+				require.Equal(t, "la la 🤯", err.GenericErr.Msg)
+			})
+			t.Run("invalid_base64", func(t *testing.T) {
+				_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"invalid_base64"}}`, true, false, defaultGasForTests)
 
-		require.NotNil(t, err.InvalidBase64)
-		require.Equal(t, "ra ra 🤯", err.InvalidBase64.Msg)
-	})
-	t.Run("invalid_utf8", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"invalid_utf8"}}`, true, false, defaultGasForTests)
+				require.NotNil(t, err.InvalidBase64)
+				require.Equal(t, "ra ra 🤯", err.InvalidBase64.Msg)
+			})
+			t.Run("invalid_utf8", func(t *testing.T) {
+				_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"invalid_utf8"}}`, true, false, defaultGasForTests)
 
-		require.NotNil(t, err.InvalidUtf8)
-		require.Equal(t, "ka ka 🤯", err.InvalidUtf8.Msg)
-	})
-	t.Run("not_found", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"not_found"}}`, true, false, defaultGasForTests)
+				require.NotNil(t, err.InvalidUtf8)
+				require.Equal(t, "ka ka 🤯", err.InvalidUtf8.Msg)
+			})
+			t.Run("not_found", func(t *testing.T) {
+				_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"not_found"}}`, true, false, defaultGasForTests)
 
-		require.NotNil(t, err.NotFound)
-		require.Equal(t, "za za 🤯", err.NotFound.Kind)
-	})
-	t.Run("parse_err", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"parse_err"}}`, true, false, defaultGasForTests)
+				require.NotNil(t, err.NotFound)
+				require.Equal(t, "za za 🤯", err.NotFound.Kind)
+			})
+			t.Run("parse_err", func(t *testing.T) {
+				_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"parse_err"}}`, true, false, defaultGasForTests)
 
-		require.NotNil(t, err.ParseErr)
-		require.Equal(t, "na na 🤯", err.ParseErr.Target)
-		require.Equal(t, "pa pa 🤯", err.ParseErr.Msg)
-	})
-	t.Run("serialize_err", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"serialize_err"}}`, true, false, defaultGasForTests)
+				require.NotNil(t, err.ParseErr)
+				require.Equal(t, "na na 🤯", err.ParseErr.Target)
+				require.Equal(t, "pa pa 🤯", err.ParseErr.Msg)
+			})
+			t.Run("serialize_err", func(t *testing.T) {
+				_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"serialize_err"}}`, true, false, defaultGasForTests)
 
-		require.NotNil(t, err.SerializeErr)
-		require.Equal(t, "ba ba 🤯", err.SerializeErr.Source)
-		require.Equal(t, "ga ga 🤯", err.SerializeErr.Msg)
-	})
-	t.Run("unauthorized", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"unauthorized"}}`, true, false, defaultGasForTests)
+				require.NotNil(t, err.SerializeErr)
+				require.Equal(t, "ba ba 🤯", err.SerializeErr.Source)
+				require.Equal(t, "ga ga 🤯", err.SerializeErr.Msg)
+			})
+			t.Run("unauthorized", func(t *testing.T) {
+				_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"unauthorized"}}`, true, false, defaultGasForTests)
 
-		require.NotNil(t, err.Unauthorized)
-	})
-	t.Run("underflow", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"underflow"}}`, true, false, defaultGasForTests)
+				require.NotNil(t, err.Unauthorized)
+			})
+			t.Run("underflow", func(t *testing.T) {
+				_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"underflow"}}`, true, false, defaultGasForTests)
 
-		require.NotNil(t, err.Underflow)
-		require.Equal(t, "minuend 🤯", err.Underflow.Minuend)
-		require.Equal(t, "subtrahend 🤯", err.Underflow.Subtrahend)
-	})
+				require.NotNil(t, err.Underflow)
+				require.Equal(t, "minuend 🤯", err.Underflow.Minuend)
+				require.Equal(t, "subtrahend 🤯", err.Underflow.Subtrahend)
+			})
+		})
+	}
 }
 
 func TestInitParamError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	codeHash := "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-	msg := fmt.Sprintf(`{"callback":{"contract_addr":"notanaddress", "code_hash":"%s"}}`, codeHash)
+			codeHash := "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+			msg := fmt.Sprintf(`{"callback":{"contract_addr":"notanaddress", "code_hash":"%s"}}`, codeHash)
 
-	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, msg, false, false, defaultGasForTests)
+			_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, msg, false, false, defaultGasForTests)
 
-	require.Contains(t, initErr.Error(), "invalid address")
+			require.Contains(t, initErr.Error(), "invalid address")
+		})
+	}
 }
 
 func TestCallbackExecuteParamError(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	msg := fmt.Sprintf(`{"a":{"code_hash":"%s","contract_addr":"notanaddress","x":2,"y":3}}`, codeHash)
+			msg := fmt.Sprintf(`{"a":{"code_hash":"%s","contract_addr":"notanaddress","x":2,"y":3}}`, codeHash)
 
-	_, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, msg, false, false, defaultGasForTests, 0)
+			_, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, msg, false, false, defaultGasForTests, 0)
 
-	require.Contains(t, err.Error(), "invalid address")
+			require.Contains(t, err.Error(), "invalid address")
+		})
+	}
 }
 
 func TestQueryInputStructureError(t *testing.T) {
@@ -864,7 +941,7 @@ func TestQueryInputStructureError(t *testing.T) {
 
 	contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, initMsg, true, false, defaultGasForTests)
 	require.Empty(t, err)
-	//require.Empty(t, initEvents)
+	// require.Empty(t, initEvents)
 
 	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"invalidkey":"invalidval"}}`, true, false, defaultGasForTests)
 
@@ -873,830 +950,1022 @@ func TestQueryInputStructureError(t *testing.T) {
 }
 
 func TestInitNotEncryptedInputError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKey, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKey, _, _ := setupTest(t, tc.WasmFilePath)
 
-	//ctx = sdk.NewContext(
-	//	ctx.MultiStore(),
-	//	ctx.BlockHeader(),
-	//	ctx.IsCheckTx(),
-	//	log.NewNopLogger(),
-	//).WithGasMeter(sdk.NewGasMeter(defaultGas))
+			//ctx = sdk.NewContext(
+			//	ctx.MultiStore(),
+			//	ctx.BlockHeader(),
+			//	ctx.IsCheckTx(),
+			//	log.NewNopLogger(),
+			//).WithGasMeter(sdk.NewGasMeter(defaultGas))
 
-	initMsg := []byte(`{"nop":{}`)
+			initMsg := []byte(`{"nop":{}`)
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privKey, initMsg, codeID, nil)
+			ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privKey, initMsg, codeID, nil)
 
-	// init
-	_, _, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, initMsg, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
-	require.Error(t, err)
+			// init
+			_, _, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, initMsg, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+			require.Error(t, err)
 
-	require.Contains(t, err.Error(), "failed to decrypt data")
+			require.Contains(t, err.Error(), "failed to decrypt data")
+		})
+	}
 }
 
 func TestExecuteNotEncryptedInputError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	//ctx = sdk.NewContext(
-	//	ctx.MultiStore(),
-	//	ctx.BlockHeader(),
-	//	ctx.IsCheckTx(),
-	//	log.NewNopLogger(),
-	//).WithGasMeter(sdk.NewGasMeter(defaultGas))
+			//ctx = sdk.NewContext(
+			//	ctx.MultiStore(),
+			//	ctx.BlockHeader(),
+			//	ctx.IsCheckTx(),
+			//	log.NewNopLogger(),
+			//).WithGasMeter(sdk.NewGasMeter(defaultGas))
 
-	execMsg := []byte(`{"empty_log_key_value":{}}`)
+			execMsg := []byte(`{"empty_log_key_value":{}}`)
 
-	ctx = PrepareExecSignedTx(t, keeper, ctx, walletA, privKeyA, execMsg, contractAddress, nil)
+			ctx = PrepareExecSignedTx(t, keeper, ctx, walletA, privKeyA, execMsg, contractAddress, nil)
 
-	_, err := keeper.Execute(ctx, contractAddress, walletA, execMsg, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
-	require.Error(t, err)
+			_, err := keeper.Execute(ctx, contractAddress, walletA, execMsg, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+			require.Error(t, err)
 
-	require.Contains(t, err.Error(), "failed to decrypt data")
+			require.Contains(t, err.Error(), "failed to decrypt data")
+		})
+	}
 }
 
 func TestQueryNotEncryptedInputError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	_, err := keeper.QuerySmart(ctx, contractAddress, []byte(`{"owner":{}}`), false)
-	require.Error(t, err)
+			_, err := keeper.QuerySmart(ctx, contractAddress, []byte(`{"owner":{}}`), false)
+			require.Error(t, err)
 
-	require.Contains(t, err.Error(), "failed to decrypt data")
+			require.Contains(t, err.Error(), "failed to decrypt data")
+		})
+	}
 }
 
 func TestInitNoLogs(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	// init
-	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"no_logs":{}}`, true, false, defaultGasForTests)
+			// init
+			_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"no_logs":{}}`, true, false, defaultGasForTests)
 
-	require.Empty(t, initErr)
-	////require.Empty(t, initEvents)
+			require.Empty(t, initErr)
+			////require.Empty(t, initEvents)
+		})
+	}
 }
 
 func TestExecNoLogs(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	// init
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			// init
+			contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	_, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"no_logs":{}}`, true, false, defaultGasForTests, 0)
+			_, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"no_logs":{}}`, true, false, defaultGasForTests, 0)
 
-	require.Empty(t, err)
-	//require.Empty(t, execEvents)
+			require.Empty(t, err)
+			// require.Empty(t, execEvents)
+		})
+	}
 }
 
 func TestExecCallbackToInit(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	// init first contract
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			// init first contract
+			contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	// init second contract and callback to the first contract
-	execData, execEvents, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d, "code_hash":"%s"}}`, codeID, codeHash), true, false, defaultGasForTests, 0)
-	require.Empty(t, execErr)
-	require.Empty(t, execData)
+			// init second contract and callback to the first contract
+			execData, execEvents, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d, "code_hash":"%s"}}`, codeID, codeHash), true, false, defaultGasForTests, 0)
+			require.Empty(t, execErr)
+			require.Empty(t, execData)
 
-	require.Equal(t, 2, len(execEvents))
-	require.Equal(t,
-		ContractEvent{
-			{Key: "contract_address", Value: contractAddress.String()},
-			{Key: "instantiating a new contract", Value: "🪂"},
-		},
-		execEvents[0],
-	)
-	require.Equal(t,
-		v010cosmwasm.LogAttribute{Key: "init", Value: "🌈"},
-		execEvents[1][1],
-	)
-	require.Equal(t, "contract_address", execEvents[1][0].Key)
+			require.Equal(t, 2, len(execEvents))
+			require.Equal(t,
+				ContractEvent{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "instantiating a new contract", Value: "🪂"},
+				},
+				execEvents[0],
+			)
+			require.Equal(t,
+				v010cosmwasm.LogAttribute{Key: "init", Value: "🌈"},
+				execEvents[1][1],
+			)
+			require.Equal(t, "contract_address", execEvents[1][0].Key)
 
-	secondContractAddressBech32 := execEvents[1][0].Value
-	secondContractAddress, err := sdk.AccAddressFromBech32(secondContractAddressBech32)
-	require.NoError(t, err)
+			secondContractAddressBech32 := execEvents[1][0].Value
+			secondContractAddress, err := sdk.AccAddressFromBech32(secondContractAddressBech32)
+			require.NoError(t, err)
 
-	data, _, _, err := execHelper(t, keeper, ctx, secondContractAddress, walletA, privKeyA, `{"unicode_data":{}}`, true, false, defaultGasForTests, 0)
+			data, _, _, err := execHelper(t, keeper, ctx, secondContractAddress, walletA, privKeyA, `{"unicode_data":{}}`, true, false, defaultGasForTests, 0)
 
-	require.Empty(t, err)
-	//require.Empty(t, execEvents)
-	require.Equal(t, "🍆🥑🍄", string(data))
+			require.Empty(t, err)
+			// require.Empty(t, execEvents)
+			require.Equal(t, "🍆🥑🍄", string(data))
+		})
+	}
 }
 
 func TestInitCallbackToInit(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d, "code_hash":"%s"}}`, codeID, codeHash), true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d, "code_hash":"%s"}}`, codeID, codeHash), true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	require.Equal(t, 2, len(initEvents))
-	require.Equal(t,
-		ContractEvent{
-			{Key: "contract_address", Value: contractAddress.String()},
-			{Key: "instantiating a new contract from init!", Value: "🐙"},
-		},
-		initEvents[0],
-	)
-	require.Equal(t,
-		v010cosmwasm.LogAttribute{Key: "init", Value: "🌈"},
-		initEvents[1][1],
-	)
-	require.Equal(t, "contract_address", initEvents[1][0].Key)
+			require.Equal(t, 2, len(initEvents))
+			require.Equal(t,
+				ContractEvent{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "instantiating a new contract from init!", Value: "🐙"},
+				},
+				initEvents[0],
+			)
+			require.Equal(t,
+				v010cosmwasm.LogAttribute{Key: "init", Value: "🌈"},
+				initEvents[1][1],
+			)
+			require.Equal(t, "contract_address", initEvents[1][0].Key)
 
-	secondContractAddressBech32 := initEvents[1][0].Value
-	secondContractAddress, err := sdk.AccAddressFromBech32(secondContractAddressBech32)
-	require.NoError(t, err)
+			secondContractAddressBech32 := initEvents[1][0].Value
+			secondContractAddress, err := sdk.AccAddressFromBech32(secondContractAddressBech32)
+			require.NoError(t, err)
 
-	data, _, _, err := execHelper(t, keeper, ctx, secondContractAddress, walletA, privKeyA, `{"unicode_data":{}}`, true, false, defaultGasForTests, 0)
+			data, _, _, err := execHelper(t, keeper, ctx, secondContractAddress, walletA, privKeyA, `{"unicode_data":{}}`, true, false, defaultGasForTests, 0)
 
-	require.Empty(t, err)
-	//require.Empty(t, execEvents)
-	require.Equal(t, "🍆🥑🍄", string(data))
+			require.Empty(t, err)
+			// require.Empty(t, execEvents)
+			require.Equal(t, "🍆🥑🍄", string(data))
+		})
+	}
 }
 
 func TestInitCallbackContractError(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
-	require.Equal(t, 1, len(initEvents))
+			contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
+			require.Equal(t, 1, len(initEvents))
 
-	secondContractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s", "code_hash":"%s"}}`, contractAddress, codeHash), true, false, defaultGasForTests)
+			secondContractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s", "code_hash":"%s"}}`, contractAddress, codeHash), true, false, defaultGasForTests)
 
-	require.NotNil(t, initErr.GenericErr)
-	require.Equal(t, "la la 🤯", initErr.GenericErr.Msg)
-	require.Empty(t, secondContractAddress)
-	//require.Empty(t, initEvents)
+			require.NotNil(t, initErr.GenericErr)
+			require.Equal(t, "la la 🤯", initErr.GenericErr.Msg)
+			require.Empty(t, secondContractAddress)
+			// require.Empty(t, initEvents)
+		})
+	}
 }
 
 func TestExecCallbackContractError(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	// init
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
-	require.Equal(t, 1, len(initEvents))
+			// init
+			contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
+			require.Equal(t, 1, len(initEvents))
 
-	data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s","code_hash":"%s"}}`, contractAddress, codeHash), true, false, defaultGasForTests, 0)
+			data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s","code_hash":"%s"}}`, contractAddress, codeHash), true, false, defaultGasForTests, 0)
 
-	require.NotNil(t, execErr.GenericErr)
-	require.Equal(t, "la la 🤯", execErr.GenericErr.Msg)
-	//require.Empty(t, execEvents)
-	require.Empty(t, data)
+			require.NotNil(t, execErr.GenericErr)
+			require.Equal(t, "la la 🤯", execErr.GenericErr.Msg)
+			// require.Empty(t, execEvents)
+			require.Empty(t, data)
+		})
+	}
 }
 
 func TestExecCallbackBadParam(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	// init
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
-	require.Equal(t, 1, len(initEvents))
+			// init
+			contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
+			require.Equal(t, 1, len(initEvents))
 
-	data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"callback_contract_bad_param":{"contract_addr":"%s"}}`, contractAddress), true, false, defaultGasForTests, 0)
+			data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"callback_contract_bad_param":{"contract_addr":"%s"}}`, contractAddress), true, false, defaultGasForTests, 0)
 
-	require.NotNil(t, execErr.ParseErr)
-	require.Equal(t, "test_contract::contract::HandleMsg", execErr.ParseErr.Target)
-	require.Contains(t, execErr.ParseErr.Msg, "unknown variant `callback_contract_bad_param`")
-	//require.Empty(t, execEvents)
-	require.Empty(t, data)
+			require.NotNil(t, execErr.ParseErr)
+			require.Equal(t, "test_contract::contract::HandleMsg", execErr.ParseErr.Target)
+			require.Contains(t, execErr.ParseErr.Msg, "unknown variant `callback_contract_bad_param`")
+			// require.Empty(t, execEvents)
+			require.Empty(t, data)
+		})
+	}
 }
 
 func TestInitCallbackBadParam(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	// init first
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
-	require.Equal(t, 1, len(initEvents))
+			// init first
+			contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
+			require.Equal(t, 1, len(initEvents))
 
-	secondContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback_contract_bad_param":{"contract_addr":"%s"}}`, contractAddress), true, false, defaultGasForTests)
-	require.Empty(t, secondContractAddress)
-	//require.Empty(t, initEvents)
+			secondContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback_contract_bad_param":{"contract_addr":"%s"}}`, contractAddress), true, false, defaultGasForTests)
+			require.Empty(t, secondContractAddress)
+			// require.Empty(t, initEvents)
 
-	require.NotNil(t, initErr.ParseErr)
-	require.Equal(t, "test_contract::contract::InitMsg", initErr.ParseErr.Target)
-	require.Contains(t, initErr.ParseErr.Msg, "unknown variant `callback_contract_bad_param`")
+			require.NotNil(t, initErr.ParseErr)
+			require.Equal(t, "test_contract::contract::InitMsg", initErr.ParseErr.Target)
+			require.Contains(t, initErr.ParseErr.Msg, "unknown variant `callback_contract_bad_param`")
+		})
+	}
 }
 
 func TestState(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	// init
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
-	require.Equal(t, 1, len(initEvents))
+			// init
+			contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
+			require.Equal(t, 1, len(initEvents))
 
-	data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, false, defaultGasForTests, 0)
-	require.Empty(t, execErr)
-	require.Empty(t, data)
+			data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, false, defaultGasForTests, 0)
+			require.Empty(t, execErr)
+			require.Empty(t, data)
 
-	_, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"set_state":{"key":"banana","value":"🍌"}}`, true, false, defaultGasForTests, 0)
-	require.Empty(t, execErr)
+			_, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"set_state":{"key":"banana","value":"🍌"}}`, true, false, defaultGasForTests, 0)
+			require.Empty(t, execErr)
 
-	data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, false, defaultGasForTests, 0)
-	require.Empty(t, execErr)
-	require.Equal(t, "🍌", string(data))
+			data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, false, defaultGasForTests, 0)
+			require.Empty(t, execErr)
+			require.Equal(t, "🍌", string(data))
 
-	_, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"remove_state":{"key":"banana"}}`, true, false, defaultGasForTests, 0)
-	require.Empty(t, execErr)
+			_, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"remove_state":{"key":"banana"}}`, true, false, defaultGasForTests, 0)
+			require.Empty(t, execErr)
 
-	data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, false, defaultGasForTests, 0)
-	require.Empty(t, execErr)
-	require.Empty(t, data)
+			data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, false, defaultGasForTests, 0)
+			require.Empty(t, execErr)
+			require.Empty(t, data)
+		})
+	}
 }
 
 func TestCanonicalizeAddressErrors(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
-	require.Equal(t, 1, len(initEvents))
+			contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
+			require.Equal(t, 1, len(initEvents))
 
-	// this function should handle errors internally and return gracefully
-	data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"test_canonicalize_address_errors":{}}`, true, false, defaultGasForTests, 0)
-	require.Empty(t, execErr)
-	require.Equal(t, "🤟", string(data))
+			// this function should handle errors internally and return gracefully
+			data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"test_canonicalize_address_errors":{}}`, true, false, defaultGasForTests, 0)
+			require.Empty(t, execErr)
+			require.Equal(t, "🤟", string(data))
+		})
+	}
 }
 
 func TestInitPanic(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"panic":{}}`, false, false, defaultGasForTests)
+			_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"panic":{}}`, false, false, defaultGasForTests)
 
-	require.NotNil(t, initErr.GenericErr)
-	require.Contains(t, initErr.GenericErr.Msg, "the contract panicked")
+			require.NotNil(t, initErr.GenericErr)
+			require.Contains(t, initErr.GenericErr.Msg, "the contract panicked")
+		})
+	}
 }
 
 func TestExecPanic(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"panic":{}}`, false, false, defaultGasForTests, 0)
+			_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"panic":{}}`, false, false, defaultGasForTests, 0)
 
-	require.NotNil(t, execErr.GenericErr)
-	require.Contains(t, execErr.GenericErr.Msg, "the contract panicked")
+			require.NotNil(t, execErr.GenericErr)
+			require.Contains(t, execErr.GenericErr.Msg, "the contract panicked")
+		})
+	}
 }
 
 func TestQueryPanic(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	_, queryErr := queryHelper(t, keeper, ctx, addr, `{"panic":{}}`, false, false, defaultGasForTests)
-	require.NotNil(t, queryErr.GenericErr)
-	require.Contains(t, queryErr.GenericErr.Msg, "the contract panicked")
+			_, queryErr := queryHelper(t, keeper, ctx, addr, `{"panic":{}}`, false, false, defaultGasForTests)
+			require.NotNil(t, queryErr.GenericErr)
+			require.Contains(t, queryErr.GenericErr.Msg, "the contract panicked")
+		})
+	}
 }
 
 func TestAllocateOnHeapFailBecauseMemoryLimit(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	data, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"allocate_on_heap":{"bytes":13631488}}`, false, false, defaultGasForTests, 0)
+			data, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"allocate_on_heap":{"bytes":13631488}}`, false, false, defaultGasForTests, 0)
 
-	// this should fail with memory error because 13MiB is more than the allowed 12MiB
+			// this should fail with memory error because 13MiB is more than the allowed 12MiB
 
-	require.Empty(t, data)
+			require.Empty(t, data)
 
-	require.NotNil(t, execErr.GenericErr)
-	require.Contains(t, execErr.GenericErr.Msg, "the contract panicked")
+			require.NotNil(t, execErr.GenericErr)
+			require.Contains(t, execErr.GenericErr.Msg, "the contract panicked")
+		})
+	}
 }
 
 func TestAllocateOnHeapFailBecauseGasLimit(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	// ensure we get an out of gas panic
-	defer func() {
-		r := recover()
-		require.NotNil(t, r)
-		_, ok := r.(sdk.ErrorOutOfGas)
-		require.True(t, ok, "%+v", r)
-	}()
+			// ensure we get an out of gas panic
+			defer func() {
+				r := recover()
+				require.NotNil(t, r)
+				_, ok := r.(sdk.ErrorOutOfGas)
+				require.True(t, ok, "%+v", r)
+			}()
 
-	_, _, _, _ = execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"allocate_on_heap":{"bytes":1073741824}}`, false, false, defaultGasForTests, 0)
+			_, _, _, _ = execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"allocate_on_heap":{"bytes":1073741824}}`, false, false, defaultGasForTests, 0)
 
-	// this should fail with out of gas because 1GiB will ask for
-	// 134,217,728 gas units (8192 per page times 16,384 pages)
-	// the default gas limit in ctx is 200,000 which translates into
-	// 20,000,000 WASM gas units, so before the memory_grow opcode is reached
-	// the gas metering sees a request that'll cost 134mn and the limit
-	// is 20mn, so it throws an out of gas exception
+			// this should fail with out of gas because 1GiB will ask for
+			// 134,217,728 gas units (8192 per page times 16,384 pages)
+			// the default gas limit in ctx is 200,000 which translates into
+			// 20,000,000 WASM gas units, so before the memory_grow opcode is reached
+			// the gas metering sees a request that'll cost 134mn and the limit
+			// is 20mn, so it throws an out of gas exception
 
-	require.True(t, false)
+			require.True(t, false)
+		})
+	}
 }
 
 func TestAllocateOnHeapMoreThanSGXHasFailBecauseMemoryLimit(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	data, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"allocate_on_heap":{"bytes":1073741824}}`, false, false, 9_000_000, 0)
+			data, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"allocate_on_heap":{"bytes":1073741824}}`, false, false, 9_000_000, 0)
 
-	// this should fail with memory error because 1GiB is more
-	// than the allowed 12MiB, gas is 9mn so WASM gas is 900mn
-	// which is bigger than the 134mn from the previous test
+			// this should fail with memory error because 1GiB is more
+			// than the allowed 12MiB, gas is 9mn so WASM gas is 900mn
+			// which is bigger than the 134mn from the previous test
 
-	require.Empty(t, data)
+			require.Empty(t, data)
 
-	require.NotNil(t, execErr.GenericErr)
-	require.Contains(t, execErr.GenericErr.Msg, "the contract panicked")
+			require.NotNil(t, execErr.GenericErr)
+			require.Contains(t, execErr.GenericErr.Msg, "the contract panicked")
+		})
+	}
 }
 
 func TestPassNullPointerToImports(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	tests := []string{
-		"read_db_key",
-		"write_db_key",
-		"write_db_value",
-		"remove_db_key",
-		"canonicalize_address_input",
-		"humanize_address_input",
-	}
+			tests := []string{
+				"read_db_key",
+				"write_db_key",
+				"write_db_value",
+				"remove_db_key",
+				"canonicalize_address_input",
+				"humanize_address_input",
+			}
 
-	for _, passType := range tests {
-		t.Run(passType, func(t *testing.T) {
-			_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"pass_null_pointer_to_imports_should_throw":{"pass_type":"%s"}}`, passType), false, false, defaultGasForTests, 0)
+			for _, passType := range tests {
+				t.Run(passType, func(t *testing.T) {
+					_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"pass_null_pointer_to_imports_should_throw":{"pass_type":"%s"}}`, passType), false, false, defaultGasForTests, 0)
 
-			require.NotNil(t, execErr.GenericErr)
-			require.Contains(t, execErr.GenericErr.Msg, "failed to read memory")
+					require.NotNil(t, execErr.GenericErr)
+					require.Contains(t, execErr.GenericErr.Msg, "failed to read memory")
+				})
+			}
 		})
 	}
 }
 
 func TestExternalQueryWorks(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	data, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests, 0)
+			data, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests, 0)
 
-	require.Empty(t, execErr)
-	require.Equal(t, []byte{3}, data)
+			require.Empty(t, execErr)
+			require.Equal(t, []byte{3}, data)
+		})
+	}
 }
 
 func TestExternalQueryCalleePanic(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, err)
+			addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, err)
 
-	_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_panic":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests, 0)
+			_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_panic":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests, 0)
 
-	require.NotNil(t, err.GenericErr)
-	require.Contains(t, err.GenericErr.Msg, "the contract panicked")
+			require.NotNil(t, err.GenericErr)
+			require.Contains(t, err.GenericErr.Msg, "the contract panicked")
+		})
+	}
 }
 
 func TestExternalQueryCalleeStdError(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, err)
+			addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, err)
 
-	_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_error":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests, 0)
+			_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_error":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests, 0)
 
-	require.NotNil(t, err.GenericErr)
-	require.Equal(t, "la la 🤯", err.GenericErr.Msg)
+			require.NotNil(t, err.GenericErr)
+			require.Equal(t, "la la 🤯", err.GenericErr.Msg)
+		})
+	}
 }
 
 func TestExternalQueryCalleeDoesntExist(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, err)
+			addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, err)
 
-	_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"send_external_query_error":{"to":"secret13l72vhjngmg55ykajxdnlalktwglyqjqv9pkq4","code_hash":"bla bla"}}`, true, false, defaultGasForTests, 0)
+			_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"send_external_query_error":{"to":"secret13l72vhjngmg55ykajxdnlalktwglyqjqv9pkq4","code_hash":"bla bla"}}`, true, false, defaultGasForTests, 0)
 
-	require.NotNil(t, err.GenericErr)
-	require.Contains(t, err.GenericErr.Msg, "not found")
+			require.NotNil(t, err.GenericErr)
+			require.Contains(t, err.GenericErr.Msg, "not found")
+		})
+	}
 }
 
 func TestExternalQueryBadSenderABI(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, err)
+			addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, err)
 
-	_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_bad_abi":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests, 0)
+			_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_bad_abi":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests, 0)
 
-	require.NotNil(t, err.ParseErr)
-	require.Equal(t, "test_contract::contract::QueryMsg", err.ParseErr.Target)
-	require.Equal(t, "Invalid type", err.ParseErr.Msg)
+			require.NotNil(t, err.ParseErr)
+			require.Equal(t, "test_contract::contract::QueryMsg", err.ParseErr.Target)
+			require.Equal(t, "Invalid type", err.ParseErr.Msg)
+		})
+	}
 }
 
 func TestExternalQueryBadReceiverABI(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, err)
+			addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, err)
 
-	_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_bad_abi_receiver":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests, 0)
+			_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_bad_abi_receiver":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests, 0)
 
-	require.NotNil(t, err.ParseErr)
-	require.Equal(t, "alloc::string::String", err.ParseErr.Target)
-	require.Equal(t, "Invalid type", err.ParseErr.Msg)
+			require.NotNil(t, err.ParseErr)
+			require.Equal(t, "alloc::string::String", err.ParseErr.Target)
+			require.Equal(t, "Invalid type", err.ParseErr.Msg)
+		})
+	}
 }
 
 func TestMsgSenderInCallback(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, err)
+			addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, err)
 
-	_, events, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"callback_to_log_msg_sender":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests, 0)
+			_, events, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"callback_to_log_msg_sender":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests, 0)
 
-	require.Empty(t, err)
-	require.Equal(t, []ContractEvent{
-		{
-			{Key: "contract_address", Value: addr.String()},
-			{Key: "hi", Value: "hey"},
-		},
-		{
-			{Key: "contract_address", Value: addr.String()},
-			{Key: "msg.sender", Value: addr.String()},
-		},
-	}, events)
+			require.Empty(t, err)
+			require.Equal(t, []ContractEvent{
+				{
+					{Key: "contract_address", Value: addr.String()},
+					{Key: "hi", Value: "hey"},
+				},
+				{
+					{Key: "contract_address", Value: addr.String()},
+					{Key: "msg.sender", Value: addr.String()},
+				},
+			}, events)
+		})
+	}
 }
 
 func TestInfiniteQueryLoopKilledGracefullyByOOM(t *testing.T) {
 	t.SkipNow() // We no longer expect to hit OOM trivially
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, err)
+			addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, err)
 
-	data, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_infinite_loop":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests)
+			data, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_infinite_loop":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests)
 
-	require.Empty(t, data)
-	require.NotNil(t, err.GenericErr)
-	require.Equal(t, err.GenericErr.Msg, "query contract failed: Execution error: Enclave: enclave ran out of heap memory")
+			require.Empty(t, data)
+			require.NotNil(t, err.GenericErr)
+			require.Equal(t, err.GenericErr.Msg, "query contract failed: Execution error: Enclave: enclave ran out of heap memory")
+		})
+	}
 }
 
 func TestQueryRecursionLimitEnforcedInQueries(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, err)
+			addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, err)
 
-	data, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, false, defaultGasForTests)
+			data, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, false, defaultGasForTests)
 
-	require.NotEmpty(t, data)
-	require.Equal(t, data, "\"Recursion limit was correctly enforced\"")
+			require.NotEmpty(t, data)
+			require.Equal(t, data, "\"Recursion limit was correctly enforced\"")
 
-	require.Nil(t, err.GenericErr)
+			require.Nil(t, err.GenericErr)
+		})
+	}
 }
 
 func TestQueryRecursionLimitEnforcedInHandles(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, err)
+			addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, err)
 
-	data, _, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, false, defaultGasForTests, 0)
+			data, _, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, false, defaultGasForTests, 0)
 
-	require.NotEmpty(t, data)
-	require.Equal(t, string(data), "\"Recursion limit was correctly enforced\"")
+			require.NotEmpty(t, data)
+			require.Equal(t, string(data), "\"Recursion limit was correctly enforced\"")
 
-	require.Nil(t, err.GenericErr)
+			require.Nil(t, err.GenericErr)
+		})
+	}
 }
 
 func TestQueryRecursionLimitEnforcedInInits(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	// Initialize a contract that we will be querying
-	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, err)
+			// Initialize a contract that we will be querying
+			addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, err)
 
-	// Initialize the contract that will be running the test
-	addr, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, false, defaultGasForTests)
-	require.Empty(t, err)
+			// Initialize the contract that will be running the test
+			addr, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, false, defaultGasForTests)
+			require.Empty(t, err)
 
-	require.Nil(t, err.GenericErr)
+			require.Nil(t, err.GenericErr)
 
-	require.Equal(t, []ContractEvent{
-		{
-			{Key: "contract_address", Value: addr.String()},
-			{Key: "message", Value: "Recursion limit was correctly enforced"},
-		},
-	}, events)
+			require.Equal(t, []ContractEvent{
+				{
+					{Key: "contract_address", Value: addr.String()},
+					{Key: "message", Value: "Recursion limit was correctly enforced"},
+				},
+			}, events)
+		})
+	}
 }
 
 func TestWriteToStorageDuringQuery(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	_, queryErr := queryHelper(t, keeper, ctx, addr, `{"write_to_storage": {}}`, false, false, defaultGasForTests)
-	require.NotNil(t, queryErr.GenericErr)
-	require.Contains(t, queryErr.GenericErr.Msg, "contract tried to write to storage during a query")
+			_, queryErr := queryHelper(t, keeper, ctx, addr, `{"write_to_storage": {}}`, false, false, defaultGasForTests)
+			require.NotNil(t, queryErr.GenericErr)
+			require.Contains(t, queryErr.GenericErr.Msg, "contract tried to write to storage during a query")
+		})
+	}
 }
 
 func TestRemoveFromStorageDuringQuery(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	_, queryErr := queryHelper(t, keeper, ctx, addr, `{"remove_from_storage": {}}`, false, false, defaultGasForTests)
-	require.NotNil(t, queryErr.GenericErr)
-	require.Contains(t, queryErr.GenericErr.Msg, "contract tried to write to storage during a query")
+			_, queryErr := queryHelper(t, keeper, ctx, addr, `{"remove_from_storage": {}}`, false, false, defaultGasForTests)
+			require.NotNil(t, queryErr.GenericErr)
+			require.Contains(t, queryErr.GenericErr.Msg, "contract tried to write to storage during a query")
+		})
+	}
 }
 
 func TestDepositToContract(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
-	walletCointsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
+			walletCointsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
-	require.Equal(t, "", contractCoinsBefore.String())
-	require.Equal(t, "200000denom", walletCointsBefore.String())
+			require.Equal(t, "", contractCoinsBefore.String())
+			require.Equal(t, "200000denom", walletCointsBefore.String())
 
-	data, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"deposit_to_contract":{}}`, false, false, defaultGasForTests, 17)
+			data, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"deposit_to_contract":{}}`, false, false, defaultGasForTests, 17)
 
-	require.Empty(t, execErr)
+			require.Empty(t, execErr)
 
-	contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
-	walletCointsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
+			walletCointsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
-	require.Equal(t, "17denom", contractCoinsAfter.String())
-	require.Equal(t, "199983denom", walletCointsAfter.String())
+			require.Equal(t, "17denom", contractCoinsAfter.String())
+			require.Equal(t, "199983denom", walletCointsAfter.String())
 
-	require.Equal(t, `[{"denom":"denom","amount":"17"}]`, string(data))
+			require.Equal(t, `[{"denom":"denom","amount":"17"}]`, string(data))
+		})
+	}
 }
 
 func TestContractSendFunds(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"deposit_to_contract":{}}`, false, false, defaultGasForTests, 17)
+			_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"deposit_to_contract":{}}`, false, false, defaultGasForTests, 17)
 
-	require.Empty(t, execErr)
+			require.Empty(t, execErr)
 
-	contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
-	walletCointsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
+			walletCointsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
-	require.Equal(t, "17denom", contractCoinsBefore.String())
-	require.Equal(t, "199983denom", walletCointsBefore.String())
+			require.Equal(t, "17denom", contractCoinsBefore.String())
+			require.Equal(t, "199983denom", walletCointsBefore.String())
 
-	_, _, _, execErr = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds":{"from":"%s","to":"%s","denom":"%s","amount":%d}}`, addr.String(), walletA.String(), "denom", 17), false, false, defaultGasForTests, 0)
+			_, _, _, execErr = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds":{"from":"%s","to":"%s","denom":"%s","amount":%d}}`, addr.String(), walletA.String(), "denom", 17), false, false, defaultGasForTests, 0)
 
-	contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
-	walletCointsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
+			walletCointsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
-	require.Equal(t, "", contractCoinsAfter.String())
-	require.Equal(t, "200000denom", walletCointsAfter.String())
+			require.Equal(t, "", contractCoinsAfter.String())
+			require.Equal(t, "200000denom", walletCointsAfter.String())
 
-	require.Empty(t, execErr)
+			require.Empty(t, execErr)
+		})
+	}
 }
 
 func TestContractTryToSendFundsFromSomeoneElse(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"deposit_to_contract":{}}`, false, false, defaultGasForTests, 17)
+			_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"deposit_to_contract":{}}`, false, false, defaultGasForTests, 17)
 
-	require.Empty(t, execErr)
+			require.Empty(t, execErr)
 
-	contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
-	walletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
+			walletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
-	require.Equal(t, "17denom", contractCoinsBefore.String())
-	require.Equal(t, "199983denom", walletCoinsBefore.String())
+			require.Equal(t, "17denom", contractCoinsBefore.String())
+			require.Equal(t, "199983denom", walletCoinsBefore.String())
 
-	_, _, _, execErr = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds":{"from":"%s","to":"%s","denom":"%s","amount":%d}}`, walletA.String(), addr.String(), "denom", 17), false, false, defaultGasForTests, 0)
+			_, _, _, execErr = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds":{"from":"%s","to":"%s","denom":"%s","amount":%d}}`, walletA.String(), addr.String(), "denom", 17), false, false, defaultGasForTests, 0)
 
-	require.NotNil(t, execErr.GenericErr)
-	require.Contains(t, execErr.GenericErr.Msg, "contract doesn't have permission")
+			require.NotNil(t, execErr.GenericErr)
+			require.Contains(t, execErr.GenericErr.Msg, "contract doesn't have permission")
+		})
+	}
 }
 
 func TestContractSendFundsToInitCallback(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
-	walletCointsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
+			walletCointsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
-	require.Equal(t, "", contractCoinsBefore.String())
-	require.Equal(t, "200000denom", walletCointsBefore.String())
+			require.Equal(t, "", contractCoinsBefore.String())
+			require.Equal(t, "200000denom", walletCointsBefore.String())
 
-	_, execEvents, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds_to_init_callback":{"code_id":%d,"denom":"%s","amount":%d,"code_hash":"%s"}}`, codeID, "denom", 17, codeHash), true, false, defaultGasForTests, 17)
+			_, execEvents, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds_to_init_callback":{"code_id":%d,"denom":"%s","amount":%d,"code_hash":"%s"}}`, codeID, "denom", 17, codeHash), true, false, defaultGasForTests, 17)
 
-	require.Empty(t, execErr)
-	require.NotEmpty(t, execEvents)
+			require.Empty(t, execErr)
+			require.NotEmpty(t, execEvents)
 
-	contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
-	walletCointsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
+			walletCointsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
-	newContract, err := sdk.AccAddressFromBech32(execEvents[1][0].Value)
-	require.NoError(t, err)
-	newContractCoins := keeper.bankKeeper.GetAllBalances(ctx, newContract)
+			newContract, err := sdk.AccAddressFromBech32(execEvents[1][0].Value)
+			require.NoError(t, err)
+			newContractCoins := keeper.bankKeeper.GetAllBalances(ctx, newContract)
 
-	require.Equal(t, "", contractCoinsAfter.String())
-	require.Equal(t, "199983denom", walletCointsAfter.String())
-	require.Equal(t, "17denom", newContractCoins.String())
+			require.Equal(t, "", contractCoinsAfter.String())
+			require.Equal(t, "199983denom", walletCointsAfter.String())
+			require.Equal(t, "17denom", newContractCoins.String())
+		})
+	}
 }
 
 func TestContractSendFundsToInitCallbackNotEnough(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
-	walletCointsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
+			walletCointsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
-	require.Equal(t, "", contractCoinsBefore.String())
-	require.Equal(t, "200000denom", walletCointsBefore.String())
+			require.Equal(t, "", contractCoinsBefore.String())
+			require.Equal(t, "200000denom", walletCointsBefore.String())
 
-	_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds_to_init_callback":{"code_id":%d,"denom":"%s","amount":%d,"code_hash":"%s"}}`, codeID, "denom", 18, codeHash), false, false, defaultGasForTests, 17)
+			_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds_to_init_callback":{"code_id":%d,"denom":"%s","amount":%d,"code_hash":"%s"}}`, codeID, "denom", 18, codeHash), false, false, defaultGasForTests, 17)
 
-	//require.Empty(t, execEvents)
+			// require.Empty(t, execEvents)
 
-	require.NotNil(t, execErr.GenericErr)
-	require.Contains(t, execErr.GenericErr.Msg, "insufficient funds")
+			require.NotNil(t, execErr.GenericErr)
+			require.Contains(t, execErr.GenericErr.Msg, "insufficient funds")
 
-	contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
-	walletCointsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
+			walletCointsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
-	require.Equal(t, "17denom", contractCoinsAfter.String())
-	require.Equal(t, "199983denom", walletCointsAfter.String())
+			require.Equal(t, "17denom", contractCoinsAfter.String())
+			require.Equal(t, "199983denom", walletCointsAfter.String())
+		})
+	}
 }
 
 func TestContractSendFundsToExecCallback(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	addr2, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr2, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
-	contract2CoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr2)
-	walletCointsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
+			contract2CoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr2)
+			walletCointsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
-	require.Equal(t, "", contractCoinsBefore.String())
-	require.Equal(t, "", contract2CoinsBefore.String())
-	require.Equal(t, "200000denom", walletCointsBefore.String())
+			require.Equal(t, "", contractCoinsBefore.String())
+			require.Equal(t, "", contract2CoinsBefore.String())
+			require.Equal(t, "200000denom", walletCointsBefore.String())
 
-	_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds_to_exec_callback":{"to":"%s","denom":"%s","amount":%d,"code_hash":"%s"}}`, addr2.String(), "denom", 17, codeHash), true, false, defaultGasForTests, 17)
+			_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds_to_exec_callback":{"to":"%s","denom":"%s","amount":%d,"code_hash":"%s"}}`, addr2.String(), "denom", 17, codeHash), true, false, defaultGasForTests, 17)
 
-	require.Empty(t, execErr)
+			require.Empty(t, execErr)
 
-	contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
-	contract2CoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr2)
-	walletCointsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
+			contract2CoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr2)
+			walletCointsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
-	require.Equal(t, "", contractCoinsAfter.String())
-	require.Equal(t, "17denom", contract2CoinsAfter.String())
-	require.Equal(t, "199983denom", walletCointsAfter.String())
+			require.Equal(t, "", contractCoinsAfter.String())
+			require.Equal(t, "17denom", contract2CoinsAfter.String())
+			require.Equal(t, "199983denom", walletCointsAfter.String())
+		})
+	}
 }
 
 func TestContractSendFundsToExecCallbackNotEnough(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	addr2, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr2, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
-	contract2CoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr2)
-	walletCointsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
+			contract2CoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr2)
+			walletCointsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
-	require.Equal(t, "", contractCoinsBefore.String())
-	require.Equal(t, "", contract2CoinsBefore.String())
-	require.Equal(t, "200000denom", walletCointsBefore.String())
+			require.Equal(t, "", contractCoinsBefore.String())
+			require.Equal(t, "", contract2CoinsBefore.String())
+			require.Equal(t, "200000denom", walletCointsBefore.String())
 
-	_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds_to_exec_callback":{"to":"%s","denom":"%s","amount":%d,"code_hash":"%s"}}`, addr2.String(), "denom", 19, codeHash), false, false, defaultGasForTests, 17)
+			_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds_to_exec_callback":{"to":"%s","denom":"%s","amount":%d,"code_hash":"%s"}}`, addr2.String(), "denom", 19, codeHash), false, false, defaultGasForTests, 17)
 
-	require.NotNil(t, execErr.GenericErr)
-	require.Contains(t, execErr.GenericErr.Msg, "insufficient funds")
+			require.NotNil(t, execErr.GenericErr)
+			require.Contains(t, execErr.GenericErr.Msg, "insufficient funds")
 
-	contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
-	contract2CoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr2)
-	walletCointsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
+			contract2CoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr2)
+			walletCointsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
-	require.Equal(t, "17denom", contractCoinsAfter.String())
-	require.Equal(t, "", contract2CoinsAfter.String())
-	require.Equal(t, "199983denom", walletCointsAfter.String())
+			require.Equal(t, "17denom", contractCoinsAfter.String())
+			require.Equal(t, "", contract2CoinsAfter.String())
+			require.Equal(t, "199983denom", walletCointsAfter.String())
+		})
+	}
 }
 
 func TestSleep(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"sleep":{"ms":3000}}`, false, false, defaultGasForTests, 0)
+			_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"sleep":{"ms":3000}}`, false, false, defaultGasForTests, 0)
 
-	require.Error(t, execErr)
-	require.Error(t, execErr.GenericErr)
-	require.Contains(t, execErr.GenericErr.Msg, "the contract panicked")
+			require.Error(t, execErr)
+			require.Error(t, execErr.GenericErr)
+			require.Contains(t, execErr.GenericErr.Msg, "the contract panicked")
+		})
+	}
 }
 
 func TestGasIsChargedForInitCallbackToInit(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d,"code_hash":"%s"}}`, codeID, codeHash), true, false, defaultGasForTests, 2, 0)
-	require.Empty(t, err)
+			_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d,"code_hash":"%s"}}`, codeID, codeHash), true, false, defaultGasForTests, 2, 0)
+			require.Empty(t, err)
+		})
+	}
 }
 
 func TestGasIsChargedForInitCallbackToExec(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback":{"contract_addr":"%s","code_hash":"%s"}}`, addr, codeHash), true, false, defaultGasForTests, 2, 0)
-	require.Empty(t, err)
+			_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback":{"contract_addr":"%s","code_hash":"%s"}}`, addr, codeHash), true, false, defaultGasForTests, 2, 0)
+			require.Empty(t, err)
+		})
+	}
 }
 
 func TestGasIsChargedForExecCallbackToInit(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	// exec callback to init
-	_, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d,"code_hash":"%s"}}`, codeID, codeHash), true, false, defaultGasForTests, 0, 2)
-	require.Empty(t, err)
+			// exec callback to init
+			_, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d,"code_hash":"%s"}}`, codeID, codeHash), true, false, defaultGasForTests, 0, 2)
+			require.Empty(t, err)
+		})
+	}
 }
 
 func TestGasIsChargedForExecCallbackToExec(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	// exec callback to exec
-	_, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"a":{"contract_addr":"%s","code_hash":"%s","x":1,"y":2}}`, addr, codeHash), true, false, defaultGasForTests, 0, 3)
-	require.Empty(t, err)
+			// exec callback to exec
+			_, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"a":{"contract_addr":"%s","code_hash":"%s","x":1,"y":2}}`, addr, codeHash), true, false, defaultGasForTests, 0, 3)
+			require.Empty(t, err)
+		})
+	}
 }
 
 func TestGasIsChargedForExecExternalQuery(t *testing.T) {
 	t.SkipNow() // as of v0.10 CowmWasm are overriding the default gas meter
 
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	_, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_depth_counter":{"to":"%s","depth":2,"code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests, 0, 3)
-	require.Empty(t, err)
+			_, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_depth_counter":{"to":"%s","depth":2,"code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests, 0, 3)
+			require.Empty(t, err)
+		})
+	}
 }
 
 func TestGasIsChargedForInitExternalQuery(t *testing.T) {
 	t.SkipNow() // as of v0.10 CowmWasm are overriding the default gas meter
 
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_depth_counter":{"to":"%s","depth":2,"code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests, 3, 0)
-	require.Empty(t, err)
+			_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_depth_counter":{"to":"%s","depth":2,"code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests, 3, 0)
+			require.Empty(t, err)
+		})
+	}
 }
 
 func TestGasIsChargedForQueryExternalQuery(t *testing.T) {
 	t.SkipNow() // as of v0.10 CowmWasm are overriding the default gas meter
 
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	_, err := queryHelperImpl(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_depth_counter":{"to":"%s","depth":2,"code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests, 3)
-	require.Empty(t, err)
+			_, err := queryHelperImpl(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_depth_counter":{"to":"%s","depth":2,"code_hash":"%s"}}`, addr.String(), codeHash), true, false, defaultGasForTests, 3)
+			require.Empty(t, err)
+		})
+	}
 }
 
 func TestWasmTooHighInitialMemoryRuntimeFail(t *testing.T) {
@@ -1728,414 +1997,466 @@ func TestWasmTooHighInitialMemoryStaticFail(t *testing.T) {
 }
 
 func TestWasmWithFloatingPoints(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract_with_floats.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract_with_floats.wasm")
 
-	_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, false, false, defaultGasForTests)
-	require.NotNil(t, err.GenericErr)
-	require.Contains(t, err.GenericErr.Msg, "found floating point operation in module code")
+			_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, false, false, defaultGasForTests)
+			require.NotNil(t, err.GenericErr)
+			require.Contains(t, err.GenericErr.Msg, "found floating point operation in module code")
+		})
+	}
 }
 
 func TestCodeHashInvalid(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privWalletA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
-	initMsg := []byte(`AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA{"nop":{}`)
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privWalletA, _, _ := setupTest(t, tc.WasmFilePath)
+			initMsg := []byte(`AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA{"nop":{}`)
 
-	enc, _ := wasmCtx.Encrypt(initMsg)
+			enc, _ := wasmCtx.Encrypt(initMsg)
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privWalletA, enc, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	_, _, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to validate transaction")
+			ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privWalletA, enc, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+			_, _, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "failed to validate transaction")
+		})
+	}
 }
 
 func TestCodeHashEmpty(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privWalletA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
-	initMsg := []byte(`{"nop":{}`)
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privWalletA, _, _ := setupTest(t, tc.WasmFilePath)
+			initMsg := []byte(`{"nop":{}`)
 
-	enc, _ := wasmCtx.Encrypt(initMsg)
+			enc, _ := wasmCtx.Encrypt(initMsg)
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privWalletA, enc, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	_, _, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to validate transaction")
+			ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privWalletA, enc, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+			_, _, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "failed to validate transaction")
+		})
+	}
 }
 
 func TestCodeHashNotHex(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privWalletA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
-	initMsg := []byte(`🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉{"nop":{}}`)
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privWalletA, _, _ := setupTest(t, tc.WasmFilePath)
+			initMsg := []byte(`🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉{"nop":{}}`)
 
-	enc, _ := wasmCtx.Encrypt(initMsg)
+			enc, _ := wasmCtx.Encrypt(initMsg)
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privWalletA, enc, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	_, _, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to validate transaction")
+			ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privWalletA, enc, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+			_, _, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "failed to validate transaction")
+		})
+	}
 }
 
 func TestCodeHashTooSmall(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privWalletA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privWalletA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	initMsg := []byte(codeHash[0:63] + `{"nop":{}`)
+			initMsg := []byte(codeHash[0:63] + `{"nop":{}`)
 
-	enc, _ := wasmCtx.Encrypt(initMsg)
+			enc, _ := wasmCtx.Encrypt(initMsg)
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privWalletA, enc, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	_, _, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to validate transaction")
+			ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privWalletA, enc, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+			_, _, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "failed to validate transaction")
+		})
+	}
 }
 
 func TestCodeHashTooBig(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privWalletA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privWalletA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	initMsg := []byte(codeHash + "a" + `{"nop":{}`)
+			initMsg := []byte(codeHash + "a" + `{"nop":{}`)
 
-	enc, _ := wasmCtx.Encrypt(initMsg)
+			enc, _ := wasmCtx.Encrypt(initMsg)
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privWalletA, enc, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	_, _, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
-	require.Error(t, err)
+			ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privWalletA, enc, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+			_, _, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+			require.Error(t, err)
 
-	initErr := extractInnerError(t, err, enc[0:32], true, false)
-	require.NotEmpty(t, initErr)
-	require.NotNil(t, initErr.ParseErr)
-	require.Equal(t, "test_contract::contract::InitMsg", initErr.ParseErr.Target)
-	require.Equal(t, "Expected to parse either a `true`, `false`, or a `null`.", initErr.ParseErr.Msg)
+			initErr := extractInnerError(t, err, enc[0:32], true, false)
+			require.NotEmpty(t, initErr)
+			require.NotNil(t, initErr.ParseErr)
+			require.Equal(t, "test_contract::contract::InitMsg", initErr.ParseErr.Target)
+			require.Equal(t, "Expected to parse either a `true`, `false`, or a `null`.", initErr.ParseErr.Msg)
+		})
+	}
 }
 
 func TestCodeHashWrong(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privWalletA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privWalletA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	initMsg := []byte(`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855{"nop":{}`)
+			initMsg := []byte(`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855{"nop":{}`)
 
-	enc, _ := wasmCtx.Encrypt(initMsg)
+			enc, _ := wasmCtx.Encrypt(initMsg)
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privWalletA, enc, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
-	_, _, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to validate transaction")
+			ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privWalletA, enc, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+			_, _, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "failed to validate transaction")
+		})
+	}
 }
 
 func TestCodeHashInitCallInit(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	t.Run("GoodCodeHash", func(t *testing.T) {
-		addr, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, false, defaultGasForTests, 2, 0)
+			t.Run("GoodCodeHash", func(t *testing.T) {
+				addr, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, false, defaultGasForTests, 2, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: addr.String()},
-					{Key: "a", Value: "a"},
-				},
-				{
-					{Key: "contract_address", Value: events[1][0].Value},
-					{Key: "init", Value: "🌈"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("EmptyCodeHash", func(t *testing.T) {
-		_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"","msg":"%s","label":"2"}}`, codeID, `{\"nop\":{}}`), false, false, defaultGasForTests, 2, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: addr.String()},
+							{Key: "a", Value: "a"},
+						},
+						{
+							{Key: "contract_address", Value: events[1][0].Value},
+							{Key: "init", Value: "🌈"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("EmptyCodeHash", func(t *testing.T) {
+				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"","msg":"%s","label":"2"}}`, codeID, `{\"nop\":{}}`), false, false, defaultGasForTests, 2, 0)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
-	t.Run("TooBigCodeHash", func(t *testing.T) {
-		_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%sa","msg":"%s","label":"3"}}`, codeID, codeHash, `{\"nop\":{}}`), true, false, defaultGasForTests, 2, 0)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+			t.Run("TooBigCodeHash", func(t *testing.T) {
+				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%sa","msg":"%s","label":"3"}}`, codeID, codeHash, `{\"nop\":{}}`), true, false, defaultGasForTests, 2, 0)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"parsing test_contract::contract::InitMsg: Expected to parse either a `true`, `false`, or a `null`.",
-		)
-	})
-	t.Run("TooSmallCodeHash", func(t *testing.T) {
-		_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"4"}}`, codeID, codeHash[0:63], `{\"nop\":{}}`), false, false, defaultGasForTests, 2, 0)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"parsing test_contract::contract::InitMsg: Expected to parse either a `true`, `false`, or a `null`.",
+				)
+			})
+			t.Run("TooSmallCodeHash", func(t *testing.T) {
+				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"4"}}`, codeID, codeHash[0:63], `{\"nop\":{}}`), false, false, defaultGasForTests, 2, 0)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
-	t.Run("IncorrectCodeHash", func(t *testing.T) {
-		_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s","label":"5"}}`, codeID, `{\"nop\":{}}`), false, false, defaultGasForTests, 2, 0)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+			t.Run("IncorrectCodeHash", func(t *testing.T) {
+				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s","label":"5"}}`, codeID, `{\"nop\":{}}`), false, false, defaultGasForTests, 2, 0)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+		})
+	}
 }
 
 func TestCodeHashInitCallExec(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests, 1, 0)
-	require.Empty(t, err)
+			addr, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests, 1, 0)
+			require.Empty(t, err)
 
-	t.Run("GoodCodeHash", func(t *testing.T) {
-		addr2, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, false, defaultGasForTests, 2, 0)
+			t.Run("GoodCodeHash", func(t *testing.T) {
+				addr2, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, false, defaultGasForTests, 2, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: addr2.String()},
-					{Key: "b", Value: "b"},
-				},
-				{
-					{Key: "contract_address", Value: addr.String()},
-					{Key: "watermelon", Value: "🍉"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("EmptyCodeHash", func(t *testing.T) {
-		_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"c\":{\"x\":1,\"y\":1}}`), false, false, defaultGasForTests, 2, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: addr2.String()},
+							{Key: "b", Value: "b"},
+						},
+						{
+							{Key: "contract_address", Value: addr.String()},
+							{Key: "watermelon", Value: "🍉"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("EmptyCodeHash", func(t *testing.T) {
+				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"c\":{\"x\":1,\"y\":1}}`), false, false, defaultGasForTests, 2, 0)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
-	t.Run("TooBigCodeHash", func(t *testing.T) {
-		_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, false, defaultGasForTests, 2, 0)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+			t.Run("TooBigCodeHash", func(t *testing.T) {
+				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, false, defaultGasForTests, 2, 0)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"parsing test_contract::contract::HandleMsg: Expected to parse either a `true`, `false`, or a `null`.",
-		)
-	})
-	t.Run("TooSmallCodeHash", func(t *testing.T) {
-		_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"c\":{\"x\":1,\"y\":1}}`), false, false, defaultGasForTests, 2, 0)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"parsing test_contract::contract::HandleMsg: Expected to parse either a `true`, `false`, or a `null`.",
+				)
+			})
+			t.Run("TooSmallCodeHash", func(t *testing.T) {
+				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"c\":{\"x\":1,\"y\":1}}`), false, false, defaultGasForTests, 2, 0)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
-	t.Run("IncorrectCodeHash", func(t *testing.T) {
-		_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"c\":{\"x\":1,\"y\":1}}`), false, false, defaultGasForTests, 2, 0)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+			t.Run("IncorrectCodeHash", func(t *testing.T) {
+				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"c\":{\"x\":1,\"y\":1}}`), false, false, defaultGasForTests, 2, 0)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+		})
+	}
 }
 
 func TestCodeHashInitCallQuery(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, err)
+			addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, err)
 
-	t.Run("GoodCodeHash", func(t *testing.T) {
-		addr2, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
+			t.Run("GoodCodeHash", func(t *testing.T) {
+				addr2, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: addr2.String()},
-					{Key: "c", Value: "2"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("EmptyCodeHash", func(t *testing.T) {
-		_, _, err = initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: addr2.String()},
+							{Key: "c", Value: "2"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("EmptyCodeHash", func(t *testing.T) {
+				_, _, err = initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
-	t.Run("TooBigCodeHash", func(t *testing.T) {
-		_, _, err = initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+			t.Run("TooBigCodeHash", func(t *testing.T) {
+				_, _, err = initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"Got an error from query: ParseErr { target: \"test_contract::contract::QueryMsg\", msg: \"Expected to parse either a `true`, `false`, or a `null`.\", backtrace: None }",
-		)
-	})
-	t.Run("TooSmallCodeHash", func(t *testing.T) {
-		_, _, err = initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"Got an error from query: ParseErr { target: \"test_contract::contract::QueryMsg\", msg: \"Expected to parse either a `true`, `false`, or a `null`.\", backtrace: None }",
+				)
+			})
+			t.Run("TooSmallCodeHash", func(t *testing.T) {
+				_, _, err = initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
-	t.Run("IncorrectCodeHash", func(t *testing.T) {
-		_, _, err = initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+			t.Run("IncorrectCodeHash", func(t *testing.T) {
+				_, _, err = initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+		})
+	}
 }
 
 func TestCodeHashExecCallInit(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, err)
+			addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, err)
 
-	t.Run("GoodCodeHash", func(t *testing.T) {
-		_, events, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, false, defaultGasForTests, 0, 2)
+			t.Run("GoodCodeHash", func(t *testing.T) {
+				_, events, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, false, defaultGasForTests, 0, 2)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: addr.String()},
-					{Key: "a", Value: "a"},
-				},
-				{
-					{Key: "contract_address", Value: events[1][0].Value},
-					{Key: "init", Value: "🌈"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("EmptyCodeHash", func(t *testing.T) {
-		_, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"","msg":"%s","label":"2"}}`, codeID, `{\"nop\":{}}`), false, false, defaultGasForTests, 0, 2)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: addr.String()},
+							{Key: "a", Value: "a"},
+						},
+						{
+							{Key: "contract_address", Value: events[1][0].Value},
+							{Key: "init", Value: "🌈"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("EmptyCodeHash", func(t *testing.T) {
+				_, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"","msg":"%s","label":"2"}}`, codeID, `{\"nop\":{}}`), false, false, defaultGasForTests, 0, 2)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
-	t.Run("TooBigCodeHash", func(t *testing.T) {
-		_, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%sa","msg":"%s","label":"3"}}`, codeID, codeHash, `{\"nop\":{}}`), true, false, defaultGasForTests, 0, 2)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+			t.Run("TooBigCodeHash", func(t *testing.T) {
+				_, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%sa","msg":"%s","label":"3"}}`, codeID, codeHash, `{\"nop\":{}}`), true, false, defaultGasForTests, 0, 2)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"parsing test_contract::contract::InitMsg: Expected to parse either a `true`, `false`, or a `null`.",
-		)
-	})
-	t.Run("TooSmallCodeHash", func(t *testing.T) {
-		_, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"4"}}`, codeID, codeHash[0:63], `{\"nop\":{}}`), false, false, defaultGasForTests, 0, 2)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"parsing test_contract::contract::InitMsg: Expected to parse either a `true`, `false`, or a `null`.",
+				)
+			})
+			t.Run("TooSmallCodeHash", func(t *testing.T) {
+				_, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"4"}}`, codeID, codeHash[0:63], `{\"nop\":{}}`), false, false, defaultGasForTests, 0, 2)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
-	t.Run("IncorrectCodeHash", func(t *testing.T) {
-		_, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s","label":"5"}}`, codeID, `{\"nop\":{}}`), false, false, defaultGasForTests, 0, 2)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+			t.Run("IncorrectCodeHash", func(t *testing.T) {
+				_, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s","label":"5"}}`, codeID, `{\"nop\":{}}`), false, false, defaultGasForTests, 0, 2)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+		})
+	}
 }
 
 func TestLabelCollisionWhenMultipleCallbacksToInitFromSameContract(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, err)
+			addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, err)
 
-	_, _, _, err = execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, false, defaultGasForTests, 0, 2)
-	require.Empty(t, err)
+			_, _, _, err = execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, false, defaultGasForTests, 0, 2)
+			require.Empty(t, err)
 
-	_, _, _, err = execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), false, false, defaultGasForTests, 0, 1)
-	require.NotEmpty(t, err)
-	require.NotNil(t, err.GenericErr)
-	require.Contains(t, err.GenericErr.Msg, "contract account already exists")
+			_, _, _, err = execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), false, false, defaultGasForTests, 0, 1)
+			require.NotEmpty(t, err)
+			require.NotNil(t, err.GenericErr)
+			require.Contains(t, err.GenericErr.Msg, "contract account already exists")
+		})
+	}
 }
 
 func TestCodeHashExecCallExec(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, err)
+			addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, err)
 
-	t.Run("GoodCodeHash", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr, codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, false, defaultGasForTests, 0)
+			t.Run("GoodCodeHash", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr, codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: addr.String()},
-					{Key: "b", Value: "b"},
-				},
-				{
-					{Key: "contract_address", Value: events[1][0].Value},
-					{Key: "watermelon", Value: "🍉"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("EmptyCodeHash", func(t *testing.T) {
-		_, _, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr, `{\"c\":{\"x\":1,\"y\":1}}`), false, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: addr.String()},
+							{Key: "b", Value: "b"},
+						},
+						{
+							{Key: "contract_address", Value: events[1][0].Value},
+							{Key: "watermelon", Value: "🍉"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("EmptyCodeHash", func(t *testing.T) {
+				_, _, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr, `{\"c\":{\"x\":1,\"y\":1}}`), false, false, defaultGasForTests, 0)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
-	t.Run("TooBigCodeHash", func(t *testing.T) {
-		_, _, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr, codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, false, defaultGasForTests, 0)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+			t.Run("TooBigCodeHash", func(t *testing.T) {
+				_, _, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr, codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, false, defaultGasForTests, 0)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"parsing test_contract::contract::HandleMsg: Expected to parse either a `true`, `false`, or a `null`.",
-		)
-	})
-	t.Run("TooSmallCodeHash", func(t *testing.T) {
-		_, _, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr, codeHash[0:63], `{\"c\":{\"x\":1,\"y\":1}}`), false, false, defaultGasForTests, 0)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"parsing test_contract::contract::HandleMsg: Expected to parse either a `true`, `false`, or a `null`.",
+				)
+			})
+			t.Run("TooSmallCodeHash", func(t *testing.T) {
+				_, _, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr, codeHash[0:63], `{\"c\":{\"x\":1,\"y\":1}}`), false, false, defaultGasForTests, 0)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
-	t.Run("IncorrectCodeHash", func(t *testing.T) {
-		_, _, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr, `{\"c\":{\"x\":1,\"y\":1}}`), false, false, defaultGasForTests, 0)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+			t.Run("IncorrectCodeHash", func(t *testing.T) {
+				_, _, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr, `{\"c\":{\"x\":1,\"y\":1}}`), false, false, defaultGasForTests, 0)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+		})
+	}
 }
 
 // todo: enable after the upgrade to sdk 0.45x
 //func TestGasUsageForStoreKey(t *testing.T) {
-//	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+//	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.Wasm)
 //
 //	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 //	require.Empty(t, err)
@@ -2161,126 +2482,137 @@ func TestCodeHashExecCallExec(t *testing.T) {
 //}
 
 func TestQueryGasPrice(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, err)
+			addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, err)
 
-	t.Run("Query to Self Gas Price", func(t *testing.T) {
-
-		_, _, gasUsed, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests, 0)
-		require.Empty(t, err)
-		// require that more gas was used than the base 20K (10K for execute, another 10K for query)
-		require.Greater(t, gasUsed, uint64(20_000))
-	})
+			t.Run("Query to Self Gas Price", func(t *testing.T) {
+				_, _, gasUsed, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				// require that more gas was used than the base 20K (10K for execute, another 10K for query)
+				require.Greater(t, gasUsed, uint64(20_000))
+			})
+		})
+	}
 }
 
 func TestCodeHashExecCallQuery(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, err)
+			addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, err)
 
-	t.Run("GoodCodeHash", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests, 0)
+			t.Run("GoodCodeHash", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: addr.String()},
-					{Key: "c", Value: "2"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("EmptyCodeHash", func(t *testing.T) {
-		_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: addr.String()},
+							{Key: "c", Value: "2"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("EmptyCodeHash", func(t *testing.T) {
+				_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests, 0)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
-	t.Run("TooBigCodeHash", func(t *testing.T) {
-		_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests, 0)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+			t.Run("TooBigCodeHash", func(t *testing.T) {
+				_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests, 0)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"Got an error from query: ParseErr { target: \"test_contract::contract::QueryMsg\", msg: \"Expected to parse either a `true`, `false`, or a `null`.\", backtrace: None }",
-		)
-	})
-	t.Run("TooSmallCodeHash", func(t *testing.T) {
-		_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests, 0)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"Got an error from query: ParseErr { target: \"test_contract::contract::QueryMsg\", msg: \"Expected to parse either a `true`, `false`, or a `null`.\", backtrace: None }",
+				)
+			})
+			t.Run("TooSmallCodeHash", func(t *testing.T) {
+				_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests, 0)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
-	t.Run("IncorrectCodeHash", func(t *testing.T) {
-		_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests, 0)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+			t.Run("IncorrectCodeHash", func(t *testing.T) {
+				_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests, 0)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+		})
+	}
 }
 
 func TestCodeHashQueryCallQuery(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, err)
+			addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, err)
 
-	t.Run("GoodCodeHash", func(t *testing.T) {
-		output, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
+			t.Run("GoodCodeHash", func(t *testing.T) {
+				output, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
 
-		require.Empty(t, err)
-		require.Equal(t, "2", output)
-	})
-	t.Run("EmptyCodeHash", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
+				require.Empty(t, err)
+				require.Equal(t, "2", output)
+			})
+			t.Run("EmptyCodeHash", func(t *testing.T) {
+				_, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
-	t.Run("TooBigCodeHash", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+			t.Run("TooBigCodeHash", func(t *testing.T) {
+				_, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"Got an error from query: ParseErr { target: \"test_contract::contract::QueryMsg\", msg: \"Expected to parse either a `true`, `false`, or a `null`.\", backtrace: None }",
-		)
-	})
-	t.Run("TooSmallCodeHash", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"Got an error from query: ParseErr { target: \"test_contract::contract::QueryMsg\", msg: \"Expected to parse either a `true`, `false`, or a `null`.\", backtrace: None }",
+				)
+			})
+			t.Run("TooSmallCodeHash", func(t *testing.T) {
+				_, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
-	t.Run("IncorrectCodeHash", func(t *testing.T) {
-		_, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+			t.Run("IncorrectCodeHash", func(t *testing.T) {
+				_, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, false, defaultGasForTests)
 
-		require.NotEmpty(t, err)
-		require.Contains(t,
-			err.Error(),
-			"failed to validate transaction",
-		)
-	})
+				require.NotEmpty(t, err)
+				require.Contains(t,
+					err.Error(),
+					"failed to validate transaction",
+				)
+			})
+		})
+	}
 }
 
 func TestEncryptedAndPlaintextLogs(t *testing.T) {
@@ -2306,485 +2638,518 @@ func TestEncryptedAndPlaintextLogs(t *testing.T) {
 }
 
 func TestSecp256k1Verify(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	// https://paulmillr.com/noble/
+			// https://paulmillr.com/noble/
 
-	t.Run("CorrectCompactPubkey", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, defaultGasForTests, 0)
+			t.Run("CorrectCompactPubkey", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "true"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("CorrectLongPubkey", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BEZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo///ne03QpL+5WFHztzVceB3WD4QY/Ipl0UkHr/R8kDpVk=","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "true"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("CorrectLongPubkey", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BEZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo///ne03QpL+5WFHztzVceB3WD4QY/Ipl0UkHr/R8kDpVk=","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "true"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("IncorrectMsgHashCompactPubkey", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzas="}}`, true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "true"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("IncorrectMsgHashCompactPubkey", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzas="}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "false"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("IncorrectMsgHashLongPubkey", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BEZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo///ne03QpL+5WFHztzVceB3WD4QY/Ipl0UkHr/R8kDpVk=","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzas="}}`, true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "false"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("IncorrectMsgHashLongPubkey", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BEZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo///ne03QpL+5WFHztzVceB3WD4QY/Ipl0UkHr/R8kDpVk=","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzas="}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "false"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("IncorrectSigCompactPubkey", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"rhZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "false"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("IncorrectSigCompactPubkey", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"rhZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "false"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("IncorrectSigLongPubkey", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BEZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo///ne03QpL+5WFHztzVceB3WD4QY/Ipl0UkHr/R8kDpVk=","sig":"rhZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "false"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("IncorrectSigLongPubkey", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BEZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo///ne03QpL+5WFHztzVceB3WD4QY/Ipl0UkHr/R8kDpVk=","sig":"rhZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "false"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("IncorrectCompactPubkey", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"AoSdDHH9J0Bfb9pT8GFn+bW9cEVkgIh4bFsepMWmczXc","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "false"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("IncorrectCompactPubkey", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"AoSdDHH9J0Bfb9pT8GFn+bW9cEVkgIh4bFsepMWmczXc","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "false"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("IncorrectLongPubkey", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BISdDHH9J0Bfb9pT8GFn+bW9cEVkgIh4bFsepMWmczXcFWl11YCgu65hzvNDQE2Qo1hwTMQ/42Xif8O/MrxzvxI=","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "false"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("IncorrectLongPubkey", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BISdDHH9J0Bfb9pT8GFn+bW9cEVkgIh4bFsepMWmczXcFWl11YCgu65hzvNDQE2Qo1hwTMQ/42Xif8O/MrxzvxI=","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "false"},
-				},
-			},
-			events,
-		)
-	})
-
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "false"},
+						},
+					},
+					events,
+				)
+			})
+		})
+	}
 }
 
 func TestBenchmarkSecp256k1VerifyAPI(t *testing.T) {
 	t.SkipNow()
 	// Assaf: I wrote the benchmark like this because the init functions take testing.T
 	// and not testing.B and I just wanted to quickly get a feel for the perf improvments
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 
-	start := time.Now()
-	// https://paulmillr.com/noble/
-	execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":10,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, defaultGasForTests, 0)
-	elapsed := time.Since(start)
-	fmt.Printf("TestBenchmarkSecp256k1VerifyAPI took %s\n", elapsed)
+			start := time.Now()
+			// https://paulmillr.com/noble/
+			execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":10,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, defaultGasForTests, 0)
+			elapsed := time.Since(start)
+			fmt.Printf("TestBenchmarkSecp256k1VerifyAPI took %s\n", elapsed)
+		})
+	}
 }
 
 func TestBenchmarkSecp256k1VerifyCrate(t *testing.T) {
 	t.SkipNow()
 	// Assaf: I wrote the benchmark like this because the init functions take testing.T
 	// and not testing.B and I just wanted to quickly get a feel for the perf improvments
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 
-	start := time.Now()
-	// https://paulmillr.com/noble/
-	execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify_from_crate":{"iterations":10,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, 100_000_000, 0)
-	elapsed := time.Since(start)
-	fmt.Printf("TestBenchmarkSecp256k1VerifyCrate took %s\n", elapsed)
+			start := time.Now()
+			// https://paulmillr.com/noble/
+			execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify_from_crate":{"iterations":10,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, 100_000_000, 0)
+			elapsed := time.Since(start)
+			fmt.Printf("TestBenchmarkSecp256k1VerifyCrate took %s\n", elapsed)
+		})
+	}
 }
 
 func TestEd25519Verify(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	// https://paulmillr.com/noble/
-	t.Run("Correct", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","msg":"YXNzYWYgd2FzIGhlcmU="}}`, true, false, defaultGasForTests, 0)
+			// https://paulmillr.com/noble/
+			t.Run("Correct", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","msg":"YXNzYWYgd2FzIGhlcmU="}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "true"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("IncorrectMsg", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","msg":"YXNzYWYgd2FzIGhlcmUK"}}`, true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "true"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("IncorrectMsg", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","msg":"YXNzYWYgd2FzIGhlcmUK"}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "false"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("IncorrectSig", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDw==","msg":"YXNzYWYgd2FzIGhlcmU="}}`, true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "false"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("IncorrectSig", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDw==","msg":"YXNzYWYgd2FzIGhlcmU="}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "false"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("IncorrectPubkey", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"DV1lgRdKw7nt4hvl8XkGZXMzU9S3uM9NLTK0h0qMbUs=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","msg":"YXNzYWYgd2FzIGhlcmU="}}`, true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "false"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("IncorrectPubkey", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"DV1lgRdKw7nt4hvl8XkGZXMzU9S3uM9NLTK0h0qMbUs=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","msg":"YXNzYWYgd2FzIGhlcmU="}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "false"},
-				},
-			},
-			events,
-		)
-	})
-
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "false"},
+						},
+					},
+					events,
+				)
+			})
+		})
+	}
 }
 
 func TestEd25519BatchVerify(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	// https://paulmillr.com/noble/
-	t.Run("Correct", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, false, defaultGasForTests, 0)
+			// https://paulmillr.com/noble/
+			t.Run("Correct", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "true"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("100Correct", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU="]}}`, true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "true"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("100Correct", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU="]}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "true"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("IncorrectPubkey", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["DV1lgRdKw7nt4hvl8XkGZXMzU9S3uM9NLTK0h0qMbUs="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "true"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("IncorrectPubkey", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["DV1lgRdKw7nt4hvl8XkGZXMzU9S3uM9NLTK0h0qMbUs="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "false"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("IncorrectMsg", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmUK"]}}`, true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "false"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("IncorrectMsg", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmUK"]}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "false"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("IncorrectSig", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDw=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "false"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("IncorrectSig", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDw=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "false"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("CorrectEmptySigsEmptyMsgsOnePubkey", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":[],"msgs":[]}}`, true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "false"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("CorrectEmptySigsEmptyMsgsOnePubkey", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":[],"msgs":[]}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "true"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("CorrectEmpty", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":[],"sigs":[],"msgs":[]}}`, true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "true"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("CorrectEmpty", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":[],"sigs":[],"msgs":[]}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "true"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("CorrectEmptyPubkeysEmptySigsOneMsg", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":[],"sigs":[],"msgs":["YXNzYWYgd2FzIGhlcmUK"]}}`, true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "true"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("CorrectEmptyPubkeysEmptySigsOneMsg", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":[],"sigs":[],"msgs":["YXNzYWYgd2FzIGhlcmUK"]}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "true"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("CorrectMultisig", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","2ukhmWRNmcgCrB9fpLP9/HZVuJn6AhpITf455F4GsbM="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","bp/N4Ub2WFk9SE9poZVEanU1l46WMrFkTd5wQIXi6QJKjvZUi7+GTzmTe8y2yzgpBI+GWQmt0/QwYbnSVxq/Cg=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "true"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("CorrectMultisig", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","2ukhmWRNmcgCrB9fpLP9/HZVuJn6AhpITf455F4GsbM="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","bp/N4Ub2WFk9SE9poZVEanU1l46WMrFkTd5wQIXi6QJKjvZUi7+GTzmTe8y2yzgpBI+GWQmt0/QwYbnSVxq/Cg=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "true"},
-				},
-			},
-			events,
-		)
-	})
-	t.Run("CorrectMultiMsgOneSigner", func(t *testing.T) {
-		_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["2ukhmWRNmcgCrB9fpLP9/HZVuJn6AhpITf455F4GsbM="],"sigs":["bp/N4Ub2WFk9SE9poZVEanU1l46WMrFkTd5wQIXi6QJKjvZUi7+GTzmTe8y2yzgpBI+GWQmt0/QwYbnSVxq/Cg==","uuNxLEzAYDbuJ+BiYN94pTqhD7UhvCJNbxAbnWz0B9DivkPXmqIULko0DddP2/tVXPtjJ90J20faiWCEC3QkDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU=","cGVhY2Ugb3V0"]}}`, true, false, defaultGasForTests, 0)
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "true"},
+						},
+					},
+					events,
+				)
+			})
+			t.Run("CorrectMultiMsgOneSigner", func(t *testing.T) {
+				_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["2ukhmWRNmcgCrB9fpLP9/HZVuJn6AhpITf455F4GsbM="],"sigs":["bp/N4Ub2WFk9SE9poZVEanU1l46WMrFkTd5wQIXi6QJKjvZUi7+GTzmTe8y2yzgpBI+GWQmt0/QwYbnSVxq/Cg==","uuNxLEzAYDbuJ+BiYN94pTqhD7UhvCJNbxAbnWz0B9DivkPXmqIULko0DddP2/tVXPtjJ90J20faiWCEC3QkDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU=","cGVhY2Ugb3V0"]}}`, true, false, defaultGasForTests, 0)
 
-		require.Empty(t, err)
-		require.Equal(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{Key: "result", Value: "true"},
-				},
-			},
-			events,
-		)
-	})
-
+				require.Empty(t, err)
+				require.Equal(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "result", Value: "true"},
+						},
+					},
+					events,
+				)
+			})
+		})
+	}
 }
 
 func TestSecp256k1RecoverPubkey(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	// https://paulmillr.com/noble/
-	_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_recover_pubkey":{"iterations":1,"recovery_param":0,"sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, defaultGasForTests, 0)
+			// https://paulmillr.com/noble/
+			_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_recover_pubkey":{"iterations":1,"recovery_param":0,"sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, defaultGasForTests, 0)
 
-	require.Empty(t, err)
-	require.Equal(t,
-		[]ContractEvent{
-			{
-				{Key: "contract_address", Value: contractAddress.String()},
-				{Key: "result", Value: "A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//"},
-			},
-		},
-		events,
-	)
+			require.Empty(t, err)
+			require.Equal(t,
+				[]ContractEvent{
+					{
+						{Key: "contract_address", Value: contractAddress.String()},
+						{Key: "result", Value: "A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//"},
+					},
+				},
+				events,
+			)
 
-	_, events, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_recover_pubkey":{"iterations":1,"recovery_param":1,"sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, defaultGasForTests, 0)
+			_, events, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_recover_pubkey":{"iterations":1,"recovery_param":1,"sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, false, defaultGasForTests, 0)
 
-	require.Empty(t, err)
-	require.Equal(t,
-		[]ContractEvent{
-			{
-				{Key: "contract_address", Value: contractAddress.String()},
-				{Key: "result", Value: "Ams198xOCEVnc/ESvxF2nxnE3AVFO8ahB22S1ZgX2vSR"},
-			},
-		},
-		events,
-	)
+			require.Empty(t, err)
+			require.Equal(t,
+				[]ContractEvent{
+					{
+						{Key: "contract_address", Value: contractAddress.String()},
+						{Key: "result", Value: "Ams198xOCEVnc/ESvxF2nxnE3AVFO8ahB22S1ZgX2vSR"},
+					},
+				},
+				events,
+			)
+		})
+	}
 }
 
 func TestSecp256k1Sign(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	// priv iadRiuRKNZvAXwolxqzJvr60uiMDJTxOEzEwV8OK2ao=
-	// pub ArQojoh5TVlSSNA1HFlH5HcQsv0jnrpeE7hgwR/N46nS
-	// msg d2VuIG1vb24=
-	// msg_hash K9vGEuzCYCUcIXlhMZu20ke2K4mJhreguYct5MqAzhA=
+			// priv iadRiuRKNZvAXwolxqzJvr60uiMDJTxOEzEwV8OK2ao=
+			// pub ArQojoh5TVlSSNA1HFlH5HcQsv0jnrpeE7hgwR/N46nS
+			// msg d2VuIG1vb24=
+			// msg_hash K9vGEuzCYCUcIXlhMZu20ke2K4mJhreguYct5MqAzhA=
 
-	// https://paulmillr.com/noble/
-	_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_sign":{"iterations":1,"msg":"d2VuIG1vb24=","privkey":"iadRiuRKNZvAXwolxqzJvr60uiMDJTxOEzEwV8OK2ao="}}`, true, false, defaultGasForTests, 0)
-	require.Empty(t, err)
+			// https://paulmillr.com/noble/
+			_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_sign":{"iterations":1,"msg":"d2VuIG1vb24=","privkey":"iadRiuRKNZvAXwolxqzJvr60uiMDJTxOEzEwV8OK2ao="}}`, true, false, defaultGasForTests, 0)
+			require.Empty(t, err)
 
-	signature := events[0][1].Value
+			signature := events[0][1].Value
 
-	_, events, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"secp256k1_verify":{"iterations":1,"pubkey":"ArQojoh5TVlSSNA1HFlH5HcQsv0jnrpeE7hgwR/N46nS","sig":"%s","msg_hash":"K9vGEuzCYCUcIXlhMZu20ke2K4mJhreguYct5MqAzhA="}}`, signature), true, false, defaultGasForTests, 0)
+			_, events, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"secp256k1_verify":{"iterations":1,"pubkey":"ArQojoh5TVlSSNA1HFlH5HcQsv0jnrpeE7hgwR/N46nS","sig":"%s","msg_hash":"K9vGEuzCYCUcIXlhMZu20ke2K4mJhreguYct5MqAzhA="}}`, signature), true, false, defaultGasForTests, 0)
 
-	require.Empty(t, err)
-	require.Equal(t,
-		[]ContractEvent{
-			{
-				{Key: "contract_address", Value: contractAddress.String()},
-				{Key: "result", Value: "true"},
-			},
-		},
-		events,
-	)
+			require.Empty(t, err)
+			require.Equal(t,
+				[]ContractEvent{
+					{
+						{Key: "contract_address", Value: contractAddress.String()},
+						{Key: "result", Value: "true"},
+					},
+				},
+				events,
+			)
+		})
+	}
 }
 
 func TestEd25519Sign(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
-	require.Empty(t, initErr)
+			contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	// priv z01UNefH2yjRslwZMmcHssdHmdEjzVvbxjr+MloUEYo=
-	// pub jh58UkC0FDsiupZBLdaqKUqYubJbk3LDaruZiJiy0Po=
-	// msg d2VuIG1vb24=
-	// msg_hash K9vGEuzCYCUcIXlhMZu20ke2K4mJhreguYct5MqAzhA=
+			// priv z01UNefH2yjRslwZMmcHssdHmdEjzVvbxjr+MloUEYo=
+			// pub jh58UkC0FDsiupZBLdaqKUqYubJbk3LDaruZiJiy0Po=
+			// msg d2VuIG1vb24=
+			// msg_hash K9vGEuzCYCUcIXlhMZu20ke2K4mJhreguYct5MqAzhA=
 
-	// https://paulmillr.com/noble/
-	_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_sign":{"iterations":1,"msg":"d2VuIG1vb24=","privkey":"z01UNefH2yjRslwZMmcHssdHmdEjzVvbxjr+MloUEYo="}}`, true, false, defaultGasForTests, 0)
-	require.Empty(t, err)
+			// https://paulmillr.com/noble/
+			_, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_sign":{"iterations":1,"msg":"d2VuIG1vb24=","privkey":"z01UNefH2yjRslwZMmcHssdHmdEjzVvbxjr+MloUEYo="}}`, true, false, defaultGasForTests, 0)
+			require.Empty(t, err)
 
-	signature := events[0][1].Value
+			signature := events[0][1].Value
 
-	_, events, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"ed25519_verify":{"iterations":1,"pubkey":"jh58UkC0FDsiupZBLdaqKUqYubJbk3LDaruZiJiy0Po=","sig":"%s","msg":"d2VuIG1vb24="}}`, signature), true, false, defaultGasForTests, 0)
+			_, events, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"ed25519_verify":{"iterations":1,"pubkey":"jh58UkC0FDsiupZBLdaqKUqYubJbk3LDaruZiJiy0Po=","sig":"%s","msg":"d2VuIG1vb24="}}`, signature), true, false, defaultGasForTests, 0)
 
-	require.Empty(t, err)
-	require.Equal(t,
-		[]ContractEvent{
-			{
-				{Key: "contract_address", Value: contractAddress.String()},
-				{Key: "result", Value: "true"},
-			},
-		},
-		events,
-	)
+			require.Empty(t, err)
+			require.Equal(t,
+				[]ContractEvent{
+					{
+						{Key: "contract_address", Value: contractAddress.String()},
+						{Key: "result", Value: "true"},
+					},
+				},
+				events,
+			)
+		})
+	}
 }
 
 func TestBenchmarkEd25519BatchVerifyAPI(t *testing.T) {
 	t.SkipNow()
 	// Assaf: I wrote the benchmark like this because the init functions take testing.T
 	// and not testing.B and I just wanted to quickly get a feel for the performance improvments
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
+	for _, tc := range testContracts {
+		t.Run(tc.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, tc.WasmFilePath)
 
-	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+			contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 
-	start := time.Now()
-	_, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1000,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU="]}}`, true, false, math.MaxUint64, 0)
+			start := time.Now()
+			_, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1000,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU="]}}`, true, false, math.MaxUint64, 0)
 
-	require.Empty(t, err)
+			require.Empty(t, err)
 
-	elapsed := time.Since(start)
-	fmt.Printf("TestBenchmarkEd25519BatchVerifyAPI took %s\n", elapsed)
+			elapsed := time.Since(start)
+			fmt.Printf("TestBenchmarkEd25519BatchVerifyAPI took %s\n", elapsed)
+		})
+	}
 }
 
 type GetResponse struct {
@@ -2795,9 +3160,9 @@ type v1QueryResponse struct {
 }
 
 func TestV1EndpointsSanity(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract.wasm")
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm")
 
-	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":10, "expires":100}`, true, true, defaultGasForTests)
+	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 
 	data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"increment":{"addition": 13}}`, true, true, math.MaxUint64, 0)
 
@@ -2815,9 +3180,9 @@ func TestV1EndpointsSanity(t *testing.T) {
 }
 
 func TestV1QueryWorksWithEnv(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract.wasm")
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm")
 
-	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":10, "expires":0}`, true, true, defaultGasForTests)
+	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":0}}`, true, true, defaultGasForTests)
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 10)
 
 	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
@@ -2831,11 +3196,10 @@ func TestV1QueryWorksWithEnv(t *testing.T) {
 }
 
 func TestV1ReplySanity(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract.wasm")
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm")
 
-	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":10, "expires":100}`, true, true, defaultGasForTests)
+	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 	fmt.Printf("LIORRR %s", string(contractAddress))
-
 
 	// data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"increment":{"addition": 13}}`, true, true, math.MaxUint64, 0)
 
