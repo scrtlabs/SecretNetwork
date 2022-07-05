@@ -28,6 +28,21 @@ import (
 
 type ContractEvent []v010cosmwasm.LogAttribute
 
+type TestContract struct {
+	Version string
+	Wasm    string
+}
+
+var testContracts = []TestContract{
+	{
+		Version: "v0.10",
+		Wasm:    "./testdata/test-contract/contract.wasm",
+	}, {
+		Version: "v1",
+		Wasm:    "./testdata/v1-sanity-contract/contract.wasm",
+	},
+}
+
 // if codeID isn't 0, it will try to use that. Otherwise will take the contractAddress
 func testEncrypt(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, codeId uint64, msg []byte) ([]byte, error) {
 
