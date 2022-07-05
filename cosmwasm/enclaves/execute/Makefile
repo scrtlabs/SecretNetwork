@@ -92,7 +92,7 @@ RustEnclave_Link_Flags := -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfi
 	$(ENCLAVE_LDFLAGS)
 
 
-Rust_Crate_Source := $(shell find -type f | grep -vP '(\.so|\.o|\.a)$$' | grep -vP '^\./target' | grep -v Enclave_t | grep -v Makefile)
+Rust_Crate_Source := $(shell find . ../shared -type f | grep -vP '(\.so|\.o|\.a)$$' | grep -v '/target/' | grep -v Enclave_t | grep -v Makefile)
 Rust_Target_Path := $(CURDIR)/../xargo
 
 ifeq ($(SGX_MODE), SW)

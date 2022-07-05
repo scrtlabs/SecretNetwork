@@ -352,6 +352,28 @@ fn start_engine(
     operation: ContractOperation,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
+) -> Result<crate::wasm3::Engine, EnclaveError> {
+    crate::wasm3::Engine::new(
+        context,
+        gas_limit,
+        WasmCosts::default(),
+        contract_code,
+        *contract_key,
+        operation,
+        nonce,
+        user_public_key,
+    )
+}
+
+// TODO remove once the new engine works well
+fn _start_engine(
+    context: Ctx,
+    gas_limit: u64,
+    contract_code: ContractCode,
+    contract_key: &ContractKey,
+    operation: ContractOperation,
+    nonce: IoNonce,
+    user_public_key: Ed25519PublicKey,
 ) -> Result<Engine, EnclaveError> {
     let module = create_module_instance(contract_code, operation)?;
 

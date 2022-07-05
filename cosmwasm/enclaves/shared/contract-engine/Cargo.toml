@@ -38,6 +38,7 @@ sha2 = "0.8.1"
 bech32 = "0.7.2"
 pwasm-utils = { version = "0.12.0", default-features = false }
 parity-wasm = { version = "0.41.0", default-features = false }
+wasm3 = { rev = "3ecaba2", git = "https://github.com/scrtlabs/wasm3-rs", features = ["build-bindgen"] }
 lru = { version = "0.6", default-features = false }
 hex = "0.4.2"
 secp256k1 = { version = "0.21.3", features = ["recovery"] }

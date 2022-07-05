@@ -12,6 +12,7 @@ use crate::external::ecalls::BufferRecoveryError;
 pub enum WasmEngineError {
     #[display(fmt = "FailedOcall")]
     FailedOcall(UntrustedVmError),
+    /// The untrusted host seems to be misbehaving
     HostMisbehavior,
     OutOfGas,
     Panic,
@@ -29,8 +30,11 @@ pub enum WasmEngineError {
     /// The contract attempted to write to storage during a query
     UnauthorizedWrite,
 
+    /// The contract tried calling an unrecognized function
     NonExistentImportFunction,
 }
+
+pub type WasmEngineResult<T> = Result<T, WasmEngineError>;
 
 impl HostError for WasmEngineError {}
 
@@ -66,6 +70,37 @@ impl From<BufferRecoveryError> for WasmEngineError {
 impl From<Box<WasmEngineError>> for EnclaveError {
     fn from(engine_err: Box<WasmEngineError>) -> Self {
         Self::from(*engine_err)
+    }
+}
+
+pub fn wasm3_error_to_enclave_error(
+    context: &mut crate::wasm3::Context,
+    wasm3_error: wasm3::error::Error,
+) -> EnclaveError {
+    use wasm3::error::Error as Wasm3RsError;
+    use wasm3::error::Trap;
+
+    match context.take_last_error() {
+        Some(wasm_engine_error) => wasm_engine_error.into(),
+        None => match wasm3_error {
+            Wasm3RsError::Wasm3(wasm3_error) => match Trap::from(wasm3_error) {
+                Trap::OutOfBoundsMemoryAccess => EnclaveError::ContractPanicMemoryAccessOutOfBounds,
+                Trap::DivisionByZero => EnclaveError::ContractPanicDivisionByZero,
+                Trap::IntegerOverflow => EnclaveError::Panic,
+                Trap::IntegerConversion => EnclaveError::ContractPanicInvalidConversionToInt,
+                Trap::IndirectCallTypeMismatch => EnclaveError::FailedFunctionCall,
+                Trap::TableIndexOutOfRange => EnclaveError::ContractPanicTableAccessOutOfBounds,
+                Trap::Exit => EnclaveError::Panic,
+                Trap::Abort => EnclaveError::Panic,
+                Trap::Unreachable => EnclaveError::ContractPanicUnreachable,
+                Trap::StackOverflow => EnclaveError::ContractPanicStackOverflow,
+            },
+            Wasm3RsError::InvalidFunctionSignature => EnclaveError::FailedFunctionCall,
+            Wasm3RsError::FunctionNotFound => EnclaveError::FailedFunctionCall,
+            Wasm3RsError::ModuleNotFound => EnclaveError::FailedFunctionCall,
+            Wasm3RsError::ModuleLoadEnvMismatch => EnclaveError::FailedFunctionCall,
+            Wasm3RsError::RuntimeIsActive => EnclaveError::FailedFunctionCall,
+        },
     }
 }
 

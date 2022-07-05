@@ -2,6 +2,7 @@
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
 
+extern crate core;
 extern crate sgx_types;
 
 mod contract_operations;
@@ -16,6 +17,7 @@ pub(crate) mod module_cache;
 mod query_chain;
 pub(crate) mod types;
 mod wasm;
+mod wasm3;
 
 pub use contract_operations::{handle, init, query};
 
