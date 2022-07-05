@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         db_backend: [rocksdb, goleveldb]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env: # Or as an environment variable
       SPID_TESTNET: ${{ secrets.SPID_TESTNET }}
       API_KEY_TESTNET: ${{ secrets.API_KEY_TESTNET }}
@@ -80,7 +80,7 @@ jobs:
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
 
   build-deb-mainnet:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
       matrix:
@@ -125,7 +125,7 @@ jobs:
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-20.04, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v3
       - name: Build CLI
@@ -139,7 +139,7 @@ jobs:
           path: secretcli-${{runner.os}}
 
   x-build-cli:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v2
@@ -160,7 +160,7 @@ jobs:
           path: secretcli-MacOS-arm64
 
   publish-localsecret:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: scrtlabs/localsecret
@@ -189,7 +189,7 @@ jobs:
 
   Release:
     needs: [native-build-cli, build-deb-testnet, build-deb-mainnet, x-build-cli]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
       - name: Get the version
