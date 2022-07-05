@@ -8,6 +8,7 @@ BUILD_PROFILE ?= release
 FEATURES += SGX_MODE_$(SGX_MODE)
 FEATURES := $(strip $(FEATURES))
 
+ROOT_DIR = ../shared
 
 TOP_DIR := ../../../third_party/build
 include $(TOP_DIR)/buildenv.mk
@@ -91,14 +92,32 @@ RustEnclave_Link_Flags := -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfi
 	-Wl,--version-script=Enclave.lds \
 	$(ENCLAVE_LDFLAGS)
 
+######################################
 
-Rust_Crate_Source := $(shell find -type f | grep -vP '(\.so|\.o|\.a)$$' | grep -vP '^\./target' | grep -v Enclave_t | grep -v Makefile)
-Rust_Target_Path := $(CURDIR)/../xargo
+# BUILD_STD=no       use no_std
+# BUILD_STD=cargo    use cargo-std-aware
+# BUILD_STD=xargo    use xargo
+BUILD_STD ?= no
+
+Rust_Build_Target := x86_64-unknown-linux-sgx
+Rust_Target_Path := $(ROOT_DIR)/rustlib
+
+#Rust_Crate_Source := $(shell find -type f | grep -vP '(\.so|\.o|\.a)$$' | grep -vP '^\./target' | grep -v Enclave_t | grep -v Makefile)
+#Rust_Target_Path := $(CURDIR)/../xargo
 
 ifeq ($(SGX_MODE), SW)
 	Rust_Flags := "-Z force-unstable-if-unmarked -C target-feature=+aes,+ssse3"
 else
 	Rust_Flags := "-Z force-unstable-if-unmarked -C target-cpu=skylake"
+endif
+
+ifeq ($(BUILD_STD), cargo)
+	Rust_Build_Std := --release -Z build-std=core,alloc
+	Rust_Std_Features := --features "untrusted_fs, untrusted_time"
+	Rust_Target_Flags := --target $(Rust_Target_Path)/$(Rust_Build_Target).json
+	Rust_LibTarget_Flags := --target ../$(Rust_Build_Target).json
+	Rust_Sysroot_Path := $(CURDIR)/sysroot
+	Rust_Sysroot_Flags := RUSTFLAGS="-Z force-unstable-if-unmarked -C target-cpu=skylake --sysroot $(Rust_Sysroot_Path)"
 endif
 
 .PHONY: all
@@ -124,9 +143,24 @@ librust_cosmwasm_enclave.signed.so: librust_cosmwasm_enclave.so $(ENCLAVE_CONFIG
 librust_cosmwasm_enclave.so: $(CUSTOM_LIBRARY_PATH)/libenclave.a Enclave_t.o
 	$(CXX) Enclave_t.o -o $@ $(RustEnclave_Link_Flags)
 
-$(CUSTOM_LIBRARY_PATH)/libenclave.a: $(CUSTOM_LIBRARY_PATH) $(Rust_Crate_Source)
-	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo build --features "$(FEATURES)" --target x86_64-unknown-linux-sgx -Z unstable-options --profile $(BUILD_PROFILE) --locked
-	cp ../target/x86_64-unknown-linux-sgx/$(BUILD_PROFILE)/libsecret_enclave.a $(CUSTOM_LIBRARY_PATH)/libenclave.a
+$(CUSTOM_LIBRARY_PATH)/libenclave.a: $(CUSTOM_LIBRARY_PATH) #  $(Rust_Crate_Source)
+ifeq ($(BUILD_STD), cargo)
+	@cd $(Rust_Target_Path)/std && RUSTFLAGS=$(Rust_Flags) cargo build $(Rust_Build_Std) $(Rust_LibTarget_Flags) $(Rust_Std_Features)
+
+	@rm -rf $(Rust_Sysroot_Path)
+	@mkdir -p $(Rust_Sysroot_Path)/lib/rustlib/$(Rust_Build_Target)/lib
+	@cp -r $(Rust_Target_Path)/std/target/$(Rust_Build_Target)/release/deps/* $(Rust_Sysroot_Path)/lib/rustlib/$(Rust_Build_Target)/lib
+
+	$(Rust_Sysroot_Flags) cargo build $(Rust_Target_Flags) $(RustEnclave_Build_Flags) --features "$(FEATURES)" -Z unstable-options --profile $(BUILD_PROFILE) --locked
+
+else ifeq ($(BUILD_STD), xargo)
+	RUST_TARGET_PATH=$(Rust_Target_Path) xargo build --target $(Rust_Build_Target) $(RustEnclave_Build_Flags)
+else
+	cargo build $(RustEnclave_Build_Flags)
+endif
+
+#	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) cargo build --features "$(FEATURES)" --target x86_64-unknown-linux-sgx -Z unstable-options --profile $(BUILD_PROFILE) --locked
+#	cp ../target/x86_64-unknown-linux-sgx/$(BUILD_PROFILE)/libsecret_enclave.a $(CUSTOM_LIBRARY_PATH)/libenclave.a
 
 $(CUSTOM_LIBRARY_PATH):
 	mkdir $(CUSTOM_LIBRARY_PATH)

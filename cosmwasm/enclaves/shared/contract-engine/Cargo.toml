@@ -13,10 +13,10 @@ test = []
 # We always compile to the "sgx" target, so this will always be false.
 # when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
-sgx_tstd = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
-  "backtrace"
+sgx_tstd = { branch = "v2.0.0-preview", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
+  "backtrace", "untrusted_fs"
 ] }
-sgx_types = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types = { branch = "v2.0.0-preview", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 [dependencies]
 enclave-ffi-types = { path = "../../ffi-types" }
@@ -25,11 +25,16 @@ enclave_crypto = { path = "../crypto" }
 enclave_cosmos_types = { path = "../cosmos-types" }
 enclave_cosmwasm_types = { path = "../cosmwasm-types" }
 enclave_utils = { path = "../utils" }
-serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
-  "derive"
-] }
-serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
-base64 = { rev = "dc7389e10817b078f289386b3b6a852ab6c4c021", git = "https://github.com/mesalock-linux/rust-base64-sgx" }
+#serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
+#  "derive"
+#] }
+serde = { version = "1.0.138", features = ["derive"]}
+
+# serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
+serde_json = "1.0.82"
+
+# base64 = { rev = "dc7389e10817b078f289386b3b6a852ab6c4c021", git = "https://github.com/mesalock-linux/rust-base64-sgx" }
+base64 = "0.13.0"
 protobuf = { version = "2.25.2" }
 lazy_static = "1.4"
 log = "0.4.14"
@@ -47,6 +52,6 @@ rand_chacha = { version = "0.2.1", default-features = false }
 
 [dependencies.wasmi]
 git = "https://github.com/paritytech/wasmi"
-rev = "84d2764594d80425373bf4949a58fa3df3d624c3"
-default-features = false
-features = ["core"]
+version = "0.11.0" # "84d2764594d80425373bf4949a58fa3df3d624c3"
+# default-features = false
+features = ["std", "virtual_memory"]
