@@ -35,7 +35,7 @@ jobs:
         run: |
           cargo --version
           rustc --version  
-          cargo +stable install xargo@0.3.25
+          cargo +stable install xargo --version 0.3.25
           xargo --version
       - name: Download sccache
         run: |
@@ -85,7 +85,7 @@ jobs:
         run: |
           cargo --version
           rustc --version  
-          cargo +stable install xargo@0.3.25
+          cargo +stable install xargo --version 0.3.25
           xargo --version
       - name: Download sccache
         run: |
@@ -239,7 +239,7 @@ jobs:
         run: |
           cargo --version
           rustc --version  
-          cargo +stable install xargo@0.3.25
+          cargo +stable install xargo --version 0.3.25
           xargo --version
       - name: Download sccache
         run: |
