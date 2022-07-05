@@ -3160,7 +3160,7 @@ type v1QueryResponse struct {
 }
 
 func TestV1EndpointsSanity(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract.wasm")
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm")
 
 	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 
@@ -3180,7 +3180,7 @@ func TestV1EndpointsSanity(t *testing.T) {
 }
 
 func TestV1QueryWorksWithEnv(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract.wasm")
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm")
 
 	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":0}}`, true, true, defaultGasForTests)
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 10)
@@ -3196,7 +3196,7 @@ func TestV1QueryWorksWithEnv(t *testing.T) {
 }
 
 func TestV1ReplySanity(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract.wasm")
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm")
 
 	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 	fmt.Printf("LIORRR %s", string(contractAddress))
