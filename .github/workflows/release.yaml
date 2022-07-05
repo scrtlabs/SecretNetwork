@@ -55,7 +55,7 @@ jobs:
       - run: rustup component add rust-src clippy
       - name: Install xargo
         run: |
-          cargo +stable install xargo
+          cargo +stable install xargo@0.3.25
           xargo --version
       - name: Download sccache
         run: |
