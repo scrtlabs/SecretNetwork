@@ -2,7 +2,7 @@ version: '3'
 
 services:
   aesm:
-    image: enigmampc/aesm
+    image: fortanix/aesmd:2.13.103.1-1
     devices:
       - /dev/sgx/enclave
       - /dev/sgx/provision
