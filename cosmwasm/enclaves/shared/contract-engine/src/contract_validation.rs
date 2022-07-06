@@ -168,7 +168,9 @@ pub fn validate_msg(
         return Err(EnclaveError::ValidationFailure);
     }
 
-    if validated_msg[0..(REPLY_ENCRYPTION_MAGIC_BYTES.len())] == *REPLY_ENCRYPTION_MAGIC_BYTES {
+    if validated_msg.len() >= REPLY_ENCRYPTION_MAGIC_BYTES.len()
+        && validated_msg[0..(REPLY_ENCRYPTION_MAGIC_BYTES.len())] == *REPLY_ENCRYPTION_MAGIC_BYTES
+    {
         validated_msg = validated_msg[REPLY_ENCRYPTION_MAGIC_BYTES.len()..].to_vec();
 
         let mut sub_msg_deserialized: [u8; SIZE_OF_U64] = [0u8; SIZE_OF_U64];

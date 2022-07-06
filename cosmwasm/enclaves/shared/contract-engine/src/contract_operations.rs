@@ -663,7 +663,7 @@ pub fn handle(
             &canonical_contract_address,
             &env_v010.contract_code_hash,
             reply_params,
-            &canonical_sender_address
+            &canonical_sender_address,
         )?;
         Ok(output)
     })
