@@ -1168,61 +1168,65 @@ fn pass_null_pointer_to_imports_should_throw(deps: DepsMut, pass_type: String) -
 fn test_canonicalize_address_errors(deps: DepsMut) -> StdResult<Response> {
     match deps.api.addr_canonicalize("") {
         Err(StdError::GenericErr { msg }) => {
-            if msg != String::from("canonicalize_address errored: input is empty") {
+            if msg != String::from("addr_canonicalize errored: Input is empty") {
                 return Err(StdError::generic_err(
-                    "empty address should have failed with 'canonicalize_address errored: input is empty'",
-                ));
-            }
-            // all is good, continue
-        }
-        _ => return Err(StdError::generic_err(
-            "empty address should have failed with 'canonicalize_address errored: input is empty'",
-        )),
-    }
-
-    match deps.api.addr_canonicalize("   ") {
-        Err(StdError::GenericErr { msg }) => {
-            if msg != String::from("canonicalize_address errored: input is empty") {
-                return Err(StdError::generic_err(
-                    "empty trimmed address should have failed with 'canonicalize_address errored: input is empty'",
+                    "empty address should have failed with 'addr_canonicalize errored: Input is empty'",
                 ));
             }
             // all is good, continue
         }
         _ => {
             return Err(StdError::generic_err(
-                "empty trimmed address should have failed with 'canonicalize_address errored: input is empty'",
+                "empty address should have failed with 'addr_canonicalize errored: Input is empty'",
+            ))
+        }
+    }
+
+    match deps.api.addr_canonicalize("   ") {
+        Err(StdError::GenericErr { msg }) => {
+            if msg != String::from("addr_canonicalize errored: invalid length") {
+                return Err(StdError::generic_err(
+                    "empty trimmed address should have failed with 'addr_canonicalize errored: invalid length'",
+                ));
+            }
+            // all is good, continue
+        }
+        _ => {
+            return Err(StdError::generic_err(
+                "empty trimmed address should have failed with 'addr_canonicalize errored: invalid length'",
             ))
         }
     }
 
     match deps.api.addr_canonicalize("cosmos1h99hrcc54ms9lxxxx") {
         Err(StdError::GenericErr { msg }) => {
-            if msg != String::from("canonicalize_address errored: invalid checksum") {
+            if msg != String::from("addr_canonicalize errored: invalid checksum") {
                 return Err(StdError::generic_err(
-                    "bad bech32 should have failed with 'canonicalize_address errored: invalid checksum'",
-                ));
-            }
-            // all is good, continue
-        }
-        _ => return Err(StdError::generic_err(
-            "bad bech32 should have failed with 'canonicalize_address errored: invalid checksum'",
-        )),
-    }
-
-    match deps.api.addr_canonicalize("cosmos1h99hrcc54ms9luwpex9kw0rwdt7etvfdyxh6gu") {
-        Err(StdError::GenericErr { msg }) => {
-            if msg != String::from("canonicalize_address errored: wrong address prefix: \"cosmos\"")
-            {
-                return Err(StdError::generic_err(
-                    "bad prefix should have failed with 'canonicalize_address errored: wrong address prefix: \"cosmos\"'",
+                    "bad bech32 should have failed with 'addr_canonicalize errored: invalid checksum'",
                 ));
             }
             // all is good, continue
         }
         _ => {
             return Err(StdError::generic_err(
-                "bad prefix should have failed with 'canonicalize_address errored: wrong address prefix: \"cosmos\"'",
+                "bad bech32 should have failed with 'addr_canonicalize errored: invalid checksum'",
+            ))
+        }
+    }
+
+    match deps.api.addr_canonicalize("cosmos1h99hrcc54ms9luwpex9kw0rwdt7etvfdyxh6gu") {
+        Err(StdError::GenericErr { msg }) => {
+            if msg != String::from("addr_canonicalize errored: wrong address prefix: \"cosmos\"")
+            {
+                return Err(StdError::generic_err(
+                    "bad prefix should have failed with 'addr_canonicalize errored: wrong address prefix: \"cosmos\"'",
+                    ));
+            }
+            // all is good, continue
+        }
+        _ => {
+            return Err(StdError::generic_err(
+                "bad prefix should have failed with 'addr_canonicalize errored: wrong address prefix: \"cosmos\"'",
             ))
         }
     }

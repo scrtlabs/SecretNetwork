@@ -632,7 +632,12 @@ func TestExecuteIllegalInputError(t *testing.T) {
 
 			_, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `bad input`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
-			require.NotNil(t, execErr.ParseErr)
+			if testContract.IsCosmWasmV1 {
+				require.NotNil(t, execErr.GenericErr)
+				require.Contains(t, execErr.GenericErr.Msg, "Error parsing")
+			} else {
+				require.NotNil(t, execErr.ParseErr)
+			}
 		})
 	}
 }
@@ -644,7 +649,12 @@ func TestInitIllegalInputError(t *testing.T) {
 
 			_, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `bad input`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 
-			require.NotNil(t, initErr.ParseErr)
+			if testContract.IsCosmWasmV1 {
+				require.NotNil(t, initErr.GenericErr)
+				require.Contains(t, initErr.GenericErr.Msg, "Error parsing")
+			} else {
+				require.NotNil(t, initErr.ParseErr)
+			}
 		})
 	}
 }
@@ -730,51 +740,90 @@ func TestInitContractError(t *testing.T) {
 				_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"generic_err"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 
 				require.NotNil(t, err.GenericErr)
-				require.Equal(t, "la la 🤯", err.GenericErr.Msg)
+				require.Contains(t, err.GenericErr.Msg, "la la 🤯")
 			})
 			t.Run("invalid_base64", func(t *testing.T) {
 				_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"invalid_base64"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 
-				require.NotNil(t, err.InvalidBase64)
-				require.Equal(t, "ra ra 🤯", err.InvalidBase64.Msg)
+				if testContract.IsCosmWasmV1 {
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "ra ra 🤯")
+				} else {
+					require.NotNil(t, err.InvalidBase64)
+					require.Equal(t, "ra ra 🤯", err.InvalidBase64.Msg)
+				}
 			})
 			t.Run("invalid_utf8", func(t *testing.T) {
 				_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"invalid_utf8"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 
-				require.NotNil(t, err.InvalidUtf8)
-				require.Equal(t, "ka ka 🤯", err.InvalidUtf8.Msg)
+				if testContract.IsCosmWasmV1 {
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "ka ka 🤯")
+				} else {
+					require.NotNil(t, err.InvalidUtf8)
+					require.Equal(t, "ka ka 🤯", err.InvalidUtf8.Msg)
+				}
 			})
 			t.Run("not_found", func(t *testing.T) {
 				_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"not_found"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 
-				require.NotNil(t, err.NotFound)
-				require.Equal(t, "za za 🤯", err.NotFound.Kind)
+				if testContract.IsCosmWasmV1 {
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "za za 🤯")
+				} else {
+					require.NotNil(t, err.NotFound)
+					require.Equal(t, "za za 🤯", err.NotFound.Kind)
+				}
 			})
 			t.Run("parse_err", func(t *testing.T) {
 				_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"parse_err"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 
-				require.NotNil(t, err.ParseErr)
-				require.Equal(t, "na na 🤯", err.ParseErr.Target)
-				require.Equal(t, "pa pa 🤯", err.ParseErr.Msg)
+				if testContract.IsCosmWasmV1 {
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "na na 🤯")
+					require.Contains(t, err.GenericErr.Msg, "pa pa 🤯")
+				} else {
+					require.NotNil(t, err.ParseErr)
+					require.Equal(t, "na na 🤯", err.ParseErr.Target)
+					require.Equal(t, "pa pa 🤯", err.ParseErr.Msg)
+				}
 			})
 			t.Run("serialize_err", func(t *testing.T) {
 				_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"serialize_err"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 
-				require.NotNil(t, err.SerializeErr)
-				require.Equal(t, "ba ba 🤯", err.SerializeErr.Source)
-				require.Equal(t, "ga ga 🤯", err.SerializeErr.Msg)
+				if testContract.IsCosmWasmV1 {
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "ba ba 🤯")
+					require.Contains(t, err.GenericErr.Msg, "ga ga 🤯")
+				} else {
+					require.NotNil(t, err.SerializeErr)
+					require.Equal(t, "ba ba 🤯", err.SerializeErr.Source)
+					require.Equal(t, "ga ga 🤯", err.SerializeErr.Msg)
+				}
 			})
 			t.Run("unauthorized", func(t *testing.T) {
 				_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"unauthorized"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 
-				require.NotNil(t, err.Unauthorized)
+				if testContract.IsCosmWasmV1 {
+					// Not supported in V1
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "catch-all 🤯")
+				} else {
+					require.NotNil(t, err.Unauthorized)
+				}
 			})
 			t.Run("underflow", func(t *testing.T) {
 				_, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"contract_error":{"error_type":"underflow"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 
-				require.NotNil(t, err.Underflow)
-				require.Equal(t, "minuend 🤯", err.Underflow.Minuend)
-				require.Equal(t, "subtrahend 🤯", err.Underflow.Subtrahend)
+				if testContract.IsCosmWasmV1 {
+					// Not supported in V1
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "catch-all 🤯")
+				} else {
+					require.NotNil(t, err.Underflow)
+					require.Equal(t, "minuend 🤯", err.Underflow.Minuend)
+					require.Equal(t, "subtrahend 🤯", err.Underflow.Subtrahend)
+				}
 			})
 		})
 	}
@@ -792,51 +841,90 @@ func TestExecContractError(t *testing.T) {
 				_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"generic_err"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.NotNil(t, err.GenericErr)
-				require.Equal(t, "la la 🤯", err.GenericErr.Msg)
+				require.Contains(t, err.GenericErr.Msg, "la la 🤯")
 			})
 			t.Run("invalid_base64", func(t *testing.T) {
 				_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"invalid_base64"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
-				require.NotNil(t, err.InvalidBase64)
-				require.Equal(t, "ra ra 🤯", err.InvalidBase64.Msg)
+				if testContract.IsCosmWasmV1 {
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "ra ra 🤯")
+				} else {
+					require.NotNil(t, err.InvalidBase64)
+					require.Equal(t, "ra ra 🤯", err.InvalidBase64.Msg)
+				}
 			})
 			t.Run("invalid_utf8", func(t *testing.T) {
 				_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"invalid_utf8"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
-				require.NotNil(t, err.InvalidUtf8)
-				require.Equal(t, "ka ka 🤯", err.InvalidUtf8.Msg)
+				if testContract.IsCosmWasmV1 {
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "ka ka 🤯")
+				} else {
+					require.NotNil(t, err.InvalidUtf8)
+					require.Equal(t, "ka ka 🤯", err.InvalidUtf8.Msg)
+				}
 			})
 			t.Run("not_found", func(t *testing.T) {
 				_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"not_found"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
-				require.NotNil(t, err.NotFound)
-				require.Equal(t, "za za 🤯", err.NotFound.Kind)
+				if testContract.IsCosmWasmV1 {
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "za za 🤯")
+				} else {
+					require.NotNil(t, err.NotFound)
+					require.Equal(t, "za za 🤯", err.NotFound.Kind)
+				}
 			})
 			t.Run("parse_err", func(t *testing.T) {
 				_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"parse_err"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
-				require.NotNil(t, err.ParseErr)
-				require.Equal(t, "na na 🤯", err.ParseErr.Target)
-				require.Equal(t, "pa pa 🤯", err.ParseErr.Msg)
+				if testContract.IsCosmWasmV1 {
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "na na 🤯")
+					require.Contains(t, err.GenericErr.Msg, "pa pa 🤯")
+				} else {
+					require.NotNil(t, err.ParseErr)
+					require.Equal(t, "na na 🤯", err.ParseErr.Target)
+					require.Equal(t, "pa pa 🤯", err.ParseErr.Msg)
+				}
 			})
 			t.Run("serialize_err", func(t *testing.T) {
 				_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"serialize_err"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
-				require.NotNil(t, err.SerializeErr)
-				require.Equal(t, "ba ba 🤯", err.SerializeErr.Source)
-				require.Equal(t, "ga ga 🤯", err.SerializeErr.Msg)
+				if testContract.IsCosmWasmV1 {
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "ba ba 🤯")
+					require.Contains(t, err.GenericErr.Msg, "ga ga 🤯")
+				} else {
+					require.NotNil(t, err.SerializeErr)
+					require.Equal(t, "ba ba 🤯", err.SerializeErr.Source)
+					require.Equal(t, "ga ga 🤯", err.SerializeErr.Msg)
+				}
 			})
 			t.Run("unauthorized", func(t *testing.T) {
 				_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"unauthorized"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
-				require.NotNil(t, err.Unauthorized)
+				if testContract.IsCosmWasmV1 {
+					// Not supported in V1
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "catch-all 🤯")
+				} else {
+					require.NotNil(t, err.Unauthorized)
+				}
 			})
 			t.Run("underflow", func(t *testing.T) {
 				_, _, _, err := execHelper(t, keeper, ctx, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"underflow"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
-				require.NotNil(t, err.Underflow)
-				require.Equal(t, "minuend 🤯", err.Underflow.Minuend)
-				require.Equal(t, "subtrahend 🤯", err.Underflow.Subtrahend)
+				if testContract.IsCosmWasmV1 {
+					// Not supported in V1
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "catch-all 🤯")
+				} else {
+					require.NotNil(t, err.Underflow)
+					require.Equal(t, "minuend 🤯", err.Underflow.Minuend)
+					require.Equal(t, "subtrahend 🤯", err.Underflow.Subtrahend)
+				}
 			})
 		})
 	}
@@ -854,51 +942,90 @@ func TestQueryContractError(t *testing.T) {
 				_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"generic_err"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 
 				require.NotNil(t, err.GenericErr)
-				require.Equal(t, "la la 🤯", err.GenericErr.Msg)
+				require.Contains(t, err.GenericErr.Msg, "la la 🤯")
 			})
 			t.Run("invalid_base64", func(t *testing.T) {
 				_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"invalid_base64"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 
-				require.NotNil(t, err.InvalidBase64)
-				require.Equal(t, "ra ra 🤯", err.InvalidBase64.Msg)
+				if testContract.IsCosmWasmV1 {
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "ra ra 🤯")
+				} else {
+					require.NotNil(t, err.InvalidBase64)
+					require.Equal(t, "ra ra 🤯", err.InvalidBase64.Msg)
+				}
 			})
 			t.Run("invalid_utf8", func(t *testing.T) {
 				_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"invalid_utf8"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 
-				require.NotNil(t, err.InvalidUtf8)
-				require.Equal(t, "ka ka 🤯", err.InvalidUtf8.Msg)
+				if testContract.IsCosmWasmV1 {
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "ka ka 🤯")
+				} else {
+					require.NotNil(t, err.InvalidUtf8)
+					require.Equal(t, "ka ka 🤯", err.InvalidUtf8.Msg)
+				}
 			})
 			t.Run("not_found", func(t *testing.T) {
 				_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"not_found"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 
-				require.NotNil(t, err.NotFound)
-				require.Equal(t, "za za 🤯", err.NotFound.Kind)
+				if testContract.IsCosmWasmV1 {
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "za za 🤯")
+				} else {
+					require.NotNil(t, err.NotFound)
+					require.Equal(t, "za za 🤯", err.NotFound.Kind)
+				}
 			})
 			t.Run("parse_err", func(t *testing.T) {
 				_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"parse_err"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 
-				require.NotNil(t, err.ParseErr)
-				require.Equal(t, "na na 🤯", err.ParseErr.Target)
-				require.Equal(t, "pa pa 🤯", err.ParseErr.Msg)
+				if testContract.IsCosmWasmV1 {
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "na na 🤯")
+					require.Contains(t, err.GenericErr.Msg, "pa pa 🤯")
+				} else {
+					require.NotNil(t, err.ParseErr)
+					require.Equal(t, "na na 🤯", err.ParseErr.Target)
+					require.Equal(t, "pa pa 🤯", err.ParseErr.Msg)
+				}
 			})
 			t.Run("serialize_err", func(t *testing.T) {
 				_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"serialize_err"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 
-				require.NotNil(t, err.SerializeErr)
-				require.Equal(t, "ba ba 🤯", err.SerializeErr.Source)
-				require.Equal(t, "ga ga 🤯", err.SerializeErr.Msg)
+				if testContract.IsCosmWasmV1 {
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "ba ba 🤯")
+					require.Contains(t, err.GenericErr.Msg, "ga ga 🤯")
+				} else {
+					require.NotNil(t, err.SerializeErr)
+					require.Equal(t, "ba ba 🤯", err.SerializeErr.Source)
+					require.Equal(t, "ga ga 🤯", err.SerializeErr.Msg)
+				}
 			})
 			t.Run("unauthorized", func(t *testing.T) {
 				_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"unauthorized"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 
-				require.NotNil(t, err.Unauthorized)
+				if testContract.IsCosmWasmV1 {
+					// Not supported in V1
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "catch-all 🤯")
+				} else {
+					require.NotNil(t, err.Unauthorized)
+				}
 			})
 			t.Run("underflow", func(t *testing.T) {
 				_, err := queryHelper(t, keeper, ctx, contractAddr, `{"contract_error":{"error_type":"underflow"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 
-				require.NotNil(t, err.Underflow)
-				require.Equal(t, "minuend 🤯", err.Underflow.Minuend)
-				require.Equal(t, "subtrahend 🤯", err.Underflow.Subtrahend)
+				if testContract.IsCosmWasmV1 {
+					// Not supported in V1
+					require.NotNil(t, err.GenericErr)
+					require.Contains(t, err.GenericErr.Msg, "catch-all 🤯")
+				} else {
+					require.NotNil(t, err.Underflow)
+					require.Equal(t, "minuend 🤯", err.Underflow.Minuend)
+					require.Equal(t, "subtrahend 🤯", err.Underflow.Subtrahend)
+				}
 			})
 		})
 	}
@@ -1139,7 +1266,7 @@ func TestInitCallbackContractError(t *testing.T) {
 			secondContractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s", "code_hash":"%s"}}`, contractAddress, codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests)
 
 			require.NotNil(t, initErr.GenericErr)
-			require.Equal(t, "la la 🤯", initErr.GenericErr.Msg)
+			require.Contains(t, initErr.GenericErr.Msg, "la la 🤯")
 			require.Empty(t, secondContractAddress)
 			// require.Empty(t, initEvents)
 		})
@@ -1159,7 +1286,7 @@ func TestExecCallbackContractError(t *testing.T) {
 			data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s","code_hash":"%s"}}`, contractAddress, codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 			require.NotNil(t, execErr.GenericErr)
-			require.Equal(t, "la la 🤯", execErr.GenericErr.Msg)
+			require.Contains(t, execErr.GenericErr.Msg, "la la 🤯")
 			// require.Empty(t, execEvents)
 			require.Empty(t, data)
 		})
@@ -1178,9 +1305,15 @@ func TestExecCallbackBadParam(t *testing.T) {
 
 			data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"callback_contract_bad_param":{"contract_addr":"%s"}}`, contractAddress), true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
-			require.NotNil(t, execErr.ParseErr)
-			require.Equal(t, "test_contract::contract::HandleMsg", execErr.ParseErr.Target)
-			require.Contains(t, execErr.ParseErr.Msg, "unknown variant `callback_contract_bad_param`")
+			if testContract.IsCosmWasmV1 {
+				require.NotNil(t, execErr.GenericErr)
+				require.Contains(t, execErr.GenericErr.Msg, "v1_sanity_contract::msg::ExecuteMsg")
+				require.Contains(t, execErr.GenericErr.Msg, "unknown variant `callback_contract_bad_param`")
+			} else {
+				require.NotNil(t, execErr.ParseErr)
+				require.Equal(t, "test_contract::contract::HandleMsg", execErr.ParseErr.Target)
+				require.Contains(t, execErr.ParseErr.Msg, "unknown variant `callback_contract_bad_param`")
+			}
 			// require.Empty(t, execEvents)
 			require.Empty(t, data)
 		})
@@ -1201,9 +1334,15 @@ func TestInitCallbackBadParam(t *testing.T) {
 			require.Empty(t, secondContractAddress)
 			// require.Empty(t, initEvents)
 
-			require.NotNil(t, initErr.ParseErr)
-			require.Equal(t, "test_contract::contract::InitMsg", initErr.ParseErr.Target)
-			require.Contains(t, initErr.ParseErr.Msg, "unknown variant `callback_contract_bad_param`")
+			if testContract.IsCosmWasmV1 {
+				require.NotNil(t, initErr.GenericErr)
+				require.Contains(t, initErr.GenericErr.Msg, "v1_sanity_contract::msg::InstantiateMsg")
+				require.Contains(t, initErr.GenericErr.Msg, "unknown variant `callback_contract_bad_param`")
+			} else {
+				require.NotNil(t, initErr.ParseErr)
+				require.Equal(t, "test_contract::contract::InitMsg", initErr.ParseErr.Target)
+				require.Contains(t, initErr.ParseErr.Msg, "unknown variant `callback_contract_bad_param`")
+			}
 		})
 	}
 }
@@ -1394,7 +1533,11 @@ func TestPassNullPointerToImports(t *testing.T) {
 					_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"pass_null_pointer_to_imports_should_throw":{"pass_type":"%s"}}`, passType), false, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 					require.NotNil(t, execErr.GenericErr)
-					require.Contains(t, execErr.GenericErr.Msg, "failed to read memory")
+					if testContract.IsCosmWasmV1 {
+						require.Contains(t, execErr.GenericErr.Msg, "execute contract failed")
+					} else {
+						require.Contains(t, execErr.GenericErr.Msg, "failed to read memory")
+					}
 				})
 			}
 		})
@@ -1432,7 +1575,6 @@ func TestExternalQueryCalleePanic(t *testing.T) {
 		})
 	}
 }
-
 func TestExternalQueryCalleeStdError(t *testing.T) {
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
@@ -1444,7 +1586,7 @@ func TestExternalQueryCalleeStdError(t *testing.T) {
 			_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_error":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 			require.NotNil(t, err.GenericErr)
-			require.Equal(t, "la la 🤯", err.GenericErr.Msg)
+			require.Contains(t, err.GenericErr.Msg, "la la 🤯")
 		})
 	}
 }
@@ -1475,9 +1617,16 @@ func TestExternalQueryBadSenderABI(t *testing.T) {
 
 			_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_bad_abi":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
-			require.NotNil(t, err.ParseErr)
-			require.Equal(t, "test_contract::contract::QueryMsg", err.ParseErr.Target)
-			require.Equal(t, "Invalid type", err.ParseErr.Msg)
+			if testContract.IsCosmWasmV1 {
+				require.NotNil(t, err.GenericErr)
+				require.Contains(t, err.GenericErr.Msg, "test_contract::contract::QueryMsg")
+				require.Contains(t, err.GenericErr.Msg, "Invalid type")
+			} else {
+				require.NotNil(t, err.ParseErr)
+				require.Equal(t, "test_contract::contract::QueryMsg", err.ParseErr.Target)
+				require.Equal(t, "Invalid type", err.ParseErr.Msg)
+			}
+
 		})
 	}
 }
@@ -1492,9 +1641,15 @@ func TestExternalQueryBadReceiverABI(t *testing.T) {
 
 			_, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_bad_abi_receiver":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
-			require.NotNil(t, err.ParseErr)
-			require.Equal(t, "alloc::string::String", err.ParseErr.Target)
-			require.Equal(t, "Invalid type", err.ParseErr.Msg)
+			if testContract.IsCosmWasmV1 {
+				require.NotNil(t, err.GenericErr)
+				require.Contains(t, err.GenericErr.Msg, "alloc::string::String")
+				require.Contains(t, err.GenericErr.Msg, "Invalid type")
+			} else {
+				require.NotNil(t, err.ParseErr)
+				require.Equal(t, "alloc::string::String", err.ParseErr.Target)
+				require.Equal(t, "Invalid type", err.ParseErr.Msg)
+			}
 		})
 	}
 }
@@ -1554,7 +1709,7 @@ func TestQueryRecursionLimitEnforcedInQueries(t *testing.T) {
 
 			require.NotEmpty(t, data)
 			require.Equal(t, data, "\"Recursion limit was correctly enforced\"")
-
+			
 			require.Nil(t, err.GenericErr)
 		})
 	}

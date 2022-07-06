@@ -195,7 +195,7 @@ func (w *Wasmer) Instantiate(
 		return respV010orV1.V010Ok, key, gasUsed, nil
 	}
 
-	return nil, nil, gasUsed, fmt.Errorf("handle: cannot detect response type (v0.10 or v1): %w", err)
+	return nil, nil, gasUsed, fmt.Errorf("handle: cannot detect response type (v0.10 or v1)")
 }
 
 func AppendReplyInternalDataToData(data []byte, internaReplyEnclaveSig []byte, internalMsgId []byte) ([]byte, error) {
@@ -286,7 +286,7 @@ func (w *Wasmer) Execute(
 		return respV010orV1.V010Ok, gasUsed, nil
 	}
 
-	return nil, gasUsed, fmt.Errorf("handle: cannot detect response type (v0.10 or v1): %w", err)
+	return nil, gasUsed, fmt.Errorf("handle: cannot detect response type (v0.10 or v1)")
 }
 
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be
@@ -311,15 +311,28 @@ func (w *Wasmer) Query(
 		return nil, gasUsed, err
 	}
 
-	var resp types.QueryResponse
+	var resp types.V010orV1ContractQueryResponse
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
 		return nil, gasUsed, err
 	}
-	if resp.Err != nil {
-		return nil, gasUsed, fmt.Errorf("%+v", resp.Err)
+
+	if resp.V010Err != nil {
+		return nil, gasUsed, fmt.Errorf("%+v", resp.V010Err)
 	}
-	return resp.Ok, gasUsed, nil
+	if resp.V1Err != "" {
+		return nil, gasUsed, fmt.Errorf("%s", resp.V1Err)
+	}
+
+	if resp.V010Ok != nil {
+		return resp.V010Ok, gasUsed, nil
+	}
+
+	if resp.V1Ok != nil {
+		return resp.V1Ok, gasUsed, nil
+	}
+
+	return nil, gasUsed, fmt.Errorf("query: cannot detect response type (v0.10 or v1)")
 }
 
 // AnalyzeCode returns a report of static analysis of the wasm contract (uncompiled).
