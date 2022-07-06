@@ -1037,7 +1037,7 @@ func (h ContractResponseHandler) Handle(ctx sdk.Context, contractAddr sdk.AccAdd
 	result := origRspData
 	switch rsp, err := h.md.DispatchSubmessages(ctx, contractAddr, ibcPort, messages, ogTx, ogSigInfo, ogCosmosMessageVersion); {
 	case err != nil:
-		return nil, err
+		return nil, sdkerrors.Wrap(err, "submessages")
 	case rsp != nil:
 		result = rsp
 	}
