@@ -26,33 +26,33 @@ use sha2::Digest;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 enum WasmOutput {
-    ErrObjectV010 {
+    ErrV010 {
         #[serde(rename = "Err")]
         err: Value,
         internal_msg_id: Option<Binary>,
         internal_reply_enclave_sig: Option<Binary>,
     },
-    ErrStringV1 {
+    ErrV1 {
         #[serde(rename = "error")]
         err: String,
         internal_msg_id: Option<Binary>,
         internal_reply_enclave_sig: Option<Binary>,
     },
-    QueryOkString {
+    QueryOkV010 {
         #[serde(rename = "Ok")]
         ok: String,
     },
-    QueryOkStringV1 {
+    QueryOkV1 {
         #[serde(rename = "ok")]
         ok: String,
     },
-    OkObjectV010 {
+    OkV010 {
         #[serde(rename = "Ok")]
         ok: cosmwasm_v010_types::types::ContractResult,
         internal_reply_enclave_sig: Option<Binary>,
         internal_msg_id: Option<Binary>,
     },
-    OkObjectV1 {
+    OkV1 {
         #[serde(rename = "ok")]
         ok: cosmwasm_v1_types::results::Response,
         internal_reply_enclave_sig: Option<Binary>,
@@ -149,7 +149,7 @@ pub fn encrypt_output(
     })?;
 
     match &mut output {
-        WasmOutput::ErrObjectV010 {
+        WasmOutput::ErrV010 {
             err,
             internal_reply_enclave_sig,
             internal_msg_id,
@@ -201,7 +201,7 @@ pub fn encrypt_output(
             }
         }
 
-        WasmOutput::ErrStringV1 {
+        WasmOutput::ErrV1 {
             err,
             internal_reply_enclave_sig,
             internal_msg_id,
@@ -253,12 +253,12 @@ pub fn encrypt_output(
             }
         }
 
-        WasmOutput::QueryOkString { ok } | WasmOutput::QueryOkStringV1 { ok } => {
+        WasmOutput::QueryOkV010 { ok } | WasmOutput::QueryOkV1 { ok } => {
             *ok = encrypt_serializable(&encryption_key, ok, &reply_params)?;
         }
 
         // Encrypt all Wasm messages (keeps Bank, Staking, etc.. as is)
-        WasmOutput::OkObjectV010 {
+        WasmOutput::OkV010 {
             ok,
             internal_reply_enclave_sig,
             internal_msg_id,
@@ -332,7 +332,7 @@ pub fn encrypt_output(
                 None => None, // Not a reply, we don't need enclave sig
             }
         }
-        WasmOutput::OkObjectV1 {
+        WasmOutput::OkV1 {
             ok,
             internal_reply_enclave_sig,
             internal_msg_id,
