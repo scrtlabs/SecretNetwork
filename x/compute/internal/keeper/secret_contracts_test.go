@@ -3199,32 +3199,36 @@ func TestV1ReplySanity(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm")
 
 	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
-	fmt.Printf("LIORRR %s", string(contractAddress))
 
-	// data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"increment":{"addition": 13}}`, true, true, math.MaxUint64, 0)
+	data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"increment":{"addition": 13}}`, true, true, math.MaxUint64, 0)
 
-	// require.Empty(t, err)
-	// require.Equal(t, uint32(23), binary.BigEndian.Uint32(data))
+	require.Empty(t, err)
+	require.Equal(t, uint32(23), binary.BigEndian.Uint32(data))
 
-	// data, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"transfer_money":{"amount": 10213}}`, true, true, math.MaxUint64, 0)
+	data, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"transfer_money":{"amount": 10213}}`, true, true, math.MaxUint64, 0)
 
-	// require.Empty(t, err)
-	// require.Equal(t, uint32(23), binary.BigEndian.Uint32(data))
+	require.Empty(t, err)
+	require.Equal(t, uint32(23), binary.BigEndian.Uint32(data))
 
-	// data, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"recursive_reply":{}}`, true, true, math.MaxUint64, 0)
+	data, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"recursive_reply":{}}`, true, true, math.MaxUint64, 0)
 
-	// require.Empty(t, err)
-	// require.Equal(t, uint32(25), binary.BigEndian.Uint32(data))
+	require.Empty(t, err)
+	require.Equal(t, uint32(25), binary.BigEndian.Uint32(data))
 
-	// data, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"recursive_reply_fail":{}}`, true, true, math.MaxUint64, 0)
+	data, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"recursive_reply_fail":{}}`, true, true, math.MaxUint64, 0)
 
-	// require.Empty(t, err)
-	// require.Equal(t, uint32(10), binary.BigEndian.Uint32(data))
+	require.Empty(t, err)
+	require.Equal(t, uint32(10), binary.BigEndian.Uint32(data))
 
-	data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"init_new_contract":{}}`, true, true, math.MaxUint64, 0)
+	data, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"init_new_contract":{}}`, true, true, math.MaxUint64, 0)
 
 	require.Empty(t, err)
 	require.Equal(t, uint32(150), binary.BigEndian.Uint32(data))
+
+	data, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"init_new_contract_with_error":{}}`, true, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(1337), binary.BigEndian.Uint32(data))
 
 	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
 	require.Empty(t, qErr)
@@ -3233,5 +3237,5 @@ func TestV1ReplySanity(t *testing.T) {
 	var resp v1QueryResponse
 	e := json.Unmarshal([]byte(queryRes), &resp)
 	require.NoError(t, e)
-	require.Equal(t, uint32(10), resp.Get.Count)
+	require.Equal(t, uint32(1337), resp.Get.Count)
 }

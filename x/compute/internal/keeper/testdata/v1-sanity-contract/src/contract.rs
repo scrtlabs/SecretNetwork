@@ -22,6 +22,10 @@ pub fn instantiate(
 ) -> StdResult<Response> {
     match msg {
         InstantiateMsg::Counter { counter, expires } => {
+            if counter == 0 {
+                return Err(StdError::generic_err("got wrong counter on init"));
+            }
+
             count(deps.storage).save(&counter)?;
             let expires = env.block.height + expires;
             expiration(deps.storage).save(&expires)?;
@@ -151,6 +155,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::RecursiveReply {} => recursive_reply(env, deps),
         ExecuteMsg::RecursiveReplyFail {} => recursive_reply_fail(env, deps),
         ExecuteMsg::InitNewContract {} => init_new_contract(env, deps),
+        ExecuteMsg::InitNewContractWithError {} => init_new_contract_with_error(env, deps),
 
         // These were ported from the v0.10 test-contract:
         ExecuteMsg::A {
@@ -613,6 +618,28 @@ pub fn init_new_contract(env: Env, _deps: DepsMut) -> StdResult<Response> {
     Ok(resp)
 }
 
+pub fn init_new_contract_with_error(env: Env, _deps: DepsMut) -> StdResult<Response> {
+    let mut resp = Response::default();
+    resp.messages.push(SubMsg {
+        id: 1405,
+        msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
+            code_hash: env.contract.code_hash,
+            msg: Binary::from(
+                "{\"counter\":{\"counter\":0, \"expires\":100}}"
+                    .as_bytes()
+                    .to_vec(),
+            ),
+            funds: vec![],
+            label: "new2022133".to_string(),
+            code_id: 1,
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Always,
+    });
+
+    Ok(resp)
+}
+
 #[entry_point]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
@@ -734,6 +761,22 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
                 "Init didn't response with contract address",
             ))),
         },
+        (1405, SubMsgResult::Ok(_)) => Err(StdError::generic_err(format!(
+            "recursive init with error failed"
+        ))),
+        (1405, SubMsgResult::Err(_)) => {
+            let mut resp = Response::default();
+            let new_count = 1337;
+            count(deps.storage).save(&new_count)?;
+
+            resp.data = Some(
+                (count_read(deps.storage).load()? as u32)
+                    .to_be_bytes()
+                    .into(),
+            );
+
+            Ok(resp)
+        }
 
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }

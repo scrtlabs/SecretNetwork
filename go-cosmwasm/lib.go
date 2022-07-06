@@ -153,7 +153,11 @@ func (w *Wasmer) Instantiate(
 	isOutputAddressedToReply := (len(respV010orV1.InternaReplyEnclaveSig) > 0 && len(respV010orV1.InternalMsgId) > 0)
 
 	if respV010orV1.V1Err != "" {
-		return nil, nil, gasUsed, fmt.Errorf(respV010orV1.V1Err)
+		return v1types.DataWithInternalReplyInfo{
+			InternalMsgId:          respV010orV1.InternalMsgId,
+			InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
+			Data:                   []byte(strings.ReplaceAll(respV010orV1.V1Err, "encrypted: ", "")),
+		}, nil, gasUsed, fmt.Errorf(respV010orV1.V1Err)
 	}
 
 	if respV010orV1.V1Ok != nil {
@@ -171,7 +175,11 @@ func (w *Wasmer) Instantiate(
 	}
 
 	if respV010orV1.V010Err != nil {
-		return nil, nil, gasUsed, fmt.Errorf("%+v", respV010orV1.V010Err)
+		return v1types.DataWithInternalReplyInfo{
+			InternalMsgId:          respV010orV1.InternalMsgId,
+			InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
+			Data:                   []byte(respV010orV1.V010Err.GenericErr.Msg),
+		}, nil, gasUsed, fmt.Errorf("%+v", respV010orV1.V010Err)
 	}
 
 	if respV010orV1.V010Ok != nil {

@@ -442,6 +442,16 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	response, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, contractAddress)
 	consumeGas(ctx, gasUsed)
 	if err != nil {
+		switch res := response.(type) {
+		case v1wasmTypes.DataWithInternalReplyInfo:
+			result, e := json.Marshal(res)
+			if e != nil {
+				return nil, nil, sdkerrors.Wrap(e, "couldn't marshal internal reply info")
+			}
+
+			return contractAddress, result, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
+		}
+
 		return contractAddress, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
 	}
 

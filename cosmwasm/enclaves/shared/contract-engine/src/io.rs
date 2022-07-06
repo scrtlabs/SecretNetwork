@@ -417,8 +417,6 @@ pub fn encrypt_output(
                         msg: reply_as_vec.clone(),
                     };
 
-                    trace!("ASSAFF Address on sign {:?}", sender_addr);
-
                     Some(Binary::from(
                         create_callback_signature(sender_addr, &tmp_secret_msg, &[]).as_slice(),
                     ))

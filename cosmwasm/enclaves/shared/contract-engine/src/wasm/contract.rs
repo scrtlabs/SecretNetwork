@@ -677,6 +677,7 @@ impl WasmiApi for ContractInstance {
             self.user_public_key,
             &mut gas_used,
             self.gas_left(),
+            &self.cosmwasm_api_version,
         )?;
 
         trace!(

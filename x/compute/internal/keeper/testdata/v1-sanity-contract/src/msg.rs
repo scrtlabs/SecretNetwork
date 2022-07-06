@@ -72,6 +72,7 @@ pub enum ExecuteMsg {
     RecursiveReply {},
     RecursiveReplyFail {},
     InitNewContract {},
+    InitNewContractWithError {},
 
     // These were ported from the v0.10 test-contract:
     A {

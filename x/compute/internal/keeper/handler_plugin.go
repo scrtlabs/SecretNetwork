@@ -524,6 +524,7 @@ func (h MessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress
 	)
 	for _, sdkMsg := range sdkMsgs {
 		sdkEvents, sdkData, err := h.handleSdkMessage(ctx, contractAddr, sdkMsg)
+
 		if err != nil {
 			data = append(data, sdkData)
 			return nil, data, err

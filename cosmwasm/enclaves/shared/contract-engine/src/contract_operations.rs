@@ -651,11 +651,7 @@ pub fn handle(
             "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",
             secret_msg.nonce, secret_msg.user_public_key
         );
-        trace!(
-            "LIORRR on sign addr {:?} canon {:?}",
-            env_v010.contract.address,
-            canonical_contract_address
-        );
+
         let output = encrypt_output(
             output,
             secret_msg.nonce,
