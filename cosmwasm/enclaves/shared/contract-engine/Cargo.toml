@@ -24,7 +24,7 @@ cosmos_proto = { path = "../cosmos-proto" }
 enclave_crypto = { path = "../crypto" }
 enclave_cosmos_types = { path = "../cosmos-types" }
 enclave_cosmwasm_types = { path = "../cosmwasm-types" }
-enclave_cosmwasm_v016_types = { path = "../cosmwasm-v016-types" }
+enclave_cosmwasm_v1_types = { path = "../cosmwasm-v1-types" }
 enclave_utils = { path = "../utils" }
 serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
   "derive"

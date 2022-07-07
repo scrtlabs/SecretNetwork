@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use enclave_cosmwasm_types::encoding::Binary;
 use crate::coins::Coin;
 #[cfg(feature = "stargate")]
 use crate::ibc::IbcMsg;
+use enclave_cosmwasm_types::encoding::Binary;
 
 use super::Empty;
 

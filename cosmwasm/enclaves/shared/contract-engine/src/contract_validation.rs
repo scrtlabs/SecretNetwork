@@ -1,4 +1,4 @@
-use enclave_cosmwasm_v016_types::results::REPLY_ENCRYPTION_MAGIC_BYTES;
+use enclave_cosmwasm_v1_types::results::REPLY_ENCRYPTION_MAGIC_BYTES;
 use log::*;
 
 use enclave_ffi_types::EnclaveError;

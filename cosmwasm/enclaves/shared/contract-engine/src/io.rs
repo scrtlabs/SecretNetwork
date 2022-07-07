@@ -6,8 +6,7 @@ use super::types::{IoNonce, SecretMessage};
 use enclave_cosmwasm_types as cosmwasm_v010_types;
 use enclave_cosmwasm_types::encoding::Binary;
 use enclave_cosmwasm_types::types::{CanonicalAddr, Coin};
-use enclave_cosmwasm_v016_types as cosmwasm_v1_types;
-use enclave_cosmwasm_v016_types::results::{Event, Reply, ReplyOn, SubMsgResponse, SubMsgResult};
+use enclave_cosmwasm_v1_types::results::{Event, Reply, ReplyOn, SubMsgResponse, SubMsgResult};
 
 use enclave_ffi_types::EnclaveError;
 
@@ -54,7 +53,7 @@ enum WasmOutput {
     },
     OkV1 {
         #[serde(rename = "ok")]
-        ok: cosmwasm_v1_types::results::Response,
+        ok: enclave_cosmwasm_v1_types::results::Response,
         internal_reply_enclave_sig: Option<Binary>,
         internal_msg_id: Option<Binary>,
     },
@@ -291,7 +290,9 @@ pub fn encrypt_output(
             internal_msg_id,
         } => {
             for sub_msg in &mut ok.messages {
-                if let cosmwasm_v1_types::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
+                if let enclave_cosmwasm_v1_types::results::CosmosMsg::Wasm(wasm_msg) =
+                    &mut sub_msg.msg
+                {
                     encrypt_v1_wasm_msg(
                         wasm_msg,
                         &sub_msg.reply_on,
@@ -433,7 +434,7 @@ fn encrypt_v010_wasm_msg(
 }
 
 fn encrypt_v1_wasm_msg(
-    wasm_msg: &mut cosmwasm_v1_types::results::WasmMsg,
+    wasm_msg: &mut enclave_cosmwasm_v1_types::results::WasmMsg,
     reply_on: &ReplyOn,
     msg_id: u64, // In every submessage there is a field called "id", currently used only by "reply".
     nonce: IoNonce,
@@ -442,14 +443,14 @@ fn encrypt_v1_wasm_msg(
     reply_recipient_contract_hash: &String,
 ) -> Result<(), EnclaveError> {
     match wasm_msg {
-        cosmwasm_v1_types::results::WasmMsg::Execute {
+        enclave_cosmwasm_v1_types::results::WasmMsg::Execute {
             msg,
             code_hash,
             callback_sig,
             funds,
             ..
         }
-        | cosmwasm_v1_types::results::WasmMsg::Instantiate {
+        | enclave_cosmwasm_v1_types::results::WasmMsg::Instantiate {
             msg,
             code_hash,
             callback_sig,
@@ -464,8 +465,9 @@ fn encrypt_v1_wasm_msg(
             // it will treat the next 64 bytes as a recipient code-hash and prepend this code-hash to its output.
             let mut hash_appended_msg = code_hash.as_bytes().to_vec();
             if *reply_on != ReplyOn::Never {
-                hash_appended_msg
-                    .extend_from_slice(cosmwasm_v1_types::results::REPLY_ENCRYPTION_MAGIC_BYTES);
+                hash_appended_msg.extend_from_slice(
+                    enclave_cosmwasm_v1_types::results::REPLY_ENCRYPTION_MAGIC_BYTES,
+                );
                 hash_appended_msg.extend_from_slice(&msg_id.to_be_bytes());
                 hash_appended_msg.extend_from_slice(reply_recipient_contract_hash.as_bytes());
             }

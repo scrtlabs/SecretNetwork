@@ -30,25 +30,25 @@ impl ModuleImportResolver for WasmiImportResolver {
     ) -> Result<FuncRef, InterpreterError> {
         let func_ref = match func_name {
             // fn db_read(key: u32) -> u32;
-            // v0.10 + v0.16
+            // v0.10 + v1
             "db_read" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32][..], Some(ValueType::I32)),
                 HostFunctions::DbReadIndex.into(),
             ),
             // fn db_write(key: u32, value: u32);
-            // v0.10 + v0.16
+            // v0.10 + v1
             "db_write" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32, ValueType::I32][..], None),
                 HostFunctions::DbWriteIndex.into(),
             ),
             // fn db_remove(key: u32);
-            // v0.10 + v0.16
+            // v0.10 + v1
             "db_remove" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32][..], None),
                 HostFunctions::DbRemoveIndex.into(),
             ),
             // fn query_chain(request: u32) -> u32;
-            // v0.10 + v0.16
+            // v0.10 + v1
             "query_chain" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32][..], Some(ValueType::I32)),
                 HostFunctions::QueryChainIndex.into(),
@@ -66,19 +66,19 @@ impl ModuleImportResolver for WasmiImportResolver {
                 HostFunctions::HumanizeAddressIndex.into(),
             ),
             // fn addr_canonicalize(source: u32, destination: u32) -> u32;
-            // v0.16
+            // v1
             "addr_canonicalize" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
                 HostFunctions::AddrCanonicalizeIndex.into(),
             ),
             // fn addr_humanize(source: u32, destination: u32) -> u32;
-            // v0.16
+            // v1
             "addr_humanize" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
                 HostFunctions::AddrHumanizeIndex.into(),
             ),
             // fn addr_validate(source_ptr: u32) -> u32;
-            // v0.16
+            // v1
             "addr_validate" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32][..], Some(ValueType::I32)),
                 HostFunctions::AddrValidateIndex.into(),

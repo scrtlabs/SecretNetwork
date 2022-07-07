@@ -1709,7 +1709,7 @@ func TestQueryRecursionLimitEnforcedInQueries(t *testing.T) {
 
 			require.NotEmpty(t, data)
 			require.Equal(t, data, "\"Recursion limit was correctly enforced\"")
-			
+
 			require.Nil(t, err.GenericErr)
 		})
 	}

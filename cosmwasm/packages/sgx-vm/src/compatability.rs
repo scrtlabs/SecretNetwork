@@ -29,7 +29,7 @@ const SUPPORTED_IMPORTS_V010: &[&str] = &[
     "env.debug_print",
 ];
 
-/// Lists all v0.16 imports we provide upon instantiating the instance in Instance::from_module()
+/// Lists all v1 imports we provide upon instantiating the instance in Instance::from_module()
 /// This should be updated when new imports are added
 const SUPPORTED_IMPORTS_V1: &[&str] = &[
     "env.db_read",
@@ -106,15 +106,15 @@ pub fn check_wasm(wasm_code: &[u8], supported_features: &HashSet<String>) -> VmR
     let is_v010 = check_v010_exports_result.is_ok() && check_v010_imports_result.is_ok();
 
     let check_v1_exports_result = check_wasm_exports(&module, REQUIRED_EXPORTS_V1);
-    let check_v016_imports_result = check_wasm_imports(&module, SUPPORTED_IMPORTS_V1);
-    let is_v1 = check_v1_exports_result.is_ok() && check_v016_imports_result.is_ok();
+    let check_v1_imports_result = check_wasm_imports(&module, SUPPORTED_IMPORTS_V1);
+    let is_v1 = check_v1_exports_result.is_ok() && check_v1_imports_result.is_ok();
 
     if !is_v010 && !is_v1 {
         let errors = vec![
             check_v010_exports_result,
             check_v010_imports_result,
             check_v1_exports_result,
-            check_v016_imports_result,
+            check_v1_imports_result,
         ];
 
         return Err(VmError::static_validation_err(format!("Contract is not CosmWasm v0.10 or v1. To support v0.10 please fix the former two errors, to supports v1 please fix the latter two errors: ${:?}", errors)));

@@ -6,13 +6,14 @@ use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::wasm::CosmWasmApiVersion;
 use cosmos_proto::tx::signing::SignMode;
 use cosmwasm_v010_types::types::CanonicalAddr;
-use cosmwasm_v016_types::addresses::Addr;
-use cosmwasm_v016_types::results::{DecryptedReply, Event, Reply, SubMsgResponse, SubMsgResult};
-use cosmwasm_v016_types::timestamp::Timestamp;
 use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
 use enclave_cosmwasm_types as cosmwasm_v010_types;
 use enclave_cosmwasm_types::encoding::Binary;
-use enclave_cosmwasm_v016_types as cosmwasm_v016_types;
+use enclave_cosmwasm_v1_types::addresses::Addr;
+use enclave_cosmwasm_v1_types::results::{
+    DecryptedReply, Event, Reply, SubMsgResponse, SubMsgResult,
+};
+use enclave_cosmwasm_v1_types::timestamp::Timestamp;
 
 use enclave_crypto::{Ed25519PublicKey, HASH_SIZE};
 use enclave_utils::coalesce;
@@ -804,7 +805,7 @@ fn env_to_env_msg_info_bytes(
             // env_v010.contract_key = None;
 
             // in v0.10 the timestamp passed from Go was unix time in seconds
-            // v0.16 time is unix time in nanoseconds, so now Go passes here unix time in nanoseconds
+            // 10.16 time is unix time in nanoseconds, so now Go passes here unix time in nanoseconds
             // but v0.10 contracts still expect time to be in unix seconds,
             // so we need to convert it from nanoseconds to seconds
             env_v010.block.time = Timestamp::from_nanos(env_v010.block.time).seconds();
@@ -822,50 +823,50 @@ fn env_to_env_msg_info_bytes(
             Ok((env_v010_bytes, msg_info_v010_bytes))
         }
         CosmWasmApiVersion::V1 => {
-            let env_v016 = cosmwasm_v016_types::types::Env {
-                block: cosmwasm_v016_types::types::BlockInfo {
+            let env_v1 = enclave_cosmwasm_v1_types::types::Env {
+                block: enclave_cosmwasm_v1_types::types::BlockInfo {
                     height: env_v010.block.height,
                     time: Timestamp::from_nanos(env_v010.block.time),
                     chain_id: env_v010.block.chain_id.clone(),
                 },
-                contract: cosmwasm_v016_types::types::ContractInfo {
+                contract: enclave_cosmwasm_v1_types::types::ContractInfo {
                     address: Addr(env_v010.contract.address.0.clone()),
                     code_hash: env_v010.contract_code_hash.clone(),
                 },
             };
 
-            let env_v016_bytes =  serde_json::to_vec(&env_v016).map_err(|err| {
+            let env_v1_bytes =  serde_json::to_vec(&env_v1).map_err(|err| {
                 warn!(
-                    "got an error while trying to serialize env_v016 (cosmwasm v0.16) into bytes {:?}: {}",
-                    env_v016, err
+                    "got an error while trying to serialize env_v1 (CosmWasm v1) into bytes {:?}: {}",
+                    env_v1, err
                 );
                 EnclaveError::FailedToSerialize
             })?;
 
-            let msg_info_v016 = cosmwasm_v016_types::types::MessageInfo {
+            let msg_info_v1 = enclave_cosmwasm_v1_types::types::MessageInfo {
                 sender: Addr(env_v010.message.sender.0.clone()),
                 funds: env_v010
                     .message
                     .sent_funds
                     .iter()
                     .map(|coin| {
-                        cosmwasm_v016_types::coins::Coin::new(
+                        enclave_cosmwasm_v1_types::coins::Coin::new(
                             coin.amount.u128(),
                             coin.denom.clone(),
                         )
                     })
-                    .collect::<Vec<cosmwasm_v016_types::coins::Coin>>(),
+                    .collect::<Vec<enclave_cosmwasm_v1_types::coins::Coin>>(),
             };
 
-            let msg_info_v016_bytes =  serde_json::to_vec(&msg_info_v016).map_err(|err| {
+            let msg_info_v1_bytes =  serde_json::to_vec(&msg_info_v1).map_err(|err| {
                 warn!(
-                    "got an error while trying to serialize msg_info_v016 (cosmwasm v0.16) into bytes {:?}: {}",
-                    msg_info_v016, err
+                    "got an error while trying to serialize msg_info_v1 (CosmWasm v1) into bytes {:?}: {}",
+                    msg_info_v1, err
                 );
                 EnclaveError::FailedToSerialize
             })?;
 
-            Ok((env_v016_bytes, msg_info_v016_bytes))
+            Ok((env_v1_bytes, msg_info_v1_bytes))
         }
     }
 }

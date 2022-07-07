@@ -421,7 +421,7 @@ dependencies = [
  "enclave-ffi-types",
  "enclave_cosmos_types",
  "enclave_cosmwasm_types",
- "enclave_cosmwasm_v016_types",
+ "enclave_cosmwasm_v1_types",
  "enclave_crypto",
  "enclave_utils",
  "hex",
@@ -475,7 +475,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "enclave_cosmwasm_v016_types"
+name = "enclave_cosmwasm_v1_types"
 version = "1.2.4"
 dependencies = [
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
