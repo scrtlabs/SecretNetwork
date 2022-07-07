@@ -66,6 +66,9 @@ var (
 
 	// ErrReplyFailed error for rust execution contract failure
 	ErrReplyFailed = sdkErrors.Register(DefaultCodespace, 19, "reply to contract failed")
+
+	// ErrInvalidEvent error if an attribute/event from the contract is invalid
+	ErrInvalidEvent = sdkErrors.Register(DefaultCodespace, 21, "invalid event")
 )
 
 func IsEncryptedErrorCode(code uint32) bool {

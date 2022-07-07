@@ -73,7 +73,7 @@ type SubMsg struct {
 }
 
 type Reply struct {
-	ID     uint64       `json:"id"`
+	ID     []byte       `json:"id"`
 	Result SubMsgResult `json:"result"`
 }
 

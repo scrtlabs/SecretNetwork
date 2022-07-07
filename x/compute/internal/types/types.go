@@ -2,12 +2,16 @@ package types
 
 import (
 	"encoding/base64"
+	fmt "fmt"
+	"strings"
+
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	wasmTypesV010 "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
+	wasmTypesV1 "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
 	"github.com/spf13/cast"
 )
 
@@ -167,6 +171,49 @@ func ContractLogsToSdkEvents(logs []wasmTypesV010.LogAttribute, contractAddr sdk
 	}
 	// each wasm invokation always returns one sdk.Event
 	return sdk.Events{sdk.NewEvent(CustomEventType, attrs...)}
+}
+
+const eventTypeMinLength = 2
+
+// NewCustomEvents converts wasm events from a contract response to sdk type events
+func NewCustomEvents(evts wasmTypesV1.Events, contractAddr sdk.AccAddress) (sdk.Events, error) {
+	events := make(sdk.Events, 0, len(evts))
+	for _, e := range evts {
+		typ := strings.TrimSpace(e.Type)
+		if len(typ) <= eventTypeMinLength {
+			return nil, sdkerrors.Wrap(ErrInvalidEvent, fmt.Sprintf("Event type too short: '%s'", typ))
+		}
+		attributes, err := contractSDKEventAttributes(e.Attributes, contractAddr)
+		if err != nil {
+			return nil, err
+		}
+		events = append(events, sdk.NewEvent(fmt.Sprintf("%s%s", CustomContractEventPrefix, typ), attributes...))
+	}
+	return events, nil
+}
+
+// convert and add contract address issuing this event
+func contractSDKEventAttributes(customAttributes []wasmTypesV010.LogAttribute, contractAddr sdk.AccAddress) ([]sdk.Attribute, error) {
+	attrs := []sdk.Attribute{sdk.NewAttribute(AttributeKeyContractAddr, contractAddr.String())}
+	// append attributes from wasm to the sdk.Event
+	for _, l := range customAttributes {
+		// ensure key and value are non-empty (and trim what is there)
+		key := strings.TrimSpace(l.Key)
+		if len(key) == 0 {
+			return nil, sdkerrors.Wrap(ErrInvalidEvent, fmt.Sprintf("Empty attribute key. Value: %s", l.Value))
+		}
+		value := strings.TrimSpace(l.Value)
+		// TODO: check if this is legal in the SDK - if it is, we can remove this check
+		if len(value) == 0 {
+			return nil, sdkerrors.Wrap(ErrInvalidEvent, fmt.Sprintf("Empty attribute value. Key: %s", key))
+		}
+		// and reserve all _* keys for our use (not contract)
+		if strings.HasPrefix(key, AttributeReservedPrefix) {
+			return nil, sdkerrors.Wrap(ErrInvalidEvent, fmt.Sprintf("Attribute key starts with reserved prefix %s: '%s'", AttributeReservedPrefix, key))
+		}
+		attrs = append(attrs, sdk.NewAttribute(key, value))
+	}
+	return attrs, nil
 }
 
 // WasmConfig is the extra config required for wasm

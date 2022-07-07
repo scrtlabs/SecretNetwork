@@ -677,6 +677,7 @@ impl WasmiApi for ContractInstance {
             self.user_public_key,
             &mut gas_used,
             self.gas_left(),
+            &self.cosmwasm_api_version,
         )?;
 
         trace!(
@@ -867,11 +868,11 @@ impl WasmiApi for ContractInstance {
             err
         })?;
 
-        let message =
+        let _message =
             String::from_utf8(message_buffer).unwrap_or_else(|err| hex::encode(err.into_bytes()));
 
         #[cfg(feature = "debug-print")]
-        info!("debug_print: {:?}", message);
+        info!("debug_print: {:?}", _message);
 
         Ok(None)
     }

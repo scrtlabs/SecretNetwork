@@ -35,7 +35,8 @@ type InitResponse struct {
 	// Messages comes directly from the contract and is it's request for action
 	Messages []CosmosMsg `json:"messages"`
 	// log message to return over abci interface
-	Log []LogAttribute `json:"log"`
+	Log  []LogAttribute `json:"log"`
+	Data []byte         `json:"data,omitempty"`
 }
 
 // LogAttribute

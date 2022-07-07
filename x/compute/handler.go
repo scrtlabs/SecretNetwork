@@ -2,6 +2,7 @@ package compute
 
 import (
 	"fmt"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -77,9 +78,11 @@ func handleStoreCode(ctx sdk.Context, k Keeper, msg *MsgStoreCode) (*sdk.Result,
 }
 
 func handleInstantiate(ctx sdk.Context, k Keeper, msg *MsgInstantiateContract) (*sdk.Result, error) {
-	contractAddr, _, err := k.Instantiate(ctx, msg.CodeID, msg.Sender, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
+	contractAddr, data, err := k.Instantiate(ctx, msg.CodeID, msg.Sender, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
 	if err != nil {
-		return nil, err
+		result := sdk.Result{}
+		result.Data = data
+		return &result, err
 	}
 
 	events := filteredMessageEvents(ctx.EventManager())
@@ -96,6 +99,14 @@ func handleInstantiate(ctx sdk.Context, k Keeper, msg *MsgInstantiateContract) (
 	// also need to parse here output events and pass them to Tendermint
 	// but k.Instantiate() doesn't return any output data right now, just contractAddr
 
+	// Only for reply
+	if data != nil {
+		return &sdk.Result{
+			Data:   data,
+			Events: events,
+		}, nil
+	}
+
 	return &sdk.Result{
 		Data:   contractAddr,
 		Events: events,
@@ -111,8 +122,9 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *MsgExecuteContract) (*sdk.Res
 		msg.SentFunds,
 		msg.CallbackSig,
 	)
+
 	if err != nil {
-		return nil, err
+		return res, err
 	}
 
 	events := filteredMessageEvents(ctx.EventManager())

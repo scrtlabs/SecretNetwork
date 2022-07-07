@@ -1,7 +1,9 @@
 package keeper
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -21,7 +23,7 @@ type Messenger interface {
 
 // Replyer is a subset of keeper that can handle replies to submessages
 type Replyer interface {
-	reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error)
+	reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo, replyToContractHash []byte) ([]byte, error)
 }
 
 // MessageDispatcher coordinates message sending and submessage reply/ state commits
@@ -135,13 +137,22 @@ func (e UnsupportedRequest) Error() string {
 	return fmt.Sprintf("unsupported request: %s", e.Kind)
 }
 
-// Reply is encrypted on when it is a contract reply and it is OK since error is always reducted to be a string.
+// Reply is encrypted only when it is a contract reply
 func isReplyEncrypted(msg v1wasmTypes.CosmosMsg, reply v1wasmTypes.Reply) bool {
-	return (msg.Wasm != nil) && (reply.Result.Ok != nil)
+	return (msg.Wasm != nil)
 }
 
 // Issue #759 - we don't return error string for worries of non-determinism
 func redactError(err error) error {
+	// Do not redact encrypted wasm contract errors
+	if strings.HasPrefix(err.Error(), "encrypted:") {
+		// remove encrypted sign
+		e := strings.ReplaceAll(err.Error(), "encrypted: ", "")
+		e = strings.ReplaceAll(e, ": execute contract failed", "")
+		e = strings.ReplaceAll(e, ": instantiate contract failed", "")
+		return fmt.Errorf("%s", e)
+	}
+
 	// Do not redact system errors
 	// SystemErrors must be created in x/wasm and we can ensure determinism
 	if wasmTypes.ToSystemError(err) != nil {
@@ -216,6 +227,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			if len(data) > 0 {
 				responseData = data[0]
 			}
+
 			result = v1wasmTypes.SubMsgResult{
 				// Copy first 64 bytes of the OG message in order to preserve the pubkey.
 				Ok: &v1wasmTypes.SubMsgResponse{
@@ -231,9 +243,10 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			}
 		}
 
+		msg_id := []byte(fmt.Sprint(msg.ID))
 		// now handle the reply, we use the parent context, and abort on error
 		reply := v1wasmTypes.Reply{
-			ID:     msg.ID,
+			ID:     msg_id,
 			Result: result,
 		}
 
@@ -249,11 +262,37 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			Signature: []byte{},
 			SignMode:  "SIGN_MODE_UNSPECIFIED",
 		}
+
+		var replyToContractHash []byte
 		if isReplyEncrypted(msg.Msg, reply) {
+			var dataWithInternalReplyInfo v1wasmTypes.DataWithInternalReplyInfo
+
+			if reply.Result.Ok != nil {
+				err = json.Unmarshal(reply.Result.Ok.Data, &dataWithInternalReplyInfo)
+				if err != nil {
+					return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json : %w", err)
+				}
+
+				reply.Result.Ok.Data = dataWithInternalReplyInfo.Data
+			} else {
+				err = json.Unmarshal(data[0], &dataWithInternalReplyInfo)
+				if err != nil {
+					return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json : %w", err)
+				}
+			}
+
+			if len(dataWithInternalReplyInfo.InternalMsgId) == 0 || len(dataWithInternalReplyInfo.InternaReplyEnclaveSig) == 0 {
+				return nil, fmt.Errorf("when sending a reply both InternaReplyEnclaveSig and InternalMsgId are expected to be initialized")
+			}
+
 			replySigInfo = ogSigInfo
+			replyToContractHash = dataWithInternalReplyInfo.Data[0:64] // First 64 bytes of the data is the contract hash
+			reply.ID = dataWithInternalReplyInfo.InternalMsgId
+			replySigInfo.CallbackSignature = dataWithInternalReplyInfo.InternaReplyEnclaveSig
+
 		}
 
-		rspData, err := d.keeper.reply(ctx, contractAddr, reply, ogTx, replySigInfo)
+		rspData, err := d.keeper.reply(ctx, contractAddr, reply, ogTx, replySigInfo, replyToContractHash)
 		switch {
 		case err != nil:
 			return nil, err
