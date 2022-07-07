@@ -13,7 +13,7 @@ type QueryResponse struct {
 
 type V010orV1ContractQueryResponse struct {
 	V1Ok    []byte    `json:"ok,omitempty"`
-	V1Err   string    `json:"error,omitempty"`
+	V1Err   *StdError `json:"error,omitempty"`
 	V010Ok  []byte    `json:"Ok,omitempty"`
 	V010Err *StdError `json:"Err,omitempty"`
 }
