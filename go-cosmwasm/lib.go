@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
 	types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	v010types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
@@ -85,17 +86,21 @@ func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 
 // This struct helps us to distinguish between v010 contract response and v1 contract response
 type V010orV1ContractResponse struct {
-	V1Ok    *v1types.Response         `json:"ok,omitempty"`
-	V1Err   string                    `json:"error,omitempty"`
-	V010Ok  *v010types.HandleResponse `json:"Ok,omitempty"`
-	V010Err *types.StdError           `json:"Err,omitempty"`
+	V1Ok                   *v1types.Response         `json:"ok,omitempty"`
+	V1Err                  *types.StdError           `json:"error,omitempty"`
+	V010Ok                 *v010types.HandleResponse `json:"Ok,omitempty"`
+	V010Err                *types.StdError           `json:"Err,omitempty"`
+	InternaReplyEnclaveSig []byte                    `json:"internal_reply_enclave_sig"`
+	InternalMsgId          []byte                    `json:"internal_msg_id"`
 }
 
 type V010orV1ContractInitResponse struct {
-	V1Ok    *v1types.Response       `json:"ok,omitempty"`
-	V1Err   string                  `json:"error,omitempty"`
-	V010Ok  *v010types.InitResponse `json:"Ok,omitempty"`
-	V010Err *types.StdError         `json:"Err,omitempty"`
+	V1Ok                   *v1types.Response       `json:"ok,omitempty"`
+	V1Err                  *types.StdError         `json:"error,omitempty"`
+	V010Ok                 *v010types.InitResponse `json:"Ok,omitempty"`
+	V010Err                *types.StdError         `json:"Err,omitempty"`
+	InternaReplyEnclaveSig []byte                  `json:"internal_reply_enclave_sig"`
+	InternalMsgId          []byte                  `json:"internal_msg_id"`
 }
 
 // Instantiate will create a new contract based on the given codeID.
@@ -116,6 +121,7 @@ func (w *Wasmer) Instantiate(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	sigInfo types.VerificationInfo,
+	contractAddress sdk.AccAddress,
 ) (interface{}, []byte, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
@@ -143,23 +149,63 @@ func (w *Wasmer) Instantiate(
 		return nil, nil, gasUsed, fmt.Errorf("handle: cannot parse response from json: %w", err)
 	}
 
-	if respV010orV1.V1Err != "" {
-		return nil, nil, gasUsed, fmt.Errorf(respV010orV1.V1Err)
-	}
+	isOutputAddressedToReply := (len(respV010orV1.InternaReplyEnclaveSig) > 0 && len(respV010orV1.InternalMsgId) > 0)
 
-	if respV010orV1.V1Ok != nil {
-		return respV010orV1.V1Ok, key, gasUsed, nil
-	}
-
+	// handle v0.10 error or success
 	if respV010orV1.V010Err != nil {
-		return nil, nil, gasUsed, fmt.Errorf("%+v", respV010orV1.V010Err)
+		return v1types.DataWithInternalReplyInfo{
+			InternalMsgId:          respV010orV1.InternalMsgId,
+			InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
+			Data:                   []byte(respV010orV1.V010Err.GenericErr.Msg),
+		}, nil, gasUsed, fmt.Errorf("%+v", respV010orV1.V010Err)
 	}
 
 	if respV010orV1.V010Ok != nil {
+		if isOutputAddressedToReply {
+			respV010orV1.V010Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
+			if err != nil {
+				return nil, nil, gasUsed, fmt.Errorf("cannot serialize v0.10 DataWithInternalReplyInfo into binary : %w", err)
+			}
+		} else {
+			respV010orV1.V010Ok.Data = nil
+		}
+
 		return respV010orV1.V010Ok, key, gasUsed, nil
 	}
 
-	return nil, nil, gasUsed, fmt.Errorf("handle: cannot detect response type (v0.10 or v1): %w", err)
+	// handle v1 error or success
+	if respV010orV1.V1Err != nil {
+		return v1types.DataWithInternalReplyInfo{
+			InternalMsgId:          respV010orV1.InternalMsgId,
+			InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
+			Data:                   []byte(respV010orV1.V1Err.GenericErr.Msg),
+		}, nil, gasUsed, fmt.Errorf("%+v", respV010orV1.V1Err)
+	}
+
+	if respV010orV1.V1Ok != nil {
+		if isOutputAddressedToReply {
+			respV010orV1.V1Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
+			if err != nil {
+				return nil, nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary : %w", err)
+			}
+		} else {
+			respV010orV1.V1Ok.Data = nil
+		}
+
+		return respV010orV1.V1Ok, key, gasUsed, nil
+	}
+
+	return nil, nil, gasUsed, fmt.Errorf("handle: cannot detect response type (v0.10 or v1)")
+}
+
+func AppendReplyInternalDataToData(data []byte, internaReplyEnclaveSig []byte, internalMsgId []byte) ([]byte, error) {
+	dataWithInternalReply := v1types.DataWithInternalReplyInfo{
+		InternaReplyEnclaveSig: internaReplyEnclaveSig,
+		InternalMsgId:          internalMsgId,
+		Data:                   data,
+	}
+
+	return json.Marshal(dataWithInternalReply)
 }
 
 // Execute calls a given contract. Since the only difference between contracts with the same CodeID is the
@@ -202,23 +248,47 @@ func (w *Wasmer) Execute(
 		return nil, gasUsed, fmt.Errorf("handle: cannot parse response from json: %w", err)
 	}
 
-	if respV010orV1.V1Err != "" {
-		return nil, gasUsed, fmt.Errorf(respV010orV1.V1Err)
-	}
+	isOutputAddressedToReply := (len(respV010orV1.InternaReplyEnclaveSig) > 0 && len(respV010orV1.InternalMsgId) > 0)
 
-	if respV010orV1.V1Ok != nil {
-		return respV010orV1.V1Ok, gasUsed, nil
-	}
-
+	// handle v0.10 response
 	if respV010orV1.V010Err != nil {
-		return nil, gasUsed, fmt.Errorf("%+v", respV010orV1.V010Err)
+		return v1types.DataWithInternalReplyInfo{
+			InternalMsgId:          respV010orV1.InternalMsgId,
+			InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
+			Data:                   []byte(respV010orV1.V010Err.GenericErr.Msg),
+		}, gasUsed, fmt.Errorf("%+v", respV010orV1.V010Err)
 	}
 
 	if respV010orV1.V010Ok != nil {
+		if isOutputAddressedToReply {
+			respV010orV1.V010Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V010Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
+			if err != nil {
+				return nil, gasUsed, fmt.Errorf("cannot serialize v010 DataWithInternalReplyInfo into binary : %w", err)
+			}
+		}
 		return respV010orV1.V010Ok, gasUsed, nil
 	}
 
-	return nil, gasUsed, fmt.Errorf("handle: cannot detect response type (v0.10 or v1): %w", err)
+	// handle v1 response
+	if respV010orV1.V1Err != nil {
+		return v1types.DataWithInternalReplyInfo{
+			InternalMsgId:          respV010orV1.InternalMsgId,
+			InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
+			Data:                   []byte(respV010orV1.V1Err.GenericErr.Msg),
+		}, gasUsed, fmt.Errorf("%+v", respV010orV1.V1Err)
+	}
+
+	if respV010orV1.V1Ok != nil {
+		if isOutputAddressedToReply {
+			respV010orV1.V1Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
+			if err != nil {
+				return nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary : %w", err)
+			}
+		}
+		return respV010orV1.V1Ok, gasUsed, nil
+	}
+
+	return nil, gasUsed, fmt.Errorf("handle: cannot detect response type (v0.10 or v1)")
 }
 
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be
@@ -243,15 +313,31 @@ func (w *Wasmer) Query(
 		return nil, gasUsed, err
 	}
 
-	var resp types.QueryResponse
+	var resp types.V010orV1ContractQueryResponse
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
 		return nil, gasUsed, err
 	}
-	if resp.Err != nil {
-		return nil, gasUsed, fmt.Errorf("%+v", resp.Err)
+
+	// handle v0.10 response
+	if resp.V010Err != nil {
+		return nil, gasUsed, fmt.Errorf("%v", resp.V010Err)
 	}
-	return resp.Ok, gasUsed, nil
+
+	if resp.V010Ok != nil {
+		return resp.V010Ok, gasUsed, nil
+	}
+
+	// handle v1 response
+	if resp.V1Err != nil {
+		return nil, gasUsed, fmt.Errorf("%v", resp.V1Err)
+	}
+
+	if resp.V1Ok != nil {
+		return resp.V1Ok, gasUsed, nil
+	}
+
+	return nil, gasUsed, fmt.Errorf("query: cannot detect response type (v0.10 or v1)")
 }
 
 // AnalyzeCode returns a report of static analysis of the wasm contract (uncompiled).

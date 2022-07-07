@@ -10,10 +10,11 @@ use enclave_utils::recursion_depth;
 use super::errors::WasmEngineError;
 use crate::external::{ecalls, ocalls};
 use crate::types::{IoNonce, SecretMessage};
+use crate::wasm::CosmWasmApiVersion;
 
 use enclave_cosmwasm_types::{
     encoding::Binary,
-    query::{QueryRequest, WasmQuery},
+    query::{QueryRequest, WasmQuery, V1SmartQueryAnswer, V1SmartQueryResult},
     std_error::{StdError, StdResult},
     system_error::{SystemError, SystemResult},
 };
@@ -25,6 +26,7 @@ pub fn encrypt_and_query_chain(
     user_public_key: Ed25519PublicKey,
     gas_used: &mut u64,
     gas_limit: u64,
+    contract_version: &CosmWasmApiVersion,
 ) -> Result<Vec<u8>, WasmEngineError> {
     if let Some(answer) = check_recursion_limit() {
         return serialize_error_response(&answer);
@@ -133,10 +135,29 @@ pub fn encrypt_and_query_chain(
         answer
     );
 
-    let answer_as_vec = serde_json::to_vec(&answer).map_err(|err| {
-        debug!("encrypt_and_query_chain() got an error while trying to serialize the decrypted answer to bytes: {:?}", err);
-        WasmEngineError::SerializationError
-    })?;
+    let answer_as_vec = match contract_version {
+        CosmWasmApiVersion::V010 => { serde_json::to_vec(&answer).map_err(|err| {
+            debug!("encrypt_and_query_chain() got an error while trying to serialize the decrypted answer to bytes: {:?}", err);
+            WasmEngineError::SerializationError
+            })? 
+        },
+    CosmWasmApiVersion::V1 => {
+        let v1_answer : V1SmartQueryAnswer =  match answer {
+            Ok(o) => {
+                match o {
+                    Ok(o2) => V1SmartQueryAnswer::Ok(V1SmartQueryResult::Ok(o2)),
+                    Err(e) => V1SmartQueryAnswer::Ok(V1SmartQueryResult::Err(format!("{:?}", e))),
+                }
+            },
+            Err(e) => V1SmartQueryAnswer::Err(e),
+        }; 
+        
+        serde_json::to_vec(&v1_answer).map_err(|err| {
+            debug!("encrypt_and_query_chain() got an error while trying to serialize the decrypted answer to bytes: {:?}", err);
+            WasmEngineError::SerializationError
+            })? 
+    },
+    };
 
     Ok(answer_as_vec)
 }

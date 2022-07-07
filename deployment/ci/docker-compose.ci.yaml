@@ -2,7 +2,7 @@ version: '3'
 
 services:
   aesm:
-    image: enigmampc/aesm
+    image: fortanix/aesmd:2.13.103.1-1
     devices:
       - /dev/sgx/enclave
       - /dev/sgx/provision
@@ -20,8 +20,9 @@ services:
       - aesm
     devices:
       - /dev/sgx/enclave
+      - /dev/sgx/provision
     volumes:
-      - /var/run/aesmd:/var/run/aesmd
+      - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/root/.secretd
       - /tmp/secretcli:/root/.secretcli
     stdin_open: true
@@ -39,8 +40,9 @@ services:
       - aesm
     devices:
       - /dev/sgx/enclave
+      - /dev/sgx/provision
     volumes:
-      - /var/run/aesmd:/var/run/aesmd
+      - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/root/.secretd
       # - /tmp/secretcli:/root/.secretcli
     stdin_open: true
@@ -58,8 +60,9 @@ services:
       - bootstrap
     devices:
       - /dev/sgx/enclave
+      - /dev/sgx/provision
     volumes:
-      - /var/run/aesmd:/var/run/aesmd
+      - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/tmp/.secretd
       # - /tmp/secretcli:/root/.secretcli
     stdin_open: true
@@ -74,8 +77,9 @@ services:
       - aesm
     devices:
       - /dev/sgx/enclave
+      - /dev/sgx/provision
     volumes:
-      - /var/run/aesmd:/var/run/aesmd
+      - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/tmp/.secretd
       - /tmp/secretcli:/root/.secretcli
     stdin_open: true

@@ -518,34 +518,25 @@ func (h MessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress
 		return nil, nil, err
 	}
 
-	switch ogMessageVersion {
-	case wasmTypes.CosmosMsgVersionV010:
-		for _, sdkMsg := range sdkMsgs {
-			_, _, err := h.handleSdkMessage(ctx, contractAddr, sdkMsg)
-			if err != nil {
-				return nil, nil, err
-			}
-			//return sdkEvents, msgData, err
-		}
-		return nil, nil, nil
-	case wasmTypes.CosmosMsgVersionV1:
-		var (
-			events []sdk.Event
-			data   [][]byte
-		)
-		for _, sdkMsg := range sdkMsgs {
-			sdkEvents, sdkData, err := h.handleSdkMessage(ctx, contractAddr, sdkMsg)
-			if err != nil {
-				return nil, nil, err
-			}
-			// append data
+	var (
+		events []sdk.Event
+		data   [][]byte
+	)
+	for _, sdkMsg := range sdkMsgs {
+		sdkEvents, sdkData, err := h.handleSdkMessage(ctx, contractAddr, sdkMsg)
+
+		if err != nil {
 			data = append(data, sdkData)
-			events = append(events, sdkEvents...)
+			return nil, data, err
 		}
-		return events, data, nil
+		// append data
+		data = append(data, sdkData)
+		events = append(events, sdkEvents...)
 	}
 
-	return nil, nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Unknown variant of CosmosMsgVersion")
+	return events, data, nil
+
+	//return nil, nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Unknown variant of CosmosMsgVersion")
 }
 
 func (h MessageHandler) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg sdk.Msg) (sdk.Events, []byte, error) {
@@ -571,7 +562,14 @@ func (h MessageHandler) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Addre
 
 		res, err = handler(ctx, msg)
 		if err != nil {
-			return nil, nil, err
+			var errData []byte
+			errData = nil
+			if res != nil {
+				errData = make([]byte, len(res.Data))
+				copy(errData, res.Data)
+			}
+
+			return nil, errData, err
 		}
 	} else {
 		return nil, nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized legacy message route: %s", sdk.MsgTypeURL(msg))

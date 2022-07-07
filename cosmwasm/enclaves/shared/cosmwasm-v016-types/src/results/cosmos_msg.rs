@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use crate::binary::Binary;
+use enclave_cosmwasm_types::encoding::Binary;
 use crate::coins::Coin;
 #[cfg(feature = "stargate")]
 use crate::ibc::IbcMsg;
@@ -56,6 +56,8 @@ pub enum BankMsg {
     /// Important if a contract controls significant token supply that must be retired.
     Burn { amount: Vec<Coin> },
 }
+
+pub const REPLY_ENCRYPTION_MAGIC_BYTES: &[u8] = b"REPLY01";
 
 /// The message types of the staking module.
 ///

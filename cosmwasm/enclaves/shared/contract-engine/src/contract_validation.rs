@@ -1,3 +1,4 @@
+use enclave_cosmwasm_v016_types::results::REPLY_ENCRYPTION_MAGIC_BYTES;
 use log::*;
 
 use enclave_ffi_types::EnclaveError;
@@ -18,6 +19,7 @@ pub type ContractKey = [u8; CONTRACT_KEY_LENGTH];
 pub const CONTRACT_KEY_LENGTH: usize = HASH_SIZE + HASH_SIZE;
 
 const HEX_ENCODED_HASH_SIZE: usize = HASH_SIZE * 2;
+const SIZE_OF_U64: usize = 8;
 
 pub fn generate_encryption_key(
     env: &Env,
@@ -132,17 +134,32 @@ pub fn validate_contract_key(
 }
 
 /// Validate that the message sent to the enclave (after decryption) was actually addressed to this contract.
-pub fn validate_msg(msg: &[u8], contract_hash: [u8; HASH_SIZE]) -> Result<Vec<u8>, EnclaveError> {
+pub fn validate_msg(
+    msg: &[u8],
+    contract_hash: [u8; HASH_SIZE],
+    contract_hash_for_validation: Option<Vec<u8>>,
+) -> Result<(Vec<u8>, Option<(Vec<u8>, u64)>), EnclaveError> {
     if msg.len() < HEX_ENCODED_HASH_SIZE {
         warn!("Malformed message - expected contract code hash to be prepended to the msg");
         return Err(EnclaveError::ValidationFailure);
     }
 
     let mut received_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] = [0u8; HEX_ENCODED_HASH_SIZE];
-    received_contract_hash.copy_from_slice(&msg[0..HEX_ENCODED_HASH_SIZE]);
+    let mut validated_msg: Vec<u8>;
+    match contract_hash_for_validation {
+        Some(c) => {
+            received_contract_hash.copy_from_slice(&c.as_slice()[0..HEX_ENCODED_HASH_SIZE]);
+            validated_msg = msg.to_vec();
+        }
+        None => {
+            received_contract_hash.copy_from_slice(&msg[0..HEX_ENCODED_HASH_SIZE]);
+            validated_msg = msg[HEX_ENCODED_HASH_SIZE..].to_vec();
+        }
+    }
 
     let decoded_hash: Vec<u8> = hex::decode(&received_contract_hash[..]).map_err(|_| {
         warn!("Got message with malformed contract hash");
+
         EnclaveError::ValidationFailure
     })?;
 
@@ -151,7 +168,27 @@ pub fn validate_msg(msg: &[u8], contract_hash: [u8; HASH_SIZE]) -> Result<Vec<u8
         return Err(EnclaveError::ValidationFailure);
     }
 
-    Ok(msg[HEX_ENCODED_HASH_SIZE..].to_vec())
+    if validated_msg.len() >= REPLY_ENCRYPTION_MAGIC_BYTES.len()
+        && validated_msg[0..(REPLY_ENCRYPTION_MAGIC_BYTES.len())] == *REPLY_ENCRYPTION_MAGIC_BYTES
+    {
+        validated_msg = validated_msg[REPLY_ENCRYPTION_MAGIC_BYTES.len()..].to_vec();
+
+        let mut sub_msg_deserialized: [u8; SIZE_OF_U64] = [0u8; SIZE_OF_U64];
+        sub_msg_deserialized.copy_from_slice(&validated_msg[..SIZE_OF_U64]);
+
+        let sub_msg_id: u64 = u64::from_be_bytes(sub_msg_deserialized);
+        validated_msg = validated_msg[SIZE_OF_U64..].to_vec();
+
+        let mut reply_recipient_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] =
+            [0u8; HEX_ENCODED_HASH_SIZE];
+        reply_recipient_contract_hash.copy_from_slice(&validated_msg[0..HEX_ENCODED_HASH_SIZE]);
+        return Ok((
+            validated_msg[HEX_ENCODED_HASH_SIZE..].to_vec(),
+            Some((reply_recipient_contract_hash.to_vec(), sub_msg_id)),
+        ));
+    }
+
+    Ok((validated_msg, None))
 }
 
 /// Verify all the parameters sent to the enclave match up, and were signed by the right account.
