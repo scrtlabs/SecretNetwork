@@ -1,0 +1,25 @@
+{
+  "rust-analyzer.linkedProjects": [
+    "./cosmwasm/Cargo.toml",
+    "./cosmwasm/enclaves/Cargo.toml",
+    "./x/compute/internal/keeper/testdata/v1-sanity-contract/Cargo.toml",
+    "./x/compute/internal/keeper/testdata/test-contract/Cargo.toml"
+  ],
+  "rust-analyzer.diagnostics.experimental.enable": true,
+  "rust-analyzer.rustfmt.rangeFormatting.enable": true,
+  "rust-analyzer.diagnostics.disabled": ["unresolved-macro-call"],
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  },
+
+  "go.alternateTools": {
+    " goreturns": "gofumpt"
+  },
+  "go.testEnvVars": {
+    "SGX_MODE": "SW",
+    "RUST_BACKTRACE": "1"
+  },
+  "[go]": {
+    "editor.defaultFormatter": "golang.go"
+  }
+}

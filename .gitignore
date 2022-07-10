@@ -19,7 +19,6 @@ librust_cosmwasm_enclave.signed.so
 SHA256SUMS*
 *.so
 /third_party/vendor
-.vscode
 *.sealed
 *.der
 __debug_bin
