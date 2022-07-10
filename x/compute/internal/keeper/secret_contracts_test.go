@@ -2244,11 +2244,9 @@ func TestCodeHashTooBig(t *testing.T) {
 			_, _, err := keeper.Instantiate(ctx, codeID, walletA /* nil, */, enc, "some label", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 			require.Error(t, err)
 
-			initErr := extractInnerError(t, err, enc[0:32], true, false)
+			initErr := extractInnerError(t, err, enc[0:32], true, testContract.IsCosmWasmV1)
 			require.NotEmpty(t, initErr)
-			require.NotNil(t, initErr.ParseErr)
-			require.Equal(t, "test_contract::contract::InitMsg", initErr.ParseErr.Target)
-			require.Equal(t, "Expected to parse either a `true`, `false`, or a `null`.", initErr.ParseErr.Msg)
+			require.Contains(t, fmt.Sprintf("%+v", initErr), "Expected to parse either a `true`, `false`, or a `null`.")
 		})
 	}
 }
