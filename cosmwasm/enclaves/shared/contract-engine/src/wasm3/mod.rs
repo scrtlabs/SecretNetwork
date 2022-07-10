@@ -126,11 +126,22 @@ impl Engine {
 
         let mut module = runtime.parse_and_load_module(contract_code.code())?;
 
-        // TODO link to implementations
+        #[rustfmt::skip] {
         link_fn!(module, context_ptr, "db_read", host_read_db)?;
-        link_fn!(module, context_ptr, "db_read", host_read_db)?;
-        link_fn!(module, context_ptr, "db_read", host_read_db)?;
-        link_fn!(module, context_ptr, "db_read", host_read_db)?;
+        link_fn!(module, context_ptr, "db_write", host_write_db)?;
+        link_fn!(module, context_ptr, "db_remove", host_remove_db)?;
+        link_fn!(module, context_ptr, "canonicalize_address", host_canonicalize_address)?;
+        link_fn!(module, context_ptr, "humanize_address", host_humanize_address)?;
+        link_fn!(module, context_ptr, "query_chain", host_query_chain)?;
+        link_fn!(module, context_ptr, "debug_print", host_debug_print)?;
+        link_fn!(module, context_ptr, "gas", host_gas)?;
+        link_fn!(module, context_ptr, "secp256k1_verify", host_secp256k1_verify)?;
+        link_fn!(module, context_ptr, "secp256k1_recover_pubkey", host_secp256k1_recover_pubkey)?;
+        link_fn!(module, context_ptr, "ed25519_verify", host_ed25519_verify)?;
+        link_fn!(module, context_ptr, "ed25519_batch_verify", host_ed25519_batch_verify)?;
+        link_fn!(module, context_ptr, "secp256k1_sign", host_secp256k1_sign)?;
+        link_fn!(module, context_ptr, "ed25519_sign", host_ed25519_sign)?;
+        }
 
         Ok(Self {
             context: context_ptr,
@@ -340,4 +351,160 @@ fn host_read_db(
         write_to_memory(&mut call_context.runtime, &value).map_err(set_last_error!(context))?;
 
     Ok(region_ptr)
+}
+
+fn host_remove_db(
+    context: *mut RefCell<Context>,
+    mut call_context: wasm3::CallContext,
+    state_key_region_ptr: u32,
+) -> TrappedResult<u32> {
+    let context = unsafe { &*context };
+    let mut context = context.borrow_mut();
+
+    let memory = CWMemory::new(&mut call_context.runtime);
+    todo!()
+}
+
+fn host_write_db(
+    context: *mut RefCell<Context>,
+    mut call_context: wasm3::CallContext,
+    state_key_region_ptr: u32,
+) -> TrappedResult<u32> {
+    let context = unsafe { &*context };
+    let mut context = context.borrow_mut();
+
+    let memory = CWMemory::new(&mut call_context.runtime);
+    todo!()
+}
+
+fn host_canonicalize_address(
+    context: *mut RefCell<Context>,
+    mut call_context: wasm3::CallContext,
+    state_key_region_ptr: u32,
+) -> TrappedResult<u32> {
+    let context = unsafe { &*context };
+    let mut context = context.borrow_mut();
+
+    let memory = CWMemory::new(&mut call_context.runtime);
+    todo!()
+}
+
+fn host_humanize_address(
+    context: *mut RefCell<Context>,
+    mut call_context: wasm3::CallContext,
+    state_key_region_ptr: u32,
+) -> TrappedResult<u32> {
+    let context = unsafe { &*context };
+    let mut context = context.borrow_mut();
+
+    let memory = CWMemory::new(&mut call_context.runtime);
+    todo!()
+}
+
+fn host_query_chain(
+    context: *mut RefCell<Context>,
+    mut call_context: wasm3::CallContext,
+    state_key_region_ptr: u32,
+) -> TrappedResult<u32> {
+    let context = unsafe { &*context };
+    let mut context = context.borrow_mut();
+
+    let memory = CWMemory::new(&mut call_context.runtime);
+    todo!()
+}
+
+fn host_debug_print(
+    context: *mut RefCell<Context>,
+    mut call_context: wasm3::CallContext,
+    state_key_region_ptr: u32,
+) -> TrappedResult<u32> {
+    let context = unsafe { &*context };
+    let mut context = context.borrow_mut();
+
+    let memory = CWMemory::new(&mut call_context.runtime);
+    todo!()
+}
+
+fn host_gas(
+    context: *mut RefCell<Context>,
+    mut call_context: wasm3::CallContext,
+    state_key_region_ptr: u32,
+) -> TrappedResult<u32> {
+    let context = unsafe { &*context };
+    let mut context = context.borrow_mut();
+
+    let memory = CWMemory::new(&mut call_context.runtime);
+    todo!()
+}
+
+fn host_secp256k1_verify(
+    context: *mut RefCell<Context>,
+    mut call_context: wasm3::CallContext,
+    state_key_region_ptr: u32,
+) -> TrappedResult<u32> {
+    let context = unsafe { &*context };
+    let mut context = context.borrow_mut();
+
+    let memory = CWMemory::new(&mut call_context.runtime);
+    todo!()
+}
+
+fn host_secp256k1_recover_pubkey(
+    context: *mut RefCell<Context>,
+    mut call_context: wasm3::CallContext,
+    state_key_region_ptr: u32,
+) -> TrappedResult<u32> {
+    let context = unsafe { &*context };
+    let mut context = context.borrow_mut();
+
+    let memory = CWMemory::new(&mut call_context.runtime);
+    todo!()
+}
+
+fn host_ed25519_verify(
+    context: *mut RefCell<Context>,
+    mut call_context: wasm3::CallContext,
+    state_key_region_ptr: u32,
+) -> TrappedResult<u32> {
+    let context = unsafe { &*context };
+    let mut context = context.borrow_mut();
+
+    let memory = CWMemory::new(&mut call_context.runtime);
+    todo!()
+}
+
+fn host_ed25519_batch_verify(
+    context: *mut RefCell<Context>,
+    mut call_context: wasm3::CallContext,
+    state_key_region_ptr: u32,
+) -> TrappedResult<u32> {
+    let context = unsafe { &*context };
+    let mut context = context.borrow_mut();
+
+    let memory = CWMemory::new(&mut call_context.runtime);
+    todo!()
+}
+
+fn host_secp256k1_sign(
+    context: *mut RefCell<Context>,
+    mut call_context: wasm3::CallContext,
+    state_key_region_ptr: u32,
+) -> TrappedResult<u32> {
+    let context = unsafe { &*context };
+    let mut context = context.borrow_mut();
+
+    let memory = CWMemory::new(&mut call_context.runtime);
+    todo!()
+}
+
+fn host_ed25519_sign(
+    context: *mut RefCell<Context>,
+    mut call_context: wasm3::CallContext,
+    state_key_region_ptr: u32,
+) -> TrappedResult<u32> {
+    let context = unsafe { &*context };
+    let mut context = context.borrow_mut();
+
+    let memory = CWMemory::new(&mut call_context.runtime);
+    todo!()
 }
