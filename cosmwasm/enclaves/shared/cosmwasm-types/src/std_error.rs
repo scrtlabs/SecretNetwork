@@ -61,4 +61,4 @@ pub enum StdError {
 ///
 /// The prefix "Std" means "the standard result within the standard library". This is not the only
 /// result/error type in cosmwasm-std.
-pub type StdResult<T> = core::result::Result<T, StdError>;
+pub type StdResult<T> = std::result::Result<T, StdError>;

@@ -1,7 +1,7 @@
-use core::ops::DerefMut;
 use std::cell::RefCell;
 use std::convert::TryInto;
 use std::marker::PhantomData;
+use std::ops::DerefMut;
 
 use wasm3::error::{Trap, TrappedResult};
 
