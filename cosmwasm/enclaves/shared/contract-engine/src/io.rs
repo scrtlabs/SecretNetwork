@@ -24,15 +24,9 @@ use sha2::Digest;
 /// b. Authenticate the reply.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
-enum WasmOutput {
-    ErrV010 {
+enum RawWasmOutput {
+    Err {
         #[serde(rename = "Err")]
-        err: Value,
-        internal_msg_id: Option<Binary>,
-        internal_reply_enclave_sig: Option<Binary>,
-    },
-    ErrV1 {
-        #[serde(rename = "error")]
         err: Value,
         internal_msg_id: Option<Binary>,
         internal_reply_enclave_sig: Option<Binary>,
@@ -52,11 +46,44 @@ enum WasmOutput {
         internal_msg_id: Option<Binary>,
     },
     OkV1 {
-        #[serde(rename = "ok")]
+        #[serde(rename = "Ok")]
         ok: enclave_cosmwasm_v1_types::results::Response,
         internal_reply_enclave_sig: Option<Binary>,
         internal_msg_id: Option<Binary>,
     },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+struct V010WasmOutput {
+    #[serde(rename = "Ok")]
+    pub ok: Option<cosmwasm_v010_types::types::ContractResult>,
+    #[serde(rename = "Err")]
+    pub err: Option<Value>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+struct V1WasmOutput {
+    #[serde(rename = "Ok")]
+    pub ok: Option<enclave_cosmwasm_v1_types::results::Response>,
+    #[serde(rename = "Err")]
+    pub err: Option<Value>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+struct QueryOutput {
+    #[serde(rename = "Ok")]
+    pub ok: Option<String>,
+    #[serde(rename = "Err")]
+    pub err: Option<Value>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+struct WasmOutput {
+    pub v010: Option<V010WasmOutput>,
+    pub v1: Option<V1WasmOutput>,
+    pub query: Option<QueryOutput>,
+    pub internal_reply_enclave_sig: Option<Binary>,
+    pub internal_msg_id: Option<Binary>,
 }
 
 pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) -> AESKey {
@@ -131,6 +158,7 @@ pub fn encrypt_output(
     contract_hash: &String,
     reply_params: Option<(Vec<u8>, u64)>,
     sender_addr: &CanonicalAddr,
+    is_query_output: bool,
 ) -> Result<Vec<u8>, EnclaveError> {
     // When encrypting an output we might encrypt an output that is a reply to a caller contract (Via "Reply" endpoint).
     // Therefore if reply_recipient_contract_hash is not "None" we append it to any encrypted data besided submessages that are irrelevant for replies.
@@ -141,19 +169,14 @@ pub fn encrypt_output(
         String::from_utf8_lossy(&output)
     );
 
-    let mut output: WasmOutput = serde_json::from_slice(&output).map_err(|err| {
+    let mut output: RawWasmOutput = serde_json::from_slice(&output).map_err(|err| {
         warn!("got an error while trying to deserialize output bytes into json");
         trace!("output: {:?} error: {:?}", output, err);
         EnclaveError::FailedToDeserialize
     })?;
 
     match &mut output {
-        WasmOutput::ErrV010 {
-            err,
-            internal_reply_enclave_sig,
-            internal_msg_id,
-        }
-        | WasmOutput::ErrV1 {
+        RawWasmOutput::Err {
             err,
             internal_reply_enclave_sig,
             internal_msg_id,
@@ -205,12 +228,12 @@ pub fn encrypt_output(
             }
         }
 
-        WasmOutput::QueryOkV010 { ok } | WasmOutput::QueryOkV1 { ok } => {
+        RawWasmOutput::QueryOkV010 { ok } | RawWasmOutput::QueryOkV1 { ok } => {
             *ok = encrypt_serializable(&encryption_key, ok, &reply_params)?;
         }
 
         // Encrypt all Wasm messages (keeps Bank, Staking, etc.. as is)
-        WasmOutput::OkV010 {
+        RawWasmOutput::OkV010 {
             ok,
             internal_reply_enclave_sig,
             internal_msg_id,
@@ -284,7 +307,7 @@ pub fn encrypt_output(
                 None => None, // Not a reply, we don't need enclave sig
             }
         }
-        WasmOutput::OkV1 {
+        RawWasmOutput::OkV1 {
             ok,
             internal_reply_enclave_sig,
             internal_msg_id,
@@ -380,12 +403,82 @@ pub fn encrypt_output(
         }
     };
 
-    trace!("WasmOutput: {:?}", output);
+    let final_output: WasmOutput = match output {
+        RawWasmOutput::Err {
+            err,
+            internal_msg_id,
+            internal_reply_enclave_sig,
+        } => {
+            if is_query_output {
+                WasmOutput {
+                    v010: None,
+                    v1: None,
+                    query: Some(QueryOutput {
+                        ok: None,
+                        err: Some(err),
+                    }),
+                    internal_reply_enclave_sig: None,
+                    internal_msg_id: None,
+                }
+            } else {
+                WasmOutput {
+                    v010: Some(V010WasmOutput {
+                        err: Some(err),
+                        ok: None,
+                    }),
+                    v1: None,
+                    query: None,
+                    internal_reply_enclave_sig,
+                    internal_msg_id,
+                }
+            }
+        }
+        RawWasmOutput::OkV010 {
+            ok,
+            internal_reply_enclave_sig,
+            internal_msg_id,
+        } => WasmOutput {
+            v010: Some(V010WasmOutput {
+                err: None,
+                ok: Some(ok),
+            }),
+            v1: None,
+            query: None,
+            internal_reply_enclave_sig,
+            internal_msg_id,
+        },
+        RawWasmOutput::OkV1 {
+            ok,
+            internal_reply_enclave_sig,
+            internal_msg_id,
+        } => WasmOutput {
+            v010: None,
+            v1: Some(V1WasmOutput {
+                err: None,
+                ok: Some(ok),
+            }),
+            query: None,
+            internal_reply_enclave_sig,
+            internal_msg_id,
+        },
+        RawWasmOutput::QueryOkV010 { ok } | RawWasmOutput::QueryOkV1 { ok } => WasmOutput {
+            v010: None,
+            v1: None,
+            query: Some(QueryOutput {
+                ok: Some(ok),
+                err: None,
+            }),
+            internal_reply_enclave_sig: None,
+            internal_msg_id: None,
+        },
+    };
 
-    let encrypted_output = serde_json::to_vec(&output).map_err(|err| {
+    trace!("WasmOutput: {:?}", final_output);
+
+    let encrypted_output = serde_json::to_vec(&final_output).map_err(|err| {
         debug!(
             "got an error while trying to serialize output json into bytes {:?}: {}",
-            output, err
+            final_output, err
         );
         EnclaveError::FailedToSerialize
     })?;
@@ -480,6 +573,7 @@ fn encrypt_v1_wasm_msg(
             )?;
 
             msg_to_pass.encrypt_in_place()?;
+
             *msg = Binary::from(msg_to_pass.to_vec().as_slice());
 
             *callback_sig = Some(create_callback_signature(

@@ -14,9 +14,10 @@ sgx_tstd = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://gi
 
 [dependencies]
 enclave-ffi-types = { path = "../../ffi-types" }
-
 log = "0.4.8"
-serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = ["derive"] }
+serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
+  "derive"
+] }
 serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
 derive_more = "0.99"
 bech32 = "0.7.2"

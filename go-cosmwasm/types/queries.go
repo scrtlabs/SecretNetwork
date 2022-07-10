@@ -11,11 +11,8 @@ type QueryResponse struct {
 	Err *StdError `json:"Err,omitempty"`
 }
 
-type V010orV1ContractQueryResponse struct {
-	V1Ok    []byte    `json:"ok,omitempty"`
-	V1Err   *StdError `json:"error,omitempty"`
-	V010Ok  []byte    `json:"Ok,omitempty"`
-	V010Err *StdError `json:"Err,omitempty"`
+type ContractQueryResponse struct {
+	Query *QueryResponse `json:"query,omitempty"`
 }
 
 //-------- Querier -----------

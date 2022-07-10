@@ -120,6 +120,7 @@ pub enum WasmMsg {
         code_hash: String,
         /// msg is the json-encoded ExecuteMsg struct (as raw Binary)
         msg: Binary,
+        #[serde(rename = "send")]
         funds: Vec<Coin>,
         /// callback_sig is used only inside the enclave to validate messages
         /// that are originating from other contracts
@@ -136,6 +137,7 @@ pub enum WasmMsg {
         code_hash: String,
         /// msg is the JSON-encoded InstantiateMsg struct (as raw Binary)
         msg: Binary,
+        #[serde(rename = "send")]
         funds: Vec<Coin>,
         /// A human-readbale label for the contract
         label: String,
