@@ -2246,7 +2246,7 @@ func TestCodeHashTooBig(t *testing.T) {
 
 			initErr := extractInnerError(t, err, enc[0:32], true, testContract.IsCosmWasmV1)
 			require.NotEmpty(t, initErr)
-			require.Contains(t, fmt.Sprintf("%+v", initErr), "Expected to parse either a `true`, `false`, or a `null`.")
+			require.Contains(t, initErr.Error(), "Expected to parse either a `true`, `false`, or a `null`.")
 		})
 	}
 }
@@ -2274,7 +2274,7 @@ func TestCodeHashInitCallInit(t *testing.T) {
 			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath)
 
 			t.Run("GoodCodeHash", func(t *testing.T) {
-				addr, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, false, defaultGasForTests, 2, 0)
+				addr, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
 
 				require.Empty(t, err)
 				require.Equal(t,
@@ -2292,7 +2292,7 @@ func TestCodeHashInitCallInit(t *testing.T) {
 				)
 			})
 			t.Run("EmptyCodeHash", func(t *testing.T) {
-				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"","msg":"%s","label":"2"}}`, codeID, `{\"nop\":{}}`), false, false, defaultGasForTests, 2, 0)
+				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"","msg":"%s","label":"2"}}`, codeID, `{\"nop\":{}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
 
 				require.NotEmpty(t, err)
 				require.Contains(t,
@@ -2301,16 +2301,16 @@ func TestCodeHashInitCallInit(t *testing.T) {
 				)
 			})
 			t.Run("TooBigCodeHash", func(t *testing.T) {
-				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%sa","msg":"%s","label":"3"}}`, codeID, codeHash, `{\"nop\":{}}`), true, false, defaultGasForTests, 2, 0)
+				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%sa","msg":"%s","label":"3"}}`, codeID, codeHash, `{\"nop\":{}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
 
 				require.NotEmpty(t, err)
 				require.Contains(t,
 					err.Error(),
-					"parsing test_contract::contract::InitMsg: Expected to parse either a `true`, `false`, or a `null`.",
+					"Expected to parse either a `true`, `false`, or a `null`.",
 				)
 			})
 			t.Run("TooSmallCodeHash", func(t *testing.T) {
-				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"4"}}`, codeID, codeHash[0:63], `{\"nop\":{}}`), false, false, defaultGasForTests, 2, 0)
+				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"4"}}`, codeID, codeHash[0:63], `{\"nop\":{}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
 
 				require.NotEmpty(t, err)
 				require.Contains(t,
@@ -2319,7 +2319,7 @@ func TestCodeHashInitCallInit(t *testing.T) {
 				)
 			})
 			t.Run("IncorrectCodeHash", func(t *testing.T) {
-				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s","label":"5"}}`, codeID, `{\"nop\":{}}`), false, false, defaultGasForTests, 2, 0)
+				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s","label":"5"}}`, codeID, `{\"nop\":{}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
 
 				require.NotEmpty(t, err)
 				require.Contains(t,
@@ -2336,11 +2336,11 @@ func TestCodeHashInitCallExec(t *testing.T) {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
 			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath)
 
-			addr, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests, 1, 0)
+			addr, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 1, 0)
 			require.Empty(t, err)
 
 			t.Run("GoodCodeHash", func(t *testing.T) {
-				addr2, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, false, defaultGasForTests, 2, 0)
+				addr2, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
 
 				require.Empty(t, err)
 				require.Equal(t,
@@ -2358,7 +2358,7 @@ func TestCodeHashInitCallExec(t *testing.T) {
 				)
 			})
 			t.Run("EmptyCodeHash", func(t *testing.T) {
-				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"c\":{\"x\":1,\"y\":1}}`), false, false, defaultGasForTests, 2, 0)
+				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"c\":{\"x\":1,\"y\":1}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
 
 				require.NotEmpty(t, err)
 				require.Contains(t,
@@ -2367,16 +2367,16 @@ func TestCodeHashInitCallExec(t *testing.T) {
 				)
 			})
 			t.Run("TooBigCodeHash", func(t *testing.T) {
-				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, false, defaultGasForTests, 2, 0)
+				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
 
 				require.NotEmpty(t, err)
 				require.Contains(t,
 					err.Error(),
-					"parsing test_contract::contract::HandleMsg: Expected to parse either a `true`, `false`, or a `null`.",
+					"Expected to parse either a `true`, `false`, or a `null`.",
 				)
 			})
 			t.Run("TooSmallCodeHash", func(t *testing.T) {
-				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"c\":{\"x\":1,\"y\":1}}`), false, false, defaultGasForTests, 2, 0)
+				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"c\":{\"x\":1,\"y\":1}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
 
 				require.NotEmpty(t, err)
 				require.Contains(t,
@@ -2385,7 +2385,7 @@ func TestCodeHashInitCallExec(t *testing.T) {
 				)
 			})
 			t.Run("IncorrectCodeHash", func(t *testing.T) {
-				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"c\":{\"x\":1,\"y\":1}}`), false, false, defaultGasForTests, 2, 0)
+				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"c\":{\"x\":1,\"y\":1}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
 
 				require.NotEmpty(t, err)
 				require.Contains(t,
@@ -2434,7 +2434,7 @@ func TestCodeHashInitCallQuery(t *testing.T) {
 				require.NotEmpty(t, err)
 				require.Contains(t,
 					err.Error(),
-					"Got an error from query: ParseErr { target: \"test_contract::contract::QueryMsg\", msg: \"Expected to parse either a `true`, `false`, or a `null`.\", backtrace: None }",
+					"Expected to parse either a `true`, `false`, or a `null`.",
 				)
 			})
 			t.Run("TooSmallCodeHash", func(t *testing.T) {
