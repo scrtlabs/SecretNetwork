@@ -11,6 +11,8 @@ use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::contract_validation::ContractKey;
 use crate::db::read_encrypted_key;
+#[cfg(not(feature = "query-only"))]
+use crate::db::{remove_encrypted_key, write_encrypted_key};
 use crate::errors::{wasm3_error_to_enclave_error, WasmEngineError, WasmEngineResult};
 use crate::gas::WasmCosts;
 use crate::types::IoNonce;
@@ -57,7 +59,7 @@ impl Context {
         self.last_error = Some(error);
     }
 
-    fn use_gas_externally(&mut self, gas: u64) -> TrappedResult<()> {
+    fn use_gas_externally(&mut self, gas: u64) -> WasmEngineResult<()> {
         // todo implement gas consumption
         Ok(())
     }
@@ -325,21 +327,23 @@ macro_rules! set_last_error {
 fn host_read_db(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: u32,
-) -> TrappedResult<u32> {
+    state_key_region_ptr: i32,
+) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
     let memory = CWMemory::new(&mut call_context.runtime);
 
     let state_key_name = memory
-        .extract_vector(state_key_region_ptr)
+        .extract_vector(state_key_region_ptr as u32)
         .map_err(set_last_error!(context))?;
 
     let (value, gas_used) =
         read_encrypted_key(&state_key_name, &context.context, &context.contract_key)
             .map_err(set_last_error!(context))?;
-    context.use_gas_externally(gas_used)?;
+    context
+        .use_gas_externally(gas_used)
+        .map_err(set_last_error!(context))?;
 
     let value = match value {
         // Return 0 (null ponter) if value is empty
@@ -350,38 +354,79 @@ fn host_read_db(
     let region_ptr =
         write_to_memory(&mut call_context.runtime, &value).map_err(set_last_error!(context))?;
 
-    Ok(region_ptr)
+    Ok(region_ptr as i32)
 }
 
 fn host_remove_db(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: u32,
-) -> TrappedResult<u32> {
+    state_key_region_ptr: i32,
+) -> TrappedResult<()> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
     let memory = CWMemory::new(&mut call_context.runtime);
-    todo!()
+
+    if context.operation.is_query() {
+        context.set_last_error(WasmEngineError::UnauthorizedWrite);
+        return Err(Trap::Abort);
+    }
+
+    let state_key_name = memory
+        .extract_vector(state_key_region_ptr as u32)
+        .map_err(set_last_error!(context))?;
+
+    let gas_used = remove_encrypted_key(&state_key_name, &context.context, &context.contract_key)
+        .map_err(set_last_error!(context))?;
+    context
+        .use_gas_externally(gas_used)
+        .map_err(set_last_error!(context))?;
+
+    Ok(())
 }
 
 fn host_write_db(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: u32,
-) -> TrappedResult<u32> {
+    (state_key_region_ptr, value_region_ptr): (i32, i32),
+) -> TrappedResult<()> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
     let memory = CWMemory::new(&mut call_context.runtime);
-    todo!()
+
+    if context.operation.is_query() {
+        context.set_last_error(WasmEngineError::UnauthorizedWrite);
+        return Err(Trap::Abort);
+    }
+
+    let state_key_name = memory
+        .extract_vector(state_key_region_ptr as u32)
+        .map_err(set_last_error!(context))?;
+
+    let value = memory
+        .extract_vector(value_region_ptr as u32)
+        .map_err(set_last_error!(context))?;
+
+    let used_gas = write_encrypted_key(
+        &state_key_name,
+        &value,
+        &context.context,
+        &context.contract_key,
+    )
+    .map_err(set_last_error!(context))?;
+    context
+        .use_gas_externally(used_gas)
+        .map_err(set_last_error!(context))?;
+
+    Ok(())
 }
 
 fn host_canonicalize_address(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: u32,
-) -> TrappedResult<u32> {
+    state_key_region_ptr: i32,
+) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
@@ -392,8 +437,8 @@ fn host_canonicalize_address(
 fn host_humanize_address(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: u32,
-) -> TrappedResult<u32> {
+    state_key_region_ptr: i32,
+) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
@@ -404,8 +449,8 @@ fn host_humanize_address(
 fn host_query_chain(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: u32,
-) -> TrappedResult<u32> {
+    state_key_region_ptr: i32,
+) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
@@ -416,8 +461,8 @@ fn host_query_chain(
 fn host_debug_print(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: u32,
-) -> TrappedResult<u32> {
+    state_key_region_ptr: i32,
+) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
@@ -428,8 +473,8 @@ fn host_debug_print(
 fn host_gas(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: u32,
-) -> TrappedResult<u32> {
+    state_key_region_ptr: i32,
+) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
@@ -440,8 +485,8 @@ fn host_gas(
 fn host_secp256k1_verify(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: u32,
-) -> TrappedResult<u32> {
+    state_key_region_ptr: i32,
+) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
@@ -452,8 +497,8 @@ fn host_secp256k1_verify(
 fn host_secp256k1_recover_pubkey(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: u32,
-) -> TrappedResult<u32> {
+    state_key_region_ptr: i32,
+) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
@@ -464,8 +509,8 @@ fn host_secp256k1_recover_pubkey(
 fn host_ed25519_verify(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: u32,
-) -> TrappedResult<u32> {
+    state_key_region_ptr: i32,
+) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
@@ -476,8 +521,8 @@ fn host_ed25519_verify(
 fn host_ed25519_batch_verify(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: u32,
-) -> TrappedResult<u32> {
+    state_key_region_ptr: i32,
+) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
@@ -488,8 +533,8 @@ fn host_ed25519_batch_verify(
 fn host_secp256k1_sign(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: u32,
-) -> TrappedResult<u32> {
+    state_key_region_ptr: i32,
+) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
@@ -500,8 +545,8 @@ fn host_secp256k1_sign(
 fn host_ed25519_sign(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: u32,
-) -> TrappedResult<u32> {
+    state_key_region_ptr: i32,
+) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 

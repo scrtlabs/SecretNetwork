@@ -32,15 +32,15 @@ pub enum ContractOperation {
 
 #[allow(unused)]
 impl ContractOperation {
-    fn is_init(&self) -> bool {
+    pub fn is_init(&self) -> bool {
         matches!(self, ContractOperation::Init)
     }
 
-    fn is_handle(&self) -> bool {
+    pub fn is_handle(&self) -> bool {
         matches!(self, ContractOperation::Handle)
     }
 
-    fn is_query(&self) -> bool {
+    pub fn is_query(&self) -> bool {
         matches!(self, ContractOperation::Query)
     }
 }
