@@ -14,7 +14,7 @@ use crate::wasm::CosmWasmApiVersion;
 
 use enclave_cosmwasm_types::{
     encoding::Binary,
-    query::{QueryRequest, WasmQuery, V1SmartQueryAnswer, V1SmartQueryResult},
+    query::{QueryRequest, V1SmartQueryAnswer, V1SmartQueryResult, WasmQuery},
     std_error::{StdError, StdResult},
     system_error::{SystemError, SystemResult},
 };
@@ -29,6 +29,7 @@ pub fn encrypt_and_query_chain(
     contract_version: &CosmWasmApiVersion,
 ) -> Result<Vec<u8>, WasmEngineError> {
     if let Some(answer) = check_recursion_limit() {
+        trace!("HERE1 {:?}", answer);
         return serialize_error_response(&answer);
     }
 
@@ -36,6 +37,7 @@ pub fn encrypt_and_query_chain(
         Ok(query_struct) => query_struct,
         Err(err) => {
             *gas_used = 500; // Should we charge gas for this to prevent spam?
+            trace!("HERE2 {:?} {:?}", query, err);
             return system_error_invalid_request(query, err);
         }
     };
@@ -71,6 +73,8 @@ pub fn encrypt_and_query_chain(
     let encrypted_answer: SystemResult<StdResult<Binary>> = match parse_result {
         Ok(encrypted_answer) => encrypted_answer,
         Err(err) => {
+            trace!("HERE3 {:?} {:?}", encrypted_answer_as_vec, err);
+
             return system_error_invalid_response(encrypted_answer_as_vec, err);
         }
     };
@@ -113,6 +117,8 @@ pub fn encrypt_and_query_chain(
                             Ok(answer) => Ok(Err(answer)),
                             Err(err) => {
                                 debug!("encrypt_and_query_chain() got an error while trying to deserialize the inner error as StdError: {:?}", err);
+                                trace!("HERE4 {:?} {:?}", decrypted, err);
+
                                 return system_error_invalid_response(decrypted, err);
                             }
                         }
@@ -135,29 +141,12 @@ pub fn encrypt_and_query_chain(
         answer
     );
 
-    let answer_as_vec = match contract_version {
-        CosmWasmApiVersion::V010 => { serde_json::to_vec(&answer).map_err(|err| {
-            debug!("encrypt_and_query_chain() got an error while trying to serialize the decrypted answer to bytes: {:?}", err);
-            WasmEngineError::SerializationError
-            })? 
-        },
-    CosmWasmApiVersion::V1 => {
-        let v1_answer : V1SmartQueryAnswer =  match answer {
-            Ok(o) => {
-                match o {
-                    Ok(o2) => V1SmartQueryAnswer::Ok(V1SmartQueryResult::Ok(o2)),
-                    Err(e) => V1SmartQueryAnswer::Ok(V1SmartQueryResult::Err(format!("{:?}", e))),
-                }
-            },
-            Err(e) => V1SmartQueryAnswer::Err(e),
-        }; 
-        
-        serde_json::to_vec(&v1_answer).map_err(|err| {
-            debug!("encrypt_and_query_chain() got an error while trying to serialize the decrypted answer to bytes: {:?}", err);
-            WasmEngineError::SerializationError
-            })? 
-    },
-    };
+    trace!("ASSAFF {:?}", answer);
+
+    let answer_as_vec = serde_json::to_vec(&answer).map_err(|err| {
+        debug!("encrypt_and_query_chain() got an error while trying to serialize the decrypted answer to bytes: {:?}", err);
+        WasmEngineError::SerializationError
+    })?;
 
     Ok(answer_as_vec)
 }
