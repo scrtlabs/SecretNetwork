@@ -29,7 +29,6 @@ pub fn encrypt_and_query_chain(
     contract_version: &CosmWasmApiVersion,
 ) -> Result<Vec<u8>, WasmEngineError> {
     if let Some(answer) = check_recursion_limit() {
-        trace!("HERE1 {:?}", answer);
         return serialize_error_response(&answer);
     }
 
@@ -37,7 +36,6 @@ pub fn encrypt_and_query_chain(
         Ok(query_struct) => query_struct,
         Err(err) => {
             *gas_used = 500; // Should we charge gas for this to prevent spam?
-            trace!("HERE2 {:?} {:?}", query, err);
             return system_error_invalid_request(query, err);
         }
     };
@@ -73,8 +71,6 @@ pub fn encrypt_and_query_chain(
     let encrypted_answer: SystemResult<StdResult<Binary>> = match parse_result {
         Ok(encrypted_answer) => encrypted_answer,
         Err(err) => {
-            trace!("HERE3 {:?} {:?}", encrypted_answer_as_vec, err);
-
             return system_error_invalid_response(encrypted_answer_as_vec, err);
         }
     };
@@ -117,8 +113,6 @@ pub fn encrypt_and_query_chain(
                             Ok(answer) => Ok(Err(answer)),
                             Err(err) => {
                                 debug!("encrypt_and_query_chain() got an error while trying to deserialize the inner error as StdError: {:?}", err);
-                                trace!("HERE4 {:?} {:?}", decrypted, err);
-
                                 return system_error_invalid_response(decrypted, err);
                             }
                         }
@@ -140,8 +134,6 @@ pub fn encrypt_and_query_chain(
         "encrypt_and_query_chain() decrypted the answer to be: {:?}",
         answer
     );
-
-    trace!("ASSAFF {:?}", answer);
 
     let answer_as_vec = serde_json::to_vec(&answer).map_err(|err| {
         debug!("encrypt_and_query_chain() got an error while trying to serialize the decrypted answer to bytes: {:?}", err);

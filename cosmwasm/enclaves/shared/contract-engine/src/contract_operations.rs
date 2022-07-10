@@ -67,8 +67,6 @@ pub fn init(
         })?;
     env_v010.contract_code_hash = hex::encode(contract_code.hash());
 
-    trace!("init env_v010: {:?}", env_v010);
-
     let canonical_contract_address = CanonicalAddr::from_human(&env_v010.contract.address).map_err(|err| {
         warn!(
             "init got an error while trying to deserialize env_v010.contract.address from bech32 string to bytes {:?}: {}",
@@ -76,6 +74,8 @@ pub fn init(
         );
         EnclaveError::FailedToDeserialize
     })?;
+
+    trace!("init env_v010: {:?}", env_v010);
 
     let canonical_sender_address = CanonicalAddr::from_human(&env_v010.message.sender).map_err(|err| {
         warn!(
@@ -148,6 +148,7 @@ pub fn init(
             &env_v010.contract_code_hash,
             reply_params,
             &canonical_sender_address,
+            false,
         )?;
 
         Ok(output)
@@ -661,6 +662,7 @@ pub fn handle(
             &env_v010.contract_code_hash,
             reply_params,
             &canonical_sender_address,
+            false,
         )?;
         Ok(output)
     })
@@ -753,6 +755,7 @@ pub fn query(
             &"".to_string(), // Not used for queries (can't call a sub-message from a query),
             None,            // Not used for queries (Query response is not replied to the caller),
             &CanonicalAddr(Binary(Vec::new())), // Not used for queries (used only for replies)
+            true,
         )?;
         Ok(output)
     })

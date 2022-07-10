@@ -835,9 +835,7 @@ fn send_external_query_recursion_limit(
         result
     } else {
         match result {
-            Err(StdError::GenericErr { msg, .. })
-                if msg == "Querier system error: Query recursion limit exceeded" =>
-            {
+            Err(StdError::GenericErr { msg, .. }) if msg.contains("exceeded_recursion_limit") => {
                 Ok(String::from("Recursion limit was correctly enforced"))
             }
             _ => Err(StdError::generic_err(

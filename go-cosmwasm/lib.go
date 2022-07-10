@@ -337,31 +337,25 @@ func (w *Wasmer) Query(
 		return nil, gasUsed, err
 	}
 
-	var resp types.V010orV1ContractQueryResponse
+	var resp types.ContractQueryResponse
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
 		return nil, gasUsed, err
 	}
 
-	// handle v0.10 response
-	if resp.V010Err != nil {
-		return nil, gasUsed, fmt.Errorf("%v", resp.V010Err)
+	if resp.Query == nil {
+		return nil, gasUsed, fmt.Errorf("query: cannot detect response type")
 	}
 
-	if resp.V010Ok != nil {
-		return resp.V010Ok, gasUsed, nil
+	if resp.Query.Err != nil {
+		return nil, gasUsed, fmt.Errorf("%v", resp.Query.Err)
 	}
 
-	// handle v1 response
-	if resp.V1Err != nil {
-		return nil, gasUsed, fmt.Errorf("%v", resp.V1Err)
+	if resp.Query.Ok != nil {
+		return resp.Query.Ok, gasUsed, nil
 	}
 
-	if resp.V1Ok != nil {
-		return resp.V1Ok, gasUsed, nil
-	}
-
-	return nil, gasUsed, fmt.Errorf("query: cannot detect response type (v0.10 or v1)")
+	return nil, gasUsed, fmt.Errorf("query: cannot detect response type")
 }
 
 // AnalyzeCode returns a report of static analysis of the wasm contract (uncompiled).

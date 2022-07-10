@@ -620,7 +620,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 			Data: data,
 		}, nil
 	default:
-		return nil, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("cannot detect response type: %+v", res))
+		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("cannot detect response type: %+v", res))
 	}
 }
 
