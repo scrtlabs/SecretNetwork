@@ -3,6 +3,8 @@ use std::convert::TryInto;
 use std::marker::PhantomData;
 use std::ops::DerefMut;
 
+use log::*;
+
 use bech32::{FromBase32, ToBase32};
 use wasm3::error::{Trap, TrappedResult};
 
@@ -65,6 +67,21 @@ impl Context {
         // todo implement gas consumption
         Ok(())
     }
+}
+
+macro_rules! debug_err {
+    ($message: literal) => {
+        |err| { debug!($message); err }
+    };
+    ($message: literal, $($args: tt)*) => {
+        |err| { debug!($message, $($args)*); err }
+    };
+    ($err: ident => $message: literal) => {
+        |$err| { debug!($message, $err = $err); $err }
+    };
+    ($err: ident => $message: literal, $($args: tt)*) => {
+        |$err| { debug!($message, $($args)*, $err = $err); $err }
+    };
 }
 
 macro_rules! link_fn {
@@ -311,10 +328,12 @@ fn write_to_memory(runtime: &mut wasm3::Runtime, buffer: &[u8]) -> WasmEngineRes
         let alloc_fn = runtime.find_function::<u32, u32>("alloc")?;
         alloc_fn.call(buffer.len() as u32)
     })()
+    .map_err(debug_err!(err => "failed to allocate {} bytes in contract: {err}", buffer.len()))
     .map_err(|_| WasmEngineError::MemoryAllocationError)?;
     let mut memory = CWMemory::new(runtime);
-    memory.write_to_allocated_memory(region_ptr, buffer)?;
-    Ok(region_ptr)
+    memory
+        .write_to_allocated_memory(region_ptr, buffer)
+        .map_err(debug_err!(err => "failed to write to contract memory {err}"))
 }
 
 macro_rules! set_last_error {
@@ -326,11 +345,20 @@ macro_rules! set_last_error {
     };
 }
 
+fn show_bytes(bytes: &[u8]) -> String {
+    format!(
+        "{:?} ({})",
+        String::from_utf8_lossy(bytes),
+        hex::encode(bytes)
+    )
+}
+
 fn host_read_db(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
     state_key_region_ptr: i32,
 ) -> TrappedResult<i32> {
+    debug!("db_read was called");
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
@@ -338,14 +366,25 @@ fn host_read_db(
 
     let state_key_name = memory
         .extract_vector(state_key_region_ptr as u32)
+        .map_err(
+            debug_err!(err => "db_read failed to extract vector from state_key_region_ptr: {err}"),
+        )
         .map_err(set_last_error!(context))?;
+
+    debug!("db_read reading key {}", show_bytes(&state_key_name));
 
     let (value, gas_used) =
         read_encrypted_key(&state_key_name, &context.context, &context.contract_key)
+            .map_err(debug_err!("db_read failed to read key from storage"))
             .map_err(set_last_error!(context))?;
     context
         .use_gas_externally(gas_used)
         .map_err(set_last_error!(context))?;
+
+    debug!(
+        "db_read received value {:?}",
+        value.as_ref().map(|v| show_bytes(&v))
+    );
 
     let value = match value {
         // Return 0 (null ponter) if value is empty
@@ -356,6 +395,7 @@ fn host_read_db(
     let region_ptr =
         write_to_memory(&mut call_context.runtime, &value).map_err(set_last_error!(context))?;
 
+    debug!("db_read finished");
     Ok(region_ptr as i32)
 }
 
@@ -364,19 +404,27 @@ fn host_remove_db(
     mut call_context: wasm3::CallContext,
     state_key_region_ptr: i32,
 ) -> TrappedResult<()> {
+    debug!("db_remove was called");
+
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
     let memory = CWMemory::new(&mut call_context.runtime);
 
     if context.operation.is_query() {
+        debug!("db_remove was called while in query mode");
         context.set_last_error(WasmEngineError::UnauthorizedWrite);
         return Err(Trap::Abort);
     }
 
     let state_key_name = memory
         .extract_vector(state_key_region_ptr as u32)
+        .map_err(
+            debug_err!(err => "db_remove failed to extract vector from state_key_region_ptr: {err}"),
+        )
         .map_err(set_last_error!(context))?;
+
+    debug!("db_remove removing key {}", show_bytes(&state_key_name));
 
     let gas_used = remove_encrypted_key(&state_key_name, &context.context, &context.contract_key)
         .map_err(set_last_error!(context))?;
@@ -384,6 +432,7 @@ fn host_remove_db(
         .use_gas_externally(gas_used)
         .map_err(set_last_error!(context))?;
 
+    debug!("db_remove finished");
     Ok(())
 }
 
@@ -392,23 +441,38 @@ fn host_write_db(
     mut call_context: wasm3::CallContext,
     (state_key_region_ptr, value_region_ptr): (i32, i32),
 ) -> TrappedResult<()> {
+    debug!("db_write was called");
+
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
     let memory = CWMemory::new(&mut call_context.runtime);
 
     if context.operation.is_query() {
+        debug!("db_write was called while in query mode");
         context.set_last_error(WasmEngineError::UnauthorizedWrite);
         return Err(Trap::Abort);
     }
 
     let state_key_name = memory
         .extract_vector(state_key_region_ptr as u32)
+        .map_err(
+            debug_err!(err => "db_write failed to extract vector from state_key_region_ptr: {err}"),
+        )
         .map_err(set_last_error!(context))?;
 
     let value = memory
         .extract_vector(value_region_ptr as u32)
+        .map_err(
+            debug_err!(err => "db_write failed to extract vector from value_region_ptr: {err}"),
+        )
         .map_err(set_last_error!(context))?;
+
+    debug!(
+        "db_write writing key: {}, value: {}",
+        show_bytes(&state_key_name),
+        show_bytes(&value)
+    );
 
     let used_gas = write_encrypted_key(
         &state_key_name,
@@ -416,11 +480,13 @@ fn host_write_db(
         &context.context,
         &context.contract_key,
     )
+    .map_err(debug_err!("db_write failed to write key to storage",))
     .map_err(set_last_error!(context))?;
     context
         .use_gas_externally(used_gas)
         .map_err(set_last_error!(context))?;
 
+    debug!("db_write finished");
     Ok(())
 }
 
@@ -429,6 +495,8 @@ fn host_canonicalize_address(
     mut call_context: wasm3::CallContext,
     (human_region_ptr, canonical_region_ptr): (i32, i32),
 ) -> TrappedResult<i32> {
+    debug!("canonicalize_address was called");
+
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
@@ -441,55 +509,77 @@ fn host_canonicalize_address(
 
     let human = memory
         .extract_vector(human_region_ptr as u32)
+        .map_err(
+            debug_err!(err => "canonicalize_address failed to extract vector from human_region_ptr: {err}"),
+        )
         .map_err(set_last_error!(context))?;
 
     let mut human_addr_str = match std::str::from_utf8(&human) {
         Ok(addr) => addr,
         Err(_err) => {
-            return Ok(
-                write_to_memory(&mut call_context.runtime, b"input is not valid UTF-8")
-                    .map_err(set_last_error!(context))? as i32,
+            debug!(
+                "canonicalize_address input was not valid UTF-8: {}",
+                show_bytes(&human)
             );
+            return write_to_memory(&mut call_context.runtime, b"input is not valid UTF-8")
+                .map(|n| n as i32)
+                .map_err(debug_err!("failed to write error message to contract"))
+                .map_err(set_last_error!(context));
         }
     };
     human_addr_str = human_addr_str.trim();
     if human_addr_str.is_empty() {
-        return Ok(
-            write_to_memory(&mut call_context.runtime, b"input is empty")
-                .map_err(set_last_error!(context))? as i32,
-        );
+        debug!("canonicalize_address input was empty");
+        return write_to_memory(&mut call_context.runtime, b"input is empty")
+            .map(|n| n as i32)
+            .map_err(debug_err!("failed to write error message to contract"))
+            .map_err(set_last_error!(context));
     }
+
+    debug!("canonicalize_address was called with {:?}", human_addr_str);
 
     let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
         Ok(ret) => ret,
         Err(err) => {
-            return Ok(
-                write_to_memory(&mut call_context.runtime, err.to_string().as_bytes())
-                    .map_err(set_last_error!(context))? as i32,
+            debug!(
+                "canonicalize_address failed to parse input as bech32: {:?}",
+                err
             );
+            return write_to_memory(&mut call_context.runtime, err.to_string().as_bytes())
+                .map(|n| n as i32)
+                .map_err(debug_err!("failed to write error message to contract"))
+                .map_err(set_last_error!(context));
         }
     };
 
     if decoded_prefix != BECH32_PREFIX_ACC_ADDR {
-        return Ok(write_to_memory(
+        debug!("canonicalize_address was called with an unexpected address prefix");
+        return write_to_memory(
             &mut call_context.runtime,
             format!("wrong address prefix: {:?}", decoded_prefix).as_bytes(),
         )
-        .map_err(set_last_error!(context))? as i32);
+        .map(|n| n as i32)
+        .map_err(debug_err!("failed to write error message to contract"))
+        .map_err(set_last_error!(context));
     }
 
     let canonical = Vec::<u8>::from_base32(&data)
         .map_err(|err| {
             // Assaf: From reading https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#607
             // and https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#228 I don't think this can fail that way
+            debug!("canonicalize_address failed to parse base32");
             WasmEngineError::Base32Error
         })
         .map_err(set_last_error!(context))?;
 
     memory
         .write_to_allocated_memory(canonical_region_ptr as u32, &canonical)
+        .map_err(debug_err!(
+            "canonicalize_address failed to write to canonical_region_ptr"
+        ))
         .map_err(set_last_error!(context))?;
 
+    debug!("canonicalize_address finished");
     // return 0 == ok
     Ok(0)
 }
@@ -499,6 +589,8 @@ fn host_humanize_address(
     mut call_context: wasm3::CallContext,
     (canonical_region_ptr, human_region_ptr): (i32, i32),
 ) -> TrappedResult<i32> {
+    debug!("humanize_address was called");
+
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
@@ -511,24 +603,39 @@ fn host_humanize_address(
 
     let canonical = memory
         .extract_vector(canonical_region_ptr as u32)
+        .map_err(
+            debug_err!(err => "humanize_address failed to extract vector from canonical_region_ptr: {err}"),
+        )
         .map_err(set_last_error!(context))?;
+
+    debug!(
+        "humanize_address was called with {}",
+        hex::encode(&canonical)
+    );
 
     let human_addr_str = match bech32::encode(BECH32_PREFIX_ACC_ADDR, canonical.to_base32()) {
         Ok(addr) => addr,
         Err(err) => {
-            return Ok(
-                write_to_memory(&mut call_context.runtime, err.to_string().as_bytes())
-                    .map_err(set_last_error!(context))? as i32,
-            );
+            debug!("humanize_address failed to encode address as bech32");
+            return write_to_memory(&mut call_context.runtime, err.to_string().as_bytes())
+                .map(|n| n as i32)
+                .map_err(debug_err!("failed to write error message to contract"))
+                .map_err(set_last_error!(context));
         }
     };
+
+    debug!("humanize_address returning address {}", human_addr_str);
 
     let human_bytes = human_addr_str.into_bytes();
 
     memory
         .write_to_allocated_memory(human_region_ptr as u32, &human_bytes)
+        .map_err(debug_err!(
+            "humanize_address failed to write to canonical_region_ptr"
+        ))
         .map_err(set_last_error!(context))?;
 
+    debug!("humanize_address finished");
     // return 0 == ok
     Ok(0)
 }
