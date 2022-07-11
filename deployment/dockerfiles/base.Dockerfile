@@ -27,7 +27,8 @@ RUN apt-get update &&  \
     zlib1g-dev \
     libbz2-dev \
     liblz4-dev \
-    libzstd-dev
+    libzstd-dev \
+    clang-10
 #
 
 

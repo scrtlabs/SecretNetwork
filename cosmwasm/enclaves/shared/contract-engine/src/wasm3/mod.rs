@@ -149,8 +149,10 @@ impl Engine {
 
         #[rustfmt::skip] {
         link_fn!(module, context_ptr, "db_read", host_read_db)?;
-        link_fn!(module, context_ptr, "db_write", host_write_db)?;
-        link_fn!(module, context_ptr, "db_remove", host_remove_db)?;
+        #[cfg(not(feature = "query-only"))] {
+            link_fn!(module, context_ptr, "db_write", host_write_db)?;
+            link_fn!(module, context_ptr, "db_remove", host_remove_db)?;
+        }
         link_fn!(module, context_ptr, "canonicalize_address", host_canonicalize_address)?;
         link_fn!(module, context_ptr, "humanize_address", host_humanize_address)?;
         link_fn!(module, context_ptr, "query_chain", host_query_chain)?;
@@ -399,6 +401,7 @@ fn host_read_db(
     Ok(region_ptr as i32)
 }
 
+#[cfg(not(feature = "query-only"))]
 fn host_remove_db(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
@@ -436,6 +439,7 @@ fn host_remove_db(
     Ok(())
 }
 
+#[cfg(not(feature = "query-only"))]
 fn host_write_db(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
