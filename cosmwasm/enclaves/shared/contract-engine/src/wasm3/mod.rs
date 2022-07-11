@@ -6,7 +6,6 @@ use std::ops::DerefMut;
 use log::*;
 
 use bech32::{FromBase32, ToBase32};
-use wasm3::error::{Trap, TrappedResult};
 
 use enclave_cosmos_types::types::ContractCode;
 use enclave_cosmwasm_types::consts::BECH32_PREFIX_ACC_ADDR;
@@ -22,8 +21,47 @@ use crate::gas::WasmCosts;
 use crate::types::IoNonce;
 use crate::wasm::ContractOperation;
 
-type Wasm3RsError = wasm3::error::Error;
 type Wasm3RsResult<T> = wasm3::error::Result<T>;
+
+macro_rules! debug_err {
+    ($message: literal) => {
+        |err| { debug!($message); err }
+    };
+    ($message: literal, $($args: tt)*) => {
+        |err| { debug!($message, $($args)*); err }
+    };
+    ($err: ident => $message: literal) => {
+        |$err| { debug!($message, $err = $err); $err }
+    };
+    ($err: ident => $message: literal, $($args: tt)*) => {
+        |$err| { debug!($message, $($args)*, $err = $err); $err }
+    };
+}
+
+macro_rules! set_last_error {
+    ($context: expr) => {
+        |err| {
+            $context.set_last_error(err);
+            wasm3::error::Trap::Exit
+        }
+    };
+}
+
+macro_rules! link_fn {
+    ($module: expr, $context_ptr: expr, $name: expr, $implementation: expr) => {
+        $module
+            .link_closure("env", $name, move |call_context, args| {
+                debug!("{} was called", $name);
+                let context = unsafe { &*$context_ptr };
+                let mut context = context.borrow_mut();
+                let ret = $implementation(&mut context, call_context, args)
+                    .map_err(set_last_error!(context));
+                debug!("{} finished", $name);
+                ret
+            })
+            .allow_missing_import()
+    };
+}
 
 trait Wasm3ResultEx {
     fn allow_missing_import(self) -> Self;
@@ -67,31 +105,6 @@ impl Context {
         // todo implement gas consumption
         Ok(())
     }
-}
-
-macro_rules! debug_err {
-    ($message: literal) => {
-        |err| { debug!($message); err }
-    };
-    ($message: literal, $($args: tt)*) => {
-        |err| { debug!($message, $($args)*); err }
-    };
-    ($err: ident => $message: literal) => {
-        |$err| { debug!($message, $err = $err); $err }
-    };
-    ($err: ident => $message: literal, $($args: tt)*) => {
-        |$err| { debug!($message, $($args)*, $err = $err); $err }
-    };
-}
-
-macro_rules! link_fn {
-    ($module: expr, $context_ptr: expr, $name: expr, $implementation: expr) => {
-        $module
-            .link_closure("env", $name, move |call_context, args| {
-                $implementation($context_ptr, call_context, args)
-            })
-            .allow_missing_import()
-    };
 }
 
 pub struct Engine {
@@ -338,15 +351,6 @@ fn write_to_memory(runtime: &mut wasm3::Runtime, buffer: &[u8]) -> WasmEngineRes
         .map_err(debug_err!(err => "failed to write to contract memory {err}"))
 }
 
-macro_rules! set_last_error {
-    ($context: expr) => {
-        |err| {
-            $context.set_last_error(err);
-            wasm3::error::Trap::Exit
-        }
-    };
-}
-
 fn show_bytes(bytes: &[u8]) -> String {
     format!(
         "{:?} ({})",
@@ -356,32 +360,22 @@ fn show_bytes(bytes: &[u8]) -> String {
 }
 
 fn host_read_db(
-    context: *mut RefCell<Context>,
+    context: &mut Context,
     mut call_context: wasm3::CallContext,
     state_key_region_ptr: i32,
-) -> TrappedResult<i32> {
-    debug!("db_read was called");
-    let context = unsafe { &*context };
-    let mut context = context.borrow_mut();
-
+) -> WasmEngineResult<i32> {
     let memory = CWMemory::new(&mut call_context.runtime);
 
-    let state_key_name = memory
-        .extract_vector(state_key_region_ptr as u32)
-        .map_err(
-            debug_err!(err => "db_read failed to extract vector from state_key_region_ptr: {err}"),
-        )
-        .map_err(set_last_error!(context))?;
+    let state_key_name = memory.extract_vector(state_key_region_ptr as u32).map_err(
+        debug_err!(err => "db_read failed to extract vector from state_key_region_ptr: {err}"),
+    )?;
 
     debug!("db_read reading key {}", show_bytes(&state_key_name));
 
     let (value, gas_used) =
         read_encrypted_key(&state_key_name, &context.context, &context.contract_key)
-            .map_err(debug_err!("db_read failed to read key from storage"))
-            .map_err(set_last_error!(context))?;
-    context
-        .use_gas_externally(gas_used)
-        .map_err(set_last_error!(context))?;
+            .map_err(debug_err!("db_read failed to read key from storage"))?;
+    context.use_gas_externally(gas_used)?;
 
     debug!(
         "db_read received value {:?}",
@@ -394,83 +388,56 @@ fn host_read_db(
         None => return Ok(0),
     };
 
-    let region_ptr =
-        write_to_memory(&mut call_context.runtime, &value).map_err(set_last_error!(context))?;
+    let region_ptr = write_to_memory(&mut call_context.runtime, &value)?;
 
-    debug!("db_read finished");
     Ok(region_ptr as i32)
 }
 
 #[cfg(not(feature = "query-only"))]
 fn host_remove_db(
-    context: *mut RefCell<Context>,
+    context: &mut Context,
     mut call_context: wasm3::CallContext,
     state_key_region_ptr: i32,
-) -> TrappedResult<()> {
-    debug!("db_remove was called");
-
-    let context = unsafe { &*context };
-    let mut context = context.borrow_mut();
-
+) -> WasmEngineResult<()> {
     let memory = CWMemory::new(&mut call_context.runtime);
 
     if context.operation.is_query() {
         debug!("db_remove was called while in query mode");
-        context.set_last_error(WasmEngineError::UnauthorizedWrite);
-        return Err(Trap::Abort);
+        return Err(WasmEngineError::UnauthorizedWrite);
     }
 
-    let state_key_name = memory
-        .extract_vector(state_key_region_ptr as u32)
-        .map_err(
-            debug_err!(err => "db_remove failed to extract vector from state_key_region_ptr: {err}"),
-        )
-        .map_err(set_last_error!(context))?;
+    let state_key_name = memory.extract_vector(state_key_region_ptr as u32).map_err(
+        debug_err!(err => "db_remove failed to extract vector from state_key_region_ptr: {err}"),
+    )?;
 
     debug!("db_remove removing key {}", show_bytes(&state_key_name));
 
-    let gas_used = remove_encrypted_key(&state_key_name, &context.context, &context.contract_key)
-        .map_err(set_last_error!(context))?;
-    context
-        .use_gas_externally(gas_used)
-        .map_err(set_last_error!(context))?;
+    let gas_used = remove_encrypted_key(&state_key_name, &context.context, &context.contract_key)?;
+    context.use_gas_externally(gas_used)?;
 
-    debug!("db_remove finished");
     Ok(())
 }
 
 #[cfg(not(feature = "query-only"))]
 fn host_write_db(
-    context: *mut RefCell<Context>,
+    context: &mut Context,
     mut call_context: wasm3::CallContext,
     (state_key_region_ptr, value_region_ptr): (i32, i32),
-) -> TrappedResult<()> {
-    debug!("db_write was called");
-
-    let context = unsafe { &*context };
-    let mut context = context.borrow_mut();
-
+) -> WasmEngineResult<()> {
     let memory = CWMemory::new(&mut call_context.runtime);
 
     if context.operation.is_query() {
         debug!("db_write was called while in query mode");
-        context.set_last_error(WasmEngineError::UnauthorizedWrite);
-        return Err(Trap::Abort);
+        return Err(WasmEngineError::UnauthorizedWrite);
     }
 
-    let state_key_name = memory
-        .extract_vector(state_key_region_ptr as u32)
-        .map_err(
-            debug_err!(err => "db_write failed to extract vector from state_key_region_ptr: {err}"),
-        )
-        .map_err(set_last_error!(context))?;
+    let state_key_name = memory.extract_vector(state_key_region_ptr as u32).map_err(
+        debug_err!(err => "db_write failed to extract vector from state_key_region_ptr: {err}"),
+    )?;
 
-    let value = memory
-        .extract_vector(value_region_ptr as u32)
-        .map_err(
-            debug_err!(err => "db_write failed to extract vector from value_region_ptr: {err}"),
-        )
-        .map_err(set_last_error!(context))?;
+    let value = memory.extract_vector(value_region_ptr as u32).map_err(
+        debug_err!(err => "db_write failed to extract vector from value_region_ptr: {err}"),
+    )?;
 
     debug!(
         "db_write writing key: {}, value: {}",
@@ -484,39 +451,27 @@ fn host_write_db(
         &context.context,
         &context.contract_key,
     )
-    .map_err(debug_err!("db_write failed to write key to storage",))
-    .map_err(set_last_error!(context))?;
-    context
-        .use_gas_externally(used_gas)
-        .map_err(set_last_error!(context))?;
+    .map_err(debug_err!("db_write failed to write key to storage",))?;
+    context.use_gas_externally(used_gas)?;
 
-    debug!("db_write finished");
     Ok(())
 }
 
 fn host_canonicalize_address(
-    context: *mut RefCell<Context>,
+    context: &mut Context,
     mut call_context: wasm3::CallContext,
     (human_region_ptr, canonical_region_ptr): (i32, i32),
-) -> TrappedResult<i32> {
-    debug!("canonicalize_address was called");
-
-    let context = unsafe { &*context };
-    let mut context = context.borrow_mut();
-
+) -> WasmEngineResult<i32> {
     let mut memory = CWMemory::new(&mut call_context.runtime);
 
     let cost = context.gas_costs.external_canonicalize_address as u64;
-    context
-        .use_gas_externally(cost)
-        .map_err(set_last_error!(context))?;
+    context.use_gas_externally(cost)?;
 
     let human = memory
         .extract_vector(human_region_ptr as u32)
         .map_err(
             debug_err!(err => "canonicalize_address failed to extract vector from human_region_ptr: {err}"),
-        )
-        .map_err(set_last_error!(context))?;
+        )?;
 
     let mut human_addr_str = match std::str::from_utf8(&human) {
         Ok(addr) => addr,
@@ -527,8 +482,7 @@ fn host_canonicalize_address(
             );
             return write_to_memory(&mut call_context.runtime, b"input is not valid UTF-8")
                 .map(|n| n as i32)
-                .map_err(debug_err!("failed to write error message to contract"))
-                .map_err(set_last_error!(context));
+                .map_err(debug_err!("failed to write error message to contract"));
         }
     };
     human_addr_str = human_addr_str.trim();
@@ -536,8 +490,7 @@ fn host_canonicalize_address(
         debug!("canonicalize_address input was empty");
         return write_to_memory(&mut call_context.runtime, b"input is empty")
             .map(|n| n as i32)
-            .map_err(debug_err!("failed to write error message to contract"))
-            .map_err(set_last_error!(context));
+            .map_err(debug_err!("failed to write error message to contract"));
     }
 
     debug!("canonicalize_address was called with {:?}", human_addr_str);
@@ -551,8 +504,7 @@ fn host_canonicalize_address(
             );
             return write_to_memory(&mut call_context.runtime, err.to_string().as_bytes())
                 .map(|n| n as i32)
-                .map_err(debug_err!("failed to write error message to contract"))
-                .map_err(set_last_error!(context));
+                .map_err(debug_err!("failed to write error message to contract"));
         }
     };
 
@@ -563,54 +515,41 @@ fn host_canonicalize_address(
             format!("wrong address prefix: {:?}", decoded_prefix).as_bytes(),
         )
         .map(|n| n as i32)
-        .map_err(debug_err!("failed to write error message to contract"))
-        .map_err(set_last_error!(context));
+        .map_err(debug_err!("failed to write error message to contract"));
     }
 
-    let canonical = Vec::<u8>::from_base32(&data)
-        .map_err(|err| {
-            // Assaf: From reading https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#607
-            // and https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#228 I don't think this can fail that way
-            debug!("canonicalize_address failed to parse base32");
-            WasmEngineError::Base32Error
-        })
-        .map_err(set_last_error!(context))?;
+    let canonical = Vec::<u8>::from_base32(&data).map_err(|err| {
+        // Assaf: From reading https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#607
+        // and https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#228 I don't think this can fail that way
+        debug!("canonicalize_address failed to parse base32: {}", err);
+        WasmEngineError::Base32Error
+    })?;
 
     memory
         .write_to_allocated_memory(canonical_region_ptr as u32, &canonical)
         .map_err(debug_err!(
             "canonicalize_address failed to write to canonical_region_ptr"
-        ))
-        .map_err(set_last_error!(context))?;
+        ))?;
 
-    debug!("canonicalize_address finished");
     // return 0 == ok
     Ok(0)
 }
 
 fn host_humanize_address(
-    context: *mut RefCell<Context>,
+    context: &mut Context,
     mut call_context: wasm3::CallContext,
     (canonical_region_ptr, human_region_ptr): (i32, i32),
-) -> TrappedResult<i32> {
-    debug!("humanize_address was called");
-
-    let context = unsafe { &*context };
-    let mut context = context.borrow_mut();
-
+) -> WasmEngineResult<i32> {
     let mut memory = CWMemory::new(&mut call_context.runtime);
 
     let cost = context.gas_costs.external_canonicalize_address as u64;
-    context
-        .use_gas_externally(cost)
-        .map_err(set_last_error!(context))?;
+    context.use_gas_externally(cost)?;
 
     let canonical = memory
         .extract_vector(canonical_region_ptr as u32)
         .map_err(
             debug_err!(err => "humanize_address failed to extract vector from canonical_region_ptr: {err}"),
-        )
-        .map_err(set_last_error!(context))?;
+        )?;
 
     debug!(
         "humanize_address was called with {}",
@@ -623,8 +562,7 @@ fn host_humanize_address(
             debug!("humanize_address failed to encode address as bech32");
             return write_to_memory(&mut call_context.runtime, err.to_string().as_bytes())
                 .map(|n| n as i32)
-                .map_err(debug_err!("failed to write error message to contract"))
-                .map_err(set_last_error!(context));
+                .map_err(debug_err!("failed to write error message to contract"));
         }
     };
 
@@ -636,118 +574,89 @@ fn host_humanize_address(
         .write_to_allocated_memory(human_region_ptr as u32, &human_bytes)
         .map_err(debug_err!(
             "humanize_address failed to write to canonical_region_ptr"
-        ))
-        .map_err(set_last_error!(context))?;
+        ))?;
 
-    debug!("humanize_address finished");
     // return 0 == ok
     Ok(0)
 }
 
 fn host_query_chain(
-    context: *mut RefCell<Context>,
+    context: &mut Context,
     mut call_context: wasm3::CallContext,
     query_region_ptr: i32,
-) -> TrappedResult<i32> {
-    let context = unsafe { &*context };
-    let mut context = context.borrow_mut();
-
+) -> WasmEngineResult<i32> {
     let memory = CWMemory::new(&mut call_context.runtime);
     todo!()
 }
 
 fn host_debug_print(
-    context: *mut RefCell<Context>,
+    context: &mut Context,
     mut call_context: wasm3::CallContext,
     message_region_ptr: i32,
-) -> TrappedResult<i32> {
-    let context = unsafe { &*context };
-    let mut context = context.borrow_mut();
-
+) -> WasmEngineResult<i32> {
     let memory = CWMemory::new(&mut call_context.runtime);
     todo!()
 }
 
 fn host_gas(
-    context: *mut RefCell<Context>,
+    context: &mut Context,
     mut call_context: wasm3::CallContext,
     gas_amount: i32,
-) -> TrappedResult<i32> {
-    let context = unsafe { &*context };
-    let mut context = context.borrow_mut();
-
+) -> WasmEngineResult<i32> {
     let memory = CWMemory::new(&mut call_context.runtime);
     todo!()
 }
 
 fn host_secp256k1_verify(
-    context: *mut RefCell<Context>,
+    context: &mut Context,
     mut call_context: wasm3::CallContext,
     (message_hash_ptr, signature_ptr, public_key_ptr): (i32, i32, i32),
-) -> TrappedResult<i32> {
-    let context = unsafe { &*context };
-    let mut context = context.borrow_mut();
-
+) -> WasmEngineResult<i32> {
     let memory = CWMemory::new(&mut call_context.runtime);
     todo!()
 }
 
 fn host_secp256k1_recover_pubkey(
-    context: *mut RefCell<Context>,
+    context: &mut Context,
     mut call_context: wasm3::CallContext,
     (message_hash_ptr, signature_ptr, recovery_param): (i32, i32, i32),
-) -> TrappedResult<i32> {
-    let context = unsafe { &*context };
-    let mut context = context.borrow_mut();
-
+) -> WasmEngineResult<i32> {
     let memory = CWMemory::new(&mut call_context.runtime);
     todo!()
 }
 
 fn host_ed25519_verify(
-    context: *mut RefCell<Context>,
+    context: &mut Context,
     mut call_context: wasm3::CallContext,
     (message_ptr, signature_ptr, public_key_ptr): (i32, i32, i32),
-) -> TrappedResult<i32> {
-    let context = unsafe { &*context };
-    let mut context = context.borrow_mut();
-
+) -> WasmEngineResult<i32> {
     let memory = CWMemory::new(&mut call_context.runtime);
     todo!()
 }
 
 fn host_ed25519_batch_verify(
-    context: *mut RefCell<Context>,
+    context: &mut Context,
     mut call_context: wasm3::CallContext,
     (messages_ptr, signatures_ptr, public_keys_ptr): (i32, i32, i32),
-) -> TrappedResult<i32> {
-    let context = unsafe { &*context };
-    let mut context = context.borrow_mut();
-
+) -> WasmEngineResult<i32> {
     let memory = CWMemory::new(&mut call_context.runtime);
     todo!()
 }
 
 fn host_secp256k1_sign(
-    context: *mut RefCell<Context>,
+    context: &mut Context,
     mut call_context: wasm3::CallContext,
     (message_ptr, private_key_ptr): (i32, i32),
-) -> TrappedResult<i32> {
-    let context = unsafe { &*context };
-    let mut context = context.borrow_mut();
-
+) -> WasmEngineResult<i32> {
     let memory = CWMemory::new(&mut call_context.runtime);
     todo!()
 }
 
 fn host_ed25519_sign(
-    context: *mut RefCell<Context>,
+    context: &mut Context,
     mut call_context: wasm3::CallContext,
     (message_ptr, private_key_ptr): (i32, i32),
-) -> TrappedResult<i32> {
-    let context = unsafe { &*context };
-    let mut context = context.borrow_mut();
-
+) -> WasmEngineResult<i32> {
     let memory = CWMemory::new(&mut call_context.runtime);
     todo!()
 }
