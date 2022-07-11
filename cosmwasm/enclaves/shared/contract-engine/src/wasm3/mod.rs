@@ -9,7 +9,7 @@ use bech32::{FromBase32, ToBase32};
 
 use enclave_cosmos_types::types::ContractCode;
 use enclave_cosmwasm_types::consts::BECH32_PREFIX_ACC_ADDR;
-use enclave_crypto::Ed25519PublicKey;
+use enclave_crypto::{Ed25519PublicKey, WasmApiCryptoError};
 use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::contract_validation::ContractKey;
@@ -613,7 +613,110 @@ fn host_secp256k1_verify(
     (message_hash_ptr, signature_ptr, public_key_ptr): (i32, i32, i32),
 ) -> WasmEngineResult<i32> {
     let memory = CWMemory::new(&mut call_context.runtime);
-    todo!()
+
+    let cost = context.gas_costs.external_secp256k1_verify as u64;
+    context.use_gas_externally(cost)?;
+
+    let message_hash_data = memory.extract_vector(message_hash_ptr as u32).map_err(
+    debug_err!(err => "secp256k1_verify error while trying to read message_hash from wasm memory: {err}")
+    )?;
+    let signature_data = memory.extract_vector(signature_ptr as u32).map_err(
+        debug_err!(err => "secp256k1_verify error while trying to read signature from wasm memory: {err}")
+    )?;
+    let public_key = memory.extract_vector(public_key_ptr as u32).map_err(
+        debug_err!(err => "secp256k1_verify error while trying to read public_key from wasm memory: {err}")
+    )?;
+
+    trace!(
+        "secp256k1_verify() was called from WASM code with message_hash {:x?} (len {:?} should be 32)",
+        &message_hash_data,
+        message_hash_data.len()
+    );
+    trace!(
+        "secp256k1_verify() was called from WASM code with signature {:x?} (len {:?} should be 64)",
+        &signature_data,
+        signature_data.len()
+    );
+    trace!(
+        "secp256k1_verify() was called from WASM code with public_key {:x?} (len {:?} should be 33 or 65)",
+        &public_key,
+        public_key.len()
+    );
+
+    // check message_hash input
+    if message_hash_data.len() != 32 {
+        // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L93
+        return Ok(WasmApiCryptoError::InvalidHashFormat as i32);
+    }
+
+    // check signature input
+    if signature_data.len() != 64 {
+        // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
+        return Ok(WasmApiCryptoError::InvalidSignatureFormat as i32);
+    }
+
+    // check pubkey input
+    if !match public_key.first() {
+        // compressed
+        Some(0x02) | Some(0x03) => public_key.len() == 33,
+        // uncompressed
+        Some(0x04) => public_key.len() == 65,
+        // hybrid
+        // see https://docs.rs/secp256k1-abc-sys/0.1.2/secp256k1_abc_sys/fn.secp256k1_ec_pubkey_parse.html
+        Some(0x06) | Some(0x07) => public_key.len() == 65,
+        _ => false,
+    } {
+        // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L95
+        return Ok(WasmApiCryptoError::InvalidPubkeyFormat as i32);
+    }
+
+    let secp256k1_msg = match secp256k1::Message::from_slice(&message_hash_data) {
+        Err(err) => {
+            debug!(
+                "secp256k1_verify failed to create a secp256k1 message from message_hash: {:?}",
+                err
+            );
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
+            return Ok(WasmApiCryptoError::GenericErr as i32);
+        }
+        Ok(x) => x,
+    };
+
+    let secp256k1_sig = match secp256k1::ecdsa::Signature::from_compact(&signature_data) {
+        Err(err) => {
+            debug!("secp256k1_verify() malformed signature: {:?}", err);
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
+            return Ok(WasmApiCryptoError::GenericErr as i32);
+        }
+        Ok(x) => x,
+    };
+
+    let secp256k1_pk = match secp256k1::PublicKey::from_slice(public_key.as_slice()) {
+        Err(err) => {
+            debug!("secp256k1_verify() malformed pubkey: {:?}", err);
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
+            return Ok(WasmApiCryptoError::GenericErr as i32);
+        }
+        Ok(x) => x,
+    };
+
+    match secp256k1::Secp256k1::verification_only().verify_ecdsa(
+        &secp256k1_msg,
+        &secp256k1_sig,
+        &secp256k1_pk,
+    ) {
+        Err(err) => {
+            debug!("secp256k1_verify() failed to verify signature: {:?}", err);
+            // return 1 == failed, invalid signature
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L220
+            Ok(1)
+        }
+        Ok(()) => {
+            // return 0 == success, valid signature
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L220
+            Ok(0)
+        }
+    }
 }
 
 fn host_secp256k1_recover_pubkey(
