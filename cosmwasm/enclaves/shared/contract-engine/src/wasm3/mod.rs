@@ -327,7 +327,7 @@ impl<'m> CWMemory<'m> {
 
 fn write_to_memory(runtime: &mut wasm3::Runtime, buffer: &[u8]) -> WasmEngineResult<u32> {
     let region_ptr = (|| {
-        let alloc_fn = runtime.find_function::<u32, u32>("alloc")?;
+        let alloc_fn = runtime.find_function::<u32, u32>("allocate")?;
         alloc_fn.call(buffer.len() as u32)
     })()
     .map_err(debug_err!(err => "failed to allocate {} bytes in contract: {err}", buffer.len()))
