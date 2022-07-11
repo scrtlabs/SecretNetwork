@@ -3,9 +3,11 @@ use std::convert::TryInto;
 use std::marker::PhantomData;
 use std::ops::DerefMut;
 
+use bech32::{FromBase32, ToBase32};
 use wasm3::error::{Trap, TrappedResult};
 
 use enclave_cosmos_types::types::ContractCode;
+use enclave_cosmwasm_types::consts::BECH32_PREFIX_ACC_ADDR;
 use enclave_crypto::Ed25519PublicKey;
 use enclave_ffi_types::{Ctx, EnclaveError};
 
@@ -425,25 +427,110 @@ fn host_write_db(
 fn host_canonicalize_address(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: i32,
+    (human_region_ptr, canonical_region_ptr): (i32, i32),
 ) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
-    let memory = CWMemory::new(&mut call_context.runtime);
-    todo!()
+    let mut memory = CWMemory::new(&mut call_context.runtime);
+
+    let cost = context.gas_costs.external_canonicalize_address as u64;
+    context
+        .use_gas_externally(cost)
+        .map_err(set_last_error!(context))?;
+
+    let human = memory
+        .extract_vector(human_region_ptr as u32)
+        .map_err(set_last_error!(context))?;
+
+    let mut human_addr_str = match std::str::from_utf8(&human) {
+        Ok(addr) => addr,
+        Err(_err) => {
+            return Ok(
+                write_to_memory(&mut call_context.runtime, b"input is not valid UTF-8")
+                    .map_err(set_last_error!(context))? as i32,
+            );
+        }
+    };
+    human_addr_str = human_addr_str.trim();
+    if human_addr_str.is_empty() {
+        return Ok(
+            write_to_memory(&mut call_context.runtime, b"input is empty")
+                .map_err(set_last_error!(context))? as i32,
+        );
+    }
+
+    let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
+        Ok(ret) => ret,
+        Err(err) => {
+            return Ok(
+                write_to_memory(&mut call_context.runtime, err.to_string().as_bytes())
+                    .map_err(set_last_error!(context))? as i32,
+            );
+        }
+    };
+
+    if decoded_prefix != BECH32_PREFIX_ACC_ADDR {
+        return Ok(write_to_memory(
+            &mut call_context.runtime,
+            format!("wrong address prefix: {:?}", decoded_prefix).as_bytes(),
+        )
+        .map_err(set_last_error!(context))? as i32);
+    }
+
+    let canonical = Vec::<u8>::from_base32(&data)
+        .map_err(|err| {
+            // Assaf: From reading https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#607
+            // and https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#228 I don't think this can fail that way
+            WasmEngineError::Base32Error
+        })
+        .map_err(set_last_error!(context))?;
+
+    memory
+        .write_to_allocated_memory(canonical_region_ptr as u32, &canonical)
+        .map_err(set_last_error!(context))?;
+
+    // return 0 == ok
+    Ok(0)
 }
 
 fn host_humanize_address(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: i32,
+    (canonical_region_ptr, human_region_ptr): (i32, i32),
 ) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
 
-    let memory = CWMemory::new(&mut call_context.runtime);
-    todo!()
+    let mut memory = CWMemory::new(&mut call_context.runtime);
+
+    let cost = context.gas_costs.external_canonicalize_address as u64;
+    context
+        .use_gas_externally(cost)
+        .map_err(set_last_error!(context))?;
+
+    let canonical = memory
+        .extract_vector(canonical_region_ptr as u32)
+        .map_err(set_last_error!(context))?;
+
+    let human_addr_str = match bech32::encode(BECH32_PREFIX_ACC_ADDR, canonical.to_base32()) {
+        Ok(addr) => addr,
+        Err(err) => {
+            return Ok(
+                write_to_memory(&mut call_context.runtime, err.to_string().as_bytes())
+                    .map_err(set_last_error!(context))? as i32,
+            );
+        }
+    };
+
+    let human_bytes = human_addr_str.into_bytes();
+
+    memory
+        .write_to_allocated_memory(human_region_ptr as u32, &human_bytes)
+        .map_err(set_last_error!(context))?;
+
+    // return 0 == ok
+    Ok(0)
 }
 
 fn host_query_chain(
