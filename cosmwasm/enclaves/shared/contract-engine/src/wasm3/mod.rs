@@ -6,6 +6,7 @@ use std::ops::DerefMut;
 use log::*;
 
 use bech32::{FromBase32, ToBase32};
+use wasm3::error::Trap;
 
 use enclave_cosmos_types::types::ContractCode;
 use enclave_cosmwasm_types::consts::BECH32_PREFIX_ACC_ADDR;
@@ -21,6 +22,7 @@ use crate::gas::WasmCosts;
 use crate::types::IoNonce;
 use crate::wasm::ContractOperation;
 
+type Wasm3RsError = wasm3::error::Error;
 type Wasm3RsResult<T> = wasm3::error::Result<T>;
 
 macro_rules! debug_err {
@@ -70,7 +72,12 @@ trait Wasm3ResultEx {
 impl Wasm3ResultEx for Wasm3RsResult<()> {
     fn allow_missing_import(self) -> Self {
         match self {
-            Err(wasm3::error::Error::FunctionNotFound) => Ok(()),
+            Err(Wasm3RsError::FunctionNotFound) => Ok(()),
+            // Workaround for erroneous non-enumerated error in this case in wasm3.
+            // Search for the string "function signature mismatch" in the C source
+            Err(Wasm3RsError::Wasm3(wasm3_error)) if Trap::from(wasm3_error) == Trap::Abort => {
+                Err(Wasm3RsError::InvalidFunctionSignature)
+            }
             other => other,
         }
     }
@@ -155,10 +162,14 @@ impl Engine {
         context_ptr: *mut RefCell<Context>,
         contract_code: ContractCode,
     ) -> Wasm3RsResult<Engine> {
+        debug!("setting up runtime");
         let environment = wasm3::Environment::new()?;
+        debug!("initialized environment");
         let runtime = environment.create_runtime(1024 * 60)?;
+        debug!("initialized runtime");
 
         let mut module = runtime.parse_and_load_module(contract_code.code())?;
+        debug!("parsed module");
 
         #[rustfmt::skip] {
         link_fn!(module, context_ptr, "db_read", host_read_db)?;
@@ -178,6 +189,7 @@ impl Engine {
         link_fn!(module, context_ptr, "secp256k1_sign", host_secp256k1_sign)?;
         link_fn!(module, context_ptr, "ed25519_sign", host_ed25519_sign)?;
         }
+        debug!("linked functions");
 
         Ok(Self {
             context: context_ptr,
@@ -215,41 +227,59 @@ impl Engine {
 
     pub fn init(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, EnclaveError> {
         let handle_wasm3_err = |err| unsafe {
+            debug!("init failed with {:?}", err);
             let context = &*self.context;
             let mut context = context.borrow_mut();
+            debug!("booped context");
             wasm3_error_to_enclave_error(context.deref_mut(), err)
         };
 
-        self.init_fn()
+        debug!("init starting");
+        let ret = self
+            .init_fn()
             .map_err(handle_wasm3_err)?
             .call(env_ptr, msg_ptr)
-            .map_err(handle_wasm3_err)
+            .map_err(handle_wasm3_err);
+        debug!("init returned {:?}", ret);
+        ret
     }
 
     pub fn handle(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, EnclaveError> {
         let handle_wasm3_err = |err| unsafe {
+            debug!("handle failed with {:?}", err);
             let context = &*self.context;
             let mut context = context.borrow_mut();
+            debug!("booped context");
             wasm3_error_to_enclave_error(context.deref_mut(), err)
         };
 
-        self.handle_fn()
+        debug!("handle starting");
+        let ret = self
+            .handle_fn()
             .map_err(handle_wasm3_err)?
             .call(env_ptr, msg_ptr)
-            .map_err(handle_wasm3_err)
+            .map_err(handle_wasm3_err);
+        debug!("handle returned {:?}", ret);
+        ret
     }
 
     pub fn query(&mut self, msg_ptr: u32) -> Result<u32, EnclaveError> {
         let handle_wasm3_err = |err| unsafe {
+            debug!("query failed with {:?}", err);
             let context = &*self.context;
             let mut context = context.borrow_mut();
+            debug!("booped context");
             wasm3_error_to_enclave_error(context.deref_mut(), err)
         };
 
-        self.query_fn()
+        debug!("query starting");
+        let ret = self
+            .query_fn()
             .map_err(handle_wasm3_err)?
             .call(msg_ptr)
-            .map_err(handle_wasm3_err)
+            .map_err(handle_wasm3_err);
+        debug!("query returned {:?}", ret);
+        ret
     }
 }
 
@@ -525,6 +555,11 @@ fn host_canonicalize_address(
         WasmEngineError::Base32Error
     })?;
 
+    debug!(
+        "canonicalize_address returning address {}",
+        hex::encode(human_addr_str)
+    );
+
     memory
         .write_to_allocated_memory(canonical_region_ptr as u32, &canonical)
         .map_err(debug_err!(
@@ -723,7 +758,7 @@ fn host_secp256k1_recover_pubkey(
     context: &mut Context,
     mut call_context: wasm3::CallContext,
     (message_hash_ptr, signature_ptr, recovery_param): (i32, i32, i32),
-) -> WasmEngineResult<i32> {
+) -> WasmEngineResult<i64> {
     let memory = CWMemory::new(&mut call_context.runtime);
     todo!()
 }
@@ -750,7 +785,7 @@ fn host_secp256k1_sign(
     context: &mut Context,
     mut call_context: wasm3::CallContext,
     (message_ptr, private_key_ptr): (i32, i32),
-) -> WasmEngineResult<i32> {
+) -> WasmEngineResult<i64> {
     let memory = CWMemory::new(&mut call_context.runtime);
     todo!()
 }
@@ -759,7 +794,7 @@ fn host_ed25519_sign(
     context: &mut Context,
     mut call_context: wasm3::CallContext,
     (message_ptr, private_key_ptr): (i32, i32),
-) -> WasmEngineResult<i32> {
+) -> WasmEngineResult<i64> {
     let memory = CWMemory::new(&mut call_context.runtime);
     todo!()
 }

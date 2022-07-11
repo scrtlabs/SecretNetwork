@@ -2431,7 +2431,7 @@ func TestBenchmarkSecp256k1VerifyAPI(t *testing.T) {
 func TestBenchmarkSecp256k1VerifyCrate(t *testing.T) {
 	t.SkipNow()
 	// Assaf: I wrote the benchmark like this because the init functions take testing.T
-	// and not testing.B and I just wanted to quickly get a feel for the perf improvments
+	// and not testing.B and I just wanted to quickly get a feel for the perf improvements
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm")
 
 	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, defaultGasForTests)
