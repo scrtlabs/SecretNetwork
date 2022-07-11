@@ -643,7 +643,7 @@ fn host_humanize_address(
 fn host_query_chain(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: i32,
+    query_region_ptr: i32,
 ) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
@@ -655,7 +655,7 @@ fn host_query_chain(
 fn host_debug_print(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: i32,
+    message_region_ptr: i32,
 ) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
@@ -667,7 +667,7 @@ fn host_debug_print(
 fn host_gas(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: i32,
+    gas_amount: i32,
 ) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
@@ -679,7 +679,7 @@ fn host_gas(
 fn host_secp256k1_verify(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: i32,
+    (message_hash_ptr, signature_ptr, public_key_ptr): (i32, i32, i32),
 ) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
@@ -691,7 +691,7 @@ fn host_secp256k1_verify(
 fn host_secp256k1_recover_pubkey(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: i32,
+    (message_hash_ptr, signature_ptr, recovery_param): (i32, i32, i32),
 ) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
@@ -703,7 +703,7 @@ fn host_secp256k1_recover_pubkey(
 fn host_ed25519_verify(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: i32,
+    (message_ptr, signature_ptr, public_key_ptr): (i32, i32, i32),
 ) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
@@ -715,7 +715,7 @@ fn host_ed25519_verify(
 fn host_ed25519_batch_verify(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: i32,
+    (messages_ptr, signatures_ptr, public_keys_ptr): (i32, i32, i32),
 ) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
@@ -727,7 +727,7 @@ fn host_ed25519_batch_verify(
 fn host_secp256k1_sign(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: i32,
+    (message_ptr, private_key_ptr): (i32, i32),
 ) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
@@ -739,7 +739,7 @@ fn host_secp256k1_sign(
 fn host_ed25519_sign(
     context: *mut RefCell<Context>,
     mut call_context: wasm3::CallContext,
-    state_key_region_ptr: i32,
+    (message_ptr, private_key_ptr): (i32, i32),
 ) -> TrappedResult<i32> {
     let context = unsafe { &*context };
     let mut context = context.borrow_mut();
