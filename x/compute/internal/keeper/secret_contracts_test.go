@@ -180,7 +180,7 @@ func tryDecryptWasmEvents(ctx sdk.Context, nonce []byte) []ContractEvent {
 	return res
 }
 
-// getDecryptedData decrytes the output of the first function to be called
+// getDecryptedData decrypts the output of the first function to be called
 // Only returns the data, logs and messages from the first function call
 func getDecryptedData(t *testing.T, data []byte, nonce []byte) []byte {
 	if len(data) == 0 {
@@ -229,7 +229,7 @@ func extractInnerError(t *testing.T, err error, nonce []byte, isEncrypted bool, 
 
 const defaultGasForTests uint64 = 100_000
 
-// wrap the defualt gas meter with a counter of wasm calls
+// wrap the default gas meter with a counter of wasm calls
 // in order to verify that every wasm call consumes gas
 type WasmCounterGasMeter struct {
 	wasmCounter uint64
@@ -313,7 +313,7 @@ func queryHelperImpl(
 	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz, false)
 
 	if wasmCallCount < 0 {
-		// default, just check that at least 1 call happend
+		// default, just check that at least 1 call happened
 		require.NotZero(t, gasMeter.GetWasmCounter(), err)
 	} else {
 		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), err)
@@ -375,7 +375,7 @@ func execHelperImpl(
 	gasUsed := gasAfter - gasBefore
 
 	if wasmCallCount < 0 {
-		// default, just check that at least 1 call happend
+		// default, just check that at least 1 call happened
 		require.NotZero(t, gasMeter.GetWasmCounter(), err)
 	} else {
 		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), err)
@@ -436,7 +436,7 @@ func initHelperImpl(
 	contractAddress, _, err := keeper.Instantiate(ctx, codeID, creator /* nil,*/, initMsgBz, base64.RawURLEncoding.EncodeToString(nonce), sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), nil)
 
 	if wasmCallCount < 0 {
-		// default, just check that at least 1 call happend
+		// default, just check that at least 1 call happened
 		require.NotZero(t, gasMeter.GetWasmCounter(), err)
 	} else {
 		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), err)
@@ -1797,20 +1797,20 @@ func TestDepositToContract(t *testing.T) {
 			require.Empty(t, initErr)
 
 			contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
-			walletCointsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			walletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
 			require.Equal(t, "", contractCoinsBefore.String())
-			require.Equal(t, "200000denom", walletCointsBefore.String())
+			require.Equal(t, "200000denom", walletCoinsBefore.String())
 
 			data, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"deposit_to_contract":{}}`, false, testContract.IsCosmWasmV1, defaultGasForTests, 17)
 
 			require.Empty(t, execErr)
 
 			contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
-			walletCointsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			walletCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
 			require.Equal(t, "17denom", contractCoinsAfter.String())
-			require.Equal(t, "199983denom", walletCointsAfter.String())
+			require.Equal(t, "199983denom", walletCoinsAfter.String())
 
 			require.Equal(t, `[{"denom":"denom","amount":"17"}]`, string(data))
 		})
@@ -1830,18 +1830,18 @@ func TestContractSendFunds(t *testing.T) {
 			require.Empty(t, execErr)
 
 			contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
-			walletCointsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			walletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
 			require.Equal(t, "17denom", contractCoinsBefore.String())
-			require.Equal(t, "199983denom", walletCointsBefore.String())
+			require.Equal(t, "199983denom", walletCoinsBefore.String())
 
 			_, _, _, execErr = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds":{"from":"%s","to":"%s","denom":"%s","amount":%d}}`, addr.String(), walletA.String(), "denom", 17), false, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 			contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
-			walletCointsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			walletCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
 			require.Equal(t, "", contractCoinsAfter.String())
-			require.Equal(t, "200000denom", walletCointsAfter.String())
+			require.Equal(t, "200000denom", walletCoinsAfter.String())
 
 			require.Empty(t, execErr)
 		})
@@ -1880,10 +1880,10 @@ func TestContractSendFundsToInitCallback(t *testing.T) {
 			require.Empty(t, initErr)
 
 			contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
-			walletCointsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			walletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
 			require.Equal(t, "", contractCoinsBefore.String())
-			require.Equal(t, "200000denom", walletCointsBefore.String())
+			require.Equal(t, "200000denom", walletCoinsBefore.String())
 
 			_, execEvents, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds_to_init_callback":{"code_id":%d,"denom":"%s","amount":%d,"code_hash":"%s"}}`, codeID, "denom", 17, codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 17)
 
@@ -1891,14 +1891,14 @@ func TestContractSendFundsToInitCallback(t *testing.T) {
 			require.NotEmpty(t, execEvents)
 
 			contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
-			walletCointsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			walletCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
 			newContract, err := sdk.AccAddressFromBech32(execEvents[1][0].Value)
 			require.NoError(t, err)
 			newContractCoins := keeper.bankKeeper.GetAllBalances(ctx, newContract)
 
 			require.Equal(t, "", contractCoinsAfter.String())
-			require.Equal(t, "199983denom", walletCointsAfter.String())
+			require.Equal(t, "199983denom", walletCoinsAfter.String())
 			require.Equal(t, "17denom", newContractCoins.String())
 		})
 	}
@@ -1913,10 +1913,10 @@ func TestContractSendFundsToInitCallbackNotEnough(t *testing.T) {
 			require.Empty(t, initErr)
 
 			contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
-			walletCointsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			walletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
 			require.Equal(t, "", contractCoinsBefore.String())
-			require.Equal(t, "200000denom", walletCointsBefore.String())
+			require.Equal(t, "200000denom", walletCoinsBefore.String())
 
 			_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds_to_init_callback":{"code_id":%d,"denom":"%s","amount":%d,"code_hash":"%s"}}`, codeID, "denom", 18, codeHash), false, testContract.IsCosmWasmV1, defaultGasForTests, 17)
 
@@ -1926,10 +1926,10 @@ func TestContractSendFundsToInitCallbackNotEnough(t *testing.T) {
 			require.Contains(t, execErr.GenericErr.Msg, "insufficient funds")
 
 			contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
-			walletCointsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			walletCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
 			require.Equal(t, "17denom", contractCoinsAfter.String())
-			require.Equal(t, "199983denom", walletCointsAfter.String())
+			require.Equal(t, "199983denom", walletCoinsAfter.String())
 		})
 	}
 }
@@ -1947,11 +1947,11 @@ func TestContractSendFundsToExecCallback(t *testing.T) {
 
 			contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
 			contract2CoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr2)
-			walletCointsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			walletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
 			require.Equal(t, "", contractCoinsBefore.String())
 			require.Equal(t, "", contract2CoinsBefore.String())
-			require.Equal(t, "200000denom", walletCointsBefore.String())
+			require.Equal(t, "200000denom", walletCoinsBefore.String())
 
 			_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds_to_exec_callback":{"to":"%s","denom":"%s","amount":%d,"code_hash":"%s"}}`, addr2.String(), "denom", 17, codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 17)
 
@@ -1959,11 +1959,11 @@ func TestContractSendFundsToExecCallback(t *testing.T) {
 
 			contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
 			contract2CoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr2)
-			walletCointsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			walletCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
 			require.Equal(t, "", contractCoinsAfter.String())
 			require.Equal(t, "17denom", contract2CoinsAfter.String())
-			require.Equal(t, "199983denom", walletCointsAfter.String())
+			require.Equal(t, "199983denom", walletCoinsAfter.String())
 		})
 	}
 }
@@ -1981,11 +1981,11 @@ func TestContractSendFundsToExecCallbackNotEnough(t *testing.T) {
 
 			contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
 			contract2CoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr2)
-			walletCointsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			walletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
 			require.Equal(t, "", contractCoinsBefore.String())
 			require.Equal(t, "", contract2CoinsBefore.String())
-			require.Equal(t, "200000denom", walletCointsBefore.String())
+			require.Equal(t, "200000denom", walletCoinsBefore.String())
 
 			_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds_to_exec_callback":{"to":"%s","denom":"%s","amount":%d,"code_hash":"%s"}}`, addr2.String(), "denom", 19, codeHash), false, testContract.IsCosmWasmV1, defaultGasForTests, 17)
 
@@ -1994,11 +1994,11 @@ func TestContractSendFundsToExecCallbackNotEnough(t *testing.T) {
 
 			contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
 			contract2CoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr2)
-			walletCointsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			walletCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
 			require.Equal(t, "17denom", contractCoinsAfter.String())
 			require.Equal(t, "", contract2CoinsAfter.String())
-			require.Equal(t, "199983denom", walletCointsAfter.String())
+			require.Equal(t, "199983denom", walletCoinsAfter.String())
 		})
 	}
 }
@@ -2076,7 +2076,7 @@ func TestGasIsChargedForExecCallbackToExec(t *testing.T) {
 }
 
 func TestGasIsChargedForExecExternalQuery(t *testing.T) {
-	t.SkipNow() // as of v0.10 CowmWasm are overriding the default gas meter
+	t.SkipNow() // as of v0.10 CosmWasm are overriding the default gas meter
 
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
@@ -2092,7 +2092,7 @@ func TestGasIsChargedForExecExternalQuery(t *testing.T) {
 }
 
 func TestGasIsChargedForInitExternalQuery(t *testing.T) {
-	t.SkipNow() // as of v0.10 CowmWasm are overriding the default gas meter
+	t.SkipNow() // as of v0.10 CosmWasm are overriding the default gas meter
 
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
@@ -2108,7 +2108,7 @@ func TestGasIsChargedForInitExternalQuery(t *testing.T) {
 }
 
 func TestGasIsChargedForQueryExternalQuery(t *testing.T) {
-	t.SkipNow() // as of v0.10 CowmWasm are overriding the default gas meter
+	t.SkipNow() // as of v0.10 CosmWasm are overriding the default gas meter
 
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
@@ -2920,7 +2920,7 @@ func TestSecp256k1Verify(t *testing.T) {
 func TestBenchmarkSecp256k1VerifyAPI(t *testing.T) {
 	t.SkipNow()
 	// Assaf: I wrote the benchmark like this because the init functions take testing.T
-	// and not testing.B and I just wanted to quickly get a feel for the perf improvments
+	// and not testing.B and I just wanted to quickly get a feel for the perf improvements
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
 			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath)
@@ -2939,7 +2939,7 @@ func TestBenchmarkSecp256k1VerifyAPI(t *testing.T) {
 func TestBenchmarkSecp256k1VerifyCrate(t *testing.T) {
 	t.SkipNow()
 	// Assaf: I wrote the benchmark like this because the init functions take testing.T
-	// and not testing.B and I just wanted to quickly get a feel for the perf improvments
+	// and not testing.B and I just wanted to quickly get a feel for the perf improvements
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
 			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath)
@@ -3288,7 +3288,7 @@ func TestEd25519Sign(t *testing.T) {
 func TestBenchmarkEd25519BatchVerifyAPI(t *testing.T) {
 	t.SkipNow()
 	// Assaf: I wrote the benchmark like this because the init functions take testing.T
-	// and not testing.B and I just wanted to quickly get a feel for the performance improvments
+	// and not testing.B and I just wanted to quickly get a feel for the performance improvements
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
 			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath)

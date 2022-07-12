@@ -422,7 +422,7 @@ mod test {
         match check_wasm_imports(&module, SUPPORTED_IMPORTS_V010) {
             Err(VmError::StaticValidationErr { msg, .. }) => {
                 assert!(
-                    msg.starts_with("Wasm contract requires unsupported import: \"env.read_db\"")
+                    msg.starts_with("Wasm contract requires unsupported import: \"env.db_read\"")
                 );
             }
             Err(e) => panic!("Unexpected error {:?}", e),
