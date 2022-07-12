@@ -133,12 +133,22 @@ pub fn validate_contract_key(
     calculated_authentication_id == expected_authentication_id
 }
 
+pub struct ValidatedMessage {
+    pub validated_msg: Vec<u8>,
+    pub reply_params: Option<ReplyParams>,
+}
+
+pub struct ReplyParams {
+    pub recipient_contract_hash: Vec<u8>,
+    pub sub_msg_id: u64,
+}
+
 /// Validate that the message sent to the enclave (after decryption) was actually addressed to this contract.
 pub fn validate_msg(
     msg: &[u8],
     contract_hash: [u8; HASH_SIZE],
     contract_hash_for_validation: Option<Vec<u8>>,
-) -> Result<(Vec<u8>, Option<(Vec<u8>, u64)>), EnclaveError> {
+) -> Result<ValidatedMessage, EnclaveError> {
     if contract_hash_for_validation.is_none() && msg.len() < HEX_ENCODED_HASH_SIZE {
         warn!("Malformed message - expected contract code hash to be prepended to the msg");
         return Err(EnclaveError::ValidationFailure);
@@ -182,13 +192,19 @@ pub fn validate_msg(
         let mut reply_recipient_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] =
             [0u8; HEX_ENCODED_HASH_SIZE];
         reply_recipient_contract_hash.copy_from_slice(&validated_msg[0..HEX_ENCODED_HASH_SIZE]);
-        return Ok((
-            validated_msg[HEX_ENCODED_HASH_SIZE..].to_vec(),
-            Some((reply_recipient_contract_hash.to_vec(), sub_msg_id)),
-        ));
+        return Ok(ValidatedMessage {
+            validated_msg: validated_msg[HEX_ENCODED_HASH_SIZE..].to_vec(),
+            reply_params: Some(ReplyParams {
+                recipient_contract_hash: reply_recipient_contract_hash.to_vec(),
+                sub_msg_id,
+            }),
+        });
     }
 
-    Ok((validated_msg, None))
+    Ok(ValidatedMessage {
+        validated_msg,
+        reply_params: None,
+    })
 }
 
 /// Verify all the parameters sent to the enclave match up, and were signed by the right account.

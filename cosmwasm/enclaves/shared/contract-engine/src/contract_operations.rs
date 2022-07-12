@@ -2,6 +2,7 @@ use log::*;
 
 use enclave_ffi_types::{Ctx, EnclaveError};
 
+use crate::contract_validation::{ReplyParams, ValidatedMessage};
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::wasm::CosmWasmApiVersion;
 use cosmos_proto::tx::signing::SignMode;
@@ -108,7 +109,10 @@ pub fn init(
 
     let decrypted_msg = secret_msg.decrypt()?;
 
-    let (validated_msg, reply_params) = validate_msg(&decrypted_msg, contract_code.hash(), None)?;
+    let ValidatedMessage {
+        validated_msg,
+        reply_params,
+    } = validate_msg(&decrypted_msg, contract_code.hash(), None)?;
 
     trace!(
         "init input after decryption: {:?}",
@@ -142,8 +146,7 @@ pub fn init(
         // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
         let output = encrypt_output(
             output,
-            secret_msg.nonce,
-            secret_msg.user_public_key,
+            &secret_msg,
             &canonical_contract_address,
             &env_v010.contract_code_hash,
             reply_params,
@@ -167,24 +170,13 @@ pub fn init(
     })
 }
 
-pub struct TaggedBool {
-    b: bool,
+pub struct ParsedMessage {
+    pub should_validate_sig_info: bool,
+    pub was_msg_encrypted: bool,
+    pub secret_msg: SecretMessage,
+    pub decrypted_msg: Vec<u8>,
+    pub contract_hash_for_validation: Option<Vec<u8>>,
 }
-
-impl From<bool> for TaggedBool {
-    fn from(b: bool) -> Self {
-        TaggedBool { b }
-    }
-}
-
-impl Into<bool> for TaggedBool {
-    fn into(self) -> bool {
-        self.b
-    }
-}
-
-type ShouldValidateSigInfo = TaggedBool;
-type WasMessageEncrypted = TaggedBool;
 
 pub fn reduct_custom_events(reply: &mut Reply) {
     reply.result = match &reply.result {
@@ -228,16 +220,7 @@ pub fn parse_message(
     message: &[u8],
     sig_info: &SigInfo,
     handle_type: &HandleType,
-) -> Result<
-    (
-        ShouldValidateSigInfo,
-        WasMessageEncrypted,
-        SecretMessage,
-        Vec<u8>,
-        Option<Vec<u8>>,
-    ),
-    EnclaveError,
-> {
+) -> Result<ParsedMessage, EnclaveError> {
     let orig_secret_msg = SecretMessage::from_slice(message)?;
 
     return match handle_type {
@@ -247,13 +230,13 @@ pub fn parse_message(
                 base64::encode(&message)
             );
             let decrypted_msg = orig_secret_msg.decrypt()?;
-            Ok((
-                ShouldValidateSigInfo::from(true),
-                WasMessageEncrypted::from(true),
-                orig_secret_msg,
+            Ok(ParsedMessage {
+                should_validate_sig_info: true,
+                was_msg_encrypted: true,
+                secret_msg: orig_secret_msg,
                 decrypted_msg,
-                None,
-            ))
+                contract_hash_for_validation: None,
+            })
         }
 
         HandleType::HANDLE_TYPE_REPLY => {
@@ -315,13 +298,13 @@ pub fn parse_message(
                     EnclaveError::FailedToSerialize
                 })?;
 
-                return Ok((
-                    ShouldValidateSigInfo::from(false),
-                    WasMessageEncrypted::from(false),
-                    reply_secret_msg,
-                    serialized_reply,
-                    None,
-                ));
+                return Ok(ParsedMessage {
+                    should_validate_sig_info: false,
+                    was_msg_encrypted: false,
+                    secret_msg: reply_secret_msg,
+                    decrypted_msg: serialized_reply,
+                    contract_hash_for_validation: None,
+                });
             }
 
             // Here we are sure the reply is OK because only OK is encrypted
@@ -420,13 +403,15 @@ pub fn parse_message(
                         msg: serialized_encrypted_reply,
                     };
 
-                    Ok((
-                        ShouldValidateSigInfo::from(true),
-                        WasMessageEncrypted::from(true),
-                        reply_secret_msg,
-                        decrypted_reply_as_vec,
-                        Some(tmp_decrypted_msg_id[..HEX_ENCODED_HASH_SIZE].to_vec()),
-                    ))
+                    Ok(ParsedMessage {
+                        should_validate_sig_info: true,
+                        was_msg_encrypted: true,
+                        secret_msg: reply_secret_msg,
+                        decrypted_msg: decrypted_reply_as_vec,
+                        contract_hash_for_validation: Some(
+                            tmp_decrypted_msg_id[..HEX_ENCODED_HASH_SIZE].to_vec(),
+                        ),
+                    })
                 }
                 SubMsgResult::Err(response) => {
                     let secret_msg = SecretMessage {
@@ -511,19 +496,22 @@ pub fn parse_message(
                         msg: serialized_encrypted_reply,
                     };
 
-                    Ok((
-                        ShouldValidateSigInfo::from(true),
-                        WasMessageEncrypted::from(true),
-                        reply_secret_msg,
-                        decrypted_reply_as_vec,
-                        Some(tmp_decrypted_msg_id[..HEX_ENCODED_HASH_SIZE].to_vec()),
-                    ))
+                    Ok(ParsedMessage {
+                        should_validate_sig_info: true,
+                        was_msg_encrypted: true,
+                        secret_msg: reply_secret_msg,
+                        decrypted_msg: decrypted_reply_as_vec,
+                        contract_hash_for_validation: Some(
+                            tmp_decrypted_msg_id[..HEX_ENCODED_HASH_SIZE].to_vec(),
+                        ),
+                    })
                 }
             }
         }
     };
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
 pub fn handle(
     context: Ctx,
     gas_limit: u64,
@@ -584,33 +572,33 @@ pub fn handle(
     // When the message is handle, we expect it always to be encrypted while in Reply for example it might be plaintext
     let parsed_handle_type = HandleType::try_from(handle_type)?;
 
-    let (
+    let ParsedMessage {
         should_validate_sig_info,
         was_msg_encrypted,
         secret_msg,
         decrypted_msg,
         contract_hash_for_validation,
-    ) = parse_message(msg, &parsed_sig_info, &parsed_handle_type)?;
+    } = parse_message(msg, &parsed_sig_info, &parsed_handle_type)?;
 
     // There is no signature to verify when the input isn't signed.
     // Receiving unsigned messages is only possible in Handle. (Init tx are always signed)
     // All of these functions go through handle but the data isn't signed:
     //  Reply (that is not WASM reply)
-    if should_validate_sig_info.into() {
+    if should_validate_sig_info {
         // Verify env parameters against the signed tx
         verify_params(&parsed_sig_info, &env_v010, &secret_msg)?;
     }
 
     let mut validated_msg = decrypted_msg.clone();
-    let mut reply_params: Option<(Vec<u8>, u64)> = None;
-    if was_msg_encrypted.into() {
+    let mut reply_params: Option<ReplyParams> = None;
+    if was_msg_encrypted {
         let x = validate_msg(
             &decrypted_msg,
             contract_code.hash(),
             contract_hash_for_validation,
         )?;
-        validated_msg = x.0;
-        reply_params = x.1;
+        validated_msg = x.validated_msg;
+        reply_params = x.reply_params;
     }
 
     trace!(
@@ -656,8 +644,7 @@ pub fn handle(
 
         let output = encrypt_output(
             output,
-            secret_msg.nonce,
-            secret_msg.user_public_key,
+            &secret_msg,
             &canonical_contract_address,
             &env_v010.contract_code_hash,
             reply_params,
@@ -722,7 +709,8 @@ pub fn query(
         "query input afer decryption: {:?}",
         String::from_utf8_lossy(&decrypted_msg)
     );
-    let validated_msg = validate_msg(&decrypted_msg, contract_code.hash(), None)?.0;
+    let ValidatedMessage { validated_msg, .. } =
+        validate_msg(&decrypted_msg, contract_code.hash(), None)?;
 
     let mut engine = start_engine(
         context,
@@ -749,8 +737,7 @@ pub fn query(
 
         let output = encrypt_output(
             output,
-            secret_msg.nonce,
-            secret_msg.user_public_key,
+            &secret_msg,
             &CanonicalAddr(Binary(Vec::new())), // Not used for queries (can't init a new contract from a query)
             &"".to_string(), // Not used for queries (can't call a sub-message from a query),
             None,            // Not used for queries (Query response is not replied to the caller),

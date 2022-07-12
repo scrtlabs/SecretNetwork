@@ -1,3 +1,5 @@
+use crate::contract_validation::ReplyParams;
+
 /// This contains all the user-facing functions. In these functions we will be using
 /// the consensus_io_exchange_keypair and a user-generated key to create a symmetric key
 /// that is unique to the user and the enclave
@@ -101,7 +103,7 @@ pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) 
 fn encrypt_serializable<T>(
     key: &AESKey,
     val: &T,
-    reply_params: &Option<(Vec<u8>, u64)>,
+    reply_params: &Option<ReplyParams>,
 ) -> Result<String, EnclaveError>
 where
     T: ?Sized + Serialize,
@@ -122,12 +124,15 @@ where
 fn encrypt_preserialized_string(
     key: &AESKey,
     val: &str,
-    reply_params: &Option<(Vec<u8>, u64)>,
+    reply_params: &Option<ReplyParams>,
 ) -> Result<String, EnclaveError> {
     let serialized = match reply_params {
-        Some((reply_recipient_contract_hash, _)) => {
+        Some(ReplyParams {
+            recipient_contract_hash,
+            ..
+        }) => {
             let mut ser = vec![];
-            ser.extend_from_slice(&reply_recipient_contract_hash);
+            ser.extend_from_slice(&recipient_contract_hash);
             ser.extend_from_slice(val.as_bytes());
             ser
         }
@@ -152,18 +157,17 @@ fn b64_encode(data: &[u8]) -> String {
 
 pub fn encrypt_output(
     output: Vec<u8>,
-    nonce: IoNonce,
-    user_public_key: Ed25519PublicKey,
+    secret_msg: &SecretMessage,
     contract_addr: &CanonicalAddr,
     contract_hash: &str,
-    reply_params: Option<(Vec<u8>, u64)>,
+    reply_params: Option<ReplyParams>,
     sender_addr: &CanonicalAddr,
     is_query_output: bool,
 ) -> Result<Vec<u8>, EnclaveError> {
     // When encrypting an output we might encrypt an output that is a reply to a caller contract (Via "Reply" endpoint).
     // Therefore if reply_recipient_contract_hash is not "None" we append it to any encrypted data besided submessages that are irrelevant for replies.
     // More info in: https://github.com/CosmWasm/cosmwasm/blob/v1.0.0/packages/std/src/results/submessages.rs#L192-L198
-    let encryption_key = calc_encryption_key(&nonce, &user_public_key);
+    let encryption_key = calc_encryption_key(&secret_msg.nonce, &secret_msg.user_public_key);
     trace!(
         "Output before encryption: {:?}",
         String::from_utf8_lossy(&output)
@@ -190,7 +194,7 @@ pub fn encrypt_output(
                 Some(ref r) => {
                     let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
                         &encryption_key,
-                        &r.1.to_string(),
+                        &r.sub_msg_id.to_string(),
                         &reply_params,
                     )?)?;
 
@@ -215,8 +219,8 @@ pub fn encrypt_output(
                         EnclaveError::FailedToSerialize
                     })?;
                     let tmp_secret_msg = SecretMessage {
-                        nonce,
-                        user_public_key,
+                        nonce: secret_msg.nonce,
+                        user_public_key: secret_msg.user_public_key,
                         msg: reply_as_vec,
                     };
 
@@ -240,7 +244,12 @@ pub fn encrypt_output(
         } => {
             for msg in &mut ok.messages {
                 if let cosmwasm_v010_types::types::CosmosMsg::Wasm(wasm_msg) = msg {
-                    encrypt_v010_wasm_msg(wasm_msg, nonce, user_public_key, contract_addr)?;
+                    encrypt_v010_wasm_msg(
+                        wasm_msg,
+                        secret_msg.nonce,
+                        secret_msg.user_public_key,
+                        contract_addr,
+                    )?;
                 }
             }
 
@@ -263,7 +272,7 @@ pub fn encrypt_output(
                 Some(ref r) => {
                     let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
                         &encryption_key,
-                        &r.1.to_string(),
+                        &r.sub_msg_id.to_string(),
                         &reply_params,
                     )?)?;
 
@@ -295,8 +304,8 @@ pub fn encrypt_output(
                         EnclaveError::FailedToSerialize
                     })?;
                     let tmp_secret_msg = SecretMessage {
-                        nonce,
-                        user_public_key,
+                        nonce: secret_msg.nonce,
+                        user_public_key: secret_msg.user_public_key,
                         msg: reply_as_vec,
                     };
 
@@ -320,8 +329,8 @@ pub fn encrypt_output(
                         wasm_msg,
                         &sub_msg.reply_on,
                         sub_msg.id,
-                        nonce,
-                        user_public_key,
+                        secret_msg.nonce,
+                        secret_msg.user_public_key,
                         contract_addr,
                         contract_hash,
                     )?;
@@ -361,7 +370,7 @@ pub fn encrypt_output(
                 Some(ref r) => {
                     let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
                         &encryption_key,
-                        &r.1.to_string(),
+                        &r.sub_msg_id.to_string(),
                         &reply_params,
                     )?)?;
 
@@ -389,8 +398,8 @@ pub fn encrypt_output(
                         EnclaveError::FailedToSerialize
                     })?;
                     let tmp_secret_msg = SecretMessage {
-                        nonce,
-                        user_public_key,
+                        nonce: secret_msg.nonce,
+                        user_public_key: secret_msg.user_public_key,
                         msg: reply_as_vec,
                     };
 
