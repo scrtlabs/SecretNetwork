@@ -251,6 +251,7 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           make vendor
           cd cosmwasm/enclaves/execute/
+          rustup component add rust-src
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
 
