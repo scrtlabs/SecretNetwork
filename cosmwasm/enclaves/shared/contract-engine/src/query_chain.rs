@@ -10,11 +10,10 @@ use enclave_utils::recursion_depth;
 use super::errors::WasmEngineError;
 use crate::external::{ecalls, ocalls};
 use crate::types::{IoNonce, SecretMessage};
-use crate::wasm::CosmWasmApiVersion;
 
 use enclave_cosmwasm_types::{
     encoding::Binary,
-    query::{QueryRequest, V1SmartQueryAnswer, V1SmartQueryResult, WasmQuery},
+    query::{QueryRequest, WasmQuery},
     std_error::{StdError, StdResult},
     system_error::{SystemError, SystemResult},
 };
@@ -26,7 +25,6 @@ pub fn encrypt_and_query_chain(
     user_public_key: Ed25519PublicKey,
     gas_used: &mut u64,
     gas_limit: u64,
-    contract_version: &CosmWasmApiVersion,
 ) -> Result<Vec<u8>, WasmEngineError> {
     if let Some(answer) = check_recursion_limit() {
         return serialize_error_response(&answer);

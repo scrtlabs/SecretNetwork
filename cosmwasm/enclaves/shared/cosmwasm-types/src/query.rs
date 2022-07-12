@@ -2,8 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::system_error::SystemError;
-
 use super::coins::Coin;
 use super::encoding::Binary;
 use super::math::Decimal;
@@ -99,22 +97,6 @@ pub enum WasmQuery {
         /// Key is the raw key used in the contracts Storage
         key: Binary,
     },
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum V1SmartQueryResult {
-    #[serde(rename = "ok")]
-    Ok(Binary),
-    #[serde(rename = "error")]
-    Err(String),
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum V1SmartQueryAnswer {
-    #[serde(rename = "ok")]
-    Ok(V1SmartQueryResult),
-    #[serde(rename = "error")]
-    Err(SystemError),
 }
 
 impl From<GovQuery> for QueryRequest {

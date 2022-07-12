@@ -551,8 +551,8 @@ fn encrypt_v1_wasm_msg(
             ..
         } => {
             // On cosmwasm v1 submessages' outputs can be sent back to the original caller by using "Reply"
-            // The output is encrpyted but the historically wasn't ment to be  sent back to the enclave as an input of another contract
-            // To support "sending back" behaviour, the enclave expects every encrypted input to be prepended with the recipient wasm hash.
+            // The output is encrypted but the historically wasn't meant to be  sent back to the enclave as an input of another contract
+            // To support "sending back" behavior, the enclave expects every encrypted input to be prepended with the recipient wasm hash.
             // In this context, we prepend the message with both hashes to signal to the next wasm call that its output is going to be an input to this contract as a "Reply"
             // On the other side when decrypting the input, the enclave will try to parse the message as usual, if the message (After reading the first code-hash) can't be parsed into json,
             // it will treat the next 64 bytes as a recipient code-hash and prepend this code-hash to its output.
