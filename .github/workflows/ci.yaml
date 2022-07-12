@@ -234,9 +234,12 @@ jobs:
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
-      - run: rustup component add rust-src clippy
+      - run: |
+          cd cosmwasm/enclaves/execute/
+          rustup component add rust-src clippy
       - name: Install xargo
         run: |
+          cd cosmwasm/enclaves/execute/
           cargo --version
           rustc --version  
           cargo +stable install xargo --version 0.3.25
@@ -251,7 +254,6 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           make vendor
           cd cosmwasm/enclaves/execute/
-          rustup component add rust-src
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
 
