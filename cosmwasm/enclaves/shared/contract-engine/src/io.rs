@@ -155,7 +155,7 @@ pub fn encrypt_output(
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
     contract_addr: &CanonicalAddr,
-    contract_hash: &String,
+    contract_hash: &str,
     reply_params: Option<(Vec<u8>, u64)>,
     sender_addr: &CanonicalAddr,
     is_query_output: bool,
@@ -217,7 +217,7 @@ pub fn encrypt_output(
                     let tmp_secret_msg = SecretMessage {
                         nonce,
                         user_public_key,
-                        msg: reply_as_vec.clone(),
+                        msg: reply_as_vec,
                     };
 
                     Some(Binary::from(
@@ -391,7 +391,7 @@ pub fn encrypt_output(
                     let tmp_secret_msg = SecretMessage {
                         nonce,
                         user_public_key,
-                        msg: reply_as_vec.clone(),
+                        msg: reply_as_vec,
                     };
 
                     Some(Binary::from(
@@ -533,7 +533,7 @@ fn encrypt_v1_wasm_msg(
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
     contract_addr: &CanonicalAddr,
-    reply_recipient_contract_hash: &String,
+    reply_recipient_contract_hash: &str,
 ) -> Result<(), EnclaveError> {
     match wasm_msg {
         enclave_cosmwasm_v1_types::results::WasmMsg::Execute {
