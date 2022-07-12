@@ -471,7 +471,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 
 		subMessages, err := V010MsgsToV1SubMsgs(contractAddress.String(), res.Messages)
 		if err != nil {
-			return nil, nil, sdkerrors.Wrap(err, "couldn't convert v010 messages to v1 messages")
+			return nil, nil, sdkerrors.Wrap(err, "couldn't convert v0.10 messages to v1 messages")
 		}
 
 		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, subMessages, res.Log, []v1wasmTypes.Event{}, res.Data, initMsg, verificationInfo, wasmTypes.CosmosMsgVersionV010)
