@@ -156,6 +156,8 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::RecursiveReplyFail {} => recursive_reply_fail(env, deps),
         ExecuteMsg::InitNewContract {} => init_new_contract(env, deps),
         ExecuteMsg::InitNewContractWithError {} => init_new_contract_with_error(env, deps),
+        ExecuteMsg::SubMsgLoop { iter } => sub_msg_loop(env, deps, iter),
+        ExecuteMsg::SubMsgLoopIner { iter } => sub_msg_loop_iner(env, deps, iter),
 
         // These were ported from the v0.10 test-contract:
         ExecuteMsg::A {
@@ -313,7 +315,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         } => Ok(Response::new()
             .add_message(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: addr,
-                code_hash: code_hash,
+                code_hash,
                 msg: Binary(msg.as_bytes().into()),
                 funds: vec![],
             }))
@@ -327,7 +329,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 .querier
                 .query(&QueryRequest::Wasm(WasmQuery::Smart {
                     contract_addr: addr,
-                    code_hash: code_hash,
+                    code_hash,
                     msg: Binary::from(msg.as_bytes().to_vec()),
                 }))
                 .map_err(|err| {
@@ -579,6 +581,41 @@ pub fn recursive_reply(env: Env, _deps: DepsMut) -> StdResult<Response> {
     Ok(resp)
 }
 
+pub fn sub_msg_loop(env: Env, _deps: DepsMut, iter: u64) -> StdResult<Response> {
+    if iter == 0 {
+        return Err(StdError::generic_err("stopped loop"));
+    }
+
+    let mut resp = Response::default();
+    let msg = "{\"sub_msg_loop_iner\":{\"iter\":".to_string() + iter.to_string().as_str() + "}}";
+    resp.messages.push(SubMsg {
+        id: 1500,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.into_string(),
+            code_hash: env.contract.code_hash,
+            msg: cosmwasm_std::Binary(msg.as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Always,
+    });
+
+    Ok(resp)
+}
+
+pub fn sub_msg_loop_iner(_env: Env, deps: DepsMut, iter: u64) -> StdResult<Response> {
+    if iter == 0 {
+        return Err(StdError::generic_err("stopped loop"));
+    }
+
+    increment(deps, 1)?;
+
+    let mut resp = Response::default();
+    resp.data = Some(((iter - 1) as u64).to_string().as_bytes().into());
+
+    Ok(resp)
+}
+
 pub fn recursive_reply_fail(env: Env, _deps: DepsMut) -> StdResult<Response> {
     let mut resp = Response::default();
     resp.messages.push(SubMsg {
@@ -680,7 +717,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 .querier
                 .query(&QueryRequest::Wasm(WasmQuery::Smart {
                     contract_addr: addr,
-                    code_hash: code_hash,
+                    code_hash,
                     msg: Binary::from(msg.as_bytes().to_vec()),
                 }))
                 .map_err(|err| {
@@ -769,6 +806,42 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
             let new_count = 1337;
             count(deps.storage).save(&new_count)?;
 
+            resp.data = Some(
+                (count_read(deps.storage).load()? as u32)
+                    .to_be_bytes()
+                    .into(),
+            );
+
+            Ok(resp)
+        }
+        (1500, SubMsgResult::Ok(iter)) => match iter.data {
+            Some(x) => {
+                let it = String::from_utf8(
+                    Binary::from_base64(String::from_utf8(x.to_vec())?.as_str())?.to_vec(),
+                )?;
+                let mut resp = Response::default();
+
+                let msg = "{\"sub_msg_loop_iner\":{\"iter\":".to_string() + it.as_str() + "}}";
+                resp.messages.push(SubMsg {
+                    id: 1500,
+                    msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                        contract_addr: env.contract.address.into_string(),
+                        code_hash: env.contract.code_hash,
+                        msg: Binary::from(msg.as_bytes().to_vec()),
+                        funds: vec![],
+                    }),
+                    gas_limit: Some(10000000_u64),
+                    reply_on: ReplyOn::Always,
+                });
+
+                Ok(resp)
+            }
+            None => Err(StdError::generic_err(format!(
+                "Init didn't response with contract address",
+            ))),
+        },
+        (1500, SubMsgResult::Err(_)) => {
+            let mut resp = Response::default();
             resp.data = Some(
                 (count_read(deps.storage).load()? as u32)
                     .to_be_bytes()

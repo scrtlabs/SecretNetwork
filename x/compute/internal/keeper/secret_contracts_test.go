@@ -3393,3 +3393,14 @@ func TestV1ReplySanity(t *testing.T) {
 	require.NoError(t, e)
 	require.Equal(t, uint32(1337), resp.Get.Count)
 }
+
+func TestV1ReplyLoop(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm")
+
+	contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+
+	data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"sub_msg_loop":{"iter": 10}}`, true, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(20), binary.BigEndian.Uint32(data))
+}

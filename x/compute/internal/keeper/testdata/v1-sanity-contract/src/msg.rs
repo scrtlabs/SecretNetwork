@@ -74,6 +74,12 @@ pub enum ExecuteMsg {
     RecursiveReplyFail {},
     InitNewContract {},
     InitNewContractWithError {},
+    SubMsgLoop {
+        iter: u64,
+    },
+    SubMsgLoopIner {
+        iter: u64,
+    },
 
     // These were ported from the v0.10 test-contract:
     A {
