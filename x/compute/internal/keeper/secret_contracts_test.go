@@ -80,10 +80,8 @@ func setupTest(t *testing.T, wasmPath string) (sdk.Context, Keeper, uint64, stri
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
-	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	walletA, privKeyA := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
-	walletB, privKeyB := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
+	walletA, privKeyA := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 200000), sdk.NewInt64Coin("assaf", 200000)))
+	walletB, privKeyB := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 5000), sdk.NewInt64Coin("assaf", 5000)))
 
 	wasmCode, err := ioutil.ReadFile(wasmPath)
 	require.NoError(t, err)
@@ -401,13 +399,13 @@ func initHelper(
 	codeID uint64, creator sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64,
 ) (sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
-	return initHelperImpl(t, keeper, ctx, codeID, creator, creatorPrivKey, initMsg, isErrorEncrypted, isV1Contract, gas, -1, 0)
+	return initHelperImpl(t, keeper, ctx, codeID, creator, creatorPrivKey, initMsg, isErrorEncrypted, isV1Contract, gas, -1, sdk.NewCoins())
 }
 
 func initHelperImpl(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	codeID uint64, creator sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, wasmCallCount int64, coin int64,
+	isErrorEncrypted bool, isV1Contract bool, gas uint64, wasmCallCount int64, coins sdk.Coins,
 ) (sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
 	hashStr := hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)
 
@@ -431,9 +429,9 @@ func initHelperImpl(
 		log.NewNopLogger(),
 	).WithGasMeter(gasMeter)
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initMsgBz, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)))
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initMsgBz, codeID, coins)
 	// make the label a random base64 string, because why not?
-	contractAddress, _, err := keeper.Instantiate(ctx, codeID, creator /* nil,*/, initMsgBz, base64.RawURLEncoding.EncodeToString(nonce), sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), nil)
+	contractAddress, _, err := keeper.Instantiate(ctx, codeID, creator /* nil,*/, initMsgBz, base64.RawURLEncoding.EncodeToString(nonce), coins, nil)
 
 	if wasmCallCount < 0 {
 		// default, just check that at least 1 call happened
@@ -2025,7 +2023,7 @@ func TestGasIsChargedForInitCallbackToInit(t *testing.T) {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
 			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath)
 
-			_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d,"code_hash":"%s"}}`, codeID, codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
+			_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d,"code_hash":"%s"}}`, codeID, codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, sdk.NewCoins())
 			require.Empty(t, err)
 		})
 	}
@@ -2039,7 +2037,7 @@ func TestGasIsChargedForInitCallbackToExec(t *testing.T) {
 			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, initErr)
 
-			_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback":{"contract_addr":"%s","code_hash":"%s"}}`, addr, codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
+			_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback":{"contract_addr":"%s","code_hash":"%s"}}`, addr, codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, sdk.NewCoins())
 			require.Empty(t, err)
 		})
 	}
@@ -2101,7 +2099,7 @@ func TestGasIsChargedForInitExternalQuery(t *testing.T) {
 			addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, initErr)
 
-			_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_depth_counter":{"to":"%s","depth":2,"code_hash":"%s"}}`, addr.String(), codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 3, 0)
+			_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_depth_counter":{"to":"%s","depth":2,"code_hash":"%s"}}`, addr.String(), codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 3, sdk.NewCoins())
 			require.Empty(t, err)
 		})
 	}
@@ -2271,7 +2269,7 @@ func TestCodeHashInitCallInit(t *testing.T) {
 			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath)
 
 			t.Run("GoodCodeHash", func(t *testing.T) {
-				addr, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
+				addr, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, sdk.NewCoins())
 
 				require.Empty(t, err)
 				require.Equal(t,
@@ -2289,7 +2287,7 @@ func TestCodeHashInitCallInit(t *testing.T) {
 				)
 			})
 			t.Run("EmptyCodeHash", func(t *testing.T) {
-				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"","msg":"%s","label":"2"}}`, codeID, `{\"nop\":{}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
+				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"","msg":"%s","label":"2"}}`, codeID, `{\"nop\":{}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 2, sdk.NewCoins())
 
 				require.NotEmpty(t, err)
 				require.Contains(t,
@@ -2298,7 +2296,7 @@ func TestCodeHashInitCallInit(t *testing.T) {
 				)
 			})
 			t.Run("TooBigCodeHash", func(t *testing.T) {
-				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%sa","msg":"%s","label":"3"}}`, codeID, codeHash, `{\"nop\":{}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
+				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%sa","msg":"%s","label":"3"}}`, codeID, codeHash, `{\"nop\":{}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, sdk.NewCoins())
 
 				require.NotEmpty(t, err)
 				require.Contains(t,
@@ -2307,7 +2305,7 @@ func TestCodeHashInitCallInit(t *testing.T) {
 				)
 			})
 			t.Run("TooSmallCodeHash", func(t *testing.T) {
-				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"4"}}`, codeID, codeHash[0:63], `{\"nop\":{}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
+				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"4"}}`, codeID, codeHash[0:63], `{\"nop\":{}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 2, sdk.NewCoins())
 
 				require.NotEmpty(t, err)
 				require.Contains(t,
@@ -2316,7 +2314,7 @@ func TestCodeHashInitCallInit(t *testing.T) {
 				)
 			})
 			t.Run("IncorrectCodeHash", func(t *testing.T) {
-				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s","label":"5"}}`, codeID, `{\"nop\":{}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
+				_, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s","label":"5"}}`, codeID, `{\"nop\":{}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 2, sdk.NewCoins())
 
 				require.NotEmpty(t, err)
 				require.Contains(t,
@@ -2333,11 +2331,11 @@ func TestCodeHashInitCallExec(t *testing.T) {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
 			ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath)
 
-			addr, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 1, 0)
+			addr, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 1, sdk.NewCoins())
 			require.Empty(t, err)
 
 			t.Run("GoodCodeHash", func(t *testing.T) {
-				addr2, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
+				addr2, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, sdk.NewCoins())
 
 				require.Empty(t, err)
 				require.Equal(t,
@@ -2355,7 +2353,7 @@ func TestCodeHashInitCallExec(t *testing.T) {
 				)
 			})
 			t.Run("EmptyCodeHash", func(t *testing.T) {
-				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"c\":{\"x\":1,\"y\":1}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
+				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"c\":{\"x\":1,\"y\":1}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 2, sdk.NewCoins())
 
 				require.NotEmpty(t, err)
 				require.Contains(t,
@@ -2364,7 +2362,7 @@ func TestCodeHashInitCallExec(t *testing.T) {
 				)
 			})
 			t.Run("TooBigCodeHash", func(t *testing.T) {
-				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
+				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, sdk.NewCoins())
 
 				require.NotEmpty(t, err)
 				require.Contains(t,
@@ -2373,7 +2371,7 @@ func TestCodeHashInitCallExec(t *testing.T) {
 				)
 			})
 			t.Run("TooSmallCodeHash", func(t *testing.T) {
-				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"c\":{\"x\":1,\"y\":1}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
+				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"c\":{\"x\":1,\"y\":1}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 2, sdk.NewCoins())
 
 				require.NotEmpty(t, err)
 				require.Contains(t,
@@ -2382,7 +2380,7 @@ func TestCodeHashInitCallExec(t *testing.T) {
 				)
 			})
 			t.Run("IncorrectCodeHash", func(t *testing.T) {
-				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"c\":{\"x\":1,\"y\":1}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 2, 0)
+				_, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"c\":{\"x\":1,\"y\":1}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 2, sdk.NewCoins())
 
 				require.NotEmpty(t, err)
 				require.Contains(t,
@@ -3403,4 +3401,103 @@ func TestV1ReplyLoop(t *testing.T) {
 
 	require.Empty(t, err)
 	require.Equal(t, uint32(20), binary.BigEndian.Uint32(data))
+}
+
+func TestBankMsgSend(t *testing.T) {
+	for _, contract := range testContracts {
+		t.Run(contract.CosmWasmVersion, func(t *testing.T) {
+
+			for _, callType := range []string{"init", "exec"} {
+				t.Run(callType, func(t *testing.T) {
+
+					for _, test := range []struct {
+						description    string
+						input          string
+						isSuccuss      bool
+						errorMsg       string
+						balancesBefore string
+						balancesAfter  string
+					}{
+						{
+							description:    "regular",
+							input:          `[{"amount":"2","denom":"denom"}]`,
+							isSuccuss:      true,
+							balancesBefore: "200000assaf,200000denom 5000assaf,5000denom",
+							balancesAfter:  "199998assaf,199998denom 5000assaf,5002denom",
+						},
+						{
+							description:    "multi-coin",
+							input:          `[{"amount":"1","denom":"assaf"},{"amount":"1","denom":"denom"}]`,
+							isSuccuss:      true,
+							balancesBefore: "200000assaf,200000denom 5000assaf,5000denom",
+							balancesAfter:  "199998assaf,199998denom 5001assaf,5001denom",
+						},
+						{
+							description:    "zero",
+							input:          `[{"amount":"0","denom":"denom"}]`,
+							isSuccuss:      false,
+							errorMsg:       "encrypted: dispatch: submessages: 0denom: invalid coins",
+							balancesBefore: "200000assaf,200000denom 5000assaf,5000denom",
+							balancesAfter:  "199998assaf,199998denom 5000assaf,5000denom",
+						},
+						{
+							description:    "insufficient funds",
+							input:          `[{"amount":"3","denom":"denom"}]`,
+							isSuccuss:      false,
+							balancesBefore: "200000assaf,200000denom 5000assaf,5000denom",
+							balancesAfter:  "199998assaf,199998denom 5000assaf,5000denom",
+							errorMsg:       "encrypted: dispatch: submessages: 2denom is smaller than 3denom: insufficient funds",
+						},
+						{
+							description:    "non-existing denom",
+							input:          `[{"amount":"1","denom":"blabla"}]`,
+							isSuccuss:      false,
+							balancesBefore: "200000assaf,200000denom 5000assaf,5000denom",
+							balancesAfter:  "199998assaf,199998denom 5000assaf,5000denom",
+							errorMsg:       "encrypted: dispatch: submessages: 0blabla is smaller than 1blabla: insufficient funds",
+						},
+						{
+							description:    "none",
+							input:          `[]`,
+							isSuccuss:      true,
+							balancesBefore: "200000assaf,200000denom 5000assaf,5000denom",
+							balancesAfter:  "199998assaf,199998denom 5000assaf,5000denom",
+						},
+					} {
+						t.Run(test.description, func(t *testing.T) {
+							ctx, keeper, codeID, _, walletA, privKeyA, walletB, _ := setupTest(t, contract.WasmFilePath)
+
+							walletACoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+							walletBCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletB)
+
+							require.Equal(t, test.balancesBefore, walletACoinsBefore.String()+" "+walletBCoinsBefore.String())
+
+							var err cosmwasm.StdError
+							var contractAddress sdk.AccAddress
+
+							if callType == "init" {
+								contractAddress, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"bank_msg":{"to":"%s","amount":%s}}`, walletB.String(), test.input), false, contract.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 2), sdk.NewInt64Coin("assaf", 2)))
+							} else {
+								contractAddress, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, false, contract.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 2), sdk.NewInt64Coin("assaf", 2)))
+
+								_, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"bank_msg":{"to":"%s","amount":%s}}`, walletB.String(), test.input), false, contract.IsCosmWasmV1, math.MaxUint64, 0)
+							}
+
+							if test.isSuccuss {
+								require.Empty(t, err)
+							} else {
+								require.NotEmpty(t, err)
+								require.Equal(t, err.Error(), test.errorMsg)
+							}
+
+							walletACoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+							walletBCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletB)
+
+							require.Equal(t, test.balancesAfter, walletACoinsAfter.String()+" "+walletBCoinsAfter.String())
+						})
+					}
+				})
+			}
+		})
+	}
 }
