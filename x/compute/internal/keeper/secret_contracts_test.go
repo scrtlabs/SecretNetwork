@@ -3403,6 +3403,28 @@ func TestV1ReplyLoop(t *testing.T) {
 	require.Equal(t, uint32(20), binary.BigEndian.Uint32(data))
 }
 
+func TestV010BankMsgSendFrom(t *testing.T) {
+	for _, callType := range []string{"init", "exec"} {
+		t.Run(callType, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, walletB, _ := setupTest(t, "./testdata/test-contract/contract.wasm", sdk.NewCoins())
+
+			var err cosmwasm.StdError
+			var contractAddress sdk.AccAddress
+
+			if callType == "init" {
+				contractAddress, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"bank_msg":{"to":"%s","from":"%s","amount":[{"amount":"1","denom":"denom"}]}}`, walletB.String(), walletA.String()), false, false, defaultGasForTests, -1, sdk.NewCoins())
+			} else {
+				contractAddress, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, false, false, defaultGasForTests, -1, sdk.NewCoins())
+
+				_, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"bank_msg":{"to":"%s","from":"%s","amount":[{"amount":"1","denom":"denom"}]}}`, walletB.String(), walletA.String()), false, false, math.MaxUint64, 0)
+			}
+
+			require.NotEmpty(t, err)
+			require.Contains(t, err.Error(), "contract doesn't have permission to send funds from another account")
+		})
+	}
+}
+
 func TestBankMsgSend(t *testing.T) {
 	for _, contract := range testContracts {
 		t.Run(contract.CosmWasmVersion, func(t *testing.T) {
