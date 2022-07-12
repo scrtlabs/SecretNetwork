@@ -423,7 +423,7 @@ func TestInstantiateWithDeposit(t *testing.T) {
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
-			ctx, keeper, codeID, _, _, _, _, _ := setupTest(t, "./testdata/contract.wasm")
+			ctx, keeper, codeID, _, _, _, _, _ := setupTest(t, "./testdata/contract.wasm", sdk.NewCoins())
 
 			deposit := 100
 			var funds int64 = 0
@@ -721,7 +721,7 @@ func TestExecuteWithDeposit(t *testing.T) {
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
-			ctx, keeper, codeID, _, _, _, _, _ := setupTest(t, "./testdata/contract.wasm")
+			ctx, keeper, codeID, _, _, _, _, _ := setupTest(t, "./testdata/contract.wasm", sdk.NewCoins())
 
 			deposit := int64(100)
 			var funds int64 = 0
