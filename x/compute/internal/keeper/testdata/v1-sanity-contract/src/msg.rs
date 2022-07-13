@@ -80,6 +80,8 @@ pub enum ExecuteMsg {
     SubMsgLoopIner {
         iter: u64,
     },
+    MultipleSubMessages {},
+    MultipleSubMessagesNoReply {},
 
     // These were ported from the v0.10 test-contract:
     A {

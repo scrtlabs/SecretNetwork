@@ -158,6 +158,8 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::InitNewContractWithError {} => init_new_contract_with_error(env, deps),
         ExecuteMsg::SubMsgLoop { iter } => sub_msg_loop(env, deps, iter),
         ExecuteMsg::SubMsgLoopIner { iter } => sub_msg_loop_iner(env, deps, iter),
+        ExecuteMsg::MultipleSubMessages {} => send_multiple_sub_messages(env, deps),
+        ExecuteMsg::MultipleSubMessagesNoReply {} => send_multiple_sub_messages_no_reply(env, deps),
 
         // These were ported from the v0.10 test-contract:
         ExecuteMsg::A {
@@ -305,7 +307,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 code_hash,
                 msg: Binary(msg.as_bytes().into()),
                 funds: vec![],
-                label: label,
+                label,
             }))
             .add_attribute("a", "a")),
         ExecuteMsg::CallToExec {
@@ -616,6 +618,126 @@ pub fn sub_msg_loop_iner(_env: Env, deps: DepsMut, iter: u64) -> StdResult<Respo
     Ok(resp)
 }
 
+pub fn send_multiple_sub_messages(env: Env, _deps: DepsMut) -> StdResult<Response> {
+    let mut resp = Response::default();
+    resp.messages.push(SubMsg {
+        id: 1600,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 1601,
+        msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from(
+                "{\"counter\":{\"counter\":150, \"expires\":100}}"
+                    .as_bytes()
+                    .to_vec(),
+            ),
+            funds: vec![],
+            label: "new202213".to_string(),
+            code_id: 1,
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Always,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 1602,
+        msg: CosmosMsg::Bank(BankMsg::Send {
+            to_address: "secret105w4vl4gm7q00yg5jngewt5kp7aj0xjk7zrnhw".to_string(),
+            amount: coins(1200 as u128, "uscrt"),
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Always,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 1603,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    Ok(resp)
+}
+
+pub fn send_multiple_sub_messages_no_reply(env: Env, deps: DepsMut) -> StdResult<Response> {
+    let mut resp = Response::default();
+
+    resp.messages.push(SubMsg {
+        id: 1610,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 1611,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 1612,
+        msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from(
+                "{\"counter\":{\"counter\":150, \"expires\":100}}"
+                    .as_bytes()
+                    .to_vec(),
+            ),
+            funds: vec![],
+            label: "new202213".to_string(),
+            code_id: 1,
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 1613,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    resp.data = Some(
+        (count_read(deps.storage).load()? as u32)
+            .to_be_bytes()
+            .into(),
+    );
+    Ok(resp)
+}
+
 pub fn recursive_reply_fail(env: Env, _deps: DepsMut) -> StdResult<Response> {
     let mut resp = Response::default();
     resp.messages.push(SubMsg {
@@ -742,6 +864,7 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
             Ok(resp)
         }
         (1337, SubMsgResult::Ok(_)) => Err(StdError::generic_err("got wrong bank answer")),
+
         (1304, SubMsgResult::Err(e)) => Err(StdError::generic_err(format!(
             "recursive reply failed: {}",
             e
@@ -772,6 +895,7 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
 
             Ok(resp)
         }
+
         (1404, SubMsgResult::Err(e)) => Err(StdError::generic_err(format!(
             "recursive init failed: {}",
             e
@@ -814,6 +938,7 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
 
             Ok(resp)
         }
+
         (1500, SubMsgResult::Ok(iter)) => match iter.data {
             Some(x) => {
                 let it = String::from_utf8(
@@ -850,6 +975,43 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
 
             Ok(resp)
         }
+
+        (1601, SubMsgResult::Err(e)) => Err(StdError::generic_err(format!(
+            "recursive init failed: {}",
+            e
+        ))),
+        (1601, SubMsgResult::Ok(s)) => match s.data {
+            Some(_) => {
+                let mut resp = Response::default();
+                let new_count = 101;
+                count(deps.storage).save(&new_count)?;
+
+                resp.data = Some(
+                    (count_read(deps.storage).load()? as u32)
+                        .to_be_bytes()
+                        .into(),
+                );
+
+                Ok(resp)
+            }
+            None => Err(StdError::generic_err(format!(
+                "Init didn't response with contract address",
+            ))),
+        },
+        (1602, SubMsgResult::Err(_)) => {
+            let mut resp = Response::default();
+            let new_count = 102;
+            count(deps.storage).save(&new_count)?;
+
+            resp.data = Some(
+                (count_read(deps.storage).load()? as u32)
+                    .to_be_bytes()
+                    .into(),
+            );
+
+            Ok(resp)
+        }
+        (1602, SubMsgResult::Ok(_)) => Err(StdError::generic_err("got wrong bank answer")),
 
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }
@@ -981,7 +1143,7 @@ fn send_external_query_panic(
         .query::<u8>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
             msg: Binary::from(r#"{"panic":{}}"#.as_bytes().to_vec()),
-            code_hash: code_hash,
+            code_hash,
         }))
         .unwrap_err();
 
@@ -1002,7 +1164,7 @@ fn send_external_query_stderror(
                     .as_bytes()
                     .to_vec(),
             ),
-            code_hash: code_hash,
+            code_hash,
         }));
 
     match answer {
@@ -1020,7 +1182,7 @@ fn send_external_query_bad_abi(
         .querier
         .query::<Binary>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            code_hash: code_hash,
+            code_hash,
             msg: Binary::from(
                 r#""contract_error":{"error_type":"generic_err"}}"#.as_bytes().to_vec(),
             ),
@@ -1042,7 +1204,7 @@ fn send_external_query_bad_abi_receiver(
         .query::<String>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
             msg: Binary::from(r#"{"receive_external_query":{"num":25}}"#.as_bytes().to_vec()),
-            code_hash: code_hash,
+            code_hash,
         }));
 
     match answer {
@@ -1054,7 +1216,7 @@ fn send_external_query_bad_abi_receiver(
 fn exec_callback_bad_params(contract_addr: String, code_hash: String) -> Response {
     Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: contract_addr.clone(),
-        code_hash: code_hash,
+        code_hash,
         msg: Binary::from(r#"{"c":{"x":"banana","y":3}}"#.as_bytes().to_vec()),
         funds: vec![],
     }))
@@ -1100,7 +1262,7 @@ pub fn b(
     Response::new()
         .add_message(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            code_hash: code_hash,
+            code_hash,
             msg: Binary::from(
                 format!("{{\"c\":{{\"x\":{} ,\"y\": {} }}}}", x + 1, y + 1)
                     .as_bytes()
@@ -1158,7 +1320,7 @@ fn exec_with_callback_contract_error(contract_addr: String, code_hash: String) -
     Response::new()
         .add_message(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.clone(),
-            code_hash: code_hash,
+            code_hash,
             msg: Binary::from(
                 r#"{"contract_error":{"error_type":"generic_err"}}"#
                     .as_bytes()
